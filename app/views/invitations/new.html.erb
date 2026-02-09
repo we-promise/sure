@@ -11,9 +11,9 @@
       <%= form.select :role,
         options_for_select([
           [t(".role_member"), "member"],
-          [t(".role_guest", default: "Guest"), "guest"],
+          (Flipper.enabled?(:intro_ui) ? [t(".role_guest", default: "Guest"), "guest"] : nil),
           [t(".role_admin"), "admin"]
-        ]),
+        ].compact),
         {},
         { label: t(".role_label") } %>
 
