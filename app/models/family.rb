@@ -1,4 +1,5 @@
 class Family < ApplicationRecord
+  include IndexaCapitalConnectable
   include CoinbaseConnectable, CoinstatsConnectable, SnaptradeConnectable, MercuryConnectable, SophtronConnectable
   include PlaidConnectable, SimplefinConnectable, LunchflowConnectable, EnableBankingConnectable, Syncable, AutoTransferMatchable, Subscribeable
 
@@ -40,6 +41,32 @@ class Family < ApplicationRecord
 
   validates :locale, inclusion: { in: I18n.available_locales.map(&:to_s) }
   validates :date_format, inclusion: { in: DATE_FORMATS.map(&:last) }
+  validates :month_start_day, inclusion: { in: 1..28 }
+
+  def uses_custom_month_start?
+    month_start_day != 1
+  end
+
+  def custom_month_start_for(date)
+    if date.day >= month_start_day
+      Date.new(date.year, date.month, month_start_day)
+    else
+      previous_month = date - 1.month
+      Date.new(previous_month.year, previous_month.month, month_start_day)
+    end
+  end
+
+  def custom_month_end_for(date)
+    start_date = custom_month_start_for(date)
+    next_month_start = start_date + 1.month
+    next_month_start - 1.day
+  end
+
+  def current_custom_month_period
+    start_date = custom_month_start_for(Date.current)
+    end_date = custom_month_end_for(Date.current)
+    Period.custom(start_date: start_date, end_date: end_date)
+  end
 
   def assigned_merchants
     merchant_ids = transactions.where.not(merchant_id: nil).pluck(:merchant_id).uniq
@@ -80,9 +107,15 @@ class Family < ApplicationRecord
     @income_statement ||= IncomeStatement.new(self)
   end
 
-  # Returns the Investment Contributions category for this family, or nil if not found.
-  # This is a bootstrapped category used for auto-categorizing transfers to investment accounts.
+  # Returns the Investment Contributions category for this family, creating it if it doesn't exist.
+  # This is used for auto-categorizing transfers to investment accounts.
   def investment_contributions_category
+    categories.find_or_create_by!(name: Category.investment_contributions_name) do |cat|
+      cat.color = "#0d9488"
+      cat.classification = "expense"
+      cat.lucide_icon = "trending-up"
+    end
+  rescue ActiveRecord::RecordNotUnique, ActiveRecord::RecordInvalid
     categories.find_by(name: Category.investment_contributions_name)
   end
 

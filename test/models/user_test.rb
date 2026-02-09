@@ -160,6 +160,47 @@ class UserTest < ActiveSupport::TestCase
     Setting.openai_access_token = previous
   end
 
+  test "intro layout collapses sidebars and enables ai" do
+    user = User.new(
+      family: families(:empty),
+      email: "intro-new@example.com",
+      password: "Password1!",
+      password_confirmation: "Password1!",
+      role: :guest,
+      ui_layout: :intro
+    )
+
+    assert user.save, user.errors.full_messages.to_sentence
+    assert user.ui_layout_intro?
+    assert_not user.show_sidebar?
+    assert_not user.show_ai_sidebar?
+    assert user.ai_enabled?
+  end
+
+  test "non-guest role cannot persist intro layout" do
+    user = User.new(
+      family: families(:empty),
+      email: "dashboard-only@example.com",
+      password: "Password1!",
+      password_confirmation: "Password1!",
+      role: :member,
+      ui_layout: :intro
+    )
+
+    assert user.save, user.errors.full_messages.to_sentence
+    assert user.ui_layout_dashboard?
+  end
+
+  test "upgrading guest role restores dashboard layout defaults" do
+    user = users(:intro_user)
+    user.update!(role: :member)
+    user.reload
+
+    assert user.ui_layout_dashboard?
+    assert user.show_sidebar?
+    assert user.show_ai_sidebar?
+  end
+
   test "update_dashboard_preferences handles concurrent updates atomically" do
     @user.update!(preferences: {})
 

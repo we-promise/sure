@@ -2,6 +2,21 @@ require "sidekiq/web"
 require "sidekiq/cron/web"
 
 Rails.application.routes.draw do
+  resources :indexa_capital_items, only: [ :index, :new, :create, :show, :edit, :update, :destroy ] do
+    collection do
+      get :preload_accounts
+      get :select_accounts
+      post :link_accounts
+      get :select_existing_account
+      post :link_existing_account
+    end
+
+    member do
+      post :sync
+      get :setup_accounts
+      post :complete_account_setup
+    end
+  end
   resources :mercury_items, only: %i[index new create show edit update destroy] do
     collection do
       get :preload_accounts
@@ -118,6 +133,7 @@ Rails.application.routes.draw do
 
   resource :registration, only: %i[new create]
   resources :sessions, only: %i[index new create destroy]
+  get "/auth/mobile/:provider", to: "sessions#mobile_sso_start"
   match "/auth/:provider/callback", to: "sessions#openid_connect", via: %i[get post]
   match "/auth/failure", to: "sessions#failure", via: %i[get post]
   get "/auth/logout/callback", to: "sessions#post_logout"
@@ -355,6 +371,7 @@ Rails.application.routes.draw do
       post "auth/signup", to: "auth#signup"
       post "auth/login", to: "auth#login"
       post "auth/refresh", to: "auth#refresh"
+      post "auth/sso_exchange", to: "auth#sso_exchange"
 
       # Production API endpoints
       resources :accounts, only: [ :index, :show ]
@@ -363,6 +380,8 @@ Rails.application.routes.draw do
       resources :tags, only: %i[index show create update destroy]
 
       resources :transactions, only: [ :index, :show, :create, :update, :destroy ]
+      resources :trades, only: [ :index, :show, :create, :update, :destroy ]
+      resources :holdings, only: [ :index, :show ]
       resources :valuations, only: [ :create, :update, :show ]
       resources :imports, only: [ :index, :show, :create ]
       resource :usage, only: [ :show ], controller: :usage
@@ -480,6 +499,7 @@ Rails.application.routes.draw do
   terms_url = ENV["LEGAL_TERMS_URL"].presence
   get "privacy", to: privacy_url ? redirect(privacy_url) : "pages#privacy"
   get "terms", to: terms_url ? redirect(terms_url) : "pages#terms"
+  get "intro", to: "pages#intro"
 
   # Admin namespace for super admin functionality
   namespace :admin do

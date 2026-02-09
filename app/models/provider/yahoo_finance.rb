@@ -1,5 +1,6 @@
 class Provider::YahooFinance < Provider
   include ExchangeRateConcept, SecurityConcept
+  extend SslConfigurable
 
   # Subclass so errors caught in this provider are raised as Provider::YahooFinance::Error
   Error = Class.new(Provider::Error)
@@ -494,7 +495,7 @@ class Provider::YahooFinance < Provider
     end
 
     def client
-      @client ||= Faraday.new(url: base_url) do |faraday|
+      @client ||= Faraday.new(url: base_url, ssl: self.class.faraday_ssl_options) do |faraday|
         faraday.request(:retry, {
           max: max_retries,
           interval: retry_interval,
@@ -609,7 +610,7 @@ class Provider::YahooFinance < Provider
 
     # Client for authentication requests (no error raising - fc.yahoo.com returns 404 but sets cookie)
     def auth_client
-      @auth_client ||= Faraday.new do |faraday|
+      @auth_client ||= Faraday.new(ssl: self.class.faraday_ssl_options) do |faraday|
         faraday.headers["User-Agent"] = random_user_agent
         faraday.headers["Accept"] = "*/*"
         faraday.headers["Accept-Language"] = "en-US,en;q=0.9"
@@ -620,7 +621,7 @@ class Provider::YahooFinance < Provider
 
     # Client for authenticated requests (includes cookie header)
     def authenticated_client(cookie)
-      Faraday.new(url: base_url) do |faraday|
+      Faraday.new(url: base_url, ssl: self.class.faraday_ssl_options) do |faraday|
         faraday.request(:retry, {
           max: max_retries,
           interval: retry_interval,

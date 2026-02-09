@@ -341,6 +341,100 @@ class AuthService {
     }
   }
 
+  String buildSsoUrl({
+    required String provider,
+    required Map<String, String> deviceInfo,
+  }) {
+    final params = {
+      'device_id': deviceInfo['device_id']!,
+      'device_name': deviceInfo['device_name']!,
+      'device_type': deviceInfo['device_type']!,
+      'os_version': deviceInfo['os_version']!,
+      'app_version': deviceInfo['app_version']!,
+    };
+    final uri = Uri.parse('${ApiConfig.baseUrl}/auth/mobile/$provider')
+        .replace(queryParameters: params);
+    return uri.toString();
+  }
+
+  Future<Map<String, dynamic>> handleSsoCallback(Uri uri) async {
+    final params = uri.queryParameters;
+
+    if (params.containsKey('error')) {
+      return {
+        'success': false,
+        'error': params['message'] ?? params['error'] ?? 'SSO login failed',
+      };
+    }
+
+    final code = params['code'];
+    if (code == null || code.isEmpty) {
+      return {
+        'success': false,
+        'error': 'Invalid SSO callback response',
+      };
+    }
+
+    // Exchange authorization code for tokens via secure POST
+    try {
+      final url = Uri.parse('${ApiConfig.baseUrl}/api/v1/auth/sso_exchange');
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: jsonEncode({'code': code}),
+      ).timeout(const Duration(seconds: 30));
+
+      if (response.statusCode != 200) {
+        final errorData = jsonDecode(response.body);
+        return {
+          'success': false,
+          'error': errorData['message'] ?? 'Token exchange failed',
+        };
+      }
+
+      final data = jsonDecode(response.body);
+
+      final tokens = AuthTokens.fromJson({
+        'access_token': data['access_token'],
+        'refresh_token': data['refresh_token'],
+        'token_type': data['token_type'] ?? 'Bearer',
+        'expires_in': data['expires_in'] ?? 0,
+        'created_at': data['created_at'] ?? 0,
+      });
+      await _saveTokens(tokens);
+
+      final user = User.fromJson(data['user']);
+      await _saveUser(user);
+
+      return {
+        'success': true,
+        'tokens': tokens,
+        'user': user,
+      };
+    } on SocketException catch (e, stackTrace) {
+      LogService.instance.error('AuthService', 'SSO exchange SocketException: $e\n$stackTrace');
+      return {
+        'success': false,
+        'error': 'Network unavailable',
+      };
+    } on TimeoutException catch (e, stackTrace) {
+      LogService.instance.error('AuthService', 'SSO exchange TimeoutException: $e\n$stackTrace');
+      return {
+        'success': false,
+        'error': 'Request timed out',
+      };
+    } catch (e, stackTrace) {
+      LogService.instance.error('AuthService', 'SSO exchange unexpected error: $e\n$stackTrace');
+      return {
+        'success': false,
+        'error': 'Failed to exchange authorization code',
+      };
+    }
+  }
+
   Future<void> logout() async {
     await _storage.delete(key: _tokenKey);
     await _storage.delete(key: _userKey);

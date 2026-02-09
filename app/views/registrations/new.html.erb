@@ -12,7 +12,7 @@
     <p class="text-secondary">
       <%= t(".invitation_message",
             inviter: @invitation.inviter.display_name,
-            role: t(".role_#{@invitation.role}")) %>
+            role: t(".role_#{@invitation.role}", default: @invitation.role.to_s.humanize.downcase)) %>
     </p>
   </div>
 <% end %>

@@ -46,8 +46,13 @@ module Api
           InviteCode.claim!(params[:invite_code]) if params[:invite_code].present?
 
           # Create device and OAuth token
-          device = create_or_update_device(user)
-          token_response = create_oauth_token_for_device(user, device)
+          begin
+            device = MobileDevice.upsert_device!(user, device_params)
+            token_response = device.issue_token!
+          rescue ActiveRecord::RecordInvalid => e
+            render json: { error: "Failed to register device: #{e.message}" }, status: :unprocessable_entity
+            return
+          end
 
           render json: token_response.merge(
             user: {
@@ -84,8 +89,13 @@ module Api
           end
 
           # Create device and OAuth token
-          device = create_or_update_device(user)
-          token_response = create_oauth_token_for_device(user, device)
+          begin
+            device = MobileDevice.upsert_device!(user, device_params)
+            token_response = device.issue_token!
+          rescue ActiveRecord::RecordInvalid => e
+            render json: { error: "Failed to register device: #{e.message}" }, status: :unprocessable_entity
+            return
+          end
 
           render json: token_response.merge(
             user: {
@@ -98,6 +108,44 @@ module Api
         else
           render json: { error: "Invalid email or password" }, status: :unauthorized
         end
+      end
+
+      def sso_exchange
+        code = sso_exchange_params
+
+        if code.blank?
+          render json: { error: "invalid_or_expired_code", message: "Authorization code is required" }, status: :unauthorized
+          return
+        end
+
+        cache_key = "mobile_sso:#{code}"
+        cached = Rails.cache.read(cache_key)
+
+        unless cached.present?
+          render json: { error: "invalid_or_expired_code", message: "Authorization code is invalid or expired" }, status: :unauthorized
+          return
+        end
+
+        # Atomic delete — only the request that successfully deletes the key may proceed.
+        # This prevents a race where two concurrent requests both read the same code.
+        unless Rails.cache.delete(cache_key)
+          render json: { error: "invalid_or_expired_code", message: "Authorization code is invalid or expired" }, status: :unauthorized
+          return
+        end
+
+        render json: {
+          access_token: cached[:access_token],
+          refresh_token: cached[:refresh_token],
+          token_type: cached[:token_type],
+          expires_in: cached[:expires_in],
+          created_at: cached[:created_at],
+          user: {
+            id: cached[:user_id],
+            email: cached[:user_email],
+            first_name: cached[:user_first_name],
+            last_name: cached[:user_last_name]
+          }
+        }
       end
 
       def refresh
@@ -121,6 +169,7 @@ module Api
         new_token = Doorkeeper::AccessToken.create!(
           application: access_token.application,
           resource_owner_id: access_token.resource_owner_id,
+          mobile_device_id: access_token.mobile_device_id,
           expires_in: 30.days.to_i,
           scopes: access_token.scopes,
           use_refresh_token: true
@@ -173,38 +222,12 @@ module Api
           required_fields.all? { |field| device[field].present? }
         end
 
-        def create_or_update_device(user)
-          # Handle both string and symbol keys
-          device_data = params[:device].permit(:device_id, :device_name, :device_type, :os_version, :app_version)
-
-          device = user.mobile_devices.find_or_initialize_by(device_id: device_data[:device_id])
-          device.update!(device_data.merge(last_seen_at: Time.current))
-          device
+        def device_params
+          params.require(:device).permit(:device_id, :device_name, :device_type, :os_version, :app_version)
         end
 
-        def create_oauth_token_for_device(user, device)
-          # Create OAuth application for this device if needed
-          oauth_app = device.create_oauth_application!
-
-          # Revoke any existing tokens for this device
-          device.revoke_all_tokens!
-
-          # Create new access token with 30-day expiration
-          access_token = Doorkeeper::AccessToken.create!(
-            application: oauth_app,
-            resource_owner_id: user.id,
-            expires_in: 30.days.to_i,
-            scopes: "read_write",
-            use_refresh_token: true
-          )
-
-          {
-            access_token: access_token.plaintext_token,
-            refresh_token: access_token.plaintext_refresh_token,
-            token_type: "Bearer",
-            expires_in: access_token.expires_in,
-            created_at: access_token.created_at.to_i
-          }
+        def sso_exchange_params
+          params.require(:code)
         end
     end
   end

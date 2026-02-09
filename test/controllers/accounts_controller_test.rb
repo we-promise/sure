@@ -165,6 +165,51 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to account_url(@account)
     assert_equal "Account is already linked to a provider", flash[:alert]
   end
+
+  test "unlink preserves SnaptradeAccount record" do
+    snaptrade_account = snaptrade_accounts(:fidelity_401k)
+    investment = accounts(:investment)
+    AccountProvider.create!(account: investment, provider: snaptrade_account)
+    investment.reload
+
+    assert investment.linked?
+
+    delete unlink_account_url(investment)
+    investment.reload
+
+    assert_not investment.linked?
+    assert_redirected_to accounts_path
+    # SnaptradeAccount should still exist (not destroyed)
+    assert SnaptradeAccount.exists?(snaptrade_account.id), "SnaptradeAccount should be preserved after unlink"
+    # But AccountProvider should be gone
+    assert_not AccountProvider.exists?(provider_type: "SnaptradeAccount", provider_id: snaptrade_account.id)
+  end
+
+  test "unlink does not enqueue SnapTrade cleanup job" do
+    snaptrade_account = snaptrade_accounts(:fidelity_401k)
+    investment = accounts(:investment)
+    AccountProvider.create!(account: investment, provider: snaptrade_account)
+    investment.reload
+
+    assert_no_enqueued_jobs(only: SnaptradeConnectionCleanupJob) do
+      delete unlink_account_url(investment)
+    end
+  end
+
+  test "unlink detaches holdings from SnapTrade provider" do
+    snaptrade_account = snaptrade_accounts(:fidelity_401k)
+    investment = accounts(:investment)
+    ap = AccountProvider.create!(account: investment, provider: snaptrade_account)
+
+    # Assign a holding to this provider
+    holding = holdings(:one)
+    holding.update!(account_provider: ap)
+
+    delete unlink_account_url(investment)
+    holding.reload
+
+    assert_nil holding.account_provider_id, "Holding should be detached from provider after unlink"
+  end
 end
 
 class AccountsControllerSimplefinCtaTest < ActionDispatch::IntegrationTest

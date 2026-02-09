@@ -2,6 +2,7 @@
 
 class SsoProvider < ApplicationRecord
   include Encryptable
+  extend SslConfigurable
 
   # Encrypt sensitive credentials if ActiveRecord encryption is configured
   if encryption_ready?
@@ -103,11 +104,12 @@ class SsoProvider < ApplicationRecord
     end
 
     def validate_default_role_setting
-      default_role = settings&.dig("default_role")
+      default_role = settings&.dig("default_role") || settings&.dig(:default_role)
+      default_role = default_role.to_s
       return if default_role.blank?
 
       unless User.roles.key?(default_role)
-        errors.add(:settings, "default_role must be member, admin, or super_admin")
+        errors.add(:settings, "default_role must be guest, member, admin, or super_admin")
       end
     end
 
@@ -116,7 +118,7 @@ class SsoProvider < ApplicationRecord
 
       begin
         discovery_url = issuer.end_with?("/") ? "#{issuer}.well-known/openid-configuration" : "#{issuer}/.well-known/openid-configuration"
-        response = Faraday.get(discovery_url) do |req|
+        response = Faraday.new(ssl: self.class.faraday_ssl_options).get(discovery_url) do |req|
           req.options.timeout = 5
           req.options.open_timeout = 3
         end
