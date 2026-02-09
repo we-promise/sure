@@ -10,11 +10,10 @@ class Settings::AiPromptsControllerTest < ActionDispatch::IntegrationTest
     @family = @user.family
   end
 
-  test "show renders and assigns assistant config" do
+  test "show renders and includes assistant prompt content" do
     get settings_ai_prompts_url
     assert_response :success
-    assert_not_nil assigns(:assistant_config)
-    assert assigns(:assistant_config).key?(:instructions)
+    assert_match(/Prompt Instructions|Main System Prompt/, response.body)
   end
 
   test "update saves custom prompts and preferred model" do
@@ -32,15 +31,14 @@ class Settings::AiPromptsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Welcome! Tell me about yourself.", @family.custom_intro_prompt
   end
 
-  test "update with invalid length returns unprocessable and preserves errors" do
+  test "update with invalid length returns unprocessable and does not persist" do
     long_prompt = "x" * (Family::CUSTOM_PROMPT_MAX_LENGTH + 1)
     patch settings_ai_prompts_url, params: {
       family: { custom_system_prompt: long_prompt }
     }
     assert_response :unprocessable_entity
-    assert_template :show
     @family.reload
-    assert @family.errors[:custom_system_prompt].any?
+    assert_not_equal long_prompt, @family.custom_system_prompt
   end
 
   test "update with blank params clears overrides" do
