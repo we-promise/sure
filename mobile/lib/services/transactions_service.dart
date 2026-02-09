@@ -32,9 +32,8 @@ class TransactionsService {
       final response = await http.post(
         url,
         headers: {
+          ...ApiConfig.getAuthHeaders(accessToken),
           'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'Authorization': 'Bearer $accessToken',
         },
         body: jsonEncode(body),
       ).timeout(const Duration(seconds: 30));
@@ -99,9 +98,8 @@ class TransactionsService {
       final response = await http.get(
         url,
         headers: {
+          ...ApiConfig.getAuthHeaders(accessToken),
           'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'Authorization': 'Bearer $accessToken',
         },
       ).timeout(const Duration(seconds: 30));
 
@@ -162,9 +160,8 @@ class TransactionsService {
       final response = await http.delete(
         url,
         headers: {
+          ...ApiConfig.getAuthHeaders(accessToken),
           'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'Authorization': 'Bearer $accessToken',
         },
       ).timeout(const Duration(seconds: 30));
 

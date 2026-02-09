@@ -27,7 +27,7 @@ class <%= class_name %>Item < ApplicationRecord
 <% end -%>
 
   belongs_to :family
-  has_one_attached :logo
+  has_one_attached :logo, dependent: :purge_later
 
   has_many :<%= file_name %>_accounts, dependent: :destroy
   has_many :accounts, through: :<%= file_name %>_accounts

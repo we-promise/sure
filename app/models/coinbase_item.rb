@@ -24,7 +24,7 @@ class CoinbaseItem < ApplicationRecord
   validates :api_secret, presence: true
 
   belongs_to :family
-  has_one_attached :logo
+  has_one_attached :logo, dependent: :purge_later
 
   has_many :coinbase_accounts, dependent: :destroy
   has_many :accounts, through: :coinbase_accounts

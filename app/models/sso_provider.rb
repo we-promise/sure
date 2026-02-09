@@ -2,6 +2,7 @@
 
 class SsoProvider < ApplicationRecord
   include Encryptable
+  extend SslConfigurable
 
   # Encrypt sensitive credentials if ActiveRecord encryption is configured
   if encryption_ready?
@@ -116,7 +117,7 @@ class SsoProvider < ApplicationRecord
 
       begin
         discovery_url = issuer.end_with?("/") ? "#{issuer}.well-known/openid-configuration" : "#{issuer}/.well-known/openid-configuration"
-        response = Faraday.get(discovery_url) do |req|
+        response = Faraday.new(ssl: self.class.faraday_ssl_options).get(discovery_url) do |req|
           req.options.timeout = 5
           req.options.open_timeout = 3
         end

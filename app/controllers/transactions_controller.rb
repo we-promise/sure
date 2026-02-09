@@ -24,11 +24,11 @@ class TransactionsController < ApplicationController
 
     @pagy, @transactions = pagy(base_scope, limit: safe_per_page)
 
-    # Load projected recurring transactions for next month
+    # Load projected recurring transactions for next 10 days
     @projected_recurring = Current.family.recurring_transactions
                                   .active
                                   .where("next_expected_date <= ? AND next_expected_date >= ?",
-                                         1.month.from_now.to_date,
+                                         10.days.from_now.to_date,
                                          Date.current)
                                   .includes(:merchant)
   end

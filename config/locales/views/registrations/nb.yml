@@ -24,3 +24,8 @@ nb:
         da kunne konfigurere flere innstillinger i appen.
       welcome_title: Velkommen til Self Hosted %{product_name}!
       password_placeholder: Angi passordet ditt
+      password_requirements:
+        length: Minimum 8 tegn
+        case: Store og små bokstaver
+        number: Et tall (0-9)
+        special: "Et spesialtegn (!, @, #, $, %, etc)"

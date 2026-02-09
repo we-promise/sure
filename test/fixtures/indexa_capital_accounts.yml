@@ -1,0 +1,29 @@
+# Minimal fixtures for Indexa Capital accounts
+
+mutual_fund:
+  indexa_capital_item: configured_with_token
+  name: "Indexa Capital Mutual Fund (LPYH3MCQ)"
+  indexa_capital_account_id: "LPYH3MCQ"
+  account_number: "LPYH3MCQ"
+  currency: "EUR"
+  current_balance: 38905.2136
+  account_status: "active"
+  account_type: "mutual"
+  provider: "Indexa Capital"
+  raw_payload: {}
+  raw_holdings_payload: []
+  raw_activities_payload: []
+
+pension_plan:
+  indexa_capital_item: configured_with_token
+  name: "Indexa Capital Pension Plan (DCU8HWEP)"
+  indexa_capital_account_id: "DCU8HWEP"
+  account_number: "DCU8HWEP"
+  currency: "EUR"
+  current_balance: 70333.18
+  account_status: "active"
+  account_type: "pension"
+  provider: "Indexa Capital"
+  raw_payload: {}
+  raw_holdings_payload: []
+  raw_activities_payload: []

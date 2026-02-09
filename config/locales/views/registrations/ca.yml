@@ -24,3 +24,8 @@ ca:
       welcome_body: Per començar, has de registrar un compte nou. Després podràs configurar
         opcions addicionals dins l'aplicació.
       welcome_title: Benvingut/da a Self Hosted %{product_name}!
+      password_requirements:
+        length: Mínim 8 caràcters
+        case: Majúscules i minúscules
+        number: Un número (0-9)
+        special: "Un caràcter especial (!, @, #, $, %, etc)"

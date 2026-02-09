@@ -1,0 +1,254 @@
+---
+en:
+  indexa_capital_items:
+    # Model method strings (i18n for item_model.rb)
+    sync_status:
+      no_accounts: "No accounts found"
+      synced:
+        one: "%{count} account synced"
+        other: "%{count} accounts synced"
+      synced_with_setup: "%{linked} synced, %{unlinked} need setup"
+    institution_summary:
+      none: "No institutions connected"
+      count:
+        one: "%{count} institution"
+        other: "%{count} institutions"
+    errors:
+      provider_not_configured: "IndexaCapital provider is not configured"
+
+    # Syncer status messages
+    sync:
+      status:
+        importing: "Importing accounts from IndexaCapital..."
+        processing: "Processing holdings and activities..."
+        calculating: "Calculating balances..."
+        importing_data: "Importing account data..."
+        checking_setup: "Checking account configuration..."
+        needs_setup: "%{count} accounts need setup..."
+      success: "Sync started"
+
+    # Panel (settings view)
+    panel:
+      setup_instructions: "Setup instructions:"
+      step_1: "Visit your Indexa Capital dashboard to generate a read-only API token"
+      step_2: "Paste your API token below and click Save"
+      step_3: "After a successful connection, go to the Accounts tab to set up new accounts"
+      field_descriptions: "Field descriptions:"
+      optional: "(Optional)"
+      required: "(required)"
+      optional_with_default: "(optional, defaults to %{default_value})"
+      alternative_auth: "Or use username/password authentication instead..."
+      save_button: "Save Configuration"
+      update_button: "Update Configuration"
+      status_configured_html: "Configured and ready to use. Visit the <a href=\"%{accounts_path}\" class=\"link\">Accounts</a> tab to manage and set up accounts."
+      status_not_configured: "Not configured"
+      fields:
+        api_token:
+          label: "API Token"
+          description: "Your read-only API token from Indexa Capital dashboard"
+          placeholder_new: "Paste your API token here"
+          placeholder_update: "Enter new API token to update"
+        username:
+          label: "Username"
+          description: "Your Indexa Capital username/email"
+          placeholder_new: "Paste username here"
+          placeholder_update: "Enter new username to update"
+        document:
+          label: "Document ID"
+          description: "Your Indexa Capital document/ID"
+          placeholder_new: "Paste document ID here"
+          placeholder_update: "Enter new document ID to update"
+        password:
+          label: "Password"
+          description: "Your Indexa Capital password"
+          placeholder_new: "Paste password here"
+          placeholder_update: "Enter new password to update"
+
+    # CRUD success messages
+    create:
+      success: "IndexaCapital connection created successfully"
+    update:
+      success: "IndexaCapital connection updated"
+    destroy:
+      success: "IndexaCapital connection removed"
+    index:
+      title: "IndexaCapital Connections"
+
+    # Loading states
+    loading:
+      loading_message: "Loading IndexaCapital accounts..."
+      loading_title: "Loading"
+
+    # Account linking
+    link_accounts:
+      all_already_linked:
+        one: "The selected account (%{names}) is already linked"
+        other: "All %{count} selected accounts are already linked: %{names}"
+      api_error: "API error: %{message}"
+      invalid_account_names:
+        one: "Cannot link account with blank name"
+        other: "Cannot link %{count} accounts with blank names"
+      link_failed: "Failed to link accounts"
+      no_accounts_selected: "Please select at least one account"
+      no_api_key: "IndexaCapital credentials not found. Please configure them in Provider Settings."
+      partial_invalid: "Successfully linked %{created_count} account(s), %{already_linked_count} were already linked, %{invalid_count} account(s) had invalid names"
+      partial_success: "Successfully linked %{created_count} account(s). %{already_linked_count} account(s) were already linked: %{already_linked_names}"
+      success:
+        one: "Successfully linked %{count} account"
+        other: "Successfully linked %{count} accounts"
+
+    # Provider item display (used in _item partial)
+    indexa_capital_item:
+      accounts_need_setup: "Accounts need setup"
+      delete: "Delete connection"
+      deletion_in_progress: "deletion in progress..."
+      error: "Error"
+      more_accounts_available:
+        one: "%{count} more account available"
+        other: "%{count} more accounts available"
+      no_accounts_description: "This connection has no linked accounts yet."
+      no_accounts_title: "No accounts"
+      provider_name: "IndexaCapital"
+      requires_update: "Connection needs update"
+      setup_action: "Set Up New Accounts"
+      setup_description: "%{linked} of %{total} accounts linked. Choose account types for your newly imported IndexaCapital accounts."
+      setup_needed: "New accounts ready to set up"
+      status: "Synced %{timestamp} ago — %{summary}"
+      status_never: "Never synced"
+      syncing: "Syncing..."
+      total: "Total"
+      unlinked: "Unlinked"
+      update_credentials: "Update credentials"
+
+    # Select accounts view
+    select_accounts:
+      accounts_selected: "accounts selected"
+      api_error: "API error: %{message}"
+      cancel: "Cancel"
+      configure_name_in_provider: "Cannot import - please configure account name in IndexaCapital"
+      description: "Select the accounts you want to link to your %{product_name} account."
+      link_accounts: "Link selected accounts"
+      no_accounts_found: "No accounts found. Please check your IndexaCapital credentials."
+      no_api_key: "IndexaCapital credentials are not configured. Please configure them in Settings."
+      no_credentials_configured: "Please configure your IndexaCapital credentials first in Provider Settings."
+      no_name_placeholder: "(No name)"
+      title: "Select IndexaCapital Accounts"
+
+    # Select existing account view
+    select_existing_account:
+      account_already_linked: "This account is already linked to a provider"
+      all_accounts_already_linked: "All IndexaCapital accounts are already linked"
+      api_error: "API error: %{message}"
+      balance_label: "Balance:"
+      cancel: "Cancel"
+      cancel_button: "Cancel"
+      configure_name_in_provider: "Cannot import - please configure account name in IndexaCapital"
+      connect_hint: "Connect a IndexaCapital account to enable automatic syncing."
+      description: "Select a IndexaCapital account to link with this account. Transactions will be synced and deduplicated automatically."
+      header: "Link with IndexaCapital"
+      link_account: "Link account"
+      link_button: "Link this account"
+      linking_to: "Linking to:"
+      no_account_specified: "No account specified"
+      no_accounts: "No unlinked IndexaCapital accounts found."
+      no_accounts_found: "No IndexaCapital accounts found. Please check your credentials."
+      no_api_key: "IndexaCapital credentials are not configured. Please configure them in Settings."
+      no_credentials_configured: "Please configure your IndexaCapital credentials first in Provider Settings."
+      no_name_placeholder: "(No name)"
+      settings_link: "Go to Provider Settings"
+      subtitle: "Choose a IndexaCapital account"
+      title: "Link %{account_name} with IndexaCapital"
+
+    # Link existing account
+    link_existing_account:
+      account_already_linked: "This account is already linked to a provider"
+      api_error: "API error: %{message}"
+      invalid_account_name: "Cannot link account with blank name"
+      provider_account_already_linked: "This IndexaCapital account is already linked to another account"
+      provider_account_not_found: "IndexaCapital account not found"
+      missing_parameters: "Missing required parameters"
+      no_api_key: "IndexaCapital credentials not found. Please configure them in Provider Settings."
+      success: "Successfully linked %{account_name} with IndexaCapital"
+
+    # Setup accounts wizard
+    setup_accounts:
+      account_type_label: "Account Type:"
+      accounts_count:
+        one: "%{count} account available"
+        other: "%{count} accounts available"
+      all_accounts_linked: "All your IndexaCapital accounts have already been set up."
+      api_error: "API error: %{message}"
+      creating: "Creating accounts..."
+      fetch_failed: "Failed to Fetch Accounts"
+      import_selected: "Import selected accounts"
+      instructions: "Select the accounts you want to import from IndexaCapital. You can choose multiple accounts."
+      no_accounts: "No unlinked accounts found from this IndexaCapital connection."
+      no_accounts_to_setup: "No Accounts to Set Up"
+      no_api_key: "IndexaCapital credentials are not configured. Please check your connection settings."
+      select_all: "Select all"
+      account_types:
+        skip: "Skip this account"
+        depository: "Checking or Savings Account"
+        credit_card: "Credit Card"
+        investment: "Investment Account"
+        crypto: "Cryptocurrency Account"
+        loan: "Loan or Mortgage"
+        other_asset: "Other Asset"
+      subtype_labels:
+        depository: "Account Subtype:"
+        credit_card: ""
+        investment: "Investment Type:"
+        crypto: ""
+        loan: "Loan Type:"
+        other_asset: ""
+      subtype_messages:
+        credit_card: "Credit cards will be automatically set up as credit card accounts."
+        other_asset: "No additional options needed for Other Assets."
+        crypto: "Cryptocurrency accounts will be set up to track holdings and transactions."
+      subtypes:
+        depository:
+          checking: "Checking"
+          savings: "Savings"
+          hsa: "Health Savings Account"
+          cd: "Certificate of Deposit"
+          money_market: "Money Market"
+        investment:
+          brokerage: "Brokerage"
+          pension: "Pension"
+          retirement: "Retirement"
+          "401k": "401(k)"
+          roth_401k: "Roth 401(k)"
+          "403b": "403(b)"
+          tsp: "Thrift Savings Plan"
+          "529_plan": "529 Plan"
+          hsa: "Health Savings Account"
+          mutual_fund: "Mutual Fund"
+          ira: "Traditional IRA"
+          roth_ira: "Roth IRA"
+          angel: "Angel"
+        loan:
+          mortgage: "Mortgage"
+          student: "Student Loan"
+          auto: "Auto Loan"
+          other: "Other Loan"
+      balance: "Balance"
+      cancel: "Cancel"
+      choose_account_type: "Choose the correct account type for each IndexaCapital account:"
+      create_accounts: "Create Accounts"
+      creating_accounts: "Creating Accounts..."
+      historical_data_range: "Historical Data Range:"
+      subtitle: "Choose the correct account types for your imported accounts"
+      sync_start_date_help: "Select how far back you want to sync transaction history."
+      sync_start_date_label: "Start syncing transactions from:"
+      title: "Set Up Your IndexaCapital Accounts"
+
+    # Complete account setup
+    complete_account_setup:
+      all_skipped: "All accounts were skipped. No accounts were created."
+      creation_failed: "Failed to create accounts: %{error}"
+      no_accounts: "No accounts to set up."
+      success: "Successfully created %{count} account(s)."
+
+    # Preload accounts
+    preload_accounts:
+      no_credentials_configured: "Please configure your IndexaCapital credentials first in Provider Settings."

@@ -151,15 +151,10 @@ class LunchflowEntry::ProcessorTest < ActiveSupport::TestCase
     # Verify the entry has a generated external_id (since we can't have blank IDs)
     assert result.external_id.present?
     assert_match /^lunchflow_pending_[a-f0-9]{32}$/, result.external_id
-
-    # Note: Calling the processor again with identical data will trigger collision
-    # detection and create a SECOND entry (with _1 suffix). In real syncs, the
-    # importer's deduplication prevents this. For true idempotency testing,
-    # use the importer, not the processor directly.
   end
 
-  test "generates unique IDs for multiple pending transactions with identical attributes" do
-    # Two pending transactions with same merchant, amount, date (e.g., two Uber rides)
+  test "does not duplicate pending transaction when synced multiple times" do
+    # Create a pending transaction
     transaction_data = {
       id: "",
       accountId: 456,
@@ -178,9 +173,14 @@ class LunchflowEntry::ProcessorTest < ActiveSupport::TestCase
     ).process
 
     assert_not_nil result1
-    assert_match /^lunchflow_pending_[a-f0-9]{32}$/, result1.external_id
+    transaction1 = result1.entryable
+    assert transaction1.pending?
+    assert_equal true, transaction1.extra.dig("lunchflow", "pending")
 
-    # Process second transaction with IDENTICAL attributes
+    # Count entries before second sync
+    entries_before = @account.entries.where(source: "lunchflow").count
+
+    # Second sync - same pending transaction (still hasn't posted)
     result2 = LunchflowEntry::Processor.new(
       transaction_data,
       lunchflow_account: @lunchflow_account
@@ -188,15 +188,61 @@ class LunchflowEntry::ProcessorTest < ActiveSupport::TestCase
 
     assert_not_nil result2
 
-    # Should create a DIFFERENT entry (not update the first one)
-    assert_not_equal result1.id, result2.id, "Should create separate entries for distinct pending transactions"
+    # Should return the SAME entry, not create a duplicate
+    assert_equal result1.id, result2.id, "Should update existing pending transaction, not create duplicate"
 
-    # Second should have a counter appended to avoid collision
-    assert_match /^lunchflow_pending_[a-f0-9]{32}_\d+$/, result2.external_id
-    assert_not_equal result1.external_id, result2.external_id, "Should generate different external_ids to avoid collision"
+    # Verify no new entries were created
+    entries_after = @account.entries.where(source: "lunchflow").count
+    assert_equal entries_before, entries_after, "Should not create duplicate entry on re-sync"
+  end
 
-    # Verify both transactions exist
-    entries = @account.entries.where(source: "lunchflow", "entries.date": "2025-01-15")
-    assert_equal 2, entries.count, "Should have created 2 separate entries"
+  test "does not duplicate pending transaction when user has edited it" do
+    # User imports a pending transaction, then edits it (name, amount, date)
+    # Next sync should update the same entry, not create a duplicate
+    transaction_data = {
+      id: "",
+      accountId: 456,
+      amount: -25.50,
+      currency: "USD",
+      date: "2025-01-20",
+      merchant: "Coffee Shop",
+      description: "Morning coffee",
+      isPending: true
+    }
+
+    # First sync - import the pending transaction
+    result1 = LunchflowEntry::Processor.new(
+      transaction_data,
+      lunchflow_account: @lunchflow_account
+    ).process
+
+    assert_not_nil result1
+    original_external_id = result1.external_id
+
+    # User edits the transaction (common scenario)
+    result1.update!(name: "Coffee Shop Downtown", amount: 26.00)
+    result1.reload
+
+    # Verify the edits were applied
+    assert_equal "Coffee Shop Downtown", result1.name
+    assert_equal 26.00, result1.amount
+
+    entries_before = @account.entries.where(source: "lunchflow").count
+
+    # Second sync - same pending transaction data from provider (unchanged)
+    result2 = LunchflowEntry::Processor.new(
+      transaction_data,
+      lunchflow_account: @lunchflow_account
+    ).process
+
+    assert_not_nil result2
+
+    # Should return the SAME entry (same external_id, not a _1 suffix)
+    assert_equal result1.id, result2.id, "Should reuse existing entry even when user edited it"
+    assert_equal original_external_id, result2.external_id, "Should not create new external_id for user-edited entry"
+
+    # Verify no duplicate was created
+    entries_after = @account.entries.where(source: "lunchflow").count
+    assert_equal entries_before, entries_after, "Should not create duplicate when user has edited pending transaction"
   end
 end
