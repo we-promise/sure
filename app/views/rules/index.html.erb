@@ -1,5 +1,6 @@
-<header class="flex items-center justify-between">
-  <h1 class="text-primary text-xl font-medium">Rules</h1>
+<%= content_for :page_title, "Rules" %>
+
+<header class="flex items-center justify-end">
   <div class="flex items-center gap-2">
     <% if @rules.any? %>
       <%= render DS::Menu.new do |menu| %>

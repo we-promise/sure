@@ -1,7 +1,7 @@
-<header class="flex items-center justify-between">
-  <h1 class="text-primary text-xl font-medium"><%= t(".tags") %></h1>
+<%= content_for :page_title, t(".tags") %>
 
-<div class="flex items-center gap-2">
+<header class="flex items-center justify-end">
+  <div class="flex items-center gap-2">
   <%= render DS::Menu.new do |menu| %>
     <% menu.with_item(
           variant: "button",

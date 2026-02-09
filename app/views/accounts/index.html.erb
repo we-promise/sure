@@ -1,5 +1,6 @@
-<header class="flex justify-between items-center text-primary font-medium">
-  <h1 class="text-xl"><%= t(".accounts") %></h1>
+<%= content_for :page_title, t(".accounts") %>
+
+<header class="flex justify-end items-center text-primary font-medium">
   <div class="flex items-center gap-5">
     <div class="flex items-center gap-2">
       <%= icon(
