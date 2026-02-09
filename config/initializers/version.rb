@@ -16,7 +16,7 @@ module Sure
 
     private
       def semver
-        "0.6.8-alpha.6"
+        "0.6.8-alpha.7"
       end
   end
 end
