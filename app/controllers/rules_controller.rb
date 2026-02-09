@@ -133,6 +133,19 @@ class RulesController < ApplicationController
     redirect_to rules_path, notice: t("rules.clear_ai_cache.success")
   end
 
+  # Renders a combobox field for dynamic action type changes
+  def action_value_combobox
+    @action_type = params[:action_type]
+    @field_name = params[:field_name] || "rule[actions_attributes][0][value]"
+
+    # Create a temporary rule to access the registry and get options
+    temp_rule = Current.family.rules.build(resource_type: "transaction")
+    executor = temp_rule.registry.action_executors.find { |e| e.key == @action_type }
+    @options = executor&.options || []
+
+    render partial: "rule/actions/value_combobox", layout: false
+  end
+
   private
     def set_rule
       @rule = Current.family.rules.find(params[:id])

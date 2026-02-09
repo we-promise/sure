@@ -314,6 +314,7 @@ Rails.application.routes.draw do
       get :confirm_all
       post :apply_all
       post :clear_ai_cache
+      get :action_value_combobox
     end
   end
 
