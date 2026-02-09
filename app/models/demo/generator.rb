@@ -171,7 +171,7 @@ class Demo::Generator
         onboarded_at: onboarded ? Time.current : nil
       )
 
-      # Member user
+      # Family member user
       family.users.create!(
         email: "partner_#{email}",
         first_name: "Eve",

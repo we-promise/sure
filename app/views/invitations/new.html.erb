@@ -11,6 +11,7 @@
       <%= form.select :role,
         options_for_select([
           [t(".role_member"), "member"],
+          [t(".role_guest", default: "Guest"), "guest"],
           [t(".role_admin"), "admin"]
         ]),
         {},

@@ -503,6 +503,7 @@ Rails.application.routes.draw do
   terms_url = ENV["LEGAL_TERMS_URL"].presence
   get "privacy", to: privacy_url ? redirect(privacy_url) : "pages#privacy"
   get "terms", to: terms_url ? redirect(terms_url) : "pages#terms"
+  get "intro", to: "pages#intro"
 
   # Admin namespace for super admin functionality
   namespace :admin do

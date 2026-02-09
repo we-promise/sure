@@ -104,11 +104,12 @@ class SsoProvider < ApplicationRecord
     end
 
     def validate_default_role_setting
-      default_role = settings&.dig("default_role")
+      default_role = settings&.dig("default_role") || settings&.dig(:default_role)
+      default_role = default_role.to_s
       return if default_role.blank?
 
       unless User.roles.key?(default_role)
-        errors.add(:settings, "default_role must be member, admin, or super_admin")
+        errors.add(:settings, "default_role must be guest, member, admin, or super_admin")
       end
     end
 
