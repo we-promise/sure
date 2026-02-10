@@ -80,6 +80,27 @@ class FamilyTest < ActiveSupport::TestCase
     end
   end
 
+  test "investment_contributions_category reuses legacy category with wrong locale" do
+    family = families(:dylan_family)
+    family.update!(locale: "fr")
+    family.categories.where(name: [ "Investment Contributions", "Contributions aux investissements" ]).destroy_all
+
+    # Simulate legacy: category was created with English name (old bug behavior)
+    legacy_category = family.categories.create!(
+      name: "Investment Contributions",
+      color: "#0d9488",
+      classification: "expense",
+      lucide_icon: "trending-up"
+    )
+
+    # Should find and reuse the legacy category, updating its name to French
+    assert_no_difference "Category.count" do
+      result = family.investment_contributions_category
+      assert_equal legacy_category.id, result.id
+      assert_equal "Contributions aux investissements", result.name
+    end
+  end
+
   test "available_merchants includes family merchants without transactions" do
     family = families(:dylan_family)
 

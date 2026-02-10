@@ -111,6 +111,19 @@ class Family < ApplicationRecord
   # This is used for auto-categorizing transfers to investment accounts.
   # Always uses the family's locale to ensure consistent category naming across all users.
   def investment_contributions_category
+    # Check if any legacy category exists (created under old request-locale behavior)
+    existing = categories.find_by(name: Category.all_investment_contributions_names)
+
+    if existing
+      # Update legacy category to use family's locale name if needed
+      I18n.with_locale(locale) do
+        correct_name = Category.investment_contributions_name
+        existing.update!(name: correct_name) unless existing.name == correct_name
+      end
+      return existing
+    end
+
+    # Create new category using family's locale
     I18n.with_locale(locale) do
       categories.find_or_create_by!(name: Category.investment_contributions_name) do |cat|
         cat.color = "#0d9488"
@@ -119,6 +132,7 @@ class Family < ApplicationRecord
       end
     end
   rescue ActiveRecord::RecordNotUnique, ActiveRecord::RecordInvalid
+    # Handle race condition: another process created the category
     I18n.with_locale(locale) do
       categories.find_by(name: Category.investment_contributions_name)
     end
