@@ -11,7 +11,7 @@ class PropertiesEditTest < ApplicationSystemTestCase
     create_new_property_account
   end
 
-  test "test property subtype persistence" do
+  test "can persist property subtype" do
     click_link "[system test] Property Account"
     find("[data-testid='account-menu']").click
     click_on "Edit"
