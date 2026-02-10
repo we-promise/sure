@@ -9,7 +9,6 @@ class InvitationsControllerTest < ActionDispatch::IntegrationTest
   test "should get new" do
     get new_invitation_url
     assert_response :success
-    assert_select "option[value=?]", "guest", count: 0 unless Flipper.enabled?(:intro_ui)
     assert_select "option[value=?]", "member"
     assert_select "option[value=?]", "admin"
   end

@@ -1,25 +1,21 @@
-<header class="flex justify-between items-center text-primary font-medium">
-  <h1 class="text-xl"><%= t(".accounts") %></h1>
-  <div class="flex items-center gap-5">
-    <div class="flex items-center gap-2">
-      <%= icon(
-            "refresh-cw",
-            as_button: true,
-            size: "sm",
-            href: sync_all_accounts_path,
-            disabled: Current.family.syncing?,
-            frame: :_top
-          ) %>
-      <%= render DS::Link.new(
-        text: "New account",
-        href: new_account_path(return_to: accounts_path),
-        variant: "primary",
-        icon: "plus",
-        frame: :modal
+<%= content_for :page_title, t(".accounts") %>
+<%= content_for :page_actions do %>
+  <%= icon(
+        "refresh-cw",
+        as_button: true,
+        size: "sm",
+        href: sync_all_accounts_path,
+        disabled: Current.family.syncing?,
+        frame: :_top
       ) %>
-    </div>
-  </div>
-</header>
+  <%= render DS::Link.new(
+    text: "New account",
+    href: new_account_path(return_to: accounts_path),
+    variant: "primary",
+    icon: "plus",
+    frame: :modal
+  ) %>
+<% end %>
 
 <% if @manual_accounts.empty? && @plaid_items.empty? && @simplefin_items.empty? && @lunchflow_items.empty? && @enable_banking_items.empty? && @coinstats_items.empty? && @coinbase_items.empty? && @mercury_items.empty? && @snaptrade_items.empty? && @indexa_capital_items.empty? %>
   <%= render "empty" %>

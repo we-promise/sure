@@ -30,6 +30,7 @@ class IndexaCapitalItem < ApplicationRecord
   has_many :accounts, through: :indexa_capital_accounts
 
   scope :active, -> { where(scheduled_for_deletion: false) }
+  scope :syncable, -> { active }
   scope :ordered, -> { order(created_at: :desc) }
   scope :needs_update, -> { where(status: :requires_update) }
 

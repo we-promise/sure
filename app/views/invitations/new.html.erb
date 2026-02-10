@@ -10,7 +10,7 @@
 
       <%= form.select :role,
         options_for_select([
-          (Flipper.enabled?(:intro_ui) ? [t(".role_guest"), "guest"] : nil),
+          (FeatureFlags.intro_ui? ? [t(".role_guest"), "guest"] : nil),
           [t(".role_member"), "member"],
           [t(".role_admin"), "admin"]
         ].compact),

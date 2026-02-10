@@ -23,6 +23,12 @@ class SsoProvider < ApplicationRecord
   }
   validates :label, presence: true
   validates :enabled, inclusion: { in: [ true, false ] }
+  validates :icon, format: {
+    with: /\A\S+\z/,
+    message: "cannot be blank or contain only whitespace"
+  }, allow_nil: true
+
+  before_validation :normalize_icon
 
   # Strategy-specific validations
   validate :validate_oidc_fields, if: -> { strategy == "openid_connect" }
@@ -44,7 +50,7 @@ class SsoProvider < ApplicationRecord
       strategy: strategy,
       name: name,
       label: label,
-      icon: icon,
+      icon: icon.present? && icon.strip.present? ? icon.strip : nil,
       issuer: issuer,
       client_id: client_id,
       client_secret: client_secret,
@@ -54,6 +60,10 @@ class SsoProvider < ApplicationRecord
   end
 
   private
+    def normalize_icon
+      self.icon = icon.to_s.strip.presence
+    end
+
     def validate_oidc_fields
       if issuer.blank?
         errors.add(:issuer, "is required for OpenID Connect providers")
