@@ -28,6 +28,7 @@ class CoinstatsItem < ApplicationRecord
   has_many :accounts, through: :coinstats_accounts
 
   scope :active, -> { where(scheduled_for_deletion: false) }
+  scope :syncable, -> { active }
   scope :ordered, -> { order(created_at: :desc) }
   scope :needs_update, -> { where(status: :requires_update) }
 
