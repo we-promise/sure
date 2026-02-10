@@ -109,14 +109,19 @@ class Family < ApplicationRecord
 
   # Returns the Investment Contributions category for this family, creating it if it doesn't exist.
   # This is used for auto-categorizing transfers to investment accounts.
+  # Always uses the family's locale to ensure consistent category naming across all users.
   def investment_contributions_category
-    categories.find_or_create_by!(name: Category.investment_contributions_name) do |cat|
-      cat.color = "#0d9488"
-      cat.classification = "expense"
-      cat.lucide_icon = "trending-up"
+    I18n.with_locale(locale) do
+      categories.find_or_create_by!(name: Category.investment_contributions_name) do |cat|
+        cat.color = "#0d9488"
+        cat.classification = "expense"
+        cat.lucide_icon = "trending-up"
+      end
     end
   rescue ActiveRecord::RecordNotUnique, ActiveRecord::RecordInvalid
-    categories.find_by(name: Category.investment_contributions_name)
+    I18n.with_locale(locale) do
+      categories.find_by(name: Category.investment_contributions_name)
+    end
   end
 
   # Returns account IDs for tax-advantaged accounts (401k, IRA, HSA, etc.)
