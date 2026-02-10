@@ -1,7 +1,5 @@
-<header class="flex items-center justify-between">
-  <h1 class="text-primary text-xl font-medium"><%= t(".tags") %></h1>
-
-<div class="flex items-center gap-2">
+<%= content_for :page_title, t(".tags") %>
+<%= content_for :page_actions do %>
   <%= render DS::Menu.new do |menu| %>
     <% menu.with_item(
           variant: "button",
@@ -12,17 +10,14 @@
           confirm: CustomConfirm.for_resource_deletion("all tags", high_severity: true)) %>
   <% end %>
 
-    <%= render DS::Link.new(
-      text: t(".new"),
-      variant: "primary",
-      href: new_tag_path,
-      icon: "plus",
-      frame: :modal
-    ) %>
-
-</div>
-
-</header>
+  <%= render DS::Link.new(
+    text: t(".new"),
+    variant: "primary",
+    href: new_tag_path,
+    icon: "plus",
+    frame: :modal
+  ) %>
+<% end %>
 
 <div class="bg-container rounded-xl shadow-border-xs p-4">
   <% if @tags.any? %>

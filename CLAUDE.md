@@ -362,3 +362,16 @@ end
 ```bash
 RAILS_ENV=test bundle exec rake rswag:specs:swaggerize
 ```
+
+### Post-commit API consistency (issue #944)
+After every API endpoint commit, ensure:
+
+1. **Minitest behavioral coverage** — Add or update tests in `test/controllers/api/v1/{resource}_controller_test.rb`. Use API key and `api_headers` (X-Api-Key). Cover index/show, CRUD where relevant, 401/403/422/404. Do not rely on rswag for behavioral assertions.
+
+2. **rswag docs-only** — Do not add `expect(...)` or `assert_*` in `spec/requests/api/v1/`. Use `run_test!` only so specs document request/response and regenerate `docs/api/openapi.yaml`.
+
+3. **Same API key auth in rswag** — Every request spec in `spec/requests/api/v1/` must use the same API key pattern (`ApiKey.generate_secure_key`, `ApiKey.create!(...)`, `let(:'X-Api-Key') { api_key.plain_key }`). Do not use Doorkeeper/OAuth in those specs so generated docs stay consistent.
+
+Full checklist and pattern: [.cursor/rules/api-endpoint-consistency.mdc](.cursor/rules/api-endpoint-consistency.mdc).
+
+To verify the implementation: `ruby test/support/verify_api_endpoint_consistency.rb`. To scan the current APIs for violations: `ruby test/support/verify_api_endpoint_consistency.rb --compliance`.

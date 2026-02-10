@@ -96,10 +96,6 @@ gem "omniauth-saml", "~> 2.1"
 gem "aasm"
 gem "after_commit_everywhere", "~> 1.0"
 
-# Feature flags
-gem "flipper"
-gem "flipper-active_record"
-
 # AI
 gem "ruby-openai"
 gem "langfuse-ruby", "~> 0.1.4", require: "langfuse"
