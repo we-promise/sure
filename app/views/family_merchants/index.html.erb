@@ -1,21 +1,18 @@
-<header class="flex items-center justify-between">
-  <h1 class="text-primary text-xl font-medium"><%= t(".title") %></h1>
-
-  <div class="flex items-center gap-2">
-    <%= render DS::Link.new(
-      text: t(".merge"),
-      variant: "outline",
-      href: merge_family_merchants_path,
-      frame: :modal
-    ) %>
-    <%= render DS::Link.new(
-      text: t(".new"),
-      variant: "primary",
-      href: new_family_merchant_path,
-      frame: :modal
-    ) %>
-  </div>
-</header>
+<%= content_for :page_title, t(".title") %>
+<%= content_for :page_actions do %>
+  <%= render DS::Link.new(
+    text: t(".merge"),
+    variant: "outline",
+    href: merge_family_merchants_path,
+    frame: :modal
+  ) %>
+  <%= render DS::Link.new(
+    text: t(".new"),
+    variant: "primary",
+    href: new_family_merchant_path,
+    frame: :modal
+  ) %>
+<% end %>
 
 <div class="bg-container rounded-xl shadow-border-xs p-4 space-y-6">
   <section class="space-y-3">
