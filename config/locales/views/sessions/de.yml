@@ -18,4 +18,5 @@ de:
       title: Melde dich bei deinem Konto an
       password_placeholder: Passwort eingeben
       openid_connect: Mit OpenID Connect anmelden
+      oidc: Mit OpenID Connect anmelden
       google_auth_connect: Mit Google anmelden

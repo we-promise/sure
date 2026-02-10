@@ -18,10 +18,7 @@ class ChatService {
 
       final response = await http.get(
         url,
-        headers: {
-          'Authorization': 'Bearer $accessToken',
-          'Accept': 'application/json',
-        },
+        headers: ApiConfig.getAuthHeaders(accessToken),
       ).timeout(const Duration(seconds: 30));
 
       if (response.statusCode == 200) {
@@ -78,10 +75,7 @@ class ChatService {
 
       final response = await http.get(
         url,
-        headers: {
-          'Authorization': 'Bearer $accessToken',
-          'Accept': 'application/json',
-        },
+        headers: ApiConfig.getAuthHeaders(accessToken),
       ).timeout(const Duration(seconds: 30));
 
       if (response.statusCode == 200) {
@@ -144,8 +138,7 @@ class ChatService {
       final response = await http.post(
         url,
         headers: {
-          'Authorization': 'Bearer $accessToken',
-          'Accept': 'application/json',
+          ...ApiConfig.getAuthHeaders(accessToken),
           'Content-Type': 'application/json',
         },
         body: jsonEncode(body),
@@ -199,8 +192,7 @@ class ChatService {
       final response = await http.post(
         url,
         headers: {
-          'Authorization': 'Bearer $accessToken',
-          'Accept': 'application/json',
+          ...ApiConfig.getAuthHeaders(accessToken),
           'Content-Type': 'application/json',
         },
         body: jsonEncode({
@@ -255,8 +247,7 @@ class ChatService {
       final response = await http.patch(
         url,
         headers: {
-          'Authorization': 'Bearer $accessToken',
-          'Accept': 'application/json',
+          ...ApiConfig.getAuthHeaders(accessToken),
           'Content-Type': 'application/json',
         },
         body: jsonEncode({
@@ -309,10 +300,7 @@ class ChatService {
 
       final response = await http.delete(
         url,
-        headers: {
-          'Authorization': 'Bearer $accessToken',
-          'Accept': 'application/json',
-        },
+        headers: ApiConfig.getAuthHeaders(accessToken),
       ).timeout(const Duration(seconds: 30));
 
       if (response.statusCode == 204) {
@@ -356,10 +344,7 @@ class ChatService {
 
       final response = await http.post(
         url,
-        headers: {
-          'Authorization': 'Bearer $accessToken',
-          'Accept': 'application/json',
-        },
+        headers: ApiConfig.getAuthHeaders(accessToken),
       ).timeout(const Duration(seconds: 30));
 
       if (response.statusCode == 202) {

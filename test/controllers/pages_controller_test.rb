@@ -5,11 +5,27 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
 
   setup do
     sign_in @user = users(:family_admin)
+    @intro_user = users(:intro_user)
     @family = @user.family
   end
 
   test "dashboard" do
     get root_path
+    assert_response :ok
+  end
+
+  test "intro page requires guest role" do
+    get intro_path
+
+    assert_redirected_to root_path
+    assert_equal "Intro is only available to guest users.", flash[:alert]
+  end
+
+  test "intro page is accessible for guest users" do
+    sign_in @intro_user
+
+    get intro_path
+
     assert_response :ok
   end
 

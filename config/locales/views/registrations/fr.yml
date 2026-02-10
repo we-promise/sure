@@ -23,3 +23,8 @@ fr:
       welcome_body: Pour commencer, vous devez créer un nouveau compte. Vous pourrez ensuite configurer des paramètres supplémentaires à l'intérieur de l'application.
       welcome_title: Bienvenue sur %{product_name} !
       password_placeholder: Entrez votre mot de passe
+      password_requirements:
+        length: Minimum 8 caractères
+        case: Majuscules et minuscules
+        number: Un chiffre (0-9)
+        special: "Un caractère spécial (!, @, #, $, %, etc)"

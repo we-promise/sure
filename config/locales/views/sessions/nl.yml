@@ -24,6 +24,7 @@ nl:
       title: "%{product_name}"
       password_placeholder: Voer uw wachtwoord in
       openid_connect: Inloggen met OpenID Connect
+      oidc: Inloggen met OpenID Connect
       google_auth_connect: Inloggen met Google
       local_login_admin_only: Lokale login is beperkt tot beheerders.
       no_auth_methods_enabled: Er zijn momenteel geen authenticatiemethoden ingeschakeld. Neem contact op met een beheerder.

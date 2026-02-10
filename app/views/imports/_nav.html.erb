@@ -1,18 +1,29 @@
 <%# locals: (import:) %>
 
-<% steps = [
-  { name: "Upload", path: import_upload_path(import), is_complete: import.uploaded?, step_number: 1 },
-  { name: "Configure", path: import_configuration_path(import), is_complete: import.configured?, step_number: 2 },
-  { name: "Clean", path: import_clean_path(import), is_complete: import.cleaned?, step_number: 3 },
-  { name: "Map", path: import_confirm_path(import), is_complete: import.publishable?, step_number: 4 },
-  { name: "Confirm", path: import_path(import), is_complete: import.complete?, step_number: 5 }
-].reject { |step| step[:name] == "Map" && import.mapping_steps.empty? } %>
+<% steps = if import.is_a?(PdfImport)
+  # PDF imports have a simplified flow: Upload -> Confirm
+  # Upload/Configure/Clean are always complete for processed PDF imports
+  [
+    { name: t("imports.steps.upload", default: "Upload"), path: nil, is_complete: import.pdf_uploaded?, step_number: 1 },
+    { name: t("imports.steps.configure", default: "Configure"), path: nil, is_complete: import.configured?, step_number: 2 },
+    { name: t("imports.steps.clean", default: "Clean"), path: nil, is_complete: import.cleaned?, step_number: 3 },
+    { name: t("imports.steps.confirm", default: "Confirm"), path: import_path(import), is_complete: import.complete?, step_number: 4 }
+  ]
+else
+  [
+    { name: t("imports.steps.upload", default: "Upload"), path: import_upload_path(import), is_complete: import.uploaded?, step_number: 1 },
+    { name: t("imports.steps.configure", default: "Configure"), path: import_configuration_path(import), is_complete: import.configured?, step_number: 2 },
+    { name: t("imports.steps.clean", default: "Clean"), path: import_clean_path(import), is_complete: import.cleaned?, step_number: 3 },
+    { name: t("imports.steps.map", default: "Map"), key: "Map", path: import_confirm_path(import), is_complete: import.publishable?, step_number: 4 },
+    { name: t("imports.steps.confirm", default: "Confirm"), path: import_path(import), is_complete: import.complete?, step_number: 5 }
+  ].reject { |step| step[:key] == "Map" && import.mapping_steps.empty? }
+end %>
 
 <% content_for :mobile_import_progress do %>
-  <% active_step = steps.detect { |s| request.path.eql?(s[:path]) } %>
-  <% if active_step.present? %>
+  <% active_step_index = steps.index { |s| request.path.eql?(s[:match_path] || s[:path]) } %>
+  <% if active_step_index %>
     <div class="md:hidden text-center text-secondary text-md my-2">
-      <span class="text-gray-500">Step <%= active_step[:step_number] %> of <%= steps.size %></span>
+      <span class="text-secondary"><%= t("imports.steps.progress", step: active_step_index + 1, total: steps.size, default: "Step %{step} of %{total}") %></span>
     </div>
   <% end %>
 <% end %>
@@ -20,7 +31,7 @@
 <ul class="hidden md:flex items-center gap-2">
   <% steps.each_with_index do |step, idx| %>
     <li class="flex items-center gap-2 group">
-      <% is_current = request.path == step[:path] %>
+      <% is_current = request.path == (step[:match_path] || step[:path]) %>
 
       <% text_class = if is_current
                   "text-primary"
@@ -33,7 +44,7 @@
                   step[:is_complete] ? "bg-green-600/10 border-alpha-black-25" : "bg-container-inset"
                 end %>
 
-      <%= link_to step[:path], class: "flex items-center gap-3" do %>
+      <% step_content = capture do %>
         <div class="flex items-center gap-2 text-sm font-medium <%= text_class %>">
           <span class="<%= step_class %> w-7 h-7 rounded-full shrink-0 inline-flex items-center justify-center border border-transparent">
             <%= step[:is_complete] && !is_current ? icon("check", size: "sm", color: "current") : idx + 1 %>
@@ -41,6 +52,11 @@
 
           <span><%= step[:name] %></span>
         </div>
+      <% end %>
+      <% if step[:path].present? %>
+        <%= link_to step[:path], class: "flex items-center gap-3" do %><%= step_content %><% end %>
+      <% else %>
+        <div class="flex items-center gap-3"><%= step_content %></div>
       <% end %>
 
       <hr class="border border-secondary w-12 group-last:hidden">

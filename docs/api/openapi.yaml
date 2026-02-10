@@ -54,6 +54,13 @@ components:
               type: string
           - type: object
           nullable: true
+        errors:
+          type: array
+          items:
+            type: string
+          nullable: true
+          description: Validation error messages (alternative to details used by trades,
+            valuations, etc.)
     ToolCall:
       type: object
       required:
@@ -486,7 +493,6 @@ components:
         id:
           type: string
           format: uuid
-          description: Entry ID for the valuation
         date:
           type: string
           format: date
@@ -693,6 +699,154 @@ components:
       properties:
         data:
           "$ref": "#/components/schemas/ImportDetail"
+    Trade:
+      type: object
+      required:
+      - id
+      - date
+      - amount
+      - currency
+      - name
+      - qty
+      - price
+      - account
+      - created_at
+      - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        date:
+          type: string
+          format: date
+        amount:
+          type: string
+        currency:
+          type: string
+        name:
+          type: string
+        notes:
+          type: string
+          nullable: true
+        qty:
+          type: string
+        price:
+          type: string
+        investment_activity_label:
+          type: string
+          nullable: true
+        account:
+          "$ref": "#/components/schemas/Account"
+        security:
+          type: object
+          nullable: true
+          properties:
+            id:
+              type: string
+              format: uuid
+            ticker:
+              type: string
+            name:
+              type: string
+              nullable: true
+        category:
+          type: object
+          nullable: true
+          properties:
+            id:
+              type: string
+              format: uuid
+            name:
+              type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    TradeCollection:
+      type: object
+      required:
+      - trades
+      - pagination
+      properties:
+        trades:
+          type: array
+          items:
+            "$ref": "#/components/schemas/Trade"
+        pagination:
+          "$ref": "#/components/schemas/Pagination"
+    Holding:
+      type: object
+      required:
+      - id
+      - date
+      - qty
+      - price
+      - amount
+      - currency
+      - account
+      - security
+      - created_at
+      - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        date:
+          type: string
+          format: date
+        qty:
+          type: string
+          description: Quantity as string (JSON number or string from API)
+        price:
+          type: string
+          description: Price as string (JSON number or string from API)
+        amount:
+          type: string
+        currency:
+          type: string
+        cost_basis_source:
+          type: string
+          nullable: true
+        account:
+          "$ref": "#/components/schemas/Account"
+        security:
+          type: object
+          required:
+          - id
+          - ticker
+          - name
+          properties:
+            id:
+              type: string
+              format: uuid
+            ticker:
+              type: string
+            name:
+              type: string
+              nullable: true
+        avg_cost:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    HoldingCollection:
+      type: object
+      required:
+      - holdings
+      - pagination
+      properties:
+        holdings:
+          type: array
+          items:
+            "$ref": "#/components/schemas/Holding"
+        pagination:
+          "$ref": "#/components/schemas/Pagination"
 paths:
   "/api/v1/accounts":
     get:
@@ -1009,6 +1163,119 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
+  "/api/v1/holdings":
+    get:
+      summary: List holdings
+      tags:
+      - Holdings
+      security:
+      - apiKeyAuth: []
+      parameters:
+      - name: page
+        in: query
+        required: false
+        description: 'Page number (default: 1)'
+        schema:
+          type: integer
+      - name: per_page
+        in: query
+        required: false
+        description: 'Items per page (default: 25, max: 100)'
+        schema:
+          type: integer
+      - name: account_id
+        in: query
+        required: false
+        description: Filter by account ID
+        schema:
+          type: string
+      - name: account_ids
+        in: query
+        required: false
+        description: Filter by multiple account IDs
+        schema:
+          type: array
+          items:
+            type: string
+      - name: date
+        in: query
+        required: false
+        description: Filter by exact date
+        schema:
+          type: string
+          format: date
+      - name: start_date
+        in: query
+        required: false
+        description: Filter holdings from this date (inclusive)
+        schema:
+          type: string
+          format: date
+      - name: end_date
+        in: query
+        required: false
+        description: Filter holdings until this date (inclusive)
+        schema:
+          type: string
+          format: date
+      - name: security_id
+        in: query
+        required: false
+        description: Filter by security ID
+        schema:
+          type: string
+      responses:
+        '200':
+          description: holdings paginated
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/HoldingCollection"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '422':
+          description: invalid date filter
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+  "/api/v1/holdings/{id}":
+    parameters:
+    - name: id
+      in: path
+      description: Holding ID
+      required: true
+      schema:
+        type: string
+    get:
+      summary: Retrieve holding
+      tags:
+      - Holdings
+      security:
+      - apiKeyAuth: []
+      responses:
+        '200':
+          description: holding retrieved
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Holding"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '404':
+          description: holding not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
   "/api/v1/imports":
     get:
       summary: List imports
@@ -1309,6 +1576,277 @@ paths:
           description: tag deleted
         '404':
           description: tag not found
+  "/api/v1/trades":
+    get:
+      summary: List trades
+      tags:
+      - Trades
+      security:
+      - apiKeyAuth: []
+      parameters:
+      - name: page
+        in: query
+        required: false
+        description: 'Page number (default: 1)'
+        schema:
+          type: integer
+      - name: per_page
+        in: query
+        required: false
+        description: 'Items per page (default: 25, max: 100)'
+        schema:
+          type: integer
+      - name: account_id
+        in: query
+        required: false
+        description: Filter by account ID
+        schema:
+          type: string
+      - name: account_ids
+        in: query
+        required: false
+        description: Filter by multiple account IDs
+        schema:
+          type: array
+          items:
+            type: string
+      - name: start_date
+        in: query
+        required: false
+        description: Filter trades from this date (inclusive)
+        schema:
+          type: string
+          format: date
+      - name: end_date
+        in: query
+        required: false
+        description: Filter trades until this date (inclusive)
+        schema:
+          type: string
+          format: date
+      responses:
+        '200':
+          description: trades paginated
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/TradeCollection"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '422':
+          description: invalid date filter
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+    post:
+      summary: Create trade
+      tags:
+      - Trades
+      security:
+      - apiKeyAuth: []
+      parameters: []
+      responses:
+        '201':
+          description: trade created
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Trade"
+        '422':
+          description: validation error - missing security identifier
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '404':
+          description: account not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                trade:
+                  type: object
+                  properties:
+                    account_id:
+                      type: string
+                      format: uuid
+                      description: Account ID (required)
+                    date:
+                      type: string
+                      format: date
+                      description: Trade date (required)
+                    qty:
+                      type: number
+                      description: Quantity (required)
+                    price:
+                      type: number
+                      description: Price (required)
+                    type:
+                      type: string
+                      enum:
+                      - buy
+                      - sell
+                      description: Trade type (required)
+                    security_id:
+                      type: string
+                      format: uuid
+                      description: Security ID (one of security_id, ticker, manual_ticker
+                        required)
+                    ticker:
+                      type: string
+                      description: Ticker symbol
+                    manual_ticker:
+                      type: string
+                      description: Manual ticker for offline securities
+                    currency:
+                      type: string
+                      description: Currency (defaults to account currency)
+                    investment_activity_label:
+                      type: string
+                      description: Activity label (e.g. Buy, Sell)
+                    category_id:
+                      type: string
+                      format: uuid
+                      description: Category ID
+                  required:
+                  - account_id
+                  - date
+                  - qty
+                  - price
+                  - type
+              required:
+              - trade
+        required: true
+  "/api/v1/trades/{id}":
+    parameters:
+    - name: id
+      in: path
+      description: Trade ID
+      required: true
+      schema:
+        type: string
+    get:
+      summary: Retrieve trade
+      tags:
+      - Trades
+      security:
+      - apiKeyAuth: []
+      responses:
+        '200':
+          description: trade retrieved
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Trade"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '404':
+          description: trade not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+    patch:
+      summary: Update trade
+      tags:
+      - Trades
+      security:
+      - apiKeyAuth: []
+      responses:
+        '200':
+          description: trade updated
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Trade"
+        '404':
+          description: trade not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '422':
+          description: validation error
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                trade:
+                  type: object
+                  description: Flat params; controller builds internal structure. When qty/price are updated, type or nature controls sign; if omitted, existing trade direction is preserved.
+                  properties:
+                    date:
+                      type: string
+                      format: date
+                    name:
+                      type: string
+                    amount:
+                      type: number
+                    currency:
+                      type: string
+                    notes:
+                      type: string
+                    nature:
+                      type: string
+                      enum:
+                      - inflow
+                      - outflow
+                    type:
+                      type: string
+                      enum:
+                      - buy
+                      - sell
+                      description: Determines sign when qty/price are updated.
+                    qty:
+                      type: number
+                    price:
+                      type: number
+                    investment_activity_label:
+                      type: string
+                    category_id:
+                      type: string
+                      format: uuid
+        required: true
+    delete:
+      summary: Delete trade
+      tags:
+      - Trades
+      security:
+      - apiKeyAuth: []
+      responses:
+        '200':
+          description: trade deleted
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/DeleteResponse"
+        '404':
+          description: trade not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
   "/api/v1/transactions":
     get:
       summary: List transactions

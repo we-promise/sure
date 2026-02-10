@@ -11,7 +11,7 @@ class Invitation < ApplicationRecord
   end
 
   validates :email, presence: true, format: { with: URI::MailTo::EMAIL_REGEXP }
-  validates :role, presence: true, inclusion: { in: %w[admin member] }
+  validates :role, presence: true, inclusion: { in: %w[admin member guest] }
   validates :token, presence: true, uniqueness: true
   validates_uniqueness_of :email, scope: :family_id, message: "has already been invited to this family"
   validate :inviter_is_admin
@@ -26,7 +26,25 @@ class Invitation < ApplicationRecord
     accepted_at.nil? && expires_at > Time.current
   end
 
+  def accept_for(user)
+    return false if user.blank?
+    return false unless pending?
+    return false unless emails_match?(user)
+
+    transaction do
+      user.update!(family_id: family_id, role: role.to_s)
+      update!(accepted_at: Time.current)
+    end
+    true
+  end
+
   private
+
+    def emails_match?(user)
+      inv_email = email.to_s.strip.downcase
+      usr_email = user.email.to_s.strip.downcase
+      inv_email.present? && usr_email.present? && inv_email == usr_email
+    end
 
     def generate_token
       loop do

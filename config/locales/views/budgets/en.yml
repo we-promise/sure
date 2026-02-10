@@ -28,3 +28,6 @@ en:
         partial: "Partially funded"
         pending: "Pending"
         manage_goals: "Manage goals"
+    name:
+      custom_range: "%{start} - %{end_date}"
+      month_year: "%{month}"

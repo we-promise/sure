@@ -14,12 +14,13 @@ class LunchflowItem < ApplicationRecord
   validates :api_key, presence: true, on: :create
 
   belongs_to :family
-  has_one_attached :logo
+  has_one_attached :logo, dependent: :purge_later
 
   has_many :lunchflow_accounts, dependent: :destroy
   has_many :accounts, through: :lunchflow_accounts
 
   scope :active, -> { where(scheduled_for_deletion: false) }
+  scope :syncable, -> { active }
   scope :ordered, -> { order(created_at: :desc) }
   scope :needs_update, -> { where(status: :requires_update) }
 

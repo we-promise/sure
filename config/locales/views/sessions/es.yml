@@ -19,6 +19,7 @@ es:
       title: Inicia sesión en tu cuenta
       password_placeholder: Introduce tu contraseña
       openid_connect: Inicia sesión con OpenID Connect
+      oidc: Inicia sesión con OpenID Connect
       google_auth_connect: Inicia sesión con Google
       local_login_admin_only: El inicio de sesión local está restringido a administradores.
       no_auth_methods_enabled: No hay métodos de autenticación habilitados actualmente. Ponte en contacto con un administrador.

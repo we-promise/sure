@@ -1,0 +1,33 @@
+---
+zh-CN:
+  oidc_accounts:
+    link:
+      title_link: 关联 OIDC 账户
+      title_create: 创建账户
+      verify_heading: 验证您的身份
+      verify_description_html: "要关联您的 %{provider} 账户%{email_suffix}，请输入密码验证您的身份。"
+      email_suffix_html: "（<strong>%{email}</strong>）"
+      email_label: 电子邮箱
+      email_placeholder: 请输入您的电子邮箱
+      password_label: 密码
+      password_placeholder: 请输入您的密码
+      verify_hint: 这可确保只有您本人能够将外部账户关联到您的个人资料。
+      submit_link: 关联账户
+      create_heading: 创建新账户
+      create_description_html: "未找到使用电子邮箱 <strong>%{email}</strong> 的账户。点击下方使用您的 %{provider} 身份创建新账户。"
+      info_email: 电子邮箱：
+      info_name: 姓名：
+      submit_create: 创建账户
+      account_creation_disabled: 通过单点登录创建账户已禁用。请联系管理员。
+      cancel: 取消
+    new_user:
+      title: 完善您的账户
+      heading: 创建您的账户
+      description: 请确认您的信息以完成使用 %{provider} 身份创建账户。
+      email_label: 电子邮箱（来自 SSO 提供商）
+      first_name_label: 名
+      first_name_placeholder: 请输入您的名
+      last_name_label: 姓
+      last_name_placeholder: 请输入您的姓
+      submit: 创建账户
+      cancel: 取消

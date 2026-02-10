@@ -13,13 +13,20 @@ class MainNavigationScreen extends StatefulWidget {
 
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _currentIndex = 0;
+  final _dashboardKey = GlobalKey<DashboardScreenState>();
 
-  final List<Widget> _screens = [
-    const DashboardScreen(),
-    const ChatListScreen(),
-    const MoreScreen(),
-    const SettingsScreen(),
-  ];
+  late final List<Widget> _screens;
+
+  @override
+  void initState() {
+    super.initState();
+    _screens = [
+      DashboardScreen(key: _dashboardKey),
+      const ChatListScreen(),
+      const MoreScreen(),
+      const SettingsScreen(),
+    ];
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -34,6 +41,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
           setState(() {
             _currentIndex = index;
           });
+          // Reload preferences whenever switching back to dashboard
+          if (index == 0) {
+            _dashboardKey.currentState?.reloadPreferences();
+          }
         },
         destinations: const [
           NavigationDestination(
