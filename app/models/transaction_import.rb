@@ -30,17 +30,24 @@ class TransactionImport < Import
         # Use account's currency when no currency column was mapped in CSV, with family currency as fallback
         effective_currency = currency_col_label.present? ? row.currency : (mapped_account.currency.presence || family.currency)
 
-        # Check for duplicate transactions using the adapter's deduplication logic
-        # Pass claimed_entry_ids to exclude entries we've already matched in this import
-        # This ensures identical rows within the CSV are all imported as separate transactions
-        adapter = Account::ProviderImportAdapter.new(mapped_account)
-        duplicate_entry = adapter.find_duplicate_transaction(
-          date: row.date_iso,
-          amount: row.signed_amount,
-          currency: effective_currency,
-          name: row.name,
-          exclude_entry_ids: claimed_entry_ids
-        )
+        # Check for duplicate using external_id first, then fallback to adapter logic
+        duplicate_entry = if row.external_id.present?
+          # Search by external_id (scoped to account for safety)
+          mapped_account.entries.joins(:transaction)
+              .where(transactions: { external_id: row.external_id })
+              .where.not(id: claimed_entry_ids)
+              .first
+        else
+          # Fallback to existing deduplication logic
+          adapter = Account::ProviderImportAdapter.new(mapped_account)
+          adapter.find_duplicate_transaction(
+              date: row.date_iso,
+                amount: row.signed_amount,
+              currency: effective_currency,
+              name: row.name,
+              exclude_entry_ids: claimed_entry_ids
+          )
+        end
 
         if duplicate_entry
           # Update existing transaction instead of creating a new one
@@ -57,6 +64,7 @@ class TransactionImport < Import
           new_transactions << Transaction.new(
             category: category,
             tags: tags,
+      external_id: row.external_id.presence,
             entry: Entry.new(
               account: mapped_account,
               date: row.date_iso,
@@ -87,7 +95,7 @@ class TransactionImport < Import
   end
 
   def column_keys
-    base = %i[date amount name currency category tags notes]
+    base = %i[date amount name currency category tags notes external_id]
     base.unshift(:account) if account.nil?
     base
   end
@@ -106,10 +114,10 @@ class TransactionImport < Import
 
   def csv_template
     template = <<-CSV
-      date*,amount*,name,currency,category,tags,account,notes
-      05/15/2024,-45.99,Grocery Store,USD,Food,groceries|essentials,Checking Account,Monthly grocery run
-      05/16/2024,1500.00,Salary,,Income,,Main Account,
-      05/17/2024,-12.50,Coffee Shop,,,coffee,,
+      date*,amount*,name,currency,category,tags,account,notes,external_id
+      05/15/2024,-45.99,Grocery Store,USD,Food,groceries|essentials,Checking Account,Monthly grocery run,TXN-001
+      05/16/2024,1500.00,Salary,,Income,,Main Account,,TXN-002
+      05/17/2024,-12.50,Coffee Shop,,,coffee,,,TXN-003
     CSV
 
     csv = CSV.parse(template, headers: true)
