@@ -2,15 +2,16 @@
 <% home_path = intro_mode ? chats_path : root_path %>
 <% mobile_nav_items = if intro_mode
   [
-    { name: "Home", path: chats_path, icon: "home", icon_custom: false, active: page_active?(chats_path) },
+    { name: t(".nav.home"), path: chats_path, icon: "home", icon_custom: false, active: page_active?(chats_path) },
     { name: "Intro", path: intro_path, icon: "sparkles", icon_custom: false, active: page_active?(intro_path) }
   ]
 else
   [
-    { name: "Home", path: root_path, icon: "pie-chart", icon_custom: false, active: page_active?(root_path) },
-    { name: "Transactions", path: transactions_path, icon: "credit-card", icon_custom: false, active: page_active?(transactions_path) },
-    { name: "Budgets", path: budgets_path, icon: "map", icon_custom: false, active: page_active?(budgets_path) },
-    { name: "Assistant", path: chats_path, icon: "icon-assistant", icon_custom: true, active: page_active?(chats_path), mobile_only: true }
+    { name: t(".nav.home"), path: root_path, icon: "pie-chart", icon_custom: false, active: page_active?(root_path) },
+    { name: t(".nav.transactions"), path: transactions_path, icon: "credit-card", icon_custom: false, active: page_active?(transactions_path) },
+    { name: t(".nav.reports"), path: reports_path, icon: "chart-bar", icon_custom: false, active: page_active?(reports_path) },
+    { name: t(".nav.budgets"), path: budgets_path, icon: "map", icon_custom: false, active: page_active?(budgets_path) },
+    { name: t(".nav.assistant"), path: chats_path, icon: "icon-assistant", icon_custom: true, active: page_active?(chats_path), mobile_only: true }
   ]
 end %>
 
