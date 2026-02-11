@@ -59,7 +59,7 @@ module Assistant::Configurable
           Assistant::Function::GetBalanceSheet,
           Assistant::Function::GetIncomeStatement,
           Assistant::Function::ImportBankStatement,
-          Assistant::Function::SearchFamilyImportedFiles
+          Assistant::Function::SearchFamilyFiles
         ]
       end
 

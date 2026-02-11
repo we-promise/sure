@@ -1,7 +1,7 @@
-class Assistant::Function::SearchFamilyImportedFiles < Assistant::Function
+class Assistant::Function::SearchFamilyFiles < Assistant::Function
   class << self
     def name
-      "search_family_imported_files"
+      "search_family_files"
     end
 
     def description
@@ -21,7 +21,7 @@ class Assistant::Function::SearchFamilyImportedFiles < Assistant::Function
         Example:
 
         ```
-        search_family_imported_files({
+        search_family_files({
           query: "What was the total income on my 2024 tax return?"
         })
         ```
@@ -108,7 +108,7 @@ class Assistant::Function::SearchFamilyImportedFiles < Assistant::Function
       end
     }
   rescue => e
-    Rails.logger.error("SearchFamilyImportedFiles error: #{e.class.name} - #{e.message}")
+    Rails.logger.error("SearchFamilyFiles error: #{e.class.name} - #{e.message}")
     {
       success: false,
       error: "search_failed",

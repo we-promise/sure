@@ -1,13 +1,13 @@
 require "test_helper"
 
-class Assistant::Function::SearchFamilyImportedFilesTest < ActiveSupport::TestCase
+class Assistant::Function::SearchFamilyFilesTest < ActiveSupport::TestCase
   setup do
     @user = users(:family_admin)
-    @function = Assistant::Function::SearchFamilyImportedFiles.new(@user)
+    @function = Assistant::Function::SearchFamilyFiles.new(@user)
   end
 
   test "has correct name" do
-    assert_equal "search_family_imported_files", @function.name
+    assert_equal "search_family_files", @function.name
   end
 
   test "has a description" do
@@ -26,7 +26,7 @@ class Assistant::Function::SearchFamilyImportedFilesTest < ActiveSupport::TestCa
 
   test "generates valid tool definition" do
     definition = @function.to_definition
-    assert_equal "search_family_imported_files", definition[:name]
+    assert_equal "search_family_files", definition[:name]
     assert_not_nil definition[:description]
     assert_not_nil definition[:params_schema]
     assert_equal false, definition[:strict]
