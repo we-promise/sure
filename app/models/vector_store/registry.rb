@@ -38,6 +38,7 @@ class VectorStore::Registry
         when :openai   then build_openai
         when :pgvector then build_pgvector
         when :qdrant   then build_qdrant
+        else raise VectorStore::ConfigurationError, "No builder defined for adapter: #{name}"
         end
       end
 

@@ -15,7 +15,7 @@ class FamilyDocument < ApplicationRecord
   end
 
   def mark_error!(error_message = nil)
-    update!(status: "error", metadata: metadata.merge("error" => error_message))
+    update!(status: "error", metadata: (metadata || {}).merge("error" => error_message))
   end
 
   def supported_extension?

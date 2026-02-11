@@ -14,8 +14,12 @@ module Family::VectorSearchable
     response = adapter.create_store(name: "Family #{id} Documents")
     return nil unless response.success?
 
-    update!(vector_store_id: response.data[:id])
-    vector_store_id
+    if update(vector_store_id: response.data[:id])
+      vector_store_id
+    else
+      adapter.delete_store(store_id: response.data[:id]) rescue nil
+      nil
+    end
   end
 
   def search_documents(query, max_results: 10)
