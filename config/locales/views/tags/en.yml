@@ -12,6 +12,9 @@ en:
       placeholder: Tag name
     index:
       delete_all: Delete all
+      delete_all_confirm_title: Delete All Tags?
+      delete_all_confirm_body: This will permanently delete all tags and cannot be undone.
+      delete_all_confirm_button: Delete All Tags
       empty: No tags yet
       new: New tag
       tags: Tags

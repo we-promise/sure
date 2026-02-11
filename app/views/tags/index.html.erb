@@ -7,7 +7,12 @@
           href: destroy_all_tags_path,
           method: :delete,
           icon: "trash-2",
-          confirm: CustomConfirm.for_resource_deletion("all tags", high_severity: true)) %>
+          confirm: CustomConfirm.new(
+            title: t(".delete_all_confirm_title"),
+            body: t(".delete_all_confirm_body"),
+            btn_text: t(".delete_all_confirm_button"),
+            high_severity: true
+          )) %>
   <% end %>
 
   <%= render DS::Link.new(

@@ -8,19 +8,19 @@
         <ul class="space-y-2 text-sm text-secondary">
           <li class="flex items-start gap-2">
             <%= icon "check", class: "shrink-0 mt-0.5 text-positive" %>
-            <span><%= t(".includes.accounts") %></span>
+            <span><%= t(".accounts_balances") %></span>
           </li>
           <li class="flex items-start gap-2">
             <%= icon "check", class: "shrink-0 mt-0.5 text-positive" %>
-            <span><%= t(".includes.transactions") %></span>
+            <span><%= t(".transaction_history") %></span>
           </li>
           <li class="flex items-start gap-2">
             <%= icon "check", class: "shrink-0 mt-0.5 text-positive" %>
-            <span><%= t(".includes.trades") %></span>
+            <span><%= t(".investment_trades") %></span>
           </li>
           <li class="flex items-start gap-2">
             <%= icon "check", class: "shrink-0 mt-0.5 text-positive" %>
-            <span><%= t(".includes.categories_tags_rules") %></span>
+            <span><%= t(".categories_tags") %></span>
           </li>
         </ul>
       </div>
@@ -34,7 +34,7 @@
       <%= form_with url: family_exports_path, method: :post, class: "space-y-4" do |form| %>
         <div class="flex gap-3">
           <%= link_to t(".cancel"), "#", class: "flex-1 text-center px-4 py-2 text-primary bg-surface border border-primary rounded-lg hover:bg-surface-hover", data: { action: "click->modal#close" } %>
-          <%= form.submit t(".export_data"), class: "flex-1 bg-inverse fg-inverse rounded-lg px-4 py-2 cursor-pointer hover:bg-inverse-hover" %>
+          <%= form.submit t(".export_button"), class: "flex-1 bg-inverse fg-inverse rounded-lg px-4 py-2 cursor-pointer hover:bg-inverse-hover" %>
         </div>
       <% end %>
     </div>

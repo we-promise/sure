@@ -32,6 +32,9 @@ en:
       categories_expenses: Expense categories
       categories_incomes: Income categories
       delete_all: Delete all
+      delete_all_confirm_title: Delete All Categories?
+      delete_all_confirm_body: This will permanently delete all categories and cannot be undone.
+      delete_all_confirm_button: Delete All Categories
       empty: No categories found
       new: New category
     menu:
