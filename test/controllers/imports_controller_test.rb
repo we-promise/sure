@@ -40,11 +40,12 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
     adapter.stubs(:supported_extensions).returns(%w[.csv .pdf])
     VectorStore::Registry.stubs(:adapter).returns(adapter)
 
-    @user.family.expects(:upload_document).with do |file_content:, filename:, **|
+    family_document = family_documents(:tax_return)
+    Family.any_instance.expects(:upload_document).with do |file_content:, filename:, **|
       assert_not_empty file_content
       assert_equal "valid.csv", filename
       true
-    end.returns(family_documents(:tax_return))
+    end.returns(family_document)
 
     assert_no_difference "Import.count" do
       post imports_url, params: {
