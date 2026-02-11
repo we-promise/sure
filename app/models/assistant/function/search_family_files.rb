@@ -51,7 +51,7 @@ class Assistant::Function::SearchFamilyFiles < Assistant::Function
 
   def call(params = {})
     query = params["query"]
-    max_results = [ (params["max_results"] || 10).to_i, 20 ].min
+    max_results = (params["max_results"] || 10).to_i.clamp(1, 20)
 
     unless family.vector_store_id.present?
       return {
