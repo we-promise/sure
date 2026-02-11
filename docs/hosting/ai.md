@@ -645,11 +645,11 @@ Sure's AI assistant can search documents that have been uploaded to a family's v
 
 #### Supported Backends
 
-| Backend | Best For | Requirements |
-|---------|----------|--------------|
-| **OpenAI** (default) | Cloud deployments, zero setup | `OPENAI_ACCESS_TOKEN` |
-| **Pgvector** | Self-hosted, full data privacy | PostgreSQL with `pgvector` extension |
-| **Qdrant** | Self-hosted, dedicated vector DB | Running Qdrant instance |
+| Backend | Status | Best For | Requirements |
+|---------|--------|----------|--------------|
+| **OpenAI** (default) | ready | Cloud deployments, zero setup | `OPENAI_ACCESS_TOKEN` |
+| **Pgvector** | scaffolded | Self-hosted, full data privacy | PostgreSQL with `pgvector` extension |
+| **Qdrant** | scaffolded | Self-hosted, dedicated vector DB | Running Qdrant instance |
 
 #### Configuration
 
@@ -664,6 +664,9 @@ OPENAI_ACCESS_TOKEN=sk-proj-...
 
 ##### Pgvector (Self-Hosted)
 
+> [!CAUTION]
+> Only `OpenAI` has been implemented!
+
 Use PostgreSQL's pgvector extension for fully local document search:
 
 ```bash
@@ -673,6 +676,9 @@ VECTOR_STORE_PROVIDER=pgvector
 > **Note:** The pgvector adapter is currently a skeleton. A future release will add full support including embedding model configuration.
 
 ##### Qdrant (Self-Hosted)
+
+> [!CAUTION]
+> Only `OpenAI` has been implemented!
 
 Use a dedicated Qdrant vector database:
 
