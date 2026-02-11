@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_02_10_120000) do
+ActiveRecord::Schema[7.2].define(version: 2026_02_11_120001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -25,7 +25,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_02_10_120000) do
     t.uuid "provider_id", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["account_id", "provider_type"], name: "index_account_providers_on_account_id_and_provider_type", unique: true
+    t.index ["account_id", "provider_type"], name: "index_account_providers_on_account_and_provider_type", unique: true
     t.index ["provider_type", "provider_id"], name: "index_account_providers_on_provider_type_and_provider_id", unique: true
   end
 
@@ -500,7 +500,23 @@ ActiveRecord::Schema[7.2].define(version: 2026_02_10_120000) do
     t.datetime "latest_sync_completed_at", default: -> { "CURRENT_TIMESTAMP" }
     t.boolean "recurring_transactions_disabled", default: false, null: false
     t.integer "month_start_day", default: 1, null: false
+    t.string "vector_store_id"
     t.check_constraint "month_start_day >= 1 AND month_start_day <= 28", name: "month_start_day_range"
+  end
+
+  create_table "family_documents", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "family_id", null: false
+    t.string "filename", null: false
+    t.string "content_type"
+    t.integer "file_size"
+    t.string "provider_file_id"
+    t.string "status", default: "pending", null: false
+    t.jsonb "metadata", default: {}
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["family_id"], name: "index_family_documents_on_family_id"
+    t.index ["provider_file_id"], name: "index_family_documents_on_provider_file_id"
+    t.index ["status"], name: "index_family_documents_on_status"
   end
 
   create_table "family_exports", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1441,9 +1457,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_02_10_120000) do
     t.datetime "set_onboarding_preferences_at"
     t.datetime "set_onboarding_goals_at"
     t.string "default_account_order", default: "name_asc"
-    t.string "ui_layout"
     t.jsonb "preferences", default: {}, null: false
     t.string "locale"
+    t.string "ui_layout"
     t.index ["email"], name: "index_users_on_email", unique: true
     t.index ["family_id"], name: "index_users_on_family_id"
     t.index ["last_viewed_chat_id"], name: "index_users_on_last_viewed_chat_id"
@@ -1497,6 +1513,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_02_10_120000) do
   add_foreign_key "eval_results", "eval_samples"
   add_foreign_key "eval_runs", "eval_datasets"
   add_foreign_key "eval_samples", "eval_datasets"
+  add_foreign_key "family_documents", "families"
   add_foreign_key "family_exports", "families"
   add_foreign_key "family_merchant_associations", "families"
   add_foreign_key "family_merchant_associations", "merchants"

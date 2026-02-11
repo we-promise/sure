@@ -43,4 +43,33 @@ class FamilyTest < ActiveSupport::TestCase
 
     assert_includes family.available_merchants, new_merchant
   end
+
+  test "upload_document stores provided metadata on family document" do
+    family = families(:dylan_family)
+    family.update!(vector_store_id: nil)
+
+    adapter = mock("vector_store_adapter")
+    adapter.expects(:create_store).with(name: "Family #{family.id} Documents").returns(
+      VectorStore::Response.new(success?: true, data: { id: "vs_test123" }, error: nil)
+    )
+    adapter.expects(:upload_file).with(
+      store_id: "vs_test123",
+      file_content: "hello",
+      filename: "notes.txt"
+    ).returns(
+      VectorStore::Response.new(success?: true, data: { file_id: "file-xyz" }, error: nil)
+    )
+
+    VectorStore::Registry.stubs(:adapter).returns(adapter)
+
+    document = family.upload_document(
+      file_content: "hello",
+      filename: "notes.txt",
+      metadata: { "type" => "financial_document" }
+    )
+
+    assert_not_nil document
+    assert_equal({ "type" => "financial_document" }, document.metadata)
+    assert_equal "vs_test123", family.reload.vector_store_id
+  end
 end

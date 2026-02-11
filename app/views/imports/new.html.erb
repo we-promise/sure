@@ -141,10 +141,10 @@
           </li>
         <% end %>
 
-        <% if (params[:type].nil? || params[:type] == "PdfImport") && Provider::Registry.get_provider(:openai)&.supports_pdf_processing? %>
+        <% if (params[:type].nil? || params[:type].in?(%w[DocumentImport PdfImport])) && @document_upload_extensions.any? %>
           <li>
             <%= styled_form_with url: imports_path, scope: :import, multipart: true, class: "w-full" do |form| %>
-              <%= form.hidden_field :type, value: "PdfImport" %>
+              <%= form.hidden_field :type, value: "DocumentImport" %>
               <label class="flex items-center justify-between p-4 group cursor-pointer w-full">
                 <div class="flex items-center gap-2">
                   <div class="bg-red-500/5 rounded-md w-8 h-8 flex items-center justify-center">
@@ -154,15 +154,15 @@
                   </div>
                   <div class="text-left">
                     <span class="text-sm text-primary group-hover:text-secondary block">
-                      <%= t(".import_pdf") %>
+                      <%= t(".import_file") %>
                     </span>
                     <span class="text-xs text-secondary">
-                      <%= t(".import_pdf_description") %>
+                      <%= t(".import_file_description") %>
                     </span>
                   </div>
                 </div>
                 <%= icon("chevron-right") %>
-                <%= form.file_field :import_file, accept: "application/pdf", class: "hidden", onchange: "this.form.submit()" %>
+                <%= form.file_field :import_file, accept: @document_upload_extensions.join(","), class: "hidden", onchange: "this.form.submit()" %>
               </label>
             <% end %>
 
