@@ -33,8 +33,8 @@ class TransactionImport < Import
         # Try external_id first if present
         duplicate_entry = if row.external_id.present?
           mapped_account.entries.joins(:transaction)
-	    .where(entryable_type: "Transaction")
-	    .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id")
+      .where(entryable_type: "Transaction")
+      .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id")
             .where(transactions: { external_id: row.external_id })
             .where.not(id: claimed_entry_ids)
             .first
