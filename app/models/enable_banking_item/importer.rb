@@ -218,7 +218,7 @@ class EnableBankingItem::Importer
         }.compact.to_set
 
         new_transactions = all_transactions.select do |tx|
-          # Use transaction_id if present, otherwise fall back to entry_reference
+          # Use entry_reference to identify new transactions
           tx_id = tx[:entry_reference].presence
           tx_id.present? && !existing_ids.include?(tx_id)
         end
@@ -284,8 +284,8 @@ class EnableBankingItem::Importer
           next
         end
 
-        # Create deduplication key (to_s to handle nil safely)
-        dedup_key = "#{booking_date}|#{amount}|#{merchant}".to_s.downcase
+        # Create deduplication key including direction to reduce false positives
+        dedup_key = "#{booking_date}|#{amount}|#{merchant}|#{credit_debit}".to_s.downcase
 
         # Keep only first occurrence
         unless seen[dedup_key]
