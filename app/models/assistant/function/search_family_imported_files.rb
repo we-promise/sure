@@ -61,18 +61,18 @@ class Assistant::Function::SearchFamilyImportedFiles < Assistant::Function
       }
     end
 
-    provider = Provider::Registry.get_provider(:openai)
+    adapter = VectorStore.adapter
 
-    unless provider&.supports_vector_store?
+    unless adapter
       return {
         success: false,
         error: "provider_not_configured",
-        message: "Document search requires OpenAI to be configured."
+        message: "No vector store is configured. Set VECTOR_STORE_PROVIDER or configure OpenAI."
       }
     end
 
-    response = provider.search_vector_store(
-      vector_store_id: family.vector_store_id,
+    response = adapter.search(
+      store_id: family.vector_store_id,
       query: query,
       max_results: max_results
     )

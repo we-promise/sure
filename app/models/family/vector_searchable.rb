@@ -8,10 +8,10 @@ module Family::VectorSearchable
   def ensure_vector_store!
     return vector_store_id if vector_store_id.present?
 
-    provider = vector_store_provider
-    return nil unless provider
+    adapter = vector_store_adapter
+    return nil unless adapter
 
-    response = provider.create_vector_store(name: "Family #{id} Documents")
+    response = adapter.create_store(name: "Family #{id} Documents")
     return nil unless response.success?
 
     update!(vector_store_id: response.data[:id])
@@ -21,11 +21,11 @@ module Family::VectorSearchable
   def search_documents(query, max_results: 10)
     return [] unless vector_store_id.present?
 
-    provider = vector_store_provider
-    return [] unless provider
+    adapter = vector_store_adapter
+    return [] unless adapter
 
-    response = provider.search_vector_store(
-      vector_store_id: vector_store_id,
+    response = adapter.search(
+      store_id: vector_store_id,
       query: query,
       max_results: max_results
     )
@@ -34,37 +34,35 @@ module Family::VectorSearchable
   end
 
   def upload_document(file_content:, filename:)
-    provider = vector_store_provider
-    return nil unless provider
+    adapter = vector_store_adapter
+    return nil unless adapter
 
     store_id = ensure_vector_store!
     return nil unless store_id
 
-    response = provider.upload_file_to_vector_store(
-      vector_store_id: store_id,
+    response = adapter.upload_file(
+      store_id: store_id,
       file_content: file_content,
       filename: filename
     )
 
     return nil unless response.success?
 
-    doc = family_documents.create!(
+    family_documents.create!(
       filename: filename,
       content_type: Marcel::MimeType.for(name: filename),
       file_size: file_content.bytesize,
       provider_file_id: response.data[:file_id],
       status: "ready"
     )
-
-    doc
   end
 
   def remove_document(family_document)
-    provider = vector_store_provider
-    return false unless provider && vector_store_id.present? && family_document.provider_file_id.present?
+    adapter = vector_store_adapter
+    return false unless adapter && vector_store_id.present? && family_document.provider_file_id.present?
 
-    provider.remove_file_from_vector_store(
-      vector_store_id: vector_store_id,
+    adapter.remove_file(
+      store_id: vector_store_id,
       file_id: family_document.provider_file_id
     )
 
@@ -74,9 +72,7 @@ module Family::VectorSearchable
 
   private
 
-    def vector_store_provider
-      provider = Provider::Registry.get_provider(:openai)
-      return nil unless provider&.supports_vector_store?
-      provider
+    def vector_store_adapter
+      VectorStore.adapter
     end
 end

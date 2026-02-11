@@ -41,9 +41,9 @@ class Assistant::Function::SearchFamilyImportedFilesTest < ActiveSupport::TestCa
     assert_equal "no_documents", result[:error]
   end
 
-  test "returns provider_not_configured when openai is not available" do
+  test "returns provider_not_configured when no adapter is available" do
     @user.family.update!(vector_store_id: "vs_test123")
-    Provider::Registry.stubs(:get_provider).with(:openai).returns(nil)
+    VectorStore::Registry.stubs(:adapter).returns(nil)
 
     result = @function.call("query" => "tax return")
 
@@ -54,10 +54,9 @@ class Assistant::Function::SearchFamilyImportedFilesTest < ActiveSupport::TestCa
   test "returns search results on success" do
     @user.family.update!(vector_store_id: "vs_test123")
 
-    mock_provider = mock("openai_provider")
-    mock_provider.stubs(:supports_vector_store?).returns(true)
-    mock_provider.stubs(:search_vector_store).returns(
-      Provider::Response.new(
+    mock_adapter = mock("vector_store_adapter")
+    mock_adapter.stubs(:search).returns(
+      VectorStore::Response.new(
         success?: true,
         data: [
           { content: "Total income: $85,000", filename: "2024_tax_return.pdf", score: 0.95, file_id: "file-abc" },
@@ -67,7 +66,7 @@ class Assistant::Function::SearchFamilyImportedFilesTest < ActiveSupport::TestCa
       )
     )
 
-    Provider::Registry.stubs(:get_provider).with(:openai).returns(mock_provider)
+    VectorStore::Registry.stubs(:adapter).returns(mock_adapter)
 
     result = @function.call("query" => "What was my total income?")
 
@@ -80,13 +79,12 @@ class Assistant::Function::SearchFamilyImportedFilesTest < ActiveSupport::TestCa
   test "returns empty results message when no matches found" do
     @user.family.update!(vector_store_id: "vs_test123")
 
-    mock_provider = mock("openai_provider")
-    mock_provider.stubs(:supports_vector_store?).returns(true)
-    mock_provider.stubs(:search_vector_store).returns(
-      Provider::Response.new(success?: true, data: [], error: nil)
+    mock_adapter = mock("vector_store_adapter")
+    mock_adapter.stubs(:search).returns(
+      VectorStore::Response.new(success?: true, data: [], error: nil)
     )
 
-    Provider::Registry.stubs(:get_provider).with(:openai).returns(mock_provider)
+    VectorStore::Registry.stubs(:adapter).returns(mock_adapter)
 
     result = @function.call("query" => "nonexistent document")
 
@@ -97,17 +95,16 @@ class Assistant::Function::SearchFamilyImportedFilesTest < ActiveSupport::TestCa
   test "handles search failure gracefully" do
     @user.family.update!(vector_store_id: "vs_test123")
 
-    mock_provider = mock("openai_provider")
-    mock_provider.stubs(:supports_vector_store?).returns(true)
-    mock_provider.stubs(:search_vector_store).returns(
-      Provider::Response.new(
+    mock_adapter = mock("vector_store_adapter")
+    mock_adapter.stubs(:search).returns(
+      VectorStore::Response.new(
         success?: false,
         data: nil,
-        error: Provider::Openai::Error.new("API rate limit exceeded")
+        error: VectorStore::Error.new("API rate limit exceeded")
       )
     )
 
-    Provider::Registry.stubs(:get_provider).with(:openai).returns(mock_provider)
+    VectorStore::Registry.stubs(:adapter).returns(mock_adapter)
 
     result = @function.call("query" => "tax return")
 
@@ -118,15 +115,14 @@ class Assistant::Function::SearchFamilyImportedFilesTest < ActiveSupport::TestCa
   test "caps max_results at 20" do
     @user.family.update!(vector_store_id: "vs_test123")
 
-    mock_provider = mock("openai_provider")
-    mock_provider.stubs(:supports_vector_store?).returns(true)
-    mock_provider.expects(:search_vector_store).with(
-      vector_store_id: "vs_test123",
+    mock_adapter = mock("vector_store_adapter")
+    mock_adapter.expects(:search).with(
+      store_id: "vs_test123",
       query: "test",
       max_results: 20
-    ).returns(Provider::Response.new(success?: true, data: [], error: nil))
+    ).returns(VectorStore::Response.new(success?: true, data: [], error: nil))
 
-    Provider::Registry.stubs(:get_provider).with(:openai).returns(mock_provider)
+    VectorStore::Registry.stubs(:adapter).returns(mock_adapter)
 
     @function.call("query" => "test", "max_results" => 50)
   end

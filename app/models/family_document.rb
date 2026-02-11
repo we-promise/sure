@@ -3,7 +3,7 @@ class FamilyDocument < ApplicationRecord
 
   has_one_attached :file
 
-  SUPPORTED_EXTENSIONS = Provider::VectorStoreConcept::SUPPORTED_EXTENSIONS
+  SUPPORTED_EXTENSIONS = VectorStore::Base::SUPPORTED_EXTENSIONS
 
   validates :filename, presence: true
   validates :status, inclusion: { in: %w[pending processing ready error] }
