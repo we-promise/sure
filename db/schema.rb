@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_02_10_120000) do
+ActiveRecord::Schema[7.2].define(version: 2026_02_11_120001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -500,7 +500,23 @@ ActiveRecord::Schema[7.2].define(version: 2026_02_10_120000) do
     t.datetime "latest_sync_completed_at", default: -> { "CURRENT_TIMESTAMP" }
     t.boolean "recurring_transactions_disabled", default: false, null: false
     t.integer "month_start_day", default: 1, null: false
+    t.string "vector_store_id"
     t.check_constraint "month_start_day >= 1 AND month_start_day <= 28", name: "month_start_day_range"
+  end
+
+  create_table "family_documents", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "family_id", null: false
+    t.string "filename", null: false
+    t.string "content_type"
+    t.integer "file_size"
+    t.string "provider_file_id"
+    t.string "status", default: "pending", null: false
+    t.jsonb "metadata", default: {}
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["family_id"], name: "index_family_documents_on_family_id"
+    t.index ["provider_file_id"], name: "index_family_documents_on_provider_file_id"
+    t.index ["status"], name: "index_family_documents_on_status"
   end
 
   create_table "family_exports", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1497,6 +1513,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_02_10_120000) do
   add_foreign_key "eval_results", "eval_samples"
   add_foreign_key "eval_runs", "eval_datasets"
   add_foreign_key "eval_samples", "eval_datasets"
+  add_foreign_key "family_documents", "families"
   add_foreign_key "family_exports", "families"
   add_foreign_key "family_merchant_associations", "families"
   add_foreign_key "family_merchant_associations", "merchants"

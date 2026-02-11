@@ -1,5 +1,6 @@
 class Provider::Openai < Provider
   include LlmConcept
+  include VectorStoreConcept
 
   # Subclass so errors caught in this provider are raised as Provider::Openai::Error
   Error = Class.new(Provider::Error)
@@ -19,6 +20,7 @@ class Provider::Openai < Provider
   end
 
   def initialize(access_token, uri_base: nil, model: nil)
+    @access_token = access_token
     client_options = { access_token: access_token }
     client_options[:uri_base] = uri_base if uri_base.present?
     client_options[:request_timeout] = ENV.fetch("OPENAI_REQUEST_TIMEOUT", 60).to_i
@@ -211,6 +213,95 @@ class Provider::Openai < Provider
         user_identifier: user_identifier,
         family: family
       )
+    end
+  end
+
+  # Vector store support — only available for native OpenAI, not custom providers
+  def supports_vector_store?
+    !custom_provider?
+  end
+
+  def create_vector_store(name:)
+    with_provider_response do
+      response = client.vector_stores.create(parameters: { name: name })
+      { id: response["id"] }
+    end
+  end
+
+  def delete_vector_store(vector_store_id:)
+    with_provider_response do
+      client.vector_stores.delete(id: vector_store_id)
+    end
+  end
+
+  def upload_file_to_vector_store(vector_store_id:, file_content:, filename:)
+    with_provider_response do
+      # Write content to a temp file so the OpenAI client can upload it
+      tempfile = Tempfile.new([ File.basename(filename, ".*"), File.extname(filename) ])
+      begin
+        tempfile.binmode
+        tempfile.write(file_content)
+        tempfile.rewind
+
+        file_response = client.files.upload(
+          parameters: { file: tempfile, purpose: "assistants" }
+        )
+        file_id = file_response["id"]
+
+        client.vector_store_files.create(
+          vector_store_id: vector_store_id,
+          parameters: { file_id: file_id }
+        )
+
+        { file_id: file_id, status: "completed" }
+      ensure
+        tempfile.close
+        tempfile.unlink
+      end
+    end
+  end
+
+  def remove_file_from_vector_store(vector_store_id:, file_id:)
+    with_provider_response do
+      client.vector_store_files.delete(
+        vector_store_id: vector_store_id,
+        id: file_id
+      )
+    end
+  end
+
+  def search_vector_store(vector_store_id:, query:, max_results: 10)
+    with_provider_response do
+      # The vector store search endpoint is not available in ruby-openai 8.1.0,
+      # so we make a direct HTTP call to the OpenAI API.
+      base_url = @uri_base.presence || "https://api.openai.com/v1"
+      connection = Faraday.new(url: base_url) do |f|
+        f.request :json
+        f.response :json
+        f.adapter Faraday.default_adapter
+      end
+
+      response = connection.post("vector_stores/#{vector_store_id}/search") do |req|
+        req.headers["Authorization"] = "Bearer #{@access_token}"
+        req.headers["Content-Type"] = "application/json"
+        req.body = { query: query, max_num_results: max_results }
+      end
+
+      unless response.success?
+        error_body = response.body
+        message = error_body.is_a?(Hash) ? error_body.dig("error", "message") || error_body.to_json : error_body.to_s
+        raise Error, "Vector store search failed: #{message}"
+      end
+
+      data = response.body
+      (data["data"] || []).map do |result|
+        {
+          content: Array(result["content"]).filter_map { |c| c["text"] }.join("\n"),
+          filename: result["filename"],
+          score: result["score"],
+          file_id: result["file_id"]
+        }
+      end
     end
   end
 
