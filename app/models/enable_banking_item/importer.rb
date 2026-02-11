@@ -206,15 +206,20 @@ class EnableBankingItem::Importer
       transactions_count = all_transactions.count
 
       if all_transactions.any?
+        all_transactions = deduplicate_enable_banking_transactions(all_transactions)
+        transactions_count = all_transactions.count
+      end
+
+      if all_transactions.any?
         existing_transactions = enable_banking_account.raw_transactions_payload.to_a
         existing_ids = existing_transactions.map { |tx|
           tx = tx.with_indifferent_access
-          tx[:transaction_id].presence || tx[:entry_reference].presence
+          tx[:entry_reference].presence
         }.compact.to_set
 
         new_transactions = all_transactions.select do |tx|
           # Use transaction_id if present, otherwise fall back to entry_reference
-          tx_id = tx[:transaction_id].presence || tx[:entry_reference].presence
+          tx_id = tx[:entry_reference].presence
           tx_id.present? && !existing_ids.include?(tx_id)
         end
 
@@ -249,5 +254,60 @@ class EnableBankingItem::Importer
         # Initial sync: use user's configured date or default to 3 months
         user_start_date || 3.months.ago.to_date
       end
+    end
+
+    def deduplicate_enable_banking_transactions(transactions)
+      return transactions if transactions.empty?
+
+      seen = {}
+      deduplicated = []
+
+      transactions.each do |tx|
+        tx = tx.with_indifferent_access
+
+        # Build unique key based on: date + amount + merchant
+        booking_date = tx[:booking_date]
+        amount = tx.dig(:transaction_amount, :amount) || tx[:amount]
+
+        # Determine merchant (creditor or debtor depending on direction)
+        credit_debit = tx[:credit_debit_indicator]
+        merchant = if credit_debit == "CRDT"
+          tx.dig(:debtor, :name) || tx[:debtor_name]
+        else
+          tx.dig(:creditor, :name) || tx[:creditor_name]
+        end
+
+        # Only deduplicate if we have enough information
+        # If merchant is nil, keep the transaction (better a duplicate than data loss)
+        if booking_date.blank? || amount.blank? || merchant.blank?
+          deduplicated << tx
+          next
+        end
+
+        # Create deduplication key (to_s to handle nil safely)
+        dedup_key = "#{booking_date}|#{amount}|#{merchant}".to_s.downcase
+
+        # Keep only first occurrence
+        unless seen[dedup_key]
+          seen[dedup_key] = true
+          deduplicated << tx
+        else
+          entry_ref = tx[:entry_reference]
+          Rails.logger.info(
+            "EnableBankingItem::Importer - Skipping duplicate transaction: " \
+            "date=#{booking_date}, amount=#{amount}, merchant=#{merchant}, entry_reference=#{entry_ref}"
+          )
+        end
+      end
+
+      removed_count = transactions.size - deduplicated.size
+      if removed_count > 0
+        Rails.logger.info(
+          "EnableBankingItem::Importer - Removed #{removed_count} duplicate(s) from API response " \
+          "(#{transactions.size} → #{deduplicated.size} transactions)"
+        )
+      end
+
+      deduplicated
     end
 end

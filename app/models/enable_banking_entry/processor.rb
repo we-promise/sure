@@ -62,8 +62,8 @@ class EnableBankingEntry::Processor
     end
 
     def external_id
-      id = data[:transaction_id].presence || data[:entry_reference].presence
-      raise ArgumentError, "Enable Banking transaction missing required field 'transaction_id'" unless id
+      id = data[:entry_reference].presence
+      raise ArgumentError, "Enable Banking transaction missing required field 'entry_reference'" unless id
       "enable_banking_#{id}"
     end
 
