@@ -2,6 +2,7 @@
 nb:
   rules:
     no_action: Ingen handling
+    no_condition: No condition
     recent_runs:
       title: Siste Kjøringer
       description: Se kjøringsloggen for reglene dine inkludert suksess/feil-status og transaksjonsantall.
