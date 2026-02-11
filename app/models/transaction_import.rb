@@ -30,22 +30,23 @@ class TransactionImport < Import
         # Use account's currency when no currency column was mapped in CSV, with family currency as fallback
         effective_currency = currency_col_label.present? ? row.currency : (mapped_account.currency.presence || family.currency)
 
-        # Check for duplicate using external_id first, then fallback to adapter logic
+        # Try external_id first if present
         duplicate_entry = if row.external_id.present?
-          # Search by external_id (scoped to account for safety)
           mapped_account.entries.joins(:transaction)
-              .where(transactions: { external_id: row.external_id })
-              .where.not(id: claimed_entry_ids)
-              .first
-        else
-          # Fallback to existing deduplication logic
+            .where(transactions: { external_id: row.external_id })
+            .where.not(id: claimed_entry_ids)
+            .first
+        end
+
+        # Fallback to heuristic deduplication if no external_id match
+        duplicate_entry ||= begin
           adapter = Account::ProviderImportAdapter.new(mapped_account)
           adapter.find_duplicate_transaction(
-              date: row.date_iso,
-                amount: row.signed_amount,
-              currency: effective_currency,
-              name: row.name,
-              exclude_entry_ids: claimed_entry_ids
+            date: row.date_iso,
+            amount: row.signed_amount,
+            currency: effective_currency,
+            name: row.name,
+            exclude_entry_ids: claimed_entry_ids
           )
         end
 
