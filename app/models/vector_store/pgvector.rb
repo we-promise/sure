@@ -30,7 +30,8 @@ class VectorStore::Pgvector < VectorStore::Base
     with_response do
       # A "store" is just a logical namespace (a UUID).
       # No external resource to create.
-      { id: SecureRandom.uuid }
+      # { id: SecureRandom.uuid }
+      raise VectorStore::Error, "Pgvector adapter is not yet implemented"
     end
   end
 

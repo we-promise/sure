@@ -61,10 +61,12 @@ module Family::VectorSearchable
     adapter = vector_store_adapter
     return false unless adapter && vector_store_id.present? && family_document.provider_file_id.present?
 
-    adapter.remove_file(
+    response = adapter.remove_file(
       store_id: vector_store_id,
       file_id: family_document.provider_file_id
     )
+
+    return false unless response.success?
 
     family_document.destroy
     true

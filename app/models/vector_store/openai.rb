@@ -41,10 +41,15 @@ class VectorStore::Openai < VectorStore::Base
         )
         file_id = file_response["id"]
 
-        client.vector_store_files.create(
-          vector_store_id: store_id,
-          parameters: { file_id: file_id }
-        )
+        begin
+          client.vector_store_files.create(
+            vector_store_id: store_id,
+            parameters: { file_id: file_id }
+          )
+        rescue => e
+          client.files.delete(id: file_id) rescue nil
+          raise
+        end
 
         { file_id: file_id }
       ensure
