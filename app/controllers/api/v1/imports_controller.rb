@@ -67,7 +67,7 @@ class Api::V1::ImportsController < Api::V1::BaseController
         }, status: :unprocessable_entity
       end
 
-      unless Import::ALLOWED_MIME_TYPES.include?(file.content_type)
+      unless Import::ALLOWED_CSV_MIME_TYPES.include?(file.content_type)
         return render json: {
           error: "invalid_file_type",
           message: "Invalid file type. Please upload a CSV file."

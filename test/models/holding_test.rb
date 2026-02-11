@@ -129,17 +129,18 @@ class HoldingTest < ActiveSupport::TestCase
     assert_not @amzn.cost_basis_replaceable_by?("manual")
   end
 
-  test "cost_basis_replaceable_by? respects priority hierarchy" do
-    # Provider data can be replaced by calculated or manual
+  test "cost_basis_replaceable_by? respects priority hierarchy and allows refreshes" do
+    # Provider data can be replaced by higher-priority sources (calculated/manual)
+    # and can be refreshed by provider again.
     @amzn.update!(cost_basis: 200, cost_basis_source: "provider", cost_basis_locked: false)
     assert @amzn.cost_basis_replaceable_by?("calculated")
     assert @amzn.cost_basis_replaceable_by?("manual")
-    assert_not @amzn.cost_basis_replaceable_by?("provider")
+    assert @amzn.cost_basis_replaceable_by?("provider")
 
-    # Calculated data can be replaced by manual only
+    # Calculated data can be replaced by manual and can be refreshed by calculated again.
     @amzn.update!(cost_basis: 200, cost_basis_source: "calculated", cost_basis_locked: false)
     assert @amzn.cost_basis_replaceable_by?("manual")
-    assert_not @amzn.cost_basis_replaceable_by?("calculated")
+    assert @amzn.cost_basis_replaceable_by?("calculated")
     assert_not @amzn.cost_basis_replaceable_by?("provider")
 
     # Manual data when LOCKED cannot be replaced by anything

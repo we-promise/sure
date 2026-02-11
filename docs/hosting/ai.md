@@ -91,6 +91,9 @@ Sure supports any OpenAI-compatible API endpoint. Here are tested providers:
 ```bash
 OPENAI_ACCESS_TOKEN=sk-proj-...
 # No other configuration needed
+
+# Optional: Request timeout in seconds (default: 60)
+# OPENAI_REQUEST_TIMEOUT=60
 ```
 
 **Recommended models:**
@@ -286,6 +289,69 @@ For self-hosted deployments, you can configure AI settings through the web inter
    - **OpenAI Model** - Model name (required for custom endpoints)
 
 **Note:** Settings in the UI override environment variables. If you change settings in the UI, those values take precedence.
+
+## AI Cache Management
+
+Sure caches AI-generated results (like auto-categorization and merchant detection) to avoid redundant API calls and costs. However, there are situations where you may want to clear this cache.
+
+### What is the AI Cache?
+
+When AI rules process transactions, Sure stores:
+- **Enrichment records**: Which attributes were set by AI (category, merchant, etc.)
+- **Attribute locks**: Prevents rules from re-processing already-handled transactions
+
+This caching means:
+- Transactions won't be sent to the LLM repeatedly
+- Your API costs are minimized
+- Processing is faster on subsequent rule runs
+
+### When to Reset the AI Cache
+
+You might want to reset the cache when:
+
+1. **Switching LLM models**: Different models may produce better categorizations
+2. **Improving prompts**: After system updates with better prompts
+3. **Fixing miscategorizations**: When AI made systematic errors
+4. **Testing**: During development or evaluation of AI features
+
+> [!CAUTION]
+> Resetting the AI cache will cause all transactions to be re-processed by AI rules on the next run. This **will incur API costs** if using a cloud provider.
+
+### How to Reset the AI Cache
+
+**Via UI (Recommended):**
+1. Go to **Settings** → **Rules**
+2. Click the menu button (three dots)
+3. Select **Reset AI cache**
+4. Confirm the action
+
+The cache is cleared asynchronously in the background. You'll see a confirmation message when the process starts.
+
+**Automatic Reset:**
+The AI cache is automatically cleared for all users when the OpenAI model setting is changed. This ensures that the new model processes transactions fresh.
+
+### What Happens When Cache is Reset
+
+1. **AI-locked attributes are unlocked**: Transactions can be re-enriched
+2. **AI enrichment records are deleted**: The history of AI changes is cleared
+3. **User edits are preserved**: If you manually changed a category after AI set it, your change is kept
+
+### Cost Implications
+
+Before resetting the cache, consider:
+
+| Scenario | Approximate Cost |
+|----------|------------------|
+| 100 transactions | $0.05-0.20 |
+| 1,000 transactions | $0.50-2.00 |
+| 10,000 transactions | $5.00-20.00 |
+
+*Costs vary by model. Use `gpt-4o-mini` for lower costs.*
+
+**Tips to minimize costs:**
+- Use narrow rule filters before running AI actions
+- Reset cache only when necessary
+- Consider using local LLMs for bulk re-processing
 
 ## Observability with Langfuse
 
@@ -566,6 +632,106 @@ The assistant uses OpenAI's function calling (tool use) to access user data:
 - `get_income_statement` - Income and expenses
 
 These are defined in `app/models/assistant/function/`.
+
+### Vector Store (Document Search)
+
+Sure's AI assistant can search documents that have been uploaded to a family's vault. Under the hood, documents are indexed in a **vector store** so the assistant can retrieve relevant passages when answering questions (Retrieval-Augmented Generation).
+
+#### How It Works
+
+1. When a user uploads a document to their family vault, it is automatically pushed to the configured vector store.
+2. When the assistant needs financial context from uploaded files, it calls the `search_family_files` function.
+3. The vector store returns the most relevant passages, which the assistant uses to answer the question.
+
+#### Supported Backends
+
+| Backend | Status | Best For | Requirements |
+|---------|--------|----------|--------------|
+| **OpenAI** (default) | ready | Cloud deployments, zero setup | `OPENAI_ACCESS_TOKEN` |
+| **Pgvector** | scaffolded | Self-hosted, full data privacy | PostgreSQL with `pgvector` extension |
+| **Qdrant** | scaffolded | Self-hosted, dedicated vector DB | Running Qdrant instance |
+
+#### Configuration
+
+##### OpenAI (Default)
+
+No extra configuration is needed. If you already have `OPENAI_ACCESS_TOKEN` set for the AI assistant, document search works automatically. OpenAI manages chunking, embedding, and retrieval.
+
+```bash
+# Already set for AI chat — document search uses the same token
+OPENAI_ACCESS_TOKEN=sk-proj-...
+```
+
+##### Pgvector (Self-Hosted)
+
+> [!CAUTION]
+> Only `OpenAI` has been implemented!
+
+Use PostgreSQL's pgvector extension for fully local document search:
+
+```bash
+VECTOR_STORE_PROVIDER=pgvector
+```
+
+> **Note:** The pgvector adapter is currently a skeleton. A future release will add full support including embedding model configuration.
+
+##### Qdrant (Self-Hosted)
+
+> [!CAUTION]
+> Only `OpenAI` has been implemented!
+
+Use a dedicated Qdrant vector database:
+
+```bash
+VECTOR_STORE_PROVIDER=qdrant
+QDRANT_URL=http://localhost:6333   # Default if not set
+QDRANT_API_KEY=your-api-key        # Optional, for authenticated instances
+```
+
+Docker Compose example:
+
+```yaml
+services:
+  sure:
+    environment:
+      - VECTOR_STORE_PROVIDER=qdrant
+      - QDRANT_URL=http://qdrant:6333
+    depends_on:
+      - qdrant
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    ports:
+      - "6333:6333"
+    volumes:
+      - qdrant_data:/qdrant/storage
+
+volumes:
+  qdrant_data:
+```
+
+> **Note:** The Qdrant adapter is currently a skeleton. A future release will add full support including collection management and embedding configuration.
+
+#### Verifying the Configuration
+
+You can check whether a vector store is properly configured from the Rails console:
+
+```ruby
+VectorStore.configured?          # => true / false
+VectorStore.adapter              # => #<VectorStore::Openai:...>
+VectorStore.adapter.class.name   # => "VectorStore::Openai"
+```
+
+#### Supported File Types
+
+The following file extensions are supported for document upload and search:
+
+`.pdf`, `.txt`, `.md`, `.csv`, `.json`, `.xml`, `.html`, `.css`, `.js`, `.rb`, `.py`, `.docx`, `.pptx`, `.xlsx`, `.yaml`, `.yml`, `.log`, `.sh`
+
+#### Privacy Notes
+
+- **OpenAI backend:** Document content is sent to OpenAI's API for indexing and search. The same privacy considerations as the AI chat apply.
+- **Pgvector / Qdrant backends:** All data stays on your infrastructure. No external API calls are made for document search.
 
 ### Multi-Model Setup
 

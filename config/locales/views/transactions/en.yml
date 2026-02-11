@@ -49,6 +49,8 @@ en:
       overview: Overview
       settings: Settings
       tags_label: Tags
+      tab_transactions: Transactions
+      tab_upcoming: Upcoming
       uncategorized: "(uncategorized)"
     activity_labels:
       buy: Buy
@@ -74,6 +76,7 @@ en:
     transaction:
       pending: Pending
       pending_tooltip: Pending transaction — may change when posted
+      linked_with_plaid: Linked with Plaid
       activity_type_tooltip: Investment activity type
       possible_duplicate: Duplicate?
       potential_duplicate_tooltip: This may be a duplicate of another transaction
@@ -95,6 +98,11 @@ en:
       transaction: transaction
       transactions: transactions
       import: Import
+    list:
+      drag_drop_title: Drop CSV to import
+      drag_drop_subtitle: Upload transactions directly
+      transaction: transaction
+      transactions: transactions
     toggle_recurring_section: Toggle upcoming recurring transactions
     search:
       filters:

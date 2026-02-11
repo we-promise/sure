@@ -3,25 +3,59 @@ ro:
   onboardings:
     header:
       sign_out: Deconectare
+      setup: Configurare
+      preferences: Preferințe
+      goals: Obiective
+      start: Start
+    logout:
+      sign_out: Deconectare
+    show:
+      title: Să-ți configurăm contul
+      subtitle: Mai întâi, să-ți completăm profilul.
+      first_name: Prenume
+      first_name_placeholder: Prenume
+      last_name: Nume de familie
+      last_name_placeholder: Nume de familie
+      household_name: Numele gospodăriei
+      household_name_placeholder: Numele gospodăriei
+      country: Țară
+      submit: Continuă
     preferences:
+      title: Configurează preferințele
+      subtitle: Să-ți configurăm preferințele.
+      example: Cont exemplu
+      preview: Previzualizare a modului în care sunt afișate datele pe baza preferințelor.
+      color_theme: Tema de culoare
+      theme_system: Sistem
+      theme_light: Deschis
+      theme_dark: Întunecat
+      locale: Limbă
       currency: Monedă
       date_format: Format dată
-      example: Cont exemplu
-      locale: Limbă
-      preview: Previzualizează cum sunt afișate datele în funcție de preferințe.
-      submit: Finalizează
-      subtitle: Să configurăm preferințele tale.
-      title: Configurează-ți preferințele
-    profile:
-      country: Țară
-      first_name: Prenume
-      household_name: Numele gospodăriei
-      last_name: Nume de familie
-      profile_image: Imagine de profil
-      submit: Continuă
-      subtitle: Să-ți completăm profilul.
-      title: Să configurăm elementele de bază
-    show:
-      message: Suntem încântați că ești aici. În pasul următor îți vom pune câteva întrebări pentru a-ți completa profilul și apoi te vom pregăti.
-      setup: Configurează contul
-      title: Fă cunoștință cu %{product_name}
+      submit: Finalizare
+    goals:
+      title: Ce te aduce aici?
+      subtitle: Selectează unul sau mai multe obiective pe care le ai cu %{product_name} ca instrument de finanțe personale.
+      unified_accounts: Să-mi văd toate conturile într-un singur loc
+      cashflow: Să înțeleg fluxul de numerar și cheltuielile
+      budgeting: Să gestionez planuri financiare și bugete
+      partner: Să gestionez finanțele împreună cu partenerul
+      investments: Să urmăresc investițiile
+      ai_insights: Să las AI să mă ajute să-mi înțeleg finanțele
+      optimization: Să analizez și să optimizez conturile
+      reduce_stress: Să reduc stresul financiar sau anxietatea
+      submit: Următorul
+    trial:
+      title: Încearcă Sure timp de 45 de zile
+      data_deletion: Datele vor fi șterse după aceea
+      description_html: Începând de azi poți testa produsul în profunzime.<br/>Dacă îți place, găzduiește-l singur sau contribuie pentru a continua să-l folosești aici.
+      try_button: Încearcă Sure timp de 45 de zile
+      continue_trial: Continuă perioada de probă
+      upgrade: Actualizează
+      how_it_works: Cum funcționează
+      today: Astăzi
+      today_description: Vei avea acces gratuit la Sure timp de 45 de zile pe AWS-ul nostru.
+      in_40_days: În 40 de zile (%{date})
+      in_40_days_description: Te vom notifica să-ți amintim să-ți exporți datele.
+      in_45_days: În 45 de zile (%{date})
+      in_45_days_description: Îți ștergem datele — contribuie pentru a continua să folosești Sure aici!

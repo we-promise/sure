@@ -2,4 +2,32 @@
 ca:
   oidc_accounts:
     link:
-      account_creation_disabled: La creació de comptes nous mitjançant inici de sessió únic està inhabilitada. Contacta amb un administrador per crear el teu compte.
+      title_link: Enllaçar compte OIDC
+      title_create: Crear compte
+      verify_heading: Verificar la vostra identitat
+      verify_description_html: "Per enllaçar el vostre compte %{provider}%{email_suffix}, verifiqueu la vostra identitat introduint la contrasenya."
+      email_suffix_html: " (<strong>%{email}</strong>)"
+      email_label: Correu electrònic
+      email_placeholder: Introduïu el vostre correu electrònic
+      password_label: Contrasenya
+      password_placeholder: Introduïu la vostra contrasenya
+      verify_hint: Això garanteix que només vós pugueu enllaçar comptes externs al vostre perfil.
+      submit_link: Enllaçar compte
+      create_heading: Crear compte nou
+      create_description_html: "No s'ha trobat cap compte amb el correu electrònic <strong>%{email}</strong>. Feu clic a baix per crear un compte nou amb la vostra identitat %{provider}."
+      info_email: "Correu electrònic:"
+      info_name: "Nom:"
+      submit_create: Crear compte
+      account_creation_disabled: La creació de comptes mitjançant l'inici de sessió únic està desactivada. Contacteu amb un administrador.
+      cancel: Cancel·lar
+    new_user:
+      title: Completar el compte
+      heading: Crear el compte
+      description: Confirmeu les vostres dades per completar la creació del compte amb la vostra identitat %{provider}.
+      email_label: Correu electrònic (del proveïdor SSO)
+      first_name_label: Nom
+      first_name_placeholder: Introduïu el vostre nom
+      last_name_label: Cognom
+      last_name_placeholder: Introduïu el vostre cognom
+      submit: Crear compte
+      cancel: Cancel·lar

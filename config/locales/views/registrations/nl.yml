@@ -23,3 +23,8 @@ nl:
       welcome_body: Om te beginnen moet u zich aanmelden voor een nieuw account. U kunt daarna aanvullende instellingen binnen de app configureren.
       welcome_title: Welkom bij Self Hosted %{product_name}!
       password_placeholder: Voer uw wachtwoord in
+      password_requirements:
+        length: Minimaal 8 tekens
+        case: Hoofdletters en kleine letters
+        number: Een cijfer (0-9)
+        special: "Een speciaal teken (!, @, #, $, %, etc)"

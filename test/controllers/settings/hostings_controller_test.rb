@@ -89,7 +89,7 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
 
       assert_response :unprocessable_entity
       assert_match(/OpenAI model is required/, flash[:alert])
-      assert_nil Setting.openai_uri_base
+      assert Setting.openai_uri_base.blank?, "Expected openai_uri_base to remain blank after failed validation"
     end
   end
 

@@ -102,28 +102,38 @@ class Transaction::Search
     def apply_category_filter(query, categories)
       return query unless categories.present?
 
+      # Check for "Uncategorized" in any supported locale (handles URL params in different languages)
+      all_uncategorized_names = Category.all_uncategorized_names
+      include_uncategorized = (categories & all_uncategorized_names).any?
+      real_categories = categories - all_uncategorized_names
+
       # Get parent category IDs for the given category names
-      parent_category_ids = family.categories.where(name: categories).pluck(:id)
+      parent_category_ids = family.categories.where(name: real_categories).pluck(:id)
+
+      uncategorized_condition = "(categories.id IS NULL AND transactions.kind NOT IN ('funds_movement', 'cc_payment'))"
 
       # Build condition based on whether parent_category_ids is empty
       if parent_category_ids.empty?
-        query = query.left_joins(:category).where(
-          "categories.name IN (?) OR (
-          categories.id IS NULL AND (transactions.kind NOT IN ('funds_movement', 'cc_payment'))
-        )",
-          categories
-        )
+        if include_uncategorized
+          query = query.left_joins(:category).where(
+            "categories.name IN (?) OR #{uncategorized_condition}",
+            real_categories.presence || []
+          )
+        else
+          query = query.left_joins(:category).where(categories: { name: real_categories })
+        end
       else
-        query = query.left_joins(:category).where(
-          "categories.name IN (?) OR categories.parent_id IN (?) OR (
-          categories.id IS NULL AND (transactions.kind NOT IN ('funds_movement', 'cc_payment'))
-        )",
-          categories, parent_category_ids
-        )
-      end
-
-      if categories.exclude?("Uncategorized")
-        query = query.where.not(category_id: nil)
+        if include_uncategorized
+          query = query.left_joins(:category).where(
+            "categories.name IN (?) OR categories.parent_id IN (?) OR #{uncategorized_condition}",
+            real_categories, parent_category_ids
+          )
+        else
+          query = query.left_joins(:category).where(
+            "categories.name IN (?) OR categories.parent_id IN (?)",
+            real_categories, parent_category_ids
+          )
+        end
       end
 
       query
@@ -175,11 +185,13 @@ class Transaction::Search
       pending_condition = <<~SQL.squish
         (transactions.extra -> 'simplefin' ->> 'pending')::boolean = true
         OR (transactions.extra -> 'plaid' ->> 'pending')::boolean = true
+        OR (transactions.extra -> 'lunchflow' ->> 'pending')::boolean = true
       SQL
 
       confirmed_condition = <<~SQL.squish
         (transactions.extra -> 'simplefin' ->> 'pending')::boolean IS DISTINCT FROM true
         AND (transactions.extra -> 'plaid' ->> 'pending')::boolean IS DISTINCT FROM true
+        AND (transactions.extra -> 'lunchflow' ->> 'pending')::boolean IS DISTINCT FROM true
       SQL
 
       case statuses.sort

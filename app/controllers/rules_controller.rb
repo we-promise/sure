@@ -128,6 +128,11 @@ class RulesController < ApplicationController
     redirect_back_or_to rules_path, notice: t("rules.apply_all.success")
   end
 
+  def clear_ai_cache
+    ClearAiCacheJob.perform_later(Current.family)
+    redirect_to rules_path, notice: t("rules.clear_ai_cache.success")
+  end
+
   private
     def set_rule
       @rule = Current.family.rules.find(params[:id])

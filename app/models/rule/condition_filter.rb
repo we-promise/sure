@@ -72,10 +72,12 @@ class Rule::ConditionFilter
           "#{field} #{sanitize_operator(operator)}"
         )
       else
-        sanitized_value = operator == "like" ? "%#{ActiveRecord::Base.sanitize_sql_like(value)}%" : value
+        normalized_value = normalize_value(value)
+        normalized_field = normalize_field(field)
+        sanitized_value = operator == "like" ? "%#{ActiveRecord::Base.sanitize_sql_like(normalized_value)}%" : normalized_value
 
         ActiveRecord::Base.sanitize_sql_for_conditions([
-          "#{field} #{sanitize_operator(operator)} ?",
+          "#{normalized_field} #{sanitize_operator(operator)} ?",
           sanitized_value
         ])
       end
@@ -92,5 +94,17 @@ class Rule::ConditionFilter
       else
         operator
       end
+    end
+
+    def normalize_value(value)
+      return value unless type == "text"
+
+      value.to_s.gsub(/\s+/, " ").strip
+    end
+
+    def normalize_field(field)
+      return field unless type == "text"
+
+      "BTRIM(REGEXP_REPLACE(#{field}, '[[:space:]]+', ' ', 'g'))"
     end
 end

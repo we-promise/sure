@@ -33,7 +33,7 @@ class Import::UploadsController < ApplicationController
     end
 
     def csv_str
-      @csv_str ||= upload_params[:csv_file]&.read || upload_params[:raw_file_str]
+      @csv_str ||= upload_params[:import_file]&.read || upload_params[:raw_file_str]
     end
 
     def csv_valid?(str)
@@ -48,6 +48,6 @@ class Import::UploadsController < ApplicationController
     end
 
     def upload_params
-      params.require(:import).permit(:raw_file_str, :csv_file, :col_sep)
+      params.require(:import).permit(:raw_file_str, :import_file, :col_sep)
     end
 end

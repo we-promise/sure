@@ -3,39 +3,52 @@ empty:
   first_name: User
   last_name: One
   email: user1@example.com
-  password_digest: $2a$12$XoNBo/cMCyzpYtvhrPAhsubG21mELX48RAcjSVCRctW8dG8wrDIla 
+  password_digest: $2a$12$XoNBo/cMCyzpYtvhrPAhsubG21mELX48RAcjSVCRctW8dG8wrDIla
   onboarded_at: <%= 3.days.ago %>
   role: admin
   ai_enabled: true
+  show_sidebar: true
+  show_ai_sidebar: true
+  ui_layout: dashboard
 
 sure_support_staff:
   family: empty
   first_name: Support
   last_name: Admin
   email: support@sure.am
-  password_digest: $2a$12$XoNBo/cMCyzpYtvhrPAhsubG21mELX48RAcjSVCRctW8dG8wrDIla 
+  password_digest: $2a$12$XoNBo/cMCyzpYtvhrPAhsubG21mELX48RAcjSVCRctW8dG8wrDIla
   role: super_admin
   onboarded_at: <%= 3.days.ago %>
   ai_enabled: true
+  show_sidebar: true
+  show_ai_sidebar: true
+  ui_layout: dashboard
 
 family_admin:
   family: dylan_family
   first_name: Bob
   last_name: Dylan
   email: bob@bobdylan.com
-  password_digest: $2a$12$XoNBo/cMCyzpYtvhrPAhsubG21mELX48RAcjSVCRctW8dG8wrDIla 
+  password_digest: $2a$12$XoNBo/cMCyzpYtvhrPAhsubG21mELX48RAcjSVCRctW8dG8wrDIla
   role: admin
   onboarded_at: <%= 3.days.ago %>
   ai_enabled: true
+  show_sidebar: true
+  show_ai_sidebar: true
+  ui_layout: dashboard
 
 family_member:
   family: dylan_family
   first_name: Jakob
   last_name: Dylan
   email: jakobdylan@yahoo.com
-  password_digest: $2a$12$XoNBo/cMCyzpYtvhrPAhsubG21mELX48RAcjSVCRctW8dG8wrDIla 
+  password_digest: $2a$12$XoNBo/cMCyzpYtvhrPAhsubG21mELX48RAcjSVCRctW8dG8wrDIla
   onboarded_at: <%= 3.days.ago %>
+  role: member
   ai_enabled: true
+  show_sidebar: true
+  show_ai_sidebar: true
+  ui_layout: dashboard
 
 new_email:
   family: empty
@@ -45,7 +58,24 @@ new_email:
   unconfirmed_email: new@example.com
   password_digest: $2a$12$XoNBo/cMCyzpYtvhrPAhsubG21mELX48RAcjSVCRctW8dG8wrDIla
   onboarded_at: <%= Time.current %>
+  role: member
   ai_enabled: true
+  show_sidebar: true
+  show_ai_sidebar: true
+  ui_layout: dashboard
+
+intro_user:
+  family: empty
+  first_name: Intro
+  last_name: User
+  email: intro@example.com
+  password_digest: $2a$12$XoNBo/cMCyzpYtvhrPAhsubG21mELX48RAcjSVCRctW8dG8wrDIla
+  onboarded_at: <%= 1.day.ago %>
+  role: guest
+  ai_enabled: true
+  show_sidebar: false
+  show_ai_sidebar: false
+  ui_layout: intro
 
 # SSO-only user: created via JIT provisioning, no local password
 sso_only:

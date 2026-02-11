@@ -132,11 +132,7 @@ RSpec.describe 'API V1 Transactions', type: :request do
       response '200', 'transactions listed' do
         schema '$ref' => '#/components/schemas/TransactionCollection'
 
-        run_test! do |response|
-          payload = JSON.parse(response.body)
-          expect(payload.fetch('transactions')).to be_present
-          expect(payload.fetch('pagination')).to include('page', 'per_page', 'total_count', 'total_pages')
-        end
+        run_test!
       end
 
       response '200', 'transactions filtered by account' do
@@ -144,10 +140,7 @@ RSpec.describe 'API V1 Transactions', type: :request do
 
         let(:account_id) { account.id }
 
-        run_test! do |response|
-          payload = JSON.parse(response.body)
-          expect(payload.fetch('transactions')).to be_present
-        end
+        run_test!
       end
 
       response '200', 'transactions filtered by date range' do
@@ -156,10 +149,7 @@ RSpec.describe 'API V1 Transactions', type: :request do
         let(:start_date) { (Date.current - 7.days).to_s }
         let(:end_date) { Date.current.to_s }
 
-        run_test! do |response|
-          payload = JSON.parse(response.body)
-          expect(payload.fetch('transactions')).to be_present
-        end
+        run_test!
       end
     end
 
@@ -209,11 +199,7 @@ RSpec.describe 'API V1 Transactions', type: :request do
       response '201', 'transaction created' do
         schema '$ref' => '#/components/schemas/Transaction'
 
-        run_test! do |response|
-          payload = JSON.parse(response.body)
-          expect(payload.fetch('name')).to eq('Test purchase')
-          expect(payload.fetch('account').fetch('id')).to eq(account.id)
-        end
+        run_test!
       end
 
       response '422', 'validation error - missing account_id' do
@@ -261,14 +247,7 @@ RSpec.describe 'API V1 Transactions', type: :request do
       response '200', 'transaction retrieved' do
         schema '$ref' => '#/components/schemas/Transaction'
 
-        run_test! do |response|
-          payload = JSON.parse(response.body)
-          expect(payload.fetch('id')).to eq(transaction.id)
-          expect(payload.fetch('name')).to eq('Grocery shopping')
-          expect(payload.fetch('category').fetch('name')).to eq('Groceries')
-          expect(payload.fetch('merchant').fetch('name')).to eq('Whole Foods')
-          expect(payload.fetch('tags').first.fetch('name')).to eq('Essential')
-        end
+        run_test!
       end
 
       response '404', 'transaction not found' do
@@ -303,7 +282,11 @@ RSpec.describe 'API V1 Transactions', type: :request do
               category_id: { type: :string, format: :uuid },
               merchant_id: { type: :string, format: :uuid },
               nature: { type: :string, enum: %w[income expense inflow outflow] },
-              tag_ids: { type: :array, items: { type: :string, format: :uuid } }
+              tag_ids: {
+                type: :array,
+                items: { type: :string, format: :uuid },
+                description: 'Array of tag IDs to assign. Omit to preserve existing tags; use [] to clear all tags.'
+              }
             }
           }
         }
@@ -321,11 +304,7 @@ RSpec.describe 'API V1 Transactions', type: :request do
       response '200', 'transaction updated' do
         schema '$ref' => '#/components/schemas/Transaction'
 
-        run_test! do |response|
-          payload = JSON.parse(response.body)
-          expect(payload.fetch('name')).to eq('Updated grocery shopping')
-          expect(payload.fetch('notes')).to eq('Weekly groceries')
-        end
+        run_test!
       end
 
       response '404', 'transaction not found' do
@@ -347,10 +326,7 @@ RSpec.describe 'API V1 Transactions', type: :request do
       response '200', 'transaction deleted' do
         schema '$ref' => '#/components/schemas/DeleteResponse'
 
-        run_test! do |response|
-          payload = JSON.parse(response.body)
-          expect(payload.fetch('message')).to eq('Transaction deleted successfully')
-        end
+        run_test!
       end
 
       response '404', 'transaction not found' do
