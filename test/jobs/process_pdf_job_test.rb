@@ -35,10 +35,9 @@ class ProcessPdfJobTest < ActiveJob::TestCase
 
   test "uploads non-bank PDF to vector store with classified type metadata" do
     pdf_content = attach_pdf!(@import)
+    process_result = Struct.new(:document_type).new("financial_document")
 
-    @import.stubs(:process_with_ai) do
-      @import.update!(ai_summary: "A tax return", document_type: "financial_document")
-    end
+    @import.expects(:process_with_ai).once.returns(process_result)
     @import.stubs(:send_next_steps_email)
     @import.expects(:extract_transactions).never
 
@@ -56,10 +55,9 @@ class ProcessPdfJobTest < ActiveJob::TestCase
 
   test "uploads bank statement PDF to vector store with classified type metadata" do
     pdf_content = attach_pdf!(@import)
+    process_result = Struct.new(:document_type).new("bank_statement")
 
-    @import.stubs(:process_with_ai) do
-      @import.update!(ai_summary: "A bank statement", document_type: "bank_statement")
-    end
+    @import.expects(:process_with_ai).once.returns(process_result)
     @import.expects(:extract_transactions).once
     @import.expects(:generate_rows_from_extracted_data).once do
       @import.update_column(:rows_count, 1)
