@@ -640,7 +640,7 @@ Sure's AI assistant can search documents that have been uploaded to a family's v
 #### How It Works
 
 1. When a user uploads a document to their family vault, it is automatically pushed to the configured vector store.
-2. When the assistant needs financial context from uploaded files, it calls the `search_family_imported_files` function.
+2. When the assistant needs financial context from uploaded files, it calls the `search_family_files` function.
 3. The vector store returns the most relevant passages, which the assistant uses to answer the question.
 
 #### Supported Backends
