@@ -18,3 +18,7 @@ zh-CN:
       footer:
         privacy_policy: 隐私政策
         terms_of_service: 服务条款
+    trial:
+      open_demo: 开放演示
+      data_deleted_in_days: 数据将在 %{days} 天后删除
+      contribute: 贡献

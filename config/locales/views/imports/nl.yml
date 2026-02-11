@@ -55,26 +55,30 @@ nl:
         instructions_5: Geen komma's, geen valutasymbolen en geen haakjes in getallen.
         title: Uw gegevens importeren
   imports:
-    empty:
-      message: Nog geen imports.
-      new: Nieuwe import
-    import:
-      complete: Voltooid
-      delete: Verwijderen
-      failed: Mislukt
-      in_progress: Bezig
-      label: "%{type}: %{datetime}"
-      revert_failed: Terugdraaien mislukt
-      reverting: Terugdraaien
-      uploading: Rijen verwerken
-      view: Bekijken
     index:
       imports: Imports
       new: Nieuwe import
-      title: Import/Export
-      exports: Exports
-      new_export: Nieuwe export
-      no_exports: Nog geen exports.
+    table:
+      title: Imports
+      header:
+        date: Datum
+        operation: Operatie
+        status: Status
+        actions: Acties
+      row:
+        status:
+          in_progress: Bezig
+          uploading: Rijen verwerken
+          reverting: Terugdraaien
+          revert_failed: Terugdraaien mislukt
+          complete: Voltooid
+          failed: Mislukt
+        actions:
+          revert: Terugdraaien
+          confirm_revert: Hierdoor worden de geïmporteerde transacties verwijderd, maar u kunt uw gegevens nog steeds op elk gewenst moment bekijken en opnieuw importeren.
+          delete: Verwijderen
+          view: Bekijken
+      empty: Nog geen imports.
     new:
       description: U kunt handmatig verschillende soorten gegevens importeren via CSV of een van onze importsjablonen zoals Mint gebruiken.
       import_accounts: Accounts importeren

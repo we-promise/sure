@@ -13,9 +13,19 @@ tr:
     index:
       title: Dışa aktarmalar
       new: Yeni Dışa Aktarma
-      no_exports: Henüz hiç dışa aktarma yok.
-    list:
-      export_from: "%{date} tarihli dışa aktarma"
-      in_progress: Devam ediyor
-      complete: Tamamlandı
-      failed: Başarısız
+    table:
+      title: Dışa aktarmalar
+      header:
+        date: Tarih
+        filename: Dosya adı
+        status: Durum
+        actions: Eylemler
+      row:
+        status:
+          in_progress: Devam ediyor
+          complete: Tamamlandı
+          failed: Başarısız
+        actions:
+          delete: Sil
+          download: İndirmek
+      empty: Henüz hiç dışa aktarma yok.

@@ -10,10 +10,12 @@ en:
         no_users: "No users found."
         role_descriptions_title: "Role Descriptions"
         roles:
+          guest: "Guest"
           member: "Member"
           admin: "Admin"
           super_admin: "Super Admin"
         role_descriptions:
+          guest: "Assistant-first experience with intentionally restricted permissions for intro workflows."
           member: "Basic user access. Can manage their own accounts, transactions, and settings."
           admin: "Family administrator. Can access advanced settings like API keys, imports, and AI prompts."
           super_admin: "Instance administrator. Can manage SSO providers, user roles, and impersonate users for support."

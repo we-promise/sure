@@ -80,7 +80,7 @@
           <% if provider[:icon].present? %>
             <%= icon provider[:icon], size: "sm" %>
           <% end %>
-          <span><%= provider[:label].presence || provider[:name].to_s.titleize %></span>
+          <span><%= provider[:label].presence || t(".#{provider_id}", default: provider[:name].to_s.titleize) %></span>
         <% end %>
       <% end %>
     <% end %>

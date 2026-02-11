@@ -3,6 +3,11 @@ require "test_helper"
 class TagsControllerTest < ActionDispatch::IntegrationTest
   setup do
     sign_in @user = users(:family_admin)
+    @other_family_user = users(:empty)
+
+    # Verify cross-family isolation setup is correct
+    assert_not_equal @user.family_id, @other_family_user.family_id,
+      "Test setup error: @other_family_user must belong to a different family"
   end
 
   test "should get index" do

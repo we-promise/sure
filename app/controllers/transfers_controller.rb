@@ -5,6 +5,7 @@ class TransfersController < ApplicationController
 
   def new
     @transfer = Transfer.new
+    @from_account_id = params[:from_account_id]
   end
 
   def show
@@ -54,7 +55,7 @@ class TransfersController < ApplicationController
       @transfer = Transfer
                     .where(id: params[:id])
                     .where(inflow_transaction_id: Current.family.transactions.select(:id))
-                    .first
+                    .first!
     end
 
     def transfer_params

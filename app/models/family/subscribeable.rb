@@ -5,7 +5,7 @@ module Family::Subscribeable
     has_one :subscription, dependent: :destroy
   end
 
-  def billing_email
+  def payment_email
     primary_admin = users.admin.order(:created_at).first || users.super_admin.order(:created_at).first
 
     unless primary_admin.present?
@@ -41,12 +41,20 @@ module Family::Subscribeable
     subscription&.active?
   end
 
+  def can_manage_subscription?
+    stripe_customer_id.present?
+  end
+
   def needs_subscription?
     subscription.nil? && !self_hoster?
   end
 
-  def next_billing_date
+  def next_payment_date
     subscription&.current_period_ends_at
+  end
+
+  def subscription_pending_cancellation?
+    subscription&.pending_cancellation?
   end
 
   def start_subscription!(stripe_subscription_id)

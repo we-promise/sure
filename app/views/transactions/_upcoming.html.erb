@@ -1,0 +1,29 @@
+<% if @projected_recurring.any? %>
+  <div id="upcoming" class="flex flex-col bg-container rounded-xl shadow-border-xs px-3 py-4 lg:p-4 relative group">
+    <div class="grid-cols-12 bg-container-inset rounded-xl px-5 py-3 text-xs uppercase font-medium text-secondary items-center mb-4 grid">
+      <div class="pl-0.5 col-span-8 flex items-center gap-4"><p><%= t("transactions.list.transaction") %></p></div>
+      <p class="col-span-2 md:block hidden"><%= t("transactions.search.filters.type") %></p>
+      <p class="col-span-2 col-start-11 md:col-start-auto justify-self-end md:block"><%= t("transactions.show.amount") %></p>
+    </div>
+    <div class="space-y-6">
+      <% @projected_recurring.group_by(&:next_expected_date).sort.each do |date, transactions| %>
+        <div id="upcoming-group-<%= date %>" class="bg-container-inset rounded-xl p-1 w-full">
+          <div class="py-2 px-4 flex items-center justify-between font-medium text-xs text-secondary">
+            <p class="uppercase space-x-1.5">
+              <%= tag.span I18n.l(date, format: :long) %>
+              <span>&middot;</span>
+              <%= tag.span transactions.size %>
+            </p>
+          </div>
+          <div class="bg-container shadow-border-xs rounded-lg">
+            <% transactions.each do |recurring_transaction| %>
+              <%= render "recurring_transactions/projected_transaction", recurring_transaction: recurring_transaction %>
+            <% end %>
+          </div>
+        </div>
+      <% end %>
+    </div>
+  </div>
+<% else %>
+  <%= render "recurring_transactions/empty" %>
+<% end %>

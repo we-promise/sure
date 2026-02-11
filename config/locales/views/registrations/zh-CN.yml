@@ -23,3 +23,8 @@ zh-CN:
       title: 创建您的账户
       welcome_body: 开始使用前，您需要注册一个新账户。注册后即可在应用内配置其他设置。
       welcome_title: 欢迎使用自托管版 %{product_name}！
+      password_requirements:
+        length: 至少8个字符
+        case: 大写和小写字母
+        number: 一个数字 (0-9)
+        special: "一个特殊字符 (!, @, #, $, %, etc)"

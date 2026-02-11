@@ -10,4 +10,19 @@ class Family::SubscribeableTest < ActiveSupport::TestCase
     @family.subscription.update!(trial_ends_at: 1.day.ago, status: "trialing")
     assert_not @family.trialing?
   end
+
+  test "can_manage_subscription? returns true when stripe_customer_id is present" do
+    @family.update!(stripe_customer_id: "cus_test123")
+    assert @family.can_manage_subscription?
+  end
+
+  test "can_manage_subscription? returns false when stripe_customer_id is nil" do
+    @family.update!(stripe_customer_id: nil)
+    assert_not @family.can_manage_subscription?
+  end
+
+  test "can_manage_subscription? returns false when stripe_customer_id is blank" do
+    @family.update!(stripe_customer_id: "")
+    assert_not @family.can_manage_subscription?
+  end
 end

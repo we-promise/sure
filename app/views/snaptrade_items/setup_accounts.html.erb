@@ -1,0 +1,232 @@
+<% content_for :title, t("snaptrade_items.setup_accounts.title", default: "Set Up SnapTrade Accounts") %>
+
+<%= render DS::Dialog.new(disable_click_outside: true) do |dialog| %>
+  <% dialog.with_header(title: t("snaptrade_items.setup_accounts.header", default: "Set Up Your SnapTrade Accounts")) do %>
+    <div class="flex items-center gap-2">
+      <%= icon "trending-up", class: "text-primary" %>
+      <span class="text-primary"><%= t("snaptrade_items.setup_accounts.subtitle", default: "Select which brokerage accounts to link") %></span>
+    </div>
+  <% end %>
+
+  <% dialog.with_body do %>
+    <div class="space-y-6">
+      <%# Always show the info box %>
+      <div class="bg-surface border border-primary p-4 rounded-lg">
+        <div class="flex items-start gap-3">
+          <%= icon "info", size: "sm", class: "text-primary mt-0.5 flex-shrink-0" %>
+          <div>
+            <p class="text-sm text-primary mb-2">
+              <strong><%= t("snaptrade_items.setup_accounts.info_title", default: "SnapTrade Investment Data") %></strong>
+            </p>
+            <ul class="text-xs text-secondary space-y-1 list-disc list-inside">
+              <li><%= t("snaptrade_items.setup_accounts.info_holdings", default: "Holdings with current prices and quantities") %></li>
+              <li><%= t("snaptrade_items.setup_accounts.info_cost_basis", default: "Cost basis per position (when available)") %></li>
+              <li><%= t("snaptrade_items.setup_accounts.info_activities", default: "Trade history with activity labels (Buy, Sell, Dividend, etc.)") %></li>
+              <li><%= t("snaptrade_items.setup_accounts.info_history", default: "Up to 3 years of transaction history") %></li>
+            </ul>
+            <p class="text-xs text-warning mt-2">
+              <%= icon "alert-triangle", size: "xs", class: "inline-block mr-1" %>
+              <%= t("snaptrade_items.setup_accounts.free_tier_note", default: "SnapTrade free tier allows 5 brokerage connections. Check your SnapTrade dashboard for current usage.") %>
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <% if @waiting_for_sync %>
+        <%# Syncing state - show spinner with manual refresh option %>
+        <div class="flex flex-col items-center justify-center py-6 space-y-3">
+          <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+          <p class="text-secondary text-center">
+            <%= t("snaptrade_items.setup_accounts.loading", default: "Fetching accounts from SnapTrade...") %>
+          </p>
+          <p class="text-xs text-secondary text-center">
+            <%= t("snaptrade_items.setup_accounts.loading_hint", default: "Click Refresh to check for accounts.") %>
+          </p>
+        </div>
+        <div class="flex gap-3 justify-center">
+          <%= render DS::Link.new(
+            text: t("snaptrade_items.setup_accounts.refresh", default: "Refresh"),
+            variant: "secondary",
+            icon: "refresh-cw",
+            href: setup_accounts_snaptrade_item_path(@snaptrade_item),
+            frame: "_top"
+          ) %>
+          <%= render DS::Link.new(
+            text: t("snaptrade_items.setup_accounts.cancel_button", default: "Cancel"),
+            variant: "ghost",
+            href: accounts_path,
+            frame: "_top"
+          ) %>
+        </div>
+      <% elsif @no_accounts_found %>
+        <%# No accounts found after sync completed %>
+        <div class="flex flex-col items-center justify-center py-6 space-y-3">
+          <%= icon "alert-circle", size: "lg", class: "text-warning" %>
+          <p class="text-primary text-center font-medium">
+            <%= t("snaptrade_items.setup_accounts.no_accounts_title", default: "No Accounts Found") %>
+          </p>
+          <p class="text-secondary text-center text-sm">
+            <%= t("snaptrade_items.setup_accounts.no_accounts_message", default: "No brokerage accounts were found. This can happen if you cancelled the connection or if your brokerage isn't supported.") %>
+          </p>
+        </div>
+        <div class="flex gap-3 justify-center">
+          <%= render DS::Link.new(
+            text: t("snaptrade_items.setup_accounts.try_again", default: "Connect Brokerage"),
+            variant: "primary",
+            href: connect_snaptrade_item_path(@snaptrade_item),
+            frame: "_top"
+          ) %>
+          <%= render DS::Link.new(
+            text: t("snaptrade_items.setup_accounts.back_to_settings", default: "Back to Settings"),
+            variant: "secondary",
+            href: settings_providers_path,
+            frame: "_top"
+          ) %>
+        </div>
+      <% else %>
+        <%= form_with url: complete_account_setup_snaptrade_item_path(@snaptrade_item),
+                      method: :post,
+                      data: {
+                        controller: "loading-button",
+                        action: "submit->loading-button#showLoading",
+                        loading_button_loading_text_value: t("snaptrade_items.setup_accounts.creating", default: "Creating Accounts..."),
+                        turbo_frame: "_top"
+                      } do |form| %>
+
+          <% if @unlinked_accounts.any? %>
+            <div class="space-y-4">
+              <h3 class="font-medium text-primary"><%= t("snaptrade_items.setup_accounts.available_accounts", default: "Available Accounts") %></h3>
+
+              <% @unlinked_accounts.each do |snaptrade_account| %>
+                <div class="border border-primary rounded-lg p-4 hover:bg-surface transition-colors">
+                  <div class="flex items-center gap-3">
+                    <input type="checkbox"
+                           id="account_<%= snaptrade_account.id %>"
+                           name="account_ids[]"
+                           value="<%= snaptrade_account.id %>"
+                           checked
+                           class="cursor-pointer">
+                    <label for="account_<%= snaptrade_account.id %>" class="flex-1 cursor-pointer">
+                      <h4 class="font-medium text-primary"><%= snaptrade_account.name %></h4>
+                      <p class="text-sm text-secondary">
+                        <% if snaptrade_account.brokerage_name.present? %>
+                          <%= snaptrade_account.brokerage_name %> •
+                        <% end %>
+                        <% if snaptrade_account.account_type.present? %>
+                          <%= snaptrade_account.account_type.titleize %> •
+                        <% end %>
+                        <%= t("snaptrade_items.setup_accounts.balance_label", default: "Balance:") %>
+                        <%= number_to_currency(snaptrade_account.current_balance || 0, unit: Money::Currency.new(snaptrade_account.currency || "USD").symbol) %>
+                      </p>
+                      <% if snaptrade_account.account_number.present? %>
+                        <p class="text-xs text-secondary"><%= t("snaptrade_items.setup_accounts.account_number", default: "Account:") %> •••<%= snaptrade_account.account_number.last(4) %></p>
+                      <% end %>
+                    </label>
+                  </div>
+                  <div class="mt-3 pl-7" onclick="event.stopPropagation();">
+                    <label for="sync_start_<%= snaptrade_account.id %>" class="block text-xs text-secondary mb-1">
+                      <%= t("snaptrade_items.setup_accounts.sync_start_date_label", default: "Import transactions from:") %>
+                    </label>
+                    <input type="date"
+                           id="sync_start_<%= snaptrade_account.id %>"
+                           name="sync_start_dates[<%= snaptrade_account.id %>]"
+                           value="<%= snaptrade_account.sync_start_date %>"
+                           onclick="event.stopPropagation();"
+                           autocomplete="off"
+                           class="bg-container border border-primary rounded px-2 py-1 text-sm text-primary">
+                    <p class="text-xs text-secondary mt-1">
+                      <%= t("snaptrade_items.setup_accounts.sync_start_date_help", default: "Leave blank for all available history") %>
+                    </p>
+                  </div>
+
+                </div>
+              <% end %>
+            </div>
+
+            <div class="flex gap-3 mt-6">
+              <%= render DS::Button.new(
+                text: t("snaptrade_items.setup_accounts.create_button", default: "Create Selected Accounts"),
+                variant: "primary",
+                icon: "plus",
+                type: "submit",
+                class: "flex-1",
+                data: { loading_button_target: "button" }
+              ) %>
+              <%= render DS::Link.new(
+                text: t("snaptrade_items.setup_accounts.cancel_button", default: "Cancel"),
+                variant: "secondary",
+                href: accounts_path,
+                frame: "_top"
+              ) %>
+            </div>
+          <% end %>
+
+        <% end %>
+
+        <%# Link-to-existing forms rendered OUTSIDE the create form to avoid nested <form> %>
+        <% if @unlinked_accounts.any? && @linkable_accounts.any? %>
+          <div class="border-t border-secondary pt-4 mt-2">
+            <p class="text-xs text-secondary mb-3">
+              <%= t("snaptrade_items.setup_accounts.or_link_existing", default: "Or link to an existing account instead of creating a new one:") %>
+            </p>
+            <div class="space-y-2">
+              <% @unlinked_accounts.each do |snaptrade_account| %>
+                <%= form_with url: link_existing_account_snaptrade_items_path, method: :post, data: { turbo_frame: "_top" } do |link_form| %>
+                  <%= link_form.hidden_field :snaptrade_account_id, value: snaptrade_account.id %>
+                  <%= link_form.hidden_field :snaptrade_item_id, value: @snaptrade_item.id %>
+                  <p class="text-xs text-primary mb-1"><%= snaptrade_account.name %></p>
+                  <div class="flex items-center gap-2">
+                    <%= link_form.select :account_id,
+                          options_for_select(@linkable_accounts.map { |a| ["#{a.name} (#{number_to_currency(a.balance, unit: Money::Currency.new(a.currency || "USD").symbol)})", a.id] }),
+                          { prompt: t("snaptrade_items.setup_accounts.select_account", default: "Select an account...") },
+                          class: "bg-container border border-primary rounded px-2 py-1 text-sm text-primary flex-1 min-w-0" %>
+                    <%= render DS::Button.new(
+                      text: t("snaptrade_items.setup_accounts.link_button", default: "Link"),
+                      variant: "secondary",
+                      size: "sm",
+                      type: "submit"
+                    ) %>
+                  </div>
+                <% end %>
+              <% end %>
+            </div>
+          </div>
+        <% end %>
+
+        <% if @linked_accounts.any? %>
+          <div class="<%= "border-t border-primary pt-6 mt-4" if @unlinked_accounts.any? %>">
+            <h3 class="font-medium text-primary mb-4"><%= t("snaptrade_items.setup_accounts.linked_accounts", default: "Already Linked") %></h3>
+            <% @linked_accounts.each do |snaptrade_account| %>
+              <div class="border border-success/20 bg-success/5 rounded-lg p-4 mb-2">
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-3">
+                    <%= icon "check-circle", class: "text-success" %>
+                    <div>
+                      <h4 class="font-medium text-primary"><%= snaptrade_account.name %></h4>
+                      <p class="text-sm text-secondary">
+                        <%= t("snaptrade_items.setup_accounts.linked_to", default: "Linked to:") %>
+                        <%= link_to snaptrade_account.current_account.name, account_path(snaptrade_account.current_account), class: "link" %>
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            <% end %>
+          </div>
+
+          <%# Show Done button when all accounts are linked (no unlinked) %>
+          <% if @unlinked_accounts.blank? %>
+            <div class="flex justify-end mt-4">
+              <%= render DS::Link.new(
+                text: t("snaptrade_items.setup_accounts.done_button", default: "Done"),
+                variant: "primary",
+                href: accounts_path,
+                frame: "_top"
+              ) %>
+            </div>
+          <% end %>
+        <% end %>
+      <% end %>
+    </div>
+  <% end %>
+<% end %>

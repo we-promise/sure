@@ -52,26 +52,30 @@ zh-TW:
         instructions_5: 數字中請勿包含逗號、貨幣符號或括號。
         title: 匯入您的資料
   imports:
-    empty:
-      message: 尚無匯入紀錄。
-      new: 新增匯入
-    import:
-      complete: 已完成
-      delete: 刪除
-      failed: 失敗
-      in_progress: 處理中
-      label: "%{type}：%{datetime}"
-      revert_failed: 還原失敗
-      reverting: 還原中
-      uploading: 正在處理資料列
-      view: 查看
     index:
-      imports: 匯入紀錄
+      title: 匯入紀錄
       new: 新增匯入
-      title: 匯入/匯出
-      exports: 匯出紀錄
-      new_export: 新增匯出
-      no_exports: 尚無匯出紀錄。
+    table:
+      title: 匯入紀錄
+      header:
+        date: 日期
+        operation: 操作
+        status: 狀態
+        actions: 行動
+      row:
+        status:
+          in_progress: 處理中
+          uploading: 正在處理資料列
+          reverting: 還原中
+          revert_failed: 還原失敗
+          complete: 已完成
+          failed: 失敗
+        actions:
+          revert: 恢復
+          confirm_revert: 這將刪除已匯入的交易記錄，但您仍然可以隨時查看和重新匯入您的資料。
+          delete: 刪除
+          view: 查看
+      empty: 尚無匯入紀錄。
     new:
       description: 您可以透過 CSV 手動匯入各種類型的資料，或使用我們提供的匯入範本（如 Mint）。
       import_accounts: 匯入帳戶

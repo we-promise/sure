@@ -1,0 +1,144 @@
+<%# locals: (coinbase_item:) %>
+
+<%= tag.div id: dom_id(coinbase_item) do %>
+  <%# Compute unlinked count early so it's available for both menu and bottom section %>
+  <% unlinked_count = if defined?(@coinbase_unlinked_count_map) && @coinbase_unlinked_count_map
+       @coinbase_unlinked_count_map[coinbase_item.id] || 0
+     else
+       begin
+         coinbase_item.coinbase_accounts
+           .left_joins(:account_provider)
+           .where(account_providers: { id: nil })
+           .count
+       rescue => e
+         Rails.logger.warn("Coinbase card: unlinked_count fallback failed: #{e.class} - #{e.message}")
+         0
+       end
+     end %>
+
+  <details open class="group bg-container p-4 shadow-border-xs rounded-xl">
+    <summary class="flex items-center justify-between gap-2 focus-visible:outline-hidden">
+      <div class="flex items-center gap-2">
+        <%= icon "chevron-right", class: "group-open:transform group-open:rotate-90" %>
+
+        <div class="flex items-center justify-center h-8 w-8 rounded-full" style="background-color: rgba(0, 82, 255, 0.1);">
+          <div class="flex items-center justify-center">
+            <%= icon "bitcoin", size: "sm", class: "text-[#0052FF]" %>
+          </div>
+        </div>
+
+        <div class="pl-1 text-sm">
+          <div class="flex items-center gap-2">
+            <%= tag.p coinbase_item.institution_display_name, class: "font-medium text-primary" %>
+            <% if coinbase_item.scheduled_for_deletion? %>
+              <p class="text-destructive text-sm animate-pulse"><%= t(".deletion_in_progress") %></p>
+            <% end %>
+          </div>
+          <p class="text-xs text-secondary"><%= t(".provider_name") %></p>
+          <% if coinbase_item.syncing? %>
+            <div class="text-secondary flex items-center gap-1">
+              <%= icon "loader", size: "sm", class: "animate-spin" %>
+              <%= tag.span t(".syncing") %>
+            </div>
+          <% elsif coinbase_item.requires_update? %>
+            <div class="text-warning flex items-center gap-1">
+              <%= icon "alert-triangle", size: "sm", color: "warning" %>
+              <%= tag.span t(".reconnect") %>
+            </div>
+          <% else %>
+            <p class="text-secondary">
+              <% if coinbase_item.last_synced_at %>
+                <% if coinbase_item.sync_status_summary %>
+                  <%= t(".status_with_summary", timestamp: time_ago_in_words(coinbase_item.last_synced_at), summary: coinbase_item.sync_status_summary) %>
+                <% else %>
+                  <%= t(".status", timestamp: time_ago_in_words(coinbase_item.last_synced_at)) %>
+                <% end %>
+              <% else %>
+                <%= t(".status_never") %>
+              <% end %>
+            </p>
+          <% end %>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <% if coinbase_item.requires_update? %>
+          <%= render DS::Link.new(
+            text: t(".update_credentials"),
+            icon: "refresh-cw",
+            variant: "secondary",
+            href: settings_providers_path,
+            frame: "_top"
+          ) %>
+        <% else %>
+          <%= icon(
+            "refresh-cw",
+            as_button: true,
+            href: sync_coinbase_item_path(coinbase_item),
+            disabled: coinbase_item.syncing?
+          ) %>
+        <% end %>
+
+        <%= render DS::Menu.new do |menu| %>
+          <% if unlinked_count.to_i > 0 %>
+            <% menu.with_item(
+              variant: "link",
+              text: t(".import_wallets_menu"),
+              icon: "plus",
+              href: setup_accounts_coinbase_item_path(coinbase_item),
+              frame: :modal
+            ) %>
+          <% end %>
+          <% menu.with_item(
+            variant: "button",
+            text: t(".delete"),
+            icon: "trash-2",
+            href: coinbase_item_path(coinbase_item),
+            method: :delete,
+            confirm: CustomConfirm.for_resource_deletion(coinbase_item.institution_display_name, high_severity: true)
+          ) %>
+        <% end %>
+      </div>
+    </summary>
+
+    <% unless coinbase_item.scheduled_for_deletion? %>
+      <div class="space-y-4 mt-4">
+        <% if coinbase_item.accounts.any? %>
+          <%= render "accounts/index/account_groups", accounts: coinbase_item.accounts %>
+        <% end %>
+
+        <%# Sync summary (collapsible) - using shared ProviderSyncSummary component %>
+        <% stats = if defined?(@coinbase_sync_stats_map) && @coinbase_sync_stats_map
+             @coinbase_sync_stats_map[coinbase_item.id] || {}
+           else
+             coinbase_item.syncs.ordered.first&.sync_stats || {}
+           end %>
+        <%= render ProviderSyncSummary.new(
+          stats: stats,
+          provider_item: coinbase_item
+        ) %>
+
+        <% if unlinked_count.to_i > 0 && coinbase_item.accounts.empty? %>
+          <%# No accounts imported yet - show prominent setup prompt %>
+          <div class="p-4 flex flex-col gap-3 items-center justify-center">
+            <p class="text-primary font-medium text-sm"><%= t(".setup_needed") %></p>
+            <p class="text-secondary text-sm"><%= t(".setup_description") %></p>
+            <%= render DS::Link.new(
+              text: t(".setup_action"),
+              icon: "plus",
+              variant: "primary",
+              href: setup_accounts_coinbase_item_path(coinbase_item),
+              frame: :modal
+            ) %>
+          </div>
+        <% elsif coinbase_item.accounts.empty? && coinbase_item.coinbase_accounts.none? %>
+          <%# No coinbase_accounts at all - waiting for sync %>
+          <div class="p-4 flex flex-col gap-3 items-center justify-center">
+            <p class="text-primary font-medium text-sm"><%= t(".no_accounts_title") %></p>
+            <p class="text-secondary text-sm"><%= t(".no_accounts_message") %></p>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+  </details>
+<% end %>

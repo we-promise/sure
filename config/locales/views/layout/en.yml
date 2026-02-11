@@ -17,3 +17,7 @@ en:
       footer:
         privacy_policy: Privacy Policy
         terms_of_service: Terms of Service
+    trial:
+      open_demo: Open demo
+      data_deleted_in_days: Data deleted in %{days} days
+      contribute: Contribute

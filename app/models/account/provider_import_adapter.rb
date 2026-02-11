@@ -77,10 +77,14 @@ class Account::ProviderImportAdapter
       end
 
       # If still a new entry and this is a POSTED transaction, check for matching pending transactions
-      incoming_pending = extra.is_a?(Hash) && (
-        ActiveModel::Type::Boolean.new.cast(extra.dig("simplefin", "pending")) ||
-        ActiveModel::Type::Boolean.new.cast(extra.dig("plaid", "pending"))
-      )
+      incoming_pending = false
+      if extra.is_a?(Hash)
+        pending_extra = extra.with_indifferent_access
+        incoming_pending =
+          ActiveModel::Type::Boolean.new.cast(pending_extra.dig("simplefin", "pending")) ||
+          ActiveModel::Type::Boolean.new.cast(pending_extra.dig("plaid", "pending")) ||
+          ActiveModel::Type::Boolean.new.cast(pending_extra.dig("lunchflow", "pending"))
+      end
 
       if entry.new_record? && !incoming_pending
         pending_match = nil
@@ -150,13 +154,15 @@ class Account::ProviderImportAdapter
 
       # Auto-set kind for internal movements and contributions
       auto_kind = nil
+      auto_category = nil
       if Transaction::INTERNAL_MOVEMENT_LABELS.include?(detected_label)
         auto_kind = "funds_movement"
       elsif detected_label == "Contribution"
         auto_kind = "investment_contribution"
+        auto_category = account.family.investment_contributions_category
       end
 
-      # Set investment activity label and kind if detected
+      # Set investment activity label, kind, and category if detected
       if entry.entryable.is_a?(Transaction)
         if detected_label.present? && entry.transaction.investment_activity_label.blank?
           entry.transaction.assign_attributes(investment_activity_label: detected_label)
@@ -164,6 +170,10 @@ class Account::ProviderImportAdapter
 
         if auto_kind.present?
           entry.transaction.assign_attributes(kind: auto_kind)
+        end
+
+        if auto_category.present? && entry.transaction.category_id.blank?
+          entry.transaction.assign_attributes(category: auto_category)
         end
       end
 
@@ -317,20 +327,46 @@ class Account::ProviderImportAdapter
         holding = account.holdings.find_by(external_id: external_id)
 
         unless holding
-          # Fallback path: match by (security, date, currency) — and when provided,
-          # also scope by account_provider_id to avoid cross‑provider claiming.
-          # This keeps behavior symmetric with deletion logic below which filters
-          # by account_provider_id when present.
-          find_by_attrs = {
-            security: security,
+          # Fallback path 1a: match by provider_security (for remapped holdings)
+          # This allows re-matching a holding that was remapped to a different security
+          # Scope by account_provider_id to avoid cross-provider overwrites
+          fallback_1a_attrs = {
+            provider_security: security,
             date: date,
             currency: currency
           }
-          if account_provider_id.present?
-            find_by_attrs[:account_provider_id] = account_provider_id
+          fallback_1a_attrs[:account_provider_id] = account_provider_id if account_provider_id.present?
+          holding = account.holdings.find_by(fallback_1a_attrs)
+
+          # Fallback path 1b: match by provider_security ticker (for remapped holdings when
+          # Security::Resolver returns a different security instance for the same ticker)
+          # Scope by account_provider_id to avoid cross-provider overwrites
+          # Skip if ticker is blank to avoid matching NULL tickers
+          unless holding || security.ticker.blank?
+            scope = account.holdings
+              .joins("INNER JOIN securities AS ps ON ps.id = holdings.provider_security_id")
+              .where(date: date, currency: currency)
+              .where("ps.ticker = ?", security.ticker)
+            scope = scope.where(account_provider_id: account_provider_id) if account_provider_id.present?
+            holding = scope.first
           end
 
-          holding = account.holdings.find_by(find_by_attrs)
+          # Fallback path 2: match by (security, date, currency) — and when provided,
+          # also scope by account_provider_id to avoid cross‑provider claiming.
+          # This keeps behavior symmetric with deletion logic below which filters
+          # by account_provider_id when present.
+          unless holding
+            find_by_attrs = {
+              security: security,
+              date: date,
+              currency: currency
+            }
+            if account_provider_id.present?
+              find_by_attrs[:account_provider_id] = account_provider_id
+            end
+
+            holding = account.holdings.find_by(find_by_attrs)
+          end
         end
 
         holding ||= account.holdings.new(
@@ -376,7 +412,6 @@ class Account::ProviderImportAdapter
 
       # Build base attributes
       attributes = {
-        security: security,
         date: date,
         currency: currency,
         qty: quantity,
@@ -385,6 +420,14 @@ class Account::ProviderImportAdapter
         account_provider_id: account_provider_id,
         external_id: external_id
       }
+
+      # Only update security if not locked by user
+      if holding.new_record? || holding.security_replaceable_by_provider?
+        attributes[:security] = security
+        # Track the provider's original security so reset_security_to_provider! works
+        # Only set if not already set (preserves original if user remapped then unlocked)
+        attributes[:provider_security_id] = security.id if holding.provider_security_id.blank?
+      end
 
       # Only update cost_basis if reconciliation says to
       if reconciled[:should_update]
@@ -647,6 +690,7 @@ class Account::ProviderImportAdapter
       .where(<<~SQL.squish)
         (transactions.extra -> 'simplefin' ->> 'pending')::boolean = true
         OR (transactions.extra -> 'plaid' ->> 'pending')::boolean = true
+        OR (transactions.extra -> 'lunchflow' ->> 'pending')::boolean = true
       SQL
       .order(date: :desc) # Prefer most recent pending transaction
 
@@ -692,6 +736,7 @@ class Account::ProviderImportAdapter
       .where(<<~SQL.squish)
         (transactions.extra -> 'simplefin' ->> 'pending')::boolean = true
         OR (transactions.extra -> 'plaid' ->> 'pending')::boolean = true
+        OR (transactions.extra -> 'lunchflow' ->> 'pending')::boolean = true
       SQL
 
     # If merchant_id is provided, prioritize matching by merchant
@@ -760,6 +805,7 @@ class Account::ProviderImportAdapter
       .where(<<~SQL.squish)
         (transactions.extra -> 'simplefin' ->> 'pending')::boolean = true
         OR (transactions.extra -> 'plaid' ->> 'pending')::boolean = true
+        OR (transactions.extra -> 'lunchflow' ->> 'pending')::boolean = true
       SQL
 
     # For low confidence, require BOTH merchant AND name match (stronger signal needed)
@@ -796,6 +842,11 @@ class Account::ProviderImportAdapter
 
     # Don't overwrite if already has a suggestion (keep first one found)
     return if existing_extra["potential_posted_match"].present?
+
+    # Don't suggest if the posted entry is also still pending (pending→pending match)
+    # Suggestions are only for pending→posted reconciliation
+    posted_transaction = posted_entry.entryable
+    return if posted_transaction.is_a?(Transaction) && posted_transaction.pending?
 
     pending_transaction.update!(
       extra: existing_extra.merge(

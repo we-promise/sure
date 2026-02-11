@@ -28,34 +28,34 @@
         </div>
 
         <% placeholder_series_data = [
-            { date: Date.current - 14.days, value: 200 },
-            { date: Date.current - 13.days, value: 200 },
-            { date: Date.current - 12.days, value: 220 },
-            { date: Date.current - 11.days, value: 220 },
-            { date: Date.current - 10.days, value: 220 },
-            { date: Date.current - 9.days, value: 220 },
-            { date: Date.current - 8.days, value: 220 },
-            { date: Date.current - 7.days, value: 220 },
-            { date: Date.current - 6.days, value: 230 },
-            { date: Date.current - 5.days, value: 230 },
-            { date: Date.current - 4.days, value: 250 },
-            { date: Date.current - 3.days, value: 250 },
-            { date: Date.current - 2.days, value: 265 },
-            { date: Date.current - 1.day, value: 265 },
-            { date: Date.current, value: 265 }
-          ] %>
+          { date: Date.current - 14.days, value: 200 },
+          { date: Date.current - 13.days, value: 200 },
+          { date: Date.current - 12.days, value: 220 },
+          { date: Date.current - 11.days, value: 220 },
+          { date: Date.current - 10.days, value: 220 },
+          { date: Date.current - 9.days, value: 220 },
+          { date: Date.current - 8.days, value: 220 },
+          { date: Date.current - 7.days, value: 220 },
+          { date: Date.current - 6.days, value: 230 },
+          { date: Date.current - 5.days, value: 230 },
+          { date: Date.current - 4.days, value: 250 },
+          { date: Date.current - 3.days, value: 250 },
+          { date: Date.current - 2.days, value: 265 },
+          { date: Date.current - 1.day, value: 265 },
+          { date: Date.current, value: 265 }
+        ] %>
 
         <% placeholder_series = Series.from_raw_values(placeholder_series_data) %>
 
         <div class="flex items-center w-2/5">
           <div class="h-12 w-full">
             <div
-                id="previewChart"
-                class="h-full w-full"
-                data-controller="time-series-chart"
-                data-time-series-chart-data-value="<%= placeholder_series.to_json %>"
-                data-time-series-chart-use-labels-value="false"
-                data-time-series-chart-use-tooltip-value="false"></div>
+              id="previewChart"
+              class="h-full w-full"
+              data-controller="time-series-chart"
+              data-time-series-chart-data-value="<%= placeholder_series.to_json %>"
+              data-time-series-chart-use-labels-value="false"
+              data-time-series-chart-use-tooltip-value="false"></div>
           </div>
         </div>
       </div>
@@ -68,26 +68,26 @@
       <%= form.hidden_field :redirect_to, value: "goals" %>
 
       <div class="mb-4">
-        <%= form.select :theme, [["System", "system"], ["Light", "light"], ["Dark", "dark"]], { label: "Color theme" }, data: { action: "onboarding#setTheme" } %>
+        <%= form.select :theme, [[t(".theme_system"), "system"], [t(".theme_light"), "light"], [t(".theme_dark"), "dark"]], { label: t(".color_theme") }, data: { action: "onboarding#setTheme" } %>
       </div>
 
       <div class="space-y-4 mb-4">
         <%= form.fields_for :family do |family_form| %>
 
           <%= family_form.select :locale,
-            language_options,
-            { label: t(".locale"), required: true, selected: params[:locale] || @user.family.locale },
-            { data: { action: "onboarding#setLocale" } } %>
+                                 language_options,
+                                 { label: t(".locale"), required: true, selected: params[:locale] || @user.locale || I18n.locale },
+                                 { data: { action: "onboarding#setLocale" } } %>
 
           <%= family_form.select :currency,
-            Money::Currency.as_options.map { |currency| [ "#{currency.name} (#{currency.iso_code})", currency.iso_code ] },
-            { label: t(".currency"), required: true, selected: params[:currency] || @user.family.currency },
-            { data: { action: "onboarding#setCurrency" } } %>
+                                 Money::Currency.as_options.map { |currency| [ "#{currency.name} (#{currency.iso_code})", currency.iso_code ] },
+                                 { label: t(".currency"), required: true, selected: params[:currency] || @user.family.currency },
+                                 { data: { action: "onboarding#setCurrency" } } %>
 
           <%= family_form.select :date_format,
-            Family::DATE_FORMATS,
-            { label: t(".date_format"), required: true, selected: params[:date_format] || @user.family.date_format },
-            { data: { action: "onboarding#setDateFormat" } } %>
+                                 Family::DATE_FORMATS,
+                                 { label: t(".date_format"), required: true, selected: params[:date_format] || @user.family.date_format },
+                                 { data: { action: "onboarding#setDateFormat" } } %>
 
         <% end %>
       </div>

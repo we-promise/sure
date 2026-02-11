@@ -1,5 +1,5 @@
 class SimplefinItem < ApplicationRecord
-  include Syncable, Provided
+  include Syncable, Provided, Encryptable
   include SimplefinItem::Unlinking
 
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
@@ -7,18 +7,11 @@ class SimplefinItem < ApplicationRecord
   # Virtual attribute for the setup token form field
   attr_accessor :setup_token
 
-  # Helper to detect if ActiveRecord Encryption is configured for this app
-  def self.encryption_ready?
-    creds_ready = Rails.application.credentials.active_record_encryption.present?
-    env_ready = ENV["ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY"].present? &&
-                ENV["ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY"].present? &&
-                ENV["ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT"].present?
-    creds_ready || env_ready
-  end
-
-  # Encrypt sensitive credentials if ActiveRecord encryption is configured (credentials OR env vars)
+  # Encrypt sensitive credentials and raw payloads if ActiveRecord encryption is configured
   if encryption_ready?
     encrypts :access_url, deterministic: true
+    encrypts :raw_payload
+    encrypts :raw_institution_payload
   end
 
   validates :name, presence: true
@@ -27,12 +20,13 @@ class SimplefinItem < ApplicationRecord
   before_destroy :remove_simplefin_item
 
   belongs_to :family
-  has_one_attached :logo
+  has_one_attached :logo, dependent: :purge_later
 
   has_many :simplefin_accounts, dependent: :destroy
   has_many :legacy_accounts, through: :simplefin_accounts, source: :account
 
   scope :active, -> { where(scheduled_for_deletion: false) }
+  scope :syncable, -> { active }
   scope :ordered, -> { order(created_at: :desc) }
   scope :needs_update, -> { where(status: :requires_update) }
 

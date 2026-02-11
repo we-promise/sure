@@ -1,8 +1,13 @@
 # frozen_string_literal: true
 
 class SsoProvider < ApplicationRecord
-  # Encrypt sensitive credentials using Rails 7.2 built-in encryption
-  encrypts :client_secret, deterministic: false
+  include Encryptable
+  extend SslConfigurable
+
+  # Encrypt sensitive credentials if ActiveRecord encryption is configured
+  if encryption_ready?
+    encrypts :client_secret, deterministic: false
+  end
 
   # Default enabled to true for new providers
   attribute :enabled, :boolean, default: true
@@ -18,6 +23,12 @@ class SsoProvider < ApplicationRecord
   }
   validates :label, presence: true
   validates :enabled, inclusion: { in: [ true, false ] }
+  validates :icon, format: {
+    with: /\A\S+\z/,
+    message: "cannot be blank or contain only whitespace"
+  }, allow_nil: true
+
+  before_validation :normalize_icon
 
   # Strategy-specific validations
   validate :validate_oidc_fields, if: -> { strategy == "openid_connect" }
@@ -39,7 +50,7 @@ class SsoProvider < ApplicationRecord
       strategy: strategy,
       name: name,
       label: label,
-      icon: icon,
+      icon: icon.present? && icon.strip.present? ? icon.strip : nil,
       issuer: issuer,
       client_id: client_id,
       client_secret: client_secret,
@@ -49,6 +60,10 @@ class SsoProvider < ApplicationRecord
   end
 
   private
+    def normalize_icon
+      self.icon = icon.to_s.strip.presence
+    end
+
     def validate_oidc_fields
       if issuer.blank?
         errors.add(:issuer, "is required for OpenID Connect providers")
@@ -99,11 +114,12 @@ class SsoProvider < ApplicationRecord
     end
 
     def validate_default_role_setting
-      default_role = settings&.dig("default_role")
+      default_role = settings&.dig("default_role") || settings&.dig(:default_role)
+      default_role = default_role.to_s
       return if default_role.blank?
 
       unless User.roles.key?(default_role)
-        errors.add(:settings, "default_role must be member, admin, or super_admin")
+        errors.add(:settings, "default_role must be guest, member, admin, or super_admin")
       end
     end
 
@@ -112,7 +128,7 @@ class SsoProvider < ApplicationRecord
 
       begin
         discovery_url = issuer.end_with?("/") ? "#{issuer}.well-known/openid-configuration" : "#{issuer}/.well-known/openid-configuration"
-        response = Faraday.get(discovery_url) do |req|
+        response = Faraday.new(ssl: self.class.faraday_ssl_options).get(discovery_url) do |req|
           req.options.timeout = 5
           req.options.open_timeout = 3
         end

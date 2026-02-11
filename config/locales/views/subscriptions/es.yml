@@ -2,3 +2,13 @@
 es:
   subscriptions:
     self_hosted_alert: "%{product_name} no está disponible en modo autoalojado."
+    upgrade:
+      contribute_and_support_sure: "Contribuir y apoyar a Sure"
+      cta: "¡Apoya el desarrollo de este proyecto!"
+      header:
+        support: "Apoyar"
+        sure: "Sure"
+        today: "hoy"
+      redirect_to_stripe: "En el siguiente paso, serás redirigido a Stripe, que gestiona las tarjetas de crédito por nosotros."
+      trialing: "Tus datos se eliminarán en %{days} días"
+      trial_over: "Tu período de prueba ha terminado"

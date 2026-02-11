@@ -89,12 +89,19 @@ class HoldingTest < ActiveSupport::TestCase
     assert_equal Money.new(200.00, "USD"), @amzn.avg_cost
   end
 
-  test "avg_cost treats zero cost_basis as unknown" do
+  test "avg_cost treats zero cost_basis as unknown when not locked" do
     # Some providers return 0 when they don't have cost basis data
     # This should be treated as "unknown" (return nil), not as $0 cost
-    @amzn.update!(cost_basis: 0)
+    @amzn.update!(cost_basis: 0, cost_basis_locked: false)
 
     assert_nil @amzn.avg_cost
+  end
+
+  test "avg_cost returns zero cost_basis when locked (e.g., airdrops)" do
+    # User-set $0 cost basis is valid for airdrops and should be honored
+    @amzn.update!(cost_basis: 0, cost_basis_source: "manual", cost_basis_locked: true)
+
+    assert_equal Money.new(0, "USD"), @amzn.avg_cost
   end
 
   test "trend returns nil when cost basis is unknown" do
@@ -122,17 +129,18 @@ class HoldingTest < ActiveSupport::TestCase
     assert_not @amzn.cost_basis_replaceable_by?("manual")
   end
 
-  test "cost_basis_replaceable_by? respects priority hierarchy" do
-    # Provider data can be replaced by calculated or manual
+  test "cost_basis_replaceable_by? respects priority hierarchy and allows refreshes" do
+    # Provider data can be replaced by higher-priority sources (calculated/manual)
+    # and can be refreshed by provider again.
     @amzn.update!(cost_basis: 200, cost_basis_source: "provider", cost_basis_locked: false)
     assert @amzn.cost_basis_replaceable_by?("calculated")
     assert @amzn.cost_basis_replaceable_by?("manual")
-    assert_not @amzn.cost_basis_replaceable_by?("provider")
+    assert @amzn.cost_basis_replaceable_by?("provider")
 
-    # Calculated data can be replaced by manual only
+    # Calculated data can be replaced by manual and can be refreshed by calculated again.
     @amzn.update!(cost_basis: 200, cost_basis_source: "calculated", cost_basis_locked: false)
     assert @amzn.cost_basis_replaceable_by?("manual")
-    assert_not @amzn.cost_basis_replaceable_by?("calculated")
+    assert @amzn.cost_basis_replaceable_by?("calculated")
     assert_not @amzn.cost_basis_replaceable_by?("provider")
 
     # Manual data when LOCKED cannot be replaced by anything
@@ -236,6 +244,164 @@ class HoldingTest < ActiveSupport::TestCase
     assert @amzn.cost_basis_replaceable_by?("calculated")
     assert_not @amzn.cost_basis_replaceable_by?("provider")
     assert_not @amzn.cost_basis_replaceable_by?("manual")
+  end
+
+  # Security remapping tests
+
+  test "security_replaceable_by_provider? returns false when locked" do
+    @amzn.update!(security_locked: true)
+    assert_not @amzn.security_replaceable_by_provider?
+  end
+
+  test "security_replaceable_by_provider? returns true when not locked" do
+    @amzn.update!(security_locked: false)
+    assert @amzn.security_replaceable_by_provider?
+  end
+
+  test "security_remapped? returns true when provider_security differs from security" do
+    other_security = create_security("GOOG", prices: [ { date: Date.current, price: 100.00 } ])
+    @amzn.update!(provider_security: other_security)
+    assert @amzn.security_remapped?
+  end
+
+  test "security_remapped? returns false when provider_security is nil" do
+    assert_nil @amzn.provider_security_id
+    assert_not @amzn.security_remapped?
+  end
+
+  test "security_remapped? returns false when provider_security equals security" do
+    @amzn.update!(provider_security: @amzn.security)
+    assert_not @amzn.security_remapped?
+  end
+
+  test "remap_security! changes holding security and locks it" do
+    old_security = @amzn.security
+    new_security = create_security("GOOG", prices: [ { date: Date.current, price: 100.00 } ])
+
+    @amzn.remap_security!(new_security)
+
+    assert_equal new_security, @amzn.security
+    assert @amzn.security_locked?
+    assert_equal old_security, @amzn.provider_security
+  end
+
+  test "remap_security! updates all holdings for the same security" do
+    old_security = @amzn.security
+    new_security = create_security("GOOG", prices: [ { date: Date.current, price: 100.00 } ])
+
+    # There are 2 AMZN holdings (from load_holdings) - yesterday and today
+    amzn_holdings_count = @account.holdings.where(security: old_security).count
+    assert_equal 2, amzn_holdings_count
+
+    @amzn.remap_security!(new_security)
+
+    # All holdings should now be for the new security
+    assert_equal 0, @account.holdings.where(security: old_security).count
+    assert_equal 2, @account.holdings.where(security: new_security).count
+
+    # All should be locked with provider_security set
+    @account.holdings.where(security: new_security).each do |h|
+      assert h.security_locked?
+      assert_equal old_security, h.provider_security
+    end
+  end
+
+  test "remap_security! moves trades to new security" do
+    old_security = @amzn.security
+    new_security = create_security("GOOG", prices: [ { date: Date.current, price: 100.00 } ])
+
+    # Create a trade for the old security
+    create_trade(old_security, account: @account, qty: 5, price: 100.00, date: Date.current)
+    assert_equal 1, @account.trades.where(security: old_security).count
+
+    @amzn.remap_security!(new_security)
+
+    # Trade should have moved to the new security
+    assert_equal 0, @account.trades.where(security: old_security).count
+    assert_equal 1, @account.trades.where(security: new_security).count
+  end
+
+  test "remap_security! does nothing when security is same" do
+    current_security = @amzn.security
+
+    @amzn.remap_security!(current_security)
+
+    assert_equal current_security, @amzn.security
+    assert_not @amzn.security_locked?
+    assert_nil @amzn.provider_security_id
+  end
+
+  test "remap_security! merges holdings on collision by combining qty and amount" do
+    new_security = create_security("GOOG", prices: [ { date: Date.current, price: 100.00 } ])
+
+    # Create an existing holding for the new security on the same date
+    existing_goog = @account.holdings.create!(
+      date: @amzn.date,
+      security: new_security,
+      qty: 5,
+      price: 100,
+      amount: 500,
+      currency: "USD"
+    )
+
+    amzn_security = @amzn.security
+    amzn_qty = @amzn.qty
+    amzn_amount = @amzn.amount
+    initial_count = @account.holdings.count
+
+    # Remap should merge by combining qty and amount
+    @amzn.remap_security!(new_security)
+
+    # The AMZN holding on collision date should be deleted, merged into GOOG
+    assert_equal initial_count - 1, @account.holdings.count
+
+    # The existing GOOG holding should have merged values
+    existing_goog.reload
+    assert_equal 5 + amzn_qty, existing_goog.qty
+    assert_equal 500 + amzn_amount, existing_goog.amount
+
+    # Merged holding should be locked to prevent provider overwrites
+    assert existing_goog.security_locked, "Merged holding should be locked"
+
+    # No holdings should remain for the old AMZN security
+    assert_equal 0, @account.holdings.where(security: amzn_security).count
+  end
+
+  test "reset_security_to_provider! restores original security" do
+    old_security = @amzn.security
+    new_security = create_security("GOOG", prices: [ { date: Date.current, price: 100.00 } ])
+
+    @amzn.remap_security!(new_security)
+    assert_equal new_security, @amzn.security
+    assert @amzn.security_locked?
+
+    @amzn.reset_security_to_provider!
+
+    assert_equal old_security, @amzn.security
+    assert_not @amzn.security_locked?
+    assert_nil @amzn.provider_security_id
+  end
+
+  test "reset_security_to_provider! moves trades back" do
+    old_security = @amzn.security
+    new_security = create_security("GOOG", prices: [ { date: Date.current, price: 100.00 } ])
+
+    create_trade(old_security, account: @account, qty: 5, price: 100.00, date: Date.current)
+
+    @amzn.remap_security!(new_security)
+    assert_equal 1, @account.trades.where(security: new_security).count
+
+    @amzn.reset_security_to_provider!
+    assert_equal 0, @account.trades.where(security: new_security).count
+    assert_equal 1, @account.trades.where(security: old_security).count
+  end
+
+  test "reset_security_to_provider! does nothing if not remapped" do
+    old_security = @amzn.security
+    @amzn.reset_security_to_provider!
+
+    assert_equal old_security, @amzn.security
+    assert_nil @amzn.provider_security_id
   end
 
   private

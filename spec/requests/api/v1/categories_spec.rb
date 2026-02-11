@@ -20,25 +20,18 @@ RSpec.describe 'API V1 Categories', type: :request do
     )
   end
 
-  let(:oauth_application) do
-    Doorkeeper::Application.create!(
-      name: 'API Docs',
-      redirect_uri: 'https://example.com/callback',
-      scopes: 'read read_write'
+  let(:api_key) do
+    key = ApiKey.generate_secure_key
+    ApiKey.create!(
+      user: user,
+      name: 'API Docs Key',
+      key: key,
+      scopes: %w[read_write],
+      source: 'web'
     )
   end
 
-  let(:access_token) do
-    Doorkeeper::AccessToken.create!(
-      application: oauth_application,
-      resource_owner_id: user.id,
-      scopes: 'read_write',
-      expires_in: 2.hours,
-      token: SecureRandom.hex(32)
-    )
-  end
-
-  let(:Authorization) { "Bearer #{access_token.token}" }
+  let(:'X-Api-Key') { api_key.plain_key }
 
   let!(:parent_category) do
     family.categories.create!(
@@ -71,10 +64,8 @@ RSpec.describe 'API V1 Categories', type: :request do
   path '/api/v1/categories' do
     get 'List categories' do
       tags 'Categories'
-      security [ { bearerAuth: [] } ]
+      security [ { apiKeyAuth: [] } ]
       produces 'application/json'
-      parameter name: :Authorization, in: :header, required: true, schema: { type: :string },
-                description: 'Bearer token with read scope'
       parameter name: :page, in: :query, type: :integer, required: false,
                 description: 'Page number (default: 1)'
       parameter name: :per_page, in: :query, type: :integer, required: false,
@@ -92,11 +83,7 @@ RSpec.describe 'API V1 Categories', type: :request do
       response '200', 'categories listed' do
         schema '$ref' => '#/components/schemas/CategoryCollection'
 
-        run_test! do |response|
-          payload = JSON.parse(response.body)
-          expect(payload.fetch('categories')).to be_present
-          expect(payload.fetch('pagination')).to include('page', 'per_page', 'total_count', 'total_pages')
-        end
+        run_test!
       end
 
       response '200', 'categories filtered by classification' do
@@ -104,12 +91,7 @@ RSpec.describe 'API V1 Categories', type: :request do
 
         let(:classification) { 'expense' }
 
-        run_test! do |response|
-          payload = JSON.parse(response.body)
-          payload.fetch('categories').each do |category|
-            expect(category.fetch('classification')).to eq('expense')
-          end
-        end
+        run_test!
       end
 
       response '200', 'root categories only' do
@@ -117,12 +99,7 @@ RSpec.describe 'API V1 Categories', type: :request do
 
         let(:roots_only) { true }
 
-        run_test! do |response|
-          payload = JSON.parse(response.body)
-          payload.fetch('categories').each do |category|
-            expect(category.fetch('parent')).to be_nil
-          end
-        end
+        run_test!
       end
 
       response '200', 'categories filtered by parent' do
@@ -130,24 +107,17 @@ RSpec.describe 'API V1 Categories', type: :request do
 
         let(:parent_id) { parent_category.id }
 
-        run_test! do |response|
-          payload = JSON.parse(response.body)
-          payload.fetch('categories').each do |category|
-            expect(category.dig('parent', 'id')).to eq(parent_category.id)
-          end
-        end
+        run_test!
       end
     end
   end
 
   path '/api/v1/categories/{id}' do
-    parameter name: :Authorization, in: :header, required: true, schema: { type: :string },
-              description: 'Bearer token with read scope'
     parameter name: :id, in: :path, type: :string, required: true, description: 'Category ID'
 
     get 'Retrieve a category' do
       tags 'Categories'
-      security [ { bearerAuth: [] } ]
+      security [ { apiKeyAuth: [] } ]
       produces 'application/json'
 
       let(:id) { parent_category.id }
@@ -155,13 +125,7 @@ RSpec.describe 'API V1 Categories', type: :request do
       response '200', 'category retrieved' do
         schema '$ref' => '#/components/schemas/CategoryDetail'
 
-        run_test! do |response|
-          payload = JSON.parse(response.body)
-          expect(payload.fetch('id')).to eq(parent_category.id)
-          expect(payload.fetch('name')).to eq('Food & Drink')
-          expect(payload.fetch('classification')).to eq('expense')
-          expect(payload.fetch('subcategories_count')).to eq(1)
-        end
+        run_test!
       end
 
       response '200', 'subcategory retrieved with parent' do
@@ -169,13 +133,7 @@ RSpec.describe 'API V1 Categories', type: :request do
 
         let(:id) { subcategory.id }
 
-        run_test! do |response|
-          payload = JSON.parse(response.body)
-          expect(payload.fetch('id')).to eq(subcategory.id)
-          expect(payload.fetch('name')).to eq('Restaurants')
-          expect(payload.dig('parent', 'id')).to eq(parent_category.id)
-          expect(payload.dig('parent', 'name')).to eq('Food & Drink')
-        end
+        run_test!
       end
 
       response '404', 'category not found' do

@@ -1,0 +1,4 @@
+---
+ro:
+  provider_warnings:
+    limited_investment_data: "Datele de investiții de la acest furnizor sunt limitate. Etichetele de activitate (Cumpărare, Vânzare, Dividend) nu sunt disponibile, ceea ce poate afecta acuratețea bugetului. Luați în considerare crearea de reguli pentru a exclude sau categoriza tranzacțiile de investiții."

@@ -21,7 +21,8 @@ class FamilyMerchant < Merchant
     def generate_logo_url_from_website
       if website_url.present? && Setting.brand_fetch_client_id.present?
         domain = extract_domain(website_url)
-        self.logo_url = "https://cdn.brandfetch.io/#{domain}/icon/fallback/lettermark/w/40/h/40?c=#{Setting.brand_fetch_client_id}"
+        size = Setting.brand_fetch_logo_size
+        self.logo_url = "https://cdn.brandfetch.io/#{domain}/icon/fallback/lettermark/w/#{size}/h/#{size}?c=#{Setting.brand_fetch_client_id}"
       elsif website_url.blank?
         self.logo_url = nil
       end

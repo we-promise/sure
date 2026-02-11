@@ -13,9 +13,19 @@ zh-CN:
     index:
       title: 导出
       new: 新建导出
-      no_exports: 暂无导出记录
-    list:
-      export_from: "导出自 %{date}"
-      complete: 已完成
-      failed: 已失败
-      in_progress: 进行中
+    table:
+      title: 导出
+      header:
+        date: 日期
+        filename: 文件名
+        status: 状态
+        actions: 操作
+      row:
+        status:
+          complete: 已完成
+          failed: 已失败
+          in_progress: 进行中
+        actions:
+          delete: 删除
+          download: 下载
+      empty: 暂无导出记录

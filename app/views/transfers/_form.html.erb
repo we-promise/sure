@@ -6,13 +6,28 @@
     </div>
   <% end %>
 
-  <section>
-    <%= render "shared/transaction_type_tabs", active_tab: "transfer" %>
-  </section>
+  <%# Hide expense/income tabs when creating a transfer involving an investment or crypto account. %>
+  <% show_type_tabs = true %>
+  <% account_ids = [] %>
+  <% account_ids << @from_account_id if defined?(@from_account_id) && @from_account_id.present? %>
+  <% account_ids << params[:from_account_id] if params[:from_account_id].present? %>
+  <% account_ids << params[:to_account_id] if params[:to_account_id].present? %>
+  <% account_ids << transfer.from_account_id if transfer.respond_to?(:from_account_id) && transfer.from_account_id.present? %>
+  <% account_ids << transfer.to_account_id if transfer.respond_to?(:to_account_id) && transfer.to_account_id.present? %>
+
+  <% if account_ids.any? && Current.family.accounts.where(id: account_ids).any? { |a| a.investment? || a.crypto? } %>
+    <% show_type_tabs = false %>
+  <% end %>
+
+  <% if show_type_tabs %>
+    <section>
+      <%= render "shared/transaction_type_tabs", active_tab: "transfer" %>
+    </section>
+  <% end %>
 
   <section class="space-y-2">
-    <%= f.collection_select :from_account_id, Current.family.accounts.manual.alphabetically, :id, :name, { prompt: t(".select_account"), label: t(".from") }, required: true %>
-    <%= f.collection_select :to_account_id, Current.family.accounts.manual.alphabetically, :id, :name, { prompt: t(".select_account"), label: t(".to") }, required: true %>
+    <%= f.collection_select :from_account_id, Current.family.accounts.alphabetically, :id, :name, { prompt: t(".select_account"), label: t(".from"), selected: @from_account_id }, required: true %>
+    <%= f.collection_select :to_account_id, Current.family.accounts.alphabetically, :id, :name, { prompt: t(".select_account"), label: t(".to") }, required: true %>
     <%= f.number_field :amount, label: t(".amount"), required: true, min: 0, placeholder: "100", step: 0.00000001 %>
     <%= f.date_field :date, value: transfer.inflow_transaction&.entry&.date || Date.current, label: t(".date"), required: true, max: Date.current %>
   </section>

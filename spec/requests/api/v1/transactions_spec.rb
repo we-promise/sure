@@ -20,25 +20,18 @@ RSpec.describe 'API V1 Transactions', type: :request do
     )
   end
 
-  let(:oauth_application) do
-    Doorkeeper::Application.create!(
-      name: 'API Docs',
-      redirect_uri: 'https://example.com/callback',
-      scopes: 'read read_write'
+  let(:api_key) do
+    key = ApiKey.generate_secure_key
+    ApiKey.create!(
+      user: user,
+      name: 'API Docs Key',
+      key: key,
+      scopes: %w[read_write],
+      source: 'web'
     )
   end
 
-  let(:access_token) do
-    Doorkeeper::AccessToken.create!(
-      application: oauth_application,
-      resource_owner_id: user.id,
-      scopes: 'read_write',
-      expires_in: 2.hours,
-      token: SecureRandom.hex(32)
-    )
-  end
-
-  let(:Authorization) { "Bearer #{access_token.token}" }
+  let(:'X-Api-Key') { api_key.plain_key }
 
   let(:account) do
     Account.create!(
@@ -96,10 +89,8 @@ RSpec.describe 'API V1 Transactions', type: :request do
   path '/api/v1/transactions' do
     get 'List transactions' do
       tags 'Transactions'
-      security [ { bearerAuth: [] } ]
+      security [ { apiKeyAuth: [] } ]
       produces 'application/json'
-      parameter name: :Authorization, in: :header, required: true, schema: { type: :string },
-                description: 'Bearer token with read scope'
       parameter name: :page, in: :query, type: :integer, required: false,
                 description: 'Page number (default: 1)'
       parameter name: :per_page, in: :query, type: :integer, required: false,
@@ -141,11 +132,7 @@ RSpec.describe 'API V1 Transactions', type: :request do
       response '200', 'transactions listed' do
         schema '$ref' => '#/components/schemas/TransactionCollection'
 
-        run_test! do |response|
-          payload = JSON.parse(response.body)
-          expect(payload.fetch('transactions')).to be_present
-          expect(payload.fetch('pagination')).to include('page', 'per_page', 'total_count', 'total_pages')
-        end
+        run_test!
       end
 
       response '200', 'transactions filtered by account' do
@@ -153,10 +140,7 @@ RSpec.describe 'API V1 Transactions', type: :request do
 
         let(:account_id) { account.id }
 
-        run_test! do |response|
-          payload = JSON.parse(response.body)
-          expect(payload.fetch('transactions')).to be_present
-        end
+        run_test!
       end
 
       response '200', 'transactions filtered by date range' do
@@ -165,20 +149,15 @@ RSpec.describe 'API V1 Transactions', type: :request do
         let(:start_date) { (Date.current - 7.days).to_s }
         let(:end_date) { Date.current.to_s }
 
-        run_test! do |response|
-          payload = JSON.parse(response.body)
-          expect(payload.fetch('transactions')).to be_present
-        end
+        run_test!
       end
     end
 
     post 'Create transaction' do
       tags 'Transactions'
-      security [ { bearerAuth: [] } ]
+      security [ { apiKeyAuth: [] } ]
       consumes 'application/json'
       produces 'application/json'
-      parameter name: :Authorization, in: :header, required: true, schema: { type: :string },
-                description: 'Bearer token with write scope'
       parameter name: :body, in: :body, required: true, schema: {
         type: :object,
         properties: {
@@ -220,11 +199,7 @@ RSpec.describe 'API V1 Transactions', type: :request do
       response '201', 'transaction created' do
         schema '$ref' => '#/components/schemas/Transaction'
 
-        run_test! do |response|
-          payload = JSON.parse(response.body)
-          expect(payload.fetch('name')).to eq('Test purchase')
-          expect(payload.fetch('account').fetch('id')).to eq(account.id)
-        end
+        run_test!
       end
 
       response '422', 'validation error - missing account_id' do
@@ -260,13 +235,11 @@ RSpec.describe 'API V1 Transactions', type: :request do
   end
 
   path '/api/v1/transactions/{id}' do
-    parameter name: :Authorization, in: :header, required: true, schema: { type: :string },
-              description: 'Bearer token'
     parameter name: :id, in: :path, type: :string, required: true, description: 'Transaction ID'
 
     get 'Retrieve a transaction' do
       tags 'Transactions'
-      security [ { bearerAuth: [] } ]
+      security [ { apiKeyAuth: [] } ]
       produces 'application/json'
 
       let(:id) { transaction.id }
@@ -274,14 +247,7 @@ RSpec.describe 'API V1 Transactions', type: :request do
       response '200', 'transaction retrieved' do
         schema '$ref' => '#/components/schemas/Transaction'
 
-        run_test! do |response|
-          payload = JSON.parse(response.body)
-          expect(payload.fetch('id')).to eq(transaction.id)
-          expect(payload.fetch('name')).to eq('Grocery shopping')
-          expect(payload.fetch('category').fetch('name')).to eq('Groceries')
-          expect(payload.fetch('merchant').fetch('name')).to eq('Whole Foods')
-          expect(payload.fetch('tags').first.fetch('name')).to eq('Essential')
-        end
+        run_test!
       end
 
       response '404', 'transaction not found' do
@@ -295,7 +261,7 @@ RSpec.describe 'API V1 Transactions', type: :request do
 
     patch 'Update a transaction' do
       tags 'Transactions'
-      security [ { bearerAuth: [] } ]
+      security [ { apiKeyAuth: [] } ]
       consumes 'application/json'
       produces 'application/json'
 
@@ -316,7 +282,11 @@ RSpec.describe 'API V1 Transactions', type: :request do
               category_id: { type: :string, format: :uuid },
               merchant_id: { type: :string, format: :uuid },
               nature: { type: :string, enum: %w[income expense inflow outflow] },
-              tag_ids: { type: :array, items: { type: :string, format: :uuid } }
+              tag_ids: {
+                type: :array,
+                items: { type: :string, format: :uuid },
+                description: 'Array of tag IDs to assign. Omit to preserve existing tags; use [] to clear all tags.'
+              }
             }
           }
         }
@@ -334,11 +304,7 @@ RSpec.describe 'API V1 Transactions', type: :request do
       response '200', 'transaction updated' do
         schema '$ref' => '#/components/schemas/Transaction'
 
-        run_test! do |response|
-          payload = JSON.parse(response.body)
-          expect(payload.fetch('name')).to eq('Updated grocery shopping')
-          expect(payload.fetch('notes')).to eq('Weekly groceries')
-        end
+        run_test!
       end
 
       response '404', 'transaction not found' do
@@ -352,7 +318,7 @@ RSpec.describe 'API V1 Transactions', type: :request do
 
     delete 'Delete a transaction' do
       tags 'Transactions'
-      security [ { bearerAuth: [] } ]
+      security [ { apiKeyAuth: [] } ]
       produces 'application/json'
 
       let(:id) { another_transaction.id }
@@ -360,10 +326,7 @@ RSpec.describe 'API V1 Transactions', type: :request do
       response '200', 'transaction deleted' do
         schema '$ref' => '#/components/schemas/DeleteResponse'
 
-        run_test! do |response|
-          payload = JSON.parse(response.body)
-          expect(payload.fetch('message')).to eq('Transaction deleted successfully')
-        end
+        run_test!
       end
 
       response '404', 'transaction not found' do

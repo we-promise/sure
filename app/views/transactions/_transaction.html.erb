@@ -4,7 +4,7 @@
 
 <%= turbo_frame_tag dom_id(entry) do %>
   <%= turbo_frame_tag dom_id(transaction) do %>
-    <div class="flex lg:grid lg:grid-cols-12 items-center text-primary text-sm font-medium p-3 lg:p-4 <%= entry.excluded ? "opacity-50 text-gray-400" : "" %>">
+    <div class="group flex lg:grid lg:grid-cols-12 items-center text-primary text-sm font-medium p-3 lg:p-4 <%= entry.excluded ? "opacity-50 text-secondary" : "" %>">
 
       <div class="pr-4 lg:pr-10 flex items-center gap-3 lg:gap-4 col-span-8 min-w-0">
         <%= check_box_tag dom_id(entry, "selection"),
@@ -21,8 +21,8 @@
           <%= content_tag :div, class: ["flex items-center gap-3 lg:gap-4"] do %>
             <div class="hidden lg:flex">
               <% if transaction.merchant&.logo_url.present? %>
-                <%= image_tag transaction.merchant.logo_url,
-                    class: "w-9 h-9 rounded-full",
+                <%= image_tag Setting.transform_brand_fetch_url(transaction.merchant.logo_url),
+                    class: "w-9 h-9 rounded-full border border-secondary",
                     loading: "lazy" %>
               <% else %>
                 <div class="hidden lg:flex">
@@ -38,7 +38,7 @@
             <div class="flex md:hidden items-center gap-1 col-span-2 relative">
               <%= render "transactions/transaction_category", transaction: transaction, variant: "mobile" %>
               <% if transaction.merchant&.logo_url.present? %>
-                <%= image_tag transaction.merchant.logo_url,
+                <%= image_tag Setting.transform_brand_fetch_url(transaction.merchant.logo_url),
                     class: "w-5 h-5 rounded-full absolute -bottom-1 -right-1 border border-secondary pointer-events-none",
                     loading: "lazy" %>
               <% end %>
@@ -145,7 +145,16 @@
         <% end %>
       </div>
 
-      <div class="shrink-0 col-span-4 lg:col-span-2 ml-auto text-right">
+      <div class="shrink-0 col-span-4 lg:col-span-2 ml-auto flex items-center justify-end gap-2">
+        <%# Protection indicator - shows on hover when entry is protected from sync %>
+        <% if entry.protected_from_sync? && !entry.excluded? %>
+          <%= link_to entry_path(entry),
+                data: { turbo_frame: "drawer", turbo_prefetch: false },
+                class: "invisible group-hover:visible transition-opacity",
+                title: t("entries.protection.tooltip") do %>
+            <%= icon "lock", size: "sm", class: "text-secondary" %>
+          <% end %>
+        <% end %>
         <%= content_tag :p,
             transaction.transfer? && view_ctx == "global" ? "+/- #{format_money(entry.amount_money.abs)}" : format_money(-entry.amount_money),
             class: ["text-green-600": entry.amount.negative?] %>

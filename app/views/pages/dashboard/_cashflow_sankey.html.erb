@@ -9,7 +9,6 @@
                 class: "bg-container border border-secondary font-medium rounded-lg px-3 py-2 text-sm pr-7 cursor-pointer text-primary focus:outline-hidden focus:ring-0" %>
     <% end %>
   </div>
-
   <% if sankey_data[:links].present? %>
     <div class="w-full h-96">
       <div
@@ -18,6 +17,18 @@
         data-sankey-chart-currency-symbol-value="<%= sankey_data[:currency_symbol] %>"
         class="w-full h-full"></div>
     </div>
+    <%= render DS::Dialog.new(id: "cashflow-expanded-dialog", auto_open: false, width: "custom", disable_frame: true, content_class: "!w-[96vw] max-w-[1650px]", data: { action: "close->cashflow-expand#restore" }) do |dialog| %>
+      <% dialog.with_header(title: t("pages.dashboard.cashflow_sankey.title")) %>
+      <% dialog.with_body do %>
+        <div class="w-full h-[85dvh] max-h-[90dvh] overflow-y-auto overscroll-contain">
+          <div
+            data-controller="sankey-chart"
+            data-sankey-chart-data-value="<%= sankey_data.to_json %>"
+            data-sankey-chart-currency-symbol-value="<%= sankey_data[:currency_symbol] %>"
+            class="w-full h-full"></div>
+        </div>
+      <% end %>
+    <% end %>
   <% else %>
     <div class="h-[300px] lg:h-[340px] bg-container py-4 flex flex-col items-center justify-center">
       <div class="space-y-3 text-center flex flex-col items-center">
@@ -25,7 +36,6 @@
           variant: :container,
           icon: "activity" # cashflow placeholder icon
         ) %>
-
         <p class="text-sm font-medium text-primary"><%= t("pages.dashboard.cashflow_sankey.no_data_title") %></p>
         <p class="text-secondary text-sm"><%= t("pages.dashboard.cashflow_sankey.no_data_description") %></p>
         <%= render DS::Link.new(

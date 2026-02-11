@@ -13,9 +13,19 @@ ro:
     index:
       title: Exporturi
       new: Export nou
-      no_exports: Nu există încă exporturi.
-    list:
-      export_from: "Export din %{date}"
-      in_progress: În curs de desfășurare
-      complete: Finalizat
-      failed: Eșuat
+    table:
+      title: Exporturi
+      header:
+        date: Data
+        filename: Nume de fișier
+        status: Stare
+        actions: Acțiuni
+      row:
+        status:
+          in_progress: În curs de desfășurare
+          complete: Finalizat
+          failed: Eșuat
+        actions:
+          delete: Șterge
+          download: Descărcare
+      empty: Nu există încă exporturi.

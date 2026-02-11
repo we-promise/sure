@@ -156,4 +156,111 @@ class TradesControllerTest < ActionDispatch::IntegrationTest
     assert_enqueued_with job: SyncJob
     assert_redirected_to account_url(created_entry.account)
   end
+
+  test "unlock clears protection flags on user-modified entry" do
+    # Mark as protected with locked_attributes on both entry and entryable
+    @entry.update!(user_modified: true, locked_attributes: { "name" => Time.current.iso8601 })
+    @entry.trade.update!(locked_attributes: { "qty" => Time.current.iso8601 })
+
+    assert @entry.reload.protected_from_sync?
+
+    post unlock_trade_path(@entry.trade)
+
+    assert_redirected_to account_path(@entry.account)
+    assert_equal "Entry unlocked. It may be updated on next sync.", flash[:notice]
+
+    @entry.reload
+    assert_not @entry.user_modified?
+    assert_empty @entry.locked_attributes, "Entry locked_attributes should be cleared"
+    assert_empty @entry.trade.locked_attributes, "Trade locked_attributes should be cleared"
+    assert_not @entry.protected_from_sync?
+  end
+
+  test "unlock clears import_locked flag" do
+    @entry.update!(import_locked: true)
+
+    assert @entry.reload.protected_from_sync?
+
+    post unlock_trade_path(@entry.trade)
+
+    assert_redirected_to account_path(@entry.account)
+    @entry.reload
+    assert_not @entry.import_locked?
+    assert_not @entry.protected_from_sync?
+  end
+
+  test "update locks saved attributes" do
+    assert_not @entry.user_modified?
+    assert_empty @entry.trade.locked_attributes
+
+    patch trade_url(@entry), params: {
+      entry: {
+        currency: "USD",
+        entryable_attributes: {
+          id: @entry.entryable_id,
+          qty: 50,
+          price: 25
+        }
+      }
+    }
+
+    @entry.reload
+    assert @entry.user_modified?
+    assert @entry.trade.locked_attributes.key?("qty")
+    assert @entry.trade.locked_attributes.key?("price")
+  end
+
+  test "turbo stream update includes lock icon for protected entry" do
+    assert_not @entry.user_modified?
+
+    patch trade_url(@entry), params: {
+      entry: {
+        currency: "USD",
+        nature: "outflow",
+        entryable_attributes: {
+          id: @entry.entryable_id,
+          qty: 50,
+          price: 25
+        }
+      }
+    }, as: :turbo_stream
+
+    assert_response :success
+    assert_match(/turbo-stream/, response.content_type)
+    # The turbo stream should contain the lock icon link with protection tooltip
+    assert_match(/title="Protected from sync"/, response.body)
+    # And should contain the lock SVG (the path for lock icon)
+    assert_match(/M7 11V7a5 5 0 0 1 10 0v4/, response.body)
+  end
+
+  test "quick edit badge update locks activity label" do
+    assert_not @entry.user_modified?
+    assert_empty @entry.trade.locked_attributes
+    original_label = @entry.trade.investment_activity_label
+
+    # Mimic the quick edit badge JSON request
+    patch trade_url(@entry),
+      params: {
+        entry: {
+          entryable_attributes: {
+            id: @entry.entryable_id,
+            investment_activity_label: original_label == "Buy" ? "Sell" : "Buy"
+          }
+        }
+      }.to_json,
+      headers: {
+        "Content-Type" => "application/json",
+        "Accept" => "text/vnd.turbo-stream.html"
+      }
+
+    assert_response :success
+    assert_match(/turbo-stream/, response.content_type)
+    # The turbo stream should contain the lock icon
+    assert_match(/title="Protected from sync"/, response.body)
+
+    @entry.reload
+    assert @entry.user_modified?, "Entry should be marked as user_modified"
+    assert @entry.trade.locked_attributes.key?("investment_activity_label"), "investment_activity_label should be locked"
+    assert @entry.protected_from_sync?, "Entry should be protected from sync"
+  end
 end

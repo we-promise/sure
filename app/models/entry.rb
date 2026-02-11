@@ -42,6 +42,7 @@ class Entry < ApplicationRecord
       .where(<<~SQL.squish)
         (transactions.extra -> 'simplefin' ->> 'pending')::boolean = true
         OR (transactions.extra -> 'plaid' ->> 'pending')::boolean = true
+        OR (transactions.extra -> 'lunchflow' ->> 'pending')::boolean = true
       SQL
   }
 
@@ -56,6 +57,7 @@ class Entry < ApplicationRecord
         AND (
           (t.extra -> 'simplefin' ->> 'pending')::boolean = true
           OR (t.extra -> 'plaid' ->> 'pending')::boolean = true
+          OR (t.extra -> 'lunchflow' ->> 'pending')::boolean = true
         )
       )
     SQL
@@ -65,6 +67,11 @@ class Entry < ApplicationRecord
   scope :stale_pending, ->(days: 8) {
     pending.where("entries.date < ?", days.days.ago.to_date)
   }
+
+  # Family-scoped query for Enrichable#clear_ai_cache
+  def self.family_scope(family)
+    joins(:account).where(accounts: { family_id: family.id })
+  end
 
   # Auto-exclude stale pending transactions for an account
   # Called during sync to clean up pending transactions that never posted
@@ -113,6 +120,7 @@ class Entry < ApplicationRecord
         .where(<<~SQL.squish)
           (transactions.extra -> 'simplefin' ->> 'pending')::boolean IS NOT TRUE
           AND (transactions.extra -> 'plaid' ->> 'pending')::boolean IS NOT TRUE
+          AND (transactions.extra -> 'lunchflow' ->> 'pending')::boolean IS NOT TRUE
         SQL
         .limit(2) # Only need to know if 0, 1, or 2+ candidates
         .to_a # Load limited records to avoid COUNT(*) on .size
@@ -159,6 +167,7 @@ class Entry < ApplicationRecord
         .where(<<~SQL.squish)
           (transactions.extra -> 'simplefin' ->> 'pending')::boolean IS NOT TRUE
           AND (transactions.extra -> 'plaid' ->> 'pending')::boolean IS NOT TRUE
+          AND (transactions.extra -> 'lunchflow' ->> 'pending')::boolean IS NOT TRUE
         SQL
 
       # Match by name similarity (first 3 words)
@@ -260,6 +269,50 @@ class Entry < ApplicationRecord
     update!(user_modified: true)
   end
 
+  # Returns the reason this entry is protected from sync, or nil if not protected.
+  # Priority: excluded > user_modified > import_locked
+  #
+  # @return [Symbol, nil] :excluded, :user_modified, :import_locked, or nil
+  def protection_reason
+    return :excluded if excluded?
+    return :user_modified if user_modified?
+    return :import_locked if import_locked?
+    nil
+  end
+
+  # Returns array of field names that are locked on entry and entryable.
+  #
+  # @return [Array<String>] locked field names
+  def locked_field_names
+    entry_keys = locked_attributes&.keys || []
+    entryable_keys = entryable&.locked_attributes&.keys || []
+    (entry_keys + entryable_keys).uniq
+  end
+
+  # Returns hash of locked field names to their lock timestamps.
+  # Combines locked_attributes from both entry and entryable.
+  # Parses ISO8601 timestamps stored in locked_attributes.
+  #
+  # @return [Hash{String => Time}] field name to lock timestamp
+  def locked_fields_with_timestamps
+    combined = (locked_attributes || {}).merge(entryable&.locked_attributes || {})
+    combined.transform_values do |timestamp|
+      Time.zone.parse(timestamp.to_s) rescue timestamp
+    end
+  end
+
+  # Clears protection flags so provider sync can update this entry again.
+  # Clears user_modified, import_locked flags, and all locked_attributes
+  # on both the entry and its entryable.
+  #
+  # @return [void]
+  def unlock_for_sync!
+    self.class.transaction do
+      update!(user_modified: false, import_locked: false, locked_attributes: {})
+      entryable&.update!(locked_attributes: {})
+    end
+  end
+
   class << self
     def search(params)
       EntrySearch.new(params).build_query(all)
@@ -270,27 +323,50 @@ class Entry < ApplicationRecord
       30.years.ago.to_date
     end
 
-    def bulk_update!(bulk_update_params)
+    # Bulk update entries with the given parameters.
+    #
+    # Tags are handled separately from other entryable attributes because they use
+    # a join table (taggings) rather than a direct column. This means:
+    # - category_id: nil means "no category" (column value)
+    # - tag_ids: [] means "delete all taggings" (join table operation)
+    #
+    # To avoid accidentally clearing tags when only updating other fields,
+    # tags are only modified when explicitly requested via update_tags: true.
+    #
+    # @param bulk_update_params [Hash] The parameters to update
+    # @param update_tags [Boolean] Whether to update tags (default: false)
+    def bulk_update!(bulk_update_params, update_tags: false)
       bulk_attributes = {
         date: bulk_update_params[:date],
         notes: bulk_update_params[:notes],
         entryable_attributes: {
           category_id: bulk_update_params[:category_id],
-          merchant_id: bulk_update_params[:merchant_id],
-          tag_ids: bulk_update_params[:tag_ids]
+          merchant_id: bulk_update_params[:merchant_id]
         }.compact_blank
       }.compact_blank
 
-      return 0 if bulk_attributes.blank?
+      tag_ids = Array.wrap(bulk_update_params[:tag_ids]).reject(&:blank?)
+      has_updates = bulk_attributes.present? || update_tags
+
+      return 0 unless has_updates
 
       transaction do
         all.each do |entry|
-          bulk_attributes[:entryable_attributes][:id] = entry.entryable_id if bulk_attributes[:entryable_attributes].present?
-          entry.update! bulk_attributes
+          # Update standard attributes
+          if bulk_attributes.present?
+            bulk_attributes[:entryable_attributes][:id] = entry.entryable_id if bulk_attributes[:entryable_attributes].present?
+            entry.update! bulk_attributes
+          end
+
+          # Handle tags separately - only when explicitly requested
+          if update_tags && entry.transaction?
+            entry.transaction.tag_ids = tag_ids
+            entry.transaction.save!
+            entry.entryable.lock_attr!(:tag_ids) if entry.transaction.tags.any?
+          end
 
           entry.lock_saved_attributes!
           entry.mark_user_modified!
-          entry.entryable.lock_attr!(:tag_ids) if entry.transaction? && entry.transaction.tags.any?
         end
       end
 

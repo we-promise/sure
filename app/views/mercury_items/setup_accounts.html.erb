@@ -1,0 +1,105 @@
+<% content_for :title, "Set Up Mercury Accounts" %>
+
+<%= render DS::Dialog.new do |dialog| %>
+  <% dialog.with_header(title: t(".title")) do %>
+    <div class="flex items-center gap-2">
+      <%= icon "building-2", class: "text-primary" %>
+      <span class="text-primary"><%= t(".subtitle") %></span>
+    </div>
+  <% end %>
+
+  <% dialog.with_body do %>
+    <%= form_with url: complete_account_setup_mercury_item_path(@mercury_item),
+                  method: :post,
+                  local: true,
+                  data: {
+                    controller: "loading-button",
+                    action: "submit->loading-button#showLoading",
+                    loading_button_loading_text_value: t(".creating_accounts"),
+                    turbo_frame: "_top"
+                  },
+                  class: "space-y-6" do |form| %>
+
+      <div class="space-y-4">
+        <% if @api_error.present? %>
+          <div class="p-8 flex flex-col gap-3 items-center justify-center text-center">
+            <%= icon "alert-circle", size: "lg", class: "text-destructive" %>
+            <p class="text-primary font-medium"><%= t(".fetch_failed") %></p>
+            <p class="text-destructive text-sm"><%= @api_error %></p>
+          </div>
+        <% elsif @mercury_accounts.empty? %>
+          <div class="p-8 flex flex-col gap-3 items-center justify-center text-center">
+            <%= icon "check-circle", size: "lg", class: "text-success" %>
+            <p class="text-primary font-medium"><%= t(".no_accounts_to_setup") %></p>
+            <p class="text-secondary text-sm"><%= t(".all_accounts_linked") %></p>
+          </div>
+        <% else %>
+          <div class="bg-surface border border-primary p-4 rounded-lg">
+            <div class="flex items-start gap-3">
+              <%= icon "info", size: "sm", class: "text-primary mt-0.5 flex-shrink-0" %>
+              <div>
+                <p class="text-sm text-primary mb-2">
+                  <strong><%= t(".choose_account_type") %></strong>
+                </p>
+                <ul class="text-xs text-secondary space-y-1 list-disc list-inside">
+                  <% @account_type_options.reject { |_, type| type == "skip" }.each do |label, type| %>
+                    <li><strong><%= label %></strong></li>
+                  <% end %>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <% @mercury_accounts.each do |mercury_account| %>
+          <div class="border border-primary rounded-lg p-4">
+            <div class="flex items-center justify-between mb-3">
+              <div>
+                <h3 class="font-medium text-primary">
+                  <%= mercury_account.name %>
+                </h3>
+              </div>
+            </div>
+
+            <div class="space-y-3" data-controller="account-type-selector" data-account-type-selector-account-id-value="<%= mercury_account.id %>">
+              <div>
+                <%= label_tag "account_types[#{mercury_account.id}]", t(".account_type_label"),
+                             class: "block text-sm font-medium text-primary mb-2" %>
+                <%= select_tag "account_types[#{mercury_account.id}]",
+                              options_for_select(@account_type_options, "skip"),
+                              { class: "appearance-none bg-container border border-primary rounded-md px-3 py-2 text-sm leading-6 text-primary focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none w-full",
+                                data: {
+                                  action: "change->account-type-selector#updateSubtype"
+                                } } %>
+              </div>
+
+              <!-- Subtype dropdowns (shown/hidden based on account type) -->
+              <div data-account-type-selector-target="subtypeContainer">
+                <% @subtype_options.each do |account_type, subtype_config| %>
+                  <%= render "mercury_items/subtype_select", account_type: account_type, subtype_config: subtype_config, mercury_account: mercury_account %>
+                <% end %>
+              </div>
+            </div>
+          </div>
+          <% end %>
+        <% end %>
+      </div>
+
+      <div class="flex gap-3">
+        <%= render DS::Button.new(
+          text: t(".create_accounts"),
+          variant: "primary",
+          icon: "plus",
+          type: "submit",
+          class: "flex-1",
+          disabled: @api_error.present? || @mercury_accounts.empty?,
+          data: { loading_button_target: "button" }
+        ) %>
+        <%= render DS::Link.new(
+          text: t(".cancel"),
+          variant: "secondary",
+          href: accounts_path
+        ) %>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>

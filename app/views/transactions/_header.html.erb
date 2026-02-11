@@ -1,29 +1,32 @@
 <%# locals: (entry:) %>
-
-<%= tag.header class: "mb-4 space-y-1", id: dom_id(entry, :header) do %>
-  <div class="flex items-center gap-4">
-    <h3 class="font-medium">
+<div class="flex items-start justify-between gap-4" id="<%= dom_id(entry, :header) %>">
+  <div>
+    <h3 class="font-medium flex items-center gap-2">
       <span class="text-2xl text-primary">
         <%= format_money -entry.amount_money %>
       </span>
-
       <span class="text-lg text-secondary">
         <%= entry.currency %>
       </span>
+      <% if entry.transaction.transfer? %>
+        <%= icon "arrow-left-right", size: "sm", class: "text-secondary" %>
+      <% end %>
+      <% if entry.linked? %>
+        <span title="<%= t('transactions.transaction.linked_with_plaid') %>" class="text-secondary">
+          <%= icon("refresh-ccw", size: "sm") %>
+        </span>
+      <% end %>
     </h3>
-
-    <% if entry.transaction.transfer? %>
-      <%= icon "arrow-left-right", class: "mt-1" %>
-    <% end %>
-
-    <% if entry.linked? %>
-      <span title="Linked with Plaid">
-        <%= icon("refresh-ccw", size: "sm") %>
+    <div class="flex items-center gap-2">
+      <span class="text-sm text-secondary">
+        <%= I18n.l(entry.date, format: :long) %>
       </span>
-    <% end %>
+      <% if entry.transaction.pending? %>
+        <span class="inline-flex items-center gap-1 text-xs font-medium rounded-full px-1.5 py-0.5 border border-secondary text-secondary" title="<%= t("transactions.transaction.pending_tooltip") %>">
+          <%= icon "clock", size: "sm", color: "current" %>
+          <%= t("transactions.transaction.pending") %>
+        </span>
+      <% end %>
+    </div>
   </div>
-
-  <span class="text-sm text-secondary">
-    <%= I18n.l(entry.date, format: :long) %>
-  </span>
-<% end %>
+</div>

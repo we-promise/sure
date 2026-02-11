@@ -16,7 +16,7 @@ class Settings::ApiKeysController < ApplicationController
   def new
     # Allow regeneration by not redirecting if user explicitly wants to create a new key
     # Only redirect if user stumbles onto new page without explicit intent
-    redirect_to settings_api_key_path if Current.user.api_keys.active.exists? && !params[:regenerate]
+    redirect_to settings_api_key_path if Current.user.api_keys.active.visible.exists? && !params[:regenerate]
     @api_key = ApiKey.new
   end
 
@@ -25,8 +25,9 @@ class Settings::ApiKeysController < ApplicationController
     @api_key = Current.user.api_keys.build(api_key_params)
     @api_key.key = @plain_key
 
-    # Temporarily revoke existing keys for validation to pass
-    existing_keys = Current.user.api_keys.active
+    # Temporarily revoke existing visible keys for validation to pass
+    # (demo monitoring key is excluded and remains active)
+    existing_keys = Current.user.api_keys.active.visible
     existing_keys.each { |key| key.update_column(:revoked_at, Time.current) }
 
     if @api_key.save
@@ -40,7 +41,11 @@ class Settings::ApiKeysController < ApplicationController
   end
 
   def destroy
-    if @api_key&.revoke!
+    if @api_key.nil?
+      flash[:alert] = "API key not found"
+    elsif @api_key.demo_monitoring_key?
+      flash[:alert] = "This API key cannot be revoked"
+    elsif @api_key.revoke!
       flash[:notice] = "API key has been revoked successfully"
     else
       flash[:alert] = "Failed to revoke API key"
@@ -51,7 +56,7 @@ class Settings::ApiKeysController < ApplicationController
   private
 
     def set_api_key
-      @api_key = Current.user.api_keys.active.first
+      @api_key = Current.user.api_keys.active.visible.first
     end
 
     def api_key_params

@@ -56,8 +56,8 @@ class IncomeStatement::Totals
         SELECT
           c.id as category_id,
           c.parent_id as parent_category_id,
-          CASE WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END as classification,
-          ABS(SUM(ae.amount * COALESCE(er.rate, 1))) as total,
+          CASE WHEN at.kind = 'investment_contribution' THEN 'expense' WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END as classification,
+          ABS(SUM(CASE WHEN at.kind = 'investment_contribution' THEN ABS(ae.amount * COALESCE(er.rate, 1)) ELSE ae.amount * COALESCE(er.rate, 1) END)) as total,
           COUNT(ae.id) as transactions_count,
           false as is_uncategorized_investment
         FROM (#{@transactions_scope.to_sql}) at
@@ -69,11 +69,12 @@ class IncomeStatement::Totals
           er.from_currency = ae.currency AND
           er.to_currency = :target_currency
         )
-        WHERE at.kind NOT IN ('funds_movement', 'one_time', 'cc_payment', 'investment_contribution')
+        WHERE at.kind NOT IN ('funds_movement', 'one_time', 'cc_payment')
           AND ae.excluded = false
-                    AND a.family_id = :family_id
+          AND a.family_id = :family_id
           AND a.status IN ('draft', 'active')
-        GROUP BY c.id, c.parent_id, CASE WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END;
+          #{exclude_tax_advantaged_sql}
+        GROUP BY c.id, c.parent_id, CASE WHEN at.kind = 'investment_contribution' THEN 'expense' WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END;
       SQL
     end
 
@@ -82,8 +83,8 @@ class IncomeStatement::Totals
         SELECT
           c.id as category_id,
           c.parent_id as parent_category_id,
-          CASE WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END as classification,
-          ABS(SUM(ae.amount * COALESCE(er.rate, 1))) as total,
+          CASE WHEN at.kind = 'investment_contribution' THEN 'expense' WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END as classification,
+          ABS(SUM(CASE WHEN at.kind = 'investment_contribution' THEN ABS(ae.amount * COALESCE(er.rate, 1)) ELSE ae.amount * COALESCE(er.rate, 1) END)) as total,
           COUNT(ae.id) as entry_count,
           false as is_uncategorized_investment
         FROM (#{@transactions_scope.to_sql}) at
@@ -95,15 +96,16 @@ class IncomeStatement::Totals
           er.from_currency = ae.currency AND
           er.to_currency = :target_currency
         )
-        WHERE at.kind NOT IN ('funds_movement', 'one_time', 'cc_payment', 'investment_contribution')
+        WHERE at.kind NOT IN ('funds_movement', 'one_time', 'cc_payment')
           AND (
             at.investment_activity_label IS NULL
             OR at.investment_activity_label NOT IN ('Transfer', 'Sweep In', 'Sweep Out', 'Exchange')
           )
           AND ae.excluded = false
-                    AND a.family_id = :family_id
+          AND a.family_id = :family_id
           AND a.status IN ('draft', 'active')
-        GROUP BY c.id, c.parent_id, CASE WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END
+          #{exclude_tax_advantaged_sql}
+        GROUP BY c.id, c.parent_id, CASE WHEN at.kind = 'investment_contribution' THEN 'expense' WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END
       SQL
     end
 
@@ -120,12 +122,26 @@ class IncomeStatement::Totals
     end
 
     def sql_params
-      {
+      params = {
         target_currency: @family.currency,
         family_id: @family.id,
         start_date: @date_range.begin,
         end_date: @date_range.end
       }
+
+      # Add tax-advantaged account IDs if any exist
+      ids = @family.tax_advantaged_account_ids
+      params[:tax_advantaged_account_ids] = ids if ids.present?
+
+      params
+    end
+
+    # Returns SQL clause to exclude tax-advantaged accounts from budget calculations.
+    # Tax-advantaged accounts (401k, IRA, HSA, etc.) are retirement savings, not daily expenses.
+    def exclude_tax_advantaged_sql
+      ids = @family.tax_advantaged_account_ids
+      return "" if ids.empty?
+      "AND a.id NOT IN (:tax_advantaged_account_ids)"
     end
 
     def validate_date_range!

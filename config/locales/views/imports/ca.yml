@@ -70,26 +70,30 @@ ca:
         instructions_5: Sense comes, símbols de moneda ni parèntesis als números.
         title: Importa les teves dades
   imports:
-    empty:
-      message: Encara no hi ha importacions.
-      new: Nova importació
-    import:
-      complete: Completat
-      delete: Elimina
-      failed: Error
-      in_progress: En curs
-      label: "%{type}: %{datetime}"
-      revert_failed: Reversió fallida
-      reverting: Revertint
-      uploading: Processant files
-      view: Veure
     index:
       title: Importacions
       new: Nova importació
-      exports: Exportacions
-      imports: Importacions
-      new_export: Nova exportació
-      no_exports: Encara no hi ha exportacions.
+    table:
+      title: Imports
+      header:
+        date: Data
+        operation: Operació
+        status: Estat
+        actions: Accions
+      row:
+        status:
+          in_progress: En curs
+          uploading: Processant files
+          reverting: Revertint
+          revert_failed: Reversió fallida
+          complete: Completat
+          failed: Error
+        actions:
+          revert: Revertir
+          confirm_revert: Això suprimirà les transaccions que s'han importat, però encara podràs revisar i tornar a importar les teves dades en qualsevol moment.
+          delete: Elimina
+          view: Veure
+      empty: Encara no hi ha importacions.
     new:
       description: Pots importar manualment diversos tipus de dades via CSV o utilitzar
         una de les nostres plantilles d'importació com Mint.
