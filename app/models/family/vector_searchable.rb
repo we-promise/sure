@@ -37,7 +37,7 @@ module Family::VectorSearchable
     response.success? ? response.data : []
   end
 
-  def upload_document(file_content:, filename:)
+  def upload_document(file_content:, filename:, metadata: {})
     adapter = vector_store_adapter
     return nil unless adapter
 
@@ -57,7 +57,8 @@ module Family::VectorSearchable
       content_type: Marcel::MimeType.for(name: filename),
       file_size: file_content.bytesize,
       provider_file_id: response.data[:file_id],
-      status: "ready"
+      status: "ready",
+      metadata: metadata || {}
     )
   end
 

@@ -11,6 +11,7 @@ class ProcessPdfJob < ApplicationJob
 
     begin
       pdf_import.process_with_ai
+      upload_to_vector_store(pdf_import)
 
       # For bank statements, extract transactions and generate import rows
       if pdf_import.bank_statement?
@@ -57,5 +58,20 @@ class ProcessPdfJob < ApplicationJob
         I18n.t("imports.pdf_import.processing_failed_generic",
                error: error.class.name.demodulize)
       end
+    end
+
+    def upload_to_vector_store(pdf_import)
+      filename = pdf_import.pdf_file.filename.to_s
+      file_content = pdf_import.pdf_file_content
+
+      family_document = pdf_import.family.upload_document(
+        file_content: file_content,
+        filename: filename,
+        metadata: { "type" => pdf_import.document_type }
+      )
+
+      return if family_document
+
+      Rails.logger.warn("ProcessPdfJob: Vector store upload failed for import #{pdf_import.id}")
     end
 end

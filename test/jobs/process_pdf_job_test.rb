@@ -32,4 +32,62 @@ class ProcessPdfJobTest < ActiveJob::TestCase
     # Should not change status since already complete
     assert_equal "complete", processed_import.reload.status
   end
+
+  test "uploads non-bank PDF to vector store with classified type metadata" do
+    pdf_content = attach_pdf!(@import)
+
+    @import.stubs(:process_with_ai) do
+      @import.update!(ai_summary: "A tax return", document_type: "financial_document")
+    end
+    @import.stubs(:send_next_steps_email)
+    @import.expects(:extract_transactions).never
+
+    @family.expects(:upload_document).with do |file_content:, filename:, metadata:|
+      assert_equal pdf_content, file_content
+      assert_equal "sample_bank_statement.pdf", filename
+      assert_equal({ "type" => "financial_document" }, metadata)
+      true
+    end.returns(family_documents(:tax_return))
+
+    ProcessPdfJob.perform_now(@import)
+
+    assert_equal "complete", @import.reload.status
+  end
+
+  test "uploads bank statement PDF to vector store with classified type metadata" do
+    pdf_content = attach_pdf!(@import)
+
+    @import.stubs(:process_with_ai) do
+      @import.update!(ai_summary: "A bank statement", document_type: "bank_statement")
+    end
+    @import.expects(:extract_transactions).once
+    @import.expects(:generate_rows_from_extracted_data).once do
+      @import.update_column(:rows_count, 1)
+    end
+    @import.expects(:sync_mappings).once
+    @import.stubs(:send_next_steps_email)
+
+    @family.expects(:upload_document).with do |file_content:, filename:, metadata:|
+      assert_equal pdf_content, file_content
+      assert_equal "sample_bank_statement.pdf", filename
+      assert_equal({ "type" => "bank_statement" }, metadata)
+      true
+    end.returns(family_documents(:tax_return))
+
+    ProcessPdfJob.perform_now(@import)
+
+    assert_equal "pending", @import.reload.status
+  end
+
+  private
+
+    def attach_pdf!(import)
+      pdf_content = file_fixture("imports/sample_bank_statement.pdf").binread
+      import.pdf_file.attach(
+        io: StringIO.new(pdf_content),
+        filename: "sample_bank_statement.pdf",
+        content_type: "application/pdf"
+      )
+      pdf_content
+    end
 end
