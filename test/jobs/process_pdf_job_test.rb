@@ -58,9 +58,18 @@ class ProcessPdfJobTest < ActiveJob::TestCase
     process_result = Struct.new(:document_type).new("bank_statement")
 
     @import.expects(:process_with_ai).once.returns(process_result)
-    @import.expects(:extract_transactions).once
-    @import.expects(:generate_rows_from_extracted_data).once do
-      @import.update_column(:rows_count, 1)
+    @import.expects(:extract_transactions).once do
+      @import.update!(
+        extracted_data: {
+          "transactions" => [
+            {
+              "date" => "2024-01-01",
+              "amount" => "10.00",
+              "name" => "Coffee Shop"
+            }
+          ]
+        }
+      )
     end
     @import.expects(:sync_mappings).once
     @import.stubs(:send_next_steps_email)
@@ -74,7 +83,7 @@ class ProcessPdfJobTest < ActiveJob::TestCase
 
     ProcessPdfJob.perform_now(@import)
 
-    assert_equal "pending", @import.reload.status
+    assert_equal "complete", @import.reload.status
   end
 
   private
