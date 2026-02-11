@@ -18,8 +18,8 @@ en:
       placeholder: Category name
       color: Color
       icon: Icon
-      poor_contrast: Poor contrast, choose darker color or
-      auto_adjust: auto-adjust.
+      poor_contrast_html: "Poor contrast, choose darker color or %{auto_adjust_link}."
+      auto_adjust: auto-adjust
       income: Income
       expense: Expense
       classification: Classification
