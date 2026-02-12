@@ -104,4 +104,4 @@ jobs:
             - **Android APK**: Debug build for testing on Android devices
             - **iOS Build**: Unsigned iOS build (requires code signing for installation)
 
-            > **Note**: These are debug builds intended for testing purposes. For production use, please build from source with proper signing credentials.
+            > **Note**: These are builds intended for testing purposes. For production use, please build from source with proper signing credentials.
