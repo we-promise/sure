@@ -6,8 +6,9 @@
       <h3 class="font-medium text-md"><%= rule.name %></h3>
     <% end %>
     <% if rule.conditions.any? %>
-      <% primary_condition = rule.conditions.first %>
-      <% displayed_condition = primary_condition&.compound? ? primary_condition.sub_conditions.first : primary_condition %>
+      <% displayable_conditions = rule.conditions.filter_map { |condition| condition.compound? ? condition.sub_conditions.first : condition } %>
+      <% displayed_condition = displayable_conditions.first %>
+      <% additional_condition_count = displayable_conditions.size - 1 %>
       <div class="flex items-center gap-2 mt-1">
         <div class="flex items-center gap-1 text-secondary w-16 shrink-0">
           <span class="font-mono text-xs">IF</span>
@@ -20,8 +21,8 @@
               <%= t("rules.no_condition") %>
             <% end %>
           </span>
-          <% if rule.conditions.count > 1 %>
-            and <%= rule.conditions.count - 1 %> more <%= rule.conditions.count - 1 == 1 ? "condition" : "conditions" %>
+          <% if additional_condition_count.positive? %>
+            and <%= additional_condition_count %> more <%= additional_condition_count == 1 ? "condition" : "conditions" %>
           <% end %>
         </p>
       </div>
