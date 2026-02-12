@@ -2,6 +2,7 @@
 zh-CN:
   rules:
     no_action: 无操作
+    no_condition: 无条件
     recent_runs:
       columns:
         date_time: 日期/时间
