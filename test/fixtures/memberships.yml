@@ -1,0 +1,34 @@
+empty_admin:
+  user: empty
+  family: empty
+  role: admin
+
+sure_support_admin:
+  user: sure_support_staff
+  family: empty
+  role: admin
+
+dylan_admin:
+  user: family_admin
+  family: dylan_family
+  role: admin
+
+dylan_member:
+  user: family_member
+  family: dylan_family
+  role: member
+
+new_email_member:
+  user: new_email
+  family: empty
+  role: member
+
+intro_guest:
+  user: intro_user
+  family: empty
+  role: guest
+
+sso_only_admin:
+  user: sso_only
+  family: empty
+  role: admin

@@ -7,6 +7,7 @@ class Session < ApplicationRecord
   end
 
   belongs_to :user
+  belongs_to :family, optional: true
   belongs_to :active_impersonator_session,
     -> { where(status: :in_progress) },
     class_name: "ImpersonationSession",

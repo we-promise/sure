@@ -4,12 +4,14 @@ module Authentication
   included do
     before_action :set_request_details
     before_action :authenticate_user!
+    before_action :ensure_family_selected!
     before_action :set_sentry_user
   end
 
   class_methods do
     def skip_authentication(**options)
       skip_before_action :authenticate_user!, **options
+      skip_before_action :ensure_family_selected!, **options
       skip_before_action :set_sentry_user, **options
     end
   end
@@ -38,9 +40,15 @@ module Authentication
     end
 
     def create_session_for(user)
-      session = user.sessions.create!
+      session = user.sessions.create!(family_id: user.family_id)
       cookies.signed.permanent[:session_token] = { value: session.id, httponly: true }
       session
+    end
+
+    def ensure_family_selected!
+      return unless Current.session
+      return if Current.session.family_id.present?
+      Current.session.update!(family_id: Current.user.family_id) if Current.user&.family_id
     end
 
     def self_hosted_first_login?

@@ -116,6 +116,6 @@ class UsersController < ApplicationController
     end
 
     def ensure_admin
-      redirect_to settings_profile_path, alert: I18n.t("users.reset.unauthorized") unless Current.user.admin?
+      redirect_to settings_profile_path, alert: I18n.t("users.reset.unauthorized") unless Current.admin?
     end
 end

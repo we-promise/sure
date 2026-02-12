@@ -135,7 +135,7 @@ class Settings::HostingsController < ApplicationController
     end
 
     def ensure_admin
-      redirect_to settings_hosting_path, alert: t(".not_authorized") unless Current.user.admin?
+      redirect_to settings_hosting_path, alert: t(".not_authorized") unless Current.admin?
     end
 
     def sync_auto_sync_scheduler!

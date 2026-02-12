@@ -24,6 +24,8 @@ class User < ApplicationRecord
 
   belongs_to :family
   belongs_to :last_viewed_chat, class_name: "Chat", optional: true
+  has_many :memberships, dependent: :destroy
+  has_many :families, through: :memberships
   has_many :sessions, dependent: :destroy
   has_many :chats, dependent: :destroy
   has_many :api_keys, dependent: :destroy
@@ -52,6 +54,8 @@ class User < ApplicationRecord
 
   enum :role, { guest: "guest", member: "member", admin: "admin", super_admin: "super_admin" }, validate: true
   enum :ui_layout, { dashboard: "dashboard", intro: "intro" }, validate: true, prefix: true
+
+  after_create :create_default_membership
 
   before_validation :apply_ui_layout_defaults
   before_validation :apply_role_based_ui_defaults
@@ -113,6 +117,10 @@ class User < ApplicationRecord
 
   def admin?
     super_admin? || role == "admin"
+  end
+
+  def membership_for(family)
+    memberships.find_by(family: family)
   end
 
   def display_name
@@ -181,11 +189,13 @@ class User < ApplicationRecord
   end
 
   def purge
-    if last_user_in_family?
-      family.destroy
-    else
-      destroy
+    if memberships.any?
+      Rails.logger.warn("Attempted to purge user #{id} who still has memberships")
+      return
     end
+
+    family.destroy if family && last_user_in_family?
+    destroy
   end
 
   # MFA
@@ -316,6 +326,14 @@ class User < ApplicationRecord
   end
 
   private
+    def create_default_membership
+      # Map super_admin to admin for the membership role (super_admin is user-level only)
+      membership_role = super_admin? ? "admin" : role
+      Membership.find_or_create_by!(user: self, family: family) do |m|
+        m.role = membership_role
+      end
+    end
+
     def apply_ui_layout_defaults
       self.ui_layout = (ui_layout.presence || self.class.default_ui_layout)
     end

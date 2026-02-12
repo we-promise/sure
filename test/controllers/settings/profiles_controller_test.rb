@@ -26,20 +26,54 @@ class Settings::ProfilesControllerTest < ActionDispatch::IntegrationTest
     assert_select "[data-action='app-layout#toggleRightSidebar']", count: 0
   end
 
-  test "admin can remove a family member" do
+  test "admin can remove a family member by destroying their membership" do
     sign_in @admin
-    assert_difference("User.count", -1) do
+    family = @admin.family
+    membership = @member.membership_for(family)
+    assert_not_nil membership
+
+    assert_difference("Membership.count", -1) do
       delete settings_profile_path(user_id: @member)
     end
 
     assert_redirected_to settings_profile_path
-    assert_equal "Member removed successfully.", flash[:notice]
-    assert_raises(ActiveRecord::RecordNotFound) { User.find(@member.id) }
+    assert_nil @member.reload.membership_for(family)
+  end
+
+  test "removing a member with no other memberships triggers user purge" do
+    sign_in @admin
+    # Member only has one membership (in dylan_family)
+    assert_equal 1, @member.memberships.count
+
+    assert_difference("Membership.count", -1) do
+      delete settings_profile_path(user_id: @member)
+    end
+
+    assert_redirected_to settings_profile_path
+    # User purge is enqueued via purge_later
+    assert_enqueued_with(job: UserPurgeJob)
+  end
+
+  test "removing a member with other memberships does not purge user" do
+    sign_in @admin
+    # Give member a second membership in another family
+    other_family = families(:empty)
+    Membership.create!(user: @member, family: other_family, role: "member")
+    assert_equal 2, @member.memberships.count
+
+    assert_difference("Membership.count", -1) do
+      delete settings_profile_path(user_id: @member)
+    end
+
+    assert_redirected_to settings_profile_path
+    # User should still exist since they have another membership
+    assert User.find(@member.id)
+    assert_equal 1, @member.memberships.reload.count
   end
 
   test "admin cannot remove themselves" do
     sign_in @admin
-    assert_no_difference("User.count") do
+    assert_no_difference("Membership.count") do
       delete settings_profile_path(user_id: @admin)
     end
 
@@ -50,7 +84,7 @@ class Settings::ProfilesControllerTest < ActionDispatch::IntegrationTest
 
   test "non-admin cannot remove members" do
     sign_in @member
-    assert_no_difference("User.count") do
+    assert_no_difference("Membership.count") do
       delete settings_profile_path(user_id: @admin)
     end
 
@@ -60,7 +94,6 @@ class Settings::ProfilesControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "admin removing a family member also destroys their invitation" do
-    # Create an invitation for the member
     invitation = @admin.family.invitations.create!(
       email: @member.email,
       role: "member",
@@ -69,13 +102,13 @@ class Settings::ProfilesControllerTest < ActionDispatch::IntegrationTest
 
     sign_in @admin
 
-    assert_difference [ "User.count", "Invitation.count" ], -1 do
-      delete settings_profile_path(user_id: @member)
+    assert_difference("Invitation.count", -1) do
+      assert_difference("Membership.count", -1) do
+        delete settings_profile_path(user_id: @member)
+      end
     end
 
     assert_redirected_to settings_profile_path
-    assert_equal "Member removed successfully.", flash[:notice]
-    assert_raises(ActiveRecord::RecordNotFound) { User.find(@member.id) }
     assert_raises(ActiveRecord::RecordNotFound) { Invitation.find(invitation.id) }
   end
 end

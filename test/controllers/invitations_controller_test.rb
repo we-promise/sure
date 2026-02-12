@@ -37,24 +37,34 @@ class InvitationsControllerTest < ActionDispatch::IntegrationTest
 
   test "should add existing user to household when inviting their email" do
     existing_user = users(:empty)
-    assert existing_user.family_id != @admin.family_id
+    original_family_id = existing_user.family_id
+    assert original_family_id != @admin.family_id
 
     assert_difference("Invitation.count") do
-      assert_no_enqueued_jobs only: ActionMailer::MailDeliveryJob do
-        post invitations_url, params: {
-          invitation: {
-            email: existing_user.email,
-            role: "member"
+      assert_difference("Membership.count") do
+        assert_no_enqueued_jobs only: ActionMailer::MailDeliveryJob do
+          post invitations_url, params: {
+            invitation: {
+              email: existing_user.email,
+              role: "member"
+            }
           }
-        }
+        end
       end
     end
 
     invitation = Invitation.order(created_at: :desc).first
     assert invitation.accepted_at.present?, "Invitation should be accepted"
+
+    # User keeps their original family (not overwritten)
     existing_user.reload
-    assert_equal @admin.family_id, existing_user.family_id
-    assert_equal "member", existing_user.role
+    assert_equal original_family_id, existing_user.family_id
+
+    # But a membership was created for the admin's family
+    membership = existing_user.membership_for(@admin.family)
+    assert_not_nil membership
+    assert_equal "member", membership.role
+
     assert_redirected_to settings_profile_path
     assert_equal I18n.t("invitations.create.existing_user_added"), flash[:notice]
   end
@@ -107,31 +117,23 @@ class InvitationsControllerTest < ActionDispatch::IntegrationTest
     assert_equal @admin, invitation.inviter
   end
 
-  test "inviting an existing user as guest applies intro defaults" do
+  test "inviting an existing user as guest creates guest membership" do
     existing_user = users(:empty)
-    existing_user.update!(
-      role: :member,
-      ui_layout: :dashboard,
-      show_sidebar: true,
-      show_ai_sidebar: true,
-      ai_enabled: false
-    )
 
     assert_difference("Invitation.count") do
-      post invitations_url, params: {
-        invitation: {
-          email: existing_user.email,
-          role: "guest"
+      assert_difference("Membership.count") do
+        post invitations_url, params: {
+          invitation: {
+            email: existing_user.email,
+            role: "guest"
+          }
         }
-      }
+      end
     end
 
-    existing_user.reload
-    assert_equal "guest", existing_user.role
-    assert existing_user.ui_layout_intro?
-    assert_not existing_user.show_sidebar?
-    assert_not existing_user.show_ai_sidebar?
-    assert existing_user.ai_enabled?
+    membership = existing_user.membership_for(@admin.family)
+    assert_not_nil membership
+    assert_equal "guest", membership.role
   end
 
   test "should handle invalid invitation creation" do

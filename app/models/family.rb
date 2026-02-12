@@ -17,6 +17,8 @@ class Family < ApplicationRecord
   ].freeze
 
   has_many :users, dependent: :destroy
+  has_many :memberships, dependent: :destroy
+  has_many :members, through: :memberships, source: :user
   has_many :accounts, dependent: :destroy
   has_many :invitations, dependent: :destroy
 

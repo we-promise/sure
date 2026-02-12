@@ -93,7 +93,7 @@ class Settings::ProvidersController < ApplicationController
     end
 
     def ensure_admin
-      redirect_to settings_providers_path, alert: "Not authorized" unless Current.user.admin?
+      redirect_to settings_providers_path, alert: "Not authorized" unless Current.admin?
     end
 
     # Reload provider configurations after settings update

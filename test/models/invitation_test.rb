@@ -7,19 +7,28 @@ class InvitationTest < ActiveSupport::TestCase
     @inviter = @invitation.inviter
   end
 
-  test "accept_for adds user to family when email matches" do
+  test "accept_for creates membership when email matches" do
     user = users(:empty)
-    user.update_columns(family_id: families(:empty).id, role: "admin")
-    assert user.family_id != @family.id
+    original_family_id = user.family_id
+    assert original_family_id != @family.id
 
     invitation = @family.invitations.create!(email: user.email, role: "member", inviter: @inviter)
     assert invitation.pending?
-    result = invitation.accept_for(user)
 
-    assert result
+    assert_difference "Membership.count", 1 do
+      result = invitation.accept_for(user)
+      assert result
+    end
+
+    # User keeps their original family_id (not overwritten)
     user.reload
-    assert_equal @family.id, user.family_id
-    assert_equal "member", user.role
+    assert_equal original_family_id, user.family_id
+
+    # But a membership was created for the new family
+    membership = user.membership_for(@family)
+    assert_not_nil membership
+    assert_equal "member", membership.role
+
     invitation.reload
     assert invitation.accepted_at.present?
   end
@@ -28,27 +37,29 @@ class InvitationTest < ActiveSupport::TestCase
     user = users(:family_member)
     assert user.email != @invitation.email
 
-    result = @invitation.accept_for(user)
+    assert_no_difference "Membership.count" do
+      result = @invitation.accept_for(user)
+      assert_not result
+    end
 
-    assert_not result
-    user.reload
-    assert_equal families(:dylan_family).id, user.family_id
     @invitation.reload
     assert_nil @invitation.accepted_at
   end
 
-  test "accept_for updates role when user already in family" do
+  test "accept_for updates membership role when user already has membership in family" do
     user = users(:family_member)
-    user.update!(family_id: @family.id, role: "member")
+    existing_membership = user.membership_for(@family)
+    assert_equal "member", existing_membership.role
+
     invitation = @family.invitations.create!(email: user.email, role: "admin", inviter: @inviter)
-    original_family_id = user.family_id
 
-    result = invitation.accept_for(user)
+    assert_no_difference "Membership.count" do
+      result = invitation.accept_for(user)
+      assert result
+    end
 
-    assert result
-    user.reload
-    assert_equal original_family_id, user.family_id
-    assert_equal "admin", user.role
+    existing_membership.reload
+    assert_equal "admin", existing_membership.role
     invitation.reload
     assert invitation.accepted_at.present?
   end
@@ -62,26 +73,20 @@ class InvitationTest < ActiveSupport::TestCase
     assert_not result
   end
 
-  test "accept_for applies guest role defaults" do
-    user = users(:family_member)
-    user.update!(
-      family_id: @family.id,
-      role: "member",
-      ui_layout: "dashboard",
-      show_sidebar: true,
-      show_ai_sidebar: true,
-      ai_enabled: false
-    )
-    invitation = @family.invitations.create!(email: user.email, role: "guest", inviter: @inviter)
+  test "accept_for preserves existing memberships in other families" do
+    user = users(:empty)
+    original_family = user.family
+    original_membership = user.membership_for(original_family)
+    assert_not_nil original_membership
 
-    result = invitation.accept_for(user)
+    invitation = @family.invitations.create!(email: user.email, role: "member", inviter: @inviter)
+    invitation.accept_for(user)
 
-    assert result
-    user.reload
-    assert_equal "guest", user.role
-    assert user.ui_layout_intro?
-    assert_not user.show_sidebar?
-    assert_not user.show_ai_sidebar?
-    assert user.ai_enabled?
+    # Original membership still exists
+    assert_not_nil user.membership_for(original_family)
+    # New membership was created
+    assert_not_nil user.membership_for(@family)
+    # User now has 2 memberships
+    assert_equal 2, user.memberships.count
   end
 end

@@ -49,7 +49,7 @@ class FamilyExportsController < ApplicationController
     end
 
     def require_admin
-      unless Current.user.admin?
+      unless Current.admin?
         redirect_to root_path, alert: t("family_exports.access_denied")
       end
     end

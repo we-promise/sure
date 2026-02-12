@@ -32,7 +32,10 @@ class Invitation < ApplicationRecord
     return false unless emails_match?(user)
 
     transaction do
-      user.update!(family_id: family_id, role: role.to_s)
+      membership = Membership.find_or_initialize_by(user: user, family: family)
+      membership.role = role.to_s
+      membership.save!
+
       update!(accepted_at: Time.current)
     end
     true
@@ -58,6 +61,6 @@ class Invitation < ApplicationRecord
     end
 
     def inviter_is_admin
-      inviter.admin?
+      inviter.super_admin? || inviter.membership_for(family)&.admin?
     end
 end

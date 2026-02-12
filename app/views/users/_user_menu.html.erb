@@ -43,6 +43,23 @@
       <% end %>
     <% end %>
 
+    <% if user.memberships.count > 1 %>
+      <% user.memberships.includes(:family).each do |membership| %>
+        <% if membership.family_id == Current.family&.id %>
+          <% menu.with_item(variant: "link", text: membership.family.name, icon: "check", href: "#") %>
+        <% else %>
+          <% menu.with_item(
+            variant: "button",
+            text: membership.family.name,
+            icon: "repeat",
+            href: current_session_path(family_id: membership.family_id),
+            method: :patch
+          ) %>
+        <% end %>
+      <% end %>
+      <% menu.with_item(variant: "divider") %>
+    <% end %>
+
     <% menu.with_item(
       variant: "link",
       text: "Settings",

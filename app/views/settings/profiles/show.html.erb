@@ -33,7 +33,7 @@
           <%= family_fields.text_field :name,
                 placeholder: t(".household_form_input_placeholder"),
                 label: t(".household_form_label"),
-                disabled: !Current.user.admin?,
+                disabled: !Current.admin?,
                 "data-auto-submit-form-target": "auto" %>
         <% end %>
       <% end %>
@@ -48,9 +48,10 @@
             </div>
             <p class="text-primary font-medium text-sm"><%= user.display_name %></p>
             <div class="rounded-md bg-surface px-1.5 py-0.5">
-              <p class="uppercase text-secondary font-medium text-xs"><%= user.role %></p>
+              <% membership_role = @memberships_by_user[user.id]&.role || user.role %>
+              <p class="uppercase text-secondary font-medium text-xs"><%= membership_role %></p>
             </div>
-            <% if Current.user.admin? && user != Current.user %>
+            <% if Current.admin? && user != Current.user %>
               <div class="ml-auto">
                 <%= render DS::Button.new(
                   variant: "icon",
@@ -98,7 +99,7 @@
                   </div>
                 <% end %>
 
-                <% if Current.user.admin? %>
+                <% if Current.admin? %>
                   <%= render DS::Button.new(
                     variant: "icon",
                     icon: "x",
@@ -111,7 +112,7 @@
             </div>
           <% end %>
         <% end %>
-        <% if Current.user.admin? %>
+        <% if Current.admin? %>
           <%= link_to new_invitation_path,
                   class: "bg-container-inset flex items-center justify-center gap-2 text-secondary mt-1 hover:bg-container-inset-hover rounded-lg px-4 py-2 w-full text-center",
                   data: { turbo_frame: :modal } do %>
@@ -126,7 +127,7 @@
 
 <%= settings_section title: t(".danger_zone_title") do %>
   <div class="space-y-4">
-    <% if Current.user.admin? %>
+    <% if Current.admin? %>
       <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div class="w-full md:w-2/3">
           <h3 class="font-medium text-primary"><%= t(".reset_account") %></h3>
