@@ -46,6 +46,7 @@ jobs:
 
       - name: Prepare release assets
         run: |
+          set -euo pipefail
           mkdir -p ${{ runner.temp }}/release-assets
 
           echo "=== Downloaded artifacts ==="
@@ -83,6 +84,12 @@ jobs:
 
           echo "Release assets:"
           ls -la "${{ runner.temp }}/release-assets/"
+
+          # Fail early if no assets were produced
+          if [ -z "$(ls -A "${{ runner.temp }}/release-assets/")" ]; then
+            echo "::error::No release assets were produced"
+            exit 1
+          fi
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
