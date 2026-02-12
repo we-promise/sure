@@ -10,6 +10,7 @@ class ApiConfig {
   static String _baseUrl = _defaultBaseUrl;
 
   static String get baseUrl => _baseUrl;
+  static String get defaultBaseUrl => _defaultBaseUrl;
 
   static void setBaseUrl(String url) {
     _baseUrl = url;

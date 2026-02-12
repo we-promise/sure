@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../providers/auth_provider.dart';
 import '../services/api_config.dart';
 
@@ -18,13 +20,35 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordController = TextEditingController();
   final _otpController = TextEditingController();
   bool _obscurePassword = true;
+  late final TapGestureRecognizer _signUpTapRecognizer;
+
+  @override
+  void initState() {
+    super.initState();
+    _signUpTapRecognizer = TapGestureRecognizer()..onTap = _openSignUpPage;
+  }
 
   @override
   void dispose() {
+    _signUpTapRecognizer.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     _otpController.dispose();
     super.dispose();
+  }
+
+  Future<void> _openSignUpPage() async {
+    final signUpUrl = Uri.parse('${ApiConfig.defaultBaseUrl}/registration/new');
+    final launched = await launchUrl(
+      signUpUrl,
+      mode: LaunchMode.externalApplication,
+    );
+
+    if (!launched && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Unable to open sign up page')),
+      );
+    }
   }
 
   void _showApiKeyDialog() {
@@ -44,9 +68,12 @@ class _LoginScreenState extends State<LoginScreen> {
                 children: [
                   Text(
                     'Enter your API key to sign in.',
-                    style: Theme.of(outerContext).textTheme.bodyMedium?.copyWith(
-                      color: Theme.of(outerContext).colorScheme.onSurfaceVariant,
-                    ),
+                    style:
+                        Theme.of(outerContext).textTheme.bodyMedium?.copyWith(
+                              color: Theme.of(outerContext)
+                                  .colorScheme
+                                  .onSurfaceVariant,
+                            ),
                   ),
                   const SizedBox(height: 16),
                   TextField(
@@ -128,7 +155,8 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final hadOtpCode = authProvider.showMfaInput && _otpController.text.isNotEmpty;
+    final hadOtpCode =
+        authProvider.showMfaInput && _otpController.text.isNotEmpty;
 
     final success = await authProvider.login(
       email: _emailController.text.trim(),
@@ -176,20 +204,25 @@ class _LoginScreenState extends State<LoginScreen> {
                   size: 80,
                   color: colorScheme.primary,
                 ),
-                const SizedBox(height: 16),
-                Text(
-                  'Sure Finance',
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: colorScheme.primary,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
                 const SizedBox(height: 8),
-                Text(
-                  'Sign in to manage your finances',
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: colorScheme.onSurfaceVariant,
+                Text.rich(
+                  TextSpan(
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                    children: [
+                      const TextSpan(text: 'Please '),
+                      TextSpan(
+                        text: 'Sign Up',
+                        style: TextStyle(
+                          color: colorScheme.primary,
+                          decoration: TextDecoration.underline,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        recognizer: _signUpTapRecognizer,
+                      ),
+                      const TextSpan(text: ' first!'),
+                    ],
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -216,7 +249,8 @@ class _LoginScreenState extends State<LoginScreen> {
                             Expanded(
                               child: Text(
                                 authProvider.errorMessage!,
-                                style: TextStyle(color: colorScheme.onErrorContainer),
+                                style: TextStyle(
+                                    color: colorScheme.onErrorContainer),
                               ),
                             ),
                             IconButton(
@@ -291,7 +325,8 @@ class _LoginScreenState extends State<LoginScreen> {
                             }
                             return null;
                           },
-                          onFieldSubmitted: showOtp ? null : (_) => _handleLogin(),
+                          onFieldSubmitted:
+                              showOtp ? null : (_) => _handleLogin(),
                         ),
 
                         // OTP Field (shown when MFA is required)
@@ -300,7 +335,8 @@ class _LoginScreenState extends State<LoginScreen> {
                           Container(
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              color: colorScheme.primaryContainer.withValues(alpha: 0.3),
+                              color: colorScheme.primaryContainer
+                                  .withValues(alpha: 0.3),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Row(
@@ -313,7 +349,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                 Expanded(
                                   child: Text(
                                     'Two-factor authentication is enabled. Enter your code.',
-                                    style: TextStyle(color: colorScheme.onSurface),
+                                    style:
+                                        TextStyle(color: colorScheme.onSurface),
                                   ),
                                 ),
                               ],
@@ -413,7 +450,8 @@ class _LoginScreenState extends State<LoginScreen> {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                    color: colorScheme.surfaceContainerHighest
+                        .withValues(alpha: 0.3),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Column(
@@ -421,17 +459,17 @@ class _LoginScreenState extends State<LoginScreen> {
                       Text(
                         'Backend URL:',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: colorScheme.onSurfaceVariant,
-                          fontWeight: FontWeight.bold,
-                        ),
+                              color: colorScheme.onSurfaceVariant,
+                              fontWeight: FontWeight.bold,
+                            ),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         ApiConfig.baseUrl,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: colorScheme.primary,
-                          fontFamily: 'monospace',
-                        ),
+                              color: colorScheme.primary,
+                              fontFamily: 'monospace',
+                            ),
                         textAlign: TextAlign.center,
                       ),
                     ],
@@ -441,8 +479,8 @@ class _LoginScreenState extends State<LoginScreen> {
                 Text(
                   'Connect to your Sure Finance server to manage your accounts.',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: colorScheme.onSurfaceVariant,
-                  ),
+                        color: colorScheme.onSurfaceVariant,
+                      ),
                   textAlign: TextAlign.center,
                 ),
               ],

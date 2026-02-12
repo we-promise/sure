@@ -80,7 +80,7 @@ class _BackendConfigScreenState extends State<BackendConfigScreen> {
         if (mounted) {
           setState(() {
             _successMessage =
-                'Connection successful! Sure backend is reachable.';
+                'Connection successful!';
           });
         }
       } else {
@@ -195,7 +195,7 @@ class _BackendConfigScreenState extends State<BackendConfigScreen> {
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  'Backend Configuration',
+                  'Configuration',
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                     color: colorScheme.primary,
@@ -204,7 +204,7 @@ class _BackendConfigScreenState extends State<BackendConfigScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Enter your Sure Finance backend URL',
+                  'Update your Sure server URL',
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                     color: colorScheme.onSurfaceVariant,
                   ),
@@ -237,8 +237,7 @@ class _BackendConfigScreenState extends State<BackendConfigScreen> {
                       ),
                       const SizedBox(height: 12),
                       Text(
-                        '• https://app.sure.am\n'
-                        '• https://sure.lazyrhythm.com\n'
+                        '• https://demo.sure.am\n'
                         '• https://your-domain.com\n'
                         '• http://localhost:3000',
                         style: TextStyle(
@@ -328,7 +327,7 @@ class _BackendConfigScreenState extends State<BackendConfigScreen> {
                   autocorrect: false,
                   textInputAction: TextInputAction.done,
                   decoration: const InputDecoration(
-                    labelText: 'Backend URL',
+                    labelText: 'Sure server URL',
                     prefixIcon: Icon(Icons.cloud_outlined),
                     hintText: 'https://app.sure.am',
                   ),
