@@ -35,9 +35,13 @@ class _BackendConfigScreenState extends State<BackendConfigScreen> {
   Future<void> _loadSavedUrl() async {
     final prefs = await SharedPreferences.getInstance();
     final savedUrl = prefs.getString('backend_url');
-    if (mounted && savedUrl != null && savedUrl.isNotEmpty) {
+    final urlToShow = (savedUrl != null && savedUrl.isNotEmpty)
+        ? savedUrl
+        : ApiConfig.baseUrl;
+
+    if (mounted) {
       setState(() {
-        _urlController.text = savedUrl;
+        _urlController.text = urlToShow;
       });
     }
   }
@@ -53,30 +57,37 @@ class _BackendConfigScreenState extends State<BackendConfigScreen> {
 
     try {
       // Normalize base URL by removing trailing slashes
-      final normalizedUrl = _urlController.text.trim().replaceAll(RegExp(r'/+$'), '');
+      final normalizedUrl = _urlController.text.trim().replaceAll(
+        RegExp(r'/+$'),
+        '',
+      );
 
       // Check /sessions/new page to verify it's a Sure backend
       final sessionsUrl = Uri.parse('$normalizedUrl/sessions/new');
-      final sessionsResponse = await http.get(
-        sessionsUrl,
-        headers: {'Accept': 'text/html'},
-      ).timeout(
-        const Duration(seconds: 10),
-        onTimeout: () {
-          throw Exception('Connection timeout. Please check the URL and try again.');
-        },
-      );
+      final sessionsResponse = await http
+          .get(sessionsUrl, headers: {'Accept': 'text/html'})
+          .timeout(
+            const Duration(seconds: 10),
+            onTimeout: () {
+              throw Exception(
+                'Connection timeout. Please check the URL and try again.',
+              );
+            },
+          );
 
-      if (sessionsResponse.statusCode >= 200 && sessionsResponse.statusCode < 400) {
+      if (sessionsResponse.statusCode >= 200 &&
+          sessionsResponse.statusCode < 400) {
         if (mounted) {
           setState(() {
-            _successMessage = 'Connection successful! Sure backend is reachable.';
+            _successMessage =
+                'Connection successful! Sure backend is reachable.';
           });
         }
       } else {
         if (mounted) {
           setState(() {
-            _errorMessage = 'Server responded with status ${sessionsResponse.statusCode}. Please check if this is a Sure backend server.';
+            _errorMessage =
+                'Server responded with status ${sessionsResponse.statusCode}. Please check if this is a Sure backend server.';
           });
         }
       }
@@ -105,7 +116,10 @@ class _BackendConfigScreenState extends State<BackendConfigScreen> {
 
     try {
       // Normalize base URL by removing trailing slashes
-      final normalizedUrl = _urlController.text.trim().replaceAll(RegExp(r'/+$'), '');
+      final normalizedUrl = _urlController.text.trim().replaceAll(
+        RegExp(r'/+$'),
+        '',
+      );
 
       // Save URL to SharedPreferences
       final prefs = await SharedPreferences.getInstance();
@@ -141,7 +155,8 @@ class _BackendConfigScreenState extends State<BackendConfigScreen> {
     final trimmedValue = value.trim();
 
     // Check if it starts with http:// or https://
-    if (!trimmedValue.startsWith('http://') && !trimmedValue.startsWith('https://')) {
+    if (!trimmedValue.startsWith('http://') &&
+        !trimmedValue.startsWith('https://')) {
       return 'URL must start with http:// or https://';
     }
 
@@ -209,10 +224,7 @@ class _BackendConfigScreenState extends State<BackendConfigScreen> {
                     children: [
                       Row(
                         children: [
-                          Icon(
-                            Icons.info_outline,
-                            color: colorScheme.primary,
-                          ),
+                          Icon(Icons.info_outline, color: colorScheme.primary),
                           const SizedBox(width: 12),
                           Text(
                             'Example URLs',
@@ -225,6 +237,7 @@ class _BackendConfigScreenState extends State<BackendConfigScreen> {
                       ),
                       const SizedBox(height: 12),
                       Text(
+                        '• https://app.sure.am\n'
                         '• https://sure.lazyrhythm.com\n'
                         '• https://your-domain.com\n'
                         '• http://localhost:3000',
@@ -249,15 +262,14 @@ class _BackendConfigScreenState extends State<BackendConfigScreen> {
                     ),
                     child: Row(
                       children: [
-                        Icon(
-                          Icons.error_outline,
-                          color: colorScheme.error,
-                        ),
+                        Icon(Icons.error_outline, color: colorScheme.error),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Text(
                             _errorMessage!,
-                            style: TextStyle(color: colorScheme.onErrorContainer),
+                            style: TextStyle(
+                              color: colorScheme.onErrorContainer,
+                            ),
                           ),
                         ),
                         IconButton(
@@ -318,7 +330,7 @@ class _BackendConfigScreenState extends State<BackendConfigScreen> {
                   decoration: const InputDecoration(
                     labelText: 'Backend URL',
                     prefixIcon: Icon(Icons.cloud_outlined),
-                    hintText: 'https://sure.lazyrhythm.com',
+                    hintText: 'https://app.sure.am',
                   ),
                   validator: _validateUrl,
                   onFieldSubmitted: (_) => _saveAndContinue(),
