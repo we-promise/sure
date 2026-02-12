@@ -4,8 +4,8 @@ en:
     allocation_progress:
       percent_set: "%{percent} set"
       over_100_set: "> 100% set"
-      budget_exceeded: Budget exceeded by
-      left_to_allocate: left to allocate
+      budget_exceeded_html: "Budget exceeded by %{amount}"
+      left_to_allocate_html: "%{amount} left to allocate"
     index:
       title: Edit your category budgets
       description: Adjust category budgets to set spending limits. Unallocated funds will be automatically assigned as uncategorized.
@@ -21,8 +21,8 @@ en:
       overview: Overview
       spending: "%{date} spending"
       status: Status
-      overspent: overspent
-      left: left
+      overspent_html: "%{amount} overspent"
+      left_html: "%{amount} left"
       budgeted: Budgeted
       monthly_average_spending: Monthly average spending
       monthly_median_spending: Monthly median spending

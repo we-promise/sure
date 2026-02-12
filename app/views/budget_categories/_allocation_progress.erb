@@ -34,11 +34,12 @@
   <div class="text-sm">
     <% if budget.available_to_allocate.negative? %>
       <p class="text-secondary">
-        <%= t("budget_categories.allocation_progress.budget_exceeded") %> <span class="text-red-500"><%= format_money(budget.available_to_allocate_money.abs) %></span>
+        <%= t("budget_categories.allocation_progress.budget_exceeded_html", amount: content_tag(:span, format_money(budget.available_to_allocate_money.abs), class: "text-red-500")) %>
       </p>
     <% else %>
-      <span class="text-primary"><%= format_money(budget.available_to_allocate_money) %></span>
-      <span class="text-secondary"><%= t("budget_categories.allocation_progress.left_to_allocate") %></span>
+      <span class="text-secondary">
+        <%= t("budget_categories.allocation_progress.left_to_allocate_html", amount: content_tag(:span, format_money(budget.available_to_allocate_money), class: "text-primary")) %>
+      </span>
     <% end %>
   </div>
 </div>

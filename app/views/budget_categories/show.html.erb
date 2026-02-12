@@ -44,20 +44,17 @@
               <% if @budget_category.available_to_spend.negative? %>
                 <dd class="flex items-center gap-1 text-red-500 font-medium">
                   <%= icon "alert-circle", size: "sm", color: "destructive" %>
-                  <%= format_money @budget_category.available_to_spend_money.abs %>
-                  <span><%= t('.overspent') %></span>
+                  <%= t('.overspent_html', amount: format_money(@budget_category.available_to_spend_money.abs)) %>
                 </dd>
               <% elsif @budget_category.available_to_spend.zero? %>
                 <dd class="flex items-center gap-1 text-orange-500 font-medium">
                   <%= icon "x-circle", size: "sm", color: "warning" %>
-                  <%= format_money @budget_category.available_to_spend_money %>
-                  <span><%= t('.left') %></span>
+                  <%= t('.left_html', amount: format_money(@budget_category.available_to_spend_money)) %>
                 </dd>
               <% else %>
                 <dd class="text-primary flex items-center gap-1 text-green-500 font-medium">
                   <%= icon "check-circle", size: "sm", color: "success" %>
-                  <%= format_money @budget_category.available_to_spend_money %>
-                  <span><%= t('.left') %></span>
+                  <%= t('.left_html', amount: format_money(@budget_category.available_to_spend_money)) %>
                 </dd>
               <% end %>
             </div>
@@ -104,7 +101,7 @@
                   <div class="flex justify-between w-full">
                     <div>
                       <p class="text-secondary text-xs uppercase">
-                        <%= I18n.l(transaction.entry.date, format: "%b %d") %>
+                        <%= I18n.l(transaction.entry.date, format: :short) %>
                       </p>
                       <%= link_to transaction.entry.name,
                                   transactions_path,
