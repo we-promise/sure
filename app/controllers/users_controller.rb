@@ -12,7 +12,7 @@ class UsersController < ApplicationController
 
   def update
     @user = Current.user
-    ensure_admin if moniker_change_requested?
+    return if moniker_change_requested? && !ensure_admin
 
     if email_changed?
       if @user.initiate_email_change(user_params[:email])
@@ -124,6 +124,9 @@ class UsersController < ApplicationController
     end
 
     def ensure_admin
-      redirect_to settings_profile_path, alert: I18n.t("users.reset.unauthorized") unless Current.user.admin?
+      return true if Current.user.admin?
+
+      redirect_to settings_profile_path, alert: I18n.t("users.reset.unauthorized")
+      false
     end
 end
