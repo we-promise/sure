@@ -35,6 +35,20 @@
           <%= form.fields_for :family do |family_form| %>
             <%= family_form.text_field :name, placeholder: t(".household_name_placeholder"), label: t(".household_name") %>
 
+            <div class="space-y-2">
+              <p class="text-sm font-medium text-primary"><%= t(".moniker_prompt") %></p>
+
+              <label class="flex items-center gap-2 text-sm text-primary">
+                <%= family_form.radio_button :moniker, "Family", required: true %>
+                <span><%= t(".moniker_family") %></span>
+              </label>
+
+              <label class="flex items-center gap-2 text-sm text-primary">
+                <%= family_form.radio_button :moniker, "Group", required: true %>
+                <span><%= t(".moniker_group") %></span>
+              </label>
+            </div>
+
             <%= family_form.select :country,
                                    country_options,
                                    { label: t(".country") },

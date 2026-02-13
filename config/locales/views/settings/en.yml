@@ -82,8 +82,8 @@ en:
         first_name: First Name
         household_form_input_placeholder: Enter household name
         household_form_label: Household name
-        household_subtitle: Invite family members, partners and other inviduals.  Invitees
-          can login to your household and access your shared accounts.
+        household_subtitle: Invite %{moniker_plural}, partners and other inviduals. Invitees
+          can login to your %{moniker} and access your shared accounts.
         household_title: Household
         invitation_link: Invitation link
         invite_member: Add member
