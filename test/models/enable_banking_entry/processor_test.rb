@@ -104,6 +104,27 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
     assert_equal "Local Bakery", name
   end
 
+  test "keeps uppercase merchant names that are not technical references" do
+    name = build_name(
+      credit_debit_indicator: "DBIT",
+      description: "CARD-3429726917",
+      remittance_information: [ "AMAZONPRIME" ]
+    )
+
+    assert_equal "AMAZONPRIME", name
+  end
+
+  test "ignores remittance when all lines are technical references" do
+    name = build_name(
+      credit_debit_indicator: "CRDT",
+      debtor_name: "CARD-1234",
+      remittance_information: [ "CARD-1234", "C18W26037W001080" ],
+      bank_transaction_code: { description: "Card Purchase" }
+    )
+
+    assert_equal "Card Purchase", name
+  end
+
   test "keeps specific description when remittance is less informative" do
     name = build_name(
       credit_debit_indicator: "DBIT",

@@ -5,7 +5,7 @@ class EnableBankingEntry::Processor
   CARD_REFERENCE_PATTERN = /\ACARD-\d+\z/i
   REFERENCE_PATTERNS = [
     CARD_REFERENCE_PATTERN,
-    /\A[A-Z0-9]{10,}\z/,
+    /\A(?=.*\d)[A-Z0-9]{10,}\z/,
     /\A[A-Z0-9]+(?:[-_][A-Z0-9]+){2,}\z/
   ].freeze
   REMITTANCE_ENTITY_PATTERNS = [
@@ -133,11 +133,18 @@ class EnableBankingEntry::Processor
       non_reference_candidates = candidates.reject { |candidate| reference_like?(candidate) }
       pool = non_reference_candidates.presence || candidates
 
+      # If every candidate is technical/reference-like, keep a safer fallback path
+      return nil if pool.all? { |candidate| technical_remittance_candidate?(candidate) }
+
       pool.max_by { |candidate| remittance_candidate_score(candidate) }
     end
 
     def remittance_candidate_score(value)
       informativeness_score(value) - technicality_score(value)
+    end
+
+    def technical_remittance_candidate?(value)
+      reference_like?(value) || technicality_score(value) >= REMITTANCE_TECHNICALITY_THRESHOLD
     end
 
     def cleanup_remittance_line(line)
