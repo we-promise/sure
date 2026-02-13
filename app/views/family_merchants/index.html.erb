@@ -1,26 +1,23 @@
-<header class="flex items-center justify-between">
-  <h1 class="text-primary text-xl font-medium"><%= t(".title") %></h1>
-
-  <div class="flex items-center gap-2">
-    <%= render DS::Link.new(
-      text: t(".merge"),
-      variant: "outline",
-      href: merge_family_merchants_path,
-      frame: :modal
-    ) %>
-    <%= render DS::Link.new(
-      text: t(".new"),
-      variant: "primary",
-      href: new_family_merchant_path,
-      frame: :modal
-    ) %>
-  </div>
-</header>
+<%= content_for :page_title, t(".title") %>
+<%= content_for :page_actions do %>
+  <%= render DS::Link.new(
+    text: t(".merge"),
+    variant: "outline",
+    href: merge_family_merchants_path,
+    frame: :modal
+  ) %>
+  <%= render DS::Link.new(
+    text: t(".new"),
+    variant: "primary",
+    href: new_family_merchant_path,
+    frame: :modal
+  ) %>
+<% end %>
 
 <div class="bg-container rounded-xl shadow-border-xs p-4 space-y-6">
   <section class="space-y-3">
     <div class="flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-secondary uppercase">
-      <p><%= t(".family_title") %></p>
+      <p><%= t(".family_title", moniker: family_moniker) %></p>
       <span class="text-subdued">&middot;</span>
       <p><%= @family_merchants.count %></p>
     </div>
@@ -44,7 +41,7 @@
     <% else %>
       <div class="flex justify-center items-center py-12">
         <div class="text-center flex flex-col items-center max-w-[300px]">
-          <p class="text-primary mb-1 font-medium text-sm"><%= t(".family_empty") %></p>
+          <p class="text-primary mb-1 font-medium text-sm"><%= t(".family_empty", moniker: family_moniker_downcase) %></p>
 
           <%= render DS::Link.new(
             text: t(".new"),
@@ -90,7 +87,7 @@
       </div>
     <% else %>
       <div class="flex justify-center items-center py-8">
-        <p class="text-secondary text-sm text-center"><%= t(".provider_empty") %></p>
+        <p class="text-secondary text-sm text-center"><%= t(".provider_empty", moniker: family_moniker_downcase) %></p>
       </div>
     <% end %>
   </section>

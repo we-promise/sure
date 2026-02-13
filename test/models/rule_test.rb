@@ -138,6 +138,40 @@ class RuleTest < ActiveSupport::TestCase
     assert_equal [ "Compound conditions cannot be nested" ], rule.errors.full_messages
   end
 
+  test "displayed_condition falls back to next valid condition when first compound condition is empty" do
+    rule = Rule.new(
+      family: @family,
+      resource_type: "transaction",
+      actions: [ Rule::Action.new(action_type: "exclude_transaction") ],
+      conditions: [
+        Rule::Condition.new(condition_type: "compound", operator: "and"),
+        Rule::Condition.new(condition_type: "transaction_name", operator: "like", value: "starbucks")
+      ]
+    )
+
+    displayed_condition = rule.displayed_condition
+
+    assert_not_nil displayed_condition
+    assert_equal "transaction_name", displayed_condition.condition_type
+    assert_equal "like", displayed_condition.operator
+    assert_equal "starbucks", displayed_condition.value
+  end
+
+  test "additional_displayable_conditions_count ignores empty compound conditions" do
+    rule = Rule.new(
+      family: @family,
+      resource_type: "transaction",
+      actions: [ Rule::Action.new(action_type: "exclude_transaction") ],
+      conditions: [
+        Rule::Condition.new(condition_type: "compound", operator: "and"),
+        Rule::Condition.new(condition_type: "transaction_name", operator: "like", value: "first"),
+        Rule::Condition.new(condition_type: "transaction_amount", operator: ">", value: 100)
+      ]
+    )
+
+    assert_equal 1, rule.additional_displayable_conditions_count
+  end
+
   test "rule matching on transaction details" do
     # Create PayPal transaction with underlying merchant in details
     paypal_entry = create_transaction(

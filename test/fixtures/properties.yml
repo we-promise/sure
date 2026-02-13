@@ -2,3 +2,9 @@ one:
   year_built: 2002
   area_value: 1000
   area_unit: "sqft"
+
+primary_residence:
+  id: c506b873-dd1b-4136-8564-02367303946a
+  subtype: Single Family Home
+  created_at: <%= Time.current %>
+  updated_at: <%= Time.current %>

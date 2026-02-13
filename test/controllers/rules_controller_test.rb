@@ -180,6 +180,36 @@ class RulesControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to rules_url
   end
 
+  test "index renders when rule has empty compound condition" do
+    malformed_rule = @user.family.rules.build(resource_type: "transaction")
+    malformed_rule.conditions.build(condition_type: "compound", operator: "and")
+    malformed_rule.actions.build(action_type: "exclude_transaction")
+    malformed_rule.save!
+
+    get rules_url
+
+    assert_response :success
+    assert_includes response.body, I18n.t("rules.no_condition")
+  end
+
+  test "index uses next valid condition when first compound condition is empty" do
+    rule = @user.family.rules.build(resource_type: "transaction")
+    rule.conditions.build(condition_type: "compound", operator: "and")
+    rule.conditions.build(condition_type: "transaction_name", operator: "like", value: "edge-case-name")
+    rule.actions.build(action_type: "exclude_transaction")
+    rule.save!
+
+    get rules_url
+
+    assert_response :success
+
+    assert_select "##{ActionView::RecordIdentifier.dom_id(rule)}" do
+      assert_select "span", text: /edge-case-name/
+      assert_select "span", text: /#{Regexp.escape(I18n.t("rules.no_condition"))}/, count: 0
+      assert_select "p", text: /and 1 more condition/, count: 0
+    end
+  end
+
   test "should get confirm_all" do
     get confirm_all_rules_url
     assert_response :success

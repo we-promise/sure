@@ -1,3 +1,5 @@
+<%= content_for :page_title, t(".title") %>
+
 <%= settings_section title: t(".title") do %>
   <div class="space-y-4">
     <% has_processing = @exports.any? { |e| e.pending? || e.processing? } %>

@@ -1,44 +1,43 @@
-<header class="flex items-center justify-between">
-  <h1 class="text-primary text-xl font-medium">Rules</h1>
-  <div class="flex items-center gap-2">
-    <% if @rules.any? %>
-      <%= render DS::Menu.new do |menu| %>
-        <% menu.with_item(
-          variant: "button",
-          text: t("rules.clear_ai_cache.button"),
-          href: clear_ai_cache_rules_path,
-          icon: "refresh-cw",
-          method: :post,
-          confirm: CustomConfirm.new(
-            title: t("rules.clear_ai_cache.confirm_title"),
-            body: t("rules.clear_ai_cache.confirm_body"),
-            btn_text: t("rules.clear_ai_cache.confirm_button")
-          )) %>
-        <% menu.with_item(
-          variant: "button",
-          text: "Delete all rules",
-          href: destroy_all_rules_path,
-          icon: "trash-2",
-          method: :delete,
-          confirm: CustomConfirm.for_resource_deletion("all rules", high_severity: true)) %>
-      <% end %>
-      <%= render DS::Link.new(
-        text: t("rules.apply_all.button"),
-        variant: "secondary",
-        href: confirm_all_rules_path,
-        icon: "play",
-        frame: :modal
-      ) %>
+<%= content_for :page_title, "Rules" %>
+<%= content_for :page_actions do %>
+  <% if @rules.any? %>
+    <%= render DS::Menu.new do |menu| %>
+      <% menu.with_item(
+        variant: "button",
+        text: t("rules.clear_ai_cache.button"),
+        href: clear_ai_cache_rules_path,
+        icon: "refresh-cw",
+        method: :post,
+        confirm: CustomConfirm.new(
+          title: t("rules.clear_ai_cache.confirm_title"),
+          body: t("rules.clear_ai_cache.confirm_body"),
+          btn_text: t("rules.clear_ai_cache.confirm_button")
+        )) %>
+      <% menu.with_item(
+        variant: "button",
+        text: "Delete all rules",
+        href: destroy_all_rules_path,
+        icon: "trash-2",
+        method: :delete,
+        confirm: CustomConfirm.for_resource_deletion("all rules", high_severity: true)) %>
     <% end %>
     <%= render DS::Link.new(
-      text: "New rule",
-      variant: "primary",
-      href: new_rule_path(resource_type: "transaction"),
-      icon: "plus",
+      text: t("rules.apply_all.button"),
+      variant: "secondary",
+      href: confirm_all_rules_path,
+      icon: "play",
       frame: :modal
     ) %>
-  </div>
-</header>
+  <% end %>
+  <%= render DS::Link.new(
+    text: "New rule",
+    variant: "primary",
+    href: new_rule_path(resource_type: "transaction"),
+    icon: "plus",
+    frame: :modal
+  ) %>
+<% end %>
+
 <% if self_hosted? %>
   <div class="flex items-center gap-2 mb-2 py-4">
     <%= icon("circle-alert", size: "sm") %>

@@ -1,28 +1,26 @@
+<%= content_for :page_title, t("recurring_transactions.title") %>
+<%= content_for :page_actions do %>
+  <% unless @family.recurring_transactions_disabled? %>
+    <%= render DS::Menu.new do |menu| %>
+      <% menu.with_item(
+          variant: "button",
+          text: t("recurring_transactions.cleanup_stale"),
+          href: cleanup_recurring_transactions_path,
+          method: :post,
+          icon: "trash-2") %>
+    <% end %>
+
+    <%= render DS::Link.new(
+      text: t("recurring_transactions.identify_patterns"),
+      icon: "search",
+      variant: "outline",
+      href: identify_recurring_transactions_path,
+      method: :post
+    ) %>
+  <% end %>
+<% end %>
+
 <div class="space-y-4 flex flex-col">
-  <header class="flex justify-between items-center text-primary font-medium">
-    <h1 class="text-xl"><%= t("recurring_transactions.title") %></h1>
-    <div class="flex items-center gap-2">
-      <% unless @family.recurring_transactions_disabled? %>
-        <%= render DS::Menu.new do |menu| %>
-          <% menu.with_item(
-              variant: "button",
-              text: t("recurring_transactions.cleanup_stale"),
-              href: cleanup_recurring_transactions_path,
-              method: :post,
-              icon: "trash-2") %>
-        <% end %>
-
-        <%= render DS::Link.new(
-          text: t("recurring_transactions.identify_patterns"),
-          icon: "search",
-          variant: "outline",
-          href: identify_recurring_transactions_path,
-          method: :post
-        ) %>
-      <% end %>
-    </div>
-  </header>
-
   <div class="bg-container rounded-xl shadow-border-xs p-4">
     <div class="flex items-center justify-between">
       <div>

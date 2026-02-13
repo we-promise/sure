@@ -6,13 +6,14 @@
                   placeholder: "Vacation home",
                   required: true %>
 
-  <%= form.select :subtype,
-                Property::SUBTYPES.map { |k, v| [v[:long], k] },
-                { prompt: "Select type", label: "Property type" }, required: true %>
-
+  
   <%= form.hidden_field :accountable_type, value: "Property" %>
 
   <%= form.fields_for :accountable do |property_form| %>
+    <%= property_form.select :subtype,
+                Property::SUBTYPES.map { |k, v| [v[:long], k] },
+                { prompt: "Select type", label: "Property type" }, required: true %>
+
     <div class="flex items-center gap-2">
       <%= property_form.number_field :year_built,
                     label: "Year Built (optional)",

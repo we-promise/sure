@@ -1,21 +1,22 @@
-<%= render DS::Dialog.new(frame: "drawer") do |dialog| %>
-  <% dialog.with_header(hide_close_icon: true) do %>
+<%= render DS::Dialog.new(frame: "drawer", responsive: true) do |dialog| %>
+  <% dialog.with_header(custom_header: true) do %>
     <div class="flex items-center justify-between">
       <div>
         <%= tag.h3 @holding.name, class: "text-2xl font-medium text-primary" %>
         <%= tag.p @holding.ticker, class: "text-sm text-secondary" %>
       </div>
-
-      <% if @holding.security.brandfetch_icon_url.present? %>
-        <%= image_tag @holding.security.brandfetch_icon_url, loading: "lazy", class: "w-9 h-9 rounded-full" %>
-      <% elsif @holding.security.logo_url.present? %>
-        <%= image_tag @holding.security.logo_url, loading: "lazy", class: "w-9 h-9 rounded-full" %>
-      <% else %>
-        <%= render DS::FilledIcon.new(variant: :text, text: @holding.name, size: "md", rounded: true) %>
-      <% end %>
+      <div class="flex items-center gap-3">
+        <% if @holding.security.brandfetch_icon_url.present? %>
+          <%= image_tag @holding.security.brandfetch_icon_url, loading: "lazy", class: "w-9 h-9 rounded-full" %>
+        <% elsif @holding.security.logo_url.present? %>
+          <%= image_tag @holding.security.logo_url, loading: "lazy", class: "w-9 h-9 rounded-full" %>
+        <% else %>
+          <%= render DS::FilledIcon.new(variant: :text, text: @holding.name, size: "md", rounded: true) %>
+        <% end %>
+        <%= dialog.close_button %>
+      </div>
     </div>
   <% end %>
-
   <% dialog.with_body do %>
     <% dialog.with_section(title: t(".overview"), open: true) do %>
       <div class="pb-4">
@@ -33,13 +34,12 @@
                 <% end %>
                 <button type="button"
                         data-action="click->holding-security-remap#toggle"
-                        class="text-secondary hover:text-primary"
-                        aria-label="<%= t('.edit_security') %>">
+                  class="text-secondary hover:text-primary"
+                  aria-label="<%= t('.edit_security') %>">
                   <%= icon "pencil", size: "xs" %>
                 </button>
               </dd>
             </div>
-
             <div data-holding-security-remap-target="form" class="hidden mt-3 space-y-3">
               <% if Security.provider.present? %>
                 <%= form_with url: remap_security_holding_path(@holding), method: :patch, class: "space-y-3" do |f| %>
@@ -64,23 +64,24 @@
               <% end %>
             </div>
           </div>
-
           <div class="flex items-center justify-between text-sm">
             <dt class="text-secondary"><%= t(".current_market_price_label") %></dt>
             <dd class="text-primary">
               <% begin %>
                 <%= @holding.security.current_price ? format_money(@holding.security.current_price) : t(".unknown") %>
-              <% rescue ActiveRecord::RecordInvalid, StandardError %>
+                <% rescue ActiveRecord::RecordInvalid %>
+                <%= t(".unknown") %>
+                <% rescue StandardError => e %>
+                <% logger.error "Error fetching current price for security #{@holding.security.id}: #{e.message}" %>
+                <% logger.error e.backtrace.first(5).join("\n") %>
                 <%= t(".unknown") %>
               <% end %>
             </dd>
           </div>
-
           <div class="flex items-center justify-between text-sm">
             <dt class="text-secondary"><%= t(".portfolio_weight_label") %></dt>
             <dd class="text-primary"><%= @holding.weight ? number_to_percentage(@holding.weight, precision: 2) : t(".unknown") %></dd>
           </div>
-
           <%# Average Cost with inline editor %>
           <%
             currency = Money::Currency.new(@holding.currency)
@@ -103,7 +104,6 @@
                 </button>
               </dd>
             </div>
-
             <%# Inline cost basis editor (hidden by default) %>
             <div class="hidden mt-3 space-y-3" data-drawer-cost-basis-target="form">
               <%
@@ -136,7 +136,7 @@
                              autocomplete="off"
                              value="<%= number_with_precision(current_total, precision: 2) if current_total %>"
                              data-action="input->drawer-cost-basis#updatePerShare"
-                             data-drawer-cost-basis-target="total">
+                      data-drawer-cost-basis-target="total">
                       <span class="text-secondary text-sm"><%= currency.iso_code %></span>
                     </div>
                   </div>
@@ -144,7 +144,6 @@
                 <p class="text-xs text-secondary -mt-2">
                   = <%= currency.symbol %><span data-drawer-cost-basis-target="perShareValue"><%= number_with_precision(current_per_share, precision: 2) || "0.00" %></span> <%= t("holdings.cost_basis_cell.per_share") %>
                 </p>
-
                 <!-- Per-share input -->
                 <div class="pt-2 border-t border-tertiary">
                   <label class="text-xs text-secondary block mb-1"><%= t("holdings.cost_basis_cell.or_per_share_label") %></label>
@@ -156,11 +155,10 @@
                            autocomplete="off"
                            value="<%= number_with_precision(current_per_share, precision: 2) if current_per_share %>"
                            data-action="input->drawer-cost-basis#updateTotal"
-                           data-drawer-cost-basis-target="perShare">
+                    data-drawer-cost-basis-target="perShare">
                     <span class="text-secondary text-sm"><%= currency.iso_code %></span>
                   </div>
                 </div>
-
                 <div class="flex justify-end gap-2 pt-2">
                   <button type="button"
                           class="inline-flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium text-primary bg-gray-200 hover:bg-gray-300 theme-dark:bg-gray-700 theme-dark:hover:bg-gray-600"
@@ -172,7 +170,6 @@
               <% end %>
             </div>
           </div>
-
           <div class="flex items-center justify-between text-sm">
             <dt class="text-secondary"><%= t(".total_return_label") %></dt>
             <% if @holding.trend %>
@@ -186,7 +183,6 @@
         </dl>
       </div>
     <% end %>
-
     <% dialog.with_section(title: t(".history"), open: true) do %>
       <div class="space-y-2">
         <div class="px-3 py-4">
@@ -200,10 +196,8 @@
                       <div class="h-12 w-px bg-alpha-black-200"></div>
                     <% end %>
                   </div>
-
                   <div>
                     <p class="text-secondary text-xs uppercase"><%= l(trade_entry.date, format: :long) %></p>
-
                     <p class="text-primary"><%= t(
                       ".trade_history_entry",
                       qty: trade_entry.trade.qty,
@@ -214,14 +208,12 @@
                 </li>
               <% end %>
             </ul>
-
           <% else %>
             <p class="text-secondary"><%= t(".no_trade_history") %></p>
           <% end %>
         </div>
       </div>
     <% end %>
-
     <% if @holding.cost_basis_locked? || @holding.security_remapped? || @holding.account.can_delete_holdings? %>
       <% dialog.with_section(title: t(".settings"), open: true) do %>
         <div class="pb-4">
@@ -231,7 +223,6 @@
                 <h4 class="text-primary"><%= t(".security_remapped_label") %></h4>
                 <p class="text-secondary"><%= t(".provider_sent", ticker: @holding.provider_security.ticker) %></p>
               </div>
-
               <%= button_to t(".reset_to_provider"),
                   reset_security_holding_path(@holding),
                   method: :post,
@@ -243,14 +234,12 @@
                   } } %>
             </div>
           <% end %>
-
           <% if @holding.cost_basis_locked? %>
             <div class="flex items-center justify-between gap-2 p-3 border-b border-tertiary">
               <div class="text-sm space-y-1">
                 <h4 class="text-primary"><%= t(".cost_basis_locked_label") %></h4>
                 <p class="text-secondary"><%= t(".cost_basis_locked_description") %></p>
               </div>
-
               <%= button_to t(".unlock_cost_basis"),
                   unlock_cost_basis_holding_path(@holding),
                   method: :post,
@@ -259,14 +248,12 @@
                   data: { turbo_confirm: { title: t(".unlock_confirm_title"), body: t(".unlock_confirm_body") } } %>
             </div>
           <% end %>
-
           <% if @holding.account.can_delete_holdings? %>
             <div class="flex items-center justify-between gap-2 p-3">
               <div class="text-sm space-y-1">
                 <h4 class="text-primary"><%= t(".delete_title") %></h4>
                 <p class="text-secondary"><%= t(".delete_subtitle") %></p>
               </div>
-
               <%= button_to t(".delete"),
                   holding_path(@holding),
                   method: :delete,
