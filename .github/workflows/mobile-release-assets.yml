@@ -49,10 +49,18 @@ jobs:
           path: ${{ runner.temp }}/ios-build
           if-no-files-found: error
 
+      - name: Normalize release metadata
+        id: metadata
+        run: |
+          RELEASE_NAME="${{ inputs.release_name }}"
+          RELEASE_VERSION="${{ inputs.release_version }}"
+          echo "release_name=${RELEASE_NAME#mobile-}" >> "$GITHUB_OUTPUT"
+          echo "release_version=${RELEASE_VERSION#mobile-}" >> "$GITHUB_OUTPUT"
+
       - name: Prepare release assets
         run: |
           set -euo pipefail
-          RELEASE_VERSION="${{ inputs.release_version }}"
+          RELEASE_VERSION="${{ steps.metadata.outputs.release_version }}"
           MOBILE_ARTIFACTS_DIR="${{ runner.temp }}/mobile-artifacts"
           IOS_ARTIFACTS_DIR="${{ runner.temp }}/ios-build"
           RELEASE_ASSETS_DIR="${{ runner.temp }}/release-assets"
@@ -105,7 +113,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ inputs.tag_name }}
-          name: ${{ inputs.release_name }}
+          name: ${{ steps.metadata.outputs.release_name }}
           draft: false
           prerelease: ${{ inputs.prerelease }}
           generate_release_notes: ${{ inputs.generate_release_notes }}
