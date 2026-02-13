@@ -1,0 +1,113 @@
+name: Mobile Release Assets
+
+on:
+  workflow_call:
+    inputs:
+      tag_name:
+        required: true
+        type: string
+      release_name:
+        required: true
+        type: string
+      release_version:
+        required: true
+        type: string
+      prerelease:
+        required: true
+        type: boolean
+      generate_release_notes:
+        required: false
+        type: boolean
+        default: false
+      release_body:
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Prepare assets and publish release
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download Android APK artifact
+        uses: actions/download-artifact@v4.3.0
+        with:
+          name: app-release-apk
+          path: ${{ runner.temp }}/mobile-artifacts
+          if-no-files-found: error
+
+      - name: Download iOS build artifact
+        uses: actions/download-artifact@v4.3.0
+        with:
+          name: ios-build-unsigned
+          path: ${{ runner.temp }}/ios-build
+          if-no-files-found: error
+
+      - name: Prepare release assets
+        run: |
+          set -euo pipefail
+          RELEASE_VERSION="${{ inputs.release_version }}"
+          MOBILE_ARTIFACTS_DIR="${{ runner.temp }}/mobile-artifacts"
+          IOS_ARTIFACTS_DIR="${{ runner.temp }}/ios-build"
+          RELEASE_ASSETS_DIR="${{ runner.temp }}/release-assets"
+          mkdir -p "$RELEASE_ASSETS_DIR"
+
+          echo "=== Downloaded artifacts ==="
+          echo "Mobile artifacts:"
+          find "$MOBILE_ARTIFACTS_DIR" -maxdepth 6 -type f -print | sed 's#^#  #' || true
+          echo "iOS build:"
+          find "$IOS_ARTIFACTS_DIR" -maxdepth 8 -type f -print | sed 's#^#  #' || true
+          echo "==========================="
+
+          DEBUG_APK_PATH="$(find "$MOBILE_ARTIFACTS_DIR" -type f -name 'app-debug.apk' -print -quit || true)"
+          RELEASE_APK_PATH="$(find "$MOBILE_ARTIFACTS_DIR" -type f -name 'app-release.apk' -print -quit || true)"
+          IOS_RUNNER_DIR="$(find "$IOS_ARTIFACTS_DIR" -type d -name 'Runner.app' -print -quit || true)"
+          IOS_INFO_PATH="$(find "$IOS_ARTIFACTS_DIR" -type f -name 'ios-build-info.txt' -print -quit || true)"
+
+          if [ -n "$DEBUG_APK_PATH" ]; then
+            cp "$DEBUG_APK_PATH" "${{ runner.temp }}/release-assets/sure-${RELEASE_VERSION}-debug.apk"
+            echo "✓ Debug APK prepared"
+          fi
+
+          if [ -n "$RELEASE_APK_PATH" ]; then
+            cp "$RELEASE_APK_PATH" "${{ runner.temp }}/release-assets/sure-${RELEASE_VERSION}.apk"
+            echo "✓ Release APK prepared"
+          fi
+
+          if [ -n "$IOS_RUNNER_DIR" ]; then
+            cd "$IOS_RUNNER_DIR/.."
+            zip -r "${{ runner.temp }}/release-assets/sure-${RELEASE_VERSION}-ios-unsigned.zip" Runner.app
+            echo "✓ iOS build archive prepared"
+          fi
+
+          if [ -n "$IOS_INFO_PATH" ]; then
+            cp "$IOS_INFO_PATH" "${{ runner.temp }}/release-assets/"
+            echo "✓ iOS build info prepared"
+          fi
+
+          echo "Release assets:"
+          ls -la "${{ runner.temp }}/release-assets/"
+
+          if [ -z "$(ls -A "${{ runner.temp }}/release-assets/")" ]; then
+            echo "::error::No release assets were produced"
+            exit 1
+          fi
+
+          echo "✓ Assets prepared for release"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ inputs.tag_name }}
+          name: ${{ inputs.release_name }}
+          draft: false
+          prerelease: ${{ inputs.prerelease }}
+          generate_release_notes: ${{ inputs.generate_release_notes }}
+          files: ${{ runner.temp }}/release-assets/*
+          body: ${{ inputs.release_body }}
