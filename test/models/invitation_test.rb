@@ -132,7 +132,7 @@ class InvitationTest < ActiveSupport::TestCase
     # Create a family with multiple users
     multi_family = Family.create!(name: "Multi Family", currency: "USD")
     user1 = User.create!(
-      email: "user1@example.com",
+      email: "multi_user1_#{SecureRandom.hex(4)}@example.com",
       password: "password123",
       family: multi_family,
       role: "admin",
@@ -140,7 +140,7 @@ class InvitationTest < ActiveSupport::TestCase
       last_name: "One"
     )
     user2 = User.create!(
-      email: "user2@example.com",
+      email: "multi_user2_#{SecureRandom.hex(4)}@example.com",
       password: "password123",
       family: multi_family,
       role: "member",
