@@ -384,6 +384,7 @@ Rails.application.routes.draw do
       post "auth/login", to: "auth#login"
       post "auth/refresh", to: "auth#refresh"
       post "auth/sso_exchange", to: "auth#sso_exchange"
+      patch "auth/enable_ai", to: "auth#enable_ai"
 
       # Health check endpoint (no auth required)
       get "health", to: "health#show"

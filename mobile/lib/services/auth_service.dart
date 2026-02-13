@@ -435,6 +435,42 @@ class AuthService {
     }
   }
 
+  Future<Map<String, dynamic>> enableAi({
+    required String accessToken,
+  }) async {
+    try {
+      final url = Uri.parse('${ApiConfig.baseUrl}/api/v1/auth/enable_ai');
+      final response = await http.patch(
+        url,
+        headers: {
+          ...ApiConfig.getAuthHeaders(accessToken),
+          'Content-Type': 'application/json',
+        },
+      ).timeout(const Duration(seconds: 30));
+
+      final responseData = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        final user = User.fromJson(responseData['user']);
+        await _saveUser(user);
+        return {
+          'success': true,
+          'user': user,
+        };
+      }
+
+      return {
+        'success': false,
+        'error': responseData['error'] ?? responseData['errors']?.join(', ') ?? 'Failed to enable AI',
+      };
+    } catch (e) {
+      return {
+        'success': false,
+        'error': 'Network error: ${e.toString()}',
+      };
+    }
+  }
+
   Future<void> logout() async {
     await _storage.delete(key: _tokenKey);
     await _storage.delete(key: _userKey);
@@ -474,12 +510,7 @@ class AuthService {
   Future<void> _saveUser(User user) async {
     await _storage.write(
       key: _userKey,
-      value: jsonEncode({
-        'id': user.id,
-        'email': user.email,
-        'first_name': user.firstName,
-        'last_name': user.lastName,
-      }),
+      value: jsonEncode(user.toJson()),
     );
   }
 
