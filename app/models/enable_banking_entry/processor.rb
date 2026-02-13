@@ -130,11 +130,14 @@ class EnableBankingEntry::Processor
       candidates = remittance_lines.map { |line| cleanup_remittance_line(line) }.compact
       return nil if candidates.empty?
 
-      candidates.each do |cleaned|
-        return cleaned unless reference_like?(cleaned) || technicality_score(cleaned) >= REMITTANCE_TECHNICALITY_THRESHOLD
-      end
+      non_reference_candidates = candidates.reject { |candidate| reference_like?(candidate) }
+      pool = non_reference_candidates.presence || candidates
 
-      candidates.first
+      pool.max_by { |candidate| remittance_candidate_score(candidate) }
+    end
+
+    def remittance_candidate_score(value)
+      informativeness_score(value) - technicality_score(value)
     end
 
     def cleanup_remittance_line(line)

@@ -20,6 +20,19 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
     assert_equal "LA REDOUTE", name
   end
 
+  test "prefers merchant remittance line over payment header" do
+    name = build_name(
+      credit_debit_indicator: "DBIT",
+      description: "PAIEMENT PSC 1102 DOUVRIN",
+      remittance_information: [
+        "PAIEMENT PSC 1102 DOUVRIN",
+        "LE TEMPS DES FRO CARTE 8496"
+      ]
+    )
+
+    assert_equal "LE TEMPS DES FRO", name
+  end
+
   test "keeps explicit counterparty name" do
     name = build_name(
       credit_debit_indicator: "DBIT",
