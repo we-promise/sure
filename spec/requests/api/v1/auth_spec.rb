@@ -221,7 +221,7 @@ RSpec.describe 'API V1 Auth', type: :request do
       tags 'Auth'
       consumes 'application/json'
       produces 'application/json'
-      security [{ apiKeyAuth: [] }]
+      security [ { apiKeyAuth: [] } ]
 
       response '200', 'ai enabled' do
         schema type: :object,
@@ -247,5 +247,4 @@ RSpec.describe 'API V1 Auth', type: :request do
       end
     end
   end
-
 end
