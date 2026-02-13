@@ -7,6 +7,7 @@ module Api
       skip_before_action :check_api_key_rate_limit
       skip_before_action :log_api_access
       before_action :authenticate_request!, only: :enable_ai
+      before_action :ensure_write_scope, only: :enable_ai
       before_action :check_api_key_rate_limit, only: :enable_ai
       before_action :log_api_access, only: :enable_ai
 
@@ -241,6 +242,10 @@ module Api
             ai_enabled: user.ai_enabled?
           }
         end
+
+      def ensure_write_scope
+        authorize_scope!(:write)
+      end
     end
   end
 end
