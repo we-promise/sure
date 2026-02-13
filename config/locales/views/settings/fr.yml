@@ -133,6 +133,10 @@ fr:
       whats_new_label: Dernières nouvelles
       api_keys_label: Clés API
       bank_sync_label: Synchronisation de la banque
+      llm_usage_label: Utilisation de LLM
+      providers_label: Fournisseurs
+      sso_providers_label: Fournisseurs SSO
+      users_label: Utilisateurs
     settings_nav_link_large:
       next: Suivant
       previous: Précédent

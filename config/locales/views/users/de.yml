@@ -15,3 +15,8 @@ de:
       unauthorized: Du bist nicht berechtigt, diese Aktion auszuführen.
     reset_with_sample_data:
       success: Dein Konto wurde zurückgesetzt, und Beispieldaten werden vorbereitet. In Kürze wirst du Demodaten sehen.
+    menu_settings: Einstellungen
+    menu_changelog: Änderungsprotokoll
+    menu_feedback: Feedback
+    menu_contact: Kontakt
+    menu_logout: Abmelden

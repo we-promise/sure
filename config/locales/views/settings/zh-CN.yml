@@ -120,6 +120,12 @@ zh-CN:
       tags_label: 标签管理
       transactions_section_title: 交易管理
       whats_new_label: 更新日志
+      llm_usage_label: 大语言模型使用情况
+      providers_label: 提供商
+      sso_providers_label: 单点登录提供商
+      users_label: 用户管理
+      recurring_label: 定期交易
+      accounts_label: 账户管理
     settings_nav_link_large:
       next: 下一步
       previous: 上一步

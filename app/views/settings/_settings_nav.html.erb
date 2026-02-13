@@ -26,14 +26,14 @@ nav_sections = [
       header: t(".advanced_section_title"),
       items: [
         { label: t(".ai_prompts_label"), path: settings_ai_prompts_path, icon: "bot" },
-        { label: "LLM Usage", path: settings_llm_usage_path, icon: "activity" },
+        { label: t(".llm_usage_label"), path: settings_llm_usage_path, icon: "activity" },
         { label: t(".api_keys_label"), path: settings_api_key_path, icon: "key" },
         { label: t(".self_hosting_label"), path: settings_hosting_path, icon: "database", if: self_hosted? },
-        { label: "Providers", path: settings_providers_path, icon: "plug" },
+        { label: t(".providers_label"), path: settings_providers_path, icon: "plug" },
         { label: t(".imports_label"), path: imports_path, icon: "download" },
         { label: t(".exports_label"), path: family_exports_path, icon: "upload" },
-        { label: "SSO Providers", path: admin_sso_providers_path, icon: "key-round", if: Current.user&.super_admin? },
-        { label: "Users", path: admin_users_path, icon: "users", if: Current.user&.super_admin? }
+        { label: t(".sso_providers_label"), path: admin_sso_providers_path, icon: "key-round", if: Current.user&.super_admin? },
+        { label: t(".users_label"), path: admin_users_path, icon: "users", if: Current.user&.super_admin? }
       ]
     } : nil
   ),
@@ -64,7 +64,7 @@ nav_sections = [
     <% nav_sections.compact.each do |section| %>
       <section class="space-y-2">
         <div class="flex items-center gap-2 px-3">
-          <h3 class="uppercase text-secondary font-medium text-xs"><%= section[:header] %></h3>
+          <h3 class="uppercase text-secondary font-medium text-xs whitespace-nowrap"><%= section[:header] %></h3>
           <%= render "shared/ruler", classes: "w-full" %>
         </div>
         <ul class="space-y-1">

@@ -16,3 +16,8 @@ en:
       unauthorized: You are not authorized to perform this action
     reset_with_sample_data:
       success: Your account has been reset and sample data is being prepared. You’ll see demo data shortly.
+    menu_settings: Settings
+    menu_changelog: Changelog
+    menu_feedback: Feedback
+    menu_contact: Contact
+    menu_logout: Logout

@@ -108,6 +108,11 @@ pt-BR:
       tags_label: Tags
       transactions_section_title: Transações
       whats_new_label: Novidades
+      bank_sync_label: Sincronização Bancária
+      llm_usage_label: Uso de LLM
+      providers_label: Provedores
+      sso_providers_label: Provedores SSO
+      users_label: Usuários
     settings_nav_link_large:
       next: Próximo
       previous: Voltar

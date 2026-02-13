@@ -14,3 +14,8 @@ es:
     reset_with_sample_data:
       success: Tu cuenta ha sido restablecida y se están preparando datos de muestra. 
         Verás datos de demostración en breve.
+    menu_settings: Configuración
+    menu_changelog: Registro de cambios
+    menu_feedback: Comentarios
+    menu_contact: Contacto
+    menu_logout: Cerrar sesión

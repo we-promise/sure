@@ -19,3 +19,8 @@ ca:
       email_change_initiated: Revisa el teu nou correu electrònic per instruccions
         de confirmació.
       success: El teu perfil s'ha actualitzat.
+    menu_settings: Configuració
+    menu_changelog: Registre de canvis
+    menu_feedback: Comentarios
+    menu_contact: Contacto
+    menu_logout: Cerrar sesión

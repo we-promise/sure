@@ -117,6 +117,10 @@ es:
       whats_new_label: Novedades
       api_keys_label: Clave API
       bank_sync_label: Sincronización Bancaria
+      llm_usage_label: Uso de LLM
+      providers_label: Proveedores
+      sso_providers_label: Proveedores SSO
+      users_label: Usuarios
     settings_nav_link_large:
       next: Siguiente
       previous: Atrás

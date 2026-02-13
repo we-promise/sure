@@ -147,6 +147,10 @@ ca:
       tags_label: Etiquetes
       transactions_section_title: Transaccions
       whats_new_label: Novetats
+      llm_usage_label: Ús de LLM
+      providers_label: Proveïdors
+      sso_providers_label: Proveïdors SSO
+      users_label: Usuaris
     settings_nav_link_large:
       next: Següent
       previous: Enrere

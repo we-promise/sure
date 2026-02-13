@@ -16,3 +16,8 @@ ro:
       unauthorized: Nu ești autorizat să efectuezi această acțiune
     reset_with_sample_data:
       success: Contul tău a fost resetat și datele eșantion sunt în curs de pregătire. Vei vedea date demonstrative în curând.
+    menu_settings: Setări
+    menu_changelog: Jurnal de modificări
+    menu_feedback: Feedback
+    menu_contact: Contact
+    menu_logout: Deconectare

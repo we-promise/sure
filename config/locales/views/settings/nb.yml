@@ -2,6 +2,7 @@
 nb:
   views:
     settings:
+      llm_usage_label: Utilisation de LLM
       payments:
         renewal: "Bidraget ditt fortsetter den %{date}."
   settings:
@@ -98,6 +99,11 @@ nb:
       tags_label: Tagger
       transactions_section_title: Transaksjoner
       whats_new_label: Hva er nytt
+      bank_sync_label: Bank synkronisering
+      llm_usage_label: LLM bruk
+      providers_label: Leverandører
+      sso_providers_label: SSO-leverandører
+      users_label: Brukere
     settings_nav_link_large:
       next: Neste
       previous: Tilbake

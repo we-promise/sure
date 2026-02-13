@@ -116,6 +116,10 @@ zh-TW:
       whats_new_label: 最新動態
       api_keys_label: API 金鑰
       bank_sync_label: 銀行同步
+      llm_usage_label: 大型語言模型使用情況
+      providers_label: 供應商
+      sso_providers_label: 單點登入供應商
+      users_label: 使用者管理
     settings_nav_link_large:
       next: 下一步
       previous: 返回

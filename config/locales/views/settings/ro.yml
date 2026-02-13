@@ -120,6 +120,10 @@ ro:
       whats_new_label: Noutăți
       api_keys_label: Cheie API
       bank_sync_label: Sincronizare bancară
+      llm_usage_label: Utilizare LLM
+      providers_label: Furnizori
+      sso_providers_label: Furnizori SSO
+      users_label: Utilizatori
     settings_nav_link_large:
       next: Următorul
       previous: Înapoi

@@ -95,6 +95,11 @@ tr:
       tags_label: Etiketler
       transactions_section_title: İşlemler
       whats_new_label: Yenilikler
+      bank_sync_label: Banka Senkronizasyonu
+      llm_usage_label: LLM Kullanımı
+      providers_label: Sağlayıcılar
+      sso_providers_label: SSO Sağlayıcıları
+      users_label: Kullanıcılar
     settings_nav_link_large:
       next: Sonraki
       previous: Geri

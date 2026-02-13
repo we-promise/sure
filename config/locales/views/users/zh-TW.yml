@@ -15,3 +15,8 @@ zh-TW:
       unauthorized: 您沒有權限執行此操作。
     reset_with_sample_data:
       success: 您的帳號已重設，範例資料正在準備中。您很快就會看到示範資料。
+    menu_settings: 設定
+    menu_changelog: 更新日誌
+    menu_feedback: 反饋
+    menu_contact: 聯繫我們
+    menu_logout: 登出
