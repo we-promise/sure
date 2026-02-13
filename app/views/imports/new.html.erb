@@ -2,6 +2,9 @@
   <% dialog.with_header(title: t(".title"), subtitle: t(".description")) %>
 
   <% dialog.with_body do %>
+    <% has_accounts = Current.family.accounts.any? %>
+    <% requires_account_message = t(".requires_account", default: "Import accounts first to unlock this option.") %>
+
     <div class="rounded-xl bg-container-inset p-1">
       <h3 class="uppercase text-secondary text-xs font-medium px-3 py-1.5"><%= t(".sources") %></h3>
       <ul class="bg-container shadow-border-xs rounded-lg">
@@ -25,40 +28,64 @@
           </li>
         <% end %>
 
-        <% if Current.family.accounts.any? && (params[:type].nil? || params[:type] == "TransactionImport") %>
+        <% if params[:type].nil? || params[:type] == "TransactionImport" %>
           <li>
-            <%= button_to imports_path(import: { type: "TransactionImport" }), class: "flex items-center justify-between p-4 group cursor-pointer w-full", data: { turbo: false } do %>
-              <div class="flex items-center gap-2">
-                <div class="bg-indigo-500/5 rounded-md w-8 h-8 flex items-center justify-center">
-                  <span class="text-indigo-500">
-                    <%= icon("file-spreadsheet", color: "current") %>
-                  </span>
+            <% if has_accounts %>
+              <%= button_to imports_path(import: { type: "TransactionImport" }), class: "flex items-center justify-between p-4 group cursor-pointer w-full", data: { turbo: false } do %>
+                <div class="flex items-center gap-2">
+                  <div class="bg-indigo-500/5 rounded-md w-8 h-8 flex items-center justify-center">
+                    <span class="text-indigo-500">
+                      <%= icon("file-spreadsheet", color: "current") %>
+                    </span>
+                  </div>
+                  <span class="text-sm text-primary group-hover:text-secondary"><%= t(".import_transactions") %></span>
                 </div>
-                <span class="text-sm text-primary group-hover:text-secondary">
-                  <%= t(".import_transactions") %>
-                </span>
+                <%= icon("chevron-right") %>
+              <% end %>
+            <% else %>
+              <div class="flex items-center justify-between p-4 w-full opacity-50 cursor-not-allowed">
+                <div class="flex items-center gap-2">
+                  <div class="bg-indigo-500/5 rounded-md w-8 h-8 flex items-center justify-center">
+                    <span class="text-indigo-500"><%= icon("file-spreadsheet", color: "current") %></span>
+                  </div>
+                  <div>
+                    <span class="text-sm text-primary block"><%= t(".import_transactions") %></span>
+                    <span class="text-xs text-secondary block"><%= requires_account_message %></span>
+                  </div>
+                </div>
+                <%= icon("chevron-right") %>
               </div>
-              <%= icon("chevron-right") %>
             <% end %>
 
             <%= render "shared/ruler" %>
           </li>
         <% end %>
 
-        <% if Current.family.accounts.any? && (params[:type].nil? || params[:type] == "TradeImport") %>
+        <% if params[:type].nil? || params[:type] == "TradeImport" %>
           <li>
-            <%= button_to imports_path(import: { type: "TradeImport" }), class: "flex items-center justify-between p-4 group cursor-pointer w-full", data: { turbo: false } do %>
-              <div class="flex items-center gap-2">
-                <div class="bg-yellow-500/5 rounded-md w-8 h-8 flex items-center justify-center">
-                  <span class="text-yellow-500">
-                    <%= icon("square-percent", color: "current") %>
-                  </span>
+            <% if has_accounts %>
+              <%= button_to imports_path(import: { type: "TradeImport" }), class: "flex items-center justify-between p-4 group cursor-pointer w-full", data: { turbo: false } do %>
+                <div class="flex items-center gap-2">
+                  <div class="bg-yellow-500/5 rounded-md w-8 h-8 flex items-center justify-center">
+                    <span class="text-yellow-500"><%= icon("square-percent", color: "current") %></span>
+                  </div>
+                  <span class="text-sm text-primary group-hover:text-secondary"><%= t(".import_portfolio") %></span>
                 </div>
-                <span class="text-sm text-primary group-hover:text-secondary">
-                  <%= t(".import_portfolio") %>
-                </span>
+                <%= icon("chevron-right") %>
+              <% end %>
+            <% else %>
+              <div class="flex items-center justify-between p-4 w-full opacity-50 cursor-not-allowed">
+                <div class="flex items-center gap-2">
+                  <div class="bg-yellow-500/5 rounded-md w-8 h-8 flex items-center justify-center">
+                    <span class="text-yellow-500"><%= icon("square-percent", color: "current") %></span>
+                  </div>
+                  <div>
+                    <span class="text-sm text-primary block"><%= t(".import_portfolio") %></span>
+                    <span class="text-xs text-secondary block"><%= requires_account_message %></span>
+                  </div>
+                </div>
+                <%= icon("chevron-right") %>
               </div>
-              <%= icon("chevron-right") %>
             <% end %>
 
             <%= render "shared/ruler" %>
@@ -125,16 +152,27 @@
           </li>
         <% end %>
 
-        <% if Current.family.accounts.any? && (params[:type].nil? || params[:type] == "MintImport" || params[:type] == "TransactionImport") %>
+        <% if params[:type].nil? || params[:type] == "MintImport" || params[:type] == "TransactionImport" %>
           <li>
-            <%= button_to imports_path(import: { type: "MintImport" }), class: "flex items-center justify-between p-4 group w-full", data: { turbo: false } do %>
-              <div class="flex items-center gap-2">
-                <%= image_tag("mint-logo.jpeg", alt: "Mint logo", class: "w-8 h-8 rounded-md") %>
-                <span class="text-sm text-primary">
-                  <%= t(".import_mint") %>
-                </span>
+            <% if has_accounts %>
+              <%= button_to imports_path(import: { type: "MintImport" }), class: "flex items-center justify-between p-4 group w-full", data: { turbo: false } do %>
+                <div class="flex items-center gap-2">
+                  <%= image_tag("mint-logo.jpeg", alt: "Mint logo", class: "w-8 h-8 rounded-md") %>
+                  <span class="text-sm text-primary"><%= t(".import_mint") %></span>
+                </div>
+                <%= icon("chevron-right") %>
+              <% end %>
+            <% else %>
+              <div class="flex items-center justify-between p-4 w-full opacity-50 cursor-not-allowed">
+                <div class="flex items-center gap-2">
+                  <%= image_tag("mint-logo.jpeg", alt: "Mint logo", class: "w-8 h-8 rounded-md") %>
+                  <div>
+                    <span class="text-sm text-primary block"><%= t(".import_mint") %></span>
+                    <span class="text-xs text-secondary block"><%= requires_account_message %></span>
+                  </div>
+                </div>
+                <%= icon("chevron-right") %>
               </div>
-              <%= icon("chevron-right") %>
             <% end %>
 
             <%= render "shared/ruler" %>
