@@ -254,6 +254,17 @@ RSpec.configure do |config|
               name: { type: :string }
             }
           },
+          MerchantDetail: {
+            type: :object,
+            required: %w[id name type created_at updated_at],
+            properties: {
+              id: { type: :string, format: :uuid },
+              name: { type: :string },
+              type: { type: :string, enum: %w[FamilyMerchant ProviderMerchant] },
+              created_at: { type: :string, format: :'date-time' },
+              updated_at: { type: :string, format: :'date-time' }
+            }
+          },
           Tag: {
             type: :object,
             required: %w[id name color],
