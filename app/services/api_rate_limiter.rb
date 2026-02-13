@@ -10,7 +10,10 @@ class ApiRateLimiter
 
   def initialize(api_key)
     @api_key = api_key
-    @redis = Redis.new
+    @redis = Redis.new(
+      url: ENV["REDIS_URL"],
+      password: ENV["REDIS_PASSWORD"]
+    )
   end
 
   # Check if the API key has exceeded its rate limit

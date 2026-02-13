@@ -35,7 +35,10 @@ module SelfHostable
     end
 
     def redis_connected?
-      Redis.new.ping
+      Redis.new(
+        url: ENV["REDIS_URL"],
+        password: ENV["REDIS_PASSWORD"]
+      ).ping
       true
     rescue Redis::CannotConnectError
       false

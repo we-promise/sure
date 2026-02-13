@@ -27,8 +27,8 @@ class Api::V1::SyncControllerTest < ActionDispatch::IntegrationTest
     )
 
     # Clear any existing rate limit data
-    Redis.new.del("api_rate_limit:#{@api_key.id}")
-    Redis.new.del("api_rate_limit:#{@read_only_api_key.id}")
+    Redis.new(url: ENV["REDIS_URL"], password: ENV["REDIS_PASSWORD"]).del("api_rate_limit:#{@api_key.id}")
+    Redis.new(url: ENV["REDIS_URL"], password: ENV["REDIS_PASSWORD"]).del("api_rate_limit:#{@read_only_api_key.id}")
   end
 
   test "should trigger sync with valid write API key" do

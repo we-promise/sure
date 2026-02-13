@@ -24,12 +24,12 @@ class Api::V1::BaseControllerTest < ActionDispatch::IntegrationTest
     )
 
     # Clear any existing rate limit data
-    Redis.new.del("api_rate_limit:#{@api_key.id}")
+    Redis.new(url: ENV["REDIS_URL"], password: ENV["REDIS_PASSWORD"]).del("api_rate_limit:#{@api_key.id}")
   end
 
   teardown do
     # Clean up Redis data after each test
-    Redis.new.del("api_rate_limit:#{@api_key.id}")
+    Redis.new(url: ENV["REDIS_URL"], password: ENV["REDIS_PASSWORD"]).del("api_rate_limit:#{@api_key.id}")
   end
 
   test "should require authentication" do
@@ -420,7 +420,7 @@ class Api::V1::BaseControllerTest < ActionDispatch::IntegrationTest
       assert_response :success
       assert_equal "99", response.headers["X-RateLimit-Remaining"]
     ensure
-      Redis.new.del("api_rate_limit:#{other_api_key.id}")
+      Redis.new(url: ENV["REDIS_URL"], password: ENV["REDIS_PASSWORD"]).del("api_rate_limit:#{other_api_key.id}")
       other_api_key.destroy
     end
   end
