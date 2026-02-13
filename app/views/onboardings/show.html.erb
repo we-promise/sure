@@ -33,20 +33,34 @@
       <% unless @invitation %>
         <div class="space-y-4 mb-4">
           <%= form.fields_for :family do |family_form| %>
-            <div class="space-y-2">
+            <div class="space-y-2"
+              data-controller="onboarding"
+              data-onboarding-household-name-label-value="<%= t(".household_name") %>"
+              data-onboarding-household-name-placeholder-value="<%= t(".household_name_placeholder") %>"
+              data-onboarding-group-name-label-value="<%= t(".group_name", default: t(".group_name")) %>"
+              data-onboarding-group-name-placeholder-value="<%= t(".group_name_placeholder", default: t(".group_name_placeholder")) %>"
+            >
               <p class="text-sm font-medium text-primary"><%= t(".moniker_prompt") %></p>
 
               <label class="flex items-center gap-2 text-sm text-primary">
-                <%= family_form.radio_button :moniker, "Family", required: true %>
+                <%= family_form.radio_button :moniker, "Family", required: true, data: {
+                  action: "onboarding#updateNameFieldForCurrentMoniker",
+                  onboarding_target: "monikerRadio",
+                  onboarding_moniker: "Family"
+                } %>
                 <span><%= t(".moniker_family") %></span>
               </label>
 
               <label class="flex items-center gap-2 text-sm text-primary">
-                <%= family_form.radio_button :moniker, "Group", required: true %>
+                <%= family_form.radio_button :moniker, "Group", required: true, data: {
+                  action: "onboarding#updateNameFieldForCurrentMoniker",
+                  onboarding_target: "monikerRadio",
+                  onboarding_moniker: "Group"
+                } %>
                 <span><%= t(".moniker_group") %></span>
               </label>
 
-            <%= family_form.text_field :name, placeholder: t(".household_name_placeholder"), label: t(".household_name") %>
+            <%= family_form.text_field :name, id: "onboarding_family_name", placeholder: t(".household_name_placeholder"), label: t(".household_name"), data: { onboarding_target: "nameField" } %>
             </div>
 
             <%= family_form.select :country,

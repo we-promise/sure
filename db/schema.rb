@@ -500,8 +500,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_02_11_120001) do
     t.datetime "latest_sync_completed_at", default: -> { "CURRENT_TIMESTAMP" }
     t.boolean "recurring_transactions_disabled", default: false, null: false
     t.integer "month_start_day", default: 1, null: false
-    t.string "moniker", default: "Family", null: false
     t.string "vector_store_id"
+    t.string "moniker", default: "Family", null: false
     t.check_constraint "month_start_day >= 1 AND month_start_day <= 28", name: "month_start_day_range"
   end
 
