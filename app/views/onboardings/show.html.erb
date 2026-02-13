@@ -33,8 +33,6 @@
       <% unless @invitation %>
         <div class="space-y-4 mb-4">
           <%= form.fields_for :family do |family_form| %>
-            <%= family_form.text_field :name, placeholder: t(".household_name_placeholder"), label: t(".household_name") %>
-
             <div class="space-y-2">
               <p class="text-sm font-medium text-primary"><%= t(".moniker_prompt") %></p>
 
@@ -47,6 +45,8 @@
                 <%= family_form.radio_button :moniker, "Group", required: true %>
                 <span><%= t(".moniker_group") %></span>
               </label>
+
+            <%= family_form.text_field :name, placeholder: t(".household_name_placeholder"), label: t(".household_name") %>
             </div>
 
             <%= family_form.select :country,

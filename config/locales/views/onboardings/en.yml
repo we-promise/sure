@@ -19,8 +19,8 @@ en:
       household_name: Household name
       household_name_placeholder: Household name
       moniker_prompt: "Will be using Sure with ..."
-      moniker_family: My family
-      moniker_group: A group of people (company, etc.)
+      moniker_family: Family members (just yourself or with partner, teens, etc.)
+      moniker_group: Group of people (company, club, association, any other type)
       country: Country
       submit: Continue
     preferences:
