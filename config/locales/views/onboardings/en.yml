@@ -20,7 +20,7 @@ en:
       group_name_placeholder: Group name
       household_name: Household name
       household_name_placeholder: Household name
-      moniker_prompt: "Will be using Sure with ..."
+      moniker_prompt: "Will be using %{product_name} with ..."
       moniker_family: Family members (just yourself or with partner, teens, etc.)
       moniker_group: Group of people (company, club, association, any other type)
       country: Country
