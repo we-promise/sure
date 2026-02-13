@@ -126,7 +126,7 @@ class Family < ApplicationRecord
   # Always uses the family's locale to ensure consistent category naming across all users.
   def investment_contributions_category
     # Check if any legacy category exists (created under old request-locale behavior)
-    existing = categories.find_by(name: Category.all_investment_contributions_names)
+    existing = categories.where(name: Category.all_investment_contributions_names).first
 
     if existing
       # Update legacy category to use family's locale name if needed

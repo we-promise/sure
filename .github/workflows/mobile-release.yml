@@ -14,14 +14,28 @@ jobs:
     uses: ./.github/workflows/flutter-build.yml
     secrets: inherit
 
+  prepare-release:
+    name: Prepare Release Version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.extract-version.outputs.version }}
+    steps:
+      - name: Extract version from tag
+        id: extract-version
+        run: |
+          TAG_NAME="${{ github.ref_name }}"
+          VERSION="${TAG_NAME#mobile-}"
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "Extracted version: ${VERSION}"
+
   release:
     name: Create Mobile GitHub Release
-    needs: [build]
+    needs: [build, prepare-release]
     uses: ./.github/workflows/mobile-release-assets.yml
     with:
       tag_name: ${{ github.ref_name }}
-      release_name: "${{ replace(github.ref_name, 'mobile-', '') }} (Mobile)"
-      release_version: ${{ replace(github.ref_name, 'mobile-', '') }}
+      release_name: "${{ needs.prepare-release.outputs.version }} (Mobile)"
+      release_version: ${{ needs.prepare-release.outputs.version }}
       prerelease: ${{ contains(github.ref_name, 'alpha') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') }}
       generate_release_notes: false
       release_body: |
