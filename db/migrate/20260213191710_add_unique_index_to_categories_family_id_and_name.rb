@@ -12,7 +12,7 @@ class AddUniqueIndexToCategoriesFamilyIdAndName < ActiveRecord::Migration[7.2]
     duplicates.each do |row|
       family_id = row["family_id"]
       name = row["name"]
-      ids = row["ids"].tr("{}","").split(",")
+      ids = row["ids"].tr("{}", "").split(",")
       keeper_id = ids.first
       duplicate_ids = ids[1..]
 
@@ -26,32 +26,32 @@ class AddUniqueIndexToCategoriesFamilyIdAndName < ActiveRecord::Migration[7.2]
       execute(<<~SQL)
         UPDATE transactions
         SET category_id = '#{keeper_id}'
-        WHERE category_id IN (#{duplicate_ids.map { |id| "'#{id}'" }.join(',')})
+        WHERE category_id IN (#{duplicate_ids.map { |id| "'#{id}'" }.join(', ')})
       SQL
 
       # Update all budget_categories to point to the keeper category
       execute(<<~SQL)
         UPDATE budget_categories
         SET category_id = '#{keeper_id}'
-        WHERE category_id IN (#{duplicate_ids.map { |id| "'#{id}'" }.join(',')})
+        WHERE category_id IN (#{duplicate_ids.map { |id| "'#{id}'" }.join(', ')})
       SQL
 
       # Update all subcategories to point to the keeper as parent
       execute(<<~SQL)
         UPDATE categories
         SET parent_id = '#{keeper_id}'
-        WHERE parent_id IN (#{duplicate_ids.map { |id| "'#{id}'" }.join(',')})
+        WHERE parent_id IN (#{duplicate_ids.map { |id| "'#{id}'" }.join(', ')})
       SQL
 
       # Delete the duplicate categories
       execute(<<~SQL)
         DELETE FROM categories
-        WHERE id IN (#{duplicate_ids.map { |id| "'#{id}'" }.join(',')})
+        WHERE id IN (#{duplicate_ids.map { |id| "'#{id}'" }.join(', ')})
       SQL
     end
 
     # Now add the unique index
-    add_index :categories, [:family_id, :name], unique: true, name: "index_categories_on_family_id_and_name_unique"
+    add_index :categories, [ :family_id, :name ], unique: true, name: "index_categories_on_family_id_and_name_unique"
   end
 
   def down
