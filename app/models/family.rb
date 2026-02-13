@@ -125,16 +125,28 @@ class Family < ApplicationRecord
   # This is used for auto-categorizing transfers to investment accounts.
   # Always uses the family's locale to ensure consistent category naming across all users.
   def investment_contributions_category
-    # Check if any legacy category exists (created under old request-locale behavior)
-    existing = categories.where(name: Category.all_investment_contributions_names).first
+    # Find ALL legacy categories (created under old request-locale behavior)
+    legacy = categories.where(name: Category.all_investment_contributions_names).order(:created_at).to_a
 
-    if existing
-      # Update legacy category to use family's locale name if needed
+    if legacy.any?
+      keeper = legacy.first
+      duplicates = legacy[1..]
+
+      # Reassign transactions and subcategories from duplicates to keeper
+      if duplicates.any?
+        duplicate_ids = duplicates.map(&:id)
+        categories.where(parent_id: duplicate_ids).update_all(parent_id: keeper.id)
+        Transaction.where(category_id: duplicate_ids).update_all(category_id: keeper.id)
+        BudgetCategory.where(category_id: duplicate_ids).update_all(category_id: keeper.id)
+        categories.where(id: duplicate_ids).delete_all
+      end
+
+      # Rename keeper to family's locale name if needed
       I18n.with_locale(locale) do
         correct_name = Category.investment_contributions_name
-        existing.update!(name: correct_name) unless existing.name == correct_name
+        keeper.update!(name: correct_name) unless keeper.name == correct_name
       end
-      return existing
+      return keeper
     end
 
     # Create new category using family's locale

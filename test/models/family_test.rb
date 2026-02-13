@@ -101,6 +101,46 @@ class FamilyTest < ActiveSupport::TestCase
     end
   end
 
+  test "investment_contributions_category merges multiple locale variants" do
+    family = families(:dylan_family)
+    family.update!(locale: "en")
+    family.categories.where(name: [ "Investment Contributions", "Contributions aux investissements" ]).destroy_all
+
+    # Simulate legacy: multiple categories created under different locales
+    english_category = family.categories.create!(
+      name: "Investment Contributions",
+      color: "#0d9488",
+      classification: "expense",
+      lucide_icon: "trending-up"
+    )
+
+    french_category = family.categories.create!(
+      name: "Contributions aux investissements",
+      color: "#0d9488",
+      classification: "expense",
+      lucide_icon: "trending-up"
+    )
+
+    # Create transactions pointing to both categories
+    account = family.accounts.first
+    txn1 = account.transactions.create!(name: "Test 1", amount: 100, date: Date.current, category: english_category)
+    txn2 = account.transactions.create!(name: "Test 2", amount: 200, date: Date.current, category: french_category)
+
+    # Should merge both categories into one, keeping the oldest
+    assert_difference "Category.count", -1 do
+      result = family.investment_contributions_category
+      assert_equal english_category.id, result.id
+      assert_equal "Investment Contributions", result.name
+
+      # Both transactions should now point to the keeper
+      assert_equal english_category.id, txn1.reload.category_id
+      assert_equal english_category.id, txn2.reload.category_id
+
+      # French category should be deleted
+      assert_nil Category.find_by(id: french_category.id)
+    end
+  end
+
   test "moniker helpers return expected singular and plural labels" do
     family = families(:dylan_family)
 
