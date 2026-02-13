@@ -119,3 +119,6 @@ scripts/
 .worktrees/
 .security-key
 logs/security/
+
+# Redis dump
+dump.rdb
