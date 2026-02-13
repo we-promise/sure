@@ -23,7 +23,7 @@ class AuthProvider with ChangeNotifier {
 
   User? get user => _user;
   bool get isIntroLayout => _user?.isIntroLayout ?? false;
-  bool get aiEnabled => _user?.aiEnabled ?? true;
+  bool get aiEnabled => _user?.aiEnabled ?? false;
   AuthTokens? get tokens => _tokens;
   bool get isLoading => _isLoading;
   bool get isInitializing => _isInitializing; // Expose initialization state
@@ -322,7 +322,6 @@ class AuthProvider with ChangeNotifier {
 
     return _tokens?.accessToken;
   }
-
 
   Future<bool> enableAi() async {
     final accessToken = await getValidAccessToken();

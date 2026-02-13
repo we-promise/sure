@@ -435,7 +435,6 @@ class AuthService {
     }
   }
 
-
   Future<Map<String, dynamic>> enableAi({
     required String accessToken,
   }) async {
