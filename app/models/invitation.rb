@@ -52,18 +52,20 @@ class Invitation < ApplicationRecord
 
       # Create a modified email to preserve the old family data
       # The format is: originalname+family123@domain.com
-      old_email_parts = user.email.split("@")
-      preserved_email = "#{old_email_parts[0]}+family#{old_family.id}@#{old_email_parts[1]}"
+      # Use rpartition to handle edge cases with '@' in local part
+      old_email_local, _, old_email_domain = user.email.rpartition('@')
+      preserved_email = "#{old_email_local}+family#{old_family.id}@#{old_email_domain}"
       
       # Create a new user in the old family with the preserved email
       # This keeps the family alive and accessible
+      # Password length: 64 characters (32 bytes as hex) - sufficient for security
       preserved_user = User.new(
         email: preserved_email,
         family_id: old_family.id,
         role: user.role,
         first_name: user.first_name,
         last_name: user.last_name,
-        password: SecureRandom.hex(32), # Random password they can't use
+        password: SecureRandom.hex(32),
         active: true
       )
       

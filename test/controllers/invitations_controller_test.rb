@@ -37,16 +37,24 @@ class InvitationsControllerTest < ActionDispatch::IntegrationTest
 
   test "should add existing user to household when inviting their email" do
     existing_user = users(:empty)
+    old_family = existing_user.family
+    old_family_id = existing_user.family_id
+    
+    # Ensure the user is alone in their family for preservation to trigger
+    old_family.users.where.not(id: existing_user.id).destroy_all
+    assert_equal 1, old_family.users.count, "User should be alone in their family"
     assert existing_user.family_id != @admin.family_id
 
     assert_difference("Invitation.count") do
-      assert_no_enqueued_jobs only: ActionMailer::MailDeliveryJob do
-        post invitations_url, params: {
-          invitation: {
-            email: existing_user.email,
-            role: "member"
+      assert_difference("User.count", 1) do # Should create preserved user
+        assert_no_enqueued_jobs only: ActionMailer::MailDeliveryJob do
+          post invitations_url, params: {
+            invitation: {
+              email: existing_user.email,
+              role: "member"
+            }
           }
-        }
+        end
       end
     end
 
@@ -56,8 +64,15 @@ class InvitationsControllerTest < ActionDispatch::IntegrationTest
     assert_equal @admin.family_id, existing_user.family_id
     assert_equal "member", existing_user.role
     assert_redirected_to settings_profile_path
+    
     # Should show warning since user switched families
     assert_equal I18n.t("invitations.create.existing_user_added_with_warning"), flash[:notice]
+    
+    # Verify preserved user was created with correct email pattern
+    preserved_email = "#{existing_user.email.split('@')[0]}+family#{old_family_id}@#{existing_user.email.split('@')[1]}"
+    preserved_user = User.find_by(email: preserved_email)
+    assert_not_nil preserved_user, "Preserved user should have been created"
+    assert_equal old_family_id, preserved_user.family_id
   end
 
   test "should show regular message when user is already in same family" do
@@ -72,12 +87,15 @@ class InvitationsControllerTest < ActionDispatch::IntegrationTest
     )
 
     assert_difference("Invitation.count") do
-      post invitations_url, params: {
-        invitation: {
-          email: existing_user.email,
-          role: "admin"
+      # Should NOT create a preserved user since user is in same family
+      assert_no_difference("User.count") do
+        post invitations_url, params: {
+          invitation: {
+            email: existing_user.email,
+            role: "admin"
+          }
         }
-      }
+      end
     end
 
     existing_user.reload
@@ -86,6 +104,9 @@ class InvitationsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to settings_profile_path
     # Should show regular message since user stayed in same family
     assert_equal I18n.t("invitations.create.existing_user_added"), flash[:notice]
+    
+    # Verify no preserved user was created
+    assert_nil User.find_by("email LIKE ?", "%+family%"), "No preserved user should be created for same-family invitation"
   end
 
   test "non-admin cannot create invitations" do

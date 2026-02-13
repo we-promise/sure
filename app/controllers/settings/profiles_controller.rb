@@ -27,13 +27,17 @@ class Settings::ProfilesController < ApplicationController
     end
 
     # Check if user has a preserved family from a previous invitation
-    # Pattern: email+family123@domain.com
+    # Pattern: email+family<UUID or ID>@domain.com
     base_email = @user.email
     base_local, _, base_domain = base_email.partition('@')
     
-    # Search for preserved user with email pattern: localpart+family*@domain
-    # Use ILIKE for case-insensitive search on unencrypted email
-    preserved_user = User.where("email ILIKE ?", "#{base_local}+family%@#{base_domain}").first
+    # Use parameterized query with sanitization to prevent SQL injection
+    # Match pattern: localpart+family<UUID or digits>@domain using regex for strict validation
+    preserved_user = User.where(
+      "email ILIKE ? AND email ~ ?",
+      User.sanitize_sql_like(base_local) + "+family%@" + User.sanitize_sql_like(base_domain),
+      "^" + Regexp.escape(base_local) + "\\+family[a-f0-9-]+@" + Regexp.escape(base_domain) + "$"
+    ).first
     
     if preserved_user && preserved_user.family_id != Current.family.id
       # Restore user to their preserved family
