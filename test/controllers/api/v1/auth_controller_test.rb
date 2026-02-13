@@ -232,7 +232,7 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
     assert_equal user.id.to_s, response_data["user"]["id"]
     assert_equal user.email, response_data["user"]["email"]
     assert_equal user.ui_layout, response_data["user"]["ui_layout"]
-    assert_equal user.ai_enabled?, response_data["user"]["ai_enabled"]
+    assert_equal user.ai_enabled, response_data["user"]["ai_enabled"]
 
     # OAuth token assertions
     assert response_data["access_token"].present?
@@ -461,7 +461,7 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
     response_data = JSON.parse(response.body)
     assert_equal true, response_data.dig("user", "ai_enabled")
     assert_equal user.ui_layout, response_data.dig("user", "ui_layout")
-    assert user.reload.ai_enabled?
+    assert_equal true, user.reload.ai_enabled
   end
 
   test "should require read_write scope to enable ai" do
@@ -479,7 +479,7 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
     response_data = JSON.parse(response.body)
     assert_equal "insufficient_scope", response_data["error"]
     assert_equal "This action requires the 'write' scope", response_data["message"]
-    assert_not user.reload.ai_enabled?
+    assert_not user.reload.ai_enabled
   end
 
   test "should require authentication when enabling ai" do
