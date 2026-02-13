@@ -84,4 +84,93 @@ class InvitationTest < ActiveSupport::TestCase
     assert_not user.show_ai_sidebar?
     assert user.ai_enabled?
   end
+
+  test "accept_for preserves old family when user is only member" do
+    # Create a user with their own family
+    new_family = Family.create!(name: "Test Family", currency: "USD")
+    user = User.create!(
+      email: "solo@example.com",
+      password: "password123",
+      family: new_family,
+      role: "admin",
+      first_name: "Solo",
+      last_name: "User"
+    )
+    
+    # Verify user is the only member of their family
+    assert_equal 1, new_family.users.count
+    old_family_id = user.family_id
+    
+    # Create invitation to a different family
+    invitation = @family.invitations.create!(
+      email: user.email,
+      role: "member",
+      inviter: @inviter
+    )
+    
+    # Accept the invitation
+    assert_difference("User.count", 1) do # Should create a preserved user
+      result = invitation.accept_for(user)
+      assert result
+    end
+    
+    # Original user should now be in the new family
+    user.reload
+    assert_equal @family.id, user.family_id
+    assert_equal "member", user.role
+    
+    # Old family should still exist with a preserved user
+    new_family.reload
+    assert_equal 1, new_family.users.count
+    preserved_user = new_family.users.first
+    assert_equal "solo+family#{old_family_id}@example.com", preserved_user.email
+    assert_equal "Solo", preserved_user.first_name
+    assert_equal "User", preserved_user.last_name
+  end
+
+  test "accept_for does not preserve family when user is not only member" do
+    # Create a family with multiple users
+    multi_family = Family.create!(name: "Multi Family", currency: "USD")
+    user1 = User.create!(
+      email: "user1@example.com",
+      password: "password123",
+      family: multi_family,
+      role: "admin",
+      first_name: "User",
+      last_name: "One"
+    )
+    user2 = User.create!(
+      email: "user2@example.com",
+      password: "password123",
+      family: multi_family,
+      role: "member",
+      first_name: "User",
+      last_name: "Two"
+    )
+    
+    # Verify family has multiple users
+    assert_equal 2, multi_family.users.count
+    
+    # Create invitation for user1 to join different family
+    invitation = @family.invitations.create!(
+      email: user1.email,
+      role: "member",
+      inviter: @inviter
+    )
+    
+    # Accept the invitation - should NOT create a preserved user
+    assert_no_difference("User.count") do
+      result = invitation.accept_for(user1)
+      assert result
+    end
+    
+    # User1 should now be in the new family
+    user1.reload
+    assert_equal @family.id, user1.family_id
+    
+    # Old family should still exist with user2
+    multi_family.reload
+    assert_equal 1, multi_family.users.count
+    assert_equal user2.id, multi_family.users.first.id
+  end
 end

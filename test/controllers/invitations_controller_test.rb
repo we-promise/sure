@@ -56,6 +56,35 @@ class InvitationsControllerTest < ActionDispatch::IntegrationTest
     assert_equal @admin.family_id, existing_user.family_id
     assert_equal "member", existing_user.role
     assert_redirected_to settings_profile_path
+    # Should show warning since user switched families
+    assert_equal I18n.t("invitations.create.existing_user_added_with_warning"), flash[:notice]
+  end
+
+  test "should show regular message when user is already in same family" do
+    # Create a user already in the admin's family
+    existing_user = User.create!(
+      email: "samefamily@example.com",
+      password: "password123",
+      family: @admin.family,
+      role: "member",
+      first_name: "Same",
+      last_name: "Family"
+    )
+
+    assert_difference("Invitation.count") do
+      post invitations_url, params: {
+        invitation: {
+          email: existing_user.email,
+          role: "admin"
+        }
+      }
+    end
+
+    existing_user.reload
+    assert_equal @admin.family_id, existing_user.family_id
+    assert_equal "admin", existing_user.role
+    assert_redirected_to settings_profile_path
+    # Should show regular message since user stayed in same family
     assert_equal I18n.t("invitations.create.existing_user_added"), flash[:notice]
   end
 

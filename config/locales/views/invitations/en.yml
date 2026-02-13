@@ -9,6 +9,7 @@ en:
       title: Join %{family}
     create:
       existing_user_added: User has been added to your household.
+      existing_user_added_with_warning: "User has been added to your household. Note: This user had their own household which has been preserved with a modified email address (+family suffix)."
       failure: Could not send invitation
       success: Invitation sent successfully
     destroy:

@@ -32,6 +32,12 @@ class Invitation < ApplicationRecord
     return false unless emails_match?(user)
 
     transaction do
+      # If user is switching families and they are the only user in their old family,
+      # preserve their old family by updating their email with a family suffix
+      if user.family_id != family_id && user.family.users.count == 1
+        preserve_old_family(user)
+      end
+      
       user.update!(family_id: family_id, role: role.to_s)
       update!(accepted_at: Time.current)
     end
@@ -39,6 +45,32 @@ class Invitation < ApplicationRecord
   end
 
   private
+
+    def preserve_old_family(user)
+      old_family = user.family
+      return unless old_family
+
+      # Create a modified email to preserve the old family data
+      # The format is: originalname+family123@domain.com
+      old_email_parts = user.email.split("@")
+      preserved_email = "#{old_email_parts[0]}+family#{old_family.id}@#{old_email_parts[1]}"
+      
+      # Create a new user in the old family with the preserved email
+      # This keeps the family alive and accessible
+      preserved_user = User.new(
+        email: preserved_email,
+        family_id: old_family.id,
+        role: user.role,
+        first_name: user.first_name,
+        last_name: user.last_name,
+        password: SecureRandom.hex(32), # Random password they can't use
+        active: true
+      )
+      
+      # Skip password validation for this special preservation user
+      preserved_user.skip_password_validation = true
+      preserved_user.save!
+    end
 
     def emails_match?(user)
       inv_email = email.to_s.strip.downcase
