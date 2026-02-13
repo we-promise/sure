@@ -143,6 +143,11 @@ module Api
       def enable_ai
         user = current_resource_owner
 
+        unless user.ai_available?
+          render json: { error: "AI is not available for your account" }, status: :forbidden
+          return
+        end
+
         if user.update(ai_enabled: true)
           render json: { user: mobile_user_payload(user) }
         else
@@ -243,9 +248,9 @@ module Api
           }
         end
 
-      def ensure_write_scope
-        authorize_scope!(:write)
-      end
+        def ensure_write_scope
+          authorize_scope!(:write)
+        end
     end
   end
 end
