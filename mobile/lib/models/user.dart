@@ -24,7 +24,11 @@ class User {
       firstName: json['first_name'] as String?,
       lastName: json['last_name'] as String?,
       uiLayout: (json['ui_layout'] as String?) ?? 'dashboard',
-      aiEnabled: json['ai_enabled'] == true,
+      // Default to true when key is absent (legacy payloads from older app versions).
+      // Avoids regressing existing users who would otherwise be incorrectly gated.
+      aiEnabled: json.containsKey('ai_enabled')
+          ? (json['ai_enabled'] == true)
+          : true,
     );
   }
 
