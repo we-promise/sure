@@ -35,13 +35,13 @@ export default class extends Controller {
       return;
     }
 
-    const selectedMonikerRadio = event?.currentTarget || this.monikerRadioTargets.find((radio) => radio.checked);
+    const selectedMonikerRadio = event?.target?.dataset?.onboardingMoniker ? event.target : this.monikerRadioTargets.find((radio) => radio.checked);
     const selectedMoniker = selectedMonikerRadio?.dataset?.onboardingMoniker;
     const isGroup = selectedMoniker === "Group";
 
     this.nameFieldTarget.placeholder = isGroup ? this.groupNamePlaceholderValue : this.householdNamePlaceholderValue;
 
-    const label = this.element.querySelector(`label[for='${this.nameFieldTarget.id}']`);
+    const label = this.nameFieldTarget.closest(".form-field")?.querySelector(".form-field__label");
     if (!label) {
       return;
     }
