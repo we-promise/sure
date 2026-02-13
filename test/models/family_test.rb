@@ -123,8 +123,25 @@ class FamilyTest < ActiveSupport::TestCase
 
     # Create transactions pointing to both categories
     account = family.accounts.first
-    txn1 = account.transactions.create!(name: "Test 1", amount: 100, date: Date.current, category: english_category)
-    txn2 = account.transactions.create!(name: "Test 2", amount: 200, date: Date.current, category: french_category)
+    txn1 = Transaction.create!(category: english_category)
+    Entry.create!(
+      account: account,
+      entryable: txn1,
+      amount: 100,
+      currency: "USD",
+      date: Date.current,
+      name: "Test 1"
+    )
+
+    txn2 = Transaction.create!(category: french_category)
+    Entry.create!(
+      account: account,
+      entryable: txn2,
+      amount: 200,
+      currency: "USD",
+      date: Date.current,
+      name: "Test 2"
+    )
 
     # Should merge both categories into one, keeping the oldest
     assert_difference "Category.count", -1 do
