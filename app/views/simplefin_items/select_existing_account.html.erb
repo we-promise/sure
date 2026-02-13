@@ -6,7 +6,7 @@
     <% dialog.with_body do %>
       <% if @available_simplefin_accounts.blank? %>
         <div class="p-4 text-sm text-secondary">
-          <p class="mb-2"><%= t("simplefin_items.select_existing_account.no_accounts_found") %></p>
+          <p class="mb-2"><%= t("simplefin_items.select_existing_account.no_accounts_found", moniker: family_moniker_downcase) %></p>
           <ul class="list-disc list-inside space-y-1">
             <li><%= t("simplefin_items.select_existing_account.wait_for_sync") %></li>
             <li><%= t("simplefin_items.select_existing_account.check_provider_health") %></li>

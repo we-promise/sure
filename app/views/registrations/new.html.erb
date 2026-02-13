@@ -1,5 +1,5 @@
 <%
-  header_title @invitation ? t(".join_family_title", family: @invitation.family.name) : t(".title")
+  header_title @invitation ? t(".join_family_title", family: @invitation.family.name, moniker: @invitation.family.moniker_label) : t(".title")
 %>
 
 <% if self_hosted_first_login? %>
