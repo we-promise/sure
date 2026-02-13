@@ -2,6 +2,7 @@
 en:
   rules:
     no_action: No Action
+    no_condition: No condition
     actions:
       value_placeholder: Enter a value
     apply_all:

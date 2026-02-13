@@ -2,6 +2,7 @@
 es:
   rules:
     no_action: Sin acción
+    no_condition: Sin condición
     recent_runs:
       title: Ejecuciones Recientes
       description: Ver el historial de ejecución de tus reglas incluyendo el estado de éxito/fallo y los conteos de transacciones.
@@ -22,4 +23,3 @@ es:
         pending: Pendiente
         success: Éxito
         failed: Fallido
-

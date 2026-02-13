@@ -6,20 +6,22 @@
       <h3 class="font-medium text-md"><%= rule.name %></h3>
     <% end %>
     <% if rule.conditions.any? %>
+      <% displayed_condition = rule.displayed_condition %>
+      <% additional_condition_count = rule.additional_displayable_conditions_count %>
       <div class="flex items-center gap-2 mt-1">
         <div class="flex items-center gap-1 text-secondary w-16 shrink-0">
           <span class="font-mono text-xs">IF</span>
         </div>
         <p class="flex items-center flex-wrap gap-1.5 m-0">
           <span class="px-2 py-1 border border-secondary rounded-full">
-            <% if rule.conditions.first.compound? %>
-              <%= rule.conditions.first.sub_conditions.first.filter.label %> <%= rule.conditions.first.sub_conditions.first.operator %> <%= rule.conditions.first.sub_conditions.first.value_display %>
+            <% if displayed_condition.present? %>
+              <%= displayed_condition.filter.label %> <%= displayed_condition.operator %> <%= displayed_condition.value_display %>
             <% else %>
-              <%= rule.conditions.first.filter.label %> <%= rule.conditions.first.operator %> <%= rule.conditions.first.value_display %>
+              <%= t("rules.no_condition") %>
             <% end %>
           </span>
-          <% if rule.conditions.count > 1 %>
-            and <%= rule.conditions.count - 1 %> more <%= rule.conditions.count - 1 == 1 ? "condition" : "conditions" %>
+          <% if additional_condition_count.positive? %>
+            and <%= additional_condition_count %> more <%= additional_condition_count == 1 ? "condition" : "conditions" %>
           <% end %>
         </p>
       </div>
