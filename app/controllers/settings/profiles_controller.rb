@@ -26,7 +26,21 @@ class Settings::ProfilesController < ApplicationController
       return
     end
 
-    if @user.destroy
+    # Check if user has a preserved family from a previous invitation
+    # Pattern: email+family123@domain.com
+    base_email = @user.email
+    base_local, _, base_domain = base_email.partition('@')
+    
+    # Search for preserved user with email pattern: localpart+family*@domain
+    # Use ILIKE for case-insensitive search on unencrypted email
+    preserved_user = User.where("email ILIKE ?", "#{base_local}+family%@#{base_domain}").first
+    
+    if preserved_user && preserved_user.family_id != Current.family.id
+      # Restore user to their preserved family
+      @user.update!(family_id: preserved_user.family_id, role: preserved_user.role)
+      preserved_user.destroy
+      flash[:notice] = "Member removed and restored to their previous household."
+    elsif @user.destroy
       # Also destroy the invitation associated with this user for this family
       Current.family.invitations.find_by(email: @user.email)&.destroy
       flash[:notice] = "Member removed successfully."
