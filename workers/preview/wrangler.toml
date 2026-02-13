@@ -8,6 +8,10 @@ compatibility_date = "2025-01-01"
 # Enable workers.dev subdomain for preview access
 workers_dev = true
 
+# Enable container logs
+[observability]
+enabled = true
+
 # Container configuration - uses preview Dockerfile with embedded PostgreSQL
 # Note: path is relative to this config file location
 [[containers]]
