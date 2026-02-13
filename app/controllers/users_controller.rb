@@ -12,6 +12,7 @@ class UsersController < ApplicationController
 
   def update
     @user = Current.user
+    ensure_admin if moniker_change_requested?
 
     if email_changed?
       if @user.initiate_email_change(user_params[:email])
@@ -113,6 +114,13 @@ class UsersController < ApplicationController
 
     def set_user
       @user = Current.user
+    end
+
+    def moniker_change_requested?
+      requested_moniker = params.dig(:user, :family_attributes, :moniker)
+      return false if requested_moniker.blank?
+
+      requested_moniker != Current.family.moniker
     end
 
     def ensure_admin
