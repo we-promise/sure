@@ -47,9 +47,10 @@ class PlaidAccount < ApplicationRecord
     reload_account_provider
 
     provider
-  rescue => e
-    Rails.logger.warn("PlaidAccount##{id}: failed to ensure AccountProvider link: #{e.class} - #{e.message}")
-    nil
+  rescue ActiveRecord::RecordNotUnique
+    # Another process created the link concurrently; reload and return it
+    reload_account_provider
+    account_provider || AccountProvider.find_by(provider_type: "PlaidAccount", provider_id: id)
   end
 
   def upsert_plaid_snapshot!(account_snapshot)

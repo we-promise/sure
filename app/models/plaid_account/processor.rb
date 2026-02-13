@@ -71,7 +71,8 @@ class PlaidAccount::Processor
         account.save!
 
         # Create account provider link if it doesn't exist
-        plaid_account.ensure_account_provider!(account)
+        link = plaid_account.ensure_account_provider!(account)
+        raise ActiveRecord::RecordNotSaved, "Failed to link PlaidAccount #{plaid_account.id} to account #{account.id}" unless link
 
         # Create or update the current balance anchor valuation for event-sourced ledger
         # Note: This is a partial implementation. In the future, we'll introduce HoldingValuation

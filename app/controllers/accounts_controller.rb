@@ -115,17 +115,17 @@ class AccountsController < ApplicationController
         end
 
         # Capture SimplefinAccounts before clearing links (so we can destroy them)
-        simplefin_accounts_to_destroy = @account.account_providers
+        simplefin_provider_ids = @account.account_providers
           .where(provider_type: "SimplefinAccount")
-          .map { |ap| SimplefinAccount.find_by(id: ap.provider_id) }
-          .compact
+          .pluck(:provider_id)
+        simplefin_accounts_to_destroy = SimplefinAccount.where(id: simplefin_provider_ids).to_a
 
         # Capture SnaptradeAccounts linked via AccountProvider
         # Destroying them will trigger delete_snaptrade_connection callback to free connection slots
-        snaptrade_accounts_to_destroy = @account.account_providers
+        snaptrade_provider_ids = @account.account_providers
           .where(provider_type: "SnaptradeAccount")
-          .map { |ap| SnaptradeAccount.find_by(id: ap.provider_id) }
-          .compact
+          .pluck(:provider_id)
+        snaptrade_accounts_to_destroy = SnaptradeAccount.where(id: snaptrade_provider_ids).to_a
 
         # Remove account provider links
         @account.account_providers.destroy_all

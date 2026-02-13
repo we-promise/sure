@@ -15,8 +15,8 @@
 class RemoveLegacyProviderForeignKeysFromAccounts < ActiveRecord::Migration[7.2]
   def up
     # Safety check: Verify no accounts are linked via legacy FK without an AccountProvider
-    orphaned_plaid = exec_query(<<~SQL).rows.count
-      SELECT a.id FROM accounts a
+    orphaned_plaid = select_value(<<~SQL).to_i
+      SELECT COUNT(*) FROM accounts a
       WHERE a.plaid_account_id IS NOT NULL
         AND NOT EXISTS (
           SELECT 1 FROM account_providers ap
@@ -26,8 +26,8 @@ class RemoveLegacyProviderForeignKeysFromAccounts < ActiveRecord::Migration[7.2]
         )
     SQL
 
-    orphaned_simplefin = exec_query(<<~SQL).rows.count
-      SELECT a.id FROM accounts a
+    orphaned_simplefin = select_value(<<~SQL).to_i
+      SELECT COUNT(*) FROM accounts a
       WHERE a.simplefin_account_id IS NOT NULL
         AND NOT EXISTS (
           SELECT 1 FROM account_providers ap

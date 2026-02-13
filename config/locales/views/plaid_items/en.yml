@@ -29,3 +29,8 @@ en:
       description: Select a Plaid account to link to your existing account
       cancel: Cancel
       link_account: Link account
+      no_available_accounts: No available Plaid accounts to link. Please connect a new Plaid account first.
+    link_existing_account:
+      invalid_account: Invalid Plaid account selected
+      already_linked: This Plaid account is already linked
+      success: Account successfully linked to Plaid

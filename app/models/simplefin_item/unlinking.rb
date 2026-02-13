@@ -12,8 +12,8 @@ module SimplefinItem::Unlinking
   def unlink_all!(dry_run: false)
     results = []
 
-    simplefin_accounts.includes(account_provider: :account).find_each do |sfa|
-      links = AccountProvider.where(provider_type: "SimplefinAccount", provider_id: sfa.id).to_a
+    simplefin_accounts.includes(:account_provider).find_each do |sfa|
+      links = Array(sfa.account_provider).compact
       link_ids = links.map(&:id)
       result = {
         sfa_id: sfa.id,

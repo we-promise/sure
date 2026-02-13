@@ -13,7 +13,7 @@ class SimplefinItem::Syncer
     # users expect: initial 7-day balances snapshot, then full chunked history after linking.
     begin
       # Check if any accounts are linked via AccountProvider
-      total_linked = simplefin_item.simplefin_accounts.count { |sfa| sfa.current_account.present? }
+      total_linked = simplefin_item.simplefin_accounts.joins(:account_provider).count
 
       if total_linked == 0
         sync.update!(status_text: "Discovering accounts (balances only)...") if sync.respond_to?(:status_text)
@@ -92,7 +92,7 @@ class SimplefinItem::Syncer
       total_accounts = simplefin_item.simplefin_accounts.count
 
       # Count linked accounts via AccountProvider
-      linked_count = simplefin_item.simplefin_accounts.count { |sfa| sfa.current_account.present? }
+      linked_count = simplefin_item.simplefin_accounts.joins(:account_provider).count
 
       # Unlinked = no AccountProvider
       unlinked_accounts = simplefin_item.simplefin_accounts
@@ -203,7 +203,9 @@ class SimplefinItem::Syncer
       window_end   = Time.current
 
       # Get account IDs via AccountProvider
-      account_ids = simplefin_item.simplefin_accounts.filter_map { |sfa| sfa.current_account&.id }
+      account_ids = simplefin_item.simplefin_accounts
+        .joins(:account_provider)
+        .pluck("account_providers.account_id")
       return {} if account_ids.empty?
 
       tx_scope = Entry.where(account_id: account_ids, source: "simplefin", entryable_type: "Transaction")
