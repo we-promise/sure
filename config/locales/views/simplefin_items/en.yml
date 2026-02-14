@@ -87,7 +87,7 @@ en:
       description: Select a SimpleFIN account to link to your existing account
       cancel: Cancel
       link_account: Link account
-      no_accounts_found: No SimpleFIN accounts found for this family.
+      no_accounts_found: "No SimpleFIN accounts found for this %{moniker}."
       wait_for_sync: If you just connected or synced, try again after the sync completes.
       unlink_to_move: To move a link, first unlink it from the account’s actions menu.
       all_accounts_already_linked: All SimpleFIN accounts appear to be linked already.
