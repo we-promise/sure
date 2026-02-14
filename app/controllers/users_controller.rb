@@ -12,6 +12,7 @@ class UsersController < ApplicationController
 
   def update
     @user = Current.user
+    return if moniker_change_requested? && !ensure_admin
 
     if email_changed?
       if @user.initiate_email_change(user_params[:email])
@@ -106,7 +107,7 @@ class UsersController < ApplicationController
       params.require(:user).permit(
         :first_name, :last_name, :email, :profile_image, :redirect_to, :delete_profile_image, :onboarded_at,
         :show_sidebar, :default_period, :default_account_order, :show_ai_sidebar, :ai_enabled, :theme, :set_onboarding_preferences_at, :set_onboarding_goals_at, :locale,
-        family_attributes: [ :name, :currency, :country, :date_format, :timezone, :locale, :month_start_day, :id ],
+        family_attributes: [ :name, :currency, :country, :date_format, :timezone, :locale, :month_start_day, :moniker, :id ],
         goals: []
       )
     end
@@ -115,7 +116,17 @@ class UsersController < ApplicationController
       @user = Current.user
     end
 
+    def moniker_change_requested?
+      requested_moniker = params.dig(:user, :family_attributes, :moniker)
+      return false if requested_moniker.blank?
+
+      requested_moniker != Current.family.moniker
+    end
+
     def ensure_admin
-      redirect_to settings_profile_path, alert: I18n.t("users.reset.unauthorized") unless Current.user.admin?
+      return true if Current.user.admin?
+
+      redirect_to settings_profile_path, alert: I18n.t("users.reset.unauthorized")
+      false
     end
 end

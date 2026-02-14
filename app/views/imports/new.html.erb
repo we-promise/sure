@@ -2,6 +2,9 @@
   <% dialog.with_header(title: t(".title"), subtitle: t(".description")) %>
 
   <% dialog.with_body do %>
+    <% has_accounts = Current.family.accounts.any? %>
+    <% requires_account_message = t(".requires_account") %>
+
     <div class="rounded-xl bg-container-inset p-1">
       <h3 class="uppercase text-secondary text-xs font-medium px-3 py-1.5"><%= t(".sources") %></h3>
       <ul class="bg-container shadow-border-xs rounded-lg">
@@ -25,126 +28,71 @@
           </li>
         <% end %>
 
-        <% if Current.family.accounts.any? && (params[:type].nil? || params[:type] == "TransactionImport") %>
-          <li>
-            <%= button_to imports_path(import: { type: "TransactionImport" }), class: "flex items-center justify-between p-4 group cursor-pointer w-full", data: { turbo: false } do %>
-              <div class="flex items-center gap-2">
-                <div class="bg-indigo-500/5 rounded-md w-8 h-8 flex items-center justify-center">
-                  <span class="text-indigo-500">
-                    <%= icon("file-spreadsheet", color: "current") %>
-                  </span>
-                </div>
-                <span class="text-sm text-primary group-hover:text-secondary">
-                  <%= t(".import_transactions") %>
-                </span>
-              </div>
-              <%= icon("chevron-right") %>
-            <% end %>
-
-            <%= render "shared/ruler" %>
-          </li>
+        <% if params[:type].nil? || params[:type] == "TransactionImport" %>
+          <%= render "imports/import_option",
+            type: "TransactionImport",
+            icon_name: "file-spreadsheet",
+            icon_bg_class: "bg-indigo-500/5",
+            icon_text_class: "text-indigo-500",
+            label: t(".import_transactions"),
+            enabled: has_accounts,
+            disabled_message: requires_account_message %>
         <% end %>
 
-        <% if Current.family.accounts.any? && (params[:type].nil? || params[:type] == "TradeImport") %>
-          <li>
-            <%= button_to imports_path(import: { type: "TradeImport" }), class: "flex items-center justify-between p-4 group cursor-pointer w-full", data: { turbo: false } do %>
-              <div class="flex items-center gap-2">
-                <div class="bg-yellow-500/5 rounded-md w-8 h-8 flex items-center justify-center">
-                  <span class="text-yellow-500">
-                    <%= icon("square-percent", color: "current") %>
-                  </span>
-                </div>
-                <span class="text-sm text-primary group-hover:text-secondary">
-                  <%= t(".import_portfolio") %>
-                </span>
-              </div>
-              <%= icon("chevron-right") %>
-            <% end %>
-
-            <%= render "shared/ruler" %>
-          </li>
+        <% if params[:type].nil? || params[:type] == "TradeImport" %>
+          <%= render "imports/import_option",
+            type: "TradeImport",
+            icon_name: "square-percent",
+            icon_bg_class: "bg-yellow-500/5",
+            icon_text_class: "text-yellow-500",
+            label: t(".import_portfolio"),
+            enabled: has_accounts,
+            disabled_message: requires_account_message %>
         <% end %>
 
         <% if params[:type].nil? || params[:type] == "AccountImport" %>
-          <li>
-            <%= button_to imports_path(import: { type: "AccountImport" }), class: "flex items-center justify-between p-4 group cursor-pointer w-full", data: { turbo: false } do %>
-              <div class="flex items-center gap-2">
-                <div class="bg-violet-500/5 rounded-md w-8 h-8 flex items-center justify-center">
-                  <span class="text-violet-500">
-                    <%= icon("building", color: "current") %>
-                  </span>
-                </div>
-                <span class="text-sm text-primary group-hover:text-secondary">
-                  <%= t(".import_accounts") %>
-                </span>
-              </div>
-              <%= icon("chevron-right") %>
-            <% end %>
-
-            <%= render "shared/ruler" %>
-          </li>
+          <%= render "imports/import_option",
+            type: "AccountImport",
+            icon_name: "building",
+            icon_bg_class: "bg-violet-500/5",
+            icon_text_class: "text-violet-500",
+            label: t(".import_accounts"),
+            enabled: true %>
         <% end %>
 
         <% if params[:type].nil? || params[:type] == "CategoryImport" %>
-          <li>
-            <%= button_to imports_path(import: { type: "CategoryImport" }), class: "flex items-center justify-between p-4 group cursor-pointer w-full", data: { turbo: false } do %>
-              <div class="flex items-center gap-2">
-                <div class="bg-blue-500/5 rounded-md w-8 h-8 flex items-center justify-center">
-                  <span class="text-blue-500">
-                    <%= icon("shapes", color: "current") %>
-                  </span>
-                </div>
-                <span class="text-sm text-primary group-hover:text-secondary">
-                  <%= t(".import_categories") %>
-                </span>
-              </div>
-              <%= icon("chevron-right") %>
-            <% end %>
-
-            <%= render "shared/ruler" %>
-          </li>
+          <%= render "imports/import_option",
+            type: "CategoryImport",
+            icon_name: "shapes",
+            icon_bg_class: "bg-blue-500/5",
+            icon_text_class: "text-blue-500",
+            label: t(".import_categories"),
+            enabled: true %>
         <% end %>
 
         <% if params[:type].nil? || params[:type] == "RuleImport" %>
-          <li>
-            <%= button_to imports_path(import: { type: "RuleImport" }), class: "flex items-center justify-between p-4 group cursor-pointer w-full", data: { turbo: false } do %>
-              <div class="flex items-center gap-2">
-                <div class="bg-green-500/5 rounded-md w-8 h-8 flex items-center justify-center">
-                  <span class="text-green-500">
-                    <%= icon("workflow", color: "current") %>
-                  </span>
-                </div>
-                <span class="text-sm text-primary group-hover:text-secondary">
-                  <%= t(".import_rules") %>
-                </span>
-              </div>
-              <%= icon("chevron-right") %>
-            <% end %>
-
-            <%= render "shared/ruler" %>
-          </li>
+          <%= render "imports/import_option",
+            type: "RuleImport",
+            icon_name: "workflow",
+            icon_bg_class: "bg-green-500/5",
+            icon_text_class: "text-green-500",
+            label: t(".import_rules"),
+            enabled: true %>
         <% end %>
 
-        <% if Current.family.accounts.any? && (params[:type].nil? || params[:type] == "MintImport" || params[:type] == "TransactionImport") %>
-          <li>
-            <%= button_to imports_path(import: { type: "MintImport" }), class: "flex items-center justify-between p-4 group w-full", data: { turbo: false } do %>
-              <div class="flex items-center gap-2">
-                <%= image_tag("mint-logo.jpeg", alt: "Mint logo", class: "w-8 h-8 rounded-md") %>
-                <span class="text-sm text-primary">
-                  <%= t(".import_mint") %>
-                </span>
-              </div>
-              <%= icon("chevron-right") %>
-            <% end %>
-
-            <%= render "shared/ruler" %>
-          </li>
+        <% if params[:type].nil? || params[:type] == "MintImport" || params[:type] == "TransactionImport" %>
+          <%= render "imports/import_option",
+            type: "MintImport",
+            image: "mint-logo.jpeg",
+            label: t(".import_mint"),
+            enabled: has_accounts,
+            disabled_message: requires_account_message %>
         <% end %>
 
-        <% if (params[:type].nil? || params[:type] == "PdfImport") && Provider::Registry.get_provider(:openai)&.supports_pdf_processing? %>
+        <% if (params[:type].nil? || params[:type].in?(%w[DocumentImport PdfImport])) && @document_upload_extensions.any? %>
           <li>
             <%= styled_form_with url: imports_path, scope: :import, multipart: true, class: "w-full" do |form| %>
-              <%= form.hidden_field :type, value: "PdfImport" %>
+              <%= form.hidden_field :type, value: "DocumentImport" %>
               <label class="flex items-center justify-between p-4 group cursor-pointer w-full">
                 <div class="flex items-center gap-2">
                   <div class="bg-red-500/5 rounded-md w-8 h-8 flex items-center justify-center">
@@ -154,15 +102,15 @@
                   </div>
                   <div class="text-left">
                     <span class="text-sm text-primary group-hover:text-secondary block">
-                      <%= t(".import_pdf") %>
+                      <%= t(".import_file") %>
                     </span>
                     <span class="text-xs text-secondary">
-                      <%= t(".import_pdf_description") %>
+                      <%= t(".import_file_description") %>
                     </span>
                   </div>
                 </div>
                 <%= icon("chevron-right") %>
-                <%= form.file_field :import_file, accept: "application/pdf", class: "hidden", onchange: "this.form.submit()" %>
+                <%= form.file_field :import_file, accept: @document_upload_extensions.join(","), class: "hidden", onchange: "this.form.submit()" %>
               </label>
             <% end %>
 

@@ -70,6 +70,23 @@ module ApplicationHelper
     end
   end
 
+
+  def family_moniker
+    Current.family&.moniker_label || "Family"
+  end
+
+  def family_moniker_downcase
+    family_moniker.downcase
+  end
+
+  def family_moniker_plural
+    Current.family&.moniker_label_plural || "Families"
+  end
+
+  def family_moniker_plural_downcase
+    family_moniker_plural.downcase
+  end
+
   def format_money(number_or_money, options = {})
     return nil unless number_or_money
 

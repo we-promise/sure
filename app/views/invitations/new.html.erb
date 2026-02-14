@@ -1,5 +1,5 @@
 <%= render DS::Dialog.new do |dialog| %>
-  <% dialog.with_header(title: t(".title"), subtitle: t(".subtitle", product_name: product_name)) %>
+  <% dialog.with_header(title: t(".title"), subtitle: t(".subtitle", product_name: product_name, moniker: family_moniker_downcase)) %>
 
   <% dialog.with_body do %>
     <%= styled_form_with model: @invitation, class: "space-y-4", data: { turbo: false } do |form| %>
@@ -10,7 +10,7 @@
 
       <%= form.select :role,
         options_for_select([
-          (Flipper.enabled?(:intro_ui) ? [t(".role_guest"), "guest"] : nil),
+          (FeatureFlags.intro_ui? ? [t(".role_guest"), "guest"] : nil),
           [t(".role_member"), "member"],
           [t(".role_admin"), "admin"]
         ].compact),

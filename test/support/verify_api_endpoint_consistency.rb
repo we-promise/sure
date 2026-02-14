@@ -3,6 +3,10 @@
 # Standalone verification of the API endpoint consistency implementation (issue #944).
 # Run without loading Rails: ruby test/support/verify_api_endpoint_consistency.rb
 # Or with bundle: bundle exec ruby test/support/verify_api_endpoint_consistency.rb
+#
+# Option: pass --compliance to also scan the current API codebase and report violations
+# (rswag specs using OAuth instead of API key, missing Minitest for API controllers,
+# rswag specs with expect/assert).
 
 def project_root
   dir = File.dirname(File.expand_path(__FILE__))
@@ -53,3 +57,56 @@ assert_includes agents_content, "rswag", "AGENTS.md must mention rswag"
 assert_includes agents_content, "X-Api-Key", "AGENTS.md must mention X-Api-Key"
 
 puts "OK: API endpoint consistency implementation verified (rule + AGENTS.md)."
+
+if ARGV.include?("--compliance")
+  puts "\n--- Compliance check (current APIs) ---"
+  spec_dir = File.join(root, "spec", "requests", "api", "v1")
+  test_dir = File.join(root, "test", "controllers", "api", "v1")
+  app_controllers_dir = File.join(root, "app", "controllers", "api", "v1")
+
+  rswag_oauth = []
+  rswag_assertions = []
+  missing_minitest = []
+
+  if File.directory?(spec_dir)
+    Dir.glob(File.join(spec_dir, "*_spec.rb")).each do |path|
+      basename = File.basename(path, "_spec.rb")
+      next if basename == "auth"
+      content = File.read(path)
+      if content.include?("Doorkeeper") || content.include?("Bearer") || content.include?("access_token")
+        rswag_oauth << "#{basename}_spec.rb"
+      end
+      rswag_assertions << "#{basename}_spec.rb" if content.include?("expect(") || content.include?("assert_")
+    end
+  end
+
+  skip_controllers = %w[base_controller test_controller]
+  if File.directory?(app_controllers_dir)
+    Dir.glob(File.join(app_controllers_dir, "*_controller.rb")).each do |path|
+      basename = File.basename(path, ".rb")
+      next if skip_controllers.include?(basename)
+      test_path = File.join(test_dir, "#{basename}_test.rb")
+      missing_minitest << basename unless File.exist?(test_path)
+    end
+  end
+
+  if rswag_oauth.any?
+    puts "rswag using OAuth (should use API key per rule): #{rswag_oauth.join(", ")}"
+  else
+    puts "rswag auth: all specs use API key."
+  end
+
+  if rswag_assertions.any?
+    puts "rswag with expect/assert (should be docs-only): #{rswag_assertions.join(", ")}"
+  else
+    puts "rswag: no expect/assert found (docs-only)."
+  end
+
+  if missing_minitest.any?
+    puts "API v1 controllers missing Minitest: #{missing_minitest.join(", ")}"
+  else
+    puts "Minitest: all API v1 controllers have a test file."
+  end
+
+  puts "---"
+end

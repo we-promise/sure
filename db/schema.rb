@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_02_09_180000) do
+ActiveRecord::Schema[7.2].define(version: 2026_02_11_120001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -502,7 +502,24 @@ ActiveRecord::Schema[7.2].define(version: 2026_02_09_180000) do
     t.text "custom_intro_prompt"
     t.string "preferred_ai_model"
     t.string "openai_uri_base"
+    t.string "vector_store_id"
+    t.string "moniker", default: "Family", null: false
     t.check_constraint "month_start_day >= 1 AND month_start_day <= 28", name: "month_start_day_range"
+  end
+
+  create_table "family_documents", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "family_id", null: false
+    t.string "filename", null: false
+    t.string "content_type"
+    t.integer "file_size"
+    t.string "provider_file_id"
+    t.string "status", default: "pending", null: false
+    t.jsonb "metadata", default: {}
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["family_id"], name: "index_family_documents_on_family_id"
+    t.index ["provider_file_id"], name: "index_family_documents_on_provider_file_id"
+    t.index ["status"], name: "index_family_documents_on_status"
   end
 
   create_table "family_exports", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -522,22 +539,6 @@ ActiveRecord::Schema[7.2].define(version: 2026_02_09_180000) do
     t.index ["family_id", "merchant_id"], name: "idx_on_family_id_merchant_id_23e883e08f", unique: true
     t.index ["family_id"], name: "index_family_merchant_associations_on_family_id"
     t.index ["merchant_id"], name: "index_family_merchant_associations_on_merchant_id"
-  end
-
-  create_table "flipper_features", force: :cascade do |t|
-    t.string "key", null: false
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["key"], name: "index_flipper_features_on_key", unique: true
-  end
-
-  create_table "flipper_gates", force: :cascade do |t|
-    t.string "feature_key", null: false
-    t.string "key", null: false
-    t.text "value"
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["feature_key", "key", "value"], name: "index_flipper_gates_on_feature_key_and_key_and_value", unique: true
   end
 
   create_table "holdings", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1505,6 +1506,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_02_09_180000) do
   add_foreign_key "eval_results", "eval_samples"
   add_foreign_key "eval_runs", "eval_datasets"
   add_foreign_key "eval_samples", "eval_datasets"
+  add_foreign_key "family_documents", "families"
   add_foreign_key "family_exports", "families"
   add_foreign_key "family_merchant_associations", "families"
   add_foreign_key "family_merchant_associations", "merchants"

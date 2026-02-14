@@ -1,7 +1,8 @@
 class Family < ApplicationRecord
-  include IndexaCapitalConnectable
+  include Syncable, AutoTransferMatchable, Subscribeable, VectorSearchable
+  include PlaidConnectable, SimplefinConnectable, LunchflowConnectable, EnableBankingConnectable
   include CoinbaseConnectable, CoinstatsConnectable, SnaptradeConnectable, MercuryConnectable
-  include PlaidConnectable, SimplefinConnectable, LunchflowConnectable, EnableBankingConnectable, Syncable, AutoTransferMatchable, Subscribeable
+  include IndexaCapitalConnectable
 
   DATE_FORMATS = [
     [ "MM-DD-YYYY", "%m-%d-%Y" ],
@@ -15,6 +16,9 @@ class Family < ApplicationRecord
     [ "YYYY.MM.DD", "%Y.%m.%d" ],
     [ "YYYYMMDD", "%Y%m%d" ]
   ].freeze
+
+
+  MONIKERS = [ "Family", "Group" ].freeze
 
   has_many :users, dependent: :destroy
   has_many :accounts, dependent: :destroy
@@ -51,9 +55,18 @@ class Family < ApplicationRecord
   validates :preferred_ai_model, length: { maximum: PREFERRED_AI_MODEL_MAX_LENGTH }, allow_blank: true
   validates :openai_uri_base, length: { maximum: OPENAI_URI_BASE_MAX_LENGTH }, allow_blank: true
   validate :openai_model_required_when_custom_endpoint
+  validates :moniker, inclusion: { in: MONIKERS }
 
   def custom_openai_endpoint?
     openai_uri_base.present?
+  end
+
+  def moniker_label
+    moniker.presence || "Family"
+  end
+
+  def moniker_label_plural
+    moniker_label == "Group" ? "Groups" : "Families"
   end
 
   def uses_custom_month_start?
