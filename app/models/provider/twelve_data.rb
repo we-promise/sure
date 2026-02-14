@@ -189,7 +189,16 @@ class Provider::TwelveData < Provider
       if values.nil?
         error_message = parsed.dig("message") || "No data returned"
         error_code = parsed.dig("code") || "unknown"
-        raise InvalidSecurityPriceError, "API error (code: #{error_code}): #{error_message}"
+        if error_code == 404
+          raise InvalidSecurityPriceError, "Security not found (code: #{error_code}): #{error_message}"
+        elsif error_code == 429
+          raise RateLimitError.new(
+            "TwelveData rate limit exceeded: #{error_message}",
+            details: parsed
+          )
+        else
+          raise InvalidSecurityPriceError, "API error (code: #{error_code}): #{error_message}"
+        end
       end
 
       values.map do |resp|
@@ -233,28 +242,13 @@ class Provider::TwelveData < Provider
       end
     end
 
+    # TODO investigate undefined method 'response' for an instance of Provider::TwelveData::InvalidSecurityPriceError
     # Custom error transformer to detect rate limiting errors
     def default_error_transformer(error)
-      if error.is_a?(Faraday::Error)
-        response_body = error.response&.dig(:body)
-        status_code = error.response&.dig(:status)
+      # Preserve specific error types raised within the provider
+      return error if error.is_a?(InvalidExchangeRateError) || error.is_a?(InvalidSecurityPriceError) || error.is_a?(RateLimitError)
 
-        # Detect 429 rate limit errors and return RateLimitError
-        if status_code == 429
-          message = extract_error_message(response_body) || error.message
-          return RateLimitError.new(
-            "TwelveData rate limit exceeded: #{message}",
-            details: response_body
-          )
-        end
-
-        self.class::Error.new(
-          error.message,
-          details: response_body
-        )
-      else
-        self.class::Error.new(error.message)
-      end
+      self.class::Error.new(error.message)
     end
 
     # Extract error message from TwelveData API response
