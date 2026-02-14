@@ -168,7 +168,7 @@ class Import < ApplicationRecord
         tags: row[tags_col_label].to_s,
         entity_type: row[entity_type_col_label].to_s,
         notes: row[notes_col_label].to_s,
-  external_id: row[external_id_col_label].to_s
+        external_id: row[external_id_col_label].to_s
       }
     end
 
@@ -242,7 +242,7 @@ class Import < ApplicationRecord
         "category_col_label", "tags_col_label", "account_col_label",
         "qty_col_label", "ticker_col_label", "price_col_label",
         "entity_type_col_label", "notes_col_label", "currency_col_label",
-  "external_id_col_label",
+        "external_id_col_label",
         "date_format", "signage_convention", "number_format",
         "exchange_operating_mic_col_label",
         "rows_to_skip"
