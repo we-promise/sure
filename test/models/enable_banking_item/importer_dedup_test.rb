@@ -182,6 +182,32 @@ class EnableBankingItem::ImporterDedupTest < ActiveSupport::TestCase
     assert_equal 2, result.count
   end
 
+  test "handles nil values in remittance_information array" do
+    transactions = [
+      {
+        entry_reference: "ref_aaa",
+        booking_date: "2026-02-07",
+        transaction_amount: { amount: "11.65", currency: "EUR" },
+        creditor: { name: "Spar" },
+        remittance_information: [ nil, "Payment ref 123", nil ],
+        status: "BOOK"
+      },
+      {
+        entry_reference: "ref_bbb",
+        booking_date: "2026-02-07",
+        transaction_amount: { amount: "11.65", currency: "EUR" },
+        creditor: { name: "Spar" },
+        remittance_information: [ "Payment ref 123", nil ],
+        status: "BOOK"
+      }
+    ]
+
+    result = @importer.send(:deduplicate_api_transactions, transactions)
+
+    assert_equal 1, result.count
+    assert_equal "ref_aaa", result.first[:entry_reference]
+  end
+
   test "returns empty array for empty input" do
     result = @importer.send(:deduplicate_api_transactions, [])
     assert_equal [], result
