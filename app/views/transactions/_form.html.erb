@@ -24,7 +24,12 @@
     <%= f.money_field :amount, label: t(".amount"), required: true %>
     <%= f.fields_for :entryable do |ef| %>
       <% categories = params[:nature] == "inflow" ? income_categories : expense_categories %>
-      <%= ef.collection_select :category_id, categories, :id, :name, { prompt: t(".category_prompt"), label: t(".category") } %>
+      <div class="form-field combobox">
+        <%= ef.combobox :category_id,
+              categories.map { |c| [c.name_with_indent, c.id] },
+              label: t(".category"),
+              placeholder: t(".category_prompt") %>
+      </div>
     <% end %>
     <%= f.date_field :date, label: t(".date"), required: true, min: Entry.min_supported_date, max: Date.current, value: Date.current %>
   </section>
@@ -35,10 +40,9 @@
                     Current.family.tags.alphabetically.pluck(:name, :id),
                     {
                       include_blank: t(".none"),
-                      multiple: true,
-                      label:    t(".tags_label")
+                      label: t(".tags_label")
                     },
-                    { "data-controller": "multi-select" } %>
+                    { multiple: true, "data-controller": "multi-select" } %>
     <% end %>
     <%= f.text_area :notes,
                     label: t(".note_label"),

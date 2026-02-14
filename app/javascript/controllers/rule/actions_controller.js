@@ -2,7 +2,11 @@ import { Controller } from "@hotwired/stimulus";
 
 // Connects to data-controller="rule--actions"
 export default class extends Controller {
-  static values = { actionExecutors: Array };
+  static values = {
+    actionExecutors: Array,
+    comboboxUrl: String,
+    fieldName: String
+  };
   static targets = [
     "destroyField",
     "actionValue",
@@ -28,7 +32,7 @@ export default class extends Controller {
     this.#clearFormFields();
 
     if (actionExecutor.type === "select") {
-      this.#buildSelectFor(actionExecutor);
+      this.#buildComboboxFor(actionExecutor);
     } else if (actionExecutor.type === "text") {
       this.#buildTextInputFor();
     } else {
@@ -46,12 +50,42 @@ export default class extends Controller {
     this.actionValueTarget.innerHTML = "";
   }
 
-  #buildSelectFor(actionExecutor) {
-    // Clone the select template
+  async #buildComboboxFor(actionExecutor) {
+    // Show loading state
+    this.actionValueTarget.classList.remove("hidden");
+
+    // Fetch combobox HTML from server
+    const url = new URL(this.comboboxUrlValue, window.location.origin);
+    url.searchParams.set("action_type", actionExecutor.key);
+    url.searchParams.set("field_name", this.fieldNameValue);
+
+    try {
+      const response = await fetch(url, {
+        headers: {
+          "Accept": "text/html",
+          "X-Requested-With": "XMLHttpRequest"
+        }
+      });
+
+      if (response.ok) {
+        const html = await response.text();
+        this.actionValueTarget.innerHTML = html;
+      } else {
+        // Fallback to plain select on error
+        this.#buildSelectFallback(actionExecutor);
+      }
+    } catch (error) {
+      console.error("Failed to load combobox:", error);
+      // Fallback to plain select on error
+      this.#buildSelectFallback(actionExecutor);
+    }
+  }
+
+  #buildSelectFallback(actionExecutor) {
+    // Clone the select template as fallback
     const template = this.selectTemplateTarget.content.cloneNode(true);
     const selectEl = template.querySelector("select");
 
-    // Add options to the select element
     if (selectEl) {
       selectEl.innerHTML = "";
       if (!actionExecutor.options || actionExecutor.options.length === 0) {
@@ -70,9 +104,7 @@ export default class extends Controller {
       }
     }
 
-    // Add the template content to the actionValue target and ensure it's visible
     this.actionValueTarget.appendChild(template);
-    this.actionValueTarget.classList.remove("hidden");
   }
 
   #buildTextInputFor() {

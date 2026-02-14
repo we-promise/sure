@@ -62,7 +62,14 @@
       <%= styled_form_with model: @transfer,
               data: { controller: "auto-submit-form" }, class: "space-y-2" do |f| %>
         <% if @transfer.categorizable? %>
-          <%= f.collection_select :category_id, @categories.alphabetically, :id, :name, { label: "Category", include_blank: "Uncategorized", selected: @transfer.outflow_transaction.category&.id }, "data-auto-submit-form-target": "auto" %>
+          <div class="form-field combobox">
+            <%= f.combobox :category_id,
+                  @categories.alphabetically_by_hierarchy.map { |c| [c.name_with_indent, c.id] },
+                  label: t(".category_label"),
+                  placeholder: t(".uncategorized"),
+                  value: @transfer.outflow_transaction.category&.id,
+                  input: { "data-auto-submit-form-target": "auto" } %>
+          </div>
         <% end %>
         <%= f.text_area :notes,
                   label: t(".note_label"),

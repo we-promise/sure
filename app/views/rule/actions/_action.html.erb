@@ -3,7 +3,11 @@
 <% action = form.object %>
 <% rule = action.rule %>
 
-<li data-controller="rule--actions" data-rule--actions-action-executors-value="<%= rule.action_executors.to_json %>" class="flex items-center gap-3">
+<li data-controller="rule--actions"
+    data-rule--actions-action-executors-value="<%= rule.action_executors.to_json %>"
+    data-rule--actions-combobox-url-value="<%= action_value_combobox_rules_path %>"
+    data-rule--actions-field-name-value="<%= form.field_name(:value) %>"
+    class="flex items-center gap-3">
   <%= form.hidden_field :_destroy, value: false, data: { rule__actions_target: "destroyField" } %>
 
   <div class="grid grid-cols-1 gap-2 items-center h-full w-full">
@@ -17,7 +21,9 @@
       <%# Subsequent renders are injected by the Stimulus controller, which uses the templates from below. %>
       <span class="font-medium text-primary uppercase text-xs">to</span>
       <% if action.executor.type == "select" %>
-        <%= form.select :value, action.options || [], {} %>
+        <div class="form-field combobox grow">
+          <%= form.combobox :value, action.options || [] %>
+        </div>
       <% elsif action.executor.type == "text" %>
         <%= form.text_field :value, placeholder: t("rules.actions.value_placeholder") %>
       <% end %>

@@ -2,6 +2,17 @@ one:
   name: Test
   family: empty
 
+parent_category:
+  name: Test Parent Category
+  family: empty
+  classification: expense
+
+child_category:
+  name: Test Child Category
+  parent: parent_category
+  family: empty
+  classification: expense
+
 income:
   name: Income
   color: "#fd7f6f"
