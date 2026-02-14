@@ -1,7 +1,8 @@
 class Family < ApplicationRecord
-  include IndexaCapitalConnectable
+  include Syncable, AutoTransferMatchable, Subscribeable, VectorSearchable
+  include PlaidConnectable, SimplefinConnectable, LunchflowConnectable, EnableBankingConnectable
   include CoinbaseConnectable, CoinstatsConnectable, SnaptradeConnectable, MercuryConnectable
-  include PlaidConnectable, SimplefinConnectable, LunchflowConnectable, EnableBankingConnectable, Syncable, AutoTransferMatchable, Subscribeable
+  include IndexaCapitalConnectable
 
   DATE_FORMATS = [
     [ "MM-DD-YYYY", "%m-%d-%Y" ],
@@ -15,6 +16,9 @@ class Family < ApplicationRecord
     [ "YYYY.MM.DD", "%Y.%m.%d" ],
     [ "YYYYMMDD", "%Y%m%d" ]
   ].freeze
+
+
+  MONIKERS = [ "Family", "Group" ].freeze
 
   has_many :users, dependent: :destroy
   has_many :memberships, dependent: :destroy
@@ -44,6 +48,16 @@ class Family < ApplicationRecord
   validates :locale, inclusion: { in: I18n.available_locales.map(&:to_s) }
   validates :date_format, inclusion: { in: DATE_FORMATS.map(&:last) }
   validates :month_start_day, inclusion: { in: 1..28 }
+  validates :moniker, inclusion: { in: MONIKERS }
+
+
+  def moniker_label
+    moniker.presence || "Family"
+  end
+
+  def moniker_label_plural
+    moniker_label == "Group" ? "Groups" : "Families"
+  end
 
   def uses_custom_month_start?
     month_start_day != 1

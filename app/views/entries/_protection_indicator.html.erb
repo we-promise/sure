@@ -22,7 +22,7 @@
             <p class="text-sm font-medium"><%= t("entries.protection.locked_fields_label") %></p>
             <% entry.locked_fields_with_timestamps.each do |field, timestamp| %>
               <div class="flex items-center justify-between text-xs gap-2 mb-1">
-                <span><%= entry.class.human_attribute_name(field) %></span>
+                <span><%= entry.class.human_attribute_name(field, moniker: Current.family&.moniker_label || "Family") %></span>
                 <hr class="grow border-dashed border-secondary">
                 <span><%= timestamp.respond_to?(:strftime) ? l(timestamp.to_date, format: :long) : timestamp %></span>
               </div>

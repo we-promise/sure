@@ -2,6 +2,7 @@
 nb:
   rules:
     no_action: Ingen handling
+    no_condition: Ingen betingelse
     recent_runs:
       title: Siste Kjøringer
       description: Se kjøringsloggen for reglene dine inkludert suksess/feil-status og transaksjonsantall.
@@ -22,4 +23,3 @@ nb:
         pending: Ventende
         success: Vellykket
         failed: Mislyktes
-

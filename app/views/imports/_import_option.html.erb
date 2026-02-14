@@ -1,0 +1,37 @@
+<%# locals: (type:, label:, icon_name: nil, icon_bg_class: nil, icon_text_class: nil, enabled:, disabled_message: nil, button_class: "flex items-center justify-between p-4 group cursor-pointer w-full", image: nil) %>
+<li>
+  <% if enabled %>
+    <%= button_to imports_path(import: { type: type }), class: button_class, data: { turbo: false } do %>
+      <div class="flex items-center gap-2">
+        <% if image %>
+          <%= image_tag(image, alt: "#{label} logo", class: "w-8 h-8 rounded-md") %>
+        <% else %>
+          <div class="<%= icon_bg_class %> rounded-md w-8 h-8 flex items-center justify-center">
+            <span class="<%= icon_text_class %>"><%= icon(icon_name, color: "current") %></span>
+          </div>
+        <% end %>
+        <span class="text-sm text-primary group-hover:text-secondary"><%= label %></span>
+      </div>
+      <%= icon("chevron-right") %>
+    <% end %>
+  <% else %>
+    <div class="flex items-center justify-between p-4 w-full opacity-50 cursor-not-allowed" aria-disabled="true">
+      <div class="flex items-center gap-2">
+        <% if image %>
+          <%= image_tag(image, alt: "#{label} logo", class: "w-8 h-8 rounded-md") %>
+        <% else %>
+          <div class="<%= icon_bg_class %> rounded-md w-8 h-8 flex items-center justify-center">
+            <span class="<%= icon_text_class %>"><%= icon(icon_name, color: "current") %></span>
+          </div>
+        <% end %>
+        <div>
+          <span class="text-sm text-primary block"><%= label %></span>
+          <span class="text-xs text-secondary block"><%= disabled_message %></span>
+        </div>
+      </div>
+      <%= icon("lock", size: "sm", class: "text-secondary") %>
+    </div>
+  <% end %>
+
+  <%= render "shared/ruler" %>
+</li>
