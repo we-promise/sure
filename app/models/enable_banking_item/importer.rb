@@ -271,6 +271,12 @@ class EnableBankingItem::Importer
 
     # Build a content-based key for deduplication. Two transactions with different
     # entry_reference values but identical content fields are considered duplicates.
+    #
+    # NOTE: This approach has a known limitation — two genuinely distinct transactions
+    # with identical content (e.g., buying coffee twice at the same store for the same
+    # amount on the same day) will be collapsed into one. This trade-off is accepted
+    # because Enable Banking's duplicate entry_reference issue (Issue #954) is more
+    # common and harmful than same-day identical purchases. (Issue #954)
     def build_transaction_content_key(tx)
       date = tx[:booking_date].presence || tx[:value_date]
       amount = tx.dig(:transaction_amount, :amount).presence || tx[:amount]
@@ -278,7 +284,7 @@ class EnableBankingItem::Importer
       creditor = tx.dig(:creditor, :name).presence || tx[:creditor_name]
       debtor = tx.dig(:debtor, :name).presence || tx[:debtor_name]
       remittance = tx[:remittance_information]
-      remittance_key = remittance.is_a?(Array) ? remittance.sort.join("|") : remittance.to_s
+      remittance_key = remittance.is_a?(Array) ? remittance.compact.map(&:to_s).sort.join("|") : remittance.to_s
       status = tx[:status]
 
       [ date, amount, currency, creditor, debtor, remittance_key, status ].map(&:to_s).join("\x1F")
