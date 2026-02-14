@@ -143,6 +143,7 @@ class Api::V1::ImportsController < Api::V1::BaseController
         :category_col_label,
         :tags_col_label,
         :notes_col_label,
+        :external_id_col_label,
         :account_col_label,
         :qty_col_label,
         :ticker_col_label,

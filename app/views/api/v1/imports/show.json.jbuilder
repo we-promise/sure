@@ -14,6 +14,7 @@ json.data do
     json.category_col_label @import.category_col_label
     json.tags_col_label @import.tags_col_label
     json.notes_col_label @import.notes_col_label
+    json.external_id_col_label @import.external_id_col_label
     json.account_col_label @import.account_col_label
     json.date_format @import.date_format
     json.number_format @import.number_format

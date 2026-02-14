@@ -360,6 +360,117 @@ class TransactionImportTest < ActiveSupport::TestCase
     assert_equal 1, credit_card.entries.where(import: @import).count
   end
 
+  test "imports transactions with external_id and source csv_import" do
+    account = accounts(:depository)
+
+    import_csv = <<~CSV
+      date,name,amount,ext_id
+      01/01/2024,Coffee Shop,100,txn-uuid-001
+      01/02/2024,Grocery Store,200,txn-uuid-002
+    CSV
+
+    @import.update!(
+      account: account,
+      raw_file_str: import_csv,
+      date_col_label: "date",
+      amount_col_label: "amount",
+      name_col_label: "name",
+      external_id_col_label: "ext_id",
+      date_format: "%m/%d/%Y",
+      amount_type_strategy: "signed_amount",
+      signage_convention: "inflows_negative"
+    )
+
+    @import.generate_rows_from_csv
+    @import.reload
+
+    assert_difference -> { Entry.count } => 2, -> { Transaction.count } => 2 do
+      @import.publish
+    end
+
+    entries = @import.entries.order(:date)
+    assert_equal "txn-uuid-001", entries.first.external_id
+    assert_equal "csv_import", entries.first.source
+    assert_equal "txn-uuid-002", entries.second.external_id
+    assert_equal "csv_import", entries.second.source
+  end
+
+  test "deduplicates by external_id on re-import" do
+    account = accounts(:depository)
+
+    # First import creates entries with external_id
+    existing_entry = account.entries.create!(
+      date: Date.new(2024, 1, 1),
+      amount: 100,
+      currency: "USD",
+      name: "Coffee Shop",
+      external_id: "txn-uuid-001",
+      source: "csv_import",
+      entryable: Transaction.new
+    )
+
+    # Re-import CSV with same external_id but updated name
+    import_csv = <<~CSV
+      date,name,amount,ext_id
+      01/01/2024,Coffee Shop Updated,100,txn-uuid-001
+    CSV
+
+    @import.update!(
+      account: account,
+      raw_file_str: import_csv,
+      date_col_label: "date",
+      amount_col_label: "amount",
+      name_col_label: "name",
+      external_id_col_label: "ext_id",
+      date_format: "%m/%d/%Y",
+      amount_type_strategy: "signed_amount",
+      signage_convention: "inflows_negative"
+    )
+
+    @import.generate_rows_from_csv
+    @import.reload
+
+    # Should not create a new entry, should update the existing one
+    assert_no_difference -> { Entry.count } do
+      @import.publish
+    end
+
+    existing_entry.reload
+    assert_equal "Coffee Shop Updated", existing_entry.name
+    assert_equal @import.id, existing_entry.import_id
+  end
+
+  test "CSV without external_id column works as before" do
+    account = accounts(:depository)
+
+    import_csv = <<~CSV
+      date,name,amount
+      01/01/2024,Coffee Shop,100
+    CSV
+
+    @import.update!(
+      account: account,
+      raw_file_str: import_csv,
+      date_col_label: "date",
+      amount_col_label: "amount",
+      name_col_label: "name",
+      date_format: "%m/%d/%Y",
+      amount_type_strategy: "signed_amount",
+      signage_convention: "inflows_negative"
+    )
+
+    @import.generate_rows_from_csv
+    @import.reload
+
+    assert_difference -> { Entry.count } => 1, -> { Transaction.count } => 1 do
+      @import.publish
+    end
+
+    entry = @import.entries.first
+    assert_nil entry.external_id
+    assert_nil entry.source
+  end
+
   test "skips specified number of rows" do
     account = accounts(:depository)
     import_csv = <<~CSV
