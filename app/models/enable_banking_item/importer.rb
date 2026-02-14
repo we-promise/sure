@@ -203,6 +203,11 @@ class EnableBankingItem::Importer
         break if continuation_key.blank?
       end
 
+      # Deduplicate API response: Enable Banking sometimes returns the same logical
+      # transaction with different entry_reference IDs in the same response.
+      # Remove content-level duplicates before storing. (Issue #954)
+      all_transactions = deduplicate_api_transactions(all_transactions)
+
       transactions_count = all_transactions.count
 
       if all_transactions.any?
@@ -230,6 +235,53 @@ class EnableBankingItem::Importer
     rescue => e
       Rails.logger.error "EnableBankingItem::Importer - Unexpected error fetching transactions for account #{enable_banking_account.uid}: #{e.class} - #{e.message}"
       { success: false, transactions_count: 0, error: e.message }
+    end
+
+    # Deduplicate transactions from the Enable Banking API response.
+    # Some banks return the same logical transaction multiple times with different
+    # entry_reference IDs. We use a content-based key (date, amount, currency,
+    # creditor, debtor, remittance_information) to detect and remove these duplicates,
+    # keeping only the first occurrence. (Issue #954)
+    def deduplicate_api_transactions(transactions)
+      seen = {}
+      duplicates_removed = 0
+
+      result = transactions.select do |tx|
+        tx = tx.with_indifferent_access
+        key = build_transaction_content_key(tx)
+
+        if seen[key]
+          duplicates_removed += 1
+          false
+        else
+          seen[key] = true
+          true
+        end
+      end
+
+      if duplicates_removed > 0
+        Rails.logger.info(
+          "EnableBankingItem::Importer - Removed #{duplicates_removed} content-level " \
+          "duplicate(s) from API response (#{transactions.count} → #{result.count} transactions)"
+        )
+      end
+
+      result
+    end
+
+    # Build a content-based key for deduplication. Two transactions with different
+    # entry_reference values but identical content fields are considered duplicates.
+    def build_transaction_content_key(tx)
+      date = tx[:booking_date].presence || tx[:value_date]
+      amount = tx.dig(:transaction_amount, :amount).presence || tx[:amount]
+      currency = tx.dig(:transaction_amount, :currency).presence || tx[:currency]
+      creditor = tx.dig(:creditor, :name).presence || tx[:creditor_name]
+      debtor = tx.dig(:debtor, :name).presence || tx[:debtor_name]
+      remittance = tx[:remittance_information]
+      remittance_key = remittance.is_a?(Array) ? remittance.sort.join("|") : remittance.to_s
+      status = tx[:status]
+
+      [ date, amount, currency, creditor, debtor, remittance_key, status ].map(&:to_s).join("\x1F")
     end
 
     def determine_sync_start_date(enable_banking_account)
