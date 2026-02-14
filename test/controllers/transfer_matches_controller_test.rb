@@ -40,6 +40,22 @@ class TransferMatchesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Transfer created", flash[:notice]
   end
 
+  test "new transfer entry is protected from provider sync" do
+    outflow_entry = create_transaction(amount: 100, account: accounts(:depository))
+
+    post transaction_transfer_match_path(outflow_entry), params: {
+      transfer_match: {
+        method: "new",
+        target_account_id: accounts(:investment).id
+      }
+    }
+
+    transfer = Transfer.order(created_at: :desc).first
+    new_entry = transfer.inflow_transaction.entry
+
+    assert new_entry.user_modified?, "New transfer entry should be marked as user_modified to protect from provider sync"
+  end
+
   test "assigns investment_contribution kind and category for investment destination" do
     # Outflow from depository (positive amount), target is investment
     outflow_entry = create_transaction(amount: 100, account: accounts(:depository))

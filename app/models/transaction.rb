@@ -54,7 +54,7 @@ class Transaction < ApplicationRecord
 
   # Overarching grouping method for all transfer-type transactions
   def transfer?
-    funds_movement? || cc_payment? || loan_payment?
+    funds_movement? || cc_payment? || loan_payment? || investment_contribution?
   end
 
   def set_category!(category)

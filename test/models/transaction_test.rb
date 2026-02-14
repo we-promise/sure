@@ -32,6 +32,18 @@ class TransactionTest < ActiveSupport::TestCase
     assert transaction.investment_contribution?
   end
 
+  test "transfer? returns true for all transfer-type kinds" do
+    assert Transaction.new(kind: "funds_movement").transfer?
+    assert Transaction.new(kind: "cc_payment").transfer?
+    assert Transaction.new(kind: "loan_payment").transfer?
+    assert Transaction.new(kind: "investment_contribution").transfer?
+  end
+
+  test "transfer? returns false for non-transfer kinds" do
+    assert_not Transaction.new(kind: "standard").transfer?
+    assert_not Transaction.new(kind: "one_time").transfer?
+  end
+
   test "all transaction kinds are valid" do
     valid_kinds = %w[standard funds_movement cc_payment loan_payment one_time investment_contribution]
 
