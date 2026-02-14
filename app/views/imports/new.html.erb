@@ -32,7 +32,8 @@
           <%= render "imports/import_option",
             type: "TransactionImport",
             icon_name: "file-spreadsheet",
-            icon_color: "indigo",
+            icon_bg_class: "bg-indigo-500/5",
+            icon_text_class: "text-indigo-500",
             label: t(".import_transactions"),
             enabled: has_accounts,
             disabled_message: requires_account_message %>
@@ -42,7 +43,8 @@
           <%= render "imports/import_option",
             type: "TradeImport",
             icon_name: "square-percent",
-            icon_color: "yellow",
+            icon_bg_class: "bg-yellow-500/5",
+            icon_text_class: "text-yellow-500",
             label: t(".import_portfolio"),
             enabled: has_accounts,
             disabled_message: requires_account_message %>
@@ -52,7 +54,8 @@
           <%= render "imports/import_option",
             type: "AccountImport",
             icon_name: "building",
-            icon_color: "violet",
+            icon_bg_class: "bg-violet-500/5",
+            icon_text_class: "text-violet-500",
             label: t(".import_accounts"),
             enabled: true %>
         <% end %>
@@ -61,7 +64,8 @@
           <%= render "imports/import_option",
             type: "CategoryImport",
             icon_name: "shapes",
-            icon_color: "blue",
+            icon_bg_class: "bg-blue-500/5",
+            icon_text_class: "text-blue-500",
             label: t(".import_categories"),
             enabled: true %>
         <% end %>
@@ -70,7 +74,8 @@
           <%= render "imports/import_option",
             type: "RuleImport",
             icon_name: "workflow",
-            icon_color: "green",
+            icon_bg_class: "bg-green-500/5",
+            icon_text_class: "text-green-500",
             label: t(".import_rules"),
             enabled: true %>
         <% end %>

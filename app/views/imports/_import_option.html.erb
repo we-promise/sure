@@ -1,4 +1,4 @@
-<%# locals: (type:, label:, icon_name: nil, icon_color: nil, enabled:, disabled_message: nil, button_class: "flex items-center justify-between p-4 group cursor-pointer w-full", image: nil) %>
+<%# locals: (type:, label:, icon_name: nil, icon_bg_class: nil, icon_text_class: nil, enabled:, disabled_message: nil, button_class: "flex items-center justify-between p-4 group cursor-pointer w-full", image: nil) %>
 <li>
   <% if enabled %>
     <%= button_to imports_path(import: { type: type }), class: button_class, data: { turbo: false } do %>
@@ -6,8 +6,8 @@
         <% if image %>
           <%= image_tag(image, alt: "#{label} logo", class: "w-8 h-8 rounded-md") %>
         <% else %>
-          <div class="bg-<%= icon_color %>-500/5 rounded-md w-8 h-8 flex items-center justify-center">
-            <span class="text-<%= icon_color %>-500"><%= icon(icon_name, color: "current") %></span>
+          <div class="<%= icon_bg_class %> rounded-md w-8 h-8 flex items-center justify-center">
+            <span class="<%= icon_text_class %>"><%= icon(icon_name, color: "current") %></span>
           </div>
         <% end %>
         <span class="text-sm text-primary group-hover:text-secondary"><%= label %></span>
@@ -20,8 +20,8 @@
         <% if image %>
           <%= image_tag(image, alt: "#{label} logo", class: "w-8 h-8 rounded-md") %>
         <% else %>
-          <div class="bg-<%= icon_color %>-500/5 rounded-md w-8 h-8 flex items-center justify-center">
-            <span class="text-<%= icon_color %>-500"><%= icon(icon_name, color: "current") %></span>
+          <div class="<%= icon_bg_class %> rounded-md w-8 h-8 flex items-center justify-center">
+            <span class="<%= icon_text_class %>"><%= icon(icon_name, color: "current") %></span>
           </div>
         <% end %>
         <div>
