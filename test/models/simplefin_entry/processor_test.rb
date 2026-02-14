@@ -120,7 +120,8 @@ class SimplefinEntry::ProcessorTest < ActiveSupport::TestCase
 
   test "posted==0 treated as missing, entry uses transacted_at date and flags pending" do
     # Simulate provider sending epoch-like zeros for posted and an integer transacted_at
-    t_epoch = (Date.current - 2).to_time.to_i
+    # using UTC epoch seconds
+    t_epoch = (Date.current - 2).to_time(:utc).to_i
     tx = {
       id: "tx_pending_zero_posted_1",
       amount: "-6.48",
@@ -144,7 +145,8 @@ class SimplefinEntry::ProcessorTest < ActiveSupport::TestCase
 
   test "infers pending when posted is explicitly 0 and transacted_at present (no explicit pending flag)" do
     # Some SimpleFIN banks indicate pending by sending posted=0 + transacted_at, without pending flag
-    t_epoch = (Date.current - 1).to_time.to_i
+    # using UTC epoch
+    t_epoch = (Date.current - 1).to_time(:utc).to_i
     tx = {
       id: "tx_inferred_pending_1",
       amount: "-15.00",

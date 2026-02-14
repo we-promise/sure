@@ -34,7 +34,8 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "should get edit when self hosting is enabled" do
-    @provider.expects(:usage).returns(@usage_response)
+    # usage method is only called if TwelveData provider is enabled, so we need to stub it even if we're not showing the settings
+    @provider.stubs(:usage).returns(@usage_response)
 
     with_self_hosting do
       get settings_hosting_url
