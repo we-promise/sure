@@ -6,6 +6,7 @@ class TransactionImport < Import
       new_transactions = []
       updated_entries = []
       claimed_entry_ids = Set.new # Track entries we've already claimed in this import
+      seen_external_ids = {} # Track external_ids within the same batch (first row wins)
 
       rows.each_with_index do |row, index|
         mapped_account = if account
@@ -31,6 +32,11 @@ class TransactionImport < Import
         effective_currency = currency_col_label.present? ? row.currency : (mapped_account.currency.presence || family.currency)
 
         if row.external_id.present?
+          # Skip intra-batch duplicates (first row wins)
+          batch_key = "#{mapped_account.id}:#{row.external_id}"
+          next if seen_external_ids.key?(batch_key)
+          seen_external_ids[batch_key] = true
+
           # External ID-based deduplication: find existing entry by external_id + source
           existing_entry = mapped_account.entries.find_by(external_id: row.external_id, source: "csv_import")
 

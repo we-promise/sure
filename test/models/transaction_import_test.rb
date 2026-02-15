@@ -440,6 +440,44 @@ class TransactionImportTest < ActiveSupport::TestCase
     assert_equal @import.id, existing_entry.import_id
   end
 
+  test "deduplicates rows with same external_id within the same CSV batch" do
+    account = accounts(:depository)
+
+    # CSV with duplicate external_ids - first row should win
+    import_csv = <<~CSV
+      date,name,amount,ext_id
+      01/01/2024,Coffee Shop,100,txn-uuid-dup
+      01/02/2024,Coffee Shop Updated,200,txn-uuid-dup
+      01/03/2024,Grocery Store,300,txn-uuid-unique
+    CSV
+
+    @import.update!(
+      account: account,
+      raw_file_str: import_csv,
+      date_col_label: "date",
+      amount_col_label: "amount",
+      name_col_label: "name",
+      external_id_col_label: "ext_id",
+      date_format: "%m/%d/%Y",
+      amount_type_strategy: "signed_amount",
+      signage_convention: "inflows_negative"
+    )
+
+    @import.generate_rows_from_csv
+    @import.reload
+
+    # Should only create 2 entries (first row wins for the duplicate external_id)
+    assert_difference -> { Entry.count } => 2, -> { Transaction.count } => 2 do
+      @import.publish
+    end
+
+    entries = @import.entries.order(:date)
+    assert_equal "txn-uuid-dup", entries.first.external_id
+    assert_equal "Coffee Shop", entries.first.name
+    assert_equal "txn-uuid-unique", entries.second.external_id
+    assert_equal "Grocery Store", entries.second.name
+  end
+
   test "CSV without external_id column works as before" do
     account = accounts(:depository)
 
