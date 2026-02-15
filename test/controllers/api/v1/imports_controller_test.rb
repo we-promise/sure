@@ -1,16 +1,26 @@
 require "test_helper"
 
 class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
+  include ActiveJob::TestHelper
+
   setup do
     @family = families(:dylan_family)
     @user = users(:family_admin)
     @account = accounts(:depository)
     @import = imports(:transaction)
-    @token = valid_token_for(@user)
+
+    @user.api_keys.active.destroy_all
+
+    @api_key = ApiKey.create!(
+      user: @user,
+      name: "Test Read-Write Key",
+      scopes: [ "read_write" ],
+      display_key: "test_rw_#{SecureRandom.hex(8)}"
+    )
   end
 
   test "should list imports" do
-    get api_v1_imports_url, headers: { Authorization: "Bearer #{@token}" }
+    get api_v1_imports_url, headers: api_headers(@api_key)
     assert_response :success
 
     json_response = JSON.parse(response.body)
@@ -19,7 +29,7 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "should show import" do
-    get api_v1_import_url(@import), headers: { Authorization: "Bearer #{@token}" }
+    get api_v1_import_url(@import), headers: api_headers(@api_key)
     assert_response :success
 
     json_response = JSON.parse(response.body)
@@ -39,7 +49,7 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
              name_col_label: "name",
              account_id: @account.id
            },
-           headers: { Authorization: "Bearer #{@token}" }
+           headers: api_headers(@api_key)
     end
 
     assert_response :created
@@ -62,7 +72,7 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
              name_col_label: "name",
              account_id: @account.id
            },
-           headers: { Authorization: "Bearer #{@token}" }
+           headers: api_headers(@api_key)
     end
 
     assert_response :created
@@ -88,7 +98,7 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
              date_format: "%Y-%m-%d",
              publish: "true"
            },
-           headers: { Authorization: "Bearer #{@token}" }
+           headers: api_headers(@api_key)
     end
 
     assert_response :created
@@ -108,7 +118,7 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
             raw_file_content: csv_content,
             account_id: other_account.id
           },
-          headers: { Authorization: "Bearer #{@token}" }
+          headers: api_headers(@api_key)
 
     assert_response :unprocessable_entity
     json_response = JSON.parse(response.body)
@@ -125,7 +135,7 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_no_difference("Import.count") do
       post api_v1_imports_url,
            params: { file: large_file },
-           headers: { Authorization: "Bearer #{@token}" }
+           headers: api_headers(@api_key)
     end
 
     assert_response :unprocessable_entity
@@ -143,7 +153,7 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_no_difference("Import.count") do
       post api_v1_imports_url,
            params: { file: invalid_file },
-           headers: { Authorization: "Bearer #{@token}" }
+           headers: api_headers(@api_key)
     end
 
     assert_response :unprocessable_entity
@@ -163,7 +173,7 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_no_difference("Import.count") do
       post api_v1_imports_url,
            params: { raw_file_content: large_content },
-           headers: { Authorization: "Bearer #{@token}" }
+           headers: api_headers(@api_key)
     end
 
     assert_response :unprocessable_entity
@@ -187,7 +197,7 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
              external_id_col_label: "ext_id",
              account_id: @account.id
            },
-           headers: { Authorization: "Bearer #{@token}" }
+           headers: api_headers(@api_key)
     end
 
     assert_response :created
@@ -215,7 +225,7 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
              name_col_label: "name",
              account_id: @account.id
            },
-           headers: { Authorization: "Bearer #{@token}" }
+           headers: api_headers(@api_key)
     end
 
     assert_response :created
@@ -223,8 +233,7 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
 
   private
 
-    def valid_token_for(user)
-      application = Doorkeeper::Application.create!(name: "Test App", redirect_uri: "urn:ietf:wg:oauth:2.0:oob", scopes: "read read_write")
-      Doorkeeper::AccessToken.create!(application: application, resource_owner_id: user.id, scopes: "read read_write").token
+    def api_headers(api_key)
+      { "X-Api-Key" => api_key.display_key }
     end
 end
