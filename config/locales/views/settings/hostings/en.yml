@@ -57,6 +57,11 @@ en:
         json_mode_none: None (best for standard models)
         json_mode_json_object: JSON Object
         json_mode_help: "Strict mode works best with thinking models (qwen-thinking, deepseek-reasoner). None mode works best with standard models (llama, mistral, gpt-oss)."
+        instruction_type_label: Instruction Type
+        instruction_type_auto: Auto (default)
+        instruction_type_detailed: Detailed (best for capable models)
+        instruction_type_simple: Simple (best for smaller models)
+        instruction_type_help: "Controls the level of detail in AI prompts. Auto uses simple instructions for custom providers and detailed for native OpenAI. Use Detailed if your custom provider runs a capable model."
         title: OpenAI
       yahoo_finance_settings:
         title: Yahoo Finance
