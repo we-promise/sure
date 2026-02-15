@@ -546,16 +546,15 @@ class Provider::Openai < Provider
         return
       end
 
-      return unless usage
-
       Rails.logger.info("Recording LLM usage - Raw usage data: #{usage.inspect}")
 
       # Handle both old and new OpenAI API response formats
       # Old format: prompt_tokens, completion_tokens, total_tokens
       # New format: input_tokens, output_tokens, total_tokens
-      prompt_tokens = usage["prompt_tokens"] || usage["input_tokens"] || 0
-      completion_tokens = usage["completion_tokens"] || usage["output_tokens"] || 0
-      total_tokens = usage["total_tokens"] || 0
+      # When usage is nil (common with custom providers), record with 0 tokens
+      prompt_tokens = usage&.dig("prompt_tokens") || usage&.dig("input_tokens") || 0
+      completion_tokens = usage&.dig("completion_tokens") || usage&.dig("output_tokens") || 0
+      total_tokens = usage&.dig("total_tokens") || 0
 
       Rails.logger.info("Extracted tokens - prompt: #{prompt_tokens}, completion: #{completion_tokens}, total: #{total_tokens}")
 
