@@ -17,6 +17,19 @@ class Settings::AiPromptsControllerTest < ActionDispatch::IntegrationTest
     assert_match(/not authorized/i, flash[:alert].to_s)
   end
 
+  test "edit_system_prompt requires admin" do
+    sign_in users(:family_member)
+    get edit_system_prompt_settings_ai_prompts_url
+    assert_redirected_to root_path
+    assert_match(/not authorized/i, flash[:alert].to_s)
+  end
+
+  test "edit_system_prompt renders form" do
+    get edit_system_prompt_settings_ai_prompts_url
+    assert_response :success
+    assert_match(/Main system prompt|Custom main system prompt/, response.body)
+  end
+
   test "update requires admin" do
     sign_in users(:family_member)
     patch settings_ai_prompts_url, params: { family: { preferred_ai_model: "gpt-4" } }
@@ -51,6 +64,18 @@ class Settings::AiPromptsControllerTest < ActionDispatch::IntegrationTest
       family: { custom_system_prompt: long_prompt }
     }
     assert_response :unprocessable_entity
+    @family.reload
+    assert_not_equal long_prompt, @family.custom_system_prompt
+  end
+
+  test "update from system_prompt form with invalid length renders edit_system_prompt" do
+    long_prompt = "x" * (Family::CUSTOM_PROMPT_MAX_LENGTH + 1)
+    patch settings_ai_prompts_url, params: {
+      from: "system_prompt",
+      family: { custom_system_prompt: long_prompt, custom_intro_prompt: "" }
+    }
+    assert_response :unprocessable_entity
+    assert_match(/Edit main system prompt|Custom main system prompt/, response.body)
     @family.reload
     assert_not_equal long_prompt, @family.custom_system_prompt
   end

@@ -14,6 +14,29 @@
 @import "./date-picker-dark-mode.css";
 @import "./print-report.css";
 
+/* Rails wraps invalid fields in span.field_with_errors; make it full width so layout doesn't break */
+.field_with_errors {
+  display: block;
+  width: 100%;
+  min-width: 0;
+}
+
+.field_with_errors input,
+.field_with_errors textarea {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+/* AI Prompts expandable content: force pre to wrap and stay within container */
+.ai-prompt-pre {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  overflow-wrap: anywhere;
+  max-width: 100%;
+  min-width: 0;
+}
+
 @layer components {
   .pcr-app{
     position: static !important;

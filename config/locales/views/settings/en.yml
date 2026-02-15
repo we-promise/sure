@@ -11,15 +11,20 @@ en:
         page_title: AI Prompts
         openai_label: OpenAI
         disable_ai: Disable AI Assistant
-        prompt_instructions: Prompt Instructions
-        edit_section_title: Customize prompts and model
-        edit_section_subtitle: Override the default AI behavior for this household. Leave blank to use built-in defaults.
-        openai_uri_base_label: OpenAI endpoint (optional)
+        prompt_instructions: Prompt instructions
+        prompt_link: Prompt
+        edit_prompt_link: Edit prompt
+        edit_prompt_coming_soon: Edit prompt (coming soon!)
+        edit_system_prompt_title: Main system prompt
+        endpoint_section_title: Endpoint & model
+        endpoint_section_subtitle: Choose the default AI model and optional custom API endpoint for this household. The prompts section below only appears when using an OpenAI-compatible setup.
+        provider_prompts_hidden: Prompt customization is available when using an OpenAI-compatible model. Set a compatible model (e.g. gpt-4) or custom endpoint above to see prompts.
+        openai_uri_base_label: Custom API endpoint (optional)
         openai_uri_base_placeholder: e.g. https://api.openai.com/v1
         openai_uri_base_hint: When set, chat uses this endpoint for this household. Preferred model is required.
         preferred_ai_model_label: Preferred AI model
-        preferred_ai_model_placeholder: e.g. gpt-4.1
-        preferred_ai_model_hint: Optional. When set, new chats use this model by default. Required if endpoint is set.
+        preferred_ai_model_placeholder: e.g. gpt-4.1 or your provider's model ID
+        preferred_ai_model_hint: Optional. When set, new chats use this model by default. Required if custom endpoint is set.
         custom_system_prompt_label: Custom main system prompt
         custom_system_prompt_placeholder: Leave blank to use the default assistant instructions.
         custom_intro_prompt_label: Custom intro prompt
@@ -34,6 +39,16 @@ en:
         merchant_detector:
           title: Merchant Detector
           subtitle: AI identifies and enriches transaction data with merchant information
+      edit_system_prompt:
+        page_title: Edit main system prompt
+        title: Main system prompt & intro
+        subtitle: Override how the AI assistant behaves in chat and in the welcome flow. Leave blank to use built-in defaults.
+        custom_system_prompt_label: Custom main system prompt
+        custom_system_prompt_placeholder: Leave blank to use the default assistant instructions.
+        custom_intro_prompt_label: Custom intro prompt
+        custom_intro_prompt_placeholder: Leave blank to use the default welcome flow instructions.
+        save: Save changes
+        back_to_prompts: Back to AI Prompts
       update:
         success: AI prompts and model preferences saved.
       not_authorized: You are not authorized to change AI prompts for this household.
