@@ -28,10 +28,10 @@
     <%# Assets vs Liabilities %>
     <div class="p-4 bg-surface-inset rounded-lg">
       <p class="text-sm text-secondary mb-2"><%= t("reports.net_worth.assets_vs_liabilities") %></p>
-      <div class="flex items-baseline gap-2">
-        <span class="text-lg font-semibold text-success"><%= net_worth_metrics[:total_assets].format %></span>
-        <span class="text-xs text-tertiary">-</span>
-        <span class="text-lg font-semibold text-destructive"><%= net_worth_metrics[:total_liabilities].format %></span>
+      <div class="flex items-baseline gap-2 flex-wrap">
+        <span class="text-lg font-semibold text-success break-words"><%= net_worth_metrics[:total_assets].format %></span>
+        <span class="text-xs text-tertiary shrink-0">-</span>
+        <span class="text-lg font-semibold text-destructive break-words"><%= net_worth_metrics[:total_liabilities].format %></span>
       </div>
     </div>
   </div>
