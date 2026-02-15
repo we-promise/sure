@@ -12,6 +12,7 @@ export default class extends Controller {
     this.draggedElement = null;
     this.placeholder = null;
     this.touchStartY = 0;
+    this.currentTouchX = 0;
     this.currentTouchY = 0;
     this.isTouching = false;
     this.keyboardGrabbedElement = null;
@@ -81,7 +82,9 @@ export default class extends Controller {
     if (section.getAttribute("draggable") === "false") return;
 
     this.pendingSection = section;
+    this.touchStartX = event.touches[0].clientX;
     this.touchStartY = event.touches[0].clientY;
+    this.currentTouchX = this.touchStartX;
     this.currentTouchY = this.touchStartY;
     this.holdActivated = false;
 
@@ -249,7 +252,7 @@ export default class extends Controller {
     if (draggableElements.length === 0) return null;
 
     let closest = null;
-    let minDistance = Infinity;
+    let minDistance = Number.POSITIVE_INFINITY;
 
     draggableElements.forEach((child) => {
       const rect = child.getBoundingClientRect();
