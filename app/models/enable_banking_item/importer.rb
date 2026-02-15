@@ -239,16 +239,23 @@ class EnableBankingItem::Importer
 
     # Deduplicate transactions from the Enable Banking API response.
     # Some banks return the same logical transaction multiple times with different
-    # entry_reference IDs. We use a content-based key (date, amount, currency,
-    # creditor, debtor, remittance_information) to detect and remove these duplicates,
-    # keeping only the first occurrence. (Issue #954)
+    # entry_reference IDs. When transaction_id is present it is a stable unique
+    # identifier, so we use it directly as the dedup key — this preserves
+    # legitimately distinct transactions with identical content (e.g. two
+    # laundromat payments on the same day). When transaction_id is nil we fall
+    # back to a content-based key (date, amount, currency, creditor, debtor,
+    # remittance_information). (Issue #954)
     def deduplicate_api_transactions(transactions)
       seen = {}
       duplicates_removed = 0
 
       result = transactions.select do |tx|
         tx = tx.with_indifferent_access
-        key = build_transaction_content_key(tx)
+
+        # Prefer transaction_id (stable) over content-based key (fallback for
+        # the nil-transaction_id duplicate entry_reference scenario).
+        tid = tx[:transaction_id].presence
+        key = tid ? "tid:#{tid}" : build_transaction_content_key(tx)
 
         if seen[key]
           duplicates_removed += 1
@@ -272,11 +279,11 @@ class EnableBankingItem::Importer
     # Build a content-based key for deduplication. Two transactions with different
     # entry_reference values but identical content fields are considered duplicates.
     #
-    # NOTE: This approach has a known limitation — two genuinely distinct transactions
-    # with identical content (e.g., buying coffee twice at the same store for the same
-    # amount on the same day) will be collapsed into one. This trade-off is accepted
-    # because Enable Banking's duplicate entry_reference issue (Issue #954) is more
-    # common and harmful than same-day identical purchases. (Issue #954)
+    # This method is only used as a fallback when transaction_id is nil. When
+    # transaction_id is present, it is used directly as the dedup key, which
+    # preserves legitimately distinct transactions with identical content
+    # (e.g. two laundromat payments of the same amount on the same day).
+    # (Issue #954)
     def build_transaction_content_key(tx)
       date = tx[:booking_date].presence || tx[:value_date]
       amount = tx.dig(:transaction_amount, :amount).presence || tx[:amount]

@@ -208,6 +208,57 @@ class EnableBankingItem::ImporterDedupTest < ActiveSupport::TestCase
     assert_equal "ref_aaa", result.first[:entry_reference]
   end
 
+  test "preserves distinct transactions with same content but different transaction_ids" do
+    transactions = [
+      {
+        entry_reference: "ref_1",
+        transaction_id: "txn_001",
+        booking_date: "2026-02-09",
+        transaction_amount: { amount: "1.50", currency: "EUR" },
+        creditor: { name: "Waschsalon" },
+        status: "BOOK"
+      },
+      {
+        entry_reference: "ref_2",
+        transaction_id: "txn_002",
+        booking_date: "2026-02-09",
+        transaction_amount: { amount: "1.50", currency: "EUR" },
+        creditor: { name: "Waschsalon" },
+        status: "BOOK"
+      }
+    ]
+
+    result = @importer.send(:deduplicate_api_transactions, transactions)
+
+    assert_equal 2, result.count
+  end
+
+  test "deduplicates same transaction_id even with different entry_references" do
+    transactions = [
+      {
+        entry_reference: "ref_aaa",
+        transaction_id: "txn_same",
+        booking_date: "2026-02-09",
+        transaction_amount: { amount: "25.00", currency: "EUR" },
+        creditor: { name: "Amazon" },
+        status: "BOOK"
+      },
+      {
+        entry_reference: "ref_bbb",
+        transaction_id: "txn_same",
+        booking_date: "2026-02-09",
+        transaction_amount: { amount: "25.00", currency: "EUR" },
+        creditor: { name: "Amazon" },
+        status: "BOOK"
+      }
+    ]
+
+    result = @importer.send(:deduplicate_api_transactions, transactions)
+
+    assert_equal 1, result.count
+    assert_equal "ref_aaa", result.first[:entry_reference]
+  end
+
   test "returns empty array for empty input" do
     result = @importer.send(:deduplicate_api_transactions, [])
     assert_equal [], result
