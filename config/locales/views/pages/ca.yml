@@ -4,6 +4,7 @@ ca:
     changelog:
       title: Novetats
     dashboard:
+      title: Panell de control
       balance_sheet:
         add_accounts: Afegeix els teus comptes de %{name} per veure'n el detall complet
         no_items: Encara no hi ha %{name}

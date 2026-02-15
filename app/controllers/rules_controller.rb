@@ -7,6 +7,8 @@ class RulesController < ApplicationController
     @sort_by = params[:sort_by] || "name"
     @direction = params[:direction] || "asc"
 
+    @breadcrumbs = [ [ t("layouts.application.nav.home"), root_path ], [ t("settings.settings_nav.rules_label"), nil ] ]
+
     allowed_columns = [ "name", "updated_at" ]
     @sort_by = "name" unless allowed_columns.include?(@sort_by)
     @direction = "asc" unless [ "asc", "desc" ].include?(@direction)

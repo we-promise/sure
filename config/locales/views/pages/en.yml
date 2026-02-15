@@ -12,6 +12,7 @@ en:
       heading: Terms of Service
       placeholder: Terms of service content will be displayed here.
     dashboard:
+      title: Dashboard
       welcome: "Welcome back, %{name}"
       subtitle: "Here's what's happening with your finances"
       new: "New"

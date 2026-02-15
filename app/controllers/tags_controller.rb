@@ -4,6 +4,8 @@ class TagsController < ApplicationController
   def index
     @tags = Current.family.tags.alphabetically
 
+    @breadcrumbs = [ [ t("layouts.application.nav.home"), root_path ], [ t("settings.settings_nav.tags_label"), nil ] ]
+
     render layout: "settings"
   end
 

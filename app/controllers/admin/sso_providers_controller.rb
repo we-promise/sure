@@ -7,6 +7,7 @@ module Admin
     def index
       authorize SsoProvider
       @sso_providers = policy_scope(SsoProvider).order(:name)
+      @breadcrumbs = [ [ t("layouts.application.nav.home"), root_path ], [ t("settings.settings_nav.sso_providers_label"), nil ] ]
 
       # Load runtime providers (from YAML/env) that might not be in the database
       # This helps show users that legacy providers are active but not manageable via UI

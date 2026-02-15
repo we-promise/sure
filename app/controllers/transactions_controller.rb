@@ -12,6 +12,7 @@ class TransactionsController < ApplicationController
 
   def index
     @q = search_params
+    @breadcrumbs = [ [ t("layouts.application.nav.home"), root_path ], [ t("transactions.index.transactions"), nil ] ]
     @search = Transaction::Search.new(Current.family, filters: @q)
 
     base_scope = @search.transactions_scope

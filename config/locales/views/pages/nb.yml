@@ -3,12 +3,57 @@ nb:
   pages:
     changelog:
       title: Hva er nytt
+    privacy:
+      title: Personvernerklæring
+      heading: Personvernerklæring
+      placeholder: Innholdet i personvernerklæringen vil bli vist her.
+    terms:
+      title: Vilkår for bruk
+      heading: Vilkår for bruk
+      placeholder: Innholdet i bruksvilkårene vil bli vist her.
     dashboard:
+      title: Oversikt
+      welcome: "Velkommen tilbake, %{name}"
+      subtitle: "Her er hva som skjer med økonomien din"
+      new: "Ny"
+      drag_to_reorder: "Dra for å endre rekkefølge på seksjoner"
+      toggle_section: "Vis eller skjul seksjon"
       net_worth_chart:
-        data_not_available: Data ikke tilgjengelig for den valgte perioden
+        data_not_available: Data er ikke tilgjengelig for den valgte perioden
         title: Nettoformue
       no_account_empty_state:
         new_account: Ny konto
-        no_account_subtitle: Siden ingen kontoer er lagt til, er det ingen data å
-          vise. Legg til dine første kontoer for å begynne å vise dashboard-data.
-        no_account_title: Ingen kontoer enda
+        no_account_subtitle: Siden ingen kontoer er lagt til, finnes det ingen data å vise. Legg til din første konto for å begynne å se data i oversikten.
+        no_account_title: Ingen kontoer ennå
+      balance_sheet:
+        title: "Balanse"
+        no_items: "Ingen %{name} ennå"
+        add_accounts: "Legg til dine %{name}-kontoer for å se en fullstendig oversikt"
+      cashflow_sankey:
+        title: "Kontantstrøm"
+        no_data_title: "Ingen kontantstrømdata for denne perioden"
+        no_data_description: "Legg til transaksjoner for å vise kontantstrømdata eller utvid tidsperioden"
+        add_transaction: "Legg til transaksjon"
+      no_accounts:
+        title: "Ingen kontoer ennå"
+        description: "Legg til kontoer for å vise nettoformuedata"
+        add_account: "Legg til konto"
+      outflows_donut:
+        title: "Utbetalinger"
+        total_outflows: "Totale utbetalinger"
+        categories: "Kategorier"
+        value: "Verdi"
+        weight: "Andel"
+      investment_summary:
+        title: "Investeringer"
+        total_return: "Total avkastning"
+        holding: "Beholdning"
+        weight: "Andel"
+        value: "Verdi"
+        return: "Avkastning"
+        period_activity: "%{period}-aktivitet"
+        contributions: "Innskudd"
+        withdrawals: "Uttak"
+        trades: "Handler"
+        no_investments: "Ingen investeringskontoer"
+        add_investment: "Legg til en investeringskonto for å følge porteføljen din"

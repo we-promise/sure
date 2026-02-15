@@ -6,6 +6,8 @@ class CategoriesController < ApplicationController
   def index
     @categories = Current.family.categories.alphabetically
 
+    @breadcrumbs = [ [ t("layouts.application.nav.home"), root_path ], [ t("settings.settings_nav.categories_label"), nil ] ]
+
     render layout: "settings"
   end
 

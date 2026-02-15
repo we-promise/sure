@@ -3,8 +3,8 @@ class Settings::SecuritiesController < ApplicationController
 
   def show
     @breadcrumbs = [
-      [ "Home", root_path ],
-      [ "Security", nil ]
+      [ t("layouts.application.nav.home"), root_path ],
+      [ t("settings.settings_nav.security_label"), nil ]
     ]
     @oidc_identities = Current.user.oidc_identities.order(:provider)
   end

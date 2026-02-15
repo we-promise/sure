@@ -1,4 +1,4 @@
-<%= content_for :page_title, "Rules" %>
+<%= content_for :page_title, t("settings.settings_nav.rules_label") %>
 <%= content_for :page_actions do %>
   <% if @rules.any? %>
     <%= render DS::Menu.new do |menu| %>
@@ -15,7 +15,7 @@
         )) %>
       <% menu.with_item(
         variant: "button",
-        text: "Delete all rules",
+        text: t("rules.delete_all_rule.button"),
         href: destroy_all_rules_path,
         icon: "trash-2",
         method: :delete,
@@ -30,7 +30,7 @@
     ) %>
   <% end %>
   <%= render DS::Link.new(
-    text: "New rule",
+    text: t("rules.new_rule.botton"),
     variant: "primary",
     href: new_rule_path(resource_type: "transaction"),
     icon: "plus",

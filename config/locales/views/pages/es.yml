@@ -4,6 +4,7 @@ es:
     changelog:
       title: Novedades
     dashboard:
+      title: Panel de control
       welcome: "Bienvenido de nuevo, %{name}"
       subtitle: "Esto es lo que está pasando con tus finanzas"
       new: "Nuevo"

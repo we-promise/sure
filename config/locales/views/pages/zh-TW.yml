@@ -4,6 +4,7 @@ zh-TW:
     changelog:
       title: 更新日誌
     dashboard:
+      title: 儀表板
       welcome: "歡迎回來，%{name}"
       subtitle: "這是您目前的財務概況"
       new: "最新"

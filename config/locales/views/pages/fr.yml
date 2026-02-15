@@ -4,6 +4,7 @@ fr:
     changelog:
       title: Nouveautés
     dashboard:
+      title: Tableau de bord
       welcome_back: Content de vous revoir
       happening_with_finance: Voici ce qui se passe avec vos finances
       new: Nouveau

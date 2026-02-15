@@ -4,6 +4,7 @@ nl:
     changelog:
       title: Wat is er nieuw
     dashboard:
+      title: Dashboard
       welcome: "Welkom terug, %{name}"
       subtitle: "Dit gebeurt er met uw financiën"
       new: "Nieuw"

@@ -7,8 +7,8 @@ class Settings::ApiKeysController < ApplicationController
 
   def show
     @breadcrumbs = [
-      [ "Home", root_path ],
-      [ "API Key", nil ]
+      [ t("layouts.application.nav.home"), root_path ],
+      [ t("settings.settings_nav.api_keys_label"), nil ]
     ]
     @current_api_key = @api_key
   end

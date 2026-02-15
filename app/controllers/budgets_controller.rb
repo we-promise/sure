@@ -35,6 +35,7 @@ class BudgetsController < ApplicationController
     end
 
     def set_budget
+      @breadcrumbs = [ [ t("layouts.application.nav.home"), root_path ], [ t("layouts.application.nav.budgets"), nil ] ]
       start_date = Budget.param_to_date(params[:month_year], family: Current.family)
       @budget = Budget.find_or_bootstrap(Current.family, start_date: start_date)
       raise ActiveRecord::RecordNotFound unless @budget

@@ -3,11 +3,57 @@ tr:
   pages:
     changelog:
       title: Yenilikler
+    privacy:
+      title: Gizlilik Politikası
+      heading: Gizlilik Politikası
+      placeholder: Gizlilik politikası içeriği burada görüntülenecektir.
+    terms:
+      title: Hizmet Şartları
+      heading: Hizmet Şartları
+      placeholder: Hizmet şartları içeriği burada görüntülenecektir.
     dashboard:
+      title: Kontrol Paneli
+      welcome: "Tekrar hoş geldin, %{name}"
+      subtitle: "İşte finansal durumunda olanlar"
+      new: "Yeni"
+      drag_to_reorder: "Bölümü yeniden sıralamak için sürükleyin"
+      toggle_section: "Bölüm görünürlüğünü değiştir"
       net_worth_chart:
         data_not_available: Seçilen dönem için veri mevcut değil
-        title: Net Değer
+        title: Net Varlık
       no_account_empty_state:
         new_account: Yeni hesap
-        no_account_subtitle: Henüz hiç hesap eklenmediği için gösterilecek veri yok. İlk hesaplarınızı ekleyerek gösterge paneli verilerini görmeye başlayın.
+        no_account_subtitle: Henüz hesap eklenmediği için görüntülenecek veri yok. Gösterge paneli verilerini görmek için ilk hesabınızı ekleyin.
         no_account_title: Henüz hesap yok
+      balance_sheet:
+        title: "Bilanço"
+        no_items: "Henüz %{name} yok"
+        add_accounts: "%{name} hesaplarınızı ekleyerek ayrıntılı dökümü görüntüleyin"
+      cashflow_sankey:
+        title: "Nakit Akışı"
+        no_data_title: "Bu dönem için nakit akışı verisi yok"
+        no_data_description: "Nakit akışı verilerini görüntülemek için işlem ekleyin veya zaman aralığını genişletin"
+        add_transaction: "İşlem ekle"
+      no_accounts:
+        title: "Henüz hesap yok"
+        description: "Net varlık verilerini görüntülemek için hesap ekleyin"
+        add_account: "Hesap ekle"
+      outflows_donut:
+        title: "Giderler"
+        total_outflows: "Toplam Giderler"
+        categories: "Kategoriler"
+        value: "Tutar"
+        weight: "Oran"
+      investment_summary:
+        title: "Yatırımlar"
+        total_return: "Toplam Getiri"
+        holding: "Portföy"
+        weight: "Oran"
+        value: "Tutar"
+        return: "Getiri"
+        period_activity: "%{period} Dönem Hareketleri"
+        contributions: "Yatırımlar"
+        withdrawals: "Çekimler"
+        trades: "İşlemler"
+        no_investments: "Yatırım hesabı yok"
+        add_investment: "Portföyünüzü takip etmek için bir yatırım hesabı ekleyin"

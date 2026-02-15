@@ -4,6 +4,7 @@ ro:
     changelog:
       title: Ce e nou
     dashboard:
+      title: Tablou de bord
       welcome: "Bun venit, %{name}"
       subtitle: "Iată ce se întâmplă cu finanțele tale"
       new: "Nou"

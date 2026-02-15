@@ -24,11 +24,11 @@ class PagesController < ApplicationController
 
     @dashboard_sections = build_dashboard_sections
 
-    @breadcrumbs = [ [ "Home", root_path ], [ "Dashboard", nil ] ]
+    @breadcrumbs = [ [ t("layouts.application.nav.home"), root_path ], [ t("pages.dashboard.title"), nil ] ]
   end
 
   def intro
-    @breadcrumbs = [ [ "Home", chats_path ], [ "Intro", nil ] ]
+    @breadcrumbs = [ [ t("layouts.application.nav.home"), chats_path ], [ "Intro", nil ] ]
   end
 
   def update_preferences
@@ -41,6 +41,7 @@ class PagesController < ApplicationController
 
   def changelog
     @release_notes = github_provider.fetch_latest_release_notes
+    @breadcrumbs = [ [ t("layouts.application.nav.home"), root_path ], [ t("settings.settings_nav.whats_new_label"), nil ] ]
 
     # Fallback if no release notes are available
     if @release_notes.nil?
@@ -57,6 +58,7 @@ class PagesController < ApplicationController
   end
 
   def feedback
+    @breadcrumbs = [ [ t("layouts.application.nav.home"), root_path ], [ t("settings.settings_nav.feedback_label"), nil ] ]
     render layout: "settings"
   end
 

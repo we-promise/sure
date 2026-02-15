@@ -96,7 +96,7 @@ en:
       import: Import
     index:
       transaction: transaction
-      transactions: transactions
+      transactions: Transactions
       import: Import
     list:
       drag_drop_title: Drop CSV to import

@@ -3,6 +3,7 @@ class AccountsController < ApplicationController
   include Periodable
 
   def index
+    @breadcrumbs = [ [ t("layouts.application.nav.home"), root_path ], [ t("settings.settings_nav.accounts_label"), nil ] ]
     @manual_accounts = family.accounts
           .listable_manual
           .order(:name)

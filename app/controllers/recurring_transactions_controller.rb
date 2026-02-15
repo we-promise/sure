@@ -6,6 +6,8 @@ class RecurringTransactionsController < ApplicationController
                                     .includes(:merchant)
                                     .order(status: :asc, next_expected_date: :asc)
     @family = Current.family
+
+    @breadcrumbs = [ [ t("layouts.application.nav.home"), root_path ], [ t("settings.settings_nav.recurring_transactions_label"), nil ] ]
   end
 
   def update_settings

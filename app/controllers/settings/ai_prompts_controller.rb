@@ -3,8 +3,8 @@ class Settings::AiPromptsController < ApplicationController
 
   def show
     @breadcrumbs = [
-      [ "Home", root_path ],
-      [ "AI Prompts", nil ]
+      [ t("layouts.application.nav.home"), root_path ],
+      [ t("settings.settings_nav.ai_prompts_label"), nil ]
     ]
     @family = Current.family
     @assistant_config = Assistant.config_for(OpenStruct.new(user: Current.user))

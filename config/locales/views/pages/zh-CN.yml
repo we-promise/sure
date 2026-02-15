@@ -4,6 +4,7 @@ zh-CN:
     changelog:
       title: 更新日志
     dashboard:
+      title: 仪表板
       balance_sheet:
         add_accounts: 添加您的%{name}账户以查看完整分析
         no_items: 暂无%{name}

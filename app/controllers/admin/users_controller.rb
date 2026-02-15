@@ -7,6 +7,7 @@ module Admin
     def index
       authorize User
       @users = policy_scope(User).order(:email)
+      @breadcrumbs = [ [ t("layouts.application.nav.home"), root_path ], [ t("settings.settings_nav.users_label"), nil ] ]
     end
 
     def update

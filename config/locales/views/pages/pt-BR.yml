@@ -4,6 +4,7 @@ pt-BR:
     changelog:
       title: Novidades
     dashboard:
+      title: Painel de controle
       welcome: "Bem-vindo(a) de volta, %{name}"
       subtitle: "Veja o que está acontecendo com suas finanças"
       new: "Novo"

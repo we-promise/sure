@@ -49,3 +49,7 @@ en:
         expense: Expense
         transfer: Transfer
         equal_to: Equal to
+    new_rule: 
+      botton: New Rule
+    delete_all_rule:
+      button: Delete All Rules
