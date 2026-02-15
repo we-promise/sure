@@ -42,7 +42,7 @@
           <% end %>
           <%# Render subcategories if present %>
           <% if group[:subcategories].present? && group[:subcategories].any? %>
-            <% group[:subcategories].each_with_index do |subcategory, idx| %>
+            <% group[:subcategories].each_with_index do |subcategory, sub_idx| %>
               <%= render "reports/category_row",
                 item: subcategory,
                 total: total,
@@ -50,7 +50,7 @@
                 level: :subcategory
               %>
             <% end %>
-            <% if idx < group[:subcategories].size - 1 %>
+            <% if sub_idx < group[:subcategories].size - 1 %>
               <%= render "shared/ruler", classes: "mx-3 lg:mx-4" %>
             <% end %>
           <% end %>
