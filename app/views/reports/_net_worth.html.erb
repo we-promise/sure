@@ -54,7 +54,7 @@
           <% end %>
         <% end %>
         <% if net_worth_metrics[:asset_groups].empty? %>
-          <p class="text-sm text-secondary p-2 text-center"><%= t("reports.net_worth.no_assets") %></p>
+          <p class="text-sm text-subdued py-3 px-4 lg:px-6"><%= t("reports.net_worth.no_assets") %></p>
         <% end %>
       </div>
     </div>
@@ -75,9 +75,7 @@
           <% end %>
         <% end %>
         <% if net_worth_metrics[:liability_groups].empty? %>
-          <div class="grid grid-cols-2 items-center text-secondary text-sm py-3 px-4 lg:px-6">
-            <div class="col-span-1 text-sm text-subdued"><%= t("reports.net_worth.no_liabilities") %></div>
-          </div>
+          <p class="text-sm text-subdued py-3 px-4 lg:px-6"><%= t("reports.net_worth.no_liabilities") %></p>
         <% end %>
       </div>
     </div>
