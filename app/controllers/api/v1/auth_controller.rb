@@ -39,7 +39,7 @@ module Api
           # Claim invite code if provided
           InviteCode.claim!(params[:invite_code]) if params[:invite_code].present?
 
-# Create device and OAuth token
+          # Create device and OAuth token
           begin
             device = MobileDevice.upsert_device!(user, device_params)
             token_response = device.issue_token!
@@ -76,7 +76,7 @@ module Api
             end
           end
 
-# Validate device info
+          # Validate device info
           unless valid_device_info?
             render json: { error: "Device information is required" }, status: :bad_request
             return
@@ -222,7 +222,7 @@ module Api
           params.require(:device).permit(:device_id, :device_name, :device_type, :os_version, :app_version)
         end
 
-def sso_exchange_params
+        def sso_exchange_params
           params.require(:code)
         end
     end

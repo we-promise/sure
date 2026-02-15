@@ -59,11 +59,10 @@ class SubscriptionsControllerTest < ActionDispatch::IntegrationTest
       )
     )
 
-      get new_subscription_path(plan: "monthly")
+    get new_subscription_path(plan: "monthly")
 
-      assert_redirected_to "https://checkout.stripe.com/c/pay/test-session-id"
-      assert_equal "test-customer-id", @family.reload.stripe_customer_id
-    end
+    assert_redirected_to "https://checkout.stripe.com/c/pay/test-session-id"
+    assert_equal "test-customer-id", @family.reload.stripe_customer_id
   end
 
   test "creates active subscription on checkout success" do
@@ -77,7 +76,7 @@ class SubscriptionsControllerTest < ActionDispatch::IntegrationTest
 
       get success_subscription_url(session_id: "test-session-id")
 
-assert @family.subscription.active?
+      assert @family.subscription.active?
       assert_equal "Welcome to Sure!  Your contribution is appreciated.", flash[:notice]
     end
   end
