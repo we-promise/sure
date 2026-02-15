@@ -27,6 +27,12 @@ module Api
           return
         end
 
+        # Validate device info
+        unless valid_device_info?
+          render json: { error: "Device information is required" }, status: :bad_request
+          return
+        end
+
         user = User.new(user_signup_params)
 
         # Create family for new user

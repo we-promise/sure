@@ -166,7 +166,7 @@ Rails.application.routes.draw do
       delete :clear_cache, on: :collection
     end
     resource :payment, only: :show
-    resource :security, only: :show
+    resource :security, only: %i[show update]
     resources :sso_identities, only: :destroy
     resource :api_key, only: [ :show, :new, :create, :destroy ]
     resource :ai_prompts, only: :show
