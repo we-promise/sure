@@ -49,9 +49,9 @@
                 color_class: color_class,
                 level: :subcategory
               %>
-            <% end %>
-            <% if sub_idx < group[:subcategories].size - 1 %>
-              <%= render "shared/ruler", classes: "mx-3 lg:mx-4" %>
+              <% if sub_idx < group[:subcategories].size - 1 %>
+                <%= render "shared/ruler", classes: "mx-3 lg:mx-4" %>
+              <% end %>
             <% end %>
           <% end %>
         <% end %>
