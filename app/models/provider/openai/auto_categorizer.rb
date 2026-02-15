@@ -61,11 +61,19 @@ class Provider::Openai::AutoCategorizer
   end
 
   def instructions
-    if custom_provider
+    case instruction_type
+    when "detailed"
+      detailed_instructions
+    when "simple"
       simple_instructions
     else
-      detailed_instructions
+      # Default: simple for custom providers, detailed for native OpenAI
+      custom_provider ? simple_instructions : detailed_instructions
     end
+  end
+
+  def instruction_type
+    Setting.openai_instruction_type.presence
   end
 
   # Simplified instructions for smaller/local LLMs

@@ -63,5 +63,19 @@
                   { disabled: ENV["LLM_JSON_MODE"].present?,
                     data: { "auto-submit-form-target": "auto" } } %>
   <p class="text-xs text-secondary mt-1"><%= t(".json_mode_help") %></p>
+
+  <%= form.select :openai_instruction_type,
+                  options_for_select(
+                    [
+                      [t(".instruction_type_auto"), ""],
+                      [t(".instruction_type_detailed"), "detailed"],
+                      [t(".instruction_type_simple"), "simple"]
+                    ],
+                    Setting.openai_instruction_type
+                  ),
+                  { label: t(".instruction_type_label") },
+                  { disabled: ENV["OPENAI_INSTRUCTION_TYPE"].present?,
+                    data: { "auto-submit-form-target": "auto" } } %>
+  <p class="text-xs text-secondary mt-1"><%= t(".instruction_type_help") %></p>
   <% end %>
 </div>
