@@ -37,7 +37,7 @@ export default class extends Controller {
     event.preventDefault();
     event.dataTransfer.dropEffect = "move";
 
-    const afterElement = this.getDragAfterElement(event.clientY);
+    const afterElement = this.getDragAfterElement(event.clientX, event.clientY);
     const container = this.element;
 
     this.clearPlaceholders();
@@ -53,7 +53,7 @@ export default class extends Controller {
     event.preventDefault();
     event.stopPropagation();
 
-    const afterElement = this.getDragAfterElement(event.clientY);
+    const afterElement = this.getDragAfterElement(event.clientX, event.clientY);
     const container = this.element;
 
     if (afterElement == null) {
@@ -110,9 +110,10 @@ export default class extends Controller {
     if (!this.holdActivated || !this.isTouching || !this.draggedElement) return;
 
     event.preventDefault();
+    this.currentTouchX = event.touches[0].clientX;
     this.currentTouchY = event.touches[0].clientY;
 
-    const afterElement = this.getDragAfterElement(this.currentTouchY);
+    const afterElement = this.getDragAfterElement(this.currentTouchX, this.currentTouchY);
     this.clearPlaceholders();
 
     if (afterElement == null) {
@@ -130,7 +131,7 @@ export default class extends Controller {
       return;
     }
 
-    const afterElement = this.getDragAfterElement(this.currentTouchY);
+    const afterElement = this.getDragAfterElement(this.currentTouchX, this.currentTouchY);
     const container = this.element;
 
     if (afterElement == null) {
@@ -240,23 +241,32 @@ export default class extends Controller {
     }
   }
 
-  getDragAfterElement(y) {
-    const draggableElements = [
-      ...this.sectionTargets.filter((section) => section !== this.draggedElement),
-    ];
+  getDragAfterElement(pointerX, pointerY) {
+    const draggableElements = this.sectionTargets.filter(
+      (section) => section !== this.draggedElement,
+    );
 
-    return draggableElements.reduce(
-      (closest, child) => {
-        const box = child.getBoundingClientRect();
-        const offset = y - box.top - box.height / 2;
+    if (draggableElements.length === 0) return null;
 
-        if (offset < 0 && offset > closest.offset) {
-          return { offset: offset, element: child };
-        }
-        return closest;
-      },
-      { offset: Number.NEGATIVE_INFINITY },
-    ).element;
+    let closest = null;
+    let minDistance = Infinity;
+
+    draggableElements.forEach((child) => {
+      const rect = child.getBoundingClientRect();
+      const centerX = rect.left + rect.width / 2;
+      const centerY = rect.top + rect.height / 2;
+
+      const dx = pointerX - centerX;
+      const dy = pointerY - centerY;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+
+      if (distance < minDistance) {
+        minDistance = distance;
+        closest = child;
+      }
+    });
+
+    return closest;
   }
 
   showPlaceholder(element, position) {
