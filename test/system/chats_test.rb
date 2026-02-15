@@ -37,6 +37,11 @@ class ChatsTest < ApplicationSystemTestCase
 
       click_on @user.chats.first.title
 
+      # Wait for the chat to load before refreshing
+      within "#chat-container" do
+        assert_selector "h1", text: @user.chats.first.title
+      end
+
       # Page refresh
       visit root_url
 
