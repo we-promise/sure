@@ -57,8 +57,8 @@ class Transaction::Search
 
         result = scope
                   .select(
-                    "COALESCE(SUM(CASE WHEN transactions.kind = 'investment_contribution' THEN ABS(entries.amount * COALESCE(er.rate, 1)) WHEN entries.amount >= 0 AND transactions.kind NOT IN ('funds_movement', 'cc_payment') THEN ABS(entries.amount * COALESCE(er.rate, 1)) ELSE 0 END), 0) as expense_total",
-                    "COALESCE(SUM(CASE WHEN entries.amount < 0 AND transactions.kind NOT IN ('funds_movement', 'cc_payment', 'investment_contribution') THEN ABS(entries.amount * COALESCE(er.rate, 1)) ELSE 0 END), 0) as income_total",
+                    "COALESCE(SUM(CASE WHEN entries.amount >= 0 AND transactions.kind NOT IN (#{transfer_kinds_sql}) THEN ABS(entries.amount * COALESCE(er.rate, 1)) ELSE 0 END), 0) as expense_total",
+                    "COALESCE(SUM(CASE WHEN entries.amount < 0 AND transactions.kind NOT IN (#{transfer_kinds_sql}) THEN ABS(entries.amount * COALESCE(er.rate, 1)) ELSE 0 END), 0) as income_total",
                     "COUNT(entries.id) as transactions_count"
                   )
                   .joins(
@@ -110,7 +110,7 @@ class Transaction::Search
       # Get parent category IDs for the given category names
       parent_category_ids = family.categories.where(name: real_categories).pluck(:id)
 
-      uncategorized_condition = "(categories.id IS NULL AND transactions.kind NOT IN ('funds_movement', 'cc_payment'))"
+      uncategorized_condition = "(categories.id IS NULL AND transactions.kind NOT IN (#{transfer_kinds_sql}))"
 
       # Build condition based on whether parent_category_ids is empty
       if parent_category_ids.empty?
@@ -143,12 +143,9 @@ class Transaction::Search
       return query unless types.present?
       return query if types.sort == [ "expense", "income", "transfer" ]
 
-      transfer_condition = "transactions.kind IN ('funds_movement', 'cc_payment', 'loan_payment')"
-      # investment_contribution is always an expense regardless of amount sign
-      # (handles both manual outflows and provider-imported inflows like 401k contributions)
-      investment_contribution_condition = "transactions.kind = 'investment_contribution'"
-      expense_condition = "(entries.amount >= 0 OR #{investment_contribution_condition})"
-      income_condition = "(entries.amount <= 0 AND NOT #{investment_contribution_condition})"
+      transfer_condition = "transactions.kind IN (#{transfer_kinds_sql})"
+      expense_condition = "(entries.amount >= 0)"
+      income_condition = "(entries.amount < 0)"
 
       condition = case types.sort
       when [ "transfer" ]
@@ -202,5 +199,9 @@ class Transaction::Search
       else
         query
       end
+    end
+
+    def transfer_kinds_sql
+      @transfer_kinds_sql ||= Transaction::TRANSFER_KINDS.map { |k| "'#{k}'" }.join(", ")
     end
 end

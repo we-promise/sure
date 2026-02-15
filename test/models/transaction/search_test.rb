@@ -237,8 +237,48 @@ class Transaction::SearchTest < ActiveSupport::TestCase
 
     # Test that the relation builds from family.transactions correctly
     assert_equal @family.transactions.joins(entry: :account).where(
-      "entries.amount >= 0 AND NOT (transactions.kind IN ('funds_movement', 'cc_payment', 'loan_payment'))"
+      "entries.amount >= 0 AND NOT (transactions.kind IN (?))", Transaction::TRANSFER_KINDS
     ).count, results.count
+  end
+
+  test "transfer filter includes investment_contribution transactions" do
+    investment_contribution = create_transaction(
+      account: @checking_account,
+      amount: 500,
+      kind: "investment_contribution"
+    )
+
+    funds_movement = create_transaction(
+      account: @checking_account,
+      amount: 200,
+      kind: "funds_movement"
+    )
+
+    search = Transaction::Search.new(@family, filters: { types: [ "transfer" ] })
+    result_ids = search.transactions_scope.pluck(:id)
+
+    assert_includes result_ids, investment_contribution.entryable.id
+    assert_includes result_ids, funds_movement.entryable.id
+  end
+
+  test "expense filter excludes investment_contribution transactions" do
+    investment_contribution = create_transaction(
+      account: @checking_account,
+      amount: 500,
+      kind: "investment_contribution"
+    )
+
+    standard_expense = create_transaction(
+      account: @checking_account,
+      amount: 100,
+      kind: "standard"
+    )
+
+    search = Transaction::Search.new(@family, filters: { types: [ "expense" ] })
+    result_ids = search.transactions_scope.pluck(:id)
+
+    assert_not_includes result_ids, investment_contribution.entryable.id
+    assert_includes result_ids, standard_expense.entryable.id
   end
 
   test "family-based API requires family parameter" do
