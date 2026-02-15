@@ -9,7 +9,7 @@ module Api
         render json: {
           id: user.id.to_s,
           email: user.email,
-          name: [user.first_name, user.last_name].compact.join(" "),
+          name: [ user.first_name, user.last_name ].compact.join(" "),
           created_at: user.created_at.iso8601
         }
       end

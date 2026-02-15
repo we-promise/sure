@@ -25,13 +25,12 @@ class InvitationsControllerTest < ActionDispatch::IntegrationTest
       end
     end
 
-      invitation = Invitation.order(created_at: :desc).first
-      assert_equal "member", invitation.role
-      assert_equal @admin, invitation.inviter
-      assert_equal "new@example.com", invitation.email
-      assert_redirected_to settings_profile_path
-      assert_equal I18n.t("invitations.create.success"), flash[:notice]
-    end
+    invitation = Invitation.order(created_at: :desc).first
+    assert_equal "member", invitation.role
+    assert_equal @admin, invitation.inviter
+    assert_equal "new@example.com", invitation.email
+    assert_redirected_to settings_profile_path
+    assert_equal I18n.t("invitations.create.success"), flash[:notice]
   end
 
   test "should add existing user to household when inviting their email" do
