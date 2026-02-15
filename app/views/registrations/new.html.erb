@@ -1,5 +1,5 @@
 <%
-  header_title @invitation ? t(".join_family_title", family: @invitation.family.name) : t(".title")
+  header_title @invitation ? t(".join_family_title", family: @invitation.family.name, moniker: @invitation.family.moniker_label) : t(".title")
 %>
 
 <% if self_hosted_first_login? %>
@@ -12,7 +12,7 @@
     <p class="text-secondary">
       <%= t(".invitation_message",
             inviter: @invitation.inviter.display_name,
-            role: t(".role_#{@invitation.role}")) %>
+            role: t(".role_#{@invitation.role}", default: @invitation.role.to_s.humanize.downcase)) %>
     </p>
   </div>
 <% end %>
@@ -74,19 +74,19 @@
     <div class="space-y-1 my-4">
       <div class="flex items-center gap-2 text-secondary text-sm" data-password-validator-target="requirementType" data-requirement-type="length">
         <%= icon("check", size: "sm") %>
-        <span>Minimum 8 characters</span>
+        <span><%= t(".password_requirements.length") %></span>
       </div>
       <div class="flex items-center gap-2 text-secondary text-sm" data-password-validator-target="requirementType" data-requirement-type="case">
         <%= icon("check", size: "sm") %>
-        <span>Upper and lowercase letters</span>
+        <span><%= t(".password_requirements.case") %></span>
       </div>
       <div class="flex items-center gap-2 text-secondary text-sm" data-password-validator-target="requirementType" data-requirement-type="number">
         <%= icon("check", size: "sm") %>
-        <span>A number (0-9)</span>
+        <span><%= t(".password_requirements.number") %></span>
       </div>
       <div class="flex items-center gap-2 text-secondary text-sm" data-password-validator-target="requirementType" data-requirement-type="special">
         <%= icon("check", size: "sm") %>
-        <span>A special character (!, @, #, $, %, etc)</span>
+        <span><%= t(".password_requirements.special") %></span>
       </div>
     </div>
   </div>

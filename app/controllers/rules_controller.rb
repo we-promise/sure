@@ -11,7 +11,7 @@ class RulesController < ApplicationController
     @sort_by = "name" unless allowed_columns.include?(@sort_by)
     @direction = "asc" unless [ "asc", "desc" ].include?(@direction)
 
-    @rules = Current.family.rules.order(@sort_by => @direction)
+    @rules = Current.family.rules.includes(conditions: :sub_conditions).order(@sort_by => @direction)
 
     # Fetch recent rule runs with pagination
     recent_runs_scope = RuleRun
@@ -126,6 +126,11 @@ class RulesController < ApplicationController
   def apply_all
     ApplyAllRulesJob.perform_later(Current.family)
     redirect_back_or_to rules_path, notice: t("rules.apply_all.success")
+  end
+
+  def clear_ai_cache
+    ClearAiCacheJob.perform_later(Current.family)
+    redirect_to rules_path, notice: t("rules.clear_ai_cache.success")
   end
 
   private

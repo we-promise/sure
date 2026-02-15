@@ -94,6 +94,30 @@ class RuleTest < ActiveSupport::TestCase
     assert_not transaction_entry.excluded, "Transaction should not be excluded when attribute is locked"
   end
 
+  test "transaction name rules normalize whitespace in comparisons" do
+    transaction_entry = create_transaction(
+      date: Date.current,
+      account: @account,
+      name: "Company  -   Mobile",
+      amount: 80
+    )
+
+    rule = Rule.create!(
+      family: @family,
+      resource_type: "transaction",
+      effective_date: 1.day.ago.to_date,
+      conditions: [ Rule::Condition.new(condition_type: "transaction_name", operator: "like", value: "Company - Mobile") ],
+      actions: [ Rule::Action.new(action_type: "set_transaction_category", value: @groceries_category.id) ]
+    )
+
+    assert_equal 1, rule.affected_resource_count
+
+    rule.apply
+    transaction_entry.reload
+
+    assert_equal @groceries_category, transaction_entry.transaction.category
+  end
+
   # Artificial limitation put in place to prevent users from creating overly complex rules
   # Rules should be shallow and wide
   test "no nested compound conditions" do
@@ -112,6 +136,40 @@ class RuleTest < ActiveSupport::TestCase
 
     assert_not rule.valid?
     assert_equal [ "Compound conditions cannot be nested" ], rule.errors.full_messages
+  end
+
+  test "displayed_condition falls back to next valid condition when first compound condition is empty" do
+    rule = Rule.new(
+      family: @family,
+      resource_type: "transaction",
+      actions: [ Rule::Action.new(action_type: "exclude_transaction") ],
+      conditions: [
+        Rule::Condition.new(condition_type: "compound", operator: "and"),
+        Rule::Condition.new(condition_type: "transaction_name", operator: "like", value: "starbucks")
+      ]
+    )
+
+    displayed_condition = rule.displayed_condition
+
+    assert_not_nil displayed_condition
+    assert_equal "transaction_name", displayed_condition.condition_type
+    assert_equal "like", displayed_condition.operator
+    assert_equal "starbucks", displayed_condition.value
+  end
+
+  test "additional_displayable_conditions_count ignores empty compound conditions" do
+    rule = Rule.new(
+      family: @family,
+      resource_type: "transaction",
+      actions: [ Rule::Action.new(action_type: "exclude_transaction") ],
+      conditions: [
+        Rule::Condition.new(condition_type: "compound", operator: "and"),
+        Rule::Condition.new(condition_type: "transaction_name", operator: "like", value: "first"),
+        Rule::Condition.new(condition_type: "transaction_amount", operator: ">", value: 100)
+      ]
+    )
+
+    assert_equal 1, rule.additional_displayable_conditions_count
   end
 
   test "rule matching on transaction details" do

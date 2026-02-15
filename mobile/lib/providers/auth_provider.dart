@@ -1,8 +1,10 @@
 import 'package:flutter/foundation.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../models/user.dart';
 import '../models/auth_tokens.dart';
 import '../services/auth_service.dart';
 import '../services/device_service.dart';
+import '../services/api_config.dart';
 import '../services/log_service.dart';
 
 class AuthProvider with ChangeNotifier {
@@ -11,6 +13,8 @@ class AuthProvider with ChangeNotifier {
 
   User? _user;
   AuthTokens? _tokens;
+  String? _apiKey;
+  bool _isApiKeyAuth = false;
   bool _isLoading = true;
   bool _isInitializing = true; // Track initial auth check separately
   String? _errorMessage;
@@ -18,10 +22,15 @@ class AuthProvider with ChangeNotifier {
   bool _showMfaInput = false; // Track if we should show MFA input field
 
   User? get user => _user;
+  bool get isIntroLayout => _user?.isIntroLayout ?? false;
+  bool get aiEnabled => _user?.aiEnabled ?? false;
   AuthTokens? get tokens => _tokens;
   bool get isLoading => _isLoading;
   bool get isInitializing => _isInitializing; // Expose initialization state
-  bool get isAuthenticated => _tokens != null && !_tokens!.isExpired;
+  bool get isApiKeyAuth => _isApiKeyAuth;
+  bool get isAuthenticated =>
+      (_isApiKeyAuth && _apiKey != null) ||
+      (_tokens != null && !_tokens!.isExpired);
   String? get errorMessage => _errorMessage;
   bool get mfaRequired => _mfaRequired;
   bool get showMfaInput => _showMfaInput; // Expose MFA input state
@@ -36,16 +45,28 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      _tokens = await _authService.getStoredTokens();
-      _user = await _authService.getStoredUser();
+      final authMode = await _authService.getStoredAuthMode();
 
-      // If tokens exist but are expired, try to refresh
-      if (_tokens != null && _tokens!.isExpired) {
-        await _refreshToken();
+      if (authMode == 'api_key') {
+        _apiKey = await _authService.getStoredApiKey();
+        if (_apiKey != null) {
+          _isApiKeyAuth = true;
+          ApiConfig.setApiKeyAuth(_apiKey!);
+        }
+      } else {
+        _tokens = await _authService.getStoredTokens();
+        _user = await _authService.getStoredUser();
+
+        // If tokens exist but are expired, try to refresh
+        if (_tokens != null && _tokens!.isExpired) {
+          await _refreshToken();
+        }
       }
     } catch (e) {
       _tokens = null;
       _user = null;
+      _apiKey = null;
+      _isApiKeyAuth = false;
     }
 
     _isLoading = false;
@@ -121,6 +142,40 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
+  Future<bool> loginWithApiKey({
+    required String apiKey,
+  }) async {
+    _errorMessage = null;
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      final result = await _authService.loginWithApiKey(apiKey: apiKey);
+
+      LogService.instance.debug('AuthProvider', 'API key login result: $result');
+
+      if (result['success'] == true) {
+        _apiKey = apiKey;
+        _isApiKeyAuth = true;
+        ApiConfig.setApiKeyAuth(apiKey);
+        _isLoading = false;
+        notifyListeners();
+        return true;
+      } else {
+        _errorMessage = result['error'] as String?;
+        _isLoading = false;
+        notifyListeners();
+        return false;
+      }
+    } catch (e, stackTrace) {
+      LogService.instance.error('AuthProvider', 'API key login error: $e\n$stackTrace');
+      _errorMessage = 'Unable to connect. Please check your network and try again.';
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
   Future<bool> signup({
     required String email,
     required String password,
@@ -163,12 +218,69 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
+  Future<void> startSsoLogin(String provider) async {
+    _errorMessage = null;
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      final deviceInfo = await _deviceService.getDeviceInfo();
+      final ssoUrl = _authService.buildSsoUrl(
+        provider: provider,
+        deviceInfo: deviceInfo,
+      );
+
+      final launched = await launchUrl(Uri.parse(ssoUrl), mode: LaunchMode.externalApplication);
+      if (!launched) {
+        _errorMessage = 'Unable to open browser for sign-in.';
+      }
+    } catch (e, stackTrace) {
+      LogService.instance.error('AuthProvider', 'SSO launch error: $e\n$stackTrace');
+      _errorMessage = 'Unable to start sign-in. Please try again.';
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> handleSsoCallback(Uri uri) async {
+    _errorMessage = null;
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      final result = await _authService.handleSsoCallback(uri);
+
+      if (result['success'] == true) {
+        _tokens = result['tokens'] as AuthTokens?;
+        _user = result['user'] as User?;
+        _isLoading = false;
+        notifyListeners();
+        return true;
+      } else {
+        _errorMessage = result['error'] as String?;
+        _isLoading = false;
+        notifyListeners();
+        return false;
+      }
+    } catch (e, stackTrace) {
+      LogService.instance.error('AuthProvider', 'SSO callback error: $e\n$stackTrace');
+      _errorMessage = 'Sign-in failed. Please try again.';
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
   Future<void> logout() async {
     await _authService.logout();
     _tokens = null;
     _user = null;
+    _apiKey = null;
+    _isApiKeyAuth = false;
     _errorMessage = null;
     _mfaRequired = false;
+    ApiConfig.clearApiKeyAuth();
     notifyListeners();
   }
 
@@ -197,6 +309,10 @@ class AuthProvider with ChangeNotifier {
   }
 
   Future<String?> getValidAccessToken() async {
+    if (_isApiKeyAuth && _apiKey != null) {
+      return _apiKey;
+    }
+
     if (_tokens == null) return null;
 
     if (_tokens!.isExpired) {
@@ -205,6 +321,27 @@ class AuthProvider with ChangeNotifier {
     }
 
     return _tokens?.accessToken;
+  }
+
+  Future<bool> enableAi() async {
+    final accessToken = await getValidAccessToken();
+    if (accessToken == null) {
+      _errorMessage = 'Session expired. Please login again.';
+      notifyListeners();
+      return false;
+    }
+
+    final result = await _authService.enableAi(accessToken: accessToken);
+    if (result['success'] == true) {
+      _user = result['user'] as User?;
+      _errorMessage = null;
+      notifyListeners();
+      return true;
+    }
+
+    _errorMessage = result['error'] as String?;
+    notifyListeners();
+    return false;
   }
 
   void clearError() {

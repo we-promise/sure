@@ -12,6 +12,8 @@ class AuthService {
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
   static const String _tokenKey = 'auth_tokens';
   static const String _userKey = 'user_data';
+  static const String _apiKeyKey = 'api_key';
+  static const String _authModeKey = 'auth_mode';
 
   Future<Map<String, dynamic>> login({
     required String email,
@@ -286,9 +288,194 @@ class AuthService {
     }
   }
 
+  Future<Map<String, dynamic>> loginWithApiKey({
+    required String apiKey,
+  }) async {
+    try {
+      final url = Uri.parse('${ApiConfig.baseUrl}/api/v1/accounts');
+
+      final response = await http.get(
+        url,
+        headers: {
+          'X-Api-Key': apiKey,
+          'Accept': 'application/json',
+        },
+      ).timeout(const Duration(seconds: 30));
+
+      LogService.instance.debug('AuthService', 'API key login response status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        await _saveApiKey(apiKey);
+        return {
+          'success': true,
+        };
+      } else if (response.statusCode == 401) {
+        return {
+          'success': false,
+          'error': 'Invalid API key',
+        };
+      } else {
+        return {
+          'success': false,
+          'error': 'Login failed (status ${response.statusCode})',
+        };
+      }
+    } on SocketException catch (e, stackTrace) {
+      LogService.instance.error('AuthService', 'API key login SocketException: $e\n$stackTrace');
+      return {
+        'success': false,
+        'error': 'Network unavailable',
+      };
+    } on TimeoutException catch (e, stackTrace) {
+      LogService.instance.error('AuthService', 'API key login TimeoutException: $e\n$stackTrace');
+      return {
+        'success': false,
+        'error': 'Request timed out',
+      };
+    } catch (e, stackTrace) {
+      LogService.instance.error('AuthService', 'API key login unexpected error: $e\n$stackTrace');
+      return {
+        'success': false,
+        'error': 'An unexpected error occurred',
+      };
+    }
+  }
+
+  String buildSsoUrl({
+    required String provider,
+    required Map<String, String> deviceInfo,
+  }) {
+    final params = {
+      'device_id': deviceInfo['device_id']!,
+      'device_name': deviceInfo['device_name']!,
+      'device_type': deviceInfo['device_type']!,
+      'os_version': deviceInfo['os_version']!,
+      'app_version': deviceInfo['app_version']!,
+    };
+    final uri = Uri.parse('${ApiConfig.baseUrl}/auth/mobile/$provider')
+        .replace(queryParameters: params);
+    return uri.toString();
+  }
+
+  Future<Map<String, dynamic>> handleSsoCallback(Uri uri) async {
+    final params = uri.queryParameters;
+
+    if (params.containsKey('error')) {
+      return {
+        'success': false,
+        'error': params['message'] ?? params['error'] ?? 'SSO login failed',
+      };
+    }
+
+    final code = params['code'];
+    if (code == null || code.isEmpty) {
+      return {
+        'success': false,
+        'error': 'Invalid SSO callback response',
+      };
+    }
+
+    // Exchange authorization code for tokens via secure POST
+    try {
+      final url = Uri.parse('${ApiConfig.baseUrl}/api/v1/auth/sso_exchange');
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: jsonEncode({'code': code}),
+      ).timeout(const Duration(seconds: 30));
+
+      if (response.statusCode != 200) {
+        final errorData = jsonDecode(response.body);
+        return {
+          'success': false,
+          'error': errorData['message'] ?? 'Token exchange failed',
+        };
+      }
+
+      final data = jsonDecode(response.body);
+
+      final tokens = AuthTokens.fromJson({
+        'access_token': data['access_token'],
+        'refresh_token': data['refresh_token'],
+        'token_type': data['token_type'] ?? 'Bearer',
+        'expires_in': data['expires_in'] ?? 0,
+        'created_at': data['created_at'] ?? 0,
+      });
+      await _saveTokens(tokens);
+
+      final user = User.fromJson(data['user']);
+      await _saveUser(user);
+
+      return {
+        'success': true,
+        'tokens': tokens,
+        'user': user,
+      };
+    } on SocketException catch (e, stackTrace) {
+      LogService.instance.error('AuthService', 'SSO exchange SocketException: $e\n$stackTrace');
+      return {
+        'success': false,
+        'error': 'Network unavailable',
+      };
+    } on TimeoutException catch (e, stackTrace) {
+      LogService.instance.error('AuthService', 'SSO exchange TimeoutException: $e\n$stackTrace');
+      return {
+        'success': false,
+        'error': 'Request timed out',
+      };
+    } catch (e, stackTrace) {
+      LogService.instance.error('AuthService', 'SSO exchange unexpected error: $e\n$stackTrace');
+      return {
+        'success': false,
+        'error': 'Failed to exchange authorization code',
+      };
+    }
+  }
+
+  Future<Map<String, dynamic>> enableAi({
+    required String accessToken,
+  }) async {
+    try {
+      final url = Uri.parse('${ApiConfig.baseUrl}/api/v1/auth/enable_ai');
+      final response = await http.patch(
+        url,
+        headers: {
+          ...ApiConfig.getAuthHeaders(accessToken),
+          'Content-Type': 'application/json',
+        },
+      ).timeout(const Duration(seconds: 30));
+
+      final responseData = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        final user = User.fromJson(responseData['user']);
+        await _saveUser(user);
+        return {
+          'success': true,
+          'user': user,
+        };
+      }
+
+      return {
+        'success': false,
+        'error': responseData['error'] ?? responseData['errors']?.join(', ') ?? 'Failed to enable AI',
+      };
+    } catch (e) {
+      return {
+        'success': false,
+        'error': 'Network error: ${e.toString()}',
+      };
+    }
+  }
+
   Future<void> logout() async {
     await _storage.delete(key: _tokenKey);
     await _storage.delete(key: _userKey);
+    await _storage.delete(key: _apiKeyKey);
+    await _storage.delete(key: _authModeKey);
   }
 
   Future<AuthTokens?> getStoredTokens() async {
@@ -323,12 +510,20 @@ class AuthService {
   Future<void> _saveUser(User user) async {
     await _storage.write(
       key: _userKey,
-      value: jsonEncode({
-        'id': user.id,
-        'email': user.email,
-        'first_name': user.firstName,
-        'last_name': user.lastName,
-      }),
+      value: jsonEncode(user.toJson()),
     );
+  }
+
+  Future<void> _saveApiKey(String apiKey) async {
+    await _storage.write(key: _apiKeyKey, value: apiKey);
+    await _storage.write(key: _authModeKey, value: 'api_key');
+  }
+
+  Future<String?> getStoredApiKey() async {
+    return await _storage.read(key: _apiKeyKey);
+  }
+
+  Future<String?> getStoredAuthMode() async {
+    return await _storage.read(key: _authModeKey);
   }
 }

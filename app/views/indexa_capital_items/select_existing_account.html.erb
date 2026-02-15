@@ -1,0 +1,67 @@
+<% content_for :title, t("indexa_capital_items.select_existing_account.title", account_name: @account.name) %>
+
+<%= render DS::Dialog.new do |dialog| %>
+  <% dialog.with_header(title: t("indexa_capital_items.select_existing_account.header")) do %>
+    <div class="flex items-center gap-2">
+      <%= icon "link", class: "text-primary" %>
+      <span class="text-primary"><%= t("indexa_capital_items.select_existing_account.subtitle", account_name: @account.name) %></span>
+    </div>
+  <% end %>
+
+  <% dialog.with_body do %>
+    <% if @indexa_capital_accounts.blank? %>
+      <div class="text-center py-8">
+        <%= icon "alert-circle", class: "text-warning mx-auto mb-4", size: "lg" %>
+        <p class="text-secondary"><%= t("indexa_capital_items.select_existing_account.no_accounts") %></p>
+        <p class="text-sm text-secondary mt-2"><%= t("indexa_capital_items.select_existing_account.connect_hint") %></p>
+        <%= link_to t("indexa_capital_items.select_existing_account.settings_link"), settings_providers_path, class: "btn btn--primary btn--sm mt-4" %>
+      </div>
+    <% else %>
+      <div class="space-y-4">
+        <div class="bg-surface border border-primary p-4 rounded-lg mb-4">
+          <p class="text-sm text-primary">
+            <strong><%= t("indexa_capital_items.select_existing_account.linking_to") %></strong>
+            <%= @account.name %>
+          </p>
+        </div>
+
+        <% @indexa_capital_accounts.each do |indexa_capital_account| %>
+          <%= form_with url: link_existing_account_indexa_capital_items_path,
+                        method: :post,
+                        local: true,
+                        class: "border border-primary rounded-lg p-4 hover:bg-surface transition-colors" do |form| %>
+            <%= hidden_field_tag :account_id, @account.id %>
+            <%= hidden_field_tag :indexa_capital_account_id, indexa_capital_account.id %>
+
+            <div class="flex items-center justify-between">
+              <div>
+                <h4 class="font-medium text-primary"><%= indexa_capital_account.name %></h4>
+                <p class="text-sm text-secondary">
+                  <% if indexa_capital_account.account_type.present? %>
+                    <%= indexa_capital_account.account_type.titleize %> &middot;
+                  <% end %>
+                  <%= t("indexa_capital_items.select_existing_account.balance_label") %>
+                  <%= number_to_currency(indexa_capital_account.current_balance || 0, unit: Money::Currency.new(indexa_capital_account.currency || "EUR").symbol) %>
+                </p>
+              </div>
+              <%= render DS::Button.new(
+                text: t("indexa_capital_items.select_existing_account.link_button"),
+                variant: "primary",
+                size: "sm",
+                type: "submit"
+              ) %>
+            </div>
+          <% end %>
+        <% end %>
+      </div>
+
+      <div class="mt-6">
+        <%= render DS::Link.new(
+          text: t("indexa_capital_items.select_existing_account.cancel_button"),
+          variant: "secondary",
+          href: account_path(@account)
+        ) %>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>

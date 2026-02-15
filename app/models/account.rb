@@ -36,7 +36,7 @@ class Account < ApplicationRecord
     manual.where.not(status: :pending_deletion)
   }
 
-  has_one_attached :logo
+  has_one_attached :logo, dependent: :purge_later
 
   delegated_type :accountable, types: Accountable::TYPES, dependent: :destroy
   delegate :subtype, to: :accountable, allow_nil: true
@@ -74,6 +74,11 @@ class Account < ApplicationRecord
   end
 
   class << self
+    def human_attribute_name(attribute, options = {})
+      options = { moniker: Current.family&.moniker_label || "Family" }.merge(options)
+      super(attribute, options)
+    end
+
     def create_and_sync(attributes, skip_initial_sync: false)
       attributes[:accountable_attributes] ||= {} # Ensure accountable is created, even if empty
       # Default cash_balance to balance unless explicitly provided (e.g., Crypto sets it to 0)

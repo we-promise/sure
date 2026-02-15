@@ -4,6 +4,8 @@ class Import::ConfigurationsController < ApplicationController
   before_action :set_import
 
   def show
+    # PDF imports are auto-configured from AI extraction, skip to clean step
+    redirect_to import_clean_path(@import) if @import.is_a?(PdfImport)
   end
 
   def update

@@ -11,12 +11,23 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
       os_version: "17.0",
       app_version: "1.0.0"
     }
+
+    # Ensure the shared OAuth application exists
+    @shared_app = Doorkeeper::Application.find_or_create_by!(name: "Sure Mobile") do |app|
+      app.redirect_uri = "sureapp://oauth/callback"
+      app.scopes = "read read_write"
+      app.confidential = false
+    end
+    @shared_app.update!(scopes: "read read_write")
+
+    # Clear the memoized class variable so it picks up the test record
+    MobileDevice.instance_variable_set(:@shared_oauth_application, nil)
   end
 
   test "should signup new user and return OAuth tokens" do
     assert_difference("User.count", 1) do
       assert_difference("MobileDevice.count", 1) do
-        assert_difference("Doorkeeper::Application.count", 1) do
+        assert_no_difference("Doorkeeper::Application.count") do
           assert_difference("Doorkeeper::AccessToken.count", 1) do
             post "/api/v1/auth/signup", params: {
               user: {
@@ -39,6 +50,9 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
     assert_equal "newuser@example.com", response_data["user"]["email"]
     assert_equal "New", response_data["user"]["first_name"]
     assert_equal "User", response_data["user"]["last_name"]
+    new_user = User.find(response_data["user"]["id"])
+    assert_equal new_user.ui_layout, response_data["user"]["ui_layout"]
+    assert_equal new_user.ai_enabled?, response_data["user"]["ai_enabled"]
 
     # OAuth token assertions
     assert response_data["access_token"].present?
@@ -48,8 +62,8 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
     assert response_data["created_at"].present?
 
     # Verify the device was created
-    new_user = User.find(response_data["user"]["id"])
-    device = new_user.mobile_devices.first
+    created_user = User.find(response_data["user"]["id"])
+    device = created_user.mobile_devices.first
     assert_equal @device_info[:device_id], device.device_id
     assert_equal @device_info[:device_name], device.device_name
     assert_equal @device_info[:device_type], device.device_type
@@ -217,6 +231,8 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
 
     assert_equal user.id.to_s, response_data["user"]["id"]
     assert_equal user.email, response_data["user"]["email"]
+    assert_equal user.ui_layout, response_data["user"]["ui_layout"]
+    assert_equal user.ai_enabled?, response_data["user"]["ai_enabled"]
 
     # OAuth token assertions
     assert response_data["access_token"].present?
@@ -279,10 +295,10 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
 
     # Create an existing device and token
     device = user.mobile_devices.create!(@device_info)
-    oauth_app = device.create_oauth_application!
     existing_token = Doorkeeper::AccessToken.create!(
-      application: oauth_app,
+      application: @shared_app,
       resource_owner_id: user.id,
+      mobile_device_id: device.id,
       expires_in: 30.days.to_i,
       scopes: "read_write"
     )
@@ -332,6 +348,28 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Invalid email or password", response_data["error"]
   end
 
+  test "should login even when OAuth application is missing" do
+    user = users(:family_admin)
+    password = user_password_test
+
+    # Simulate a fresh instance where seeds were never run
+    Doorkeeper::Application.where(name: "Sure Mobile").destroy_all
+    MobileDevice.instance_variable_set(:@shared_oauth_application, nil)
+
+    assert_difference("Doorkeeper::Application.count", 1) do
+      post "/api/v1/auth/login", params: {
+        email: user.email,
+        password: password,
+        device: @device_info
+      }
+    end
+
+    assert_response :success
+    response_data = JSON.parse(response.body)
+    assert response_data["access_token"].present?
+    assert response_data["refresh_token"].present?
+  end
+
   test "should not login without device info" do
     user = users(:family_admin)
 
@@ -350,12 +388,12 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
   test "should refresh access token with valid refresh token" do
     user = users(:family_admin)
     device = user.mobile_devices.create!(@device_info)
-    oauth_app = device.create_oauth_application!
 
     # Create initial token
     initial_token = Doorkeeper::AccessToken.create!(
-      application: oauth_app,
+      application: @shared_app,
       resource_owner_id: user.id,
+      mobile_device_id: device.id,
       expires_in: 30.days.to_i,
       scopes: "read_write",
       use_refresh_token: true
@@ -406,5 +444,65 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
     assert_response :bad_request
     response_data = JSON.parse(response.body)
     assert_equal "Refresh token is required", response_data["error"]
+  end
+
+  test "should enable ai for authenticated user" do
+    user = users(:family_admin)
+    user.update!(ai_enabled: false)
+    device = user.mobile_devices.create!(@device_info)
+    token = Doorkeeper::AccessToken.create!(application: @shared_app, resource_owner_id: user.id, mobile_device_id: device.id, scopes: "read_write")
+
+    patch "/api/v1/auth/enable_ai", headers: {
+      "Authorization" => "Bearer #{token.token}",
+      "Content-Type" => "application/json"
+    }
+
+    assert_response :success
+    response_data = JSON.parse(response.body)
+    assert_equal true, response_data.dig("user", "ai_enabled")
+    assert_equal user.ui_layout, response_data.dig("user", "ui_layout")
+    assert_equal true, user.reload.ai_enabled
+  end
+
+  test "should require read_write scope to enable ai" do
+    user = users(:family_admin)
+    user.update!(ai_enabled: false)
+    device = user.mobile_devices.create!(@device_info)
+    token = Doorkeeper::AccessToken.create!(application: @shared_app, resource_owner_id: user.id, mobile_device_id: device.id, scopes: "read")
+
+    patch "/api/v1/auth/enable_ai", headers: {
+      "Authorization" => "Bearer #{token.token}",
+      "Content-Type" => "application/json"
+    }
+
+    assert_response :forbidden
+    response_data = JSON.parse(response.body)
+    assert_equal "insufficient_scope", response_data["error"]
+    assert_equal "This action requires the 'write' scope", response_data["message"]
+    assert_not user.reload.ai_enabled
+  end
+
+  test "should require authentication when enabling ai" do
+    patch "/api/v1/auth/enable_ai", headers: { "Content-Type" => "application/json" }
+
+    assert_response :unauthorized
+  end
+
+  test "should return forbidden when ai is not available" do
+    user = users(:family_admin)
+    user.update!(ai_enabled: false)
+    device = user.mobile_devices.create!(@device_info)
+    token = Doorkeeper::AccessToken.create!(application: @shared_app, resource_owner_id: user.id, mobile_device_id: device.id, scopes: "read_write")
+    User.any_instance.stubs(:ai_available?).returns(false)
+
+    patch "/api/v1/auth/enable_ai", headers: {
+      "Authorization" => "Bearer #{token.token}",
+      "Content-Type" => "application/json"
+    }
+
+    assert_response :forbidden
+    response_data = JSON.parse(response.body)
+    assert_equal "AI is not available for your account", response_data["error"]
+    assert_not user.reload.ai_enabled
   end
 end

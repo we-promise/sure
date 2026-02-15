@@ -111,6 +111,7 @@ class Security::Price::Importer
         )
 
         if response.success?
+          Security.clear_plan_restriction(security.id, provider: security_provider.class.name.demodulize)
           response.data.index_by(&:date)
         else
           error = response.error
@@ -120,7 +121,17 @@ class Security::Price::Importer
             raise error
           end
 
-          Rails.logger.warn("#{security_provider.class.name} could not fetch prices for #{security.ticker} between #{provider_fetch_start_date} and #{end_date}. Provider error: #{error.message}")
+          error_message = response.error.message
+          Rails.logger.warn("#{security_provider.class.name} could not fetch prices for #{security.ticker} between #{provider_fetch_start_date} and #{end_date}. Provider error: #{error_message}")
+
+          if Security.plan_upgrade_required?(error_message, provider: security_provider.class.name.demodulize)
+            Security.record_plan_restriction(
+              security_id: security.id,
+              error_message: error_message,
+              provider: security_provider.class.name.demodulize
+            )
+          end
+
           Sentry.capture_exception(MissingSecurityPriceError.new("Could not fetch prices for ticker"), level: :warning) do |scope|
             scope.set_tags(security_id: security.id)
             scope.set_context("security", { id: security.id, start_date: start_date, end_date: end_date })

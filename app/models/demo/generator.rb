@@ -93,6 +93,9 @@ class Demo::Generator
       puts "👥 Creating demo family..."
       family = create_family_and_users!("Demo Family", email, onboarded: true, subscribed: true)
 
+      puts "🔑 Creating monitoring API key..."
+      create_monitoring_api_key!(family)
+
       puts "📊 Creating realistic financial data..."
       create_realistic_categories!(family)
       create_realistic_accounts!(family)
@@ -168,7 +171,7 @@ class Demo::Generator
         onboarded_at: onboarded ? Time.current : nil
       )
 
-      # Member user
+      # Family member user
       family.users.create!(
         email: "partner_#{email}",
         first_name: "Eve",
@@ -179,6 +182,33 @@ class Demo::Generator
       )
 
       family
+    end
+
+    def create_monitoring_api_key!(family)
+      admin_user = family.users.find_by(role: "admin")
+      return unless admin_user
+
+      # Find existing key scoped to this admin user by the deterministic display_key value
+      existing_key = admin_user.api_keys.find_by(display_key: ApiKey::DEMO_MONITORING_KEY)
+
+      if existing_key
+        puts "  → Use existing monitoring API key"
+        return existing_key
+      end
+
+      # Revoke any existing user-created web API keys to keep demo access predictable.
+      # (the monitoring key uses the dedicated "monitoring" source and cannot be revoked)
+      admin_user.api_keys.active.visible.where(source: "web").find_each(&:revoke!)
+
+      api_key = admin_user.api_keys.create!(
+        name: "monitoring",
+        key: ApiKey::DEMO_MONITORING_KEY,
+        scopes: [ "read" ],
+        source: "monitoring"
+      )
+
+      puts "  → Created monitoring API key: #{ApiKey::DEMO_MONITORING_KEY}"
+      api_key
     end
 
     def create_realistic_categories!(family)

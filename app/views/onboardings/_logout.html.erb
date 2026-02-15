@@ -1,8 +1,8 @@
- <%= render DS::Button.new(
-        text: "Sign out",
-        icon: "log-out",
-        icon_position: :right,
-        variant: "ghost",
-        href: session_path(Current.session),
-        method: :delete
-      ) %>
+<%= render DS::Button.new(
+  text: t("onboardings.logout.sign_out"),
+  icon: "log-out",
+  icon_position: :right,
+  variant: "ghost",
+  href: session_path(Current.session),
+  method: :delete
+) %>
