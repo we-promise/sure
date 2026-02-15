@@ -119,11 +119,10 @@ class Transaction::SearchTest < ActiveSupport::TestCase
 
     # Should include standard uncategorized transactions
     assert_includes uncategorized_ids, uncategorized_standard.entryable.id
-    # Should include loan_payment since it's treated specially in category logic
-    assert_includes uncategorized_ids, uncategorized_loan_payment.entryable.id
 
-    # Should exclude transfer transactions even if uncategorized
+    # Should exclude all transfer kinds (TRANSFER_KINDS) even if uncategorized
     assert_not_includes uncategorized_ids, uncategorized_transfer.entryable.id
+    assert_not_includes uncategorized_ids, uncategorized_loan_payment.entryable.id
   end
 
   test "filtering for only Uncategorized returns only uncategorized transactions" do
