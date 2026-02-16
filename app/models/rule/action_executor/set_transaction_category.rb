@@ -9,6 +9,7 @@ class Rule::ActionExecutor::SetTransactionCategory < Rule::ActionExecutor
 
   def execute(transaction_scope, value: nil, ignore_attribute_locks: false, rule_run: nil)
     category = family.categories.find_by_id(value)
+    return 0 unless category
 
     scope = transaction_scope
 
