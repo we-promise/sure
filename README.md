@@ -93,13 +93,6 @@ For further instructions, see guides below.
 
 [![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/sure?referralCode=CW_fPQ)
 
-## License and Trademarks
-
-Maybe and Sure are both distributed under
-an [AGPLv3 license](https://github.com/we-promise/sure/blob/main/LICENSE).
-- "Maybe" is a trademark of Maybe Finance, Inc.
-- "Sure" is not, and refers to this community fork.
-
 <!-- MOBILE_DOWNLOADS_START -->
 ## Latest Mobile Release: v0.6.8-alpha.10
 
@@ -112,3 +105,10 @@ an [AGPLv3 license](https://github.com/we-promise/sure/blob/main/LICENSE).
 
 > **Note**: These are builds intended for testing purposes. For production use, please build from source with proper signing credentials.
 <!-- MOBILE_DOWNLOADS_END -->
+
+## License and Trademarks
+
+Maybe and Sure are both distributed under
+an [AGPLv3 license](https://github.com/we-promise/sure/blob/main/LICENSE).
+- "Maybe" is a trademark of Maybe Finance, Inc.
+- "Sure" is not, and refers to this community fork.
