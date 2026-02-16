@@ -357,6 +357,31 @@ components:
           format: uuid
         name:
           type: string
+    MerchantDetail:
+      type: object
+      required:
+      - id
+      - name
+      - type
+      - created_at
+      - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        type:
+          type: string
+          enum:
+          - FamilyMerchant
+          - ProviderMerchant
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
     Tag:
       type: object
       required:
@@ -798,10 +823,10 @@ components:
           format: date
         qty:
           type: string
-          description: Quantity as string (JSON number or string from API)
+          description: Quantity of shares held
         price:
           type: string
-          description: Price as string (JSON number or string from API)
+          description: Formatted price per share
         amount:
           type: string
         currency:
@@ -848,6 +873,49 @@ components:
         pagination:
           "$ref": "#/components/schemas/Pagination"
 paths:
+  "/api/v1/merchants":
+    get:
+      summary: List merchants
+      tags:
+      - Merchants
+      security:
+      - apiKeyAuth: []
+      responses:
+        '200':
+          description: merchants listed
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  "$ref": "#/components/schemas/MerchantDetail"
+  "/api/v1/merchants/{id}":
+    parameters:
+    - name: id
+      in: path
+      required: true
+      description: Merchant ID
+      schema:
+        type: string
+    get:
+      summary: Retrieve a merchant
+      tags:
+      - Merchants
+      security:
+      - apiKeyAuth: []
+      responses:
+        '200':
+          description: merchant retrieved
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/MerchantDetail"
+        '404':
+          description: merchant not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
   "/api/v1/accounts":
     get:
       summary: List accounts
@@ -875,6 +943,365 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/AccountCollection"
+  "/api/v1/auth/signup":
+    post:
+      summary: Sign up a new user
+      tags:
+      - Auth
+      parameters: []
+      responses:
+        '201':
+          description: user created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+                  refresh_token:
+                    type: string
+                  token_type:
+                    type: string
+                  expires_in:
+                    type: integer
+                  created_at:
+                    type: integer
+                  user:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      email:
+                        type: string
+                      first_name:
+                        type: string
+                      last_name:
+                        type: string
+                      ui_layout:
+                        type: string
+                        enum:
+                        - dashboard
+                        - intro
+                      ai_enabled:
+                        type: boolean
+        '422':
+          description: validation error
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: invite code required or invalid
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                user:
+                  type: object
+                  properties:
+                    email:
+                      type: string
+                      format: email
+                      description: User email address
+                    password:
+                      type: string
+                      description: Password (min 8 chars, mixed case, number, special
+                        char)
+                    first_name:
+                      type: string
+                    last_name:
+                      type: string
+                  required:
+                  - email
+                  - password
+                device:
+                  type: object
+                  properties:
+                    device_id:
+                      type: string
+                      description: Unique device identifier
+                    device_name:
+                      type: string
+                      description: Human-readable device name
+                    device_type:
+                      type: string
+                      description: Device type (e.g. ios, android)
+                    os_version:
+                      type: string
+                    app_version:
+                      type: string
+                  required:
+                  - device_id
+                  - device_name
+                  - device_type
+                  - os_version
+                  - app_version
+                invite_code:
+                  type: string
+                  nullable: true
+                  description: Invite code (required when invites are enforced)
+              required:
+              - user
+              - device
+        required: true
+  "/api/v1/auth/login":
+    post:
+      summary: Log in with email and password
+      tags:
+      - Auth
+      parameters: []
+      responses:
+        '200':
+          description: login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+                  refresh_token:
+                    type: string
+                  token_type:
+                    type: string
+                  expires_in:
+                    type: integer
+                  created_at:
+                    type: integer
+                  user:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      email:
+                        type: string
+                      first_name:
+                        type: string
+                      last_name:
+                        type: string
+                      ui_layout:
+                        type: string
+                        enum:
+                        - dashboard
+                        - intro
+                      ai_enabled:
+                        type: boolean
+        '401':
+          description: invalid credentials or MFA required
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                otp_code:
+                  type: string
+                  nullable: true
+                  description: TOTP code if MFA is enabled
+                device:
+                  type: object
+                  properties:
+                    device_id:
+                      type: string
+                    device_name:
+                      type: string
+                    device_type:
+                      type: string
+                    os_version:
+                      type: string
+                    app_version:
+                      type: string
+                  required:
+                  - device_id
+                  - device_name
+                  - device_type
+                  - os_version
+                  - app_version
+              required:
+              - email
+              - password
+              - device
+        required: true
+  "/api/v1/auth/sso_exchange":
+    post:
+      summary: Exchange mobile SSO authorization code for tokens
+      tags:
+      - Auth
+      description: Exchanges a one-time authorization code (received via deep link
+        after mobile SSO) for OAuth tokens. The code is single-use and expires after
+        5 minutes.
+      parameters: []
+      responses:
+        '200':
+          description: tokens issued
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+                  refresh_token:
+                    type: string
+                  token_type:
+                    type: string
+                  expires_in:
+                    type: integer
+                  created_at:
+                    type: integer
+                  user:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      email:
+                        type: string
+                      first_name:
+                        type: string
+                      last_name:
+                        type: string
+                      ui_layout:
+                        type: string
+                        enum:
+                        - dashboard
+                        - intro
+                      ai_enabled:
+                        type: boolean
+        '401':
+          description: invalid or expired code
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                code:
+                  type: string
+                  description: One-time authorization code from mobile SSO callback
+              required:
+              - code
+        required: true
+  "/api/v1/auth/refresh":
+    post:
+      summary: Refresh an access token
+      tags:
+      - Auth
+      parameters: []
+      responses:
+        '200':
+          description: token refreshed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+                  refresh_token:
+                    type: string
+                  token_type:
+                    type: string
+                  expires_in:
+                    type: integer
+                  created_at:
+                    type: integer
+        '401':
+          description: invalid refresh token
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '400':
+          description: missing refresh token
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                refresh_token:
+                  type: string
+                  description: The refresh token from a previous login or refresh
+                device:
+                  type: object
+                  properties:
+                    device_id:
+                      type: string
+                  required:
+                  - device_id
+              required:
+              - refresh_token
+              - device
+        required: true
+  "/api/v1/auth/enable_ai":
+    patch:
+      summary: Enable AI features for the authenticated user
+      tags:
+      - Auth
+      security:
+      - apiKeyAuth: []
+      responses:
+        '200':
+          description: ai enabled
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      email:
+                        type: string
+                      first_name:
+                        type: string
+                        nullable: true
+                      last_name:
+                        type: string
+                        nullable: true
+                      ui_layout:
+                        type: string
+                        enum:
+                        - dashboard
+                        - intro
+                      ai_enabled:
+                        type: boolean
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
   "/api/v1/categories":
     get:
       summary: List categories
@@ -1247,8 +1674,8 @@ paths:
     parameters:
     - name: id
       in: path
-      description: Holding ID
       required: true
+      description: Holding ID
       schema:
         type: string
     get:
@@ -1732,8 +2159,8 @@ paths:
     parameters:
     - name: id
       in: path
-      description: Trade ID
       required: true
+      description: Trade ID
       schema:
         type: string
     get:
@@ -1767,6 +2194,7 @@ paths:
       - Trades
       security:
       - apiKeyAuth: []
+      parameters: []
       responses:
         '200':
           description: trade updated
@@ -1780,12 +2208,6 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
-        '422':
-          description: validation error
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/ErrorResponse"
       requestBody:
         content:
           application/json:
@@ -1794,34 +2216,30 @@ paths:
               properties:
                 trade:
                   type: object
-                  description: Flat params; controller builds internal structure. When qty/price are updated, type or nature controls sign; if omitted, existing trade direction is preserved.
                   properties:
                     date:
                       type: string
                       format: date
-                    name:
-                      type: string
-                    amount:
+                    qty:
                       type: number
-                    currency:
-                      type: string
-                    notes:
-                      type: string
-                    nature:
-                      type: string
-                      enum:
-                      - inflow
-                      - outflow
+                    price:
+                      type: number
                     type:
                       type: string
                       enum:
                       - buy
                       - sell
-                      description: Determines sign when qty/price are updated.
-                    qty:
-                      type: number
-                    price:
-                      type: number
+                    nature:
+                      type: string
+                      enum:
+                      - inflow
+                      - outflow
+                    name:
+                      type: string
+                    notes:
+                      type: string
+                    currency:
+                      type: string
                     investment_activity_label:
                       type: string
                     category_id:
@@ -2136,6 +2554,8 @@ paths:
                       items:
                         type: string
                         format: uuid
+                      description: Array of tag IDs to assign. Omit to preserve existing
+                        tags; use [] to clear all tags.
         required: true
     delete:
       summary: Delete a transaction

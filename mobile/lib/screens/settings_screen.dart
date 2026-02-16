@@ -122,9 +122,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final authProvider = Provider.of<AuthProvider>(context);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Settings'),
-      ),
       body: ListView(
         children: [
           // User info section
@@ -180,10 +177,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
 
           // App version
-          const ListTile(
-            leading: Icon(Icons.info_outline),
-            title: Text('App Version'),
-            subtitle: Text('1.0.0'),
+          ListTile(
+            leading: const Icon(Icons.info_outline),
+            title: const Text('App Version: 0.6.8'),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(' > ui_layout: ${authProvider.user?.uiLayout}'),
+                Text(' > ai_enabled: ${authProvider.user?.aiEnabled}'),
+              ],
+            ),
           ),
 
           const Divider(),

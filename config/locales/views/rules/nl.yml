@@ -2,6 +2,7 @@
 nl:
   rules:
     no_action: Geen actie
+    no_condition: Geen voorwaarde
     actions:
       value_placeholder: Voer een waarde in
     apply_all:

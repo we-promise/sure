@@ -633,6 +633,106 @@ The assistant uses OpenAI's function calling (tool use) to access user data:
 
 These are defined in `app/models/assistant/function/`.
 
+### Vector Store (Document Search)
+
+Sure's AI assistant can search documents that have been uploaded to a family's vault. Under the hood, documents are indexed in a **vector store** so the assistant can retrieve relevant passages when answering questions (Retrieval-Augmented Generation).
+
+#### How It Works
+
+1. When a user uploads a document to their family vault, it is automatically pushed to the configured vector store.
+2. When the assistant needs financial context from uploaded files, it calls the `search_family_files` function.
+3. The vector store returns the most relevant passages, which the assistant uses to answer the question.
+
+#### Supported Backends
+
+| Backend | Status | Best For | Requirements |
+|---------|--------|----------|--------------|
+| **OpenAI** (default) | ready | Cloud deployments, zero setup | `OPENAI_ACCESS_TOKEN` |
+| **Pgvector** | scaffolded | Self-hosted, full data privacy | PostgreSQL with `pgvector` extension |
+| **Qdrant** | scaffolded | Self-hosted, dedicated vector DB | Running Qdrant instance |
+
+#### Configuration
+
+##### OpenAI (Default)
+
+No extra configuration is needed. If you already have `OPENAI_ACCESS_TOKEN` set for the AI assistant, document search works automatically. OpenAI manages chunking, embedding, and retrieval.
+
+```bash
+# Already set for AI chat — document search uses the same token
+OPENAI_ACCESS_TOKEN=sk-proj-...
+```
+
+##### Pgvector (Self-Hosted)
+
+> [!CAUTION]
+> Only `OpenAI` has been implemented!
+
+Use PostgreSQL's pgvector extension for fully local document search:
+
+```bash
+VECTOR_STORE_PROVIDER=pgvector
+```
+
+> **Note:** The pgvector adapter is currently a skeleton. A future release will add full support including embedding model configuration.
+
+##### Qdrant (Self-Hosted)
+
+> [!CAUTION]
+> Only `OpenAI` has been implemented!
+
+Use a dedicated Qdrant vector database:
+
+```bash
+VECTOR_STORE_PROVIDER=qdrant
+QDRANT_URL=http://localhost:6333   # Default if not set
+QDRANT_API_KEY=your-api-key        # Optional, for authenticated instances
+```
+
+Docker Compose example:
+
+```yaml
+services:
+  sure:
+    environment:
+      - VECTOR_STORE_PROVIDER=qdrant
+      - QDRANT_URL=http://qdrant:6333
+    depends_on:
+      - qdrant
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    ports:
+      - "6333:6333"
+    volumes:
+      - qdrant_data:/qdrant/storage
+
+volumes:
+  qdrant_data:
+```
+
+> **Note:** The Qdrant adapter is currently a skeleton. A future release will add full support including collection management and embedding configuration.
+
+#### Verifying the Configuration
+
+You can check whether a vector store is properly configured from the Rails console:
+
+```ruby
+VectorStore.configured?          # => true / false
+VectorStore.adapter              # => #<VectorStore::Openai:...>
+VectorStore.adapter.class.name   # => "VectorStore::Openai"
+```
+
+#### Supported File Types
+
+The following file extensions are supported for document upload and search:
+
+`.pdf`, `.txt`, `.md`, `.csv`, `.json`, `.xml`, `.html`, `.css`, `.js`, `.rb`, `.py`, `.docx`, `.pptx`, `.xlsx`, `.yaml`, `.yml`, `.log`, `.sh`
+
+#### Privacy Notes
+
+- **OpenAI backend:** Document content is sent to OpenAI's API for indexing and search. The same privacy considerations as the AI chat apply.
+- **Pgvector / Qdrant backends:** All data stays on your infrastructure. No external API calls are made for document search.
+
 ### Multi-Model Setup
 
 Currently not supported out of the box, but you could:

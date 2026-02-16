@@ -1,28 +1,23 @@
-<%= render DS::Dialog.new(frame: "drawer") do |dialog| %>
-  <% dialog.with_header(hide_close_icon: true) do %>
+<%= render DS::Dialog.new(frame: "drawer", responsive: true) do |dialog| %>
+  <% dialog.with_header(custom_header: true) do %>
     <div class="flex items-start justify-between gap-4">
       <div>
         <h3 class="font-medium flex items-center gap-2">
           <span class="text-2xl text-primary">
             <%= format_money @transfer.amount_abs %>
           </span>
-
           <span class="text-lg text-secondary">
             <%= @transfer.amount_abs.currency.iso_code %>
           </span>
-
           <%= icon "arrow-left-right", size: "sm", class: "text-secondary" %>
         </h3>
-
         <span class="text-sm text-secondary">
           <%= @transfer.name %>
         </span>
       </div>
-
-      <%= render DS::Button.new(variant: "icon", icon: "x", data: { action: "DS--dialog#close" }) %>
+      <%= dialog.close_button %>
     </div>
   <% end %>
-
   <% dialog.with_body do %>
     <% dialog.with_section(title: t(".overview"), open: true) do %>
       <div class="pb-4 px-3 pt-2 text-sm space-y-3 text-primary">
@@ -34,20 +29,16 @@
               <%= link_to @transfer.from_account.name, account_path(@transfer.from_account), data: { turbo_frame: "_top" } %>
             </dd>
           </dl>
-
           <dl class="flex items-center gap-2 justify-between">
             <dt class="text-secondary">Date</dt>
             <dd class="font-medium"><%= l(@transfer.outflow_transaction.entry.date, format: :long) %></dd>
           </dl>
-
           <dl class="flex items-center gap-2 justify-between">
             <dt class="text-secondary">Amount</dt>
             <dd class="font-medium text-red-500"><%= format_money @transfer.outflow_transaction.entry.amount_money * -1 %></dd>
           </dl>
         </div>
-
         <%= render "shared/ruler", classes: "my-2" %>
-
         <div class="space-y-3">
           <dl class="flex items-center gap-2 justify-between">
             <dt class="text-secondary">To</dt>
@@ -56,12 +47,10 @@
               <%= link_to @transfer.to_account.name, account_path(@transfer.to_account), data: { turbo_frame: "_top" } %>
             </dd>
           </dl>
-
           <dl class="flex items-center gap-2 justify-between">
             <dt class="text-secondary">Date</dt>
             <dd class="font-medium"><%= l(@transfer.inflow_transaction.entry.date, format: :long) %></dd>
           </dl>
-
           <dl class="flex items-center gap-2 justify-between">
             <dt class="text-secondary">Amount</dt>
             <dd class="font-medium text-green-500">+<%= format_money @transfer.inflow_transaction.entry.amount_money * -1 %></dd>
@@ -69,14 +58,12 @@
         </div>
       </div>
     <% end %>
-
     <% dialog.with_section(title: t(".details")) do %>
       <%= styled_form_with model: @transfer,
               data: { controller: "auto-submit-form" }, class: "space-y-2" do |f| %>
         <% if @transfer.categorizable? %>
           <%= f.collection_select :category_id, @categories.alphabetically, :id, :name, { label: "Category", include_blank: "Uncategorized", selected: @transfer.outflow_transaction.category&.id }, "data-auto-submit-form-target": "auto" %>
         <% end %>
-
         <%= f.text_area :notes,
                   label: t(".note_label"),
                   placeholder: t(".note_placeholder"),
@@ -84,7 +71,6 @@
                   "data-auto-submit-form-target": "auto" %>
       <% end %>
     <% end %>
-
     <% dialog.with_section(title: t(".settings")) do %>
       <div class="pb-4">
         <div class="flex items-center justify-between gap-2 p-3">
@@ -92,7 +78,6 @@
             <h4 class="text-primary"><%= t(".delete_title") %></h4>
             <p class="text-secondary"><%= t(".delete_subtitle") %></p>
           </div>
-
           <%= button_to t(".delete"),
                 transfer_path(@transfer),
                 method: :delete,

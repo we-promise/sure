@@ -80,10 +80,12 @@ en:
         reset_account_with_sample_data_warning: Delete all your existing data and then load fresh sample data so you can explore with a pre-filled environment.
         email: Email
         first_name: First Name
+        group_form_input_placeholder: Enter group name
+        group_form_label: Group name
+        group_title: Group Members
         household_form_input_placeholder: Enter household name
         household_form_label: Household name
-        household_subtitle: Invite family members, partners and other inviduals.  Invitees
-          can login to your household and access your shared accounts.
+        household_subtitle: Invitees can login to your %{moniker} account and access shared resources.
         household_title: Household
         invitation_link: Invitation link
         invite_member: Add member
