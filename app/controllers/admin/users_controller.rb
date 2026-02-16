@@ -6,7 +6,10 @@ module Admin
 
     def index
       authorize User
-      @users = policy_scope(User).order(:email)
+      @users = policy_scope(User)
+        .left_joins(family: :subscription)
+        .includes(family: :subscription)
+        .order(Arel.sql("subscriptions.trial_ends_at IS NULL, subscriptions.trial_ends_at ASC, users.email ASC"))
     end
 
     def update

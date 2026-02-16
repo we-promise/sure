@@ -7,6 +7,8 @@ en:
         description: "Manage user roles for your instance. Super admins can access SSO provider settings and user management."
         section_title: "Users"
         you: "(You)"
+        trial_ends_at: "Trial ends"
+        not_available: "n/a"
         no_users: "No users found."
         role_descriptions_title: "Role Descriptions"
         roles:
