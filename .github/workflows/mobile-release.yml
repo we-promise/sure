@@ -112,3 +112,84 @@ jobs:
             - **iOS Build**: Unsigned iOS build (requires code signing for installation)
 
             > **Note**: These are builds intended for testing purposes. For production use, please build from source with proper signing credentials.
+
+      - name: Checkout gh-pages branch
+        uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+          path: gh-pages
+
+      - name: Update README with latest mobile release links
+        run: |
+          set -euo pipefail
+          VERSION="${{ steps.version.outputs.version }}"
+          TAG="${{ github.ref_name }}"
+          REPO="${{ github.repository }}"
+
+          # Build download links based on which assets were produced
+          LINKS=""
+          if [ -f "${{ runner.temp }}/release-assets/sure-${VERSION}.apk" ]; then
+            LINKS="${LINKS}- **Android APK**: [sure-${VERSION}.apk](https://github.com/${REPO}/releases/download/${TAG}/sure-${VERSION}.apk)\n"
+          fi
+          if [ -f "${{ runner.temp }}/release-assets/sure-${VERSION}-debug.apk" ]; then
+            LINKS="${LINKS}- **Android Debug APK**: [sure-${VERSION}-debug.apk](https://github.com/${REPO}/releases/download/${TAG}/sure-${VERSION}-debug.apk)\n"
+          fi
+          if [ -f "${{ runner.temp }}/release-assets/sure-${VERSION}-ios-unsigned.zip" ]; then
+            LINKS="${LINKS}- **iOS Build (unsigned)**: [sure-${VERSION}-ios-unsigned.zip](https://github.com/${REPO}/releases/download/${TAG}/sure-${VERSION}-ios-unsigned.zip)\n"
+          fi
+
+          # Build the mobile downloads section
+          SECTION="$(cat <<BLOCK
+          <!-- MOBILE_DOWNLOADS_START -->
+          ## Latest Mobile Release: ${VERSION}
+
+          **Release page**: [${TAG}](https://github.com/${REPO}/releases/tag/${TAG})
+
+          ### Direct Downloads
+
+          $(echo -e "$LINKS")
+
+          > **Note**: These are builds intended for testing purposes. For production use, please build from source with proper signing credentials.
+          <!-- MOBILE_DOWNLOADS_END -->
+          BLOCK
+          )"
+
+          # Strip leading whitespace from heredoc indentation
+          SECTION="$(echo "$SECTION" | sed 's/^          //')"
+
+          README="gh-pages/README.md"
+
+          if [ ! -f "$README" ]; then
+            # No README yet — create one
+            printf "# Sure\n\n%s\n" "$SECTION" > "$README"
+          elif grep -q '<!-- MOBILE_DOWNLOADS_START -->' "$README"; then
+            # Replace existing mobile section between markers
+            awk '
+              /<!-- MOBILE_DOWNLOADS_START -->/ { skip=1; next }
+              /<!-- MOBILE_DOWNLOADS_END -->/   { skip=0; next }
+              !skip { print }
+            ' "$README" > "${README}.tmp"
+
+            # Re-insert the updated section at the end
+            printf "%s\n\n%s\n" "$(cat "${README}.tmp")" "$SECTION" > "$README"
+            rm "${README}.tmp"
+          else
+            # Append mobile section to existing README
+            printf "\n%s\n" "$SECTION" >> "$README"
+          fi
+
+          echo "Updated README.md:"
+          cat "$README"
+
+      - name: Push updated README to gh-pages
+        run: |
+          cd gh-pages
+          git config user.name "${{ github.actor }}"
+          git config user.email "${{ github.actor }}@users.noreply.github.com"
+          git add README.md
+          if git diff --cached --quiet; then
+            echo "No README changes to push."
+            exit 0
+          fi
+          git commit -m "Update mobile download links for ${{ steps.version.outputs.version }}"
+          git push
