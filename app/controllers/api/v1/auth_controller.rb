@@ -54,14 +54,7 @@ module Api
             return
           end
 
-          render json: token_response.merge(
-            user: {
-              id: user.id,
-              email: user.email,
-              first_name: user.first_name,
-              last_name: user.last_name
-            }
-          ), status: :created
+          render json: token_response.merge(user: mobile_user_payload(user)), status: :created
         else
           render json: { errors: user.errors.full_messages }, status: :unprocessable_entity
         end
@@ -97,14 +90,7 @@ module Api
             return
           end
 
-          render json: token_response.merge(
-            user: {
-              id: user.id,
-              email: user.email,
-              first_name: user.first_name,
-              last_name: user.last_name
-            }
-          )
+          render json: token_response.merge(user: mobile_user_payload(user))
         else
           render json: { error: "Invalid email or password" }, status: :unauthorized
         end
@@ -143,7 +129,9 @@ module Api
             id: cached[:user_id],
             email: cached[:user_email],
             first_name: cached[:user_first_name],
-            last_name: cached[:user_last_name]
+            last_name: cached[:user_last_name],
+            ui_layout: cached[:user_ui_layout],
+            ai_enabled: cached[:user_ai_enabled]
           }
         }
       end
@@ -228,6 +216,17 @@ module Api
 
         def sso_exchange_params
           params.require(:code)
+        end
+
+        def mobile_user_payload(user)
+          {
+            id: user.id,
+            email: user.email,
+            first_name: user.first_name,
+            last_name: user.last_name,
+            ui_layout: user.ui_layout,
+            ai_enabled: user.ai_enabled?
+          }
         end
     end
   end

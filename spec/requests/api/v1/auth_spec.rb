@@ -51,7 +51,9 @@ RSpec.describe 'API V1 Auth', type: :request do
                      id: { type: :string, format: :uuid },
                      email: { type: :string },
                      first_name: { type: :string },
-                     last_name: { type: :string }
+                     last_name: { type: :string },
+                     ui_layout: { type: :string, enum: %w[dashboard intro] },
+                     ai_enabled: { type: :boolean }
                    }
                  }
                }
@@ -110,7 +112,9 @@ RSpec.describe 'API V1 Auth', type: :request do
                      id: { type: :string, format: :uuid },
                      email: { type: :string },
                      first_name: { type: :string },
-                     last_name: { type: :string }
+                     last_name: { type: :string },
+                     ui_layout: { type: :string, enum: %w[dashboard intro] },
+                     ai_enabled: { type: :boolean }
                    }
                  }
                }
@@ -152,7 +156,9 @@ RSpec.describe 'API V1 Auth', type: :request do
                      id: { type: :string, format: :uuid },
                      email: { type: :string },
                      first_name: { type: :string },
-                     last_name: { type: :string }
+                     last_name: { type: :string },
+                     ui_layout: { type: :string, enum: %w[dashboard intro] },
+                     ai_enabled: { type: :boolean }
                    }
                  }
                }
@@ -209,4 +215,6 @@ RSpec.describe 'API V1 Auth', type: :request do
       end
     end
   end
+
+
 end
