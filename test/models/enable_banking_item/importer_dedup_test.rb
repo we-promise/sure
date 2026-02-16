@@ -259,6 +259,33 @@ class EnableBankingItem::ImporterDedupTest < ActiveSupport::TestCase
     assert_equal "ref_aaa", result.first[:entry_reference]
   end
 
+  test "preserves transactions with same non-unique transaction_id but different content" do
+    # Per Enable Banking API docs, transaction_id is not guaranteed to be unique.
+    # Two transactions sharing a transaction_id but differing in content must both be kept.
+    transactions = [
+      {
+        entry_reference: "ref_1",
+        transaction_id: "shared_tid",
+        booking_date: "2026-02-09",
+        transaction_amount: { amount: "25.00", currency: "EUR" },
+        creditor: { name: "Amazon" },
+        status: "BOOK"
+      },
+      {
+        entry_reference: "ref_2",
+        transaction_id: "shared_tid",
+        booking_date: "2026-02-09",
+        transaction_amount: { amount: "42.00", currency: "EUR" },
+        creditor: { name: "Amazon" },
+        status: "BOOK"
+      }
+    ]
+
+    result = @importer.send(:deduplicate_api_transactions, transactions)
+
+    assert_equal 2, result.count
+  end
+
   test "returns empty array for empty input" do
     result = @importer.send(:deduplicate_api_transactions, [])
     assert_equal [], result

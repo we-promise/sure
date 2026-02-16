@@ -239,23 +239,20 @@ class EnableBankingItem::Importer
 
     # Deduplicate transactions from the Enable Banking API response.
     # Some banks return the same logical transaction multiple times with different
-    # entry_reference IDs. When transaction_id is present it is a stable unique
-    # identifier, so we use it directly as the dedup key — this preserves
-    # legitimately distinct transactions with identical content (e.g. two
-    # laundromat payments on the same day). When transaction_id is nil we fall
-    # back to a content-based key (date, amount, currency, creditor, debtor,
-    # remittance_information). (Issue #954)
+    # entry_reference IDs. We build a composite content key that includes
+    # transaction_id (when present) alongside date, amount, currency, creditor,
+    # debtor, remittance_information, and status. Per the Enable Banking API docs
+    # transaction_id is not guaranteed to be unique, so it cannot be used as
+    # the sole dedup criterion. Including it in the composite key preserves
+    # legitimately distinct transactions with identical content but different
+    # transaction_ids (e.g. two laundromat payments on the same day). (Issue #954)
     def deduplicate_api_transactions(transactions)
       seen = {}
       duplicates_removed = 0
 
       result = transactions.select do |tx|
         tx = tx.with_indifferent_access
-
-        # Prefer transaction_id (stable) over content-based key (fallback for
-        # the nil-transaction_id duplicate entry_reference scenario).
-        tid = tx[:transaction_id].presence
-        key = tid ? "tid:#{tid}" : build_transaction_content_key(tx)
+        key = build_transaction_content_key(tx)
 
         if seen[key]
           duplicates_removed += 1
@@ -276,13 +273,13 @@ class EnableBankingItem::Importer
       result
     end
 
-    # Build a content-based key for deduplication. Two transactions with different
-    # entry_reference values but identical content fields are considered duplicates.
-    #
-    # This method is only used as a fallback when transaction_id is nil. When
-    # transaction_id is present, it is used directly as the dedup key, which
-    # preserves legitimately distinct transactions with identical content
-    # (e.g. two laundromat payments of the same amount on the same day).
+    # Build a composite key for deduplication. Two transactions with different
+    # entry_reference values but identical content fields (including
+    # transaction_id) are considered duplicates. transaction_id is included
+    # as one component — not a standalone key — because the Enable Banking
+    # API docs state it is not guaranteed to be unique. When transaction_id
+    # differs between otherwise-identical transactions, both are preserved.
+    # When transaction_id is nil for both, pure content comparison applies.
     # (Issue #954)
     def build_transaction_content_key(tx)
       date = tx[:booking_date].presence || tx[:value_date]
@@ -293,8 +290,9 @@ class EnableBankingItem::Importer
       remittance = tx[:remittance_information]
       remittance_key = remittance.is_a?(Array) ? remittance.compact.map(&:to_s).sort.join("|") : remittance.to_s
       status = tx[:status]
+      tid = tx[:transaction_id]
 
-      [ date, amount, currency, creditor, debtor, remittance_key, status ].map(&:to_s).join("\x1F")
+      [ date, amount, currency, creditor, debtor, remittance_key, status, tid ].map(&:to_s).join("\x1F")
     end
 
     def determine_sync_start_date(enable_banking_account)
