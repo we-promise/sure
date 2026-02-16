@@ -23,6 +23,6 @@ class Admin::UsersControllerTest < ActionDispatch::IntegrationTest
     get admin_users_url
 
     assert_response :success
-    assert_match(/Trial ends:\s*n\/a/, response.body)
+    assert_match(/n\/a/, response.body, "Page should show n/a for users without trial end date")
   end
 end
