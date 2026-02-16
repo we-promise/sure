@@ -65,6 +65,12 @@ class SureApp extends StatelessWidget {
         title: 'Sure Finance',
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
+          fontFamily: 'Geist',
+          fontFamilyFallback: const [
+            'Inter',
+            'Arial',
+            'sans-serif',
+          ],
           colorScheme: ColorScheme.fromSeed(
             seedColor: const Color(0xFF6366F1),
             brightness: Brightness.light,
@@ -96,6 +102,12 @@ class SureApp extends StatelessWidget {
           ),
         ),
         darkTheme: ThemeData(
+          fontFamily: 'Geist',
+          fontFamilyFallback: const [
+            'Inter',
+            'Arial',
+            'sans-serif',
+          ],
           colorScheme: ColorScheme.fromSeed(
             seedColor: const Color(0xFF6366F1),
             brightness: Brightness.dark,

@@ -44,7 +44,7 @@ end %>
     </div>
 
     <%# MOBILE - Top nav %>
-    <nav class="lg:hidden flex justify-between items-center p-3">
+    <nav class="lg:hidden flex justify-between items-center p-3 pt-[calc(env(safe-area-inset-top)+0.75rem)]">
       <% if intro_mode %>
       <% else %>
         <%= icon("panel-left", as_button: true, data: { action: "app-layout#openMobileSidebar"}) %>
@@ -126,7 +126,7 @@ end %>
     <% end %>
 
     <%# SHARED - Main content %>
-    <%= tag.main class: class_names("grow overflow-y-auto px-3 lg:px-10 pt-0 pb-4 w-full mx-auto max-w-5xl"), data: { app_layout_target: "content" } do %>
+    <%= tag.main class: class_names("grow overflow-y-auto px-3 lg:px-10 w-full mx-auto max-w-5xl"), data: { app_layout_target: "content", viewport_target: "content" } do %>
       <% unless intro_mode %>
         <div class="hidden lg:flex gap-2 items-center justify-between mb-6 sticky top-0 z-10 -mx-3 lg:-mx-10 px-3 lg:px-10 py-4 bg-surface border-b border-tertiary">
           <div class="flex items-center gap-2">
@@ -173,7 +173,8 @@ end %>
     <% end %>
 
     <%# MOBILE - Bottom Nav %>
-    <%= tag.nav class: "lg:hidden sticky bottom-0 left-0 right-0 bg-surface z-10 border-t border-tertiary flex justify-around" do %>
+    <%= tag.nav class: "lg:hidden fixed bottom-0 left-0 right-0 bg-surface z-10 border-t border-tertiary flex justify-around pb-[env(safe-area-inset-bottom)]",
+      data: { viewport_target: "bottomNav" } do %>
       <% mobile_nav_items.each do |nav_item| %>
         <%= render "layouts/shared/nav_item", **nav_item %>
       <% end %>

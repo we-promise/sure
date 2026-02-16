@@ -56,7 +56,9 @@ class AuthService {
         // Store user data - parse once and reuse
         User? user;
         if (responseData['user'] != null) {
-          user = User.fromJson(responseData['user']);
+          final rawUser = responseData['user'];
+          _logRawUserPayload('login', rawUser);
+          user = User.fromJson(rawUser);
           await _saveUser(user);
         }
 
@@ -160,7 +162,9 @@ class AuthService {
         // Store user data - parse once and reuse
         User? user;
         if (responseData['user'] != null) {
-          user = User.fromJson(responseData['user']);
+          final rawUser = responseData['user'];
+          _logRawUserPayload('signup', rawUser);
+          user = User.fromJson(rawUser);
           await _saveUser(user);
         }
 
@@ -406,6 +410,7 @@ class AuthService {
       });
       await _saveTokens(tokens);
 
+      _logRawUserPayload('sso_exchange', data['user']);
       final user = User.fromJson(data['user']);
       await _saveUser(user);
 
@@ -451,6 +456,7 @@ class AuthService {
       final responseData = jsonDecode(response.body);
 
       if (response.statusCode == 200) {
+        _logRawUserPayload('enable_ai', responseData['user']);
         final user = User.fromJson(responseData['user']);
         await _saveUser(user);
         return {
@@ -512,6 +518,23 @@ class AuthService {
       key: _userKey,
       value: jsonEncode(user.toJson()),
     );
+  }
+
+  void _logRawUserPayload(String source, dynamic userPayload) {
+    if (userPayload == null) {
+      LogService.instance.debug('AuthService', '$source user payload: <missing>');
+      return;
+    }
+
+    if (userPayload is Map<String, dynamic>) {
+      try {
+        LogService.instance.debug('AuthService', '$source user payload: ${jsonEncode(userPayload)}');
+      } catch (_) {
+        LogService.instance.debug('AuthService', '$source user payload: $userPayload');
+      }
+    } else {
+      LogService.instance.debug('AuthService', '$source user payload type: ${userPayload.runtimeType}');
+    }
   }
 
   Future<void> _saveApiKey(String apiKey) async {
