@@ -14,10 +14,10 @@
             options_for_select(
               [[t(".filters.role_all"), ""], [t(".roles.guest"), "guest"], [t(".roles.member", default: "Member"), "member"], [t(".roles.admin"), "admin"], [t(".roles.super_admin"), "super_admin"]],
               params[:role]
-              <p class="text-sm text-secondary">
-                <%= t(".trial_ends_at") %>:
-                <%= user.family&.subscription&.trial_ends_at&.to_fs(:long) || t(".not_available") %>
-              </p>
+            ),
+            {},
+            class: "rounded-lg border border-primary px-3 py-2 text-sm bg-container-inset text-primary w-full" %>
+      </div>
       <div class="w-full md:w-auto">
         <%= f.label :trial_status, t(".filters.trial_status"), class: "block text-sm font-medium text-primary mb-1" %>
         <%= f.select :trial_status,
