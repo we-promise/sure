@@ -266,7 +266,7 @@ class LunchflowEntry::ProcessorTest < ActiveSupport::TestCase
 
     assert_not_nil result1
     assert_equal "lunchflow_lf_txn_real_123", result1.external_id
-    assert_not result1.transaction.pending?
+    assert_not result1.entryable.pending?
 
     entries_before = @account.entries.where(source: "lunchflow").count
 
@@ -375,7 +375,7 @@ class LunchflowEntry::ProcessorTest < ActiveSupport::TestCase
     ).process
 
     assert_not_nil result
-    assert result.transaction.pending?, "Should create new pending entry when merchant doesn't match"
+    assert result.entryable.pending?, "Should create new pending entry when merchant doesn't match"
     assert result.external_id.start_with?("lunchflow_pending_"), "Should have temporary ID"
   end
 end
