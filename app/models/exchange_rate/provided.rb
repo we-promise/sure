@@ -2,6 +2,7 @@ module ExchangeRate::Provided
   extend ActiveSupport::Concern
 
   class_methods do
+    # Returns the configured exchange rate provider instance.
     def provider
       provider = ENV["EXCHANGE_RATE_PROVIDER"].presence || Setting.exchange_rate_provider
       registry = Provider::Registry.for_concept(:exchange_rates)

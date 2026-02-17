@@ -1,13 +1,16 @@
 class BalanceSheet::AccountTotals
+  # Builds account row data for the balance sheet, converting balances to the family's currency.
   def initialize(family, sync_status_monitor:)
     @family = family
     @sync_status_monitor = sync_status_monitor
   end
 
+  # Returns account rows classified as assets.
   def asset_accounts
     @asset_accounts ||= account_rows.filter { |t| t.classification == "asset" }
   end
 
+  # Returns account rows classified as liabilities.
   def liability_accounts
     @liability_accounts ||= account_rows.filter { |t| t.classification == "liability" }
   end
@@ -23,10 +26,12 @@ class BalanceSheet::AccountTotals
       delegate_missing_to :account
     end
 
+    # Returns the family's visible accounts with logos eager-loaded.
     def visible_accounts
       @visible_accounts ||= family.accounts.visible.with_attached_logo
     end
 
+    # Wraps each account in an AccountRow with its converted balance and sync status.
     def account_rows
       @account_rows ||= accounts.map do |account|
         AccountRow.new(
@@ -37,6 +42,7 @@ class BalanceSheet::AccountTotals
       end
     end
 
+    # Returns the cache key for storing visible account IDs, invalidated on data updates.
     def cache_key
       family.build_cache_key(
         "balance_sheet_account_ids",
