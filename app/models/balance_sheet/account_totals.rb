@@ -28,44 +28,31 @@ class BalanceSheet::AccountTotals
     end
 
     def account_rows
-      @account_rows ||= query.map do |account_row|
+      @account_rows ||= cached_accounts.map do |account|
         AccountRow.new(
-          account: account_row,
-          converted_balance: account_row.converted_balance,
-          is_syncing: sync_status_monitor.account_syncing?(account_row)
+          account: account,
+          converted_balance: converted_balance_for(account),
+          is_syncing: sync_status_monitor.account_syncing?(account)
         )
       end
     end
 
     def cache_key
       family.build_cache_key(
-        "balance_sheet_account_rows",
+        "balance_sheet_accounts",
         invalidate_on_data_updates: true
       )
     end
 
-    def query
-      @query ||= Rails.cache.fetch(cache_key) do
-        visible_accounts
-          .joins(ActiveRecord::Base.sanitize_sql_array([
-            "LEFT JOIN LATERAL (
-              SELECT exchange_rates.rate
-              FROM exchange_rates
-              WHERE exchange_rates.from_currency = accounts.currency
-                AND exchange_rates.to_currency = ?
-                AND exchange_rates.date <= ?
-              ORDER BY exchange_rates.date DESC
-              LIMIT 1
-            ) latest_rate ON true",
-            family.currency,
-            Date.current
-          ]))
-          .select(
-            "accounts.*",
-            "SUM(accounts.balance * COALESCE(latest_rate.rate, 1)) as converted_balance"
-          )
-          .group(:classification, :accountable_type, :id)
-          .to_a
+    def cached_accounts
+      @cached_accounts ||= Rails.cache.fetch(cache_key) do
+        visible_accounts.to_a
       end
+    end
+
+    def converted_balance_for(account)
+      Money.new(account.balance, account.currency)
+           .exchange_to(family.currency, date: Date.current, fallback_rate: 1)
+           .amount
     end
 end

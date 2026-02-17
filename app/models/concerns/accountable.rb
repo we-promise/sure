@@ -65,20 +65,12 @@ module Accountable
     def balance_money(family)
       family.accounts
             .active
-            .joins(sanitize_sql_array([
-              "LEFT JOIN LATERAL (
-                SELECT exchange_rates.rate
-                FROM exchange_rates
-                WHERE exchange_rates.from_currency = accounts.currency
-                  AND exchange_rates.to_currency = :family_currency
-                  AND exchange_rates.date <= :current_date
-                ORDER BY exchange_rates.date DESC
-                LIMIT 1
-              ) latest_rate ON true",
-              { current_date: Date.current.to_s, family_currency: family.currency }
-            ]))
             .where(accountable_type: self.name)
-            .sum("accounts.balance * COALESCE(latest_rate.rate, 1)")
+            .sum { |account|
+              Money.new(account.balance, account.currency)
+                   .exchange_to(family.currency, date: Date.current, fallback_rate: 1)
+                   .amount
+            }
     end
   end
 
