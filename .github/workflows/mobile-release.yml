@@ -93,26 +93,40 @@ jobs:
           fi
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ github.ref_name }}
-          name: "${{ steps.version.outputs.version }} (Mobile)"
-          draft: false
-          prerelease: ${{ contains(github.ref_name, 'alpha') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') }}
-          generate_release_notes: false
-          files: |
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          VERSION="${{ steps.version.outputs.version }}"
+          TAG="${{ github.ref_name }}"
+
+          cat > /tmp/release-notes.md <<NOTES
+          ## Mobile-Only Release: ${VERSION}
+
+          This is a mobile-only release. It does not include server-side changes.
+
+          ### Downloads
+
+          - **Android APK**: Debug build for testing on Android devices
+          - **iOS Build**: Unsigned iOS build (requires code signing for installation)
+
+          > **Note**: These are builds intended for testing purposes. For production use, please build from source with proper signing credentials.
+          NOTES
+
+          # Strip heredoc indentation
+          sed -i 's/^          //' /tmp/release-notes.md
+
+          PRERELEASE_FLAG=""
+          if [[ "$TAG" == *"alpha"* ]] || [[ "$TAG" == *"beta"* ]] || [[ "$TAG" == *"rc"* ]]; then
+            PRERELEASE_FLAG="--prerelease"
+          fi
+
+          gh release create "$TAG" \
+            --repo "${{ github.repository }}" \
+            --title "${VERSION} (Mobile)" \
+            --notes-file /tmp/release-notes.md \
+            $PRERELEASE_FLAG \
             ${{ runner.temp }}/release-assets/*
-          body: |
-            ## Mobile-Only Release: ${{ steps.version.outputs.version }}
-
-            This is a mobile-only release. It does not include server-side changes.
-
-            ### Downloads
-
-            - **Android APK**: Debug build for testing on Android devices
-            - **iOS Build**: Unsigned iOS build (requires code signing for installation)
-
-            > **Note**: These are builds intended for testing purposes. For production use, please build from source with proper signing credentials.
 
       - name: Checkout gh-pages branch
         uses: actions/checkout@v4
