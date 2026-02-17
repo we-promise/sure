@@ -5,14 +5,6 @@ import { Controller } from "@hotwired/stimulus";
 export default class extends Controller {
   static targets = ["name", "badge"];
 
-  connect() {
-    this.nameTarget.addEventListener("input", this.handleNameChange);
-  }
-
-  disconnect() {
-    this.nameTarget.removeEventListener("input", this.handleNameChange);
-  }
-
   handleNameChange = (e) => {
     this.nameTarget.textContent = e.currentTarget.value || "?";
   };
