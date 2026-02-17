@@ -52,11 +52,11 @@ class Balance::ChartSeriesBuilderTest < ActiveSupport::TestCase
     )
 
     # Only 1 rate in DB. We'll be missing the first and last days in the series.
-    # This rate should be applied to 1 day ago and today, but not 2 days ago (will fall back to 1)
+    # This rate should be applied to all days: LOCF for future dates, nearest future rate for earlier dates.
     ExchangeRate.create!(date: 1.day.ago.to_date, from_currency: "USD", to_currency: "EUR", rate: 2)
 
     expected = [
-      1000, # No rate available, so fall back to 1:1 conversion (1000 USD = 1000 EUR)
+      2000, # No prior rate, so use nearest future rate (2:1 from 1 day ago): 1000 * 2 = 2000
       2200, # Rate available, so use 2:1 conversion (1100 USD = 2200 EUR)
       2400 # Rate NOT available, but LOCF will use the last available rate, so use 2:1 conversion (1200 USD = 2400 EUR)
     ]
