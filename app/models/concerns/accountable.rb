@@ -63,14 +63,23 @@ module Accountable
     end
 
     def balance_money(family)
-      family.accounts
-            .active
-            .where(accountable_type: self.name)
-            .sum { |account|
-              Money.new(account.balance, account.currency)
-                   .exchange_to(family.currency, date: Date.current, fallback_rate: 1)
-                   .amount
-            }
+      accounts = family.accounts.active.where(accountable_type: self.name).to_a
+
+      rates = accounts
+        .filter_map { |a| a.currency if a.currency != family.currency }
+        .uniq
+        .each_with_object({}) do |currency, map|
+          rate = ExchangeRate.find_or_fetch_rate(from: currency, to: family.currency, date: Date.current)
+          map[currency] = rate&.rate || 1
+        end
+
+      accounts.sum { |account|
+        if account.currency == family.currency
+          account.balance
+        else
+          account.balance * (rates[account.currency] || 1)
+        end
+      }
     end
   end
 
