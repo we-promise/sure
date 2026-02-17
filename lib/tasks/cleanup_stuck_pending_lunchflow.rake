@@ -23,13 +23,14 @@ namespace :lunchflow do
       # matching is sufficient. We still exclude self (pending_entry.id) for extra safety.
       posted_match = Entry
         .where(source: "lunchflow")
+        .where(account_id: pending_entry.account_id)
         .where(name: pending_entry.name)
         .where(amount: pending_entry.amount)
         .where(currency: pending_entry.currency)
         .where("date BETWEEN ? AND ?", pending_entry.date, pending_entry.date + 8)
         .where("external_id NOT LIKE 'lunchflow_pending_%'")
         .where("external_id IS NOT NULL")
-        .where.not(id: pending_entry.id) # Exclude self for extra safety
+        .where.not(id: pending_entry.id)
         .order(date: :asc) # Prefer closest date match
         .first
 

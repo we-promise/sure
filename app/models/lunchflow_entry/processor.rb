@@ -238,7 +238,7 @@ class LunchflowEntry::Processor
 
       # Add merchant name matching for better precision
       # Only if merchant name is present in the transaction data
-      if name.present?
+      if data[:merchant].present?
         query = query.where(name: name)
       end
 
