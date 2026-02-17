@@ -73,6 +73,10 @@ class LunchflowEntry::Processor
     end
 
     def external_id
+      @external_id ||= calculate_external_id
+    end
+
+    def calculate_external_id
       id = data[:id].presence
 
       # For pending transactions, Lunchflow may return blank/nil IDs
@@ -111,10 +115,10 @@ class LunchflowEntry::Processor
           Rails.logger.debug "Lunchflow: Generated temporary ID #{final_id} for pending transaction: #{data[:merchant]} #{data[:amount]} #{data[:currency]}"
         end
 
-        return final_id
+        final_id
+      else
+        "lunchflow_#{id}"
       end
-
-      "lunchflow_#{id}"
     end
 
     def entry_exists_with_external_id?(external_id)
