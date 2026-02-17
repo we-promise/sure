@@ -44,6 +44,8 @@ class BalanceSheet::AccountTotals
       )
     end
 
+    # Loads visible accounts, caching their IDs to speed up subsequent requests.
+    # On cache miss, loads records once and writes IDs; on hit, filters by cached IDs.
     def accounts
       @accounts ||= begin
         ids = Rails.cache.read(cache_key)
@@ -58,6 +60,8 @@ class BalanceSheet::AccountTotals
       end
     end
 
+    # Batch-fetches today's exchange rates for all foreign currencies present in accounts.
+    # @return [Hash{String => Numeric}] currency code to rate mapping
     def exchange_rates
       @exchange_rates ||= begin
         foreign_currencies = accounts.filter_map { |a| a.currency if a.currency != family.currency }
@@ -65,6 +69,8 @@ class BalanceSheet::AccountTotals
       end
     end
 
+    # Converts an account's balance to the family's currency using pre-fetched exchange rates.
+    # @return [BigDecimal] balance in the family's currency
     def converted_balance_for(account)
       return account.balance if account.currency == family.currency
 

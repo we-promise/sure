@@ -62,6 +62,8 @@ module Accountable
       self.name.pluralize.titleize
     end
 
+    # Sums the balances of all active accounts of this type, converting foreign currencies to the family's currency.
+    # @return [BigDecimal] total balance in the family's currency
     def balance_money(family)
       accounts = family.accounts.active.where(accountable_type: self.name).to_a
 

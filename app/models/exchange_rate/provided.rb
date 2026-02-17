@@ -8,6 +8,8 @@ module ExchangeRate::Provided
       registry.get_provider(provider.to_sym)
     end
 
+    # Looks up an exchange rate in the database, falling back to the configured provider.
+    # @return [ExchangeRate, nil] the rate record, or nil if unavailable
     def find_or_fetch_rate(from:, to:, date: Date.current, cache: true)
       rate = find_by(from_currency: from, to_currency: to, date: date)
       return rate if rate.present?
