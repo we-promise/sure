@@ -10,6 +10,11 @@ class Setting < RailsSettings::Base
   field :openai_uri_base, type: :string, default: ENV["OPENAI_URI_BASE"]
   field :openai_model, type: :string, default: ENV["OPENAI_MODEL"]
   field :openai_json_mode, type: :string, default: ENV["LLM_JSON_MODE"]
+  field :cloudflare_ai_gateway_account_id, type: :string, default: ENV["CLOUDFLARE_AI_GATEWAY_ACCOUNT_ID"]
+  field :cloudflare_ai_gateway_id, type: :string, default: ENV["CLOUDFLARE_AI_GATEWAY_ID"]
+  field :cloudflare_ai_gateway_token, type: :string, default: ENV["CLOUDFLARE_AI_GATEWAY_TOKEN"]
+  field :cloudflare_ai_gateway_access_token, type: :string, default: ENV["CLOUDFLARE_AI_GATEWAY_ACCESS_TOKEN"]
+  field :cloudflare_ai_gateway_model, type: :string, default: ENV["CLOUDFLARE_AI_GATEWAY_MODEL"]
   field :brand_fetch_client_id, type: :string, default: ENV["BRAND_FETCH_CLIENT_ID"]
   field :brand_fetch_high_res_logos, type: :boolean, default: ENV.fetch("BRAND_FETCH_HIGH_RES_LOGOS", "false") == "true"
 

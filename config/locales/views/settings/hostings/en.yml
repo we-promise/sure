@@ -42,6 +42,21 @@ en:
         title: Brand Fetch Settings
         high_res_label: Enable high-resolution logos
         high_res_description: When enabled, logos will be retrieved at 120x120 resolution instead of 40x40. This provides sharper images on high-DPI displays.
+      cloudflare_ai_gateway_settings:
+        title: Cloudflare AI Gateway
+        description: Route AI requests through Cloudflare AI Gateway for caching, analytics, and multi-provider access. Use the {provider}/{model} format for models.
+        env_configured_message: Successfully configured through environment variables.
+        account_id_label: Account ID
+        account_id_placeholder: Enter your Cloudflare Account ID
+        gateway_id_label: Gateway ID
+        gateway_id_placeholder: Enter your AI Gateway ID
+        access_token_label: Provider API Key (pass-through mode)
+        access_token_placeholder: Enter the API key for your LLM provider
+        cf_token_label: Cloudflare Gateway Token (BYOK mode)
+        cf_token_placeholder: Enter your Cloudflare AI Gateway token
+        model_label: Model
+        model_placeholder: "openai/gpt-4o"
+        model_help: "Use {provider}/{model} format. Examples: openai/gpt-4o, anthropic/claude-4-5-sonnet, google-ai-studio/gemini-2.5-pro, groq/llama-3.1-70b"
       openai_settings:
         description: Enter the access token and optionally configure a custom OpenAI-compatible provider
         env_configured_message: Successfully configured through environment variables.

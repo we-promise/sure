@@ -78,6 +78,35 @@ class Provider::Registry
         Provider::Openai.new(access_token, uri_base: uri_base, model: model)
       end
 
+      def cloudflare_ai_gateway
+        account_id = ENV["CLOUDFLARE_AI_GATEWAY_ACCOUNT_ID"].presence || Setting.cloudflare_ai_gateway_account_id
+        gateway_id = ENV["CLOUDFLARE_AI_GATEWAY_ID"].presence || Setting.cloudflare_ai_gateway_id
+
+        return nil unless account_id.present? && gateway_id.present?
+
+        cf_aig_token = ENV["CLOUDFLARE_AI_GATEWAY_TOKEN"].presence || Setting.cloudflare_ai_gateway_token
+        access_token = ENV["CLOUDFLARE_AI_GATEWAY_ACCESS_TOKEN"].presence ||
+                       Setting.cloudflare_ai_gateway_access_token
+
+        # At least one auth method is required
+        return nil unless cf_aig_token.present? || access_token.present?
+
+        model = ENV["CLOUDFLARE_AI_GATEWAY_MODEL"].presence || Setting.cloudflare_ai_gateway_model
+
+        if model.blank?
+          Rails.logger.error("Cloudflare AI Gateway configured without a model; please set CLOUDFLARE_AI_GATEWAY_MODEL")
+          return nil
+        end
+
+        Provider::CloudflareAiGateway.new(
+          account_id: account_id,
+          gateway_id: gateway_id,
+          cf_aig_token: cf_aig_token,
+          access_token: access_token,
+          model: model
+        )
+      end
+
       def yahoo_finance
         Provider::YahooFinance.new
       end
@@ -110,7 +139,7 @@ class Provider::Registry
       when :securities
         %i[twelve_data yahoo_finance]
       when :llm
-        %i[openai]
+        %i[openai cloudflare_ai_gateway]
       else
         %i[plaid_us plaid_eu github openai]
       end

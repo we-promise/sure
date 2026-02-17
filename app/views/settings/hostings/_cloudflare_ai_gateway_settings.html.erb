@@ -1,0 +1,73 @@
+<div class="space-y-4">
+  <div>
+    <h2 class="font-medium mb-1"><%= t(".title") %></h2>
+    <% if ENV["CLOUDFLARE_AI_GATEWAY_ACCOUNT_ID"].present? %>
+      <p class="text-sm text-secondary"><%= t(".env_configured_message") %></p>
+    <% else %>
+      <p class="text-secondary text-sm mb-4"><%= t(".description") %></p>
+    <% end %>
+  </div>
+
+  <%= styled_form_with model: Setting.new,
+                       url: settings_hosting_path,
+                       method: :patch,
+                       class: "space-y-4",
+                       data: {
+                         controller: "auto-submit-form",
+                         "auto-submit-form-trigger-event-value": "blur"
+                       } do |form| %>
+  <%= form.text_field :cloudflare_ai_gateway_account_id,
+                      label: t(".account_id_label"),
+                      placeholder: t(".account_id_placeholder"),
+                      value: Setting.cloudflare_ai_gateway_account_id,
+                      autocomplete: "off",
+                      autocapitalize: "none",
+                      spellcheck: "false",
+                      disabled: ENV["CLOUDFLARE_AI_GATEWAY_ACCOUNT_ID"].present?,
+                      data: { "auto-submit-form-target": "auto" } %>
+
+  <%= form.text_field :cloudflare_ai_gateway_id,
+                      label: t(".gateway_id_label"),
+                      placeholder: t(".gateway_id_placeholder"),
+                      value: Setting.cloudflare_ai_gateway_id,
+                      autocomplete: "off",
+                      autocapitalize: "none",
+                      spellcheck: "false",
+                      disabled: ENV["CLOUDFLARE_AI_GATEWAY_ID"].present?,
+                      data: { "auto-submit-form-target": "auto" } %>
+
+  <%= form.password_field :cloudflare_ai_gateway_access_token,
+                          label: t(".access_token_label"),
+                          placeholder: t(".access_token_placeholder"),
+                          value: (Setting.cloudflare_ai_gateway_access_token.present? ? "********" : nil),
+                          autocomplete: "off",
+                          autocapitalize: "none",
+                          spellcheck: "false",
+                          inputmode: "text",
+                          disabled: ENV["CLOUDFLARE_AI_GATEWAY_ACCESS_TOKEN"].present?,
+                          data: { "auto-submit-form-target": "auto" } %>
+
+  <%= form.password_field :cloudflare_ai_gateway_token,
+                          label: t(".cf_token_label"),
+                          placeholder: t(".cf_token_placeholder"),
+                          value: (Setting.cloudflare_ai_gateway_token.present? ? "********" : nil),
+                          autocomplete: "off",
+                          autocapitalize: "none",
+                          spellcheck: "false",
+                          inputmode: "text",
+                          disabled: ENV["CLOUDFLARE_AI_GATEWAY_TOKEN"].present?,
+                          data: { "auto-submit-form-target": "auto" } %>
+
+  <%= form.text_field :cloudflare_ai_gateway_model,
+                      label: t(".model_label"),
+                      placeholder: t(".model_placeholder"),
+                      value: Setting.cloudflare_ai_gateway_model,
+                      autocomplete: "off",
+                      autocapitalize: "none",
+                      spellcheck: "false",
+                      inputmode: "text",
+                      disabled: ENV["CLOUDFLARE_AI_GATEWAY_MODEL"].present?,
+                      data: { "auto-submit-form-target": "auto" } %>
+  <p class="text-xs text-secondary mt-1"><%= t(".model_help") %></p>
+  <% end %>
+</div>

@@ -118,6 +118,33 @@ class Settings::HostingsController < ApplicationController
       Setting.openai_json_mode = hosting_params[:openai_json_mode].presence
     end
 
+    # Cloudflare AI Gateway settings
+    if hosting_params.key?(:cloudflare_ai_gateway_account_id)
+      Setting.cloudflare_ai_gateway_account_id = hosting_params[:cloudflare_ai_gateway_account_id]
+    end
+
+    if hosting_params.key?(:cloudflare_ai_gateway_id)
+      Setting.cloudflare_ai_gateway_id = hosting_params[:cloudflare_ai_gateway_id]
+    end
+
+    if hosting_params.key?(:cloudflare_ai_gateway_access_token)
+      token_param = hosting_params[:cloudflare_ai_gateway_access_token].to_s.strip
+      unless token_param.blank? || token_param == "********"
+        Setting.cloudflare_ai_gateway_access_token = token_param
+      end
+    end
+
+    if hosting_params.key?(:cloudflare_ai_gateway_token)
+      token_param = hosting_params[:cloudflare_ai_gateway_token].to_s.strip
+      unless token_param.blank? || token_param == "********"
+        Setting.cloudflare_ai_gateway_token = token_param
+      end
+    end
+
+    if hosting_params.key?(:cloudflare_ai_gateway_model)
+      Setting.cloudflare_ai_gateway_model = hosting_params[:cloudflare_ai_gateway_model]
+    end
+
     redirect_to settings_hosting_path, notice: t(".success")
   rescue Setting::ValidationError => error
     flash.now[:alert] = error.message
@@ -131,7 +158,7 @@ class Settings::HostingsController < ApplicationController
 
   private
     def hosting_params
-      params.require(:setting).permit(:onboarding_state, :require_email_confirmation, :brand_fetch_client_id, :brand_fetch_high_res_logos, :twelve_data_api_key, :openai_access_token, :openai_uri_base, :openai_model, :openai_json_mode, :exchange_rate_provider, :securities_provider, :syncs_include_pending, :auto_sync_enabled, :auto_sync_time)
+      params.require(:setting).permit(:onboarding_state, :require_email_confirmation, :brand_fetch_client_id, :brand_fetch_high_res_logos, :twelve_data_api_key, :openai_access_token, :openai_uri_base, :openai_model, :openai_json_mode, :cloudflare_ai_gateway_account_id, :cloudflare_ai_gateway_id, :cloudflare_ai_gateway_access_token, :cloudflare_ai_gateway_token, :cloudflare_ai_gateway_model, :exchange_rate_provider, :securities_provider, :syncs_include_pending, :auto_sync_enabled, :auto_sync_time)
     end
 
     def ensure_admin
