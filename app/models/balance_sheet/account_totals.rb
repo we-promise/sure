@@ -68,7 +68,7 @@ class BalanceSheet::AccountTotals
     def converted_balance_for(account)
       return account.balance if account.currency == family.currency
 
-      rate = exchange_rates[account.currency] || 1
+      rate = exchange_rates[account.currency]
       account.balance * rate
     end
 end

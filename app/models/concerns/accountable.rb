@@ -68,7 +68,7 @@ module Accountable
       foreign_currencies = accounts.filter_map { |a| a.currency if a.currency != family.currency }
       rates = ExchangeRate.rates_for(foreign_currencies, to: family.currency, date: Date.current)
 
-      accounts.sum { |account|
+      accounts.sum(BigDecimal(0)) { |account|
         if account.currency == family.currency
           account.balance
         else
