@@ -222,6 +222,8 @@ class LunchflowEntry::Processor
     # Find an existing posted version of this pending transaction
     # Matches by: exact amount, currency, merchant name (if present), and date window
     # Uses same 8-day window as Account::ProviderImportAdapter reconciliation logic
+    # Note: Lunchflow never provides real IDs for pending transactions (they're always blank),
+    # so filtering by external_id NOT LIKE 'lunchflow_pending_%' is sufficient to exclude pending entries
     def find_existing_posted_version
       return nil unless account.present?
 

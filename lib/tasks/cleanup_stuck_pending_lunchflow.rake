@@ -19,6 +19,8 @@ namespace :lunchflow do
       pending_entry = transaction.entry
 
       # Search for a posted version with same merchant name, amount, and date window
+      # Note: Lunchflow never provides real IDs for pending transactions, so external_id pattern
+      # matching is sufficient. We still exclude self (pending_entry.id) for extra safety.
       posted_match = Entry
         .where(source: "lunchflow")
         .where(name: pending_entry.name)
@@ -27,6 +29,7 @@ namespace :lunchflow do
         .where("date BETWEEN ? AND ?", pending_entry.date, pending_entry.date + 8)
         .where("external_id NOT LIKE 'lunchflow_pending_%'")
         .where("external_id IS NOT NULL")
+        .where.not(id: pending_entry.id) # Exclude self for extra safety
         .order(date: :asc) # Prefer closest date match
         .first
 
