@@ -46,20 +46,22 @@ class BalanceSheet::AccountTotals
 
     def accounts
       @accounts ||= begin
-        ids = Rails.cache.fetch(cache_key) { visible_accounts.pluck(:id) }
-        visible_accounts.where(id: ids).to_a
+        ids = Rails.cache.read(cache_key)
+
+        if ids
+          visible_accounts.where(id: ids).to_a
+        else
+          records = visible_accounts.to_a
+          Rails.cache.write(cache_key, records.map(&:id))
+          records
+        end
       end
     end
 
     def exchange_rates
       @exchange_rates ||= begin
-        currencies = accounts.filter_map { |a| a.currency if a.currency != family.currency }.uniq
-        rates = {}
-        currencies.each do |currency|
-          rate = ExchangeRate.find_or_fetch_rate(from: currency, to: family.currency, date: Date.current)
-          rates[currency] = rate&.rate || 1
-        end
-        rates
+        foreign_currencies = accounts.filter_map { |a| a.currency if a.currency != family.currency }
+        ExchangeRate.rates_for(foreign_currencies, to: family.currency, date: Date.current)
       end
     end
 

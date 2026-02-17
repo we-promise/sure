@@ -39,6 +39,15 @@ module ExchangeRate::Provided
       rate
     end
 
+    # Batch-fetches exchange rates for multiple source currencies.
+    # Returns a hash mapping each currency to its numeric rate, defaulting to 1 when unavailable.
+    def rates_for(currencies, to:, date: Date.current)
+      currencies.uniq.each_with_object({}) do |currency, map|
+        rate = find_or_fetch_rate(from: currency, to: to, date: date)
+        map[currency] = rate&.rate || 1
+      end
+    end
+
     # @return [Integer] The number of exchange rates synced
     def import_provider_rates(from:, to:, start_date:, end_date:, clear_cache: false)
       unless provider.present?

@@ -65,13 +65,8 @@ module Accountable
     def balance_money(family)
       accounts = family.accounts.active.where(accountable_type: self.name).to_a
 
-      rates = accounts
-        .filter_map { |a| a.currency if a.currency != family.currency }
-        .uniq
-        .each_with_object({}) do |currency, map|
-          rate = ExchangeRate.find_or_fetch_rate(from: currency, to: family.currency, date: Date.current)
-          map[currency] = rate&.rate || 1
-        end
+      foreign_currencies = accounts.filter_map { |a| a.currency if a.currency != family.currency }
+      rates = ExchangeRate.rates_for(foreign_currencies, to: family.currency, date: Date.current)
 
       accounts.sum { |account|
         if account.currency == family.currency
