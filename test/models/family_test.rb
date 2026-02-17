@@ -158,6 +158,20 @@ class FamilyTest < ActiveSupport::TestCase
     end
   end
 
+  test "validates assistant_type inclusion" do
+    family = families(:dylan_family)
+
+    family.assistant_type = "builtin"
+    assert family.valid?
+
+    family.assistant_type = "external"
+    assert family.valid?
+
+    family.assistant_type = "invalid"
+    assert_not family.valid?
+    assert_includes family.errors[:assistant_type], "is not included in the list"
+  end
+
   test "moniker helpers return expected singular and plural labels" do
     family = families(:dylan_family)
 

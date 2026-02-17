@@ -1,5 +1,7 @@
 empty:
   name: Family
+  assistant_type: builtin
 
 dylan_family:
   name: The Dylan Family
+  assistant_type: builtin
