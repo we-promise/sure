@@ -28,7 +28,7 @@ class BalanceSheet::AccountTotals
     end
 
     def account_rows
-      @account_rows ||= cached_accounts.map do |account|
+      @account_rows ||= accounts.map do |account|
         AccountRow.new(
           account: account,
           converted_balance: converted_balance_for(account),
@@ -39,20 +39,34 @@ class BalanceSheet::AccountTotals
 
     def cache_key
       family.build_cache_key(
-        "balance_sheet_accounts",
+        "balance_sheet_account_ids",
         invalidate_on_data_updates: true
       )
     end
 
-    def cached_accounts
-      @cached_accounts ||= Rails.cache.fetch(cache_key) do
-        visible_accounts.to_a
+    def accounts
+      @accounts ||= begin
+        ids = Rails.cache.fetch(cache_key) { visible_accounts.pluck(:id) }
+        visible_accounts.where(id: ids).to_a
+      end
+    end
+
+    def exchange_rates
+      @exchange_rates ||= begin
+        currencies = accounts.filter_map { |a| a.currency if a.currency != family.currency }.uniq
+        rates = {}
+        currencies.each do |currency|
+          rate = ExchangeRate.find_or_fetch_rate(from: currency, to: family.currency, date: Date.current)
+          rates[currency] = rate&.rate || 1
+        end
+        rates
       end
     end
 
     def converted_balance_for(account)
-      Money.new(account.balance, account.currency)
-           .exchange_to(family.currency, date: Date.current, fallback_rate: 1)
-           .amount
+      return account.balance if account.currency == family.currency
+
+      rate = exchange_rates[account.currency] || 1
+      account.balance * rate
     end
 end
