@@ -93,18 +93,6 @@ For further instructions, see guides below.
 
 [![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/sure?referralCode=CW_fPQ)
 
-<!-- MOBILE_DOWNLOADS_START -->
-## Latest Mobile Release: v0.6.8-alpha.10
-
-**Release page**: [mobile-v0.6.8-alpha.10](https://github.com/we-promise/sure/releases/tag/mobile-v0.6.8-alpha.10)
-
-### Direct Downloads
-
-- **Android APK**: [sure-v0.6.8-alpha.10.apk](https://github.com/we-promise/sure/releases/download/mobile-v0.6.8-alpha.10/sure-v0.6.8-alpha.10.apk)
-- **iOS Build (unsigned)**: [sure-v0.6.8-alpha.10-ios-unsigned.zip](https://github.com/we-promise/sure/releases/download/mobile-v0.6.8-alpha.10/sure-v0.6.8-alpha.10-ios-unsigned.zip)
-
-> **Note**: These are builds intended for testing purposes. For production use, please build from source with proper signing credentials.
-<!-- MOBILE_DOWNLOADS_END -->
 
 ## License and Trademarks
 
@@ -112,3 +100,16 @@ Maybe and Sure are both distributed under
 an [AGPLv3 license](https://github.com/we-promise/sure/blob/main/LICENSE).
 - "Maybe" is a trademark of Maybe Finance, Inc.
 - "Sure" is not, and refers to this community fork.
+
+<!-- MOBILE_DOWNLOADS_START -->
+## Latest Mobile Release: main
+
+**Release page**: [main](https://github.com/we-promise/sure/releases/tag/main)
+
+### Direct Downloads
+
+- **Android APK**: [sure-main.apk](https://github.com/we-promise/sure/releases/download/main/sure-main.apk)
+- **iOS Build (unsigned)**: [sure-main-ios-unsigned.zip](https://github.com/we-promise/sure/releases/download/main/sure-main-ios-unsigned.zip)
+
+> **Note**: These are builds intended for testing purposes. For production use, please build from source with proper signing credentials.
+<!-- MOBILE_DOWNLOADS_END -->
