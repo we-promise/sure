@@ -478,6 +478,52 @@ class TransactionImportTest < ActiveSupport::TestCase
     assert_equal "Grocery Store", entries.second.name
   end
 
+  test "falls back to legacy dedup when external_id is present but existing entry has no external_id" do
+    account = accounts(:depository)
+
+    # Simulate an entry imported before external_id support (no external_id, no source)
+    legacy_entry = account.entries.create!(
+      date: Date.new(2024, 1, 1),
+      amount: 100,
+      currency: "USD",
+      name: "Coffee Shop",
+      external_id: nil,
+      source: nil,
+      entryable: Transaction.new
+    )
+
+    # Re-import with external_id mapped - should match the legacy entry by date/amount/name
+    import_csv = <<~CSV
+      date,name,amount,ext_id
+      01/01/2024,Coffee Shop,100,txn-uuid-backfill
+    CSV
+
+    @import.update!(
+      account: account,
+      raw_file_str: import_csv,
+      date_col_label: "date",
+      amount_col_label: "amount",
+      name_col_label: "name",
+      external_id_col_label: "ext_id",
+      date_format: "%m/%d/%Y",
+      amount_type_strategy: "signed_amount",
+      signage_convention: "inflows_negative"
+    )
+
+    @import.generate_rows_from_csv
+    @import.reload
+
+    # Should not create a new entry - should match the legacy one
+    assert_no_difference -> { Entry.count } do
+      @import.publish
+    end
+
+    legacy_entry.reload
+    assert_equal "txn-uuid-backfill", legacy_entry.external_id
+    assert_equal "csv_import", legacy_entry.source
+    assert_equal @import.id, legacy_entry.import_id
+  end
+
   test "CSV without external_id column works as before" do
     account = accounts(:depository)
 

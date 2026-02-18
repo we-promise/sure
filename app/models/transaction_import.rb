@@ -41,7 +41,7 @@ class TransactionImport < Import
           existing_entry = mapped_account.entries.find_by(external_id: row.external_id, source: "csv_import")
 
           if existing_entry
-            # Update existing entry
+            # Update existing entry matched by external_id
             existing_entry.transaction.category = category if category.present?
             existing_entry.transaction.tags = tags if tags.any?
             existing_entry.notes = row.notes if row.notes.present?
@@ -56,23 +56,48 @@ class TransactionImport < Import
             updated_entries << existing_entry
             claimed_entry_ids.add(existing_entry.id)
           else
-            # Create new transaction with external_id
-            new_transactions << Transaction.new(
-              category: category,
-              tags: tags,
-              entry: Entry.new(
-                account: mapped_account,
-                date: row.date_iso,
-                amount: row.signed_amount,
-                name: row.name,
-                currency: effective_currency,
-                notes: row.notes,
+            # Fallback to legacy date/amount/name dedup for entries imported before external_id support
+            adapter = Account::ProviderImportAdapter.new(mapped_account)
+            legacy_match = adapter.find_duplicate_transaction(
+              date: row.date_iso,
+              amount: row.signed_amount,
+              currency: effective_currency,
+              name: row.name,
+              exclude_entry_ids: claimed_entry_ids
+            )
+
+            if legacy_match
+              # Update existing entry and backfill external_id
+              legacy_match.transaction.category = category if category.present?
+              legacy_match.transaction.tags = tags if tags.any?
+              legacy_match.notes = row.notes if row.notes.present?
+              legacy_match.assign_attributes(
                 external_id: row.external_id,
                 source: "csv_import",
                 import: self,
                 import_locked: true
               )
-            )
+              updated_entries << legacy_match
+              claimed_entry_ids.add(legacy_match.id)
+            else
+              # Create new transaction with external_id
+              new_transactions << Transaction.new(
+                category: category,
+                tags: tags,
+                entry: Entry.new(
+                  account: mapped_account,
+                  date: row.date_iso,
+                  amount: row.signed_amount,
+                  name: row.name,
+                  currency: effective_currency,
+                  notes: row.notes,
+                  external_id: row.external_id,
+                  source: "csv_import",
+                  import: self,
+                  import_locked: true
+                )
+              )
+            end
           end
         else
           # Legacy name/date/amount-based deduplication
