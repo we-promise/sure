@@ -1,0 +1,13 @@
+class Assistant::External < Assistant::Base
+  class << self
+    def for_chat(chat)
+      new(chat)
+    end
+  end
+
+  def respond_to(message)
+    chat.add_error(
+      StandardError.new("External assistant (OpenClaw/WebSocket) is not yet implemented.")
+    )
+  end
+end
