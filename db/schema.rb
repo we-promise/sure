@@ -502,8 +502,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_02_11_120001) do
     t.text "custom_intro_prompt"
     t.string "preferred_ai_model"
     t.string "openai_uri_base"
-    t.string "vector_store_id"
     t.string "moniker", default: "Family", null: false
+    t.string "vector_store_id"
     t.check_constraint "month_start_day >= 1 AND month_start_day <= 28", name: "month_start_day_range"
   end
 
