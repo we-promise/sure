@@ -12,6 +12,7 @@ module Assistant
     end
 
     def config_for(chat)
+      raise Error, "chat is required" if chat.blank?
       Assistant::Builtin.config_for(chat)
     end
 
@@ -21,10 +22,10 @@ module Assistant
 
     private
 
-    def implementation_for(chat)
-      raise Error, "chat is required" if chat.blank?
-      type = chat.user&.family&.assistant_type.presence || "builtin"
-      REGISTRY.fetch(type) { REGISTRY["builtin"] }
-    end
+      def implementation_for(chat)
+        raise Error, "chat is required" if chat.blank?
+        type = chat.user&.family&.assistant_type.presence || "builtin"
+        REGISTRY.fetch(type) { REGISTRY["builtin"] }
+      end
   end
 end

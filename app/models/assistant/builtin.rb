@@ -68,28 +68,28 @@ class Assistant::Builtin < Assistant::Base
 
   private
 
-  attr_reader :functions
+    attr_reader :functions
 
-  def function_tool_caller
-    @function_tool_caller ||= Assistant::FunctionToolCaller.new(
-      functions.map { |fn| fn.new(chat.user) }
-    )
-  end
-
-  def build_no_provider_error_message(requested_model)
-    available_providers = registry.providers
-    if available_providers.empty?
-      "No LLM provider configured that supports model '#{requested_model}'. " \
-        "Please configure an LLM provider (e.g., OpenAI) in settings."
-    else
-      provider_details = available_providers.map do |provider|
-        "  - #{provider.provider_name}: #{provider.supported_models_description}"
-      end.join("\n")
-      "No LLM provider configured that supports model '#{requested_model}'.\n\n" \
-        "Available providers:\n#{provider_details}\n\n" \
-        "Please either:\n" \
-        "  1. Use a supported model from the list above, or\n" \
-        "  2. Configure a provider that supports '#{requested_model}' in settings."
+    def function_tool_caller
+      @function_tool_caller ||= Assistant::FunctionToolCaller.new(
+        functions.map { |fn| fn.new(chat.user) }
+      )
     end
-  end
+
+    def build_no_provider_error_message(requested_model)
+      available_providers = registry.providers
+      if available_providers.empty?
+        "No LLM provider configured that supports model '#{requested_model}'. " \
+          "Please configure an LLM provider (e.g., OpenAI) in settings."
+      else
+        provider_details = available_providers.map do |provider|
+          "  - #{provider.provider_name}: #{provider.supported_models_description}"
+        end.join("\n")
+        "No LLM provider configured that supports model '#{requested_model}'.\n\n" \
+          "Available providers:\n#{provider_details}\n\n" \
+          "Please either:\n" \
+          "  1. Use a supported model from the list above, or\n" \
+          "  2. Configure a provider that supports '#{requested_model}' in settings."
+      end
+    end
 end
