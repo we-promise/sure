@@ -286,6 +286,32 @@ class EnableBankingItem::ImporterDedupTest < ActiveSupport::TestCase
     assert_equal 2, result.count
   end
 
+  test "deduplicates using value_date when booking_date is absent" do
+    transactions = [
+      {
+        entry_reference: "ref_1",
+        transaction_id: nil,
+        value_date: "2026-02-10",
+        transaction_amount: { amount: "1.50", currency: "EUR" },
+        creditor: { name: "Waschsalon" },
+        status: "BOOK"
+      },
+      {
+        entry_reference: "ref_2",
+        transaction_id: nil,
+        value_date: "2026-02-10",
+        transaction_amount: { amount: "1.50", currency: "EUR" },
+        creditor: { name: "Waschsalon" },
+        status: "BOOK"
+      }
+    ]
+
+    result = @importer.send(:deduplicate_api_transactions, transactions)
+
+    assert_equal 1, result.count
+    assert_equal "ref_1", result.first[:entry_reference]
+  end
+
   test "returns empty array for empty input" do
     result = @importer.send(:deduplicate_api_transactions, [])
     assert_equal [], result
