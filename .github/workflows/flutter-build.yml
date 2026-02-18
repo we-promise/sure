@@ -11,6 +11,8 @@ on:
       - 'mobile/android/**'
       - 'mobile/ios/**'
       - 'mobile/pubspec.yaml'
+      - 'public/android-chrome-*.png'
+      - 'public/apple-touch-icon.png'
       - '.github/workflows/flutter-build.yml'
   pull_request:
     paths:
@@ -18,6 +20,8 @@ on:
       - 'mobile/android/**'
       - 'mobile/ios/**'
       - 'mobile/pubspec.yaml'
+      - 'public/android-chrome-*.png'
+      - 'public/apple-touch-icon.png'
       - '.github/workflows/flutter-build.yml'
   workflow_call:
   workflow_dispatch:
@@ -51,6 +55,9 @@ jobs:
       - name: Get dependencies
         working-directory: mobile
         run: flutter pub get
+
+      - name: Copy Sure icons from public/
+        run: cp public/android-chrome-512x512.png mobile/assets/icon/app_icon.png
 
       - name: Generate app icons
         working-directory: mobile
@@ -143,6 +150,9 @@ jobs:
       - name: Get dependencies
         working-directory: mobile
         run: flutter pub get
+
+      - name: Copy Sure icons from public/
+        run: cp public/android-chrome-512x512.png mobile/assets/icon/app_icon.png
 
       - name: Generate app icons
         working-directory: mobile

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../services/offline_storage_service.dart';
@@ -14,11 +15,20 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   bool _groupByType = false;
+  String? _appVersion;
 
   @override
   void initState() {
     super.initState();
     _loadPreferences();
+    _loadAppVersion();
+  }
+
+  Future<void> _loadAppVersion() async {
+    final packageInfo = await PackageInfo.fromPlatform();
+    if (mounted) {
+      setState(() => _appVersion = packageInfo.version);
+    }
   }
 
   Future<void> _loadPreferences() async {
@@ -179,7 +189,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           // App version
           ListTile(
             leading: const Icon(Icons.info_outline),
-            title: const Text('App Version: 0.6.8'),
+            title: Text('App Version: ${_appVersion ?? '…'}'),
             subtitle: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,

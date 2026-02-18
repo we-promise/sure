@@ -68,7 +68,7 @@ class PdfImport < Import
   end
 
   def extract_transactions
-    return unless bank_statement?
+    return unless statement_with_transactions?
 
     provider = Provider::Registry.get_provider(:openai)
     raise "AI provider not configured" unless provider
@@ -89,6 +89,10 @@ class PdfImport < Import
 
   def bank_statement?
     document_type == "bank_statement"
+  end
+
+  def statement_with_transactions?
+    document_type.in?(%w[bank_statement credit_card_statement])
   end
 
   def has_extracted_transactions?
@@ -147,7 +151,7 @@ class PdfImport < Import
   end
 
   def publishable?
-    account.present? && bank_statement? && cleaned? && mappings.all?(&:valid?)
+    account.present? && statement_with_transactions? && cleaned? && mappings.all?(&:valid?)
   end
 
   def column_keys
