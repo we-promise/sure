@@ -279,8 +279,12 @@ class EnableBankingItem::Importer
     # as one component — not a standalone key — because the Enable Banking
     # API docs state it is not guaranteed to be unique. When transaction_id
     # differs between otherwise-identical transactions, both are preserved.
-    # When transaction_id is nil for both, pure content comparison applies.
-    # (Issue #954)
+    # Known limitation: when transaction_id is nil for both, pure content
+    # comparison applies. This means two genuinely distinct transactions
+    # with identical content (same date, amount, creditor, etc.) and no
+    # transaction_id would collapse to one. In practice, banks that omit
+    # transaction_id rarely produce such exact duplicates in the same API
+    # response; timestamps or remittance info usually differ. (Issue #954)
     def build_transaction_content_key(tx)
       date = tx[:booking_date].presence || tx[:value_date]
       amount = tx.dig(:transaction_amount, :amount).presence || tx[:amount]
