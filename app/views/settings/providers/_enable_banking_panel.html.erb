@@ -112,7 +112,19 @@
       <% items.each do |item| %>
         <div class="flex items-center justify-between p-3 rounded-lg bg-container border border-primary">
           <div class="flex items-center gap-3">
-            <% if item.session_valid? %>
+            <% if item.syncing? %>
+              <div class="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
+              <div>
+                <p class="text-sm font-medium text-primary"><%= item.aspsp_name || t("settings.providers.enable_banking_panel.syncing", default: "Syncing") %></p>
+                <p class="text-xs text-secondary"><%= t("settings.providers.enable_banking_panel.syncing", default: "Syncing") %></p>
+              </div>
+            <% elsif item.sync_error.present? %>
+              <div class="w-2 h-2 bg-destructive rounded-full"></div>
+              <div>
+                <p class="text-sm font-medium text-primary"><%= item.aspsp_name || t("settings.providers.enable_banking_panel.connection_error") %></p>
+                <p class="text-xs text-destructive" title="<%= item.sync_error %>"><%= item.sync_error.truncate(50) %></p>
+              </div>
+            <% elsif item.session_valid? %>
               <div class="w-2 h-2 bg-success rounded-full"></div>
               <div>
                 <p class="text-sm font-medium text-primary"><%= item.aspsp_name || "Connected Bank" %></p>

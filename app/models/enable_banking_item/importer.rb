@@ -18,7 +18,8 @@ class EnableBankingItem::Importer
 
     session_data = fetch_session_data
     unless session_data
-      return { success: false, error: "Failed to fetch session data", accounts_updated: 0, transactions_imported: 0 }
+      error_msg = @session_error || "Failed to fetch session data"
+      return { success: false, error: error_msg, accounts_updated: 0, transactions_imported: 0 }
     end
 
     # Store raw payload
@@ -103,6 +104,23 @@ class EnableBankingItem::Importer
 
   private
 
+    def extract_friendly_error_message(exception)
+      [exception, exception.cause].compact.each do |ex|
+        case ex
+        when SocketError then return "DNS resolution failed: check your network/DNS configuration"
+        when Net::OpenTimeout, Net::ReadTimeout then return "Connection timed out: the Enable Banking API may be unreachable"
+        when Errno::ECONNREFUSED then return "Connection refused: the Enable Banking API is unreachable"
+        end
+      end
+
+      msg = exception.message.to_s
+      return "DNS resolution failed: check your network/DNS configuration" if msg.include?("getaddrinfo") || msg.match?(/name or service not known/i)
+      return "Connection timed out: the Enable Banking API may be unreachable" if msg.include?("execution expired") || msg.include?("timeout") || msg.match?(/timed out/i)
+      return "Connection refused: the Enable Banking API is unreachable" if msg.include?("ECONNREFUSED") || msg.match?(/connection refused/i)
+
+      msg
+    end
+
     def fetch_session_data
       enable_banking_provider.get_session(session_id: enable_banking_item.session_id)
     rescue Provider::EnableBanking::EnableBankingError => e
@@ -110,9 +128,11 @@ class EnableBankingItem::Importer
         enable_banking_item.update!(status: :requires_update)
       end
       Rails.logger.error "EnableBankingItem::Importer - Enable Banking API error: #{e.message}"
+      @session_error = extract_friendly_error_message(e)
       nil
     rescue => e
       Rails.logger.error "EnableBankingItem::Importer - Unexpected error fetching session: #{e.class} - #{e.message}"
+      @session_error = extract_friendly_error_message(e)
       nil
     end
 

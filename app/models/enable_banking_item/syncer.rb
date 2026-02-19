@@ -17,6 +17,11 @@ class EnableBankingItem::Syncer
     sync.update!(status_text: "Importing accounts from Enable Banking...") if sync.respond_to?(:status_text)
     import_result = enable_banking_item.import_latest_enable_banking_data
 
+    unless import_result[:success]
+      error_msg = import_result[:error] || "Import failed"
+      raise StandardError.new(error_msg)
+    end
+
     # Phase 2: Check account setup status and collect sync statistics
     sync.update!(status_text: "Checking account configuration...") if sync.respond_to?(:status_text)
     total_accounts = enable_banking_item.enable_banking_accounts.count
