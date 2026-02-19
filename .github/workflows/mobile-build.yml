@@ -214,16 +214,24 @@ jobs:
             # No README yet — create one
             printf "# Sure\n\n%s\n" "$SECTION" > "$README"
           elif grep -q '<!-- MOBILE_DOWNLOADS_START -->' "$README"; then
-            # Replace existing mobile section between markers
-            awk '
-              /<!-- MOBILE_DOWNLOADS_START -->/ { skip=1; next }
-              /<!-- MOBILE_DOWNLOADS_END -->/   { skip=0; next }
-              !skip { print }
-            ' "$README" > "${README}.tmp"
+            # Write section to a temp file so awk can read it without quoting issues
+            printf '%s\n' "$SECTION" > "${README}.section"
 
-            # Re-insert the updated section at the end
-            printf "%s\n\n%s\n" "$(cat "${README}.tmp")" "$SECTION" > "$README"
-            rm "${README}.tmp"
+            # In-place replacement: keep content before/after the markers,
+            # replace the block between them with the new section
+            awk '
+              /<!-- MOBILE_DOWNLOADS_START -->/ {
+                while ((getline line < SECFILE) > 0) print line
+                close(SECFILE)
+                skip=1
+                next
+              }
+              /<!-- MOBILE_DOWNLOADS_END -->/ { skip=0; next }
+              !skip { print }
+            ' SECFILE="${README}.section" "$README" > "${README}.tmp"
+
+            mv "${README}.tmp" "$README"
+            rm "${README}.section"
           else
             # Append mobile section to existing README
             printf "\n%s\n" "$SECTION" >> "$README"
