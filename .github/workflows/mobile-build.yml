@@ -1,4 +1,4 @@
-name: Mobile Main Build
+name: Mobile Build
 
 on:
   workflow_dispatch:
@@ -13,6 +13,7 @@ jobs:
     timeout-minutes: 5
     outputs:
       stamp: ${{ steps.stamp.outputs.stamp }}
+      branch: ${{ steps.stamp.outputs.branch }}
       version: ${{ steps.stamp.outputs.version }}
       tag_name: ${{ steps.stamp.outputs.tag_name }}
 
@@ -20,13 +21,24 @@ jobs:
       - name: Generate stamp
         id: stamp
         run: |
+          set -euo pipefail
           STAMP="$(date -u +'%Y%m%d%H%M')"
-          VERSION="main-${STAMP}"
-          TAG_NAME="main-build-${STAMP}"
-          echo "stamp=$STAMP" >> "$GITHUB_OUTPUT"
+
+          # Sanitise branch name for use in file names and git tags
+          # e.g. feature/foo-bar → feature-foo-bar
+          RAW_BRANCH="${{ github.ref_name }}"
+          BRANCH="$(echo "$RAW_BRANCH" | sed 's/[^a-zA-Z0-9._-]/-/g' | sed 's/--*/-/g' | sed 's/^-//;s/-$//')"
+
+          VERSION="${BRANCH}-${STAMP}"
+          TAG_NAME="${BRANCH}-build-${STAMP}"
+
+          echo "stamp=$STAMP"   >> "$GITHUB_OUTPUT"
+          echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "tag_name=$TAG_NAME" >> "$GITHUB_OUTPUT"
-          echo "Stamp: $STAMP"
+
+          echo "Branch (raw): $RAW_BRANCH"
+          echo "Branch (safe): $BRANCH"
           echo "Version: $VERSION"
           echo "Tag: $TAG_NAME"
 
@@ -48,6 +60,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
+          ref: ${{ github.ref }}
           fetch-depth: 0
 
       - name: Download Android APK artifact
@@ -63,7 +76,6 @@ jobs:
           path: ${{ runner.temp }}/ios-build
 
       - name: Prepare release assets
-        id: assets
         run: |
           set -euo pipefail
           VERSION="${{ needs.prepare.outputs.version }}"
@@ -118,24 +130,25 @@ jobs:
           set -euo pipefail
           VERSION="${{ needs.prepare.outputs.version }}"
           TAG="${{ needs.prepare.outputs.tag_name }}"
+          BRANCH="${{ needs.prepare.outputs.branch }}"
 
           cat > /tmp/release-notes.md <<NOTES
-          ## Mobile Build from main: ${VERSION}
+          ## Mobile Build: ${VERSION}
 
-          This is an automated mobile build from the \`main\` branch. It does not correspond to a tagged release.
+          This is an automated mobile build from the \`${BRANCH}\` branch. It does not correspond to a tagged release.
 
           ### Downloads
 
           - **Android APK**: Debug or signed build for testing on Android devices
           - **iOS Build**: Unsigned iOS build (requires code signing for installation)
 
-          > **Note**: These are development builds from \`main\` intended for testing purposes. For production use, please use a tagged release or build from source with proper signing credentials.
+          > **Note**: These are development builds from \`${BRANCH}\` intended for testing purposes. For production use, please use a tagged release or build from source with proper signing credentials.
           NOTES
 
           # Strip heredoc indentation
           sed -i 's/^          //' /tmp/release-notes.md
 
-          # Create a lightweight tag on the current main HEAD
+          # Create a lightweight tag on the checked-out commit
           git config user.name "${GITHUB_ACTOR}"
           git config user.email "${GITHUB_ACTOR}@users.noreply.github.com"
           git tag "$TAG"
@@ -159,6 +172,7 @@ jobs:
           set -euo pipefail
           VERSION="${{ needs.prepare.outputs.version }}"
           TAG="${{ needs.prepare.outputs.tag_name }}"
+          BRANCH="${{ needs.prepare.outputs.branch }}"
           REPO="${{ github.repository }}"
 
           # Build download links based on which assets were produced
@@ -178,13 +192,13 @@ jobs:
           <!-- MOBILE_DOWNLOADS_START -->
           ## Latest Mobile Build: ${VERSION}
 
-          **Build from**: \`main\` branch
+          **Build from**: \`${BRANCH}\` branch
 
           ### Direct Downloads
 
           $(echo -e "$LINKS")
 
-          > **Note**: These are development builds from \`main\` intended for testing purposes. For production use, please use a tagged release or build from source with proper signing credentials.
+          > **Note**: These are development builds from \`${BRANCH}\` intended for testing purposes. For production use, please use a tagged release or build from source with proper signing credentials.
           <!-- MOBILE_DOWNLOADS_END -->
           BLOCK
           )"
