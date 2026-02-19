@@ -1,0 +1,46 @@
+<div class="relative" data-controller="dropdown list-filter form-dropdown">
+  <div class="form-field">
+    <input type="hidden" data-form-dropdown-target="input" value="<%= selected&.public_send(value_method) %>">
+    
+    <label class="form-field__label" for="entry_date"><%= label %></label>
+    <button type="button" class="form-field__input" data-dropdown-target="button" data-action="click->dropdown#toggle">
+      <%= selected&.public_send(label_method) || placeholder %>
+    </button>
+  </div>
+
+  <div class="absolute z-50 mt-1 w-full rounded-lg shadow-lg hidden shadow-border-xs bg-container rounded-lg" data-dropdown-target="menu">
+    <div class="flex flex-col relative" data-controller="list-filter">
+      <div class="grow p-1.5">
+        <div class="relative flex items-center bg-container border border-secondary rounded-lg">
+          <input
+            placeholder="<%= t("helpers.filter_dropdown.search_placeholder") %>"
+            autocomplete="nope"
+            type="search"
+            class="bg-container placeholder:text-sm placeholder:text-secondary font-normal h-10 relative pl-10 w-full border-none rounded-lg focus:outline-hidden focus:ring-0"
+            data-list-filter-target="input" 
+            data-action="list-filter#filter">
+            <%= helpers.icon("search", class: "absolute inset-0 ml-2 transform top-1/2 -translate-y-1/2") %>
+        </div>
+        <div data-list-filter-target="list" class="flex flex-col gap-0.5 p-1.5 mt-0.5 mr-2 max-h-64 overflow-y-scroll scrollbar">
+          <% if items.present? %>
+            <% items.each do |item| %>
+              <% value = item.public_send(value_method) %>
+              <% label_text = item.public_send(label_method) %>
+
+              <div class="filterable-item cursor-pointer flex text-sm font-medium items-center gap-2 text-secondary w-full rounded-lg p-3 hover:bg-container-inset-hover"
+                  data-action="click->dropdown#select"
+                  data-value="<%= value %>"
+                  data-filter-name="<%= label_text %>">
+                  <%= label_text %>
+              </div>
+            <% end %>
+          <% else %>
+            <div class="p-2 text-secondary">
+              <%= empty_text %>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

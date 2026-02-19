@@ -157,6 +157,10 @@ en:
       create: Create %{model}
       submit: Save %{model}
       update: Update %{model}
+    filter_dropdown:
+      search_placeholder: "Search"
+      empty_text: "No items"
+      default_label: "Select..."
   number:
     currency:
       format:
