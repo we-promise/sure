@@ -7,7 +7,28 @@ en:
         description: "Manage user roles for your instance. Super admins can access SSO provider settings and user management."
         section_title: "Users"
         you: "(You)"
+        trial_ends_at: "Trial ends"
+        not_available: "n/a"
         no_users: "No users found."
+        filters:
+          role: "Role"
+          role_all: "All roles"
+          trial_status: "Trial status"
+          trial_all: "All"
+          trial_expiring_soon: "Expiring in 7 days"
+          trial_trialing: "On trial"
+          submit: "Filter"
+        summary:
+          trials_expiring_7_days: "Trials expiring in next 7 days"
+        table:
+          user: "User"
+          trial_ends_at: "Trial ends"
+          family_accounts: "Family accounts"
+          family_transactions: "Family transactions"
+          last_login: "Last login"
+          session_count: "Session count"
+          never: "Never"
+          role: "Role"
         role_descriptions_title: "Role Descriptions"
         roles:
           guest: "Guest"

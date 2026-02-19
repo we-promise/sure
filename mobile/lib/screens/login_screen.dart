@@ -17,8 +17,8 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
+  final _emailController = TextEditingController(text: 'user@example.com');
+  final _passwordController = TextEditingController(text: 'Password1!');
   final _otpController = TextEditingController();
   bool _obscurePassword = true;
   late final TapGestureRecognizer _signUpTapRecognizer;
@@ -197,24 +197,23 @@ class _LoginScreenState extends State<LoginScreen> {
                       width: 80,
                       height: 80,
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 24),
                     Text.rich(
                       TextSpan(
                         style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                               color: colorScheme.onSurfaceVariant,
                             ),
                         children: [
-                          const TextSpan(text: 'Please '),
+                          const TextSpan(text: 'Demo account or '),
                           TextSpan(
                             text: 'Sign Up',
                             style: TextStyle(
                               color: colorScheme.primary,
-                              decoration: TextDecoration.underline,
                               fontWeight: FontWeight.w600,
                             ),
                             recognizer: _signUpTapRecognizer,
                           ),
-                          const TextSpan(text: ' first!'),
+                          const TextSpan(text: '!'),
                         ],
                       ),
                       textAlign: TextAlign.center,
@@ -442,34 +441,38 @@ class _LoginScreenState extends State<LoginScreen> {
                     const SizedBox(height: 24),
 
                     // Backend URL info
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: colorScheme.surfaceContainerHighest
-                            .withValues(alpha: 0.3),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Column(
-                        children: [
-                          Text(
-                            'Sure server URL:',
-                            style:
-                                Theme.of(context).textTheme.bodySmall?.copyWith(
-                                      color: colorScheme.onSurfaceVariant,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            ApiConfig.baseUrl,
-                            style:
-                                Theme.of(context).textTheme.bodySmall?.copyWith(
-                                      color: colorScheme.primary,
-                                      fontFamily: 'monospace',
-                                    ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ],
+                    InkWell(
+                      onTap: widget.onGoToSettings,
+                      borderRadius: BorderRadius.circular(8),
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: colorScheme.surfaceContainerHighest
+                              .withValues(alpha: 0.3),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Column(
+                          children: [
+                            Text(
+                              'Sure server URL:',
+                              style:
+                                  Theme.of(context).textTheme.bodySmall?.copyWith(
+                                        color: colorScheme.onSurfaceVariant,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              ApiConfig.baseUrl,
+                              style:
+                                  Theme.of(context).textTheme.bodySmall?.copyWith(
+                                        color: colorScheme.primary,
+                                        fontFamily: 'monospace',
+                                      ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
+                        ),
                       ),
                     ),
 

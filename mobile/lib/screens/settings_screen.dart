@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../services/offline_storage_service.dart';
@@ -14,11 +15,20 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   bool _groupByType = false;
+  String? _appVersion;
 
   @override
   void initState() {
     super.initState();
     _loadPreferences();
+    _loadAppVersion();
+  }
+
+  Future<void> _loadAppVersion() async {
+    final packageInfo = await PackageInfo.fromPlatform();
+    if (mounted) {
+      setState(() => _appVersion = packageInfo.version);
+    }
   }
 
   Future<void> _loadPreferences() async {
@@ -122,9 +132,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final authProvider = Provider.of<AuthProvider>(context);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Settings'),
-      ),
       body: ListView(
         children: [
           // User info section
@@ -180,10 +187,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
 
           // App version
-          const ListTile(
-            leading: Icon(Icons.info_outline),
-            title: Text('App Version'),
-            subtitle: Text('1.0.0'),
+          ListTile(
+            leading: const Icon(Icons.info_outline),
+            title: Text('App Version: ${_appVersion ?? '…'}'),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(' > ui_layout: ${authProvider.user?.uiLayout}'),
+                Text(' > ai_enabled: ${authProvider.user?.aiEnabled}'),
+              ],
+            ),
           ),
 
           const Divider(),

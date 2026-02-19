@@ -1,0 +1,240 @@
+name: iOS TestFlight
+
+on:
+  workflow_dispatch:
+    inputs:
+      notes:
+        description: "TestFlight release notes"
+        required: false
+        type: string
+  workflow_call:
+    inputs:
+      notes:
+        description: "TestFlight release notes"
+        required: false
+        type: string
+  push:
+    tags:
+      - 'ios-v*'
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-upload:
+    name: Build signed IPA and upload to TestFlight
+    runs-on: macos-latest
+    timeout-minutes: 120
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check TestFlight credentials
+        id: check_prereqs
+        env:
+          IOS_KEYCHAIN_PASSWORD: ${{ secrets.IOS_KEYCHAIN_PASSWORD }}
+          IOS_DISTRIBUTION_P12_BASE64: ${{ secrets.IOS_DISTRIBUTION_P12_BASE64 }}
+          IOS_DISTRIBUTION_P12_PASSWORD: ${{ secrets.IOS_DISTRIBUTION_P12_PASSWORD }}
+          IOS_PROVISIONING_PROFILE_BASE64: ${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}
+          IOS_PROVISIONING_PROFILE_NAME: ${{ secrets.IOS_PROVISIONING_PROFILE_NAME }}
+          IOS_TEAM_ID: ${{ secrets.IOS_TEAM_ID }}
+          IOS_DISTRIBUTION_CERT_NAME: ${{ secrets.IOS_DISTRIBUTION_CERT_NAME }}
+          APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          APP_STORE_CONNECT_API_KEY_BASE64: ${{ secrets.APP_STORE_CONNECT_API_KEY_BASE64 }}
+          APP_STORE_CONNECT_API_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}
+        run: |
+          set -eu
+
+          required=(
+            IOS_KEYCHAIN_PASSWORD
+            IOS_DISTRIBUTION_P12_BASE64
+            IOS_DISTRIBUTION_P12_PASSWORD
+            IOS_PROVISIONING_PROFILE_BASE64
+            IOS_PROVISIONING_PROFILE_NAME
+            IOS_TEAM_ID
+            IOS_DISTRIBUTION_CERT_NAME
+            APP_STORE_CONNECT_API_KEY_ID
+            APP_STORE_CONNECT_API_KEY_BASE64
+            APP_STORE_CONNECT_API_ISSUER_ID
+          )
+
+          missing=()
+          for var in "${required[@]}"; do
+            if [ -z "${!var-}" ]; then
+              missing+=("$var")
+            fi
+          done
+
+          if [ "${#missing[@]}" -eq 0 ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "enabled=false" >> "$GITHUB_OUTPUT"
+          {
+            echo "Missing required TestFlight secrets:"
+            printf " - %s\n" "${missing[@]}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Skip iOS TestFlight upload
+        if: ${{ steps.check_prereqs.outputs.enabled != 'true' }}
+        run: |
+          echo "Skipping TestFlight upload because required credentials are not configured."
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        if: ${{ steps.check_prereqs.outputs.enabled == 'true' }}
+        with:
+          flutter-version: '3.32.4'
+          channel: 'stable'
+          cache: true
+
+      - name: Install Flutter dependencies
+        working-directory: mobile
+        if: ${{ steps.check_prereqs.outputs.enabled == 'true' }}
+        run: flutter pub get
+
+      - name: Copy app icon source
+        if: ${{ steps.check_prereqs.outputs.enabled == 'true' }}
+        run: cp public/android-chrome-512x512.png mobile/assets/icon/app_icon.png
+
+      - name: Generate app icons
+        working-directory: mobile
+        if: ${{ steps.check_prereqs.outputs.enabled == 'true' }}
+        run: flutter pub run flutter_launcher_icons
+
+      - name: Install CocoaPods
+        working-directory: mobile/ios
+        if: ${{ steps.check_prereqs.outputs.enabled == 'true' }}
+        run: pod install
+
+      - name: Configure iOS signing assets
+        id: signing
+        if: ${{ steps.check_prereqs.outputs.enabled == 'true' }}
+        env:
+          KEYCHAIN_PASSWORD: ${{ secrets.IOS_KEYCHAIN_PASSWORD }}
+          DIST_P12_BASE64: ${{ secrets.IOS_DISTRIBUTION_P12_BASE64 }}
+          DIST_P12_PASSWORD: ${{ secrets.IOS_DISTRIBUTION_P12_PASSWORD }}
+          PROFILE_BASE64: ${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}
+          PROFILE_NAME: ${{ secrets.IOS_PROVISIONING_PROFILE_NAME }}
+        run: |
+          set -euo pipefail
+
+          KEYCHAIN_PATH="$RUNNER_TEMP/ios-signing.keychain-db"
+          PROFILE_DIR="$HOME/Library/MobileDevice/Provisioning Profiles"
+
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 3600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security list-keychains -d user -s "$KEYCHAIN_PATH"
+
+          CERT_PATH="$RUNNER_TEMP/distribution.p12"
+          echo "$DIST_P12_BASE64" | base64 --decode > "$CERT_PATH"
+          security import "$CERT_PATH" -k "$KEYCHAIN_PATH" -P "$DIST_P12_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+
+          if [ -n "$PROFILE_BASE64" ] && [ -n "$PROFILE_NAME" ]; then
+            mkdir -p "$PROFILE_DIR"
+            PROFILE_PATH="$PROFILE_DIR/${PROFILE_NAME}.mobileprovision"
+            echo "$PROFILE_BASE64" | base64 --decode > "$PROFILE_PATH"
+          fi
+
+          rm -f "$CERT_PATH"
+          echo "keychain-path=$KEYCHAIN_PATH" >> "$GITHUB_OUTPUT"
+
+      - name: Build signed IPA
+        working-directory: mobile
+        if: ${{ steps.check_prereqs.outputs.enabled == 'true' }}
+        env:
+          APP_BUNDLE_ID: am.sure.mobile
+          IOS_TEAM_ID: ${{ secrets.IOS_TEAM_ID }}
+          PROFILE_NAME: ${{ secrets.IOS_PROVISIONING_PROFILE_NAME }}
+          IOS_DISTRIBUTION_CERT_NAME: ${{ secrets.IOS_DISTRIBUTION_CERT_NAME }}
+        run: |
+          set -euo pipefail
+
+          EXPORT_PLIST="$RUNNER_TEMP/ExportOptions.plist"
+          cat > "$EXPORT_PLIST" <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key>
+            <string>app-store</string>
+            <key>teamID</key>
+            <string>${IOS_TEAM_ID}</string>
+            <key>signingStyle</key>
+            <string>manual</string>
+            <key>provisioningProfiles</key>
+            <dict>
+              <key>${APP_BUNDLE_ID}</key>
+              <string>${PROFILE_NAME}</string>
+            </dict>
+            <key>uploadBitcode</key>
+            <false/>
+            <key>uploadSymbols</key>
+            <true/>
+            <key>compileBitcode</key>
+            <false/>
+          </dict>
+          </plist>
+          EOF
+
+          CODE_SIGN_IDENTITY="${IOS_DISTRIBUTION_CERT_NAME}" \
+          CODE_SIGN_STYLE=Manual \
+          DEVELOPMENT_TEAM="${IOS_TEAM_ID}" \
+          PROVISIONING_PROFILE_SPECIFIER="${PROFILE_NAME}" \
+          flutter build ipa --release --export-options-plist="$EXPORT_PLIST"
+
+      - name: Prepare TestFlight auth key
+        id: testflight_key
+        if: ${{ steps.check_prereqs.outputs.enabled == 'true' }}
+        env:
+          APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          APP_STORE_CONNECT_API_KEY_BASE64: ${{ secrets.APP_STORE_CONNECT_API_KEY_BASE64 }}
+        run: |
+          set -euo pipefail
+          KEY_FILE="$RUNNER_TEMP/AuthKey_${APP_STORE_CONNECT_API_KEY_ID}.p8"
+          echo "$APP_STORE_CONNECT_API_KEY_BASE64" | base64 --decode > "$KEY_FILE"
+          echo "key-file=$KEY_FILE" >> "$GITHUB_OUTPUT"
+
+      - name: Upload IPA to TestFlight
+        working-directory: mobile
+        if: ${{ steps.check_prereqs.outputs.enabled == 'true' }}
+        env:
+          APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          APP_STORE_CONNECT_API_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}
+          APP_STORE_CONNECT_API_KEY_FILE: ${{ steps.testflight_key.outputs.key-file }}
+        run: |
+          set -euo pipefail
+          IPA_PATH="$(find build/ios/ipa -name '*.ipa' | head -n 1)"
+          if [ -z "$IPA_PATH" ]; then
+            echo "::error::No IPA found at build/ios/ipa"
+            exit 1
+          fi
+
+          xcrun altool \
+            --upload-app \
+            --file "$IPA_PATH" \
+            --type ios \
+            --apiKey "$APP_STORE_CONNECT_API_KEY_ID" \
+            --apiIssuer "$APP_STORE_CONNECT_API_ISSUER_ID" \
+            --apiPrivateKey "$APP_STORE_CONNECT_API_KEY_FILE"
+
+      - name: Upload build artifact
+        if: ${{ steps.check_prereqs.outputs.enabled == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-ipa-testflight
+          path: mobile/build/ios/ipa/*.ipa
+          if-no-files-found: error
+
+      - name: Cleanup signing keychain
+        if: ${{ always() && steps.check_prereqs.outputs.enabled == 'true' }}
+        run: |
+          set -euo pipefail
+          KEYCHAIN_PATH="${{ steps.signing.outputs.keychain-path }}"
+          if [ -n "$KEYCHAIN_PATH" ] && [ -f "$KEYCHAIN_PATH" ]; then
+            security delete-keychain "$KEYCHAIN_PATH"
+          fi

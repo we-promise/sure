@@ -110,12 +110,19 @@ class _ChatListScreenState extends State<ChatListScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('AI Assistant'),
+        title: const Text('Chats'),
+        centerTitle: false,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _handleRefresh,
-            tooltip: 'Refresh',
+          Padding(
+            padding: const EdgeInsets.only(top: 12, right: 12),
+            child: InkWell(
+              onTap: _handleRefresh,
+              child: const SizedBox(
+                width: 36,
+                height: 36,
+                child: Icon(Icons.refresh),
+              ),
+            ),
           ),
         ],
       ),

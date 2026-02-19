@@ -23,13 +23,40 @@ class User {
       email: json['email'] as String,
       firstName: json['first_name'] as String?,
       lastName: json['last_name'] as String?,
-      uiLayout: (json['ui_layout'] as String?) ?? 'dashboard',
-      // Default to true when key is absent (legacy payloads from older app versions).
-      // Avoids regressing existing users who would otherwise be incorrectly gated.
-      aiEnabled: json.containsKey('ai_enabled')
-          ? (json['ai_enabled'] == true)
-          : true,
+      uiLayout: _coerceUiLayout(json['ui_layout'] ?? json['uiLayout']),
+      aiEnabled: _coerceBool(json['ai_enabled'] ?? json['aiEnabled'], defaultValue: false),
     );
+  }
+
+  static String _coerceUiLayout(dynamic value) {
+    if (value is String) {
+      final layout = value.trim();
+      if (layout.isNotEmpty) return layout;
+    }
+    return 'dashboard';
+  }
+
+  static bool _coerceBool(dynamic value, {required bool defaultValue}) {
+    if (value == null) {
+      return defaultValue;
+    }
+
+    if (value is bool) return value;
+    if (value is num) return value != 0;
+    if (value is String) {
+      switch (value.trim().toLowerCase()) {
+        case "true":
+        case "1":
+        case "yes":
+          return true;
+        case "false":
+        case "0":
+        case "no":
+          return false;
+      }
+    }
+
+    return defaultValue;
   }
 
   User copyWith({

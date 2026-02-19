@@ -31,6 +31,7 @@ on:
       - main
     paths-ignore:
       - 'charts/**'
+      - 'mobile/**'
   schedule:
     - cron: '30 1 * * *'
 
@@ -241,6 +242,17 @@ jobs:
             sleep ${delay}
           done
 
+
+  helm:
+    name: Package Helm chart
+    if: startsWith(github.ref, 'refs/tags/v')
+    uses: ./.github/workflows/helm-publish.yml
+    with:
+      chart_version: ${{ github.ref_name }}
+      app_version: ${{ github.ref_name }}
+      update_gh_pages: true
+    secrets: inherit
+
   mobile:
     name: Build Mobile Apps
     if: startsWith(github.ref, 'refs/tags/v')
@@ -250,7 +262,7 @@ jobs:
   release:
     name: Create GitHub Release
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [merge, mobile]
+    needs: [merge, mobile, helm]
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -269,6 +281,12 @@ jobs:
         with:
           name: ios-build-unsigned
           path: ${{ runner.temp }}/ios-build
+
+      - name: Download Helm chart artifact
+        uses: actions/download-artifact@v4.3.0
+        with:
+          name: helm-chart-package
+          path: ${{ runner.temp }}/helm-artifacts
 
       - name: Prepare release assets
         run: |
@@ -306,6 +324,12 @@ jobs:
             cp "${{ runner.temp }}/ios-build/ios-build-info.txt" "${{ runner.temp }}/release-assets/"
           fi
 
+          # Copy Helm chart package(s)
+          if compgen -G "${{ runner.temp }}/helm-artifacts/*.tgz" > /dev/null; then
+            cp ${{ runner.temp }}/helm-artifacts/*.tgz "${{ runner.temp }}/release-assets/"
+            echo "✓ Helm chart package prepared"
+          fi
+
           echo "Release assets:"
           ls -la "${{ runner.temp }}/release-assets/"
 
@@ -328,6 +352,38 @@ jobs:
             - **iOS Build**: Unsigned iOS build (requires code signing for installation)
 
             > **Note**: These are debug builds intended for testing purposes. For production use, please build from source with proper signing credentials.
+
+
+  create_release_branch:
+    name: Create or update release branch
+    if: startsWith(github.ref, 'refs/tags/v') && !contains(github.ref_name, 'alpha') && !contains(github.ref_name, 'beta') && !contains(github.ref_name, 'rc')
+    needs: [release]
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Create/update minor release branch
+        env:
+          TAG_NAME: ${{ github.ref_name }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          BRANCH_NAME="$(echo "$TAG_NAME" | sed -E 's/^v([0-9]+)\.([0-9]+)\..*/v\1.\2-release-branch/')"
+          SHA="${GITHUB_SHA}"
+
+          echo "Updating ${BRANCH_NAME} -> ${SHA}"
+          if ! gh api "repos/${GITHUB_REPOSITORY}/git/refs/heads/${BRANCH_NAME}" \
+            --method PATCH \
+            --field sha="${SHA}" \
+            --field force=true 2>/dev/null; then
+            gh api "repos/${GITHUB_REPOSITORY}/git/refs" \
+              --method POST \
+              --field ref="refs/heads/${BRANCH_NAME}" \
+              --field sha="${SHA}"
+          fi
 
   bump-pre_release-version:
     name: Bump Pre-release Version

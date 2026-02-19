@@ -1,19 +1,19 @@
-<div data-controller="color-avatar">
+<div data-controller="color-badge">
   <%= styled_form_with model: tag, class: "space-y-4", data: { turbo_frame: :_top } do |f| %>
     <section class="space-y-4">
       <div class="w-fit m-auto mb-4">
-        <%= render partial: "shared/color_avatar", locals: { name: tag.name, color: tag.color } %>
+        <%= render partial: "shared/color_badge", locals: { name: tag.name, color: tag.color } %>
       </div>
       <div class="flex gap-2 items-center justify-center">
         <% Tag::COLORS.each do |color| %>
           <label class="relative">
-            <%= f.radio_button :color, color, class: "sr-only peer", data: { action: "change->color-avatar#handleColorChange" } %>
+            <%= f.radio_button :color, color, class: "sr-only peer", data: { action: "change->color-badge#handleColorChange" } %>
             <div class="w-6 h-6 rounded-full cursor-pointer peer-checked:ring-2 peer-checked:ring-offset-2 peer-checked:ring-blue-500" style="background-color: <%= color %>"></div>
           </label>
         <% end %>
       </div>
       <div class="relative flex items-center border border-secondary rounded-lg text-subdued">
-        <%= f.text_field :name, placeholder: t(".placeholder"), autofocus: true, required: true, data: { color_avatar_target: "name" } %>
+        <%= f.text_field :name, placeholder: t(".placeholder"), autofocus: true, required: true, data: { action: "input->color-badge#handleNameChange" } %>
       </div>
     </section>
 

@@ -67,4 +67,32 @@ class ExchangeRateTest < ActiveSupport::TestCase
 
     assert_nil ExchangeRate.find_or_fetch_rate(from: "USD", to: "EUR", date: Date.current, cache: true)
   end
+
+  test "reuses nearest cached rate within lookback window instead of calling provider" do
+    # Simulate a rate saved under Friday's date when Saturday is requested
+    friday = 1.day.ago.to_date
+    ExchangeRate.create!(from_currency: "USD", to_currency: "JPY", date: friday, rate: 150.5)
+
+    saturday = Date.current
+
+    @provider.expects(:fetch_exchange_rate).never
+
+    result = ExchangeRate.find_or_fetch_rate(from: "USD", to: "JPY", date: saturday)
+    assert_equal 150.5, result.rate
+    assert_equal friday, result.date
+  end
+
+  test "does not reuse cached rate outside lookback window" do
+    old_date = (ExchangeRate::NEAREST_RATE_LOOKBACK_DAYS + 1).days.ago.to_date
+    ExchangeRate.create!(from_currency: "USD", to_currency: "JPY", date: old_date, rate: 140.0)
+
+    provider_response = provider_success_response(
+      OpenStruct.new(from: "USD", to: "JPY", date: Date.current, rate: 155.0)
+    )
+
+    @provider.expects(:fetch_exchange_rate).returns(provider_response)
+
+    result = ExchangeRate.find_or_fetch_rate(from: "USD", to: "JPY", date: Date.current)
+    assert_equal 155.0, result.rate
+  end
 end

@@ -86,11 +86,20 @@
         <% end %>
 
         <%# Sync summary (collapsible) - using shared ProviderSyncSummary component %>
-        <% stats = if defined?(@enable_banking_sync_stats_map) && @enable_banking_sync_stats_map
-             @enable_banking_sync_stats_map[enable_banking_item.id] || {}
-           else
-             enable_banking_item.syncs.ordered.first&.sync_stats || {}
-           end %>
+        <% if defined?(@enable_banking_sync_stats_map) && @enable_banking_sync_stats_map %>
+          <% stats = @enable_banking_sync_stats_map[enable_banking_item.id] || {} %>
+          <% latest_sync_error = defined?(@enable_banking_latest_sync_error_map) && @enable_banking_latest_sync_error_map ? @enable_banking_latest_sync_error_map[enable_banking_item.id] : nil %>
+        <% else %>
+          <% latest_sync = enable_banking_item.syncs.ordered.first %>
+          <% stats = latest_sync&.sync_stats || {} %>
+          <% latest_sync_error = latest_sync&.error %>
+        <% end %>
+        <% if latest_sync_error.present? && stats.is_a?(Hash) %>
+          <% stats = stats.merge(
+            "total_errors" => 1,
+            "errors" => [{ "message" => latest_sync_error }]
+          ) %>
+        <% end %>
         <%= render ProviderSyncSummary.new(
           stats: stats,
           provider_item: enable_banking_item
