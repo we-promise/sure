@@ -35,16 +35,25 @@ jobs:
               exit 1
             fi
 
-            BASE_CHART_VERSION="$(sed -n 's/^version: //p' charts/sure/Chart.yaml | head -n 1)"
-            if [ -z "$BASE_CHART_VERSION" ]; then
-              BASE_CHART_VERSION="0.0.0"
+            LATEST_CHART_TAG="$(git tag --list 'chart-v*' --sort=-v:refname | head -n 1)"
+            if [ -n "$LATEST_CHART_TAG" ]; then
+              BASE_CHART_VERSION="${LATEST_CHART_TAG#chart-v}"
+            else
+              BASE_CHART_VERSION="$(sed -n 's/^version: //p' charts/sure/Chart.yaml | head -n 1)"
+              BASE_CHART_VERSION="${BASE_CHART_VERSION:-0.0.0}"
             fi
             MAJOR="$(echo "$BASE_CHART_VERSION" | cut -d. -f1)"
             MINOR="$(echo "$BASE_CHART_VERSION" | cut -d. -f2)"
             PATCH="$(echo "$BASE_CHART_VERSION" | cut -d. -f3 | sed 's/[^0-9].*$//')"
             PATCH="${PATCH:-0}"
-            CHART_VERSION="${MAJOR}.${MINOR}.$((PATCH + 1))"
-            TAG_NAME="chart-v${CHART_VERSION}"
+
+            NEXT_PATCH=$((PATCH + 1))
+            TAG_NAME="chart-v${MAJOR}.${MINOR}.${NEXT_PATCH}"
+            while git rev-parse "refs/tags/${TAG_NAME}" >/dev/null 2>&1; do
+              NEXT_PATCH=$((NEXT_PATCH + 1))
+              TAG_NAME="chart-v${MAJOR}.${MINOR}.${NEXT_PATCH}"
+            done
+            CHART_VERSION="${MAJOR}.${MINOR}.${NEXT_PATCH}"
 
             git config user.name "${GITHUB_ACTOR}"
             git config user.email "${GITHUB_ACTOR}@users.noreply.github.com"
