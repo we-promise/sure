@@ -64,12 +64,14 @@ jobs:
           fetch-depth: 0
 
       - name: Download Android APK artifact
+        continue-on-error: true
         uses: actions/download-artifact@v4.3.0
         with:
           name: app-release-apk
           path: ${{ runner.temp }}/mobile-artifacts
 
       - name: Download iOS build artifact
+        continue-on-error: true
         uses: actions/download-artifact@v4.3.0
         with:
           name: ios-build-unsigned
