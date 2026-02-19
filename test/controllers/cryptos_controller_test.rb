@@ -24,7 +24,8 @@ class CryptosControllerTest < ActionDispatch::IntegrationTest
       }
     end
 
-    created = @family.accounts.where(accountable_type: "Crypto").order(:created_at).last
+    assert_response :redirect
+    created = Account.find(URI(response.location).path.split("/").last)
     assert_redirected_to created
     assert_equal "exchange", created.accountable.subtype, "subtype must be persisted for trades API"
     assert created.supports_trades?, "exchange crypto account must support trades"
