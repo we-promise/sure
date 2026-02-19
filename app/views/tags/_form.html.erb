@@ -13,7 +13,7 @@
         <% end %>
       </div>
       <div class="relative flex items-center border border-secondary rounded-lg text-subdued">
-        <%= f.text_field :name, placeholder: t(".placeholder"), autofocus: true, required: true, data: { color_badge_target: "name", action: "input->color-badge#handleNameChange" } %>
+        <%= f.text_field :name, placeholder: t(".placeholder"), autofocus: true, required: true, data: { action: "input->color-badge#handleNameChange" } %>
       </div>
     </section>
 
