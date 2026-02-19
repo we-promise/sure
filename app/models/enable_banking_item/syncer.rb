@@ -18,8 +18,14 @@ class EnableBankingItem::Syncer
     import_result = enable_banking_item.import_latest_enable_banking_data
 
     unless import_result[:success]
-      error_msg = import_result[:error] || "Import failed"
-      raise StandardError.new(error_msg)
+      error_msg = import_result[:error]
+      if error_msg.blank? && (import_result[:accounts_failed].to_i > 0 || import_result[:transactions_failed].to_i > 0)
+        parts = []
+        parts << "#{import_result[:accounts_failed]} #{'account'.pluralize(import_result[:accounts_failed])} failed" if import_result[:accounts_failed].to_i > 0
+        parts << "#{import_result[:transactions_failed]} #{'transaction'.pluralize(import_result[:transactions_failed])} failed" if import_result[:transactions_failed].to_i > 0
+        error_msg = parts.join(", ")
+      end
+      raise StandardError.new(error_msg.presence || "Import failed")
     end
 
     # Phase 2: Check account setup status and collect sync statistics

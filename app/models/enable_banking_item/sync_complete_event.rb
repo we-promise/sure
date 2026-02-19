@@ -25,7 +25,7 @@ class EnableBankingItem::SyncCompleteEvent
     )
 
     # Update the Settings > Providers panel
-    enable_banking_items = family.enable_banking_items.ordered
+    enable_banking_items = family.enable_banking_items.ordered.includes(:syncs)
     enable_banking_item.broadcast_replace_to(
       family,
       target: "enable_banking-providers-panel",

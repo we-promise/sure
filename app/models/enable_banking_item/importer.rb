@@ -93,13 +93,20 @@ class EnableBankingItem::Importer
       end
     end
 
-    {
+    result = {
       success: accounts_failed == 0 && transactions_failed == 0,
       accounts_updated: accounts_updated,
       accounts_failed: accounts_failed,
       transactions_imported: transactions_imported,
       transactions_failed: transactions_failed
     }
+    if !result[:success] && (accounts_failed > 0 || transactions_failed > 0)
+      parts = []
+      parts << "#{accounts_failed} #{'account'.pluralize(accounts_failed)} failed" if accounts_failed > 0
+      parts << "#{transactions_failed} #{'transaction'.pluralize(transactions_failed)} failed" if transactions_failed > 0
+      result[:error] = parts.join(", ")
+    end
+    result
   end
 
   private
