@@ -1,7 +1,8 @@
 class Family < ApplicationRecord
-  include IndexaCapitalConnectable
+  include Syncable, AutoTransferMatchable, Subscribeable, VectorSearchable
+  include PlaidConnectable, SimplefinConnectable, LunchflowConnectable, EnableBankingConnectable
   include CoinbaseConnectable, CoinstatsConnectable, SnaptradeConnectable, MercuryConnectable, SophtronConnectable
-  include PlaidConnectable, SimplefinConnectable, LunchflowConnectable, EnableBankingConnectable, Syncable, AutoTransferMatchable, Subscribeable
+  include IndexaCapitalConnectable
 
   DATE_FORMATS = [
     [ "MM-DD-YYYY", "%m-%d-%Y" ],
@@ -15,6 +16,9 @@ class Family < ApplicationRecord
     [ "YYYY.MM.DD", "%Y.%m.%d" ],
     [ "YYYYMMDD", "%Y%m%d" ]
   ].freeze
+
+
+  MONIKERS = [ "Family", "Group" ].freeze
 
   has_many :users, dependent: :destroy
   has_many :accounts, dependent: :destroy
@@ -42,6 +46,16 @@ class Family < ApplicationRecord
   validates :locale, inclusion: { in: I18n.available_locales.map(&:to_s) }
   validates :date_format, inclusion: { in: DATE_FORMATS.map(&:last) }
   validates :month_start_day, inclusion: { in: 1..28 }
+  validates :moniker, inclusion: { in: MONIKERS }
+
+
+  def moniker_label
+    moniker.presence || "Family"
+  end
+
+  def moniker_label_plural
+    moniker_label == "Group" ? "Groups" : "Families"
+  end
 
   def uses_custom_month_start?
     month_start_day != 1
@@ -109,14 +123,45 @@ class Family < ApplicationRecord
 
   # Returns the Investment Contributions category for this family, creating it if it doesn't exist.
   # This is used for auto-categorizing transfers to investment accounts.
+  # Always uses the family's locale to ensure consistent category naming across all users.
   def investment_contributions_category
-    categories.find_or_create_by!(name: Category.investment_contributions_name) do |cat|
-      cat.color = "#0d9488"
-      cat.classification = "expense"
-      cat.lucide_icon = "trending-up"
+    # Find ALL legacy categories (created under old request-locale behavior)
+    legacy = categories.where(name: Category.all_investment_contributions_names).order(:created_at).to_a
+
+    if legacy.any?
+      keeper = legacy.first
+      duplicates = legacy[1..]
+
+      # Reassign transactions and subcategories from duplicates to keeper
+      if duplicates.any?
+        duplicate_ids = duplicates.map(&:id)
+        categories.where(parent_id: duplicate_ids).update_all(parent_id: keeper.id)
+        Transaction.where(category_id: duplicate_ids).update_all(category_id: keeper.id)
+        BudgetCategory.where(category_id: duplicate_ids).update_all(category_id: keeper.id)
+        categories.where(id: duplicate_ids).delete_all
+      end
+
+      # Rename keeper to family's locale name if needed
+      I18n.with_locale(locale) do
+        correct_name = Category.investment_contributions_name
+        keeper.update!(name: correct_name) unless keeper.name == correct_name
+      end
+      return keeper
+    end
+
+    # Create new category using family's locale
+    I18n.with_locale(locale) do
+      categories.find_or_create_by!(name: Category.investment_contributions_name) do |cat|
+        cat.color = "#0d9488"
+        cat.classification = "expense"
+        cat.lucide_icon = "trending-up"
+      end
     end
   rescue ActiveRecord::RecordNotUnique, ActiveRecord::RecordInvalid
-    categories.find_by(name: Category.investment_contributions_name)
+    # Handle race condition: another process created the category
+    I18n.with_locale(locale) do
+      categories.find_by!(name: Category.investment_contributions_name)
+    end
   end
 
   # Returns account IDs for tax-advantaged accounts (401k, IRA, HSA, etc.)

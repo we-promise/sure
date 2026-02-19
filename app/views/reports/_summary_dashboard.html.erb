@@ -28,7 +28,7 @@
               <%= metrics[:income_change] %>%
             </span>
           <% end %>
-          <span class="text-sm text-tertiary">
+          <span class="text-sm text-subdued">
             <%= t("reports.summary.vs_previous") %>
           </span>
         </div>
@@ -65,7 +65,7 @@
               <%= metrics[:expense_change] %>%
             </span>
           <% end %>
-          <span class="text-sm text-tertiary">
+          <span class="text-sm text-subdued">
             <%= t("reports.summary.vs_previous") %>
           </span>
         </div>
@@ -89,7 +89,7 @@
         <%= metrics[:net_savings].format %>
       </p>
 
-      <p class="text-sm text-tertiary">
+      <p class="text-sm text-subdued">
         <%= t("reports.summary.income_minus_expenses") %>
       </p>
     </div>
@@ -118,12 +118,12 @@
                  style="width: <%= [metrics[:budget_percent], 100].min %>%"></div>
           </div>
 
-          <p class="text-sm text-tertiary">
+          <p class="text-sm text-subdued">
             <%= t("reports.summary.of_budget_used") %>
           </p>
         </div>
       <% else %>
-        <p class="text-base text-tertiary">
+        <p class="text-base text-subdued">
           <%= t("reports.summary.no_budget_data") %>
         </p>
       <% end %>

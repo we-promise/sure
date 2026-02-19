@@ -26,13 +26,15 @@
 <% end %>
 
 <% unless Current.user.ui_layout_intro? %>
-  <%= settings_section title: t(".household_title"), subtitle: t(".household_subtitle") do %>
+  <%= settings_section title: family_moniker == "Group" ? t(".group_title", default: "Group") : t(".household_title"), subtitle: t(".household_subtitle", moniker_plural: family_moniker_plural_downcase, moniker: family_moniker_downcase) do %>
     <div class="space-y-4">
       <%= styled_form_with model: Current.user, class: "space-y-4", data: { controller: "auto-submit-form" } do |form| %>
         <%= form.fields_for :family do |family_fields| %>
+          <% name_label = family_moniker == "Group" ? t(".group_form_label", default: "Group name") : t(".household_form_label") %>
+          <% name_placeholder = family_moniker == "Group" ? t(".group_form_input_placeholder", default: "Enter group name") : t(".household_form_input_placeholder") %>
           <%= family_fields.text_field :name,
-                placeholder: t(".household_form_input_placeholder"),
-                label: t(".household_form_label"),
+                placeholder: name_placeholder,
+                label: name_label,
                 disabled: !Current.user.admin?,
                 "data-auto-submit-form-target": "auto" %>
         <% end %>

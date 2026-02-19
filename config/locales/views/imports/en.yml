@@ -102,11 +102,12 @@ en:
       import_portfolio: Import investments
       import_rules: Import rules
       import_transactions: Import transactions
-      import_pdf: Import PDF document
-      import_pdf_description: AI-powered document analysis
+      import_file: Import document
+      import_file_description: AI-powered analysis for PDFs and searchable upload for other supported files
+      requires_account: Import accounts first to unlock this option.
       resume: Resume %{type}
       sources: Sources
-      title: New CSV Import
+      title: New Import
     create:
       file_too_large: File is too large. Maximum size is %{max_size}MB.
       invalid_file_type: Invalid file type. Please upload a CSV file.
@@ -114,6 +115,11 @@ en:
       pdf_too_large: PDF file is too large. Maximum size is %{max_size}MB.
       pdf_processing: Your PDF is being processed. You will receive an email when analysis is complete.
       invalid_pdf: The uploaded file is not a valid PDF.
+      document_too_large: Document file is too large. Maximum size is %{max_size}MB.
+      invalid_document_file_type: Invalid document file type for the active vector store.
+      document_uploaded: Document uploaded successfully.
+      document_upload_failed: We couldn't upload the document to the vector store. Please try again.
+      document_provider_not_configured: No vector store is configured for document uploads.
     show:
       finalize_upload: Please finalize your file upload.
       finalize_mappings: Please finalize your mappings before proceeding.

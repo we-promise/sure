@@ -6,7 +6,7 @@
   [
     { name: t("imports.steps.upload", default: "Upload"), path: nil, is_complete: import.pdf_uploaded?, step_number: 1 },
     { name: t("imports.steps.configure", default: "Configure"), path: nil, is_complete: import.configured?, step_number: 2 },
-    { name: t("imports.steps.clean", default: "Clean"), path: nil, is_complete: import.cleaned?, step_number: 3 },
+    { name: t("imports.steps.clean", default: "Clean"), path: import.configured? ? import_clean_path(import) : nil, is_complete: import.cleaned?, step_number: 3 },
     { name: t("imports.steps.confirm", default: "Confirm"), path: import_path(import), is_complete: import.complete?, step_number: 4 }
   ]
 else

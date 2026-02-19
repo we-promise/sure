@@ -1,53 +1,120 @@
 <%= content_for :page_title, t(".title") %>
 
-<div class="space-y-4">
-  <p class="text-secondary"><%= t(".description") %></p>
+<div class="bg-container rounded-xl shadow-border-xs p-4">
+  <div class="mb-6">
+    <p class="text-sm text-secondary"><%= t(".description") %></p>
+  </div>
 
-  <%= settings_section title: t(".section_title") do %>
-    <div class="divide-y divide-primary">
-      <% @users.each do |user| %>
-        <div class="flex items-center justify-between py-3 first:pt-0 last:pb-0">
-          <div class="flex items-center gap-3">
-            <div class="w-8 h-8 rounded-full bg-surface flex items-center justify-center">
-              <span class="text-sm font-medium text-primary"><%= user.initials %></span>
-            </div>
-            <div>
-              <p class="font-medium text-primary"><%= user.display_name %></p>
-              <p class="text-sm text-secondary"><%= user.email %></p>
-            </div>
-          </div>
-          <div class="flex items-center gap-3">
-            <% if user.id == Current.user.id %>
-              <span class="text-sm text-secondary"><%= t(".you") %></span>
-              <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-surface text-primary">
-                <%= t(".roles.#{user.role}", default: user.role.humanize) %>
-              </span>
-            <% else %>
-              <%= form_with model: [:admin, user], method: :patch, class: "flex items-center gap-2" do |form| %>
-                <%= form.select :role,
-                    options_for_select([
-                      [t(".roles.guest"), "guest"],
-                      [t(".roles.member", default: "Member"), "member"],
-                      [t(".roles.admin"), "admin"],
-                      [t(".roles.super_admin"), "super_admin"]
-                    ], user.role),
-                    {},
-                    class: "text-sm rounded-lg border-primary bg-container text-primary px-2 py-1",
-                    onchange: "this.form.requestSubmit()" %>
-              <% end %>
+  <!-- Filters -->
+  <div class="mb-6">
+    <%= form_with url: admin_users_path, method: :get, class: "flex gap-4 items-end flex-wrap" do |f| %>
+      <div class="w-full md:w-auto">
+        <%= f.label :role, t(".filters.role"), class: "block text-sm font-medium text-primary mb-1" %>
+        <%= f.select :role,
+            options_for_select(
+              [[t(".filters.role_all"), ""], [t(".roles.guest"), "guest"], [t(".roles.member", default: "Member"), "member"], [t(".roles.admin"), "admin"], [t(".roles.super_admin"), "super_admin"]],
+              params[:role]
+            ),
+            {},
+            class: "rounded-lg border border-primary px-3 py-2 text-sm bg-container-inset text-primary w-full" %>
+      </div>
+      <div class="w-full md:w-auto">
+        <%= f.label :trial_status, t(".filters.trial_status"), class: "block text-sm font-medium text-primary mb-1" %>
+        <%= f.select :trial_status,
+            options_for_select(
+              [[t(".filters.trial_all"), ""], [t(".filters.trial_expiring_soon"), "expiring_soon"], [t(".filters.trial_trialing"), "trialing"]],
+              params[:trial_status]
+            ),
+            {},
+            class: "rounded-lg border border-primary px-3 py-2 text-sm bg-container-inset text-primary w-full" %>
+      </div>
+      <%= render DS::Button.new(variant: :primary, size: :md, type: "submit", text: t(".filters.submit"), class: "md:w-auto w-full justify-center") %>
+    <% end %>
+  </div>
+
+  <!-- Summary: trials expiring in next 7 days -->
+  <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+    <div class="bg-container-inset rounded-lg p-4">
+      <div class="flex items-center gap-2 mb-2">
+        <%= icon "calendar-clock", class: "w-5 h-5 text-secondary" %>
+        <p class="text-xs font-medium text-secondary uppercase"><%= t(".summary.trials_expiring_7_days") %></p>
+      </div>
+      <p class="text-2xl font-semibold text-primary"><%= @trials_expiring_in_7_days %></p>
+    </div>
+  </div>
+
+  <!-- Users table -->
+  <div>
+    <h2 class="text-lg font-semibold text-primary mb-3"><%= t(".section_title") %></h2>
+    <div class="bg-container-inset rounded-lg overflow-hidden">
+      <% if @users.any? %>
+        <table class="w-full">
+          <thead class="bg-surface-default border-b border-primary">
+            <tr>
+              <th class="px-4 py-3 text-left text-xs font-medium text-secondary uppercase"><%= t(".table.user") %></th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-secondary uppercase"><%= t(".table.trial_ends_at") %></th>
+              <th class="px-4 py-3 text-right text-xs font-medium text-secondary uppercase"><%= t(".table.family_accounts") %></th>
+              <th class="px-4 py-3 text-right text-xs font-medium text-secondary uppercase"><%= t(".table.family_transactions") %></th>
+              <th class="px-4 py-3 text-right text-xs font-medium text-secondary uppercase"><%= t(".table.role") %></th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-primary">
+            <% @users.each do |user| %>
+              <tr>
+                <td class="px-4 py-3">
+                  <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-full bg-surface flex items-center justify-center shrink-0">
+                      <span class="text-sm font-medium text-primary"><%= user.initials %></span>
+                    </div>
+                    <div>
+                      <p class="font-medium text-primary"><%= user.display_name %></p>
+                      <p class="text-sm text-secondary"><%= user.email %></p>
+                      <p class="text-xs text-secondary mt-1 space-y-0.5">
+                        <span class="block"><%= t(".table.last_login") %>: <%= @last_login_by_user[user.id]&.to_fs(:long) || t(".table.never") %></span>
+                        <span class="block"><%= t(".table.session_count") %>: <%= number_with_delimiter(@sessions_count_by_user[user.id] || 0) %></span>
+                      </p>
+                    </div>
+                  </div>
+                </td>
+                <td class="px-4 py-3 text-sm text-primary whitespace-nowrap">
+                  <%= user.family.subscription&.trial_ends_at&.to_fs(:long) || t(".not_available") %>
+                </td>
+                <td class="px-4 py-3 text-sm text-primary text-right whitespace-nowrap">
+                  <%= number_with_delimiter(@accounts_count_by_family[user.family_id] || 0) %>
+                </td>
+                <td class="px-4 py-3 text-sm text-primary text-right whitespace-nowrap">
+                  <%= number_with_delimiter(@entries_count_by_family[user.family_id] || 0) %>
+                </td>
+                <td class="px-4 py-3 text-right">
+                  <% if user.id == Current.user.id %>
+                    <span class="text-sm text-secondary"><%= t(".you") %></span>
+                  <% else %>
+                    <%= form_with model: [:admin, user], method: :patch, class: "flex items-center justify-end gap-2" do |form| %>
+                      <%= form.select :role,
+                          options_for_select([
+                            [t(".roles.guest"), "guest"],
+                            [t(".roles.member", default: "Member"), "member"],
+                            [t(".roles.admin"), "admin"],
+                            [t(".roles.super_admin"), "super_admin"]
+                          ], user.role),
+                          {},
+                          class: "text-sm rounded-lg border border-primary bg-container text-primary px-2 py-1",
+                          onchange: "this.form.requestSubmit()" %>
+                    <% end %>
+                  <% end %>
+                </td>
+              </tr>
             <% end %>
-          </div>
+          </tbody>
+        </table>
+      <% else %>
+        <div class="p-8 text-center">
+          <%= icon "users", class: "w-12 h-12 mx-auto text-secondary mb-3" %>
+          <p class="text-secondary"><%= t(".no_users") %></p>
         </div>
       <% end %>
     </div>
-
-    <% if @users.empty? %>
-      <div class="text-center py-6">
-        <%= icon "users", class: "w-12 h-12 mx-auto text-secondary mb-3" %>
-        <p class="text-secondary"><%= t(".no_users") %></p>
-      </div>
-    <% end %>
-  <% end %>
+  </div>
 
   <%= settings_section title: t(".role_descriptions_title"), collapsible: true, open: false do %>
     <div class="space-y-3 text-sm">

@@ -1,12 +1,12 @@
-# Sure Mobile - Technical Documentation
+# Sure Flutter - Technical Documentation
 
 ## Project Overview
 
-Sure Mobile is the mobile application for the [Sure Personal Finance Management System](https://github.com/we-promise/sure), developed with Flutter framework and supporting both Android and iOS platforms. This application provides core mobile functionality for the Sure finance management system, allowing users to view and manage their financial accounts anytime, anywhere.
+Sure Flutter is a mobile client for the [Sure Finances Management System](https://github.com/we-promise/sure), developed with Flutter framework and supporting both Android and iOS platforms. This application provides core mobile functionality for the Sure Finances management system, allowing users to view and manage their financial accounts anytime, anywhere.
 
 ### Backend Relationship
 
-This application is a client app for the Sure Finance Management System and requires connection to the Sure backend server (Rails API) to function properly. Backend project: https://github.com/we-promise/sure
+This application is a client app for the Sure Finances Management System and requires connection to the Sure backend server (Rails API) to function properly. Backend project: https://github.com/we-promise/sure
 
 ## Core Features
 

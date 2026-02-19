@@ -2,6 +2,7 @@
 tr:
   rules:
     no_action: İşlem yok
+    no_condition: Koşul yok
     recent_runs:
       title: Son Çalıştırmalar
       description: Başarı/başarısızlık durumu ve işlem sayıları dahil olmak üzere kurallarınızın yürütme geçmişini görüntüleyin.
@@ -22,4 +23,3 @@ tr:
         pending: Beklemede
         success: Başarılı
         failed: Başarısız
-
