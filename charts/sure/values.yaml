@@ -9,7 +9,8 @@ fullnameOverride: ""
 
 image:
   repository: ghcr.io/we-promise/sure
-  tag: "0.6.6"
+  # Defaults to Chart.appVersion when empty (kept in sync with config/initializers/version.rb)
+  tag: ""
   pullPolicy: IfNotPresent
   # Optional: imagePullSecrets to pull from private registries
   imagePullSecrets: []
