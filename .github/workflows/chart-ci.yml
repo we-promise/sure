@@ -35,4 +35,4 @@ jobs:
         run: helm lint charts/sure
 
       - name: Render templates
-        run: helm template sure charts/sure >/tmp/sure-chart-rendered.yaml
+        run: helm template sure charts/sure --kube-version 1.25.0 >/tmp/sure-chart-rendered.yaml
