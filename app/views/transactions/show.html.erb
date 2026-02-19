@@ -74,12 +74,19 @@
                     disable_currency: @entry.linked? %>
             </div>
             <%= f.fields_for :entryable do |ef| %>
-              <%= ef.collection_select :category_id,
-                      Current.family.categories.alphabetically,
-                    :id, :name,
-                    { label: t(".category_label"),
-                      class: "text-subdued", include_blank: t(".uncategorized") },
-                    "data-auto-submit-form-target": "auto" %>
+              <div data-controller="form-dropdown" class="w-full">
+                <%= ef.hidden_field :category_id,
+                      data: {
+                        form_dropdown_target: "input"
+                      } %>
+                <%= render DS::FilterDropdown.new(
+                      items: Current.family.categories.alphabetically,
+                      selected: Current.family.categories.find_by(id: ef.object.category_id),
+                      placeholder: t(".category_label"),
+                      empty_text: t(".no_categories"),
+                      label: t(".category_label")
+                    ) %>
+              </div>
             <% end %>
           <% end %>
         <% end %>
