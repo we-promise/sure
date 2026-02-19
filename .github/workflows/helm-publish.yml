@@ -34,7 +34,7 @@ jobs:
           fetch-depth: 0
 
       - name: Install Helm
-        uses: azure/setup-helm@v3
+        uses: azure/setup-helm@v4.3.1
 
       - name: Resolve chart and app versions
         id: version
