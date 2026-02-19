@@ -367,6 +367,7 @@ jobs:
       - name: Create/update minor release branch
         env:
           TAG_NAME: ${{ github.ref_name }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
 
@@ -374,9 +375,15 @@ jobs:
           SHA="${GITHUB_SHA}"
 
           echo "Updating ${BRANCH_NAME} -> ${SHA}"
-          git init --quiet
-          git remote add origin "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git"
-          git push --force origin "$SHA:refs/heads/$BRANCH_NAME"
+          if ! gh api "repos/${GITHUB_REPOSITORY}/git/refs/heads/${BRANCH_NAME}" \
+            --method PATCH \
+            --field sha="${SHA}" \
+            --field force=true 2>/dev/null; then
+            gh api "repos/${GITHUB_REPOSITORY}/git/refs" \
+              --method POST \
+              --field ref="refs/heads/${BRANCH_NAME}" \
+              --field sha="${SHA}"
+          fi
 
   bump-pre_release-version:
     name: Bump Pre-release Version
