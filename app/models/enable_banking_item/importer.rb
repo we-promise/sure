@@ -105,7 +105,7 @@ class EnableBankingItem::Importer
   private
 
     def extract_friendly_error_message(exception)
-      [exception, exception.cause].compact.each do |ex|
+      [ exception, exception.cause ].compact.each do |ex|
         case ex
         when SocketError then return "DNS resolution failed: check your network/DNS configuration"
         when Net::OpenTimeout, Net::ReadTimeout then return "Connection timed out: the Enable Banking API may be unreachable"
