@@ -29,7 +29,7 @@ jobs:
           set -euo pipefail
 
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            BASE_STABLE_TAG="$(git tag --list 'v*' --sort=-v:refname | grep -Ev 'alpha|beta|rc' | head -n 1)"
+            BASE_STABLE_TAG="$(git tag --list 'v*' --sort=-v:refname | { grep -Ev 'alpha|beta|rc' || true; } | head -n 1)"
             if [ -z "$BASE_STABLE_TAG" ]; then
               echo "::error::No stable app tag found for chart appVersion"
               exit 1
@@ -67,10 +67,15 @@ jobs:
             fi
           else
             TAG_NAME="${GITHUB_REF_NAME}"
-            BASE_STABLE_TAG="$(git tag --list 'v*' --sort=-v:refname | grep -Ev 'alpha|beta|rc' | head -n 1)"
+            BASE_STABLE_TAG="$(git tag --list 'v*' --sort=-v:refname | grep -Ev 'alpha|beta|rc' | head -n 1 || true)"
           fi
 
           CHART_VERSION="${TAG_NAME#chart-v}"
+
+          if [ -z "${BASE_STABLE_TAG:-}" ]; then
+            echo "::warning::No stable app tag found; falling back to CHART_VERSION (${CHART_VERSION}) for appVersion"
+          fi
+
           APP_VERSION="${BASE_STABLE_TAG:-${CHART_VERSION}}"
 
           echo "tag_name=$TAG_NAME" >> "$GITHUB_OUTPUT"
