@@ -174,6 +174,8 @@ class Category < ApplicationRecord
 
   def to_combobox_option
     Category::ComboboxOption.new(category: self)
+  end
+  
   def name_with_parent
     subcategory? ? "#{parent.name} > #{name}" : name
   end
