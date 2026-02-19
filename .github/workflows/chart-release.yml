@@ -57,8 +57,14 @@ jobs:
 
             git config user.name "${GITHUB_ACTOR}"
             git config user.email "${GITHUB_ACTOR}@users.noreply.github.com"
-            git tag "$TAG_NAME"
-            git push origin "$TAG_NAME"
+            if ! git tag "$TAG_NAME"; then
+              echo "::error::Failed to create tag ${TAG_NAME}"
+              exit 1
+            fi
+            if ! git push origin "$TAG_NAME"; then
+              echo "::error::Failed to push tag ${TAG_NAME} to origin"
+              exit 1
+            fi
           else
             TAG_NAME="${GITHUB_REF_NAME}"
             BASE_STABLE_TAG="$(git tag --list 'v*' --sort=-v:refname | grep -Ev 'alpha|beta|rc' | head -n 1)"
