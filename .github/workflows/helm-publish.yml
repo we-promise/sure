@@ -109,16 +109,52 @@ jobs:
           GIT_USER_EMAIL: ${{ github.actor }}@users.noreply.github.com
         run: |
           set -euo pipefail
+
+          CHART_VERSION="${{ steps.version.outputs.chart_version }}"
+          MAX_ATTEMPTS=5
+
           cp .cr-release-packages/*.tgz gh-pages/
-          helm repo index gh-pages --url https://we-promise.github.io/sure --merge gh-pages/index.yaml
 
           cd gh-pages
           git config user.name "$GIT_USER_NAME"
           git config user.email "$GIT_USER_EMAIL"
-          git add .
-          if git diff --cached --quiet; then
-            echo "No Helm chart updates to publish."
-            exit 0
-          fi
-          git commit -m "Publish chart ${{ steps.version.outputs.chart_version }}"
-          git push
+
+          index_and_commit() {
+            if [ -f index.yaml ]; then
+              helm repo index . --url https://we-promise.github.io/sure --merge index.yaml
+            else
+              helm repo index . --url https://we-promise.github.io/sure
+            fi
+
+            git add .
+            if git diff --cached --quiet; then
+              echo "No Helm chart updates to publish."
+              return 1
+            fi
+            git commit -m "Publish chart ${CHART_VERSION}"
+          }
+
+          index_and_commit || exit 0
+
+          for attempt in $(seq 1 "$MAX_ATTEMPTS"); do
+            echo "Push attempt ${attempt}/${MAX_ATTEMPTS}..."
+            if git push; then
+              echo "Chart ${CHART_VERSION} published successfully."
+              exit 0
+            fi
+
+            if [ "$attempt" -eq "$MAX_ATTEMPTS" ]; then
+              echo "::error::Failed to push after ${MAX_ATTEMPTS} attempts"
+              exit 1
+            fi
+
+            backoff=$(( attempt * 2 ))
+            echo "Push failed; retrying in ${backoff}s after rebase..."
+            sleep "$backoff"
+
+            git fetch origin gh-pages
+            git rebase origin/gh-pages
+
+            git reset HEAD~1 --soft 2>/dev/null || true
+            index_and_commit || { echo "No changes after rebase."; exit 0; }
+          done
