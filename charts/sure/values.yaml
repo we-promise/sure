@@ -40,8 +40,6 @@ rails:
       ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT: ""
       # Third party optional keys
       OPENAI_ACCESS_TOKEN: ""
-      OPENAI_URI_BASE: ""
-      OPENAI_MODEL: ""
       OIDC_CLIENT_ID: ""
       OIDC_CLIENT_SECRET: ""
       OIDC_ISSUER: ""
