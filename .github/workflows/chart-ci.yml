@@ -27,7 +27,11 @@ jobs:
         run: |
           set -euo pipefail
 
-          RAILS_VERSION=$(grep -oP '"\K[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?' config/initializers/version.rb)
+          RAILS_VERSION=$(grep -oP '"\K[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?' config/initializers/version.rb | head -n 1 || true)
+          if [ -z "$RAILS_VERSION" ]; then
+            echo "::error::Could not extract a version string from config/initializers/version.rb — ensure it contains a quoted semver like VERSION = \"1.2.3\""
+            exit 1
+          fi
           CHART_VERSION=$(sed -n 's/^version: //p' charts/sure/Chart.yaml | head -n 1)
           APP_VERSION=$(sed -n 's/^appVersion: "\{0,1\}\([^"]*\)"\{0,1\}/\1/p' charts/sure/Chart.yaml | head -n 1)
 
