@@ -102,14 +102,14 @@ an [AGPLv3 license](https://github.com/we-promise/sure/blob/main/LICENSE).
 - "Sure" is not, and refers to this community fork.
 
 <!-- MOBILE_DOWNLOADS_START -->
-## Latest Mobile Release: main-202602181259
+## Latest Mobile Build: main-202602201142
 
-**Release page**: [main-202602181259](https://github.com/we-promise/sure/releases/tag/main-202602181259)
+**Build from**: `main` branch
 
 ### Direct Downloads
 
-- **Android APK**: [sure-main-202602181259.apk](https://github.com/we-promise/sure/releases/download/main-202602181259/sure-main-202602181259.apk)
-- **iOS Build (unsigned)**: [sure-main-202602181259-ios-unsigned.zip](https://github.com/we-promise/sure/releases/download/main-202602181259/sure-main-202602181259-ios-unsigned.zip)
+- **Android APK**: [sure-main-202602201142.apk](https://github.com/we-promise/sure/releases/download/main-build-202602201142/sure-main-202602201142.apk)
+- **iOS Build (unsigned)**: [sure-main-202602201142-ios-unsigned.zip](https://github.com/we-promise/sure/releases/download/main-build-202602201142/sure-main-202602201142-ios-unsigned.zip)
 
-> **Note**: These are builds intended for testing purposes. For production use, please build from source with proper signing credentials.
+> **Note**: These are development builds from `main` intended for testing purposes. For production use, please use a tagged release or build from source with proper signing credentials.
 <!-- MOBILE_DOWNLOADS_END -->
