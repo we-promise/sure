@@ -55,6 +55,23 @@ class Investment < ApplicationRecord
     "pillar_3a" => { short: "Pillar 3a", long: "Private Pension (Pillar 3a)", region: "eu", tax_treatment: :tax_deferred },
     "riester" => { short: "Riester", long: "Riester-Rente", region: "eu", tax_treatment: :tax_deferred },
 
+    # === France ===
+    "assurance_vie" => { short: "Assurance Vie", long: "Assurance Vie", region: "fr", tax_treatment: :tax_advantaged },
+    "contrat_de_capitalisation" => { short: "Contrat de Capitalisation", long: "Contrat de Capitalisation", region: "fr", tax_treatment: :tax_advantaged },
+    "cto" => { short: "CTO", long: "Compte-Titres Ordinaire", region: "fr", tax_treatment: :taxable },
+    "livret_a" => { short: "Livret A", long: "Livret A", region: "fr", tax_treatment: :tax_exempt },
+    "ldds" => { short: "LDDS", long: "Livret de Développement Durable et Solidaire", region: "fr", tax_treatment: :tax_exempt },
+    "leep" => { short: "LEEP", long: "Livret d'Épargne Entreprise et Professionnelle", region: "fr", tax_treatment: :tax_exempt },
+    "lep" => { short: "LEP", long: "Livret d'Épargne Populaire", region: "fr", tax_treatment: :tax_exempt },
+    "livret_jeune" => { short: "Livret Jeune", long: "Livret Jeune", region: "fr", tax_treatment: :tax_exempt },
+    "pee" => { short: "PEE", long: "Plan d'Épargne Entreprise", region: "fr", tax_treatment: :tax_advantaged },
+    "peg" => { short: "PEG", long: "Plan d'Épargne Groupe", region: "fr", tax_treatment: :tax_advantaged },
+    "pel" => { short: "PEL", long: "Plan d'Épargne Logement", region: "fr", tax_treatment: :tax_advantaged },
+    "per" => { short: "PER", long: "Plan d'Épargne Retraite", region: "fr", tax_treatment: :tax_deferred },
+    "per_individuel" => { short: "PER Individuel", long: "Plan d'Épargne Retraite Individuel", region: "fr", tax_treatment: :tax_deferred },
+    "percol" => { short: "PER Collectif", long: "Plan d'Épargne Retraite Collectif", region: "fr", tax_treatment: :tax_deferred },
+    "perobligatoire" => { short: "PER Obligatoire", long: "Plan d'Épargne Retraite Obligatoire", region: "fr", tax_treatment: :tax_deferred },
+
     # === India ===
     # Pensions & insurance
     "nps" => { short: "NPS", long: "National Pension System", region: "in", tax_treatment: :tax_advantaged },
@@ -133,7 +150,7 @@ class Investment < ApplicationRecord
       grouped = SUBTYPES.group_by { |_, v| v[:region] }
 
       # Build region order: user's region first (if known), then Generic, then others
-      other_regions = %w[us uk ca au eu in] - [ user_region ].compact
+      other_regions = %w[us uk ca au eu fr in] - [ user_region ].compact
       region_order = if user_region
         [ user_region, nil, *other_regions ].uniq
       else
