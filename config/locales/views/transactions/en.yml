@@ -11,8 +11,14 @@ en:
       date: Date
       description: Description
       description_placeholder: Describe transaction
+      cancel: Cancel
+      details: Details
       expense: Expense
       income: Income
+      merchant_label: Merchant
+      merchant_prompt: Select a Merchant
+      new_merchant: New merchant
+      new_merchant_placeholder: Merchant name
       none: (none)
       note_label: Notes
       note_placeholder: Enter a note
@@ -41,7 +47,7 @@ en:
       convert_to_trade_description: Convert this transaction into a Buy or Sell trade with security details for portfolio tracking.
       convert_to_trade_button: Convert to Trade
       merchant_label: Merchant
-      name_label: Name
+      name_label: Description
       nature: Type
       none: "(none)"
       note_label: Notes

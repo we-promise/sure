@@ -64,13 +64,18 @@ class TransactionsController < ApplicationController
 
   def create
     account = Current.family.accounts.find(params.dig(:entry, :account_id))
-    @entry = account.entries.new(entry_params)
+
+    resolved_params = entry_params
+    resolved_params = resolve_new_merchant(resolved_params)
+
+    @entry = account.entries.new(resolved_params)
 
     if @entry.save
       @entry.sync_account_later
       @entry.lock_saved_attributes!
       @entry.mark_user_modified!
       @entry.transaction.lock_attr!(:tag_ids) if @entry.transaction.tags.any?
+      @entry.transaction.lock_attr!(:merchant_id) if @entry.transaction.merchant_id.present?
 
       flash[:notice] = "Transaction created"
 
@@ -322,6 +327,14 @@ class TransactionsController < ApplicationController
 
       transaction.saved_change_to_category_id? && transaction.category_id.present? &&
       transaction.eligible_for_category_rule?
+    end
+
+    def resolve_new_merchant(resolved_params)
+      new_name = params[:new_merchant_name].to_s.strip
+      return resolved_params if new_name.blank?
+
+      merchant = Current.family.merchants.find_or_create_by!(name: new_name)
+      resolved_params.deep_merge(entryable_attributes: { merchant_id: merchant.id })
     end
 
     def entry_params
