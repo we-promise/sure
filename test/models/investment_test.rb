@@ -102,7 +102,7 @@ class InvestmentTest < ActiveSupport::TestCase
   # French account types
 
   test "tax_treatment returns tax_exempt for French regulated savings accounts" do
-    %w[livret_a ldds leep lep livret_jeune].each do |subtype|
+    %w[livret_a ldds lep livret_jeune].each do |subtype|
       investment = Investment.new(subtype: subtype)
       assert_equal :tax_exempt, investment.tax_treatment, "Expected #{subtype} to be tax_exempt"
     end
@@ -122,9 +122,11 @@ class InvestmentTest < ActiveSupport::TestCase
     end
   end
 
-  test "tax_treatment returns taxable for French CTO" do
-    investment = Investment.new(subtype: "cto")
-    assert_equal :taxable, investment.tax_treatment
+  test "tax_treatment returns taxable for French taxable accounts" do
+    %w[cto lee].each do |subtype|
+      investment = Investment.new(subtype: subtype)
+      assert_equal :taxable, investment.tax_treatment, "Expected #{subtype} to be taxable"
+    end
   end
 
   # Generic account types
