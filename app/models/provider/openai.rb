@@ -82,7 +82,7 @@ class Provider::Openai < Provider
         json_mode: json_mode
       ).auto_categorize
 
-      trace&.update(output: result.map(&:to_h))
+      langfuse_client&.trace(id: trace.id, output: result.map(&:to_h)) if trace
 
       result
     end
@@ -110,7 +110,7 @@ class Provider::Openai < Provider
         json_mode: json_mode
       ).auto_detect_merchants
 
-      trace&.update(output: result.map(&:to_h))
+      langfuse_client&.trace(id: trace.id, output: result.map(&:to_h)) if trace
 
       result
     end
@@ -147,7 +147,7 @@ class Provider::Openai < Provider
         family: family
       ).process
 
-      trace&.update(output: result.to_h)
+      langfuse_client&.trace(id: trace.id, output: result.to_h) if trace
 
       result
     end
@@ -168,7 +168,7 @@ class Provider::Openai < Provider
         model: effective_model
       ).extract
 
-      trace&.update(output: { transaction_count: result[:transactions].size })
+      langfuse_client&.trace(id: trace.id, output: { transaction_count: result[:transactions].size }) if trace
 
       result
     end
@@ -480,7 +480,7 @@ class Provider::Openai < Provider
         environment: Rails.env
       )
     rescue => e
-      Rails.logger.warn("Langfuse trace creation failed: #{e.message}")
+      Rails.logger.warn("Langfuse trace creation failed: #{e.message}\n#{e.backtrace&.join("\n")}")
       nil
     end
 
@@ -505,16 +505,13 @@ class Provider::Openai < Provider
           output: { error: error.message, details: error.respond_to?(:details) ? error.details : nil },
           level: "ERROR"
         )
-        trace&.update(
-          output: { error: error.message },
-          level: "ERROR"
-        )
+        langfuse_client&.trace(id: trace.id, output: { error: error.message }, level: "ERROR") if trace
       else
         generation&.end(output: output, usage: usage)
-        trace&.update(output: output)
+        langfuse_client&.trace(id: trace.id, output: output) if trace
       end
     rescue => e
-      Rails.logger.warn("Langfuse logging failed: #{e.message}")
+      Rails.logger.warn("Langfuse logging failed: #{e.message}\n#{e.backtrace&.join("\n")}")
     end
 
     def record_llm_usage(family:, model:, operation:, usage: nil, error: nil)
