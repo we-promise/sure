@@ -68,8 +68,8 @@ class Investment < ApplicationRecord
     "pel" => { short: "PEL", long: "Plan d'Épargne Logement", region: "fr", tax_treatment: :tax_advantaged },
     "per" => { short: "PER", long: "Plan d'Épargne Retraite", region: "fr", tax_treatment: :tax_deferred },
     "per_individuel" => { short: "PER Individuel", long: "Plan d'Épargne Retraite Individuel", region: "fr", tax_treatment: :tax_deferred },
-    "percol" => { short: "PER Collectif", long: "Plan d'Épargne Retraite Collectif", region: "fr", tax_treatment: :tax_deferred },
-    "perobligatoire" => { short: "PER Obligatoire", long: "Plan d'Épargne Retraite Obligatoire", region: "fr", tax_treatment: :tax_deferred },
+    "per_collectif" => { short: "PER Collectif", long: "Plan d'Épargne Retraite Collectif", region: "fr", tax_treatment: :tax_deferred },
+    "per_obligatoire" => { short: "PER Obligatoire", long: "Plan d'Épargne Retraite Obligatoire", region: "fr", tax_treatment: :tax_deferred },
 
     # === India ===
     # Pensions & insurance
