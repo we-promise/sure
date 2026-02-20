@@ -50,7 +50,7 @@ class Investment < ApplicationRecord
     "cto" => { short: "CTO", long: "Compte-Titres Ordinaire", region: "fr", tax_treatment: :taxable },
     "livret_a" => { short: "Livret A", long: "Livret A", region: "fr", tax_treatment: :tax_exempt },
     "ldds" => { short: "LDDS", long: "Livret de Développement Durable et Solidaire", region: "fr", tax_treatment: :tax_exempt },
-    "leep" => { short: "LEEP", long: "Livret d'Épargne Entreprise et Professionnelle", region: "fr", tax_treatment: :tax_exempt },
+    "lee" => { short: "LEE", long: "Livret d'Épargne Entreprise", region: "fr", tax_treatment: :taxable },
     "lep" => { short: "LEP", long: "Livret d'Épargne Populaire", region: "fr", tax_treatment: :tax_exempt },
     "livret_jeune" => { short: "Livret Jeune", long: "Livret Jeune", region: "fr", tax_treatment: :tax_exempt },
     "pea" => { short: "PEA", long: "Plan d'Épargne en Actions", region: "fr", tax_treatment: :tax_advantaged },
