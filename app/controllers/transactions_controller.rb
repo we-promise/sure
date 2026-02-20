@@ -66,9 +66,13 @@ class TransactionsController < ApplicationController
     account = Current.family.accounts.find(params.dig(:entry, :account_id))
     @entry = account.entries.new(entry_params)
 
-    ActiveRecord::Base.transaction do
-      resolve_new_merchant!(@entry)
-      @entry.save!
+    begin
+      ActiveRecord::Base.transaction do
+        resolve_new_merchant!(@entry)
+        @entry.save!
+      end
+    rescue ActiveRecord::RecordInvalid
+      return render :new, status: :unprocessable_entity
     end
 
     @entry.sync_account_later
@@ -77,14 +81,12 @@ class TransactionsController < ApplicationController
     @entry.transaction.lock_attr!(:tag_ids) if @entry.transaction.tags.any?
     @entry.transaction.lock_attr!(:merchant_id) if @entry.transaction.merchant_id.present?
 
-    flash[:notice] = "Transaction created"
+    flash[:notice] = t(".created")
 
     respond_to do |format|
       format.html { redirect_back_or_to account_path(@entry.account) }
       format.turbo_stream { stream_redirect_back_or_to(account_path(@entry.account)) }
     end
-  rescue ActiveRecord::RecordInvalid
-    render :new, status: :unprocessable_entity
   end
 
   def update

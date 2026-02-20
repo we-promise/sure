@@ -25,6 +25,8 @@ en:
       submit: Add transaction
       tags_label: Tags
       transfer: Transfer
+    create:
+      created: Transaction created
     new:
       new_transaction: New transaction
     show:
