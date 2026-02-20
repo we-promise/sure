@@ -10,15 +10,31 @@ en:
       success: Category created successfully
     destroy:
       success: Category deleted successfully
+    destroy_all:
+      all_deleted: All categories deleted
     edit:
       edit: Edit category
     form:
       placeholder: Category name
+      color: Color
+      icon: Icon
+      poor_contrast_html: "Poor contrast, choose darker color or %{auto_adjust_link}."
+      auto_adjust: auto-adjust
+      income: Income
+      expense: Expense
+      classification: Classification
+      name: Name
+      parent_category: Parent category (optional)
+      unassigned: "(unassigned)"
     index:
       bootstrap: Use defaults (recommended)
       categories: Categories
       categories_expenses: Expense categories
       categories_incomes: Income categories
+      delete_all: Delete all
+      delete_all_confirm_title: Delete All Categories?
+      delete_all_confirm_body: This will permanently delete all categories and cannot be undone.
+      delete_all_confirm_button: Delete All Categories
       empty: No categories found
       new: New category
     menu:
@@ -32,3 +48,6 @@ en:
       show:
         bootstrap: Generate default categories
         empty: No categories found
+        match_transfer: Match transfer/payment
+        one_time_income: One-time income
+        one_time_expense: One-time expense
