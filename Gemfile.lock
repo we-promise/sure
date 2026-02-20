@@ -295,9 +295,10 @@ GEM
       bigdecimal (~> 3.1)
     jwt (2.10.2)
       base64
-    langfuse-ruby (0.1.4)
+    langfuse-ruby (0.1.6)
       concurrent-ruby (~> 1.0)
       faraday (>= 1.8, < 3.0)
+      faraday-multipart (~> 1.0)
       faraday-net_http (>= 1.0, < 4.0)
       json (~> 2.0)
     language_server-protocol (3.17.0.5)
@@ -808,7 +809,7 @@ DEPENDENCIES
   inline_svg
   jbuilder
   jwt
-  langfuse-ruby (~> 0.1.4)
+  langfuse-ruby (~> 0.1.6)
   letter_opener
   logtail-rails
   lookbook (= 2.3.11)
