@@ -41,7 +41,6 @@ class Investment < ApplicationRecord
     "smsf" => { short: "SMSF", long: "Self-Managed Super Fund", region: "au", tax_treatment: :tax_deferred },
 
     # === Europe ===
-    "pea" => { short: "PEA", long: "Plan d'Épargne en Actions", region: "eu", tax_treatment: :tax_advantaged },
     "pillar_3a" => { short: "Pillar 3a", long: "Private Pension (Pillar 3a)", region: "eu", tax_treatment: :tax_deferred },
     "riester" => { short: "Riester", long: "Riester-Rente", region: "eu", tax_treatment: :tax_deferred },
 
@@ -54,6 +53,7 @@ class Investment < ApplicationRecord
     "leep" => { short: "LEEP", long: "Livret d'Épargne Entreprise et Professionnelle", region: "fr", tax_treatment: :tax_exempt },
     "lep" => { short: "LEP", long: "Livret d'Épargne Populaire", region: "fr", tax_treatment: :tax_exempt },
     "livret_jeune" => { short: "Livret Jeune", long: "Livret Jeune", region: "fr", tax_treatment: :tax_exempt },
+    "pea" => { short: "PEA", long: "Plan d'Épargne en Actions", region: "fr", tax_treatment: :tax_advantaged },
     "pee" => { short: "PEE", long: "Plan d'Épargne Entreprise", region: "fr", tax_treatment: :tax_advantaged },
     "peg" => { short: "PEG", long: "Plan d'Épargne Groupe", region: "fr", tax_treatment: :tax_advantaged },
     "pel" => { short: "PEL", long: "Plan d'Épargne Logement", region: "fr", tax_treatment: :tax_advantaged },
