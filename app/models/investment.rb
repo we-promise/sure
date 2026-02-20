@@ -70,7 +70,6 @@ class Investment < ApplicationRecord
     "per_individuel" => { short: "PER Individuel", long: "Plan d'Épargne Retraite Individuel", region: "fr", tax_treatment: :tax_deferred },
     "per_collectif" => { short: "PER Collectif", long: "Plan d'Épargne Retraite Collectif", region: "fr", tax_treatment: :tax_deferred },
     "per_obligatoire" => { short: "PER Obligatoire", long: "Plan d'Épargne Retraite Obligatoire", region: "fr", tax_treatment: :tax_deferred },
-
     # === India ===
     # Pensions & insurance
     "nps" => { short: "NPS", long: "National Pension System", region: "in", tax_treatment: :tax_advantaged },
@@ -88,7 +87,7 @@ class Investment < ApplicationRecord
     "fd" => { short: "FD", long: "Fixed Deposit", region: "in", tax_treatment: :taxable },
     "rd" => { short: "RD", long: "Recurring Deposit", region: "in", tax_treatment: :taxable },
     "pomis" => { short: "POMIS", long: "Post Office Monthly Income Scheme", region: "in", tax_treatment: :taxable },
-    "kvp" => { short: "KVP", long: "Kisan Vikas Patra", region: "in", tax_treatment: :taxable },
+    "kvp" => { short: "KVP", long: "Kisan Vikas Patra", region: "in", tax_treatment: :tax_exempt },
     # Bonds
     "g_sec" => { short: "G-Sec", long: "Government Securities (G-Secs)", region: "in", tax_treatment: :taxable },
     "sdl" => { short: "SDL", long: "State Development Loans (SDLs)", region: "in", tax_treatment: :taxable },
