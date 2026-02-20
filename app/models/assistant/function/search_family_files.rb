@@ -92,7 +92,11 @@ class Assistant::Function::SearchFamilyFiles < Assistant::Function
     unless response.success?
       error_msg = response.error&.message
       Rails.logger.debug("[SearchFamilyFiles] search failed: #{error_msg}")
-      trace&.update(output: { error: error_msg }, level: "ERROR")
+      begin
+        trace&.update(output: { error: error_msg }, level: "ERROR")
+      rescue => e
+        Rails.logger.debug("[SearchFamilyFiles] Langfuse trace update failed: #{e.message}")
+      end
       return {
         success: false,
         error: "search_failed",
@@ -121,10 +125,14 @@ class Assistant::Function::SearchFamilyFiles < Assistant::Function
       { success: true, query: query, result_count: mapped.size, results: mapped }
     end
 
-    trace&.update(output: {
-      result_count: mapped.size,
-      chunks: mapped.map { |r| { filename: r[:filename], score: r[:score], content_length: r[:content]&.length } }
-    })
+    begin
+      trace&.update(output: {
+        result_count: mapped.size,
+        chunks: mapped.map { |r| { filename: r[:filename], score: r[:score], content_length: r[:content]&.length } }
+      })
+    rescue => e
+      Rails.logger.debug("[SearchFamilyFiles] Langfuse trace update failed: #{e.message}")
+    end
 
     output
   rescue => e
