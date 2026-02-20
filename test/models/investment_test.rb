@@ -116,7 +116,7 @@ class InvestmentTest < ActiveSupport::TestCase
   end
 
   test "tax_treatment returns tax_deferred for French retirement plans" do
-    %w[per per_individuel percol perobligatoire].each do |subtype|
+    %w[per per_individuel per_collectif per_obligatoire].each do |subtype|
       investment = Investment.new(subtype: subtype)
       assert_equal :tax_deferred, investment.tax_treatment, "Expected #{subtype} to be tax_deferred"
     end
