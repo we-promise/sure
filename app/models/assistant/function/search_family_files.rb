@@ -93,9 +93,9 @@ class Assistant::Function::SearchFamilyFiles < Assistant::Function
       error_msg = response.error&.message
       Rails.logger.debug("[SearchFamilyFiles] search failed: #{error_msg}")
       begin
-        trace&.update(output: { error: error_msg }, level: "ERROR")
+        langfuse_client&.trace(id: trace.id, output: { error: error_msg }, level: "ERROR") if trace
       rescue => e
-        Rails.logger.debug("[SearchFamilyFiles] Langfuse trace update failed: #{e.message}")
+        Rails.logger.debug("[SearchFamilyFiles] Langfuse trace update failed: #{e.class}: #{e.message}\n#{e.backtrace&.first(5)&.join("\n")}")
       end
       return {
         success: false,
@@ -126,12 +126,14 @@ class Assistant::Function::SearchFamilyFiles < Assistant::Function
     end
 
     begin
-      trace&.update(output: {
-        result_count: mapped.size,
-        chunks: mapped.map { |r| { filename: r[:filename], score: r[:score], content_length: r[:content]&.length } }
-      })
+      if trace
+        langfuse_client&.trace(id: trace.id, output: {
+          result_count: mapped.size,
+          chunks: mapped.map { |r| { filename: r[:filename], score: r[:score], content_length: r[:content]&.length } }
+        })
+      end
     rescue => e
-      Rails.logger.debug("[SearchFamilyFiles] Langfuse trace update failed: #{e.message}")
+      Rails.logger.debug("[SearchFamilyFiles] Langfuse trace update failed: #{e.class}: #{e.message}\n#{e.backtrace&.first(5)&.join("\n")}")
     end
 
     output
@@ -161,7 +163,7 @@ class Assistant::Function::SearchFamilyFiles < Assistant::Function
         environment: Rails.env
       )
     rescue => e
-      Rails.logger.debug("[SearchFamilyFiles] Langfuse trace creation failed: #{e.message}")
+      Rails.logger.debug("[SearchFamilyFiles] Langfuse trace creation failed: #{e.class}: #{e.message}\n#{e.backtrace&.first(5)&.join("\n")}")
       nil
     end
 end
