@@ -6,6 +6,7 @@ class TransactionImport < Import
       new_transactions = []
       updated_entries = []
       claimed_entry_ids = Set.new # Track entries we've already claimed in this import
+      seen_external_ids = {} # Track external_ids within the same batch (first row wins)
 
       rows.each_with_index do |row, index|
         mapped_account = if account
@@ -30,44 +31,114 @@ class TransactionImport < Import
         # Use account's currency when no currency column was mapped in CSV, with family currency as fallback
         effective_currency = currency_col_label.present? ? row.currency : (mapped_account.currency.presence || family.currency)
 
-        # Check for duplicate transactions using the adapter's deduplication logic
-        # Pass claimed_entry_ids to exclude entries we've already matched in this import
-        # This ensures identical rows within the CSV are all imported as separate transactions
-        adapter = Account::ProviderImportAdapter.new(mapped_account)
-        duplicate_entry = adapter.find_duplicate_transaction(
-          date: row.date_iso,
-          amount: row.signed_amount,
-          currency: effective_currency,
-          name: row.name,
-          exclude_entry_ids: claimed_entry_ids
-        )
+        if row.external_id.present?
+          # Skip intra-batch duplicates (first row wins)
+          batch_key = "#{mapped_account.id}:#{row.external_id}"
+          next if seen_external_ids.key?(batch_key)
+          seen_external_ids[batch_key] = true
 
-        if duplicate_entry
-          # Update existing transaction instead of creating a new one
-          duplicate_entry.transaction.category = category if category.present?
-          duplicate_entry.transaction.tags = tags if tags.any?
-          duplicate_entry.notes = row.notes if row.notes.present?
-          duplicate_entry.import = self
-          duplicate_entry.import_locked = true  # Protect from provider sync overwrites
-          updated_entries << duplicate_entry
-          claimed_entry_ids.add(duplicate_entry.id)
-        else
-          # Create new transaction (no duplicate found)
-          # Mark as import_locked to protect from provider sync overwrites
-          new_transactions << Transaction.new(
-            category: category,
-            tags: tags,
-            entry: Entry.new(
-              account: mapped_account,
+          # External ID-based deduplication: find existing entry by external_id + source
+          existing_entry = mapped_account.entries.find_by(external_id: row.external_id, source: "csv_import")
+
+          if existing_entry
+            # Update existing entry matched by external_id
+            existing_entry.transaction.category = category if category.present?
+            existing_entry.transaction.tags = tags if tags.any?
+            existing_entry.notes = row.notes if row.notes.present?
+            existing_entry.assign_attributes(
               date: row.date_iso,
               amount: row.signed_amount,
               name: row.name,
               currency: effective_currency,
-              notes: row.notes,
               import: self,
               import_locked: true
             )
+            updated_entries << existing_entry
+            claimed_entry_ids.add(existing_entry.id)
+          else
+            # Fallback to legacy date/amount/name dedup for entries imported before external_id support
+            adapter = Account::ProviderImportAdapter.new(mapped_account)
+            legacy_match = adapter.find_duplicate_transaction(
+              date: row.date_iso,
+              amount: row.signed_amount,
+              currency: effective_currency,
+              name: row.name,
+              exclude_entry_ids: claimed_entry_ids
+            )
+
+            if legacy_match
+              # Update existing entry and backfill external_id
+              legacy_match.transaction.category = category if category.present?
+              legacy_match.transaction.tags = tags if tags.any?
+              legacy_match.notes = row.notes if row.notes.present?
+              legacy_match.assign_attributes(
+                external_id: row.external_id,
+                source: "csv_import",
+                import: self,
+                import_locked: true
+              )
+              updated_entries << legacy_match
+              claimed_entry_ids.add(legacy_match.id)
+            else
+              # Create new transaction with external_id
+              new_transactions << Transaction.new(
+                category: category,
+                tags: tags,
+                entry: Entry.new(
+                  account: mapped_account,
+                  date: row.date_iso,
+                  amount: row.signed_amount,
+                  name: row.name,
+                  currency: effective_currency,
+                  notes: row.notes,
+                  external_id: row.external_id,
+                  source: "csv_import",
+                  import: self,
+                  import_locked: true
+                )
+              )
+            end
+          end
+        else
+          # Legacy name/date/amount-based deduplication
+          # Pass claimed_entry_ids to exclude entries we've already matched in this import
+          # This ensures identical rows within the CSV are all imported as separate transactions
+          adapter = Account::ProviderImportAdapter.new(mapped_account)
+          duplicate_entry = adapter.find_duplicate_transaction(
+            date: row.date_iso,
+            amount: row.signed_amount,
+            currency: effective_currency,
+            name: row.name,
+            exclude_entry_ids: claimed_entry_ids
           )
+
+          if duplicate_entry
+            # Update existing transaction instead of creating a new one
+            duplicate_entry.transaction.category = category if category.present?
+            duplicate_entry.transaction.tags = tags if tags.any?
+            duplicate_entry.notes = row.notes if row.notes.present?
+            duplicate_entry.import = self
+            duplicate_entry.import_locked = true  # Protect from provider sync overwrites
+            updated_entries << duplicate_entry
+            claimed_entry_ids.add(duplicate_entry.id)
+          else
+            # Create new transaction (no duplicate found)
+            # Mark as import_locked to protect from provider sync overwrites
+            new_transactions << Transaction.new(
+              category: category,
+              tags: tags,
+              entry: Entry.new(
+                account: mapped_account,
+                date: row.date_iso,
+                amount: row.signed_amount,
+                name: row.name,
+                currency: effective_currency,
+                notes: row.notes,
+                import: self,
+                import_locked: true
+              )
+            )
+          end
         end
       end
 
@@ -87,7 +158,7 @@ class TransactionImport < Import
   end
 
   def column_keys
-    base = %i[date amount name currency category tags notes]
+    base = %i[date amount name currency category tags notes external_id]
     base.unshift(:account) if account.nil?
     base
   end
