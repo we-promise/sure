@@ -5,6 +5,7 @@ import '../providers/auth_provider.dart';
 import '../services/offline_storage_service.dart';
 import '../services/log_service.dart';
 import '../services/preferences_service.dart';
+import '../services/user_service.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -98,6 +99,113 @@ class _SettingsScreenState extends State<SettingsScreen> {
           );
         }
       }
+    }
+  }
+
+  Future<void> _handleResetAccount(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Reset Account'),
+        content: const Text(
+          'Resetting your account will delete all your accounts, categories, '
+          'merchants, tags, and other data, but keep your user account intact.\n\n'
+          'This action cannot be undone. Are you sure?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(
+              foregroundColor: Theme.of(context).colorScheme.error,
+            ),
+            child: const Text('Reset Account'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !context.mounted) return;
+
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final accessToken = await authProvider.getValidAccessToken();
+    if (accessToken == null) {
+      await authProvider.logout();
+      return;
+    }
+
+    final result = await UserService().resetAccount(accessToken: accessToken);
+
+    if (!context.mounted) return;
+
+    if (result['success'] == true) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Account reset has been initiated. This may take a moment.'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result['error'] ?? 'Failed to reset account'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Future<void> _handleDeleteAccount(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Account'),
+        content: const Text(
+          'Deleting your account will permanently remove all your data '
+          'and cannot be undone.\n\n'
+          'Are you sure you want to delete your account?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(
+              foregroundColor: Theme.of(context).colorScheme.error,
+            ),
+            child: const Text('Delete Account'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !context.mounted) return;
+
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final accessToken = await authProvider.getValidAccessToken();
+    if (accessToken == null) {
+      await authProvider.logout();
+      return;
+    }
+
+    final result = await UserService().deleteAccount(accessToken: accessToken);
+
+    if (!context.mounted) return;
+
+    if (result['success'] == true) {
+      await authProvider.logout();
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result['error'] ?? 'Failed to delete account'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
@@ -249,6 +357,39 @@ class _SettingsScreenState extends State<SettingsScreen> {
             title: const Text('Clear Local Data'),
             subtitle: const Text('Remove all cached transactions and accounts'),
             onTap: () => _handleClearLocalData(context),
+          ),
+
+          const Divider(),
+
+          // Danger Zone Section
+          const Padding(
+            padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: Text(
+              'Danger Zone',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: Colors.red,
+              ),
+            ),
+          ),
+
+          ListTile(
+            leading: const Icon(Icons.restart_alt, color: Colors.red),
+            title: const Text('Reset Account'),
+            subtitle: const Text(
+              'Delete all accounts, categories, merchants, and tags but keep your user account',
+            ),
+            onTap: () => _handleResetAccount(context),
+          ),
+
+          ListTile(
+            leading: const Icon(Icons.delete_forever, color: Colors.red),
+            title: const Text('Delete Account'),
+            subtitle: const Text(
+              'Permanently remove all your data. This cannot be undone.',
+            ),
+            onTap: () => _handleDeleteAccount(context),
           ),
 
           const Divider(),

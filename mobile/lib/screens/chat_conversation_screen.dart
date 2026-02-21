@@ -79,13 +79,13 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
 
     _messageController.clear();
 
-    await chatProvider.sendMessage(
+    final delivered = await chatProvider.sendMessage(
       accessToken: accessToken,
       chatId: widget.chatId,
       content: content,
     );
 
-    if (shouldUpdateTitle) {
+    if (delivered && shouldUpdateTitle) {
       await chatProvider.updateChatTitle(
         accessToken: accessToken,
         chatId: widget.chatId,
