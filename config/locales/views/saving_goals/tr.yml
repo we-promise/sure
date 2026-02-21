@@ -1,0 +1,92 @@
+---
+tr:
+  saving_goals:
+    create:
+      success: "Tasarruf hedefi başarıyla oluşturuldu."
+    update:
+      success: "Tasarruf hedefi başarıyla güncellendi."
+    destroy:
+      success: "Tasarruf hedefi başarıyla silindi."
+    pause:
+      success: "Tasarruf hedefi duraklatıldı."
+    resume:
+      success: "Tasarruf hedefi devam ettirildi."
+    complete:
+      success: "Tasarruf hedefi tamamlandı! 🎉"
+    archive:
+      success: "Tasarruf hedefi arşivlendi."
+    index:
+      title: "Tasarruf Hedefleri"
+      new_goal: "Yeni Hedef"
+      empty:
+        title: "Henüz tasarruf hedefi yok"
+        description: "Bir finansal hedef belirleyin ve ilerlemenizi takip edin."
+      filters:
+        all: "Tümü"
+        active: "Aktif"
+        paused: "Duraklatıldı"
+        completed: "Tamamlandı"
+        archived: "Arşivlendi"
+    show:
+      progress: "%{percent}% tasarruf edildi"
+      target: "Hedef: %{amount}"
+      deadline: "Son Tarih: %{date}"
+      behind: "Geride"
+      contributions: "Katkılar"
+      actions: "İşlemler"
+      edit: "Hedefi Düzenle"
+      delete: "Hedefi Sil"
+      target_date: "Hedef tarih: %{date}"
+      current_balance: "Mevcut Bakiye"
+      of_target: "%{amount} hedefinin"
+      on_track: "Yolunda"
+      on_track_description: "Hedefinize zamanında ulaşmak için yeterince biriktiriyorsunuz."
+      off_track: "Geride"
+      off_track_description: "Yetişmek için aylık tasarruflarınızı artırmayı düşünün."
+      pause: "Duraklat"
+      resume: "Sürdür"
+      complete: "Tamamlandı Olarak İşaretle"
+      monthly_effort: "Aylık Çaba"
+      save_per_month: "Ayda %{amount} biriktir"
+      for_months: "hedefinize ulaşmak için %{count} ay boyunca"
+      allocate: "Ayır"
+      contribution_history: "Katkı Geçmişi"
+      no_contributions: "Henüz katkı yok. Biriktirmeye başlayın!"
+      auto_source: "Oto"
+      manual_source: "Manuel"
+      initial_balance_source: "Başlangıç Bakiyesi"
+      total_contributions:
+        one: "Toplam: 1 katkıdan %{amount}"
+        other: "Toplam: %{count} katkıdan %{amount}"
+    form:
+      errors_title: "Lütfen aşağıdaki hataları düzeltin:"
+      name_label: "Hedef Adı"
+      name_placeholder: "örn. Acil Durum Fonu, Tatil"
+      target_amount_label: "Hedef Tutar"
+      target_date_label: "Hedef Tarih"
+      target_date_hint: "İsteğe bağlı. Hızı takip etmek için bir son tarih belirleyin."
+      initial_amount_label: "Zaten birikmiş (isteğe bağlı)"
+      initial_amount_hint: "Bu hedef için zaten biriktirmeye başladıysanız"
+
+      notes_label: "Notlar"
+      notes_placeholder: "Bu hedef hakkında notlar ekleyin..."
+      save: "Hedefi Kaydet"
+      create: "Hedef Oluştur"
+      update: "Değişiklikleri Kaydet"
+      cancel: "İptal"
+    new:
+      title: "Yeni Tasarruf Hedefi"
+    edit:
+      title: "Tasarruf Hedefini Düzenle"
+    actions:
+      pause: "Hedefi Duraklat"
+      resume: "Hedefi Sürdür"
+      complete: "Hedefi Tamamla"
+      archive: "Hedefi Arşivle"
+    status:
+      active: "Aktif"
+      paused: "Duraklatıldı"
+      completed: "Tamamlandı"
+      archived: "Arşivlendi"
+    goal_card:
+      target_date: "Hedef: %{date}"

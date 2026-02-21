@@ -1,0 +1,27 @@
+---
+fr:
+  budgets:
+    show:
+      savings_goals:
+        title: "Objectifs d'épargne"
+        manage: "Gérer les objectifs"
+        surplus: "Surplus mensuel"
+        allocated: "Alloué"
+        available: "Disponible"
+        allocate: "Allouer"
+        add_more: "Ajouter"
+        auto_funded: "Financement auto"
+        no_contribution: "Non financé ce mois-ci"
+        empty: "Aucun objectif actif"
+        create_first: "Créez votre premier objectif"
+      savings:
+        title: "Épargne"
+        category_name: "Objectifs d'épargne"
+        funded: "Financé"
+        commitment: "Objectif"
+        remaining: "Restant"
+        to_fund: "à financer"
+        fully_funded: "Entièrement financé"
+        partial: "Partiellement financé"
+        pending: "En attente"
+        manage_goals: "Gérer les objectifs"

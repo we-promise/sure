@@ -1,0 +1,27 @@
+---
+de:
+  budgets:
+    show:
+      savings_goals:
+        title: "Sparziele"
+        manage: "Ziele verwalten"
+        surplus: "Monatlicher Überschuss"
+        allocated: "Zugewiesen"
+        available: "Verfügbar"
+        allocate: "Zuweisen"
+        add_more: "Mehr hinzufügen"
+        auto_funded: "Automatisch finanziert"
+        no_contribution: "Diesen Monat nicht finanziert"
+        empty: "Keine aktiven Sparziele"
+        create_first: "Erstellen Sie Ihr erstes Ziel"
+      savings:
+        title: "Ersparnisse"
+        category_name: "Sparziele"
+        funded: "Finanziert"
+        commitment: "Ziel"
+        remaining: "Verbleibend"
+        to_fund: "zu finanzieren"
+        fully_funded: "Vollständig finanziert"
+        partial: "Teilweise finanziert"
+        pending: "Ausstehend"
+        manage_goals: "Ziele verwalten"

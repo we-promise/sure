@@ -1,0 +1,71 @@
+<%# locals: (budget:) %>
+
+<% if budget.savings_commitment > 0 %>
+  <div class="group block w-full px-4 py-2 bg-container">
+    <%# Category Header with Status Badge %>
+    <div class="flex items-center lg:justify-between gap-2 mb-3">
+      <div class="h-9 w-9 flex-shrink-0 group-hover:scale-105 transition-all duration-300 rounded-full flex justify-center items-center"
+            style="background-color: color-mix(in oklab, var(--color-green-500) 10%, transparent); color: var(--color-green-500);">
+        <%= icon "piggy-bank", color: "current" %>
+      </div>
+      <h3 class="flex-1 min-w-0 font-medium text-primary truncate"><%= t("budgets.show.savings.category_name") %></h3>
+      <div class="flex items-center gap-3 flex-shrink-0 ml-auto">
+        <% if budget.unfunded_savings_this_month <= 0 %>
+          <span class="inline-flex items-center gap-1 px-2 py-1 bg-green-500/10 text-success text-xs font-medium rounded-full whitespace-nowrap">
+            <%= icon("check-circle", size: "sm", color: "green") %>
+            <%= t("budgets.show.savings.fully_funded") %>
+          </span>
+        <% elsif budget.allocated_to_goals > 0 %>
+          <span class="inline-flex items-center gap-1 px-2 py-1 bg-yellow-500/10 text-warning text-xs font-medium rounded-full whitespace-nowrap">
+            <%= icon("alert-triangle", size: "sm", color: "yellow") %>
+            <%= t("budgets.show.savings.partial") %>
+          </span>
+        <% else %>
+          <span class="inline-flex items-center gap-1 px-2 py-1 bg-gray-500/10 text-secondary text-xs font-medium rounded-full whitespace-nowrap">
+            <%= icon("clock", size: "sm") %>
+            <%= t("budgets.show.savings.pending") %>
+          </span>
+        <% end %>
+      </div>
+    </div>
+
+    <%# Progress Bar %>
+    <div class="mb-3">
+      <div class="h-1.5 bg-container-inset rounded-full overflow-hidden">
+        <% funded_percent = budget.savings_commitment > 0 ? (budget.allocated_to_goals / budget.savings_commitment.to_f * 100) : 0 %>
+        <% bar_color = funded_percent >= 100 ? "bg-green-500" : (funded_percent > 0 ? "bg-yellow-500" : "bg-gray-400") %>
+        <div class="h-full <%= bar_color %> rounded-full transition-all duration-500"
+             style="width: <%= [funded_percent, 100].min %>%"></div>
+      </div>
+    </div>
+
+    <%# Budget Details %>
+    <div class="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+      <div class="whitespace-nowrap w-full sm:w-auto">
+        <span class="text-sm text-secondary"><%= t("budgets.show.savings.funded") %>:</span>
+        <span class="font-medium text-primary">
+          <%= format_money(Money.new(budget.allocated_to_goals, budget.currency)) %>
+        </span>
+      </div>
+      <div class="whitespace-nowrap w-full sm:w-auto inline-flex items-center gap-1">
+        <span class="text-sm text-secondary"><%= t("budgets.show.savings.commitment") %>:</span>
+        <span class="font-medium text-primary">
+          <%= format_money(budget.savings_commitment_money) %>
+        </span>
+      </div>
+      <div class="whitespace-nowrap w-full sm:w-auto lg:ml-auto">
+        <% if budget.unfunded_savings_this_month > 0 %>
+          <span class="text-sm text-secondary"><%= t("budgets.show.savings.remaining") %>:</span>
+          <span class="font-medium text-primary">
+            <%= format_money(Money.new(budget.unfunded_savings_this_month, budget.currency)) %>
+          </span>
+        <% else %>
+          <span class="text-sm text-secondary"><%= t("budgets.show.savings.remaining") %>:</span>
+          <span class="font-medium text-green-500">
+            <%= format_money(Money.new(0, budget.currency)) %>
+          </span>
+        <% end %>
+      </div>
+    </div>
+  </div>
+<% end %>
