@@ -172,7 +172,9 @@ Rails.application.routes.draw do
     resource :security, only: :show
     resources :sso_identities, only: :destroy
     resource :api_key, only: [ :show, :new, :create, :destroy ]
-    resource :ai_prompts, only: :show
+    resource :ai_prompts, only: %i[show update] do
+      get :edit_system_prompt
+    end
     resource :llm_usage, only: :show
     resource :guides, only: :show
     resource :bank_sync, only: :show, controller: "bank_sync"
