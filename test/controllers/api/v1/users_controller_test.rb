@@ -96,6 +96,32 @@ class Api::V1::UsersControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Failed to delete account", body["error"]
   end
 
+  # -- Deactivated user ------------------------------------------------------
+
+  test "OAuth rejects deactivated user with 401" do
+    @user.update!(active: false)
+
+    delete "/api/v1/users/reset", headers: bearer_auth_header(@write_token)
+    assert_response :unauthorized
+
+    body = JSON.parse(response.body)
+    assert_equal "Account has been deactivated", body["message"]
+  end
+
+  test "API key rejects deactivated user with 401" do
+    @user.update!(active: false)
+    plain_key = ApiKey.generate_secure_key
+    api_key = @user.api_keys.build(name: "Test Key", scopes: [ "read_write" ], source: "mobile")
+    api_key.key = plain_key
+    api_key.save!
+
+    delete "/api/v1/users/reset", headers: { "X-Api-Key" => plain_key }
+    assert_response :unauthorized
+
+    body = JSON.parse(response.body)
+    assert_equal "Account has been deactivated", body["message"]
+  end
+
   # -- API key auth ----------------------------------------------------------
 
   test "reset works with API key authentication" do
