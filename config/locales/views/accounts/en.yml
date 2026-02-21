@@ -72,7 +72,8 @@ en:
         owed: Amount owed
       menu:
         confirm_accept: Delete "%{name}"
-        confirm_body_html: "<p>By deleting this account, you will erase its value
+        confirm_body_html:
+          "<p>By deleting this account, you will erase its value
           history, affecting various aspects of your overall account. This action
           will have a direct impact on your net worth calculations and the account
           graphs.</p><br /> <p>After deletion, there is no way you'll be able to restore
@@ -123,6 +124,7 @@ en:
       ca: Canada
       au: Australia
       eu: Europe
+      fr: France
       generic: General
     confirm_unlink:
       title: Unlink account from provider?
@@ -147,5 +149,6 @@ en:
   email_confirmations:
     new:
       invalid_token: Invalid or expired confirmation link.
-      success_login: Your email has been confirmed. Please log in with your new email
+      success_login:
+        Your email has been confirmed. Please log in with your new email
         address.
