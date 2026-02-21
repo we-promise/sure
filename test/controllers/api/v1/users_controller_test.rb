@@ -64,23 +64,31 @@ class Api::V1::UsersControllerTest < ActionDispatch::IntegrationTest
   # -- Delete account --------------------------------------------------------
 
   test "destroy deactivates user and returns 200" do
-    delete "/api/v1/users/me", headers: bearer_auth_header(@write_token)
+    solo_family = Family.create!(name: "Solo Family", currency: "USD", locale: "en", date_format: "%m-%d-%Y")
+    solo_user = solo_family.users.create!(
+      email: "solo@example.com",
+      password: "password123",
+      password_confirmation: "password123",
+      role: :admin
+    )
+    solo_token = Doorkeeper::AccessToken.create!(
+      application: @oauth_app,
+      resource_owner_id: solo_user.id,
+      scopes: "read_write"
+    )
+
+    delete "/api/v1/users/me", headers: bearer_auth_header(solo_token)
     assert_response :ok
 
     body = JSON.parse(response.body)
     assert_equal "Account has been deleted", body["message"]
 
-    @user.reload
-    assert_not @user.active?
-    assert_not_equal "bob@bobdylan.com", @user.email
+    solo_user.reload
+    assert_not solo_user.active?
+    assert_not_equal "solo@example.com", solo_user.email
   end
 
-  test "destroy returns 422 when deactivation fails" do
-    User.any_instance.stubs(:deactivate).returns(false)
-    User.any_instance.stubs(:errors).returns(
-      OpenStruct.new(full_messages: [ "Cannot deactivate admin with other users" ])
-    )
-
+  test "destroy returns 422 when admin has other family members" do
     delete "/api/v1/users/me", headers: bearer_auth_header(@write_token)
     assert_response :unprocessable_entity
 
