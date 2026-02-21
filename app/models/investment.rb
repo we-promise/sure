@@ -140,7 +140,6 @@ class Investment < ApplicationRecord
       "CHF" => "eu",
       "INR" => "in"
     }.freeze
-
     # Returns subtypes grouped by region for use with grouped_options_for_select
     # Optionally accepts country (ISO 2-letter code) to prioritize user's country first, else currency
     # Region mappings are configured in config/regions.yml
