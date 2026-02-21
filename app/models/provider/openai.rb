@@ -4,6 +4,18 @@ class Provider::Openai < Provider
   # Subclass so errors caught in this provider are raised as Provider::Openai::Error
   Error = Class.new(Provider::Error)
 
+  # Specific error for models that don't support function calling
+  class FunctionCallingNotSupportedError < Error
+    def initialize(model:, provider_url:)
+      message = I18n.t(
+        "errors.llm.function_calling_not_supported",
+        model: model,
+        provider_url: provider_url
+      )
+      super(message)
+    end
+  end
+
   # Supported OpenAI model prefixes (e.g., "gpt-4" matches "gpt-4", "gpt-4.1", "gpt-4-turbo", etc.)
   DEFAULT_OPENAI_MODEL_PREFIXES = %w[gpt-4 gpt-5 o1 o3]
   DEFAULT_MODEL = "gpt-4.1"
@@ -380,9 +392,35 @@ class Provider::Openai < Provider
             user_identifier: user_identifier
           )
           record_llm_usage(family: family, model: model, operation: "chat", error: e)
+
+          # Detect function calling not supported error (404 with tools)
+          if tools.present? && function_calling_not_supported_error?(e)
+            raise FunctionCallingNotSupportedError.new(model: model, provider_url: @uri_base)
+          end
+
           raise
         end
       end
+    end
+
+    def function_calling_not_supported_error?(error)
+      # Check if this is a 404 error which often indicates the endpoint doesn't support tools
+      # Different providers may return different error formats
+      http_status = extract_http_status_code(error)
+      return true if http_status == 404
+
+      # Also check error message for common tool-related error patterns
+      error_message = error.message.to_s.downcase
+      tool_error_patterns = [
+        "tools",
+        "tool_choice",
+        "function",
+        "does not support",
+        "not supported",
+        "invalid parameter",
+        "unknown parameter"
+      ]
+      tool_error_patterns.any? { |pattern| error_message.include?(pattern) }
     end
 
     def build_generic_messages(prompt:, instructions: nil, function_results: [])
