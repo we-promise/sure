@@ -143,7 +143,7 @@ class Assistant::Function::GetHoldings < Assistant::Function
         )
 
       if params["securities"].present?
-        security_ids = family.securities.where(ticker: params["securities"]).pluck(:id)
+        security_ids = Security.where(ticker: params["securities"]).pluck(:id)
         holdings = holdings.where(security_id: security_ids)
       end
 
