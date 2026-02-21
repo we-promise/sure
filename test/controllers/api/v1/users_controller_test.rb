@@ -110,12 +110,17 @@ class Api::V1::UsersControllerTest < ActionDispatch::IntegrationTest
 
   test "API key rejects deactivated user with 401" do
     @user.update_column(:active, false)
-    plain_key = ApiKey.generate_secure_key
-    api_key = @user.api_keys.build(name: "Test Key", scopes: [ "read_write" ], source: "mobile")
-    api_key.key = plain_key
-    api_key.save!
+    @user.api_keys.active.destroy_all
 
-    delete "/api/v1/users/reset", headers: { "X-Api-Key" => plain_key }
+    api_key = ApiKey.create!(
+      user: @user,
+      name: "Test Key",
+      scopes: [ "read_write" ],
+      display_key: "test_deactivated_#{SecureRandom.hex(8)}",
+      source: "mobile"
+    )
+
+    delete "/api/v1/users/reset", headers: api_headers(api_key)
     assert_response :unauthorized
 
     body = JSON.parse(response.body)
@@ -125,24 +130,27 @@ class Api::V1::UsersControllerTest < ActionDispatch::IntegrationTest
   # -- API key auth ----------------------------------------------------------
 
   test "reset works with API key authentication" do
-    @user.api_keys.destroy_all
+    @user.api_keys.active.destroy_all
 
-    plain_key = ApiKey.generate_secure_key
-    api_key = @user.api_keys.build(
+    api_key = ApiKey.create!(
+      user: @user,
       name: "Test API Key",
-      scopes: [ "read_write" ]
+      scopes: [ "read_write" ],
+      display_key: "test_reset_#{SecureRandom.hex(8)}"
     )
-    api_key.key = plain_key
-    api_key.save!
 
     assert_enqueued_with(job: FamilyResetJob) do
-      delete "/api/v1/users/reset", headers: { "X-Api-Key" => plain_key }
+      delete "/api/v1/users/reset", headers: api_headers(api_key)
     end
 
     assert_response :ok
   end
 
   private
+
+    def api_headers(api_key)
+      { "X-Api-Key" => api_key.display_key }
+    end
 
     def bearer_auth_header(token)
       { "Authorization" => "Bearer #{token.token}" }
