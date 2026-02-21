@@ -23,7 +23,8 @@ class Assistant::FunctionToolCaller
   private
     def execute(function_request)
       fn = find_function(function_request)
-      fn_args = JSON.parse(function_request.function_args)
+      raw_args = function_request.function_args
+      fn_args = raw_args.present? ? JSON.parse(raw_args) : {}
       fn.call(fn_args)
     rescue => e
       raise FunctionExecutionError.new(
