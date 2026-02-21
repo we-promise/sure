@@ -5,7 +5,7 @@ class Import::ConfigurationsController < ApplicationController
 
   def show
     # PDF imports are auto-configured from AI extraction, skip to clean step
-    redirect_to import_clean_path(@import) if @import.is_a?(PdfImport)
+    redirect_to import_clean_path(@import) if @import.type == "PdfImport"
   end
 
   def update
@@ -44,6 +44,8 @@ class Import::ConfigurationsController < ApplicationController
         :entity_type_col_label,
         :notes_col_label,
         :currency_col_label,
+        :category_parent_col_label,
+        :paid_by_col_label,
         :date_format,
         :number_format,
         :signage_convention,

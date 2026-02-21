@@ -89,6 +89,28 @@
             disabled_message: requires_account_message %>
         <% end %>
 
+        <% if params[:type].nil? || params[:type] == "BuddyImport" %>
+          <%= render "imports/import_option",
+            type: "BuddyImport",
+            icon_name: "wallet",
+            icon_bg_class: "bg-teal-500/5",
+            icon_text_class: "text-teal-500",
+            label: t(".import_buddy", default: "Import from Buddy"),
+            enabled: has_accounts,
+            disabled_message: requires_account_message %>
+        <% end %>
+
+        <% if params[:type].nil? || params[:type] == "FidelityImport" %>
+          <%= render "imports/import_option",
+            type: "FidelityImport",
+            icon_name: "landmark",
+            icon_bg_class: "bg-emerald-500/5",
+            icon_text_class: "text-emerald-500",
+            label: t(".import_fidelity", default: "Import from Fidelity"),
+            enabled: has_accounts,
+            disabled_message: requires_account_message %>
+        <% end %>
+
         <% if (params[:type].nil? || params[:type].in?(%w[DocumentImport PdfImport])) && @document_upload_extensions.any? %>
           <li>
             <%= styled_form_with url: imports_path, scope: :import, multipart: true, class: "w-full" do |form| %>

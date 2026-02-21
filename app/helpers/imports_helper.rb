@@ -4,7 +4,8 @@ module ImportsHelper
       "Import::AccountTypeMapping" => "Account Type",
       "Import::AccountMapping" => "Account",
       "Import::CategoryMapping" => "Category",
-      "Import::TagMapping" => "Tag"
+      "Import::TagMapping" => "Tag",
+      "Import::BuddyCategoryMapping" => "Category"
     }.fetch(mapping_class.name)
   end
 
@@ -24,6 +25,7 @@ module ImportsHelper
       price: "Price",
       entity_type: "Type",
       category_parent: "Parent category",
+      paid_by: "Paid by",
       category_color: "Color",
       category_classification: "Classification",
       category_icon: "Lucide icon"
@@ -67,7 +69,7 @@ module ImportsHelper
 
   private
     def permitted_import_types
-      %w[transaction_import trade_import account_import mint_import category_import rule_import]
+      %w[transaction_import trade_import account_import mint_import category_import rule_import buddy_import fidelity_import]
     end
 
     DryRunResource = Struct.new(:label, :icon, :text_class, :bg_class, keyword_init: true)

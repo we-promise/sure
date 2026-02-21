@@ -29,16 +29,14 @@ class Provider::TwelveData < Provider
 
   def healthy?
     with_provider_response do
-      response = client.get("#{base_url}/api_usage")
-      JSON.parse(response.body).dig("plan_category").present?
+      parsed = get_with_rate_limit_retry("#{base_url}/api_usage")
+      parsed.dig("plan_category").present?
     end
   end
 
   def usage
     with_provider_response do
-      response = client.get("#{base_url}/api_usage")
-
-      parsed = JSON.parse(response.body)
+      parsed = get_with_rate_limit_retry("#{base_url}/api_usage")
 
       limit = parsed.dig("plan_daily_limit")
       used = parsed.dig("daily_usage")
@@ -59,34 +57,31 @@ class Provider::TwelveData < Provider
 
   def fetch_exchange_rate(from:, to:, date:)
     with_provider_response do
-      response = client.get("#{base_url}/exchange_rate") do |req|
+      parsed = get_with_rate_limit_retry("#{base_url}/exchange_rate") do |req|
         req.params["symbol"] = "#{from}/#{to}"
         req.params["date"] = date.to_s
       end
 
-      rate = JSON.parse(response.body).dig("rate")
-
-      Rate.new(date: date.to_date, from:, to:, rate: rate)
+      Rate.new(date: date.to_date, from:, to:, rate: parsed.dig("rate"))
     end
   end
 
   def fetch_exchange_rates(from:, to:, start_date:, end_date:)
     with_provider_response do
       # Try to fetch the currency pair via the time_series API (consumes 1 credit) - this might not return anything as the API does not provide time series data for all possible currency pairs
-      response = client.get("#{base_url}/time_series") do |req|
+      parsed = get_with_rate_limit_retry("#{base_url}/time_series") do |req|
         req.params["symbol"] = "#{from}/#{to}"
         req.params["start_date"] = start_date.to_s
         req.params["end_date"] = end_date.to_s
         req.params["interval"] = "1day"
       end
 
-      parsed = JSON.parse(response.body)
       data = parsed.dig("values")
 
       # If currency pair is not available, try to fetch via the time_series/cross API (consumes 5 credits)
-      if data.nil?
+      if data.nil? && parsed.dig("code") != RATE_LIMIT_CODE
         Rails.logger.info("#{self.class.name}: Currency pair #{from}/#{to} not available, fetching via time_series/cross API")
-        response = client.get("#{base_url}/time_series/cross") do |req|
+        parsed = get_with_rate_limit_retry("#{base_url}/time_series/cross") do |req|
           req.params["base"] = from
           req.params["quote"] = to
           req.params["start_date"] = start_date.to_s
@@ -94,7 +89,6 @@ class Provider::TwelveData < Provider
           req.params["interval"] = "1day"
         end
 
-        parsed = JSON.parse(response.body)
         data = parsed.dig("values")
       end
 
@@ -123,12 +117,11 @@ class Provider::TwelveData < Provider
 
   def search_securities(symbol, country_code: nil, exchange_operating_mic: nil)
     with_provider_response do
-      response = client.get("#{base_url}/symbol_search") do |req|
+      parsed = get_with_rate_limit_retry("#{base_url}/symbol_search") do |req|
         req.params["symbol"] = symbol
         req.params["outputsize"] = 25
       end
 
-      parsed = JSON.parse(response.body)
       data = parsed.dig("data")
 
       if data.nil?
@@ -153,19 +146,15 @@ class Provider::TwelveData < Provider
 
   def fetch_security_info(symbol:, exchange_operating_mic:)
     with_provider_response do
-      response = client.get("#{base_url}/profile") do |req|
+      profile = get_with_rate_limit_retry("#{base_url}/profile") do |req|
         req.params["symbol"] = symbol
         req.params["mic_code"] = exchange_operating_mic
       end
 
-      profile = JSON.parse(response.body)
-
-      response = client.get("#{base_url}/logo") do |req|
+      logo = get_with_rate_limit_retry("#{base_url}/logo") do |req|
         req.params["symbol"] = symbol
         req.params["mic_code"] = exchange_operating_mic
       end
-
-      logo = JSON.parse(response.body)
 
       SecurityInfo.new(
         symbol: symbol,
@@ -191,7 +180,7 @@ class Provider::TwelveData < Provider
 
   def fetch_security_prices(symbol:, exchange_operating_mic: nil, start_date:, end_date:)
     with_provider_response do
-      response = client.get("#{base_url}/time_series") do |req|
+      parsed = get_with_rate_limit_retry("#{base_url}/time_series") do |req|
         req.params["symbol"] = symbol
         req.params["mic_code"] = exchange_operating_mic
         req.params["start_date"] = start_date.to_s
@@ -199,7 +188,6 @@ class Provider::TwelveData < Provider
         req.params["interval"] = "1day"
       end
 
-      parsed = JSON.parse(response.body)
       values = parsed.dig("values")
 
       if values.nil?
@@ -228,7 +216,31 @@ class Provider::TwelveData < Provider
   end
 
   private
+    RATE_LIMIT_CODE = 429
+    RATE_LIMIT_WAIT = 60 # seconds — Twelve Data resets credits each minute
+    RATE_LIMIT_MAX_RETRIES = 3
+
     attr_reader :api_key
+
+    # Makes a GET request and automatically retries on Twelve Data rate limit (code 429).
+    # Twelve Data returns HTTP 200 with {"code": 429, ...} in the JSON body when rate limited.
+    def get_with_rate_limit_retry(url, &block)
+      retries = 0
+
+      loop do
+        response = client.get(url, &block)
+        parsed = JSON.parse(response.body)
+
+        if parsed.dig("code") == RATE_LIMIT_CODE && retries < RATE_LIMIT_MAX_RETRIES
+          retries += 1
+          Rails.logger.info("#{self.class.name} rate limited, waiting #{RATE_LIMIT_WAIT}s before retry #{retries}/#{RATE_LIMIT_MAX_RETRIES}")
+          sleep(RATE_LIMIT_WAIT)
+          next
+        end
+
+        return parsed
+      end
+    end
 
     def base_url
       ENV["TWELVE_DATA_URL"] || "https://api.twelvedata.com"

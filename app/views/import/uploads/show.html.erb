@@ -22,10 +22,12 @@
 
       <% tabs.with_panel(tab_id: "csv-upload") do %>
         <%= styled_form_with model: @import, scope: :import, url: import_upload_path(@import), multipart: true, class: "space-y-2", data: { drag_and_drop_import_target: "form" } do |form| %>
-          <%= form.select :col_sep, Import::SEPARATORS, label: true %>
+          <%= form.select :col_sep, Import::SEPARATORS, { label: true, selected: @import.col_sep } %>
 
-          <% if @import.type == "TransactionImport" || @import.type == "TradeImport" %>
+          <% if @import.type.in?(%w[TransactionImport TradeImport]) %>
             <%= form.select :account_id, @import.family.accounts.visible.pluck(:name, :id), { label: "Account (optional)", include_blank: "Multi-account import", selected: @import.account_id } %>
+          <% elsif @import.type.in?(%w[BuddyImport MintImport]) %>
+            <%= form.select :account_id, @import.family.accounts.visible.pluck(:name, :id), { label: "Account", selected: @import.account_id }, required: true %>
           <% end %>
 
           <div class="flex flex-col items-center justify-center w-full h-64 border border-secondary border-dashed rounded-xl cursor-pointer" data-controller="file-upload" data-action="click->file-upload#triggerFileInput" data-file-upload-target="uploadArea">
@@ -54,10 +56,12 @@
 
       <% tabs.with_panel(tab_id: "csv-paste") do %>
         <%= styled_form_with model: @import, scope: :import, url: import_upload_path(@import), multipart: true, class: "space-y-2" do |form| %>
-          <%= form.select :col_sep, Import::SEPARATORS, label: true %>
+          <%= form.select :col_sep, Import::SEPARATORS, { label: true, selected: @import.col_sep } %>
 
-          <% if @import.type == "TransactionImport" || @import.type == "TradeImport" %>
+          <% if @import.type.in?(%w[TransactionImport TradeImport]) %>
             <%= form.select :account_id, @import.family.accounts.visible.pluck(:name, :id), { label: "Account (optional)", include_blank: "Multi-account import", selected: @import.account_id } %>
+          <% elsif @import.type.in?(%w[BuddyImport MintImport]) %>
+            <%= form.select :account_id, @import.family.accounts.visible.pluck(:name, :id), { label: "Account", selected: @import.account_id }, required: true %>
           <% end %>
 
           <%= form.text_area :raw_file_str,

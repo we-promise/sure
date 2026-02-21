@@ -9,7 +9,7 @@ class Import < ApplicationRecord
 
   DOCUMENT_TYPES = %w[bank_statement credit_card_statement investment_statement financial_document contract other].freeze
 
-  TYPES = %w[TransactionImport TradeImport AccountImport MintImport CategoryImport RuleImport PdfImport].freeze
+  TYPES = %w[TransactionImport TradeImport AccountImport MintImport CategoryImport RuleImport PdfImport BuddyImport FidelityImport].freeze
   SIGNAGE_CONVENTIONS = %w[inflows_positive inflows_negative]
   SEPARATORS = [ [ "Comma (,)", "," ], [ "Semicolon (;)", ";" ] ].freeze
 
@@ -241,6 +241,7 @@ class Import < ApplicationRecord
         "category_col_label", "tags_col_label", "account_col_label",
         "qty_col_label", "ticker_col_label", "price_col_label",
         "entity_type_col_label", "notes_col_label", "currency_col_label",
+        "category_parent_col_label", "paid_by_col_label",
         "date_format", "signage_convention", "number_format",
         "exchange_operating_mic_col_label",
         "rows_to_skip"

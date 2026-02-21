@@ -91,13 +91,13 @@
             class: "space-y-2",
             data: { controller: "auto-submit-form" } do |f| %>
         <% unless @entry.transaction.transfer? %>
-          <%= f.select :account,
+          <%= f.select :account_id,
               options_for_select(
                 Current.family.accounts.alphabetically.pluck(:name, :id),
                 @entry.account_id
               ),
               { label: t(".account_label") },
-              { disabled: true } %>
+              { disabled: !@entry.import_locked?, "data-auto-submit-form-target": @entry.import_locked? ? "auto" : nil } %>
           <%= f.fields_for :entryable do |ef| %>
             <%= ef.collection_select :merchant_id,
                   Current.family.available_merchants.alphabetically,
