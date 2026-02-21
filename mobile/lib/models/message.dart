@@ -2,12 +2,18 @@ import 'tool_call.dart';
 
 class Message {
   /// Known LLM special tokens that may leak into responses (strip from display).
+  /// Includes ASCII ChatML (<|...|>) and DeepSeek full-width variants (<｜...｜>).
   static const _llmTokenPatterns = [
-    '</start_of_sentence|>',
+    '<|start_of_sentence|>',
     '<|im_start|>',
     '<|im_end|>',
     '<|endoftext|>',
     '</s>',
+    // DeepSeek full-width pipe variants (U+FF5C ｜)
+    '<\uFF5Cstart_of_sentence\uFF5C>',
+    '<\uFF5Cim_start\uFF5C>',
+    '<\uFF5Cim_end\uFF5C>',
+    '<\uFF5Cendoftext\uFF5C>',
   ];
 
   /// Removes LLM tokens and trims trailing whitespace from assistant content.
@@ -17,7 +23,7 @@ class Message {
       out = out.replaceAll(token, '');
     }
     out = out.replaceAll(RegExp(r'<\|[^|]*\|>'), '');
-    out = out.replaceAll(RegExp(r'</[a-z_]+\|[^>]*>'), '');
+    out = out.replaceAll(RegExp('<\u{FF5C}[^\u{FF5C}]*\u{FF5C}>'), '');
     return out.trim();
   }
 
