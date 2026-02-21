@@ -3,7 +3,7 @@ require "digest/md5"
 class InvestmentStatement
   include Monetizable
 
-  monetize :total_contributions, :total_dividends, :total_interest, :unrealized_gains
+  monetize :total_contributions, :total_dividends, :total_interest, :unrealized_gains, :investment_only_value, :crypto_value
 
   attr_reader :family
 
@@ -42,6 +42,23 @@ class InvestmentStatement
 
   def portfolio_value_money
     Money.new(portfolio_value, family.currency)
+  end
+
+  # Breakdown by account type
+  def investment_only_value
+    investment_accounts.select { |a| a.accountable_type == "Investment" }.sum(&:balance)
+  end
+
+  def crypto_value
+    investment_accounts.select { |a| a.accountable_type == "Crypto" }.sum(&:balance)
+  end
+
+  def has_crypto?
+    investment_accounts.any? { |a| a.accountable_type == "Crypto" }
+  end
+
+  def has_investments?
+    investment_accounts.any? { |a| a.accountable_type == "Investment" }
   end
 
   # Total cash in investment accounts

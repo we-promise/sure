@@ -25,6 +25,29 @@
       </div>
     </div>
 
+    <% if investment_statement.has_investments? && investment_statement.has_crypto? %>
+      <div class="flex gap-4 px-4">
+        <div class="flex-1 bg-container-inset rounded-lg p-3">
+          <div class="flex items-center gap-2 mb-1">
+            <%= icon "chart-line", size: "sm", class: "text-secondary" %>
+            <p class="text-xs text-secondary"><%= t(".investments_label") %></p>
+          </div>
+          <p class="text-sm font-medium text-primary">
+            <%= format_money(investment_statement.investment_only_value_money) %>
+          </p>
+        </div>
+        <div class="flex-1 bg-container-inset rounded-lg p-3">
+          <div class="flex items-center gap-2 mb-1">
+            <%= icon "bitcoin", size: "sm", class: "text-secondary" %>
+            <p class="text-xs text-secondary"><%= t(".crypto_label") %></p>
+          </div>
+          <p class="text-sm font-medium text-primary">
+            <%= format_money(investment_statement.crypto_value_money) %>
+          </p>
+        </div>
+      </div>
+    <% end %>
+
     <% holdings = investment_statement.top_holdings(limit: 5) %>
     <% if holdings.any? %>
       <div class="bg-container-inset rounded-xl p-1 mx-4">
