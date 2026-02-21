@@ -167,6 +167,7 @@ class InvestmentTest < ActiveSupport::TestCase
     end
   end
 
+<<<<<<< HEAD
   # India account types
 
   test "India pension subtypes have tax_advantaged treatment" do
@@ -203,10 +204,21 @@ class InvestmentTest < ActiveSupport::TestCase
     assert_equal I18n.t("accounts.subtype_regions.in"), first_group_label
   end
 
-  test "subtypes_grouped_for_select includes France region" do
+  test "subtypes_grouped_for_select includes France region when country is FR" do
+    grouped = Investment.subtypes_grouped_for_select(currency: "EUR", country: "FR")
+    labels = grouped.map(&:first)
+    france_label = I18n.t("accounts.subtype_regions.fr")
+
+    assert_includes labels, france_label
+    assert_equal france_label, labels.first
+  end
+
+  test "subtypes_grouped_for_select prioritizes currency when no country given" do
     grouped = Investment.subtypes_grouped_for_select(currency: "EUR")
     labels = grouped.map(&:first)
+    eu_label = I18n.t("accounts.subtype_regions.eu")
 
-    assert_includes labels, I18n.t("accounts.subtype_regions.fr")
+    assert_includes labels, eu_label
+    assert_equal eu_label, labels.first
   end
 end
