@@ -99,7 +99,7 @@ class Api::V1::UsersControllerTest < ActionDispatch::IntegrationTest
   # -- Deactivated user ------------------------------------------------------
 
   test "OAuth rejects deactivated user with 401" do
-    @user.update!(active: false)
+    @user.update_column(:active, false)
 
     delete "/api/v1/users/reset", headers: bearer_auth_header(@write_token)
     assert_response :unauthorized
@@ -109,7 +109,7 @@ class Api::V1::UsersControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "API key rejects deactivated user with 401" do
-    @user.update!(active: false)
+    @user.update_column(:active, false)
     plain_key = ApiKey.generate_secure_key
     api_key = @user.api_keys.build(name: "Test Key", scopes: [ "read_write" ], source: "mobile")
     api_key.key = plain_key
