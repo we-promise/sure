@@ -43,10 +43,14 @@ x-rails-env: &rails_env
   REDIS_URL: redis://redis:6379/1
   # NOTE: enabling OpenAI will incur costs when you use AI-related features in the app (chat, rules).  Make sure you have set appropriate spend limits on your account before adding this.
   OPENAI_ACCESS_TOKEN: ${OPENAI_ACCESS_TOKEN}
+  PLAID_CLIENT_ID: ${PLAID_CLIENT_ID}
+  PLAID_SECRET: ${PLAID_SECRET}
+  PLAID_ENV: ${PLAID_ENV:-production}
 
 services:
   web:
-    image: ghcr.io/we-promise/sure:stable
+    build: .
+    image: sure:${SOURCE_COMMIT:-latest}
     volumes:
       - app-storage:/rails/storage
     ports:
@@ -63,7 +67,7 @@ services:
       - sure_net
 
   worker:
-    image: ghcr.io/we-promise/sure:stable
+    image: sure:${SOURCE_COMMIT:-latest}
     command: bundle exec sidekiq
     volumes:
       - app-storage:/rails/storage
