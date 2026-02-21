@@ -17,6 +17,10 @@ en:
         description: Upload a simple CSV file (like the one we generate when you
           export your data). We'll automatically map the columns for you.
         instructions: Select continue to parse your CSV and move on to the clean step.
+      buddy_import:
+        date_format_label: Date format
+      fidelity_import:
+        date_format_label: Date format
       mint_import:
         date_format_label: Date format
       rule_import:
@@ -50,6 +54,10 @@ en:
         account_type_mapping_description: Assign all of your imported file's account
           types to Maybe's
         account_type_mapping_title: Assign your account types
+        buddy_category_mapping_description: Assign all of your imported file's categories
+          to existing categories. Categories will be created with their parent hierarchy
+          if you choose "Add as new category".
+        buddy_category_mapping_title: Assign your categories
         category_mapping_description: Assign all of your imported file's categories
           to Maybe's existing categories.  You can also add new categories or leave
           them uncategorized.
@@ -98,6 +106,7 @@ en:
         of our import templates like Mint.
       import_accounts: Import accounts
       import_categories: Import categories
+      import_buddy: Import from Buddy
       import_mint: Import from Mint
       import_portfolio: Import investments
       import_rules: Import rules
