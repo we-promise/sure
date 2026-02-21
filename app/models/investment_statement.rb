@@ -3,7 +3,7 @@ require "digest/md5"
 class InvestmentStatement
   include Monetizable
 
-  monetize :total_contributions, :total_dividends, :total_interest, :unrealized_gains
+  monetize :total_contributions, :total_dividends, :total_interest, :unrealized_gains, :investment_only_value, :crypto_value
 
   attr_reader :family
 
