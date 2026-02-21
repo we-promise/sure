@@ -90,10 +90,6 @@ en:
       smsf:
         short: SMSF
         long: Self-Managed Super Fund
-      # Sweden
-      isk:
-        short: ISK
-        long: Investeringssparkonto
       # Europe
       pea:
         short: PEA
@@ -104,6 +100,9 @@ en:
       riester:
         short: Riester
         long: Riester-Rente
+      isk:
+        short: ISK
+        long: Investeringssparkonto
       # Generic
       pension:
         short: Pension

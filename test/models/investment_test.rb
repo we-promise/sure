@@ -99,8 +99,6 @@ class InvestmentTest < ActiveSupport::TestCase
     assert_equal :tax_advantaged, investment.tax_treatment
   end
 
-  # Swedish account types
-
   test "tax_treatment returns tax_advantaged for Swedish ISK" do
     investment = Investment.new(subtype: "isk")
     assert_equal :tax_advantaged, investment.tax_treatment
@@ -136,7 +134,7 @@ class InvestmentTest < ActiveSupport::TestCase
   end
 
   test "all subtypes have valid region values" do
-    valid_regions = [ "us", "uk", "ca", "au", "se", "eu", nil ]
+    valid_regions = [ "us", "uk", "ca", "au", "eu", nil ]
 
     Investment::SUBTYPES.each do |key, metadata|
       assert_includes valid_regions, metadata[:region],
