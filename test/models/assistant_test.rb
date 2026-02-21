@@ -176,6 +176,31 @@ class AssistantTest < ActiveSupport::TestCase
     end
   end
 
+  test "for_chat returns Builtin by default" do
+    assert_instance_of Assistant::Builtin, Assistant.for_chat(@chat)
+  end
+
+  test "available_types includes builtin and external" do
+    assert_includes Assistant.available_types, "builtin"
+    assert_includes Assistant.available_types, "external"
+  end
+
+  test "for_chat returns External when family assistant_type is external" do
+    @chat.user.family.update!(assistant_type: "external")
+    assistant = Assistant.for_chat(@chat)
+    assert_instance_of Assistant::External, assistant
+    assert_no_difference "AssistantMessage.count" do
+      assistant.respond_to(@message)
+    end
+    @chat.reload
+    assert @chat.error.present?
+    assert_includes @chat.error, "not yet implemented"
+  end
+
+  test "for_chat raises when chat is blank" do
+    assert_raises(Assistant::Error) { Assistant.for_chat(nil) }
+  end
+
   private
     def provider_function_request(id:, call_id:, function_name:, function_args:)
       Provider::LlmConcept::ChatFunctionRequest.new(
