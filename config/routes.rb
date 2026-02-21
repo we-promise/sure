@@ -394,6 +394,9 @@ Rails.application.routes.draw do
         end
       end
 
+      delete "users/reset", to: "users#reset"
+      delete "users/me", to: "users#destroy"
+
       # Test routes for API controller testing (only available in test environment)
       if Rails.env.test?
         get "test", to: "test#index"

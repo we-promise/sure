@@ -517,6 +517,13 @@ RSpec.configure do |config|
               },
               pagination: { '$ref' => '#/components/schemas/Pagination' }
             }
+          },
+          SuccessMessage: {
+            type: :object,
+            required: %w[message],
+            properties: {
+              message: { type: :string }
+            }
           }
         }
       }

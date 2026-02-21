@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../models/chat.dart';
 import '../providers/auth_provider.dart';
 import '../providers/chat_provider.dart';
 import 'chat_conversation_screen.dart';
@@ -58,7 +59,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
 
     final chat = await chatProvider.createChat(
       accessToken: accessToken,
-      title: 'New Chat',
+      title: Chat.defaultTitle,
     );
 
     // Close loading dialog
