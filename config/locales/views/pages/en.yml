@@ -46,6 +46,8 @@ en:
       investment_summary:
         title: "Investments"
         total_return: "Total Return"
+        investments_label: "Investments"
+        crypto_label: "Crypto"
         holding: "Holding"
         weight: "Weight"
         value: "Value"

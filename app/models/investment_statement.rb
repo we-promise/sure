@@ -44,6 +44,23 @@ class InvestmentStatement
     Money.new(portfolio_value, family.currency)
   end
 
+  # Breakdown by account type
+  def investment_only_value
+    investment_accounts.select { |a| a.accountable_type == "Investment" }.sum(&:balance)
+  end
+
+  def crypto_value
+    investment_accounts.select { |a| a.accountable_type == "Crypto" }.sum(&:balance)
+  end
+
+  def has_crypto?
+    investment_accounts.any? { |a| a.accountable_type == "Crypto" }
+  end
+
+  def has_investments?
+    investment_accounts.any? { |a| a.accountable_type == "Investment" }
+  end
+
   # Total cash in investment accounts
   def cash_balance
     investment_accounts.sum(&:cash_balance)
