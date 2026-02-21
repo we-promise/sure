@@ -6,6 +6,7 @@ class Provider::TwelveData < Provider
   Error = Class.new(Provider::Error)
   InvalidExchangeRateError = Class.new(Error)
   InvalidSecurityPriceError = Class.new(Error)
+  RateLimitError = Class.new(Error)
 
   # Pattern to detect plan upgrade errors in API responses
   PLAN_UPGRADE_PATTERN = /available starting with (\w+)/i
@@ -246,6 +247,42 @@ class Provider::TwelveData < Provider
         faraday.request :json
         faraday.response :raise_error
         faraday.headers["Authorization"] = "apikey #{api_key}"
+      end
+    end
+
+    # Custom error transformer to detect rate limiting errors
+    def default_error_transformer(error)
+      if error.is_a?(Faraday::Error)
+        response_body = error.response&.dig(:body)
+        status_code = error.response&.dig(:status)
+
+        # Detect 429 rate limit errors and return RateLimitError
+        if status_code == 429
+          message = extract_error_message(response_body) || error.message
+          return RateLimitError.new(
+            "TwelveData rate limit exceeded: #{message}",
+            details: response_body
+          )
+        end
+
+        self.class::Error.new(
+          error.message,
+          details: response_body
+        )
+      else
+        self.class::Error.new(error.message)
+      end
+    end
+
+    # Extract error message from TwelveData API response
+    def extract_error_message(response_body)
+      return nil unless response_body.is_a?(String)
+
+      begin
+        parsed = JSON.parse(response_body)
+        parsed.dig("message") || parsed.dig("error")
+      rescue JSON::ParserError
+        nil
       end
     end
 end

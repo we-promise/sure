@@ -114,6 +114,13 @@ class Security::Price::Importer
           Security.clear_plan_restriction(security.id, provider: security_provider.class.name.demodulize)
           response.data.index_by(&:date)
         else
+          error = response.error
+
+          # If this is a rate limit error, re-raise it so the job can be retried
+          if error.is_a?(Provider::TwelveData::RateLimitError)
+            raise error
+          end
+
           error_message = response.error.message
           Rails.logger.warn("#{security_provider.class.name} could not fetch prices for #{security.ticker} between #{provider_fetch_start_date} and #{end_date}. Provider error: #{error_message}")
 
