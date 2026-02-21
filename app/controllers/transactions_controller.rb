@@ -85,8 +85,17 @@ class TransactionsController < ApplicationController
 
   def update
     previous_account = @entry.account
+    permitted_params = entry_params
 
-    if @entry.update(entry_params)
+    if permitted_params[:account_id].present?
+      unless Current.family.accounts.exists?(id: permitted_params[:account_id])
+        flash[:alert] = "Account not found"
+        redirect_back_or_to transactions_path
+        return
+      end
+    end
+
+    if @entry.update(permitted_params)
       transaction = @entry.transaction
 
       if needs_rule_notification?(transaction)
