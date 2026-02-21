@@ -40,6 +40,9 @@ class Investment < ApplicationRecord
     "super" => { short: "Super", long: "Superannuation", region: "au", tax_treatment: :tax_deferred },
     "smsf" => { short: "SMSF", long: "Self-Managed Super Fund", region: "au", tax_treatment: :tax_deferred },
 
+    # === Sweden ===
+    "isk" => { short: "ISK", long: "Investeringssparkonto", region: "se", tax_treatment: :tax_advantaged },
+
     # === Europe ===
     "pea" => { short: "PEA", long: "Plan d'Épargne en Actions", region: "eu", tax_treatment: :tax_advantaged },
     "pillar_3a" => { short: "Pillar 3a", long: "Private Pension (Pillar 3a)", region: "eu", tax_treatment: :tax_deferred },
@@ -81,6 +84,7 @@ class Investment < ApplicationRecord
       "GBP" => "uk",
       "CAD" => "ca",
       "AUD" => "au",
+      "SEK" => "se",
       "EUR" => "eu",
       "CHF" => "eu"
     }.freeze
@@ -92,7 +96,7 @@ class Investment < ApplicationRecord
       grouped = SUBTYPES.group_by { |_, v| v[:region] }
 
       # Build region order: user's region first (if known), then Generic, then others
-      other_regions = %w[us uk ca au eu] - [ user_region ].compact
+      other_regions = %w[us uk ca au se eu] - [ user_region ].compact
       region_order = [ user_region, nil, *other_regions ].compact.uniq
 
       region_order.filter_map do |region|

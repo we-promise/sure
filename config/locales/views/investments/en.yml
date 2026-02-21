@@ -90,6 +90,10 @@ en:
       smsf:
         short: SMSF
         long: Self-Managed Super Fund
+      # Sweden
+      isk:
+        short: ISK
+        long: Investeringssparkonto
       # Europe
       pea:
         short: PEA
