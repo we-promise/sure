@@ -9,10 +9,10 @@ class Account::ProviderImportAdapterCrossProviderTest < ActiveSupport::TestCase
     security = securities(:aapl)
 
     # Create two different account providers for the SAME account
-    # Provider A (e.g., Plaid)
+    # Provider A (e.g., Plaid) - use :two since :one is pre-linked to accounts(:connected)
     ap_a = AccountProvider.create!(
       account: investment_account,
-      provider: plaid_accounts(:one)
+      provider: plaid_accounts(:two)
     )
 
     # Provider B (e.g., SimpleFin)
