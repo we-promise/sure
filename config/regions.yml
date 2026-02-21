@@ -1,0 +1,49 @@
+# Geographic regions and their associated countries
+# Used for prioritizing investment account subtypes and localizing financial products
+
+regions:
+  us:
+    label: United States
+    countries:
+      - US
+  ca:
+    label: Canada
+    countries:
+      - CA
+  uk:
+    label: United Kingdom
+    countries:
+      - GB
+  au:
+    label: Australia
+    countries:
+      - AU
+  fr:
+    label: France
+    countries:
+      - FR
+  eu:
+    label: Europe
+    countries:
+      - DE
+      - AT
+      - BE
+      - NL
+      - SE
+      - NO
+      - CH
+      - IT
+      - ES
+      - PT
+      - CZ
+      - PL
+
+# Currency to region fallback mapping
+# Used when country is not available
+currencies:
+  USD: us
+  GBP: uk
+  CAD: ca
+  AUD: au
+  EUR: eu
+  CHF: eu
