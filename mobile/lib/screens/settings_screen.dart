@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../providers/auth_provider.dart';
 import '../services/offline_storage_service.dart';
 import '../services/log_service.dart';
@@ -99,6 +100,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
           );
         }
       }
+    }
+  }
+
+  Future<void> _launchContactUrl(BuildContext context) async {
+    final uri = Uri.parse('https://discord.com/invite/36ZGBsxYEK');
+    final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!launched && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Unable to open link')),
+      );
     }
   }
 
@@ -306,6 +317,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 Text(' > ai_enabled: ${authProvider.user?.aiEnabled}'),
               ],
             ),
+          ),
+
+          ListTile(
+            leading: const Icon(Icons.chat_bubble_outline),
+            title: const Text('Contact us'),
+            subtitle: Text(
+              'https://discord.com/invite/36ZGBsxYEK',
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.primary,
+                decoration: TextDecoration.underline,
+              ),
+            ),
+            onTap: () => _launchContactUrl(context),
           ),
 
           const Divider(),
