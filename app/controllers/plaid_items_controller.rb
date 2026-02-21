@@ -3,6 +3,14 @@ class PlaidItemsController < ApplicationController
 
   def new
     region = params[:region] == "eu" ? :eu : :us
+
+    # Check if Plaid is configured for the requested region
+    unless Provider::Registry.plaid_provider_for_region(region).present?
+      region_name = region == :eu ? "EU" : "US"
+      redirect_to accounts_path, alert: "Plaid #{region_name} is not configured. Please configure Plaid credentials in settings."
+      return
+    end
+
     webhooks_url = region == :eu ? plaid_eu_webhooks_url : plaid_us_webhooks_url
 
     @link_token = Current.family.get_link_token(
@@ -14,6 +22,15 @@ class PlaidItemsController < ApplicationController
   end
 
   def edit
+    region = @plaid_item.plaid_region.to_sym
+
+    # Check if Plaid is configured for the item's region
+    unless Provider::Registry.plaid_provider_for_region(region).present?
+      region_name = region == :eu ? "EU" : "US"
+      redirect_to accounts_path, alert: "Plaid #{region_name} is not configured. Please configure Plaid credentials in settings."
+      return
+    end
+
     webhooks_url = @plaid_item.plaid_region == "eu" ? plaid_eu_webhooks_url : plaid_us_webhooks_url
 
     @link_token = @plaid_item.get_update_link_token(
