@@ -50,7 +50,7 @@ class Import::UploadsController < ApplicationController
     end
 
     def auto_configured_import?
-      @import.type.in?(%w[MintImport BuddyImport])
+      @import.type.in?(%w[MintImport BuddyImport FidelityImport])
     end
 
     def upload_params

@@ -107,6 +107,7 @@ en:
       import_accounts: Import accounts
       import_categories: Import categories
       import_buddy: Import from Buddy
+      import_fidelity: Import from Fidelity
       import_mint: Import from Mint
       import_portfolio: Import investments
       import_rules: Import rules

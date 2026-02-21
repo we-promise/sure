@@ -234,6 +234,9 @@ class Provider::TwelveData < Provider
         if parsed.dig("code") == RATE_LIMIT_CODE && retries < RATE_LIMIT_MAX_RETRIES
           retries += 1
           Rails.logger.info("#{self.class.name} rate limited, waiting #{RATE_LIMIT_WAIT}s before retry #{retries}/#{RATE_LIMIT_MAX_RETRIES}")
+          # NOTE: Blocks the current thread for up to 60s per retry (3 retries max = 180s).
+          # Acceptable for single-user self-hosted. For multi-tenant production, consider
+          # requeuing the job with a delay instead.
           sleep(RATE_LIMIT_WAIT)
           next
         end

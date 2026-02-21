@@ -26,7 +26,7 @@
 
           <% if @import.type.in?(%w[TransactionImport TradeImport]) %>
             <%= form.select :account_id, @import.family.accounts.visible.pluck(:name, :id), { label: "Account (optional)", include_blank: "Multi-account import", selected: @import.account_id } %>
-          <% elsif @import.type.in?(%w[BuddyImport MintImport]) %>
+          <% elsif @import.type.in?(%w[BuddyImport MintImport FidelityImport]) %>
             <%= form.select :account_id, @import.family.accounts.visible.pluck(:name, :id), { label: "Account", selected: @import.account_id }, required: true %>
           <% end %>
 
@@ -60,7 +60,7 @@
 
           <% if @import.type.in?(%w[TransactionImport TradeImport]) %>
             <%= form.select :account_id, @import.family.accounts.visible.pluck(:name, :id), { label: "Account (optional)", include_blank: "Multi-account import", selected: @import.account_id } %>
-          <% elsif @import.type.in?(%w[BuddyImport MintImport]) %>
+          <% elsif @import.type.in?(%w[BuddyImport MintImport FidelityImport]) %>
             <%= form.select :account_id, @import.family.accounts.visible.pluck(:name, :id), { label: "Account", selected: @import.account_id }, required: true %>
           <% end %>
 
