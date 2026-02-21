@@ -2,6 +2,27 @@ require "digest/md5"
 
 class EnableBankingEntry::Processor
   include CurrencyNormalizable
+  CARD_REFERENCE_PATTERN = /\ACARD-\d+\z/i
+  REFERENCE_PATTERNS = [
+    CARD_REFERENCE_PATTERN,
+    /\A(?=.*\d)[A-Z0-9]{10,}\z/,
+    /\A[A-Z0-9]+(?:[-_][A-Z0-9]+){2,}\z/
+  ].freeze
+  REMITTANCE_ENTITY_PATTERNS = [
+    /\bissued by\s+(.+)\z/i,
+    /\bpaid to\s+(.+)\z/i,
+    /\bpurchase at\s+(.+)\z/i
+  ].freeze
+  REMITTANCE_TRAILING_PATTERNS = [
+    /\s+CARTE\s+\d+\z/i,
+    /\s+CARD\s+\d+\z/i
+  ].freeze
+  INFORMATIVENESS_DELTA_THRESHOLD = 4
+  REMITTANCE_TECHNICALITY_THRESHOLD = 7
+  TECHNICAL_REFERENCE_BONUS = 3
+  TECHNICAL_UPPERCASE_RATIO_THRESHOLD = 0.8
+  TECHNICAL_UPPERCASE_RATIO_MIN_WORDS = 3
+  TECHNICAL_UPPERCASE_RATIO_BONUS = 2
 
   # enable_banking_transaction is the raw hash fetched from Enable Banking API
   # Transaction structure from Enable Banking:
@@ -68,8 +89,13 @@ class EnableBankingEntry::Processor
     end
 
     def name
-      # Build name from available Enable Banking transaction fields
-      # Priority: counterparty name > bank_transaction_code description > remittance_information
+      description = data[:description] || data[:transaction_description]
+      remittance_name = remittance_name_candidate
+
+      if description.present?
+        return remittance_name if prefer_remittance_name?(description, remittance_name)
+        return description
+      end
 
       # Determine counterparty based on transaction direction
       # For outgoing payments (DBIT), counterparty is the creditor (who we paid)
@@ -79,19 +105,136 @@ class EnableBankingEntry::Processor
       else
         data.dig(:creditor, :name) || data[:creditor_name]
       end
+      counterparty_is_card_reference = counterparty.to_s.match?(CARD_REFERENCE_PATTERN)
 
-      return counterparty if counterparty.present?
+      if counterparty.present? && !counterparty_is_card_reference
+        return counterparty
+      end
 
       # Fall back to bank_transaction_code description
       bank_tx_description = data.dig(:bank_transaction_code, :description)
+      if remittance_name.present? &&
+          (prefer_remittance_name?(bank_tx_description, remittance_name) ||
+          (counterparty_is_card_reference && !reference_like?(remittance_name)))
+        return remittance_name
+      end
       return bank_tx_description if bank_tx_description.present?
 
-      # Fall back to remittance_information
-      remittance = data[:remittance_information]
-      return remittance.first.truncate(100) if remittance.is_a?(Array) && remittance.first.present?
+      return remittance_name if remittance_name.present?
 
       # Final fallback: use transaction type indicator
       credit_debit_indicator == "CRDT" ? "Incoming Transfer" : "Outgoing Transfer"
+    end
+
+    def remittance_name_candidate
+      candidates = remittance_lines.map { |line| cleanup_remittance_line(line) }.compact
+      return nil if candidates.empty?
+
+      non_reference_candidates = candidates.reject { |candidate| reference_like?(candidate) }
+      pool = non_reference_candidates.presence || candidates
+
+      # If every candidate is technical/reference-like, keep a safer fallback path
+      return nil if pool.all? { |candidate| technical_remittance_candidate?(candidate) }
+
+      pool.max_by { |candidate| remittance_candidate_score(candidate) }
+    end
+
+    def remittance_candidate_score(value)
+      informativeness_score(value) - technicality_score(value)
+    end
+
+    def technical_remittance_candidate?(value)
+      reference_like?(value) || technicality_score(value) >= REMITTANCE_TECHNICALITY_THRESHOLD
+    end
+
+    def cleanup_remittance_line(line)
+      return nil if line.blank?
+
+      cleaned = extract_entity_from_remittance_line(line)
+      cleaned = cleaned.gsub(/\s+/, " ")
+      REMITTANCE_TRAILING_PATTERNS.each do |pattern|
+        cleaned = cleaned.sub(pattern, "")
+      end
+      cleaned.presence&.truncate(100)
+    end
+
+    def extract_entity_from_remittance_line(line)
+      text = line.to_s.strip
+      return text if text.blank?
+
+      REMITTANCE_ENTITY_PATTERNS.each do |pattern|
+        match = text.match(pattern)
+        return match[1].to_s.strip if match && match[1].present?
+      end
+
+      text
+    end
+
+    def prefer_remittance_name?(description, remittance_name)
+      return false if description.blank? || remittance_name.blank?
+
+      normalized_description = description.to_s.strip
+      normalized_remittance = remittance_name.to_s.strip
+      return false if normalized_description.blank? || normalized_remittance.blank?
+      return false if normalized_description.casecmp?(normalized_remittance)
+
+      reference_like?(normalized_description) ||
+        (
+          significantly_more_informative?(normalized_remittance, normalized_description) &&
+          !more_technical_than?(normalized_remittance, normalized_description)
+        )
+    end
+
+    def reference_like?(value)
+      normalized = value.to_s.strip
+      return false if normalized.blank?
+
+      REFERENCE_PATTERNS.any? { |pattern| normalized.match?(pattern) }
+    end
+
+    def significantly_more_informative?(candidate, baseline)
+      informativeness_score(candidate) >= informativeness_score(baseline) + INFORMATIVENESS_DELTA_THRESHOLD
+    end
+
+    def more_technical_than?(candidate, baseline)
+      technicality_score(candidate) > technicality_score(baseline)
+    end
+
+    def informativeness_score(value)
+      text = value.to_s.strip
+      return 0 if text.blank?
+
+      words = text.split(/\s+/)
+      alpha_words = words.select { |word| word.match?(/[[:alpha:]]/) }
+      alpha_word_count = alpha_words.size
+      unique_alpha_word_count = alpha_words.map { |word| word.downcase.gsub(/[^[:alpha:]]/, "") }.reject(&:blank?).uniq.size
+
+      digit_count = text.scan(/\d/).size
+      symbol_count = text.scan(/[^\p{Alnum}\s]/).size
+      mixed_case_bonus = text.match?(/[[:upper:]]/) && text.match?(/[[:lower:]]/) ? 2 : 0
+
+      (alpha_word_count * 2) + unique_alpha_word_count + mixed_case_bonus - digit_count - (symbol_count / 2)
+    end
+
+    def technicality_score(value)
+      text = value.to_s.strip
+      return 0 if text.blank?
+
+      words = text.split(/\s+/)
+      uppercase_words = words.count { |word| word.match?(/\A[[:upper:]\d\W]+\z/) }
+      uppercase_ratio = words.empty? ? 0.0 : (uppercase_words.to_f / words.size)
+
+      digit_count = text.scan(/\d/).size
+      symbol_count = text.scan(/[^\p{Alnum}\s]/).size
+      date_token_count = text.scan(/\b\d{1,4}[\/-]\d{1,4}(?:[\/-]\d{1,4})?\b/).size
+
+      score = 0
+      score += TECHNICAL_REFERENCE_BONUS if reference_like?(text)
+      score += TECHNICAL_UPPERCASE_RATIO_BONUS if uppercase_ratio >= TECHNICAL_UPPERCASE_RATIO_THRESHOLD && words.size >= TECHNICAL_UPPERCASE_RATIO_MIN_WORDS
+      score += digit_count
+      score += (symbol_count / 2)
+      score += (date_token_count * 2)
+      score
     end
 
     def merchant
@@ -123,10 +266,22 @@ class EnableBankingEntry::Processor
     end
 
     def notes
-      remittance = data[:remittance_information]
-      return nil unless remittance.is_a?(Array) && remittance.any?
+      return nil if remittance_lines.empty?
 
-      remittance.join("\n")
+      remittance_lines.join("\n")
+    end
+
+    def remittance_lines
+      @remittance_lines ||= begin
+        remittance = data[:remittance_information]
+        if remittance.is_a?(String)
+          [ remittance.to_s.strip ].reject(&:blank?)
+        elsif remittance.is_a?(Array)
+          remittance.map(&:to_s).map(&:strip).reject(&:blank?)
+        else
+          []
+        end
+      end
     end
 
     def amount_value
