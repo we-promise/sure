@@ -76,6 +76,7 @@ class Assistant::Responder
       elsif follow_up.function_requests.any?
         # Hit max depth but model still wants to call functions.
         # Force a final text response by calling without tools.
+        Rails.logger.warn("[Assistant::Responder] Max follow-up depth (#{MAX_FOLLOW_UP_DEPTH}) reached for chat #{chat&.id}. Forcing text-only response.")
         force_final_text_response(follow_up)
       else
         emit(:response, { id: follow_up.id })
@@ -85,6 +86,7 @@ class Assistant::Responder
     # When the model gets stuck in a function call loop, make one last call
     # without any tool definitions to force it to produce a text answer.
     def force_final_text_response(last_response)
+      Rails.logger.warn("[Assistant::Responder] Forcing text-only response for chat #{chat&.id}")
       final = llm.chat_response(
         message.content,
         model: message.ai_model,
@@ -92,7 +94,7 @@ class Assistant::Responder
         functions: [],
         function_results: [],
         streamer: nil,
-        previous_response_id: nil,
+        previous_response_id: last_response.id,
         session_id: chat_session_id,
         user_identifier: chat_user_identifier,
         family: message.chat&.user&.family
@@ -104,6 +106,7 @@ class Assistant::Responder
         end
         emit(:response, { id: final.data.id })
       else
+        Rails.logger.warn("[Assistant::Responder] Force text fallback failed for chat #{chat&.id}. Using last response as final.")
         emit(:response, { id: last_response.id })
       end
     end
