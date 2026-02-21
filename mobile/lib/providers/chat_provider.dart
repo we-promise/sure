@@ -85,7 +85,6 @@ class ChatProvider with ChangeNotifier {
     required String accessToken,
     String? title,
     String? initialMessage,
-    String model = 'gpt-4',
   }) async {
     _isLoading = true;
     _errorMessage = null;
@@ -96,7 +95,6 @@ class ChatProvider with ChangeNotifier {
         accessToken: accessToken,
         title: title,
         initialMessage: initialMessage,
-        model: model,
       );
 
       if (result['success'] == true) {
