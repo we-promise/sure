@@ -52,6 +52,10 @@ class FidelityImport < Import
     transaction do
       new_trades = []
       new_transactions = []
+      @duplicate_count = 0
+
+      # Pre-load existing entries on this account for dedup
+      existing_entries = load_existing_entries
 
       rows.each do |row|
         entity_type, activity_label = row.entity_type.to_s.split(":", 2)
@@ -60,10 +64,17 @@ class FidelityImport < Import
         next if mapped_account.nil?
 
         effective_currency = row.currency.presence || mapped_account.currency || family.currency
+        row_date = row.date_iso
+        row_amount = row.signed_amount
 
         if entity_type == "trade" && row.ticker.present?
           security = find_or_create_security(ticker: row.ticker)
           next unless security
+
+          if duplicate_entry?(existing_entries, row_date, row_amount, row.ticker)
+            @duplicate_count += 1
+            next
+          end
 
           qty = row.qty.to_d
           # Reinvestments are always buys (positive qty)
@@ -79,8 +90,8 @@ class FidelityImport < Import
             investment_activity_label: activity_label,
             entry: Entry.new(
               account: mapped_account,
-              date: row.date_iso,
-              amount: row.signed_amount,
+              date: row_date,
+              amount: row_amount,
               name: row.name,
               currency: effective_currency,
               notes: row.notes,
@@ -89,12 +100,17 @@ class FidelityImport < Import
             )
           )
         elsif entity_type == "transaction"
+          if duplicate_entry?(existing_entries, row_date, row_amount, nil)
+            @duplicate_count += 1
+            next
+          end
+
           new_transactions << Transaction.new(
             kind: activity_label == "Transfer" ? "investment_contribution" : "standard",
             entry: Entry.new(
               account: mapped_account,
-              date: row.date_iso,
-              amount: row.signed_amount,
+              date: row_date,
+              amount: row_amount,
               name: row.name,
               currency: effective_currency,
               notes: row.notes,
@@ -107,6 +123,8 @@ class FidelityImport < Import
 
       Trade.import!(new_trades, recursive: true) if new_trades.any?
       Transaction.import!(new_transactions, recursive: true) if new_transactions.any?
+
+      Rails.logger.info("[FidelityImport] Imported #{new_trades.size} trades, #{new_transactions.size} transactions, skipped #{@duplicate_count} duplicates")
     end
   end
 
@@ -123,9 +141,20 @@ class FidelityImport < Import
   end
 
   def dry_run
+    existing_entries = load_existing_entries
+    dupes = 0
+
+    rows.each do |row|
+      row_date = (Date.strptime(row.date, date_format).iso8601 rescue nil)
+      next unless row_date
+      row_amount = row.signed_amount
+      ticker = row.ticker.presence
+      dupes += 1 if duplicate_entry?(existing_entries, row_date, row_amount, ticker)
+    end
+
     trade_count = rows.where("entity_type LIKE 'trade:%'").count
     transaction_count = rows.where("entity_type LIKE 'transaction:%'").count
-    { transactions: trade_count + transaction_count }
+    { transactions: trade_count + transaction_count - dupes, duplicates: dupes }
   end
 
   def csv_template
@@ -173,6 +202,54 @@ class FidelityImport < Import
       when "Fee" then "Fee charged"
       else action.truncate(60)
       end
+    end
+
+    # Build a lookup set of existing entries on this account for fast dedup.
+    # Key: "date|amount|TICKER" for trades, "date|amount|" for transactions.
+    def load_existing_entries
+      return Set.new if account.nil?
+
+      date_range = row_date_range
+      return Set.new if date_range.nil?
+
+      set = Set.new
+
+      # Load trade entries with security ticker
+      account.entries
+        .where(date: date_range.first..date_range.last, entryable_type: "Trade")
+        .joins("INNER JOIN trades ON trades.id = entries.entryable_id")
+        .joins("INNER JOIN securities ON securities.id = trades.security_id")
+        .select("entries.date, entries.amount, securities.ticker")
+        .each do |entry|
+          set.add(dedup_key(entry.date.iso8601, entry.amount, entry.ticker))
+        end
+
+      # Load non-trade entries (dividends, fees, transfers)
+      account.entries
+        .where(date: date_range.first..date_range.last, entryable_type: "Transaction")
+        .select(:date, :amount)
+        .each do |entry|
+          set.add(dedup_key(entry.date.iso8601, entry.amount, nil))
+        end
+
+      set
+    end
+
+    def row_date_range
+      dates = rows.filter_map { |r| Date.strptime(r.date, date_format) rescue nil }
+      return nil if dates.empty?
+      [dates.min, dates.max]
+    end
+
+    def duplicate_entry?(existing_set, date, amount, ticker)
+      existing_set.include?(dedup_key(date, amount, ticker))
+    end
+
+    def dedup_key(date, amount, ticker)
+      # Round to 2 decimal places to avoid float precision issues
+      amt = amount.to_d.round(2).to_s
+      ticker_part = ticker.present? ? ticker.upcase : ""
+      "#{date}|#{amt}|#{ticker_part}"
     end
 
     def find_or_create_security(ticker:)
