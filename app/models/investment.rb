@@ -92,16 +92,6 @@ class Investment < ApplicationRecord
       I18n.t("accounts.subtype_regions.#{region || 'generic'}")
     end
 
-    # Maps currency codes to regions for prioritizing user's likely region
-    CURRENCY_REGION_MAP = {
-      "USD" => "us",
-      "GBP" => "uk",
-      "CAD" => "ca",
-      "AUD" => "au",
-      "EUR" => "eu",
-      "CHF" => "eu"
-    }.freeze
-
     # Returns subtypes grouped by region for use with grouped_options_for_select
     # Optionally accepts country (ISO 2-letter code) to prioritize user's country first, else currency
     # Region mappings are configured in config/regions.yml
