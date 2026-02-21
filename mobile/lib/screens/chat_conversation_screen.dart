@@ -321,7 +321,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
                     actions: <Type, Action<Intent>>{
                       _SendMessageIntent: CallbackAction<_SendMessageIntent>(
                         onInvoke: (_) {
-                          _sendMessage();
+                          if (!chatProvider.isSendingMessage) _sendMessage();
                           return null;
                         },
                       ),
