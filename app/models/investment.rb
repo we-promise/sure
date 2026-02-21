@@ -103,9 +103,11 @@ class Investment < ApplicationRecord
     }.freeze
 
     # Returns subtypes grouped by region for use with grouped_options_for_select
-    # Optionally accepts currency to prioritize user's region first
-    def subtypes_grouped_for_select(currency: nil)
-      user_region = CURRENCY_REGION_MAP[currency]
+    # Optionally accepts country (ISO 2-letter code) to prioritize user's country first, else currency
+    # Region mappings are configured in config/regions.yml
+    def subtypes_grouped_for_select(currency: nil, country: nil)
+      # Prefer country if provided, else fallback to currency mapping
+      user_region = Regions.region_for(country: country, currency: currency)
       grouped = SUBTYPES.group_by { |_, v| v[:region] }
 
       # Build region order: user's region first (if known), then Generic, then others
