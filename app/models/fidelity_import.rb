@@ -124,7 +124,11 @@ class FidelityImport < Import
       Trade.import!(new_trades, recursive: true) if new_trades.any?
       Transaction.import!(new_transactions, recursive: true) if new_transactions.any?
 
-      Rails.logger.info("[FidelityImport] Imported #{new_trades.size} trades, #{new_transactions.size} transactions, skipped #{@duplicate_count} duplicates")
+      # Create opening balance trades from positions CSV if present
+      opening_balance_trades = build_opening_balance_trades
+      Trade.import!(opening_balance_trades, recursive: true) if opening_balance_trades.any?
+
+      Rails.logger.info("[FidelityImport] Imported #{new_trades.size} trades, #{new_transactions.size} transactions, #{opening_balance_trades.size} opening balances, skipped #{@duplicate_count} duplicates")
     end
   end
 
@@ -154,7 +158,10 @@ class FidelityImport < Import
 
     trade_count = rows.where("entity_type LIKE 'trade:%'").count
     transaction_count = rows.where("entity_type LIKE 'transaction:%'").count
-    { transactions: trade_count + transaction_count - dupes, duplicates: dupes }
+
+    result = { transactions: trade_count + transaction_count - dupes, duplicates: dupes }
+    result[:opening_balances] = count_opening_balances if positions_file_str.present?
+    result
   end
 
   def csv_template
@@ -167,7 +174,231 @@ class FidelityImport < Import
     CSV.parse(template, headers: true)
   end
 
+  # Returns the list of account numbers found in the positions CSV, if multi-account
+  def positions_account_numbers
+    return [] unless positions_file_str.present?
+    parse_positions_csv.keys.sort
+  end
+
+  # The currently selected positions account number (stored in extracted_data)
+  def positions_account_number
+    extracted_data&.dig("positions_account_number")
+  end
+
+  def positions_account_number=(value)
+    self.extracted_data = (extracted_data || {}).merge("positions_account_number" => value)
+  end
+
   private
+    def parse_positions_csv
+      return {} unless positions_file_str.present?
+      @parsed_positions ||= parse_positions_csv_str(positions_file_str)
+    end
+
+    # Parses Fidelity positions CSV format. Returns hash grouped by account number:
+    # { "Z12345678" => { "AAPL" => { qty: 10.0, price: 150.0 }, ... } }
+    #
+    # Fidelity positions CSVs typically have:
+    # - Header rows to skip (account info lines before the actual CSV)
+    # - Columns: Account Number, Symbol, Description, Quantity, Last Price, ...
+    def parse_positions_csv_str(csv_str)
+      lines = csv_str.strip.lines
+
+      # Find the header row — look for a line containing "Symbol" and "Quantity"
+      header_idx = lines.index { |l| l.match?(/Symbol/i) && l.match?(/Quantity/i) }
+      return {} unless header_idx
+
+      csv_content = lines[header_idx..].join
+      parsed = CSV.parse(csv_content, headers: true, liberal_parsing: true, converters: [ ->(s) { s&.strip } ])
+
+      # Detect column names (Fidelity uses various formats)
+      account_col = parsed.headers.find { |h| h&.match?(/Account.*Number|Account/i) }
+      symbol_col = parsed.headers.find { |h| h&.match?(/\ASymbol\z/i) }
+      qty_col = parsed.headers.find { |h| h&.match?(/Quantity/i) }
+      price_col = parsed.headers.find { |h| h&.match?(/Last Price|Current Value/i) } ||
+                  parsed.headers.find { |h| h&.match?(/Price/i) }
+
+      return {} unless symbol_col && qty_col
+
+      accounts = {}
+
+      parsed.each do |row|
+        ticker = row[symbol_col].to_s.strip
+        next if ticker.blank? || ticker.match?(/^-+$/) || ticker.upcase == "SPAXX"
+        next if ticker.match?(/pending/i)
+
+        # Clean ticker — remove trailing asterisk or other annotations
+        ticker = ticker.gsub(/\*+$/, "").strip
+        next if ticker.blank?
+
+        qty = sanitize_number(row[qty_col]).to_d
+        next if qty.zero?
+
+        price = price_col ? sanitize_number(row[price_col]).to_d : 0
+        acct_num = account_col ? row[account_col].to_s.strip : "default"
+        acct_num = "default" if acct_num.blank?
+
+        accounts[acct_num] ||= {}
+        accounts[acct_num][ticker.upcase] = { qty: qty, price: price }
+      end
+
+      accounts
+    end
+
+    # Returns the positions hash for the selected account (or the only account)
+    def selected_positions
+      positions = parse_positions_csv
+      return {} if positions.empty?
+
+      if positions.size == 1
+        positions.values.first
+      elsif positions_account_number.present?
+        positions[positions_account_number] || {}
+      else
+        # No account selected yet — return empty
+        {}
+      end
+    end
+
+    # Count how many opening balance trades would be created
+    def count_opening_balances
+      positions = selected_positions
+      return 0 if positions.empty? || account.nil?
+
+      # Calculate net qty per ticker from existing import rows
+      imported_qty = net_qty_from_rows
+
+      # Also check for existing opening balance entries on the account
+      existing_opening_tickers = existing_opening_balance_tickers
+
+      count = 0
+      positions.each do |ticker, pos_data|
+        next if existing_opening_tickers.include?(ticker.upcase)
+        gap = pos_data[:qty] - (imported_qty[ticker.upcase] || 0)
+        count += 1 if gap > 0.001
+      end
+      count
+    end
+
+    # Build Trade objects for opening balances
+    def build_opening_balance_trades
+      return [] unless positions_file_str.present?
+
+      positions = selected_positions
+      return [] if positions.empty? || account.nil?
+
+      # Calculate net qty per ticker from ALL trades on this account (existing + just imported)
+      net_qty = net_qty_from_account_trades
+
+      # Check for existing opening balance entries to avoid duplicates
+      existing_opening_tickers = existing_opening_balance_tickers
+
+      effective_currency = account.currency || family.currency
+      opening_trades = []
+
+      positions.each do |ticker, pos_data|
+        next if existing_opening_tickers.include?(ticker.upcase)
+
+        gap = pos_data[:qty] - (net_qty[ticker.upcase] || 0)
+        next unless gap > 0.001
+
+        security = find_or_create_security(ticker: ticker)
+        next unless security
+
+        # Date: 1 day before earliest trade for this security, or 1 day before earliest import row
+        earliest_date = earliest_trade_date_for(ticker) || earliest_import_date
+        ob_date = earliest_date ? earliest_date - 1.day : Date.current - 1.year
+
+        opening_trades << Trade.new(
+          security: security,
+          qty: gap,
+          price: pos_data[:price],
+          currency: effective_currency,
+          investment_activity_label: "Buy",
+          entry: Entry.new(
+            account: account,
+            date: ob_date,
+            amount: 0,
+            name: "Opening balance - #{ticker.upcase}",
+            currency: effective_currency,
+            notes: "Auto-created from positions CSV",
+            import: self,
+            import_locked: true
+          )
+        )
+      end
+
+      Rails.logger.info("[FidelityImport] Creating #{opening_trades.size} opening balance trades") if opening_trades.any?
+      opening_trades
+    end
+
+    # Net qty per ticker from import rows (used in dry_run before import)
+    def net_qty_from_rows
+      qty_map = Hash.new(0)
+
+      rows.where("entity_type LIKE 'trade:%'").each do |row|
+        ticker = row.ticker.to_s.strip.upcase
+        next if ticker.blank?
+
+        _entity, activity = row.entity_type.to_s.split(":", 2)
+        qty = row.qty.to_d
+        qty = qty.abs if activity == "Reinvestment"
+        qty = -qty.abs if activity == "Sell" && qty.positive?
+        qty_map[ticker] += qty
+      end
+
+      qty_map
+    end
+
+    # Net qty per ticker from all account trades (used during import!)
+    def net_qty_from_account_trades
+      return Hash.new(0) if account.nil?
+
+      qty_map = Hash.new(0)
+      account.entries
+        .where(entryable_type: "Trade")
+        .joins("INNER JOIN trades ON trades.id = entries.entryable_id")
+        .joins("INNER JOIN securities ON securities.id = trades.security_id")
+        .select("securities.ticker, trades.qty")
+        .each do |entry|
+          qty_map[entry.ticker.upcase] += entry.qty.to_d
+        end
+
+      qty_map
+    end
+
+    # Tickers that already have opening balance entries on this account
+    def existing_opening_balance_tickers
+      return Set.new if account.nil?
+
+      tickers = Set.new
+      account.entries
+        .where("name LIKE ?", "Opening balance%")
+        .where(entryable_type: "Trade")
+        .joins("INNER JOIN trades ON trades.id = entries.entryable_id")
+        .joins("INNER JOIN securities ON securities.id = trades.security_id")
+        .select("securities.ticker")
+        .each { |e| tickers.add(e.ticker.upcase) }
+
+      tickers
+    end
+
+    def earliest_trade_date_for(ticker)
+      return nil if account.nil?
+
+      account.entries
+        .where(entryable_type: "Trade")
+        .joins("INNER JOIN trades ON trades.id = entries.entryable_id")
+        .joins("INNER JOIN securities ON securities.id = trades.security_id")
+        .where("UPPER(securities.ticker) = ?", ticker.upcase)
+        .minimum(:date)
+    end
+
+    def earliest_import_date
+      dates = rows.filter_map { |r| Date.strptime(r.date, date_format) rescue nil }
+      dates.min
+    end
+
     def set_mappings
       self.col_sep = ","
       self.signage_convention = "inflows_positive"

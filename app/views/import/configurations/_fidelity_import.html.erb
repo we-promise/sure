@@ -4,10 +4,10 @@
   <span class="text-green-500">
     <%= icon("check-circle", color: "current") %>
   </span>
-  <p class="text-sm text-primary italic">We have pre-configured your Fidelity import. Please proceed to the next step.</p>
+  <p class="text-sm text-primary italic"><%= t(".preconfigured_notice") %></p>
 </div>
 
-<%= styled_form_with model: @import, url: import_configuration_path(@import), scope: :import, method: :patch, class: "space-y-4" do |form| %>
+<%= styled_form_with model: @import, url: import_configuration_path(@import), scope: :import, method: :patch, multipart: true, class: "space-y-4" do |form| %>
   <div class="flex items-center gap-4">
     <%= form.select :date_col_label, import.csv_headers, { include_blank: "Leave empty", label: "Date" }, required: true, disabled: import.complete? %>
     <%= form.select :date_format, Family::DATE_FORMATS, { label: t(".date_format_label") }, label: true, required: true, disabled: import.complete? %>
@@ -28,6 +28,29 @@
   <%= form.select :price_col_label, import.csv_headers, { include_blank: "Leave empty", label: "Price" }, disabled: import.complete? %>
   <%= form.select :qty_col_label, import.csv_headers, { include_blank: "Leave empty", label: "Quantity" }, disabled: import.complete? %>
   <%= form.select :name_col_label, import.csv_headers, { include_blank: "Leave empty", label: "Description" }, disabled: import.complete? %>
+
+  <div class="border border-secondary rounded-lg p-4 space-y-3 mt-4">
+    <div class="space-y-1">
+      <p class="text-sm font-medium text-primary"><%= t(".positions_csv_label") %></p>
+      <p class="text-xs text-secondary"><%= t(".positions_csv_help") %></p>
+    </div>
+
+    <%= form.file_field :positions_file, accept: ".csv,text/csv", disabled: import.complete?, class: "block w-full text-sm text-secondary file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-gray-100 file:text-primary hover:file:bg-gray-200 theme-dark:file:bg-gray-800 theme-dark:hover:file:bg-gray-700" %>
+
+    <% if import.positions_file_str.present? %>
+      <div class="flex items-center gap-2 text-green-600 text-xs">
+        <%= icon("check-circle", size: "sm", color: "current") %>
+        <span><%= t(".positions_csv_uploaded") %></span>
+      </div>
+
+      <% if import.positions_account_numbers.size > 1 %>
+        <%= form.select :positions_account_number,
+          import.positions_account_numbers,
+          { label: t(".positions_account_label"), include_blank: t(".positions_account_prompt"), selected: import.positions_account_number },
+          disabled: import.complete? %>
+      <% end %>
+    <% end %>
+  </div>
 
   <%= form.submit "Apply configuration", disabled: import.complete? %>
 <% end %>

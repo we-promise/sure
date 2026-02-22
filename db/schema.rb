@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_02_18_120000) do
+ActiveRecord::Schema[7.2].define(version: 2026_02_22_175642) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -667,6 +667,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_02_18_120000) do
     t.text "ai_summary"
     t.string "document_type"
     t.jsonb "extracted_data"
+    t.text "positions_file_str"
     t.index ["family_id"], name: "index_imports_on_family_id"
   end
 
