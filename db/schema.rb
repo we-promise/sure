@@ -668,6 +668,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_03_120000) do
     t.text "ai_summary"
     t.string "document_type"
     t.jsonb "extracted_data"
+    t.text "positions_file_str"
     t.index ["family_id"], name: "index_imports_on_family_id"
   end
 

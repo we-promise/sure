@@ -21,6 +21,12 @@ en:
         date_format_label: Date format
       fidelity_import:
         date_format_label: Date format
+        preconfigured_notice: We have pre-configured your Fidelity import. Please proceed to the next step.
+        positions_csv_label: Positions CSV (optional)
+        positions_csv_help: Upload your Fidelity positions CSV to automatically create opening balances for pre-existing holdings.
+        positions_csv_uploaded: Positions file uploaded
+        positions_account_label: Positions account
+        positions_account_prompt: Select account from positions CSV
       mint_import:
         date_format_label: Date format
       rule_import:

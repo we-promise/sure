@@ -13,6 +13,8 @@ class Import::ConfigurationsController < ApplicationController
       @import.update!(rows_to_skip: params.dig(:import, :rows_to_skip).to_i)
       redirect_to import_configuration_path(@import)
     else
+      handle_positions_file if @import.type == "FidelityImport"
+
       @import.update!(import_params)
       @import.generate_rows_from_csv
       @import.reload.sync_mappings
@@ -27,6 +29,17 @@ class Import::ConfigurationsController < ApplicationController
   private
     def set_import
       @import = Current.family.imports.find(params[:import_id])
+    end
+
+    def handle_positions_file
+      positions_file = params.dig(:import, :positions_file)
+      return unless positions_file.present?
+
+      @import.positions_file_str = positions_file.read
+
+      # Store selected account number if provided
+      acct_num = params.dig(:import, :positions_account_number)
+      @import.positions_account_number = acct_num if acct_num.present?
     end
 
     def import_params
