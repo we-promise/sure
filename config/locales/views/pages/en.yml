@@ -51,6 +51,12 @@ en:
         view_all: "View all goals"
         no_goals: "No goals yet"
         add_goal: "Create a goal to start tracking your savings targets"
+      annual_budget_health:
+        title: "Annual Budget"
+        percent_used: "%{percent}% of annual budget used"
+        view_plan: "View annual plan"
+        no_budget: "No annual budget set"
+        setup_budget: "Set up budget categories to see your annual overview"
       investment_summary:
         title: "Investments"
         total_return: "Total Return"

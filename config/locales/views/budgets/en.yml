@@ -38,6 +38,32 @@ en:
       annual_remaining_label: Annual Remaining
       monthly_amortized: Monthly Amortized
       annual_limit_met: Annual limit met
+    annual:
+      title: "Annual Plan %{year}"
+      total_budget: "Total Annual Budget"
+      ytd_spent: "YTD Spent"
+      remaining: "Remaining"
+      monthly_set_aside: "Monthly Set-Aside"
+      non_monthly_expenses: "Non-Monthly Expenses"
+      non_monthly_description: "Annual, semi-annual, and quarterly expenses amortized across the year"
+      monthly_expenses: "Monthly Expenses (Annualized)"
+      savings: "Annual Savings"
+      savings_rate: "Savings Rate"
+      on_track: "On Track"
+      behind: "Behind"
+      over: "Over Budget"
+      back_to_monthly: "Monthly"
+      months_elapsed:
+        one: "%{count} month elapsed"
+        other: "%{count} months elapsed"
+      vs_last_year: "vs Last Year"
+      hide_comparison: "Hide Comparison"
+      last_year: "Last year"
+      yoy_comparison: "%{current} vs %{previous}"
+      yoy_description: "Year-over-year spending comparison"
+      vs_prior_year: "vs prior year"
+      projected_savings: "Projected annual savings"
+      projected_savings_description: "Based on your year-to-date income and spending pace"
     savings:
       saved_label: savings
       extra_saved: extra saved!

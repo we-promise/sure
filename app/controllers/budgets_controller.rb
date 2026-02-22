@@ -17,6 +17,14 @@ class BudgetsController < ApplicationController
     redirect_to budget_budget_categories_path(@budget)
   end
 
+  def annual
+    @year = (params[:year] || Date.current.year).to_i
+    @annual_plan = Budget::AnnualPlan.new(Current.family, year: @year)
+    @show_comparison = params[:compare] == "true"
+    @year_comparison = Budget::YearComparison.new(Current.family, current_year: @year) if @show_comparison
+    @breadcrumbs = [ [ "Home", root_path ], [ "Budgets", budgets_path ], [ t("budgets.annual.title", year: @year), nil ] ]
+  end
+
   def picker
     render partial: "budgets/picker", locals: {
       family: Current.family,

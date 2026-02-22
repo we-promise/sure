@@ -1,0 +1,88 @@
+<%# locals: (annual_plan:, **args) %>
+
+<% if annual_plan.category_summaries.any? %>
+  <div id="annual-budget-health" class="space-y-4">
+    <div class="px-4">
+      <div class="flex items-center justify-between">
+        <p class="text-sm text-secondary">
+          <%= t("pages.dashboard.annual_budget_health.percent_used", percent: annual_plan.percent_complete) %>
+        </p>
+        <% if annual_plan.on_track? %>
+          <span class="text-xs font-medium text-success"><%= t("budgets.annual.on_track") %></span>
+        <% else %>
+          <span class="text-xs font-medium text-destructive"><%= t("budgets.annual.behind") %></span>
+        <% end %>
+      </div>
+      <div class="h-2 bg-container-inset rounded-full overflow-hidden mt-2">
+        <div class="h-full rounded-full transition-all duration-500 <%= annual_plan.on_track? ? "bg-success" : "bg-destructive" %>"
+             style="width: <%= annual_plan.percent_complete %>%"></div>
+      </div>
+      <div class="flex items-center justify-between mt-1">
+        <span class="text-xs text-secondary">
+          <%= format_money Money.new(annual_plan.total_annual_actual, annual_plan.currency) %>
+        </span>
+        <span class="text-xs text-secondary">
+          <%= format_money Money.new(annual_plan.total_annual_budget, annual_plan.currency) %>
+        </span>
+      </div>
+    </div>
+
+    <% top_categories = annual_plan.non_monthly_category_summaries.first(4) %>
+    <% if top_categories.any? %>
+      <div class="bg-container-inset rounded-xl p-1 mx-4">
+        <div class="shadow-border-xs rounded-lg bg-container font-medium text-sm">
+          <% top_categories.each_with_index do |cs, idx| %>
+            <div class="p-3 <%= idx < top_categories.size - 1 ? "border-b border-primary" : "" %>">
+              <div class="flex items-center justify-between mb-1.5">
+                <div class="flex items-center gap-2 min-w-0">
+                  <div class="w-2 h-2 rounded-full shrink-0" style="background-color: <%= cs.color %>"></div>
+                  <span class="text-sm text-primary truncate"><%= cs.name %></span>
+                  <span class="text-xs px-1 py-0.5 rounded bg-container-inset text-secondary shrink-0">
+                    <%= cs.frequency_label %>
+                  </span>
+                </div>
+                <span class="text-xs text-secondary shrink-0 ml-2">
+                  <%= format_money Money.new(cs.annual_actual, cs.currency) %>
+                  / <%= format_money Money.new(cs.annual_budget, cs.currency) %>
+                </span>
+              </div>
+
+              <div class="h-1.5 bg-container-inset rounded-full overflow-hidden">
+                <% bar_class = case cs.status
+                   when :over_budget then "bg-destructive"
+                   when :warning then "bg-warning"
+                   else "bg-success"
+                   end %>
+                <div class="h-full rounded-full transition-all duration-500 <%= bar_class %>"
+                     style="width: <%= [cs.percent_used, 100].min %>%"></div>
+              </div>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    <% end %>
+
+    <div class="px-4">
+      <%= render DS::Link.new(
+        text: t("pages.dashboard.annual_budget_health.view_plan"),
+        variant: "ghost",
+        href: annual_budgets_path,
+        icon: "arrow-right"
+      ) %>
+    </div>
+  </div>
+<% else %>
+  <div class="py-10 flex flex-col items-center">
+    <%= render DS::FilledIcon.new(
+      variant: :container,
+      icon: "calendar",
+    ) %>
+
+    <p class="text-primary text-sm font-medium mb-1 mt-4">
+      <%= t("pages.dashboard.annual_budget_health.no_budget") %>
+    </p>
+    <p class="text-secondary text-sm text-center">
+      <%= t("pages.dashboard.annual_budget_health.setup_budget") %>
+    </p>
+  </div>
+<% end %>

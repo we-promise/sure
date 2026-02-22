@@ -1,0 +1,381 @@
+<% content_for :page_header do %>
+  <div class="flex items-center gap-1 mb-4">
+    <div class="flex items-center gap-2">
+      <% if @annual_plan.can_go_previous? %>
+        <%= render DS::Link.new(
+          variant: "icon",
+          icon: "chevron-left",
+          href: annual_budgets_path(year: @annual_plan.previous_year),
+        ) %>
+      <% else %>
+        <span class="text-subdued">
+          <%= icon "chevron-left", color: "current" %>
+        </span>
+      <% end %>
+
+      <% if @annual_plan.can_go_next? %>
+        <%= render DS::Link.new(
+          variant: "icon",
+          icon: "chevron-right",
+          href: annual_budgets_path(year: @annual_plan.next_year),
+        ) %>
+      <% else %>
+        <span class="text-subdued">
+          <%= icon "chevron-right", color: "current" %>
+        </span>
+      <% end %>
+    </div>
+
+    <h1 class="text-primary font-medium text-lg lg:text-base ml-2">
+      <%= t("budgets.annual.title", year: @year) %>
+    </h1>
+
+    <div class="ml-auto flex items-center gap-2">
+      <% if @show_comparison %>
+        <%= render DS::Link.new(
+          text: t("budgets.annual.hide_comparison"),
+          variant: "secondary",
+          href: annual_budgets_path(year: @year),
+          icon: "bar-chart-2",
+          size: :sm
+        ) %>
+      <% else %>
+        <%= render DS::Link.new(
+          text: t("budgets.annual.vs_last_year"),
+          variant: "outline",
+          href: annual_budgets_path(year: @year, compare: "true"),
+          icon: "bar-chart-2",
+          size: :sm
+        ) %>
+      <% end %>
+      <%= render DS::Link.new(
+        text: t("budgets.annual.back_to_monthly"),
+        variant: "outline",
+        href: budgets_path,
+        icon: "calendar",
+        size: :sm
+      ) %>
+    </div>
+  </div>
+<% end %>
+
+<div class="pb-6 lg:pb-12 space-y-6">
+  <%# Summary Cards %>
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <%# Total Annual Budget %>
+    <div class="bg-container rounded-xl shadow-border-xs p-4">
+      <p class="text-xs font-medium text-secondary uppercase tracking-wide mb-1">
+        <%= t("budgets.annual.total_budget") %>
+      </p>
+      <p class="text-xl font-semibold text-primary">
+        <%= format_money Money.new(@annual_plan.total_annual_budget, @annual_plan.currency) %>
+      </p>
+      <p class="text-xs text-secondary mt-1">
+        <%= format_money Money.new(@annual_plan.monthly_set_aside, @annual_plan.currency) %> / <%= t("budgets.frequencies.mo") %>
+      </p>
+    </div>
+
+    <%# YTD Spent %>
+    <div class="bg-container rounded-xl shadow-border-xs p-4">
+      <p class="text-xs font-medium text-secondary uppercase tracking-wide mb-1">
+        <%= t("budgets.annual.ytd_spent") %>
+      </p>
+      <p class="text-xl font-semibold text-primary">
+        <%= format_money Money.new(@annual_plan.total_annual_actual, @annual_plan.currency) %>
+      </p>
+      <div class="mt-2">
+        <div class="h-1.5 bg-container-inset rounded-full overflow-hidden">
+          <div class="h-full rounded-full transition-all duration-500 <%= @annual_plan.on_track? ? "bg-success" : "bg-destructive" %>"
+               style="width: <%= @annual_plan.percent_complete %>%"></div>
+        </div>
+        <p class="text-xs text-secondary mt-1"><%= @annual_plan.percent_complete %>%</p>
+      </div>
+    </div>
+
+    <%# Remaining %>
+    <div class="bg-container rounded-xl shadow-border-xs p-4">
+      <p class="text-xs font-medium text-secondary uppercase tracking-wide mb-1">
+        <%= t("budgets.annual.remaining") %>
+      </p>
+      <p class="text-xl font-semibold <%= @annual_plan.total_annual_remaining >= 0 ? "text-success" : "text-destructive" %>">
+        <%= format_money Money.new(@annual_plan.total_annual_remaining, @annual_plan.currency) %>
+      </p>
+      <p class="text-xs mt-1 <%= @annual_plan.on_track? ? "text-success" : "text-destructive" %>">
+        <%= @annual_plan.on_track? ? t("budgets.annual.on_track") : t("budgets.annual.behind") %>
+      </p>
+    </div>
+
+    <%# Savings Rate %>
+    <div class="bg-container rounded-xl shadow-border-xs p-4">
+      <p class="text-xs font-medium text-secondary uppercase tracking-wide mb-1">
+        <%= t("budgets.annual.savings_rate") %>
+      </p>
+      <p class="text-xl font-semibold text-primary">
+        <%= number_to_percentage(@annual_plan.savings_rate, precision: 1) %>
+      </p>
+      <p class="text-xs text-secondary mt-1">
+        <%= t("budgets.annual.months_elapsed", count: @annual_plan.months_elapsed) %>
+      </p>
+    </div>
+  </div>
+
+  <%# Year-over-Year Summary %>
+  <% if @show_comparison %>
+    <div class="bg-container rounded-xl shadow-border-xs p-4">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-sm font-medium text-primary">
+            <%= t("budgets.annual.yoy_comparison", current: @year, previous: @year - 1) %>
+          </p>
+          <p class="text-xs text-secondary">
+            <%= t("budgets.annual.yoy_description") %>
+          </p>
+        </div>
+        <div class="text-right">
+          <% change = @year_comparison.total_change_percent %>
+          <p class="text-lg font-semibold <%= change <= 0 ? "text-success" : "text-destructive" %>">
+            <% if change > 0 %>
+              <%= icon("trending-up", size: "sm", color: "destructive") %>
+            <% elsif change < 0 %>
+              <%= icon("trending-down", size: "sm", color: "success") %>
+            <% end %>
+            <%= number_to_percentage(change.abs, precision: 1) %>
+          </p>
+          <p class="text-xs text-secondary"><%= t("budgets.annual.vs_prior_year") %></p>
+        </div>
+      </div>
+    </div>
+  <% end %>
+
+  <%# Non-Monthly Expenses Section %>
+  <% if @annual_plan.non_monthly_category_summaries.any? %>
+    <div class="bg-container rounded-xl shadow-border-xs">
+      <div class="px-4 py-3 border-b border-primary">
+        <h2 class="text-base font-medium text-primary">
+          <%= t("budgets.annual.non_monthly_expenses") %>
+        </h2>
+        <p class="text-xs text-secondary">
+          <%= t("budgets.annual.non_monthly_description") %>
+        </p>
+      </div>
+
+      <div class="divide-y divide-primary">
+        <% @annual_plan.non_monthly_category_summaries.each do |cs| %>
+          <div class="px-4 py-3">
+            <div class="flex items-center justify-between mb-2">
+              <div class="flex items-center gap-2 min-w-0">
+                <div class="w-2.5 h-2.5 rounded-full shrink-0" style="background-color: <%= cs.color %>"></div>
+                <span class="text-sm font-medium text-primary truncate"><%= cs.name %></span>
+                <span class="text-xs px-1.5 py-0.5 rounded-full bg-container-inset text-secondary font-medium shrink-0">
+                  <%= cs.frequency_label %>
+                </span>
+                <% if cs.budget_category.goal.present? %>
+                  <span class="text-xs text-secondary flex items-center gap-1 shrink-0">
+                    <%= icon("target", size: "sm") %>
+                    <%= cs.budget_category.goal.name %>
+                  </span>
+                <% end %>
+              </div>
+              <div class="text-right shrink-0 ml-4">
+                <span class="text-sm font-medium text-primary">
+                  <%= format_money Money.new(cs.annual_actual, cs.currency) %>
+                </span>
+                <span class="text-xs text-secondary">
+                  / <%= format_money Money.new(cs.annual_budget, cs.currency) %>
+                </span>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-3">
+              <div class="flex-1 h-1.5 bg-container-inset rounded-full overflow-hidden">
+                <% bar_class = case cs.status
+                   when :over_budget then "bg-destructive"
+                   when :warning then "bg-warning"
+                   else "bg-success"
+                   end %>
+                <div class="h-full rounded-full transition-all duration-500 <%= bar_class %>"
+                     style="width: <%= [cs.percent_used, 100].min %>%"></div>
+              </div>
+              <div class="flex items-center gap-2 shrink-0">
+                <% text_class = case cs.status
+                   when :over_budget then "text-destructive"
+                   when :warning then "text-warning"
+                   else "text-success"
+                   end %>
+                <span class="text-xs font-medium <%= text_class %>">
+                  <%= cs.percent_used %>%
+                </span>
+                <span class="text-xs text-secondary">
+                  <%= format_money Money.new(cs.annual_remaining, cs.currency) %> <%= t("budgets.annual.remaining").downcase %>
+                </span>
+              </div>
+            </div>
+
+            <% if @show_comparison %>
+              <% comparison = @year_comparison.category_comparisons.find { |cc| cc.category.id == cs.category.id } %>
+              <% if comparison && comparison.previous_actual > 0 %>
+                <div class="flex items-center gap-2 mt-2 pt-2 border-t border-primary/50">
+                  <span class="text-xs text-secondary"><%= t("budgets.annual.last_year") %>:</span>
+                  <span class="text-xs text-secondary">
+                    <%= format_money Money.new(comparison.previous_actual, cs.currency) %>
+                  </span>
+                  <% if comparison.change_percent != 0 %>
+                    <span class="text-xs font-medium <%= comparison.improved? ? "text-success" : "text-destructive" %>">
+                      <% if comparison.worsened? %>
+                        <%= icon("arrow-up", size: "xs") %>
+                      <% else %>
+                        <%= icon("arrow-down", size: "xs") %>
+                      <% end %>
+                      <%= number_to_percentage(comparison.change_percent.abs, precision: 1) %>
+                    </span>
+                  <% end %>
+                </div>
+              <% end %>
+            <% end %>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  <% end %>
+
+  <%# Monthly Expenses (Annualized) %>
+  <% monthly_expenses = @annual_plan.monthly_category_summaries.reject(&:savings?) %>
+  <% if monthly_expenses.any? %>
+    <div class="bg-container rounded-xl shadow-border-xs">
+      <div class="px-4 py-3 border-b border-primary">
+        <h2 class="text-base font-medium text-primary">
+          <%= t("budgets.annual.monthly_expenses") %>
+        </h2>
+      </div>
+
+      <div class="divide-y divide-primary">
+        <% monthly_expenses.each do |cs| %>
+          <div class="px-4 py-3">
+            <div class="flex items-center justify-between mb-2">
+              <div class="flex items-center gap-2 min-w-0">
+                <div class="w-2.5 h-2.5 rounded-full shrink-0" style="background-color: <%= cs.color %>"></div>
+                <span class="text-sm font-medium text-primary truncate"><%= cs.name %></span>
+              </div>
+              <div class="text-right shrink-0 ml-4">
+                <span class="text-sm font-medium text-primary">
+                  <%= format_money Money.new(cs.annual_actual, cs.currency) %>
+                </span>
+                <span class="text-xs text-secondary">
+                  / <%= format_money Money.new(cs.annual_budget, cs.currency) %>
+                </span>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-3">
+              <div class="flex-1 h-1.5 bg-container-inset rounded-full overflow-hidden">
+                <% bar_class = case cs.status
+                   when :over_budget then "bg-destructive"
+                   when :warning then "bg-warning"
+                   else "bg-success"
+                   end %>
+                <div class="h-full rounded-full transition-all duration-500 <%= bar_class %>"
+                     style="width: <%= [cs.percent_used, 100].min %>%"></div>
+              </div>
+              <% text_class = case cs.status
+                 when :over_budget then "text-destructive"
+                 when :warning then "text-warning"
+                 else "text-success"
+                 end %>
+              <span class="text-xs font-medium shrink-0 <%= text_class %>">
+                <%= cs.percent_used %>%
+              </span>
+            </div>
+
+            <% if @show_comparison %>
+              <% comparison = @year_comparison.category_comparisons.find { |cc| cc.category.id == cs.category.id } %>
+              <% if comparison && comparison.previous_actual > 0 %>
+                <div class="flex items-center gap-2 mt-2 pt-2 border-t border-primary/50">
+                  <span class="text-xs text-secondary"><%= t("budgets.annual.last_year") %>:</span>
+                  <span class="text-xs text-secondary">
+                    <%= format_money Money.new(comparison.previous_actual, cs.currency) %>
+                  </span>
+                  <% if comparison.change_percent != 0 %>
+                    <span class="text-xs font-medium <%= comparison.improved? ? "text-success" : "text-destructive" %>">
+                      <% if comparison.worsened? %>
+                        <%= icon("arrow-up", size: "xs") %>
+                      <% else %>
+                        <%= icon("arrow-down", size: "xs") %>
+                      <% end %>
+                      <%= number_to_percentage(comparison.change_percent.abs, precision: 1) %>
+                    </span>
+                  <% end %>
+                </div>
+              <% end %>
+            <% end %>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  <% end %>
+
+  <%# Savings & Projections %>
+  <div class="bg-container rounded-xl shadow-border-xs p-4">
+    <div class="flex items-center justify-between">
+      <div>
+        <p class="text-sm font-medium text-primary"><%= t("budgets.annual.savings_rate") %></p>
+        <p class="text-xs text-secondary"><%= t("budgets.annual.projected_savings_description") %></p>
+      </div>
+      <div class="text-right">
+        <p class="text-lg font-semibold text-primary">
+          <%= number_to_percentage(@annual_plan.savings_rate, precision: 1) %>
+        </p>
+        <p class="text-xs text-secondary">
+          <%= t("budgets.annual.projected_savings") %>:
+          <%= format_money Money.new(@annual_plan.projected_annual_savings, @annual_plan.currency) %>
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <%# Savings Categories Section %>
+  <% if @annual_plan.savings_category_summaries.any? %>
+    <div class="bg-container rounded-xl shadow-border-xs">
+      <div class="px-4 py-3 border-b border-primary">
+        <h2 class="text-base font-medium text-primary">
+          <%= t("budgets.annual.savings") %>
+        </h2>
+      </div>
+
+      <div class="divide-y divide-primary">
+        <% @annual_plan.savings_category_summaries.each do |cs| %>
+          <div class="px-4 py-3">
+            <div class="flex items-center justify-between mb-2">
+              <div class="flex items-center gap-2 min-w-0">
+                <div class="w-2.5 h-2.5 rounded-full shrink-0" style="background-color: <%= cs.color %>"></div>
+                <span class="text-sm font-medium text-primary truncate"><%= cs.name %></span>
+                <% if cs.budget_category.non_monthly? %>
+                  <span class="text-xs px-1.5 py-0.5 rounded-full bg-container-inset text-secondary font-medium shrink-0">
+                    <%= cs.frequency_label %>
+                  </span>
+                <% end %>
+              </div>
+              <div class="text-right shrink-0 ml-4">
+                <span class="text-sm font-medium text-primary">
+                  <%= format_money Money.new(cs.annual_actual, cs.currency) %>
+                </span>
+                <span class="text-xs text-secondary">
+                  / <%= format_money Money.new(cs.annual_budget, cs.currency) %>
+                </span>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-3">
+              <div class="flex-1 h-1.5 bg-container-inset rounded-full overflow-hidden">
+                <div class="h-full rounded-full transition-all duration-500 bg-success"
+                     style="width: <%= [cs.percent_used, 100].min %>%"></div>
+              </div>
+              <span class="text-xs font-medium shrink-0 text-success">
+                <%= cs.percent_used %>%
+              </span>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  <% end %>
+</div>

@@ -1,0 +1,100 @@
+<%# locals: (annual_plan:, **args) %>
+
+<% if annual_plan.category_summaries.any? %>
+  <div class="space-y-6">
+    <%# Summary row %>
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div class="text-center">
+        <p class="text-xs text-secondary uppercase tracking-wide mb-1">
+          <%= t("reports.annual_budget_performance.annual_budget") %>
+        </p>
+        <p class="text-lg font-semibold text-primary">
+          <%= format_money Money.new(annual_plan.total_annual_budget, annual_plan.currency) %>
+        </p>
+      </div>
+      <div class="text-center">
+        <p class="text-xs text-secondary uppercase tracking-wide mb-1">
+          <%= t("reports.annual_budget_performance.ytd_actual") %>
+        </p>
+        <p class="text-lg font-semibold text-primary">
+          <%= format_money Money.new(annual_plan.total_annual_actual, annual_plan.currency) %>
+        </p>
+      </div>
+      <div class="text-center">
+        <p class="text-xs text-secondary uppercase tracking-wide mb-1">
+          <%= t("reports.annual_budget_performance.remaining") %>
+        </p>
+        <p class="text-lg font-semibold <%= annual_plan.total_annual_remaining >= 0 ? "text-success" : "text-destructive" %>">
+          <%= format_money Money.new(annual_plan.total_annual_remaining, annual_plan.currency) %>
+        </p>
+      </div>
+    </div>
+
+    <%# Category breakdown table %>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b border-primary text-left">
+            <th class="pb-2 font-medium text-secondary"><%= t("reports.annual_budget_performance.category") %></th>
+            <th class="pb-2 font-medium text-secondary text-right"><%= t("reports.annual_budget_performance.annual_budget") %></th>
+            <th class="pb-2 font-medium text-secondary text-right"><%= t("reports.annual_budget_performance.ytd_actual") %></th>
+            <th class="pb-2 font-medium text-secondary text-right"><%= t("reports.annual_budget_performance.remaining") %></th>
+            <th class="pb-2 font-medium text-secondary w-32"></th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-primary">
+          <% annual_plan.expense_category_summaries.each do |cs| %>
+            <tr>
+              <td class="py-2.5">
+                <div class="flex items-center gap-2">
+                  <div class="w-2 h-2 rounded-full shrink-0" style="background-color: <%= cs.color %>"></div>
+                  <span class="text-primary"><%= cs.name %></span>
+                  <% if cs.budget_category.non_monthly? %>
+                    <span class="text-xs px-1.5 py-0.5 rounded-full bg-container-inset text-secondary font-medium">
+                      <%= cs.frequency_label %>
+                    </span>
+                  <% end %>
+                </div>
+              </td>
+              <td class="py-2.5 text-right text-primary">
+                <%= format_money Money.new(cs.annual_budget, cs.currency) %>
+              </td>
+              <td class="py-2.5 text-right text-primary">
+                <%= format_money Money.new(cs.annual_actual, cs.currency) %>
+              </td>
+              <td class="py-2.5 text-right <%= cs.annual_remaining >= 0 ? "text-success" : "text-destructive" %>">
+                <%= format_money Money.new(cs.annual_remaining, cs.currency) %>
+              </td>
+              <td class="py-2.5">
+                <div class="h-1.5 bg-container-inset rounded-full overflow-hidden">
+                  <% bar_class = case cs.status
+                     when :over_budget then "bg-destructive"
+                     when :warning then "bg-warning"
+                     else "bg-success"
+                     end %>
+                  <div class="h-full rounded-full <%= bar_class %>"
+                       style="width: <%= [cs.percent_used, 100].min %>%"></div>
+                </div>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+
+    <%# Savings rate summary %>
+    <div class="bg-container-inset rounded-xl p-4 flex items-center justify-between">
+      <div>
+        <p class="text-sm font-medium text-primary"><%= t("reports.annual_budget_performance.savings_rate") %></p>
+        <p class="text-xs text-secondary"><%= t("reports.annual_budget_performance.savings_rate_description") %></p>
+      </div>
+      <p class="text-xl font-semibold text-primary">
+        <%= number_to_percentage(annual_plan.savings_rate, precision: 1) %>
+      </p>
+    </div>
+  </div>
+<% else %>
+  <div class="py-8 text-center">
+    <p class="text-sm text-secondary"><%= t("reports.annual_budget_performance.no_data") %></p>
+  </div>
+<% end %>

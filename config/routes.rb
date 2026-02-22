@@ -211,6 +211,7 @@ Rails.application.routes.draw do
 
   resources :budgets, only: %i[index show edit update], param: :month_year do
     get :picker, on: :collection
+    get :annual, on: :collection
 
     resources :budget_categories, only: %i[index show update]
   end
