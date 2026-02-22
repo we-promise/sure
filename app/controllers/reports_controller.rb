@@ -226,6 +226,19 @@ class ReportsController < ApplicationController
       Money.new(value, Current.family.currency)
     end
 
+    # Savings-category transactions show up as "expenses" in the income statement
+    # (positive outflows), but they're not true expenses — they're transfers to savings.
+    # Subtract them so Net Savings and Total Expenses are accurate.
+    def savings_in_expense_totals(expense_period_total)
+      savings_ids = Current.family.categories.savings.pluck(:id).to_set
+      return 0 if savings_ids.empty?
+
+      expense_period_total.category_totals
+        .reject { |ct| ct.category.subcategory? }
+        .select { |ct| savings_ids.include?(ct.category.id) }
+        .sum(&:total)
+    end
+
     def parse_date_param(param_name)
       date_string = params[param_name]
       return nil if date_string.blank?
@@ -279,14 +292,21 @@ class ReportsController < ApplicationController
       # Ensure we always have Money objects
       current_income = ensure_money(@current_income_totals.total)
       current_expenses = ensure_money(@current_expense_totals.total)
-      net_savings = current_income - current_expenses
+
+      # Subtract savings-category spending from expenses so transfers to savings
+      # don't count as expenses in the Net Savings calculation
+      current_savings_in_expenses = savings_in_expense_totals(@current_expense_totals)
+      current_expenses_excluding_savings = ensure_money([ current_expenses.amount - current_savings_in_expenses, 0 ].max)
+
+      net_savings = current_income - current_expenses_excluding_savings
 
       previous_income = ensure_money(@previous_income_totals.total)
-      previous_expenses = ensure_money(@previous_expense_totals.total)
+      previous_savings_in_expenses = savings_in_expense_totals(@previous_expense_totals)
+      previous_expenses = ensure_money([ @previous_expense_totals.total - previous_savings_in_expenses, 0 ].max)
 
       # Calculate percentage changes
       income_change = calculate_percentage_change(previous_income, current_income)
-      expense_change = calculate_percentage_change(previous_expenses, current_expenses)
+      expense_change = calculate_percentage_change(previous_expenses, current_expenses_excluding_savings)
 
       # Get budget performance for current period
       budget_percent = calculate_budget_performance
@@ -294,7 +314,7 @@ class ReportsController < ApplicationController
       {
         current_income: current_income,
         income_change: income_change,
-        current_expenses: current_expenses,
+        current_expenses: current_expenses_excluding_savings,
         expense_change: expense_change,
         net_savings: net_savings,
         budget_percent: budget_percent
@@ -337,7 +357,8 @@ class ReportsController < ApplicationController
         period = Period.custom(start_date: month_start, end_date: month_end)
 
         income = Current.family.income_statement.income_totals(period: period).total
-        expenses = Current.family.income_statement.expense_totals(period: period).total
+        expense_totals = Current.family.income_statement.expense_totals(period: period)
+        expenses = [ expense_totals.total - savings_in_expense_totals(expense_totals), 0 ].max
 
         trends << {
           month: month_start.strftime("%b %Y"),
