@@ -110,6 +110,18 @@ class Account::ProviderImportAdapter
         if pending_match
           entry = pending_match
           entry.assign_attributes(external_id: external_id)
+
+          # Clear the pending flag since we're claiming this as a posted transaction.
+          # Without this, the entry remains "pending" in extra metadata even though
+          # it now represents the posted version, which causes false duplicate matches.
+          if entry.entryable.is_a?(Transaction)
+            existing_extra = entry.entryable.extra || {}
+            cleared = existing_extra.deep_dup
+            %w[simplefin plaid lunchflow].each do |provider|
+              cleared[provider]&.delete("pending")
+            end
+            entry.entryable.extra = cleared if cleared != existing_extra
+          end
         end
       end
 
@@ -836,6 +848,9 @@ class Account::ProviderImportAdapter
   # @param confidence [String] Confidence level: "medium" (≤30% diff) or "low" (>30% diff)
   def store_duplicate_suggestion(pending_entry:, posted_entry:, reason:, posted_amount:, confidence: "medium")
     return unless pending_entry&.entryable.is_a?(Transaction)
+
+    # Never suggest an entry as its own duplicate (self-reference guard)
+    return if pending_entry.id == posted_entry.id
 
     pending_transaction = pending_entry.entryable
     existing_extra = pending_transaction.extra || {}
