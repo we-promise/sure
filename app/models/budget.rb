@@ -12,7 +12,8 @@ class Budget < ApplicationRecord
 
   monetize :budgeted_spending, :expected_income, :allocated_spending,
            :actual_spending, :available_to_spend, :available_to_allocate,
-           :estimated_spending, :estimated_income, :actual_income, :remaining_expected_income
+           :estimated_spending, :estimated_income, :actual_income, :remaining_expected_income,
+           :budgeted_savings, :actual_savings
 
   class << self
     def date_to_param(date)
@@ -81,7 +82,7 @@ class Budget < ApplicationRecord
   end
 
   def sync_budget_categories
-    current_category_ids = family.categories.expenses.pluck(:id).to_set
+    current_category_ids = family.categories.budgetable.pluck(:id).to_set
     existing_budget_category_ids = budget_categories.pluck(:category_id).to_set
     categories_to_add = current_category_ids - existing_budget_category_ids
     categories_to_remove = existing_budget_category_ids - current_category_ids
@@ -103,6 +104,24 @@ class Budget < ApplicationRecord
     budget_categories.uncategorized.tap do |bc|
       bc.budgeted_spending = [ available_to_allocate, 0 ].max
       bc.currency = family.currency
+    end
+  end
+
+  def expense_budget_categories
+    budget_categories.select { |bc| !bc.savings? }
+  end
+
+  def savings_budget_categories
+    budget_categories.select { |bc| bc.savings? }
+  end
+
+  def budgeted_savings
+    savings_budget_categories.reject { |bc| bc.subcategory? }.sum(&:budgeted_spending)
+  end
+
+  def actual_savings
+    savings_budget_categories.reject { |bc| bc.subcategory? }.sum do |bc|
+      budget_category_actual_spending(bc)
     end
   end
 
@@ -184,7 +203,7 @@ class Budget < ApplicationRecord
   end
 
   def actual_spending
-    [ expense_totals.total - refunds_in_expense_categories, 0 ].max
+    [ expense_totals.total - savings_in_expense_totals - refunds_in_expense_categories, 0 ].max
   end
 
   def budget_category_actual_spending(budget_category)
@@ -192,6 +211,10 @@ class Budget < ApplicationRecord
     expense = expense_totals_by_category[cat_id]&.total || 0
     refund = income_totals_by_category[cat_id]&.total || 0
     [ expense - refund, 0 ].max
+  end
+
+  def annual_expense_total_for_category(category)
+    annual_expense_totals_by_category[category.id] || 0
   end
 
   def category_median_monthly_expense(category)
@@ -267,6 +290,17 @@ class Budget < ApplicationRecord
   end
 
   private
+    def savings_category_ids
+      @savings_category_ids ||= savings_budget_categories.map(&:category_id).to_set
+    end
+
+    def savings_in_expense_totals
+      expense_totals.category_totals
+        .reject { |ct| ct.category.subcategory? }
+        .select { |ct| savings_category_ids.include?(ct.category.id) }
+        .sum(&:total)
+    end
+
     def refunds_in_expense_categories
       expense_category_ids = budget_categories.map(&:category_id).to_set
       income_totals.category_totals
@@ -293,5 +327,18 @@ class Budget < ApplicationRecord
 
     def income_totals_by_category
       @income_totals_by_category ||= income_totals.category_totals.index_by { |ct| ct.category.id }
+    end
+
+    def annual_expense_totals_by_category
+      @annual_expense_totals_by_category ||= begin
+        year_start = Date.new(start_date.year, 1, 1)
+        year_end = Date.new(start_date.year, 12, 31)
+        annual_period = Period.custom(start_date: year_start, end_date: year_end)
+        annual_totals = income_statement.expense_totals(period: annual_period)
+
+        annual_totals.category_totals.each_with_object({}) do |ct, hash|
+          hash[ct.category.id] = ct.total
+        end
+      end
     end
 end

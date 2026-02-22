@@ -3,10 +3,21 @@ class BudgetCategory < ApplicationRecord
 
   belongs_to :budget
   belongs_to :category
+  belongs_to :goal, optional: true
 
   validates :budget_id, uniqueness: { scope: :category_id }
 
-  monetize :budgeted_spending, :available_to_spend, :avg_monthly_expense, :median_monthly_expense, :actual_spending
+  FREQUENCIES = {
+    "monthly" => 1,
+    "quarterly" => 3,
+    "semi_annual" => 6,
+    "annual" => 12
+  }.freeze
+
+  validates :budget_frequency, inclusion: { in: FREQUENCIES.keys }
+
+  monetize :budgeted_spending, :available_to_spend, :avg_monthly_expense, :median_monthly_expense,
+           :actual_spending, :monthly_amortized_amount, :annual_actual_spending, :annual_remaining
 
   class Group
     attr_reader :budget_category, :budget_subcategories
@@ -59,6 +70,47 @@ class BudgetCategory < ApplicationRecord
 
   def median_monthly_expense
     budget.category_median_monthly_expense(category)
+  end
+
+  def non_monthly?
+    budget_frequency != "monthly"
+  end
+
+  def frequency_months
+    FREQUENCIES[budget_frequency] || 1
+  end
+
+  def monthly_amortized_amount
+    return budgeted_spending if budget_frequency == "monthly"
+    return 0 unless annual_amount && annual_amount > 0
+
+    annual_amount / 12.0
+  end
+
+  def sync_budgeted_from_annual!
+    return unless non_monthly? && annual_amount && annual_amount > 0
+
+    update!(budgeted_spending: annual_amount / frequency_months)
+  end
+
+  def annual_actual_spending
+    budget.annual_expense_total_for_category(category)
+  end
+
+  def annual_remaining
+    return 0 unless annual_amount && annual_amount > 0
+
+    annual_amount - annual_actual_spending
+  end
+
+  def annual_limit_met?
+    return false unless annual_amount && annual_amount > 0
+
+    annual_actual_spending >= annual_amount
+  end
+
+  def savings?
+    category.savings?
   end
 
   def subcategory?
@@ -148,11 +200,25 @@ class BudgetCategory < ApplicationRecord
   end
 
   def over_budget?
+    return false if savings?
     available_to_spend.negative?
   end
 
   def near_limit?
+    return false if savings?
     !over_budget? && percent_of_budget_spent >= 90
+  end
+
+  def under_saved?
+    savings? && available_to_spend.positive?
+  end
+
+  def exceeded_savings_target?
+    savings? && available_to_spend.negative?
+  end
+
+  def savings_on_track?
+    savings? && percent_of_budget_spent >= 90
   end
 
   # Returns hash with suggested daily spending info or nil if not applicable
@@ -180,7 +246,8 @@ class BudgetCategory < ApplicationRecord
     segments = [ { color: category.color, amount: actual_spending, id: id } ]
 
     if available_to_spend.negative?
-      segments.push({ color: "var(--color-destructive)", amount: available_to_spend.abs, id: overage_segment_id })
+      overage_color = savings? ? "var(--color-success)" : "var(--color-destructive)"
+      segments.push({ color: overage_color, amount: available_to_spend.abs, id: overage_segment_id })
     else
       segments.push({ color: "var(--budget-unallocated-fill)", amount: available_to_spend, id: unused_segment_id })
     end

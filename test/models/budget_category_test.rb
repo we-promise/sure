@@ -176,4 +176,176 @@ class BudgetCategoryTest < ActiveSupport::TestCase
     assert_equal 800, @subcategory_with_limit_bc.available_to_spend
     assert_equal 800, @subcategory_inheriting_bc.available_to_spend
   end
+
+  test "savings category over_budget? is always false" do
+    savings_category = Category.create!(
+      name: "Test Savings #{Time.now.to_f}",
+      family: @family,
+      color: "#059669",
+      lucide_icon: "piggy-bank",
+      classification: "savings"
+    )
+
+    savings_bc = BudgetCategory.create!(
+      budget: @budget,
+      category: savings_category,
+      budgeted_spending: 500,
+      currency: "USD"
+    )
+
+    # Mock spending that exceeds budget
+    @budget.stubs(:budget_category_actual_spending).with(savings_bc).returns(600)
+
+    refute savings_bc.over_budget?
+    assert savings_bc.exceeded_savings_target?
+  end
+
+  test "savings category near_limit? is always false" do
+    savings_category = Category.create!(
+      name: "Test Savings NL #{Time.now.to_f}",
+      family: @family,
+      color: "#059669",
+      lucide_icon: "piggy-bank",
+      classification: "savings"
+    )
+
+    savings_bc = BudgetCategory.create!(
+      budget: @budget,
+      category: savings_category,
+      budgeted_spending: 500,
+      currency: "USD"
+    )
+
+    # Mock spending at 95% of budget
+    @budget.stubs(:budget_category_actual_spending).with(savings_bc).returns(475)
+
+    refute savings_bc.near_limit?
+    assert savings_bc.savings_on_track?
+  end
+
+  test "savings category under_saved? when below target" do
+    savings_category = Category.create!(
+      name: "Test Savings US #{Time.now.to_f}",
+      family: @family,
+      color: "#059669",
+      lucide_icon: "piggy-bank",
+      classification: "savings"
+    )
+
+    savings_bc = BudgetCategory.create!(
+      budget: @budget,
+      category: savings_category,
+      budgeted_spending: 500,
+      currency: "USD"
+    )
+
+    # Mock spending well below target
+    @budget.stubs(:budget_category_actual_spending).with(savings_bc).returns(200)
+
+    assert savings_bc.under_saved?
+    refute savings_bc.exceeded_savings_target?
+    refute savings_bc.savings_on_track?
+  end
+
+  # === Frequency tests ===
+
+  test "monthly is the default frequency" do
+    assert_equal "monthly", @parent_budget_category.budget_frequency
+    refute @parent_budget_category.non_monthly?
+  end
+
+  test "non_monthly? returns true for quarterly frequency" do
+    @parent_budget_category.update!(budget_frequency: "quarterly")
+    assert @parent_budget_category.non_monthly?
+  end
+
+  test "frequency_months returns correct values" do
+    assert_equal 1, @parent_budget_category.frequency_months
+
+    @parent_budget_category.budget_frequency = "quarterly"
+    assert_equal 3, @parent_budget_category.frequency_months
+
+    @parent_budget_category.budget_frequency = "semi_annual"
+    assert_equal 6, @parent_budget_category.frequency_months
+
+    @parent_budget_category.budget_frequency = "annual"
+    assert_equal 12, @parent_budget_category.frequency_months
+  end
+
+  test "monthly_amortized_amount computes correctly for annual" do
+    @parent_budget_category.update!(budget_frequency: "annual", annual_amount: 2400)
+    assert_equal 200, @parent_budget_category.monthly_amortized_amount
+  end
+
+  test "monthly_amortized_amount returns budgeted_spending for monthly" do
+    @parent_budget_category.update!(budgeted_spending: 500)
+    assert_equal 500, @parent_budget_category.monthly_amortized_amount
+  end
+
+  test "sync_budgeted_from_annual sets budgeted_spending for quarterly" do
+    @parent_budget_category.update!(budget_frequency: "quarterly", annual_amount: 1200)
+    @parent_budget_category.sync_budgeted_from_annual!
+    assert_equal 400, @parent_budget_category.reload.budgeted_spending
+  end
+
+  test "sync_budgeted_from_annual sets budgeted_spending for annual" do
+    @parent_budget_category.update!(budget_frequency: "annual", annual_amount: 2400)
+    @parent_budget_category.sync_budgeted_from_annual!
+    assert_equal 200, @parent_budget_category.reload.budgeted_spending
+  end
+
+  test "annual_limit_met? returns true when annual spending meets annual amount" do
+    @parent_budget_category.update!(budget_frequency: "annual", annual_amount: 1000)
+    @budget.stubs(:annual_expense_total_for_category).with(@parent_budget_category.category).returns(1000)
+
+    assert @parent_budget_category.annual_limit_met?
+  end
+
+  test "annual_limit_met? returns false when under annual amount" do
+    @parent_budget_category.update!(budget_frequency: "annual", annual_amount: 1000)
+    @budget.stubs(:annual_expense_total_for_category).with(@parent_budget_category.category).returns(500)
+
+    refute @parent_budget_category.annual_limit_met?
+  end
+
+  test "annual_remaining computes correctly" do
+    @parent_budget_category.update!(budget_frequency: "annual", annual_amount: 2000)
+    @budget.stubs(:annual_expense_total_for_category).with(@parent_budget_category.category).returns(800)
+
+    assert_equal 1200, @parent_budget_category.annual_remaining
+  end
+
+  test "validates budget_frequency inclusion" do
+    @parent_budget_category.budget_frequency = "biweekly"
+    refute @parent_budget_category.valid?
+    assert @parent_budget_category.errors[:budget_frequency].any?
+  end
+
+  # === Savings tests ===
+
+  test "savings category donut uses green for overage" do
+    savings_category = Category.create!(
+      name: "Test Savings Donut #{Time.now.to_f}",
+      family: @family,
+      color: "#059669",
+      lucide_icon: "piggy-bank",
+      classification: "savings"
+    )
+
+    savings_bc = BudgetCategory.create!(
+      budget: @budget,
+      category: savings_category,
+      budgeted_spending: 500,
+      currency: "USD"
+    )
+
+    # Mock spending that exceeds budget
+    @budget.stubs(:budget_category_actual_spending).with(savings_bc).returns(600)
+
+    segments = savings_bc.to_donut_segments_json
+    overage_segment = segments.find { |s| s[:id] == "overage" }
+
+    assert_not_nil overage_segment
+    assert_equal "var(--color-success)", overage_segment[:color]
+  end
 end

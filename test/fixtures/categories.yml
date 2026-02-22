@@ -15,3 +15,10 @@ subcategory:
   name: Restaurants
   parent: food_and_drink
   family: dylan_family
+
+savings:
+  name: Emergency Fund
+  color: "#059669"
+  lucide_icon: piggy-bank
+  classification: savings
+  family: dylan_family
