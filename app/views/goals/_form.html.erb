@@ -28,10 +28,18 @@
 
     <%= f.text_area :description, label: t("goals.form.description"), rows: 2 %>
 
-    <div class="grid grid-cols-2 gap-4">
-      <%= f.number_field :target_amount, label: t("goals.form.target_amount"), required: true, min: 0, step: 0.01 %>
+    <%= f.number_field :target_amount, label: t("goals.form.target_amount"), required: true, min: 0, step: 0.01 %>
+
+    <% accounts = Current.family.accounts.visible.alphabetically %>
+    <% if accounts.any? %>
+      <%= f.select :account_id,
+            accounts.map { |a| [ "#{a.name} (#{format_money(a.balance_money)})", a.id ] },
+            { include_blank: t("goals.form.no_account"), label: t("goals.form.linked_account") } %>
+    <% end %>
+
+    <% unless goal.account_id.present? %>
       <%= f.number_field :current_amount, label: t("goals.form.current_amount"), min: 0, step: 0.01 %>
-    </div>
+    <% end %>
 
     <%= f.date_field :target_date, label: t("goals.form.target_date") %>
 

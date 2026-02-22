@@ -2,12 +2,15 @@ class Goal < ApplicationRecord
   include Monetizable
 
   belongs_to :family
+  belongs_to :account, optional: true
   has_many :budget_categories, dependent: :nullify
 
   validates :name, presence: true
   validates :target_amount, presence: true, numericality: { greater_than: 0 }
   validates :goal_type, presence: true, inclusion: { in: ->(_) { GOAL_TYPES.keys } }
   validates :currency, presence: true
+
+  before_validation :normalize_current_amount
 
   monetize :target_amount, :current_amount, :computed_current_amount, :remaining_amount
 
@@ -28,7 +31,9 @@ class Goal < ApplicationRecord
   scope :by_priority, -> { order(priority: :desc, created_at: :desc) }
 
   def computed_current_amount
-    if linked_budget_categories.any?
+    if account.present?
+      account.balance
+    elsif linked_budget_categories.any?
       linked_budget_categories.sum { |bc| bc.budget.budget_category_actual_spending(bc) }
     else
       current_amount
@@ -37,11 +42,11 @@ class Goal < ApplicationRecord
 
   def progress_percent
     return 0 if target_amount.zero?
-    [(computed_current_amount / target_amount.to_f * 100), 100].min
+    [ (computed_current_amount / target_amount.to_f * 100), 100 ].min
   end
 
   def remaining_amount
-    [target_amount - computed_current_amount, 0].max
+    [ target_amount - computed_current_amount, 0 ].max
   end
 
   def on_track?
@@ -58,7 +63,7 @@ class Goal < ApplicationRecord
 
   def days_remaining
     return 0 unless target_date
-    [(target_date - Date.current).to_i, 0].max
+    [ (target_date - Date.current).to_i, 0 ].max
   end
 
   def goal_type_icon
@@ -73,6 +78,10 @@ class Goal < ApplicationRecord
 
     def linked_budget_categories
       @linked_budget_categories ||= budget_categories.includes(:budget, :category).to_a
+    end
+
+    def normalize_current_amount
+      self.current_amount = 0 if current_amount.blank?
     end
 
     def monetizable_currency
