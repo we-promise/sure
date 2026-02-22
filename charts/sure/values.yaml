@@ -9,7 +9,8 @@ fullnameOverride: ""
 
 image:
   repository: ghcr.io/we-promise/sure
-  tag: "0.6.6"
+  # Defaults to Chart.appVersion when empty
+  tag: ""
   pullPolicy: IfNotPresent
   # Optional: imagePullSecrets to pull from private registries
   imagePullSecrets: []
@@ -34,14 +35,12 @@ rails:
     enabled: false
     values:
       SECRET_KEY_BASE: ""
-      # Active Record encryption keys — required if simplefin.encryption.enabled=true
+      # Active Record encryption keys
       ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY: ""
       ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY: ""
       ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT: ""
       # Third party optional keys
       OPENAI_ACCESS_TOKEN: ""
-      OPENAI_URI_BASE: ""
-      OPENAI_MODEL: ""
       OIDC_CLIENT_ID: ""
       OIDC_CLIENT_SECRET: ""
       OIDC_ISSUER: ""
@@ -53,7 +52,7 @@ rails:
   settings:
     SELF_HOSTED: "true"
     ONBOARDING_STATE: "open"
-    AI_DEBUG_MODE: ""
+    AI_DEBUG_MODE: "false"
 
 # Database: CloudNativePG (operator chart dependency) and a Cluster CR (optional)
 cloudnative-pg:

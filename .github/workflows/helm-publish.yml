@@ -92,6 +92,7 @@ jobs:
         with:
           name: helm-chart-package
           path: .cr-release-packages/*.tgz
+          include-hidden-files: true
           if-no-files-found: error
           retention-days: 7
 
