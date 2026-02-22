@@ -6,12 +6,17 @@
 # --------
 #
 # This file adds Pipelock (https://github.com/luckyPipewrench/pipelock)
-# as a forward proxy for Sure's outbound traffic. It provides audit
-# logging and cooperative scanning for HTTP clients that respect the
-# HTTPS_PROXY environment variable.
+# as a security proxy for Sure, providing two layers of protection:
 #
-# Coverage:
-# ---------
+#   1. Forward proxy (port 8888) — routes outbound HTTPS through Pipelock
+#      for clients that respect the HTTPS_PROXY environment variable.
+#
+#   2. MCP reverse proxy (port 8889) — scans inbound MCP traffic from
+#      external AI assistants bidirectionally (DLP, prompt injection,
+#      tool poisoning, tool call policy).
+#
+# Forward proxy coverage:
+# -----------------------
 #
 # Covered (Faraday-based clients respect HTTPS_PROXY automatically):
 #   - OpenAI API calls (ruby-openai gem)
@@ -28,6 +33,24 @@
 #   - DLP scanning on connection targets (detects exfiltration patterns)
 #   - Rate limiting per domain
 #   - Structured JSON audit logging of all outbound connections
+#
+# MCP reverse proxy coverage:
+# ---------------------------
+#
+# External AI assistants connect to Pipelock on port 8889 instead of
+# directly to Sure's /mcp endpoint. Pipelock scans all traffic:
+#
+#   Request scanning (client → Sure):
+#     - DLP detection (blocks credential/secret leakage in tool arguments)
+#     - Prompt injection detection in tool call parameters
+#     - Tool call policy enforcement (blocks dangerous operations)
+#
+#   Response scanning (Sure → client):
+#     - Prompt injection detection in tool response content
+#     - Tool poisoning / drift detection (tool definitions changing)
+#
+# The MCP endpoint on Sure (port 3000/mcp) should NOT be exposed directly
+# to the internet. Route all external MCP traffic through Pipelock.
 #
 # Limitations:
 # ------------
@@ -49,18 +72,13 @@
 #         - port: 53
 #           protocol: UDP
 #
-# This compose file does NOT inspect encrypted request/response bodies
-# (HTTPS is end-to-end). For deep content scanning of AI traffic, use
-# Pipelock's MCP proxy mode.
-#
 # Monitoring:
 # -----------
 #
-# Pipelock logs every outbound connection as structured JSON to stdout.
+# Pipelock logs every connection and MCP request as structured JSON to stdout.
 # View logs with: docker compose logs pipelock
 #
-# To expose monitoring endpoints from the host, uncomment the ports
-# section on the pipelock service, then visit:
+# Forward proxy endpoints (port 8888):
 #   http://localhost:8888/health   - liveness check
 #   http://localhost:8888/metrics  - Prometheus metrics
 #   http://localhost:8888/stats    - JSON summary
@@ -71,11 +89,15 @@
 # ------
 #
 # 1. Copy this file to compose.yml (or use -f flag)
-# 2. Set your environment variables (OPENAI_ACCESS_TOKEN, etc.)
+# 2. Set your environment variables (OPENAI_ACCESS_TOKEN, MCP_API_TOKEN, etc.)
 # 3. docker compose up
 #
-# Pipelock runs on port 8888 inside the Docker network. The web and worker
-# services route outbound HTTPS through it via the HTTPS_PROXY env var.
+# Pipelock runs both proxies in a single container:
+#   - Port 8888: forward proxy for outbound HTTPS (internal only)
+#   - Port 8889: MCP reverse proxy for external AI assistants
+#
+# External AI clients connect to http://<host>:8889 as their MCP endpoint.
+# Pipelock scans the traffic and forwards clean requests to Sure's /mcp.
 #
 # Customization:
 # --------------
@@ -88,7 +110,8 @@
 # For a custom config, mount a file and use --config instead of --preset:
 #   volumes:
 #     - ./config/pipelock.yml:/etc/pipelock/config.yml:ro
-#   command: ["run", "--config", "/etc/pipelock/config.yml"]
+#   command: ["run", "--config", "/etc/pipelock/config.yml",
+#             "--mcp-listen", "0.0.0.0:8889", "--mcp-upstream", "http://web:3000/mcp"]
 #
 
 x-db-env: &db_env
@@ -109,11 +132,11 @@ x-rails-env: &rails_env
   OPENAI_ACCESS_TOKEN: ${OPENAI_ACCESS_TOKEN}
   # MCP server endpoint — enables /mcp for external AI assistants (e.g. Claude, GPT).
   # Set both values to activate. MCP_USER_EMAIL must match an existing user's email.
-  # Outbound HTTPS from MCP tool calls is routed through Pipelock's forward proxy.
+  # External AI clients connect via Pipelock (port 8889), not directly to /mcp.
   MCP_API_TOKEN: ${MCP_API_TOKEN:-}
   MCP_USER_EMAIL: ${MCP_USER_EMAIL:-}
   # Route outbound HTTPS through Pipelock for clients that respect HTTPS_PROXY.
-  # See "Coverage" section above for which clients are covered.
+  # See "Forward proxy coverage" section above for which clients are covered.
   HTTPS_PROXY: "http://pipelock:8888"
   HTTP_PROXY: "http://pipelock:8888"
   # Skip proxy for internal Docker network services
@@ -125,10 +148,21 @@ services:
     container_name: pipelock
     hostname: pipelock
     restart: unless-stopped
-    command: ["run", "--listen", "0.0.0.0:8888", "--preset", "balanced"]
-    # Uncomment to expose Pipelock's /health, /metrics, /stats from the host:
-    # ports:
-    #   - "8888:8888"
+    command:
+      - "run"
+      - "--listen"
+      - "0.0.0.0:8888"
+      - "--preset"
+      - "balanced"
+      - "--mcp-listen"
+      - "0.0.0.0:8889"
+      - "--mcp-upstream"
+      - "http://web:3000/mcp"
+    ports:
+      # MCP reverse proxy — external AI assistants connect here
+      - "${MCP_PROXY_PORT:-8889}:8889"
+      # Uncomment to expose forward proxy endpoints (/health, /metrics, /stats):
+      # - "8888:8888"
     healthcheck:
       test: ["CMD", "/pipelock", "healthcheck", "--addr", "127.0.0.1:8888"]
       interval: 10s
