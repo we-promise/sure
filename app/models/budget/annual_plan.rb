@@ -91,18 +91,23 @@ class Budget::AnnualPlan
     ytd_income_totals.total
   end
 
-  # Savings rate: (income - expenses) / income
+  # Expenses excluding savings-category transfers (for savings rate calculation)
+  def total_annual_expenses_excluding_savings
+    total_annual_actual - savings_in_expense_totals
+  end
+
+  # Savings rate: (income - non-savings expenses) / income
   def savings_rate
     return 0 if annual_income.zero?
 
-    ((annual_income - total_annual_actual) / annual_income.to_f * 100).round(1)
+    ((annual_income - total_annual_expenses_excluding_savings) / annual_income.to_f * 100).round(1)
   end
 
   # Projected annual savings based on YTD pace
   def projected_annual_savings
     return 0 if months_elapsed.zero?
 
-    ytd_savings = annual_income - total_annual_actual
+    ytd_savings = annual_income - total_annual_expenses_excluding_savings
     (ytd_savings / months_elapsed.to_f * 12).round(2)
   end
 
@@ -172,6 +177,21 @@ class Budget::AnnualPlan
 
     def ytd_income_totals
       @ytd_income_totals ||= income_statement.income_totals(period: ytd_period)
+    end
+
+    def savings_category_ids
+      @savings_category_ids ||= family.categories.savings.pluck(:id).to_set
+    end
+
+    def savings_in_expense_totals
+      @savings_in_expense_totals ||= begin
+        return 0 if savings_category_ids.empty?
+
+        ytd_expense_totals.category_totals
+          .reject { |ct| ct.category.subcategory? }
+          .select { |ct| savings_category_ids.include?(ct.category.id) }
+          .sum(&:total)
+      end
     end
 
     # Inner class wrapping a budget_category with annual computed values
