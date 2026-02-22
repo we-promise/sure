@@ -1,0 +1,85 @@
+---
+en:
+  retirement:
+    show:
+      page_title: Retirement Planning
+      subtitle: Track your path to financial independence and retirement readiness
+      current_age: Current Age
+      years_to_retirement:
+        one: "%{count} year to retirement"
+        other: "%{count} years to retirement"
+      estimated_pension: Estimated Monthly Pension
+      estimated_pension_grv: Estimated GRV Pension
+      after_tax: After tax
+      pension_gap: Monthly Pension Gap
+      target: "Target"
+      required_savings: Required Monthly Savings
+      per_month: per month to close pension gap
+      fire_progress: FIRE Progress
+      current_portfolio: Current Portfolio
+      fire_number: FIRE Number
+      progress: Progress
+      estimated_fire_date: Estimated FIRE Date
+      assumptions: Assumptions
+      edit: Edit
+      birth_year: Birth Year
+      retirement_age: Retirement Age
+      expected_return: Expected Return
+      inflation: Inflation Rate
+      tax_rate: Tax Rate
+      monthly_savings: Monthly Savings
+      pension_history: Pension History (Renteninformation)
+      add_entry: Add new pension entry
+      date: Date
+      pension_points: Pension Points
+      points_gained: Points Gained
+      current_pension: Current Pension
+      projected_pension: Projected Pension
+      notes: Notes
+      notes_placeholder: "e.g. Annual Renteninformation 2024"
+      save_entry: Save Entry
+      confirm_delete: Are you sure you want to delete this entry?
+      no_entries: No pension entries yet
+      no_entries_hint: Add entries from your Renteninformation to track your pension progress
+      setup_required: Please set up retirement planning first
+    form_fields: &retirement_form_fields_en
+      personal_section: Personal Information
+      birth_year: Birth Year
+      retirement_age: Desired Retirement Age
+      financial_section: Financial Targets
+      target_monthly_income: Target Monthly Income (Retirement)
+      current_monthly_savings: Current Monthly Savings
+      currency: Currency
+      pension_section: Pension System
+      pension_system: Pension System
+      country: Country
+      expected_annual_points: Expected Annual Points
+      expected_annual_points_hint: Average salary = ~1.0 points/year
+      rentenwert: Current Pension Value (Rentenwert)
+      rentenwert_hint: Current value in EUR (2025 ~ 39.32)
+      contribution_start_year: Contribution Start Year
+      assumptions_section: Assumptions
+      expected_return: Expected Annual Return (%)
+      inflation: Expected Inflation (%)
+      tax_rate: Tax Rate in Retirement (%)
+    setup:
+      page_title: Set Up Retirement Planning
+      subtitle: Configure your retirement and FIRE planning parameters
+      cancel: Cancel
+      save: Save & Continue
+    edit:
+      page_title: Edit Retirement Settings
+      subtitle: Update your retirement planning parameters
+      cancel: Cancel
+      save: Save Changes
+    create:
+      created: Retirement planning has been set up successfully
+    update:
+      updated: Retirement settings updated successfully
+    add_pension_entry:
+      pension_entry_added: Pension entry added successfully
+    destroy_pension_entry:
+      pension_entry_removed: Pension entry removed
+    pension_systems:
+      de_grv: German Statutory Pension (GRV)
+      custom: Custom / Other

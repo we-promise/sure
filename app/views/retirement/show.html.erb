@@ -1,0 +1,240 @@
+<%= content_for :page_title, t(".page_title") %>
+
+<% content_for :page_header do %>
+  <div class="space-y-1 mb-6">
+    <h1 class="text-xl lg:text-3xl font-medium text-primary">
+      <%= t(".page_title") %>
+    </h1>
+    <p class="text-sm lg:text-base text-secondary">
+      <%= t(".subtitle") %>
+    </p>
+  </div>
+<% end %>
+
+<%# Overview Cards %>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+  <%# Current Age & Retirement %>
+  <div class="bg-container shadow-border-xs rounded-lg p-4">
+    <p class="text-sm text-secondary mb-1"><%= t(".current_age") %></p>
+    <p class="text-2xl font-semibold text-primary"><%= @retirement_config.current_age %></p>
+    <p class="text-xs text-secondary mt-1">
+      <%= t(".years_to_retirement", count: @retirement_config.years_to_retirement) %>
+    </p>
+  </div>
+
+  <%# Estimated Pension %>
+  <div class="bg-container shadow-border-xs rounded-lg p-4">
+    <p class="text-sm text-secondary mb-1">
+      <%= @retirement_config.pension_system == "de_grv" ? t(".estimated_pension_grv") : t(".estimated_pension") %>
+    </p>
+    <p class="text-2xl font-semibold text-primary">
+      <%= number_to_currency(@retirement_config.estimated_monthly_pension, unit: retirement_currency_unit(@retirement_config)) %>
+    </p>
+    <p class="text-xs text-secondary mt-1">
+      <%= t(".after_tax") %>:
+      <%= number_to_currency(@retirement_config.estimated_monthly_pension_after_tax, unit: retirement_currency_unit(@retirement_config)) %>
+    </p>
+  </div>
+
+  <%# Monthly Pension Gap %>
+  <div class="bg-container shadow-border-xs rounded-lg p-4">
+    <p class="text-sm text-secondary mb-1"><%= t(".pension_gap") %></p>
+    <p class="text-2xl font-semibold <%= @retirement_config.monthly_pension_gap > 0 ? 'text-destructive' : 'text-success' %>">
+      <%= number_to_currency(@retirement_config.monthly_pension_gap, unit: retirement_currency_unit(@retirement_config)) %>
+    </p>
+    <p class="text-xs text-secondary mt-1">
+      <%= t(".target") %>: <%= number_to_currency(@retirement_config.target_monthly_income, unit: retirement_currency_unit(@retirement_config)) %>
+    </p>
+  </div>
+
+  <%# Required Monthly Savings %>
+  <div class="bg-container shadow-border-xs rounded-lg p-4">
+    <p class="text-sm text-secondary mb-1"><%= t(".required_savings") %></p>
+    <p class="text-2xl font-semibold text-primary">
+      <%= number_to_currency(@retirement_config.required_monthly_savings, unit: retirement_currency_unit(@retirement_config)) %>
+    </p>
+    <p class="text-xs text-secondary mt-1"><%= t(".per_month") %></p>
+  </div>
+</div>
+
+<%# FIRE Section %>
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+  <%# FIRE Progress %>
+  <div class="bg-container shadow-border-xs rounded-lg p-6">
+    <h2 class="text-lg font-medium text-primary mb-4"><%= t(".fire_progress") %></h2>
+
+    <div class="space-y-4">
+      <div>
+        <div class="flex justify-between text-sm mb-2">
+          <span class="text-secondary"><%= t(".current_portfolio") %></span>
+          <span class="text-primary font-medium">
+            <%= number_to_currency(@retirement_config.current_portfolio_value, unit: retirement_currency_unit(@retirement_config)) %>
+          </span>
+        </div>
+        <div class="flex justify-between text-sm mb-2">
+          <span class="text-secondary"><%= t(".fire_number") %></span>
+          <span class="text-primary font-medium">
+            <%= number_to_currency(@retirement_config.fire_number, unit: retirement_currency_unit(@retirement_config)) %>
+          </span>
+        </div>
+      </div>
+
+      <%# Progress bar %>
+      <div>
+        <div class="flex justify-between text-sm mb-1">
+          <span class="text-secondary"><%= t(".progress") %></span>
+          <span class="text-primary font-medium"><%= @retirement_config.fire_progress_pct %>%</span>
+        </div>
+        <div class="w-full bg-surface-inset rounded-full h-3">
+          <div class="bg-success h-3 rounded-full transition-all" style="width: <%= [@retirement_config.fire_progress_pct, 100].min %>%"></div>
+        </div>
+      </div>
+
+      <% if @retirement_config.estimated_fire_date %>
+        <p class="text-sm text-secondary">
+          <%= t(".estimated_fire_date") %>:
+          <span class="text-primary font-medium"><%= l(@retirement_config.estimated_fire_date, format: :long) %></span>
+        </p>
+      <% end %>
+    </div>
+  </div>
+
+  <%# Assumptions %>
+  <div class="bg-container shadow-border-xs rounded-lg p-6">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-lg font-medium text-primary"><%= t(".assumptions") %></h2>
+      <%= link_to edit_retirement_path, class: "text-sm text-primary hover:underline" do %>
+        <%= icon("pencil", size: "sm") %> <%= t(".edit") %>
+      <% end %>
+    </div>
+
+    <dl class="space-y-3">
+      <div class="flex justify-between text-sm">
+        <dt class="text-secondary"><%= t(".birth_year") %></dt>
+        <dd class="text-primary"><%= @retirement_config.birth_year %></dd>
+      </div>
+      <div class="flex justify-between text-sm">
+        <dt class="text-secondary"><%= t(".retirement_age") %></dt>
+        <dd class="text-primary"><%= @retirement_config.retirement_age %></dd>
+      </div>
+      <div class="flex justify-between text-sm">
+        <dt class="text-secondary"><%= t(".expected_return") %></dt>
+        <dd class="text-primary"><%= number_to_percentage(@retirement_config.expected_return_pct, precision: 1) %></dd>
+      </div>
+      <div class="flex justify-between text-sm">
+        <dt class="text-secondary"><%= t(".inflation") %></dt>
+        <dd class="text-primary"><%= number_to_percentage(@retirement_config.inflation_pct, precision: 1) %></dd>
+      </div>
+      <div class="flex justify-between text-sm">
+        <dt class="text-secondary"><%= t(".tax_rate") %></dt>
+        <dd class="text-primary"><%= number_to_percentage(@retirement_config.tax_rate_pct, precision: 2) %></dd>
+      </div>
+      <div class="flex justify-between text-sm">
+        <dt class="text-secondary"><%= t(".monthly_savings") %></dt>
+        <dd class="text-primary"><%= number_to_currency(@retirement_config.current_monthly_savings || 0, unit: retirement_currency_unit(@retirement_config)) %></dd>
+      </div>
+    </dl>
+  </div>
+</div>
+
+<%# Pension History %>
+<div class="bg-container shadow-border-xs rounded-lg p-6">
+  <h2 class="text-lg font-medium text-primary mb-4"><%= t(".pension_history") %></h2>
+
+  <%# Add Entry Form %>
+  <details class="mb-6">
+    <summary class="text-sm text-primary cursor-pointer hover:underline">
+      <%= icon("plus", size: "sm") %> <%= t(".add_entry") %>
+    </summary>
+
+    <div class="mt-4 p-4 bg-surface-inset rounded-lg">
+      <%= form_with url: add_pension_entry_retirement_path, method: :post, scope: :pension_entry, class: "space-y-4" do |f| %>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-secondary mb-1"><%= t(".date") %></label>
+            <%= f.date_field :recorded_at, value: Date.current, class: "form-input w-full rounded-lg border border-secondary bg-container text-sm text-primary px-3 py-2", required: true %>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-secondary mb-1"><%= t(".pension_points") %></label>
+            <%= f.number_field :current_points, step: 0.0001, min: 0, class: "form-input w-full rounded-lg border border-secondary bg-container text-sm text-primary px-3 py-2", required: true %>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-secondary mb-1"><%= t(".current_pension") %></label>
+            <%= f.number_field :current_monthly_pension, step: 0.01, min: 0, class: "form-input w-full rounded-lg border border-secondary bg-container text-sm text-primary px-3 py-2" %>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-secondary mb-1"><%= t(".projected_pension") %></label>
+            <%= f.number_field :projected_monthly_pension, step: 0.01, min: 0, class: "form-input w-full rounded-lg border border-secondary bg-container text-sm text-primary px-3 py-2" %>
+          </div>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-secondary mb-1"><%= t(".notes") %></label>
+          <%= f.text_field :notes, class: "form-input w-full rounded-lg border border-secondary bg-container text-sm text-primary px-3 py-2", placeholder: t(".notes_placeholder") %>
+        </div>
+        <div>
+          <%= f.submit t(".save_entry"), class: "inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium text-inverse bg-inverse hover:bg-inverse-hover cursor-pointer" %>
+        </div>
+      <% end %>
+    </div>
+  </details>
+
+  <%# Entry Table %>
+  <% if @pension_entries.any? %>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b border-secondary">
+            <th class="text-left text-secondary font-medium py-2 px-3"><%= t(".date") %></th>
+            <th class="text-right text-secondary font-medium py-2 px-3"><%= t(".pension_points") %></th>
+            <th class="text-right text-secondary font-medium py-2 px-3"><%= t(".points_gained") %></th>
+            <th class="text-right text-secondary font-medium py-2 px-3"><%= t(".current_pension") %></th>
+            <th class="text-right text-secondary font-medium py-2 px-3"><%= t(".projected_pension") %></th>
+            <th class="text-left text-secondary font-medium py-2 px-3"><%= t(".notes") %></th>
+            <th class="py-2 px-3"></th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @pension_entries.each do |entry| %>
+            <tr class="border-b border-secondary/50 hover:bg-surface-hover">
+              <td class="py-3 px-3 text-primary"><%= l(entry.recorded_at) %></td>
+              <td class="py-3 px-3 text-right text-primary"><%= number_with_precision(entry.current_points, precision: 4) %></td>
+              <td class="py-3 px-3 text-right">
+                <span class="<%= entry.points_gained > 0 ? 'text-success' : entry.points_gained < 0 ? 'text-destructive' : 'text-secondary' %>">
+                  <%= entry.points_gained >= 0 ? '+' : '' %><%= number_with_precision(entry.points_gained, precision: 4) %>
+                </span>
+              </td>
+              <td class="py-3 px-3 text-right text-primary">
+                <% if entry.current_monthly_pension %>
+                  <%= number_to_currency(entry.current_monthly_pension, unit: retirement_currency_unit(@retirement_config)) %>
+                <% else %>
+                  <span class="text-secondary">—</span>
+                <% end %>
+              </td>
+              <td class="py-3 px-3 text-right text-primary">
+                <% if entry.projected_monthly_pension %>
+                  <%= number_to_currency(entry.projected_monthly_pension, unit: retirement_currency_unit(@retirement_config)) %>
+                <% else %>
+                  <span class="text-secondary">—</span>
+                <% end %>
+              </td>
+              <td class="py-3 px-3 text-secondary max-w-xs truncate"><%= entry.notes %></td>
+              <td class="py-3 px-3">
+                <%= button_to destroy_pension_entry_retirement_path(id: entry.id),
+                    method: :delete,
+                    class: "text-secondary hover:text-destructive",
+                    data: { turbo_confirm: t(".confirm_delete") } do %>
+                  <%= icon("trash-2", size: "sm") %>
+                <% end %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% else %>
+    <div class="text-center py-8">
+      <p class="text-secondary"><%= t(".no_entries") %></p>
+      <p class="text-sm text-secondary mt-2"><%= t(".no_entries_hint") %></p>
+    </div>
+  <% end %>
+</div>
