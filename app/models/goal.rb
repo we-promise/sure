@@ -37,11 +37,11 @@ class Goal < ApplicationRecord
 
   def progress_percent
     return 0 if target_amount.zero?
-    [(computed_current_amount / target_amount.to_f * 100), 100].min
+    [ (computed_current_amount / target_amount.to_f * 100), 100 ].min
   end
 
   def remaining_amount
-    [target_amount - computed_current_amount, 0].max
+    [ target_amount - computed_current_amount, 0 ].max
   end
 
   def on_track?
@@ -58,7 +58,7 @@ class Goal < ApplicationRecord
 
   def days_remaining
     return 0 unless target_date
-    [(target_date - Date.current).to_i, 0].max
+    [ (target_date - Date.current).to_i, 0 ].max
   end
 
   def goal_type_icon
