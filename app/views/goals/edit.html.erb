@@ -1,4 +1,11 @@
 <div class="max-w-lg mx-auto">
+  <%= render DS::Link.new(
+    text: t("goals.show.back"),
+    variant: "ghost",
+    href: goals_path,
+    icon: "arrow-left",
+    class: "mb-4"
+  ) %>
   <h1 class="text-xl font-medium text-primary mb-6"><%= t("goals.edit.title") %></h1>
   <%= render "form", goal: @goal %>
 </div>

@@ -1,0 +1,79 @@
+<%# locals: (goals:, **args) %>
+
+<% if goals.any? %>
+  <div id="goals-summary" class="space-y-4">
+    <div class="px-4">
+      <p class="text-sm text-secondary">
+        <%= t("pages.dashboard.goals_summary.active_goals", count: goals.size) %>
+      </p>
+    </div>
+
+    <div class="bg-container-inset rounded-xl p-1 mx-4">
+      <div class="shadow-border-xs rounded-lg bg-container font-medium text-sm">
+        <% goals.each_with_index do |goal, idx| %>
+          <%= link_to goal_path(goal), class: "p-4 flex items-center gap-3 hover:bg-container-inset/50 transition-colors #{idx < goals.size - 1 ? 'border-b border-primary' : ''} #{idx == 0 ? 'rounded-t-lg' : ''} #{idx == goals.size - 1 ? 'rounded-b-lg' : ''}" do %>
+            <div class="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style="background-color: color-mix(in oklab, <%= goal.color %> 15%, transparent); color: <%= goal.color %>;">
+              <%= icon(goal.lucide_icon || goal.goal_type_icon, size: "sm", color: "current") %>
+            </div>
+
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center justify-between mb-1">
+                <div class="min-w-0">
+                  <p class="font-medium text-primary truncate"><%= goal.name %></p>
+                  <p class="text-xs text-secondary"><%= t("goals.types.#{goal.goal_type}") %></p>
+                </div>
+                <div class="text-right shrink-0 ml-4">
+                  <p class="font-medium text-primary"><%= number_to_percentage(goal.progress_percent, precision: 0) %></p>
+                  <p class="text-xs text-secondary">
+                    <%= format_money(goal.computed_current_amount_money) %>
+                    <span class="text-subdued"><%= t("goals.show.of") %></span>
+                    <%= format_money(goal.target_amount_money) %>
+                  </p>
+                </div>
+              </div>
+
+              <div class="h-1.5 bg-container-inset rounded-full overflow-hidden">
+                <div class="h-full rounded-full transition-all duration-500"
+                     style="width: <%= goal.progress_percent %>%; background-color: <%= goal.color %>"></div>
+              </div>
+
+              <% if goal.account.present? %>
+                <p class="text-xs text-subdued mt-1 flex items-center gap-1">
+                  <%= icon("landmark", size: "sm") %>
+                  <%= goal.account.name %>
+                </p>
+              <% elsif goal.target_date && !goal.is_completed %>
+                <p class="text-xs text-subdued mt-1">
+                  <%= t("goals.show.days_remaining", count: goal.days_remaining) %>
+                </p>
+              <% end %>
+            </div>
+          <% end %>
+        <% end %>
+      </div>
+    </div>
+
+    <div class="px-4">
+      <%= render DS::Link.new(
+        text: t("pages.dashboard.goals_summary.view_all"),
+        variant: "ghost",
+        href: goals_path,
+        icon: "arrow-right"
+      ) %>
+    </div>
+  </div>
+<% else %>
+  <div class="py-10 flex flex-col items-center">
+    <%= render DS::FilledIcon.new(
+      variant: :container,
+      icon: "target",
+    ) %>
+
+    <p class="text-primary text-sm font-medium mb-1 mt-4">
+      <%= t("pages.dashboard.goals_summary.no_goals") %>
+    </p>
+    <p class="text-secondary text-sm text-center">
+      <%= t("pages.dashboard.goals_summary.add_goal") %>
+    </p>
+  </div>
+<% end %>

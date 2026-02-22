@@ -1,29 +1,47 @@
-<div class="space-y-4">
-  <div class="flex items-center justify-between">
-    <div>
-      <h1 class="text-xl font-medium text-primary"><%= t("goals.index.title") %></h1>
-      <p class="text-sm text-secondary"><%= t("goals.index.subtitle") %></p>
+<% content_for :page_header do %>
+  <div class="space-y-1 mb-6 flex gap-4 justify-between items-center">
+    <div class="space-y-1">
+      <h1 class="text-xl lg:text-3xl font-medium text-primary">
+        <%= t("goals.index.title") %>
+      </h1>
+      <p class="text-sm lg:text-base text-secondary">
+        <%= t("goals.index.subtitle") %>
+      </p>
     </div>
+
     <%= render DS::Link.new(
+      icon: "plus",
       text: t("goals.index.new_goal"),
       variant: "primary",
       href: new_goal_path,
-      icon: "plus"
+      class: "hidden lg:inline-flex"
+    ) %>
+
+    <%= render DS::Link.new(
+      variant: "icon-inverse",
+      icon: "plus",
+      href: new_goal_path,
+      class: "rounded-full lg:hidden"
     ) %>
   </div>
+<% end %>
 
-  <% if @goals.any? %>
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      <% @goals.each do |goal| %>
-        <%= render "goals/goal", goal: goal %>
-      <% end %>
-    </div>
-  <% else %>
-    <div class="text-center py-12 bg-container rounded-lg shadow-border-xs">
-      <div class="mx-auto w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mb-4">
-        <%= icon "target", size: "lg", color: "subdued" %>
-      </div>
-      <h3 class="text-primary font-medium mb-1"><%= t("goals.index.empty.title") %></h3>
+<% if @goals.any? %>
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    <% @goals.each do |goal| %>
+      <%= render "goals/goal", goal: goal %>
+    <% end %>
+  </div>
+<% else %>
+  <div class="text-center py-12 bg-container rounded-xl shadow-border-xs">
+    <div class="flex flex-col items-center">
+      <%= render DS::FilledIcon.new(
+        variant: :container,
+        icon: "target",
+        size: "lg"
+      ) %>
+
+      <h3 class="text-primary font-medium mb-1 mt-4"><%= t("goals.index.empty.title") %></h3>
       <p class="text-sm text-secondary mb-4"><%= t("goals.index.empty.description") %></p>
       <%= render DS::Link.new(
         text: t("goals.index.new_goal"),
@@ -32,5 +50,5 @@
         icon: "plus"
       ) %>
     </div>
-  <% end %>
-</div>
+  </div>
+<% end %>

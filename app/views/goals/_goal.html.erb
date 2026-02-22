@@ -1,6 +1,6 @@
 <%# locals: (goal:) %>
 
-<%= link_to goal_path(goal), class: "block bg-container rounded-lg shadow-border-xs p-4 hover:shadow-border-md transition-shadow" do %>
+<%= link_to goal_path(goal), class: "block bg-container rounded-xl shadow-border-xs p-5 hover:shadow-border-md transition-shadow" do %>
   <div class="flex items-start justify-between mb-3">
     <div class="flex items-center gap-3">
       <div class="w-10 h-10 rounded-full flex items-center justify-center" style="background-color: color-mix(in oklab, <%= goal.color %> 15%, transparent); color: <%= goal.color %>;">
