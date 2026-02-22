@@ -43,6 +43,14 @@ en:
         categories: "Categories"
         value: "Value"
         weight: "Weight"
+      goals_summary:
+        title: "Goals"
+        active_goals:
+          one: "%{count} active goal"
+          other: "%{count} active goals"
+        view_all: "View all goals"
+        no_goals: "No goals yet"
+        add_goal: "Create a goal to start tracking your savings targets"
       investment_summary:
         title: "Investments"
         total_return: "Total Return"

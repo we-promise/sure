@@ -1,4 +1,4 @@
-<div class="max-w-2xl mx-auto space-y-6">
+<div class="max-w-3xl mx-auto space-y-6">
   <div class="flex items-center justify-between">
     <%= render DS::Link.new(
       text: t("goals.show.back"),
@@ -21,7 +21,7 @@
   </div>
 
   <%# Header %>
-  <div class="bg-container rounded-lg shadow-border-xs p-6">
+  <div class="bg-container rounded-xl shadow-border-xs p-6">
     <div class="flex items-center gap-4 mb-6">
       <div class="w-14 h-14 rounded-full flex items-center justify-center" style="background-color: color-mix(in oklab, <%= @goal.color %> 15%, transparent); color: <%= @goal.color %>;">
         <%= icon(@goal.lucide_icon || @goal.goal_type_icon, size: "lg", color: "current") %>
@@ -96,7 +96,7 @@
 
   <%# Linked budget categories %>
   <% if @goal.budget_categories.any? %>
-    <div class="bg-container rounded-lg shadow-border-xs p-6">
+    <div class="bg-container rounded-xl shadow-border-xs p-6">
       <h2 class="text-sm font-medium text-secondary uppercase mb-4"><%= t("goals.show.linked_categories") %></h2>
       <ul class="space-y-3">
         <% @goal.budget_categories.includes(:category, :budget).each do |bc| %>

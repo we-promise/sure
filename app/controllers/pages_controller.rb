@@ -22,6 +22,8 @@ class PagesController < ApplicationController
     @cashflow_sankey_data = build_cashflow_sankey_data(income_totals, expense_totals, family_currency)
     @outflows_data = build_outflows_donut_data(expense_totals)
 
+    @goals = Current.family.goals.active.includes(:account).by_priority.limit(4)
+
     @dashboard_sections = build_dashboard_sections
 
     @breadcrumbs = [ [ "Home", root_path ], [ "Dashboard", nil ] ]
@@ -105,6 +107,14 @@ class PagesController < ApplicationController
           partial: "pages/dashboard/investment_summary",
           locals: { investment_statement: @investment_statement, period: @period },
           visible: Current.family.accounts.any? && @investment_statement.investment_accounts.any?,
+          collapsible: true
+        },
+        {
+          key: "goals_summary",
+          title: "pages.dashboard.goals_summary.title",
+          partial: "pages/dashboard/goals_summary",
+          locals: { goals: @goals },
+          visible: Current.family.goals.any?,
           collapsible: true
         },
         {
