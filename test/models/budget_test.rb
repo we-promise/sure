@@ -305,29 +305,80 @@ class BudgetTest < ActiveSupport::TestCase
     assert_not_nil budget.previous_budget_param
   end
 
-  test "uncategorized budget category actual spending reflects uncategorized transactions" do
+  test "sync_budget_categories includes savings categories" do
+    family = families(:dylan_family)
+    savings_category = categories(:savings)
+
+    budget = Budget.find_or_bootstrap(family, start_date: Date.current.beginning_of_month)
+    budget.sync_budget_categories
+
+    category_ids = budget.budget_categories.map(&:category_id)
+    assert_includes category_ids, savings_category.id
+  end
+
+  test "actual_spending excludes savings categories" do
     family = families(:dylan_family)
     budget = Budget.find_or_bootstrap(family, start_date: Date.current.beginning_of_month)
     account = accounts(:depository)
 
-    # Create an uncategorized expense
+    savings_category = categories(:savings)
+    budget.sync_budget_categories
+
+    # Create a savings outflow (positive amount = appears as expense in income statement)
     Entry.create!(
       account: account,
-      entryable: Transaction.create!(category: nil),
+      entryable: Transaction.create!(category: savings_category),
       date: Date.current,
-      name: "Uncategorized lunch",
-      amount: 75,
+      name: "Savings transfer",
+      amount: 500,
       currency: "USD"
     )
 
     budget = Budget.find(budget.id)
     budget.sync_budget_categories
 
-    uncategorized_bc = budget.uncategorized_budget_category
-    spending = budget.budget_category_actual_spending(uncategorized_bc)
+    spending_with_savings_transfer = budget.actual_spending
 
-    # Must be > 0 — the nil-key collision between Uncategorized and
-    # Other Investments synthetic categories previously caused this to return 0
-    assert spending >= 75, "Uncategorized actual spending should include the $75 transaction, got #{spending}"
+    # Now create a regular expense
+    Entry.create!(
+      account: account,
+      entryable: Transaction.create!(category: categories(:food_and_drink)),
+      date: Date.current,
+      name: "Dinner",
+      amount: 100,
+      currency: "USD"
+    )
+
+    budget = Budget.find(budget.id)
+    budget.sync_budget_categories
+
+    # actual_spending should increase by 100 (the dinner), not include the 500 savings
+    assert_equal 100, budget.actual_spending - spending_with_savings_transfer
+  end
+
+  test "actual_savings sums savings budget categories" do
+    family = families(:dylan_family)
+    budget = Budget.find_or_bootstrap(family, start_date: Date.current.beginning_of_month)
+    account = accounts(:depository)
+
+    savings_category = categories(:savings)
+    budget.sync_budget_categories
+
+    savings_bc = budget.budget_categories.find_by(category: savings_category)
+    savings_bc.update!(budgeted_spending: 1000)
+
+    Entry.create!(
+      account: account,
+      entryable: Transaction.create!(category: savings_category),
+      date: Date.current,
+      name: "Savings transfer",
+      amount: 300,
+      currency: "USD"
+    )
+
+    budget = Budget.find(budget.id)
+    budget.sync_budget_categories
+
+    assert_equal 300, budget.actual_savings
   end
 end

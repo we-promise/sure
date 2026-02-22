@@ -1,0 +1,45 @@
+<%# locals: (goal:) %>
+
+<%= link_to goal_path(goal), class: "block bg-container rounded-lg shadow-border-xs p-4 hover:shadow-border-md transition-shadow" do %>
+  <div class="flex items-start justify-between mb-3">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-full flex items-center justify-center" style="background-color: color-mix(in oklab, <%= goal.color %> 15%, transparent); color: <%= goal.color %>;">
+        <%= icon(goal.lucide_icon || goal.goal_type_icon, color: "current") %>
+      </div>
+      <div>
+        <h3 class="font-medium text-primary"><%= goal.name %></h3>
+        <p class="text-xs text-secondary"><%= t("goals.types.#{goal.goal_type}") %></p>
+      </div>
+    </div>
+    <% if goal.is_completed %>
+      <span class="inline-flex items-center gap-1 px-2 py-1 bg-green-500/10 text-success text-xs font-medium rounded-full">
+        <%= icon("check-circle", size: "sm", color: "green") %>
+        <%= t("goals.status.completed") %>
+      </span>
+    <% end %>
+  </div>
+
+  <%# Progress bar %>
+  <div class="mb-3">
+    <div class="h-2 bg-container-inset rounded-full overflow-hidden">
+      <div class="h-full bg-green-500 rounded-full transition-all duration-500"
+           style="width: <%= goal.progress_percent %>%; background-color: <%= goal.color %>"></div>
+    </div>
+  </div>
+
+  <%# Amounts %>
+  <div class="flex justify-between items-center text-sm">
+    <span class="text-secondary">
+      <%= format_money(goal.computed_current_amount_money) %>
+      <span class="text-subdued"><%= t("goals.show.of") %></span>
+      <%= format_money(goal.target_amount_money) %>
+    </span>
+    <span class="font-medium text-primary"><%= number_to_percentage(goal.progress_percent, precision: 0) %></span>
+  </div>
+
+  <% if goal.target_date && !goal.is_completed %>
+    <p class="text-xs text-subdued mt-2">
+      <%= t("goals.show.days_remaining", count: goal.days_remaining) %>
+    </p>
+  <% end %>
+<% end %>

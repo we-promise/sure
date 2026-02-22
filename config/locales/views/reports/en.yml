@@ -37,10 +37,15 @@ en:
       shared: shared
       suggested_daily: "%{amount} suggested per day for %{days} remaining days"
       no_budgets: No budget categories set up for this month
+      saved: Saved
+      left_to_save: Left to save
+      extra_saved: Extra saved
       status:
         good: On Track
         warning: Near Limit
         over: Over Budget
+        savings_extra: Extra Savings!
+        savings_behind: Behind
     trends:
       title: Trends & Insights
       monthly_breakdown: Monthly Breakdown

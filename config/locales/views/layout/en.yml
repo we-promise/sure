@@ -5,6 +5,7 @@ en:
       nav:
         assistant: Assistant
         budgets: Budgets
+        goals: Goals
         home: Home
         reports: Reports
         transactions: Transactions

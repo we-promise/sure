@@ -1,0 +1,58 @@
+---
+en:
+  goals:
+    created: Goal created successfully.
+    updated: Goal updated successfully.
+    deleted: Goal deleted.
+    index:
+      title: Goals
+      subtitle: Track your savings targets and financial milestones
+      new_goal: New Goal
+      empty:
+        title: No goals yet
+        description: Create your first goal to start tracking your savings targets.
+    new:
+      title: New Goal
+    edit:
+      title: Edit Goal
+    show:
+      back: Back to Goals
+      edit: Edit
+      delete: Delete
+      confirm_delete: Are you sure you want to delete this goal?
+      of: of
+      remaining: Remaining
+      target_date: Target Date
+      days_left: Days Left
+      on_track_label: Status
+      on_track: On Track
+      behind: Behind
+      linked_categories: Linked Budget Categories
+      days_remaining:
+        one: "%{count} day remaining"
+        other: "%{count} days remaining"
+    form:
+      goal_type: Goal Type
+      name: Name
+      description: Description
+      target_amount: Target Amount
+      current_amount: Current Amount
+      target_date: Target Date
+      color: Color
+      priority: Priority
+      mark_completed: Mark as completed
+      cancel: Cancel
+      no_goal: "(no goal)"
+    types:
+      emergency_fund: Emergency Fund
+      vacation: Vacation
+      home_down_payment: Home Down Payment
+      car: Car
+      debt_payoff: Debt Payoff
+      education: Education
+      retirement: Retirement
+      investment: Investment
+      custom: Custom
+    status:
+      completed: Completed
+      active: Active

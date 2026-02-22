@@ -1,0 +1,61 @@
+<%# locals: (goal:) %>
+
+<%= styled_form_with model: goal, class: "space-y-4" do |f| %>
+  <% if goal.errors.any? %>
+    <%= render "shared/form_errors", model: goal %>
+  <% end %>
+
+  <section class="space-y-4">
+    <%# Goal type picker %>
+    <fieldset>
+      <legend class="text-sm font-medium text-secondary mb-2"><%= t("goals.form.goal_type") %></legend>
+      <div class="grid grid-cols-3 gap-2">
+        <% Goal::GOAL_TYPES.each do |type_key, type_config| %>
+          <label class="relative cursor-pointer">
+            <%= f.radio_button :goal_type, type_key, class: "sr-only peer" %>
+            <div class="flex flex-col items-center gap-1 p-3 rounded-lg border border-primary peer-checked:border-2 peer-checked:border-blue-500 hover:bg-container-inset transition-colors">
+              <div class="w-8 h-8 rounded-full flex items-center justify-center" style="color: <%= type_config[:color] %>">
+                <%= icon(type_config[:icon], color: "current") %>
+              </div>
+              <span class="text-xs text-primary text-center"><%= t("goals.types.#{type_key}") %></span>
+            </div>
+          </label>
+        <% end %>
+      </div>
+    </fieldset>
+
+    <%= f.text_field :name, label: t("goals.form.name"), required: true, autofocus: true %>
+
+    <%= f.text_area :description, label: t("goals.form.description"), rows: 2 %>
+
+    <div class="grid grid-cols-2 gap-4">
+      <%= f.number_field :target_amount, label: t("goals.form.target_amount"), required: true, min: 0, step: 0.01 %>
+      <%= f.number_field :current_amount, label: t("goals.form.current_amount"), min: 0, step: 0.01 %>
+    </div>
+
+    <%= f.date_field :target_date, label: t("goals.form.target_date") %>
+
+    <%= f.hidden_field :currency, value: goal.currency || Current.family.currency %>
+
+    <div class="grid grid-cols-2 gap-4">
+      <%= f.text_field :color, label: t("goals.form.color"), value: goal.color || "#6366f1" %>
+      <%= f.number_field :priority, label: t("goals.form.priority"), min: 0, max: 10 %>
+    </div>
+
+    <% if goal.persisted? %>
+      <div class="flex items-center gap-2">
+        <%= f.check_box :is_completed, class: "rounded border-primary" %>
+        <%= f.label :is_completed, t("goals.form.mark_completed"), class: "text-sm text-primary" %>
+      </div>
+    <% end %>
+  </section>
+
+  <section class="flex items-center gap-3">
+    <%= f.submit %>
+    <%= render DS::Link.new(
+      text: t("goals.form.cancel"),
+      variant: "ghost",
+      href: goal.persisted? ? goal_path(goal) : goals_path
+    ) %>
+  </section>
+<% end %>

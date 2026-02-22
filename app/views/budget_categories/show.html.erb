@@ -31,7 +31,7 @@
         <dl class="space-y-3 px-3 py-2">
           <div class="flex items-center justify-between text-sm">
             <dt class="text-secondary">
-              <%= @budget_category.budget.start_date.strftime("%b %Y") %> spending
+              <%= @budget_category.budget.start_date.strftime("%b %Y") %> <%= @budget_category.savings? ? t("budgets.savings.saved_label") : t("reports.budget_performance.spent").downcase %>
             </dt>
             <dd class="text-primary font-medium">
               <%= format_money @budget_category.actual_spending_money %>
@@ -40,8 +40,27 @@
 
           <% if @budget_category.budget.initialized? %>
             <div class="flex items-center justify-between text-sm">
-              <dt class="text-secondary">Status</dt>
-              <% if @budget_category.available_to_spend.negative? %>
+              <dt class="text-secondary"><%= t("budgets.show.tabs.status", default: "Status") %></dt>
+              <% if @budget_category.savings? %>
+                <% if @budget_category.available_to_spend.negative? %>
+                  <dd class="flex items-center gap-1 text-green-500 font-medium">
+                    <%= icon "check-circle", size: "sm", color: "success" %>
+                    <%= format_money @budget_category.available_to_spend_money.abs %>
+                    <span><%= t("budgets.savings.extra_saved") %></span>
+                  </dd>
+                <% elsif @budget_category.available_to_spend.zero? %>
+                  <dd class="flex items-center gap-1 text-green-500 font-medium">
+                    <%= icon "check-circle", size: "sm", color: "success" %>
+                    <span><%= t("budgets.savings.target_met") %></span>
+                  </dd>
+                <% else %>
+                  <dd class="text-primary flex items-center gap-1 text-yellow-500 font-medium">
+                    <%= icon "alert-triangle", size: "sm", color: "warning" %>
+                    <%= format_money @budget_category.available_to_spend_money %>
+                    <span><%= t("budgets.savings.left_to_save") %></span>
+                  </dd>
+                <% end %>
+              <% elsif @budget_category.available_to_spend.negative? %>
                 <dd class="flex items-center gap-1 text-red-500 font-medium">
                   <%= icon "alert-circle", size: "sm", color: "destructive" %>
                   <%= format_money @budget_category.available_to_spend_money.abs %>
@@ -85,6 +104,48 @@
           </div>
         </dl>
       </div>
+    <% end %>
+
+    <% if @budget_category.non_monthly? && @budget_category.annual_amount && @budget_category.annual_amount > 0 %>
+      <% dialog.with_section(title: t("budgets.frequencies.annual_overview"), open: true) do %>
+        <div class="pb-4">
+          <dl class="space-y-3 px-3 py-2">
+            <div class="flex items-center justify-between text-sm">
+              <dt class="text-secondary"><%= t("budgets.frequencies.frequency_label") %></dt>
+              <dd class="text-primary font-medium"><%= t("budgets.frequencies.#{@budget_category.budget_frequency}") %></dd>
+            </div>
+
+            <div class="flex items-center justify-between text-sm">
+              <dt class="text-secondary"><%= t("budgets.frequencies.annual_budget") %></dt>
+              <dd class="text-primary font-medium"><%= format_money(Money.new(@budget_category.annual_amount, @budget_category.budget.family.currency)) %></dd>
+            </div>
+
+            <div class="flex items-center justify-between text-sm">
+              <dt class="text-secondary"><%= t("budgets.frequencies.annual_spent") %></dt>
+              <dd class="text-primary font-medium"><%= format_money(@budget_category.annual_actual_spending_money) %></dd>
+            </div>
+
+            <div class="flex items-center justify-between text-sm">
+              <dt class="text-secondary"><%= t("budgets.frequencies.annual_remaining_label") %></dt>
+              <dd class="font-medium <%= @budget_category.annual_remaining.negative? ? 'text-red-500' : 'text-green-500' %>">
+                <%= format_money(@budget_category.annual_remaining_money) %>
+              </dd>
+            </div>
+
+            <div class="flex items-center justify-between text-sm">
+              <dt class="text-secondary"><%= t("budgets.frequencies.monthly_amortized") %></dt>
+              <dd class="text-primary font-medium"><%= format_money(@budget_category.monthly_amortized_amount_money) %></dd>
+            </div>
+
+            <% if @budget_category.annual_limit_met? %>
+              <div class="flex items-center gap-1 text-sm text-red-500 font-medium">
+                <%= icon "alert-circle", size: "sm", color: "destructive" %>
+                <span><%= t("budgets.frequencies.annual_limit_met") %></span>
+              </div>
+            <% end %>
+          </dl>
+        </div>
+      <% end %>
     <% end %>
 
     <% dialog.with_section(title: "Recent Transactions", open: true) do %>

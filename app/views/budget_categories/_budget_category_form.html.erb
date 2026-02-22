@@ -2,31 +2,76 @@
 
 <% currency = Money::Currency.new(budget_category.budget.currency) %>
 
-<div id="<%= dom_id(budget_category, :form) %>" class="w-full flex gap-3">
-  <div class="w-1 h-3 rounded-xl mt-1" style="background-color: <%= budget_category.category.color %>"></div>
+<div id="<%= dom_id(budget_category, :form) %>" class="w-full flex flex-col gap-2">
+  <div class="flex gap-3">
+    <div class="w-1 h-3 rounded-xl mt-1" style="background-color: <%= budget_category.category.color %>"></div>
 
-  <div class="text-sm mr-3">
-    <p class="text-primary font-medium mb-0.5"><%= budget_category.category.name %></p>
+    <div class="text-sm mr-3">
+      <p class="text-primary font-medium mb-0.5"><%= budget_category.category.name %></p>
+      <p class="text-secondary"><%= budget_category.median_monthly_expense_money.format(precision: 0) %>/m avg</p>
+    </div>
 
-    <p class="text-secondary"><%= budget_category.median_monthly_expense_money.format(precision: 0) %>/m avg</p>
-  </div>
+    <div class="ml-auto">
+      <%= form_with model: [budget_category.budget, budget_category], data: { controller: "auto-submit-form preserve-focus budget-category-form" } do |f| %>
+        <div class="flex items-center gap-2">
+          <% unless budget_category.subcategory? %>
+            <div class="form-field w-[100px]">
+              <%= f.select :budget_frequency,
+                    BudgetCategory::FREQUENCIES.keys.map { |freq| [t("budgets.frequencies.#{freq}"), freq] },
+                    {},
+                    class: "form-field__input text-xs",
+                    data: { action: "change->budget-category-form#frequencyChanged change->auto-submit-form#submit", budget_category_form_target: "frequency" } %>
+            </div>
+          <% end %>
 
-  <div class="ml-auto">
-    <%= form_with model: [budget_category.budget, budget_category], data: { controller: "auto-submit-form preserve-focus" } do |f| %>
-      <div class="form-field w-[120px]">
-        <div class="flex items-center">
-          <span class="text-secondary text-sm mr-2"><%= currency.symbol %></span>
-          <%= f.number_field :budgeted_spending,
-                            class: "form-field__input text-right [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
-                            placeholder: budget_category.subcategory? ? "Shared" : "0",
-                            step: currency.step,
-                            id: dom_id(budget_category, :budgeted_spending),
-                            min: 0,
-                            max: budget_category.max_allocation,
-                            data: { auto_submit_form_target: "auto" },
-                            title: budget_category.subcategory? ? "Leave empty to share parent's budget" : nil %>
+          <div class="form-field w-[120px]" data-budget-category-form-target="monthlyField">
+            <div class="flex items-center">
+              <span class="text-secondary text-sm mr-2"><%= currency.symbol %></span>
+              <%= f.number_field :budgeted_spending,
+                                class: "form-field__input text-right [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
+                                placeholder: budget_category.subcategory? ? "Shared" : "0",
+                                step: currency.step,
+                                id: dom_id(budget_category, :budgeted_spending),
+                                min: 0,
+                                max: budget_category.max_allocation,
+                                data: { auto_submit_form_target: "auto", budget_category_form_target: "budgetedSpending" },
+                                title: budget_category.subcategory? ? "Leave empty to share parent's budget" : nil %>
+            </div>
+          </div>
+
+          <div class="form-field w-[120px] <%= budget_category.non_monthly? ? '' : 'hidden' %>" data-budget-category-form-target="annualField">
+            <div class="flex items-center">
+              <span class="text-secondary text-sm mr-2"><%= currency.symbol %></span>
+              <%= f.number_field :annual_amount,
+                                class: "form-field__input text-right [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
+                                placeholder: "0",
+                                step: currency.step,
+                                id: dom_id(budget_category, :annual_amount),
+                                min: 0,
+                                data: { auto_submit_form_target: "auto", budget_category_form_target: "annualAmount" } %>
+            </div>
+          </div>
         </div>
-      </div>
-    <% end %>
+
+        <% if budget_category.non_monthly? && budget_category.annual_amount && budget_category.annual_amount > 0 %>
+          <p class="text-xs text-subdued mt-1" data-budget-category-form-target="monthlyNote">
+            <%= format_money(budget_category.monthly_amortized_amount_money) %>/<%= t("budgets.frequencies.monthly").downcase %> &middot; <%= format_money(budget_category.annual_amount) %>/<%= t("budgets.frequencies.year") %>
+          </p>
+        <% end %>
+
+        <% if budget_category.savings? %>
+          <% goals = budget_category.budget.family.goals.active %>
+          <% if goals.any? %>
+            <div class="mt-1">
+              <%= f.select :goal_id,
+                    goals.map { |g| [g.name, g.id] },
+                    { include_blank: t("goals.form.no_goal"), label: false },
+                    class: "form-field__input text-xs",
+                    data: { action: "change->auto-submit-form#submit" } %>
+            </div>
+          <% end %>
+        <% end %>
+      <% end %>
+    </div>
   </div>
 </div>

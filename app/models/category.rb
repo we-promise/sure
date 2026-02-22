@@ -26,6 +26,8 @@ class Category < ApplicationRecord
   scope :roots, -> { where(parent_id: nil) }
   scope :incomes, -> { where(classification: "income") }
   scope :expenses, -> { where(classification: "expense") }
+  scope :savings, -> { where(classification: "savings") }
+  scope :budgetable, -> { where(classification: %w[expense savings]) }
 
   COLORS = %w[#e99537 #4da568 #6471eb #db5a54 #df4e92 #c44fe9 #eb5429 #61c9ea #805dee #6ad28a]
 
@@ -187,6 +189,10 @@ class Category < ApplicationRecord
 
   def name_with_parent
     subcategory? ? "#{parent.name} > #{name}" : name
+  end
+
+  def savings?
+    classification == "savings"
   end
 
   # Predicate: is this the synthetic "Uncategorized" category?
