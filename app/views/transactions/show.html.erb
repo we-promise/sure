@@ -61,10 +61,26 @@
                 "data-auto-submit-form-target": "auto" %>
           <% unless @entry.transaction.transfer? %>
             <div class="flex items-center gap-2">
-              <%= f.select :nature,
-                    [["Expense", "outflow"], ["Income", "inflow"]],
-                    { container_class: "w-1/3", label: t(".nature"), selected: @entry.amount.negative? ? "inflow" : "outflow" },
-                    { data: { "auto-submit-form-target": "auto" }, disabled: @entry.linked? } %>
+              <div data-controller="form-dropdown" class="w-1/3">
+                <%= f.hidden_field :nature,
+                      data: { form_dropdown_target: "input" },
+                      disabled: @entry.linked? %>
+
+                <%= render DS::FilterDropdown.new(
+                      items: [
+                        { value: "outflow", label: "Expense" },
+                        { value: "inflow",  label: "Income" }
+                      ],
+                      selected: { 
+                        value: (@entry.amount.negative? ? "inflow" : "outflow"),
+                        label: (@entry.amount.negative? ? "Income" : "Expense")
+                      },
+                      value_method: :value,
+                      label_method: :label,
+                      label: t(".nature"),
+                      searchable: false
+                    ) %>
+              </div>
               <%= f.money_field :amount, label: t(".amount"),
                     container_class: "w-2/3",
                     auto_submit: true,
