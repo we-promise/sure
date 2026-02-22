@@ -23,14 +23,19 @@
         </div>
         <div data-list-filter-target="list" class="flex flex-col gap-0.5 p-1.5 mt-0.5 mr-2 max-h-64 overflow-y-scroll scrollbar">
           <% if items.present? %>
+            <% selected_value = selected&.public_send(value_method) %>
             <% items.each do |item| %>
               <% value = item.public_send(value_method) %>
               <% label_text = item.public_send(label_method) %>
+              <% is_selected = value == selected_value %>
 
-              <div class="filterable-item cursor-pointer flex text-sm font-medium items-center gap-2 text-secondary w-full rounded-lg p-3 hover:bg-container-inset-hover"
+              <div class="filterable-item cursor-pointer flex text-sm font-medium items-center gap-2 text-secondary w-full rounded-lg p-3 hover:bg-container-inset-hover <%= "bg-container-inset" if is_selected %>"
                   data-action="click->dropdown#select"
                   data-value="<%= value %>"
                   data-filter-name="<%= label_text %>">
+                  <span class="check-icon <%= "hidden" unless is_selected %>">
+                    <%= helpers.icon("check") %>
+                  </span>
                   <%= label_text %>
               </div>
             <% end %>
