@@ -8,11 +8,11 @@
 
       <% if @budget_category.budget.initialized? %>
         <p class="text-sm text-secondary">
-          <span class="text-primary">
+          <span class="text-primary privacy-sensitive">
             <%= format_money(@budget_category.actual_spending_money) %>
           </span>
           <span>/</span>
-          <span><%= format_money(@budget_category.budgeted_spending_money) %></span>
+          <span class="privacy-sensitive"><%= format_money(@budget_category.budgeted_spending_money) %></span>
         </p>
       <% end %>
     </div>
@@ -33,7 +33,7 @@
             <dt class="text-secondary">
               <%= @budget_category.budget.start_date.strftime("%b %Y") %> spending
             </dt>
-            <dd class="text-primary font-medium">
+            <dd class="text-primary font-medium privacy-sensitive">
               <%= format_money @budget_category.actual_spending_money %>
             </dd>
           </div>
@@ -42,19 +42,19 @@
             <div class="flex items-center justify-between text-sm">
               <dt class="text-secondary">Status</dt>
               <% if @budget_category.available_to_spend.negative? %>
-                <dd class="flex items-center gap-1 text-red-500 font-medium">
+                <dd class="flex items-center gap-1 text-red-500 font-medium privacy-sensitive">
                   <%= icon "alert-circle", size: "sm", color: "destructive" %>
                   <%= format_money @budget_category.available_to_spend_money.abs %>
                   <span>overspent</span>
                 </dd>
               <% elsif @budget_category.available_to_spend.zero? %>
-                <dd class="flex items-center gap-1 text-orange-500 font-medium">
+                <dd class="flex items-center gap-1 text-orange-500 font-medium privacy-sensitive">
                   <%= icon "x-circle", size: "sm", color: "warning" %>
                   <%= format_money @budget_category.available_to_spend_money %>
                   <span>left</span>
                 </dd>
               <% else %>
-                <dd class="text-primary flex items-center gap-1 text-green-500 font-medium">
+                <dd class="text-primary flex items-center gap-1 text-green-500 font-medium privacy-sensitive">
                   <%= icon "check-circle", size: "sm", color: "success" %>
                   <%= format_money @budget_category.available_to_spend_money %>
                   <span>left</span>
@@ -64,7 +64,7 @@
 
             <div class="flex items-center justify-between text-sm">
               <dt class="text-secondary">Budgeted</dt>
-              <dd class="text-primary font-medium">
+              <dd class="text-primary font-medium privacy-sensitive">
                 <%= format_money @budget_category.budgeted_spending_money %>
               </dd>
             </div>
@@ -72,14 +72,14 @@
 
           <div class="flex items-center justify-between text-sm">
             <dt class="text-secondary">Monthly average spending</dt>
-            <dd class="text-primary font-medium">
+            <dd class="text-primary font-medium privacy-sensitive">
               <%= @budget_category.avg_monthly_expense_money.format %>
             </dd>
           </div>
 
           <div class="flex items-center justify-between text-sm">
             <dt class="text-secondary">Monthly median spending</dt>
-            <dd class="text-primary font-medium">
+            <dd class="text-primary font-medium privacy-sensitive">
               <%= @budget_category.median_monthly_expense_money.format %>
             </dd>
           </div>
@@ -111,7 +111,7 @@
                                   class: "text-primary hover:underline",
                                   data: { turbo_frame: :_top } %>
                     </div>
-                    <p class="text-primary font-medium">
+                    <p class="text-primary font-medium privacy-sensitive">
                       <%= format_money transaction.entry.amount_money %>
                     </p>
                   </div>

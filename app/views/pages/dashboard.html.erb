@@ -9,21 +9,33 @@
       </p>
     </div>
 
-    <%= render DS::Link.new(
-      icon: "plus",
-      text: t("pages.dashboard.new"),
-      href: new_account_path,
-      frame: :modal,
-      class: "hidden lg:inline-flex"
-    ) %>
+    <div class="flex items-center gap-2">
+      <button type="button"
+              class="inline-flex items-center justify-center w-9 h-9 rounded-lg text-secondary hover:text-primary hover:bg-surface-hover transition-colors"
+              data-action="click->privacy-mode#toggle"
+              data-privacy-mode-target="toggle"
+              title="<%= t("pages.dashboard.privacy_mode") %>"
+              aria-label="<%= t("pages.dashboard.privacy_mode") %>"
+              aria-pressed="false">
+        <%= icon("eye-off", size: "sm") %>
+      </button>
 
-    <%= render DS::Link.new(
-        variant: "icon-inverse",
+      <%= render DS::Link.new(
         icon: "plus",
+        text: t("pages.dashboard.new"),
         href: new_account_path,
         frame: :modal,
-        class: "rounded-full lg:hidden"
+        class: "hidden lg:inline-flex"
       ) %>
+
+      <%= render DS::Link.new(
+          variant: "icon-inverse",
+          icon: "plus",
+          href: new_account_path,
+          frame: :modal,
+          class: "rounded-full lg:hidden"
+        ) %>
+    </div>
   </div>
 <% end %>
 

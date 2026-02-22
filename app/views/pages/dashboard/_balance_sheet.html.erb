@@ -11,7 +11,7 @@
 
           <% if classification_group.account_groups.any? %>
             <span class="text-secondary">&middot;</span>
-            <span class="text-secondary font-medium text-lg"><%= classification_group.total_money.format(precision: 0) %></span>
+            <span class="text-secondary font-medium text-lg privacy-sensitive"><%= classification_group.total_money.format(precision: 0) %></span>
           <% end %>
         </h2>
       </div>
@@ -29,7 +29,7 @@
               <div class="flex items-center gap-2 text-sm">
                 <div class="h-2.5 w-2.5 rounded-full" style="background-color: <%= account_group.color %>;"></div>
                 <p class="text-secondary"><%= account_group.name %></p>
-                <p class="text-primary font-mono"><%= number_to_percentage(account_group.weight, precision: 0) %></p>
+                <p class="text-primary font-mono privacy-sensitive"><%= number_to_percentage(account_group.weight, precision: 0) %></p>
               </div>
             <% end %>
           </div>
@@ -67,7 +67,7 @@
                     </div>
 
                     <div class="w-40 shrink-0">
-                      <p><%= format_money(account_group.total_money) %></p>
+                      <p class="privacy-sensitive"><%= format_money(account_group.total_money) %></p>
                     </div>
                   </div>
                 </summary>
@@ -92,7 +92,7 @@
                         </div>
 
                         <div class="w-40 shrink-0">
-                          <p><%= format_money(account.balance_money) %></p>
+                          <p class="privacy-sensitive"><%= format_money(account.balance_money) %></p>
                         </div>
                       </div>
                     </div>

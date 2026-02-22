@@ -8,5 +8,5 @@
       <div class="w-0.5 h-2.5 rounded-lg <%= i < (effective_weight / 10.0).ceil ? "" : "opacity-20" %>" style="background-color: <%= color %>;"></div>
     <% end %>
   </div>
-  <p class="text-sm"><%= number_to_percentage(effective_weight, precision: 2) %></p>
+  <p class="text-sm privacy-sensitive"><%= number_to_percentage(effective_weight, precision: 2) %></p>
 </div>
