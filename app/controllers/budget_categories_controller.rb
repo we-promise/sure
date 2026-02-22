@@ -25,6 +25,8 @@ class BudgetCategoriesController < ApplicationController
     @budget_category = Current.family.budget_categories.find(params[:id])
 
     if @budget_category.update(budget_category_params)
+      @budget_category.sync_budgeted_from_annual! if @budget_category.non_monthly?
+
       respond_to do |format|
         format.turbo_stream
         format.html { redirect_to budget_budget_categories_path(@budget) }
@@ -36,7 +38,7 @@ class BudgetCategoriesController < ApplicationController
 
   private
     def budget_category_params
-      params.require(:budget_category).permit(:budgeted_spending).tap do |params|
+      params.require(:budget_category).permit(:budgeted_spending, :budget_frequency, :annual_amount, :goal_id).tap do |params|
         params[:budgeted_spending] = params[:budgeted_spending].presence || 0
       end
     end

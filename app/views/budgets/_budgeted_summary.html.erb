@@ -31,8 +31,8 @@
     </div>
   </div>
 
-  <div class="p-4">
-    <h3 class="text-sm text-secondary mb-2">Budgeted</h3>
+  <div class="p-4 <%= budget.budgeted_savings > 0 ? "border-b border-secondary" : "" %>">
+    <h3 class="text-sm text-secondary mb-2"><%= t("budgets.summary.budgeted") %></h3>
 
     <span class="inline-block mb-2 text-xl font-medium text-primary">
       <%= format_money(budget.budgeted_spending_money) %>
@@ -49,15 +49,51 @@
         <% end %>
       </div>
       <div class="flex justify-between text-sm">
-        <p class="text-secondary"><%= format_money(budget.actual_spending_money) %> spent</p>
+        <p class="text-secondary"><%= format_money(budget.actual_spending_money) %> <%= t("budgets.summary.spent") %></p>
         <p class="font-medium">
           <% if budget.available_to_spend.negative? %>
-            <span class="text-destructive"><%= format_money(budget.available_to_spend_money.abs) %> over</span>
+            <span class="text-destructive"><%= format_money(budget.available_to_spend_money.abs) %> <%= t("budgets.summary.over") %></span>
           <% else %>
-            <span class="text-primary"><%= format_money(budget.available_to_spend_money) %> left</span>
+            <span class="text-primary"><%= format_money(budget.available_to_spend_money) %> <%= t("budgets.summary.left") %></span>
           <% end %>
         </p>
       </div>
     </div>
   </div>
+
+  <% if budget.budgeted_savings > 0 %>
+    <div class="p-4">
+      <h3 class="text-sm text-secondary mb-2"><%= t("budgets.summary.savings") %></h3>
+
+      <span class="inline-block mb-2 text-xl font-medium text-primary">
+        <%= format_money(budget.budgeted_savings_money) %>
+      </span>
+
+      <div>
+        <% savings_percent = budget.budgeted_savings > 0 ? (budget.actual_savings.to_f / budget.budgeted_savings * 100) : 0 %>
+        <% savings_over = budget.actual_savings > budget.budgeted_savings %>
+        <div class="flex h-1.5 mb-3 gap-1">
+          <% if savings_over %>
+            <% over_pct = ((budget.actual_savings - budget.budgeted_savings).to_f / budget.actual_savings * 100) %>
+            <div class="rounded-md h-1.5 bg-green-500" style="width: <%= 100 - over_pct %>%"></div>
+            <div class="rounded-md h-1.5 bg-green-500" style="width: <%= over_pct %>%"></div>
+          <% else %>
+            <div class="rounded-md h-1.5 bg-green-500" style="width: <%= [savings_percent, 100].min %>%"></div>
+            <div class="rounded-md h-1.5 bg-surface-inset" style="width: <%= [100 - savings_percent, 0].max %>%"></div>
+          <% end %>
+        </div>
+        <div class="flex justify-between text-sm">
+          <p class="text-secondary"><%= format_money(budget.actual_savings_money) %> <%= t("budgets.summary.saved") %></p>
+          <p class="font-medium">
+            <% savings_remaining = budget.budgeted_savings - budget.actual_savings %>
+            <% if savings_remaining.negative? %>
+              <span class="text-green-500"><%= format_money(Money.new(savings_remaining.abs, budget.family.currency)) %> <%= t("budgets.summary.extra") %></span>
+            <% else %>
+              <span class="text-primary"><%= format_money(Money.new(savings_remaining, budget.family.currency)) %> <%= t("budgets.summary.left") %></span>
+            <% end %>
+          </p>
+        </div>
+      </div>
+    </div>
+  <% end %>
 </div>

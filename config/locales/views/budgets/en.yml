@@ -8,3 +8,38 @@ en:
       tabs:
         actual: Actual
         budgeted: Budgeted
+        status: Status
+    categories:
+      spending_header: Spending
+      savings_header: Savings
+      amount: Amount
+    summary:
+      budgeted: Budgeted
+      spent: spent
+      over: over
+      left: left
+      savings: Savings
+      saved: saved
+      extra: extra
+    frequencies:
+      monthly: Monthly
+      quarterly: Quarterly
+      semi_annual: Semi-Annual
+      annual: Annual
+      mo: mo
+      year: yr
+      of: of
+      spent_of: spent of
+      annual_label: annual
+      annual_overview: Annual Overview
+      frequency_label: Frequency
+      annual_budget: Annual Budget
+      annual_spent: Annual Spent
+      annual_remaining_label: Annual Remaining
+      monthly_amortized: Monthly Amortized
+      annual_limit_met: Annual limit met
+    savings:
+      saved_label: savings
+      extra_saved: extra saved!
+      target_met: Target met!
+      left_to_save: left to save

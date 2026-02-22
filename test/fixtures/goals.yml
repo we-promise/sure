@@ -1,0 +1,34 @@
+emergency_fund:
+  family: dylan_family
+  name: Emergency Fund
+  goal_type: emergency_fund
+  target_amount: 10000
+  current_amount: 3000
+  target_date: <%= 6.months.from_now.to_date %>
+  lucide_icon: shield
+  color: "#ef4444"
+  currency: USD
+  is_completed: false
+
+vacation:
+  family: dylan_family
+  name: Summer Vacation
+  goal_type: vacation
+  target_amount: 5000
+  current_amount: 1500
+  target_date: <%= 3.months.from_now.to_date %>
+  lucide_icon: plane
+  color: "#3b82f6"
+  currency: USD
+  is_completed: false
+
+completed_goal:
+  family: dylan_family
+  name: New Laptop
+  goal_type: custom
+  target_amount: 2000
+  current_amount: 2000
+  lucide_icon: target
+  color: "#6366f1"
+  currency: USD
+  is_completed: true
