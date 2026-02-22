@@ -184,7 +184,8 @@ class Provider::Openai < Provider
     previous_response_id: nil,
     session_id: nil,
     user_identifier: nil,
-    family: nil
+    family: nil,
+    conversation_history: []
   )
     if custom_provider?
       generic_chat_response(
@@ -196,7 +197,8 @@ class Provider::Openai < Provider
         streamer: streamer,
         session_id: session_id,
         user_identifier: user_identifier,
-        family: family
+        family: family,
+        conversation_history: conversation_history
       )
     else
       native_chat_response(
@@ -320,13 +322,15 @@ class Provider::Openai < Provider
       streamer: nil,
       session_id: nil,
       user_identifier: nil,
-      family: nil
+      family: nil,
+      conversation_history: []
     )
       with_provider_response do
         messages = build_generic_messages(
           prompt: prompt,
           instructions: instructions,
-          function_results: function_results
+          function_results: function_results,
+          conversation_history: conversation_history
         )
 
         tools = build_generic_tools(functions)
@@ -385,7 +389,7 @@ class Provider::Openai < Provider
       end
     end
 
-    def build_generic_messages(prompt:, instructions: nil, function_results: [])
+    def build_generic_messages(prompt:, instructions: nil, function_results: [], conversation_history: [])
       messages = []
 
       # Add system message if instructions present
@@ -393,7 +397,12 @@ class Provider::Openai < Provider
         messages << { role: "system", content: instructions }
       end
 
-      # Add user prompt
+      # Add conversation history (prior messages in the chat)
+      conversation_history.each do |msg|
+        messages << { role: msg[:role], content: msg[:content] }
+      end
+
+      # Add current user prompt
       messages << { role: "user", content: prompt }
 
       # If there are function results, we need to add the assistant message that made the tool calls
