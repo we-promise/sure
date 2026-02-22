@@ -37,6 +37,13 @@
     <span class="font-medium text-primary"><%= number_to_percentage(goal.progress_percent, precision: 0) %></span>
   </div>
 
+  <% if goal.account.present? %>
+    <p class="text-xs text-subdued mt-2 flex items-center gap-1">
+      <%= icon("landmark", size: "sm") %>
+      <%= goal.account.name %>
+    </p>
+  <% end %>
+
   <% if goal.target_date && !goal.is_completed %>
     <p class="text-xs text-subdued mt-2">
       <%= t("goals.show.days_remaining", count: goal.days_remaining) %>

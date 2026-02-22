@@ -67,6 +67,18 @@ class GoalTest < ActiveSupport::TestCase
     assert @goal.on_track?
   end
 
+  test "normalizes blank current_amount to zero" do
+    goal = Goal.new(family: @family, name: "Test", target_amount: 1000, currency: "USD", goal_type: "custom", current_amount: "")
+    goal.valid?
+    assert_equal 0, goal.current_amount
+  end
+
+  test "computed_current_amount uses account balance when linked" do
+    account = accounts(:depository)
+    @goal.update!(account: account)
+    assert_equal account.balance, @goal.computed_current_amount
+  end
+
   test "computed_current_amount uses current_amount when no linked categories" do
     assert_equal @goal.current_amount, @goal.computed_current_amount
   end

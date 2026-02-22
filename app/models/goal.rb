@@ -2,12 +2,15 @@ class Goal < ApplicationRecord
   include Monetizable
 
   belongs_to :family
+  belongs_to :account, optional: true
   has_many :budget_categories, dependent: :nullify
 
   validates :name, presence: true
   validates :target_amount, presence: true, numericality: { greater_than: 0 }
   validates :goal_type, presence: true, inclusion: { in: ->(_) { GOAL_TYPES.keys } }
   validates :currency, presence: true
+
+  before_validation :normalize_current_amount
 
   monetize :target_amount, :current_amount, :computed_current_amount, :remaining_amount
 
@@ -28,7 +31,9 @@ class Goal < ApplicationRecord
   scope :by_priority, -> { order(priority: :desc, created_at: :desc) }
 
   def computed_current_amount
-    if linked_budget_categories.any?
+    if account.present?
+      account.balance
+    elsif linked_budget_categories.any?
       linked_budget_categories.sum { |bc| bc.budget.budget_category_actual_spending(bc) }
     else
       current_amount
@@ -73,6 +78,10 @@ class Goal < ApplicationRecord
 
     def linked_budget_categories
       @linked_budget_categories ||= budget_categories.includes(:budget, :category).to_a
+    end
+
+    def normalize_current_amount
+      self.current_amount = 0 if current_amount.blank?
     end
 
     def monetizable_currency

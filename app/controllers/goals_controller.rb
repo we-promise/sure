@@ -2,7 +2,7 @@ class GoalsController < ApplicationController
   before_action :set_goal, only: %i[show edit update destroy]
 
   def index
-    @goals = Current.family.goals.by_priority
+    @goals = Current.family.goals.includes(:account).by_priority
   end
 
   def show
@@ -47,7 +47,8 @@ class GoalsController < ApplicationController
     def goal_params
       params.require(:goal).permit(
         :name, :description, :goal_type, :target_amount, :current_amount,
-        :target_date, :lucide_icon, :color, :priority, :is_completed, :currency
+        :target_date, :lucide_icon, :color, :priority, :is_completed, :currency,
+        :account_id
       )
     end
 end

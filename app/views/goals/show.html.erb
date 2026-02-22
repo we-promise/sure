@@ -58,6 +58,13 @@
       </div>
     </div>
 
+    <% if @goal.account.present? %>
+      <div class="flex items-center gap-2 text-sm text-secondary mb-4">
+        <%= icon("landmark", size: "sm") %>
+        <span><%= t("goals.show.linked_to_account") %> <strong class="text-primary"><%= @goal.account.name %></strong></span>
+      </div>
+    <% end %>
+
     <%# Details %>
     <dl class="grid grid-cols-2 gap-4 pt-4 border-t border-primary">
       <div>

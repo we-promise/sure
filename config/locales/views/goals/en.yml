@@ -28,6 +28,7 @@ en:
       on_track: On Track
       behind: Behind
       linked_categories: Linked Budget Categories
+      linked_to_account: Tracking balance from
       days_remaining:
         one: "%{count} day remaining"
         other: "%{count} days remaining"
@@ -43,6 +44,8 @@ en:
       mark_completed: Mark as completed
       cancel: Cancel
       no_goal: "(no goal)"
+      linked_account: Linked Account
+      no_account: "(none — enter amount manually)"
     types:
       emergency_fund: Emergency Fund
       vacation: Vacation
