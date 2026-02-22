@@ -97,7 +97,8 @@ class Assistant::Responder
         previous_response_id: last_response.id,
         session_id: chat_session_id,
         user_identifier: chat_user_identifier,
-        family: message.chat&.user&.family
+        family: message.chat&.user&.family,
+        conversation_history: conversation_history
       )
 
       if final.success? && final.data
@@ -122,7 +123,8 @@ class Assistant::Responder
         previous_response_id: previous_response_id,
         session_id: chat_session_id,
         user_identifier: chat_user_identifier,
-        family: message.chat&.user&.family
+        family: message.chat&.user&.family,
+        conversation_history: conversation_history
       )
 
       unless response.success?
@@ -152,5 +154,16 @@ class Assistant::Responder
 
     def chat
       @chat ||= message.chat
+    end
+
+    def conversation_history
+      @conversation_history ||= begin
+        return [] unless chat
+
+        chat.messages.ordered
+          .where.not(id: message.id)
+          .where(status: :complete)
+          .map { |msg| { role: msg.role, content: msg.content } }
+      end
     end
 end
