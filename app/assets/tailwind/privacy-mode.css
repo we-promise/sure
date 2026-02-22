@@ -1,0 +1,14 @@
+/* Privacy Mode - blurs financial numbers when activated */
+html.privacy-mode .privacy-sensitive {
+  filter: blur(8px);
+  user-select: none;
+  transition: filter 0.2s ease;
+}
+
+html.privacy-mode .privacy-sensitive:hover {
+  filter: blur(4px);
+}
+
+html:not(.privacy-mode) .privacy-sensitive {
+  transition: filter 0.2s ease;
+}

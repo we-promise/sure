@@ -24,13 +24,13 @@
                       <span class="text-xs text-subdued">(<%= t("reports.trends.current") %>)</span>
                     <% end %>
                   </div>
-                  <div class="text-right">
+                  <div class="text-right privacy-sensitive">
                     <%= Money.new(trend[:income], Current.family.currency).format %>
                   </div>
-                  <div class="text-right">
+                  <div class="text-right privacy-sensitive">
                     <%= Money.new(trend[:expenses], Current.family.currency).format %>
                   </div>
-                  <div class="text-right <%= trend[:net] >= 0 ? "text-success" : "text-destructive" %>">
+                  <div class="text-right privacy-sensitive <%= trend[:net] >= 0 ? "text-success" : "text-destructive" %>">
                     <%= Money.new(trend[:net], Current.family.currency).format %>
                   </div>
                   <div class="text-right <%= trend[:net] >= 0 ? "text-success" : "text-destructive" %>">
@@ -54,21 +54,21 @@
 
           <div class="p-4 bg-surface-inset rounded-lg">
             <p class="text-sm text-secondary mb-1"><%= t("reports.trends.avg_monthly_income") %></p>
-            <p class="text-lg font-semibold text-success">
+            <p class="text-lg font-semibold text-success privacy-sensitive">
               <%= Money.new(avg_income, Current.family.currency).format %>
             </p>
           </div>
 
           <div class="p-4 bg-surface-inset rounded-lg">
             <p class="text-sm text-secondary mb-1"><%= t("reports.trends.avg_monthly_expenses") %></p>
-            <p class="text-lg font-semibold text-destructive">
+            <p class="text-lg font-semibold text-destructive privacy-sensitive">
               <%= Money.new(avg_expenses, Current.family.currency).format %>
             </p>
           </div>
 
           <div class="p-4 bg-surface-inset rounded-lg">
             <p class="text-sm text-secondary mb-1"><%= t("reports.trends.avg_monthly_savings") %></p>
-            <p class="text-lg font-semibold <%= avg_net >= 0 ? "text-success" : "text-destructive" %>">
+            <p class="text-lg font-semibold privacy-sensitive <%= avg_net >= 0 ? "text-success" : "text-destructive" %>">
               <%= Money.new(avg_net, Current.family.currency).format %>
             </p>
           </div>

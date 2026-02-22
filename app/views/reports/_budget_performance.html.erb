@@ -63,13 +63,13 @@
             <div class="flex items-center gap-4">
               <div>
                 <span class="text-subdued"><%= t("reports.budget_performance.spent") %>:</span>
-                <span class="font-medium text-primary">
+                <span class="font-medium text-primary privacy-sensitive">
                   <%= Money.new(budget_item[:actual], Current.family.currency).format %>
                 </span>
               </div>
               <div>
                 <span class="text-subdued"><%= t("reports.budget_performance.budgeted") %>:</span>
-                <span class="font-medium text-secondary">
+                <span class="font-medium text-secondary privacy-sensitive">
                   <%= Money.new(budget_item[:budgeted], Current.family.currency).format %>
                 </span>
               </div>
@@ -78,12 +78,12 @@
             <div>
               <% if budget_item[:remaining] >= 0 %>
                 <span class="text-subdued"><%= t("reports.budget_performance.remaining") %>:</span>
-                <span class="font-medium text-success">
+                <span class="font-medium text-success privacy-sensitive">
                   <%= Money.new(budget_item[:remaining], Current.family.currency).format %>
                 </span>
               <% else %>
                 <span class="text-subdued"><%= t("reports.budget_performance.over_by") %>:</span>
-                <span class="font-medium text-destructive">
+                <span class="font-medium text-destructive privacy-sensitive">
                   <%= Money.new(budget_item[:remaining].abs, Current.family.currency).format %>
                 </span>
               <% end %>
