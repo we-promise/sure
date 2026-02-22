@@ -318,7 +318,7 @@ class FidelityImport < Import
           entry: Entry.new(
             account: account,
             date: ob_date,
-            amount: 0,
+            amount: gap * pos_data[:price],
             name: "Opening balance - #{ticker.upcase}",
             currency: effective_currency,
             notes: "Auto-created from positions CSV",
