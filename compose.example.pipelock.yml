@@ -102,12 +102,15 @@
 # Customization:
 # --------------
 #
-# Edit the pipelock command to change the preset:
-#   --preset strict     Block unknown domains (recommended for production)
-#   --preset balanced   Warn on unknown domains, block known-bad (default)
-#   --preset audit      Log everything, block nothing (for evaluation)
+# Requires Pipelock with MCP HTTP listener support (--mcp-listen flag).
+# See: https://github.com/luckyPipewrench/pipelock/releases
 #
-# For a custom config, mount a file and use --config instead of --preset:
+# Edit the pipelock command to change the mode:
+#   --mode strict     Block unknown domains (recommended for production)
+#   --mode balanced   Warn on unknown domains, block known-bad (default)
+#   --mode audit      Log everything, block nothing (for evaluation)
+#
+# For a custom config, mount a file and use --config instead of --mode:
 #   volumes:
 #     - ./config/pipelock.yml:/etc/pipelock/config.yml:ro
 #   command: ["run", "--config", "/etc/pipelock/config.yml",
@@ -152,7 +155,7 @@ services:
       - "run"
       - "--listen"
       - "0.0.0.0:8888"
-      - "--preset"
+      - "--mode"
       - "balanced"
       - "--mcp-listen"
       - "0.0.0.0:8889"
@@ -177,6 +180,10 @@ services:
     volumes:
       - app-storage:/rails/storage
     ports:
+      # Web UI for browser access. Note: /mcp is also reachable on this port,
+      # bypassing Pipelock's MCP scanning (auth token is still required).
+      # For hardened deployments, use `expose: [3000]` instead and front
+      # the web UI with a separate reverse proxy.
       - ${PORT:-3000}:3000
     restart: unless-stopped
     environment:

@@ -107,6 +107,16 @@ class McpControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "tools/call sent as notification does not execute" do
+    with_mcp_env do
+      post "/mcp", params: jsonrpc_notification("tools/call", { name: "get_balance_sheet", arguments: {} }).to_json,
+           headers: mcp_headers(@token)
+
+      assert_response :no_content
+      assert response.body.blank?, "Notification-style tools/call must not execute or respond"
+    end
+  end
+
   test "unknown notification method still returns no content" do
     with_mcp_env do
       post "/mcp", params: jsonrpc_notification("notifications/unknown").to_json,
