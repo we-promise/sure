@@ -20,6 +20,18 @@ module Assistant
       REGISTRY.keys
     end
 
+    def function_classes
+      [
+        Function::GetTransactions,
+        Function::GetAccounts,
+        Function::GetHoldings,
+        Function::GetBalanceSheet,
+        Function::GetIncomeStatement,
+        Function::ImportBankStatement,
+        Function::SearchFamilyFiles
+      ]
+    end
+
     private
 
       def implementation_for(chat)

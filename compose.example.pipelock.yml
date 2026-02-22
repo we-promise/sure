@@ -1,0 +1,234 @@
+# ===========================================================================
+# Example Docker Compose file with Pipelock agent security proxy
+# ===========================================================================
+#
+# Purpose:
+# --------
+#
+# This file adds Pipelock (https://github.com/luckyPipewrench/pipelock)
+# as a forward proxy for Sure's outbound traffic. It provides audit
+# logging and cooperative scanning for HTTP clients that respect the
+# HTTPS_PROXY environment variable.
+#
+# Coverage:
+# ---------
+#
+# Covered (Faraday-based clients respect HTTPS_PROXY automatically):
+#   - OpenAI API calls (ruby-openai gem)
+#   - Market data providers using Faraday
+#
+# NOT covered (these clients ignore HTTPS_PROXY):
+#   - SimpleFin (HTTParty / Net::HTTP)
+#   - Coinbase (HTTParty / Net::HTTP)
+#   - Any code using Net::HTTP or HTTParty directly
+#
+# For covered traffic, Pipelock provides:
+#   - Domain allowlisting (only known-good external APIs can be reached)
+#   - SSRF protection (blocks connections to private/internal IPs)
+#   - DLP scanning on connection targets (detects exfiltration patterns)
+#   - Rate limiting per domain
+#   - Structured JSON audit logging of all outbound connections
+#
+# Limitations:
+# ------------
+#
+# HTTPS_PROXY is cooperative. Docker Compose has no egress network policy,
+# so any code path that doesn't check the env var can connect directly.
+# For hard enforcement, deploy with network-level controls that deny all
+# egress except through the proxy. Example for Kubernetes:
+#
+#   # NetworkPolicy: deny all egress, allow only proxy + DNS
+#   egress:
+#     - to:
+#         - podSelector:
+#             matchLabels:
+#               app: pipelock
+#       ports:
+#         - port: 8888
+#     - ports:
+#         - port: 53
+#           protocol: UDP
+#
+# This compose file does NOT inspect encrypted request/response bodies
+# (HTTPS is end-to-end). For deep content scanning of AI traffic, use
+# Pipelock's MCP proxy mode.
+#
+# Monitoring:
+# -----------
+#
+# Pipelock logs every outbound connection as structured JSON to stdout.
+# View logs with: docker compose logs pipelock
+#
+# To expose monitoring endpoints from the host, uncomment the ports
+# section on the pipelock service, then visit:
+#   http://localhost:8888/health   - liveness check
+#   http://localhost:8888/metrics  - Prometheus metrics
+#   http://localhost:8888/stats    - JSON summary
+#
+# More info: https://github.com/luckyPipewrench/pipelock
+#
+# Setup:
+# ------
+#
+# 1. Copy this file to compose.yml (or use -f flag)
+# 2. Set your environment variables (OPENAI_ACCESS_TOKEN, etc.)
+# 3. docker compose up
+#
+# Pipelock runs on port 8888 inside the Docker network. The web and worker
+# services route outbound HTTPS through it via the HTTPS_PROXY env var.
+#
+# Customization:
+# --------------
+#
+# Edit the pipelock command to change the preset:
+#   --preset strict     Block unknown domains (recommended for production)
+#   --preset balanced   Warn on unknown domains, block known-bad (default)
+#   --preset audit      Log everything, block nothing (for evaluation)
+#
+# For a custom config, mount a file and use --config instead of --preset:
+#   volumes:
+#     - ./config/pipelock.yml:/etc/pipelock/config.yml:ro
+#   command: ["run", "--config", "/etc/pipelock/config.yml"]
+#
+
+x-db-env: &db_env
+  POSTGRES_USER: ${POSTGRES_USER:-sure_user}
+  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-sure_password}
+  POSTGRES_DB: ${POSTGRES_DB:-sure_production}
+
+x-rails-env: &rails_env
+  <<: *db_env
+  SECRET_KEY_BASE: ${SECRET_KEY_BASE:-a7523c3d0ae56415046ad8abae168d71074a79534a7062258f8d1d51ac2f76d3c3bc86d86b6b0b307df30d9a6a90a2066a3fa9e67c5e6f374dbd7dd4e0778e13}
+  SELF_HOSTED: "true"
+  RAILS_FORCE_SSL: "false"
+  RAILS_ASSUME_SSL: "false"
+  DB_HOST: db
+  DB_PORT: 5432
+  REDIS_URL: redis://redis:6379/1
+  # NOTE: enabling OpenAI will incur costs when you use AI-related features in the app (chat, rules).  Make sure you have set appropriate spend limits on your account before adding this.
+  OPENAI_ACCESS_TOKEN: ${OPENAI_ACCESS_TOKEN}
+  # MCP server endpoint — enables /mcp for external AI assistants (e.g. Claude, GPT).
+  # Set both values to activate. MCP_USER_EMAIL must match an existing user's email.
+  # Outbound HTTPS from MCP tool calls is routed through Pipelock's forward proxy.
+  MCP_API_TOKEN: ${MCP_API_TOKEN:-}
+  MCP_USER_EMAIL: ${MCP_USER_EMAIL:-}
+  # Route outbound HTTPS through Pipelock for clients that respect HTTPS_PROXY.
+  # See "Coverage" section above for which clients are covered.
+  HTTPS_PROXY: "http://pipelock:8888"
+  HTTP_PROXY: "http://pipelock:8888"
+  # Skip proxy for internal Docker network services
+  NO_PROXY: "db,redis,pipelock,localhost,127.0.0.1"
+
+services:
+  pipelock:
+    image: ghcr.io/luckypipewrench/pipelock:latest
+    container_name: pipelock
+    hostname: pipelock
+    restart: unless-stopped
+    command: ["run", "--listen", "0.0.0.0:8888", "--preset", "balanced"]
+    # Uncomment to expose Pipelock's /health, /metrics, /stats from the host:
+    # ports:
+    #   - "8888:8888"
+    healthcheck:
+      test: ["CMD", "/pipelock", "healthcheck", "--addr", "127.0.0.1:8888"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    networks:
+      - sure_net
+
+  web:
+    image: ghcr.io/we-promise/sure:stable
+    volumes:
+      - app-storage:/rails/storage
+    ports:
+      - ${PORT:-3000}:3000
+    restart: unless-stopped
+    environment:
+      <<: *rails_env
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      pipelock:
+        condition: service_healthy
+    networks:
+      - sure_net
+
+  worker:
+    image: ghcr.io/we-promise/sure:stable
+    command: bundle exec sidekiq
+    volumes:
+      - app-storage:/rails/storage
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      pipelock:
+        condition: service_healthy
+    environment:
+      <<: *rails_env
+    networks:
+      - sure_net
+
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    environment:
+      <<: *db_env
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - sure_net
+
+  backup:
+    profiles:
+      - backup
+    image: prodrigestivill/postgres-backup-local
+    restart: unless-stopped
+    volumes:
+      - /opt/sure-data/backups:/backups # Change this path to your desired backup location on the host machine
+    environment:
+      - POSTGRES_HOST=db
+      - POSTGRES_DB=${POSTGRES_DB:-sure_production}
+      - POSTGRES_USER=${POSTGRES_USER:-sure_user}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-sure_password}
+      - SCHEDULE=@daily # Runs once a day at midnight
+      - BACKUP_KEEP_DAYS=7 # Keeps the last 7 days of backups
+      - BACKUP_KEEP_WEEKS=4 # Keeps 4 weekly backups
+      - BACKUP_KEEP_MONTHS=6 # Keeps 6 monthly backups
+    depends_on:
+      - db
+    networks:
+      - sure_net
+
+  redis:
+    image: redis:latest
+    restart: unless-stopped
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - sure_net
+
+volumes:
+  app-storage:
+  postgres-data:
+  redis-data:
+
+networks:
+  sure_net:
+    driver: bridge
