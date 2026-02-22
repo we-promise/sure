@@ -24,6 +24,8 @@ class PagesController < ApplicationController
 
     @goals = Current.family.goals.active.includes(:account).by_priority.limit(4)
 
+    @annual_plan = Budget::AnnualPlan.new(Current.family)
+
     @dashboard_sections = build_dashboard_sections
 
     @breadcrumbs = [ [ "Home", root_path ], [ "Dashboard", nil ] ]
@@ -115,6 +117,14 @@ class PagesController < ApplicationController
           partial: "pages/dashboard/goals_summary",
           locals: { goals: @goals },
           visible: Current.family.goals.any?,
+          collapsible: true
+        },
+        {
+          key: "annual_budget_health",
+          title: "pages.dashboard.annual_budget_health.title",
+          partial: "pages/dashboard/annual_budget_health",
+          locals: { annual_plan: @annual_plan },
+          visible: Current.family.budgets.any?,
           collapsible: true
         },
         {

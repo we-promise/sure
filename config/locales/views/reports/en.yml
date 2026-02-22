@@ -156,6 +156,15 @@ en:
       holdings: Holdings
       sell_trades: Sell Trades
       and_more: "+%{count} more"
+    annual_budget_performance:
+      title: "Annual Budget Performance"
+      category: "Category"
+      annual_budget: "Annual Budget"
+      ytd_actual: "YTD Actual"
+      remaining: "Remaining"
+      savings_rate: "Savings Rate"
+      savings_rate_description: "Percentage of income saved this year"
+      no_data: "No budget data available"
     investment_flows:
       title: Investment Flows
       description: Track money flowing into and out of your investment accounts

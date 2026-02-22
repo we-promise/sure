@@ -126,6 +126,9 @@ class ReportsController < ApplicationController
       # Investment flows (contributions/withdrawals)
       @investment_flows = InvestmentFlowStatement.new(Current.family).period_totals(period: @period)
 
+      # Annual budget plan
+      @annual_plan = Budget::AnnualPlan.new(Current.family, year: @start_date.year)
+
       # Flags for view rendering
       @has_accounts = Current.family.accounts.any?
     end
@@ -170,6 +173,14 @@ class ReportsController < ApplicationController
           partial: "reports/investment_flows",
           locals: { investment_flows: @investment_flows },
           visible: @investment_metrics[:has_investments] && (@investment_flows.contributions.amount > 0 || @investment_flows.withdrawals.amount > 0),
+          collapsible: true
+        },
+        {
+          key: "annual_budget_performance",
+          title: "reports.annual_budget_performance.title",
+          partial: "reports/annual_budget_performance",
+          locals: { annual_plan: @annual_plan },
+          visible: Current.family.budgets.any?,
           collapsible: true
         },
         {
