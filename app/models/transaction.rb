@@ -125,6 +125,14 @@ class Transaction < ApplicationRecord
     posted_entry = potential_duplicate_entry
     return false unless posted_entry
 
+    # Safety check: never delete an entry that points to itself as the posted match.
+    # This can happen if stale pending metadata caused a self-referencing suggestion.
+    if entry.id == posted_entry.id
+      Rails.logger.warn("merge_with_duplicate! aborted: pending entry #{entry.id} points to itself as posted match (self-reference). Clearing stale suggestion.")
+      clear_duplicate_suggestion!
+      return false
+    end
+
     pending_entry_id = entry.id
     pending_entry_name = entry.name
 
