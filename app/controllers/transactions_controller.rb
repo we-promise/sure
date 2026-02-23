@@ -332,11 +332,11 @@ class TransactionsController < ApplicationController
 
     def resolve_new_merchant!(entry)
       new_name = params[:new_merchant_name].to_s.strip
-      return if new_name.blank? || entry.entryable.nil?
+      return if new_name.blank?
 
       merchant = Current.family.available_merchants.find_by(name: new_name) ||
                  Current.family.merchants.create_or_find_by!(name: new_name)
-      entry.entryable.merchant_id = merchant.id
+      entry.entryable&.merchant_id = merchant.id
     end
 
     def entry_params
