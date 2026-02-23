@@ -6,22 +6,21 @@ class Api::V1::UsersControllerTest < ActionDispatch::IntegrationTest
   setup do
     @user = users(:family_admin)
 
-    @oauth_app = Doorkeeper::Application.create!(
-      name: "Test API App",
-      redirect_uri: "https://example.com/callback",
-      scopes: "read write read_write"
+    @user.api_keys.active.destroy_all
+
+    @api_key = ApiKey.create!(
+      user: @user,
+      name: "Test Read-Write Key",
+      scopes: [ "read_write" ],
+      display_key: "test_rw_#{SecureRandom.hex(8)}"
     )
 
-    @read_token = Doorkeeper::AccessToken.create!(
-      application: @oauth_app,
-      resource_owner_id: @user.id,
-      scopes: "read"
-    )
-
-    @write_token = Doorkeeper::AccessToken.create!(
-      application: @oauth_app,
-      resource_owner_id: @user.id,
-      scopes: "read_write"
+    @read_only_api_key = ApiKey.create!(
+      user: @user,
+      name: "Test Read-Only Key",
+      scopes: [ "read" ],
+      display_key: "test_ro_#{SecureRandom.hex(8)}",
+      source: "mobile"
     )
   end
 
@@ -40,12 +39,12 @@ class Api::V1::UsersControllerTest < ActionDispatch::IntegrationTest
   # -- Scope enforcement -----------------------------------------------------
 
   test "reset requires write scope" do
-    delete "/api/v1/users/reset", headers: bearer_auth_header(@read_token)
+    delete "/api/v1/users/reset", headers: api_headers(@read_only_api_key)
     assert_response :forbidden
   end
 
   test "destroy requires write scope" do
-    delete "/api/v1/users/me", headers: bearer_auth_header(@read_token)
+    delete "/api/v1/users/me", headers: api_headers(@read_only_api_key)
     assert_response :forbidden
   end
 
@@ -53,7 +52,7 @@ class Api::V1::UsersControllerTest < ActionDispatch::IntegrationTest
 
   test "reset enqueues FamilyResetJob and returns 200" do
     assert_enqueued_with(job: FamilyResetJob) do
-      delete "/api/v1/users/reset", headers: bearer_auth_header(@write_token)
+      delete "/api/v1/users/reset", headers: api_headers(@api_key)
     end
 
     assert_response :ok
@@ -71,13 +70,14 @@ class Api::V1::UsersControllerTest < ActionDispatch::IntegrationTest
       password_confirmation: "password123",
       role: :admin
     )
-    solo_token = Doorkeeper::AccessToken.create!(
-      application: @oauth_app,
-      resource_owner_id: solo_user.id,
-      scopes: "read_write"
+    solo_api_key = ApiKey.create!(
+      user: solo_user,
+      name: "Solo Key",
+      scopes: [ "read_write" ],
+      display_key: "test_solo_#{SecureRandom.hex(8)}"
     )
 
-    delete "/api/v1/users/me", headers: bearer_auth_header(solo_token)
+    delete "/api/v1/users/me", headers: api_headers(solo_api_key)
     assert_response :ok
 
     body = JSON.parse(response.body)
@@ -89,7 +89,7 @@ class Api::V1::UsersControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "destroy returns 422 when admin has other family members" do
-    delete "/api/v1/users/me", headers: bearer_auth_header(@write_token)
+    delete "/api/v1/users/me", headers: api_headers(@api_key)
     assert_response :unprocessable_entity
 
     body = JSON.parse(response.body)
@@ -98,61 +98,19 @@ class Api::V1::UsersControllerTest < ActionDispatch::IntegrationTest
 
   # -- Deactivated user ------------------------------------------------------
 
-  test "OAuth rejects deactivated user with 401" do
+  test "rejects deactivated user with 401" do
     @user.update_column(:active, false)
 
-    delete "/api/v1/users/reset", headers: bearer_auth_header(@write_token)
+    delete "/api/v1/users/reset", headers: api_headers(@api_key)
     assert_response :unauthorized
 
     body = JSON.parse(response.body)
     assert_equal "Account has been deactivated", body["message"]
-  end
-
-  test "API key rejects deactivated user with 401" do
-    @user.update_column(:active, false)
-    @user.api_keys.active.destroy_all
-
-    api_key = ApiKey.create!(
-      user: @user,
-      name: "Test Key",
-      scopes: [ "read_write" ],
-      display_key: "test_deactivated_#{SecureRandom.hex(8)}",
-      source: "mobile"
-    )
-
-    delete "/api/v1/users/reset", headers: api_headers(api_key)
-    assert_response :unauthorized
-
-    body = JSON.parse(response.body)
-    assert_equal "Account has been deactivated", body["message"]
-  end
-
-  # -- API key auth ----------------------------------------------------------
-
-  test "reset works with API key authentication" do
-    @user.api_keys.active.destroy_all
-
-    api_key = ApiKey.create!(
-      user: @user,
-      name: "Test API Key",
-      scopes: [ "read_write" ],
-      display_key: "test_reset_#{SecureRandom.hex(8)}"
-    )
-
-    assert_enqueued_with(job: FamilyResetJob) do
-      delete "/api/v1/users/reset", headers: api_headers(api_key)
-    end
-
-    assert_response :ok
   end
 
   private
 
     def api_headers(api_key)
       { "X-Api-Key" => api_key.display_key }
-    end
-
-    def bearer_auth_header(token)
-      { "Authorization" => "Bearer #{token.token}" }
     end
 end
