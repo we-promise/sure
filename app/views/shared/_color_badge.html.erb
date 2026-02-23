@@ -1,0 +1,10 @@
+<%# locals: (name: nil, color: "#000") %>
+
+<% background_color = "color-mix(in oklab, #{color} 10%, transparent)" %>
+<% border_color = "color-mix(in oklab, #{color} 10%, transparent)" %>
+<span data-color-badge-target="badge"
+      class="border text-sm font-medium px-3 py-1 rounded-full inline-flex items-center gap-2"
+      style="background-color: <%= background_color %>; border-color: <%= border_color %>; color: <%= color %>">
+  <span class="size-1.5 rounded-full" style="background-color: currentColor;"></span>
+  <span data-color-badge-target="name"><%= name || "?" %></span>
+</span>

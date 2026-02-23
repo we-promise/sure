@@ -237,9 +237,11 @@ class AccountsController < ApplicationController
 
       # Enable Banking sync stats
       @enable_banking_sync_stats_map = {}
+      @enable_banking_latest_sync_error_map = {}
       @enable_banking_items.each do |item|
         latest_sync = item.syncs.ordered.first
         @enable_banking_sync_stats_map[item.id] = latest_sync&.sync_stats || {}
+        @enable_banking_latest_sync_error_map[item.id] = latest_sync&.error
       end
 
       # CoinStats sync stats

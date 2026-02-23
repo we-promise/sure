@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_02_11_120001) do
+ActiveRecord::Schema[7.2].define(version: 2026_02_18_120001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -54,6 +54,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_02_11_120001) do
     t.index ["currency"], name: "index_accounts_on_currency"
     t.index ["family_id", "accountable_type"], name: "index_accounts_on_family_id_and_accountable_type"
     t.index ["family_id", "id"], name: "index_accounts_on_family_id_and_id"
+    t.index ["family_id", "status", "accountable_type"], name: "index_accounts_on_family_id_status_accountable_type"
     t.index ["family_id", "status"], name: "index_accounts_on_family_id_and_status"
     t.index ["family_id"], name: "index_accounts_on_family_id"
     t.index ["import_id"], name: "index_accounts_on_import_id"
@@ -504,6 +505,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_02_11_120001) do
     t.string "openai_uri_base"
     t.string "moniker", default: "Family", null: false
     t.string "vector_store_id"
+    t.string "assistant_type", default: "builtin", null: false
     t.check_constraint "month_start_day >= 1 AND month_start_day <= 28", name: "month_start_day_range"
   end
 

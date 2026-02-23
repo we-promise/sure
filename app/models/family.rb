@@ -19,6 +19,7 @@ class Family < ApplicationRecord
 
 
   MONIKERS = [ "Family", "Group" ].freeze
+  ASSISTANT_TYPES = %w[builtin external].freeze
 
   has_many :users, dependent: :destroy
   has_many :accounts, dependent: :destroy
@@ -56,6 +57,7 @@ class Family < ApplicationRecord
   validates :openai_uri_base, length: { maximum: OPENAI_URI_BASE_MAX_LENGTH }, allow_blank: true
   validate :openai_model_required_when_custom_endpoint
   validates :moniker, inclusion: { in: MONIKERS }
+  validates :assistant_type, inclusion: { in: ASSISTANT_TYPES }
 
   def custom_openai_endpoint?
     openai_uri_base.present?
