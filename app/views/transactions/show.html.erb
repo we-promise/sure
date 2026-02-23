@@ -71,12 +71,7 @@
                         { value: "outflow", label: "Expense" },
                         { value: "inflow",  label: "Income" }
                       ],
-                      selected: { 
-                        value: (@entry.amount.negative? ? "inflow" : "outflow"),
-                        label: (@entry.amount.negative? ? "Income" : "Expense")
-                      },
-                      value_method: :value,
-                      label_method: :label,
+                      selected: (@entry.amount.negative? ? "inflow" : "outflow"),
                       label: t(".nature"),
                       searchable: false
                     ) %>
@@ -92,12 +87,11 @@
             <%= f.fields_for :entryable do |ef| %>
               <div data-controller="form-dropdown" class="w-full">
                 <%= ef.hidden_field :category_id,
-                      data: {
-                        form_dropdown_target: "input"
-                      } %>
+                      data: { form_dropdown_target: "input" } %>
+
                 <%= render DS::FilterDropdown.new(
                       items: Current.family.categories.alphabetically,
-                      selected: Current.family.categories.find_by(id: ef.object.category_id),
+                      selected: ef.object.category_id,
                       placeholder: t(".category_label"),
                       empty_text: t(".no_categories"),
                       label: t(".category_label"),
@@ -123,13 +117,24 @@
               { label: t(".account_label") },
               { disabled: true } %>
           <%= f.fields_for :entryable do |ef| %>
-            <%= ef.collection_select :merchant_id,
-                  Current.family.available_merchants.alphabetically,
-                  :id, :name,
-                  { include_blank: t(".none"),
-                    label: t(".merchant_label"),
-                    class: "text-subdued" },
-                  "data-auto-submit-form-target": "auto" %>
+            <div data-controller="form-dropdown" class="w-full">
+            <%= ef.hidden_field :merchant_id,
+                  data: {
+                    form_dropdown_target: "input",
+                    auto_submit_form_target: "auto"
+                  } %>
+
+            <%= render DS::FilterDropdown.new(
+                  items: Current.family.available_merchants.alphabetically,
+                  selected: ef.object.merchant_id,
+                  value_method: :id,
+                  label_method: :name,
+                  label: t(".merchant_label"),
+                  searchable: true,
+                  include_blank: t(".none"),
+                  variant: :icon
+                ) %>
+          </div>
             <%= ef.select :tag_ids,
                   Current.family.tags.alphabetically.pluck(:name, :id),
                   {
