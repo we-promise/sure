@@ -165,6 +165,7 @@ en:
       category: "Category"
       annual_budget: "Annual Budget"
       ytd_actual: "YTD Actual"
+      period_actual: "Period Actual"
       remaining: "Remaining"
       savings_rate: "Savings Rate"
       savings_rate_description: "Percentage of income saved this year"
