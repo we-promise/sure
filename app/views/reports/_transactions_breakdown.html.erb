@@ -31,12 +31,14 @@
   <%# Transactions Tables - Split by Income and Expenses %>
   <% if transactions.any? %>
     <%
-      # Separate income and expenses
+      # Separate income, savings, and expenses
       income_groups = transactions.select { |g| g[:type] == "income" }
-      expense_groups = transactions.select { |g| g[:type] == "expense" }
+      savings_groups = transactions.select { |g| g[:classification] == "savings" }
+      expense_groups = transactions.select { |g| g[:type] == "expense" && g[:classification] != "savings" }
 
       # Calculate totals
       income_total = income_groups.sum { |g| g[:total] }
+      savings_total = savings_groups.sum { |g| g[:total] }
       expense_total = expense_groups.sum { |g| g[:total] }
 
       # Determine sort direction for Amount column
@@ -57,6 +59,17 @@
               groups: income_groups,
               total: income_total,
               type: :income,
+              amount_sort_params: amount_sort_params,
+              current_sort_by: current_sort_by,
+              current_sort_direction: current_sort_direction %>
+      <% end %>
+
+      <%# Savings Section %>
+      <% if savings_groups.any? %>
+        <%= render "reports/breakdown_table",
+              groups: savings_groups,
+              total: savings_total,
+              type: :savings,
               amount_sort_params: amount_sort_params,
               current_sort_by: current_sort_by,
               current_sort_direction: current_sort_direction %>

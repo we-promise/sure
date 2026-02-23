@@ -108,6 +108,7 @@ en:
         type: Type
         expense: Expenses
         income: Income
+        savings: Savings
         uncategorized: Uncategorized
         entries:
           one: "%{count} entry"
