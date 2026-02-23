@@ -100,7 +100,8 @@
                       selected: Current.family.categories.find_by(id: ef.object.category_id),
                       placeholder: t(".category_label"),
                       empty_text: t(".no_categories"),
-                      label: t(".category_label")
+                      label: t(".category_label"),
+                      variant: :badge
                     ) %>
               </div>
             <% end %>

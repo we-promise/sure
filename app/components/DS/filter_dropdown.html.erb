@@ -8,7 +8,7 @@
     </button>
   </div>
 
-  <div class="absolute z-50 mt-1 w-full rounded-lg shadow-lg hidden shadow-border-xs bg-container rounded-lg" data-dropdown-target="menu">
+  <div class="absolute z-50 mt-1.5 w-full rounded-lg shadow-lg hidden shadow-border-xs bg-container rounded-lg" data-dropdown-target="menu">
     <div class="flex flex-col relative" data-controller="list-filter">
       <div class="grow p-1.5">
         <% if searchable %>
@@ -23,7 +23,7 @@
               <%= helpers.icon("search", class: "absolute inset-0 ml-2 transform top-1/2 -translate-y-1/2") %>
           </div>
         <% end %>
-        <div data-list-filter-target="list" class="flex flex-col gap-0.5 p-1.5 mt-0.5 mr-2 max-h-64 overflow-y-scroll scrollbar">
+        <div data-list-filter-target="list" class="flex flex-col gap-0.5 max-h-64 overflow-y-scroll scrollbar">
           <% if items.present? %>
             <% selected_value = value_for(selected) %>
             <% items.each do |item| %>
@@ -31,16 +31,51 @@
               <% label_text = label_for(item) %>
               <% is_selected = value == selected_value %>
 
-              <div class="filterable-item cursor-pointer flex text-sm font-medium items-center gap-2 text-secondary w-full rounded-lg p-3 hover:bg-container-inset-hover <%= "bg-container-inset" if is_selected %>"
-                  data-action="click->dropdown#select"
-                  data-value="<%= value %>"
-                  data-filter-name="<%= label_text %>">
-                  <span class="check-icon <%= "hidden" unless is_selected %>">
+              <% case variant %>
+              <% when :simple %>
+                <div class="filterable-item cursor-pointer flex text-sm font-medium items-center gap-2 text-secondary w-full rounded-lg px-3 py-2 hover:bg-container-inset-hover <%= "bg-container-inset" if is_selected %>"
+                    data-action="click->dropdown#select"
+                    data-value="<%= value %>"
+                    data-filter-name="<%= label_text %>">
+                    <span class="check-icon <%= "hidden" unless is_selected %>">
+                      <%= helpers.icon("check") %>
+                    </span>
+                    <%= label_text %>
+                </div>
+
+              <% when :icon %>
+                <div class="filterable-item cursor-pointer flex text-sm font-medium items-center gap-2 text-secondary w-full rounded-lg p-3 hover:bg-container-inset-hover <%= "bg-container-inset" if is_selected %>"
+                    data-action="click->dropdown#select"
+                    data-value="<%= value %>"
+                    data-filter-name="<%= label_text %>">
+                    <span class="check-icon <%= "hidden" unless is_selected %>">
+                      <%= helpers.icon("check") %>
+                    </span>
+                    <%= label_text %>
+                </div>
+
+              <% when :badge %>
+                <div class="filterable-item cursor-pointer flex items-center gap-2 p-2 rounded-lg hover:bg-container-inset-hover <%= "bg-container-inset" if is_selected %>"
+                    data-action="click->dropdown#select"
+                    data-value="<%= value %>"
+                    data-filter-name="<%= label_text %>">
+                  <span class="check-icon <%= 'hidden' unless is_selected %>">
                     <%= helpers.icon("check") %>
                   </span>
-                  <%= label_text %>
-              </div>
+                  <% hex_color = item.color || "#CCCCCC" %>
+                  <span class="flex items-center gap-1 text-sm font-medium rounded-full px-1.5 py-1 border truncate focus-visible:outline-none focus-visible:ring-0"
+                        style="
+                          background-color: color-mix(in oklab, <%= hex_color %> 10%, transparent);
+                          border-color: color-mix(in oklab, <%= hex_color %> 20%, transparent);
+                          color: <%= hex_color %>;">
+                    <% if item.lucide_icon.present? %>
+                      <%= helpers.icon item.lucide_icon, size: "sm", color: "current" %>
+                    <% end %>
+                    <%= label_text %>
+                  </span>
+                </div>
             <% end %>
+          <% end %>
           <% else %>
             <div class="p-2 text-secondary">
               <%= empty_text %>
