@@ -230,13 +230,7 @@ class ReportsController < ApplicationController
     # (positive outflows), but they're not true expenses — they're transfers to savings.
     # Subtract them so Net Savings and Total Expenses are accurate.
     def savings_in_expense_totals(expense_period_total)
-      savings_ids = Current.family.categories.savings.pluck(:id).to_set
-      return 0 if savings_ids.empty?
-
-      expense_period_total.category_totals
-        .reject { |ct| ct.category.subcategory? }
-        .select { |ct| savings_ids.include?(ct.category.id) }
-        .sum(&:total)
+      Current.family.income_statement.savings_in_expense_totals(expense_period_total)
     end
 
     def parse_date_param(param_name)
@@ -690,6 +684,9 @@ class ReportsController < ApplicationController
 
       transactions = apply_transaction_filters(transactions)
 
+      # Preload savings category IDs
+      savings_ids = Current.family.categories.savings.pluck(:id).to_set
+
       # Group by category, type, and month
       breakdown = {}
       family_currency = Current.family.currency
@@ -700,36 +697,35 @@ class ReportsController < ApplicationController
         is_expense = entry.amount > 0
         type = is_expense ? "expense" : "income"
         category_name = transaction.category&.name || "Uncategorized"
+        category_id = transaction.category_id
         month_key = entry.date.beginning_of_month
+
+        # Classify savings categories separately
+        classification = (is_expense && category_id && savings_ids.include?(category_id)) ? "savings" : type
 
         # Convert to family currency
         converted_amount = Money.new(entry.amount.abs, entry.currency).exchange_to(family_currency, fallback_rate: 1).amount
 
         key = [ category_name, type ]
-        breakdown[key] ||= { category: category_name, type: type, months: {}, total: 0 }
+        breakdown[key] ||= { category: category_name, type: type, classification: classification, months: {}, total: 0 }
         breakdown[key][:months][month_key] ||= 0
         breakdown[key][:months][month_key] += converted_amount
         breakdown[key][:total] += converted_amount
       end
 
       # Convert to array and sort by type and total (descending)
-      result = breakdown.map do |key, data|
-        {
-          category: data[:category],
-          type: data[:type],
-          months: data[:months],
-          total: data[:total]
-        }
-      end
+      result = breakdown.values
 
-      # Separate and sort income and expenses
+      # Separate income, expenses (excluding savings), and savings
       income_data = result.select { |r| r[:type] == "income" }.sort_by { |r| -r[:total] }
-      expense_data = result.select { |r| r[:type] == "expense" }.sort_by { |r| -r[:total] }
+      expense_data = result.select { |r| r[:type] == "expense" && r[:classification] != "savings" }.sort_by { |r| -r[:total] }
+      savings_data = result.select { |r| r[:classification] == "savings" }.sort_by { |r| -r[:total] }
 
       {
         months: months,
         income: income_data,
-        expenses: expense_data
+        expenses: expense_data,
+        savings: savings_data
       }
     end
 
@@ -800,6 +796,33 @@ class ReportsController < ApplicationController
           end
           grand_expenses_total = @export_data[:expenses].sum { |c| c[:total] }
           totals_row << Money.new(grand_expenses_total, Current.family.currency).format
+          csv << totals_row
+        end
+
+        # Savings section
+        if @export_data[:savings]&.any?
+          csv << []
+          csv << [ "SAVINGS" ] + Array.new(month_headers.length + 1, "")
+
+          @export_data[:savings].each do |category_data|
+            row = [ category_data[:category] ]
+
+            @export_data[:months].each do |month|
+              amount = category_data[:months][month] || 0
+              row << Money.new(amount, Current.family.currency).format
+            end
+
+            row << Money.new(category_data[:total], Current.family.currency).format
+            csv << row
+          end
+
+          totals_row = [ "TOTAL SAVINGS" ]
+          @export_data[:months].each do |month|
+            month_total = @export_data[:savings].sum { |c| c[:months][month] || 0 }
+            totals_row << Money.new(month_total, Current.family.currency).format
+          end
+          grand_savings_total = @export_data[:savings].sum { |c| c[:total] }
+          totals_row << Money.new(grand_savings_total, Current.family.currency).format
           csv << totals_row
         end
       end

@@ -272,6 +272,8 @@ class BudgetTest < ActiveSupport::TestCase
     savings_bc = budget.budget_categories.find_by(category: savings_category)
     savings_bc.update!(budgeted_spending: 1000)
 
+    savings_before = budget.actual_savings
+
     Entry.create!(
       account: account,
       entryable: Transaction.create!(category: savings_category),
@@ -284,6 +286,98 @@ class BudgetTest < ActiveSupport::TestCase
     budget = Budget.find(budget.id)
     budget.sync_budget_categories
 
-    assert_equal 300, budget.actual_savings
+    assert_equal 300, budget.actual_savings - savings_before
+  end
+
+  test "savings_percent returns percentage of budgeted savings achieved" do
+    family = families(:dylan_family)
+    budget = Budget.find_or_bootstrap(family, start_date: Date.current.beginning_of_month)
+
+    savings_category = categories(:savings)
+    budget.sync_budget_categories
+
+    savings_bc = budget.budget_categories.find_by(category: savings_category)
+    savings_bc.update!(budgeted_spending: 1000)
+
+    budget.stubs(:actual_savings).returns(500)
+    assert_in_delta 50.0, budget.savings_percent, 0.01
+  end
+
+  test "savings_percent returns 0 when no budgeted savings" do
+    family = families(:dylan_family)
+    budget = Budget.find_or_bootstrap(family, start_date: Date.current.beginning_of_month)
+
+    budget.stubs(:budgeted_savings).returns(0)
+    assert_equal 0, budget.savings_percent
+  end
+
+  test "savings_overage_percent returns percentage when savings exceed budget" do
+    family = families(:dylan_family)
+    budget = Budget.find_or_bootstrap(family, start_date: Date.current.beginning_of_month)
+
+    budget.stubs(:budgeted_savings).returns(500)
+    budget.stubs(:actual_savings).returns(750)
+
+    # overage = 250, overage_pct = 250/750 * 100 = 33.33
+    assert_in_delta 33.33, budget.savings_overage_percent, 0.01
+  end
+
+  test "savings_overage_percent returns 0 when savings under budget" do
+    family = families(:dylan_family)
+    budget = Budget.find_or_bootstrap(family, start_date: Date.current.beginning_of_month)
+
+    budget.stubs(:budgeted_savings).returns(500)
+    budget.stubs(:actual_savings).returns(300)
+
+    assert_equal 0, budget.savings_overage_percent
+  end
+
+  test "savings_remaining returns difference between budgeted and actual savings" do
+    family = families(:dylan_family)
+    budget = Budget.find_or_bootstrap(family, start_date: Date.current.beginning_of_month)
+
+    budget.stubs(:budgeted_savings).returns(1000)
+    budget.stubs(:actual_savings).returns(400)
+
+    assert_equal 600, budget.savings_remaining
+  end
+
+  test "refunds in savings categories do not reduce actual_spending" do
+    family = families(:dylan_family)
+    budget = Budget.find_or_bootstrap(family, start_date: Date.current.beginning_of_month)
+    account = accounts(:depository)
+
+    savings_category = categories(:savings)
+    budget.sync_budget_categories
+
+    # Create a regular expense
+    Entry.create!(
+      account: account,
+      entryable: Transaction.create!(category: categories(:food_and_drink)),
+      date: Date.current,
+      name: "Grocery shopping",
+      amount: 200,
+      currency: "USD"
+    )
+
+    budget = Budget.find(budget.id)
+    budget.sync_budget_categories
+    spending_before = budget.actual_spending
+
+    # Create a refund in savings category (income in savings)
+    Entry.create!(
+      account: account,
+      entryable: Transaction.create!(category: savings_category),
+      date: Date.current,
+      name: "Savings rebate",
+      amount: -100,
+      currency: "USD"
+    )
+
+    budget = Budget.find(budget.id)
+    budget.sync_budget_categories
+
+    # actual_spending should NOT decrease from the savings refund
+    assert_equal spending_before, budget.actual_spending
   end
 end

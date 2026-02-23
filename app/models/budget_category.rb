@@ -17,7 +17,8 @@ class BudgetCategory < ApplicationRecord
   validates :budget_frequency, inclusion: { in: FREQUENCIES.keys }
 
   monetize :budgeted_spending, :available_to_spend, :avg_monthly_expense, :median_monthly_expense,
-           :actual_spending, :monthly_amortized_amount, :annual_actual_spending, :annual_remaining
+           :actual_spending, :monthly_amortized_amount, :annual_actual_spending, :annual_remaining,
+           :annual_amount
 
   class Group
     attr_reader :budget_category, :budget_subcategories

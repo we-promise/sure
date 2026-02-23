@@ -46,7 +46,7 @@
     <%= f.hidden_field :currency, value: goal.currency || Current.family.currency %>
 
     <div class="grid grid-cols-2 gap-4">
-      <%= f.text_field :color, label: t("goals.form.color"), value: goal.color || "#6366f1" %>
+      <%= f.color_field :color, label: t("goals.form.color"), value: goal.color || "#6366f1" %>
       <%= f.number_field :priority, label: t("goals.form.priority"), min: 0, max: 10 %>
     </div>
 
