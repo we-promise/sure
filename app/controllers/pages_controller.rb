@@ -235,18 +235,23 @@ class PagesController < ApplicationController
 
     def build_outflows_donut_data(expense_totals)
       currency_symbol = Money::Currency.new(expense_totals.currency).symbol
-      total = expense_totals.total
+      savings_ids = savings_category_ids
 
-      categories = expense_totals.category_totals
-        .reject { |ct| ct.category.parent_id.present? || ct.total.zero? }
+      filtered_totals = expense_totals.category_totals
+        .reject { |ct| ct.category.parent_id.present? || ct.total.zero? || savings_ids.include?(ct.category.id) }
+
+      total = filtered_totals.sum(&:total)
+
+      categories = filtered_totals
         .sort_by { |ct| -ct.total }
         .map do |ct|
+          percentage = total.zero? ? 0 : (ct.total / total.to_f * 100).round(1)
           {
             id: ct.category.id,
             name: ct.category.name,
             amount: ct.total.to_f.round(2),
             currency: ct.currency,
-            percentage: ct.weight.round(1),
+            percentage: percentage,
             color: ct.category.color.presence || Category::UNCATEGORIZED_COLOR,
             icon: ct.category.lucide_icon,
             clickable: !ct.category.other_investments?

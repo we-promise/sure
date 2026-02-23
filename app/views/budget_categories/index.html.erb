@@ -26,7 +26,7 @@
           <div class="space-y-4 mb-4">
             <% BudgetCategory::Group.for(@budget_categories).sort_by(&:name).each do |group| %>
               <div class="space-y-4">
-                <%= render "budget_categories/budget_category_form", budget_category: group.budget_category %>
+                <%= render "budget_categories/budget_category_form", budget_category: group.budget_category, active_goals: @active_goals %>
 
                 <div class="space-y-4">
                   <% group.budget_subcategories.each do |budget_subcategory| %>
@@ -35,7 +35,7 @@
                         <%= icon("corner-down-right") %>
                       </div>
 
-                      <%= render "budget_categories/budget_category_form", budget_category: budget_subcategory %>
+                      <%= render "budget_categories/budget_category_form", budget_category: budget_subcategory, active_goals: @active_goals %>
                     </div>
                   <% end %>
                 </div>

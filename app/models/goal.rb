@@ -9,6 +9,7 @@ class Goal < ApplicationRecord
   validates :target_amount, presence: true, numericality: { greater_than: 0 }
   validates :goal_type, presence: true, inclusion: { in: ->(_) { GOAL_TYPES.keys } }
   validates :currency, presence: true
+  validates :color, format: { with: /\A#[0-9a-fA-F]{6}\z/, message: :invalid_hex_color }, allow_blank: true
 
   before_validation :normalize_current_amount
 

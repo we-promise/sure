@@ -1,14 +1,16 @@
 <%# locals: (budget:) %>
 
 <div>
-  <% expense_groups = BudgetCategory::Group.for(budget.expense_budget_categories) %>
-  <% savings_groups = BudgetCategory::Group.for(budget.savings_budget_categories) %>
+  <% expense_cats = budget.expense_budget_categories %>
+  <% savings_cats = budget.savings_budget_categories %>
+  <% expense_groups = BudgetCategory::Group.for(expense_cats) %>
+  <% savings_groups = BudgetCategory::Group.for(savings_cats) %>
 
   <%# Spending Categories Section %>
   <div class="flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-secondary uppercase">
     <p><%= t("budgets.categories.spending_header") %></p>
     <span class="text-subdued">&middot;</span>
-    <p><%= budget.expense_budget_categories.count %></p>
+    <p><%= expense_cats.size %></p>
     <p class="ml-auto"><%= t("budgets.categories.amount") %></p>
   </div>
 
@@ -48,7 +50,7 @@
     <div class="flex items-center gap-1.5 px-4 py-2 mt-6 text-xs font-medium text-secondary uppercase">
       <p><%= t("budgets.categories.savings_header") %></p>
       <span class="text-subdued">&middot;</span>
-      <p><%= budget.savings_budget_categories.count %></p>
+      <p><%= savings_cats.size %></p>
       <p class="ml-auto"><%= t("budgets.categories.amount") %></p>
     </div>
 

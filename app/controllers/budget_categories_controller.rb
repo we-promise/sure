@@ -3,6 +3,7 @@ class BudgetCategoriesController < ApplicationController
 
   def index
     @budget_categories = @budget.budget_categories.includes(:category)
+    @active_goals = Current.family.goals.active
     render layout: "wizard"
   end
 

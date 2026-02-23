@@ -192,10 +192,6 @@ class Budget::AnnualPlan
       @ytd_income_totals ||= income_statement.income_totals(period: ytd_period)
     end
 
-    def savings_category_ids
-      @savings_category_ids ||= family.categories.savings.pluck(:id).to_set
-    end
-
     def period_expense_totals_by_category
       @period_expense_totals_by_category ||= begin
         return {} unless period
@@ -208,14 +204,7 @@ class Budget::AnnualPlan
     end
 
     def savings_in_expense_totals
-      @savings_in_expense_totals ||= begin
-        return 0 if savings_category_ids.empty?
-
-        ytd_expense_totals.category_totals
-          .reject { |ct| ct.category.subcategory? }
-          .select { |ct| savings_category_ids.include?(ct.category.id) }
-          .sum(&:total)
-      end
+      @savings_in_expense_totals ||= income_statement.savings_in_expense_totals(ytd_expense_totals)
     end
 
     # Inner class wrapping a budget_category with annual computed values

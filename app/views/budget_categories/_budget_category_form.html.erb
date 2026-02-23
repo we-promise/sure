@@ -1,4 +1,4 @@
-<%# locals: (budget_category:) %>
+<%# locals: (budget_category:, active_goals: nil) %>
 
 <% currency = Money::Currency.new(budget_category.budget.currency) %>
 
@@ -55,12 +55,12 @@
 
         <% if budget_category.non_monthly? && budget_category.annual_amount && budget_category.annual_amount > 0 %>
           <p class="text-xs text-subdued mt-1" data-budget-category-form-target="monthlyNote">
-            <%= format_money(budget_category.monthly_amortized_amount_money) %>/<%= t("budgets.frequencies.monthly").downcase %> &middot; <%= format_money(budget_category.annual_amount) %>/<%= t("budgets.frequencies.year") %>
+            <%= format_money(budget_category.monthly_amortized_amount_money) %>/<%= t("budgets.frequencies.monthly").downcase %> &middot; <%= format_money(budget_category.annual_amount_money) %>/<%= t("budgets.frequencies.year") %>
           </p>
         <% end %>
 
         <% if budget_category.savings? %>
-          <% goals = budget_category.budget.family.goals.active %>
+          <% goals = active_goals || budget_category.budget.family.goals.active %>
           <% if goals.any? %>
             <div class="mt-1">
               <%= f.select :goal_id,

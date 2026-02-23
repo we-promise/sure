@@ -56,6 +56,19 @@ class IncomeStatement
     family_stats(interval: interval).find { |stat| stat.classification == "income" }&.median || 0
   end
 
+  # Calculates the total of savings-classified categories that appear within
+  # expense totals. These are outflows to savings categories that the income
+  # statement reports as "expenses" but should be treated as savings.
+  def savings_in_expense_totals(expense_period_total)
+    ids = savings_category_ids
+    return 0 if ids.empty?
+
+    expense_period_total.category_totals
+      .reject { |ct| ct.category.subcategory? }
+      .select { |ct| ids.include?(ct.category.id) }
+      .sum(&:total)
+  end
+
   private
     ScopeTotals = Data.define(:transactions_count, :income_money, :expense_money)
     PeriodTotal = Data.define(:classification, :total, :currency, :category_totals)
@@ -132,6 +145,10 @@ class IncomeStatement
       Rails.cache.fetch([
         "income_statement", "totals_query", "v2", family.id, sql_hash, family.entries_cache_version
       ]) { Totals.new(family, transactions_scope: transactions_scope, date_range: date_range).call }
+    end
+
+    def savings_category_ids
+      @savings_category_ids ||= family.categories.savings.pluck(:id).to_set
     end
 
     def monetizable_currency

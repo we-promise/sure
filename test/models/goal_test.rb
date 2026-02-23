@@ -24,6 +24,26 @@ class GoalTest < ActiveSupport::TestCase
     assert goal.errors[:goal_type].any?
   end
 
+  test "validates color is a valid hex code" do
+    goal = Goal.new(family: @family, name: "Test", target_amount: 1000, currency: "USD", goal_type: "custom")
+
+    goal.color = "#ff0000"
+    goal.valid?
+    assert_empty goal.errors[:color]
+
+    goal.color = "not-a-color"
+    refute goal.valid?
+    assert goal.errors[:color].any?
+
+    goal.color = "#ff00"
+    refute goal.valid?
+    assert goal.errors[:color].any?
+
+    goal.color = nil
+    goal.valid?
+    assert_empty goal.errors[:color]
+  end
+
   test "progress_percent computes correctly" do
     assert_equal 30.0, @goal.progress_percent
   end
