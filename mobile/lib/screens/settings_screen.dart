@@ -157,12 +157,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
       if (!context.mounted) return;
 
       if (result['success'] == true) {
+        await OfflineStorageService().clearAllData();
+
+        if (!context.mounted) return;
+
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Account reset has been initiated. This may take a moment.'),
             backgroundColor: Colors.green,
           ),
         );
+
+        await authProvider.logout();
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
