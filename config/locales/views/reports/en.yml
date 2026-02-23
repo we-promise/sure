@@ -165,6 +165,7 @@ en:
       remaining: "Remaining"
       savings_rate: "Savings Rate"
       savings_rate_description: "Percentage of income saved this year"
+      savings: "Savings"
       no_data: "No budget data available"
     investment_flows:
       title: Investment Flows

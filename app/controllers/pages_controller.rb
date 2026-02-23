@@ -163,6 +163,10 @@ class PagesController < ApplicationController
       Provider::Registry.get_provider(:github)
     end
 
+    def savings_category_ids
+      @savings_category_ids ||= Current.family.categories.savings.pluck(:id).to_set
+    end
+
     def build_cashflow_sankey_data(income_totals, expense_totals, currency)
       nodes = []
       links = []
@@ -175,8 +179,14 @@ class PagesController < ApplicationController
         end
       }
 
+      # Separate savings from expenses
+      savings_ids = savings_category_ids
+      expense_category_totals = expense_totals.category_totals.reject { |ct| savings_ids.include?(ct.category.id) || (ct.category.parent_id.present? && savings_ids.include?(ct.category.parent_id)) }
+      savings_category_totals = expense_totals.category_totals.select { |ct| savings_ids.include?(ct.category.id) || (ct.category.parent_id.present? && savings_ids.include?(ct.category.parent_id)) }
+
       total_income = income_totals.total.to_f.round(2)
-      total_expense = expense_totals.total.to_f.round(2)
+      total_expense = expense_category_totals.reject { |ct| ct.category.parent_id.present? }.sum { |ct| ct.total.to_f }.round(2)
+      total_savings = savings_category_totals.reject { |ct| ct.category.parent_id.present? }.sum { |ct| ct.total.to_f }.round(2)
 
       # Central Cash Flow node
       cash_flow_idx = add_node.call("cash_flow_node", "Cash Flow", total_income, 100.0, "var(--color-success)")
@@ -193,9 +203,9 @@ class PagesController < ApplicationController
         flow_direction: :inbound
       )
 
-      # Process expense categories (flow: cash_flow -> parent -> subcategory)
+      # Process expense categories excluding savings (flow: cash_flow -> parent -> subcategory)
       process_category_totals(
-        category_totals: expense_totals.category_totals,
+        category_totals: expense_category_totals,
         total: total_expense,
         prefix: "expense",
         default_color: Category::UNCATEGORIZED_COLOR,
@@ -205,8 +215,15 @@ class PagesController < ApplicationController
         flow_direction: :outbound
       )
 
-      # Surplus/Deficit
-      net = (total_income - total_expense).round(2)
+      # Savings as its own outbound flow (separate from expenses)
+      if total_savings.positive?
+        percentage = total_income.zero? ? 0 : (total_savings / total_income * 100).round(1)
+        savings_idx = add_node.call("savings_node", "Savings", total_savings, percentage, "var(--color-success)")
+        links << { source: cash_flow_idx, target: savings_idx, value: total_savings, color: "var(--color-success)", percentage: percentage }
+      end
+
+      # Surplus/Deficit (after both expenses and savings)
+      net = (total_income - total_expense - total_savings).round(2)
       if net.positive?
         percentage = total_income.zero? ? 0 : (net / total_income * 100).round(1)
         idx = add_node.call("surplus_node", "Surplus", net, percentage, "var(--color-success)")
@@ -217,19 +234,26 @@ class PagesController < ApplicationController
     end
 
     def build_outflows_donut_data(expense_totals)
+      savings_ids = savings_category_ids
       currency_symbol = Money::Currency.new(expense_totals.currency).symbol
-      total = expense_totals.total
 
-      categories = expense_totals.category_totals
+      # Exclude savings categories from outflows donut — they're not spending
+      filtered_totals = expense_totals.category_totals
+        .reject { |ct| savings_ids.include?(ct.category.id) || (ct.category.parent_id.present? && savings_ids.include?(ct.category.parent_id)) }
+
+      total = filtered_totals.reject { |ct| ct.category.parent_id.present? }.sum(&:total)
+
+      categories = filtered_totals
         .reject { |ct| ct.category.parent_id.present? || ct.total.zero? }
         .sort_by { |ct| -ct.total }
         .map do |ct|
+          percentage = total.zero? ? 0 : (ct.total / total * 100)
           {
             id: ct.category.id,
             name: ct.category.name,
             amount: ct.total.to_f.round(2),
             currency: ct.currency,
-            percentage: ct.weight.round(1),
+            percentage: percentage.round(1),
             color: ct.category.color.presence || Category::UNCATEGORIZED_COLOR,
             icon: ct.category.lucide_icon,
             clickable: !ct.category.other_investments?
