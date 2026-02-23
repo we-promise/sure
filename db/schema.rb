@@ -507,6 +507,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_02_22_220000) do
     t.integer "month_start_day", default: 1, null: false
     t.string "vector_store_id"
     t.string "moniker", default: "Family", null: false
+    t.string "assistant_type", default: "builtin", null: false
     t.check_constraint "month_start_day >= 1 AND month_start_day <= 28", name: "month_start_day_range"
   end
 

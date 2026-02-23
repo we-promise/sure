@@ -1,3 +1,4 @@
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/user.dart';
@@ -57,9 +58,20 @@ class AuthProvider with ChangeNotifier {
         _tokens = await _authService.getStoredTokens();
         _user = await _authService.getStoredUser();
 
-        // If tokens exist but are expired, try to refresh
+        // If tokens exist but are expired, try to refresh only when online
         if (_tokens != null && _tokens!.isExpired) {
-          await _refreshToken();
+          final results = await Connectivity().checkConnectivity();
+          final isOnline = results.any((r) =>
+              r == ConnectivityResult.mobile ||
+              r == ConnectivityResult.wifi ||
+              r == ConnectivityResult.ethernet ||
+              r == ConnectivityResult.vpn ||
+              r == ConnectivityResult.bluetooth);
+          if (isOnline) {
+            await _refreshToken();
+          } else {
+            await logout();
+          }
         }
       }
     } catch (e) {
