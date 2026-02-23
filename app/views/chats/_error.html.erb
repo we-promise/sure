@@ -1,5 +1,20 @@
 <%# locals: (chat:) %>
 
+<%
+  # Try to extract a meaningful error message
+  error_message = nil
+  begin
+    if chat.error.present?
+      parsed = JSON.parse(chat.error) rescue nil
+      if parsed.is_a?(Hash) && parsed["message"].present?
+        error_message = parsed["message"]
+      end
+    end
+  rescue
+    # Fall back to generic message
+  end
+%>
+
 <div id="chat-error" class="px-3 py-2 bg-red-100 border border-red-500 rounded-lg">
   <% if chat.debug_mode? %>
     <div class="overflow-x-auto text-xs p-4 bg-red-200 rounded-md mb-2">
@@ -7,8 +22,12 @@
     </div>
   <% end %>
 
-  <div class="flex items-center justify-between gap-2">
-    <p class="text-xs text-red-500">Failed to generate response.  Please try again.</p>
+  <div class="flex flex-col gap-2">
+    <% if error_message.present? %>
+      <p class="text-xs text-red-500"><%= error_message %></p>
+    <% else %>
+      <p class="text-xs text-red-500">Failed to generate response. Please try again.</p>
+    <% end %>
 
     <%= render DS::Button.new(
       text: "Retry",
