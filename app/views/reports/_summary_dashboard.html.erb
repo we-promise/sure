@@ -1,4 +1,4 @@
-<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
   <%# Total Income Card %>
   <div class="bg-container rounded-xl shadow-border-xs p-6">
     <div class="flex items-start justify-between mb-3">
@@ -73,24 +73,46 @@
     </div>
   </div>
 
-  <%# Net Savings Card %>
+  <%# Savings Card %>
   <div class="bg-container rounded-xl shadow-border-xs p-6">
     <div class="flex items-start justify-between mb-3">
       <div class="flex items-center gap-2">
         <%= icon("piggy-bank", class: "w-5 h-5") %>
         <h3 class="text-sm font-medium text-secondary">
-          <%= t("reports.summary.net_savings") %>
+          <%= t("reports.summary.savings") %>
         </h3>
       </div>
     </div>
 
     <div class="space-y-2">
-      <p class="text-2xl font-semibold <%= metrics[:net_savings] >= 0 ? "text-success" : "text-destructive" %>">
-        <%= metrics[:net_savings].format %>
+      <p class="text-2xl font-semibold text-success">
+        <%= metrics[:current_savings].format %>
       </p>
 
       <p class="text-sm text-subdued">
-        <%= t("reports.summary.income_minus_expenses") %>
+        <%= t("reports.summary.saved_this_period") %>
+      </p>
+    </div>
+  </div>
+
+  <%# Net Card %>
+  <div class="bg-container rounded-xl shadow-border-xs p-6">
+    <div class="flex items-start justify-between mb-3">
+      <div class="flex items-center gap-2">
+        <%= icon("scale", class: "w-5 h-5") %>
+        <h3 class="text-sm font-medium text-secondary">
+          <%= t("reports.summary.net") %>
+        </h3>
+      </div>
+    </div>
+
+    <div class="space-y-2">
+      <p class="text-2xl font-semibold <%= metrics[:net] >= 0 ? "text-success" : "text-destructive" %>">
+        <%= metrics[:net].format %>
+      </p>
+
+      <p class="text-sm text-subdued">
+        <%= t("reports.summary.after_expenses_and_savings") %>
       </p>
     </div>
   </div>

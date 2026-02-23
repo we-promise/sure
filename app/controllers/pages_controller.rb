@@ -234,26 +234,19 @@ class PagesController < ApplicationController
     end
 
     def build_outflows_donut_data(expense_totals)
-      savings_ids = savings_category_ids
       currency_symbol = Money::Currency.new(expense_totals.currency).symbol
+      total = expense_totals.total
 
-      # Exclude savings categories from outflows donut — they're not spending
-      filtered_totals = expense_totals.category_totals
-        .reject { |ct| savings_ids.include?(ct.category.id) || (ct.category.parent_id.present? && savings_ids.include?(ct.category.parent_id)) }
-
-      total = filtered_totals.reject { |ct| ct.category.parent_id.present? }.sum(&:total)
-
-      categories = filtered_totals
+      categories = expense_totals.category_totals
         .reject { |ct| ct.category.parent_id.present? || ct.total.zero? }
         .sort_by { |ct| -ct.total }
         .map do |ct|
-          percentage = total.zero? ? 0 : (ct.total / total * 100)
           {
             id: ct.category.id,
             name: ct.category.name,
             amount: ct.total.to_f.round(2),
             currency: ct.currency,
-            percentage: percentage.round(1),
+            percentage: ct.weight.round(1),
             color: ct.category.color.presence || Category::UNCATEGORIZED_COLOR,
             icon: ct.category.lucide_icon,
             clickable: !ct.category.other_investments?
