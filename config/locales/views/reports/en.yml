@@ -56,6 +56,7 @@ en:
       expenses: Expenses
       net: Net
       savings_rate: Savings Rate
+      net_rate: Net %
       current: current
       avg_monthly_income: Avg. Monthly Income
       avg_monthly_expenses: Avg. Monthly Expenses
@@ -201,10 +202,12 @@ en:
         title: Summary
         income: Income
         expenses: Expenses
-        net_savings: Net Savings
+        savings: Savings
+        saved_this_period: Saved this period
+        net: Net
+        after_expenses_and_savings: After expenses & savings
         budget: Budget
         vs_prior: "%{percent}% vs prior"
-        of_income: "%{percent}% of income"
         used: used
       # Net Worth section
       net_worth:
