@@ -29,43 +29,55 @@ module DS
 
       raise ArgumentError, "Invalid variant: #{@variant}" unless VARIANTS.include?(@variant)
 
-      normalized_items = normalize_items(items)
+      @items = normalize_items(items)
 
       if include_blank
-        normalized_items.unshift({
+        @items.unshift({
           value: nil,
           label: include_blank,
           object: nil
         })
       end
 
-      @items = normalized_items
-      @selected_value = selected
+      @selected_value = normalize_selected(selected)
     end
 
     def selected_item
-      items.find { |item| item[:value] == selected_value }
+      items_by_value[selected_value]
     end
 
     private
 
-    def normalize_items(collection)
-      collection.map do |item|
-        case item
-        when Hash
-          {
-            value: item[:value] || item[value_method],
-            label: item[:label] || item[label_method],
-            object: item[:object]
-          }
-        else
-          {
-            value: item.public_send(value_method),
-            label: item.public_send(label_method),
-            object: item
-          }
+      def normalize_items(collection)
+        collection.map do |item|
+          case item
+          when Hash
+            {
+              value: item.key?(:value) ? item[:value] : item[value_method],
+              label: item.key?(:label) ? item[:label] : item[label_method],
+              object: item[:object]
+            }
+          else
+            {
+              value: item.public_send(value_method),
+              label: item.public_send(label_method),
+              object: item
+            }
+          end
         end
       end
-    end
+
+      def items_by_value
+        @items_by_value ||= @items.index_by { |item| item[:value] }
+      end
+
+      def normalize_selected(selected)
+        case selected
+        when Hash
+          selected[:value]
+        else
+          selected.respond_to?(value_method) ? selected.public_send(value_method) : selected
+        end
+      end
   end
 end

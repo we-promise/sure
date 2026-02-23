@@ -1,11 +1,10 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
-  static targets = ["button", "menu"]
-  static values = { open: Boolean }
+  static targets = ["button", "menu", "input"]
 
   connect() {
-    this.open = false
+    this.isOpen = false
     this.boundOutsideClick = this.handleOutsideClick.bind(this)
     this.boundKeydown = this.handleKeydown.bind(this)
 
@@ -19,19 +18,18 @@ export default class extends Controller {
   }
 
   toggle = () => {
-    this.open ? this.close() : this.openMenu()
+    this.isOpen ? this.close() : this.openMenu()
   }
 
   openMenu() {
-    this.open = true
+    this.isOpen = true
     this.menuTarget.classList.remove("hidden")
-
     this.scrollToSelected()
     this.focusSearch()
   }
 
   close() {
-    this.open = false
+    this.isOpen = false
     this.menuTarget.classList.add("hidden")
   }
 
@@ -41,21 +39,16 @@ export default class extends Controller {
     const label = selectedElement.dataset.filterName || selectedElement.textContent.trim()
 
     this.buttonTarget.textContent = label
+    if (this.hasInputTarget) this.inputTarget.value = value
 
-    const input = this.element.querySelector('input[type="hidden"]')
-    if (input) input.value = value
-
-    this.menuTarget
-      .querySelectorAll(".filterable-item")
-      .forEach(el => {
-        el.classList.remove("bg-container-inset")
-
-        const icon = el.querySelector(".check-icon")
-        if (icon) icon.classList.add("hidden")
-      })
+    const previousSelected = this.menuTarget.querySelector(".bg-container-inset")
+    if (previousSelected) {
+      previousSelected.classList.remove("bg-container-inset")
+      const prevIcon = previousSelected.querySelector(".check-icon")
+      if (prevIcon) prevIcon.classList.add("hidden")
+    }
 
     selectedElement.classList.add("bg-container-inset")
-
     const selectedIcon = selectedElement.querySelector(".check-icon")
     if (selectedIcon) selectedIcon.classList.remove("hidden")
 
@@ -76,26 +69,22 @@ export default class extends Controller {
 
   scrollToSelected() {
     const selected = this.menuTarget.querySelector(".bg-container-inset")
-    const container = this.menuTarget.querySelector('[data-list-filter-target="list"]')
-
-    if (selected && container) {
-      const offset =
-        selected.offsetTop -
-        container.clientHeight / 2 +
-        selected.clientHeight / 2
-
-      container.scrollTop = offset
+    if (selected) {
+      selected.scrollIntoView({
+        block: "center",
+        behavior: "instant"
+      })
     }
   }
 
   handleOutsideClick(event) {
-    if (this.open && !this.element.contains(event.target)) {
+    if (this.isOpen && !this.element.contains(event.target)) {
       this.close()
     }
   }
 
   handleKeydown(event) {
-    if (!this.open) return
+    if (!this.isOpen) return
 
     if (event.key === "Escape") {
       this.close()
