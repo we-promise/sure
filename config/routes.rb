@@ -394,6 +394,9 @@ Rails.application.routes.draw do
         end
       end
 
+      delete "users/reset", to: "users#reset"
+      delete "users/me", to: "users#destroy"
+
       # Test routes for API controller testing (only available in test environment)
       if Rails.env.test?
         get "test", to: "test#index"
@@ -468,6 +471,9 @@ Rails.application.routes.draw do
   end
 
   get "redis-configuration-error", to: "pages#redis_configuration_error"
+
+  # MCP server endpoint for external AI assistants (JSON-RPC 2.0)
+  post "mcp", to: "mcp#handle"
 
   # Reveal health status on /up that returns 200 if the app boots with no exceptions, otherwise 500.
   # Can be used by load balancers and uptime monitors to verify that the app is live.

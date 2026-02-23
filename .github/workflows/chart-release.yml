@@ -28,32 +28,22 @@ jobs:
         run: |
           set -euo pipefail
 
+          # Read the canonical version from the Rails app (single source of truth)
+          APP_SEMVER=$(grep -oP '"\K[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?' config/initializers/version.rb | head -n 1 || true)
+          if [ -z "$APP_SEMVER" ]; then
+            echo "::error::Could not extract version from config/initializers/version.rb"
+            exit 1
+          fi
+          echo "App version from version.rb: $APP_SEMVER"
+
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            BASE_STABLE_TAG="$(git tag --list 'v*' --sort=-v:refname | { grep -Ev 'alpha|beta|rc' || true; } | head -n 1)"
-            if [ -z "$BASE_STABLE_TAG" ]; then
-              echo "::error::No stable app tag found for chart appVersion"
+            # Use the app version as the chart version (monorepo: versions stay in sync)
+            TAG_NAME="chart-v${APP_SEMVER}"
+
+            if git rev-parse "refs/tags/${TAG_NAME}" >/dev/null 2>&1; then
+              echo "::error::Tag ${TAG_NAME} already exists. Bump the version in config/initializers/version.rb and charts/sure/Chart.yaml first."
               exit 1
             fi
-
-            LATEST_CHART_TAG="$(git tag --list 'chart-v*' --sort=-v:refname | head -n 1)"
-            if [ -n "$LATEST_CHART_TAG" ]; then
-              BASE_CHART_VERSION="${LATEST_CHART_TAG#chart-v}"
-            else
-              BASE_CHART_VERSION="$(sed -n 's/^version: //p' charts/sure/Chart.yaml | head -n 1)"
-              BASE_CHART_VERSION="${BASE_CHART_VERSION:-0.0.0}"
-            fi
-            MAJOR="$(echo "$BASE_CHART_VERSION" | cut -d. -f1)"
-            MINOR="$(echo "$BASE_CHART_VERSION" | cut -d. -f2)"
-            PATCH="$(echo "$BASE_CHART_VERSION" | cut -d. -f3 | sed 's/[^0-9].*$//')"
-            PATCH="${PATCH:-0}"
-
-            NEXT_PATCH=$((PATCH + 1))
-            TAG_NAME="chart-v${MAJOR}.${MINOR}.${NEXT_PATCH}"
-            while git rev-parse "refs/tags/${TAG_NAME}" >/dev/null 2>&1; do
-              NEXT_PATCH=$((NEXT_PATCH + 1))
-              TAG_NAME="chart-v${MAJOR}.${MINOR}.${NEXT_PATCH}"
-            done
-            CHART_VERSION="${MAJOR}.${MINOR}.${NEXT_PATCH}"
 
             git config user.name "${GITHUB_ACTOR}"
             git config user.email "${GITHUB_ACTOR}@users.noreply.github.com"
@@ -67,20 +57,13 @@ jobs:
             fi
           else
             TAG_NAME="${GITHUB_REF_NAME}"
-            BASE_STABLE_TAG="$(git tag --list 'v*' --sort=-v:refname | grep -Ev 'alpha|beta|rc' | head -n 1 || true)"
           fi
 
           CHART_VERSION="${TAG_NAME#chart-v}"
 
-          if [ -z "${BASE_STABLE_TAG:-}" ]; then
-            echo "::warning::No stable app tag found; falling back to CHART_VERSION (${CHART_VERSION}) for appVersion"
-          fi
-
-          APP_VERSION="${BASE_STABLE_TAG:-${CHART_VERSION}}"
-
           echo "tag_name=$TAG_NAME" >> "$GITHUB_OUTPUT"
           echo "chart_version=$CHART_VERSION" >> "$GITHUB_OUTPUT"
-          echo "app_version=$APP_VERSION" >> "$GITHUB_OUTPUT"
+          echo "app_version=$APP_SEMVER" >> "$GITHUB_OUTPUT"
 
   publish_chart:
     needs: prepare_release
