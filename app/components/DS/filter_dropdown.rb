@@ -29,55 +29,54 @@ module DS
 
       raise ArgumentError, "Invalid variant: #{@variant}" unless VARIANTS.include?(@variant)
 
-      @items = normalize_items(items)
+      normalized_items = normalize_items(items)
+      normalized_items.unshift({ value: nil, label: include_blank, object: nil }) if include_blank
 
-      if include_blank
-        @items.unshift({
-          value: nil,
-          label: include_blank,
-          object: nil
-        })
-      end
-
-      @selected_value = normalize_selected(selected)
+      @items = normalized_items
+      @selected_value = selected
     end
 
     def selected_item
-      items_by_value[selected_value]
+      items.find { |item| item[:value] == selected_value }
+    end
+
+    # Returns the color for a given item (used in :badge variant)
+    def color_for(item)
+      obj = item[:object]
+      obj&.respond_to?(:color) ? obj.color : DEFAULT_COLOR
+    end
+
+    # Returns the lucide_icon name for a given item (used in :badge variant)
+    def icon_for(item)
+      obj = item[:object]
+      obj&.respond_to?(:lucide_icon) ? obj.lucide_icon : nil
+    end
+
+    # Returns true if the item has a logo (used in :icon variant)
+    def logo_for(item)
+      obj = item[:object]
+      obj&.respond_to?(:logo_url) && obj.logo_url.present? ? Setting.transform_brand_fetch_url(obj.logo_url) : nil
     end
 
     private
 
-      def normalize_items(collection)
-        collection.map do |item|
-          case item
-          when Hash
-            {
-              value: item.key?(:value) ? item[:value] : item[value_method],
-              label: item.key?(:label) ? item[:label] : item[label_method],
-              object: item[:object]
-            }
-          else
-            {
-              value: item.public_send(value_method),
-              label: item.public_send(label_method),
-              object: item
-            }
-          end
-        end
-      end
-
-      def items_by_value
-        @items_by_value ||= @items.index_by { |item| item[:value] }
-      end
-
-      def normalize_selected(selected)
-        case selected
+    def normalize_items(collection)
+      collection.map do |item|
+        case item
         when Hash
-          selected[:value]
+          {
+            value: item[:value] || item[value_method],
+            label: item[:label] || item[label_method],
+            object: item[:object]
+          }
         else
-          selected.respond_to?(value_method) ? selected.public_send(value_method) : selected
+          {
+            value: item.public_send(value_method),
+            label: item.public_send(label_method),
+            object: item
+          }
         end
       end
+    end
   end
 end
