@@ -1,0 +1,85 @@
+name: Chart CI
+
+on:
+  pull_request:
+    paths:
+      - 'charts/**'
+      - 'config/initializers/version.rb'
+      - '.github/workflows/chart-ci.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'charts/**'
+      - 'config/initializers/version.rb'
+      - '.github/workflows/chart-ci.yml'
+
+jobs:
+  version-sync:
+    name: Verify Helm ↔ Rails version sync
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check version alignment
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          RAILS_VERSION=$(grep -oP '"\K[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?' config/initializers/version.rb | head -n 1 || true)
+          if [ -z "$RAILS_VERSION" ]; then
+            echo "::error::Could not extract a version string from config/initializers/version.rb — ensure it contains a quoted semver like VERSION = \"1.2.3\""
+            exit 1
+          fi
+          CHART_VERSION=$(sed -n 's/^version: //p' charts/sure/Chart.yaml | head -n 1)
+          APP_VERSION=$(sed -n 's/^appVersion: "\{0,1\}\([^"]*\)"\{0,1\}/\1/p' charts/sure/Chart.yaml | head -n 1)
+
+          echo "Rails version (version.rb):     $RAILS_VERSION"
+          echo "Helm chart version (Chart.yaml): $CHART_VERSION"
+          echo "Helm appVersion (Chart.yaml):    $APP_VERSION"
+
+          ERRORS=0
+
+          if [ "$RAILS_VERSION" != "$CHART_VERSION" ]; then
+            echo "::error::Chart version ($CHART_VERSION) does not match Rails version ($RAILS_VERSION)"
+            ERRORS=$((ERRORS + 1))
+          fi
+
+          if [ "$RAILS_VERSION" != "$APP_VERSION" ]; then
+            echo "::error::Chart appVersion ($APP_VERSION) does not match Rails version ($RAILS_VERSION)"
+            ERRORS=$((ERRORS + 1))
+          fi
+
+          if [ "$ERRORS" -gt 0 ]; then
+            echo ""
+            echo "To fix: ensure version in config/initializers/version.rb matches"
+            echo "both 'version' and 'appVersion' in charts/sure/Chart.yaml"
+            exit 1
+          fi
+
+          echo "All versions are in sync."
+
+  helm-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4.3.1
+
+      - name: Add chart dependencies repositories
+        run: |
+          helm repo add cloudnative-pg https://cloudnative-pg.github.io/charts
+          helm repo add ot-helm https://ot-container-kit.github.io/helm-charts
+          helm repo update
+
+      - name: Build chart dependencies
+        run: helm dependency build charts/sure
+
+      - name: Lint chart
+        run: helm lint charts/sure
+
+      - name: Render templates
+        run: helm template sure charts/sure --kube-version 1.25.0 >/tmp/sure-chart-rendered.yaml

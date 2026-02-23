@@ -231,7 +231,7 @@ jobs:
           if-no-files-found: error
 
       - name: Cleanup signing keychain
-        if: always() && ${{ steps.check_prereqs.outputs.enabled == 'true' }}
+        if: ${{ always() && steps.check_prereqs.outputs.enabled == 'true' }}
         run: |
           set -euo pipefail
           KEYCHAIN_PATH="${{ steps.signing.outputs.keychain-path }}"

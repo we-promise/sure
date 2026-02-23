@@ -245,4 +245,137 @@ class LunchflowEntry::ProcessorTest < ActiveSupport::TestCase
     entries_after = @account.entries.where(source: "lunchflow").count
     assert_equal entries_before, entries_after, "Should not create duplicate when user has edited pending transaction"
   end
+
+  test "skips creating pending entry when posted version already exists" do
+    # First sync: posted transaction arrives with real ID
+    posted_transaction_data = {
+      id: "lf_txn_real_123",
+      accountId: 456,
+      amount: -75.50,
+      currency: "USD",
+      date: "2025-01-20",
+      merchant: "Coffee Shop",
+      description: "Morning coffee",
+      isPending: false
+    }
+
+    result1 = LunchflowEntry::Processor.new(
+      posted_transaction_data,
+      lunchflow_account: @lunchflow_account
+    ).process
+
+    assert_not_nil result1
+    assert_equal "lunchflow_lf_txn_real_123", result1.external_id
+    assert_not result1.entryable.pending?
+
+    entries_before = @account.entries.where(source: "lunchflow").count
+
+    # Second sync: pending version arrives later (without ID, so would create temp ID)
+    # This should skip creation since posted version exists
+    pending_transaction_data = {
+      id: "", # No ID = would generate lunchflow_pending_xxx
+      accountId: 456,
+      amount: -75.50,
+      currency: "USD",
+      date: "2025-01-20", # Same date
+      merchant: "Coffee Shop",
+      description: "Morning coffee",
+      isPending: true
+    }
+
+    result2 = LunchflowEntry::Processor.new(
+      pending_transaction_data,
+      lunchflow_account: @lunchflow_account
+    ).process
+
+    # Should return the existing posted entry, not create a duplicate
+    assert_not_nil result2
+    assert_equal result1.id, result2.id, "Should return existing posted entry"
+    assert_equal "lunchflow_lf_txn_real_123", result2.external_id, "Should keep posted external_id"
+
+    # Verify no duplicate was created
+    entries_after = @account.entries.where(source: "lunchflow").count
+    assert_equal entries_before, entries_after, "Should not create duplicate pending entry"
+  end
+
+  test "skips creating pending entry when posted version exists with nearby date" do
+    # Posted transaction on Jan 20
+    posted_transaction_data = {
+      id: "lf_txn_456",
+      accountId: 456,
+      amount: -55.33,
+      currency: "USD",
+      date: "2025-01-20",
+      merchant: "MORRISONS",
+      description: "Groceries",
+      isPending: false
+    }
+
+    result1 = LunchflowEntry::Processor.new(
+      posted_transaction_data,
+      lunchflow_account: @lunchflow_account
+    ).process
+
+    assert_not_nil result1
+
+    # Pending transaction on Jan 19 (1 day earlier, within 8-day forward window)
+    pending_transaction_data = {
+      id: "",
+      accountId: 456,
+      amount: -55.33,
+      currency: "USD",
+      date: "2025-01-19",
+      merchant: "MORRISONS",
+      description: "Groceries",
+      isPending: true
+    }
+
+    result2 = LunchflowEntry::Processor.new(
+      pending_transaction_data,
+      lunchflow_account: @lunchflow_account
+    ).process
+
+    # Should return existing posted entry (posted date is within pending date + 8 days)
+    assert_equal result1.id, result2.id, "Should match posted entry with nearby date"
+  end
+
+  test "creates pending entry when merchant name doesn't match" do
+    # Posted transaction at Coffee Shop
+    posted_transaction_data = {
+      id: "lf_txn_coffee",
+      accountId: 456,
+      amount: -5.00,
+      currency: "USD",
+      date: "2025-01-20",
+      merchant: "Coffee Shop",
+      description: "Latte",
+      isPending: false
+    }
+
+    LunchflowEntry::Processor.new(
+      posted_transaction_data,
+      lunchflow_account: @lunchflow_account
+    ).process
+
+    # Pending transaction at different merchant but same amount and date
+    pending_transaction_data = {
+      id: "",
+      accountId: 456,
+      amount: -5.00, # Same amount
+      currency: "USD",
+      date: "2025-01-20",
+      merchant: "Tea House", # Different merchant
+      description: "Tea",
+      isPending: true
+    }
+
+    result = LunchflowEntry::Processor.new(
+      pending_transaction_data,
+      lunchflow_account: @lunchflow_account
+    ).process
+
+    assert_not_nil result
+    assert result.entryable.pending?, "Should create new pending entry when merchant doesn't match"
+    assert result.external_id.start_with?("lunchflow_pending_"), "Should have temporary ID"
+  end
 end

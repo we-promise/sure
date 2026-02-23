@@ -15,6 +15,7 @@ module EnableBankingItems
       @enable_banking_unlinked_count_map ||= {}
       @enable_banking_duplicate_only_map ||= {}
       @enable_banking_show_relink_map ||= {}
+      @enable_banking_latest_sync_error_map ||= {}
 
       # Batch-check if ANY family has manual accounts (same result for all items from same family)
       family_ids = items.map { |i| i.family_id }.uniq
@@ -42,6 +43,7 @@ module EnableBankingItems
         end
         stats = (latest_sync&.sync_stats || {})
         @enable_banking_sync_stats_map[item.id] = stats
+        @enable_banking_latest_sync_error_map[item.id] = latest_sync&.error
 
         # Whether the family has any manual accounts available to link (from batch query)
         @enable_banking_has_unlinked_map[item.id] = families_with_manuals.include?(item.family_id)
@@ -68,13 +70,6 @@ module EnableBankingItems
           @enable_banking_show_relink_map[item.id] = false
         end
       end
-
-      # Ensure maps are hashes even when items empty
-      @enable_banking_sync_stats_map ||= {}
-      @enable_banking_has_unlinked_map ||= {}
-      @enable_banking_unlinked_count_map ||= {}
-      @enable_banking_duplicate_only_map ||= {}
-      @enable_banking_show_relink_map ||= {}
     end
 
     private
