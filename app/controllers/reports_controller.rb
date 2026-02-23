@@ -405,9 +405,13 @@ class ReportsController < ApplicationController
       grouped_data = {}
       family_currency = Current.family.currency
 
+      # Preload savings category IDs for classification tagging
+      savings_cat_ids = Current.family.categories.savings.pluck(:id).to_set
+
       # Helper to initialize a category group hash
       init_category_group = ->(id, name, color, icon, type) do
-        { category_id: id, category_name: name, category_color: color, category_icon: icon, type: type, total: 0, count: 0, subcategories: {} }
+        classification = savings_cat_ids.include?(id) ? "savings" : type
+        { category_id: id, category_name: name, category_color: color, category_icon: icon, type: type, classification: classification, total: 0, count: 0, subcategories: {} }
       end
 
       # Helper to initialize a subcategory hash

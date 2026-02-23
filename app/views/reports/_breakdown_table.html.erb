@@ -2,9 +2,21 @@
 <%# Local variables: groups, total, type (:income or :expense), amount_sort_params, current_sort_by, current_sort_direction %>
 
 <%
-  color_class = type == :income ? "text-success" : "text-destructive"
-  icon_name = type == :income ? "trending-up" : "trending-down"
-  title_key = type == :income ? "reports.transactions_breakdown.table.income" : "reports.transactions_breakdown.table.expense"
+  color_class = case type
+                when :income then "text-success"
+                when :savings then "text-success"
+                else "text-destructive"
+                end
+  icon_name = case type
+              when :income then "trending-up"
+              when :savings then "piggy-bank"
+              else "trending-down"
+              end
+  title_key = case type
+              when :income then "reports.transactions_breakdown.table.income"
+              when :savings then "reports.transactions_breakdown.table.savings"
+              else "reports.transactions_breakdown.table.expense"
+              end
 %>
 
 <div>
@@ -35,8 +47,7 @@
             item: group,
             total: total,
             color_class: color_class,
-            level: :category
-          %>
+            level: :category %>
           <% if idx < groups.size - 1 %>
             <%= render "shared/ruler", classes: "mx-3 lg:mx-4" %>
           <% end %>
@@ -47,8 +58,7 @@
                 item: subcategory,
                 total: total,
                 color_class: color_class,
-                level: :subcategory
-              %>
+                level: :subcategory %>
               <% if sub_idx < group[:subcategories].size - 1 %>
                 <%= render "shared/ruler", classes: "mx-3 lg:mx-4" %>
               <% end %>
