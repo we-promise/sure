@@ -1,12 +1,19 @@
-<%# locals: (annual_plan:, **args) %>
+<%# locals: (annual_plan:, start_date:, end_date:, **args) %>
 
 <% if annual_plan.category_summaries.any? %>
   <%
     expense_summaries = annual_plan.expense_category_summaries
     savings_summaries = annual_plan.savings_category_summaries
     expense_budget_total = expense_summaries.sum(&:annual_budget)
-    expense_actual_total = expense_summaries.sum(&:annual_actual)
-    expense_remaining_total = expense_budget_total - expense_actual_total
+    expense_period_total = expense_summaries.sum(&:period_actual)
+    expense_remaining_total = expense_budget_total - expense_period_total
+
+    # Determine the actual column label based on period scope
+    if annual_plan.period_scoped?
+      actual_label = t("reports.annual_budget_performance.period_actual")
+    else
+      actual_label = t("reports.annual_budget_performance.ytd_actual")
+    end
   %>
 
   <div class="space-y-4">
@@ -22,10 +29,10 @@
       </div>
       <div class="bg-container-inset rounded-xl p-4">
         <p class="text-xs font-medium text-secondary uppercase tracking-wide mb-1">
-          <%= t("reports.annual_budget_performance.ytd_actual") %>
+          <%= actual_label %>
         </p>
         <p class="text-lg font-semibold text-primary">
-          <%= format_money Money.new(expense_actual_total, annual_plan.currency) %>
+          <%= format_money Money.new(expense_period_total, annual_plan.currency) %>
         </p>
       </div>
       <div class="bg-container-inset rounded-xl p-4">
@@ -53,13 +60,25 @@
           <div class="grid grid-cols-12 items-center uppercase text-xs font-medium text-secondary px-4 py-2">
             <div class="col-span-4"><%= t("reports.annual_budget_performance.category") %></div>
             <div class="col-span-2 text-right"><%= t("reports.annual_budget_performance.annual_budget") %></div>
-            <div class="col-span-2 text-right"><%= t("reports.annual_budget_performance.ytd_actual") %></div>
+            <div class="col-span-2 text-right"><%= actual_label %></div>
             <div class="col-span-2 text-right"><%= t("reports.annual_budget_performance.remaining") %></div>
             <div class="col-span-2"></div>
           </div>
 
           <div class="bg-container rounded-lg shadow-border-xs">
             <% expense_summaries.each_with_index do |cs, idx| %>
+              <%
+                period_spent = cs.period_actual
+                period_remaining = cs.annual_budget - period_spent
+                period_pct = cs.annual_budget.positive? ? (period_spent / cs.annual_budget.to_f * 100).round(1) : 0
+                period_status = if period_pct > 100
+                  :over_budget
+                elsif period_pct > 80
+                  :warning
+                else
+                  :on_track
+                end
+              %>
               <div class="grid grid-cols-12 items-center px-4 py-3 text-sm">
                 <div class="col-span-4">
                   <div class="flex items-center gap-2">
@@ -76,20 +95,20 @@
                   <%= format_money Money.new(cs.annual_budget, cs.currency) %>
                 </div>
                 <div class="col-span-2 text-right text-primary font-medium">
-                  <%= format_money Money.new(cs.annual_actual, cs.currency) %>
+                  <%= format_money Money.new(period_spent, cs.currency) %>
                 </div>
-                <div class="col-span-2 text-right font-medium <%= cs.annual_remaining >= 0 ? "text-success" : "text-destructive" %>">
-                  <%= format_money Money.new(cs.annual_remaining, cs.currency) %>
+                <div class="col-span-2 text-right font-medium <%= period_remaining >= 0 ? "text-success" : "text-destructive" %>">
+                  <%= format_money Money.new(period_remaining, cs.currency) %>
                 </div>
                 <div class="col-span-2 pl-4">
                   <div class="h-1.5 bg-container-inset rounded-full overflow-hidden">
-                    <% bar_class = case cs.status
+                    <% bar_class = case period_status
                        when :over_budget then "bg-destructive"
                        when :warning then "bg-warning"
                        else "bg-success"
                        end %>
                     <div class="h-full rounded-full <%= bar_class %>"
-                         style="width: <%= [cs.percent_used, 100].min %>%"></div>
+                         style="width: <%= [period_pct, 100].min %>%"></div>
                   </div>
                 </div>
               </div>
@@ -112,6 +131,10 @@
       <div class="bg-container-inset rounded-xl p-1 overflow-x-auto">
         <div class="bg-container rounded-lg shadow-border-xs">
           <% savings_summaries.each_with_index do |cs, idx| %>
+            <%
+              savings_period_spent = cs.period_actual
+              savings_remaining = cs.annual_budget - savings_period_spent
+            %>
             <div class="grid grid-cols-12 items-center px-4 py-3 text-sm">
               <div class="col-span-4">
                 <div class="flex items-center gap-2">
@@ -123,10 +146,9 @@
                 <%= format_money Money.new(cs.annual_budget, cs.currency) %>
               </div>
               <div class="col-span-2 text-right text-success font-medium">
-                <%= format_money Money.new(cs.annual_actual, cs.currency) %>
+                <%= format_money Money.new(savings_period_spent, cs.currency) %>
               </div>
               <div class="col-span-2 text-right text-secondary">
-                <% savings_remaining = cs.annual_budget - cs.annual_actual %>
                 <% if savings_remaining.negative? %>
                   <span class="text-success font-medium"><%= format_money Money.new(savings_remaining.abs, cs.currency) %> extra</span>
                 <% else %>
@@ -134,9 +156,10 @@
                 <% end %>
               </div>
               <div class="col-span-2 pl-4">
+                <% savings_pct = cs.annual_budget.positive? ? (savings_period_spent / cs.annual_budget.to_f * 100).round(1) : 0 %>
                 <div class="h-1.5 bg-container-inset rounded-full overflow-hidden">
                   <div class="h-full rounded-full bg-success"
-                       style="width: <%= [cs.percent_used, 100].min %>%"></div>
+                       style="width: <%= [savings_pct, 100].min %>%"></div>
                 </div>
               </div>
             </div>

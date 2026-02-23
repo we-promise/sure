@@ -1,9 +1,15 @@
 class Budget::AnnualPlan
-  attr_reader :family, :year
+  attr_reader :family, :year, :period
 
-  def initialize(family, year: Date.current.year)
+  def initialize(family, year: Date.current.year, period: nil)
     @family = family
     @year = year
+    @period = period
+  end
+
+  # Whether actuals are scoped to a custom period (vs full YTD)
+  def period_scoped?
+    period.present?
   end
 
   # All monthly budgets in the year
@@ -44,6 +50,13 @@ class Budget::AnnualPlan
 
   def monthly_category_summaries
     category_summaries.reject { |cs| cs.budget_category.non_monthly? }
+  end
+
+  # Period-scoped actual spending for a given category
+  def period_actual_for_category(category)
+    return nil unless period_scoped?
+
+    period_expense_totals_by_category[category.id] || 0
   end
 
   # Totals
@@ -183,6 +196,17 @@ class Budget::AnnualPlan
       @savings_category_ids ||= family.categories.savings.pluck(:id).to_set
     end
 
+    def period_expense_totals_by_category
+      @period_expense_totals_by_category ||= begin
+        return {} unless period
+
+        totals = income_statement.expense_totals(period: period)
+        totals.category_totals.each_with_object({}) do |ct, hash|
+          hash[ct.category.id] = ct.total
+        end
+      end
+    end
+
     def savings_in_expense_totals
       @savings_in_expense_totals ||= begin
         return 0 if savings_category_ids.empty?
@@ -215,6 +239,11 @@ class Budget::AnnualPlan
 
       def annual_actual
         budget_category.annual_actual_spending
+      end
+
+      # Actual spending for the selected period (or full year if no period set)
+      def period_actual
+        annual_plan.period_actual_for_category(category) || annual_actual
       end
 
       def annual_remaining

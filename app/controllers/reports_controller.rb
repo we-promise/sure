@@ -126,8 +126,8 @@ class ReportsController < ApplicationController
       # Investment flows (contributions/withdrawals)
       @investment_flows = InvestmentFlowStatement.new(Current.family).period_totals(period: @period)
 
-      # Annual budget plan
-      @annual_plan = Budget::AnnualPlan.new(Current.family, year: @start_date.year)
+      # Annual budget plan (period-scoped actuals react to date selection)
+      @annual_plan = Budget::AnnualPlan.new(Current.family, year: @start_date.year, period: @period)
 
       # Flags for view rendering
       @has_accounts = Current.family.accounts.any?
@@ -179,7 +179,7 @@ class ReportsController < ApplicationController
           key: "annual_budget_performance",
           title: "reports.annual_budget_performance.title",
           partial: "reports/annual_budget_performance",
-          locals: { annual_plan: @annual_plan },
+          locals: { annual_plan: @annual_plan, start_date: @start_date, end_date: @end_date },
           visible: Current.family.budgets.any?,
           collapsible: true
         },
