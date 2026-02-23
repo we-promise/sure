@@ -147,6 +147,16 @@
         </div>
       </div>
     <% end %>
+
+    <%# Link to full annual plan %>
+    <div class="mt-2">
+      <%= render DS::Link.new(
+        text: t("reports.annual_budget_performance.view_annual_plan"),
+        variant: "ghost",
+        href: annual_budgets_path(year: annual_plan.year),
+        icon: "arrow-right"
+      ) %>
+    </div>
   </div>
 <% else %>
   <div class="py-8 text-center">

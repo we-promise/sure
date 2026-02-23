@@ -293,12 +293,12 @@ class ReportsController < ApplicationController
       current_income = ensure_money(@current_income_totals.total)
       current_expenses = ensure_money(@current_expense_totals.total)
 
-      # Subtract savings-category spending from expenses so transfers to savings
-      # don't count as expenses in the Net Savings calculation
-      current_savings_in_expenses = savings_in_expense_totals(@current_expense_totals)
-      current_expenses_excluding_savings = ensure_money([ current_expenses.amount - current_savings_in_expenses, 0 ].max)
+      # Separate savings-category spending from real expenses
+      current_savings_amount = savings_in_expense_totals(@current_expense_totals)
+      current_expenses_excluding_savings = ensure_money([ current_expenses.amount - current_savings_amount, 0 ].max)
 
-      net_savings = current_income - current_expenses_excluding_savings
+      # Net = income - expenses - savings (true surplus/deficit)
+      net = current_income - current_expenses_excluding_savings - ensure_money(current_savings_amount)
 
       previous_income = ensure_money(@previous_income_totals.total)
       previous_savings_in_expenses = savings_in_expense_totals(@previous_expense_totals)
@@ -316,7 +316,8 @@ class ReportsController < ApplicationController
         income_change: income_change,
         current_expenses: current_expenses_excluding_savings,
         expense_change: expense_change,
-        net_savings: net_savings,
+        current_savings: ensure_money(current_savings_amount),
+        net: net,
         budget_percent: budget_percent
       }
     end

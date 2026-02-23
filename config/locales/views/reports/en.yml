@@ -22,10 +22,12 @@ en:
     summary:
       total_income: Total Income
       total_expenses: Total Expenses
-      net_savings: Net Savings
+      savings: Savings
+      saved_this_period: Saved this period
+      net: Net
+      after_expenses_and_savings: After expenses & savings
       budget_performance: Budget Performance
       vs_previous: vs previous period
-      income_minus_expenses: Income minus expenses
       of_budget_used: of budget used
       no_budget_data: No budget data for this period
     budget_performance:
@@ -166,6 +168,7 @@ en:
       savings_rate: "Savings Rate"
       savings_rate_description: "Percentage of income saved this year"
       savings: "Savings"
+      view_annual_plan: "View annual plan"
       no_data: "No budget data available"
     investment_flows:
       title: Investment Flows
