@@ -1,7 +1,12 @@
 import { Controller } from "@hotwired/stimulus"
+import { autoUpdate, computePosition, offset, shift } from "@floating-ui/dom"
 
 export default class extends Controller {
   static targets = ["button", "menu", "input"]
+  static values = {
+    placement: { type: String, default: "bottom-start" },
+    offset: { type: Number, default: 6 }
+  }
 
   connect() {
     this.isOpen = false
@@ -10,11 +15,14 @@ export default class extends Controller {
 
     document.addEventListener("click", this.boundOutsideClick)
     this.element.addEventListener("keydown", this.boundKeydown)
+
+    this.startAutoUpdate()
   }
 
   disconnect() {
     document.removeEventListener("click", this.boundOutsideClick)
     this.element.removeEventListener("keydown", this.boundKeydown)
+    this.stopAutoUpdate()
   }
 
   toggle = () => {
@@ -24,6 +32,7 @@ export default class extends Controller {
   openMenu() {
     this.isOpen = true
     this.menuTarget.classList.remove("hidden")
+    this.updatePosition()
     this.scrollToSelected()
     this.focusSearch()
   }
@@ -95,5 +104,40 @@ export default class extends Controller {
       event.preventDefault()
       event.target.click()
     }
+  }
+
+  startAutoUpdate() {
+    if (!this._cleanup && this.buttonTarget && this.menuTarget) {
+      this._cleanup = autoUpdate(
+        this.buttonTarget,
+        this.menuTarget,
+        () => this.updatePosition()
+      )
+    }
+  }
+
+  stopAutoUpdate() {
+    if (this._cleanup) {
+      this._cleanup()
+      this._cleanup = null
+    }
+  }
+
+  updatePosition() {
+    if (!this.buttonTarget || !this.menuTarget) return;
+
+    const containerRect = this.element.getBoundingClientRect();
+    computePosition(this.buttonTarget, this.menuTarget, {
+      placement: this.placementValue,
+      middleware: [offset(this.offsetValue), shift({ padding: 5 })],
+      strategy: "fixed"
+    }).then(() => {
+      Object.assign(this.menuTarget.style, {
+        position: "fixed",
+        left: `${containerRect.left}px`,
+        top: `${containerRect.bottom + this.offsetValue}px`,
+        width: `${containerRect.width}px`
+      });
+    });
   }
 }
