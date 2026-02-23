@@ -4,6 +4,7 @@ module DS
                 :value_method, :label_method, :label, :searchable, :variant
 
     VARIANTS = %i[simple icon badge].freeze
+    DEFAULT_COLOR = "#737373"
 
     def initialize(
       items:,

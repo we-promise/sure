@@ -12,7 +12,7 @@
     <div class="flex flex-col relative" data-controller="list-filter">
       <div class="grow p-1.5">
         <% if searchable %>
-          <div class="relative flex items-center bg-container border border-secondary rounded-lg">
+          <div class="relative flex items-center bg-container border border-secondary rounded-lg mb-1">
             <input
               placeholder="<%= t("helpers.filter_dropdown.search_placeholder") %>"
               autocomplete="nope"
@@ -27,6 +27,7 @@
           <% if items.present? %>
             <% selected_value = value_for(selected) %>
             <% items.each do |item| %>
+              <%= item %>
               <% value = value_for(item) %>
               <% label_text = label_for(item) %>
               <% is_selected = value == selected_value %>
@@ -62,7 +63,7 @@
                   <span class="check-icon <%= 'hidden' unless is_selected %>">
                     <%= helpers.icon("check") %>
                   </span>
-                  <% hex_color = item.color || "#CCCCCC" %>
+                  <% hex_color = item.color || DEFAULT_COLOR %>
                   <span class="flex items-center gap-1 text-sm font-medium rounded-full px-1.5 py-1 border truncate focus-visible:outline-none focus-visible:ring-0"
                         style="
                           background-color: color-mix(in oklab, <%= hex_color %> 10%, transparent);
