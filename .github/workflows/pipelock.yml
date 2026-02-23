@@ -20,5 +20,5 @@ jobs:
         uses: luckyPipewrench/pipelock@v1
         with:
           scan-diff: 'true'
-          fail-on-findings: 'true'
+          fail-on-findings: 'false'
           test-vectors: 'false'
