@@ -18,6 +18,8 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   bool _groupByType = false;
   String? _appVersion;
+  bool _isResettingAccount = false;
+  bool _isDeletingAccount = false;
 
   @override
   void initState() {
@@ -141,31 +143,36 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     if (confirmed != true || !context.mounted) return;
 
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final accessToken = await authProvider.getValidAccessToken();
-    if (accessToken == null) {
-      await authProvider.logout();
-      return;
-    }
+    setState(() => _isResettingAccount = true);
+    try {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final accessToken = await authProvider.getValidAccessToken();
+      if (accessToken == null) {
+        await authProvider.logout();
+        return;
+      }
 
-    final result = await UserService().resetAccount(accessToken: accessToken);
+      final result = await UserService().resetAccount(accessToken: accessToken);
 
-    if (!context.mounted) return;
+      if (!context.mounted) return;
 
-    if (result['success'] == true) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Account reset has been initiated. This may take a moment.'),
-          backgroundColor: Colors.green,
-        ),
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(result['error'] ?? 'Failed to reset account'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (result['success'] == true) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Account reset has been initiated. This may take a moment.'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['error'] ?? 'Failed to reset account'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isResettingAccount = false);
     }
   }
 
@@ -197,26 +204,31 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     if (confirmed != true || !context.mounted) return;
 
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final accessToken = await authProvider.getValidAccessToken();
-    if (accessToken == null) {
-      await authProvider.logout();
-      return;
-    }
+    setState(() => _isDeletingAccount = true);
+    try {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final accessToken = await authProvider.getValidAccessToken();
+      if (accessToken == null) {
+        await authProvider.logout();
+        return;
+      }
 
-    final result = await UserService().deleteAccount(accessToken: accessToken);
+      final result = await UserService().deleteAccount(accessToken: accessToken);
 
-    if (!context.mounted) return;
+      if (!context.mounted) return;
 
-    if (result['success'] == true) {
-      await authProvider.logout();
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(result['error'] ?? 'Failed to delete account'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (result['success'] == true) {
+        await authProvider.logout();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['error'] ?? 'Failed to delete account'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isDeletingAccount = false);
     }
   }
 
@@ -404,7 +416,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
             subtitle: const Text(
               'Delete all accounts, categories, merchants, and tags but keep your user account',
             ),
-            onTap: () => _handleResetAccount(context),
+            trailing: _isResettingAccount
+                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                : null,
+            enabled: !_isResettingAccount && !_isDeletingAccount,
+            onTap: _isResettingAccount || _isDeletingAccount ? null : () => _handleResetAccount(context),
           ),
 
           ListTile(
@@ -413,7 +429,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
             subtitle: const Text(
               'Permanently remove all your data. This cannot be undone.',
             ),
-            onTap: () => _handleDeleteAccount(context),
+            trailing: _isDeletingAccount
+                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                : null,
+            enabled: !_isDeletingAccount && !_isResettingAccount,
+            onTap: _isDeletingAccount || _isResettingAccount ? null : () => _handleDeleteAccount(context),
           ),
 
           const Divider(),
