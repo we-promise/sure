@@ -2,8 +2,8 @@ apiVersion: v1
 entries:
   sure:
   - apiVersion: v2
-    appVersion: 0.6.8-alpha.13
-    created: "2026-02-20T11:14:52.234286355Z"
+    appVersion: v0.6.8-alpha.13
+    created: "2026-02-23T14:32:35.219008835Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -16,7 +16,7 @@ entries:
       version: ~0.23.0
     description: Official Helm chart for deploying the Sure Rails app (web + Sidekiq)
       on Kubernetes with optional HA PostgreSQL (CloudNativePG) and Redis.
-    digest: 1f9110940d82d1ed570cb9a29b4529b5c73b98540fd80f4e45ffd6ef91d1c0d8
+    digest: 810a38c7997e32ac428a41521bbe43e78df2b8bd623bc3d7d546f468039f13f4
     home: https://github.com/we-promise/sure
     keywords:
     - rails
@@ -35,4 +35,4 @@ entries:
     urls:
     - https://we-promise.github.io/sure/sure-0.6.8-alpha.13.tgz
     version: 0.6.8-alpha.13
-generated: "2026-02-20T11:14:52.22088684Z"
+generated: "2026-02-23T14:32:35.205968145Z"
