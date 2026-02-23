@@ -28,6 +28,7 @@ class Transfer::CreatorTest < ActiveSupport::TestCase
     # Verify outflow transaction is marked as investment_contribution
     outflow = transfer.outflow_transaction
     assert_equal "investment_contribution", outflow.kind
+    assert outflow.transfer?, "investment_contribution should be recognized as a transfer"
     assert_equal @amount, outflow.entry.amount
     assert_equal @source_account.currency, outflow.entry.currency
     assert_equal "Transfer to #{@destination_account.name}", outflow.entry.name
@@ -36,6 +37,7 @@ class Transfer::CreatorTest < ActiveSupport::TestCase
     # Verify inflow transaction (always funds_movement)
     inflow = transfer.inflow_transaction
     assert_equal "funds_movement", inflow.kind
+    assert inflow.transfer?, "funds_movement should be recognized as a transfer"
     assert_equal(@amount * -1, inflow.entry.amount)
     assert_equal @destination_account.currency, inflow.entry.currency
     assert_equal "Transfer from #{@source_account.name}", inflow.entry.name

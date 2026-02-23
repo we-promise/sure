@@ -49,6 +49,7 @@ class TransferMatchesController < ApplicationController
             currency: @entry.currency,
             date: @entry.date,
             name: "Transfer to #{@entry.amount.negative? ? @entry.account.name : target_account.name}",
+            user_modified: true,
           )
         )
 

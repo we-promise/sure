@@ -98,10 +98,10 @@
               <div class="flex items-center gap-1">
                 <%= icon "clock", size: "sm", color: "secondary" %>
                 <%= tag.span pending_status[:message], class: "text-sm" %>
-                <span class="text-xs text-tertiary"><%= t(".stale_pending_note") %></span>
+                <span class="text-xs text-subdued"><%= t(".stale_pending_note") %></span>
               </div>
               <% if pending_status[:accounts]&.any? %>
-                <div class="text-xs text-tertiary ml-5">
+                <div class="text-xs text-subdued ml-5">
                   <%= t(".stale_pending_accounts", accounts: pending_status[:accounts].join(", ")) %>
                 </div>
               <% end %>
@@ -110,7 +110,7 @@
             <div class="text-success flex items-center gap-1">
               <%= icon "check-circle", size: "sm", color: "success" %>
               <%= tag.span reconciled_status[:message], class: "text-sm" %>
-              <span class="text-xs text-tertiary"><%= t(".reconciled_details_note") %></span>
+              <span class="text-xs text-subdued"><%= t(".reconciled_details_note") %></span>
             </div>
           <% elsif simplefin_item.rate_limited_message.present? %>
             <div class="text-warning flex items-center gap-1">

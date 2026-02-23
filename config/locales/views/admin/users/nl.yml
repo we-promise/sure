@@ -7,6 +7,8 @@ nl:
         description: "Beheer gebruikersrollen voor uw instantie. Superbeheerders hebben toegang tot SSO-providerinstellingen en gebruikersbeheer."
         section_title: "Gebruikers"
         you: "(U)"
+        trial_ends_at: "Proefperiode eindigt"
+        not_available: "n/a"
         no_users: "Geen gebruikers gevonden."
         role_descriptions_title: "Rolbeschrijvingen"
         roles:
