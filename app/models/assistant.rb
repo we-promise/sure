@@ -23,7 +23,7 @@ class Assistant
       ai_model: message.ai_model
     )
 
-    llm_provider = get_model_provider(message.ai_model, family: chat.user.family)
+    llm_provider = get_model_provider(message.ai_model, family: chat.user&.family)
 
     unless llm_provider
       error_message = build_no_provider_error_message(message.ai_model)
