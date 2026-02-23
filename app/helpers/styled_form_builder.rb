@@ -29,10 +29,23 @@ class StyledFormBuilder < ActionView::Helpers::FormBuilder
 
   def collection_select(method, collection, value_method, text_method, options = {}, html_options = {})
     field_options = normalize_options(options, html_options)
+    selected_value = @object.public_send(method) if @object.respond_to?(method)
+    placeholder = options[:include_blank] || options[:placeholder] || "Select..."
 
-    build_field(method, field_options, html_options) do |merged_html_options|
-      super(method, collection, value_method, text_method, options, merged_html_options)
-    end
+    @template.render(
+      DS::FilterDropdown.new(
+        form: self,
+        method: method,
+        items: collection.map { |item| { value: item.id, label: item.name, object: item } },
+        selected: selected_value,
+        placeholder: options[:placeholder] || "Select...",
+        searchable: options.fetch(:searchable, false),
+        variant: options.fetch(:variant, :simple),
+        label: options[:label],
+        container_class: options[:container_class],
+        label_tooltip: options[:label_tooltip]
+      )
+    )
   end
 
   def money_field(amount_method, options = {})

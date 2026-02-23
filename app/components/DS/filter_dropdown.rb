@@ -1,39 +1,19 @@
 module DS
   class FilterDropdown < ViewComponent::Base
-    attr_reader :items, :selected_value, :placeholder,
-                :empty_text, :value_method, :label_method,
-                :label, :searchable, :variant
+    attr_reader :form, :method, :items, :selected_value, :placeholder, :variant, :searchable, :options
 
     VARIANTS = %i[simple icon badge].freeze
     DEFAULT_COLOR = "#737373"
 
-    def initialize(
-      items:,
-      selected: nil,
-      placeholder: "Select...",
-      empty_text: "No items",
-      value_method: :id,
-      label_method: :name,
-      label: nil,
-      searchable: true,
-      variant: :simple,
-      include_blank: nil
-    )
-      @value_method = value_method
-      @label_method = label_method
-      @placeholder = placeholder
-      @empty_text = empty_text
-      @label = label
-      @searchable = searchable
-      @variant = variant.to_sym
-
-      raise ArgumentError, "Invalid variant: #{@variant}" unless VARIANTS.include?(@variant)
-
-      normalized_items = normalize_items(items)
-      normalized_items.unshift({ value: nil, label: include_blank, object: nil }) if include_blank
-
-      @items = normalized_items
+    def initialize(form:, method:, items:, selected: nil, placeholder: "Select...", variant: :simple, searchable: false, **options)
+      @form = form
+      @method = method
+      @items = items
       @selected_value = selected
+      @placeholder = placeholder
+      @variant = variant
+      @searchable = searchable
+      @options = options
     end
 
     def selected_item
@@ -65,14 +45,14 @@ module DS
         case item
         when Hash
           {
-            value: item[:value] || item[value_method],
-            label: item[:label] || item[label_method],
+            value: item[:value],
+            label: item[:label],
             object: item[:object]
           }
         else
           {
-            value: item.public_send(value_method),
-            label: item.public_send(label_method),
+            value: item.id,
+            label: item.name,
             object: item
           }
         end
