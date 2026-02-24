@@ -1,0 +1,49 @@
+---
+de:
+  enable_banking_items:
+    authorize:
+      authorization_failed: Autorisierung konnte nicht gestartet werden
+      bank_required: Bitte wählen Sie eine Bank.
+      invalid_redirect: Die erhaltene Autorisierungs-URL ist ungültig. Bitte versuchen Sie es erneut.
+      redirect_uri_not_allowed: Weiterleitung nicht erlaubt. Konfigurieren Sie %{callback_url} in den Enable-Banking-App-Einstellungen.
+      unexpected_error: Ein unerwarteter Fehler ist aufgetreten. Bitte versuchen Sie es erneut.
+    callback:
+      authorization_error: Autorisierung fehlgeschlagen
+      invalid_callback: Ungültige Callback-Parameter.
+      item_not_found: Verbindung nicht gefunden.
+      session_failed: Autorisierung konnte nicht abgeschlossen werden
+      success: Erfolgreich mit Ihrer Bank verbunden. Ihre Konten werden synchronisiert.
+      unexpected_error: Ein unerwarteter Fehler ist aufgetreten. Bitte versuchen Sie es erneut.
+    complete_account_setup:
+      all_skipped: Alle Konten wurden übersprungen. Sie können sie später auf der Konten-Seite einrichten.
+      no_accounts: Keine Konten zum Einrichten verfügbar.
+      success: "%{count} Konten wurden erfolgreich angelegt!"
+    create:
+      success: Enable-Banking-Konfiguration erfolgreich.
+    destroy:
+      success: Die Enable-Banking-Verbindung wurde zur Löschung vorgemerkt.
+    link_accounts:
+      already_linked: Die ausgewählten Konten sind bereits verknüpft.
+      link_failed: Konten konnten nicht verknüpft werden
+      no_accounts_selected: Keine Konten ausgewählt.
+      no_session: Keine aktive Enable-Banking-Verbindung. Bitte verbinden Sie zuerst eine Bank.
+      success: "%{count} Konten wurden erfolgreich verknüpft."
+    link_existing_account:
+      success: Konto erfolgreich mit Enable Banking verknüpft
+      errors:
+        only_manual: Nur manuelle Konten können verknüpft werden
+        invalid_enable_banking_account: Ungültiges Enable-Banking-Konto ausgewählt
+    new:
+      link_enable_banking_title: Enable Banking verknüpfen
+    reauthorize:
+      invalid_redirect: Die erhaltene Autorisierungs-URL ist ungültig. Bitte versuchen Sie es erneut.
+      reauthorization_failed: Erneute Autorisierung fehlgeschlagen
+    select_bank:
+      cancel: Abbrechen
+      check_country: Bitte prüfen Sie Ihre Ländereinstellungen.
+      credentials_required: Bitte konfigurieren Sie zuerst Ihre Enable-Banking-Zugangsdaten.
+      description: Wählen Sie die Bank, die Sie mit Ihren Konten verbinden möchten.
+      no_banks: Für diese Region/Land sind keine Banken verfügbar.
+      title: Wählen Sie Ihre Bank
+    update:
+      success: Enable-Banking-Konfiguration aktualisiert.

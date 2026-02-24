@@ -1,0 +1,247 @@
+---
+de:
+  indexa_capital_items:
+    sync_status:
+      no_accounts: "Keine Konten gefunden"
+      synced:
+        one: "%{count} Konto synchronisiert"
+        other: "%{count} Konten synchronisiert"
+      synced_with_setup: "%{linked} synchronisiert, %{unlinked} benötigen Einrichtung"
+    institution_summary:
+      none: "Keine Institute verbunden"
+      count:
+        one: "%{count} Institut"
+        other: "%{count} Institute"
+    errors:
+      provider_not_configured: "IndexaCapital-Anbieter ist nicht konfiguriert"
+
+    
+    sync:
+      status:
+        importing: "Konten werden von IndexaCapital importiert..."
+        processing: "Depots und Aktivitäten werden verarbeitet..."
+        calculating: "Salden werden berechnet..."
+        importing_data: "Kontodaten werden importiert..."
+        checking_setup: "Kontokonfiguration wird geprüft..."
+        needs_setup: "%{count} Konten benötigen Einrichtung..."
+      success: "Synchronisation gestartet"
+
+   
+    panel:
+      setup_instructions: "Einrichtungsanleitung:"
+      step_1: "Besuchen Sie Ihr Indexa Capital Dashboard, um einen schreibgeschützten API-Token zu erstellen"
+      step_2: "Fügen Sie Ihren API-Token unten ein und klicken Sie auf Speichern"
+      step_3: "Nach erfolgreicher Verbindung gehen Sie zur Registerkarte Konten, um neue Konten einzurichten"
+      field_descriptions: "Feldbeschreibungen:"
+      optional: "(Optional)"
+      required: "(Pflichtfeld)"
+      optional_with_default: "(optional, Standard: %{default_value})"
+      alternative_auth: "Oder nutzen Sie Benutzername/Passwort-Anmeldung..."
+      save_button: "Konfiguration speichern"
+      update_button: "Konfiguration aktualisieren"
+      status_configured_html: "Konfiguriert und einsatzbereit. Besuchen Sie die Registerkarte <a href=\"%{accounts_path}\" class=\"link\">Konten</a>, um Konten zu verwalten und einzurichten."
+      status_not_configured: "Nicht konfiguriert"
+      fields:
+        api_token:
+          label: "API-Token"
+          description: "Ihr schreibgeschützter API-Token aus dem Indexa Capital Dashboard"
+          placeholder_new: "API-Token hier einfügen"
+          placeholder_update: "Neuen API-Token zum Aktualisieren eingeben"
+        username:
+          label: "Benutzername"
+          description: "Ihr Indexa Capital Benutzername/E-Mail"
+          placeholder_new: "Benutzername hier einfügen"
+          placeholder_update: "Neuen Benutzernamen zum Aktualisieren eingeben"
+        document:
+          label: "Dokument-ID"
+          description: "Ihre Indexa Capital Dokument-/ID-Nummer"
+          placeholder_new: "Dokument-ID hier einfügen"
+          placeholder_update: "Neue Dokument-ID zum Aktualisieren eingeben"
+        password:
+          label: "Passwort"
+          description: "Ihr Indexa Capital Passwort"
+          placeholder_new: "Passwort hier einfügen"
+          placeholder_update: "Neues Passwort zum Aktualisieren eingeben"
+
+    
+    create:
+      success: "IndexaCapital-Verbindung erfolgreich erstellt"
+    update:
+      success: "IndexaCapital-Verbindung aktualisiert"
+    destroy:
+      success: "IndexaCapital-Verbindung entfernt"
+    index:
+      title: "IndexaCapital-Verbindungen"
+
+   
+    loading:
+      loading_message: "IndexaCapital-Konten werden geladen..."
+      loading_title: "Laden"
+
+    link_accounts:
+      all_already_linked:
+        one: "Das ausgewählte Konto (%{names}) ist bereits verknüpft"
+        other: "Alle %{count} ausgewählten Konten sind bereits verknüpft: %{names}"
+      api_error: "API-Fehler: %{message}"
+      invalid_account_names:
+        one: "Konto mit leerem Namen kann nicht verknüpft werden"
+        other: "%{count} Konten mit leeren Namen können nicht verknüpft werden"
+      link_failed: "Konten konnten nicht verknüpft werden"
+      no_accounts_selected: "Bitte wählen Sie mindestens ein Konto aus"
+      no_api_key: "IndexaCapital-Zugangsdaten nicht gefunden. Bitte in den Anbieter-Einstellungen konfigurieren."
+      partial_invalid: "Erfolgreich %{created_count} Konto/Konten verknüpft, %{already_linked_count} waren bereits verknüpft, %{invalid_count} Konto/Konten hatten ungültige Namen"
+      partial_success: "Erfolgreich %{created_count} Konto/Konten verknüpft. %{already_linked_count} Konto/Konten waren bereits verknüpft: %{already_linked_names}"
+      success:
+        one: "Erfolgreich %{count} Konto verknüpft"
+        other: "Erfolgreich %{count} Konten verknüpft"
+
+
+    indexa_capital_item:
+      accounts_need_setup: "Konten benötigen Einrichtung"
+      delete: "Verbindung löschen"
+      deletion_in_progress: "Löschung läuft..."
+      error: "Fehler"
+      more_accounts_available:
+        one: "%{count} weiteres Konto verfügbar"
+        other: "%{count} weitere Konten verfügbar"
+      no_accounts_description: "Diese Verbindung hat noch keine verknüpften Konten."
+      no_accounts_title: "Keine Konten"
+      provider_name: "IndexaCapital"
+      requires_update: "Verbindung muss aktualisiert werden"
+      setup_action: "Neue Konten einrichten"
+      setup_description: "%{linked} von %{total} Konten verknüpft. Wählen Sie Kontotypen für Ihre neu importierten IndexaCapital-Konten."
+      setup_needed: "Neue Konten bereit zur Einrichtung"
+      status: "Vor %{timestamp} synchronisiert — %{summary}"
+      status_never: "Noch nie synchronisiert"
+      syncing: "Synchronisiere..."
+      total: "Gesamt"
+      unlinked: "Nicht verknüpft"
+      update_credentials: "Zugangsdaten aktualisieren"
+
+
+    select_accounts:
+      accounts_selected: "Konten ausgewählt"
+      api_error: "API-Fehler: %{message}"
+      cancel: "Abbrechen"
+      configure_name_in_provider: "Import nicht möglich – bitte Kontoname in IndexaCapital konfigurieren"
+      description: "Wählen Sie die Konten aus, die Sie mit Ihrem %{product_name}-Konto verknüpfen möchten."
+      link_accounts: "Ausgewählte Konten verknüpfen"
+      no_accounts_found: "Keine Konten gefunden. Bitte überprüfen Sie Ihre IndexaCapital-Zugangsdaten."
+      no_api_key: "IndexaCapital-Zugangsdaten sind nicht konfiguriert. Bitte in den Einstellungen konfigurieren."
+      no_credentials_configured: "Bitte konfigurieren Sie zuerst Ihre IndexaCapital-Zugangsdaten in den Anbieter-Einstellungen."
+      no_name_placeholder: "(Kein Name)"
+      title: "IndexaCapital-Konten auswählen"
+
+    select_existing_account:
+      account_already_linked: "Dieses Konto ist bereits mit einem Anbieter verknüpft"
+      all_accounts_already_linked: "Alle IndexaCapital-Konten sind bereits verknüpft"
+      api_error: "API-Fehler: %{message}"
+      balance_label: "Saldo:"
+      cancel: "Abbrechen"
+      cancel_button: "Abbrechen"
+      configure_name_in_provider: "Import nicht möglich – bitte Kontoname in IndexaCapital konfigurieren"
+      connect_hint: "Verbinden Sie ein IndexaCapital-Konto für automatische Synchronisation."
+      description: "Wählen Sie ein IndexaCapital-Konto zur Verknüpfung mit diesem Konto. Transaktionen werden automatisch synchronisiert und dedupliziert."
+      header: "Mit IndexaCapital verknüpfen"
+      link_account: "Konto verknüpfen"
+      link_button: "Dieses Konto verknüpfen"
+      linking_to: "Verknüpfe mit:"
+      no_account_specified: "Kein Konto angegeben"
+      no_accounts: "Keine unverknüpften IndexaCapital-Konten gefunden."
+      no_accounts_found: "Keine IndexaCapital-Konten gefunden. Bitte überprüfen Sie Ihre Zugangsdaten."
+      no_api_key: "IndexaCapital-Zugangsdaten sind nicht konfiguriert. Bitte in den Einstellungen konfigurieren."
+      no_credentials_configured: "Bitte konfigurieren Sie zuerst Ihre IndexaCapital-Zugangsdaten in den Anbieter-Einstellungen."
+      no_name_placeholder: "(Kein Name)"
+      settings_link: "Zu den Anbieter-Einstellungen"
+      subtitle: "IndexaCapital-Konto auswählen"
+      title: "%{account_name} mit IndexaCapital verknüpfen"
+
+    link_existing_account:
+      account_already_linked: "Dieses Konto ist bereits mit einem Anbieter verknüpft"
+      api_error: "API-Fehler: %{message}"
+      invalid_account_name: "Konto mit leerem Namen kann nicht verknüpft werden"
+      provider_account_already_linked: "Dieses IndexaCapital-Konto ist bereits mit einem anderen Konto verknüpft"
+      provider_account_not_found: "IndexaCapital-Konto nicht gefunden"
+      missing_parameters: "Erforderliche Parameter fehlen"
+      no_api_key: "IndexaCapital-Zugangsdaten nicht gefunden. Bitte in den Anbieter-Einstellungen konfigurieren."
+      success: "%{account_name} erfolgreich mit IndexaCapital verknüpft"
+
+    setup_accounts:
+      account_type_label: "Kontotyp:"
+      accounts_count:
+        one: "%{count} Konto verfügbar"
+        other: "%{count} Konten verfügbar"
+      all_accounts_linked: "Alle Ihre IndexaCapital-Konten sind bereits eingerichtet."
+      api_error: "API-Fehler: %{message}"
+      creating: "Konten werden erstellt..."
+      fetch_failed: "Konten konnten nicht geladen werden"
+      import_selected: "Ausgewählte Konten importieren"
+      instructions: "Wählen Sie die Konten aus, die Sie von IndexaCapital importieren möchten. Sie können mehrere Konten auswählen."
+      no_accounts: "Keine unverknüpften Konten von dieser IndexaCapital-Verbindung gefunden."
+      no_accounts_to_setup: "Keine Konten zum Einrichten"
+      no_api_key: "IndexaCapital-Zugangsdaten sind nicht konfiguriert. Bitte überprüfen Sie Ihre Verbindungseinstellungen."
+      select_all: "Alle auswählen"
+      account_types:
+        skip: "Dieses Konto überspringen"
+        depository: "Giro- oder Sparkonto"
+        credit_card: "Kreditkarte"
+        investment: "Depot/Anlagekonto"
+        crypto: "Kryptowährungs-Konto"
+        loan: "Darlehen oder Hypothek"
+        other_asset: "Sonstiges Vermögen"
+      subtype_labels:
+        depository: "Konto-Untertyp:"
+        credit_card: ""
+        investment: "Anlagetyp:"
+        crypto: ""
+        loan: "Darlehenstyp:"
+        other_asset: ""
+      subtype_messages:
+        credit_card: "Kreditkarten werden automatisch als Kreditkartenkonten eingerichtet."
+        other_asset: "Für sonstiges Vermögen sind keine weiteren Optionen nötig."
+        crypto: "Kryptowährungs-Konten werden zur Verwaltung von Beständen und Transaktionen eingerichtet."
+      subtypes:
+        depository:
+          checking: "Girokonto"
+          savings: "Sparkonto"
+          hsa: "Gesundheits-Sparkonto"
+          cd: "Festgeld"
+          money_market: "Geldmarkt"
+        investment:
+          brokerage: "Brokerage"
+          pension: "Rente"
+          retirement: "Altersvorsorge"
+          "401k": "401(k)"
+          roth_401k: "Roth 401(k)"
+          "403b": "403(b)"
+          tsp: "Thrift Savings Plan"
+          "529_plan": "529 Plan"
+          hsa: "Gesundheits-Sparkonto"
+          mutual_fund: "Investmentfonds"
+          ira: "Traditioneller IRA"
+          roth_ira: "Roth IRA"
+          angel: "Angel"
+        loan:
+          mortgage: "Hypothek"
+          student: "Studienkredit"
+          auto: "Autokredit"
+          other: "Sonstiges Darlehen"
+      balance: "Saldo"
+      cancel: "Abbrechen"
+      choose_account_type: "Wählen Sie den passenden Kontotyp für jedes IndexaCapital-Konto:"
+      create_accounts: "Konten erstellen"
+      creating_accounts: "Konten werden erstellt..."
+      historical_data_range: "Zeitraum für Verlauf:"
+      subtitle: "Wählen Sie die passenden Kontotypen für Ihre importierten Konten"
+      sync_start_date_help: "Wählen Sie, wie weit die Transaktionshistorie synchronisiert werden soll."
+      sync_start_date_label: "Transaktionen synchronisieren ab:"
+      title: "Ihre IndexaCapital-Konten einrichten"
+
+    complete_account_setup:
+      all_skipped: "Alle Konten wurden übersprungen. Es wurden keine Konten erstellt."
+      creation_failed: "Konten konnten nicht erstellt werden: %{error}"
+      no_accounts: "Keine Konten zum Einrichten."
+      success: "Erfolgreich %{count} Konto/Konten erstellt."
+
+    preload_accounts:
+      no_credentials_configured: "Bitte konfigurieren Sie zuerst Ihre IndexaCapital-Zugangsdaten in den Anbieter-Einstellungen."

@@ -3,6 +3,8 @@ de:
   defaults:
     brand_name: "%{brand_name}"
     product_name: "%{product_name}"
+  global:
+    expand: "Aufklappen"
   activerecord:
     errors:
       messages:

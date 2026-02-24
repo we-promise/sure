@@ -12,3 +12,12 @@ de:
       loading: Buchungen werden geladen...
     update:
       success: Buchung aktualisiert
+    unlock:
+      success: Buchung freigegeben. Sie kann beim nächsten Sync aktualisiert werden.
+    protection:
+      tooltip: Vor Sync geschützt
+      title: Vor Sync geschützt
+      description: Ihre Änderungen an dieser Buchung werden nicht durch den Provider-Sync überschrieben.
+      locked_fields_label: "Gesperrte Felder:"
+      unlock_button: Sync-Updates zulassen
+      unlock_confirm: Soll der Sync diese Buchung aktualisieren dürfen? Ihre Änderungen können beim nächsten Sync überschrieben werden.

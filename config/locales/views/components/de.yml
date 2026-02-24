@@ -1,0 +1,67 @@
+---
+de:
+  provider_sync_summary:
+    title: Sync-Zusammenfassung
+    last_sync: "Letzter Sync: vor %{time_ago}"
+    accounts:
+      title: Konten
+      total: "Gesamt: %{count}"
+      linked: "Verknüpft: %{count}"
+      unlinked: "Nicht verknüpft: %{count}"
+      institutions: "Institute: %{count}"
+    transactions:
+      title: Buchungen
+      seen: "Erfasst: %{count}"
+      imported: "Importiert: %{count}"
+      updated: "Aktualisiert: %{count}"
+      skipped: "Übersprungen: %{count}"
+      fetching: "Wird vom Broker abgerufen..."
+      protected:
+        one: "%{count} Buchung geschützt (nicht überschrieben)"
+        other: "%{count} Buchungen geschützt (nicht überschrieben)"
+      view_protected: Geschützte Buchungen anzeigen
+    skip_reasons:
+      excluded: Ausgeschlossen
+      user_modified: Vom Benutzer geändert
+      import_locked: CSV-Import
+      protected: Geschützt
+    holdings:
+      title: Bestände
+      found: "Gefunden: %{count}"
+      processed: "Verarbeitet: %{count}"
+    trades:
+      title: Trades
+      imported: "Importiert: %{count}"
+      skipped: "Übersprungen: %{count}"
+      fetching: "Aktivitäten werden vom Broker abgerufen..."
+    health:
+      title: Status
+      view_error_details: Fehlerdetails anzeigen
+      rate_limited: "Rate-Limit vor %{time_ago}"
+      recently: kürzlich
+      errors: "Fehler: %{count}"
+      pending_reconciled:
+        one: "%{count} ausstehende Doppelbuchung abgeglichen"
+        other: "%{count} ausstehende Doppelbuchungen abgeglichen"
+      view_reconciled: Abgeglichene Buchungen anzeigen
+      duplicate_suggestions:
+        one: "%{count} mögliche Doppelbuchung zur Prüfung"
+        other: "%{count} mögliche Doppelbuchungen zur Prüfung"
+      view_duplicate_suggestions: Vorgeschlagene Duplikate anzeigen
+      stale_pending:
+        one: "%{count} veraltete ausstehende Buchung (von Budgets ausgeschlossen)"
+        other: "%{count} veraltete ausstehende Buchungen (von Budgets ausgeschlossen)"
+      view_stale_pending: Betroffene Konten anzeigen
+      stale_pending_count:
+        one: "%{count} Buchung"
+        other: "%{count} Buchungen"
+      stale_unmatched:
+        one: "%{count} ausstehende Buchung benötigt manuelle Prüfung"
+        other: "%{count} ausstehende Buchungen benötigen manuelle Prüfung"
+      view_stale_unmatched: Zu prüfende Buchungen anzeigen
+      stale_unmatched_count:
+        one: "%{count} Buchung"
+        other: "%{count} Buchungen"
+      data_warnings: "Datenwarnungen: %{count}"
+      notices: "Hinweise: %{count}"
+      view_data_quality: Datenqualitätsdetails anzeigen

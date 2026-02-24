@@ -1,0 +1,17 @@
+---
+de:
+  pdf_import_mailer:
+    next_steps:
+      greeting: "Hallo %{name},"
+      intro: "Wir haben die PDF-Datei analysiert, die Sie an %{product} hochgeladen haben."
+      document_type_label: Dokumenttyp
+      summary_label: KI-Zusammenfassung
+      transactions_note: Dieses Dokument scheint Buchungen zu enthalten. Sie können diese jetzt extrahieren und prüfen.
+      document_stored_note: Dieses Dokument wurde zu Ihrer Referenz gespeichert. Es kann für Kontext in zukünftigen KI-Gesprächen verwendet werden.
+      next_steps_label: Was als Nächstes?
+      next_steps_intro: "Sie haben mehrere Möglichkeiten:"
+      option_extract_transactions: Buchungen aus diesem Kontoauszug extrahieren
+      option_keep_reference: Dokument für Referenz in zukünftigen KI-Gesprächen behalten
+      option_delete: Import löschen, wenn Sie ihn nicht mehr benötigen
+      view_import_button: Importdetails anzeigen
+      footer_note: Dies ist eine automatische Nachricht. Bitte antworten Sie nicht direkt auf diese E-Mail.

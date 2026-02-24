@@ -1,7 +1,14 @@
 ---
 de:
   invitations:
+    accept_choice:
+      create_account: Neues Konto erstellen
+      joined_household: Sie sind dem Haushalt beigetreten.
+      message: "%{inviter} hat Sie eingeladen, als %{role} beizutreten."
+      sign_in_existing: Ich habe bereits ein Konto
+      title: "%{family} beitreten"
     create:
+      existing_user_added: Der Benutzer wurde Ihrem Haushalt hinzugefügt.
       failure: Einladung konnte nicht gesendet werden.
       success: Einladung erfolgreich gesendet.
     destroy:
@@ -12,6 +19,7 @@ de:
       email_label: E-Mail-Adresse
       email_placeholder: E-Mail-Adresse eingeben
       role_admin: Administrator
+      role_guest: Gast
       role_label: Rolle
       role_member: Mitglied
       submit: Einladung senden

@@ -21,3 +21,8 @@ de:
       status_never: Synchronisierung erforderlich
       syncing: Wird synchronisiert...
       update: Verbindung aktualisieren
+    select_existing_account:
+      title: "%{account_name} mit Plaid verknüpfen"
+      description: Wählen Sie ein Plaid-Konto zur Verknüpfung mit Ihrem bestehenden Konto
+      cancel: Abbrechen
+      link_account: Konto verknüpfen

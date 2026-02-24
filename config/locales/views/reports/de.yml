@@ -5,6 +5,9 @@ de:
       title: Berichte
       subtitle: Umfassende Einblicke in deine finanzielle Situation
       export: CSV exportieren
+      print_report: Bericht drucken
+      drag_to_reorder: "Bereich per Drag & Drop neu anordnen"
+      toggle_section: "Sichtbarkeit des Bereichs umschalten"
       periods:
         monthly: Monatlich
         quarterly: Vierteljährlich
@@ -45,6 +48,7 @@ de:
       budgeted: Budgetiert
       remaining: Verbleibend
       over_by: Überschritten um
+      shared: geteilt
       suggested_daily: "%{amount} pro Tag empfohlen für %{days} verbleibende Tage"
       no_budgets: Keine Budgetkategorien für diesen Monat eingerichtet
       status:
@@ -80,6 +84,49 @@ de:
       description: Erfasse deine Finanzen, indem du Transaktionen hinzufügst oder deine Konten verbindest, um umfassende Berichte zu sehen
       add_transaction: Transaktion hinzufügen
       add_account: Konto hinzufügen
+    net_worth:
+      title: Nettovermögen
+      current_net_worth: Aktuelles Nettovermögen
+      period_change: Änderung im Zeitraum
+      assets_vs_liabilities: Vermögen vs. Verbindlichkeiten
+      total_assets: Vermögen
+      total_liabilities: Verbindlichkeiten
+      no_assets: Keine Vermögenswerte
+      no_liabilities: Keine Verbindlichkeiten
+    investment_performance:
+      title: Anlageperformance
+      portfolio_value: Portfoliowert
+      total_return: Gesamtrendite
+      contributions: Einlagen im Zeitraum
+      withdrawals: Entnahmen im Zeitraum
+      top_holdings: Top-Positionen
+      holding: Position
+      weight: Gewicht
+      value: Wert
+      return: Rendite
+      accounts: Anlagekonten
+      gains_by_tax_treatment: Gewinne nach Steuerbehandlung
+      unrealized_gains: Nicht realisierte Gewinne
+      realized_gains: Realisierte Gewinne
+      total_gains: Gesamtgewinne
+      taxable_realized_note: Diese Gewinne können steuerpflichtig sein
+      no_data: "-"
+      view_details: Details anzeigen
+      holdings_count:
+        one: "%{count} Position"
+        other: "%{count} Positionen"
+      sells_count:
+        one: "%{count} Verkauf"
+        other: "%{count} Verkäufe"
+      holdings: Positionen
+      sell_trades: Verkaufstrades
+      and_more: "+%{count} weitere"
+    investment_flows:
+      title: Anlageflüsse
+      description: Verfolge Geldflüsse in und aus deinen Anlagekonten
+      contributions: Einlagen
+      withdrawals: Entnahmen
+      net_flow: Nettfluss
     transactions_breakdown:
       title: Transaktionsübersicht
       no_transactions: Keine Transaktionen für den ausgewählten Zeitraum und Filter gefunden
@@ -114,10 +161,14 @@ de:
         expense: Ausgaben
         income: Einnahmen
         uncategorized: Ohne Kategorie
-        transactions: Transaktionen
+        entries:
+          one: "%{count} Eintrag"
+          other: "%{count} Einträge"
         percentage: "% des Gesamtbetrags"
       pagination:
-        showing: Zeige %{count} Transaktionen
+        showing:
+          one: Zeige %{count} Eintrag
+          other: Zeige %{count} Einträge
         previous: Zurück
         next: Weiter
     google_sheets_instructions:
@@ -136,3 +187,52 @@ de:
       open_sheets: Google Sheets öffnen
       go_to_api_keys: Zu den API-Schlüsseln
       close: Verstanden
+    print:
+      document_title: Finanzbericht
+      title: Finanzbericht
+      generated_on: "Erstellt am %{date}"
+      summary:
+        title: Zusammenfassung
+        income: Einnahmen
+        expenses: Ausgaben
+        net_savings: Nettoersparnis
+        budget: Budget
+        vs_prior: "%{percent}% vs. Vorperiode"
+        of_income: "%{percent}% der Einnahmen"
+        used: genutzt
+      net_worth:
+        title: Nettovermögen
+        current_balance: Aktueller Kontostand
+        this_period: dieser Zeitraum
+        assets: Vermögen
+        liabilities: Verbindlichkeiten
+        no_liabilities: Keine Verbindlichkeiten
+      trends:
+        title: Monatliche Trends
+        month: Monat
+        income: Einnahmen
+        expenses: Ausgaben
+        net: Netto
+        savings_rate: Sparquote
+        average: Durchschnitt
+        current_month_note: "* Aktueller Monat (Teildaten)"
+      investments:
+        title: Anlagen
+        portfolio_value: Portfoliowert
+        total_return: Gesamtrendite
+        contributions: Einlagen
+        withdrawals: Entnahmen
+        this_period: dieser Zeitraum
+        top_holdings: Top-Positionen
+        holding: Position
+        weight: Gewicht
+        value: Wert
+        return: Rendite
+      spending:
+        title: Ausgaben nach Kategorie
+        income: Einnahmen
+        expenses: Ausgaben
+        category: Kategorie
+        amount: Betrag
+        percent: "%"
+        more_categories: "+ %{count} weitere Kategorien"
