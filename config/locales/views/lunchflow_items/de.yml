@@ -136,7 +136,9 @@ de:
       all_skipped: "Alle Konten wurden übersprungen. Es wurden keine Konten angelegt."
       creation_failed: "Konten konnten nicht angelegt werden: %{error}"
       no_accounts: "Keine Konten zum Einrichten."
-      success: "%{count} Konto/Konten erfolgreich angelegt."
+      success:
+        one: "%{count} Konto erfolgreich angelegt."
+        other: "%{count} Konten erfolgreich angelegt."
     sync:
       success: Synchronisierung gestartet
     update:
