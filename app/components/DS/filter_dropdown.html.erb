@@ -13,7 +13,7 @@
         </button>
     </div>
   </div>
-  <div class="absolute z-50 p-1.5 w-full min-w-32 rounded-lg shadow-lg shadow-border-sm bg-container mt-1.5 transition duration-150 ease-out -translate-y-1 opacity-0" data-dropdown-target="menu">
+  <div class="absolute z-50 p-1.5 w-full min-w-32 rounded-lg shadow-lg shadow-border-xs bg-container mt-1.5 transition duration-150 ease-out -translate-y-1 opacity-0" data-dropdown-target="menu">
     <% if searchable %>
       <div class="relative flex items-center bg-container border border-secondary rounded-lg mb-1">
         <input type="search"
@@ -60,13 +60,15 @@
 
           <% when :badge %>
             <% hex_color = color_for(item) %>
-            <span class="flex items-center gap-1 text-sm font-medium rounded-full px-1.5 py-1 border truncate"
+            <span class="flex items-center gap-2 text-sm font-medium rounded-full px-3 py-1 border truncate"
                   style="
                     background-color: color-mix(in oklab, <%= hex_color %> 10%, transparent);
                     border-color: color-mix(in oklab, <%= hex_color %> 20%, transparent);
                     color: <%= hex_color %>;">
               <% if icon_for(item) %>
                 <%= helpers.icon icon_for(item), size: "sm", color: "current" %>
+              <% else %>
+                <span class="size-1.5 rounded-full" style="background-color: <%= hex_color %>;"></span>
               <% end %>
               <%= item[:label] %>
             </span>
