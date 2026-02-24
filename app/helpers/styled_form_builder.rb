@@ -38,7 +38,7 @@ class StyledFormBuilder < ActionView::Helpers::FormBuilder
         method: method,
         items: collection.map { |item| { value: item.id, label: item.name, object: item } },
         selected: selected_value,
-        placeholder: options[:placeholder] || "Select...",
+        placeholder: placeholder,
         searchable: options.fetch(:searchable, false),
         variant: options.fetch(:variant, :simple),
         label: options[:label],
