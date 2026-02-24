@@ -5,15 +5,27 @@ module DS
     VARIANTS = %i[simple logo badge].freeze
     DEFAULT_COLOR = "#737373"
 
-    def initialize(form:, method:, items:, selected: nil, placeholder: "Select...", variant: :simple, searchable: false, **options)
+    def initialize(form:, method:, items:, selected: nil, placeholder: "Select...", variant: :simple, include_blank: nil, searchable: false, **options)
       @form = form
       @method = method
-      @items = items
       @selected_value = selected
       @placeholder = placeholder
       @variant = variant
       @searchable = searchable
       @options = options
+
+      normalized_items = normalize_items(items)
+
+      if include_blank
+        normalized_items.unshift({
+          value: nil,
+          label: include_blank,
+          object: nil
+        })
+      end
+
+      @items = normalized_items
+      @selected_value = selected
     end
 
     def selected_item

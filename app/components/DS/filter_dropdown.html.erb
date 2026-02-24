@@ -44,17 +44,19 @@
             <%= item[:label] %>
 
           <% when :logo %>
-            <% if logo_for(item) %>
-              <%= image_tag logo_for(item),
-                    class: "w-6 h-6 rounded-full border border-secondary",
-                    loading: "lazy" %>
-            <% else %>
-              <%= render DS::FilledIcon.new(
-                    variant: :text,
-                    text: item[:label],
-                    size: "sm",
-                    rounded: true
-                  ) %>
+            <% unless item[:value].nil? %>
+              <% if logo_for(item) %>
+                <%= image_tag logo_for(item),
+                      class: "w-6 h-6 rounded-full border border-secondary",
+                      loading: "lazy" %>
+              <% else %>
+                <%= render DS::FilledIcon.new(
+                      variant: :text,
+                      text: item[:label],
+                      size: "sm",
+                      rounded: true
+                    ) %>
+              <% end %>
             <% end %>
             <%= item[:label] %>
 

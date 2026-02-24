@@ -41,6 +41,7 @@ class StyledFormBuilder < ActionView::Helpers::FormBuilder
         placeholder: placeholder,
         searchable: options.fetch(:searchable, false),
         variant: options.fetch(:variant, :simple),
+        include_blank: options[:include_blank],
         label: options[:label],
         container_class: options[:container_class],
         label_tooltip: options[:label_tooltip]
