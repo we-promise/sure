@@ -82,7 +82,7 @@ class Provider::Openai < Provider
         json_mode: json_mode
       ).auto_categorize
 
-      trace&.update(output: result.map(&:to_h))
+      upsert_langfuse_trace(trace: trace, output: result.map(&:to_h))
 
       result
     end
@@ -110,7 +110,7 @@ class Provider::Openai < Provider
         json_mode: json_mode
       ).auto_detect_merchants
 
-      trace&.update(output: result.map(&:to_h))
+      upsert_langfuse_trace(trace: trace, output: result.map(&:to_h))
 
       result
     end
@@ -147,7 +147,7 @@ class Provider::Openai < Provider
         family: family
       ).process
 
-      trace&.update(output: result.to_h)
+      upsert_langfuse_trace(trace: trace, output: result.to_h)
 
       result
     end
@@ -168,7 +168,7 @@ class Provider::Openai < Provider
         model: effective_model
       ).extract
 
-      trace&.update(output: { transaction_count: result[:transactions].size })
+      upsert_langfuse_trace(trace: trace, output: { transaction_count: result[:transactions].size })
 
       result
     end
@@ -480,7 +480,7 @@ class Provider::Openai < Provider
         environment: Rails.env
       )
     rescue => e
-      Rails.logger.warn("Langfuse trace creation failed: #{e.message}")
+      Rails.logger.warn("Langfuse trace creation failed: #{e.message}\n#{e.full_message}")
       nil
     end
 
@@ -505,16 +505,32 @@ class Provider::Openai < Provider
           output: { error: error.message, details: error.respond_to?(:details) ? error.details : nil },
           level: "ERROR"
         )
-        trace&.update(
+        upsert_langfuse_trace(
+          trace: trace,
           output: { error: error.message },
           level: "ERROR"
         )
       else
         generation&.end(output: output, usage: usage)
-        trace&.update(output: output)
+        upsert_langfuse_trace(trace: trace, output: output)
       end
     rescue => e
-      Rails.logger.warn("Langfuse logging failed: #{e.message}")
+      Rails.logger.warn("Langfuse logging failed: #{e.message}\n#{e.full_message}")
+    end
+
+    def upsert_langfuse_trace(trace:, output:, level: nil)
+      return unless langfuse_client && trace&.id
+
+      payload = {
+        id: trace.id,
+        output: output
+      }
+      payload[:level] = level if level.present?
+
+      langfuse_client.trace(**payload)
+    rescue => e
+      Rails.logger.warn("Langfuse trace upsert failed for trace_id=#{trace&.id}: #{e.message}\n#{e.full_message}")
+      nil
     end
 
     def record_llm_usage(family:, model:, operation:, usage: nil, error: nil)

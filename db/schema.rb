@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_02_18_120000) do
+ActiveRecord::Schema[7.2].define(version: 2026_02_18_120001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -503,6 +503,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_02_18_120000) do
     t.integer "month_start_day", default: 1, null: false
     t.string "vector_store_id"
     t.string "moniker", default: "Family", null: false
+    t.string "assistant_type", default: "builtin", null: false
     t.check_constraint "month_start_day >= 1 AND month_start_day <= 28", name: "month_start_day_range"
   end
 
