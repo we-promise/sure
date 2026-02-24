@@ -105,7 +105,7 @@
                   :id, :name,
                   { include_blank: t(".none"),
                     label: t(".merchant_label"),
-                    class: "text-subdued", variant: :icon, searchable: true },
+                    class: "text-subdued", variant: :logo, searchable: true },
                   "data-auto-submit-form-target": "auto" %>
             <%= ef.select :tag_ids,
                   Current.family.tags.alphabetically.pluck(:name, :id),

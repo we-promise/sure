@@ -2,7 +2,7 @@ module DS
   class FilterDropdown < ViewComponent::Base
     attr_reader :form, :method, :items, :selected_value, :placeholder, :variant, :searchable, :options
 
-    VARIANTS = %i[simple icon badge].freeze
+    VARIANTS = %i[simple logo badge].freeze
     DEFAULT_COLOR = "#737373"
 
     def initialize(form:, method:, items:, selected: nil, placeholder: "Select...", variant: :simple, searchable: false, **options)
@@ -32,7 +32,7 @@ module DS
       obj&.respond_to?(:lucide_icon) ? obj.lucide_icon : nil
     end
 
-    # Returns true if the item has a logo (used in :icon variant)
+    # Returns true if the item has a logo (used in :logo variant)
     def logo_for(item)
       obj = item[:object]
       obj&.respond_to?(:logo_url) && obj.logo_url.present? ? Setting.transform_brand_fetch_url(obj.logo_url) : nil
