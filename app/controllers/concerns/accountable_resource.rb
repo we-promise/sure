@@ -34,7 +34,11 @@ module AccountableResource
   end
 
   def create
-    opening_balance_date = account_params[:opening_balance_date].presence&.to_date || Time.zone.today
+    opening_balance_date = begin
+      account_params[:opening_balance_date].presence&.to_date
+    rescue Date::Error
+      nil
+    end || Time.zone.today
     @account = Current.family.accounts.create_and_sync(
       account_params.except(:return_to, :opening_balance_date),
       opening_balance_date: opening_balance_date
