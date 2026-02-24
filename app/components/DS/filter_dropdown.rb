@@ -40,23 +40,23 @@ module DS
 
     private
 
-    def normalize_items(collection)
-      collection.map do |item|
-        case item
-        when Hash
-          {
-            value: item[:value],
-            label: item[:label],
-            object: item[:object]
-          }
-        else
-          {
-            value: item.id,
-            label: item.name,
-            object: item
-          }
+      def normalize_items(collection)
+        collection.map do |item|
+          case item
+          when Hash
+            {
+              value: item[:value],
+              label: item[:label],
+              object: item[:object]
+            }
+          else
+            {
+              value: item.id,
+              label: item.name,
+              object: item
+            }
+          end
         end
       end
-    end
   end
 end
