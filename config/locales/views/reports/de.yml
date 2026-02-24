@@ -126,7 +126,7 @@ de:
       description: Verfolge Geldflüsse in und aus deinen Anlagekonten
       contributions: Einlagen
       withdrawals: Entnahmen
-      net_flow: Nettfluss
+      net_flow: Nettozufluss
     transactions_breakdown:
       title: Transaktionsübersicht
       no_transactions: Keine Transaktionen für den ausgewählten Zeitraum und Filter gefunden

@@ -29,7 +29,7 @@ de:
    
     panel:
       setup_instructions: "Einrichtungsanleitung:"
-      step_1: "Besuchen Sie Ihr Indexa Capital Dashboard, um einen schreibgeschützten API-Token zu erstellen"
+      step_1: "Besuchen Sie Ihr IndexaCapital Dashboard, um einen schreibgeschützten API-Token zu erstellen"
       step_2: "Fügen Sie Ihren API-Token unten ein und klicken Sie auf Speichern"
       step_3: "Nach erfolgreicher Verbindung gehen Sie zur Registerkarte Konten, um neue Konten einzurichten"
       field_descriptions: "Feldbeschreibungen:"
@@ -44,22 +44,22 @@ de:
       fields:
         api_token:
           label: "API-Token"
-          description: "Ihr schreibgeschützter API-Token aus dem Indexa Capital Dashboard"
+          description: "Ihr schreibgeschützter API-Token aus dem IndexaCapital Dashboard"
           placeholder_new: "API-Token hier einfügen"
           placeholder_update: "Neuen API-Token zum Aktualisieren eingeben"
         username:
           label: "Benutzername"
-          description: "Ihr Indexa Capital Benutzername/E-Mail"
+          description: "Ihr IndexaCapital Benutzername/E-Mail"
           placeholder_new: "Benutzername hier einfügen"
           placeholder_update: "Neuen Benutzernamen zum Aktualisieren eingeben"
         document:
           label: "Dokument-ID"
-          description: "Ihre Indexa Capital Dokument-/ID-Nummer"
+          description: "Ihre IndexaCapital Dokument-/ID-Nummer"
           placeholder_new: "Dokument-ID hier einfügen"
           placeholder_update: "Neue Dokument-ID zum Aktualisieren eingeben"
         password:
           label: "Passwort"
-          description: "Ihr Indexa Capital Passwort"
+          description: "Ihr IndexaCapital Passwort"
           placeholder_new: "Passwort hier einfügen"
           placeholder_update: "Neues Passwort zum Aktualisieren eingeben"
 

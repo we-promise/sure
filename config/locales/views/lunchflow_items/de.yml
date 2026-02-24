@@ -2,13 +2,13 @@
 de:
   lunchflow_items:
     create:
-      success: Lunch-Flow-Verbindung erfolgreich erstellt
+      success: Lunch‑Flow-Verbindung erfolgreich erstellt
     destroy:
-      success: Lunch-Flow-Verbindung entfernt
+      success: Lunch‑Flow-Verbindung entfernt
     index:
-      title: Lunch-Flow-Verbindungen
+      title: Lunch‑Flow-Verbindungen
     loading:
-      loading_message: Lunch-Flow-Konten werden geladen...
+      loading_message: Lunch‑Flow-Konten werden geladen...
       loading_title: Wird geladen
     link_accounts:
       all_already_linked:
@@ -33,7 +33,7 @@ de:
       no_accounts_description: Diese Verbindung enthält derzeit keine verknüpften Konten.
       no_accounts_title: Keine Konten
       setup_action: Neue Konten einrichten
-      setup_description: "%{linked} von %{total} Konten verknüpft. Wählen Sie Kontotypen für Ihre neu importierten Lunch-Flow-Konten."
+      setup_description: "%{linked} von %{total} Konten verknüpft. Wählen Sie Kontotypen für Ihre neu importierten Lunch‑Flow-Konten."
       setup_needed: Neue Konten bereit zur Einrichtung
       status: "Vor %{timestamp} synchronisiert"
       status_never: Noch nie synchronisiert
@@ -45,41 +45,41 @@ de:
       accounts_selected: Konten ausgewählt
       api_error: "API-Fehler: %{message}"
       cancel: Abbrechen
-      configure_name_in_lunchflow: Import nicht möglich – bitte Kontoname in Lunchflow konfigurieren
+      configure_name_in_lunchflow: Import nicht möglich – bitte Kontoname in Lunch‑Flow konfigurieren
       description: Wähle die Konten aus, die du mit deinem %{product_name}-Konto verknüpfen möchtest.
       link_accounts: Ausgewählte Konten verknüpfen
       no_accounts_found: Keine Konten gefunden. Bitte überprüfe deine API-Key-Konfiguration.
-      no_api_key: Lunch-Flow-API-Schlüssel ist nicht konfiguriert. Bitte konfiguriere ihn in den Einstellungen.
+      no_api_key: Lunch‑Flow-API-Schlüssel ist nicht konfiguriert. Bitte konfiguriere ihn in den Einstellungen.
       no_name_placeholder: "(Kein Name)"
-      title: Lunch-Flow-Konten auswählen
+      title: Lunch‑Flow-Konten auswählen
     select_existing_account:
       account_already_linked: Dieses Konto ist bereits mit einem Anbieter verknüpft
-      all_accounts_already_linked: Alle Lunch-Flow-Konten sind bereits verknüpft
+      all_accounts_already_linked: Alle Lunch‑Flow-Konten sind bereits verknüpft
       api_error: "API-Fehler: %{message}"
       cancel: Abbrechen
-      configure_name_in_lunchflow: Import nicht möglich – bitte Kontoname in Lunchflow konfigurieren
-      description: Wähle ein Lunch-Flow-Konto aus, um es mit diesem Konto zu verknüpfen. Transaktionen werden automatisch synchronisiert und doppelte Einträge entfernt.
+      configure_name_in_lunchflow: Import nicht möglich – bitte Kontoname in Lunch‑Flow konfigurieren
+      description: Wähle ein Lunch‑Flow-Konto aus, um es mit diesem Konto zu verknüpfen. Transaktionen werden automatisch synchronisiert und doppelte Einträge entfernt.
       link_account: Konto verknüpfen
       no_account_specified: Kein Konto angegeben
-      no_accounts_found: Keine Lunch-Flow-Konten gefunden. Bitte überprüfe deine API-Key-Konfiguration.
-      no_api_key: Lunch-Flow-API-Schlüssel ist nicht konfiguriert. Bitte konfiguriere ihn in den Einstellungen.
+      no_accounts_found: Keine Lunch‑Flow-Konten gefunden. Bitte überprüfe deine API-Key-Konfiguration.
+      no_api_key: Lunch‑Flow-API-Schlüssel ist nicht konfiguriert. Bitte konfiguriere ihn in den Einstellungen.
       no_name_placeholder: "(Kein Name)"
-      title: "%{account_name} mit Lunch Flow verknüpfen"
+      title: "%{account_name} mit Lunch‑Flow verknüpfen"
     link_existing_account:
       account_already_linked: Dieses Konto ist bereits mit einem Anbieter verknüpft
       api_error: "API-Fehler: %{message}"
       invalid_account_name: Konto mit leerem Namen kann nicht verknüpft werden
-      lunchflow_account_already_linked: Dieses Lunch-Flow-Konto ist bereits mit einem anderen Konto verknüpft
-      lunchflow_account_not_found: Lunch-Flow-Konto nicht gefunden
+      lunchflow_account_already_linked: Dieses Lunch‑Flow-Konto ist bereits mit einem anderen Konto verknüpft
+      lunchflow_account_not_found: Lunch‑Flow-Konto nicht gefunden
       missing_parameters: Erforderliche Parameter fehlen
-      success: "%{account_name} erfolgreich mit Lunch Flow verknüpft"
+      success: "%{account_name} erfolgreich mit Lunch‑Flow verknüpft"
     setup_accounts:
       account_type_label: "Kontotyp:"
-      all_accounts_linked: "Alle Ihre Lunch-Flow-Konten sind bereits eingerichtet."
+      all_accounts_linked: "Alle Ihre Lunch‑Flow-Konten sind bereits eingerichtet."
       api_error: "API-Fehler: %{message}"
       fetch_failed: "Konten konnten nicht geladen werden"
       no_accounts_to_setup: "Keine Konten zum Einrichten"
-      no_api_key: "Lunch-Flow-API-Schlüssel ist nicht konfiguriert. Bitte prüfen Sie Ihre Verbindungseinstellungen."
+      no_api_key: "Lunch‑Flow-API-Schlüssel ist nicht konfiguriert. Bitte prüfen Sie Ihre Verbindungseinstellungen."
       account_types:
         skip: Dieses Konto überspringen
         depository: Giro- oder Sparkonto
@@ -124,14 +124,14 @@ de:
           other: Sonstiges Darlehen
       balance: Saldo
       cancel: Abbrechen
-      choose_account_type: "Wählen Sie den richtigen Kontotyp für jedes Lunch-Flow-Konto:"
+      choose_account_type: "Wählen Sie den richtigen Kontotyp für jedes Lunch‑Flow-Konto:"
       create_accounts: Konten anlegen
       creating_accounts: Konten werden angelegt...
       historical_data_range: "Historischer Datenbereich:"
       subtitle: Wählen Sie die richtigen Kontotypen für Ihre importierten Konten
       sync_start_date_help: Wählen Sie, wie weit die Buchungshistorie zurück synchronisiert werden soll. Maximal 3 Jahre verfügbar.
       sync_start_date_label: "Buchungen synchronisieren ab:"
-      title: Lunch-Flow-Konten einrichten
+      title: Lunch‑Flow-Konten einrichten
     complete_account_setup:
       all_skipped: "Alle Konten wurden übersprungen. Es wurden keine Konten angelegt."
       creation_failed: "Konten konnten nicht angelegt werden: %{error}"
@@ -140,4 +140,4 @@ de:
     sync:
       success: Synchronisierung gestartet
     update:
-      success: Lunch-Flow-Verbindung aktualisiert
+      success: Lunch‑Flow-Verbindung aktualisiert

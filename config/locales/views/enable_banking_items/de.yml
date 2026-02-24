@@ -29,12 +29,12 @@ de:
       no_session: Keine aktive Enable-Banking-Verbindung. Bitte verbinden Sie zuerst eine Bank.
       success: "%{count} Konten wurden erfolgreich verknüpft."
     link_existing_account:
-      success: Konto erfolgreich mit Enable Banking verknüpft
+      success: Konto erfolgreich mit Enable-Banking verknüpft
       errors:
         only_manual: Nur manuelle Konten können verknüpft werden
         invalid_enable_banking_account: Ungültiges Enable-Banking-Konto ausgewählt
     new:
-      link_enable_banking_title: Enable Banking verknüpfen
+      link_enable_banking_title: Enable-Banking verknüpfen
     reauthorize:
       invalid_redirect: Die erhaltene Autorisierungs-URL ist ungültig. Bitte versuchen Sie es erneut.
       reauthorization_failed: Erneute Autorisierung fehlgeschlagen

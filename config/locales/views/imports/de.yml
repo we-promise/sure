@@ -12,8 +12,8 @@ de:
         success: Import wurde erfolgreich konfiguriert.
       category_import:
         button_label: Weiter
-        description: Laden Sie eine einfache CSV-Datei hoch (z. B. wie bei einem Export). Die Spalten werden automatisch zugeordnet.
-        instructions: Wählen Sie Weiter, um die CSV zu parsen und zum Bereinigungsschritt zu gelangen.
+        description: Lade eine einfache CSV-Datei hoch (z. B. wie bei einem Export). Die Spalten werden automatisch zugeordnet.
+        instructions: Wähle Weiter, um die CSV zu parsen und zum Bereinigungsschritt zu gelangen.
       mint_import:
         date_format_label: Datumsformat
       rule_import:
@@ -89,7 +89,7 @@ de:
       import_portfolio: Investitionen importieren
       import_rules: Regeln importieren
       import_transactions: Transaktionen importieren
-      requires_account: Importieren Sie zuerst Konten, um diese Option zu nutzen.
+      requires_account: Importiere zuerst Konten, um diese Option zu nutzen.
       resume: "%{type} fortsetzen"
       sources: Quellen
       title: Neuer CSV-Import
