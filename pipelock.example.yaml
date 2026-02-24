@@ -1,0 +1,36 @@
+# Pipelock configuration for Docker Compose
+# See https://github.com/luckyPipewrench/pipelock for full options.
+
+forward_proxy:
+  enabled: true
+  max_tunnel_seconds: 300
+  idle_timeout_seconds: 60
+
+websocket_proxy:
+  enabled: false
+  max_message_bytes: 1048576
+  max_concurrent_connections: 128
+  scan_text_frames: true
+  allow_binary_frames: false
+  forward_cookies: false
+  strip_compression: true
+  max_connection_seconds: 3600
+  idle_timeout_seconds: 300
+  origin_policy: rewrite
+
+dlp:
+  scan_env: true
+
+response_scanning:
+  enabled: true
+  action: warn
+
+mcp_input_scanning:
+  enabled: true
+  action: block
+  on_parse_error: block
+
+mcp_tool_scanning:
+  enabled: true
+  action: warn
+  detect_drift: true
