@@ -19,16 +19,17 @@ class Provider::Registry
     end
 
     def openai_for_family(family)
-      return nil unless family&.custom_openai_endpoint?
-      return nil unless family.preferred_ai_model.present?
+      config = family&.builtin_assistant_config
+      return nil unless config&.custom_openai_endpoint?
+      return nil unless config.preferred_ai_model.present?
 
       access_token = ENV["OPENAI_ACCESS_TOKEN"].presence || Setting.openai_access_token
       return nil unless access_token.present?
 
       Provider::Openai.new(
         access_token,
-        uri_base: family.openai_uri_base,
-        model: family.preferred_ai_model
+        uri_base: config.openai_uri_base,
+        model: config.preferred_ai_model
       )
     end
 

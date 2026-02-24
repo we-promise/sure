@@ -18,28 +18,28 @@
   <div class="bg-container rounded-xl shadow-border-xs p-4">
     <h2 class="text-sm font-medium text-primary mb-1"><%= t(".endpoint_section_title") %></h2>
     <p class="text-xs text-secondary mb-4"><%= t(".endpoint_section_subtitle") %></p>
-    <%= styled_form_with model: @family,
+    <%= styled_form_with model: @config,
                          url: settings_ai_prompts_path,
                          method: :patch,
-                         scope: :family,
+                         scope: :builtin_assistant_config,
                          class: "space-y-4" do |form| %>
       <%= form.text_field :openai_uri_base,
                           label: t(".openai_uri_base_label"),
                           placeholder: t(".openai_uri_base_placeholder"),
-                          value: @family.openai_uri_base,
+                          value: @config.openai_uri_base,
                           class: "w-full min-w-0 font-mono text-sm text-primary bg-container placeholder:text-subdued min-h-[2.25rem] px-2 py-1.5 rounded border border-secondary" %>
       <p class="text-xs text-secondary -mt-2"><%= t(".openai_uri_base_hint") %></p>
       <%= form.text_field :preferred_ai_model,
                           label: t(".preferred_ai_model_label"),
                           placeholder: t(".preferred_ai_model_placeholder"),
-                          value: @family.preferred_ai_model,
+                          value: @config.preferred_ai_model,
                           class: "w-full min-w-0 font-mono text-sm text-primary bg-container placeholder:text-subdued min-h-[2.25rem] px-2 py-1.5 rounded border border-secondary" %>
       <p class="text-xs text-secondary -mt-2"><%= t(".preferred_ai_model_hint") %></p>
       <%= form.submit t(".save"), class: "cursor-pointer" %>
     <% end %>
-    <% if @family.errors.any? && params[:from] != "system_prompt" %>
+    <% if @config.errors.any? && params[:from] != "system_prompt" %>
       <div class="mt-3 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
-        <%= @family.errors.full_messages.to_sentence %>
+        <%= @config.errors.full_messages.to_sentence %>
       </div>
     <% end %>
   </div>

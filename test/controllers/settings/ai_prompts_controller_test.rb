@@ -32,7 +32,7 @@ class Settings::AiPromptsControllerTest < ActionDispatch::IntegrationTest
 
   test "update requires admin" do
     sign_in users(:family_member)
-    patch settings_ai_prompts_url, params: { family: { preferred_ai_model: "gpt-4" } }
+    patch settings_ai_prompts_url, params: { builtin_assistant_config: { preferred_ai_model: "gpt-4" } }
     assert_redirected_to root_path
     assert_match(/not authorized/i, flash[:alert].to_s)
   end
@@ -45,72 +45,74 @@ class Settings::AiPromptsControllerTest < ActionDispatch::IntegrationTest
 
   test "update saves custom prompts and preferred model" do
     patch settings_ai_prompts_url, params: {
-      family: {
+      builtin_assistant_config: {
         preferred_ai_model: "gpt-4-turbo",
         custom_system_prompt: "You are a helpful assistant.",
         custom_intro_prompt: "Welcome! Tell me about yourself."
       }
     }
     assert_redirected_to settings_ai_prompts_path
-    @family.reload
-    assert_equal "gpt-4-turbo", @family.preferred_ai_model
-    assert_equal "You are a helpful assistant.", @family.custom_system_prompt
-    assert_equal "Welcome! Tell me about yourself.", @family.custom_intro_prompt
+    config = @family.reload.builtin_assistant_config
+    assert config.present?
+    assert_equal "gpt-4-turbo", config.preferred_ai_model
+    assert_equal "You are a helpful assistant.", config.custom_system_prompt
+    assert_equal "Welcome! Tell me about yourself.", config.custom_intro_prompt
   end
 
   test "update with invalid length returns unprocessable and does not persist" do
-    long_prompt = "x" * (Family::CUSTOM_PROMPT_MAX_LENGTH + 1)
+    long_prompt = "x" * (BuiltinAssistantConfig::CUSTOM_PROMPT_MAX_LENGTH + 1)
     patch settings_ai_prompts_url, params: {
-      family: { custom_system_prompt: long_prompt }
+      builtin_assistant_config: { custom_system_prompt: long_prompt }
     }
     assert_response :unprocessable_entity
-    @family.reload
-    assert_not_equal long_prompt, @family.custom_system_prompt
+    config = @family.reload.builtin_assistant_config
+    assert config.nil? || config.custom_system_prompt != long_prompt
   end
 
   test "update from system_prompt form with invalid length renders edit_system_prompt" do
-    long_prompt = "x" * (Family::CUSTOM_PROMPT_MAX_LENGTH + 1)
+    long_prompt = "x" * (BuiltinAssistantConfig::CUSTOM_PROMPT_MAX_LENGTH + 1)
     patch settings_ai_prompts_url, params: {
       from: "system_prompt",
-      family: { custom_system_prompt: long_prompt, custom_intro_prompt: "" }
+      builtin_assistant_config: { custom_system_prompt: long_prompt, custom_intro_prompt: "" }
     }
     assert_response :unprocessable_entity
     assert_match(/Edit main system prompt|Custom main system prompt/, response.body)
-    @family.reload
-    assert_not_equal long_prompt, @family.custom_system_prompt
+    config = @family.reload.builtin_assistant_config
+    assert config.nil? || config.custom_system_prompt != long_prompt
   end
 
   test "update saves per-family OpenAI endpoint and model" do
     patch settings_ai_prompts_url, params: {
-      family: {
+      builtin_assistant_config: {
         openai_uri_base: "https://api.example.com/v1",
         preferred_ai_model: "gpt-4-turbo"
       }
     }
     assert_redirected_to settings_ai_prompts_path
-    @family.reload
-    assert_equal "https://api.example.com/v1", @family.openai_uri_base
-    assert_equal "gpt-4-turbo", @family.preferred_ai_model
+    config = @family.reload.builtin_assistant_config
+    assert config.present?
+    assert_equal "https://api.example.com/v1", config.openai_uri_base
+    assert_equal "gpt-4-turbo", config.preferred_ai_model
   end
 
   test "update with endpoint but no model returns unprocessable" do
     patch settings_ai_prompts_url, params: {
-      family: { openai_uri_base: "https://api.example.com/v1", preferred_ai_model: "" }
+      builtin_assistant_config: { openai_uri_base: "https://api.example.com/v1", preferred_ai_model: "" }
     }
     assert_response :unprocessable_entity
-    @family.reload
-    assert @family.openai_uri_base.blank?
+    config = @family.reload.builtin_assistant_config
+    assert config.nil? || config.openai_uri_base.blank?
   end
 
   test "update with blank params clears overrides" do
-    @family.update!(
+    @family.builtin_assistant_config || @family.create_builtin_assistant_config!(
       preferred_ai_model: "gpt-4",
       custom_system_prompt: "Custom",
       custom_intro_prompt: "Intro",
       openai_uri_base: "https://api.example.com/v1"
     )
     patch settings_ai_prompts_url, params: {
-      family: {
+      builtin_assistant_config: {
         preferred_ai_model: "",
         custom_system_prompt: "",
         custom_intro_prompt: "",
@@ -118,10 +120,11 @@ class Settings::AiPromptsControllerTest < ActionDispatch::IntegrationTest
       }
     }
     assert_redirected_to settings_ai_prompts_path
-    @family.reload
-    assert @family.preferred_ai_model.blank?
-    assert @family.custom_system_prompt.blank?
-    assert @family.custom_intro_prompt.blank?
-    assert @family.openai_uri_base.blank?
+    config = @family.reload.builtin_assistant_config
+    assert config.present?
+    assert config.preferred_ai_model.blank?
+    assert config.custom_system_prompt.blank?
+    assert config.custom_intro_prompt.blank?
+    assert config.openai_uri_base.blank?
   end
 end

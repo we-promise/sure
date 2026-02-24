@@ -5,6 +5,7 @@ class Settings::AiPromptsController < ApplicationController
 
   def show
     @breadcrumbs = [ [ "Home", root_path ], [ "AI Prompts", nil ] ]
+    @config = builtin_config
     @assistant_config = Assistant.config_for(OpenStruct.new(user: Current.user))
     @effective_model = Chat.default_model(@family)
     @show_openai_prompts = show_openai_prompts?
@@ -16,10 +17,12 @@ class Settings::AiPromptsController < ApplicationController
       [ "AI Prompts", settings_ai_prompts_path ],
       [ t("settings.ai_prompts.show.edit_system_prompt_title"), nil ]
     ]
+    @config = builtin_config
   end
 
   def update
-    if @family.update(ai_prompt_params)
+    @config = builtin_config
+    if @config.update(builtin_assistant_config_params)
       redirect_to redirect_after_update, notice: t(".success")
     else
       if params[:from].to_s == "system_prompt"
@@ -47,8 +50,12 @@ class Settings::AiPromptsController < ApplicationController
       @family = Current.family
     end
 
-    def ai_prompt_params
-      params.require(:family).permit(:custom_system_prompt, :custom_intro_prompt, :preferred_ai_model, :openai_uri_base)
+    def builtin_config
+      @family.builtin_assistant_config || @family.build_builtin_assistant_config
+    end
+
+    def builtin_assistant_config_params
+      params.require(:builtin_assistant_config).permit(:custom_system_prompt, :custom_intro_prompt, :preferred_ai_model, :openai_uri_base)
     end
 
     def show_openai_prompts?

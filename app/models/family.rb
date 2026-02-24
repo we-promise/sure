@@ -43,25 +43,13 @@ class Family < ApplicationRecord
 
   has_many :llm_usages, dependent: :destroy
   has_many :recurring_transactions, dependent: :destroy
-
-  CUSTOM_PROMPT_MAX_LENGTH = 32_000
-  PREFERRED_AI_MODEL_MAX_LENGTH = 128
-  OPENAI_URI_BASE_MAX_LENGTH = 512
+  has_one :builtin_assistant_config, dependent: :destroy
 
   validates :locale, inclusion: { in: I18n.available_locales.map(&:to_s) }
   validates :date_format, inclusion: { in: DATE_FORMATS.map(&:last) }
   validates :month_start_day, inclusion: { in: 1..28 }
-  validates :custom_system_prompt, length: { maximum: CUSTOM_PROMPT_MAX_LENGTH }, allow_blank: true
-  validates :custom_intro_prompt, length: { maximum: CUSTOM_PROMPT_MAX_LENGTH }, allow_blank: true
-  validates :preferred_ai_model, length: { maximum: PREFERRED_AI_MODEL_MAX_LENGTH }, allow_blank: true
-  validates :openai_uri_base, length: { maximum: OPENAI_URI_BASE_MAX_LENGTH }, allow_blank: true
-  validate :openai_model_required_when_custom_endpoint
   validates :moniker, inclusion: { in: MONIKERS }
   validates :assistant_type, inclusion: { in: ASSISTANT_TYPES }
-
-  def custom_openai_endpoint?
-    openai_uri_base.present?
-  end
 
   def moniker_label
     moniker.presence || "Family"
@@ -285,10 +273,4 @@ class Family < ApplicationRecord
   end
 
   private
-
-    def openai_model_required_when_custom_endpoint
-      return unless openai_uri_base.present? && preferred_ai_model.blank?
-
-      errors.add(:preferred_ai_model, :blank)
-    end
 end

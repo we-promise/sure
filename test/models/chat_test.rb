@@ -31,7 +31,7 @@ class ChatTest < ActiveSupport::TestCase
 
   test "creates with default model when model is nil" do
     prompt = "Test prompt"
-    @user.family.update_column(:preferred_ai_model, nil)
+    @user.family.builtin_assistant_config&.update_column(:preferred_ai_model, nil)
 
     with_env_overrides OPENAI_MODEL: nil do
       Setting.stubs(:openai_model).returns(nil)
@@ -46,7 +46,7 @@ class ChatTest < ActiveSupport::TestCase
 
   test "creates with default model when model is empty string" do
     prompt = "Test prompt"
-    @user.family.update_column(:preferred_ai_model, nil)
+    @user.family.builtin_assistant_config&.update_column(:preferred_ai_model, nil)
 
     with_env_overrides OPENAI_MODEL: nil do
       Setting.stubs(:openai_model).returns(nil)

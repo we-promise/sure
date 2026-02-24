@@ -30,7 +30,7 @@ class Chat < ApplicationRecord
     # @param family [Family, nil] optional family for per-family preferred model
     # @return [String]
     def default_model(family = nil)
-      family&.preferred_ai_model.presence ||
+      family&.builtin_assistant_config&.preferred_ai_model.presence ||
         ENV["OPENAI_MODEL"].presence ||
         Setting.openai_model.presence ||
         Provider::Openai::DEFAULT_MODEL
