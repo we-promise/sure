@@ -33,6 +33,7 @@ class ImpersonationSessionsController < ApplicationController
   end
 
   def complete
+    raise_unauthorized! unless @impersonation_session.impersonator == Current.true_user
     @impersonation_session.complete!
     redirect_to root_path, notice: t(".success")
   end
