@@ -1,0 +1,44 @@
+<div class="space-y-4">
+  <div>
+    <h2 class="font-medium mb-1"><%= t(".title") %></h2>
+    <% if ENV["ASSISTANT_TYPE"].present? %>
+      <p class="text-sm text-secondary"><%= t(".env_notice", type: ENV["ASSISTANT_TYPE"]) %></p>
+    <% else %>
+      <p class="text-secondary text-sm mb-4"><%= t(".description") %></p>
+    <% end %>
+  </div>
+
+  <% effective_type = ENV["ASSISTANT_TYPE"].presence || Current.family.assistant_type %>
+
+  <%= styled_form_with model: Current.family,
+                       url: settings_hosting_path,
+                       method: :patch,
+                       class: "space-y-4",
+                       data: {
+                         controller: "auto-submit-form",
+                         "auto-submit-form-trigger-event-value": "change"
+                       } do |form| %>
+    <%= form.select :assistant_type,
+                    options_for_select(
+                      [
+                        [t(".type_builtin"), "builtin"],
+                        [t(".type_external"), "external"]
+                      ],
+                      effective_type
+                    ),
+                    { label: t(".type_label") },
+                    { disabled: ENV["ASSISTANT_TYPE"].present?,
+                      data: { "auto-submit-form-target": "auto" } } %>
+  <% end %>
+  <% if effective_type == "external" %>
+    <div class="flex items-center gap-2 text-sm">
+      <% if Assistant::External.configured? %>
+        <span class="inline-block w-2 h-2 rounded-full bg-green-500"></span>
+        <span class="text-secondary"><%= t(".external_configured") %></span>
+      <% else %>
+        <span class="inline-block w-2 h-2 rounded-full bg-red-500"></span>
+        <span class="text-secondary"><%= t(".external_not_configured") %></span>
+      <% end %>
+    </div>
+  <% end %>
+</div>

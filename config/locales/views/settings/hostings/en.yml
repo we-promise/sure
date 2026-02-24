@@ -16,6 +16,7 @@ en:
           invite_only: Invite-only
       show:
         general: General Settings
+        ai_assistant: AI Assistant
         financial_data_providers: Financial Data Providers
         sync_settings: Sync Settings
         invites: Invite Codes
@@ -35,6 +36,16 @@ en:
         providers:
           twelve_data: Twelve Data
           yahoo_finance: Yahoo Finance
+      assistant_settings:
+        title: AI Assistant
+        description: Choose how the chat assistant responds. Builtin uses your configured LLM provider directly. External delegates to a remote AI agent that can call back to Sure's financial tools via MCP.
+        type_label: Assistant type
+        type_builtin: Builtin (direct LLM)
+        type_external: External (remote agent)
+        external_status: External assistant endpoint
+        external_configured: Configured
+        external_not_configured: Not configured. Set EXTERNAL_ASSISTANT_URL and EXTERNAL_ASSISTANT_TOKEN.
+        env_notice: "Assistant type is locked to '%{type}' via ASSISTANT_TYPE environment variable."
       brand_fetch_settings:
         description: Enter the Client ID provided by Brand Fetch
         label: Client ID

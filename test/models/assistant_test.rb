@@ -187,14 +187,218 @@ class AssistantTest < ActiveSupport::TestCase
 
   test "for_chat returns External when family assistant_type is external" do
     @chat.user.family.update!(assistant_type: "external")
-    assistant = Assistant.for_chat(@chat)
-    assert_instance_of Assistant::External, assistant
-    assert_no_difference "AssistantMessage.count" do
-      assistant.respond_to(@message)
+    assert_instance_of Assistant::External, Assistant.for_chat(@chat)
+  end
+
+  test "ASSISTANT_TYPE env override forces external regardless of DB value" do
+    assert_equal "builtin", @chat.user.family.assistant_type
+
+    with_env_overrides("ASSISTANT_TYPE" => "external") do
+      assert_instance_of Assistant::External, Assistant.for_chat(@chat)
     end
-    @chat.reload
-    assert @chat.error.present?
-    assert_includes @chat.error, "not yet implemented"
+
+    assert_instance_of Assistant::Builtin, Assistant.for_chat(@chat)
+  end
+
+  test "external assistant responds with streamed text" do
+    @chat.user.family.update!(assistant_type: "external")
+    assistant = Assistant.for_chat(@chat)
+
+    sse_body = <<~SSE
+      data: {"choices":[{"delta":{"content":"Your net worth"}}],"model":"openclaw:buster"}
+
+      data: {"choices":[{"delta":{"content":" is $124,200."}}],"model":"openclaw:buster"}
+
+      data: [DONE]
+
+    SSE
+
+    mock_external_sse_response(sse_body)
+
+    with_env_overrides(
+      "EXTERNAL_ASSISTANT_URL" => "http://localhost:18789/v1/chat/completions",
+      "EXTERNAL_ASSISTANT_TOKEN" => "test-token"
+    ) do
+      assert_difference "AssistantMessage.count", 1 do
+        assistant.respond_to(@message)
+      end
+
+      response_msg = @chat.messages.where(type: "AssistantMessage").last
+      assert_equal "Your net worth is $124,200.", response_msg.content
+      assert_equal "openclaw:buster", response_msg.ai_model
+    end
+  end
+
+  test "external assistant adds error when not configured" do
+    @chat.user.family.update!(assistant_type: "external")
+    assistant = Assistant.for_chat(@chat)
+
+    with_env_overrides(
+      "EXTERNAL_ASSISTANT_URL" => nil,
+      "EXTERNAL_ASSISTANT_TOKEN" => nil
+    ) do
+      assert_no_difference "AssistantMessage.count" do
+        assistant.respond_to(@message)
+      end
+
+      @chat.reload
+      assert @chat.error.present?
+      assert_includes @chat.error, "not configured"
+    end
+  end
+
+  test "external assistant adds error on connection failure" do
+    @chat.user.family.update!(assistant_type: "external")
+    assistant = Assistant.for_chat(@chat)
+
+    Net::HTTP.any_instance.stubs(:request).raises(Errno::ECONNREFUSED, "Connection refused")
+
+    with_env_overrides(
+      "EXTERNAL_ASSISTANT_URL" => "http://localhost:18789/v1/chat/completions",
+      "EXTERNAL_ASSISTANT_TOKEN" => "test-token"
+    ) do
+      assert_no_difference "AssistantMessage.count" do
+        assistant.respond_to(@message)
+      end
+
+      @chat.reload
+      assert @chat.error.present?
+    end
+  end
+
+  test "external assistant handles empty response gracefully" do
+    @chat.user.family.update!(assistant_type: "external")
+    assistant = Assistant.for_chat(@chat)
+
+    sse_body = <<~SSE
+      data: {"choices":[{"delta":{"role":"assistant"}}],"model":"openclaw:buster"}
+
+      data: {"choices":[{"delta":{}}],"model":"openclaw:buster"}
+
+      data: [DONE]
+
+    SSE
+
+    mock_external_sse_response(sse_body)
+
+    with_env_overrides(
+      "EXTERNAL_ASSISTANT_URL" => "http://localhost:18789/v1/chat/completions",
+      "EXTERNAL_ASSISTANT_TOKEN" => "test-token"
+    ) do
+      assert_no_difference "AssistantMessage.count" do
+        assistant.respond_to(@message)
+      end
+
+      @chat.reload
+      assert @chat.error.present?
+      assert_includes @chat.error, "empty response"
+    end
+  end
+
+  test "external assistant sends conversation history" do
+    @chat.user.family.update!(assistant_type: "external")
+    assistant = Assistant.for_chat(@chat)
+
+    AssistantMessage.create!(chat: @chat, content: "I can help with that.", ai_model: "external")
+
+    sse_body = "data: {\"choices\":[{\"delta\":{\"content\":\"Sure!\"}}],\"model\":\"m\"}\n\ndata: [DONE]\n\n"
+    capture = mock_external_sse_response(sse_body)
+
+    with_env_overrides(
+      "EXTERNAL_ASSISTANT_URL" => "http://localhost:18789/v1/chat/completions",
+      "EXTERNAL_ASSISTANT_TOKEN" => "test-token"
+    ) do
+      assistant.respond_to(@message)
+
+      body = JSON.parse(capture[0].body)
+      messages = body["messages"]
+
+      assert messages.size >= 2
+      assert_equal "user", messages.first["role"]
+    end
+  end
+
+  test "full external assistant flow: config check, stream, save, error recovery" do
+    @chat.user.family.update!(assistant_type: "external")
+
+    # Phase 1: Without config, errors gracefully
+    with_env_overrides("EXTERNAL_ASSISTANT_URL" => nil, "EXTERNAL_ASSISTANT_TOKEN" => nil) do
+      assistant = Assistant::External.new(@chat)
+      assistant.respond_to(@message)
+      @chat.reload
+      assert @chat.error.present?
+    end
+
+    # Phase 2: With config, streams response
+    @chat.update!(error: nil)
+
+    sse_body = <<~SSE
+      data: {"choices":[{"delta":{"content":"Based on your accounts, "}}],"model":"openclaw:buster"}
+
+      data: {"choices":[{"delta":{"content":"your net worth is $50,000."}}],"model":"openclaw:buster"}
+
+      data: [DONE]
+
+    SSE
+
+    mock_external_sse_response(sse_body)
+
+    with_env_overrides(
+      "EXTERNAL_ASSISTANT_URL" => "http://openclaw:18789/v1/chat/completions",
+      "EXTERNAL_ASSISTANT_TOKEN" => "oc_test123"
+    ) do
+      assistant = Assistant::External.new(@chat)
+      assistant.respond_to(@message)
+
+      @chat.reload
+      assert_nil @chat.error
+
+      response = @chat.messages.where(type: "AssistantMessage").last
+      assert_equal "Based on your accounts, your net worth is $50,000.", response.content
+      assert_equal "openclaw:buster", response.ai_model
+    end
+  end
+
+  test "ASSISTANT_TYPE env override with unknown value falls back to builtin" do
+    with_env_overrides("ASSISTANT_TYPE" => "nonexistent") do
+      assert_instance_of Assistant::Builtin, Assistant.for_chat(@chat)
+    end
+  end
+
+  test "external assistant sets user identifier with family_id" do
+    @chat.user.family.update!(assistant_type: "external")
+    assistant = Assistant.for_chat(@chat)
+
+    sse_body = "data: {\"choices\":[{\"delta\":{\"content\":\"OK\"}}],\"model\":\"m\"}\n\ndata: [DONE]\n\n"
+    capture = mock_external_sse_response(sse_body)
+
+    with_env_overrides(
+      "EXTERNAL_ASSISTANT_URL" => "http://localhost:18789/v1/chat/completions",
+      "EXTERNAL_ASSISTANT_TOKEN" => "test-token"
+    ) do
+      assistant.respond_to(@message)
+
+      body = JSON.parse(capture[0].body)
+      assert_equal "sure-family-#{@chat.user.family_id}", body["user"]
+    end
+  end
+
+  test "external assistant updates ai_model from SSE response model field" do
+    @chat.user.family.update!(assistant_type: "external")
+    assistant = Assistant.for_chat(@chat)
+
+    sse_body = "data: {\"choices\":[{\"delta\":{\"content\":\"Hi\"}}],\"model\":\"openclaw:custom-agent\"}\n\ndata: [DONE]\n\n"
+    mock_external_sse_response(sse_body)
+
+    with_env_overrides(
+      "EXTERNAL_ASSISTANT_URL" => "http://localhost:18789/v1/chat/completions",
+      "EXTERNAL_ASSISTANT_TOKEN" => "test-token"
+    ) do
+      assistant.respond_to(@message)
+
+      response = @chat.messages.where(type: "AssistantMessage").last
+      assert_equal "openclaw:custom-agent", response.ai_model
+    end
   end
 
   test "for_chat raises when chat is blank" do
@@ -202,6 +406,27 @@ class AssistantTest < ActiveSupport::TestCase
   end
 
   private
+
+    def mock_external_sse_response(sse_body)
+      capture = []
+      mock_response = stub("response")
+      mock_response.stubs(:code).returns("200")
+      mock_response.stubs(:is_a?).with(Net::HTTPSuccess).returns(true)
+      mock_response.stubs(:read_body).yields(sse_body)
+
+      mock_http = stub("http")
+      mock_http.stubs(:use_ssl=)
+      mock_http.stubs(:open_timeout=)
+      mock_http.stubs(:read_timeout=)
+      mock_http.stubs(:request).with do |req|
+        capture[0] = req
+        true
+      end.yields(mock_response)
+
+      Net::HTTP.stubs(:new).returns(mock_http)
+      capture
+    end
+
     def provider_function_request(id:, call_id:, function_name:, function_args:)
       Provider::LlmConcept::ChatFunctionRequest.new(
         id: id,

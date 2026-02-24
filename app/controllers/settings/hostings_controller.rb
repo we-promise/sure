@@ -118,6 +118,8 @@ class Settings::HostingsController < ApplicationController
       Setting.openai_json_mode = hosting_params[:openai_json_mode].presence
     end
 
+    update_assistant_type
+
     redirect_to settings_hosting_path, notice: t(".success")
   rescue Setting::ValidationError => error
     flash.now[:alert] = error.message
@@ -131,7 +133,16 @@ class Settings::HostingsController < ApplicationController
 
   private
     def hosting_params
+      return ActionController::Parameters.new unless params.key?(:setting)
       params.require(:setting).permit(:onboarding_state, :require_email_confirmation, :brand_fetch_client_id, :brand_fetch_high_res_logos, :twelve_data_api_key, :openai_access_token, :openai_uri_base, :openai_model, :openai_json_mode, :exchange_rate_provider, :securities_provider, :syncs_include_pending, :auto_sync_enabled, :auto_sync_time)
+    end
+
+    def update_assistant_type
+      return unless params[:family].present? && params[:family][:assistant_type].present?
+      return if ENV["ASSISTANT_TYPE"].present?
+
+      assistant_type = params[:family][:assistant_type]
+      Current.family.update!(assistant_type: assistant_type) if Family::ASSISTANT_TYPES.include?(assistant_type)
     end
 
     def ensure_admin

@@ -136,6 +136,38 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     assert_not Balance.exists?(account_balance.id)
   end
 
+  test "can update assistant type to external" do
+    with_self_hosting do
+      assert_equal "builtin", users(:family_admin).family.assistant_type
+
+      patch settings_hosting_url, params: { family: { assistant_type: "external" } }
+
+      assert_redirected_to settings_hosting_url
+      assert_equal "external", users(:family_admin).family.reload.assistant_type
+    end
+  end
+
+  test "ignores invalid assistant type values" do
+    with_self_hosting do
+      patch settings_hosting_url, params: { family: { assistant_type: "hacked" } }
+
+      assert_redirected_to settings_hosting_url
+      assert_equal "builtin", users(:family_admin).family.reload.assistant_type
+    end
+  end
+
+  test "ignores assistant type update when ASSISTANT_TYPE env is set" do
+    with_self_hosting do
+      with_env_overrides("ASSISTANT_TYPE" => "external") do
+        patch settings_hosting_url, params: { family: { assistant_type: "external" } }
+
+        assert_redirected_to settings_hosting_url
+        # DB value should NOT change when env override is active
+        assert_equal "builtin", users(:family_admin).family.reload.assistant_type
+      end
+    end
+  end
+
   test "can clear data only when admin" do
     with_self_hosting do
       sign_in users(:family_member)
