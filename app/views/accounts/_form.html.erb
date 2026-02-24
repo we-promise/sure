@@ -15,6 +15,13 @@
       <%= form.money_field :balance, label: t(".balance"), required: true, default_currency: Current.family.currency %>
     <% end %>
 
+    <% if account.new_record? && !account.linked? %>
+      <%= form.date_field :opening_balance_date,
+          label: t(".opening_balance_date_label"),
+          value: Time.zone.today,
+          required: true %>
+    <% end %>
+
     <%= yield form %>
 
     <details class="group">
