@@ -158,7 +158,7 @@ export default class extends Controller {
     const shouldOpenUp = spaceBelow < menuHeight && spaceAbove > spaceBelow
 
     this.menuTarget.style.left = "0"
-    this.menuTarget.style.width = `${this.buttonTarget.offsetWidth}px`
+    this.menuTarget.style.width = "100%"
     this.menuTarget.style.top = ""
     this.menuTarget.style.bottom = ""
     this.menuTarget.style.overflowY = "auto"
