@@ -43,6 +43,12 @@ en:
         categories: "Categories"
         value: "Value"
         weight: "Weight"
+      inflows_donut:
+        title: "Incomes"
+        total_inflows: "Total Incomes"
+        categories: "Categories"
+        value: "Value"
+        weight: "Weight"
       investment_summary:
         title: "Investments"
         total_return: "Total Return"

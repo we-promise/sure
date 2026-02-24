@@ -282,7 +282,7 @@ class UserTest < ActiveSupport::TestCase
       "Should return false when collapsed_sections key is missing"
 
     # dashboard_section_order should return default order when key is missing
-    assert_equal %w[cashflow_sankey outflows_donut net_worth_chart balance_sheet],
+    assert_equal %w[cashflow_sankey outflows_donut inflows_donut net_worth_chart balance_sheet],
       @user.dashboard_section_order,
       "Should return default order when section_order key is missing"
 

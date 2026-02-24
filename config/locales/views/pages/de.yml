@@ -29,3 +29,9 @@ de:
       outflows_donut:
         title: "Ausgaben"
         total_outflows: "Gesamtausgaben"
+      inflows_donut:
+        title: "Einnahmen"
+        total_inflows: "Gesamteinnahmen"
+        categories: "Kategorien"
+        value: "Wert"
+        weight: "Anteil"
