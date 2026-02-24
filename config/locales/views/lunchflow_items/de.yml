@@ -33,7 +33,7 @@ de:
       no_accounts_description: Diese Verbindung enthält derzeit keine verknüpften Konten.
       no_accounts_title: Keine Konten
       setup_action: Neue Konten einrichten
-      setup_description: "%{linked} von %{total} Konten verknüpft. Wählen Sie Kontotypen für Ihre neu importierten Lunch‑Flow-Konten."
+      setup_description: "%{linked} von %{total} Konten verknüpft. Wähle die richtigen Kontotypen für deine neu importierten Lunch‑Flow-Konten."
       setup_needed: Neue Konten bereit zur Einrichtung
       status: "Vor %{timestamp} synchronisiert"
       status_never: Noch nie synchronisiert
@@ -75,11 +75,11 @@ de:
       success: "%{account_name} erfolgreich mit Lunch‑Flow verknüpft"
     setup_accounts:
       account_type_label: "Kontotyp:"
-      all_accounts_linked: "Alle Ihre Lunch‑Flow-Konten sind bereits eingerichtet."
+      all_accounts_linked: "Alle deine Lunch‑Flow-Konten sind bereits eingerichtet."
       api_error: "API-Fehler: %{message}"
       fetch_failed: "Konten konnten nicht geladen werden"
       no_accounts_to_setup: "Keine Konten zum Einrichten"
-      no_api_key: "Lunch‑Flow-API-Schlüssel ist nicht konfiguriert. Bitte prüfen Sie Ihre Verbindungseinstellungen."
+      no_api_key: "Der Lunch‑Flow-API-Schlüssel ist nicht konfiguriert. Bitte prüfe deine Verbindungseinstellungen."
       account_types:
         skip: Dieses Konto überspringen
         depository: Giro- oder Sparkonto
@@ -124,12 +124,12 @@ de:
           other: Sonstiges Darlehen
       balance: Saldo
       cancel: Abbrechen
-      choose_account_type: "Wählen Sie den richtigen Kontotyp für jedes Lunch‑Flow-Konto:"
+      choose_account_type: "Wähle den richtigen Kontotyp für jedes Lunch‑Flow-Konto:"
       create_accounts: Konten anlegen
       creating_accounts: Konten werden angelegt...
       historical_data_range: "Historischer Datenbereich:"
-      subtitle: Wählen Sie die richtigen Kontotypen für Ihre importierten Konten
-      sync_start_date_help: Wählen Sie, wie weit die Buchungshistorie zurück synchronisiert werden soll. Maximal 3 Jahre verfügbar.
+      subtitle: Wähle die richtigen Kontotypen für deine importierten Konten
+      sync_start_date_help: Wähle, wie weit die Buchungshistorie zurück synchronisiert werden soll. Maximal sind 3 Jahre verfügbar.
       sync_start_date_label: "Buchungen synchronisieren ab:"
       title: Lunch‑Flow-Konten einrichten
     complete_account_setup:
