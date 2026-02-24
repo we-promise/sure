@@ -6,6 +6,8 @@ es:
       account_prompt: Buscar cuenta
       amount: Importe
       holding: Símbolo del ticker
+      manual_ticker_label: Símbolo del ticker
+      manual_ticker_placeholder: AAPL
       price: Precio por acción
       qty: Cantidad
       submit: Añadir transacción

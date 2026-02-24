@@ -128,3 +128,12 @@ zh-CN:
       transactions: 交易笔数
       weekday_spending: 工作日消费
       weekend_spending: 周末消费
+    investment_flows:
+      title: 投资资金流向
+      description: 通过投入和提取追踪您投资账户的资金流入和流出情况。
+      contributions: 资金投入
+      contributions_description: 投入到投资中的资金
+      withdrawals: 资金提取
+      withdrawals_description: 从投资中提取的资金
+      net_flow: 净流量
+      net_flow_description: 总净变化

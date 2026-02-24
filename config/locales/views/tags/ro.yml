@@ -11,6 +11,7 @@ ro:
     form:
       placeholder: Numele etichetei
     index:
+      delete_all: Șterge tot
       empty: Nu există etichete încă
       new: Etichetă nouă
       tags: Etichete

@@ -10,6 +10,17 @@ nb:
       success: Eksport slettet
     export_not_ready: Eksport ikke klar for nedlasting
     exporting: Eksporterer...
+    new:
+      title: Eksporter dataene dine
+      subtitle: Last ned alle dine finansielle data
+      whats_included: "Hva som er inkludert:"
+      all_accounts_and_balances: Alle kontoer og saldoer
+      transaction_history: Transaksjonshistorikk
+      investment_trades: Investeringshandler
+      categories_tags_and_rules: "Kategorier, tagger og regler"
+      note: "Merk:"
+      note_body: "Denne eksporten inkluderer alle dataene dine, men bare noen av dataene kan importeres tilbake via CSV-importfunksjonen. Vi støtter import av kontoer, transaksjoner (med kategori og tagger) og handler. Andre kontodata kan ikke importeres og er kun for dine egne oppføringer."
+      cancel: Avbryt
     index:
       title: Eksporter
       new: Ny Eksport

@@ -7,16 +7,92 @@ tr:
         errors_notice: Verilerinizde hatalar var. Detayları görmek için hatanın üzerine gelin.
         errors_notice_mobile: Verilerinizde hatalar var. Detayları görmek için hata simgesine dokunun.
         title: Verilerinizi temizleyin
+        data_cleaned: Verileriniz temizlendi
+        next_step: Sonraki adım
+        all_rows: Tüm satırlar
+        error_rows: Hatalı satırlar
     configurations:
       mint_import:
         date_format_label: Tarih formatı
+        pre_configured: Mint içe aktarmanızı sizin için önceden yapılandırdık. Lütfen bir sonraki adıma geçin.
+        leave_empty: Boş bırak
+        date: Tarih
+        amount: Tutar
+        currency: Para birimi
+        account_optional: Hesap (isteğe bağlı)
+        name_optional: Ad (isteğe bağlı)
+        category_optional: Kategori (isteğe bağlı)
+        tags_optional: Etiketler (isteğe bağlı)
+        format: Format
+        select_format: Format seçin
+        incomes_negative: Gelirler negatif
+        incomes_positive: Gelirler pozitif
+        apply_configuration: Yapılandırmayı uygula
       show:
         description: CSV dosyanızdaki her alan için karşılık gelen sütunları seçin.
         title: İçe aktarmayı yapılandırın
+        template_found: Şablon yapılandırması bulundu
+        template_description: Bu hesap için önceki bir içe aktarmadan bir yapılandırma bulduk. Bu içe aktarmaya uygulamak ister misiniz?
+        manually_configure: Manuel olarak yapılandır
+        apply_template: Şablonu uygula
       trade_import:
         date_format_label: Tarih formatı
+        select_column: Sütun seçin
+        date: Tarih
+        quantity: Miktar
+        buys_positive: Alımlar pozitif miktar
+        buys_negative: Alımlar negatif miktar
+        default_currency: Varsayılan
+        currency: Para birimi
+        format: Format
+        select_format: Format seçin
+        ticker: Ticker
+        leave_empty: Boş bırak
+        stock_exchange_code: Borsa kodu
+        price: Fiyat
+        account: Hesap
+        name: Ad
+        security_prices_note_html: "<strong>Not:</strong> Menkul kıymet fiyat sağlayıcısı yapılandırılmamış. İşlem içe aktarmalarınız çalışacak, ancak Sure fiyat geçmişini doldurmayacaktır. Lütfen bunu yapılandırmak için ayarlarınıza gidin."
+        apply_configuration: Yapılandırmayı uygula
       transaction_import:
         date_format_label: Tarih formatı
+        date: Tarih
+        select_column: Sütun seçin
+        amount: Tutar
+        default_currency: Varsayılan
+        currency: Para birimi
+        format: Format
+        select_format: Format seçin
+        amount_type_strategy: Tutar türü stratejisi
+        select_strategy: Strateji seçin
+        incomes_positive: Gelirler pozitif
+        incomes_negative: Gelirler negatif
+        amount_type: Tutar türü
+        select_convention: Kural seçin
+        set_label: Ayarla
+        as_amount_type_column: tutar türü sütunu olarak
+        as_identifier_value: tanımlayıcı değeri olarak
+        select_type: Tür seçin
+        income_inflow: Gelir (giriş)
+        expense_outflow: Gider (çıkış)
+        leave_empty: Boş bırak
+        account: Hesap
+        name: Ad
+        category: Kategori
+        tags: Etiketler
+        notes: Notlar
+        apply_configuration: Yapılandırmayı uygula
+      account_import:
+        leave_empty: Boş bırak
+        entity_type: Varlık Türü
+        name: Ad
+        balance: Bakiye
+        default_currency: Varsayılan
+        currency: Para birimi
+        balance_date: Bakiye Tarihi
+        date_format: Tarih Formatı
+        select_format: Format seçin
+        apply_configuration: Yapılandırmayı uygula
     confirms:
       mappings:
         create_account: Hesap oluştur
@@ -25,6 +101,7 @@ tr:
         no_accounts: Henüz hiç hesabınız yok. Lütfen CSV'nizdeki (atanmamış) satırlar için kullanabileceğimiz bir hesap oluşturun veya Temizle adımına geri dönüp kullanabileceğimiz bir hesap adı girin.
         rows_label: Satırlar
         unassigned_account: Atanmamış satırlar için yeni bir hesap oluşturmak ister misiniz?
+        next: İleri
       show:
         account_mapping_description: "İçe aktardığınız dosyadaki tüm hesapları %{product_name}'deki mevcut hesaplara eşleyin. Ayrıca yeni hesaplar ekleyebilir veya kategorize etmeden bırakabilirsiniz."
         account_mapping_title: Hesaplarınızı eşleyin
@@ -43,7 +120,36 @@ tr:
         instructions_4: Yıldız (*) ile işaretli sütunlar zorunlu verilerdir.
         instructions_5: Sayılarda virgül, para birimi simgesi veya parantez kullanmayın.
         title: Verilerinizi içe aktarın
+        drop_csv_title: Yüklemek için CSV'yi sürükleyin
+        drop_csv_subtitle: Dosyanız otomatik olarak yüklenecek
+        upload_csv_tab: CSV yükle
+        copy_paste_tab: Kopyala ve Yapıştır
+        account_optional: Hesap (isteğe bağlı)
+        multi_account_import: Çoklu hesap içe aktarma
+        browse_to_add: Gözat
+        browse_to_add_suffix: CSV dosyanızı buraya eklemek için
+        upload_csv_btn: CSV yükle
+        paste_placeholder: CSV dosyanızın içeriğini buraya yapıştırın
+        download_sample: Örnek CSV indir
+        see_format: gerekli CSV formatını görmek için
   imports:
+    failure:
+      title: İçe aktarma başarısız oldu
+      description: Lütfen dosya formatını, hataları ve tüm zorunlu alanların doldurulduğunu kontrol edin, ardından tekrar deneyin.
+      try_again: Tekrar dene
+    importing:
+      title: İçe aktarma devam ediyor
+      description: İçe aktarma işleminiz devam ediyor. Durum güncellemeleri için içe aktarma menüsünü kontrol edin veya sayfayı yenilemek için 'Durumu kontrol et'çe tıklayın. Uygulamayı kullanmaya devam edebilirsiniz.
+      check_status: Durumu kontrol et
+      back_to_dashboard: Panoya dön
+    revert_failure:
+      title: İçe aktarmanın geri alınması başarısız oldu
+      description: Lütfen tekrar deneyin
+      try_again: Tekrar dene
+    success:
+      title: İçe aktarma başarılı
+      description: İçe aktarılan verileriniz uygulamaya başarıyla eklendi ve artık kullanıma hazır.
+      back_to_dashboard: Panoya dön
     index:
       title: İçe aktarmalar
       new: Yeni İçe Aktarma
@@ -78,5 +184,8 @@ tr:
       sources: Kaynaklar
       title: Yeni CSV İçe Aktarma
     ready:
+      item: öğe
+      count: sayı
+      publish_import: İçe aktarmayı yayınla
       description: Bu içe aktarmayı yayınladığınızda hesabınıza eklenecek yeni öğelerin özeti aşağıdadır.
       title: İçe aktarma verilerinizi onaylayın

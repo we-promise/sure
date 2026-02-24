@@ -10,7 +10,7 @@
       <% additional_condition_count = rule.additional_displayable_conditions_count %>
       <div class="flex items-center gap-2 mt-1">
         <div class="flex items-center gap-1 text-secondary w-16 shrink-0">
-          <span class="font-mono text-xs">IF</span>
+          <span class="font-mono text-xs"><%= t("rules.rule.if_label") %></span>
         </div>
         <p class="flex items-center flex-wrap gap-1.5 m-0">
           <span class="px-2 py-1 border border-secondary rounded-full">
@@ -21,14 +21,14 @@
             <% end %>
           </span>
           <% if additional_condition_count.positive? %>
-            and <%= additional_condition_count %> more <%= additional_condition_count == 1 ? "condition" : "conditions" %>
+            <%= t("rules.rule.and_more_conditions", count: additional_condition_count) %>
           <% end %>
         </p>
       </div>
     <% end %>
     <div class="flex items-center gap-2 mt-1">
       <div class="flex items-center gap-1 text-secondary w-16 shrink-0">
-        <span class="font-mono text-xs">THEN</span>
+        <span class="font-mono text-xs"><%= t("rules.rule.then_label") %></span>
       </div>
       <p class="flex items-center flex-wrap gap-1.5 m-0">
         <span class="px-2 py-1 border border-secondary rounded-full">
@@ -43,20 +43,20 @@
           <% end %>
         </span>
         <% if rule.actions.count > 1 %>
-          and <%= rule.actions.count - 1 %> more <%= rule.actions.count - 1 == 1 ? "action" : "actions" %>
+          <%= t("rules.rule.and_more_actions", count: rule.actions.count - 1) %>
         <% end %>
       </p>
     </div>
     <div class="flex items-center gap-2 mt-1">
       <div class="flex items-center gap-1 text-secondary w-16 shrink-0">
-        <span class="font-mono text-xs">FOR</span>
+        <span class="font-mono text-xs"><%= t("rules.rule.for_label") %></span>
       </div>
       <p class="flex items-center flex-wrap gap-1.5 m-0">
         <span class="px-2 py-1 border border-secondary rounded-full">
           <% if rule.effective_date.nil? %>
-            All past and future <%= rule.resource_type.pluralize %>
+            <%= t("rules.rule.all_past_future", resource_type: rule.resource_type.pluralize) %>
           <% else %>
-            <%= rule.resource_type.pluralize %> on or after <%= rule.effective_date.strftime("%b %-d, %Y") %>
+            <%= t("rules.rule.on_or_after", resource_type: rule.resource_type.pluralize, date: rule.effective_date.strftime("%b %-d, %Y")) %>
           <% end %>
         </span>
       </p>
@@ -67,11 +67,11 @@
       <%= f.toggle :active, { data: { auto_submit_form_target: "auto" } } %>
     <% end %>
     <%= render DS::Menu.new do |menu| %>
-      <% menu.with_item(variant: "link", text: "Edit", href: edit_rule_path(rule), icon: "pencil", data: { turbo_frame: "modal" }) %>
-      <% menu.with_item(variant: "link", text: "Re-apply rule", href: confirm_rule_path(rule), icon: "refresh-cw", data: { turbo_frame: "modal" }) %>
+      <% menu.with_item(variant: "link", text: t("rules.rule.edit"), href: edit_rule_path(rule), icon: "pencil", data: { turbo_frame: "modal" }) %>
+      <% menu.with_item(variant: "link", text: t("rules.rule.reapply_rule"), href: confirm_rule_path(rule), icon: "refresh-cw", data: { turbo_frame: "modal" }) %>
       <% menu.with_item(
         variant: "button",
-        text: "Delete",
+        text: t("rules.rule.delete"),
         href: rule_path(rule),
         icon: "trash-2",
         method: :delete,

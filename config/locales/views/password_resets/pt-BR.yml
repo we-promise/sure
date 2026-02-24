@@ -4,6 +4,7 @@ pt-BR:
     edit:
       title: Redefinir senha
     new:
+      email_placeholder: "you@example.com"
       requested: Por favor, verifique seu e-mail para um link para redefinir sua senha.
       submit: Redefinir senha
       title: Redefinir senha

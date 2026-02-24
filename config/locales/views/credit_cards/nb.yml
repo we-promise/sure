@@ -21,6 +21,7 @@ nb:
       apr: Eff. rente
 
       available_credit: Tilgjengelig kreditt
+      edit_account_details: Rediger kontodetaljer
       expiration_date: Utløpsdato
       minimum_payment: Minimumsbetaling
       unknown: Ukjent

@@ -18,13 +18,19 @@ ro:
     new:
       title: Transfer nou
     show:
+      amount: Sumă
+      category: Categorie
+      date: Dată
       delete: Elimină transfer
-      delete_subtitle: Aceasta elimină transferul. Nu va șterge tranzacțiile subiacente.
+      delete_subtitle: Aceasta elimină transferul. Nu va şterge tranzacțiile subiacente.
       delete_title: Elimini transferul?
       details: Detalii
+      from: De la
       note_label: Notițe
       note_placeholder: Adaugă o notiță la acest transfer
       overview: Prezentare generală
       settings: Setări
+      to: Către
+      uncategorized: Necategorizat
     update:
       success: Transfer actualizat

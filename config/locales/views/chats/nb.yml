@@ -1,0 +1,43 @@
+---
+nb:
+  chats:
+    demo_banner_title: "Demomodus aktiv"
+    demo_banner_message: "Du bruker en åpen-vekts Qwen3 LLM med kreditter levert av Cloudflare Workers AI. Resultatene kan variere siden kodebasen hovedsakelig ble testet med `gpt-4.1`, men tokenene dine sendes ikke noe annet sted for trening! 🤖"
+    index:
+      chats: Chatter
+      new_chat: Ny chat
+    ai_consent:
+      enable_ai_chats: Aktiver AI-chatter
+      ai_available_description: AI-chat kan svare på finansspørsmål og gi innsikt basert på dataene dine. For å bruke denne funksjonen må du aktivere den eksplisitt.
+      ai_unavailable_description_html: "For å bruke AI-assistenten må du sette miljøvariabelen <code class=\"bg-surface-inset px-1 py-0.5 rounded font-mono text-xs\">OPENAI_ACCESS_TOKEN</code> eller konfigurere den i Self-Hosting-innstillingene for instansen din."
+      enable_btn: Aktiver AI-chatter
+      disable_note: Deaktiver når som helst. Alle data sendt til våre LLM-leverandører er anonymisert.
+    ai_greeting:
+      greeting: "Hei %{name}! Jeg er en AI/stor språkmodell som kan hjelpe deg med økonomien din. Jeg har tilgang til nettet og kontodataene dine."
+      commands_hint_html: "Du kan bruke <span class=\"bg-container border border-secondary px-1.5 py-0.5 rounded font-mono text-xs\">/</span> for å få tilgang til kommandoer"
+      questions_intro: "Her er noen spørsmål du kan stille:"
+      evaluate_portfolio: Vurder investeringsportefølje
+      spending_insights: Vis forbruksinnsikt
+      unusual_patterns: Finn uvanlige mønstre
+    error:
+      failed_response: Kunne ikke generere svar. Vennligst prøv igjen.
+    chat:
+      edit_chat_title: Rediger chat-tittel
+      delete_chat: Slett chat
+    chat_nav:
+      all_chats: Alle chatter
+      start_new_chat: Start ny chat
+      edit_chat_title: Rediger chat-tittel
+      delete_chat: Slett chat
+  messages:
+    chat_form:
+      ask_anything: "Spør om hva som helst ..."
+      coming_soon: Kommer snart
+      ai_disclaimer: AI-svar er kun informative og utgjør ikke finansiell rådgivning.
+  assistant_messages:
+    assistant_message:
+      assistant_reasoning: Assistentens resonnement
+    tool_calls:
+      tool_calls: Verktøykall
+      function: "Funksjon:"
+      arguments: "Argumenter:"

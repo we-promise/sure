@@ -5,6 +5,7 @@ de:
       accept: Bestätigen
       body_html: "<p>Diese Entscheidung kann nicht rückgängig gemacht werden</p>"
       cancel: Abbrechen
+      subtitle: Diese Aktion kann nicht rückgängig gemacht werden.
       title: Bist du sicher
     money_field:
       label: Betrag

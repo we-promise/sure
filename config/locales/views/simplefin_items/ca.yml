@@ -25,6 +25,14 @@ ca:
     destroy:
       success: La connexió SimpleFIN s'eliminarà
     edit:
+      title: "Actualitza la connexió SimpleFin"
+      subtitle: "Obtén un nou token de configuració per reconnectar el teu compte SimpleFin"
+      update_needed: "La teva connexió SimpleFIN necessita ser actualitzada:"
+      step_1_html: 'Visita <a href="https://bridge.simplefin.org/simplefin/create" target="_blank" rel="noopener noreferrer" class="text-link hover:text-link underline">SimpleFIN Bridge</a> per crear un nou token de configuració'
+      step_2: "Copia el token i enganxa'l a continuació"
+      step_3: 'Fes clic a "Actualitza" per restaurar l''accés'
+      update: "Actualitza"
+      cancel: "Cancel·la"
       setup_token:
         help_text: El token ha de ser una cadena llarga que comenci amb lletres i
           números
@@ -46,6 +54,9 @@ ca:
         one: "%{count} transacció pendent duplicada conciliada"
         other: "%{count} transaccions pendents duplicades conciliades"
     select_existing_account:
+      header_title: "Enllaça compte SimpleFIN"
+      link_button: "Enllaça"
+      balance_label: "Saldo:"
       all_accounts_already_linked: Sembla que ja s'han enllaçat tots els comptes de SimpleFIN.
       cancel: Cancel·la
       check_provider_health: Comprova l'estat del proveïdor
@@ -57,6 +68,27 @@ ca:
       unlink_to_move: Per moure un enllaç, primer des-enllaça'l del menú d'accions del compte.
       wait_for_sync: Si acabes de connectar o sincronitzar, torna-ho a provar després que la sincronització completi.
     setup_accounts:
+      page_title: "Configura els comptes SimpleFin"
+      title: "Configura els teus comptes SimpleFin"
+      subtitle: "Tria els tipus de compte correctes per als teus comptes importats"
+      creating_accounts: "Creant comptes..."
+      choose_account_type: "Tria el tipus de compte correcte per a cada compte SimpleFin:"
+      account_type_depository: "Compte corrent o d'estalvi"
+      account_type_depository_desc: "Comptes bancaris habituals"
+      account_type_credit_card: "Targeta de crèdit"
+      account_type_credit_card_desc: "Comptes de targeta de crèdit"
+      account_type_investment: "Inversió"
+      account_type_investment_desc: "Comptes de corredoria, 401(k), IRA"
+      account_type_loan: "Préstec o hipoteca"
+      account_type_loan_desc: "Comptes de deute"
+      account_type_other_asset: "Altre actiu"
+      account_type_other_asset_desc: "Tot el resta"
+      transaction_history: "Historial de transaccions:"
+      transaction_history_note_html: "SimpleFin normalment proporciona <strong>60-90 dies</strong> d'historial de transaccions, depenent del teu banc. Després de la configuració inicial, les noves transaccions se sincronitzaran automàticament. La disponibilitat de dades històriques varia segons la institució i el tipus de compte."
+      account_type_label: "Tipus de compte:"
+      balance_label: "Saldo:"
+      create_accounts: "Crear comptes"
+      cancel: "Cancel·la"
       stale_accounts:
         action_delete: Elimina el compte i totes les transaccions
         action_move: 'Mou les transaccions a:'

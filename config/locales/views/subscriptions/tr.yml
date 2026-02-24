@@ -3,6 +3,9 @@ tr:
   subscriptions:
     self_hosted_alert: "%{product_name} kendi sunucunda barındırılan modda kullanılamaz."
     upgrade:
+      sr_only_title: Yükselt
+      account_settings: Hesap Ayarları
+      sign_out: Çıkış yap
       contribute_and_support_sure: "Katkıda bulun ve Sure'u destekle"
       cta: "Bu kod tabanının geliştirilmesini desteklemeye devam edin!"
       header:

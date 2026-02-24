@@ -6,6 +6,7 @@ zh-CN:
         success: 删除成功
   accounts:
     account:
+      complete_setup: 完成设置
       link_lunchflow: 关联 Lunch Flow 账户
       link_provider: 关联服务提供商
       troubleshoot: 故障排查
@@ -51,6 +52,12 @@ zh-CN:
         manual_entry: 手动输入账户余额
         title: 请选择添加方式
       title: 您希望添加什么类型的账户？
+      container:
+        previous: 上一步
+        next: 下一步
+        select: 选择
+        navigate: 导航
+        close: 关闭
     select_provider:
       already_linked: 账户已关联到服务提供商
       description: 请选择用于关联 %{account_name} 的服务提供商
@@ -73,8 +80,11 @@ zh-CN:
       chart:
         balance: 余额
         owed: 欠款金额
+      header:
+        complete_setup: 完成设置
       menu:
         confirm_accept: 删除“%{name}”
+        delete_account: 删除账户
         confirm_body_html: "<p>删除此账户将清除其历史价值数据，影响您整体账户的多个方面。此操作将直接影响您的资产净值计算和账户图表。</p><br
           /><p>删除后无法恢复账户信息，您需要将其作为新账户重新添加。</p>"
         confirm_title: 确认删除账户？

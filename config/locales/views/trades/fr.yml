@@ -6,6 +6,8 @@ fr:
       account_prompt: Rechercher un compte
       amount: Montant
       holding: Symbole boursier
+      manual_ticker_label: Symbole boursier
+      manual_ticker_placeholder: AAPL
       price: Prix par action
       qty: Quantité
       submit: Ajouter la transaction

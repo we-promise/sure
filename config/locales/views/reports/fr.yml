@@ -134,6 +134,15 @@ fr:
       value: Valeur
       return: Rendement
       accounts: Comptes d'investissement
+    investment_flows:
+      title: Flux d'investissement
+      description: Suivez l'argent entrant et sortant de vos comptes d'investissement à travers les contributions et les retraits.
+      contributions: Contributions
+      contributions_description: Argent ajouté aux investissements
+      withdrawals: Retraits
+      withdrawals_description: Argent retiré des investissements
+      net_flow: Flux net
+      net_flow_description: Variation nette totale
     google_sheets_instructions:
       title_with_key: "✅ Copier l'URL pour Google Sheets"
       title_no_key: "⚠️ Clé API requise"

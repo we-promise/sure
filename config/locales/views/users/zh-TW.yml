@@ -15,3 +15,5 @@ zh-TW:
       unauthorized: 您沒有權限執行此操作。
     reset_with_sample_data:
       success: 您的帳號已重設，範例資料正在準備中。您很快就會看到示範資料。
+    user_menu:
+      version: "版本："

@@ -14,12 +14,23 @@ pt-BR:
       edit: Editar categoria
     form:
       placeholder: Nome da categoria
+      color: Cor
+      poor_contrast: "Pouco contraste, escolha uma cor mais escura ou"
+      auto_adjust: "ajustar automaticamente."
+      icon: Ícone
+      income: Receita
+      expense: Despesa
+      classification: Classificação
+      unassigned: "(não atribuído)"
+      parent_category: "Categoria pai (opcional)"
+      name: Nome
     index:
       bootstrap: Usar padrões (recomendado)
       categories: Categorias
       categories_expenses: Categorias de despesas
       categories_incomes: Categorias de receitas
       empty: Nenhuma categoria encontrada
+      delete_all: Excluir tudo
       new: Nova categoria
     menu:
       loading: Carregando...

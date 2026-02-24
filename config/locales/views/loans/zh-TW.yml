@@ -13,6 +13,7 @@ zh-TW:
     new:
       title: 輸入貸款詳情
     overview:
+      edit_loan_details: 編輯貸款詳情
       interest_rate: 利率
       monthly_payment: 每月還款額
       not_applicable: 不適用

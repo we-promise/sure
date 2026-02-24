@@ -13,3 +13,21 @@ ca:
       success: Has sortit de la sessió
     reject:
       success: Sol·licitud rebutjada
+    approval_bar:
+      access_session: Accedir a la sessió
+      access_request: Sol·licitud d'accés
+      request_message: "El personal de suport de Sure ha sol·licitat accés al teu compte (probablement per ajudar-te amb una sol·licitud de suport). Si aproves la sol·licitud, tota l'activitat que realitzin quedarà registrada per motius de seguretat i auditoria."
+      approve: Aprovar
+      reject: Rebutjar
+      in_progress_message: "Algú de l'equip de Sure Finances està veient les teves dades. Pots finalitzar la sessió en qualsevol moment."
+      end_session: Finalitzar sessió
+      error_message: "Alguna cosa ha anat malament. Si us plau, contacta'ns."
+    super_admin_bar:
+      super_admin: Super Admin
+      jobs: Treballs
+      impersonating: "Suplantant:"
+      leave: Sortir
+      terminate: Finalitzar
+      join_session_prompt: Unir-se a una sessió
+      join: Unir-se
+      request_impersonation: Sol·licitar suplantació

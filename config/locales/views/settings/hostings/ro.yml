@@ -26,6 +26,11 @@ ro:
           body: Ești sigur că vrei să ștergi cache-ul de date? Aceasta va elimina toate ratele de schimb, prețurile titlurilor de valoare, soldurile conturilor și alte date. Această acțiune nu poate fi anulată.
       brand_fetch_settings:
         description: Introdu ID-ul Clientului furnizat de Brand Fetch
+        env_configured_message: Ai configurat cu succes Client ID-ul Brand Fetch prin variabila de mediu BRAND_FETCH_CLIENT_ID.
+        show_details: "(arată detalii)"
+        step1_html: 'Vizitează <a href="https://brandfetch.com/developers" target="_blank" rel="noopener noreferrer" class="underline">brandfetch.com</a> și creează un cont gratuit de dezvoltator Brand Fetch.'
+        step2_html: 'Accesează pagina <a href="https://developers.brandfetch.com/dashboard/logo-api" target="_blank" rel="noopener noreferrer" class="underline">Logo API</a>.'
+        step3: Apasă pictograma cu ochiul din secțiunea "Your Client ID" pentru a dezvălui Client ID-ul tău și lipește-l mai jos.
         label: ID Client
         placeholder: Introdu ID-ul tău de Client aici
         title: Setări Brand Fetch
@@ -50,6 +55,10 @@ ro:
         api_calls_used: "%{used} / %{limit} apeluri API zilnice utilizate (%{percentage})"
         description: Introdu cheia API furnizată de Twelve Data
         env_configured_message: Configurat cu succes prin variabila de mediu TWELVE_DATA_API_KEY.
+        show_details: "(arată detalii)"
+        step1_html: 'Vizitează <a href="https://twelvedata.com/register" target="_blank" rel="noopener noreferrer" class="underline">twelvedata.com</a> și creează un cont gratuit de dezvoltator Twelve Data.'
+        step2_html: 'Accesează pagina <a href="https://twelvedata.com/account/api-keys" target="_blank" rel="noopener noreferrer" class="underline">API Keys</a>.'
+        step3: Dezvăluie cheia ta secretă și lipește-o mai jos.
         label: Cheie API
         placeholder: Introdu cheia ta API aici
         plan: "planul %{plan}"

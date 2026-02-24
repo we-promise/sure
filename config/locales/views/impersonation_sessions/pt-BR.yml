@@ -13,3 +13,21 @@ pt-BR:
       success: Sessão encerrada
     reject:
       success: Solicitação rejeitada
+    approval_bar:
+      access_session: Acessar sessão
+      access_request: Solicitação de acesso
+      request_message: "A equipe de suporte do Sure solicitou acesso à sua conta (provavelmente para ajudá-lo com uma solicitação de suporte). Se você aprovar a solicitação, toda a atividade realizada será registrada para fins de segurança e auditoria."
+      approve: Aprovar
+      reject: Rejeitar
+      in_progress_message: "Alguém da equipe Sure Finances está visualizando seus dados no momento. Você pode encerrar a sessão a qualquer momento."
+      end_session: Encerrar sessão
+      error_message: "Algo deu errado. Por favor, entre em contato conosco."
+    super_admin_bar:
+      super_admin: Super Admin
+      jobs: Tarefas
+      impersonating: "Representando:"
+      leave: Sair
+      terminate: Encerrar
+      join_session_prompt: Entrar em uma sessão
+      join: Entrar
+      request_impersonation: Solicitar representação

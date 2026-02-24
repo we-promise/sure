@@ -3,6 +3,11 @@ de:
   holdings:
     cash:
       brokerage_cash: Depotguthaben
+    new:
+      coming_soon: "Demnächst verfügbar..."
+    cost_basis_cell:
+      set: Festlegen
+      unknown: "--"
     destroy:
       success: Position gelöscht
     holding:

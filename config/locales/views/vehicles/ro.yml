@@ -17,6 +17,7 @@ ro:
       title: Introdu detalii vehicul
     overview:
       current_price: Preț curent
+      edit_account_details: Editează detaliile contului
       make_model: Marcă & Model
       mileage: Kilometraj
       purchase_price: Preț de achiziție

@@ -13,3 +13,21 @@ tr:
       success: Oturumdan ayrıldınız
     reject:
       success: İstek reddedildi
+    approval_bar:
+      access_session: Oturuma Eriş
+      access_request: Erişim İsteği
+      request_message: "Sure destek ekibi hesabınıza erişim talep etti (muhtemelen bir destek talebinizle ilgili size yardımcı olmak için). Talebi onaylarsanız, gerçekleştirdikleri tüm etkinlikler güvenlik ve denetim amacıyla kaydedilecektir."
+      approve: Onayla
+      reject: Reddet
+      in_progress_message: "Sure Finances ekibinden biri şu anda verilerinizi görüntülüyor. Oturumu istediğiniz zaman sonlandırabilirsiniz."
+      end_session: Oturumu Sonlandır
+      error_message: "Bir şeyler ters gitti. Lütfen bizimle iletişime geçin."
+    super_admin_bar:
+      super_admin: Super Admin
+      jobs: İşler
+      impersonating: "Kimliğine bürünülen:"
+      leave: Ayrıl
+      terminate: Sonlandır
+      join_session_prompt: Bir oturuma katıl
+      join: Katıl
+      request_impersonation: Kimliğe bürünme iste

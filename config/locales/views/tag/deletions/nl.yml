@@ -11,5 +11,6 @@ nl:
         explanation: "%{tag_name} wordt verwijderd uit transacties en andere tagbare
           entiteiten. In plaats van ze ongetagd te laten, kunt u ook een nieuwe tag
           hieronder toewijzen."
+        delete_and_reassign: Verwijder en wijs opnieuw toe
         replacement_tag_prompt: Selecteer tag
         tag: Tag

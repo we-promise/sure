@@ -1,0 +1,45 @@
+---
+nb:
+  admin:
+    users:
+      index:
+        title: "Brukeradministrasjon"
+        description: "Administrer brukerroller for din instans. Superadministratorer kan få tilgang til SSO-leverandørinnstillinger og brukeradministrasjon."
+        section_title: "Brukere"
+        you: "(Deg)"
+        trial_ends_at: "Prøveperiode slutter"
+        not_available: "n/a"
+        no_users: "Ingen brukere funnet."
+        filters:
+          role: "Rolle"
+          role_all: "Alle roller"
+          trial_status: "Prøvestatus"
+          trial_all: "Alle"
+          trial_expiring_soon: "Utløper om 7 dager"
+          trial_trialing: "På prøve"
+          submit: "Filtrer"
+        summary:
+          trials_expiring_7_days: "Prøveperioder som utløper de neste 7 dagene"
+        table:
+          user: "Bruker"
+          trial_ends_at: "Prøveperiode slutter"
+          family_accounts: "Familiekontoer"
+          family_transactions: "Familietransaksjoner"
+          last_login: "Siste innlogging"
+          session_count: "Antall økter"
+          never: "Aldri"
+          role: "Rolle"
+        role_descriptions_title: "Rollebeskrivelser"
+        roles:
+          guest: "Gjest"
+          member: "Medlem"
+          admin: "Admin"
+          super_admin: "Superadmin"
+        role_descriptions:
+          guest: "Assistentbasert opplevelse med bevisst begrensede tillatelser for introduksjonsarbeidsflyter."
+          member: "Grunnleggende brukertilgang. Kan administrere egne kontoer, transaksjoner og innstillinger."
+          admin: "Familieadministrator. Kan få tilgang til avanserte innstillinger som API-nøkler, importer og AI-instruksjoner."
+          super_admin: "Instansadministrator. Kan administrere SSO-leverandører, brukerroller og utgi seg for brukere for support."
+      update:
+        success: "Brukerrolle oppdatert."
+        failure: "Kunne ikke oppdatere brukerrollen."

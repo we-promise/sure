@@ -11,5 +11,6 @@ en:
         explanation: "%{tag_name} will be removed from transactions and other taggable
           entities.  Instead of leaving them untagged, you can also assign a new tag
           below."
+        delete_and_reassign: Delete and reassign
         replacement_tag_prompt: Select tag
         tag: Tag

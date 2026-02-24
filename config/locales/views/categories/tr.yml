@@ -14,12 +14,23 @@ tr:
       edit: Kategoriyi düzenle
     form:
       placeholder: Kategori adı
+      color: Renk
+      poor_contrast: "Zayıf kontrast, daha koyu bir renk seçin veya"
+      auto_adjust: "otomatik ayarla."
+      icon: Simge
+      income: Gelir
+      expense: Gider
+      classification: Sınıflandırma
+      unassigned: "(atanmamış)"
+      parent_category: "Üst kategori (isteğe bağlı)"
+      name: Ad
     index:
       bootstrap: Varsayılanları kullan (önerilir)
       categories: Kategoriler
       categories_expenses: Gider kategorileri
       categories_incomes: Gelir kategorileri
       empty: Hiç kategori bulunamadı
+      delete_all: Tümünü sil
       new: Yeni kategori
     menu:
       loading: Yükleniyor...

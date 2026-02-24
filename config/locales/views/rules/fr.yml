@@ -5,6 +5,68 @@ fr:
     no_condition: Aucune condition
     actions:
       value_placeholder: Entrez une valeur
+    index:
+      page_title: Règles
+      delete_all_rules: Supprimer toutes les règles
+      new_rule: Nouvelle règle
+      ai_warning: Les actions de règles avec IA activée coûteront de l'argent. Filtrez aussi précisément que possible pour éviter les coûts inutiles.
+      rules_label: Règles
+      sort_by: "Trier par :"
+      toggle_sort_direction: Inverser le sens du tri
+      no_rules: Aucune règle pour le moment
+      no_rules_description: Configurez des règles pour effectuer des actions sur vos transactions et autres données à chaque synchronisation de compte.
+    new:
+      back_to_rules: Retour aux règles
+      new_rule_title: "Nouvelle règle de %{resource_type}"
+    edit:
+      back_to_rules: Retour aux règles
+      edit_rule_title: "Modifier la règle de %{resource_type} \"%{name}\""
+      edit_rule_title_unnamed: "Modifier la règle de %{resource_type}"
+    confirm:
+      confirm_changes_to: "Confirmer les modifications de \"%{name}\""
+      confirm_changes: Confirmer les modifications
+      about_to_apply_html: "Vous êtes sur le point d'appliquer cette règle à <span class=\"text-primary font-medium\">%{count} %{resource_type}</span> qui répondent aux critères spécifiés. Veuillez confirmer si vous souhaitez procéder à cette modification."
+      ai_cost_title: Estimation du coût IA
+      ai_cost_message: "Cela utilisera l'IA pour catégoriser %{count} transaction(s). Coût estimé : <span class=\"font-semibold\">~$%{cost}</span>"
+      ai_cost_no_estimate: "Cela utilisera l'IA pour catégoriser %{count} transaction(s)."
+      cost_unavailable_model: "Estimation du coût non disponible pour le modèle \"%{model}\"."
+      cost_unavailable_no_provider: Estimation du coût non disponible (aucun fournisseur LLM configuré).
+      cost_warning: Vous pourriez encourir des frais, veuillez vérifier auprès du fournisseur du modèle pour les prix les plus récents.
+      view_usage: Voir l'historique d'utilisation
+      confirm_changes_btn: Confirmer les modifications
+    form:
+      rule_name_optional: Nom de la règle (facultatif)
+      enter_name: Saisissez un nom pour cette règle
+      if_label: SI
+      then_label: ALORS
+      for_label: POUR
+      add_condition: Ajouter une condition
+      add_condition_group: Ajouter un groupe de conditions
+      add_action: Ajouter une action
+      all_past_future: "Tous les %{resource_type}s passés et futurs"
+      starting_from: À partir de
+    rule:
+      if_label: SI
+      then_label: ALORS
+      for_label: POUR
+      to_label: à
+      and_more_conditions:
+        one: "et %{count} condition supplémentaire"
+        other: "et %{count} conditions supplémentaires"
+      and_more_actions:
+        one: "et %{count} action supplémentaire"
+        other: "et %{count} actions supplémentaires"
+      all_past_future: "Tous les %{resource_type} passés et futurs"
+      on_or_after: "%{resource_type} le ou après le %{date}"
+      edit: Modifier
+      reapply_rule: Réappliquer la règle
+      delete: Supprimer
+    category_rule_cta:
+      updated_to: "Mis à jour vers %{name}"
+      auto_categorize_description: Vous pouvez créer une règle pour catégoriser automatiquement les transactions comme celle-ci
+      dont_show_again: Ne plus afficher
+      dismiss: Ignorer
+      create_rule: Créer une règle
     apply_all:
       button: Appliquer tout
       confirm_title: Appliquer toutes les règles
@@ -38,3 +100,16 @@ fr:
         pending: En attente
         success: Réussi
         failed: Échoué
+  rule:
+    actions:
+      action:
+        to_label: à
+    conditions:
+      condition:
+        and_label: et
+        enter_value: Saisissez une valeur
+      condition_group:
+        and_label: et
+        match: correspondent
+        of_the_following: des conditions suivantes
+        add_condition: Ajouter une condition

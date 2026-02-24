@@ -6,6 +6,7 @@ nl:
     edit:
       title: Wachtwoord opnieuw instellen
     new:
+      email_placeholder: "you@example.com"
       requested: Controleer uw e-mail voor een link om uw wachtwoord opnieuw in te stellen.
       submit: Wachtwoord opnieuw instellen
       title: Wachtwoord opnieuw instellen

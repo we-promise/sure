@@ -15,6 +15,10 @@ de:
         no_account_subtitle: Da noch keine Konten hinzugefügt wurden, gibt es keine Daten anzuzeigen. Füge dein erstes Konto hinzu, um Dashboard-Daten zu sehen.
         no_account_title: Noch keine Konten vorhanden
       balance_sheet:
+        title: "Bilanz"
+        name: "Name"
+        weight: "Gewicht"
+        value: "Wert"
         no_items: "Noch keine %{name}"
         add_accounts: "Füge deine %{name}-Konten hinzu, um eine vollständige Übersicht zu erhalten."
       cashflow_sankey:
@@ -29,3 +33,25 @@ de:
       outflows_donut:
         title: "Ausgaben"
         total_outflows: "Gesamtausgaben"
+    feedback:
+      page_title: Feedback
+      title: Feedback hinterlassen
+      description: Lass uns wissen, ob du bestimmtes Feedback hast. Du kannst gerne Links zu Videos oder Screenshots beifügen.
+      feature_request: Funktionswunsch schreiben
+      bug_report: Fehlerbericht erstellen
+      discuss: "Diskutiere %{product_name} mit anderen"
+    intro:
+      welcome: "Willkommen!"
+      coming_soon: Einführungserlebnis kommt bald
+      description: "Wir arbeiten an einer umfangreicheren Onboarding-Erfahrung, um mehr über deine Ziele, Meilensteine und täglichen Bedürfnisse zu erfahren. Gehe vorerst zur Chat-Seitenleiste, um ein Gespräch mit Sure zu beginnen und uns mitzuteilen, wo du auf deiner finanziellen Reise stehst."
+      start_chatting: Jetzt chatten
+    redis_configuration_error:
+      page_title: "Redis-Konfiguration erforderlich - Sure"
+      title: Redis-Konfiguration erforderlich
+      subtitle: Deine selbst gehostete Sure-Installation benötigt eine korrekte Redis-Konfiguration.
+      why_required: Warum ist Redis erforderlich?
+      explanation: Sure verwendet Redis, um Sidekiq-Hintergrundaufgaben wie Kontodaten-Synchronisierung, Importverarbeitung und andere Hintergrundoperationen auszuführen, die deine Finanzdaten aktuell halten.
+      view_setup_guide: Einrichtungsanleitung anzeigen
+      docker_guide: Folge unserer vollständigen Docker-Einrichtungsanleitung, um Redis zu konfigurieren
+      refresh_hint: "Sobald du Redis konfiguriert hast, aktualisiere diese Seite, um fortzufahren."
+      refresh_page: Seite aktualisieren

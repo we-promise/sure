@@ -4,6 +4,11 @@ zh-CN:
     hostings:
       brand_fetch_settings:
         description: 请输入 Brand Fetch 提供的 Client ID
+        env_configured_message: 您已通过 BRAND_FETCH_CLIENT_ID 环境变量成功配置了 Brand Fetch Client ID。
+        show_details: "(显示详情)"
+        step1_html: '访问 <a href="https://brandfetch.com/developers" target="_blank" rel="noopener noreferrer" class="underline">brandfetch.com</a> 并创建一个免费的 Brand Fetch 开发者账户。'
+        step2_html: '前往 <a href="https://developers.brandfetch.com/dashboard/logo-api" target="_blank" rel="noopener noreferrer" class="underline">Logo API</a> 页面。'
+        step3: 点击"Your Client ID"部分的眼睛图标以显示您的 Client ID，然后粘贴到下方。
         label: Client ID
         placeholder: 在此输入您的 Client ID
         title: Brand Fetch 设置
@@ -62,6 +67,10 @@ zh-CN:
         api_calls_used: 已使用 %{used} / %{limit} 次每日 API 调用（%{percentage}）
         description: 请输入 Twelve Data 提供的 API 密钥
         env_configured_message: 已通过 TWELVE_DATA_API_KEY 环境变量成功配置。
+        show_details: "(显示详情)"
+        step1_html: '访问 <a href="https://twelvedata.com/register" target="_blank" rel="noopener noreferrer" class="underline">twelvedata.com</a> 并创建一个免费的 Twelve Data 开发者账户。'
+        step2_html: '前往 <a href="https://twelvedata.com/account/api-keys" target="_blank" rel="noopener noreferrer" class="underline">API Keys</a> 页面。'
+        step3: 显示您的密钥并粘贴到下方。
         label: API 密钥
         placeholder: 在此输入您的 API 密钥
         plan: "%{plan} 套餐"

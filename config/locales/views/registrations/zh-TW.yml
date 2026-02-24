@@ -14,6 +14,7 @@ zh-TW:
       invalid_invite_code: 邀請碼無效，請再試一次。
       success: 您已成功註冊。
     new:
+      email_placeholder: "you@example.com"
       invitation_message: "%{inviter} 已邀請您以 %{role} 身分加入"
       join_family_title: 加入 %{family}
       role_admin: 管理員

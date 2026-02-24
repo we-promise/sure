@@ -1,0 +1,43 @@
+---
+ro:
+  chats:
+    demo_banner_title: "Mod demonstrativ activ"
+    demo_banner_message: "Utilizați un LLM Qwen3 cu greutăți deschise, cu credite furnizate de Cloudflare Workers AI. Rezultatele pot varia deoarece baza de cod a fost testată în principal cu `gpt-4.1`, dar tokenurile dvs. nu sunt trimise în altă parte pentru antrenament! 🤖"
+    index:
+      chats: Conversații
+      new_chat: Conversație nouă
+    ai_consent:
+      enable_ai_chats: Activați conversațiile AI
+      ai_available_description: Chatul AI poate răspunde la întrebări financiare și poate oferi informații bazate pe datele dvs. Pentru a utiliza această funcție, trebuie să o activați explicit.
+      ai_unavailable_description_html: "Pentru a utiliza asistentul AI, trebuie să setați variabila de mediu <code class=\"bg-surface-inset px-1 py-0.5 rounded font-mono text-xs\">OPENAI_ACCESS_TOKEN</code> sau să o configurați în setările de Self-Hosting ale instanței dvs."
+      enable_btn: Activați conversațiile AI
+      disable_note: Dezactivați oricând. Toate datele trimise furnizorilor noștri LLM sunt anonimizate.
+    ai_greeting:
+      greeting: "Bună %{name}! Sunt un AI/model lingvistic mare care te poate ajuta cu finanțele tale. Am acces la web și la datele contului tău."
+      commands_hint_html: "Poți folosi <span class=\"bg-container border border-secondary px-1.5 py-0.5 rounded font-mono text-xs\">/</span> pentru a accesa comenzile"
+      questions_intro: "Iată câteva întrebări pe care le poți pune:"
+      evaluate_portfolio: Evaluează portofoliul de investiții
+      spending_insights: Arată analiza cheltuielilor
+      unusual_patterns: Găsește tipare neobișnuite
+    error:
+      failed_response: Nu s-a putut genera răspunsul. Vă rugăm să încercați din nou.
+    chat:
+      edit_chat_title: Editează titlul conversației
+      delete_chat: Șterge conversația
+    chat_nav:
+      all_chats: Toate conversațiile
+      start_new_chat: Începe o conversație nouă
+      edit_chat_title: Editează titlul conversației
+      delete_chat: Șterge conversația
+  messages:
+    chat_form:
+      ask_anything: "Întreabă orice ..."
+      coming_soon: În curând
+      ai_disclaimer: Răspunsurile AI sunt doar informative și nu constituie sfaturi financiare.
+  assistant_messages:
+    assistant_message:
+      assistant_reasoning: Raționamentul asistentului
+    tool_calls:
+      tool_calls: Apeluri de instrumente
+      function: "Funcție:"
+      arguments: "Argumente:"

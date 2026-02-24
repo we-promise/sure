@@ -3,6 +3,11 @@ es:
   holdings:
     cash:
       brokerage_cash: Efectivo en la cuenta de corretaje
+    new:
+      coming_soon: "Próximamente..."
+    cost_basis_cell:
+      set: Establecer
+      unknown: "--"
     destroy:
       success: Posición eliminada
     holding:

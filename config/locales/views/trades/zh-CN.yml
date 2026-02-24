@@ -6,6 +6,8 @@ zh-CN:
       account_prompt: 搜索账户
       amount: 金额
       holding: 股票代码
+      manual_ticker_label: 股票代码
+      manual_ticker_placeholder: AAPL
       price: 每股价格
       qty: 数量
       submit: 添加交易

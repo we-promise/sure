@@ -3,6 +3,68 @@ ca:
   rules:
     actions:
       value_placeholder: Introdueix un valor
+    index:
+      page_title: Regles
+      delete_all_rules: Eliminar totes les regles
+      new_rule: Nova regla
+      ai_warning: Les accions de regles amb IA habilitada tindran costos. Assegura't de filtrar el més estrictament possible per evitar costos innecessaris.
+      rules_label: Regles
+      sort_by: "Ordenar per:"
+      toggle_sort_direction: Canviar direcció d'ordenació
+      no_rules: Encara no hi ha regles
+      no_rules_description: Configura regles per executar accions a les teves transaccions i altres dades en cada sincronització de compte.
+    new:
+      back_to_rules: Tornar a regles
+      new_rule_title: "Nova regla de %{resource_type}"
+    edit:
+      back_to_rules: Tornar a regles
+      edit_rule_title: "Editar regla de %{resource_type} \"%{name}\""
+      edit_rule_title_unnamed: "Editar regla de %{resource_type}"
+    confirm:
+      confirm_changes_to: "Confirmar canvis a \"%{name}\""
+      confirm_changes: Confirmar canvis
+      about_to_apply_html: "Estàs a punt d'aplicar aquesta regla a <span class=\"text-primary font-medium\">%{count} %{resource_type}</span> que compleixen els criteris especificats. Si us plau, confirmeu si voleu continuar amb aquest canvi."
+      ai_cost_title: Estimació de Cost d'IA
+      ai_cost_message: "Això utilitzarà IA per categoritzar %{count} transacció(ns). Cost estimat: <span class=\"font-semibold\">~$%{cost}</span>"
+      ai_cost_no_estimate: "Això utilitzarà IA per categoritzar %{count} transacció(ns)."
+      cost_unavailable_model: "Estimació de cost no disponible per al model \"%{model}\"."
+      cost_unavailable_no_provider: Estimació de cost no disponible (no hi ha proveïdor LLM configurat).
+      cost_warning: Pots tenir costos, comprova amb el proveïdor del model per als preus més actualitzats.
+      view_usage: Veure l'historial d'ús
+      confirm_changes_btn: Confirmar canvis
+    form:
+      rule_name_optional: Nom de la regla (opcional)
+      enter_name: Introdueix un nom per a aquesta regla
+      if_label: SI
+      then_label: LLAVORS
+      for_label: PER
+      add_condition: Afegir condició
+      add_condition_group: Afegir grup de condicions
+      add_action: Afegir acció
+      all_past_future: "Tots els %{resource_type}s passats i futurs"
+      starting_from: A partir de
+    rule:
+      if_label: SI
+      then_label: LLAVORS
+      for_label: PER
+      to_label: a
+      and_more_conditions:
+        one: "i %{count} condició més"
+        other: "i %{count} condicions més"
+      and_more_actions:
+        one: "i %{count} acció més"
+        other: "i %{count} accions més"
+      all_past_future: "Tots els %{resource_type} passats i futurs"
+      on_or_after: "%{resource_type} en o després de %{date}"
+      edit: Editar
+      reapply_rule: Reaplicar regla
+      delete: Eliminar
+    category_rule_cta:
+      updated_to: "Actualitzat a %{name}"
+      auto_categorize_description: Pots crear una regla per categoritzar automàticament transaccions com aquesta
+      dont_show_again: No tornis a mostrar
+      dismiss: Descartar
+      create_rule: Crear regla
     apply_all:
       ai_cost_message: Això utilitzarà IA per categoritzar fins a %{transactions} transaccions.
       ai_cost_title: Estimació de Cost d'IA
@@ -41,3 +103,16 @@ ca:
         success: Èxit
       title: Execucions Recents
       unnamed_rule: Regla Sense Nom
+  rule:
+    actions:
+      action:
+        to_label: a
+    conditions:
+      condition:
+        and_label: i
+        enter_value: Introdueix un valor
+      condition_group:
+        and_label: i
+        match: coincideix
+        of_the_following: de les condicions següents
+        add_condition: Afegir condició

@@ -25,6 +25,14 @@ ro:
         page_title: Plată
         subscription_subtitle: Actualizează-ți abonamentul și detaliile de plată
         subscription_title: Gestionează abonamentul
+        currently_on: "Momentan pe planul %{plan}."
+        demo_mode: "Utilizați în prezent versiunea demo deschisă a"
+        data_deleted_in_days: "(Datele vor fi șterse în %{days} zile)"
+        not_contributing: "Momentan nu contribuiți"
+        contributions_show_here: "Contribuțiile la %{product_name} vor apărea aici."
+        manage: Gestionează
+        choose_level: Alege nivelul
+        payment_via_stripe: Plată prin Stripe
     preferences:
       show:
         country: Țară
@@ -43,6 +51,7 @@ ro:
         theme_system: Sistem
         theme_title: Temă
         timezone: Fus orar
+        translations_note: Vă rugăm să rețineți, lucrăm în continuare la traducerile pentru diferite limbi.
     profiles:
       destroy:
         cannot_remove_self: Nu te poți elimina singur din cont.
@@ -128,3 +137,187 @@ ro:
       choose: Încarcă fotografie
       choose_label: (opțional)
       change: Schimbă fotografia
+    llm_usages:
+      show:
+        page_title: Utilizare și costuri LLM
+        subtitle: Urmăriți utilizarea AI și costurile estimate
+        start_date: Data de început
+        end_date: Data de sfârșit
+        filter: Filtrează
+        total_requests: Total cereri
+        total_tokens: Total tokeni
+        prompt: prompt
+        completion: completare
+        total_cost: Cost total
+        avg_cost: Cost mediu/cerere
+        cost_data_basis: "Bazat pe %{count} din %{total} cereri cu date de cost"
+        cost_by_operation: Cost pe operațiune
+        cost_by_model: Cost pe model
+        recent_usage: Utilizare recentă
+        date: Data
+        operation: Operațiune
+        model: Model
+        tokens: Tokeni
+        cost: Cost
+        failed: Eșuat
+        http_status: "Status HTTP:"
+        no_data: Nu s-au găsit date de utilizare pentru perioada selectată
+        about_cost_estimates: Despre estimările de cost
+        cost_estimates_description: "Costurile sunt estimate pe baza prețurilor OpenAI din 2025. Costurile reale pot varia în funcție de furnizor și plan. Cererile eșuate (status non-200) pot fi totuși contorizate în utilizarea API-ului."
+    api_keys:
+      show:
+        page_title_created: Cheie API creată cu succes
+        page_title_key: Cheia dvs. API
+        created_success: Cheie API creată cu succes!
+        created_description: "Noua dvs. cheie API \"%{name}\" a fost creată și este gata de utilizare."
+        your_api_key: Cheia dvs. API
+        copy_store_securely: "Copiați și stocați această cheie în siguranță. Veți avea nevoie de ea pentru autentificarea cererilor API."
+        copy_api_key: Copiază cheia API
+        how_to_use: Cum să utilizați cheia API
+        usage_instructions: "Includeți cheia API în antetul X-Api-Key atunci când faceți cereri:"
+        continue_to_settings: Continuă la setările cheii API
+        create_new_key: Creează cheie nouă
+        created_ago: "Creată acum %{time}"
+        last_used_ago: "Ultima utilizare acum %{time}"
+        never_used: Neutilizată niciodată
+        active: Activă
+        permissions: Permisiuni
+        read_only: Doar citire
+        read_write: Citire/Scriere
+        revoke_key: Revocă cheia
+        confirm_revoke: Sunteți sigur că doriți să revocați această cheie API? Această acțiune nu poate fi anulată.
+      new:
+        page_title: Creează cheie API nouă
+        subtitle: Generați o nouă cheie API pentru a accesa datele Sure programatic.
+        name_placeholder: "de ex., Aplicația mea de buget, Tracker portofoliu"
+        name_label: Numele cheii API
+        name_help: Alegeți un nume descriptiv pentru a identifica această cheie mai târziu.
+        permissions_label: Permisiuni
+        select_permissions: "Selectați permisiunile pe care această cheie API ar trebui să le aibă:"
+        read_only: Doar citire
+        read_only_description: Vizualizați conturile, tranzacțiile și soldurile
+        read_write: Citire/Scriere
+        read_write_description: Vizualizați datele și creați tranzacții noi
+        security_warning: Avertisment de securitate
+        security_warning_description: "Cheia API va fi afișată o singură dată după creare. Asigurați-vă că o copiați și o stocați în siguranță. Dacă o pierdeți, va trebui să creați o cheie nouă."
+        cancel: Anulează
+        save: Salvează cheia API
+      created:
+        page_title: Cheie API creată
+        created_success: Cheie API creată cu succes!
+        created_description: "Noua dvs. cheie API \"%{name}\" a fost creată și este gata de utilizare."
+        your_api_key: Cheia dvs. API
+        copy_store_securely: "Copiați și stocați această cheie în siguranță. Veți avea nevoie de ea pentru autentificarea cererilor API."
+        copy_api_key: Copiază cheia API
+        key_details: Detalii cheie
+        name_label: "Nume:"
+        permissions_label: "Permisiuni:"
+        view_accounts: Vizualizează conturile
+        view_transactions: Vizualizează tranzacțiile
+        view_balances: Vizualizează soldurile
+        create_transactions: Creează tranzacții
+        created_label: "Creată:"
+        security_note: Notă importantă de securitate
+        security_note_description: "Aceasta este singura dată când cheia API va fi afișată. Asigurați-vă că o copiați acum. Dacă o pierdeți, va trebui să creați o cheie nouă."
+        how_to_use: Cum să utilizați cheia API
+        usage_instructions: "Includeți cheia API în antetul X-Api-Key atunci când faceți cereri:"
+        continue_to_settings: Continuă la setările cheii API
+    bank_sync:
+      show:
+        page_title: Sincronizare bancară
+        providers: FURNIZORI
+        no_providers: Niciun furnizor configurat
+        configure_providers: Configurați furnizorii pentru a conecta conturile bancare.
+    providers:
+      provider_form:
+        config_via_env: Configurația poate fi setată prin variabile de mediu sau suprascrisă mai jos.
+        field_descriptions: "Descrieri câmpuri:"
+        optional: Opțional
+        save_configuration: Salvează configurația
+        configured: Configurat și gata de utilizare
+        not_configured: Neconfigurat
+      simplefin_panel:
+        setup_instructions: "Instrucțiuni de configurare:"
+        step1_html: "Vizitați <a href=\"https://bridge.simplefin.org\" target=\"_blank\" class=\"text-primary underline\">SimpleFIN Bridge</a> pentru a obține tokenul de configurare unică"
+        step2: Inserați tokenul mai jos și faceți clic pe butonul Salvează pentru a activa sincronizarea datelor bancare SimpleFIN
+        step3: După o conexiune reușită, mergeți la fila Conturi pentru a configura conturile noi din datele SimpleFIN
+        field_descriptions: "Descrieri câmpuri:"
+        setup_token_description: "Token de configurare: Tokenul dvs. unic de configurare SimpleFIN. Acesta va fi schimbat pentru un URL de acces permanent."
+        setup_token_label: Token de configurare
+        setup_token_placeholder: Inserați tokenul de configurare SimpleFIN
+        save_configuration: Salvează configurația
+        configured: Configurat și gata de utilizare. Vizitați fila Conturi pentru a gestiona și configura conturile.
+        not_configured: Neconfigurat
+      lunchflow_panel:
+        setup_instructions: "Instrucțiuni de configurare:"
+        step1_html: "Vizitați <a href=\"https://lunchflow.app\" target=\"_blank\" class=\"text-primary underline\">Lunch Flow</a> pentru a obține cheia API"
+        step2: Inserați cheia API mai jos și faceți clic pe butonul Salvează
+        step3: După o conexiune reușită, mergeți la fila Conturi pentru a configura și gestiona conturile conectate
+        field_descriptions: "Descrieri câmpuri:"
+        api_key_description: "Cheie API: Cheia dvs. API Lunch Flow pentru autentificare (obligatoriu)"
+        base_url_description: "URL de bază: URL de bază pentru API-ul Lunch Flow (opțional, implicit https://lunchflow.app/api/v1)"
+        api_key_label: Cheie API
+        api_key_placeholder_new: Inserați cheia API aici
+        api_key_placeholder_update: Introduceți o cheie API nouă pentru actualizare
+        base_url_label: URL de bază (Opțional)
+        base_url_placeholder: "https://lunchflow.app/api/v1 (implicit)"
+        save_configuration: Salvează configurația
+        update_configuration: Actualizează configurația
+        configured: Configurat și gata de utilizare. Vizitați fila Conturi pentru a gestiona și configura conturile.
+        not_configured: Neconfigurat
+      mercury_panel:
+        setup_instructions: "Instrucțiuni de configurare:"
+        step1: Mergeți la https://app.mercury.com
+        step2: "Faceți clic pe numele companiei → Setări → Dezvoltatori → Tokeni API"
+        step3: Faceți clic pe Generare token
+        step4: "Selectați tipul tokenului: Doar citire"
+        step5: "Denumiți tokenul (de ex., 'Sure Finance')"
+        step6: Faceți clic pe Creare token și copiați-l
+        field_descriptions: "Descrieri câmpuri:"
+        token_description: "Token API: Tokenul dvs. complet Mercury API pentru autentificare"
+        base_url_description: "URL de bază: URL-ul API Mercury (opțional, implicit https://api.mercury.com/api/v1)"
+        sandbox_note: "Notă: Pentru testare sandbox, utilizați https://api.mercury.com/api/v1/sandbox ca URL de bază."
+        token_label: Token
+        token_placeholder_new: Inserați tokenul aici
+        token_placeholder_update: Introduceți un token nou pentru actualizare
+        base_url_label: URL de bază (Opțional)
+        base_url_placeholder: "https://api.mercury.com/api/v1 (implicit)"
+        save_configuration: Salvează configurația
+        update_configuration: Actualizează configurația
+        configured: Configurat și gata de utilizare. Vizitați fila Conturi pentru a gestiona și configura conturile.
+        not_configured: Neconfigurat
+      enable_banking_panel:
+        setup_instructions: "Instrucțiuni de configurare:"
+        step1_html: "Vizitați contul dvs. de dezvoltator <a href=\"https://enablebanking.com\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"link\">Enable Banking</a> pentru a obține acreditările"
+        step2: Selectați codul țării din meniul derulant de mai jos
+        step3: Introduceți ID-ul aplicației și inserați certificatul client (inclusiv cheia privată)
+        step4: "Faceți clic pe Salvează configurația, apoi utilizați \"Adaugă conexiune\" pentru a conecta banca"
+        callback_url_instruction: "Pentru URL-ul de callback, utilizați %{callback_url}."
+        field_descriptions: "Descrieri câmpuri:"
+        country_code_description: "Cod țară: Cod ISO 3166-1 alfa-2 (de ex., GB, DE, FR) - determină băncile disponibile"
+        application_id_description: "ID aplicație: ID-ul generat în contul dvs. de dezvoltator Enable Banking"
+        client_certificate_description: "Certificat client: Certificatul generat la crearea aplicației (trebuie să includă cheia privată)"
+        select_country: "Selectați țara..."
+        country_label: Țară
+        config_locked: Configurație blocată
+        config_locked_description: Acreditările nu pot fi modificate cât timp aveți conexiuni bancare active. Eliminați mai întâi toate conexiunile pentru a actualiza acreditările.
+        application_id_label: ID aplicație
+        application_id_placeholder_new: Introduceți ID-ul aplicației
+        application_id_placeholder_update: Introduceți un ID nou pentru actualizare
+        client_certificate_label: Certificat client (cu cheie privată)
+        save_configuration: Salvează configurația
+        update_configuration: Actualizează configurația
+        syncing: Se sincronizează
+        connected_bank: Bancă conectată
+        session_expires: "Sesiunea expiră: %{date}"
+        unknown: Necunoscut
+        connection: Conexiune
+        session_expired: Sesiune expirată - reconectați
+        configured: Configurat
+        ready_to_link: Gata pentru conectarea conturilor
+        sync_button: Sincronizare
+        reconnect: Reconectare
+        connect_bank: Conectează banca
+        remove: Elimină
+        remove_confirm: Sunteți sigur că doriți să eliminați această conexiune?
+        add_connection: Adaugă conexiune

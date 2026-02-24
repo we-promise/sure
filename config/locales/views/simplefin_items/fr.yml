@@ -20,6 +20,14 @@ fr:
         update_failed: "Échec de la mise à jour de la connexion : %{message}"
         unexpected: Une erreur inattendue s'est produite. Veuillez réessayer.
     edit:
+      title: "Mettre à jour la connexion SimpleFin"
+      subtitle: "Obtenez un nouveau jeton de configuration pour reconnecter votre compte SimpleFin"
+      update_needed: "Votre connexion SimpleFIN doit être mise à jour :"
+      step_1_html: 'Visitez <a href="https://bridge.simplefin.org/simplefin/create" target="_blank" rel="noopener noreferrer" class="text-link hover:text-link underline">SimpleFIN Bridge</a> pour créer un nouveau jeton de configuration'
+      step_2: "Copiez le jeton et collez-le ci-dessous"
+      step_3: 'Cliquez sur "Mettre à jour" pour restaurer l''accès'
+      update: "Mettre à jour"
+      cancel: "Annuler"
       setup_token:
         label: "Jeton de configuration SimpleFIN :"
         placeholder: "Collez votre jeton de configuration SimpleFIN ici..."
@@ -45,3 +53,29 @@ fr:
       status_with_summary: "Dernière synchronisation il y a %{timestamp} • %{summary}"
       syncing: Synchronisation...
       update: Mettre à jour la connexion
+    setup_accounts:
+      page_title: "Configurer les comptes SimpleFin"
+      title: "Configurez vos comptes SimpleFin"
+      subtitle: "Choisissez les types de compte corrects pour vos comptes importés"
+      creating_accounts: "Création des comptes..."
+      choose_account_type: "Choisissez le type de compte correct pour chaque compte SimpleFin :"
+      account_type_depository: "Compte courant ou épargne"
+      account_type_depository_desc: "Comptes bancaires classiques"
+      account_type_credit_card: "Carte de crédit"
+      account_type_credit_card_desc: "Comptes de carte de crédit"
+      account_type_investment: "Investissement"
+      account_type_investment_desc: "Comptes de courtage, 401(k), IRA"
+      account_type_loan: "Prêt ou hypothèque"
+      account_type_loan_desc: "Comptes de dette"
+      account_type_other_asset: "Autre actif"
+      account_type_other_asset_desc: "Tout le reste"
+      transaction_history: "Historique des transactions :"
+      transaction_history_note_html: "SimpleFin fournit généralement <strong>60-90 jours</strong> d'historique de transactions, selon votre banque. Après la configuration initiale, les nouvelles transactions se synchroniseront automatiquement. La disponibilité des données historiques varie selon l'institution et le type de compte."
+      account_type_label: "Type de compte :"
+      balance_label: "Solde :"
+      create_accounts: "Créer les comptes"
+      cancel: "Annuler"
+    select_existing_account:
+      header_title: "Lier un compte SimpleFIN"
+      link_button: "Lier"
+      balance_label: "Solde :"

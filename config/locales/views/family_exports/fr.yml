@@ -10,6 +10,17 @@ fr:
       success: Exportation supprimée avec succès
     export_not_ready: Exportation non prête pour le téléchargement
     exporting: Exporte...
+    new:
+      title: Exportez vos données
+      subtitle: Téléchargez toutes vos données financières
+      whats_included: "Ce qui est inclus :"
+      all_accounts_and_balances: Tous les comptes et soldes
+      transaction_history: Historique des transactions
+      investment_trades: Opérations d'investissement
+      categories_tags_and_rules: "Catégories, tags et règles"
+      note: "Note :"
+      note_body: "Cet export inclut toutes vos données, mais seule une partie peut être réimportée via la fonction d'importation CSV. Nous prenons en charge l'importation de comptes, de transactions (avec catégorie et tags) et d'opérations. Les autres données du compte ne peuvent pas être importées et sont uniquement pour vos archives."
+      cancel: Annuler
     index:
       title: Exportations
       new: Nouvelle exportation

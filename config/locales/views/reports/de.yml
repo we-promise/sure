@@ -136,3 +136,12 @@ de:
       open_sheets: Google Sheets öffnen
       go_to_api_keys: Zu den API-Schlüsseln
       close: Verstanden
+    investment_flows:
+      title: Investitionsflüsse
+      description: Verfolge den Geldfluss in und aus deinen Anlagekonten durch Ein- und Auszahlungen.
+      contributions: Einzahlungen
+      contributions_description: In Anlagen investiertes Geld
+      withdrawals: Auszahlungen
+      withdrawals_description: Aus Anlagen abgezogenes Geld
+      net_flow: Nettofluss
+      net_flow_description: Gesamte Nettoveränderung

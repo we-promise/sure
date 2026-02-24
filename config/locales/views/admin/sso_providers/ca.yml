@@ -10,6 +10,8 @@ ca:
         success: El proveïdor SSO s'ha eliminat correctament.
       edit:
         description: Actualitza la configuració per a %{label}
+        page_title: "Edita %{label}"
+        provider_configuration_title: "Configuració del proveïdor"
         title: Edita el proveïdor SSO
       form:
         admin_groups: Grups d'administradors
@@ -25,16 +27,22 @@ ca:
         client_secret_placeholder_existing: "••••••••••••••••"
         client_secret_placeholder_new: el-teu-secret-client
         copy_button: Copia
+        callback_url_label: "URL de callback"
+        callback_url_help: "Configureu aquesta URL al vostre proveïdor d'identitat"
+        copy_to_clipboard: "Copia al porta-retalls"
         default_role_help: Rol assignat als usuaris creats mitjançant aprovisionament
           de comptes SSO just-in-time (JIT). Per defecte és Membre.
         default_role_label: Rol per defecte per a nous usuaris
         enabled_help: Els usuaris poden iniciar sessió amb aquest proveïdor quan està
           habilitat
         enabled_label: Habilita aquest proveïdor
-        errors_title: "%{count} error ha prohibit que aquest proveïdor s' desa:"
+        errors_title:
+          one: "1 error ha impedit que aquest proveïdor es desi:"
+          other: "%{count} errors han impedit que aquest proveïdor es desi:"
         groups_help: Llista separada per comes dels noms de grups del IdP. Usa * per coincidir
           amb tots els grups.
         icon_help: Nom de la icona Lucide (opcional)
+        icon_login_help: "Nom de la icona Lucide per al botó d'inici de sessió"
         icon_label: Icona
         icon_placeholder: p. ex., key, google, github
         idp_cert_fingerprint: Emprempta del certificat (alternativa)
@@ -65,6 +73,7 @@ ca:
         name_label: Nom
         name_placeholder: p. ex., openid_connect, keycloak, authentik
         oauth_configuration: Configuració OAuth/OIDC
+        provider_configuration_title: "Configuració del proveïdor"
         prompt_consent: Força consentiment (autoritzar de nou)
         prompt_default: Per defecte (decideix el IdP)
         prompt_help: Controla com el IdP demana a l'usuari durant l'autenticació.
@@ -84,12 +93,20 @@ ca:
         role_member: Membre
         role_super_admin: Super administrador
         saml_configuration: Configuració SAML
+        saml_callback_url_label: "URL de callback SP (URL ACS)"
+        saml_callback_url_help: "Configureu aquesta URL com a URL del Servei de Consum d'Assertions al vostre IdP"
         scopes_help: Llista separada per espais d'àmbits OIDC. Deixa en blanc per defecte
           (openid email profile). Afegeix 'groups' per recuperar claims de grup.
         scopes_label: Àmbits personalitzats
         strategy_help: L'estratègia d'autenticació a utilitzar
+        strategy_openid_connect: "OpenID Connect"
+        strategy_saml: "SAML 2.0"
+        strategy_google: "Google OAuth2"
+        strategy_github: "GitHub"
         strategy_label: Estratègia
         submit: Desa el proveïdor
+        update_provider: "Actualitza el proveïdor"
+        create_provider: "Crea el proveïdor"
         super_admin_groups: Grups de super administradors
         test_connection: Prova la connexió
       index:
@@ -106,6 +123,17 @@ ca:
         note: Els canvis als proveïdors SSO requereixen un reinici del servidor per fer efecte.
           Alternativament, activa la bandera de característica AUTH_PROVIDERS_SOURCE=db per carregar
           proveïdors de la base de dades de manera dinàmica.
+        restart_warning: "Els canvis requereixen un reinici del servidor per fer efecte."
+        configured_providers_title: "Proveïdors configurats"
+        edit_title: "Edita"
+        enable_title: "Activa"
+        disable_title: "Desactiva"
+        delete_title: "Elimina"
+        no_providers_configured: "Encara no s'ha configurat cap proveïdor SSO."
+        configuration_mode_title: "Mode de configuració"
+        db_providers_title: "Proveïdors basats en base de dades"
+        db_providers_description: "Carrega proveïdors des de la base de dades en lloc de la configuració YAML"
+        db_providers_hint_html: "Establiu <code class='bg-surface px-1 py-0.5 rounded text-xs'>AUTH_PROVIDERS_SOURCE=db</code> per habilitar proveïdors basats en base de dades. Això permet canvis sense reinicis del servidor."
         table:
           actions: Accions
           disabled: Desactivat
@@ -117,6 +145,7 @@ ca:
         title: Proveïdors SSO
       new:
         description: Configura un nou proveïdor d'autenticació d'inici de sessió únic
+        provider_configuration_title: "Configuració del proveïdor"
         title: Afegeix proveïdor SSO
       toggle:
         confirm_disable: Estàs segur que vols desactivar aquest proveïdor?

@@ -84,6 +84,7 @@ zh-CN:
       no_name_placeholder: "（无名称）"
       title: 将 %{account_name} 与 Lunch Flow 关联
     setup_accounts:
+      page_title: "设置 Lunch Flow 账户"
       account_type_label: 账户类型：
       account_types:
         credit_card: 信用卡
@@ -146,3 +147,22 @@ zh-CN:
       success: 同步已开始
     update:
       success: Lunch Flow 连接已更新
+    api_error:
+      title: "Lunch Flow 连接错误"
+      unable_to_connect: "无法连接到 Lunch Flow"
+      common_issues: "常见问题："
+      issue_invalid_key_html: '<strong>API 密钥无效：</strong>请在服务商设置中检查您的 API 密钥'
+      issue_expired_html: '<strong>凭证已过期：</strong>请从 Lunch Flow 生成新的 API 密钥'
+      issue_network_html: '<strong>网络问题：</strong>请检查您的网络连接'
+      issue_service_down_html: '<strong>服务不可用：</strong>Lunch Flow API 可能暂时不可用'
+      check_settings: "检查服务商设置"
+    setup_required:
+      title: "需要配置 Lunch Flow"
+      api_key_not_configured: "API 密钥未配置"
+      description: "在关联 Lunch Flow 账户之前，您需要先配置 Lunch Flow API 密钥。"
+      setup_steps: "配置步骤："
+      step_1_html: '前往 <strong>设置 → 服务商</strong>'
+      step_2_html: '找到 <strong>Lunch Flow</strong> 部分'
+      step_3: "输入您的 Lunch Flow API 密钥"
+      step_4: "返回此处关联您的账户"
+      go_to_settings: "前往服务商设置"

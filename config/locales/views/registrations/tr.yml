@@ -14,6 +14,7 @@ tr:
       invalid_invite_code: Geçersiz davet kodu, lütfen tekrar deneyin.
       success: Başarıyla kaydoldunuz.
     new:
+      email_placeholder: "you@example.com"
       invitation_message: "%{inviter}, sizi %{role} olarak katılmaya davet etti"
       join_family_title: "%{family} ailesine katıl"
       role_admin: yönetici

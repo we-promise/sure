@@ -17,6 +17,7 @@ fr:
       accept: Confirmer
       body_html: "<p>Vous ne pourrez pas annuler cette action</p>"
       cancel: Annuler
+      subtitle: Cette action ne peut pas être annulée.
       title: Êtes-vous sûr ?
     money_field:
       label: Montant

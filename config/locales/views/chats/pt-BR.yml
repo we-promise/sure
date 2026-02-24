@@ -1,0 +1,43 @@
+---
+pt-BR:
+  chats:
+    demo_banner_title: "Modo de demonstração ativo"
+    demo_banner_message: "Você está usando um LLM Qwen3 de pesos abertos com créditos fornecidos pelo Cloudflare Workers AI. Os resultados podem variar, pois a base de código foi testada principalmente com `gpt-4.1`, mas seus tokens não são enviados para nenhum outro lugar para treinamento! 🤖"
+    index:
+      chats: Conversas
+      new_chat: Nova conversa
+    ai_consent:
+      enable_ai_chats: Ativar conversas com IA
+      ai_available_description: O chat de IA pode responder perguntas financeiras e fornecer insights com base nos seus dados. Para usar este recurso, você precisa habilitá-lo explicitamente.
+      ai_unavailable_description_html: "Para usar o assistente de IA, você precisa definir a variável de ambiente <code class=\"bg-surface-inset px-1 py-0.5 rounded font-mono text-xs\">OPENAI_ACCESS_TOKEN</code> ou configurá-la nas configurações de Self-Hosting da sua instância."
+      enable_btn: Ativar conversas com IA
+      disable_note: Desative a qualquer momento. Todos os dados enviados aos nossos provedores de LLM são anonimizados.
+    ai_greeting:
+      greeting: "Olá %{name}! Sou uma IA/modelo de linguagem grande que pode ajudar com suas finanças. Tenho acesso à web e aos dados da sua conta."
+      commands_hint_html: "Você pode usar <span class=\"bg-container border border-secondary px-1.5 py-0.5 rounded font-mono text-xs\">/</span> para acessar comandos"
+      questions_intro: "Aqui estão algumas perguntas que você pode fazer:"
+      evaluate_portfolio: Avaliar portfólio de investimentos
+      spending_insights: Mostrar análise de gastos
+      unusual_patterns: Encontrar padrões incomuns
+    error:
+      failed_response: Falha ao gerar resposta. Por favor, tente novamente.
+    chat:
+      edit_chat_title: Editar título da conversa
+      delete_chat: Excluir conversa
+    chat_nav:
+      all_chats: Todas as conversas
+      start_new_chat: Iniciar nova conversa
+      edit_chat_title: Editar título da conversa
+      delete_chat: Excluir conversa
+  messages:
+    chat_form:
+      ask_anything: "Pergunte qualquer coisa ..."
+      coming_soon: Em breve
+      ai_disclaimer: As respostas da IA são apenas informativas e não constituem aconselhamento financeiro.
+  assistant_messages:
+    assistant_message:
+      assistant_reasoning: Raciocínio do assistente
+    tool_calls:
+      tool_calls: Chamadas de ferramentas
+      function: "Função:"
+      arguments: "Argumentos:"

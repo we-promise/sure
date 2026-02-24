@@ -6,6 +6,8 @@ nb:
       account_prompt: Søk etter konto
       amount: Beløp
       holding: Ticker-symbol
+      manual_ticker_label: Ticker-symbol
+      manual_ticker_placeholder: AAPL
       price: Pris per aksje
       qty: Antall
       submit: Legg til transaksjon

@@ -1,6 +1,8 @@
 ---
 pt-BR:
   invite_codes:
+    invite_code:
+      confirm_delete: "Tem certeza?"
     index:
       invite_code_description: Gere um novo código para vê-lo exibido aqui. Códigos gerados
         que foram usados não serão mais mostrados.

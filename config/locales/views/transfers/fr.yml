@@ -18,13 +18,19 @@ fr:
     new:
       title: Nouveau transfert
     show:
+      amount: Montant
+      category: Catégorie
+      date: Date
       delete: Supprimer le transfert
       delete_subtitle: Ce transfert est supprimé. Il ne supprimera pas les transactions sous-jacentes.
       delete_title: Voulez-vous vraiment supprimer ce transfert?
       details: Détails
+      from: De
       note_label: Notes
       note_placeholder: Ajoutez une note à ce transfert
       overview: Aperçu
       settings: Paramètres
+      to: Vers
+      uncategorized: Non catégorisé
     update:
       success: Transfert mis à jour

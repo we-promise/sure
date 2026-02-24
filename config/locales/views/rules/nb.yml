@@ -3,6 +3,68 @@ nb:
   rules:
     no_action: Ingen handling
     no_condition: Ingen betingelse
+    index:
+      page_title: Regler
+      delete_all_rules: Slett alle regler
+      new_rule: Ny regel
+      ai_warning: AI-aktiverte regelhandlinger vil koste penger. Sørg for å filtrere så smalt som mulig for å unngå unødvendige kostnader.
+      rules_label: Regler
+      sort_by: "Sorter etter:"
+      toggle_sort_direction: Bytt sorteringsretning
+      no_rules: Ingen regler ennå
+      no_rules_description: Sett opp regler for å utføre handlinger på transaksjonene dine og andre data ved hver kontosynkronisering.
+    new:
+      back_to_rules: Tilbake til regler
+      new_rule_title: "Ny %{resource_type}-regel"
+    edit:
+      back_to_rules: Tilbake til regler
+      edit_rule_title: "Rediger %{resource_type}-regel \"%{name}\""
+      edit_rule_title_unnamed: "Rediger %{resource_type}-regel"
+    confirm:
+      confirm_changes_to: "Bekreft endringer til \"%{name}\""
+      confirm_changes: Bekreft endringer
+      about_to_apply_html: "Du er i ferd med å anvende denne regelen på <span class=\"text-primary font-medium\">%{count} %{resource_type}</span> som oppfyller de angitte regelkriteriene. Vennligst bekreft om du ønsker å fortsette med denne endringen."
+      ai_cost_title: AI-kostnadsestimat
+      ai_cost_message: "Dette vil bruke AI til å kategorisere %{count} transaksjon(er). Estimert kostnad: <span class=\"font-semibold\">~$%{cost}</span>"
+      ai_cost_no_estimate: "Dette vil bruke AI til å kategorisere %{count} transaksjon(er)."
+      cost_unavailable_model: "Kostnadsestimat ikke tilgjengelig for modell \"%{model}\"."
+      cost_unavailable_no_provider: Kostnadsestimat ikke tilgjengelig (ingen LLM-leverandør konfigurert).
+      cost_warning: Du kan pådra deg kostnader, vennligst sjekk med modellleverandøren for de mest oppdaterte prisene.
+      view_usage: Vis brukshistorikk
+      confirm_changes_btn: Bekreft endringer
+    form:
+      rule_name_optional: Regelnavn (valgfritt)
+      enter_name: Skriv inn et navn for denne regelen
+      if_label: HVIS
+      then_label: DA
+      for_label: FOR
+      add_condition: Legg til betingelse
+      add_condition_group: Legg til betingelsesgruppe
+      add_action: Legg til handling
+      all_past_future: "Alle tidligere og fremtidige %{resource_type}er"
+      starting_from: Fra og med
+    rule:
+      if_label: HVIS
+      then_label: DA
+      for_label: FOR
+      to_label: til
+      and_more_conditions:
+        one: "og %{count} betingelse til"
+        other: "og %{count} betingelser til"
+      and_more_actions:
+        one: "og %{count} handling til"
+        other: "og %{count} handlinger til"
+      all_past_future: "Alle tidligere og fremtidige %{resource_type}"
+      on_or_after: "%{resource_type} på eller etter %{date}"
+      edit: Rediger
+      reapply_rule: Anvend regel på nytt
+      delete: Slett
+    category_rule_cta:
+      updated_to: "Oppdatert til %{name}"
+      auto_categorize_description: Du kan opprette en regel for å automatisk kategorisere transaksjoner som denne
+      dont_show_again: Ikke vis igjen
+      dismiss: Avvis
+      create_rule: Opprett regel
     recent_runs:
       title: Siste Kjøringer
       description: Se kjøringsloggen for reglene dine inkludert suksess/feil-status og transaksjonsantall.
@@ -23,3 +85,16 @@ nb:
         pending: Ventende
         success: Vellykket
         failed: Mislyktes
+  rule:
+    actions:
+      action:
+        to_label: til
+    conditions:
+      condition:
+        and_label: og
+        enter_value: Skriv inn en verdi
+      condition_group:
+        and_label: og
+        match: samsvarer
+        of_the_following: av de følgende betingelsene
+        add_condition: Legg til betingelse

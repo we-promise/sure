@@ -3,6 +3,11 @@ zh-CN:
   holdings:
     cash:
       brokerage_cash: 经纪账户现金
+    new:
+      coming_soon: "即将推出..."
+    cost_basis_cell:
+      set: 设置
+      unknown: "--"
     destroy:
       success: 持仓已删除
     holding:

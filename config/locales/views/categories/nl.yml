@@ -14,12 +14,23 @@ nl:
       edit: Categorie bewerken
     form:
       placeholder: Categorienaam
+      color: Kleur
+      poor_contrast: "Slecht contrast, kies een donkerdere kleur of"
+      auto_adjust: "automatisch aanpassen."
+      icon: Icoon
+      income: Inkomen
+      expense: Uitgave
+      classification: Classificatie
+      unassigned: "(niet toegewezen)"
+      parent_category: "Bovenliggende categorie (optioneel)"
+      name: Naam
     index:
       bootstrap: Gebruik standaardinstellingen (aanbevolen)
       categories: Categorieën
       categories_expenses: Uitgavencategorieën
       categories_incomes: Inkomenscategorieën
       empty: Geen categorieën gevonden
+      delete_all: Alles verwijderen
       new: Nieuwe categorie
     menu:
       loading: Laden...

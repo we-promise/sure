@@ -18,13 +18,19 @@ zh-CN:
     new:
       title: 新建转账
     show:
+      amount: 金额
+      category: 类别
+      date: 日期
       delete: 移除转账
       delete_subtitle: 此操作仅移除转账记录，不会删除底层交易数据。
       delete_title: 确认移除转账？
       details: 详情
+      from: 转出
       note_label: 备注
       note_placeholder: 为此转账添加备注
       overview: 概览
       settings: 设置
+      to: 转入
+      uncategorized: 未分类
     update:
       success: 转账已更新

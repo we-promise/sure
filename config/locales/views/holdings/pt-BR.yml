@@ -3,6 +3,11 @@ pt-BR:
   holdings:
     cash:
       brokerage_cash: Dinheiro da corretora
+    new:
+      coming_soon: "Em breve..."
+    cost_basis_cell:
+      set: Definir
+      unknown: "--"
     destroy:
       success: Posição excluída
     holding:

@@ -3,6 +3,9 @@ zh-CN:
   subscriptions:
     self_hosted_alert: "%{product_name} 在自托管模式下不可用。"
     upgrade:
+      sr_only_title: 升级
+      account_settings: 账户设置
+      sign_out: 退出登录
       contribute_and_support_sure: "贡献并支持 Sure"
       cta: "继续支持此代码库的开发！"
       header:

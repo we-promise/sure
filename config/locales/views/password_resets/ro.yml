@@ -4,6 +4,7 @@ ro:
     edit:
       title: Resetează parola
     new:
+      email_placeholder: "you@example.com"
       requested: Te rugăm să-ți verifici emailul pentru un link de resetare a parolei.
       submit: Resetează parola
       title: Resetează parola

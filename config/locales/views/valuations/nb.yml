@@ -1,6 +1,14 @@
 ---
 nb:
   valuations:
+    confirm_create:
+      title: Bekreft ny saldo
+    confirm_update:
+      title: Oppdater saldo
+    confirmation_contents:
+      brokerage_cash: Meglerkontanter
+      holdings_value: Beholdningsverdi
+      total_account_value: Total kontoverdi
     form:
       amount: Beløp
       submit: Legg til saldooppdatering
@@ -16,6 +24,7 @@ nb:
     new:
       title: Ny saldo
     show:
+      account_value_on_date: Kontoverdi på dato
       amount: Beløp
       date_label: Dato
       delete: Slett
@@ -28,3 +37,4 @@ nb:
       note_placeholder: Legg til eventuelle tilleggsdetaljer om denne oppføringen
       overview: Oversikt
       settings: Innstillinger
+      update_value: Oppdater verdi

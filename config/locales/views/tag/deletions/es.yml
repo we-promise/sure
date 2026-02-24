@@ -10,5 +10,6 @@ es:
         delete_tag: ¿Eliminar etiqueta?
         explanation: "%{tag_name} será eliminado de las transacciones y otras entidades etiquetables.
           En lugar de dejarlos sin etiqueta, también puedes asignar una nueva etiqueta a continuación."
+        delete_and_reassign: Eliminar y reasignar
         replacement_tag_prompt: Seleccionar etiqueta
         tag: Etiqueta

@@ -17,6 +17,7 @@ tr:
       title: Araç bilgilerini girin
     overview:
       current_price: Güncel Fiyat
+      edit_account_details: Hesap detaylarını düzenle
       make_model: Marka & Model
       mileage: Kilometre
       purchase_price: Satın Alma Fiyatı

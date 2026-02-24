@@ -3,6 +3,9 @@ es:
   subscriptions:
     self_hosted_alert: "%{product_name} no está disponible en modo autoalojado."
     upgrade:
+      sr_only_title: Mejora
+      account_settings: Configuración de la cuenta
+      sign_out: Cerrar sesión
       contribute_and_support_sure: "Contribuir y apoyar a Sure"
       cta: "¡Apoya el desarrollo de este proyecto!"
       header:

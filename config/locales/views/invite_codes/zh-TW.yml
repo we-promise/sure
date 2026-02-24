@@ -1,6 +1,8 @@
 ---
 zh-TW:
   invite_codes:
+    invite_code:
+      confirm_delete: "您確定嗎？"
     index:
       invite_code_description: 產生新代碼後將會顯示在此處。已使用的產生代碼將不再顯示。
       no_invite_codes: 暫無邀請碼

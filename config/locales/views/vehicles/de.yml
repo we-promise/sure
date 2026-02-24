@@ -17,6 +17,7 @@ de:
       title: Fahrzeugdetails eingeben
     overview:
       current_price: Aktueller Preis
+      edit_account_details: Kontodetails bearbeiten
       make_model: Marke und Modell
       mileage: Kilometerstand
       purchase_price: Kaufpreis

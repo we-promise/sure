@@ -1,0 +1,34 @@
+---
+tr:
+  budgets:
+    name:
+      custom_range: "%{start} - %{end_date}"
+      month_year: "%{month}"
+    show:
+      categories: Kategoriler
+      edit: Düzenle
+      tabs:
+        actual: Gerçekleşen
+        budgeted: Bütçelenen
+    edit:
+      title: Bütçenizi oluşturun
+      description: Bütçenizi oluşturmak için aylık gelirlerinizi ve planlanan harcamalarınızı aşağıya girin.
+      budgeted_spending: Bütçelenen harcamalar
+      expected_income: Beklenen gelir
+      autosuggest: Gelir ve harcama bütçesini otomatik öner
+      autosuggest_description: Bu, işlem geçmişine dayalı olacaktır. Yapay zeka hata yapabilir, devam etmeden önce doğrulayın.
+      continue: Devam et
+    budgeted_summary:
+      expected_income: Beklenen gelir
+      earned: "%{amount} kazanıldı"
+      over: "%{amount} aşıldı"
+      left: "%{amount} kaldı"
+      budgeted: Bütçelenen
+      spent: "%{amount} harcandı"
+    actuals_summary:
+      income: Gelirler
+      expenses: Giderler
+  budget_categories:
+    index:
+      title: Kategori bütçelerini düzenle
+      description: Harcama limitleri belirlemek için kategori bütçelerini ayarlayın. Tahsis edilmemiş fonlar otomatik olarak kategorisiz olarak atanacaktır.

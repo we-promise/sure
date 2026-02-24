@@ -1,0 +1,45 @@
+---
+ro:
+  admin:
+    users:
+      index:
+        title: "Gestionare utilizatori"
+        description: "Gestionați rolurile utilizatorilor pentru instanța dvs. Super administratorii pot accesa setările furnizorilor SSO și gestionarea utilizatorilor."
+        section_title: "Utilizatori"
+        you: "(Tu)"
+        trial_ends_at: "Perioada de probă se încheie"
+        not_available: "n/a"
+        no_users: "Nu au fost găsiți utilizatori."
+        filters:
+          role: "Rol"
+          role_all: "Toate rolurile"
+          trial_status: "Stare perioadă de probă"
+          trial_all: "Toate"
+          trial_expiring_soon: "Expiră în 7 zile"
+          trial_trialing: "În perioadă de probă"
+          submit: "Filtrează"
+        summary:
+          trials_expiring_7_days: "Perioade de probă care expiră în următoarele 7 zile"
+        table:
+          user: "Utilizator"
+          trial_ends_at: "Perioada de probă se încheie"
+          family_accounts: "Conturi de familie"
+          family_transactions: "Tranzacții de familie"
+          last_login: "Ultima autentificare"
+          session_count: "Număr de sesiuni"
+          never: "Niciodată"
+          role: "Rol"
+        role_descriptions_title: "Descrierea rolurilor"
+        roles:
+          guest: "Oaspete"
+          member: "Membru"
+          admin: "Administrator"
+          super_admin: "Super Administrator"
+        role_descriptions:
+          guest: "Experiență bazată pe asistent cu permisiuni restricționate intenționat pentru fluxuri introductive."
+          member: "Acces de bază. Poate gestiona propriile conturi, tranzacții și setări."
+          admin: "Administrator de familie. Poate accesa setări avansate precum chei API, importuri și instrucțiuni AI."
+          super_admin: "Administrator de instanță. Poate gestiona furnizorii SSO, rolurile utilizatorilor și poate impersona utilizatori pentru suport."
+      update:
+        success: "Rolul utilizatorului a fost actualizat cu succes."
+        failure: "Nu s-a putut actualiza rolul utilizatorului."

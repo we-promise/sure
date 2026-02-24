@@ -6,6 +6,8 @@ en:
       account_prompt: Search account
       amount: Amount
       holding: Ticker symbol
+      manual_ticker_label: Ticker symbol
+      manual_ticker_placeholder: AAPL
       price: Price per share
       qty: Quantity
       submit: Add transaction

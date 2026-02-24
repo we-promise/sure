@@ -13,6 +13,7 @@ ca:
     new:
       title: Introdueix les dades del préstec
     overview:
+      edit_loan_details: Edita els detalls del préstec
       interest_rate: Tipus d'interès
       monthly_payment: Quota mensual
       not_applicable: N/A

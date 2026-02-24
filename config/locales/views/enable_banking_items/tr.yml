@@ -1,0 +1,106 @@
+---
+tr:
+  enable_banking_items:
+    authorize:
+      authorization_failed: Yetkilendirme başlatılamadı
+      bank_required: Lütfen bir banka seçin.
+      invalid_redirect: Alınan yetkilendirme URL'si geçersiz. Lütfen tekrar deneyin.
+      redirect_uri_not_allowed: Yönlendirmeye izin verilmiyor. Lütfen Enable Banking uygulama ayarlarınızda `%{callback_url}` adresini yapılandırın.
+      unexpected_error: Beklenmeyen bir hata oluştu. Lütfen tekrar deneyin.
+    callback:
+      authorization_error: Yetkilendirme başarısız
+      invalid_callback: Geçersiz geri çağrı parametreleri.
+      item_not_found: Bağlantı bulunamadı.
+      session_failed: Yetkilendirme tamamlanamadı
+      success: Bankanıza başarıyla bağlanıldı. Hesaplarınız senkronize ediliyor.
+      unexpected_error: Beklenmeyen bir hata oluştu. Lütfen tekrar deneyin.
+    complete_account_setup:
+      all_skipped: Tüm hesaplar atlandı. Bunları daha sonra hesaplar sayfasında ayarlayabilirsiniz.
+      no_accounts: Ayarlanacak hesap bulunmuyor.
+      success: "%{count} hesap başarıyla oluşturuldu!"
+    create:
+      success: Enable Banking yapılandırması başarılı.
+    destroy:
+      success: Enable Banking bağlantısı silinmek üzere kuyruğa alındı.
+    link_accounts:
+      already_linked: Seçilen hesaplar zaten bağlı.
+      link_failed: Hesaplar bağlanamadı
+      no_accounts_selected: Hesap seçilmedi.
+      no_session: Aktif Enable Banking bağlantısı yok. Lütfen önce bir bankaya bağlanın.
+      success: "%{count} hesap başarıyla bağlandı."
+    link_existing_account:
+      success: Hesap başarıyla Enable Banking'e bağlandı
+      errors:
+        only_manual: Yalnızca manuel hesaplar bağlanabilir
+        invalid_enable_banking_account: Geçersiz Enable Banking hesabı seçildi
+    new:
+      link_enable_banking_title: Enable Banking'i Bağla
+      connected_bank: "Bağlı Banka"
+      connection: "Bağlantı"
+      session_expires: "Oturum sona eriyor: %{date}"
+      unknown_date: "Bilinmiyor"
+      session_expired: "Oturum süresi doldu – yeniden yetkilendirme gerekli"
+      configured: "Yapılandırıldı"
+      ready_to_connect: "Bir bankaya bağlanmaya hazır"
+      sync: "Senkronize Et"
+      reconnect: "Yeniden Bağlan"
+      connect_bank: "Banka Bağla"
+      confirm_remove: "Bu bağlantıyı kaldırmak istediğinizden emin misiniz?"
+      remove: "Kaldır"
+      add_connection: "Bağlantı Ekle"
+      not_configured: "Enable Banking bağlantısı yapılandırılmadı"
+      not_configured_description: "Enable Banking hesaplarını bağlamadan önce Enable Banking bağlantınızı yapılandırmanız gerekir."
+      setup_steps: "Kurulum Adımları:"
+      step_1_html: '<strong>Ayarlar → Sağlayıcılar</strong> bölümüne gidin'
+      step_2_html: '<strong>Enable Banking</strong> bölümünü bulun'
+      step_3: "Enable Banking kimlik bilgilerinizi girin"
+      step_4: "Hesaplarınızı bağlamak için buraya geri dönün"
+      go_to_settings: "Sağlayıcı Ayarlarına Git"
+    reauthorize:
+      invalid_redirect: Alınan yetkilendirme URL'si geçersiz. Lütfen tekrar deneyin.
+      reauthorization_failed: Yeniden yetkilendirme başarısız
+    select_bank:
+      cancel: İptal
+      check_country: Lütfen ülke kodu ayarlarınızı kontrol edin.
+      credentials_required: Lütfen önce Enable Banking kimlik bilgilerinizi yapılandırın.
+      description: Hesaplarınıza bağlamak istediğiniz bankayı seçin.
+      no_banks: Bu ülke/bölge için banka bulunmuyor.
+      title: Bankanızı Seçin
+    update:
+      success: Enable Banking yapılandırması güncellendi.
+    select_existing_account:
+      title: "Enable Banking Hesabını Bağla"
+      all_linked: "Tüm Enable Banking hesapları zaten bağlı görünüyor."
+      wait_for_sync: "Az önce bağlandıysanız veya senkronize ettiyseniz, senkronizasyon tamamlandıktan sonra tekrar deneyin."
+      unlink_to_move: "Farklı bir hesap bağlamak için önce hesabın eylemler menüsünden bağlantısını kaldırın."
+      balance_label: "Bakiye:"
+      link_button: "Bağla"
+      cancel: "İptal"
+    setup_accounts:
+      title: "Enable Banking Hesaplarınızı Ayarlayın"
+      subtitle: "İçe aktarılan hesaplarınız için doğru hesap türlerini seçin"
+      creating_accounts: "Hesaplar oluşturuluyor..."
+      choose_account_type: "Her Enable Banking hesabı için doğru hesap türünü seçin:"
+      historical_data_range: "Geçmiş Veri Aralığı:"
+      sync_start_date_label: "İşlemleri şu tarihten itibaren senkronize etmeye başla:"
+      sync_start_date_help: "İşlem geçmişini ne kadar geriye kadar senkronize etmek istediğinizi seçin. Maksimum 1 yıllık geçmiş mevcuttur."
+      account_type_label: "Hesap Türü:"
+      balance_label: "Bakiye:"
+      create_accounts: "Hesapları Oluştur"
+      cancel: "İptal"
+    enable_banking_item:
+      deletion_in_progress: "Silme işlemi devam ediyor"
+      provider_name: "Enable Banking"
+      syncing: "Senkronize ediliyor..."
+      reconnect_label: "Yeniden Bağlan"
+      last_synced: "%{time} önce senkronize edildi"
+      never_synced: "Hiç senkronize edilmedi"
+      update: "Güncelle"
+      delete: "Sil"
+      setup_needed: "Kurulum gerekli"
+      setup_accounts_description:
+        one: "Enable Banking'den içe aktarılan %{count} hesabın ayarlanması gerekiyor"
+        other: "Enable Banking'den içe aktarılan %{count} hesabın ayarlanması gerekiyor"
+      set_up_accounts: "Hesapları ayarla"
+      no_accounts_found: "Hesap bulunamadı"
+      no_accounts_description: "Enable Banking'den hesap bulunamadı. Tekrar senkronize etmeyi deneyin."

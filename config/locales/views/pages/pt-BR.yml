@@ -18,6 +18,9 @@ pt-BR:
         no_account_title: Nenhuma conta ainda
       balance_sheet:
         title: "Balanço Patrimonial"
+        name: "Nome"
+        weight: "Peso"
+        value: "Valor"
         no_items: "Nenhuma %{name} ainda"
         add_accounts: "Adicione suas contas de %{name} para ver um detalhamento completo"
       cashflow_sankey:
@@ -35,3 +38,25 @@ pt-BR:
         categories: "Categorias"
         value: "Valor"
         weight: "Peso"
+    feedback:
+      page_title: Feedback
+      title: Deixe seu feedback
+      description: Conte-nos se você tem algum feedback específico. Sinta-se à vontade para incluir links para vídeos ou capturas de tela.
+      feature_request: Escrever uma solicitação de funcionalidade
+      bug_report: Reportar um bug
+      discuss: "Discuta %{product_name} com outros"
+    intro:
+      welcome: "Bem-vindo(a)!"
+      coming_soon: Experiência de introdução em breve
+      description: "Estamos construindo uma jornada de integração mais rica para conhecer seus objetivos, marcos e necessidades do dia a dia. Por enquanto, vá até a barra lateral do chat para iniciar uma conversa com o Sure e nos contar onde você está na sua jornada financeira."
+      start_chatting: Começar a conversar
+    redis_configuration_error:
+      page_title: "Configuração do Redis necessária - Sure"
+      title: Configuração do Redis necessária
+      subtitle: Sua instalação auto-hospedada do Sure precisa que o Redis esteja configurado corretamente.
+      why_required: Por que o Redis é necessário?
+      explanation: O Sure usa o Redis para executar tarefas em segundo plano do Sidekiq, como sincronização de dados de contas, processamento de importações e outras operações em segundo plano que mantêm seus dados financeiros atualizados.
+      view_setup_guide: Ver guia de configuração
+      docker_guide: Siga nosso guia completo de configuração do Docker para configurar o Redis
+      refresh_hint: "Depois de configurar o Redis, atualize esta página para continuar."
+      refresh_page: Atualizar página

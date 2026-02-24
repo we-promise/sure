@@ -6,6 +6,8 @@ zh-TW:
       account_prompt: 搜尋帳戶
       amount: 金額
       holding: 股票代碼
+      manual_ticker_label: 股票代碼
+      manual_ticker_placeholder: AAPL
       price: 每股價格
       qty: 數量
       submit: 新增交易

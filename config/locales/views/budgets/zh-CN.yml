@@ -2,6 +2,30 @@
 zh-CN:
   budgets:
     show:
+      categories: 分类
+      edit: 编辑
       tabs:
         actual: 实际
         budgeted: 预算
+    edit:
+      title: 设置您的预算
+      description: 在下方输入您的月收入和计划支出以设置您的预算。
+      budgeted_spending: 预算支出
+      expected_income: 预期收入
+      autosuggest: 自动建议收入和支出预算
+      autosuggest_description: 这将基于交易历史记录。AI 可能会出错，请在继续之前进行验证。
+      continue: 继续
+    budgeted_summary:
+      expected_income: 预期收入
+      earned: "%{amount} 已赚取"
+      over: "%{amount} 超支"
+      left: "%{amount} 剩余"
+      budgeted: 预算
+      spent: "%{amount} 已支出"
+    actuals_summary:
+      income: 收入
+      expenses: 支出
+  budget_categories:
+    index:
+      title: 编辑分类预算
+      description: 调整分类预算以设置支出限额。未分配的资金将自动归类为未分类。

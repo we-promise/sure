@@ -7,5 +7,6 @@ nb:
         edit: Rediger kategori
       show:
         clear: Fjern kategori
+        match_transfer: "Tilordne overføring/betaling"
         no_categories: Ingen kategorier funnet
         search_placeholder: Søk

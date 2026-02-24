@@ -13,6 +13,7 @@ nl:
     new:
       title: Voer leninggegevens in
     overview:
+      edit_loan_details: Leninggegevens bewerken
       interest_rate: Rentepercentage
       monthly_payment: Maandelijkse betaling
       not_applicable: N.v.t.

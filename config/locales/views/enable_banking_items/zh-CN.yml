@@ -35,6 +35,27 @@ zh-CN:
       success: 账户已成功关联到 Enable Banking
     new:
       link_enable_banking_title: 关联 Enable Banking
+      connected_bank: "已连接的银行"
+      connection: "连接"
+      session_expires: "会话过期时间：%{date}"
+      unknown_date: "未知"
+      session_expired: "会话已过期 – 需要重新授权"
+      configured: "已配置"
+      ready_to_connect: "准备连接银行"
+      sync: "同步"
+      reconnect: "重新连接"
+      connect_bank: "连接银行"
+      confirm_remove: "您确定要移除此连接吗？"
+      remove: "移除"
+      add_connection: "添加连接"
+      not_configured: "Enable Banking 连接未配置"
+      not_configured_description: "在您可以关联 Enable Banking 账户之前，您需要配置您的 Enable Banking 连接。"
+      setup_steps: "设置步骤："
+      step_1_html: '前往 <strong>设置 → 提供商</strong>'
+      step_2_html: '找到 <strong>Enable Banking</strong> 部分'
+      step_3: "输入您的 Enable Banking 凭据"
+      step_4: "返回此处关联您的账户"
+      go_to_settings: "前往提供商设置"
     reauthorize:
       invalid_redirect: 收到的授权 URL 无效。请重试或联系支持人员。
       reauthorization_failed: 重新授权失败
@@ -47,3 +68,39 @@ zh-CN:
       title: 选择您的银行
     update:
       success: Enable Banking 配置已更新。
+    select_existing_account:
+      title: "关联 Enable Banking 账户"
+      all_linked: "所有 Enable Banking 账户似乎已经关联。"
+      wait_for_sync: "如果您刚刚连接或同步，请在同步完成后重试。"
+      unlink_to_move: "要关联其他账户，请先从账户的操作菜单中取消关联。"
+      balance_label: "余额："
+      link_button: "关联"
+      cancel: "取消"
+    setup_accounts:
+      title: "设置您的 Enable Banking 账户"
+      subtitle: "为您导入的账户选择正确的账户类型"
+      creating_accounts: "正在创建账户..."
+      choose_account_type: "为每个 Enable Banking 账户选择正确的账户类型："
+      historical_data_range: "历史数据范围："
+      sync_start_date_label: "从以下日期开始同步交易："
+      sync_start_date_help: "选择您希望同步交易历史记录的时间范围。最长可用 1 年的历史记录。"
+      account_type_label: "账户类型："
+      balance_label: "余额："
+      create_accounts: "创建账户"
+      cancel: "取消"
+    enable_banking_item:
+      deletion_in_progress: "正在删除"
+      provider_name: "Enable Banking"
+      syncing: "同步中..."
+      reconnect_label: "重新连接"
+      last_synced: "上次同步于 %{time} 前"
+      never_synced: "从未同步"
+      update: "更新"
+      delete: "删除"
+      setup_needed: "需要设置"
+      setup_accounts_description:
+        one: "%{count} 个从 Enable Banking 导入的账户需要设置"
+        other: "%{count} 个从 Enable Banking 导入的账户需要设置"
+      set_up_accounts: "设置账户"
+      no_accounts_found: "未找到账户"
+      no_accounts_description: "未从 Enable Banking 找到任何账户。请尝试重新同步。"

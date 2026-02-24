@@ -11,3 +11,30 @@ tr:
         new_account: Yeni hesap
         no_account_subtitle: Henüz hiç hesap eklenmediği için gösterilecek veri yok. İlk hesaplarınızı ekleyerek gösterge paneli verilerini görmeye başlayın.
         no_account_title: Henüz hesap yok
+      balance_sheet:
+        title: "Bilanço"
+        name: "Ad"
+        weight: "Ağırlık"
+        value: "Değer"
+    feedback:
+      page_title: Geri Bildirim
+      title: Geri bildirim bırakın
+      description: Belirli bir geri bildiriminiz varsa bize bildirin. Video veya ekran görüntüsü bağlantıları eklemekten çekinmeyin.
+      feature_request: Özellik isteği yazın
+      bug_report: Hata raporu oluşturun
+      discuss: "%{product_name} hakkında başkalarıyla tartışın"
+    intro:
+      welcome: "Hoş geldiniz!"
+      coming_soon: Tanıtım deneyimi yakında
+      description: "Hedeflerinizi, kilometre taşlarınızı ve günlük ihtiyaçlarınızı öğrenmek için daha zengin bir başlangıç deneyimi oluşturuyoruz. Şimdilik, Sure ile bir sohbet başlatmak ve finansal yolculuğunuzda nerede olduğunuzu bize bildirmek için sohbet kenar çubuğuna gidin."
+      start_chatting: Sohbete başla
+    redis_configuration_error:
+      page_title: "Redis Yapılandırması Gerekli - Sure"
+      title: Redis Yapılandırması Gerekli
+      subtitle: Kendi sunucunuzda barındırdığınız Sure kurulumu, Redis'in düzgün yapılandırılmasını gerektiriyor.
+      why_required: Redis neden gerekli?
+      explanation: Sure, hesap verilerini senkronize etme, içe aktarmaları işleme ve finansal verilerinizi güncel tutan diğer arka plan işlemleri gibi Sidekiq arka plan görevlerini çalıştırmak için Redis'i kullanır.
+      view_setup_guide: Kurulum Kılavuzunu Görüntüle
+      docker_guide: Redis'i yapılandırmak için eksiksiz Docker kurulum kılavuzumuzu takip edin
+      refresh_hint: "Redis'i yapılandırdıktan sonra devam etmek için bu sayfayı yenileyin."
+      refresh_page: Sayfayı Yenile

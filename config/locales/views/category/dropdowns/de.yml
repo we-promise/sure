@@ -7,5 +7,6 @@ de:
         edit: Kategorie bearbeiten
       show:
         clear: Kategorie löschen
+        match_transfer: "Überweisung/Zahlung zuordnen"
         no_categories: Keine Kategorien gefunden
         search_placeholder: Suchen

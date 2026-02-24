@@ -5,6 +5,7 @@ pt-BR:
       accept: Confirmar
       body_html: "<p>Você não poderá desfazer esta decisão</p>"
       cancel: Cancelar
+      subtitle: Esta ação não pode ser desfeita.
       title: Tem certeza?
     money_field:
       label: Valor

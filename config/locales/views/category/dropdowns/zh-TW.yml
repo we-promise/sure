@@ -7,5 +7,6 @@ zh-TW:
         edit: 編輯分類
       show:
         clear: 清空分類
+        match_transfer: "配對轉帳/付款"
         no_categories: 暫無分類
         search_placeholder: 搜尋分類

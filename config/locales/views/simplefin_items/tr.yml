@@ -1,0 +1,139 @@
+---
+tr:
+  simplefin_items:
+    new:
+      title: SimpleFIN Bağla
+      setup_token: Kurulum anahtarı
+      setup_token_placeholder: SimpleFIN kurulum anahtarınızı yapıştırın
+      connect: Bağlan
+      cancel: İptal
+    create:
+      success: SimpleFIN bağlantısı başarıyla eklendi! Hesaplarınız arka planda senkronize edilirken kısa sürede görünecektir.
+      errors:
+        blank_token: Lütfen bir SimpleFIN kurulum anahtarı girin.
+        invalid_token: Geçersiz kurulum anahtarı. Lütfen SimpleFIN Bridge'den tam anahtarı kopyaladığınızdan emin olun.
+        token_compromised: Kurulum anahtarı ele geçirilmiş, süresi dolmuş veya zaten kullanılmış olabilir. Lütfen yeni bir tane oluşturun.
+        create_failed: "Bağlanılamadı: %{message}"
+        unexpected: Beklenmeyen bir hata oluştu. Lütfen tekrar deneyin.
+    destroy:
+      success: SimpleFIN bağlantısı kaldırılacak
+    update:
+      success: SimpleFIN bağlantısı başarıyla güncellendi! Hesaplarınız yeniden bağlanıyor.
+      errors:
+        blank_token: Lütfen bir SimpleFIN kurulum anahtarı girin.
+        invalid_token: Geçersiz kurulum anahtarı. Lütfen SimpleFIN Bridge'den tam anahtarı kopyaladığınızdan emin olun.
+        token_compromised: Kurulum anahtarı ele geçirilmiş, süresi dolmuş veya zaten kullanılmış olabilir. Lütfen yeni bir tane oluşturun.
+        update_failed: "Bağlantı güncellenemedi: %{message}"
+        unexpected: Beklenmeyen bir hata oluştu. Lütfen tekrar deneyin.
+    edit:
+      title: "SimpleFin Bağlantısını Güncelle"
+      subtitle: "SimpleFin hesabınızı yeniden bağlamak için yeni bir kurulum anahtarı alın"
+      update_needed: "SimpleFIN bağlantınızın güncellenmesi gerekiyor:"
+      step_1_html: 'Yeni bir kurulum anahtarı oluşturmak için <a href="https://bridge.simplefin.org/simplefin/create" target="_blank" rel="noopener noreferrer" class="text-link hover:text-link underline">SimpleFIN Bridge</a> adresini ziyaret edin'
+      step_2: "Anahtarı kopyalayın ve aşağıya yapıştırın"
+      step_3: 'Erişimi geri yüklemek için "Güncelle" düğmesine tıklayın'
+      update: "Güncelle"
+      cancel: "İptal"
+      setup_token:
+        label: "SimpleFIN Kurulum Anahtarı:"
+        placeholder: "SimpleFIN kurulum anahtarınızı buraya yapıştırın..."
+        help_text: "Anahtar, harf ve rakamlarla başlayan uzun bir dize olmalıdır"
+    setup_accounts:
+      page_title: "SimpleFin Hesaplarını Kur"
+      title: "SimpleFin Hesaplarınızı Kurun"
+      subtitle: "İçe aktarılan hesaplarınız için doğru hesap türlerini seçin"
+      creating_accounts: "Hesaplar Oluşturuluyor..."
+      choose_account_type: "Her SimpleFin hesabı için doğru hesap türünü seçin:"
+      account_type_depository: "Vadesiz veya Tasarruf"
+      account_type_depository_desc: "Normal banka hesapları"
+      account_type_credit_card: "Kredi Kartı"
+      account_type_credit_card_desc: "Kredi kartı hesapları"
+      account_type_investment: "Yatırım"
+      account_type_investment_desc: "Aracı kurum, 401(k), IRA hesapları"
+      account_type_loan: "Kredi veya İpotek"
+      account_type_loan_desc: "Borç hesapları"
+      account_type_other_asset: "Diğer Varlık"
+      account_type_other_asset_desc: "Diğer her şey"
+      transaction_history: "İşlem Geçmişi:"
+      transaction_history_note_html: "SimpleFin genellikle bankanıza bağlı olarak <strong>60-90 gün</strong> işlem geçmişi sağlar. İlk kurulumdan sonra yeni işlemler otomatik olarak senkronize edilir. Geçmiş veri kullanılabilirliği kuruma ve hesap türüne göre değişir."
+      account_type_label: "Hesap Türü:"
+      balance_label: "Bakiye:"
+      create_accounts: "Hesapları Oluştur"
+      cancel: "İptal"
+      stale_accounts:
+        title: "SimpleFIN'de Artık Bulunmayan Hesaplar"
+        description: "Bu hesaplar veritabanınızda mevcut ancak artık SimpleFIN tarafından sağlanmıyor. Bu, hesap yapılandırmaları yukarı akışta değiştiğinde olabilir."
+        action_prompt: "Ne yapmak istersiniz?"
+        action_delete: "Hesabı ve tüm işlemleri sil"
+        action_move: "İşlemleri şuraya taşı:"
+        action_skip: "Şimdilik atla"
+        transaction_count:
+          one: "%{count} işlem"
+          other: "%{count} işlem"
+    complete_account_setup:
+      all_skipped: "Tüm hesaplar atlandı. Hiçbir hesap oluşturulmadı."
+      no_accounts: "Kurulacak hesap yok."
+      success:
+        one: "%{count} SimpleFIN hesabı başarıyla oluşturuldu! İşlemleriniz ve varlıklarınız arka planda içe aktarılıyor."
+        other: "%{count} SimpleFIN hesabı başarıyla oluşturuldu! İşlemleriniz ve varlıklarınız arka planda içe aktarılıyor."
+      stale_accounts_processed: "Eski hesaplar: %{deleted} silindi, %{moved} taşındı."
+      stale_accounts_errors:
+        one: "%{count} eski hesap işlemi başarısız oldu. Ayrıntılar için günlükleri kontrol edin."
+        other: "%{count} eski hesap işlemi başarısız oldu. Ayrıntılar için günlükleri kontrol edin."
+    simplefin_item:
+      add_new: Yeni bağlantı ekle
+      confirm_accept: Bağlantıyı sil
+      confirm_body: Bu, bu gruptaki tüm hesapları ve ilişkili tüm verileri kalıcı olarak silecektir.
+      confirm_title: SimpleFIN bağlantısı silinsin mi?
+      delete: Sil
+      deletion_in_progress: "(silme işlemi devam ediyor...)"
+      error: Veri senkronizasyonu sırasında hata oluştu
+      no_accounts_description: Bu bağlantının henüz senkronize edilmiş hesabı yok.
+      no_accounts_title: Hesap bulunamadı
+      requires_update: Yeniden bağlan
+      setup_needed: Kuruluma hazır yeni hesaplar
+      setup_description: Yeni içe aktarılan SimpleFIN hesaplarınız için hesap türlerini seçin.
+      setup_action: Yeni Hesapları Kur
+      setup_accounts_menu: Hesapları Kur
+      more_accounts_available:
+        one: "Kurulabilecek %{count} hesap daha var"
+        other: "Kurulabilecek %{count} hesap daha var"
+      accounts_skipped_tooltip: "Senkronizasyon sırasında hatalar nedeniyle bazı hesaplar atlandı"
+      accounts_skipped_label: "Atlanan: %{count}"
+      rate_limited_ago: "Hız sınırlandı (%{time} önce)"
+      rate_limited_recently: "Yakın zamanda hız sınırlandı"
+      status: Son senkronizasyon %{timestamp} önce
+      status_never: Hiç senkronize edilmedi
+      status_with_summary: "Son senkronizasyon %{timestamp} önce • %{summary}"
+      syncing: Senkronize ediliyor...
+      update: Güncelle
+      stale_pending_note: "(bütçelerden hariç)"
+      stale_pending_accounts: "şurada: %{accounts}"
+      reconciled_details_note: "(ayrıntılar için senkronizasyon özetine bakın)"
+      duplicate_accounts_skipped: "Bazı hesaplar yinelenen olarak atlandı — birleştirmek için 'Mevcut hesapları bağla' seçeneğini kullanın."
+    select_existing_account:
+      header_title: "SimpleFIN hesabını bağla"
+      link_button: "Bağla"
+      balance_label: "Bakiye:"
+      title: "%{account_name} hesabını SimpleFIN'e bağla"
+      description: Mevcut hesabınıza bağlamak için bir SimpleFIN hesabı seçin
+      cancel: İptal
+      link_account: Hesabı bağla
+      no_accounts_found: "Bu %{moniker} için SimpleFIN hesabı bulunamadı."
+      wait_for_sync: Az önce bağlandıysanız veya senkronize ettiyseniz, senkronizasyon tamamlandıktan sonra tekrar deneyin.
+      unlink_to_move: Bir bağlantıyı taşımak için önce hesabın eylemler menüsünden bağlantıyı kaldırın.
+      all_accounts_already_linked: Tüm SimpleFIN hesapları zaten bağlı görünüyor.
+      currently_linked_to: "Şu anda bağlı: %{account_name}"
+    link_existing_account:
+      success: Hesap SimpleFIN'e başarıyla bağlandı
+      errors:
+        only_manual: Yalnızca manuel hesaplar bağlanabilir
+        invalid_simplefin_account: Geçersiz SimpleFIN hesabı seçildi
+    reconciled_status:
+      message:
+        one: "%{count} yinelenen bekleyen işlem uzlaştırıldı"
+        other: "%{count} yinelenen bekleyen işlem uzlaştırıldı"
+    stale_pending_status:
+      message:
+        one: "%{count} bekleyen işlem %{days} günden eski"
+        other: "%{count} bekleyen işlem %{days} günden eski"

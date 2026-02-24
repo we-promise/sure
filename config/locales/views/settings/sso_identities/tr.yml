@@ -1,0 +1,7 @@
+---
+tr:
+  settings:
+    sso_identities:
+      destroy:
+        cannot_unlink_last: Son kimlik bağlantısı kaldırılamaz
+        success: Başarılı

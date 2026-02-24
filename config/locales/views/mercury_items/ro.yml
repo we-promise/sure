@@ -1,0 +1,168 @@
+---
+ro:
+  mercury_items:
+    create:
+      success: Conexiunea Mercury a fost creată cu succes
+    destroy:
+      success: Conexiunea Mercury a fost eliminată
+    index:
+      title: Conexiuni Mercury
+    loading:
+      loading_message: Se încarcă conturile Mercury...
+      loading_title: Se încarcă
+    link_accounts:
+      all_already_linked:
+        one: "Contul selectat (%{names}) este deja asociat"
+        other: "Toate cele %{count} conturi selectate sunt deja asociate: %{names}"
+      api_error: "Eroare API: %{message}"
+      invalid_account_names:
+        one: "Nu se poate asocia un cont cu numele gol"
+        other: "Nu se pot asocia %{count} conturi cu numele goale"
+      link_failed: Asocierea conturilor a eșuat
+      no_accounts_selected: Vă rugăm să selectați cel puțin un cont
+      no_api_token: Tokenul API Mercury nu a fost găsit. Vă rugăm să îl configurați în Setările furnizorului.
+      partial_invalid: "%{created_count} cont(uri) asociat(e) cu succes, %{already_linked_count} erau deja asociate, %{invalid_count} cont(uri) aveau nume invalide"
+      partial_success: "%{created_count} cont(uri) asociat(e) cu succes. %{already_linked_count} cont(uri) erau deja asociate: %{already_linked_names}"
+      success:
+        one: "%{count} cont asociat cu succes"
+        other: "%{count} conturi asociate cu succes"
+    mercury_item:
+      accounts_need_setup: Conturile necesită configurare
+      delete: Șterge conexiunea
+      deletion_in_progress: ștergere în curs...
+      error: Eroare
+      no_accounts_description: Această conexiune nu are încă conturi asociate.
+      no_accounts_title: Niciun cont
+      setup_action: Configurează conturi noi
+      setup_description: "%{linked} din %{total} conturi asociate. Alegeți tipurile de cont pentru conturile Mercury importate recent."
+      setup_needed: Conturi noi pregătite pentru configurare
+      status: "Sincronizat acum %{timestamp}"
+      status_never: Niciodată sincronizat
+      status_with_summary: "Ultima sincronizare acum %{timestamp} – %{summary}"
+      syncing: Se sincronizează...
+      total: Total
+      unlinked: Neasociat
+    select_accounts:
+      accounts_selected: conturi selectate
+      api_error: "Eroare API: %{message}"
+      cancel: Anulare
+      configure_name_in_mercury: Nu se poate importa – vă rugăm să configurați numele contului în Mercury
+      description: Selectați conturile pe care doriți să le asociați cu contul dvs. %{product_name}.
+      link_accounts: Asociază conturile selectate
+      no_accounts_found: Nu s-au găsit conturi. Vă rugăm să verificați configurarea tokenului API.
+      no_api_token: Tokenul API Mercury nu este configurat. Vă rugăm să îl configurați în Setări.
+      no_credentials_configured: Vă rugăm să configurați mai întâi tokenul API Mercury în Setările furnizorului.
+      no_name_placeholder: "(Fără nume)"
+      title: Selectați conturile Mercury
+    select_existing_account:
+      account_already_linked: Acest cont este deja asociat unui furnizor
+      all_accounts_already_linked: Toate conturile Mercury sunt deja asociate
+      api_error: "Eroare API: %{message}"
+      cancel: Anulare
+      configure_name_in_mercury: Nu se poate importa – vă rugăm să configurați numele contului în Mercury
+      description: Selectați un cont Mercury pentru a-l asocia cu acest cont. Tranzacțiile vor fi sincronizate și deduplicate automat.
+      link_account: Asociază contul
+      no_account_specified: Niciun cont specificat
+      no_accounts_found: Nu s-au găsit conturi Mercury. Vă rugăm să verificați configurarea tokenului API.
+      no_api_token: Tokenul API Mercury nu este configurat. Vă rugăm să îl configurați în Setări.
+      no_credentials_configured: Vă rugăm să configurați mai întâi tokenul API Mercury în Setările furnizorului.
+      no_name_placeholder: "(Fără nume)"
+      title: "Asociază %{account_name} cu Mercury"
+    link_existing_account:
+      account_already_linked: Acest cont este deja asociat unui furnizor
+      api_error: "Eroare API: %{message}"
+      invalid_account_name: Nu se poate asocia un cont cu numele gol
+      mercury_account_already_linked: Acest cont Mercury este deja asociat altui cont
+      mercury_account_not_found: Contul Mercury nu a fost găsit
+      missing_parameters: Parametri obligatorii lipsă
+      no_api_token: Tokenul API Mercury nu a fost găsit. Vă rugăm să îl configurați în Setările furnizorului.
+      success: "%{account_name} a fost asociat cu succes cu Mercury"
+    setup_accounts:
+      page_title: "Configurare conturi Mercury"
+      account_type_label: "Tipul contului:"
+      all_accounts_linked: "Toate conturile dvs. Mercury au fost deja configurate."
+      api_error: "Eroare API: %{message}"
+      fetch_failed: "Nu s-au putut obține conturile"
+      no_accounts_to_setup: "Niciun cont de configurat"
+      no_api_token: "Tokenul API Mercury nu este configurat. Vă rugăm să verificați setările conexiunii."
+      account_types:
+        skip: Omite acest cont
+        depository: Cont curent sau de economii
+        credit_card: Card de credit
+        investment: Cont de investiții
+        loan: Împrumut sau ipotecă
+        other_asset: Alte active
+      subtype_labels:
+        depository: "Subtipul contului:"
+        credit_card: ""
+        investment: "Tipul investiției:"
+        loan: "Tipul împrumutului:"
+        other_asset: ""
+      subtype_messages:
+        credit_card: "Cardurile de credit vor fi configurate automat ca conturi de card de credit."
+        other_asset: "Nu sunt necesare opțiuni suplimentare pentru Alte active."
+      subtypes:
+        depository:
+          checking: Cont curent
+          savings: Economii
+          hsa: Health Savings Account
+          cd: Certificat de depozit
+          money_market: Cont pe piața monetară
+        investment:
+          brokerage: Cont de brokeraj
+          pension: Pensie
+          retirement: Pensionare
+          "401k": "401(k)"
+          roth_401k: "Roth 401(k)"
+          "403b": "403(b)"
+          tsp: Thrift Savings Plan
+          "529_plan": "529 Plan"
+          hsa: Health Savings Account
+          mutual_fund: Fond de investiții
+          ira: Traditional IRA
+          roth_ira: Roth IRA
+          angel: Angel
+        loan:
+          mortgage: Ipotecă
+          student: Împrumut studențesc
+          auto: Împrumut auto
+          other: Alt împrumut
+      balance: Sold
+      cancel: Anulare
+      choose_account_type: "Alegeți tipul de cont corect pentru fiecare cont Mercury:"
+      create_accounts: Creează conturi
+      creating_accounts: Se creează conturile...
+      historical_data_range: "Intervalul datelor istorice:"
+      subtitle: Alegeți tipurile de cont corecte pentru conturile importate
+      sync_start_date_help: Selectați cât de departe în trecut doriți să sincronizați istoricul tranzacțiilor. Maxim 3 ani de istoric disponibil.
+      sync_start_date_label: "Începe sincronizarea tranzacțiilor de la:"
+      title: Configurați conturile Mercury
+    complete_account_setup:
+      all_skipped: "Toate conturile au fost omise. Niciun cont nu a fost creat."
+      creation_failed: "Nu s-au putut crea conturile: %{error}"
+      no_accounts: "Niciun cont de configurat."
+      success: "%{count} cont(uri) creat(e) cu succes."
+    sync:
+      success: Sincronizarea a început
+    update:
+      success: Conexiunea Mercury a fost actualizată
+    api_error:
+      title: "Eroare de conexiune Mercury"
+      unable_to_connect: "Nu s-a putut conecta la Mercury"
+      common_issues: "Probleme frecvente:"
+      issue_invalid_token_html: "<strong>Token API invalid:</strong> Verificați tokenul API în Setările furnizorului"
+      issue_expired_html: "<strong>Acreditări expirate:</strong> Generați un nou token API din Mercury"
+      issue_permissions_html: "<strong>Permisiuni insuficiente:</strong> Asigurați-vă că tokenul dvs. are acces doar de citire"
+      issue_network_html: "<strong>Problemă de rețea:</strong> Verificați conexiunea la internet"
+      issue_service_down_html: "<strong>Serviciu indisponibil:</strong> API-ul Mercury poate fi temporar indisponibil"
+      check_settings: "Verificați Setările furnizorului"
+    setup_required:
+      title: "Configurare Mercury necesară"
+      api_token_not_configured: "Token API neconfigurat"
+      description: "Înainte de a putea asocia conturi Mercury, trebuie să configurați tokenul API Mercury."
+      setup_steps: "Pași de configurare:"
+      step_1_html: "Mergeți la <strong>Setări > Furnizori</strong>"
+      step_2_html: "Găsiți secțiunea <strong>Mercury</strong>"
+      step_3: "Introduceți tokenul API Mercury"
+      step_4: "Reveniți aici pentru a asocia conturile"
+      go_to_settings: "Mergeți la Setările furnizorului"

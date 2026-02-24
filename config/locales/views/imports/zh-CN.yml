@@ -7,6 +7,10 @@ zh-CN:
         errors_notice: 您的数据中存在错误。将鼠标悬停在错误上可查看详情。
         errors_notice_mobile: 您的数据中存在错误。点击错误提示可查看详情。
         title: 数据清洗
+        data_cleaned: 您的数据已清洗完成
+        next_step: 下一步
+        all_rows: 所有行
+        error_rows: 错误行
     configurations:
       category_import:
         button_label: 继续
@@ -14,6 +18,20 @@ zh-CN:
         instructions: 选择继续以解析您的 CSV 文件并进入清洗步骤。
       mint_import:
         date_format_label: 日期格式
+        pre_configured: 我们已为您预配置了 Mint 导入。请继续下一步。
+        leave_empty: 留空
+        date: 日期
+        amount: 金额
+        currency: 货币
+        account_optional: 账户（可选）
+        name_optional: 名称（可选）
+        category_optional: 分类（可选）
+        tags_optional: 标签（可选）
+        format: 格式
+        select_format: 选择格式
+        incomes_negative: 收入为负值
+        incomes_positive: 收入为正值
+        apply_configuration: 应用配置
       rule_import:
         description: 配置您的规则导入。规则将根据 CSV 数据创建或更新。
         process_button: 处理规则
@@ -21,10 +39,68 @@ zh-CN:
       show:
         description: 请选择 CSV 文件中各列对应的字段。
         title: 配置导入设置
+        template_found: 找到模板配置
+        template_description: 我们找到了此账户之前导入的配置。您是否要将其应用到此次导入？
+        manually_configure: 手动配置
+        apply_template: 应用模板
       trade_import:
         date_format_label: 日期格式
+        select_column: 选择列
+        date: 日期
+        quantity: 数量
+        buys_positive: 买入为正数量
+        buys_negative: 买入为负数量
+        default_currency: 默认
+        currency: 货币
+        format: 格式
+        select_format: 选择格式
+        ticker: 股票代码
+        leave_empty: 留空
+        stock_exchange_code: 证券交易所代码
+        price: 价格
+        account: 账户
+        name: 名称
+        security_prices_note_html: "<strong>注意：</strong>证券价格提供商未配置。您的交易导入将正常运行，但 Sure 不会回填价格历史。请前往设置进行配置。"
+        apply_configuration: 应用配置
       transaction_import:
         date_format_label: 日期格式
+        date: 日期
+        select_column: 选择列
+        amount: 金额
+        default_currency: 默认
+        currency: 货币
+        format: 格式
+        select_format: 选择格式
+        amount_type_strategy: 金额类型策略
+        select_strategy: 选择策略
+        incomes_positive: 收入为正值
+        incomes_negative: 收入为负值
+        amount_type: 金额类型
+        select_convention: 选择规则
+        set_label: 设置
+        as_amount_type_column: 作为金额类型列
+        as_identifier_value: 作为标识符值
+        select_type: 选择类型
+        income_inflow: 收入（流入）
+        expense_outflow: 支出（流出）
+        leave_empty: 留空
+        account: 账户
+        name: 名称
+        category: 分类
+        tags: 标签
+        notes: 备注
+        apply_configuration: 应用配置
+      account_import:
+        leave_empty: 留空
+        entity_type: 实体类型
+        name: 名称
+        balance: 余额
+        default_currency: 默认
+        currency: 货币
+        balance_date: 余额日期
+        date_format: 日期格式
+        select_format: 选择格式
+        apply_configuration: 应用配置
     confirms:
       mappings:
         create_account: 新建账户
@@ -33,6 +109,7 @@ zh-CN:
         rows_label: 行数
         sure_mapping_label: "%{product_name} 中的 %{mapping}"
         unassigned_account: 需要为未分配行创建新账户？
+        next: 下一步
       show:
         account_mapping_description: 将导入文件中的所有账户分配到 %{product_name} 的现有账户。您也可以新建账户或保留为未分类。
         account_mapping_title: 分配账户
@@ -51,7 +128,36 @@ zh-CN:
         instructions_4: 标有星号 (*) 的列为必填数据。
         instructions_5: 数字中请勿包含逗号、货币符号或括号。
         title: 导入数据
+        drop_csv_title: 拖放 CSV 文件以上传
+        drop_csv_subtitle: 您的文件将自动上传
+        upload_csv_tab: 上传 CSV
+        copy_paste_tab: 复制粘贴
+        account_optional: 账户（可选）
+        multi_account_import: 多账户导入
+        browse_to_add: 浏览
+        browse_to_add_suffix: 将您的 CSV 文件添加到此处
+        upload_csv_btn: 上传 CSV
+        paste_placeholder: 在此处粘贴您的 CSV 文件内容
+        download_sample: 下载示例 CSV
+        see_format: 查看所需的 CSV 格式
   imports:
+    failure:
+      title: 导入失败
+      description: 请检查文件格式是否有错误，以及所有必填字段是否已填写，然后重试。
+      try_again: 重试
+    importing:
+      title: 导入进行中
+      description: 您的导入正在进行中。请查看导入菜单获取状态更新，或点击“检查状态”刷新页面。您可以继续使用应用程序。
+      check_status: 检查状态
+      back_to_dashboard: 返回仪表盘
+    revert_failure:
+      title: 导入回滚失败
+      description: 请重试
+      try_again: 重试
+    success:
+      title: 导入成功
+      description: 您导入的数据已成功添加到应用程序，现已准备就绪。
+      back_to_dashboard: 返回仪表盘
     index:
       title: 导入记录
       new: 新建导入
@@ -88,5 +194,8 @@ zh-CN:
       sources: 数据来源
       title: 新建 CSV 导入
     ready:
+      item: 项目
+      count: 数量
+      publish_import: 发布导入
       description: 以下是发布导入后将添加到您账户的新项目摘要。
       title: 确认导入数据

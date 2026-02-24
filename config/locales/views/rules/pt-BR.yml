@@ -1,0 +1,127 @@
+---
+pt-BR:
+  rules:
+    no_action: Sem ação
+    no_condition: Sem condição
+    actions:
+      value_placeholder: Insira um valor
+    index:
+      page_title: Regras
+      delete_all_rules: Excluir todas as regras
+      new_rule: Nova regra
+      ai_warning: Ações de regras com AI habilitada terão custo. Filtre o mais restritamente possível para evitar custos desnecessários.
+      rules_label: Regras
+      sort_by: "Ordenar por:"
+      toggle_sort_direction: Alternar direção da ordenação
+      no_rules: Nenhuma regra ainda
+      no_rules_description: Configure regras para executar ações em suas transações e outros dados a cada sincronização de conta.
+    new:
+      back_to_rules: Voltar para regras
+      new_rule_title: "Nova regra de %{resource_type}"
+    edit:
+      back_to_rules: Voltar para regras
+      edit_rule_title: "Editar regra de %{resource_type} \"%{name}\""
+      edit_rule_title_unnamed: "Editar regra de %{resource_type}"
+    confirm:
+      confirm_changes_to: "Confirmar alterações em \"%{name}\""
+      confirm_changes: Confirmar alterações
+      about_to_apply_html: "Você está prestes a aplicar esta regra a <span class=\"text-primary font-medium\">%{count} %{resource_type}</span> que atendem aos critérios especificados. Confirme se deseja prosseguir com esta alteração."
+      ai_cost_title: Estimativa de Custo AI
+      ai_cost_message: "Isso usará AI para categorizar %{count} transação(ões). Custo estimado: <span class=\"font-semibold\">~$%{cost}</span>"
+      ai_cost_no_estimate: "Isso usará AI para categorizar %{count} transação(ões)."
+      cost_unavailable_model: "Estimativa de custo indisponível para o modelo \"%{model}\"."
+      cost_unavailable_no_provider: Estimativa de custo indisponível (nenhum provedor LLM configurado).
+      cost_warning: Você pode incorrer em custos; verifique com o provedor do modelo os preços mais atualizados.
+      view_usage: Ver histórico de uso
+      confirm_changes_btn: Confirmar alterações
+    form:
+      rule_name_optional: Nome da regra (opcional)
+      enter_name: Insira um nome para esta regra
+      if_label: SE
+      then_label: ENTÃO
+      for_label: PARA
+      add_condition: Adicionar condição
+      add_condition_group: Adicionar grupo de condições
+      add_action: Adicionar ação
+      all_past_future: "Todos(as) %{resource_type}s passados(as) e futuros(as)"
+      starting_from: A partir de
+    rule:
+      if_label: SE
+      then_label: ENTÃO
+      for_label: PARA
+      to_label: para
+      and_more_conditions:
+        one: "e mais %{count} condição"
+        other: "e mais %{count} condições"
+      and_more_actions:
+        one: "e mais %{count} ação"
+        other: "e mais %{count} ações"
+      all_past_future: "Todos(as) %{resource_type} passados(as) e futuros(as)"
+      on_or_after: "%{resource_type} em ou após %{date}"
+      edit: Editar
+      reapply_rule: Reaplicar regra
+      delete: Excluir
+    category_rule_cta:
+      updated_to: "Atualizado para %{name}"
+      auto_categorize_description: Você pode criar uma regra para categorizar automaticamente transações como esta
+      dont_show_again: Não mostrar novamente
+      dismiss: Dispensar
+      create_rule: Criar regra
+    apply_all:
+      button: Aplicar Todas
+      confirm_title: Aplicar Todas as Regras
+      confirm_message: Você está prestes a aplicar %{count} regras afetando %{transactions} transações únicas. Confirme se deseja prosseguir.
+      confirm_button: Confirmar e Aplicar Todas
+      success: Todas as regras foram enfileiradas para execução
+      ai_cost_title: Estimativa de Custo AI
+      ai_cost_message: Isso usará AI para categorizar até %{transactions} transações.
+      estimated_cost: "Custo estimado: ~$%{cost}"
+      cost_unavailable_model: Estimativa de custo indisponível para o modelo "%{model}".
+      cost_unavailable_no_provider: Estimativa de custo indisponível (nenhum provedor LLM configurado).
+      cost_warning: Você pode incorrer em custos; verifique com o provedor do modelo os preços mais atualizados.
+      view_usage: Ver histórico de uso
+    recent_runs:
+      title: Execuções Recentes
+      description: Veja o histórico de execução das suas regras, incluindo status de sucesso/falha e contagem de transações.
+      unnamed_rule: Regra Sem Nome
+      columns:
+        date_time: Data/Hora
+        execution_type: Tipo
+        status: Status
+        rule_name: Nome da Regra
+        transactions_counts:
+          queued: Na fila
+          processed: Processadas
+          modified: Modificadas
+      execution_types:
+        manual: Manual
+        scheduled: Agendada
+      statuses:
+        pending: Pendente
+        success: Sucesso
+        failed: Falhou
+    clear_ai_cache:
+      button: Redefinir cache de AI
+      confirm_title: Redefinir cache de AI?
+      confirm_body: Tem certeza de que deseja redefinir o cache de AI? Isso permitirá que as regras de AI reprocessem todas as transações. Isso pode gerar custos adicionais de API.
+      confirm_button: Redefinir Cache
+      success: O cache de AI está sendo limpo. Isso pode levar alguns instantes.
+    condition_filters:
+      transaction_type:
+        income: Receita
+        expense: Despesa
+        transfer: Transferência
+        equal_to: Igual a
+  rule:
+    actions:
+      action:
+        to_label: para
+    conditions:
+      condition:
+        and_label: e
+        enter_value: Insira um valor
+      condition_group:
+        and_label: e
+        match: corresponder
+        of_the_following: das seguintes condições
+        add_condition: Adicionar condição

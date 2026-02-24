@@ -15,3 +15,5 @@ pt-BR:
       unauthorized: Você não está autorizado a realizar esta ação
     reset_with_sample_data:
       success: Sua conta foi resetada e os dados de exemplo estão sendo preparados. Você verá os dados de demonstração em breve.
+    user_menu:
+      version: "Versão:"

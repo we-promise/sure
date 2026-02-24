@@ -13,3 +13,21 @@ ro:
       success: Sesiune părăsită
     reject:
       success: Solicitare respinsă
+    approval_bar:
+      access_session: Accesează sesiunea
+      access_request: Cerere de acces
+      request_message: "Personalul de suport Sure a solicitat acces la contul tău (probabil pentru a te ajuta cu o cerere de suport). Dacă aprobi cererea, toată activitatea lor va fi înregistrată în scopuri de securitate și audit."
+      approve: Aprobă
+      reject: Respinge
+      in_progress_message: "Cineva din echipa Sure Finances vizualizează în prezent datele tale. Poți încheia sesiunea în orice moment."
+      end_session: Încheie sesiunea
+      error_message: "Ceva nu a funcționat corect. Te rugăm să ne contactezi."
+    super_admin_bar:
+      super_admin: Super Admin
+      jobs: Sarcini
+      impersonating: "Personificare:"
+      leave: Părăsește
+      terminate: Termină
+      join_session_prompt: Alătură-te unei sesiuni
+      join: Alătură-te
+      request_impersonation: Solicită personificare

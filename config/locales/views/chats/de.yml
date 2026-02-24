@@ -1,0 +1,43 @@
+---
+de:
+  chats:
+    demo_banner_title: "Demomodus aktiv"
+    demo_banner_message: "Sie verwenden ein Open-Weights Qwen3 LLM mit Credits von Cloudflare Workers AI. Die Ergebnisse können variieren, da die Codebasis hauptsächlich mit `gpt-4.1` getestet wurde, aber Ihre Tokens werden nirgendwo anders zum Training verwendet! 🤖"
+    index:
+      chats: Chats
+      new_chat: Neuer Chat
+    ai_consent:
+      enable_ai_chats: KI-Chats aktivieren
+      ai_available_description: Der KI-Chat kann Finanzfragen beantworten und Einblicke basierend auf Ihren Daten geben. Um diese Funktion zu nutzen, müssen Sie sie ausdrücklich aktivieren.
+      ai_unavailable_description_html: "Um den KI-Assistenten zu verwenden, müssen Sie die Umgebungsvariable <code class=\"bg-surface-inset px-1 py-0.5 rounded font-mono text-xs\">OPENAI_ACCESS_TOKEN</code> setzen oder sie in den Self-Hosting-Einstellungen Ihrer Instanz konfigurieren."
+      enable_btn: KI-Chats aktivieren
+      disable_note: Jederzeit deaktivierbar. Alle an unsere LLM-Anbieter gesendeten Daten werden anonymisiert.
+    ai_greeting:
+      greeting: "Hallo %{name}! Ich bin eine KI/ein großes Sprachmodell, das Ihnen bei Ihren Finanzen helfen kann. Ich habe Zugriff auf das Web und Ihre Kontodaten."
+      commands_hint_html: "Sie können <span class=\"bg-container border border-secondary px-1.5 py-0.5 rounded font-mono text-xs\">/</span> verwenden, um auf Befehle zuzugreifen"
+      questions_intro: "Hier sind einige Fragen, die Sie stellen können:"
+      evaluate_portfolio: Anlageportfolio bewerten
+      spending_insights: Ausgabeneinblicke anzeigen
+      unusual_patterns: Ungewöhnliche Muster finden
+    error:
+      failed_response: Antwort konnte nicht generiert werden. Bitte versuchen Sie es erneut.
+    chat:
+      edit_chat_title: Chat-Titel bearbeiten
+      delete_chat: Chat löschen
+    chat_nav:
+      all_chats: Alle Chats
+      start_new_chat: Neuen Chat starten
+      edit_chat_title: Chat-Titel bearbeiten
+      delete_chat: Chat löschen
+  messages:
+    chat_form:
+      ask_anything: "Fragen Sie etwas ..."
+      coming_soon: Demnächst verfügbar
+      ai_disclaimer: KI-Antworten dienen nur zur Information und stellen keine Finanzberatung dar.
+  assistant_messages:
+    assistant_message:
+      assistant_reasoning: Assistenten-Begründung
+    tool_calls:
+      tool_calls: Werkzeugaufrufe
+      function: "Funktion:"
+      arguments: "Argumente:"

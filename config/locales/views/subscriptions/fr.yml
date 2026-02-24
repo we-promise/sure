@@ -2,6 +2,9 @@ fr:
   subscriptions:
     self_hosted_alert: "%{product_name} n'est pas disponible en mode auto-hébergé."
     upgrade:
+      sr_only_title: Mise à niveau
+      account_settings: Paramètres du compte
+      sign_out: Se déconnecter
       contribute_and_support_sure: "Contribuer et soutenir Sure"
       cta: "Continuez à soutenir le développement de cette base de code !"
       header:

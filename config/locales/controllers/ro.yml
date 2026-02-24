@@ -1,0 +1,58 @@
+---
+ro:
+  controllers:
+    holdings:
+      cannot_delete: "Nu puteți șterge această deținere"
+    settings:
+      api_keys:
+        created: "Cheia API a fost creată cu succes"
+        not_found: "Cheia API nu a fost găsită"
+        cannot_revoke: "Această cheie API nu poate fi revocată"
+        revoked: "Cheia API a fost revocată cu succes"
+        revoke_failed: "Revocarea cheii API a eșuat"
+      profiles:
+        member_removed: "Membrul a fost eliminat cu succes."
+        member_remove_failed: "Eliminarea membrului a eșuat."
+      providers:
+        updated: "Setările furnizorului au fost actualizate cu succes"
+        no_changes: "Nu au fost efectuate modificări"
+        not_authorized: "Neautorizat"
+    transactions:
+      created: "Tranzacție creată"
+    rules:
+      deleted: "Regulă ștearsă"
+      all_deleted: "Toate regulile au fost șterse"
+    subscriptions:
+      already_contributing: "Contribuiți deja. Vă mulțumim!"
+      welcome: "Bine ați venit la Sure!"
+      trial_completed: "Ați început sau finalizat deja o perioadă de probă. Vă rugăm să faceți upgrade pentru a continua."
+      welcome_contribution: "Bine ați venit la Sure! Contribuția dumneavoastră este apreciată."
+      contribution_failed: "Ceva nu a funcționat la procesarea contribuției dumneavoastră. Vă rugăm să încercați din nou."
+    plaid_items:
+      linked: "Contul a fost conectat cu succes la Plaid"
+      no_available_accounts: "Nu există conturi Plaid disponibile pentru conectare. Vă rugăm să conectați mai întâi un cont Plaid nou."
+      invalid_account: "Cont Plaid selectat nevalid"
+      already_linked: "Acest cont Plaid este deja conectat"
+    imports:
+      publish_started: "Importul dumneavoastră a început în fundal."
+      reverting: "Importul este anulat în fundal."
+      template_applied: "Șablon aplicat."
+      no_template: "Nu s-a găsit niciun șablon, vă rugăm să configurați importul manual."
+      deleted: "Importul dumneavoastră a fost șters."
+    import:
+      uploads:
+        csv_uploaded: "CSV încărcat cu succes."
+      cleans:
+        configure_first: "Vă rugăm să configurați importul înainte de a continua."
+      confirms:
+        invalid_data: "Aveți date nevalide, vă rugăm să editați până când toate erorile sunt rezolvate"
+    chats:
+      deleted: "Conversația a fost ștearsă cu succes"
+    oidc_accounts:
+      no_pending_auth: "Nu a fost găsită nicio autentificare OIDC în așteptare"
+      creation_disabled: "Crearea conturilor SSO este dezactivată. Vă rugăm să contactați un administrator."
+    concerns:
+      self_hostable:
+        redis_configured: "Redis este acum configurat corect! Acum puteți configura aplicația Sure."
+    snaptrade_items:
+      use_setup_flow: "Folosiți fluxul de configurare a contului"

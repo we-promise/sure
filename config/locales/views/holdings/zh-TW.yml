@@ -3,6 +3,11 @@ zh-TW:
   holdings:
     cash:
       brokerage_cash: 經紀帳戶現金
+    new:
+      coming_soon: "即將推出..."
+    cost_basis_cell:
+      set: 設定
+      unknown: "--"
     destroy:
       success: 持股已刪除
     holding:

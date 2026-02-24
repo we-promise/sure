@@ -13,6 +13,7 @@ tr:
     new:
       title: "Kredi detaylarını girin"
     overview:
+      edit_loan_details: Kredi detaylarını düzenle
       interest_rate: "Faiz Oranı"
       monthly_payment: "Aylık Ödeme"
       not_applicable: "Uygulanamaz"

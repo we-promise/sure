@@ -60,7 +60,7 @@
 
     <div class="flex justify-center w-full">
       <%= render DS::Link.new(
-        text: "Next",
+        text: t(".next"),
         variant: "primary",
         href: is_last_step ? import_path(import) : url_for(step: step_idx + 2),
         icon: "arrow-right",

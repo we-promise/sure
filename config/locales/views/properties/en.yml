@@ -1,8 +1,25 @@
 ---
 en:
   properties:
+    address:
+      title: Enter property manually
+      address_line1: Address Line 1
+      address_line1_placeholder: "123 Main Street"
+      city: City
+      city_placeholder: San Francisco
+      country: Country
+      country_placeholder: USA
+      postal_code: Postal Code
+      postal_code_placeholder: "12345"
+      state_region: State/Region
+      state_region_placeholder: CA
+    balances:
+      title: Enter property manually
+      estimated_market_value: Estimated market value
+      estimated_market_value_tooltip: "The estimated market value of your property. This number can often be found on sites like Zillow or Redfin, and is never an exact number."
     edit:
       edit: Edit %{account}
+      title: Enter property manually
     form:
       address_line1: Street address
       address_line1_placeholder: 123 Main St
@@ -18,11 +35,17 @@ en:
       postal_code_placeholder: '94105'
       region: State/Province
       region_placeholder: CA
+      square_feet: Square Feet
+      square_meters: Square Meters
       subtype_prompt: Select property type
       year_built: Year built
       year_built_placeholder: '2000'
+    form_tabs:
+      address: Address
+      overview: Overview
+      value: Value
     new:
-      title: Enter property details
+      title: Enter property manually
     overview:
       living_area: Living Area
       market_value: Market Value
@@ -30,3 +53,16 @@ en:
       trend: Trend
       unknown: Unknown
       year_built: Year Built
+    overview_fields:
+      area_optional: "Area (optional)"
+      area_unit: Area Unit
+      name: Name
+      name_placeholder: Vacation home
+      property_type: Property type
+      select_type: Select type
+      square_feet: Square Feet
+      square_meters: Square Meters
+      year_built_optional: "Year Built (optional)"
+    tabs:
+      overview:
+        edit_account_details: Edit account details

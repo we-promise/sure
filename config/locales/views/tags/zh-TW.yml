@@ -11,6 +11,7 @@ zh-TW:
     form:
       placeholder: 標籤名稱
     index:
+      delete_all: 全部刪除
       empty: 尚無標籤
       new: 新增標籤
       tags: 標籤

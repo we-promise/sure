@@ -5,6 +5,7 @@ zh-TW:
       accept: 確認
       body_html: "<p>此操作將無法復原</p>"
       cancel: 取消
+      subtitle: 此操作將無法復原。
       title: 您確定嗎？
     money_field:
       label: 金額

@@ -1,6 +1,14 @@
 ---
 zh-TW:
   valuations:
+    confirm_create:
+      title: 確認新餘額
+    confirm_update:
+      title: 更新餘額
+    confirmation_contents:
+      brokerage_cash: 經紀現金
+      holdings_value: 持倉價值
+      total_account_value: 帳戶總價值
     form:
       amount: 金額
       submit: 新增餘額更新
@@ -16,6 +24,7 @@ zh-TW:
     new:
       title: 新餘額
     show:
+      account_value_on_date: 帳戶於該日期的價值
       amount: 金額
       date_label: 日期
       delete: 刪除
@@ -28,3 +37,4 @@ zh-TW:
       note_placeholder: 加入關於此紀錄的額外資訊
       overview: 概覽
       settings: 設定
+      update_value: 更新價值

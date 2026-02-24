@@ -5,3 +5,41 @@ ca:
       per Cloudflare Workers AI. Els resultats poden variar ja que el codi es va provar
       principalment amb `gpt-4.1` però els teus tokens no van a cap altre lloc per ser entrenats! 🤖"
     demo_banner_title: Mode de demostració
+    index:
+      chats: Xats
+      new_chat: Nou xat
+    ai_consent:
+      enable_ai_chats: Activa els xats d'IA
+      ai_available_description: El xat d'IA pot respondre preguntes financeres i proporcionar informació basada en les teves dades. Per utilitzar aquesta funció, l'has d'activar explícitament.
+      ai_unavailable_description_html: "Per utilitzar l'assistent d'IA, cal establir la variable d'entorn <code class=\"bg-surface-inset px-1 py-0.5 rounded font-mono text-xs\">OPENAI_ACCESS_TOKEN</code> o configurar-la a la configuració d'autoallotjament de la teva instància."
+      enable_btn: Activa els xats d'IA
+      disable_note: Desactiva en qualsevol moment. Totes les dades enviades als nostres proveïdors de LLM són anònimes.
+    ai_greeting:
+      greeting: "Hola %{name}! Sóc una IA/model de llenguatge gran que pot ajudar-te amb les teves finances. Tinc accés al web i a les dades del teu compte."
+      commands_hint_html: "Pots utilitzar <span class=\"bg-container border border-secondary px-1.5 py-0.5 rounded font-mono text-xs\">/</span> per accedir a les comandes"
+      questions_intro: "Aquí tens algunes preguntes que pots fer:"
+      evaluate_portfolio: Avalua la cartera d'inversions
+      spending_insights: Mostra informació sobre despeses
+      unusual_patterns: Troba patrons inusuals
+    error:
+      failed_response: No s'ha pogut generar la resposta. Si us plau, torna-ho a provar.
+    chat:
+      edit_chat_title: Edita el títol del xat
+      delete_chat: Elimina el xat
+    chat_nav:
+      all_chats: Tots els xats
+      start_new_chat: Inicia un nou xat
+      edit_chat_title: Edita el títol del xat
+      delete_chat: Elimina el xat
+  messages:
+    chat_form:
+      ask_anything: "Pregunta el que vulguis ..."
+      coming_soon: Properament
+      ai_disclaimer: Les respostes de la IA són només informatives i no constitueixen assessorament financer.
+  assistant_messages:
+    assistant_message:
+      assistant_reasoning: Raonament de l'assistent
+    tool_calls:
+      tool_calls: Crides d'eines
+      function: "Funció:"
+      arguments: "Arguments:"

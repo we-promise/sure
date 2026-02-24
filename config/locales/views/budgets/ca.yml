@@ -2,6 +2,30 @@
 ca:
   budgets:
     show:
+      categories: Categories
+      edit: Edita
       tabs:
         actual: Real
         budgeted: Pressupostat
+    edit:
+      title: Configura el teu pressupost
+      description: Introdueix els teus ingressos mensuals i la despesa planificada a continuació per configurar el teu pressupost.
+      budgeted_spending: Despesa pressupostada
+      expected_income: Ingressos esperats
+      autosuggest: Suggeriment automàtic d'ingressos i pressupost de despeses
+      autosuggest_description: Es basarà en l'historial de transaccions. La IA pot cometre errors, verifica abans de continuar.
+      continue: Continua
+    budgeted_summary:
+      expected_income: Ingressos esperats
+      earned: "%{amount} guanyat"
+      over: "%{amount} per sobre"
+      left: "%{amount} restant"
+      budgeted: Pressupostat
+      spent: "%{amount} gastat"
+    actuals_summary:
+      income: Ingressos
+      expenses: Despeses
+  budget_categories:
+    index:
+      title: Edita els pressupostos de categories
+      description: Ajusta els pressupostos de categories per establir límits de despesa. Els fons no assignats es classificaran automàticament com a sense categoria.

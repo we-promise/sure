@@ -6,6 +6,8 @@ de:
       account_prompt: Konto suchen
       amount: Betrag
       holding: Tickersymbol
+      manual_ticker_label: Ticker-Symbol
+      manual_ticker_placeholder: AAPL
       price: Preis pro Anteil
       qty: Menge
       submit: Transaktion hinzufügen

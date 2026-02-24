@@ -18,13 +18,19 @@ tr:
     new:
       title: Yeni transfer
     show:
+      amount: Tutar
+      category: Kategori
+      date: Tarih
       delete: Transferi kaldır
       delete_subtitle: Bu işlem transferi kaldırır. Altta yatan işlemler silinmeyecektir.
       delete_title: Transfer kaldırılsın mı?
       details: Detaylar
+      from: Kimden
       note_label: Notlar
       note_placeholder: Bu transfere bir not ekleyin
       overview: Genel Bakış
       settings: Ayarlar
+      to: Kime
+      uncategorized: Kategorisiz
     update:
       success: Transfer güncellendi

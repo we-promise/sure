@@ -25,6 +25,14 @@ fr:
         page_title: Paiement
         subscription_subtitle: Mettez à jour votre abonnement et vos détails de paiement
         subscription_title: Gérer l'abonnement
+        currently_on: "Actuellement sur le %{plan}."
+        demo_mode: "Utilise actuellement la démo ouverte de"
+        data_deleted_in_days: "(Les données seront supprimées dans %{days} jours)"
+        not_contributing: "Vous ne contribuez pas actuellement"
+        contributions_show_here: "Les contributions à %{product_name} s'afficheront ici."
+        manage: Gérer
+        choose_level: Choisir le niveau
+        payment_via_stripe: Paiement via Stripe
     preferences:
       show:
         country: Pays
@@ -43,6 +51,7 @@ fr:
         theme_system: Système
         theme_title: Thème
         timezone: Fuseau horaire
+        translations_note: Veuillez noter que nous travaillons encore sur les traductions pour différentes langues.
     profiles:
       destroy:
         cannot_remove_self: Vous ne pouvez pas vous enlever de votre compte.
@@ -93,6 +102,10 @@ fr:
         page_title: Sécurité
         mfa_title: Authentification à deux facteurs
         mfa_description: Ajoutez une couche de sécurité supplémentaire à votre compte en exigeant un code de votre application d'authentification lors de la connexion
+        mfa_enabled: L'authentification à deux facteurs est activée
+        mfa_enabled_description: Votre compte est protégé par une couche de sécurité supplémentaire.
+        mfa_disabled: L'authentification à deux facteurs est désactivée
+        mfa_disabled_description: Activez la 2FA pour ajouter une couche de sécurité supplémentaire à votre compte.
         enable_mfa: Activer 2FA
         disable_mfa: Désactiver 2FA
         disable_mfa_confirm: Êtes-vous sûr(e) de vouloir désactiver l'authentification à deux facteurs ?
@@ -141,3 +154,188 @@ fr:
       choose: Charger une photo
       choose_label: (facultatif)
       change: Changer de photo
+    providers:
+      enable_banking_panel:
+        connection_error: Erreur de connexion
+        setup_instructions: "Instructions de configuration :"
+        step1_html: "Visitez votre compte développeur <a href=\"https://enablebanking.com\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"link\">Enable Banking</a> pour obtenir vos identifiants"
+        step2: Sélectionnez votre code pays dans le menu déroulant ci-dessous
+        step3: Entrez votre ID d'application et collez votre certificat client (y compris la clé privée)
+        step4: "Cliquez sur Enregistrer la configuration, puis utilisez \"Ajouter une connexion\" pour relier votre banque"
+        callback_url_instruction: "Pour l'URL de rappel, utilisez %{callback_url}."
+        field_descriptions: "Descriptions des champs :"
+        country_code_description: "Code pays : code pays ISO 3166-1 alpha-2 (ex. GB, DE, FR) - détermine les banques disponibles"
+        application_id_description: "ID d'application : l'identifiant généré dans votre compte développeur Enable Banking"
+        client_certificate_description: "Certificat client : le certificat généré lors de la création de votre application (doit inclure la clé privée)"
+        select_country: "Sélectionner un pays..."
+        country_label: Pays
+        config_locked: Configuration verrouillée
+        config_locked_description: Les identifiants ne peuvent pas être modifiés tant que vous avez des connexions bancaires actives. Supprimez d'abord toutes les connexions pour mettre à jour les identifiants.
+        application_id_label: ID d'Application
+        application_id_placeholder_new: Entrez l'ID d'application
+        application_id_placeholder_update: Entrez un nouvel ID pour mettre à jour
+        client_certificate_label: Certificat Client (avec Clé Privée)
+        save_configuration: Enregistrer la Configuration
+        update_configuration: Mettre à jour la Configuration
+        syncing: Synchronisation
+        connected_bank: Banque Connectée
+        session_expires: "La session expire : %{date}"
+        unknown: Inconnu
+        connection: Connexion
+        session_expired: Session expirée - reconnecter
+        configured: Configuré
+        ready_to_link: Prêt à relier des comptes
+        sync_button: Synchroniser
+        reconnect: Reconnecter
+        connect_bank: Connecter une Banque
+        remove: Supprimer
+        remove_confirm: Êtes-vous sûr(e) de vouloir supprimer cette connexion ?
+        add_connection: Ajouter une Connexion
+      provider_form:
+        config_via_env: La configuration peut être définie via des variables d'environnement ou remplacée ci-dessous.
+        field_descriptions: "Descriptions des champs :"
+        optional: Optionnel
+        save_configuration: Enregistrer la Configuration
+        configured: Configuré et prêt à l'emploi
+        not_configured: Non configuré
+      simplefin_panel:
+        setup_instructions: "Instructions de configuration :"
+        step1_html: "Visitez <a href=\"https://bridge.simplefin.org\" target=\"_blank\" class=\"text-primary underline\">SimpleFIN Bridge</a> pour obtenir votre jeton de configuration unique"
+        step2: Collez le jeton ci-dessous et cliquez sur le bouton Enregistrer pour activer la synchronisation des données bancaires SimpleFIN
+        step3: Après une connexion réussie, allez dans l'onglet Comptes pour configurer de nouveaux comptes à partir de vos données SimpleFIN
+        field_descriptions: "Descriptions des champs :"
+        setup_token_description: "Jeton de configuration : votre jeton de configuration unique SimpleFIN. Il sera échangé contre une URL d'accès permanente."
+        setup_token_label: Jeton de Configuration
+        setup_token_placeholder: Collez le jeton de configuration SimpleFIN
+        save_configuration: Enregistrer la Configuration
+        configured: Configuré et prêt à l'emploi. Visitez l'onglet Comptes pour gérer et configurer les comptes.
+        not_configured: Non configuré
+      lunchflow_panel:
+        setup_instructions: "Instructions de configuration :"
+        step1_html: "Visitez <a href=\"https://lunchflow.app\" target=\"_blank\" class=\"text-primary underline\">Lunch Flow</a> pour obtenir votre clé API"
+        step2: Collez votre clé API ci-dessous et cliquez sur le bouton Enregistrer
+        step3: Après une connexion réussie, allez dans l'onglet Comptes pour configurer et gérer vos comptes liés
+        field_descriptions: "Descriptions des champs :"
+        api_key_description: "Clé API : votre clé API Lunch Flow pour l'authentification (requise)"
+        base_url_description: "URL de base : URL de base pour l'API Lunch Flow (optionnel, par défaut : https://lunchflow.app/api/v1)"
+        api_key_label: Clé API
+        api_key_placeholder_new: Collez la clé API ici
+        api_key_placeholder_update: Entrez une nouvelle clé API pour mettre à jour
+        base_url_label: URL de Base (Optionnel)
+        base_url_placeholder: "https://lunchflow.app/api/v1 (par défaut)"
+        save_configuration: Enregistrer la Configuration
+        update_configuration: Mettre à jour la Configuration
+        configured: Configuré et prêt à l'emploi. Visitez l'onglet Comptes pour gérer et configurer les comptes.
+        not_configured: Non configuré
+      mercury_panel:
+        setup_instructions: "Instructions de configuration :"
+        step1: Allez sur https://app.mercury.com
+        step2: "Cliquez sur le nom de votre entreprise → Paramètres → Développeurs → Jetons API"
+        step3: Cliquez sur Générer un Jeton
+        step4: "Sélectionnez le type de jeton : Lecture Seule"
+        step5: "Nommez le jeton (ex. 'Sure Finance')"
+        step6: Cliquez sur Créer le Jeton et copiez-le
+        field_descriptions: "Descriptions des champs :"
+        token_description: "Jeton API : votre jeton complet de l'API Mercury pour l'authentification"
+        base_url_description: "URL de base : URL de l'API Mercury (optionnel, par défaut : https://api.mercury.com/api/v1)"
+        sandbox_note: "Note : Pour les tests en sandbox, utilisez https://api.mercury.com/api/v1/sandbox comme URL de base."
+        token_label: Jeton
+        token_placeholder_new: Collez le jeton ici
+        token_placeholder_update: Entrez un nouveau jeton pour mettre à jour
+        base_url_label: URL de Base (Optionnel)
+        base_url_placeholder: "https://api.mercury.com/api/v1 (par défaut)"
+        save_configuration: Enregistrer la Configuration
+        update_configuration: Mettre à jour la Configuration
+        configured: Configuré et prêt à l'emploi. Visitez l'onglet Comptes pour gérer et configurer les comptes.
+        not_configured: Non configuré
+    llm_usages:
+      show:
+        page_title: Utilisation et Coûts LLM
+        subtitle: Suivez votre utilisation de l'IA et les coûts estimés
+        start_date: Date de Début
+        end_date: Date de Fin
+        filter: Filtrer
+        total_requests: Total des Requêtes
+        total_tokens: Total des Tokens
+        prompt: prompt
+        completion: complétion
+        total_cost: Coût Total
+        avg_cost: Coût Moy./Requête
+        cost_data_basis: "Basé sur %{count} de %{total} requêtes avec données de coût"
+        cost_by_operation: Coût par Opération
+        cost_by_model: Coût par Modèle
+        recent_usage: Utilisation Récente
+        date: Date
+        operation: Opération
+        model: Modèle
+        tokens: Tokens
+        cost: Coût
+        failed: Échoué
+        http_status: "Statut HTTP :"
+        no_data: Aucune donnée d'utilisation trouvée pour la période sélectionnée
+        about_cost_estimates: À propos des Estimations de Coûts
+        cost_estimates_description: "Les coûts sont estimés sur la base des tarifs d'OpenAI à partir de 2025. Les coûts réels peuvent varier en fonction de votre fournisseur et de votre plan. Les requêtes échouées (statut non-200) peuvent toujours compter dans votre utilisation d'API."
+    api_keys:
+      show:
+        page_title_created: Clé API Créée avec Succès
+        page_title_key: Votre Clé API
+        created_success: Clé API Créée avec Succès !
+        created_description: "Votre nouvelle clé API \"%{name}\" a été créée et est prête à l'emploi."
+        your_api_key: Votre Clé API
+        copy_store_securely: "Copiez et stockez cette clé en toute sécurité. Vous en aurez besoin pour authentifier vos requêtes API."
+        copy_api_key: Copier la Clé API
+        how_to_use: Comment utiliser votre clé API
+        usage_instructions: "Incluez votre clé API dans l'en-tête X-Api-Key lors des requêtes :"
+        continue_to_settings: Continuer vers les Paramètres de Clé API
+        create_new_key: Créer une Nouvelle Clé
+        created_ago: "Créée il y a %{time}"
+        last_used_ago: "Dernière utilisation il y a %{time}"
+        never_used: Jamais utilisée
+        active: Active
+        permissions: Permissions
+        read_only: Lecture Seule
+        read_write: Lecture/Écriture
+        revoke_key: Révoquer la Clé
+        confirm_revoke: Êtes-vous sûr(e) de vouloir révoquer cette clé API ? Cette action ne peut pas être annulée.
+      new:
+        page_title: Créer une Nouvelle Clé API
+        subtitle: Générez une nouvelle clé API pour accéder à vos données Sure par programmation.
+        name_placeholder: "ex. Mon App Budget, Suivi de Portefeuille"
+        name_label: Nom de la Clé API
+        name_help: Choisissez un nom descriptif pour vous aider à identifier cette clé plus tard.
+        permissions_label: Permissions
+        select_permissions: "Sélectionnez les permissions que cette clé API doit avoir :"
+        read_only: Lecture Seule
+        read_only_description: Voir vos comptes, transactions et soldes
+        read_write: Lecture/Écriture
+        read_write_description: Voir vos données et créer de nouvelles transactions
+        security_warning: Avertissement de Sécurité
+        security_warning_description: "Votre clé API ne sera affichée qu'une seule fois après la création. Assurez-vous de la copier et de la stocker en toute sécurité. Si vous la perdez, vous devrez créer une nouvelle clé."
+        cancel: Annuler
+        save: Enregistrer la Clé API
+      created:
+        page_title: Clé API Créée
+        created_success: Clé API Créée avec Succès !
+        created_description: "Votre nouvelle clé API \"%{name}\" a été créée et est prête à l'emploi."
+        your_api_key: Votre Clé API
+        copy_store_securely: "Copiez et stockez cette clé en toute sécurité. Vous en aurez besoin pour authentifier vos requêtes API."
+        copy_api_key: Copier la Clé API
+        key_details: Détails de la Clé
+        name_label: "Nom :"
+        permissions_label: "Permissions :"
+        view_accounts: Voir les Comptes
+        view_transactions: Voir les Transactions
+        view_balances: Voir les Soldes
+        create_transactions: Créer des Transactions
+        created_label: "Créée :"
+        security_note: Note de Sécurité Importante
+        security_note_description: "C'est la seule fois que votre clé API sera affichée. Assurez-vous de la copier maintenant. Si vous la perdez, vous devrez créer une nouvelle clé."
+        how_to_use: Comment utiliser votre clé API
+        usage_instructions: "Incluez votre clé API dans l'en-tête X-Api-Key lors des requêtes :"
+        continue_to_settings: Continuer vers les Paramètres de Clé API
+    bank_sync:
+      show:
+        page_title: Synchronisation Bancaire
+        providers: FOURNISSEURS
+        no_providers: Aucun fournisseur configuré
+        configure_providers: Configurez des fournisseurs pour relier vos comptes bancaires.

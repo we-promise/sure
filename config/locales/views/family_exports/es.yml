@@ -10,6 +10,17 @@ es:
       success: Exportación eliminada con éxito
     export_not_ready: La exportación no está lista para descargar
     exporting: Exportando...
+    new:
+      title: Exporta tus datos
+      subtitle: Descarga todos tus datos financieros
+      whats_included: "Qué se incluye:"
+      all_accounts_and_balances: Todas las cuentas y saldos
+      transaction_history: Historial de transacciones
+      investment_trades: Operaciones de inversión
+      categories_tags_and_rules: "Categorías, etiquetas y reglas"
+      note: "Nota:"
+      note_body: "Esta exportación incluye todos tus datos, pero solo algunos se pueden volver a importar mediante la función de importación CSV. Admitimos la importación de cuentas, transacciones (con categoría y etiquetas) y operaciones. Los demás datos de la cuenta no se pueden importar y son solo para tus registros."
+      cancel: Cancelar
     index:
       title: Exportaciones
       new: Nueva exportación

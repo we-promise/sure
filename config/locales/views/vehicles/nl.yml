@@ -17,6 +17,7 @@ nl:
       title: Voer voertuiggegevens in
     overview:
       current_price: Huidige prijs
+      edit_account_details: Accountgegevens bewerken
       make_model: Merk & Model
       mileage: Kilometerstand
       purchase_price: Aankoopprijs

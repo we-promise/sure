@@ -34,7 +34,7 @@
                             required: true %>
           </div>
         <% else %>
-          <%= form.text_field :manual_ticker, label: "Ticker symbol", placeholder: "AAPL", required: true %>
+          <%= form.text_field :manual_ticker, label: t(".manual_ticker_label"), placeholder: t(".manual_ticker_placeholder"), required: true %>
         <% end %>
       <% end %>
 

@@ -153,10 +153,13 @@ en:
       and_more: "+%{count} more"
     investment_flows:
       title: Investment Flows
-      description: Track money flowing into and out of your investment accounts
+      description: Track money flowing into and out of your investment accounts through contributions and withdrawals.
       contributions: Contributions
+      contributions_description: Money added to investments
       withdrawals: Withdrawals
+      withdrawals_description: Money withdrawn from investments
       net_flow: Net Flow
+      net_flow_description: Total net change
     google_sheets_instructions:
       title_with_key: "✅ Copy URL for Google Sheets"
       title_no_key: "⚠️ API Key Required"

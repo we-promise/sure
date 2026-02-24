@@ -26,6 +26,14 @@ ro:
         update_failed: "Eșec la actualizarea conexiunii: %{message}"
         unexpected: A apărut o eroare neașteptată. Te rugăm să încerci din nou sau să contactezi suportul.
     edit:
+      title: "Actualizează conexiunea SimpleFin"
+      subtitle: "Obține un nou token de configurare pentru a reconecta contul tău SimpleFin"
+      update_needed: "Conexiunea ta SimpleFIN trebuie actualizată:"
+      step_1_html: 'Vizitează <a href="https://bridge.simplefin.org/simplefin/create" target="_blank" rel="noopener noreferrer" class="text-link hover:text-link underline">SimpleFIN Bridge</a> pentru a crea un nou token de configurare'
+      step_2: "Copiază tokenul și lipește-l mai jos"
+      step_3: 'Apasă pe "Actualizează" pentru a restabili accesul'
+      update: "Actualizează"
+      cancel: "Anulează"
       setup_token:
         label: "Token de configurare SimpleFin:"
         placeholder: "Lipește aici tokenul tău de configurare SimpleFin..."
@@ -51,3 +59,29 @@ ro:
       status_with_summary: "Ultima sincronizare acum %{timestamp} • %{summary}"
       syncing: Se sincronizează...
       update: Actualizează conexiunea
+    setup_accounts:
+      page_title: "Configurare conturi SimpleFin"
+      title: "Configurează conturile tale SimpleFin"
+      subtitle: "Alege tipurile de cont corecte pentru conturile tale importate"
+      creating_accounts: "Se creează conturile..."
+      choose_account_type: "Alege tipul de cont corect pentru fiecare cont SimpleFin:"
+      account_type_depository: "Cont curent sau de economii"
+      account_type_depository_desc: "Conturi bancare obișnuite"
+      account_type_credit_card: "Card de credit"
+      account_type_credit_card_desc: "Conturi de card de credit"
+      account_type_investment: "Investiție"
+      account_type_investment_desc: "Conturi de brokeraj, 401(k), IRA"
+      account_type_loan: "Împrumut sau ipotecă"
+      account_type_loan_desc: "Conturi de datorie"
+      account_type_other_asset: "Alt activ"
+      account_type_other_asset_desc: "Tot restul"
+      transaction_history: "Istoric tranzacții:"
+      transaction_history_note_html: "SimpleFin oferă de obicei <strong>60-90 de zile</strong> de istoric al tranzacțiilor, în funcție de banca ta. După configurarea inițială, noile tranzacții se vor sincroniza automat. Disponibilitatea datelor istorice variază în funcție de instituție și tipul de cont."
+      account_type_label: "Tip de cont:"
+      balance_label: "Sold:"
+      create_accounts: "Creează conturi"
+      cancel: "Anulează"
+    select_existing_account:
+      header_title: "Leagă contul SimpleFIN"
+      link_button: "Leagă"
+      balance_label: "Sold:"

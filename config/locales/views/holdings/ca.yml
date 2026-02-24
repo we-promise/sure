@@ -3,7 +3,10 @@ ca:
   holdings:
     cash:
       brokerage_cash: Efectiu de broker
+    new:
+      coming_soon: "Pròximament..."
     cost_basis_cell:
+      set: Estableix
       cancel: Cancel·la
       or_per_share_label: 'O entra per acció:'
       overwrite_confirm_body: Això reemplaçarà el cost base actual de %{current}.

@@ -19,7 +19,7 @@ class Import::UploadsController < ApplicationController
       @import.assign_attributes(raw_file_str: csv_str, col_sep: upload_params[:col_sep])
       @import.save!(validate: false)
 
-      redirect_to import_configuration_path(@import, template_hint: true), notice: "CSV uploaded successfully."
+      redirect_to import_configuration_path(@import, template_hint: true), notice: t("controllers.import.uploads.csv_uploaded")
     else
       flash.now[:alert] = "Must be valid CSV with headers and at least one row of data"
 

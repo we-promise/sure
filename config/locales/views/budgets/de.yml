@@ -1,0 +1,34 @@
+---
+de:
+  budgets:
+    name:
+      custom_range: "%{start} - %{end_date}"
+      month_year: "%{month}"
+    show:
+      categories: Kategorien
+      edit: Bearbeiten
+      tabs:
+        actual: Tatsächlich
+        budgeted: Budgetiert
+    edit:
+      title: Budget einrichten
+      description: Geben Sie unten Ihre monatlichen Einnahmen und geplanten Ausgaben ein, um Ihr Budget einzurichten.
+      budgeted_spending: Budgetierte Ausgaben
+      expected_income: Erwartetes Einkommen
+      autosuggest: Einkommen & Ausgabenbudget automatisch vorschlagen
+      autosuggest_description: Dies basiert auf der Transaktionshistorie. KI kann Fehler machen, überprüfen Sie die Vorschläge vor dem Fortfahren.
+      continue: Weiter
+    budgeted_summary:
+      expected_income: Erwartetes Einkommen
+      earned: "%{amount} verdient"
+      over: "%{amount} überschritten"
+      left: "%{amount} übrig"
+      budgeted: Budgetiert
+      spent: "%{amount} ausgegeben"
+    actuals_summary:
+      income: Einnahmen
+      expenses: Ausgaben
+  budget_categories:
+    index:
+      title: Kategoriebudgets bearbeiten
+      description: Passen Sie die Kategoriebudgets an, um Ausgabenlimits festzulegen. Nicht zugewiesene Mittel werden automatisch als nicht kategorisiert zugewiesen.

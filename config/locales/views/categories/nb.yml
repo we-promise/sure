@@ -14,12 +14,23 @@ nb:
       edit: Rediger kategori
     form:
       placeholder: Kategorinavn
+      color: Farge
+      poor_contrast: "Dårlig kontrast, velg en mørkere farge eller"
+      auto_adjust: "juster automatisk."
+      icon: Ikon
+      income: Inntekt
+      expense: Utgift
+      classification: Klassifisering
+      unassigned: "(ikke tildelt)"
+      parent_category: "Overordnet kategori (valgfritt)"
+      name: Navn
     index:
       bootstrap: Bruk standarder (anbefalt)
       categories: Kategorier
       categories_expenses: Utgiftskategorier
       categories_incomes: Inntektskategorier
       empty: Ingen kategorier funnet
+      delete_all: Slett alle
       new: Ny kategori
     menu:
       loading: Laster...

@@ -3,6 +3,68 @@ de:
   rules:
     no_action: Keine Aktion
     no_condition: Keine Bedingung
+    index:
+      page_title: Regeln
+      delete_all_rules: Alle Regeln löschen
+      new_rule: Neue Regel
+      ai_warning: KI-aktivierte Regelaktionen verursachen Kosten. Filtere so genau wie möglich, um unnötige Kosten zu vermeiden.
+      rules_label: Regeln
+      sort_by: "Sortieren nach:"
+      toggle_sort_direction: Sortierrichtung umschalten
+      no_rules: Noch keine Regeln
+      no_rules_description: Richte Regeln ein, um Aktionen für deine Transaktionen und andere Daten bei jeder Kontosynchronisierung auszuführen.
+    new:
+      back_to_rules: Zurück zu Regeln
+      new_rule_title: "Neue %{resource_type}-Regel"
+    edit:
+      back_to_rules: Zurück zu Regeln
+      edit_rule_title: "%{resource_type}-Regel \"%{name}\" bearbeiten"
+      edit_rule_title_unnamed: "%{resource_type}-Regel bearbeiten"
+    confirm:
+      confirm_changes_to: "Änderungen an \"%{name}\" bestätigen"
+      confirm_changes: Änderungen bestätigen
+      about_to_apply_html: "Du bist dabei, diese Regel auf <span class=\"text-primary font-medium\">%{count} %{resource_type}</span> anzuwenden, die den angegebenen Regelkriterien entsprechen. Bitte bestätige, ob du mit dieser Änderung fortfahren möchtest."
+      ai_cost_title: KI-Kostenschätzung
+      ai_cost_message: "Dies wird KI verwenden, um %{count} Transaktion(en) zu kategorisieren. Geschätzte Kosten: <span class=\"font-semibold\">~$%{cost}</span>"
+      ai_cost_no_estimate: "Dies wird KI verwenden, um %{count} Transaktion(en) zu kategorisieren."
+      cost_unavailable_model: "Kostenschätzung nicht verfügbar für Modell \"%{model}\"."
+      cost_unavailable_no_provider: Kostenschätzung nicht verfügbar (kein LLM-Anbieter konfiguriert).
+      cost_warning: Es können Kosten anfallen, bitte prüfe beim Modellanbieter die aktuellsten Preise.
+      view_usage: Nutzungsverlauf anzeigen
+      confirm_changes_btn: Änderungen bestätigen
+    form:
+      rule_name_optional: Regelname (optional)
+      enter_name: Gib einen Namen für diese Regel ein
+      if_label: WENN
+      then_label: DANN
+      for_label: FÜR
+      add_condition: Bedingung hinzufügen
+      add_condition_group: Bedingungsgruppe hinzufügen
+      add_action: Aktion hinzufügen
+      all_past_future: "Alle vergangenen und zukünftigen %{resource_type}s"
+      starting_from: Ab
+    rule:
+      if_label: WENN
+      then_label: DANN
+      for_label: FÜR
+      to_label: zu
+      and_more_conditions:
+        one: "und %{count} weitere Bedingung"
+        other: "und %{count} weitere Bedingungen"
+      and_more_actions:
+        one: "und %{count} weitere Aktion"
+        other: "und %{count} weitere Aktionen"
+      all_past_future: "Alle vergangenen und zukünftigen %{resource_type}"
+      on_or_after: "%{resource_type} am oder nach %{date}"
+      edit: Bearbeiten
+      reapply_rule: Regel erneut anwenden
+      delete: Löschen
+    category_rule_cta:
+      updated_to: "Aktualisiert auf %{name}"
+      auto_categorize_description: Du kannst eine Regel erstellen, um Transaktionen wie diese automatisch zu kategorisieren
+      dont_show_again: Nicht mehr anzeigen
+      dismiss: Verwerfen
+      create_rule: Regel erstellen
     recent_runs:
       title: Letzte Ausführungen
       description: Zeige die Ausführungsgeschichte deiner Regeln einschließlich Erfolgs-/Fehlerstatus und Transaktionsanzahlen.
@@ -23,3 +85,16 @@ de:
         pending: Ausstehend
         success: Erfolgreich
         failed: Fehlgeschlagen
+  rule:
+    actions:
+      action:
+        to_label: zu
+    conditions:
+      condition:
+        and_label: und
+        enter_value: Wert eingeben
+      condition_group:
+        and_label: und
+        match: stimmen überein
+        of_the_following: der folgenden Bedingungen
+        add_condition: Bedingung hinzufügen

@@ -16,6 +16,14 @@ zh-CN:
     destroy:
       success: SimpleFIN 连接将被移除
     edit:
+      title: "更新 SimpleFin 连接"
+      subtitle: "获取新的设置令牌以重新连接您的 SimpleFin 账户"
+      update_needed: "您的 SimpleFIN 连接需要更新："
+      step_1_html: '访问 <a href="https://bridge.simplefin.org/simplefin/create" target="_blank" rel="noopener noreferrer" class="text-link hover:text-link underline">SimpleFIN Bridge</a> 创建新的设置令牌'
+      step_2: "复制令牌并粘贴到下方"
+      step_3: '点击"更新"以恢复访问'
+      update: "更新"
+      cancel: "取消"
       setup_token:
         help_text: 令牌应为以字母和数字开头的长字符串
         label: SimpleFIN 设置令牌：
@@ -32,6 +40,9 @@ zh-CN:
       setup_token_placeholder: 粘贴您的 SimpleFIN 设置令牌
       title: 连接 SimpleFIN
     select_existing_account:
+      header_title: "关联 SimpleFIN 账户"
+      link_button: "关联"
+      balance_label: "余额："
       all_accounts_already_linked: 所有 SimpleFIN 账户似乎均已关联。
       cancel: 取消
       check_provider_health: 检查服务提供商状态
@@ -69,3 +80,25 @@ zh-CN:
         unexpected: 发生意外错误。请重试或联系支持团队。
         update_failed: 更新连接失败：%{message}
       success: SimpleFIN 连接更新成功！您的账户正在重新连接中。
+    setup_accounts:
+      page_title: "设置 SimpleFin 账户"
+      title: "设置您的 SimpleFin 账户"
+      subtitle: "为您的导入账户选择正确的账户类型"
+      creating_accounts: "正在创建账户..."
+      choose_account_type: "为每个 SimpleFin 账户选择正确的账户类型："
+      account_type_depository: "支票或储蓄账户"
+      account_type_depository_desc: "普通银行账户"
+      account_type_credit_card: "信用卡"
+      account_type_credit_card_desc: "信用卡账户"
+      account_type_investment: "投资"
+      account_type_investment_desc: "经纪、401(k)、IRA 账户"
+      account_type_loan: "贷款或抵押贷款"
+      account_type_loan_desc: "债务账户"
+      account_type_other_asset: "其他资产"
+      account_type_other_asset_desc: "其他所有类型"
+      transaction_history: "交易历史："
+      transaction_history_note_html: "SimpleFin 通常提供 <strong>60-90 天</strong>的交易历史，具体取决于您的银行。初始设置后，新交易将自动同步。历史数据的可用性因机构和账户类型而异。"
+      account_type_label: "账户类型："
+      balance_label: "余额："
+      create_accounts: "创建账户"
+      cancel: "取消"

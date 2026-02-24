@@ -2,6 +2,7 @@
 fr:
   accounts:
     account:
+      complete_setup: Terminer la configuration
       link_lunchflow: Lier avec Lunch Flow
       link_provider: Lier avec un fournisseur
       unlink_provider: Délier du fournisseur
@@ -46,6 +47,12 @@ fr:
         manual_entry: Saisir le solde du compte
         title: Comment voulez-vous l'ajouter ?
       title: Que voulez-vous ajouter ?
+      container:
+        previous: Précédent
+        next: Suivant
+        select: Sélectionner
+        navigate: Naviguer
+        close: Fermer
     show:
       activity:
         amount: Montant
@@ -67,8 +74,11 @@ fr:
       chart:
         balance: Solde
         owed: Montant dû
+      header:
+        complete_setup: Terminer la configuration
       menu:
         confirm_accept: Supprimer "%{name}"
+        delete_account: Supprimer le compte
         confirm_body_html: "<p>En supprimant ce compte, vous effacerez son historique de valeur,
           affectant divers aspects de votre solde global. Cette action aura un impact direct sur vos calculs de valeur nette et les graphiques des comptes.</p><br /> <p>Après la suppression, il n'y a aucun moyen de restaurer l'information du compte car vous aurez besoin d'en ajouter un nouveau.</p>"
         confirm_title: Supprimer le compte ?

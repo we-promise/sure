@@ -1,6 +1,14 @@
 ---
 zh-CN:
   valuations:
+    confirm_create:
+      title: 确认新余额
+    confirm_update:
+      title: 更新余额
+    confirmation_contents:
+      brokerage_cash: 经纪现金
+      holdings_value: 持仓价值
+      total_account_value: 账户总价值
     form:
       amount: 金额
       submit: 添加余额更新
@@ -18,6 +26,7 @@ zh-CN:
       submit: 提交
       title: 新建余额记录
     show:
+      account_value_on_date: 账户在该日期的价值
       amount: 金额
       date_label: 日期
       delete: 删除
@@ -30,3 +39,4 @@ zh-CN:
       note_placeholder: 添加此记录的其他详细信息
       overview: 概览
       settings: 设置
+      update_value: 更新价值

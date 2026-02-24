@@ -2,6 +2,30 @@
 zh-TW:
   budgets:
     show:
+      categories: 分類
+      edit: 編輯
       tabs:
         actual: 實際
         budgeted: 預算
+    edit:
+      title: 設定您的預算
+      description: 在下方輸入您的月收入和計劃支出以設定您的預算。
+      budgeted_spending: 預算支出
+      expected_income: 預期收入
+      autosuggest: 自動建議收入和支出預算
+      autosuggest_description: 這將基於交易歷史記錄。AI 可能會出錯，請在繼續之前進行驗證。
+      continue: 繼續
+    budgeted_summary:
+      expected_income: 預期收入
+      earned: "%{amount} 已賺取"
+      over: "%{amount} 超支"
+      left: "%{amount} 剩餘"
+      budgeted: 預算
+      spent: "%{amount} 已支出"
+    actuals_summary:
+      income: 收入
+      expenses: 支出
+  budget_categories:
+    index:
+      title: 編輯分類預算
+      description: 調整分類預算以設定支出限額。未分配的資金將自動歸類為未分類。

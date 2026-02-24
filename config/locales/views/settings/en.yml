@@ -102,6 +102,10 @@ en:
         page_title: Security
         mfa_title: Two-Factor Authentication
         mfa_description: Add an extra layer of security to your account by requiring a code from your authenticator app when signing in
+        mfa_enabled: Two-factor authentication is enabled
+        mfa_enabled_description: Your account is protected with an additional layer of security.
+        mfa_disabled: Two-factor authentication is disabled
+        mfa_disabled_description: Enable 2FA to add an extra layer of security to your account.
         enable_mfa: Enable 2FA
         disable_mfa: Disable 2FA
         disable_mfa_confirm: Are you sure you want to disable two-factor authentication?
@@ -175,3 +179,198 @@ en:
       enable_banking_panel:
         callback_url_instruction: "For the callback URL, use %{callback_url}."
         connection_error: Connection Error
+        setup_instructions: "Setup instructions:"
+        step1_html: "Visit your <a href=\"https://enablebanking.com\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"link\">Enable Banking</a> developer account to get your credentials"
+        step2: Select your country code from the dropdown below
+        step3: Enter your Application ID and paste your Client Certificate (including the private key)
+        step4: "Click Save Configuration, then use \"Add Connection\" to link your bank"
+        field_descriptions: "Field descriptions:"
+        country_code_description: "Country Code: ISO 3166-1 alpha-2 country code (e.g., GB, DE, FR) - determines available banks"
+        application_id_description: "Application ID: The ID generated in your Enable Banking developer account"
+        client_certificate_description: "Client Certificate: The certificate generated when you created your application (must include the private key)"
+        select_country: "Select country..."
+        country_label: Country
+        config_locked: Configuration locked
+        config_locked_description: Credentials cannot be changed while you have active bank connections. Remove all connections first to update credentials.
+        application_id_label: Application ID
+        application_id_placeholder_new: Enter application ID
+        application_id_placeholder_update: Enter new ID to update
+        client_certificate_label: Client Certificate (with Private Key)
+        save_configuration: Save Configuration
+        update_configuration: Update Configuration
+        syncing: Syncing
+        connected_bank: Connected Bank
+        session_expires: "Session expires: %{date}"
+        unknown: Unknown
+        connection: Connection
+        session_expired: Session expired - reconnect
+        configured: Configured
+        ready_to_link: Ready to link accounts
+        sync_button: Sync
+        reconnect: Reconnect
+        connect_bank: Connect Bank
+        remove: Remove
+        remove_confirm: Are you sure you want to remove this connection?
+        add_connection: Add Connection
+    llm_usages:
+      show:
+        page_title: LLM Usage & Costs
+        subtitle: Track your AI usage and estimated costs
+        start_date: Start Date
+        end_date: End Date
+        filter: Filter
+        total_requests: Total Requests
+        total_tokens: Total Tokens
+        prompt: prompt
+        completion: completion
+        total_cost: Total Cost
+        avg_cost: Avg Cost/Request
+        cost_data_basis: "Based on %{count} of %{total} requests with cost data"
+        cost_by_operation: Cost by Operation
+        cost_by_model: Cost by Model
+        recent_usage: Recent Usage
+        date: Date
+        operation: Operation
+        model: Model
+        tokens: Tokens
+        cost: Cost
+        failed: Failed
+        http_status: "HTTP Status:"
+        no_data: No usage data found for the selected period
+        about_cost_estimates: About Cost Estimates
+        cost_estimates_description: "Costs are estimated based on OpenAI's pricing as of 2025. Actual costs may vary depending on your provider and plan. Failed requests (non-200 status) may still count toward your API usage."
+    api_keys:
+      show:
+        page_title_created: API Key Created Successfully
+        page_title_key: Your API Key
+        created_success: API Key Created Successfully!
+        created_description: "Your new API key \"%{name}\" has been created and is ready to use."
+        your_api_key: Your API Key
+        copy_store_securely: "Copy and store this key securely. You'll need it to authenticate your API requests."
+        copy_api_key: Copy API Key
+        how_to_use: How to use your API key
+        usage_instructions: "Include your API key in the X-Api-Key header when making requests:"
+        continue_to_settings: Continue to API Key Settings
+        create_new_key: Create New Key
+        created_ago: "Created %{time} ago"
+        last_used_ago: "Last used %{time} ago"
+        never_used: Never used
+        active: Active
+        permissions: Permissions
+        read_only: Read Only
+        read_write: Read/Write
+        revoke_key: Revoke Key
+        confirm_revoke: Are you sure you want to revoke this API key? This action cannot be undone.
+      new:
+        page_title: Create New API Key
+        subtitle: Generate a new API key to access your Sure data programmatically.
+        name_placeholder: "e.g., My Budget App, Portfolio Tracker"
+        name_label: API Key Name
+        name_help: Choose a descriptive name to help you identify this key later.
+        permissions_label: Permissions
+        select_permissions: "Select the permissions this API key should have:"
+        read_only: Read Only
+        read_only_description: View your accounts, transactions, and balances
+        read_write: Read/Write
+        read_write_description: View your data and create new transactions
+        security_warning: Security Warning
+        security_warning_description: "Your API key will be displayed only once after creation. Make sure to copy it and store it securely. If you lose it, you'll need to create a new key."
+        cancel: Cancel
+        save: Save API Key
+      created:
+        page_title: API Key Created
+        created_success: API Key Created Successfully!
+        created_description: "Your new API key \"%{name}\" has been created and is ready to use."
+        your_api_key: Your API Key
+        copy_store_securely: "Copy and store this key securely. You'll need it to authenticate your API requests."
+        copy_api_key: Copy API Key
+        key_details: Key Details
+        name_label: "Name:"
+        permissions_label: "Permissions:"
+        view_accounts: View Accounts
+        view_transactions: View Transactions
+        view_balances: View Balances
+        create_transactions: Create Transactions
+        created_label: "Created:"
+        security_note: Important Security Note
+        security_note_description: "This is the only time your API key will be displayed. Make sure to copy it now. If you lose it, you'll need to create a new key."
+        how_to_use: How to use your API key
+        usage_instructions: "Include your API key in the X-Api-Key header when making requests:"
+        continue_to_settings: Continue to API Key Settings
+    bank_sync:
+      show:
+        page_title: Bank Sync
+        providers: PROVIDERS
+        no_providers: No providers configured
+        configure_providers: Configure providers to link your bank accounts.
+    payments:
+      show:
+        currently_on: "Currently on the %{plan}."
+        demo_mode: "Currently using the open demo of"
+        data_deleted_in_days: "(Data will be deleted in %{days} days)"
+        not_contributing: "You are currently not contributing"
+        contributions_show_here: "Contributions to %{product_name} will show here."
+        manage: Manage
+        choose_level: Choose level
+        payment_via_stripe: Payment via Stripe
+    preferences:
+      show:
+        translations_note: Please note, we are still working on translations for various languages.
+    providers:
+      provider_form:
+        config_via_env: Configuration can be set via environment variables or overridden below.
+        field_descriptions: "Field descriptions:"
+        optional: Optional
+        save_configuration: Save Configuration
+        configured: Configured and ready to use
+        not_configured: Not configured
+      simplefin_panel:
+        setup_instructions: "Setup instructions:"
+        step1_html: "Visit <a href=\"https://bridge.simplefin.org\" target=\"_blank\" class=\"text-primary underline\">SimpleFIN Bridge</a> to get your one-time setup token"
+        step2: Paste the token below and click the Save button to enable SimpleFIN bank data sync
+        step3: After a successful connection, go to the Accounts tab to set up new accounts from your SimpleFIN data
+        field_descriptions: "Field descriptions:"
+        setup_token_description: "Setup Token: Your SimpleFIN one-time setup token. This will be exchanged for a permanent access URL."
+        setup_token_label: Setup Token
+        setup_token_placeholder: Paste SimpleFIN setup token
+        save_configuration: Save Configuration
+        configured: Configured and ready to use. Visit the Accounts tab to manage and set up accounts.
+        not_configured: Not configured
+      lunchflow_panel:
+        setup_instructions: "Setup instructions:"
+        step1_html: "Visit <a href=\"https://lunchflow.app\" target=\"_blank\" class=\"text-primary underline\">Lunch Flow</a> to get your API key"
+        step2: Paste your API key below and click the Save button
+        step3: After a successful connection, go to the Accounts tab to set up and manage your linked accounts
+        field_descriptions: "Field descriptions:"
+        api_key_description: "API Key: Your Lunch Flow API key for authentication (required)"
+        base_url_description: "Base URL: Base URL for Lunch Flow API (optional, defaults to https://lunchflow.app/api/v1)"
+        api_key_label: API Key
+        api_key_placeholder_new: Paste API key here
+        api_key_placeholder_update: Enter new API key to update
+        base_url_label: Base URL (Optional)
+        base_url_placeholder: "https://lunchflow.app/api/v1 (default)"
+        save_configuration: Save Configuration
+        update_configuration: Update Configuration
+        configured: Configured and ready to use. Visit the Accounts tab to manage and set up accounts.
+        not_configured: Not configured
+      mercury_panel:
+        setup_instructions: "Setup instructions:"
+        step1: Go to https://app.mercury.com
+        step2: Click on your company name → Settings → Developers → API Tokens
+        step3: Click Generate Token
+        step4: "Select token type: Read Only"
+        step5: "Name the token (e.g., 'Sure Finance')"
+        step6: Click Create Token and copy it
+        field_descriptions: "Field descriptions:"
+        token_description: "API Token: Your full Mercury API token for authentication"
+        base_url_description: "Base URL: Mercury API URL (optional, defaults to https://api.mercury.com/api/v1)"
+        sandbox_note: "Note: For sandbox testing, use https://api.mercury.com/api/v1/sandbox as the Base URL."
+        token_label: Token
+        token_placeholder_new: Paste token here
+        token_placeholder_update: Enter new token to update
+        base_url_label: Base Url (Optional)
+        base_url_placeholder: "https://api.mercury.com/api/v1 (default)"
+        save_configuration: Save Configuration
+        update_configuration: Update Configuration
+        configured: Configured and ready to use. Visit the Accounts tab to manage and set up accounts.
+        not_configured: Not configured

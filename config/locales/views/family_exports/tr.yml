@@ -10,6 +10,17 @@ tr:
       success: Dışa aktarma başarıyla silindi
     export_not_ready: Dışa aktarma henüz indirmeye hazır değil
     exporting: Dışa aktarılıyor...
+    new:
+      title: Verilerinizi dışa aktarın
+      subtitle: Tüm finansal verilerinizi indirin
+      whats_included: "Neleri içerir:"
+      all_accounts_and_balances: Tüm hesaplar ve bakiyeler
+      transaction_history: İşlem geçmişi
+      investment_trades: Yatırım işlemleri
+      categories_tags_and_rules: "Kategoriler, etiketler ve kurallar"
+      note: "Not:"
+      note_body: "Bu dışa aktarma tüm verilerinizi içerir, ancak yalnızca bazı veriler CSV içe aktarma özelliği ile geri yüklenebilir. Hesap, işlem (kategori ve etiketlerle) ve yatırım işlemi içe aktarmalarını destekliyoruz. Diğer hesap verileri içe aktarılamaz ve yalnızca kayıtlarınız içindir."
+      cancel: İptal
     index:
       title: Dışa aktarmalar
       new: Yeni Dışa Aktarma

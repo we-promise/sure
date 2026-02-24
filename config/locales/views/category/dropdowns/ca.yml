@@ -7,5 +7,6 @@ ca:
         edit: Edita categoria
       show:
         clear: Neteja categoria
+        match_transfer: "Coincideix transferència/pagament"
         no_categories: No s'han trobat categories
         search_placeholder: Cerca

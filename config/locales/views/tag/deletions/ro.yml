@@ -11,5 +11,6 @@ ro:
         explanation: "%{tag_name} va fi eliminată din tranzacții și alte entități
           etichetabile. În loc să le lași neetichetate, poți atribui și o etichetă
           nouă mai jos."
+        delete_and_reassign: Șterge și reatribuie
         replacement_tag_prompt: Selectează eticheta
         tag: Etichetă

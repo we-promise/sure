@@ -1,6 +1,14 @@
 ---
 ro:
   valuations:
+    confirm_create:
+      title: Confirmă sold nou
+    confirm_update:
+      title: Actualizează sold
+    confirmation_contents:
+      brokerage_cash: Numerar de brokeraj
+      holdings_value: Valoarea deținerilor
+      total_account_value: Valoarea totală a contului
     form:
       amount: Sumă
       submit: Adaugă actualizare sold
@@ -14,6 +22,7 @@ ro:
     new:
       title: Sold nou
     show:
+      account_value_on_date: Valoarea contului la dată
       amount: Sumă
       date_label: Dată
       delete: Șterge
@@ -24,3 +33,4 @@ ro:
       note_placeholder: Adaugă orice detalii suplimentare despre această înregistrare
       overview: Prezentare generală
       settings: Setări
+      update_value: Actualizează valoarea

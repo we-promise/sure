@@ -13,6 +13,7 @@ en:
     new:
       title: Enter loan details
     overview:
+      edit_loan_details: Edit loan details
       interest_rate: Interest Rate
       monthly_payment: Monthly Payment
       not_applicable: N/A

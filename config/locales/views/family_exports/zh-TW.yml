@@ -7,6 +7,17 @@ zh-TW:
     destroy:
       success: 匯出已成功刪除
     export_not_ready: 匯出尚未準備好下載
+    new:
+      title: 匯出您的資料
+      subtitle: 下載您的所有財務資料
+      whats_included: "包含內容："
+      all_accounts_and_balances: 所有帳戶和餘額
+      transaction_history: 交易紀錄
+      investment_trades: 投資交易
+      categories_tags_and_rules: "分類、標籤和規則"
+      note: "注意："
+      note_body: "此匯出包含您的所有資料，但只有部分資料可以透過 CSV 匯入功能重新匯入。我們支援匯入帳戶、交易（包含分類和標籤）以及投資交易。其他帳戶資料無法匯入，僅供您記錄參考。"
+      cancel: 取消
     table:
       title: 匯出
       header:

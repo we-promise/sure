@@ -16,3 +16,5 @@ zh-CN:
       email_change_failed: 邮箱地址更改失败。
       email_change_initiated: 请查收新邮箱地址的确认邮件以完成更改。
       success: 个人资料已更新成功。
+    user_menu:
+      version: "版本："

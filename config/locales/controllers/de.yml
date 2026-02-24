@@ -1,0 +1,58 @@
+---
+de:
+  controllers:
+    holdings:
+      cannot_delete: "Sie können diese Position nicht löschen"
+    settings:
+      api_keys:
+        created: "Ihr API-Schlüssel wurde erfolgreich erstellt"
+        not_found: "API-Schlüssel nicht gefunden"
+        cannot_revoke: "Dieser API-Schlüssel kann nicht widerrufen werden"
+        revoked: "API-Schlüssel wurde erfolgreich widerrufen"
+        revoke_failed: "API-Schlüssel konnte nicht widerrufen werden"
+      profiles:
+        member_removed: "Mitglied erfolgreich entfernt."
+        member_remove_failed: "Mitglied konnte nicht entfernt werden."
+      providers:
+        updated: "Anbietereinstellungen erfolgreich aktualisiert"
+        no_changes: "Es wurden keine Änderungen vorgenommen"
+        not_authorized: "Nicht autorisiert"
+    transactions:
+      created: "Transaktion erstellt"
+    rules:
+      deleted: "Regel gelöscht"
+      all_deleted: "Alle Regeln gelöscht"
+    subscriptions:
+      already_contributing: "Sie tragen bereits bei. Vielen Dank!"
+      welcome: "Willkommen bei Sure!"
+      trial_completed: "Sie haben bereits eine Testphase gestartet oder abgeschlossen. Bitte führen Sie ein Upgrade durch, um fortzufahren."
+      welcome_contribution: "Willkommen bei Sure! Ihr Beitrag wird geschätzt."
+      contribution_failed: "Bei der Verarbeitung Ihres Beitrags ist ein Fehler aufgetreten. Bitte versuchen Sie es erneut."
+    plaid_items:
+      linked: "Konto erfolgreich mit Plaid verknüpft"
+      no_available_accounts: "Keine verfügbaren Plaid-Konten zum Verknüpfen. Bitte verbinden Sie zuerst ein neues Plaid-Konto."
+      invalid_account: "Ungültiges Plaid-Konto ausgewählt"
+      already_linked: "Dieses Plaid-Konto ist bereits verknüpft"
+    imports:
+      publish_started: "Ihr Import wurde im Hintergrund gestartet."
+      reverting: "Import wird im Hintergrund rückgängig gemacht."
+      template_applied: "Vorlage angewendet."
+      no_template: "Keine Vorlage gefunden, bitte konfigurieren Sie Ihren Import manuell."
+      deleted: "Ihr Import wurde gelöscht."
+    import:
+      uploads:
+        csv_uploaded: "CSV erfolgreich hochgeladen."
+      cleans:
+        configure_first: "Bitte konfigurieren Sie Ihren Import, bevor Sie fortfahren."
+      confirms:
+        invalid_data: "Sie haben ungültige Daten, bitte bearbeiten Sie diese, bis alle Fehler behoben sind"
+    chats:
+      deleted: "Chat wurde erfolgreich gelöscht"
+    oidc_accounts:
+      no_pending_auth: "Keine ausstehende OIDC-Authentifizierung gefunden"
+      creation_disabled: "Die SSO-Kontoerstellung ist deaktiviert. Bitte kontaktieren Sie einen Administrator."
+    concerns:
+      self_hostable:
+        redis_configured: "Redis ist jetzt korrekt konfiguriert! Sie können nun Ihre Sure-Anwendung einrichten."
+    snaptrade_items:
+      use_setup_flow: "Verwenden Sie stattdessen den Kontoeinrichtungsablauf"

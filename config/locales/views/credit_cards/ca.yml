@@ -20,6 +20,7 @@ ca:
       annual_fee: Quota anual
       apr: TAE
       available_credit: Crèdit disponible
+      edit_account_details: Edita els detalls del compte
       expiration_date: Data de caducitat
       minimum_payment: Pagament mínim
       unknown: Desconegut

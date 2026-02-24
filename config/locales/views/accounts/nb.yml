@@ -2,6 +2,7 @@
 nb:
   accounts:
     account:
+      complete_setup: Fullfør oppsett
       troubleshoot: Feilsøk
     chart:
       data_not_available: Data ikke tilgjengelig for den valgte perioden
@@ -32,6 +33,12 @@ nb:
         manual_entry: Angi kontobalanse
         title: Hvordan vil du legge den til?
       title: Hva vil du legge til?
+      container:
+        previous: Forrige
+        next: Neste
+        select: Velg
+        navigate: Naviger
+        close: Lukk
     show:
       activity:
         amount: Beløp
@@ -47,8 +54,11 @@ nb:
       chart:
         balance: Balanse
         owed: Beløp skyldig
+      header:
+        complete_setup: Fullfør oppsett
       menu:
         confirm_accept: Slett "%{name}"
+        delete_account: Slett konto
         confirm_body_html: "<p>Ved å slette denne kontoen, vil du slette dens verdihistorikk, som påvirker ulike aspekter av din samlede konto. Denne handlingen vil ha en direkte innvirkning på dine nettoverdi-beregninger og kontoens grafer.</p><br /> <p>Etter sletting er det ingen måte å gjenopprette kontoinformasjonen på, fordi du må legge den til som en ny konto.</p>"
         confirm_title: Slette konto?
         edit: Rediger

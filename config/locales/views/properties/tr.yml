@@ -3,6 +3,7 @@ tr:
   properties:
     edit:
       edit: "%{account} düzenle"
+      title: Mülkü manuel olarak girin
     form:
       address_line1: Sokak adresi
       address_line1_placeholder: 123 Ana Cadde
@@ -18,11 +19,13 @@ tr:
       postal_code_placeholder: '94105'
       region: Eyalet/İl
       region_placeholder: CA
+      square_feet: Fit kare
+      square_meters: Metrekare
       subtype_prompt: Mülk türü seçin
       year_built: İnşa yılı
       year_built_placeholder: '2000'
     new:
-      title: Mülk bilgilerini girin
+      title: Mülkü manuel olarak girin
     overview:
       living_area: Yaşam Alanı
       market_value: Piyasa Değeri
@@ -30,3 +33,36 @@ tr:
       trend: Eğilim
       unknown: Bilinmiyor
       year_built: İnşa Yılı
+    address:
+      title: Mülkü manuel olarak girin
+      address_line1: Adres Satırı 1
+      address_line1_placeholder: "123 Ana Cadde"
+      city: Şehir
+      city_placeholder: İstanbul
+      country: Ülke
+      country_placeholder: TR
+      postal_code: Posta Kodu
+      postal_code_placeholder: "34000"
+      state_region: İl/Bölge
+      state_region_placeholder: İstanbul
+    balances:
+      title: Mülkü manuel olarak girin
+      estimated_market_value: Tahmini piyasa değeri
+      estimated_market_value_tooltip: "Mülkünüzn tahmini piyasa değeri. Bu rakam genellikle Zillow veya Redfin gibi sitelerde bulunabilir ve hiçbir zaman kesin bir rakam değildir."
+    form_tabs:
+      address: Adres
+      overview: Genel Bakış
+      value: Değer
+    overview_fields:
+      area_optional: "Alan (isteğe bağlı)"
+      area_unit: Alan Birimi
+      name: Ad
+      name_placeholder: Yazlık
+      property_type: Mülk türü
+      select_type: Tür seçin
+      square_feet: Fit kare
+      square_meters: Metrekare
+      year_built_optional: "Yapım Yılı (isteğe bağlı)"
+    tabs:
+      overview:
+        edit_account_details: Hesap detaylarını düzenle

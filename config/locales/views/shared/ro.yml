@@ -5,6 +5,7 @@ ro:
       accept: Confirmă
       body_html: "<p>Nu vei putea anula această decizie</p>"
       cancel: Anulează
+      subtitle: Această acțiune nu poate fi anulată.
       title: Ești sigur?
     money_field:
       label: Sumă

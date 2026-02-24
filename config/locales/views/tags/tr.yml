@@ -11,6 +11,7 @@ tr:
     form:
       placeholder: Etiket adı
     index:
+      delete_all: Tümünü sil
       empty: Henüz hiç etiket yok
       new: Yeni etiket
       tags: Etiketler

@@ -70,6 +70,15 @@ ca:
       value: Valor
       weight: Pes
       withdrawals: Retirades del període
+    investment_flows:
+      title: Fluxos d'inversió
+      description: Seguiment dels diners que entren i surten dels teus comptes d'inversió a través de contribucions i retirades.
+      contributions: Contribucions
+      contributions_description: Diners afegits a les inversions
+      withdrawals: Retirades
+      withdrawals_description: Diners retirats de les inversions
+      net_flow: Flux net
+      net_flow_description: Canvi net total
     net_worth:
       assets_vs_liabilities: Actius vs. Passius
       current_net_worth: Patrimoni net actual

@@ -1,0 +1,45 @@
+---
+zh-TW:
+  admin:
+    users:
+      index:
+        title: "使用者管理"
+        description: "管理您實例的使用者角色。超級管理員可以存取 SSO 提供者設定和使用者管理。"
+        section_title: "使用者"
+        you: "（你）"
+        trial_ends_at: "試用截止"
+        not_available: "n/a"
+        no_users: "未找到使用者。"
+        filters:
+          role: "角色"
+          role_all: "所有角色"
+          trial_status: "試用狀態"
+          trial_all: "全部"
+          trial_expiring_soon: "7 天內到期"
+          trial_trialing: "試用中"
+          submit: "篩選"
+        summary:
+          trials_expiring_7_days: "未來 7 天內到期的試用"
+        table:
+          user: "使用者"
+          trial_ends_at: "試用截止"
+          family_accounts: "家庭帳戶"
+          family_transactions: "家庭交易"
+          last_login: "上次登入"
+          session_count: "工作階段次數"
+          never: "從未"
+          role: "角色"
+        role_descriptions_title: "角色說明"
+        roles:
+          guest: "訪客"
+          member: "成員"
+          admin: "管理員"
+          super_admin: "超級管理員"
+        role_descriptions:
+          guest: "以助手為核心的體驗，為引導流程特意限制了權限。"
+          member: "基本使用者存取權限。可以管理自己的帳戶、交易和設定。"
+          admin: "家庭管理員。可以存取 API 金鑰、匯入和 AI 提示詞等進階設定。"
+          super_admin: "實例管理員。可以管理 SSO 提供者、使用者角色，並可模擬使用者身分以提供支援。"
+      update:
+        success: "使用者角色更新成功。"
+        failure: "使用者角色更新失敗。"

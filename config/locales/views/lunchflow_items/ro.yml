@@ -61,3 +61,24 @@ ro:
       success: Sincronizarea a început
     update:
       success: Conexiunea Lunch Flow a fost actualizată
+    setup_accounts:
+      page_title: "Configurare conturi Lunch Flow"
+    api_error:
+      title: "Eroare de conexiune Lunch Flow"
+      unable_to_connect: "Nu se poate conecta la Lunch Flow"
+      common_issues: "Probleme frecvente:"
+      issue_invalid_key_html: '<strong>Cheie API invalidă:</strong> Verifică cheia API în Setări furnizor'
+      issue_expired_html: '<strong>Credențiale expirate:</strong> Generează o cheie API nouă din Lunch Flow'
+      issue_network_html: '<strong>Problemă de rețea:</strong> Verifică conexiunea la internet'
+      issue_service_down_html: '<strong>Serviciu indisponibil:</strong> API-ul Lunch Flow poate fi temporar indisponibil'
+      check_settings: "Verifică setările furnizorului"
+    setup_required:
+      title: "Configurare Lunch Flow necesară"
+      api_key_not_configured: "Cheie API neconfigurată"
+      description: "Înainte de a putea conecta conturile Lunch Flow, trebuie să configurezi cheia API Lunch Flow."
+      setup_steps: "Pași de configurare:"
+      step_1_html: 'Mergi la <strong>Setări → Furnizori</strong>'
+      step_2_html: 'Găsește secțiunea <strong>Lunch Flow</strong>'
+      step_3: "Introdu cheia ta API Lunch Flow"
+      step_4: "Revino aici pentru a conecta conturile"
+      go_to_settings: "Mergi la Setări furnizor"

@@ -1,0 +1,58 @@
+---
+en:
+  controllers:
+    holdings:
+      cannot_delete: "You cannot delete this holding"
+    settings:
+      api_keys:
+        created: "Your API key has been created successfully"
+        not_found: "API key not found"
+        cannot_revoke: "This API key cannot be revoked"
+        revoked: "API key has been revoked successfully"
+        revoke_failed: "Failed to revoke API key"
+      profiles:
+        member_removed: "Member removed successfully."
+        member_remove_failed: "Failed to remove member."
+      providers:
+        updated: "Provider settings updated successfully"
+        no_changes: "No changes were made"
+        not_authorized: "Not authorized"
+    transactions:
+      created: "Transaction created"
+    rules:
+      deleted: "Rule deleted"
+      all_deleted: "All rules deleted"
+    subscriptions:
+      already_contributing: "You are already contributing. Thank you!"
+      welcome: "Welcome to Sure!"
+      trial_completed: "You have already started or completed a trial. Please upgrade to continue."
+      welcome_contribution: "Welcome to Sure!  Your contribution is appreciated."
+      contribution_failed: "Something went wrong processing your contribution. Please try again."
+    plaid_items:
+      linked: "Account successfully linked to Plaid"
+      no_available_accounts: "No available Plaid accounts to link. Please connect a new Plaid account first."
+      invalid_account: "Invalid Plaid account selected"
+      already_linked: "This Plaid account is already linked"
+    imports:
+      publish_started: "Your import has started in the background."
+      reverting: "Import is reverting in the background."
+      template_applied: "Template applied."
+      no_template: "No template found, please manually configure your import."
+      deleted: "Your import has been deleted."
+    import:
+      uploads:
+        csv_uploaded: "CSV uploaded successfully."
+      cleans:
+        configure_first: "Please configure your import before proceeding."
+      confirms:
+        invalid_data: "You have invalid data, please edit until all errors are resolved"
+    chats:
+      deleted: "Chat was successfully deleted"
+    oidc_accounts:
+      no_pending_auth: "No pending OIDC authentication found"
+      creation_disabled: "SSO account creation is disabled. Please contact an administrator."
+    concerns:
+      self_hostable:
+        redis_configured: "Redis is now configured properly! You can now setup your Sure application."
+    snaptrade_items:
+      use_setup_flow: "Use the account setup flow instead"

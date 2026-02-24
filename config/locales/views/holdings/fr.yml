@@ -3,6 +3,11 @@ fr:
   holdings:
     cash:
       brokerage_cash: Liquidités de courtage
+    new:
+      coming_soon: "Bientôt disponible..."
+    cost_basis_cell:
+      set: Définir
+      unknown: "--"
     destroy:
       success: Position supprimée
     holding:

@@ -1,0 +1,45 @@
+---
+pt-BR:
+  admin:
+    users:
+      index:
+        title: "Gerenciamento de Usuários"
+        description: "Gerencie os papéis de usuário da sua instância. Super administradores podem acessar as configurações de provedores SSO e o gerenciamento de usuários."
+        section_title: "Usuários"
+        you: "(Você)"
+        trial_ends_at: "Fim do teste"
+        not_available: "n/a"
+        no_users: "Nenhum usuário encontrado."
+        filters:
+          role: "Papel"
+          role_all: "Todos os papéis"
+          trial_status: "Status do teste"
+          trial_all: "Todos"
+          trial_expiring_soon: "Expirando em 7 dias"
+          trial_trialing: "Em teste"
+          submit: "Filtrar"
+        summary:
+          trials_expiring_7_days: "Testes expirando nos próximos 7 dias"
+        table:
+          user: "Usuário"
+          trial_ends_at: "Fim do teste"
+          family_accounts: "Contas familiares"
+          family_transactions: "Transações familiares"
+          last_login: "Último login"
+          session_count: "Número de sessões"
+          never: "Nunca"
+          role: "Papel"
+        role_descriptions_title: "Descrição dos Papéis"
+        roles:
+          guest: "Convidado"
+          member: "Membro"
+          admin: "Administrador"
+          super_admin: "Super Administrador"
+        role_descriptions:
+          guest: "Experiência orientada por assistente com permissões intencionalmente restritas para fluxos de introdução."
+          member: "Acesso básico de usuário. Pode gerenciar suas próprias contas, transações e configurações."
+          admin: "Administrador familiar. Pode acessar configurações avançadas como chaves de API, importações e prompts de AI."
+          super_admin: "Administrador da instância. Pode gerenciar provedores SSO, papéis de usuário e personificar usuários para suporte."
+      update:
+        success: "Papel do usuário atualizado com sucesso."
+        failure: "Falha ao atualizar o papel do usuário."

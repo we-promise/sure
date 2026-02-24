@@ -3,6 +3,9 @@ ro:
   subscriptions:
     self_hosted_alert: "%{product_name} nu este disponibil în modul self-hosted."
     upgrade:
+      sr_only_title: Actualizează
+      account_settings: Setări cont
+      sign_out: Deconectează-te
       contribute_and_support_sure: "Contribuie și sprijină Sure"
       cta: "Continuați să sprijiniți dezvoltarea acestei baze de cod!"
       header:

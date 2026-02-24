@@ -26,6 +26,11 @@ de:
           body: Bist du sicher, dass du den Daten-Cache leeren möchtest? Dadurch werden alle Wechselkurse, Wertpapierpreise, Kontostände und andere Daten entfernt. Diese Aktion kann nicht rückgängig gemacht werden.
       brand_fetch_settings:
         description: Gib die von Brand Fetch bereitgestellte Client-ID ein.
+        env_configured_message: Du hast deine Brand Fetch Client-ID erfolgreich über die Umgebungsvariable BRAND_FETCH_CLIENT_ID konfiguriert.
+        show_details: "(Details anzeigen)"
+        step1_html: 'Besuche <a href="https://brandfetch.com/developers" target="_blank" rel="noopener noreferrer" class="underline">brandfetch.com</a> und erstelle ein kostenloses Brand Fetch Entwicklerkonto.'
+        step2_html: 'Gehe zur <a href="https://developers.brandfetch.com/dashboard/logo-api" target="_blank" rel="noopener noreferrer" class="underline">Logo API</a>-Seite.'
+        step3: Tippe auf das Augensymbol im Abschnitt "Your Client ID", um deine Client-ID anzuzeigen, und füge sie unten ein.
         label: Client-ID
         placeholder: Gib hier deine Client-ID ein
         title: Brand Fetch Einstellungen
@@ -50,6 +55,10 @@ de:
         api_calls_used: "%{used} / %{limit} API-Aufrufe heute genutzt (%{percentage})"
         description: Gib den von Twelve Data bereitgestellten API-Schlüssel ein.
         env_configured_message: Erfolgreich über die Umgebungsvariable TWELVE_DATA_API_KEY konfiguriert.
+        show_details: "(Details anzeigen)"
+        step1_html: 'Besuche <a href="https://twelvedata.com/register" target="_blank" rel="noopener noreferrer" class="underline">twelvedata.com</a> und erstelle ein kostenloses Twelve Data Entwicklerkonto.'
+        step2_html: 'Gehe zur <a href="https://twelvedata.com/account/api-keys" target="_blank" rel="noopener noreferrer" class="underline">API Keys</a>-Seite.'
+        step3: Zeige deinen geheimen Schlüssel an und füge ihn unten ein.
         label: API-Schlüssel
         placeholder: Gib hier deinen API-Schlüssel ein
         plan: "%{plan}-Tarif"

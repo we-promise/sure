@@ -36,6 +36,11 @@ pt-BR:
           yahoo_finance: Yahoo Finance
       brand_fetch_settings:
         description: Insira o Client ID fornecido pelo Brand Fetch
+        env_configured_message: Você configurou com sucesso seu Client ID do Brand Fetch através da variável de ambiente BRAND_FETCH_CLIENT_ID.
+        show_details: "(mostrar detalhes)"
+        step1_html: 'Visite <a href="https://brandfetch.com/developers" target="_blank" rel="noopener noreferrer" class="underline">brandfetch.com</a> e crie uma conta gratuita de desenvolvedor Brand Fetch.'
+        step2_html: 'Acesse a página da <a href="https://developers.brandfetch.com/dashboard/logo-api" target="_blank" rel="noopener noreferrer" class="underline">Logo API</a>.'
+        step3: Toque no ícone do olho na seção "Your Client ID" para revelar seu Client ID e cole-o abaixo.
         label: Client ID
         placeholder: Insira seu Client ID aqui
         title: Configurações do Brand Fetch
@@ -60,6 +65,10 @@ pt-BR:
         api_calls_used: "%{used} / %{limit} chamadas diárias da API usadas (%{percentage})"
         description: Insira a chave de API fornecida pela Twelve Data
         env_configured_message: Configurado com sucesso através da variável de ambiente TWELVE_DATA_API_KEY.
+        show_details: "(mostrar detalhes)"
+        step1_html: 'Visite <a href="https://twelvedata.com/register" target="_blank" rel="noopener noreferrer" class="underline">twelvedata.com</a> e crie uma conta gratuita de desenvolvedor Twelve Data.'
+        step2_html: 'Acesse a página de <a href="https://twelvedata.com/account/api-keys" target="_blank" rel="noopener noreferrer" class="underline">API Keys</a>.'
+        step3: Revele sua chave secreta e cole-a abaixo.
         label: Chave de API
         placeholder: Insira sua chave de API aqui
         plan: "plano %{plan}"

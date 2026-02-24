@@ -96,12 +96,12 @@ class RulesController < ApplicationController
 
   def destroy
     @rule.destroy
-    redirect_to rules_path, notice: "Rule deleted"
+    redirect_to rules_path, notice: t("controllers.rules.deleted")
   end
 
   def destroy_all
     Current.family.rules.destroy_all
-    redirect_to rules_path, notice: "All rules deleted"
+    redirect_to rules_path, notice: t("controllers.rules.all_deleted")
   end
 
   def confirm_all

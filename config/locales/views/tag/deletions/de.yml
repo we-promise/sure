@@ -9,5 +9,6 @@ de:
         delete_and_recategorize: "%{tag_name} löschen und neuen Tag zuweisen"
         delete_tag: Tag löschen?
         explanation: "%{tag_name} wird aus Transaktionen und anderen getaggten Elementen entfernt. Statt sie ungetaggt zu lassen, kannst du unten einen neuen Tag zuweisen."
+        delete_and_reassign: Löschen und neu zuweisen
         replacement_tag_prompt: Tag auswählen
         tag: Tag

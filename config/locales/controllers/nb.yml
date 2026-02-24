@@ -1,0 +1,58 @@
+---
+nb:
+  controllers:
+    holdings:
+      cannot_delete: "Du kan ikke slette denne beholdningen"
+    settings:
+      api_keys:
+        created: "API-nøkkelen din ble opprettet"
+        not_found: "API-nøkkel ikke funnet"
+        cannot_revoke: "Denne API-nøkkelen kan ikke tilbakekalles"
+        revoked: "API-nøkkelen ble tilbakekalt"
+        revoke_failed: "Kunne ikke tilbakekalle API-nøkkelen"
+      profiles:
+        member_removed: "Medlemmet ble fjernet."
+        member_remove_failed: "Kunne ikke fjerne medlemmet."
+      providers:
+        updated: "Leverandørinnstillinger oppdatert"
+        no_changes: "Ingen endringer ble gjort"
+        not_authorized: "Ikke autorisert"
+    transactions:
+      created: "Transaksjon opprettet"
+    rules:
+      deleted: "Regel slettet"
+      all_deleted: "Alle regler slettet"
+    subscriptions:
+      already_contributing: "Du bidrar allerede. Takk!"
+      welcome: "Velkommen til Sure!"
+      trial_completed: "Du har allerede startet eller fullført en prøveperiode. Vennligst oppgrader for å fortsette."
+      welcome_contribution: "Velkommen til Sure! Ditt bidrag er verdsatt."
+      contribution_failed: "Noe gikk galt under behandling av bidraget ditt. Vennligst prøv igjen."
+    plaid_items:
+      linked: "Konto ble koblet til Plaid"
+      no_available_accounts: "Ingen tilgjengelige Plaid-kontoer å koble til. Vennligst koble til en ny Plaid-konto først."
+      invalid_account: "Ugyldig Plaid-konto valgt"
+      already_linked: "Denne Plaid-kontoen er allerede koblet til"
+    imports:
+      publish_started: "Importen din har startet i bakgrunnen."
+      reverting: "Importen reverseres i bakgrunnen."
+      template_applied: "Mal anvendt."
+      no_template: "Ingen mal funnet, vennligst konfigurer importen manuelt."
+      deleted: "Importen din har blitt slettet."
+    import:
+      uploads:
+        csv_uploaded: "CSV lastet opp."
+      cleans:
+        configure_first: "Vennligst konfigurer importen din før du fortsetter."
+      confirms:
+        invalid_data: "Du har ugyldige data, vennligst rediger til alle feil er løst"
+    chats:
+      deleted: "Chatten ble slettet"
+    oidc_accounts:
+      no_pending_auth: "Ingen ventende OIDC-autentisering funnet"
+      creation_disabled: "SSO-kontooppretting er deaktivert. Vennligst kontakt en administrator."
+    concerns:
+      self_hostable:
+        redis_configured: "Redis er nå konfigurert riktig! Du kan nå sette opp Sure-applikasjonen din."
+    snaptrade_items:
+      use_setup_flow: "Bruk kontooppsetflyten i stedet"

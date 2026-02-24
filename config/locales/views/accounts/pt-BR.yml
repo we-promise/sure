@@ -2,6 +2,7 @@
 pt-BR:
   accounts:
     account:
+      complete_setup: Concluir configuração
       link_lunchflow: Vincular ao Lunch Flow
       link_provider: Vincular ao provedor
       unlink_provider: Desvincular do provedor
@@ -39,6 +40,12 @@ pt-BR:
         manual_entry: Inserir saldo da conta
         title: Como você gostaria de adicionar?
       title: O que você gostaria de adicionar?
+      container:
+        previous: Anterior
+        next: Próximo
+        select: Selecionar
+        navigate: Navegar
+        close: Fechar
     show:
       activity:
         amount: Valor
@@ -56,8 +63,11 @@ pt-BR:
       chart:
         balance: Saldo
         owed: Valor devido
+      header:
+        complete_setup: Concluir configuração
       menu:
         confirm_accept: Excluir "%{name}"
+        delete_account: Excluir conta
         confirm_body_html: "<p>Ao excluir esta conta, você apagará seu histórico de valores,
           afetando vários aspectos de sua conta geral. Esta ação
           terá um impacto direto nos cálculos de patrimônio líquido e nos

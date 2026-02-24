@@ -2,6 +2,7 @@
 nl:
   accounts:
     account:
+      complete_setup: Installatie voltooien
       link_lunchflow: Koppel met Lunch Flow
       link_provider: Koppel met provider
       unlink_provider: Verbreek verbinding met provider
@@ -46,6 +47,12 @@ nl:
         manual_entry: Voer accountsaldo in
         title: Hoe wilt u het toevoegen?
       title: Wat wilt u toevoegen?
+      container:
+        previous: Vorige
+        next: Volgende
+        select: Selecteren
+        navigate: Navigeren
+        close: Sluiten
     show:
       activity:
         amount: Bedrag
@@ -68,8 +75,11 @@ nl:
       chart:
         balance: Saldo
         owed: Bedrag verschuldigd
+      header:
+        complete_setup: Installatie voltooien
       menu:
         confirm_accept: Verwijder "%{name}"
+        delete_account: Account verwijderen
         confirm_body_html: "<p>Door dit account te verwijderen, wist u de waarde geschiedenis, wat verschillende aspecten van uw totale account beïnvloedt. Deze actie heeft een directe impact op uw netto waarde berekeningen en de account grafieken.</p><br /> <p>Na verwijdering is er geen manier om de account informatie te herstellen omdat u het als een nieuw account moet toevoegen.</p>"
         confirm_title: Account verwijderen?
         edit: Bewerken

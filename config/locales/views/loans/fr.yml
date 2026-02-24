@@ -13,6 +13,7 @@ fr:
     new:
       title: Saisir les détails du prêt
     overview:
+      edit_loan_details: Modifier les détails du prêt
       interest_rate: Taux d'intérêt
       monthly_payment: Paiement mensuel
       not_applicable: N/A

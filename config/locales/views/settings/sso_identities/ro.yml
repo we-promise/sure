@@ -1,0 +1,7 @@
+---
+ro:
+  settings:
+    sso_identities:
+      destroy:
+        cannot_unlink_last: Nu se poate disocia ultima identitate
+        success: Succes

@@ -6,6 +6,8 @@ ca:
       account_prompt: Cerca compte
       amount: Import
       holding: Símbol del valor
+      manual_ticker_label: Símbol del valor
+      manual_ticker_placeholder: AAPL
       price: Preu per acció
       qty: Quantitat
       submit: Afegeix transacció

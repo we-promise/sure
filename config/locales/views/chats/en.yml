@@ -3,3 +3,41 @@ en:
   chats:
     demo_banner_title: "Demo Mode Active"
     demo_banner_message: "You are using an open-weights Qwen3 LLM with credits provided by Cloudflare Workers AI.  Result may vary since the codebase was mostly tested on `gpt-4.1` but your tokens don't go anywhere else to be trained with! 🤖"
+    index:
+      chats: Chats
+      new_chat: New chat
+    ai_consent:
+      enable_ai_chats: Enable AI Chats
+      ai_available_description: AI chat can answer financial questions and provide insights based on your data. To use this feature you'll need to explicitly enable it.
+      ai_unavailable_description_html: "To use the AI assistant, you need to set the <code class=\"bg-surface-inset px-1 py-0.5 rounded font-mono text-xs\">OPENAI_ACCESS_TOKEN</code> environment variable or configure it in the Self-Hosting settings of your instance."
+      enable_btn: Enable AI Chats
+      disable_note: Disable anytime. All data sent to our LLM providers is anonymized.
+    ai_greeting:
+      greeting: "Hey %{name}! I'm an AI/large-language-model that can help with your finances. I have access to the web and your account data."
+      commands_hint_html: "You can use <span class=\"bg-container border border-secondary px-1.5 py-0.5 rounded font-mono text-xs\">/</span> to access commands"
+      questions_intro: "Here's a few questions you can ask:"
+      evaluate_portfolio: Evaluate investment portfolio
+      spending_insights: Show spending insights
+      unusual_patterns: Find unusual patterns
+    error:
+      failed_response: Failed to generate response. Please try again.
+    chat:
+      edit_chat_title: Edit chat title
+      delete_chat: Delete chat
+    chat_nav:
+      all_chats: All chats
+      start_new_chat: Start new chat
+      edit_chat_title: Edit chat title
+      delete_chat: Delete chat
+  messages:
+    chat_form:
+      ask_anything: "Ask anything ..."
+      coming_soon: Coming soon
+      ai_disclaimer: AI responses are informational only and are not financial advice.
+  assistant_messages:
+    assistant_message:
+      assistant_reasoning: Assistant reasoning
+    tool_calls:
+      tool_calls: Tool Calls
+      function: "Function:"
+      arguments: "Arguments:"

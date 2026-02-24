@@ -4,6 +4,7 @@ fr:
     edit:
       title: Réinitialiser votre mot de passe
     new:
+      email_placeholder: "you@example.com"
       requested: Veuillez vérifier votre boîte mail pour un lien de réinitialisation de votre mot de passe.
       submit: Réinitialiser votre mot de passe
       title: Réinitialiser votre mot de passe

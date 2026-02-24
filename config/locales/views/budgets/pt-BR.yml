@@ -1,0 +1,34 @@
+---
+pt-BR:
+  budgets:
+    name:
+      custom_range: "%{start} - %{end_date}"
+      month_year: "%{month}"
+    show:
+      categories: Categorias
+      edit: Editar
+      tabs:
+        actual: Real
+        budgeted: Orçado
+    edit:
+      title: Configure seu orçamento
+      description: Insira seus ganhos mensais e gastos planejados abaixo para configurar seu orçamento.
+      budgeted_spending: Gastos orçados
+      expected_income: Renda esperada
+      autosuggest: Sugerir automaticamente renda e orçamento de gastos
+      autosuggest_description: Isso será baseado no histórico de transações. A IA pode cometer erros, verifique antes de continuar.
+      continue: Continuar
+    budgeted_summary:
+      expected_income: Renda esperada
+      earned: "%{amount} ganho"
+      over: "%{amount} acima"
+      left: "%{amount} restante"
+      budgeted: Orçado
+      spent: "%{amount} gasto"
+    actuals_summary:
+      income: Receitas
+      expenses: Despesas
+  budget_categories:
+    index:
+      title: Editar orçamentos por categoria
+      description: Ajuste os orçamentos de categoria para definir limites de gastos. Fundos não alocados serão automaticamente atribuídos como sem categoria.

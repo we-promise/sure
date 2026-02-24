@@ -7,5 +7,6 @@ ro:
         edit: Editează categoria
       show:
         clear: Golește categoria
+        match_transfer: "Potrivire transfer/plată"
         no_categories: Nu s-au găsit categorii
         search_placeholder: Caută

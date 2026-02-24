@@ -2,6 +2,9 @@ nl:
   subscriptions:
     self_hosted_alert: "%{product_name} is niet beschikbaar in zelfgehoste modus."
     upgrade:
+      sr_only_title: Upgraden
+      account_settings: Accountinstellingen
+      sign_out: Uitloggen
       contribute_and_support_sure: "Bijdragen en Sure ondersteunen"
       cta: "Blijf de ontwikkeling van deze codebase ondersteunen!"
       header:

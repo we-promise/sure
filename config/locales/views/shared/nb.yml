@@ -5,6 +5,7 @@ nb:
       accept: Bekreft
       body_html: "<p>Du vil ikke kunne angre denne beslutningen</p>"
       cancel: Avbryt
+      subtitle: Denne handlingen kan ikke angres.
       title: Er du sikker?
     money_field:
       label: Beløp

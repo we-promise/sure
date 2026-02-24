@@ -1,6 +1,8 @@
 ---
 ca:
   invite_codes:
+    invite_code:
+      confirm_delete: "Estàs segur?"
     index:
       invite_code_description: Genera un nou codi per veure'l aquí. Els codis generats
         que s'hagin utilitzat ja no es mostraran.

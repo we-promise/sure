@@ -1,6 +1,30 @@
 nl:
   budgets:
     show:
+      categories: "Categorieën"
+      edit: "Bewerken"
       tabs:
         actual: "Actueel"
         budgeted: "Begroot"
+    edit:
+      title: Stel uw budget in
+      description: Voer hieronder uw maandelijkse inkomsten en geplande uitgaven in om uw budget in te stellen.
+      budgeted_spending: Begrote uitgaven
+      expected_income: Verwacht inkomen
+      autosuggest: Automatisch inkomen & uitgavenbudget voorstellen
+      autosuggest_description: Dit wordt gebaseerd op de transactiegeschiedenis. AI kan fouten maken, controleer voordat u verdergaat.
+      continue: Doorgaan
+    budgeted_summary:
+      expected_income: Verwacht inkomen
+      earned: "%{amount} verdiend"
+      over: "%{amount} overschreden"
+      left: "%{amount} over"
+      budgeted: Begroot
+      spent: "%{amount} uitgegeven"
+    actuals_summary:
+      income: Inkomsten
+      expenses: Uitgaven
+  budget_categories:
+    index:
+      title: Bewerk uw categoriebudgetten
+      description: Pas categoriebudgetten aan om uitgavenlimieten in te stellen. Niet-toegewezen middelen worden automatisch als niet-gecategoriseerd toegewezen.

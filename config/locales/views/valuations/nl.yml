@@ -1,6 +1,14 @@
 ---
 nl:
   valuations:
+    confirm_create:
+      title: Nieuwe balans bevestigen
+    confirm_update:
+      title: Balans bijwerken
+    confirmation_contents:
+      brokerage_cash: Brokeragecontant
+      holdings_value: Waarde van beleggingen
+      total_account_value: Totale accountwaarde
     form:
       amount: Bedrag
       submit: Voeg balansupdate toe
@@ -16,6 +24,7 @@ nl:
     new:
       title: Nieuwe balans
     show:
+      account_value_on_date: Accountwaarde op datum
       amount: Bedrag
       date_label: Datum
       delete: Verwijder
@@ -28,3 +37,4 @@ nl:
       note_placeholder: Voeg eventuele aanvullende details toe over deze invoer
       overview: Overzicht
       settings: Instellingen
+      update_value: Waarde bijwerken

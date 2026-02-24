@@ -74,6 +74,7 @@ fr:
       missing_parameters: Paramètres requis manquants
       success: "%{account_name} lié avec succès à Lunch Flow"
     setup_accounts:
+      page_title: "Configurer les comptes Lunch Flow"
       account_type_label: "Type de compte :"
       all_accounts_linked: "Tous vos comptes Lunch Flow ont déjà été configurés."
       api_error: "Erreur API : %{message}"
@@ -141,3 +142,22 @@ fr:
       success: Synchronisation démarrée
     update:
       success: Connexion Lunch Flow mise à jour
+    api_error:
+      title: "Erreur de connexion Lunch Flow"
+      unable_to_connect: "Impossible de se connecter à Lunch Flow"
+      common_issues: "Problèmes courants :"
+      issue_invalid_key_html: '<strong>Clé API invalide :</strong> Vérifiez votre clé API dans les paramètres du fournisseur'
+      issue_expired_html: '<strong>Identifiants expirés :</strong> Générez une nouvelle clé API depuis Lunch Flow'
+      issue_network_html: '<strong>Problème réseau :</strong> Vérifiez votre connexion Internet'
+      issue_service_down_html: '<strong>Service indisponible :</strong> L''API Lunch Flow est peut-être temporairement indisponible'
+      check_settings: "Vérifier les paramètres du fournisseur"
+    setup_required:
+      title: "Configuration de Lunch Flow requise"
+      api_key_not_configured: "Clé API non configurée"
+      description: "Avant de pouvoir lier des comptes Lunch Flow, vous devez configurer votre clé API Lunch Flow."
+      setup_steps: "Étapes de configuration :"
+      step_1_html: 'Allez dans <strong>Paramètres → Fournisseurs</strong>'
+      step_2_html: 'Trouvez la section <strong>Lunch Flow</strong>'
+      step_3: "Entrez votre clé API Lunch Flow"
+      step_4: "Revenez ici pour lier vos comptes"
+      go_to_settings: "Aller aux paramètres du fournisseur"

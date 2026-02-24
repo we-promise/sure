@@ -4,6 +4,7 @@ es:
     edit:
       title: Restablecer contraseña
     new:
+      email_placeholder: "you@example.com"
       requested: Por favor, revisa tu correo electrónico para obtener 
         un enlace para restablecer tu contraseña.
       submit: Restablecer contraseña

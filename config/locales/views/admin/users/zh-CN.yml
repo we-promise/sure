@@ -1,0 +1,45 @@
+---
+zh-CN:
+  admin:
+    users:
+      index:
+        title: "用户管理"
+        description: "管理实例的用户角色。超级管理员可以访问 SSO 提供商设置和用户管理。"
+        section_title: "用户"
+        you: "（你）"
+        trial_ends_at: "试用截止"
+        not_available: "n/a"
+        no_users: "未找到用户。"
+        filters:
+          role: "角色"
+          role_all: "所有角色"
+          trial_status: "试用状态"
+          trial_all: "全部"
+          trial_expiring_soon: "7 天内到期"
+          trial_trialing: "试用中"
+          submit: "筛选"
+        summary:
+          trials_expiring_7_days: "未来 7 天内到期的试用"
+        table:
+          user: "用户"
+          trial_ends_at: "试用截止"
+          family_accounts: "家庭账户"
+          family_transactions: "家庭交易"
+          last_login: "上次登录"
+          session_count: "会话次数"
+          never: "从未"
+          role: "角色"
+        role_descriptions_title: "角色说明"
+        roles:
+          guest: "访客"
+          member: "成员"
+          admin: "管理员"
+          super_admin: "超级管理员"
+        role_descriptions:
+          guest: "以助手为核心的体验，为引导流程特意限制了权限。"
+          member: "基本用户访问权限。可以管理自己的账户、交易和设置。"
+          admin: "家庭管理员。可以访问 API 密钥、导入和 AI 提示词等高级设置。"
+          super_admin: "实例管理员。可以管理 SSO 提供商、用户角色，并可模拟用户身份以提供支持。"
+      update:
+        success: "用户角色更新成功。"
+        failure: "用户角色更新失败。"

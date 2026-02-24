@@ -3,6 +3,68 @@ tr:
   rules:
     no_action: İşlem yok
     no_condition: Koşul yok
+    index:
+      page_title: Kurallar
+      delete_all_rules: Tüm kuralları sil
+      new_rule: Yeni kural
+      ai_warning: Yapay zeka destekli kural eylemleri ücretlidir. Gereksiz maliyetlerden kaçınmak için mümkün olduğunca dar filtre uygulayın.
+      rules_label: Kurallar
+      sort_by: "Sıralama:"
+      toggle_sort_direction: Sıralama yönünü değiştir
+      no_rules: Henüz kural yok
+      no_rules_description: Her hesap senkronizasyonunda işlemlerinize ve diğer verilerinize eylem uygulamak için kurallar oluşturun.
+    new:
+      back_to_rules: Kurallara geri dön
+      new_rule_title: "Yeni %{resource_type} kuralı"
+    edit:
+      back_to_rules: Kurallara geri dön
+      edit_rule_title: "%{resource_type} kuralını düzenle \"%{name}\""
+      edit_rule_title_unnamed: "%{resource_type} kuralını düzenle"
+    confirm:
+      confirm_changes_to: "\"%{name}\" değişikliklerini onayla"
+      confirm_changes: Değişiklikleri onayla
+      about_to_apply_html: "Bu kuralı, belirlenen kural kriterlerini karşılayan <span class=\"text-primary font-medium\">%{count} %{resource_type}</span> öğeye uygulamak üzeresiniz. Bu değişikliğe devam etmek istiyorsanız lütfen onaylayın."
+      ai_cost_title: Yapay Zeka Maliyet Tahmini
+      ai_cost_message: "Bu, %{count} işlemi kategorize etmek için yapay zeka kullanacaktır. Tahmini maliyet: <span class=\"font-semibold\">~$%{cost}</span>"
+      ai_cost_no_estimate: "Bu, %{count} işlemi kategorize etmek için yapay zeka kullanacaktır."
+      cost_unavailable_model: "Model \"%{model}\" için maliyet tahmini yapılamıyor."
+      cost_unavailable_no_provider: Maliyet tahmini yapılamıyor (LLM sağlayıcısı yapılandırılmamış).
+      cost_warning: Maliyetleriniz olabilir, en güncel fiyatlar için model sağlayıcısına danışın.
+      view_usage: Kullanım geçmişini görüntüle
+      confirm_changes_btn: Değişiklikleri onayla
+    form:
+      rule_name_optional: Kural adı (isteğe bağlı)
+      enter_name: Bu kural için bir ad girin
+      if_label: EĞER
+      then_label: İSE
+      for_label: İÇİN
+      add_condition: Koşul ekle
+      add_condition_group: Koşul grubu ekle
+      add_action: Eylem ekle
+      all_past_future: "Tüm geçmiş ve gelecek %{resource_type}lar"
+      starting_from: Başlangıç tarihi
+    rule:
+      if_label: EĞER
+      then_label: İSE
+      for_label: İÇİN
+      to_label: değerine
+      and_more_conditions:
+        one: "ve %{count} koşul daha"
+        other: "ve %{count} koşul daha"
+      and_more_actions:
+        one: "ve %{count} eylem daha"
+        other: "ve %{count} eylem daha"
+      all_past_future: "Tüm geçmiş ve gelecek %{resource_type}"
+      on_or_after: "%{date} tarihinde veya sonrasındaki %{resource_type}"
+      edit: Düzenle
+      reapply_rule: Kuralı yeniden uygula
+      delete: Sil
+    category_rule_cta:
+      updated_to: "%{name} olarak güncellendi"
+      auto_categorize_description: Bu gibi işlemleri otomatik olarak kategorize etmek için bir kural oluşturabilirsiniz
+      dont_show_again: Bir daha gösterme
+      dismiss: Kapat
+      create_rule: Kural oluştur
     recent_runs:
       title: Son Çalıştırmalar
       description: Başarı/başarısızlık durumu ve işlem sayıları dahil olmak üzere kurallarınızın yürütme geçmişini görüntüleyin.
@@ -23,3 +85,16 @@ tr:
         pending: Beklemede
         success: Başarılı
         failed: Başarısız
+  rule:
+    actions:
+      action:
+        to_label: değerine
+    conditions:
+      condition:
+        and_label: ve
+        enter_value: Bir değer girin
+      condition_group:
+        and_label: ve
+        match: eşleşir
+        of_the_following: aşağıdaki koşulların
+        add_condition: Koşul ekle

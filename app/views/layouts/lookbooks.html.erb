@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html data-theme="<%= params.dig(:lookbook, :display, :theme) %>">
   <head>
-    <title>Component Preview</title>
+    <title><%= t("layouts.lookbooks.title") %></title>
     <%= csrf_meta_tags %>
     <%= csp_meta_tag %>
     <%= stylesheet_link_tag "tailwind", "data-turbo-track": "reload" %>

@@ -39,15 +39,58 @@ tr:
       settings: Ayarlar
       tags_label: Etiketler
       uncategorized: "(kategorilendirilmemiş)"
+      additional_details: Ek detaylar
+      payee: Alacaklı
+      description: Açıklama
+      memo: Not
+      provider_extras: Sağlayıcı ek bilgileri
+      transfer_or_payment: Transfer veya borç ödemesi?
+      transfer_description: Transferler ve ödemeler, 2 hesap arasındaki para hareketini gösteren özel işlem türleridir.
+      open_matcher: Eşleştiriciyi aç
+      convert: Dönüştür
     header:
       edit_categories: Kategorileri düzenle
       edit_imports: İçe aktarımları düzenle
       edit_merchants: Satıcıları düzenle
       edit_tags: Etiketleri düzenle
+      edit_rules: Kuralları düzenle
+      new_rule: Yeni kural
       import: İçe aktar
     index:
+      title: İşlemler
+      new_transaction: Yeni işlem
       transaction: işlem
       transactions: işlemler
+    summary:
+      total_transactions: Toplam işlem
+      income: Gelir
+      expenses: Giderler
+    selection_bar:
+      edit: Düzenle
+      delete: Sil
+    bulk_updates:
+      title: İşlemleri düzenle
+      overview: Genel Bakış
+      transactions: İşlemler
+      select_category: Bir kategori seçin
+      select_merchant: Bir satıcı seçin
+      bulk_note_placeholder: Seçili işlemlere uygulanacak bir not girin
+      cancel: İptal
+      save: Kaydet
+    search:
+      filters:
+        account: Hesap
+        date: Tarih
+        type: Tür
+        status: Durum
+        amount: Tutar
+        category: Kategori
+        tag: Etiket
+        merchant: Satıcı
+        filter_accounts: Hesapları filtrele
+        filter_category: Kategoriyi filtrele
+        filter_tags: Etiketleri filtrele
+        filter_merchants: Satıcıları filtrele
     searches:
       filters:
         amount_filter:

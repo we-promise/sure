@@ -1,0 +1,45 @@
+---
+de:
+  admin:
+    users:
+      index:
+        title: "Benutzerverwaltung"
+        description: "Verwalte Benutzerrollen für deine Instanz. Super-Admins können auf SSO-Anbieter-Einstellungen und die Benutzerverwaltung zugreifen."
+        section_title: "Benutzer"
+        you: "(Du)"
+        trial_ends_at: "Testphase endet"
+        not_available: "n/a"
+        no_users: "Keine Benutzer gefunden."
+        filters:
+          role: "Rolle"
+          role_all: "Alle Rollen"
+          trial_status: "Teststatus"
+          trial_all: "Alle"
+          trial_expiring_soon: "Läuft in 7 Tagen ab"
+          trial_trialing: "In Testphase"
+          submit: "Filtern"
+        summary:
+          trials_expiring_7_days: "Testphasen, die in den nächsten 7 Tagen ablaufen"
+        table:
+          user: "Benutzer"
+          trial_ends_at: "Testphase endet"
+          family_accounts: "Familienkonten"
+          family_transactions: "Familientransaktionen"
+          last_login: "Letzter Login"
+          session_count: "Sitzungsanzahl"
+          never: "Nie"
+          role: "Rolle"
+        role_descriptions_title: "Rollenbeschreibungen"
+        roles:
+          guest: "Gast"
+          member: "Mitglied"
+          admin: "Admin"
+          super_admin: "Super-Admin"
+        role_descriptions:
+          guest: "Assistenten-basierte Erfahrung mit absichtlich eingeschränkten Berechtigungen für Einführungs-Workflows."
+          member: "Grundlegender Benutzerzugang. Kann eigene Konten, Transaktionen und Einstellungen verwalten."
+          admin: "Familienadministrator. Kann auf erweiterte Einstellungen wie API-Schlüssel, Importe und AI-Prompts zugreifen."
+          super_admin: "Instanzadministrator. Kann SSO-Anbieter, Benutzerrollen verwalten und sich als Benutzer ausgeben für Support."
+      update:
+        success: "Benutzerrolle erfolgreich aktualisiert."
+        failure: "Benutzerrolle konnte nicht aktualisiert werden."

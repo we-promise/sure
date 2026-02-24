@@ -7,7 +7,7 @@ class OidcAccountsController < ApplicationController
     @pending_auth = session[:pending_oidc_auth]
 
     if @pending_auth.nil?
-      redirect_to new_session_path, alert: "No pending OIDC authentication found"
+      redirect_to new_session_path, alert: t("controllers.oidc_accounts.no_pending_auth")
       return
     end
 
@@ -23,7 +23,7 @@ class OidcAccountsController < ApplicationController
     @pending_auth = session[:pending_oidc_auth]
 
     if @pending_auth.nil?
-      redirect_to new_session_path, alert: "No pending OIDC authentication found"
+      redirect_to new_session_path, alert: t("controllers.oidc_accounts.no_pending_auth")
       return
     end
 
@@ -72,7 +72,7 @@ class OidcAccountsController < ApplicationController
     @pending_auth = session[:pending_oidc_auth]
 
     if @pending_auth.nil?
-      redirect_to new_session_path, alert: "No pending OIDC authentication found"
+      redirect_to new_session_path, alert: t("controllers.oidc_accounts.no_pending_auth")
       return
     end
 
@@ -88,7 +88,7 @@ class OidcAccountsController < ApplicationController
     @pending_auth = session[:pending_oidc_auth]
 
     if @pending_auth.nil?
-      redirect_to new_session_path, alert: "No pending OIDC authentication found"
+      redirect_to new_session_path, alert: t("controllers.oidc_accounts.no_pending_auth")
       return
     end
 
@@ -98,7 +98,7 @@ class OidcAccountsController < ApplicationController
     # domain is not allowed, block JIT account creation and send the user
     # back to the login page with a clear message.
     unless !AuthConfig.jit_link_only? && AuthConfig.allowed_oidc_domain?(email)
-      redirect_to new_session_path, alert: "SSO account creation is disabled. Please contact an administrator."
+      redirect_to new_session_path, alert: t("controllers.oidc_accounts.creation_disabled")
       return
     end
 

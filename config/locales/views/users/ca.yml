@@ -19,3 +19,5 @@ ca:
       email_change_initiated: Revisa el teu nou correu electrònic per instruccions
         de confirmació.
       success: El teu perfil s'ha actualitzat.
+    user_menu:
+      version: "Versió:"

@@ -1,0 +1,7 @@
+---
+nl:
+  settings:
+    sso_identities:
+      destroy:
+        cannot_unlink_last: Kan de laatste identiteit niet ontkoppelen
+        success: Gelukt

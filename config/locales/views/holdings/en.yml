@@ -21,7 +21,10 @@ en:
       manual: User set
       calculated: From trades
       provider: From provider
+    new:
+      coming_soon: "Coming soon..."
     cost_basis_cell:
+      set: Set
       unknown: "--"
       set_cost_basis_header: "Set cost basis for %{ticker} (%{qty} shares)"
       total_cost_basis_label: Total cost basis

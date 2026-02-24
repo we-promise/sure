@@ -17,6 +17,7 @@ en:
       title: Enter vehicle details
     overview:
       current_price: Current Price
+      edit_account_details: Edit account details
       make_model: Make & Model
       mileage: Mileage
       purchase_price: Purchase Price

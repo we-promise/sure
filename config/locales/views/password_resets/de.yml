@@ -4,6 +4,7 @@ de:
     edit:
       title: Passwort zurücksetzen
     new:
+      email_placeholder: "you@example.com"
       requested: Bitte überprüfe deine E-Mails auf einen Link zum Zurücksetzen deines Passworts.
       submit: Passwort zurücksetzen
       title: Passwort zurücksetzen

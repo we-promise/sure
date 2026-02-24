@@ -11,6 +11,7 @@ de:
     form:
       placeholder: Tag-Name
     index:
+      delete_all: Alle löschen
       empty: Noch keine Tags vorhanden
       new: Neuer Tag
       tags: Tags

@@ -38,7 +38,7 @@ class ChatsController < ApplicationController
     @chat.destroy
     clear_last_viewed_chat
 
-    redirect_to chats_path, notice: "Chat was successfully deleted"
+    redirect_to chats_path, notice: t("controllers.chats.deleted")
   end
 
   def retry

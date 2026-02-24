@@ -38,6 +38,27 @@ ca:
       success: Compte vinculat correctament a Enable Banking
     new:
       link_enable_banking_title: Vincula Enable Banking
+      connected_bank: "Banc connectat"
+      connection: "Connexió"
+      session_expires: "La sessió expira: %{date}"
+      unknown_date: "Desconegut"
+      session_expired: "Sessió expirada – cal reautorització"
+      configured: "Configurat"
+      ready_to_connect: "Preparat per connectar un banc"
+      sync: "Sincronitza"
+      reconnect: "Reconnecta"
+      connect_bank: "Connecta el banc"
+      confirm_remove: "Estàs segur que vols eliminar aquesta connexió?"
+      remove: "Elimina"
+      add_connection: "Afegeix connexió"
+      not_configured: "Connexió Enable Banking no configurada"
+      not_configured_description: "Abans de poder vincular comptes d'Enable Banking, has de configurar la teva connexió d'Enable Banking."
+      setup_steps: "Passos de configuració:"
+      step_1_html: 'Vés a <strong>Configuració → Proveïdors</strong>'
+      step_2_html: 'Troba la secció <strong>Enable Banking</strong>'
+      step_3: "Introdueix les teves credencials d'Enable Banking"
+      step_4: "Torna aquí per vincular els teus comptes"
+      go_to_settings: "Vés a la configuració de proveïdors"
     reauthorize:
       invalid_redirect: L'URL d'autorització rebuta no és vàlida. Si us plau, torna-ho
         a provar o contacta amb l'assistència.
@@ -51,3 +72,39 @@ ca:
       title: Selecciona el teu banc
     update:
       success: La configuració d'Enable Banking s'ha actualitzat.
+    select_existing_account:
+      title: "Vincula un compte d'Enable Banking"
+      all_linked: "Tots els comptes d'Enable Banking semblen estar ja vinculats."
+      wait_for_sync: "Si acabes de connectar o sincronitzar, torna-ho a provar després que la sincronització s'hagi completat."
+      unlink_to_move: "Per vincular un altre compte, primer desvincula'l des del menú d'accions del compte."
+      balance_label: "Saldo:"
+      link_button: "Vincula"
+      cancel: "Cancel·la"
+    setup_accounts:
+      title: "Configura els teus comptes d'Enable Banking"
+      subtitle: "Escull els tipus de compte correctes per als teus comptes importats"
+      creating_accounts: "Creant comptes..."
+      choose_account_type: "Escull el tipus de compte correcte per a cada compte d'Enable Banking:"
+      historical_data_range: "Rang de dades històriques:"
+      sync_start_date_label: "Comença a sincronitzar transaccions des de:"
+      sync_start_date_help: "Selecciona fins quan enrere vols sincronitzar l'historial de transaccions. Màxim 1 any d'historial disponible."
+      account_type_label: "Tipus de compte:"
+      balance_label: "Saldo:"
+      create_accounts: "Crea comptes"
+      cancel: "Cancel·la"
+    enable_banking_item:
+      deletion_in_progress: "Eliminació en curs"
+      provider_name: "Enable Banking"
+      syncing: "Sincronitzant..."
+      reconnect_label: "Reconnecta"
+      last_synced: "Darrera sincronització fa %{time}"
+      never_synced: "Mai sincronitzat"
+      update: "Actualitza"
+      delete: "Elimina"
+      setup_needed: "Cal configuració"
+      setup_accounts_description:
+        one: "%{count} compte importat d'Enable Banking necessita ser configurat"
+        other: "%{count} comptes importats d'Enable Banking necessiten ser configurats"
+      set_up_accounts: "Configura comptes"
+      no_accounts_found: "No s'han trobat comptes"
+      no_accounts_description: "No s'han trobat comptes d'Enable Banking. Prova de sincronitzar de nou."
