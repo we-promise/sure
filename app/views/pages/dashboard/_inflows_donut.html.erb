@@ -14,16 +14,17 @@
     <div class="flex flex-col lg:flex-row gap-8 items-center">
       <!-- Donut Chart -->
       <div class="w-full lg:w-1/3 max-w-[300px] px-4">
-        <div class="h-[300px] relative"
-          data-controller="donut-chart"
-          data-donut-chart-segments-value="<%= inflows_data[:categories].to_json %>"
-          data-donut-chart-segment-opacity-value="0.9"
-          data-donut-chart-extended-hover-value="true"
-          data-donut-chart-hover-extension-value="3"
-          data-donut-chart-enable-click-value="true"
-          data-donut-chart-start-date-value="<%= period.date_range.first %>"
-          data-donut-chart-end-date-value="<%= period.date_range.last %>">
-          <div data-donut-chart-target="chartContainer" class="absolute inset-0 pointer-events-none"></div>
+        <% if inflows_data[:categories].present? %>
+          <div class="h-[300px] relative"
+            data-controller="donut-chart"
+            data-donut-chart-segments-value="<%= inflows_data[:categories].to_json %>"
+            data-donut-chart-segment-opacity-value="0.9"
+            data-donut-chart-extended-hover-value="true"
+            data-donut-chart-hover-extension-value="3"
+            data-donut-chart-enable-click-value="true"
+            data-donut-chart-start-date-value="<%= period.date_range.first %>"
+            data-donut-chart-end-date-value="<%= period.date_range.last %>">
+            <div data-donut-chart-target="chartContainer" class="absolute inset-0 pointer-events-none"></div>
 
           <div data-donut-chart-target="contentContainer" class="flex justify-center items-center h-full">
             <div data-donut-chart-target="defaultContent" class="flex flex-col items-center">
@@ -50,7 +51,22 @@
               </div>
             <% end %>
           </div>
-        </div>
+          </div>
+        <% else %>
+          <!-- Empty state: grey circle -->
+          <div class="h-[300px] flex items-center justify-center">
+            <div class="h-48 w-48 rounded-full bg-container border-8 border-subdued flex items-center justify-center">
+              <div class="text-center">
+                <div class="text-secondary text-sm mb-2">
+                  <span><%= t("pages.dashboard.inflows_donut.total_inflows") %></span>
+                </div>
+                <div class="text-3xl font-medium text-primary">
+                  $0.00
+                </div>
+              </div>
+            </div>
+          </div>
+        <% end %>
       </div>
 
       <!-- Category List -->

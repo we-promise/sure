@@ -105,7 +105,7 @@ class PagesController < ApplicationController
           title: "pages.dashboard.inflows_donut.title",
           partial: "pages/dashboard/inflows_donut",
           locals: { inflows_data: @inflows_data, period: @period },
-          visible: Current.family.accounts.any? && @inflows_data[:categories].present?,
+          visible: Current.family.accounts.any?,
           collapsible: true
         },
         {
