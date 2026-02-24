@@ -61,7 +61,7 @@
                   <span><%= t("pages.dashboard.inflows_donut.total_inflows") %></span>
                 </div>
                 <div class="text-3xl font-medium text-primary">
-                  $0.00
+                  <%= format_money Money.new(0, inflows_data[:currency]) %>
                 </div>
               </div>
             </div>
