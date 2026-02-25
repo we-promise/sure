@@ -33,7 +33,7 @@ class StyledFormBuilder < ActionView::Helpers::FormBuilder
     placeholder = options[:include_blank] || options[:placeholder] || "Select..."
 
     @template.render(
-      DS::FilterDropdown.new(
+      DS::Select.new(
         form: self,
         method: method,
         items: collection.map { |item| { value: item.id, label: item.name, object: item } },

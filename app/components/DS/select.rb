@@ -1,5 +1,5 @@
 module DS
-  class FilterDropdown < ViewComponent::Base
+  class Select < ViewComponent::Base
     attr_reader :form, :method, :items, :selected_value, :placeholder, :variant, :searchable, :options
 
     VARIANTS = %i[simple logo badge].freeze
