@@ -8,7 +8,25 @@ class Loan < ApplicationRecord
     "other" => { short: "Other Loan", long: "Other Loan" }
   }.freeze
 
+<<<<<<< HEAD
   validates :subtype, inclusion: { in: SUBTYPES.keys }, allow_blank: true
+=======
+  validates :interest_rate,
+            numericality: { greater_than_or_equal_to: 0 },
+            allow_nil: true
+
+  validates :term_months,
+            numericality: { only_integer: true, greater_than: 0 },
+            allow_nil: true
+
+  validates :rate_type,
+            inclusion: { in: %w[fixed variable adjustable] },
+            allow_nil: true
+
+  validates :down_payment,
+            numericality: { greater_than_or_equal_to: 0 },
+            allow_nil: true
+>>>>>>> 67061b6a (add validates for every fields)
 
   def monthly_payment
     return nil if term_months.nil? || interest_rate.nil? || rate_type.nil? || rate_type != "fixed"
