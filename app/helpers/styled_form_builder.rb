@@ -28,7 +28,6 @@ class StyledFormBuilder < ActionView::Helpers::FormBuilder
   end
 
   def collection_select(method, collection, value_method, text_method, options = {}, html_options = {})
-    field_options = normalize_options(options, html_options)
     selected_value = @object.public_send(method) if @object.respond_to?(method)
     placeholder = options[:include_blank] || options[:placeholder] || I18n.t("helpers.select.default_label")
 
@@ -44,7 +43,8 @@ class StyledFormBuilder < ActionView::Helpers::FormBuilder
         include_blank: options[:include_blank],
         label: options[:label],
         container_class: options[:container_class],
-        label_tooltip: options[:label_tooltip]
+        label_tooltip: options[:label_tooltip],
+        html_options: html_options
       )
     )
   end
