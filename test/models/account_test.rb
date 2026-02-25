@@ -172,6 +172,7 @@ class AccountTest < ActiveSupport::TestCase
 
     assert_not ActiveStorage::Attachment.exists?(attachment_id)
   end
+
   test "visible scope excludes accounts marked as excluded" do
     @account.update!(excluded: false)
     assert_includes Account.visible, @account

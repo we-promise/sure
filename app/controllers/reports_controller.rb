@@ -342,7 +342,7 @@ class ReportsController < ApplicationController
       trends
     end
 
-        def build_transactions_breakdown
+    def build_transactions_breakdown
       # Base query: all transactions in the period
       # Exclude transfers, one-time, and CC payments (matching income_statement logic)
       transactions = Transaction
@@ -356,7 +356,7 @@ class ReportsController < ApplicationController
       # Apply filters
       transactions = apply_transaction_filters(transactions)
 
-            # Get trades in the period (matching income_statement logic)
+      # Get trades in the period (matching income_statement logic)
       trades = Trade
         .joins(:entry)
         .joins(entry: :account)
@@ -603,7 +603,7 @@ class ReportsController < ApplicationController
       transactions
     end
 
-        def build_transactions_breakdown_for_export
+    def build_transactions_breakdown_for_export
       # Get flat transactions list (not grouped) for export
       # Exclude transfers, one-time, and CC payments (matching income_statement logic)
       transactions = Transaction
@@ -641,7 +641,7 @@ class ReportsController < ApplicationController
         current_month = current_month.next_month
       end
 
-            # Get all transactions in the period
+      # Get all transactions in the period
       # Exclude transfers, one-time, and CC payments (matching income_statement logic)
       transactions = Transaction
         .joins(:entry)
