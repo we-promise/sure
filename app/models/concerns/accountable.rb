@@ -62,15 +62,21 @@ module Accountable
       self.name.pluralize.titleize
     end
 
+    # Sums the balances of all active accounts of this type, converting foreign currencies to the family's currency.
+    # @return [BigDecimal] total balance in the family's currency
     def balance_money(family)
-      family.accounts
-            .active
-            .joins(sanitize_sql_array([
-              "LEFT JOIN exchange_rates ON exchange_rates.date = :current_date AND accounts.currency = exchange_rates.from_currency AND exchange_rates.to_currency = :family_currency",
-              { current_date: Date.current.to_s, family_currency: family.currency }
-            ]))
-            .where(accountable_type: self.name)
-            .sum("accounts.balance * COALESCE(exchange_rates.rate, 1)")
+      accounts = family.accounts.active.where(accountable_type: self.name).to_a
+
+      foreign_currencies = accounts.filter_map { |a| a.currency if a.currency != family.currency }
+      rates = ExchangeRate.rates_for(foreign_currencies, to: family.currency, date: Date.current)
+
+      accounts.sum(BigDecimal(0)) { |account|
+        if account.currency == family.currency
+          account.balance
+        else
+          account.balance * (rates[account.currency] || 1)
+        end
+      }
     end
   end
 

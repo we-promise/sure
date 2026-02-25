@@ -1,28 +1,6 @@
 name: Flutter Mobile Build
 
 on:
-  push:
-    branches:
-      - main
-    tags:
-      - 'v*'
-    paths:
-      - 'mobile/lib/**'
-      - 'mobile/android/**'
-      - 'mobile/ios/**'
-      - 'mobile/pubspec.yaml'
-      - 'public/android-chrome-*.png'
-      - 'public/apple-touch-icon.png'
-      - '.github/workflows/flutter-build.yml'
-  pull_request:
-    paths:
-      - 'mobile/lib/**'
-      - 'mobile/android/**'
-      - 'mobile/ios/**'
-      - 'mobile/pubspec.yaml'
-      - 'public/android-chrome-*.png'
-      - 'public/apple-touch-icon.png'
-      - '.github/workflows/flutter-build.yml'
   workflow_call:
   workflow_dispatch:
 

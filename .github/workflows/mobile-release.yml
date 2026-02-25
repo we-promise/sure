@@ -33,9 +33,14 @@ jobs:
           set -euo pipefail
 
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            BRANCH_NAME="${GITHUB_REF_NAME}"
-            SAFE_BRANCH_NAME="${BRANCH_NAME//\//-}"
-            BASE_TAG="${SAFE_BRANCH_NAME}-$(date -u +'%Y%m%d%H%M')"
+            BASE_STABLE_TAG="$(git tag --list 'v*' --sort=-v:refname | { grep -Ev 'alpha|beta|rc' || true; } | head -n 1)"
+            if [ -z "$BASE_STABLE_TAG" ]; then
+              echo "::error::No stable v* tag found to base mobile patch release on"
+              exit 1
+            fi
+
+            STAMP="$(date -u +'%Y%m%d%H%M')"
+            BASE_TAG="mobile-${BASE_STABLE_TAG}-p${STAMP}"
             TAG_NAME="$BASE_TAG"
             TAG_SUFFIX=1
 

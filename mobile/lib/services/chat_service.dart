@@ -118,14 +118,11 @@ class ChatService {
     required String accessToken,
     String? title,
     String? initialMessage,
-    String model = 'gpt-4',
   }) async {
     try {
       final url = Uri.parse('${ApiConfig.baseUrl}/api/v1/chats');
 
-      final body = <String, dynamic>{
-        'model': model,
-      };
+      final body = <String, dynamic>{};
 
       if (title != null) {
         body['title'] = title;

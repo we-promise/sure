@@ -41,15 +41,14 @@ module AccountableResource
   end
 
   def update
-    # Handle balance update if provided
-    if account_params[:balance].present?
+    # Handle balance update if the value actually changed
+    if account_params[:balance].present? && account_params[:balance].to_d != @account.balance
       result = @account.set_current_balance(account_params[:balance].to_d)
       unless result.success?
         @error_message = result.error_message
         render :edit, status: :unprocessable_entity
         return
       end
-      @account.sync_later
     end
 
     # Update remaining account attributes

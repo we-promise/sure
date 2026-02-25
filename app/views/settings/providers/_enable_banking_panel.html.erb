@@ -6,6 +6,7 @@
       <li>Select your country code from the dropdown below</li>
       <li>Enter your Application ID and paste your Client Certificate (including the private key)</li>
       <li>Click Save Configuration, then use "Add Connection" to link your bank</li>
+      <li><%= t("settings.providers.enable_banking_panel.callback_url_instruction", callback_url: enable_banking_callback_url) %></li>
     </ol>
 
     <p class="text-primary font-medium">Field descriptions:</p>
@@ -112,7 +113,19 @@
       <% items.each do |item| %>
         <div class="flex items-center justify-between p-3 rounded-lg bg-container border border-primary">
           <div class="flex items-center gap-3">
-            <% if item.session_valid? %>
+            <% if item.syncing? %>
+              <div class="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
+              <div>
+                <p class="text-sm font-medium text-primary"><%= item.aspsp_name || t("settings.providers.enable_banking_panel.syncing", default: "Syncing") %></p>
+                <p class="text-xs text-secondary"><%= t("settings.providers.enable_banking_panel.syncing", default: "Syncing") %></p>
+              </div>
+            <% elsif item.sync_error.present? %>
+              <div class="w-2 h-2 bg-destructive rounded-full"></div>
+              <div>
+                <p class="text-sm font-medium text-primary"><%= item.aspsp_name || t("settings.providers.enable_banking_panel.connection_error") %></p>
+                <p class="text-xs text-destructive" title="<%= item.sync_error %>"><%= item.sync_error.truncate(50) %></p>
+              </div>
+            <% elsif item.session_valid? %>
               <div class="w-2 h-2 bg-success rounded-full"></div>
               <div>
                 <p class="text-sm font-medium text-primary"><%= item.aspsp_name || "Connected Bank" %></p>

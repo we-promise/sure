@@ -53,6 +53,17 @@ class Chat {
     };
   }
 
+  static const String defaultTitle = 'New Chat';
+  static const int maxTitleLength = 80;
+
+  static String generateTitle(String prompt) {
+    final trimmed = prompt.trim();
+    if (trimmed.length <= maxTitleLength) return trimmed;
+    return trimmed.substring(0, maxTitleLength);
+  }
+
+  bool get hasDefaultTitle => title == defaultTitle;
+
   Chat copyWith({
     String? id,
     String? title,

@@ -172,3 +172,6 @@ en:
         disconnect_confirm: Are you sure you want to disconnect this Coinbase connection? Your synced accounts will become manual accounts.
         status_connected: Coinbase is connected and syncing your crypto holdings.
         status_not_connected: Not connected. Enter your API credentials above to get started.
+      enable_banking_panel:
+        callback_url_instruction: "For the callback URL, use %{callback_url}."
+        connection_error: Connection Error
