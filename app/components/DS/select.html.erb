@@ -34,7 +34,7 @@
       </div>
     <% end %>
     <div data-list-filter-target="list" data-select-target="content" class="flex flex-col gap-0.5 max-h-64 overflow-auto" 
-          role="listbox" tabindex="-1">>
+          role="listbox" tabindex="-1">
       <% items.each do |item| %>
         <% is_selected = item[:value] == selected_value %>
         <% obj = item[:object] %>
