@@ -56,6 +56,31 @@ class Loan < ApplicationRecord
     Money.new(account.first_valuation_amount, account.currency)
   end
 
+  def total_paid
+    mp = monthly_payment
+    return nil unless mp && term_months.present?
+
+    mp * term_months
+  end
+
+  def total_interest
+    tp = total_paid
+    ob = original_balance
+    return nil unless tp && ob
+
+    tp - ob
+  end
+
+  def interest_ratio
+    tp = total_paid
+    ti = total_interest
+    return nil unless tp && ti
+    return nil if tp.zero?
+
+    ti.to_f / tp.to_f
+  end
+
+
   class << self
     def color
       "#D444F1"
