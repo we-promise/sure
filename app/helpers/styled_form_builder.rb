@@ -29,7 +29,7 @@ class StyledFormBuilder < ActionView::Helpers::FormBuilder
 
   def collection_select(method, collection, value_method, text_method, options = {}, html_options = {})
     selected_value = @object.public_send(method) if @object.respond_to?(method)
-    placeholder = options[:include_blank] || options[:placeholder] || I18n.t("helpers.select.default_label")
+    placeholder = options[:prompt] || options[:include_blank] || options[:placeholder] || I18n.t("helpers.select.default_label")
 
     @template.render(
       DS::Select.new(
