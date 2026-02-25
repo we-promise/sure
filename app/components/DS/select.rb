@@ -8,7 +8,6 @@ module DS
     def initialize(form:, method:, items:, selected: nil, placeholder: "Select...", variant: :simple, include_blank: nil, searchable: false, **options)
       @form = form
       @method = method
-      @selected_value = selected
       @placeholder = placeholder
       @variant = variant
       @searchable = searchable
