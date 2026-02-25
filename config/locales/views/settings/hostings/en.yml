@@ -49,7 +49,7 @@ en:
         env_configured_external: Successfully configured through environment variables.
         url_label: Endpoint URL
         url_placeholder: "https://your-agent-host/v1/chat/completions"
-        url_help: Any OpenAI-compatible chat completions endpoint. Your agent provider will give you this URL.
+        url_help: The full URL to your agent's API endpoint. Your agent provider will give you this.
         token_label: API Token
         token_placeholder: Enter the token from your agent provider
         token_help: The authentication token provided by your external agent. This is sent as a Bearer token with each request.
