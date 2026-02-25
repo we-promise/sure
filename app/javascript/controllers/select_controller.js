@@ -40,8 +40,8 @@ export default class extends Controller {
     this.startAutoUpdate()
     this.clearSearch()
     requestAnimationFrame(() => {
-      this.menuTarget.classList.remove("opacity-0", "scale-95", "translate-y-1", "pointer-events-none")
-      this.menuTarget.classList.add("opacity-100", "scale-100", "translate-y-0")
+      this.menuTarget.classList.remove("opacity-0", "-translate-y-1", "pointer-events-none")
+      this.menuTarget.classList.add("opacity-100", "translate-y-0")
       this.updatePosition()
       this.scrollToSelected()
     })
