@@ -1,6 +1,9 @@
 class AccountableSparklinesController < ApplicationController
   def show
-    @accountable = Accountable.from_type(params[:accountable_type]&.classify)
+    @accountable = accountable
+
+    # Don't render if there are no visible accounts for this type.
+    return if account_ids.empty?
 
     etag_key = cache_key
 
@@ -28,14 +31,14 @@ class AccountableSparklinesController < ApplicationController
     end
 
     def accountable
-      Accountable.from_type(params[:accountable_type]&.classify)
+      @accountable ||= Accountable.from_type(params[:accountable_type]&.classify)
     end
 
     def account_ids
-      family.accounts.visible.where(accountable_type: accountable.name).pluck(:id)
+      @account_ids ||= family.accounts.visible.where(accountable_type: accountable.name).pluck(:id)
     end
 
     def cache_key
-      family.build_cache_key("#{@accountable.name}_sparkline", invalidate_on_data_updates: true)
+      family.build_cache_key("#{accountable.name}_sparkline", invalidate_on_data_updates: true)
     end
 end
