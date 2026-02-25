@@ -22,6 +22,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Example-only keys like `backup.ttl` and `backup.volumeSnapshot.enabled` are stripped to avoid CRD warnings.
 - CNPG: render `Cluster.spec.plugins` from `cnpg.cluster.plugins` (enables barman-cloud plugin / WAL archiver configuration).
 
+## [0.6.8-alpha] - 2026-02-25
+
+### Added
+- **Pipelock security proxy** (`pipelock.enabled=true`): Separate Deployment + Service that provides two scanning layers
+  - **Forward proxy** (port 8888): Scans outbound HTTPS from Faraday-based clients (e.g. ruby-openai). Auto-injects `HTTPS_PROXY`/`HTTP_PROXY`/`NO_PROXY` env vars into app pods
+  - **MCP reverse proxy** (port 8889): Scans inbound MCP traffic for DLP, prompt injection, and tool poisoning. Auto-computes upstream URL via `sure.pipelockUpstream` helper
+  - **WebSocket proxy** configuration support (disabled by default, requires Pipelock >= 0.2.9)
+  - ConfigMap with scanning config (DLP, prompt injection detection, MCP input/tool scanning, response scanning)
+  - ConfigMap checksum annotation for automatic pod restart on config changes
+  - Helm helpers: `sure.pipelockImage`, `sure.pipelockUpstream`
+  - Health and readiness probes on the Pipelock deployment
+  - `imagePullSecrets` with fallback to app-level secrets
+  - Boolean safety: uses `hasKey` to prevent Helm's `default` from swallowing explicit `false`
+  - Configurable ports via `forwardProxy.port` and `mcpProxy.port` (single source of truth across Service, Deployment, and env vars)
+- `pipelock.example.yaml` reference config for Docker Compose deployments
+
+### Changed
+- Consolidated `compose.example.pipelock.yml` into `compose.example.ai.yml` — Pipelock now runs alongside Ollama in one compose file with health checks, config volume mount, and MCP env vars (`MCP_API_TOKEN`, `MCP_USER_EMAIL`)
+- CI: Pipelock scan `fail-on-findings` changed from `false` to `true`; added `exclude-paths` for locale help text false positives
+
 ## [0.6.7-alpha] - 2026-01-10
 
 ### Added
