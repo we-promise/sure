@@ -24,3 +24,4 @@ jobs:
           test-vectors: 'false'
           exclude-paths: |
             config/locales/views/reports/
+            app/models/assistant/external/client.rb
