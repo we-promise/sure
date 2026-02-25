@@ -30,13 +30,13 @@ class StyledFormBuilder < ActionView::Helpers::FormBuilder
   def collection_select(method, collection, value_method, text_method, options = {}, html_options = {})
     field_options = normalize_options(options, html_options)
     selected_value = @object.public_send(method) if @object.respond_to?(method)
-    placeholder = options[:include_blank] || options[:placeholder] || "Select..."
+    placeholder = options[:include_blank] || options[:placeholder] || I18n.t("helpers.select.default_label")
 
     @template.render(
       DS::Select.new(
         form: self,
         method: method,
-        items: collection.map { |item| { value: item.id, label: item.name, object: item } },
+        items: collection.map { |item| { value: item.public_send(value_method), label: item.public_send(text_method), object: item } },
         selected: selected_value,
         placeholder: placeholder,
         searchable: options.fetch(:searchable, false),
