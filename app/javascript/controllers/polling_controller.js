@@ -35,7 +35,7 @@ export default class extends Controller {
     try {
       const response = await fetch(this.urlValue, {
         headers: {
-          Accept: "text/vnd.turbo-stream.html",
+          Accept: "text/html",
           "Turbo-Frame": this.element.id,
         },
       });
