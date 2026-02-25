@@ -1,54 +1,80 @@
-<%# locals: (account:) %>
+<% loan = account.loan %>
 
-<div class="grid grid-cols-3 gap-2">
-  <%= summary_card title: t(".original_principal") do %>
-    <%= format_money account.loan.original_balance %>
-  <% end %>
+<div class="space-y-8">
 
-  <%= summary_card title: t(".remaining_principal") do %>
-    <%= format_money account.balance_money %>
-  <% end %>
-
-  <%= summary_card title: t(".interest_rate") do %>
-    <% if account.loan.interest_rate.present? %>
-      <%= number_to_percentage(account.loan.interest_rate, precision: 3) %>
-    <% else %>
-      <%= t(".unknown") %>
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <%= summary_card title: t(".remaining_principal") do %>
+        <%= format_money account.balance_money %>
     <% end %>
-  <% end %>
 
-  <%= summary_card title: t(".monthly_payment") do %>
-    <% if account.loan.rate_type.present? && account.loan.rate_type != 'fixed' %>
-      <%= t(".not_applicable") %>
-    <% elsif account.loan.rate_type == 'fixed' && account.loan.monthly_payment.present? %>
-      <%= format_money(account.loan.monthly_payment) %>
-    <% else %>
-      <%= t(".unknown") %>
-    <% end %>
-  <% end %>
-
-  <%= summary_card title: t(".term") do %>
-    <% if account.loan.term_months.present? %>
-      <% if account.loan.term_months < 12 %>
-        <%= pluralize(account.loan.term_months, "month") %>
+    <%= summary_card title: t(".monthly_payment") do %>
+      <% if loan.rate_type == 'fixed' && loan.monthly_payment.present? %>
+          <%= format_money(loan.monthly_payment) %>
       <% else %>
-        <%= pluralize(account.loan.term_months / 12, "year") %>
+        <%= t(".not_applicable") %>
       <% end %>
-    <% else %>
-      <%= t(".unknown") %>
     <% end %>
-  <% end %>
+  </div>
 
-  <%= summary_card title: t(".type") do %>
-    <%= account.loan.rate_type&.titleize || t(".unknown") %>
-  <% end %>
-</div>
 
-<div class="flex justify-center py-8">
-  <%= render DS::Link.new(
-    text: "Edit loan details",
-    variant: "ghost",
-    href: edit_loan_path(account),
-    frame: :modal
-  ) %>
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <%= summary_card title: "Total Paid (End of Loan)" do %>
+      <% if loan.total_paid.present? %>
+        <%= format_money(loan.total_paid) %>
+      <% else %>
+        <%= t(".unknown") %>
+      <% end %>
+    <% end %>
+
+    <%= summary_card title: "Total Interest" do %>
+      <% if loan.total_interest.present? %>
+        <div class="space-y-2">
+          <div class="text-amber-500">
+            <%= format_money(loan.total_interest) %>
+          </div>
+
+          <% if loan.interest_ratio.present? %>
+            <div class="text-xs text-zinc-500">
+              <%= number_to_percentage(loan.interest_ratio * 100, precision: 1) %>
+              of total paid
+            </div>
+            <div class="w-full h-2 bg-zinc-800 rounded-full overflow-hidden">
+              <div
+                class="h-full bg-amber-500"
+                style="width: <%= loan.interest_ratio * 100 %>%">
+              </div>
+            </div>
+          <% end %>
+        </div>
+      <% else %>
+        <%= t(".unknown") %>
+      <% end %>
+    <% end %>
+
+  </div>
+
+
+  <!-- ⚙️ Technical details -->
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+    <%= summary_card title: t(".original_principal") do %>
+      <%= format_money loan.original_balance %>
+    <% end %>
+    <%= summary_card title: t(".interest_rate") do %>
+      <%= loan.interest_rate.present? ? number_to_percentage(loan.interest_rate, precision: 3) : t(".unknown") %>
+    <% end %>
+    <%= summary_card title: t(".term") do %>
+      <% if loan.term_months.present? %>
+        <%= pluralize(loan.term_months / 12, "year") %>
+      <% else %>
+        <%= t(".unknown") %>
+      <% end %>
+    <% end %>
+    <%= summary_card title: t(".type") do %>
+      <%= loan.rate_type&.titleize || t(".unknown") %>
+    <% end %>
+
+    
+
+  </div>
+
 </div>
