@@ -170,10 +170,10 @@ export default class extends Controller {
 
     if (shouldOpenUp) {
       this.menuTarget.style.bottom = "100%"
-      this.menuTarget.style.maxHeight = `${spaceAbove - 8}px`
+      this.menuTarget.style.maxHeight = `${spaceAbove - this.offsetValue}px`
     } else {
       this.menuTarget.style.top = "100%"
-      this.menuTarget.style.maxHeight = `${spaceBelow - 8}px`
+      this.menuTarget.style.maxHeight = `${spaceBelow - this.offsetValue}px`
     }
   }
 }
