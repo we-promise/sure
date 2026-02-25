@@ -51,7 +51,7 @@ export default class extends Controller {
     this.stopAutoUpdate()
     this.menuTarget.classList.remove("opacity-100", "translate-y-0")
     this.menuTarget.classList.add("opacity-0", "-translate-y-1", "pointer-events-none")
-    setTimeout(() => { if (!this.isOpen) this.menuTarget.classList.add("hidden") }, 150)
+    setTimeout(() => { if (!this.isOpen && this.hasMenuTarget) this.menuTarget.classList.add("hidden") }, 150)
   }
 
   select(event) {
