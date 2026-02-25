@@ -15,6 +15,14 @@ class Loan < ApplicationRecord
             numericality: { greater_than_or_equal_to: 0 },
             allow_nil: true
 
+  validates :insurance_rate,
+          numericality: { greater_than_or_equal_to: 0 },
+          allow_nil: true
+
+  validates :insurance_rate_type,
+            inclusion: { in: %w[fixed variable adjustable] },
+            allow_nil: true
+
   validates :term_months,
             numericality: { only_integer: true, greater_than: 0 },
             allow_nil: true
