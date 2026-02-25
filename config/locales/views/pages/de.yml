@@ -35,3 +35,4 @@ de:
         categories: "Kategorien"
         value: "Wert"
         weight: "Anteil"
+        no_data_message: "Keine Einnahmen für diesen Zeitraum"

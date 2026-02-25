@@ -13,7 +13,7 @@
   <div class="px-4">
     <div class="flex flex-col lg:flex-row gap-8 items-center">
       <!-- Donut Chart -->
-      <div class="w-full lg:w-1/3 max-w-[300px] px-4">
+      <div class="<%= inflows_data[:categories].present? ? 'w-full lg:w-1/3 max-w-[300px]' : 'w-full' %> px-4">
         <% if inflows_data[:categories].present? %>
           <div class="h-[300px] relative"
             data-controller="donut-chart"
@@ -53,39 +53,35 @@
           </div>
           </div>
         <% else %>
-          <!-- Empty state: grey circle -->
-          <div class="h-[300px] flex items-center justify-center">
-            <div class="h-48 w-48 rounded-full bg-container border-8 border-subdued flex items-center justify-center">
-              <div class="text-center">
-                <div class="text-secondary text-sm mb-2">
-                  <span><%= t("pages.dashboard.inflows_donut.total_inflows") %></span>
-                </div>
-                <div class="text-3xl font-medium text-primary">
-                  <%= format_money Money.new(0, inflows_data[:currency]) %>
-                </div>
-              </div>
+          <!-- Empty state: no income message -->
+          <div class="flex items-center justify-center py-20">
+            <div class="text-center">
+              <p class="text-secondary text-base">
+                <%= t("pages.dashboard.inflows_donut.no_data_message") %>
+              </p>
             </div>
           </div>
         <% end %>
       </div>
 
-      <!-- Category List -->
-      <div class="w-full lg:w-2/3 bg-container-inset rounded-xl p-1 space-y-1 overflow-x-auto">
-        <div class="px-4 py-2 flex items-center uppercase text-xs font-medium text-secondary">
-          <div class="w-16 lg:w-40">
-            <p><%= t("pages.dashboard.inflows_donut.categories") %><span class="text-subdued mx-1">&middot;</span><%= inflows_data[:categories].count %></p>
-          </div>
-          <div class="ml-auto text-right flex items-center gap-6">
+      <% if inflows_data[:categories].present? %>
+        <!-- Category List -->
+        <div class="w-full lg:w-2/3 bg-container-inset rounded-xl p-1 space-y-1 overflow-x-auto">
+          <div class="px-4 py-2 flex items-center uppercase text-xs font-medium text-secondary">
             <div class="w-16 lg:w-40">
-              <p><%= t("pages.dashboard.inflows_donut.value") %></p>
+              <p><%= t("pages.dashboard.inflows_donut.categories") %><span class="text-subdued mx-1">&middot;</span><%= inflows_data[:categories].count %></p>
             </div>
-            <div class="w-16">
-              <p><%= t("pages.dashboard.inflows_donut.weight") %></p>
+            <div class="ml-auto text-right flex items-center gap-6">
+              <div class="w-16 lg:w-40">
+                <p><%= t("pages.dashboard.inflows_donut.value") %></p>
+              </div>
+              <div class="w-16">
+                <p><%= t("pages.dashboard.inflows_donut.weight") %></p>
+              </div>
             </div>
           </div>
-        </div>
-        <div class="py-3 shadow-border-xs rounded-lg bg-container font-medium text-sm max-w-full">
-          <% inflows_data[:categories].each_with_index do |category, idx| %>
+          <div class="py-3 shadow-border-xs rounded-lg bg-container font-medium text-sm max-w-full">
+            <% inflows_data[:categories].each_with_index do |category, idx| %>
             <%
               category_content = capture do
             %>
@@ -139,6 +135,7 @@
           <% end %>
         </div>
       </div>
+      <% end %>
     </div>
   </div>
 </div>
