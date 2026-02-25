@@ -322,6 +322,7 @@ Rails.application.routes.draw do
       post :sync
       get :sparkline
       patch :toggle_active
+      patch :toggle_excluded
       get :select_provider
       get :confirm_unlink
       delete :unlink

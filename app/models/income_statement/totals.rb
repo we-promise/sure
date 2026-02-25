@@ -70,9 +70,10 @@ class IncomeStatement::Totals
           er.to_currency = :target_currency
         )
         WHERE at.kind NOT IN (#{budget_excluded_kinds_sql})
-          AND ae.excluded = false
+                    AND ae.excluded = false
           AND a.family_id = :family_id
           AND a.status IN ('draft', 'active')
+          AND a.excluded = false
           #{exclude_tax_advantaged_sql}
         GROUP BY c.id, c.parent_id, CASE WHEN at.kind = 'investment_contribution' THEN 'expense' WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END;
       SQL
@@ -101,9 +102,10 @@ class IncomeStatement::Totals
             at.investment_activity_label IS NULL
             OR at.investment_activity_label NOT IN ('Transfer', 'Sweep In', 'Sweep Out', 'Exchange')
           )
-          AND ae.excluded = false
+                    AND ae.excluded = false
           AND a.family_id = :family_id
           AND a.status IN ('draft', 'active')
+          AND a.excluded = false
           #{exclude_tax_advantaged_sql}
         GROUP BY c.id, c.parent_id, CASE WHEN at.kind = 'investment_contribution' THEN 'expense' WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END
       SQL

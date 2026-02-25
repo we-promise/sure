@@ -12,6 +12,14 @@
       <% end %>
     </div>
     <div class="bg-container rounded-lg shadow-border-xs overflow-hidden">
+      <div class="p-4 flex items-center justify-between gap-3 text-sm font-medium text-secondary">
+        <div class="flex items-center gap-8 ml-auto">
+          <div class="w-24 text-right">Total</div>
+          <div class="w-20 text-center">Active</div>
+          <div class="w-20 text-center">Excluded</div>
+        </div>
+      </div>
+      <%= render "shared/ruler" %>
       <% accounts.each_with_index do |account, index| %>
         <%= render "accounts/account", account: account %>
         <% unless index == accounts.count - 1 %>
