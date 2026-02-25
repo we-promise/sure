@@ -6,8 +6,11 @@ en:
     form:
       interest_rate: Interest rate
       interest_rate_placeholder: '5.25'
+      insurance_rate: Insurance rate
+      insurance_rate_placeholder: '0.5'
       initial_balance: Original loan balance
       rate_type: Rate type
+      insurance_rate_type: Insurance rate type
       term_months: Term (months)
       term_months_placeholder: '360'
       subtype_prompt: Select loan type
