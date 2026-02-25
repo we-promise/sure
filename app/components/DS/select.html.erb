@@ -1,10 +1,15 @@
 <%# locals: form:, method:, collection:, options: {} %>
 
-<div class="relative" data-controller="select <%= "list-filter" if searchable %> form-dropdown">
+<div class="relative" data-controller="select <%= "list-filter" if searchable %> form-dropdown" data-action="dropdown:select->form-dropdown#onSelect">
   <div class="form-field <%= options[:container_class] %>">
     <div class="form-field__body">
         <%= form.label method, options[:label], class: "form-field__label" if options[:label].present? %>
-        <input type="hidden" data-form-dropdown-target="input" value="<%= @selected_value %>">
+        <%= form.hidden_field method,
+            value: @selected_value,
+            data: {
+              "form-dropdown-target": "input",
+              "auto-submit-target": "auto"
+            } %>
         <button type="button"
                 class="form-field__input w-full"
                 data-select-target="button"
