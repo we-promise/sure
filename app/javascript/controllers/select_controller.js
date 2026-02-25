@@ -36,6 +36,7 @@ export default class extends Controller {
   openMenu() {
     this.isOpen = true
     this.menuTarget.classList.remove("hidden")
+    this.buttonTarget.setAttribute("aria-expanded", "true")
     this.startAutoUpdate()
     this.clearSearch()
     requestAnimationFrame(() => {
@@ -51,6 +52,7 @@ export default class extends Controller {
     this.stopAutoUpdate()
     this.menuTarget.classList.remove("opacity-100", "translate-y-0")
     this.menuTarget.classList.add("opacity-0", "-translate-y-1", "pointer-events-none")
+    this.buttonTarget.setAttribute("aria-expanded", "false")
     setTimeout(() => { if (!this.isOpen && this.hasMenuTarget) this.menuTarget.classList.add("hidden") }, 150)
   }
 
@@ -62,13 +64,15 @@ export default class extends Controller {
     this.buttonTarget.textContent = label
     if (this.hasInputTarget) this.inputTarget.value = value
 
-    const previousSelected = this.menuTarget.querySelector(".bg-container-inset")
+    const previousSelected = this.menuTarget.querySelector("[aria-selected='true']")
     if (previousSelected) {
+      previousSelected.setAttribute("aria-selected", "false")
       previousSelected.classList.remove("bg-container-inset")
       const prevIcon = previousSelected.querySelector(".check-icon")
       if (prevIcon) prevIcon.classList.add("hidden")
     }
 
+    selectedElement.setAttribute("aria-selected", "true")
     selectedElement.classList.add("bg-container-inset")
     const selectedIcon = selectedElement.querySelector(".check-icon")
     if (selectedIcon) selectedIcon.classList.remove("hidden")

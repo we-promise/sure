@@ -13,7 +13,10 @@
         <button type="button"
                 class="form-field__input w-full"
                 data-select-target="button"
-                data-action="click->select#toggle">
+                data-action="click->select#toggle"
+                aria-haspopup="listbox"
+                aria-expanded="<%= @selected_value.present? ? "true" : "false" %>"
+                aria-labelledby="<%= "#{method}_label" %>">
           <%= selected_item&.dig(:label) || @placeholder %>
         </button>
     </div>
@@ -30,12 +33,16 @@
         <%= helpers.icon("search", class: "absolute inset-0 ml-2 transform top-1/2 -translate-y-1/2") %>
       </div>
     <% end %>
-    <div data-list-filter-target="list" data-select-target="content" class="flex flex-col gap-0.5 max-h-64 overflow-auto">
+    <div data-list-filter-target="list" data-select-target="content" class="flex flex-col gap-0.5 max-h-64 overflow-auto" 
+          role="listbox" tabindex="-1">>
       <% items.each do |item| %>
         <% is_selected = item[:value] == selected_value %>
         <% obj = item[:object] %>
 
         <div class="filterable-item text-sm cursor-pointer flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-container-inset-hover <%= "bg-container-inset" if is_selected %>"
+              role="option"
+              tabindex="0"
+              aria-selected="<%= is_selected %>"
               data-action="click->select#select"
               data-value="<%= item[:value] %>"
               data-filter-name="<%= item[:label] %>">
