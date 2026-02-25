@@ -40,7 +40,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_04_12_120000) do
     t.index ["account_id"], name: "index_account_shares_on_account_id"
     t.index ["user_id", "include_in_finances"], name: "index_account_shares_on_user_id_and_include_in_finances"
     t.index ["user_id"], name: "index_account_shares_on_user_id"
-    t.check_constraint "permission::text = ANY (ARRAY['full_control'::character varying::text, 'read_write'::character varying::text, 'read_only'::character varying::text])", name: "chk_account_shares_permission"
+    t.check_constraint "permission::text = ANY (ARRAY['full_control'::character varying, 'read_write'::character varying, 'read_only'::character varying]::text[])", name: "chk_account_shares_permission"
   end
 
   create_table "accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -63,6 +63,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_04_12_120000) do
     t.string "institution_name"
     t.string "institution_domain"
     t.text "notes"
+    t.jsonb "holdings_snapshot_data"
+    t.datetime "holdings_snapshot_at"
     t.uuid "owner_id"
     t.index ["accountable_id", "accountable_type"], name: "index_accounts_on_accountable_id_and_accountable_type"
     t.index ["accountable_type"], name: "index_accounts_on_accountable_type"
@@ -246,8 +248,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_04_12_120000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.uuid "parent_id"
-    t.string "lucide_icon", default: "shapes", null: false
     t.string "classification_unused", default: "expense", null: false
+    t.string "lucide_icon", default: "shapes", null: false
     t.index ["family_id"], name: "index_categories_on_family_id"
   end
 
@@ -595,7 +597,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_04_12_120000) do
     t.string "assistant_type", default: "builtin", null: false
     t.string "default_account_sharing", default: "shared", null: false
     t.string "enabled_currencies", array: true
-    t.check_constraint "default_account_sharing::text = ANY (ARRAY['shared'::character varying::text, 'private'::character varying::text])", name: "chk_families_default_account_sharing"
+    t.check_constraint "default_account_sharing::text = ANY (ARRAY['shared'::character varying, 'private'::character varying]::text[])", name: "chk_families_default_account_sharing"
     t.check_constraint "month_start_day >= 1 AND month_start_day <= 28", name: "month_start_day_range"
   end
 
@@ -875,6 +877,10 @@ ActiveRecord::Schema[7.2].define(version: 2026_04_12_120000) do
     t.decimal "initial_balance", precision: 19, scale: 4
     t.jsonb "locked_attributes", default: {}
     t.string "subtype"
+    t.decimal "down_payment"
+    t.decimal "insurance_rate", precision: 8, scale: 4
+    t.string "insurance_rate_type"
+    t.date "start_date"
   end
 
   create_table "lunchflow_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1333,6 +1339,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_04_12_120000) do
   create_table "snaptrade_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "snaptrade_item_id", null: false
     t.string "name"
+    t.string "account_id"
     t.string "snaptrade_account_id"
     t.string "snaptrade_authorization_id"
     t.string "account_number"
@@ -1354,6 +1361,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_04_12_120000) do
     t.datetime "updated_at", null: false
     t.boolean "activities_fetch_pending", default: false
     t.date "sync_start_date"
+    t.index ["account_id"], name: "index_snaptrade_accounts_on_account_id", unique: true
     t.index ["snaptrade_item_id", "snaptrade_account_id"], name: "index_snaptrade_accounts_on_item_and_snaptrade_account_id", unique: true, where: "(snaptrade_account_id IS NOT NULL)"
     t.index ["snaptrade_item_id"], name: "index_snaptrade_accounts_on_snaptrade_item_id"
   end
@@ -1491,9 +1499,16 @@ ActiveRecord::Schema[7.2].define(version: 2026_04_12_120000) do
     t.datetime "updated_at", null: false
     t.string "currency"
     t.jsonb "locked_attributes", default: {}
+    t.decimal "realized_gain", precision: 19, scale: 4
+    t.decimal "cost_basis_amount", precision: 19, scale: 4
+    t.string "cost_basis_currency"
+    t.integer "holding_period_days"
+    t.string "realized_gain_confidence"
+    t.string "realized_gain_currency"
     t.string "investment_activity_label"
     t.decimal "fee", precision: 19, scale: 4, default: "0.0", null: false
     t.index ["investment_activity_label"], name: "index_trades_on_investment_activity_label"
+    t.index ["realized_gain"], name: "index_trades_on_realized_gain_not_null", where: "(realized_gain IS NOT NULL)"
     t.index ["security_id"], name: "index_trades_on_security_id"
   end
 
