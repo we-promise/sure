@@ -18,7 +18,6 @@ export default class extends Controller {
     document.addEventListener("turbo:load", this.boundTurboLoad)
     this.element.addEventListener("keydown", this.boundKeydown)
 
-    this.startAutoUpdate()
     this.observeMenuResize()
   }
 
@@ -37,6 +36,7 @@ export default class extends Controller {
   openMenu() {
     this.isOpen = true
     this.menuTarget.classList.remove("hidden")
+    this.startAutoUpdate()
     this.clearSearch()
     requestAnimationFrame(() => {
       this.menuTarget.classList.remove("opacity-0", "scale-95", "translate-y-1", "pointer-events-none")
@@ -48,6 +48,7 @@ export default class extends Controller {
 
   close() {
     this.isOpen = false
+    this.stopAutoUpdate()
     this.menuTarget.classList.remove("opacity-100", "translate-y-0")
     this.menuTarget.classList.add("opacity-0", "-translate-y-1", "pointer-events-none")
     setTimeout(() => { if (!this.isOpen) this.menuTarget.classList.add("hidden") }, 150)
