@@ -1,21 +1,33 @@
 # ===========================================================================
-# Example Docker Compose file with additional Ollama service for LLM tools
+# Example Docker Compose file with Ollama (local LLM) and Pipelock (agent
+# security proxy)
 # ===========================================================================
 #
 # Purpose:
 # --------
 #
-# This file is an example Docker Compose configuration for self hosting
-# Sure with Ollama on your local machine or on a cloud VPS.
+# This file extends the standard Sure setup with two optional capabilities:
 #
-# The configuration below is a "standard" setup that works out of the box,
-# but if you're running this outside of a local network, it is recommended
-# to set the environment variables for extra security.
+#   Pipelock — agent security proxy (always runs)
+#     - Forward proxy (port 8888): scans outbound HTTPS from Faraday-based
+#       clients (e.g. ruby-openai). NOT covered: SimpleFin, Coinbase, or
+#       anything using Net::HTTP/HTTParty directly. HTTPS_PROXY is
+#       cooperative; Docker Compose has no egress network policy.
+#     - MCP reverse proxy (port 8889): scans inbound AI traffic (DLP,
+#       prompt injection, tool poisoning, tool call policy). External AI
+#       clients should connect to Pipelock on port 8889 rather than
+#       directly to Sure's /mcp endpoint. Note: /mcp is still reachable
+#       on web port 3000 (auth token required); Pipelock adds scanning
+#       but Docker Compose cannot enforce network-level routing.
+#
+#   Ollama + Open WebUI — local LLM inference (optional, --profile ai)
+#     - Only starts when you run: docker compose --profile ai up
 #
 # Setup:
 # ------
 #
-# To run this, you should read the setup guide:
+# 1. Copy pipelock.example.yaml alongside this file (or customize it).
+# 2. Read the full setup guide:
 #
 # https://github.com/we-promise/sure/blob/main/docs/hosting/docker.md
 #
@@ -41,6 +53,17 @@ x-rails-env: &rails_env
   DB_HOST: db
   DB_PORT: 5432
   REDIS_URL: redis://redis:6379/1
+  # MCP server endpoint — enables /mcp for external AI assistants (e.g. Claude, GPT).
+  # Set both values to activate. MCP_USER_EMAIL must match an existing user's email.
+  # External AI clients should connect via Pipelock (port 8889) for scanning.
+  MCP_API_TOKEN: ${MCP_API_TOKEN:-}
+  MCP_USER_EMAIL: ${MCP_USER_EMAIL:-}
+  # Route outbound HTTPS through Pipelock for clients that respect HTTPS_PROXY.
+  # Covered: OpenAI API (ruby-openai/Faraday). NOT covered: SimpleFin, Coinbase (Net::HTTP).
+  HTTPS_PROXY: "http://pipelock:8888"
+  HTTP_PROXY: "http://pipelock:8888"
+  # Skip proxy for internal Docker network services (including ollama for local LLM calls)
+  NO_PROXY: "db,redis,pipelock,ollama,localhost,127.0.0.1"
   AI_DEBUG_MODE: "true" # Useful for debugging, set to "false" in production
   # Ollama using OpenAI API compatible endpoints
   OPENAI_ACCESS_TOKEN: token-can-be-any-value-for-ollama
@@ -60,6 +83,39 @@ x-rails-env: &rails_env
   EXTERNAL_ASSISTANT_ALLOWED_EMAILS: ${EXTERNAL_ASSISTANT_ALLOWED_EMAILS:-}
 
 services:
+  pipelock:
+    image: ghcr.io/luckypipewrench/pipelock:latest  # pin to a specific version (e.g., :0.2.7) for production
+    container_name: pipelock
+    hostname: pipelock
+    restart: unless-stopped
+    volumes:
+      - ./pipelock.example.yaml:/etc/pipelock/pipelock.yaml:ro
+    command:
+      - "run"
+      - "--config"
+      - "/etc/pipelock/pipelock.yaml"
+      - "--listen"
+      - "0.0.0.0:8888"
+      - "--mode"
+      - "balanced"
+      - "--mcp-listen"
+      - "0.0.0.0:8889"
+      - "--mcp-upstream"
+      - "http://web:3000/mcp"
+    ports:
+      # MCP reverse proxy — external AI assistants connect here
+      - "${MCP_PROXY_PORT:-8889}:8889"
+      # Uncomment to expose forward proxy endpoints (/health, /metrics, /stats):
+      # - "8888:8888"
+    healthcheck:
+      test: ["CMD", "/pipelock", "healthcheck", "--addr", "127.0.0.1:8888"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    networks:
+      - sure_net
+
   # Note: You still have to download models manually using the ollama CLI or via Open WebUI
   ollama:
     profiles:
@@ -116,6 +172,10 @@ services:
     volumes:
       - app-storage:/rails/storage
     ports:
+      # Web UI for browser access. Note: /mcp is also reachable on this port,
+      # bypassing Pipelock's MCP scanning (auth token is still required).
+      # For hardened deployments, use `expose: [3000]` instead and front
+      # the web UI with a separate reverse proxy.
       - ${PORT:-3000}:3000
     restart: unless-stopped
     environment:
@@ -124,6 +184,8 @@ services:
       db:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      pipelock:  # Remove this block and unset HTTPS_PROXY/HTTP_PROXY to run without Pipelock
         condition: service_healthy
     dns:
       - 8.8.8.8
@@ -141,6 +203,8 @@ services:
       db:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      pipelock:  # Remove this block and unset HTTPS_PROXY/HTTP_PROXY to run without Pipelock
         condition: service_healthy
     dns:
       - 8.8.8.8
