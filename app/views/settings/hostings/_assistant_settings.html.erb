@@ -63,6 +63,7 @@
                           inputmode: "url",
                           disabled: ENV["EXTERNAL_ASSISTANT_URL"].present?,
                           data: { "auto-submit-form-target": "auto" } %>
+      <p class="text-xs text-secondary mt-1"><%= t(".url_help") %></p>
 
       <%= form.password_field :external_assistant_token,
                               label: t(".token_label"),
@@ -74,6 +75,7 @@
                               inputmode: "text",
                               disabled: ENV["EXTERNAL_ASSISTANT_TOKEN"].present?,
                               data: { "auto-submit-form-target": "auto" } %>
+      <p class="text-xs text-secondary mt-1"><%= t(".token_help") %></p>
 
       <%= form.text_field :external_assistant_agent_id,
                           label: t(".agent_id_label"),
@@ -85,6 +87,7 @@
                           inputmode: "text",
                           disabled: ENV["EXTERNAL_ASSISTANT_AGENT_ID"].present?,
                           data: { "auto-submit-form-target": "auto" } %>
+      <p class="text-xs text-secondary mt-1"><%= t(".agent_id_help") %></p>
     <% end %>
   <% end %>
 </div>
