@@ -16,6 +16,7 @@ class ScopeAllProviderAccountUniquenessToItem < ActiveRecord::Migration[7.2]
   end
 
   def down
+    raise_if_cross_item_duplicates_exist
     revert_plaid_accounts
     revert_indexa_capital_accounts
     revert_snaptrade_accounts
@@ -36,14 +37,21 @@ class ScopeAllProviderAccountUniquenessToItem < ActiveRecord::Migration[7.2]
                 name: "index_plaid_accounts_on_item_and_plaid_id"
     end
 
-    def revert_plaid_accounts
-      if PlaidAccount.group(:plaid_id).having("COUNT(*) > 1").exists?
+    def raise_if_cross_item_duplicates_exist
+      duplicates = []
+      duplicates << "plaid_accounts" if execute("SELECT 1 FROM plaid_accounts WHERE plaid_id IS NOT NULL GROUP BY plaid_id HAVING COUNT(DISTINCT plaid_item_id) > 1 LIMIT 1").any?
+      duplicates << "indexa_capital_accounts" if execute("SELECT 1 FROM indexa_capital_accounts WHERE indexa_capital_account_id IS NOT NULL GROUP BY indexa_capital_account_id HAVING COUNT(DISTINCT indexa_capital_item_id) > 1 LIMIT 1").any?
+      duplicates << "snaptrade_accounts (account_id)" if execute("SELECT 1 FROM snaptrade_accounts WHERE account_id IS NOT NULL GROUP BY account_id HAVING COUNT(DISTINCT snaptrade_item_id) > 1 LIMIT 1").any?
+      duplicates << "snaptrade_accounts (snaptrade_account_id)" if execute("SELECT 1 FROM snaptrade_accounts WHERE snaptrade_account_id IS NOT NULL GROUP BY snaptrade_account_id HAVING COUNT(DISTINCT snaptrade_item_id) > 1 LIMIT 1").any?
+
+      if duplicates.any?
         raise ActiveRecord::IrreversibleMigration,
-              "Cannot restore global unique index on plaid_accounts.plaid_id: " \
-              "duplicate plaid_id values exist across plaid_items. " \
+              "Cannot rollback: cross-item duplicates exist in #{duplicates.join(', ')}. " \
               "Remove duplicates first before rolling back."
       end
+    end
 
+    def revert_plaid_accounts
       remove_index :plaid_accounts, name: "index_plaid_accounts_on_item_and_plaid_id", if_exists: true
       return if index_exists?(:plaid_accounts, :plaid_id, name: "index_plaid_accounts_on_plaid_id")
 
@@ -62,13 +70,6 @@ class ScopeAllProviderAccountUniquenessToItem < ActiveRecord::Migration[7.2]
     end
 
     def revert_indexa_capital_accounts
-      if IndexaCapitalAccount.where.not(indexa_capital_account_id: nil).group(:indexa_capital_account_id).having("COUNT(*) > 1").exists?
-        raise ActiveRecord::IrreversibleMigration,
-              "Cannot restore global unique index on indexa_capital_accounts.indexa_capital_account_id: " \
-              "duplicate values exist across indexa_capital_items. " \
-              "Remove duplicates first before rolling back."
-      end
-
       remove_index :indexa_capital_accounts, name: "index_indexa_capital_accounts_on_item_and_account_id", if_exists: true
       return if index_exists?(:indexa_capital_accounts, :indexa_capital_account_id, name: "index_indexa_capital_accounts_on_indexa_capital_account_id")
 
@@ -96,14 +97,6 @@ class ScopeAllProviderAccountUniquenessToItem < ActiveRecord::Migration[7.2]
     end
 
     def revert_snaptrade_accounts
-      if SnaptradeAccount.where.not(account_id: nil).group(:account_id).having("COUNT(*) > 1").exists? ||
-          SnaptradeAccount.where.not(snaptrade_account_id: nil).group(:snaptrade_account_id).having("COUNT(*) > 1").exists?
-        raise ActiveRecord::IrreversibleMigration,
-              "Cannot restore global unique indexes on snaptrade_accounts: " \
-              "duplicate account_id or snaptrade_account_id values exist across snaptrade_items. " \
-              "Remove duplicates first before rolling back."
-      end
-
       remove_index :snaptrade_accounts, name: "index_snaptrade_accounts_on_item_and_account_id", if_exists: true
       remove_index :snaptrade_accounts, name: "index_snaptrade_accounts_on_item_and_snaptrade_account_id", if_exists: true
       unless index_exists?(:snaptrade_accounts, :account_id, name: "index_snaptrade_accounts_on_account_id")
