@@ -33,7 +33,7 @@ class CoinbaseItem::Syncer
     collect_setup_stats(sync, provider_accounts: coinbase_item.coinbase_accounts.to_a)
 
     unlinked_accounts = coinbase_item.coinbase_accounts.left_joins(:account_provider).where(account_providers: { id: nil })
-    linked_accounts = coinbase_item.coinbase_accounts.joins(:account_provider).joins(:account).merge(Account.visible)
+    linked_accounts = coinbase_item.coinbase_accounts.joins(:account_provider).joins(:account).merge(Account.sync_enabled)
 
     if unlinked_accounts.any?
       coinbase_item.update!(pending_account_setup: true)

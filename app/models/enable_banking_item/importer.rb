@@ -75,7 +75,7 @@ class EnableBankingItem::Importer
     transactions_imported = 0
     transactions_failed = 0
 
-    linked_accounts_query = enable_banking_item.enable_banking_accounts.joins(:account_provider).joins(:account).merge(Account.visible)
+    linked_accounts_query = enable_banking_item.enable_banking_accounts.joins(:account_provider).joins(:account).merge(Account.sync_enabled)
 
     linked_accounts_query.each do |enable_banking_account|
       begin

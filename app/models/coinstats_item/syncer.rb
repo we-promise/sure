@@ -21,7 +21,7 @@ class CoinstatsItem::Syncer
     sync.update!(status_text: I18n.t("models.coinstats_item.syncer.checking_configuration")) if sync.respond_to?(:status_text)
     total_accounts = coinstats_item.coinstats_accounts.count
 
-    linked_accounts = coinstats_item.coinstats_accounts.joins(:account_provider).joins(:account).merge(Account.visible)
+    linked_accounts = coinstats_item.coinstats_accounts.joins(:account_provider).joins(:account).merge(Account.sync_enabled)
     unlinked_accounts = coinstats_item.coinstats_accounts.left_joins(:account_provider).where(account_providers: { id: nil })
 
     sync_stats = {

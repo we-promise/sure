@@ -67,7 +67,7 @@ class CoinbaseItem < ApplicationRecord
       )
     end
 
-    linked = coinbase_accounts.joins(:account).merge(Account.visible)
+    linked = coinbase_accounts.joins(:account).merge(Account.sync_enabled)
     Rails.logger.info "CoinbaseItem #{id} - found #{linked.count} linked visible accounts to process"
 
     results = []
@@ -90,7 +90,7 @@ class CoinbaseItem < ApplicationRecord
     return [] if accounts.empty?
 
     results = []
-    accounts.visible.each do |account|
+    accounts.sync_enabled.each do |account|
       begin
         account.sync_later(
           parent_sync: parent_sync,

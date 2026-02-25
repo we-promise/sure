@@ -20,6 +20,7 @@ class Account < ApplicationRecord
 
   scope :visible, -> { where(status: [ "draft", "active" ], excluded: false) }
   scope :sidebar_visible, -> { where(status: [ "draft", "active" ]) }
+  scope :sync_enabled, -> { where(status: [ "draft", "active" ]) }
   scope :assets, -> { where(classification: "asset") }
   scope :liabilities, -> { where(classification: "liability") }
   scope :alphabetically, -> { order(:name) }

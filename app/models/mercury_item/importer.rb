@@ -82,7 +82,7 @@ class MercuryItem::Importer
     transactions_imported = 0
     transactions_failed = 0
 
-    mercury_item.mercury_accounts.joins(:account).merge(Account.visible).each do |mercury_account|
+    mercury_item.mercury_accounts.joins(:account).merge(Account.sync_enabled).each do |mercury_account|
       begin
         result = fetch_and_store_transactions(mercury_account)
         if result[:success]
