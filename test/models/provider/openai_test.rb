@@ -286,4 +286,48 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
 
     assert_equal "configured model: custom-model", custom_provider.supported_models_description
   end
+
+  test "upsert_langfuse_trace uses client trace upsert" do
+    trace = Struct.new(:id).new("trace_123")
+    fake_client = mock
+
+    fake_client.expects(:trace).with(id: "trace_123", output: { ok: true }, level: "ERROR")
+    @subject.stubs(:langfuse_client).returns(fake_client)
+
+    @subject.send(:upsert_langfuse_trace, trace: trace, output: { ok: true }, level: "ERROR")
+  end
+
+  test "log_langfuse_generation upserts trace through client" do
+    trace = Struct.new(:id).new("trace_456")
+    generation = mock
+    fake_client = mock
+
+    @subject.stubs(:langfuse_client).returns(fake_client)
+    @subject.stubs(:create_langfuse_trace).returns(trace)
+
+    fake_client.expects(:trace).with(id: "trace_456", output: "hello")
+    trace.expects(:generation).returns(generation)
+    generation.expects(:end).with(output: "hello", usage: { "total_tokens" => 10 })
+
+    @subject.send(
+      :log_langfuse_generation,
+      name: "chat",
+      model: "gpt-4.1",
+      input: { prompt: "Hi" },
+      output: "hello",
+      usage: { "total_tokens" => 10 }
+    )
+  end
+
+  test "create_langfuse_trace logs full error details" do
+    fake_client = mock
+    error = StandardError.new("boom")
+
+    @subject.stubs(:langfuse_client).returns(fake_client)
+    fake_client.expects(:trace).raises(error)
+
+    Rails.logger.expects(:warn).with(regexp_matches(/Langfuse trace creation failed: boom.*test\/models\/provider\/openai_test\.rb/m))
+
+    @subject.send(:create_langfuse_trace, name: "openai.test", input: { foo: "bar" })
+  end
 end

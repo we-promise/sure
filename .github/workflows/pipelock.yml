@@ -1,0 +1,24 @@
+name: Pipelock Security Scan
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Pipelock Scan
+        uses: luckyPipewrench/pipelock@v1
+        with:
+          scan-diff: 'true'
+          fail-on-findings: 'false'
+          test-vectors: 'false'

@@ -472,6 +472,9 @@ Rails.application.routes.draw do
 
   get "redis-configuration-error", to: "pages#redis_configuration_error"
 
+  # MCP server endpoint for external AI assistants (JSON-RPC 2.0)
+  post "mcp", to: "mcp#handle"
+
   # Reveal health status on /up that returns 200 if the app boots with no exceptions, otherwise 500.
   # Can be used by load balancers and uptime monitors to verify that the app is live.
   get "up" => "rails/health#show", as: :rails_health_check
