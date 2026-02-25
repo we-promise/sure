@@ -118,6 +118,21 @@ class Settings::HostingsController < ApplicationController
       Setting.openai_json_mode = hosting_params[:openai_json_mode].presence
     end
 
+    if hosting_params.key?(:external_assistant_url)
+      Setting.external_assistant_url = hosting_params[:external_assistant_url]
+    end
+
+    if hosting_params.key?(:external_assistant_token)
+      token_param = hosting_params[:external_assistant_token].to_s.strip
+      unless token_param.blank? || token_param == "********"
+        Setting.external_assistant_token = token_param
+      end
+    end
+
+    if hosting_params.key?(:external_assistant_agent_id)
+      Setting.external_assistant_agent_id = hosting_params[:external_assistant_agent_id]
+    end
+
     update_assistant_type
 
     redirect_to settings_hosting_path, notice: t(".success")
@@ -134,7 +149,7 @@ class Settings::HostingsController < ApplicationController
   private
     def hosting_params
       return ActionController::Parameters.new unless params.key?(:setting)
-      params.require(:setting).permit(:onboarding_state, :require_email_confirmation, :brand_fetch_client_id, :brand_fetch_high_res_logos, :twelve_data_api_key, :openai_access_token, :openai_uri_base, :openai_model, :openai_json_mode, :exchange_rate_provider, :securities_provider, :syncs_include_pending, :auto_sync_enabled, :auto_sync_time)
+      params.require(:setting).permit(:onboarding_state, :require_email_confirmation, :brand_fetch_client_id, :brand_fetch_high_res_logos, :twelve_data_api_key, :openai_access_token, :openai_uri_base, :openai_model, :openai_json_mode, :exchange_rate_provider, :securities_provider, :syncs_include_pending, :auto_sync_enabled, :auto_sync_time, :external_assistant_url, :external_assistant_token, :external_assistant_agent_id)
     end
 
     def update_assistant_type

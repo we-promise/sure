@@ -22,9 +22,9 @@ class Assistant::External < Assistant::Base
 
     def config
       Config.new(
-        url: ENV["EXTERNAL_ASSISTANT_URL"],
-        token: ENV["EXTERNAL_ASSISTANT_TOKEN"],
-        agent_id: ENV.fetch("EXTERNAL_ASSISTANT_AGENT_ID", "main"),
+        url: ENV["EXTERNAL_ASSISTANT_URL"].presence || Setting.external_assistant_url,
+        token: ENV["EXTERNAL_ASSISTANT_TOKEN"].presence || Setting.external_assistant_token,
+        agent_id: ENV["EXTERNAL_ASSISTANT_AGENT_ID"].presence || Setting.external_assistant_agent_id.presence || "main",
         session_key: ENV.fetch("EXTERNAL_ASSISTANT_SESSION_KEY", "agent:main:main")
       )
     end
@@ -33,7 +33,7 @@ class Assistant::External < Assistant::Base
   def respond_to(message)
     unless self.class.configured?
       raise Assistant::Error,
-        "External assistant is not configured. Set EXTERNAL_ASSISTANT_URL and EXTERNAL_ASSISTANT_TOKEN environment variables."
+        "External assistant is not configured. Set the URL and token in Settings > Self-Hosting or via environment variables."
     end
 
     unless self.class.allowed_user?(chat.user)

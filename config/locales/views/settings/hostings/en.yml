@@ -44,8 +44,15 @@ en:
         type_external: External (remote agent)
         external_status: External assistant endpoint
         external_configured: Configured
-        external_not_configured: Not configured. Set EXTERNAL_ASSISTANT_URL and EXTERNAL_ASSISTANT_TOKEN.
+        external_not_configured: Not configured. Enter the URL and token below, or set EXTERNAL_ASSISTANT_URL and EXTERNAL_ASSISTANT_TOKEN environment variables.
         env_notice: "Assistant type is locked to '%{type}' via ASSISTANT_TYPE environment variable."
+        env_configured_external: Successfully configured through environment variables.
+        url_label: Endpoint URL
+        url_placeholder: "http://your-agent:18789/v1/chat/completions"
+        token_label: Bearer Token
+        token_placeholder: Enter your agent's API token here
+        agent_id_label: Agent ID (Optional)
+        agent_id_placeholder: "main (default)"
       brand_fetch_settings:
         description: Enter the Client ID provided by Brand Fetch
         label: Client ID

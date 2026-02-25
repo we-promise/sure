@@ -1,16 +1,25 @@
 require "test_helper"
 
 class Assistant::ExternalConfigTest < ActiveSupport::TestCase
-  test "config reads URL from environment dynamically" do
-    with_env_overrides("EXTERNAL_ASSISTANT_URL" => "http://localhost:18789/v1/chat/completions") do
-      assert_equal "http://localhost:18789/v1/chat/completions", Assistant::External.config.url
-      assert_nil Assistant::External.config.token
+  test "config reads URL from environment with priority over Setting" do
+    with_env_overrides("EXTERNAL_ASSISTANT_URL" => "http://from-env/v1/chat/completions") do
+      assert_equal "http://from-env/v1/chat/completions", Assistant::External.config.url
       assert_equal "main", Assistant::External.config.agent_id
       assert_equal "agent:main:main", Assistant::External.config.session_key
     end
+  end
 
-    # After env override is gone, config reflects that
-    assert_nil Assistant::External.config.url
+  test "config falls back to Setting when env var is absent" do
+    Setting.external_assistant_url = "http://from-setting/v1/chat/completions"
+    Setting.external_assistant_token = "setting-token"
+
+    with_env_overrides("EXTERNAL_ASSISTANT_URL" => nil, "EXTERNAL_ASSISTANT_TOKEN" => nil) do
+      assert_equal "http://from-setting/v1/chat/completions", Assistant::External.config.url
+      assert_equal "setting-token", Assistant::External.config.token
+    end
+  ensure
+    Setting.external_assistant_url = nil
+    Setting.external_assistant_token = nil
   end
 
   test "config reads agent_id with custom value" do
@@ -51,6 +60,9 @@ class Assistant::ExternalConfigTest < ActiveSupport::TestCase
   end
 
   test "configured? returns true only when URL and token are both present" do
+    Setting.external_assistant_url = nil
+    Setting.external_assistant_token = nil
+
     with_env_overrides("EXTERNAL_ASSISTANT_URL" => "http://x", "EXTERNAL_ASSISTANT_TOKEN" => nil) do
       assert_not Assistant::External.configured?
     end

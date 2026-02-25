@@ -31,7 +31,7 @@
                       data: { "auto-submit-form-target": "auto" } } %>
   <% end %>
   <% if effective_type == "external" %>
-    <div class="flex items-center gap-2 text-sm">
+    <div class="flex items-center gap-2 text-sm mb-4">
       <% if Assistant::External.configured? %>
         <span class="inline-block w-2 h-2 rounded-full bg-green-500"></span>
         <span class="text-secondary"><%= t(".external_configured") %></span>
@@ -40,5 +40,51 @@
         <span class="text-secondary"><%= t(".external_not_configured") %></span>
       <% end %>
     </div>
+
+    <% if ENV["EXTERNAL_ASSISTANT_URL"].present? && ENV["EXTERNAL_ASSISTANT_TOKEN"].present? %>
+      <p class="text-sm text-secondary"><%= t(".env_configured_external") %></p>
+    <% end %>
+
+    <%= styled_form_with model: Setting.new,
+                         url: settings_hosting_path,
+                         method: :patch,
+                         class: "space-y-4",
+                         data: {
+                           controller: "auto-submit-form",
+                           "auto-submit-form-trigger-event-value": "blur"
+                         } do |form| %>
+      <%= form.text_field :external_assistant_url,
+                          label: t(".url_label"),
+                          placeholder: t(".url_placeholder"),
+                          value: Setting.external_assistant_url,
+                          autocomplete: "off",
+                          autocapitalize: "none",
+                          spellcheck: "false",
+                          inputmode: "url",
+                          disabled: ENV["EXTERNAL_ASSISTANT_URL"].present?,
+                          data: { "auto-submit-form-target": "auto" } %>
+
+      <%= form.password_field :external_assistant_token,
+                              label: t(".token_label"),
+                              placeholder: t(".token_placeholder"),
+                              value: (Setting.external_assistant_token.present? ? "********" : nil),
+                              autocomplete: "off",
+                              autocapitalize: "none",
+                              spellcheck: "false",
+                              inputmode: "text",
+                              disabled: ENV["EXTERNAL_ASSISTANT_TOKEN"].present?,
+                              data: { "auto-submit-form-target": "auto" } %>
+
+      <%= form.text_field :external_assistant_agent_id,
+                          label: t(".agent_id_label"),
+                          placeholder: t(".agent_id_placeholder"),
+                          value: Setting.external_assistant_agent_id,
+                          autocomplete: "off",
+                          autocapitalize: "none",
+                          spellcheck: "false",
+                          inputmode: "text",
+                          disabled: ENV["EXTERNAL_ASSISTANT_AGENT_ID"].present?,
+                          data: { "auto-submit-form-target": "auto" } %>
+    <% end %>
   <% end %>
 </div>
