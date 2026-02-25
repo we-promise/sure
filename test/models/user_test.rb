@@ -160,12 +160,25 @@ class UserTest < ActiveSupport::TestCase
     Setting.openai_access_token = previous
   end
 
-  test "ai_available? returns true when external assistant is configured and user is allowed" do
+  test "ai_available? returns true when external assistant is configured and family type is external" do
     Rails.application.config.app_mode.stubs(:self_hosted?).returns(true)
     previous = Setting.openai_access_token
-    with_env_overrides OPENAI_ACCESS_TOKEN: nil, EXTERNAL_ASSISTANT_URL: "http://localhost:18789/v1/chat/completions", EXTERNAL_ASSISTANT_TOKEN: "test-token" do
+    @user.family.update!(assistant_type: "external")
+    with_env_overrides OPENAI_ACCESS_TOKEN: nil, EXTERNAL_ASSISTANT_URL: "http://localhost:18789/v1/chat", EXTERNAL_ASSISTANT_TOKEN: "test-token" do
       Setting.openai_access_token = nil
       assert @user.ai_available?
+    end
+  ensure
+    Setting.openai_access_token = previous
+    @user.family.update!(assistant_type: "builtin")
+  end
+
+  test "ai_available? returns false when external assistant is configured but family type is builtin" do
+    Rails.application.config.app_mode.stubs(:self_hosted?).returns(true)
+    previous = Setting.openai_access_token
+    with_env_overrides OPENAI_ACCESS_TOKEN: nil, EXTERNAL_ASSISTANT_URL: "http://localhost:18789/v1/chat", EXTERNAL_ASSISTANT_TOKEN: "test-token" do
+      Setting.openai_access_token = nil
+      assert_not @user.ai_available?
     end
   ensure
     Setting.openai_access_token = previous
@@ -174,12 +187,14 @@ class UserTest < ActiveSupport::TestCase
   test "ai_available? returns false when external assistant is configured but user is not in allowlist" do
     Rails.application.config.app_mode.stubs(:self_hosted?).returns(true)
     previous = Setting.openai_access_token
-    with_env_overrides OPENAI_ACCESS_TOKEN: nil, EXTERNAL_ASSISTANT_URL: "http://localhost:18789/v1/chat/completions", EXTERNAL_ASSISTANT_TOKEN: "test-token", EXTERNAL_ASSISTANT_ALLOWED_EMAILS: "other@example.com" do
+    @user.family.update!(assistant_type: "external")
+    with_env_overrides OPENAI_ACCESS_TOKEN: nil, EXTERNAL_ASSISTANT_URL: "http://localhost:18789/v1/chat", EXTERNAL_ASSISTANT_TOKEN: "test-token", EXTERNAL_ASSISTANT_ALLOWED_EMAILS: "other@example.com" do
       Setting.openai_access_token = nil
       assert_not @user.ai_available?
     end
   ensure
     Setting.openai_access_token = previous
+    @user.family.update!(assistant_type: "builtin")
   end
 
   test "intro layout collapses sidebars and enables ai" do

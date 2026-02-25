@@ -205,9 +205,9 @@ class AssistantTest < ActiveSupport::TestCase
     assistant = Assistant.for_chat(@chat)
 
     sse_body = <<~SSE
-      data: {"choices":[{"delta":{"content":"Your net worth"}}],"model":"openclaw:buster"}
+      data: {"choices":[{"delta":{"content":"Your net worth"}}],"model":"ext-agent:main"}
 
-      data: {"choices":[{"delta":{"content":" is $124,200."}}],"model":"openclaw:buster"}
+      data: {"choices":[{"delta":{"content":" is $124,200."}}],"model":"ext-agent:main"}
 
       data: [DONE]
 
@@ -216,7 +216,7 @@ class AssistantTest < ActiveSupport::TestCase
     mock_external_sse_response(sse_body)
 
     with_env_overrides(
-      "EXTERNAL_ASSISTANT_URL" => "http://localhost:18789/v1/chat/completions",
+      "EXTERNAL_ASSISTANT_URL" => "http://localhost:18789/v1/chat",
       "EXTERNAL_ASSISTANT_TOKEN" => "test-token"
     ) do
       assert_difference "AssistantMessage.count", 1 do
@@ -225,7 +225,7 @@ class AssistantTest < ActiveSupport::TestCase
 
       response_msg = @chat.messages.where(type: "AssistantMessage").last
       assert_equal "Your net worth is $124,200.", response_msg.content
-      assert_equal "openclaw:buster", response_msg.ai_model
+      assert_equal "ext-agent:main", response_msg.ai_model
     end
   end
 
@@ -254,7 +254,7 @@ class AssistantTest < ActiveSupport::TestCase
     Net::HTTP.any_instance.stubs(:request).raises(Errno::ECONNREFUSED, "Connection refused")
 
     with_env_overrides(
-      "EXTERNAL_ASSISTANT_URL" => "http://localhost:18789/v1/chat/completions",
+      "EXTERNAL_ASSISTANT_URL" => "http://localhost:18789/v1/chat",
       "EXTERNAL_ASSISTANT_TOKEN" => "test-token"
     ) do
       assert_no_difference "AssistantMessage.count" do
@@ -271,9 +271,9 @@ class AssistantTest < ActiveSupport::TestCase
     assistant = Assistant.for_chat(@chat)
 
     sse_body = <<~SSE
-      data: {"choices":[{"delta":{"role":"assistant"}}],"model":"openclaw:buster"}
+      data: {"choices":[{"delta":{"role":"assistant"}}],"model":"ext-agent:main"}
 
-      data: {"choices":[{"delta":{}}],"model":"openclaw:buster"}
+      data: {"choices":[{"delta":{}}],"model":"ext-agent:main"}
 
       data: [DONE]
 
@@ -282,7 +282,7 @@ class AssistantTest < ActiveSupport::TestCase
     mock_external_sse_response(sse_body)
 
     with_env_overrides(
-      "EXTERNAL_ASSISTANT_URL" => "http://localhost:18789/v1/chat/completions",
+      "EXTERNAL_ASSISTANT_URL" => "http://localhost:18789/v1/chat",
       "EXTERNAL_ASSISTANT_TOKEN" => "test-token"
     ) do
       assert_no_difference "AssistantMessage.count" do
@@ -305,7 +305,7 @@ class AssistantTest < ActiveSupport::TestCase
     capture = mock_external_sse_response(sse_body)
 
     with_env_overrides(
-      "EXTERNAL_ASSISTANT_URL" => "http://localhost:18789/v1/chat/completions",
+      "EXTERNAL_ASSISTANT_URL" => "http://localhost:18789/v1/chat",
       "EXTERNAL_ASSISTANT_TOKEN" => "test-token"
     ) do
       assistant.respond_to(@message)
@@ -333,9 +333,9 @@ class AssistantTest < ActiveSupport::TestCase
     @chat.update!(error: nil)
 
     sse_body = <<~SSE
-      data: {"choices":[{"delta":{"content":"Based on your accounts, "}}],"model":"openclaw:buster"}
+      data: {"choices":[{"delta":{"content":"Based on your accounts, "}}],"model":"ext-agent:main"}
 
-      data: {"choices":[{"delta":{"content":"your net worth is $50,000."}}],"model":"openclaw:buster"}
+      data: {"choices":[{"delta":{"content":"your net worth is $50,000."}}],"model":"ext-agent:main"}
 
       data: [DONE]
 
@@ -344,8 +344,8 @@ class AssistantTest < ActiveSupport::TestCase
     mock_external_sse_response(sse_body)
 
     with_env_overrides(
-      "EXTERNAL_ASSISTANT_URL" => "http://openclaw:18789/v1/chat/completions",
-      "EXTERNAL_ASSISTANT_TOKEN" => "oc_test123"
+      "EXTERNAL_ASSISTANT_URL" => "http://localhost:18789/v1/chat",
+      "EXTERNAL_ASSISTANT_TOKEN" => "test-token"
     ) do
       assistant = Assistant::External.new(@chat)
       assistant.respond_to(@message)
@@ -355,7 +355,7 @@ class AssistantTest < ActiveSupport::TestCase
 
       response = @chat.messages.where(type: "AssistantMessage").last
       assert_equal "Based on your accounts, your net worth is $50,000.", response.content
-      assert_equal "openclaw:buster", response.ai_model
+      assert_equal "ext-agent:main", response.ai_model
     end
   end
 
@@ -373,7 +373,7 @@ class AssistantTest < ActiveSupport::TestCase
     capture = mock_external_sse_response(sse_body)
 
     with_env_overrides(
-      "EXTERNAL_ASSISTANT_URL" => "http://localhost:18789/v1/chat/completions",
+      "EXTERNAL_ASSISTANT_URL" => "http://localhost:18789/v1/chat",
       "EXTERNAL_ASSISTANT_TOKEN" => "test-token"
     ) do
       assistant.respond_to(@message)
@@ -387,17 +387,17 @@ class AssistantTest < ActiveSupport::TestCase
     @chat.user.family.update!(assistant_type: "external")
     assistant = Assistant.for_chat(@chat)
 
-    sse_body = "data: {\"choices\":[{\"delta\":{\"content\":\"Hi\"}}],\"model\":\"openclaw:custom-agent\"}\n\ndata: [DONE]\n\n"
+    sse_body = "data: {\"choices\":[{\"delta\":{\"content\":\"Hi\"}}],\"model\":\"ext-agent:custom\"}\n\ndata: [DONE]\n\n"
     mock_external_sse_response(sse_body)
 
     with_env_overrides(
-      "EXTERNAL_ASSISTANT_URL" => "http://localhost:18789/v1/chat/completions",
+      "EXTERNAL_ASSISTANT_URL" => "http://localhost:18789/v1/chat",
       "EXTERNAL_ASSISTANT_TOKEN" => "test-token"
     ) do
       assistant.respond_to(@message)
 
       response = @chat.messages.where(type: "AssistantMessage").last
-      assert_equal "openclaw:custom-agent", response.ai_model
+      assert_equal "ext-agent:custom", response.ai_model
     end
   end
 

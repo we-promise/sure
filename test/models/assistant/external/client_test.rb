@@ -3,21 +3,21 @@ require "test_helper"
 class Assistant::External::ClientTest < ActiveSupport::TestCase
   setup do
     @client = Assistant::External::Client.new(
-      url: "http://localhost:18789/v1/chat/completions",
+      url: "http://localhost:18789/v1/chat",
       token: "test-token",
-      agent_id: "buster"
+      agent_id: "test-agent"
     )
   end
 
   test "streams text chunks from SSE response" do
     sse_body = <<~SSE
-      data: {"id":"chatcmpl-1","object":"chat.completion.chunk","choices":[{"index":0,"delta":{"role":"assistant"},"finish_reason":null}],"model":"openclaw:buster"}
+      data: {"id":"chatcmpl-1","object":"chat.completion.chunk","choices":[{"index":0,"delta":{"role":"assistant"},"finish_reason":null}],"model":"test-agent"}
 
-      data: {"id":"chatcmpl-1","object":"chat.completion.chunk","choices":[{"index":0,"delta":{"content":"Your net worth"},"finish_reason":null}],"model":"openclaw:buster"}
+      data: {"id":"chatcmpl-1","object":"chat.completion.chunk","choices":[{"index":0,"delta":{"content":"Your net worth"},"finish_reason":null}],"model":"test-agent"}
 
-      data: {"id":"chatcmpl-1","object":"chat.completion.chunk","choices":[{"index":0,"delta":{"content":" is $124,200."},"finish_reason":null}],"model":"openclaw:buster"}
+      data: {"id":"chatcmpl-1","object":"chat.completion.chunk","choices":[{"index":0,"delta":{"content":" is $124,200."},"finish_reason":null}],"model":"test-agent"}
 
-      data: {"id":"chatcmpl-1","object":"chat.completion.chunk","choices":[{"index":0,"delta":{},"finish_reason":"stop"}],"model":"openclaw:buster"}
+      data: {"id":"chatcmpl-1","object":"chat.completion.chunk","choices":[{"index":0,"delta":{},"finish_reason":"stop"}],"model":"test-agent"}
 
       data: [DONE]
 
@@ -31,7 +31,7 @@ class Assistant::External::ClientTest < ActiveSupport::TestCase
     end
 
     assert_equal [ "Your net worth", " is $124,200." ], chunks
-    assert_equal "openclaw:buster", model
+    assert_equal "test-agent", model
   end
 
   test "raises on non-200 response" do
@@ -42,12 +42,46 @@ class Assistant::External::ClientTest < ActiveSupport::TestCase
     end
   end
 
-  test "raises on connection timeout" do
+  test "retries transient errors then raises Assistant::Error" do
     Net::HTTP.any_instance.stubs(:request).raises(Net::OpenTimeout, "connection timed out")
 
-    assert_raises(Net::OpenTimeout) do
+    error = assert_raises(Assistant::Error) do
       @client.chat(messages: [ { role: "user", content: "test" } ]) { |_| }
     end
+
+    assert_match(/unreachable after 3 attempts/, error.message)
+  end
+
+  test "does not retry after streaming has started" do
+    call_count = 0
+
+    # Custom response that yields one chunk then raises mid-stream
+    mock_response = Object.new
+    mock_response.define_singleton_method(:is_a?) { |klass| klass == Net::HTTPSuccess }
+    mock_response.define_singleton_method(:read_body) do |&blk|
+      blk.call("data: {\"choices\":[{\"delta\":{\"content\":\"partial\"}}],\"model\":\"m\"}\n\n")
+      raise Errno::ECONNRESET, "connection reset mid-stream"
+    end
+
+    mock_http = stub("http")
+    mock_http.stubs(:use_ssl=)
+    mock_http.stubs(:open_timeout=)
+    mock_http.stubs(:read_timeout=)
+    mock_http.define_singleton_method(:request) do |_req, &blk|
+      call_count += 1
+      blk.call(mock_response)
+    end
+
+    Net::HTTP.stubs(:new).returns(mock_http)
+
+    chunks = []
+    error = assert_raises(Assistant::Error) do
+      @client.chat(messages: [ { role: "user", content: "test" } ]) { |t| chunks << t }
+    end
+
+    assert_equal 1, call_count, "Should not retry after streaming started"
+    assert_equal [ "partial" ], chunks
+    assert_match(/connection lost/, error.message)
   end
 
   test "builds correct request payload" do
@@ -64,7 +98,7 @@ class Assistant::External::ClientTest < ActiveSupport::TestCase
     ) { |_| }
 
     body = JSON.parse(capture[0].body)
-    assert_equal "openclaw:buster", body["model"]
+    assert_equal "test-agent", body["model"]
     assert_equal true, body["stream"]
     assert_equal 3, body["messages"].size
     assert_equal "sure-family-42", body["user"]
@@ -77,8 +111,8 @@ class Assistant::External::ClientTest < ActiveSupport::TestCase
     @client.chat(messages: [ { role: "user", content: "test" } ]) { |_| }
 
     assert_equal "Bearer test-token", capture[0]["Authorization"]
-    assert_equal "buster", capture[0]["x-openclaw-agent-id"]
-    assert_equal "agent:main:main", capture[0]["x-openclaw-session-key"]
+    assert_equal "test-agent", capture[0]["X-Agent-Id"]
+    assert_equal "agent:main:main", capture[0]["X-Session-Key"]
     assert_equal "text/event-stream", capture[0]["Accept"]
     assert_equal "application/json", capture[0]["Content-Type"]
   end
@@ -146,17 +180,17 @@ class Assistant::External::ClientTest < ActiveSupport::TestCase
     end.returns(mock_http)
 
     client = Assistant::External::Client.new(
-      url: "https://example.com/v1/chat/completions",
+      url: "https://example.com/v1/chat",
       token: "test-token"
     )
 
-    ClimateControl.modify(HTTPS_PROXY: "http://pipelock:8888") do
+    ClimateControl.modify(HTTPS_PROXY: "http://proxy:8888") do
       client.chat(messages: [ { role: "user", content: "test" } ]) { |_| }
     end
 
     assert_equal "example.com", captured_args[0]
     assert_equal 443, captured_args[1]
-    assert_equal "pipelock", captured_args[2]
+    assert_equal "proxy", captured_args[2]
     assert_equal 8888, captured_args[3]
   end
 
@@ -181,11 +215,11 @@ class Assistant::External::ClientTest < ActiveSupport::TestCase
     end.returns(mock_http)
 
     client = Assistant::External::Client.new(
-      url: "http://openclaw.svc.cluster.local:18789/v1/chat/completions",
+      url: "http://agent.internal.example.com:18789/v1/chat",
       token: "test-token"
     )
 
-    ClimateControl.modify(HTTPS_PROXY: "http://pipelock:8888", NO_PROXY: "localhost,.svc.cluster.local") do
+    ClimateControl.modify(HTTPS_PROXY: "http://proxy:8888", NO_PROXY: "localhost,.example.com") do
       client.chat(messages: [ { role: "user", content: "test" } ]) { |_| }
     end
 

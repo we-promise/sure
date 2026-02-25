@@ -43,7 +43,7 @@ class Assistant::External < Assistant::Base
     assistant_message = AssistantMessage.new(
       chat: chat,
       content: "",
-      ai_model: "external"
+      ai_model: "external-agent"
     )
 
     client = build_client
@@ -68,12 +68,24 @@ class Assistant::External < Assistant::Base
     end
 
     assistant_message.update!(ai_model: model) if model.present?
-  rescue => e
+  rescue Assistant::Error, ActiveRecord::ActiveRecordError => e
+    cleanup_partial_response(assistant_message)
     stop_thinking
     chat.add_error(e)
+  rescue => e
+    Rails.logger.error("[Assistant::External] Unexpected error: #{e.class} - #{e.message}")
+    cleanup_partial_response(assistant_message)
+    stop_thinking
+    chat.add_error(Assistant::Error.new("Something went wrong with the external assistant. Check server logs for details."))
   end
 
   private
+
+    def cleanup_partial_response(assistant_message)
+      assistant_message&.destroy! if assistant_message&.persisted?
+    rescue ActiveRecord::ActiveRecordError => e
+      Rails.logger.warn("[Assistant::External] Failed to clean up partial response: #{e.message}")
+    end
 
     def build_client
       Assistant::External::Client.new(
@@ -84,8 +96,10 @@ class Assistant::External < Assistant::Base
       )
     end
 
+    MAX_CONVERSATION_MESSAGES = 20
+
     def build_conversation_messages
-      chat.conversation_messages.ordered.map do |msg|
+      chat.conversation_messages.ordered.last(MAX_CONVERSATION_MESSAGES).map do |msg|
         { role: msg.role, content: msg.content }
       end
     end

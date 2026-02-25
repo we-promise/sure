@@ -3,7 +3,7 @@ class Settings::HostingsController < ApplicationController
 
   guard_feature unless: -> { self_hosted? }
 
-  before_action :ensure_admin, only: [ :update, :clear_cache ]
+  before_action :ensure_admin, only: [ :update, :clear_cache, :disconnect_external_assistant ]
 
   def show
     @breadcrumbs = [
@@ -144,6 +144,17 @@ class Settings::HostingsController < ApplicationController
   def clear_cache
     DataCacheClearJob.perform_later(Current.family)
     redirect_to settings_hosting_path, notice: t(".cache_cleared")
+  end
+
+  def disconnect_external_assistant
+    Setting.external_assistant_url = nil
+    Setting.external_assistant_token = nil
+    Setting.external_assistant_agent_id = nil
+    Current.family.update!(assistant_type: "builtin") unless ENV["ASSISTANT_TYPE"].present?
+    redirect_to settings_hosting_path, notice: t(".external_assistant_disconnected")
+  rescue => e
+    Rails.logger.error("[External Assistant] Disconnect failed: #{e.message}")
+    redirect_to settings_hosting_path, alert: t("settings.hostings.update.failure")
   end
 
   private

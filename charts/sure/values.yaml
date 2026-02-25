@@ -58,7 +58,7 @@ rails:
   # Delegates chat to a remote AI agent that calls back via MCP.
   externalAssistant:
     enabled: false
-    url: ""           # e.g., http://openclaw:18789/v1/chat/completions
+    url: ""           # e.g., https://your-agent-host/v1/chat
     token: ""         # Bearer token for the external AI gateway
     agentId: "main"      # Agent routing identifier
     sessionKey: "agent:main:main"  # Session key for persistent agent sessions

@@ -45,6 +45,25 @@
       <p class="text-sm text-secondary"><%= t(".env_configured_external") %></p>
     <% end %>
 
+    <% if Assistant::External.configured? && !ENV["EXTERNAL_ASSISTANT_URL"].present? %>
+      <div class="flex items-center justify-between p-3 rounded-lg border border-primary">
+        <div>
+          <p class="text-sm font-medium text-primary"><%= t(".disconnect_title") %></p>
+          <p class="text-xs text-secondary"><%= t(".disconnect_description") %></p>
+        </div>
+        <%= button_to t(".disconnect_button"),
+              disconnect_external_assistant_settings_hosting_path,
+              method: :delete,
+              class: "bg-red-600 fg-inverse text-sm font-medium rounded-lg px-4 py-2 whitespace-nowrap",
+              data: { turbo_confirm: {
+                title: t(".confirm_disconnect.title"),
+                body: t(".confirm_disconnect.body"),
+                accept: t(".disconnect_button"),
+                acceptClass: "w-full bg-red-600 fg-inverse rounded-xl text-center p-[10px] border mb-2"
+              }} %>
+      </div>
+    <% end %>
+
     <%= styled_form_with model: Setting.new,
                          url: settings_hosting_path,
                          method: :patch,

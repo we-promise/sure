@@ -136,7 +136,16 @@ class User < ApplicationRecord
   end
 
   def ai_available?
-    !Rails.application.config.app_mode.self_hosted? || ENV["OPENAI_ACCESS_TOKEN"].present? || Setting.openai_access_token.present? || Assistant::External.available_for?(self)
+    return true unless Rails.application.config.app_mode.self_hosted?
+
+    effective_type = ENV["ASSISTANT_TYPE"].presence || family&.assistant_type.presence || "builtin"
+
+    case effective_type
+    when "external"
+      Assistant::External.available_for?(self)
+    else
+      ENV["OPENAI_ACCESS_TOKEN"].present? || Setting.openai_access_token.present?
+    end
   end
 
   def ai_enabled?

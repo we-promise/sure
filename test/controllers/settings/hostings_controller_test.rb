@@ -168,6 +168,66 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "can update external assistant settings" do
+    with_self_hosting do
+      patch settings_hosting_url, params: { setting: {
+        external_assistant_url: "https://agent.example.com/v1/chat",
+        external_assistant_token: "my-secret-token",
+        external_assistant_agent_id: "finance-bot"
+      } }
+
+      assert_redirected_to settings_hosting_url
+      assert_equal "https://agent.example.com/v1/chat", Setting.external_assistant_url
+      assert_equal "my-secret-token", Setting.external_assistant_token
+      assert_equal "finance-bot", Setting.external_assistant_agent_id
+    end
+  ensure
+    Setting.external_assistant_url = nil
+    Setting.external_assistant_token = nil
+    Setting.external_assistant_agent_id = nil
+  end
+
+  test "does not overwrite token with masked placeholder" do
+    with_self_hosting do
+      Setting.external_assistant_token = "real-secret"
+
+      patch settings_hosting_url, params: { setting: { external_assistant_token: "********" } }
+
+      assert_equal "real-secret", Setting.external_assistant_token
+    end
+  ensure
+    Setting.external_assistant_token = nil
+  end
+
+  test "disconnect external assistant clears settings and resets type" do
+    with_self_hosting do
+      Setting.external_assistant_url = "https://agent.example.com/v1/chat"
+      Setting.external_assistant_token = "token"
+      Setting.external_assistant_agent_id = "finance-bot"
+      users(:family_admin).family.update!(assistant_type: "external")
+
+      delete disconnect_external_assistant_settings_hosting_url
+
+      assert_redirected_to settings_hosting_url
+      assert_not Assistant::External.configured?
+      assert_equal "builtin", users(:family_admin).family.reload.assistant_type
+    end
+  ensure
+    Setting.external_assistant_url = nil
+    Setting.external_assistant_token = nil
+    Setting.external_assistant_agent_id = nil
+  end
+
+  test "disconnect external assistant requires admin" do
+    with_self_hosting do
+      sign_in users(:family_member)
+      delete disconnect_external_assistant_settings_hosting_url
+
+      assert_redirected_to settings_hosting_url
+      assert_equal I18n.t("settings.hostings.not_authorized"), flash[:alert]
+    end
+  end
+
   test "can clear data only when admin" do
     with_self_hosting do
       sign_in users(:family_member)
