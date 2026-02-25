@@ -1,8 +1,6 @@
 <%# locals: (account:, url:) %>
-
 <%= render "accounts/form", account: account, url: url do |form| %>
   <%= render "shared/ruler", classes: "my-4" %>
-
   <div class="space-y-2">
     <%= form.fields_for :accountable do |loan_form| %>
       <div class="flex items-center gap-2">
@@ -11,7 +9,11 @@
                                  default_currency: Current.family.currency,
                                  required: true %>
       </div>
-
+      <div class="flex items-center gap-2">
+        <%= loan_form.money_field :down_payment,
+                             label: t("loans.form.down_payment"),
+                             default_currency: Current.family.currency %>
+      </div>
       <div class="flex items-center gap-2">
         <%= loan_form.number_field :interest_rate,
                                  label: t("loans.form.interest_rate"),
@@ -22,7 +24,6 @@
                            [["Fixed", "fixed"], ["Variable", "variable"], ["Adjustable", "adjustable"]],
                            { label: t("loans.form.rate_type") } %>
       </div>
-
       <div class="flex items-center gap-2">
         <%= loan_form.number_field :term_months,
                                  label: t("loans.form.term_months"),
