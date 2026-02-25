@@ -62,7 +62,10 @@ export default class extends Controller {
     const label = selectedElement.dataset.filterName || selectedElement.textContent.trim()
 
     this.buttonTarget.textContent = label
-    if (this.hasInputTarget) this.inputTarget.value = value
+    if (this.hasInputTarget) {
+      this.inputTarget.value = value
+      this.inputTarget.dispatchEvent(new Event("change", { bubbles: true }))
+    }
 
     const previousSelected = this.menuTarget.querySelector("[aria-selected='true']")
     if (previousSelected) {
