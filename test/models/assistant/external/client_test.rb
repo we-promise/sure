@@ -125,6 +125,74 @@ class Assistant::External::ClientTest < ActiveSupport::TestCase
     assert_equal [ "Hello" ], chunks
   end
 
+  test "routes through HTTPS_PROXY when set" do
+    sse_body = "data: {\"choices\":[{\"delta\":{\"content\":\"hi\"}}],\"model\":\"m\"}\n\ndata: [DONE]\n\n"
+
+    mock_response = stub("response")
+    mock_response.stubs(:code).returns("200")
+    mock_response.stubs(:is_a?).with(Net::HTTPSuccess).returns(true)
+    mock_response.stubs(:read_body).yields(sse_body)
+
+    mock_http = stub("http")
+    mock_http.stubs(:use_ssl=)
+    mock_http.stubs(:open_timeout=)
+    mock_http.stubs(:read_timeout=)
+    mock_http.stubs(:request).yields(mock_response)
+
+    captured_args = nil
+    Net::HTTP.stubs(:new).with do |*args|
+      captured_args = args
+      true
+    end.returns(mock_http)
+
+    client = Assistant::External::Client.new(
+      url: "https://example.com/v1/chat/completions",
+      token: "test-token"
+    )
+
+    ClimateControl.modify(HTTPS_PROXY: "http://pipelock:8888") do
+      client.chat(messages: [ { role: "user", content: "test" } ]) { |_| }
+    end
+
+    assert_equal "example.com", captured_args[0]
+    assert_equal 443, captured_args[1]
+    assert_equal "pipelock", captured_args[2]
+    assert_equal 8888, captured_args[3]
+  end
+
+  test "skips proxy for hosts in NO_PROXY" do
+    sse_body = "data: {\"choices\":[{\"delta\":{\"content\":\"hi\"}}],\"model\":\"m\"}\n\ndata: [DONE]\n\n"
+
+    mock_response = stub("response")
+    mock_response.stubs(:code).returns("200")
+    mock_response.stubs(:is_a?).with(Net::HTTPSuccess).returns(true)
+    mock_response.stubs(:read_body).yields(sse_body)
+
+    mock_http = stub("http")
+    mock_http.stubs(:use_ssl=)
+    mock_http.stubs(:open_timeout=)
+    mock_http.stubs(:read_timeout=)
+    mock_http.stubs(:request).yields(mock_response)
+
+    captured_args = nil
+    Net::HTTP.stubs(:new).with do |*args|
+      captured_args = args
+      true
+    end.returns(mock_http)
+
+    client = Assistant::External::Client.new(
+      url: "http://openclaw.svc.cluster.local:18789/v1/chat/completions",
+      token: "test-token"
+    )
+
+    ClimateControl.modify(HTTPS_PROXY: "http://pipelock:8888", NO_PROXY: "localhost,.svc.cluster.local") do
+      client.chat(messages: [ { role: "user", content: "test" } ]) { |_| }
+    end
+
+    # Should NOT pass proxy args — only host and port
+    assert_equal 2, captured_args.length
+  end
+
   private
 
     def mock_http_streaming_response(sse_body)

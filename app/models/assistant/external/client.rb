@@ -61,11 +61,36 @@ class Assistant::External::Client
   private
 
     def build_http(uri)
-      http = Net::HTTP.new(uri.host, uri.port)
+      proxy_uri = resolve_proxy(uri)
+
+      if proxy_uri
+        http = Net::HTTP.new(uri.host, uri.port, proxy_uri.host, proxy_uri.port)
+      else
+        http = Net::HTTP.new(uri.host, uri.port)
+      end
+
       http.use_ssl = (uri.scheme == "https")
       http.open_timeout = TIMEOUT_CONNECT
       http.read_timeout = TIMEOUT_READ
       http
+    end
+
+    def resolve_proxy(uri)
+      proxy_env = (uri.scheme == "https") ? "HTTPS_PROXY" : "HTTP_PROXY"
+      proxy_url = ENV[proxy_env] || ENV[proxy_env.downcase]
+      return nil if proxy_url.blank?
+
+      no_proxy = ENV["NO_PROXY"] || ENV["no_proxy"]
+      return nil if host_bypasses_proxy?(uri.host, no_proxy)
+
+      URI(proxy_url)
+    rescue URI::InvalidURIError
+      nil
+    end
+
+    def host_bypasses_proxy?(host, no_proxy)
+      return false if no_proxy.blank?
+      no_proxy.split(",").any? { |pattern| host.end_with?(pattern.strip) }
     end
 
     def build_request(uri, messages, user)
