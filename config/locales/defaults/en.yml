@@ -154,7 +154,6 @@ en:
     select:
       prompt: Please select
       search_placeholder: "Search"
-      empty_text: "No items"
       default_label: "Select..."
     submit:
       create: Create %{model}
