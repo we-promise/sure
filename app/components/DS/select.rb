@@ -5,7 +5,7 @@ module DS
     VARIANTS = %i[simple logo badge].freeze
     DEFAULT_COLOR = "#737373"
 
-    def initialize(form:, method:, items:, selected: nil, placeholder: "Select...", variant: :simple, include_blank: nil, searchable: false, **options)
+    def initialize(form:, method:, items:, selected: nil, placeholder: I18n.t("helpers.select.default_label"), variant: :simple, include_blank: nil, searchable: false, **options)
       @form = form
       @method = method
       @placeholder = placeholder
