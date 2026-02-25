@@ -6,10 +6,11 @@ class Assistant::External::Client
   TIMEOUT_CONNECT = 10   # seconds
   TIMEOUT_READ    = 120  # seconds (agent may take time to reason + call tools)
 
-  def initialize(url:, token:, agent_id: "main")
+  def initialize(url:, token:, agent_id: "main", session_key: "agent:main:main")
     @url = url
     @token = token
     @agent_id = agent_id
+    @session_key = session_key
   end
 
   # Streams text chunks from an OpenAI-compatible chat completions endpoint.
@@ -73,6 +74,7 @@ class Assistant::External::Client
       request["Authorization"] = "Bearer #{@token}"
       request["Accept"] = "text/event-stream"
       request["x-openclaw-agent-id"] = @agent_id
+      request["x-openclaw-session-key"] = @session_key
 
       payload = {
         model: "openclaw:#{@agent_id}",

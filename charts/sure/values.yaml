@@ -60,7 +60,9 @@ rails:
     enabled: false
     url: ""           # e.g., http://openclaw:18789/v1/chat/completions
     token: ""         # Bearer token for the external AI gateway
-    agentId: "main"   # Agent routing identifier
+    agentId: "main"      # Agent routing identifier
+    sessionKey: "agent:main:main"  # Session key for persistent agent sessions
+    allowedEmails: ""     # Comma-separated emails allowed to use external assistant (empty = all)
     # For production, use a Secret reference instead of plaintext:
     # tokenSecretRef:
     #   name: external-assistant-secret

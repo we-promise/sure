@@ -78,6 +78,7 @@ class Assistant::External::ClientTest < ActiveSupport::TestCase
 
     assert_equal "Bearer test-token", capture[0]["Authorization"]
     assert_equal "buster", capture[0]["x-openclaw-agent-id"]
+    assert_equal "agent:main:main", capture[0]["x-openclaw-session-key"]
     assert_equal "text/event-stream", capture[0]["Accept"]
     assert_equal "application/json", capture[0]["Content-Type"]
   end

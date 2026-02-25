@@ -96,6 +96,12 @@ The helper always injects:
 {{- end }}
 - name: EXTERNAL_ASSISTANT_AGENT_ID
   value: {{ $ctx.Values.rails.externalAssistant.agentId | quote }}
+- name: EXTERNAL_ASSISTANT_SESSION_KEY
+  value: {{ $ctx.Values.rails.externalAssistant.sessionKey | quote }}
+{{- if $ctx.Values.rails.externalAssistant.allowedEmails }}
+- name: EXTERNAL_ASSISTANT_ALLOWED_EMAILS
+  value: {{ $ctx.Values.rails.externalAssistant.allowedEmails | quote }}
+{{- end }}
 {{- end }}
 {{- range $k, $v := $ctx.Values.rails.extraEnv }}
 - name: {{ $k }}

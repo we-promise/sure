@@ -1,5 +1,5 @@
 class Assistant::External < Assistant::Base
-  Config = Struct.new(:url, :token, :agent_id, keyword_init: true)
+  Config = Struct.new(:url, :token, :agent_id, :session_key, keyword_init: true)
 
   class << self
     def for_chat(chat)
@@ -10,11 +10,22 @@ class Assistant::External < Assistant::Base
       config.url.present? && config.token.present?
     end
 
+    def available_for?(user)
+      configured? && allowed_user?(user)
+    end
+
+    def allowed_user?(user)
+      allowed = ENV["EXTERNAL_ASSISTANT_ALLOWED_EMAILS"]
+      return true if allowed.blank?
+      allowed.split(",").map(&:strip).include?(user.email)
+    end
+
     def config
       Config.new(
         url: ENV["EXTERNAL_ASSISTANT_URL"],
         token: ENV["EXTERNAL_ASSISTANT_TOKEN"],
-        agent_id: ENV.fetch("EXTERNAL_ASSISTANT_AGENT_ID", "main")
+        agent_id: ENV.fetch("EXTERNAL_ASSISTANT_AGENT_ID", "main"),
+        session_key: ENV.fetch("EXTERNAL_ASSISTANT_SESSION_KEY", "agent:main:main")
       )
     end
   end
@@ -23,6 +34,10 @@ class Assistant::External < Assistant::Base
     unless self.class.configured?
       raise Assistant::Error,
         "External assistant is not configured. Set EXTERNAL_ASSISTANT_URL and EXTERNAL_ASSISTANT_TOKEN environment variables."
+    end
+
+    unless self.class.allowed_user?(chat.user)
+      raise Assistant::Error, "Your account is not authorized to use the external assistant."
     end
 
     assistant_message = AssistantMessage.new(
@@ -64,7 +79,8 @@ class Assistant::External < Assistant::Base
       Assistant::External::Client.new(
         url: self.class.config.url,
         token: self.class.config.token,
-        agent_id: self.class.config.agent_id
+        agent_id: self.class.config.agent_id,
+        session_key: self.class.config.session_key
       )
     end
 
