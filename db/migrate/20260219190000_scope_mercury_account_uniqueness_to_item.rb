@@ -14,6 +14,13 @@ class ScopeMercuryAccountUniquenessToItem < ActiveRecord::Migration[7.2]
   end
 
   def down
+    if MercuryAccount.group(:account_id).having("COUNT(*) > 1").exists?
+      raise ActiveRecord::IrreversibleMigration,
+            "Cannot restore global unique index on mercury_accounts.account_id: " \
+            "duplicate account_id values exist across mercury_items. " \
+            "Remove duplicates first before rolling back."
+    end
+
     remove_index :mercury_accounts, name: "index_mercury_accounts_on_item_and_account_id", if_exists: true
     unless index_exists?(:mercury_accounts, :account_id, name: "index_mercury_accounts_on_account_id")
       add_index :mercury_accounts, :account_id, name: "index_mercury_accounts_on_account_id", unique: true

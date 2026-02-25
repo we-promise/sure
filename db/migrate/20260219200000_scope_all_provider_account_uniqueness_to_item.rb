@@ -37,6 +37,13 @@ class ScopeAllProviderAccountUniquenessToItem < ActiveRecord::Migration[7.2]
     end
 
     def revert_plaid_accounts
+      if PlaidAccount.group(:plaid_id).having("COUNT(*) > 1").exists?
+        raise ActiveRecord::IrreversibleMigration,
+              "Cannot restore global unique index on plaid_accounts.plaid_id: " \
+              "duplicate plaid_id values exist across plaid_items. " \
+              "Remove duplicates first before rolling back."
+      end
+
       remove_index :plaid_accounts, name: "index_plaid_accounts_on_item_and_plaid_id", if_exists: true
       return if index_exists?(:plaid_accounts, :plaid_id, name: "index_plaid_accounts_on_plaid_id")
 
@@ -55,6 +62,13 @@ class ScopeAllProviderAccountUniquenessToItem < ActiveRecord::Migration[7.2]
     end
 
     def revert_indexa_capital_accounts
+      if IndexaCapitalAccount.where.not(indexa_capital_account_id: nil).group(:indexa_capital_account_id).having("COUNT(*) > 1").exists?
+        raise ActiveRecord::IrreversibleMigration,
+              "Cannot restore global unique index on indexa_capital_accounts.indexa_capital_account_id: " \
+              "duplicate values exist across indexa_capital_items. " \
+              "Remove duplicates first before rolling back."
+      end
+
       remove_index :indexa_capital_accounts, name: "index_indexa_capital_accounts_on_item_and_account_id", if_exists: true
       return if index_exists?(:indexa_capital_accounts, :indexa_capital_account_id, name: "index_indexa_capital_accounts_on_indexa_capital_account_id")
 
@@ -82,10 +96,22 @@ class ScopeAllProviderAccountUniquenessToItem < ActiveRecord::Migration[7.2]
     end
 
     def revert_snaptrade_accounts
+      if SnaptradeAccount.where.not(account_id: nil).group(:account_id).having("COUNT(*) > 1").exists? ||
+          SnaptradeAccount.where.not(snaptrade_account_id: nil).group(:snaptrade_account_id).having("COUNT(*) > 1").exists?
+        raise ActiveRecord::IrreversibleMigration,
+              "Cannot restore global unique indexes on snaptrade_accounts: " \
+              "duplicate account_id or snaptrade_account_id values exist across snaptrade_items. " \
+              "Remove duplicates first before rolling back."
+      end
+
       remove_index :snaptrade_accounts, name: "index_snaptrade_accounts_on_item_and_account_id", if_exists: true
       remove_index :snaptrade_accounts, name: "index_snaptrade_accounts_on_item_and_snaptrade_account_id", if_exists: true
-      add_index :snaptrade_accounts, :account_id, name: "index_snaptrade_accounts_on_account_id", unique: true unless index_exists?(:snaptrade_accounts, :account_id, name: "index_snaptrade_accounts_on_account_id")
-      add_index :snaptrade_accounts, :snaptrade_account_id, name: "index_snaptrade_accounts_on_snaptrade_account_id", unique: true unless index_exists?(:snaptrade_accounts, :snaptrade_account_id, name: "index_snaptrade_accounts_on_snaptrade_account_id")
+      unless index_exists?(:snaptrade_accounts, :account_id, name: "index_snaptrade_accounts_on_account_id")
+        add_index :snaptrade_accounts, :account_id, name: "index_snaptrade_accounts_on_account_id", unique: true
+      end
+      unless index_exists?(:snaptrade_accounts, :snaptrade_account_id, name: "index_snaptrade_accounts_on_snaptrade_account_id")
+        add_index :snaptrade_accounts, :snaptrade_account_id, name: "index_snaptrade_accounts_on_snaptrade_account_id", unique: true
+      end
     end
 
     def add_per_item_unique_coinbase_accounts
