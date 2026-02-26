@@ -42,7 +42,7 @@
                   </div>
                   <span class="col-span-8 text-sm text-primary"><%= category %></span>
                   <span class="col-span-3 text-sm text-secondary text-right">
-                    <%= pluralize(@category_counts[category] || 0, "txn") %>
+                    <%= t(".txn_count", count: @category_counts[category] || 0) %>
                   </span>
                 </label>
               <% end %>
@@ -82,7 +82,7 @@
                   </div>
                   <span class="col-span-8 text-sm text-primary"><%= tag %></span>
                   <span class="col-span-3 text-sm text-secondary text-right">
-                    <%= pluralize(@tag_counts[tag] || 0, "txn") %>
+                    <%= t(".txn_count", count: @tag_counts[tag] || 0) %>
                   </span>
                 </label>
               <% end %>
