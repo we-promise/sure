@@ -74,6 +74,27 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_enqueued_with(job: SyncJob)
   end
 
+  test "index excludes transactions from excluded accounts" do
+    family = families(:empty)
+    sign_in users(:empty)
+    account = family.accounts.create! name: "Active Account", balance: 0, currency: "USD", accountable: Depository.new
+    excluded_account = family.accounts.create! name: "Excluded Account", balance: 0, currency: "USD", accountable: Depository.new, excluded: true
+
+    visible_entry = create_transaction(account: account, name: "Visible Transaction", amount: 50)
+    excluded_entry = create_transaction(account: excluded_account, name: "Hidden Transaction", amount: 100)
+
+    get transactions_url(per_page: 50)
+    assert_response :success
+
+    # Visible transaction should appear, excluded should not
+    assert_dom "#" + dom_id(visible_entry), count: 1
+    assert_dom "#" + dom_id(excluded_entry), count: 0
+
+    # Totals should only count visible transactions
+    search = Transaction::Search.new(family)
+    assert_equal 1, search.totals.count
+  end
+
   test "transaction count represents filtered total" do
     family = families(:empty)
     sign_in users(:empty)
