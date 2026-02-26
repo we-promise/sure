@@ -1,5 +1,5 @@
 class AccountsController < ApplicationController
-  before_action :set_account, only: %i[sync sparkline toggle_active show destroy unlink confirm_unlink select_provider]
+  before_action :set_account, only: %i[sync sparkline toggle_active toggle_excluded show destroy unlink confirm_unlink select_provider]
   include Periodable
 
   def index
@@ -82,6 +82,11 @@ class AccountsController < ApplicationController
     elsif @account.disabled?
       @account.enable!
     end
+    redirect_to accounts_path
+  end
+
+  def toggle_excluded
+    @account.toggle!(:excluded)
     redirect_to accounts_path
   end
 

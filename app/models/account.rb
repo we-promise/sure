@@ -18,7 +18,9 @@ class Account < ApplicationRecord
 
   enum :classification, { asset: "asset", liability: "liability" }, validate: { allow_nil: true }
 
-  scope :visible, -> { where(status: [ "draft", "active" ]) }
+  scope :visible, -> { where(status: [ "draft", "active" ], excluded: false) }
+  scope :sidebar_visible, -> { where(status: [ "draft", "active" ]) }
+  scope :sync_enabled, -> { where(status: [ "draft", "active" ]) }
   scope :assets, -> { where(classification: "asset") }
   scope :liabilities, -> { where(classification: "liability") }
   scope :alphabetically, -> { order(:name) }
@@ -27,6 +29,8 @@ class Account < ApplicationRecord
       .where(account_providers: { id: nil })
       .where(plaid_account_id: nil, simplefin_account_id: nil)
   }
+  scope :excluded, -> { where(excluded: true) }
+  scope :not_excluded, -> { where(excluded: false) }
 
   scope :visible_manual, -> {
     visible.manual

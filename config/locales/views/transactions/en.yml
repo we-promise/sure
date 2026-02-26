@@ -95,6 +95,7 @@ en:
       edit_tags: Edit tags
       import: Import
     index:
+      include_excluded_accounts: Include excluded accounts
       transaction: transaction
       transactions: transactions
       import: Import

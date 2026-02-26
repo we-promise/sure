@@ -32,7 +32,7 @@ class EnableBankingItem::Syncer
     sync.update!(status_text: "Checking account configuration...") if sync.respond_to?(:status_text)
     total_accounts = enable_banking_item.enable_banking_accounts.count
 
-    linked_accounts = enable_banking_item.enable_banking_accounts.joins(:account_provider).joins(:account).merge(Account.visible)
+    linked_accounts = enable_banking_item.enable_banking_accounts.joins(:account_provider).joins(:account).merge(Account.sync_enabled)
     unlinked_accounts = enable_banking_item.enable_banking_accounts.left_joins(:account_provider).where(account_providers: { id: nil })
 
     sync_stats = {

@@ -56,7 +56,7 @@
       <% elsif account.syncing? %>
         <div class="w-16 h-6 bg-loader rounded-full animate-pulse"></div>
       <% else %>
-        <p class="text-sm font-medium <%= account.active? ? "text-primary" : "text-subdued" %>">
+        <p class="w-24 text-right text-sm font-medium <%= account.active? ? "text-primary" : "text-subdued" %>">
           <%= format_money account.balance_money %>
         </p>
       <% end %>
@@ -69,14 +69,26 @@
           frame: :modal
         ) %>
       <% elsif account.active? || account.disabled? %>
-        <%= form_with model: account, url: toggle_active_account_path(account), method: :patch, data: { turbo_frame: "_top", controller: "auto-submit-form" } do |f| %>
-          <%= render DS::Toggle.new(
-            id: "account_#{account.id}_active",
-            name: "active",
-            checked: account.active?,
-            data: { auto_submit_form_target: "auto" }
-          ) %>
-        <% end %>
+        <div class="w-20 text-center">
+          <%= form_with model: account, url: toggle_active_account_path(account), method: :patch, data: { turbo_frame: "_top", controller: "auto-submit-form" } do |f| %>
+            <%= render DS::Toggle.new(
+              id: "account_#{account.id}_active",
+              name: "active",
+              checked: account.active?,
+              data: { auto_submit_form_target: "auto" }
+            ) %>
+          <% end %>
+        </div>
+        <div class="w-20 text-center">
+          <%= form_with model: account, url: polymorphic_path([:toggle_excluded, account]), method: :patch, data: { turbo_frame: "_top", controller: "auto-submit-form" } do |f| %>
+            <%= render DS::Toggle.new(
+              id: "account_#{account.id}_excluded",
+              name: "excluded",
+              checked: account.excluded?,
+              data: { auto_submit_form_target: "auto" }
+            ) %>
+          <% end %>
+        </div>
       <% end %>
     </div>
   </div>

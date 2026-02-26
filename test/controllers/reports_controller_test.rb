@@ -246,4 +246,20 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_select "div[data-category='category-#{subcategory_movies.id}']", text: /^Movies/
     assert_select "div[data-category='category-#{subcategory_games.id}']", text: /^Games/
   end
+
+  test "index excludes excluded accounts from reports" do
+    excluded_account = @family.accounts.create!(
+      name: "Excluded Account",
+      balance: 1000,
+      currency: "USD",
+      accountable: Depository.new(subtype: "checking"),
+      excluded: true
+    )
+
+    create_transaction(account: excluded_account, name: "Excluded Transaction", amount: 100)
+
+    get reports_path(period_type: :monthly)
+
+    assert_select "td", text: "Excluded Transaction", count: 0
+  end
 end

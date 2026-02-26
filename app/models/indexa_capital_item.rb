@@ -85,7 +85,7 @@ class IndexaCapitalItem < ApplicationRecord
     return [] if accounts.empty?
 
     results = []
-    accounts.visible.each do |account|
+    accounts.sync_enabled.each do |account|
       begin
         account.sync_later(
           parent_sync: parent_sync,

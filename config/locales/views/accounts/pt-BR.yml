@@ -21,8 +21,16 @@ pt-BR:
       balance: Saldo atual
       name_label: Nome da conta
       name_placeholder: Nome da conta exemplo
+      exclude_from_reports_label: Excluir de relatórios e métricas
+      exclude_from_reports_description: Contas excluídas ficam ocultas nos relatórios e nos cálculos de patrimônio líquido.
+    accountable_group:
+      excluded_badge: "(Excluída)"
     index:
       accounts: Contas
+      account_groups:
+        total: Total
+        active: Ativa
+        excluded: Excluída
       manual_accounts:
         other_accounts: Outras contas
       new_account: Nova conta

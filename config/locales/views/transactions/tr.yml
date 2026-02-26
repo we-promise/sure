@@ -46,6 +46,7 @@ tr:
       edit_tags: Etiketleri düzenle
       import: İçe aktar
     index:
+      include_excluded_accounts: Hariç tutulan hesapları dahil et
       transaction: işlem
       transactions: işlemler
     searches:

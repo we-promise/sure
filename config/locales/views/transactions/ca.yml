@@ -30,6 +30,7 @@ ca:
       import: Importa
     index:
       import: Importa
+      include_excluded_accounts: Incloure comptes exclosos
       transaction: transacció
       transactions: transaccions
     merge_duplicate:

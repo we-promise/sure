@@ -61,7 +61,7 @@ class MercuryItem < ApplicationRecord
     return [] if mercury_accounts.empty?
 
     results = []
-    mercury_accounts.joins(:account).merge(Account.visible).each do |mercury_account|
+    mercury_accounts.joins(:account).merge(Account.sync_enabled).each do |mercury_account|
       begin
         result = MercuryAccount::Processor.new(mercury_account).process
         results << { mercury_account_id: mercury_account.id, success: true, result: result }
@@ -80,7 +80,7 @@ class MercuryItem < ApplicationRecord
     return [] if accounts.empty?
 
     results = []
-    accounts.visible.each do |account|
+    accounts.sync_enabled.each do |account|
       begin
         account.sync_later(
           parent_sync: parent_sync,

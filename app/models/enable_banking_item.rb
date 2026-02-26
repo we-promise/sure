@@ -114,7 +114,7 @@ class EnableBankingItem < ApplicationRecord
     return [] if enable_banking_accounts.empty?
 
     results = []
-    enable_banking_accounts.joins(:account).merge(Account.visible).each do |enable_banking_account|
+    enable_banking_accounts.joins(:account).merge(Account.sync_enabled).each do |enable_banking_account|
       begin
         result = EnableBankingAccount::Processor.new(enable_banking_account).process
         results << { enable_banking_account_id: enable_banking_account.id, success: true, result: result }
@@ -131,7 +131,7 @@ class EnableBankingItem < ApplicationRecord
     return [] if accounts.empty?
 
     results = []
-    accounts.visible.each do |account|
+    accounts.sync_enabled.each do |account|
       begin
         account.sync_later(
           parent_sync: parent_sync,

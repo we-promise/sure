@@ -47,11 +47,43 @@
   <% if Current.family.recurring_transactions_disabled? %>
     <%= render "transactions/list", transactions: @transactions, projected_recurring: @projected_recurring, q: params[:q], pagy: @pagy %>
   <% else %>
-    <%= render DS::Tabs.new(active_tab: params[:tab].presence || "transactions") do |tabs| %>
-      <% tabs.with_nav(classes: "max-w-fit") do |nav| %>
-        <% nav.with_btn(id: "transactions", label: t("transactions.show.tab_transactions"), classes: "px-6") %>
-        <% nav.with_btn(id: "upcoming", label: t("transactions.show.tab_upcoming"), classes: "px-6") %>
-      <% end %>
+    <% include_excluded = @q && @q["active_accounts_only"] == "false" %>
+    <%= render DS::Tabs.new(active_tab: params[:tab].presence || "transactions", variant: :unstyled) do |tabs| %>
+      <div class="flex items-center justify-between mb-4">
+        <% tabs.with_nav(classes: "flex bg-surface-inset p-1 rounded-lg max-w-fit") do |nav| %>
+          <% nav.with_btn(id: "transactions", label: t("transactions.show.tab_transactions"), classes: "px-6") %>
+          <% nav.with_btn(id: "upcoming", label: t("transactions.show.tab_upcoming"), classes: "px-6") %>
+        <% end %>
+
+        <div class="flex items-center gap-2">
+          <label for="include_excluded_accounts" class="text-sm text-secondary cursor-pointer select-none">
+            <%= t("transactions.index.include_excluded_accounts") %>
+          </label>
+          <%= form_with url: transactions_path, method: :get, data: { turbo_frame: "_top", controller: "auto-submit-form" } do |f| %>
+            <% (params[:q] || {}).each do |key, value| %>
+              <% next if key == "active_accounts_only" %>
+              <% if value.is_a?(Array) %>
+                <% value.each do |v| %>
+                  <%= hidden_field_tag "q[#{key}][]", v %>
+                <% end %>
+              <% else %>
+                <%= hidden_field_tag "q[#{key}]", value %>
+              <% end %>
+            <% end %>
+            <% if params[:tab].present? %>
+              <%= hidden_field_tag "tab", params[:tab] %>
+            <% end %>
+            <%= render DS::Toggle.new(
+              id: "include_excluded_accounts",
+              name: "q[active_accounts_only]",
+              checked: include_excluded,
+              checked_value: "false",
+              unchecked_value: "true",
+              data: { auto_submit_form_target: "auto" }
+            ) %>
+          <% end %>
+        </div>
+      </div>
 
       <% tabs.with_panel(tab_id: "transactions") do %>
         <div class="bg-container rounded-xl shadow-border-xs">

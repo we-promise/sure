@@ -27,6 +27,7 @@ zh-CN:
       import: 导入
     index:
       import: 导入
+      include_excluded_accounts: 包含已排除的账户
       transaction: 交易
       transactions: 交易记录
     new:
