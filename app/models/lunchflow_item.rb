@@ -46,7 +46,7 @@ class LunchflowItem < ApplicationRecord
     return [] if lunchflow_accounts.empty?
 
     results = []
-    # Only process accounts that are linked and have active status
+    # Only process accounts that are linked and have sync enabled
     lunchflow_accounts.joins(:account).merge(Account.sync_enabled).each do |lunchflow_account|
       begin
         result = LunchflowAccount::Processor.new(lunchflow_account).process
@@ -65,7 +65,7 @@ class LunchflowItem < ApplicationRecord
     return [] if accounts.empty?
 
     results = []
-    # Only schedule syncs for active accounts
+    # Only schedule syncs for accounts with sync enabled
     accounts.sync_enabled.each do |account|
       begin
         account.sync_later(
@@ -104,11 +104,11 @@ class LunchflowItem < ApplicationRecord
     unlinked_count = unlinked_accounts_count
 
     if total_accounts == 0
-      "No accounts found"
+      I18n.t("lunchflow_items.lunchflow_item.sync_status.no_accounts")
     elsif unlinked_count == 0
-      "#{linked_count} #{'account'.pluralize(linked_count)} synced"
+      I18n.t("lunchflow_items.lunchflow_item.sync_status.all_synced", count: linked_count)
     else
-      "#{linked_count} synced, #{unlinked_count} need setup"
+      I18n.t("lunchflow_items.lunchflow_item.sync_status.partial_sync", linked_count: linked_count, unlinked_count: unlinked_count)
     end
   end
 
@@ -131,8 +131,7 @@ class LunchflowItem < ApplicationRecord
 
   def connected_institutions
     # Get unique institutions from all accounts
-    lunchflow_accounts.includes(:account)
-                      .where.not(institution_metadata: nil)
+    lunchflow_accounts.where.not(institution_metadata: nil)
                       .map { |acc| acc.institution_metadata }
                       .uniq { |inst| inst["name"] || inst["institution_name"] }
   end
