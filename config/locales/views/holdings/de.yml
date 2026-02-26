@@ -5,9 +5,37 @@ de:
       brokerage_cash: Depotguthaben
     destroy:
       success: Position gelöscht
+    update:
+      success: Einstandspreis gespeichert.
+      error: Ungültiger Einstandspreis.
+    unlock_cost_basis:
+      success: Einstandspreis freigegeben. Er kann beim nächsten Sync aktualisiert werden.
+    remap_security:
+      success: Wertpapier erfolgreich aktualisiert.
+      security_not_found: Das ausgewählte Wertpapier konnte nicht gefunden werden.
+    reset_security:
+      success: Wertpapier auf Provider-Wert zurückgesetzt.
+    errors:
+      security_collision: "Umbildung nicht möglich: Sie haben bereits eine Position für %{ticker} am %{date}."
+    cost_basis_sources:
+      manual: Vom Benutzer gesetzt
+      calculated: Aus Trades
+      provider: Vom Provider
+    cost_basis_cell:
+      unknown: "--"
+      set_cost_basis_header: "Einstandspreis für %{ticker} setzen (%{qty} Anteile)"
+      total_cost_basis_label: Gesamter Einstandspreis
+      or_per_share_label: "Oder pro Anteil eingeben:"
+      per_share: pro Anteil
+      cancel: Abbrechen
+      save: Speichern
+      overwrite_confirm_title: Einstandspreis überschreiben?
+      overwrite_confirm_body: "Dies ersetzt den aktuellen Einstandspreis von %{current}."
     holding:
       per_share: pro Anteil
       shares: "%{qty} Anteile"
+      unknown: "--"
+      no_cost_basis: Kein Einstandspreis
     index:
       average_cost: Durchschnittlicher Einstandspreis
       holdings: Positionen
@@ -23,13 +51,32 @@ de:
       avg_cost_label: Durchschnittlicher Einstandspreis
       current_market_price_label: Aktueller Marktpreis
       delete: Löschen
-      delete_subtitle: Dadurch wird die Position und alle zugehörigen Trades auf diesem Konto gelöscht Diese Aktion kann nicht rückgängig gemacht werden
+      delete_subtitle: Dadurch wird die Position und alle zugehörigen Trades auf diesem Konto gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.
       delete_title: Position löschen
+      edit_security: Wertpapier bearbeiten
       history: Verlauf
+      no_trade_history: Für diese Position ist keine Trade-Historie verfügbar.
       overview: Übersicht
       portfolio_weight_label: Portfolio-Gewichtung
       settings: Einstellungen
+      security_label: Wertpapier
+      originally: "war %{ticker}"
+      search_security: Wertpapier suchen
+      search_security_placeholder: Nach Ticker oder Name suchen
+      cancel: Abbrechen
+      remap_security: Speichern
+      no_security_provider: Wertpapier-Provider nicht konfiguriert. Suche nach Wertpapieren nicht möglich.
+      security_remapped_label: Wertpapier umgebildet
+      provider_sent: "Provider: %{ticker}"
+      reset_to_provider: Auf Provider zurücksetzen
+      reset_confirm_title: Wertpapier auf Provider zurücksetzen?
+      reset_confirm_body: "Das Wertpapier wird von %{current} zurück auf %{original} geändert; alle zugehörigen Trades werden verschoben."
       ticker_label: Ticker
       trade_history_entry: "%{qty} Anteile von %{security} zu %{price}"
       total_return_label: Gesamtrendite
       unknown: Unbekannt
+      cost_basis_locked_label: Einstandspreis ist gesperrt
+      cost_basis_locked_description: Ihr manuell gesetzter Einstandspreis wird durch Syncs nicht geändert.
+      unlock_cost_basis: Freigeben
+      unlock_confirm_title: Einstandspreis freigeben?
+      unlock_confirm_body: Der Einstandspreis kann dann durch Provider-Syncs oder Trade-Berechnungen aktualisiert werden.

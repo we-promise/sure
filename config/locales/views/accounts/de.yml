@@ -1,7 +1,10 @@
+---
 de:
   accounts:
     account:
       link_lunchflow: Mit Lunch Flow verknüpfen
+      link_provider: Mit Provider verknüpfen
+      unlink_provider: Von Provider trennen
       troubleshoot: Fehlerbehebung
     chart:
       data_not_available: Für den ausgewählten Zeitraum sind keine Daten verfügbar
@@ -9,6 +12,7 @@ de:
       success: "%{type}-Konto erstellt"
     destroy:
       success: "%{type}-Konto zur Löschung vorgemerkt"
+      cannot_delete_linked: "Ein verknüpftes Konto kann nicht gelöscht werden. Bitte trennen Sie es zuerst."
     empty:
       empty_message: Füge ein Konto über eine Verbindung, einen Import oder manuell hinzu
       new_account: Neues Konto
@@ -17,18 +21,28 @@ de:
       balance: Aktueller Kontostand
       name_label: Kontoname
       name_placeholder: Beispielkontoname
+      additional_details: Weitere Angaben
+      institution_name_label: Name der Institution
+      institution_name_placeholder: "z. B. Chase Bank"
+      institution_domain_label: Domain der Institution
+      institution_domain_placeholder: "z. B. chase.com"
+      notes_label: Notizen
+      notes_placeholder: Zusätzliche Informationen wie Kontonummern, Sort codes, IBAN, Routing-Nummern usw.
     index:
       accounts: Konten
       manual_accounts:
         other_accounts: Andere Konten
       new_account: Neues Konto
       sync: Alle synchronisieren
+    sync_all:
+      syncing: "Konten werden synchronisiert..."
     new:
       import_accounts: Konten importieren
       method_selector:
         connected_entry: Konto verknüpfen
         connected_entry_eu: EU-Konto verknüpfen
         link_with_provider: "Mit %{provider} verknüpfen"
+        lunchflow_entry: Lunch-Flow-Konto verknüpfen
         manual_entry: Kontostand manuell eingeben
         title: Wie möchtest du es hinzufügen
       title: Was möchtest du hinzufügen
@@ -36,13 +50,22 @@ de:
       activity:
         amount: Betrag
         balance: Kontostand
+        confirmed: Bestätigt
         date: Datum
         entries: Buchungen
         entry: Buchung
+        filter: Filtern
         new: Neu
+        new_activity: Neue Aktivität
         new_balance: Neuer Kontostand
+        new_trade: Neuer Trade
         new_transaction: Neue Transaktion
+        new_transfer: Neue Überweisung
         no_entries: Keine Buchungen gefunden
+        pending: Ausstehend
+        search:
+          placeholder: Buchungen nach Name suchen
+        status: Status
         title: Aktivität
       chart:
         balance: Kontostand
@@ -53,6 +76,8 @@ de:
         confirm_title: Konto löschen
         edit: Bearbeiten
         import: Transaktionen importieren
+        import_trades: Trades importieren
+        import_transactions: Transaktionen importieren
         manage: Konten verwalten
     update:
       success: "%{type}-Konto aktualisiert"
@@ -78,6 +103,42 @@ de:
       credit_card: Kreditkarte
       loan: Darlehen
       other_liability: Sonstige Verbindlichkeit
+    subtype_regions:
+      us: Vereinigte Staaten
+      uk: Vereinigtes Königreich
+      ca: Kanada
+      au: Australien
+      eu: Europa
+      generic: Generisch
+    tax_treatments:
+      taxable: Versteuerbar
+      tax_deferred: Steuerlich aufgeschoben
+      tax_exempt: Steuerfrei
+      tax_advantaged: Steuerbegünstigt
+    tax_treatment_descriptions:
+      taxable: Gewinne werden bei Realisierung besteuert
+      tax_deferred: Beiträge abzugsfähig, Besteuerung bei Auszahlung
+      tax_exempt: Beiträge nach Steuer, Gewinne nicht besteuert
+      tax_advantaged: Besondere Steuervorteile unter Bedingungen
+    confirm_unlink:
+      title: Konto vom Provider trennen?
+      description_html: "Sie sind dabei, <strong>%{account_name}</strong> von <strong>%{provider_name}</strong> zu trennen. Das Konto wird zu einem manuellen Konto."
+      warning_title: Was das bedeutet
+      warning_no_sync: Das Konto wird nicht mehr automatisch mit dem Provider synchronisiert
+      warning_manual_updates: Sie müssen Buchungen und Salden manuell pflegen
+      warning_transactions_kept: Bestehende Buchungen und Salden bleiben erhalten
+      warning_can_delete: Nach dem Trennen können Sie das Konto bei Bedarf löschen
+      confirm_button: Bestätigen und trennen
+    unlink:
+      success: "Konto erfolgreich getrennt. Es ist jetzt ein manuelles Konto."
+      not_linked: "Konto ist mit keinem Provider verknüpft"
+      error: "Konto konnte nicht getrennt werden: %{error}"
+      generic_error: "Ein unerwarteter Fehler ist aufgetreten. Bitte versuchen Sie es erneut."
+    select_provider:
+      title: Provider zum Verknüpfen auswählen
+      description: "Wählen Sie den Provider, mit dem %{account_name} verknüpft werden soll"
+      already_linked: "Konto ist bereits mit einem Provider verknüpft"
+      no_providers: "Derzeit sind keine Provider konfiguriert"
 
   email_confirmations:
     new:

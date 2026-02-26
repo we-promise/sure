@@ -6,19 +6,26 @@ de:
       success: Neuer Händler erfolgreich erstellt
     destroy:
       success: Händler erfolgreich gelöscht
+      unlinked_success: Händler von deinen Transaktionen entfernt
     edit:
       title: Händler bearbeiten
     form:
       name_placeholder: Händlername
+      website_placeholder: Website (z. B. starbucks.com)
+      website_hint: Gib die Website des Händlers ein, um dessen Logo automatisch anzuzeigen
     index:
       empty: Noch keine Händler vorhanden
       new: Neuer Händler
+      merge: Händler zusammenführen
       title: Händler
       family_title: Händler der Familie
       family_empty: Noch keine Händler der Familie vorhanden
       provider_title: Anbieter-Händler
       provider_empty: Noch keine Anbieter-Händler mit dieser Familie verbunden
       provider_read_only: Anbieter-Händler werden von deinen verbundenen Institutionen synchronisiert. Sie können hier nicht bearbeitet werden.
+      provider_info: Diese Händler wurden automatisch von deinen Bankverbindungen oder der KI erkannt. Du kannst sie bearbeiten, um deine eigene Kopie zu erstellen, oder sie entfernen, um sie von deinen Transaktionen zu trennen.
+      unlinked_title: Kürzlich getrennt
+      unlinked_info: Diese Händler wurden kürzlich von deinen Transaktionen entfernt. Sie verschwinden nach 30 Tagen aus dieser Liste, sofern sie nicht erneut einer Transaktion zugewiesen werden.
       table:
         merchant: Händler
         actions: Aktionen
@@ -30,7 +37,26 @@ de:
       confirm_title: Händler löschen
       delete: Händler löschen
       edit: Händler bearbeiten
+    merge:
+      title: Händler zusammenführen
+      description: Wähle einen Zielhändler und die Händler, die darin zusammengeführt werden sollen. Alle Transaktionen der zusammengeführten Händler werden dem Ziel zugewiesen.
+      target_label: Zusammenführen in (Ziel)
+      select_target: Zielhändler auswählen …
+      sources_label: Händler zum Zusammenführen
+      sources_hint: Die ausgewählten Händler werden in den Zielhändler zusammengeführt. Familienhändler werden gelöscht, Anbieter-Händler werden getrennt.
+      submit: Ausgewählte zusammenführen
     new:
       title: Neuer Händler
+    perform_merge:
+      success: "%{count} Händler erfolgreich zusammengeführt"
+      no_merchants_selected: Keine Händler zum Zusammenführen ausgewählt
+      target_not_found: Zielhändler nicht gefunden
+      invalid_merchants: Ungültige Händler ausgewählt
+    provider_merchant:
+      edit: Bearbeiten
+      remove: Entfernen
+      remove_confirm_title: Händler entfernen?
+      remove_confirm_body: Bist du sicher, dass du %{name} entfernen möchtest? Dadurch werden alle zugehörigen Transaktionen von diesem Händler getrennt, der Händler selbst wird nicht gelöscht.
     update:
       success: Händler erfolgreich aktualisiert
+      converted_success: Händler umgewandelt und erfolgreich aktualisiert

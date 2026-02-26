@@ -4,10 +4,18 @@ de:
     upcoming: Anstehende wiederkehrende Transaktionen
     projected: Prognostiziert
     recurring: Wiederkehrend
+    expected_today: "Erwartet heute"
+    expected_in:
+      one: "Erwartet in %{count} Tag"
+      other: "Erwartet in %{count} Tagen"
     expected_on: Erwartet am %{date}
     day_of_month: Tag %{day} des Monats
     identify_patterns: Muster erkennen
     cleanup_stale: Alte Einträge bereinigen
+    settings:
+      enable_label: Wiederkehrende Transaktionen aktivieren
+      enable_description: Erkenne automatisch wiederkehrende Transaktionsmuster und zeige anstehende prognostizierte Transaktionen an.
+    settings_updated: Einstellungen für wiederkehrende Transaktionen aktualisiert
     info:
       title: Automatische Mustererkennung
       manual_description: Du kannst Muster manuell erkennen oder alte wiederkehrende Transaktionen mit den obigen Schaltflächen bereinigen.
@@ -21,6 +29,11 @@ de:
     marked_active: Wiederkehrende Transaktion als aktiv markiert
     deleted: Wiederkehrende Transaktion gelöscht
     confirm_delete: Bist du sicher, dass du diese wiederkehrende Transaktion löschen möchtest?
+    marked_as_recurring: Transaktion als wiederkehrend markiert
+    already_exists: Für dieses Muster existiert bereits eine manuelle wiederkehrende Transaktion
+    creation_failed: Wiederkehrende Transaktion konnte nicht erstellt werden. Bitte überprüfe die Transaktionsdetails und versuche es erneut.
+    unexpected_error: Beim Erstellen der wiederkehrenden Transaktion ist ein unerwarteter Fehler aufgetreten
+    amount_range: "Bereich: %{min} bis %{max}"
     empty:
       title: Keine wiederkehrenden Transaktionen gefunden
       description: Klicke auf „Muster erkennen“, um automatisch wiederkehrende Transaktionen aus deinem Verlauf zu erkennen.
@@ -35,3 +48,5 @@ de:
     status:
       active: Aktiv
       inactive: Inaktiv
+    badges:
+      manual: Manuell

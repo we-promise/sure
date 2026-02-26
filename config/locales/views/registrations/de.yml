@@ -17,6 +17,7 @@ de:
       invitation_message: "%{inviter} hat dich eingeladen als %{role} beizutreten"
       join_family_title: "%{family} beitreten"
       role_admin: Administrator
+      role_guest: Gast
       role_member: Mitglied
       submit: Konto erstellen
       title: Erstelle dein Konto

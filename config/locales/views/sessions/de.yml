@@ -3,12 +3,19 @@ de:
   sessions:
     create:
       invalid_credentials: Ungültige E-Mail-Adresse oder falsches Passwort.
+      local_login_disabled: Anmeldung mit Passwort ist deaktiviert. Bitte nutze Single Sign-On.
     destroy:
       logout_successful: Du hast dich erfolgreich abgemeldet.
+    post_logout:
+      logout_successful: Du hast dich erfolgreich abgemeldet.
     openid_connect:
+      account_linked: "Konto erfolgreich mit %{provider} verknüpft"
       failed: Anmeldung über OpenID Connect fehlgeschlagen.
     failure:
       failed: Anmeldung fehlgeschlagen.
+      sso_provider_unavailable: "Der SSO-Anbieter ist derzeit nicht verfügbar. Bitte versuche es später erneut oder wende dich an einen Administrator."
+      sso_invalid_response: "Vom SSO-Anbieter wurde eine ungültige Antwort erhalten. Bitte versuche es erneut."
+      sso_failed: "Single Sign-On-Anmeldung fehlgeschlagen. Bitte versuche es erneut."
     new:
       email: E-Mail-Adresse
       email_placeholder: du@beispiel.de
@@ -20,3 +27,7 @@ de:
       openid_connect: Mit OpenID Connect anmelden
       oidc: Mit OpenID Connect anmelden
       google_auth_connect: Mit Google anmelden
+      local_login_admin_only: Lokale Anmeldung ist auf Administratoren beschränkt.
+      no_auth_methods_enabled: Derzeit sind keine Anmeldemethoden aktiviert. Bitte wende dich an einen Administrator.
+      demo_banner_title: "Demo-Modus aktiv"
+      demo_banner_message: "Dies ist eine Demo-Umgebung. Anmeldedaten wurden zur Vereinfachung vorausgefüllt. Bitte gib keine echten oder sensiblen Daten ein."

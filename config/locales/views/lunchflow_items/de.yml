@@ -1,62 +1,145 @@
+---
 de:
   lunchflow_items:
     create:
-      success: Lunch-Flow-Verbindung erfolgreich erstellt
+      success: Lunch‑Flow-Verbindung erfolgreich erstellt
     destroy:
-      success: Lunch-Flow-Verbindung entfernt
+      success: Lunch‑Flow-Verbindung entfernt
     index:
-      title: Lunch-Flow-Verbindungen
+      title: Lunch‑Flow-Verbindungen
     loading:
-      loading_message: Lunch-Flow-Konten werden geladen...
+      loading_message: Lunch‑Flow-Konten werden geladen...
       loading_title: Wird geladen
     link_accounts:
       all_already_linked:
         one: "Das ausgewählte Konto (%{names}) ist bereits verknüpft"
         other: "Alle %{count} ausgewählten Konten sind bereits verknüpft: %{names}"
       api_error: "API-Fehler: %{message}"
+      invalid_account_names:
+        one: "Konto mit leerem Namen kann nicht verknüpft werden"
+        other: "%{count} Konten mit leerem Namen können nicht verknüpft werden"
       link_failed: Konten konnten nicht verknüpft werden
       no_accounts_selected: Bitte wähle mindestens ein Konto aus
+      partial_invalid: "%{created_count} Konto/Konten verknüpft, %{already_linked_count} waren bereits verknüpft, %{invalid_count} hatten ungültige Namen"
       partial_success: "%{created_count} Konto/Konten erfolgreich verknüpft. %{already_linked_count} Konto/Konten waren bereits verknüpft: %{already_linked_names}"
       success:
         one: "%{count} Konto erfolgreich verknüpft"
         other: "%{count} Konten erfolgreich verknüpft"
     lunchflow_item:
+      accounts_need_setup: Konten müssen eingerichtet werden
       delete: Verbindung löschen
       deletion_in_progress: Löschung wird durchgeführt...
       error: Fehler
       no_accounts_description: Diese Verbindung enthält derzeit keine verknüpften Konten.
       no_accounts_title: Keine Konten
+      setup_action: Neue Konten einrichten
+      setup_description: "%{linked} von %{total} Konten verknüpft. Wähle die richtigen Kontotypen für deine neu importierten Lunch‑Flow-Konten."
+      setup_needed: Neue Konten bereit zur Einrichtung
       status: "Vor %{timestamp} synchronisiert"
       status_never: Noch nie synchronisiert
+      status_with_summary: "Zuletzt vor %{timestamp} synchronisiert • %{summary}"
       syncing: Wird synchronisiert...
+      total: Gesamt
+      unlinked: Nicht verknüpft
     select_accounts:
       accounts_selected: Konten ausgewählt
       api_error: "API-Fehler: %{message}"
       cancel: Abbrechen
+      configure_name_in_lunchflow: Import nicht möglich – bitte Kontoname in Lunch‑Flow konfigurieren
       description: Wähle die Konten aus, die du mit deinem %{product_name}-Konto verknüpfen möchtest.
       link_accounts: Ausgewählte Konten verknüpfen
       no_accounts_found: Keine Konten gefunden. Bitte überprüfe deine API-Key-Konfiguration.
-      no_api_key: Lunch-Flow-API-Schlüssel ist nicht konfiguriert. Bitte konfiguriere ihn in den Einstellungen.
-      title: Lunch-Flow-Konten auswählen
+      no_api_key: Lunch‑Flow-API-Schlüssel ist nicht konfiguriert. Bitte konfiguriere ihn in den Einstellungen.
+      no_name_placeholder: "(Kein Name)"
+      title: Lunch‑Flow-Konten auswählen
     select_existing_account:
       account_already_linked: Dieses Konto ist bereits mit einem Anbieter verknüpft
-      all_accounts_already_linked: Alle Lunch-Flow-Konten sind bereits verknüpft
+      all_accounts_already_linked: Alle Lunch‑Flow-Konten sind bereits verknüpft
       api_error: "API-Fehler: %{message}"
       cancel: Abbrechen
-      description: Wähle ein Lunch-Flow-Konto aus, um es mit diesem Konto zu verknüpfen. Transaktionen werden automatisch synchronisiert und doppelte Einträge entfernt.
+      configure_name_in_lunchflow: Import nicht möglich – bitte Kontoname in Lunch‑Flow konfigurieren
+      description: Wähle ein Lunch‑Flow-Konto aus, um es mit diesem Konto zu verknüpfen. Transaktionen werden automatisch synchronisiert und doppelte Einträge entfernt.
       link_account: Konto verknüpfen
       no_account_specified: Kein Konto angegeben
-      no_accounts_found: Keine Lunch-Flow-Konten gefunden. Bitte überprüfe deine API-Key-Konfiguration.
-      no_api_key: Lunch-Flow-API-Schlüssel ist nicht konfiguriert. Bitte konfiguriere ihn in den Einstellungen.
-      title: "%{account_name} mit Lunch Flow verknüpfen"
+      no_accounts_found: Keine Lunch‑Flow-Konten gefunden. Bitte überprüfe deine API-Key-Konfiguration.
+      no_api_key: Lunch‑Flow-API-Schlüssel ist nicht konfiguriert. Bitte konfiguriere ihn in den Einstellungen.
+      no_name_placeholder: "(Kein Name)"
+      title: "%{account_name} mit Lunch‑Flow verknüpfen"
     link_existing_account:
       account_already_linked: Dieses Konto ist bereits mit einem Anbieter verknüpft
       api_error: "API-Fehler: %{message}"
-      lunchflow_account_already_linked: Dieses Lunch-Flow-Konto ist bereits mit einem anderen Konto verknüpft
-      lunchflow_account_not_found: Lunch-Flow-Konto nicht gefunden
+      invalid_account_name: Konto mit leerem Namen kann nicht verknüpft werden
+      lunchflow_account_already_linked: Dieses Lunch‑Flow-Konto ist bereits mit einem anderen Konto verknüpft
+      lunchflow_account_not_found: Lunch‑Flow-Konto nicht gefunden
       missing_parameters: Erforderliche Parameter fehlen
-      success: "%{account_name} erfolgreich mit Lunch Flow verknüpft"
+      success: "%{account_name} erfolgreich mit Lunch‑Flow verknüpft"
+    setup_accounts:
+      account_type_label: "Kontotyp:"
+      all_accounts_linked: "Alle deine Lunch‑Flow-Konten sind bereits eingerichtet."
+      api_error: "API-Fehler: %{message}"
+      fetch_failed: "Konten konnten nicht geladen werden"
+      no_accounts_to_setup: "Keine Konten zum Einrichten"
+      no_api_key: "Der Lunch‑Flow-API-Schlüssel ist nicht konfiguriert. Bitte prüfe deine Verbindungseinstellungen."
+      account_types:
+        skip: Dieses Konto überspringen
+        depository: Giro- oder Sparkonto
+        credit_card: Kreditkarte
+        investment: Anlagekonto
+        loan: Darlehen oder Hypothek
+        other_asset: Sonstiges Vermögen
+      subtype_labels:
+        depository: "Konto-Untertyp:"
+        credit_card: ""
+        investment: "Anlagetyp:"
+        loan: "Darlehenstyp:"
+        other_asset: ""
+      subtype_messages:
+        credit_card: "Kreditkarten werden automatisch als Kreditkartenkonten eingerichtet."
+        other_asset: "Für sonstiges Vermögen sind keine weiteren Optionen nötig."
+      subtypes:
+        depository:
+          checking: Girokonto
+          savings: Sparkonto
+          hsa: Health Savings Account
+          cd: Festgeld
+          money_market: Geldmarkt
+        investment:
+          brokerage: Brokerage
+          pension: Pension
+          retirement: Ruhestand
+          "401k": "401(k)"
+          roth_401k: "Roth 401(k)"
+          "403b": "403(b)"
+          tsp: Thrift Savings Plan
+          "529_plan": "529 Plan"
+          hsa: Health Savings Account
+          mutual_fund: Fonds
+          ira: Traditionelles IRA
+          roth_ira: Roth IRA
+          angel: Business Angel
+        loan:
+          mortgage: Hypothek
+          student: Studienkredit
+          auto: Autokredit
+          other: Sonstiges Darlehen
+      balance: Saldo
+      cancel: Abbrechen
+      choose_account_type: "Wähle den richtigen Kontotyp für jedes Lunch‑Flow-Konto:"
+      create_accounts: Konten anlegen
+      creating_accounts: Konten werden angelegt...
+      historical_data_range: "Historischer Datenbereich:"
+      subtitle: Wähle die richtigen Kontotypen für deine importierten Konten
+      sync_start_date_help: Wähle, wie weit die Buchungshistorie zurück synchronisiert werden soll. Maximal sind 3 Jahre verfügbar.
+      sync_start_date_label: "Buchungen synchronisieren ab:"
+      title: Lunch‑Flow-Konten einrichten
+    complete_account_setup:
+      all_skipped: "Alle Konten wurden übersprungen. Es wurden keine Konten angelegt."
+      creation_failed: "Konten konnten nicht angelegt werden: %{error}"
+      no_accounts: "Keine Konten zum Einrichten."
+      success:
+        one: "%{count} Konto erfolgreich angelegt."
+        other: "%{count} Konten erfolgreich angelegt."
     sync:
       success: Synchronisierung gestartet
     update:
-      success: Lunch-Flow-Verbindung aktualisiert
+      success: Lunch‑Flow-Verbindung aktualisiert

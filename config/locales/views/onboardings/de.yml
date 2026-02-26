@@ -16,8 +16,13 @@ de:
       first_name_placeholder: Vorname
       last_name: Nachname
       last_name_placeholder: Nachname
+      group_name: Gruppenname
+      group_name_placeholder: Gruppenname
       household_name: Haushaltsname
       household_name_placeholder: Haushaltsname
+      moniker_prompt: "%{product_name} wird genutzt mit …"
+      moniker_family: Familienmitglieder (nur Sie selbst oder mit Partner, Kindern usw.)
+      moniker_group: Personengruppe (Firma, Verein, Verband o. Ä.)
       country: Land
       submit: Weiter
     preferences:

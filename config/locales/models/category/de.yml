@@ -1,0 +1,7 @@
+---
+de:
+  models:
+    category:
+      uncategorized: Nicht kategorisiert
+      other_investments: Sonstige Anlagen
+      investment_contributions: Anlagebeiträge
