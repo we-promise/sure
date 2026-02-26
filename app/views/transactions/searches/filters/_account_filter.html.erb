@@ -20,7 +20,7 @@
         <%= form.label :accounts, value: account.name, class: "text-sm text-primary flex items-center gap-1" do %>
           <%= account.name %>
           <% if account.excluded? %>
-            <span class="text-xs text-secondary">(<%= t("accounts.accountable_group.excluded_badge", default: "Excluded") %>)</span>
+            <span class="text-xs text-secondary"><%= t("accounts.accountable_group.excluded_badge", default: "Excluded") %></span>
           <% end %>
         <% end %>
       </div>
