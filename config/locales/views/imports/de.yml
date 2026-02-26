@@ -3,9 +3,25 @@ de:
   import:
     qif_category_selections:
       show:
+        title: "Kategorien und Tags auswählen"
+        description: "Wähle aus, welche Kategorien und Tags aus deiner QIF-Datei in Sure übernommen werden sollen. Abgewählte Einträge werden aus den betreffenden Transaktionen entfernt."
+        categories_heading: Kategorien
+        categories_found:
+          one: "1 Kategorie gefunden"
+          other: "%{count} Kategorien gefunden"
+        category_name_col: Kategoriename
+        transactions_col: Buchungen
+        tags_heading: Tags
+        tags_found:
+          one: "1 Tag gefunden"
+          other: "%{count} Tags gefunden"
+        tag_name_col: Tag-Name
         txn_count:
           one: "1 Buchung"
           other: "%{count} Buchungen"
+        empty_state_primary: In dieser QIF-Datei wurden keine Kategorien oder Tags gefunden.
+        empty_state_secondary: Alle Transaktionen werden ohne Kategorien und Tags importiert.
+        submit: Weiter zur Überprüfung
     cleans:
       show:
         description: Bearbeite deine Daten in der Tabelle unten. Rote Zellen sind ungültig.
