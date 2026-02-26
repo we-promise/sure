@@ -5,6 +5,7 @@ class BalanceSheet::ClassificationGroup
 
   attr_reader :classification, :currency
 
+  # Initializes a classification group (asset or liability) with its accounts
   def initialize(classification:, currency:, accounts:)
     @classification = normalize_classification!(classification)
     @name = name
@@ -12,18 +13,22 @@ class BalanceSheet::ClassificationGroup
     @accounts = accounts
   end
 
+  # Returns the human-readable classification name (e.g., "Assets")
   def name
     classification.titleize.pluralize
   end
 
+  # Returns the icon name for this classification (plus or minus)
   def icon
     classification == "asset" ? "plus" : "minus"
   end
 
+  # Returns the total converted balance for non-excluded accounts
   def total
     accounts.reject(&:excluded?).sum(&:converted_balance)
   end
 
+  # Returns true if any account in this classification is syncing
   def syncing?
     accounts.any?(&:syncing?)
   end
@@ -54,6 +59,7 @@ class BalanceSheet::ClassificationGroup
   private
     attr_reader :accounts
 
+    # Validates that the classification is either asset or liability
     def normalize_classification!(classification)
       raise ArgumentError, "Invalid classification: #{classification}" unless %w[asset liability].include?(classification)
       classification

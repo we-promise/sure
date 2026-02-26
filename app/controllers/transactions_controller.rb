@@ -4,12 +4,14 @@ class TransactionsController < ApplicationController
   before_action :set_entry_for_unlock, only: :unlock
   before_action :store_params!, only: :index
 
+  # Renders the new transaction form with income and expense categories
   def new
     super
     @income_categories = Current.family.categories.incomes.alphabetically
     @expense_categories = Current.family.categories.expenses.alphabetically
   end
 
+  # Lists transactions with search filters, pagination, and recurring projections
   def index
     @q = search_params
     @search = Transaction::Search.new(Current.family, filters: @q)
@@ -37,6 +39,7 @@ class TransactionsController < ApplicationController
                                   .includes(:merchant)
   end
 
+  # Removes a single filter parameter and redirects with updated query
   def clear_filter
     updated_params = {
       "q" => search_params,
@@ -66,6 +69,7 @@ class TransactionsController < ApplicationController
     redirect_to transactions_path(updated_params)
   end
 
+  # Creates a new transaction entry and syncs the account
   def create
     account = Current.family.accounts.find(params.dig(:entry, :account_id))
     @entry = account.entries.new(entry_params)
@@ -87,6 +91,7 @@ class TransactionsController < ApplicationController
     end
   end
 
+  # Updates a transaction entry and optionally prompts for category rule creation
   def update
     if @entry.update(entry_params)
       transaction = @entry.transaction
@@ -131,6 +136,7 @@ class TransactionsController < ApplicationController
     end
   end
 
+  # Merges the current transaction with its detected duplicate
   def merge_duplicate
     transaction = Current.family.transactions.includes(entry: :account).find(params[:id])
 
@@ -147,6 +153,7 @@ class TransactionsController < ApplicationController
     redirect_to transactions_path
   end
 
+  # Dismisses the duplicate suggestion for a transaction
   def dismiss_duplicate
     transaction = Current.family.transactions.includes(entry: :account).find(params[:id])
 
@@ -163,6 +170,7 @@ class TransactionsController < ApplicationController
     redirect_back_or_to transactions_path
   end
 
+  # Renders the convert-to-trade form for an investment account transaction
   def convert_to_trade
     @transaction = Current.family.transactions.includes(entry: :account).find(params[:id])
     @entry = @transaction.entry
@@ -176,6 +184,7 @@ class TransactionsController < ApplicationController
     render :convert_to_trade
   end
 
+  # Converts a transaction into a trade entry within the same investment account
   def create_trade_from_transaction
     @transaction = Current.family.transactions.includes(entry: :account).find(params[:id])
     @entry = @transaction.entry
@@ -253,6 +262,7 @@ class TransactionsController < ApplicationController
     redirect_back_or_to transactions_path, status: :see_other
   end
 
+  # Unlocks a locked entry so it can be overwritten by sync
   def unlock
     @entry.unlock_for_sync!
     flash[:notice] = t("entries.unlock.success")
@@ -260,6 +270,7 @@ class TransactionsController < ApplicationController
     redirect_back_or_to transactions_path
   end
 
+  # Marks a transaction as a recurring transaction pattern
   def mark_as_recurring
     transaction = Current.family.transactions.includes(entry: :account).find(params[:id])
 
@@ -303,6 +314,7 @@ class TransactionsController < ApplicationController
     end
   end
 
+  # Saves user preferences for the transactions view
   def update_preferences
     Current.user.update_transactions_preferences(preferences_params)
     head :ok
@@ -311,11 +323,13 @@ class TransactionsController < ApplicationController
   end
 
   private
+    # Finds the entry associated with the transaction for unlocking
     def set_entry_for_unlock
       transaction = Current.family.transactions.find(params[:id])
       @entry = transaction.entry
     end
 
+    # Checks whether a category rule prompt should be shown after update
     def needs_rule_notification?(transaction)
       return false if Current.user.rule_prompts_disabled
 
@@ -328,6 +342,7 @@ class TransactionsController < ApplicationController
       transaction.eligible_for_category_rule?
     end
 
+    # Permits and transforms entry parameters, applying amount sign from nature
     def entry_params
       entry_params = params.require(:entry).permit(
         :name, :date, :amount, :currency, :excluded, :notes, :nature, :entryable_type,
@@ -344,6 +359,7 @@ class TransactionsController < ApplicationController
       entry_params
     end
 
+    # Sanitizes and returns search filter parameters, removing excluded accounts
     def search_params
       cleaned_params = params.fetch(:q, {})
               .permit(
@@ -385,6 +401,7 @@ class TransactionsController < ApplicationController
       cleaned_params
     end
 
+    # Stores current params or restores previous ones for back-navigation
     def store_params!
       if should_restore_params?
         params_to_restore = {}
@@ -405,20 +422,24 @@ class TransactionsController < ApplicationController
       end
     end
 
+    # Returns true if the request has no query params and stored ones exist
     def should_restore_params?
       request.query_parameters.blank? && (stored_params["q"].present? || stored_params["page"].present? || stored_params["per_page"].present?)
     end
 
+    # Returns the previously stored transaction page params from the session
     def stored_params
       Current.session.prev_transaction_page_params
     end
 
+    # Permits the preference parameters for collapsed sections
     def preferences_params
       params.require(:preferences).permit(collapsed_sections: {})
     end
 
     # Helper methods for convert_to_trade
 
+    # Resolves a Security record from params for trade conversion
     def resolve_security_for_conversion
       user_country = Current.family.country
 
@@ -475,6 +496,7 @@ class TransactionsController < ApplicationController
       end
     end
 
+    # Calculates trade quantity and price from params and entry amount
     def calculate_qty_and_price
       amount = @entry.amount.abs
       qty = params[:qty].present? ? params[:qty].to_d.abs : nil

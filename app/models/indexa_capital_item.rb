@@ -34,10 +34,12 @@ class IndexaCapitalItem < ApplicationRecord
   scope :ordered, -> { order(created_at: :desc) }
   scope :needs_update, -> { where(status: :requires_update) }
 
+  # Returns the syncer instance for this item
   def syncer
     IndexaCapitalItem::Syncer.new(self)
   end
 
+  # Schedules this item for async deletion
   def destroy_later
     update!(scheduled_for_deletion: true)
     DestroyJob.perform_later(self)
@@ -102,6 +104,7 @@ class IndexaCapitalItem < ApplicationRecord
     results
   end
 
+  # Persists the raw API snapshot for debugging and reprocessing
   def upsert_indexa_capital_snapshot!(accounts_snapshot)
     assign_attributes(
       raw_payload: accounts_snapshot
@@ -110,6 +113,7 @@ class IndexaCapitalItem < ApplicationRecord
     save!
   end
 
+  # Returns true if at least one account has been linked
   def has_completed_initial_setup?
     accounts.any?
   end
@@ -124,6 +128,7 @@ class IndexaCapitalItem < ApplicationRecord
     indexa_capital_accounts.left_joins(:account_provider).where(account_providers: { id: nil })
   end
 
+  # Returns a human-readable summary of the sync status
   def sync_status_summary
     total_accounts = total_accounts_count
     linked_count = linked_accounts_count
@@ -138,22 +143,27 @@ class IndexaCapitalItem < ApplicationRecord
     end
   end
 
+  # Returns the count of accounts with provider links
   def linked_accounts_count
     indexa_capital_accounts.joins(:account_provider).count
   end
 
+  # Returns the count of accounts without provider links
   def unlinked_accounts_count
     indexa_capital_accounts.left_joins(:account_provider).where(account_providers: { id: nil }).count
   end
 
+  # Returns the total number of Indexa Capital accounts
   def total_accounts_count
     indexa_capital_accounts.count
   end
 
+  # Returns the display name for this connection
   def institution_display_name
     institution_name.presence || institution_domain.presence || name
   end
 
+  # Returns the unique connected institutions from account metadata
   def connected_institutions
     indexa_capital_accounts.includes(:account)
                   .where.not(institution_metadata: nil)
@@ -161,6 +171,7 @@ class IndexaCapitalItem < ApplicationRecord
                   .uniq { |inst| inst["name"] || inst["institution_name"] }
   end
 
+  # Returns a summary string describing connected institution count
   def institution_summary
     institutions = connected_institutions
     case institutions.count
@@ -173,6 +184,7 @@ class IndexaCapitalItem < ApplicationRecord
 
   private
 
+    # Validates that credentials are present on create
     def credentials_present_on_create
       return if credentials_configured?
 

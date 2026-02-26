@@ -34,11 +34,13 @@ class CoinbaseItem < ApplicationRecord
   scope :ordered, -> { order(created_at: :desc) }
   scope :needs_update, -> { where(status: :requires_update) }
 
+  # Schedules this item for async deletion
   def destroy_later
     update!(scheduled_for_deletion: true)
     DestroyJob.perform_later(self)
   end
 
+  # Fetches and imports the latest data from the Coinbase API
   def import_latest_coinbase_data
     provider = coinbase_provider
     unless provider
@@ -52,6 +54,7 @@ class CoinbaseItem < ApplicationRecord
     raise
   end
 
+  # Processes holdings for all linked sync-enabled Coinbase accounts
   def process_accounts
     Rails.logger.info "CoinbaseItem #{id} - process_accounts: total coinbase_accounts=#{coinbase_accounts.count}"
 
@@ -86,6 +89,7 @@ class CoinbaseItem < ApplicationRecord
     results
   end
 
+  # Queues balance sync jobs for all sync-enabled accounts
   def schedule_account_syncs(parent_sync: nil, window_start_date: nil, window_end_date: nil)
     return [] if accounts.empty?
 
@@ -107,6 +111,7 @@ class CoinbaseItem < ApplicationRecord
     results
   end
 
+  # Persists the raw API snapshot for debugging and reprocessing
   def upsert_coinbase_snapshot!(accounts_snapshot)
     assign_attributes(
       raw_payload: accounts_snapshot
@@ -115,11 +120,13 @@ class CoinbaseItem < ApplicationRecord
     save!
   end
 
+  # Returns true if at least one account has been linked
   def has_completed_initial_setup?
     # Setup is complete if we have any linked accounts
     accounts.any?
   end
 
+  # Returns a human-readable summary of the sync status
   def sync_status_summary
     total_accounts = total_accounts_count
     linked_count = linked_accounts_count
@@ -134,22 +141,27 @@ class CoinbaseItem < ApplicationRecord
     end
   end
 
+  # Returns the count of accounts with provider links
   def linked_accounts_count
     coinbase_accounts.joins(:account_provider).count
   end
 
+  # Returns the count of accounts without provider links
   def unlinked_accounts_count
     coinbase_accounts.left_joins(:account_provider).where(account_providers: { id: nil }).count
   end
 
+  # Returns the total number of Coinbase accounts
   def total_accounts_count
     coinbase_accounts.count
   end
 
+  # Returns the display name for this Coinbase connection
   def institution_display_name
     institution_name.presence || institution_domain.presence || name
   end
 
+  # Returns the unique connected institutions from account metadata
   def connected_institutions
     coinbase_accounts.includes(:account)
                   .where.not(institution_metadata: nil)
@@ -157,6 +169,7 @@ class CoinbaseItem < ApplicationRecord
                   .uniq { |inst| inst["name"] || inst["institution_name"] }
   end
 
+  # Returns a summary string describing connected institution count
   def institution_summary
     institutions = connected_institutions
     case institutions.count
@@ -169,6 +182,7 @@ class CoinbaseItem < ApplicationRecord
     end
   end
 
+  # Returns true if API key and secret are both configured
   def credentials_configured?
     api_key.present? && api_secret.present?
   end

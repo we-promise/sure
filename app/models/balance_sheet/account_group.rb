@@ -5,6 +5,7 @@ class BalanceSheet::AccountGroup
 
   attr_reader :name, :color, :accountable_type, :accounts
 
+  # Initializes an account group with its display info and accounts
   def initialize(name:, color:, accountable_type:, accounts:, classification_group:)
     @name = name
     @color = color
@@ -29,20 +30,24 @@ class BalanceSheet::AccountGroup
     parts.compact.join("_")
   end
 
+  # Returns the underscored accountable type as a stable key
   def key
     accountable_type.to_s.underscore
   end
 
+  # Returns the total converted balance for non-excluded accounts
   def total
     accounts.reject(&:excluded?).sum(&:converted_balance)
   end
 
+  # Returns this group's percentage weight within its classification
   def weight
     return 0 if classification_group.total.zero?
 
     total / classification_group.total.to_d * 100
   end
 
+  # Returns true if any account in this group is currently syncing
   def syncing?
     accounts.any?(&:syncing?)
   end
@@ -52,6 +57,7 @@ class BalanceSheet::AccountGroup
     classification_group.classification
   end
 
+  # Returns the family currency from the parent classification group
   def currency
     classification_group.currency
   end

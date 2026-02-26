@@ -1,4 +1,5 @@
 class AccountableSparklinesController < ApplicationController
+  # Renders the sparkline chart for a given accountable type
   def show
     @accountable = accountable
 
@@ -29,18 +30,22 @@ class AccountableSparklinesController < ApplicationController
   end
 
   private
+    # Returns the current user's family
     def family
       Current.family
     end
 
+    # Resolves the accountable model type from the request params
     def accountable
       @accountable ||= Accountable.from_type(params[:accountable_type]&.classify)
     end
 
+    # Returns IDs of visible accounts for the current accountable type
     def account_ids
       @account_ids ||= family.accounts.visible.where(accountable_type: accountable.name).pluck(:id)
     end
 
+    # Builds a cache key for the sparkline data, invalidated on data updates
     def cache_key
       family.build_cache_key("#{accountable.name}_sparkline", invalidate_on_data_updates: true)
     end

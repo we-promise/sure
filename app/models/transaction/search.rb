@@ -18,11 +18,13 @@ class Transaction::Search
 
   attr_reader :family
 
+  # Initializes a search with the given family and optional filter params
   def initialize(family, filters: {})
     @family = family
     super(filters)
   end
 
+  # Returns the filtered and scoped transaction query
   def transactions_scope
     @transactions_scope ||= begin
       # This already joins entries + accounts. To avoid expensive double-joins, don't join them again (causes full table scan)
@@ -84,6 +86,7 @@ class Transaction::Search
     end
   end
 
+  # Returns a composite cache key based on filters and family version
   def cache_key_base
     [
       family.id,
@@ -96,6 +99,7 @@ class Transaction::Search
   private
     Totals = Data.define(:count, :income_money, :expense_money)
 
+    # Filters to only active, non-excluded accounts when the toggle is on
     def apply_active_accounts_filter(query, active_accounts_only_filter)
       if active_accounts_only_filter
         query.where(accounts: { status: [ "draft", "active" ], excluded: false })
@@ -105,6 +109,7 @@ class Transaction::Search
     end
 
 
+    # Filters transactions by category names, including subcategories
     def apply_category_filter(query, categories)
       return query unless categories.present?
 
@@ -145,6 +150,7 @@ class Transaction::Search
       query
     end
 
+    # Filters transactions by type (income, expense, transfer)
     def apply_type_filter(query, types)
       return query unless types.present?
       return query if types.sort == [ "expense", "income", "transfer" ]
@@ -167,16 +173,19 @@ class Transaction::Search
       end
     end
 
+    # Filters transactions by merchant name
     def apply_merchant_filter(query, merchants)
       return query unless merchants.present?
       query.joins(:merchant).where(merchants: { name: merchants })
     end
 
+    # Filters transactions by tag name
     def apply_tag_filter(query, tags)
       return query unless tags.present?
       query.joins(:tags).where(tags: { name: tags })
     end
 
+    # Filters transactions by pending/confirmed status
     def apply_status_filter(query, statuses)
       return query unless statuses.present?
       return query if statuses.uniq.sort == [ "confirmed", "pending" ] # Both selected = no filter

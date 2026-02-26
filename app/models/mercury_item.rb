@@ -31,6 +31,7 @@ class MercuryItem < ApplicationRecord
   scope :ordered, -> { order(created_at: :desc) }
   scope :needs_update, -> { where(status: :requires_update) }
 
+  # Schedules this item for async deletion
   def destroy_later
     update!(scheduled_for_deletion: true)
     DestroyJob.perform_later(self)
@@ -97,6 +98,7 @@ class MercuryItem < ApplicationRecord
     results
   end
 
+  # Persists the raw API snapshot for debugging and reprocessing
   def upsert_mercury_snapshot!(accounts_snapshot)
     assign_attributes(
       raw_payload: accounts_snapshot
@@ -105,6 +107,7 @@ class MercuryItem < ApplicationRecord
     save!
   end
 
+  # Returns true if at least one account has been linked
   def has_completed_initial_setup?
     # Setup is complete if we have any linked accounts
     accounts.any?
@@ -127,18 +130,22 @@ class MercuryItem < ApplicationRecord
     end
   end
 
+  # Returns the count of accounts with provider links
   def linked_accounts_count
     mercury_accounts.joins(:account_provider).count
   end
 
+  # Returns the count of accounts without provider links
   def unlinked_accounts_count
     mercury_accounts.left_joins(:account_provider).where(account_providers: { id: nil }).count
   end
 
+  # Returns the total number of Mercury accounts
   def total_accounts_count
     mercury_accounts.count
   end
 
+  # Returns the display name for this connection
   def institution_display_name
     institution_name.presence || institution_domain.presence || name
   end
@@ -167,10 +174,12 @@ class MercuryItem < ApplicationRecord
     end
   end
 
+  # Returns true if the API token is configured
   def credentials_configured?
     token.present?
   end
 
+  # Returns the base URL, falling back to the default Mercury API URL
   def effective_base_url
     base_url.presence || "https://api.mercury.com/api/v1"
   end

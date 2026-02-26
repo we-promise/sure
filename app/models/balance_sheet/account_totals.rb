@@ -1,13 +1,16 @@
 class BalanceSheet::AccountTotals
+  # Initializes account totals for a family with sync status tracking
   def initialize(family, sync_status_monitor:)
     @family = family
     @sync_status_monitor = sync_status_monitor
   end
 
+  # Returns account rows classified as assets
   def asset_accounts
     @asset_accounts ||= account_rows.filter { |t| t.classification == "asset" }
   end
 
+  # Returns account rows classified as liabilities
   def liability_accounts
     @liability_accounts ||= account_rows.filter { |t| t.classification == "liability" }
   end
@@ -16,6 +19,7 @@ class BalanceSheet::AccountTotals
     attr_reader :family, :sync_status_monitor
 
     AccountRow = Data.define(:account, :converted_balance, :is_syncing) do
+      # Returns whether this account row is currently syncing
       def syncing? = is_syncing
 
       # Allows Rails path helpers to generate URLs from the wrapper
@@ -23,6 +27,7 @@ class BalanceSheet::AccountTotals
       delegate_missing_to :account
     end
 
+    # Returns all sidebar-visible accounts for the family with logos
     def visible_accounts
       @visible_accounts ||= family.accounts.sidebar_visible.with_attached_logo
     end

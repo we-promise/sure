@@ -27,23 +27,28 @@ class EnableBankingItem < ApplicationRecord
   scope :ordered, -> { order(created_at: :desc) }
   scope :needs_update, -> { where(status: :requires_update) }
 
+  # Schedules this item for async deletion
   def destroy_later
     update!(scheduled_for_deletion: true)
     DestroyJob.perform_later(self)
   end
 
+  # Returns true if all required credentials are configured
   def credentials_configured?
     application_id.present? && client_certificate.present? && country_code.present?
   end
 
+  # Returns true if the session exists and has not expired
   def session_valid?
     session_id.present? && (session_expires_at.nil? || session_expires_at > Time.current)
   end
 
+  # Returns true if the session exists but has expired
   def session_expired?
     session_id.present? && session_expires_at.present? && session_expires_at <= Time.current
   end
 
+  # Returns true if re-authorization is needed
   def needs_authorization?
     !session_valid?
   end
@@ -91,6 +96,7 @@ class EnableBankingItem < ApplicationRecord
     result
   end
 
+  # Imports the latest data from the Enable Banking API
   def import_latest_enable_banking_data
     provider = enable_banking_provider
     unless provider
@@ -110,6 +116,7 @@ class EnableBankingItem < ApplicationRecord
     raise
   end
 
+  # Processes transactions for all linked sync-enabled accounts
   def process_accounts
     return [] if enable_banking_accounts.empty?
 
@@ -127,6 +134,7 @@ class EnableBankingItem < ApplicationRecord
     results
   end
 
+  # Queues balance sync jobs for all sync-enabled accounts
   def schedule_account_syncs(parent_sync: nil, window_start_date: nil, window_end_date: nil)
     return [] if accounts.empty?
 
@@ -148,6 +156,7 @@ class EnableBankingItem < ApplicationRecord
     results
   end
 
+  # Persists the raw API snapshot for debugging and reprocessing
   def upsert_enable_banking_snapshot!(accounts_snapshot)
     assign_attributes(
       raw_payload: accounts_snapshot
@@ -156,22 +165,27 @@ class EnableBankingItem < ApplicationRecord
     save!
   end
 
+  # Returns true if at least one account has been linked
   def has_completed_initial_setup?
     accounts.any?
   end
 
+  # Returns the count of accounts with provider links
   def linked_accounts_count
     enable_banking_accounts.joins(:account_provider).count
   end
 
+  # Returns the count of accounts without provider links
   def unlinked_accounts_count
     enable_banking_accounts.left_joins(:account_provider).where(account_providers: { id: nil }).count
   end
 
+  # Returns the total number of Enable Banking accounts
   def total_accounts_count
     enable_banking_accounts.count
   end
 
+  # Returns a human-readable summary of the sync status
   def sync_status_summary
     latest = latest_sync
     return nil unless latest
@@ -204,10 +218,12 @@ class EnableBankingItem < ApplicationRecord
     end
   end
 
+  # Returns the display name for this connection
   def institution_display_name
     aspsp_name.presence || institution_name.presence || institution_domain.presence || name
   end
 
+  # Returns the unique connected institutions from account metadata
   def connected_institutions
     enable_banking_accounts.includes(:account)
                            .where.not(institution_metadata: nil)
@@ -215,6 +231,7 @@ class EnableBankingItem < ApplicationRecord
                            .uniq { |inst| inst["name"] || inst["institution_name"] }
   end
 
+  # Returns a summary string describing connected institution count
   def institution_summary
     institutions = connected_institutions
     case institutions.count
@@ -249,6 +266,7 @@ class EnableBankingItem < ApplicationRecord
 
   private
 
+    # Parses the session expiry time from the API response
     def parse_session_expiry(session_result)
       # Enable Banking sessions typically last 90 days
       # The exact expiry depends on the ASPSP consent
@@ -262,6 +280,7 @@ class EnableBankingItem < ApplicationRecord
       90.days.from_now
     end
 
+    # Creates or updates Enable Banking accounts from session data
     def import_accounts_from_session(accounts_data)
       return if accounts_data.blank?
 

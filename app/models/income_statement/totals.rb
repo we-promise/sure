@@ -1,4 +1,5 @@
 class IncomeStatement::Totals
+  # Initializes totals with a family, transaction scope, date range, and trade inclusion flag
   def initialize(family, transactions_scope:, date_range:, include_trades: true)
     @family = family
     @transactions_scope = transactions_scope
@@ -8,6 +9,7 @@ class IncomeStatement::Totals
     validate_date_range!
   end
 
+  # Executes the query and returns an array of TotalsRow results
   def call
     ActiveRecord::Base.connection.select_all(query_sql).map do |row|
       TotalsRow.new(
@@ -24,6 +26,7 @@ class IncomeStatement::Totals
   private
     TotalsRow = Data.define(:parent_category_id, :category_id, :classification, :total, :transactions_count, :is_uncategorized_investment)
 
+    # Builds the sanitized SQL query string based on trade inclusion
     def query_sql
       ActiveRecord::Base.sanitize_sql_array([
         @include_trades ? combined_query_sql : transactions_only_query_sql,
@@ -79,6 +82,7 @@ class IncomeStatement::Totals
       SQL
     end
 
+    # Returns the SQL subquery for transaction totals by category
     def transactions_subquery_sql
       <<~SQL
         SELECT
@@ -111,6 +115,7 @@ class IncomeStatement::Totals
       SQL
     end
 
+    # Returns a no-op SQL subquery that excludes all trades from budgets
     def trades_subquery_sql
       # Trades are completely excluded from income/expense budgets
       # Rationale: Trades represent portfolio rebalancing, not cash flow
@@ -123,6 +128,7 @@ class IncomeStatement::Totals
       SQL
     end
 
+    # Returns the parameter hash for SQL query interpolation
     def sql_params
       params = {
         target_currency: @family.currency,
@@ -146,10 +152,12 @@ class IncomeStatement::Totals
       "AND a.id NOT IN (:tax_advantaged_account_ids)"
     end
 
+    # Returns SQL for excluding budget-excluded transaction kinds
     def budget_excluded_kinds_sql
       @budget_excluded_kinds_sql ||= Transaction::BUDGET_EXCLUDED_KINDS.map { |k| "'#{k}'" }.join(", ")
     end
 
+    # Validates that date_range is a Range with date-like endpoints
     def validate_date_range!
       unless @date_range.is_a?(Range)
         raise ArgumentError, "date_range must be a Range, got #{@date_range.class}"
