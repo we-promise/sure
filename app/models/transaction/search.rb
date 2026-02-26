@@ -14,6 +14,7 @@ class Transaction::Search
   attribute :categories, array: true
   attribute :merchants, array: true
   attribute :tags, array: true
+  # Determines whether transactions from excluded accounts should be filtered out (true by default).
   attribute :active_accounts_only, :boolean, default: true
 
   attr_reader :family
@@ -96,6 +97,8 @@ class Transaction::Search
   private
     Totals = Data.define(:count, :income_money, :expense_money)
 
+    # Applies a filter to only include transactions from active, non-excluded accounts,
+    # if the active_accounts_only_filter flag is enabled.
     def apply_active_accounts_filter(query, active_accounts_only_filter)
       if active_accounts_only_filter
         query.where(accounts: { status: [ "draft", "active" ], excluded: false })
@@ -147,9 +150,12 @@ class Transaction::Search
 
     def apply_type_filter(query, types)
       return query unless types.present?
-      return query if types.sort == [ "expense", "income", "transfer" ]
 
-      case types.sort
+      normalized_types = types.reject(&:blank?).uniq
+      return query if normalized_types.blank?
+      return query if normalized_types.sort == [ "expense", "income", "transfer" ]
+
+      case normalized_types.sort
       when [ "transfer" ]
         query.where(kind: Transaction::TRANSFER_KINDS)
       when [ "expense" ]
@@ -174,12 +180,16 @@ class Transaction::Search
 
     def apply_tag_filter(query, tags)
       return query unless tags.present?
-      query.joins(:tags).where(tags: { name: tags })
+      # Use a subquery to prevent duplication when multiple tags match
+      query.where(id: query.unscoped.select(:id).joins(:tags).where(tags: { name: tags }))
     end
 
     def apply_status_filter(query, statuses)
       return query unless statuses.present?
-      return query if statuses.uniq.sort == [ "confirmed", "pending" ] # Both selected = no filter
+
+      normalized_statuses = statuses.reject(&:blank?).uniq
+      return query if normalized_statuses.blank?
+      return query if normalized_statuses.sort == [ "confirmed", "pending" ] # Both selected = no filter
 
       pending_condition = <<~SQL.squish
         (transactions.extra -> 'simplefin' ->> 'pending')::boolean = true
@@ -193,7 +203,7 @@ class Transaction::Search
         AND (transactions.extra -> 'lunchflow' ->> 'pending')::boolean IS DISTINCT FROM true
       SQL
 
-      case statuses.sort
+      case normalized_statuses.sort
       when [ "pending" ]
         query.where(pending_condition)
       when [ "confirmed" ]

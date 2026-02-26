@@ -61,8 +61,9 @@ class EnableBankingItem::Importer
           # For string UIDs, we don't have account data to update - skip the import_account call
           # The account data will be fetched via balances/transactions endpoints
           if account_data.is_a?(Hash)
-            import_account(account_data)
-            accounts_updated += 1
+            if import_account(account_data)
+              accounts_updated += 1
+            end
           end
         rescue => e
           accounts_failed += 1
