@@ -64,12 +64,13 @@ class IncomeStatementTest < ActiveSupport::TestCase
     # Clear existing transactions by deleting entries
     Entry.joins(:account).where(accounts: { family_id: @family.id }).destroy_all
 
-    # Create expenses: 100, 200, 300, 400, 500 (median should be 300)
-    create_transaction(account: @checking_account, amount: 100, category: @groceries_category)
-    create_transaction(account: @checking_account, amount: 200, category: @groceries_category)
-    create_transaction(account: @checking_account, amount: 300, category: @groceries_category)
-    create_transaction(account: @checking_account, amount: 400, category: @groceries_category)
-    create_transaction(account: @checking_account, amount: 500, category: @groceries_category)
+    # Create expenses in a past completed month (within the 6-month lookback window)
+    past_month = 2.months.ago.beginning_of_month.to_date
+    create_transaction(account: @checking_account, amount: 100, category: @groceries_category, date: past_month)
+    create_transaction(account: @checking_account, amount: 200, category: @groceries_category, date: past_month + 1.day)
+    create_transaction(account: @checking_account, amount: 300, category: @groceries_category, date: past_month + 2.days)
+    create_transaction(account: @checking_account, amount: 400, category: @groceries_category, date: past_month + 3.days)
+    create_transaction(account: @checking_account, amount: 500, category: @groceries_category, date: past_month + 4.days)
 
     income_statement = IncomeStatement.new(@family)
     # CORRECT BUSINESS LOGIC: Calculates median of time-period totals for budget planning
@@ -81,12 +82,13 @@ class IncomeStatementTest < ActiveSupport::TestCase
     # Clear existing transactions by deleting entries
     Entry.joins(:account).where(accounts: { family_id: @family.id }).destroy_all
 
-    # Create income: -200, -300, -400, -500, -600 (median should be -400, displayed as 400)
-    create_transaction(account: @checking_account, amount: -200, category: @income_category)
-    create_transaction(account: @checking_account, amount: -300, category: @income_category)
-    create_transaction(account: @checking_account, amount: -400, category: @income_category)
-    create_transaction(account: @checking_account, amount: -500, category: @income_category)
-    create_transaction(account: @checking_account, amount: -600, category: @income_category)
+    # Create income in a past completed month (within the 6-month lookback window)
+    past_month = 2.months.ago.beginning_of_month.to_date
+    create_transaction(account: @checking_account, amount: -200, category: @income_category, date: past_month)
+    create_transaction(account: @checking_account, amount: -300, category: @income_category, date: past_month + 1.day)
+    create_transaction(account: @checking_account, amount: -400, category: @income_category, date: past_month + 2.days)
+    create_transaction(account: @checking_account, amount: -500, category: @income_category, date: past_month + 3.days)
+    create_transaction(account: @checking_account, amount: -600, category: @income_category, date: past_month + 4.days)
 
     income_statement = IncomeStatement.new(@family)
     # CORRECT BUSINESS LOGIC: Calculates median of time-period totals for budget planning
@@ -98,10 +100,11 @@ class IncomeStatementTest < ActiveSupport::TestCase
     # Clear existing transactions by deleting entries
     Entry.joins(:account).where(accounts: { family_id: @family.id }).destroy_all
 
-    # Create expenses: 100, 200, 300 (average should be 200)
-    create_transaction(account: @checking_account, amount: 100, category: @groceries_category)
-    create_transaction(account: @checking_account, amount: 200, category: @groceries_category)
-    create_transaction(account: @checking_account, amount: 300, category: @groceries_category)
+    # Create expenses in a past completed month (within the 6-month lookback window)
+    past_month = 2.months.ago.beginning_of_month.to_date
+    create_transaction(account: @checking_account, amount: 100, category: @groceries_category, date: past_month)
+    create_transaction(account: @checking_account, amount: 200, category: @groceries_category, date: past_month + 1.day)
+    create_transaction(account: @checking_account, amount: 300, category: @groceries_category, date: past_month + 2.days)
 
     income_statement = IncomeStatement.new(@family)
     # CORRECT BUSINESS LOGIC: Calculates average of time-period totals for budget planning
@@ -113,17 +116,18 @@ class IncomeStatementTest < ActiveSupport::TestCase
     # Clear existing transactions by deleting entries
     Entry.joins(:account).where(accounts: { family_id: @family.id }).destroy_all
 
-    # Create different amounts for groceries vs other food
+    # Create different amounts for groceries vs other food in a past completed month
     other_food_category = @family.categories.create! name: "Restaurants", classification: "expense", parent: @food_category
+    past_month = 2.months.ago.beginning_of_month.to_date
 
-    # Groceries: 100, 300, 500 (median = 300)
-    create_transaction(account: @checking_account, amount: 100, category: @groceries_category)
-    create_transaction(account: @checking_account, amount: 300, category: @groceries_category)
-    create_transaction(account: @checking_account, amount: 500, category: @groceries_category)
+    # Groceries: 100, 300, 500 (monthly total = 900)
+    create_transaction(account: @checking_account, amount: 100, category: @groceries_category, date: past_month)
+    create_transaction(account: @checking_account, amount: 300, category: @groceries_category, date: past_month + 1.day)
+    create_transaction(account: @checking_account, amount: 500, category: @groceries_category, date: past_month + 2.days)
 
-    # Restaurants: 50, 150 (median = 100)
-    create_transaction(account: @checking_account, amount: 50, category: other_food_category)
-    create_transaction(account: @checking_account, amount: 150, category: other_food_category)
+    # Restaurants: 50, 150 (monthly total = 200)
+    create_transaction(account: @checking_account, amount: 50, category: other_food_category, date: past_month + 3.days)
+    create_transaction(account: @checking_account, amount: 150, category: other_food_category, date: past_month + 4.days)
 
     income_statement = IncomeStatement.new(@family)
     # CORRECT BUSINESS LOGIC: Calculates median of time-period totals for budget planning
@@ -138,11 +142,11 @@ class IncomeStatementTest < ActiveSupport::TestCase
     # Clear existing transactions by deleting entries
     Entry.joins(:account).where(accounts: { family_id: @family.id }).destroy_all
 
-    # Create different amounts for groceries
-    # Groceries: 100, 200, 300 (average = 200)
-    create_transaction(account: @checking_account, amount: 100, category: @groceries_category)
-    create_transaction(account: @checking_account, amount: 200, category: @groceries_category)
-    create_transaction(account: @checking_account, amount: 300, category: @groceries_category)
+    # Create groceries in a past completed month (within the 6-month lookback window)
+    past_month = 2.months.ago.beginning_of_month.to_date
+    create_transaction(account: @checking_account, amount: 100, category: @groceries_category, date: past_month)
+    create_transaction(account: @checking_account, amount: 200, category: @groceries_category, date: past_month + 1.day)
+    create_transaction(account: @checking_account, amount: 300, category: @groceries_category, date: past_month + 2.days)
 
     income_statement = IncomeStatement.new(@family)
     # CORRECT BUSINESS LOGIC: Calculates average of time-period totals for budget planning
@@ -224,33 +228,32 @@ class IncomeStatementTest < ActiveSupport::TestCase
     # Clear existing transactions
     Entry.joins(:account).where(accounts: { family_id: @family.id }).destroy_all
 
-    # Create transactions across multiple weeks to test interval behavior
-    # Week 1: 100, 200 (total: 300, median: 150)
-    create_transaction(account: @checking_account, amount: 100, category: @groceries_category, date: 3.weeks.ago)
-    create_transaction(account: @checking_account, amount: 200, category: @groceries_category, date: 3.weeks.ago + 1.day)
+    # Create transactions in past months across multiple weeks (within 6-month lookback window)
+    # Pin to the first Monday of a past completed month so PostgreSQL
+    # date_trunc('week') groupings are deterministic.
+    raw = 2.months.ago.beginning_of_month.to_date
+    base_date = raw + ((1 - raw.wday) % 7) # advance to the first Monday
 
-    # Week 2: 400, 600 (total: 1000, median: 500)
-    create_transaction(account: @checking_account, amount: 400, category: @groceries_category, date: 2.weeks.ago)
-    create_transaction(account: @checking_account, amount: 600, category: @groceries_category, date: 2.weeks.ago + 1.day)
+    # Week 1 (Mon/Tue): 100, 200 (total: 300)
+    create_transaction(account: @checking_account, amount: 100, category: @groceries_category, date: base_date)
+    create_transaction(account: @checking_account, amount: 200, category: @groceries_category, date: base_date + 1.day)
 
-    # Week 3: 800 (total: 800, median: 800)
-    create_transaction(account: @checking_account, amount: 800, category: @groceries_category, date: 1.week.ago)
+    # Week 2 (next Mon/Tue): 400, 600 (total: 1000)
+    create_transaction(account: @checking_account, amount: 400, category: @groceries_category, date: base_date + 7.days)
+    create_transaction(account: @checking_account, amount: 600, category: @groceries_category, date: base_date + 8.days)
+
+    # Week 3 (next Mon): 800 (total: 800)
+    create_transaction(account: @checking_account, amount: 800, category: @groceries_category, date: base_date + 14.days)
 
     income_statement = IncomeStatement.new(@family)
 
     month_median = income_statement.median_expense(interval: "month")
     week_median = income_statement.median_expense(interval: "week")
 
-    # CRITICAL TEST: Different intervals should return different results
-    # Month interval: median of monthly totals (if all in same month) vs individual transactions
-    # Week interval: median of weekly totals [300, 1000, 800] = 800 vs individual transactions [100,200,400,600,800] = 400
-    refute_equal month_median, week_median, "Different intervals should return different statistical results when data spans multiple time periods"
-
-    # Both should still be numeric
-    assert month_median.is_a?(Numeric)
-    assert week_median.is_a?(Numeric)
-    assert month_median > 0
-    assert week_median > 0
+    # Month interval: all in same month = total 2100, median = 2100
+    assert_equal 2100.0, month_median
+    # Week interval: weekly totals [300, 1000, 800], median = 800
+    assert_equal 800.0, week_median
   end
 
   # NEW TESTS: Edge Cases

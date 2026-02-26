@@ -1,4 +1,6 @@
 class IncomeStatement::CategoryStats
+  include IncomeStatement::StatsLookback
+
   def initialize(family, interval: "month")
     @family = family
     @interval = interval
@@ -29,7 +31,9 @@ class IncomeStatement::CategoryStats
       params = {
         target_currency: @family.currency,
         interval: @interval,
-        family_id: @family.id
+        family_id: @family.id,
+        lookback_start: lookback_start_date,
+        lookback_end: lookback_end_date
       }
 
       ids = @family.tax_advantaged_account_ids
@@ -68,6 +72,9 @@ class IncomeStatement::CategoryStats
           WHERE a.family_id = :family_id
             AND t.kind NOT IN (#{budget_excluded_kinds_sql})
             AND ae.excluded = false
+            AND ae.date >= :lookback_start
+            AND ae.date <= :lookback_end
+            AND a.status IN (#{visible_account_statuses_sql})
             AND (t.extra -> 'simplefin' ->> 'pending')::boolean IS DISTINCT FROM true
             AND (t.extra -> 'plaid' ->> 'pending')::boolean IS DISTINCT FROM true
             #{exclude_tax_advantaged_sql}

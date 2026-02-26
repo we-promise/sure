@@ -159,11 +159,10 @@ class BudgetCategory < ApplicationRecord
   def suggested_daily_spending
     return nil unless available_to_spend > 0
 
-    budget_date = budget.start_date
-    return nil unless budget_date.month == Date.current.month && budget_date.year == Date.current.year
+    # Check if the current date falls within this budget's period
+    return nil unless Date.current.between?(budget.start_date, budget.end_date)
 
-    days_remaining = (budget_date.end_of_month - Date.current).to_i + 1
-    return nil unless days_remaining > 0
+    days_remaining = (budget.end_date - Date.current).to_i + 1
 
     {
       amount: Money.new((available_to_spend / days_remaining), budget.family.currency),
