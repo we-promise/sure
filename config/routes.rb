@@ -215,6 +215,13 @@ Rails.application.routes.draw do
     resources :budget_categories, only: %i[index show update]
   end
 
+  # Retirement / FIRE planning
+  resource :retirement, only: %i[show create update edit], controller: "retirement" do
+    get :setup, on: :member
+    post :add_pension_entry, on: :member
+    delete :destroy_pension_entry, on: :member
+  end
+
   resources :family_merchants, only: %i[index new create edit update destroy] do
     collection do
       get :merge

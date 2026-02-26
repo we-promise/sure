@@ -1,0 +1,15 @@
+entry_2023:
+  retirement_config: dylan_retirement
+  recorded_at: "2023-07-01"
+  current_points: 8.5000
+  current_monthly_pension: 334.22
+  projected_monthly_pension: 1800.00
+  notes: "Renteninformation 2023"
+
+entry_2024:
+  retirement_config: dylan_retirement
+  recorded_at: "2024-07-01"
+  current_points: 9.5000
+  current_monthly_pension: 373.54
+  projected_monthly_pension: 1850.00
+  notes: "Renteninformation 2024"
