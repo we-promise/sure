@@ -21,8 +21,23 @@ pt-BR:
       balance: Saldo atual
       name_label: Nome da conta
       name_placeholder: Nome da conta exemplo
+      additional_details: Detalhes adicionais
+      institution_name_label: Nome da instituição
+      institution_name_placeholder: ex., Banco do Brasil
+      institution_domain_label: Domínio da instituição
+      institution_domain_placeholder: ex., bb.com.br
+      notes_label: Notas
+      notes_placeholder: Armazene informações adicionais como números de conta, códigos de agência, IBAN, números de roteamento, etc.
+      exclude_from_reports_label: Excluir de relatórios e métricas
+      exclude_from_reports_description: Contas excluídas ficam ocultas nos relatórios e nos cálculos de patrimônio líquido.
+    accountable_group:
+      excluded_badge: "(Excluída)"
     index:
       accounts: Contas
+      account_groups:
+        total: Total
+        active: Ativa
+        excluded: Excluída
       manual_accounts:
         other_accounts: Outras contas
       new_account: Nova conta

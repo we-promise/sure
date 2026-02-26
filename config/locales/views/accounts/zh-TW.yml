@@ -28,8 +28,16 @@ zh-TW:
       institution_domain_placeholder: e.g., esunbank.com.tw
       notes_label: 備註
       notes_placeholder: 儲存額外資訊，例如帳號、分行代碼、IBAN、銀行轉帳號碼 (Routing numbers) 等。
+      exclude_from_reports_label: 從報告和指標中排除
+      exclude_from_reports_description: 被排除的帳戶將不會顯示在報告和淨值計算中。
+    accountable_group:
+      excluded_badge: （已排除）
     index:
       accounts: 帳戶管理
+      account_groups:
+        total: 總計
+        active: 活跃
+        excluded: 已排除
       manual_accounts:
         other_accounts: 其他帳戶
       new_account: 新增帳戶

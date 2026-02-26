@@ -18,8 +18,23 @@ ro:
       balance: Sold curent
       name_label: Nume cont
       name_placeholder: Exemplu nume cont
+      additional_details: Detalii suplimentare
+      institution_name_label: Numele instituției
+      institution_name_placeholder: ex., Banca Transilvania
+      institution_domain_label: Domeniul instituției
+      institution_domain_placeholder: ex., bancatransilvania.ro
+      notes_label: Note
+      notes_placeholder: Stochează informații suplimentare precum numere de cont, coduri de sortare, IBAN, numere de rută etc.
+      exclude_from_reports_label: Exclude din rapoarte și indicatori
+      exclude_from_reports_description: Conturile excluse sunt ascunse din rapoarte și din calculele averii nete.
+    accountable_group:
+      excluded_badge: "(Exclus)"
     index:
       accounts: Conturi
+      account_groups:
+        total: Total
+        active: Activ
+        excluded: Exclus
       manual_accounts:
         other_accounts: Alte conturi
       new_account: Cont nou

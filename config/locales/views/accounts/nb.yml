@@ -17,8 +17,23 @@ nb:
       balance: Nåværende balanse
       name_label: Kontonavn
       name_placeholder: Eksempel på kontonavn
+      additional_details: Tilleggsdetaljer
+      institution_name_label: Institusjonsnavn
+      institution_name_placeholder: f.eks. DNB
+      institution_domain_label: Institusjonsdomene
+      institution_domain_placeholder: f.eks. dnb.no
+      notes_label: Notater
+      notes_placeholder: Lagre tilleggsinformasjon som kontonumre, sorteringskoder, IBAN, rutingsnumre, osv.
+      exclude_from_reports_label: Ekskluder fra rapporter og målinger
+      exclude_from_reports_description: Ekskluderte kontoer er skjult i rapporter og nettoformueberegninger.
+    accountable_group:
+      excluded_badge: "(Ekskludert)"
     index:
       accounts: Kontoer
+      account_groups:
+        total: Totalt
+        active: Aktiv
+        excluded: Ekskludert
       manual_accounts:
         other_accounts: Andre kontoer
       new_account: Ny konto

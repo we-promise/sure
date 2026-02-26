@@ -35,8 +35,23 @@ zh-CN:
       balance: 当前余额
       name_label: 账户名称
       name_placeholder: 例如：储蓄账户
+      additional_details: 额外详情
+      institution_name_label: 机构名称
+      institution_name_placeholder: 例如：中国银行
+      institution_domain_label: 机构网址
+      institution_domain_placeholder: 例如：boc.cn
+      notes_label: 备注
+      notes_placeholder: 存储额外信息，如账号、分行代码、IBAN、转账号码等。
+      exclude_from_reports_label: 从报告和指标中排除
+      exclude_from_reports_description: 被排除的账户将不显示在报告和净资产计算中。
+    accountable_group:
+      excluded_badge: （已排除）
     index:
       accounts: 账户管理
+      account_groups:
+        total: 总计
+        active: 活跃
+        excluded: 已排除
       manual_accounts:
         other_accounts: 其他账户
       new_account: 新建账户

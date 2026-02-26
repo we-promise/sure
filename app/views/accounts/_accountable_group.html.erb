@@ -38,7 +38,7 @@
             <div class="flex items-baseline gap-1">
               <%= tag.p account.short_subtype_label, class: "text-sm text-secondary truncate" %>
               <% if account.excluded? %>
-                <span class="text-xs text-secondary">(Excluded)</span>
+                <span class="text-xs text-secondary"><%= t("accounts.accountable_group.excluded_badge") %></span>
               <% end %>
             </div>
           </div>
