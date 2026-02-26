@@ -153,12 +153,14 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     active_entry = create_transaction(account: active_account, name: "Active Txn", amount: 50)
     excluded_entry = create_transaction(account: excluded_account, name: "Excluded Txn", amount: 100)
 
-    # Explicitly requesting the excluded account by ID should return its transactions
+    # Explicitly requesting the excluded account by ID respects active_accounts_only=true
     get transactions_url(per_page: 50, q: { account_ids: [ excluded_account.id.to_s ] })
     assert_response :success
 
+    assert_dom "#" + dom_id(excluded_entry), count: 0
+
     search = Transaction::Search.new(family, filters: { "account_ids" => [ excluded_account.id.to_s ] })
-    assert_equal search.totals.count, search.totals.count
+    assert_equal 0, search.totals.count
   end
 
   test "transaction count represents filtered total" do

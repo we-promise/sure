@@ -88,12 +88,13 @@ module TransactionsHelper
     q_hash = q_params.respond_to?(:to_unsafe_h) ? q_params.to_unsafe_h : q_params.to_h
 
     fields = q_hash.each_with_object([]) do |(key, value), tags|
-      next if key == "active_accounts_only"
+      key_str = key.to_s
+      next if key_str == "active_accounts_only"
 
       if value.is_a?(Array)
-        value.each { |v| tags << hidden_field_tag("q[#{key}][]", v) }
+        value.each { |v| tags << hidden_field_tag("q[#{key_str}][]", v) }
       else
-        tags << hidden_field_tag("q[#{key}]", value)
+        tags << hidden_field_tag("q[#{key_str}]", value)
       end
     end
 

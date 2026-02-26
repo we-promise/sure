@@ -20,9 +20,11 @@ class Account < ApplicationRecord
 
   enum :classification, { asset: "asset", liability: "liability" }, validate: { allow_nil: true }
 
-  scope :visible, -> { where(status: [ "draft", "active" ], excluded: false) }
-  scope :sidebar_visible, -> { where(status: [ "draft", "active" ]) }
-  scope :sync_enabled, -> { where(status: [ "draft", "active" ]) }
+  VISIBLE_STATUSES = %w[draft active].freeze
+
+  scope :visible, -> { where(status: VISIBLE_STATUSES, excluded: false) }
+  scope :sidebar_visible, -> { where(status: VISIBLE_STATUSES) }
+  scope :sync_enabled, -> { where(status: VISIBLE_STATUSES) }
   scope :assets, -> { where(classification: "asset") }
   scope :liabilities, -> { where(classification: "liability") }
   scope :alphabetically, -> { order(:name) }
@@ -350,6 +352,7 @@ class Account < ApplicationRecord
   private
     # Touches the most recent entry to invalidate family-level caches
     def invalidate_family_caches
-      entries.order(updated_at: :desc).limit(1).touch_all
+      top_entry_id = entries.order(updated_at: :desc).limit(1).pluck(:id).first
+      entries.where(id: top_entry_id).touch_all if top_entry_id
     end
 end

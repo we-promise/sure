@@ -28,7 +28,8 @@ class TransactionsController < ApplicationController
 
     # Prepare accounts for the filter partial
     include_excluded = @q && @q[:active_accounts_only] == "false"
-    @filter_accounts = include_excluded ? Current.family.accounts.alphabetically : Current.family.accounts.not_excluded.alphabetically
+    base_accounts = Current.family.accounts.sidebar_visible
+    @filter_accounts = include_excluded ? base_accounts.alphabetically : base_accounts.not_excluded.alphabetically
 
     # Load projected recurring transactions for next 10 days
     @projected_recurring = Current.family.recurring_transactions
@@ -375,23 +376,15 @@ class TransactionsController < ApplicationController
 
       if cleaned_params[:active_accounts_only].to_s != "false"
         if cleaned_params[:accounts].present? || cleaned_params[:account_ids].present?
-          excluded_ids, excluded_names = [], []
-
           if cleaned_params[:accounts].present?
-            excluded_names = Current.family.accounts.where(name: cleaned_params[:accounts], excluded: true).pluck(:name)
-          end
-
-          if cleaned_params[:account_ids].present?
-            excluded_ids = Current.family.accounts.where(id: cleaned_params[:account_ids], excluded: true).pluck(:id).map(&:to_s)
-          end
-
-          if excluded_names.any?
-            cleaned_params[:accounts] -= excluded_names
+            allowed_names = Current.family.accounts.where(name: cleaned_params[:accounts], excluded: false).pluck(:name)
+            cleaned_params[:accounts] &= allowed_names
             cleaned_params.delete(:accounts) if cleaned_params[:accounts].empty?
           end
 
-          if excluded_ids.any?
-            cleaned_params[:account_ids] -= excluded_ids
+          if cleaned_params[:account_ids].present?
+            allowed_ids = Current.family.accounts.where(id: cleaned_params[:account_ids], excluded: false).pluck(:id).map(&:to_s)
+            cleaned_params[:account_ids] &= allowed_ids
             cleaned_params.delete(:account_ids) if cleaned_params[:account_ids].empty?
           end
         end

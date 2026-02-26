@@ -3,6 +3,12 @@ class AccountableSparklinesController < ApplicationController
   def show
     @accountable = accountable
 
+    if @accountable.nil?
+      param_key = params[:accountable_type]&.underscore || "accountable"
+      render html: helpers.turbo_frame_tag("#{param_key}_sparkline")
+      return
+    end
+
     # Don't render if there are no visible accounts for this type.
     if account_ids.empty?
       render html: helpers.turbo_frame_tag("#{@accountable.model_name.param_key}_sparkline")
