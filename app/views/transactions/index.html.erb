@@ -50,7 +50,7 @@
     <% include_excluded = @q && @q["active_accounts_only"] == "false" %>
     <%= render DS::Tabs.new(active_tab: params[:tab].presence || "transactions", variant: :unstyled) do |tabs| %>
       <div class="flex items-center justify-between mb-4">
-        <% tabs.with_nav(classes: "flex bg-surface-inset p-1 rounded-lg max-w-fit") do |nav| %>
+        <%= tabs.with_nav(classes: "flex bg-surface-inset p-1 rounded-lg max-w-fit") do |nav| %>
           <% nav.with_btn(id: "transactions", label: t("transactions.show.tab_transactions"), classes: "px-6") %>
           <% nav.with_btn(id: "upcoming", label: t("transactions.show.tab_upcoming"), classes: "px-6") %>
         <% end %>
@@ -85,13 +85,13 @@
         </div>
       </div>
 
-      <% tabs.with_panel(tab_id: "transactions") do %>
+      <%= tabs.with_panel(tab_id: "transactions") do %>
         <div class="bg-container rounded-xl shadow-border-xs">
           <%= render "transactions/list", transactions: @transactions, projected_recurring: @projected_recurring, q: params[:q], pagy: @pagy %>
         </div>
       <% end %>
 
-      <% tabs.with_panel(tab_id: "upcoming") do %>
+      <%= tabs.with_panel(tab_id: "upcoming") do %>
         <div class="bg-container rounded-xl shadow-border-xs">
           <%= render "transactions/upcoming" %>
         </div>
