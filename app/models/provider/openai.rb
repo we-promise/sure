@@ -4,31 +4,51 @@ class Provider::Openai < Provider
   # Subclass so errors caught in this provider are raised as Provider::Openai::Error
   Error = Class.new(Provider::Error)
 
-  # Supported OpenAI model prefixes (e.g., "gpt-4" matches "gpt-4", "gpt-4.1", "gpt-4-turbo", etc.)
-  DEFAULT_OPENAI_MODEL_PREFIXES = %w[gpt-4 gpt-5 o1 o3]
-  DEFAULT_MODEL = "gpt-4.1"
+  LLM_FILE_PATH = Rails.root.join("config", "llm.yml")
+
+  def self.llm_config
+    @llm_config ||= (YAML.safe_load(
+      ERB.new(File.read(LLM_FILE_PATH)).result,
+      permitted_classes: [],
+      permitted_symbols: [],
+      aliases: true
+    ) || {}).with_indifferent_access.freeze
+  end
+
+  def self.active_provider
+    provider = llm_config.fetch(:active_provider, "openai")
+    @active_provider ||= (llm_config.dig("providers", provider) || {}).with_indifferent_access.freeze
+  end
 
   # Models that support PDF/vision input (not all OpenAI models have vision capabilities)
-  VISION_CAPABLE_MODEL_PREFIXES = %w[gpt-4o gpt-4-turbo gpt-4.1 gpt-5 o1 o3].freeze
 
   # Returns the effective model that would be used by the provider
   # Uses the same logic as Provider::Registry and the initializer
   def self.effective_model
-    configured_model = ENV.fetch("OPENAI_MODEL", Setting.openai_model)
-    configured_model.presence || DEFAULT_MODEL
+    configured_model = active_provider.fetch(:model, Setting.openai_model)
+    configured_model.presence || active_provider[:default_model]
+  end
+
+  DEFAULT_MODEL = self.active_provider[:default_model]
+  VISION_CAPABLE_MODEL_PREFIXES = self.active_provider[:supported_vision_models].to_s.split(/\s+/).freeze
+
+  def active_provider
+    self.class.active_provider
   end
 
   def initialize(access_token, uri_base: nil, model: nil)
-    client_options = { access_token: access_token }
-    client_options[:uri_base] = uri_base if uri_base.present?
+    client_options = { access_token: access_token || active_provider[:access_token] }
+    llm_uri_base = uri_base.presence || active_provider[:uri_base]
+    llm_model = model.presence || active_provider[:model]
+    client_options[:uri_base] = llm_uri_base if llm_uri_base.present?
     client_options[:request_timeout] = ENV.fetch("OPENAI_REQUEST_TIMEOUT", 60).to_i
 
     @client = ::OpenAI::Client.new(**client_options)
-    @uri_base = uri_base
-    if custom_provider? && model.blank?
+    @uri_base = llm_uri_base
+    if custom_provider? && llm_model.blank?
       raise Error, "Model is required when using a custom OpenAI‑compatible provider"
     end
-    @default_model = model.presence || DEFAULT_MODEL
+    @default_model = llm_model.presence || effective_model
   end
 
   def supports_model?(model)
@@ -36,7 +56,18 @@ class Provider::Openai < Provider
     return true if custom_provider?
 
     # Otherwise, check if model starts with any supported OpenAI prefix
-    DEFAULT_OPENAI_MODEL_PREFIXES.any? { |prefix| model.start_with?(prefix) }
+    active_provider[:supported_models].split(/\s+/).any? { |prefix| model.start_with?(prefix) }
+  end
+
+  def supports_responses_endpoint?
+    return @supports_responses_endpoint if defined?(@supports_responses_endpoint)
+
+    supports_responses = active_provider[:supports_responses_endpoint]
+    if supports_responses.to_s.present?
+      return @supports_responses_endpoint = ActiveModel::Type::Boolean.new.cast(supports_responses)
+    end
+
+    @supports_responses_endpoint = !custom_provider?
   end
 
   def provider_name
@@ -47,11 +78,13 @@ class Provider::Openai < Provider
     if custom_provider?
       @default_model.present? ? "configured model: #{@default_model}" : "any model"
     else
-      "models starting with: #{DEFAULT_OPENAI_MODEL_PREFIXES.join(', ')}"
+      "models starting with: #{self.active_provider[:supported_models]}"
     end
   end
 
   def custom_provider?
+    value = active_provider[:custom_provider]
+    return ActiveModel::Type::Boolean.new.cast(value)  unless value.to_s.blank?
     @uri_base.present?
   end
 
@@ -180,25 +213,14 @@ class Provider::Openai < Provider
     instructions: nil,
     functions: [],
     function_results: [],
+    messages: nil,
     streamer: nil,
     previous_response_id: nil,
     session_id: nil,
     user_identifier: nil,
     family: nil
   )
-    if custom_provider?
-      generic_chat_response(
-        prompt: prompt,
-        model: model,
-        instructions: instructions,
-        functions: functions,
-        function_results: function_results,
-        streamer: streamer,
-        session_id: session_id,
-        user_identifier: user_identifier,
-        family: family
-      )
-    else
+    if supports_responses_endpoint?
       native_chat_response(
         prompt: prompt,
         model: model,
@@ -207,6 +229,19 @@ class Provider::Openai < Provider
         function_results: function_results,
         streamer: streamer,
         previous_response_id: previous_response_id,
+        session_id: session_id,
+        user_identifier: user_identifier,
+        family: family
+      )
+    else
+      generic_chat_response(
+        prompt: prompt,
+        model: model,
+        instructions: instructions,
+        functions: functions,
+        function_results: function_results,
+        messages: messages,
+        streamer: streamer,
         session_id: session_id,
         user_identifier: user_identifier,
         family: family
@@ -251,7 +286,9 @@ class Provider::Openai < Provider
           nil
         end
 
-        input_payload = chat_config.build_input(prompt)
+        input_payload = chat_config.build_input(
+          prompt: prompt
+        )
 
         begin
           raw_response = client.responses.create(parameters: {
@@ -317,6 +354,7 @@ class Provider::Openai < Provider
       instructions: nil,
       functions: [],
       function_results: [],
+      messages: nil,
       streamer: nil,
       session_id: nil,
       user_identifier: nil,
@@ -326,7 +364,8 @@ class Provider::Openai < Provider
         messages = build_generic_messages(
           prompt: prompt,
           instructions: instructions,
-          function_results: function_results
+          function_results: function_results,
+          messages: messages
         )
 
         tools = build_generic_tools(functions)
@@ -385,16 +424,20 @@ class Provider::Openai < Provider
       end
     end
 
-    def build_generic_messages(prompt:, instructions: nil, function_results: [])
-      messages = []
+    def build_generic_messages(prompt:, instructions: nil, function_results: [], messages: nil)
+      payload = []
 
       # Add system message if instructions present
       if instructions.present?
-        messages << { role: "system", content: instructions }
+        payload << { role: "system", content: instructions }
       end
 
-      # Add user prompt
-      messages << { role: "user", content: prompt }
+      # Add conversation history or user prompt
+      if messages.present?
+        payload.concat(messages)
+      elsif prompt.present?
+        payload << { role: "user", content: prompt }
+      end
 
       # If there are function results, we need to add the assistant message that made the tool calls
       # followed by the tool messages with the results
@@ -415,7 +458,7 @@ class Provider::Openai < Provider
           }
         end
 
-        messages << {
+        payload << {
           role: "assistant",
           content: "",  # Some OpenAI-compatible APIs require string, not null
           tool_calls: tool_calls
@@ -435,7 +478,7 @@ class Provider::Openai < Provider
             output.to_json
           end
 
-          messages << {
+          payload << {
             role: "tool",
             tool_call_id: fn_result[:call_id],
             name: fn_result[:name],
@@ -444,7 +487,7 @@ class Provider::Openai < Provider
         end
       end
 
-      messages
+      payload
     end
 
     def build_generic_tools(functions)
