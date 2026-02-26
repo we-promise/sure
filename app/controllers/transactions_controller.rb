@@ -353,6 +353,14 @@ class TransactionsController < ApplicationController
 
       cleaned_params.delete(:amount_operator) unless cleaned_params[:amount].present?
 
+      if cleaned_params[:active_accounts_only].to_s != "false" && cleaned_params[:accounts].present?
+        excluded_names = Current.family.accounts.where(name: cleaned_params[:accounts], excluded: true).pluck(:name)
+        if excluded_names.any?
+          cleaned_params[:accounts] -= excluded_names
+          cleaned_params.delete(:accounts) if cleaned_params[:accounts].empty?
+        end
+      end
+
 
       cleaned_params
     end
