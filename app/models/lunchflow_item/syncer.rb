@@ -3,12 +3,10 @@ class LunchflowItem::Syncer
 
   attr_reader :lunchflow_item
 
-  # Initializes the syncer with a Lunchflow item
   def initialize(lunchflow_item)
     @lunchflow_item = lunchflow_item
   end
 
-  # Runs the full sync: imports data, processes accounts, and schedules balance syncs
   def perform_sync(sync)
     # Phase 1: Import data from Lunchflow API
     sync.update!(status_text: "Importing accounts from Lunchflow...") if sync.respond_to?(:status_text)
@@ -63,7 +61,6 @@ class LunchflowItem::Syncer
     raise
   end
 
-  # Hook called after sync completion (currently a no-op)
   def perform_post_sync
     # no-op
   end

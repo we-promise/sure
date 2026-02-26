@@ -1,15 +1,12 @@
 class BalanceSheet::SyncStatusMonitor
-  # Initializes a sync status monitor for the given family
   def initialize(family)
     @family = family
   end
 
-  # Returns true if any account in the family is currently syncing
   def syncing?
     syncing_account_ids.any?
   end
 
-  # Returns true if the given account is currently syncing
   def account_syncing?(account)
     syncing_account_ids.include?(account.id)
   end
@@ -17,7 +14,6 @@ class BalanceSheet::SyncStatusMonitor
   private
     attr_reader :family
 
-    # Returns the set of account IDs that have active visible syncs
     def syncing_account_ids
       Rails.cache.fetch(cache_key) do
         Sync.visible

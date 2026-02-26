@@ -9,14 +9,12 @@ module AccountableResource
   end
 
   class_methods do
-    # Defines or retrieves the permitted attributes for the accountable model
     def permitted_accountable_attributes(*attrs)
       @permitted_accountable_attributes = attrs if attrs.any?
       @permitted_accountable_attributes ||= [ :id ]
     end
   end
 
-  # Builds a new account with a default currency and accountable type
   def new
     @account = Current.family.accounts.build(
       currency: Current.family.currency,
@@ -24,7 +22,6 @@ module AccountableResource
     )
   end
 
-  # Displays the account with paginated, reverse-chronological entries
   def show
     @chart_view = params[:chart_view] || "balance"
     @q = params.fetch(:q, {}).permit(:search)
@@ -33,11 +30,9 @@ module AccountableResource
     @pagy, @entries = pagy(entries, limit: safe_per_page(10))
   end
 
-  # Renders the edit form for the account
   def edit
   end
 
-  # Creates a new account, triggers sync, and locks saved attributes
   def create
     @account = Current.family.accounts.create_and_sync(account_params.except(:return_to))
     @account.lock_saved_attributes!
@@ -45,7 +40,6 @@ module AccountableResource
     redirect_to account_params[:return_to].presence || @account, notice: t("accounts.create.success", type: accountable_type.name.underscore.humanize)
   end
 
-  # Updates account attributes and optionally adjusts the current balance
   def update
     # Handle balance update if the value actually changed
     if account_params[:balance].present? && account_params[:balance].to_d != @account.balance
@@ -70,7 +64,6 @@ module AccountableResource
   end
 
   private
-    # Loads available provider configurations for linking a new account
     def set_link_options
       account_type_name = accountable_type.name
 
@@ -81,17 +74,14 @@ module AccountableResource
       )
     end
 
-    # Infers the accountable model class from the controller name
     def accountable_type
       controller_name.classify.constantize
     end
 
-    # Finds and sets the account from the current family
     def set_account
       @account = Current.family.accounts.find(params[:id])
     end
 
-    # Permits the allowed account parameters from the request
     def account_params
       params.require(:account).permit(
         :name, :balance, :subtype, :currency, :accountable_type, :return_to,

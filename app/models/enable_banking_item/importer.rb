@@ -5,13 +5,11 @@ class EnableBankingItem::Importer
 
   attr_reader :enable_banking_item, :enable_banking_provider
 
-  # Initializes the importer with an Enable Banking item and its provider
   def initialize(enable_banking_item, enable_banking_provider:)
     @enable_banking_item = enable_banking_item
     @enable_banking_provider = enable_banking_provider
   end
 
-  # Runs the full import: validates session, fetches data, and stores results
   def import
     unless enable_banking_item.session_valid?
       enable_banking_item.update!(status: :requires_update)
@@ -113,7 +111,6 @@ class EnableBankingItem::Importer
 
   private
 
-    # Extracts a user-friendly error message from an exception chain
     def extract_friendly_error_message(exception)
       [ exception, exception.cause ].compact.each do |ex|
         case ex
@@ -131,7 +128,6 @@ class EnableBankingItem::Importer
       msg
     end
 
-    # Fetches session data from the Enable Banking API
     def fetch_session_data
       enable_banking_provider.get_session(session_id: enable_banking_item.session_id)
     rescue Provider::EnableBanking::EnableBankingError => e
@@ -147,7 +143,6 @@ class EnableBankingItem::Importer
       nil
     end
 
-    # Updates an existing Enable Banking account from API data
     def import_account(account_data)
       # Use identification_hash as the stable identifier across sessions
       uid = account_data[:identification_hash] || account_data[:uid]
@@ -159,7 +154,6 @@ class EnableBankingItem::Importer
       enable_banking_account.save!
     end
 
-    # Fetches and stores the latest balance for an Enable Banking account
     def fetch_and_update_balance(enable_banking_account)
       balance_data = enable_banking_provider.get_account_balances(account_id: enable_banking_account.api_account_id)
 
@@ -189,7 +183,6 @@ class EnableBankingItem::Importer
       Rails.logger.error "EnableBankingItem::Importer - Error fetching balance for account #{enable_banking_account.uid}: #{e.message}"
     end
 
-    # Fetches and stores new transactions with pagination support
     def fetch_and_store_transactions(enable_banking_account)
       start_date = determine_sync_start_date(enable_banking_account)
 
@@ -266,7 +259,6 @@ class EnableBankingItem::Importer
       { success: false, transactions_count: 0, error: e.message }
     end
 
-    # Determines the appropriate sync start date for incremental imports
     def determine_sync_start_date(enable_banking_account)
       has_stored_transactions = enable_banking_account.raw_transactions_payload.to_a.any?
 

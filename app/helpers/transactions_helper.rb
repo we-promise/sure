@@ -1,5 +1,4 @@
 module TransactionsHelper
-  # Returns the list of available transaction search filter definitions
   def transaction_search_filters
     [
       { key: "account_filter", label: t("transactions.search.filters.account"), icon: "layers" },
@@ -13,12 +12,10 @@ module TransactionsHelper
     ]
   end
 
-  # Returns the partial path for a given search filter
   def get_transaction_search_filter_partial_path(filter)
     "transactions/searches/filters/#{filter[:key]}"
   end
 
-  # Returns the first (default) transaction search filter
   def get_default_transaction_search_filter
     transaction_search_filters[0]
   end

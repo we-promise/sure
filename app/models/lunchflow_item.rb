@@ -24,13 +24,11 @@ class LunchflowItem < ApplicationRecord
   scope :ordered, -> { order(created_at: :desc) }
   scope :needs_update, -> { where(status: :requires_update) }
 
-  # Schedules this item for async deletion
   def destroy_later
     update!(scheduled_for_deletion: true)
     DestroyJob.perform_later(self)
   end
 
-  # Imports the latest data from the Lunchflow API
   def import_latest_lunchflow_data
     provider = lunchflow_provider
     unless provider
@@ -44,7 +42,6 @@ class LunchflowItem < ApplicationRecord
     raise
   end
 
-  # Processes transactions for all linked sync-enabled accounts
   def process_accounts
     return [] if lunchflow_accounts.empty?
 
@@ -64,7 +61,6 @@ class LunchflowItem < ApplicationRecord
     results
   end
 
-  # Queues balance sync jobs for all sync-enabled accounts
   def schedule_account_syncs(parent_sync: nil, window_start_date: nil, window_end_date: nil)
     return [] if accounts.empty?
 
@@ -88,7 +84,6 @@ class LunchflowItem < ApplicationRecord
     results
   end
 
-  # Persists the raw API snapshot for debugging and reprocessing
   def upsert_lunchflow_snapshot!(accounts_snapshot)
     assign_attributes(
       raw_payload: accounts_snapshot
@@ -97,13 +92,11 @@ class LunchflowItem < ApplicationRecord
     save!
   end
 
-  # Returns true if at least one account has been linked
   def has_completed_initial_setup?
     # Setup is complete if we have any linked accounts
     accounts.any?
   end
 
-  # Returns a human-readable summary of the sync status
   def sync_status_summary
     # Use centralized count helper methods for consistency
     total_accounts = total_accounts_count
@@ -119,28 +112,23 @@ class LunchflowItem < ApplicationRecord
     end
   end
 
-  # Returns the count of accounts with provider links
   def linked_accounts_count
     lunchflow_accounts.joins(:account_provider).count
   end
 
-  # Returns the count of accounts without provider links
   def unlinked_accounts_count
     lunchflow_accounts.left_joins(:account_provider).where(account_providers: { id: nil }).count
   end
 
-  # Returns the total number of Lunchflow accounts
   def total_accounts_count
     lunchflow_accounts.count
   end
 
-  # Returns the display name for this connection
   def institution_display_name
     # Try to get institution name from stored metadata
     institution_name.presence || institution_domain.presence || name
   end
 
-  # Returns the unique connected institutions from account metadata
   def connected_institutions
     # Get unique institutions from all accounts
     lunchflow_accounts.includes(:account)
@@ -149,7 +137,6 @@ class LunchflowItem < ApplicationRecord
                       .uniq { |inst| inst["name"] || inst["institution_name"] }
   end
 
-  # Returns a summary string describing connected institution count
   def institution_summary
     institutions = connected_institutions
     case institutions.count
@@ -162,12 +149,10 @@ class LunchflowItem < ApplicationRecord
     end
   end
 
-  # Returns true if the API key is configured
   def credentials_configured?
     api_key.present?
   end
 
-  # Returns the base URL, falling back to the default Lunchflow API URL
   def effective_base_url
     base_url.presence || "https://lunchflow.app/api/v1"
   end

@@ -6,7 +6,6 @@ class ReportsController < ApplicationController
   skip_authentication only: :export_transactions
   before_action :authenticate_for_export, only: :export_transactions
 
-  # Displays the reports dashboard with all report sections
   def index
     setup_report_data(show_flash: true)
 
@@ -16,14 +15,12 @@ class ReportsController < ApplicationController
     @breadcrumbs = [ [ "Home", root_path ], [ "Reports", nil ] ]
   end
 
-  # Renders a printable version of the reports data
   def print
     setup_report_data(show_flash: false)
 
     render layout: "print"
   end
 
-  # Updates the user's report section preferences (collapse/order)
   def update_preferences
     if Current.user.update_reports_preferences(preferences_params)
       head :ok
@@ -32,7 +29,6 @@ class ReportsController < ApplicationController
     end
   end
 
-  # Exports transaction breakdown data as CSV (supports API key auth)
   def export_transactions
     @period_type = params[:period_type]&.to_sym || :monthly
     @start_date = parse_date_param(:start_date) || default_start_date
@@ -74,7 +70,6 @@ class ReportsController < ApplicationController
     end
   end
 
-  # Renders Google Sheets import instructions with the export URL
   def google_sheets_instructions
     # Re-build the params needed for the export URL
     base_params = {
@@ -94,7 +89,6 @@ class ReportsController < ApplicationController
   end
 
   private
-    # Loads and computes all report data for the current period
     def setup_report_data(show_flash: false)
       @period_type = params[:period_type]&.to_sym || :monthly
       @start_date = parse_date_param(:start_date) || default_start_date
@@ -136,7 +130,6 @@ class ReportsController < ApplicationController
       @has_accounts = Current.family.accounts.any?
     end
 
-    # Extracts permitted report preference parameters
     def preferences_params
       prefs = params.require(:preferences)
       {}.tap do |permitted|
@@ -145,7 +138,6 @@ class ReportsController < ApplicationController
       end
     end
 
-    # Builds the ordered list of report sections for the UI
     def build_reports_sections
       all_sections = [
         {
@@ -209,7 +201,6 @@ class ReportsController < ApplicationController
       ordered_sections
     end
 
-    # Swaps start and end dates if the range is invalid
     def validate_and_fix_date_range(show_flash: false)
       return unless @start_date > @end_date
 
@@ -218,14 +209,12 @@ class ReportsController < ApplicationController
       flash.now[:alert] = t("reports.invalid_date_range") if show_flash
     end
 
-    # Wraps a numeric value in a Money object if necessary
     def ensure_money(value)
       return value if value.is_a?(Money)
       # Value is numeric (BigDecimal or Integer) in dollars - pass directly to Money.new
       Money.new(value, Current.family.currency)
     end
 
-    # Parses a date string from params, returning nil if invalid
     def parse_date_param(param_name)
       date_string = params[param_name]
       return nil if date_string.blank?
@@ -235,7 +224,6 @@ class ReportsController < ApplicationController
       nil
     end
 
-    # Returns the default start date based on the selected period type
     def default_start_date
       case @period_type
       when :monthly
@@ -253,7 +241,6 @@ class ReportsController < ApplicationController
       end
     end
 
-    # Returns the default end date based on the selected period type
     def default_end_date
       case @period_type
       when :monthly, :last_6_months
@@ -269,7 +256,6 @@ class ReportsController < ApplicationController
       end
     end
 
-    # Builds the previous comparison period of equal duration
     def build_previous_period
       duration = (@end_date - @start_date).to_i
       previous_end = @start_date - 1.day
@@ -278,7 +264,6 @@ class ReportsController < ApplicationController
       Period.custom(start_date: previous_start, end_date: previous_end)
     end
 
-    # Computes summary metrics (income, expenses, savings, budget)
     def build_summary_metrics
       # Ensure we always have Money objects
       current_income = ensure_money(@current_income_totals.total)
@@ -305,14 +290,12 @@ class ReportsController < ApplicationController
       }
     end
 
-    # Calculates the percentage change between two Money values
     def calculate_percentage_change(previous_value, current_value)
       return 0 if previous_value.zero?
 
       ((current_value - previous_value) / previous_value * 100).round(1)
     end
 
-    # Returns the budget utilization percentage for the current month
     def calculate_budget_performance
       # Only calculate if we're looking at current month
       return nil unless @period_type == :monthly && @start_date.beginning_of_month.to_date == Date.current.beginning_of_month.to_date
@@ -325,7 +308,6 @@ class ReportsController < ApplicationController
       nil
     end
 
-    # Builds month-by-month income/expense trend data for the period
     def build_trends_data
       # Generate month-by-month data based on the current period filter
       trends = []
@@ -360,7 +342,6 @@ class ReportsController < ApplicationController
       trends
     end
 
-    # Groups transactions and trades by category and type for breakdown display
     def build_transactions_breakdown
       # Base query: all transactions in the period
       # Exclude transfers, one-time, and CC payments (matching income_statement logic)
@@ -460,7 +441,6 @@ class ReportsController < ApplicationController
       end
     end
 
-    # Builds investment performance metrics including holdings and gains
     def build_investment_metrics
       investment_statement = Current.family.investment_statement
       investment_accounts = investment_statement.investment_accounts
@@ -481,7 +461,6 @@ class ReportsController < ApplicationController
       }
     end
 
-    # Groups unrealized and realized gains by tax treatment category
     def build_gains_by_tax_treatment(investment_statement)
       currency = Current.family.currency
       # Eager-load account and accountable to avoid N+1 when accessing tax_treatment
@@ -546,7 +525,6 @@ class ReportsController < ApplicationController
       end
     end
 
-    # Builds net worth metrics including asset/liability breakdowns and trend
     def build_net_worth_metrics
       balance_sheet = Current.family.balance_sheet
       currency = Current.family.currency
@@ -580,7 +558,6 @@ class ReportsController < ApplicationController
       }
     end
 
-    # Applies optional filters (category, account, tag, amount, date) to transactions
     def apply_transaction_filters(transactions)
       # Filter by category (including subcategories)
       if params[:filter_category_id].present?
@@ -626,7 +603,6 @@ class ReportsController < ApplicationController
       transactions
     end
 
-    # Builds a flat, sorted list of transactions for CSV/Excel export
     def build_transactions_breakdown_for_export
       # Get flat transactions list (not grouped) for export
       # Exclude transfers, one-time, and CC payments (matching income_statement logic)
@@ -654,7 +630,6 @@ class ReportsController < ApplicationController
       end
     end
 
-    # Builds monthly category breakdown data for export reports
     def build_monthly_breakdown_for_export
       # Generate list of months in the period
       months = []
@@ -721,7 +696,6 @@ class ReportsController < ApplicationController
       }
     end
 
-    # Generates a CSV string with income/expense breakdown by month
     def generate_transactions_csv
       require "csv"
 
@@ -794,7 +768,6 @@ class ReportsController < ApplicationController
       end
     end
 
-    # Generates an XLSX workbook with income/expense breakdown by month
     def generate_transactions_xlsx
       require "caxlsx"
 
@@ -873,7 +846,6 @@ class ReportsController < ApplicationController
       package.to_stream.read
     end
 
-    # Generates a PDF document with income/expense breakdown tables
     def generate_transactions_pdf
       require "prawn"
 
@@ -990,7 +962,6 @@ class ReportsController < ApplicationController
       params[:api_key].present? || request.headers["X-Api-Key"].present?
     end
 
-    # Authenticates an export request using an API key
     def authenticate_with_api_key
       api_key_value = params[:api_key] || request.headers["X-Api-Key"]
 
@@ -1023,7 +994,6 @@ class ReportsController < ApplicationController
       true
     end
 
-    # Establishes the Current user and family context for API key requests
     def setup_current_context_for_api_key
       unless @current_user
         render plain: "User not found for API key", status: :internal_server_error

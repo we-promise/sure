@@ -2,7 +2,6 @@ class AccountsController < ApplicationController
   before_action :set_account, only: %i[sync sparkline toggle_active toggle_excluded show destroy unlink confirm_unlink select_provider]
   include Periodable
 
-  # Lists all accounts grouped by provider type with sync stats
   def index
     @manual_accounts = family.accounts
           .listable_manual
@@ -25,7 +24,6 @@ class AccountsController < ApplicationController
     render layout: "settings"
   end
 
-  # Renders the new account form with available provider configurations
   def new
     # Get all registered providers with any credentials configured
     @provider_configs = Provider::Factory.registered_adapters.flat_map do |adapter_class|
@@ -33,13 +31,11 @@ class AccountsController < ApplicationController
     end
   end
 
-  # Triggers a sync for all accounts in the family
   def sync_all
     family.sync_later
     redirect_to accounts_path, notice: t("accounts.sync_all.syncing")
   end
 
-  # Displays an individual account with its entries and activity feed
   def show
     @chart_view = params[:chart_view] || "balance"
     @tab = params[:tab]
@@ -51,7 +47,6 @@ class AccountsController < ApplicationController
     @activity_feed_data = Account::ActivityFeedData.new(@account, @entries)
   end
 
-  # Triggers a sync for a single account (provider-linked or manual)
   def sync
     unless @account.syncing?
       if @account.linked?
@@ -70,7 +65,6 @@ class AccountsController < ApplicationController
     redirect_to account_path(@account)
   end
 
-  # Renders the sparkline chart for an individual account
   def sparkline
     etag_key = @account.family.build_cache_key("#{@account.id}_sparkline", invalidate_on_data_updates: true)
 
@@ -82,7 +76,6 @@ class AccountsController < ApplicationController
     end
   end
 
-  # Toggles the active/disabled status of an account
   def toggle_active
     if @account.active?
       @account.disable!
@@ -92,13 +85,11 @@ class AccountsController < ApplicationController
     redirect_to accounts_path
   end
 
-  # Toggles whether an account is excluded from reports and summaries
   def toggle_excluded
     @account.toggle!(:excluded)
     redirect_to accounts_path
   end
 
-  # Destroys an unlinked account asynchronously
   def destroy
     if @account.linked?
       redirect_to account_path(@account), alert: t("accounts.destroy.cannot_delete_linked")
@@ -108,14 +99,12 @@ class AccountsController < ApplicationController
     end
   end
 
-  # Renders the unlink confirmation page for a linked account
   def confirm_unlink
     unless @account.linked?
       redirect_to account_path(@account), alert: t("accounts.unlink.not_linked")
     end
   end
 
-  # Unlinks an account from its provider, preserving local data
   def unlink
     unless @account.linked?
       redirect_to account_path(@account), alert: t("accounts.unlink.not_linked")
@@ -160,7 +149,6 @@ class AccountsController < ApplicationController
     end
   end
 
-  # Shows available providers for linking an unlinked account
   def select_provider
     if @account.linked?
       redirect_to account_path(@account), alert: t("accounts.select_provider.already_linked")
@@ -193,12 +181,10 @@ class AccountsController < ApplicationController
   end
 
   private
-    # Returns the current user's family
     def family
       Current.family
     end
 
-    # Finds and sets the account from the family's accounts
     def set_account
       @account = family.accounts.find(params[:id])
     end

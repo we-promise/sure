@@ -1,12 +1,10 @@
 class EnableBankingItem::Syncer
   attr_reader :enable_banking_item
 
-  # Initializes the syncer with an Enable Banking item
   def initialize(enable_banking_item)
     @enable_banking_item = enable_banking_item
   end
 
-  # Runs the full sync: validates session, imports, processes, and schedules
   def perform_sync(sync)
     # Check if session is valid before syncing
     unless enable_banking_item.session_valid?
@@ -69,7 +67,6 @@ class EnableBankingItem::Syncer
     end
   end
 
-  # Hook called after sync completion (currently a no-op)
   def perform_post_sync
     # no-op
   end

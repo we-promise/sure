@@ -82,13 +82,11 @@ class Account < ApplicationRecord
   end
 
   class << self
-    # Returns a human-readable attribute name with family moniker interpolation
     def human_attribute_name(attribute, options = {})
       options = { moniker: Current.family&.moniker_label || "Family" }.merge(options)
       super(attribute, options)
     end
 
-    # Creates an account with an opening balance and triggers initial sync
     def create_and_sync(attributes, skip_initial_sync: false)
       attributes[:accountable_attributes] ||= {} # Ensure accountable is created, even if empty
       # Default cash_balance to balance unless explicitly provided (e.g., Crypto sets it to 0)
@@ -112,7 +110,6 @@ class Account < ApplicationRecord
     end
 
 
-    # Creates an account from a SimpleFIN account record with balance and type
     def create_from_simplefin_account(simplefin_account, account_type, subtype = nil)
       # Respect user choice when provided; otherwise infer a sensible default
       # Require an explicit account_type; do not infer on the backend
@@ -161,7 +158,6 @@ class Account < ApplicationRecord
       create_and_sync(attributes, skip_initial_sync: true)
     end
 
-    # Creates an account from an Enable Banking account record
     def create_from_enable_banking_account(enable_banking_account, account_type, subtype = nil)
       # Get the balance from Enable Banking
       balance = enable_banking_account.current_balance || 0
@@ -195,7 +191,6 @@ class Account < ApplicationRecord
       )
     end
 
-    # Creates a crypto account from a Coinbase account record
     def create_from_coinbase_account(coinbase_account)
       # All Coinbase accounts are crypto exchange accounts
       family = coinbase_account.coinbase_item.family
@@ -224,7 +219,6 @@ class Account < ApplicationRecord
 
     private
 
-      # Builds accountable attributes hash from SimpleFIN data for the given type
       def build_simplefin_accountable_attributes(simplefin_account, account_type, subtype)
         attributes = {}
         attributes[:subtype] = subtype if subtype.present?
@@ -246,22 +240,18 @@ class Account < ApplicationRecord
       end
   end
 
-  # Returns the institution name from the record or provider
   def institution_name
     read_attribute(:institution_name).presence || provider&.institution_name
   end
 
-  # Returns the institution domain from the record or provider
   def institution_domain
     read_attribute(:institution_domain).presence || provider&.institution_domain
   end
 
-  # Returns the logo URL from the linked provider
   def logo_url
     provider&.logo_url
   end
 
-  # Marks the account for deletion and schedules async destruction
   def destroy_later
     mark_for_deletion!
     DestroyJob.perform_later(self)
@@ -277,7 +267,6 @@ class Account < ApplicationRecord
     raise e
   end
 
-  # Returns the latest non-zero holdings in the account's currency
   def current_holdings
     holdings
       .where(currency: currency)
@@ -290,24 +279,20 @@ class Account < ApplicationRecord
       .order(amount: :desc)
   end
 
-  # Returns the day before the earliest entry, used as the sync start date
   def start_date
     first_entry_date = entries.minimum(:date) || Date.current
     first_entry_date - 1.day
   end
 
-  # Locks saved attributes on both the account and its accountable
   def lock_saved_attributes!
     super
     accountable.lock_saved_attributes!
   end
 
-  # Returns the earliest valuation entry for this account
   def first_valuation
     entries.valuations.order(:date).first
   end
 
-  # Returns the amount of the first valuation, or the current balance
   def first_valuation_amount
     first_valuation&.amount_money || balance_money
   end
@@ -350,7 +335,6 @@ class Account < ApplicationRecord
   end
 
   private
-    # Touches the most recent entry to invalidate family-level caches
     def invalidate_family_caches
       top_entry_id = entries.order(updated_at: :desc).limit(1).pluck(:id).first
       entries.where(id: top_entry_id).touch_all if top_entry_id

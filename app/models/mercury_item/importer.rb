@@ -1,13 +1,11 @@
 class MercuryItem::Importer
   attr_reader :mercury_item, :mercury_provider
 
-  # Initializes the importer with a Mercury item and its provider
   def initialize(mercury_item, mercury_provider:)
     @mercury_item = mercury_item
     @mercury_provider = mercury_provider
   end
 
-  # Runs the full import: fetches accounts, stores snapshot, and imports transactions
   def import
     Rails.logger.info "MercuryItem::Importer - Starting import for item #{mercury_item.id}"
 
@@ -113,7 +111,6 @@ class MercuryItem::Importer
 
   private
 
-    # Fetches accounts data from the Mercury API, handling errors
     def fetch_accounts_data
       begin
         accounts_data = mercury_provider.get_accounts
@@ -152,7 +149,6 @@ class MercuryItem::Importer
       accounts_data
     end
 
-    # Updates an existing Mercury account from API data
     def import_account(account_data)
       # Validate account data structure
       unless account_data.is_a?(Hash)
@@ -188,7 +184,6 @@ class MercuryItem::Importer
       end
     end
 
-    # Fetches and stores new transactions for a Mercury account
     def fetch_and_store_transactions(mercury_account)
       start_date = determine_sync_start_date(mercury_account)
       Rails.logger.info "MercuryItem::Importer - Fetching transactions for account #{mercury_account.account_id} from #{start_date}"
@@ -256,7 +251,6 @@ class MercuryItem::Importer
       end
     end
 
-    # Determines the appropriate sync start date for incremental imports
     def determine_sync_start_date(mercury_account)
       # Check if this account has any stored transactions
       # If not, treat it as a first sync for this account even if the item has been synced before
@@ -283,7 +277,6 @@ class MercuryItem::Importer
       end
     end
 
-    # Handles API errors and marks item as requiring update if auth-related
     def handle_error(error_message)
       # Mark item as requiring update for authentication-related errors
       error_msg_lower = error_message.to_s.downcase

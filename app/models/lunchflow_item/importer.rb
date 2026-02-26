@@ -3,13 +3,11 @@ class LunchflowItem::Importer
 
   attr_reader :lunchflow_item, :lunchflow_provider
 
-  # Initializes the importer with a Lunchflow item and its provider
   def initialize(lunchflow_item, lunchflow_provider:)
     @lunchflow_item = lunchflow_item
     @lunchflow_provider = lunchflow_provider
   end
 
-  # Runs the full import: fetches accounts, stores snapshot, and imports transactions
   def import
     Rails.logger.info "LunchflowItem::Importer - Starting import for item #{lunchflow_item.id}"
 
@@ -112,7 +110,6 @@ class LunchflowItem::Importer
 
   private
 
-    # Fetches accounts data from the Lunchflow API, handling errors
     def fetch_accounts_data
       begin
         accounts_data = lunchflow_provider.get_accounts
@@ -151,7 +148,6 @@ class LunchflowItem::Importer
       accounts_data
     end
 
-    # Updates an existing Lunchflow account from API data
     def import_account(account_data)
       # Validate account data structure
       unless account_data.is_a?(Hash)
@@ -187,7 +183,6 @@ class LunchflowItem::Importer
       end
     end
 
-    # Fetches and stores new transactions for a Lunchflow account
     def fetch_and_store_transactions(lunchflow_account)
       start_date = determine_sync_start_date(lunchflow_account)
       include_pending = Rails.configuration.x.lunchflow.include_pending
@@ -300,7 +295,6 @@ class LunchflowItem::Importer
       end
     end
 
-    # Fetches and updates the balance for a Lunchflow account
     def fetch_and_update_balance(lunchflow_account)
       begin
         balance_data = lunchflow_provider.get_account_balance(lunchflow_account.account_id)
@@ -344,7 +338,6 @@ class LunchflowItem::Importer
       end
     end
 
-    # Fetches and stores holdings for investment/crypto accounts
     def fetch_and_store_holdings(lunchflow_account)
       # Only fetch holdings for investment/crypto accounts
       account = lunchflow_account.current_account
@@ -392,7 +385,6 @@ class LunchflowItem::Importer
       end
     end
 
-    # Determines the appropriate sync start date for incremental imports
     def determine_sync_start_date(lunchflow_account)
       # Check if this account has any stored transactions
       # If not, treat it as a first sync for this account even if the item has been synced before
@@ -419,7 +411,6 @@ class LunchflowItem::Importer
       end
     end
 
-    # Handles API errors and marks item as requiring update if auth-related
     def handle_error(error_message)
       # Mark item as requiring update for authentication-related errors
       error_msg_lower = error_message.to_s.downcase
