@@ -179,9 +179,10 @@ class Transaction::Search
     end
 
     def apply_tag_filter(query, tags)
-      return query unless tags.present?
+      normalized_tags = Array(tags).map(&:to_s).map(&:strip).reject(&:blank?).uniq
+      return query unless normalized_tags.present?
       # Use a subquery to prevent duplication when multiple tags match
-      query.where(id: query.klass.select(:id).joins(:tags).where(tags: { name: tags }))
+      query.where(id: query.klass.select(:id).joins(:tags).where(tags: { name: normalized_tags }))
     end
 
     def apply_status_filter(query, statuses)
