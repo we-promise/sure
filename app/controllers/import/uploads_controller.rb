@@ -46,11 +46,13 @@ class Import::UploadsController < ApplicationController
         render :show, status: :unprocessable_entity and return
       end
 
-      @import.account = Current.family.accounts.find(account_id)
-      @import.raw_file_str = QifParser.normalize_encoding(csv_str)
-      @import.save!(validate: false)
-      @import.generate_rows_from_csv
-      @import.sync_mappings
+      ActiveRecord::Base.transaction do
+        @import.account = Current.family.accounts.find(account_id)
+        @import.raw_file_str = QifParser.normalize_encoding(csv_str)
+        @import.save!(validate: false)
+        @import.generate_rows_from_csv
+        @import.sync_mappings
+      end
 
       redirect_to import_qif_category_selection_path(@import), notice: "QIF file uploaded successfully."
     end

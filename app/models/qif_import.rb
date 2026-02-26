@@ -79,9 +79,8 @@ class QifImport < Import
 
   # The account type declared in the QIF file (e.g. "CCard", "Bank", "Invst").
   def qif_account_type
-    return nil unless raw_file_str.present?
-
-    QifParser.account_type(raw_file_str)
+    return @qif_account_type if instance_variable_defined?(:@qif_account_type)
+    @qif_account_type = raw_file_str.present? ? QifParser.account_type(raw_file_str) : nil
   end
 
   # Unique categories used across all rows (blank entries excluded).
