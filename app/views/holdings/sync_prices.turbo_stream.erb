@@ -1,0 +1,21 @@
+<%= turbo_stream.replace dom_id(@holding, :market_data_section) do %>
+  <div id="<%= dom_id(@holding, :market_data_section) %>" class="flex items-center justify-between gap-2 p-3 border-b border-tertiary">
+    <div class="text-sm space-y-1">
+      <h4 class="text-primary"><%= t("holdings.show.market_data_label") %></h4>
+      <p class="text-secondary">
+        <% last_updated = @holding.security.prices.maximum(:updated_at) %>
+        <%= t("holdings.show.last_price_update") %>: <%= last_updated ? l(last_updated, format: :long) : t("holdings.show.never") %>
+      </p>
+    </div>
+    <%= button_to t("holdings.show.market_data_sync_button"),
+        sync_prices_holding_path(@holding),
+        method: :post,
+        class: "inline-flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium text-primary bg-gray-200 hover:bg-gray-300 theme-dark:bg-gray-700 theme-dark:hover:bg-gray-600",
+        data: { loading_button_target: "button" },
+        form: { data: {
+          controller: "loading-button",
+          action: "submit->loading-button#showLoading",
+          loading_button_loading_text_value: t("holdings.show.syncing")
+        } } %>
+  </div>
+<% end %>
