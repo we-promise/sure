@@ -181,7 +181,7 @@ class Transaction::Search
     def apply_tag_filter(query, tags)
       return query unless tags.present?
       # Use a subquery to prevent duplication when multiple tags match
-      query.where(id: query.unscoped.select(:id).joins(:tags).where(tags: { name: tags }))
+      query.where(id: query.klass.select(:id).joins(:tags).where(tags: { name: tags }))
     end
 
     def apply_status_filter(query, statuses)
