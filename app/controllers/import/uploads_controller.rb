@@ -73,6 +73,6 @@ class Import::UploadsController < ApplicationController
     end
 
     def upload_params
-      params.require(:import).permit(:raw_file_str, :import_file, :col_sep, :account_id)
+      params.require(:import).permit(:raw_file_str, :import_file, :col_sep)
     end
 end
