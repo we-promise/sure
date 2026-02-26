@@ -100,8 +100,10 @@ class Transaction::Search
     # Applies a filter to only include transactions from active, non-excluded accounts,
     # if the active_accounts_only_filter flag is enabled.
     def apply_active_accounts_filter(query, active_accounts_only_filter)
+      query = query.where(accounts: { status: [ "draft", "active" ] })
+      
       if active_accounts_only_filter
-        query.where(accounts: { status: [ "draft", "active" ], excluded: false })
+        query.where(accounts: { excluded: false })
       else
         query
       end
