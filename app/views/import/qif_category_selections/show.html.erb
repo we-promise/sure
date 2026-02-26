@@ -1,0 +1,116 @@
+<%= content_for :header_nav do %>
+  <%= render "imports/nav", import: @import %>
+<% end %>
+
+<%= content_for :previous_path, import_upload_path(@import) %>
+
+<div class="space-y-8 mx-auto max-w-2xl mb-6">
+  <div class="text-center space-y-2">
+    <h1 class="text-3xl text-primary font-medium">Select categories & tags</h1>
+    <p class="text-secondary text-sm">
+      Choose which categories and tags from your QIF file to bring into Sure.
+      Deselected items will be removed from those transactions.
+    </p>
+  </div>
+
+  <%= form_with url: import_qif_category_selection_path(@import), method: :put, class: "space-y-8" do |form| %>
+
+    <%# ── Categories ─────────────────────────────────────────────── %>
+    <% if @categories.any? %>
+      <div class="space-y-3">
+        <div class="flex items-center justify-between">
+          <h2 class="text-lg font-medium text-primary">Categories</h2>
+          <span class="text-sm text-secondary"><%= pluralize(@categories.count, "category") %> found</span>
+        </div>
+
+        <div class="bg-container-inset rounded-xl p-1">
+          <div class="bg-container shadow-border-xs rounded-lg overflow-hidden">
+            <div class="grid grid-cols-12 gap-2 px-5 py-3 text-xs font-medium text-secondary uppercase border-b border-primary">
+              <div class="col-span-1"></div>
+              <div class="col-span-8">Category name</div>
+              <div class="col-span-3 text-right">Transactions</div>
+            </div>
+
+            <div class="divide-y divide-alpha-black-100">
+              <% @categories.each do |category| %>
+                <label for="cat_<%= category.parameterize(separator: '_') %>" class="grid grid-cols-12 gap-2 items-center px-5 py-3 bg-container cursor-pointer hover:bg-surface-inset transition-colors">
+                  <div class="col-span-1">
+                    <input
+                      type="checkbox"
+                      name="categories[]"
+                      value="<%= category %>"
+                      id="cat_<%= category.parameterize(separator: '_') %>"
+                      checked
+                      class="rounded border-primary"
+                    >
+                  </div>
+                  <span class="col-span-8 text-sm text-primary"><%= category %></span>
+                  <span class="col-span-3 text-sm text-secondary text-right">
+                    <%= pluralize(@category_counts[category] || 0, "txn") %>
+                  </span>
+                </label>
+              <% end %>
+            </div>
+          </div>
+        </div>
+      </div>
+    <% end %>
+
+    <%# ── Tags ───────────────────────────────────────────────────── %>
+    <% if @tags.any? %>
+      <div class="space-y-3">
+        <div class="flex items-center justify-between">
+          <h2 class="text-lg font-medium text-primary">Tags</h2>
+          <span class="text-sm text-secondary"><%= pluralize(@tags.count, "tag") %> found</span>
+        </div>
+
+        <div class="bg-container-inset rounded-xl p-1">
+          <div class="bg-container shadow-border-xs rounded-lg overflow-hidden">
+            <div class="grid grid-cols-12 gap-2 px-5 py-3 text-xs font-medium text-secondary uppercase border-b border-primary">
+              <div class="col-span-1"></div>
+              <div class="col-span-8">Tag name</div>
+              <div class="col-span-3 text-right">Transactions</div>
+            </div>
+
+            <div class="divide-y divide-alpha-black-100">
+              <% @tags.each do |tag| %>
+                <label for="tag_<%= tag.parameterize(separator: '_') %>" class="grid grid-cols-12 gap-2 items-center px-5 py-3 bg-container cursor-pointer hover:bg-surface-inset transition-colors">
+                  <div class="col-span-1">
+                    <input
+                      type="checkbox"
+                      name="tags[]"
+                      value="<%= tag %>"
+                      id="tag_<%= tag.parameterize(separator: '_') %>"
+                      checked
+                      class="rounded border-primary"
+                    >
+                  </div>
+                  <span class="col-span-8 text-sm text-primary"><%= tag %></span>
+                  <span class="col-span-3 text-sm text-secondary text-right">
+                    <%= pluralize(@tag_counts[tag] || 0, "txn") %>
+                  </span>
+                </label>
+              <% end %>
+            </div>
+          </div>
+        </div>
+      </div>
+    <% end %>
+
+    <%# ── Empty state ─────────────────────────────────────────────── %>
+    <% if @categories.empty? && @tags.empty? %>
+      <div class="text-center py-12 text-secondary space-y-2">
+        <%= icon("tag", size: "lg", class: "mx-auto mb-2") %>
+        <p class="text-sm">No categories or tags were found in this QIF file.</p>
+        <p class="text-xs">All transactions will be imported without categories or tags.</p>
+      </div>
+    <% end %>
+
+    <%# ── Submit ──────────────────────────────────────────────────── %>
+    <div class="flex justify-center">
+      <%= form.submit "Continue to review",
+            class: "btn btn-primary w-full md:w-auto" %>
+    </div>
+
+  <% end %>
+</div>
