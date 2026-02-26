@@ -11,6 +11,10 @@ class Demo::DataCleaner
     # Clear SSO audit logs first (they reference users)
     SsoAuditLog.destroy_all
 
+    # Force-delete demo monitoring API key via SQL to bypass
+    # the before_destroy callback that prevents its destruction.
+    ApiKey.where(display_key: ApiKey::DEMO_MONITORING_KEY).delete_all
+
     Family.destroy_all
     Setting.destroy_all
     InviteCode.destroy_all

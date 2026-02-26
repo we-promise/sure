@@ -188,12 +188,20 @@ class Demo::Generator
       admin_user = family.users.find_by(role: "admin")
       return unless admin_user
 
-      # Find existing key scoped to this admin user by the deterministic display_key value
-      existing_key = admin_user.api_keys.find_by(display_key: ApiKey::DEMO_MONITORING_KEY)
+      # Search globally for the monitoring key (it may belong to a different user
+      # from a previous demo run)
+      existing_key = ApiKey.find_by(display_key: ApiKey::DEMO_MONITORING_KEY)
 
       if existing_key
-        puts "  → Use existing monitoring API key"
-        return existing_key
+        if existing_key.user_id == admin_user.id
+          puts "  → Use existing monitoring API key"
+          return existing_key
+        else
+          # Old key belongs to a different user; force-delete via SQL
+          # to bypass the before_destroy callback protection.
+          ApiKey.where(id: existing_key.id).delete_all
+          puts "  → Removed stale monitoring API key from previous demo user"
+        end
       end
 
       # Revoke any existing user-created web API keys to keep demo access predictable.
