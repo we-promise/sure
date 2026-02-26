@@ -17,6 +17,8 @@ en:
       empty_message: Add an account either via connection, importing or entering manually.
       new_account: New account
       no_accounts: No accounts yet
+    accountable_group:
+      excluded_badge: "(Excluded)"
     form:
       balance: Current balance
       name_label: Account name
