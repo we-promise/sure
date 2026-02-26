@@ -52,7 +52,7 @@ class CoinstatsItem < ApplicationRecord
     raise
   end
 
-  # Processes holdings for all linked visible accounts.
+  # Processes holdings for all linked sync-enabled accounts.
   # @return [Array<Hash>] Results with success status per account
   def process_accounts
     return [] if coinstats_accounts.empty?
@@ -71,7 +71,7 @@ class CoinstatsItem < ApplicationRecord
     results
   end
 
-  # Queues balance sync jobs for all visible accounts.
+  # Queues balance sync jobs for all sync-enabled accounts.
   # @param parent_sync [Sync, nil] Parent sync for tracking
   # @param window_start_date [Date, nil] Start of sync window
   # @param window_end_date [Date, nil] End of sync window

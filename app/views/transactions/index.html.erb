@@ -60,16 +60,7 @@
             <%= t("transactions.index.include_excluded_accounts") %>
           </label>
           <%= form_with url: transactions_path, method: :get, data: { turbo_frame: "_top", controller: "auto-submit-form" } do |f| %>
-            <% (params[:q] || {}).each do |key, value| %>
-              <% next if key == "active_accounts_only" %>
-              <% if value.is_a?(Array) %>
-                <% value.each do |v| %>
-                  <%= hidden_field_tag "q[#{key}][]", v %>
-                <% end %>
-              <% else %>
-                <%= hidden_field_tag "q[#{key}]", value %>
-              <% end %>
-            <% end %>
+            <%= hidden_query_params(params[:q]) %>
             <% if params[:tab].present? %>
               <%= hidden_field_tag "tab", params[:tab] %>
             <% end %>

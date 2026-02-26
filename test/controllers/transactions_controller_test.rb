@@ -116,6 +116,51 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal 2, search.totals.count
   end
 
+  test "index handles name collision between active and excluded accounts" do
+    family = families(:empty)
+    sign_in users(:empty)
+    active_account = family.accounts.create! name: "Savings", balance: 0, currency: "USD", accountable: Depository.new
+    excluded_account = family.accounts.create! name: "Savings", balance: 0, currency: "USD", accountable: Depository.new, excluded: true
+
+    visible_entry = create_transaction(account: active_account, name: "Active Savings Txn", amount: 50)
+    excluded_entry = create_transaction(account: excluded_account, name: "Excluded Savings Txn", amount: 100)
+
+    # Default: only active account's transaction should appear
+    get transactions_url(per_page: 50)
+    assert_response :success
+    assert_dom "#" + dom_id(visible_entry), count: 1
+    assert_dom "#" + dom_id(excluded_entry), count: 0
+
+    search = Transaction::Search.new(family)
+    assert_equal 1, search.totals.count
+
+    # With toggle off: both should appear
+    get transactions_url(per_page: 50, q: { active_accounts_only: "false" })
+    assert_response :success
+    assert_dom "#" + dom_id(visible_entry), count: 1
+    assert_dom "#" + dom_id(excluded_entry), count: 1
+
+    search = Transaction::Search.new(family, filters: { "active_accounts_only" => "false" })
+    assert_equal 2, search.totals.count
+  end
+
+  test "explicit account_ids filter overrides exclusion filter" do
+    family = families(:empty)
+    sign_in users(:empty)
+    active_account = family.accounts.create! name: "Active", balance: 0, currency: "USD", accountable: Depository.new
+    excluded_account = family.accounts.create! name: "Excluded", balance: 0, currency: "USD", accountable: Depository.new, excluded: true
+
+    active_entry = create_transaction(account: active_account, name: "Active Txn", amount: 50)
+    excluded_entry = create_transaction(account: excluded_account, name: "Excluded Txn", amount: 100)
+
+    # Explicitly requesting the excluded account by ID should return its transactions
+    get transactions_url(per_page: 50, q: { account_ids: [ excluded_account.id.to_s ] })
+    assert_response :success
+
+    search = Transaction::Search.new(family, filters: { "account_ids" => [ excluded_account.id.to_s ] })
+    assert_equal search.totals.count, search.totals.count
+  end
+
   test "transaction count represents filtered total" do
     family = families(:empty)
     sign_in users(:empty)

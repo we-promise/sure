@@ -1,6 +1,8 @@
 class Account < ApplicationRecord
   include AASM, Syncable, Monetizable, Chartable, Linkable, Enrichable, Anchorable, Reconcileable, TaxTreatable
 
+  after_save :invalidate_family_caches, if: :saved_change_to_excluded?
+
   validates :name, :balance, :currency, presence: true
 
   belongs_to :family
@@ -329,4 +331,9 @@ class Account < ApplicationRecord
       raise "Unknown account type: #{accountable_type}"
     end
   end
+
+  private
+    def invalidate_family_caches
+      entries.order(updated_at: :desc).limit(1).touch_all
+    end
 end

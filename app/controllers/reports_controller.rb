@@ -348,7 +348,7 @@ class ReportsController < ApplicationController
       transactions = Transaction
         .joins(:entry)
         .joins(entry: :account)
-        .where(accounts: { family_id: Current.family.id, status: [ "draft", "active" ], excluded: false })
+        .where(accounts: { family_id: Current.family.id }).merge(Account.visible)
         .where(entries: { entryable_type: "Transaction", excluded: false, date: @period.date_range })
         .where.not(kind: Transaction::BUDGET_EXCLUDED_KINDS)
         .includes(entry: :account, category: :parent)
@@ -360,7 +360,7 @@ class ReportsController < ApplicationController
       trades = Trade
         .joins(:entry)
         .joins(entry: :account)
-        .where(accounts: { family_id: Current.family.id, status: [ "draft", "active" ], excluded: false })
+        .where(accounts: { family_id: Current.family.id }).merge(Account.visible)
         .where(entries: { entryable_type: "Trade", excluded: false, date: @period.date_range })
         .includes(entry: :account, category: :parent)
 
@@ -609,7 +609,7 @@ class ReportsController < ApplicationController
       transactions = Transaction
         .joins(:entry)
         .joins(entry: :account)
-        .where(accounts: { family_id: Current.family.id, status: [ "draft", "active" ], excluded: false })
+        .where(accounts: { family_id: Current.family.id }).merge(Account.visible)
         .where(entries: { entryable_type: "Transaction", excluded: false, date: @period.date_range })
         .where.not(kind: Transaction::BUDGET_EXCLUDED_KINDS)
         .includes(entry: :account, category: [])
@@ -646,7 +646,7 @@ class ReportsController < ApplicationController
       transactions = Transaction
         .joins(:entry)
         .joins(entry: :account)
-        .where(accounts: { family_id: Current.family.id, status: [ "draft", "active" ], excluded: false })
+        .where(accounts: { family_id: Current.family.id }).merge(Account.visible)
         .where(entries: { entryable_type: "Transaction", excluded: false, date: @period.date_range })
         .where.not(kind: Transaction::BUDGET_EXCLUDED_KINDS)
         .includes(entry: :account, category: [])

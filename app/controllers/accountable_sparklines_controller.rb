@@ -4,7 +4,7 @@ class AccountableSparklinesController < ApplicationController
 
     # Don't render if there are no visible accounts for this type.
     if account_ids.empty?
-      render html: "<turbo-frame id=\"#{@accountable.model_name.param_key}_sparkline\"></turbo-frame>".html_safe
+      render html: helpers.turbo_frame_tag("#{@accountable.model_name.param_key}_sparkline")
       return
     end
 
