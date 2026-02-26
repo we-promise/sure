@@ -36,7 +36,7 @@ zh-TW:
       accounts: 帳戶管理
       account_groups:
         total: 總計
-        active: 活跃
+        active: 活躍
         excluded: 已排除
       manual_accounts:
         other_accounts: 其他帳戶
