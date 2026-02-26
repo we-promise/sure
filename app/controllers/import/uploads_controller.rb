@@ -14,7 +14,9 @@ class Import::UploadsController < ApplicationController
   end
 
   def update
-    if csv_valid?(csv_str)
+    if @import.is_a?(QifImport)
+      handle_qif_upload
+    elsif csv_valid?(csv_str)
       @import.account = Current.family.accounts.find_by(id: params.dig(:import, :account_id))
       @import.assign_attributes(raw_file_str: csv_str, col_sep: upload_params[:col_sep])
       @import.save!(validate: false)
@@ -30,6 +32,27 @@ class Import::UploadsController < ApplicationController
   private
     def set_import
       @import = Current.family.imports.find(params[:import_id])
+    end
+
+    def handle_qif_upload
+      unless QifParser.valid?(csv_str)
+        flash.now[:alert] = "Must be a valid QIF file"
+        render :show, status: :unprocessable_entity and return
+      end
+
+      account_id = params.dig(:import, :account_id)
+      unless account_id.present?
+        flash.now[:alert] = "Please select an account for the QIF import"
+        render :show, status: :unprocessable_entity and return
+      end
+
+      @import.account = Current.family.accounts.find(account_id)
+      @import.raw_file_str = QifParser.normalize_encoding(csv_str)
+      @import.save!(validate: false)
+      @import.generate_rows_from_csv
+      @import.sync_mappings
+
+      redirect_to import_qif_category_selection_path(@import), notice: "QIF file uploaded successfully."
     end
 
     def csv_str
@@ -48,6 +71,6 @@ class Import::UploadsController < ApplicationController
     end
 
     def upload_params
-      params.require(:import).permit(:raw_file_str, :import_file, :col_sep)
+      params.require(:import).permit(:raw_file_str, :import_file, :col_sep, :account_id)
     end
 end
