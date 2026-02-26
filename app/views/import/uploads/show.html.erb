@@ -20,7 +20,7 @@
             { label: "Account", include_blank: "Select an account…", selected: @import.account_id },
             required: true %>
 
-      <div class="flex flex-col items-center justify-center w-full h-64 border border-secondary border-dashed rounded-xl cursor-pointer" data-controller="file-upload" data-action="click->file-upload#triggerFileInput" data-file-upload-target="uploadArea">
+      <label for="import_import_file" class="flex flex-col items-center justify-center w-full h-64 border border-secondary border-dashed rounded-xl cursor-pointer" data-controller="file-upload" data-file-upload-target="uploadArea">
         <div class="flex flex-col items-center justify-center pt-5 pb-6">
           <div data-file-upload-target="uploadText" class="flex flex-col items-center">
             <%= icon("plus", size: "lg", class: "mb-4 mx-auto") %>
@@ -39,10 +39,11 @@
 
           <%= form.file_field :import_file,
                 accept: ".qif",
+                id: "import_import_file",
                 class: "hidden",
                 "data-file-upload-target": "input" %>
         </div>
-      </div>
+      </label>
 
       <%= form.submit "Upload QIF", disabled: @import.complete? %>
     <% end %>

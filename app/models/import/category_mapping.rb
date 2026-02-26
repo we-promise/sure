@@ -13,13 +13,15 @@ class Import::CategoryMapping < Import::Mapping
 
     private
 
-    # Returns the leaf (child) name for a potentially hierarchical key.
-    # "Home:Home Improvement" → "Home Improvement"
-    # "Fees & Charges"        → "Fees & Charges"
-    def leaf_category_name(key)
-      parts = key.split(":", 2)
-      parts.length == 2 ? parts[1].strip : key
-    end
+      # Returns the leaf (child) name for a potentially hierarchical key.
+      # "Home:Home Improvement" → "Home Improvement"
+      # "Fees & Charges"        → "Fees & Charges"
+      def leaf_category_name(key)
+        return "" if key.blank?
+
+        parts = key.to_s.split(":", 2)
+        parts.length == 2 ? parts[1].strip : key
+      end
   end
 
   def selectable_values

@@ -82,7 +82,7 @@ module QifParser
 
     FALLBACK_ENCODINGS.each do |encoding|
       begin
-        return binary.encode("UTF-8", encoding, undef: :raise)
+        return binary.encode("UTF-8", encoding)
       rescue Encoding::UndefinedConversionError
         next
       end
@@ -354,7 +354,12 @@ module QifParser
     if (m = date_str.match(%r{\A(\d{1,2})/\s*(\d{1,2})'(\d{2,4})\z}))
       month = m[1].to_i
       day   = m[2].to_i
-      year  = m[3].length == 2 ? 2000 + m[3].to_i : m[3].to_i
+      if m[3].length == 2
+        year = 2000 + m[3].to_i
+        year -= 100 if year > Date.today.year
+      else
+        year = m[3].to_i
+      end
       return Date.new(year, month, day).iso8601
     end
 
