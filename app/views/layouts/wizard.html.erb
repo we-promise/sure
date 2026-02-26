@@ -1,6 +1,6 @@
 <%= render "layouts/shared/htmldoc" do %>
   <div class="bg-surface flex flex-col h-full">
-    <header class="flex items-center justify-between p-8">
+    <header class="flex items-center justify-between p-8 pt-[calc(env(safe-area-inset-top)+2rem)]">
       <% if content_for?(:prev_nav) %>
         <%= yield :prev_nav %>
       <% else %>
