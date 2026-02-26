@@ -25,8 +25,8 @@ class TransactionsController < ApplicationController
     @pagy, @transactions = pagy(base_scope, limit: safe_per_page)
 
     # Prepare accounts for the filter partial
-    include_excluded = @q && @q["active_accounts_only"] == "false"
-    @filter_accounts = include_excluded ? Current.family.accounts.alphabetically : Current.family.accounts.where(excluded: false).alphabetically
+    include_excluded = @q && @q[:active_accounts_only] == "false"
+    @filter_accounts = include_excluded ? Current.family.accounts.alphabetically : Current.family.accounts.not_excluded.alphabetically
 
     # Load projected recurring transactions for next 10 days
     @projected_recurring = Current.family.recurring_transactions
