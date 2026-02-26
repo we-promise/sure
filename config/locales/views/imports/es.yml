@@ -3,9 +3,25 @@ es:
   import:
     qif_category_selections:
       show:
+        title: "Seleccionar categorías y etiquetas"
+        description: "Elige qué categorías y etiquetas de tu archivo QIF importar en Sure. Los elementos deseleccionados se eliminarán de esas transacciones."
+        categories_heading: Categorías
+        categories_found:
+          one: "1 categoría encontrada"
+          other: "%{count} categorías encontradas"
+        category_name_col: Nombre de categoría
+        transactions_col: Transacciones
+        tags_heading: Etiquetas
+        tags_found:
+          one: "1 etiqueta encontrada"
+          other: "%{count} etiquetas encontradas"
+        tag_name_col: Nombre de etiqueta
         txn_count:
           one: "1 transacción"
           other: "%{count} transacciones"
+        empty_state_primary: No se encontraron categorías ni etiquetas en este archivo QIF.
+        empty_state_secondary: Todas las transacciones se importarán sin categorías ni etiquetas.
+        submit: Continuar a la revisión
     cleans:
       show:
         description: Edita tus datos en la tabla de abajo. Las celdas rojas son inválidas.
