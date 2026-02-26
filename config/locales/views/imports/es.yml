@@ -1,6 +1,11 @@
 ---
 es:
   import:
+    qif_category_selections:
+      show:
+        txn_count:
+          one: "1 transacción"
+          other: "%{count} transacciones"
     cleans:
       show:
         description: Edita tus datos en la tabla de abajo. Las celdas rojas son inválidas.
@@ -40,6 +45,15 @@ es:
         tag_mapping_title: Asigna tus etiquetas
     uploads:
       show:
+        qif_title: Subir archivo QIF
+        qif_description: Selecciona la cuenta a la que pertenece este archivo QIF y sube tu exportación .qif desde Quicken.
+        qif_account_label: Cuenta
+        qif_account_placeholder: Seleccionar una cuenta…
+        qif_file_prompt: para añadir tu archivo QIF aquí
+        qif_file_hint: Solo archivos .qif
+        qif_submit: Subir QIF
+        browse: Examinar
+        csv_file_prompt: para añadir tu archivo CSV aquí
         description: Pega o sube tu archivo CSV abajo. Por favor, revisa las instrucciones en la tabla de abajo antes de comenzar.
         instructions_1: Abajo hay un ejemplo de CSV con columnas disponibles para importar.
         instructions_2: Tu CSV debe tener una fila de encabezado.

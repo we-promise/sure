@@ -1,6 +1,11 @@
 ---
 fr:
   import:
+    qif_category_selections:
+      show:
+        txn_count:
+          one: "1 opération"
+          other: "%{count} opérations"
     cleans:
       show:
         description: Modifiez vos données dans le tableau ci-dessous. Les cellules rouges sont invalides.
@@ -47,6 +52,15 @@ fr:
         tag_mapping_title: Attribuez vos étiquettes
     uploads:
       show:
+        qif_title: Téléverser le fichier QIF
+        qif_description: Sélectionnez le compte auquel appartient ce fichier QIF, puis téléversez votre export .qif depuis Quicken.
+        qif_account_label: Compte
+        qif_account_placeholder: Sélectionner un compte…
+        qif_file_prompt: pour ajouter votre fichier QIF ici
+        qif_file_hint: Fichiers .qif uniquement
+        qif_submit: Téléverser le QIF
+        browse: Parcourir
+        csv_file_prompt: pour ajouter votre fichier CSV ici
         description: Collez ou téléversez votre fichier CSV ci-dessous. Veuillez examiner les instructions dans le tableau ci-dessous avant de commencer.
         instructions_1: Voici un exemple de CSV avec des colonnes disponibles pour l'importation.
         instructions_2: Votre CSV doit avoir une ligne d'en-tête

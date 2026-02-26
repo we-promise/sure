@@ -1,6 +1,11 @@
 ---
 de:
   import:
+    qif_category_selections:
+      show:
+        txn_count:
+          one: "1 Buchung"
+          other: "%{count} Buchungen"
     cleans:
       show:
         description: Bearbeite deine Daten in der Tabelle unten. Rote Zellen sind ungültig.
@@ -36,6 +41,15 @@ de:
         tag_mapping_title: Tags zuweisen
     uploads:
       show:
+        qif_title: QIF-Datei hochladen
+        qif_description: Wähle das Konto, zu dem diese QIF-Datei gehört, und lade deinen .qif-Export aus Quicken hoch.
+        qif_account_label: Konto
+        qif_account_placeholder: Konto auswählen…
+        qif_file_prompt: um deine QIF-Datei hier hinzuzufügen
+        qif_file_hint: Nur .qif-Dateien
+        qif_submit: QIF hochladen
+        browse: Durchsuchen
+        csv_file_prompt: um deine CSV-Datei hier hinzuzufügen
         description: Füge unten deine CSV-Datei ein oder lade sie hoch. Bitte lies die Anweisungen in der Tabelle unten, bevor du beginnst.
         instructions_1: Unten siehst du ein Beispiel einer CSV-Datei mit verfügbaren Spalten für den Import.
         instructions_2: Deine CSV muss eine Kopfzeile enthalten.
