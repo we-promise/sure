@@ -32,4 +32,7 @@ de:
       ticker_label: Ticker
       trade_history_entry: "%{qty} Anteile von %{security} zu %{price}"
       total_return_label: Gesamtrendite
+      shares_label: Anteile
+      book_value_label: Buchwert
+      market_value_label: Marktwert
       unknown: Unbekannt

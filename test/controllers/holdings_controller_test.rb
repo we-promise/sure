@@ -61,4 +61,40 @@ class HoldingsControllerTest < ActionDispatch::IntegrationTest
     assert_equal 50.0, @holding.cost_basis.to_f
     assert_equal "manual", @holding.cost_basis_source
   end
+
+  test "remap_security brings offline security back online" do
+    # Given: the target security is marked offline (e.g. created by a failed QIF import)
+    msft = securities(:msft)
+    msft.update!(offline: true, failed_fetch_count: 3)
+
+    # When: user explicitly selects it from the provider search and saves
+    patch remap_security_holding_path(@holding), params: { security_id: "MSFT|XNAS" }
+
+    # Then: the security is brought back online and the holding is remapped
+    assert_redirected_to account_path(@holding.account, tab: "holdings")
+    msft.reload
+    assert_not msft.offline?
+    assert_equal 0, msft.failed_fetch_count
+  end
+
+  test "sync_prices redirects with alert for offline security" do
+    @holding.security.update!(offline: true)
+
+    post sync_prices_holding_path(@holding)
+
+    assert_redirected_to account_path(@holding.account, tab: "holdings")
+    assert_equal I18n.t("holdings.sync_prices.unavailable"), flash[:alert]
+  end
+
+  test "sync_prices syncs market data and redirects with notice" do
+    # Stub external calls to avoid hitting real APIs in tests
+    Security::HealthChecker.any_instance.stubs(:run_check)
+    Security.any_instance.stubs(:import_provider_prices).returns(0)
+    Security.any_instance.stubs(:import_provider_details)
+
+    post sync_prices_holding_path(@holding)
+
+    assert_redirected_to account_path(@holding.account, tab: "holdings")
+    assert_equal I18n.t("holdings.sync_prices.success"), flash[:notice]
+  end
 end

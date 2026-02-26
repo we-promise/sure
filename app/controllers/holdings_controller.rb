@@ -1,5 +1,5 @@
 class HoldingsController < ApplicationController
-  before_action :set_holding, only: %i[show update destroy unlock_cost_basis remap_security reset_security]
+  before_action :set_holding, only: %i[show update destroy unlock_cost_basis remap_security reset_security sync_prices]
 
   def index
     @account = Current.family.accounts.find(params[:account_id])
@@ -70,12 +70,49 @@ class HoldingsController < ApplicationController
       return
     end
 
+    # The user explicitly selected this security from provider search results,
+    # so we know the provider can handle it. Bring it back online if it was
+    # previously marked offline (e.g. by a failed QIF import resolution).
+    if new_security.offline?
+      new_security.update!(offline: false, failed_fetch_count: 0, failed_fetch_at: nil)
+    end
+
     @holding.remap_security!(new_security)
     flash[:notice] = t(".success")
 
     respond_to do |format|
       format.html { redirect_to account_path(@holding.account, tab: "holdings") }
       format.turbo_stream { render turbo_stream: turbo_stream.action(:redirect, account_path(@holding.account, tab: "holdings")) }
+    end
+  end
+
+  def sync_prices
+    security = @holding.security
+
+    if security.offline?
+      redirect_to account_path(@holding.account, tab: "holdings"),
+                  alert: t("holdings.sync_prices.unavailable")
+      return
+    end
+
+    Security::HealthChecker.new(security).run_check
+    security.reload
+
+    if security.offline?
+      redirect_to account_path(@holding.account, tab: "holdings"),
+                  alert: t("holdings.sync_prices.error")
+      return
+    end
+
+    security.import_provider_prices(
+      start_date: 31.days.ago.to_date,
+      end_date: Date.current
+    )
+    security.import_provider_details
+
+    respond_to do |format|
+      format.html { redirect_to account_path(@holding.account, tab: "holdings"), notice: t("holdings.sync_prices.success") }
+      format.turbo_stream
     end
   end
 

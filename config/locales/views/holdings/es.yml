@@ -34,4 +34,7 @@ es:
       ticker_label: Ticker
       trade_history_entry: "%{qty} acciones de %{security} a %{price}"
       total_return_label: Rendimiento total
+      shares_label: Acciones
+      book_value_label: Valor en libros
+      market_value_label: Valor de mercado
       unknown: Desconocido
