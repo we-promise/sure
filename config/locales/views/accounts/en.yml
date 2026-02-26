@@ -19,6 +19,7 @@ en:
       no_accounts: No accounts yet
     form:
       balance: Current balance
+      opening_balance_date_label: Opening balance date
       name_label: Account name
       name_placeholder: Example account name
       additional_details: Additional details
