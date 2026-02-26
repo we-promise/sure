@@ -29,6 +29,9 @@ en:
       notes_label: Notes
       notes_placeholder: Store additional information like account numbers, sort codes, IBAN, routing numbers, etc.
       exclude_from_reports_label: Exclude from reports and metrics
+      exclude_from_reports_description: Excluded accounts are hidden from reports and net worth calculations.
+      accountable_group:
+        excluded_badge: "(Excluded)"
     index:
       accounts: Accounts
       manual_accounts:
