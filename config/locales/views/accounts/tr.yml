@@ -17,13 +17,6 @@ tr:
       balance: Güncel bakiye
       name_label: Hesap adı
       name_placeholder: Örnek hesap adı
-      additional_details: Ek detaylar
-      institution_name_label: Kurum adı
-      institution_name_placeholder: ör., Garanti Bankası
-      institution_domain_label: Kurum alan adı
-      institution_domain_placeholder: ör., garantibbva.com.tr
-      notes_label: Notlar
-      notes_placeholder: Hesap numaraları, sıralama kodları, IBAN, yönlendirme numaraları gibi ek bilgileri saklayın.
       exclude_from_reports_label: Raporlardan ve ölçümlerden hariç tut
       exclude_from_reports_description: Hariç tutulan hesaplar raporlarda ve net değer hesaplamalarında gizlenir.
     accountable_group:

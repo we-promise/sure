@@ -17,13 +17,6 @@ de:
       balance: Aktueller Kontostand
       name_label: Kontoname
       name_placeholder: Beispielkontoname
-      additional_details: Zusätzliche Details
-      institution_name_label: Name des Instituts
-      institution_name_placeholder: z.B. Deutsche Bank
-      institution_domain_label: Domain des Instituts
-      institution_domain_placeholder: z.B. deutsche-bank.de
-      notes_label: Notizen
-      notes_placeholder: Speichere zusätzliche Informationen wie Kontonummern, Bankleitzahlen, IBAN, Routing-Nummern usw.
       exclude_from_reports_label: Von Berichten und Kennzahlen ausschließen
       exclude_from_reports_description: Ausgeschlossene Konten werden in Berichten und Nettovermögensberechnungen ausgeblendet.
     accountable_group:
