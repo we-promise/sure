@@ -31,22 +31,22 @@ class TransfersTest < ApplicationSystemTestCase
 
   private
 
-  def select_ds(label_text, option_text)
-    field_label = find("label", text: label_text)
-    container = field_label.ancestor("div.relative")
+    def select_ds(label_text, option_text)
+      field_label = find("label", text: label_text)
+      container = field_label.ancestor("div.relative")
 
-    # Click the button to open the dropdown
-    container.find("button").click
+      # Click the button to open the dropdown
+      container.find("button").click
 
-    # If searchable, type in the search input
-    if container.has_selector?("input[type='search']", visible: true)
-      container.find("input[type='search']", visible: true).fill_in(with: option_text)
+      # If searchable, type in the search input
+      if container.has_selector?("input[type='search']", visible: true)
+        container.find("input[type='search']", visible: true).fill_in(with: option_text)
+      end
+
+      # Wait for the listbox to appear inside the relative container
+      listbox = container.find("div[role='listbox']", visible: :all)
+
+      # Click the option inside the listbox
+      listbox.find("div", text: option_text, visible: true).click
     end
-
-    # Wait for the listbox to appear inside the relative container
-    listbox = container.find("div[role='listbox']", visible: :all)
-
-    # Click the option inside the listbox
-    listbox.find("div", text: option_text, visible: true).click
-  end
 end
