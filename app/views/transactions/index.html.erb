@@ -49,7 +49,7 @@
   <% else %>
     <% include_excluded = @q && @q[:active_accounts_only] == "false" %>
     <%= render DS::Tabs.new(active_tab: params[:tab].presence || "transactions", variant: :unstyled) do |tabs| %>
-      <div class="flex items-center justify-between mb-4">
+      <div class="flex flex-wrap items-center justify-between gap-y-4 mb-4">
         <%= tabs.with_nav(classes: "flex bg-surface-inset p-1 rounded-lg max-w-fit") do |nav| %>
           <% nav.with_btn(id: "transactions", label: t("transactions.show.tab_transactions"), classes: "px-6") %>
           <% nav.with_btn(id: "upcoming", label: t("transactions.show.tab_upcoming"), classes: "px-6") %>
