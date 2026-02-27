@@ -4,19 +4,27 @@ class Balance::SyncCache
   end
 
   def get_valuation(date)
-    converted_entries.find { |e| e.date == date && e.valuation? }
+    entries_by_date[date]&.find { |e| e.valuation? }
   end
 
   def get_holdings(date)
-    converted_holdings.select { |h| h.date == date }
+    holdings_by_date[date] || []
   end
 
   def get_entries(date)
-    converted_entries.select { |e| e.date == date && (e.transaction? || e.trade?) }
+    entries_by_date[date]&.select { |e| e.transaction? || e.trade? } || []
   end
 
   private
     attr_reader :account
+
+    def entries_by_date
+      @entries_by_date ||= converted_entries.group_by(&:date)
+    end
+
+    def holdings_by_date
+      @holdings_by_date ||= converted_holdings.group_by(&:date)
+    end
 
     def converted_entries
       @converted_entries ||= account.entries.order(:date).to_a.map do |e|
