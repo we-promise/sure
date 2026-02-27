@@ -22,40 +22,40 @@
 <% else %>
   <div class="space-y-2">
     <% if @plaid_items.any? %>
-      <%= render @plaid_items.sort_by(&:created_at) %>
+      <%= render @plaid_items %>
     <% end %>
 
     <% if @simplefin_items.any? %>
-      <%= render @simplefin_items.sort_by(&:created_at) %>
+      <%= render @simplefin_items %>
     <% end %>
 
     <% if @lunchflow_items.any? %>
-      <%= render @lunchflow_items.sort_by(&:created_at) %>
+      <%= render @lunchflow_items %>
     <% end %>
 
     <% if @enable_banking_items.any? %>
-      <%= render @enable_banking_items.sort_by(&:created_at) %>
+      <%= render @enable_banking_items %>
     <% end %>
 
     <% if @coinstats_items.any? %>
-      <%= render @coinstats_items.sort_by(&:created_at) %>
+      <%= render @coinstats_items %>
     <% end %>
 
     <% if @mercury_items.any? %>
-      <%= render @mercury_items.sort_by(&:created_at) %>
+      <%= render @mercury_items %>
     <% end %>
-    
+
     <% if @coinbase_items.any? %>
-      <%= render @coinbase_items.sort_by(&:created_at) %>
+      <%= render @coinbase_items %>
     <% end %>
 
     <% if @snaptrade_items.any? %>
-      <%= render @snaptrade_items.sort_by(&:created_at) %>
+      <%= render @snaptrade_items %>
     <% end %>
 
     <% if @indexa_capital_items.any? %>
-  <%= render @indexa_capital_items.sort_by(&:created_at) %>
-<% end %>
+      <%= render @indexa_capital_items %>
+    <% end %>
 
     <% if @manual_accounts.any? %>
       <div id="manual-accounts">

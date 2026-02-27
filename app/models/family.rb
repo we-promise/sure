@@ -85,18 +85,16 @@ class Family < ApplicationRecord
   end
 
   def assigned_merchants
-    merchant_ids = transactions.where.not(merchant_id: nil).pluck(:merchant_id).uniq
-    Merchant.where(id: merchant_ids)
+    Merchant.where(id: assigned_merchant_ids)
   end
 
   def available_merchants
-    assigned_ids = transactions.where.not(merchant_id: nil).pluck(:merchant_id).uniq
     recently_unlinked_ids = FamilyMerchantAssociation
       .where(family: self)
       .recently_unlinked
       .pluck(:merchant_id)
     family_merchant_ids = merchants.pluck(:id)
-    Merchant.where(id: (assigned_ids + recently_unlinked_ids + family_merchant_ids).uniq)
+    Merchant.where(id: (assigned_merchant_ids + recently_unlinked_ids + family_merchant_ids).uniq)
   end
 
   def auto_categorize_transactions_later(transactions, rule_run_id: nil)
@@ -206,12 +204,12 @@ class Family < ApplicationRecord
 
   def requires_exchange_rates_data_provider?
     # If family has any accounts not denominated in the family's currency, they need a provider for historical exchange rates
-    return true if accounts.where.not(currency: self.currency).any?
+    return true if accounts.where.not(currency: self.currency).exists?
 
     # If family has any entries in different currencies, they need a provider for historical exchange rates
-    uniq_currencies = entries.pluck(:currency).uniq
-    return true if uniq_currencies.count > 1
-    return true if uniq_currencies.count > 0 && uniq_currencies.first != self.currency
+    distinct_currencies = entries.distinct.pluck(:currency)
+    return true if distinct_currencies.count > 1
+    return true if distinct_currencies.count == 1 && distinct_currencies.first != self.currency
 
     false
   end
@@ -271,4 +269,9 @@ class Family < ApplicationRecord
   def self_hoster?
     Rails.application.config.app_mode.self_hosted?
   end
+
+  private
+    def assigned_merchant_ids
+      @assigned_merchant_ids ||= transactions.where.not(merchant_id: nil).distinct.pluck(:merchant_id)
+    end
 end

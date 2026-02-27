@@ -1,0 +1,29 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "Full Dev Stack (Rails + Tailwind + Sidekiq)",
+      "runtimeExecutable": "bundle",
+      "runtimeArgs": ["exec", "foreman", "start", "-f", "Procfile.dev"],
+      "port": 3000
+    },
+    {
+      "name": "Rails Server",
+      "runtimeExecutable": "bundle",
+      "runtimeArgs": ["exec", "rails", "server", "-b", "0.0.0.0"],
+      "port": 3000
+    },
+    {
+      "name": "Sidekiq Worker",
+      "runtimeExecutable": "bundle",
+      "runtimeArgs": ["exec", "sidekiq"],
+      "port": 6379
+    },
+    {
+      "name": "Tailwind CSS Watcher",
+      "runtimeExecutable": "bundle",
+      "runtimeArgs": ["exec", "bin/rails", "tailwindcss:watch"],
+      "port": 3000
+    }
+  ]
+}

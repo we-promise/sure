@@ -260,7 +260,7 @@ class Account < ApplicationRecord
   end
 
   def current_holdings
-    holdings
+    @current_holdings ||= holdings
       .where(currency: currency)
       .where.not(qty: 0)
       .where(
