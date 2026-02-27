@@ -155,9 +155,15 @@ class Transaction::Search
 
       normalized_types = types.reject(&:blank?).uniq
       return query if normalized_types.blank?
-      return query if normalized_types.sort == [ "expense", "income", "transfer" ]
+      
+      allowed = %w[expense income transfer]
+      invalid = normalized_types - allowed
+      return query.none if invalid.any?
 
-      case normalized_types.sort
+      valid_types = normalized_types & allowed
+      return query if valid_types.sort == allowed.sort
+
+      case valid_types.sort
       when [ "transfer" ]
         query.where(kind: Transaction::TRANSFER_KINDS)
       when [ "expense" ]
@@ -193,7 +199,13 @@ class Transaction::Search
 
       normalized_statuses = statuses.reject(&:blank?).uniq
       return query if normalized_statuses.blank?
-      return query if normalized_statuses.sort == [ "confirmed", "pending" ] # Both selected = no filter
+      
+      allowed = %w[confirmed pending]
+      invalid = normalized_statuses - allowed
+      return query.none if invalid.any?
+
+      valid_statuses = normalized_statuses & allowed
+      return query if valid_statuses.sort == allowed.sort # Both selected = no filter
 
       pending_condition = <<~SQL.squish
         (transactions.extra -> 'simplefin' ->> 'pending')::boolean = true
@@ -207,7 +219,7 @@ class Transaction::Search
         AND (transactions.extra -> 'lunchflow' ->> 'pending')::boolean IS DISTINCT FROM true
       SQL
 
-      case normalized_statuses.sort
+      case valid_statuses.sort
       when [ "pending" ]
         query.where(pending_condition)
       when [ "confirmed" ]
