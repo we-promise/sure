@@ -41,16 +41,17 @@ class Provider::YahooFinance < Provider
   def healthy?
     begin
       # Test with a known stable ticker (Apple)
-      response = client.get("#{base_url}/v8/finance/chart/AAPL") do |req|
+      # The chart endpoint requires cookie/crumb authentication
+      cookie, crumb = fetch_cookie_and_crumb
+      response = authenticated_client(cookie).get("#{base_url}/v8/finance/chart/AAPL") do |req|
         req.params["interval"] = "1d"
         req.params["range"] = "1d"
+        req.params["crumb"] = crumb
       end
 
       data = JSON.parse(response.body)
       result = data.dig("chart", "result")
-      health_status = result.present? && result.any?
-
-      health_status
+      result.present? && result.any?
     rescue => e
       false
     end

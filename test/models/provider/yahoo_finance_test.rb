@@ -10,20 +10,18 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
   # ================================
 
   test "healthy? returns true when API is working" do
-    # Mock successful response
     mock_response = mock
     mock_response.stubs(:body).returns('{"chart":{"result":[{"meta":{"symbol":"AAPL"}}]}}')
 
-    @provider.stubs(:client).returns(mock_client = mock)
+    @provider.stubs(:fetch_cookie_and_crumb).returns([ "test_cookie", "test_crumb" ])
+    @provider.stubs(:authenticated_client).returns(mock_client = mock)
     mock_client.stubs(:get).returns(mock_response)
 
     assert @provider.healthy?
   end
 
   test "healthy? returns false when API fails" do
-    # Mock failed response
-    @provider.stubs(:client).returns(mock_client = mock)
-    mock_client.stubs(:get).raises(Faraday::Error.new("Connection failed"))
+    @provider.stubs(:fetch_cookie_and_crumb).raises(Provider::YahooFinance::AuthenticationError.new("auth failed"))
 
     assert_not @provider.healthy?
   end
