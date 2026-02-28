@@ -103,8 +103,9 @@ class HoldingsController < ApplicationController
     security.import_provider_details
 
     if prices_updated == 0
+      @provider_error = @provider_error.presence || t("holdings.sync_prices.provider_error")
       respond_to do |format|
-        format.html { redirect_to account_path(@holding.account, tab: "holdings"), alert: t("holdings.sync_prices.provider_error") }
+        format.html { redirect_to account_path(@holding.account, tab: "holdings"), alert: @provider_error }
         format.turbo_stream
       end
       return
