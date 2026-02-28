@@ -192,6 +192,9 @@ class Provider::YahooFinance < Provider
           req.params["crumb"] = crumb
         end
         data = JSON.parse(response.body)
+        if data.dig("quoteSummary", "error", "code") == "Unauthorized"
+          raise AuthenticationError, "Yahoo Finance authentication failed after crumb refresh"
+        end
       end
 
       result = data.dig("quoteSummary", "result", 0)
