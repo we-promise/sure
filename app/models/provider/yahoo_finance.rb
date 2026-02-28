@@ -500,7 +500,7 @@ class Provider::YahooFinance < Provider
         end
 
         results.sort_by(&:date)
-      rescue Faraday::Error => e
+      rescue Faraday::Error, JSON::ParserError => e
         nil
       end
     end
