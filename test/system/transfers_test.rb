@@ -32,7 +32,7 @@ class TransfersTest < ApplicationSystemTestCase
   private
 
     def select_ds(label_text, option_text)
-      field_label = find("label", text: label_text)
+      field_label = find("label", exact_text: label_text)
       container = field_label.ancestor("div.relative")
 
       # Click the button to open the dropdown
@@ -44,9 +44,9 @@ class TransfersTest < ApplicationSystemTestCase
       end
 
       # Wait for the listbox to appear inside the relative container
-      listbox = container.find("div[role='listbox']", visible: :all)
+      listbox = container.find("[role='listbox']", visible: true)
 
       # Click the option inside the listbox
-      listbox.find("div", text: option_text, visible: true).click
+      listbox.find("[role='option']", exact_text: option_text, visible: true).click
     end
 end
