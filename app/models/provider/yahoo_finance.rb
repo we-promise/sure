@@ -40,35 +40,11 @@ class Provider::YahooFinance < Provider
   end
 
   def healthy?
-    begin
-      # Test with a known stable ticker (Apple)
-      # The chart endpoint requires cookie/crumb authentication
-      cookie, crumb = fetch_cookie_and_crumb
-      response = authenticated_client(cookie).get("#{base_url}/v8/finance/chart/AAPL") do |req|
-        req.params["interval"] = "1d"
-        req.params["range"] = "1d"
-        req.params["crumb"] = crumb
-      end
-
-      data = JSON.parse(response.body)
-
-      # Stale crumb returns 200 OK with an error body — clear cache and retry once
-      if data.dig("chart", "error", "code") == "Unauthorized"
-        clear_crumb_cache
-        cookie, crumb = fetch_cookie_and_crumb
-        response = authenticated_client(cookie).get("#{base_url}/v8/finance/chart/AAPL") do |req|
-          req.params["interval"] = "1d"
-          req.params["range"] = "1d"
-          req.params["crumb"] = crumb
-        end
-        data = JSON.parse(response.body)
-      end
-
-      result = data.dig("chart", "result")
-      result.present? && result.any?
-    rescue => e
-      false
-    end
+    data = fetch_authenticated_chart("AAPL", { "interval" => "1d", "range" => "1d" })
+    result = data.dig("chart", "result")
+    result.present? && result.any?
+  rescue => e
+    false
   end
 
   def usage
@@ -286,30 +262,12 @@ class Provider::YahooFinance < Provider
       period2 = end_date.end_of_day.to_time.utc.to_i
 
       throttle_request
-      cookie, crumb = fetch_cookie_and_crumb
-
-      response = authenticated_client(cookie).get("#{base_url}/v8/finance/chart/#{symbol}") do |req|
-        req.params["period1"] = period1
-        req.params["period2"] = period2
-        req.params["interval"] = "1d"
-        req.params["includeAdjustedClose"] = true
-        req.params["crumb"] = crumb
-      end
-
-      data = JSON.parse(response.body)
-
-      if data.dig("chart", "error", "code") == "Unauthorized"
-        clear_crumb_cache
-        cookie, crumb = fetch_cookie_and_crumb
-        response = authenticated_client(cookie).get("#{base_url}/v8/finance/chart/#{symbol}") do |req|
-          req.params["period1"] = period1
-          req.params["period2"] = period2
-          req.params["interval"] = "1d"
-          req.params["includeAdjustedClose"] = true
-          req.params["crumb"] = crumb
-        end
-        data = JSON.parse(response.body)
-      end
+      data = fetch_authenticated_chart(symbol, {
+        "period1" => period1,
+        "period2" => period2,
+        "interval" => "1d",
+        "includeAdjustedClose" => true
+      })
 
       chart_data = data.dig("chart", "result", 0)
 
@@ -484,37 +442,42 @@ class Provider::YahooFinance < Provider
       rates
     end
 
+    # Makes a single authenticated GET to /v8/finance/chart/:symbol.
+    # If Yahoo returns a stale-crumb error (200 OK with Unauthorized body),
+    # clears the crumb cache and retries once with fresh credentials.
+    def fetch_authenticated_chart(symbol, params)
+      cookie, crumb = fetch_cookie_and_crumb
+      response = authenticated_client(cookie).get("#{base_url}/v8/finance/chart/#{symbol}") do |req|
+        params.each { |k, v| req.params[k] = v }
+        req.params["crumb"] = crumb
+      end
+      data = JSON.parse(response.body)
+
+      if data.dig("chart", "error", "code") == "Unauthorized"
+        clear_crumb_cache
+        cookie, crumb = fetch_cookie_and_crumb
+        response = authenticated_client(cookie).get("#{base_url}/v8/finance/chart/#{symbol}") do |req|
+          params.each { |k, v| req.params[k] = v }
+          req.params["crumb"] = crumb
+        end
+        data = JSON.parse(response.body)
+      end
+
+      data
+    end
+
     def fetch_chart_data(symbol, start_date, end_date, &block)
       period1 = start_date.to_time.utc.to_i
       period2 = end_date.end_of_day.to_time.utc.to_i
 
       begin
         throttle_request
-        cookie, crumb = fetch_cookie_and_crumb
-
-        response = authenticated_client(cookie).get("#{base_url}/v8/finance/chart/#{symbol}") do |req|
-          req.params["period1"] = period1
-          req.params["period2"] = period2
-          req.params["interval"] = "1d"
-          req.params["includeAdjustedClose"] = true
-          req.params["crumb"] = crumb
-        end
-
-        data = JSON.parse(response.body)
-
-        # Stale crumb returns 200 OK with an error body — clear cache and retry once
-        if data.dig("chart", "error", "code") == "Unauthorized"
-          clear_crumb_cache
-          cookie, crumb = fetch_cookie_and_crumb
-          response = authenticated_client(cookie).get("#{base_url}/v8/finance/chart/#{symbol}") do |req|
-            req.params["period1"] = period1
-            req.params["period2"] = period2
-            req.params["interval"] = "1d"
-            req.params["includeAdjustedClose"] = true
-            req.params["crumb"] = crumb
-          end
-          data = JSON.parse(response.body)
-        end
+        data = fetch_authenticated_chart(symbol, {
+          "period1" => period1,
+          "period2" => period2,
+          "interval" => "1d",
+          "includeAdjustedClose" => true
+        })
 
         # Check for Yahoo Finance errors
         if data.dig("chart", "error")
