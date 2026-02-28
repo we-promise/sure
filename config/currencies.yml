@@ -2504,3 +2504,228 @@ kgs:
   delimiter: ","
   default_format: "%n %u"
   default_precision: 2
+eth:
+  name: Ethereum
+  priority: 100
+  iso_code: ETH
+  iso_numeric: ""
+  html_code: ""
+  symbol: "Ξ"
+  minor_unit: Wei
+  minor_unit_conversion: 100000000
+  smallest_denomination: 1
+  separator: "."
+  delimiter: ","
+  default_format: "%u%n"
+  default_precision: 8
+doge:
+  name: Dogecoin
+  priority: 100
+  iso_code: DOGE
+  iso_numeric: ""
+  html_code: ""
+  symbol: "Ð"
+  minor_unit: Koinu
+  minor_unit_conversion: 100000000
+  smallest_denomination: 1
+  separator: "."
+  delimiter: ","
+  default_format: "%u%n"
+  default_precision: 8
+sol:
+  name: Solana
+  priority: 100
+  iso_code: SOL
+  iso_numeric: ""
+  html_code: ""
+  symbol: "◎"
+  minor_unit: Lamport
+  minor_unit_conversion: 1000000000
+  smallest_denomination: 1
+  separator: "."
+  delimiter: ","
+  default_format: "%u%n"
+  default_precision: 9
+shib:
+  name: Shiba Inu
+  priority: 100
+  iso_code: SHIB
+  iso_numeric: ""
+  html_code: ""
+  symbol: SHIB
+  minor_unit: Shiba
+  minor_unit_conversion: 1000000000
+  smallest_denomination: 1
+  separator: "."
+  delimiter: ","
+  default_format: "%u%n"
+  default_precision: 8
+usdt:
+  name: Tether
+  priority: 100
+  iso_code: USDT
+  iso_numeric: ""
+  html_code: "$"
+  symbol: USDT
+  minor_unit: Cent
+  minor_unit_conversion: 100
+  smallest_denomination: 1
+  separator: "."
+  delimiter: ","
+  default_format: "%u%n"
+  default_precision: 2
+bnb:
+  name: Binance Coin
+  priority: 100
+  iso_code: BNB
+  iso_numeric: ""
+  html_code: ""
+  symbol: BNB
+  minor_unit: "Smallest Unit"
+  minor_unit_conversion: 100000000
+  smallest_denomination: 1
+  separator: "."
+  delimiter: ","
+  default_format: "%u%n"
+  default_precision: 8
+xrp:
+  name: XRP
+  priority: 100
+  iso_code: XRP
+  iso_numeric: ""
+  html_code: ""
+  symbol: XRP
+  minor_unit: Drop
+  minor_unit_conversion: 100000000
+  smallest_denomination: 1
+  separator: "."
+  delimiter: ","
+  default_format: "%u%n"
+  default_precision: 6
+ada:
+  name: Cardano
+  priority: 100
+  iso_code: ADA
+  iso_numeric: ""
+  html_code: ""
+  symbol: ADA
+  minor_unit: Lovelace
+  minor_unit_conversion: 1000000
+  smallest_denomination: 1
+  separator: "."
+  delimiter: ","
+  default_format: "%u%n"
+  default_precision: 6
+matic:
+  name: Polygon
+  priority: 100
+  iso_code: MATIC
+  iso_numeric: ""
+  html_code: ""
+  symbol: MATIC
+  minor_unit: "Smallest Unit"
+  minor_unit_conversion: 100000000
+  smallest_denomination: 1
+  separator: "."
+  delimiter: ","
+  default_format: "%u%n"
+  default_precision: 6
+dot:
+  name: Polkadot
+  priority: 100
+  iso_code: DOT
+  iso_numeric: ""
+  html_code: ""
+  symbol: DOT
+  minor_unit: Planck
+  minor_unit_conversion: 100000000
+  smallest_denomination: 1
+  separator: "."
+  delimiter: ","
+  default_format: "%u%n"
+  default_precision: 6
+ltc:
+  name: Litecoin
+  priority: 100
+  iso_code: LTC
+  iso_numeric: ""
+  html_code: ""
+  symbol: Ł
+  minor_unit: Litoshi
+  minor_unit_conversion: 100000000
+  smallest_denomination: 1
+  separator: "."
+  delimiter: ","
+  default_format: "%u%n"
+  default_precision: 8
+
+link:
+  name: Chainlink
+  priority: 100
+  iso_code: LINK
+  iso_numeric: ""
+  html_code: ""
+  symbol: LINK
+  minor_unit: "Smallest Unit"
+  minor_unit_conversion: 100000000
+  smallest_denomination: 1
+  separator: "."
+  delimiter: ","
+  default_format: "%u%n"
+  default_precision: 6
+bch:
+  name: Bitcoin Cash
+  priority: 100
+  iso_code: BCH
+  iso_numeric: ""
+  html_code: ""
+  symbol: BCH
+  minor_unit: Satoshi
+  minor_unit_conversion: 100000000
+  smallest_denomination: 1
+  separator: "."
+  delimiter: ","
+  default_format: "%u%n"
+  default_precision: 8
+avax:
+  name: Avalanche
+  priority: 100
+  iso_code: AVAX
+  iso_numeric: ""
+  html_code: ""
+  symbol: AVAX
+  minor_unit: nAVAX
+  minor_unit_conversion: 100000000
+  smallest_denomination: 1
+  separator: "."
+  delimiter: ","
+  default_format: "%u%n"
+  default_precision: 8
+trx:
+  name: TRON
+  priority: 100
+  iso_code: TRX
+  iso_numeric: ""
+  html_code: ""
+  symbol: TRX
+  minor_unit: Sun
+  minor_unit_conversion: 1000000
+  smallest_denomination: 1
+  separator: "."
+  delimiter: ","
+  default_format: "%u%n"
+  default_precision: 6
+busd:
+  name: Binance USD
+  priority: 100
+  iso_code: BUSD
+  iso_numeric: ""
+  html_code: "$"
+  symbol: BUSD
+  minor_unit: Cent
+  minor_unit_conversion: 100
+  smallest_denomination: 1
+  separator: "."
+  delimiter: ","
+  default_format: "%u%n"
+  default_precision: 2
