@@ -3,7 +3,11 @@
     <dd id="<%= dom_id(@holding, :current_market_price) %>" class="text-primary">
       <% begin %>
         <%= @holding.security.current_price ? format_money(@holding.security.current_price) : t("holdings.show.unknown") %>
-      <% rescue %>
+        <% rescue ActiveRecord::RecordInvalid %>
+        <%= t("holdings.show.unknown") %>
+        <% rescue StandardError => e %>
+        <% logger.error "Error fetching current price for security #{@holding.security.id}: #{e.message}" %>
+        <% logger.error e.backtrace.first(5).join("\n") %>
         <%= t("holdings.show.unknown") %>
       <% end %>
     </dd>
