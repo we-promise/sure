@@ -95,20 +95,24 @@ class HoldingsController < ApplicationController
       return
     end
 
-    Security::HealthChecker.new(security).run_check
-    security.reload
+    prices_updated, @provider_error = security.import_provider_prices(
+      start_date: 31.days.ago.to_date,
+      end_date: Date.current,
+      clear_cache: true
+    )
+    security.import_provider_details
 
-    if security.offline?
-      redirect_to account_path(@holding.account, tab: "holdings"),
-                  alert: t("holdings.sync_prices.error")
+    if prices_updated == 0
+      respond_to do |format|
+        format.html { redirect_to account_path(@holding.account, tab: "holdings"), alert: t("holdings.sync_prices.provider_error") }
+        format.turbo_stream
+      end
       return
     end
 
-    security.import_provider_prices(
-      start_date: 31.days.ago.to_date,
-      end_date: Date.current
-    )
-    security.import_provider_details
+    strategy = @holding.account.linked? ? :reverse : :forward
+    Balance::Materializer.new(@holding.account, strategy: strategy, security_ids: [ @holding.security_id ]).materialize_balances
+    @holding.reload
 
     respond_to do |format|
       format.html { redirect_to account_path(@holding.account, tab: "holdings"), notice: t("holdings.sync_prices.success") }

@@ -1,3 +1,32 @@
+<% unless @provider_error %>
+  <%= turbo_stream.replace dom_id(@holding, :current_market_price) do %>
+    <dd id="<%= dom_id(@holding, :current_market_price) %>" class="text-primary">
+      <% begin %>
+        <%= @holding.security.current_price ? format_money(@holding.security.current_price) : t("holdings.show.unknown") %>
+      <% rescue %>
+        <%= t("holdings.show.unknown") %>
+      <% end %>
+    </dd>
+  <% end %>
+  <%= turbo_stream.replace dom_id(@holding, :market_value) do %>
+    <div id="<%= dom_id(@holding, :market_value) %>" class="flex items-center justify-between text-sm">
+      <dt class="text-secondary"><%= t("holdings.show.market_value_label") %></dt>
+      <dd class="text-primary"><%= format_money(@holding.amount_money) %></dd>
+    </div>
+  <% end %>
+  <%= turbo_stream.replace dom_id(@holding, :total_return) do %>
+    <div id="<%= dom_id(@holding, :total_return) %>" class="flex items-center justify-between text-sm">
+      <dt class="text-secondary"><%= t("holdings.show.total_return_label") %></dt>
+      <% if @holding.trend %>
+        <dd style="color: <%= @holding.trend.color %>;">
+          <%= render("shared/trend_change", trend: @holding.trend) %>
+        </dd>
+      <% else %>
+        <dd class="text-secondary"><%= t("holdings.show.unknown") %></dd>
+      <% end %>
+    </div>
+  <% end %>
+<% end %>
 <%= turbo_stream.replace dom_id(@holding, :market_data_section) do %>
   <div id="<%= dom_id(@holding, :market_data_section) %>" class="flex items-center justify-between gap-2 p-3 border-b border-tertiary">
     <div class="text-sm space-y-1">
@@ -6,6 +35,9 @@
         <% last_updated = @holding.security.prices.maximum(:updated_at) %>
         <%= t("holdings.show.last_price_update") %>: <%= last_updated ? l(last_updated, format: :long) : t("holdings.show.never") %>
       </p>
+      <% if @provider_error %>
+        <p class="text-xs text-red-500"><%= @provider_error %></p>
+      <% end %>
     </div>
     <%= button_to t("holdings.show.market_data_sync_button"),
         sync_prices_holding_path(@holding),

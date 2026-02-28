@@ -17,8 +17,8 @@ en:
       success: Security reset to provider value.
     sync_prices:
       success: Market data synced successfully.
-      error: Sync failed. The security may no longer be available from the provider.
       unavailable: Market data sync is not available for offline securities.
+      provider_error: Could not fetch latest prices. Please try again in a few minutes.
     errors:
       security_collision: "Cannot remap: you already have a holding for %{ticker} on %{date}."
     cost_basis_sources:
