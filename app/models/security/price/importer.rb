@@ -4,6 +4,8 @@ class Security::Price::Importer
 
   PROVISIONAL_LOOKBACK_DAYS = 7
 
+  attr_reader :provider_error
+
   def initialize(security:, security_provider:, start_date:, end_date:, clear_cache: false)
     @security          = security
     @security_provider = security_provider
@@ -95,8 +97,6 @@ class Security::Price::Importer
 
     upsert_rows(gapfilled_prices)
   end
-
-  attr_reader :provider_error
 
   private
     attr_reader :security, :security_provider, :start_date, :end_date, :clear_cache

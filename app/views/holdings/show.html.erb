@@ -254,8 +254,7 @@
               <div class="text-sm space-y-1">
                 <h4 class="text-primary"><%= t(".market_data_label") %></h4>
                 <p class="text-secondary">
-                  <% last_updated = @holding.security.prices.maximum(:updated_at) %>
-                  <%= t(".last_price_update") %>: <%= last_updated ? l(last_updated, format: :long) : t(".never") %>
+                  <%= t(".last_price_update") %>: <%= @last_price_updated ? l(@last_price_updated, format: :long) : t(".never") %>
                 </p>
               </div>
               <%= button_to t(".market_data_sync_button"),

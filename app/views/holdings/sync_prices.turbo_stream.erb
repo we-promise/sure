@@ -32,8 +32,7 @@
     <div class="text-sm space-y-1">
       <h4 class="text-primary"><%= t("holdings.show.market_data_label") %></h4>
       <p class="text-secondary">
-        <% last_updated = @holding.security.prices.maximum(:updated_at) %>
-        <%= t("holdings.show.last_price_update") %>: <%= last_updated ? l(last_updated, format: :long) : t("holdings.show.never") %>
+        <%= t("holdings.show.last_price_update") %>: <%= @last_price_updated ? l(@last_price_updated, format: :long) : t("holdings.show.never") %>
       </p>
       <% if @provider_error %>
         <p class="text-xs text-red-500"><%= @provider_error %></p>
