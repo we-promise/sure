@@ -1,9 +1,10 @@
 class Balance::Materializer
-  attr_reader :account, :strategy
+  attr_reader :account, :strategy, :security_ids
 
-  def initialize(account, strategy:)
+  def initialize(account, strategy:, security_ids: nil)
     @account = account
     @strategy = strategy
+    @security_ids = security_ids
   end
 
   def materialize_balances
@@ -24,7 +25,7 @@ class Balance::Materializer
 
   private
     def materialize_holdings
-      @holdings = Holding::Materializer.new(account, strategy: strategy).materialize_holdings
+      @holdings = Holding::Materializer.new(account, strategy: strategy, security_ids: security_ids).materialize_holdings
     end
 
     def update_account_info

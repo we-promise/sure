@@ -35,7 +35,7 @@
                 <button type="button"
                         data-action="click->holding-security-remap#toggle"
                   class="text-secondary hover:text-primary"
-                  aria-label="<%= t('.edit_security') %>">
+                  aria-label="<%= t(".edit_security") %>">
                   <%= icon "pencil", size: "xs" %>
                 </button>
               </dd>
@@ -66,7 +66,7 @@
           </div>
           <div class="flex items-center justify-between text-sm">
             <dt class="text-secondary"><%= t(".current_market_price_label") %></dt>
-            <dd class="text-primary">
+            <dd id="<%= dom_id(@holding, :current_market_price) %>" class="text-primary">
               <% begin %>
                 <%= @holding.security.current_price ? format_money(@holding.security.current_price) : t(".unknown") %>
                 <% rescue ActiveRecord::RecordInvalid %>
@@ -181,11 +181,11 @@
               <%= book_value ? format_money(book_value) : t(".unknown") %>
             </dd>
           </div>
-          <div class="flex items-center justify-between text-sm">
+          <div id="<%= dom_id(@holding, :market_value) %>" class="flex items-center justify-between text-sm">
             <dt class="text-secondary"><%= t(".market_value_label") %></dt>
             <dd class="text-primary"><%= format_money(@holding.amount_money) %></dd>
           </div>
-          <div class="flex items-center justify-between text-sm">
+          <div id="<%= dom_id(@holding, :total_return) %>" class="flex items-center justify-between text-sm">
             <dt class="text-secondary"><%= t(".total_return_label") %></dt>
             <% if @holding.trend %>
               <dd style="color: <%= @holding.trend.color %>;">

@@ -87,14 +87,27 @@ class HoldingsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "sync_prices syncs market data and redirects with notice" do
-    # Stub external calls to avoid hitting real APIs in tests
-    Security::HealthChecker.any_instance.stubs(:run_check)
-    Security.any_instance.stubs(:import_provider_prices).returns(0)
+    Security.any_instance.expects(:import_provider_prices).with(
+      start_date: 31.days.ago.to_date,
+      end_date: Date.current,
+      clear_cache: true
+    ).returns([ 31, nil ])
     Security.any_instance.stubs(:import_provider_details)
+    Balance::Materializer.any_instance.stubs(:materialize_balances)
 
     post sync_prices_holding_path(@holding)
 
     assert_redirected_to account_path(@holding.account, tab: "holdings")
     assert_equal I18n.t("holdings.sync_prices.success"), flash[:notice]
+  end
+
+  test "sync_prices shows provider error inline when provider returns no prices" do
+    Security.any_instance.stubs(:import_provider_prices).returns([ 0, "Yahoo Finance rate limit exceeded" ])
+    Security.any_instance.stubs(:import_provider_details)
+
+    post sync_prices_holding_path(@holding)
+
+    assert_redirected_to account_path(@holding.account, tab: "holdings")
+    assert_equal I18n.t("holdings.sync_prices.provider_error"), flash[:alert]
   end
 end
