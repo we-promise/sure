@@ -272,14 +272,31 @@ class Provider::YahooFinance < Provider
       period2 = end_date.end_of_day.to_time.utc.to_i
 
       throttle_request
-      response = client.get("#{base_url}/v8/finance/chart/#{symbol}") do |req|
+      cookie, crumb = fetch_cookie_and_crumb
+
+      response = authenticated_client(cookie).get("#{base_url}/v8/finance/chart/#{symbol}") do |req|
         req.params["period1"] = period1
         req.params["period2"] = period2
         req.params["interval"] = "1d"
         req.params["includeAdjustedClose"] = true
+        req.params["crumb"] = crumb
       end
 
       data = JSON.parse(response.body)
+
+      if data.dig("chart", "error", "code") == "Unauthorized"
+        clear_crumb_cache
+        cookie, crumb = fetch_cookie_and_crumb
+        response = authenticated_client(cookie).get("#{base_url}/v8/finance/chart/#{symbol}") do |req|
+          req.params["period1"] = period1
+          req.params["period2"] = period2
+          req.params["interval"] = "1d"
+          req.params["includeAdjustedClose"] = true
+          req.params["crumb"] = crumb
+        end
+        data = JSON.parse(response.body)
+      end
+
       chart_data = data.dig("chart", "result", 0)
 
       raise Error, "No chart data found for #{symbol}" unless chart_data
@@ -459,11 +476,14 @@ class Provider::YahooFinance < Provider
 
       begin
         throttle_request
-        response = client.get("#{base_url}/v8/finance/chart/#{symbol}") do |req|
+        cookie, crumb = fetch_cookie_and_crumb
+
+        response = authenticated_client(cookie).get("#{base_url}/v8/finance/chart/#{symbol}") do |req|
           req.params["period1"] = period1
           req.params["period2"] = period2
           req.params["interval"] = "1d"
           req.params["includeAdjustedClose"] = true
+          req.params["crumb"] = crumb
         end
 
         data = JSON.parse(response.body)
