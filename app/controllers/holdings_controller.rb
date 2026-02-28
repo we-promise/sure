@@ -6,6 +6,7 @@ class HoldingsController < ApplicationController
   end
 
   def show
+    @last_price_updated = @holding.security.prices.maximum(:updated_at)
   end
 
   def update
@@ -102,6 +103,8 @@ class HoldingsController < ApplicationController
     )
     security.import_provider_details
 
+    @last_price_updated = @holding.security.prices.maximum(:updated_at)
+
     if prices_updated == 0
       @provider_error = @provider_error.presence || t("holdings.sync_prices.provider_error")
       respond_to do |format|
@@ -114,6 +117,7 @@ class HoldingsController < ApplicationController
     strategy = @holding.account.linked? ? :reverse : :forward
     Balance::Materializer.new(@holding.account, strategy: strategy, security_ids: [ @holding.security_id ]).materialize_balances
     @holding.reload
+    @last_price_updated = @holding.security.prices.maximum(:updated_at)
 
     respond_to do |format|
       format.html { redirect_to account_path(@holding.account, tab: "holdings"), notice: t("holdings.sync_prices.success") }
