@@ -30,7 +30,8 @@ class DragAndDropImportTest < ApplicationSystemTestCase
     # Submit the form manually since we bypassed the 'drop' event listener which triggers submit
     find("form[action='#{imports_path}']").evaluate_script("this.requestSubmit()")
 
-    assert_text "CSV uploaded successfully"
+    # Notice toasts auto-dismiss, so assert the stable post-upload destination/state.
+    assert_current_path %r{/imports/.+/configuration}
     assert_text "Configure your import"
   end
 end
