@@ -51,6 +51,19 @@ class Provider::YahooFinance < Provider
       end
 
       data = JSON.parse(response.body)
+
+      # Stale crumb returns 200 OK with an error body — clear cache and retry once
+      if data.dig("chart", "error", "code") == "Unauthorized"
+        clear_crumb_cache
+        cookie, crumb = fetch_cookie_and_crumb
+        response = authenticated_client(cookie).get("#{base_url}/v8/finance/chart/AAPL") do |req|
+          req.params["interval"] = "1d"
+          req.params["range"] = "1d"
+          req.params["crumb"] = crumb
+        end
+        data = JSON.parse(response.body)
+      end
+
       result = data.dig("chart", "result")
       result.present? && result.any?
     rescue => e
@@ -489,9 +502,22 @@ class Provider::YahooFinance < Provider
 
         data = JSON.parse(response.body)
 
+        # Stale crumb returns 200 OK with an error body — clear cache and retry once
+        if data.dig("chart", "error", "code") == "Unauthorized"
+          clear_crumb_cache
+          cookie, crumb = fetch_cookie_and_crumb
+          response = authenticated_client(cookie).get("#{base_url}/v8/finance/chart/#{symbol}") do |req|
+            req.params["period1"] = period1
+            req.params["period2"] = period2
+            req.params["interval"] = "1d"
+            req.params["includeAdjustedClose"] = true
+            req.params["crumb"] = crumb
+          end
+          data = JSON.parse(response.body)
+        end
+
         # Check for Yahoo Finance errors
         if data.dig("chart", "error")
-          error_msg = data.dig("chart", "error", "description") || "Unknown Yahoo Finance error"
           return nil
         end
 
