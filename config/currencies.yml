@@ -2512,7 +2512,7 @@ eth:
   html_code: ""
   symbol: "Ξ"
   minor_unit: Wei
-  minor_unit_conversion: 100000000
+  minor_unit_conversion: 1000000000000000000
   smallest_denomination: 1
   separator: "."
   delimiter: ","
@@ -2553,8 +2553,8 @@ shib:
   iso_numeric: ""
   html_code: ""
   symbol: SHIB
-  minor_unit: Shiba
-  minor_unit_conversion: 1000000000
+  minor_unit: Wei
+  minor_unit_conversion: 1000000000000000000
   smallest_denomination: 1
   separator: "."
   delimiter: ","
@@ -2596,7 +2596,7 @@ xrp:
   html_code: ""
   symbol: XRP
   minor_unit: Drop
-  minor_unit_conversion: 100000000
+  minor_unit_conversion: 1000000
   smallest_denomination: 1
   separator: "."
   delimiter: ","
@@ -2623,8 +2623,8 @@ matic:
   iso_numeric: ""
   html_code: ""
   symbol: MATIC
-  minor_unit: "Smallest Unit"
-  minor_unit_conversion: 100000000
+  minor_unit: "Wei"
+  minor_unit_conversion: 1000000000000000000
   smallest_denomination: 1
   separator: "."
   delimiter: ","
@@ -2638,12 +2638,12 @@ dot:
   html_code: ""
   symbol: DOT
   minor_unit: Planck
-  minor_unit_conversion: 100000000
+  minor_unit_conversion: 10000000000
   smallest_denomination: 1
   separator: "."
   delimiter: ","
   default_format: "%u%n"
-  default_precision: 6
+  default_precision: 10
 ltc:
   name: Litecoin
   priority: 100
@@ -2666,8 +2666,8 @@ link:
   iso_numeric: ""
   html_code: ""
   symbol: LINK
-  minor_unit: "Smallest Unit"
-  minor_unit_conversion: 100000000
+  minor_unit: "Wei"
+  minor_unit_conversion: 1000000000000000000
   smallest_denomination: 1
   separator: "."
   delimiter: ","
@@ -2722,8 +2722,8 @@ busd:
   iso_numeric: ""
   html_code: "$"
   symbol: BUSD
-  minor_unit: Cent
-  minor_unit_conversion: 100
+  minor_unit: Wei
+  minor_unit_conversion: 1000000000000000000
   smallest_denomination: 1
   separator: "."
   delimiter: ","
