@@ -629,6 +629,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_02_18_120001) do
     t.string "effective_date"
     t.text "conditions"
     t.text "actions"
+    t.string "external_id"
     t.index ["import_id"], name: "index_import_rows_on_import_id"
   end
 
@@ -668,6 +669,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_02_18_120001) do
     t.text "ai_summary"
     t.string "document_type"
     t.jsonb "extracted_data"
+    t.string "external_id_col_label"
     t.index ["family_id"], name: "index_imports_on_family_id"
   end
 

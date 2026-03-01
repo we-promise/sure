@@ -18,6 +18,7 @@ module ImportsHelper
       tags: "Tags",
       account: "Account",
       notes: "Notes",
+      external_id: "External ID",
       qty: "Quantity",
       ticker: "Ticker",
       exchange: "Exchange",
