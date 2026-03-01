@@ -240,6 +240,22 @@
             frame: :modal
           ) %>
         </div>
+        <!-- Pending Duplicate Merger -->
+        <% if @entry.entryable.is_a?(Transaction) && @entry.entryable.pending? %>
+          <div class="flex items-center justify-between gap-4 p-3">
+            <div class="text-sm space-y-1">
+              <h4 class="text-primary"><%= t("transactions.show.pending_duplicate_merger_title") %></h4>
+              <p class="text-secondary"><%= t("transactions.show.pending_duplicate_merger_description") %></p>
+            </div>
+            <%= render DS::Link.new(
+              text: t("transactions.show.pending_duplicate_merger_button"),
+              icon: "merge",
+              variant: "outline",
+              href: new_transaction_pending_duplicate_merges_path(@entry),
+              frame: :modal
+            ) %>
+          </div>
+        <% end %>
         <!-- Convert to Trade (Investment Accounts Only, not already converted) -->
         <% if @entry.account.investment? && @entry.entryable.is_a?(Transaction) && !@entry.excluded? %>
           <div class="flex items-center justify-between gap-2 p-3">

@@ -1,0 +1,96 @@
+<%= render DS::Dialog.new do |dialog| %>
+  <% dialog.with_header(title: t(".title")) %>
+  <% dialog.with_body do %>
+    <div class="space-y-6">
+      <div class="bg-warning/10 border border-warning/20 rounded-lg p-4">
+        <div class="flex items-start gap-3">
+          <%= icon "alert-triangle", size: "md", class: "text-warning flex-shrink-0 mt-0.5" %>
+          <div class="text-sm space-y-2">
+            <p class="text-primary font-medium"><%= t(".warning_title") %></p>
+            <p class="text-secondary"><%= t(".warning_description") %></p>
+          </div>
+        </div>
+      </div>
+
+      <%= styled_form_with(
+            url: transaction_pending_duplicate_merges_path(@transaction.entry),
+            scope: :pending_duplicate_merges,
+            class: "space-y-6",
+            data: { turbo_frame: :_top }
+          ) do |f| %>
+        <!-- Current Pending Transaction -->
+        <section class="space-y-3">
+          <h2 class="inline-flex items-center gap-1 ml-2 text-sm font-medium text-primary"><%= icon "clock", size: "sm" %> <%= t(".pending_transaction") %></h2>
+          <div class="bg-surface-inset border border-secondary rounded-lg p-4">
+            <div class="flex items-center justify-between">
+              <div class="space-y-1">
+                <p class="text-primary font-medium"><%= @transaction.entry.name %></p>
+                <p class="text-xs text-secondary">
+                  <%= @transaction.entry.account.name %>
+                  • <%= I18n.l(@transaction.entry.date, format: :long) %>
+                  • <%= number_to_currency(@transaction.entry.amount.abs, unit: Money::Currency.new(@transaction.entry.currency).symbol) %>
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <div class="flex justify-center">
+          <%= icon "arrow-down", class: "text-secondary" %>
+        </div>
+
+        <!-- Select Posted Transaction -->
+        <section class="space-y-3">
+          <h2 class="text-sm font-medium text-primary"><%= t(".select_posted") %></h2>
+
+          <%= turbo_frame_tag "posted_transaction_candidates" do %>
+            <% if @potential_duplicates.any? %>
+              <div class="space-y-2 max-h-96 overflow-y-auto">
+                <% @potential_duplicates.each do |entry| %>
+                  <label class="flex items-center gap-3 p-3 border border-secondary rounded-lg cursor-pointer hover:bg-surface-inset transition-colors">
+                    <%= f.radio_button :posted_entry_id, entry.id, class: "form-radio" %>
+                    <div class="flex-1 text-sm">
+                      <div class="font-medium text-primary"><%= entry.name %></div>
+                      <div class="text-xs text-secondary">
+                        <%= I18n.l(entry.date, format: :short) %> • 
+                        <%= number_to_currency(entry.amount.abs, unit: Money::Currency.new(entry.currency).symbol) %>
+                      </div>
+                    </div>
+                  </label>
+                <% end %>
+              </div>
+
+              <div class="flex items-center justify-between mt-3">
+                <p class="text-xs text-secondary">
+                  <%= t(".showing_range", start: @range_start, end: @range_end) %>
+                </p>
+                <div class="flex gap-2">
+                  <% if @offset > 0 %>
+                    <%= link_to t(".previous"),
+                                new_transaction_pending_duplicate_merges_path(@transaction.entry, offset: [@offset - 10, 0].max),
+                                class: "text-xs text-link hover:underline",
+                                data: { turbo_frame: "posted_transaction_candidates" } %>
+                  <% end %>
+                  <% if @has_more %>
+                    <%= link_to t(".next"),
+                                new_transaction_pending_duplicate_merges_path(@transaction.entry, offset: @offset + 10),
+                                class: "text-xs text-link hover:underline",
+                                data: { turbo_frame: "posted_transaction_candidates" } %>
+                  <% end %>
+                </div>
+              </div>
+            <% else %>
+              <div class="bg-surface-inset border border-secondary rounded-lg p-4 text-center">
+                <p class="text-secondary"><%= t(".no_candidates") %></p>
+              </div>
+            <% end %>
+          <% end %>
+        </section>
+
+        <% if @potential_duplicates.any? %>
+          <%= f.submit t(".submit_button"), class: "w-full" %>
+        <% end %>
+      <% end %>
+    </div>
+  <% end %>
+<% end %>
