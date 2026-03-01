@@ -20,5 +20,8 @@ jobs:
         uses: luckyPipewrench/pipelock@v1
         with:
           scan-diff: 'true'
-          fail-on-findings: 'false'
+          fail-on-findings: 'true'
           test-vectors: 'false'
+          exclude-paths: |
+            config/locales/views/reports/
+            app/models/assistant/external/client.rb

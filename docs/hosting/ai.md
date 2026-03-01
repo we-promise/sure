@@ -290,6 +290,70 @@ For self-hosted deployments, you can configure AI settings through the web inter
 
 **Note:** Settings in the UI override environment variables. If you change settings in the UI, those values take precedence.
 
+## External AI Assistant
+
+Instead of using the builtin LLM (which calls OpenAI or a local model directly), you can delegate chat to an **external AI agent**. The agent receives the conversation, can call back to Sure's financial data via MCP, and streams a response.
+
+This is useful when:
+- You have a custom AI agent with domain knowledge, memory, or personality
+- You want to use a non-OpenAI-compatible model (the agent translates)
+- You want to keep LLM credentials and logic outside Sure entirely
+
+### How It Works
+
+1. Sure sends the chat conversation to your agent's API endpoint
+2. Your agent processes it (using whatever LLM, tools, or context it needs)
+3. Your agent can call Sure's `/mcp` endpoint for financial data (accounts, transactions, balance sheet)
+4. Your agent streams the response back to Sure via Server-Sent Events (SSE)
+
+The agent's API must be **OpenAI chat completions compatible** — accept `POST` with `messages` array, return SSE with `delta.content` chunks.
+
+### Configuration
+
+Configure via the UI or environment variables:
+
+**Settings UI:**
+1. Go to **Settings** → **Self-Hosting**
+2. Set **Assistant type** to "External (remote agent)"
+3. Enter the **Endpoint URL** and **API Token** from your agent provider
+4. Optionally set an **Agent ID** if the provider hosts multiple agents
+
+**Environment variables:**
+```bash
+ASSISTANT_TYPE=external                          # Force all families to use external
+EXTERNAL_ASSISTANT_URL=https://your-agent/v1/chat/completions
+EXTERNAL_ASSISTANT_TOKEN=your-api-token
+EXTERNAL_ASSISTANT_AGENT_ID=main                 # Optional, defaults to "main"
+EXTERNAL_ASSISTANT_SESSION_KEY=agent:main:main   # Optional, for session persistence
+EXTERNAL_ASSISTANT_ALLOWED_EMAILS=user@example.com  # Optional, comma-separated allowlist
+```
+
+When environment variables are set, the corresponding UI fields are disabled (env takes precedence).
+
+### Security with Pipelock
+
+When [Pipelock](https://github.com/luckyPipewrench/pipelock) is enabled (`pipelock.enabled=true` in Helm, or the `pipelock` service in Docker Compose), all traffic between Sure and the external agent is scanned:
+
+- **Outbound** (Sure → agent): routed through Pipelock's forward proxy via `HTTPS_PROXY`
+- **Inbound** (agent → Sure /mcp): routed through Pipelock's MCP reverse proxy (port 8889)
+
+Pipelock scans for prompt injection, DLP violations, and tool poisoning. The external agent does not need Pipelock installed — Sure's Pipelock handles both directions.
+
+### Access Control
+
+Use `EXTERNAL_ASSISTANT_ALLOWED_EMAILS` to restrict which users can use the external assistant. When set, only users whose email matches the comma-separated list will see the AI chat. When blank, all users can access it.
+
+### Docker Compose Example
+
+```yaml
+x-rails-env: &rails_env
+  ASSISTANT_TYPE: external
+  EXTERNAL_ASSISTANT_URL: https://your-agent/v1/chat/completions
+  EXTERNAL_ASSISTANT_TOKEN: your-api-token
+```
+
+Or configure via the Settings UI after startup (no env vars needed).
+
 ## AI Cache Management
 
 Sure caches AI-generated results (like auto-categorization and merchant detection) to avoid redundant API calls and costs. However, there are situations where you may want to clear this cache.

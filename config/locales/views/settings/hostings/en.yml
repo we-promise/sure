@@ -16,6 +16,7 @@ en:
           invite_only: Invite-only
       show:
         general: General Settings
+        ai_assistant: AI Assistant
         financial_data_providers: Financial Data Providers
         sync_settings: Sync Settings
         invites: Invite Codes
@@ -35,6 +36,32 @@ en:
         providers:
           twelve_data: Twelve Data
           yahoo_finance: Yahoo Finance
+      assistant_settings:
+        title: AI Assistant
+        description: Choose how the chat assistant responds. Builtin uses your configured LLM provider directly. External delegates to a remote AI agent that can call back to Sure's financial tools via MCP.
+        type_label: Assistant type
+        type_builtin: Builtin (direct LLM)
+        type_external: External (remote agent)
+        external_status: External assistant endpoint
+        external_configured: Configured
+        external_not_configured: Not configured. Enter the URL and token below, or set EXTERNAL_ASSISTANT_URL and EXTERNAL_ASSISTANT_TOKEN environment variables.
+        env_notice: "Assistant type is locked to '%{type}' via ASSISTANT_TYPE environment variable."
+        env_configured_external: Successfully configured through environment variables.
+        url_label: Endpoint URL
+        url_placeholder: "https://your-agent-host/v1/chat"
+        url_help: The full URL to your agent's API endpoint. Your agent provider will give you this.
+        token_label: API Token
+        token_placeholder: Enter the token from your agent provider
+        token_help: The authentication token provided by your external agent. This is sent as a Bearer token with each request.
+        agent_id_label: Agent ID (Optional)
+        agent_id_placeholder: "main (default)"
+        agent_id_help: Routes to a specific agent when the provider hosts multiple. Leave blank for the default.
+        disconnect_title: External connection
+        disconnect_description: Remove the external assistant connection and switch back to the builtin assistant.
+        disconnect_button: Disconnect
+        confirm_disconnect:
+          title: Disconnect external assistant?
+          body: This will remove the saved URL, token, and agent ID, and switch to the builtin assistant. You can reconnect later by entering new credentials.
       brand_fetch_settings:
         description: Enter the Client ID provided by Brand Fetch
         label: Client ID
@@ -83,6 +110,8 @@ en:
         invalid_onboarding_state: Invalid onboarding state
         invalid_sync_time: Invalid sync time format. Please use HH:MM format (e.g., 02:30).
         scheduler_sync_failed: Settings saved, but failed to update the sync schedule. Please try again or check the server logs.
+      disconnect_external_assistant:
+        external_assistant_disconnected: External assistant disconnected
       clear_cache:
         cache_cleared: Data cache has been cleared. This may take a few moments to complete.
       not_authorized: You are not authorized to perform this action

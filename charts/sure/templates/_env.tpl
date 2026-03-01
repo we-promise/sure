@@ -11,6 +11,7 @@ The helper always injects:
 - optional Active Record Encryption keys (controlled by rails.encryptionEnv.enabled)
 - optional DATABASE_URL + DB_PASSWORD (includeDatabase=true and helper can compute a DB URL)
 - optional REDIS_URL + REDIS_PASSWORD (includeRedis=true and helper can compute a Redis URL)
+- optional HTTPS_PROXY / HTTP_PROXY / NO_PROXY (pipelock.enabled=true)
 - rails.settings / rails.extraEnv / rails.extraEnvVars
 - optional additional per-workload env / envFrom blocks via extraEnv / extraEnvFrom.
 */}}
@@ -77,9 +78,43 @@ The helper always injects:
 {{- end }}
 {{- end }}
 {{- end }}
+{{- if and $ctx.Values.pipelock.enabled (ne (toString (dig "forwardProxy" "enabled" true $ctx.Values.pipelock)) "false") }}
+{{- $proxyPort := 8888 -}}
+{{- if $ctx.Values.pipelock.forwardProxy -}}
+{{- $proxyPort = int ($ctx.Values.pipelock.forwardProxy.port | default 8888) -}}
+{{- end }}
+- name: HTTPS_PROXY
+  value: {{ printf "http://%s-pipelock.%s.svc.cluster.local:%d" (include "sure.fullname" $ctx) $ctx.Release.Namespace $proxyPort | quote }}
+- name: HTTP_PROXY
+  value: {{ printf "http://%s-pipelock.%s.svc.cluster.local:%d" (include "sure.fullname" $ctx) $ctx.Release.Namespace $proxyPort | quote }}
+- name: NO_PROXY
+  value: "localhost,127.0.0.1,.svc.cluster.local,.cluster.local"
+{{- end }}
 {{- range $k, $v := $ctx.Values.rails.settings }}
 - name: {{ $k }}
   value: {{ $v | quote }}
+{{- end }}
+{{- if $ctx.Values.rails.externalAssistant.enabled }}
+- name: EXTERNAL_ASSISTANT_URL
+  value: {{ $ctx.Values.rails.externalAssistant.url | quote }}
+{{- if $ctx.Values.rails.externalAssistant.tokenSecretRef }}
+- name: EXTERNAL_ASSISTANT_TOKEN
+  valueFrom:
+    secretKeyRef:
+      name: {{ $ctx.Values.rails.externalAssistant.tokenSecretRef.name }}
+      key: {{ $ctx.Values.rails.externalAssistant.tokenSecretRef.key }}
+{{- else }}
+- name: EXTERNAL_ASSISTANT_TOKEN
+  value: {{ $ctx.Values.rails.externalAssistant.token | quote }}
+{{- end }}
+- name: EXTERNAL_ASSISTANT_AGENT_ID
+  value: {{ $ctx.Values.rails.externalAssistant.agentId | quote }}
+- name: EXTERNAL_ASSISTANT_SESSION_KEY
+  value: {{ $ctx.Values.rails.externalAssistant.sessionKey | quote }}
+{{- if $ctx.Values.rails.externalAssistant.allowedEmails }}
+- name: EXTERNAL_ASSISTANT_ALLOWED_EMAILS
+  value: {{ $ctx.Values.rails.externalAssistant.allowedEmails | quote }}
+{{- end }}
 {{- end }}
 {{- range $k, $v := $ctx.Values.rails.extraEnv }}
 - name: {{ $k }}

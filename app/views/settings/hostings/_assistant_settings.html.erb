@@ -1,0 +1,112 @@
+<div class="space-y-4">
+  <div>
+    <h2 class="font-medium mb-1"><%= t(".title") %></h2>
+    <% if ENV["ASSISTANT_TYPE"].present? %>
+      <p class="text-sm text-secondary"><%= t(".env_notice", type: ENV["ASSISTANT_TYPE"]) %></p>
+    <% else %>
+      <p class="text-secondary text-sm mb-4"><%= t(".description") %></p>
+    <% end %>
+  </div>
+
+  <% effective_type = ENV["ASSISTANT_TYPE"].presence || Current.family.assistant_type %>
+
+  <%= styled_form_with model: Current.family,
+                       url: settings_hosting_path,
+                       method: :patch,
+                       class: "space-y-4",
+                       data: {
+                         controller: "auto-submit-form",
+                         "auto-submit-form-trigger-event-value": "change"
+                       } do |form| %>
+    <%= form.select :assistant_type,
+                    options_for_select(
+                      [
+                        [t(".type_builtin"), "builtin"],
+                        [t(".type_external"), "external"]
+                      ],
+                      effective_type
+                    ),
+                    { label: t(".type_label") },
+                    { disabled: ENV["ASSISTANT_TYPE"].present?,
+                      data: { "auto-submit-form-target": "auto" } } %>
+  <% end %>
+  <% if effective_type == "external" %>
+    <div class="flex items-center gap-2 text-sm mb-4">
+      <% if Assistant::External.configured? %>
+        <span class="inline-block w-2 h-2 rounded-full bg-green-500"></span>
+        <span class="text-secondary"><%= t(".external_configured") %></span>
+      <% else %>
+        <span class="inline-block w-2 h-2 rounded-full bg-red-500"></span>
+        <span class="text-secondary"><%= t(".external_not_configured") %></span>
+      <% end %>
+    </div>
+
+    <% if ENV["EXTERNAL_ASSISTANT_URL"].present? && ENV["EXTERNAL_ASSISTANT_TOKEN"].present? %>
+      <p class="text-sm text-secondary"><%= t(".env_configured_external") %></p>
+    <% end %>
+
+    <% if Assistant::External.configured? && !ENV["EXTERNAL_ASSISTANT_URL"].present? %>
+      <div class="flex items-center justify-between p-3 rounded-lg border border-primary">
+        <div>
+          <p class="text-sm font-medium text-primary"><%= t(".disconnect_title") %></p>
+          <p class="text-xs text-secondary"><%= t(".disconnect_description") %></p>
+        </div>
+        <%= button_to t(".disconnect_button"),
+              disconnect_external_assistant_settings_hosting_path,
+              method: :delete,
+              class: "bg-red-600 fg-inverse text-sm font-medium rounded-lg px-4 py-2 whitespace-nowrap",
+              data: { turbo_confirm: {
+                title: t(".confirm_disconnect.title"),
+                body: t(".confirm_disconnect.body"),
+                accept: t(".disconnect_button"),
+                acceptClass: "w-full bg-red-600 fg-inverse rounded-xl text-center p-[10px] border mb-2"
+              }} %>
+      </div>
+    <% end %>
+
+    <%= styled_form_with model: Setting.new,
+                         url: settings_hosting_path,
+                         method: :patch,
+                         class: "space-y-4",
+                         data: {
+                           controller: "auto-submit-form",
+                           "auto-submit-form-trigger-event-value": "blur"
+                         } do |form| %>
+      <%= form.text_field :external_assistant_url,
+                          label: t(".url_label"),
+                          placeholder: t(".url_placeholder"),
+                          value: Setting.external_assistant_url,
+                          autocomplete: "off",
+                          autocapitalize: "none",
+                          spellcheck: "false",
+                          inputmode: "url",
+                          disabled: ENV["EXTERNAL_ASSISTANT_URL"].present?,
+                          data: { "auto-submit-form-target": "auto" } %>
+      <p class="text-xs text-secondary mt-1"><%= t(".url_help") %></p>
+
+      <%= form.password_field :external_assistant_token,
+                              label: t(".token_label"),
+                              placeholder: t(".token_placeholder"),
+                              value: (Setting.external_assistant_token.present? ? "********" : nil),
+                              autocomplete: "off",
+                              autocapitalize: "none",
+                              spellcheck: "false",
+                              inputmode: "text",
+                              disabled: ENV["EXTERNAL_ASSISTANT_TOKEN"].present?,
+                              data: { "auto-submit-form-target": "auto" } %>
+      <p class="text-xs text-secondary mt-1"><%= t(".token_help") %></p>
+
+      <%= form.text_field :external_assistant_agent_id,
+                          label: t(".agent_id_label"),
+                          placeholder: t(".agent_id_placeholder"),
+                          value: Setting.external_assistant_agent_id,
+                          autocomplete: "off",
+                          autocapitalize: "none",
+                          spellcheck: "false",
+                          inputmode: "text",
+                          disabled: ENV["EXTERNAL_ASSISTANT_AGENT_ID"].present?,
+                          data: { "auto-submit-form-target": "auto" } %>
+      <p class="text-xs text-secondary mt-1"><%= t(".agent_id_help") %></p>
+    <% end %>
+  <% end %>
+</div>
