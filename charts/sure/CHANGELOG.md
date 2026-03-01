@@ -5,24 +5,7 @@ All notable changes to the Sure Helm chart will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-### [0.0.0], [0.6.5]
-
-### Added
-
-- First (nightly/test) releases via <https://we-promise.github.io/sure/index.yaml>
-
-### [0.6.6] - 2025-12-31
-
-### Added
-
-- First version/release that aligns versions with monorepo
-- CNPG: render `Cluster.spec.backup` from `cnpg.cluster.backup`.
-  - If `backup.method` is omitted and `backup.volumeSnapshot` is present, the chart will infer `method: volumeSnapshot`.
-  - For snapshot backups, `backup.volumeSnapshot.className` is required (template fails early if missing).
-  - Example-only keys like `backup.ttl` and `backup.volumeSnapshot.enabled` are stripped to avoid CRD warnings.
-- CNPG: render `Cluster.spec.plugins` from `cnpg.cluster.plugins` (enables barman-cloud plugin / WAL archiver configuration).
-
-## [0.6.8-alpha] - 2026-02-25
+## [0.6.9-alpha] - 2026-03-01
 
 ### Added
 - **Pipelock security proxy** (`pipelock.enabled=true`): Separate Deployment + Service that provides two scanning layers
@@ -52,6 +35,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Robust validation of Sentinel endpoints with port range checking (1-65535) and graceful fallback to direct Redis URL on invalid configuration
   - Production-ready HA timeouts: 200ms connect, 1s read/write, 3 reconnection attempts
   - Backward compatible with existing `REDIS_URL` deployments
+
+### [0.6.6] - 2025-12-31
+
+### Added
+
+- First version/release that aligns versions with monorepo
+- CNPG: render `Cluster.spec.backup` from `cnpg.cluster.backup`.
+  - If `backup.method` is omitted and `backup.volumeSnapshot` is present, the chart will infer `method: volumeSnapshot`.
+  - For snapshot backups, `backup.volumeSnapshot.className` is required (template fails early if missing).
+  - Example-only keys like `backup.ttl` and `backup.volumeSnapshot.enabled` are stripped to avoid CRD warnings.
+- CNPG: render `Cluster.spec.plugins` from `cnpg.cluster.plugins` (enables barman-cloud plugin / WAL archiver configuration).
+
+### [0.0.0], [0.6.5]
+
+### Added
+
+- First (nightly/test) releases via <https://we-promise.github.io/sure/index.yaml>
 
 ## Notes
 - Chart version and application version are kept in sync
