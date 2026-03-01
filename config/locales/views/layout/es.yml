@@ -2,6 +2,7 @@
 es:
   layouts:
     application:
+      privacy_mode: Alternar modo de privacidad
       nav:
         assistant: Asistente
         budgets: Presupuestos

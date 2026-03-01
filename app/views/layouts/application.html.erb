@@ -54,7 +54,19 @@ end %>
         <%= image_tag "logomark-color.svg", class: "w-9 h-9 mx-auto" %>
       <% end %>
 
-      <%= render "users/user_menu", user: Current.user, placement: "bottom-end", offset: 12, intro_mode: intro_mode %>
+      <div class="flex items-center gap-1">
+        <button type="button"
+                class="inline-flex items-center justify-center w-8 h-8 rounded-lg text-secondary hover:text-primary transition-colors"
+                data-action="click->privacy-mode#toggle"
+                data-privacy-mode-target="toggle"
+                title="<%= t("layouts.application.privacy_mode") %>"
+                aria-label="<%= t("layouts.application.privacy_mode") %>"
+                aria-pressed="false">
+          <%= icon("eye-off", size: "sm", data: { privacy_mode_target: "iconOff" }) %>
+          <%= icon("eye", size: "sm", class: "hidden", data: { privacy_mode_target: "iconOn" }) %>
+        </button>
+        <%= render "users/user_menu", user: Current.user, placement: "bottom-end", offset: 12, intro_mode: intro_mode %>
+      </div>
     </nav>
 
     <%# DESKTOP - Left navbar %>
@@ -138,7 +150,21 @@ end %>
               <%= render "layouts/shared/breadcrumbs", breadcrumbs: @breadcrumbs %>
             <% end %>
           </div>
-          <%= icon("panel-right", as_button: true, data: { action: "app-layout#toggleRightSidebar" }) %>
+
+          <div class="flex items-center gap-2">
+            <button type="button"
+                    class="inline-flex items-center justify-center w-8 h-8 rounded-lg text-secondary hover:text-primary hover:bg-surface-hover transition-colors"
+                    data-action="click->privacy-mode#toggle"
+                    data-privacy-mode-target="toggle"
+                    title="<%= t("layouts.application.privacy_mode") %>"
+                    aria-label="<%= t("layouts.application.privacy_mode") %>"
+                    aria-pressed="false">
+              <%= icon("eye-off", size: "sm", data: { privacy_mode_target: "iconOff" }) %>
+              <%= icon("eye", size: "sm", class: "hidden", data: { privacy_mode_target: "iconOn" }) %>
+            </button>
+
+            <%= icon("panel-right", as_button: true, data: { action: "app-layout#toggleRightSidebar" }) %>
+          </div>
         </div>
       <% end %>
 
