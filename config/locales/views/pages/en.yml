@@ -43,6 +43,13 @@ en:
         categories: "Categories"
         value: "Value"
         weight: "Weight"
+      inflows_donut:
+        title: "Inflows"
+        total_inflows: "Total Inflows"
+        categories: "Categories"
+        value: "Value"
+        weight: "Weight"
+        no_data_message: "No inflows for this period"
       investment_summary:
         title: "Investments"
         total_return: "Total Return"
