@@ -34,7 +34,8 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "syncing linked account triggers sync for all provider items" do
-    plaid_account = plaid_accounts(:one)
+    # Use :two since :one is pre-linked to accounts(:connected)
+    plaid_account = plaid_accounts(:two)
     plaid_item = plaid_account.plaid_item
     AccountProvider.create!(account: @account, provider: plaid_account)
 
@@ -59,7 +60,8 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "confirms unlink for linked account" do
-    plaid_account = plaid_accounts(:one)
+    # Use :two since :one is pre-linked to accounts(:connected)
+    plaid_account = plaid_accounts(:two)
     AccountProvider.create!(account: @account, provider: plaid_account)
 
     get confirm_unlink_account_url(@account)
@@ -72,8 +74,9 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Account is not linked to a provider", flash[:alert]
   end
 
-  test "unlinks linked account successfully with new system" do
-    plaid_account = plaid_accounts(:one)
+  test "unlinks linked account successfully" do
+    # Use :two since :one is pre-linked to accounts(:connected)
+    plaid_account = plaid_accounts(:two)
     AccountProvider.create!(account: @account, provider: plaid_account)
     @account.reload
 
@@ -83,22 +86,7 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     @account.reload
 
     assert_not @account.linked?
-    assert_redirected_to accounts_path
-    assert_equal "Account unlinked successfully. It is now a manual account.", flash[:notice]
-  end
-
-  test "unlinks linked account successfully with legacy system" do
-    plaid_account = plaid_accounts(:one)
-    @account.update!(plaid_account_id: plaid_account.id)
-    @account.reload
-
-    assert @account.linked?
-
-    delete unlink_account_url(@account)
-    @account.reload
-
-    assert_not @account.linked?
-    assert_nil @account.plaid_account_id
+    assert_equal 0, @account.account_providers.count
     assert_redirected_to accounts_path
     assert_equal "Account unlinked successfully. It is now a manual account.", flash[:notice]
   end
@@ -110,7 +98,8 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "unlinked account can be deleted" do
-    plaid_account = plaid_accounts(:one)
+    # Use :two since :one is pre-linked to accounts(:connected)
+    plaid_account = plaid_accounts(:two)
     AccountProvider.create!(account: @account, provider: plaid_account)
     @account.reload
 
@@ -158,7 +147,8 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "select_provider redirects for already linked account" do
-    plaid_account = plaid_accounts(:one)
+    # Use :two since :one is pre-linked to accounts(:connected)
+    plaid_account = plaid_accounts(:two)
     AccountProvider.create!(account: @account, provider: plaid_account)
 
     get select_provider_account_url(@account)
@@ -166,7 +156,7 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Account is already linked to a provider", flash[:alert]
   end
 
-  test "unlink preserves SnaptradeAccount record" do
+  test "unlink destroys SnaptradeAccount record to free connection slots" do
     snaptrade_account = snaptrade_accounts(:fidelity_401k)
     investment = accounts(:investment)
     AccountProvider.create!(account: investment, provider: snaptrade_account)
@@ -179,19 +169,19 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
 
     assert_not investment.linked?
     assert_redirected_to accounts_path
-    # SnaptradeAccount should still exist (not destroyed)
-    assert SnaptradeAccount.exists?(snaptrade_account.id), "SnaptradeAccount should be preserved after unlink"
-    # But AccountProvider should be gone
+    # SnaptradeAccount should be destroyed (frees connection slots)
+    assert_not SnaptradeAccount.exists?(snaptrade_account.id), "SnaptradeAccount should be destroyed after unlink"
+    # AccountProvider should also be gone
     assert_not AccountProvider.exists?(provider_type: "SnaptradeAccount", provider_id: snaptrade_account.id)
   end
 
-  test "unlink does not enqueue SnapTrade cleanup job" do
+  test "unlink enqueues SnapTrade cleanup job via after_destroy callback" do
     snaptrade_account = snaptrade_accounts(:fidelity_401k)
     investment = accounts(:investment)
     AccountProvider.create!(account: investment, provider: snaptrade_account)
     investment.reload
 
-    assert_no_enqueued_jobs(only: SnaptradeConnectionCleanupJob) do
+    assert_enqueued_jobs(1, only: SnaptradeConnectionCleanupJob) do
       delete unlink_account_url(investment)
     end
   end
@@ -240,8 +230,8 @@ class AccountsControllerSimplefinCtaTest < ActionDispatch::IntegrationTest
     # Create a manual linked to SFA so unlinked count == 0
     sfa = item.simplefin_accounts.create!(name: "B", account_id: "sf_b", currency: "USD", current_balance: 1, account_type: "depository")
     linked = Account.create!(family: @family, name: "Linked", currency: "USD", balance: 0, accountable_type: "Depository", accountable: Depository.create!(subtype: "savings"))
-    # Legacy association sufficient to count as linked
-    sfa.update!(account: linked)
+    # Link via AccountProvider
+    AccountProvider.create!(account: linked, provider: sfa)
 
     # Also create another manual account to make manuals_exist true
     Account.create!(family: @family, name: "Manual B", currency: "USD", balance: 0, accountable_type: "Depository", accountable: Depository.create!(subtype: "checking"))

@@ -30,9 +30,6 @@ class SimplefinItem::Importer
       # Defensive guard: If last_synced_at is set but there are linked accounts
       # with no transactions captured yet (typical after a balances-only run),
       # force the first full run to use chunked history to backfill.
-      #
-      # Check for linked accounts via BOTH legacy FK (accounts.simplefin_account_id) AND
-      # the new AccountProvider system. An account is "linked" if either association exists.
       linked_accounts = simplefin_item.simplefin_accounts.select { |sfa| sfa.current_account.present? }
       no_txns_yet = linked_accounts.any? && linked_accounts.all? { |sfa| sfa.raw_transactions_payload.blank? }
 
@@ -589,18 +586,13 @@ class SimplefinItem::Importer
       # Find SimplefinAccount records with account_ids NOT in the upstream set
       # Eager-load associations to prevent N+1 queries when checking linkage
       orphaned = simplefin_item.simplefin_accounts
-        .includes(:account, :account_provider)
+        .includes(account_provider: :account)
         .where.not(account_id: upstream_account_ids)
         .where.not(account_id: nil)
 
       orphaned.each do |sfa|
-        # Only delete if not linked to any Account (via legacy FK or AccountProvider)
-        # Note: sfa.account checks the legacy FK on Account.simplefin_account_id
-        #       sfa.account_provider checks the new AccountProvider join table
-        linked_via_legacy = sfa.account.present?
-        linked_via_provider = sfa.account_provider.present?
-
-        if !linked_via_legacy && !linked_via_provider
+        # Only delete if not linked to any Account
+        if sfa.current_account.nil?
           Rails.logger.info "SimpleFin: Pruning orphaned SimplefinAccount id=#{sfa.id} account_id=#{sfa.account_id} (no longer exists upstream)"
           stats["accounts_pruned"] = stats.fetch("accounts_pruned", 0) + 1
           sfa.destroy

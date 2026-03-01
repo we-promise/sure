@@ -7,8 +7,8 @@
      else
        begin
          simplefin_item.simplefin_accounts
-           .left_joins(:account, :account_provider)
-           .where(accounts: { id: nil }, account_providers: { id: nil })
+           .left_joins(:account_provider)
+           .where(account_providers: { id: nil })
            .count
        rescue => e
          Rails.logger.warn("SimpleFin card: unlinked_count fallback failed: #{e.class} - #{e.message}")

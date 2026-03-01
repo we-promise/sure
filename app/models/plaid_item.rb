@@ -20,18 +20,17 @@ class PlaidItem < ApplicationRecord
   has_one_attached :logo, dependent: :purge_later
 
   has_many :plaid_accounts, dependent: :destroy
-  has_many :legacy_accounts, through: :plaid_accounts, source: :account
 
   scope :active, -> { where(scheduled_for_deletion: false) }
   scope :syncable, -> { active }
   scope :ordered, -> { order(created_at: :desc) }
   scope :needs_update, -> { where(status: :requires_update) }
 
-  # Get accounts from both new and legacy systems
+  # Get linked accounts via AccountProvider
   def accounts
     # Preload associations to avoid N+1 queries
     plaid_accounts
-      .includes(:account, account_provider: :account)
+      .includes(account_provider: :account)
       .map(&:current_account)
       .compact
       .uniq

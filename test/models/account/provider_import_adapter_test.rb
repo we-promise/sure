@@ -300,9 +300,10 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
     investment_account = accounts(:investment)
     adapter = Account::ProviderImportAdapter.new(investment_account)
     security = securities(:aapl)
+    # Use :two since :one is pre-linked to accounts(:connected)
     account_provider = AccountProvider.create!(
       account: investment_account,
-      provider: plaid_accounts(:one)
+      provider: plaid_accounts(:two)
     )
 
     holding = adapter.import_holding(

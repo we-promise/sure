@@ -50,6 +50,11 @@ class PlaidItemsControllerTest < ActionDispatch::IntegrationTest
   test "select_existing_account redirects when no available plaid accounts" do
     account = accounts(:depository)
 
+    # Ensure no unlinked plaid accounts exist - link plaid_accounts(:two) which is unlinked
+    # (plaid_accounts(:one) is already linked to connected via fixture)
+    investment_account = accounts(:investment)
+    AccountProvider.create!(account: investment_account, provider: plaid_accounts(:two))
+
     get select_existing_account_plaid_items_url(account_id: account.id, region: "us")
     assert_redirected_to account_path(account)
     assert_equal "No available Plaid accounts to link. Please connect a new Plaid account first.", flash[:alert]
@@ -71,7 +76,7 @@ class PlaidItemsControllerTest < ActionDispatch::IntegrationTest
     )
 
     assert_not account.linked?
-    assert_nil plaid_account.account
+    assert_nil plaid_account.linked_account
     assert_nil plaid_account.account_provider
 
     assert_difference "AccountProvider.count", 1 do

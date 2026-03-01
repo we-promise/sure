@@ -32,7 +32,6 @@ connected:
   currency: USD
   accountable_type: Depository
   accountable: two
-  plaid_account: one
   status: active
 
 credit_card:

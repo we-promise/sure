@@ -42,50 +42,6 @@ class SimplefinItem::ImporterOrphanPruneTest < ActiveSupport::TestCase
     assert_equal 1, stats["accounts_pruned"], "should track pruned accounts"
   end
 
-  test "does not prune SimplefinAccount that is linked to an Account via legacy FK" do
-    # Create a SimplefinAccount with an old account_id
-    old_sfa = SimplefinAccount.create!(
-      simplefin_item: @item,
-      account_id: "ACT-old-id-12345",
-      name: "Business",
-      currency: "USD",
-      current_balance: 100,
-      account_type: "checking"
-    )
-
-    # Link it to an Account via legacy FK
-    account = Account.create!(
-      family: @family,
-      name: "Business Checking",
-      currency: "USD",
-      balance: 100,
-      accountable: Depository.create!(subtype: :checking),
-      simplefin_account_id: old_sfa.id
-    )
-
-    # Stub provider to return accounts with NEW account_ids
-    mock_provider = mock()
-    mock_provider.expects(:get_accounts).at_least_once.returns({
-      accounts: [
-        { id: "ACT-new-id-67890", name: "Business", balance: "288.41", currency: "USD", type: "checking" }
-      ]
-    })
-
-    importer = SimplefinItem::Importer.new(@item, simplefin_provider: mock_provider, sync: @sync)
-    importer.send(:perform_account_discovery)
-
-    # The old SimplefinAccount should NOT be pruned because it's linked
-    assert_not_nil SimplefinAccount.find_by(id: old_sfa.id), "linked SimplefinAccount should not be deleted"
-
-    # New SimplefinAccount should also exist
-    new_sfa = @item.simplefin_accounts.find_by(account_id: "ACT-new-id-67890")
-    assert_not_nil new_sfa, "new SimplefinAccount should be created"
-
-    # Stats should not show any pruning
-    stats = @sync.reload.sync_stats
-    assert_nil stats["accounts_pruned"], "should not prune linked accounts"
-  end
-
   test "does not prune SimplefinAccount that is linked via AccountProvider" do
     # Create a SimplefinAccount with an old account_id
     old_sfa = SimplefinAccount.create!(
@@ -97,7 +53,7 @@ class SimplefinItem::ImporterOrphanPruneTest < ActiveSupport::TestCase
       account_type: "checking"
     )
 
-    # Create an Account and link via AccountProvider (new system)
+    # Link it to an Account via AccountProvider
     account = Account.create!(
       family: @family,
       name: "Business Checking",
@@ -118,8 +74,12 @@ class SimplefinItem::ImporterOrphanPruneTest < ActiveSupport::TestCase
     importer = SimplefinItem::Importer.new(@item, simplefin_provider: mock_provider, sync: @sync)
     importer.send(:perform_account_discovery)
 
-    # The old SimplefinAccount should NOT be pruned because it's linked via AccountProvider
+    # The old SimplefinAccount should NOT be pruned because it's linked
     assert_not_nil SimplefinAccount.find_by(id: old_sfa.id), "linked SimplefinAccount should not be deleted"
+
+    # New SimplefinAccount should also exist
+    new_sfa = @item.simplefin_accounts.find_by(account_id: "ACT-new-id-67890")
+    assert_not_nil new_sfa, "new SimplefinAccount should be created"
 
     # Stats should not show any pruning
     stats = @sync.reload.sync_stats
