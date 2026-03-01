@@ -9,21 +9,23 @@
       </p>
     </div>
 
-    <%= render DS::Link.new(
-      icon: "plus",
-      text: t("pages.dashboard.new"),
-      href: new_account_path,
-      frame: :modal,
-      class: "hidden lg:inline-flex"
-    ) %>
-
-    <%= render DS::Link.new(
-        variant: "icon-inverse",
+    <div class="flex items-center gap-2">
+      <%= render DS::Link.new(
         icon: "plus",
+        text: t("pages.dashboard.new"),
         href: new_account_path,
         frame: :modal,
-        class: "rounded-full lg:hidden"
+        class: "hidden lg:inline-flex"
       ) %>
+
+      <%= render DS::Link.new(
+          variant: "icon-inverse",
+          icon: "plus",
+          href: new_account_path,
+          frame: :modal,
+          class: "rounded-full lg:hidden"
+        ) %>
+    </div>
   </div>
 <% end %>
 

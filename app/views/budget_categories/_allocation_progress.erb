@@ -17,9 +17,9 @@
     <% end %>
 
     <p class="ml-auto text-sm space-x-1">
-      <span class="<%= budget.available_to_allocate.negative? ? "text-red-500" : "text-primary" %>"><%= format_money(budget.allocated_spending_money) %></span>
+      <span class="privacy-sensitive <%= budget.available_to_allocate.negative? ? "text-red-500" : "text-primary" %>"><%= format_money(budget.allocated_spending_money) %></span>
       <span class="text-secondary"> / </span>
-      <span class="text-secondary"><%= format_money(budget.budgeted_spending_money) %></span>
+      <span class="text-secondary privacy-sensitive"><%= format_money(budget.budgeted_spending_money) %></span>
     </p>
   </div>
 
@@ -34,10 +34,10 @@
   <div class="text-sm">
     <% if budget.available_to_allocate.negative? %>
       <p class="text-secondary">
-        Budget exceeded by <span class="text-red-500"><%= format_money(budget.available_to_allocate_money.abs) %></span>
+        Budget exceeded by <span class="text-red-500 privacy-sensitive"><%= format_money(budget.available_to_allocate_money.abs) %></span>
       </p>
     <% else %>
-      <span class="text-primary"><%= format_money(budget.available_to_allocate_money) %></span>
+      <span class="text-primary privacy-sensitive"><%= format_money(budget.available_to_allocate_money) %></span>
       <span class="text-secondary">left to allocate</span>
     <% end %>
   </div>
