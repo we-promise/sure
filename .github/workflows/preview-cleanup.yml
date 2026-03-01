@@ -1,0 +1,188 @@
+name: Cleanup PR Previews
+
+on:
+  # Run hourly to check for expired previews
+  schedule:
+    - cron: '0 * * * *'
+
+  # Immediately cleanup when PR is closed
+  pull_request:
+    types: [closed]
+
+  # Allow manual trigger
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'PR number to cleanup (optional, cleans all expired if empty)'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  deployments: write
+
+jobs:
+  cleanup-on-close:
+    name: Cleanup closed PR preview
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install Wrangler
+        run: npm install -g wrangler
+
+      - name: Delete preview Worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          WORKER_NAME="sure-preview-${{ github.event.pull_request.number }}"
+          echo "Deleting Worker: $WORKER_NAME"
+
+          # Delete the worker (this also stops any running containers)
+          wrangler delete --name "$WORKER_NAME" --force || echo "Worker may not exist"
+
+      - name: Delete GitHub Deployment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const environment = `preview-pr-${{ github.event.pull_request.number }}`;
+
+            try {
+              // Get deployments for this environment
+              const { data: deployments } = await github.rest.repos.listDeployments({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                environment: environment
+              });
+
+              // Mark all deployments as inactive
+              for (const deployment of deployments) {
+                await github.rest.repos.createDeploymentStatus({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  deployment_id: deployment.id,
+                  state: 'inactive',
+                  description: 'PR closed - preview deleted'
+                });
+              }
+
+              console.log(`Marked ${deployments.length} deployments as inactive`);
+            } catch (error) {
+              console.log('No deployments to cleanup or error:', error.message);
+            }
+
+  cleanup-expired:
+    name: Cleanup expired previews
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install Wrangler
+        run: npm install -g wrangler
+
+      - name: Cleanup expired previews
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # If specific PR number provided, only cleanup that one
+          if [ -n "${{ inputs.pr_number }}" ]; then
+            PR_NUM="${{ inputs.pr_number }}"
+            WORKER_NAME="sure-preview-$PR_NUM"
+            echo "Manually deleting Worker: $WORKER_NAME"
+            wrangler delete --name "$WORKER_NAME" --force || echo "Worker may not exist"
+
+            # Cleanup GitHub deployment for this PR
+            echo "Cleaning up GitHub deployment for PR #$PR_NUM"
+            gh api \
+              -X GET "/repos/${{ github.repository }}/deployments?environment=preview-pr-$PR_NUM" \
+              --jq '.[].id' 2>/dev/null | while read -r DEPLOY_ID; do
+                if [ -n "$DEPLOY_ID" ]; then
+                  gh api \
+                    -X POST "/repos/${{ github.repository }}/deployments/$DEPLOY_ID/statuses" \
+                    -f state=inactive \
+                    -f description="Preview manually deleted" || true
+                fi
+              done || echo "No deployments to cleanup or error occurred"
+
+            exit 0
+          fi
+
+          # Get list of all preview workers
+          echo "Fetching list of preview workers..."
+
+          # Use Cloudflare API to list workers
+          WORKERS=$(curl -s -X GET \
+            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts" \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            -H "Content-Type: application/json" | jq -r '.result[] | select(.id | startswith("sure-preview-")) | .id')
+
+          if [ -z "$WORKERS" ]; then
+            echo "No preview workers found"
+            exit 0
+          fi
+
+          echo "Found preview workers:"
+          echo "$WORKERS"
+
+          # Check each worker's deployment time
+          CUTOFF_TIME=$(date -d '24 hours ago' +%s)
+
+          for WORKER in $WORKERS; do
+            echo "Checking $WORKER..."
+
+            # Get worker details to find last deployment time
+            WORKER_INFO=$(curl -s -X GET \
+              "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts/$WORKER" \
+              -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+              -H "Content-Type: application/json")
+
+            MODIFIED_ON=$(echo "$WORKER_INFO" | jq -r '.result.modified_on // empty')
+
+            if [ -n "$MODIFIED_ON" ]; then
+              MODIFIED_TS=$(date -d "$MODIFIED_ON" +%s 2>/dev/null || echo "0")
+
+              if [ "$MODIFIED_TS" -lt "$CUTOFF_TIME" ]; then
+                echo "Worker $WORKER is older than 24 hours, deleting..."
+                wrangler delete --name "$WORKER" --force || echo "Failed to delete $WORKER"
+
+                # Extract PR number and cleanup GitHub deployment
+                PR_NUM=$(echo "$WORKER" | sed 's/sure-preview-//')
+                if [ -n "$PR_NUM" ]; then
+                  echo "Cleaning up GitHub deployment for PR #$PR_NUM"
+                  gh api \
+                    -X GET "/repos/${{ github.repository }}/deployments?environment=preview-pr-$PR_NUM" \
+                    --jq '.[].id' | while read -r DEPLOY_ID; do
+                      gh api \
+                        -X POST "/repos/${{ github.repository }}/deployments/$DEPLOY_ID/statuses" \
+                        -f state=inactive \
+                        -f description="Preview expired after 24 hours" || true
+                    done
+                fi
+              else
+                echo "Worker $WORKER is still within 24-hour window, keeping..."
+              fi
+            fi
+          done
+
+          echo "Cleanup complete"
