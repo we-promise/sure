@@ -6,11 +6,17 @@ en:
       error: 'Error creating tag: %{error}'
     destroy:
       deleted: Tag deleted
+    destroy_all:
+      all_deleted: All tags deleted
     edit:
       edit: Edit tag
     form:
       placeholder: Tag name
     index:
+      delete_all: Delete all
+      delete_all_confirm_title: Delete All Tags?
+      delete_all_confirm_body: This will permanently delete all tags and cannot be undone.
+      delete_all_confirm_button: Delete All Tags
       empty: No tags yet
       new: New tag
       tags: Tags
@@ -21,3 +27,7 @@ en:
       edit: Edit
     update:
       updated: Tag updated
+  tag:
+    deletions:
+      new:
+        delete_and_reassign: Delete and reassign
