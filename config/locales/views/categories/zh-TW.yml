@@ -14,12 +14,23 @@ zh-TW:
       edit: 編輯分類
     form:
       placeholder: 分類名稱
+      color: 顏色
+      poor_contrast: "對比度不足，請選擇較深的顏色或"
+      auto_adjust: "自動調整。"
+      icon: 圖示
+      income: 收入
+      expense: 支出
+      classification: 分類
+      unassigned: "(未指定)"
+      parent_category: "父級分類（選填）"
+      name: 名稱
     index:
       bootstrap: 使用預設分類（推薦）
       categories: 分類管理
       categories_expenses: 支出分類
       categories_incomes: 收入分類
       empty: 暫無分類
+      delete_all: 全部刪除
       new: 新建分類
     menu:
       loading: 載入中...

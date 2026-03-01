@@ -3,6 +3,68 @@ es:
   rules:
     no_action: Sin acción
     no_condition: Sin condición
+    index:
+      page_title: Reglas
+      delete_all_rules: Eliminar todas las reglas
+      new_rule: Nueva regla
+      ai_warning: Las acciones de reglas con IA habilitada tendrán costos. Filtra lo más estrictamente posible para evitar costos innecesarios.
+      rules_label: Reglas
+      sort_by: "Ordenar por:"
+      toggle_sort_direction: Cambiar dirección de ordenación
+      no_rules: Aún no hay reglas
+      no_rules_description: Configura reglas para ejecutar acciones en tus transacciones y otros datos en cada sincronización de cuenta.
+    new:
+      back_to_rules: Volver a reglas
+      new_rule_title: "Nueva regla de %{resource_type}"
+    edit:
+      back_to_rules: Volver a reglas
+      edit_rule_title: "Editar regla de %{resource_type} \"%{name}\""
+      edit_rule_title_unnamed: "Editar regla de %{resource_type}"
+    confirm:
+      confirm_changes_to: "Confirmar cambios a \"%{name}\""
+      confirm_changes: Confirmar cambios
+      about_to_apply_html: "Estás a punto de aplicar esta regla a <span class=\"text-primary font-medium\">%{count} %{resource_type}</span> que cumplen los criterios especificados. Por favor confirma si deseas continuar con este cambio."
+      ai_cost_title: Estimación de Costo de IA
+      ai_cost_message: "Esto usará IA para categorizar %{count} transacción(es). Costo estimado: <span class=\"font-semibold\">~$%{cost}</span>"
+      ai_cost_no_estimate: "Esto usará IA para categorizar %{count} transacción(es)."
+      cost_unavailable_model: "Estimación de costo no disponible para el modelo \"%{model}\"."
+      cost_unavailable_no_provider: Estimación de costo no disponible (ningún proveedor LLM configurado).
+      cost_warning: Puedes incurrir en costos, por favor verifica con el proveedor del modelo los precios más actualizados.
+      view_usage: Ver historial de uso
+      confirm_changes_btn: Confirmar cambios
+    form:
+      rule_name_optional: Nombre de la regla (opcional)
+      enter_name: Ingresa un nombre para esta regla
+      if_label: SI
+      then_label: ENTONCES
+      for_label: PARA
+      add_condition: Agregar condición
+      add_condition_group: Agregar grupo de condiciones
+      add_action: Agregar acción
+      all_past_future: "Todos los %{resource_type}s pasados y futuros"
+      starting_from: A partir de
+    rule:
+      if_label: SI
+      then_label: ENTONCES
+      for_label: PARA
+      to_label: a
+      and_more_conditions:
+        one: "y %{count} condición más"
+        other: "y %{count} condiciones más"
+      and_more_actions:
+        one: "y %{count} acción más"
+        other: "y %{count} acciones más"
+      all_past_future: "Todos los %{resource_type} pasados y futuros"
+      on_or_after: "%{resource_type} en o después de %{date}"
+      edit: Editar
+      reapply_rule: Reaplicar regla
+      delete: Eliminar
+    category_rule_cta:
+      updated_to: "Actualizado a %{name}"
+      auto_categorize_description: Puedes crear una regla para categorizar automáticamente transacciones como esta
+      dont_show_again: No mostrar de nuevo
+      dismiss: Descartar
+      create_rule: Crear regla
     recent_runs:
       title: Ejecuciones Recientes
       description: Ver el historial de ejecución de tus reglas incluyendo el estado de éxito/fallo y los conteos de transacciones.
@@ -23,3 +85,16 @@ es:
         pending: Pendiente
         success: Éxito
         failed: Fallido
+  rule:
+    actions:
+      action:
+        to_label: a
+    conditions:
+      condition:
+        and_label: y
+        enter_value: Ingrese un valor
+      condition_group:
+        and_label: y
+        match: coinciden
+        of_the_following: de las siguientes condiciones
+        add_condition: Agregar condición

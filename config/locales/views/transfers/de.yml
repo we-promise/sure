@@ -18,13 +18,19 @@ de:
     new:
       title: Neue Überweisung
     show:
+      amount: Betrag
+      category: Kategorie
+      date: Datum
       delete: Überweisung entfernen
       delete_subtitle: Dadurch wird die Überweisung entfernt. Die zugrunde liegenden Transaktionen bleiben erhalten.
       delete_title: Überweisung entfernen?
       details: Details
+      from: Von
       note_label: Notizen
       note_placeholder: Füge dieser Überweisung eine Notiz hinzu …
       overview: Übersicht
       settings: Einstellungen
+      to: An
+      uncategorized: Nicht kategorisiert
     update:
       success: Überweisung aktualisiert

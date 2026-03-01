@@ -1,0 +1,22 @@
+---
+ro:
+  transfer_matches:
+    matching_fields:
+      create_new: Creează o tranzacție nouă
+      description: Selectați o metodă pentru potrivirea tranzacțiilor dumneavoastră.
+      match_existing: Potrivește cu o tranzacție existentă (recomandat)
+      matching_method: Metodă de potrivire
+      matching_transaction: Tranzacție potrivită
+      no_matches_description: Nu am putut găsi nicio tranzacție de potrivit din celelalte
+        conturi ale dumneavoastră. Vă rugăm să selectați un cont și vom crea o nouă
+        tranzacție de intrare pentru dumneavoastră.
+      target_account: Cont destinație
+    new:
+      from_account: Din contul
+      from_account_name: "Din contul: %{name}"
+      inflow_transaction: Tranzacție de intrare
+      outflow_transaction: Tranzacție de ieșire
+      submit: Creează potrivire de transfer
+      title: Potrivește transfer sau plată
+      to_account: Către contul
+      to_account_name: "Către contul: %{name}"

@@ -9,6 +9,10 @@ pt-BR:
         errors_notice_mobile: Há erros em seus dados. Toque na dica de ferramenta do erro para ver
           detalhes.
         title: Limpar seus dados
+        data_cleaned: Seus dados foram limpos
+        next_step: Próxima etapa
+        all_rows: Todas as linhas
+        error_rows: Linhas com erros
     configurations:
       category_import:
         button_label: Continuar
@@ -17,13 +21,85 @@ pt-BR:
         instructions: Selecione continuar para processar seu CSV e avançar para a etapa de limpeza.
       mint_import:
         date_format_label: Formato da data
+        pre_configured: Pré-configuramos sua importação do Mint. Por favor, prossiga para a próxima etapa.
+        leave_empty: Deixar vazio
+        date: Data
+        amount: Valor
+        currency: Moeda
+        account_optional: Conta (opcional)
+        name_optional: Nome (opcional)
+        category_optional: Categoria (opcional)
+        tags_optional: Tags (opcional)
+        format: Formato
+        select_format: Selecionar formato
+        incomes_negative: Receitas são negativas
+        incomes_positive: Receitas são positivas
+        apply_configuration: Aplicar configuração
       show:
         description: Selecione as colunas que correspondem a cada campo no seu CSV.
         title: Configurar sua importação
+        template_found: Configuração de modelo encontrada
+        template_description: Encontramos uma configuração de uma importação anterior para esta conta. Deseja aplicá-la a esta importação?
+        manually_configure: Configurar manualmente
+        apply_template: Aplicar modelo
       trade_import:
         date_format_label: Formato da data
+        select_column: Selecionar coluna
+        date: Data
+        quantity: Quantidade
+        buys_positive: Compras são quantidade positiva
+        buys_negative: Compras são quantidade negativa
+        default_currency: Padrão
+        currency: Moeda
+        format: Formato
+        select_format: Selecionar formato
+        ticker: Ticker
+        leave_empty: Deixar vazio
+        stock_exchange_code: Código da bolsa
+        price: Preço
+        account: Conta
+        name: Nome
+        security_prices_note_html: "<strong>Nota:</strong> O provedor de preços de títulos não está configurado. Suas importações de operações funcionarão, mas o Sure não preencherá o histórico de preços. Por favor, vá às configurações para configurar isso."
+        apply_configuration: Aplicar configuração
       transaction_import:
         date_format_label: Formato da data
+        date: Data
+        select_column: Selecionar coluna
+        amount: Valor
+        default_currency: Padrão
+        currency: Moeda
+        format: Formato
+        select_format: Selecionar formato
+        amount_type_strategy: Estratégia de tipo de valor
+        select_strategy: Selecionar estratégia
+        incomes_positive: Receitas são positivas
+        incomes_negative: Receitas são negativas
+        amount_type: Tipo de valor
+        select_convention: Selecionar convenção
+        set_label: Definir
+        as_amount_type_column: como coluna de tipo de valor
+        as_identifier_value: como valor de identificador
+        select_type: Selecionar tipo
+        income_inflow: Receita (entrada)
+        expense_outflow: Despesa (saída)
+        leave_empty: Deixar vazio
+        account: Conta
+        name: Nome
+        category: Categoria
+        tags: Tags
+        notes: Notas
+        apply_configuration: Aplicar configuração
+      account_import:
+        leave_empty: Deixar vazio
+        entity_type: Tipo de entidade
+        name: Nome
+        balance: Saldo
+        default_currency: Padrão
+        currency: Moeda
+        balance_date: Data do saldo
+        date_format: Formato da data
+        select_format: Selecionar formato
+        apply_configuration: Aplicar configuração
     confirms:
       mappings:
         create_account: Criar conta
@@ -34,6 +110,7 @@ pt-BR:
           um nome de conta que possamos usar.
         rows_label: Linhas
         unassigned_account: Precisa criar uma nova conta para linhas não atribuídas?
+        next: Próximo
       show:
         account_mapping_description: Atribua todas as contas do seu arquivo importado às
           contas existentes no %{product_name}. Você também pode adicionar novas contas ou deixá-las
@@ -61,7 +138,36 @@ pt-BR:
         instructions_4: Colunas marcadas com um asterisco (*) são dados obrigatórios.
         instructions_5: Sem vírgulas (para separar milhares), sem símbolos de moeda e sem parênteses em números.
         title: Importar seus dados
+        drop_csv_title: Arraste o CSV para enviar
+        drop_csv_subtitle: Seu arquivo será enviado automaticamente
+        upload_csv_tab: Enviar CSV
+        copy_paste_tab: Copiar e colar
+        account_optional: Conta (opcional)
+        multi_account_import: Importação multi-conta
+        browse_to_add: Procurar
+        browse_to_add_suffix: para adicionar seu arquivo CSV aqui
+        upload_csv_btn: Enviar CSV
+        paste_placeholder: Cole o conteúdo do seu arquivo CSV aqui
+        download_sample: Baixar um CSV de exemplo
+        see_format: para ver o formato CSV necessário
   imports:
+    failure:
+      title: A importação falhou
+      description: Verifique o formato do arquivo, se há erros e se todos os campos obrigatórios estão preenchidos, e tente novamente.
+      try_again: Tentar novamente
+    importing:
+      title: Importação em andamento
+      description: Sua importação está em andamento. Verifique o menu de importações para atualizações de status ou clique em 'Verificar status' para atualizar a página. Sinta-se à vontade para continuar usando o aplicativo.
+      check_status: Verificar status
+      back_to_dashboard: Voltar ao painel
+    revert_failure:
+      title: A reversão da importação falhou
+      description: Por favor, tente novamente
+      try_again: Tentar novamente
+    success:
+      title: Importação bem-sucedida
+      description: Seus dados importados foram adicionados com sucesso ao aplicativo e já estão prontos para uso.
+      back_to_dashboard: Voltar ao painel
     index:
       title: Importações
       new: Nova Importação
@@ -98,6 +204,9 @@ pt-BR:
       sources: Fontes
       title: Nova Importação CSV
     ready:
+      item: item
+      count: contagem
+      publish_import: Publicar importação
       description: Aqui está um resumo dos novos itens que serão adicionados à sua conta
         assim que você publicar esta importação.
       title: Confirmar seus dados de importação

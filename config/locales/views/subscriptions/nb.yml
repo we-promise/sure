@@ -3,6 +3,9 @@ nb:
   subscriptions:
     self_hosted_alert: "%{product_name} er ikke tilgjengelig i selvhostet modus."
     upgrade:
+      sr_only_title: Oppgrader
+      account_settings: Kontoinnstillinger
+      sign_out: Logg ut
       contribute_and_support_sure: "Bidra og støtt Sure"
       cta: "Fortsett å støtte utviklingen av denne kodebasen!"
       header:

@@ -3,6 +3,7 @@ de:
   properties:
     edit:
       edit: "%{account} bearbeiten"
+      title: Immobilie manuell eingeben
     form:
       address_line1: Straßenadresse
       address_line1_placeholder: Musterstraße 123
@@ -18,11 +19,13 @@ de:
       postal_code_placeholder: '80331'
       region: Bundesland
       region_placeholder: BY
+      square_feet: Quadratfuß
+      square_meters: Quadratmeter
       subtype_prompt: Immobilientyp auswählen
       year_built: Baujahr
       year_built_placeholder: '2000'
     new:
-      title: Immobiliendetails eingeben
+      title: Immobilie manuell eingeben
     overview:
       living_area: Wohnfläche
       market_value: Marktwert
@@ -30,3 +33,36 @@ de:
       trend: Entwicklung
       unknown: Unbekannt
       year_built: Baujahr
+    address:
+      title: Immobilie manuell eingeben
+      address_line1: Adresszeile 1
+      address_line1_placeholder: "Musterstraße 123"
+      city: Stadt
+      city_placeholder: München
+      country: Land
+      country_placeholder: DE
+      postal_code: Postleitzahl
+      postal_code_placeholder: "80331"
+      state_region: Bundesland/Region
+      state_region_placeholder: BY
+    balances:
+      title: Immobilie manuell eingeben
+      estimated_market_value: Geschätzter Marktwert
+      estimated_market_value_tooltip: "Der geschätzte Marktwert Ihrer Immobilie. Diese Zahl ist oft auf Seiten wie Zillow oder Redfin zu finden und ist nie ein exakter Wert."
+    form_tabs:
+      address: Adresse
+      overview: Übersicht
+      value: Wert
+    overview_fields:
+      area_optional: "Fläche (optional)"
+      area_unit: Flächeneinheit
+      name: Name
+      name_placeholder: Ferienhaus
+      property_type: Immobilientyp
+      select_type: Typ auswählen
+      square_feet: Quadratfuß
+      square_meters: Quadratmeter
+      year_built_optional: "Baujahr (optional)"
+    tabs:
+      overview:
+        edit_account_details: Kontodetails bearbeiten

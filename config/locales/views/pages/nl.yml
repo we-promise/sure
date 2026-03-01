@@ -18,6 +18,9 @@ nl:
         no_account_title: Nog geen accounts
       balance_sheet:
         title: "Balans"
+        name: "Naam"
+        weight: "Gewicht"
+        value: "Waarde"
         no_items: "Nog geen %{name}"
         add_accounts: "Voeg uw %{name} accounts toe om een volledig overzicht te zien"
       cashflow_sankey:
@@ -48,3 +51,25 @@ nl:
         trades: "Transacties"
         no_investments: "Geen beleggingsrekeningen"
         add_investment: "Voeg een beleggingsrekening toe om uw portfolio te volgen"
+    feedback:
+      page_title: Feedback
+      title: Feedback achterlaten
+      description: Laat ons weten als u specifieke feedback heeft. U kunt gerust links naar video's of schermafbeeldingen toevoegen.
+      feature_request: Functieverzoek schrijven
+      bug_report: Bug melden
+      discuss: "Bespreek %{product_name} met anderen"
+    intro:
+      welcome: "Welkom!"
+      coming_soon: Introductie-ervaring komt binnenkort
+      description: "We bouwen aan een rijkere onboarding-ervaring om meer te leren over uw doelen, mijlpalen en dagelijkse behoeften. Ga voorlopig naar de chat-zijbalk om een gesprek te starten met Sure en ons te laten weten waar u staat op uw financiële reis."
+      start_chatting: Begin met chatten
+    redis_configuration_error:
+      page_title: "Redis-configuratie vereist - Sure"
+      title: Redis-configuratie vereist
+      subtitle: Uw zelf gehoste Sure-installatie vereist dat Redis correct is geconfigureerd.
+      why_required: Waarom is Redis vereist?
+      explanation: Sure gebruikt Redis om Sidekiq-achtergrondtaken aan te sturen, zoals het synchroniseren van accountgegevens, het verwerken van imports en andere achtergrondoperaties die uw financiële gegevens up-to-date houden.
+      view_setup_guide: Installatiegids bekijken
+      docker_guide: Volg onze volledige Docker-installatiegids om Redis te configureren
+      refresh_hint: "Nadat u Redis heeft geconfigureerd, vernieuw deze pagina om door te gaan."
+      refresh_page: Pagina vernieuwen

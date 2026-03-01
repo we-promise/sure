@@ -2,6 +2,7 @@
 tr:
   accounts:
     account:
+      complete_setup: Kurulumu tamamla
       troubleshoot: Sorun Gider
     chart:
       data_not_available: Seçilen dönem için veri mevcut değil
@@ -32,6 +33,12 @@ tr:
         manual_entry: Hesap bakiyesi gir
         title: Nasıl eklemek istersiniz?
       title: Ne eklemek istersiniz?
+      container:
+        previous: Önceki
+        next: Sonraki
+        select: Seç
+        navigate: Gezin
+        close: Kapat
     show:
       activity:
         amount: Tutar
@@ -47,8 +54,11 @@ tr:
       chart:
         balance: Bakiye
         owed: Borç miktarı
+      header:
+        complete_setup: Kurulumu tamamla
       menu:
         confirm_accept: "%{name} hesabını sil"
+        delete_account: Hesabı sil
         confirm_body_html: "<p>Bu hesabı silerek, değer geçmişini silmiş olacaksınız ve bu, genel hesabınızın çeşitli yönlerini etkileyecektir. Bu işlem, net değer hesaplamalarınızı ve hesap grafiklerinizi doğrudan etkileyecektir.</p><br /> <p>Silme işleminden sonra, hesabı yeni bir hesap olarak eklemeniz gerekeceğinden, hesap bilgilerini geri yüklemenin bir yolu olmayacaktır.</p>"
         confirm_title: Hesap silinsin mi?
         edit: Düzenle

@@ -3,6 +3,68 @@ zh-TW:
   rules:
     no_action: 無動作
     no_condition: 無條件
+    index:
+      page_title: 規則
+      delete_all_rules: 刪除所有規則
+      new_rule: 新規則
+      ai_warning: 啟用AI的規則動作將產生費用。請儘可能精確地篩選以避免不必要的費用。
+      rules_label: 規則
+      sort_by: "排序方式："
+      toggle_sort_direction: 切換排序方向
+      no_rules: 尚無規則
+      no_rules_description: 設定規則以在每次帳戶同步時對您的交易和其他資料執行動作。
+    new:
+      back_to_rules: 返回規則
+      new_rule_title: "新建%{resource_type}規則"
+    edit:
+      back_to_rules: 返回規則
+      edit_rule_title: "編輯%{resource_type}規則 \"%{name}\""
+      edit_rule_title_unnamed: "編輯%{resource_type}規則"
+    confirm:
+      confirm_changes_to: "確認對 \"%{name}\" 的變更"
+      confirm_changes: 確認變更
+      about_to_apply_html: "您即將將此規則套用於符合指定規則條件的 <span class=\"text-primary font-medium\">%{count} 個%{resource_type}</span>。請確認是否要繼續此變更。"
+      ai_cost_title: AI費用估算
+      ai_cost_message: "這將使用AI對 %{count} 筆交易進行分類。預估費用：<span class=\"font-semibold\">~$%{cost}</span>"
+      ai_cost_no_estimate: "這將使用AI對 %{count} 筆交易進行分類。"
+      cost_unavailable_model: "模型 \"%{model}\" 的費用估算不可用。"
+      cost_unavailable_no_provider: 費用估算不可用（未設定LLM提供者）。
+      cost_warning: 您可能會產生費用，請向模型提供者查詢最新價格。
+      view_usage: 查看使用紀錄
+      confirm_changes_btn: 確認變更
+    form:
+      rule_name_optional: 規則名稱（選填）
+      enter_name: 輸入此規則的名稱
+      if_label: 如果
+      then_label: 則
+      for_label: 適用於
+      add_condition: 新增條件
+      add_condition_group: 新增條件群組
+      add_action: 新增動作
+      all_past_future: "所有過去和未來的%{resource_type}"
+      starting_from: 開始於
+    rule:
+      if_label: 如果
+      then_label: 則
+      for_label: 適用於
+      to_label: 到
+      and_more_conditions:
+        one: "還有 %{count} 個條件"
+        other: "還有 %{count} 個條件"
+      and_more_actions:
+        one: "還有 %{count} 個動作"
+        other: "還有 %{count} 個動作"
+      all_past_future: "所有過去和未來的%{resource_type}"
+      on_or_after: "%{date}當天或之後的%{resource_type}"
+      edit: 編輯
+      reapply_rule: 重新套用規則
+      delete: 刪除
+    category_rule_cta:
+      updated_to: "已更新為 %{name}"
+      auto_categorize_description: 您可以建立規則來自動分類類似的交易
+      dont_show_again: 不再顯示
+      dismiss: 關閉
+      create_rule: 建立規則
     recent_runs:
       title: 最近執行紀錄
       description: 查看規則的執行歷史，包括成功/失敗狀態以及交易處理筆數。
@@ -23,3 +85,16 @@ zh-TW:
         pending: 待處理
         success: 成功
         failed: 失敗
+  rule:
+    actions:
+      action:
+        to_label: 到
+    conditions:
+      condition:
+        and_label: 且
+        enter_value: 輸入一個值
+      condition_group:
+        and_label: 且
+        match: 符合
+        of_the_following: 以下條件中的
+        add_condition: 新增條件

@@ -5,6 +5,7 @@ tr:
       accept: Onayla
       body_html: "<p>Bu kararı geri alamayacaksınız</p>"
       cancel: İptal
+      subtitle: Bu işlem geri alınamaz.
       title: Emin misiniz?
     money_field:
       label: Tutar

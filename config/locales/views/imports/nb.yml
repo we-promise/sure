@@ -9,16 +9,92 @@ nb:
         errors_notice_mobile: Du har feil i dataene dine. Trykk på feilverktøytipset for å se
           detaljer.
         title: Rengjør dataene dine
+        data_cleaned: Dataene dine har blitt rengjort
+        next_step: Neste steg
+        all_rows: Alle rader
+        error_rows: Rader med feil
     configurations:
       mint_import:
         date_format_label: Datoformat
+        pre_configured: Vi har forhåndskonfigurert Mint-importen din. Vennligst gå videre til neste steg.
+        leave_empty: La stå tomt
+        date: Dato
+        amount: Beløp
+        currency: Valuta
+        account_optional: Konto (valgfritt)
+        name_optional: Navn (valgfritt)
+        category_optional: Kategori (valgfritt)
+        tags_optional: Tagger (valgfritt)
+        format: Format
+        select_format: Velg format
+        incomes_negative: Inntekter er negative
+        incomes_positive: Inntekter er positive
+        apply_configuration: Bruk konfigurasjon
       show:
         description: Velg kolonnene som tilsvarer hvert felt i CSV-filen din.
         title: Konfigurer importen din
+        template_found: Malkonfigurasjon funnet
+        template_description: Vi fant en konfigurasjon fra en tidligere import for denne kontoen. Vil du bruke den på denne importen?
+        manually_configure: Konfigurer manuelt
+        apply_template: Bruk mal
       trade_import:
         date_format_label: Datoformat
+        select_column: Velg kolonne
+        date: Dato
+        quantity: Antall
+        buys_positive: Kjøp er positivt antall
+        buys_negative: Kjøp er negativt antall
+        default_currency: Standard
+        currency: Valuta
+        format: Format
+        select_format: Velg format
+        ticker: Ticker
+        leave_empty: La stå tomt
+        stock_exchange_code: Børskode
+        price: Pris
+        account: Konto
+        name: Navn
+        security_prices_note_html: "<strong>Merk:</strong> Leverandøren av verdipapirpriser er ikke konfigurert. Handelsimportene dine vil fungere, men Sure vil ikke fylle ut prishistorikk. Vennligst gå til innstillingene dine for å konfigurere dette."
+        apply_configuration: Bruk konfigurasjon
       transaction_import:
         date_format_label: Datoformat
+        date: Dato
+        select_column: Velg kolonne
+        amount: Beløp
+        default_currency: Standard
+        currency: Valuta
+        format: Format
+        select_format: Velg format
+        amount_type_strategy: Beløpstypestrategi
+        select_strategy: Velg strategi
+        incomes_positive: Inntekter er positive
+        incomes_negative: Inntekter er negative
+        amount_type: Beløpstype
+        select_convention: Velg konvensjon
+        set_label: Sett
+        as_amount_type_column: som beløpstypekolonne
+        as_identifier_value: som identifikatorverdi
+        select_type: Velg type
+        income_inflow: Inntekt (inngang)
+        expense_outflow: Utgift (utgang)
+        leave_empty: La stå tomt
+        account: Konto
+        name: Navn
+        category: Kategori
+        tags: Tagger
+        notes: Notater
+        apply_configuration: Bruk konfigurasjon
+      account_import:
+        leave_empty: La stå tomt
+        entity_type: Enhetstype
+        name: Navn
+        balance: Saldo
+        default_currency: Standard
+        currency: Valuta
+        balance_date: Saldodato
+        date_format: Datoformat
+        select_format: Velg format
+        apply_configuration: Bruk konfigurasjon
     confirms:
       mappings:
         create_account: Opprett konto
@@ -29,6 +105,7 @@ nb:
           og oppgi et kontonavn vi kan bruke.
         rows_label: Rader
         unassigned_account: Trenger å opprette en ny konto for utilordnede rader?
+        next: Neste
       show:
         account_mapping_description: Tilordne alle kontoene i den importerte filen din til
           Maybes eksisterende kontoer. Du kan også legge til nye kontoer eller la dem
@@ -56,7 +133,36 @@ nb:
         instructions_4: Kolonner merket med en stjerne (*) er obligatoriske data.
         instructions_5: Ingen komma, ingen valutasymboler og ingen parenteser i tall.
         title: Importer dataene dine
+        drop_csv_title: Slipp CSV for å laste opp
+        drop_csv_subtitle: Filen din lastes opp automatisk
+        upload_csv_tab: Last opp CSV
+        copy_paste_tab: Kopier og lim inn
+        account_optional: Konto (valgfritt)
+        multi_account_import: Flerkontoimport
+        browse_to_add: Bla gjennom
+        browse_to_add_suffix: for å legge til CSV-filen din her
+        upload_csv_btn: Last opp CSV
+        paste_placeholder: Lim inn innholdet i CSV-filen din her
+        download_sample: Last ned en eksempel-CSV
+        see_format: for å se det påkrevde CSV-formatet
   imports:
+    failure:
+      title: Importen mislyktes
+      description: Vennligst sjekk filformatet for feil og at alle obligatoriske felt er fylt ut, og prøv igjen.
+      try_again: Prøv igjen
+    importing:
+      title: Import pågår
+      description: Importen din pågår. Sjekk importmenyen for statusoppdateringer eller klikk på 'Sjekk status' for å oppdatere siden. Du kan fortsette å bruke appen.
+      check_status: Sjekk status
+      back_to_dashboard: Tilbake til dashboardet
+    revert_failure:
+      title: Tilbakestilling av importen mislyktes
+      description: Vennligst prøv igjen
+      try_again: Prøv igjen
+    success:
+      title: Importen var vellykket
+      description: Dine importerte data har blitt lagt til i appen og er nå klare til bruk.
+      back_to_dashboard: Tilbake til dashboardet
     index:
       title: Importer
       new: Ny Import
@@ -92,6 +198,9 @@ nb:
       sources: Kilder
       title: Ny CSV-import
     ready:
+      item: element
+      count: antall
+      publish_import: Publiser import
       description: Her er en oppsummering av de nye elementene som vil bli lagt til kontoen din
         når du publiserer denne importen.
       title: Bekreft importdataene dine

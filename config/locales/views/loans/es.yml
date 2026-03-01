@@ -13,6 +13,7 @@ es:
     new:
       title: Introduce los detalles del préstamo
     overview:
+      edit_loan_details: Editar detalles del préstamo
       interest_rate: Tasa de interés
       monthly_payment: Pago mensual
       not_applicable: N/A

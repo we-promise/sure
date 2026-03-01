@@ -10,6 +10,14 @@ tr:
         page_title: Ödeme
         subscription_subtitle: Abonelik ve ödeme bilgilerinizi güncelleyin
         subscription_title: Aboneliği yönet
+        currently_on: "Şu anda %{plan} planındasınız."
+        demo_mode: "Şu anda açık demosunu kullanıyorsunuz"
+        data_deleted_in_days: "(Veriler %{days} gün içinde silinecek)"
+        not_contributing: "Şu anda katkı sağlamıyorsunuz"
+        contributions_show_here: "%{product_name} katkıları burada görünecek."
+        manage: Yönet
+        choose_level: Seviye seçin
+        payment_via_stripe: Stripe üzerinden ödeme
     preferences:
       show:
         country: Ülke
@@ -27,6 +35,7 @@ tr:
         theme_system: Sistem
         theme_title: Tema
         timezone: Zaman dilimi
+        translations_note: Lütfen dikkat, çeşitli diller için çeviriler üzerinde hâlâ çalışıyoruz.
     profiles:
       destroy:
         cannot_remove_self: Kendinizi hesaptan çıkaramazsınız.
@@ -103,3 +112,187 @@ tr:
       choose: Fotoğraf yükle
       choose_label: (isteğe bağlı)
       change: Fotoğrafı değiştir
+    llm_usages:
+      show:
+        page_title: LLM Kullanımı ve Maliyetler
+        subtitle: AI kullanımınızı ve tahmini maliyetleri takip edin
+        start_date: Başlangıç Tarihi
+        end_date: Bitiş Tarihi
+        filter: Filtrele
+        total_requests: Toplam İstek
+        total_tokens: Toplam Token
+        prompt: prompt
+        completion: tamamlama
+        total_cost: Toplam Maliyet
+        avg_cost: Ort. Maliyet/İstek
+        cost_data_basis: "Maliyet verisi olan %{total} istekten %{count} tanesine dayanmaktadır"
+        cost_by_operation: İşleme Göre Maliyet
+        cost_by_model: Modele Göre Maliyet
+        recent_usage: Son Kullanım
+        date: Tarih
+        operation: İşlem
+        model: Model
+        tokens: Token
+        cost: Maliyet
+        failed: Başarısız
+        http_status: "HTTP Durumu:"
+        no_data: Seçilen dönem için kullanım verisi bulunamadı
+        about_cost_estimates: Maliyet Tahminleri Hakkında
+        cost_estimates_description: "Maliyetler, 2025 itibarıyla OpenAI fiyatlandırmasına göre tahmin edilmektedir. Gerçek maliyetler sağlayıcınıza ve planınıza bağlı olarak değişebilir. Başarısız istekler (200 dışı durum) yine de API kullanımınıza sayılabilir."
+    api_keys:
+      show:
+        page_title_created: API Anahtarı Başarıyla Oluşturuldu
+        page_title_key: API Anahtarınız
+        created_success: API Anahtarı Başarıyla Oluşturuldu!
+        created_description: "Yeni API anahtarınız \"%{name}\" oluşturuldu ve kullanıma hazır."
+        your_api_key: API Anahtarınız
+        copy_store_securely: "Bu anahtarı kopyalayın ve güvenli bir şekilde saklayın. API isteklerinizi doğrulamak için buna ihtiyacınız olacak."
+        copy_api_key: API Anahtarını Kopyala
+        how_to_use: API anahtarınızı nasıl kullanırsınız
+        usage_instructions: "İstek yaparken API anahtarınızı X-Api-Key başlığına ekleyin:"
+        continue_to_settings: API Anahtarı Ayarlarına Devam Et
+        create_new_key: Yeni Anahtar Oluştur
+        created_ago: "%{time} önce oluşturuldu"
+        last_used_ago: "Son kullanım %{time} önce"
+        never_used: Hiç kullanılmadı
+        active: Aktif
+        permissions: İzinler
+        read_only: Salt Okunur
+        read_write: Okuma/Yazma
+        revoke_key: Anahtarı İptal Et
+        confirm_revoke: Bu API anahtarını iptal etmek istediğinizden emin misiniz? Bu işlem geri alınamaz.
+      new:
+        page_title: Yeni API Anahtarı Oluştur
+        subtitle: Sure verilerinize programatik olarak erişmek için yeni bir API anahtarı oluşturun.
+        name_placeholder: "örn., Bütçe Uygulamam, Portföy Takipçisi"
+        name_label: API Anahtarı Adı
+        name_help: Bu anahtarı daha sonra tanımlamanıza yardımcı olacak açıklayıcı bir ad seçin.
+        permissions_label: İzinler
+        select_permissions: "Bu API anahtarının sahip olması gereken izinleri seçin:"
+        read_only: Salt Okunur
+        read_only_description: Hesaplarınızı, işlemlerinizi ve bakiyelerinizi görüntüleyin
+        read_write: Okuma/Yazma
+        read_write_description: Verilerinizi görüntüleyin ve yeni işlemler oluşturun
+        security_warning: Güvenlik Uyarısı
+        security_warning_description: "API anahtarınız oluşturulduktan sonra yalnızca bir kez görüntülenecektir. Kopyaladığınızdan ve güvenli bir şekilde sakladığınızdan emin olun. Kaybederseniz yeni bir anahtar oluşturmanız gerekecektir."
+        cancel: İptal
+        save: API Anahtarını Kaydet
+      created:
+        page_title: API Anahtarı Oluşturuldu
+        created_success: API Anahtarı Başarıyla Oluşturuldu!
+        created_description: "Yeni API anahtarınız \"%{name}\" oluşturuldu ve kullanıma hazır."
+        your_api_key: API Anahtarınız
+        copy_store_securely: "Bu anahtarı kopyalayın ve güvenli bir şekilde saklayın. API isteklerinizi doğrulamak için buna ihtiyacınız olacak."
+        copy_api_key: API Anahtarını Kopyala
+        key_details: Anahtar Detayları
+        name_label: "Ad:"
+        permissions_label: "İzinler:"
+        view_accounts: Hesapları Görüntüle
+        view_transactions: İşlemleri Görüntüle
+        view_balances: Bakiyeleri Görüntüle
+        create_transactions: İşlem Oluştur
+        created_label: "Oluşturulma:"
+        security_note: Önemli Güvenlik Notu
+        security_note_description: "API anahtarınızın görüntüleneceği tek sefer budur. Şimdi kopyaladığınızdan emin olun. Kaybederseniz yeni bir anahtar oluşturmanız gerekecektir."
+        how_to_use: API anahtarınızı nasıl kullanırsınız
+        usage_instructions: "İstek yaparken API anahtarınızı X-Api-Key başlığına ekleyin:"
+        continue_to_settings: API Anahtarı Ayarlarına Devam Et
+    bank_sync:
+      show:
+        page_title: Banka Senkronizasyonu
+        providers: SAĞLAYICILAR
+        no_providers: Yapılandırılmış sağlayıcı yok
+        configure_providers: Banka hesaplarınızı bağlamak için sağlayıcıları yapılandırın.
+    providers:
+      provider_form:
+        config_via_env: Yapılandırma ortam değişkenleri aracılığıyla ayarlanabilir veya aşağıda geçersiz kılınabilir.
+        field_descriptions: "Alan açıklamaları:"
+        optional: İsteğe bağlı
+        save_configuration: Yapılandırmayı Kaydet
+        configured: Yapılandırıldı ve kullanıma hazır
+        not_configured: Yapılandırılmadı
+      simplefin_panel:
+        setup_instructions: "Kurulum talimatları:"
+        step1_html: "Tek seferlik kurulum tokeninizi almak için <a href=\"https://bridge.simplefin.org\" target=\"_blank\" class=\"text-primary underline\">SimpleFIN Bridge</a> adresini ziyaret edin"
+        step2: Tokenı aşağıya yapıştırın ve SimpleFIN banka verisi senkronizasyonunu etkinleştirmek için Kaydet düğmesine tıklayın
+        step3: Başarılı bir bağlantıdan sonra, SimpleFIN verilerinizden yeni hesaplar oluşturmak için Hesaplar sekmesine gidin
+        field_descriptions: "Alan açıklamaları:"
+        setup_token_description: "Kurulum Tokeni: SimpleFIN tek seferlik kurulum tokeniniz. Bu, kalıcı bir erişim URL'si ile değiştirilecektir."
+        setup_token_label: Kurulum Tokeni
+        setup_token_placeholder: SimpleFIN kurulum tokenini yapıştırın
+        save_configuration: Yapılandırmayı Kaydet
+        configured: Yapılandırıldı ve kullanıma hazır. Hesapları yönetmek ve kurmak için Hesaplar sekmesini ziyaret edin.
+        not_configured: Yapılandırılmadı
+      lunchflow_panel:
+        setup_instructions: "Kurulum talimatları:"
+        step1_html: "API anahtarınızı almak için <a href=\"https://lunchflow.app\" target=\"_blank\" class=\"text-primary underline\">Lunch Flow</a> adresini ziyaret edin"
+        step2: API anahtarınızı aşağıya yapıştırın ve Kaydet düğmesine tıklayın
+        step3: Başarılı bir bağlantıdan sonra, bağlı hesaplarınızı kurmak ve yönetmek için Hesaplar sekmesine gidin
+        field_descriptions: "Alan açıklamaları:"
+        api_key_description: "API Anahtarı: Kimlik doğrulama için Lunch Flow API anahtarınız (gerekli)"
+        base_url_description: "Temel URL: Lunch Flow API için temel URL (isteğe bağlı, varsayılan https://lunchflow.app/api/v1)"
+        api_key_label: API Anahtarı
+        api_key_placeholder_new: API anahtarını buraya yapıştırın
+        api_key_placeholder_update: Güncellemek için yeni API anahtarı girin
+        base_url_label: Temel URL (İsteğe bağlı)
+        base_url_placeholder: "https://lunchflow.app/api/v1 (varsayılan)"
+        save_configuration: Yapılandırmayı Kaydet
+        update_configuration: Yapılandırmayı Güncelle
+        configured: Yapılandırıldı ve kullanıma hazır. Hesapları yönetmek ve kurmak için Hesaplar sekmesini ziyaret edin.
+        not_configured: Yapılandırılmadı
+      mercury_panel:
+        setup_instructions: "Kurulum talimatları:"
+        step1: https://app.mercury.com adresine gidin
+        step2: "Şirket adınıza tıklayın → Ayarlar → Geliştiriciler → API Tokenleri"
+        step3: Token Oluştur'a tıklayın
+        step4: "Token türünü seçin: Salt Okunur"
+        step5: "Tokeni adlandırın (örn., 'Sure Finance')"
+        step6: Token Oluştur'a tıklayın ve kopyalayın
+        field_descriptions: "Alan açıklamaları:"
+        token_description: "API Tokeni: Kimlik doğrulama için tam Mercury API tokeniniz"
+        base_url_description: "Temel URL: Mercury API URL'si (isteğe bağlı, varsayılan https://api.mercury.com/api/v1)"
+        sandbox_note: "Not: Sandbox testi için Temel URL olarak https://api.mercury.com/api/v1/sandbox kullanın."
+        token_label: Token
+        token_placeholder_new: Tokeni buraya yapıştırın
+        token_placeholder_update: Güncellemek için yeni token girin
+        base_url_label: Temel URL (İsteğe bağlı)
+        base_url_placeholder: "https://api.mercury.com/api/v1 (varsayılan)"
+        save_configuration: Yapılandırmayı Kaydet
+        update_configuration: Yapılandırmayı Güncelle
+        configured: Yapılandırıldı ve kullanıma hazır. Hesapları yönetmek ve kurmak için Hesaplar sekmesini ziyaret edin.
+        not_configured: Yapılandırılmadı
+      enable_banking_panel:
+        setup_instructions: "Kurulum talimatları:"
+        step1_html: "Kimlik bilgilerinizi almak için <a href=\"https://enablebanking.com\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"link\">Enable Banking</a> geliştirici hesabınızı ziyaret edin"
+        step2: Aşağıdaki açılır menüden ülke kodunuzu seçin
+        step3: Uygulama Kimliğinizi girin ve İstemci Sertifikanızı (özel anahtar dahil) yapıştırın
+        step4: "Yapılandırmayı Kaydet'e tıklayın, ardından bankanızı bağlamak için \"Bağlantı Ekle\"yi kullanın"
+        callback_url_instruction: "Geri arama URL'si için %{callback_url} adresini kullanın."
+        field_descriptions: "Alan açıklamaları:"
+        country_code_description: "Ülke Kodu: ISO 3166-1 alfa-2 ülke kodu (örn., GB, DE, FR) - kullanılabilir bankaları belirler"
+        application_id_description: "Uygulama Kimliği: Enable Banking geliştirici hesabınızda oluşturulan kimlik"
+        client_certificate_description: "İstemci Sertifikası: Uygulamanızı oluştururken oluşturulan sertifika (özel anahtarı içermelidir)"
+        select_country: "Ülke seçin..."
+        country_label: Ülke
+        config_locked: Yapılandırma kilitli
+        config_locked_description: Aktif banka bağlantılarınız varken kimlik bilgileri değiştirilemez. Kimlik bilgilerini güncellemek için önce tüm bağlantıları kaldırın.
+        application_id_label: Uygulama Kimliği
+        application_id_placeholder_new: Uygulama kimliğini girin
+        application_id_placeholder_update: Güncellemek için yeni kimlik girin
+        client_certificate_label: İstemci Sertifikası (Özel Anahtar ile)
+        save_configuration: Yapılandırmayı Kaydet
+        update_configuration: Yapılandırmayı Güncelle
+        syncing: Senkronize ediliyor
+        connected_bank: Bağlı Banka
+        session_expires: "Oturum sona eriyor: %{date}"
+        unknown: Bilinmiyor
+        connection: Bağlantı
+        session_expired: Oturum süresi doldu - yeniden bağlanın
+        configured: Yapılandırıldı
+        ready_to_link: Hesap bağlamaya hazır
+        sync_button: Senkronize Et
+        reconnect: Yeniden Bağlan
+        connect_bank: Banka Bağla
+        remove: Kaldır
+        remove_confirm: Bu bağlantıyı kaldırmak istediğinizden emin misiniz?
+        add_connection: Bağlantı Ekle

@@ -1,0 +1,34 @@
+---
+ro:
+  budgets:
+    name:
+      custom_range: "%{start} - %{end_date}"
+      month_year: "%{month}"
+    show:
+      categories: Categorii
+      edit: Editează
+      tabs:
+        actual: Efectiv
+        budgeted: Bugetat
+    edit:
+      title: Configurează-ți bugetul
+      description: Introduceți veniturile lunare și cheltuielile planificate mai jos pentru a vă configura bugetul.
+      budgeted_spending: Cheltuieli bugetate
+      expected_income: Venituri așteptate
+      autosuggest: Sugerare automată a veniturilor și bugetului de cheltuieli
+      autosuggest_description: Aceasta se va baza pe istoricul tranzacțiilor. AI poate face greșeli, verificați înainte de a continua.
+      continue: Continuă
+    budgeted_summary:
+      expected_income: Venituri așteptate
+      earned: "%{amount} câștigat"
+      over: "%{amount} depășit"
+      left: "%{amount} rămas"
+      budgeted: Bugetat
+      spent: "%{amount} cheltuit"
+    actuals_summary:
+      income: Venituri
+      expenses: Cheltuieli
+  budget_categories:
+    index:
+      title: Editează bugetele pe categorii
+      description: Ajustați bugetele pe categorii pentru a stabili limite de cheltuieli. Fondurile nealocate vor fi atribuite automat ca necategorizate.

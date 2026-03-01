@@ -1,6 +1,14 @@
 ---
 fr:
   valuations:
+    confirm_create:
+      title: Confirmer le nouveau solde
+    confirm_update:
+      title: Mettre à jour le solde
+    confirmation_contents:
+      brokerage_cash: Liquidités de courtage
+      holdings_value: Valeur des avoirs
+      total_account_value: Valeur totale du compte
     form:
       amount: Montant
       submit: Ajouter une mise à jour du solde
@@ -16,6 +24,7 @@ fr:
     new:
       title: Nouveau solde
     show:
+      account_value_on_date: Valeur du compte à la date
       amount: Montant
       date_label: Date
       delete: Supprimer
@@ -28,3 +37,4 @@ fr:
       note_placeholder: Ajoutez tout détail supplémentaire à ce bilan
       overview: Aperçu
       settings: Paramètres
+      update_value: Mettre à jour la valeur

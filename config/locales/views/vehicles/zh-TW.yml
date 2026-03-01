@@ -17,6 +17,7 @@ zh-TW:
       title: 輸入車輛詳情
     overview:
       current_price: 目前價值
+      edit_account_details: 編輯帳戶詳情
       make_model: 廠牌與車型
       mileage: 里程數
       purchase_price: 買入價格

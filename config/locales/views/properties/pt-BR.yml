@@ -3,6 +3,7 @@ pt-BR:
   properties:
     edit:
       edit: Editar %{account}
+      title: Inserir propriedade manualmente
     form:
       address_line1: Endereço
       address_line1_placeholder: Rua Principal, 123
@@ -18,11 +19,13 @@ pt-BR:
       postal_code_placeholder: '01234-567'
       region: Estado
       region_placeholder: SP
+      square_feet: Pés quadrados
+      square_meters: Metros quadrados
       subtype_prompt: Selecionar tipo de propriedade
       year_built: Ano de construção
       year_built_placeholder: '2000'
     new:
-      title: Inserir detalhes da propriedade
+      title: Inserir propriedade manualmente
     overview:
       living_area: Área Útil
       market_value: Valor de Mercado
@@ -30,3 +33,36 @@ pt-BR:
       trend: Tendência
       unknown: Desconhecido
       year_built: Ano de Construção
+    address:
+      title: Inserir propriedade manualmente
+      address_line1: Linha de endereço 1
+      address_line1_placeholder: "Rua Principal, 123"
+      city: Cidade
+      city_placeholder: São Paulo
+      country: País
+      country_placeholder: BR
+      postal_code: CEP
+      postal_code_placeholder: "01234-567"
+      state_region: Estado/Região
+      state_region_placeholder: SP
+    balances:
+      title: Inserir propriedade manualmente
+      estimated_market_value: Valor de mercado estimado
+      estimated_market_value_tooltip: "O valor de mercado estimado da sua propriedade. Esse número pode ser encontrado frequentemente em sites como Zillow ou Redfin, e nunca é um número exato."
+    form_tabs:
+      address: Endereço
+      overview: Visão geral
+      value: Valor
+    overview_fields:
+      area_optional: "Área (opcional)"
+      area_unit: Unidade de área
+      name: Nome
+      name_placeholder: Casa de férias
+      property_type: Tipo de propriedade
+      select_type: Selecionar tipo
+      square_feet: Pés quadrados
+      square_meters: Metros quadrados
+      year_built_optional: "Ano de construção (opcional)"
+    tabs:
+      overview:
+        edit_account_details: Editar detalhes da conta

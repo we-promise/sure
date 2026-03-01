@@ -124,3 +124,183 @@ zh-TW:
       choose: 上傳相片
       choose_label: （選填）
       change: 變更相片
+    llm_usages:
+      show:
+        page_title: LLM 使用量與費用
+        subtitle: 追蹤您的 AI 使用情況與預估費用
+        start_date: 開始日期
+        end_date: 結束日期
+        filter: 篩選
+        total_requests: 總請求數
+        total_tokens: 總 Token 數
+        prompt: 提示詞
+        completion: 補全
+        total_cost: 總費用
+        avg_cost: 平均每次請求費用
+        cost_data_basis: "基於 %{total} 個請求中 %{count} 個包含費用資料的請求"
+        cost_by_operation: 依操作分類的費用
+        cost_by_model: 依模型分類的費用
+        recent_usage: 近期使用紀錄
+        date: 日期
+        operation: 操作
+        model: 模型
+        tokens: Token 數
+        cost: 費用
+        failed: 失敗
+        http_status: "HTTP 狀態碼："
+        no_data: 所選時段內未找到使用資料
+        about_cost_estimates: 關於費用估算
+        cost_estimates_description: "費用基於 2025 年 OpenAI 定價進行估算。實際費用可能因您的供應商和方案不同而有所差異。失敗的請求（非 200 狀態碼）仍可能計入您的 API 使用量。"
+    api_keys:
+      show:
+        page_title_created: API 金鑰建立成功
+        page_title_key: 您的 API 金鑰
+        created_success: API 金鑰建立成功！
+        created_description: "您的新 API 金鑰 \"%{name}\" 已建立並可以使用。"
+        your_api_key: 您的 API 金鑰
+        copy_store_securely: "請複製並安全保存此金鑰。您需要使用它來驗證 API 請求。"
+        copy_api_key: 複製 API 金鑰
+        how_to_use: 如何使用您的 API 金鑰
+        usage_instructions: "發送請求時，請在 X-Api-Key 標頭中包含您的 API 金鑰："
+        continue_to_settings: 前往 API 金鑰設定
+        create_new_key: 建立新金鑰
+        created_ago: "建立於 %{time} 前"
+        last_used_ago: "上次使用於 %{time} 前"
+        never_used: 從未使用
+        active: 啟用中
+        permissions: 權限
+        read_only: 唯讀
+        read_write: 讀寫
+        revoke_key: 撤銷金鑰
+        confirm_revoke: 確定要撤銷此 API 金鑰嗎？此操作無法復原。
+      new:
+        page_title: 建立新 API 金鑰
+        subtitle: 產生一個新的 API 金鑰，以程式方式存取您的 Sure 資料。
+        name_placeholder: "例如：我的預算應用、投資組合追蹤器"
+        name_label: API 金鑰名稱
+        name_help: 選擇一個易於辨識的名稱，方便日後識別此金鑰。
+        permissions_label: 權限
+        select_permissions: "選擇此 API 金鑰應具有的權限："
+        read_only: 唯讀
+        read_only_description: 檢視您的帳戶、交易和餘額
+        read_write: 讀寫
+        read_write_description: 檢視您的資料並建立新交易
+        security_warning: 安全警告
+        security_warning_description: "您的 API 金鑰僅在建立後顯示一次。請務必複製並安全保存。如果遺失，您需要建立一個新金鑰。"
+        cancel: 取消
+        save: 儲存 API 金鑰
+      created:
+        page_title: API 金鑰已建立
+        created_success: API 金鑰建立成功！
+        created_description: "您的新 API 金鑰 \"%{name}\" 已建立並可以使用。"
+        your_api_key: 您的 API 金鑰
+        copy_store_securely: "請複製並安全保存此金鑰。您需要使用它來驗證 API 請求。"
+        copy_api_key: 複製 API 金鑰
+        key_details: 金鑰詳情
+        name_label: "名稱："
+        permissions_label: "權限："
+        view_accounts: 檢視帳戶
+        view_transactions: 檢視交易
+        view_balances: 檢視餘額
+        create_transactions: 建立交易
+        created_label: "建立時間："
+        security_note: 重要安全提示
+        security_note_description: "這是您的 API 金鑰唯一一次顯示的機會。請務必現在複製。如果遺失，您需要建立一個新金鑰。"
+        how_to_use: 如何使用您的 API 金鑰
+        usage_instructions: "發送請求時，請在 X-Api-Key 標頭中包含您的 API 金鑰："
+        continue_to_settings: 前往 API 金鑰設定
+    bank_sync:
+      show:
+        page_title: 銀行同步
+        providers: 服務提供商
+        no_providers: 尚未配置任何服務提供商
+        configure_providers: 配置服務提供商以連結您的銀行帳戶。
+    providers:
+      provider_form:
+        config_via_env: 設定可透過環境變數設定，也可在下方覆寫。
+        field_descriptions: "欄位說明："
+        optional: 選填
+        save_configuration: 儲存設定
+        configured: 已設定，可以使用
+        not_configured: 尚未設定
+      simplefin_panel:
+        setup_instructions: "設定說明："
+        step1_html: "前往 <a href=\"https://bridge.simplefin.org\" target=\"_blank\" class=\"text-primary underline\">SimpleFIN Bridge</a> 取得一次性設定權杖"
+        step2: 將權杖貼到下方，然後點選儲存按鈕以啟用 SimpleFIN 銀行資料同步
+        step3: 成功連線後，前往帳戶分頁設定來自 SimpleFIN 資料的新帳戶
+        setup_token_description: "設定權杖：您的 SimpleFIN 一次性設定權杖。它將被交換為永久存取 URL。"
+        setup_token_label: 設定權杖
+        setup_token_placeholder: 貼上 SimpleFIN 設定權杖
+        save_configuration: 儲存設定
+        configured: 已設定，可以使用。前往帳戶分頁管理和設定帳戶。
+        not_configured: 尚未設定
+      lunchflow_panel:
+        setup_instructions: "設定說明："
+        step1_html: "前往 <a href=\"https://lunchflow.app\" target=\"_blank\" class=\"text-primary underline\">Lunch Flow</a> 取得您的 API 金鑰"
+        step2: 將您的 API 金鑰貼到下方，然後點選儲存按鈕
+        step3: 成功連線後，前往帳戶分頁設定和管理您的連結帳戶
+        api_key_description: "API 金鑰：您的 Lunch Flow API 認證金鑰（必填）"
+        base_url_description: "基礎 URL：Lunch Flow API 的基礎 URL（選填，預設為 https://lunchflow.app/api/v1）"
+        api_key_label: API 金鑰
+        api_key_placeholder_new: 在此貼上 API 金鑰
+        api_key_placeholder_update: 輸入新的 API 金鑰以更新
+        base_url_label: 基礎 URL（選填）
+        base_url_placeholder: "https://lunchflow.app/api/v1（預設）"
+        save_configuration: 儲存設定
+        update_configuration: 更新設定
+        configured: 已設定，可以使用。前往帳戶分頁管理和設定帳戶。
+        not_configured: 尚未設定
+      mercury_panel:
+        setup_instructions: "設定說明："
+        step1: 前往 https://app.mercury.com
+        step2: "點選您的公司名稱 → 設定 → 開發者 → API 權杖"
+        step3: 點選產生權杖
+        step4: "選擇權杖類型：唯讀"
+        step5: "為權杖命名（例如：'Sure Finance'）"
+        step6: 點選建立權杖並複製
+        token_description: "API 權杖：您的完整 Mercury API 認證權杖"
+        base_url_description: "基礎 URL：Mercury API URL（選填，預設為 https://api.mercury.com/api/v1）"
+        sandbox_note: "注意：如需沙盒測試，請將基礎 URL 設定為 https://api.mercury.com/api/v1/sandbox。"
+        token_label: 權杖
+        token_placeholder_new: 在此貼上權杖
+        token_placeholder_update: 輸入新的權杖以更新
+        base_url_label: 基礎 URL（選填）
+        base_url_placeholder: "https://api.mercury.com/api/v1（預設）"
+        save_configuration: 儲存設定
+        update_configuration: 更新設定
+        configured: 已設定，可以使用。前往帳戶分頁管理和設定帳戶。
+        not_configured: 尚未設定
+      enable_banking_panel:
+        setup_instructions: "設定說明："
+        step1_html: "前往您的 <a href=\"https://enablebanking.com\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"link\">Enable Banking</a> 開發者帳戶以取得憑證"
+        step2: 從下方下拉選單中選擇您的國家代碼
+        step3: 輸入您的應用程式 ID 並貼上您的用戶端憑證（包含私鑰）
+        step4: "點選儲存設定，然後使用「新增連線」來連結您的銀行"
+        callback_url_instruction: "回呼 URL 請使用 %{callback_url}。"
+        country_code_description: "國家代碼：ISO 3166-1 alpha-2 國家代碼（例如 GB、DE、FR）— 決定可用的銀行"
+        application_id_description: "應用程式 ID：在您的 Enable Banking 開發者帳戶中產生的 ID"
+        client_certificate_description: "用戶端憑證：建立應用程式時產生的憑證（必須包含私鑰）"
+        select_country: "選擇國家..."
+        country_label: 國家
+        config_locked: 設定已鎖定
+        config_locked_description: 存在活動銀行連線時無法變更憑證。請先移除所有連線再更新憑證。
+        application_id_label: 應用程式 ID
+        application_id_placeholder_new: 輸入應用程式 ID
+        application_id_placeholder_update: 輸入新的 ID 以更新
+        client_certificate_label: 用戶端憑證（含私鑰）
+        save_configuration: 儲存設定
+        update_configuration: 更新設定
+        syncing: 同步中
+        connected_bank: 已連線銀行
+        session_expires: "工作階段到期時間：%{date}"
+        unknown: 未知
+        connection: 連線
+        session_expired: 工作階段已過期 - 請重新連線
+        configured: 已設定
+        ready_to_link: 可以連結帳戶
+        sync_button: 同步
+        reconnect: 重新連線
+        connect_bank: 連線銀行
+        remove: 移除
+        remove_confirm: 確定要移除此連線嗎？
+        add_connection: 新增連線

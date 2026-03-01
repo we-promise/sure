@@ -36,6 +36,11 @@ nl:
           yahoo_finance: Yahoo Finance
       brand_fetch_settings:
         description: Voer het Client ID in dat door Brand Fetch is verstrekt
+        env_configured_message: U heeft uw Brand Fetch Client ID succesvol geconfigureerd via de BRAND_FETCH_CLIENT_ID omgevingsvariabele.
+        show_details: "(details tonen)"
+        step1_html: 'Bezoek <a href="https://brandfetch.com/developers" target="_blank" rel="noopener noreferrer" class="underline">brandfetch.com</a> en maak een gratis Brand Fetch Developer-account aan.'
+        step2_html: 'Ga naar de <a href="https://developers.brandfetch.com/dashboard/logo-api" target="_blank" rel="noopener noreferrer" class="underline">Logo API</a>-pagina.'
+        step3: Tik op het oogpictogram onder het gedeelte "Your Client ID" om uw Client ID te onthullen en plak het hieronder.
         label: Client ID
         placeholder: Voer hier uw Client ID in
         title: Brand Fetch instellingen
@@ -66,6 +71,10 @@ nl:
         api_calls_used: "%{used} / %{limit} API dagelijkse oproepen gebruikt (%{percentage})"
         description: Voer de API Key in die door Twelve Data is verstrekt
         env_configured_message: Succesvol geconfigureerd via de TWELVE_DATA_API_KEY omgevingsvariabele.
+        show_details: "(details tonen)"
+        step1_html: 'Bezoek <a href="https://twelvedata.com/register" target="_blank" rel="noopener noreferrer" class="underline">twelvedata.com</a> en maak een gratis Twelve Data Developer-account aan.'
+        step2_html: 'Ga naar de <a href="https://twelvedata.com/account/api-keys" target="_blank" rel="noopener noreferrer" class="underline">API Keys</a>-pagina.'
+        step3: Toon uw geheime sleutel en plak deze hieronder.
         label: API Key
         placeholder: Voer hier uw API Key in
         plan: "%{plan} plan"

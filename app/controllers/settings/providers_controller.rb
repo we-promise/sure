@@ -66,9 +66,9 @@ class Settings::ProvidersController < ApplicationController
       # Reload provider configurations if needed
       reload_provider_configs(updated_fields)
 
-      redirect_to settings_providers_path, notice: "Provider settings updated successfully"
+      redirect_to settings_providers_path, notice: t("controllers.settings.providers.updated")
     else
-      redirect_to settings_providers_path, notice: "No changes were made"
+      redirect_to settings_providers_path, notice: t("controllers.settings.providers.no_changes")
     end
   rescue => error
     Rails.logger.error("Failed to update provider settings: #{error.message}")
@@ -93,7 +93,7 @@ class Settings::ProvidersController < ApplicationController
     end
 
     def ensure_admin
-      redirect_to settings_providers_path, alert: "Not authorized" unless Current.user.admin?
+      redirect_to settings_providers_path, alert: t("controllers.settings.providers.not_authorized") unless Current.user.admin?
     end
 
     # Reload provider configurations after settings update

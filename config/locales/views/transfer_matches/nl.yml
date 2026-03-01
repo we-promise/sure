@@ -1,0 +1,22 @@
+---
+nl:
+  transfer_matches:
+    matching_fields:
+      create_new: Nieuwe transactie aanmaken
+      description: Selecteer een methode om uw transacties te koppelen.
+      match_existing: Bestaande transactie koppelen (aanbevolen)
+      matching_method: Koppelmethode
+      matching_transaction: Gekoppelde transactie
+      no_matches_description: We konden geen transacties vinden om te koppelen uit
+        uw andere rekeningen. Selecteer een rekening en wij maken een nieuwe inkomende
+        transactie voor u aan.
+      target_account: Doelrekening
+    new:
+      from_account: Van rekening
+      from_account_name: "Van rekening: %{name}"
+      inflow_transaction: Inkomende transactie
+      outflow_transaction: Uitgaande transactie
+      submit: Overboekingskoppeling aanmaken
+      title: Overboeking of betaling koppelen
+      to_account: Naar rekening
+      to_account_name: "Naar rekening: %{name}"

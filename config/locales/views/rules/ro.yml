@@ -3,6 +3,68 @@ ro:
   rules:
     no_action: Nicio acțiune
     no_condition: Nicio condiție
+    index:
+      page_title: Reguli
+      delete_all_rules: Șterge toate regulile
+      new_rule: Regulă nouă
+      ai_warning: Acțiunile regulilor cu IA activată vor costa bani. Asigură-te că filtrezi cât mai precis posibil pentru a evita costurile inutile.
+      rules_label: Reguli
+      sort_by: "Sortează după:"
+      toggle_sort_direction: Comută direcția sortării
+      no_rules: Nicio regulă încă
+      no_rules_description: Configurează reguli pentru a executa acțiuni asupra tranzacțiilor tale și altor date la fiecare sincronizare de cont.
+    new:
+      back_to_rules: Înapoi la reguli
+      new_rule_title: "Regulă nouă de %{resource_type}"
+    edit:
+      back_to_rules: Înapoi la reguli
+      edit_rule_title: "Editează regula de %{resource_type} \"%{name}\""
+      edit_rule_title_unnamed: "Editează regula de %{resource_type}"
+    confirm:
+      confirm_changes_to: "Confirmă modificările la \"%{name}\""
+      confirm_changes: Confirmă modificările
+      about_to_apply_html: "Ești pe cale să aplici această regulă la <span class=\"text-primary font-medium\">%{count} %{resource_type}</span> care îndeplinesc criteriile specificate. Te rugăm să confirmi dacă dorești să continui cu această modificare."
+      ai_cost_title: Estimare Cost IA
+      ai_cost_message: "Aceasta va folosi IA pentru a categoriza %{count} tranzacție/tranzacții. Cost estimat: <span class=\"font-semibold\">~$%{cost}</span>"
+      ai_cost_no_estimate: "Aceasta va folosi IA pentru a categoriza %{count} tranzacție/tranzacții."
+      cost_unavailable_model: "Estimare de cost indisponibilă pentru modelul \"%{model}\"."
+      cost_unavailable_no_provider: Estimare de cost indisponibilă (niciun furnizor LLM configurat).
+      cost_warning: Poți suporta costuri, te rugăm să verifici cu furnizorul modelului pentru cele mai recente prețuri.
+      view_usage: Vezi istoricul utilizării
+      confirm_changes_btn: Confirmă modificările
+    form:
+      rule_name_optional: Numele regulii (opțional)
+      enter_name: Introdu un nume pentru această regulă
+      if_label: DACĂ
+      then_label: ATUNCI
+      for_label: PENTRU
+      add_condition: Adaugă condiție
+      add_condition_group: Adaugă grup de condiții
+      add_action: Adaugă acțiune
+      all_past_future: "Toate %{resource_type}urile trecute și viitoare"
+      starting_from: Începând de la
+    rule:
+      if_label: DACĂ
+      then_label: ATUNCI
+      for_label: PENTRU
+      to_label: la
+      and_more_conditions:
+        one: "și încă %{count} condiție"
+        other: "și încă %{count} condiții"
+      and_more_actions:
+        one: "și încă %{count} acțiune"
+        other: "și încă %{count} acțiuni"
+      all_past_future: "Toate %{resource_type} trecute și viitoare"
+      on_or_after: "%{resource_type} la sau după %{date}"
+      edit: Editează
+      reapply_rule: Reaplică regula
+      delete: Șterge
+    category_rule_cta:
+      updated_to: "Actualizat la %{name}"
+      auto_categorize_description: Poți crea o regulă pentru a categoriza automat tranzacțiile ca aceasta
+      dont_show_again: Nu mai afișa
+      dismiss: Respinge
+      create_rule: Creează regulă
     recent_runs:
       title: Rulări Recente
       description: Vezi istoricul de execuție al regulilor tale incluzând statusul de succes/eșec și numărul de tranzacții.
@@ -23,3 +85,16 @@ ro:
         pending: În Așteptare
         success: Succes
         failed: Eșuat
+  rule:
+    actions:
+      action:
+        to_label: la
+    conditions:
+      condition:
+        and_label: și
+        enter_value: Introdu o valoare
+      condition_group:
+        and_label: și
+        match: corespund
+        of_the_following: din condițiile următoare
+        add_condition: Adaugă condiție

@@ -18,6 +18,8 @@ de:
       footer:
         privacy_policy: Datenschutzrichtlinie
         terms_of_service: Nutzungsbedingungen
+    lookbooks:
+      title: Komponentenvorschau
     trial:
       open_demo: Offene Demo
       data_deleted_in_days: Daten werden in %{days} Tagen gelöscht

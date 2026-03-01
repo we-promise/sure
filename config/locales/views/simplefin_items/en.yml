@@ -26,11 +26,40 @@ en:
         update_failed: "Failed to update connection: %{message}"
         unexpected: An unexpected error occurred. Please try again.
     edit:
+      title: "Update SimpleFin Connection"
+      subtitle: "Get a new setup token to reconnect your SimpleFin account"
+      update_needed: "Your SimpleFIN connection needs to be updated:"
+      step_1_html: 'Visit <a href="https://bridge.simplefin.org/simplefin/create" target="_blank" rel="noopener noreferrer" class="text-link hover:text-link underline">SimpleFIN Bridge</a> to create a new setup token'
+      step_2: "Copy the token and paste it below"
+      step_3: 'Click "Update" to restore access'
+      update: "Update"
+      cancel: "Cancel"
       setup_token:
         label: "SimpleFIN Setup Token:"
         placeholder: "Paste your SimpleFIN setup token here..."
         help_text: "The token should be a long string starting with letters and numbers"
     setup_accounts:
+      page_title: "Set Up SimpleFin Accounts"
+      title: "Set Up Your SimpleFin Accounts"
+      subtitle: "Choose the correct account types for your imported accounts"
+      creating_accounts: "Creating Accounts..."
+      choose_account_type: "Choose the correct account type for each SimpleFin account:"
+      account_type_depository: "Checking or Savings"
+      account_type_depository_desc: "Regular bank accounts"
+      account_type_credit_card: "Credit Card"
+      account_type_credit_card_desc: "Credit card accounts"
+      account_type_investment: "Investment"
+      account_type_investment_desc: "Brokerage, 401(k), IRA accounts"
+      account_type_loan: "Loan or Mortgage"
+      account_type_loan_desc: "Debt accounts"
+      account_type_other_asset: "Other Asset"
+      account_type_other_asset_desc: "Everything else"
+      transaction_history: "Transaction History:"
+      transaction_history_note_html: "SimpleFin typically provides <strong>60-90 days</strong> of transaction history, depending on your bank. After initial setup, new transactions will sync automatically going forward. Historical data availability varies by institution and account type."
+      account_type_label: "Account Type:"
+      balance_label: "Balance:"
+      create_accounts: "Create Accounts"
+      cancel: "Cancel"
       stale_accounts:
         title: "Accounts No Longer in SimpleFIN"
         description: "These accounts exist in your database but are no longer provided by SimpleFIN. This can happen when account configurations change upstream."
@@ -83,6 +112,9 @@ en:
       reconciled_details_note: "(see sync summary for details)"
       duplicate_accounts_skipped: "Some accounts were skipped as duplicates — use 'Link existing accounts' to merge."
     select_existing_account:
+      header_title: "Link SimpleFIN account"
+      link_button: "Link"
+      balance_label: "Balance:"
       title: "Link %{account_name} to SimpleFIN"
       description: Select a SimpleFIN account to link to your existing account
       cancel: Cancel

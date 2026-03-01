@@ -7,5 +7,6 @@ en:
         edit: Edit category
       show:
         clear: Clear category
+        match_transfer: "Match transfer/payment"
         no_categories: No categories found
         search_placeholder: Search

@@ -1,0 +1,34 @@
+---
+nb:
+  budgets:
+    name:
+      custom_range: "%{start} - %{end_date}"
+      month_year: "%{month}"
+    show:
+      categories: Kategorier
+      edit: Rediger
+      tabs:
+        actual: Faktisk
+        budgeted: Budsjettert
+    edit:
+      title: Sett opp budsjettet ditt
+      description: Skriv inn dine månedlige inntekter og planlagte utgifter nedenfor for å sette opp budsjettet ditt.
+      budgeted_spending: Budsjetterte utgifter
+      expected_income: Forventet inntekt
+      autosuggest: Foreslå inntekt og utgiftsbudsjett automatisk
+      autosuggest_description: Dette vil være basert på transaksjonshistorikk. AI kan gjøre feil, kontroller før du fortsetter.
+      continue: Fortsett
+    budgeted_summary:
+      expected_income: Forventet inntekt
+      earned: "%{amount} opptjent"
+      over: "%{amount} over"
+      left: "%{amount} igjen"
+      budgeted: Budsjettert
+      spent: "%{amount} brukt"
+    actuals_summary:
+      income: Inntekter
+      expenses: Utgifter
+  budget_categories:
+    index:
+      title: Rediger kategoribudsjetter
+      description: Juster kategoribudsjetter for å sette forbruksgrenser. Uallokerte midler vil automatisk bli tildelt som ukategorisert.

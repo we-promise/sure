@@ -124,3 +124,12 @@ zh-TW:
       open_sheets: 開啟 Google 試算表
       go_to_api_keys: 前往 API 金鑰設定
       close: 我知道了
+    investment_flows:
+      title: 投資資金流向
+      description: 透過投入與提取追蹤您投資帳戶的資金流入和流出情況。
+      contributions: 資金投入
+      contributions_description: 投入到投資中的資金
+      withdrawals: 資金提取
+      withdrawals_description: 從投資中提取的資金
+      net_flow: 淨流量
+      net_flow_description: 總淨變化

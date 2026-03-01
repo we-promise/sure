@@ -13,3 +13,21 @@ fr:
       success: Session quittée
     reject:
       success: Demande rejetée
+    approval_bar:
+      access_session: Accéder à la session
+      access_request: Demande d'accès
+      request_message: "Le personnel de support de Sure a demandé l'accès à votre compte (probablement pour vous aider avec une demande de support). Si vous approuvez la demande, toute activité effectuée sera enregistrée à des fins de sécurité et d'audit."
+      approve: Approuver
+      reject: Rejeter
+      in_progress_message: "Quelqu'un de l'équipe Sure Finances consulte actuellement vos données. Vous pouvez mettre fin à la session à tout moment."
+      end_session: Terminer la session
+      error_message: "Quelque chose s'est mal passé. Veuillez nous contacter."
+    super_admin_bar:
+      super_admin: Super Admin
+      jobs: Tâches
+      impersonating: "Usurpation :"
+      leave: Quitter
+      terminate: Terminer
+      join_session_prompt: Rejoindre une session
+      join: Rejoindre
+      request_impersonation: Demander une usurpation d'identité

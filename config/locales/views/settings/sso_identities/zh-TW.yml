@@ -1,0 +1,7 @@
+---
+zh-TW:
+  settings:
+    sso_identities:
+      destroy:
+        cannot_unlink_last: 無法取消關聯最後一個身分
+        success: 成功

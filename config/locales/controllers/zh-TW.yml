@@ -1,0 +1,58 @@
+---
+zh-TW:
+  controllers:
+    holdings:
+      cannot_delete: "您無法刪除此持倉"
+    settings:
+      api_keys:
+        created: "您的 API 金鑰已成功建立"
+        not_found: "找不到 API 金鑰"
+        cannot_revoke: "此 API 金鑰無法撤銷"
+        revoked: "API 金鑰已成功撤銷"
+        revoke_failed: "撤銷 API 金鑰失敗"
+      profiles:
+        member_removed: "成員已成功移除。"
+        member_remove_failed: "移除成員失敗。"
+      providers:
+        updated: "供應商設定已成功更新"
+        no_changes: "未進行任何變更"
+        not_authorized: "未授權"
+    transactions:
+      created: "交易已建立"
+    rules:
+      deleted: "規則已刪除"
+      all_deleted: "所有規則已刪除"
+    subscriptions:
+      already_contributing: "您已在貢獻中。謝謝！"
+      welcome: "歡迎使用 Sure！"
+      trial_completed: "您已開始或完成試用期。請升級以繼續使用。"
+      welcome_contribution: "歡迎使用 Sure！感謝您的貢獻。"
+      contribution_failed: "處理您的貢獻時出現問題。請重試。"
+    plaid_items:
+      linked: "帳戶已成功連結至 Plaid"
+      no_available_accounts: "沒有可連結的 Plaid 帳戶。請先連接一個新的 Plaid 帳戶。"
+      invalid_account: "選取的 Plaid 帳戶無效"
+      already_linked: "此 Plaid 帳戶已被連結"
+    imports:
+      publish_started: "您的匯入已在背景啟動。"
+      reverting: "匯入正在背景中還原。"
+      template_applied: "範本已套用。"
+      no_template: "找不到範本，請手動設定您的匯入。"
+      deleted: "您的匯入已被刪除。"
+    import:
+      uploads:
+        csv_uploaded: "CSV 上傳成功。"
+      cleans:
+        configure_first: "請在繼續之前設定您的匯入。"
+      confirms:
+        invalid_data: "您有無效資料，請編輯直到所有錯誤都已解決"
+    chats:
+      deleted: "聊天已成功刪除"
+    oidc_accounts:
+      no_pending_auth: "找不到待處理的 OIDC 身份驗證"
+      creation_disabled: "SSO 帳戶建立已停用。請聯絡管理員。"
+    concerns:
+      self_hostable:
+        redis_configured: "Redis 現已正確設定！您現在可以設定您的 Sure 應用程式。"
+    snaptrade_items:
+      use_setup_flow: "請使用帳戶設定流程"

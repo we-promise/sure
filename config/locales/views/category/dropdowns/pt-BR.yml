@@ -7,5 +7,6 @@ pt-BR:
         edit: Editar categoria
       show:
         clear: Limpar categoria
+        match_transfer: "Corresponder transferência/pagamento"
         no_categories: Nenhuma categoria encontrada
         search_placeholder: Buscar

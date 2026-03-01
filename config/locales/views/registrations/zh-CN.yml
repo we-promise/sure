@@ -14,6 +14,7 @@ zh-CN:
       invalid_invite_code: 邀请码无效，请重试。
       success: 您已成功注册。
     new:
+      email_placeholder: "you@example.com"
       invitation_message: "%{inviter} 已邀请您以 %{role} 身份加入"
       join_family_title: 加入 %{family}
       password_placeholder: 请输入密码

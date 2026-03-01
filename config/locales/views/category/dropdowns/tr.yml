@@ -7,5 +7,6 @@ tr:
         edit: Kategoriyi düzenle
       show:
         clear: Kategoriyi temizle
+        match_transfer: "Transfer/ödeme eşleştir"
         no_categories: Hiç kategori bulunamadı
         search_placeholder: Ara

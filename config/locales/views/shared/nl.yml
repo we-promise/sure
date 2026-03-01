@@ -5,6 +5,7 @@ nl:
       accept: Bevestigen
       body_html: "<p>U kunt deze beslissing niet ongedaan maken</p>"
       cancel: Annuleren
+      subtitle: Deze actie kan niet ongedaan worden gemaakt.
       title: Weet u het zeker?
     money_field:
       label: Bedrag

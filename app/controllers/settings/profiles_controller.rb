@@ -29,9 +29,9 @@ class Settings::ProfilesController < ApplicationController
     if @user.destroy
       # Also destroy the invitation associated with this user for this family
       Current.family.invitations.find_by(email: @user.email)&.destroy
-      flash[:notice] = "Member removed successfully."
+      flash[:notice] = t("controllers.settings.profiles.member_removed")
     else
-      flash[:alert] = "Failed to remove member."
+      flash[:alert] = t("controllers.settings.profiles.member_remove_failed")
     end
 
     redirect_to settings_profile_path

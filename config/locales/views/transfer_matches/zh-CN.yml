@@ -1,0 +1,20 @@
+---
+zh-CN:
+  transfer_matches:
+    matching_fields:
+      create_new: 创建新交易
+      description: 选择一种方法来匹配您的交易。
+      match_existing: 匹配现有交易（推荐）
+      matching_method: 匹配方法
+      matching_transaction: 匹配的交易
+      no_matches_description: 我们无法从您的其他账户中找到可匹配的交易。请选择一个账户，我们将为您创建一笔新的收入交易。
+      target_account: 目标账户
+    new:
+      from_account: 来源账户
+      from_account_name: "来源账户：%{name}"
+      inflow_transaction: 收入交易
+      outflow_transaction: 支出交易
+      submit: 创建转账匹配
+      title: 匹配转账或付款
+      to_account: 目标账户
+      to_account_name: "目标账户：%{name}"

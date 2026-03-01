@@ -11,6 +11,7 @@ nb:
     form:
       placeholder: Tagnavn
     index:
+      delete_all: Slett alle
       empty: Ingen tagger ennå
       new: Ny tag
       tags: Tagger

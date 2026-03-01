@@ -3,6 +3,7 @@ nl:
   properties:
     edit:
       edit: "%{account} bewerken"
+      title: Vastgoed handmatig invoeren
     form:
       address_line1: Straatnaam
       address_line1_placeholder: Hoofdstraat 123
@@ -18,11 +19,13 @@ nl:
       postal_code_placeholder: '1234AB'
       region: Provincie
       region_placeholder: Noord-Holland
+      square_feet: Vierkante voet
+      square_meters: Vierkante meter
       subtype_prompt: Selecteer vastgoedtype
       year_built: Bouwjaar
       year_built_placeholder: '2000'
     new:
-      title: Vastgoedgegevens invoeren
+      title: Vastgoed handmatig invoeren
     overview:
       living_area: Woonoppervlakte
       market_value: Marktwaarde
@@ -30,3 +33,36 @@ nl:
       trend: Trend
       unknown: Onbekend
       year_built: Bouwjaar
+    address:
+      title: Vastgoed handmatig invoeren
+      address_line1: Adresregel 1
+      address_line1_placeholder: "Hoofdstraat 123"
+      city: Stad
+      city_placeholder: Amsterdam
+      country: Land
+      country_placeholder: NL
+      postal_code: Postcode
+      postal_code_placeholder: "1234AB"
+      state_region: Provincie/Regio
+      state_region_placeholder: Noord-Holland
+    balances:
+      title: Vastgoed handmatig invoeren
+      estimated_market_value: Geschatte marktwaarde
+      estimated_market_value_tooltip: "De geschatte marktwaarde van uw vastgoed. Dit bedrag is vaak te vinden op sites zoals Zillow of Redfin, en is nooit een exact bedrag."
+    form_tabs:
+      address: Adres
+      overview: Overzicht
+      value: Waarde
+    overview_fields:
+      area_optional: "Oppervlakte (optioneel)"
+      area_unit: Oppervlakte-eenheid
+      name: Naam
+      name_placeholder: Vakantiehuis
+      property_type: Vastgoedtype
+      select_type: Type selecteren
+      square_feet: Vierkante voet
+      square_meters: Vierkante meter
+      year_built_optional: "Bouwjaar (optioneel)"
+    tabs:
+      overview:
+        edit_account_details: Accountgegevens bewerken

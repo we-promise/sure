@@ -3,6 +3,7 @@ fr:
   properties:
     edit:
       edit: Modifier %{account}
+      title: Saisir la propriété manuellement
     form:
       address_line1: Adresse
       address_line1_placeholder: 123, rue de la Paix
@@ -18,11 +19,13 @@ fr:
       postal_code_placeholder: '75000'
       region: Région/Département
       region_placeholder: Île-de-France
+      square_feet: Pieds carrés
+      square_meters: Mètres carrés
       subtype_prompt: Sélectionnez le type de propriété
       year_built: Année de construction
       year_built_placeholder: '2000'
     new:
-      title: Saisir les détails de la propriété
+      title: Saisir la propriété manuellement
     overview:
       living_area: Surface habitable
       market_value: Valeur du marché
@@ -30,3 +33,36 @@ fr:
       trend: Tendance
       unknown: Inconnu
       year_built: Année de construction
+    address:
+      title: Saisir la propriété manuellement
+      address_line1: Ligne d'adresse 1
+      address_line1_placeholder: "123, rue de la Paix"
+      city: Ville
+      city_placeholder: Paris
+      country: Pays
+      country_placeholder: FR
+      postal_code: Code postal
+      postal_code_placeholder: "75000"
+      state_region: État/Région
+      state_region_placeholder: Île-de-France
+    balances:
+      title: Saisir la propriété manuellement
+      estimated_market_value: Valeur marchande estimée
+      estimated_market_value_tooltip: "La valeur marchande estimée de votre propriété. Ce chiffre peut souvent être trouvé sur des sites comme Zillow ou Redfin, et n'est jamais un chiffre exact."
+    form_tabs:
+      address: Adresse
+      overview: Aperçu
+      value: Valeur
+    overview_fields:
+      area_optional: "Surface (optionnel)"
+      area_unit: Unité de surface
+      name: Nom
+      name_placeholder: Maison de vacances
+      property_type: Type de propriété
+      select_type: Sélectionner le type
+      square_feet: Pieds carrés
+      square_meters: Mètres carrés
+      year_built_optional: "Année de construction (optionnel)"
+    tabs:
+      overview:
+        edit_account_details: Modifier les détails du compte

@@ -136,10 +136,13 @@ nl:
       accounts: Beleggingsrekeningen
     investment_flows:
       title: Investeringsstromen
-      description: Volg geld dat in en uit uw beleggingsrekeningen stroomt
+      description: Volg geld dat in en uit uw beleggingsrekeningen stroomt via stortingen en opnames.
       contributions: Stortingen
+      contributions_description: Geld toegevoegd aan beleggingen
       withdrawals: Opnames
+      withdrawals_description: Geld opgenomen uit beleggingen
       net_flow: Netto stroom
+      net_flow_description: Totale nettoverandering
     google_sheets_instructions:
       title_with_key: "✅ Kopieer URL voor Google Sheets"
       title_no_key: "⚠️ API Key vereist"

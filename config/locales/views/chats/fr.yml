@@ -3,3 +3,41 @@ fr:
   chats:
     demo_banner_title: "Mode Démo Actif"
     demo_banner_message: "Vous utilisez un LLM Qwen3 open-weights avec des crédits fournis par Cloudflare Workers AI. Les résultats peuvent varier car le code a été principalement testé sur `gpt-4.1` mais vos tokens ne sont envoyés nulle part ailleurs pour être entraînés !"
+    index:
+      chats: Conversations
+      new_chat: Nouvelle conversation
+    ai_consent:
+      enable_ai_chats: Activer les conversations IA
+      ai_available_description: Le chat IA peut répondre à des questions financières et fournir des analyses basées sur vos données. Pour utiliser cette fonctionnalité, vous devez l'activer explicitement.
+      ai_unavailable_description_html: "Pour utiliser l'assistant IA, vous devez définir la variable d'environnement <code class=\"bg-surface-inset px-1 py-0.5 rounded font-mono text-xs\">OPENAI_ACCESS_TOKEN</code> ou la configurer dans les paramètres d'auto-hébergement de votre instance."
+      enable_btn: Activer les conversations IA
+      disable_note: Désactivable à tout moment. Toutes les données envoyées à nos fournisseurs LLM sont anonymisées.
+    ai_greeting:
+      greeting: "Bonjour %{name} ! Je suis une IA/grand modèle de langage qui peut vous aider avec vos finances. J'ai accès au web et aux données de votre compte."
+      commands_hint_html: "Vous pouvez utiliser <span class=\"bg-container border border-secondary px-1.5 py-0.5 rounded font-mono text-xs\">/</span> pour accéder aux commandes"
+      questions_intro: "Voici quelques questions que vous pouvez poser :"
+      evaluate_portfolio: Évaluer le portefeuille d'investissement
+      spending_insights: Afficher les analyses de dépenses
+      unusual_patterns: Trouver des schémas inhabituels
+    error:
+      failed_response: Impossible de générer la réponse. Veuillez réessayer.
+    chat:
+      edit_chat_title: Modifier le titre de la conversation
+      delete_chat: Supprimer la conversation
+    chat_nav:
+      all_chats: Toutes les conversations
+      start_new_chat: Démarrer une nouvelle conversation
+      edit_chat_title: Modifier le titre de la conversation
+      delete_chat: Supprimer la conversation
+  messages:
+    chat_form:
+      ask_anything: "Posez n'importe quelle question ..."
+      coming_soon: Bientôt disponible
+      ai_disclaimer: Les réponses de l'IA sont fournies à titre informatif uniquement et ne constituent pas des conseils financiers.
+  assistant_messages:
+    assistant_message:
+      assistant_reasoning: Raisonnement de l'assistant
+    tool_calls:
+      tool_calls: Appels d'outils
+      function: "Fonction :"
+      arguments: "Arguments :"

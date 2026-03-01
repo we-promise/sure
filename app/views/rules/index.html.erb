@@ -1,4 +1,4 @@
-<%= content_for :page_title, "Rules" %>
+<%= content_for :page_title, t("rules.index.page_title") %>
 <%= content_for :page_actions do %>
   <% if @rules.any? %>
     <%= render DS::Menu.new do |menu| %>
@@ -15,7 +15,7 @@
         )) %>
       <% menu.with_item(
         variant: "button",
-        text: "Delete all rules",
+        text: t("rules.index.delete_all_rules"),
         href: destroy_all_rules_path,
         icon: "trash-2",
         method: :delete,
@@ -30,7 +30,7 @@
     ) %>
   <% end %>
   <%= render DS::Link.new(
-    text: "New rule",
+    text: t("rules.index.new_rule"),
     variant: "primary",
     href: new_rule_path(resource_type: "transaction"),
     icon: "plus",
@@ -42,7 +42,7 @@
   <div class="flex items-center gap-2 mb-2 py-4">
     <%= icon("circle-alert", size: "sm") %>
     <p class="text-sm text-secondary">
-      AI-enabled rule actions will cost money.  Be sure to filter as narrowly as possible to avoid unnecessary costs.
+      <%= t("rules.index.ai_warning") %>
     </p>
   </div>
 <% end %>
@@ -51,12 +51,12 @@
     <div class="bg-container-inset rounded-xl">
       <div class="flex justify-between px-4 py-2 text-xs uppercase">
         <div class="flex items-center gap-1.5 font-medium text-secondary">
-          <p>Rules</p>
+          <p><%= t("rules.index.rules_label") %></p>
           <span class="text-subdued">&middot;</span>
           <p><%= @rules.count %></p>
         </div>
         <div class="flex items-center gap-1">
-          <span class="text-secondary">Sort by:</span>
+          <span class="text-secondary"><%= t("rules.index.sort_by") %></span>
           <%= form_with url: rules_path, method: :get, local: true, class: "flex items-center", data: { controller: "auto-submit-form" } do |form| %>
             <%= form.select :sort_by,
                       options_for_select([["Name", "name"], ["Updated At", "updated_at"]], @sort_by),
@@ -70,7 +70,7 @@
             variant: "icon",
             icon: "arrow-up-down",
             size: :sm,
-            title: "Toggle sort direction"
+            title: t("rules.index.toggle_sort_direction")
           ) %>
         </div>
       </div>
@@ -83,11 +83,11 @@
   <% else %>
     <div class="flex justify-center items-center py-20">
       <div class="text-center flex flex-col items-center max-w-[500px]">
-        <p class="text-sm text-primary font-medium mb-1">No rules yet</p>
-        <p class="text-sm text-secondary mb-4">Set up rules to perform actions to your transactions and other data on every account sync.</p>
+        <p class="text-sm text-primary font-medium mb-1"><%= t("rules.index.no_rules") %></p>
+        <p class="text-sm text-secondary mb-4"><%= t("rules.index.no_rules_description") %></p>
         <div class="flex items-center gap-2">
           <%= render DS::Link.new(
-            text: "New rule",
+            text: t("rules.index.new_rule"),
             variant: "primary",
             href: new_rule_path(resource_type: "transaction"),
             icon: "plus",

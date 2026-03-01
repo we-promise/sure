@@ -17,6 +17,7 @@ ca:
       title: Introdueix els detalls del vehicle
     overview:
       current_price: Preu actual
+      edit_account_details: Edita els detalls del compte
       make_model: Marca i model
       mileage: Quilometratge
       purchase_price: Preu de compra

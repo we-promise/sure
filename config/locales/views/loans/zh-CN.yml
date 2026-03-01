@@ -13,6 +13,7 @@ zh-CN:
     new:
       title: 请输入贷款详情
     overview:
+      edit_loan_details: 编辑贷款详情
       interest_rate: 利率
       monthly_payment: 月还款额
       not_applicable: 不适用

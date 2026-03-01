@@ -1,0 +1,168 @@
+---
+fr:
+  mercury_items:
+    create:
+      success: Connexion Mercury créée avec succès
+    destroy:
+      success: Connexion Mercury supprimée
+    index:
+      title: Connexions Mercury
+    loading:
+      loading_message: Chargement des comptes Mercury...
+      loading_title: Chargement
+    link_accounts:
+      all_already_linked:
+        one: "Le compte sélectionné (%{names}) est déjà lié"
+        other: "Les %{count} comptes sélectionnés sont déjà liés : %{names}"
+      api_error: "Erreur API : %{message}"
+      invalid_account_names:
+        one: "Impossible de lier un compte avec un nom vide"
+        other: "Impossible de lier %{count} comptes avec des noms vides"
+      link_failed: Échec de la liaison des comptes
+      no_accounts_selected: Veuillez sélectionner au moins un compte
+      no_api_token: Jeton API Mercury introuvable. Veuillez le configurer dans les Paramètres du fournisseur.
+      partial_invalid: "%{created_count} compte(s) lié(s) avec succès, %{already_linked_count} étaient déjà liés, %{invalid_count} compte(s) avaient des noms invalides"
+      partial_success: "%{created_count} compte(s) lié(s) avec succès. %{already_linked_count} compte(s) étaient déjà liés : %{already_linked_names}"
+      success:
+        one: "%{count} compte lié avec succès"
+        other: "%{count} comptes liés avec succès"
+    mercury_item:
+      accounts_need_setup: Les comptes nécessitent une configuration
+      delete: Supprimer la connexion
+      deletion_in_progress: suppression en cours...
+      error: Erreur
+      no_accounts_description: Cette connexion n'a pas encore de comptes liés.
+      no_accounts_title: Aucun compte
+      setup_action: Configurer de nouveaux comptes
+      setup_description: "%{linked} sur %{total} comptes liés. Choisissez les types de compte pour vos comptes Mercury nouvellement importés."
+      setup_needed: Nouveaux comptes prêts à configurer
+      status: "Synchronisé il y a %{timestamp}"
+      status_never: Jamais synchronisé
+      status_with_summary: "Dernière synchronisation il y a %{timestamp} – %{summary}"
+      syncing: Synchronisation...
+      total: Total
+      unlinked: Non lié
+    select_accounts:
+      accounts_selected: comptes sélectionnés
+      api_error: "Erreur API : %{message}"
+      cancel: Annuler
+      configure_name_in_mercury: Impossible d'importer – veuillez configurer le nom du compte dans Mercury
+      description: Sélectionnez les comptes que vous souhaitez lier à votre compte %{product_name}.
+      link_accounts: Lier les comptes sélectionnés
+      no_accounts_found: Aucun compte trouvé. Veuillez vérifier la configuration du jeton API.
+      no_api_token: Le jeton API Mercury n'est pas configuré. Veuillez le configurer dans les Paramètres.
+      no_credentials_configured: Veuillez d'abord configurer votre jeton API Mercury dans les Paramètres du fournisseur.
+      no_name_placeholder: "(Sans nom)"
+      title: Sélectionner les comptes Mercury
+    select_existing_account:
+      account_already_linked: Ce compte est déjà lié à un fournisseur
+      all_accounts_already_linked: Tous les comptes Mercury sont déjà liés
+      api_error: "Erreur API : %{message}"
+      cancel: Annuler
+      configure_name_in_mercury: Impossible d'importer – veuillez configurer le nom du compte dans Mercury
+      description: Sélectionnez un compte Mercury à lier avec ce compte. Les transactions seront synchronisées et dédupliquées automatiquement.
+      link_account: Lier le compte
+      no_account_specified: Aucun compte spécifié
+      no_accounts_found: Aucun compte Mercury trouvé. Veuillez vérifier la configuration du jeton API.
+      no_api_token: Le jeton API Mercury n'est pas configuré. Veuillez le configurer dans les Paramètres.
+      no_credentials_configured: Veuillez d'abord configurer votre jeton API Mercury dans les Paramètres du fournisseur.
+      no_name_placeholder: "(Sans nom)"
+      title: "Lier %{account_name} avec Mercury"
+    link_existing_account:
+      account_already_linked: Ce compte est déjà lié à un fournisseur
+      api_error: "Erreur API : %{message}"
+      invalid_account_name: Impossible de lier un compte avec un nom vide
+      mercury_account_already_linked: Ce compte Mercury est déjà lié à un autre compte
+      mercury_account_not_found: Compte Mercury introuvable
+      missing_parameters: Paramètres requis manquants
+      no_api_token: Jeton API Mercury introuvable. Veuillez le configurer dans les Paramètres du fournisseur.
+      success: "%{account_name} lié avec succès à Mercury"
+    setup_accounts:
+      page_title: "Configurer les comptes Mercury"
+      account_type_label: "Type de compte :"
+      all_accounts_linked: "Tous vos comptes Mercury ont déjà été configurés."
+      api_error: "Erreur API : %{message}"
+      fetch_failed: "Impossible de récupérer les comptes"
+      no_accounts_to_setup: "Aucun compte à configurer"
+      no_api_token: "Le jeton API Mercury n'est pas configuré. Veuillez vérifier les paramètres de votre connexion."
+      account_types:
+        skip: Ignorer ce compte
+        depository: Compte courant ou d'épargne
+        credit_card: Carte de crédit
+        investment: Compte d'investissement
+        loan: Prêt ou hypothèque
+        other_asset: Autres actifs
+      subtype_labels:
+        depository: "Sous-type de compte :"
+        credit_card: ""
+        investment: "Type d'investissement :"
+        loan: "Type de prêt :"
+        other_asset: ""
+      subtype_messages:
+        credit_card: "Les cartes de crédit seront automatiquement configurées comme comptes de carte de crédit."
+        other_asset: "Aucune option supplémentaire nécessaire pour les Autres actifs."
+      subtypes:
+        depository:
+          checking: Compte courant
+          savings: Épargne
+          hsa: Health Savings Account
+          cd: Certificat de dépôt
+          money_market: Marché monétaire
+        investment:
+          brokerage: Courtage
+          pension: Pension
+          retirement: Retraite
+          "401k": "401(k)"
+          roth_401k: "Roth 401(k)"
+          "403b": "403(b)"
+          tsp: Thrift Savings Plan
+          "529_plan": "529 Plan"
+          hsa: Health Savings Account
+          mutual_fund: Fonds commun de placement
+          ira: Traditional IRA
+          roth_ira: Roth IRA
+          angel: Angel
+        loan:
+          mortgage: Hypothèque
+          student: Prêt étudiant
+          auto: Prêt automobile
+          other: Autre prêt
+      balance: Solde
+      cancel: Annuler
+      choose_account_type: "Choisissez le type de compte correct pour chaque compte Mercury :"
+      create_accounts: Créer les comptes
+      creating_accounts: Création des comptes...
+      historical_data_range: "Plage de données historiques :"
+      subtitle: Choisissez les types de compte corrects pour vos comptes importés
+      sync_start_date_help: Sélectionnez jusqu'où vous souhaitez synchroniser l'historique des transactions. Maximum 3 ans d'historique disponible.
+      sync_start_date_label: "Commencer à synchroniser les transactions à partir du :"
+      title: Configurez vos comptes Mercury
+    complete_account_setup:
+      all_skipped: "Tous les comptes ont été ignorés. Aucun compte n'a été créé."
+      creation_failed: "Impossible de créer les comptes : %{error}"
+      no_accounts: "Aucun compte à configurer."
+      success: "%{count} compte(s) créé(s) avec succès."
+    sync:
+      success: Synchronisation lancée
+    update:
+      success: Connexion Mercury mise à jour
+    api_error:
+      title: "Erreur de connexion Mercury"
+      unable_to_connect: "Impossible de se connecter à Mercury"
+      common_issues: "Problèmes courants :"
+      issue_invalid_token_html: "<strong>Jeton API invalide :</strong> Vérifiez votre jeton API dans les Paramètres du fournisseur"
+      issue_expired_html: "<strong>Identifiants expirés :</strong> Générez un nouveau jeton API depuis Mercury"
+      issue_permissions_html: "<strong>Permissions insuffisantes :</strong> Assurez-vous que votre jeton dispose d'un accès en lecture seule"
+      issue_network_html: "<strong>Problème réseau :</strong> Vérifiez votre connexion Internet"
+      issue_service_down_html: "<strong>Service indisponible :</strong> L'API Mercury peut être temporairement indisponible"
+      check_settings: "Vérifier les Paramètres du fournisseur"
+    setup_required:
+      title: "Configuration Mercury requise"
+      api_token_not_configured: "Jeton API non configuré"
+      description: "Avant de pouvoir lier des comptes Mercury, vous devez configurer votre jeton API Mercury."
+      setup_steps: "Étapes de configuration :"
+      step_1_html: "Allez dans <strong>Paramètres > Fournisseurs</strong>"
+      step_2_html: "Trouvez la section <strong>Mercury</strong>"
+      step_3: "Saisissez votre jeton API Mercury"
+      step_4: "Revenez ici pour lier vos comptes"
+      go_to_settings: "Aller aux Paramètres du fournisseur"

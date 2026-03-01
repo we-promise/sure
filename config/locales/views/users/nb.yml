@@ -12,4 +12,6 @@ nb:
       unauthorized: Du er ikke autorisert til å utføre denne handlingen.
     reset_with_sample_data:
       success: Kontoen din har blitt tilbakestilt og demodata forberedes. Du vil snart se eksempeldata.
+    user_menu:
+      version: "Versjon:"
 

@@ -3,6 +3,9 @@ ca:
   subscriptions:
     self_hosted_alert: "%{product_name} no està disponible en mode autoallotjat."
     upgrade:
+      sr_only_title: Millora
+      account_settings: Configuració del compte
+      sign_out: Tanca sessió
       contribute_and_support_sure: "Contribuir i donar suport a Sure"
       cta: "Continua donant suport al desenvolupament d'aquest codi!"
       header:

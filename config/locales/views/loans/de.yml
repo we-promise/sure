@@ -13,6 +13,7 @@ de:
     new:
       title: Kreditdetails eingeben
     overview:
+      edit_loan_details: Kreditdetails bearbeiten
       interest_rate: Zinssatz
       monthly_payment: Monatliche Zahlung
       not_applicable: Nicht zutreffend

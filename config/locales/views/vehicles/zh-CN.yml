@@ -17,6 +17,7 @@ zh-CN:
       title: 请输入车辆详情
     overview:
       current_price: 当前估值
+      edit_account_details: 编辑账户详情
       make_model: 品牌与车型
       mileage: 里程
       purchase_price: 购买价格

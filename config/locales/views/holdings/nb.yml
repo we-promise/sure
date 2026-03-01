@@ -3,6 +3,11 @@ nb:
   holdings:
     cash:
       brokerage_cash: Meglerkontanter
+    new:
+      coming_soon: "Kommer snart..."
+    cost_basis_cell:
+      set: Angi
+      unknown: "--"
     destroy:
       success: Beholdning slettet
     holding:

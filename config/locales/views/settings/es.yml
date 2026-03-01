@@ -25,6 +25,14 @@ es:
         page_title: Pago
         subscription_subtitle: Actualiza tu suscripción y detalles de pago
         subscription_title: Gestionar suscripción
+        currently_on: "Actualmente en el %{plan}."
+        demo_mode: "Actualmente usando la demo abierta de"
+        data_deleted_in_days: "(Los datos se eliminarán en %{days} días)"
+        not_contributing: "Actualmente no está contribuyendo"
+        contributions_show_here: "Las contribuciones a %{product_name} se mostrarán aquí."
+        manage: Administrar
+        choose_level: Elegir nivel
+        payment_via_stripe: Pago a través de Stripe
     preferences:
       show:
         country: País
@@ -43,6 +51,7 @@ es:
         theme_system: Sistema
         theme_title: Tema
         timezone: Zona horaria
+        translations_note: Por favor, tenga en cuenta que todavía estamos trabajando en traducciones para varios idiomas.
     profiles:
       destroy:
         cannot_remove_self: No puedes eliminarte a ti mismo de la cuenta.
@@ -91,6 +100,10 @@ es:
     securities:
       show:
         page_title: Seguridad
+        mfa_enabled: La autenticación de dos factores está habilitada
+        mfa_enabled_description: Su cuenta está protegida con una capa adicional de seguridad.
+        mfa_disabled: La autenticación de dos factores está deshabilitada
+        mfa_disabled_description: Habilite 2FA para agregar una capa adicional de seguridad a su cuenta.
     settings_nav:
       accounts_label: Cuentas
       advanced_section_title: Avanzado
@@ -125,3 +138,188 @@ es:
       choose: Subir foto
       choose_label: (opcional)
       change: Cambiar foto
+    providers:
+      enable_banking_panel:
+        connection_error: Error de conexión
+        setup_instructions: "Instrucciones de configuración:"
+        step1_html: "Visite su cuenta de desarrollador de <a href=\"https://enablebanking.com\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"link\">Enable Banking</a> para obtener sus credenciales"
+        step2: Seleccione su código de país del menú desplegable a continuación
+        step3: Ingrese su ID de aplicación y pegue su certificado de cliente (incluyendo la clave privada)
+        step4: "Haga clic en Guardar configuración, luego use \"Agregar conexión\" para vincular su banco"
+        callback_url_instruction: "Para la URL de callback, use %{callback_url}."
+        field_descriptions: "Descripciones de campos:"
+        country_code_description: "Código de país: código de país ISO 3166-1 alfa-2 (ej., GB, DE, FR) - determina los bancos disponibles"
+        application_id_description: "ID de aplicación: el ID generado en su cuenta de desarrollador de Enable Banking"
+        client_certificate_description: "Certificado de cliente: el certificado generado al crear su aplicación (debe incluir la clave privada)"
+        select_country: "Seleccionar país..."
+        country_label: País
+        config_locked: Configuración bloqueada
+        config_locked_description: Las credenciales no se pueden cambiar mientras tenga conexiones bancarias activas. Elimine todas las conexiones primero para actualizar las credenciales.
+        application_id_label: ID de Aplicación
+        application_id_placeholder_new: Ingrese el ID de aplicación
+        application_id_placeholder_update: Ingrese un nuevo ID para actualizar
+        client_certificate_label: Certificado de Cliente (con Clave Privada)
+        save_configuration: Guardar Configuración
+        update_configuration: Actualizar Configuración
+        syncing: Sincronizando
+        connected_bank: Banco Conectado
+        session_expires: "La sesión expira: %{date}"
+        unknown: Desconocido
+        connection: Conexión
+        session_expired: Sesión expirada - reconectar
+        configured: Configurado
+        ready_to_link: Listo para vincular cuentas
+        sync_button: Sincronizar
+        reconnect: Reconectar
+        connect_bank: Conectar Banco
+        remove: Eliminar
+        remove_confirm: ¿Está seguro de que desea eliminar esta conexión?
+        add_connection: Agregar Conexión
+      provider_form:
+        config_via_env: La configuración se puede establecer mediante variables de entorno o anularse a continuación.
+        field_descriptions: "Descripciones de campos:"
+        optional: Opcional
+        save_configuration: Guardar Configuración
+        configured: Configurado y listo para usar
+        not_configured: No configurado
+      simplefin_panel:
+        setup_instructions: "Instrucciones de configuración:"
+        step1_html: "Visite <a href=\"https://bridge.simplefin.org\" target=\"_blank\" class=\"text-primary underline\">SimpleFIN Bridge</a> para obtener su token de configuración único"
+        step2: Pegue el token a continuación y haga clic en el botón Guardar para habilitar la sincronización de datos bancarios de SimpleFIN
+        step3: Después de una conexión exitosa, vaya a la pestaña Cuentas para configurar nuevas cuentas con sus datos de SimpleFIN
+        field_descriptions: "Descripciones de campos:"
+        setup_token_description: "Token de configuración: su token de configuración único de SimpleFIN. Se intercambiará por una URL de acceso permanente."
+        setup_token_label: Token de Configuración
+        setup_token_placeholder: Pegue el token de configuración de SimpleFIN
+        save_configuration: Guardar Configuración
+        configured: Configurado y listo para usar. Visite la pestaña Cuentas para administrar y configurar cuentas.
+        not_configured: No configurado
+      lunchflow_panel:
+        setup_instructions: "Instrucciones de configuración:"
+        step1_html: "Visite <a href=\"https://lunchflow.app\" target=\"_blank\" class=\"text-primary underline\">Lunch Flow</a> para obtener su clave API"
+        step2: Pegue su clave API a continuación y haga clic en el botón Guardar
+        step3: Después de una conexión exitosa, vaya a la pestaña Cuentas para configurar y administrar sus cuentas vinculadas
+        field_descriptions: "Descripciones de campos:"
+        api_key_description: "Clave API: su clave API de Lunch Flow para autenticación (requerida)"
+        base_url_description: "URL base: URL base para la API de Lunch Flow (opcional, por defecto: https://lunchflow.app/api/v1)"
+        api_key_label: Clave API
+        api_key_placeholder_new: Pegue la clave API aquí
+        api_key_placeholder_update: Ingrese una nueva clave API para actualizar
+        base_url_label: URL Base (Opcional)
+        base_url_placeholder: "https://lunchflow.app/api/v1 (por defecto)"
+        save_configuration: Guardar Configuración
+        update_configuration: Actualizar Configuración
+        configured: Configurado y listo para usar. Visite la pestaña Cuentas para administrar y configurar cuentas.
+        not_configured: No configurado
+      mercury_panel:
+        setup_instructions: "Instrucciones de configuración:"
+        step1: Vaya a https://app.mercury.com
+        step2: "Haga clic en el nombre de su empresa → Configuración → Desarrolladores → Tokens API"
+        step3: Haga clic en Generar Token
+        step4: "Seleccione el tipo de token: Solo Lectura"
+        step5: "Nombre el token (ej., 'Sure Finance')"
+        step6: Haga clic en Crear Token y cópielo
+        field_descriptions: "Descripciones de campos:"
+        token_description: "Token API: su token completo de la API de Mercury para autenticación"
+        base_url_description: "URL base: URL de la API de Mercury (opcional, por defecto: https://api.mercury.com/api/v1)"
+        sandbox_note: "Nota: Para pruebas en sandbox, use https://api.mercury.com/api/v1/sandbox como URL base."
+        token_label: Token
+        token_placeholder_new: Pegue el token aquí
+        token_placeholder_update: Ingrese un nuevo token para actualizar
+        base_url_label: URL Base (Opcional)
+        base_url_placeholder: "https://api.mercury.com/api/v1 (por defecto)"
+        save_configuration: Guardar Configuración
+        update_configuration: Actualizar Configuración
+        configured: Configurado y listo para usar. Visite la pestaña Cuentas para administrar y configurar cuentas.
+        not_configured: No configurado
+    llm_usages:
+      show:
+        page_title: Uso y Costos de LLM
+        subtitle: Rastree su uso de IA y costos estimados
+        start_date: Fecha de Inicio
+        end_date: Fecha de Fin
+        filter: Filtrar
+        total_requests: Total de Solicitudes
+        total_tokens: Total de Tokens
+        prompt: prompt
+        completion: completado
+        total_cost: Costo Total
+        avg_cost: Costo Prom./Solicitud
+        cost_data_basis: "Basado en %{count} de %{total} solicitudes con datos de costo"
+        cost_by_operation: Costo por Operación
+        cost_by_model: Costo por Modelo
+        recent_usage: Uso Reciente
+        date: Fecha
+        operation: Operación
+        model: Modelo
+        tokens: Tokens
+        cost: Costo
+        failed: Fallido
+        http_status: "Estado HTTP:"
+        no_data: No se encontraron datos de uso para el período seleccionado
+        about_cost_estimates: Sobre las Estimaciones de Costos
+        cost_estimates_description: "Los costos se estiman basándose en los precios de OpenAI a partir de 2025. Los costos reales pueden variar según su proveedor y plan. Las solicitudes fallidas (estado no-200) todavía pueden contar para su uso de API."
+    api_keys:
+      show:
+        page_title_created: Clave API Creada Exitosamente
+        page_title_key: Su Clave API
+        created_success: ¡Clave API Creada Exitosamente!
+        created_description: "Su nueva clave API \"%{name}\" ha sido creada y está lista para usar."
+        your_api_key: Su Clave API
+        copy_store_securely: "Copie y almacene esta clave de forma segura. La necesitará para autenticar sus solicitudes de API."
+        copy_api_key: Copiar Clave API
+        how_to_use: Cómo usar su clave API
+        usage_instructions: "Incluya su clave API en el encabezado X-Api-Key al hacer solicitudes:"
+        continue_to_settings: Continuar a Configuración de Claves API
+        create_new_key: Crear Nueva Clave
+        created_ago: "Creada hace %{time}"
+        last_used_ago: "Último uso hace %{time}"
+        never_used: Nunca usada
+        active: Activa
+        permissions: Permisos
+        read_only: Solo Lectura
+        read_write: Lectura/Escritura
+        revoke_key: Revocar Clave
+        confirm_revoke: ¿Está seguro de que desea revocar esta clave API? Esta acción no se puede deshacer.
+      new:
+        page_title: Crear Nueva Clave API
+        subtitle: Genere una nueva clave API para acceder a sus datos de Sure programáticamente.
+        name_placeholder: "ej., Mi App de Presupuesto, Rastreador de Portafolio"
+        name_label: Nombre de la Clave API
+        name_help: Elija un nombre descriptivo para ayudarle a identificar esta clave más tarde.
+        permissions_label: Permisos
+        select_permissions: "Seleccione los permisos que esta clave API debe tener:"
+        read_only: Solo Lectura
+        read_only_description: Ver sus cuentas, transacciones y saldos
+        read_write: Lectura/Escritura
+        read_write_description: Ver sus datos y crear nuevas transacciones
+        security_warning: Advertencia de Seguridad
+        security_warning_description: "Su clave API se mostrará solo una vez después de la creación. Asegúrese de copiarla y almacenarla de forma segura. Si la pierde, necesitará crear una nueva clave."
+        cancel: Cancelar
+        save: Guardar Clave API
+      created:
+        page_title: Clave API Creada
+        created_success: ¡Clave API Creada Exitosamente!
+        created_description: "Su nueva clave API \"%{name}\" ha sido creada y está lista para usar."
+        your_api_key: Su Clave API
+        copy_store_securely: "Copie y almacene esta clave de forma segura. La necesitará para autenticar sus solicitudes de API."
+        copy_api_key: Copiar Clave API
+        key_details: Detalles de la Clave
+        name_label: "Nombre:"
+        permissions_label: "Permisos:"
+        view_accounts: Ver Cuentas
+        view_transactions: Ver Transacciones
+        view_balances: Ver Saldos
+        create_transactions: Crear Transacciones
+        created_label: "Creada:"
+        security_note: Nota de Seguridad Importante
+        security_note_description: "Esta es la única vez que se mostrará su clave API. Asegúrese de copiarla ahora. Si la pierde, necesitará crear una nueva clave."
+        how_to_use: Cómo usar su clave API
+        usage_instructions: "Incluya su clave API en el encabezado X-Api-Key al hacer solicitudes:"
+        continue_to_settings: Continuar a Configuración de Claves API
+    bank_sync:
+      show:
+        page_title: Sincronización Bancaria
+        providers: PROVEEDORES
+        no_providers: No hay proveedores configurados
+        configure_providers: Configure proveedores para vincular sus cuentas bancarias.

@@ -1,0 +1,168 @@
+---
+nb:
+  mercury_items:
+    create:
+      success: Mercury-tilkobling opprettet
+    destroy:
+      success: Mercury-tilkobling fjernet
+    index:
+      title: Mercury-tilkoblinger
+    loading:
+      loading_message: Laster Mercury-kontoer...
+      loading_title: Laster
+    link_accounts:
+      all_already_linked:
+        one: "Den valgte kontoen (%{names}) er allerede koblet"
+        other: "Alle %{count} valgte kontoer er allerede koblet: %{names}"
+      api_error: "API-feil: %{message}"
+      invalid_account_names:
+        one: "Kan ikke koble konto med tomt navn"
+        other: "Kan ikke koble %{count} kontoer med tomme navn"
+      link_failed: Kunne ikke koble kontoene
+      no_accounts_selected: Vennligst velg minst én konto
+      no_api_token: Mercury API-nøkkel ikke funnet. Vennligst konfigurer den i Leverandørinnstillinger.
+      partial_invalid: "%{created_count} konto(er) koblet, %{already_linked_count} var allerede koblet, %{invalid_count} konto(er) hadde ugyldige navn"
+      partial_success: "%{created_count} konto(er) koblet. %{already_linked_count} konto(er) var allerede koblet: %{already_linked_names}"
+      success:
+        one: "%{count} konto koblet"
+        other: "%{count} kontoer koblet"
+    mercury_item:
+      accounts_need_setup: Kontoer trenger oppsett
+      delete: Slett tilkobling
+      deletion_in_progress: sletting pågår...
+      error: Feil
+      no_accounts_description: Denne tilkoblingen har ingen koblede kontoer ennå.
+      no_accounts_title: Ingen kontoer
+      setup_action: Sett opp nye kontoer
+      setup_description: "%{linked} av %{total} kontoer koblet. Velg kontotyper for dine nylig importerte Mercury-kontoer."
+      setup_needed: Nye kontoer klare for oppsett
+      status: "Synkronisert for %{timestamp} siden"
+      status_never: Aldri synkronisert
+      status_with_summary: "Sist synkronisert for %{timestamp} siden – %{summary}"
+      syncing: Synkroniserer...
+      total: Totalt
+      unlinked: Ikke koblet
+    select_accounts:
+      accounts_selected: kontoer valgt
+      api_error: "API-feil: %{message}"
+      cancel: Avbryt
+      configure_name_in_mercury: Kan ikke importere – vennligst konfigurer kontonavnet i Mercury
+      description: Velg kontoene du vil koble til %{product_name}-kontoen din.
+      link_accounts: Koble valgte kontoer
+      no_accounts_found: Ingen kontoer funnet. Vennligst sjekk API-nøkkelkonfigurasjonen din.
+      no_api_token: Mercury API-nøkkel er ikke konfigurert. Vennligst konfigurer den i Innstillinger.
+      no_credentials_configured: Vennligst konfigurer Mercury API-nøkkelen din først i Leverandørinnstillinger.
+      no_name_placeholder: "(Uten navn)"
+      title: Velg Mercury-kontoer
+    select_existing_account:
+      account_already_linked: Denne kontoen er allerede koblet til en leverandør
+      all_accounts_already_linked: Alle Mercury-kontoer er allerede koblet
+      api_error: "API-feil: %{message}"
+      cancel: Avbryt
+      configure_name_in_mercury: Kan ikke importere – vennligst konfigurer kontonavnet i Mercury
+      description: Velg en Mercury-konto å koble med denne kontoen. Transaksjoner vil synkroniseres og dedupliseres automatisk.
+      link_account: Koble konto
+      no_account_specified: Ingen konto spesifisert
+      no_accounts_found: Ingen Mercury-kontoer funnet. Vennligst sjekk API-nøkkelkonfigurasjonen din.
+      no_api_token: Mercury API-nøkkel er ikke konfigurert. Vennligst konfigurer den i Innstillinger.
+      no_credentials_configured: Vennligst konfigurer Mercury API-nøkkelen din først i Leverandørinnstillinger.
+      no_name_placeholder: "(Uten navn)"
+      title: "Koble %{account_name} med Mercury"
+    link_existing_account:
+      account_already_linked: Denne kontoen er allerede koblet til en leverandør
+      api_error: "API-feil: %{message}"
+      invalid_account_name: Kan ikke koble konto med tomt navn
+      mercury_account_already_linked: Denne Mercury-kontoen er allerede koblet til en annen konto
+      mercury_account_not_found: Mercury-konto ikke funnet
+      missing_parameters: Manglende nødvendige parametere
+      no_api_token: Mercury API-nøkkel ikke funnet. Vennligst konfigurer den i Leverandørinnstillinger.
+      success: "%{account_name} koblet med Mercury"
+    setup_accounts:
+      page_title: "Sett opp Mercury-kontoer"
+      account_type_label: "Kontotype:"
+      all_accounts_linked: "Alle dine Mercury-kontoer er allerede satt opp."
+      api_error: "API-feil: %{message}"
+      fetch_failed: "Kunne ikke hente kontoer"
+      no_accounts_to_setup: "Ingen kontoer å sette opp"
+      no_api_token: "Mercury API-nøkkel er ikke konfigurert. Vennligst sjekk tilkoblingsinnstillingene dine."
+      account_types:
+        skip: Hopp over denne kontoen
+        depository: Bruks- eller sparekonto
+        credit_card: Kredittkort
+        investment: Investeringskonto
+        loan: Lån eller boliglån
+        other_asset: Andre eiendeler
+      subtype_labels:
+        depository: "Konto-undertype:"
+        credit_card: ""
+        investment: "Investeringstype:"
+        loan: "Lånetype:"
+        other_asset: ""
+      subtype_messages:
+        credit_card: "Kredittkort vil automatisk bli satt opp som kredittkortkontoer."
+        other_asset: "Ingen tilleggsalternativer nødvendige for Andre eiendeler."
+      subtypes:
+        depository:
+          checking: Brukskonto
+          savings: Sparekonto
+          hsa: Health Savings Account
+          cd: Innskuddsbevis
+          money_market: Pengemarkedskonto
+        investment:
+          brokerage: Meglerkonto
+          pension: Pensjon
+          retirement: Pensjonssparing
+          "401k": "401(k)"
+          roth_401k: "Roth 401(k)"
+          "403b": "403(b)"
+          tsp: Thrift Savings Plan
+          "529_plan": "529 Plan"
+          hsa: Health Savings Account
+          mutual_fund: Verdipapirfond
+          ira: Traditional IRA
+          roth_ira: Roth IRA
+          angel: Angel
+        loan:
+          mortgage: Boliglån
+          student: Studielån
+          auto: Billån
+          other: Annet lån
+      balance: Saldo
+      cancel: Avbryt
+      choose_account_type: "Velg riktig kontotype for hver Mercury-konto:"
+      create_accounts: Opprett kontoer
+      creating_accounts: Oppretter kontoer...
+      historical_data_range: "Historisk dataområde:"
+      subtitle: Velg riktige kontotyper for dine importerte kontoer
+      sync_start_date_help: Velg hvor langt tilbake du vil synkronisere transaksjonshistorikk. Maksimalt 3 års historikk tilgjengelig.
+      sync_start_date_label: "Begynn synkronisering av transaksjoner fra:"
+      title: Sett opp dine Mercury-kontoer
+    complete_account_setup:
+      all_skipped: "Alle kontoer ble hoppet over. Ingen kontoer ble opprettet."
+      creation_failed: "Kunne ikke opprette kontoer: %{error}"
+      no_accounts: "Ingen kontoer å sette opp."
+      success: "%{count} konto(er) opprettet."
+    sync:
+      success: Synkronisering startet
+    update:
+      success: Mercury-tilkobling oppdatert
+    api_error:
+      title: "Mercury-tilkoblingsfeil"
+      unable_to_connect: "Kan ikke koble til Mercury"
+      common_issues: "Vanlige problemer:"
+      issue_invalid_token_html: "<strong>Ugyldig API-nøkkel:</strong> Sjekk API-nøkkelen din i Leverandørinnstillinger"
+      issue_expired_html: "<strong>Utløpte legitimasjoner:</strong> Generer en ny API-nøkkel fra Mercury"
+      issue_permissions_html: "<strong>Utilstrekkelige tillatelser:</strong> Sørg for at nøkkelen din har lesetilgang"
+      issue_network_html: "<strong>Nettverksproblem:</strong> Sjekk internettilkoblingen din"
+      issue_service_down_html: "<strong>Tjeneste nede:</strong> Mercury API kan være midlertidig utilgjengelig"
+      check_settings: "Sjekk Leverandørinnstillinger"
+    setup_required:
+      title: "Mercury-oppsett nødvendig"
+      api_token_not_configured: "API-nøkkel ikke konfigurert"
+      description: "Før du kan koble Mercury-kontoer, må du konfigurere Mercury API-nøkkelen din."
+      setup_steps: "Oppsettstrinn:"
+      step_1_html: "Gå til <strong>Innstillinger > Leverandører</strong>"
+      step_2_html: "Finn <strong>Mercury</strong>-seksjonen"
+      step_3: "Skriv inn Mercury API-nøkkelen din"
+      step_4: "Kom tilbake hit for å koble kontoene dine"
+      go_to_settings: "Gå til Leverandørinnstillinger"

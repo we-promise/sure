@@ -3,6 +3,11 @@ ro:
   holdings:
     cash:
       brokerage_cash: Numerar de brokeraj
+    new:
+      coming_soon: "În curând..."
+    cost_basis_cell:
+      set: Setează
+      unknown: "--"
     destroy:
       success: Deținerea a fost ștearsă
     holding:

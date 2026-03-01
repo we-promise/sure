@@ -1,0 +1,58 @@
+---
+ca:
+  controllers:
+    holdings:
+      cannot_delete: "No podeu eliminar aquesta posició"
+    settings:
+      api_keys:
+        created: "La vostra clau API s'ha creat correctament"
+        not_found: "No s'ha trobat la clau API"
+        cannot_revoke: "Aquesta clau API no es pot revocar"
+        revoked: "La clau API s'ha revocat correctament"
+        revoke_failed: "No s'ha pogut revocar la clau API"
+      profiles:
+        member_removed: "El membre s'ha eliminat correctament."
+        member_remove_failed: "No s'ha pogut eliminar el membre."
+      providers:
+        updated: "La configuració del proveïdor s'ha actualitzat correctament"
+        no_changes: "No s'han fet canvis"
+        not_authorized: "No autoritzat"
+    transactions:
+      created: "Transacció creada"
+    rules:
+      deleted: "Regla eliminada"
+      all_deleted: "Totes les regles eliminades"
+    subscriptions:
+      already_contributing: "Ja esteu contribuint. Gràcies!"
+      welcome: "Benvingut a Sure!"
+      trial_completed: "Ja heu iniciat o completat un període de prova. Si us plau, actualitzeu per continuar."
+      welcome_contribution: "Benvingut a Sure! La vostra contribució és molt apreciada."
+      contribution_failed: "Hi ha hagut un error en processar la vostra contribució. Si us plau, torneu-ho a provar."
+    plaid_items:
+      linked: "El compte s'ha vinculat correctament a Plaid"
+      no_available_accounts: "No hi ha comptes de Plaid disponibles per vincular. Si us plau, connecteu un compte de Plaid nou primer."
+      invalid_account: "El compte de Plaid seleccionat no és vàlid"
+      already_linked: "Aquest compte de Plaid ja està vinculat"
+    imports:
+      publish_started: "La vostra importació s'ha iniciat en segon pla."
+      reverting: "La importació s'està revertint en segon pla."
+      template_applied: "Plantilla aplicada."
+      no_template: "No s'ha trobat cap plantilla, si us plau configureu la vostra importació manualment."
+      deleted: "La vostra importació s'ha eliminat."
+    import:
+      uploads:
+        csv_uploaded: "CSV carregat correctament."
+      cleans:
+        configure_first: "Si us plau, configureu la vostra importació abans de continuar."
+      confirms:
+        invalid_data: "Teniu dades no vàlides, si us plau editeu fins que tots els errors estiguin resolts"
+    chats:
+      deleted: "El xat s'ha eliminat correctament"
+    oidc_accounts:
+      no_pending_auth: "No s'ha trobat cap autenticació OIDC pendent"
+      creation_disabled: "La creació de comptes SSO està desactivada. Si us plau, contacteu amb un administrador."
+    concerns:
+      self_hostable:
+        redis_configured: "Redis ja està configurat correctament! Ara podeu configurar la vostra aplicació Sure."
+    snaptrade_items:
+      use_setup_flow: "Utilitzeu el flux de configuració del compte"

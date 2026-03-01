@@ -25,6 +25,14 @@ nl:
         page_title: Betaling
         subscription_subtitle: Werk uw abonnement en betalingsgegevens bij
         subscription_title: Abonnement beheren
+        currently_on: "Momenteel op het %{plan}."
+        demo_mode: "Momenteel gebruik makend van de open demo van"
+        data_deleted_in_days: "(Gegevens worden verwijderd over %{days} dagen)"
+        not_contributing: "U draagt momenteel niet bij"
+        contributions_show_here: "Bijdragen aan %{product_name} worden hier weergegeven."
+        manage: Beheren
+        choose_level: Kies niveau
+        payment_via_stripe: Betaling via Stripe
     preferences:
       show:
         country: Land
@@ -43,6 +51,7 @@ nl:
         theme_system: Systeem
         theme_title: Thema
         timezone: Tijdzone
+        translations_note: Let op, we werken nog aan vertalingen voor verschillende talen.
     profiles:
       destroy:
         cannot_remove_self: U kunt uzelf niet van het account verwijderen.
@@ -144,3 +153,187 @@ nl:
       choose: Foto uploaden
       choose_label: (optioneel)
       change: Foto wijzigen
+    llm_usages:
+      show:
+        page_title: LLM-gebruik en kosten
+        subtitle: Volg uw AI-gebruik en geschatte kosten
+        start_date: Startdatum
+        end_date: Einddatum
+        filter: Filteren
+        total_requests: Totaal verzoeken
+        total_tokens: Totaal tokens
+        prompt: prompt
+        completion: completion
+        total_cost: Totale kosten
+        avg_cost: Gem. kosten/verzoek
+        cost_data_basis: "Gebaseerd op %{count} van %{total} verzoeken met kostengegevens"
+        cost_by_operation: Kosten per operatie
+        cost_by_model: Kosten per model
+        recent_usage: Recent gebruik
+        date: Datum
+        operation: Operatie
+        model: Model
+        tokens: Tokens
+        cost: Kosten
+        failed: Mislukt
+        http_status: "HTTP-status:"
+        no_data: Geen gebruiksgegevens gevonden voor de geselecteerde periode
+        about_cost_estimates: Over kostenschattingen
+        cost_estimates_description: "Kosten worden geschat op basis van de prijzen van OpenAI vanaf 2025. Werkelijke kosten kunnen variëren afhankelijk van uw provider en plan. Mislukte verzoeken (niet-200 status) kunnen nog steeds meetellen voor uw API-gebruik."
+    api_keys:
+      show:
+        page_title_created: API-sleutel succesvol aangemaakt
+        page_title_key: Uw API-sleutel
+        created_success: API-sleutel succesvol aangemaakt!
+        created_description: "Uw nieuwe API-sleutel \"%{name}\" is aangemaakt en klaar voor gebruik."
+        your_api_key: Uw API-sleutel
+        copy_store_securely: "Kopieer en bewaar deze sleutel veilig. U heeft deze nodig om uw API-verzoeken te authenticeren."
+        copy_api_key: API-sleutel kopiëren
+        how_to_use: Hoe uw API-sleutel te gebruiken
+        usage_instructions: "Voeg uw API-sleutel toe aan de X-Api-Key header bij het doen van verzoeken:"
+        continue_to_settings: Verder naar API-sleutelinstellingen
+        create_new_key: Nieuwe sleutel aanmaken
+        created_ago: "Aangemaakt %{time} geleden"
+        last_used_ago: "Laatst gebruikt %{time} geleden"
+        never_used: Nooit gebruikt
+        active: Actief
+        permissions: Rechten
+        read_only: Alleen lezen
+        read_write: Lezen/Schrijven
+        revoke_key: Sleutel intrekken
+        confirm_revoke: Weet u zeker dat u deze API-sleutel wilt intrekken? Deze actie kan niet ongedaan worden gemaakt.
+      new:
+        page_title: Nieuwe API-sleutel aanmaken
+        subtitle: Genereer een nieuwe API-sleutel om programmatisch toegang te krijgen tot uw Sure-gegevens.
+        name_placeholder: "bijv. Mijn Budget App, Portfolio Tracker"
+        name_label: API-sleutelnaam
+        name_help: Kies een beschrijvende naam om deze sleutel later te kunnen identificeren.
+        permissions_label: Rechten
+        select_permissions: "Selecteer de rechten die deze API-sleutel moet hebben:"
+        read_only: Alleen lezen
+        read_only_description: Bekijk uw accounts, transacties en saldi
+        read_write: Lezen/Schrijven
+        read_write_description: Bekijk uw gegevens en maak nieuwe transacties aan
+        security_warning: Beveiligingswaarschuwing
+        security_warning_description: "Uw API-sleutel wordt slechts één keer weergegeven na aanmaak. Zorg ervoor dat u deze kopieert en veilig opslaat. Als u deze kwijtraakt, moet u een nieuwe sleutel aanmaken."
+        cancel: Annuleren
+        save: API-sleutel opslaan
+      created:
+        page_title: API-sleutel aangemaakt
+        created_success: API-sleutel succesvol aangemaakt!
+        created_description: "Uw nieuwe API-sleutel \"%{name}\" is aangemaakt en klaar voor gebruik."
+        your_api_key: Uw API-sleutel
+        copy_store_securely: "Kopieer en bewaar deze sleutel veilig. U heeft deze nodig om uw API-verzoeken te authenticeren."
+        copy_api_key: API-sleutel kopiëren
+        key_details: Sleuteldetails
+        name_label: "Naam:"
+        permissions_label: "Rechten:"
+        view_accounts: Accounts bekijken
+        view_transactions: Transacties bekijken
+        view_balances: Saldi bekijken
+        create_transactions: Transacties aanmaken
+        created_label: "Aangemaakt:"
+        security_note: Belangrijke beveiligingsopmerking
+        security_note_description: "Dit is de enige keer dat uw API-sleutel wordt weergegeven. Zorg ervoor dat u deze nu kopieert. Als u deze kwijtraakt, moet u een nieuwe sleutel aanmaken."
+        how_to_use: Hoe uw API-sleutel te gebruiken
+        usage_instructions: "Voeg uw API-sleutel toe aan de X-Api-Key header bij het doen van verzoeken:"
+        continue_to_settings: Verder naar API-sleutelinstellingen
+    bank_sync:
+      show:
+        page_title: Banksynchronisatie
+        providers: PROVIDERS
+        no_providers: Geen providers geconfigureerd
+        configure_providers: Configureer providers om uw bankrekeningen te koppelen.
+    providers:
+      provider_form:
+        config_via_env: Configuratie kan worden ingesteld via omgevingsvariabelen of hieronder worden overschreven.
+        field_descriptions: "Veldbeschrijvingen:"
+        optional: Optioneel
+        save_configuration: Configuratie opslaan
+        configured: Geconfigureerd en klaar voor gebruik
+        not_configured: Niet geconfigureerd
+      simplefin_panel:
+        setup_instructions: "Installatie-instructies:"
+        step1_html: "Bezoek <a href=\"https://bridge.simplefin.org\" target=\"_blank\" class=\"text-primary underline\">SimpleFIN Bridge</a> om uw eenmalige configuratietoken te verkrijgen"
+        step2: Plak het token hieronder en klik op de knop Opslaan om SimpleFIN bankgegevensynchronisatie in te schakelen
+        step3: Na een succesvolle verbinding, ga naar het tabblad Accounts om nieuwe accounts in te stellen vanuit uw SimpleFIN-gegevens
+        field_descriptions: "Veldbeschrijvingen:"
+        setup_token_description: "Configuratietoken: Uw eenmalige SimpleFIN configuratietoken. Dit wordt ingewisseld voor een permanente toegangs-URL."
+        setup_token_label: Configuratietoken
+        setup_token_placeholder: Plak SimpleFIN configuratietoken
+        save_configuration: Configuratie opslaan
+        configured: Geconfigureerd en klaar voor gebruik. Bezoek het tabblad Accounts om accounts te beheren en in te stellen.
+        not_configured: Niet geconfigureerd
+      lunchflow_panel:
+        setup_instructions: "Installatie-instructies:"
+        step1_html: "Bezoek <a href=\"https://lunchflow.app\" target=\"_blank\" class=\"text-primary underline\">Lunch Flow</a> om uw API-sleutel te verkrijgen"
+        step2: Plak uw API-sleutel hieronder en klik op de knop Opslaan
+        step3: Na een succesvolle verbinding, ga naar het tabblad Accounts om uw gekoppelde accounts in te stellen en te beheren
+        field_descriptions: "Veldbeschrijvingen:"
+        api_key_description: "API-sleutel: Uw Lunch Flow API-sleutel voor authenticatie (vereist)"
+        base_url_description: "Base-URL: Base-URL voor Lunch Flow API (optioneel, standaard https://lunchflow.app/api/v1)"
+        api_key_label: API-sleutel
+        api_key_placeholder_new: Plak API-sleutel hier
+        api_key_placeholder_update: Voer nieuwe API-sleutel in om bij te werken
+        base_url_label: Base-URL (Optioneel)
+        base_url_placeholder: "https://lunchflow.app/api/v1 (standaard)"
+        save_configuration: Configuratie opslaan
+        update_configuration: Configuratie bijwerken
+        configured: Geconfigureerd en klaar voor gebruik. Bezoek het tabblad Accounts om accounts te beheren en in te stellen.
+        not_configured: Niet geconfigureerd
+      mercury_panel:
+        setup_instructions: "Installatie-instructies:"
+        step1: Ga naar https://app.mercury.com
+        step2: "Klik op uw bedrijfsnaam → Settings → Developers → API Tokens"
+        step3: Klik op Generate Token
+        step4: "Selecteer tokentype: Read Only"
+        step5: "Geef het token een naam (bijv. 'Sure Finance')"
+        step6: Klik op Create Token en kopieer het
+        field_descriptions: "Veldbeschrijvingen:"
+        token_description: "API-token: Uw volledige Mercury API-token voor authenticatie"
+        base_url_description: "Base-URL: Mercury API-URL (optioneel, standaard https://api.mercury.com/api/v1)"
+        sandbox_note: "Opmerking: Gebruik voor sandbox-testen https://api.mercury.com/api/v1/sandbox als Base-URL."
+        token_label: Token
+        token_placeholder_new: Plak token hier
+        token_placeholder_update: Voer nieuw token in om bij te werken
+        base_url_label: Base-URL (Optioneel)
+        base_url_placeholder: "https://api.mercury.com/api/v1 (standaard)"
+        save_configuration: Configuratie opslaan
+        update_configuration: Configuratie bijwerken
+        configured: Geconfigureerd en klaar voor gebruik. Bezoek het tabblad Accounts om accounts te beheren en in te stellen.
+        not_configured: Niet geconfigureerd
+      enable_banking_panel:
+        setup_instructions: "Installatie-instructies:"
+        step1_html: "Bezoek uw <a href=\"https://enablebanking.com\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"link\">Enable Banking</a> ontwikkelaarsaccount om uw inloggegevens te verkrijgen"
+        step2: Selecteer uw landcode uit de onderstaande keuzelijst
+        step3: Voer uw Application ID in en plak uw Client Certificate (inclusief de privésleutel)
+        step4: "Klik op Configuratie opslaan en gebruik vervolgens \"Verbinding toevoegen\" om uw bank te koppelen"
+        callback_url_instruction: "Gebruik voor de callback-URL %{callback_url}."
+        field_descriptions: "Veldbeschrijvingen:"
+        country_code_description: "Landcode: ISO 3166-1 alpha-2 landcode (bijv. GB, DE, FR) - bepaalt beschikbare banken"
+        application_id_description: "Application ID: Het ID gegenereerd in uw Enable Banking ontwikkelaarsaccount"
+        client_certificate_description: "Client Certificate: Het certificaat dat is gegenereerd toen u uw applicatie aanmaakte (moet de privésleutel bevatten)"
+        select_country: "Selecteer land..."
+        country_label: Land
+        config_locked: Configuratie vergrendeld
+        config_locked_description: Inloggegevens kunnen niet worden gewijzigd terwijl u actieve bankverbindingen heeft. Verwijder eerst alle verbindingen om inloggegevens bij te werken.
+        application_id_label: Application ID
+        application_id_placeholder_new: Voer application ID in
+        application_id_placeholder_update: Voer nieuw ID in om bij te werken
+        client_certificate_label: Client Certificate (met privésleutel)
+        save_configuration: Configuratie opslaan
+        update_configuration: Configuratie bijwerken
+        syncing: Synchroniseren
+        connected_bank: Verbonden bank
+        session_expires: "Sessie verloopt: %{date}"
+        unknown: Onbekend
+        connection: Verbinding
+        session_expired: Sessie verlopen - opnieuw verbinden
+        configured: Geconfigureerd
+        ready_to_link: Klaar om accounts te koppelen
+        sync_button: Synchroniseren
+        reconnect: Opnieuw verbinden
+        connect_bank: Bank verbinden
+        remove: Verwijderen
+        remove_confirm: Weet u zeker dat u deze verbinding wilt verwijderen?
+        add_connection: Verbinding toevoegen

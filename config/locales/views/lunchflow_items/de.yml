@@ -60,3 +60,24 @@ de:
       success: Synchronisierung gestartet
     update:
       success: Lunch-Flow-Verbindung aktualisiert
+    setup_accounts:
+      page_title: "Lunch Flow Konten einrichten"
+    api_error:
+      title: "Lunch Flow Verbindungsfehler"
+      unable_to_connect: "Verbindung zu Lunch Flow nicht möglich"
+      common_issues: "Häufige Probleme:"
+      issue_invalid_key_html: '<strong>Ungültiger API-Schlüssel:</strong> Überprüfe deinen API-Schlüssel in den Anbieter-Einstellungen'
+      issue_expired_html: '<strong>Abgelaufene Zugangsdaten:</strong> Erstelle einen neuen API-Schlüssel in Lunch Flow'
+      issue_network_html: '<strong>Netzwerkproblem:</strong> Überprüfe deine Internetverbindung'
+      issue_service_down_html: '<strong>Dienst nicht verfügbar:</strong> Die Lunch Flow API ist möglicherweise vorübergehend nicht erreichbar'
+      check_settings: "Anbieter-Einstellungen überprüfen"
+    setup_required:
+      title: "Lunch Flow Einrichtung erforderlich"
+      api_key_not_configured: "API-Schlüssel nicht konfiguriert"
+      description: "Bevor du Lunch Flow Konten verknüpfen kannst, musst du deinen Lunch Flow API-Schlüssel konfigurieren."
+      setup_steps: "Einrichtungsschritte:"
+      step_1_html: 'Gehe zu <strong>Einstellungen → Anbieter</strong>'
+      step_2_html: 'Finde den Bereich <strong>Lunch Flow</strong>'
+      step_3: "Gib deinen Lunch Flow API-Schlüssel ein"
+      step_4: "Komm hierher zurück, um deine Konten zu verknüpfen"
+      go_to_settings: "Zu den Anbieter-Einstellungen"

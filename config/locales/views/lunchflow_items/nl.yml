@@ -74,6 +74,7 @@ nl:
       missing_parameters: Ontbrekende vereiste parameters
       success: "Succesvol %{account_name} gekoppeld met Lunch Flow"
     setup_accounts:
+      page_title: "Lunch Flow Accounts instellen"
       account_type_label: "Accounttype:"
       all_accounts_linked: "Al uw Lunch Flow accounts zijn al ingesteld."
       api_error: "API fout: %{message}"
@@ -141,3 +142,22 @@ nl:
       success: Synchronisatie gestart
     update:
       success: Lunch Flow verbinding bijgewerkt
+    api_error:
+      title: "Lunch Flow Verbindingsfout"
+      unable_to_connect: "Kan geen verbinding maken met Lunch Flow"
+      common_issues: "Veelvoorkomende problemen:"
+      issue_invalid_key_html: '<strong>Ongeldige API Key:</strong> Controleer uw API Key in Aanbiederinstellingen'
+      issue_expired_html: '<strong>Verlopen inloggegevens:</strong> Genereer een nieuwe API Key vanuit Lunch Flow'
+      issue_network_html: '<strong>Netwerkprobleem:</strong> Controleer uw internetverbinding'
+      issue_service_down_html: '<strong>Service niet beschikbaar:</strong> De Lunch Flow API is mogelijk tijdelijk niet beschikbaar'
+      check_settings: "Aanbiederinstellingen controleren"
+    setup_required:
+      title: "Lunch Flow Instelling Vereist"
+      api_key_not_configured: "API Key niet geconfigureerd"
+      description: "Voordat u Lunch Flow accounts kunt koppelen, moet u uw Lunch Flow API Key configureren."
+      setup_steps: "Installatiestappen:"
+      step_1_html: 'Ga naar <strong>Instellingen → Aanbieders</strong>'
+      step_2_html: 'Zoek de sectie <strong>Lunch Flow</strong>'
+      step_3: "Voer uw Lunch Flow API Key in"
+      step_4: "Keer hier terug om uw accounts te koppelen"
+      go_to_settings: "Ga naar Aanbiederinstellingen"

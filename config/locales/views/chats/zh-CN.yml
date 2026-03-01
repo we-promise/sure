@@ -3,3 +3,41 @@ zh-CN:
   chats:
     demo_banner_message: "您正在使用由 Cloudflare Workers AI 提供额度的开源权重 Qwen3 大语言模型。由于代码库主要在 `gpt-4.1` 上测试，结果可能有所不同，但您的令牌不会被用于其他地方进行训练！🤖"
     demo_banner_title: 演示模式已激活
+    index:
+      chats: 对话
+      new_chat: 新对话
+    ai_consent:
+      enable_ai_chats: 启用 AI 对话
+      ai_available_description: AI 对话可以回答财务问题并根据您的数据提供洞察。要使用此功能，您需要明确启用它。
+      ai_unavailable_description_html: "要使用 AI 助手，您需要设置 <code class=\"bg-surface-inset px-1 py-0.5 rounded font-mono text-xs\">OPENAI_ACCESS_TOKEN</code> 环境变量，或在您实例的自托管设置中进行配置。"
+      enable_btn: 启用 AI 对话
+      disable_note: 可随时禁用。发送给我们 LLM 提供商的所有数据均已匿名化。
+    ai_greeting:
+      greeting: "嗨 %{name}！我是一个 AI/大语言模型，可以帮助您管理财务。我可以访问网络和您的账户数据。"
+      commands_hint_html: "您可以使用 <span class=\"bg-container border border-secondary px-1.5 py-0.5 rounded font-mono text-xs\">/</span> 来访问命令"
+      questions_intro: "以下是您可以提出的一些问题："
+      evaluate_portfolio: 评估投资组合
+      spending_insights: 显示支出洞察
+      unusual_patterns: 查找异常模式
+    error:
+      failed_response: 无法生成回复。请重试。
+    chat:
+      edit_chat_title: 编辑对话标题
+      delete_chat: 删除对话
+    chat_nav:
+      all_chats: 所有对话
+      start_new_chat: 开始新对话
+      edit_chat_title: 编辑对话标题
+      delete_chat: 删除对话
+  messages:
+    chat_form:
+      ask_anything: "随便问 ..."
+      coming_soon: 即将推出
+      ai_disclaimer: AI 回复仅供参考，不构成财务建议。
+  assistant_messages:
+    assistant_message:
+      assistant_reasoning: 助手推理
+    tool_calls:
+      tool_calls: 工具调用
+      function: "函数："
+      arguments: "参数："

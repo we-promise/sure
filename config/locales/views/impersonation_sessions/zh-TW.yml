@@ -13,3 +13,21 @@ zh-TW:
       success: 已離開工作階段
     reject:
       success: 請求已拒絕
+    approval_bar:
+      access_session: 存取工作階段
+      access_request: 存取請求
+      request_message: "Sure 支援人員已請求存取您的帳戶（可能是為了協助您處理支援請求）。如果您批准該請求，他們的所有操作都將被記錄，以用於安全和稽核目的。"
+      approve: 批准
+      reject: 拒絕
+      in_progress_message: "Sure Finances 團隊的成員正在查看您的資料。您可以隨時結束工作階段。"
+      end_session: 結束工作階段
+      error_message: "發生了一些錯誤。請與我們聯繫。"
+    super_admin_bar:
+      super_admin: 超級管理員
+      jobs: 工作
+      impersonating: "正在模擬："
+      leave: 離開
+      terminate: 終止
+      join_session_prompt: 加入工作階段
+      join: 加入
+      request_impersonation: 請求身分模擬

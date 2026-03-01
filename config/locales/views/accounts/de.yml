@@ -1,6 +1,7 @@
 de:
   accounts:
     account:
+      complete_setup: Einrichtung abschließen
       link_lunchflow: Mit Lunch Flow verknüpfen
       troubleshoot: Fehlerbehebung
     chart:
@@ -32,6 +33,12 @@ de:
         manual_entry: Kontostand manuell eingeben
         title: Wie möchtest du es hinzufügen
       title: Was möchtest du hinzufügen
+      container:
+        previous: Zurück
+        next: Weiter
+        select: Auswählen
+        navigate: Navigieren
+        close: Schließen
     show:
       activity:
         amount: Betrag
@@ -47,8 +54,11 @@ de:
       chart:
         balance: Kontostand
         owed: Geschuldeter Betrag
+      header:
+        complete_setup: Einrichtung abschließen
       menu:
         confirm_accept: "%{name} löschen"
+        delete_account: Konto löschen
         confirm_body_html: "<p>Wenn du dieses Konto löschst, werden dessen Wertverläufe gelöscht, was sich auf verschiedene Bereiche deines Gesamtvermögens auswirkt Diese Aktion beeinflusst direkt deine Nettovermögensberechnung und die Kontodiagramme</p><br /> <p>Nach dem Löschen kann das Konto nicht wiederhergestellt werden Du müsstest es als neues Konto hinzufügen</p>"
         confirm_title: Konto löschen
         edit: Bearbeiten

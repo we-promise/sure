@@ -5,6 +5,68 @@ nl:
     no_condition: Geen voorwaarde
     actions:
       value_placeholder: Voer een waarde in
+    index:
+      page_title: Regels
+      delete_all_rules: Alle regels verwijderen
+      new_rule: Nieuwe regel
+      ai_warning: AI-gestuurde regelacties kosten geld. Zorg ervoor dat u zo nauwkeurig mogelijk filtert om onnodige kosten te voorkomen.
+      rules_label: Regels
+      sort_by: "Sorteren op:"
+      toggle_sort_direction: Sorteerrichting omwisselen
+      no_rules: Nog geen regels
+      no_rules_description: Stel regels in om acties uit te voeren op uw transacties en andere gegevens bij elke accountsynchronisatie.
+    new:
+      back_to_rules: Terug naar regels
+      new_rule_title: "Nieuwe %{resource_type}-regel"
+    edit:
+      back_to_rules: Terug naar regels
+      edit_rule_title: "%{resource_type}-regel \"%{name}\" bewerken"
+      edit_rule_title_unnamed: "%{resource_type}-regel bewerken"
+    confirm:
+      confirm_changes_to: "Wijzigingen bevestigen voor \"%{name}\""
+      confirm_changes: Wijzigingen bevestigen
+      about_to_apply_html: "U staat op het punt deze regel toe te passen op <span class=\"text-primary font-medium\">%{count} %{resource_type}</span> die aan de opgegeven regelcriteria voldoen. Bevestig alstublieft of u met deze wijziging wilt doorgaan."
+      ai_cost_title: AI kostenraming
+      ai_cost_message: "Dit zal AI gebruiken om %{count} transactie(s) te categoriseren. Geschatte kosten: <span class=\"font-semibold\">~$%{cost}</span>"
+      ai_cost_no_estimate: "Dit zal AI gebruiken om %{count} transactie(s) te categoriseren."
+      cost_unavailable_model: "Kostenraming niet beschikbaar voor model \"%{model}\"."
+      cost_unavailable_no_provider: Kostenraming niet beschikbaar (geen LLM provider geconfigureerd).
+      cost_warning: U kunt kosten maken, controleer bij de modelprovider voor de meest actuele prijzen.
+      view_usage: Gebruiksgeschiedenis bekijken
+      confirm_changes_btn: Wijzigingen bevestigen
+    form:
+      rule_name_optional: Regelnaam (optioneel)
+      enter_name: Voer een naam in voor deze regel
+      if_label: ALS
+      then_label: DAN
+      for_label: VOOR
+      add_condition: Voorwaarde toevoegen
+      add_condition_group: Voorwaardengroep toevoegen
+      add_action: Actie toevoegen
+      all_past_future: "Alle eerdere en toekomstige %{resource_type}s"
+      starting_from: Vanaf
+    rule:
+      if_label: ALS
+      then_label: DAN
+      for_label: VOOR
+      to_label: naar
+      and_more_conditions:
+        one: "en %{count} voorwaarde meer"
+        other: "en %{count} voorwaarden meer"
+      and_more_actions:
+        one: "en %{count} actie meer"
+        other: "en %{count} acties meer"
+      all_past_future: "Alle eerdere en toekomstige %{resource_type}"
+      on_or_after: "%{resource_type} op of na %{date}"
+      edit: Bewerken
+      reapply_rule: Regel opnieuw toepassen
+      delete: Verwijderen
+    category_rule_cta:
+      updated_to: "Bijgewerkt naar %{name}"
+      auto_categorize_description: U kunt een regel aanmaken om transacties zoals deze automatisch te categoriseren
+      dont_show_again: Niet meer tonen
+      dismiss: Sluiten
+      create_rule: Regel aanmaken
     apply_all:
       button: Alles toepassen
       confirm_title: Alle regels toepassen
@@ -38,3 +100,16 @@ nl:
         pending: In behandeling
         success: Succesvol
         failed: Mislukt
+  rule:
+    actions:
+      action:
+        to_label: naar
+    conditions:
+      condition:
+        and_label: en
+        enter_value: Voer een waarde in
+      condition_group:
+        and_label: en
+        match: voldoen
+        of_the_following: van de volgende voorwaarden
+        add_condition: Voorwaarde toevoegen

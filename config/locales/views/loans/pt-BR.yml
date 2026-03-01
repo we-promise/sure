@@ -13,6 +13,7 @@ pt-BR:
     new:
       title: Inserir detalhes do empréstimo
     overview:
+      edit_loan_details: Editar detalhes do empréstimo
       interest_rate: Taxa de Juros
       monthly_payment: Pagamento Mensal
       not_applicable: N/A

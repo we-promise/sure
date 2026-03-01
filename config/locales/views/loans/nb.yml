@@ -13,6 +13,7 @@ nb:
     new:
       title: Angi lånedetaljer
     overview:
+      edit_loan_details: Rediger lånedetaljer
       interest_rate: Rente
       monthly_payment: Månedlig betaling
       not_applicable: Ikke Aktuelt

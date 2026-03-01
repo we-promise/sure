@@ -92,6 +92,7 @@ ca:
       no_name_placeholder: "(Sense nom)"
       title: Enllaça %{account_name} amb Lunch Flow
     setup_accounts:
+      page_title: "Configura els comptes de Lunch Flow"
       account_type_label: 'Tipus de compte:'
       account_types:
         credit_card: Targeta de crèdit
@@ -156,3 +157,22 @@ ca:
       success: S'ha iniciat la sincronització
     update:
       success: La connexió amb Lunch Flow s'ha actualitzat
+    api_error:
+      title: "Error de connexió amb Lunch Flow"
+      unable_to_connect: "No s'ha pogut connectar amb Lunch Flow"
+      common_issues: "Problemes habituals:"
+      issue_invalid_key_html: '<strong>Clau API invàlida:</strong> Comprova la teva clau API a Configuració de proveïdors'
+      issue_expired_html: '<strong>Credencials caducades:</strong> Genera una nova clau API des de Lunch Flow'
+      issue_network_html: '<strong>Problema de xarxa:</strong> Comprova la connexió a Internet'
+      issue_service_down_html: '<strong>Servei no disponible:</strong> L''API de Lunch Flow pot estar temporalment no disponible'
+      check_settings: "Comprova la configuració de proveïdors"
+    setup_required:
+      title: "Configuració de Lunch Flow requerida"
+      api_key_not_configured: "Clau API no configurada"
+      description: "Abans de poder enllaçar comptes de Lunch Flow, has de configurar la teva clau API de Lunch Flow."
+      setup_steps: "Passos de configuració:"
+      step_1_html: 'Vés a <strong>Configuració → Proveïdors</strong>'
+      step_2_html: 'Cerca la secció <strong>Lunch Flow</strong>'
+      step_3: "Introdueix la teva clau API de Lunch Flow"
+      step_4: "Torna aquí per enllaçar els teus comptes"
+      go_to_settings: "Anar a Configuració de proveïdors"

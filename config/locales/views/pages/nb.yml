@@ -12,3 +12,30 @@ nb:
         no_account_subtitle: Siden ingen kontoer er lagt til, er det ingen data å
           vise. Legg til dine første kontoer for å begynne å vise dashboard-data.
         no_account_title: Ingen kontoer enda
+      balance_sheet:
+        title: "Balanseoppstilling"
+        name: "Navn"
+        weight: "Vekt"
+        value: "Verdi"
+    feedback:
+      page_title: Tilbakemelding
+      title: Gi tilbakemelding
+      description: Gi oss beskjed om du har spesifikke tilbakemeldinger. Du kan gjerne inkludere lenker til videoer eller skjermbilder.
+      feature_request: Skriv et funksjonsønske
+      bug_report: Rapporter en feil
+      discuss: "Diskuter %{product_name} med andre"
+    intro:
+      welcome: "Velkommen!"
+      coming_soon: Introduksjonsopplevelse kommer snart
+      description: "Vi bygger en rikere onboarding-opplevelse for å lære om dine mål, milepæler og daglige behov. Foreløpig kan du gå til chat-sidefeltet for å starte en samtale med Sure og fortelle oss hvor du er i din økonomiske reise."
+      start_chatting: Start en samtale
+    redis_configuration_error:
+      page_title: "Redis-konfigurasjon påkrevd - Sure"
+      title: Redis-konfigurasjon påkrevd
+      subtitle: Din selvhostede Sure-installasjon trenger at Redis er riktig konfigurert.
+      why_required: Hvorfor er Redis påkrevd?
+      explanation: Sure bruker Redis til å drive Sidekiq-bakgrunnsoppgaver som synkronisering av kontodata, importbehandling og andre bakgrunnsoperasjoner som holder finansdataene dine oppdatert.
+      view_setup_guide: Se oppsettguide
+      docker_guide: Følg vår komplette Docker-oppsettguide for å konfigurere Redis
+      refresh_hint: "Når du har konfigurert Redis, oppdater denne siden for å fortsette."
+      refresh_page: Oppdater side

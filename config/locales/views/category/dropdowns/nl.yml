@@ -7,5 +7,6 @@ nl:
         edit: Categorie bewerken
       show:
         clear: Categorie wissen
+        match_transfer: "Overboeking/betaling matchen"
         no_categories: Geen categorieën gevonden
         search_placeholder: Zoeken

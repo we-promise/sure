@@ -1,0 +1,22 @@
+---
+nb:
+  transfer_matches:
+    matching_fields:
+      create_new: Opprett ny transaksjon
+      description: Velg en metode for å matche transaksjonene dine.
+      match_existing: Match eksisterende transaksjon (anbefalt)
+      matching_method: Matchmetode
+      matching_transaction: Matchet transaksjon
+      no_matches_description: Vi fant ingen transaksjoner å matche fra dine andre
+        kontoer. Vennligst velg en konto, så oppretter vi en ny inngående transaksjon
+        for deg.
+      target_account: Målkonto
+    new:
+      from_account: Fra konto
+      from_account_name: "Fra konto: %{name}"
+      inflow_transaction: Inngående transaksjon
+      outflow_transaction: Utgående transaksjon
+      submit: Opprett overføringsmatch
+      title: Match overføring eller betaling
+      to_account: Til konto
+      to_account_name: "Til konto: %{name}"

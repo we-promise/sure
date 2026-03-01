@@ -14,7 +14,10 @@ nl:
       manual: Gebruiker ingesteld
       calculated: Uit transacties
       provider: Van provider
+    new:
+      coming_soon: "Binnenkort beschikbaar..."
     cost_basis_cell:
+      set: Instellen
       unknown: "--"
       set_cost_basis_header: "Kostprijs instellen voor %{ticker} (%{qty} aandelen)"
       total_cost_basis_label: Totale kostprijs

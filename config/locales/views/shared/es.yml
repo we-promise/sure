@@ -5,6 +5,7 @@ es:
       accept: Confirmar
       body_html: "<p>No podrás deshacer esta decisión</p>"
       cancel: Cancelar
+      subtitle: Esta acción no se puede deshacer.
       title: ¿Estás seguro?
     money_field:
       label: Importe

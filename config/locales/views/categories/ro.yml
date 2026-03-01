@@ -14,12 +14,23 @@ ro:
       edit: Editează categoria
     form:
       placeholder: Nume categorie
+      color: Culoare
+      poor_contrast: "Contrast slab, alege o culoare mai închisă sau"
+      auto_adjust: "ajustare automată."
+      icon: Pictogramă
+      income: Venituri
+      expense: Cheltuieli
+      classification: Clasificare
+      unassigned: "(neatribuit)"
+      parent_category: "Categorie părinte (opțional)"
+      name: Nume
     index:
       bootstrap: Folosește valorile implicite (recomandat)
       categories: Categorii
       categories_expenses: Categorii de cheltuieli
       categories_incomes: Categorii de venituri
       empty: Nicio categorie găsită
+      delete_all: Șterge tot
       new: Categorie nouă
     menu:
       loading: Se încarcă...

@@ -12,4 +12,6 @@ tr:
       unauthorized: Bu işlemi gerçekleştirmeye yetkiniz yok.
     reset_with_sample_data:
       success: Hesabınız sıfırlandı ve örnek veriler hazırlanıyor. Kısa süre içinde demo verileri göreceksiniz.
+    user_menu:
+      version: "Sürüm:"
 

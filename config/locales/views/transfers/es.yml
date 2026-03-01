@@ -18,13 +18,19 @@ es:
     new:
       title: Nueva transferencia
     show:
+      amount: Importe
+      category: Categoría
+      date: Fecha
       delete: Eliminar transferencia
       delete_subtitle: Esto eliminará la transferencia. No se eliminarán las transacciones subyacentes.
       delete_title: ¿Eliminar transferencia?
       details: Detalles
+      from: Desde
       note_label: Notas
       note_placeholder: Añade una nota a esta transferencia
       overview: Resumen
       settings: Configuración
+      to: Hacia
+      uncategorized: Sin categoría
     update:
       success: Transferencia actualizada

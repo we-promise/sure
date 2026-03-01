@@ -23,3 +23,30 @@ fr:
         no_account_yet: Pas encore de compte
         add_account_to_display: Ajouter des comptes pour afficher les données de valeur nette
         new: Ajouter un compte
+      balance_sheet:
+        title: "Bilan"
+        name: "Nom"
+        weight: "Poids"
+        value: "Valeur"
+    feedback:
+      page_title: Commentaires
+      title: Laisser un commentaire
+      description: Dites-nous si vous avez des commentaires spécifiques. N'hésitez pas à inclure des liens vers des vidéos ou des captures d'écran.
+      feature_request: Écrire une demande de fonctionnalité
+      bug_report: Signaler un bug
+      discuss: "Discuter de %{product_name} avec d'autres"
+    intro:
+      welcome: "Bienvenue !"
+      coming_soon: L'expérience d'introduction arrive bientôt
+      description: "Nous construisons un parcours d'intégration plus riche pour en apprendre davantage sur vos objectifs, vos jalons et vos besoins quotidiens. Pour l'instant, rendez-vous dans la barre latérale du chat pour démarrer une conversation avec Sure et nous faire savoir où vous en êtes dans votre parcours financier."
+      start_chatting: Commencer à discuter
+    redis_configuration_error:
+      page_title: "Configuration de Redis requise - Sure"
+      title: Configuration de Redis requise
+      subtitle: Votre installation auto-hébergée de Sure nécessite que Redis soit correctement configuré.
+      why_required: "Pourquoi Redis est-il requis ?"
+      explanation: Sure utilise Redis pour alimenter les tâches en arrière-plan de Sidekiq, telles que la synchronisation des données de comptes, le traitement des importations et d'autres opérations en arrière-plan qui maintiennent vos données financières à jour.
+      view_setup_guide: Voir le guide de configuration
+      docker_guide: Suivez notre guide complet de configuration Docker pour configurer Redis
+      refresh_hint: "Une fois Redis configuré, actualisez cette page pour continuer."
+      refresh_page: Actualiser la page

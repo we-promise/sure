@@ -11,6 +11,7 @@ fr:
     form:
       placeholder: Nom de l'étiquette
     index:
+      delete_all: Tout supprimer
       empty: Aucune étiquette pour le moment
       new: Nouvelle étiquette
       tags: Étiquettes

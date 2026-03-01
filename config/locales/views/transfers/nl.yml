@@ -18,14 +18,20 @@ nl:
     new:
       title: Nieuwe overboeking
     show:
+      amount: Bedrag
+      category: Categorie
+      date: Datum
       delete: Verwijder overboeking
       delete_subtitle: Dit verwijdert de overboeking. Het verwijdert niet de onderliggende
         transacties.
       delete_title: Overboeking verwijderen?
       details: Details
+      from: Van
       note_label: Notities
       note_placeholder: Voeg een notitie toe aan deze overboeking
       overview: Overzicht
       settings: Instellingen
+      to: Naar
+      uncategorized: Ongecategoriseerd
     update:
       success: Overboeking bijgewerkt

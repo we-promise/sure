@@ -11,5 +11,6 @@ nb:
         explanation: "%{tag_name} vil bli fjernet fra transaksjoner og andre tagbare
           enheter. I stedet for å la dem være uten tag, kan du også tildele en ny tag
           nedenfor."
+        delete_and_reassign: Slett og tildel på nytt
         replacement_tag_prompt: Velg tag
         tag: Tag

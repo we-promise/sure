@@ -6,6 +6,8 @@ pt-BR:
       account_prompt: Buscar conta
       amount: Valor
       holding: Símbolo do ticker
+      manual_ticker_label: Símbolo do ticker
+      manual_ticker_placeholder: AAPL
       price: Preço por ação
       qty: Quantidade
       submit: Adicionar transação

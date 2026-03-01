@@ -14,6 +14,7 @@ en:
       invalid_invite_code: Invalid invite code, please try again.
       success: You have signed up successfully.
     new:
+      email_placeholder: "you@example.com"
       invitation_message: "%{inviter} has invited you to join as a %{role}"
       join_family_title: Join %{family} %{moniker}
       role_admin: administrator

@@ -13,6 +13,7 @@ ro:
     new:
       title: Introdu detaliile împrumutului
     overview:
+      edit_loan_details: Editează detaliile împrumutului
       interest_rate: Rata dobânzii
       monthly_payment: Plată lunară
       not_applicable: N/A

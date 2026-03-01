@@ -74,6 +74,7 @@ zh-TW:
       missing_parameters: 缺少必要參數
       success: "已成功將 %{account_name} 與 Lunch Flow 連結"
     setup_accounts:
+      page_title: "設定 Lunch Flow 帳戶"
       account_type_label: "帳戶類型："
       all_accounts_linked: "您的所有 Lunch Flow 帳戶都已設定完畢。"
       api_error: "API 錯誤：%{message}"
@@ -141,3 +142,22 @@ zh-TW:
       success: 同步已開始
     update:
       success: Lunch Flow 連線已更新
+    api_error:
+      title: "Lunch Flow 連線錯誤"
+      unable_to_connect: "無法連線到 Lunch Flow"
+      common_issues: "常見問題："
+      issue_invalid_key_html: '<strong>API 金鑰無效：</strong>請在提供商設定中檢查您的 API 金鑰'
+      issue_expired_html: '<strong>憑證已過期：</strong>請從 Lunch Flow 產生新的 API 金鑰'
+      issue_network_html: '<strong>網路問題：</strong>請檢查您的網路連線'
+      issue_service_down_html: '<strong>服務不可用：</strong>Lunch Flow API 可能暫時無法使用'
+      check_settings: "檢查提供商設定"
+    setup_required:
+      title: "需要設定 Lunch Flow"
+      api_key_not_configured: "API 金鑰未設定"
+      description: "在連結 Lunch Flow 帳戶之前，您需要先設定 Lunch Flow API 金鑰。"
+      setup_steps: "設定步驟："
+      step_1_html: '前往 <strong>設定 → 提供商</strong>'
+      step_2_html: '找到 <strong>Lunch Flow</strong> 區塊'
+      step_3: "輸入您的 Lunch Flow API 金鑰"
+      step_4: "返回此處連結您的帳戶"
+      go_to_settings: "前往提供商設定"

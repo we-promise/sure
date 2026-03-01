@@ -1,0 +1,34 @@
+---
+fr:
+  budgets:
+    name:
+      custom_range: "%{start} - %{end_date}"
+      month_year: "%{month}"
+    show:
+      categories: Catégories
+      edit: Modifier
+      tabs:
+        actual: Réel
+        budgeted: Budgétisé
+    edit:
+      title: Configurez votre budget
+      description: Saisissez vos revenus mensuels et vos dépenses prévues ci-dessous pour configurer votre budget.
+      budgeted_spending: Dépenses budgétisées
+      expected_income: Revenus attendus
+      autosuggest: Suggestion automatique des revenus et du budget de dépenses
+      autosuggest_description: Cela sera basé sur l'historique des transactions. L'IA peut faire des erreurs, vérifiez avant de continuer.
+      continue: Continuer
+    budgeted_summary:
+      expected_income: Revenus attendus
+      earned: "%{amount} gagnés"
+      over: "%{amount} dépassés"
+      left: "%{amount} restants"
+      budgeted: Budgétisé
+      spent: "%{amount} dépensés"
+    actuals_summary:
+      income: Revenus
+      expenses: Dépenses
+  budget_categories:
+    index:
+      title: Modifier les budgets par catégorie
+      description: Ajustez les budgets de catégorie pour définir des limites de dépenses. Les fonds non alloués seront automatiquement attribués comme non catégorisés.

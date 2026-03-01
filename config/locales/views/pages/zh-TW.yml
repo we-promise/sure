@@ -18,6 +18,9 @@ zh-TW:
         no_account_title: 尚無帳戶
       balance_sheet:
         title: "資產負債表"
+        name: "名稱"
+        weight: "占比"
+        value: "金額"
         no_items: "尚無 %{name}"
         add_accounts: "新增您的 %{name} 帳戶以查看詳細分析"
       cashflow_sankey:
@@ -35,3 +38,25 @@ zh-TW:
         categories: "類別"
         value: "金額"
         weight: "占比"
+    feedback:
+      page_title: 意見回饋
+      title: 提交意見回饋
+      description: 如果您有任何具體的意見回饋，請告訴我們。您可以附上影片或截圖的連結。
+      feature_request: 撰寫功能需求
+      bug_report: 提交錯誤報告
+      discuss: "與其他使用者討論 %{product_name}"
+    intro:
+      welcome: "歡迎！"
+      coming_soon: 引導體驗即將推出
+      description: "我們正在打造更豐富的入門體驗，以了解您的目標、里程碑和日常需求。目前，請前往聊天側邊欄與 Sure 開始對話，讓我們了解您在財務旅程中的位置。"
+      start_chatting: 開始聊天
+    redis_configuration_error:
+      page_title: "需要設定 Redis - Sure"
+      title: 需要設定 Redis
+      subtitle: 您的自架 Sure 安裝需要正確設定 Redis。
+      why_required: 為什麼需要 Redis？
+      explanation: Sure 使用 Redis 來驅動 Sidekiq 背景任務，例如同步帳戶資料、處理匯入以及其他保持您財務資料更新的背景作業。
+      view_setup_guide: 查看設定指南
+      docker_guide: 依照我們完整的 Docker 設定指南來設定 Redis
+      refresh_hint: "設定好 Redis 後，請重新整理此頁面以繼續。"
+      refresh_page: 重新整理頁面

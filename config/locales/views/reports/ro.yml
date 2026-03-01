@@ -135,3 +135,12 @@ ro:
       open_sheets: Deschide Google Sheets
       go_to_api_keys: Mergi la Chei API
       close: Am înțeles
+    investment_flows:
+      title: Fluxuri de investiții
+      description: Urmărește banii care intră și ies din conturile tale de investiții prin contribuții și retrageri.
+      contributions: Contribuții
+      contributions_description: Bani adăugați la investiții
+      withdrawals: Retrageri
+      withdrawals_description: Bani retrași din investiții
+      net_flow: Flux net
+      net_flow_description: Variație netă totală

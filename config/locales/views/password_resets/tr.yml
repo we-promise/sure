@@ -4,6 +4,7 @@ tr:
     edit:
       title: Şifreyi sıfırla
     new:
+      email_placeholder: "you@example.com"
       requested: Lütfen şifrenizi sıfırlamak için e-postanızı kontrol edin.
       submit: Şifreyi sıfırla
       title: Şifreyi sıfırla

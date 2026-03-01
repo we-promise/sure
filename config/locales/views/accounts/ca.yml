@@ -6,6 +6,7 @@ ca:
         success: Èxit
   accounts:
     account:
+      complete_setup: Completa la configuració
       link_lunchflow: Enllaça amb Lunch Flow
       link_provider: Enllaça amb proveïdor
       troubleshoot: Resolució de problemes
@@ -62,6 +63,12 @@ ca:
         manual_entry: Introdueix el saldo del compte
         title: Com vols afegir-lo?
       title: Què vols afegir?
+      container:
+        previous: Anterior
+        next: Següent
+        select: Selecciona
+        navigate: Navega
+        close: Tanca
     select_provider:
       already_linked: Aquest compte ja està enllaçat a un proveïdor
       description: Tria quin proveïdor vols utilitzar per enllaçar %{account_name}
@@ -88,8 +95,11 @@ ca:
       chart:
         balance: Saldo
         owed: Import degut
+      header:
+        complete_setup: Completa la configuració
       menu:
         confirm_accept: Elimina "%{name}"
+        delete_account: Elimina el compte
         confirm_body_html: "<p>En eliminar aquest compte, s'esborrarà l'historial
           de valors, afectant diversos aspectes del teu compte global. Aquesta acció
           tindrà un impacte directe en el càlcul del teu patrimoni net i els gràfics

@@ -1,0 +1,20 @@
+---
+zh-TW:
+  transfer_matches:
+    matching_fields:
+      create_new: 建立新交易
+      description: 選擇一種方法來配對您的交易。
+      match_existing: 配對現有交易（建議）
+      matching_method: 配對方法
+      matching_transaction: 配對的交易
+      no_matches_description: 我們無法從您的其他帳戶中找到可配對的交易。請選擇一個帳戶，我們將為您建立一筆新的收入交易。
+      target_account: 目標帳戶
+    new:
+      from_account: 來源帳戶
+      from_account_name: "來源帳戶：%{name}"
+      inflow_transaction: 收入交易
+      outflow_transaction: 支出交易
+      submit: 建立轉帳配對
+      title: 配對轉帳或付款
+      to_account: 目標帳戶
+      to_account_name: "目標帳戶：%{name}"

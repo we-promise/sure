@@ -1,6 +1,17 @@
 ---
 nl:
   family_exports:
+    new:
+      title: Exporteer uw gegevens
+      subtitle: Download al uw financiële gegevens
+      whats_included: "Wat is inbegrepen:"
+      all_accounts_and_balances: Alle accounts en saldi
+      transaction_history: Transactiegeschiedenis
+      investment_trades: Beleggingstransacties
+      categories_tags_and_rules: "Categorieën, tags en regels"
+      note: "Opmerking:"
+      note_body: "Deze export bevat al uw gegevens, maar slechts een deel van de gegevens kan worden teruggeïmporteerd via de CSV-importfunctie. Wij ondersteunen het importeren van accounts, transacties (met categorie en tags) en beleggingstransacties. Andere accountgegevens kunnen niet worden geïmporteerd en zijn alleen voor uw administratie."
+      cancel: Annuleren
     table:
       title: Exporten
       header:

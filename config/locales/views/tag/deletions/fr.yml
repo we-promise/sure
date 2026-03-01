@@ -9,5 +9,6 @@ fr:
         delete_and_recategorize: Supprimer "%{tag_name}" et attribuer une nouvelle étiquette
         delete_tag: Supprimer l'étiquette ?
         explanation: "%{tag_name} sera supprimé des transactions et d'autres entités catégorisables. Au lieu de les laisser non catégorisées, vous pouvez également attribuer une nouvelle étiquette ci-dessous."
+        delete_and_reassign: Supprimer et réattribuer
         replacement_tag_prompt: Sélectionnez l'étiquette
         tag: Étiquette

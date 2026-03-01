@@ -24,13 +24,47 @@ zh-CN:
       edit_imports: 编辑导入
       edit_merchants: 编辑商户
       edit_tags: 编辑标签
+      edit_rules: 编辑规则
+      new_rule: 新建规则
       import: 导入
     index:
+      title: 交易记录
+      new_transaction: 新建交易
       import: 导入
       transaction: 交易
       transactions: 交易记录
+    summary:
+      total_transactions: 交易总数
+      income: 收入
+      expenses: 支出
+    selection_bar:
+      edit: 编辑
+      delete: 删除
+    bulk_updates:
+      title: 编辑交易
+      overview: 概览
+      transactions: 交易记录
+      select_category: 选择分类
+      select_merchant: 选择商户
+      bulk_note_placeholder: 输入将应用于所选交易的备注
+      cancel: 取消
+      save: 保存
     new:
       new_transaction: 新建交易
+    search:
+      filters:
+        account: 账户
+        date: 日期
+        type: 类型
+        status: 状态
+        amount: 金额
+        category: 分类
+        tag: 标签
+        merchant: 商户
+        filter_accounts: 筛选账户
+        filter_category: 筛选分类
+        filter_tags: 筛选标签
+        filter_merchants: 筛选商户
     searches:
       filters:
         amount_filter:
@@ -87,4 +121,13 @@ zh-CN:
       settings: 设置
       tags_label: 标签
       uncategorized: "（未分类）"
+      additional_details: 附加详情
+      payee: 收款方
+      description: 描述
+      memo: 备忘录
+      provider_extras: 提供商额外信息
+      transfer_or_payment: 转账或债务偿还？
+      transfer_description: 转账和付款是特殊类型的交易，表示两个账户之间的资金流动。
+      open_matcher: 打开匹配器
+      convert: 转换
     toggle_recurring_section: 切换即将发生的定期交易显示

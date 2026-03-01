@@ -27,11 +27,31 @@ ca:
       edit_imports: Edita importacions
       edit_merchants: Edita comerciants
       edit_tags: Edita etiquetes
+      edit_rules: Edita regles
+      new_rule: Nova regla
       import: Importa
     index:
+      title: Transaccions
+      new_transaction: Nova transacció
       import: Importa
       transaction: transacció
       transactions: transaccions
+    summary:
+      total_transactions: Total de transaccions
+      income: Ingressos
+      expenses: Despeses
+    selection_bar:
+      edit: Edita
+      delete: Elimina
+    bulk_updates:
+      title: Edita transaccions
+      overview: Resum
+      transactions: Transaccions
+      select_category: Selecciona una categoria
+      select_merchant: Selecciona un comerciant
+      bulk_note_placeholder: Introdueix una nota que s'aplicarà a les transaccions seleccionades
+      cancel: Cancel·la
+      save: Desa
     merge_duplicate:
       failure: No s'han pogut fusionar les transaccions
       success: Les transaccions s'han fusionat correctament
@@ -47,6 +67,10 @@ ca:
         status: Estat
         tag: Etiqueta
         type: Tipus
+        filter_accounts: Filtra comptes
+        filter_category: Filtra categoria
+        filter_tags: Filtra etiquetes
+        filter_merchants: Filtra comerciants
     searches:
       filters:
         amount_filter:
@@ -116,6 +140,15 @@ ca:
       settings: Configuració
       tags_label: Etiquetes
       uncategorized: "(sense categoritzar)"
+      additional_details: Detalls addicionals
+      payee: Beneficiari
+      description: Descripció
+      memo: Memo
+      provider_extras: Extres del proveïdor
+      transfer_or_payment: Transferència o pagament de deute?
+      transfer_description: Les transferències i els pagaments són tipus especials de transaccions que indiquen moviment de diners entre 2 comptes.
+      open_matcher: Obre el coincididor
+      convert: Converteix
       loan_payment: Pagament de préstec
       transfer: Transferència
     toggle_recurring_section: Mostra/Amaga les transaccions recurrents properes

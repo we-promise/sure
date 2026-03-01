@@ -3,6 +3,11 @@ tr:
   holdings:
     cash:
       brokerage_cash: Aracı kurum nakiti
+    new:
+      coming_soon: "Yakında..."
+    cost_basis_cell:
+      set: Ayarla
+      unknown: "--"
     destroy:
       success: Holding silindi
     holding:

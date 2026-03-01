@@ -11,5 +11,6 @@ pt-BR:
         explanation: "%{tag_name} será removida de transações e outras entidades marcáveis.
           Em vez de deixá-las sem marcação, você também pode atribuir uma nova tag
           abaixo."
+        delete_and_reassign: Excluir e reatribuir
         replacement_tag_prompt: Selecionar tag
         tag: Tag

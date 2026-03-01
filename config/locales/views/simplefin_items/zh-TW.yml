@@ -26,6 +26,14 @@ zh-TW:
         update_failed: "更新連線失敗：%{message}"
         unexpected: 發生預期之外的錯誤。請再試一次或聯絡支援團隊。
     edit:
+      title: "更新 SimpleFin 連線"
+      subtitle: "取得新的設定權杖以重新連結您的 SimpleFin 帳戶"
+      update_needed: "您的 SimpleFIN 連線需要更新："
+      step_1_html: '前往 <a href="https://bridge.simplefin.org/simplefin/create" target="_blank" rel="noopener noreferrer" class="text-link hover:text-link underline">SimpleFIN Bridge</a> 建立新的設定權杖'
+      step_2: "複製權杖並貼到下方"
+      step_3: '點擊「更新」以恢復存取權限'
+      update: "更新"
+      cancel: "取消"
       setup_token:
         label: "SimpleFIN 設定權杖："
         placeholder: "在此貼上您的 SimpleFIN 設定權杖..."
@@ -54,6 +62,9 @@ zh-TW:
       syncing: 同步中...
       update: 更新
     select_existing_account:
+      header_title: "連結 SimpleFIN 帳戶"
+      link_button: "連結"
+      balance_label: "餘額："
       title: "將 %{account_name} 連結至 SimpleFIN"
       description: 選擇一個 SimpleFIN 帳戶來連結至您現有的帳戶
       cancel: 取消
@@ -69,3 +80,25 @@ zh-TW:
       errors:
         only_manual: 僅能連結手動管理的帳戶
         invalid_simplefin_account: 所選的 SimpleFIN 帳戶無效
+    setup_accounts:
+      page_title: "設定 SimpleFin 帳戶"
+      title: "設定您的 SimpleFin 帳戶"
+      subtitle: "為您匯入的帳戶選擇正確的帳戶類型"
+      creating_accounts: "正在建立帳戶..."
+      choose_account_type: "為每個 SimpleFin 帳戶選擇正確的帳戶類型："
+      account_type_depository: "支票或儲蓄帳戶"
+      account_type_depository_desc: "一般銀行帳戶"
+      account_type_credit_card: "信用卡"
+      account_type_credit_card_desc: "信用卡帳戶"
+      account_type_investment: "投資"
+      account_type_investment_desc: "證券經紀、401(k)、IRA 帳戶"
+      account_type_loan: "貸款或房屋貸款"
+      account_type_loan_desc: "債務帳戶"
+      account_type_other_asset: "其他資產"
+      account_type_other_asset_desc: "其他所有類型"
+      transaction_history: "交易紀錄："
+      transaction_history_note_html: "SimpleFin 通常提供 <strong>60-90 天</strong>的交易紀錄，視您的銀行而定。初始設定後，新交易將自動同步。歷史資料的可用性因金融機構和帳戶類型而異。"
+      account_type_label: "帳戶類型："
+      balance_label: "餘額："
+      create_accounts: "建立帳戶"
+      cancel: "取消"

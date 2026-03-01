@@ -1,6 +1,14 @@
 ---
 de:
   valuations:
+    confirm_create:
+      title: Neuen Kontostand bestätigen
+    confirm_update:
+      title: Kontostand aktualisieren
+    confirmation_contents:
+      brokerage_cash: Brokerage-Bargeld
+      holdings_value: Wert der Bestände
+      total_account_value: Gesamtkontowert
     form:
       amount: Betrag
       submit: Kontostand aktualisieren
@@ -16,6 +24,7 @@ de:
     new:
       title: Neuer Kontostand
     show:
+      account_value_on_date: Kontowert am Datum
       amount: Betrag
       date_label: Datum
       delete: Löschen
@@ -28,3 +37,4 @@ de:
       note_placeholder: Füge zusätzliche Details zu diesem Eintrag hinzu
       overview: Übersicht
       settings: Einstellungen
+      update_value: Wert aktualisieren

@@ -13,3 +13,21 @@ nb:
       success: Forlot økt
     reject:
       success: Forespørsel avvist
+    approval_bar:
+      access_session: Tilgangsøkt
+      access_request: Tilgangsforespørsel
+      request_message: "Sure-supportpersonalet har bedt om tilgang til kontoen din (sannsynligvis for å hjelpe deg med en supportforespørsel). Hvis du godkjenner forespørselen, vil all aktivitet de utfører bli logget for sikkerhets- og revisjonsformål."
+      approve: Godkjenn
+      reject: Avvis
+      in_progress_message: "Noen fra Sure Finances-teamet ser på dataene dine for øyeblikket. Du kan avslutte økten når som helst."
+      end_session: Avslutt økt
+      error_message: "Noe gikk galt. Vennligst kontakt oss."
+    super_admin_bar:
+      super_admin: Super Admin
+      jobs: Jobber
+      impersonating: "Utgir seg for:"
+      leave: Forlat
+      terminate: Avslutt
+      join_session_prompt: Bli med i en økt
+      join: Bli med
+      request_impersonation: Be om identitetstyveri

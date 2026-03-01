@@ -15,6 +15,10 @@ es:
         no_account_subtitle: Como no se han añadido cuentas, no hay datos para mostrar. Añade tus primeras cuentas para empezar a ver los datos del panel.
         no_account_title: Aún no hay cuentas
       balance_sheet:
+        title: "Balance general"
+        name: "Nombre"
+        weight: "Peso"
+        value: "Valor"
         no_items: "Aún no hay %{name}"
         add_accounts: "Añade tus cuentas de %{name} para ver un desglose completo"
       cashflow_sankey:
@@ -29,3 +33,25 @@ es:
       outflows_donut:
         title: "Salidas"
         total_outflows: "Salidas totales"
+    feedback:
+      page_title: Comentarios
+      title: Deja tu opinión
+      description: Haznos saber si tienes comentarios específicos. No dudes en incluir enlaces a videos o capturas de pantalla.
+      feature_request: Escribe una solicitud de función
+      bug_report: Reporta un error
+      discuss: "Comenta %{product_name} con otros"
+    intro:
+      welcome: "¡Bienvenido!"
+      coming_soon: La experiencia de introducción llegará pronto
+      description: "Estamos creando una experiencia de incorporación más completa para conocer tus objetivos, hitos y necesidades diarias. Por ahora, ve a la barra lateral del chat para iniciar una conversación con Sure y contarnos dónde te encuentras en tu recorrido financiero."
+      start_chatting: Empezar a chatear
+    redis_configuration_error:
+      page_title: "Configuración de Redis requerida - Sure"
+      title: Configuración de Redis requerida
+      subtitle: Tu instalación autoalojada de Sure necesita que Redis esté correctamente configurado.
+      why_required: "¿Por qué se requiere Redis?"
+      explanation: Sure utiliza Redis para ejecutar las tareas en segundo plano de Sidekiq, como la sincronización de datos de cuentas, el procesamiento de importaciones y otras operaciones en segundo plano que mantienen tus datos financieros actualizados.
+      view_setup_guide: Ver guía de configuración
+      docker_guide: Sigue nuestra guía completa de configuración de Docker para configurar Redis
+      refresh_hint: "Una vez que hayas configurado Redis, actualiza esta página para continuar."
+      refresh_page: Actualizar página

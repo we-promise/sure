@@ -1,0 +1,45 @@
+---
+tr:
+  admin:
+    users:
+      index:
+        title: "Kullanıcı Yönetimi"
+        description: "Örneğiniz için kullanıcı rollerini yönetin. Süper yöneticiler SSO sağlayıcı ayarlarına ve kullanıcı yönetimine erişebilir."
+        section_title: "Kullanıcılar"
+        you: "(Sen)"
+        trial_ends_at: "Deneme bitiş tarihi"
+        not_available: "n/a"
+        no_users: "Kullanıcı bulunamadı."
+        filters:
+          role: "Rol"
+          role_all: "Tüm roller"
+          trial_status: "Deneme durumu"
+          trial_all: "Tümü"
+          trial_expiring_soon: "7 gün içinde sona eriyor"
+          trial_trialing: "Denemede"
+          submit: "Filtrele"
+        summary:
+          trials_expiring_7_days: "Önümüzdeki 7 gün içinde sona erecek denemeler"
+        table:
+          user: "Kullanıcı"
+          trial_ends_at: "Deneme bitiş tarihi"
+          family_accounts: "Aile hesapları"
+          family_transactions: "Aile işlemleri"
+          last_login: "Son giriş"
+          session_count: "Oturum sayısı"
+          never: "Hiçbir zaman"
+          role: "Rol"
+        role_descriptions_title: "Rol Açıklamaları"
+        roles:
+          guest: "Misafir"
+          member: "Üye"
+          admin: "Yönetici"
+          super_admin: "Süper Yönetici"
+        role_descriptions:
+          guest: "Giriş iş akışları için kasıtlı olarak kısıtlanmış izinlerle asistan odaklı deneyim."
+          member: "Temel kullanıcı erişimi. Kendi hesaplarını, işlemlerini ve ayarlarını yönetebilir."
+          admin: "Aile yöneticisi. API anahtarları, içe aktarmalar ve AI yönergeleri gibi gelişmiş ayarlara erişebilir."
+          super_admin: "Örnek yöneticisi. SSO sağlayıcılarını, kullanıcı rollerini yönetebilir ve destek için kullanıcıların kimliğine bürünebilir."
+      update:
+        success: "Kullanıcı rolü başarıyla güncellendi."
+        failure: "Kullanıcı rolü güncellenemedi."

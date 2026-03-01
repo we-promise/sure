@@ -7,6 +7,10 @@ nl:
         errors_notice: U heeft fouten in uw gegevens. Beweeg over de fout om details te zien.
         errors_notice_mobile: U heeft fouten in uw gegevens. Tik op de fout tooltip om details te zien.
         title: Uw gegevens opschonen
+        data_cleaned: Uw gegevens zijn opgeschoond
+        next_step: Volgende stap
+        all_rows: Alle rijen
+        error_rows: Rijen met fouten
     configurations:
       update:
         success: Import succesvol geconfigureerd.
@@ -16,6 +20,20 @@ nl:
         instructions: Selecteer doorgaan om uw CSV te parsen en door te gaan naar de opschoon stap.
       mint_import:
         date_format_label: Datumformaat
+        pre_configured: We hebben uw Mint-import voor u vooraf geconfigureerd. Ga alstublieft verder naar de volgende stap.
+        leave_empty: Leeg laten
+        date: Datum
+        amount: Bedrag
+        currency: Valuta
+        account_optional: Account (optioneel)
+        name_optional: Naam (optioneel)
+        category_optional: Categorie (optioneel)
+        tags_optional: Tags (optioneel)
+        format: Formaat
+        select_format: Formaat selecteren
+        incomes_negative: Inkomsten zijn negatief
+        incomes_positive: Inkomsten zijn positief
+        apply_configuration: Configuratie toepassen
       rule_import:
         description: Configureer uw regel import. Regels worden aangemaakt of bijgewerkt op basis van de CSV-gegevens.
         process_button: Regels verwerken
@@ -23,11 +41,69 @@ nl:
       show:
         description: Selecteer de kolommen die overeenkomen met elk veld in uw CSV.
         title: Uw import configureren
+        template_found: Sjabloonconfiguratie gevonden
+        template_description: We hebben een configuratie gevonden van een eerdere import voor dit account. Wilt u deze toepassen op deze import?
+        manually_configure: Handmatig configureren
+        apply_template: Sjabloon toepassen
       trade_import:
         date_format_label: Datumformaat
+        select_column: Kolom selecteren
+        date: Datum
+        quantity: Hoeveelheid
+        buys_positive: Aankopen zijn positieve hoeveelheid
+        buys_negative: Aankopen zijn negatieve hoeveelheid
+        default_currency: Standaard
+        currency: Valuta
+        format: Formaat
+        select_format: Formaat selecteren
+        ticker: Ticker
+        leave_empty: Leeg laten
+        stock_exchange_code: Beurscode
+        price: Prijs
+        account: Account
+        name: Naam
+        security_prices_note_html: "<strong>Opmerking:</strong> De leverancier van effectenprijzen is niet geconfigureerd. Uw handelsimports werken, maar Sure zal de prijsgeschiedenis niet aanvullen. Ga naar uw instellingen om dit te configureren."
+        apply_configuration: Configuratie toepassen
       transaction_import:
         date_format_label: Datumformaat
         rows_to_skip_label: Eerste n rijen overslaan
+        date: Datum
+        select_column: Kolom selecteren
+        amount: Bedrag
+        default_currency: Standaard
+        currency: Valuta
+        format: Formaat
+        select_format: Formaat selecteren
+        amount_type_strategy: Strategie voor bedragtype
+        select_strategy: Strategie selecteren
+        incomes_positive: Inkomsten zijn positief
+        incomes_negative: Inkomsten zijn negatief
+        amount_type: Bedragtype
+        select_convention: Conventie selecteren
+        set_label: Instellen
+        as_amount_type_column: als bedragtypekolom
+        as_identifier_value: als identificatiewaarde
+        select_type: Type selecteren
+        income_inflow: Inkomen (instroom)
+        expense_outflow: Uitgave (uitstroom)
+        leave_empty: Leeg laten
+        account: Account
+        name: Naam
+        category: Categorie
+        tags: Tags
+        notes: Notities
+        apply_configuration: Configuratie toepassen
+      account_import:
+        leave_empty: Leeg laten
+        entity_type: Entiteitstype
+        name: Naam
+        balance: Saldo
+        default_currency: Standaard
+        currency: Valuta
+        balance_date: Saldodatum
+        date_format: Datumformaat
+        select_format: Formaat selecteren
+        apply_configuration: Configuratie toepassen
     confirms:
       mappings:
         create_account: Account aanmaken
@@ -36,6 +112,7 @@ nl:
         no_accounts: U heeft nog geen accounts. Maak een account aan dat we kunnen gebruiken voor (niet-toegewezen) rijen in uw CSV of ga terug naar de Opschoon stap en geef een accountnaam op die we kunnen gebruiken.
         rows_label: Rijen
         unassigned_account: Moet u een nieuw account aanmaken voor niet-toegewezen rijen?
+        next: Volgende
       show:
         account_mapping_description: Wijs alle accounts van uw geïmporteerde bestand toe aan bestaande %{product_name} accounts. U kunt ook nieuwe accounts toevoegen of ze ongecategoriseerd laten.
         account_mapping_title: Uw accounts toewijzen
@@ -54,7 +131,36 @@ nl:
         instructions_4: Kolommen gemarkeerd met een asterisk (*) zijn verplichte gegevens.
         instructions_5: Geen komma's, geen valutasymbolen en geen haakjes in getallen.
         title: Uw gegevens importeren
+        drop_csv_title: Sleep CSV om te uploaden
+        drop_csv_subtitle: Uw bestand wordt automatisch geüpload
+        upload_csv_tab: CSV uploaden
+        copy_paste_tab: Kopiëren en plakken
+        account_optional: Account (optioneel)
+        multi_account_import: Multi-account import
+        browse_to_add: Bladeren
+        browse_to_add_suffix: om uw CSV-bestand hier toe te voegen
+        upload_csv_btn: CSV uploaden
+        paste_placeholder: Plak de inhoud van uw CSV-bestand hier
+        download_sample: Voorbeeld-CSV downloaden
+        see_format: om het vereiste CSV-formaat te zien
   imports:
+    failure:
+      title: Import mislukt
+      description: Controleer het bestandsformaat op fouten en of alle verplichte velden zijn ingevuld, en probeer het opnieuw.
+      try_again: Opnieuw proberen
+    importing:
+      title: Import wordt uitgevoerd
+      description: Uw import wordt uitgevoerd. Controleer het importmenu voor statusupdates of klik op 'Status controleren' om de pagina te vernieuwen. U kunt de app gewoon blijven gebruiken.
+      check_status: Status controleren
+      back_to_dashboard: Terug naar dashboard
+    revert_failure:
+      title: Het terugdraaien van de import is mislukt
+      description: Probeer het opnieuw
+      try_again: Opnieuw proberen
+    success:
+      title: Import geslaagd
+      description: Uw geïmporteerde gegevens zijn succesvol toegevoegd aan de app en zijn nu klaar voor gebruik.
+      back_to_dashboard: Terug naar dashboard
     index:
       imports: Imports
       new: Nieuwe import
@@ -91,5 +197,8 @@ nl:
       sources: Bronnen
       title: Nieuwe CSV import
     ready:
+      item: item
+      count: aantal
+      publish_import: Import publiceren
       description: Hier is een samenvatting van de nieuwe items die aan uw account worden toegevoegd zodra u deze import publiceert.
       title: Uw importgegevens bevestigen

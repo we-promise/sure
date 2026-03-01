@@ -10,6 +10,17 @@ ca:
       success: Exportació eliminada amb èxit
     export_not_ready: L'exportació no està llesta per descarregar
     exporting: Exportant...
+    new:
+      title: Exporta les teves dades
+      subtitle: Descarrega totes les teves dades financeres
+      whats_included: "Què s'inclou:"
+      all_accounts_and_balances: Tots els comptes i saldos
+      transaction_history: Historial de transaccions
+      investment_trades: Operacions d'inversió
+      categories_tags_and_rules: "Categories, etiquetes i regles"
+      note: "Nota:"
+      note_body: "Aquesta exportació inclou totes les teves dades, però només algunes es poden tornar a importar mitjançant la funció d'importació CSV. Admetem la importació de comptes, transaccions (amb categoria i etiquetes) i operacions. Les altres dades del compte no es poden importar i són només per als teus registres."
+      cancel: Cancel·la
     index:
       title: Exportacions
       new: Nova exportació

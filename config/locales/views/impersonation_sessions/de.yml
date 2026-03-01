@@ -13,3 +13,21 @@ de:
       success: Sitzung verlassen
     reject:
       success: Anfrage abgelehnt
+    approval_bar:
+      access_session: Sitzung aufrufen
+      access_request: Zugriffsanfrage
+      request_message: "Das Sure-Supportteam hat Zugriff auf dein Konto angefordert (wahrscheinlich um dir bei einer Supportanfrage zu helfen). Wenn du die Anfrage genehmigst, werden alle durchgeführten Aktivitäten zu Sicherheits- und Prüfzwecken protokolliert."
+      approve: Genehmigen
+      reject: Ablehnen
+      in_progress_message: "Jemand vom Sure Finances-Team sieht sich gerade deine Daten an. Du kannst die Sitzung jederzeit beenden."
+      end_session: Sitzung beenden
+      error_message: "Etwas ist schiefgelaufen. Bitte kontaktiere uns."
+    super_admin_bar:
+      super_admin: Super Admin
+      jobs: Aufgaben
+      impersonating: "Angemeldet als:"
+      leave: Verlassen
+      terminate: Beenden
+      join_session_prompt: Einer Sitzung beitreten
+      join: Beitreten
+      request_impersonation: Identitätswechsel anfordern

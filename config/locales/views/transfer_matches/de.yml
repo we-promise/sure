@@ -1,0 +1,22 @@
+---
+de:
+  transfer_matches:
+    matching_fields:
+      create_new: Neue Transaktion erstellen
+      description: Wählen Sie eine Methode zum Abgleichen Ihrer Transaktionen.
+      match_existing: Bestehende Transaktion abgleichen (empfohlen)
+      matching_method: Abgleichmethode
+      matching_transaction: Abgeglichene Transaktion
+      no_matches_description: Wir konnten keine Transaktionen zum Abgleichen aus
+        Ihren anderen Konten finden. Bitte wählen Sie ein Konto aus und wir erstellen
+        eine neue Eingangstransaktion für Sie.
+      target_account: Zielkonto
+    new:
+      from_account: Vom Konto
+      from_account_name: "Vom Konto: %{name}"
+      inflow_transaction: Eingangstransaktion
+      outflow_transaction: Ausgangstransaktion
+      submit: Überweisungsabgleich erstellen
+      title: Überweisung oder Zahlung abgleichen
+      to_account: Zum Konto
+      to_account_name: "Zum Konto: %{name}"

@@ -4,6 +4,7 @@ ca:
     edit:
       title: "Restableix la contrasenya"
     new:
+      email_placeholder: "you@example.com"
       back: "Enrere"
       requested: "Si us plau, revisa el teu correu electrònic; hi trobaràs un enllaç per restablir la contrasenya."
       submit: "Restableix la contrasenya"

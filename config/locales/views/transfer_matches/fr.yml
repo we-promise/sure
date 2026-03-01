@@ -1,0 +1,22 @@
+---
+fr:
+  transfer_matches:
+    matching_fields:
+      create_new: Créer une nouvelle transaction
+      description: Sélectionnez une méthode pour faire correspondre vos transactions.
+      match_existing: Faire correspondre une transaction existante (recommandé)
+      matching_method: Méthode de correspondance
+      matching_transaction: Transaction correspondante
+      no_matches_description: Nous n'avons trouvé aucune transaction à faire correspondre
+        depuis vos autres comptes. Veuillez sélectionner un compte et nous créerons
+        une nouvelle transaction entrante pour vous.
+      target_account: Compte cible
+    new:
+      from_account: Depuis le compte
+      from_account_name: "Depuis le compte : %{name}"
+      inflow_transaction: Transaction entrante
+      outflow_transaction: Transaction sortante
+      submit: Créer la correspondance de transfert
+      title: Faire correspondre un transfert ou un paiement
+      to_account: Vers le compte
+      to_account_name: "Vers le compte : %{name}"

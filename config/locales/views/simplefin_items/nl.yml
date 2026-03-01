@@ -26,11 +26,40 @@ nl:
         update_failed: "Bijwerken verbinding mislukt: %{message}"
         unexpected: Er is een onverwachte fout opgetreden. Probeer het opnieuw.
     edit:
+      title: "SimpleFin-verbinding bijwerken"
+      subtitle: "Verkrijg een nieuw setup-token om uw SimpleFin-account opnieuw te verbinden"
+      update_needed: "Uw SimpleFIN-verbinding moet worden bijgewerkt:"
+      step_1_html: 'Bezoek <a href="https://bridge.simplefin.org/simplefin/create" target="_blank" rel="noopener noreferrer" class="text-link hover:text-link underline">SimpleFIN Bridge</a> om een nieuw setup-token aan te maken'
+      step_2: "Kopieer het token en plak het hieronder"
+      step_3: 'Klik op "Bijwerken" om de toegang te herstellen'
+      update: "Bijwerken"
+      cancel: "Annuleren"
       setup_token:
         label: "SimpleFIN Setup Token:"
         placeholder: "Plak uw SimpleFIN setup token hier..."
         help_text: "De token moet een lange tekenreeks zijn die begint met letters en cijfers"
     setup_accounts:
+      page_title: "SimpleFin-accounts instellen"
+      title: "Stel uw SimpleFin-accounts in"
+      subtitle: "Kies de juiste accounttypen voor uw geïmporteerde accounts"
+      creating_accounts: "Accounts worden aangemaakt..."
+      choose_account_type: "Kies het juiste accounttype voor elk SimpleFin-account:"
+      account_type_depository: "Betaal- of Spaarrekening"
+      account_type_depository_desc: "Reguliere bankrekeningen"
+      account_type_credit_card: "Creditcard"
+      account_type_credit_card_desc: "Creditcardrekeningen"
+      account_type_investment: "Belegging"
+      account_type_investment_desc: "Effecten-, 401(k)-, IRA-rekeningen"
+      account_type_loan: "Lening of Hypotheek"
+      account_type_loan_desc: "Schuldenrekeningen"
+      account_type_other_asset: "Ander bezit"
+      account_type_other_asset_desc: "Al het overige"
+      transaction_history: "Transactiegeschiedenis:"
+      transaction_history_note_html: "SimpleFin biedt doorgaans <strong>60-90 dagen</strong> aan transactiegeschiedenis, afhankelijk van uw bank. Na de eerste installatie worden nieuwe transacties automatisch gesynchroniseerd. De beschikbaarheid van historische gegevens varieert per instelling en accounttype."
+      account_type_label: "Accounttype:"
+      balance_label: "Saldo:"
+      create_accounts: "Accounts aanmaken"
+      cancel: "Annuleren"
       stale_accounts:
         title: "Accounts Niet Langer in SimpleFIN"
         description: "Deze accounts bestaan in uw database maar worden niet langer aangeboden door SimpleFIN. Dit kan gebeuren wanneer accountconfiguraties upstream wijzigen."
@@ -75,6 +104,9 @@ nl:
       reconciled_details_note: "(zie synchronisatiesamenvatting voor details)"
       duplicate_accounts_skipped: "Sommige accounts zijn overgeslagen als duplicaten — gebruik 'Koppel bestaande accounts' om samen te voegen."
     select_existing_account:
+      header_title: "SimpleFIN-account koppelen"
+      link_button: "Koppelen"
+      balance_label: "Saldo:"
       title: "Koppel %{account_name} aan SimpleFIN"
       description: Selecteer een SimpleFIN account om te koppelen aan uw bestaande account
       cancel: Annuleren

@@ -28,6 +28,11 @@ es:
             precios de valores, saldos de cuentas y otros datos. Esta acción no se puede deshacer.
       brand_fetch_settings:
         description: Introduce el ID de Cliente proporcionado por Brand Fetch
+        env_configured_message: Ha configurado correctamente su Client ID de Brand Fetch a través de la variable de entorno BRAND_FETCH_CLIENT_ID.
+        show_details: "(mostrar detalles)"
+        step1_html: 'Visita <a href="https://brandfetch.com/developers" target="_blank" rel="noopener noreferrer" class="underline">brandfetch.com</a> y crea una cuenta de desarrollador gratuita de Brand Fetch.'
+        step2_html: 'Ve a la página de <a href="https://developers.brandfetch.com/dashboard/logo-api" target="_blank" rel="noopener noreferrer" class="underline">Logo API</a>.'
+        step3: Toca el icono del ojo en la sección "Your Client ID" para revelar tu Client ID y pégalo a continuación.
         label: ID de Cliente
         placeholder: Introduce tu ID de Cliente aquí
         title: Configuración de Brand Fetch
@@ -52,6 +57,10 @@ es:
         api_calls_used: "%{used} / %{limit} llamadas diarias a la API utilizadas (%{percentage})"
         description: Introduce la clave API proporcionada por Twelve Data
         env_configured_message: Configurado con éxito a través de la variable de entorno TWELVE_DATA_API_KEY.
+        show_details: "(mostrar detalles)"
+        step1_html: 'Visita <a href="https://twelvedata.com/register" target="_blank" rel="noopener noreferrer" class="underline">twelvedata.com</a> y crea una cuenta de desarrollador gratuita de Twelve Data.'
+        step2_html: 'Ve a la página de <a href="https://twelvedata.com/account/api-keys" target="_blank" rel="noopener noreferrer" class="underline">API Keys</a>.'
+        step3: Revela tu clave secreta y pégala a continuación.
         label: Clave API
         placeholder: Introduce tu clave API aquí
         plan: Plan %{plan}

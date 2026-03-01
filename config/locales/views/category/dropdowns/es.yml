@@ -7,5 +7,6 @@ es:
         edit: Editar categoría
       show:
         clear: Limpiar categoría
+        match_transfer: "Coincidir transferencia/pago"
         no_categories: No se encontraron categorías
         search_placeholder: Buscar

@@ -40,15 +40,58 @@ nb:
       settings: Innstillinger
       tags_label: Tagger
       uncategorized: "(ukategorisert)"
+      additional_details: Tilleggsdetaljer
+      payee: Betalingsmottaker
+      description: Beskrivelse
+      memo: Memo
+      provider_extras: Leverandørekstra
+      transfer_or_payment: Overføring eller gjeldsbetaling?
+      transfer_description: Overføringer og betalinger er spesielle transaksjonstyper som indikerer pengebevegelse mellom 2 kontoer.
+      open_matcher: Åpne samsvarsverktøy
+      convert: Konverter
     header:
       edit_categories: Rediger kategorier
       edit_imports: Rediger importer
       edit_merchants: Rediger selgere
       edit_tags: Rediger tagger
+      edit_rules: Rediger regler
+      new_rule: Ny regel
       import: Importer
     index:
+      title: Transaksjoner
+      new_transaction: Ny transaksjon
       transaction: transaksjon
       transactions: transaksjoner
+    summary:
+      total_transactions: Totalt antall transaksjoner
+      income: Inntekter
+      expenses: Utgifter
+    selection_bar:
+      edit: Rediger
+      delete: Slett
+    bulk_updates:
+      title: Rediger transaksjoner
+      overview: Oversikt
+      transactions: Transaksjoner
+      select_category: Velg en kategori
+      select_merchant: Velg en selger
+      bulk_note_placeholder: Skriv et notat som vil bli lagt til valgte transaksjoner
+      cancel: Avbryt
+      save: Lagre
+    search:
+      filters:
+        account: Konto
+        date: Dato
+        type: Type
+        status: Status
+        amount: Beløp
+        category: Kategori
+        tag: Tag
+        merchant: Selger
+        filter_accounts: Filtrer kontoer
+        filter_category: Filtrer kategori
+        filter_tags: Filtrer tagger
+        filter_merchants: Filtrer selgere
     searches:
       filters:
         amount_filter:

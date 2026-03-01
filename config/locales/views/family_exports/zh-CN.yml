@@ -10,6 +10,17 @@ zh-CN:
       success: 导出已成功删除
     export_not_ready: 导出尚未准备好下载
     exporting: 正在导出...
+    new:
+      title: 导出您的数据
+      subtitle: 下载您的所有财务数据
+      whats_included: "包含内容："
+      all_accounts_and_balances: 所有账户和余额
+      transaction_history: 交易记录
+      investment_trades: 投资交易
+      categories_tags_and_rules: "分类、标签和规则"
+      note: "注意："
+      note_body: "此导出包含您的所有数据，但只有部分数据可以通过 CSV 导入功能重新导入。我们支持导入账户、交易（包含分类和标签）以及投资交易。其他账户数据无法导入，仅供您记录参考。"
+      cancel: 取消
     index:
       title: 导出
       new: 新建导出

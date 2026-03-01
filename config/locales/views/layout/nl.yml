@@ -17,6 +17,8 @@ nl:
       footer:
         privacy_policy: Privacybeleid
         terms_of_service: Servicevoorwaarden
+    lookbooks:
+      title: Componentvoorvertoning
     trial:
       open_demo: Open demo
       data_deleted_in_days: Gegevens worden over %{days} dagen verwijderd

@@ -17,6 +17,8 @@ ca:
       footer:
         privacy_policy: Política de privacitat
         terms_of_service: Termes del servei
+    lookbooks:
+      title: Vista prèvia de components
     trial:
       open_demo: Demo oberta
       data_deleted_in_days: Les dades s'eliminaran en %{days} dies

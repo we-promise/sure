@@ -9,5 +9,6 @@ tr:
         delete_and_recategorize: "%{tag_name} etiketini sil ve yeni bir etiket ata"
         delete_tag: Etiket silinsin mi?
         explanation: "%{tag_name} işlemlerden ve diğer etiketlenebilir varlıklardan kaldırılacak. Onları etiketsiz bırakmak yerine aşağıdan yeni bir etiket de atayabilirsin."
+        delete_and_reassign: Sil ve yeniden ata
         replacement_tag_prompt: Etiket seç
         tag: Etiket

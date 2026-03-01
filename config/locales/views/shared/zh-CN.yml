@@ -5,6 +5,7 @@ zh-CN:
       accept: 确认
       body_html: "<p>此操作不可撤销</p>"
       cancel: 取消
+      subtitle: 此操作不可撤销。
       title: 确定要执行此操作？
     money_field:
       label: 金额

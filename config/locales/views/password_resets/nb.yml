@@ -4,6 +4,7 @@ nb:
     edit:
       title: Tilbakestill passord
     new:
+      email_placeholder: "you@example.com"
       requested: Vennligst sjekk e-posten din for en lenke til å tilbakestille passordet ditt.
       submit: Tilbakestill passord
       title: Tilbakestill passord

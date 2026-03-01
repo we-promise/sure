@@ -1,6 +1,14 @@
 ---
 ca:
   valuations:
+    confirm_create:
+      title: Confirma nou saldo
+    confirm_update:
+      title: Actualitza saldo
+    confirmation_contents:
+      brokerage_cash: Efectiu de corretatge
+      holdings_value: Valor de les participacions
+      total_account_value: Valor total del compte
     form:
       amount: Import
       submit: Afegeix actualització de saldo
@@ -18,6 +26,7 @@ ca:
       submit: Afegeix actualització de saldo
       title: Nou saldo
     show:
+      account_value_on_date: Valor del compte a la data
       amount: Import
       date_label: Data
       delete: Elimina
@@ -30,3 +39,4 @@ ca:
       note_placeholder: Afegeix qualsevol detall addicional sobre aquesta entrada
       overview: Resum
       settings: Configuració
+      update_value: Actualitza valor

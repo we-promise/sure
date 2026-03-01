@@ -3,6 +3,9 @@ de:
   subscriptions:
     self_hosted_alert: "%{product_name} ist im Self-Hosting-Modus nicht verfügbar."
     upgrade:
+      sr_only_title: Upgrade
+      account_settings: Kontoeinstellungen
+      sign_out: Abmelden
       contribute_and_support_sure: "Beitragen und Sure unterstützen"
       cta: "Unterstützen Sie weiterhin die Entwicklung dieser Codebasis!"
       header:

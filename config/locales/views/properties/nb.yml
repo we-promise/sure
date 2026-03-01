@@ -3,6 +3,7 @@ nb:
   properties:
     edit:
       edit: Rediger %{account}
+      title: Legg inn eiendom manuelt
     form:
       address_line1: Gateadresse
       address_line1_placeholder: Slottspplassen 1
@@ -18,11 +19,13 @@ nb:
       postal_code_placeholder: '0010'
       region: Kommune/Fylke
       region_placeholder: Oslo
+      square_feet: Kvadratfot
+      square_meters: Kvadratmeter
       subtype_prompt: Velg eiendomstype
       year_built: Byggeår
       year_built_placeholder: '1849'
     new:
-      title: Angi eiendomsdetaljer
+      title: Legg inn eiendom manuelt
     overview:
       living_area: Boareal
       market_value: Markedsverdi
@@ -30,3 +33,36 @@ nb:
       trend: Trend
       unknown: Ukjent
       year_built: Byggeår
+    address:
+      title: Legg inn eiendom manuelt
+      address_line1: Adresselinje 1
+      address_line1_placeholder: "Slottsplassen 1"
+      city: By
+      city_placeholder: Oslo
+      country: Land
+      country_placeholder: "NO"
+      postal_code: Postnummer
+      postal_code_placeholder: "0010"
+      state_region: Fylke/Region
+      state_region_placeholder: Oslo
+    balances:
+      title: Legg inn eiendom manuelt
+      estimated_market_value: Estimert markedsverdi
+      estimated_market_value_tooltip: "Den estimerte markedsverdien av eiendommen din. Dette tallet kan ofte finnes på nettsteder som Zillow eller Redfin, og er aldri et eksakt tall."
+    form_tabs:
+      address: Adresse
+      overview: Oversikt
+      value: Verdi
+    overview_fields:
+      area_optional: "Areal (valgfritt)"
+      area_unit: Arealenhet
+      name: Navn
+      name_placeholder: Feriehus
+      property_type: Eiendomstype
+      select_type: Velg type
+      square_feet: Kvadratfot
+      square_meters: Kvadratmeter
+      year_built_optional: "Byggeår (valgfritt)"
+    tabs:
+      overview:
+        edit_account_details: Rediger kontodetaljer

@@ -1,0 +1,58 @@
+---
+tr:
+  controllers:
+    holdings:
+      cannot_delete: "Bu varlığı silemezsiniz"
+    settings:
+      api_keys:
+        created: "API anahtarınız başarıyla oluşturuldu"
+        not_found: "API anahtarı bulunamadı"
+        cannot_revoke: "Bu API anahtarı iptal edilemez"
+        revoked: "API anahtarı başarıyla iptal edildi"
+        revoke_failed: "API anahtarı iptal edilemedi"
+      profiles:
+        member_removed: "Üye başarıyla kaldırıldı."
+        member_remove_failed: "Üye kaldırılamadı."
+      providers:
+        updated: "Sağlayıcı ayarları başarıyla güncellendi"
+        no_changes: "Herhangi bir değişiklik yapılmadı"
+        not_authorized: "Yetkisiz"
+    transactions:
+      created: "İşlem oluşturuldu"
+    rules:
+      deleted: "Kural silindi"
+      all_deleted: "Tüm kurallar silindi"
+    subscriptions:
+      already_contributing: "Zaten katkıda bulunuyorsunuz. Teşekkürler!"
+      welcome: "Sure'a hoş geldiniz!"
+      trial_completed: "Zaten bir deneme süresi başlattınız veya tamamladınız. Devam etmek için lütfen yükseltin."
+      welcome_contribution: "Sure'a hoş geldiniz! Katkınız için teşekkür ederiz."
+      contribution_failed: "Katkınız işlenirken bir hata oluştu. Lütfen tekrar deneyin."
+    plaid_items:
+      linked: "Hesap Plaid'e başarıyla bağlandı"
+      no_available_accounts: "Bağlanacak Plaid hesabı yok. Lütfen önce yeni bir Plaid hesabı bağlayın."
+      invalid_account: "Geçersiz Plaid hesabı seçildi"
+      already_linked: "Bu Plaid hesabı zaten bağlı"
+    imports:
+      publish_started: "İçe aktarmanız arka planda başlatıldı."
+      reverting: "İçe aktarma arka planda geri alınıyor."
+      template_applied: "Şablon uygulandı."
+      no_template: "Şablon bulunamadı, lütfen içe aktarmanızı manuel olarak yapılandırın."
+      deleted: "İçe aktarmanız silindi."
+    import:
+      uploads:
+        csv_uploaded: "CSV başarıyla yüklendi."
+      cleans:
+        configure_first: "Devam etmeden önce lütfen içe aktarmanızı yapılandırın."
+      confirms:
+        invalid_data: "Geçersiz verileriniz var, lütfen tüm hatalar çözülene kadar düzenleyin"
+    chats:
+      deleted: "Sohbet başarıyla silindi"
+    oidc_accounts:
+      no_pending_auth: "Bekleyen OIDC kimlik doğrulaması bulunamadı"
+      creation_disabled: "SSO hesap oluşturma devre dışı bırakıldı. Lütfen bir yönetici ile iletişime geçin."
+    concerns:
+      self_hostable:
+        redis_configured: "Redis artık doğru şekilde yapılandırılmış! Şimdi Sure uygulamanızı kurabilirsiniz."
+    snaptrade_items:
+      use_setup_flow: "Bunun yerine hesap kurulum akışını kullanın"

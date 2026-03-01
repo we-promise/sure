@@ -32,6 +32,12 @@ nb:
       clear_cache:
         cache_cleared: Cachen er tømt. Dette kan ta noen øyeblikk å fullføre.
       not_authorized: Du er ikke autorisert til å utføre denne handlingen
+      brand_fetch_settings:
+        env_configured_message: Du har konfigurert din Brand Fetch Client ID gjennom BRAND_FETCH_CLIENT_ID miljøvariabelen.
+        show_details: "(vis detaljer)"
+        step1_html: 'Besøk <a href="https://brandfetch.com/developers" target="_blank" rel="noopener noreferrer" class="underline">brandfetch.com</a> og opprett en gratis Brand Fetch utviklerkonto.'
+        step2_html: 'Gå til <a href="https://developers.brandfetch.com/dashboard/logo-api" target="_blank" rel="noopener noreferrer" class="underline">Logo API</a>-siden.'
+        step3: Trykk på øyeikonet under "Your Client ID"-seksjonen for å vise din Client ID og lim den inn nedenfor.
       yahoo_finance_settings:
         title: Yahoo Finance
         description: Yahoo Finance gir gratis tilgang til aksjekurser, valutakurser og finansdata uten å kreve en API-nøkkel.
@@ -39,4 +45,9 @@ nb:
         status_inactive: Yahoo Finance-tilkobling feilet
         connection_failed: Kunne ikke koble til Yahoo Finance
         troubleshooting: Sjekk internettilkoblingen og brannmurinnstillingene. Yahoo Finance kan være midlertidig utilgjengelig.
+      twelve_data_settings:
+        show_details: "(vis detaljer)"
+        step1_html: 'Besøk <a href="https://twelvedata.com/register" target="_blank" rel="noopener noreferrer" class="underline">twelvedata.com</a> og opprett en gratis Twelve Data utviklerkonto.'
+        step2_html: 'Gå til <a href="https://twelvedata.com/account/api-keys" target="_blank" rel="noopener noreferrer" class="underline">API Keys</a>-siden.'
+        step3: Vis din hemmelige nøkkel og lim den inn nedenfor.
 

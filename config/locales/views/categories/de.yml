@@ -14,12 +14,23 @@ de:
       edit: Kategorie bearbeiten
     form:
       placeholder: Kategoriename
+      color: Farbe
+      poor_contrast: "Schlechter Kontrast, wähle eine dunklere Farbe oder"
+      auto_adjust: "automatisch anpassen."
+      icon: Symbol
+      income: Einnahmen
+      expense: Ausgaben
+      classification: Klassifikation
+      unassigned: "(nicht zugewiesen)"
+      parent_category: "Übergeordnete Kategorie (optional)"
+      name: Name
     index:
       bootstrap: Standard verwenden (empfohlen)
       categories: Kategorien
       categories_expenses: Ausgabenkategorien
       categories_incomes: Einnahmekategorien
       empty: Keine Kategorien gefunden
+      delete_all: Alle löschen
       new: Neue Kategorie
     menu:
       loading: Wird geladen...

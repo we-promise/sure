@@ -14,6 +14,7 @@ nb:
       invalid_invite_code: Ugyldig invitasjonskode, vennligst prøv igjen.
       success: Du har blitt registrert.
     new:
+      email_placeholder: "you@example.com"
       invitation_message: "%{inviter} har invitert deg til å bli med som %{role}"
       join_family_title: Bli med i %{family}
       role_admin: administrator

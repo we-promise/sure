@@ -1,6 +1,14 @@
 ---
 pt-BR:
   valuations:
+    confirm_create:
+      title: Confirmar novo saldo
+    confirm_update:
+      title: Atualizar saldo
+    confirmation_contents:
+      brokerage_cash: Dinheiro de corretagem
+      holdings_value: Valor das posições
+      total_account_value: Valor total da conta
     form:
       amount: Valor
       submit: Adicionar atualização de saldo
@@ -16,6 +24,7 @@ pt-BR:
     new:
       title: Novo saldo
     show:
+      account_value_on_date: Valor da conta na data
       amount: Valor
       date_label: Data
       delete: Excluir
@@ -28,3 +37,4 @@ pt-BR:
       note_placeholder: Adicione detalhes adicionais sobre esta entrada
       overview: Visão geral
       settings: Configurações
+      update_value: Atualizar valor

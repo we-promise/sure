@@ -7,13 +7,13 @@
     </div>
 
     <div class="text-center space-y-2">
-      <h1 class="font-medium text-primary text-center text-3xl">Import in progress</h1>
-      <p class="text-sm text-secondary">Your import is in progress. Check the imports menu for status updates or click 'Check Status' to refresh the page for updates. Feel free to continue using the app.</p>
+      <h1 class="font-medium text-primary text-center text-3xl"><%= t("imports.importing.title") %></h1>
+      <p class="text-sm text-secondary"><%= t("imports.importing.description") %></p>
     </div>
 
     <div class="space-y-2 flex flex-col">
-      <%= render DS::Link.new(text: "Check status", href: import_path(import), variant: "primary", full_width: true) %>
-      <%= render DS::Link.new(text: "Back to dashboard", href: root_path, variant: "secondary", full_width: true) %>
+      <%= render DS::Link.new(text: t("imports.importing.check_status"), href: import_path(import), variant: "primary", full_width: true) %>
+      <%= render DS::Link.new(text: t("imports.importing.back_to_dashboard"), href: root_path, variant: "secondary", full_width: true) %>
     </div>
   </div>
 </div>

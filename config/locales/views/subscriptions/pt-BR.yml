@@ -3,6 +3,9 @@ pt-BR:
   subscriptions:
     self_hosted_alert: "%{product_name} não está disponível no modo self-hosted."
     upgrade:
+      sr_only_title: Atualizar
+      account_settings: Configurações da conta
+      sign_out: Sair
       contribute_and_support_sure: "Contribuir e apoiar o Sure"
       cta: "Continue apoiando o desenvolvimento desta base de código!"
       header:

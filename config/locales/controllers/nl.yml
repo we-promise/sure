@@ -1,0 +1,58 @@
+---
+nl:
+  controllers:
+    holdings:
+      cannot_delete: "U kunt deze positie niet verwijderen"
+    settings:
+      api_keys:
+        created: "Uw API-sleutel is succesvol aangemaakt"
+        not_found: "API-sleutel niet gevonden"
+        cannot_revoke: "Deze API-sleutel kan niet worden ingetrokken"
+        revoked: "API-sleutel is succesvol ingetrokken"
+        revoke_failed: "Kan API-sleutel niet intrekken"
+      profiles:
+        member_removed: "Lid succesvol verwijderd."
+        member_remove_failed: "Kan lid niet verwijderen."
+      providers:
+        updated: "Providerinstellingen succesvol bijgewerkt"
+        no_changes: "Er zijn geen wijzigingen aangebracht"
+        not_authorized: "Niet geautoriseerd"
+    transactions:
+      created: "Transactie aangemaakt"
+    rules:
+      deleted: "Regel verwijderd"
+      all_deleted: "Alle regels verwijderd"
+    subscriptions:
+      already_contributing: "U draagt al bij. Bedankt!"
+      welcome: "Welkom bij Sure!"
+      trial_completed: "U heeft al een proefperiode gestart of voltooid. Upgrade om door te gaan."
+      welcome_contribution: "Welkom bij Sure! Uw bijdrage wordt gewaardeerd."
+      contribution_failed: "Er is iets misgegaan bij het verwerken van uw bijdrage. Probeer het opnieuw."
+    plaid_items:
+      linked: "Account succesvol gekoppeld aan Plaid"
+      no_available_accounts: "Geen beschikbare Plaid-accounts om te koppelen. Verbind eerst een nieuw Plaid-account."
+      invalid_account: "Ongeldig Plaid-account geselecteerd"
+      already_linked: "Dit Plaid-account is al gekoppeld"
+    imports:
+      publish_started: "Uw import is op de achtergrond gestart."
+      reverting: "Import wordt op de achtergrond teruggedraaid."
+      template_applied: "Sjabloon toegepast."
+      no_template: "Geen sjabloon gevonden, configureer uw import handmatig."
+      deleted: "Uw import is verwijderd."
+    import:
+      uploads:
+        csv_uploaded: "CSV succesvol geüpload."
+      cleans:
+        configure_first: "Configureer uw import voordat u verdergaat."
+      confirms:
+        invalid_data: "U heeft ongeldige gegevens, bewerk deze totdat alle fouten zijn opgelost"
+    chats:
+      deleted: "Chat is succesvol verwijderd"
+    oidc_accounts:
+      no_pending_auth: "Geen openstaande OIDC-authenticatie gevonden"
+      creation_disabled: "SSO-accountaanmaak is uitgeschakeld. Neem contact op met een beheerder."
+    concerns:
+      self_hostable:
+        redis_configured: "Redis is nu correct geconfigureerd! U kunt nu uw Sure-applicatie instellen."
+    snaptrade_items:
+      use_setup_flow: "Gebruik in plaats daarvan de accountinstellingsstroom"

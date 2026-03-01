@@ -1,0 +1,22 @@
+---
+tr:
+  transfer_matches:
+    matching_fields:
+      create_new: Yeni işlem oluştur
+      description: İşlemlerinizi eşleştirmek için bir yöntem seçin.
+      match_existing: Mevcut işlemle eşleştir (önerilir)
+      matching_method: Eşleştirme yöntemi
+      matching_transaction: Eşleşen işlem
+      no_matches_description: Diğer hesaplarınızdan eşleştirilecek herhangi bir işlem
+        bulamadık. Lütfen bir hesap seçin, sizin için yeni bir gelen işlem
+        oluşturacağız.
+      target_account: Hedef hesap
+    new:
+      from_account: Kaynak hesap
+      from_account_name: "Kaynak hesap: %{name}"
+      inflow_transaction: Gelen işlem
+      outflow_transaction: Giden işlem
+      submit: Transfer eşleşmesi oluştur
+      title: Transfer veya ödeme eşleştir
+      to_account: Hedef hesap
+      to_account_name: "Hedef hesap: %{name}"

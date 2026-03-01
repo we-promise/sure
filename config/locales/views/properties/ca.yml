@@ -3,6 +3,7 @@ ca:
   properties:
     edit:
       edit: Edita %{account}
+      title: Introdueix l'immoble manualment
     form:
       address_line1: Adreça
       address_line1_placeholder: Carrer Major 123
@@ -18,11 +19,13 @@ ca:
       postal_code_placeholder: '08001'
       region: Província/Comarca
       region_placeholder: BCN
+      square_feet: Peus quadrats
+      square_meters: Metres quadrats
       subtype_prompt: Selecciona el tipus d'immoble
       year_built: Any de construcció
       year_built_placeholder: '2000'
     new:
-      title: Introdueix els detalls de l'immoble
+      title: Introdueix l'immoble manualment
     overview:
       living_area: Superfície habitable
       market_value: Valor de mercat
@@ -30,4 +33,37 @@ ca:
       trend: Tendència
       unknown: Desconegut
       year_built: Any de construcció
+    address:
+      title: Introdueix l'immoble manualment
+      address_line1: Línia d'adreça 1
+      address_line1_placeholder: "Carrer Major 123"
+      city: Ciutat
+      city_placeholder: Barcelona
+      country: País
+      country_placeholder: ES
+      postal_code: Codi postal
+      postal_code_placeholder: "08001"
+      state_region: Estat/Regió
+      state_region_placeholder: BCN
+    balances:
+      title: Introdueix l'immoble manualment
+      estimated_market_value: Valor de mercat estimat
+      estimated_market_value_tooltip: "El valor de mercat estimat de l'immoble. Aquesta xifra es pot trobar sovint en llocs com Zillow o Redfin, i mai és un número exacte."
+    form_tabs:
+      address: Adreça
+      overview: Resum
+      value: Valor
+    overview_fields:
+      area_optional: "Superfície (opcional)"
+      area_unit: Unitat de superfície
+      name: Nom
+      name_placeholder: Casa de vacances
+      property_type: Tipus d'immoble
+      select_type: Selecciona tipus
+      square_feet: Peus quadrats
+      square_meters: Metres quadrats
+      year_built_optional: "Any de construcció (opcional)"
+    tabs:
+      overview:
+        edit_account_details: Edita els detalls del compte
 

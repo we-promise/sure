@@ -1,0 +1,43 @@
+---
+tr:
+  chats:
+    demo_banner_title: "Demo Modu Aktif"
+    demo_banner_message: "Cloudflare Workers AI tarafından sağlanan kredilerle açık ağırlıklı Qwen3 LLM kullanıyorsunuz. Kod tabanı ağırlıklı olarak `gpt-4.1` ile test edildiğinden sonuçlar değişebilir, ancak tokenlarınız başka bir yere eğitim için gönderilmiyor! 🤖"
+    index:
+      chats: Sohbetler
+      new_chat: Yeni sohbet
+    ai_consent:
+      enable_ai_chats: AI sohbetlerini etkinleştir
+      ai_available_description: AI sohbet, finansal soruları yanıtlayabilir ve verilerinize dayalı bilgiler sağlayabilir. Bu özelliği kullanmak için açıkça etkinleştirmeniz gerekir.
+      ai_unavailable_description_html: "AI asistanını kullanmak için <code class=\"bg-surface-inset px-1 py-0.5 rounded font-mono text-xs\">OPENAI_ACCESS_TOKEN</code> ortam değişkenini ayarlamanız veya örneğinizin Self-Hosting ayarlarında yapılandırmanız gerekir."
+      enable_btn: AI sohbetlerini etkinleştir
+      disable_note: İstediğiniz zaman devre dışı bırakın. LLM sağlayıcılarımıza gönderilen tüm veriler anonimleştirilmiştir.
+    ai_greeting:
+      greeting: "Merhaba %{name}! Ben finanslarınızla ilgili yardımcı olabilecek bir AI/büyük dil modeliyim. Web'e ve hesap verilerinize erişimim var."
+      commands_hint_html: "Komutlara erişmek için <span class=\"bg-container border border-secondary px-1.5 py-0.5 rounded font-mono text-xs\">/</span> kullanabilirsiniz"
+      questions_intro: "İşte sorabileceğiniz bazı sorular:"
+      evaluate_portfolio: Yatırım portföyünü değerlendir
+      spending_insights: Harcama analizini göster
+      unusual_patterns: Olağandışı kalıpları bul
+    error:
+      failed_response: Yanıt oluşturulamadı. Lütfen tekrar deneyin.
+    chat:
+      edit_chat_title: Sohbet başlığını düzenle
+      delete_chat: Sohbeti sil
+    chat_nav:
+      all_chats: Tüm sohbetler
+      start_new_chat: Yeni sohbet başlat
+      edit_chat_title: Sohbet başlığını düzenle
+      delete_chat: Sohbeti sil
+  messages:
+    chat_form:
+      ask_anything: "Herhangi bir şey sorun ..."
+      coming_soon: Yakında
+      ai_disclaimer: AI yanıtları yalnızca bilgi amaçlıdır ve finansal tavsiye niteliği taşımaz.
+  assistant_messages:
+    assistant_message:
+      assistant_reasoning: Asistan muhakemesi
+    tool_calls:
+      tool_calls: Araç çağrıları
+      function: "Fonksiyon:"
+      arguments: "Argümanlar:"

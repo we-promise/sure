@@ -3,6 +3,7 @@ zh-TW:
   properties:
     edit:
       edit: 編輯 %{account}
+      title: 手動輸入不動產
     form:
       address_line1: 街道地址
       address_line1_placeholder: 例如：忠孝東路一段 123 號
@@ -18,11 +19,13 @@ zh-TW:
       postal_code_placeholder: '100'
       region: 縣市/省份
       region_placeholder: 台北市
+      square_feet: 平方英尺
+      square_meters: 平方公尺
       subtype_prompt: 選擇不動產類型
       year_built: 建築年份
       year_built_placeholder: '2000'
     new:
-      title: 輸入不動產詳情
+      title: 手動輸入不動產
     overview:
       living_area: 居住面積
       market_value: 市場價值
@@ -30,3 +33,36 @@ zh-TW:
       trend: 趨勢
       unknown: 未知
       year_built: 建築年份
+    address:
+      title: 手動輸入不動產
+      address_line1: 地址行 1
+      address_line1_placeholder: "忠孝東路一段 123 號"
+      city: 城市
+      city_placeholder: 台北市
+      country: 國家
+      country_placeholder: TW
+      postal_code: 郵遞區號
+      postal_code_placeholder: "100"
+      state_region: 縣市/區域
+      state_region_placeholder: 台北市
+    balances:
+      title: 手動輸入不動產
+      estimated_market_value: 估計市場價值
+      estimated_market_value_tooltip: "您不動產的估計市場價值。這個數字通常可以在 Zillow 或 Redfin 等網站上找到，但從來不是一個精確的數字。"
+    form_tabs:
+      address: 地址
+      overview: 概覽
+      value: 價值
+    overview_fields:
+      area_optional: "面積（選填）"
+      area_unit: 面積單位
+      name: 名稱
+      name_placeholder: 度假屋
+      property_type: 不動產類型
+      select_type: 選擇類型
+      square_feet: 平方英尺
+      square_meters: 平方公尺
+      year_built_optional: "建築年份（選填）"
+    tabs:
+      overview:
+        edit_account_details: 編輯帳戶詳情

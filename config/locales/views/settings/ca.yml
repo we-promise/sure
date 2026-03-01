@@ -28,6 +28,14 @@ ca:
         page_title: Pagament
         subscription_subtitle: Actualitza la teva subscripció i dades de pagament
         subscription_title: Gestiona la subscripció
+        currently_on: "Actualment al pla %{plan}."
+        demo_mode: "Utilitzant la demo oberta de"
+        data_deleted_in_days: "(Les dades s'eliminaran en %{days} dies)"
+        not_contributing: "Actualment no estàs contribuint"
+        contributions_show_here: "Les contribucions a %{product_name} es mostraran aquí."
+        manage: Gestiona
+        choose_level: Tria el nivell
+        payment_via_stripe: Pagament via Stripe
     hostings:
       ensure_admin:
         not_authorized: No autoritzat
@@ -49,6 +57,7 @@ ca:
         theme_system: Sistema
         theme_title: Tema
         timezone: Fus horari
+        translations_note: Tingueu en compte que encara estem treballant en les traduccions per a diversos idiomes.
     profiles:
       destroy:
         cannot_remove_self: No pots eliminar-te del compte.
@@ -155,3 +164,187 @@ ca:
       change: Canvia la foto
       choose: Pujar foto
       choose_label: "(opcional)"
+    llm_usages:
+      show:
+        page_title: Ús i costos de LLM
+        subtitle: Fes seguiment del teu ús d'IA i costos estimats
+        start_date: Data d'inici
+        end_date: Data de fi
+        filter: Filtra
+        total_requests: Sol·licituds totals
+        total_tokens: Tokens totals
+        prompt: prompt
+        completion: completion
+        total_cost: Cost total
+        avg_cost: Cost mitjà/Sol·licitud
+        cost_data_basis: "Basat en %{count} de %{total} sol·licituds amb dades de cost"
+        cost_by_operation: Cost per operació
+        cost_by_model: Cost per model
+        recent_usage: Ús recent
+        date: Data
+        operation: Operació
+        model: Model
+        tokens: Tokens
+        cost: Cost
+        failed: Fallida
+        http_status: "Estat HTTP:"
+        no_data: No s'han trobat dades d'ús per al període seleccionat
+        about_cost_estimates: Sobre les estimacions de cost
+        cost_estimates_description: "Els costos s'estimen segons els preus d'OpenAI a partir del 2025. Els costos reals poden variar segons el teu proveïdor i pla. Les sol·licituds fallides (estat no-200) poden comptar igualment per al teu ús de l'API."
+    api_keys:
+      show:
+        page_title_created: Clau API creada correctament
+        page_title_key: La teva clau API
+        created_success: Clau API creada correctament!
+        created_description: "La teva nova clau API \"%{name}\" s'ha creat i està llesta per utilitzar."
+        your_api_key: La teva clau API
+        copy_store_securely: "Copia i desa aquesta clau de forma segura. La necessitaràs per autenticar les teves sol·licituds API."
+        copy_api_key: Copia la clau API
+        how_to_use: Com utilitzar la teva clau API
+        usage_instructions: "Inclou la teva clau API a la capçalera X-Api-Key quan facis sol·licituds:"
+        continue_to_settings: Continua a la configuració de claus API
+        create_new_key: Crea una nova clau
+        created_ago: "Creada fa %{time}"
+        last_used_ago: "Darrer ús fa %{time}"
+        never_used: Mai utilitzada
+        active: Activa
+        permissions: Permisos
+        read_only: Només lectura
+        read_write: Lectura/Escriptura
+        revoke_key: Revocar clau
+        confirm_revoke: Estàs segur que vols revocar aquesta clau API? Aquesta acció no es pot desfer.
+      new:
+        page_title: Crear nova clau API
+        subtitle: Genera una nova clau API per accedir a les teves dades de Sure de forma programàtica.
+        name_placeholder: "p. ex., La meva app de pressupostos, Seguiment de cartera"
+        name_label: Nom de la clau API
+        name_help: Tria un nom descriptiu per identificar aquesta clau més endavant.
+        permissions_label: Permisos
+        select_permissions: "Selecciona els permisos que ha de tenir aquesta clau API:"
+        read_only: Només lectura
+        read_only_description: Consulta els teus comptes, transaccions i saldos
+        read_write: Lectura/Escriptura
+        read_write_description: Consulta les teves dades i crea noves transaccions
+        security_warning: Avís de seguretat
+        security_warning_description: "La teva clau API només es mostrarà una vegada després de la creació. Assegura't de copiar-la i desar-la de forma segura. Si la perds, hauràs de crear una nova clau."
+        cancel: Cancel·la
+        save: Desa la clau API
+      created:
+        page_title: Clau API creada
+        created_success: Clau API creada correctament!
+        created_description: "La teva nova clau API \"%{name}\" s'ha creat i està llesta per utilitzar."
+        your_api_key: La teva clau API
+        copy_store_securely: "Copia i desa aquesta clau de forma segura. La necessitaràs per autenticar les teves sol·licituds API."
+        copy_api_key: Copia la clau API
+        key_details: Detalls de la clau
+        name_label: "Nom:"
+        permissions_label: "Permisos:"
+        view_accounts: Veure comptes
+        view_transactions: Veure transaccions
+        view_balances: Veure saldos
+        create_transactions: Crear transaccions
+        created_label: "Creada:"
+        security_note: Nota de seguretat important
+        security_note_description: "Aquesta és l'única vegada que es mostrarà la teva clau API. Assegura't de copiar-la ara. Si la perds, hauràs de crear una nova clau."
+        how_to_use: Com utilitzar la teva clau API
+        usage_instructions: "Inclou la teva clau API a la capçalera X-Api-Key quan facis sol·licituds:"
+        continue_to_settings: Continua a la configuració de claus API
+    bank_sync:
+      show:
+        page_title: Sincronització bancària
+        providers: PROVEÏDORS
+        no_providers: No hi ha proveïdors configurats
+        configure_providers: Configura proveïdors per vincular els teus comptes bancaris.
+    providers:
+      provider_form:
+        config_via_env: La configuració es pot establir mitjançant variables d'entorn o sobreescriure a continuació.
+        field_descriptions: "Descripcions dels camps:"
+        optional: Opcional
+        save_configuration: Desa la configuració
+        configured: Configurat i llest per utilitzar
+        not_configured: No configurat
+      simplefin_panel:
+        setup_instructions: "Instruccions de configuració:"
+        step1_html: "Visita <a href=\"https://bridge.simplefin.org\" target=\"_blank\" class=\"text-primary underline\">SimpleFIN Bridge</a> per obtenir el teu token de configuració únic"
+        step2: Enganxa el token a continuació i fes clic al botó Desa per activar la sincronització bancària de SimpleFIN
+        step3: Després d'una connexió correcta, ves a la pestanya Comptes per configurar nous comptes amb les teves dades de SimpleFIN
+        field_descriptions: "Descripcions dels camps:"
+        setup_token_description: "Token de configuració: El teu token de configuració únic de SimpleFIN. S'intercanviarà per una URL d'accés permanent."
+        setup_token_label: Token de configuració
+        setup_token_placeholder: Enganxa el token de configuració de SimpleFIN
+        save_configuration: Desa la configuració
+        configured: Configurat i llest per utilitzar. Visita la pestanya Comptes per gestionar i configurar comptes.
+        not_configured: No configurat
+      lunchflow_panel:
+        setup_instructions: "Instruccions de configuració:"
+        step1_html: "Visita <a href=\"https://lunchflow.app\" target=\"_blank\" class=\"text-primary underline\">Lunch Flow</a> per obtenir la teva clau API"
+        step2: Enganxa la teva clau API a continuació i fes clic al botó Desa
+        step3: Després d'una connexió correcta, ves a la pestanya Comptes per configurar i gestionar els teus comptes vinculats
+        field_descriptions: "Descripcions dels camps:"
+        api_key_description: "Clau API: La teva clau API de Lunch Flow per a l'autenticació (obligatòria)"
+        base_url_description: "URL base: URL base per a l'API de Lunch Flow (opcional, per defecte https://lunchflow.app/api/v1)"
+        api_key_label: Clau API
+        api_key_placeholder_new: Enganxa la clau API aquí
+        api_key_placeholder_update: Introdueix una nova clau API per actualitzar
+        base_url_label: URL base (Opcional)
+        base_url_placeholder: "https://lunchflow.app/api/v1 (per defecte)"
+        save_configuration: Desa la configuració
+        update_configuration: Actualitza la configuració
+        configured: Configurat i llest per utilitzar. Visita la pestanya Comptes per gestionar i configurar comptes.
+        not_configured: No configurat
+      mercury_panel:
+        setup_instructions: "Instruccions de configuració:"
+        step1: Ves a https://app.mercury.com
+        step2: "Fes clic al nom de la teva empresa → Settings → Developers → API Tokens"
+        step3: Fes clic a Generate Token
+        step4: "Selecciona el tipus de token: Read Only"
+        step5: "Posa un nom al token (p. ex., 'Sure Finance')"
+        step6: Fes clic a Create Token i copia'l
+        field_descriptions: "Descripcions dels camps:"
+        token_description: "Token API: El teu token complet de l'API de Mercury per a l'autenticació"
+        base_url_description: "URL base: URL de l'API de Mercury (opcional, per defecte https://api.mercury.com/api/v1)"
+        sandbox_note: "Nota: Per a proves en sandbox, utilitza https://api.mercury.com/api/v1/sandbox com a URL base."
+        token_label: Token
+        token_placeholder_new: Enganxa el token aquí
+        token_placeholder_update: Introdueix un nou token per actualitzar
+        base_url_label: URL base (Opcional)
+        base_url_placeholder: "https://api.mercury.com/api/v1 (per defecte)"
+        save_configuration: Desa la configuració
+        update_configuration: Actualitza la configuració
+        configured: Configurat i llest per utilitzar. Visita la pestanya Comptes per gestionar i configurar comptes.
+        not_configured: No configurat
+      enable_banking_panel:
+        setup_instructions: "Instruccions de configuració:"
+        step1_html: "Visita el teu compte de desenvolupador d'<a href=\"https://enablebanking.com\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"link\">Enable Banking</a> per obtenir les teves credencials"
+        step2: Selecciona el codi del teu país al desplegable de sota
+        step3: Introdueix el teu Application ID i enganxa el teu Client Certificate (incloent la clau privada)
+        step4: "Fes clic a Desa la configuració, després utilitza \"Afegir connexió\" per vincular el teu banc"
+        callback_url_instruction: "Per a l'URL de retorn, utilitzeu %{callback_url}."
+        field_descriptions: "Descripcions dels camps:"
+        country_code_description: "Codi de país: Codi de país ISO 3166-1 alpha-2 (p. ex., GB, DE, FR) - determina els bancs disponibles"
+        application_id_description: "Application ID: L'ID generat al teu compte de desenvolupador d'Enable Banking"
+        client_certificate_description: "Client Certificate: El certificat generat quan vas crear la teva aplicació (ha d'incloure la clau privada)"
+        select_country: "Selecciona el país..."
+        country_label: País
+        config_locked: Configuració bloquejada
+        config_locked_description: Les credencials no es poden canviar mentre tens connexions bancàries actives. Elimina totes les connexions primer per actualitzar les credencials.
+        application_id_label: Application ID
+        application_id_placeholder_new: Introdueix l'application ID
+        application_id_placeholder_update: Introdueix un nou ID per actualitzar
+        client_certificate_label: Client Certificate (amb clau privada)
+        save_configuration: Desa la configuració
+        update_configuration: Actualitza la configuració
+        syncing: Sincronitzant
+        connected_bank: Banc connectat
+        session_expires: "La sessió expira: %{date}"
+        unknown: Desconegut
+        connection: Connexió
+        session_expired: Sessió expirada - reconnecta
+        configured: Configurat
+        ready_to_link: Llest per vincular comptes
+        sync_button: Sincronitza
+        reconnect: Reconnecta
+        connect_bank: Connectar banc
+        remove: Elimina
+        remove_confirm: Estàs segur que vols eliminar aquesta connexió?
+        add_connection: Afegir connexió

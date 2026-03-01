@@ -11,5 +11,6 @@ ca:
         explanation: "%{tag_name} s'eliminarà de les transaccions i altres entitats
           etiquetables. En comptes de deixar-les sense etiqueta, pots assignar-ne
           una de nova a continuació."
+        delete_and_reassign: Elimina i reassigna
         replacement_tag_prompt: Selecciona una etiqueta
         tag: Etiqueta

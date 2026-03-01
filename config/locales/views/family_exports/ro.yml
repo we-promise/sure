@@ -10,6 +10,17 @@ ro:
       success: Export șters cu succes
     export_not_ready: Exportul nu este gata pentru descărcare
     exporting: Se exportă...
+    new:
+      title: Exportă datele tale
+      subtitle: Descarcă toate datele tale financiare
+      whats_included: "Ce este inclus:"
+      all_accounts_and_balances: Toate conturile și soldurile
+      transaction_history: Istoricul tranzacțiilor
+      investment_trades: Tranzacții de investiții
+      categories_tags_and_rules: "Categorii, etichete și reguli"
+      note: "Notă:"
+      note_body: "Acest export include toate datele tale, dar doar o parte din date pot fi reimportate prin funcția de import CSV. Supportăm importul de conturi, tranzacții (cu categorie și etichete) și operațiuni. Alte date ale contului nu pot fi importate și sunt doar pentru evidențele tale."
+      cancel: Anulează
     index:
       title: Exporturi
       new: Export nou

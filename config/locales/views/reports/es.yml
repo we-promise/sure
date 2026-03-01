@@ -136,10 +136,13 @@ es:
       accounts: Cuentas de inversión
     investment_flows:
       title: Flujos de inversión
-      description: Controla el dinero que entra y sale de tus cuentas de inversión
+      description: Controla el dinero que entra y sale de tus cuentas de inversión a través de aportaciones y retiradas.
       contributions: Aportaciones
+      contributions_description: Dinero añadido a las inversiones
       withdrawals: Retiradas
+      withdrawals_description: Dinero retirado de las inversiones
       net_flow: Flujo neto
+      net_flow_description: Cambio neto total
     google_sheets_instructions:
       title_with_key: "✅ Copiar URL para Google Sheets"
       title_no_key: "⚠️ Se requiere clave API"

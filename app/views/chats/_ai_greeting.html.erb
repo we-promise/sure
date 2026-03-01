@@ -5,24 +5,24 @@
     <p>Hey <%= Current.user&.first_name || "there" %>! I'm an AI/large-language-model that can help with your finances. I have access to the web and your account data.</p>
 
     <p>
-      You can use <span class="bg-container border border-secondary px-1.5 py-0.5 rounded font-mono text-xs">/</span> to access commands
+      <%= t("chats.ai_greeting.commands_hint_html").html_safe %>
     </p>
 
     <div class="space-y-3">
-      <p>Here's a few questions you can ask:</p>
+      <p><%= t("chats.ai_greeting.questions_intro") %></p>
 
       <% questions = [
         {
           icon: "chart-area",
-          text: "Evaluate investment portfolio"
+          text: t("chats.ai_greeting.evaluate_portfolio")
         },
         {
           icon: "wallet-minimal",
-          text: "Show spending insights"
+          text: t("chats.ai_greeting.spending_insights")
         },
         {
           icon: "alert-triangle",
-          text: "Find unusual patterns"
+          text: t("chats.ai_greeting.unusual_patterns")
         }
       ] %>
 

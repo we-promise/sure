@@ -3,6 +3,7 @@ es:
   properties:
     edit:
       edit: Editar %{account}
+      title: Introducir propiedad manualmente
     form:
       address_line1: Dirección
       address_line1_placeholder: Calle Principal 123
@@ -18,11 +19,13 @@ es:
       postal_code_placeholder: '28001'
       region: Estado/Provincia
       region_placeholder: Madrid
+      square_feet: Pies cuadrados
+      square_meters: Metros cuadrados
       subtype_prompt: Seleccione el tipo de propiedad
       year_built: Año de construcción
       year_built_placeholder: '2000'
     new:
-      title: Introduzca los detalles de la propiedad
+      title: Introducir propiedad manualmente
     overview:
       living_area: Área Habitable
       market_value: Valor de Mercado
@@ -30,3 +33,36 @@ es:
       trend: Tendencia
       unknown: Desconocido
       year_built: Año de Construcción
+    address:
+      title: Introducir propiedad manualmente
+      address_line1: Línea de dirección 1
+      address_line1_placeholder: "Calle Principal 123"
+      city: Ciudad
+      city_placeholder: Madrid
+      country: País
+      country_placeholder: ES
+      postal_code: Código postal
+      postal_code_placeholder: "28001"
+      state_region: Estado/Región
+      state_region_placeholder: Madrid
+    balances:
+      title: Introducir propiedad manualmente
+      estimated_market_value: Valor de mercado estimado
+      estimated_market_value_tooltip: "El valor de mercado estimado de tu propiedad. Este número se puede encontrar a menudo en sitios como Zillow o Redfin, y nunca es un número exacto."
+    form_tabs:
+      address: Dirección
+      overview: Resumen
+      value: Valor
+    overview_fields:
+      area_optional: "Área (opcional)"
+      area_unit: Unidad de área
+      name: Nombre
+      name_placeholder: Casa de vacaciones
+      property_type: Tipo de propiedad
+      select_type: Seleccionar tipo
+      square_feet: Pies cuadrados
+      square_meters: Metros cuadrados
+      year_built_optional: "Año de construcción (opcional)"
+    tabs:
+      overview:
+        edit_account_details: Editar detalles de la cuenta

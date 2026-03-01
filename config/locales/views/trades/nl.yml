@@ -6,6 +6,8 @@ nl:
       account_prompt: Account zoeken
       amount: Bedrag
       holding: Ticker symbool
+      manual_ticker_label: Ticker symbool
+      manual_ticker_placeholder: AAPL
       price: Prijs per aandeel
       qty: Hoeveelheid
       submit: Transactie toevoegen

@@ -10,6 +10,14 @@ nb:
         page_title: Betaling
         subscription_subtitle: Oppdater abonnementet og betalingsdetaljene dine
         subscription_title: Administrer abonnement
+        currently_on: "For øyeblikket på %{plan}."
+        demo_mode: "Bruker for øyeblikket den åpne demoen av"
+        data_deleted_in_days: "(Data vil bli slettet om %{days} dager)"
+        not_contributing: "Du bidrar for øyeblikket ikke"
+        contributions_show_here: "Bidrag til %{product_name} vil vises her."
+        manage: Administrer
+        choose_level: Velg nivå
+        payment_via_stripe: Betaling via Stripe
     preferences:
       show:
         country: Land
@@ -27,6 +35,7 @@ nb:
         theme_system: System
         theme_title: Tema
         timezone: Tidssone
+        translations_note: Vær oppmerksom på at vi fortsatt jobber med oversettelser for ulike språk.
     profiles:
       destroy:
         cannot_remove_self: Du kan ikke fjerne deg selv fra din egen konto.
@@ -106,3 +115,187 @@ nb:
       choose: Last opp bilde
       choose_label: (valgfritt)
       change: Endre bilde
+    llm_usages:
+      show:
+        page_title: LLM-bruk og kostnader
+        subtitle: Følg med på din AI-bruk og estimerte kostnader
+        start_date: Startdato
+        end_date: Sluttdato
+        filter: Filtrer
+        total_requests: Totalt antall forespørsler
+        total_tokens: Totalt antall tokens
+        prompt: prompt
+        completion: completion
+        total_cost: Total kostnad
+        avg_cost: Gj.snittskostnad/forespørsel
+        cost_data_basis: "Basert på %{count} av %{total} forespørsler med kostnadsdata"
+        cost_by_operation: Kostnad per operasjon
+        cost_by_model: Kostnad per modell
+        recent_usage: Nylig bruk
+        date: Dato
+        operation: Operasjon
+        model: Modell
+        tokens: Tokens
+        cost: Kostnad
+        failed: Mislykket
+        http_status: "HTTP-status:"
+        no_data: Ingen bruksdata funnet for den valgte perioden
+        about_cost_estimates: Om kostnadsestimater
+        cost_estimates_description: "Kostnadene estimeres basert på OpenAIs priser fra 2025. Faktiske kostnader kan variere avhengig av leverandør og plan. Mislykkede forespørsler (ikke-200 status) kan fortsatt telle mot din API-bruk."
+    api_keys:
+      show:
+        page_title_created: API-nøkkel opprettet
+        page_title_key: Din API-nøkkel
+        created_success: API-nøkkel opprettet!
+        created_description: "Din nye API-nøkkel \"%{name}\" er opprettet og klar til bruk."
+        your_api_key: Din API-nøkkel
+        copy_store_securely: "Kopier og lagre denne nøkkelen sikkert. Du trenger den for å autentisere API-forespørslene dine."
+        copy_api_key: Kopier API-nøkkel
+        how_to_use: Slik bruker du API-nøkkelen din
+        usage_instructions: "Inkluder API-nøkkelen din i X-Api-Key-headeren når du sender forespørsler:"
+        continue_to_settings: Fortsett til API-nøkkelinnstillinger
+        create_new_key: Opprett ny nøkkel
+        created_ago: "Opprettet for %{time} siden"
+        last_used_ago: "Sist brukt for %{time} siden"
+        never_used: Aldri brukt
+        active: Aktiv
+        permissions: Tillatelser
+        read_only: Kun lesing
+        read_write: Lese/skrive
+        revoke_key: Tilbakekall nøkkel
+        confirm_revoke: Er du sikker på at du vil tilbakekalle denne API-nøkkelen? Denne handlingen kan ikke angres.
+      new:
+        page_title: Opprett ny API-nøkkel
+        subtitle: Generer en ny API-nøkkel for å få tilgang til Sure-dataene dine programmatisk.
+        name_placeholder: "f.eks. Min budsjettapp, Porteføljeovervåker"
+        name_label: API-nøkkelnavn
+        name_help: Velg et beskrivende navn for å identifisere denne nøkkelen senere.
+        permissions_label: Tillatelser
+        select_permissions: "Velg tillatelsene denne API-nøkkelen skal ha:"
+        read_only: Kun lesing
+        read_only_description: Se kontoene, transaksjonene og saldoene dine
+        read_write: Lese/skrive
+        read_write_description: Se dataene dine og opprett nye transaksjoner
+        security_warning: Sikkerhetsadvarsel
+        security_warning_description: "API-nøkkelen din vises kun én gang etter opprettelse. Sørg for å kopiere den og lagre den sikkert. Hvis du mister den, må du opprette en ny nøkkel."
+        cancel: Avbryt
+        save: Lagre API-nøkkel
+      created:
+        page_title: API-nøkkel opprettet
+        created_success: API-nøkkel opprettet!
+        created_description: "Din nye API-nøkkel \"%{name}\" er opprettet og klar til bruk."
+        your_api_key: Din API-nøkkel
+        copy_store_securely: "Kopier og lagre denne nøkkelen sikkert. Du trenger den for å autentisere API-forespørslene dine."
+        copy_api_key: Kopier API-nøkkel
+        key_details: Nøkkeldetaljer
+        name_label: "Navn:"
+        permissions_label: "Tillatelser:"
+        view_accounts: Se kontoer
+        view_transactions: Se transaksjoner
+        view_balances: Se saldoer
+        create_transactions: Opprett transaksjoner
+        created_label: "Opprettet:"
+        security_note: Viktig sikkerhetsmelding
+        security_note_description: "Dette er den eneste gangen API-nøkkelen din vises. Sørg for å kopiere den nå. Hvis du mister den, må du opprette en ny nøkkel."
+        how_to_use: Slik bruker du API-nøkkelen din
+        usage_instructions: "Inkluder API-nøkkelen din i X-Api-Key-headeren når du sender forespørsler:"
+        continue_to_settings: Fortsett til API-nøkkelinnstillinger
+    bank_sync:
+      show:
+        page_title: Banksynkronisering
+        providers: LEVERANDØRER
+        no_providers: Ingen leverandører konfigurert
+        configure_providers: Konfigurer leverandører for å koble til bankkontoene dine.
+    providers:
+      provider_form:
+        config_via_env: Konfigurasjon kan settes via miljøvariabler eller overstyres nedenfor.
+        field_descriptions: "Feltbeskrivelser:"
+        optional: Valgfritt
+        save_configuration: Lagre konfigurasjon
+        configured: Konfigurert og klar til bruk
+        not_configured: Ikke konfigurert
+      simplefin_panel:
+        setup_instructions: "Oppsettsinstruksjoner:"
+        step1_html: "Besøk <a href=\"https://bridge.simplefin.org\" target=\"_blank\" class=\"text-primary underline\">SimpleFIN Bridge</a> for å få ditt engangs oppsett-token"
+        step2: Lim inn tokenet nedenfor og klikk Lagre-knappen for å aktivere SimpleFIN bankdatasynkronisering
+        step3: Etter en vellykket tilkobling, gå til Kontoer-fanen for å sette opp nye kontoer fra SimpleFIN-dataene dine
+        field_descriptions: "Feltbeskrivelser:"
+        setup_token_description: "Oppsett-token: Ditt SimpleFIN engangs oppsett-token. Dette vil byttes mot en permanent tilgangs-URL."
+        setup_token_label: Oppsett-token
+        setup_token_placeholder: Lim inn SimpleFIN oppsett-token
+        save_configuration: Lagre konfigurasjon
+        configured: Konfigurert og klar til bruk. Besøk Kontoer-fanen for å administrere og sette opp kontoer.
+        not_configured: Ikke konfigurert
+      lunchflow_panel:
+        setup_instructions: "Oppsettsinstruksjoner:"
+        step1_html: "Besøk <a href=\"https://lunchflow.app\" target=\"_blank\" class=\"text-primary underline\">Lunch Flow</a> for å få API-nøkkelen din"
+        step2: Lim inn API-nøkkelen din nedenfor og klikk Lagre-knappen
+        step3: Etter en vellykket tilkobling, gå til Kontoer-fanen for å sette opp og administrere de tilkoblede kontoene dine
+        field_descriptions: "Feltbeskrivelser:"
+        api_key_description: "API-nøkkel: Din Lunch Flow API-nøkkel for autentisering (påkrevd)"
+        base_url_description: "Base-URL: Base-URL for Lunch Flow API (valgfritt, standard https://lunchflow.app/api/v1)"
+        api_key_label: API-nøkkel
+        api_key_placeholder_new: Lim inn API-nøkkel her
+        api_key_placeholder_update: Skriv inn ny API-nøkkel for å oppdatere
+        base_url_label: Base-URL (Valgfritt)
+        base_url_placeholder: "https://lunchflow.app/api/v1 (standard)"
+        save_configuration: Lagre konfigurasjon
+        update_configuration: Oppdater konfigurasjon
+        configured: Konfigurert og klar til bruk. Besøk Kontoer-fanen for å administrere og sette opp kontoer.
+        not_configured: Ikke konfigurert
+      mercury_panel:
+        setup_instructions: "Oppsettsinstruksjoner:"
+        step1: Gå til https://app.mercury.com
+        step2: "Klikk på firmanavnet ditt → Settings → Developers → API Tokens"
+        step3: Klikk Generate Token
+        step4: "Velg tokentype: Read Only"
+        step5: "Gi tokenet et navn (f.eks. 'Sure Finance')"
+        step6: Klikk Create Token og kopier det
+        field_descriptions: "Feltbeskrivelser:"
+        token_description: "API-token: Ditt fulle Mercury API-token for autentisering"
+        base_url_description: "Base-URL: Mercury API-URL (valgfritt, standard https://api.mercury.com/api/v1)"
+        sandbox_note: "Merk: For sandkassetesting, bruk https://api.mercury.com/api/v1/sandbox som Base-URL."
+        token_label: Token
+        token_placeholder_new: Lim inn token her
+        token_placeholder_update: Skriv inn nytt token for å oppdatere
+        base_url_label: Base-URL (Valgfritt)
+        base_url_placeholder: "https://api.mercury.com/api/v1 (standard)"
+        save_configuration: Lagre konfigurasjon
+        update_configuration: Oppdater konfigurasjon
+        configured: Konfigurert og klar til bruk. Besøk Kontoer-fanen for å administrere og sette opp kontoer.
+        not_configured: Ikke konfigurert
+      enable_banking_panel:
+        setup_instructions: "Oppsettsinstruksjoner:"
+        step1_html: "Besøk din <a href=\"https://enablebanking.com\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"link\">Enable Banking</a>-utviklerkonto for å få legitimasjonen din"
+        step2: Velg landkoden din fra nedtrekkslisten nedenfor
+        step3: Skriv inn din Application ID og lim inn Client Certificate (inkludert den private nøkkelen)
+        step4: "Klikk Lagre konfigurasjon, bruk deretter \"Legg til tilkobling\" for å koble til banken din"
+        callback_url_instruction: "For callback-URL, bruk %{callback_url}."
+        field_descriptions: "Feltbeskrivelser:"
+        country_code_description: "Landkode: ISO 3166-1 alpha-2 landkode (f.eks. GB, DE, FR) - bestemmer tilgjengelige banker"
+        application_id_description: "Application ID: ID-en generert i din Enable Banking-utviklerkonto"
+        client_certificate_description: "Client Certificate: Sertifikatet som ble generert da du opprettet applikasjonen (må inkludere den private nøkkelen)"
+        select_country: "Velg land..."
+        country_label: Land
+        config_locked: Konfigurasjon låst
+        config_locked_description: Legitimasjon kan ikke endres mens du har aktive banktilkoblinger. Fjern alle tilkoblinger først for å oppdatere legitimasjonen.
+        application_id_label: Application ID
+        application_id_placeholder_new: Skriv inn application ID
+        application_id_placeholder_update: Skriv inn ny ID for å oppdatere
+        client_certificate_label: Client Certificate (med privat nøkkel)
+        save_configuration: Lagre konfigurasjon
+        update_configuration: Oppdater konfigurasjon
+        syncing: Synkroniserer
+        connected_bank: Tilkoblet bank
+        session_expires: "Økten utløper: %{date}"
+        unknown: Ukjent
+        connection: Tilkobling
+        session_expired: Økten utløpt - koble til på nytt
+        configured: Konfigurert
+        ready_to_link: Klar til å koble kontoer
+        sync_button: Synkroniser
+        reconnect: Koble til på nytt
+        connect_bank: Koble til bank
+        remove: Fjern
+        remove_confirm: Er du sikker på at du vil fjerne denne tilkoblingen?
+        add_connection: Legg til tilkobling

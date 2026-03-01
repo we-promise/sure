@@ -11,6 +11,7 @@ pt-BR:
     form:
       placeholder: Nome da tag
     index:
+      delete_all: Excluir tudo
       empty: Nenhuma tag ainda
       new: Nova tag
       tags: Tags

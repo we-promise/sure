@@ -7,5 +7,6 @@ fr:
         edit: Éditer la catégorie
       show:
         clear: Effacer la catégorie
+        match_transfer: "Associer transfert/paiement"
         no_categories: Aucune catégorie trouvée
         search_placeholder: Rechercher

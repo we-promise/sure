@@ -1,0 +1,22 @@
+---
+ca:
+  transfer_matches:
+    matching_fields:
+      create_new: Crear una nova transacció
+      description: Seleccioneu un mètode per fer coincidir les vostres transaccions.
+      match_existing: Coincidir amb una transacció existent (recomanat)
+      matching_method: Mètode de coincidència
+      matching_transaction: Transacció coincident
+      no_matches_description: No hem pogut trobar cap transacció per fer coincidir
+        dels vostres altres comptes. Si us plau, seleccioneu un compte i crearem una
+        nova transacció d'entrada per a vós.
+      target_account: Compte de destinació
+    new:
+      from_account: Des del compte
+      from_account_name: "Des del compte: %{name}"
+      inflow_transaction: Transacció d'entrada
+      outflow_transaction: Transacció de sortida
+      submit: Crear coincidència de transferència
+      title: Fer coincidir transferència o pagament
+      to_account: Cap al compte
+      to_account_name: "Cap al compte: %{name}"

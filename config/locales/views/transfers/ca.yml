@@ -18,14 +18,20 @@ ca:
     new:
       title: Nova transferència
     show:
+      amount: Import
+      category: Categoria
+      date: Data
       delete: Elimina transferència
       delete_subtitle: Això eliminarà la transferència. No s'eliminaran les transaccions
         associades.
       delete_title: Vols eliminar la transferència?
       details: Detalls
+      from: Des de
       note_label: Notes
       note_placeholder: Afegeix una nota a aquesta transferència
       overview: Resum
       settings: Configuració
+      to: Fins a
+      uncategorized: Sense categoria
     update:
       success: Transferència actualitzada

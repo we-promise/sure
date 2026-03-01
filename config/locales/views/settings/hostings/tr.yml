@@ -38,6 +38,12 @@ tr:
       clear_cache:
         cache_cleared: Veri önbelleği temizlendi. Bu işlemin tamamlanması birkaç dakika sürebilir.
       not_authorized: Bu işlemi gerçekleştirmek için yetkiniz yok
+      brand_fetch_settings:
+        env_configured_message: Brand Fetch Client ID'nizi BRAND_FETCH_CLIENT_ID ortam değişkeni aracılığıyla başarıyla yapılandırdınız.
+        show_details: "(detayları göster)"
+        step1_html: '<a href="https://brandfetch.com/developers" target="_blank" rel="noopener noreferrer" class="underline">brandfetch.com</a> adresini ziyaret edin ve ücretsiz bir Brand Fetch Geliştirici hesabı oluşturun.'
+        step2_html: '<a href="https://developers.brandfetch.com/dashboard/logo-api" target="_blank" rel="noopener noreferrer" class="underline">Logo API</a> sayfasına gidin.'
+        step3: Client ID'nizi görmek için "Your Client ID" bölümündeki göz simgesine dokunun ve aşağıya yapıştırın.
       yahoo_finance_settings:
         title: Yahoo Finance
         description: Yahoo Finance, API anahtarı gerektirmeden hisse senedi fiyatları, döviz kurları ve finansal verilere ücretsiz erişim sağlar.
@@ -45,3 +51,8 @@ tr:
         status_inactive: Yahoo Finance bağlantısı başarısız
         connection_failed: Yahoo Finance'e bağlanılamıyor
         troubleshooting: İnternet bağlantınızı ve güvenlik duvarı ayarlarınızı kontrol edin. Yahoo Finance geçici olarak kullanılamayabilir.
+      twelve_data_settings:
+        show_details: "(detayları göster)"
+        step1_html: '<a href="https://twelvedata.com/register" target="_blank" rel="noopener noreferrer" class="underline">twelvedata.com</a> adresini ziyaret edin ve ücretsiz bir Twelve Data Geliştirici hesabı oluşturun.'
+        step2_html: '<a href="https://twelvedata.com/account/api-keys" target="_blank" rel="noopener noreferrer" class="underline">API Keys</a> sayfasına gidin.'
+        step3: Gizli anahtarınızı gösterin ve aşağıya yapıştırın.

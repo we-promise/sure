@@ -18,14 +18,20 @@ pt-BR:
     new:
       title: Nova transferência
     show:
+      amount: Valor
+      category: Categoria
+      date: Data
       delete: Remover transferência
       delete_subtitle: Isso remove a transferência. Não excluirá as transações
         subjacentes.
       delete_title: Remover transferência?
       details: Detalhes
+      from: De
       note_label: Notas
       note_placeholder: Adicionar uma nota a esta transferência
       overview: Visão geral
       settings: Configurações
+      to: Para
+      uncategorized: Sem categoria
     update:
       success: Transferência atualizada

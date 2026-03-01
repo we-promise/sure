@@ -1,24 +1,23 @@
 <div class="space-y-4">
   <div class="prose prose-sm text-secondary">
-    <p class="text-primary font-medium">Setup instructions:</p>
+    <p class="text-primary font-medium"><%= t("settings.providers.mercury_panel.setup_instructions") %></p>
     <ol>
-      <li>Visit <a href="https://mercury.com" target="_blank" rel="noopener noreferrer" class="link">Mercury</a> and log in to your account</li>
-      <li>Go to Settings > Developer > API Tokens</li>
-      <li>Create a new API token with "Read Only" access</li>
-      <li><strong>Important:</strong> Add your server's IP address to the token's whitelist</li>
-      <li>Copy the <strong>full token</strong> (including the <code>secret-token:</code> prefix) and paste it below</li>
-      <li>After a successful connection, go to the Accounts tab to set up new accounts</li>
+      <li><%= t("settings.providers.mercury_panel.step1") %></li>
+      <li><%= t("settings.providers.mercury_panel.step2") %></li>
+      <li><%= t("settings.providers.mercury_panel.step3") %></li>
+      <li><%= t("settings.providers.mercury_panel.step4") %></li>
+      <li><%= t("settings.providers.mercury_panel.step5") %></li>
+      <li><%= t("settings.providers.mercury_panel.step6") %></li>
     </ol>
 
-    <p class="text-primary font-medium">Field descriptions:</p>
+    <p class="text-primary font-medium"><%= t("settings.providers.mercury_panel.field_descriptions") %></p>
     <ul>
-      <li><strong>API Token:</strong> Your full Mercury API token including the <code>secret-token:</code> prefix (required)</li>
-      <li><strong>Base URL:</strong> Mercury API URL (optional, defaults to https://api.mercury.com/api/v1)</li>
+      <li><%= t("settings.providers.mercury_panel.token_description").html_safe %></li>
+      <li><%= t("settings.providers.mercury_panel.base_url_description") %></li>
     </ul>
 
     <p class="text-sm text-muted-foreground mt-2">
-      <strong>Note:</strong> For sandbox testing, use <code>https://api-sandbox.mercury.com/api/v1</code> as the Base URL.
-      Mercury requires IP whitelisting - make sure to add your IP in the Mercury dashboard.
+      <%= t("settings.providers.mercury_panel.sandbox_note").html_safe %>
     </p>
   </div>
 
@@ -45,17 +44,17 @@
                        data: { turbo: true },
                        class: "space-y-3" do |form| %>
     <%= form.text_field :token,
-                        label: "Token",
-                        placeholder: is_new_record ? "Paste token here" : "Enter new token to update",
+                        label: t("settings.providers.mercury_panel.token_label"),
+                        placeholder: is_new_record ? t("settings.providers.mercury_panel.token_placeholder_new") : t("settings.providers.mercury_panel.token_placeholder_update"),
                         type: :password %>
 
     <%= form.text_field :base_url,
-                        label: "Base Url (Optional)",
-                        placeholder: "https://api.mercury.com/api/v1 (default)",
+                        label: t("settings.providers.mercury_panel.base_url_label"),
+                        placeholder: t("settings.providers.mercury_panel.base_url_placeholder"),
                         value: mercury_item.base_url %>
 
     <div class="flex justify-end">
-      <%= form.submit is_new_record ? "Save Configuration" : "Update Configuration",
+      <%= form.submit is_new_record ? t("settings.providers.mercury_panel.save_configuration") : t("settings.providers.mercury_panel.update_configuration"),
                       class: "inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-white bg-gray-900 hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2 transition-colors" %>
     </div>
   <% end %>
@@ -64,10 +63,10 @@
   <div class="flex items-center gap-2">
     <% if items&.any? %>
       <div class="w-2 h-2 bg-success rounded-full"></div>
-      <p class="text-sm text-secondary">Configured and ready to use. Visit the <a href="<%= accounts_path %>" class="link">Accounts</a> tab to manage and set up accounts.</p>
+      <p class="text-sm text-secondary"><%= t("settings.providers.mercury_panel.configured") %></p>
     <% else %>
       <div class="w-2 h-2 bg-gray-400 rounded-full"></div>
-      <p class="text-sm text-secondary">Not configured</p>
+      <p class="text-sm text-secondary"><%= t("settings.providers.mercury_panel.not_configured") %></p>
     <% end %>
   </div>
 </div>

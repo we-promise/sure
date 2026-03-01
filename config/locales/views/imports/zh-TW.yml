@@ -7,6 +7,10 @@ zh-TW:
         errors_notice: 您的資料中有錯誤。將游標移至錯誤上方可查看詳細資訊。
         errors_notice_mobile: 您的資料中有錯誤。點擊錯誤提示框可查看詳細資訊。
         title: 校正您的資料
+        data_cleaned: 您的資料已校正完成
+        next_step: 下一步
+        all_rows: 所有資料列
+        error_rows: 錯誤資料列
     configurations:
       category_import:
         button_label: 繼續
@@ -14,6 +18,20 @@ zh-TW:
         instructions: 點擊繼續以解析您的 CSV 並進入校正步驟。
       mint_import:
         date_format_label: 日期格式
+        pre_configured: 我們已為您預設定了 Mint 匯入。請繼續下一步。
+        leave_empty: 留空
+        date: 日期
+        amount: 金額
+        currency: 貨幣
+        account_optional: 帳戶（可選）
+        name_optional: 名稱（可選）
+        category_optional: 類別（可選）
+        tags_optional: 標籤（可選）
+        format: 格式
+        select_format: 選擇格式
+        incomes_negative: 收入為負值
+        incomes_positive: 收入為正值
+        apply_configuration: 應用設定
       rule_import:
         description: 設定規則匯入。系統將根據 CSV 資料建立或更新規則。
         process_button: 處理規則
@@ -21,10 +39,68 @@ zh-TW:
       show:
         description: 選擇 CSV 中對應各個欄位的項目。
         title: 設定您的匯入項目
+        template_found: 找到範本設定
+        template_description: 我們找到了此帳戶之前匯入的設定。您是否要將其應用到此次匯入？
+        manually_configure: 手動設定
+        apply_template: 應用範本
       trade_import:
         date_format_label: 日期格式
+        select_column: 選擇欄位
+        date: 日期
+        quantity: 數量
+        buys_positive: 買入為正數量
+        buys_negative: 買入為負數量
+        default_currency: 預設
+        currency: 貨幣
+        format: 格式
+        select_format: 選擇格式
+        ticker: 股票代碼
+        leave_empty: 留空
+        stock_exchange_code: 證券交易所代碼
+        price: 價格
+        account: 帳戶
+        name: 名稱
+        security_prices_note_html: "<strong>注意：</strong>證券價格提供商未設定。您的交易匯入將正常運作，但 Sure 不會回填價格歷史。請前往設定進行配置。"
+        apply_configuration: 應用設定
       transaction_import:
         date_format_label: 日期格式
+        date: 日期
+        select_column: 選擇欄位
+        amount: 金額
+        default_currency: 預設
+        currency: 貨幣
+        format: 格式
+        select_format: 選擇格式
+        amount_type_strategy: 金額類型策略
+        select_strategy: 選擇策略
+        incomes_positive: 收入為正值
+        incomes_negative: 收入為負值
+        amount_type: 金額類型
+        select_convention: 選擇規則
+        set_label: 設定
+        as_amount_type_column: 作為金額類型欄位
+        as_identifier_value: 作為識別符值
+        select_type: 選擇類型
+        income_inflow: 收入（流入）
+        expense_outflow: 支出（流出）
+        leave_empty: 留空
+        account: 帳戶
+        name: 名稱
+        category: 類別
+        tags: 標籤
+        notes: 備註
+        apply_configuration: 應用設定
+      account_import:
+        leave_empty: 留空
+        entity_type: 實體類型
+        name: 名稱
+        balance: 餘額
+        default_currency: 預設
+        currency: 貨幣
+        balance_date: 餘額日期
+        date_format: 日期格式
+        select_format: 選擇格式
+        apply_configuration: 應用設定
     confirms:
       mappings:
         create_account: 建立帳戶
@@ -33,6 +109,7 @@ zh-TW:
         no_accounts: 您尚未建立任何帳戶。請建立一個帳戶以便分配 CSV 中（未指定）的資料列，或返回「校正」步驟並提供可使用的帳戶名稱。
         rows_label: 資料列
         unassigned_account: 需要為未分配的資料列建立新帳戶嗎？
+        next: 下一步
       show:
         account_mapping_description: 將匯入檔案中的帳戶對應到 Maybe 現有的帳戶。您也可以新增帳戶，或暫時不進行分類。
         account_mapping_title: 分配您的帳戶
@@ -51,7 +128,36 @@ zh-TW:
         instructions_4: 標有星號 (*) 的欄位為必填資料。
         instructions_5: 數字中請勿包含逗號、貨幣符號或括號。
         title: 匯入您的資料
+        drop_csv_title: 拖放 CSV 檔案以上傳
+        drop_csv_subtitle: 您的檔案將自動上傳
+        upload_csv_tab: 上傳 CSV
+        copy_paste_tab: 複製貼上
+        account_optional: 帳戶（可選）
+        multi_account_import: 多帳戶匯入
+        browse_to_add: 瀏覽
+        browse_to_add_suffix: 將您的 CSV 檔案新增至此處
+        upload_csv_btn: 上傳 CSV
+        paste_placeholder: 在此處貼上您的 CSV 檔案內容
+        download_sample: 下載範例 CSV
+        see_format: 查看所需的 CSV 格式
   imports:
+    failure:
+      title: 匯入失敗
+      description: 請檢查檔案格式是否有錯誤，以及所有必填欄位是否已填寫，然後重試。
+      try_again: 重試
+    importing:
+      title: 匯入進行中
+      description: 您的匯入正在進行中。請查看匯入選單獲取狀態更新，或點擊「檢查狀態」重新整理頁面。您可以繼續使用應用程式。
+      check_status: 檢查狀態
+      back_to_dashboard: 返回儀表板
+    revert_failure:
+      title: 匯入回滾失敗
+      description: 請重試
+      try_again: 重試
+    success:
+      title: 匯入成功
+      description: 您匯入的資料已成功新增至應用程式，現已準備就緒。
+      back_to_dashboard: 返回儀表板
     index:
       title: 匯入紀錄
       new: 新增匯入
@@ -88,5 +194,8 @@ zh-TW:
       sources: 來源
       title: 新增 CSV 匯入
     ready:
+      item: 項目
+      count: 數量
+      publish_import: 發佈匯入
       description: 以下是發佈此匯入後，將新增至您帳戶的項目摘要。
       title: 確認您的匯入資料

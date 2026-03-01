@@ -17,6 +17,7 @@ nb:
       title: Skriv inn kjøretøydetaljer
     overview:
       current_price: Gjeldende pris
+      edit_account_details: Rediger kontodetaljer
       make_model: Merke og modell
       mileage: Kilometerstand
       purchase_price: Kjøpspris

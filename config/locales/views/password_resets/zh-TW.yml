@@ -5,6 +5,7 @@ zh-TW:
     edit:
       title: 重設密碼
     new:
+      email_placeholder: "you@example.com"
       requested: 請檢查您的電子郵件，以取得重設密碼的連結。
       submit: 重設密碼
       title: 重設密碼

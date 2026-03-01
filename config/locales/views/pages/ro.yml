@@ -15,6 +15,10 @@ ro:
         no_account_subtitle: Deoarece nu au fost adăugate conturi, nu există date de afișat. Adaugă primele tale conturi pentru a începe să vezi datele din tabloul de bord.
         no_account_title: Niciun cont încă
       balance_sheet:
+        title: "Bilanț"
+        name: "Nume"
+        weight: "Pondere"
+        value: "Valoare"
         no_items: "Niciun %{name} încă"
         add_accounts: "Adaugă conturile tale de %{name} pentru a vedea o defalcare completă"
       cashflow_sankey:
@@ -29,3 +33,25 @@ ro:
       outflows_donut:
         title: "Ieșiri"
         total_outflows: "Total ieșiri"
+    feedback:
+      page_title: Feedback
+      title: Lasă feedback
+      description: Spune-ne dacă ai vreun feedback specific. Poți include linkuri către videoclipuri sau capturi de ecran.
+      feature_request: Scrie o cerere de funcționalitate
+      bug_report: Raportează un bug
+      discuss: "Discută despre %{product_name} cu alții"
+    intro:
+      welcome: "Bun venit!"
+      coming_soon: Experiența de introducere vine în curând
+      description: "Construim o experiență de integrare mai bogată pentru a afla despre obiectivele, reperele și nevoile tale zilnice. Deocamdată, mergi la bara laterală de chat pentru a începe o conversație cu Sure și a ne spune unde te afli în călătoria ta financiară."
+      start_chatting: Îencepe să conversezi
+    redis_configuration_error:
+      page_title: "Configurare Redis necesară - Sure"
+      title: Configurare Redis necesară
+      subtitle: Instalarea ta auto-găzduită Sure necesită ca Redis să fie configurat corect.
+      why_required: De ce este necesar Redis?
+      explanation: Sure folosește Redis pentru a alimenta sarcinile de fundal Sidekiq, cum ar fi sincronizarea datelor conturilor, procesarea importurilor și alte operațiuni de fundal care mențin datele tale financiare actualizate.
+      view_setup_guide: Vezi ghidul de configurare
+      docker_guide: Urmează ghidul nostru complet de configurare Docker pentru a configura Redis
+      refresh_hint: "După ce ai configurat Redis, reîmprospătează această pagină pentru a continua."
+      refresh_page: Reîmprospătează pagina

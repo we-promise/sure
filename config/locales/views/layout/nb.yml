@@ -17,6 +17,8 @@ nb:
       footer:
         privacy_policy: Personvernerklæring
         terms_of_service: Vilkår for bruk
+    lookbooks:
+      title: Komponentforhåndsvisning
     trial:
       open_demo: Åpen demo
       data_deleted_in_days: Data slettes om %{days} dager

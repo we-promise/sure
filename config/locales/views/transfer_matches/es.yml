@@ -1,0 +1,22 @@
+---
+es:
+  transfer_matches:
+    matching_fields:
+      create_new: Crear nueva transacción
+      description: Seleccione un método para emparejar sus transacciones.
+      match_existing: Emparejar transacción existente (recomendado)
+      matching_method: Método de emparejamiento
+      matching_transaction: Transacción emparejada
+      no_matches_description: No pudimos encontrar ninguna transacción para emparejar
+        de sus otras cuentas. Por favor, seleccione una cuenta y crearemos una nueva
+        transacción de ingreso para usted.
+      target_account: Cuenta de destino
+    new:
+      from_account: Desde la cuenta
+      from_account_name: "Desde la cuenta: %{name}"
+      inflow_transaction: Transacción de ingreso
+      outflow_transaction: Transacción de egreso
+      submit: Crear emparejamiento de transferencia
+      title: Emparejar transferencia o pago
+      to_account: Hacia la cuenta
+      to_account_name: "Hacia la cuenta: %{name}"

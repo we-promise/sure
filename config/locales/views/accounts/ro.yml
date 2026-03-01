@@ -2,6 +2,7 @@
 ro:
   accounts:
     account:
+      complete_setup: Finalizează configurarea
       link_lunchflow: Conectare cu Lunch Flow
       troubleshoot: Depanare
     chart:
@@ -34,6 +35,12 @@ ro:
         manual_entry: Introdu soldul contului
         title: Cum dorești să adaugi?
       title: Ce dorești să adaugi?
+      container:
+        previous: Anterior
+        next: Următor
+        select: Selectează
+        navigate: Navighează
+        close: Închide
     show:
       activity:
         amount: Sumă
@@ -51,8 +58,11 @@ ro:
       chart:
         balance: Sold
         owed: Sumă datorată
+      header:
+        complete_setup: Finalizează configurarea
       menu:
         confirm_accept: Șterge "%{name}"
+        delete_account: Șterge contul
         confirm_body_html: "<p>Prin ștergerea acestui cont, vei șterge istoricul valorii sale, afectând diverse aspecte ale contului tău general. Această acțiune va avea un impact direct asupra calculelor averii nete și a graficelor contului.</p><br /> <p>După ștergere, nu vei mai putea restaura informațiile contului, deoarece va trebui să îl adaugi ca un cont nou.</p>"
         confirm_title: Ștergi contul?
         edit: Editează

@@ -1,0 +1,58 @@
+---
+es:
+  controllers:
+    holdings:
+      cannot_delete: "No puede eliminar esta posición"
+    settings:
+      api_keys:
+        created: "Su clave API se ha creado correctamente"
+        not_found: "Clave API no encontrada"
+        cannot_revoke: "Esta clave API no se puede revocar"
+        revoked: "La clave API se ha revocado correctamente"
+        revoke_failed: "No se pudo revocar la clave API"
+      profiles:
+        member_removed: "Miembro eliminado correctamente."
+        member_remove_failed: "No se pudo eliminar al miembro."
+      providers:
+        updated: "Configuración del proveedor actualizada correctamente"
+        no_changes: "No se realizaron cambios"
+        not_authorized: "No autorizado"
+    transactions:
+      created: "Transacción creada"
+    rules:
+      deleted: "Regla eliminada"
+      all_deleted: "Todas las reglas eliminadas"
+    subscriptions:
+      already_contributing: "Ya estás contribuyendo. ¡Gracias!"
+      welcome: "¡Bienvenido a Sure!"
+      trial_completed: "Ya has iniciado o completado un período de prueba. Por favor, actualiza para continuar."
+      welcome_contribution: "¡Bienvenido a Sure! Tu contribución es muy apreciada."
+      contribution_failed: "Algo salió mal al procesar tu contribución. Por favor, inténtalo de nuevo."
+    plaid_items:
+      linked: "Cuenta vinculada correctamente a Plaid"
+      no_available_accounts: "No hay cuentas de Plaid disponibles para vincular. Por favor, conecta una nueva cuenta de Plaid primero."
+      invalid_account: "Cuenta de Plaid seleccionada no válida"
+      already_linked: "Esta cuenta de Plaid ya está vinculada"
+    imports:
+      publish_started: "Tu importación se ha iniciado en segundo plano."
+      reverting: "La importación se está revirtiendo en segundo plano."
+      template_applied: "Plantilla aplicada."
+      no_template: "No se encontró ninguna plantilla, por favor configura tu importación manualmente."
+      deleted: "Tu importación ha sido eliminada."
+    import:
+      uploads:
+        csv_uploaded: "CSV cargado correctamente."
+      cleans:
+        configure_first: "Por favor, configura tu importación antes de continuar."
+      confirms:
+        invalid_data: "Tienes datos no válidos, por favor edítalos hasta que todos los errores estén resueltos"
+    chats:
+      deleted: "El chat se ha eliminado correctamente"
+    oidc_accounts:
+      no_pending_auth: "No se encontró ninguna autenticación OIDC pendiente"
+      creation_disabled: "La creación de cuentas SSO está deshabilitada. Por favor, contacta con un administrador."
+    concerns:
+      self_hostable:
+        redis_configured: "¡Redis está configurado correctamente! Ahora puedes configurar tu aplicación Sure."
+    snaptrade_items:
+      use_setup_flow: "Usa el flujo de configuración de cuenta"

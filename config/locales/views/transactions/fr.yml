@@ -39,15 +39,58 @@ fr:
       settings: Paramètres
       tags_label: Étiquettes
       uncategorized: "(non catégorisée)"
+      additional_details: Détails supplémentaires
+      payee: Bénéficiaire
+      description: Description
+      memo: Mémo
+      provider_extras: Extras du fournisseur
+      transfer_or_payment: Transfert ou paiement de dette ?
+      transfer_description: Les transferts et les paiements sont des types spéciaux de transactions qui indiquent un mouvement d'argent entre 2 comptes.
+      open_matcher: Ouvrir le rapprochement
+      convert: Convertir
     header:
       edit_categories: Modifier les catégories
       edit_imports: Modifier les importations
       edit_merchants: Modifier les marchands
       edit_tags: Modifier les étiquettes
+      edit_rules: Modifier les règles
+      new_rule: Nouvelle règle
       import: Importer
     index:
+      title: Transactions
+      new_transaction: Nouvelle transaction
       transaction: transaction
       transactions: transactions
+    summary:
+      total_transactions: Total des transactions
+      income: Revenus
+      expenses: Dépenses
+    selection_bar:
+      edit: Modifier
+      delete: Supprimer
+    bulk_updates:
+      title: Modifier les transactions
+      overview: Aperçu
+      transactions: Transactions
+      select_category: Sélectionnez une catégorie
+      select_merchant: Sélectionnez un marchand
+      bulk_note_placeholder: Saisissez une note qui sera appliquée aux transactions sélectionnées
+      cancel: Annuler
+      save: Enregistrer
+    search:
+      filters:
+        account: Compte
+        date: Date
+        type: Type
+        status: Statut
+        amount: Montant
+        category: Catégorie
+        tag: Étiquette
+        merchant: Marchand
+        filter_accounts: Filtrer les comptes
+        filter_category: Filtrer la catégorie
+        filter_tags: Filtrer les étiquettes
+        filter_merchants: Filtrer les marchands
     searches:
       filters:
         amount_filter:

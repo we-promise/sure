@@ -6,6 +6,8 @@ ro:
       account_prompt: Caută cont
       amount: Sumă
       holding: Simbol bursier
+      manual_ticker_label: Simbol bursier
+      manual_ticker_placeholder: AAPL
       price: Preț pe acțiune
       qty: Cantitate
       submit: Adaugă tranzacție

@@ -4,6 +4,11 @@ ca:
     hostings:
       brand_fetch_settings:
         description: Introdueix el Client ID proporcionat per Brand Fetch
+        env_configured_message: Has configurat correctament el teu Client ID de Brand Fetch mitjançant la variable d'entorn BRAND_FETCH_CLIENT_ID.
+        show_details: "(mostrar detalls)"
+        step1_html: 'Visita <a href="https://brandfetch.com/developers" target="_blank" rel="noopener noreferrer" class="underline">brandfetch.com</a> i crea un compte de desenvolupador gratuït de Brand Fetch.'
+        step2_html: 'Ves a la pàgina de <a href="https://developers.brandfetch.com/dashboard/logo-api" target="_blank" rel="noopener noreferrer" class="underline">Logo API</a>.'
+        step3: Toca la icona de l'ull a la secció "Your Client ID" per revelar el teu Client ID i enganxa'l a continuació.
         label: Client ID
         placeholder: Introdueix aquí el teu Client ID
         title: Brand Fetch
@@ -91,6 +96,10 @@ ca:
         description: Introdueix la clau API proporcionada per Twelve Data
         env_configured_message: Configurat correctament mitjançant la variable d'entorn
           TWELVE_DATA_API_KEY.
+        show_details: "(mostrar detalls)"
+        step1_html: 'Visita <a href="https://twelvedata.com/register" target="_blank" rel="noopener noreferrer" class="underline">twelvedata.com</a> i crea un compte de desenvolupador gratuït de Twelve Data.'
+        step2_html: 'Ves a la pàgina de <a href="https://twelvedata.com/account/api-keys" target="_blank" rel="noopener noreferrer" class="underline">API Keys</a>.'
+        step3: Revela la teva clau secreta i enganxa-la a continuació.
         label: Clau API
         placeholder: Introdueix aquí la teva clau API
         plan: Pla %{plan}

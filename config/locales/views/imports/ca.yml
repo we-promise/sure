@@ -10,6 +10,10 @@ ca:
         errors_notice_mobile: Hi ha errors a les teves dades. Toca la icona d'error
           per veure'n els detalls.
         title: Neteja les teves dades
+        data_cleaned: Les teves dades han estat netejades
+        next_step: Pas següent
+        all_rows: Totes les files
+        error_rows: Files amb errors
     configurations:
       category_import:
         button_label: Continua
@@ -18,6 +22,20 @@ ca:
         instructions: Selecciona continuar per analitzar el teu CSV i passar al pas de neteja.
       mint_import:
         date_format_label: Format de data
+        pre_configured: Hem preconfigurat la teva importació de Mint. Si us plau, passa al pas següent.
+        leave_empty: Deixar buit
+        date: Data
+        amount: Import
+        currency: Moneda
+        account_optional: Compte (opcional)
+        name_optional: Nom (opcional)
+        category_optional: Categoria (opcional)
+        tags_optional: Etiquetes (opcional)
+        format: Format
+        select_format: Seleccionar format
+        incomes_negative: Els ingressos són negatius
+        incomes_positive: Els ingressos són positius
+        apply_configuration: Aplicar configuració
       rule_import:
         description: Configura la teva importació de regles. Es crearan o actualitzaran
           regles basades en les dades del CSV.
@@ -27,10 +45,68 @@ ca:
       show:
         description: Selecciona les columnes que corresponen a cada camp del teu CSV.
         title: Configura la teva importació
+        template_found: S'ha trobat una configuració de plantilla
+        template_description: Hem trobat una configuració d'una importació anterior per a aquest compte. Vols aplicar-la a aquesta importació?
+        manually_configure: Configurar manualment
+        apply_template: Aplicar plantilla
       trade_import:
         date_format_label: Format de data
+        select_column: Seleccionar columna
+        date: Data
+        quantity: Quantitat
+        buys_positive: Les compres són de quantitat positiva
+        buys_negative: Les compres són de quantitat negativa
+        default_currency: Per defecte
+        currency: Moneda
+        format: Format
+        select_format: Seleccionar format
+        ticker: Ticker
+        leave_empty: Deixar buit
+        stock_exchange_code: Codi de borsa
+        price: Preu
+        account: Compte
+        name: Nom
+        security_prices_note_html: "<strong>Nota:</strong> El proveïdor de preus de valors no està configurat. Les importacions funcionaran, però Sure no completarà l'historial de preus. Si us plau, vés a la configuració per configurar-ho."
+        apply_configuration: Aplicar configuració
       transaction_import:
         date_format_label: Format de data
+        date: Data
+        select_column: Seleccionar columna
+        amount: Import
+        default_currency: Per defecte
+        currency: Moneda
+        format: Format
+        select_format: Seleccionar format
+        amount_type_strategy: Estratègia de tipus d'import
+        select_strategy: Seleccionar estratègia
+        incomes_positive: Els ingressos són positius
+        incomes_negative: Els ingressos són negatius
+        amount_type: Tipus d'import
+        select_convention: Seleccionar convenció
+        set_label: Establir
+        as_amount_type_column: com a columna de tipus d'import
+        as_identifier_value: com a valor d'identificador
+        select_type: Seleccionar tipus
+        income_inflow: Ingrés (entrada)
+        expense_outflow: Despesa (sortida)
+        leave_empty: Deixar buit
+        account: Compte
+        name: Nom
+        category: Categoria
+        tags: Etiquetes
+        notes: Notes
+        apply_configuration: Aplicar configuració
+      account_import:
+        leave_empty: Deixar buit
+        entity_type: Tipus d'entitat
+        name: Nom
+        balance: Saldo
+        default_currency: Per defecte
+        currency: Moneda
+        balance_date: Data del saldo
+        date_format: Format de data
+        select_format: Seleccionar format
+        apply_configuration: Aplicar configuració
     confirms:
       mappings:
         create_account: Crea un compte
@@ -41,6 +117,7 @@ ca:
         rows_label: Files
         sure_mapping_label: "%{mapping} a %{product_name}"
         unassigned_account: Necessites crear un nou compte per a les files sense assignar?
+        next: Següent
       show:
         account_mapping_description: Assigna tots els comptes del teu fitxer importat
           als comptes existents de Maybe. També pots afegir nous comptes o deixar-los
@@ -69,7 +146,36 @@ ca:
         instructions_4: Les columnes marcades amb un asterisc (*) són obligatòries.
         instructions_5: Sense comes, símbols de moneda ni parèntesis als números.
         title: Importa les teves dades
+        drop_csv_title: Arrossega un CSV per pujar
+        drop_csv_subtitle: El teu fitxer es pujarà automàticament
+        upload_csv_tab: Pujar CSV
+        copy_paste_tab: Copiar i enganxar
+        account_optional: Compte (opcional)
+        multi_account_import: Importació multi-compte
+        browse_to_add: Navegar
+        browse_to_add_suffix: per afegir el teu fitxer CSV aquí
+        upload_csv_btn: Pujar CSV
+        paste_placeholder: Enganxa el contingut del teu fitxer CSV aquí
+        download_sample: Descarregar un CSV d'exemple
+        see_format: per veure el format CSV requerit
   imports:
+    failure:
+      title: La importació ha fallat
+      description: Si us plau, comprova el format del fitxer, si hi ha errors i que tots els camps obligatoris estiguin complerts, i torna a intentar-ho.
+      try_again: Torna a intentar-ho
+    importing:
+      title: Importació en curs
+      description: La teva importació està en curs. Comprova el menú d'importacions per a actualitzacions d'estat o fes clic a 'Comprovar estat' per actualitzar la pàgina. Pots continuar utilitzant l'aplicació.
+      check_status: Comprovar estat
+      back_to_dashboard: Tornar al tauler
+    revert_failure:
+      title: La reversió de la importació ha fallat
+      description: Si us plau, torna a intentar-ho
+      try_again: Torna a intentar-ho
+    success:
+      title: Importació correcta
+      description: Les teves dades importades s'han afegit correctament a l'aplicació i ja estan llestes per al seu ús.
+      back_to_dashboard: Tornar al tauler
     index:
       title: Importacions
       new: Nova importació
@@ -107,6 +213,9 @@ ca:
       sources: Fonts
       title: Nova importació CSV
     ready:
+      item: element
+      count: recompte
+      publish_import: Publicar importació
       description: Aquí tens un resum dels nous elements que s'afegiran al teu compte
         un cop publiquis aquesta importació.
       title: Confirma les teves dades d'importació

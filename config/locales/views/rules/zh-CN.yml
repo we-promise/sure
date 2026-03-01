@@ -3,6 +3,68 @@ zh-CN:
   rules:
     no_action: 无操作
     no_condition: 无条件
+    index:
+      page_title: 规则
+      delete_all_rules: 删除所有规则
+      new_rule: 新规则
+      ai_warning: 启用AI的规则操作将产生费用。请尽可能精确地筛选以避免不必要的费用。
+      rules_label: 规则
+      sort_by: "排序方式："
+      toggle_sort_direction: 切换排序方向
+      no_rules: 暂无规则
+      no_rules_description: 设置规则以在每次账户同步时对您的交易和其他数据执行操作。
+    new:
+      back_to_rules: 返回规则
+      new_rule_title: "新建%{resource_type}规则"
+    edit:
+      back_to_rules: 返回规则
+      edit_rule_title: "编辑%{resource_type}规则 \"%{name}\""
+      edit_rule_title_unnamed: "编辑%{resource_type}规则"
+    confirm:
+      confirm_changes_to: "确认对 \"%{name}\" 的更改"
+      confirm_changes: 确认更改
+      about_to_apply_html: "您即将将此规则应用于符合指定规则条件的 <span class=\"text-primary font-medium\">%{count} 个%{resource_type}</span>。请确认是否要继续此更改。"
+      ai_cost_title: AI费用估算
+      ai_cost_message: "这将使用AI对 %{count} 笔交易进行分类。估计费用：<span class=\"font-semibold\">~$%{cost}</span>"
+      ai_cost_no_estimate: "这将使用AI对 %{count} 笔交易进行分类。"
+      cost_unavailable_model: "模型 \"%{model}\" 的费用估算不可用。"
+      cost_unavailable_no_provider: 费用估算不可用（未配置LLM提供商）。
+      cost_warning: 您可能会产生费用，请向模型提供商查询最新价格。
+      view_usage: 查看使用记录
+      confirm_changes_btn: 确认更改
+    form:
+      rule_name_optional: 规则名称（可选）
+      enter_name: 输入此规则的名称
+      if_label: 如果
+      then_label: 则
+      for_label: 适用于
+      add_condition: 添加条件
+      add_condition_group: 添加条件组
+      add_action: 添加操作
+      all_past_future: "所有过去和未来的%{resource_type}"
+      starting_from: 开始于
+    rule:
+      if_label: 如果
+      then_label: 则
+      for_label: 适用于
+      to_label: 到
+      and_more_conditions:
+        one: "还有 %{count} 个条件"
+        other: "还有 %{count} 个条件"
+      and_more_actions:
+        one: "还有 %{count} 个操作"
+        other: "还有 %{count} 个操作"
+      all_past_future: "所有过去和未来的%{resource_type}"
+      on_or_after: "%{date}当天或之后的%{resource_type}"
+      edit: 编辑
+      reapply_rule: 重新应用规则
+      delete: 删除
+    category_rule_cta:
+      updated_to: "已更新为 %{name}"
+      auto_categorize_description: 您可以创建规则来自动分类类似的交易
+      dont_show_again: 不再显示
+      dismiss: 关闭
+      create_rule: 创建规则
     recent_runs:
       columns:
         date_time: 日期/时间
@@ -23,3 +85,16 @@ zh-CN:
         success: 成功
       title: 最近执行记录
       unnamed_rule: 未命名规则
+  rule:
+    actions:
+      action:
+        to_label: 到
+    conditions:
+      condition:
+        and_label: 且
+        enter_value: 输入一个值
+      condition_group:
+        and_label: 且
+        match: 匹配
+        of_the_following: 以下条件中的
+        add_condition: 添加条件

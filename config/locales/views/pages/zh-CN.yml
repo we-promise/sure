@@ -8,6 +8,9 @@ zh-CN:
         add_accounts: 添加您的%{name}账户以查看完整分析
         no_items: 暂无%{name}
         title: 资产负债表
+        name: "名称"
+        weight: "占比"
+        value: "金额"
       cashflow_sankey:
         add_transaction: 添加交易
         no_data_description: 添加交易记录以显示现金流数据或扩大时间范围
@@ -35,3 +38,25 @@ zh-CN:
       subtitle: 以下是您财务状况的概览
       toggle_section: 切换模块显示/隐藏
       welcome: 欢迎回来，%{name}
+    feedback:
+      page_title: 反馈
+      title: 提交反馈
+      description: 如果您有任何具体反馈，请告诉我们。您可以附上视频或截图的链接。
+      feature_request: 提交功能请求
+      bug_report: 提交错误报告
+      discuss: "与其他用户讨论 %{product_name}"
+    intro:
+      welcome: "欢迎！"
+      coming_soon: 引导体验即将推出
+      description: "我们正在打造更丰富的入门体验，以了解您的目标、里程碑和日常需求。目前，请前往聊天侧边栏与 Sure 开始对话，让我们了解您在财务旅程中的位置。"
+      start_chatting: 开始聊天
+    redis_configuration_error:
+      page_title: "需要配置 Redis - Sure"
+      title: 需要配置 Redis
+      subtitle: 您的自托管 Sure 安装需要正确配置 Redis。
+      why_required: 为什么需要 Redis？
+      explanation: Sure 使用 Redis 来驱动 Sidekiq 后台任务，例如同步账户数据、处理导入以及其他保持您财务数据更新的后台操作。
+      view_setup_guide: 查看设置指南
+      docker_guide: 按照我们完整的 Docker 设置指南配置 Redis
+      refresh_hint: "配置好 Redis 后，刷新此页面以继续。"
+      refresh_page: 刷新页面

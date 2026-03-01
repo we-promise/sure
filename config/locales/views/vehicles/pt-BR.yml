@@ -17,6 +17,7 @@ pt-BR:
       title: Inserir detalhes do veículo
     overview:
       current_price: Preço Atual
+      edit_account_details: Editar detalhes da conta
       make_model: Marca e Modelo
       mileage: Quilometragem
       purchase_price: Preço de Compra

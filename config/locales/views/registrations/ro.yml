@@ -14,6 +14,7 @@ ro:
       invalid_invite_code: Cod de invitație invalid, te rugăm să încerci din nou.
       success: Te-ai înregistrat cu succes.
     new:
+      email_placeholder: "you@example.com"
       invitation_message: "%{inviter} te-a invitat să te alături ca %{role}"
       join_family_title: Alătură-te %{family}
       role_admin: administrator

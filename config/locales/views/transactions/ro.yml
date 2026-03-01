@@ -39,15 +39,58 @@ ro:
       settings: Setări
       tags_label: Etichete
       uncategorized: "(necategorizat)"
+      additional_details: Detalii suplimentare
+      payee: Beneficiar
+      description: Descriere
+      memo: Notă
+      provider_extras: Extra furnizor
+      transfer_or_payment: Transfer sau plată de datorie?
+      transfer_description: Transferurile și plățile sunt tipuri speciale de tranzacții care indică mișcarea banilor între 2 conturi.
+      open_matcher: Deschide potrivirea
+      convert: Convertește
     header:
       edit_categories: Editează categorii
       edit_imports: Editează importuri
       edit_merchants: Editează comercianți
       edit_tags: Editează etichete
+      edit_rules: Editează reguli
+      new_rule: Regulă nouă
       import: Importă
     index:
+      title: Tranzacții
+      new_transaction: Tranzacție nouă
       transaction: tranzacție
       transactions: tranzacții
+    summary:
+      total_transactions: Total tranzacții
+      income: Venituri
+      expenses: Cheltuieli
+    selection_bar:
+      edit: Editează
+      delete: Șterge
+    bulk_updates:
+      title: Editează tranzacțiile
+      overview: Prezentare generală
+      transactions: Tranzacții
+      select_category: Selectează o categorie
+      select_merchant: Selectează un comerciant
+      bulk_note_placeholder: Introdu o notiță care va fi aplicată tranzacțiilor selectate
+      cancel: Anulează
+      save: Salvează
+    search:
+      filters:
+        account: Cont
+        date: Dată
+        type: Tip
+        status: Status
+        amount: Sumă
+        category: Categorie
+        tag: Etichetă
+        merchant: Comerciant
+        filter_accounts: Filtrează conturile
+        filter_category: Filtrează categoria
+        filter_tags: Filtrează etichetele
+        filter_merchants: Filtrează comercianții
     searches:
       filters:
         amount_filter:

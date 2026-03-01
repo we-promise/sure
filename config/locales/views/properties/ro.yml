@@ -3,6 +3,7 @@ ro:
   properties:
     edit:
       edit: Editează %{account}
+      title: Introdu proprietatea manual
     form:
       address_line1: Adresă stradală
       address_line1_placeholder: Strada Principală 123
@@ -18,11 +19,13 @@ ro:
       postal_code_placeholder: '94105'
       region: Județ/Provincie
       region_placeholder: B
+      square_feet: Picioare pătrate
+      square_meters: Metri pătrați
       subtype_prompt: Selectează tipul proprietății
       year_built: Anul construcției
       year_built_placeholder: '2000'
     new:
-      title: Introdu detalii proprietate
+      title: Introdu proprietatea manual
     overview:
       living_area: Suprafață locuibilă
       market_value: Valoare de piață
@@ -30,3 +33,36 @@ ro:
       trend: Tendință
       unknown: Necunoscut
       year_built: Anul construcției
+    address:
+      title: Introdu proprietatea manual
+      address_line1: Linia de adresă 1
+      address_line1_placeholder: "Strada Principală 123"
+      city: Oraș
+      city_placeholder: București
+      country: Țară
+      country_placeholder: RO
+      postal_code: Cod poștal
+      postal_code_placeholder: "010101"
+      state_region: Județ/Regiune
+      state_region_placeholder: B
+    balances:
+      title: Introdu proprietatea manual
+      estimated_market_value: Valoare de piață estimată
+      estimated_market_value_tooltip: "Valoarea de piață estimată a proprietății tale. Acest număr poate fi găsit adesea pe site-uri precum Zillow sau Redfin, și nu este niciodată un număr exact."
+    form_tabs:
+      address: Adresă
+      overview: Prezentare generală
+      value: Valoare
+    overview_fields:
+      area_optional: "Suprafață (opțional)"
+      area_unit: Unitate de suprafață
+      name: Nume
+      name_placeholder: Casă de vacanță
+      property_type: Tip proprietate
+      select_type: Selectează tipul
+      square_feet: Picioare pătrate
+      square_meters: Metri pătrați
+      year_built_optional: "Anul construcției (opțional)"
+    tabs:
+      overview:
+        edit_account_details: Editează detaliile contului

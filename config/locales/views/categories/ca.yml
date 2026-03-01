@@ -14,12 +14,23 @@ ca:
       edit: Edita categoria
     form:
       placeholder: Nom de la categoria
+      color: Color
+      poor_contrast: "Poc contrast, trieu un color més fosc o"
+      auto_adjust: "ajust automàtic."
+      icon: Icona
+      income: Ingressos
+      expense: Despesa
+      classification: Classificació
+      unassigned: "(sense assignar)"
+      parent_category: "Categoria pare (opcional)"
+      name: Nom
     index:
       bootstrap: Utilitza les predeterminades (recomanat)
       categories: Categories
       categories_expenses: Categories de despesa
       categories_incomes: Categories d'ingressos
       empty: No s'han trobat categories
+      delete_all: Elimina-ho tot
       new: Nova categoria
     menu:
       loading: Carregant...

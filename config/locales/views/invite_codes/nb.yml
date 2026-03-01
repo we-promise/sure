@@ -1,0 +1,9 @@
+---
+nb:
+  invite_codes:
+    invite_code:
+      confirm_delete: "Er du sikker?"
+    index:
+      invite_code_description: Generer en ny kode for å se den vist her. Genererte
+        koder som har blitt brukt, vil ikke lenger vises.
+      no_invite_codes: Ingen koder å vise

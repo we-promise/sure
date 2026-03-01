@@ -1,6 +1,14 @@
 ---
 tr:
   valuations:
+    confirm_create:
+      title: Yeni bakiyeyi onayla
+    confirm_update:
+      title: Bakiyeyi güncelle
+    confirmation_contents:
+      brokerage_cash: Aracılık nakdi
+      holdings_value: Portföy değeri
+      total_account_value: Toplam hesap değeri
     form:
       amount: Tutar
       submit: Bakiye güncellemesi ekle
@@ -16,6 +24,7 @@ tr:
     new:
       title: Yeni bakiye
     show:
+      account_value_on_date: Tarihteki hesap değeri
       amount: Tutar
       date_label: Tarih
       delete: Sil
@@ -28,3 +37,4 @@ tr:
       note_placeholder: Bu girişle ilgili ek detaylar ekleyin
       overview: Genel Bakış
       settings: Ayarlar
+      update_value: Değeri güncelle

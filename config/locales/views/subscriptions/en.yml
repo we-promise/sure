@@ -2,6 +2,9 @@ en:
   subscriptions:
     self_hosted_alert: "%{product_name} is not available in self-hosted mode."
     upgrade:
+      sr_only_title: Upgrade
+      account_settings: Account Settings
+      sign_out: Sign out
       contribute_and_support_sure: "Contribute and support Sure"
       cta: "Continue supporting the development of this codebase!"
       header:

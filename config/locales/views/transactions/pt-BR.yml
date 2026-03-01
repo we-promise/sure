@@ -43,15 +43,58 @@ pt-BR:
       settings: Configurações
       tags_label: Tags
       uncategorized: "(sem categoria)"
+      additional_details: Detalhes adicionais
+      payee: Beneficiário
+      description: Descrição
+      memo: Memorando
+      provider_extras: Extras do provedor
+      transfer_or_payment: Transferência ou pagamento de dívida?
+      transfer_description: Transferências e pagamentos são tipos especiais de transações que indicam movimentação de dinheiro entre 2 contas.
+      open_matcher: Abrir correspondência
+      convert: Converter
     header:
       edit_categories: Editar categorias
       edit_imports: Editar importações
       edit_merchants: Editar comerciantes
       edit_tags: Editar tags
+      edit_rules: Editar regras
+      new_rule: Nova regra
       import: Importar
     index:
+      title: Transações
+      new_transaction: Nova transação
       transaction: transação
       transactions: transações
+    summary:
+      total_transactions: Total de transações
+      income: Receitas
+      expenses: Despesas
+    selection_bar:
+      edit: Editar
+      delete: Excluir
+    bulk_updates:
+      title: Editar transações
+      overview: Visão geral
+      transactions: Transações
+      select_category: Selecione uma categoria
+      select_merchant: Selecione um comerciante
+      bulk_note_placeholder: Digite uma nota que será aplicada às transações selecionadas
+      cancel: Cancelar
+      save: Salvar
+    search:
+      filters:
+        account: Conta
+        date: Data
+        type: Tipo
+        status: Status
+        amount: Valor
+        category: Categoria
+        tag: Tag
+        merchant: Comerciante
+        filter_accounts: Filtrar contas
+        filter_category: Filtrar categoria
+        filter_tags: Filtrar tags
+        filter_merchants: Filtrar comerciantes
     searches:
       filters:
         amount_filter:

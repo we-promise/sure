@@ -356,7 +356,7 @@ class SnaptradeItemsController < ApplicationController
   end
 
   def link_accounts
-    redirect_to settings_providers_path, alert: "Use the account setup flow instead"
+    redirect_to settings_providers_path, alert: t("controllers.snaptrade_items.use_setup_flow")
   end
 
   def select_existing_account

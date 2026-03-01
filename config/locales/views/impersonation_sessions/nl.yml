@@ -13,3 +13,21 @@ nl:
       success: Sessie verlaten
     reject:
       success: Verzoek afgewezen
+    approval_bar:
+      access_session: Sessie openen
+      access_request: Toegangsverzoek
+      request_message: "Het Sure-ondersteuningsteam heeft toegang tot uw account aangevraagd (waarschijnlijk om u te helpen met een ondersteuningsverzoek). Als u het verzoek goedkeurt, worden alle activiteiten geregistreerd voor beveiligings- en auditdoeleinden."
+      approve: Goedkeuren
+      reject: Afwijzen
+      in_progress_message: "Iemand van het Sure Finances-team bekijkt momenteel uw gegevens. U kunt de sessie op elk moment beëindigen."
+      end_session: Sessie beëindigen
+      error_message: "Er is iets misgegaan. Neem contact met ons op."
+    super_admin_bar:
+      super_admin: Super Admin
+      jobs: Taken
+      impersonating: "Imiteert:"
+      leave: Verlaten
+      terminate: Beëindigen
+      join_session_prompt: Deelnemen aan een sessie
+      join: Deelnemen
+      request_impersonation: Imitatie aanvragen

@@ -11,6 +11,7 @@ ca:
     form:
       placeholder: Nom de l'etiqueta
     index:
+      delete_all: Elimina-ho tot
       empty: Encara no hi ha etiquetes
       new: Nova etiqueta
       tags: Etiquetes

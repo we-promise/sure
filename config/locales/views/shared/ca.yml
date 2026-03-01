@@ -5,6 +5,7 @@ ca:
       accept: Confirma
       body_html: "<p>No podràs desfer aquesta acció</p>"
       cancel: Cancel·la
+      subtitle: Aquesta acció no es pot desfer.
       title: Segur que vols continuar?
     money_field:
       label: Import

@@ -124,3 +124,12 @@ pt-BR:
       open_sheets: Abrir Google Sheets
       go_to_api_keys: Ir para Chaves de API
       close: Entendi
+    investment_flows:
+      title: Fluxos de investimento
+      description: Acompanhe o dinheiro entrando e saindo de suas contas de investimento através de aportes e retiradas.
+      contributions: Aportes
+      contributions_description: Dinheiro adicionado aos investimentos
+      withdrawals: Retiradas
+      withdrawals_description: Dinheiro retirado dos investimentos
+      net_flow: Fluxo líquido
+      net_flow_description: Variação líquida total

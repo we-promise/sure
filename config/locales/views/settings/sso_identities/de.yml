@@ -1,0 +1,7 @@
+---
+de:
+  settings:
+    sso_identities:
+      destroy:
+        cannot_unlink_last: Die letzte Identität kann nicht getrennt werden
+        success: Erfolgreich

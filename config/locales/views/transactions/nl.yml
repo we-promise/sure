@@ -50,6 +50,15 @@ nl:
       settings: Instellingen
       tags_label: Tags
       uncategorized: "(ongecategoriseerd)"
+      additional_details: Aanvullende details
+      payee: Begunstigde
+      description: Beschrijving
+      memo: Memo
+      provider_extras: Provider-extra's
+      transfer_or_payment: Overboeking of schuldbetaling?
+      transfer_description: Overboekingen en betalingen zijn speciale soorten transacties die geldbewegingen tussen 2 rekeningen aangeven.
+      open_matcher: Koppeling openen
+      convert: Converteren
     activity_labels:
       buy: Kopen
       sell: Verkopen
@@ -90,11 +99,31 @@ nl:
       edit_imports: Imports bewerken
       edit_merchants: Handelaren bewerken
       edit_tags: Tags bewerken
+      edit_rules: Regels bewerken
+      new_rule: Nieuwe regel
       import: Importeren
     index:
+      title: Transacties
+      new_transaction: Nieuwe transactie
       transaction: transactie
       transactions: transacties
       import: Importeren
+    summary:
+      total_transactions: Totaal transacties
+      income: Inkomsten
+      expenses: Uitgaven
+    selection_bar:
+      edit: Bewerken
+      delete: Verwijderen
+    bulk_updates:
+      title: Transacties bewerken
+      overview: Overzicht
+      transactions: Transacties
+      select_category: Selecteer een categorie
+      select_merchant: Selecteer een handelaar
+      bulk_note_placeholder: Voer een notitie in die wordt toegepast op geselecteerde transacties
+      cancel: Annuleren
+      save: Opslaan
     toggle_recurring_section: Schakel aankomende terugkerende transacties in/uit
     search:
       filters:
@@ -106,6 +135,10 @@ nl:
         category: Categorie
         tag: Tag
         merchant: Handelaar
+        filter_accounts: Filter rekeningen
+        filter_category: Filter categorie
+        filter_tags: Filter tags
+        filter_merchants: Filter handelaren
     convert_to_trade:
       title: Converteer naar Effectentransactie
       description: Converteer deze transactie naar een trade met effectendetails

@@ -3,6 +3,7 @@ zh-CN:
   properties:
     edit:
       edit: 编辑%{account}
+      title: 手动输入房产
     form:
       address_line1: 街道地址
       address_line1_placeholder: 123 Main St
@@ -18,11 +19,13 @@ zh-CN:
       postal_code_placeholder: '94105'
       region: 州/省份
       region_placeholder: 加利福尼亚州
+      square_feet: 平方英尺
+      square_meters: 平方米
       subtype_prompt: 选择房产类型
       year_built: 建造年份
       year_built_placeholder: '2000'
     new:
-      title: 请输入房产详情
+      title: 手动输入房产
     overview:
       living_area: 居住面积
       market_value: 市场估值
@@ -30,11 +33,36 @@ zh-CN:
       trend: 价格趋势
       unknown: 未知
       year_built: 建造年份
+    address:
+      title: 手动输入房产
+      address_line1: 地址行 1
+      address_line1_placeholder: "123 Main Street"
+      city: 城市
+      city_placeholder: 旧金山
+      country: 国家/地区
+      country_placeholder: 美国
+      postal_code: 邮政编码
+      postal_code_placeholder: "12345"
+      state_region: 州/地区
+      state_region_placeholder: 加利福尼亚州
+    balances:
+      title: 手动输入房产
+      estimated_market_value: 预估市场价值
+      estimated_market_value_tooltip: "您房产的预估市场价值。这个数字通常可以在 Zillow 或 Redfin 等网站上找到，但从来不是一个精确的数字。"
+    form_tabs:
+      address: 地址
+      overview: 概览
+      value: 价值
+    overview_fields:
+      area_optional: "面积（可选）"
+      area_unit: 面积单位
+      name: 名称
+      name_placeholder: 度假屋
+      property_type: 房产类型
+      select_type: 选择类型
+      square_feet: 平方英尺
+      square_meters: 平方米
+      year_built_optional: "建造年份（可选）"
     tabs:
       overview:
-        living_area: 居住面积
-        market_value: 市场价
-        purchase_price: 买入价
-        trend: 走势
-        unknown: 未知
-        year_built: 建筑年份
+        edit_account_details: 编辑账户详情

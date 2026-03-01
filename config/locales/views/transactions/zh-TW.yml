@@ -42,16 +42,59 @@ zh-TW:
       settings: 設定
       tags_label: 標籤
       uncategorized: "(未分類)"
+      additional_details: 附加詳情
+      payee: 收款方
+      description: 描述
+      memo: 備忘錄
+      provider_extras: 供應商額外資訊
+      transfer_or_payment: 轉帳或債務償還？
+      transfer_description: 轉帳和付款是特殊類型的交易，表示兩個帳戶之間的資金流動。
+      open_matcher: 開啟配對工具
+      convert: 轉換
     header:
       edit_categories: 編輯類別
       edit_imports: 編輯匯入
       edit_merchants: 編輯商家
       edit_tags: 編輯標籤
+      edit_rules: 編輯規則
+      new_rule: 新增規則
       import: 匯入
     index:
+      title: 交易紀錄
+      new_transaction: 新增交易
       transaction: 筆交易
       transactions: 筆交易
       import: 匯入
+    summary:
+      total_transactions: 交易總數
+      income: 收入
+      expenses: 支出
+    selection_bar:
+      edit: 編輯
+      delete: 刪除
+    bulk_updates:
+      title: 編輯交易
+      overview: 概覽
+      transactions: 交易紀錄
+      select_category: 選擇類別
+      select_merchant: 選擇商家
+      bulk_note_placeholder: 輸入將套用至所選交易的備註
+      cancel: 取消
+      save: 儲存
+    search:
+      filters:
+        account: 帳戶
+        date: 日期
+        type: 類型
+        status: 狀態
+        amount: 金額
+        category: 類別
+        tag: 標籤
+        merchant: 商家
+        filter_accounts: 篩選帳戶
+        filter_category: 篩選類別
+        filter_tags: 篩選標籤
+        filter_merchants: 篩選商家
     toggle_recurring_section: 切換即將到來的定期交易顯示狀態
     searches:
       filters:

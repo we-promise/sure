@@ -39,15 +39,58 @@ de:
       settings: Einstellungen
       tags_label: Tags
       uncategorized: (ohne Kategorie)
+      additional_details: Zusätzliche Details
+      payee: Zahlungsempfänger
+      description: Beschreibung
+      memo: Memo
+      provider_extras: Anbieter-Extras
+      transfer_or_payment: Überweisung oder Schuldenzahlung?
+      transfer_description: Überweisungen und Zahlungen sind spezielle Transaktionsarten, die Geldbewegungen zwischen 2 Konten anzeigen.
+      open_matcher: Zuordnung öffnen
+      convert: Konvertieren
     header:
       edit_categories: Kategorien bearbeiten
       edit_imports: Importe bearbeiten
       edit_merchants: Händler bearbeiten
       edit_tags: Tags bearbeiten
       import: Importieren
+      edit_rules: Regeln bearbeiten
+      new_rule: Neue Regel
     index:
+      title: Transaktionen
+      new_transaction: Neue Transaktion
       transaction: Transaktion
       transactions: Transaktionen
+    summary:
+      total_transactions: Transaktionen gesamt
+      income: Einnahmen
+      expenses: Ausgaben
+    selection_bar:
+      edit: Bearbeiten
+      delete: Löschen
+    bulk_updates:
+      title: Transaktionen bearbeiten
+      overview: Übersicht
+      transactions: Transaktionen
+      select_category: Kategorie auswählen
+      select_merchant: Händler auswählen
+      bulk_note_placeholder: Notiz eingeben, die auf ausgewählte Transaktionen angewendet wird
+      cancel: Abbrechen
+      save: Speichern
+    search:
+      filters:
+        account: Konto
+        date: Datum
+        type: Typ
+        status: Status
+        amount: Betrag
+        category: Kategorie
+        tag: Tag
+        merchant: Händler
+        filter_accounts: Konten filtern
+        filter_category: Kategorie filtern
+        filter_tags: Tags filtern
+        filter_merchants: Händler filtern
     searches:
       filters:
         amount_filter:

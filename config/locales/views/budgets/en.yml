@@ -5,6 +5,30 @@ en:
       custom_range: "%{start} - %{end_date}"
       month_year: "%{month}"
     show:
+      categories: Categories
+      edit: Edit
       tabs:
         actual: Actual
         budgeted: Budgeted
+    edit:
+      title: Setup your budget
+      description: Enter your monthly earnings and planned spending below to setup your budget.
+      budgeted_spending: Budgeted spending
+      expected_income: Expected income
+      autosuggest: Autosuggest income & spending budget
+      autosuggest_description: This will be based on transaction history. AI can make mistakes, verify before continuing.
+      continue: Continue
+    budgeted_summary:
+      expected_income: Expected income
+      earned: "%{amount} earned"
+      over: "%{amount} over"
+      left: "%{amount} left"
+      budgeted: Budgeted
+      spent: "%{amount} spent"
+    actuals_summary:
+      income: Income
+      expenses: Expenses
+  budget_categories:
+    index:
+      title: Edit your category budgets
+      description: Adjust category budgets to set spending limits. Unallocated funds will be automatically assigned as uncategorized.

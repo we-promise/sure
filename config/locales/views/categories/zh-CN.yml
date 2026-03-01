@@ -14,12 +14,23 @@ zh-CN:
       edit: 编辑分类
     form:
       placeholder: 分类名称
+      color: 颜色
+      poor_contrast: "对比度不足，请选择更深的颜色或"
+      auto_adjust: "自动调整。"
+      icon: 图标
+      income: 收入
+      expense: 支出
+      classification: 分类
+      unassigned: "(未分配)"
+      parent_category: "父级分类（可选）"
+      name: 名称
     index:
       bootstrap: 使用默认分类（推荐）
       categories: 分类管理
       categories_expenses: 支出分类
       categories_incomes: 收入分类
       empty: 暂无分类
+      delete_all: 全部删除
       new: 新建分类
     menu:
       loading: 加载中...

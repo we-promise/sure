@@ -6,6 +6,8 @@ tr:
       account_prompt: Hesap ara
       amount: Tutar
       holding: Sembol
+      manual_ticker_label: Sembol
+      manual_ticker_placeholder: AAPL
       price: Hisse başı fiyat
       qty: Miktar
       submit: İşlem ekle

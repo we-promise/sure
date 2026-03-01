@@ -35,6 +35,11 @@ zh-TW:
           yahoo_finance: Yahoo Finance
       brand_fetch_settings:
         description: 輸入 Brand Fetch 提供的 Client ID
+        env_configured_message: 您已透過 BRAND_FETCH_CLIENT_ID 環境變數成功配置了 Brand Fetch Client ID。
+        show_details: "(顯示詳情)"
+        step1_html: '造訪 <a href="https://brandfetch.com/developers" target="_blank" rel="noopener noreferrer" class="underline">brandfetch.com</a> 並建立免費的 Brand Fetch 開發者帳戶。'
+        step2_html: '前往 <a href="https://developers.brandfetch.com/dashboard/logo-api" target="_blank" rel="noopener noreferrer" class="underline">Logo API</a> 頁面。'
+        step3: 點擊「Your Client ID」區段中的眼睛圖示以顯示您的 Client ID，然後貼至下方。
         label: Client ID
         placeholder: 在此輸入您的 Client ID
         title: Brand Fetch 設定
@@ -65,6 +70,10 @@ zh-TW:
         api_calls_used: "每日 API 呼叫已使用 %{used} / %{limit} (%{percentage})"
         description: 輸入 Twelve Data 提供的 API 金鑰
         env_configured_message: 已透過 TWELVE_DATA_API_KEY 環境變數成功配置。
+        show_details: "(顯示詳情)"
+        step1_html: '造訪 <a href="https://twelvedata.com/register" target="_blank" rel="noopener noreferrer" class="underline">twelvedata.com</a> 並建立免費的 Twelve Data 開發者帳戶。'
+        step2_html: '前往 <a href="https://twelvedata.com/account/api-keys" target="_blank" rel="noopener noreferrer" class="underline">API Keys</a> 頁面。'
+        step3: 顯示您的密鑰並貼至下方。
         label: API 金鑰
         placeholder: 在此輸入您的 API 金鑰
         plan: "%{plan} 方案"
