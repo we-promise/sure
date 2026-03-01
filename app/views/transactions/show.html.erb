@@ -123,6 +123,11 @@
                 "data-auto-submit-form-target": "auto" %>
       <% end %>
     <% end %>
+
+    <% dialog.with_section(title: t(".attachments")) do %>
+      <%= render "transactions/attachments", transaction: @entry.transaction %>
+    <% end %>
+
     <% if (details = build_transaction_extra_details(@entry)) %>
       <% dialog.with_section(title: "Additional details", open: false) do %>
         <div class="px-3 py-2 space-y-3">

@@ -7,6 +7,23 @@ class Transaction < ApplicationRecord
   has_many :taggings, as: :taggable, dependent: :destroy
   has_many :tags, through: :taggings
 
+  # File attachments (receipts, invoices, etc.) using Active Storage
+  # Supports images (JPEG, PNG, GIF, WebP) and PDFs up to 10MB each
+  # Maximum 10 attachments per transaction, family-scoped access
+  has_many_attached :attachments do |attachable|
+    attachable.variant :thumbnail, resize_to_limit: [ 150, 150 ]
+  end
+
+  # Attachment validation constants
+  MAX_ATTACHMENTS_PER_TRANSACTION = 10
+  MAX_ATTACHMENT_SIZE = 10.megabytes
+  ALLOWED_CONTENT_TYPES = %w[
+    image/jpeg image/jpg image/png image/gif image/webp
+    application/pdf
+  ].freeze
+
+  validate :validate_attachments, if: -> { attachments.attached? }
+
   accepts_nested_attributes_for :taggings, allow_destroy: true
 
   after_save :clear_merchant_unlinked_association, if: :merchant_id_previously_changed?
@@ -158,6 +175,26 @@ class Transaction < ApplicationRecord
   end
 
   private
+
+    def validate_attachments
+      # Check attachment count limit
+      if attachments.size > MAX_ATTACHMENTS_PER_TRANSACTION
+        errors.add(:attachments, :too_many, max: MAX_ATTACHMENTS_PER_TRANSACTION)
+      end
+
+      # Validate each attachment
+      attachments.each_with_index do |attachment, index|
+        # Check file size
+        if attachment.byte_size > MAX_ATTACHMENT_SIZE
+          errors.add(:attachments, :too_large, index: index + 1, max_mb: MAX_ATTACHMENT_SIZE / 1.megabyte)
+        end
+
+        # Check content type
+        unless ALLOWED_CONTENT_TYPES.include?(attachment.content_type)
+          errors.add(:attachments, :invalid_format, index: index + 1, file_format: attachment.content_type)
+        end
+      end
+    end
 
     def potential_posted_match_data
       return nil unless extra.is_a?(Hash)
