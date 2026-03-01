@@ -1,0 +1,36 @@
+<%= content_for :page_title, t(".page_title") %>
+
+<div class="bg-container rounded-xl shadow-border-xs p-4 max-w-3xl">
+  <h2 class="text-sm font-medium text-primary mb-1"><%= t(".title") %></h2>
+  <p class="text-xs text-secondary mb-4"><%= t(".subtitle") %></p>
+
+  <%= styled_form_with model: @config,
+                       url: settings_ai_prompts_path,
+                       method: :patch,
+                       scope: :builtin_assistant_config,
+                       class: "space-y-4" do |form| %>
+    <%= hidden_field_tag :from, "system_prompt" %>
+    <%= form.text_area :custom_system_prompt,
+                       label: t(".custom_system_prompt_label"),
+                       placeholder: t(".custom_system_prompt_placeholder"),
+                       value: @config.custom_system_prompt,
+                       rows: 10,
+                       class: "font-mono text-xs text-primary bg-container placeholder:text-subdued border border-secondary rounded px-2 py-1.5" %>
+    <%= form.text_area :custom_intro_prompt,
+                       label: t(".custom_intro_prompt_label"),
+                       placeholder: t(".custom_intro_prompt_placeholder"),
+                       value: @config.custom_intro_prompt,
+                       rows: 6,
+                       class: "font-mono text-xs text-primary bg-container placeholder:text-subdued border border-secondary rounded px-2 py-1.5" %>
+    <div class="flex items-center gap-3">
+      <%= form.submit t(".save"), class: "cursor-pointer" %>
+      <%= link_to t(".back_to_prompts"), settings_ai_prompts_path, class: "text-sm text-secondary hover:underline" %>
+    </div>
+  <% end %>
+
+  <% if @config.errors.any? %>
+    <div class="mt-3 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+      <%= @config.errors.full_messages.to_sentence %>
+    </div>
+  <% end %>
+</div>

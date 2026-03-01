@@ -33,6 +33,7 @@ gem "hotwire_combobox"
 # Background Jobs
 gem "sidekiq"
 gem "sidekiq-cron"
+gem "sidekiq-throttled"
 gem "sidekiq-unique-jobs"
 
 # Monitoring

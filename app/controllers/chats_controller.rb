@@ -17,7 +17,8 @@ class ChatsController < ApplicationController
   end
 
   def create
-    @chat = Current.user.chats.start!(chat_params[:content], model: chat_params[:ai_model])
+    default_model = Chat.default_model(Current.user.family)
+    @chat = Current.user.chats.start!(chat_params[:content], model: chat_params[:ai_model].presence || default_model)
     set_last_viewed_chat(@chat)
     redirect_to chat_path(@chat, thinking: true)
   end

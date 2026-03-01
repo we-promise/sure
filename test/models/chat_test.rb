@@ -31,23 +31,31 @@ class ChatTest < ActiveSupport::TestCase
 
   test "creates with default model when model is nil" do
     prompt = "Test prompt"
+    @user.family.builtin_assistant_config&.update_column(:preferred_ai_model, nil)
 
-    assert_difference "@user.chats.count", 1 do
-      chat = @user.chats.start!(prompt, model: nil)
+    with_env_overrides OPENAI_MODEL: nil do
+      Setting.stubs(:openai_model).returns(nil)
+      assert_difference "@user.chats.count", 1 do
+        chat = @user.chats.start!(prompt, model: nil)
 
-      assert_equal 1, chat.messages.count
-      assert_equal Provider::Openai::DEFAULT_MODEL, chat.messages.first.ai_model
+        assert_equal 1, chat.messages.count
+        assert_equal Provider::Openai::DEFAULT_MODEL, chat.messages.first.ai_model
+      end
     end
   end
 
   test "creates with default model when model is empty string" do
     prompt = "Test prompt"
+    @user.family.builtin_assistant_config&.update_column(:preferred_ai_model, nil)
 
-    assert_difference "@user.chats.count", 1 do
-      chat = @user.chats.start!(prompt, model: "")
+    with_env_overrides OPENAI_MODEL: nil do
+      Setting.stubs(:openai_model).returns(nil)
+      assert_difference "@user.chats.count", 1 do
+        chat = @user.chats.start!(prompt, model: "")
 
-      assert_equal 1, chat.messages.count
-      assert_equal Provider::Openai::DEFAULT_MODEL, chat.messages.first.ai_model
+        assert_equal 1, chat.messages.count
+        assert_equal Provider::Openai::DEFAULT_MODEL, chat.messages.first.ai_model
+      end
     end
   end
 
