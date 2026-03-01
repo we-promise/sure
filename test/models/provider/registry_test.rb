@@ -2,9 +2,10 @@ require "test_helper"
 
 class Provider::RegistryTest < ActiveSupport::TestCase
   test "providers filters out nil values when provider is not configured" do
-    # Ensure OpenAI is not configured
-    ClimateControl.modify("OPENAI_ACCESS_TOKEN" => nil) do
+    # Ensure OpenAI is not configured (no token and no custom URI base)
+    ClimateControl.modify("OPENAI_ACCESS_TOKEN" => nil, "OPENAI_URI_BASE" => nil) do
       Setting.stubs(:openai_access_token).returns(nil)
+      Setting.stubs(:openai_uri_base).returns(nil)
 
       registry = Provider::Registry.for_concept(:llm)
 
@@ -34,9 +35,10 @@ class Provider::RegistryTest < ActiveSupport::TestCase
   end
 
   test "get_provider returns nil when provider not configured" do
-    # Ensure OpenAI is not configured
-    ClimateControl.modify("OPENAI_ACCESS_TOKEN" => nil) do
+    # Ensure OpenAI is not configured (no token and no custom URI base)
+    ClimateControl.modify("OPENAI_ACCESS_TOKEN" => nil, "OPENAI_URI_BASE" => nil) do
       Setting.stubs(:openai_access_token).returns(nil)
+      Setting.stubs(:openai_uri_base).returns(nil)
 
       registry = Provider::Registry.for_concept(:llm)
 
@@ -62,6 +64,26 @@ class Provider::RegistryTest < ActiveSupport::TestCase
       # Should successfully create provider using Setting value
       assert_not_nil provider
       assert_instance_of Provider::Openai, provider
+    end
+  end
+
+  test "openai provider can be created with custom URI base without access token" do
+    # Test self-hosted instances like Ollama that don't require authentication
+    ClimateControl.modify(
+      "OPENAI_ACCESS_TOKEN" => nil,
+      "OPENAI_URI_BASE" => "http://localhost:11434/v1",
+      "OPENAI_MODEL" => "llama3.1:13b"
+    ) do
+      Setting.stubs(:openai_access_token).returns(nil)
+      Setting.stubs(:openai_uri_base).returns("http://localhost:11434/v1")
+      Setting.stubs(:openai_model).returns("llama3.1:13b")
+
+      provider = Provider::Registry.get_provider(:openai)
+
+      # Should successfully create provider with custom URI base even without token
+      assert_not_nil provider
+      assert_instance_of Provider::Openai, provider
+      assert provider.custom_provider?
     end
   end
 end
