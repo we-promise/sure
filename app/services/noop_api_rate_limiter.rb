@@ -23,13 +23,18 @@ class NoopApiRateLimiter
     0
   end
 
+  def redis_available?
+    true
+  end
+
   def usage_info
     {
       current_count: 0,
       rate_limit: Float::INFINITY,
       remaining: Float::INFINITY,
       reset_time: 0,
-      tier: :noop
+      tier: :noop,
+      redis_available: true
     }
   end
 
