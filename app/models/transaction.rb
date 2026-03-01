@@ -157,7 +157,7 @@ class Transaction < ApplicationRecord
   # Find potential posted transactions that might be duplicates of this pending transaction
   # Returns entries (not transactions) for UI consistency with transfer matcher
   # Lists recent posted transactions from the same account for manual merging
-  def pending_duplicate_candidates(limit: 20)
+  def pending_duplicate_candidates(limit: 20, offset: 0)
     return Entry.none unless pending? && entry.present?
 
     account = entry.account
@@ -173,6 +173,7 @@ class Transaction < ApplicationRecord
       .where(conditions.join(" AND "))
       .order(date: :desc, created_at: :desc)
       .limit(limit)
+      .offset(offset)
   end
 
   private

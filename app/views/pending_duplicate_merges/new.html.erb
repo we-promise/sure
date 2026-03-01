@@ -43,37 +43,47 @@
         <section class="space-y-3">
           <h2 class="text-sm font-medium text-primary"><%= t(".select_posted") %></h2>
 
-          <% if @potential_duplicates.any? %>
-            <%= f.select(
-                  :posted_entry_id,
-                  options_for_select(
-                    [[t(".select_posted_prompt"), ""]] +
-                    @potential_duplicates.map do |entry|
-                      transaction = entry.entryable
-                      [
-                        "#{entry.name} • #{I18n.l(entry.date, format: :short)} • #{number_to_currency(entry.amount.abs, unit: Money::Currency.new(entry.currency).symbol)}",
-                        entry.id
-                      ]
-                    end
-                  ),
-                  { label: t(".posted_transaction_label") },
-                  { class: "form-field__input border border-secondary rounded-lg px-3 py-2 w-full" }
-                ) %>
+          <%= turbo_frame_tag "posted_transaction_candidates" do %>
+            <% if @potential_duplicates.any? %>
+              <div class="space-y-2 max-h-96 overflow-y-auto">
+                <% @potential_duplicates.each do |entry| %>
+                  <label class="flex items-center gap-3 p-3 border border-secondary rounded-lg cursor-pointer hover:bg-surface-inset transition-colors">
+                    <%= f.radio_button :posted_entry_id, entry.id, class: "form-radio" %>
+                    <div class="flex-1 text-sm">
+                      <div class="font-medium text-primary"><%= entry.name %></div>
+                      <div class="text-xs text-secondary">
+                        <%= I18n.l(entry.date, format: :short) %> • 
+                        <%= number_to_currency(entry.amount.abs, unit: Money::Currency.new(entry.currency).symbol) %>
+                      </div>
+                    </div>
+                  </label>
+                <% end %>
+              </div>
 
-            <div class="flex items-center justify-between">
-              <p class="text-xs text-secondary">
-                <%= t(".showing_count", count: @potential_duplicates.count) %>
-              </p>
-              <% if @has_more %>
-                <%= link_to t(".load_more"),
-                            new_transaction_pending_duplicate_merges_path(@transaction.entry, limit: @limit + 20),
-                            class: "text-xs text-link hover:underline" %>
-              <% end %>
-            </div>
-          <% else %>
-            <div class="bg-surface-inset border border-secondary rounded-lg p-4 text-center">
-              <p class="text-secondary"><%= t(".no_candidates") %></p>
-            </div>
+              <div class="flex items-center justify-between mt-3">
+                <p class="text-xs text-secondary">
+                  <%= t(".showing_count", count: @potential_duplicates.count) %>
+                </p>
+                <div class="flex gap-2">
+                  <% if @offset > 0 %>
+                    <%= link_to t(".previous"),
+                                new_transaction_pending_duplicate_merges_path(@transaction.entry, offset: [@offset - 10, 0].max),
+                                class: "text-xs text-link hover:underline",
+                                data: { turbo_frame: "posted_transaction_candidates" } %>
+                  <% end %>
+                  <% if @has_more %>
+                    <%= link_to t(".next"),
+                                new_transaction_pending_duplicate_merges_path(@transaction.entry, offset: @offset + 10),
+                                class: "text-xs text-link hover:underline",
+                                data: { turbo_frame: "posted_transaction_candidates" } %>
+                  <% end %>
+                </div>
+              </div>
+            <% else %>
+              <div class="bg-surface-inset border border-secondary rounded-lg p-4 text-center">
+                <p class="text-secondary"><%= t(".no_candidates") %></p>
+              </div>
+            <% end %>
           <% end %>
         </section>
 
