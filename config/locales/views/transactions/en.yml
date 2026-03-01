@@ -40,6 +40,9 @@ en:
       convert_to_trade_title: Convert to Security Trade
       convert_to_trade_description: Convert this transaction into a Buy or Sell trade with security details for portfolio tracking.
       convert_to_trade_button: Convert to Trade
+      pending_duplicate_merger_title: Duplicate of Posted Transaction?
+      pending_duplicate_merger_description: Manually merge this pending transaction with its posted version.
+      pending_duplicate_merger_button: Open merger
       merchant_label: Merchant
       name_label: Name
       nature: Type
@@ -88,6 +91,13 @@ en:
     dismiss_duplicate:
       success: Kept as separate transactions
       failure: Could not dismiss duplicate suggestion
+    pending_duplicate_merge:
+      possible_duplicate: Duplicate?
+      possible_duplicate_short: Dup?
+      review_recommended: Review
+      review_recommended_short: Rev
+      confirm_title: "Merge with posted transaction (%{posted_amount})"
+      reject_title: Keep as separate transactions
     header:
       edit_categories: Edit categories
       edit_imports: Edit imports

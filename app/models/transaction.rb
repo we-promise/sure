@@ -154,6 +154,27 @@ class Transaction < ApplicationRecord
     true
   end
 
+  # Find potential posted transactions that might be duplicates of this pending transaction
+  # Returns entries (not transactions) for UI consistency with transfer matcher
+  # Lists recent posted transactions from the same account for manual merging
+  def pending_duplicate_candidates(limit: 20)
+    return Entry.none unless pending? && entry.present?
+
+    account = entry.account
+    currency = entry.currency
+
+    # Find recent posted transactions from the same account
+    conditions = PENDING_PROVIDERS.map { |provider| "(transactions.extra -> '#{provider}' ->> 'pending')::boolean IS NOT TRUE" }
+
+    account.entries
+      .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
+      .where.not(id: entry.id)
+      .where(currency: currency)
+      .where(conditions.join(" AND "))
+      .order(date: :desc, created_at: :desc)
+      .limit(limit)
+  end
+
   private
 
     def potential_posted_match_data

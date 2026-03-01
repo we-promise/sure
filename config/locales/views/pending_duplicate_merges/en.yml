@@ -1,0 +1,17 @@
+---
+en:
+  pending_duplicate_merges:
+    new:
+      title: Merge with Posted Transaction
+      warning_title: Manual Duplicate Merging
+      warning_description: Use this to manually merge a pending transaction with its posted version. This will delete the pending transaction and keep only the posted one.
+      pending_transaction: Pending Transaction
+      select_posted: Select Posted Transaction to Merge With
+      posted_transaction_label: Posted transaction
+      select_posted_prompt: "— Select a transaction —"
+      showing_count:
+        one: "Showing most recent posted transaction"
+        other: "Showing %{count} most recent posted transactions"
+      load_more: Load 20 more →
+      no_candidates: No posted transactions found in this account.
+      submit_button: Merge Transactions

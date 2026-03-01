@@ -1,0 +1,86 @@
+<%= render DS::Dialog.new do |dialog| %>
+  <% dialog.with_header(title: t(".title")) %>
+  <% dialog.with_body do %>
+    <div class="space-y-6">
+      <div class="bg-warning/10 border border-warning/20 rounded-lg p-4">
+        <div class="flex items-start gap-3">
+          <%= icon "alert-triangle", size: "md", class: "text-warning flex-shrink-0 mt-0.5" %>
+          <div class="text-sm space-y-2">
+            <p class="text-primary font-medium"><%= t(".warning_title") %></p>
+            <p class="text-secondary"><%= t(".warning_description") %></p>
+          </div>
+        </div>
+      </div>
+
+      <%= styled_form_with(
+            url: transaction_pending_duplicate_merges_path(@transaction.entry),
+            scope: :pending_duplicate_merges,
+            class: "space-y-6",
+            data: { turbo_frame: :_top }
+          ) do |f| %>
+        <!-- Current Pending Transaction -->
+        <section class="space-y-3">
+          <h2 class="inline-flex items-center gap-1 ml-2 text-sm font-medium text-primary"><%= icon "clock", size: "sm" %> <%= t(".pending_transaction") %></h2>
+          <div class="bg-surface-inset border border-secondary rounded-lg p-4">
+            <div class="flex items-center justify-between">
+              <div class="space-y-1">
+                <p class="text-primary font-medium"><%= @transaction.entry.name %></p>
+                <p class="text-xs text-secondary">
+                  <%= @transaction.entry.account.name %>
+                  • <%= I18n.l(@transaction.entry.date, format: :long) %>
+                  • <%= number_to_currency(@transaction.entry.amount.abs, unit: Money::Currency.new(@transaction.entry.currency).symbol) %>
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <div class="flex justify-center">
+          <%= icon "arrow-down", class: "text-secondary" %>
+        </div>
+
+        <!-- Select Posted Transaction -->
+        <section class="space-y-3">
+          <h2 class="text-sm font-medium text-primary"><%= t(".select_posted") %></h2>
+
+          <% if @potential_duplicates.any? %>
+            <%= f.select(
+                  :posted_entry_id,
+                  options_for_select(
+                    [[t(".select_posted_prompt"), ""]] +
+                    @potential_duplicates.map do |entry|
+                      transaction = entry.entryable
+                      [
+                        "#{entry.name} • #{I18n.l(entry.date, format: :short)} • #{number_to_currency(entry.amount.abs, unit: Money::Currency.new(entry.currency).symbol)}",
+                        entry.id
+                      ]
+                    end
+                  ),
+                  { label: t(".posted_transaction_label") },
+                  { class: "form-field__input border border-secondary rounded-lg px-3 py-2 w-full" }
+                ) %>
+
+            <div class="flex items-center justify-between">
+              <p class="text-xs text-secondary">
+                <%= t(".showing_count", count: @potential_duplicates.count) %>
+              </p>
+              <% if @has_more %>
+                <%= link_to t(".load_more"),
+                            new_transaction_pending_duplicate_merges_path(@transaction.entry, limit: @limit + 20),
+                            class: "text-xs text-link hover:underline" %>
+              <% end %>
+            </div>
+          <% else %>
+            <div class="bg-surface-inset border border-secondary rounded-lg p-4 text-center">
+              <p class="text-secondary"><%= t(".no_candidates") %></p>
+            </div>
+          <% end %>
+        </section>
+
+        <% if @potential_duplicates.any? %>
+          <%= f.submit t(".submit_button"), class: "w-full" %>
+        <% end %>
+      <% end %>
+    </div>
+  <% end %>
+<% end %>
