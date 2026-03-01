@@ -1,0 +1,76 @@
+{{- if .Values.pipelock.enabled }}
+{{- $fwdEnabled := true -}}
+{{- $fwdMaxTunnel := 300 -}}
+{{- $fwdIdleTimeout := 60 -}}
+{{- if .Values.pipelock.forwardProxy -}}
+{{- if hasKey .Values.pipelock.forwardProxy "enabled" -}}
+{{- $fwdEnabled = .Values.pipelock.forwardProxy.enabled -}}
+{{- end -}}
+{{- $fwdMaxTunnel = int (.Values.pipelock.forwardProxy.maxTunnelSeconds | default 300) -}}
+{{- $fwdIdleTimeout = int (.Values.pipelock.forwardProxy.idleTimeoutSeconds | default 60) -}}
+{{- end -}}
+{{- $wsEnabled := false -}}
+{{- $wsMaxMsg := 1048576 -}}
+{{- $wsMaxConns := 128 -}}
+{{- $wsScanText := true -}}
+{{- $wsAllowBinary := false -}}
+{{- $wsForwardCookies := false -}}
+{{- $wsMaxConnSec := 3600 -}}
+{{- $wsIdleTimeout := 300 -}}
+{{- $wsOriginPolicy := "rewrite" -}}
+{{- if .Values.pipelock.websocketProxy -}}
+{{- if hasKey .Values.pipelock.websocketProxy "enabled" -}}
+{{- $wsEnabled = .Values.pipelock.websocketProxy.enabled -}}
+{{- end -}}
+{{- $wsMaxMsg = int (.Values.pipelock.websocketProxy.maxMessageBytes | default 1048576) -}}
+{{- $wsMaxConns = int (.Values.pipelock.websocketProxy.maxConcurrentConnections | default 128) -}}
+{{- if hasKey .Values.pipelock.websocketProxy "scanTextFrames" -}}
+{{- $wsScanText = .Values.pipelock.websocketProxy.scanTextFrames -}}
+{{- end -}}
+{{- if hasKey .Values.pipelock.websocketProxy "allowBinaryFrames" -}}
+{{- $wsAllowBinary = .Values.pipelock.websocketProxy.allowBinaryFrames -}}
+{{- end -}}
+{{- if hasKey .Values.pipelock.websocketProxy "forwardCookies" -}}
+{{- $wsForwardCookies = .Values.pipelock.websocketProxy.forwardCookies -}}
+{{- end -}}
+{{- $wsMaxConnSec = int (.Values.pipelock.websocketProxy.maxConnectionSeconds | default 3600) -}}
+{{- $wsIdleTimeout = int (.Values.pipelock.websocketProxy.idleTimeoutSeconds | default 300) -}}
+{{- $wsOriginPolicy = .Values.pipelock.websocketProxy.originPolicy | default "rewrite" -}}
+{{- end }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "sure.fullname" . }}-pipelock
+  labels:
+    {{- include "sure.labels" . | nindent 4 }}
+data:
+  pipelock.yaml: |
+    forward_proxy:
+      enabled: {{ $fwdEnabled }}
+      max_tunnel_seconds: {{ $fwdMaxTunnel }}
+      idle_timeout_seconds: {{ $fwdIdleTimeout }}
+    websocket_proxy:
+      enabled: {{ $wsEnabled }}
+      max_message_bytes: {{ $wsMaxMsg }}
+      max_concurrent_connections: {{ $wsMaxConns }}
+      scan_text_frames: {{ $wsScanText }}
+      allow_binary_frames: {{ $wsAllowBinary }}
+      forward_cookies: {{ $wsForwardCookies }}
+      strip_compression: true
+      max_connection_seconds: {{ $wsMaxConnSec }}
+      idle_timeout_seconds: {{ $wsIdleTimeout }}
+      origin_policy: {{ $wsOriginPolicy }}
+    dlp:
+      scan_env: true
+    response_scanning:
+      enabled: true
+      action: warn
+    mcp_input_scanning:
+      enabled: true
+      action: block
+      on_parse_error: block
+    mcp_tool_scanning:
+      enabled: true
+      action: warn
+      detect_drift: true
+{{- end }}

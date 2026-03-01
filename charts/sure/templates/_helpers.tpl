@@ -157,3 +157,27 @@ true
     {{- default "redis-password" .Values.redis.passwordKey -}}
   {{- end -}}
 {{- end -}}
+
+{{/* Pipelock image string */}}
+{{- define "sure.pipelockImage" -}}
+{{- $repo := "ghcr.io/luckypipewrench/pipelock" -}}
+{{- $tag := "latest" -}}
+{{- if .Values.pipelock.image -}}
+{{- $repo = .Values.pipelock.image.repository | default $repo -}}
+{{- $tag = .Values.pipelock.image.tag | default $tag -}}
+{{- end -}}
+{{- printf "%s:%s" $repo $tag -}}
+{{- end -}}
+
+{{/* Pipelock MCP upstream URL (auto-compute or explicit override) */}}
+{{- define "sure.pipelockUpstream" -}}
+{{- $upstream := "" -}}
+{{- if .Values.pipelock.mcpProxy -}}
+{{- $upstream = .Values.pipelock.mcpProxy.upstream | default "" -}}
+{{- end -}}
+{{- if $upstream -}}
+{{- $upstream -}}
+{{- else -}}
+{{- printf "http://%s:%d/mcp" (include "sure.fullname" .) (int (.Values.service.port | default 80)) -}}
+{{- end -}}
+{{- end -}}
