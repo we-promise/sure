@@ -89,7 +89,7 @@ class PendingDuplicateMergesControllerTest < ActionDispatch::IntegrationTest
 
     pending_transaction.reload
     metadata = pending_transaction.entryable.extra["potential_posted_match"]
-    
+
     assert_not_nil metadata
     assert_equal posted_transaction.id, metadata["entry_id"]
     assert_equal "manual_match", metadata["reason"]
@@ -187,19 +187,19 @@ class PendingDuplicateMergesControllerTest < ActionDispatch::IntegrationTest
 
   private
 
-  def create_pending_transaction(attributes = {})
-    # Create a transaction with pending metadata
-    transaction = create_transaction(attributes)
-    
-    # Mark it as pending by adding extra metadata
-    transaction.entryable.update!(
-      extra: {
-        "simplefin" => {
-          "pending" => true
+    def create_pending_transaction(attributes = {})
+      # Create a transaction with pending metadata
+      transaction = create_transaction(attributes)
+
+      # Mark it as pending by adding extra metadata
+      transaction.entryable.update!(
+        extra: {
+          "simplefin" => {
+            "pending" => true
+          }
         }
-      }
-    )
-    
-    transaction
-  end
+      )
+
+      transaction
+    end
 end

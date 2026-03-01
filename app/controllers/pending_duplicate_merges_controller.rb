@@ -4,7 +4,7 @@ class PendingDuplicateMergesController < ApplicationController
   def new
     @limit = 10
     # Ensure offset is non-negative to prevent abuse
-    @offset = [(params[:offset] || 0).to_i, 0].max
+    @offset = [ (params[:offset] || 0).to_i, 0 ].max
 
     # Fetch one extra to determine if there are more results
     candidates = @transaction.pending_duplicate_candidates(limit: @limit + 1, offset: @offset).to_a
@@ -25,7 +25,7 @@ class PendingDuplicateMergesController < ApplicationController
 
     # Validate the posted entry is an eligible candidate (same account, currency, not pending)
     posted_entry = find_eligible_posted_entry(merge_params[:posted_entry_id])
-    
+
     unless posted_entry
       redirect_back_or_to transactions_path, alert: "Invalid transaction selected for merge"
       return
@@ -66,7 +66,7 @@ class PendingDuplicateMergesController < ApplicationController
       # Constrain to same account, currency, and ensure it's a posted transaction
       # Use the same logic as pending_duplicate_candidates to ensure consistency
       conditions = Transaction::PENDING_PROVIDERS.map { |provider| "(transactions.extra -> '#{provider}' ->> 'pending')::boolean IS NOT TRUE" }
-      
+
       @transaction.entry.account.entries
         .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
         .where(id: entry_id)
