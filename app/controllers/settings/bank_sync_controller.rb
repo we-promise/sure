@@ -30,6 +30,13 @@ class Settings::BankSyncController < ApplicationController
         path: "https://enablebanking.com",
         target: "_blank",
         rel: "noopener noreferrer"
+      },
+      {
+        name: "Sophtron",
+        description: "US & Canada bank, credit card, investment, loan, insurance, utility, and other connections.",
+        path: "https://www.sophtron.com/",
+        target: "_blank",
+        rel: "noopener noreferrer"
       }
     ]
   end

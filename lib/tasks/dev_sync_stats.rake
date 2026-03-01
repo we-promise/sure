@@ -124,6 +124,7 @@ namespace :dev do
       DevSyncStatsHelpers.generate_fake_stats_for_items(LunchflowItem, "lunchflow")
       DevSyncStatsHelpers.generate_fake_stats_for_items(EnableBankingItem, "enable_banking")
       DevSyncStatsHelpers.generate_fake_stats_for_items(CoinstatsItem, "coinstats")
+      DevSyncStatsHelpers.generate_fake_stats_for_items(SophtronItem, "sophtron")
 
       puts "Done! Refresh your browser to see the sync summaries."
     end
@@ -154,7 +155,7 @@ namespace :dev do
       DevSyncStatsHelpers.generate_fake_stats_for_items(LunchflowItem, "lunchflow", include_issues: true)
       DevSyncStatsHelpers.generate_fake_stats_for_items(EnableBankingItem, "enable_banking", include_issues: true)
       DevSyncStatsHelpers.generate_fake_stats_for_items(CoinstatsItem, "coinstats", include_issues: true)
-
+      DevSyncStatsHelpers.generate_fake_stats_for_items(SophtronItem, "sophtron", include_issues: true)
       puts "Done! Refresh your browser to see the sync summaries with issues."
     end
 
@@ -231,6 +232,27 @@ namespace :dev do
       end
       puts "    Created 2 LunchflowAccounts"
 
+      # Create a fake Sophtron item
+      sophtron_item = family.sophtron_items.create!(
+        name: "Test Sophtron Connection",
+        user_id: "test-user-id-#{SecureRandom.hex(16)}",
+        access_key: "test-access-key-#{SecureRandom.hex(32)}"
+      )
+      puts "  Created SophtronItem: #{sophtron_item.name}"
+
+      # Create fake Sophtron accounts
+      2.times do |i|
+        sophtron_item.sophtron_accounts.create!(
+          name: "Test Sophtron Account #{i + 1}",
+          account_id: "test-sophtron-#{SecureRandom.hex(8)}",
+          customer_id: "test-sophtron-#{SecureRandom.hex(8)}",
+          member_id: "test-sophtron-#{SecureRandom.hex(8)}",
+          currency: "USD",
+          current_balance: rand(1000..50000)
+        )
+      end
+      puts "    Created 2 SophtronAccounts"
+
       # Create a fake CoinStats item
       coinstats_item = family.coinstats_items.create!(
         name: "Test CoinStats Connection",
@@ -288,6 +310,7 @@ namespace :dev do
       DevSyncStatsHelpers.generate_fake_stats_for_items(LunchflowItem, "lunchflow", include_issues: false)
       DevSyncStatsHelpers.generate_fake_stats_for_items(CoinstatsItem, "coinstats", include_issues: true)
       DevSyncStatsHelpers.generate_fake_stats_for_items(EnableBankingItem, "enable_banking", include_issues: false)
+      DevSyncStatsHelpers.generate_fake_stats_for_items(SophtronItem, "sophtron", include_issues: false)
 
       puts "\nDone! Visit /accounts to see the sync summaries."
     end
@@ -308,6 +331,7 @@ namespace :dev do
       count += LunchflowItem.where("name LIKE ?", "Test %").destroy_all.count
       count += CoinstatsItem.where("name LIKE ?", "Test %").destroy_all.count
       count += EnableBankingItem.where("name LIKE ? OR institution_name LIKE ?", "Test %", "Test %").destroy_all.count
+      count += SophtronItem.where("name LIKE ?", "Test %").destroy_all.count
 
       puts "Removed #{count} test provider items. Done!"
     end

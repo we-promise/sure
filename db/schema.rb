@@ -49,8 +49,6 @@ ActiveRecord::Schema[7.2].define(version: 2026_02_18_120001) do
     t.string "institution_name"
     t.string "institution_domain"
     t.text "notes"
-    t.jsonb "holdings_snapshot_data"
-    t.datetime "holdings_snapshot_at"
     t.index ["accountable_id", "accountable_type"], name: "index_accounts_on_accountable_id_and_accountable_type"
     t.index ["accountable_type"], name: "index_accounts_on_accountable_type"
     t.index ["currency"], name: "index_accounts_on_currency"
@@ -662,9 +660,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_02_18_120001) do
     t.string "exchange_operating_mic_col_label"
     t.string "amount_type_strategy", default: "signed_amount"
     t.string "amount_type_inflow_value"
-    t.integer "rows_to_skip", default: 0, null: false
     t.integer "rows_count", default: 0, null: false
     t.string "amount_type_identifier_value"
+    t.integer "rows_to_skip", default: 0, null: false
     t.text "ai_summary"
     t.string "document_type"
     t.jsonb "extracted_data"
@@ -1230,7 +1228,6 @@ ActiveRecord::Schema[7.2].define(version: 2026_02_18_120001) do
   create_table "snaptrade_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "snaptrade_item_id", null: false
     t.string "name"
-    t.string "account_id"
     t.string "snaptrade_account_id"
     t.string "snaptrade_authorization_id"
     t.string "account_number"
@@ -1248,11 +1245,10 @@ ActiveRecord::Schema[7.2].define(version: 2026_02_18_120001) do
     t.jsonb "raw_activities_payload", default: []
     t.datetime "last_holdings_sync"
     t.datetime "last_activities_sync"
+    t.boolean "activities_fetch_pending", default: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.boolean "activities_fetch_pending", default: false
     t.date "sync_start_date"
-    t.index ["account_id"], name: "index_snaptrade_accounts_on_account_id", unique: true
     t.index ["snaptrade_account_id"], name: "index_snaptrade_accounts_on_snaptrade_account_id", unique: true
     t.index ["snaptrade_item_id"], name: "index_snaptrade_accounts_on_snaptrade_item_id"
   end
@@ -1280,6 +1276,51 @@ ActiveRecord::Schema[7.2].define(version: 2026_02_18_120001) do
     t.datetime "updated_at", null: false
     t.index ["family_id"], name: "index_snaptrade_items_on_family_id"
     t.index ["status"], name: "index_snaptrade_items_on_status"
+  end
+
+  create_table "sophtron_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "sophtron_item_id", null: false
+    t.string "name", null: false
+    t.string "account_id", null: false
+    t.string "currency"
+    t.decimal "balance", precision: 19, scale: 4
+    t.decimal "available_balance", precision: 19, scale: 4
+    t.string "account_status"
+    t.string "account_type"
+    t.string "account_sub_type"
+    t.datetime "last_updated"
+    t.jsonb "institution_metadata"
+    t.jsonb "raw_payload"
+    t.jsonb "raw_transactions_payload"
+    t.string "customer_id", null: false
+    t.string "member_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_sophtron_accounts_on_account_id"
+    t.index ["sophtron_item_id"], name: "index_sophtron_accounts_on_sophtron_item_id"
+  end
+
+  create_table "sophtron_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "family_id", null: false
+    t.string "name"
+    t.string "institution_id"
+    t.string "institution_name"
+    t.string "institution_domain"
+    t.string "institution_url"
+    t.string "institution_color"
+    t.string "status", default: "good"
+    t.boolean "scheduled_for_deletion", default: false
+    t.boolean "pending_account_setup", default: false
+    t.datetime "sync_start_date"
+    t.jsonb "raw_payload"
+    t.jsonb "raw_institution_payload"
+    t.string "user_id"
+    t.string "access_key"
+    t.string "base_url"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["family_id"], name: "index_sophtron_items_on_family_id"
+    t.index ["status"], name: "index_sophtron_items_on_status"
   end
 
   create_table "sso_audit_logs", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1390,15 +1431,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_02_18_120001) do
     t.datetime "updated_at", null: false
     t.string "currency"
     t.jsonb "locked_attributes", default: {}
-    t.decimal "realized_gain", precision: 19, scale: 4
-    t.decimal "cost_basis_amount", precision: 19, scale: 4
-    t.string "cost_basis_currency"
-    t.integer "holding_period_days"
-    t.string "realized_gain_confidence"
-    t.string "realized_gain_currency"
     t.string "investment_activity_label"
     t.index ["investment_activity_label"], name: "index_trades_on_investment_activity_label"
-    t.index ["realized_gain"], name: "index_trades_on_realized_gain_not_null", where: "(realized_gain IS NOT NULL)"
     t.index ["security_id"], name: "index_trades_on_security_id"
   end
 
@@ -1562,6 +1596,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_02_18_120001) do
   add_foreign_key "simplefin_items", "families"
   add_foreign_key "snaptrade_accounts", "snaptrade_items"
   add_foreign_key "snaptrade_items", "families"
+  add_foreign_key "sophtron_accounts", "sophtron_items"
+  add_foreign_key "sophtron_items", "families"
   add_foreign_key "sso_audit_logs", "users"
   add_foreign_key "subscriptions", "families"
   add_foreign_key "syncs", "syncs", column: "parent_id"
