@@ -19,6 +19,13 @@ class TransactionCategoriesController < ApplicationController
     transaction.lock_saved_attributes!
     @entry.lock_saved_attributes!
 
+    # Apply rules to the updated transaction
+    ApplyRulesToTransactionService.new(@entry, execution_type: "manual").call
+
+    # Reload to ensure fresh state for turbo stream rendering (rules may have modified the transaction)
+    @entry.reload
+    transaction = @entry.transaction
+
     respond_to do |format|
       format.html { redirect_back_or_to transaction_path(@entry) }
       format.turbo_stream do

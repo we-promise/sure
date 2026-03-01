@@ -335,7 +335,7 @@ class Entry < ApplicationRecord
     #
     # @param bulk_update_params [Hash] The parameters to update
     # @param update_tags [Boolean] Whether to update tags (default: false)
-    def bulk_update!(bulk_update_params, update_tags: false)
+    def bulk_update!(bulk_update_params, update_tags: false, lock_attributes: true)
       bulk_attributes = {
         date: bulk_update_params[:date],
         notes: bulk_update_params[:notes],
@@ -362,11 +362,13 @@ class Entry < ApplicationRecord
           if update_tags && entry.transaction?
             entry.transaction.tag_ids = tag_ids
             entry.transaction.save!
-            entry.entryable.lock_attr!(:tag_ids) if entry.transaction.tags.any?
+            entry.entryable.lock_attr!(:tag_ids) if entry.transaction.tags.any? && lock_attributes
           end
 
-          entry.lock_saved_attributes!
-          entry.mark_user_modified!
+          if lock_attributes
+            entry.lock_saved_attributes!
+            entry.mark_user_modified!
+          end
         end
       end
 

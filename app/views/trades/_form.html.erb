@@ -41,7 +41,8 @@
       <%= form.date_field :date, label: true, value: model.date || Date.current, required: true %>
 
       <% unless %w[buy sell].include?(type) %>
-        <%= form.money_field :amount, label: t(".amount"), value: model.amount, required: true %>
+        <% default_currency = account ? account.currency : Current.family.currency %>
+        <%= form.money_field :amount, label: t(".amount"), value: model.amount, required: true, default_currency: default_currency %>
       <% end %>
 
       <% if %w[deposit withdrawal].include?(type) %>
@@ -50,7 +51,8 @@
 
       <% if %w[buy sell].include?(type) %>
         <%= form.number_field :qty, label: t(".qty"), placeholder: "10", min: 0.000000000000000001, step: "any", required: true %>
-        <%= form.money_field :price, label: t(".price"), step: "any", precision: 10, required: true %>
+        <% default_currency = account ? account.currency : Current.family.currency %>
+        <%= form.money_field :price, label: t(".price"), step: "any", precision: 10, required: true, default_currency: default_currency %>
       <% end %>
     </div>
 
