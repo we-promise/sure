@@ -2,6 +2,7 @@
 ca:
   layouts:
     application:
+      privacy_mode: Alternar mode de privadesa
       nav:
         assistant: Assistent
         budgets: Pressupostos

@@ -2,6 +2,7 @@
 de:
   layouts:
     application:
+      privacy_mode: Datenschutzmodus umschalten
       nav:
         assistant: Assistent
         budgets: Budgets
