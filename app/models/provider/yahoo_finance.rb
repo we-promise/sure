@@ -25,12 +25,13 @@ class Provider::YahooFinance < Provider
 
   # Pool of modern browser user-agents to rotate through
   # Based on https://github.com/ranaroussi/yfinance/pull/2277
+  # UPDATED user-agents string on 2026-02-27 with current versions of browsers (Chrome 145, Firefox 148, Safari 26)
   USER_AGENTS = [
-    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
-    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.2 Safari/605.1.15",
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 Edg/131.0.0.0",
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:133.0) Gecko/20100101 Firefox/133.0"
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 15_7_4) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36 Edg/145.0.0.0",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:148.0) Gecko/20100101 Firefox/148.0"
   ].freeze
 
   def initialize
@@ -39,21 +40,11 @@ class Provider::YahooFinance < Provider
   end
 
   def healthy?
-    begin
-      # Test with a known stable ticker (Apple)
-      response = client.get("#{base_url}/v8/finance/chart/AAPL") do |req|
-        req.params["interval"] = "1d"
-        req.params["range"] = "1d"
-      end
-
-      data = JSON.parse(response.body)
-      result = data.dig("chart", "result")
-      health_status = result.present? && result.any?
-
-      health_status
-    rescue => e
-      false
-    end
+    data = fetch_authenticated_chart("AAPL", { "interval" => "1d", "range" => "1d" })
+    result = data.dig("chart", "result")
+    result.present? && result.any?
+  rescue => e
+    false
   end
 
   def usage
@@ -201,6 +192,9 @@ class Provider::YahooFinance < Provider
           req.params["crumb"] = crumb
         end
         data = JSON.parse(response.body)
+        if data.dig("quoteSummary", "error", "code") == "Unauthorized"
+          raise AuthenticationError, "Yahoo Finance authentication failed after crumb refresh"
+        end
       end
 
       result = data.dig("quoteSummary", "result", 0)
@@ -271,14 +265,13 @@ class Provider::YahooFinance < Provider
       period2 = end_date.end_of_day.to_time.utc.to_i
 
       throttle_request
-      response = client.get("#{base_url}/v8/finance/chart/#{symbol}") do |req|
-        req.params["period1"] = period1
-        req.params["period2"] = period2
-        req.params["interval"] = "1d"
-        req.params["includeAdjustedClose"] = true
-      end
+      data = fetch_authenticated_chart(symbol, {
+        "period1" => period1,
+        "period2" => period2,
+        "interval" => "1d",
+        "includeAdjustedClose" => true
+      })
 
-      data = JSON.parse(response.body)
       chart_data = data.dig("chart", "result", 0)
 
       raise Error, "No chart data found for #{symbol}" unless chart_data
@@ -452,24 +445,48 @@ class Provider::YahooFinance < Provider
       rates
     end
 
+    # Makes a single authenticated GET to /v8/finance/chart/:symbol.
+    # If Yahoo returns a stale-crumb error (200 OK with Unauthorized body),
+    # clears the crumb cache and retries once with fresh credentials.
+    def fetch_authenticated_chart(symbol, params)
+      cookie, crumb = fetch_cookie_and_crumb
+      response = authenticated_client(cookie).get("#{base_url}/v8/finance/chart/#{symbol}") do |req|
+        params.each { |k, v| req.params[k] = v }
+        req.params["crumb"] = crumb
+      end
+      data = JSON.parse(response.body)
+
+      if data.dig("chart", "error", "code") == "Unauthorized"
+        clear_crumb_cache
+        cookie, crumb = fetch_cookie_and_crumb
+        response = authenticated_client(cookie).get("#{base_url}/v8/finance/chart/#{symbol}") do |req|
+          params.each { |k, v| req.params[k] = v }
+          req.params["crumb"] = crumb
+        end
+        data = JSON.parse(response.body)
+        if data.dig("chart", "error", "code") == "Unauthorized"
+          raise AuthenticationError, "Yahoo Finance authentication failed after crumb refresh"
+        end
+      end
+
+      data
+    end
+
     def fetch_chart_data(symbol, start_date, end_date, &block)
       period1 = start_date.to_time.utc.to_i
       period2 = end_date.end_of_day.to_time.utc.to_i
 
       begin
         throttle_request
-        response = client.get("#{base_url}/v8/finance/chart/#{symbol}") do |req|
-          req.params["period1"] = period1
-          req.params["period2"] = period2
-          req.params["interval"] = "1d"
-          req.params["includeAdjustedClose"] = true
-        end
-
-        data = JSON.parse(response.body)
+        data = fetch_authenticated_chart(symbol, {
+          "period1" => period1,
+          "period2" => period2,
+          "interval" => "1d",
+          "includeAdjustedClose" => true
+        })
 
         # Check for Yahoo Finance errors
         if data.dig("chart", "error")
-          error_msg = data.dig("chart", "error", "description") || "Unknown Yahoo Finance error"
           return nil
         end
 
@@ -489,7 +506,7 @@ class Provider::YahooFinance < Provider
         end
 
         results.sort_by(&:date)
-      rescue Faraday::Error => e
+      rescue Faraday::Error, JSON::ParserError => e
         nil
       end
     end
