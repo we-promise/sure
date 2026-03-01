@@ -7,9 +7,7 @@ en:
       warning_description: Use this to manually merge a pending transaction with its posted version. This will delete the pending transaction and keep only the posted one.
       pending_transaction: Pending Transaction
       select_posted: Select Posted Transaction to Merge With
-      showing_count:
-        one: "Showing most recent posted transaction"
-        other: "Showing %{count} most recent posted transactions"
+      showing_range: "Showing %{start} - %{end}"
       previous: "← Previous 10"
       next: "Next 10 →"
       no_candidates: No posted transactions found in this account.

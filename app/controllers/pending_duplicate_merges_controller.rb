@@ -10,6 +10,10 @@ class PendingDuplicateMergesController < ApplicationController
     candidates = @transaction.pending_duplicate_candidates(limit: @limit + 1, offset: @offset).to_a
     @has_more = candidates.size > @limit
     @potential_duplicates = candidates.first(@limit)
+
+    # Calculate range for display (e.g., "1-10", "11-20")
+    @range_start = @offset + 1
+    @range_end = @offset + @potential_duplicates.count
   end
 
   def create

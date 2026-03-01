@@ -62,7 +62,7 @@
 
               <div class="flex items-center justify-between mt-3">
                 <p class="text-xs text-secondary">
-                  <%= t(".showing_count", count: @potential_duplicates.count) %>
+                  <%= t(".showing_range", start: @range_start, end: @range_end) %>
                 </p>
                 <div class="flex gap-2">
                   <% if @offset > 0 %>
