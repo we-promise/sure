@@ -2,12 +2,14 @@ class PendingDuplicateMergesController < ApplicationController
   before_action :set_transaction
 
   def new
-    @potential_duplicates = @transaction.pending_duplicate_candidates(limit: @limit)
-    # Check if there are more transactions available
-    @has_more = @transaction.pending_duplicate_candidates(limit: @limit + 1).count > @limit
     @limit = 10
     # Ensure offset is non-negative to prevent abuse
     @offset = [(params[:offset] || 0).to_i, 0].max
+
+    # Fetch one extra to determine if there are more results
+    candidates = @transaction.pending_duplicate_candidates(limit: @limit + 1, offset: @offset).to_a
+    @has_more = candidates.size > @limit
+    @potential_duplicates = candidates.first(@limit)
   end
 
   def create
