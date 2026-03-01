@@ -1,6 +1,27 @@
 ---
 en:
   import:
+    qif_category_selections:
+      show:
+        title: "Select categories & tags"
+        description: "Choose which categories and tags from your QIF file to bring into Sure. Deselected items will be removed from those transactions."
+        categories_heading: Categories
+        categories_found:
+          one: "1 category found"
+          other: "%{count} categories found"
+        category_name_col: Category name
+        transactions_col: Transactions
+        tags_heading: Tags
+        tags_found:
+          one: "1 tag found"
+          other: "%{count} tags found"
+        tag_name_col: Tag name
+        txn_count:
+          one: "1 txn"
+          other: "%{count} txns"
+        empty_state_primary: No categories or tags were found in this QIF file.
+        empty_state_secondary: All transactions will be imported without categories or tags.
+        submit: Continue to review
     cleans:
       show:
         description: Edit your data in the table below.  Red cells are invalid.
@@ -59,6 +80,15 @@ en:
         tag_mapping_title: Assign your tags
     uploads:
       show:
+        qif_title: Upload QIF file
+        qif_description: Select the account this QIF file belongs to, then upload your .qif export from Quicken.
+        qif_account_label: Account
+        qif_account_placeholder: Select an account…
+        qif_file_prompt: to add your QIF file here
+        qif_file_hint: .qif files only
+        qif_submit: Upload QIF
+        browse: Browse
+        csv_file_prompt: to add your CSV file here
         description: Paste or upload your CSV file below.  Please review the instructions
           in the table below before beginning.
         instructions_1: Below is an example CSV with columns available for import.
@@ -69,6 +99,13 @@ en:
         instructions_5: No commas, no currency symbols, and no parentheses in numbers.
         title: Import your data
   imports:
+    steps:
+      upload: Upload
+      configure: Configure
+      clean: Clean
+      map: Map
+      confirm: Confirm
+      select: Select
     index:
       title: Imports
       new: New Import
@@ -102,6 +139,7 @@ en:
       import_portfolio: Import investments
       import_rules: Import rules
       import_transactions: Import transactions
+      import_qif: Import from Quicken (QIF)
       import_file: Import document
       import_file_description: AI-powered analysis for PDFs and searchable upload for other supported files
       requires_account: Import accounts first to unlock this option.
