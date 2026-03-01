@@ -38,22 +38,19 @@ class Transaction < ApplicationRecord
   # Internal movement labels that should be excluded from budget (auto cash management)
   INTERNAL_MOVEMENT_LABELS = [ "Transfer", "Sweep In", "Sweep Out", "Exchange" ].freeze
 
+  # Providers that support pending transaction flags
+  PENDING_PROVIDERS = %w[simplefin plaid lunchflow].freeze
+
   # Pending transaction scopes - filter based on provider pending flags in extra JSONB
   # Works with any provider that stores pending status in extra["provider_name"]["pending"]
   scope :pending, -> {
-    where(<<~SQL.squish)
-      (transactions.extra -> 'simplefin' ->> 'pending')::boolean = true
-      OR (transactions.extra -> 'plaid' ->> 'pending')::boolean = true
-      OR (transactions.extra -> 'lunchflow' ->> 'pending')::boolean = true
-    SQL
+    conditions = PENDING_PROVIDERS.map { |provider| "(transactions.extra -> '#{provider}' ->> 'pending')::boolean = true" }
+    where(conditions.join(" OR "))
   }
 
   scope :excluding_pending, -> {
-    where(<<~SQL.squish)
-      (transactions.extra -> 'simplefin' ->> 'pending')::boolean IS DISTINCT FROM true
-      AND (transactions.extra -> 'plaid' ->> 'pending')::boolean IS DISTINCT FROM true
-      AND (transactions.extra -> 'lunchflow' ->> 'pending')::boolean IS DISTINCT FROM true
-    SQL
+    conditions = PENDING_PROVIDERS.map { |provider| "(transactions.extra -> '#{provider}' ->> 'pending')::boolean IS DISTINCT FROM true" }
+    where(conditions.join(" AND "))
   }
 
   # Family-scoped query for Enrichable#clear_ai_cache
@@ -78,9 +75,9 @@ class Transaction < ApplicationRecord
 
   def pending?
     extra_data = extra.is_a?(Hash) ? extra : {}
-    ActiveModel::Type::Boolean.new.cast(extra_data.dig("simplefin", "pending")) ||
-      ActiveModel::Type::Boolean.new.cast(extra_data.dig("plaid", "pending")) ||
-      ActiveModel::Type::Boolean.new.cast(extra_data.dig("lunchflow", "pending"))
+    PENDING_PROVIDERS.any? do |provider|
+      ActiveModel::Type::Boolean.new.cast(extra_data.dig(provider, "pending"))
+    end
   rescue
     false
   end
