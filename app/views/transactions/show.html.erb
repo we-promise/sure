@@ -78,7 +78,8 @@
                       Current.family.categories.alphabetically,
                     :id, :name,
                     { label: t(".category_label"),
-                      class: "text-subdued", include_blank: t(".uncategorized") },
+                      class: "text-subdued", include_blank: t(".uncategorized"),
+                      variant: :badge, searchable: true },
                     "data-auto-submit-form-target": "auto" %>
             <% end %>
           <% end %>
@@ -104,7 +105,7 @@
                   :id, :name,
                   { include_blank: t(".none"),
                     label: t(".merchant_label"),
-                    class: "text-subdued" },
+                    class: "text-subdued", variant: :logo, searchable: true },
                   "data-auto-submit-form-target": "auto" %>
             <%= ef.select :tag_ids,
                   Current.family.tags.alphabetically.pluck(:name, :id),
