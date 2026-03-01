@@ -61,7 +61,7 @@ class MercuryItem < ApplicationRecord
     return [] if mercury_accounts.empty?
 
     results = []
-    mercury_accounts.joins(:account).merge(Account.visible).each do |mercury_account|
+    mercury_accounts.joins(:account).merge(Account.sync_enabled).each do |mercury_account|
       begin
         result = MercuryAccount::Processor.new(mercury_account).process
         results << { mercury_account_id: mercury_account.id, success: true, result: result }
@@ -80,7 +80,7 @@ class MercuryItem < ApplicationRecord
     return [] if accounts.empty?
 
     results = []
-    accounts.visible.each do |account|
+    accounts.sync_enabled.each do |account|
       begin
         account.sync_later(
           parent_sync: parent_sync,
@@ -119,11 +119,11 @@ class MercuryItem < ApplicationRecord
     unlinked_count = unlinked_accounts_count
 
     if total_accounts == 0
-      "No accounts found"
+      I18n.t("mercury_items.mercury_item.sync_status.no_accounts")
     elsif unlinked_count == 0
-      "#{linked_count} #{'account'.pluralize(linked_count)} synced"
+      I18n.t("mercury_items.mercury_item.sync_status.all_synced", count: linked_count)
     else
-      "#{linked_count} synced, #{unlinked_count} need setup"
+      I18n.t("mercury_items.mercury_item.sync_status.partial_sync", linked_count: linked_count, unlinked_count: unlinked_count)
     end
   end
 

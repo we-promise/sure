@@ -35,8 +35,16 @@ zh-CN:
       balance: 当前余额
       name_label: 账户名称
       name_placeholder: 例如：储蓄账户
+      exclude_from_reports_label: 从报告和指标中排除
+      exclude_from_reports_description: 被排除的账户将不显示在报告和净资产计算中。
+    accountable_group:
+      excluded_badge: （已排除）
     index:
       accounts: 账户管理
+      account_groups:
+        total: 总计
+        active: 活跃
+        excluded: 已排除
       manual_accounts:
         other_accounts: 其他账户
       new_account: 新建账户

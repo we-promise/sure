@@ -24,7 +24,7 @@ class BalanceSheet::AccountTotals
     end
 
     def visible_accounts
-      @visible_accounts ||= family.accounts.visible.with_attached_logo
+      @visible_accounts ||= family.accounts.sidebar_visible.with_attached_logo
     end
 
     # Wraps each account in an AccountRow with its converted balance and sync status.

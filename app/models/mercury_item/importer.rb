@@ -78,11 +78,11 @@ class MercuryItem::Importer
 
     Rails.logger.info "MercuryItem::Importer - Updated #{accounts_updated} accounts, created #{accounts_created} new (#{accounts_failed} failed)"
 
-    # Step 3: Fetch transactions only for linked accounts with active status
+    # Step 3: Fetch transactions only for linked accounts with sync enabled
     transactions_imported = 0
     transactions_failed = 0
 
-    mercury_item.mercury_accounts.joins(:account).merge(Account.visible).each do |mercury_account|
+    mercury_item.mercury_accounts.joins(:account).merge(Account.sync_enabled).each do |mercury_account|
       begin
         result = fetch_and_store_transactions(mercury_account)
         if result[:success]

@@ -14,6 +14,7 @@ class Transaction::Search
   attribute :categories, array: true
   attribute :merchants, array: true
   attribute :tags, array: true
+  # Determines whether transactions from excluded accounts should be filtered out (true by default).
   attribute :active_accounts_only, :boolean, default: true
 
   attr_reader :family
@@ -96,9 +97,13 @@ class Transaction::Search
   private
     Totals = Data.define(:count, :income_money, :expense_money)
 
+    # Applies a filter to only include transactions from active, non-excluded accounts,
+    # if the active_accounts_only_filter flag is enabled.
     def apply_active_accounts_filter(query, active_accounts_only_filter)
+      query = query.where(accounts: { status: [ "draft", "active" ] })
+      
       if active_accounts_only_filter
-        query.where(accounts: { status: [ "draft", "active" ] })
+        query.where(accounts: { excluded: false })
       else
         query
       end
@@ -147,9 +152,18 @@ class Transaction::Search
 
     def apply_type_filter(query, types)
       return query unless types.present?
-      return query if types.sort == [ "expense", "income", "transfer" ]
 
-      case types.sort
+      normalized_types = types.reject(&:blank?).uniq
+      return query if normalized_types.blank?
+      
+      allowed = %w[expense income transfer]
+      invalid = normalized_types - allowed
+      return query.none if invalid.any?
+
+      valid_types = normalized_types & allowed
+      return query if valid_types.sort == allowed.sort
+
+      case valid_types.sort
       when [ "transfer" ]
         query.where(kind: Transaction::TRANSFER_KINDS)
       when [ "expense" ]
@@ -173,13 +187,25 @@ class Transaction::Search
     end
 
     def apply_tag_filter(query, tags)
-      return query unless tags.present?
-      query.joins(:tags).where(tags: { name: tags })
+      normalized_tags = Array(tags).map(&:to_s).map(&:strip).reject(&:blank?).uniq
+      return query unless normalized_tags.present?
+      # Use a subquery to prevent duplication when multiple tags match
+      subquery = query.reselect(:id).joins(:tags).where(tags: { name: normalized_tags }).distinct
+      query.where(id: subquery)
     end
 
     def apply_status_filter(query, statuses)
       return query unless statuses.present?
-      return query if statuses.uniq.sort == [ "confirmed", "pending" ] # Both selected = no filter
+
+      normalized_statuses = statuses.reject(&:blank?).uniq
+      return query if normalized_statuses.blank?
+      
+      allowed = %w[confirmed pending]
+      invalid = normalized_statuses - allowed
+      return query.none if invalid.any?
+
+      valid_statuses = normalized_statuses & allowed
+      return query if valid_statuses.sort == allowed.sort # Both selected = no filter
 
       pending_condition = <<~SQL.squish
         (transactions.extra -> 'simplefin' ->> 'pending')::boolean = true
@@ -193,7 +219,7 @@ class Transaction::Search
         AND (transactions.extra -> 'lunchflow' ->> 'pending')::boolean IS DISTINCT FROM true
       SQL
 
-      case statuses.sort
+      case valid_statuses.sort
       when [ "pending" ]
         query.where(pending_condition)
       when [ "confirmed" ]

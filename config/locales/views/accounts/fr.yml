@@ -28,8 +28,16 @@ fr:
       institution_domain_placeholder: ex., banquepopulaire.fr
       notes_label: Notes
       notes_placeholder: Stockez des informations supplémentaires comme les numéros de compte, codes de tri, IBAN, numéros de routage, etc.
+      exclude_from_reports_label: Exclure des rapports et métriques
+      exclude_from_reports_description: Les comptes exclus sont masqués dans les rapports et les calculs de valeur nette.
+    accountable_group:
+      excluded_badge: "(Exclu)"
     index:
       accounts: Comptes
+      account_groups:
+        total: Total
+        active: Actif
+        excluded: Exclu
       manual_accounts:
         other_accounts: Autres comptes
       new_account: Nouveau compte

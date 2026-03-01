@@ -17,8 +17,16 @@ nb:
       balance: Nåværende balanse
       name_label: Kontonavn
       name_placeholder: Eksempel på kontonavn
+      exclude_from_reports_label: Ekskluder fra rapporter og målinger
+      exclude_from_reports_description: Ekskluderte kontoer er skjult i rapporter og nettoformueberegninger.
+    accountable_group:
+      excluded_badge: "(Ekskludert)"
     index:
       accounts: Kontoer
+      account_groups:
+        total: Totalt
+        active: Aktiv
+        excluded: Ekskludert
       manual_accounts:
         other_accounts: Andre kontoer
       new_account: Ny konto

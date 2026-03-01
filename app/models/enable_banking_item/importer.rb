@@ -61,8 +61,9 @@ class EnableBankingItem::Importer
           # For string UIDs, we don't have account data to update - skip the import_account call
           # The account data will be fetched via balances/transactions endpoints
           if account_data.is_a?(Hash)
-            import_account(account_data)
-            accounts_updated += 1
+            if import_account(account_data)
+              accounts_updated += 1
+            end
           end
         rescue => e
           accounts_failed += 1
@@ -75,7 +76,7 @@ class EnableBankingItem::Importer
     transactions_imported = 0
     transactions_failed = 0
 
-    linked_accounts_query = enable_banking_item.enable_banking_accounts.joins(:account_provider).joins(:account).merge(Account.visible)
+    linked_accounts_query = enable_banking_item.enable_banking_accounts.joins(:account_provider).joins(:account).merge(Account.sync_enabled)
 
     linked_accounts_query.each do |enable_banking_account|
       begin

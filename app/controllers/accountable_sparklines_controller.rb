@@ -1,6 +1,18 @@
 class AccountableSparklinesController < ApplicationController
   def show
-    @accountable = Accountable.from_type(params[:accountable_type]&.classify)
+    @accountable = accountable
+
+    if @accountable.nil?
+      param_key = params[:accountable_type]&.underscore || "accountable"
+      render html: helpers.turbo_frame_tag("#{param_key}_sparkline")
+      return
+    end
+
+    # Don't render if there are no visible accounts for this type.
+    if account_ids.empty?
+      render html: helpers.turbo_frame_tag("#{@accountable.model_name.param_key}_sparkline")
+      return
+    end
 
     etag_key = cache_key
 
@@ -28,14 +40,14 @@ class AccountableSparklinesController < ApplicationController
     end
 
     def accountable
-      Accountable.from_type(params[:accountable_type]&.classify)
+      @accountable ||= Accountable.from_type(params[:accountable_type]&.classify)
     end
 
     def account_ids
-      family.accounts.visible.where(accountable_type: accountable.name).pluck(:id)
+      @account_ids ||= family.accounts.visible.where(accountable_type: accountable.name).pluck(:id)
     end
 
     def cache_key
-      family.build_cache_key("#{@accountable.name}_sparkline", invalidate_on_data_updates: true)
+      family.build_cache_key("#{accountable.name}_sparkline", invalidate_on_data_updates: true)
     end
 end

@@ -28,8 +28,16 @@ nl:
       institution_domain_placeholder: bijv. chase.com
       notes_label: Notities
       notes_placeholder: Sla aanvullende informatie op zoals rekeningnummers, sorteer codes, IBAN, routenummers, enz.
+      exclude_from_reports_label: Uitsluiten van rapporten en statistieken
+      exclude_from_reports_description: Uitgesloten accounts worden verborgen in rapporten en nettowaardeberekeningen.
+    accountable_group:
+      excluded_badge: "(Uitgesloten)"
     index:
       accounts: Accounts
+      account_groups:
+        total: Totaal
+        active: Actief
+        excluded: Uitgesloten
       manual_accounts:
         other_accounts: Andere accounts
       new_account: Nieuw account

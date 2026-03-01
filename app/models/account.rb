@@ -1,6 +1,8 @@
 class Account < ApplicationRecord
   include AASM, Syncable, Monetizable, Chartable, Linkable, Enrichable, Anchorable, Reconcileable, TaxTreatable
 
+  after_save :invalidate_family_caches, if: :saved_change_to_excluded?
+
   validates :name, :balance, :currency, presence: true
 
   belongs_to :family
@@ -18,7 +20,11 @@ class Account < ApplicationRecord
 
   enum :classification, { asset: "asset", liability: "liability" }, validate: { allow_nil: true }
 
-  scope :visible, -> { where(status: [ "draft", "active" ]) }
+  VISIBLE_STATUSES = %w[draft active].freeze
+
+  scope :visible, -> { where(status: VISIBLE_STATUSES, excluded: false) }
+  scope :sidebar_visible, -> { where(status: VISIBLE_STATUSES) }
+  scope :sync_enabled, -> { where(status: VISIBLE_STATUSES) }
   scope :assets, -> { where(classification: "asset") }
   scope :liabilities, -> { where(classification: "liability") }
   scope :alphabetically, -> { order(:name) }
@@ -27,6 +33,8 @@ class Account < ApplicationRecord
       .where(account_providers: { id: nil })
       .where(plaid_account_id: nil, simplefin_account_id: nil)
   }
+  scope :excluded, -> { where(excluded: true) }
+  scope :not_excluded, -> { where(excluded: false) }
 
   scope :visible_manual, -> {
     visible.manual
@@ -325,4 +333,10 @@ class Account < ApplicationRecord
       raise "Unknown account type: #{accountable_type}"
     end
   end
+
+  private
+    def invalidate_family_caches
+      top_entry_id = entries.order(updated_at: :desc).limit(1).pluck(:id).first
+      entries.where(id: top_entry_id).touch_all if top_entry_id
+    end
 end
