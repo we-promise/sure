@@ -120,7 +120,14 @@ class ExchangeRate::Importer
         if provider_response.success?
           provider_response.data.index_by(&:date)
         else
-          message = "#{exchange_rate_provider.class.name} could not fetch exchange rate pair from: #{from} to: #{to} between: #{effective_start_date} and: #{Date.current}.  Provider error: #{provider_response.error.message}"
+          error = provider_response.error
+
+          # If this is a rate limit error, re-raise it so the job can be retried
+          if error.is_a?(Provider::TwelveData::RateLimitError)
+            raise error
+          end
+
+          message = "#{exchange_rate_provider.class.name} could not fetch exchange rate pair from: #{from} to: #{to} between: #{effective_start_date} and: #{Date.current}.  Provider error: #{error.message}"
           Rails.logger.warn(message)
           Sentry.capture_exception(MissingExchangeRateError.new(message), level: :warning)
           {}
