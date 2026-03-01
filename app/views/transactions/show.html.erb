@@ -74,12 +74,15 @@
                     disable_currency: @entry.linked? %>
             </div>
             <%= f.fields_for :entryable do |ef| %>
-              <%= ef.collection_select :category_id,
-                      Current.family.categories.alphabetically,
-                    :id, :name,
-                    { label: t(".category_label"),
-                      class: "text-subdued", include_blank: t(".uncategorized") },
-                    "data-auto-submit-form-target": "auto" %>
+              <div class="form-field combobox" data-controller="combobox-dialog">
+                <%= ef.combobox :category_id,
+                                sorted_category_options(Current.family.categories.alphabetically),
+                                render_in: { partial: "categories/combobox_category" },
+                                label: t(".category_label"),
+                                placeholder: t(".uncategorized"),
+                                open_on_focus: true,
+                                "data-auto-submit-form-target": "auto" %>
+              </div>
             <% end %>
           <% end %>
         <% end %>

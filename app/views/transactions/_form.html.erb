@@ -24,7 +24,14 @@
     <%= f.money_field :amount, label: t(".amount"), required: true %>
     <%= f.fields_for :entryable do |ef| %>
       <% categories = params[:nature] == "inflow" ? income_categories : expense_categories %>
-      <%= ef.collection_select :category_id, categories, :id, :name, { prompt: t(".category_prompt"), label: t(".category") } %>
+      <div class="form-field combobox" data-controller="combobox-dialog">
+        <%= ef.combobox :category_id,
+                        sorted_category_options(categories),
+                        render_in: { partial: "categories/combobox_category" },
+                        label: t(".category"),
+                        placeholder: t(".category_prompt"),
+                        open_on_focus: true %>
+      </div>
     <% end %>
     <%= f.date_field :date, label: t(".date"), required: true, min: Entry.min_supported_date, max: Date.current, value: Date.current %>
   </section>
