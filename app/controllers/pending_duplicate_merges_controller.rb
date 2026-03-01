@@ -15,7 +15,13 @@ class PendingDuplicateMergesController < ApplicationController
       return
     end
 
-    posted_entry = Current.family.entries.find(merge_params[:posted_entry_id])
+    # Validate the posted entry is an eligible candidate (same account, currency, not pending)
+    posted_entry = find_eligible_posted_entry(merge_params[:posted_entry_id])
+    
+    unless posted_entry
+      redirect_back_or_to transactions_path, alert: "Invalid transaction selected for merge"
+      return
+    end
 
     # Store the merge suggestion and immediately execute it
     @transaction.update!(
@@ -46,6 +52,20 @@ class PendingDuplicateMergesController < ApplicationController
       unless @transaction.is_a?(Transaction) && @transaction.pending?
         redirect_to transactions_path, alert: "This feature is only available for pending transactions"
       end
+    end
+
+    def find_eligible_posted_entry(entry_id)
+      # Constrain to same account, currency, and ensure it's a posted transaction
+      # Use the same logic as pending_duplicate_candidates to ensure consistency
+      conditions = Transaction::PENDING_PROVIDERS.map { |provider| "(transactions.extra -> '#{provider}' ->> 'pending')::boolean IS NOT TRUE" }
+      
+      @transaction.entry.account.entries
+        .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
+        .where(id: entry_id)
+        .where(currency: @transaction.entry.currency)
+        .where.not(id: @transaction.entry.id)
+        .where(conditions.join(" AND "))
+        .first
     end
 
     def merge_params

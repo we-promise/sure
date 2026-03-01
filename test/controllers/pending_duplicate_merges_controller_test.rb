@@ -122,6 +122,69 @@ class PendingDuplicateMergesControllerTest < ActionDispatch::IntegrationTest
     assert_not_includes candidates.map(&:id), different_currency_transaction.id
   end
 
+  test "create rejects merge with pending transaction" do
+    pending_transaction = create_pending_transaction(amount: -50, account: @account)
+    another_pending = create_pending_transaction(amount: -50, account: @account)
+
+    assert_no_difference "Entry.count" do
+      post transaction_pending_duplicate_merges_path(pending_transaction), params: {
+        pending_duplicate_merges: {
+          posted_entry_id: another_pending.id
+        }
+      }
+    end
+
+    assert_redirected_to transactions_path
+    assert_equal "Invalid transaction selected for merge", flash[:alert]
+  end
+
+  test "create rejects merge with transaction from different account" do
+    pending_transaction = create_pending_transaction(amount: -50, account: @account)
+    different_account_transaction = create_transaction(amount: -50, account: accounts(:investment))
+
+    assert_no_difference "Entry.count" do
+      post transaction_pending_duplicate_merges_path(pending_transaction), params: {
+        pending_duplicate_merges: {
+          posted_entry_id: different_account_transaction.id
+        }
+      }
+    end
+
+    assert_redirected_to transactions_path
+    assert_equal "Invalid transaction selected for merge", flash[:alert]
+  end
+
+  test "create rejects merge with transaction in different currency" do
+    pending_transaction = create_pending_transaction(amount: -50, account: @account, currency: "USD")
+    different_currency_transaction = create_transaction(amount: -50, account: @account, currency: "EUR")
+
+    assert_no_difference "Entry.count" do
+      post transaction_pending_duplicate_merges_path(pending_transaction), params: {
+        pending_duplicate_merges: {
+          posted_entry_id: different_currency_transaction.id
+        }
+      }
+    end
+
+    assert_redirected_to transactions_path
+    assert_equal "Invalid transaction selected for merge", flash[:alert]
+  end
+
+  test "create rejects merge with invalid entry id" do
+    pending_transaction = create_pending_transaction(amount: -50, account: @account)
+
+    assert_no_difference "Entry.count" do
+      post transaction_pending_duplicate_merges_path(pending_transaction), params: {
+        pending_duplicate_merges: {
+          posted_entry_id: 999999
+        }
+      }
+    end
+
+    assert_redirected_to transactions_path
+    assert_equal "Invalid transaction selected for merge", flash[:alert]
+  end
+
   private
 
   def create_pending_transaction(attributes = {})
