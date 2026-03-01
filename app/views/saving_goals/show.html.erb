@@ -1,0 +1,211 @@
+<div class="max-w-3xl mx-auto space-y-6">
+  <!-- Header -->
+  <div class="flex items-start justify-between gap-4">
+    <%= link_to safe_back_path(fallback: saving_goals_path), class: "p-2 -ml-2 text-subdued hover:text-primary transition-colors" do %>
+      <%= icon "arrow-left", class: "w-6 h-6" %>
+    <% end %>
+
+    <div class="flex-1">
+      <h1 class="text-2xl font-bold text-primary mb-1"><%= @saving_goal.name %></h1>
+      <div class="flex items-center gap-2 text-sm text-secondary">
+        <% if @saving_goal.target_date %>
+          <span><%= t(".target_date", date: l(@saving_goal.target_date, format: :long)) %></span>
+          <span>•</span>
+        <% end %>
+        <span class="<%= @saving_goal.active? ? (@saving_goal.on_track? ? "text-success" : "text-warning") : "text-secondary" %>">
+          <%= t("saving_goals.status.#{@saving_goal.status}") %>
+        </span>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-1">
+      <%= render DS::Link.new(
+        variant: :icon,
+        icon: "pencil",
+        href: edit_saving_goal_path(@saving_goal),
+        title: t("common.edit")
+      ) %>
+
+      <% if @saving_goal.active? %>
+        <%= render DS::Button.new(
+          variant: :icon,
+          icon: "pause",
+          href: pause_saving_goal_path(@saving_goal),
+          method: :post,
+          title: t(".pause")
+        ) %>
+        <%= render DS::Button.new(
+          variant: :icon,
+          icon: "check",
+          href: complete_saving_goal_path(@saving_goal),
+          method: :post,
+          class: "hover:bg-success/10 hover:text-success",
+          title: t(".complete")
+        ) %>
+      <% elsif @saving_goal.paused? %>
+        <%= render DS::Button.new(
+          variant: :icon,
+          icon: "play",
+          href: resume_saving_goal_path(@saving_goal),
+          method: :post,
+          title: t(".resume")
+        ) %>
+      <% end %>
+
+      <%= render DS::Button.new(
+        variant: :icon,
+        icon: "trash",
+        href: saving_goal_path(@saving_goal),
+        method: :delete,
+        confirm: CustomConfirm.for_resource_deletion(t("resources.saving_goal", default: "saving goal")),
+        title: t("common.delete"),
+        class: "hover:text-destructive hover:bg-destructive/10"
+      ) %>
+    </div>
+  </div>
+
+  <!-- Main Card -->
+  <div class="bg-container rounded-xl shadow-border-xs p-6 md:p-8">
+    <div class="flex flex-col md:flex-row items-center gap-8 md:gap-12">
+      <div class="shrink-0">
+        <%
+            color = case @saving_goal.status
+                    when "completed" then "green"
+                    when "active" then "green"
+                    else "zinc"
+                    end
+        %>
+        <%= render "progress_ring", percent: @saving_goal.progress_percent, size: 160, stroke_width: 12, color: color %>
+      </div>
+
+      <div class="flex-1 text-center md:text-left space-y-4">
+        <div>
+          <p class="text-sm text-secondary mb-1"><%= t(".current_balance") %></p>
+          <p class="text-4xl font-bold text-primary"><%= format_money(@saving_goal.current_amount_money) %></p>
+          <p class="text-sm text-subdued mt-1">
+             <%= t(".of_target", amount: format_money(@saving_goal.target_amount_money)) %>
+          </p>
+        </div>
+
+        <% if @saving_goal.active? && @saving_goal.target_date %>
+          <div class="p-4 bg-surface-inset rounded-lg">
+            <% if @saving_goal.on_track? %>
+               <div class="flex items-center gap-2 text-success font-medium mb-1">
+                 <%= icon "check-circle", class: "w-5 h-5", variant: :solid %>
+                 <%= t(".on_track") %>
+               </div>
+               <p class="text-sm text-secondary">
+                 <%= t(".on_track_description") %>
+               </p>
+            <% else %>
+               <div class="flex items-center gap-2 text-warning font-medium mb-1">
+                 <%= icon "exclamation-circle", class: "w-5 h-5", variant: :solid %>
+                 <%= t(".off_track") %>
+               </div>
+               <p class="text-sm text-secondary">
+                 <%= t(".off_track_description") %>
+               </p>
+            <% end %>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+
+  <% if @saving_goal.notes.present? %>
+    <div class="bg-container rounded-xl shadow-border-xs p-6">
+      <h3 class="text-sm font-medium text-primary mb-2"><%= t("saving_goals.form.notes_label") %></h3>
+      <div class="prose prose-sm text-secondary">
+        <%= simple_format @saving_goal.notes %>
+      </div>
+    </div>
+  <% end %>
+
+  <%# Monthly Effort Section %>
+  <% if @saving_goal.active? && @saving_goal.target_date && @saving_goal.monthly_target %>
+    <div class="bg-container rounded-xl shadow-border-xs p-6">
+      <div class="flex items-center justify-between">
+        <div>
+          <h3 class="text-sm font-medium text-primary mb-1"><%= t(".monthly_effort") %></h3>
+          <p class="text-2xl font-bold text-primary">
+            <%= t(".save_per_month", amount: format_money(Money.new(@saving_goal.monthly_target, @saving_goal.currency))) %>
+          </p>
+          <p class="text-sm text-secondary">
+            <%= t(".for_months", count: @saving_goal.months_remaining) %>
+          </p>
+        </div>
+        <%= render DS::Link.new(
+          text: t(".allocate"),
+          href: new_saving_goal_saving_contribution_path(@saving_goal),
+          variant: "primary",
+          size: "md"
+        ) %>
+      </div>
+    </div>
+  <% end %>
+
+  <%# Contribution History Section %>
+  <div class="bg-container rounded-xl shadow-border-xs p-6">
+    <h3 class="text-sm font-medium text-primary mb-4"><%= t(".contribution_history") %></h3>
+
+    <% contributions = @saving_goal.saving_contributions.order(month: :desc) %>
+    <% if contributions.any? %>
+      <div class="space-y-3">
+        <% contributions.each do |contribution| %>
+          <div class="flex items-center justify-between p-3 bg-surface-inset rounded-lg">
+            <div class="flex items-center gap-3">
+              <div class="w-8 h-8 rounded-full bg-success/10 flex items-center justify-center">
+                <%= icon "plus", class: "w-4 h-4 text-success", variant: :solid %>
+              </div>
+              <div>
+                <p class="font-medium text-primary">+<%= format_money(contribution.amount_money) %></p>
+                <p class="text-xs text-subdued"><%= l(contribution.month, format: :long) %></p>
+              </div>
+            </div>
+            <div class="flex items-center gap-3">
+              <% badge_color = case contribution.source
+                 when "auto" then "bg-blue/10 text-blue-500"
+                 when "initial_balance" then "bg-violet/10 text-violet-500"
+                 else "bg-gray/10 text-subdued"
+                 end %>
+              <span class="px-2 py-1 text-xs font-medium rounded-full <%= badge_color %>">
+                <%= t(".#{contribution.source}_source") %>
+              </span>
+
+              <%= render DS::Button.new(
+                variant: :ghost,
+                size: :sm,
+                icon: "trash",
+                href: saving_goal_saving_contribution_path(@saving_goal, contribution),
+                method: :delete,
+                confirm: CustomConfirm.for_resource_deletion(t("resources.contribution", default: "contribution")),
+                title: t("common.delete"),
+                class: "text-subdued hover:text-destructive -mr-2"
+              ) %>
+            </div>
+          </div>
+        <% end %>
+      </div>
+
+      <div class="mt-4 pt-4 border-t border-primary/10">
+        <p class="text-sm text-secondary">
+          <%= t(".total_contributions", amount: format_money(@saving_goal.current_amount_money), count: contributions.count) %>
+        </p>
+      </div>
+    <% else %>
+      <div class="text-center py-6">
+        <%= icon "piggy-bank", class: "mx-auto text-subdued", size: "xl" %>
+        <p class="mt-2 text-sm text-secondary"><%= t(".no_contributions") %></p>
+        <% if @saving_goal.active? %>
+          <%= render DS::Link.new(
+            text: t(".allocate"),
+            href: new_saving_goal_saving_contribution_path(@saving_goal),
+            variant: "secondary",
+            class: "mt-3 inline-block"
+          ) %>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+</div>
+

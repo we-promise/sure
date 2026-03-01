@@ -1,0 +1,24 @@
+---
+zh-CN:
+  saving_contributions:
+    new:
+      title: "向 %{goal} 存入资金"
+      current_progress: "当前进度"
+      remaining: "剩余 %{amount}"
+      available_from_budget: "本月预算中可用 %{amount}"
+      budget_month: "%{month} 预算"
+      amount_label: "存入金额"
+      suggested_amount_hint: "建议每月分配：%{amount}"
+      limited_by_surplus: "以可用盈余为上限"
+      source_label: "来源"
+      source_manual: "手动存入"
+      source_auto: "来自预算盈余"
+      source_help: "选择“手动”进行一次性存入，或选择“自动”进行经常性预算分配"
+      submit: "添加存款"
+      cancel: "取消"
+    create:
+      success: "存款添加成功"
+    destroy:
+      removed: "存款已移除"
+    errors:
+      exceeds_surplus: "金额超过可用预算盈余"

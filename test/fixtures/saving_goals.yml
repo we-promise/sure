@@ -1,0 +1,21 @@
+emergency_fund:
+  family: dylan_family
+  name: Emergency Fund
+  target_amount: 10000
+  current_amount: 500
+  currency: USD
+  target_date: <%= 1.year.from_now.to_date %>
+  status: active
+  color: "green"
+  icon: "shield-check"
+
+vacation_fund:
+  family: dylan_family
+  name: Vacation 2027
+  target_amount: 5000
+  current_amount: 200
+  currency: USD
+  target_date: <%= 2.years.from_now.to_date %>
+  status: active
+  color: "blue"
+  icon: "plane"

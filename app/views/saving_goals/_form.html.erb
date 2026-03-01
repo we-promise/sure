@@ -1,0 +1,79 @@
+<%# locals: (saving_goal:) %>
+<%
+  form_url = saving_goal.persisted? ? saving_goal_path(saving_goal) : saving_goals_path
+%>
+
+<%= styled_form_with(model: saving_goal, url: form_url, class: "space-y-6") do |form| %>
+  <% if saving_goal.errors.any? %>
+    <div class="bg-destructive/10 text-destructive p-4 rounded-lg">
+      <p class="font-medium"><%= t("saving_goals.form.errors_title") %></p>
+      <ul class="list-disc list-inside mt-2">
+        <% saving_goal.errors.full_messages.each do |message| %>
+          <li><%= message %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <div class="space-y-4">
+    <%= form.text_field :name, 
+        label: t("saving_goals.form.name_label"),
+        placeholder: t("saving_goals.form.name_placeholder"),
+        required: true,
+        autofocus: true %>
+
+    <%= form.money_field :target_amount,
+        label: t("saving_goals.form.target_amount_label"),
+        hide_currency: true,
+        step: "0.01",
+        min: "0.01",
+        required: true %>
+
+    <%= form.date_field :target_date,
+        label: t("saving_goals.form.target_date_label"),
+        min: Date.current,
+        label_tooltip: t("saving_goals.form.target_date_hint") %>
+
+    <% unless saving_goal.persisted? %>
+      <%= form.money_field :initial_amount,
+          label: t("saving_goals.form.initial_amount_label"),
+          hide_currency: true,
+          step: "0.01",
+          min: "0",
+          label_tooltip: t("saving_goals.form.initial_amount_hint") %>
+    <% end %>
+
+    <%# Custom Color Picker - StyledFormBuilder doesn't wrap radio buttons automatically appropriately for this layout %>
+    <div>
+      <%= form.label :color, t("saving_goals.form.color_label"), class: "form-field__label mb-2" %>
+      <div class="flex flex-wrap gap-3">
+        <% SavingGoal::COLORS.each do |color| %>
+          <label class="cursor-pointer relative group">
+            <%= form.radio_button :color, color, class: "sr-only peer" %>
+            <span class="block w-8 h-8 rounded-full border border-secondary peer-checked:ring-2 peer-checked:ring-offset-1 peer-checked:ring-primary transition-all group-hover:scale-110"
+                  style="background-color: var(--color-<%= color %>-500, <%= color %>);"></span>
+            <span class="sr-only"><%= color.humanize %></span>
+          </label>
+        <% end %>
+      </div>
+    </div>
+
+    <%= form.text_area :notes,
+        label: t("saving_goals.form.notes_label"),
+        rows: 3,
+        placeholder: t("saving_goals.form.notes_placeholder") %>
+  </div>
+
+  <div class="flex items-center gap-3 pt-4">
+    <%= render DS::Button.new(
+      text: saving_goal.persisted? ? t("saving_goals.form.update") : t("saving_goals.form.create"),
+      type: "submit",
+      variant: :primary
+    ) %>
+    <%= render DS::Link.new(
+      text: t("saving_goals.form.cancel"),
+      href: saving_goal.persisted? ? saving_goal_path(saving_goal) : saving_goals_path,
+      variant: :secondary
+    ) %>
+  </div>
+<% end %>

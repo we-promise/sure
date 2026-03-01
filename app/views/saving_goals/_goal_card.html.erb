@@ -1,0 +1,33 @@
+<%# locals: (goal:) %>
+<%= link_to saving_goal_path(goal), class: "block bg-container rounded-xl shadow-border-xs p-4 hover:shadow-md transition-shadow group" do %>
+  <div class="flex items-start gap-3">
+    <div class="shrink-0">
+      <%
+        color = case goal.status
+                when "completed" then "green"
+                when "active" then "green"
+                else "zinc"
+                end
+      %>
+      <%= render "saving_goals/progress_ring", percent: goal.progress_percent, size: 48, stroke_width: 4, color: color %>
+    </div>
+
+    <div class="flex-1 min-w-0">
+      <h3 class="font-medium text-primary truncate group-hover:text-brand transition-colors"><%= goal.name %></h3>
+      <div class="flex items-baseline gap-1">
+        <span class="text-sm font-medium text-primary"><%= format_money(goal.current_amount_money) %></span>
+        <span class="text-xs text-secondary">/ <%= format_money(goal.target_amount_money) %></span>
+      </div>
+      <% if goal.target_date.present? %>
+        <% date_format = goal.target_date.year == Date.current.year ? "%b %d" : "%b %d, %Y" %>
+        <p class="text-xs text-subdued mt-1"><%= t("saving_goals.goal_card.target_date", date: goal.target_date.strftime(date_format)) %></p>
+      <% end %>
+    </div>
+
+    <% unless goal.active? %>
+      <span class="px-2 py-1 text-xs font-medium rounded-full bg-surface-inset text-subdued whitespace-nowrap">
+        <%= t("saving_goals.status.#{goal.status}") %>
+      </span>
+    <% end %>
+  </div>
+<% end %>

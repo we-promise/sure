@@ -32,18 +32,18 @@
   <div class="p-4">
     <h3 class="text-sm text-secondary mb-2">Expenses</h3>
 
-    <span class="inline-block mb-2 text-xl font-medium text-primary"><%= budget.actual_spending_money.format %></span>
+    <span class="inline-block mb-2 text-xl font-medium text-primary"><%= budget.actual_spending_with_savings_money.format %></span>
 
-    <% if budget.expense_category_totals.any? %>
+    <% if budget.expense_category_totals_with_savings.any? %>
       <div>
         <div class="flex h-1.5 mb-3 gap-1">
-          <% budget.expense_category_totals.each do |category_total| %>
+          <% budget.expense_category_totals_with_savings.each do |category_total| %>
             <div class="h-full rounded-full" style="background-color: <%= category_total.category.color %>; width: <%= category_total.weight %>%"></div>
           <% end %>
         </div>
 
         <div class="flex flex-wrap gap-x-2.5 gap-y-1 text-xs">
-          <% budget.expense_category_totals.each do |category_total| %>
+          <% budget.expense_category_totals_with_savings.each do |category_total| %>
             <div class="flex items-center gap-1.5">
               <div class="w-2.5 h-2.5 rounded-full shrink-0" style="background-color: <%= category_total.category.color %>"></div>
               <span class="text-secondary"><%= category_total.category.name %></span>
@@ -55,3 +55,4 @@
     <% end %>
   </div>
 </div>
+

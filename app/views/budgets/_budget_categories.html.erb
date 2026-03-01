@@ -39,6 +39,14 @@
       <div class="py-2">
         <%= render "budget_categories/budget_category", budget_category: budget.uncategorized_budget_category %>
       </div>
+
+      <%# Savings Goals Category %>
+      <% if budget.savings_commitment > 0 %>
+        <%= render "shared/ruler" %>
+        <div class="py-2">
+          <%= render "budgets/savings_category", budget: budget %>
+        </div>
+      <% end %>
     <% end %>
   </div>
 </div>

@@ -5,3 +5,26 @@ ca:
       tabs:
         actual: Real
         budgeted: Pressupostat
+      savings_goals:
+        title: "Objectius d'estalvi"
+        manage: "Gestionar objectius"
+        surplus: "Superàvit mensual"
+        allocated: "Assignat"
+        available: "Disponible"
+        allocate: "Assignar"
+        add_more: "Afegir-ne més"
+        auto_funded: "Finançat auto."
+        no_contribution: "No finançat aquest mes"
+        empty: "Sense objectius actius"
+        create_first: "Crea el teu primer objectiu"
+      savings:
+        title: "Estalvi"
+        category_name: "Objectius d'estalvi"
+        funded: "Finançat"
+        commitment: "Objectiu"
+        remaining: "Restant"
+        to_fund: "per finançar"
+        fully_funded: "Totalment finançat"
+        partial: "Parcialment finançat"
+        pending: "Pendent"
+        manage_goals: "Gestionar objectius"

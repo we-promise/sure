@@ -134,6 +134,46 @@ class Budget < ApplicationRecord
     expense_totals.category_totals.reject { |ct| ct.category.subcategory? || ct.total.zero? }.sort_by(&:weight).reverse
   end
 
+  # Returns expense category totals WITH savings contributions included as a virtual category
+  # This recalculates weights to include savings as part of total expenses
+  def expense_category_totals_with_savings
+    base_totals = expense_category_totals
+    savings_amount = allocated_to_goals
+    return base_totals if savings_amount <= 0
+
+    # Calculate new total including savings
+    total_with_savings = base_totals.sum(&:total) + savings_amount
+
+    # Recalculate weights for existing categories
+    adjusted_totals = base_totals.map do |ct|
+      new_weight = total_with_savings.zero? ? 0 : (ct.total.to_f / total_with_savings) * 100
+      IncomeStatement::CategoryTotal.new(
+        category: ct.category,
+        total: ct.total,
+        currency: ct.currency,
+        weight: new_weight
+      )
+    end
+
+    # Add savings as a virtual category total
+    savings_weight = total_with_savings.zero? ? 0 : (savings_amount.to_f / total_with_savings) * 100
+    savings_category_total = IncomeStatement::CategoryTotal.new(
+      category: Category.savings,
+      total: savings_amount,
+      currency: currency,
+      weight: savings_weight
+    )
+
+    (adjusted_totals + [ savings_category_total ]).sort_by(&:weight).reverse
+  end
+
+  # Actual spending INCLUDING savings contributions
+  def actual_spending_with_savings
+    actual_spending + allocated_to_goals
+  end
+
+  monetize :actual_spending_with_savings
+
   def current?
     if family.uses_custom_month_start?
       current_period = family.current_custom_month_period
@@ -161,12 +201,18 @@ class Budget < ApplicationRecord
 
   def to_donut_segments_json
     unused_segment_id = "unused"
+    savings_segment_id = "savings"
 
     # Continuous gray segment for empty budgets
     return [ { color: "var(--budget-unallocated-fill)", amount: 1, id: unused_segment_id } ] unless allocations_valid?
 
     segments = budget_categories.map do |bc|
       { color: bc.category.color, amount: budget_category_actual_spending(bc), id: bc.id }
+    end
+
+    # Add savings as a segment if there are savings contributions
+    if allocated_to_goals > 0
+      segments.push({ color: Category::SAVINGS_COLOR, amount: allocated_to_goals, id: savings_segment_id })
     end
 
     if available_to_spend.positive?
@@ -206,10 +252,38 @@ class Budget < ApplicationRecord
     (budgeted_spending || 0) - actual_spending
   end
 
+  # Budgeted spending INCLUDING savings commitment
+  def budgeted_spending_with_savings
+    (budgeted_spending || 0) + savings_commitment
+  end
+
+  monetize :budgeted_spending_with_savings
+
+  # Available to spend INCLUDING savings
+  def available_to_spend_with_savings
+    budgeted_spending_with_savings - actual_spending_with_savings
+  end
+
+  monetize :available_to_spend_with_savings
+
   def percent_of_budget_spent
     return 0 unless budgeted_spending > 0
 
     (actual_spending / budgeted_spending.to_f) * 100
+  end
+
+  # Percent of budget spent INCLUDING savings
+  def percent_of_budget_spent_with_savings
+    return 0 unless budgeted_spending_with_savings > 0
+
+    (actual_spending_with_savings / budgeted_spending_with_savings.to_f) * 100
+  end
+
+  # Overage percent INCLUDING savings
+  def overage_percent_with_savings
+    return 0 unless available_to_spend_with_savings.negative?
+
+    available_to_spend_with_savings.abs / actual_spending_with_savings.to_f * 100
   end
 
   def overage_percent
@@ -264,6 +338,98 @@ class Budget < ApplicationRecord
     return 0 unless remaining_expected_income.negative?
 
     remaining_expected_income.abs / expected_income.to_f * 100
+  end
+
+  # =============================================================================
+  # Savings Goals: Monthly surplus and allocations to goals
+  # =============================================================================
+  def monthly_surplus
+    actual_income - actual_spending
+  end
+
+  monetize :monthly_surplus
+
+  def allocated_to_goals
+    SavingContribution
+      .joins(:saving_goal)
+      .where(saving_goals: { family_id: family_id })
+      .where(month: start_date.beginning_of_month)
+      .where.not(source: :initial_balance)
+      .sum(:amount)
+  end
+
+  def available_for_goals
+    [ monthly_surplus - allocated_to_goals, 0 ].max
+  end
+
+  # Monthly commitment for all active goals with target dates
+  # This is the amount that should be budgeted for savings each month
+  def savings_commitment
+    family_active_saving_goals
+      .select { |g| g.monthly_target.present? && g.monthly_target > 0 }
+      .sum(&:monthly_target)
+  end
+
+  monetize :savings_commitment
+
+  # Amount of savings commitment that hasn't been funded this month
+  def unfunded_savings_this_month
+    [ savings_commitment - allocated_to_goals, 0 ].max
+  end
+
+  # Adjusted surplus after accounting for savings commitment
+  # This shows the "true" surplus after savings obligations
+  def adjusted_surplus
+    monthly_surplus - unfunded_savings_this_month
+  end
+
+  monetize :adjusted_surplus
+
+  # Returns active saving goals for the family, sorted by urgency and creation.
+  def family_active_saving_goals
+    family.saving_goals.active.order(Arel.sql("target_date IS NULL, target_date ASC, created_at ASC"))
+  end
+
+  # Automatically fund active saving goals from budget surplus.
+  # This method is idempotent and safe to call multiple times (e.g. in GET requests)
+  # as it uses a unique index and transaction locking to prevent duplicates.
+  # Goals are funded in priority order (created_at ASC) up to their monthly target.
+  def ensure_funded!
+    return unless start_date.beginning_of_month == Date.current.beginning_of_month
+
+    transaction do
+      lock!
+      contributions = []
+      remaining = available_for_goals
+
+      family_active_saving_goals.each do |goal|
+        break if remaining <= 0
+        next if goal.monthly_target.nil? || goal.monthly_target <= 0
+        next if goal_already_funded_this_month?(goal)
+
+        amount = [ goal.monthly_target, remaining ].min
+        contribution = goal.saving_contributions.create!(
+          amount: amount,
+          currency: currency,
+          month: start_date.beginning_of_month,
+          source: "auto"
+        )
+        contributions << contribution
+        remaining -= amount
+      end
+
+      contributions
+    end
+  end
+
+  # Checks if a specific goal has already received an auto-contribution this month.
+  def goal_already_funded_this_month?(goal)
+    goal.saving_contributions.where(month: start_date.beginning_of_month).where.not(source: :initial_balance).exists?
+  end
+
+  # Returns all non-initial contributions for a specific goal in this budget month.
+  def goal_contributions_for_month(goal)
+    goal.saving_contributions.where(month: start_date.beginning_of_month).where.not(source: :initial_balance)
   end
 
   private

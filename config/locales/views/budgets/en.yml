@@ -1,10 +1,33 @@
 ---
 en:
   budgets:
+    show:
+      tabs:
+        actual: "Actual"
+        budgeted: "Budgeted"
+      savings_goals:
+        title: "Savings Goals"
+        manage: "Manage Goals"
+        surplus: "Monthly surplus"
+        allocated: "Allocated"
+        available: "Available"
+        allocate: "Allocate"
+        add_more: "Add More"
+        auto_funded: "Auto-funded"
+        no_contribution: "Not funded this month"
+        empty: "No active savings goals"
+        create_first: "Create your first goal"
+      savings:
+        title: "Savings"
+        category_name: "Savings Goals"
+        funded: "Funded"
+        commitment: "Target"
+        remaining: "Remaining"
+        to_fund: "to fund"
+        fully_funded: "Fully funded"
+        partial: "Partially funded"
+        pending: "Pending"
+        manage_goals: "Manage goals"
     name:
       custom_range: "%{start} - %{end_date}"
       month_year: "%{month}"
-    show:
-      tabs:
-        actual: Actual
-        budgeted: Budgeted

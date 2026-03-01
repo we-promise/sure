@@ -1,0 +1,27 @@
+<% clamped_percent = percent.clamp(0, 100) %>
+<% circumference = 2 * Math::PI * ((size - stroke_width) / 2) %>
+<% offset = circumference - (clamped_percent / 100.0 * circumference) %>
+
+<svg width="<%= size %>" height="<%= size %>" class="transform -rotate-90">
+  <!-- Background circle -->
+  <circle
+    cx="<%= size / 2 %>"
+    cy="<%= size / 2 %>"
+    r="<%= (size - stroke_width) / 2 %>"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="<%= stroke_width %>"
+    class="text-surface-inset" />
+  <!-- Progress circle -->
+  <circle
+    cx="<%= size / 2 %>"
+    cy="<%= size / 2 %>"
+    r="<%= (size - stroke_width) / 2 %>"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="<%= stroke_width %>"
+    stroke-dasharray="<%= circumference %>"
+    stroke-dashoffset="<%= offset %>"
+    stroke-linecap="round"
+    class="<%= progress_ring_color_class(color) %> transition-all duration-500" />
+</svg>

@@ -6,6 +6,7 @@ class BudgetsController < ApplicationController
   end
 
   def show
+    @budget.ensure_funded!
   end
 
   def edit

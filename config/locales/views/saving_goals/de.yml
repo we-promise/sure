@@ -1,0 +1,92 @@
+---
+de:
+  saving_goals:
+    create:
+      success: "Sparziel erfolgreich erstellt."
+    update:
+      success: "Sparziel erfolgreich aktualisiert."
+    destroy:
+      success: "Sparziel erfolgreich gelöscht."
+    pause:
+      success: "Sparziel pausiert."
+    resume:
+      success: "Sparziel fortgesetzt."
+    complete:
+      success: "Sparziel abgeschlossen! 🎉"
+    archive:
+      success: "Sparziel archiviert."
+    index:
+      title: "Sparziele"
+      new_goal: "Neues Ziel"
+      empty:
+        title: "Noch keine Sparziele"
+        description: "Setzen Sie ein finanzielles Ziel und verfolgen Sie Ihren Fortschritt."
+      filters:
+        all: "Alle"
+        active: "Aktiv"
+        paused: "Pausiert"
+        completed: "Abgeschlossen"
+        archived: "Archiviert"
+    show:
+      progress: "%{percent}% gespart"
+      target: "Ziel: %{amount}"
+      deadline: "Frist: %{date}"
+      on_track: "Im Plan"
+      behind: "Im Rückstand"
+      contributions: "Beiträge"
+      actions: "Aktionen"
+      edit: "Ziel bearbeiten"
+      delete: "Ziel löschen"
+      target_date: "Zieldatum: %{date}"
+      current_balance: "Aktueller Stand"
+      of_target: "von %{amount} Ziel"
+      on_track_description: "Sie sparen genug, um Ihr Ziel rechtzeitig zu erreichen."
+      off_track: "Im Rückstand"
+      off_track_description: "Erwägen Sie, Ihre monatlichen Ersparnisse zu erhöhen, um aufzuholen."
+      pause: "Pausieren"
+      resume: "Fortsetzen"
+      complete: "Als abgeschlossen markieren"
+      monthly_effort: "Monatlicher Aufwand"
+      save_per_month: "Sparen Sie %{amount}/Monat"
+      for_months: "für %{count} Monate, um Ihr Ziel zu erreichen"
+      allocate: "Zuweisen"
+      contribution_history: "Beitragsverlauf"
+      no_contributions: "Noch keine Beiträge. Fangen Sie an zu sparen!"
+      auto_source: "Auto"
+      manual_source: "Manuell"
+      initial_balance_source: "Anfangssaldo"
+      total_contributions:
+        one: "Gesamt: %{amount} aus 1 Beitrag"
+        other: "Gesamt: %{amount} aus %{count} Beiträgen"
+    form:
+      errors_title: "Bitte beheben Sie folgende Fehler:"
+      name_label: "Zielname"
+      name_placeholder: "z.B. Notfallfonds, Urlaub"
+      target_amount_label: "Zielbetrag"
+      target_date_label: "Zieldatum"
+      target_date_hint: "Optional. Setzen Sie eine Frist, um das Tempo zu verfolgen."
+      initial_amount_label: "Bereits gespart (optional)"
+      initial_amount_hint: "Falls Sie bereits begonnen haben, für dieses Ziel zu sparen"
+
+      notes_label: "Notizen"
+      notes_placeholder: "Fügen Sie Notizen zu diesem Ziel hinzu..."
+      save: "Ziel speichern"
+      create: "Ziel erstellen"
+      update: "Änderungen speichern"
+      cancel: "Abbrechen"
+    new:
+      title: "Neues Sparziel"
+    edit:
+      title: "Sparziel bearbeiten"
+    actions:
+      pause: "Ziel pausieren"
+      resume: "Ziel fortsetzen"
+      complete: "Ziel abschließen"
+      archive: "Ziel archivieren"
+    status:
+      active: "Aktiv"
+      paused: "Pausiert"
+      completed: "Abgeschlossen"
+      archived: "Archiviert"
+    goal_card:
+      target_date: "Ziel: %{date}"

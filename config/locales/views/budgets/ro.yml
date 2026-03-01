@@ -1,0 +1,27 @@
+---
+ro:
+  budgets:
+    show:
+      savings_goals:
+        title: "Obiective de economisire"
+        manage: "Gestionează obiective"
+        surplus: "Excedent lunar"
+        allocated: "Alocat"
+        available: "Disponibil"
+        allocate: "Alocă"
+        add_more: "Adaugă mai mult"
+        auto_funded: "Finanțat automat"
+        no_contribution: "Nefinanțat luna aceasta"
+        empty: "Niciun obiectiv activ"
+        create_first: "Creați primul obiectiv"
+      savings:
+        title: "Economii"
+        category_name: "Obiective de economisire"
+        funded: "Finanțat"
+        commitment: "Obiectiv"
+        remaining: "Rămas"
+        to_fund: "de finanțat"
+        fully_funded: "Complet finanțat"
+        partial: "Parțial finanțat"
+        pending: "În așteptare"
+        manage_goals: "Gestionează obiective"

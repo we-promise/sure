@@ -1,0 +1,92 @@
+---
+pt-BR:
+  saving_goals:
+    create:
+      success: "Meta de economia criada com sucesso."
+    update:
+      success: "Meta de economia atualizada com sucesso."
+    destroy:
+      success: "Meta de economia excluída com sucesso."
+    pause:
+      success: "Meta de economia pausada."
+    resume:
+      success: "Meta de economia retomada."
+    complete:
+      success: "Meta de economia concluída! 🎉"
+    archive:
+      success: "Meta de economia arquivada."
+    index:
+      title: "Metas de Economia"
+      new_goal: "Nova Meta"
+      empty:
+        title: "Nenhuma meta de economia ainda"
+        description: "Defina uma meta financeira e acompanhe seu progresso."
+      filters:
+        all: "Todas"
+        active: "Ativas"
+        paused: "Pausadas"
+        completed: "Concluídas"
+        archived: "Arquivadas"
+    show:
+      progress: "%{percent}% economizado"
+      target: "Meta: %{amount}"
+      deadline: "Prazo: %{date}"
+      behind: "Atrasado"
+      contributions: "Contribuições"
+      actions: "Ações"
+      edit: "Editar Meta"
+      delete: "Excluir Meta"
+      target_date: "Data alvo: %{date}"
+      current_balance: "Saldo Atual"
+      of_target: "da meta de %{amount}"
+      on_track: "No Prazo"
+      on_track_description: "Você está economizando o suficiente para atingir sua meta no prazo."
+      off_track: "Atrasado"
+      off_track_description: "Considere aumentar suas economias mensais para recuperar o atraso."
+      pause: "Pausar"
+      resume: "Retomar"
+      complete: "Marcar como Concluída"
+      monthly_effort: "Esforço Mensal"
+      save_per_month: "Economize %{amount}/mês"
+      for_months: "por %{count} meses para atingir sua meta"
+      allocate: "Alocar"
+      contribution_history: "Histórico de Contribuições"
+      no_contributions: "Nenhuma contribuição ainda. Comece a economizar!"
+      auto_source: "Auto"
+      manual_source: "Manual"
+      initial_balance_source: "Saldo Inicial"
+      total_contributions:
+        one: "Total: %{amount} de 1 contribuição"
+        other: "Total: %{amount} de %{count} contribuições"
+    form:
+      errors_title: "Por favor, corrija os seguintes erros:"
+      name_label: "Nome da Meta"
+      name_placeholder: "ex: Fundo de emergência, Férias"
+      target_amount_label: "Valor Alvo"
+      target_date_label: "Data Alvo"
+      target_date_hint: "Opcional. Defina um prazo para acompanhar o ritmo."
+      initial_amount_label: "Já economizado (opcional)"
+      initial_amount_hint: "Se você já começou a economizar para esta meta"
+
+      notes_label: "Notas"
+      notes_placeholder: "Adicione notas sobre esta meta..."
+      save: "Salvar Meta"
+      create: "Criar Meta"
+      update: "Salvar Alterações"
+      cancel: "Cancelar"
+    new:
+      title: "Nova Meta de Economia"
+    edit:
+      title: "Editar Meta de Economia"
+    actions:
+      pause: "Pausar Meta"
+      resume: "Retomar Meta"
+      complete: "Concluir Meta"
+      archive: "Arquivar Meta"
+    status:
+      active: "Ativa"
+      paused: "Pausada"
+      completed: "Concluída"
+      archived: "Arquivada"
+    goal_card:
+      target_date: "Meta: %{date}"
