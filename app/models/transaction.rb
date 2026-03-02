@@ -11,6 +11,29 @@ class Transaction < ApplicationRecord
 
   after_save :clear_merchant_unlinked_association, if: :merchant_id_previously_changed?
 
+  # Accessors for exchange_rate stored in extra jsonb field
+  def exchange_rate
+    extra&.dig("exchange_rate")
+  end
+
+  def exchange_rate=(value)
+    normalized_value = value.present? ? (Float(value) rescue nil) : nil
+    self.extra = (extra || {}).merge("exchange_rate" => normalized_value)
+  end
+
+  validate :exchange_rate_must_be_positive
+
+  private
+
+    def exchange_rate_must_be_positive
+      rate = exchange_rate
+      if rate.present? && rate.to_f <= 0
+        errors.add(:exchange_rate, "must be greater than 0")
+      end
+    end
+
+  public
+
   enum :kind, {
     standard: "standard", # A regular transaction, included in budget analytics
     funds_movement: "funds_movement", # Movement of funds between accounts, excluded from budget analytics

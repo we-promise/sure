@@ -222,7 +222,11 @@ Rails.application.routes.draw do
     end
   end
 
-  resources :transfers, only: %i[new create destroy show update]
+  resources :transfers, only: %i[new create destroy show update] do
+    collection do
+      get :exchange_rate
+    end
+  end
 
   resources :imports, only: %i[index new show create update destroy] do
     member do
@@ -269,6 +273,7 @@ Rails.application.routes.draw do
     collection do
       delete :clear_filter
       patch :update_preferences
+      get :exchange_rate
     end
 
     member do

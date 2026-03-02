@@ -1,10 +1,18 @@
 class Transfer::Creator
-  def initialize(family:, source_account_id:, destination_account_id:, date:, amount:)
+  def initialize(family:, source_account_id:, destination_account_id:, date:, amount:, exchange_rate: nil)
     @family = family
     @source_account = family.accounts.find(source_account_id) # early throw if not found
     @destination_account = family.accounts.find(destination_account_id) # early throw if not found
     @date = date
     @amount = amount.to_d
+
+    if exchange_rate.present?
+      rate_value = exchange_rate.to_d
+      raise ArgumentError, "exchange_rate must be greater than 0" unless rate_value > 0
+      @exchange_rate = rate_value
+    else
+      @exchange_rate = nil
+    end
   end
 
   def create
@@ -23,7 +31,7 @@ class Transfer::Creator
   end
 
   private
-    attr_reader :family, :source_account, :destination_account, :date, :amount
+    attr_reader :family, :source_account, :destination_account, :date, :amount, :exchange_rate
 
     def outflow_transaction
       name = "#{name_prefix} to #{destination_account.name}"
@@ -62,12 +70,13 @@ class Transfer::Creator
     end
 
     # If destination account has different currency, its transaction should show up as converted
-    # Future improvement: instead of a 1:1 conversion fallback, add a UI/UX flow for missing rates
+    # Uses user-provided exchange rate if available, otherwise fetches from provider with 1:1 fallback
     def inflow_converted_money
       Money.new(amount.abs, source_account.currency)
            .exchange_to(
              destination_account.currency,
              date: date,
+             custom_rate: exchange_rate,
              fallback_rate: 1.0
            )
     end
