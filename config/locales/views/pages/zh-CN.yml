@@ -1,8 +1,6 @@
 ---
 zh-CN:
   pages:
-    intro:
-      not_authorized: 引导页仅对访客用户开放。
     changelog:
       title: 更新日志
     dashboard:
@@ -50,6 +48,8 @@ zh-CN:
       subtitle: 以下是您财务状况的概览
       toggle_section: 切换模块显示/隐藏
       welcome: 欢迎回来，%{name}
+    intro:
+      not_authorized: 引导页仅对访客用户开放。
     privacy:
       heading: 隐私政策
       placeholder: 隐私政策内容将在此显示。

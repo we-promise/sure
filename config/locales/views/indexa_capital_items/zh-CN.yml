@@ -51,7 +51,8 @@ zh-CN:
       link_failed: 关联账户失败
       no_accounts_selected: 请至少选择一个账户
       no_api_key: 未找到 IndexaCapital 凭据。请在提供商设置中进行配置。
-      partial_invalid: 成功关联(s), %{already_linked_count} were already linked, %{invalid_count} account(s) had invalid names
+      partial_invalid: 成功关联(s), %{already_linked_count} were already linked, %{invalid_count}
+        account(s) had invalid names
       partial_success: 成功关联 %{created_count} 个账户。%{already_linked_count} 个账户已关联：%{already_linked_names}
       success:
         one: 成功关联
@@ -97,7 +98,8 @@ zh-CN:
       required: "（必填）"
       save_button: 保存配置
       setup_instructions: 设置说明：
-      status_configured_html: 已配置并可使用。请访问 <a href="%{accounts_path}" class="link">账户</a> 标签页管理和设置账户。
+      status_configured_html: 已配置并可使用。请访问 <a href="%{accounts_path}" class="link">账户</a>
+        标签页管理和设置账户。
       status_not_configured: 未配置
       step_1: 访问 Indexa Capital 控制台并生成只读 API 令牌
       step_2: 在下方粘贴您的 API 令牌并点击保存

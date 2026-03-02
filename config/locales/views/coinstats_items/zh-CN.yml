@@ -52,9 +52,11 @@ zh-CN:
       setup_instructions: 设置说明：
       status_configured_html: 可立即使用
       status_not_configured: 未配置
-      step1_html: 访问 <a href="https://openapi.coinstats.app/" class="link" target="_blank" rel="noopener noreferrer">CoinStats 公共 API 控制台</a> 获取 API 密钥。
+      step1_html: 访问 <a href="https://openapi.coinstats.app/" class="link" target="_blank"
+        rel="noopener noreferrer">CoinStats 公共 API 控制台</a> 获取 API 密钥。
       step2: 在下方输入您的 API 密钥并点击“配置”。
-      step3_html: 连接成功后，请前往 <a href="%{accounts_url}" class="link" data-turbo-frame="_top">账户</a> 标签页设置加密钱包。
+      step3_html: 连接成功后，请前往 <a href="%{accounts_url}" class="link" data-turbo-frame="_top">账户</a>
+        标签页设置加密钱包。
       title: 使用 CoinStats 关联加密钱包
       update_configuration: 重新配置
     update:

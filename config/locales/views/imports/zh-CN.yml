@@ -55,8 +55,6 @@ zh-CN:
         instructions_5: 数字中请勿包含逗号、货币符号或括号。
         title: 导入数据
   imports:
-    empty:
-      message: 暂无导入记录。
     create:
       csv_uploaded: CSV 上传成功。
       document_provider_not_configured: 未为文档上传配置向量存储。
@@ -77,6 +75,8 @@ zh-CN:
       investment_statement: 投资对账单
       other: 其他文档
       unknown: 未知文档
+    empty:
+      message: 暂无导入记录。
     errors:
       custom_column_requires_inflow: 自定义列导入需要选择流入列
     index:
@@ -100,15 +100,15 @@ zh-CN:
       back_to_dashboard: 返回仪表盘
       back_to_imports: 返回导入
       check_status: 检查状态
-      create_account: 新建账户
       complete_description: 我们已分析您的 PDF，以下是结果。
       complete_title: 文档已分析
+      create_account: 新建账户
       delete_import: 删除导入
       document_type_label: 文档类型
       email_sent_notice: 后续步骤已通过邮件发送给您。
-      no_accounts: 暂无可用账户。请先创建一个账户。
       failed_description: 我们无法处理您的 PDF 文档。请重试或联系支持。
       failed_title: 处理失败
+      no_accounts: 暂无可用账户。请先创建一个账户。
       processing_description: 我们正在使用 AI 分析您的文档，这可能需要一些时间。分析完成后您将收到邮件。
       processing_failed_generic: 处理失败：%{error}
       processing_failed_with_message: 错误信息：%{message}
@@ -126,9 +126,9 @@ zh-CN:
       transactions_extracted: 已提取交易
       transactions_extracted_count: "%{count} 笔交易"
       try_again: 重试
+      unknown_document_type: 未知
       unknown_state_description: 该导入处于异常状态。请返回导入页面。
       unknown_state_title: 未知状态
-      unknown_document_type: 未知
     ready:
       description: 以下是发布导入后将添加到您账户的新项目摘要。
       title: 确认导入数据

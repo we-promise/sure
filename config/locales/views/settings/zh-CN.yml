@@ -104,7 +104,8 @@ zh-CN:
         setup_instructions: 连接 Coinbase：
         status_connected: Coinbase 已连接，正在同步您的加密资产持仓。
         status_not_connected: 尚未连接。请输入上方 API 凭据以开始。
-        step1_html: 前往 <a href="https://portal.cdp.coinbase.com/projects/api-keys" target="_blank" class="text-primary underline">Coinbase API 设置</a>
+        step1_html: 前往 <a href="https://portal.cdp.coinbase.com/projects/api-keys"
+          target="_blank" class="text-primary underline">Coinbase API 设置</a>
         step2: 创建一个只读权限的新 API 密钥（查看账户、查看交易）
         step3: 复制您的 API 密钥及密钥密文并粘贴到下方
         sync: 同步

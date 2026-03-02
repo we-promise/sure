@@ -23,7 +23,8 @@ zh-CN:
       link_failed: 关联账户失败
       no_accounts_selected: 请至少选择一个账户
       no_api_token: 未找到 Mercury API 令牌。请在提供商设置中配置。
-      partial_invalid: 成功关联(s), %{already_linked_count} were already linked, %{invalid_count} account(s) had invalid names
+      partial_invalid: 成功关联(s), %{already_linked_count} were already linked, %{invalid_count}
+        account(s) had invalid names
       partial_success: 成功关联 %{created_count} 个账户。%{already_linked_count} 个账户已关联：%{already_linked_names}
       success:
         one: 成功关联

@@ -1,7 +1,5 @@
 ---
 zh-CN:
-  common:
-    close: 关闭
   activerecord:
     errors:
       messages:
@@ -9,6 +7,8 @@ zh-CN:
         restrict_dependent_destroy:
           has_many: 由于%{record}需要此记录，所以无法移除记录
           has_one: 由于%{record}需要此记录，所以无法移除记录
+  common:
+    close: 关闭
   date:
     abbr_day_names:
     - 周日

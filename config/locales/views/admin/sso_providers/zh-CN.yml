@@ -77,7 +77,8 @@ zh-CN:
         role_member: 成员
         role_super_admin: 超级管理员
         saml_configuration: SAML 配置
-        scopes_help: 以空格分隔的 OIDC scope 列表。留空将使用默认值（openid email profile）。添加 groups 以获取组声明。
+        scopes_help: 以空格分隔的 OIDC scope 列表。留空将使用默认值（openid email profile）。添加 groups
+          以获取组声明。
         scopes_label: 自定义 Scope
         strategy_help: 要使用的身份验证策略
         strategy_label: 策略
@@ -88,7 +89,8 @@ zh-CN:
         add_provider: 添加提供商
         description: 管理您实例的单点登录认证提供商
         env_configured: 环境变量/YAML
-        legacy_providers_notice: 这些提供商通过环境变量或 YAML 配置，无法在此界面管理。若要在此管理，请启用 AUTH_PROVIDERS_SOURCE=db，将其迁移为数据库提供商并在 UI 中重新创建。
+        legacy_providers_notice: 这些提供商通过环境变量或 YAML 配置，无法在此界面管理。若要在此管理，请启用 AUTH_PROVIDERS_SOURCE=db，将其迁移为数据库提供商并在
+          UI 中重新创建。
         legacy_providers_title: 环境配置的提供商
         no_providers_message: 从添加第一个 SSO 提供商开始。
         no_providers_title: 暂无 SSO 提供商

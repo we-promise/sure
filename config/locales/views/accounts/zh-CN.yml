@@ -14,7 +14,8 @@ zh-CN:
       data_not_available: 所选时间段内无可用数据
     confirm_unlink:
       confirm_button: 确认并解除关联
-      description_html: 您即将解除 <strong>%{account_name}</strong> 与 <strong>%{provider_name}</strong> 的关联。这将转换为手动账户。
+      description_html: 您即将解除 <strong>%{account_name}</strong> 与 <strong>%{provider_name}</strong>
+        的关联。这将转换为手动账户。
       title: 确认解除账户关联？
       warning_can_delete: 解除关联后，您可以在需要时删除账户
       warning_manual_updates: 您需要手动添加交易和更新余额
@@ -88,7 +89,8 @@ zh-CN:
         owed: 欠款金额
       menu:
         confirm_accept: 删除“%{name}”
-        confirm_body_html: "<p>删除此账户将清除其历史价值数据，影响您整体账户的多个方面。此操作将直接影响您的资产净值计算和账户图表。</p><br /><p>删除后无法恢复账户信息，您需要将其作为新账户重新添加。</p>"
+        confirm_body_html: "<p>删除此账户将清除其历史价值数据，影响您整体账户的多个方面。此操作将直接影响您的资产净值计算和账户图表。</p><br
+          /><p>删除后无法恢复账户信息，您需要将其作为新账户重新添加。</p>"
         confirm_title: 确认删除账户？
         edit: 编辑
         import: 导入交易记录
