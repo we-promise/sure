@@ -1,0 +1,22 @@
+<%= content_for :page_title, t(".page_title") %>
+
+<div class="max-w-2xl mx-auto py-8 px-4">
+  <div class="mb-8 text-center">
+    <div class="inline-flex items-center justify-center w-14 h-14 bg-surface-inset rounded-full mb-4">
+      <%= icon("sun", size: "lg", class: "text-success") %>
+    </div>
+    <h1 class="text-2xl font-semibold text-primary"><%= t(".page_title") %></h1>
+    <p class="text-secondary mt-2"><%= t(".subtitle") %></p>
+  </div>
+
+  <div class="bg-container shadow-border-xs rounded-lg p-6">
+    <%= form_with model: @retirement_config, url: retirement_path, method: :post, class: "space-y-6" do |f| %>
+      <%= render "retirement/form_fields", f: f %>
+
+      <div class="flex justify-end gap-3 pt-4 border-t border-secondary">
+        <%= link_to t(".cancel"), root_path, class: "inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium text-secondary hover:bg-surface-hover" %>
+        <%= f.submit t(".save"), class: "inline-flex items-center px-6 py-2 rounded-lg text-sm font-medium text-inverse bg-inverse hover:bg-inverse-hover cursor-pointer" %>
+      </div>
+    <% end %>
+  </div>
+</div>
