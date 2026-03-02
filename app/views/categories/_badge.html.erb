@@ -1,15 +1,22 @@
-<%# locals: (category:) %>
+<%# locals: (category:, show_details: false) %>
 <% category ||= Category.uncategorized %>
+<% show_details = true if show_details.nil? %>
 
-<div>
-  <span class="flex items-center gap-1 text-sm font-medium rounded-full px-1.5 py-1 border truncate focus-visible:outline-none focus-visible:ring-0"
-        style="
-          background-color: color-mix(in oklab, <%= category.color %> 10%, transparent);
-          border-color: color-mix(in oklab, <%= category.color %> 10%, transparent);
-          color: <%= category.color %>;">
+<div class="flex flex-col items-start gap-1 text-sm font-medium rounded-lg px-1.5 py-1 border <%= show_details ? 'w-fit max-w-full' : 'truncate' %> focus-visible:outline-none focus-visible:ring-0"
+     style="
+     background-color: color-mix(in oklab, <%= category.color %> 10%, transparent);
+       border-color: color-mix(in oklab, <%= category.color %> 10%, transparent);
+       color: <%= category.color %>;"
+     title="<%= category.details %>">
+  <span class="flex items-center gap-1">
     <% if category.lucide_icon.present? %>
       <%= icon category.lucide_icon, size: "sm", color: "current" %>
     <% end %>
     <%= category.name %>
   </span>
+  <% if show_details && category.details.present? %>
+    <span class="text-xs whitespace-normal break-words <%= 'pl-5' if category.lucide_icon.present? %>"
+          style="color: color-mix(in oklab, <%= category.color %> 55%, transparent);"
+          title="<%= category.details %>"><%= category.details %></span>
+  <% end %>
 </div>

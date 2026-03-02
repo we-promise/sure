@@ -22,4 +22,13 @@ module CategoriesHelper
   def family_categories
     [ Category.uncategorized ].concat(Current.family.categories.alphabetically)
   end
+
+  # Build sorted category options for combobox: parents first, then children alphabetically
+  def sorted_category_options(categories)
+    categories
+      .select { |cat| cat.parent_id.nil? }
+      .sort_by(&:name)
+      .flat_map { |parent| [parent] + parent.subcategories.sort_by(&:name) }
+      .map(&:to_combobox_option)
+  end
 end

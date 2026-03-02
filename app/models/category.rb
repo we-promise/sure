@@ -11,10 +11,13 @@ class Category < ApplicationRecord
   validates :name, :color, :lucide_icon, :family, presence: true
   validates :name, uniqueness: { scope: :family_id }
 
+  validates :details, length: { maximum: 1000 }, allow_blank: true
+
   validate :category_level_limit
   validate :nested_category_matches_parent_classification
 
   before_save :inherit_color_from_parent
+  before_save { self.details = nil if details.blank? }
 
   scope :alphabetically, -> { order(:name) }
   scope :alphabetically_by_hierarchy, -> {
@@ -53,7 +56,7 @@ class Category < ApplicationRecord
 
     def initialize(category, subcategories = nil)
       @category = category
-      @subcategories = subcategories || []
+      @subcategories = (subcategories || []).sort_by(&:name)
     end
   end
 
@@ -185,6 +188,10 @@ class Category < ApplicationRecord
     parent.present?
   end
 
+  def to_combobox_option
+    Category::ComboboxOption.new(category: self)
+  end
+  
   def name_with_parent
     subcategory? ? "#{parent.name} > #{name}" : name
   end
