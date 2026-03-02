@@ -11,6 +11,7 @@ The helper always injects:
 - optional Active Record Encryption keys (controlled by rails.encryptionEnv.enabled)
 - optional DATABASE_URL + DB_PASSWORD (includeDatabase=true and helper can compute a DB URL)
 - optional REDIS_URL + REDIS_PASSWORD (includeRedis=true and helper can compute a Redis URL)
+- optional HTTPS_PROXY / HTTP_PROXY / NO_PROXY (pipelock.enabled=true)
 - rails.settings / rails.extraEnv / rails.extraEnvVars
 - optional additional per-workload env / envFrom blocks via extraEnv / extraEnvFrom.
 */}}
@@ -76,6 +77,18 @@ The helper always injects:
   value: {{ include "sure.redisSentinelMaster" $ctx | quote }}
 {{- end }}
 {{- end }}
+{{- end }}
+{{- if and $ctx.Values.pipelock.enabled (ne (toString (dig "forwardProxy" "enabled" true $ctx.Values.pipelock)) "false") }}
+{{- $proxyPort := 8888 -}}
+{{- if $ctx.Values.pipelock.forwardProxy -}}
+{{- $proxyPort = int ($ctx.Values.pipelock.forwardProxy.port | default 8888) -}}
+{{- end }}
+- name: HTTPS_PROXY
+  value: {{ printf "http://%s-pipelock.%s.svc.cluster.local:%d" (include "sure.fullname" $ctx) $ctx.Release.Namespace $proxyPort | quote }}
+- name: HTTP_PROXY
+  value: {{ printf "http://%s-pipelock.%s.svc.cluster.local:%d" (include "sure.fullname" $ctx) $ctx.Release.Namespace $proxyPort | quote }}
+- name: NO_PROXY
+  value: "localhost,127.0.0.1,.svc.cluster.local,.cluster.local"
 {{- end }}
 {{- range $k, $v := $ctx.Values.rails.settings }}
 - name: {{ $k }}

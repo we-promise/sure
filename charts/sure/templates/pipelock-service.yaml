@@ -1,0 +1,30 @@
+{{- if .Values.pipelock.enabled }}
+{{- $fwdPort := 8888 -}}
+{{- $mcpPort := 8889 -}}
+{{- if .Values.pipelock.forwardProxy -}}
+{{- $fwdPort = int (.Values.pipelock.forwardProxy.port | default 8888) -}}
+{{- end -}}
+{{- if .Values.pipelock.mcpProxy -}}
+{{- $mcpPort = int (.Values.pipelock.mcpProxy.port | default 8889) -}}
+{{- end }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "sure.fullname" . }}-pipelock
+  labels:
+    {{- include "sure.labels" . | nindent 4 }}
+spec:
+  type: {{ (.Values.pipelock.service).type | default "ClusterIP" }}
+  selector:
+    app.kubernetes.io/component: pipelock
+    {{- include "sure.selectorLabels" . | nindent 4 }}
+  ports:
+    - name: proxy
+      port: {{ $fwdPort }}
+      targetPort: proxy
+      protocol: TCP
+    - name: mcp
+      port: {{ $mcpPort }}
+      targetPort: mcp
+      protocol: TCP
+{{- end }}

@@ -1,0 +1,101 @@
+{{- if .Values.pipelock.enabled }}
+{{- $fwdPort := 8888 -}}
+{{- $mcpPort := 8889 -}}
+{{- $pullPolicy := "IfNotPresent" -}}
+{{- if .Values.pipelock.forwardProxy -}}
+{{- $fwdPort = int (.Values.pipelock.forwardProxy.port | default 8888) -}}
+{{- end -}}
+{{- if .Values.pipelock.mcpProxy -}}
+{{- $mcpPort = int (.Values.pipelock.mcpProxy.port | default 8889) -}}
+{{- end -}}
+{{- if .Values.pipelock.image -}}
+{{- $pullPolicy = .Values.pipelock.image.pullPolicy | default "IfNotPresent" -}}
+{{- end }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "sure.fullname" . }}-pipelock
+  labels:
+    {{- include "sure.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.pipelock.replicas | default 1 }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: pipelock
+      {{- include "sure.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: pipelock
+        {{- include "sure.selectorLabels" . | nindent 8 }}
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/pipelock-configmap.yaml") . | sha256sum }}
+        {{- with .Values.pipelock.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- $plSecrets := coalesce .Values.pipelock.image.imagePullSecrets .Values.image.imagePullSecrets }}
+      {{- if $plSecrets }}
+      imagePullSecrets:
+        {{- toYaml $plSecrets | nindent 8 }}
+      {{- end }}
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "sure.fullname" . }}-pipelock
+      containers:
+        - name: pipelock
+          image: {{ include "sure.pipelockImage" . }}
+          imagePullPolicy: {{ $pullPolicy }}
+          args:
+            - "run"
+            - "--config"
+            - "/etc/pipelock/pipelock.yaml"
+            - "--listen"
+            - "0.0.0.0:{{ $fwdPort }}"
+            - "--mode"
+            - {{ .Values.pipelock.mode | default "balanced" | quote }}
+            - "--mcp-listen"
+            - "0.0.0.0:{{ $mcpPort }}"
+            - "--mcp-upstream"
+            - {{ include "sure.pipelockUpstream" . | quote }}
+          volumeMounts:
+            - name: config
+              mountPath: /etc/pipelock
+              readOnly: true
+          ports:
+            - name: proxy
+              containerPort: {{ $fwdPort }}
+              protocol: TCP
+            - name: mcp
+              containerPort: {{ $mcpPort }}
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: proxy
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: proxy
+            initialDelaySeconds: 3
+            periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 3
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          resources:
+            {{- toYaml (.Values.pipelock.resources | default dict) | nindent 12 }}
+      nodeSelector:
+        {{- toYaml (.Values.pipelock.nodeSelector | default dict) | nindent 8 }}
+      affinity:
+        {{- toYaml (.Values.pipelock.affinity | default dict) | nindent 8 }}
+      tolerations:
+        {{- toYaml (.Values.pipelock.tolerations | default list) | nindent 8 }}
+{{- end }}

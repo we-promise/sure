@@ -465,3 +465,53 @@ hpa:
     minReplicas: 2
     maxReplicas: 10
     targetCPUUtilizationPercentage: 70
+
+# Pipelock: AI agent security proxy (optional)
+# Provides forward proxy (outbound HTTPS scanning) and MCP reverse proxy
+# (inbound MCP traffic scanning for prompt injection, DLP, tool poisoning).
+# More info: https://github.com/luckyPipewrench/pipelock
+pipelock:
+  enabled: false
+  image:
+    repository: ghcr.io/luckypipewrench/pipelock
+    tag: "0.2.7"
+    pullPolicy: IfNotPresent
+    imagePullSecrets: []
+  replicas: 1
+  # Pipelock run mode: strict, balanced, audit
+  mode: balanced
+  forwardProxy:
+    enabled: true
+    port: 8888
+    maxTunnelSeconds: 300
+    idleTimeoutSeconds: 60
+  mcpProxy:
+    port: 8889
+    # Auto-computed when empty: http://<fullname>:<service.port>/mcp
+    upstream: ""
+  # WebSocket proxy: bidirectional frame scanning for ws/wss connections.
+  # Runs on the same listener as the forward proxy at /ws?url=<ws-url>.
+  # Requires Pipelock >= 0.2.9 (or current dev build).
+  websocketProxy:
+    # Requires image.tag >= 0.2.9. Update pipelock.image.tag before enabling.
+    enabled: false
+    maxMessageBytes: 1048576       # 1MB per message
+    maxConcurrentConnections: 128
+    scanTextFrames: true           # DLP + injection scanning on text frames
+    allowBinaryFrames: false       # block binary frames by default
+    forwardCookies: false
+    maxConnectionSeconds: 3600     # 1 hour max connection lifetime
+    idleTimeoutSeconds: 300        # 5 min idle timeout
+    originPolicy: rewrite          # rewrite, forward, or strip
+  service:
+    type: ClusterIP
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      memory: 128Mi
+  podAnnotations: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
