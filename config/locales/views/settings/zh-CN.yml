@@ -112,6 +112,7 @@ zh-CN:
       enable_banking_panel:
         callback_url_instruction: 回调 URL 请使用 %{callback_url}。
         connection_error: 连接错误
+        syncing: 同步中
       encryption_error:
         message: 尚未配置 Active Record 加密密钥。使用同步提供商前，请确保在 Rails 凭据或环境变量中正确设置加密凭据（active_record_encryption.primary_key、active_record_encryption.deterministic_key、active_record_encryption.key_derivation_salt）。
         title: 需要加密配置

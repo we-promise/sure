@@ -55,6 +55,8 @@ zh-CN:
         instructions_5: 数字中请勿包含逗号、货币符号或括号。
         title: 导入数据
   imports:
+    empty:
+      message: 暂无导入记录。
     create:
       csv_uploaded: CSV 上传成功。
       document_provider_not_configured: 未为文档上传配置向量存储。
@@ -98,6 +100,7 @@ zh-CN:
       back_to_dashboard: 返回仪表盘
       back_to_imports: 返回导入
       check_status: 检查状态
+      create_account: 新建账户
       complete_description: 我们已分析您的 PDF，以下是结果。
       complete_title: 文档已分析
       delete_import: 删除导入
@@ -109,16 +112,35 @@ zh-CN:
       processing_failed_generic: 处理失败：%{error}
       processing_failed_with_message: 错误信息：%{message}
       processing_title: 正在处理您的 PDF
+      publish_transactions: 发布 %{count} 笔交易
+      ready_for_review_description: 我们已从您的账单中提取 %{count} 笔交易。请审核并发布以添加到您的账户。
+      ready_for_review_title: 准备就绪，等待审核
+      review_transactions: 审核交易
+      save_account: 保存
+      select_account: 导入到账户
+      select_account_hint: 请选择要将这些交易导入到哪个账户。
+      select_account_placeholder: 选择一个账户...
+      select_account_to_continue: 请先在上方选择一个账户后继续。
       summary_label: 摘要
+      transactions_extracted: 已提取交易
+      transactions_extracted_count: "%{count} 笔交易"
       try_again: 重试
       unknown_state_description: 该导入处于异常状态。请返回导入页面。
       unknown_state_title: 未知状态
+      unknown_document_type: 未知
     ready:
       description: 以下是发布导入后将添加到您账户的新项目摘要。
       title: 确认导入数据
     show:
       finalize_mappings: 继续前请先完成映射。
       finalize_upload: 请先完成文件上传。
+    steps:
+      clean: 清洗
+      configure: 配置
+      confirm: 确认
+      map: 映射
+      progress: 第 %{step} 步，共 %{total} 步
+      upload: 上传
     table:
       empty: 暂无导入记录。
       header:
@@ -140,3 +162,6 @@ zh-CN:
           reverting: 回滚中
           uploading: 处理行数据中
       title: 导入记录
+    update:
+      account_saved: 账户已保存。
+      invalid_account: 未找到账户。

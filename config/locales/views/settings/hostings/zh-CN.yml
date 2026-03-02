@@ -84,7 +84,7 @@ zh-CN:
         failure: 设置值无效
         invalid_onboarding_state: 无效的新用户注册状态
         invalid_sync_time: 同步时间格式无效。请使用 HH:MM 格式（例如 02:30）。
-        scheduler_sync_failed: 设置已保存，但更新同步计划失败。请重试或检查服务器日志。
+        scheduler_sync_failed: 设置已保存，但同步任务计划更新失败。请重试或检查服务器日志。
         success: 设置已更新
       yahoo_finance_settings:
         connection_failed: 无法连接到 Yahoo Finance

@@ -1,6 +1,8 @@
 ---
 zh-CN:
   pages:
+    intro:
+      not_authorized: 引导页仅对访客用户开放。
     changelog:
       title: 更新日志
     dashboard:
