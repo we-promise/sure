@@ -42,7 +42,11 @@ class AccountsController < ApplicationController
     @q = params.fetch(:q, {}).permit(:search, status: [])
     entries = @account.entries.where(excluded: false).search(@q).reverse_chronological
 
-    @pagy, @entries = pagy(entries, limit: safe_per_page)
+    @pagy, @entries = pagy(
+      entries,
+      limit: safe_per_page,
+      params: request.query_parameters.except("tab").merge("tab" => "activity")
+    )
 
     @activity_feed_data = Account::ActivityFeedData.new(@account, @entries)
   end
