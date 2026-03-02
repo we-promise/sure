@@ -1,4 +1,4 @@
-<%# locals: (entry:, income_categories:, expense_categories:) %>
+<%# locals: (entry:, income_categories:, expense_categories:, name_suggestions: []) %>
 
 <%= styled_form_with model: entry, url: transactions_path, class: "space-y-4" do |f| %>
   <% if entry.errors.any? %>
@@ -13,7 +13,23 @@
   </section>
 
   <section class="space-y-2">
-    <%= f.text_field :name, label: t(".description"), placeholder: t(".description_placeholder"), required: true %>
+    <div data-controller="transaction-name-suggestions"
+         data-transaction-name-suggestions-url-value="<%= name_suggestions_transactions_path %>">
+      <%= f.text_field :name,
+                       label: t(".description"),
+                       placeholder: t(".description_placeholder"),
+                       required: true,
+                       list: "transaction-name-suggestions",
+                       data: {
+                         action: "input->transaction-name-suggestions#fetchSuggestions",
+                         transaction_name_suggestions_target: "input"
+                       } %>
+      <datalist id="transaction-name-suggestions" data-transaction-name-suggestions-target="datalist">
+        <% name_suggestions.each do |name| %>
+          <option value="<%= name %>"></option>
+        <% end %>
+      </datalist>
+    </div>
 
     <% if @entry.account_id %>
       <%= f.hidden_field :account_id %>

@@ -6,8 +6,7 @@ class TransactionsController < ApplicationController
 
   def new
     super
-    @income_categories = Current.family.categories.incomes.alphabetically
-    @expense_categories = Current.family.categories.expenses.alphabetically
+    load_new_form_options
   end
 
   def index
@@ -31,6 +30,10 @@ class TransactionsController < ApplicationController
                                          10.days.from_now.to_date,
                                          Date.current)
                                   .includes(:merchant)
+  end
+
+  def name_suggestions
+    render json: { suggestions: transaction_name_suggestions(query: params[:query]) }
   end
 
   def clear_filter
@@ -79,6 +82,7 @@ class TransactionsController < ApplicationController
         format.turbo_stream { stream_redirect_back_or_to(account_path(@entry.account)) }
       end
     else
+      load_new_form_options
       render :new, status: :unprocessable_entity
     end
   end
@@ -387,6 +391,57 @@ class TransactionsController < ApplicationController
 
     def preferences_params
       params.require(:preferences).permit(collapsed_sections: {})
+    end
+
+    def load_new_form_options
+      @income_categories = Current.family.categories.incomes.alphabetically
+      @expense_categories = Current.family.categories.expenses.alphabetically
+      @name_suggestions = transaction_name_suggestions
+    end
+
+    def transaction_name_suggestions(query: nil, limit: 20)
+      query_text = query.to_s.strip
+      scope = Current.family.entries.transactions.where.not(name: [ nil, "" ])
+
+      if query_text.present?
+        escaped_query = ActiveRecord::Base.sanitize_sql_like(query_text)
+        scope = scope.where("entries.name ILIKE ?", "%#{escaped_query}%")
+      end
+
+      rows = scope
+        .order(created_at: :desc)
+        .limit(query_text.present? ? 2000 : 500)
+        .pluck(:name, :created_at)
+
+      deduplicate_transaction_name_rows(rows, limit: limit)
+    end
+
+    def deduplicate_transaction_name_rows(rows, limit:)
+      grouped_names = rows.each_with_object({}) do |(name, created_at), grouped|
+        normalized_name = normalize_transaction_name(name)
+        next if normalized_name.blank?
+
+        bucket = grouped[normalized_name] ||= { latest_seen_at: created_at, variants: {} }
+        bucket[:latest_seen_at] = [ bucket[:latest_seen_at], created_at ].max
+
+        variant = bucket[:variants][name] ||= { count: 0, latest_seen_at: created_at }
+        variant[:count] += 1
+        variant[:latest_seen_at] = [ variant[:latest_seen_at], created_at ].max
+      end
+
+      grouped_names
+        .sort_by { |_, data| -data[:latest_seen_at].to_i }
+        .map { |_, data| best_casing_variant_name(data[:variants]) }
+        .compact
+        .first(limit)
+    end
+
+    def best_casing_variant_name(variants)
+      variants.max_by { |_, stats| [ stats[:count], stats[:latest_seen_at].to_i ] }&.first
+    end
+
+    def normalize_transaction_name(name)
+      name.to_s.squish.downcase
     end
 
     # Helper methods for convert_to_trade
