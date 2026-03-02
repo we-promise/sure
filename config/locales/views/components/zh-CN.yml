@@ -1,5 +1,9 @@
 ---
 zh-CN:
+  ui:
+    account:
+      activity_feed:
+        toggle_selection_checkboxes: 切换选择复选框
   provider_sync_summary:
     accounts:
       institutions: 机构：%{count}
