@@ -93,7 +93,13 @@ class HoldingsControllerTest < ActionDispatch::IntegrationTest
       clear_cache: true
     ).returns([ 31, nil ])
     Security.any_instance.stubs(:import_provider_details)
-    Balance::Materializer.any_instance.stubs(:materialize_balances)
+    materializer = mock("materializer")
+    materializer.expects(:materialize_balances).once
+    Balance::Materializer.expects(:new).with(
+      @holding.account,
+      strategy: :forward,
+      security_ids: [ @holding.security_id ]
+    ).returns(materializer)
 
     post sync_prices_holding_path(@holding)
 
