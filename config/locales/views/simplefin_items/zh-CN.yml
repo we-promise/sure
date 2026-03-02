@@ -5,9 +5,9 @@ zh-CN:
       all_skipped: 所有账户已跳过。未创建任何账户。
       no_accounts: 无待设置账户。
       stale_accounts_errors:
-        one: "%{count} stale account action failed. Check logs for details."
-        other: "%{count} stale account actions failed. Check logs for details."
-      stale_accounts_processed: 'Stale accounts: %{deleted} deleted, %{moved} moved.'
+        one: "%{count} 个陈旧账户操作失败。请查看日志。"
+        other: "%{count} 个陈旧账户操作失败。请查看日志。"
+      stale_accounts_processed: 陈旧账户：已删除 %{deleted} 个，已迁移 %{moved} 个。
       success: 已成功创建 %{count} 个 SimpleFIN 账户！您的交易和投资数据正在后台导入。
     create:
       errors:
@@ -37,8 +37,8 @@ zh-CN:
       title: 连接 SimpleFIN
     reconciled_status:
       message:
-        one: "%{count} duplicate pending transaction reconciled"
-        other: "%{count} duplicate pending transactions reconciled"
+        one: 已对账 %{count} 笔重复待处理交易
+        other: 已对账 %{count} 笔重复待处理交易
     select_existing_account:
       all_accounts_already_linked: 所有 SimpleFIN 账户似乎均已关联。
       cancel: 取消
@@ -52,43 +52,41 @@ zh-CN:
       wait_for_sync: 如果您刚刚连接或同步完成，请等待同步完成后再试。
     setup_accounts:
       stale_accounts:
-        action_delete: Delete account and all transactions
-        action_move: 'Move transactions to:'
-        action_prompt: What would you like to do?
-        action_skip: Skip for now
-        description: These accounts exist in your database but are no longer provided
-          by SimpleFIN. This can happen when account configurations change upstream.
-        title: Accounts No Longer in SimpleFIN
+        action_delete: 删除账户及所有交易
+        action_move: 将交易迁移到：
+        action_prompt: 您想如何处理？
+        action_skip: 暂时跳过
+        description: 这些账户存在于您的数据库中，但已不再由 SimpleFIN 提供。上游账户配置变更时可能出现此情况。
+        title: SimpleFIN 不再提供的账户
         transaction_count:
-          one: "%{count} transaction"
-          other: "%{count} transactions"
+          one: "%{count} 笔交易"
+          other: "%{count} 笔交易"
     simplefin_item:
-      accounts_skipped_label: 'Skipped: %{count}'
-      accounts_skipped_tooltip: Some accounts were skipped due to errors during sync
+      accounts_skipped_label: 已跳过：%{count}
+      accounts_skipped_tooltip: 部分账户因同步错误被跳过
       add_new: 添加新连接
       confirm_accept: 删除连接
       confirm_body: 此操作将永久删除该组下的所有账户及相关数据。
       confirm_title: 确认删除 SimpleFIN 连接？
       delete: 删除
       deletion_in_progress: "（删除进行中...）"
-      duplicate_accounts_skipped: Some accounts were skipped as duplicates — use 'Link
-        existing accounts' to merge.
+      duplicate_accounts_skipped: 部分账户因重复被跳过——请使用“关联现有账户”进行合并。
       error: 同步数据时发生错误
       more_accounts_available:
-        one: "%{count} more account available to set up"
-        other: "%{count} more accounts available to set up"
+        one: 还有 %{count} 个账户可设置
+        other: 还有 %{count} 个账户可设置
       no_accounts_description: 此连接尚未同步任何账户。
       no_accounts_title: 未找到账户
-      rate_limited_ago: Rate limited (%{time} ago)
-      rate_limited_recently: Rate limited recently
-      reconciled_details_note: "(see sync summary for details)"
+      rate_limited_ago: 触发限流（%{time} 前）
+      rate_limited_recently: 最近触发限流
+      reconciled_details_note: "（详情见同步摘要）"
       requires_update: 需要重新认证
-      setup_accounts_menu: Set Up Accounts
+      setup_accounts_menu: 设置账户
       setup_action: 设置新账户
       setup_description: 请为您新导入的 SimpleFIN 账户选择账户类型。
       setup_needed: 新账户待设置
-      stale_pending_accounts: 'in: %{accounts}'
-      stale_pending_note: "(excluded from budgets)"
+      stale_pending_accounts: 涉及：%{accounts}
+      stale_pending_note: "（不计入预算）"
       status: 上次同步于 %{timestamp} 前
       status_never: 从未同步
       status_with_summary: 同步于 %{timestamp} 前 • %{summary}
@@ -96,8 +94,8 @@ zh-CN:
       update: 更新连接
     stale_pending_status:
       message:
-        one: "%{count} pending transaction older than %{days} days"
-        other: "%{count} pending transactions older than %{days} days"
+        one: "%{count} 笔待处理交易已超过 %{days} 天"
+        other: "%{count} 笔待处理交易已超过 %{days} 天"
     update:
       errors:
         blank_token: 请输入 SimpleFIN 设置令牌。

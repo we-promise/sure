@@ -117,7 +117,7 @@ zh-CN:
       body: 如下字段出现错误：
       header: 有%{count}个错误发生导致"%{model}"无法被保存。
   global:
-    expand: Expand
+    expand: 展开
   helpers:
     select:
       prompt: 请选择
@@ -156,12 +156,12 @@ zh-CN:
         format: "%n %u"
         units:
           byte: 字节
-          eb: EB
-          gb: GB
-          kb: KB
-          mb: MB
-          pb: PB
-          tb: TB
+          eb: 艾字节
+          gb: 吉字节
+          kb: 千字节
+          mb: 兆字节
+          pb: 拍字节
+          tb: 太字节
     percentage:
       format:
         delimiter: ''

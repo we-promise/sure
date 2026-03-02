@@ -3,202 +3,184 @@ zh-CN:
   providers:
     snaptrade:
       accounts_count:
-        one: "%{count} account"
-        other: "%{count} accounts"
+        one: "%{count} 个账户"
+        other: "%{count} 个账户"
       client_id_label: 客户端 ID
-      client_id_placeholder: Enter your SnapTrade Client ID
-      client_id_update_placeholder: Enter new Client ID to update
+      client_id_placeholder: 输入您的 SnapTrade Client ID
+      client_id_update_placeholder: 输入新的 Client ID 以更新
       connect_button: 连接券商
-      connected_brokerages: 'Connected:'
-      connection_description: Connect to your brokerage via SnapTrade (25+ brokers
-        supported)
-      connection_limit_info: SnapTrade free tier allows 5 brokerage connections. Delete
-        unused connections to free up slots.
-      connections_error: 'Failed to load connections: %{message}'
-      consumer_key_label: Consumer Key
-      consumer_key_placeholder: Enter your SnapTrade Consumer Key
-      consumer_key_update_placeholder: Enter new Consumer Key to update
+      connected_brokerages: 已连接：
+      connection_description: 通过 SnapTrade 连接您的券商（支持 25+ 家券商）
+      connection_limit_info: SnapTrade 免费版支持 5 个券商连接。删除未使用连接可释放名额。
+      connections_error: 加载连接失败：%{message}
+      consumer_key_label: Consumer Key（密钥）
+      consumer_key_placeholder: 输入您的 SnapTrade Consumer Key
+      consumer_key_update_placeholder: 输入新的 Consumer Key 以更新
       delete_connection: 删除
-      delete_connection_body: This will permanently remove the %{brokerage} connection
-        from SnapTrade. All accounts from this brokerage will be unlinked. You'll
-        need to reconnect to sync these accounts again.
-      delete_connection_confirm: Delete Connection
-      delete_connection_title: Delete Brokerage Connection?
+      delete_connection_body: 这将从 SnapTrade 永久移除 %{brokerage} 连接。该券商下所有账户将被取消关联。若要再次同步这些账户，您需要重新连接。
+      delete_connection_confirm: 删除连接
+      delete_connection_title: 删除券商连接？
       delete_orphaned_user: 删除
-      delete_orphaned_user_body: This will permanently delete this orphaned SnapTrade
-        user and all their brokerage connections, freeing up connection slots.
-      delete_orphaned_user_confirm: Delete Registration
-      delete_orphaned_user_title: Delete Orphaned Registration?
-      description: SnapTrade connects to 25+ major brokerages (Fidelity, Vanguard,
-        Schwab, Robinhood, etc.) and provides full trade history with activity labels
-        and cost basis.
-      free_tier_warning: Free tier includes 5 brokerage connections. Additional connections
-        require a paid SnapTrade plan.
-      loading_connections: Loading connections...
-      manage_connections: Manage Connections
-      name: SnapTrade
-      needs_linking: needs linking
+      delete_orphaned_user_body: 这将永久删除该孤立 SnapTrade 用户及其所有券商连接，以释放连接名额。
+      delete_orphaned_user_confirm: 删除注册
+      delete_orphaned_user_title: 删除孤立注册？
+      description: SnapTrade 可连接 25+ 家主流券商（Fidelity、Vanguard、Schwab、Robinhood 等），并提供完整交易历史、活动标签与成本基础。
+      free_tier_warning: 免费版包含 5 个券商连接，额外连接需要 SnapTrade 付费套餐。
+      loading_connections: 正在加载连接...
+      manage_connections: 管理连接
+      name: SnapTrade（服务商）
+      needs_linking: 待关联
       needs_setup:
-        one: "%{count} needs setup"
-        other: "%{count} need setup"
-      no_connections: No brokerage connections found.
-      orphaned_connection: Orphaned connection (not synced locally)
-      orphaned_user: Orphaned Registration
-      orphaned_users_description: These are previous SnapTrade user registrations
-        that are using your connection slots. Delete them to free up slots.
+        one: "%{count} 个待设置"
+        other: "%{count} 个待设置"
+      no_connections: 未找到券商连接。
+      orphaned_connection: 孤立连接（未在本地同步）
+      orphaned_user: 孤立注册
+      orphaned_users_description: 这些是之前的 SnapTrade 用户注册，正在占用连接名额。删除后可释放名额。
       orphaned_users_title:
-        one: "%{count} orphaned registration"
-        other: "%{count} orphaned registrations"
-      save_button: Save Configuration
-      setup_accounts_button: Setup Accounts
-      setup_title: 'Setup instructions:'
+        one: "%{count} 个孤立注册"
+        other: "%{count} 个孤立注册"
+      save_button: 保存配置
+      setup_accounts_button: 设置账户
+      setup_title: 设置说明：
       status_connected:
-        one: "%{count} account from SnapTrade"
-        other: "%{count} accounts from SnapTrade"
-      status_needs_registration: Credentials saved. Go to Accounts page to connect
-        brokerages.
+        one: 来自 SnapTrade 的 %{count} 个账户
+        other: 来自 SnapTrade 的 %{count} 个账户
+      status_needs_registration: 凭据已保存。请前往账户页面连接券商。
       status_not_configured: 未配置
-      status_ready: Ready to connect brokerages
-      step_1_html: Create an account at <a href="https://dashboard.snaptrade.com"
-        target="_blank" rel="noopener noreferrer" class="text-primary underline">dashboard.snaptrade.com</a>
-      step_2: Copy your Client ID and Consumer Key from the dashboard
-      step_3: Enter your credentials below and click Save
-      step_4: Go to the Accounts page and use 'Connect another brokerage' to link
-        your investment accounts
+      status_ready: 可连接券商
+      step_1_html: 在 <a href="https://dashboard.snaptrade.com" target="_blank" rel="noopener noreferrer" class="text-primary underline">dashboard.snaptrade.com</a> 创建账户
+      step_2: 从控制台复制您的 Client ID 和 Consumer Key
+      step_3: 在下方输入凭据并点击保存
+      step_4: 前往账户页面，使用“连接其他券商”来关联您的投资账户
       update_button: 更新配置
   snaptrade_item:
     brokerage_summary:
       count:
-        one: "%{count} brokerage"
-        other: "%{count} brokerages"
-      none: No brokerages connected
+        one: "%{count} 家券商"
+        other: "%{count} 家券商"
+      none: 未连接任何券商
     institution_summary:
       count:
-        one: "%{count} institution"
-        other: "%{count} institutions"
-      none: No institutions connected
+        one: "%{count} 家机构"
+        other: "%{count} 家机构"
+      none: 未连接任何机构
     sync_status:
       no_accounts: 未找到账户
       synced:
-        one: "%{count} account synced"
-        other: "%{count} accounts synced"
-      synced_with_setup: "%{linked} synced, %{unlinked} need setup"
+        one: 已同步 %{count} 个账户
+        other: 已同步 %{count} 个账户
+      synced_with_setup: 已同步 %{linked} 个，%{unlinked} 个待设置
     syncer:
-      activities_fetching_async: Activities are being fetched in the background. This
-        may take up to a minute for fresh brokerage connections.
+      activities_fetching_async: 活动数据正在后台获取。新连接的券商可能需要最多一分钟。
       calculating: 正在计算余额...
       checking_config: 正在检查账户配置...
       discovering: 正在发现账户...
       importing: 正在从...导入账户 SnapTrade...
-      needs_setup: "%{count} accounts need setup..."
-      processing: Processing holdings and activities...
+      needs_setup: 有 %{count} 个账户需要设置...
+      processing: 正在处理持仓和活动...
   snaptrade_items:
     callback:
-      no_item: SnapTrade configuration not found.
-      success: Brokerage connected! Please select which accounts to link.
+      no_item: 未找到 SnapTrade 配置。
+      success: 券商已连接！请选择要关联的账户。
     complete_account_setup:
-      link_failed: 'Failed to link accounts: %{errors}'
-      no_accounts: No accounts were selected for linking.
-      partial_success: Linked %{linked} account(s). %{failed} failed to link.
+      link_failed: 关联账户失败：%{errors}
+      no_accounts: 未选择要关联的账户。
+      partial_success: 已关联 %{linked} 个账户，%{failed} 个关联失败。
       success:
         one: 成功关联账户.
         other: 成功关联s.
     connect:
-      connection_failed: 'Failed to connect to SnapTrade: %{message}'
-      decryption_failed: Unable to read SnapTrade credentials. Please delete and recreate
-        this connection.
+      connection_failed: 连接 SnapTrade 失败：%{message}
+      decryption_failed: 无法读取 SnapTrade 凭据。请删除并重新创建该连接。
     connections:
-      unknown_brokerage: Unknown Brokerage
+      unknown_brokerage: 未知券商
     create:
-      success: Successfully configured SnapTrade.
-    default_name: SnapTrade Connection
+      success: SnapTrade 配置成功。
+    default_name: SnapTrade 连接
     delete_connection:
-      api_deletion_failed: Could not delete connection from SnapTrade - missing credentials.
-        The connection may still exist in your SnapTrade account.
-      failed: 'Failed to delete connection: %{message}'
-      missing_authorization_id: Missing authorization ID
-      success: Connection deleted successfully. One slot freed up.
+      api_deletion_failed: 无法从 SnapTrade 删除连接——缺少凭据。该连接可能仍存在于您的 SnapTrade 账户中。
+      failed: 删除连接失败：%{message}
+      missing_authorization_id: 缺少授权 ID
+      success: 连接删除成功，已释放一个名额。
     delete_orphaned_user:
-      failed: Failed to delete orphaned registration.
-      success: Orphaned registration deleted successfully.
+      failed: 删除孤立注册失败。
+      success: 孤立注册删除成功。
     destroy:
-      success: Scheduled SnapTrade connection for deletion.
+      success: 已计划删除 SnapTrade 连接。
     link_existing_account:
-      failed: 'Failed to link account: %{message}'
-      not_found: Account not found.
+      failed: 关联账户失败：%{message}
+      not_found: 未找到账户。
       success: 成功关联账户.
     preload_accounts:
-      not_configured: SnapTrade is not configured.
+      not_configured: SnapTrade 尚未配置。
     select_accounts:
-      not_configured: SnapTrade is not configured.
+      not_configured: SnapTrade 尚未配置。
     select_existing_account:
-      balance_label: 'Balance:'
+      balance_label: 余额：
       cancel_button: 取消
-      connect_hint: You may need to connect a brokerage first.
-      header: Link Existing Account
+      connect_hint: 您可能需要先连接券商。
+      header: 关联现有账户
       link_button: 关联
-      linking_to: 'Linking to account:'
-      no_accounts: No unlinked SnapTrade accounts available.
-      not_found: Account or SnapTrade configuration not found.
+      linking_to: 正在关联到账户：
+      no_accounts: 没有可用的未关联 SnapTrade 账户。
+      not_found: 未找到账户或 SnapTrade 配置。
       settings_link: 前往服务商设置
-      subtitle: Select a SnapTrade account to link to
-      title: Link to SnapTrade Account
+      subtitle: 选择要关联的 SnapTrade 账户
+      title: 关联到 SnapTrade 账户
     setup_accounts:
-      account_number: 'Account:'
-      available_accounts: Available Accounts
-      back_to_settings: Back to Settings
-      balance_label: 'Balance:'
+      account_number: 账户：
+      available_accounts: 可用账户
+      back_to_settings: 返回设置
+      balance_label: 余额：
       cancel_button: 取消
-      create_button: Create Selected Accounts
+      create_button: 创建所选账户
       creating: 正在创建账户...
-      done_button: Done
-      free_tier_note: SnapTrade free tier allows 5 brokerage connections. Check your
-        SnapTrade dashboard for current usage.
-      header: Set Up Your SnapTrade Accounts
-      info_activities: Trade history with activity labels (Buy, Sell, Dividend, etc.)
-      info_cost_basis: Cost basis per position (when available)
-      info_history: Up to 3 years of transaction history
-      info_holdings: Holdings with current prices and quantities
-      info_title: SnapTrade Investment Data
+      done_button: 完成
+      free_tier_note: SnapTrade 免费版支持 5 个券商连接。请在 SnapTrade 控制台查看当前使用情况。
+      header: 设置您的 SnapTrade 账户
+      info_activities: 带活动标签的交易历史（买入、卖出、分红等）
+      info_cost_basis: 每个持仓的成本基础（如可用）
+      info_history: 最多 3 年交易历史
+      info_holdings: 包含当前价格和数量的持仓
+      info_title: SnapTrade 投资数据
       link_button: 关联
-      linked_accounts: Already Linked
-      linked_to: 'Linked to:'
-      loading: Fetching accounts from SnapTrade...
-      loading_hint: Click Refresh to check for accounts.
-      no_accounts_message: No brokerage accounts were found. This can happen if you
-        cancelled the connection or if your brokerage isn't supported.
-      no_accounts_title: No Accounts Found
-      or_link_existing: 'Or link to an existing account instead of creating a new
-        one:'
-      refresh: Refresh
-      select_account: Select an account...
-      subtitle: Select which brokerage accounts to link
+      linked_accounts: 已关联
+      linked_to: 已关联到：
+      loading: 正在从 SnapTrade 获取账户...
+      loading_hint: 点击“刷新”检查账户。
+      no_accounts_message: 未找到券商账户。可能是您取消了连接，或该券商暂不受支持。
+      no_accounts_title: 未找到账户
+      or_link_existing: 或关联到现有账户，而不是创建新账户：
+      refresh: 刷新
+      select_account: 选择一个账户...
+      subtitle: 选择要关联的券商账户
       syncing: 正在获取您的账户...
-      title: Set Up SnapTrade Accounts
+      title: 设置 SnapTrade 账户
       try_again: 连接券商
     snaptrade_item:
       accounts_need_setup:
-        one: "%{count} account needs setup"
-        other: "%{count} accounts need setup"
-      add_another_brokerage: Connect another brokerage
+        one: "%{count} 个账户需要设置"
+        other: "%{count} 个账户需要设置"
+      add_another_brokerage: 连接其他券商
       connect_brokerage: 连接券商
       delete: 删除
-      deletion_in_progress: Deletion in progress...
-      error: Sync error
-      manage_connections: Manage Connections
+      deletion_in_progress: 删除进行中...
+      error: 同步错误
+      manage_connections: 管理连接
       more_accounts_available:
-        one: "%{count} more account available to set up"
-        other: "%{count} more accounts available to set up"
-      no_accounts_description: Connect a brokerage to import your investment accounts.
-      no_accounts_title: No accounts discovered
-      reconnect: Reconnect
-      requires_update: Connection needs update
-      setup_accounts_menu: Set Up Accounts
-      setup_action: Setup Accounts
-      setup_description: Some accounts from SnapTrade need to be linked to Sure accounts.
+        one: 还有 %{count} 个账户可设置
+        other: 还有 %{count} 个账户可设置
+      no_accounts_description: 连接券商以导入您的投资账户。
+      no_accounts_title: 未发现账户
+      reconnect: 重新连接
+      requires_update: 连接需要更新
+      setup_accounts_menu: 设置账户
+      setup_action: 设置账户
+      setup_description: 部分来自 SnapTrade 的账户需要关联到 Sure 账户。
       setup_needed: 账户需要设置
-      status: Last synced %{timestamp} ago - %{summary}
+      status: 上次同步于 %{timestamp} 前 - %{summary}
       status_never: 从未同步
       syncing: 同步中...
     update:
-      success: Successfully updated SnapTrade configuration.
+      success: SnapTrade 配置更新成功。

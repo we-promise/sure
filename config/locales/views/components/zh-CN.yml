@@ -2,66 +2,66 @@
 zh-CN:
   provider_sync_summary:
     accounts:
-      institutions: 'Institutions: %{count}'
-      linked: 'Linked: %{count}'
-      title: Accounts
-      total: 'Total: %{count}'
-      unlinked: 'Unlinked: %{count}'
+      institutions: 机构：%{count}
+      linked: 已关联：%{count}
+      title: 账户
+      total: 总计：%{count}
+      unlinked: 未关联：%{count}
     health:
-      data_warnings: 'Data warnings: %{count}'
+      data_warnings: 数据警告：%{count}
       duplicate_suggestions:
-        one: "%{count} possible duplicate needs review"
-        other: "%{count} possible duplicates need review"
-      errors: 'Errors: %{count}'
-      notices: 'Notices: %{count}'
+        one: 有 %{count} 条可能重复项待审核
+        other: 有 %{count} 条可能重复项待审核
+      errors: 错误：%{count}
+      notices: 提示：%{count}
       pending_reconciled:
-        one: "%{count} duplicate pending transaction reconciled"
-        other: "%{count} duplicate pending transactions reconciled"
-      rate_limited: Rate limited %{time_ago}
-      recently: recently
+        one: 已对账 %{count} 笔重复待处理交易
+        other: 已对账 %{count} 笔重复待处理交易
+      rate_limited: 在 %{time_ago} 触发限流
+      recently: 最近
       stale_pending:
-        one: "%{count} stale pending transaction (excluded from budgets)"
-        other: "%{count} stale pending transactions (excluded from budgets)"
+        one: "%{count} 笔过期待处理交易（不计入预算）"
+        other: "%{count} 笔过期待处理交易（不计入预算）"
       stale_pending_count:
-        one: "%{count} transaction"
-        other: "%{count} transactions"
+        one: "%{count} 笔交易"
+        other: "%{count} 笔交易"
       stale_unmatched:
-        one: "%{count} pending transaction needs manual review"
-        other: "%{count} pending transactions need manual review"
+        one: "%{count} 笔待处理交易需人工审核"
+        other: "%{count} 笔待处理交易需人工审核"
       stale_unmatched_count:
-        one: "%{count} transaction"
-        other: "%{count} transactions"
-      title: Health
-      view_data_quality: View data quality details
-      view_duplicate_suggestions: View suggested duplicates
-      view_error_details: View error details
-      view_reconciled: View reconciled transactions
-      view_stale_pending: View affected accounts
-      view_stale_unmatched: View transactions needing review
+        one: "%{count} 笔交易"
+        other: "%{count} 笔交易"
+      title: 健康状态
+      view_data_quality: 查看数据质量详情
+      view_duplicate_suggestions: 查看建议重复项
+      view_error_details: 查看错误详情
+      view_reconciled: 查看已对账交易
+      view_stale_pending: 查看受影响账户
+      view_stale_unmatched: 查看待审核交易
     holdings:
-      found: 'Found: %{count}'
-      processed: 'Processed: %{count}'
-      title: Holdings
-    last_sync: 'Last sync: %{time_ago} ago'
+      found: 发现：%{count}
+      processed: 已处理：%{count}
+      title: 持仓
+    last_sync: 上次同步：%{time_ago} 前
     skip_reasons:
-      excluded: Excluded
-      import_locked: CSV import
-      protected: Protected
-      user_modified: User modified
-    title: Sync summary
+      excluded: 已排除
+      import_locked: CSV 导入
+      protected: 受保护
+      user_modified: 用户已修改
+    title: 同步摘要
     trades:
-      fetching: Fetching activities from brokerage...
-      imported: 'Imported: %{count}'
-      skipped: 'Skipped: %{count}'
+      fetching: 正在从券商获取活动数据...
+      imported: 已导入：%{count}
+      skipped: 已跳过：%{count}
       title: 交易
     transactions:
-      fetching: Fetching from brokerage...
-      imported: 'Imported: %{count}'
+      fetching: 正在从券商获取数据...
+      imported: 已导入：%{count}
       protected:
-        one: "%{count} entry protected (not overwritten)"
-        other: "%{count} entries protected (not overwritten)"
-      seen: 'Seen: %{count}'
-      skipped: 'Skipped: %{count}'
+        one: "%{count} 条记录受保护（未被覆盖）"
+        other: "%{count} 条记录受保护（未被覆盖）"
+      seen: 已扫描：%{count}
+      skipped: 已跳过：%{count}
       title: 交易
-      updated: 'Updated: %{count}'
-      view_protected: View protected entries
+      updated: 已更新：%{count}
+      view_protected: 查看受保护记录

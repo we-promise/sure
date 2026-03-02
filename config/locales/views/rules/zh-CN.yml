@@ -2,33 +2,30 @@
 zh-CN:
   rules:
     actions:
-      value_placeholder: Enter a value
+      value_placeholder: 输入一个值
     apply_all:
-      ai_cost_message: This will use AI to categorize up to %{transactions} transactions.
-      ai_cost_title: AI Cost Estimation
-      button: Apply All
-      confirm_button: Confirm and Apply All
-      confirm_message: You are about to apply %{count} rules affecting %{transactions}
-        unique transactions. Please confirm if you wish to proceed.
-      confirm_title: Apply All Rules
-      cost_unavailable_model: Cost estimation unavailable for model "%{model}".
-      cost_unavailable_no_provider: Cost estimation unavailable (no LLM provider configured).
-      cost_warning: You may incur costs, please check with the model provider for
-        the most up-to-date prices.
-      estimated_cost: 'Estimated cost: ~$%{cost}'
-      success: All rules have been queued for execution
-      view_usage: View usage history
+      ai_cost_message: 这将使用 AI 最多为 %{transactions} 笔交易分类。
+      ai_cost_title: AI 成本估算
+      button: 应用全部
+      confirm_button: 确认并应用全部
+      confirm_message: 您即将应用 %{count} 条规则，影响 %{transactions} 笔唯一交易。请确认是否继续。
+      confirm_title: 应用全部规则
+      cost_unavailable_model: 模型“%{model}”无法进行成本估算。
+      cost_unavailable_no_provider: 成本估算不可用（未配置 LLM 提供商）。
+      cost_warning: 此操作可能产生费用，请向模型提供商确认最新价格。
+      estimated_cost: 预估成本：约 $%{cost}
+      success: 所有规则已加入执行队列
+      view_usage: 查看使用历史
     clear_ai_cache:
-      button: Reset AI cache
-      confirm_body: Are you sure you want to reset the AI cache? This will allow AI
-        rules to re-process all transactions. This may incur additional API costs.
-      confirm_button: Reset Cache
-      confirm_title: Reset AI cache?
-      success: AI cache is being cleared. This may take a few moments.
+      button: 重置 AI 缓存
+      confirm_body: 确定要重置 AI 缓存吗？这将允许 AI 规则重新处理所有交易，可能产生额外 API 费用。
+      confirm_button: 重置缓存
+      confirm_title: 重置 AI 缓存？
+      success: 正在清理 AI 缓存，可能需要一些时间。
     condition_filters:
       transaction_type:
-        equal_to: Equal to
-        expense: Expense
+        equal_to: 等于
+        expense: 支出
         income: 收入
         transfer: 转账
     no_action: 无操作

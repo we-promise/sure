@@ -11,14 +11,13 @@ zh-CN:
     loading:
       loading: 正在加载记录...
     protection:
-      description: Your edits to this entry won't be overwritten by provider sync.
-      locked_fields_label: 'Locked fields:'
-      title: Protected from sync
-      tooltip: Protected from sync
-      unlock_button: Allow sync to update
-      unlock_confirm: Allow sync to update this entry? Your changes may be overwritten
-        on the next sync.
+      description: 您对此条目的修改不会被提供商同步覆盖。
+      locked_fields_label: 已锁定字段：
+      title: 受同步保护
+      tooltip: 受同步保护
+      unlock_button: 允许同步更新
+      unlock_confirm: 允许同步更新此条目吗？您的更改可能会在下一次同步时被覆盖。
     unlock:
-      success: Entry unlocked. It may be updated on next sync.
+      success: 条目已解锁。下次同步时可能会被更新。
     update:
       success: 记录已更新

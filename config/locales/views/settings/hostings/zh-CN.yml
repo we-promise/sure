@@ -4,9 +4,8 @@ zh-CN:
     hostings:
       brand_fetch_settings:
         description: 请输入 Brand Fetch 提供的 Client ID
-        high_res_description: When enabled, logos will be retrieved at 120x120 resolution
-          instead of 40x40. This provides sharper images on high-DPI displays.
-        high_res_label: Enable high-resolution logos
+        high_res_description: 启用后，Logo 将以 120x120 分辨率获取，而非 40x40，可在高 DPI 屏幕上显示更清晰。
+        high_res_label: 启用高分辨率 Logo
         label: 客户端 ID
         placeholder: 在此输入您的 Client ID
         title: Brand Fetch 设置
@@ -41,13 +40,12 @@ zh-CN:
         uri_base_label: API 基础 URL（可选）
         uri_base_placeholder: https://api.openai.com/v1（默认）
       provider_selection:
-        description: 选择用于获取汇率和证券价格的服务。Yahoo Finance 免费且无需 API 密钥。Twelve Data 需要免费的
-          API 密钥，但可能提供更全面的数据覆盖。
+        description: 选择用于获取汇率和证券价格的服务。Yahoo Finance 免费且无需 API 密钥。Twelve Data 需要免费的 API 密钥，但可能提供更全面的数据覆盖。
         env_configured_message: 提供商选择已禁用，因为环境变量（EXCHANGE_RATE_PROVIDER 或 SECURITIES_PROVIDER）已设置。要在此处启用选择，请从配置中移除这些环境变量。
         exchange_rate_provider_label: 汇率数据提供商
         providers:
-          twelve_data: Twelve Data
-          yahoo_finance: Yahoo Finance
+          twelve_data: Twelve Data（服务商）
+          yahoo_finance: Yahoo Finance（服务商）
         securities_provider_label: 证券（股票价格）数据提供商
         title: 数据提供商选择
       show:
@@ -60,22 +58,16 @@ zh-CN:
         financial_data_providers: 金融数据提供商
         general: 通用设置
         invites: 邀请码设置
-        sync_settings: Sync Settings
+        sync_settings: 同步设置
         title: 自托管配置
       sync_settings:
-        auto_sync_description: When enabled, all accounts will be automatically synced
-          daily at the specified time.
-        auto_sync_label: Enable automatic sync
-        auto_sync_time_description: Specify the time of day when automatic sync should
-          occur.
-        auto_sync_time_label: Sync time (HH:MM)
-        env_configured_message: This setting is disabled because a provider environment
-          variable (SIMPLEFIN_INCLUDE_PENDING or PLAID_INCLUDE_PENDING) is set. Remove
-          it to enable this setting.
-        include_pending_description: When enabled, pending (uncleared) transactions
-          will be imported and automatically reconciled when they post. Disable if
-          your bank provides unreliable pending data.
-        include_pending_label: Include pending transactions
+        auto_sync_description: 启用后，所有账户将在指定时间每天自动同步。
+        auto_sync_label: 启用自动同步
+        auto_sync_time_description: 指定自动同步执行的时间。
+        auto_sync_time_label: 同步时间（HH:MM）
+        env_configured_message: 由于已设置提供商环境变量（SIMPLEFIN_INCLUDE_PENDING 或 PLAID_INCLUDE_PENDING），该设置已禁用。移除后可启用。
+        include_pending_description: 启用后，将导入待处理（未清算）交易，并在入账后自动对账。若银行提供的待处理数据不可靠，请关闭。
+        include_pending_label: 包含待处理交易
       twelve_data_settings:
         api_calls_used: 已使用 %{used} / %{limit} 次每日 API 调用（%{percentage}）
         description: 请输入 Twelve Data 提供的 API 密钥
@@ -83,19 +75,16 @@ zh-CN:
         label: API 密钥
         placeholder: 在此输入您的 API 密钥
         plan: "%{plan} 套餐"
-        plan_upgrade_warning_description: The following tickers in your portfolio
-          cannot sync prices with your current Twelve Data plan.
-        plan_upgrade_warning_title: Some tickers require a paid plan
-        requires_plan: requires %{plan} plan
+        plan_upgrade_warning_description: 您投资组合中的以下代码无法使用当前 Twelve Data 套餐同步价格。
+        plan_upgrade_warning_title: 部分代码需要付费套餐
+        requires_plan: 需要 %{plan} 套餐
         title: Twelve Data 设置
-        view_pricing: View Twelve Data pricing
+        view_pricing: 查看 Twelve Data 价格
       update:
         failure: 设置值无效
         invalid_onboarding_state: 无效的新用户注册状态
-        invalid_sync_time: Invalid sync time format. Please use HH:MM format (e.g.,
-          02:30).
-        scheduler_sync_failed: Settings saved, but failed to update the sync schedule.
-          Please try again or check the server logs.
+        invalid_sync_time: 同步时间格式无效。请使用 HH:MM 格式（例如 02:30）。
+        scheduler_sync_failed: 设置已保存，但更新同步计划失败。请重试或检查服务器日志。
         success: 设置已更新
       yahoo_finance_settings:
         connection_failed: 无法连接到 Yahoo Finance

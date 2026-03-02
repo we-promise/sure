@@ -3,48 +3,43 @@ zh-CN:
   admin:
     users:
       index:
-        description: Manage user roles for your instance. Super admins can access
-          SSO provider settings and user management.
+        description: 管理您实例中的用户角色。超级管理员可访问 SSO 提供商设置和用户管理。
         filters:
-          role: Role
-          role_all: All roles
-          submit: Filter
-          trial_all: All
-          trial_expiring_soon: Expiring in 7 days
-          trial_status: Trial status
-          trial_trialing: On trial
-        no_users: No users found.
-        not_available: n/a
+          role: 角色
+          role_all: 全部角色
+          submit: 筛选
+          trial_all: 全部
+          trial_expiring_soon: 7 天内到期
+          trial_status: 试用状态
+          trial_trialing: 试用中
+        no_users: 未找到用户。
+        not_available: 不适用
         role_descriptions:
-          admin: Family administrator. Can access advanced settings like API keys,
-            imports, and AI prompts.
-          guest: Assistant-first experience with intentionally restricted permissions
-            for intro workflows.
-          member: Basic user access. Can manage their own accounts, transactions,
-            and settings.
-          super_admin: Instance administrator. Can manage SSO providers, user roles,
-            and impersonate users for support.
-        role_descriptions_title: Role Descriptions
+          admin: 家庭管理员。可访问 API 密钥、导入和 AI 提示等高级设置。
+          guest: 以助手为先的体验，权限受限以适配入门流程。
+          member: 基础用户权限。可管理自己的账户、交易和设置。
+          super_admin: 实例管理员。可管理 SSO 提供商、用户角色，并可为支持目的模拟登录用户。
+        role_descriptions_title: 角色说明
         roles:
-          admin: Admin
+          admin: 管理员
           guest: 访客
-          member: Member
+          member: 成员
           super_admin: 超级管理员
-        section_title: Users
+        section_title: 用户
         summary:
-          trials_expiring_7_days: Trials expiring in next 7 days
+          trials_expiring_7_days: 未来 7 天内到期的试用
         table:
-          family_accounts: Family accounts
-          family_transactions: Family transactions
-          last_login: Last login
-          never: Never
-          role: Role
-          session_count: Session count
+          family_accounts: 家庭账户
+          family_transactions: 家庭交易
+          last_login: 上次登录
+          never: 从未
+          role: 角色
+          session_count: 会话数量
           trial_ends_at: 试用结束
-          user: User
-        title: User Management
+          user: 用户
+        title: 用户管理
         trial_ends_at: 试用结束
-        you: "(You)"
+        you: "（您）"
       update:
-        failure: Failed to update user role.
-        success: User role updated successfully.
+        failure: 更新用户角色失败。
+        success: 用户角色更新成功。

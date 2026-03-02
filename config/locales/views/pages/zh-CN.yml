@@ -15,13 +15,13 @@ zh-CN:
         title: 现金流
       drag_to_reorder: 拖动以重新排序模块
       investment_summary:
-        add_investment: Add an investment account to track your portfolio
+        add_investment: 添加投资账户以跟踪您的投资组合
         contributions: 缴存
         holding: 持仓
-        no_investments: No investment accounts
-        period_activity: "%{period} Activity"
+        no_investments: 暂无投资账户
+        period_activity: "%{period} 活动"
         return: 收益
-        title: Investments
+        title: 投资
         total_return: 总收益
         trades: 交易
         value: 价值
@@ -49,10 +49,10 @@ zh-CN:
       toggle_section: 切换模块显示/隐藏
       welcome: 欢迎回来，%{name}
     privacy:
-      heading: Privacy Policy
-      placeholder: Privacy policy content will be displayed here.
-      title: Privacy Policy
+      heading: 隐私政策
+      placeholder: 隐私政策内容将在此显示。
+      title: 隐私政策
     terms:
       heading: 服务条款
-      placeholder: Terms of service content will be displayed here.
+      placeholder: 服务条款内容将在此显示。
       title: 服务条款

@@ -4,12 +4,11 @@ zh-CN:
     link:
       account_creation_disabled: 通过单点登录创建账户已禁用。请联系管理员。
       cancel: 取消
-      create_description_html: 未找到使用电子邮箱 <strong>%{email}</strong> 的账户。点击下方使用您的 %{provider}
-        身份创建新账户。
+      create_description_html: 未找到使用电子邮箱 <strong>%{email}</strong> 的账户。点击下方使用您的 %{provider} 身份创建新账户。
       create_heading: 创建新账户
       email_label: 电子邮箱
       email_placeholder: 请输入您的电子邮箱
-      email_suffix_html: "（<strong>%{email}</strong>）"
+      email_suffix_html: "（邮箱：<strong>%{email}</strong>）"
       info_email: 电子邮箱：
       info_name: 姓名：
       password_label: 密码

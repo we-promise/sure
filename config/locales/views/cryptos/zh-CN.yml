@@ -4,19 +4,17 @@ zh-CN:
     edit:
       edit: 编辑%{account}
     form:
-      subtype_label: Account type
-      subtype_none: Not specified
-      subtype_prompt: Select type...
-      tax_treatment_hint: Most cryptocurrency is held in taxable accounts. Select
-        a different option if held in a tax-advantaged account like a self-directed
-        IRA.
-      tax_treatment_label: Tax Treatment
+      subtype_label: 账户类型
+      subtype_none: 未指定
+      subtype_prompt: 请选择类型…
+      tax_treatment_hint: 大多数加密货币通常持有在应税账户中。如果持有在自主管理 IRA 等税优账户中，请选择其他选项。
+      tax_treatment_label: 税务处理
     new:
       title: 请输入账户余额
     subtypes:
       exchange:
-        long: Crypto Exchange
-        short: Exchange
+        long: 加密货币交易所
+        short: 交易所
       wallet:
-        long: Crypto Wallet
-        short: Wallet
+        long: 加密货币钱包
+        short: 钱包

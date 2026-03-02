@@ -2,4 +2,4 @@
 zh-CN:
   pdf_import_mailer:
     next_steps:
-      subject: Your PDF document has been analyzed - %{product_name}
+      subject: 您的 PDF 文档已分析完成 - %{product_name}

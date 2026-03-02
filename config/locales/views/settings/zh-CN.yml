@@ -10,7 +10,7 @@ zh-CN:
         merchant_detector:
           subtitle: AI 识别交易数据并补充商户信息
           title: 商户识别器
-        openai_label: OpenAI
+        openai_label: OpenAI（模型服务）
         page_title: AI 提示词设置
         prompt_instructions: 提示词说明
         transaction_categorizer:
@@ -35,10 +35,9 @@ zh-CN:
         general_title: 通用设置
         language: 语言
         language_auto: 浏览器语言
-        month_start_day: Budget month starts on
-        month_start_day_hint: Set when your budget month starts (e.g., payday)
-        month_start_day_warning: Your budgets and MTD calculations will use this custom
-          start day instead of the 1st of each month.
+        month_start_day: 预算月起始日
+        month_start_day_hint: 设置预算月从哪一天开始（例如发薪日）
+        month_start_day_warning: 您的预算和本月至今（MTD）计算将使用该自定义起始日，而非每月 1 日。
         page_title: 偏好设置
         theme_dark: 深色模式
         theme_light: 浅色模式
@@ -73,9 +72,9 @@ zh-CN:
         delete_account_warning: 删除账户将永久移除您的所有数据且不可恢复。
         email: 邮箱
         first_name: 名字
-        group_form_input_placeholder: Enter group name
+        group_form_input_placeholder: 输入组名
         group_form_label: 组名
-        group_title: Group Members
+        group_title: 组成员
         household_form_input_placeholder: 请输入家庭名称
         household_form_label: 家庭名称
         household_subtitle: 邀请家庭成员、合作伙伴等人员。被邀请者可登录您的家庭账户并访问共享账户。
@@ -96,53 +95,43 @@ zh-CN:
         save: 保存
     providers:
       coinbase_panel:
-        api_key_label: API Key
-        api_key_placeholder: Enter your Coinbase API key
-        api_secret_label: API Secret
-        api_secret_placeholder: Enter your Coinbase API secret
-        connect_button: Connect Coinbase
-        disconnect_confirm: Are you sure you want to disconnect this Coinbase connection?
-          Your synced accounts will become manual accounts.
-        setup_instructions: 'To connect Coinbase:'
-        status_connected: Coinbase is connected and syncing your crypto holdings.
-        status_not_connected: Not connected. Enter your API credentials above to get
-          started.
-        step1_html: Go to <a href="https://portal.cdp.coinbase.com/projects/api-keys"
-          target="_blank" class="text-primary underline">Coinbase API Settings</a>
-        step2: Create a new API key with read-only permissions (view accounts, view
-          transactions)
-        step3: Copy your API key and API secret and paste them below
-        sync: Sync
+        api_key_label: API 密钥
+        api_key_placeholder: 输入您的 Coinbase API 密钥
+        api_secret_label: API 密钥密文
+        api_secret_placeholder: 输入您的 Coinbase API 密钥密文
+        connect_button: 连接 Coinbase
+        disconnect_confirm: 确定要断开此 Coinbase 连接吗？已同步账户将转为手动账户。
+        setup_instructions: 连接 Coinbase：
+        status_connected: Coinbase 已连接，正在同步您的加密资产持仓。
+        status_not_connected: 尚未连接。请输入上方 API 凭据以开始。
+        step1_html: 前往 <a href="https://portal.cdp.coinbase.com/projects/api-keys" target="_blank" class="text-primary underline">Coinbase API 设置</a>
+        step2: 创建一个只读权限的新 API 密钥（查看账户、查看交易）
+        step3: 复制您的 API 密钥及密钥密文并粘贴到下方
+        sync: 同步
         syncing: 同步中...
       enable_banking_panel:
-        callback_url_instruction: For the callback URL, use %{callback_url}.
-        connection_error: Connection Error
+        callback_url_instruction: 回调 URL 请使用 %{callback_url}。
+        connection_error: 连接错误
       encryption_error:
-        message: Active Record encryption keys are not configured. Please ensure the
-          encryption credentials (active_record_encryption.primary_key, active_record_encryption.deterministic_key,
-          and active_record_encryption.key_derivation_salt) are properly set up in
-          your Rails credentials or environment variables before using sync providers.
-        title: Encryption Configuration Required
+        message: 尚未配置 Active Record 加密密钥。使用同步提供商前，请确保在 Rails 凭据或环境变量中正确设置加密凭据（active_record_encryption.primary_key、active_record_encryption.deterministic_key、active_record_encryption.key_derivation_salt）。
+        title: 需要加密配置
       show:
-        coinbase_title: Coinbase
+        coinbase_title: Coinbase（服务商）
     securities:
       show:
         page_title: 安全设置
-        sso_confirm_body: Are you sure you want to disconnect your %{provider} account?
-          You can reconnect it later by signing in with that provider again.
-        sso_confirm_button: Disconnect
-        sso_confirm_title: Disconnect Account?
-        sso_connect_hint: Log out and sign in with an SSO provider to connect an account.
-        sso_disconnect: Disconnect
-        sso_last_used: Last used
-        sso_never: Never
-        sso_no_email: No email
-        sso_no_identities: No SSO accounts connected
-        sso_subtitle: Manage your single sign-on account connections
-        sso_title: Connected Accounts
-        sso_warning_message: This is your only login method. You should set a password
-          in your security settings before disconnecting, otherwise you may be locked
-          out of your account.
+        sso_confirm_body: 确定要断开您的 %{provider} 账户吗？稍后可通过该提供商重新登录再连接。
+        sso_confirm_button: 断开连接
+        sso_confirm_title: 断开账户？
+        sso_connect_hint: 退出后使用 SSO 提供商登录以连接账户。
+        sso_disconnect: 断开连接
+        sso_last_used: 最近使用
+        sso_never: 从未
+        sso_no_email: 无邮箱
+        sso_no_identities: 未连接任何 SSO 账户
+        sso_subtitle: 管理您的单点登录账户连接
+        sso_title: 已连接账户
+        sso_warning_message: 这是您唯一的登录方式。断开前请先在安全设置中设置密码，否则您可能无法再登录账户。
     settings_nav:
       accounts_label: 账户管理
       advanced_section_title: 高级设置

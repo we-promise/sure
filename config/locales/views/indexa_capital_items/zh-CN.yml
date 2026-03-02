@@ -3,7 +3,7 @@ zh-CN:
   indexa_capital_items:
     complete_account_setup:
       all_skipped: 所有账户已被跳过，未创建任何账户.
-      creation_failed: '创建账户失败：%{error}'
+      creation_failed: 创建账户失败：%{error}
       no_accounts: 没有需要设置的账户.
       success: 成功创建(s).
     create:
@@ -17,20 +17,19 @@ zh-CN:
     indexa_capital_item:
       accounts_need_setup: 账户需要设置
       delete: 删除连接
-      deletion_in_progress: deletion in progress...
+      deletion_in_progress: 删除进行中...
       error: 错误
       more_accounts_available:
-        one: "%{count} more account available"
-        other: "%{count} more accounts available"
+        one: 还有 %{count} 个账户可用
+        other: 还有 %{count} 个账户可用
       no_accounts_description: 此连接尚未关联任何账户
       no_accounts_title: 没有账户
-      provider_name: IndexaCapital
-      requires_update: Connection needs update
+      provider_name: IndexaCapital（服务商）
+      requires_update: 连接需要更新
       setup_action: 设置新账户
-      setup_description: "%{linked} of %{total} accounts linked. Choose account types
-        for your newly imported IndexaCapital accounts."
-      setup_needed: New accounts ready to set up
-      status: Synced %{timestamp} ago — %{summary}
+      setup_description: 已关联 %{linked}/%{total} 个账户。请为新导入的 IndexaCapital 账户选择账户类型。
+      setup_needed: 新账户可开始设置
+      status: 同步于 %{timestamp} 前 — %{summary}
       status_never: 从未同步
       syncing: 同步中...
       total: 总计
@@ -38,211 +37,193 @@ zh-CN:
       update_credentials: 更新凭据
     institution_summary:
       count:
-        one: "%{count} institution"
-        other: "%{count} institutions"
-      none: No institutions connected
+        one: "%{count} 家机构"
+        other: "%{count} 家机构"
+      none: 未连接任何机构
     link_accounts:
       all_already_linked:
         one: 所选账户已关联
-        other: 'All %{count} selected accounts are already linked: %{names}'
-      api_error: 'API error: %{message}'
+        other: 所选 %{count} 个账户均已关联：%{names}
+      api_error: API 错误：%{message}
       invalid_account_names:
         one: 无法关联空白名称的账户
-        other: Cannot link %{count} accounts with blank names
+        other: 无法关联 %{count} 个名称为空的账户
       link_failed: 关联账户失败
-      no_accounts_selected: Please select at least one account
-      no_api_key: IndexaCapital credentials not found. Please configure them in Provider
-        Settings.
-      partial_invalid: 成功关联(s), %{already_linked_count}
-        were already linked, %{invalid_count} account(s) had invalid names
-      partial_success: 'Successfully linked %{created_count} account(s). %{already_linked_count}
-        account(s) were already linked: %{already_linked_names}'
+      no_accounts_selected: 请至少选择一个账户
+      no_api_key: 未找到 IndexaCapital 凭据。请在提供商设置中进行配置。
+      partial_invalid: 成功关联(s), %{already_linked_count} were already linked, %{invalid_count} account(s) had invalid names
+      partial_success: 成功关联 %{created_count} 个账户。%{already_linked_count} 个账户已关联：%{already_linked_names}
       success:
         one: 成功关联
         other: 成功关联s
     link_existing_account:
       account_already_linked: 此账户已关联服务商
-      api_error: 'API error: %{message}'
+      api_error: API 错误：%{message}
       invalid_account_name: 无法关联空白名称的账户
-      missing_parameters: Missing required parameters
-      no_api_key: IndexaCapital credentials not found. Please configure them in Provider
-        Settings.
-      provider_account_already_linked: This IndexaCapital account is already linked
-        to another account
-      provider_account_not_found: IndexaCapital account not found
-      success: Successfully linked %{account_name} with IndexaCapital
+      missing_parameters: 缺少必需参数
+      no_api_key: 未找到 IndexaCapital 凭据。请在提供商设置中进行配置。
+      provider_account_already_linked: 该 IndexaCapital 账户已关联到其他账户
+      provider_account_not_found: 未找到 IndexaCapital 账户
+      success: 已成功将 %{account_name} 与 IndexaCapital 关联
     loading:
-      loading_message: Loading IndexaCapital accounts...
+      loading_message: 正在加载 IndexaCapital 账户...
       loading_title: 加载中
     panel:
-      alternative_auth: Or use username/password authentication instead...
-      field_descriptions: 'Field descriptions:'
+      alternative_auth: 或改用用户名/密码认证...
+      field_descriptions: 字段说明：
       fields:
         api_token:
-          description: Your read-only API token from Indexa Capital dashboard
-          label: API Token
-          placeholder_new: Paste your API token here
-          placeholder_update: Enter new API token to update
+          description: 来自 Indexa Capital 控制台的只读 API 令牌
+          label: API 令牌
+          placeholder_new: 在此粘贴 API 令牌
+          placeholder_update: 输入新的 API 令牌以更新
         document:
           description: 您的 Indexa Capital 文档/ID
-          label: Document ID
-          placeholder_new: Paste document ID here
-          placeholder_update: Enter new document ID to update
+          label: 文档 ID
+          placeholder_new: 在此粘贴文档 ID
+          placeholder_update: 输入新的文档 ID 以更新
         password:
           description: 您的 Indexa Capital 密码
-          label: Password
-          placeholder_new: Paste password here
-          placeholder_update: Enter new password to update
+          label: 密码
+          placeholder_new: 在此粘贴密码
+          placeholder_update: 输入新密码以更新
         username:
           description: 您的 Indexa Capital 用户名/邮箱
-          label: Username
-          placeholder_new: Paste username here
-          placeholder_update: Enter new username to update
-      optional: "(Optional)"
-      optional_with_default: "(optional, defaults to %{default_value})"
-      required: "(required)"
-      save_button: Save Configuration
-      setup_instructions: 'Setup instructions:'
-      status_configured_html: Configured and ready to use. Visit the <a href="%{accounts_path}"
-        class="link">Accounts</a> tab to manage and set up accounts.
+          label: 用户名
+          placeholder_new: 在此粘贴用户名
+          placeholder_update: 输入新用户名以更新
+      optional: "（可选）"
+      optional_with_default: "（可选，默认：%{default_value}）"
+      required: "（必填）"
+      save_button: 保存配置
+      setup_instructions: 设置说明：
+      status_configured_html: 已配置并可使用。请访问 <a href="%{accounts_path}" class="link">账户</a> 标签页管理和设置账户。
       status_not_configured: 未配置
-      step_1: Visit your Indexa Capital dashboard to generate a read-only API token
-      step_2: Paste your API token below and click Save
-      step_3: After a successful connection, go to the Accounts tab to set up new
-        accounts
+      step_1: 访问 Indexa Capital 控制台并生成只读 API 令牌
+      step_2: 在下方粘贴您的 API 令牌并点击保存
+      step_3: 连接成功后，前往“账户”标签页设置新账户
       update_button: 更新配置
     preload_accounts:
-      no_credentials_configured: 请先配置您的 IndexaCapital 凭据
-        in Provider Settings.
+      no_credentials_configured: 请先配置您的 IndexaCapital 凭据 in Provider Settings.
     select_accounts:
-      accounts_selected: accounts selected
-      api_error: 'API error: %{message}'
+      accounts_selected: 已选择账户
+      api_error: API 错误：%{message}
       cancel: 取消
-      configure_name_in_provider: 无法导入 - 请在以下位置配置账户名称
-        IndexaCapital
-      description: Select the accounts you want to link to your %{product_name} account.
-      link_accounts: Link selected accounts
+      configure_name_in_provider: 无法导入 - 请在以下位置配置账户名称 IndexaCapital
+      description: 选择要关联到您 %{product_name} 账户的账户。
+      link_accounts: 关联所选账户
       no_accounts_found: 未找到账户. Please check your IndexaCapital credentials.
-      no_api_key: IndexaCapital credentials are not configured. Please configure them
-        in Settings.
-      no_credentials_configured: 请先配置您的 IndexaCapital 凭据
-        in Provider Settings.
-      no_name_placeholder: "(No name)"
-      title: Select IndexaCapital Accounts
+      no_api_key: 尚未配置 IndexaCapital 凭据。请在设置中进行配置。
+      no_credentials_configured: 请先配置您的 IndexaCapital 凭据 in Provider Settings.
+      no_name_placeholder: "（无名称）"
+      title: 选择 IndexaCapital 账户
     select_existing_account:
       account_already_linked: 此账户已关联服务商
-      all_accounts_already_linked: All IndexaCapital accounts are already linked
-      api_error: 'API error: %{message}'
-      balance_label: 'Balance:'
+      all_accounts_already_linked: 所有 IndexaCapital 账户均已关联
+      api_error: API 错误：%{message}
+      balance_label: 余额：
       cancel: 取消
       cancel_button: 取消
-      configure_name_in_provider: 无法导入 - 请在以下位置配置账户名称
-        IndexaCapital
-      connect_hint: Connect a IndexaCapital account to enable automatic syncing.
-      description: Select a IndexaCapital account to link with this account. Transactions
-        will be synced and deduplicated automatically.
-      header: Link with IndexaCapital
-      link_account: Link account
-      link_button: Link this account
-      linking_to: 'Linking to:'
-      no_account_specified: No account specified
-      no_accounts: No unlinked IndexaCapital accounts found.
-      no_accounts_found: No IndexaCapital accounts found. Please check your credentials.
-      no_api_key: IndexaCapital credentials are not configured. Please configure them
-        in Settings.
-      no_credentials_configured: 请先配置您的 IndexaCapital 凭据
-        in Provider Settings.
-      no_name_placeholder: "(No name)"
+      configure_name_in_provider: 无法导入 - 请在以下位置配置账户名称 IndexaCapital
+      connect_hint: 连接一个 IndexaCapital 账户以启用自动同步。
+      description: 选择一个 IndexaCapital 账户与此账户关联。交易将自动同步并去重。
+      header: 与 IndexaCapital 关联
+      link_account: 关联账户
+      link_button: 关联此账户
+      linking_to: 正在关联到：
+      no_account_specified: 未指定账户
+      no_accounts: 未找到未关联的 IndexaCapital 账户。
+      no_accounts_found: 未找到 IndexaCapital 账户。请检查您的凭据。
+      no_api_key: 尚未配置 IndexaCapital 凭据。请在设置中进行配置。
+      no_credentials_configured: 请先配置您的 IndexaCapital 凭据 in Provider Settings.
+      no_name_placeholder: "（无名称）"
       settings_link: 前往服务商设置
-      subtitle: Choose a IndexaCapital account
-      title: Link %{account_name} with IndexaCapital
+      subtitle: 选择一个 IndexaCapital 账户
+      title: 将 %{account_name} 与 IndexaCapital 关联
     setup_accounts:
-      account_type_label: 'Account Type:'
+      account_type_label: 账户类型：
       account_types:
-        credit_card: Credit Card
-        crypto: Cryptocurrency Account
-        depository: Checking or Savings Account
-        investment: Investment Account
-        loan: Loan or Mortgage
-        other_asset: Other Asset
-        skip: Skip this account
+        credit_card: 信用卡
+        crypto: 加密货币账户
+        depository: 支票或储蓄账户
+        investment: 投资账户
+        loan: 贷款或按揭
+        other_asset: 其他资产
+        skip: 跳过此账户
       accounts_count:
-        one: "%{count} account available"
-        other: "%{count} accounts available"
-      all_accounts_linked: All your IndexaCapital accounts have already been set up.
-      api_error: 'API error: %{message}'
+        one: 有 %{count} 个账户可用
+        other: 有 %{count} 个账户可用
+      all_accounts_linked: 您的 IndexaCapital 账户均已设置完成。
+      api_error: API 错误：%{message}
       balance: 余额
       cancel: 取消
-      choose_account_type: 'Choose the correct account type for each IndexaCapital
-        account:'
-      create_accounts: Create Accounts
-      creating: Creating accounts...
+      choose_account_type: 为每个 IndexaCapital 账户选择正确的账户类型：
+      create_accounts: 创建账户
+      creating: 正在创建账户...
       creating_accounts: 正在创建账户...
       fetch_failed: 获取账户失败
-      historical_data_range: 'Historical Data Range:'
-      import_selected: Import selected accounts
-      instructions: Select the accounts you want to import from IndexaCapital. You
-        can choose multiple accounts.
-      no_accounts: No unlinked accounts found from this IndexaCapital connection.
+      historical_data_range: 历史数据范围：
+      import_selected: 导入所选账户
+      instructions: 选择要从 IndexaCapital 导入的账户，可多选。
+      no_accounts: 该 IndexaCapital 连接下未找到未关联账户。
       no_accounts_to_setup: 没有需要设置的账户
-      no_api_key: IndexaCapital credentials are not configured. Please check your
-        connection settings.
-      select_all: Select all
-      subtitle: Choose the correct account types for your imported accounts
+      no_api_key: IndexaCapital 凭据未配置。请检查连接设置。
+      select_all: 全选
+      subtitle: 为导入账户选择正确的账户类型
       subtype_labels:
-        credit_card: Credit card
-        crypto: Crypto
-        depository: 'Account Subtype:'
-        investment: 'Investment Type:'
-        loan: 'Loan Type:'
-        other_asset: Other asset
+        credit_card: 信用卡
+        crypto: 加密货币
+        depository: 账户子类型：
+        investment: 投资类型：
+        loan: 贷款类型：
+        other_asset: 其他资产
       subtype_messages:
-        credit_card: Credit cards will be automatically set up as credit card accounts.
-        crypto: Cryptocurrency accounts will be set up to track holdings and transactions.
-        other_asset: No additional options needed for Other Assets.
+        credit_card: 信用卡将自动设置为信用卡账户。
+        crypto: 加密货币账户将被设置为跟踪持仓和交易。
+        other_asset: "“其他资产”无需额外选项。"
       subtypes:
         depository:
-          cd: Certificate of Deposit
+          cd: 定期存款
           checking: 支票账户
           hsa: 健康储蓄账户
-          money_market: Money Market
-          savings: Savings
+          money_market: 货币市场
+          savings: 储蓄
         investment:
-          401k: 401(k)
-          403b: 403(b)
-          529_plan: 529 Plan
-          angel: Angel
+          401k: 401(k) 退休账户
+          403b: 403(b) 退休账户
+          529_plan: 529 计划
+          angel: 天使轮
           brokerage: 券商账户
           hsa: 健康储蓄账户
           ira: 传统 IRA
           mutual_fund: 共同基金
           pension: 养老金
           retirement: 退休账户
-          roth_401k: Roth 401(k)
-          roth_ira: Roth IRA
+          roth_401k: 罗斯 401(k)
+          roth_ira: 罗斯 IRA
           tsp: 储蓄计划
         loan:
-          auto: Auto Loan
-          mortgage: Mortgage
-          other: Other Loan
+          auto: 汽车贷款
+          mortgage: 按揭贷款
+          other: 其他贷款
           student: 学生贷款
-      sync_start_date_help: Select how far back you want to sync transaction history.
-      sync_start_date_label: 'Start syncing transactions from:'
+      sync_start_date_help: 选择要同步多久之前的交易历史。
+      sync_start_date_label: 从以下时间开始同步交易：
       title: 设置您的 IndexaCapital 账户
     sync:
       status:
         calculating: 正在计算余额...
         checking_setup: 正在检查账户配置...
         importing: 正在从...导入账户 IndexaCapital...
-        importing_data: Importing account data...
-        needs_setup: "%{count} accounts need setup..."
-        processing: Processing holdings and activities...
+        importing_data: 正在导入账户数据...
+        needs_setup: 有 %{count} 个账户需要设置...
+        processing: 正在处理持仓和活动...
       success: 同步已开始
     sync_status:
       no_accounts: 未找到账户
       synced:
-        one: "%{count} account synced"
-        other: "%{count} accounts synced"
-      synced_with_setup: "%{linked} synced, %{unlinked} need setup"
+        one: 已同步 %{count} 个账户
+        other: 已同步 %{count} 个账户
+      synced_with_setup: 已同步 %{linked} 个，%{unlinked} 个待设置
     update:
-      success: IndexaCapital connection updated
+      success: IndexaCapital 连接已更新
