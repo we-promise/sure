@@ -57,7 +57,7 @@ To stay compliant and avoid trademark issues:
 
 With data-heavy apps, inevitably, there are performance issues. We've set up a public dashboard showing the problematic requests seen on the demo site, along with the stacktraces to help debug them.
 
-https://www.skylight.io/app/applications/s6PEZSKwcklL/recent/6h/endpoints
+[https://www.skylight.io/app/applications/s6PEZSKwcklL/recent/6h/endpoints](https://oss.skylight.io/app/applications/s6PEZSKwcklL/recent/6h/endpoints)
 
 Any contributions that help improve performance are very much welcome.
 
