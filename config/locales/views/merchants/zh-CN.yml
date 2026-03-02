@@ -6,16 +6,23 @@ zh-CN:
       success: 商户创建成功
     destroy:
       success: 商户删除成功
+      unlinked_success: Merchant removed from your transactions
     edit:
       title: 编辑商户
     form:
       name_placeholder: 商户名称
+      website_hint: Enter the merchant's website to automatically display their logo
+      website_placeholder: Website (e.g., starbucks.com)
     index:
       empty: 暂无商户
       family_empty: 暂无家庭商户
       family_title: 家庭商户
+      merge: Merge merchants
       new: 新建商户
       provider_empty: 此家庭尚未关联任何服务提供商商户
+      provider_info: These merchants were automatically detected by your bank connections
+        or AI. You can edit them to create your own copy, or remove them to unlink
+        from your transactions.
       provider_read_only: 服务提供商商户从您关联的金融机构同步而来，无法在此编辑。
       provider_title: 服务提供商商户
       table:
@@ -23,13 +30,39 @@ zh-CN:
         merchant: 商户名称
         source: 来源
       title: 商户管理
+      unlinked_info: These merchants were recently removed from your transactions.
+        They will disappear from this list after 30 days unless re-assigned to a transaction.
+      unlinked_title: Recently unlinked
     merchant:
       confirm_accept: 确认删除
       confirm_body: 确定要删除此商户吗？删除后将解除所有关联交易，并可能影响您的报表数据。
       confirm_title: 确认删除商户？
       delete: 删除商户
       edit: 编辑商户
+    merge:
+      description: Select a target merchant and the merchants to merge into it. All
+        transactions from merged merchants will be reassigned to the target.
+      select_target: Select target merchant...
+      sources_hint: Selected merchants will be merged into the target. Family merchants
+        will be deleted, provider merchants will be unlinked.
+      sources_label: Merchants to merge
+      submit: Merge selected
+      target_label: Merge into (target)
+      title: Merge merchants
     new:
       title: 新建商户
+    perform_merge:
+      invalid_merchants: Invalid merchants selected
+      no_merchants_selected: No merchants selected to merge
+      success: Successfully merged %{count} merchants
+      target_not_found: Target merchant not found
+    provider_merchant:
+      edit: Edit
+      remove: Remove
+      remove_confirm_body: Are you sure you want to remove %{name}? This will unlink
+        all associated transactions from this merchant but will not delete the merchant
+        itself.
+      remove_confirm_title: Remove merchant?
     update:
+      converted_success: Merchant converted and updated successfully
       success: 商户更新成功

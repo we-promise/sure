@@ -4,7 +4,10 @@ zh-CN:
     hostings:
       brand_fetch_settings:
         description: 请输入 Brand Fetch 提供的 Client ID
-        label: Client ID
+        high_res_description: When enabled, logos will be retrieved at 120x120 resolution
+          instead of 40x40. This provides sharper images on high-DPI displays.
+        high_res_label: Enable high-resolution logos
+        label: 客户端 ID
         placeholder: 在此输入您的 Client ID
         title: Brand Fetch 设置
       clear_cache:
@@ -57,7 +60,22 @@ zh-CN:
         financial_data_providers: 金融数据提供商
         general: 通用设置
         invites: 邀请码设置
+        sync_settings: Sync Settings
         title: 自托管配置
+      sync_settings:
+        auto_sync_description: When enabled, all accounts will be automatically synced
+          daily at the specified time.
+        auto_sync_label: Enable automatic sync
+        auto_sync_time_description: Specify the time of day when automatic sync should
+          occur.
+        auto_sync_time_label: Sync time (HH:MM)
+        env_configured_message: This setting is disabled because a provider environment
+          variable (SIMPLEFIN_INCLUDE_PENDING or PLAID_INCLUDE_PENDING) is set. Remove
+          it to enable this setting.
+        include_pending_description: When enabled, pending (uncleared) transactions
+          will be imported and automatically reconciled when they post. Disable if
+          your bank provides unreliable pending data.
+        include_pending_label: Include pending transactions
       twelve_data_settings:
         api_calls_used: 已使用 %{used} / %{limit} 次每日 API 调用（%{percentage}）
         description: 请输入 Twelve Data 提供的 API 密钥
@@ -65,10 +83,19 @@ zh-CN:
         label: API 密钥
         placeholder: 在此输入您的 API 密钥
         plan: "%{plan} 套餐"
+        plan_upgrade_warning_description: The following tickers in your portfolio
+          cannot sync prices with your current Twelve Data plan.
+        plan_upgrade_warning_title: Some tickers require a paid plan
+        requires_plan: requires %{plan} plan
         title: Twelve Data 设置
+        view_pricing: View Twelve Data pricing
       update:
         failure: 设置值无效
         invalid_onboarding_state: 无效的新用户注册状态
+        invalid_sync_time: Invalid sync time format. Please use HH:MM format (e.g.,
+          02:30).
+        scheduler_sync_failed: Settings saved, but failed to update the sync schedule.
+          Please try again or check the server logs.
         success: 设置已更新
       yahoo_finance_settings:
         connection_failed: 无法连接到 Yahoo Finance

@@ -1,0 +1,54 @@
+---
+zh-CN:
+  UI:
+    account:
+      activity_feed:
+        toggle_selection_checkboxes: Toggle selection checkboxes
+  common:
+    close: Close
+  imports:
+    empty:
+      message: Message
+    pdf_import:
+      create_account: Create Account
+      no_accounts: No accounts available. Please create an account first.
+      publish_transactions: Publish %{count} Transactions
+      ready_for_review_description: We extracted %{count} transactions from your statement.
+        Review and publish them to add to your account.
+      ready_for_review_title: Ready for Review
+      review_transactions: Review Transactions
+      save_account: 保存
+      select_account: Import to Account
+      select_account_hint: Choose which account to import these transactions into.
+      select_account_placeholder: Select an account...
+      select_account_to_continue: Please select an account above to continue.
+      transactions_extracted: Transactions Extracted
+      transactions_extracted_count: "%{count} transactions"
+      unknown_document_type: Unknown
+    steps:
+      clean: Clean
+      configure: Configure
+      confirm: Confirm
+      map: Map
+      progress: Step %{step} of %{total}
+      upload: Upload
+    update:
+      account_saved: Account saved.
+      invalid_account: Account not found.
+  pages:
+    intro:
+      not_authorized: Intro is only available to guest users.
+  settings:
+    hostings:
+      sync_auto_sync_scheduler!:
+        scheduler_sync_failed: Scheduler sync failed
+    providers:
+      enable_banking_panel:
+        syncing: Syncing
+  snaptrade_items:
+    setup_accounts:
+      sync_start_date_help: Leave blank for all available history
+      sync_start_date_label: 'Import transactions from:'
+  transactions:
+    form:
+      category_label: Category label

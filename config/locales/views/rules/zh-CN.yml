@@ -1,6 +1,36 @@
 ---
 zh-CN:
   rules:
+    actions:
+      value_placeholder: Enter a value
+    apply_all:
+      ai_cost_message: This will use AI to categorize up to %{transactions} transactions.
+      ai_cost_title: AI Cost Estimation
+      button: Apply All
+      confirm_button: Confirm and Apply All
+      confirm_message: You are about to apply %{count} rules affecting %{transactions}
+        unique transactions. Please confirm if you wish to proceed.
+      confirm_title: Apply All Rules
+      cost_unavailable_model: Cost estimation unavailable for model "%{model}".
+      cost_unavailable_no_provider: Cost estimation unavailable (no LLM provider configured).
+      cost_warning: You may incur costs, please check with the model provider for
+        the most up-to-date prices.
+      estimated_cost: 'Estimated cost: ~$%{cost}'
+      success: All rules have been queued for execution
+      view_usage: View usage history
+    clear_ai_cache:
+      button: Reset AI cache
+      confirm_body: Are you sure you want to reset the AI cache? This will allow AI
+        rules to re-process all transactions. This may incur additional API costs.
+      confirm_button: Reset Cache
+      confirm_title: Reset AI cache?
+      success: AI cache is being cleared. This may take a few moments.
+    condition_filters:
+      transaction_type:
+        equal_to: Equal to
+        expense: Expense
+        income: 收入
+        transfer: 转账
     no_action: 无操作
     no_condition: 无条件
     recent_runs:

@@ -1,0 +1,50 @@
+---
+zh-CN:
+  admin:
+    users:
+      index:
+        description: Manage user roles for your instance. Super admins can access
+          SSO provider settings and user management.
+        filters:
+          role: Role
+          role_all: All roles
+          submit: Filter
+          trial_all: All
+          trial_expiring_soon: Expiring in 7 days
+          trial_status: Trial status
+          trial_trialing: On trial
+        no_users: No users found.
+        not_available: n/a
+        role_descriptions:
+          admin: Family administrator. Can access advanced settings like API keys,
+            imports, and AI prompts.
+          guest: Assistant-first experience with intentionally restricted permissions
+            for intro workflows.
+          member: Basic user access. Can manage their own accounts, transactions,
+            and settings.
+          super_admin: Instance administrator. Can manage SSO providers, user roles,
+            and impersonate users for support.
+        role_descriptions_title: Role Descriptions
+        roles:
+          admin: Admin
+          guest: 访客
+          member: Member
+          super_admin: 超级管理员
+        section_title: Users
+        summary:
+          trials_expiring_7_days: Trials expiring in next 7 days
+        table:
+          family_accounts: Family accounts
+          family_transactions: Family transactions
+          last_login: Last login
+          never: Never
+          role: Role
+          session_count: Session count
+          trial_ends_at: 试用结束
+          user: User
+        title: User Management
+        trial_ends_at: 试用结束
+        you: "(You)"
+      update:
+        failure: Failed to update user role.
+        success: User role updated successfully.

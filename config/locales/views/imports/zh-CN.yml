@@ -25,6 +25,9 @@ zh-CN:
         date_format_label: 日期格式
       transaction_import:
         date_format_label: 日期格式
+        rows_to_skip_label: Skip first n rows
+      update:
+        success: Import configured successfully.
     confirms:
       mappings:
         create_account: 新建账户
@@ -52,41 +55,97 @@ zh-CN:
         instructions_5: 数字中请勿包含逗号、货币符号或括号。
         title: 导入数据
   imports:
+    create:
+      csv_uploaded: CSV uploaded successfully.
+      document_provider_not_configured: No vector store is configured for document
+        uploads.
+      document_too_large: Document file is too large. Maximum size is %{max_size}MB.
+      document_upload_failed: We couldn't upload the document to the vector store.
+        Please try again.
+      document_uploaded: Document uploaded successfully.
+      file_too_large: File is too large. Maximum size is %{max_size}MB.
+      invalid_document_file_type: Invalid document file type for the active vector
+        store.
+      invalid_file_type: Invalid file type. Please upload a CSV file.
+      invalid_pdf: The uploaded file is not a valid PDF.
+      pdf_processing: Your PDF is being processed. You will receive an email when
+        analysis is complete.
+      pdf_too_large: PDF file is too large. Maximum size is %{max_size}MB.
+    document_types:
+      bank_statement: Bank Statement
+      contract: Contract
+      credit_card_statement: Credit Card Statement
+      financial_document: Financial Document
+      investment_statement: Investment Statement
+      other: Other Document
+      unknown: Unknown Document
+    errors:
+      custom_column_requires_inflow: Custom column imports require an inflow column
+        to be selected
     index:
-      title: 导入记录
       new: 新建导入
-    table:
       title: 导入记录
-      header:
-        date: 日期
-        operation: 操作
-        status: 状态
-        actions: 操作
-      row:
-        status:
-          in_progress: 进行中
-          uploading: 处理行数据中
-          reverting: 回滚中
-          revert_failed: 回滚失败
-          complete: 已完成
-          failed: 已失败
-        actions:
-          revert: 恢复
-          confirm_revert: 这将删除已导入的交易记录，但您仍然可以随时查看和重新导入您的数据。
-          delete: 删除
-          view: 查看
-      empty: 暂无导入记录。
     new:
       description: 您可以通过 CSV 手动导入多种类型数据，或使用我们的导入模板（如 Mint 格式）。
       import_accounts: 导入账户
       import_categories: 导入分类
+      import_file: Import document
+      import_file_description: AI-powered analysis for PDFs and searchable upload
+        for other supported files
       import_mint: 从 Mint 导入
       import_portfolio: 导入投资数据
       import_rules: 导入规则
       import_transactions: 导入交易记录
+      requires_account: Import accounts first to unlock this option.
       resume: 继续 %{type}
       sources: 数据来源
       title: 新建 CSV 导入
+    pdf_import:
+      back_to_dashboard: Back to dashboard
+      back_to_imports: Back to imports
+      check_status: Check status
+      complete_description: We've analyzed your PDF and here's what we found.
+      complete_title: Document analyzed
+      delete_import: Delete import
+      document_type_label: Document Type
+      email_sent_notice: An email has been sent to you with next steps.
+      failed_description: We were unable to process your PDF document. Please try
+        again or contact support.
+      failed_title: Processing failed
+      processing_description: We're analyzing your document using AI. This may take
+        a moment. You'll receive an email when the analysis is complete.
+      processing_failed_generic: 'Processing failed: %{error}'
+      processing_failed_with_message: "%{message}"
+      processing_title: Processing your PDF
+      summary_label: 摘要
+      try_again: Try again
+      unknown_state_description: This import is in an unexpected state. Please return
+        to imports.
+      unknown_state_title: Unknown state
     ready:
       description: 以下是发布导入后将添加到您账户的新项目摘要。
       title: 确认导入数据
+    show:
+      finalize_mappings: Please finalize your mappings before proceeding.
+      finalize_upload: Please finalize your file upload.
+    table:
+      empty: 暂无导入记录。
+      header:
+        actions: 操作
+        date: 日期
+        operation: 操作
+        status: 状态
+      row:
+        actions:
+          confirm_revert: 这将删除已导入的交易记录，但您仍然可以随时查看和重新导入您的数据。
+          delete: 删除
+          revert: 恢复
+          view: 查看
+        status:
+          complete: 已完成
+          failed: 已失败
+          in_progress: 进行中
+          revert_failed: 回滚失败
+          reverting: 回滚中
+          uploading: 处理行数据中
+      title: 导入记录

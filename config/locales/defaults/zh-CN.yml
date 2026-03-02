@@ -82,6 +82,9 @@ zh-CN:
       month: 月
       second: 秒
       year: 年
+  defaults:
+    brand_name: "%{brand_name}"
+    product_name: "%{product_name}"
   errors:
     format: "%{attribute}%{message}"
     messages:
@@ -113,6 +116,8 @@ zh-CN:
     template:
       body: 如下字段出现错误：
       header: 有%{count}个错误发生导致"%{model}"无法被保存。
+  global:
+    expand: Expand
   helpers:
     select:
       prompt: 请选择

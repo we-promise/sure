@@ -1,9 +1,5 @@
 ---
 zh-CN:
-  views:
-    settings:
-      payments:
-        renewal: "您的贡献将在 %{date} 继续。"
   settings:
     ai_prompts:
       show:
@@ -20,14 +16,14 @@ zh-CN:
         transaction_categorizer:
           subtitle: AI 根据您定义的分类自动为交易进行分类
           title: 交易分类器
+    hostings:
+      ensure_admin:
+        not_authorized: 未授权
     payments:
       show:
         page_title: 付款管理
         subscription_subtitle: 更新订阅与付款信息
         subscription_title: 管理订阅
-    hostings:
-      ensure_admin:
-        not_authorized: 未授权
     preferences:
       show:
         country: 国家/地区
@@ -39,6 +35,10 @@ zh-CN:
         general_title: 通用设置
         language: 语言
         language_auto: 浏览器语言
+        month_start_day: Budget month starts on
+        month_start_day_hint: Set when your budget month starts (e.g., payday)
+        month_start_day_warning: Your budgets and MTD calculations will use this custom
+          start day instead of the 1st of each month.
         page_title: 偏好设置
         theme_dark: 深色模式
         theme_light: 浅色模式
@@ -73,6 +73,9 @@ zh-CN:
         delete_account_warning: 删除账户将永久移除您的所有数据且不可恢复。
         email: 邮箱
         first_name: 名字
+        group_form_input_placeholder: Enter group name
+        group_form_label: 组名
+        group_title: Group Members
         household_form_input_placeholder: 请输入家庭名称
         household_form_label: 家庭名称
         household_subtitle: 邀请家庭成员、合作伙伴等人员。被邀请者可登录您的家庭账户并访问共享账户。
@@ -91,9 +94,55 @@ zh-CN:
         reset_account_with_sample_data: 重置并预加载数据
         reset_account_with_sample_data_warning: 删除所有现有数据，然后加载新的示例数据，以便您在预填充环境中进行探索。
         save: 保存
+    providers:
+      coinbase_panel:
+        api_key_label: API Key
+        api_key_placeholder: Enter your Coinbase API key
+        api_secret_label: API Secret
+        api_secret_placeholder: Enter your Coinbase API secret
+        connect_button: Connect Coinbase
+        disconnect_confirm: Are you sure you want to disconnect this Coinbase connection?
+          Your synced accounts will become manual accounts.
+        setup_instructions: 'To connect Coinbase:'
+        status_connected: Coinbase is connected and syncing your crypto holdings.
+        status_not_connected: Not connected. Enter your API credentials above to get
+          started.
+        step1_html: Go to <a href="https://portal.cdp.coinbase.com/projects/api-keys"
+          target="_blank" class="text-primary underline">Coinbase API Settings</a>
+        step2: Create a new API key with read-only permissions (view accounts, view
+          transactions)
+        step3: Copy your API key and API secret and paste them below
+        sync: Sync
+        syncing: 同步中...
+      enable_banking_panel:
+        callback_url_instruction: For the callback URL, use %{callback_url}.
+        connection_error: Connection Error
+      encryption_error:
+        message: Active Record encryption keys are not configured. Please ensure the
+          encryption credentials (active_record_encryption.primary_key, active_record_encryption.deterministic_key,
+          and active_record_encryption.key_derivation_salt) are properly set up in
+          your Rails credentials or environment variables before using sync providers.
+        title: Encryption Configuration Required
+      show:
+        coinbase_title: Coinbase
     securities:
       show:
         page_title: 安全设置
+        sso_confirm_body: Are you sure you want to disconnect your %{provider} account?
+          You can reconnect it later by signing in with that provider again.
+        sso_confirm_button: Disconnect
+        sso_confirm_title: Disconnect Account?
+        sso_connect_hint: Log out and sign in with an SSO provider to connect an account.
+        sso_disconnect: Disconnect
+        sso_last_used: Last used
+        sso_never: Never
+        sso_no_email: No email
+        sso_no_identities: No SSO accounts connected
+        sso_subtitle: Manage your single sign-on account connections
+        sso_title: Connected Accounts
+        sso_warning_message: This is your only login method. You should set a password
+          in your security settings before disconnecting, otherwise you may be locked
+          out of your account.
     settings_nav:
       accounts_label: 账户管理
       advanced_section_title: 高级设置
@@ -101,16 +150,16 @@ zh-CN:
       api_key_label: API 密钥
       api_keys_label: API 密钥
       bank_sync_label: 银行同步
-      payment_label: 付款管理
       categories_label: 分类管理
+      exports_label: 导出记录
       feedback_label: 意见反馈
       general_section_title: 通用设置
       guides_label: 使用指南
       imports_label: 导入记录
-      exports_label: 导出记录
       logout: 退出登录
       merchants_label: 商户管理
       other_section_title: 更多设置
+      payment_label: 付款管理
       preferences_label: 偏好设置
       profile_label: 个人资料信息
       recurring_transactions_label: 定期交易
@@ -128,3 +177,8 @@ zh-CN:
       change: 更换头像
       choose: 上传头像
       choose_label: "（可选）"
+  views:
+    settings:
+      payments:
+        cancellation: 您的贡献将于 %{date} 结束.
+        renewal: 您的贡献将在 %{date} 继续。

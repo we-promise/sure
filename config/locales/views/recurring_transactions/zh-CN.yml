@@ -14,7 +14,11 @@ zh-CN:
     empty:
       description: 点击"识别模式"可从您的交易历史中自动识别定期交易。
       title: 未找到定期交易
+    expected_in:
+      one: Expected in %{count} day
+      other: Expected in %{count} days
     expected_on: 预计于 %{date}
+    expected_today: Expected today
     identified: 已识别 %{count} 个定期交易模式
     identify_patterns: 识别模式
     info:

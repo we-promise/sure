@@ -1,5 +1,6 @@
 ---
 zh-CN:
   chats:
-    demo_banner_message: "您正在使用由 Cloudflare Workers AI 提供额度的开源权重 Qwen3 大语言模型。由于代码库主要在 `gpt-4.1` 上测试，结果可能有所不同，但您的令牌不会被用于其他地方进行训练！🤖"
+    demo_banner_message: "您正在使用由 Cloudflare Workers AI 提供额度的开源权重 Qwen3 大语言模型。由于代码库主要在
+      `gpt-4.1` 上测试，结果可能有所不同，但您的令牌不会被用于其他地方进行训练！🤖"
     demo_banner_title: 演示模式已激活

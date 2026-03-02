@@ -1,0 +1,67 @@
+---
+zh-CN:
+  provider_sync_summary:
+    accounts:
+      institutions: 'Institutions: %{count}'
+      linked: 'Linked: %{count}'
+      title: Accounts
+      total: 'Total: %{count}'
+      unlinked: 'Unlinked: %{count}'
+    health:
+      data_warnings: 'Data warnings: %{count}'
+      duplicate_suggestions:
+        one: "%{count} possible duplicate needs review"
+        other: "%{count} possible duplicates need review"
+      errors: 'Errors: %{count}'
+      notices: 'Notices: %{count}'
+      pending_reconciled:
+        one: "%{count} duplicate pending transaction reconciled"
+        other: "%{count} duplicate pending transactions reconciled"
+      rate_limited: Rate limited %{time_ago}
+      recently: recently
+      stale_pending:
+        one: "%{count} stale pending transaction (excluded from budgets)"
+        other: "%{count} stale pending transactions (excluded from budgets)"
+      stale_pending_count:
+        one: "%{count} transaction"
+        other: "%{count} transactions"
+      stale_unmatched:
+        one: "%{count} pending transaction needs manual review"
+        other: "%{count} pending transactions need manual review"
+      stale_unmatched_count:
+        one: "%{count} transaction"
+        other: "%{count} transactions"
+      title: Health
+      view_data_quality: View data quality details
+      view_duplicate_suggestions: View suggested duplicates
+      view_error_details: View error details
+      view_reconciled: View reconciled transactions
+      view_stale_pending: View affected accounts
+      view_stale_unmatched: View transactions needing review
+    holdings:
+      found: 'Found: %{count}'
+      processed: 'Processed: %{count}'
+      title: Holdings
+    last_sync: 'Last sync: %{time_ago} ago'
+    skip_reasons:
+      excluded: Excluded
+      import_locked: CSV import
+      protected: Protected
+      user_modified: User modified
+    title: Sync summary
+    trades:
+      fetching: Fetching activities from brokerage...
+      imported: 'Imported: %{count}'
+      skipped: 'Skipped: %{count}'
+      title: 交易
+    transactions:
+      fetching: Fetching from brokerage...
+      imported: 'Imported: %{count}'
+      protected:
+        one: "%{count} entry protected (not overwritten)"
+        other: "%{count} entries protected (not overwritten)"
+      seen: 'Seen: %{count}'
+      skipped: 'Skipped: %{count}'
+      title: 交易
+      updated: 'Updated: %{count}'
+      view_protected: View protected entries

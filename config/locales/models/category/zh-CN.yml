@@ -1,0 +1,7 @@
+---
+zh-CN:
+  models:
+    category:
+      investment_contributions: Investment Contributions
+      other_investments: Other Investments
+      uncategorized: Uncategorized

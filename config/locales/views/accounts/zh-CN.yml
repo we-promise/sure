@@ -32,9 +32,17 @@ zh-CN:
       new_account: 新建账户
       no_accounts: 暂无账户
     form:
+      additional_details: Additional details
       balance: 当前余额
+      institution_domain_label: Institution domain
+      institution_domain_placeholder: e.g., chase.com
+      institution_name_label: Institution name
+      institution_name_placeholder: e.g., Chase Bank
       name_label: 账户名称
       name_placeholder: 例如：储蓄账户
+      notes_label: Notes
+      notes_placeholder: Store additional information like account numbers, sort codes,
+        IBAN, routing numbers, etc.
     index:
       accounts: 账户管理
       manual_accounts:
@@ -60,15 +68,22 @@ zh-CN:
       activity:
         amount: 金额
         balance: 余额
+        confirmed: 已确认
         date: 日期
         entries: 条记录
         entry: 条记录
+        filter: Filter
         new: 新建
+        new_activity: New activity
         new_balance: 新增余额
+        new_trade: New trade
         new_transaction: 新建交易
+        new_transfer: New transfer
         no_entries: 未找到相关记录
+        pending: 待处理
         search:
           placeholder: 按名称搜索记录
+        status: 状态
         title: 账户活动
       chart:
         balance: 余额
@@ -80,6 +95,8 @@ zh-CN:
         confirm_title: 确认删除账户？
         edit: 编辑
         import: 导入交易记录
+        import_trades: Import trades
+        import_transactions: Import transactions
         manage: 管理账户
     sidebar:
       configure_providers: 在此配置您的服务提供商。
@@ -93,8 +110,25 @@ zh-CN:
         all: 全部
         assets: 资产
         debts: 负债
+    subtype_regions:
+      au: Australia
+      ca: Canada
+      eu: Europe
+      generic: General
+      uk: United Kingdom
+      us: United States
     sync_all:
       syncing: 账户同步中...
+    tax_treatment_descriptions:
+      tax_advantaged: Special tax benefits with conditions
+      tax_deferred: Contributions deductible, taxed on withdrawal
+      tax_exempt: Contributions after-tax, gains not taxed
+      taxable: Gains taxed when realized
+    tax_treatments:
+      tax_advantaged: Tax-Advantaged
+      tax_deferred: Tax-Deferred
+      tax_exempt: Tax-Exempt
+      taxable: Taxable
     types:
       credit_card: 信用卡账户
       crypto: 加密货币账户
