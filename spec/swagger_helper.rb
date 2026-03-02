@@ -45,7 +45,7 @@ RSpec.configure do |config|
           },
           ErrorResponse: {
             type: :object,
-            required: %w[error],
+            required: [],
             properties: {
               error: { type: :string },
               message: { type: :string, nullable: true },

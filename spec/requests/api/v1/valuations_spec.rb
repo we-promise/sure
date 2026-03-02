@@ -39,6 +39,7 @@ RSpec.describe 'API V1 Valuations', type: :request do
   end
 
   let(:Authorization) { "Bearer #{access_token.token}" }
+  let(:"X-Api-Key") { nil } # Rswag requires this for apiKeyAuth security scheme
 
   let(:account) do
     Account.create!(

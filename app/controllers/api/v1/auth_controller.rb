@@ -20,6 +20,12 @@ module Api
           return
         end
 
+        # Validate user params presence
+        unless params[:user].is_a?(ActionController::Parameters)
+          render json: { errors: ["User parameters are required"] }, status: :unprocessable_entity
+          return
+        end
+
         # Validate password
         password_errors = validate_password(params[:user][:password])
         if password_errors.any?
