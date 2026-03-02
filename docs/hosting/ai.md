@@ -292,7 +292,7 @@ For self-hosted deployments, you can configure AI settings through the web inter
 
 ## External AI Assistant
 
-Instead of using the builtin LLM (which calls OpenAI or a local model directly), you can delegate chat to an **external AI agent**. The agent receives the conversation, can call back to Sure's financial data via MCP, and streams a response.
+Instead of using the built-in LLM (which calls OpenAI or a local model directly), you can delegate chat to an **external AI agent**. The agent receives the conversation, can call back to Sure's financial data via MCP, and streams a response.
 
 This is useful when:
 - You have a custom AI agent with domain knowledge, memory, or personality

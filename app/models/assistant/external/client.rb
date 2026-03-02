@@ -7,6 +7,7 @@ class Assistant::External::Client
   TIMEOUT_READ    = 120  # seconds (agent may take time to reason + call tools)
   MAX_RETRIES     = 2
   RETRY_DELAY     = 1    # seconds (doubles each retry)
+  MAX_SSE_BUFFER  = 1_048_576 # 1 MB safety cap on SSE buffer
 
   TRANSIENT_ERRORS = [
     Net::OpenTimeout,
@@ -62,17 +63,22 @@ class Assistant::External::Client
 
     def stream_response(http, request, &block)
       model = nil
-      buffer = ""
+      buffer = +""
       done = false
 
       http.request(request) do |response|
         unless response.is_a?(Net::HTTPSuccess)
-          raise Assistant::Error, "External assistant returned HTTP #{response.code}: #{response.body}"
+          Rails.logger.warn("[External::Client] Upstream HTTP #{response.code}: #{response.body.to_s.truncate(500)}")
+          raise Assistant::Error, "External assistant returned HTTP #{response.code}."
         end
 
         response.read_body do |chunk|
           break if done
-          buffer += chunk
+          buffer << chunk
+
+          if buffer.bytesize > MAX_SSE_BUFFER
+            raise Assistant::Error, "External assistant stream exceeded maximum buffer size."
+          end
 
           while (line_end = buffer.index("\n"))
             line = buffer.slice!(0..line_end).strip

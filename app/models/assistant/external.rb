@@ -18,7 +18,9 @@ class Assistant::External < Assistant::Base
     def allowed_user?(user)
       allowed = ENV["EXTERNAL_ASSISTANT_ALLOWED_EMAILS"]
       return true if allowed.blank?
-      allowed.split(",").map(&:strip).include?(user.email)
+      return false if user&.email.blank?
+
+      allowed.split(",").map { |e| e.strip.downcase }.include?(user.email.downcase)
     end
 
     def config
