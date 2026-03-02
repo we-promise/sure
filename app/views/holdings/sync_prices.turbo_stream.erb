@@ -1,0 +1,56 @@
+<% unless @provider_error %>
+  <%= turbo_stream.replace dom_id(@holding, :current_market_price) do %>
+    <dd id="<%= dom_id(@holding, :current_market_price) %>" class="text-primary">
+      <% begin %>
+        <%= @holding.security.current_price ? format_money(@holding.security.current_price) : t("holdings.show.unknown") %>
+        <% rescue ActiveRecord::RecordInvalid %>
+        <%= t("holdings.show.unknown") %>
+        <% rescue StandardError => e %>
+        <% logger.error "Error fetching current price for security #{@holding.security.id}: #{e.message}" %>
+        <% logger.error e.backtrace.first(5).join("\n") %>
+        <%= t("holdings.show.unknown") %>
+      <% end %>
+    </dd>
+  <% end %>
+  <%= turbo_stream.replace dom_id(@holding, :market_value) do %>
+    <div id="<%= dom_id(@holding, :market_value) %>" class="flex items-center justify-between text-sm">
+      <dt class="text-secondary"><%= t("holdings.show.market_value_label") %></dt>
+      <dd class="text-primary"><%= format_money(@holding.amount_money) %></dd>
+    </div>
+  <% end %>
+  <%= turbo_stream.replace dom_id(@holding, :total_return) do %>
+    <div id="<%= dom_id(@holding, :total_return) %>" class="flex items-center justify-between text-sm">
+      <dt class="text-secondary"><%= t("holdings.show.total_return_label") %></dt>
+      <% if @holding.trend %>
+        <dd style="color: <%= @holding.trend.color %>;">
+          <%= render("shared/trend_change", trend: @holding.trend) %>
+        </dd>
+      <% else %>
+        <dd class="text-secondary"><%= t("holdings.show.unknown") %></dd>
+      <% end %>
+    </div>
+  <% end %>
+<% end %>
+<%= turbo_stream.replace dom_id(@holding, :market_data_section) do %>
+  <div id="<%= dom_id(@holding, :market_data_section) %>" class="flex items-center justify-between gap-2 p-3 border-b border-tertiary">
+    <div class="text-sm space-y-1">
+      <h4 class="text-primary"><%= t("holdings.show.market_data_label") %></h4>
+      <p class="text-secondary">
+        <%= t("holdings.show.last_price_update") %>: <%= @last_price_updated ? l(@last_price_updated, format: :long) : t("holdings.show.never") %>
+      </p>
+      <% if @provider_error %>
+        <p class="text-xs text-red-500"><%= @provider_error %></p>
+      <% end %>
+    </div>
+    <%= button_to t("holdings.show.market_data_sync_button"),
+        sync_prices_holding_path(@holding),
+        method: :post,
+        class: "inline-flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium text-primary bg-gray-200 hover:bg-gray-300 theme-dark:bg-gray-700 theme-dark:hover:bg-gray-600",
+        data: { loading_button_target: "button" },
+        form: { data: {
+          controller: "loading-button",
+          action: "submit->loading-button#showLoading",
+          loading_button_loading_text_value: t("holdings.show.syncing")
+        } } %>
+  </div>
+<% end %>

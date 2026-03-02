@@ -20,6 +20,10 @@ es:
       description: Esta inversión tiene valores faltantes y no pudimos calcular
         su rendimiento o valor.
       missing_data: Datos faltantes
+    sync_prices:
+      success: Datos de mercado sincronizados correctamente.
+      unavailable: La sincronización de datos de mercado no está disponible para valores fuera de línea.
+      provider_error: No se pudieron obtener los precios más recientes. Inténtalo de nuevo en unos minutos.
     show:
       avg_cost_label: Costo promedio
       current_market_price_label: Precio de mercado actual
@@ -34,4 +38,12 @@ es:
       ticker_label: Ticker
       trade_history_entry: "%{qty} acciones de %{security} a %{price}"
       total_return_label: Rendimiento total
+      shares_label: Acciones
+      book_value_label: Valor en libros
+      market_value_label: Valor de mercado
+      market_data_label: Datos de mercado
+      market_data_sync_button: Actualizar
+      last_price_update: Última actualización de precio
+      syncing: Sincronizando...
+      never: Nunca
       unknown: Desconocido

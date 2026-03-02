@@ -245,6 +245,7 @@ Rails.application.routes.draw do
       post :unlock_cost_basis
       patch :remap_security
       post :reset_security
+      post :sync_prices
     end
   end
   resources :trades, only: %i[show new create update destroy] do

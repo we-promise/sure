@@ -4,6 +4,8 @@ class Security::Price::Importer
 
   PROVISIONAL_LOOKBACK_DAYS = 7
 
+  attr_reader :provider_error
+
   def initialize(security:, security_provider:, start_date:, end_date:, clear_cache: false)
     @security          = security
     @security_provider = security_provider
@@ -130,6 +132,7 @@ class Security::Price::Importer
             scope.set_context("security", { id: security.id, start_date: start_date, end_date: end_date })
           end
 
+          @provider_error = error_message
           {}
         end
       end
