@@ -19,6 +19,11 @@ class BudgetsController < ApplicationController
   end
 
   def copy_previous
+    if @budget.initialized?
+      redirect_to budget_path(@budget), alert: t("budgets.copy_previous.already_initialized")
+      return
+    end
+
     source_budget = @budget.most_recent_initialized_budget
 
     if source_budget

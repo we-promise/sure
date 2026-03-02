@@ -16,3 +16,4 @@ en:
     copy_previous:
       success: "Budget copied from %{source_name}"
       no_source: "No previous budget found to copy from"
+      already_initialized: "This budget has already been set up"

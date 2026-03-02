@@ -128,6 +128,7 @@ class Budget < ApplicationRecord
 
   def most_recent_initialized_budget
     family.budgets
+      .includes(:budget_categories)
       .where("start_date < ?", start_date)
       .where.not(budgeted_spending: nil)
       .order(start_date: :desc)
