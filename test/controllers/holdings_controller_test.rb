@@ -108,6 +108,6 @@ class HoldingsControllerTest < ActionDispatch::IntegrationTest
     post sync_prices_holding_path(@holding)
 
     assert_redirected_to account_path(@holding.account, tab: "holdings")
-    assert_equal I18n.t("holdings.sync_prices.provider_error"), flash[:alert]
+    assert_equal "Yahoo Finance rate limit exceeded", flash[:alert]
   end
 end
