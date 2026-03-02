@@ -3,6 +3,16 @@
 require 'swagger_helper'
 
 RSpec.describe 'API V1 Auth', type: :request do
+  let(:device_params) do
+    {
+      device_id: SecureRandom.uuid,
+      device_name: "Test Device",
+      device_type: "ios",
+      os_version: "17.0",
+      app_version: "1.0.0"
+    }
+  end
+
   path '/api/v1/auth/signup' do
     post 'Sign up a new user' do
       tags 'Auth'
@@ -42,6 +52,8 @@ RSpec.describe 'API V1 Auth', type: :request do
       end
 
       response '201', 'user created' do
+        let(:body) { { user: { email: "signup_#{SecureRandom.hex(4)}@example.com", password: "SecurePass1!", first_name: "Test", last_name: "User" }, device: device_params } }
+
         schema type: :object,
                properties: {
                  access_token: { type: :string },
@@ -69,6 +81,8 @@ RSpec.describe 'API V1 Auth', type: :request do
       end
 
       response '422', 'validation error' do
+        let(:body) { { user: { email: "bad@example.com", password: "weak" }, device: device_params } }
+
         schema '$ref' => '#/components/schemas/ErrorResponse'
 
         let(:body) do
@@ -79,6 +93,9 @@ RSpec.describe 'API V1 Auth', type: :request do
       end
 
       response '403', 'invite code required or invalid' do
+        before { allow(ENV).to receive(:[]).and_call_original; allow(ENV).to receive(:[]).with("REQUIRE_INVITE_CODE").and_return("true") }
+        let(:body) { { user: { email: "inv_#{SecureRandom.hex(4)}@example.com", password: "SecurePass1!" }, device: device_params } }
+
         schema '$ref' => '#/components/schemas/ErrorResponse'
 
         before { allow(ENV).to receive(:[]).and_call_original }
@@ -154,6 +171,8 @@ RSpec.describe 'API V1 Auth', type: :request do
       end
 
       response '401', 'invalid credentials or MFA required' do
+        let(:body) { { email: "noone@example.com", password: "wrongpassword", device: device_params } }
+
         schema '$ref' => '#/components/schemas/ErrorResponse'
 
         let(:body) do
@@ -180,6 +199,10 @@ RSpec.describe 'API V1 Auth', type: :request do
       }
 
       response '200', 'tokens issued' do
+        let(:sso_code) { SecureRandom.hex(16) }
+        before { Rails.cache.write("mobile_sso:#{sso_code}", { access_token: "tok", refresh_token: "ref", token_type: "Bearer", expires_in: 7200, created_at: Time.current.to_i, user_id: SecureRandom.uuid, user_email: "sso@example.com", user_first_name: "SSO", user_last_name: "User" }) }
+        let(:body) { { code: sso_code } }
+
         schema type: :object,
                properties: {
                  access_token: { type: :string },
@@ -212,6 +235,8 @@ RSpec.describe 'API V1 Auth', type: :request do
       end
 
       response '401', 'invalid or expired code' do
+        let(:body) { { code: "invalid_#{SecureRandom.hex(8)}" } }
+
         schema '$ref' => '#/components/schemas/ErrorResponse'
 
         let(:body) { { code: 'invalid-code-xyz' } }
@@ -255,6 +280,13 @@ RSpec.describe 'API V1 Auth', type: :request do
       end
 
       response '200', 'token refreshed' do
+        let!(:ref_family) { Family.create!(name: "RefFamily") }
+        let!(:ref_user) { User.create!(email: "ref_#{SecureRandom.hex(4)}@example.com", password: "SecurePass1!", first_name: "R", last_name: "U", family: ref_family) }
+        let!(:ref_device) { MobileDevice.create!(user: ref_user, device_id: SecureRandom.uuid, device_name: "Test", device_type: "ios", os_version: "17.0", app_version: "1.0") }
+        let!(:ref_app)    { Doorkeeper::Application.create!(name: "RefApp", redirect_uri: "urn:ietf:wg:oauth:2.0:oob", scopes: "read write") }
+        let!(:existing_token) { Doorkeeper::AccessToken.create!(application: ref_app, resource_owner_id: ref_user.id, mobile_device_id: ref_device.id, expires_in: 30.days.to_i, scopes: "read write", use_refresh_token: true) }
+        let(:body) { { refresh_token: existing_token.refresh_token, device: { device_id: ref_device.device_id } } }
+
         schema type: :object,
                properties: {
                  access_token: { type: :string },
@@ -270,6 +302,8 @@ RSpec.describe 'API V1 Auth', type: :request do
       end
 
       response '401', 'invalid refresh token' do
+        let(:body) { { refresh_token: "invalid_#{SecureRandom.hex}", device: { device_id: SecureRandom.uuid } } }
+
         schema '$ref' => '#/components/schemas/ErrorResponse'
 
         let(:body) { { refresh_token: 'totally-invalid-refresh-token', device: { device_id: 'dev-x' } } }
@@ -278,6 +312,8 @@ RSpec.describe 'API V1 Auth', type: :request do
       end
 
       response '400', 'missing refresh token' do
+        let(:body) { { device: { device_id: SecureRandom.uuid } } }
+
         schema '$ref' => '#/components/schemas/ErrorResponse'
 
         let(:body) { { device: { device_id: 'dev-x' } } }
