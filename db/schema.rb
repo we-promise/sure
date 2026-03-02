@@ -1125,6 +1125,38 @@ ActiveRecord::Schema[7.2].define(version: 2026_02_18_120001) do
     t.index ["family_id"], name: "index_rules_on_family_id"
   end
 
+  create_table "saving_contributions", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "saving_goal_id", null: false
+    t.uuid "budget_id"
+    t.decimal "amount", precision: 19, scale: 4, null: false
+    t.date "month", null: false
+    t.string "source", default: "manual", null: false
+    t.string "currency", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["budget_id"], name: "index_saving_contributions_on_budget_id"
+    t.index ["saving_goal_id", "month"], name: "index_saving_contributions_on_saving_goal_id_and_month"
+    t.index ["saving_goal_id", "month"], name: "index_unique_auto_contributions", unique: true, where: "((source)::text = 'auto'::text)"
+    t.index ["saving_goal_id"], name: "index_saving_contributions_on_saving_goal_id"
+  end
+
+  create_table "saving_goals", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "family_id", null: false
+    t.string "name", null: false
+    t.decimal "target_amount", precision: 19, scale: 4, null: false
+    t.decimal "current_amount", precision: 19, scale: 4, default: "0.0", null: false
+    t.date "target_date"
+    t.string "status", default: "active", null: false
+    t.string "color"
+    t.string "icon"
+    t.string "currency", null: false
+    t.text "notes"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["family_id", "status"], name: "index_saving_goals_on_family_id_and_status"
+    t.index ["family_id"], name: "index_saving_goals_on_family_id"
+  end
+
   create_table "securities", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.string "ticker", null: false
     t.string "name"
@@ -1555,6 +1587,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_02_18_120001) do
   add_foreign_key "rule_conditions", "rules"
   add_foreign_key "rule_runs", "rules"
   add_foreign_key "rules", "families"
+  add_foreign_key "saving_contributions", "budgets"
+  add_foreign_key "saving_contributions", "saving_goals"
+  add_foreign_key "saving_goals", "families"
   add_foreign_key "security_prices", "securities"
   add_foreign_key "sessions", "impersonation_sessions", column: "active_impersonator_session_id"
   add_foreign_key "sessions", "users"

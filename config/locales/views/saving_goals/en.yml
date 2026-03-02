@@ -1,0 +1,92 @@
+---
+en:
+  saving_goals:
+    create:
+      success: "Saving goal created successfully."
+    update:
+      success: "Saving goal updated successfully."
+    destroy:
+      success: "Saving goal deleted successfully."
+    pause:
+      success: "Saving goal paused."
+    resume:
+      success: "Saving goal resumed."
+    complete:
+      success: "Saving goal completed! 🎉"
+    archive:
+      success: "Saving goal archived."
+    index:
+      title: "Saving Goals"
+      new_goal: "New Goal"
+      empty:
+        title: "No saving goals yet"
+        description: "Set a financial target and track your progress."
+      filters:
+        all: "All"
+        active: "Active"
+        paused: "Paused"
+        completed: "Completed"
+        archived: "Archived"
+    show:
+      progress: "%{percent}% saved"
+      target: "Target: %{amount}"
+      deadline: "Deadline: %{date}"
+      behind: "Behind schedule"
+      contributions: "Contributions"
+      actions: "Actions"
+      edit: "Edit Goal"
+      delete: "Delete Goal"
+      target_date: "Target date: %{date}"
+      current_balance: "Current Balance"
+      of_target: "of %{amount} goal"
+      on_track: "On Track"
+      on_track_description: "You are saving enough to reach your goal on time."
+      off_track: "Behind Schedule"
+      off_track_description: "Consider increasing your monthly savings to catch up."
+      pause: "Pause"
+      resume: "Resume"
+      complete: "Mark Complete"
+      monthly_effort: "Monthly Effort"
+      save_per_month: "Save %{amount}/month"
+      for_months: "for %{count} months to reach your goal"
+      allocate: "Allocate"
+      contribution_history: "Contribution History"
+      no_contributions: "No contributions yet. Start saving!"
+      auto_source: "Auto"
+      manual_source: "Manual"
+      initial_balance_source: "Initial Balance"
+      total_contributions:
+        one: "Total: %{amount} from 1 contribution"
+        other: "Total: %{amount} from %{count} contributions"
+    form:
+      errors_title: "Please fix the following errors:"
+      name_label: "Goal Name"
+      name_placeholder: "e.g., Emergency Fund, Vacation"
+      target_amount_label: "Target Amount"
+      target_date_label: "Target Date"
+      target_date_hint: "Optional. Set a deadline to track whether you're on pace."
+      initial_amount_label: "Already saved (optional)"
+      initial_amount_hint: "If you've already started saving toward this goal"
+
+      notes_label: "Notes"
+      notes_placeholder: "Add any notes about this goal..."
+      save: "Save Goal"
+      create: "Create Goal"
+      update: "Save Changes"
+      cancel: "Cancel"
+    new:
+      title: "New Saving Goal"
+    edit:
+      title: "Edit Saving Goal"
+    actions:
+      pause: "Pause Goal"
+      resume: "Resume Goal"
+      complete: "Complete Goal"
+      archive: "Archive Goal"
+    status:
+      active: "Active"
+      paused: "Paused"
+      completed: "Completed"
+      archived: "Archived"
+    goal_card:
+      target_date: "Target: %{date}"

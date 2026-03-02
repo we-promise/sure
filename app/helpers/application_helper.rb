@@ -173,6 +173,32 @@ module ApplicationHelper
     number_with_precision(qty, precision: precision, strip_insignificant_zeros: true)
   end
 
+  # Sanitizes return_to param or referrer for safe back links
+  def safe_back_path(fallback: root_path)
+    if params[:return_to].present? && params[:return_to].match?(/\A\/(?:$|[^\/])/)
+      return params[:return_to]
+    end
+
+    if request.referer.present? && URI(request.referer).host == request.host
+      return request.referer
+    end
+
+    fallback
+  rescue URI::InvalidURIError
+    fallback
+  end
+
+  # Maps backend color names (e.g. "success", "green") to their corresponding
+  # design token classes (e.g. "text-success"). Safe-lists allowed colors.
+  # Validates and maps color names to their corresponding text color class.
+  # Only allows colors defined in SavingGoal::COLORS.
+  # Defaults to text-primary-600 if an invalid color is provided.
+  def progress_ring_color_class(color)
+    safe_color = SavingGoal::COLORS.include?(color.to_s) ? color : "primary"
+    # using 600 shade for better visibility as per design system
+    "text-#{safe_color}-600"
+  end
+
   private
     def calculate_total(item, money_method, negate)
       # Filter out transfer-type transactions from entries

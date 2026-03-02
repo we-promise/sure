@@ -43,6 +43,7 @@ class Family < ApplicationRecord
 
   has_many :llm_usages, dependent: :destroy
   has_many :recurring_transactions, dependent: :destroy
+  has_many :saving_goals, dependent: :destroy
 
   validates :locale, inclusion: { in: I18n.available_locales.map(&:to_s) }
   validates :date_format, inclusion: { in: DATE_FORMATS.map(&:last) }
@@ -82,6 +83,10 @@ class Family < ApplicationRecord
     start_date = custom_month_start_for(Date.current)
     end_date = custom_month_end_for(Date.current)
     Period.custom(start_date: start_date, end_date: end_date)
+  end
+
+  def currency_symbol
+    Money::Currency.new(currency).symbol
   end
 
   def assigned_merchants
