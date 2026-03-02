@@ -72,7 +72,9 @@ class HoldingsControllerTest < ActionDispatch::IntegrationTest
 
     # Then: the security is brought back online and the holding is remapped
     assert_redirected_to account_path(@holding.account, tab: "holdings")
+    @holding.reload
     msft.reload
+    assert_equal msft.id, @holding.security_id
     assert_not msft.offline?
     assert_equal 0, msft.failed_fetch_count
   end
