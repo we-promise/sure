@@ -24,7 +24,7 @@ class Assistant::Builtin < Assistant::Base
       ai_model: message.ai_model
     )
 
-    llm_provider = get_model_provider(message.ai_model)
+    llm_provider = get_model_provider(message.ai_model, family: chat.user&.family)
     unless llm_provider
       raise StandardError, build_no_provider_error_message(message.ai_model)
     end
