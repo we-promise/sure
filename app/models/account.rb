@@ -84,6 +84,15 @@ class Account < ApplicationRecord
       # Default cash_balance to balance unless explicitly provided (e.g., Crypto sets it to 0)
       attrs = attributes.dup
       attrs[:cash_balance] = attrs[:balance] unless attrs.key?(:cash_balance)
+
+      # Extract and parse opening_balance_date before building the account model
+      opening_balance_date_param = attrs.delete(:opening_balance_date)
+      opening_balance_date = begin
+        Date.parse(opening_balance_date_param.to_s)
+      rescue ArgumentError, TypeError
+        nil
+      end
+
       account = new(attrs)
       initial_balance = attributes.dig(:accountable_attributes, :initial_balance)&.to_d
 
@@ -91,7 +100,7 @@ class Account < ApplicationRecord
         account.save!
 
         manager = Account::OpeningBalanceManager.new(account)
-        result = manager.set_opening_balance(balance: initial_balance || account.balance)
+        result = manager.set_opening_balance(balance: initial_balance || account.balance, date: opening_balance_date)
         raise result.error if result.error
       end
 

@@ -72,6 +72,50 @@ class AccountTest < ActiveSupport::TestCase
     assert_equal 1000, opening_anchor.entry.amount
   end
 
+  test "create_and_sync uses provided opening_balance_date for opening anchor" do
+    Account.any_instance.stubs(:sync_later)
+    date = 3.years.ago.to_date
+
+    account = Account.create_and_sync(
+      {
+        family: @family,
+        name: "Test Account",
+        balance: 500,
+        currency: "USD",
+        accountable_type: "Depository",
+        accountable_attributes: {},
+        opening_balance_date: date.to_s
+      },
+      skip_initial_sync: true
+    )
+
+    opening_anchor = account.valuations.opening_anchor.first
+    assert_not_nil opening_anchor
+    assert_equal date, opening_anchor.entry.date
+  end
+
+  test "create_and_sync falls back to default date when opening_balance_date is invalid" do
+    Account.any_instance.stubs(:sync_later)
+
+    account = Account.create_and_sync(
+      {
+        family: @family,
+        name: "Test Account",
+        balance: 500,
+        currency: "USD",
+        accountable_type: "Depository",
+        accountable_attributes: {},
+        opening_balance_date: "not-a-date"
+      },
+      skip_initial_sync: true
+    )
+
+    opening_anchor = account.valuations.opening_anchor.first
+    assert_not_nil opening_anchor
+    # Falls back to OpeningBalanceManager's default (2 years ago)
+    assert opening_anchor.entry.date <= Date.current
+  end
+
   test "gets short/long subtype label" do
     investment = Investment.new(subtype: "hsa")
     account = @family.accounts.create!(

@@ -13,6 +13,9 @@
 
     <% unless account.linked? %>
       <%= form.money_field :balance, label: t(".balance"), required: true, default_currency: Current.family.currency %>
+      <% if account.new_record? %>
+        <%= form.date_field :opening_balance_date, label: t(".opening_balance_date_label"), value: Date.current, required: true %>
+      <% end %>
     <% end %>
 
     <%= yield form %>

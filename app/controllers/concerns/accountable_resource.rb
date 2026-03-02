@@ -52,7 +52,7 @@ module AccountableResource
     end
 
     # Update remaining account attributes
-    update_params = account_params.except(:return_to, :balance, :currency)
+    update_params = account_params.except(:return_to, :balance, :currency, :opening_balance_date)
     unless @account.update(update_params)
       @error_message = @account.errors.full_messages.join(", ")
       render :edit, status: :unprocessable_entity
@@ -85,7 +85,7 @@ module AccountableResource
     def account_params
       params.require(:account).permit(
         :name, :balance, :subtype, :currency, :accountable_type, :return_to,
-        :institution_name, :institution_domain, :notes,
+        :institution_name, :institution_domain, :notes, :opening_balance_date,
         accountable_attributes: self.class.permitted_accountable_attributes
       )
     end

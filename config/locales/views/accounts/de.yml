@@ -15,6 +15,7 @@ de:
       no_accounts: Noch keine Konten vorhanden
     form:
       balance: Aktueller Kontostand
+      opening_balance_date_label: Eröffnungsdatum des Kontostands
       name_label: Kontoname
       name_placeholder: Beispielkontoname
     index:
