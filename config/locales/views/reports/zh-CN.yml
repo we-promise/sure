@@ -30,7 +30,7 @@ zh-CN:
       step1: 前往 设置 → API 密钥
       step2: 创建一个具有"读取"权限的新 API 密钥
       step3: 复制 API 密钥
-      step4: 将其添加到链接中：?api_key=您的密钥
+      step4: 将其添加到链接中：api_key=您的密钥
       steps: |-
         导入到 Google 表格的步骤：
         1. 创建新的 Google 表格
