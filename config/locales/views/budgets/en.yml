@@ -8,3 +8,11 @@ en:
       tabs:
         actual: Actual
         budgeted: Budgeted
+    copy_previous_prompt:
+      title: "Set up your budget"
+      description: "You can copy your budget from %{source_name} or start fresh."
+      copy_button: "Copy from %{source_name}"
+      fresh_button: "Start fresh"
+    copy_previous:
+      success: "Budget copied from %{source_name}"
+      no_source: "No previous budget found to copy from"
