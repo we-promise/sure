@@ -89,7 +89,7 @@ zh-CN:
       unrealized_gains: 未实现收益
       value: 价值
       view_details: 查看详情
-      weight: 重量
+      weight: 权重
       withdrawals: 本期提取
     net_worth:
       assets_vs_liabilities: 资产与负债
@@ -113,7 +113,7 @@ zh-CN:
         top_holdings: 主要持仓
         total_return: 总收益
         value: 价值
-        weight: 重量
+        weight: 权重
         withdrawals: 提取
       net_worth:
         assets: 资产

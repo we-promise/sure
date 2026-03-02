@@ -77,8 +77,7 @@ en:
         requires_plan: requires %{plan} plan
         view_pricing: View Twelve Data pricing
         title: Twelve Data
-      "sync_auto_sync_scheduler!":
-        scheduler_sync_failed: Settings saved, but failed to update the sync schedule. Please try again or check the server logs.
+
       update:
         failure: Invalid setting value
         success: Settings updated

@@ -61,8 +61,7 @@ zh-CN:
         invites: 邀请码设置
         sync_settings: 同步设置
         title: 自托管配置
-      sync_auto_sync_scheduler!:
-        scheduler_sync_failed: 设置已保存，但同步任务计划更新失败。请重试或检查服务器日志。
+
       sync_settings:
         auto_sync_description: 启用后，所有账户将在指定时间每天自动同步。
         auto_sync_label: 启用自动同步

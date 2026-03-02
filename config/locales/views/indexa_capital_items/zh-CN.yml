@@ -2,10 +2,10 @@
 zh-CN:
   indexa_capital_items:
     complete_account_setup:
-      all_skipped: 所有账户已被跳过，未创建任何账户.
+      all_skipped: 所有账户已被跳过，未创建任何账户。
       creation_failed: 创建账户失败：%{error}
-      no_accounts: 没有需要设置的账户.
-      success: 成功创建(s).
+      no_accounts: 没有需要设置的账户。
+      success: 创建成功
     create:
       success: IndexaCapital 连接已创建
     destroy:
@@ -51,8 +51,7 @@ zh-CN:
       link_failed: 关联账户失败
       no_accounts_selected: 请至少选择一个账户
       no_api_key: 未找到 IndexaCapital 凭据。请在提供商设置中进行配置。
-      partial_invalid: 成功关联(s), %{already_linked_count} were already linked, %{invalid_count}
-        account(s) had invalid names
+      partial_invalid: 成功关联 %{created_count} 个账户，%{already_linked_count} 个已关联，%{invalid_count} 个账户名称无效
       partial_success: 成功关联 %{created_count} 个账户。%{already_linked_count} 个账户已关联：%{already_linked_names}
       success:
         one: 成功关联
@@ -106,7 +105,7 @@ zh-CN:
       step_3: 连接成功后，前往“账户”标签页设置新账户
       update_button: 更新配置
     preload_accounts:
-      no_credentials_configured: 请先配置您的 IndexaCapital 凭据 in Provider Settings.
+      no_credentials_configured: 请先在服务商设置中配置您的 IndexaCapital 凭据。
     select_accounts:
       accounts_selected: 已选择账户
       api_error: API 错误：%{message}
@@ -114,9 +113,9 @@ zh-CN:
       configure_name_in_provider: 无法导入 - 请在以下位置配置账户名称 IndexaCapital
       description: 选择要关联到您 %{product_name} 账户的账户。
       link_accounts: 关联所选账户
-      no_accounts_found: 未找到账户. Please check your IndexaCapital credentials.
+      no_accounts_found: 未找到账户。请检查您的 IndexaCapital 凭据。
       no_api_key: 尚未配置 IndexaCapital 凭据。请在设置中进行配置。
-      no_credentials_configured: 请先配置您的 IndexaCapital 凭据 in Provider Settings.
+      no_credentials_configured: 请先在服务商设置中配置您的 IndexaCapital 凭据。
       no_name_placeholder: "（无名称）"
       title: 选择 IndexaCapital 账户
     select_existing_account:
@@ -137,7 +136,7 @@ zh-CN:
       no_accounts: 未找到未关联的 IndexaCapital 账户。
       no_accounts_found: 未找到 IndexaCapital 账户。请检查您的凭据。
       no_api_key: 尚未配置 IndexaCapital 凭据。请在设置中进行配置。
-      no_credentials_configured: 请先配置您的 IndexaCapital 凭据 in Provider Settings.
+      no_credentials_configured: 请先在服务商设置中配置您的 IndexaCapital 凭据。
       no_name_placeholder: "（无名称）"
       settings_link: 前往服务商设置
       subtitle: 选择一个 IndexaCapital 账户

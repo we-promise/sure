@@ -25,7 +25,7 @@ zh-CN:
         total_return: 总收益
         trades: 交易
         value: 价值
-        weight: 重量
+        weight: 占比
         withdrawals: 提取
       net_worth_chart:
         data_not_available: 所选时间段内无可用数据

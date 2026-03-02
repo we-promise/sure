@@ -21,7 +21,6 @@ zh-CN:
       local_login_admin_only: 本地登录仅限管理员使用。
       no_auth_methods_enabled: 目前未启用任何认证方式。请联系管理员。
       oidc: 使用 OpenID Connect 登录
-      openid_connect: 使用 OpenID Connect 登录
       password: 密码
       password_placeholder: 请输入密码
       submit: 登录

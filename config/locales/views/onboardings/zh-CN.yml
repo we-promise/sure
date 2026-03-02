@@ -58,9 +58,9 @@ zh-CN:
       in_40_days: 40 天后（%{date}）
       in_40_days_description: 我们会通知您提醒导出数据。
       in_45_days: 45 天后（%{date}）
-      in_45_days_description: 我们将删除您的数据 — 贡献以继续在这里使用 Sure！
-      title: 免费试用 Sure 45 天
+      in_45_days_description: 我们将删除您的数据 — 贡献以继续在这里使用 %{product_name}！
+      title: 免费试用 %{product_name} 45 天
       today: 今天
-      today_description: 您将在我们的 AWS 上获得 45 天免费访问 Sure 的权限。
-      try_button: 试用 Sure 45 天
+      today_description: 您将在我们的 AWS 上获得 45 天免费访问 %{product_name} 的权限。
+      try_button: 试用 %{product_name} 45 天
       upgrade: 升级
