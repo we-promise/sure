@@ -12,106 +12,106 @@ zh-CN:
       chart_title: 总价值
     subtypes:
       401k:
-        long: 401(k)
-        short: 401(k)
+        long: 退休账户（401(k)）
+        short: 401(k) 账户
       403b:
-        long: 403(b)
-        short: 403(b)
+        long: 退休账户（403(b)）
+        short: 403(b) 账户
       457b:
-        long: 457(b)
-        short: 457(b)
+        long: 退休账户（457(b)）
+        short: 457(b) 账户
       529_plan:
-        long: 529 Education Savings Plan
-        short: 529 Plan
+        long: 529 教育储蓄计划
+        short: 529 计划
       angel:
-        long: Angel Investment
-        short: Angel
+        long: 天使投资
+        short: 天使轮
       brokerage:
         long: 券商账户
         short: 券商账户
       hsa:
         long: 健康储蓄账户
-        short: HSA
+        short: HSA 账户
       ira:
         long: 传统 IRA
-        short: IRA
+        short: IRA 账户
       isa:
-        long: Individual Savings Account
-        short: ISA
+        long: 个人储蓄账户
+        short: ISA 账户
       lira:
-        long: Locked-In Retirement Account
-        short: LIRA
+        long: 锁定型退休账户
+        short: LIRA 账户
       lisa:
-        long: Lifetime ISA
-        short: LISA
+        long: 终身 ISA
+        short: LISA 账户
       mutual_fund:
         long: 共同基金
         short: 共同基金
       other:
-        long: Other Investment
-        short: Other
+        long: 其他投资
+        short: 其他
       pea:
-        long: Plan d'Épargne en Actions
-        short: PEA
+        long: 股票储蓄计划（PEA）
+        short: PEA 账户
       pension:
         long: 养老金
         short: 养老金
       pillar_3a:
-        long: Private Pension (Pillar 3a)
-        short: Pillar 3a
+        long: 私人养老金（第三支柱 3a）
+        short: 第三支柱 3a
       resp:
-        long: Registered Education Savings Plan
-        short: RESP
+        long: 注册教育储蓄计划
+        short: RESP 账户
       retirement:
-        long: Retirement Account
+        long: 退休账户
         short: 退休账户
       riester:
-        long: Riester-Rente
-        short: Riester
+        long: 里斯特养老金
+        short: 里斯特
       roth_401k:
-        long: Roth 401(k)
-        short: Roth 401(k)
+        long: 罗斯 401(k)
+        short: 罗斯 401(k)
       roth_ira:
-        long: Roth IRA
-        short: Roth IRA
+        long: 罗斯 IRA
+        short: 罗斯 IRA
       rrif:
-        long: Registered Retirement Income Fund
-        short: RRIF
+        long: 注册退休收入基金
+        short: RRIF 账户
       rrsp:
-        long: Registered Retirement Savings Plan
-        short: RRSP
+        long: 注册退休储蓄计划
+        short: RRSP 账户
       sep_ira:
-        long: SEP IRA
-        short: SEP IRA
+        long: 简化雇员养老金（SEP IRA）
+        short: SEP IRA 账户
       simple_ira:
-        long: SIMPLE IRA
-        short: SIMPLE IRA
+        long: 简易 IRA（SIMPLE IRA）
+        short: SIMPLE IRA 账户
       sipp:
-        long: Self-Invested Personal Pension
-        short: SIPP
+        long: 自主管理个人养老金
+        short: SIPP 账户
       smsf:
-        long: Self-Managed Super Fund
-        short: SMSF
+        long: 自主管理超级基金
+        short: SMSF 账户
       super:
-        long: Superannuation
-        short: Super
+        long: 养老金超级基金
+        short: Super 账户
       tfsa:
-        long: Tax-Free Savings Account
-        short: TFSA
+        long: 免税储蓄账户
+        short: TFSA 账户
       trust:
         long: 信托
         short: 信托
       tsp:
         long: 储蓄计划
-        short: TSP
+        short: TSP 账户
       ugma:
-        long: UGMA Custodial Account
-        short: UGMA
+        long: UGMA 托管账户
+        short: UGMA 账户
       utma:
-        long: UTMA Custodial Account
-        short: UTMA
+        long: UTMA 托管账户
+        short: UTMA 账户
       workplace_pension_uk:
-        long: Workplace Pension
+        long: 职场养老金
         short: 养老金
     value_tooltip:
       cash: 现金

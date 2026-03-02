@@ -6,23 +6,21 @@ zh-CN:
       success: 商户创建成功
     destroy:
       success: 商户删除成功
-      unlinked_success: Merchant removed from your transactions
+      unlinked_success: 商户已从您的交易中移除
     edit:
       title: 编辑商户
     form:
       name_placeholder: 商户名称
-      website_hint: Enter the merchant's website to automatically display their logo
-      website_placeholder: Website (e.g., starbucks.com)
+      website_hint: 输入商户网站以自动显示其 Logo
+      website_placeholder: 网站（例如：starbucks.com）
     index:
       empty: 暂无商户
       family_empty: 暂无家庭商户
       family_title: 家庭商户
-      merge: Merge merchants
+      merge: 合并商户
       new: 新建商户
       provider_empty: 此家庭尚未关联任何服务提供商商户
-      provider_info: These merchants were automatically detected by your bank connections
-        or AI. You can edit them to create your own copy, or remove them to unlink
-        from your transactions.
+      provider_info: 这些商户由您的银行连接或 AI 自动识别。您可以编辑以创建自己的副本，或移除以取消与交易的关联。
       provider_read_only: 服务提供商商户从您关联的金融机构同步而来，无法在此编辑。
       provider_title: 服务提供商商户
       table:
@@ -30,9 +28,8 @@ zh-CN:
         merchant: 商户名称
         source: 来源
       title: 商户管理
-      unlinked_info: These merchants were recently removed from your transactions.
-        They will disappear from this list after 30 days unless re-assigned to a transaction.
-      unlinked_title: Recently unlinked
+      unlinked_info: 这些商户最近已从您的交易中移除。除非再次分配到交易，否则 30 天后将从该列表中消失。
+      unlinked_title: 最近已取消关联
     merchant:
       confirm_accept: 确认删除
       confirm_body: 确定要删除此商户吗？删除后将解除所有关联交易，并可能影响您的报表数据。
@@ -40,29 +37,25 @@ zh-CN:
       delete: 删除商户
       edit: 编辑商户
     merge:
-      description: Select a target merchant and the merchants to merge into it. All
-        transactions from merged merchants will be reassigned to the target.
-      select_target: Select target merchant...
-      sources_hint: Selected merchants will be merged into the target. Family merchants
-        will be deleted, provider merchants will be unlinked.
-      sources_label: Merchants to merge
-      submit: Merge selected
-      target_label: Merge into (target)
-      title: Merge merchants
+      description: 选择目标商户及要合并到其中的商户。被合并商户的所有交易将重新分配到目标商户。
+      select_target: 选择目标商户…
+      sources_hint: 所选商户将合并到目标商户。家庭商户将被删除，提供商商户将被取消关联。
+      sources_label: 待合并商户
+      submit: 合并所选
+      target_label: 合并到（目标）
+      title: 合并商户
     new:
       title: 新建商户
     perform_merge:
-      invalid_merchants: Invalid merchants selected
-      no_merchants_selected: No merchants selected to merge
-      success: Successfully merged %{count} merchants
-      target_not_found: Target merchant not found
+      invalid_merchants: 选择的商户无效
+      no_merchants_selected: 未选择要合并的商户
+      success: 已成功合并 %{count} 个商户
+      target_not_found: 未找到目标商户
     provider_merchant:
-      edit: Edit
-      remove: Remove
-      remove_confirm_body: Are you sure you want to remove %{name}? This will unlink
-        all associated transactions from this merchant but will not delete the merchant
-        itself.
-      remove_confirm_title: Remove merchant?
+      edit: 编辑
+      remove: 移除
+      remove_confirm_body: 确定要移除 %{name} 吗？这将取消该商户与所有关联交易的关系，但不会删除商户本身。
+      remove_confirm_title: 移除商户？
     update:
-      converted_success: Merchant converted and updated successfully
+      converted_success: 商户已成功转换并更新
       success: 商户更新成功

@@ -14,8 +14,7 @@ zh-CN:
       data_not_available: 所选时间段内无可用数据
     confirm_unlink:
       confirm_button: 确认并解除关联
-      description_html: 您即将解除 <strong>%{account_name}</strong> 与 <strong>%{provider_name}</strong>
-        的关联。这将转换为手动账户。
+      description_html: 您即将解除 <strong>%{account_name}</strong> 与 <strong>%{provider_name}</strong> 的关联。这将转换为手动账户。
       title: 确认解除账户关联？
       warning_can_delete: 解除关联后，您可以在需要时删除账户
       warning_manual_updates: 您需要手动添加交易和更新余额
@@ -32,17 +31,16 @@ zh-CN:
       new_account: 新建账户
       no_accounts: 暂无账户
     form:
-      additional_details: Additional details
+      additional_details: 附加详情
       balance: 当前余额
-      institution_domain_label: Institution domain
-      institution_domain_placeholder: e.g., chase.com
-      institution_name_label: Institution name
-      institution_name_placeholder: e.g., Chase Bank
+      institution_domain_label: 机构域名
+      institution_domain_placeholder: 例如：cmbchina.com
+      institution_name_label: 机构名称
+      institution_name_placeholder: 例如：招商银行
       name_label: 账户名称
       name_placeholder: 例如：储蓄账户
-      notes_label: Notes
-      notes_placeholder: Store additional information like account numbers, sort codes,
-        IBAN, routing numbers, etc.
+      notes_label: 备注
+      notes_placeholder: 存储附加信息，例如账户号、分行代码、IBAN、路由号等。
     index:
       accounts: 账户管理
       manual_accounts:
@@ -72,13 +70,13 @@ zh-CN:
         date: 日期
         entries: 条记录
         entry: 条记录
-        filter: Filter
+        filter: 筛选
         new: 新建
-        new_activity: New activity
+        new_activity: 新建活动
         new_balance: 新增余额
-        new_trade: New trade
+        new_trade: 新建交易
         new_transaction: 新建交易
-        new_transfer: New transfer
+        new_transfer: 新建转账
         no_entries: 未找到相关记录
         pending: 待处理
         search:
@@ -90,13 +88,12 @@ zh-CN:
         owed: 欠款金额
       menu:
         confirm_accept: 删除“%{name}”
-        confirm_body_html: "<p>删除此账户将清除其历史价值数据，影响您整体账户的多个方面。此操作将直接影响您的资产净值计算和账户图表。</p><br
-          /><p>删除后无法恢复账户信息，您需要将其作为新账户重新添加。</p>"
+        confirm_body_html: "<p>删除此账户将清除其历史价值数据，影响您整体账户的多个方面。此操作将直接影响您的资产净值计算和账户图表。</p><br /><p>删除后无法恢复账户信息，您需要将其作为新账户重新添加。</p>"
         confirm_title: 确认删除账户？
         edit: 编辑
         import: 导入交易记录
-        import_trades: Import trades
-        import_transactions: Import transactions
+        import_trades: 导入交易
+        import_transactions: 导入流水
         manage: 管理账户
     sidebar:
       configure_providers: 在此配置您的服务提供商。
@@ -111,24 +108,24 @@ zh-CN:
         assets: 资产
         debts: 负债
     subtype_regions:
-      au: Australia
-      ca: Canada
-      eu: Europe
-      generic: General
-      uk: United Kingdom
-      us: United States
+      au: 澳大利亚
+      ca: 加拿大
+      eu: 欧洲
+      generic: 通用
+      uk: 英国
+      us: 美国
     sync_all:
       syncing: 账户同步中...
     tax_treatment_descriptions:
-      tax_advantaged: Special tax benefits with conditions
-      tax_deferred: Contributions deductible, taxed on withdrawal
-      tax_exempt: Contributions after-tax, gains not taxed
-      taxable: Gains taxed when realized
+      tax_advantaged: 在满足条件时享有特殊税务优惠
+      tax_deferred: 缴款可抵税，提取时征税
+      tax_exempt: 税后缴款，收益不征税
+      taxable: 收益实现时征税
     tax_treatments:
-      tax_advantaged: Tax-Advantaged
-      tax_deferred: Tax-Deferred
-      tax_exempt: Tax-Exempt
-      taxable: Taxable
+      tax_advantaged: 税优账户
+      tax_deferred: 递延纳税
+      tax_exempt: 免税
+      taxable: 应税
     types:
       credit_card: 信用卡账户
       crypto: 加密货币账户

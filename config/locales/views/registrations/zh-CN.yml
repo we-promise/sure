@@ -23,7 +23,7 @@ zh-CN:
         number: 一个数字 (0-9)
         special: '一个特殊字符 (!, @, #, $, %, etc)'
       role_admin: 管理员
-      role_guest: guest
+      role_guest: 访客
       role_member: 成员
       submit: 创建账户
       title: 创建您的账户

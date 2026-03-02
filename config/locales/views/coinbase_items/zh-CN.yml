@@ -3,78 +3,76 @@ zh-CN:
   coinbase_item:
     syncer:
       accounts_need_setup:
-        one: "%{count} account needs setup"
-        other: "%{count} accounts need setup"
+        one: 有 %{count} 个账户需要设置
+        other: 有 %{count} 个账户需要设置
       calculating_balances: 正在计算余额...
       checking_configuration: 正在检查账户配置...
-      checking_credentials: Checking credentials...
-      credentials_invalid: Invalid API credentials. Please check your API key and
-        secret.
+      checking_credentials: 正在检查凭据…
+      credentials_invalid: API 凭据无效。请检查 API key 和 secret。
       importing_accounts: 正在从...导入账户 Coinbase...
-      processing_accounts: Processing account data...
+      processing_accounts: 正在处理账户数据…
   coinbase_items:
     coinbase_item:
       delete: 删除
-      deletion_in_progress: Deleting...
-      import_wallets_menu: Import Wallets
+      deletion_in_progress: 删除中…
+      import_wallets_menu: 导入钱包
       more_wallets_available:
-        one: "%{count} more wallet available to import"
-        other: "%{count} more wallets available to import"
-      no_accounts_message: Your Coinbase wallets will appear here after syncing.
+        one: 还有 %{count} 个钱包可导入
+        other: 还有 %{count} 个钱包可导入
+      no_accounts_message: 同步后，您的 Coinbase 钱包将显示在这里。
       no_accounts_title: 未找到账户
-      provider_name: Coinbase
-      reconnect: Credentials need updating
-      setup_action: Import Wallets
-      setup_description: Select which Coinbase wallets you want to track.
-      setup_needed: Wallets ready to import
-      status: Last synced %{timestamp} ago
+      provider_name: Coinbase（服务商）
+      reconnect: 凭据需要更新
+      setup_action: 导入钱包
+      setup_description: 选择您想追踪的 Coinbase 钱包。
+      setup_needed: 钱包可导入
+      status: 上次同步于 %{timestamp} 前
       status_never: 从未同步
-      status_with_summary: Last synced %{timestamp} ago - %{summary}
+      status_with_summary: 上次同步于 %{timestamp} 前 - %{summary}
       sync_status:
         all_synced:
-          one: "%{count} account synced"
-          other: "%{count} accounts synced"
+          one: 已同步 %{count} 个账户
+          other: 已同步 %{count} 个账户
         no_accounts: 未找到账户
-        partial_sync: "%{linked_count} synced, %{unlinked_count} need setup"
+        partial_sync: 已同步 %{linked_count} 个，另有 %{unlinked_count} 个待设置
       syncing: 同步中...
       update_credentials: 更新凭据
     complete_account_setup:
-      no_accounts: No wallets to import
-      none_selected: No wallets selected
+      no_accounts: 没有可导入的钱包
+      none_selected: 未选择钱包
       success:
-        one: Imported %{count} wallet
-        other: Imported %{count} wallets
+        one: 已导入 %{count} 个钱包
+        other: 已导入 %{count} 个钱包
     create:
-      default_name: Coinbase
-      success: Successfully connected to Coinbase! Your accounts are being synced.
+      default_name: Coinbase 连接
+      success: 已成功连接 Coinbase！您的账户正在同步。
     destroy:
-      success: Scheduled Coinbase connection for deletion.
+      success: 已计划删除 Coinbase 连接。
     link_existing_account:
       errors:
-        invalid_coinbase_account: Invalid Coinbase account
-        only_manual: Only manual accounts can be linked to Coinbase
+        invalid_coinbase_account: 无效的 Coinbase 账户
+        only_manual: 仅手动账户可关联到 Coinbase
       success: 成功关联
     select_existing_account:
       balance: 余额
       cancel: 取消
-      check_provider_health: Check that your Coinbase API credentials are valid
-      currently_linked_to: 'Currently linked to: %{account_name}'
+      check_provider_health: 请检查 Coinbase API 凭据是否有效
+      currently_linked_to: 当前关联到：%{account_name}
       link: 关联
-      no_accounts_found: No Coinbase accounts found.
-      title: Link Coinbase Account
-      wait_for_sync: Wait for Coinbase to finish syncing
+      no_accounts_found: 未找到 Coinbase 账户。
+      title: 关联 Coinbase 账户
+      wait_for_sync: 请等待 Coinbase 完成同步
     setup_accounts:
       accounts_count:
-        one: "%{count} wallet available"
-        other: "%{count} wallets available"
+        one: 有 %{count} 个钱包可用
+        other: 有 %{count} 个钱包可用
       cancel: 取消
-      creating: Importing...
-      import_selected: Import Selected
-      instructions: Select the wallets you want to import. Unselected wallets will
-        remain available if you want to add them later.
-      no_accounts: All wallets have been imported.
-      select_all: Select all
-      subtitle: Select which wallets to track
-      title: Import Coinbase Wallets
+      creating: 导入中…
+      import_selected: 导入所选
+      instructions: 选择要导入的钱包。未选择的钱包会保留，您稍后仍可添加。
+      no_accounts: 所有钱包均已导入。
+      select_all: 全选
+      subtitle: 选择要追踪的钱包
+      title: 导入 Coinbase 钱包
     update:
-      success: Successfully updated Coinbase configuration.
+      success: Coinbase 配置更新成功。

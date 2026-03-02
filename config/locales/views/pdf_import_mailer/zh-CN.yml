@@ -2,19 +2,16 @@
 zh-CN:
   pdf_import_mailer:
     next_steps:
-      document_stored_note: This document has been stored for your reference. It can
-        be used to provide context in future AI conversations.
-      document_type_label: Document Type
-      footer_note: This is an automated message. Please do not reply directly to this
-        email.
-      greeting: Hi %{name},
-      intro: We've finished analyzing the PDF document you uploaded to %{product}.
-      next_steps_intro: 'You have several options:'
-      next_steps_label: What's Next?
-      option_delete: Delete this import if you no longer need it
-      option_extract_transactions: Extract transactions from this statement
-      option_keep_reference: Keep this document for reference in future AI conversations
-      summary_label: AI Summary
-      transactions_note: This document appears to contain transactions. You can extract
-        and review them now.
-      view_import_button: View Import Details
+      document_stored_note: 该文档已保存供您参考。后续与 AI 对话时可用作上下文。
+      document_type_label: 文档类型
+      footer_note: 这是一封自动发送的邮件，请勿直接回复。
+      greeting: 您好，%{name}：
+      intro: 我们已完成对您上传到 %{product} 的 PDF 文档分析。
+      next_steps_intro: 您可以选择以下操作：
+      next_steps_label: 下一步？
+      option_delete: 如果不再需要，可删除本次导入
+      option_extract_transactions: 从该对账单中提取交易
+      option_keep_reference: 保留该文档，以便未来 AI 对话参考
+      summary_label: AI 摘要
+      transactions_note: 该文档似乎包含交易记录。您现在可以提取并审核。
+      view_import_button: 查看导入详情

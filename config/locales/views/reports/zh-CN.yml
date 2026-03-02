@@ -6,7 +6,7 @@ zh-CN:
       no_budgets: 本月未设置预算分类
       over_by: 超支
       remaining: 剩余
-      shared: shared
+      shared: 共享
       spent: 已支出
       status:
         good: 正常执行
@@ -51,7 +51,7 @@ zh-CN:
         monthly: 月度
         quarterly: 季度
         ytd: 本年度至今
-      print_report: Print Report
+      print_report: 打印报表
       showing_period: 显示 %{start} 至 %{end} 的数据
       subtitle: 全面洞察您的财务健康状况
       title: 财务报告
@@ -59,96 +59,96 @@ zh-CN:
     invalid_date_range: 结束日期不能早于开始日期。日期已自动交换。
     investment_flows:
       contributions: 缴存
-      description: Track money flowing into and out of your investment accounts
-      net_flow: Net Flow
-      title: Investment Flows
+      description: 跟踪资金流入和流出您的投资账户
+      net_flow: 净流量
+      title: 投资资金流
       withdrawals: 提取
     investment_performance:
-      accounts: Investment Accounts
-      and_more: "+%{count} more"
-      contributions: Period Contributions
-      gains_by_tax_treatment: Gains by Tax Treatment
+      accounts: 投资账户
+      and_more: "+%{count} 更多"
+      contributions: 本期注资
+      gains_by_tax_treatment: 按税务处理分类的收益
       holding: 持仓
-      holdings: Holdings
+      holdings: 持仓
       holdings_count:
-        one: "%{count} holding"
-        other: "%{count} holdings"
+        one: "%{count} 个持仓"
+        other: "%{count} 个持仓"
       no_data: "-"
-      portfolio_value: Portfolio Value
-      realized_gains: Realized Gains
+      portfolio_value: 投资组合价值
+      realized_gains: 已实现收益
       return: 收益
-      sell_trades: Sell Trades
+      sell_trades: 卖出交易
       sells_count:
-        one: "%{count} sell"
-        other: "%{count} sells"
-      taxable_realized_note: These gains may be subject to taxes
-      title: Investment Performance
+        one: "%{count} 笔卖出"
+        other: "%{count} 笔卖出"
+      taxable_realized_note: 这些收益可能需要纳税
+      title: 投资表现
       top_holdings: 主要持仓
-      total_gains: Total Gains
+      total_gains: 总收益
       total_return: 总收益
-      unrealized_gains: Unrealized Gains
+      unrealized_gains: 未实现收益
       value: 价值
-      view_details: View details
+      view_details: 查看详情
       weight: 重量
-      withdrawals: Period Withdrawals
+      withdrawals: 本期提取
     net_worth:
-      assets_vs_liabilities: Assets vs Liabilities
-      current_net_worth: Current Net Worth
-      no_assets: No assets
-      no_liabilities: No liabilities
-      period_change: Period Change
-      title: Net Worth
-      total_assets: Assets
-      total_liabilities: Liabilities
+      assets_vs_liabilities: 资产与负债
+      current_net_worth: 当前净资产
+      no_assets: 无资产
+      no_liabilities: 无负债
+      period_change: 期间变化
+      title: 净资产
+      total_assets: 资产
+      total_liabilities: 负债
     print:
-      document_title: Financial Report
-      generated_on: Generated %{date}
+      document_title: 财务报告
+      generated_on: 生成于 %{date}
       investments:
         contributions: 缴存
         holding: 持仓
-        portfolio_value: Portfolio Value
+        portfolio_value: 投资组合价值
         return: 收益
-        this_period: this period
-        title: Investments
+        this_period: 本期
+        title: 投资
         top_holdings: 主要持仓
         total_return: 总收益
         value: 价值
         weight: 重量
         withdrawals: 提取
       net_worth:
-        assets: Assets
-        current_balance: Current Balance
-        liabilities: Liabilities
-        no_liabilities: No liabilities
-        this_period: this period
-        title: Net Worth
+        assets: 资产
+        current_balance: 当前余额
+        liabilities: 负债
+        no_liabilities: 无负债
+        this_period: 本期
+        title: 净资产
       spending:
-        amount: Amount
-        category: Category
+        amount: 金额
+        category: 分类
         expenses: 支出
         income: 收入
-        more_categories: "+ %{count} more categories"
+        more_categories: "+ %{count} 个更多分类"
         percent: "%"
-        title: Spending by Category
+        title: 按分类支出
       summary:
-        budget: Budget
+        budget: 预算
         expenses: 支出
         income: 收入
-        net_savings: Net Savings
-        of_income: "%{percent}% of income"
+        net_savings: 净储蓄
+        of_income: 占收入 %{percent}%
         title: 摘要
-        used: used
-        vs_prior: "%{percent}% vs prior"
-      title: Financial Report
+        used: 已使用
+        vs_prior: 较上期 %{percent}%
+      title: 财务报告
       trends:
-        average: Average
-        current_month_note: "* Current month (partial data)"
+        average: 平均值
+        current_month_note: "* 当前月份（部分数据）"
         expenses: 支出
         income: 收入
-        month: Month
-        net: Net
-        savings_rate: Savings Rate
-        title: Monthly Trends
+        month: 月份
+        net: 净值
+        savings_rate: 储蓄率
+        title: 月度趋势
     summary:
       budget_performance: 预算执行情况
       income_minus_expenses: 收入减去支出
@@ -160,11 +160,11 @@ zh-CN:
       vs_previous: 与上一期相比
     transactions_breakdown:
       export:
-        csv: CSV
-        excel: Excel
+        csv: CSV 格式
+        excel: Excel 格式
         google_sheets: 在 Google 表格中打开
         label: 导出格式
-        pdf: PDF
+        pdf: PDF 格式
       filters:
         account: 账户
         all_accounts: 全部账户
@@ -192,8 +192,8 @@ zh-CN:
         amount: 金额
         category: 分类
         entries:
-          one: "%{count} entry"
-          other: "%{count} entries"
+          one: "%{count} 条记录"
+          other: "%{count} 条记录"
         expense: 支出
         income: 收入
         percentage: 占总比

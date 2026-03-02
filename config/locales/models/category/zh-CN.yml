@@ -2,6 +2,6 @@
 zh-CN:
   models:
     category:
-      investment_contributions: Investment Contributions
-      other_investments: Other Investments
-      uncategorized: Uncategorized
+      investment_contributions: 投资注资
+      other_investments: 其他投资
+      uncategorized: 未分类

@@ -3,67 +3,61 @@ zh-CN:
   coinstats_items:
     coinstats_item:
       delete: 删除
-      deletion_in_progress: Crypto wallet data is being deleted…
-      no_wallets_message: No crypto wallets are currently connected to CoinStats.
-      no_wallets_title: No crypto wallets connected
-      provider_name: CoinStats
-      reconnect: Reconnect
-      status: Last synced %{timestamp} ago
+      deletion_in_progress: 加密钱包数据正在删除…
+      no_wallets_message: 当前没有加密钱包连接到 CoinStats。
+      no_wallets_title: 未连接任何加密钱包
+      provider_name: CoinStats（服务商）
+      reconnect: 重新连接
+      status: 上次同步于 %{timestamp} 前
       status_never: 从未同步
-      status_with_summary: Last synced %{timestamp} ago • %{summary}
+      status_with_summary: 上次同步于 %{timestamp} 前 • %{summary}
       sync_status:
         all_synced:
-          one: "%{count} crypto wallet synced"
-          other: "%{count} crypto wallets synced"
-        no_accounts: No crypto wallets found
-        partial_sync: "%{linked_count} crypto wallets synced, %{unlinked_count} need
-          setup"
-      syncing: Syncing…
-      update_api_key: Update API Key
+          one: 已同步 %{count} 个加密钱包
+          other: 已同步 %{count} 个加密钱包
+        no_accounts: 未找到加密钱包
+        partial_sync: 已同步 %{linked_count} 个加密钱包，%{unlinked_count} 个待设置
+      syncing: 同步中…
+      update_api_key: 更新 API 密钥
     create:
-      default_name: CoinStats Connection
+      default_name: CoinStats 连接
       errors:
-        validation_failed: 'Validation failed: %{message}.'
-      success: CoinStats provider connection configured successfully.
+        validation_failed: 验证失败：%{message}。
+      success: CoinStats 提供商连接配置成功。
     destroy:
-      success: CoinStats provider connection scheduled for deletion.
+      success: CoinStats 提供商连接已计划删除。
     link_wallet:
-      error: 'Crypto wallet linking failed: %{message}.'
-      failed: Crypto wallet linking failed.
-      missing_params: 'Missing required parameters: address and blockchain.'
-      success: "%{count} crypto wallet(s) linked successfully."
+      error: 加密钱包关联失败：%{message}。
+      failed: 加密钱包关联失败。
+      missing_params: 缺少必需参数：地址和区块链。
+      success: 已成功关联 %{count} 个加密钱包。
     new:
-      address_label: Address
+      address_label: 地址
       address_placeholder: 必填
-      api_key_label: API Key
+      api_key_label: API 密钥
       api_key_placeholder: 必填
-      blockchain_fetch_error: Failed load Blockchains. Please try again later.
-      blockchain_label: Blockchain
+      blockchain_fetch_error: 区块链加载失败。请稍后重试。
+      blockchain_label: 区块链
       blockchain_placeholder: 必填
-      blockchain_select_blank: Select a Blockchain
-      configure: Configure
-      default_name: CoinStats Connection
+      blockchain_select_blank: 选择区块链
+      configure: 配置
+      default_name: CoinStats 连接
       go_to_settings: 前往服务商设置
-      link: Link Crypto Wallet
-      not_configured_message: To link a crypto wallet, you must first configure the
-        CoinStats provider connection.
-      not_configured_step1_html: Go to <strong>Settings → Providers</strong>
-      not_configured_step2_html: Locate the <strong>CoinStats</strong> provider
-      not_configured_step3_html: Follow the provided <strong>setup Instructions</strong>
-        to complete provider configuration
-      not_configured_title: CoinStats provider connection not configured
-      setup_instructions: 'Setup Instructions:'
-      status_configured_html: Ready to use
+      link: 关联加密钱包
+      not_configured_message: 要关联加密钱包，您必须先配置 CoinStats 提供商连接。
+      not_configured_step1_html: 前往 <strong>设置 → 服务商</strong>
+      not_configured_step2_html: 找到 <strong>CoinStats</strong> 提供商
+      not_configured_step3_html: 按照提供的<strong>设置说明</strong>完成提供商配置
+      not_configured_title: CoinStats 提供商连接未配置
+      setup_instructions: 设置说明：
+      status_configured_html: 可立即使用
       status_not_configured: 未配置
-      step1_html: Visit the <a href="https://openapi.coinstats.app/" class="link"
-        target="_blank" rel="noopener noreferrer">CoinStats Public API Dashboard</a>
-        to obtain an API key.
-      step2: Enter your API key below and click Configure.
-      step3_html: After a successful connection, visit the <a href="%{accounts_url}"
-        class="link" data-turbo-frame="_top">Accounts</a> tab to set up crypto wallets.
-      title: Link a Crypto Wallet with CoinStats
-      update_configuration: Reconfigure
+      step1_html: 访问 <a href="https://openapi.coinstats.app/" class="link" target="_blank" rel="noopener noreferrer">CoinStats 公共 API 控制台</a> 获取 API 密钥。
+      step2: 在下方输入您的 API 密钥并点击“配置”。
+      step3_html: 连接成功后，请前往 <a href="%{accounts_url}" class="link" data-turbo-frame="_top">账户</a> 标签页设置加密钱包。
+      title: 使用 CoinStats 关联加密钱包
+      update_configuration: 重新配置
     update:
       errors:
-        validation_failed: 'Validation failed: %{message}.'
-      success: CoinStats provider connection updated successfully.
+        validation_failed: 验证失败：%{message}。
+      success: CoinStats 提供商连接更新成功。

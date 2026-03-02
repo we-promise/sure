@@ -5,7 +5,7 @@ zh-CN:
       edit: 编辑%{account}
     form:
       address_line1: 街道地址
-      address_line1_placeholder: 123 Main St
+      address_line1_placeholder: 例如：中山路 123 号
       area: 居住面积
       area_placeholder: '2000'
       area_unit: 面积单位

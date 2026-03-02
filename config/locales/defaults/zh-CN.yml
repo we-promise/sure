@@ -39,7 +39,7 @@ zh-CN:
     - 星期五
     - 星期六
     formats:
-      default: "%Y-%m-%d"
+      默认: "%Y-%m-%d"
       long: "%Y年%m月%d日"
       short: "%m月%d日"
     month_names:
@@ -117,7 +117,7 @@ zh-CN:
       body: 如下字段出现错误：
       header: 有%{count}个错误发生导致"%{model}"无法被保存。
   global:
-    expand: Expand
+    expand: 展开
   helpers:
     select:
       prompt: 请选择
@@ -177,7 +177,7 @@ zh-CN:
   time:
     am: 上午
     formats:
-      default: "%Y年%m月%d日 %A %H:%M:%S"
+      默认: "%Y年%m月%d日 %A %H:%M:%S"
       long: "%Y年%m月%d日 %H:%M"
       short: "%m月%d日 %H:%M"
     pm: 下午

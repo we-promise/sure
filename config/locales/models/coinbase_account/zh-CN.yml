@@ -2,4 +2,4 @@
 zh-CN:
   coinbase:
     processor:
-      paid_via: Paid via %{method}
+      paid_via: 通过 %{method} 支付

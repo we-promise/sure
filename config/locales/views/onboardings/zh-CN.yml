@@ -44,9 +44,9 @@ zh-CN:
       household_name_placeholder: 家庭名称
       last_name: 姓
       last_name_placeholder: 姓
-      moniker_family: Family members (just yourself or with partner, teens, etc.)
-      moniker_group: Group of people (company, club, association, any other type)
-      moniker_prompt: Will be using %{product_name} with ...
+      moniker_family: 家庭成员（仅自己，或与伴侣、青少年等一起）
+      moniker_group: 一群人（公司、俱乐部、协会或其他类型）
+      moniker_prompt: 将与……一起使用 %{product_name}
       submit: 继续
       subtitle: 首先，让我们完善您的个人资料。
       title: 让我们设置您的账户

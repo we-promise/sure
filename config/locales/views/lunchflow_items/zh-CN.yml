@@ -23,8 +23,7 @@ zh-CN:
       link_failed: 关联账户失败
       no_accounts_selected: 请至少选择一个账户
       no_api_key: 未发现 API 密钥
-      partial_invalid: 成功关联 %{created_count} 个账户，%{already_linked_count} 个已关联，%{invalid_count}
-        个账户名称无效
+      partial_invalid: 成功关联 %{created_count} 个账户，%{already_linked_count} 个已关联，%{invalid_count} 个账户名称无效
       partial_success: 成功关联 %{created_count} 个账户。%{already_linked_count} 个账户已关联：%{already_linked_names}
       success:
         one: 成功关联 %{count} 个账户
@@ -132,7 +131,7 @@ zh-CN:
           pension: 养老金账户
           retirement: 退休账户
           roth_401k: Roth 401(k) 计划
-          roth_ira: Roth IRA
+          roth_ira: 罗斯 IRA
           tsp: 节俭储蓄计划
         loan:
           auto: 汽车贷款
