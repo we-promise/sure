@@ -73,6 +73,14 @@ en:
       vs_prior_year: "vs prior year"
       projected_savings: "Projected annual savings"
       projected_savings_description: "Based on your year-to-date income and spending pace"
+    copy_previous_prompt:
+      title: "Set up your budget"
+      description: "You can copy your budget from %{source_name} or start fresh."
+      copy_button: "Copy from %{source_name}"
+      fresh_button: "Start fresh"
+    copy_previous:
+      success: "Budget copied from %{source_name}"
+      no_source: "No previous budget found to copy from"
     savings:
       saved_label: savings
       extra_saved: extra saved!

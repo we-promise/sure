@@ -170,7 +170,12 @@ class Budget < ApplicationRecord
         target_bc = target_by_category[source_bc.category_id]
         next unless target_bc
 
-        target_bc.update!(budgeted_spending: source_bc.budgeted_spending)
+        target_bc.update!(
+          budgeted_spending: source_bc.budgeted_spending,
+          budget_frequency: source_bc.budget_frequency,
+          annual_amount: source_bc.annual_amount,
+          goal_id: source_bc.goal_id
+        )
       end
     end
   end
