@@ -39,7 +39,7 @@ zh-CN:
     - 星期五
     - 星期六
     formats:
-      default: "%Y-%m-%d"
+      默认: "%Y-%m-%d"
       long: "%Y年%m月%d日"
       short: "%m月%d日"
     month_names:
@@ -156,12 +156,12 @@ zh-CN:
         format: "%n %u"
         units:
           byte: 字节
-          eb: 艾字节
-          gb: 吉字节
-          kb: 千字节
-          mb: 兆字节
-          pb: 拍字节
-          tb: 太字节
+          eb: eb
+          gb: gb
+          kb: kb
+          mb: mb
+          pb: pb
+          tb: tb
     percentage:
       format:
         delimiter: ''
@@ -177,7 +177,7 @@ zh-CN:
   time:
     am: 上午
     formats:
-      default: "%Y年%m月%d日 %A %H:%M:%S"
+      默认: "%Y年%m月%d日 %A %H:%M:%S"
       long: "%Y年%m月%d日 %H:%M"
       short: "%m月%d日 %H:%M"
     pm: 下午
