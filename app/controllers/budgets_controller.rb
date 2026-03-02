@@ -23,7 +23,7 @@ class BudgetsController < ApplicationController
 
     if source_budget
       @budget.copy_from!(source_budget)
-      redirect_to budget_path(@budget), notice: t("budgets.copy_previous.success", source_name: source_budget.name)
+      redirect_to budget_budget_categories_path(@budget), notice: t("budgets.copy_previous.success", source_name: source_budget.name)
     else
       redirect_to budget_path(@budget), alert: t("budgets.copy_previous.no_source")
     end
