@@ -31,6 +31,44 @@
 
   <%= render DS::Disclosure.new(title: t(".details")) do %>
     <%= f.fields_for :entryable do |ef| %>
+      <div data-controller="merchant-selector">
+        <div data-merchant-selector-target="selectMode">
+          <div class="flex items-center gap-1">
+            <div class="grow">
+              <%= ef.collection_select :merchant_id,
+                    Current.family.available_merchants.alphabetically,
+                    :id, :name,
+                    { prompt: t(".merchant_prompt"), label: t(".merchant_label") },
+                    { "data-merchant-selector-target": "merchantSelect" } %>
+            </div>
+            <button type="button"
+                    class="flex items-center justify-center w-8 h-8 rounded-lg text-secondary hover:text-primary hover:bg-surface-inset-hover shrink-0 mt-4"
+                    data-action="click->merchant-selector#showNew"
+                    title="<%= t(".new_merchant") %>">
+              <%= icon "plus", size: "sm" %>
+            </button>
+          </div>
+        </div>
+        <div data-merchant-selector-target="newMode" class="hidden">
+          <div class="flex items-center gap-1">
+            <div class="grow">
+              <div class="form-field">
+                <div class="form-field__body">
+                  <%= label_tag :new_merchant_name, t(".merchant_label"), class: "form-field__label" %>
+                  <%= text_field_tag :new_merchant_name, nil, placeholder: t(".new_merchant_placeholder"), class: "form-field__input", data: { merchant_selector_target: "merchantName" } %>
+                </div>
+              </div>
+            </div>
+            <button type="button"
+                    class="flex items-center justify-center w-8 h-8 rounded-lg text-secondary hover:text-primary hover:bg-surface-inset-hover shrink-0 mt-4"
+                    data-action="click->merchant-selector#showSelect"
+                    title="<%= t(".cancel") %>">
+              <%= icon "x", size: "sm" %>
+            </button>
+          </div>
+        </div>
+      </div>
+
       <%= ef.select :tag_ids,
                     Current.family.tags.alphabetically.pluck(:name, :id),
                     {

@@ -66,20 +66,26 @@ class TransactionsController < ApplicationController
     account = Current.family.accounts.find(params.dig(:entry, :account_id))
     @entry = account.entries.new(entry_params)
 
-    if @entry.save
-      @entry.sync_account_later
-      @entry.lock_saved_attributes!
-      @entry.mark_user_modified!
-      @entry.transaction.lock_attr!(:tag_ids) if @entry.transaction.tags.any?
-
-      flash[:notice] = "Transaction created"
-
-      respond_to do |format|
-        format.html { redirect_back_or_to account_path(@entry.account) }
-        format.turbo_stream { stream_redirect_back_or_to(account_path(@entry.account)) }
+    begin
+      ActiveRecord::Base.transaction do
+        resolve_new_merchant!(@entry)
+        @entry.save!
       end
-    else
-      render :new, status: :unprocessable_entity
+    rescue ActiveRecord::RecordInvalid
+      return render :new, status: :unprocessable_entity
+    end
+
+    @entry.sync_account_later
+    @entry.lock_saved_attributes!
+    @entry.mark_user_modified!
+    @entry.transaction.lock_attr!(:tag_ids) if @entry.transaction.tags.any?
+    @entry.transaction.lock_attr!(:merchant_id) if @entry.transaction.merchant_id.present?
+
+    flash[:notice] = t(".created")
+
+    respond_to do |format|
+      format.html { redirect_back_or_to account_path(@entry.account) }
+      format.turbo_stream { stream_redirect_back_or_to(account_path(@entry.account)) }
     end
   end
 
@@ -322,6 +328,15 @@ class TransactionsController < ApplicationController
 
       transaction.saved_change_to_category_id? && transaction.category_id.present? &&
       transaction.eligible_for_category_rule?
+    end
+
+    def resolve_new_merchant!(entry)
+      new_name = params[:new_merchant_name].to_s.strip
+      return if new_name.blank?
+
+      merchant = Current.family.available_merchants.find_by(name: new_name) ||
+                 Current.family.merchants.create_or_find_by!(name: new_name)
+      entry.entryable&.merchant_id = merchant.id
     end
 
     def entry_params
