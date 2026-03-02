@@ -65,6 +65,7 @@ zh-CN:
       account_prompt: 选择账户
       amount: 金额
       category: 分类
+      category_label: 分类
       category_prompt: 选择分类
       date: 日期
       description: 描述
@@ -204,3 +205,8 @@ zh-CN:
       review_recommended: 审核
       review_recommended_tooltip: 金额差异较大 — 建议检查是否为重复交易
     unknown_name: 未知交易
+
+  ui:
+    account:
+      activity_feed:
+        toggle_selection_checkboxes: 切换所有复选框

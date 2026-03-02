@@ -156,6 +156,8 @@ zh-CN:
       select_account: 选择一个账户...
       subtitle: 选择要关联的券商账户
       syncing: 正在获取您的账户...
+      sync_start_date_help: 留空则导入所有可用历史记录
+      sync_start_date_label: 交易同步起始日期：
       title: 设置 SnapTrade 账户
       try_again: 连接券商
     snaptrade_item:

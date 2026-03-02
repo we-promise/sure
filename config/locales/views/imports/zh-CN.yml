@@ -106,6 +106,7 @@ zh-CN:
       delete_import: 删除导入
       document_type_label: 文档类型
       email_sent_notice: 后续步骤已通过邮件发送给您。
+      no_accounts: 暂无可用账户。请先创建一个账户。
       failed_description: 我们无法处理您的 PDF 文档。请重试或联系支持。
       failed_title: 处理失败
       processing_description: 我们正在使用 AI 分析您的文档，这可能需要一些时间。分析完成后您将收到邮件。
