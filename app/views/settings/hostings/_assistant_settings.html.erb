@@ -33,10 +33,10 @@
   <% if effective_type == "external" %>
     <div class="flex items-center gap-2 text-sm mb-4">
       <% if Assistant::External.configured? %>
-        <span class="inline-block w-2 h-2 rounded-full bg-green-500"></span>
+        <span class="inline-block w-2 h-2 rounded-full bg-success"></span>
         <span class="text-secondary"><%= t(".external_configured") %></span>
       <% else %>
-        <span class="inline-block w-2 h-2 rounded-full bg-red-500"></span>
+        <span class="inline-block w-2 h-2 rounded-full bg-destructive"></span>
         <span class="text-secondary"><%= t(".external_not_configured") %></span>
       <% end %>
     </div>

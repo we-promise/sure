@@ -841,4 +841,4 @@ For issues with AI features:
 
 ---
 
-**Last Updated:** October 2025
+**Last Updated:** March 2026

@@ -63,6 +63,7 @@ class Assistant::External::Client
     def stream_response(http, request, &block)
       model = nil
       buffer = ""
+      done = false
 
       http.request(request) do |response|
         unless response.is_a?(Net::HTTPSuccess)
@@ -70,6 +71,7 @@ class Assistant::External::Client
         end
 
         response.read_body do |chunk|
+          break if done
           buffer += chunk
 
           while (line_end = buffer.index("\n"))
@@ -79,7 +81,11 @@ class Assistant::External::Client
 
             data = line.delete_prefix("data:")
             data = data.delete_prefix(" ") # SSE spec: strip one optional leading space
-            break if data == "[DONE]"
+
+            if data == "[DONE]"
+              done = true
+              break
+            end
 
             parsed = parse_sse_data(data)
             next unless parsed
@@ -125,7 +131,11 @@ class Assistant::External::Client
 
     def host_bypasses_proxy?(host, no_proxy)
       return false if no_proxy.blank?
-      no_proxy.split(",").any? { |pattern| host.end_with?(pattern.strip) }
+      host_down = host.downcase
+      no_proxy.split(",").any? do |pattern|
+        pattern = pattern.strip.downcase.delete_prefix(".")
+        host_down == pattern || host_down.end_with?(".#{pattern}")
+      end
     end
 
     def build_request(uri, messages, user)
