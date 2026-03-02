@@ -156,12 +156,12 @@ zh-CN:
         format: "%n %u"
         units:
           byte: 字节
-          eb: eb
-          gb: gb
-          kb: kb
-          mb: mb
-          pb: pb
-          tb: tb
+          eb: EB
+          gb: GB
+          kb: KB
+          mb: MB
+          pb: PB
+          tb: TB
     percentage:
       format:
         delimiter: ''
