@@ -30,7 +30,7 @@ class EnableBankingItem::SyncCompleteEvent
       family,
       target: "enable_banking-providers-panel",
       partial: "settings/providers/enable_banking_panel",
-      locals: { enable_banking_items: enable_banking_items }
+      locals: { enable_banking_items: enable_banking_items, family: family }
     )
 
     # Let family handle sync notifications
