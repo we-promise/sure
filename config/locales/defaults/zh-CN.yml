@@ -42,7 +42,6 @@ zh-CN:
     - 星期六
     formats:
       default: "%Y-%m-%d"
-      默认: "%Y-%m-%d"
       long: "%Y年%m月%d日"
       short: "%m月%d日"
     month_names:
@@ -181,7 +180,6 @@ zh-CN:
     am: 上午
     formats:
       default: "%a, %d %b %Y %H:%M:%S %z"
-      默认: "%Y年%m月%d日 %A %H:%M:%S"
       long: "%Y年%m月%d日 %H:%M"
       short: "%m月%d日 %H:%M"
     pm: 下午
