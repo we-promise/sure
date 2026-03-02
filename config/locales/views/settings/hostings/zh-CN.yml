@@ -80,6 +80,8 @@ zh-CN:
         requires_plan: 需要 %{plan} 套餐
         title: Twelve Data 设置
         view_pricing: 查看 Twelve Data 价格
+      "sync_auto_sync_scheduler!":
+        scheduler_sync_failed: 设置已保存，但同步任务计划更新失败。请重试或检查服务器日志。
       update:
         failure: 设置值无效
         invalid_onboarding_state: 无效的新用户注册状态
