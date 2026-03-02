@@ -34,6 +34,8 @@ class Assistant::External < Assistant::Base
   end
 
   def respond_to(message)
+    response_completed = false
+
     unless self.class.configured?
       raise Assistant::Error,
         "External assistant is not configured. Set the URL and token in Settings > Self-Hosting or via environment variables."
@@ -70,14 +72,15 @@ class Assistant::External < Assistant::Base
       raise Assistant::Error, "External assistant returned an empty response."
     end
 
+    response_completed = true
     assistant_message.update!(ai_model: model) if model.present?
   rescue Assistant::Error, ActiveRecord::ActiveRecordError => e
-    cleanup_partial_response(assistant_message)
+    cleanup_partial_response(assistant_message) unless response_completed
     stop_thinking
     chat.add_error(e)
   rescue => e
     Rails.logger.error("[Assistant::External] Unexpected error: #{e.class} - #{e.message}")
-    cleanup_partial_response(assistant_message)
+    cleanup_partial_response(assistant_message) unless response_completed
     stop_thinking
     chat.add_error(Assistant::Error.new("Something went wrong with the external assistant. Check server logs for details."))
   end

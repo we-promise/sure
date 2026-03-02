@@ -49,7 +49,7 @@ class Assistant::External::ClientTest < ActiveSupport::TestCase
       @client.chat(messages: [ { role: "user", content: "test" } ]) { |_| }
     end
 
-    assert_match(/unreachable after 3 attempts/, error.message)
+    assert_match(/temporarily unavailable/, error.message)
   end
 
   test "does not retry after streaming has started" do
@@ -81,7 +81,7 @@ class Assistant::External::ClientTest < ActiveSupport::TestCase
 
     assert_equal 1, call_count, "Should not retry after streaming started"
     assert_equal [ "partial" ], chunks
-    assert_match(/connection lost/, error.message)
+    assert_match(/connection was interrupted/, error.message)
   end
 
   test "builds correct request payload" do

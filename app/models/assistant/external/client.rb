@@ -46,8 +46,10 @@ class Assistant::External::Client
       end
       model
     rescue *TRANSIENT_ERRORS => e
-      # Don't retry once streaming has started — caller already has partial data
-      raise Assistant::Error, "External assistant connection lost: #{e.message}" if streaming_started
+      if streaming_started
+        Rails.logger.warn("[External::Client] Stream interrupted: #{e.class} - #{e.message}")
+        raise Assistant::Error, "External assistant connection was interrupted."
+      end
 
       retries += 1
       if retries <= MAX_RETRIES
@@ -55,7 +57,8 @@ class Assistant::External::Client
         sleep(RETRY_DELAY * retries)
         retry
       end
-      raise Assistant::Error, "External assistant unreachable after #{MAX_RETRIES + 1} attempts: #{e.message}"
+      Rails.logger.error("[External::Client] Unreachable after #{MAX_RETRIES + 1} attempts: #{e.class} - #{e.message}")
+      raise Assistant::Error, "External assistant is temporarily unavailable."
     end
   end
 
