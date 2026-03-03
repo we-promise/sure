@@ -27,14 +27,36 @@ module Authentication
       end
     end
 
+    # Session TTL constants (CWE-613)
+    SESSION_ABSOLUTE_TTL = 30.days
+    SESSION_IDLE_TTL = 24.hours
+
     def find_session_by_cookie
       cookie_value = cookies.signed[:session_token]
+      return nil unless cookie_value.present?
 
-      if cookie_value.present?
-        Session.find_by(id: cookie_value)
-      else
-        nil
+      session = Session.find_by(id: cookie_value)
+      return nil unless session
+
+      now = Time.current
+
+      # Absolute TTL: session older than 30 days is always expired
+      if session.created_at < now - SESSION_ABSOLUTE_TTL
+        session.destroy
+        cookies.delete(:session_token)
+        return nil
       end
+
+      # Idle TTL: session not used in 24h is expired
+      if session.updated_at < now - SESSION_IDLE_TTL
+        session.destroy
+        cookies.delete(:session_token)
+        return nil
+      end
+
+      # Touch to refresh idle timer on each request
+      session.touch
+      session
     end
 
     def create_session_for(user)
