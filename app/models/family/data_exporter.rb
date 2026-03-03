@@ -70,7 +70,7 @@ class Family::DataExporter
           .find_each do |transaction|
             csv << [
               transaction.entry.date.iso8601,
-              transaction.entry.sanitize_csv(account.name),
+              sanitize_csv(transaction.entry.account.name),
               transaction.entry.amount.to_s,
               sanitize_csv(transaction.entry.name),
               sanitize_csv(transaction.category&.name),
@@ -92,7 +92,7 @@ class Family::DataExporter
           .find_each do |trade|
             csv << [
               trade.entry.date.iso8601,
-              trade.entry.sanitize_csv(account.name),
+              sanitize_csv(trade.entry.account.name),
               trade.security.ticker,
               trade.qty.to_s,
               trade.price.to_s,
@@ -354,8 +354,7 @@ class Family::DataExporter
     # Values starting with =, +, -, @ can execute as formulas in Excel/Sheets
     def sanitize_csv(value)
       return value unless value.is_a?(String)
-      value.start_with?("=", "+", "-", "@", "	", "
-") ? "'#{value}" : value
+      value.match?(/\A[=+\-@	]/) ? "'" + value : value
     end
   end
 end
