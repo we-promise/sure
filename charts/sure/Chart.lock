@@ -1,0 +1,9 @@
+dependencies:
+- name: cloudnative-pg
+  repository: https://cloudnative-pg.github.io/charts
+  version: 0.27.0
+- name: redis-operator
+  repository: https://ot-container-kit.github.io/helm-charts
+  version: 0.23.0
+digest: sha256:b863c8c320516c76e2b8aa9969b85122e2bd6e58db2770b1ebc04b9ed688d518
+generated: "2026-01-24T00:46:56.233768464Z"
