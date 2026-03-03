@@ -101,7 +101,7 @@ class Transaction::Search
     # if the active_accounts_only_filter flag is enabled.
     def apply_active_accounts_filter(query, active_accounts_only_filter)
       query = query.where(accounts: { status: [ "draft", "active" ] })
-      
+
       if active_accounts_only_filter
         query.where(accounts: { excluded: false })
       else
@@ -155,7 +155,7 @@ class Transaction::Search
 
       normalized_types = types.reject(&:blank?).uniq
       return query if normalized_types.blank?
-      
+
       allowed = %w[expense income transfer]
       invalid = normalized_types - allowed
       return query.none if invalid.any?
@@ -199,7 +199,7 @@ class Transaction::Search
 
       normalized_statuses = statuses.reject(&:blank?).uniq
       return query if normalized_statuses.blank?
-      
+
       allowed = %w[confirmed pending]
       invalid = normalized_statuses - allowed
       return query.none if invalid.any?
