@@ -1,4 +1,3 @@
----
 es:
   trades:
     form:
@@ -24,6 +23,8 @@ es:
       title: Nueva transacción
     show:
       additional: Adicional
+      buy: Compra
+      category_label: Categoría
       cost_per_share_label: Costo por acción
       date_label: Fecha
       delete: Eliminar
@@ -32,7 +33,10 @@ es:
       details: Detalles
       exclude_subtitle: Esta operación no se incluirá en informes y cálculos
       exclude_title: Excluir de los análisis
+      no_category: Sin categoría
       note_label: Nota
       note_placeholder: Añade aquí cualquier nota adicional...
       quantity_label: Cantidad
+      sell: Venta
       settings: Configuración
+      type_label: Tipo

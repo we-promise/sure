@@ -1,8 +1,9 @@
----
 es:
   accounts:
     account:
       link_lunchflow: Vincular con Lunch Flow
+      link_provider: Vincular con proveedor
+      unlink_provider: Desvincular de proveedor
       troubleshoot: Solucionar problemas
     chart:
       data_not_available: Datos no disponibles para el período seleccionado
@@ -10,6 +11,7 @@ es:
       success: "Cuenta %{type} creada"
     destroy:
       success: "Cuenta %{type} programada para eliminación"
+      cannot_delete_linked: "No se puede eliminar una cuenta vinculada. Por favor, desvincúlela primero."
     empty:
       empty_message: Añade una cuenta mediante conexión, importación o introducción manual.
       new_account: Nueva cuenta
@@ -18,12 +20,21 @@ es:
       balance: Saldo actual
       name_label: Nombre de la cuenta
       name_placeholder: Ejemplo de nombre de cuenta
+      additional_details: Detalles adicionales
+      institution_name_label: Nombre de la institución
+      institution_name_placeholder: ej. Chase Bank
+      institution_domain_label: Dominio de la institución
+      institution_domain_placeholder: ej. chase.com
+      notes_label: Notas
+      notes_placeholder: Guarda información adicional como números de cuenta, códigos de sucursal, IBAN, números de ruta, etc.
     index:
       accounts: Cuentas
       manual_accounts:
         other_accounts: Otras cuentas
       new_account: Nueva cuenta
       sync: Sincronizar todo
+    sync_all:
+      syncing: "Sincronizando cuentas..."
     new:
       import_accounts: Importar cuentas
       method_selector:
@@ -38,15 +49,22 @@ es:
       activity:
         amount: Cantidad
         balance: Saldo
+        confirmed: Confirmado
         date: Fecha
         entries: entradas
         entry: entrada
+        filter: Filtrar
         new: Nuevo
+        new_activity: Nueva actividad
         new_balance: Nuevo saldo
+        new_trade: Nueva operación
         new_transaction: Nueva transacción
+        new_transfer: Nueva transferencia
         no_entries: No se encontraron entradas
+        pending: Pendiente
         search:
           placeholder: Buscar entradas por nombre
+        status: Estado
         title: Actividad
       chart:
         balance: Saldo
@@ -57,6 +75,8 @@ es:
         confirm_title: ¿Eliminar cuenta?
         edit: Editar
         import: Importar transacciones
+        import_trades: Importar operaciones
+        import_transactions: Importar transacciones
         manage: Gestionar cuentas
     update:
       success: "Cuenta %{type} actualizada"
@@ -82,6 +102,42 @@ es:
       credit_card: Tarjeta de crédito
       loan: Préstamo
       other_liability: Otra deuda
+    tax_treatments:
+      taxable: Sujeto a impuestos
+      tax_deferred: Impuestos diferidos
+      tax_exempt: Exento de impuestos
+      tax_advantaged: Ventaja fiscal
+    tax_treatment_descriptions:
+      taxable: Ganancias gravadas al realizarse
+      tax_deferred: Aportaciones deducibles, impuestos al retirar
+      tax_exempt: Aportaciones después de impuestos, ganancias exentas
+      tax_advantaged: Beneficios fiscales especiales con condiciones
+    subtype_regions:
+      us: Estados Unidos
+      uk: Reino Unido
+      ca: Canadá
+      au: Australia
+      eu: Europa
+      generic: General
+    confirm_unlink:
+      title: ¿Desvincular cuenta del proveedor?
+      description_html: "Estás a punto de desvincular <strong>%{account_name}</strong> de <strong>%{provider_name}</strong>. Esto la convertirá en una cuenta manual."
+      warning_title: Qué significa esto
+      warning_no_sync: La cuenta dejará de sincronizarse automáticamente con tu proveedor
+      warning_manual_updates: Deberás añadir transacciones y actualizar saldos manualmente
+      warning_transactions_kept: Se conservarán todas las transacciones y saldos existentes
+      warning_can_delete: Tras desvincularla, podrás eliminar la cuenta si es necesario
+      confirm_button: Confirmar y desvincular
+    unlink:
+      success: "Cuenta desvinculada correctamente. Ahora es una cuenta manual."
+      not_linked: "La cuenta no está vinculada a un proveedor"
+      error: "Error al desvincular la cuenta: %{error}"
+      generic_error: "Ha ocurrido un error inesperado. Por favor, inténtalo de nuevo."
+    select_provider:
+      title: Selecciona un proveedor para vincular
+      description: "Elige qué proveedor quieres usar para vincular %{account_name}"
+      already_linked: "La cuenta ya está vinculada a un proveedor"
+      no_providers: "No hay proveedores configurados actualmente"
 
   email_confirmations:
     new:

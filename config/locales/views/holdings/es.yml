@@ -5,9 +5,37 @@ es:
       brokerage_cash: Efectivo en la cuenta de corretaje
     destroy:
       success: Posición eliminada
+    update:
+      success: Base de costes guardada.
+      error: Valor de base de costes no válido.
+    unlock_cost_basis:
+      success: Base de costes desbloqueada. Podría actualizarse en la próxima sincronización.
+    remap_security:
+      success: Valor actualizado correctamente.
+      security_not_found: No se ha podido encontrar el valor seleccionado.
+    reset_security:
+      success: Valor restablecido al valor del proveedor.
+    errors:
+      security_collision: "No se puede reasignar: ya tienes una posición para %{ticker} en la fecha %{date}."
+    cost_basis_sources:
+      manual: Configurado por el usuario
+      calculated: Desde operaciones
+      provider: Desde el proveedor
+    cost_basis_cell:
+      unknown: "--"
+      set_cost_basis_header: "Establecer base de costes para %{ticker} (%{qty} acciones)"
+      total_cost_basis_label: Base de costes total
+      or_per_share_label: "O introduce por acción:"
+      per_share: por acción
+      cancel: Cancelar
+      save: Guardar
+      overwrite_confirm_title: ¿Sobrescribir base de costes?
+      overwrite_confirm_body: "Esto reemplazará la base de costes actual de %{current}."
     holding:
       per_share: por acción
       shares: "%{qty} acciones"
+      unknown: "--"
+      no_cost_basis: Sin base de costes
     index:
       average_cost: Costo promedio
       holdings: Posiciones
@@ -17,21 +45,38 @@ es:
       return: Rendimiento total
       weight: Peso
     missing_price_tooltip:
-      description: Esta inversión tiene valores faltantes y no pudimos calcular
-        su rendimiento o valor.
+      description: Esta inversión tiene valores faltantes y no pudimos calcular su rendimiento o valor.
       missing_data: Datos faltantes
     show:
       avg_cost_label: Costo promedio
       current_market_price_label: Precio de mercado actual
       delete: Eliminar
-      delete_subtitle: Esto eliminará la posición y todas tus operaciones asociadas
-        en esta cuenta. Esta acción no se puede deshacer.
+      delete_subtitle: Esto eliminará la posición y todas tus operaciones asociadas en esta cuenta. Esta acción no se puede deshacer.
       delete_title: Eliminar posición
+      edit_security: Editar valor
       history: Historial
+      no_trade_history: No hay historial de operaciones disponible para esta posición.
       overview: Resumen
       portfolio_weight_label: Peso en el portafolio
       settings: Configuración
+      security_label: Valor
+      originally: "era %{ticker}"
+      search_security: Buscar valor
+      search_security_placeholder: Buscar por ticker o nombre
+      cancel: Cancelar
+      remap_security: Guardar
+      no_security_provider: Proveedor de valores no configurado. No se pueden buscar valores.
+      security_remapped_label: Valor reasignado
+      provider_sent: "El proveedor envió: %{ticker}"
+      reset_to_provider: Restablecer al proveedor
+      reset_confirm_title: ¿Restablecer valor al del proveedor?
+      reset_confirm_body: "Esto cambiará el valor de %{current} de nuevo a %{original} y moverá todas las operaciones asociadas."
       ticker_label: Ticker
       trade_history_entry: "%{qty} acciones de %{security} a %{price}"
       total_return_label: Rendimiento total
       unknown: Desconocido
+      cost_basis_locked_label: La base de costes está bloqueada
+      cost_basis_locked_description: La base de costes establecida manualmente no cambiará con las sincronizaciones.
+      unlock_cost_basis: Desbloquear
+      unlock_confirm_title: ¿Desbloquear base de costes?
+      unlock_confirm_body: Esto permitirá que la base de costes se actualice mediante las sincronizaciones del proveedor o los cálculos de operaciones.

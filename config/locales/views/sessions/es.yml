@@ -1,25 +1,32 @@
----
 es:
   sessions:
     create:
-      invalid_credentials: Correo electrónico o contraseña inválidos.
-      local_login_disabled: El inicio de sesión con contraseña local está deshabilitado. Utiliza el inicio de sesión único (SSO).
+      invalid_credentials: Correo electrónico o contraseña no válidos.
+      local_login_disabled: El inicio de sesión con contraseña local está desactivado. Por favor, utiliza el inicio de sesión único (SSO).
     destroy:
-      logout_successful: Has cerrado sesión con éxito.
+      logout_successful: Has cerrado sesión correctamente.
+    post_logout:
+      logout_successful: Has cerrado sesión correctamente.
     openid_connect:
+      account_linked: "Cuenta vinculada correctamente a %{provider}"
       failed: No se pudo autenticar a través de OpenID Connect.
     failure:
       failed: No se pudo autenticar.
+      sso_provider_unavailable: "El proveedor de SSO no está disponible en este momento. Por favor, inténtalo de nuevo más tarde o contacta con un administrador."
+      sso_invalid_response: "Se ha recibido una respuesta no válida del proveedor de SSO. Por favor, inténtalo de nuevo."
+      sso_failed: "Error en la autenticación de inicio de sesión único (SSO). Por favor, inténtalo de nuevo."
     new:
       email: Dirección de correo electrónico
       email_placeholder: tu@ejemplo.com
-      forgot_password: ¿Olvidaste tu contraseña?
+      forgot_password: ¿Has olvidado tu contraseña?
       password: Contraseña
       submit: Iniciar sesión
-      title: Inicia sesión en tu cuenta
+      title: Sure
       password_placeholder: Introduce tu contraseña
-      openid_connect: Inicia sesión con OpenID Connect
-      oidc: Inicia sesión con OpenID Connect
-      google_auth_connect: Inicia sesión con Google
+      openid_connect: Iniciar sesión con OpenID Connect
+      oidc: Iniciar sesión con OpenID Connect
+      google_auth_connect: Iniciar sesión con Google
       local_login_admin_only: El inicio de sesión local está restringido a administradores.
-      no_auth_methods_enabled: No hay métodos de autenticación habilitados actualmente. Ponte en contacto con un administrador.
+      no_auth_methods_enabled: No hay métodos de autenticación habilitados actualmente. Por favor, contacta con un administrador.
+      demo_banner_title: "Modo de demostración activo"
+      demo_banner_message: "Este es un entorno de demostración. Las credenciales de acceso se han rellenado automáticamente para tu comodidad. Por favor, no introduzcas información real o sensible."
