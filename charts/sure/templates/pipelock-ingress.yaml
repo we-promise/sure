@@ -15,7 +15,7 @@ spec:
   {{- end }}
   rules:
     {{- range .Values.pipelock.ingress.hosts }}
-    - host: {{ .host }}
+    - host: {{ .host | quote }}
       http:
         paths:
           {{- range .paths }}

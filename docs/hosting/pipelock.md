@@ -4,7 +4,7 @@
 
 ## What Pipelock does
 
-Pipelock runs as a sidecar alongside Sure with two listeners:
+Pipelock runs as a separate proxy service alongside Sure with two listeners:
 
 | Listener | Port | Direction | What it scans |
 |----------|------|-----------|---------------|
@@ -52,7 +52,7 @@ The `compose.example.ai.yml` file includes Pipelock. To use it:
 
 External agents should use the MCP reverse proxy port:
 
-```
+```text
 http://your-server:8889
 ```
 
