@@ -24,6 +24,11 @@ class TransactionsController < ApplicationController
 
     @pagy, @transactions = pagy(base_scope, limit: safe_per_page)
 
+    # Prepare accounts for the filter partial
+    include_excluded = @q && @q[:active_accounts_only] == "false"
+    base_accounts = Current.family.accounts.sidebar_visible
+    @filter_accounts = include_excluded ? base_accounts.alphabetically : base_accounts.not_excluded.alphabetically
+
     # Load projected recurring transactions for next 10 days
     @projected_recurring = Current.family.recurring_transactions
                                   .active
@@ -352,6 +357,22 @@ class TransactionsController < ApplicationController
               .compact_blank
 
       cleaned_params.delete(:amount_operator) unless cleaned_params[:amount].present?
+
+      if cleaned_params[:active_accounts_only].to_s != "false"
+        if cleaned_params[:accounts].present? || cleaned_params[:account_ids].present?
+          if cleaned_params[:accounts].present?
+            allowed_names = Current.family.accounts.where(name: cleaned_params[:accounts], excluded: false).pluck(:name)
+            cleaned_params[:accounts] &= allowed_names
+            cleaned_params.delete(:accounts) if cleaned_params[:accounts].empty?
+          end
+
+          if cleaned_params[:account_ids].present?
+            allowed_ids = Current.family.accounts.where(id: cleaned_params[:account_ids], excluded: false).pluck(:id).map(&:to_s)
+            cleaned_params[:account_ids] &= allowed_ids
+            cleaned_params.delete(:account_ids) if cleaned_params[:account_ids].empty?
+          end
+        end
+      end
 
 
       cleaned_params

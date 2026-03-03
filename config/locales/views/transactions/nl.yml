@@ -92,6 +92,7 @@ nl:
       edit_tags: Tags bewerken
       import: Importeren
     index:
+      include_excluded_accounts: Uitgesloten rekeningen opnemen
       transaction: transactie
       transactions: transacties
       import: Importeren

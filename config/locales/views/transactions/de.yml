@@ -46,6 +46,7 @@ de:
       edit_tags: Tags bearbeiten
       import: Importieren
     index:
+      include_excluded_accounts: Ausgeschlossene Konten einbeziehen
       transaction: Transaktion
       transactions: Transaktionen
     searches:

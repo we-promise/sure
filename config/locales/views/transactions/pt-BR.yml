@@ -50,6 +50,7 @@ pt-BR:
       edit_tags: Editar tags
       import: Importar
     index:
+      include_excluded_accounts: Incluir contas excluídas
       transaction: transação
       transactions: transações
     searches:

@@ -32,6 +32,12 @@ en:
       error: Error
       no_accounts_description: This connection has no linked accounts yet.
       no_accounts_title: No accounts
+      sync_status:
+        no_accounts: No accounts found
+        all_synced:
+          one: "%{count} account synced"
+          other: "%{count} accounts synced"
+        partial_sync: "%{linked_count} synced, %{unlinked_count} need setup"
       setup_action: Set Up New Accounts
       setup_description: "%{linked} of %{total} accounts linked. Choose account types for your newly imported Lunch Flow accounts."
       setup_needed: New accounts ready to set up

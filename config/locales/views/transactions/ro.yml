@@ -46,6 +46,7 @@ ro:
       edit_tags: Editează etichete
       import: Importă
     index:
+      include_excluded_accounts: Include conturile excluse
       transaction: tranzacție
       transactions: tranzacții
     searches:

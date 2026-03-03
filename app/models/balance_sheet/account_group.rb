@@ -34,7 +34,7 @@ class BalanceSheet::AccountGroup
   end
 
   def total
-    accounts.sum(&:converted_balance)
+    accounts.reject(&:excluded?).sum(&:converted_balance)
   end
 
   def weight

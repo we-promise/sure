@@ -46,8 +46,16 @@ ca:
       notes_label: Notes
       notes_placeholder: Emmagatzema informació addicional com números de compte, codis de sortida,
         IBAN, números de ruta, etc.
+      exclude_from_reports_label: Excloure dels informes i les mètriques
+      exclude_from_reports_description: Els comptes exclosos estan ocults als informes i als càlculs del patrimoni net.
+    accountable_group:
+      excluded_badge: "(Exclòs)"
     index:
       accounts: Comptes
+      account_groups:
+        total: Total
+        active: Actiu
+        excluded: Exclòs
       manual_accounts:
         other_accounts: Altres comptes
       new_account: Nou compte

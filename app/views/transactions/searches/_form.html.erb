@@ -4,6 +4,9 @@
               method: :get,
               data: { controller: "auto-submit-form" } do |form| %>
   <%= hidden_field_tag :per_page, params[:per_page] %>
+  <% if @q[:active_accounts_only].to_s == "false" %>
+    <%= hidden_field_tag "q[active_accounts_only]", "false" %>
+  <% end %>
 
   <div class="flex gap-2 mb-4">
     <div class="grow">

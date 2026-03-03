@@ -17,8 +17,16 @@ tr:
       balance: Güncel bakiye
       name_label: Hesap adı
       name_placeholder: Örnek hesap adı
+      exclude_from_reports_label: Raporlardan ve ölçümlerden hariç tut
+      exclude_from_reports_description: Hariç tutulan hesaplar raporlarda ve net değer hesaplamalarında gizlenir.
+    accountable_group:
+      excluded_badge: "(Hariç tutulan)"
     index:
       accounts: Hesaplar
+      account_groups:
+        total: Toplam
+        active: Aktif
+        excluded: Hariç tutulan
       manual_accounts:
         other_accounts: Diğer hesaplar
       new_account: Yeni hesap

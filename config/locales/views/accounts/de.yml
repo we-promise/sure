@@ -17,8 +17,16 @@ de:
       balance: Aktueller Kontostand
       name_label: Kontoname
       name_placeholder: Beispielkontoname
+      exclude_from_reports_label: Von Berichten und Kennzahlen ausschließen
+      exclude_from_reports_description: Ausgeschlossene Konten werden in Berichten und Nettovermögensberechnungen ausgeblendet.
+    accountable_group:
+      excluded_badge: "(Ausgeschlossen)"
     index:
       accounts: Konten
+      account_groups:
+        total: Gesamt
+        active: Aktiv
+        excluded: Ausgeschlossen
       manual_accounts:
         other_accounts: Andere Konten
       new_account: Neues Konto

@@ -73,6 +73,7 @@ class IncomeStatement::Totals
           AND ae.excluded = false
           AND a.family_id = :family_id
           AND a.status IN ('draft', 'active')
+          AND a.excluded = false
           #{exclude_tax_advantaged_sql}
         GROUP BY c.id, c.parent_id, CASE WHEN at.kind = 'investment_contribution' THEN 'expense' WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END;
       SQL
@@ -104,6 +105,7 @@ class IncomeStatement::Totals
           AND ae.excluded = false
           AND a.family_id = :family_id
           AND a.status IN ('draft', 'active')
+          AND a.excluded = false
           #{exclude_tax_advantaged_sql}
         GROUP BY c.id, c.parent_id, CASE WHEN at.kind = 'investment_contribution' THEN 'expense' WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END
       SQL
