@@ -157,8 +157,12 @@ class MfaControllerTest < ActionDispatch::IntegrationTest
     # Simulate partial login with MFA pending
     post sessions_path, params: { email: other_user.email, password: user_password_test }
 
+    # Use deterministic invalid code (not hardcoded "000000" which could collide with real TOTP)
+    current_code = ROTP::TOTP.new(other_user.otp_secret, issuer: "Sure Finances").now
+    invalid_code = ((current_code.to_i + 1) % 1_000_000).to_s.rjust(6, "0")
+
     6.times do
-      post verify_mfa_path, params: { code: "000000" }
+      post verify_mfa_path, params: { code: invalid_code }
     end
 
     assert_redirected_to new_session_path

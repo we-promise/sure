@@ -18,7 +18,11 @@ class Rack::Attack
 
   # Throttle web session creation (login) to slow down brute-force/password-spraying.
   # NOTE: this is the Rails web session endpoint, not the OAuth token endpoint.
-  throttle("sessions/create", limit: 10, period: 1.minute) do |request|
+  # Configurable via ENV: RACK_ATTACK_SESSION_LIMIT (default: 10), RACK_ATTACK_SESSION_PERIOD_SECONDS (default: 60)
+  throttle("sessions/create",
+    limit:  ENV.fetch("RACK_ATTACK_SESSION_LIMIT", 10).to_i,
+    period: ENV.fetch("RACK_ATTACK_SESSION_PERIOD_SECONDS", 60).to_i.seconds
+  ) do |request|
     request.ip if request.post? && request.path == "/sessions"
   end
 
@@ -60,8 +64,12 @@ class Rack::Attack
   end
 
   # Configure response for throttled requests
-  # Per-user OTP rate limiting on API login (mirrors web MFA: 5 attempts per 5 min)
-  throttle('api/otp_attempts/email', limit: 5, period: 5.minutes) do |request|
+  # Per-user OTP rate limiting on API login (mirrors web MFA)
+  # Configurable via ENV: RACK_ATTACK_OTP_LIMIT (default: 5), RACK_ATTACK_OTP_PERIOD_SECONDS (default: 300)
+  throttle("api/otp_attempts/email",
+    limit:  ENV.fetch("RACK_ATTACK_OTP_LIMIT", 5).to_i,
+    period: ENV.fetch("RACK_ATTACK_OTP_PERIOD_SECONDS", 300).to_i.seconds
+  ) do |request|
     if request.path == '/api/v1/auth/login' && request.post? && request.params['otp_code'].present?
       request.params['email']&.downcase&.strip
     end
