@@ -16,6 +16,9 @@ spec:
   {{- if .Values.pipelock.ingress.hosts }}
   rules:
     {{- range .Values.pipelock.ingress.hosts }}
+    {{- if not .paths }}
+    {{- fail "each entry in pipelock.ingress.hosts must include at least one paths item" }}
+    {{- end }}
     - host: {{ .host | quote }}
       http:
         paths:
