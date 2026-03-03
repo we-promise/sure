@@ -13,6 +13,7 @@ spec:
   {{- if .Values.pipelock.ingress.className }}
   ingressClassName: {{ .Values.pipelock.ingress.className }}
   {{- end }}
+  {{- if .Values.pipelock.ingress.hosts }}
   rules:
     {{- range .Values.pipelock.ingress.hosts }}
     - host: {{ .host | quote }}
@@ -28,6 +29,9 @@ spec:
                   name: mcp
           {{- end }}
     {{- end }}
+  {{- else }}
+  {{- fail "pipelock.ingress.enabled=true requires at least one entry in pipelock.ingress.hosts" }}
+  {{- end }}
   {{- if .Values.pipelock.ingress.tls }}
   tls:
     {{- toYaml .Values.pipelock.ingress.tls | nindent 4 }}
