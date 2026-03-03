@@ -120,6 +120,7 @@ module ApplicationHelper
 
     renderer = Redcarpet::Render::HTML.new(
       hard_wrap: true,
+      filter_html: true,
       link_attributes: { target: "_blank", rel: "noopener noreferrer" }
     )
 

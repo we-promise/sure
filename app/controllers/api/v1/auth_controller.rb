@@ -12,6 +12,12 @@ module Api
       before_action :log_api_access, only: :enable_ai
 
       def signup
+        # Block signups when registration is closed (self-hosted)
+        if Rails.application.config.app_mode.self_hosted? && Setting.onboarding_state == "closed"
+          render json: { error: "Registration is currently closed" }, status: :forbidden
+          return
+        end
+
         # Check if invite code is required
         if invite_code_required? && params[:invite_code].blank?
           render json: { error: "Invite code is required" }, status: :forbidden
@@ -68,6 +74,12 @@ module Api
         user = User.find_by(email: params[:email])
 
         if user&.authenticate(params[:password])
+          # Reject deactivated users
+          unless user.active?
+            render json: { error: "Account has been deactivated" }, status: :unauthorized
+            return
+          end
+
           # Check MFA if enabled
           if user.otp_required?
             unless params[:otp_code].present? && user.verify_otp?(params[:otp_code])
@@ -185,8 +197,15 @@ module Api
         # Revoke old access token
         access_token.revoke
 
-        # Update device last seen
+        # Reject deactivated users on token refresh
         user = User.find(access_token.resource_owner_id)
+        unless user.active?
+          access_token.revoke
+          render json: { error: "Account has been deactivated" }, status: :unauthorized
+          return
+        end
+
+        # Update device last seen
         device = user.mobile_devices.find_by(device_id: params[:device][:device_id])
         device&.update_last_seen!
 

@@ -68,6 +68,7 @@ class SessionsController < ApplicationController
         redirect_to verify_mfa_path
       else
         log_super_admin_override_login(user)
+        reset_session  # Prevent session fixation
         @session = create_session_for(user)
         flash[:notice] = t("invitations.accept_choice.joined_household") if accept_pending_invitation_for(user)
         redirect_to root_path
@@ -185,6 +186,7 @@ class SessionsController < ApplicationController
         session[:mfa_user_id] = user.id
         redirect_to verify_mfa_path
       else
+        reset_session  # Prevent session fixation
         @session = create_session_for(user)
         flash[:notice] = t("invitations.accept_choice.joined_household") if accept_pending_invitation_for(user)
         redirect_to root_path
