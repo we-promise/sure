@@ -54,6 +54,20 @@ rails:
     ONBOARDING_STATE: "open"
     AI_DEBUG_MODE: "false"
 
+  # External AI Assistant (optional)
+  # Delegates chat to a remote AI agent that calls back via MCP.
+  externalAssistant:
+    enabled: false
+    url: ""           # e.g., https://your-agent-host/v1/chat
+    token: ""         # Bearer token for the external AI gateway
+    agentId: "main"      # Agent routing identifier
+    sessionKey: "agent:main:main"  # Session key for persistent agent sessions
+    allowedEmails: ""     # Comma-separated emails allowed to use external assistant (empty = all)
+    # For production, use a Secret reference instead of plaintext:
+    # tokenSecretRef:
+    #   name: external-assistant-secret
+    #   key: token
+
 # Database: CloudNativePG (operator chart dependency) and a Cluster CR (optional)
 cloudnative-pg:
   config:
@@ -465,3 +479,114 @@ hpa:
     minReplicas: 2
     maxReplicas: 10
     targetCPUUtilizationPercentage: 70
+
+# Pipelock: AI agent security proxy (optional)
+# Provides forward proxy (outbound HTTPS scanning) and MCP reverse proxy
+# (inbound MCP traffic scanning for prompt injection, DLP, tool poisoning).
+# More info: https://github.com/luckyPipewrench/pipelock
+pipelock:
+  enabled: false
+  image:
+    repository: ghcr.io/luckypipewrench/pipelock
+    tag: "0.3.2"
+    pullPolicy: IfNotPresent
+    imagePullSecrets: []
+  replicas: 1
+  # Pipelock run mode: strict, balanced, audit
+  mode: balanced
+  forwardProxy:
+    enabled: true
+    port: 8888
+    maxTunnelSeconds: 300
+    idleTimeoutSeconds: 60
+  mcpProxy:
+    port: 8889
+    # Auto-computed when empty: http://<fullname>:<service.port>/mcp
+    upstream: ""
+  # WebSocket proxy: bidirectional frame scanning for ws/wss connections.
+  # Runs on the same listener as the forward proxy at /ws?url=<ws-url>.
+  websocketProxy:
+    enabled: false
+    maxMessageBytes: 1048576       # 1MB per message
+    maxConcurrentConnections: 128
+    scanTextFrames: true           # DLP + injection scanning on text frames
+    allowBinaryFrames: false       # block binary frames by default
+    forwardCookies: false
+    maxConnectionSeconds: 3600     # 1 hour max connection lifetime
+    idleTimeoutSeconds: 300        # 5 min idle timeout
+    originPolicy: rewrite          # rewrite, forward, or strip
+  # MCP tool policy: pre-execution rules for tool calls (shell obfuscation, etc.)
+  mcpToolPolicy:
+    enabled: true
+    action: warn
+  # MCP session binding: pins tool inventory on first tools/list, detects injection
+  mcpSessionBinding:
+    enabled: true
+    unknownToolAction: warn
+  # Tool call chain detection: detects multi-step attack patterns (recon, exfil, etc.)
+  toolChainDetection:
+    enabled: true
+    action: warn
+    windowSize: 20
+    maxGap: 3
+  service:
+    type: ClusterIP
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      memory: 128Mi
+  podAnnotations: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  topologySpreadConstraints: []
+
+  # Prometheus Operator ServiceMonitor for /metrics on the proxy port
+  serviceMonitor:
+    enabled: false
+    interval: 30s
+    scrapeTimeout: 10s
+    path: /metrics
+    portName: proxy      # matches Service port name "proxy" (8888)
+    additionalLabels: {}
+
+  # Ingress for MCP reverse proxy (port 8889) — external AI assistants need this in k8s
+  ingress:
+    enabled: false
+    className: ""
+    annotations: {}
+    hosts:
+      - host: pipelock.local
+        paths:
+          - path: /
+            pathType: Prefix
+    tls: []
+
+  # PodDisruptionBudget — protects pipelock during node drains.
+  # WARNING: minAvailable with replicas=1 blocks eviction entirely.
+  # Use maxUnavailable: 1 for single-replica deployments, or increase replicas.
+  pdb:
+    enabled: false
+    minAvailable: ""       # set to 1 when replicas > 1
+    maxUnavailable: 1      # safe default: allows 1 pod to be evicted
+
+  # Structured logging for k8s log aggregation
+  logging:
+    format: json
+    output: stdout
+    includeAllowed: false
+    includeBlocked: true
+
+  # Escape hatch: ADDITIONAL config sections appended to pipelock.yaml.
+  # Use for sections not covered by structured values above (session_profiling,
+  # data_budget, adaptive_enforcement, kill_switch, internal CIDRs, etc.)
+  # Do NOT duplicate keys already rendered above — behavior is parser-dependent.
+  extraConfig: {}
+
+  # Hard-fail helm template when externalAssistant is enabled without pipelock.
+  # NOTE: This only guards the rails.externalAssistant path. Direct MCP access
+  # (/mcp endpoint with MCP_API_TOKEN) is not detectable from Helm values.
+  # For full coverage, also ensure pipelock is enabled whenever MCP_API_TOKEN is set.
+  requireForExternalAssistant: false

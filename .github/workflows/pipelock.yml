@@ -20,5 +20,9 @@ jobs:
         uses: luckyPipewrench/pipelock@v1
         with:
           scan-diff: 'true'
-          fail-on-findings: 'false'
+          fail-on-findings: 'true'
           test-vectors: 'false'
+          exclude-paths: |
+            config/locales/views/reports/
+            # False positive: client.rb stores Bearer token and sends Authorization header by design
+            app/models/assistant/external/client.rb
