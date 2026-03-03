@@ -171,7 +171,17 @@ class MercuryItem < ApplicationRecord
     token.present?
   end
 
+  ALLOWED_BASE_URLS = [
+    "https://api.mercury.com/api/v1",
+    "https://sandbox.mercury.com/api/v1"
+  ].freeze
+
   def effective_base_url
-    base_url.presence || "https://api.mercury.com/api/v1"
+    url = base_url.presence || ALLOWED_BASE_URLS.first
+    unless ALLOWED_BASE_URLS.include?(url)
+      Rails.logger.warn("[SECURITY] Rejected Mercury base_url: \#{url.inspect}")
+      return ALLOWED_BASE_URLS.first
+    end
+    url
   end
 end
