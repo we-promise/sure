@@ -41,7 +41,40 @@ Troubleshooting
 - For CloudNativePG, verify the RW service exists and the primary is Ready.
 - For redis-operator, verify the RedisSentinel CR reports Ready and that the master service resolves.
 
+{{- if .Values.pipelock.enabled }}
+
+Pipelock (AI agent security proxy)
+-----------------------------------
+5) Verify pipelock is running:
+     kubectl rollout status deploy/{{ include "sure.fullname" . }}-pipelock -n {{ .Release.Namespace }}
+     kubectl logs deploy/{{ include "sure.fullname" . }}-pipelock -n {{ .Release.Namespace }} --tail=20
+
+6) MCP access for external AI assistants:
+{{- if .Values.pipelock.ingress.enabled }}
+{{- range .Values.pipelock.ingress.hosts }}
+   - Ingress: http{{ if $.Values.pipelock.ingress.tls }}s{{ end }}://{{ .host }}
+{{- end }}
+{{- else }}
+   - No Ingress configured. Port-forward for local access:
+       kubectl port-forward -n {{ .Release.Namespace }} svc/{{ include "sure.fullname" . }}-pipelock 8889:{{ .Values.pipelock.mcpProxy.port | default 8889 }}
+{{- end }}
+
+   Security: Enable TLS on the pipelock Ingress and ensure MCP_API_TOKEN is set.
+   The MCP endpoint requires authentication but the Ingress does not add it.
+
+7) Metrics:
+{{- if .Values.pipelock.serviceMonitor.enabled }}
+   - ServiceMonitor enabled — Prometheus will scrape /metrics on port {{ .Values.pipelock.serviceMonitor.portName }}.
+{{- else }}
+   - ServiceMonitor not enabled. Metrics are available at http://<pipelock-pod>:{{ .Values.pipelock.forwardProxy.port | default 8888 }}/metrics
+     Enable with: pipelock.serviceMonitor.enabled=true
+{{- end }}
+{{- end }}
+
 Security reminder
 -----------------
 - For production, prefer immutable image tags (for example, image.tag=v1.2.3) instead of 'latest'.
 - Provide secrets via an existing Kubernetes Secret or a secret manager (External Secrets, Sealed Secrets).
+{{- if .Values.pipelock.enabled }}
+- When exposing MCP to external AI assistants, always enable pipelock to scan inbound traffic.
+{{- end }}

@@ -5,7 +5,7 @@ All notable changes to the Sure Helm chart will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.6.9-alpha] - 2026-03-01
+## [0.6.9-alpha] - 2026-03-02
 
 ### Added
 - **Pipelock security proxy** (`pipelock.enabled=true`): Separate Deployment + Service that provides two scanning layers
@@ -20,10 +20,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Boolean safety: uses `hasKey` to prevent Helm's `default` from swallowing explicit `false`
   - Configurable ports via `forwardProxy.port` and `mcpProxy.port` (single source of truth across Service, Deployment, and env vars)
 - `pipelock.example.yaml` reference config for Docker Compose deployments
+- **Pipelock operational hardening**:
+  - `pipelock.serviceMonitor`: Prometheus Operator ServiceMonitor for /metrics on the proxy port
+  - `pipelock.ingress`: Ingress template for MCP reverse proxy (external AI assistant access in k8s)
+  - `pipelock.pdb`: PodDisruptionBudget with minAvailable/maxUnavailable mutual exclusion guard
+  - `pipelock.topologySpreadConstraints`: Pod spread across nodes
+  - `pipelock.logging`: Structured logging config (format, output, include_allowed, include_blocked)
+  - `pipelock.extraConfig`: Escape hatch for additional pipelock.yaml config sections
+  - `pipelock.requireForExternalAssistant`: Helm guard that fails when externalAssistant is enabled without pipelock
+  - Component label (`app.kubernetes.io/component: pipelock`) on Service metadata for selector targeting
+  - NOTES.txt: Pipelock health check commands, MCP access info, security notes, metrics status
 
 ### Changed
+- Bumped `pipelock.image.tag` from `0.3.1` to `0.3.2`
 - Consolidated `compose.example.pipelock.yml` into `compose.example.ai.yml` — Pipelock now runs alongside Ollama in one compose file with health checks, config volume mount, and MCP env vars (`MCP_API_TOKEN`, `MCP_USER_EMAIL`)
 - CI: Pipelock scan `fail-on-findings` changed from `false` to `true`; added `exclude-paths` for locale help text false positives
+
+### Fixed
+- Renamed `_asserts.tpl` to `asserts.tpl` — Helm's `_` prefix convention prevented guards from executing
 
 ## [0.6.7-alpha] - 2026-01-10
 

@@ -64,6 +64,20 @@
 {{- $chainAction = .Values.pipelock.toolChainDetection.action | default "warn" -}}
 {{- $chainWindow = int (.Values.pipelock.toolChainDetection.windowSize | default 20) -}}
 {{- $chainGap = int (.Values.pipelock.toolChainDetection.maxGap | default 3) -}}
+{{- end -}}
+{{- $logFormat := "json" -}}
+{{- $logOutput := "stdout" -}}
+{{- $logIncludeAllowed := false -}}
+{{- $logIncludeBlocked := true -}}
+{{- if .Values.pipelock.logging -}}
+{{- $logFormat = .Values.pipelock.logging.format | default "json" -}}
+{{- $logOutput = .Values.pipelock.logging.output | default "stdout" -}}
+{{- if hasKey .Values.pipelock.logging "includeAllowed" -}}
+{{- $logIncludeAllowed = .Values.pipelock.logging.includeAllowed -}}
+{{- end -}}
+{{- if hasKey .Values.pipelock.logging "includeBlocked" -}}
+{{- $logIncludeBlocked = .Values.pipelock.logging.includeBlocked -}}
+{{- end -}}
 {{- end }}
 apiVersion: v1
 kind: ConfigMap
@@ -116,4 +130,12 @@ data:
       action: {{ $chainAction }}
       window_size: {{ $chainWindow }}
       max_gap: {{ $chainGap }}
+    logging:
+      format: {{ $logFormat }}
+      output: {{ $logOutput }}
+      include_allowed: {{ $logIncludeAllowed }}
+      include_blocked: {{ $logIncludeBlocked }}
+{{- if .Values.pipelock.extraConfig }}
+    {{- toYaml .Values.pipelock.extraConfig | nindent 4 }}
+{{- end }}
 {{- end }}

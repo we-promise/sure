@@ -488,7 +488,7 @@ pipelock:
   enabled: false
   image:
     repository: ghcr.io/luckypipewrench/pipelock
-    tag: "0.3.1"
+    tag: "0.3.2"
     pullPolicy: IfNotPresent
     imagePullSecrets: []
   replicas: 1
@@ -541,3 +541,52 @@ pipelock:
   nodeSelector: {}
   tolerations: []
   affinity: {}
+  topologySpreadConstraints: []
+
+  # Prometheus Operator ServiceMonitor for /metrics on the proxy port
+  serviceMonitor:
+    enabled: false
+    interval: 30s
+    scrapeTimeout: 10s
+    path: /metrics
+    portName: proxy      # matches Service port name "proxy" (8888)
+    additionalLabels: {}
+
+  # Ingress for MCP reverse proxy (port 8889) — external AI assistants need this in k8s
+  ingress:
+    enabled: false
+    className: ""
+    annotations: {}
+    hosts:
+      - host: pipelock.local
+        paths:
+          - path: /
+            pathType: Prefix
+    tls: []
+
+  # PodDisruptionBudget — protects pipelock during node drains.
+  # WARNING: minAvailable with replicas=1 blocks eviction entirely.
+  # Use maxUnavailable: 1 for single-replica deployments, or increase replicas.
+  pdb:
+    enabled: false
+    minAvailable: ""       # set to 1 when replicas > 1
+    maxUnavailable: 1      # safe default: allows 1 pod to be evicted
+
+  # Structured logging for k8s log aggregation
+  logging:
+    format: json
+    output: stdout
+    includeAllowed: false
+    includeBlocked: true
+
+  # Escape hatch: ADDITIONAL config sections appended to pipelock.yaml.
+  # Use for sections not covered by structured values above (session_profiling,
+  # data_budget, adaptive_enforcement, kill_switch, internal CIDRs, etc.)
+  # Do NOT duplicate keys already rendered above — behavior is parser-dependent.
+  extraConfig: {}
+
+  # Hard-fail helm template when externalAssistant is enabled without pipelock.
+  # NOTE: This only guards the rails.externalAssistant path. Direct MCP access
+  # (/mcp endpoint with MCP_API_TOKEN) is not detectable from Helm values.
+  # For full coverage, also ensure pipelock is enabled whenever MCP_API_TOKEN is set.
+  requireForExternalAssistant: false
