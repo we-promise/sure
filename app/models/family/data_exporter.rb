@@ -354,7 +354,7 @@ class Family::DataExporter
     # Values starting with =, +, -, @ can execute as formulas in Excel/Sheets
     def sanitize_csv(value)
       return value unless value.is_a?(String)
-      value.match?(/\A[=+\-@	]/) ? "'" + value : value
+      value.match?(/\A[=+\-@	
+]/) ? "'" + value : value
     end
-  end
 end

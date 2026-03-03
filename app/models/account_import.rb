@@ -2,9 +2,9 @@ class AccountImport < Import
   OpeningBalanceError = Class.new(StandardError)
 
   ALLOWED_ACCOUNTABLE_TYPES = %w[
-    Account::Depository Account::Investment Account::Crypto
-    Account::Property Account::Vehicle Account::OtherAsset
-    Account::CreditCard Account::Loan Account::OtherLiability
+    Depository Investment Crypto
+    Property Vehicle OtherAsset
+    CreditCard Loan OtherLiability
   ].freeze
 
   def import!

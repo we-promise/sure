@@ -33,7 +33,7 @@ class MfaControllerTest < ActionDispatch::IntegrationTest
     @user.setup_mfa!
     totp = ROTP::TOTP.new(@user.otp_secret, issuer: "Sure Finances")
 
-    post mfa_path, params: { code: totp.now }
+    post mfa_path, params: { code: totp.now, password: user_password_test }
 
     assert_response :success
     assert @user.reload.otp_required?
@@ -109,11 +109,73 @@ class MfaControllerTest < ActionDispatch::IntegrationTest
     @user.setup_mfa!
     @user.enable_mfa!
 
-    delete disable_mfa_path
+    delete disable_mfa_path, params: { password: user_password_test }
 
     assert_redirected_to settings_security_path
     assert_not @user.reload.otp_required?
     assert_nil @user.otp_secret
     assert_empty @user.otp_backup_codes
+  end
+  # ── Security tests added with pentest fixes ──────────────────────────────────
+
+  test "enables MFA only with correct password" do
+    @user.setup_mfa!
+    totp = ROTP::TOTP.new(@user.otp_secret, issuer: "Sure Finances")
+
+    post mfa_path, params: { code: totp.now, password: "wrongpassword" }
+
+    assert_not @user.reload.otp_required?
+    assert_redirected_to new_mfa_path
+  end
+
+  test "disabling MFA requires correct password" do
+    @user.setup_mfa!
+    @user.enable_mfa!
+
+    delete disable_mfa_path, params: { password: "wrongpassword" }
+
+    assert @user.reload.otp_required?
+    assert_redirected_to settings_security_path
+  end
+
+  test "disabling MFA works with correct password" do
+    @user.setup_mfa!
+    @user.enable_mfa!
+
+    delete disable_mfa_path, params: { password: user_password_test }
+
+    assert_not @user.reload.otp_required?
+    assert_redirected_to settings_security_path
+  end
+
+  test "MFA verify_code rate-limits after 5 attempts" do
+    other_user = users(:family_admin)
+    other_user.setup_mfa!
+    other_user.enable_mfa!
+
+    sign_out
+    # Simulate partial login with MFA pending
+    post sessions_path, params: { email: other_user.email, password: user_password_test }
+
+    6.times do
+      post verify_mfa_path, params: { code: "000000" }
+    end
+
+    assert_redirected_to new_session_path
+  end
+
+  test "MFA session expires after TTL" do
+    other_user = users(:family_admin)
+    other_user.setup_mfa!
+    other_user.enable_mfa!
+
+    sign_out
+    post sessions_path, params: { email: other_user.email, password: user_password_test }
+
+    # Backdate the MFA session start
+    travel_to(6.minutes.from_now) do
+      post verify_mfa_path, params: { code: ROTP::TOTP.new(other_user.otp_secret).now }
+      assert_redirected_to new_session_path
+    end
   end
 end
