@@ -113,7 +113,7 @@ class Assistant::External::Client
       proxy_uri = resolve_proxy(uri)
 
       if proxy_uri
-        http = Net::HTTP.new(uri.host, uri.port, proxy_uri.host, proxy_uri.port)
+        http = Net::HTTP.new(uri.host, uri.port, proxy_uri.host, proxy_uri.port, proxy_uri.user, proxy_uri.password)
       else
         http = Net::HTTP.new(uri.host, uri.port)
       end

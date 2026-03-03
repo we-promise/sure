@@ -184,7 +184,7 @@ class Assistant::External::ClientTest < ActiveSupport::TestCase
       token: "test-token"
     )
 
-    ClimateControl.modify(HTTPS_PROXY: "http://proxy:8888") do
+    ClimateControl.modify(HTTPS_PROXY: "http://proxyuser:proxypass@proxy:8888") do
       client.chat(messages: [ { role: "user", content: "test" } ]) { |_| }
     end
 
@@ -192,6 +192,8 @@ class Assistant::External::ClientTest < ActiveSupport::TestCase
     assert_equal 443, captured_args[1]
     assert_equal "proxy", captured_args[2]
     assert_equal 8888, captured_args[3]
+    assert_equal "proxyuser", captured_args[4]
+    assert_equal "proxypass", captured_args[5]
   end
 
   test "skips proxy for hosts in NO_PROXY" do
