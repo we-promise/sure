@@ -488,7 +488,7 @@ pipelock:
   enabled: false
   image:
     repository: ghcr.io/luckypipewrench/pipelock
-    tag: "0.2.7"
+    tag: "0.3.1"
     pullPolicy: IfNotPresent
     imagePullSecrets: []
   replicas: 1
@@ -505,9 +505,7 @@ pipelock:
     upstream: ""
   # WebSocket proxy: bidirectional frame scanning for ws/wss connections.
   # Runs on the same listener as the forward proxy at /ws?url=<ws-url>.
-  # Requires Pipelock >= 0.2.9 (or current dev build).
   websocketProxy:
-    # Requires image.tag >= 0.2.9. Update pipelock.image.tag before enabling.
     enabled: false
     maxMessageBytes: 1048576       # 1MB per message
     maxConcurrentConnections: 128
@@ -517,6 +515,20 @@ pipelock:
     maxConnectionSeconds: 3600     # 1 hour max connection lifetime
     idleTimeoutSeconds: 300        # 5 min idle timeout
     originPolicy: rewrite          # rewrite, forward, or strip
+  # MCP tool policy: pre-execution rules for tool calls (shell obfuscation, etc.)
+  mcpToolPolicy:
+    enabled: true
+    action: warn
+  # MCP session binding: pins tool inventory on first tools/list, detects injection
+  mcpSessionBinding:
+    enabled: true
+    unknownToolAction: warn
+  # Tool call chain detection: detects multi-step attack patterns (recon, exfil, etc.)
+  toolChainDetection:
+    enabled: true
+    action: warn
+    windowSize: 20
+    maxGap: 3
   service:
     type: ClusterIP
   resources:

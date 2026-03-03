@@ -1,6 +1,9 @@
 # Pipelock configuration for Docker Compose
 # See https://github.com/luckyPipewrench/pipelock for full options.
 
+version: 1
+mode: balanced
+
 forward_proxy:
   enabled: true
   max_tunnel_seconds: 300
@@ -20,10 +23,12 @@ websocket_proxy:
 
 dlp:
   scan_env: true
+  include_defaults: true
 
 response_scanning:
   enabled: true
   action: warn
+  include_defaults: true
 
 mcp_input_scanning:
   enabled: true
@@ -34,3 +39,17 @@ mcp_tool_scanning:
   enabled: true
   action: warn
   detect_drift: true
+
+mcp_tool_policy:
+  enabled: true
+  action: warn
+
+mcp_session_binding:
+  enabled: true
+  unknown_tool_action: warn
+
+tool_chain_detection:
+  enabled: true
+  action: warn
+  window_size: 20
+  max_gap: 3

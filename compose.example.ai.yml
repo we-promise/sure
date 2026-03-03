@@ -96,8 +96,6 @@ services:
       - "/etc/pipelock/pipelock.yaml"
       - "--listen"
       - "0.0.0.0:8888"
-      - "--mode"
-      - "balanced"
       - "--mcp-listen"
       - "0.0.0.0:8889"
       - "--mcp-upstream"

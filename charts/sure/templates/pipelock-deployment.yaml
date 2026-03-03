@@ -55,8 +55,6 @@ spec:
             - "/etc/pipelock/pipelock.yaml"
             - "--listen"
             - "0.0.0.0:{{ $fwdPort }}"
-            - "--mode"
-            - {{ .Values.pipelock.mode | default "balanced" | quote }}
             - "--mcp-listen"
             - "0.0.0.0:{{ $mcpPort }}"
             - "--mcp-upstream"

@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Pipelock security proxy** (`pipelock.enabled=true`): Separate Deployment + Service that provides two scanning layers
   - **Forward proxy** (port 8888): Scans outbound HTTPS from Faraday-based clients (e.g. ruby-openai). Auto-injects `HTTPS_PROXY`/`HTTP_PROXY`/`NO_PROXY` env vars into app pods
   - **MCP reverse proxy** (port 8889): Scans inbound MCP traffic for DLP, prompt injection, and tool poisoning. Auto-computes upstream URL via `sure.pipelockUpstream` helper
-  - **WebSocket proxy** configuration support (disabled by default, requires Pipelock >= 0.2.9)
+  - **WebSocket proxy** configuration support (disabled by default)
   - ConfigMap with scanning config (DLP, prompt injection detection, MCP input/tool scanning, response scanning)
   - ConfigMap checksum annotation for automatic pod restart on config changes
   - Helm helpers: `sure.pipelockImage`, `sure.pipelockUpstream`

@@ -36,6 +36,34 @@
 {{- $wsMaxConnSec = int (.Values.pipelock.websocketProxy.maxConnectionSeconds | default 3600) -}}
 {{- $wsIdleTimeout = int (.Values.pipelock.websocketProxy.idleTimeoutSeconds | default 300) -}}
 {{- $wsOriginPolicy = .Values.pipelock.websocketProxy.originPolicy | default "rewrite" -}}
+{{- end -}}
+{{- $mcpPolicyEnabled := true -}}
+{{- $mcpPolicyAction := "warn" -}}
+{{- if .Values.pipelock.mcpToolPolicy -}}
+{{- if hasKey .Values.pipelock.mcpToolPolicy "enabled" -}}
+{{- $mcpPolicyEnabled = .Values.pipelock.mcpToolPolicy.enabled -}}
+{{- end -}}
+{{- $mcpPolicyAction = .Values.pipelock.mcpToolPolicy.action | default "warn" -}}
+{{- end -}}
+{{- $mcpBindingEnabled := true -}}
+{{- $mcpBindingAction := "warn" -}}
+{{- if .Values.pipelock.mcpSessionBinding -}}
+{{- if hasKey .Values.pipelock.mcpSessionBinding "enabled" -}}
+{{- $mcpBindingEnabled = .Values.pipelock.mcpSessionBinding.enabled -}}
+{{- end -}}
+{{- $mcpBindingAction = .Values.pipelock.mcpSessionBinding.unknownToolAction | default "warn" -}}
+{{- end -}}
+{{- $chainEnabled := true -}}
+{{- $chainAction := "warn" -}}
+{{- $chainWindow := 20 -}}
+{{- $chainGap := 3 -}}
+{{- if .Values.pipelock.toolChainDetection -}}
+{{- if hasKey .Values.pipelock.toolChainDetection "enabled" -}}
+{{- $chainEnabled = .Values.pipelock.toolChainDetection.enabled -}}
+{{- end -}}
+{{- $chainAction = .Values.pipelock.toolChainDetection.action | default "warn" -}}
+{{- $chainWindow = int (.Values.pipelock.toolChainDetection.windowSize | default 20) -}}
+{{- $chainGap = int (.Values.pipelock.toolChainDetection.maxGap | default 3) -}}
 {{- end }}
 apiVersion: v1
 kind: ConfigMap
@@ -45,6 +73,8 @@ metadata:
     {{- include "sure.labels" . | nindent 4 }}
 data:
   pipelock.yaml: |
+    version: 1
+    mode: {{ .Values.pipelock.mode | default "balanced" }}
     forward_proxy:
       enabled: {{ $fwdEnabled }}
       max_tunnel_seconds: {{ $fwdMaxTunnel }}
@@ -62,9 +92,11 @@ data:
       origin_policy: {{ $wsOriginPolicy }}
     dlp:
       scan_env: true
+      include_defaults: true
     response_scanning:
       enabled: true
       action: warn
+      include_defaults: true
     mcp_input_scanning:
       enabled: true
       action: block
@@ -73,4 +105,15 @@ data:
       enabled: true
       action: warn
       detect_drift: true
+    mcp_tool_policy:
+      enabled: {{ $mcpPolicyEnabled }}
+      action: {{ $mcpPolicyAction }}
+    mcp_session_binding:
+      enabled: {{ $mcpBindingEnabled }}
+      unknown_tool_action: {{ $mcpBindingAction }}
+    tool_chain_detection:
+      enabled: {{ $chainEnabled }}
+      action: {{ $chainAction }}
+      window_size: {{ $chainWindow }}
+      max_gap: {{ $chainGap }}
 {{- end }}
