@@ -112,7 +112,7 @@ class ScopeAllProviderAccountUniquenessToItem < ActiveRecord::Migration[7.2]
                   name: "index_snaptrade_accounts_on_snaptrade_account_id",
                   unique: true,
                   where: "snaptrade_account_id IS NOT NULL"
-        end
+      end
     end
 
     def add_per_item_unique_coinbase_accounts
