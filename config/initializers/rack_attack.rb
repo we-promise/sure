@@ -60,7 +60,14 @@ class Rack::Attack
   end
 
   # Configure response for throttled requests
-  self.throttled_responder = lambda do |request|
+  # Per-user OTP rate limiting on API login (mirrors web MFA: 5 attempts per 5 min)
+  throttle('api/otp_attempts/email', limit: 5, period: 5.minutes) do |request|
+    if request.path == '/api/v1/auth/login' && request.post? && request.params['otp_code'].present?
+      request.params['email']&.downcase&.strip
+    end
+  end
+
+    self.throttled_responder = lambda do |request|
     [
       429, # status
       {
