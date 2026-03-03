@@ -39,6 +39,9 @@ module Sure
       theme: [ "light", "dark" ] # available in view as params[:theme]
     }
 
+    # Enable Skylight instrumentation for ActiveJob (background workers)
+    config.skylight.probes << "active_job"
+
     # Enable Rack::Attack middleware for API rate limiting
     config.middleware.use Rack::Attack
 
