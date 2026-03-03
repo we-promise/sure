@@ -136,6 +136,98 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     assert_not Balance.exists?(account_balance.id)
   end
 
+  test "can update assistant type to external" do
+    with_self_hosting do
+      assert_equal "builtin", users(:family_admin).family.assistant_type
+
+      patch settings_hosting_url, params: { family: { assistant_type: "external" } }
+
+      assert_redirected_to settings_hosting_url
+      assert_equal "external", users(:family_admin).family.reload.assistant_type
+    end
+  end
+
+  test "ignores invalid assistant type values" do
+    with_self_hosting do
+      patch settings_hosting_url, params: { family: { assistant_type: "hacked" } }
+
+      assert_redirected_to settings_hosting_url
+      assert_equal "builtin", users(:family_admin).family.reload.assistant_type
+    end
+  end
+
+  test "ignores assistant type update when ASSISTANT_TYPE env is set" do
+    with_self_hosting do
+      with_env_overrides("ASSISTANT_TYPE" => "external") do
+        patch settings_hosting_url, params: { family: { assistant_type: "external" } }
+
+        assert_redirected_to settings_hosting_url
+        # DB value should NOT change when env override is active
+        assert_equal "builtin", users(:family_admin).family.reload.assistant_type
+      end
+    end
+  end
+
+  test "can update external assistant settings" do
+    with_self_hosting do
+      patch settings_hosting_url, params: { setting: {
+        external_assistant_url: "https://agent.example.com/v1/chat",
+        external_assistant_token: "my-secret-token",
+        external_assistant_agent_id: "finance-bot"
+      } }
+
+      assert_redirected_to settings_hosting_url
+      assert_equal "https://agent.example.com/v1/chat", Setting.external_assistant_url
+      assert_equal "my-secret-token", Setting.external_assistant_token
+      assert_equal "finance-bot", Setting.external_assistant_agent_id
+    end
+  ensure
+    Setting.external_assistant_url = nil
+    Setting.external_assistant_token = nil
+    Setting.external_assistant_agent_id = nil
+  end
+
+  test "does not overwrite token with masked placeholder" do
+    with_self_hosting do
+      Setting.external_assistant_token = "real-secret"
+
+      patch settings_hosting_url, params: { setting: { external_assistant_token: "********" } }
+
+      assert_equal "real-secret", Setting.external_assistant_token
+    end
+  ensure
+    Setting.external_assistant_token = nil
+  end
+
+  test "disconnect external assistant clears settings and resets type" do
+    with_self_hosting do
+      Setting.external_assistant_url = "https://agent.example.com/v1/chat"
+      Setting.external_assistant_token = "token"
+      Setting.external_assistant_agent_id = "finance-bot"
+      users(:family_admin).family.update!(assistant_type: "external")
+
+      delete disconnect_external_assistant_settings_hosting_url
+
+      assert_redirected_to settings_hosting_url
+      assert_not Assistant::External.configured?
+      assert_equal "builtin", users(:family_admin).family.reload.assistant_type
+    end
+  ensure
+    Setting.external_assistant_url = nil
+    Setting.external_assistant_token = nil
+    Setting.external_assistant_agent_id = nil
+  end
+
+  test "disconnect external assistant requires admin" do
+    with_self_hosting do
+      sign_in users(:family_member)
+      delete disconnect_external_assistant_settings_hosting_url
+
+      assert_redirected_to settings_hosting_url
+      assert_equal I18n.t("settings.hostings.not_authorized"), flash[:alert]
+    end
+  end
+
   test "can clear data only when admin" do
     with_self_hosting do
       sign_in users(:family_member)

@@ -94,6 +94,28 @@ The helper always injects:
 - name: {{ $k }}
   value: {{ $v | quote }}
 {{- end }}
+{{- if $ctx.Values.rails.externalAssistant.enabled }}
+- name: EXTERNAL_ASSISTANT_URL
+  value: {{ $ctx.Values.rails.externalAssistant.url | quote }}
+{{- if $ctx.Values.rails.externalAssistant.tokenSecretRef }}
+- name: EXTERNAL_ASSISTANT_TOKEN
+  valueFrom:
+    secretKeyRef:
+      name: {{ $ctx.Values.rails.externalAssistant.tokenSecretRef.name }}
+      key: {{ $ctx.Values.rails.externalAssistant.tokenSecretRef.key }}
+{{- else }}
+- name: EXTERNAL_ASSISTANT_TOKEN
+  value: {{ $ctx.Values.rails.externalAssistant.token | quote }}
+{{- end }}
+- name: EXTERNAL_ASSISTANT_AGENT_ID
+  value: {{ $ctx.Values.rails.externalAssistant.agentId | quote }}
+- name: EXTERNAL_ASSISTANT_SESSION_KEY
+  value: {{ $ctx.Values.rails.externalAssistant.sessionKey | quote }}
+{{- if $ctx.Values.rails.externalAssistant.allowedEmails }}
+- name: EXTERNAL_ASSISTANT_ALLOWED_EMAILS
+  value: {{ $ctx.Values.rails.externalAssistant.allowedEmails | quote }}
+{{- end }}
+{{- end }}
 {{- range $k, $v := $ctx.Values.rails.extraEnv }}
 - name: {{ $k }}
   value: {{ $v | quote }}

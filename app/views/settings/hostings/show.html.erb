@@ -1,4 +1,7 @@
 <%= content_for :page_title, t(".title") %>
+<%= settings_section title: t(".ai_assistant") do %>
+  <%= render "settings/hostings/assistant_settings" %>
+<% end %>
 <%= settings_section title: t(".general") do %>
     <div class="space-y-6">
     <%= render "settings/hostings/openai_settings" %>
