@@ -206,7 +206,7 @@ module Api
         # Reject deactivated users on token refresh
         user = User.find(access_token.resource_owner_id)
         unless user.active?
-          access_token.revoke
+          new_token.revoke  # revoke the freshly issued token (access_token already revoked above)
           render json: { error: "Account has been deactivated" }, status: :unauthorized
           return
         end
