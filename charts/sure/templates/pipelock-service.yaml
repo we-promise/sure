@@ -13,6 +13,7 @@ metadata:
   name: {{ include "sure.fullname" . }}-pipelock
   labels:
     {{- include "sure.labels" . | nindent 4 }}
+    app.kubernetes.io/component: pipelock
 spec:
   type: {{ (.Values.pipelock.service).type | default "ClusterIP" }}
   selector:

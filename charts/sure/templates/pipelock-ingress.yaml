@@ -1,0 +1,35 @@
+{{- if and .Values.pipelock.enabled .Values.pipelock.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "sure.fullname" . }}-pipelock
+  labels:
+    {{- include "sure.labels" . | nindent 4 }}
+  {{- with .Values.pipelock.ingress.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- if .Values.pipelock.ingress.className }}
+  ingressClassName: {{ .Values.pipelock.ingress.className }}
+  {{- end }}
+  rules:
+    {{- range .Values.pipelock.ingress.hosts }}
+    - host: {{ .host }}
+      http:
+        paths:
+          {{- range .paths }}
+          - path: {{ .path }}
+            pathType: {{ .pathType }}
+            backend:
+              service:
+                name: {{ include "sure.fullname" $ }}-pipelock
+                port:
+                  name: mcp
+          {{- end }}
+    {{- end }}
+  {{- if .Values.pipelock.ingress.tls }}
+  tls:
+    {{- toYaml .Values.pipelock.ingress.tls | nindent 4 }}
+  {{- end }}
+{{- end }}
