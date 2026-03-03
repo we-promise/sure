@@ -101,7 +101,7 @@ class Assistant::External::Client
 
             model ||= parsed["model"]
             content = parsed.dig("choices", 0, "delta", "content")
-            block.call(content) if content.present?
+            block.call(content) unless content.nil?
           end
         end
       end

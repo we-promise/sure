@@ -219,7 +219,7 @@ class Assistant::External::ClientTest < ActiveSupport::TestCase
       token: "test-token"
     )
 
-    ClimateControl.modify(HTTPS_PROXY: "http://proxy:8888", NO_PROXY: "localhost,.example.com") do
+    ClimateControl.modify(HTTP_PROXY: "http://proxy:8888", NO_PROXY: "localhost,.example.com") do
       client.chat(messages: [ { role: "user", content: "test" } ]) { |_| }
     end
 
