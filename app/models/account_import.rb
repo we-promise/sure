@@ -1,11 +1,21 @@
 class AccountImport < Import
   OpeningBalanceError = Class.new(StandardError)
 
+  ALLOWED_ACCOUNTABLE_TYPES = %w[
+    Account::Depository Account::Investment Account::Crypto
+    Account::Property Account::Vehicle Account::OtherAsset
+    Account::CreditCard Account::Loan Account::OtherLiability
+  ].freeze
+
   def import!
     transaction do
       rows.each do |row|
         mapping = mappings.account_types.find_by(key: row.entity_type)
-        accountable_class = mapping.value.constantize
+        type = mapping&.value
+        unless type.present? && ALLOWED_ACCOUNTABLE_TYPES.include?(type)
+          raise ArgumentError, "Invalid accountable type: \#{type.inspect}"
+        end
+        accountable_class = type.constantize
 
         account = family.accounts.build(
           name: row.name,
