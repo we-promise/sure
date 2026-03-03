@@ -1,0 +1,26 @@
+<%# locals: (budget:, source_budget:) %>
+
+<div class="flex flex-col gap-4 items-center justify-center h-full">
+  <%= icon "copy", size: "lg" %>
+
+  <div class="text-center">
+    <p class="text-primary font-medium"><%= t("budgets.copy_previous_prompt.title") %></p>
+    <p class="text-secondary text-sm mt-1"><%= t("budgets.copy_previous_prompt.description", source_name: source_budget.name) %></p>
+  </div>
+
+  <div class="flex flex-col sm:flex-row items-center gap-2">
+    <%= render DS::Button.new(
+      text: t("budgets.copy_previous_prompt.copy_button", source_name: source_budget.name),
+      href: copy_previous_budget_path(budget),
+      method: :post,
+      icon: "copy"
+    ) %>
+
+    <%= render DS::Link.new(
+      text: t("budgets.copy_previous_prompt.fresh_button"),
+      variant: "secondary",
+      icon: "plus",
+      href: edit_budget_path(budget)
+    ) %>
+  </div>
+</div>
