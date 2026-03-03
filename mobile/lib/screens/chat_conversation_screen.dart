@@ -25,6 +25,25 @@ class ChatConversationScreen extends StatefulWidget {
 }
 
 class _ChatConversationScreenState extends State<ChatConversationScreen> {
+  static const List<({IconData icon, String text})> _suggestedQuestions = [
+    (
+      icon: Icons.help_outline,
+      text: 'What is a Chancen ISA?',
+    ),
+    (
+      icon: Icons.show_chart,
+      text: 'How does Chancen ISA impact my future income?',
+    ),
+    (
+      icon: Icons.attach_money,
+      text: 'Can I repay my Chancen ISA all at once?',
+    ),
+    (
+      icon: Icons.account_balance_wallet_outlined,
+      text: 'How to budget in volatile situations?',
+    ),
+  ];
+
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   bool _hasEverHadMessages = false;
@@ -171,6 +190,19 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
     });
   }
 
+  Future<void> _sendSuggestedQuestion(String question) async {
+    if (!mounted) return;
+
+    final chatProvider = Provider.of<ChatProvider>(context, listen: false);
+    if (chatProvider.isSendingMessage) return;
+
+    _messageController.text = question;
+    _messageController.selection = TextSelection.collapsed(
+      offset: _messageController.text.length,
+    );
+    await _sendMessage();
+  }
+
   Future<void> _editTitle() async {
     if (_activeChatId == null) return;
 
@@ -278,6 +310,8 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final authProvider = Provider.of<AuthProvider>(context);
+    final firstName = authProvider.user?.firstName ?? 'there';
 
     return Scaffold(
       appBar: AppBar(
@@ -396,45 +430,112 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
               // Messages list
               Expanded(
                 child: visibleMessages.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            if (!_hasEverHadMessages) ...[
-                              Icon(
-                                Icons.chat_bubble_outline,
-                                size: 64,
-                                color: colorScheme.onSurfaceVariant,
-                              ),
-                              const SizedBox(height: 16),
-                              Text(
-                                'Start a conversation',
-                                style: Theme.of(context).textTheme.titleLarge,
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                'Send a message to begin chatting with the AI assistant.',
-                                style: TextStyle(
-                                    color: colorScheme.onSurfaceVariant),
-                                textAlign: TextAlign.center,
-                              ),
-                            ] else ...[
-                              const SizedBox(
-                                width: 24,
-                                height: 24,
-                                child:
-                                    CircularProgressIndicator(strokeWidth: 2),
-                              ),
-                              const SizedBox(height: 12),
-                              Text(
-                                'Loading conversation…',
-                                style: TextStyle(
-                                    color: colorScheme.onSurfaceVariant),
+                    ? (!_hasEverHadMessages
+                        ? ListView(
+                            padding: const EdgeInsets.all(16),
+                            children: [
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  CircleAvatar(
+                                    radius: 16,
+                                    backgroundColor:
+                                        colorScheme.primaryContainer,
+                                    child: SvgPicture.asset(
+                                      'assets/images/logomark-color.svg',
+                                      width: 18,
+                                      height: 18,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Hey $firstName! I am your financial companion, ready to help you learn and grow your money skills.',
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodyMedium,
+                                        ),
+                                        const SizedBox(height: 16),
+                                        Text(
+                                          'I can explain your Chancen ISA, help you understand budgeting, and teach you about finances. Just ask!',
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodyMedium,
+                                        ),
+                                        const SizedBox(height: 16),
+                                        Text(
+                                          "Here's a few questions you can ask:",
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodyMedium,
+                                        ),
+                                        const SizedBox(height: 12),
+                                        Wrap(
+                                          spacing: 8,
+                                          runSpacing: 8,
+                                          children: _suggestedQuestions
+                                              .map(
+                                                (question) =>
+                                                    OutlinedButton.icon(
+                                                  onPressed: chatProvider
+                                                          .isSendingMessage
+                                                      ? null
+                                                      : () =>
+                                                          _sendSuggestedQuestion(
+                                                              question.text),
+                                                  icon: Icon(
+                                                    question.icon,
+                                                    size: 16,
+                                                  ),
+                                                  label: Text(question.text),
+                                                  style:
+                                                      OutlinedButton.styleFrom(
+                                                    side: BorderSide(
+                                                      color: colorScheme
+                                                          .outlineVariant,
+                                                    ),
+                                                    shape:
+                                                        const StadiumBorder(),
+                                                    padding: const EdgeInsets
+                                                        .symmetric(
+                                                      horizontal: 12,
+                                                      vertical: 10,
+                                                    ),
+                                                  ),
+                                                ),
+                                              )
+                                              .toList(),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
                               ),
                             ],
-                          ],
-                        ),
-                      )
+                          )
+                        : Center(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const SizedBox(
+                                  width: 24,
+                                  height: 24,
+                                  child:
+                                      CircularProgressIndicator(strokeWidth: 2),
+                                ),
+                                const SizedBox(height: 12),
+                                Text(
+                                  'Loading conversation…',
+                                  style: TextStyle(
+                                      color: colorScheme.onSurfaceVariant),
+                                ),
+                              ],
+                            ),
+                          ))
                     : ListView.builder(
                         controller: _scrollController,
                         padding: const EdgeInsets.all(16),
