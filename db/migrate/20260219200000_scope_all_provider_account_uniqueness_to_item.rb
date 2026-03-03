@@ -99,15 +99,20 @@ class ScopeAllProviderAccountUniquenessToItem < ActiveRecord::Migration[7.2]
     def revert_snaptrade_accounts
       remove_index :snaptrade_accounts, name: "index_snaptrade_accounts_on_item_and_account_id", if_exists: true
       remove_index :snaptrade_accounts, name: "index_snaptrade_accounts_on_item_and_snaptrade_account_id", if_exists: true
-      # Only restore the one index that originally existed (from create_snaptrade_items_and_accounts).
-      # account_id never had a standalone unique index, so we don't restore one.
-      # snaptrade_account_id is nullable, so use a partial index to avoid NULL collisions.
+      # Restore both indexes that up removed, so rollback returns DB to prior state.
+      # Both columns are nullable; use partial indexes to avoid NULL uniqueness issues.
+      unless index_exists?(:snaptrade_accounts, :account_id, name: "index_snaptrade_accounts_on_account_id")
+        add_index :snaptrade_accounts, :account_id,
+                  name: "index_snaptrade_accounts_on_account_id",
+                  unique: true,
+                  where: "account_id IS NOT NULL"
+      end
       unless index_exists?(:snaptrade_accounts, :snaptrade_account_id, name: "index_snaptrade_accounts_on_snaptrade_account_id")
         add_index :snaptrade_accounts, :snaptrade_account_id,
                   name: "index_snaptrade_accounts_on_snaptrade_account_id",
                   unique: true,
                   where: "snaptrade_account_id IS NOT NULL"
-      end
+        end
     end
 
     def add_per_item_unique_coinbase_accounts

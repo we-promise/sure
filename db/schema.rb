@@ -543,22 +543,6 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_03_120000) do
     t.index ["merchant_id"], name: "index_family_merchant_associations_on_merchant_id"
   end
 
-  create_table "flipper_features", force: :cascade do |t|
-    t.string "key", null: false
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["key"], name: "index_flipper_features_on_key", unique: true
-  end
-
-  create_table "flipper_gates", force: :cascade do |t|
-    t.string "feature_key", null: false
-    t.string "key", null: false
-    t.text "value"
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["feature_key", "key", "value"], name: "index_flipper_gates_on_feature_key_and_key_and_value", unique: true
-  end
-
   create_table "holdings", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "account_id", null: false
     t.uuid "security_id", null: false
