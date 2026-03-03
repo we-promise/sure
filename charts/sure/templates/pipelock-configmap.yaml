@@ -138,4 +138,3 @@ data:
 {{- if .Values.pipelock.extraConfig }}
     {{- toYaml .Values.pipelock.extraConfig | nindent 4 }}
 {{- end }}
-{{- end }}
