@@ -44,7 +44,7 @@ class MfaControllerTest < ActionDispatch::IntegrationTest
   test "does not enable MFA with invalid code" do
     @user.setup_mfa!
 
-    post mfa_path, params: { code: "invalid" }
+    post mfa_path, params: { code: "invalid", password: user_password_test }
 
     assert_redirected_to new_mfa_path
     assert_not @user.reload.otp_required?
