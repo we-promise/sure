@@ -45,7 +45,7 @@ es:
       accounts_selected: cuentas seleccionadas
       api_error: "Error de API: %{message}"
       cancel: Cancelar
-      configure_name_in_lunchflow: "No se puede importar: por favor, configura el nombre de la cuenta en Lunchflow"
+      configure_name_in_lunchflow: "No se puede importar: por favor, configura el nombre de la cuenta en Lunch Flow"
       description: Selecciona las cuentas que deseas vincular a tu cuenta de %{product_name}.
       link_accounts: Vincular cuentas seleccionadas
       no_accounts_found: No se encontraron cuentas. Por favor, verifica la configuración de tu clave API.
@@ -57,7 +57,7 @@ es:
       all_accounts_already_linked: Todas las cuentas de Lunch Flow ya están vinculadas
       api_error: "Error de API: %{message}"
       cancel: Cancelar
-      configure_name_in_lunchflow: "No se puede importar: por favor, configura el nombre de la cuenta en Lunchflow"
+      configure_name_in_lunchflow: "No se puede importar: por favor, configura el nombre de la cuenta en Lunch Flow"
       description: Selecciona una cuenta de Lunch Flow para vincular con esta cuenta. Las transacciones se sincronizarán y desduplicarán automáticamente.
       link_account: Vincular cuenta
       no_account_specified: No se especificó ninguna cuenta

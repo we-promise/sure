@@ -75,4 +75,4 @@ es:
         one: "%{count} cuenta necesita configuración"
         other: "%{count} cuentas necesitan configuración"
       processing_accounts: Procesando datos de la cuenta...
-      calculating_balances: Calculando saldos..."
+      calculating_balances: Calculando saldos.

@@ -37,7 +37,7 @@ es:
       link_enable_banking_title: Vincular Enable Banking
     reauthorize:
       invalid_redirect: La URL de autorización recibida no es válida. Por favor, inténtalo de nuevo.
-      reauthorization_failed: Error en la reacreditación
+      reauthorization_failed: Error en la reautorización
     select_bank:
       cancel: Cancelar
       check_country: Por favor, comprueba los ajustes de tu código de país.

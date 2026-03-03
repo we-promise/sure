@@ -70,8 +70,9 @@ es:
     mark_recurring_title: Transacción recurrente
     potential_duplicate_title: Posible duplicado detectado
     potential_duplicate_description: Esta transacción pendiente podría ser la misma que la transacción confirmada a continuación. Si es así, combínalas para evitar una doble contabilización.
-    merge_duplicate: Sí, combinarlas
-    keep_both: No, mantener ambas
+    duplicate_resolution:
+      merge_duplicate: Sí, combinarlas
+      keep_both: No, mantener ambas
     transaction:
       pending: Pendiente
       pending_tooltip: Transacción pendiente — puede cambiar al confirmarse
