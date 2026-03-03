@@ -43,7 +43,8 @@ Rails.application.configure do
   end
 
   # Nonces for inline scripts/styles managed by importmap and Hotwire
-  config.content_security_policy_nonce_generator = ->(request) { request.session.id.to_s }
+  # Use SecureRandom for nonce — do NOT use session.id (leaks session identifier)
+  config.content_security_policy_nonce_generator = ->(_request) { SecureRandom.base64(16) }
   config.content_security_policy_nonce_directives = %w[script-src]
 
   # REPORT-ONLY: violations are logged, nothing is blocked.

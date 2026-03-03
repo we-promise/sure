@@ -74,7 +74,7 @@ class Family::DataExporter
               transaction.entry.amount.to_s,
               sanitize_csv(transaction.entry.name),
               sanitize_csv(transaction.category&.name),
-              transaction.tags.pluck(:name).join(","),
+              transaction.tags.pluck(:name).map { |t| sanitize_csv(t) }.join(","),
               sanitize_csv(transaction.entry.notes),
               transaction.entry.currency
             ]
@@ -233,7 +233,7 @@ class Family::DataExporter
             date: entry.date,
             amount: entry.amount,
             currency: entry.currency,
-            name: entry.name,
+            name: sanitize_csv(entry.name),
             created_at: entry.created_at,
             updated_at: entry.updated_at
           }

@@ -13,7 +13,7 @@ class AccountImport < Import
         mapping = mappings.account_types.find_by(key: row.entity_type)
         type = mapping&.value
         unless type.present? && ALLOWED_ACCOUNTABLE_TYPES.include?(type)
-          raise ArgumentError, "Invalid accountable type: \#{type.inspect}"
+          raise ArgumentError, "Invalid accountable type: #{type.inspect}"
         end
         accountable_class = type.constantize
 

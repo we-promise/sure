@@ -60,7 +60,8 @@ module Api
             device = MobileDevice.upsert_device!(user, device_params)
             token_response = device.issue_token!
           rescue ActiveRecord::RecordInvalid => e
-            render json: { error: "Failed to register device: #{e.message}" }, status: :unprocessable_entity
+            Rails.logger.error("[Auth] Device registration failed: #{e.message}")
+            render json: { error: "Failed to register device" }, status: :unprocessable_entity
             return
           end
 
@@ -108,7 +109,8 @@ module Api
             device = MobileDevice.upsert_device!(user, device_params)
             token_response = device.issue_token!
           rescue ActiveRecord::RecordInvalid => e
-            render json: { error: "Failed to register device: #{e.message}" }, status: :unprocessable_entity
+            Rails.logger.error("[Auth] Device registration failed: #{e.message}")
+            render json: { error: "Failed to register device" }, status: :unprocessable_entity
             return
           end
 
@@ -211,8 +213,9 @@ module Api
           return
         end
 
-        # Update device last seen
-        device = user.mobile_devices.find_by(device_id: params[:device][:device_id])
+        # Update device last seen (guard against missing device params)
+        device_id = params.dig(:device, :device_id)
+        device = device_id.present? ? user.mobile_devices.find_by(device_id: device_id) : nil
         device&.update_last_seen!
 
         render json: {

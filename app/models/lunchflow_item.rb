@@ -160,7 +160,7 @@ class LunchflowItem < ApplicationRecord
   def effective_base_url
     url = base_url.presence || ALLOWED_BASE_URLS.first
     unless ALLOWED_BASE_URLS.include?(url)
-      Rails.logger.warn("[SECURITY] Rejected Lunchflow base_url: \#{url.inspect}")
+      Rails.logger.warn("[SECURITY] Rejected Lunchflow base_url: #{url.inspect}")
       return ALLOWED_BASE_URLS.first
     end
     url

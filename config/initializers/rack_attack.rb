@@ -68,11 +68,21 @@ class Rack::Attack
   end
 
     self.throttled_responder = lambda do |request|
+    match_data = request.env["rack.attack.match_data"]
+    retry_after = if match_data
+      epoch  = match_data[:epoch] || Time.now.to_i
+      period = match_data[:period] || 60
+      remaining = period - (Time.now.to_i - epoch)
+      remaining > 0 ? remaining.to_s : period.to_s
+    else
+      "60"
+    end
+
     [
-      429, # status
+      429,
       {
         "Content-Type" => "application/json",
-        "Retry-After" => "60"
+        "Retry-After" => retry_after
       },
       [ { error: "Rate limit exceeded. Try again later." }.to_json ]
     ]
