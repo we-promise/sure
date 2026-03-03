@@ -9,6 +9,7 @@
 #   - PostHog:  https://us.i.posthog.com, https://us-assets.i.posthog.com
 #   - Plaid:    https://cdn.plaid.com
 #   - Stripe:   https://js.stripe.com, https://hooks.stripe.com
+#   - Pusher:   wss://*.pusher.com (ActionCable / Hotwire)
 #   - OpenAI:   (server-side only, no browser resources needed)
 
 Rails.application.configure do
@@ -18,28 +19,46 @@ Rails.application.configure do
     policy.img_src     :self, :https, :data, :blob
     policy.object_src  :none
 
-    # Scripts: self + PostHog + Plaid + Stripe + importmap inline (nonce-controlled)
-    policy.script_src  :self,
-                       "https://us.i.posthog.com",
-                       "https://us-assets.i.posthog.com",
-                       "https://cdn.plaid.com",
-                       "https://js.stripe.com"
+    managed_mode = Rails.application.config.app_mode.managed?
 
-    # Styles: self + unsafe_inline needed for Tailwind/inline styles
-    policy.style_src   :self, :unsafe_inline
+    # Scripts: self + (optional) PostHog + Plaid + Stripe + importmap inline (nonce-controlled)
+    script_src = [
+      :self,
+      "https://cdn.plaid.com",
+      "https://js.stripe.com"
+    ]
 
     # Connections: self + external APIs used client-side
-    policy.connect_src :self,
-                       "https://us.i.posthog.com",
-                       "https://us-assets.i.posthog.com",
-                       "https://hooks.stripe.com",
-                       "wss://*.pusher.com"   # ActionCable / Hotwire
+    connect_src = [
+      :self,
+      "https://hooks.stripe.com"
+    ]
+
+    if managed_mode
+      script_src += [
+        "https://us.i.posthog.com",
+        "https://us-assets.i.posthog.com"
+      ]
+
+      connect_src += [
+        "https://us.i.posthog.com",
+        "https://us-assets.i.posthog.com",
+        "wss://*.pusher.com"
+      ]
+    end
+
+    policy.script_src(*script_src)
+
+    # Styles: self + unsafe_inline needed for Tailwind/inline styles
+    policy.style_src :self, :unsafe_inline
+
+    policy.connect_src(*connect_src)
 
     # Frames: Plaid and Stripe use iframes
-    policy.frame_src   "https://cdn.plaid.com",
-                       "https://js.stripe.com"
+    policy.frame_src "https://cdn.plaid.com",
+                     "https://js.stripe.com"
 
-    policy.report_uri  "/csp-violation-report"
+    policy.report_uri "/csp-violation-report"
   end
 
   # Nonces for inline scripts/styles managed by importmap and Hotwire

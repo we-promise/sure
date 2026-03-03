@@ -355,6 +355,5 @@ class Family::DataExporter
     def sanitize_csv(value)
       return value unless value.is_a?(String)
       value.match?(/\A[=+\-@\t\r\n]/) ? "'" + value : value
-]/) ? "'" + value : value
     end
 end

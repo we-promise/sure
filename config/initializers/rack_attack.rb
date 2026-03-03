@@ -75,7 +75,7 @@ class Rack::Attack
     end
   end
 
-    self.throttled_responder = lambda do |request|
+  self.throttled_responder = lambda do |request|
     match_data = request.env["rack.attack.match_data"]
     retry_after = if match_data
       epoch  = match_data[:epoch] || Time.now.to_i
