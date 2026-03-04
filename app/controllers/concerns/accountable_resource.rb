@@ -82,6 +82,23 @@ module AccountableResource
       @account = Current.family.accounts.find(params[:id])
     end
 
+    # Sanitize return_to parameter to prevent XSS/open-redirect attacks.
+    # Only allow internal relative paths (starting with "/"), and reject any scheme/host.
+    def safe_return_to_path
+      return nil if params[:return_to].blank?
+
+      return_to = params[:return_to].to_s
+
+      begin
+        uri = URI.parse(return_to)
+        return nil if uri.scheme.present?
+        return nil unless return_to.start_with?("/")
+        return_to
+      rescue URI::InvalidURIError
+        nil
+      end
+    end
+
     def account_params
       params.require(:account).permit(
         :name, :balance, :subtype, :currency, :accountable_type, :return_to,

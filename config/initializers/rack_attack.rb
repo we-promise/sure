@@ -70,8 +70,8 @@ class Rack::Attack
     limit:  ENV.fetch("RACK_ATTACK_OTP_LIMIT", 5).to_i,
     period: ENV.fetch("RACK_ATTACK_OTP_PERIOD_SECONDS", 300).to_i.seconds
   ) do |request|
-    if request.path == '/api/v1/auth/login' && request.post? && request.params['otp_code'].present?
-      request.params['email']&.downcase&.strip
+    if request.path == "/api/v1/auth/login" && request.post? && request.params["otp_code"].present?
+      request.params["email"]&.downcase&.strip
     end
   end
 

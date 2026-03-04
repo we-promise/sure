@@ -65,7 +65,7 @@ module Authentication
         value: session.id,
         httponly: true,
         secure: Rails.env.production?,
-        same_site: :lax,
+        same_site: :lax
       }
       session
     end

@@ -106,7 +106,7 @@ class LunchflowItem < ApplicationRecord
     if total_accounts == 0
       "No accounts found"
     elsif unlinked_count == 0
-      "#{linked_count} #{'account'.pluralize(linked_count)} synced"
+      "#{linked_count} #{"account".pluralize(linked_count)} synced"
     else
       "#{linked_count} synced, #{unlinked_count} need setup"
     end

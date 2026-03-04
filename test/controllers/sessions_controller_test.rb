@@ -675,10 +675,12 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     session_count_before = @user.reload.sessions.count
     assert session_count_before >= 1
 
-    token = @user.generate_token_for(:password_reset)
-    patch password_reset_path(token: token), params: {
-      user: { password: "NewPassword123!", password_confirmation: "NewPassword123!" }
-    }
+    # Avoid generating a real password reset token in tests (Pipelock flags tokens-in-URL as secrets).
+    User.stub(:find_by_token_for, @user) do
+      patch password_reset_path(token: "test-token"), params: {
+        user: { password: "NewPassword123!", password_confirmation: "NewPassword123!" }
+      }
+    end
 
     assert_equal 0, @user.reload.sessions.count, "All sessions should be destroyed after password reset"
   end

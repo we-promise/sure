@@ -9,12 +9,12 @@ class Family::DataExporterTest < ActiveSupport::TestCase
 
   test "sanitize_csv prefixes formula-starting values with single quote" do
     dangerous = {
-      "=SUM(A1)"    => "'=SUM(A1)",
-      "+cmd"        => "'+cmd",
-      "-1+1"        => "'-1+1",
-      "@user"       => "'@user",
-      "\tcell"     => "'\tcell",
-      "\nrow"      => "'\nrow"
+      "=SUM(A1)" => "'=SUM(A1)",
+      "+cmd" => "'+cmd",
+      "-1+1" => "'-1+1",
+      "@user" => "'@user",
+      "\tcell" => "'\tcell",
+      "\nrow" => "'\nrow"
     }
     dangerous.each do |input, expected|
       assert_equal expected, @exporter.send(:sanitize_csv, input), "Failed for: #{input}"

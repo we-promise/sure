@@ -50,7 +50,7 @@ redis_config = if ENV["REDIS_SENTINEL_HOSTS"].present?
     { url: ENV.fetch("REDIS_URL", "redis://localhost:6379/0") }
   else
     {
-      url: "redis://#{ENV.fetch('REDIS_SENTINEL_MASTER', 'mymaster')}/0",
+      url: "redis://#{ENV.fetch("REDIS_SENTINEL_MASTER", "mymaster")}/0",
       sentinels: sentinels,
       password: ENV["REDIS_PASSWORD"],
       sentinel_username: ENV.fetch("REDIS_SENTINEL_USERNAME", "default"),

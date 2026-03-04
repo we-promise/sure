@@ -15,7 +15,7 @@ def allowed_origins
   if ENV["ALLOWED_ORIGINS"].present?
     ENV["ALLOWED_ORIGINS"].split(",").map(&:strip)
   elsif ENV["APP_DOMAIN"].present?
-    [ "https://#{ENV['APP_DOMAIN']}" ]
+    [ "https://#{ENV["APP_DOMAIN"]}" ]
   else
     Rails.logger.warn("[SECURITY] ALLOWED_ORIGINS and APP_DOMAIN not set — CORS will deny all cross-origin requests")
     []
