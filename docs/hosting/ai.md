@@ -823,14 +823,14 @@ ollama pull model-name  # Install a model
    ```
    If the env var is unset, check the family setting in the database or Settings UI.
 
-2. **Can Sure reach the agent?** Test from inside the worker pod:
+2. **Can Sure reach the agent?** Test from inside the worker pod (use `sh -c` so the env var expands inside the pod, not locally):
    ```bash
    kubectl exec deploy/sure-worker -c sidekiq -- \
-     curl -s -o /dev/null -w "%{http_code}" \
-     -H "Authorization: Bearer $TOKEN" \
+     sh -c 'curl -s -o /dev/null -w "%{http_code}" \
+     -H "Authorization: Bearer $EXTERNAL_ASSISTANT_TOKEN" \
      -H "Content-Type: application/json" \
-     -d '{"model":"test","messages":[{"role":"user","content":"ping"}]}' \
-     http://your-agent-url/v1/chat/completions
+     -d "{\"model\":\"test\",\"messages\":[{\"role\":\"user\",\"content\":\"ping\"}]}" \
+     $EXTERNAL_ASSISTANT_URL'
    ```
    - **Exit code 7 (connection refused):** Network policy is blocking. Check egress rules, and remember to use the `targetPort`, not the service port.
    - **HTTP 401/403:** Token mismatch between Sure's `EXTERNAL_ASSISTANT_TOKEN` and the agent's expected token.
