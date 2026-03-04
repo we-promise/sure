@@ -338,7 +338,6 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_03_120000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["account_id"], name: "index_enable_banking_accounts_on_account_id"
-    t.index ["enable_banking_item_id", "account_id"], name: "index_enable_banking_accounts_on_item_and_account_id", unique: true, where: "(account_id IS NOT NULL)"
     t.index ["enable_banking_item_id"], name: "index_enable_banking_accounts_on_enable_banking_item_id"
   end
 

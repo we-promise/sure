@@ -53,7 +53,17 @@ class MercuryAccountTest < ActiveSupport::TestCase
       current_balance: 1000
     )
 
-    assert_raises(ActiveRecord::RecordNotUnique) do
+    duplicate = MercuryAccount.new(
+      mercury_item: @item_a,
+      account_id: "duplicate_acc",
+      name: "Checking",
+      currency: "USD",
+      current_balance: 1000
+    )
+    refute duplicate.valid?
+    assert_includes duplicate.errors[:account_id], "has already been taken"
+
+    assert_raises(ActiveRecord::RecordInvalid) do
       MercuryAccount.create!(
         mercury_item: @item_a,
         account_id: "duplicate_acc",
