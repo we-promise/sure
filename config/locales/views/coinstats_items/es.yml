@@ -1,0 +1,63 @@
+---
+es:
+  coinstats_items:
+    create:
+      success: Conexión del proveedor CoinStats configurada correctamente.
+      default_name: Conexión de CoinStats
+      errors:
+        validation_failed: "Error de validación: %{message}."
+    update:
+      success: Conexión del proveedor CoinStats actualizada correctamente.
+      errors:
+        validation_failed: "Error de validación: %{message}."
+    destroy:
+      success: Conexión del proveedor CoinStats programada para su eliminación.
+    link_wallet:
+      success: "%{count} cartera(s) de criptomonedas vinculada(s) correctamente."
+      missing_params: "Faltan parámetros requeridos: dirección y blockchain."
+      failed: Error al vincular la cartera de criptomonedas.
+      error: "Error al vincular la cartera de criptomonedas: %{message}."
+    new:
+      title: Vincular una cartera de criptomonedas con CoinStats
+      blockchain_fetch_error: Error al cargar las Blockchains. Por favor, inténtalo de nuevo más tarde.
+      address_label: Dirección
+      address_placeholder: Obligatorio
+      blockchain_label: Blockchain
+      blockchain_placeholder: Obligatorio
+      blockchain_select_blank: Selecciona una Blockchain
+      link: Vincular cartera de criptomonedas
+      not_configured_title: Conexión del proveedor CoinStats no configurada
+      not_configured_message: Para vincular una cartera de criptomonedas, primero debes configurar la conexión del proveedor CoinStats.
+      not_configured_step1_html: Ve a <strong>Ajustes → Proveedores</strong>
+      not_configured_step2_html: Localiza el proveedor <strong>CoinStats</strong>
+      not_configured_step3_html: Sigue las <strong>instrucciones de configuración</strong> proporcionadas para completar la configuración del proveedor
+      go_to_settings: Ir a Ajustes de proveedores
+      setup_instructions: "Instrucciones de configuración:"
+      step1_html: Visita el <a href="https://openapi.coinstats.app/" class="link" target="_blank" rel="noopener noreferrer">Panel de la API pública de CoinStats</a> para obtener una clave API.
+      step2: Introduce tu clave API a continuación y haz clic en Configurar.
+      step3_html: Tras una conexión exitosa, visita la pestaña de <a href="%{accounts_url}" class="link" data-turbo-frame="_top">Cuentas</a> para configurar tus carteras de criptomonedas.
+      api_key_label: Clave API
+      api_key_placeholder: Obligatorio
+      configure: Configurar
+      update_configuration: Reconfigurar
+      default_name: Conexión de CoinStats
+      status_configured_html: Listo para usar
+      status_not_configured: No configurado
+    coinstats_item:
+      deletion_in_progress: Los datos de la cartera de criptomonedas se están eliminando…
+      provider_name: CoinStats
+      syncing: Sincronizando…
+      sync_status:
+        no_accounts: No se han encontrado carteras de criptomonedas
+        all_synced:
+          one: "%{count} cartera de criptomonedas sincronizada"
+          other: "%{count} carteras de criptomonedas sincronizadas"
+        partial_sync: "%{linked_count} carteras de criptomonedas sincronizadas, %{unlinked_count} necesitan configuración"
+      reconnect: Reconectar
+      status: Sincronizado hace %{timestamp}
+      status_never: Nunca sincronizado
+      status_with_summary: "Sincronizado hace %{timestamp} • %{summary}"
+      update_api_key: Actualizar clave API
+      delete: Eliminar
+      no_wallets_title: No hay carteras de criptomonedas conectadas
+      no_wallets_message: Actualmente no hay carteras de criptomonedas conectadas a CoinStats.

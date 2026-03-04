@@ -34,6 +34,7 @@ es:
       budgeted: Presupuestado
       remaining: Restante
       over_by: Exceso de
+      shared: compartido
       suggested_daily: "%{amount} sugerido por día durante los %{days} días restantes"
       no_budgets: No hay categorías de presupuesto configuradas para este mes
       status:
@@ -134,6 +135,22 @@ es:
       value: Valor
       return: Rentabilidad
       accounts: Cuentas de inversión
+      gains_by_tax_treatment: Ganancias por tratamiento fiscal
+      unrealized_gains: Ganancias no realizadas
+      realized_gains: Ganancias realizadas
+      total_gains: Ganancias totales
+      taxable_realized_note: Estas ganancias pueden estar sujetas a impuestos
+      no_data: "-"
+      view_details: Ver detalles
+      holdings_count:
+        one: "%{count} activo"
+        other: "%{count} activos"
+      sells_count:
+        one: "%{count} venta"
+        other: "%{count} ventas"
+      holdings: Activos
+      sell_trades: Operaciones de venta
+      and_more: "+%{count} más"
     investment_flows:
       title: Flujos de inversión
       description: Controla el dinero que entra y sale de tus cuentas de inversión
@@ -147,7 +164,7 @@ es:
       steps: "Para importar en Google Sheets:\n1. Crea una nueva hoja de cálculo\n2. En la celda A1, introduce la fórmula que se muestra abajo\n3. Pulsa Enter"
       security_warning: "Esta URL incluye tu clave API. ¡Mantenla segura!"
       need_key: Para importar los datos en Google Sheets necesitas una clave API.
-      step1: "Ve a ajustes → Clave API"  
+      step1: "Ve a Ajustes → Claves API"  
       step2: "Crea una nueva clave API con permiso de lectura (\"read\")"
       step3: Copia la clave API
       step4: "Añádela a esta URL como: ?api_key=TU_CLAVE"

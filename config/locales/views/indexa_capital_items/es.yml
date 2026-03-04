@@ -1,0 +1,241 @@
+---
+es:
+  indexa_capital_items:
+    sync_status:
+      no_accounts: "No se han encontrado cuentas"
+      synced:
+        one: "%{count} cuenta sincronizada"
+        other: "%{count} cuentas sincronizadas"
+      synced_with_setup: "%{linked} sincronizadas, %{unlinked} necesitan configuración"
+    institution_summary:
+      none: "No hay instituciones conectadas"
+      count:
+        one: "%{count} institución"
+        other: "%{count} instituciones"
+    errors:
+      provider_not_configured: "El proveedor Indexa Capital no está configurado"
+
+    sync:
+      status:
+        importing: "Importando cuentas de Indexa Capital..."
+        processing: "Procesando posiciones y actividades..."
+        calculating: "Calculando saldos..."
+        importing_data: "Importando datos de la cuenta..."
+        checking_setup: "Comprobando la configuración de la cuenta..."
+        needs_setup: "%{count} cuentas necesitan configuración..."
+      success: "Sincronización iniciada"
+
+    panel:
+      setup_instructions: "Instrucciones de configuración:"
+      step_1: "Visita tu panel de Indexa Capital para generar un token de API de solo lectura"
+      step_2: "Pega tu token de API a continuación y haz clic en Guardar"
+      step_3: "Tras una conexión exitosa, ve a la pestaña Cuentas para configurar las nuevas cuentas"
+      field_descriptions: "Descripciones de los campos:"
+      optional: "(Opcional)"
+      required: "(obligatorio)"
+      optional_with_default: "(opcional, por defecto %{default_value})"
+      alternative_auth: "O usa la autenticación por usuario/contraseña en su lugar..."
+      save_button: "Guardar configuración"
+      update_button: "Actualizar configuración"
+      status_configured_html: "Configurado y listo para usar. Visita la pestaña de <a href=\"%{accounts_path}\" class=\"link\">Cuentas</a> para gestionar y configurar tus cuentas."
+      status_not_configured: "No configurado"
+      fields:
+        api_token:
+          label: "Token de API"
+          description: "Tu token de API de solo lectura del panel de Indexa Capital"
+          placeholder_new: "Pega tu token de API aquí"
+          placeholder_update: "Introduce el nuevo token de API para actualizar"
+        username:
+          label: "Usuario"
+          description: "Tu usuario/email de Indexa Capital"
+          placeholder_new: "Pega el usuario aquí"
+          placeholder_update: "Introduce el nuevo usuario para actualizar"
+        document:
+          label: "Documento de identidad"
+          description: "Tu documento/ID de Indexa Capital"
+          placeholder_new: "Pega el ID del documento aquí"
+          placeholder_update: "Introduce el nuevo ID de documento para actualizar"
+        password:
+          label: "Contraseña"
+          description: "Tu contraseña de Indexa Capital"
+          placeholder_new: "Pega la contraseña aquí"
+          placeholder_update: "Introduce la nueva contraseña para actualizar"
+
+    create:
+      success: "Conexión con Indexa Capital creada correctamente"
+    update:
+      success: "Conexión con Indexa Capital actualizada"
+    destroy:
+      success: "Conexión con Indexa Capital eliminada"
+    index:
+      title: "Conexiones de Indexa Capital"
+
+    loading:
+      loading_message: "Cargando cuentas de Indexa Capital..."
+      loading_title: "Cargando"
+
+    link_accounts:
+      all_already_linked:
+        one: "La cuenta seleccionada (%{names}) ya está vinculada"
+        other: "Las %{count} cuentas seleccionadas ya están vinculadas: %{names}"
+      api_error: "Error de la API: %{message}"
+      invalid_account_names:
+        one: "No se puede vincular una cuenta sin nombre"
+        other: "No se pueden vincular %{count} cuentas sin nombre"
+      link_failed: "Error al vincular las cuentas"
+      no_accounts_selected: "Por favor, selecciona al menos una cuenta"
+      no_api_key: "No se han encontrado las credenciales de Indexa Capital. Por favor, configúralas en los ajustes del proveedor."
+      partial_invalid: "Se han vinculado correctamente %{created_count} cuenta(s), %{already_linked_count} ya estaban vinculadas, %{invalid_count} cuenta(s) tenían nombres no válidos"
+      partial_success: "Se han vinculado correctamente %{created_count} cuenta(s). %{already_linked_count} cuenta(s) ya estaban vinculadas: %{already_linked_names}"
+      success:
+        one: "Cuenta vinculada correctamente"
+        other: "%{count} cuentas vinculadas correctamente"
+
+    indexa_capital_item:
+      accounts_need_setup: "Las cuentas necesitan configuración"
+      delete: "Eliminar conexión"
+      deletion_in_progress: "eliminación en curso..."
+      error: "Error"
+      more_accounts_available:
+        one: "Hay %{count} cuenta más disponible"
+        other: "Hay %{count} cuentas más disponibles"
+      no_accounts_description: "Esta conexión aún no tiene cuentas vinculadas."
+      no_accounts_title: "Sin cuentas"
+      provider_name: "Indexa Capital"
+      requires_update: "La conexión necesita una actualización"
+      setup_action: "Configurar nuevas cuentas"
+      setup_description: "%{linked} de %{total} cuentas vinculadas. Elige los tipos de cuenta para tus cuentas de Indexa Capital recién importadas."
+      setup_needed: "Nuevas cuentas listas para configurar"
+      status: "Sincronizado hace %{timestamp} — %{summary}"
+      status_never: "Nunca sincronizado"
+      syncing: "Sincronizando..."
+      total: "Total"
+      unlinked: "Desvinculadas"
+      update_credentials: "Actualizar credenciales"
+
+    select_accounts:
+      accounts_selected: "cuentas seleccionadas"
+      api_error: "Error de la API: %{message}"
+      cancel: "Cancelar"
+      configure_name_in_provider: "No se puede importar; por favor, configura el nombre de la cuenta en Indexa Capital"
+      description: "Selecciona las cuentas que quieres vincular a tu cuenta de %{product_name}."
+      link_accounts: "Vincular cuentas seleccionadas"
+      no_accounts_found: "No se han encontrado cuentas. Por favor, comprueba tus credenciales de Indexa Capital."
+      no_api_key: "Las credenciales de Indexa Capital no están configuradas. Por favor, configúralas en Ajustes."
+      no_credentials_configured: "Por favor, configura primero tus credenciales de Indexa Capital en los ajustes del proveedor."
+      no_name_placeholder: "(Sin nombre)"
+      title: "Seleccionar cuentas de Indexa Capital"
+
+    select_existing_account:
+      account_already_linked: "Esta cuenta ya está vinculada a un proveedor"
+      all_accounts_already_linked: "Todas las cuentas de Indexa Capital ya están vinculadas"
+      api_error: "Error de la API: %{message}"
+      balance_label: "Saldo:"
+      cancel: "Cancelar"
+      cancel_button: "Cancelar"
+      configure_name_in_provider: "No se puede importar; por favor, configura el nombre de la cuenta en Indexa Capital"
+      connect_hint: "Conecta una cuenta de Indexa Capital para habilitar la sincronización automática."
+      description: "Selecciona una cuenta de Indexa Capital para vincularla con esta cuenta. Las transacciones se sincronizarán y se eliminarán los duplicados automáticamente."
+      header: "Vincular con Indexa Capital"
+      link_account: "Vincular cuenta"
+      link_button: "Vincular esta cuenta"
+      linking_to: "Vinculando a:"
+      no_account_specified: "No se ha especificado ninguna cuenta"
+      no_accounts: "No se han encontrado cuentas de Indexa Capital sin vincular."
+      no_accounts_found: "No se han encontrado cuentas de Indexa Capital. Por favor, comprueba tus credenciales."
+      no_api_key: "Las credenciales de Indexa Capital no están configuradas. Por favor, configúralas en Ajustes."
+      no_credentials_configured: "Por favor, configura primero tus credenciales de Indexa Capital en los ajustes del proveedor."
+      no_name_placeholder: "(Sin nombre)"
+      settings_link: "Ir a ajustes del proveedor"
+      subtitle: "Elige una cuenta de Indexa Capital"
+      title: "Vincular %{account_name} con Indexa Capital"
+
+    link_existing_account:
+      account_already_linked: "Esta cuenta ya está vinculada a un proveedor"
+      api_error: "Error de la API: %{message}"
+      invalid_account_name: "No se puede vincular una cuenta sin nombre"
+      provider_account_already_linked: "Esta cuenta de Indexa Capital ya está vinculada a otra cuenta"
+      provider_account_not_found: "Cuenta de Indexa Capital no encontrada"
+      missing_parameters: "Faltan parámetros obligatorios"
+      no_api_key: "No se han encontrado las credenciales de Indexa Capital. Por favor, configúralas en los ajustes del proveedor."
+      success: "Se ha vinculado correctamente %{account_name} con Indexa Capital"
+
+    setup_accounts:
+      account_type_label: "Tipo de cuenta:"
+      accounts_count:
+        one: "%{count} cuenta disponible"
+        other: "%{count} cuentas disponibles"
+      all_accounts_linked: "Todas tus cuentas de Indexa Capital ya han sido configuradas."
+      api_error: "Error de la API: %{message}"
+      creating: "Creando cuentas..."
+      fetch_failed: "Error al obtener las cuentas"
+      import_selected: "Importar cuentas seleccionadas"
+      instructions: "Selecciona las cuentas que quieres importar de Indexa Capital. Puedes elegir varias cuentas."
+      no_accounts: "No se han encontrado cuentas sin vincular en esta conexión de Indexa Capital."
+      no_accounts_to_setup: "No hay cuentas para configurar"
+      no_api_key: "Las credenciales de Indexa Capital no están configuradas. Por favor, comprueba los ajustes de conexión."
+      select_all: "Seleccionar todas"
+      account_types:
+        skip: "Omitir esta cuenta"
+        depository: "Cuenta corriente o de ahorro"
+        credit_card: "Tarjeta de crédito"
+        investment: "Cuenta de inversión"
+        crypto: "Cuenta de criptomonedas"
+        loan: "Préstamo o hipoteca"
+        other_asset: "Otro activo"
+      subtype_labels:
+        depository: "Subtipo de cuenta:"
+        credit_card: ""
+        investment: "Tipo de inversión:"
+        crypto: ""
+        loan: "Tipo de préstamo:"
+        other_asset: ""
+      subtype_messages:
+        credit_card: "Las tarjetas de crédito se configurarán automáticamente como cuentas de tarjeta de crédito."
+        other_asset: "No se necesitan opciones adicionales para otros activos."
+        crypto: "Las cuentas de criptomonedas se configurarán para seguir posiciones y transacciones."
+      subtypes:
+        depository:
+          checking: "Corriente"
+          savings: "Ahorros"
+          hsa: "Cuenta de ahorros para la salud (HSA)"
+          cd: "Certificado de depósito"
+          money_market: "Mercado monetario"
+        investment:
+          brokerage: "Bróker"
+          pension: "Plan de pensiones"
+          retirement: "Jubilación"
+          "401k": "401(k)"
+          roth_401k: "Roth 401(k)"
+          "403b": "403(b)"
+          tsp: "Plan de ahorro TSP"
+          "529_plan": "Plan 529"
+          hsa: "Cuenta de ahorros para la salud (HSA)"
+          mutual_fund: "Fondo de inversión"
+          ira: "IRA tradicional"
+          roth_ira: "Roth IRA"
+          angel: "Capital riesgo / Angel"
+        loan:
+          mortgage: "Hipoteca"
+          student: "Préstamo estudiantil"
+          auto: "Préstamo de coche"
+          other: "Otro préstamo"
+      balance: "Saldo"
+      cancel: "Cancelar"
+      choose_account_type: "Elige el tipo de cuenta correcto para cada cuenta de Indexa Capital:"
+      create_accounts: "Crear cuentas"
+      creating_accounts: "Creando cuentas..."
+      historical_data_range: "Rango de datos históricos:"
+      subtitle: "Elige los tipos de cuenta correctos para tus cuentas importadas"
+      sync_start_date_help: "Selecciona desde qué fecha quieres sincronizar el historial de transacciones."
+      sync_start_date_label: "Empezar a sincronizar transacciones desde:"
+      title: "Configura tus cuentas de Indexa Capital"
+
+    complete_account_setup:
+      all_skipped: "Se han omitido todas las cuentas. No se ha creado ninguna."
+      creation_failed: "Error al crear las cuentas: %{error}"
+      no_accounts: "No hay cuentas para configurar."
+      success: "Se han creado correctamente %{count} cuenta(s)."
+
+    preload_accounts:
+      no_credentials_configured: "Por favor, configura primero tus credenciales de Indexa Capital en los ajustes del proveedor."
