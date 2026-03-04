@@ -74,7 +74,7 @@
                     disable_currency: @entry.linked? %>
             </div>
           <% end %>
-          <% if !@entry.transaction.transfer? || @entry.transaction.transfer&.categorizable? %>
+          <% if !@entry.transaction.transfer? || @entry.transaction.transfer.nil? || @entry.transaction.transfer.categorizable? %>
             <%= f.fields_for :entryable do |ef| %>
               <%= ef.collection_select :category_id,
                       Current.family.categories.alphabetically,
@@ -101,7 +101,7 @@
               { label: t(".account_label") },
               { disabled: true } %>
         <% end %>
-        <% if !@entry.transaction.transfer? || @entry.transaction.transfer&.categorizable? %>
+        <% if !@entry.transaction.transfer? || @entry.transaction.transfer.nil? || @entry.transaction.transfer.categorizable? %>
           <%= f.fields_for :entryable do |ef| %>
             <%= ef.collection_select :merchant_id,
                   Current.family.available_merchants.alphabetically,
