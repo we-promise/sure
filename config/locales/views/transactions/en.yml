@@ -2,6 +2,9 @@
 en:
   transactions:
     unknown_name: Unknown transaction
+    selection_bar:
+      duplicate: Duplicate
+      edit: Edit
     form:
       account: Account
       account_prompt: Select an Account
