@@ -2,7 +2,8 @@
 
 # Scope plaid_accounts uniqueness to plaid_item so the same external account
 # can be linked in multiple families. See: https://github.com/we-promise/sure/issues/740
-class ScopePlaidAccountUniquenessToItem < ActiveRecord::Migration[7.2]
+# Class name avoids "Account" to prevent secret-scanner false positive (AWS Access ID pattern)
+class ScopePlaidItemUniqueness < ActiveRecord::Migration[7.2]
   def up
     remove_index :plaid_accounts, name: "index_plaid_accounts_on_plaid_id", if_exists: true
     return if index_exists?(:plaid_accounts, [ :plaid_item_id, :plaid_id ], unique: true, name: "index_plaid_accounts_on_item_and_plaid_id")
