@@ -108,6 +108,11 @@ module ApplicationHelper
     cookies[:admin] == "true"
   end
 
+  def assistant_icon
+    type = ENV["ASSISTANT_TYPE"].presence || Current.family&.assistant_type.presence || "builtin"
+    type == "external" ? "claw" : "ai"
+  end
+
   def default_ai_model
     # Always return a valid model, never nil or empty
     # Delegates to Chat.default_model for consistency
