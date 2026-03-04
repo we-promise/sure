@@ -309,6 +309,23 @@ end
     assert_not entry.protected_from_sync?
   end
 
+  test "new with duplicate_entry_id pre-fills form from source transaction" do
+    get new_transaction_url(duplicate_entry_id: @entry.id)
+    assert_response :success
+    assert_select "input[name='entry[name]'][value=?]", @entry.name
+    assert_select "input[type='number'][name='entry[amount]']" do |elements|
+      assert_equal sprintf("%.2f", @entry.amount.abs), elements.first["value"]
+    end
+  end
+
+  test "new with invalid duplicate_entry_id renders empty form" do
+    get new_transaction_url(duplicate_entry_id: -1)
+    assert_response :success
+    assert_select "input[name='entry[name]']" do |elements|
+      assert_nil elements.first["value"]
+    end
+  end
+
   test "unlock clears import_locked flag" do
     family = families(:empty)
     sign_in users(:empty)
