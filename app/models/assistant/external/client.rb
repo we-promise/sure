@@ -20,7 +20,7 @@ class Assistant::External::Client
 
   def initialize(url:, token:, agent_id: "main", session_key: "agent:main:main")
     @url = url
-    @token = token
+    @token = token # pipelock:ignore Credential in URL
     @agent_id = agent_id
     @session_key = session_key
   end
