@@ -44,7 +44,7 @@
                     <img src="<%= holding.security.logo_url %>" alt="<%= holding.ticker %>" class="w-8 h-8 rounded-full">
                   <% else %>
                     <div class="w-8 h-8 rounded-full bg-container-inset flex items-center justify-center text-xs font-medium text-secondary">
-                      <%= holding.ticker[0..1] %>
+                      <%= holding.ticker.to_s.first(2).presence || "—" %>
                     </div>
                   <% end %>
                   <div class="max-w-32">
