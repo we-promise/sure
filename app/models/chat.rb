@@ -14,9 +14,11 @@ class Chat < ApplicationRecord
     def start!(prompt, model:)
       # Ensure we have a valid model by using the default if none provided
       effective_model = model.presence || default_model
+      effective_type = ENV["ASSISTANT_TYPE"].presence || Current.family&.assistant_type.presence || "builtin"
 
       create!(
         title: generate_title(prompt),
+        assistant_type: effective_type,
         messages: [ UserMessage.new(content: prompt, ai_model: effective_model) ]
       )
     end

@@ -16,7 +16,7 @@
     <% end %>
 
     <div class="flex items-start gap-3 mb-6">
-      <%= render "chats/ai_avatar" %>
+      <%= render "chats/ai_avatar", chat: assistant_message.chat %>
 
       <div class="prose prose--ai-chat"><%= markdown(assistant_message.content) %></div>
     </div>

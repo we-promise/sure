@@ -1,7 +1,7 @@
-<%# locals: (theme: "light") %>
+<%# locals: (chat: nil) %>
 
 <div class="shrink-0 w-8 h-8 antialiased" style="filter: drop-shadow(0px 6px 8px rgba(244, 78, 247, 0.10));">
   <%# Never use svg as an image tag, it appears blurry in Safari %>
-  <%= icon "#{assistant_icon}-dark", custom: true, alt: "AI", class: "w-full h-full hidden theme-dark:block" %>
-  <%= icon assistant_icon, custom: true, alt: "AI", class: "w-full h-full theme-dark:hidden" %>
+  <%= icon "#{assistant_icon(chat)}-dark", custom: true, alt: "AI", class: "w-full h-full hidden theme-dark:block" %>
+  <%= icon assistant_icon(chat), custom: true, alt: "AI", class: "w-full h-full theme-dark:hidden" %>
 </div>
