@@ -10,6 +10,109 @@ zh-CN:
       title: 请输入账户余额
     show:
       chart_title: 总价值
+    subtypes:
+      401k:
+        long: 401(k)
+        short: 401(k)
+      403b:
+        long: 403(b)
+        short: 403(b)
+      457b:
+        long: 457(b)
+        short: 457(b)
+      529_plan:
+        long: 529 Education Savings Plan
+        short: 529 Plan
+      angel:
+        long: Angel Investment
+        short: Angel
+      brokerage:
+        long: Brokerage
+        short: Brokerage
+      hsa:
+        long: Health Savings Account
+        short: HSA
+      ira:
+        long: Traditional IRA
+        short: IRA
+      isa:
+        long: Individual Savings Account
+        short: ISA
+      lira:
+        long: Locked-In Retirement Account
+        short: LIRA
+      lisa:
+        long: Lifetime ISA
+        short: LISA
+      mutual_fund:
+        long: Mutual Fund
+        short: Mutual Fund
+      other:
+        long: Other Investment
+        short: Other
+      pea:
+        long: Plan d'Épargne en Actions
+        short: PEA
+      pension:
+        long: Pension
+        short: Pension
+      pillar_3a:
+        long: Private Pension (Pillar 3a)
+        short: Pillar 3a
+      resp:
+        long: Registered Education Savings Plan
+        short: RESP
+      retirement:
+        long: Retirement Account
+        short: Retirement
+      riester:
+        long: Riester-Rente
+        short: Riester
+      roth_401k:
+        long: Roth 401(k)
+        short: Roth 401(k)
+      roth_ira:
+        long: Roth IRA
+        short: Roth IRA
+      rrif:
+        long: Registered Retirement Income Fund
+        short: RRIF
+      rrsp:
+        long: Registered Retirement Savings Plan
+        short: RRSP
+      sep_ira:
+        long: SEP IRA
+        short: SEP IRA
+      simple_ira:
+        long: SIMPLE IRA
+        short: SIMPLE IRA
+      sipp:
+        long: Self-Invested Personal Pension
+        short: SIPP
+      smsf:
+        long: Self-Managed Super Fund
+        short: SMSF
+      super:
+        long: Superannuation
+        short: Super
+      tfsa:
+        long: Tax-Free Savings Account
+        short: TFSA
+      trust:
+        long: Trust
+        short: Trust
+      tsp:
+        long: Thrift Savings Plan
+        short: TSP
+      ugma:
+        long: UGMA Custodial Account
+        short: UGMA
+      utma:
+        long: UTMA Custodial Account
+        short: UTMA
+      workplace_pension_uk:
+        long: Workplace Pension
+        short: Pension
     value_tooltip:
       cash: 现金
       holdings: 持仓

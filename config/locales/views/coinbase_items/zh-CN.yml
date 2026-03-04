@@ -1,0 +1,78 @@
+---
+zh-CN:
+  coinbase_item:
+    syncer:
+      accounts_need_setup:
+        one: "%{count} 个账户需要设置"
+        other: "%{count} 个账户需要设置"
+      calculating_balances: 正在计算余额...
+      checking_configuration: 正在检查账户配置...
+      checking_credentials: 正在检查凭据...
+      credentials_invalid: API 凭据无效。请检查您的 API 密钥和密钥。
+      importing_accounts: 正在从 Coinbase 导入账户...
+      processing_accounts: 正在处理账户数据...
+  coinbase_items: 
+    coinbase_item:
+      delete: 删除
+      deletion_in_progress: 正在删除...
+      import_wallets_menu: 导入钱包
+      more_wallets_available:
+        one: "还有 %{count} 个钱包可导入"
+        other: "还有 %{count} 个钱包可导入"
+      no_accounts_message: 同步后，您的 Coinbase 钱包将显示在此处。
+      no_accounts_title: 未找到账户
+      provider_name: Coinbase
+      reconnect: 凭据需要更新
+      setup_action: 导入钱包
+      setup_description: 选择您要追踪的 Coinbase 钱包。
+      setup_needed: 钱包准备导入
+      status: 上次同步于 %{timestamp} 前
+      status_never: 从未同步
+      status_with_summary: 上次同步于 %{timestamp} 前 - %{summary}
+      sync_status:
+        all_synced:
+          one: "%{count} 个账户已同步"
+          other: "%{count} 个账户已同步"
+        no_accounts: 未找到账户
+        partial_sync: "%{linked_count} 个已同步，%{unlinked_count} 个需要设置"
+      syncing: 正在同步...
+      update_credentials: 更新凭据
+    complete_account_setup:
+      no_accounts: 没有要导入的钱包
+      none_selected: 未选择钱包
+      success:
+        one: 已导入 %{count} 个钱包
+        other: 已导入 %{count} 个钱包
+    create:
+      default_name: Coinbase
+      success: 成功连接到 Coinbase！您的账户正在同步。
+    destroy:
+      success: 已计划删除 Coinbase 连接。
+    link_existing_account:
+      errors:
+        invalid_coinbase_account: 无效的 Coinbase 账户
+        only_manual: 只有手动账户可以关联到 Coinbase
+      success: 成功关联到 Coinbase 账户
+    select_existing_account:
+      balance: 余额
+      cancel: 取消
+      check_provider_health: 检查您的 Coinbase API 凭据是否有效
+      currently_linked_to: '当前关联到：%{account_name}'
+      link: 关联
+      no_accounts_found: 未找到 Coinbase 账户。
+      title: 关联 Coinbase 账户
+      wait_for_sync: 等待 Coinbase 完成同步
+    setup_accounts:
+      accounts_count:
+        one: "%{count} 个钱包可用"
+        other: "%{count} 个钱包可用"
+      cancel: 取消
+      creating: 正在导入...
+      import_selected: 导入所选
+      instructions: 选择您要导入的钱包。未选中的钱包将保留，以便您之后添加。
+      no_accounts: 所有钱包均已导入。
+      select_all: 全选
+      subtitle: 选择要追踪的钱包
+      title: 导入 Coinbase 钱包
+    update:
+      success: 成功更新 Coinbase 配置。

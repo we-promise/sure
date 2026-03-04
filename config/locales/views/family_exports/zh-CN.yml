@@ -11,21 +11,21 @@ zh-CN:
     export_not_ready: 导出尚未准备好下载
     exporting: 正在导出...
     index:
-      title: 导出
       new: 新建导出
-    table:
       title: 导出
+    table:
+      empty: 暂无导出记录
       header:
+        actions: 操作
         date: 日期
         filename: 文件名
         status: 状态
-        actions: 操作
       row:
+        actions:
+          delete: 删除
+          download: 下载
         status:
           complete: 已完成
           failed: 已失败
           in_progress: 进行中
-        actions:
-          delete: 删除
-          download: 下载
-      empty: 暂无导出记录
+      title: 导出

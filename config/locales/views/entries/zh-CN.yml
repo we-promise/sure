@@ -10,5 +10,14 @@ zh-CN:
       title: 未找到相关记录
     loading:
       loading: 正在加载记录...
+    protection:
+      description: 您对此记录的编辑不会被提供程序同步覆盖。
+      locked_fields_label: 锁定字段：
+      title: 受同步保护
+      tooltip: 受同步保护
+      unlock_button: 允许同步更新
+      unlock_confirm: 允许同步更新此记录？您的更改可能会在下次同步时被覆盖。
+    unlock:
+      success: 记录已解锁。可能会在下次同步时更新。
     update:
       success: 记录已更新

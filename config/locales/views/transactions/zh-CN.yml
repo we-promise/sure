@@ -1,6 +1,65 @@
 ---
 zh-CN:
   transactions:
+    activity_labels:
+      buy: 买入
+      contribution: 存入
+      dividend: 股息
+      exchange: 兑换
+      fee: 费用
+      interest: 利息
+      other: 其他
+      reinvestment: 再投资
+      sell: 卖出
+      sweep_in: 资金转入
+      sweep_out: 资金转出
+      transfer: 转账
+      withdrawal: 提取
+    convert_to_trade:
+      account_label: '账户：'
+      amount_label: '金额：'
+      cancel: 取消
+      conversion_note: '从交易转换而来：%{original_name} (%{original_date})'
+      date_label: '日期：'
+      description: 将此交易转换为包含证券详情的交易
+      errors:
+        already_converted: 此交易已被转换或排除
+        conversion_failed: '转换交易失败：%{error}'
+        enter_qty_or_price: 请输入数量或每股价格。另一项将根据交易金额计算。
+        enter_ticker: 请输入股票代码
+        invalid_qty_or_price: 无效的数量或价格。请输入有效的正值。
+        not_investment_account: 只有投资账户中的交易才能转换为交易
+        security_not_found: 所选证券不再存在。请选择其他证券。
+        select_security: 请选择或输入证券
+        unexpected_error: '转换期间出现意外错误：%{error}'
+      exchange_hint: 留空以自动检测
+      exchange_label: 交易所（可选）
+      exchange_placeholder: XNAS
+      price_hint: 每股价格 (%{currency})
+      price_label: 每股价格
+      price_mismatch_message: 您的价格 (%{entered_price}/股) 与 %{ticker} 的当前市价 (%{market_price}) 相差较大。如果这看起来有误，您可能选择了错误的证券 — 请尝试使用“输入自定义股票代码”来指定正确的证券。
+      price_mismatch_title: 价格可能不匹配
+      price_placeholder: 例如 52.15
+      qty_or_price_hint: 至少输入数量或价格。另一项将根据交易金额 (%{amount}) 计算。
+      quantity_hint: 交易股份数量
+      quantity_label: 数量（股份）
+      quantity_placeholder: 例如 20
+      security_custom: "+ 输入自定义股票代码"
+      security_label: 证券
+      security_not_listed_hint: 找不到您的证券？请在列表底部选择“输入自定义股票代码”。
+      security_prompt: 选择一个证券...
+      submit: 转换为交易
+      success: 交易已转换为投资交易
+      ticker_hint: 输入股票/ETF 代码（例如 AAPL、MSFT）
+      ticker_placeholder: AAPL
+      ticker_search_hint: 按股票代码或公司名称搜索，或输入自定义股票代码
+      ticker_search_placeholder: 搜索股票代码...
+      title: 转换为证券交易
+      trade_type_hint: 买入或卖出证券股份
+      trade_type_label: 交易类型
+    dismiss_duplicate:
+      failure: 无法忽略重复建议
+      success: 已保留为单独交易
     form:
       account: 账户
       account_prompt: 选择账户
@@ -13,7 +72,7 @@ zh-CN:
       details: 详情
       expense: 支出
       income: 收入
-      none: "（无）"
+      none: （无）
       note_label: 备注
       note_placeholder: 请输入备注
       submit: 添加交易
@@ -29,8 +88,32 @@ zh-CN:
       import: 导入
       transaction: 交易
       transactions: 交易记录
+    keep_both: 不，保留两者
+    list:
+      drag_drop_subtitle: 直接上传交易
+      drag_drop_title: 拖放 CSV 文件以导入
+      transaction: 笔交易
+      transactions: 笔交易
+    mark_recurring: 标记为定期
+    mark_recurring_subtitle: 将此交易作为定期交易跟踪。金额波动将根据过去6个月的类似交易自动计算。
+    mark_recurring_title: 定期交易
+    merge_duplicate:
+      failure: 无法合并交易
+      success: 交易合并成功
     new:
       new_transaction: 新建交易
+    potential_duplicate_description: 此待处理交易可能与下方的已发布交易相同。如果是，请合并它们以避免重复计算。
+    potential_duplicate_title: 检测到可能的重复
+    search:
+      filters:
+        account: 账户
+        amount: 金额
+        category: 分类
+        date: 日期
+        merchant: 商户
+        status: 状态
+        tag: 标签
+        type: 类型
     searches:
       filters:
         amount_filter:
@@ -39,15 +122,22 @@ zh-CN:
           less_than: 小于
           placeholder: '0'
         badge:
+          confirmed: 已确认
           expense: 支出
           income: 收入
           on_or_after: 在 %{date} 或之后
           on_or_before: 在 %{date} 或之前
+          pending: 待处理
           transfer: 转账
+        status_filter:
+          confirmed: 已确认
+          pending: 待处理
         type_filter:
           expense: 支出
           income: 收入
           transfer: 转账
+      form:
+        toggle_selection_checkboxes: 切换所有复选框
       menu:
         account_filter: 账户
         amount_filter: 金额
@@ -57,34 +147,60 @@ zh-CN:
         clear_filters: 清除筛选
         date_filter: 日期
         merchant_filter: 商户
+        status_filter: 状态
         tag_filter: 标签
         type_filter: 类型
       search:
         equal_to: 等于
         greater_than: 大于
         less_than: 小于
-      form:
-        toggle_selection_checkboxes: 切换所有复选框
     show:
       account_label: 账户
+      activity_type: 活动类型
+      activity_type_description: 投资活动类型（买入、卖出、股息等）。自动检测或手动设置。
       amount: 金额
       category_label: 分类
+      convert_to_trade_button: 转换为投资交易
+      convert_to_trade_description: 将此交易转换为包含证券详情的买入或卖出交易，以便进行投资组合跟踪。
+      convert_to_trade_title: 转换为证券交易
       date_label: 日期
       delete: 删除
       delete_subtitle: 此操作将永久删除该交易，影响历史余额数据，且不可恢复。
       delete_title: 删除交易
       details: 详情
+      exclude: 排除
+      exclude_description: 被排除的交易将从预算计算和报告中移除。
+      keep_both: 保留两者
+      loan_payment: 贷款支付
       mark_recurring: 标记为定期交易
       mark_recurring_subtitle: 将此交易标记为定期交易跟踪。金额波动将根据过去6个月的类似交易自动计算。
       mark_recurring_title: 定期交易设置
       merchant_label: 商户
+      merge_duplicate: 合并重复项
       name_label: 名称
       nature: 类型
-      none: "（无）"
+      none: （无）
       note_label: 备注
       note_placeholder: 请输入备注
+      one_time_description: 一次性交易将从某些预算计算和报告中排除，以帮助您看清真正重要的内容。
+      one_time_title: 一次性 %{type}
       overview: 概览
+      potential_duplicate_description: 可能的重复描述
+      potential_duplicate_title: 可能的重复标题
       settings: 设置
+      tab_transactions: 交易
+      tab_upcoming: 即将发生
       tags_label: 标签
-      uncategorized: "（未分类）"
+      transfer: 转账
+      uncategorized: （未分类）
     toggle_recurring_section: 切换即将发生的定期交易显示
+    transaction:
+      activity_type_tooltip: 投资活动类型
+      linked_with_plaid: 已通过 Plaid 关联
+      pending: 待处理
+      pending_tooltip: 待处理交易 — 发布时可能更改
+      possible_duplicate: 重复？
+      potential_duplicate_tooltip: 这可能是另一笔交易的重复
+      review_recommended: 建议审核
+      review_recommended_tooltip: 金额差异较大 — 建议审核以检查是否为重复
+    unknown_name: 未知交易
