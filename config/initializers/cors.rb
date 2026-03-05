@@ -24,7 +24,9 @@ end
 
 Rails.application.config.middleware.insert_before 0, Rack::Cors do
   allow do
-    origins(*allowed_origins)
+    origins do |source, _env|
+      allowed_origins.include?(source)
+    end
 
     resource "/api/*",
       headers: :any,
