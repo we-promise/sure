@@ -65,7 +65,7 @@ zh-CN:
       withdrawals: 提取
     investment_performance:
       accounts: 投资账户
-      and_more: "+%{count} 更多"
+      and_more: "还有 %{count} 个"
       contributions: 期间出资
       gains_by_tax_treatment: 按税收处理的收益
       holding: 持仓
