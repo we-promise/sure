@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 class DS::Menu < DesignSystemComponent
-  attr_reader :variant, :avatar_url, :initials, :placement, :offset, :icon_vertical, :no_padding, :testid, :mobile_fullwidth
+  attr_reader :variant, :avatar_url, :initials, :placement, :offset, :icon_vertical, :no_padding, :testid, :mobile_fullwidth, :max_width
 
   renders_one :button, ->(**button_options, &block) do
     options_with_target = button_options.merge(data: { DS__menu_target: "button" })
@@ -23,7 +23,7 @@ class DS::Menu < DesignSystemComponent
 
   VARIANTS = %i[icon button avatar].freeze
 
-  def initialize(variant: "icon", avatar_url: nil, initials: nil, placement: "bottom-end", offset: 12, icon_vertical: false, no_padding: false, testid: nil, mobile_fullwidth: true)
+  def initialize(variant: "icon", avatar_url: nil, initials: nil, placement: "bottom-end", offset: 12, icon_vertical: false, no_padding: false, testid: nil, mobile_fullwidth: true, max_width: nil)
     @variant = variant.to_sym
     @avatar_url = avatar_url
     @initials = initials
@@ -33,6 +33,7 @@ class DS::Menu < DesignSystemComponent
     @no_padding = no_padding
     @testid = testid
     @mobile_fullwidth = mobile_fullwidth
+    @max_width = max_width
 
     raise ArgumentError, "Invalid variant: #{@variant}" unless VARIANTS.include?(@variant)
   end
