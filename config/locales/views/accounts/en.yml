@@ -10,10 +10,14 @@ en:
       enable: Enable account
       disable: Disable account
       set_default: Set as default
+      default_label: Default
+      delete: Delete account
     chart:
       data_not_available: Data not available for the selected period
     create:
       success: "%{type} account created"
+    set_default:
+      depository_only: "Only cash accounts can be set as default."
     destroy:
       success: "%{type} account scheduled for deletion"
       cannot_delete_linked: "Cannot delete a linked account. Please unlink it first."

@@ -3,7 +3,7 @@
 <% is_default = Current.user.default_account_id == account.id %>
 
 <%= turbo_frame_tag dom_id(account) do %>
-  <div class="p-4 flex items-center justify-between gap-3 group/account hover:bg-surface-hover">
+  <div class="relative p-4 flex items-center justify-between gap-3 group/account hover:bg-surface-hover">
     <div class="flex items-center gap-3">
       <%= render "accounts/logo", account: account, size: "md" %>
 
@@ -20,15 +20,19 @@
         <% else %>
           <div class="flex items-center gap-1.5">
             <%= link_to account.name, account, class: [(account.active? ? "text-primary" : "text-subdued"), "text-sm font-medium hover:underline"], data: { turbo_frame: "_top" } %>
-            <% if is_default %>
-              <%= icon("circle-check", size: "sm", color: "success") %>
-            <% end %>
+
             <% if account.institution_name %>
-              <span class="text-secondary">• <%= account.institution_name %></span>
+              <span class="hidden sm:inline text-secondary">• <%= account.institution_name %></span>
             <% end %>
           </div>
           <% if account.long_subtype_label %>
             <p class="text-sm text-secondary truncate"><%= account.long_subtype_label %></p>
+          <% end %>
+          <% if account.depository? && is_default %>
+            <p class="text-xs text-secondary opacity-50"><%= t("accounts.account.default_label") %></p>
+          <% end %>
+          <% if account.institution_name %>
+            <p class="sm:hidden text-sm text-secondary truncate"><%= account.institution_name %></p>
           <% end %>
         <% end %>
       </div>
@@ -52,7 +56,7 @@
           frame: :modal
         ) %>
       <% elsif !account.pending_deletion? %>
-        <%= render DS::Menu.new(icon_vertical: true) do |menu| %>
+        <%= render DS::Menu.new(icon_vertical: true, mobile_fullwidth: false) do |menu| %>
           <% menu.with_item(variant: "link", text: t("accounts.account.edit"), href: edit_account_path(account, return_to: return_to), icon: "pencil-line", data: { turbo_frame: :modal }) %>
 
           <% if !account.linked? && %w[Depository CreditCard Investment Crypto].include?(account.accountable_type) %>
@@ -69,17 +73,24 @@
             <% menu.with_item(variant: "button", text: t("accounts.account.enable"), href: toggle_active_account_path(account), method: :patch, icon: "toggle-left", data: { turbo_frame: :_top }) %>
           <% end %>
 
-          <% if is_default %>
-            <% menu.with_custom_content do %>
-              <div class="px-1">
-                <div class="flex items-center gap-2 p-2 rounded-md w-full opacity-40 cursor-default">
-                  <%= icon("star") %>
-                  <span class="text-sm text-primary"><%= t("accounts.account.set_default") %></span>
+          <% if account.depository? %>
+            <% if is_default %>
+              <% menu.with_custom_content do %>
+                <div class="px-1">
+                  <div class="flex items-center gap-2 p-2 rounded-md w-full opacity-40 cursor-default">
+                    <%= icon("star") %>
+                    <span class="text-sm text-primary"><%= t("accounts.account.set_default") %></span>
+                  </div>
                 </div>
-              </div>
+              <% end %>
+            <% else %>
+              <% menu.with_item(variant: "button", text: t("accounts.account.set_default"), href: set_default_account_path(account), method: :patch, icon: "star", data: { turbo_frame: :_top }) %>
             <% end %>
-          <% else %>
-            <% menu.with_item(variant: "button", text: t("accounts.account.set_default"), href: set_default_account_path(account), method: :patch, icon: "star", data: { turbo_frame: :_top }) %>
+          <% end %>
+
+          <% unless account.linked? %>
+            <% menu.with_item(variant: "divider") %>
+            <% menu.with_item(variant: "button", text: t("accounts.account.delete"), href: account_path(account), method: :delete, icon: "trash-2", confirm: CustomConfirm.for_resource_deletion("account", high_severity: true), data: { turbo_frame: :_top }) %>
           <% end %>
         <% end %>
       <% end %>
