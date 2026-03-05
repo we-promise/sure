@@ -1,6 +1,8 @@
 ---
 fr:
   sessions:
+    logout:
+      successful: Vous avez été déconnecté avec succès.
     create:
       invalid_credentials: Adresse e-mail ou mot de passe invalide.
     destroy:

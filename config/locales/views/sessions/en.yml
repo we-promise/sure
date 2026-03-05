@@ -1,6 +1,8 @@
 ---
 en:
   sessions:
+    logout:
+      successful: You have signed out successfully.
     create:
       invalid_credentials: Invalid email or password.
       local_login_disabled: Local password login is disabled. Please use single sign-on.

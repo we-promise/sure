@@ -73,22 +73,22 @@ zh-CN:
       field_descriptions: 字段说明：
       fields:
         api_token:
-          description: 您从 Indexa Capital 仪表板获得的只读 API 令牌
+          description: 您从 IndexaCapital 仪表板获得的只读 API 令牌
           label: API 令牌
           placeholder_new: 在此粘贴您的 API 令牌
           placeholder_update: 输入新的 API 令牌以更新
         document:
-          description: 您的 Indexa Capital 文档/ID
+          description: 您的 IndexaCapital 文档/ID
           label: 文档 ID
           placeholder_new: 在此粘贴文档 ID
           placeholder_update: 输入新的文档 ID 以更新
         password:
-          description: 您的 Indexa Capital 密码
+          description: 您的 IndexaCapital 密码
           label: 密码
           placeholder_new: 在此粘贴密码
           placeholder_update: 输入新密码以更新
         username:
-          description: 您的 Indexa Capital 用户名/电子邮件
+          description: 您的 IndexaCapital 用户名/电子邮件
           label: 用户名
           placeholder_new: 在此粘贴用户名
           placeholder_update: 输入新用户名以更新
@@ -99,7 +99,7 @@ zh-CN:
       setup_instructions: 设置说明：
       status_configured_html: 已配置并准备就绪。请访问<a href="%{accounts_path}" class="link">账户</a>标签页来管理和设置账户。
       status_not_configured: 未配置
-      step_1: 访问您的 Indexa Capital 仪表板以生成一个只读 API 令牌
+      step_1: 访问您的 IndexaCapital 仪表板以生成一个只读 API 令牌
       step_2: 在下方粘贴您的 API 令牌，然后点击保存
       step_3: 连接成功后，前往账户标签页设置新账户
       update_button: 更新配置

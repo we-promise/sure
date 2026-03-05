@@ -3,7 +3,7 @@ zh-CN:
   subscriptions:
     self_hosted_alert: "%{product_name} 在自托管模式下不可用。"
     upgrade:
-      contribute_and_support_sure: 贡献并支持 Sure
+      contribute_and_support_sure: 贡献并支持 %{product}
       cta: 继续支持此代码库的开发！
       header:
         support: 支持

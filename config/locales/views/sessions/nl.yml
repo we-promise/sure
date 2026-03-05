@@ -1,6 +1,8 @@
 ---
 nl:
   sessions:
+    logout:
+      successful: U bent succesvol uitgelogd.
     create:
       invalid_credentials: Ongeldige e-mail of wachtwoord.
       local_login_disabled: Lokale wachtwoordinlog is uitgeschakeld. Gebruik single sign-on.

@@ -21,98 +21,98 @@ zh-CN:
         long: 457(b)
         short: 457(b)
       529_plan:
-        long: 529 Education Savings Plan
-        short: 529 Plan
+        long: 529 教育储蓄计划
+        short: 529 计划
       angel:
-        long: Angel Investment
-        short: Angel
+        long: 天使投资
+        short: 天使投资
       brokerage:
-        long: Brokerage
-        short: Brokerage
+        long: 券商账户
+        short: 券商
       hsa:
-        long: Health Savings Account
-        short: HSA
+        long: 健康储蓄账户
+        short: 健康储蓄账户
       ira:
-        long: Traditional IRA
-        short: IRA
+        long: 传统个人退休账户
+        short: 传统 IRA
       isa:
-        long: Individual Savings Account
+        long: 个人储蓄账户
         short: ISA
       lira:
-        long: Locked-In Retirement Account
+        long: 锁定型退休账户
         short: LIRA
       lisa:
-        long: Lifetime ISA
+        long: 终身个人储蓄账户
         short: LISA
       mutual_fund:
-        long: Mutual Fund
-        short: Mutual Fund
+        long: 共同基金
+        short: 共同基金
       other:
-        long: Other Investment
-        short: Other
+        long: 其他投资
+        short: 其他
       pea:
-        long: Plan d'Épargne en Actions
-        short: PEA
+        long: 股票储蓄计划（PEA）
+        short: 股票储蓄计划
       pension:
-        long: Pension
-        short: Pension
+        long: 养老金账户
+        short: 工作养老金
       pillar_3a:
-        long: Private Pension (Pillar 3a)
-        short: Pillar 3a
+        long: 私人养老金（第三支柱 3a）
+        short: 第三支柱 3a
       resp:
-        long: Registered Education Savings Plan
+        long: 注册教育储蓄计划
         short: RESP
       retirement:
-        long: Retirement Account
-        short: Retirement
+        long: 退休账户
+        short: 退休
       riester:
-        long: Riester-Rente
-        short: Riester
+        long: 里斯特养老金
+        short: 里斯特
       roth_401k:
-        long: Roth 401(k)
-        short: Roth 401(k)
+        long: 罗斯 401(k)
+        short: 罗斯 401(k)
       roth_ira:
-        long: Roth IRA
-        short: Roth IRA
+        long: 罗斯个人退休账户
+        short: 罗斯 IRA
       rrif:
-        long: Registered Retirement Income Fund
+        long: 注册退休收入基金
         short: RRIF
       rrsp:
-        long: Registered Retirement Savings Plan
+        long: 注册退休储蓄计划
         short: RRSP
       sep_ira:
-        long: SEP IRA
+        long: SEP 个人退休账户
         short: SEP IRA
       simple_ira:
-        long: SIMPLE IRA
+        long: SIMPLE 个人退休账户
         short: SIMPLE IRA
       sipp:
-        long: Self-Invested Personal Pension
+        long: 自主投资个人养老金
         short: SIPP
       smsf:
-        long: Self-Managed Super Fund
+        long: 自主管理养老金基金
         short: SMSF
       super:
-        long: Superannuation
+        long: 养老金（Super）
         short: Super
       tfsa:
-        long: Tax-Free Savings Account
+        long: 免税储蓄账户
         short: TFSA
       trust:
-        long: Trust
-        short: Trust
+        long: 信托账户
+        short: 信托
       tsp:
-        long: Thrift Savings Plan
+        long: 联邦储蓄计划
         short: TSP
       ugma:
-        long: UGMA Custodial Account
+        long: UGMA 监护账户
         short: UGMA
       utma:
-        long: UTMA Custodial Account
+        long: UTMA 监护账户
         short: UTMA
       workplace_pension_uk:
-        long: Workplace Pension
-        short: Pension
+        long: 工作场所养老金
+        short: 工作养老金
     value_tooltip:
       cash: 现金
       holdings: 持仓

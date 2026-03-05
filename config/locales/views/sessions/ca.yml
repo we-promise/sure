@@ -1,6 +1,8 @@
 ---
 ca:
   sessions:
+    logout:
+      successful: Has tancat la sessió correctament.
     create:
       invalid_credentials: Correu electrònic o contrasenya incorrectes.
       local_login_disabled: L'inici de sessió amb contrasenya local està inhabilitat. Utilitza l'inici de sessió únic.

@@ -93,7 +93,7 @@ zh-CN:
       requires_account: 请先导入账户以解锁此选项。
       resume: 继续 %{type}
       sources: 数据来源
-      title: 新建 CSV 导入
+      title: 新建导入
     pdf_import:
       back_to_dashboard: 返回仪表板
       back_to_imports: 返回导入

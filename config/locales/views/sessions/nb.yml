@@ -1,6 +1,8 @@
 ---
 nb:
   sessions:
+    logout:
+      successful: Du har blitt logget ut.
     create:
       invalid_credentials: Ugyldig e-post eller passord.
     destroy:

@@ -127,7 +127,7 @@ zh-CN:
         category: 分类
         expenses: 支出
         income: 收入
-        more_categories: "+ %{count} 个更多分类"
+        more_categories: "还有 %{count} 个分类"
         percent: "%"
         title: 按分类支出
       summary:

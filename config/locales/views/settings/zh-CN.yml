@@ -97,8 +97,8 @@ zh-CN:
       coinbase_panel:
         api_key_label: API 密钥
         api_key_placeholder: 输入您的 Coinbase API 密钥
-        api_secret_label: API 密钥
-        api_secret_placeholder: 输入您的 Coinbase API 密钥
+        api_secret_label: API 密钥（Secret）
+        api_secret_placeholder: 输入您的 Coinbase API 密钥（Secret）
         connect_button: 连接 Coinbase
         disconnect_confirm: 您确定要断开此 Coinbase 连接吗？您同步的账户将变为手动账户。
         setup_instructions: '要连接 Coinbase：'

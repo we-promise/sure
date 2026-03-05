@@ -185,8 +185,8 @@ zh-CN:
       one_time_description: 一次性交易将从某些预算计算和报告中排除，以帮助您看清真正重要的内容。
       one_time_title: 一次性 %{type}
       overview: 概览
-      potential_duplicate_description: 可能的重复描述
-      potential_duplicate_title: 可能的重复标题
+      potential_duplicate_description: 系统检测到此交易可能与已有记录重复；请核对交易详情后决定保留或忽略。
+      potential_duplicate_title: 可能为重复交易
       settings: 设置
       tab_transactions: 交易
       tab_upcoming: 即将发生

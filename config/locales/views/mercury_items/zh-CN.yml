@@ -57,7 +57,7 @@ zh-CN:
       total: 总计
       unlinked: 未关联
     select_accounts:
-      accounts_selected: 个账户已选择
+      accounts_selected: 已选择 %{count} 个账户
       api_error: API 错误：%{message}
       cancel: 取消
       configure_name_in_mercury: 无法导入 - 请在 Mercury 中配置账户名称

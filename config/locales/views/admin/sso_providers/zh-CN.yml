@@ -90,7 +90,7 @@ zh-CN:
         env_configured: 环境/YAML
         legacy_providers_notice: 这些提供程序是通过环境变量或 YAML 配置的，无法通过此界面管理。要在此处管理它们，请通过启用 AUTH_PROVIDERS_SOURCE=db 并在 UI 中重新创建它们，将它们迁移到数据库支持的提供程序。
         legacy_providers_title: 环境配置的提供程序
-        no_providers_message: 首先添加您的第一个 SSO 提供程序开始。
+        no_providers_message: 请先添加您的第一个 SSO 提供程序以开始。
         no_providers_title: 没有 SSO 提供程序
         note: 对 SSO 提供程序的更改需要重新启动服务器才能生效。或者，启用 AUTH_PROVIDERS_SOURCE=db 功能标志以从数据库动态加载提供程序。
         table:

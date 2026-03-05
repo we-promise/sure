@@ -1,6 +1,8 @@
 ---
 es:
   sessions:
+    logout:
+      successful: Has cerrado sesión con éxito.
     create:
       invalid_credentials: Correo electrónico o contraseña inválidos.
       local_login_disabled: El inicio de sesión con contraseña local está deshabilitado. Utiliza el inicio de sesión único (SSO).

@@ -1,6 +1,8 @@
 ---
 tr:
   sessions:
+    logout:
+      successful: Başarıyla çıkış yaptınız.
     create:
       invalid_credentials: Geçersiz e-posta veya şifre.
     destroy:

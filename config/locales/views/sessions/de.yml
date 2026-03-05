@@ -1,6 +1,8 @@
 ---
 de:
   sessions:
+    logout:
+      successful: Du hast dich erfolgreich abgemeldet.
     create:
       invalid_credentials: Ungültige E-Mail-Adresse oder falsches Passwort.
     destroy:

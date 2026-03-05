@@ -1,6 +1,8 @@
 ---
 pt-BR:
   sessions:
+    logout:
+      successful: Você saiu com sucesso.
     create:
       invalid_credentials: E-mail ou senha inválidos.
     destroy:
