@@ -8,19 +8,9 @@ class Loan < ApplicationRecord
     "other" => { short: "Other Loan", long: "Other Loan" }
   }.freeze
 
-<<<<<<< HEAD
   validates :subtype, inclusion: { in: SUBTYPES.keys }, allow_blank: true
-=======
   validates :interest_rate,
             numericality: { greater_than_or_equal_to: 0 },
-            allow_nil: true
-
-  validates :insurance_rate,
-          numericality: { greater_than_or_equal_to: 0 },
-          allow_nil: true
-
-  validates :insurance_rate_type,
-            inclusion: { in: %w[fixed variable adjustable] },
             allow_nil: true
 
   validates :term_months,
@@ -34,7 +24,16 @@ class Loan < ApplicationRecord
   validates :down_payment,
             numericality: { greater_than_or_equal_to: 0 },
             allow_nil: true
->>>>>>> 67061b6a (add validates for every fields)
+
+  validates :insurance_rate,
+            numericality: { greater_than_or_equal_to: 0 },
+            allow_nil: true
+
+  validates :insurance_rate_type,
+            inclusion: { in: %w[fixed variable] },
+            allow_nil: true
+
+  validates :start_date, allow_nil: true
 
   def monthly_payment
     return nil if term_months.nil? || interest_rate.nil? || rate_type.nil? || rate_type != "fixed"
@@ -55,31 +54,6 @@ class Loan < ApplicationRecord
   def original_balance
     Money.new(account.first_valuation_amount, account.currency)
   end
-
-  def total_paid
-    mp = monthly_payment
-    return nil unless mp && term_months.present?
-
-    mp * term_months
-  end
-
-  def total_interest
-    tp = total_paid
-    ob = original_balance
-    return nil unless tp && ob
-
-    tp - ob
-  end
-
-  def interest_ratio
-    tp = total_paid
-    ti = total_interest
-    return nil unless tp && ti
-    return nil if tp.zero?
-
-    ti.to_f / tp.to_f
-  end
-
 
   class << self
     def color
