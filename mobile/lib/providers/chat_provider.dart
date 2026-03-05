@@ -14,14 +14,11 @@ class ChatProvider with ChangeNotifier {
   String? _errorMessage;
   Timer? _pollingTimer;
 
-  /// Content length of the last assistant message from the previous poll.
-  /// Used to detect when the LLM has finished writing (no growth between polls).
-  int? _lastAssistantContentLength;
-
   List<Chat> get chats => _chats;
   Chat? get currentChat => _currentChat;
   bool get isLoading => _isLoading;
   bool get isSendingMessage => _isSendingMessage;
+  bool get isAssistantResponding => _pollingTimer != null;
   String? get errorMessage => _errorMessage;
 
   /// Fetch list of chats
@@ -252,7 +249,6 @@ class ChatProvider with ChangeNotifier {
   /// Start polling for new messages (AI responses)
   void _startPolling(String accessToken, String chatId) {
     _stopPolling();
-    _lastAssistantContentLength = null;
 
     _pollingTimer = Timer.periodic(const Duration(seconds: 2), (timer) async {
       await _pollForUpdates(accessToken, chatId);
@@ -284,8 +280,12 @@ class ChatProvider with ChangeNotifier {
         final newMessageCount = newMessages.length;
 
         final oldContentLengthById = <String, int>{};
+        final oldStatusById = <String, String?>{};
         for (final m in oldMessages) {
-          if (m.isAssistant) oldContentLengthById[m.id] = m.content.length;
+          if (m.isAssistant) {
+            oldContentLengthById[m.id] = m.content.length;
+            oldStatusById[m.id] = m.status;
+          }
         }
 
         bool shouldUpdate = false;
@@ -293,13 +293,13 @@ class ChatProvider with ChangeNotifier {
         // New messages added
         if (newMessageCount > oldMessageCount) {
           shouldUpdate = true;
-          _lastAssistantContentLength = null;
         } else if (newMessageCount == oldMessageCount) {
-          // Same count: check if any assistant message has more content
+          // Same count: check if any assistant message has more content or status changed
           for (final m in newMessages) {
             if (m.isAssistant) {
               final oldLen = oldContentLengthById[m.id] ?? 0;
-              if (m.content.length > oldLen) {
+              final oldStatus = oldStatusById[m.id];
+              if (m.content.length > oldLen || m.status != oldStatus) {
                 shouldUpdate = true;
                 break;
               }
@@ -312,16 +312,17 @@ class ChatProvider with ChangeNotifier {
           notifyListeners();
         }
 
+        // Check if last assistant message is complete
         final lastMessage = updatedChat.messages.lastOrNull;
         if (lastMessage != null && lastMessage.isAssistant) {
-          final newLen = lastMessage.content.length;
-          if (newLen > (_lastAssistantContentLength ?? 0)) {
-            _lastAssistantContentLength = newLen;
-          } else {
-            // Content stable: no growth since last poll
+          if (lastMessage.isComplete) {
+            // Response is complete, stop polling
             _stopPolling();
-            _lastAssistantContentLength = null;
           }
+          // Keep polling while message is still pending (status != 'complete')
+        } else {
+          // No assistant message, stop polling
+          _stopPolling();
         }
       }
     } catch (e) {

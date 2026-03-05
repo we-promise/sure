@@ -7,6 +7,7 @@ import '../models/chat.dart';
 import '../providers/auth_provider.dart';
 import '../providers/chat_provider.dart';
 import '../models/message.dart';
+import '../widgets/typing_indicator.dart';
 
 class _SendMessageIntent extends Intent {
   const _SendMessageIntent();
@@ -425,6 +426,19 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
                   ? _lastNonEmptyMessages
                   : messages;
 
+          // Auto-scroll to bottom when messages update or typing indicator appears
+          if (visibleMessages.isNotEmpty || chatProvider.isAssistantResponding) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (_scrollController.hasClients) {
+                _scrollController.animateTo(
+                  _scrollController.position.maxScrollExtent,
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeOut,
+                );
+              }
+            });
+          }
+
           return Column(
             children: [
               // Messages list
@@ -539,8 +553,43 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
                     : ListView.builder(
                         controller: _scrollController,
                         padding: const EdgeInsets.all(16),
-                        itemCount: visibleMessages.length,
+                        itemCount: visibleMessages.length +
+                            (chatProvider.isAssistantResponding ? 1 : 0),
                         itemBuilder: (context, index) {
+                          // Show typing indicator as the last item
+                          if (chatProvider.isAssistantResponding &&
+                              index == visibleMessages.length) {
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 16),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  CircleAvatar(
+                                    radius: 16,
+                                    backgroundColor: colorScheme.primaryContainer,
+                                    child: SvgPicture.asset(
+                                      'assets/images/logomark-color.svg',
+                                      width: 18,
+                                      height: 18,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Flexible(
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 16, vertical: 12),
+                                      decoration: BoxDecoration(
+                                        color: colorScheme.surfaceContainerHighest,
+                                        borderRadius: BorderRadius.circular(16),
+                                      ),
+                                      child: const TypingIndicator(),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }
+
                           final message = visibleMessages[index];
                           return _MessageBubble(
                             message: message,
@@ -549,30 +598,6 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
                         },
                       ),
               ),
-
-              // Loading indicator when sending
-              if (chatProvider.isSendingMessage)
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  child: Row(
-                    children: [
-                      const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      ),
-                      const SizedBox(width: 12),
-                      Text(
-                        'AI is thinking...',
-                        style: TextStyle(
-                          color: colorScheme.onSurfaceVariant,
-                          fontStyle: FontStyle.italic,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
 
               // Message input
               Container(

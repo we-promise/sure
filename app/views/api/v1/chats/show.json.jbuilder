@@ -8,6 +8,7 @@ json.messages @messages do |message|
   json.role message.role
   json.content message.content
   json.model message.ai_model if message.type == "AssistantMessage"
+  json.status message.status if message.type == "AssistantMessage"
   json.created_at message.created_at.iso8601
   json.updated_at message.updated_at.iso8601
 

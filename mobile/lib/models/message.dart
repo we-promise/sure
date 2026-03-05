@@ -32,6 +32,7 @@ class Message {
   final String role;
   final String content;
   final String? model;
+  final String? status;
   final DateTime createdAt;
   final DateTime updatedAt;
   final List<ToolCall>? toolCalls;
@@ -42,6 +43,7 @@ class Message {
     required this.role,
     required this.content,
     this.model,
+    this.status,
     required this.createdAt,
     required this.updatedAt,
     this.toolCalls,
@@ -57,6 +59,7 @@ class Message {
       role: role,
       content: content,
       model: json['model'] as String?,
+      status: json['status'] as String?,
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
       toolCalls: json['tool_calls'] != null
@@ -74,6 +77,7 @@ class Message {
       'role': role,
       'content': content,
       'model': model,
+      'status': status,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
       'tool_calls': toolCalls?.map((tc) => tc.toJson()).toList(),
@@ -82,4 +86,6 @@ class Message {
 
   bool get isUser => role == 'user';
   bool get isAssistant => role == 'assistant';
+  bool get isComplete => status == 'complete';
+  bool get isPending => status == 'pending';
 }
