@@ -10,7 +10,7 @@
           <%= icon("briefcase", size: "sm") %>
           <span class="text-sm text-secondary"><%= t("reports.investment_performance.portfolio_value") %></span>
         </div>
-        <p class="text-xl font-semibold text-primary">
+        <p class="text-xl font-semibold text-primary privacy-sensitive">
           <%= format_money(investment_metrics[:portfolio_value]) %>
         </p>
       </div>
@@ -22,7 +22,7 @@
           <span class="text-sm text-secondary"><%= t("reports.investment_performance.total_return") %></span>
         </div>
         <% if investment_metrics[:unrealized_trend] %>
-          <p class="text-xl font-semibold" style="color: <%= investment_metrics[:unrealized_trend].color %>">
+          <p class="text-xl font-semibold privacy-sensitive" style="color: <%= investment_metrics[:unrealized_trend].color %>">
             <%= format_money(Money.new(investment_metrics[:unrealized_trend].value, Current.family.currency)) %>
             (<%= investment_metrics[:unrealized_trend].percent_formatted %>)
           </p>
@@ -37,7 +37,7 @@
           <%= icon("arrow-down-to-line", size: "sm") %>
           <span class="text-sm text-secondary"><%= t("reports.investment_performance.contributions") %></span>
         </div>
-        <p class="text-xl font-semibold text-primary">
+        <p class="text-xl font-semibold text-primary privacy-sensitive">
           <%= format_money(investment_metrics[:period_contributions]) %>
         </p>
       </div>
@@ -48,7 +48,7 @@
           <%= icon("arrow-up-from-line", size: "sm") %>
           <span class="text-sm text-secondary"><%= t("reports.investment_performance.withdrawals") %></span>
         </div>
-        <p class="text-xl font-semibold text-primary">
+        <p class="text-xl font-semibold text-primary privacy-sensitive">
           <%= format_money(investment_metrics[:period_withdrawals]) %>
         </p>
       </div>
@@ -85,7 +85,7 @@
                   </div>
                 </div>
                 <div class="text-right text-secondary"><%= number_to_percentage(holding.weight || 0, precision: 1) %></div>
-                <div class="text-right font-medium text-primary"><%= format_money(holding.amount_money) %></div>
+                <div class="text-right font-medium text-primary privacy-sensitive"><%= format_money(holding.amount_money) %></div>
                 <div class="text-right">
                   <% if holding.trend %>
                     <span style="color: <%= holding.trend.color %>">
@@ -117,7 +117,7 @@
                 <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium <%= tax_treatment_badge_classes(treatment) %>" title="<%= t("accounts.tax_treatment_descriptions.#{treatment}") %>">
                   <%= t("accounts.tax_treatments.#{treatment}") %>
                 </span>
-                <span class="text-sm font-semibold text-primary">
+                <span class="text-sm font-semibold text-primary privacy-sensitive">
                   <%= format_money(data[:total_gain]) %>
                 </span>
               </div>
@@ -125,11 +125,11 @@
               <div class="space-y-2 text-sm">
                 <div class="flex justify-between">
                   <span class="text-secondary"><%= t("reports.investment_performance.unrealized_gains") %></span>
-                  <span class="text-primary"><%= format_money(data[:unrealized_gain]) %></span>
+                  <span class="text-primary privacy-sensitive"><%= format_money(data[:unrealized_gain]) %></span>
                 </div>
                 <div class="flex justify-between">
                   <span class="text-secondary"><%= t("reports.investment_performance.realized_gains") %></span>
-                  <span class="text-primary"><%= format_money(data[:realized_gain]) %></span>
+                  <span class="text-primary privacy-sensitive"><%= format_money(data[:realized_gain]) %></span>
                 </div>
               </div>
 
@@ -205,7 +205,7 @@
                   <p class="text-xs text-secondary"><%= account.short_subtype_label %></p>
                 </div>
               </div>
-              <p class="font-medium text-primary"><%= format_money(account.balance_money) %></p>
+              <p class="font-medium text-primary privacy-sensitive"><%= format_money(account.balance_money) %></p>
             <% end %>
           <% end %>
         </div>

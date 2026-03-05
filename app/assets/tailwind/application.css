@@ -13,6 +13,7 @@
 @import "./google-sign-in.css";
 @import "./date-picker-dark-mode.css";
 @import "./print-report.css";
+@import "./privacy-mode.css";
 
 @layer components {
   .pcr-app{

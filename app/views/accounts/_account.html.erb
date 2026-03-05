@@ -56,7 +56,7 @@
       <% elsif account.syncing? %>
         <div class="w-16 h-6 bg-loader rounded-full animate-pulse"></div>
       <% else %>
-        <p class="text-sm font-medium <%= account.active? ? "text-primary" : "text-subdued" %>">
+        <p class="text-sm font-medium privacy-sensitive <%= account.active? ? "text-primary" : "text-subdued" %>">
           <%= format_money account.balance_money %>
         </p>
       <% end %>

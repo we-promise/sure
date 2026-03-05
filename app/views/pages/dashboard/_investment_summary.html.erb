@@ -8,7 +8,7 @@
           <h2 class="text-lg font-medium"><%= t(".title") %></h2>
         </div>
 
-        <p class="text-primary text-3xl font-medium">
+        <p class="text-primary text-3xl font-medium privacy-sensitive">
           <%= format_money(investment_statement.portfolio_value_money) %>
         </p>
 
@@ -16,7 +16,7 @@
         <% if trend %>
           <div class="flex items-center gap-2 text-sm">
             <span class="text-secondary"><%= t(".total_return") %>:</span>
-            <span class="font-medium" style="color: <%= trend.color %>">
+            <span class="font-medium privacy-sensitive" style="color: <%= trend.color %>">
               <%= format_money(Money.new(trend.value, Current.family.currency)) %>
               (<%= trend.percent_formatted %>)
             </span>
@@ -52,17 +52,17 @@
                 </div>
               </div>
 
-              <div class="w-20 text-right text-secondary">
+              <div class="w-20 text-right text-secondary privacy-sensitive">
                 <%= number_to_percentage(holding.weight || 0, precision: 1) %>
               </div>
 
-              <div class="w-28 text-right">
+              <div class="w-28 text-right privacy-sensitive">
                 <%= format_money(holding.amount_money) %>
               </div>
 
               <div class="w-24 text-right">
                 <% if holding.trend %>
-                  <span style="color: <%= holding.trend.color %>">
+                  <span class="privacy-sensitive" style="color: <%= holding.trend.color %>">
                     <%= holding.trend.percent_formatted %>
                   </span>
                 <% else %>
@@ -90,7 +90,7 @@
               </div>
               <div>
                 <p class="text-xs text-secondary"><%= t(".contributions") %></p>
-                <p class="font-medium text-green-600"><%= format_money(totals.contributions) %></p>
+                <p class="font-medium text-green-600 privacy-sensitive"><%= format_money(totals.contributions) %></p>
               </div>
             </div>
             <div class="flex items-center gap-2">
@@ -99,7 +99,7 @@
               </div>
               <div>
                 <p class="text-xs text-secondary"><%= t(".withdrawals") %></p>
-                <p class="font-medium text-orange-600"><%= format_money(totals.withdrawals) %></p>
+                <p class="font-medium text-orange-600 privacy-sensitive"><%= format_money(totals.withdrawals) %></p>
               </div>
             </div>
             <div class="flex items-center gap-2">
