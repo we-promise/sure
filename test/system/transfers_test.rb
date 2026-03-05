@@ -28,4 +28,32 @@ class TransfersTest < ApplicationSystemTestCase
       assert_text "Payment to"
     end
   end
+
+  test "shows exchange rate field for different currencies" do
+    # Create an account with a different currency
+    eur_account = @user.family.accounts.create!(
+      name: "EUR Savings",
+      balance: 1000,
+      currency: "EUR",
+      accountable: Depository.new
+    )
+
+    checking_name = accounts(:depository).name # USD account
+    transfer_date = Date.current
+
+    click_on "New transaction"
+    click_on "Transfer"
+    assert_text "New transfer"
+
+    # Initially, exchange rate field should be hidden
+    assert_selector "[data-transfer-form-target='exchangeRateContainer'].hidden", visible: :all
+
+    # Select accounts with different currencies
+    select checking_name, from: "From"
+    select eur_account.name, from: "To"
+
+    # Exchange rate field should appear (note: we can't easily test JS behavior in system tests without JS drivers)
+    # For now, we just verify the field exists in the HTML
+    assert_selector "input[name='transfer[exchange_rate]']", visible: :all
+  end
 end

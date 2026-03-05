@@ -19,13 +19,22 @@ class Balance::SyncCache
     attr_reader :account
 
     def converted_entries
-      @converted_entries ||= account.entries.order(:date).to_a.map do |e|
+      @converted_entries ||= account.entries.includes(:entryable).order(:date).to_a.map do |e|
         converted_entry = e.dup
+
+        # Extract custom exchange rate if present on Transaction
+        custom_rate = if e.entryable.is_a?(Transaction)
+          e.entryable.extra&.dig("exchange_rate")
+        end
+
+        # Use Money#exchange_to with custom rate if available, standard lookup otherwise
         converted_entry.amount = converted_entry.amount_money.exchange_to(
           account.currency,
           date: e.date,
+          custom_rate: custom_rate,
           fallback_rate: 1
         ).amount
+
         converted_entry.currency = account.currency
         converted_entry
       end

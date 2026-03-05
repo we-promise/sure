@@ -60,7 +60,7 @@
           data: {
             "money-field-target": "amount",
             "auto-submit-form-target": ("auto" if options[:auto_submit])
-          }.compact,
+          }.compact.merge(options[:amount_data] || {}),
           required: options[:required] %>
       </div>
 
@@ -76,7 +76,7 @@
                             "money-field-target": "currency",
                             action: "change->money-field#handleCurrencyChange",
                             "auto-submit-form-target": ("auto" if options[:auto_submit])
-                          }.compact
+                          }.compact.merge(options[:currency_data] || {})
                         } %>
         </div>
       <% end %>

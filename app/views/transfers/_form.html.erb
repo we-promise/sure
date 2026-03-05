@@ -1,4 +1,4 @@
-<%= styled_form_with model: transfer, class: "space-y-4", data: { turbo_frame: "_top", controller: "transfer-form" } do |f| %>
+<%= styled_form_with model: transfer, class: "space-y-4", data: { turbo_frame: "_top", controller: "transfer-form", transfer_form_exchange_rate_url_value: exchange_rate_transfers_path } do |f| %>
   <% if transfer.errors.present? %>
     <div class="text-destructive flex items-center gap-2">
       <%= icon "circle-alert", size: "sm" %>
@@ -26,10 +26,65 @@
   <% end %>
 
   <section class="space-y-2">
-    <%= f.collection_select :from_account_id, Current.family.accounts.alphabetically, :id, :name, { prompt: t(".select_account"), label: t(".from"), selected: @from_account_id }, required: true %>
-    <%= f.collection_select :to_account_id, Current.family.accounts.alphabetically, :id, :name, { prompt: t(".select_account"), label: t(".to") }, required: true %>
-    <%= f.number_field :amount, label: t(".amount"), required: true, min: 0, placeholder: "100", step: 0.00000001 %>
-    <%= f.date_field :date, value: transfer.inflow_transaction&.entry&.date || Date.current, label: t(".date"), required: true, max: Date.current %>
+    <%= f.collection_select :from_account_id, Current.family.accounts.alphabetically, :id, :name, { prompt: t(".select_account"), label: t(".from"), selected: @from_account_id }, { required: true, data: { transfer_form_target: "fromAccount", action: "change->transfer-form#checkCurrencyDifference" } } %>
+    <%= f.collection_select :to_account_id, Current.family.accounts.alphabetically, :id, :name, { prompt: t(".select_account"), label: t(".to") }, { required: true, data: { transfer_form_target: "toAccount", action: "change->transfer-form#checkCurrencyDifference" } } %>
+    
+    <%= f.date_field :date, value: transfer.inflow_transaction&.entry&.date || Date.current, label: t(".date"), required: true, max: Date.current, data: { transfer_form_target: "date", action: "change->transfer-form#checkCurrencyDifference" } %>
+    
+    <%= f.number_field :amount, label: t(".source_amount"), required: true, min: 0, placeholder: "100", step: 0.00000001, data: { transfer_form_target: "amount", action: "input->transfer-form#onSourceAmountChange" } %>
+    
+    <%# Exchange rate fields - shown only when currencies differ %>
+    <div class="hidden px-1 pt-2" data-transfer-form-target="exchangeRateContainer">
+      <p class="text-xs text-secondary mb-2"><%= t(".exchange_rate_help") %></p>
+      
+      <!-- Tab buttons -->
+      <div class="flex gap-4 border-b border-secondary mb-3">
+        <button 
+          type="button"
+          class="px-0 py-1 -mb-px text-sm font-medium border-b-2 border-primary text-primary"
+          data-transfer-form-target="convertTab"
+          data-action="click->transfer-form#switchToConvertTab">
+          <%= t(".convert_tab") %>
+        </button>
+        <button 
+          type="button"
+          class="px-0 py-1 -mb-px text-sm font-medium border-b-2 border-transparent text-secondary opacity-60 hover:opacity-100"
+          data-transfer-form-target="calculateRateTab"
+          data-action="click->transfer-form#switchToCalculateRateTab">
+          <%= t(".calculate_rate_tab") %>
+        </button>
+      </div>
+      
+      <!-- Convert Tab Content -->
+      <div data-transfer-form-target="convertContent" class="space-y-2 mb-3">
+        <div class="form-field">
+          <div class="form-field__body">
+            <label class="form-field__label" for="transfer_exchange_rate"><%= t(".exchange_rate") %></label>
+            <input type="number" min="0.00000000000001" step="0.00000000000001" placeholder="1.0" class="form-field__input" data-transfer-form-target="exchangeRateField" data-action="input->transfer-form#onConvertExchangeRateChange" name="transfer[exchange_rate]" id="transfer_exchange_rate">
+          </div>
+        </div>
+        
+        <div class="flex items-center justify-between p-2 bg-secondary bg-opacity-10 rounded text-sm">
+          <span class="text-secondary"><%= t(".destination_amount") %></span>
+          <span class="font-medium text-primary" data-transfer-form-target="convertDestinationDisplay">-</span>
+        </div>
+      </div>
+      
+      <!-- Calculate Rate Tab Content -->
+      <div data-transfer-form-target="calculateRateContent" class="hidden space-y-2 mb-3">
+        <div class="form-field">
+          <div class="form-field__body">
+            <label class="form-field__label" for="transfer_destination_amount"><%= t(".destination_amount") %></label>
+            <input type="number" min="0" step="0.00000001" placeholder="92" class="form-field__input" data-transfer-form-target="destinationAmount" data-action="input->transfer-form#onCalculateRateDestinationAmountChange" id="transfer_destination_amount">
+          </div>
+        </div>
+        
+        <div class="flex items-center justify-between p-2 bg-secondary bg-opacity-10 rounded text-sm">
+          <span class="text-secondary"><%= t(".exchange_rate") %></span>
+          <span class="font-medium text-primary" data-transfer-form-target="calculateRateDisplay">-</span>
+        </div>
+      </div>
+    </div>
   </section>
 
   <section>

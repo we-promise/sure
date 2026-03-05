@@ -8,6 +8,33 @@ class TransfersController < ApplicationController
     @from_account_id = params[:from_account_id]
   end
 
+  def exchange_rate
+    from_account = Current.family.accounts.find(params[:from_account_id])
+    to_account = Current.family.accounts.find(params[:to_account_id])
+    date = params[:date].present? ? Date.parse(params[:date]) : Date.current
+
+    if from_account.currency == to_account.currency
+      render json: { rate: nil, same_currency: true }
+    else
+      rate = ExchangeRate.find_or_fetch_rate(
+        from: from_account.currency,
+        to: to_account.currency,
+        date: date
+      )&.rate || 1.0
+
+      render json: {
+        rate: rate,
+        same_currency: false,
+        from_currency: from_account.currency,
+        to_currency: to_account.currency
+      }
+    end
+  rescue ActiveRecord::RecordNotFound
+    render json: { error: "Account not found" }, status: :not_found
+  rescue ArgumentError
+    render json: { error: "Invalid date" }, status: :unprocessable_entity
+  end
+
   def show
     @categories = Current.family.categories.expenses
   end
@@ -18,7 +45,8 @@ class TransfersController < ApplicationController
       source_account_id: transfer_params[:from_account_id],
       destination_account_id: transfer_params[:to_account_id],
       date: Date.parse(transfer_params[:date]),
-      amount: transfer_params[:amount].to_d
+      amount: transfer_params[:amount].to_d,
+      exchange_rate: transfer_params[:exchange_rate]
     ).create
 
     if @transfer.persisted?
@@ -59,7 +87,7 @@ class TransfersController < ApplicationController
     end
 
     def transfer_params
-      params.require(:transfer).permit(:from_account_id, :to_account_id, :amount, :date, :name, :excluded)
+      params.require(:transfer).permit(:from_account_id, :to_account_id, :amount, :date, :name, :excluded, :exchange_rate)
     end
 
     def transfer_update_params
