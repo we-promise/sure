@@ -56,7 +56,7 @@
           frame: :modal
         ) %>
       <% elsif !account.pending_deletion? %>
-        <%= render DS::Menu.new(icon_vertical: true, mobile_fullwidth: false) do |menu| %>
+        <%= render DS::Menu.new(icon_vertical: true, mobile_fullwidth: false, max_width: "280px") do |menu| %>
           <% menu.with_item(variant: "link", text: t("accounts.account.edit"), href: edit_account_path(account, return_to: return_to), icon: "pencil-line", data: { turbo_frame: :modal }) %>
 
           <% if !account.linked? && %w[Depository CreditCard Investment Crypto].include?(account.accountable_type) %>
