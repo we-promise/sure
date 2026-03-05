@@ -21,7 +21,7 @@
           <div class="flex items-center gap-1.5">
             <%= link_to account.name, account, class: [(account.active? ? "text-primary" : "text-subdued"), "text-sm font-medium hover:underline"], data: { turbo_frame: "_top" } %>
 
-            <% if account.institution_name %>
+            <% if account.institution_name.present? %>
               <span class="hidden sm:inline text-secondary">• <%= account.institution_name %></span>
             <% end %>
           </div>
@@ -31,7 +31,7 @@
           <% if account.supports_default? && is_default %>
             <p class="text-xs text-secondary opacity-50"><%= t("accounts.account.default_label") %></p>
           <% end %>
-          <% if account.institution_name %>
+          <% if account.institution_name.present? %>
             <p class="sm:hidden text-sm text-secondary truncate"><%= account.institution_name %></p>
           <% end %>
         <% end %>
@@ -73,7 +73,8 @@
             <% menu.with_item(variant: "button", text: t("accounts.account.enable"), href: toggle_active_account_path(account), method: :patch, icon: "toggle-left", data: { turbo_frame: :_top }) %>
           <% end %>
 
-          <% if account.supports_default? %>
+          <% can_be_default = account.supports_default? && account.active? && !account.linked? %>
+          <% if can_be_default || is_default %>
             <% if is_default %>
               <% menu.with_custom_content do %>
                 <div class="px-1">
