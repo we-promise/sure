@@ -17,7 +17,7 @@ es:
     create:
       success: "Cuenta %{type} creada"
     set_default:
-      depository_only: "Solo las cuentas de efectivo pueden establecerse como predeterminadas."
+      depository_only: "Solo las cuentas de efectivo y tarjeta de crédito pueden establecerse como predeterminadas."
     destroy:
       success: "Cuenta %{type} programada para eliminación"
       cannot_delete_linked: "No se puede eliminar una cuenta vinculada. Por favor, desvincúlela primero."

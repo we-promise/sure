@@ -17,7 +17,7 @@ en:
     create:
       success: "%{type} account created"
     set_default:
-      depository_only: "Only cash accounts can be set as default."
+      depository_only: "Only cash and credit card accounts can be set as default."
     destroy:
       success: "%{type} account scheduled for deletion"
       cannot_delete_linked: "Cannot delete a linked account. Please unlink it first."

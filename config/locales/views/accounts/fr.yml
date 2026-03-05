@@ -17,7 +17,7 @@ fr:
     create:
       success: "Compte %{type} créé"
     set_default:
-      depository_only: "Seuls les comptes de liquidités peuvent être définis par défaut."
+      depository_only: "Seuls les comptes de liquidités et de carte de crédit peuvent être définis par défaut."
     destroy:
       success: "Le compte %{type} a été préparé à la suppression"
       cannot_delete_linked: "Impossible de supprimer un compte lié. Veuillez d'abord le délier."
