@@ -73,7 +73,7 @@
             <% menu.with_item(variant: "button", text: t("accounts.account.enable"), href: toggle_active_account_path(account), method: :patch, icon: "toggle-left", data: { turbo_frame: :_top }) %>
           <% end %>
 
-          <% can_be_default = account.supports_default? && account.active? && !account.linked? %>
+          <% can_be_default = account.eligible_for_transaction_default? %>
           <% if can_be_default || is_default %>
             <% if is_default %>
               <% menu.with_custom_content do %>

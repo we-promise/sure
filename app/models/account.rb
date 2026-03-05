@@ -314,6 +314,10 @@ class Account < ApplicationRecord
     depository? || credit_card?
   end
 
+  def eligible_for_transaction_default?
+    supports_default? && active? && !linked?
+  end
+
   # Determines if this account supports manual trade entry
   # Investment accounts always support trades; Crypto only if subtype is "exchange"
   def supports_trades?
