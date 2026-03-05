@@ -28,7 +28,7 @@
           <% if account.long_subtype_label %>
             <p class="text-sm text-secondary truncate"><%= account.long_subtype_label %></p>
           <% end %>
-          <% if account.depository? && is_default %>
+          <% if account.supports_default? && is_default %>
             <p class="text-xs text-secondary opacity-50"><%= t("accounts.account.default_label") %></p>
           <% end %>
           <% if account.institution_name %>
@@ -73,7 +73,7 @@
             <% menu.with_item(variant: "button", text: t("accounts.account.enable"), href: toggle_active_account_path(account), method: :patch, icon: "toggle-left", data: { turbo_frame: :_top }) %>
           <% end %>
 
-          <% if account.depository? %>
+          <% if account.supports_default? %>
             <% if is_default %>
               <% menu.with_custom_content do %>
                 <div class="px-1">

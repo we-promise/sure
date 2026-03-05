@@ -90,7 +90,7 @@ class AccountsController < ApplicationController
   end
 
   def set_default
-    unless @account.depository?
+    unless @account.supports_default?
       redirect_to accounts_path, alert: t("accounts.set_default.depository_only")
       return
     end
