@@ -2,14 +2,22 @@
 fr:
   accounts:
     account:
+      edit: Modifier
       link_lunchflow: Lier avec Lunch Flow
       link_provider: Lier avec un fournisseur
       unlink_provider: Délier du fournisseur
       troubleshoot: Dépannage
+      enable: Activer le compte
+      disable: Désactiver le compte
+      set_default: Définir par défaut
+      default_label: Par défaut
+      delete: Supprimer le compte
     chart:
       data_not_available: Données non disponibles pour la période sélectionnée
     create:
       success: "Compte %{type} créé"
+    set_default:
+      depository_only: "Seuls les comptes de liquidités peuvent être définis par défaut."
     destroy:
       success: "Le compte %{type} a été préparé à la suppression"
       cannot_delete_linked: "Impossible de supprimer un compte lié. Veuillez d'abord le délier."

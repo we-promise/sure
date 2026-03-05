@@ -90,6 +90,11 @@ class AccountsController < ApplicationController
   end
 
   def set_default
+    unless @account.depository?
+      redirect_to accounts_path, alert: t("accounts.set_default.depository_only")
+      return
+    end
+
     Current.user.update!(default_account: @account)
     redirect_to accounts_path
   end
