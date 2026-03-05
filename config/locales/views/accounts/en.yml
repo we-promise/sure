@@ -2,10 +2,14 @@
 en:
   accounts:
     account:
+      edit: Edit
       link_lunchflow: Link with Lunch Flow
       link_provider: Link with provider
       unlink_provider: Unlink from provider
       troubleshoot: Troubleshoot
+      enable: Enable account
+      disable: Disable account
+      set_default: Set as default
     chart:
       data_not_available: Data not available for the selected period
     create:
