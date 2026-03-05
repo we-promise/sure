@@ -1,6 +1,6 @@
 <%# locals: (account:, return_to: nil) %>
 
-<% is_default = Current.user.default_account_id == account.id %>
+<% is_default = Current.user&.default_account_id == account.id %>
 
 <%= turbo_frame_tag dom_id(account) do %>
   <div class="relative p-4 flex items-center justify-between gap-3 group/account hover:bg-surface-hover">
