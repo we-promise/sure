@@ -33,7 +33,7 @@ module Api
         # Validate password
         password_errors = validate_password(params[:user][:password])
         if password_errors.any?
-          render json: { errors: password_errors }, status: :unprocessable_entity
+          render json: { error: "Validation failed", errors: password_errors }, status: :unprocessable_entity
           return
         end
 
