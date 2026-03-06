@@ -33,12 +33,19 @@ class InvitationsController < ApplicationController
   end
 
   def accept
-    @invitation = Invitation.find_by!(token: params[:id])
+    @invitation = Invitation.find_by(token: params[:id])
 
-    if @invitation.pending?
+    if @invitation.nil?
+      raise ActiveRecord::RecordNotFound
+    elsif @invitation.pending?
       render :accept_choice, layout: "auth"
     else
-      raise ActiveRecord::RecordNotFound
+      # Invitation exists but is either expired or already accepted
+      if @invitation.expires_at < Time.current
+        render :expired, layout: "auth"
+      else
+        render :already_accepted, layout: "auth"
+      end
     end
   end
 
