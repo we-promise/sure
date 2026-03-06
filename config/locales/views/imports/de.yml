@@ -8,8 +8,18 @@ de:
         errors_notice_mobile: Deine Daten enthalten Fehler. Tippe auf den Fehler-Tooltip, um Details zu sehen.
         title: Daten bereinigen
     configurations:
+      update:
+        success: Import wurde erfolgreich konfiguriert.
+      category_import:
+        button_label: Weiter
+        description: Lade eine einfache CSV-Datei hoch (z. B. wie bei einem Export). Die Spalten werden automatisch zugeordnet.
+        instructions: Wähle Weiter, um die CSV zu parsen und zum Bereinigungsschritt zu gelangen.
       mint_import:
         date_format_label: Datumsformat
+      rule_import:
+        description: Konfigurieren Sie den Regel-Import. Regeln werden basierend auf den CSV-Daten erstellt oder aktualisiert.
+        process_button: Regeln verarbeiten
+        process_help: Klicken Sie unten, um Ihre CSV zu verarbeiten und Regelzeilen zu erzeugen.
       show:
         description: Wähle die Spalten aus, die den jeweiligen Feldern in deiner CSV entsprechen.
         title: Import konfigurieren
@@ -17,6 +27,7 @@ de:
         date_format_label: Datumsformat
       transaction_import:
         date_format_label: Datumsformat
+        rows_to_skip_label: Erste n Zeilen überspringen
     confirms:
       mappings:
         create_account: Konto erstellen
@@ -71,12 +82,61 @@ de:
     new:
       description: Du kannst verschiedene Datentypen manuell über CSV importieren oder eine unserer Importvorlagen wie Mint verwenden.
       import_accounts: Konten importieren
+      import_categories: Kategorien importieren
+      import_file: Dokument importieren
+      import_file_description: KI-gestützte Analyse für PDFs und durchsuchbarer Upload für weitere Formate
       import_mint: Von Mint importieren
       import_portfolio: Investitionen importieren
+      import_rules: Regeln importieren
       import_transactions: Transaktionen importieren
+      requires_account: Importiere zuerst Konten, um diese Option zu nutzen.
       resume: "%{type} fortsetzen"
       sources: Quellen
       title: Neuer CSV-Import
+    create:
+      file_too_large: Datei ist zu groß. Maximale Größe %{max_size} MB.
+      invalid_file_type: Ungültiger Dateityp. Bitte laden Sie eine CSV-Datei hoch.
+      csv_uploaded: CSV wurde erfolgreich hochgeladen.
+      pdf_too_large: PDF ist zu groß. Maximale Größe %{max_size} MB.
+      pdf_processing: Ihre PDF wird verarbeitet. Sie erhalten eine E-Mail, wenn die Analyse abgeschlossen ist.
+      invalid_pdf: Die hochgeladene Datei ist keine gültige PDF.
+      document_too_large: Dokument ist zu groß. Maximale Größe %{max_size} MB.
+      invalid_document_file_type: Ungültiger Dokumenttyp für den aktiven Vektorspeicher.
+      document_uploaded: Dokument wurde erfolgreich hochgeladen.
+      document_upload_failed: Das Dokument konnte nicht in den Vektorspeicher hochgeladen werden. Bitte versuchen Sie es erneut.
+      document_provider_not_configured: Kein Vektorspeicher für Dokument-Uploads konfiguriert.
+    show:
+      finalize_upload: Bitte schließen Sie den Datei-Upload ab.
+      finalize_mappings: Bitte schließen Sie die Zuordnungen ab, bevor Sie fortfahren.
+    errors:
+      custom_column_requires_inflow: "Bei benutzerdefinierten Spalten muss eine Einnahmen-Spalte ausgewählt werden."
+    document_types:
+      bank_statement: Kontoauszug
+      credit_card_statement: Kreditkartenabrechnung
+      investment_statement: Wertpapierabrechnung
+      financial_document: Finanzdokument
+      contract: Vertrag
+      other: Sonstiges Dokument
+      unknown: Unbekanntes Dokument
+    pdf_import:
+      processing_title: Ihre PDF wird verarbeitet
+      processing_description: Wir analysieren Ihr Dokument mit KI. Das kann einen Moment dauern. Sie erhalten eine E-Mail, wenn die Analyse abgeschlossen ist.
+      check_status: Status prüfen
+      back_to_dashboard: Zurück zur Übersicht
+      failed_title: Verarbeitung fehlgeschlagen
+      failed_description: Ihre PDF konnte nicht verarbeitet werden. Bitte versuchen Sie es erneut oder kontaktieren Sie den Support.
+      try_again: Erneut versuchen
+      delete_import: Import löschen
+      complete_title: Dokument analysiert
+      complete_description: Wir haben Ihre PDF analysiert – hier ist das Ergebnis.
+      document_type_label: Dokumenttyp
+      summary_label: Zusammenfassung
+      email_sent_notice: Sie haben eine E-Mail mit den nächsten Schritten erhalten.
+      back_to_imports: Zurück zu Importen
+      unknown_state_title: Unbekannter Status
+      unknown_state_description: Dieser Import befindet sich in einem unerwarteten Zustand. Bitte kehren Sie zu den Importen zurück.
+      processing_failed_with_message: "%{message}"
+      processing_failed_generic: "Verarbeitung fehlgeschlagen: %{error}"
     ready:
       description: Hier ist eine Zusammenfassung der neuen Elemente, die deinem Konto hinzugefügt werden, sobald du diesen Import veröffentlichst.
       title: Importdaten bestätigen

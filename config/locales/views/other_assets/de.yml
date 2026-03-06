@@ -3,5 +3,7 @@ de:
   other_assets:
     edit:
       edit: "%{account} bearbeiten"
+      balance_tracking_info: "Sonstige Vermögenswerte werden über manuelle Bewertungen („Neuer Saldo“) erfasst, nicht über Buchungen. Cashflow ändert den Kontostand nicht."
     new:
       title: Vermögenswertdetails eingeben
+      balance_tracking_info: "Sonstige Vermögenswerte werden über manuelle Bewertungen („Neuer Saldo“) erfasst, nicht über Buchungen. Cashflow ändert den Kontostand nicht."

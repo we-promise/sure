@@ -1,0 +1,188 @@
+---
+de:
+  snaptrade_items:
+    default_name: "SnapTrade-Verbindung"
+    create:
+      success: "SnapTrade wurde erfolgreich eingerichtet."
+    update:
+      success: "SnapTrade-Konfiguration wurde erfolgreich aktualisiert."
+    destroy:
+      success: "SnapTrade-Verbindung wurde zur Löschung vorgemerkt."
+    connect:
+      decryption_failed: "SnapTrade-Zugangsdaten konnten nicht gelesen werden. Bitte löschen Sie die Verbindung und legen Sie sie neu an."
+      connection_failed: "Verbindung zu SnapTrade fehlgeschlagen: %{message}"
+    callback:
+      success: "Broker verbunden! Bitte wählen Sie die zu verknüpfenden Konten."
+      no_item: "SnapTrade-Konfiguration nicht gefunden."
+    complete_account_setup:
+      success:
+        one: "%{count} Konto erfolgreich verknüpft."
+        other: "%{count} Konten erfolgreich verknüpft."
+      partial_success: "%{linked} Konto/Konten verknüpft. %{failed} Verknüpfung(en) fehlgeschlagen."
+      link_failed: "Konten konnten nicht verknüpft werden: %{errors}"
+      no_accounts: "Es wurden keine Konten zur Verknüpfung ausgewählt."
+    preload_accounts:
+      not_configured: "SnapTrade ist nicht konfiguriert."
+    select_accounts:
+      not_configured: "SnapTrade ist nicht konfiguriert."
+    select_existing_account:
+      not_found: "Konto oder SnapTrade-Konfiguration nicht gefunden."
+      title: "Mit SnapTrade-Konto verknüpfen"
+      header: "Bestehendes Konto verknüpfen"
+      subtitle: "Wählen Sie ein SnapTrade-Konto zur Verknüpfung"
+      no_accounts: "Keine unverknüpften SnapTrade-Konten verfügbar."
+      connect_hint: "Möglicherweise müssen Sie zuerst einen Broker verbinden."
+      settings_link: "Zu den Provider-Einstellungen"
+      linking_to: "Verknüpfe mit Konto:"
+      balance_label: "Saldo:"
+      link_button: "Verknüpfen"
+      cancel_button: "Abbrechen"
+    link_existing_account:
+      success: "Erfolgreich mit SnapTrade-Konto verknüpft."
+      failed: "Verknüpfung fehlgeschlagen: %{message}"
+      not_found: "Konto nicht gefunden."
+    connections:
+      unknown_brokerage: "Unbekannter Broker"
+    delete_connection:
+      success: "Verbindung erfolgreich gelöscht. Ein Platz ist frei."
+      failed: "Löschen der Verbindung fehlgeschlagen: %{message}"
+      missing_authorization_id: "Autorisierungs-ID fehlt"
+      api_deletion_failed: "Verbindung konnte bei SnapTrade nicht gelöscht werden – Zugangsdaten fehlen. Die Verbindung kann in Ihrem SnapTrade-Konto noch existieren."
+    delete_orphaned_user:
+      success: "Verwaiste Registrierung wurde erfolgreich gelöscht."
+      failed: "Löschen der verwaisten Registrierung fehlgeschlagen."
+    setup_accounts:
+      title: "SnapTrade-Konten einrichten"
+      header: "SnapTrade-Konten einrichten"
+      subtitle: "Wählen Sie die zu verknüpfenden Broker-Konten"
+      syncing: "Ihre Konten werden abgerufen..."
+      loading: "Konten werden von SnapTrade geladen..."
+      loading_hint: "Klicken Sie auf Aktualisieren, um nach Konten zu suchen."
+      refresh: "Aktualisieren"
+      info_title: "SnapTrade-Anlagedaten"
+      info_holdings: "Bestände mit aktuellen Preisen und Mengen"
+      info_cost_basis: "Einstandskosten pro Position (falls verfügbar)"
+      info_activities: "Handelshistorie mit Aktivitätslabels (Kaufen, Verkaufen, Dividende usw.)"
+      info_history: "Bis zu 3 Jahre Buchungshistorie"
+      free_tier_note: "SnapTrade Free Tier erlaubt 5 Broker-Verbindungen. Nutzung im SnapTrade-Dashboard prüfen."
+      no_accounts_title: "Keine Konten gefunden"
+      no_accounts_message: "Es wurden keine Broker-Konten gefunden. Das kann passieren, wenn Sie die Verbindung abgebrochen haben oder Ihr Broker nicht unterstützt wird."
+      try_again: "Broker verbinden"
+      back_to_settings: "Zurück zu Einstellungen"
+      available_accounts: "Verfügbare Konten"
+      balance_label: "Saldo:"
+      account_number: "Konto:"
+      create_button: "Ausgewählte Konten anlegen"
+      cancel_button: "Abbrechen"
+      creating: "Konten werden angelegt..."
+      done_button: "Fertig"
+      or_link_existing: "Oder mit einem bestehenden Konto verknüpfen statt neu anlegen:"
+      select_account: "Konto auswählen..."
+      link_button: "Verknüpfen"
+      linked_accounts: "Bereits verknüpft"
+      linked_to: "Verknüpft mit:"
+    snaptrade_item:
+      accounts_need_setup:
+        one: "%{count} Konto muss eingerichtet werden"
+        other: "%{count} Konten müssen eingerichtet werden"
+      deletion_in_progress: "Löschung läuft..."
+      syncing: "Synchronisiere..."
+      requires_update: "Verbindung muss aktualisiert werden"
+      error: "Sync-Fehler"
+      status: "Zuletzt synchronisiert vor %{timestamp} – %{summary}"
+      status_never: "Noch nie synchronisiert"
+      reconnect: "Erneut verbinden"
+      connect_brokerage: "Broker verbinden"
+      add_another_brokerage: "Weiteren Broker verbinden"
+      delete: "Löschen"
+      setup_needed: "Konten müssen eingerichtet werden"
+      setup_description: "Einige Konten von SnapTrade müssen Sure-Konten zugeordnet werden."
+      setup_action: "Konten einrichten"
+      setup_accounts_menu: "Konten einrichten"
+      manage_connections: "Verbindungen verwalten"
+      more_accounts_available:
+        one: "%{count} weiteres Konto kann eingerichtet werden"
+        other: "%{count} weitere Konten können eingerichtet werden"
+      no_accounts_title: "Keine Konten gefunden"
+      no_accounts_description: "Verbinden Sie einen Broker, um Ihre Anlagekonten zu importieren."
+
+  providers:
+    snaptrade:
+      name: "SnapTrade"
+      connection_description: "Verbinden Sie Ihren Broker über SnapTrade (25+ Broker unterstützt)"
+      description: "SnapTrade verbindet mit 25+ großen Brokern (Fidelity, Vanguard, Schwab, Robinhood usw.) und liefert vollständige Handelshistorie mit Aktivitätslabels und Einstandskosten."
+      setup_title: "Einrichtungsanleitung:"
+      step_1_html: "Konto erstellen unter <a href=\"https://dashboard.snaptrade.com\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"text-primary underline\">dashboard.snaptrade.com</a>"
+      step_2: "Client ID und Consumer Key aus dem Dashboard kopieren"
+      step_3: "Zugangsdaten unten eintragen und auf Speichern klicken"
+      step_4: "Auf die Konten-Seite gehen und „Weiteren Broker verbinden“ nutzen, um Ihre Anlagekonten zu verknüpfen"
+      free_tier_warning: "Free Tier enthält 5 Broker-Verbindungen. Weitere erfordern einen kostenpflichtigen SnapTrade-Plan."
+      client_id_label: "Client ID"
+      client_id_placeholder: "SnapTrade Client ID eingeben"
+      client_id_update_placeholder: "Neue Client ID zum Aktualisieren eingeben"
+      consumer_key_label: "Consumer Key"
+      consumer_key_placeholder: "SnapTrade Consumer Key eingeben"
+      consumer_key_update_placeholder: "Neuen Consumer Key zum Aktualisieren eingeben"
+      save_button: "Konfiguration speichern"
+      update_button: "Konfiguration aktualisieren"
+      status_connected:
+        one: "%{count} Konto von SnapTrade"
+        other: "%{count} Konten von SnapTrade"
+      needs_setup:
+        one: "%{count} muss eingerichtet werden"
+        other: "%{count} müssen eingerichtet werden"
+      status_ready: "Bereit zum Verbinden von Brokern"
+      status_needs_registration: "Zugangsdaten gespeichert. Gehen Sie zur Konten-Seite, um Broker zu verbinden."
+      status_not_configured: "Nicht konfiguriert"
+      setup_accounts_button: "Konten einrichten"
+      connect_button: "Broker verbinden"
+      connected_brokerages: "Verbunden:"
+      manage_connections: "Verbindungen verwalten"
+      connection_limit_info: "SnapTrade Free Tier erlaubt 5 Broker-Verbindungen. Löschen Sie ungenutzte Verbindungen, um Plätze freizugeben."
+      loading_connections: "Verbindungen werden geladen..."
+      connections_error: "Verbindungen konnten nicht geladen werden: %{message}"
+      accounts_count:
+        one: "%{count} Konto"
+        other: "%{count} Konten"
+      orphaned_connection: "Verwaiste Verbindung (lokal nicht synchronisiert)"
+      needs_linking: "muss verknüpft werden"
+      no_connections: "Keine Broker-Verbindungen gefunden."
+      delete_connection: "Löschen"
+      delete_connection_title: "Broker-Verbindung löschen?"
+      delete_connection_body: "Die Verbindung zu %{brokerage} wird dauerhaft von SnapTrade entfernt. Alle Konten dieses Brokers werden getrennt. Zum erneuten Sync müssen Sie sich wieder verbinden."
+      delete_connection_confirm: "Verbindung löschen"
+      orphaned_users_title:
+        one: "%{count} verwaiste Registrierung"
+        other: "%{count} verwaiste Registrierungen"
+      orphaned_users_description: "Das sind frühere SnapTrade-Registrierungen, die Ihre Verbindungsplätze belegen. Löschen Sie sie, um Plätze freizugeben."
+      orphaned_user: "Verwaiste Registrierung"
+      delete_orphaned_user: "Löschen"
+      delete_orphaned_user_title: "Verwaiste Registrierung löschen?"
+      delete_orphaned_user_body: "Diese verwaiste SnapTrade-Registrierung und alle zugehörigen Broker-Verbindungen werden dauerhaft gelöscht, Verbindungsplätze werden frei."
+      delete_orphaned_user_confirm: "Registrierung löschen"
+
+  snaptrade_item:
+    sync_status:
+      no_accounts: "Keine Konten gefunden"
+      synced:
+        one: "%{count} Konto synchronisiert"
+        other: "%{count} Konten synchronisiert"
+      synced_with_setup: "%{linked} synchronisiert, %{unlinked} müssen eingerichtet werden"
+    institution_summary:
+      none: "Keine Institute verbunden"
+      count:
+        one: "%{count} Institut"
+        other: "%{count} Institute"
+    brokerage_summary:
+      none: "Keine Broker verbunden"
+      count:
+        one: "%{count} Broker"
+        other: "%{count} Broker"
+    syncer:
+      discovering: "Konten werden ermittelt..."
+      importing: "Konten werden von SnapTrade importiert..."
+      processing: "Bestände und Aktivitäten werden verarbeitet..."
+      calculating: "Salden werden berechnet..."
+      checking_config: "Kontokonfiguration wird geprüft..."
+      needs_setup: "%{count} Konten müssen eingerichtet werden..."
+      activities_fetching_async: "Aktivitäten werden im Hintergrund geladen. Bei neuen Broker-Verbindungen kann das bis zu einer Minute dauern."

@@ -3,5 +3,18 @@ de:
   cryptos:
     edit:
       edit: "%{account} bearbeiten"
+    form:
+      subtype_label: Kontotyp
+      subtype_prompt: Typ auswählen...
+      subtype_none: Nicht angegeben
+      tax_treatment_label: Steuerbehandlung
+      tax_treatment_hint: Die meisten Kryptowährungen werden in versteuerten Konten gehalten. Wählen Sie eine andere Option bei steuerbegünstigten Konten (z. B. selbst verwaltetes IRA).
     new:
       title: Kontostand eingeben
+    subtypes:
+      wallet:
+        short: Wallet
+        long: Krypto-Wallet
+      exchange:
+        short: Börse
+        long: Krypto-Börse
