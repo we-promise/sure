@@ -159,7 +159,9 @@ end
     totals = OpenStruct.new(
       count: 1,
       expense_money: Money.new(10000, "USD"),
-      income_money: Money.new(0, "USD")
+      income_money: Money.new(0, "USD"),
+      transfer_inflow_money: Money.new(0, "USD"),
+      transfer_outflow_money: Money.new(0, "USD")
     )
 
     Transaction::Search.expects(:new).with(family, filters: {}).returns(search)
@@ -181,7 +183,9 @@ end
     totals = OpenStruct.new(
       count: 1,
       expense_money: Money.new(10000, "USD"),
-      income_money: Money.new(0, "USD")
+      income_money: Money.new(0, "USD"),
+      transfer_inflow_money: Money.new(0, "USD"),
+      transfer_outflow_money: Money.new(0, "USD")
     )
 
     Transaction::Search.expects(:new).with(family, filters: { "categories" => [ "Food" ], "types" => [ "expense" ] }).returns(search)

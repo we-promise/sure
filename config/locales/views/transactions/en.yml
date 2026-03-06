@@ -88,6 +88,12 @@ en:
     dismiss_duplicate:
       success: Kept as separate transactions
       failure: Could not dismiss duplicate suggestion
+    summary:
+      total_transactions: Total transactions
+      income: Income
+      expenses: Expenses
+      inflow: Inflow
+      outflow: Outflow
     header:
       edit_categories: Edit categories
       edit_imports: Edit imports
