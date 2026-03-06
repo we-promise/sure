@@ -65,10 +65,19 @@
                 </div>
               </div>
               <div class="flex items-center gap-4 shrink-0">
-                <span class="text-xs text-secondary">
-                  <%= t(".table.trial_ends_at") %>:
-                  <%= family.subscription&.trial_ends_at&.to_fs(:long) || t(".not_available") %>
-                </span>
+                <% sub = family.subscription %>
+                <% if sub&.trialing? %>
+                  <span class="text-xs text-secondary">
+                    <%= t(".table.trial_ends_at") %>: <%= sub.trial_ends_at&.to_fs(:long) || t(".not_available") %>
+                  </span>
+                <% elsif sub %>
+                  <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium
+                    <%= sub.active? ? 'bg-green-100 text-green-800' : 'bg-surface text-secondary' %>">
+                    <%= sub.status.humanize %>
+                  </span>
+                <% else %>
+                  <span class="text-xs text-secondary"><%= t(".no_subscription") %></span>
+                <% end %>
                 <%= icon "chevron-down", class: "w-4 h-4 text-secondary transition-transform group-open:rotate-180" %>
               </div>
             </summary>

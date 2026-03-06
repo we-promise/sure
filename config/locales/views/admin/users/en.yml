@@ -11,6 +11,7 @@ en:
         not_available: "n/a"
         no_users: "No users found."
         unnamed_family: "Unnamed Family/Group"
+        no_subscription: "No subscription"
         family_summary: "%{members} members · %{accounts} accounts · %{transactions} transactions"
         filters:
           role: "Role"
