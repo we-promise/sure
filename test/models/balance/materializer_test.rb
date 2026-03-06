@@ -61,6 +61,60 @@ class Balance::MaterializerTest < ActiveSupport::TestCase
     assert_balance_fields_persisted(expected_balances)
   end
 
+  test "incremental sync preserves balances before window_start_date and purges only beyond calc_end_date" do
+    # Add an opening anchor so opening_anchor_date is well in the past.
+    @account.entries.create!(
+      name: "Opening Balance",
+      date: 10.days.ago.to_date,
+      amount: 5000,
+      currency: "USD",
+      entryable: Valuation.new(kind: "opening_anchor")
+    )
+
+    preserved_old  = create_balance(account: @account, date: 5.days.ago.to_date, balance: 10000)
+    preserved_mid  = create_balance(account: @account, date: 3.days.ago.to_date, balance: 12000)
+    stale_future   = create_balance(account: @account, date: 5.days.from_now.to_date, balance: 99000)
+
+    # Calculator returns only the window being recalculated (2.days.ago).
+    recalculated = [
+      Balance.new(
+        date: 2.days.ago.to_date,
+        balance: 15000,
+        cash_balance: 15000,
+        currency: "USD",
+        start_cash_balance: 12000,
+        start_non_cash_balance: 0,
+        cash_inflows: 3000,
+        cash_outflows: 0,
+        non_cash_inflows: 0,
+        non_cash_outflows: 0,
+        net_market_flows: 0,
+        cash_adjustments: 0,
+        non_cash_adjustments: 0,
+        flows_factor: 1
+      )
+    ]
+
+    Balance::ForwardCalculator.any_instance.expects(:calculate).returns(recalculated)
+    Holding::Materializer.any_instance.expects(:materialize_holdings).returns([]).once
+
+    Balance::Materializer.new(@account, strategy: :forward, window_start_date: 2.days.ago.to_date).materialize_balances
+
+    # Balances before window_start_date must be preserved.
+    assert_not_nil @account.balances.find_by(id: preserved_old.id),
+      "Balance at 5.days.ago should be preserved (before window_start_date)"
+    assert_not_nil @account.balances.find_by(id: preserved_mid.id),
+      "Balance at 3.days.ago should be preserved (before window_start_date)"
+
+    # Balance after calc_end_date must be purged.
+    assert_nil @account.balances.find_by(id: stale_future.id),
+      "Balance at 5.days.from_now should be purged (after calc_end_date)"
+
+    # Recalculated balance must be present.
+    assert_not_nil @account.balances.find_by(date: 2.days.ago.to_date),
+      "Recalculated balance for 2.days.ago should be persisted"
+  end
+
   test "purges stale balances outside calculated range" do
     # Create existing balances that will be stale
     stale_old = create_balance(account: @account, date: 5.days.ago.to_date, balance: 5000)

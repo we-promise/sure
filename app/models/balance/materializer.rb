@@ -1,10 +1,11 @@
 class Balance::Materializer
   attr_reader :account, :strategy, :security_ids
 
-  def initialize(account, strategy:, security_ids: nil)
+  def initialize(account, strategy:, security_ids: nil, window_start_date: nil)
     @account = account
     @strategy = strategy
     @security_ids = security_ids
+    @window_start_date = window_start_date
   end
 
   def materialize_balances
@@ -74,9 +75,19 @@ class Balance::Materializer
 
     def purge_stale_balances
       sorted_balances = @balances.sort_by(&:date)
-      oldest_calculated_balance_date = sorted_balances.first&.date
       newest_calculated_balance_date = sorted_balances.last&.date
-      deleted_count = account.balances.delete_by("date < ? OR date > ?", oldest_calculated_balance_date, newest_calculated_balance_date)
+
+      # In incremental forward-sync mode we only recalculate from window_start_date
+      # onward, so balances before that date are still valid. Use the full account
+      # range start (opening_anchor_date) as the lower purge bound so those
+      # preserved balances are not deleted.
+      oldest_valid_date = if @window_start_date.present? && strategy == :forward
+        account.opening_anchor_date
+      else
+        sorted_balances.first&.date
+      end
+
+      deleted_count = account.balances.delete_by("date < ? OR date > ?", oldest_valid_date, newest_calculated_balance_date)
       Rails.logger.info("Purged #{deleted_count} stale balances") if deleted_count > 0
     end
 
@@ -84,7 +95,7 @@ class Balance::Materializer
       if strategy == :reverse
         Balance::ReverseCalculator.new(account)
       else
-        Balance::ForwardCalculator.new(account)
+        Balance::ForwardCalculator.new(account, window_start_date: @window_start_date)
       end
     end
 end
