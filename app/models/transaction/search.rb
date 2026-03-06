@@ -48,7 +48,7 @@ class Transaction::Search
   # because those transactions are retirement savings, not daily income/expenses.
   def totals
     @totals ||= begin
-      Rails.cache.fetch("transaction_search_totals/#{cache_key_base}") do
+      Rails.cache.fetch("transaction_search_totals/v2/#{cache_key_base}") do
         scope = transactions_scope
 
         # Exclude tax-advantaged accounts from totals calculation
