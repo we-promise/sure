@@ -13,7 +13,7 @@ module Admin
       scope = scope.where(role: params[:role]) if params[:role].present?
       scope = apply_trial_filter(scope) if params[:trial_status].present?
 
-      @users = scope.order(
+      users = scope.order(
         Arel.sql(
           "CASE " \
           "WHEN subscriptions.status = 'trialing' THEN 0 " \
@@ -23,13 +23,17 @@ module Admin
         )
       )
 
-      family_ids = @users.map(&:family_id).uniq
+      family_ids = users.map(&:family_id).uniq
       @accounts_count_by_family = Account.where(family_id: family_ids).group(:family_id).count
       @entries_count_by_family = Entry.joins(:account).where(accounts: { family_id: family_ids }).group("accounts.family_id").count
 
-      user_ids = @users.map(&:id).uniq
+      user_ids = users.map(&:id).uniq
       @last_login_by_user = Session.where(user_id: user_ids).group(:user_id).maximum(:created_at)
       @sessions_count_by_user = Session.where(user_id: user_ids).group(:user_id).count
+
+      @families_with_users = users.group_by(&:family).sort_by do |family, _users|
+        -(@entries_count_by_family[family.id] || 0)
+      end
 
       @trials_expiring_in_7_days = Subscription
         .where(status: :trialing)
