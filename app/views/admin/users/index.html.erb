@@ -50,7 +50,7 @@
     <% if @families_with_users.any? %>
       <div class="space-y-4">
         <% @families_with_users.each do |family, users| %>
-          <details class="bg-container-inset rounded-lg overflow-hidden group" open>
+          <details class="bg-container-inset rounded-lg overflow-hidden group">
             <summary class="flex items-center justify-between gap-4 px-4 py-3 cursor-pointer select-none hover:bg-surface-hover">
               <div class="flex items-center gap-3">
                 <%= icon "users", class: "w-5 h-5 text-secondary shrink-0" %>
@@ -137,7 +137,7 @@
     <% end %>
   </div>
 
-  <%= settings_section title: t(".role_descriptions_title"), collapsible: true, open: false do %>
+  <%= settings_section title: t(".role_descriptions_title"), collapsible: true, open: true do %>
     <div class="space-y-3 text-sm">
       <div class="flex items-start gap-3">
         <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-surface text-primary shrink-0">
