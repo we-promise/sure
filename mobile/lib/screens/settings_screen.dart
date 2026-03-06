@@ -8,6 +8,7 @@ import '../services/offline_storage_service.dart';
 import '../services/log_service.dart';
 import '../services/preferences_service.dart';
 import '../services/user_service.dart';
+import '../services/api_config.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -21,12 +22,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String? _appVersion;
   bool _isResettingAccount = false;
   bool _isDeletingAccount = false;
+  String? _selectedEnvironment;
 
   @override
   void initState() {
     super.initState();
     _loadPreferences();
     _loadAppVersion();
+    _loadSelectedEnvironment();
   }
 
   Future<void> _loadAppVersion() async {
@@ -37,6 +40,45 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ? '${packageInfo.version} (${build})'
           : packageInfo.version;
       setState(() => _appVersion = display);
+    }
+  }
+
+  Future<void> _loadSelectedEnvironment() async {
+    try {
+      final env = await ApiConfig.getCurrentEnvironment();
+      if (mounted) {
+        setState(() {
+          _selectedEnvironment = env ?? 'Staging';
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _selectedEnvironment = 'Staging';
+        });
+      }
+    }
+  }
+
+  Future<void> _changeEnvironment(String envName) async {
+    final success = await ApiConfig.setEnvironment(envName);
+    if (success && mounted) {
+      setState(() {
+        _selectedEnvironment = envName;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Switched to $envName environment'),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    } else if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Failed to change environment'),
+          duration: const Duration(seconds: 2),
+        ),
+      );
     }
   }
 
@@ -357,6 +399,39 @@ class _SettingsScreenState extends State<SettingsScreen> {
             onTap: () => _launchContactUrl(context),
           ),
 
+          const Divider(),
+
+          // Environment switcher
+          const Padding(
+            padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: Text(
+              'Environment',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey,
+              ),
+            ),
+          ),
+          
+          ListTile(
+            leading: const Icon(Icons.public),
+            title: const Text('Environment'),
+            subtitle: Text('Current: ${_selectedEnvironment ?? "Unknown"}'),
+            trailing: PopupMenuButton<String>(
+              onSelected: _changeEnvironment,
+              itemBuilder: (BuildContext context) {
+                return ApiConfig.presetEnvironments.keys.map((String envName) {
+                  return PopupMenuItem<String>(
+                    value: envName,
+                    child: Text(envName),
+                  );
+                }).toList();
+              },
+              child: const Icon(Icons.more_vert),
+            ),
+          ),
+          
           const Divider(),
 
           if (!AppConfig.isCompanion) ...[

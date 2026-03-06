@@ -25,10 +25,13 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _obscurePassword = true;
   late final TapGestureRecognizer _signUpTapRecognizer;
 
+  String? _selectedEnvironment;
+
   @override
   void initState() {
     super.initState();
     _signUpTapRecognizer = TapGestureRecognizer()..onTap = _openSignUpPage;
+    _loadSelectedEnvironment();
   }
 
   @override
@@ -38,6 +41,45 @@ class _LoginScreenState extends State<LoginScreen> {
     _passwordController.dispose();
     _otpController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadSelectedEnvironment() async {
+    try {
+      final env = await ApiConfig.getCurrentEnvironment();
+      if (mounted) {
+        setState(() {
+          _selectedEnvironment = env ?? 'Staging';
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _selectedEnvironment = 'Staging';
+        });
+      }
+    }
+  }
+
+  Future<void> _changeEnvironment(String envName) async {
+    final success = await ApiConfig.setEnvironment(envName);
+    if (success && mounted) {
+      setState(() {
+        _selectedEnvironment = envName;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Switched to $envName environment'),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    } else if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Failed to change environment'),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
   }
 
   Future<void> _openSignUpPage() async {
@@ -489,6 +531,30 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ],
                   ],
+                ),
+              ),
+            ),
+            // single environment button at top right
+            Positioned(
+              top: 8,
+              right: 8,
+              child: TextButton(
+                onPressed: () {
+                  if (_selectedEnvironment == null) return;
+                  final newEnv = _selectedEnvironment == 'Staging' ? 'Production' : 'Staging';
+                  _changeEnvironment(newEnv);
+                },
+                child: Text(
+                  _selectedEnvironment ?? 'Staging',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: colorScheme.primary,
+                  ),
+                ),
+                style: TextButton.styleFrom(
+                  minimumSize: const Size(0, 0),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
               ),
             ),

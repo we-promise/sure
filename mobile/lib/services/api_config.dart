@@ -1,19 +1,62 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiConfig {
+  // Predefined environments
+  static const String STAGING_ENV = 'https://companion-staging.chancen.tech';
+  static const String PRODUCTION_ENV = 'https://companion.chancen.tech';
+
   // Base URL for the API - can be changed to point to different environments
   // For local development, use: http://10.0.2.2:3000 (Android emulator)
   // For iOS simulator, use: http://localhost:3000
-  // For production, use your actual server URL
-  static const String _defaultBaseUrl = 'https://companion-staging.chancen.tech';
+  static const String _defaultBaseUrl = STAGING_ENV;
   static const String _backendUrlKey = 'backend_url';
+  static const String _environmentKey = 'app_environment';
   static String _baseUrl = _defaultBaseUrl;
+
+  // Available preset environments
+  static const Map<String, String> presetEnvironments = {
+    'Staging': STAGING_ENV,
+    'Production': PRODUCTION_ENV,
+  };
 
   static String get baseUrl => _baseUrl;
   static String get defaultBaseUrl => _defaultBaseUrl;
 
   static void setBaseUrl(String url) {
     _baseUrl = url;
+  }
+
+  /// Set environment by preset name (e.g., "Staging", "Production")
+  /// Returns true if successful, false if name is not found
+  static Future<bool> setEnvironment(String environmentName) async {
+    final url = presetEnvironments[environmentName];
+    if (url == null) return false;
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      _baseUrl = url;
+      await prefs.setString(_backendUrlKey, url);
+      await prefs.setString(_environmentKey, environmentName);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /// Get the current environment name (if using preset), or 'Custom' if using custom URL
+  static Future<String?> getCurrentEnvironment() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final savedEnv = prefs.getString(_environmentKey);
+      return savedEnv;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /// Check if current URL is a preset environment
+  static bool isPresetEnvironment() {
+    return presetEnvironments.containsValue(_baseUrl);
   }
 
   // API key authentication mode
@@ -48,6 +91,7 @@ class ApiConfig {
     try {
       final prefs = await SharedPreferences.getInstance();
       final savedUrl = prefs.getString(_backendUrlKey);
+      final savedEnv = prefs.getString(_environmentKey);
 
       if (savedUrl != null && savedUrl.isNotEmpty) {
         _baseUrl = savedUrl;
@@ -58,6 +102,10 @@ class ApiConfig {
       // go straight to login while still letting users override it later.
       _baseUrl = _defaultBaseUrl;
       await prefs.setString(_backendUrlKey, _defaultBaseUrl);
+      // Set default environment on first launch
+      if (savedEnv == null) {
+        await prefs.setString(_environmentKey, 'Staging');
+      }
       return true;
     } catch (e) {
       // If initialization fails, keep the default URL
