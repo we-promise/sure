@@ -153,6 +153,8 @@ en:
   helpers:
     select:
       prompt: Please select
+      search_placeholder: "Search"
+      default_label: "Select..."
     submit:
       create: Create %{model}
       submit: Save %{model}
