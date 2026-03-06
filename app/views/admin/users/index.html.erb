@@ -116,7 +116,7 @@
                         <% if user.id == Current.user.id %>
                           <span class="text-sm text-secondary"><%= t(".you") %></span>
                         <% else %>
-                          <%= form_with model: [:admin, user], method: :patch, class: "flex items-center justify-end gap-2" do |form| %>
+                          <%= form_with model: [:admin, user], method: :patch, class: "flex items-center justify-end gap-2", data: { controller: "auto-submit-form" } do |form| %>
                             <%= form.select :role,
                                 options_for_select([
                                   [t(".roles.guest"), "guest"],
@@ -126,7 +126,7 @@
                                 ], user.role),
                                 {},
                                 class: "text-sm rounded-lg border border-primary bg-container text-primary px-2 py-1",
-                                onchange: "this.form.requestSubmit()" %>
+                                data: { auto_submit_form_target: "auto" } %>
                           <% end %>
                         <% end %>
                       </td>
