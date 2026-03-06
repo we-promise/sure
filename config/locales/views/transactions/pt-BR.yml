@@ -1,6 +1,7 @@
 ---
 pt-BR:
   transactions:
+    unknown_name: Transação desconhecida
     form:
       account: Conta
       account_prompt: Selecione uma Conta
@@ -26,13 +27,18 @@ pt-BR:
       category_label: Categoria
       date_label: Data
       delete: Excluir
-      delete_subtitle: Isso exclui permanentemente a transação, afeta seus saldos históricos
-        e não pode ser desfeito.
+      delete_subtitle: Isso exclui permanentemente a transação, afeta seus saldos históricos e não pode ser desfeito.
       delete_title: Excluir transação
       details: Detalhes
-      mark_recurring: Marcar como Recorrente
-      mark_recurring_subtitle: Acompanhe como uma transação recorrente. A variação de valor é calculada automaticamente com base nos últimos 6 meses de transações similares.
-      mark_recurring_title: Transação Recorrente
+      exclude: Excluir
+      exclude_description: Transações excluídas serão removidas dos cálculos e relatórios de orçamento.
+      activity_type: Tipo de Atividade
+      activity_type_description: Tipo de atividade de investimento (Compra, Venda, Dividendo, etc.). Detectado automaticamente ou definido manualmente.
+      one_time_title: %{type} Única
+      one_time_description: Transações únicas serão excluídas de certos cálculos e relatórios de orçamento para ajudar você a ver o que é realmente importante.
+      convert_to_trade_title: Converter para Negociação de Ativo
+      convert_to_trade_description: Converter esta transação em uma negociação de Compra ou Venda com detalhes do ativo para acompanhamento de portfólio.
+      convert_to_trade_button: Converter para Negociação
       merchant_label: Comerciante
       name_label: Nome
       nature: Tipo
@@ -42,7 +48,45 @@ pt-BR:
       overview: Visão geral
       settings: Configurações
       tags_label: Tags
+      tab_transactions: Transações
+      tab_upcoming: Próximas
       uncategorized: "(sem categoria)"
+    activity_labels:
+      buy: Compra
+      sell: Venda
+      sweep_in: Resgate Automático (Sweep In)
+      sweep_out: Aplicação Automática (Sweep Out)
+      dividend: Dividendo
+      reinvestment: Reinvestimento
+      interest: Juros
+      fee: Taxa
+      transfer: Transferência
+      contribution: Aporte
+      withdrawal: Retirada
+      exchange: Câmbio
+      other: Outro
+    mark_recurring: Marcar como Recorrente
+    mark_recurring_subtitle: Acompanhe como uma transação recorrente. A variação de valor é calculada automaticamente com base nos últimos 6 meses de transações similares.
+    mark_recurring_title: Transação Recorrente
+    potential_duplicate_title: Possível duplicata detectada
+    potential_duplicate_description: Esta transação pendente pode ser a mesma que a transação confirmada abaixo. Se sim, mescle-as para evitar contagem dupla.
+    merge_duplicate: Sim, mesclar
+    keep_both: Não, manter ambas
+    transaction:
+      pending: Pendente
+      pending_tooltip: Transação pendente — pode mudar quando for confirmada
+      linked_with_plaid: Vinculada com o Plaid
+      activity_type_tooltip: Tipo de atividade de investimento
+      possible_duplicate: Duplicata?
+      potential_duplicate_tooltip: Esta pode ser uma duplicata de outra transação
+      review_recommended: Revisar
+      review_recommended_tooltip: Grande diferença de valor — recomenda-se revisar para verificar se é uma duplicata
+    merge_duplicate:
+      success: Transações mescladas com sucesso
+      failure: Não foi possível mesclar as transações
+    dismiss_duplicate:
+      success: Mantidas como transações separadas
+      failure: Não foi possível descartar a sugestão de duplicata
     header:
       edit_categories: Editar categorias
       edit_imports: Editar importações
@@ -52,6 +96,65 @@ pt-BR:
     index:
       transaction: transação
       transactions: transações
+      import: Importar
+    list:
+      drag_drop_title: Arraste o CSV para importar
+      drag_drop_subtitle: Faça o upload de transações diretamente
+      transaction: transação
+      transactions: transações
+    toggle_recurring_section: Alternar próximas transações recorrentes
+    search:
+      filters:
+        account: Conta
+        date: Data
+        type: Tipo
+        status: Status
+        amount: Valor
+        category: Categoria
+        tag: Tag
+        merchant: Comerciante
+    convert_to_trade:
+      title: Converter para Negociação de Ativo
+      description: Converter esta transação em uma negociação com detalhes do ativo
+      date_label: "Data:"
+      account_label: "Conta:"
+      amount_label: "Valor:"
+      security_label: Ativo
+      security_prompt: Selecione um ativo...
+      security_custom: "+ Inserir ticker personalizado"
+      security_not_listed_hint: Não encontrou seu ativo? Selecione "Inserir ticker personalizado" no final da lista.
+      ticker_placeholder: PETR4
+      ticker_hint: Insira o símbolo (ticker) da ação/ETF/FII (ex: PETR4, VALE3)
+      ticker_search_placeholder: Pesquisar por um ticker...
+      ticker_search_hint: Pesquise pelo símbolo do ticker ou nome da empresa, ou digite um ticker personalizado
+      price_mismatch_title: O preço pode não corresponder
+      price_mismatch_message: "Seu preço (%{entered_price}/ação) difere significativamente do preço de mercado atual de %{ticker} (%{market_price}). Se isso parecer incorreto, você pode ter selecionado o ativo errado — tente usar \"Inserir ticker personalizado\" para especificar o correto."
+      quantity_label: Quantidade (Ações/Cotas)
+      quantity_placeholder: ex. 100
+      quantity_hint: Número de ações/cotas negociadas
+      price_label: Preço por Ação/Cota
+      price_placeholder: ex. 35.50
+      price_hint: Preço por ação/cota (%{currency})
+      qty_or_price_hint: Insira pelo menos a quantidade OU o preço. O outro será calculado a partir do valor da transação (%{amount}).
+      trade_type_label: Tipo de Negociação
+      trade_type_hint: Comprar ou Vender ações/cotas de um ativo
+      exchange_label: Bolsa de Valores (Opcional)
+      exchange_placeholder: BVMF
+      exchange_hint: Deixe em branco para detectar automaticamente
+      cancel: Cancelar
+      submit: Converter para Negociação
+      success: Transação convertida para negociação
+      conversion_note: "Convertido da transação: %{original_name} (%{original_date})"
+      errors:
+        not_investment_account: Apenas transações em contas de investimento podem ser convertidas para negociações
+        already_converted: Esta transação já foi convertida ou excluída
+        enter_ticker: Por favor, insira um símbolo de ticker
+        security_not_found: O ativo selecionado não existe mais. Por favor, selecione outro.
+        select_security: Por favor, selecione ou insira um ativo
+        enter_qty_or_price: Por favor, insira a quantidade ou o preço por ação. O outro será calculado a partir do valor da transação.
+        invalid_qty_or_price: Quantidade ou preço inválido. Por favor, insira valores positivos válidos.
+        conversion_failed: "Falha ao converter a transação: %{error}"
+        unexpected_error: "Erro inesperado durante a conversão: %{error}"
     searches:
       filters:
         amount_filter:
@@ -65,10 +168,15 @@ pt-BR:
           on_or_after: em ou após %{date}
           on_or_before: em ou antes de %{date}
           transfer: Transferência
+          confirmed: Confirmada
+          pending: Pendente
         type_filter:
           expense: Despesa
           income: Receita
           transfer: Transferência
+        status_filter:
+          confirmed: Confirmada
+          pending: Pendente
       menu:
         account_filter: Conta
         amount_filter: Valor
@@ -78,6 +186,7 @@ pt-BR:
         clear_filters: Limpar filtros
         date_filter: Data
         merchant_filter: Comerciante
+        status_filter: Status
         tag_filter: Tag
         type_filter: Tipo
       search:
