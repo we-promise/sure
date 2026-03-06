@@ -15,6 +15,10 @@ en:
       security_not_found: Could not find the selected security.
     reset_security:
       success: Security reset to provider value.
+    sync_prices:
+      success: Market data synced successfully.
+      unavailable: Market data sync is not available for offline securities.
+      provider_error: Could not fetch latest prices. Please try again in a few minutes.
     errors:
       security_collision: "Cannot remap: you already have a holding for %{ticker} on %{date}."
     cost_basis_sources:
@@ -82,3 +86,11 @@ en:
       unlock_cost_basis: Unlock
       unlock_confirm_title: Unlock cost basis?
       unlock_confirm_body: This will allow the cost basis to be updated by provider syncs or trade calculations.
+      shares_label: Shares
+      book_value_label: Book Value
+      market_value_label: Market Value
+      market_data_label: Market data
+      market_data_sync_button: Refresh
+      last_price_update: Last price update
+      syncing: Syncing...
+      never: Never
