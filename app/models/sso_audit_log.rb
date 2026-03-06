@@ -1,6 +1,13 @@
 # frozen_string_literal: true
 
 class SsoAuditLog < ApplicationRecord
+  include Encryptable
+
+  if encryption_ready?
+    encrypts :ip_address
+    encrypts :user_agent
+  end
+
   belongs_to :user, optional: true
 
   # Event types for SSO audit logging
