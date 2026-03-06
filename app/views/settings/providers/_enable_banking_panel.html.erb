@@ -25,10 +25,12 @@
   <% end %>
 
   <%
-    enable_banking_item = Current.family.enable_banking_items.first_or_initialize(name: "Enable Banking Connection")
+    # Use local family variable if available (e.g., from Sidekiq broadcast), otherwise fall back to Current.family (HTTP requests)
+    family = local_assigns[:family] || Current.family
+    enable_banking_item = family.enable_banking_items.first_or_initialize(name: "Enable Banking Connection")
     is_new_record = enable_banking_item.new_record?
     # Check if there are any authenticated connections (have session_id)
-    has_authenticated_connections = Current.family.enable_banking_items.where.not(session_id: nil).exists?
+    has_authenticated_connections = family.enable_banking_items.where.not(session_id: nil).exists?
   %>
 
   <%= styled_form_with model: enable_banking_item,
@@ -101,7 +103,7 @@
     </div>
   <% end %>
 
-  <% items = local_assigns[:enable_banking_items] || @enable_banking_items || Current.family.enable_banking_items.where.not(client_certificate: nil) %>
+  <% items = local_assigns[:enable_banking_items] || @enable_banking_items || family.enable_banking_items.where.not(client_certificate: nil) %>
   <% if items&.any? %>
     <%
       # Find the first item with valid session to use for "Add Connection" button
