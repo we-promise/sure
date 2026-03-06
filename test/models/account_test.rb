@@ -72,6 +72,27 @@ class AccountTest < ActiveSupport::TestCase
     assert_equal 1000, opening_anchor.entry.amount
   end
 
+  test "create_and_sync uses provided opening balance date" do
+    Account.any_instance.stubs(:sync_later)
+    opening_date = Time.zone.today
+
+    account = Account.create_and_sync(
+      {
+        family: @family,
+        name: "Test Account",
+        balance: 1000,
+        currency: "USD",
+        accountable_type: "Depository",
+        accountable_attributes: {}
+      },
+      skip_initial_sync: true,
+      opening_balance_date: opening_date
+    )
+
+    opening_anchor = account.valuations.opening_anchor.first
+    assert_equal opening_date, opening_anchor.entry.date
+  end
+
   test "gets short/long subtype label" do
     investment = Investment.new(subtype: "hsa")
     account = @family.accounts.create!(

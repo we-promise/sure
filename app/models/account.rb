@@ -79,7 +79,7 @@ class Account < ApplicationRecord
       super(attribute, options)
     end
 
-    def create_and_sync(attributes, skip_initial_sync: false)
+    def create_and_sync(attributes, skip_initial_sync: false, opening_balance_date: nil)
       attributes[:accountable_attributes] ||= {} # Ensure accountable is created, even if empty
       # Default cash_balance to balance unless explicitly provided (e.g., Crypto sets it to 0)
       attrs = attributes.dup
@@ -91,7 +91,10 @@ class Account < ApplicationRecord
         account.save!
 
         manager = Account::OpeningBalanceManager.new(account)
-        result = manager.set_opening_balance(balance: initial_balance || account.balance)
+        result = manager.set_opening_balance(
+          balance: initial_balance || account.balance,
+          date: opening_balance_date
+        )
         raise result.error if result.error
       end
 
