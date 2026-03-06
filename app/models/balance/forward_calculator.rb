@@ -1,11 +1,12 @@
 class Balance::ForwardCalculator < Balance::BaseCalculator
+  def initialize(account, window_start_date: nil)
+    super(account)
+    @window_start_date = window_start_date
+  end
+
   def calculate
     Rails.logger.tagged("Balance::ForwardCalculator") do
-      start_cash_balance = derive_cash_balance_on_date_from_total(
-        total_balance: account.opening_anchor_balance,
-        date: account.opening_anchor_date
-      )
-      start_non_cash_balance = account.opening_anchor_balance - start_cash_balance
+      start_cash_balance, start_non_cash_balance = resolve_starting_balances
 
       calc_start_date.upto(calc_end_date).map do |date|
         valuation = sync_cache.get_valuation(date)
@@ -52,8 +53,44 @@ class Balance::ForwardCalculator < Balance::BaseCalculator
   end
 
   private
+    # Returns [start_cash_balance, start_non_cash_balance] for the first iteration.
+    #
+    # In incremental mode: load the persisted end-of-day balance for window_start_date - 1
+    # from the DB and use that as the seed. If no such record exists, fall back to a
+    # full recalculation from the opening anchor so we never produce wrong results.
+    def resolve_starting_balances
+      if @window_start_date.present?
+        prior = prior_balance
+
+        if prior
+          Rails.logger.info("Incremental sync from #{@window_start_date}, seeding from persisted balance on #{prior.date}")
+          return [ prior.end_cash_balance, prior.end_non_cash_balance ]
+        else
+          Rails.logger.info("No persisted balance found for #{@window_start_date - 1}, falling back to full recalculation")
+          @window_start_date = nil
+        end
+      end
+
+      opening_starting_balances
+    end
+
+    def opening_starting_balances
+      cash = derive_cash_balance_on_date_from_total(
+        total_balance: account.opening_anchor_balance,
+        date: account.opening_anchor_date
+      )
+      [ cash, account.opening_anchor_balance - cash ]
+    end
+
+    # The balance record for the day immediately before the incremental window.
+    def prior_balance
+      @prior_balance ||= account.balances
+        .where(currency: account.currency)
+        .find_by(date: @window_start_date - 1)
+    end
+
     def calc_start_date
-      account.opening_anchor_date
+      @window_start_date || account.opening_anchor_date
     end
 
     def calc_end_date
