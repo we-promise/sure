@@ -1,12 +1,22 @@
 de:
   accounts:
     account:
+      edit: Bearbeiten
       link_lunchflow: Mit Lunch Flow verknüpfen
+      link_provider: Mit Anbieter verknüpfen
+      unlink_provider: Vom Anbieter trennen
       troubleshoot: Fehlerbehebung
+      enable: Konto aktivieren
+      disable: Konto deaktivieren
+      set_default: Als Standard festlegen
+      default_label: Standard
+      delete: Konto löschen
     chart:
       data_not_available: Für den ausgewählten Zeitraum sind keine Daten verfügbar
     create:
       success: "%{type}-Konto erstellt"
+    set_default:
+      depository_only: "Nur Bargeld- und Kreditkartenkonten können als Standard festgelegt werden."
     destroy:
       success: "%{type}-Konto zur Löschung vorgemerkt"
     empty:
