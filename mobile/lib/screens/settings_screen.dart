@@ -61,22 +61,40 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _changeEnvironment(String envName) async {
+    // Show confirmation dialog
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Switch Environment?'),
+        content: Text(
+          'Switching to $envName will log you out. Do you want to continue?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Switch'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
     final success = await ApiConfig.setEnvironment(envName);
     if (success && mounted) {
-      setState(() {
-        _selectedEnvironment = envName;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Switched to $envName environment'),
-          duration: const Duration(seconds: 2),
-        ),
-      );
+      // Clear offline cache when switching environments
+      await OfflineStorageService().clearAllData();
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      await authProvider.logout();
     } else if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Failed to change environment'),
-          duration: const Duration(seconds: 2),
+          duration: Duration(seconds: 2),
         ),
       );
     }
@@ -421,14 +439,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
             trailing: PopupMenuButton<String>(
               onSelected: _changeEnvironment,
               itemBuilder: (BuildContext context) {
-                return ApiConfig.presetEnvironments.keys.map((String envName) {
+                return ['Staging', 'Production'].map((String envName) {
                   return PopupMenuItem<String>(
                     value: envName,
-                    child: Text(envName),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (_selectedEnvironment == envName)
+                          Icon(Icons.check, color: colorScheme.primary, size: 20),
+                        if (_selectedEnvironment == envName)
+                          const SizedBox(width: 8),
+                        Text(envName),
+                      ],
+                    ),
                   );
                 }).toList();
               },
-              child: const Icon(Icons.more_vert),
+              child: const Icon(Icons.settings),
             ),
           ),
           

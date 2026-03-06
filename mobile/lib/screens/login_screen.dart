@@ -6,6 +6,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import '../app_config.dart';
 import '../providers/auth_provider.dart';
 import '../services/api_config.dart';
+import '../services/offline_storage_service.dart';
 
 class LoginScreen extends StatefulWidget {
   final VoidCallback? onGoToSettings;
@@ -66,6 +67,8 @@ class _LoginScreenState extends State<LoginScreen> {
       setState(() {
         _selectedEnvironment = envName;
       });
+      // Clear offline cache when switching environments
+      await OfflineStorageService().clearAllData();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Switched to $envName environment'),
@@ -534,28 +537,42 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
             ),
-            // single environment button at top right
+            // environment dropdown at top right
             Positioned(
               top: 8,
               right: 8,
-              child: TextButton(
-                onPressed: () {
-                  if (_selectedEnvironment == null) return;
-                  final newEnv = _selectedEnvironment == 'Staging' ? 'Production' : 'Staging';
-                  _changeEnvironment(newEnv);
-                },
-                child: Text(
-                  _selectedEnvironment ?? 'Staging',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w600,
-                    color: colorScheme.primary,
+              child: PopupMenuButton<String>(
+                icon: const Icon(Icons.settings),
+                tooltip: 'Environment',
+                onSelected: _changeEnvironment,
+                itemBuilder: (BuildContext context) => [
+                  PopupMenuItem<String>(
+                    value: 'Staging',
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (_selectedEnvironment == 'Staging')
+                          Icon(Icons.check, color: colorScheme.primary, size: 20),
+                        if (_selectedEnvironment == 'Staging')
+                          const SizedBox(width: 8),
+                        const Text('Staging'),
+                      ],
+                    ),
                   ),
-                ),
-                style: TextButton.styleFrom(
-                  minimumSize: const Size(0, 0),
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                ),
+                  PopupMenuItem<String>(
+                    value: 'Production',
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (_selectedEnvironment == 'Production')
+                          Icon(Icons.check, color: colorScheme.primary, size: 20),
+                        if (_selectedEnvironment == 'Production')
+                          const SizedBox(width: 8),
+                        const Text('Production'),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
             if (!AppConfig.isCompanion && _enableAdvancedLoginOptions)
