@@ -1471,7 +1471,6 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_24_100003) do
     t.string "unconfirmed_email"
     t.string "otp_secret"
     t.boolean "otp_required", default: false, null: false
-    t.string "otp_backup_codes", default: [], array: true
     t.boolean "show_sidebar", default: true
     t.string "default_period", default: "last_30_days", null: false
     t.uuid "last_viewed_chat_id"
@@ -1487,13 +1486,13 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_24_100003) do
     t.jsonb "preferences", default: {}, null: false
     t.string "locale"
     t.string "ui_layout"
+    t.text "otp_backup_codes"
     t.uuid "default_account_id"
     t.index ["default_account_id"], name: "index_users_on_default_account_id"
     t.index ["email"], name: "index_users_on_email", unique: true
     t.index ["family_id"], name: "index_users_on_family_id"
     t.index ["last_viewed_chat_id"], name: "index_users_on_last_viewed_chat_id"
     t.index ["locale"], name: "index_users_on_locale"
-    t.index ["otp_secret"], name: "index_users_on_otp_secret", unique: true, where: "(otp_secret IS NOT NULL)"
     t.index ["preferences"], name: "index_users_on_preferences", using: :gin
   end
 
