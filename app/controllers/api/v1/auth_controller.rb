@@ -89,13 +89,28 @@ module Api
 
           # Check MFA if enabled
           if user.otp_required?
+            otp_cache_key = "api_otp_attempts:#{user.id}"
+            otp_attempts  = Rails.cache.read(otp_cache_key).to_i
+
+            if otp_attempts >= 5
+              render json: {
+                error: "Too many OTP attempts. Try again in 5 minutes.",
+                mfa_required: true
+              }, status: :too_many_requests
+              return
+            end
+
             unless params[:otp_code].present? && user.verify_otp?(params[:otp_code])
+              Rails.cache.write(otp_cache_key, otp_attempts + 1, expires_in: 5.minutes)
               render json: {
                 error: "Two-factor authentication required",
                 mfa_required: true
               }, status: :unauthorized
               return
             end
+
+            # Successful OTP — clear attempt counter
+            Rails.cache.delete(otp_cache_key)
           end
 
           # Validate device info

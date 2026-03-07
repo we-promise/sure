@@ -40,13 +40,13 @@
 
 | # | Finding | Severity | Priority |
 |---|---------|----------|----------|
-| F-01 | API login bypasses AuthConfig (SSO-only mode) | HIGH | Immediate |
-| F-02 | CORS wildcard on sensitive endpoints | HIGH | Immediate |
-| F-07 | Unsafe constantize in account_import.rb | HIGH | Immediate |
+| ~~F-01~~ | ~~API login bypasses AuthConfig (SSO-only mode)~~ | ~~HIGH~~ | ✅ Fixed (2026-03-07) |
+| ~~F-02~~ | ~~CORS wildcard on sensitive endpoints~~ | ~~HIGH~~ | ✅ Fixed (2026-03-07) |
+| ~~F-07~~ | ~~Unsafe constantize in account_import.rb~~ | ~~HIGH~~ | ✅ Fixed (2026-03-07) |
 | F-03 | Content Security Policy disabled | MEDIUM | Short-term |
 | F-04 | Web sessions never expire | MEDIUM | Short-term |
 | F-05 | DNS rebinding protection disabled | MEDIUM | Short-term |
-| F-06 | No OTP rate limiting on API login | MEDIUM | Short-term |
+| ~~F-06~~ | ~~No OTP rate limiting on API login~~ | ~~MEDIUM~~ | ✅ Fixed (2026-03-07) |
 | F-08 | SSRF via base_url in Mercury/Lunchflow | MEDIUM | Medium-term |
 | F-09 | CSV injection in data exports | MEDIUM | Medium-term |
 | F-10 | Open redirect in accountable_resource.rb | MEDIUM | Medium-term |
