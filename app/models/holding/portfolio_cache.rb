@@ -7,9 +7,10 @@ class Holding::PortfolioCache
     end
   end
 
-  def initialize(account, use_holdings: false)
+  def initialize(account, use_holdings: false, security_ids: nil)
     @account = account
     @use_holdings = use_holdings
+    @security_ids = security_ids
     load_prices
   end
 
@@ -62,10 +63,12 @@ class Holding::PortfolioCache
 
     def collect_unique_securities
       unique_securities_from_trades = trades.map(&:entryable).map(&:security).uniq
+      unique_securities_from_trades = unique_securities_from_trades.select { |s| @security_ids.include?(s.id) } if @security_ids
 
       return unique_securities_from_trades unless use_holdings
 
       unique_securities_from_holdings = holdings.map(&:security).uniq
+      unique_securities_from_holdings = unique_securities_from_holdings.select { |s| @security_ids.include?(s.id) } if @security_ids
 
       (unique_securities_from_trades + unique_securities_from_holdings).uniq
     end

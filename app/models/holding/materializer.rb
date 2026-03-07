@@ -1,9 +1,10 @@
 # "Materializes" holdings (similar to a DB materialized view, but done at the app level)
 # into a series of records we can easily query and join with other data.
 class Holding::Materializer
-  def initialize(account, strategy:)
+  def initialize(account, strategy:, security_ids: nil)
     @account = account
     @strategy = strategy
+    @security_ids = security_ids
   end
 
   def materialize_holdings
@@ -12,7 +13,7 @@ class Holding::Materializer
     Rails.logger.info("Persisting #{@holdings.size} holdings")
     persist_holdings
 
-    if strategy == :forward
+    if strategy == :forward && security_ids.nil?
       purge_stale_holdings
     end
 
@@ -28,7 +29,7 @@ class Holding::Materializer
   end
 
   private
-    attr_reader :account, :strategy
+    attr_reader :account, :strategy, :security_ids
 
     def calculate_holdings
       @holdings = calculator.calculate
@@ -164,9 +165,9 @@ class Holding::Materializer
     def calculator
       if strategy == :reverse
         portfolio_snapshot = Holding::PortfolioSnapshot.new(account)
-        Holding::ReverseCalculator.new(account, portfolio_snapshot: portfolio_snapshot)
+        Holding::ReverseCalculator.new(account, portfolio_snapshot: portfolio_snapshot, security_ids: security_ids)
       else
-        Holding::ForwardCalculator.new(account)
+        Holding::ForwardCalculator.new(account, security_ids: security_ids)
       end
     end
 end

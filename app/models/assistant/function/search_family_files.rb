@@ -53,10 +53,10 @@ class Assistant::Function::SearchFamilyFiles < Assistant::Function
     query = params["query"]
     max_results = (params["max_results"] || 10).to_i.clamp(1, 20)
 
-    Rails.logger.warn("[SearchFamilyFiles] query=#{query.inspect} max_results=#{max_results} family_id=#{family.id}")
+    Rails.logger.debug("[SearchFamilyFiles] query=#{query.inspect} max_results=#{max_results} family_id=#{family.id}")
 
     unless family.vector_store_id.present?
-      Rails.logger.warn("[SearchFamilyFiles] family #{family.id} has no vector_store_id")
+      Rails.logger.debug("[SearchFamilyFiles] family #{family.id} has no vector_store_id")
       return {
         success: false,
         error: "no_documents",
@@ -67,7 +67,7 @@ class Assistant::Function::SearchFamilyFiles < Assistant::Function
     adapter = VectorStore.adapter
 
     unless adapter
-      Rails.logger.warn("[SearchFamilyFiles] no VectorStore adapter configured")
+      Rails.logger.debug("[SearchFamilyFiles] no VectorStore adapter configured")
       return {
         success: false,
         error: "provider_not_configured",
@@ -76,7 +76,7 @@ class Assistant::Function::SearchFamilyFiles < Assistant::Function
     end
 
     store_id = family.vector_store_id
-    Rails.logger.warn("[SearchFamilyFiles] searching store_id=#{store_id} via #{adapter.class.name}")
+    Rails.logger.debug("[SearchFamilyFiles] searching store_id=#{store_id} via #{adapter.class.name}")
 
     trace = create_langfuse_trace(
       name: "search_family_files",
@@ -91,8 +91,12 @@ class Assistant::Function::SearchFamilyFiles < Assistant::Function
 
     unless response.success?
       error_msg = response.error&.message
-      Rails.logger.warn("[SearchFamilyFiles] search failed: #{error_msg}")
-      trace&.update(output: { error: error_msg }, level: "ERROR")
+      Rails.logger.debug("[SearchFamilyFiles] search failed: #{error_msg}")
+      begin
+        langfuse_client&.trace(id: trace.id, output: { error: error_msg }, level: "ERROR") if trace
+      rescue => e
+        Rails.logger.debug("[SearchFamilyFiles] Langfuse trace update failed: #{e.class}: #{e.message}\n#{e.backtrace&.first(5)&.join("\n")}")
+      end
       return {
         success: false,
         error: "search_failed",
@@ -102,12 +106,12 @@ class Assistant::Function::SearchFamilyFiles < Assistant::Function
 
     results = response.data
 
-    Rails.logger.warn("[SearchFamilyFiles] #{results.size} chunk(s) returned")
+    Rails.logger.debug("[SearchFamilyFiles] #{results.size} chunk(s) returned")
 
     results.each_with_index do |r, i|
-      Rails.logger.warn(
+      Rails.logger.debug(
         "[SearchFamilyFiles] chunk[#{i}] score=#{r[:score]} file=#{r[:filename].inspect} " \
-        "content_length=#{r[:content]&.length} preview=#{r[:content]&.truncate(200).inspect}"
+        "content_length=#{r[:content]&.length} preview=#{r[:content]&.truncate(10).inspect}"
       )
     end
 
@@ -121,10 +125,16 @@ class Assistant::Function::SearchFamilyFiles < Assistant::Function
       { success: true, query: query, result_count: mapped.size, results: mapped }
     end
 
-    trace&.update(output: {
-      result_count: mapped.size,
-      chunks: mapped.map { |r| { filename: r[:filename], score: r[:score], content_length: r[:content]&.length } }
-    })
+    begin
+      if trace
+        langfuse_client&.trace(id: trace.id, output: {
+          result_count: mapped.size,
+          chunks: mapped.map { |r| { filename: r[:filename], score: r[:score], content_length: r[:content]&.length } }
+        })
+      end
+    rescue => e
+      Rails.logger.debug("[SearchFamilyFiles] Langfuse trace update failed: #{e.class}: #{e.message}\n#{e.backtrace&.first(5)&.join("\n")}")
+    end
 
     output
   rescue => e
@@ -153,7 +163,7 @@ class Assistant::Function::SearchFamilyFiles < Assistant::Function
         environment: Rails.env
       )
     rescue => e
-      Rails.logger.warn("[SearchFamilyFiles] Langfuse trace creation failed: #{e.message}")
+      Rails.logger.debug("[SearchFamilyFiles] Langfuse trace creation failed: #{e.class}: #{e.message}\n#{e.backtrace&.first(5)&.join("\n")}")
       nil
     end
 end

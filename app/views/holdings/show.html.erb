@@ -35,7 +35,7 @@
                 <button type="button"
                         data-action="click->holding-security-remap#toggle"
                   class="text-secondary hover:text-primary"
-                  aria-label="<%= t('.edit_security') %>">
+                  aria-label="<%= t(".edit_security") %>">
                   <%= icon "pencil", size: "xs" %>
                 </button>
               </dd>
@@ -66,7 +66,7 @@
           </div>
           <div class="flex items-center justify-between text-sm">
             <dt class="text-secondary"><%= t(".current_market_price_label") %></dt>
-            <dd class="text-primary">
+            <dd id="<%= dom_id(@holding, :current_market_price) %>" class="text-primary">
               <% begin %>
                 <%= @holding.security.current_price ? format_money(@holding.security.current_price) : t(".unknown") %>
                 <% rescue ActiveRecord::RecordInvalid %>
@@ -77,6 +77,10 @@
                 <%= t(".unknown") %>
               <% end %>
             </dd>
+          </div>
+          <div class="flex items-center justify-between text-sm">
+            <dt class="text-secondary"><%= t(".shares_label") %></dt>
+            <dd class="text-primary"><%= format_quantity(@holding.qty) %></dd>
           </div>
           <div class="flex items-center justify-between text-sm">
             <dt class="text-secondary"><%= t(".portfolio_weight_label") %></dt>
@@ -171,6 +175,17 @@
             </div>
           </div>
           <div class="flex items-center justify-between text-sm">
+            <dt class="text-secondary"><%= t(".book_value_label") %></dt>
+            <dd class="text-primary">
+              <% book_value = @holding.avg_cost ? @holding.avg_cost * @holding.qty : nil %>
+              <%= book_value ? format_money(book_value) : t(".unknown") %>
+            </dd>
+          </div>
+          <div id="<%= dom_id(@holding, :market_value) %>" class="flex items-center justify-between text-sm">
+            <dt class="text-secondary"><%= t(".market_value_label") %></dt>
+            <dd class="text-primary"><%= format_money(@holding.amount_money) %></dd>
+          </div>
+          <div id="<%= dom_id(@holding, :total_return) %>" class="flex items-center justify-between text-sm">
             <dt class="text-secondary"><%= t(".total_return_label") %></dt>
             <% if @holding.trend %>
               <dd style="color: <%= @holding.trend.color %>;">
@@ -214,7 +229,7 @@
         </div>
       </div>
     <% end %>
-    <% if @holding.cost_basis_locked? || @holding.security_remapped? || @holding.account.can_delete_holdings? %>
+    <% if @holding.cost_basis_locked? || @holding.security_remapped? || @holding.account.can_delete_holdings? || !@holding.security.offline? %>
       <% dialog.with_section(title: t(".settings"), open: true) do %>
         <div class="pb-4">
           <% if @holding.security_remapped? %>
@@ -231,6 +246,26 @@
                   data: { turbo_confirm: {
                     title: t(".reset_confirm_title"),
                     body: t(".reset_confirm_body", current: @holding.security.ticker, original: @holding.provider_security.ticker)
+                  } } %>
+            </div>
+          <% end %>
+          <% unless @holding.security.offline? %>
+            <div id="<%= dom_id(@holding, :market_data_section) %>" class="flex items-center justify-between gap-2 p-3 border-b border-tertiary">
+              <div class="text-sm space-y-1">
+                <h4 class="text-primary"><%= t(".market_data_label") %></h4>
+                <p class="text-secondary">
+                  <%= t(".last_price_update") %>: <%= @last_price_updated ? l(@last_price_updated, format: :long) : t(".never") %>
+                </p>
+              </div>
+              <%= button_to t(".market_data_sync_button"),
+                  sync_prices_holding_path(@holding),
+                  method: :post,
+                  class: "inline-flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium text-primary bg-gray-200 hover:bg-gray-300 theme-dark:bg-gray-700 theme-dark:hover:bg-gray-600",
+                  data: { loading_button_target: "button" },
+                  form: { data: {
+                    controller: "loading-button",
+                    action: "submit->loading-button#showLoading",
+                    loading_button_loading_text_value: t(".syncing")
                   } } %>
             </div>
           <% end %>

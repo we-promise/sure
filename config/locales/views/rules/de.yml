@@ -3,6 +3,21 @@ de:
   rules:
     no_action: Keine Aktion
     no_condition: Keine Bedingung
+    actions:
+      value_placeholder: Wert eingeben
+    apply_all:
+      button: Alle anwenden
+      confirm_title: Alle Regeln anwenden
+      confirm_message: Du bist dabei, %{count} Regeln anzuwenden, die %{transactions} eindeutige Transaktionen betreffen. Bitte bestätige, wenn du fortfahren möchtest.
+      confirm_button: Bestätigen und alle anwenden
+      success: Alle Regeln wurden zur Ausführung in die Warteschlange gestellt
+      ai_cost_title: KI-Kostenschätzung
+      ai_cost_message: Dies verwendet KI, um bis zu %{transactions} Transaktionen zu kategorisieren.
+      estimated_cost: "Geschätzte Kosten: ca. %{cost} $"
+      cost_unavailable_model: Kostenschätzung für Modell „%{model}“ nicht verfügbar.
+      cost_unavailable_no_provider: Kostenschätzung nicht verfügbar (kein LLM-Anbieter konfiguriert).
+      cost_warning: Es können Kosten entstehen. Bitte informiere dich beim Modellanbieter über die aktuellen Preise.
+      view_usage: Nutzungshistorie anzeigen
     recent_runs:
       title: Letzte Ausführungen
       description: Zeige die Ausführungsgeschichte deiner Regeln einschließlich Erfolgs-/Fehlerstatus und Transaktionsanzahlen.
@@ -23,3 +38,15 @@ de:
         pending: Ausstehend
         success: Erfolgreich
         failed: Fehlgeschlagen
+    clear_ai_cache:
+      button: KI-Cache zurücksetzen
+      confirm_title: KI-Cache zurücksetzen?
+      confirm_body: Bist du sicher, dass du den KI-Cache zurücksetzen möchtest? Dadurch können KI-Regeln alle Transaktionen erneut verarbeiten. Dies kann zusätzliche API-Kosten verursachen.
+      confirm_button: Cache zurücksetzen
+      success: Der KI-Cache wird geleert. Das kann einen Moment dauern.
+    condition_filters:
+      transaction_type:
+        income: Einnahme
+        expense: Ausgabe
+        transfer: Überweisung
+        equal_to: Gleich

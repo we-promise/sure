@@ -140,6 +140,17 @@ class FamilyExportsControllerTest < ActionDispatch::IntegrationTest
     assert_not ActiveStorage::Attachment.exists?(file_id)
   end
 
+  test "index responds to html with settings layout" do
+    get family_exports_path
+    assert_response :success
+    assert_select "title" # rendered with layout
+  end
+
+  test "index responds to turbo_stream without raising MissingTemplate" do
+    get family_exports_path, headers: { "Accept" => "text/vnd.turbo-stream.html" }
+    assert_redirected_to family_exports_path
+  end
+
   test "non-admin cannot delete export" do
     export = @family.family_exports.create!(status: "completed")
     sign_in @non_admin
