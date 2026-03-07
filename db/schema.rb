@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_03_03_120000) do
+ActiveRecord::Schema[7.2].define(version: 2026_03_06_025144) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -1447,7 +1447,6 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_03_120000) do
     t.string "unconfirmed_email"
     t.string "otp_secret"
     t.boolean "otp_required", default: false, null: false
-    t.string "otp_backup_codes", default: [], array: true
     t.boolean "show_sidebar", default: true
     t.string "default_period", default: "last_30_days", null: false
     t.uuid "last_viewed_chat_id"
@@ -1463,6 +1462,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_03_120000) do
     t.jsonb "preferences", default: {}, null: false
     t.string "locale"
     t.string "ui_layout"
+    t.text "otp_backup_codes"
     t.index ["email"], name: "index_users_on_email", unique: true
     t.index ["family_id"], name: "index_users_on_family_id"
     t.index ["last_viewed_chat_id"], name: "index_users_on_last_viewed_chat_id"

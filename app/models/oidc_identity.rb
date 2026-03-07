@@ -1,4 +1,11 @@
 class OidcIdentity < ApplicationRecord
+  include Encryptable
+
+  if encryption_ready?
+    encrypts :uid, deterministic: true
+    encrypts :info
+  end
+
   belongs_to :user
 
   validates :provider, presence: true

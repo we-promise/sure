@@ -1,9 +1,10 @@
 class Session < ApplicationRecord
   include Encryptable
 
-  # Encrypt user_agent if ActiveRecord encryption is configured
+  # Encrypt sensitive fields if ActiveRecord encryption is configured
   if encryption_ready?
     encrypts :user_agent
+    encrypts :ip_address
   end
 
   belongs_to :user
@@ -30,6 +31,6 @@ class Session < ApplicationRecord
       self.user_agent = Current.user_agent
       raw_ip = Current.ip_address
       self.ip_address = raw_ip
-      self.ip_address_digest = Digest::SHA256.hexdigest(raw_ip.to_s) if raw_ip.present?
+      self.ip_address_digest = OpenSSL::HMAC.hexdigest("SHA256", Rails.application.secret_key_base, raw_ip.to_s) if raw_ip.present?
     end
 end
