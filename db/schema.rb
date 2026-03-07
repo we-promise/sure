@@ -215,6 +215,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_03_120000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["account_id"], name: "index_coinbase_accounts_on_account_id"
+    t.index ["coinbase_item_id", "account_id"], name: "index_coinbase_accounts_on_item_and_account_id", unique: true, where: "(account_id IS NOT NULL)"
     t.index ["coinbase_item_id"], name: "index_coinbase_accounts_on_coinbase_item_id"
   end
 
@@ -693,7 +694,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_03_120000) do
     t.date "sync_start_date"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["indexa_capital_account_id"], name: "index_indexa_capital_accounts_on_indexa_capital_account_id", unique: true
+    t.index ["indexa_capital_item_id", "indexa_capital_account_id"], name: "index_indexa_capital_accounts_on_item_and_account_id", unique: true, where: "(indexa_capital_account_id IS NOT NULL)"
     t.index ["indexa_capital_authorization_id"], name: "idx_on_indexa_capital_authorization_id_58db208d52"
     t.index ["indexa_capital_item_id"], name: "index_indexa_capital_accounts_on_indexa_capital_item_id"
   end
@@ -802,6 +803,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_03_120000) do
     t.boolean "holdings_supported", default: true, null: false
     t.jsonb "raw_holdings_payload"
     t.index ["account_id"], name: "index_lunchflow_accounts_on_account_id"
+    t.index ["lunchflow_item_id", "account_id"], name: "index_lunchflow_accounts_on_item_and_account_id", unique: true, where: "(account_id IS NOT NULL)"
     t.index ["lunchflow_item_id"], name: "index_lunchflow_accounts_on_lunchflow_item_id"
   end
 
@@ -859,7 +861,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_03_120000) do
     t.jsonb "raw_transactions_payload"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["account_id"], name: "index_mercury_accounts_on_account_id", unique: true
+    t.index ["mercury_item_id", "account_id"], name: "index_mercury_accounts_on_item_and_account_id", unique: true
     t.index ["mercury_item_id"], name: "index_mercury_accounts_on_mercury_item_id"
   end
 
@@ -1004,7 +1006,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_03_120000) do
     t.jsonb "raw_transactions_payload", default: {}
     t.jsonb "raw_holdings_payload", default: {}
     t.jsonb "raw_liabilities_payload", default: {}
-    t.index ["plaid_id"], name: "index_plaid_accounts_on_plaid_id", unique: true
+    t.index ["plaid_item_id", "plaid_id"], name: "index_plaid_accounts_on_item_and_plaid_id", unique: true
     t.index ["plaid_item_id"], name: "index_plaid_accounts_on_plaid_item_id"
   end
 
@@ -1252,8 +1254,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_03_120000) do
     t.datetime "updated_at", null: false
     t.boolean "activities_fetch_pending", default: false
     t.date "sync_start_date"
-    t.index ["account_id"], name: "index_snaptrade_accounts_on_account_id", unique: true
-    t.index ["snaptrade_account_id"], name: "index_snaptrade_accounts_on_snaptrade_account_id", unique: true
+    t.index ["snaptrade_item_id", "account_id"], name: "index_snaptrade_accounts_on_item_and_account_id", unique: true, where: "(account_id IS NOT NULL)"
+    t.index ["snaptrade_item_id", "snaptrade_account_id"], name: "index_snaptrade_accounts_on_item_and_snaptrade_account_id", unique: true, where: "(snaptrade_account_id IS NOT NULL)"
     t.index ["snaptrade_item_id"], name: "index_snaptrade_accounts_on_snaptrade_item_id"
   end
 
