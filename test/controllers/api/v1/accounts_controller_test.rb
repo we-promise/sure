@@ -214,4 +214,307 @@ end
     account_names = response_body["accounts"].map { |a| a["name"] }
     assert_equal account_names.sort, account_names
   end
+
+  # Show action tests
+
+  test "show requires authentication" do
+    account = @user.family.accounts.visible.first
+
+    get "/api/v1/accounts/#{account.id}"
+    assert_response :unauthorized
+  end
+
+  test "show returns account successfully" do
+    account = @user.family.accounts.visible.first
+    access_token = Doorkeeper::AccessToken.create!(
+      application: @oauth_app,
+      resource_owner_id: @user.id,
+      scopes: "read"
+    )
+
+    get "/api/v1/accounts/#{account.id}", headers: {
+      "Authorization" => "Bearer #{access_token.token}"
+    }
+
+    assert_response :success
+    response_body = JSON.parse(response.body)
+
+    assert_equal account.id, response_body["id"]
+    assert_equal account.name, response_body["name"]
+    assert_equal account.currency, response_body["currency"]
+  end
+
+  test "show returns 404 for non-existent account" do
+    access_token = Doorkeeper::AccessToken.create!(
+      application: @oauth_app,
+      resource_owner_id: @user.id,
+      scopes: "read"
+    )
+
+    get "/api/v1/accounts/#{SecureRandom.uuid}", headers: {
+      "Authorization" => "Bearer #{access_token.token}"
+    }
+
+    assert_response :not_found
+  end
+
+  test "show returns 404 for account from another family" do
+    access_token = Doorkeeper::AccessToken.create!(
+      application: @oauth_app,
+      resource_owner_id: @user.id,
+      scopes: "read"
+    )
+
+    other_family_account = @other_family_user.family.accounts.create!(
+      name: "Other Account",
+      balance: 100,
+      currency: "USD",
+      accountable: OtherAsset.create!,
+      status: :active
+    )
+
+    get "/api/v1/accounts/#{other_family_account.id}", headers: {
+      "Authorization" => "Bearer #{access_token.token}"
+    }
+
+    assert_response :not_found
+  end
+
+  # Create action tests
+
+  test "create requires authentication" do
+    post "/api/v1/accounts", params: {
+      account: { name: "New Account", accountable_type: "Depository" }
+    }
+
+    assert_response :unauthorized
+  end
+
+  test "create requires read_write scope" do
+    access_token = Doorkeeper::AccessToken.create!(
+      application: @oauth_app,
+      resource_owner_id: @user.id,
+      scopes: "read"
+    )
+
+    post "/api/v1/accounts",
+         params: { account: { name: "New Account", accountable_type: "Depository", balance: 1000 } },
+         headers: { "Authorization" => "Bearer #{access_token.token}" }
+
+    assert_response :forbidden
+  end
+
+  test "create account successfully" do
+    access_token = Doorkeeper::AccessToken.create!(
+      application: @oauth_app,
+      resource_owner_id: @user.id,
+      scopes: "read_write"
+    )
+
+    account_name = "API Test Account #{SecureRandom.hex(4)}"
+
+    assert_difference -> { @user.family.accounts.count }, 1 do
+      post "/api/v1/accounts",
+           params: { account: { name: account_name, accountable_type: "Depository", balance: 5000, currency: "USD" } },
+           headers: { "Authorization" => "Bearer #{access_token.token}" }
+    end
+
+    assert_response :created
+    response_body = JSON.parse(response.body)
+    assert_equal account_name, response_body["name"]
+    assert_equal "USD", response_body["currency"]
+  end
+
+  test "create account defaults currency to family currency" do
+    access_token = Doorkeeper::AccessToken.create!(
+      application: @oauth_app,
+      resource_owner_id: @user.id,
+      scopes: "read_write"
+    )
+
+    post "/api/v1/accounts",
+         params: { account: { name: "Default Currency #{SecureRandom.hex(4)}", accountable_type: "Depository", balance: 100 } },
+         headers: { "Authorization" => "Bearer #{access_token.token}" }
+
+    assert_response :created
+    response_body = JSON.parse(response.body)
+    assert_equal @user.family.currency, response_body["currency"]
+  end
+
+  # Update action tests
+
+  test "update requires authentication" do
+    account = @user.family.accounts.visible.first
+
+    patch "/api/v1/accounts/#{account.id}", params: { account: { name: "Updated" } }
+    assert_response :unauthorized
+  end
+
+  test "update requires read_write scope" do
+    account = @user.family.accounts.visible.first
+    access_token = Doorkeeper::AccessToken.create!(
+      application: @oauth_app,
+      resource_owner_id: @user.id,
+      scopes: "read"
+    )
+
+    patch "/api/v1/accounts/#{account.id}",
+          params: { account: { name: "Updated" } },
+          headers: { "Authorization" => "Bearer #{access_token.token}" }
+
+    assert_response :forbidden
+  end
+
+  test "update account name successfully" do
+    account = @user.family.accounts.visible.first
+    access_token = Doorkeeper::AccessToken.create!(
+      application: @oauth_app,
+      resource_owner_id: @user.id,
+      scopes: "read_write"
+    )
+
+    new_name = "Updated Account #{SecureRandom.hex(4)}"
+
+    patch "/api/v1/accounts/#{account.id}",
+          params: { account: { name: new_name } },
+          headers: { "Authorization" => "Bearer #{access_token.token}" }
+
+    assert_response :success
+    response_body = JSON.parse(response.body)
+    assert_equal new_name, response_body["name"]
+  end
+
+  test "update returns 404 for non-existent account" do
+    access_token = Doorkeeper::AccessToken.create!(
+      application: @oauth_app,
+      resource_owner_id: @user.id,
+      scopes: "read_write"
+    )
+
+    patch "/api/v1/accounts/#{SecureRandom.uuid}",
+          params: { account: { name: "Not Found" } },
+          headers: { "Authorization" => "Bearer #{access_token.token}" }
+
+    assert_response :not_found
+  end
+
+  test "update returns 404 for account from another family" do
+    access_token = Doorkeeper::AccessToken.create!(
+      application: @oauth_app,
+      resource_owner_id: @user.id,
+      scopes: "read_write"
+    )
+
+    other_family_account = @other_family_user.family.accounts.create!(
+      name: "Other Account",
+      balance: 100,
+      currency: "USD",
+      accountable: OtherAsset.create!,
+      status: :active
+    )
+
+    patch "/api/v1/accounts/#{other_family_account.id}",
+          params: { account: { name: "Hacker Update" } },
+          headers: { "Authorization" => "Bearer #{access_token.token}" }
+
+    assert_response :not_found
+  end
+
+  # Destroy action tests
+
+  test "destroy requires authentication" do
+    account = @user.family.accounts.visible.first
+
+    delete "/api/v1/accounts/#{account.id}"
+    assert_response :unauthorized
+  end
+
+  test "destroy requires read_write scope" do
+    account = @user.family.accounts.visible.first
+    access_token = Doorkeeper::AccessToken.create!(
+      application: @oauth_app,
+      resource_owner_id: @user.id,
+      scopes: "read"
+    )
+
+    delete "/api/v1/accounts/#{account.id}",
+           headers: { "Authorization" => "Bearer #{access_token.token}" }
+
+    assert_response :forbidden
+  end
+
+  test "destroy unlinked account successfully" do
+    access_token = Doorkeeper::AccessToken.create!(
+      application: @oauth_app,
+      resource_owner_id: @user.id,
+      scopes: "read_write"
+    )
+
+    # Create an unlinked account to delete
+    account_to_delete = @user.family.accounts.create!(
+      name: "Delete Me #{SecureRandom.hex(4)}",
+      accountable: OtherAsset.create!,
+      balance: 0,
+      currency: "USD",
+      status: :active
+    )
+
+    delete "/api/v1/accounts/#{account_to_delete.id}",
+           headers: { "Authorization" => "Bearer #{access_token.token}" }
+
+    assert_response :success
+    response_body = JSON.parse(response.body)
+    assert_equal "Account deleted successfully", response_body["message"]
+  end
+
+  test "destroy linked account returns unprocessable entity" do
+    access_token = Doorkeeper::AccessToken.create!(
+      application: @oauth_app,
+      resource_owner_id: @user.id,
+      scopes: "read_write"
+    )
+
+    linked_account = accounts(:connected)
+
+    delete "/api/v1/accounts/#{linked_account.id}",
+           headers: { "Authorization" => "Bearer #{access_token.token}" }
+
+    assert_response :unprocessable_entity
+    response_body = JSON.parse(response.body)
+    assert_equal "validation_failed", response_body["error"]
+  end
+
+  test "destroy returns 404 for non-existent account" do
+    access_token = Doorkeeper::AccessToken.create!(
+      application: @oauth_app,
+      resource_owner_id: @user.id,
+      scopes: "read_write"
+    )
+
+    delete "/api/v1/accounts/#{SecureRandom.uuid}",
+           headers: { "Authorization" => "Bearer #{access_token.token}" }
+
+    assert_response :not_found
+  end
+
+  test "destroy returns 404 for account from another family" do
+    access_token = Doorkeeper::AccessToken.create!(
+      application: @oauth_app,
+      resource_owner_id: @user.id,
+      scopes: "read_write"
+    )
+
+    other_family_account = @other_family_user.family.accounts.create!(
+      name: "Other Account",
+      balance: 100,
+      currency: "USD",
+      accountable: OtherAsset.create!,
+      status: :active
+    )
+
+    delete "/api/v1/accounts/#{other_family_account.id}",
+           headers: { "Authorization" => "Bearer #{access_token.token}" }
+
+    assert_response :not_found
+  end
 end
