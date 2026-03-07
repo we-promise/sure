@@ -136,6 +136,7 @@ class User < ApplicationRecord
   end
 
   def ai_available?
+    return false if ENV["OPENAI_ACCESS_TOKEN"] == "DISABLED"
     return true unless Rails.application.config.app_mode.self_hosted?
 
     effective_type = ENV["ASSISTANT_TYPE"].presence || family&.assistant_type.presence || "builtin"
