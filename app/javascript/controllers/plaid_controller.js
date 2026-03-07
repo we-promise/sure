@@ -13,7 +13,33 @@ export default class extends Controller {
     this.open();
   }
 
-  open() {
+  waitForPlaid() {
+    if (typeof Plaid !== "undefined") {
+      return Promise.resolve();
+    }
+
+    return new Promise((resolve, reject) => {
+      let plaidScript = document.querySelector(
+        'script[src*="link-initialize.js"]'
+      );
+
+      if (!plaidScript) {
+        plaidScript = document.createElement("script");
+        plaidScript.src = "https://cdn.plaid.com/link/v2/stable/link-initialize.js";
+        plaidScript.async = true;
+        document.head.appendChild(plaidScript);
+      }
+
+      plaidScript.addEventListener("load", resolve, { once: true });
+      plaidScript.addEventListener("error", () => {
+        reject(new Error("Failed to load Plaid script"));
+      }, { once: true });
+    });
+  }
+
+  async open() {
+    await this.waitForPlaid();
+
     const handler = Plaid.create({
       token: this.linkTokenValue,
       onSuccess: this.handleSuccess,
