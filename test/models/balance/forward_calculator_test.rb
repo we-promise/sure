@@ -595,19 +595,8 @@ class Balance::ForwardCalculatorTest < ActiveSupport::TestCase
       ]
     )
 
-    # Persist full balances in DB so that the incremental run can seed from them.
-    full_balances = Balance::ForwardCalculator.new(account).calculate
-    account.balances.upsert_all(
-      full_balances.map { |b|
-        b.attributes.slice("date", "balance", "cash_balance", "currency",
-                           "start_cash_balance", "start_non_cash_balance",
-                           "cash_inflows", "cash_outflows",
-                           "non_cash_inflows", "non_cash_outflows",
-                           "net_market_flows", "cash_adjustments", "non_cash_adjustments",
-                           "flows_factor").merge("updated_at" => Time.now)
-      },
-      unique_by: %i[account_id date currency]
-    )
+    # Persist full balances via the materializer (same path as production).
+    Balance::Materializer.new(account, strategy: :forward).materialize_balances
 
     # Incremental from 3.days.ago: seeds from persisted balance on 4.days.ago (20500).
     incremental = Balance::ForwardCalculator.new(account, window_start_date: 3.days.ago.to_date).calculate
@@ -633,6 +622,38 @@ class Balance::ForwardCalculatorTest < ActiveSupport::TestCase
         }
       ]
     )
+  end
+
+  test "falls back to full recalculation when prior balance has a non-cash component" do
+    account = create_account_with_ledger(
+      account: { type: Depository, currency: "USD" },
+      entries: [
+        { type: "opening_anchor", date: 3.days.ago.to_date, balance: 20000 },
+        { type: "transaction", date: 2.days.ago.to_date, amount: -500 }
+      ]
+    )
+
+    # Persist a prior balance (window_start_date - 1 = 3.days.ago) with a non-zero
+    # non-cash component. This simulates an investment account where holdings were
+    # fully recalculated, making the stored non-cash seed potentially stale.
+    account.balances.create!(
+      date: 3.days.ago.to_date,
+      balance: 20000,
+      cash_balance: 15000,
+      currency: "USD",
+      start_cash_balance: 15000,
+      start_non_cash_balance: 5000,
+      cash_inflows: 0, cash_outflows: 0,
+      non_cash_inflows: 0, non_cash_outflows: 0,
+      net_market_flows: 0, cash_adjustments: 0, non_cash_adjustments: 0,
+      flows_factor: 1
+    )
+
+    result = Balance::ForwardCalculator.new(account, window_start_date: 2.days.ago.to_date).calculate
+
+    # Fell back: full range from opening_anchor_date, not just the window.
+    assert_includes result.map(&:date), 3.days.ago.to_date
+    assert_includes result.map(&:date), 2.days.ago.to_date
   end
 
   test "falls back to full recalculation when no prior balance exists in DB" do

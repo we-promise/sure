@@ -115,6 +115,45 @@ class Balance::MaterializerTest < ActiveSupport::TestCase
       "Recalculated balance for 2.days.ago should be persisted"
   end
 
+  test "falls back to full recalculation when window_start_date is given but no prior balance exists" do
+    @account.entries.create!(
+      name: "Opening Balance",
+      date: 5.days.ago.to_date,
+      amount: 20000,
+      currency: "USD",
+      entryable: Valuation.new(kind: "opening_anchor")
+    )
+    @account.entries.create!(
+      name: "Test transaction",
+      date: 3.days.ago.to_date,
+      amount: -1000,
+      currency: "USD",
+      entryable: Transaction.new
+    )
+
+    # A stale pre-window balance with a wrong value.
+    # In successful incremental mode this would be preserved as-is;
+    # in fallback (no prior balance) the full recalc must overwrite it.
+    wrong_pre_window = create_balance(account: @account, date: 4.days.ago.to_date, balance: 99999)
+
+    # A stale balance before opening_anchor_date — must be purged in both modes.
+    stale_before_anchor = create_balance(account: @account, date: 8.days.ago.to_date, balance: 99999)
+
+    Holding::Materializer.any_instance.stubs(:materialize_holdings).returns([])
+
+    # No prior balance exists for window_start_date - 1 (4.days.ago) → calculator falls back to full recalc.
+    Balance::Materializer.new(@account, strategy: :forward, window_start_date: 3.days.ago.to_date).materialize_balances
+
+    # After fallback the pre-window balance must be recalculated with the correct value, not preserved.
+    recalculated = @account.balances.find_by(date: wrong_pre_window.date)
+    assert_not_nil recalculated, "Balance at 4.days.ago should exist after full recalculation"
+    assert_equal 20000, recalculated.balance, "Balance should reflect full recalculation, not the stale value (99999)"
+
+    # Stale balance before opening_anchor_date should be purged.
+    assert_nil @account.balances.find_by(id: stale_before_anchor.id),
+      "Balance before opening_anchor_date should be purged"
+  end
+
   test "purges stale balances outside calculated range" do
     # Create existing balances that will be stale
     stale_old = create_balance(account: @account, date: 5.days.ago.to_date, balance: 5000)
