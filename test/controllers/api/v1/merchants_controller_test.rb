@@ -40,7 +40,11 @@ class Api::V1::MerchantsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
 
-    merchants = JSON.parse(response.body)
+    body = JSON.parse(response.body)
+    assert body.key?("merchants")
+    assert body.key?("pagination")
+
+    merchants = body["merchants"]
     assert_kind_of Array, merchants
     assert_not_empty merchants
 
@@ -58,8 +62,8 @@ class Api::V1::MerchantsControllerTest < ActionDispatch::IntegrationTest
     get api_v1_merchants_url, headers: auth_headers
 
     assert_response :success
-    merchants = JSON.parse(response.body)
-    merchant_ids = merchants.map { |m| m["id"] }
+    body = JSON.parse(response.body)
+    merchant_ids = body["merchants"].map { |m| m["id"] }
 
     assert_includes merchant_ids, @merchant.id
     assert_not_includes merchant_ids, other_merchant.id
