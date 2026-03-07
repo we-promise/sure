@@ -51,7 +51,9 @@ RSpec.describe 'API V1 Auth', type: :request do
                      id: { type: :string, format: :uuid },
                      email: { type: :string },
                      first_name: { type: :string },
-                     last_name: { type: :string }
+                     last_name: { type: :string },
+                     ui_layout: { type: :string, enum: %w[dashboard intro] },
+                     ai_enabled: { type: :boolean }
                    }
                  }
                }
@@ -110,7 +112,9 @@ RSpec.describe 'API V1 Auth', type: :request do
                      id: { type: :string, format: :uuid },
                      email: { type: :string },
                      first_name: { type: :string },
-                     last_name: { type: :string }
+                     last_name: { type: :string },
+                     ui_layout: { type: :string, enum: %w[dashboard intro] },
+                     ai_enabled: { type: :boolean }
                    }
                  }
                }
@@ -152,7 +156,9 @@ RSpec.describe 'API V1 Auth', type: :request do
                      id: { type: :string, format: :uuid },
                      email: { type: :string },
                      first_name: { type: :string },
-                     last_name: { type: :string }
+                     last_name: { type: :string },
+                     ui_layout: { type: :string, enum: %w[dashboard intro] },
+                     ai_enabled: { type: :boolean }
                    }
                  }
                }
@@ -204,6 +210,43 @@ RSpec.describe 'API V1 Auth', type: :request do
       end
 
       response '400', 'missing refresh token' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+        run_test!
+      end
+    end
+  end
+
+  path '/api/v1/auth/enable_ai' do
+    patch 'Enable AI features for the authenticated user' do
+      tags 'Auth'
+      consumes 'application/json'
+      produces 'application/json'
+      security [ { apiKeyAuth: [] } ]
+
+      response '200', 'ai enabled' do
+        schema type: :object,
+               properties: {
+                 user: {
+                   type: :object,
+                   properties: {
+                     id: { type: :string, format: :uuid },
+                     email: { type: :string },
+                     first_name: { type: :string, nullable: true },
+                     last_name: { type: :string, nullable: true },
+                     ui_layout: { type: :string, enum: %w[dashboard intro] },
+                     ai_enabled: { type: :boolean }
+                   }
+                 }
+               }
+        run_test!
+      end
+
+      response '401', 'unauthorized' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+        run_test!
+      end
+
+      response '403', 'insufficient scope' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
         run_test!
       end

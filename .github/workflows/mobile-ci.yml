@@ -1,0 +1,28 @@
+name: Mobile CI
+
+on:
+  pull_request:
+    paths:
+      - 'mobile/**'
+      - 'public/android-chrome-*.png'
+      - 'public/apple-touch-icon.png'
+      - '.github/workflows/flutter-build.yml'
+      - '.github/workflows/mobile-ci.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'mobile/**'
+      - 'public/android-chrome-*.png'
+      - 'public/apple-touch-icon.png'
+      - '.github/workflows/flutter-build.yml'
+      - '.github/workflows/mobile-ci.yml'
+
+concurrency:
+  group: mobile-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    uses: ./.github/workflows/flutter-build.yml
+    secrets: inherit

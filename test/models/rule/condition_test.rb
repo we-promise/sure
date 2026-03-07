@@ -447,7 +447,7 @@ class Rule::ConditionTest < ActiveSupport::TestCase
     assert_not filtered.map(&:id).include?(transfer_entry.transaction.id)
   end
 
-  test "transaction_type expense includes investment_contribution regardless of amount sign" do
+  test "transaction_type transfer includes investment_contribution" do
     scope = @rule_scope
 
     # Create investment contribution with negative amount (inflow from provider)
@@ -463,14 +463,27 @@ class Rule::ConditionTest < ActiveSupport::TestCase
       rule: @transaction_rule,
       condition_type: "transaction_type",
       operator: "=",
-      value: "expense"
+      value: "transfer"
     )
 
     scope = condition.prepare(scope)
     filtered = condition.apply(scope)
 
-    # Should include investment_contribution even with negative amount
+    # investment_contribution is a transfer kind
     assert filtered.map(&:id).include?(contribution_entry.transaction.id)
+
+    # Should NOT match expense filter
+    expense_condition = Rule::Condition.new(
+      rule: @transaction_rule,
+      condition_type: "transaction_type",
+      operator: "=",
+      value: "expense"
+    )
+
+    expense_scope = expense_condition.prepare(@rule_scope)
+    expense_filtered = expense_condition.apply(expense_scope)
+
+    assert_not expense_filtered.map(&:id).include?(contribution_entry.transaction.id)
   end
 
   test "transaction_type income excludes investment_contribution" do

@@ -57,8 +57,14 @@ class Transaction::Search
 
         result = scope
                   .select(
-                    "COALESCE(SUM(CASE WHEN transactions.kind = 'investment_contribution' THEN ABS(entries.amount * COALESCE(er.rate, 1)) WHEN entries.amount >= 0 AND transactions.kind NOT IN ('funds_movement', 'cc_payment') THEN ABS(entries.amount * COALESCE(er.rate, 1)) ELSE 0 END), 0) as expense_total",
-                    "COALESCE(SUM(CASE WHEN entries.amount < 0 AND transactions.kind NOT IN ('funds_movement', 'cc_payment', 'investment_contribution') THEN ABS(entries.amount * COALESCE(er.rate, 1)) ELSE 0 END), 0) as income_total",
+                    ActiveRecord::Base.sanitize_sql_array([
+                      "COALESCE(SUM(CASE WHEN entries.amount >= 0 AND transactions.kind NOT IN (?) THEN ABS(entries.amount * COALESCE(er.rate, 1)) ELSE 0 END), 0) as expense_total",
+                      Transaction::TRANSFER_KINDS
+                    ]),
+                    ActiveRecord::Base.sanitize_sql_array([
+                      "COALESCE(SUM(CASE WHEN entries.amount < 0 AND transactions.kind NOT IN (?) THEN ABS(entries.amount * COALESCE(er.rate, 1)) ELSE 0 END), 0) as income_total",
+                      Transaction::TRANSFER_KINDS
+                    ]),
                     "COUNT(entries.id) as transactions_count"
                   )
                   .joins(
@@ -110,14 +116,14 @@ class Transaction::Search
       # Get parent category IDs for the given category names
       parent_category_ids = family.categories.where(name: real_categories).pluck(:id)
 
-      uncategorized_condition = "(categories.id IS NULL AND transactions.kind NOT IN ('funds_movement', 'cc_payment'))"
+      uncategorized_condition = "categories.id IS NULL AND transactions.kind NOT IN (?)"
 
       # Build condition based on whether parent_category_ids is empty
       if parent_category_ids.empty?
         if include_uncategorized
           query = query.left_joins(:category).where(
-            "categories.name IN (?) OR #{uncategorized_condition}",
-            real_categories.presence || []
+            "categories.name IN (?) OR (#{uncategorized_condition})",
+            real_categories.presence || [], Transaction::TRANSFER_KINDS
           )
         else
           query = query.left_joins(:category).where(categories: { name: real_categories })
@@ -125,8 +131,8 @@ class Transaction::Search
       else
         if include_uncategorized
           query = query.left_joins(:category).where(
-            "categories.name IN (?) OR categories.parent_id IN (?) OR #{uncategorized_condition}",
-            real_categories, parent_category_ids
+            "categories.name IN (?) OR categories.parent_id IN (?) OR (#{uncategorized_condition})",
+            real_categories, parent_category_ids, Transaction::TRANSFER_KINDS
           )
         else
           query = query.left_joins(:category).where(
@@ -143,29 +149,22 @@ class Transaction::Search
       return query unless types.present?
       return query if types.sort == [ "expense", "income", "transfer" ]
 
-      transfer_condition = "transactions.kind IN ('funds_movement', 'cc_payment', 'loan_payment')"
-      # investment_contribution is always an expense regardless of amount sign
-      # (handles both manual outflows and provider-imported inflows like 401k contributions)
-      investment_contribution_condition = "transactions.kind = 'investment_contribution'"
-      expense_condition = "(entries.amount >= 0 OR #{investment_contribution_condition})"
-      income_condition = "(entries.amount <= 0 AND NOT #{investment_contribution_condition})"
-
-      condition = case types.sort
+      case types.sort
       when [ "transfer" ]
-        transfer_condition
+        query.where(kind: Transaction::TRANSFER_KINDS)
       when [ "expense" ]
-        Arel.sql("#{expense_condition} AND NOT (#{transfer_condition})")
+        query.where("entries.amount >= 0").where.not(kind: Transaction::TRANSFER_KINDS)
       when [ "income" ]
-        Arel.sql("#{income_condition} AND NOT (#{transfer_condition})")
+        query.where("entries.amount < 0").where.not(kind: Transaction::TRANSFER_KINDS)
       when [ "expense", "transfer" ]
-        Arel.sql("#{expense_condition} OR #{transfer_condition}")
+        query.where("entries.amount >= 0 OR transactions.kind IN (?)", Transaction::TRANSFER_KINDS)
       when [ "income", "transfer" ]
-        Arel.sql("#{income_condition} OR #{transfer_condition}")
+        query.where("entries.amount < 0 OR transactions.kind IN (?)", Transaction::TRANSFER_KINDS)
       when [ "expense", "income" ]
-        Arel.sql("NOT (#{transfer_condition})")
+        query.where.not(kind: Transaction::TRANSFER_KINDS)
+      else
+        query
       end
-
-      query.where(condition)
     end
 
     def apply_merchant_filter(query, merchants)

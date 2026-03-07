@@ -34,26 +34,33 @@ module AccountableResource
   end
 
   def create
-    @account = Current.family.accounts.create_and_sync(account_params.except(:return_to))
+    opening_balance_date = begin
+      account_params[:opening_balance_date].presence&.to_date
+    rescue Date::Error
+      nil
+    end || (Time.zone.today - 2.years)
+    @account = Current.family.accounts.create_and_sync(
+      account_params.except(:return_to, :opening_balance_date),
+      opening_balance_date: opening_balance_date
+    )
     @account.lock_saved_attributes!
 
     redirect_to account_params[:return_to].presence || @account, notice: t("accounts.create.success", type: accountable_type.name.underscore.humanize)
   end
 
   def update
-    # Handle balance update if provided
-    if account_params[:balance].present?
+    # Handle balance update if the value actually changed
+    if account_params[:balance].present? && account_params[:balance].to_d != @account.balance
       result = @account.set_current_balance(account_params[:balance].to_d)
       unless result.success?
         @error_message = result.error_message
         render :edit, status: :unprocessable_entity
         return
       end
-      @account.sync_later
     end
 
     # Update remaining account attributes
-    update_params = account_params.except(:return_to, :balance, :currency)
+    update_params = account_params.except(:return_to, :balance, :currency, :opening_balance_date)
     unless @account.update(update_params)
       @error_message = @account.errors.full_messages.join(", ")
       render :edit, status: :unprocessable_entity
@@ -86,6 +93,7 @@ module AccountableResource
     def account_params
       params.require(:account).permit(
         :name, :balance, :subtype, :currency, :accountable_type, :return_to,
+        :opening_balance_date,
         :institution_name, :institution_domain, :notes,
         accountable_attributes: self.class.permitted_accountable_attributes
       )

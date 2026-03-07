@@ -63,7 +63,7 @@ module SettingsHelper
     previous_setting = adjacent_setting(request.path, -1)
     next_setting = adjacent_setting(request.path, 1)
 
-    content_tag :div, class: "md:hidden flex flex-col gap-4" do
+    content_tag :div, class: "md:hidden flex flex-col gap-4 pb-[env(safe-area-inset-bottom)]" do
       concat(previous_setting)
       concat(next_setting)
     end

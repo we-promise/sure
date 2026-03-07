@@ -18,7 +18,7 @@ void main() async {
   await ApiConfig.initialize();
 
   // Add initial log entry
-  LogService.instance.info('App', 'Sure Finance app starting...');
+  LogService.instance.info('App', 'Sure app starting...');
 
   runApp(const SureApp());
 }
@@ -62,9 +62,15 @@ class SureApp extends StatelessWidget {
         ),
       ],
       child: MaterialApp(
-        title: 'Sure Finance',
+        title: 'Sure Finances',
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
+          fontFamily: 'Geist',
+          fontFamilyFallback: const [
+            'Inter',
+            'Arial',
+            'sans-serif',
+          ],
           colorScheme: ColorScheme.fromSeed(
             seedColor: const Color(0xFF6366F1),
             brightness: Brightness.light,
@@ -96,6 +102,12 @@ class SureApp extends StatelessWidget {
           ),
         ),
         darkTheme: ThemeData(
+          fontFamily: 'Geist',
+          fontFamilyFallback: const [
+            'Inter',
+            'Arial',
+            'sans-serif',
+          ],
           colorScheme: ColorScheme.fromSeed(
             seedColor: const Color(0xFF6366F1),
             brightness: Brightness.dark,

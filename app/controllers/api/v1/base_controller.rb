@@ -73,6 +73,11 @@ class Api::V1::BaseController < ApplicationController
           render_json({ error: "unauthorized", message: "Access token is invalid - user not found" }, status: :unauthorized)
           return false
         end
+
+        unless @current_user.active?
+          render_json({ error: "unauthorized", message: "Account has been deactivated" }, status: :unauthorized)
+          return false
+        end
       else
         Rails.logger.warn "API OAuth Token Invalid: Access token missing resource_owner_id"
         render_json({ error: "unauthorized", message: "Access token is invalid - missing resource owner" }, status: :unauthorized)
@@ -96,6 +101,11 @@ class Api::V1::BaseController < ApplicationController
       return false unless @api_key && @api_key.active?
 
       @current_user = @api_key.user
+      unless @current_user.active?
+        render_json({ error: "unauthorized", message: "Account has been deactivated" }, status: :unauthorized)
+        return false
+      end
+
       @api_key.update_last_used!
       @authentication_method = :api_key
       @rate_limiter = ApiRateLimiter.limit(@api_key)

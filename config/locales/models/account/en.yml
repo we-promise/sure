@@ -5,8 +5,8 @@ en:
       account:
         balance: Balance
         currency: Currency
-        family: Family
-        family_id: Family
+        family: "%{moniker}"
+        family_id: "%{moniker}"
         name: Name
         subtype: Subtype
     models:

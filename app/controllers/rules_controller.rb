@@ -11,7 +11,7 @@ class RulesController < ApplicationController
     @sort_by = "name" unless allowed_columns.include?(@sort_by)
     @direction = "asc" unless [ "asc", "desc" ].include?(@direction)
 
-    @rules = Current.family.rules.order(@sort_by => @direction)
+    @rules = Current.family.rules.includes(conditions: :sub_conditions).order(@sort_by => @direction)
 
     # Fetch recent rule runs with pagination
     recent_runs_scope = RuleRun

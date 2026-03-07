@@ -158,7 +158,7 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_response :ok
 
     # Verify spending patterns shows data (not the "no data" message)
-    assert_select ".text-center.py-8.text-tertiary", { text: /No spending data/, count: 0 }, "Should not show 'No spending data' message when transactions exist"
+    assert_select ".text-center.py-8.text-subdued", { text: /No spending data/, count: 0 }, "Should not show 'No spending data' message when transactions exist"
   end
 
   test "export transactions with API key authentication" do

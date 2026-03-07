@@ -1,0 +1,260 @@
+name: Mobile Build
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  prepare:
+    name: Prepare build stamp
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      stamp: ${{ steps.stamp.outputs.stamp }}
+      branch: ${{ steps.stamp.outputs.branch }}
+      version: ${{ steps.stamp.outputs.version }}
+      tag_name: ${{ steps.stamp.outputs.tag_name }}
+
+    steps:
+      - name: Generate stamp
+        id: stamp
+        run: |
+          set -euo pipefail
+          STAMP="$(date -u +'%Y%m%d%H%M')"
+
+          # Sanitise branch name for use in file names and git tags
+          # e.g. feature/foo-bar → feature-foo-bar
+          # When workflow_dispatch is triggered from a tag, fall back to the
+          # default branch so filenames use "main" instead of the tag name.
+          if [[ "${{ github.ref_type }}" == "tag" ]]; then
+            RAW_BRANCH="${{ github.event.repository.default_branch }}"
+          else
+            RAW_BRANCH="${{ github.ref_name }}"
+          fi
+          BRANCH="$(echo "$RAW_BRANCH" | sed 's/[^a-zA-Z0-9._-]/-/g' | sed 's/--*/-/g' | sed 's/^-//;s/-$//')"
+
+          VERSION="${BRANCH}-${STAMP}"
+          TAG_NAME="${BRANCH}-build-${STAMP}"
+
+          echo "stamp=$STAMP"   >> "$GITHUB_OUTPUT"
+          echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag_name=$TAG_NAME" >> "$GITHUB_OUTPUT"
+
+          echo "Branch (raw): $RAW_BRANCH"
+          echo "Branch (safe): $BRANCH"
+          echo "Version: $VERSION"
+          echo "Tag: $TAG_NAME"
+
+  build:
+    name: Build Mobile Apps
+    uses: ./.github/workflows/flutter-build.yml
+    secrets: inherit
+
+  release:
+    name: Create GitHub Release
+    needs: [build, prepare]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
+          fetch-depth: 0
+
+      - name: Download Android APK artifact
+        continue-on-error: true
+        uses: actions/download-artifact@v4.3.0
+        with:
+          name: app-release-apk
+          path: ${{ runner.temp }}/mobile-artifacts
+
+      - name: Download iOS build artifact
+        continue-on-error: true
+        uses: actions/download-artifact@v4.3.0
+        with:
+          name: ios-build-unsigned
+          path: ${{ runner.temp }}/ios-build
+
+      - name: Prepare release assets
+        run: |
+          set -euo pipefail
+          VERSION="${{ needs.prepare.outputs.version }}"
+          mkdir -p ${{ runner.temp }}/release-assets
+
+          echo "=== Downloaded artifacts ==="
+          echo "Mobile artifacts:"
+          ls -laR "${{ runner.temp }}/mobile-artifacts" || echo "No mobile-artifacts directory"
+          echo "iOS build:"
+          ls -laR "${{ runner.temp }}/ios-build" || echo "No ios-build directory"
+          echo "==========================="
+
+          # Copy debug APK if it exists
+          if [ -f "${{ runner.temp }}/mobile-artifacts/app-debug.apk" ]; then
+            cp "${{ runner.temp }}/mobile-artifacts/app-debug.apk" \
+               "${{ runner.temp }}/release-assets/sure-${VERSION}-debug.apk"
+            echo "✓ Debug APK prepared"
+          fi
+
+          # Copy release APK if it exists
+          if [ -f "${{ runner.temp }}/mobile-artifacts/app-release.apk" ]; then
+            cp "${{ runner.temp }}/mobile-artifacts/app-release.apk" \
+               "${{ runner.temp }}/release-assets/sure-${VERSION}.apk"
+            echo "✓ Release APK prepared"
+          fi
+
+          # Create iOS app archive (zip the .app bundle)
+          if [ -d "${{ runner.temp }}/ios-build/ios/iphoneos/Runner.app" ]; then
+            cd "${{ runner.temp }}/ios-build/ios/iphoneos"
+            zip -r "${{ runner.temp }}/release-assets/sure-${VERSION}-ios-unsigned.zip" Runner.app
+            echo "✓ iOS build archive prepared"
+          fi
+
+          # Copy iOS build info
+          if [ -f "${{ runner.temp }}/ios-build/ios-build-info.txt" ]; then
+            cp "${{ runner.temp }}/ios-build/ios-build-info.txt" "${{ runner.temp }}/release-assets/"
+          fi
+
+          echo "Release assets:"
+          ls -la "${{ runner.temp }}/release-assets/"
+
+          # Fail early if no assets were produced
+          if [ -z "$(ls -A "${{ runner.temp }}/release-assets/")" ]; then
+            echo "::error::No release assets were produced"
+            exit 1
+          fi
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          VERSION="${{ needs.prepare.outputs.version }}"
+          TAG="${{ needs.prepare.outputs.tag_name }}"
+          BRANCH="${{ needs.prepare.outputs.branch }}"
+
+          cat > /tmp/release-notes.md <<NOTES
+          ## Mobile Build: ${VERSION}
+
+          This is an automated mobile build from the \`${BRANCH}\` branch. It does not correspond to a tagged release.
+
+          ### Downloads
+
+          - **Android APK**: Debug or signed build for testing on Android devices
+          - **iOS Build**: Unsigned iOS build (requires code signing for installation)
+
+          > **Note**: These are development builds from \`${BRANCH}\` intended for testing purposes. For production use, please use a tagged release or build from source with proper signing credentials.
+          NOTES
+
+          # Strip heredoc indentation
+          sed -i 's/^          //' /tmp/release-notes.md
+
+          # Create a lightweight tag on the checked-out commit
+          git config user.name "${GITHUB_ACTOR}"
+          git config user.email "${GITHUB_ACTOR}@users.noreply.github.com"
+          git tag "$TAG"
+          git push origin "$TAG"
+
+          gh release create "$TAG" \
+            --repo "${{ github.repository }}" \
+            --title "Mobile build ${VERSION}" \
+            --notes-file /tmp/release-notes.md \
+            --prerelease \
+            ${{ runner.temp }}/release-assets/*
+
+      - name: Checkout gh-pages branch
+        uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+          path: gh-pages
+
+      - name: Update README with latest mobile build links
+        run: |
+          set -euo pipefail
+          VERSION="${{ needs.prepare.outputs.version }}"
+          TAG="${{ needs.prepare.outputs.tag_name }}"
+          BRANCH="${{ needs.prepare.outputs.branch }}"
+          REPO="${{ github.repository }}"
+
+          # Build download links based on which assets were produced
+          LINKS=""
+          if [ -f "${{ runner.temp }}/release-assets/sure-${VERSION}.apk" ]; then
+            LINKS="${LINKS}- **Android APK**: [sure-${VERSION}.apk](https://github.com/${REPO}/releases/download/${TAG}/sure-${VERSION}.apk)\n"
+          fi
+          if [ -f "${{ runner.temp }}/release-assets/sure-${VERSION}-debug.apk" ]; then
+            LINKS="${LINKS}- **Android Debug APK**: [sure-${VERSION}-debug.apk](https://github.com/${REPO}/releases/download/${TAG}/sure-${VERSION}-debug.apk)\n"
+          fi
+          if [ -f "${{ runner.temp }}/release-assets/sure-${VERSION}-ios-unsigned.zip" ]; then
+            LINKS="${LINKS}- **iOS Build (unsigned)**: [sure-${VERSION}-ios-unsigned.zip](https://github.com/${REPO}/releases/download/${TAG}/sure-${VERSION}-ios-unsigned.zip)\n"
+          fi
+
+          # Build the mobile downloads section
+          SECTION="$(cat <<BLOCK
+          <!-- MOBILE_DOWNLOADS_START -->
+          ## Latest Mobile Build: ${VERSION}
+
+          **Build from**: \`${BRANCH}\` branch
+
+          ### Direct Downloads
+
+          $(echo -e "$LINKS")
+
+          > **Note**: These are development builds from \`${BRANCH}\` intended for testing purposes. For production use, please use a tagged release or build from source with proper signing credentials.
+          <!-- MOBILE_DOWNLOADS_END -->
+          BLOCK
+          )"
+
+          # Strip leading whitespace from heredoc indentation
+          SECTION="$(echo "$SECTION" | sed 's/^          //')"
+
+          README="gh-pages/README.md"
+
+          if [ ! -f "$README" ]; then
+            # No README yet — create one
+            printf "# Sure\n\n%s\n" "$SECTION" > "$README"
+          elif grep -q '<!-- MOBILE_DOWNLOADS_START -->' "$README"; then
+            # Write section to a temp file so awk can read it without quoting issues
+            printf '%s\n' "$SECTION" > "${README}.section"
+
+            # In-place replacement: keep content before/after the markers,
+            # replace the block between them with the new section
+            awk '
+              /<!-- MOBILE_DOWNLOADS_START -->/ {
+                while ((getline line < SECFILE) > 0) print line
+                close(SECFILE)
+                skip=1
+                next
+              }
+              /<!-- MOBILE_DOWNLOADS_END -->/ { skip=0; next }
+              !skip { print }
+            ' SECFILE="${README}.section" "$README" > "${README}.tmp"
+
+            mv "${README}.tmp" "$README"
+            rm "${README}.section"
+          else
+            # Append mobile section to existing README
+            printf "\n%s\n" "$SECTION" >> "$README"
+          fi
+
+          echo "Updated README.md:"
+          cat "$README"
+
+      - name: Push updated README to gh-pages
+        run: |
+          cd gh-pages
+          git config user.name "${{ github.actor }}"
+          git config user.email "${{ github.actor }}@users.noreply.github.com"
+          git add README.md
+          if git diff --cached --quiet; then
+            echo "No README changes to push."
+            exit 0
+          fi
+          git commit -m "Update mobile download links for ${{ needs.prepare.outputs.version }}"
+          git push

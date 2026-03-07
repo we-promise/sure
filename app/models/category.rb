@@ -127,6 +127,14 @@ class Category < ApplicationRecord
       I18n.t(INVESTMENT_CONTRIBUTIONS_NAME_KEY)
     end
 
+    # Returns all possible investment contributions names across all supported locales
+    # Used to detect investment contributions category regardless of locale
+    def all_investment_contributions_names
+      LanguagesHelper::SUPPORTED_LOCALES.map do |locale|
+        I18n.t(INVESTMENT_CONTRIBUTIONS_NAME_KEY, locale: locale)
+      end.uniq
+    end
+
     private
       def default_categories
         [

@@ -4,7 +4,10 @@ class Import::CleansController < ApplicationController
   before_action :set_import
 
   def show
-    redirect_to import_configuration_path(@import), alert: "Please configure your import before proceeding." unless @import.configured?
+    unless @import.configured?
+      redirect_path = @import.is_a?(PdfImport) ? import_path(@import) : import_configuration_path(@import)
+      return redirect_to redirect_path, alert: "Please configure your import before proceeding."
+    end
 
     rows = @import.rows.ordered
 

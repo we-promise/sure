@@ -5,15 +5,15 @@
 <html
   lang="en"
   data-theme="<%= theme %>"
-  data-controller="theme"
+  data-controller="theme viewport"
   data-theme-user-preference-value="<%= Current.user&.theme || "system" %>"
-  class="text-primary bg-surface overflow-hidden overscroll-none font-sans <%= @os %>">
+  class="h-[var(--app-height, 100dvh)] text-primary bg-surface overflow-hidden overscroll-none font-sans <%= @os %>">
   <head>
     <%= render "layouts/shared/head" %>
     <%= yield :head %>
   </head>
 
-  <body class="h-[100dvh] overflow-hidden antialiased pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
+  <body class="h-[var(--app-height)] overflow-hidden antialiased">
     <% if Rails.env.development? %>
       <button hidden data-controller="hotkey" data-hotkey="t t /" data-action="theme#toggle"></button>
     <% end %>

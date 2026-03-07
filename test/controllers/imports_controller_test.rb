@@ -23,6 +23,20 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_select "turbo-frame#modal"
   end
 
+  test "shows disabled account-dependent imports when family has no accounts" do
+    sign_in users(:empty)
+
+    get new_import_url
+
+    assert_response :success
+    assert_select "button", text: "Import accounts"
+    assert_select "button", text: "Import transactions", count: 0
+    assert_select "button", text: "Import investments", count: 0
+    assert_select "button", text: "Import from Mint", count: 0
+    assert_select "span", text: "Import accounts first to unlock this option.", count: 3
+    assert_select "div[aria-disabled=true]", count: 3
+  end
+
   test "creates import" do
     assert_difference "Import.count", 1 do
       post imports_url, params: {

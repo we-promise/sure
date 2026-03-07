@@ -1,3 +1,4 @@
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/user.dart';
@@ -22,6 +23,8 @@ class AuthProvider with ChangeNotifier {
   bool _showMfaInput = false; // Track if we should show MFA input field
 
   User? get user => _user;
+  bool get isIntroLayout => _user?.isIntroLayout ?? false;
+  bool get aiEnabled => _user?.aiEnabled ?? false;
   AuthTokens? get tokens => _tokens;
   bool get isLoading => _isLoading;
   bool get isInitializing => _isInitializing; // Expose initialization state
@@ -55,9 +58,20 @@ class AuthProvider with ChangeNotifier {
         _tokens = await _authService.getStoredTokens();
         _user = await _authService.getStoredUser();
 
-        // If tokens exist but are expired, try to refresh
+        // If tokens exist but are expired, try to refresh only when online
         if (_tokens != null && _tokens!.isExpired) {
-          await _refreshToken();
+          final results = await Connectivity().checkConnectivity();
+          final isOnline = results.any((r) =>
+              r == ConnectivityResult.mobile ||
+              r == ConnectivityResult.wifi ||
+              r == ConnectivityResult.ethernet ||
+              r == ConnectivityResult.vpn ||
+              r == ConnectivityResult.bluetooth);
+          if (isOnline) {
+            await _refreshToken();
+          } else {
+            await logout();
+          }
         }
       }
     } catch (e) {
@@ -319,6 +333,27 @@ class AuthProvider with ChangeNotifier {
     }
 
     return _tokens?.accessToken;
+  }
+
+  Future<bool> enableAi() async {
+    final accessToken = await getValidAccessToken();
+    if (accessToken == null) {
+      _errorMessage = 'Session expired. Please login again.';
+      notifyListeners();
+      return false;
+    }
+
+    final result = await _authService.enableAi(accessToken: accessToken);
+    if (result['success'] == true) {
+      _user = result['user'] as User?;
+      _errorMessage = null;
+      notifyListeners();
+      return true;
+    }
+
+    _errorMessage = result['error'] as String?;
+    notifyListeners();
+    return false;
   }
 
   void clearError() {

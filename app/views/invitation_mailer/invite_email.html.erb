@@ -5,6 +5,7 @@
     ".body",
     inviter: @invitation.inviter.display_name,
     family: @invitation.family.name,
+    moniker: @invitation.family.moniker_label.downcase,
     product_name: product_name
   ).html_safe %>
 </p>

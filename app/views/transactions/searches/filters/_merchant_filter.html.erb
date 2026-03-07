@@ -16,14 +16,21 @@
                            merchant.name,
                            nil %>
         <%= form.label :merchants, value: merchant.name, class: "text-sm text-primary flex items-center gap-2" do %>
-          <%= render DS::FilledIcon.new(
-            variant: :text,
-            hex_color: merchant.color,
-            text: merchant.name,
-            size: "sm",
-            rounded: true
-          ) %>
-
+          <div class="hidden lg:flex">
+            <% if merchant.logo_url.present? %>
+              <%= image_tag Setting.transform_brand_fetch_url(merchant.logo_url),
+                  class: "w-6 h-6 rounded-full border border-secondary",
+                  loading: "lazy" %>
+            <% else %>
+              <%= render DS::FilledIcon.new(
+                variant: :text,
+                hex_color: merchant.color,
+                text: merchant.name,
+                size: "sm",
+                rounded: true
+              ) %>
+            <% end %>
+          </div>
           <%= merchant.name %>
         <% end %>
       </div>
