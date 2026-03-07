@@ -10,6 +10,109 @@ zh-CN:
       title: 请输入账户余额
     show:
       chart_title: 总价值
+    subtypes:
+      401k:
+        long: 401(k)
+        short: 401(k)
+      403b:
+        long: 403(b)
+        short: 403(b)
+      457b:
+        long: 457(b)
+        short: 457(b)
+      529_plan:
+        long: 529 教育储蓄计划
+        short: 529 计划
+      angel:
+        long: 天使投资
+        short: 天使投资
+      brokerage:
+        long: 券商账户
+        short: 券商
+      hsa:
+        long: 健康储蓄账户
+        short: 健康储蓄账户
+      ira:
+        long: 传统个人退休账户
+        short: 传统 IRA
+      isa:
+        long: 个人储蓄账户
+        short: ISA
+      lira:
+        long: 锁定型退休账户
+        short: LIRA
+      lisa:
+        long: 终身个人储蓄账户
+        short: LISA
+      mutual_fund:
+        long: 共同基金
+        short: 共同基金
+      other:
+        long: 其他投资
+        short: 其他
+      pea:
+        long: 股票储蓄计划（PEA）
+        short: 股票储蓄计划
+      pension:
+        long: 养老金账户
+        short: 工作养老金
+      pillar_3a:
+        long: 私人养老金（第三支柱 3a）
+        short: 第三支柱 3a
+      resp:
+        long: 注册教育储蓄计划
+        short: RESP
+      retirement:
+        long: 退休账户
+        short: 退休
+      riester:
+        long: 里斯特养老金
+        short: 里斯特
+      roth_401k:
+        long: 罗斯 401(k)
+        short: 罗斯 401(k)
+      roth_ira:
+        long: 罗斯个人退休账户
+        short: 罗斯 IRA
+      rrif:
+        long: 注册退休收入基金
+        short: RRIF
+      rrsp:
+        long: 注册退休储蓄计划
+        short: RRSP
+      sep_ira:
+        long: SEP 个人退休账户
+        short: SEP IRA
+      simple_ira:
+        long: SIMPLE 个人退休账户
+        short: SIMPLE IRA
+      sipp:
+        long: 自主投资个人养老金
+        short: SIPP
+      smsf:
+        long: 自主管理养老金基金
+        short: SMSF
+      super:
+        long: 养老金（Super）
+        short: Super
+      tfsa:
+        long: 免税储蓄账户
+        short: TFSA
+      trust:
+        long: 信托账户
+        short: 信托
+      tsp:
+        long: 联邦储蓄计划
+        short: TSP
+      ugma:
+        long: UGMA 监护账户
+        short: UGMA
+      utma:
+        long: UTMA 监护账户
+        short: UTMA
+      workplace_pension_uk:
+        long: 工作场所养老金
+        short: 工作养老金
     value_tooltip:
       cash: 现金
       holdings: 持仓

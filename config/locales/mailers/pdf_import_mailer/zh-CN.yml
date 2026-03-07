@@ -1,0 +1,6 @@
+---
+zh-CN:
+  pdf_import_mailer:
+    next_steps:
+      subject: 您的 PDF 文档已完成分析 - %{product_name}
+      

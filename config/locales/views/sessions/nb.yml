@@ -1,10 +1,10 @@
 ---
 nb:
   sessions:
+    logout:
+      successful: Du har blitt logget ut.
     create:
       invalid_credentials: Ugyldig e-post eller passord.
-    destroy:
-      logout_successful: Du har blitt logget ut.
     openid_connect:
       failed: Kunne ikke autentisere via OpenID Connect.
     new:

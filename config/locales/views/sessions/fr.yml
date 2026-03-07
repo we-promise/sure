@@ -1,10 +1,10 @@
 ---
 fr:
   sessions:
+    logout:
+      successful: Vous avez été déconnecté avec succès.
     create:
       invalid_credentials: Adresse e-mail ou mot de passe invalide.
-    destroy:
-      logout_successful: Vous avez été déconnecté avec succès.
     new:
       email: Adresse e-mail
       email_placeholder: nom@exemple.fr

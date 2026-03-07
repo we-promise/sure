@@ -3,5 +3,18 @@ zh-CN:
   cryptos:
     edit:
       edit: 编辑%{account}
+    form:
+      subtype_label: 账户类型
+      subtype_none: 未指定
+      subtype_prompt: 选择类型...
+      tax_treatment_hint: 大多数加密货币保存在应税账户中。如果保存在像自管IRA这样的税收优惠账户中，请选择其他选项。
+      tax_treatment_label: 税收处理
     new:
       title: 请输入账户余额
+    subtypes:
+      exchange:
+        long: 加密货币交易所
+        short: 交易所
+      wallet:
+        long: 加密货币钱包
+        short: 钱包

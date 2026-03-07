@@ -3,7 +3,7 @@ ca:
   subscriptions:
     self_hosted_alert: "%{product_name} no està disponible en mode autoallotjat."
     upgrade:
-      contribute_and_support_sure: "Contribuir i donar suport a Sure"
+      contribute_and_support_sure: "Contribuir i donar suport a %{product}"
       cta: "Continua donant suport al desenvolupament d'aquest codi!"
       header:
         support: "Suport"

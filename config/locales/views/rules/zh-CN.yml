@@ -1,6 +1,32 @@
----
 zh-CN:
   rules:
+    actions:
+      value_placeholder: 输入一个值
+    apply_all:
+      ai_cost_message: 这将使用 AI 对最多 %{transactions} 笔交易进行分类。
+      ai_cost_title: AI 成本估算
+      button: 全部应用
+      confirm_button: 确认并全部应用
+      confirm_message: 您即将应用 %{count} 条规则，这将影响 %{transactions} 笔唯一的交易。请确认是否继续。
+      confirm_title: 应用所有规则
+      cost_unavailable_model: 无法为模型 "%{model}" 估算成本。
+      cost_unavailable_no_provider: 成本估算不可用（未配置 LLM 提供商）。
+      cost_warning: 您可能会产生费用，请与模型提供商核实最新价格。
+      estimated_cost: '估算成本：~$%{cost}'
+      success: 所有规则已加入执行队列
+      view_usage: 查看使用历史
+    clear_ai_cache:
+      button: 重置 AI 缓存
+      confirm_body: 您确定要重置 AI 缓存吗？这将允许 AI 规则重新处理所有交易。这可能会产生额外的 API 费用。
+      confirm_button: 重置缓存
+      confirm_title: 重置 AI 缓存？
+      success: AI 缓存正在清除中。这可能需要一些时间。
+    condition_filters:
+      transaction_type:
+        equal_to: 等于
+        expense: 支出
+        income: 收入
+        transfer: 转账
     no_action: 无操作
     no_condition: 无条件
     recent_runs:

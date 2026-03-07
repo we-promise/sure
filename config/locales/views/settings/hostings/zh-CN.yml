@@ -2,13 +2,43 @@
 zh-CN:
   settings:
     hostings:
+      assistant_settings:
+        agent_id_help: 当提供商托管多个代理时，路由到特定代理。留空则使用默认代理。
+        agent_id_label: 代理 ID（可选）
+        agent_id_placeholder: main（默认）
+        confirm_disconnect:
+          body: 这将删除已保存的 URL、令牌和代理 ID，并切换回内置助手。您之后可以通过输入新凭据重新连接。
+          title: 断开外部助手连接？
+        description: 选择聊天助手的响应方式。内置助手直接使用您配置的 LLM 提供商。外部助手则委托给远程 AI 代理，该代理可以通过 MCP 回调到 Sure 的财务工具。
+        disconnect_button: 断开连接
+        disconnect_description: 移除外部助手连接并切换回内置助手。
+        disconnect_title: 外部连接
+        env_configured_external: 已通过环境变量成功配置。
+        env_notice: 助手类型已通过 ASSISTANT_TYPE 环境变量锁定为“%{type}”。
+        external_configured: 已配置
+        external_not_configured: 未配置。请在下方输入 URL 和令牌，或设置 EXTERNAL_ASSISTANT_URL 和 EXTERNAL_ASSISTANT_TOKEN 环境变量。
+        external_status: 外部助手端点
+        title: AI 助手
+        token_help: 您的外部代理提供的身份验证令牌。这将在每个请求中作为 Bearer 令牌发送。
+        token_label: API 令牌
+        token_placeholder: 输入您的代理提供商提供的令牌
+        type_builtin: 内置（直接 LLM）
+        type_external: 外部（远程代理）
+        type_label: 助手类型
+        url_help: 您的代理 API 端点的完整 URL。您的代理提供商会提供此 URL。
+        url_label: 端点 URL
+        url_placeholder: https://your-agent-host/v1/chat
       brand_fetch_settings:
         description: 请输入 Brand Fetch 提供的 Client ID
+        high_res_description: 启用后，徽标将以 120x120 分辨率（而非 40x40）获取。这在高 DPI 显示屏上提供更清晰的图像。
+        high_res_label: 启用高分辨率徽标
         label: Client ID
         placeholder: 在此输入您的 Client ID
         title: Brand Fetch 设置
       clear_cache:
         cache_cleared: 数据缓存已清除，此操作可能需要一些时间完成。
+      disconnect_external_assistant:
+        external_assistant_disconnected: 外部助手已断开连接
       invite_code_settings:
         description: 控制新用户如何注册您的 %{product} 实例。
         email_confirmation_description: 启用后，用户在更改邮箱地址时必须进行邮箱确认。
@@ -38,8 +68,7 @@ zh-CN:
         uri_base_label: API 基础 URL（可选）
         uri_base_placeholder: https://api.openai.com/v1（默认）
       provider_selection:
-        description: 选择用于获取汇率和证券价格的服务。Yahoo Finance 免费且无需 API 密钥。Twelve Data 需要免费的
-          API 密钥，但可能提供更全面的数据覆盖。
+        description: 选择用于获取汇率和证券价格的服务。Yahoo Finance 免费且无需 API 密钥。Twelve Data 需要免费的 API 密钥，但可能提供更全面的数据覆盖。
         env_configured_message: 提供商选择已禁用，因为环境变量（EXCHANGE_RATE_PROVIDER 或 SECURITIES_PROVIDER）已设置。要在此处启用选择，请从配置中移除这些环境变量。
         exchange_rate_provider_label: 汇率数据提供商
         providers:
@@ -48,6 +77,7 @@ zh-CN:
         securities_provider_label: 证券（股票价格）数据提供商
         title: 数据提供商选择
       show:
+        ai_assistant: AI 助手
         clear_cache: 清除数据缓存
         clear_cache_warning: 清除数据缓存将移除所有汇率、证券价格、账户余额及其他数据。这不会删除账户、交易记录、分类或其他用户自有数据。
         confirm_clear_cache:
@@ -57,7 +87,16 @@ zh-CN:
         financial_data_providers: 金融数据提供商
         general: 通用设置
         invites: 邀请码设置
+        sync_settings: 同步设置
         title: 自托管配置
+      sync_settings:
+        auto_sync_description: 启用后，所有账户将在每天指定时间自动同步。
+        auto_sync_label: 启用自动同步
+        auto_sync_time_description: 指定自动同步应在一天中的什么时间发生。
+        auto_sync_time_label: 同步时间（HH:MM）
+        env_configured_message: 此设置已禁用，因为设置了提供商环境变量（SIMPLEFIN_INCLUDE_PENDING 或 PLAID_INCLUDE_PENDING）。移除它以启用此设置。
+        include_pending_description: 启用后，将导入待处理（未清算）交易，并在它们过账时自动核对。如果您的银行提供的待处理数据不可靠，请禁用。
+        include_pending_label: 包含待处理交易
       twelve_data_settings:
         api_calls_used: 已使用 %{used} / %{limit} 次每日 API 调用（%{percentage}）
         description: 请输入 Twelve Data 提供的 API 密钥
@@ -65,10 +104,16 @@ zh-CN:
         label: API 密钥
         placeholder: 在此输入您的 API 密钥
         plan: "%{plan} 套餐"
+        plan_upgrade_warning_description: 您投资组合中的以下股票代码无法使用您当前的 Twelve Data 套餐同步价格。
+        plan_upgrade_warning_title: 部分股票代码需要付费套餐
+        requires_plan: 需要 %{plan} 套餐
         title: Twelve Data 设置
+        view_pricing: 查看 Twelve Data 定价
       update:
         failure: 设置值无效
         invalid_onboarding_state: 无效的新用户注册状态
+        invalid_sync_time: 无效的同步时间格式。请使用 HH:MM 格式（例如 02:30）。
+        scheduler_sync_failed: 设置已保存，但更新同步计划失败。请重试或检查服务器日志。
         success: 设置已更新
       yahoo_finance_settings:
         connection_failed: 无法连接到 Yahoo Finance

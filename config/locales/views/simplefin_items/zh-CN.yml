@@ -4,6 +4,10 @@ zh-CN:
     complete_account_setup:
       all_skipped: 所有账户已跳过。未创建任何账户。
       no_accounts: 无待设置账户。
+      stale_accounts_errors:
+        one: "%{count} 个过期账户操作失败。请查看日志了解详情。"
+        other: "%{count} 个过期账户操作失败。请查看日志了解详情。"
+      stale_accounts_processed: '过期账户处理：%{deleted} 个已删除，%{moved} 个已转移。'
       success: 已成功创建 %{count} 个 SimpleFIN 账户！您的交易和投资数据正在后台导入。
     create:
       errors:
@@ -31,36 +35,67 @@ zh-CN:
       setup_token: 设置令牌
       setup_token_placeholder: 粘贴您的 SimpleFIN 设置令牌
       title: 连接 SimpleFIN
+    reconciled_status:
+      message:
+        one: "%{count} 笔重复待处理交易已核对"
+        other: "%{count} 笔重复待处理交易已核对"
     select_existing_account:
       all_accounts_already_linked: 所有 SimpleFIN 账户似乎均已关联。
       cancel: 取消
       check_provider_health: 检查服务提供商状态
-      currently_linked_to: "当前关联到：%{account_name}"
+      currently_linked_to: 当前关联到：%{account_name}
       description: 选择一个 SimpleFIN 账户与您的现有账户关联
       link_account: 关联账户
       no_accounts_found: 此家庭未找到 SimpleFIN 账户。
       title: 将 %{account_name} 关联到 SimpleFIN
       unlink_to_move: 如需移动关联，请先从账户操作菜单中解除当前关联。
       wait_for_sync: 如果您刚刚连接或同步完成，请等待同步完成后再试。
+    setup_accounts:
+      stale_accounts:
+        action_delete: 删除账户及所有交易
+        action_move: '将交易转移到：'
+        action_prompt: 您想做什么？
+        action_skip: 暂时跳过
+        description: 这些账户存在于您的数据库中，但 SimpleFIN 不再提供。当上游账户配置发生更改时，可能会发生这种情况。
+        title: 不再存在于 SimpleFIN 的账户
+        transaction_count:
+          one: "%{count} 笔交易"
+          other: "%{count} 笔交易"
     simplefin_item:
+      accounts_skipped_label: '已跳过：%{count}'
+      accounts_skipped_tooltip: 由于同步期间出现错误，部分账户被跳过
       add_new: 添加新连接
       confirm_accept: 删除连接
       confirm_body: 此操作将永久删除该组下的所有账户及相关数据。
       confirm_title: 确认删除 SimpleFIN 连接？
       delete: 删除
-      deletion_in_progress: "（删除进行中...）"
+      deletion_in_progress: （删除进行中...）
+      duplicate_accounts_skipped: 部分账户因重复而被跳过 — 请使用“关联现有账户”进行合并。
       error: 同步数据时发生错误
+      more_accounts_available:
+        one: 还有 %{count} 个账户可设置
+        other: 还有 %{count} 个账户可设置
       no_accounts_description: 此连接尚未同步任何账户。
       no_accounts_title: 未找到账户
+      rate_limited_ago: 频率限制（%{time} 前）
+      rate_limited_recently: 最近受到频率限制
+      reconciled_details_note: （详见同步摘要）
       requires_update: 需要重新认证
+      setup_accounts_menu: 设置账户
       setup_action: 设置新账户
       setup_description: 请为您新导入的 SimpleFIN 账户选择账户类型。
       setup_needed: 新账户待设置
+      stale_pending_accounts: '位于：%{accounts}'
+      stale_pending_note: （已从预算中排除）
       status: 上次同步于 %{timestamp} 前
       status_never: 从未同步
       status_with_summary: 同步于 %{timestamp} 前 • %{summary}
       syncing: 同步中...
       update: 更新连接
+    stale_pending_status:
+      message:
+        one: "%{count} 笔待处理交易超过 %{days} 天"
+        other: "%{count} 笔待处理交易超过 %{days} 天"
     update:
       errors:
         blank_token: 请输入 SimpleFIN 设置令牌。

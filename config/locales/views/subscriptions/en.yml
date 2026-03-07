@@ -2,7 +2,7 @@ en:
   subscriptions:
     self_hosted_alert: "%{product_name} is not available in self-hosted mode."
     upgrade:
-      contribute_and_support_sure: "Contribute and support Sure"
+      contribute_and_support_sure: "Contribute and support %{product}"
       cta: "Continue supporting the development of this codebase!"
       header:
         support: "Support"

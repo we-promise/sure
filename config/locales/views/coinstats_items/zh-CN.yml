@@ -1,0 +1,65 @@
+---
+zh-CN:
+  coinstats_items:
+    coinstats_item:
+      delete: 删除
+      deletion_in_progress: 正在删除加密货币钱包数据…
+      no_wallets_message: 当前没有通过 CoinStats 连接的加密货币钱包。
+      no_wallets_title: 未连接加密货币钱包
+      provider_name: CoinStats
+      reconnect: 重新连接
+      status: 上次同步于 %{timestamp} 前
+      status_never: 从未同步
+      status_with_summary: 上次同步于 %{timestamp} 前 • %{summary}
+      sync_status:
+        all_synced:
+          one: "%{count} 个加密货币钱包已同步"
+          other: "%{count} 个加密货币钱包已同步"
+        no_accounts: 未找到加密货币钱包
+        partial_sync: "%{linked_count} 个加密货币钱包已同步，%{unlinked_count} 个需要设置"
+      syncing: 正在同步…
+      update_api_key: 更新 API 密钥
+    create:
+      default_name: CoinStats 连接
+      errors:
+        validation_failed: '验证失败：%{message}。'
+      success: CoinStats 提供程序连接配置成功。
+    destroy:
+      success: 已计划删除 CoinStats 提供程序连接。
+    link_wallet:
+      error: '加密货币钱包关联失败：%{message}。'
+      failed: 加密货币钱包关联失败。
+      missing_params: '缺少必需的参数：地址和区块链。'
+      success: 成功关联 %{count} 个加密货币钱包。
+    new:
+      address_label: 地址
+      address_placeholder: 必填
+      api_key_label: API 密钥
+      api_key_placeholder: 必填
+      blockchain_fetch_error: 加载区块链失败。请稍后重试。
+      blockchain_label: 区块链
+      blockchain_placeholder: 必填
+      blockchain_select_blank: 选择区块链
+      configure: 配置
+      default_name: CoinStats 连接
+      go_to_settings: 前往提供程序设置
+      link: 关联加密货币钱包
+      not_configured_message: 要关联加密货币钱包，您必须先配置 CoinStats 提供程序连接。
+      not_configured_step1_html: 前往 <strong>设置 → 提供程序</strong>
+      not_configured_step2_html: 找到 <strong>CoinStats</strong> 提供程序
+      not_configured_step3_html: 按照提供的<strong>设置说明</strong>完成提供程序配置
+      not_configured_title: CoinStats 提供程序连接未配置
+      setup_instructions: '设置说明：'
+      status_configured_html: 准备就绪
+      status_not_configured: 未配置
+      step1_html: 访问 <a href="https://openapi.coinstats.app/" class="link"
+        target="_blank" rel="noopener noreferrer">CoinStats 公共 API 仪表板</a>
+        获取 API 密钥。
+      step2: 在下方输入您的 API 密钥，然后点击配置。
+      step3_html: 连接成功后，访问 <a href="%{accounts_url}" class="link" data-turbo-frame="_top">账户</a> 标签页来设置加密货币钱包。
+      title: 通过 CoinStats 关联加密货币钱包
+      update_configuration: 重新配置
+    update:
+      errors:
+        validation_failed: '验证失败：%{message}。'
+      success: CoinStats 提供程序连接更新成功。

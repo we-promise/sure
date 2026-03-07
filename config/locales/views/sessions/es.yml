@@ -1,13 +1,11 @@
 ---
 es:
   sessions:
+    logout:
+      successful: Has cerrado sesión con éxito.
     create:
-      invalid_credentials: Correo electrónico o contraseña no válidos.
-      local_login_disabled: El inicio de sesión con contraseña local está desactivado. Por favor, utiliza el inicio de sesión único (SSO).
-    destroy:
-      logout_successful: Has cerrado sesión correctamente.
-    post_logout:
-      logout_successful: Has cerrado sesión correctamente.
+      invalid_credentials: Correo electrónico o contraseña inválidos.
+      local_login_disabled: El inicio de sesión con contraseña local está deshabilitado. Utiliza el inicio de sesión único (SSO).
     openid_connect:
       account_linked: "Cuenta vinculada correctamente a %{provider}"
       failed: No se pudo autenticar a través de OpenID Connect.

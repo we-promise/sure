@@ -46,7 +46,7 @@
 
       <div class="text-center space-y-2">
         <%= render DS::Button.new(
-          text: t('subscriptions.upgrade.contribute_and_support_sure'),
+          text: t('subscriptions.upgrade.contribute_and_support_sure', product: product_name),
           variant: "primary",
           full_width: true
         ) %>

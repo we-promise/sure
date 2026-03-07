@@ -1,10 +1,10 @@
 ---
 ro:
   sessions:
+    logout:
+      successful: Te-ai deconectat cu succes.
     create:
       invalid_credentials: Email sau parolă incorecte.
-    destroy:
-      logout_successful: Te-ai deconectat cu succes.
     openid_connect:
       failed: Autentificarea prin OpenID Connect nu a reușit.
     failure:

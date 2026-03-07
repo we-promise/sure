@@ -1,10 +1,10 @@
 ---
 pt-BR:
   sessions:
+    logout:
+      successful: Você saiu com sucesso.
     create:
       invalid_credentials: E-mail ou senha inválidos.
-    destroy:
-      logout_successful: Você saiu com sucesso.
     openid_connect:
       failed: Não foi possível autenticar via OpenID Connect.
     failure:
