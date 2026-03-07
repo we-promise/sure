@@ -75,7 +75,21 @@ class Balance::Materializer
 
     def purge_stale_balances
       sorted_balances = @balances.sort_by(&:date)
-      return if sorted_balances.empty?
+
+      if sorted_balances.empty?
+        # In incremental forward-sync, even when no balances were calculated for the window
+        # (e.g. window_start_date is beyond the last entry), purge stale tail records that
+        # now fall beyond the prior-balance boundary so orphaned future rows are cleaned up.
+        if strategy == :forward && calculator.incremental?
+          deleted_count = account.balances.delete_by(
+            "date < ? OR date > ?",
+            account.opening_anchor_date,
+            @window_start_date - 1
+          )
+          Rails.logger.info("Purged #{deleted_count} stale balances") if deleted_count > 0
+        end
+        return
+      end
 
       newest_calculated_balance_date = sorted_balances.last.date
 

@@ -96,6 +96,7 @@ class Balance::MaterializerTest < ActiveSupport::TestCase
     ]
 
     Balance::ForwardCalculator.any_instance.expects(:calculate).returns(recalculated)
+    Balance::ForwardCalculator.any_instance.stubs(:incremental?).returns(true)
     Holding::Materializer.any_instance.expects(:materialize_holdings).returns([]).once
 
     Balance::Materializer.new(@account, strategy: :forward, window_start_date: 2.days.ago.to_date).materialize_balances
@@ -141,8 +142,8 @@ class Balance::MaterializerTest < ActiveSupport::TestCase
 
     Holding::Materializer.any_instance.stubs(:materialize_holdings).returns([])
 
-    # No prior balance exists for window_start_date - 1 (4.days.ago) → calculator falls back to full recalc.
-    Balance::Materializer.new(@account, strategy: :forward, window_start_date: 3.days.ago.to_date).materialize_balances
+    # No prior balance exists for window_start_date - 1 (3.days.ago) → calculator falls back to full recalc.
+    Balance::Materializer.new(@account, strategy: :forward, window_start_date: 2.days.ago.to_date).materialize_balances
 
     # After fallback the pre-window balance must be recalculated with the correct value, not preserved.
     recalculated = @account.balances.find_by(date: wrong_pre_window.date)
