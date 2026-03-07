@@ -34,7 +34,7 @@ pt-BR:
       exclude_description: Transações excluídas serão removidas dos cálculos e relatórios de orçamento.
       activity_type: Tipo de Atividade
       activity_type_description: Tipo de atividade de investimento (Compra, Venda, Dividendo, etc.). Detectado automaticamente ou definido manualmente.
-      one_time_title: %{type} Única
+      one_time_title: Única %{type}
       one_time_description: Transações únicas serão excluídas de certos cálculos e relatórios de orçamento para ajudar você a ver o que é realmente importante.
       convert_to_trade_title: Converter para Negociação de Ativo
       convert_to_trade_description: Converter esta transação em uma negociação de Compra ou Venda com detalhes do ativo para acompanhamento de portfólio.
