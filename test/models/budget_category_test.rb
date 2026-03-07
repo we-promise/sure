@@ -162,6 +162,15 @@ class BudgetCategoryTest < ActiveSupport::TestCase
     assert_equal 40.0, standalone_bc.percent_of_budget_spent
   end
 
+  test "uncategorized budget category returns no subcategories" do
+    uncategorized_bc = BudgetCategory.uncategorized
+    uncategorized_bc.budget = @budget
+
+    # Before the fix, this would return all top-level categories because
+    # category.id is nil, causing WHERE parent_id IS NULL to match all roots
+    assert_empty uncategorized_bc.subcategories
+  end
+
   test "parent with only inheriting subcategories shares entire budget" do
     # Set subcategory_with_limit to also inherit
     @subcategory_with_limit_bc.update!(budgeted_spending: 0)

@@ -1,0 +1,45 @@
+---
+es:
+  admin:
+    users:
+      index:
+        title: "Gestión de usuarios"
+        description: "Gestiona los roles de usuario para tu instancia. Los superadministradores pueden acceder a la configuración del proveedor de SSO y a la gestión de usuarios."
+        section_title: "Usuarios"
+        you: "(Tú)"
+        trial_ends_at: "La prueba finaliza"
+        not_available: "n/a"
+        no_users: "No se han encontrado usuarios."
+        filters:
+          role: "Rol"
+          role_all: "Todos los roles"
+          trial_status: "Estado de la prueba"
+          trial_all: "Todos"
+          trial_expiring_soon: "Caduca en 7 días"
+          trial_trialing: "En periodo de prueba"
+          submit: "Filtrar"
+        summary:
+          trials_expiring_7_days: "Pruebas que caducan en los próximos 7 días"
+        table:
+          user: "Usuario"
+          trial_ends_at: "La prueba finaliza"
+          family_accounts: "Cuentas familiares"
+          family_transactions: "Transacciones familiares"
+          last_login: "Último inicio de sesión"
+          session_count: "Número de sesiones"
+          never: "Nunca"
+          role: "Rol"
+        role_descriptions_title: "Descripción de los roles"
+        roles:
+          guest: "Invitado"
+          member: "Miembro"
+          admin: "Administrador"
+          super_admin: "Superadministrador"
+        role_descriptions:
+          guest: "Experiencia centrada en el asistente con permisos restringidos intencionadamente para flujos de introducción."
+          member: "Acceso de usuario básico. Pueden gestionar sus propias cuentas, transacciones y ajustes."
+          admin: "Administrador de la familia. Puede acceder a ajustes avanzados como claves API, importaciones e instrucciones de IA."
+          super_admin: "Administrador de la instancia. Puede gestionar proveedores de SSO, roles de usuario y suplantar a usuarios para soporte."
+      update:
+        success: "Rol de usuario actualizado correctamente."
+        failure: "Error al actualizar el rol de usuario."

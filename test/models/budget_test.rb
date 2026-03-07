@@ -304,4 +304,30 @@ class BudgetTest < ActiveSupport::TestCase
 
     assert_not_nil budget.previous_budget_param
   end
+
+  test "uncategorized budget category actual spending reflects uncategorized transactions" do
+    family = families(:dylan_family)
+    budget = Budget.find_or_bootstrap(family, start_date: Date.current.beginning_of_month)
+    account = accounts(:depository)
+
+    # Create an uncategorized expense
+    Entry.create!(
+      account: account,
+      entryable: Transaction.create!(category: nil),
+      date: Date.current,
+      name: "Uncategorized lunch",
+      amount: 75,
+      currency: "USD"
+    )
+
+    budget = Budget.find(budget.id)
+    budget.sync_budget_categories
+
+    uncategorized_bc = budget.uncategorized_budget_category
+    spending = budget.budget_category_actual_spending(uncategorized_bc)
+
+    # Must be > 0 — the nil-key collision between Uncategorized and
+    # Other Investments synthetic categories previously caused this to return 0
+    assert spending >= 75, "Uncategorized actual spending should include the $75 transaction, got #{spending}"
+  end
 end
