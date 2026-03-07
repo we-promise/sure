@@ -10,6 +10,16 @@ en:
       success: Export deleted successfully
     export_not_ready: Export not ready for download
     exporting: Exporting...
+    new:
+      title: Export your data
+      subtitle: Download all your financial data
+      whats_included: "What's included:"
+      accounts_balances: All accounts and balances
+      transaction_history: Transaction history
+      investment_trades: Investment trades
+      categories_tags: Categories and tags
+      note_html: "<strong>Note:</strong> The download will start automatically. Check your browser's download folder for the file."
+      export_button: Export data
     index:
       title: Exports
       new: New Export
