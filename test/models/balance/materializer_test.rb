@@ -61,6 +61,100 @@ class Balance::MaterializerTest < ActiveSupport::TestCase
     assert_balance_fields_persisted(expected_balances)
   end
 
+  test "incremental sync preserves balances before window_start_date and purges only beyond calc_end_date" do
+    # Add an opening anchor so opening_anchor_date is well in the past.
+    @account.entries.create!(
+      name: "Opening Balance",
+      date: 10.days.ago.to_date,
+      amount: 5000,
+      currency: "USD",
+      entryable: Valuation.new(kind: "opening_anchor")
+    )
+
+    preserved_old  = create_balance(account: @account, date: 5.days.ago.to_date, balance: 10000)
+    preserved_mid  = create_balance(account: @account, date: 3.days.ago.to_date, balance: 12000)
+    stale_future   = create_balance(account: @account, date: 5.days.from_now.to_date, balance: 99000)
+
+    # Calculator returns only the window being recalculated (2.days.ago).
+    recalculated = [
+      Balance.new(
+        date: 2.days.ago.to_date,
+        balance: 15000,
+        cash_balance: 15000,
+        currency: "USD",
+        start_cash_balance: 12000,
+        start_non_cash_balance: 0,
+        cash_inflows: 3000,
+        cash_outflows: 0,
+        non_cash_inflows: 0,
+        non_cash_outflows: 0,
+        net_market_flows: 0,
+        cash_adjustments: 0,
+        non_cash_adjustments: 0,
+        flows_factor: 1
+      )
+    ]
+
+    Balance::ForwardCalculator.any_instance.expects(:calculate).returns(recalculated)
+    Balance::ForwardCalculator.any_instance.stubs(:incremental?).returns(true)
+    Holding::Materializer.any_instance.expects(:materialize_holdings).returns([]).once
+
+    Balance::Materializer.new(@account, strategy: :forward, window_start_date: 2.days.ago.to_date).materialize_balances
+
+    # Balances before window_start_date must be preserved.
+    assert_not_nil @account.balances.find_by(id: preserved_old.id),
+      "Balance at 5.days.ago should be preserved (before window_start_date)"
+    assert_not_nil @account.balances.find_by(id: preserved_mid.id),
+      "Balance at 3.days.ago should be preserved (before window_start_date)"
+
+    # Balance after calc_end_date must be purged.
+    assert_nil @account.balances.find_by(id: stale_future.id),
+      "Balance at 5.days.from_now should be purged (after calc_end_date)"
+
+    # Recalculated balance must be present.
+    assert_not_nil @account.balances.find_by(date: 2.days.ago.to_date),
+      "Recalculated balance for 2.days.ago should be persisted"
+  end
+
+  test "falls back to full recalculation when window_start_date is given but no prior balance exists" do
+    @account.entries.create!(
+      name: "Opening Balance",
+      date: 5.days.ago.to_date,
+      amount: 20000,
+      currency: "USD",
+      entryable: Valuation.new(kind: "opening_anchor")
+    )
+    @account.entries.create!(
+      name: "Test transaction",
+      date: 3.days.ago.to_date,
+      amount: -1000,
+      currency: "USD",
+      entryable: Transaction.new
+    )
+
+    # A stale pre-window balance with a wrong value.
+    # In successful incremental mode this would be preserved as-is;
+    # in fallback (no prior balance) the full recalc must overwrite it.
+    wrong_pre_window = create_balance(account: @account, date: 4.days.ago.to_date, balance: 99999)
+
+    # A stale balance before opening_anchor_date — must be purged in both modes.
+    stale_before_anchor = create_balance(account: @account, date: 8.days.ago.to_date, balance: 99999)
+
+    Holding::Materializer.any_instance.stubs(:materialize_holdings).returns([])
+
+    # No prior balance exists for window_start_date - 1 (3.days.ago) → calculator falls back to full recalc.
+    Balance::Materializer.new(@account, strategy: :forward, window_start_date: 2.days.ago.to_date).materialize_balances
+
+    # After fallback the pre-window balance must be recalculated with the correct value, not preserved.
+    recalculated = @account.balances.find_by(date: wrong_pre_window.date)
+    assert_not_nil recalculated, "Balance at 4.days.ago should exist after full recalculation"
+    assert_equal 20000, recalculated.balance, "Balance should reflect full recalculation, not the stale value (99999)"
+
+    # Stale balance before opening_anchor_date should be purged.
+    assert_nil @account.balances.find_by(id: stale_before_anchor.id),
+      "Balance before opening_anchor_date should be purged"
+  end
+
   test "purges stale balances outside calculated range" do
     # Create existing balances that will be stale
     stale_old = create_balance(account: @account, date: 5.days.ago.to_date, balance: 5000)
