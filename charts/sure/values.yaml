@@ -314,7 +314,7 @@ web:
   # Probes
   livenessProbe:
     httpGet:
-      path: /
+      path: /up
       port: http
     initialDelaySeconds: 20
     periodSeconds: 10
@@ -322,7 +322,7 @@ web:
     failureThreshold: 6
   readinessProbe:
     httpGet:
-      path: /
+      path: /up
       port: http
     initialDelaySeconds: 10
     periodSeconds: 5
@@ -330,7 +330,7 @@ web:
     failureThreshold: 6
   startupProbe:
     httpGet:
-      path: /
+      path: /up
       port: http
     failureThreshold: 30
     periodSeconds: 5
