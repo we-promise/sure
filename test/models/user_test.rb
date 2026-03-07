@@ -474,4 +474,32 @@ class UserTest < ActiveSupport::TestCase
     assert_not Family.exists?(family.id)
     assert_not ActiveStorage::Attachment.exists?(export_attachment_id)
   end
+  # ── Security tests added with pentest fixes ──────────────────────────────────
+
+  test "backup code cannot be reused after verification" do
+    user = users(:family_admin)
+    user.setup_mfa!
+    user.enable_mfa!
+    code = user.otp_backup_codes.first
+
+    # verify_otp? accepts backup codes
+    assert user.verify_otp?(code)
+    assert_not user.reload.verify_otp?(code), "Backup code should not be reusable"
+  end
+
+  test "backup code rejects invalid code" do
+    user = users(:family_admin)
+    user.setup_mfa!
+    user.enable_mfa!
+
+    assert_not user.verify_otp?("00000000")
+  end
+
+  test "backup code verification handles blank input safely" do
+    user = users(:family_admin)
+    user.setup_mfa!
+    user.enable_mfa!
+
+    assert_not user.verify_otp?("")
+  end
 end

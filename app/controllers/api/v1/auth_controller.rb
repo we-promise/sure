@@ -12,6 +12,12 @@ module Api
       before_action :log_api_access, only: :enable_ai
 
       def signup
+        # Block signups when registration is closed (self-hosted)
+        if Rails.application.config.app_mode.self_hosted? && Setting.onboarding_state == "closed"
+          render json: { error: "Registration is currently closed" }, status: :forbidden
+          return
+        end
+
         # Check if invite code is required
         if invite_code_required? && params[:invite_code].blank?
           render json: { error: "Invite code is required" }, status: :forbidden
@@ -27,7 +33,7 @@ module Api
         # Validate password
         password_errors = validate_password(params[:user][:password])
         if password_errors.any?
-          render json: { errors: password_errors }, status: :unprocessable_entity
+          render json: { error: "Validation failed", errors: password_errors }, status: :unprocessable_entity
           return
         end
 
@@ -54,7 +60,8 @@ module Api
             device = MobileDevice.upsert_device!(user, device_params)
             token_response = device.issue_token!
           rescue ActiveRecord::RecordInvalid => e
-            render json: { error: "Failed to register device: #{e.message}" }, status: :unprocessable_entity
+            Rails.logger.error("[Auth] Device registration failed: #{e.message}")
+            render json: { error: "Failed to register device" }, status: :unprocessable_entity
             return
           end
 
@@ -65,18 +72,45 @@ module Api
       end
 
       def login
+        # Enforce AuthConfig — respect SSO-only mode for API clients too
+        unless AuthConfig.local_login_enabled?
+          render json: { error: "Local login is disabled. Please use SSO." }, status: :forbidden
+          return
+        end
+
         user = User.find_by(email: params[:email])
 
         if user&.authenticate(params[:password])
+          # Reject deactivated users
+          unless user.active?
+            render json: { error: "Account has been deactivated" }, status: :unauthorized
+            return
+          end
+
           # Check MFA if enabled
           if user.otp_required?
+            otp_cache_key = "api_otp_attempts:#{user.id}"
+            otp_attempts  = Rails.cache.read(otp_cache_key).to_i
+
+            if otp_attempts >= 5
+              render json: {
+                error: "Too many OTP attempts. Try again in 5 minutes.",
+                mfa_required: true
+              }, status: :too_many_requests
+              return
+            end
+
             unless params[:otp_code].present? && user.verify_otp?(params[:otp_code])
+              Rails.cache.write(otp_cache_key, otp_attempts + 1, expires_in: 5.minutes)
               render json: {
                 error: "Two-factor authentication required",
                 mfa_required: true
               }, status: :unauthorized
               return
             end
+
+            # Successful OTP — clear attempt counter
+            Rails.cache.delete(otp_cache_key)
           end
 
           # Validate device info
@@ -90,7 +124,8 @@ module Api
             device = MobileDevice.upsert_device!(user, device_params)
             token_response = device.issue_token!
           rescue ActiveRecord::RecordInvalid => e
-            render json: { error: "Failed to register device: #{e.message}" }, status: :unprocessable_entity
+            Rails.logger.error("[Auth] Device registration failed: #{e.message}")
+            render json: { error: "Failed to register device" }, status: :unprocessable_entity
             return
           end
 
@@ -185,9 +220,17 @@ module Api
         # Revoke old access token
         access_token.revoke
 
-        # Update device last seen
+        # Reject deactivated users on token refresh
         user = User.find(access_token.resource_owner_id)
-        device = user.mobile_devices.find_by(device_id: params[:device][:device_id])
+        unless user.active?
+          new_token.revoke  # revoke the freshly issued token (access_token already revoked above)
+          render json: { error: "Account has been deactivated" }, status: :unauthorized
+          return
+        end
+
+        # Update device last seen (guard against missing device params)
+        device_id = params.dig(:device, :device_id)
+        device = device_id.present? ? user.mobile_devices.find_by(device_id: device_id) : nil
         device&.update_last_seen!
 
         render json: {

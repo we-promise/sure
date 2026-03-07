@@ -21,7 +21,9 @@
     </div>
     <div class="w-full md:w-2/3 text-secondary text-sm prose prose--github-release-notes">
       <h2 class="mb-5 text-xl text-primary"><%= @release_notes[:name] %></h2>
-      <%= (@release_notes[:body] || "No release notes available").html_safe %>
+      <%= sanitize(@release_notes[:body] || "No release notes available",
+                   tags: %w[h1 h2 h3 h4 h5 h6 p a ul ol li code pre blockquote strong em br img hr div span table thead tbody tr th td dl dt dd sup sub],
+                   attributes: %w[href src alt class id title]) %>
     </div>
   </div>
 </div>

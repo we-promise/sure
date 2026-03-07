@@ -63,9 +63,12 @@ class SessionsController < ApplicationController
       if user.otp_required?
         log_super_admin_override_login(user)
         session[:mfa_user_id] = user.id
+        session[:mfa_started_at] = Time.current.iso8601
+        session[:mfa_attempts] = 0
         redirect_to verify_mfa_path
       else
         log_super_admin_override_login(user)
+        reset_session  # Prevent session fixation
         @session = create_session_for(user)
         flash[:notice] = t("invitations.accept_choice.joined_household") if accept_pending_invitation_for(user)
         redirect_to root_path
@@ -174,16 +177,25 @@ class SessionsController < ApplicationController
         return
       end
 
-      # Store id_token and provider for RP-initiated logout
-      session[:id_token_hint] = auth.credentials&.id_token if auth.credentials&.id_token
-      session[:sso_login_provider] = auth.provider
+      # Capture OIDC logout context before any session reset
+      id_token_hint = auth.credentials&.id_token
+      sso_login_provider = auth.provider
 
       # MFA check: If user has MFA enabled, require verification
       if user.otp_required?
+        # Preserve OIDC logout context through MFA flow
         session[:mfa_user_id] = user.id
+        session[:mfa_started_at] = Time.current.iso8601
+        session[:mfa_attempts] = 0
+        session[:id_token_hint] = id_token_hint if id_token_hint.present?
+        session[:sso_login_provider] = sso_login_provider
         redirect_to verify_mfa_path
       else
+        reset_session  # Prevent session fixation
         @session = create_session_for(user)
+        # Restore OIDC logout context after reset_session
+        session[:id_token_hint] = id_token_hint if id_token_hint.present?
+        session[:sso_login_provider] = sso_login_provider
         flash[:notice] = t("invitations.accept_choice.joined_household") if accept_pending_invitation_for(user)
         redirect_to root_path
       end

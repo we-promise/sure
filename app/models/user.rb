@@ -399,14 +399,15 @@ class User < ApplicationRecord
     def verify_backup_code?(code)
       return false if otp_backup_codes.blank?
 
-      # Find and remove the used backup code
-      if (index = otp_backup_codes.index(code))
+      # Atomic check-and-consume: lock row to prevent race condition (same code used twice)
+      with_lock do
+        index = otp_backup_codes.index { |stored| ActiveSupport::SecurityUtils.secure_compare(stored.to_s, code.to_s) }
+        return false unless index
+
         remaining_codes = otp_backup_codes.dup
         remaining_codes.delete_at(index)
         update!(otp_backup_codes: remaining_codes)
         true
-      else
-        false
       end
     end
 
