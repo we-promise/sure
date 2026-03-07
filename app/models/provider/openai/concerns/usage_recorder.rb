@@ -47,15 +47,15 @@ module Provider::Openai::Concerns::UsageRecorder
 
     # Records failed LLM usage for a family with error details
     def record_usage_error(model_name, operation:, error:, metadata: {})
-      return unless family
+      return unless family && error
 
-      Rails.logger.info("Recording failed LLM usage - Operation: #{operation}, Error: #{error.message}")
+      Rails.logger.info("Recording failed LLM usage - Operation: #{operation}, Error: #{error&.message}")
 
       # Extract HTTP status code if available from the error
       http_status_code = extract_http_status_code(error)
 
       error_metadata = metadata.merge(
-        error: error.message,
+        error: error&.message,
         http_status_code: http_status_code
       )
 

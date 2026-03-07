@@ -538,7 +538,7 @@ class Provider::Openai < Provider
 
       # For error cases, record with zero tokens
       if error.present?
-        Rails.logger.info("Recording failed LLM usage - Error: #{error.message}")
+        Rails.logger.info("Recording failed LLM usage - Error: #{error&.message}")
 
         # Extract HTTP status code if available from the error
         http_status_code = extract_http_status_code(error)
@@ -553,7 +553,7 @@ class Provider::Openai < Provider
           total_tokens: 0,
           estimated_cost: nil,
           metadata: {
-            error: error.message,
+            error: error&.message,
             http_status_code: http_status_code
           }
         )
