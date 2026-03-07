@@ -81,7 +81,7 @@ class Category < ApplicationRecord
     /book|reading|library/                                         => "book",
     /child|kid|baby|infant|daycare/                                => "baby",
     /cloth|apparel|fashion|wear/                                   => "shirt",
-    /ticket/                                                       => "ticket",
+    /ticket/                                                       => "ticket"
   }.freeze
 
   # Category name keys for i18n
