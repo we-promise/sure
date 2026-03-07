@@ -29,6 +29,13 @@ class PagesController < ApplicationController
 
   def intro
     @breadcrumbs = [ [ "Home", chats_path ], [ "Intro", nil ] ]
+
+    @intro_prompts = [
+      { title: "🔔 UPDATE 🔔", description: "Your side hustle income could cover groceries and several other expenses, reducing the need for a loan. Consider redirecting your side hustle earnings to priority expenses like groceries before borrowing. Family support is your largest expense category. However, you can trim eating out and reduce uncategorised spending to minimise future loan dependence. By maximising your side hustle and cutting back on non-essential expenses, you could avoid loans altogether and build a stronger financial buffer." },
+      { title: "🔍 Show spending insights", description: "We update this data weekly with fresh insights." },
+      { title: "💡 Your Turn Soon", description: "You will soon be able to get personalized insights just like this!" },
+      { title: "📳 M-PESA Integration", description: "We are working on integrating M-PESA to make it easier to add income and expenses." }
+    ]
   end
 
   def update_preferences
