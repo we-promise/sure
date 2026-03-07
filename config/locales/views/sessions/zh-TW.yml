@@ -6,8 +6,6 @@ zh-TW:
     create:
       invalid_credentials: 電子郵件或密碼無效。
       local_login_disabled: 本地密碼登入功能已停用。請使用單一登入 (SSO)。
-    destroy:
-      logout_successful: 您已成功登出。
     openid_connect:
       failed: 無法透過 OpenID Connect 進行驗證。
     failure:

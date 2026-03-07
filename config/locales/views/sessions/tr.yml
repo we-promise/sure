@@ -5,8 +5,6 @@ tr:
       successful: Başarıyla çıkış yaptınız.
     create:
       invalid_credentials: Geçersiz e-posta veya şifre.
-    destroy:
-      logout_successful: Başarıyla çıkış yaptınız.
     openid_connect:
       failed: OpenID Connect ile kimlik doğrulaması yapılamadı.
     new:

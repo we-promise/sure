@@ -3,7 +3,7 @@ tr:
   subscriptions:
     self_hosted_alert: "%{product_name} kendi sunucunda barındırılan modda kullanılamaz."
     upgrade:
-      contribute_and_support_sure: "Katkıda bulun ve Sure'u destekle"
+      contribute_and_support_sure: "Katkıda bulun ve %{product}'u destekle"
       cta: "Bu kod tabanının geliştirilmesini desteklemeye devam edin!"
       header:
         support: "Destekle"

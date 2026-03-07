@@ -5,8 +5,6 @@ de:
       successful: Du hast dich erfolgreich abgemeldet.
     create:
       invalid_credentials: Ungültige E-Mail-Adresse oder falsches Passwort.
-    destroy:
-      logout_successful: Du hast dich erfolgreich abgemeldet.
     openid_connect:
       failed: Anmeldung über OpenID Connect fehlgeschlagen.
     failure:

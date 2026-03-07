@@ -6,8 +6,6 @@ es:
     create:
       invalid_credentials: Correo electrónico o contraseña inválidos.
       local_login_disabled: El inicio de sesión con contraseña local está deshabilitado. Utiliza el inicio de sesión único (SSO).
-    destroy:
-      logout_successful: Has cerrado sesión con éxito.
     openid_connect:
       failed: No se pudo autenticar a través de OpenID Connect.
     failure:
