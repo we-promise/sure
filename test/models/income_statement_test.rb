@@ -257,6 +257,24 @@ class IncomeStatementTest < ActiveSupport::TestCase
   end
 
   # NEW TESTS: Edge Cases
+  test "excludes transactions outside the 6-month lookback window" do
+    # Clear existing transactions
+    Entry.joins(:account).where(accounts: { family_id: @family.id }).destroy_all
+
+    # Create a transaction well outside the lookback window (8 months ago)
+    old_date = 8.months.ago.beginning_of_month.to_date
+    create_transaction(account: @checking_account, amount: 9999, category: @groceries_category, date: old_date)
+
+    # Create a transaction inside the lookback window (2 months ago)
+    recent_date = 2.months.ago.beginning_of_month.to_date
+    create_transaction(account: @checking_account, amount: 200, category: @groceries_category, date: recent_date)
+
+    income_statement = IncomeStatement.new(@family)
+
+    # Only the recent transaction should be included; the old one should be excluded
+    assert_equal 200.0, income_statement.median_expense(interval: "month")
+  end
+
   test "handles empty dataset gracefully" do
     # Create a truly empty family
     empty_family = Family.create!(name: "Empty Test Family", currency: "USD")

@@ -1,9 +1,6 @@
 module IncomeStatement::StatsLookback
   STATS_LOOKBACK_MONTHS = 6
 
-  # Matches Account.visible scope: where(status: ["draft", "active"])
-  VISIBLE_ACCOUNT_STATUSES = %w[draft active].freeze
-
   private
 
     def lookback_start_date
@@ -16,7 +13,8 @@ module IncomeStatement::StatsLookback
       1.month.ago.end_of_month.to_date
     end
 
-    def visible_account_statuses_sql
-      @visible_account_statuses_sql ||= VISIBLE_ACCOUNT_STATUSES.map { |s| "'#{s}'" }.join(", ")
+    # Derives visible statuses from Account.visible scope to avoid duplication.
+    def visible_account_statuses
+      Account.visible.where_values_hash["status"]
     end
 end

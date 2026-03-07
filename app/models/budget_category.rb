@@ -163,6 +163,7 @@ class BudgetCategory < ApplicationRecord
     return nil unless Date.current.between?(budget.start_date, budget.end_date)
 
     days_remaining = (budget.end_date - Date.current).to_i + 1
+    return nil unless days_remaining > 0
 
     {
       amount: Money.new((available_to_spend / days_remaining), budget.family.currency),
