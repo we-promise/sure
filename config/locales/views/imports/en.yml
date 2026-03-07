@@ -19,6 +19,9 @@ en:
         txn_count:
           one: "1 txn"
           other: "%{count} txns"
+        split_warning_title: Split transactions detected
+        split_warning_description: "This QIF file contains split transactions. Splits are not yet supported, so each split transaction will be imported as a single transaction with its full amount and no category. The individual split breakdowns will not be preserved."
+        split_badge: split
         empty_state_primary: No categories or tags were found in this QIF file.
         empty_state_secondary: All transactions will be imported without categories or tags.
         submit: Continue to review

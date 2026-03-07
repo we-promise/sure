@@ -4,10 +4,12 @@ class Import::QifCategorySelectionsController < ApplicationController
   before_action :set_import
 
   def show
-    @categories      = @import.row_categories
-    @tags            = @import.row_tags
-    @category_counts = @import.rows.group(:category).count.reject { |k, _| k.blank? }
-    @tag_counts      = compute_tag_counts
+    @categories       = @import.row_categories
+    @tags             = @import.row_tags
+    @category_counts  = @import.rows.group(:category).count.reject { |k, _| k.blank? }
+    @tag_counts       = compute_tag_counts
+    @split_categories      = @import.split_categories
+    @has_split_transactions = @import.has_split_transactions?
   end
 
   def update

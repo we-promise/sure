@@ -42,7 +42,7 @@ module QifParser
   OUTFLOW_TRANSACTION_ACTIONS = %w[XOut MiscExp].freeze
 
   ParsedTransaction = Struct.new(
-    :date, :amount, :payee, :memo, :category, :tags, :check_num, :cleared,
+    :date, :amount, :payee, :memo, :category, :tags, :check_num, :cleared, :split,
     keyword_init: true
   )
 
@@ -262,6 +262,7 @@ module QifParser
 
   # Splits a section into an array of field-code => value hashes.
   # Single-letter codes with no value (e.g. "I", "E", "T") are stored with nil.
+  # Split transactions (multiple S/$/E lines) are flagged with "_split" => true.
   def self.parse_records(section_content)
     records = []
     current = {}
@@ -277,6 +278,9 @@ module QifParser
         code  = line[0]
         value = line[1..]&.strip
         next unless code
+
+        # Mark records that contain split fields (S = split category, $ = split amount)
+        current["_split"] = true if code == "S"
 
         # Flag fields like "I" (income) and "E" (expense) have no meaningful value
         current[code] = value.presence
@@ -313,7 +317,8 @@ module QifParser
       category:  category,
       tags:      tags,
       check_num: record["N"],
-      cleared:   record["C"]
+      cleared:   record["C"],
+      split:     record["_split"] == true
     )
   end
   private_class_method :build_transaction
@@ -329,9 +334,10 @@ module QifParser
     return [ "", [] ] if l_field.blank?
 
     # Transfer account reference
-    if l_field.start_with?("[")
-      return [ "", [] ]
-    end
+    return [ "", [] ] if l_field.start_with?("[")
+
+    # Quicken uses "--Split--" as a placeholder category for split transactions
+    return [ "", [] ] if l_field.strip.match?(/\A--Split--\z/i)
 
     parts    = l_field.split("/", 2)
     category = parts[0].strip

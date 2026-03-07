@@ -22,6 +22,9 @@ de:
         empty_state_primary: In dieser QIF-Datei wurden keine Kategorien oder Tags gefunden.
         empty_state_secondary: Alle Transaktionen werden ohne Kategorien und Tags importiert.
         submit: Weiter zur Überprüfung
+        split_warning_title: Aufgeteilte Buchungen erkannt
+        split_warning_description: "Diese QIF-Datei enthält aufgeteilte Buchungen. Aufgeteilte Buchungen werden noch nicht unterstützt – jede aufgeteilte Buchung wird als einzelne Buchung mit ihrem Gesamtbetrag und ohne Kategorie importiert. Die einzelnen Aufteilungsdetails werden nicht übernommen."
+        split_badge: aufgeteilt
     cleans:
       show:
         description: Bearbeite deine Daten in der Tabelle unten. Rote Zellen sind ungültig.
@@ -85,6 +88,13 @@ de:
         instructions_5: Keine Kommas, Währungssymbole oder Klammern in Zahlen verwenden.
         title: Daten importieren
   imports:
+    steps:
+      upload: Hochladen
+      configure: Konfigurieren
+      clean: Bereinigen
+      map: Zuordnen
+      confirm: Bestätigen
+      select: Auswählen
     index:
       title: Importe
       new: Neuer Import
@@ -119,6 +129,7 @@ de:
       import_portfolio: Investitionen importieren
       import_rules: Regeln importieren
       import_transactions: Transaktionen importieren
+      import_qif: Von Quicken importieren (QIF)
       requires_account: Importiere zuerst Konten, um diese Option zu nutzen.
       resume: "%{type} fortsetzen"
       sources: Quellen

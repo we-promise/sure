@@ -127,6 +127,62 @@ class QifImportTest < ActiveSupport::TestCase
     ^
   QIF
 
+  # A QIF file that includes split transactions (S/$ fields) with an L field category.
+  QIF_WITH_SPLITS = <<~QIF
+    !Type:Cat
+    NFood & Dining
+    E
+    ^
+    NHousehold
+    E
+    ^
+    NUtilities
+    E
+    ^
+    !Type:Bank
+    D1/ 1'24
+    U-150.00
+    T-150.00
+    PGrocery & Hardware Store
+    LFood & Dining
+    SFood & Dining
+    $-100.00
+    EGroceries
+    SHousehold
+    $-50.00
+    ESupplies
+    ^
+    D1/ 2'24
+    U-75.00
+    T-75.00
+    PElectric Company
+    LUtilities
+    ^
+  QIF
+
+  # A QIF file where Quicken uses --Split-- as the L field for split transactions.
+  QIF_WITH_SPLIT_PLACEHOLDER = <<~QIF
+    !Type:Bank
+    D1/ 1'24
+    U-100.00
+    T-100.00
+    PWalmart
+    L--Split--
+    SClothing
+    $-25.00
+    SFood
+    $-25.00
+    SHome Improvement
+    $-50.00
+    ^
+    D1/ 2'24
+    U-30.00
+    T-30.00
+    PCoffee Shop
+    LFood & Dining
+    ^
+  QIF
+
   # ── QifParser: valid? ───────────────────────────────────────────────────────
 
   test "valid? returns true for QIF content" do
@@ -253,6 +309,38 @@ class QifImportTest < ActiveSupport::TestCase
     assert_nil QifParser.parse_opening_balance("")
   end
 
+  # ── QifParser: split transactions ──────────────────────────────────────────
+
+  test "parse flags split transactions" do
+    transactions = QifParser.parse(QIF_WITH_SPLITS)
+    split_txn = transactions.find { |t| t.payee == "Grocery & Hardware Store" }
+    normal_txn = transactions.find { |t| t.payee == "Electric Company" }
+
+    assert split_txn.split, "Expected split transaction to be flagged"
+    refute normal_txn.split, "Expected normal transaction not to be flagged"
+  end
+
+  test "parse returns correct count including split transactions" do
+    transactions = QifParser.parse(QIF_WITH_SPLITS)
+    assert_equal 2, transactions.length
+  end
+
+  test "parse strips --Split-- placeholder from category" do
+    transactions = QifParser.parse(QIF_WITH_SPLIT_PLACEHOLDER)
+    walmart = transactions.find { |t| t.payee == "Walmart" }
+
+    assert walmart.split, "Expected split transaction to be flagged"
+    assert_equal "", walmart.category, "Expected --Split-- to be stripped from category"
+  end
+
+  test "parse preserves normal category alongside --Split-- placeholder" do
+    transactions = QifParser.parse(QIF_WITH_SPLIT_PLACEHOLDER)
+    coffee = transactions.find { |t| t.payee == "Coffee Shop" }
+
+    refute coffee.split
+    assert_equal "Food & Dining", coffee.category
+  end
+
   # ── QifImport model ─────────────────────────────────────────────────────────
 
   setup do
@@ -334,6 +422,45 @@ class QifImportTest < ActiveSupport::TestCase
     tags = @import.row_tags
     assert_includes tags, "TRIP2025"
     refute_includes tags, ""
+  end
+
+  test "split_categories returns categories from split transactions" do
+    @import.update!(raw_file_str: QIF_WITH_SPLITS)
+    @import.generate_rows_from_csv
+
+    split_cats = @import.split_categories
+    assert_includes split_cats, "Food & Dining"
+    refute_includes split_cats, "Utilities"
+  end
+
+  test "split_categories returns empty when no splits" do
+    @import.update!(raw_file_str: SAMPLE_QIF)
+    @import.generate_rows_from_csv
+
+    assert_empty @import.split_categories
+  end
+
+  test "has_split_transactions? returns true when splits exist" do
+    @import.update!(raw_file_str: QIF_WITH_SPLITS)
+    assert @import.has_split_transactions?
+  end
+
+  test "has_split_transactions? returns true for --Split-- placeholder" do
+    @import.update!(raw_file_str: QIF_WITH_SPLIT_PLACEHOLDER)
+    assert @import.has_split_transactions?
+  end
+
+  test "has_split_transactions? returns false when no splits" do
+    @import.update!(raw_file_str: SAMPLE_QIF)
+    refute @import.has_split_transactions?
+  end
+
+  test "split_categories is empty when splits use --Split-- placeholder" do
+    @import.update!(raw_file_str: QIF_WITH_SPLIT_PLACEHOLDER)
+    @import.generate_rows_from_csv
+
+    assert_empty @import.split_categories
+    refute_includes @import.row_categories, "--Split--"
   end
 
   test "categories_selected? is false before sync_mappings" do

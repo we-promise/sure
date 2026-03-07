@@ -88,6 +88,22 @@ class QifImport < Import
     rows.distinct.pluck(:category).reject(&:blank?).sort
   end
 
+  # Returns true if the QIF file contains any split transactions.
+  def has_split_transactions?
+    return @has_split_transactions if defined?(@has_split_transactions)
+    @has_split_transactions = parsed_transactions_with_splits.any?(&:split)
+  end
+
+  # Categories that appear on split transactions in the QIF file.
+  # Split transactions use S/$ fields to break a total into sub-amounts;
+  # the app does not yet support splits, so these categories are flagged.
+  def split_categories
+    return @split_categories if defined?(@split_categories)
+
+    split_cats = parsed_transactions_with_splits.select(&:split).map(&:category).reject(&:blank?).uniq.sort
+    @split_categories = split_cats & row_categories
+  end
+
   # Unique tags used across all rows (blank entries excluded).
   def row_tags
     rows.flat_map(&:tags_list).uniq.reject(&:blank?).sort
@@ -104,6 +120,10 @@ class QifImport < Import
   end
 
   private
+
+    def parsed_transactions_with_splits
+      @parsed_transactions_with_splits ||= QifParser.parse(raw_file_str)
+    end
 
     def investment_account?
       qif_account_type == "Invst"

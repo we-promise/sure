@@ -12,6 +12,17 @@
 
   <%= form_with url: import_qif_category_selection_path(@import), method: :put, class: "space-y-8" do |form| %>
 
+    <%# ── Split transaction warning ────────────────────────────── %>
+    <% if @has_split_transactions %>
+      <div class="flex gap-3 items-start rounded-xl border border-warning bg-warning/5 px-4 py-3">
+        <%= icon("triangle-alert", size: "md", class: "text-warning shrink-0 mt-0.5") %>
+        <div class="text-sm text-primary space-y-1">
+          <p class="font-medium"><%= t(".split_warning_title") %></p>
+          <p class="text-secondary"><%= t(".split_warning_description") %></p>
+        </div>
+      </div>
+    <% end %>
+
     <%# ── Categories ─────────────────────────────────────────────── %>
     <% if @categories.any? %>
       <div class="space-y-3">
@@ -30,6 +41,7 @@
 
             <div class="divide-y divide-alpha-black-100">
               <% @categories.each_with_index do |category, index| %>
+                <% is_split = @split_categories.include?(category) %>
                 <label for="cat_<%= index %>_<%= category.parameterize(separator: "_") %>" class="grid grid-cols-12 gap-2 items-center px-5 py-3 bg-container cursor-pointer hover:bg-surface-inset transition-colors">
                   <div class="col-span-1">
                     <input
@@ -37,10 +49,15 @@
                       name="categories[]"
                       value="<%= category %>"
                       id="cat_<%= index %>_<%= category.parameterize(separator: "_") %>"
-                      checked
+                      <%= "checked" unless is_split %>
                       class="rounded border-primary">
                   </div>
-                  <span class="col-span-8 text-sm text-primary"><%= category %></span>
+                  <div class="col-span-8 flex items-center gap-2">
+                    <span class="text-sm text-primary"><%= category %></span>
+                    <% if is_split %>
+                      <span class="inline-flex items-center rounded-full bg-warning/10 px-2 py-0.5 text-xs font-medium text-warning"><%= t(".split_badge") %></span>
+                    <% end %>
+                  </div>
                   <span class="col-span-3 text-sm text-secondary text-right">
                     <%= t(".txn_count", count: @category_counts[category] || 0) %>
                   </span>
