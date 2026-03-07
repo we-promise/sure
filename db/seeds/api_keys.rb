@@ -73,7 +73,7 @@ begin
     api_key = user.api_keys.create!(
       name: "Setup API Key",
       key: api_key_value,
-      scopes: ["read_write"],
+      scopes: [ "read_write" ],
       source: "web"
     )
 
