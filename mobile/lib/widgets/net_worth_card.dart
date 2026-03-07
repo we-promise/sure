@@ -8,6 +8,7 @@ class NetWorthCard extends StatelessWidget {
   final AccountFilter currentFilter;
   final ValueChanged<AccountFilter> onFilterChanged;
   final String Function(String currency, double amount) formatAmount;
+  final String? netWorthFormatted;
 
   const NetWorthCard({
     super.key,
@@ -16,6 +17,7 @@ class NetWorthCard extends StatelessWidget {
     required this.currentFilter,
     required this.onFilterChanged,
     required this.formatAmount,
+    this.netWorthFormatted,
   });
 
   @override
@@ -33,14 +35,26 @@ class NetWorthCard extends StatelessWidget {
       ),
       child: Column(
         children: [
-          // Net Worth Section (Placeholder)
+          // Net Worth Section
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
-            child: Text(
-              'Net Worth — coming soon',
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: colorScheme.onSurfaceVariant,
-                  ),
+            child: Column(
+              children: [
+                Text(
+                  'Net Worth',
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  netWorthFormatted ?? '--',
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: colorScheme.onSurface,
+                      ),
+                ),
+              ],
             ),
           ),
 
