@@ -2,6 +2,7 @@ require "digest/md5"
 
 class IncomeStatement
   include Monetizable
+  include IncomeStatement::StatsLookback
 
   monetize :median_expense, :median_income
 
@@ -115,15 +116,23 @@ class IncomeStatement
     def family_stats(interval: "month")
       @family_stats ||= {}
       @family_stats[interval] ||= Rails.cache.fetch([
-        "income_statement", "family_stats", family.id, interval, family.entries_cache_version
+        "income_statement", "family_stats", family.id, interval,
+        family.entries_cache_version, stats_lookback_key
       ]) { FamilyStats.new(family, interval:).call }
     end
 
     def category_stats(interval: "month")
       @category_stats ||= {}
       @category_stats[interval] ||= Rails.cache.fetch([
-        "income_statement", "category_stats", family.id, interval, family.entries_cache_version
+        "income_statement", "category_stats", family.id, interval,
+        family.entries_cache_version, stats_lookback_key
       ]) { CategoryStats.new(family, interval:).call }
+    end
+
+    # Include the current lookback window boundaries in the cache key so that
+    # the cache invalidates automatically when the month rolls over.
+    def stats_lookback_key
+      lookback_start_date.to_s
     end
 
     def totals_query(transactions_scope:, date_range:)
