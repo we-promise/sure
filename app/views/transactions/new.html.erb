@@ -1,6 +1,10 @@
 <%= render DS::Dialog.new do |dialog| %>
   <% dialog.with_header(title: "New transaction") %>
   <% dialog.with_body do %>
-    <%= render "form", entry: @entry, income_categories: @income_categories, expense_categories: @expense_categories %>
+    <%= render "form",
+        entry: @entry,
+        income_categories: @income_categories,
+        expense_categories: @expense_categories,
+        name_suggestions: @name_suggestions %>
   <% end %>
 <% end %>

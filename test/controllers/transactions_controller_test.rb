@@ -8,6 +8,62 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     @entry = entries(:transaction)
   end
 
+  test "new shows autocomplete suggestions for transaction names" do
+    family = families(:empty)
+    sign_in users(:empty)
+    account = family.accounts.create! name: "Test", balance: 0, currency: "USD", accountable: Depository.new
+
+    create_transaction(account: account, name: "Sample Merchant")
+    create_transaction(account: account, name: "Another Sample")
+    create_transaction(account: account, name: "Sample Merchant")
+    create_transaction(account: account, name: "sample merchant")
+
+    get new_transaction_url(account_id: account.id)
+
+    assert_response :success
+    assert_dom "datalist#transaction-name-suggestions", count: 1
+    assert_dom "datalist#transaction-name-suggestions option[value='Sample Merchant']", count: 1
+    assert_dom "datalist#transaction-name-suggestions option[value='sample merchant']", count: 0
+    assert_dom "datalist#transaction-name-suggestions option[value='Another Sample']", count: 1
+  end
+
+  test "name_suggestions returns case-insensitive deduped names" do
+    family = families(:empty)
+    sign_in users(:empty)
+    account = family.accounts.create! name: "Test", balance: 0, currency: "USD", accountable: Depository.new
+
+    create_transaction(account: account, name: "Sample Vendor")
+    create_transaction(account: account, name: "sample vendor")
+    create_transaction(account: account, name: "Sample Vendor")
+
+    get name_suggestions_transactions_url(query: "sample"), as: :json
+
+    assert_response :success
+    suggestions = response.parsed_body["suggestions"]
+    assert_equal 1, suggestions.count { |name| name.downcase == "sample vendor" }
+  end
+
+  test "name_suggestions finds older matches outside initial top suggestions" do
+    family = families(:empty)
+    sign_in users(:empty)
+    account = family.accounts.create! name: "Test", balance: 0, currency: "USD", accountable: Depository.new
+
+    create_transaction(account: account, name: "Example Match")
+    25.times do |index|
+      create_transaction(account: account, name: "Recent Entry #{index}")
+    end
+
+    get new_transaction_url(account_id: account.id)
+    assert_response :success
+    assert_dom "datalist#transaction-name-suggestions option[value='Example Match']", count: 0
+
+    get name_suggestions_transactions_url(query: "example"), as: :json
+
+    assert_response :success
+    suggestions = response.parsed_body["suggestions"]
+    assert_equal 1, suggestions.count { |name| name.downcase == "example match" }
+  end
+
   test "creates with transaction details" do
     assert_difference [ "Entry.count", "Transaction.count" ], 1 do
       post transactions_url, params: {
