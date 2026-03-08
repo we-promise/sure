@@ -79,4 +79,38 @@ class OidcIdentityTest < ActiveSupport::TestCase
     assert_equal @user, identity.user
     assert_not_nil identity.last_authenticated_at
   end
+
+  test "sync_user_attributes does not overwrite existing name" do
+    @user.update!(first_name: "Custom", last_name: "Name")
+
+    auth = OmniAuth::AuthHash.new({
+      provider: @oidc_identity.provider,
+      uid: @oidc_identity.uid,
+      info: { email: @user.email, first_name: "SSO", last_name: "Provider" },
+      extra: { raw_info: {} }
+    })
+
+    @oidc_identity.sync_user_attributes!(auth)
+    @user.reload
+
+    assert_equal "Custom", @user.first_name
+    assert_equal "Name", @user.last_name
+  end
+
+  test "sync_user_attributes sets name when user has blank name" do
+    @user.update!(first_name: "", last_name: nil)
+
+    auth = OmniAuth::AuthHash.new({
+      provider: @oidc_identity.provider,
+      uid: @oidc_identity.uid,
+      info: { email: @user.email, first_name: "SSO", last_name: "Provider" },
+      extra: { raw_info: {} }
+    })
+
+    @oidc_identity.sync_user_attributes!(auth)
+    @user.reload
+
+    assert_equal "SSO", @user.first_name
+    assert_equal "Provider", @user.last_name
+  end
 end

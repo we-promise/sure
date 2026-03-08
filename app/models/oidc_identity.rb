@@ -25,11 +25,12 @@ class OidcIdentity < ApplicationRecord
       groups: groups
     })
 
-    # Sync name to user if provided (keep existing if IdP doesn't provide)
-    user.update!(
-      first_name: auth.info&.first_name.presence || user.first_name,
-      last_name: auth.info&.last_name.presence || user.last_name
-    )
+    # Sync name to user only when the user's current value is blank
+    # (don't overwrite names the user has manually changed)
+    attrs = {}
+    attrs[:first_name] = auth.info&.first_name if user.first_name.blank? && auth.info&.first_name.present?
+    attrs[:last_name] = auth.info&.last_name if user.last_name.blank? && auth.info&.last_name.present?
+    user.update!(attrs) if attrs.any?
 
     # Apply role mapping based on group membership
     apply_role_mapping!(groups)
