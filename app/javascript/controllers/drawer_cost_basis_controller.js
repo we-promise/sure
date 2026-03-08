@@ -1,4 +1,5 @@
 import { Controller } from "@hotwired/stimulus"
+import { parseLocalizedFloat } from "helpers/number_format"
 
 // Handles the inline cost basis editor in the holding drawer.
 // Shows/hides the form and handles bidirectional total <-> per-share conversion.
@@ -13,7 +14,7 @@ export default class extends Controller {
 
   // Called when user types in total cost basis field
   updatePerShare() {
-    const total = Number.parseFloat(this.totalTarget.value) || 0
+    const total = parseLocalizedFloat(this.totalTarget.value) || 0
     const qty = this.qtyValue || 1
     const perShare = qty > 0 ? (total / qty).toFixed(2) : "0.00"
     this.perShareValueTarget.textContent = perShare
@@ -24,7 +25,7 @@ export default class extends Controller {
 
   // Called when user types in per-share field
   updateTotal() {
-    const perShare = Number.parseFloat(this.perShareTarget.value) || 0
+    const perShare = parseLocalizedFloat(this.perShareTarget.value) || 0
     const qty = this.qtyValue || 1
     const total = (perShare * qty).toFixed(2)
     this.totalTarget.value = total
