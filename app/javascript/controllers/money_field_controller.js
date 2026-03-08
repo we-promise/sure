@@ -13,8 +13,6 @@ export default class extends Controller {
 
   updateAmount(currency) {
     new CurrenciesService().get(currency).then((currency) => {
-      this.amountTarget.step = currency.step;
-
       if (Number.isFinite(this.amountTarget.value)) {
         this.amountTarget.value = Number.parseFloat(
           this.amountTarget.value,
