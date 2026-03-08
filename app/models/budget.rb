@@ -322,7 +322,10 @@ class Budget < ApplicationRecord
     end
 
     def stable_synthetic_key(category)
-      return :uncategorized if category.uncategorized?
-      return :other_investments if category.other_investments?
+      if category.uncategorized?
+        :uncategorized
+      elsif category.other_investments?
+        :other_investments
+      end
     end
 end
