@@ -4,6 +4,7 @@ class RemoveClassificationFromCategories < ActiveRecord::Migration[7.2]
   end
 
   def down
-    add_column :categories, :classification, :string, default: "expense", null: false
+    raise ActiveRecord::IrreversibleMigration,
+      "Cannot restore classification column — original per-category values (income/expense) were not preserved"
   end
 end

@@ -218,8 +218,10 @@ class Budget < ApplicationRecord
   end
 
   def budget_category_actual_spending(budget_category)
-    cat_id = budget_category.category_id
-    net_totals.net_expense_categories.find { |ct| ct.category.id == cat_id }&.total || 0
+    key = budget_category.category_id || stable_synthetic_key(budget_category.category)
+    expense = expense_totals_by_category[key]&.total || 0
+    refund = income_totals_by_category[key]&.total || 0
+    [ expense - refund, 0 ].max
   end
 
   def category_median_monthly_expense(category)
@@ -301,5 +303,26 @@ class Budget < ApplicationRecord
 
     def net_totals
       @net_totals ||= income_statement.net_category_totals(period: period)
+    end
+
+    def expense_totals
+      @expense_totals ||= income_statement.expense_totals(period: period)
+    end
+
+    def income_totals
+      @income_totals ||= income_statement.income_totals(period: period)
+    end
+
+    def expense_totals_by_category
+      @expense_totals_by_category ||= expense_totals.category_totals.index_by { |ct| ct.category.id || stable_synthetic_key(ct.category) }
+    end
+
+    def income_totals_by_category
+      @income_totals_by_category ||= income_totals.category_totals.index_by { |ct| ct.category.id || stable_synthetic_key(ct.category) }
+    end
+
+    def stable_synthetic_key(category)
+      return :uncategorized if category.uncategorized?
+      return :other_investments if category.other_investments?
     end
 end

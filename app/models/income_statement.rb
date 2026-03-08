@@ -40,8 +40,16 @@ class IncomeStatement
     expense = expense_totals(period: period)
     income = income_totals(period: period)
 
-    # Use a stable key for each category: id for persisted, name for synthetic
-    cat_key = ->(ct) { ct.category.id || ct.category.name }
+    # Use a stable key for each category: id for persisted, invariant token for synthetic
+    cat_key = ->(ct) {
+      if ct.category.uncategorized?
+        :uncategorized
+      elsif ct.category.other_investments?
+        :other_investments
+      else
+        ct.category.id
+      end
+    }
 
     expense_by_cat = expense.category_totals.reject { |ct| ct.category.subcategory? }.index_by { |ct| cat_key.call(ct) }
     income_by_cat = income.category_totals.reject { |ct| ct.category.subcategory? }.index_by { |ct| cat_key.call(ct) }
