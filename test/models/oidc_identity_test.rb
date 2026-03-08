@@ -79,4 +79,67 @@ class OidcIdentityTest < ActiveSupport::TestCase
     assert_equal @user, identity.user
     assert_not_nil identity.last_authenticated_at
   end
+
+  # ── sync_user_attributes! ────────────────────────────────────────────────────
+
+  test "sync_user_attributes! updates name when user has not manually changed it" do
+    # bob_google fixture: stored info has first_name "Bob", user.first_name is "Bob"
+    # IdP now returns "Robert" → user hasn't changed from "Bob", so sync should apply
+    auth = OmniAuth::AuthHash.new({
+      provider: "openid_connect",
+      uid: "google-uid-12345",
+      info: { email: "bob@bobdylan.com", name: "Robert Dylan",
+              first_name: "Robert", last_name: "Dylan" }
+    })
+
+    @oidc_identity.sync_user_attributes!(auth)
+
+    assert_equal "Robert", @user.reload.first_name
+    assert_equal "Dylan",  @user.reload.last_name
+  end
+
+  test "sync_user_attributes! does NOT overwrite name when user manually changed it" do
+    # User changed their name from the IdP-stored "Bob" to "Bobby"
+    @user.update!(first_name: "Bobby")
+
+    auth = OmniAuth::AuthHash.new({
+      provider: "openid_connect",
+      uid: "google-uid-12345",
+      info: { email: "bob@bobdylan.com", name: "Robert Dylan",
+              first_name: "Robert", last_name: "Dylan" }
+    })
+
+    @oidc_identity.sync_user_attributes!(auth)
+
+    # "Bobby" is a manual change — must be preserved
+    assert_equal "Bobby", @user.reload.first_name
+  end
+
+  test "sync_user_attributes! preserves name when IdP provides no first_name" do
+    @user.update!(first_name: "Bobby")
+
+    auth = OmniAuth::AuthHash.new({
+      provider: "openid_connect",
+      uid: "google-uid-12345",
+      info: { email: "bob@bobdylan.com" }
+    })
+
+    @oidc_identity.sync_user_attributes!(auth)
+
+    assert_equal "Bobby", @user.reload.first_name
+  end
+
+  test "sync_user_attributes! stores latest IdP info regardless of name sync" do
+    auth = OmniAuth::AuthHash.new({
+      provider: "openid_connect",
+      uid: "google-uid-12345",
+      info: { email: "newemail@example.com", name: "Robert Dylan",
+              first_name: "Robert", last_name: "Dylan" }
+    })
+
+    @oidc_identity.sync_user_attributes!(auth)
+
+    assert_equal "newemail@example.com", @oidc_identity.reload.info["email"]
+    assert_equal "Robert", @oidc_identity.reload.info["first_name"]
+  end
 end

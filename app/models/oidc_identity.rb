@@ -13,6 +13,11 @@ class OidcIdentity < ApplicationRecord
   # Sync user attributes from IdP on each login
   # Updates stored identity info and syncs name to user (not email - that's identity)
   def sync_user_attributes!(auth)
+    # Capture previously-stored IdP name BEFORE updating info, so we can detect
+    # whether the user has manually changed their name since the last SSO login.
+    prev_first_name = info&.dig("first_name").presence
+    prev_last_name  = info&.dig("last_name").presence
+
     # Extract groups from claims (various common claim names)
     groups = extract_groups(auth)
 
@@ -25,11 +30,26 @@ class OidcIdentity < ApplicationRecord
       groups: groups
     })
 
-    # Sync name to user if provided (keep existing if IdP doesn't provide)
-    user.update!(
-      first_name: auth.info&.first_name.presence || user.first_name,
-      last_name: auth.info&.last_name.presence || user.last_name
-    )
+    # Sync name to user only if the user hasn't manually changed it since the
+    # last SSO login. We detect manual changes by comparing the current user
+    # name against the previously-stored IdP name (captured above).
+    # If they differ, the user edited their profile — we respect that and skip.
+    idp_first_name = auth.info&.first_name.presence
+    idp_last_name  = auth.info&.last_name.presence
+
+    synced_first_name = if idp_first_name && user.first_name == prev_first_name
+      idp_first_name
+    else
+      user.first_name
+    end
+
+    synced_last_name = if idp_last_name && user.last_name == prev_last_name
+      idp_last_name
+    else
+      user.last_name
+    end
+
+    user.update!(first_name: synced_first_name, last_name: synced_last_name)
 
     # Apply role mapping based on group membership
     apply_role_mapping!(groups)
