@@ -341,4 +341,50 @@ class Family::DataExporterTest < ActiveSupport::TestCase
       refute ndjson_content.include?(other_rule.name)
     end
   end
+
+  test "exports transaction amounts with inflows-positive convention for round-trip import compatibility" do
+    # Sure stores amounts internally as: positive = outflow (expense), negative = inflow (income)
+    # The CSV import template uses the opposite: positive = inflow, negative = outflow.
+    # Export must negate amounts so exported CSVs can be re-imported without sign inversion.
+
+    # Expense: internally stored as +50.00 → should export as -50.00
+    expense_entry = @account.entries.create!(
+      date: "2024-01-15",
+      name: "Coffee Shop",
+      amount: 50.00,
+      currency: "USD",
+      entryable: Transaction.new(kind: :standard)
+    )
+
+    # Income: internally stored as -1500.00 → should export as +1500.00
+    income_entry = @account.entries.create!(
+      date: "2024-01-16",
+      name: "Salary",
+      amount: -1500.00,
+      currency: "USD",
+      entryable: Transaction.new(kind: :standard)
+    )
+
+    zip_data = @exporter.generate_export
+
+    Zip::File.open_buffer(zip_data) do |zip|
+      csv = CSV.parse(zip.read("transactions.csv"), headers: true)
+
+      expense_row = csv.find { |row| row["name"] == "Coffee Shop" }
+      income_row  = csv.find { |row| row["name"] == "Salary" }
+
+      assert_not_nil expense_row, "Expense transaction not found in CSV"
+      assert_not_nil income_row,  "Income transaction not found in CSV"
+
+      # Expense (outflow) must be negative in export
+      assert expense_row["amount"].to_d < 0,
+        "Expense should export as negative (inflows-positive convention), got #{expense_row["amount"]}"
+      assert_equal(-50.00, expense_row["amount"].to_d)
+
+      # Income (inflow) must be positive in export
+      assert income_row["amount"].to_d > 0,
+        "Income should export as positive (inflows-positive convention), got #{income_row["amount"]}"
+      assert_equal 1500.00, income_row["amount"].to_d
+    end
+  end
 end
