@@ -77,7 +77,17 @@ class Transaction::Search
                   )
                   .joins(
                     ActiveRecord::Base.sanitize_sql_array([
-                      "LEFT JOIN exchange_rates er ON (er.date = entries.date AND er.from_currency = entries.currency AND er.to_currency = ?)",
+                      "LEFT JOIN LATERAL (
+                        SELECT COALESCE(
+                          (SELECT er.rate FROM exchange_rates er
+                           WHERE er.from_currency = entries.currency AND er.to_currency = ?
+                             AND er.date <= entries.date ORDER BY er.date DESC LIMIT 1),
+                          (SELECT er.rate FROM exchange_rates er
+                           WHERE er.from_currency = entries.currency AND er.to_currency = ?
+                             AND er.date > entries.date ORDER BY er.date ASC LIMIT 1)
+                        ) AS rate
+                      ) er ON TRUE",
+                      family.currency,
                       family.currency
                     ])
                   )

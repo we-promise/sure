@@ -36,11 +36,16 @@ class InvestmentStatement::Totals
         FROM (#{@trades_scope.to_sql}) t
         JOIN entries ae ON ae.entryable_id = t.id AND ae.entryable_type = 'Trade'
         JOIN accounts a ON a.id = ae.account_id
-        LEFT JOIN exchange_rates er ON (
-          er.date = ae.date AND
-          er.from_currency = ae.currency AND
-          er.to_currency = :target_currency
-        )
+        LEFT JOIN LATERAL (
+          SELECT COALESCE(
+            (SELECT er.rate FROM exchange_rates er
+             WHERE er.from_currency = ae.currency AND er.to_currency = :target_currency
+               AND er.date <= ae.date ORDER BY er.date DESC LIMIT 1),
+            (SELECT er.rate FROM exchange_rates er
+             WHERE er.from_currency = ae.currency AND er.to_currency = :target_currency
+               AND er.date > ae.date ORDER BY er.date ASC LIMIT 1)
+          ) AS rate
+        ) er ON TRUE
         WHERE a.family_id = :family_id
           AND a.status IN ('draft', 'active')
           AND ae.excluded = false
