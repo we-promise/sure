@@ -47,8 +47,8 @@ class IncomeStatement
     income_by_cat = income.category_totals.reject { |ct| ct.category.subcategory? }.index_by { |ct| cat_key.call(ct) }
 
     all_keys = (expense_by_cat.keys + income_by_cat.keys).uniq
-    net_expense_categories = []
-    net_income_categories = []
+    raw_expense_categories = []
+    raw_income_categories = []
 
     all_keys.each do |key|
       exp_ct = expense_by_cat[key]
@@ -59,26 +59,24 @@ class IncomeStatement
       category = exp_ct&.category || inc_ct&.category
 
       if net > 0
-        weight = expense.total.zero? ? 0 : (net.to_f / expense.total) * 100
-        net_expense_categories << CategoryTotal.new(
-          category: category,
-          total: net,
-          currency: family.currency,
-          weight: weight
-        )
+        raw_expense_categories << { category: category, total: net }
       elsif net < 0
-        weight = income.total.zero? ? 0 : (net.abs.to_f / income.total) * 100
-        net_income_categories << CategoryTotal.new(
-          category: category,
-          total: net.abs,
-          currency: family.currency,
-          weight: weight
-        )
+        raw_income_categories << { category: category, total: net.abs }
       end
     end
 
-    total_net_expense = net_expense_categories.sum(&:total)
-    total_net_income = net_income_categories.sum(&:total)
+    total_net_expense = raw_expense_categories.sum { |r| r[:total] }
+    total_net_income = raw_income_categories.sum { |r| r[:total] }
+
+    net_expense_categories = raw_expense_categories.map do |r|
+      weight = total_net_expense.zero? ? 0 : (r[:total].to_f / total_net_expense) * 100
+      CategoryTotal.new(category: r[:category], total: r[:total], currency: family.currency, weight: weight)
+    end
+
+    net_income_categories = raw_income_categories.map do |r|
+      weight = total_net_income.zero? ? 0 : (r[:total].to_f / total_net_income) * 100
+      CategoryTotal.new(category: r[:category], total: r[:total], currency: family.currency, weight: weight)
+    end
 
     NetCategoryTotals.new(
       net_expense_categories: net_expense_categories,
