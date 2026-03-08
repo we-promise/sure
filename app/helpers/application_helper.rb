@@ -147,6 +147,28 @@ module ApplicationHelper
     number_with_precision(qty, precision: precision, strip_insignificant_zeros: true)
   end
 
+  # Maps a Trend object to a semantic design-token CSS text class.
+  #
+  # Uses the trend direction and favorable_direction to determine whether the
+  # movement is positive or negative, then returns the appropriate token class.
+  #
+  # @param trend [Trend] The trend object to evaluate
+  # @return [String] A CSS class string ("text-success", "text-destructive", or "text-secondary")
+  def trend_text_class(trend)
+    return "text-secondary" unless trend
+
+    case trend.direction
+    when "flat"
+      "text-secondary"
+    when "up"
+      trend.favorable_direction.down? ? "text-destructive" : "text-success"
+    when "down"
+      trend.favorable_direction.down? ? "text-success" : "text-destructive"
+    else
+      "text-secondary"
+    end
+  end
+
   private
     def calculate_total(item, money_method, negate)
       # Filter out transfer-type transactions from entries

@@ -62,7 +62,7 @@
 
               <div class="w-24 text-right">
                 <% if holding.trend %>
-                  <span style="color: <%= holding.trend.color %>">
+                  <span class="<%= trend_text_class(holding.trend) %>">
                     <%= holding.trend.percent_formatted %>
                   </span>
                 <% else %>
