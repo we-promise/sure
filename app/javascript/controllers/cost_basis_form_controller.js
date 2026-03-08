@@ -1,4 +1,5 @@
 import { Controller } from "@hotwired/stimulus"
+import { parseLocalized } from "helpers/number_helpers"
 
 // Handles bidirectional conversion between total cost basis and per-share cost
 // in the manual cost basis entry form.
@@ -9,7 +10,7 @@ export default class extends Controller {
   // Called when user types in the total cost basis field
   // Updates the per-share display and input to show the calculated value
   updatePerShare() {
-    const total = Number.parseFloat(this.totalTarget.value) || 0
+    const total = parseLocalized(this.totalTarget.value)
     const qty = this.qtyValue || 1
     const perShare = qty > 0 ? (total / qty).toFixed(2) : "0.00"
     this.perShareValueTarget.textContent = perShare
@@ -21,10 +22,12 @@ export default class extends Controller {
   // Called when user types in the per-share field
   // Updates the total cost basis field with the calculated value
   updateTotal() {
-    const perShare = Number.parseFloat(this.perShareTarget.value) || 0
+    const perShare = parseLocalized(this.perShareTarget.value)
     const qty = this.qtyValue || 1
     const total = (perShare * qty).toFixed(2)
     this.totalTarget.value = total
     this.perShareValueTarget.textContent = perShare.toFixed(2)
   }
 }
+
+
