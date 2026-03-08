@@ -57,18 +57,13 @@ class IncomeStatement::Totals
           c.id as category_id,
           c.parent_id as parent_category_id,
           CASE WHEN at.kind = 'investment_contribution' THEN 'expense' WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END as classification,
-          ABS(SUM(CASE WHEN at.kind = 'investment_contribution' THEN ABS(ae.amount * COALESCE(er.rate, 1)) ELSE ae.amount * COALESCE(er.rate, 1) END)) as total,
+          ABS(SUM(CASE WHEN at.kind = 'investment_contribution' THEN ABS(ae.amount * #{nearest_rate_sql}) ELSE ae.amount * #{nearest_rate_sql} END)) as total,
           COUNT(ae.id) as transactions_count,
           false as is_uncategorized_investment
         FROM (#{@transactions_scope.to_sql}) at
         JOIN entries ae ON ae.entryable_id = at.id AND ae.entryable_type = 'Transaction'
         JOIN accounts a ON a.id = ae.account_id
         LEFT JOIN categories c ON c.id = at.category_id
-        LEFT JOIN exchange_rates er ON (
-          er.date = ae.date AND
-          er.from_currency = ae.currency AND
-          er.to_currency = :target_currency
-        )
         WHERE at.kind NOT IN ('funds_movement', 'one_time', 'cc_payment')
           AND ae.excluded = false
           AND a.family_id = :family_id
@@ -84,18 +79,13 @@ class IncomeStatement::Totals
           c.id as category_id,
           c.parent_id as parent_category_id,
           CASE WHEN at.kind = 'investment_contribution' THEN 'expense' WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END as classification,
-          ABS(SUM(CASE WHEN at.kind = 'investment_contribution' THEN ABS(ae.amount * COALESCE(er.rate, 1)) ELSE ae.amount * COALESCE(er.rate, 1) END)) as total,
+          ABS(SUM(CASE WHEN at.kind = 'investment_contribution' THEN ABS(ae.amount * #{nearest_rate_sql}) ELSE ae.amount * #{nearest_rate_sql} END)) as total,
           COUNT(ae.id) as entry_count,
           false as is_uncategorized_investment
         FROM (#{@transactions_scope.to_sql}) at
         JOIN entries ae ON ae.entryable_id = at.id AND ae.entryable_type = 'Transaction'
         JOIN accounts a ON a.id = ae.account_id
         LEFT JOIN categories c ON c.id = at.category_id
-        LEFT JOIN exchange_rates er ON (
-          er.date = ae.date AND
-          er.from_currency = ae.currency AND
-          er.to_currency = :target_currency
-        )
         WHERE at.kind NOT IN ('funds_movement', 'one_time', 'cc_payment')
           AND (
             at.investment_activity_label IS NULL
@@ -106,6 +96,33 @@ class IncomeStatement::Totals
           AND a.status IN ('draft', 'active')
           #{exclude_tax_advantaged_sql}
         GROUP BY c.id, c.parent_id, CASE WHEN at.kind = 'investment_contribution' THEN 'expense' WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END
+      SQL
+    end
+
+    # Returns a SQL fragment that finds the nearest available exchange rate for each entry.
+    #
+    # Uses a dual-lookup strategy (same as PR #1010 for balance charts):
+    # 1. Look backwards for the latest rate on or before the entry date
+    # 2. Fall back to the earliest rate after the entry date if none found before
+    # 3. Fall back to 1:1 if no rate exists at all (same-currency transactions)
+    #
+    # This avoids the 1:1 fallback bug that occurred when a direct FX pair was missing
+    # for the exact transaction date (e.g. NZD→CNY on a date with no recorded rate).
+    def nearest_rate_sql
+      <<~SQL.squish
+        COALESCE(
+          (SELECT er.rate FROM exchange_rates er
+           WHERE er.from_currency = ae.currency
+             AND er.to_currency = :target_currency
+             AND er.date <= ae.date
+           ORDER BY er.date DESC LIMIT 1),
+          (SELECT er.rate FROM exchange_rates er
+           WHERE er.from_currency = ae.currency
+             AND er.to_currency = :target_currency
+             AND er.date > ae.date
+           ORDER BY er.date ASC LIMIT 1),
+          1
+        )
       SQL
     end
 
