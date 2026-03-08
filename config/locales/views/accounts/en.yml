@@ -20,7 +20,8 @@ en:
     accountable_group:
       excluded_badge: "(Excluded)"
     form:
-      balance: Current balance
+      balance: "Balance on date:"
+      opening_balance_date_label: Opening balance date
       name_label: Account name
       name_placeholder: Example account name
       additional_details: Additional details

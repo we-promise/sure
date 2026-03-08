@@ -1,0 +1,63 @@
+---
+de:
+  coinstats_items:
+    create:
+      success: CoinStats-Provider-Verbindung wurde erfolgreich eingerichtet.
+      default_name: CoinStats-Verbindung
+      errors:
+        validation_failed: "Validierung fehlgeschlagen: %{message}."
+    update:
+      success: CoinStats-Provider-Verbindung wurde erfolgreich aktualisiert.
+      errors:
+        validation_failed: "Validierung fehlgeschlagen: %{message}."
+    destroy:
+      success: CoinStats-Provider-Verbindung wurde zur Löschung vorgemerkt.
+    link_wallet:
+      success: "%{count} Krypto-Wallet(s) erfolgreich verknüpft."
+      missing_params: "Fehlende erforderliche Parameter: Adresse und Blockchain."
+      failed: Verknüpfung des Krypto-Wallets fehlgeschlagen.
+      error: "Krypto-Wallet-Verknüpfung fehlgeschlagen: %{message}."
+    new:
+      title: Krypto-Wallet mit CoinStats verknüpfen
+      blockchain_fetch_error: Blockchains konnten nicht geladen werden. Bitte später erneut versuchen.
+      address_label: Adresse
+      address_placeholder: Erforderlich
+      blockchain_label: Blockchain
+      blockchain_placeholder: Erforderlich
+      blockchain_select_blank: Blockchain auswählen
+      link: Krypto-Wallet verknüpfen
+      not_configured_title: CoinStats-Provider-Verbindung nicht konfiguriert
+      not_configured_message: Zum Verknüpfen eines Krypto-Wallets müssen Sie zuerst die CoinStats-Provider-Verbindung konfigurieren.
+      not_configured_step1_html: Gehen Sie zu <strong>Einstellungen → Provider</strong>
+      not_configured_step2_html: Suchen Sie den <strong>CoinStats</strong>-Provider
+      not_configured_step3_html: Folgen Sie den <strong>Einrichtungsanweisungen</strong> zur Konfiguration
+      go_to_settings: Zu den Provider-Einstellungen
+      setup_instructions: "Einrichtungsanleitung:"
+      step1_html: Besuchen Sie das <a href="https://openapi.coinstats.app/" class="link" target="_blank" rel="noopener noreferrer">CoinStats Public API Dashboard</a>, um einen API-Key zu erhalten.
+      step2: Tragen Sie Ihren API-Key unten ein und klicken Sie auf Konfigurieren.
+      step3_html: Nach erfolgreicher Verbindung gehen Sie zum <a href="%{accounts_url}" class="link" data-turbo-frame="_top">Konten</a>-Tab, um Krypto-Wallets einzurichten.
+      api_key_label: API-Key
+      api_key_placeholder: Erforderlich
+      configure: Konfigurieren
+      update_configuration: Neu konfigurieren
+      default_name: CoinStats-Verbindung
+      status_configured_html: Bereit zur Nutzung
+      status_not_configured: Nicht konfiguriert
+    coinstats_item:
+      deletion_in_progress: Krypto-Wallet-Daten werden gelöscht…
+      provider_name: CoinStats
+      syncing: Synchronisiere…
+      sync_status:
+        no_accounts: Keine Krypto-Wallets gefunden
+        all_synced:
+          one: "%{count} Krypto-Wallet synchronisiert"
+          other: "%{count} Krypto-Wallets synchronisiert"
+        partial_sync: "%{linked_count} Krypto-Wallets synchronisiert, %{unlinked_count} müssen eingerichtet werden"
+      reconnect: Erneut verbinden
+      status: Zuletzt synchronisiert vor %{timestamp}
+      status_never: Noch nie synchronisiert
+      status_with_summary: "Zuletzt synchronisiert vor %{timestamp} • %{summary}"
+      update_api_key: API-Key aktualisieren
+      delete: Löschen
+      no_wallets_title: Keine Krypto-Wallets verbunden
+      no_wallets_message: Derzeit sind keine Krypto-Wallets mit CoinStats verbunden.

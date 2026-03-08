@@ -1,8 +1,9 @@
 class Holding::ForwardCalculator
   attr_reader :account
 
-  def initialize(account)
+  def initialize(account, security_ids: nil)
     @account = account
+    @security_ids = security_ids
     # Track cost basis per security: { security_id => { total_cost: BigDecimal, total_qty: BigDecimal } }
     @cost_basis_tracker = Hash.new { |h, k| h[k] = { total_cost: BigDecimal("0"), total_qty: BigDecimal("0") } }
   end
@@ -27,7 +28,7 @@ class Holding::ForwardCalculator
 
   private
     def portfolio_cache
-      @portfolio_cache ||= Holding::PortfolioCache.new(account)
+      @portfolio_cache ||= Holding::PortfolioCache.new(account, security_ids: @security_ids)
     end
 
     def empty_portfolio
@@ -55,6 +56,8 @@ class Holding::ForwardCalculator
 
     def build_holdings(portfolio, date, price_source: nil)
       portfolio.map do |security_id, qty|
+        next if @security_ids && !@security_ids.include?(security_id)
+
         price = portfolio_cache.get_price(security_id, date, source: price_source)
 
         if price.nil?

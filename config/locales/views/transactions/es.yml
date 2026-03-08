@@ -1,6 +1,7 @@
 ---
 es:
   transactions:
+    unknown_name: Transacción desconocida
     form:
       account: Cuenta
       account_prompt: Selecciona una cuenta
@@ -29,6 +30,15 @@ es:
       delete_subtitle: Esto eliminará permanentemente la transacción, afectará tus saldos históricos y no se podrá deshacer.
       delete_title: Eliminar transacción
       details: Detalles
+      exclude: Excluir
+      exclude_description: Las transacciones excluidas se eliminarán de los cálculos y presupuestos e informes.
+      activity_type: Tipo de actividad
+      activity_type_description: Tipo de actividad de inversión (Compra, Venta, Dividendo, etc.). Detectado automáticamente o configurado manualmente.
+      one_time_title: Transacción puntual %{type}
+      one_time_description: Las transacciones puntuales se excluirán de ciertos cálculos de presupuesto e informes para ayudarte a ver lo que es realmente importante.
+      convert_to_trade_title: Convertir en operación de valores
+      convert_to_trade_description: Convierte esta transacción en una operación de compra o venta con detalles del valor para el seguimiento de la cartera.
+      convert_to_trade_button: Convertir en operación
       merchant_label: Comerciante
       name_label: Nombre
       nature: Tipo
@@ -38,7 +48,46 @@ es:
       overview: Resumen
       settings: Configuración
       tags_label: Etiquetas
+      tab_transactions: Transacciones
+      tab_upcoming: Próximas
       uncategorized: "(sin categorizar)"
+    activity_labels:
+      buy: Compra
+      sell: Venta
+      sweep_in: Transferencia de barrido (entrada)
+      sweep_out: Transferencia de barrido (salida)
+      dividend: Dividendo
+      reinvestment: Reinversión
+      interest: Interés
+      fee: Comisión
+      transfer: Transferencia
+      contribution: Aportación
+      withdrawal: Retirada
+      exchange: Intercambio
+      other: Otros
+    mark_recurring: Marcar como recurrente
+    mark_recurring_subtitle: Realiza el seguimiento como una transacción recurrente. La variación del importe se calcula automáticamente basándose en transacciones similares de los últimos 6 meses.
+    mark_recurring_title: Transacción recurrente
+    potential_duplicate_title: Posible duplicado detectado
+    potential_duplicate_description: Esta transacción pendiente podría ser la misma que la transacción confirmada a continuación. Si es así, combínalas para evitar una doble contabilización.
+    duplicate_resolution:
+      merge_duplicate: Sí, combinarlas
+      keep_both: No, mantener ambas
+    transaction:
+      pending: Pendiente
+      pending_tooltip: Transacción pendiente — puede cambiar al confirmarse
+      linked_with_plaid: Vinculado con Plaid
+      activity_type_tooltip: Tipo de actividad de inversión
+      possible_duplicate: ¿Duplicada?
+      potential_duplicate_tooltip: Esto puede ser un duplicado de otra transacción
+      review_recommended: Revisar
+      review_recommended_tooltip: Gran diferencia de importe — se recomienda revisar para comprobar si es un duplicado
+    merge_duplicate:
+      success: Transacciones combinadas correctamente
+      failure: No se pudieron combinar las transacciones
+    dismiss_duplicate:
+      success: Mantenidas como transacciones separadas
+      failure: No se pudo descartar la sugerencia de duplicado
     header:
       edit_categories: Editar categorías
       edit_imports: Editar importaciones
@@ -49,6 +98,65 @@ es:
       include_excluded_accounts: Incluir cuentas excluidas
       transaction: transacción
       transactions: transacciones
+      import: Importar
+    list:
+      drag_drop_title: Suelta el CSV para importar
+      drag_drop_subtitle: Sube transacciones directamente
+      transaction: transacción
+      transactions: transacciones
+    toggle_recurring_section: Alternar próximas transacciones recurrentes
+    search:
+      filters:
+        account: Cuenta
+        date: Fecha
+        type: Tipo
+        status: Estado
+        amount: Importe
+        category: Categoría
+        tag: Etiqueta
+        merchant: Comerciante
+    convert_to_trade:
+      title: Convertir en operación de valores
+      description: Convierte esta transacción en una operación con detalles del valor
+      date_label: "Fecha:"
+      account_label: "Cuenta:"
+      amount_label: "Importe:"
+      security_label: Valor
+      security_prompt: Selecciona un valor...
+      security_custom: "+ Introducir ticker personalizado"
+      security_not_listed_hint: ¿No ves tu valor? Selecciona "Introducir ticker personalizado" al final de la lista.
+      ticker_placeholder: AAPL
+      ticker_hint: Introduce el símbolo del ticker de la acción/ETF (ej. AAPL, MSFT)
+      ticker_search_placeholder: Buscar un ticker...
+      ticker_search_hint: Busca por símbolo de ticker o nombre de empresa, o escribe un ticker personalizado
+      price_mismatch_title: Es posible que el precio no coincida
+      price_mismatch_message: "Tu precio (%{entered_price}/acción) difiere significativamente del precio de mercado actual de %{ticker} (%{market_price}). Si esto parece incorrecto, es posible que hayas seleccionado el valor equivocado — intenta usar \"Introducir ticker personalizado\" para especificar el correcto."
+      quantity_label: Cantidad (Acciones)
+      quantity_placeholder: ej. 20
+      quantity_hint: Número de acciones negociadas
+      price_label: Precio por acción
+      price_placeholder: ej. 52.15
+      price_hint: Precio por acción (%{currency})
+      qty_or_price_hint: Introduce al menos la cantidad O el precio. El otro se calculará a partir del importe de la transacción (%{amount}).
+      trade_type_label: Tipo de operación
+      trade_type_hint: Comprar o vender acciones de un valor
+      exchange_label: Bolsa (Opcional)
+      exchange_placeholder: XNAS
+      exchange_hint: Deja en blanco para detectar automáticamente
+      cancel: Cancelar
+      submit: Convertir en operación
+      success: Transacción convertida en operación correctamente
+      conversion_note: "Convertido desde la transacción: %{original_name} (%{original_date})"
+      errors:
+        not_investment_account: Solo las transacciones en cuentas de inversión pueden convertirse en operaciones
+        already_converted: Esta transacción ya ha sido convertida o excluida
+        enter_ticker: Por favor, introduce un símbolo de ticker
+        security_not_found: El valor seleccionado ya no existe. Por favor, selecciona otro.
+        select_security: Por favor, selecciona o introduce un valor
+        enter_qty_or_price: Por favor, introduce la cantidad o el precio por acción. El otro se calculará a partir del importe de la transacción.
+        invalid_qty_or_price: Cantidad o precio no válidos. Por favor, introduce valores positivos válidos.
+        conversion_failed: "Error al convertir la transacción: %{error}"
+        unexpected_error: "Error inesperado durante la conversión: %{error}"
     searches:
       filters:
         amount_filter:
@@ -62,10 +170,15 @@ es:
           on_or_after: en o después de %{date}
           on_or_before: en o antes de %{date}
           transfer: Transferencia
+          confirmed: Confirmada
+          pending: Pendiente
         type_filter:
           expense: Gasto
           income: Ingreso
           transfer: Transferencia
+        status_filter:
+          confirmed: Confirmada
+          pending: Pendiente
       menu:
         account_filter: Cuenta
         amount_filter: Importe
@@ -75,6 +188,7 @@ es:
         clear_filters: Limpiar filtros
         date_filter: Fecha
         merchant_filter: Comerciante
+        status_filter: Estado
         tag_filter: Etiqueta
         type_filter: Tipo
       search:

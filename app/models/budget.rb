@@ -126,6 +126,36 @@ class Budget < ApplicationRecord
     budgeted_spending.present?
   end
 
+  def most_recent_initialized_budget
+    family.budgets
+      .includes(:budget_categories)
+      .where("start_date < ?", start_date)
+      .where.not(budgeted_spending: nil)
+      .order(start_date: :desc)
+      .first
+  end
+
+  def copy_from!(source_budget)
+    raise ArgumentError, "source budget must belong to the same family" unless source_budget.family_id == family_id
+    raise ArgumentError, "source budget must precede target budget" unless source_budget.start_date < start_date
+
+    Budget.transaction do
+      update!(
+        budgeted_spending: source_budget.budgeted_spending,
+        expected_income: source_budget.expected_income
+      )
+
+      target_by_category = budget_categories.index_by(&:category_id)
+
+      source_budget.budget_categories.each do |source_bc|
+        target_bc = target_by_category[source_bc.category_id]
+        next unless target_bc
+
+        target_bc.update!(budgeted_spending: source_bc.budgeted_spending)
+      end
+    end
+  end
+
   def income_category_totals
     income_totals.category_totals.reject { |ct| ct.category.subcategory? || ct.total.zero? }.sort_by(&:weight).reverse
   end
@@ -188,9 +218,9 @@ class Budget < ApplicationRecord
   end
 
   def budget_category_actual_spending(budget_category)
-    cat_id = budget_category.category_id
-    expense = expense_totals_by_category[cat_id]&.total || 0
-    refund = income_totals_by_category[cat_id]&.total || 0
+    key = budget_category.category_id || budget_category.category.name
+    expense = expense_totals_by_category[key]&.total || 0
+    refund = income_totals_by_category[key]&.total || 0
     [ expense - refund, 0 ].max
   end
 
@@ -288,10 +318,10 @@ class Budget < ApplicationRecord
     end
 
     def expense_totals_by_category
-      @expense_totals_by_category ||= expense_totals.category_totals.index_by { |ct| ct.category.id }
+      @expense_totals_by_category ||= expense_totals.category_totals.index_by { |ct| ct.category.id || ct.category.name }
     end
 
     def income_totals_by_category
-      @income_totals_by_category ||= income_totals.category_totals.index_by { |ct| ct.category.id }
+      @income_totals_by_category ||= income_totals.category_totals.index_by { |ct| ct.category.id || ct.category.name }
     end
 end
