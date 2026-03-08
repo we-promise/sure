@@ -1,0 +1,26 @@
+# Model routing for financial assistant conversations
+# No local models — all conversations go through Claude API.
+# Haiku is too weak for persona/financial advice; Sonnet is the floor.
+
+[routing]
+moderate = "claude-sonnet-4-20250514"     # Default for all queries
+complex  = "claude-opus-4-20250514"       # Financial planning, strategy, forecasting
+
+# Complexity signals for upgrading to Opus:
+# "should I", "refinance", "invest", "tax strategy", "forecast",
+# "plan for", "retirement", "mortgage", word count > 100
+
+[pricing]
+# USD per million tokens (for budget tracking)
+
+[pricing.claude-haiku-4-5-20251001]
+input = 0.8
+output = 4
+
+[pricing.claude-sonnet-4-20250514]
+input = 3
+output = 15
+
+[pricing.claude-opus-4-20250514]
+input = 15
+output = 75

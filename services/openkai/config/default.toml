@@ -1,0 +1,24 @@
+[daemon]
+name = "openkai-sure"
+version = "0.1.0"
+log_level = "info"      # debug | info | warn | error
+
+[api]
+host = "0.0.0.0"
+port = 3210
+
+[claude]
+default_model = "claude-sonnet-4-20250514"
+complex_model = "claude-opus-4-20250514"
+extraction_model = "claude-haiku-4-5-20251001"  # Cheap model for memory extraction + dedup
+daily_budget_usd = 5.0
+per_family_daily_budget_usd = 1.0
+timeout_ms = 60000
+
+[memory]
+max_cached_tenants = 50
+data_dir = "/data"
+
+[sure_api]
+# Sure's REST API — direct or through Pipelock reverse proxy
+base_url = "http://web:3000"

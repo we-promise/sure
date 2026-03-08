@@ -261,12 +261,50 @@ services:
     networks:
       - sure_net
 
+  # OpenKai — memory-powered financial AI assistant (optional, --profile openkai)
+  # Calls Sure's REST API (/api/v1/*) for financial data. Claude API routed through Pipelock.
+  # Requires: ANTHROPIC_API_KEY + SURE_API_KEY (Sure API key with read scope).
+  openkai:
+    profiles:
+      - openkai
+    build: ./services/openkai
+    # image: ghcr.io/we-promise/sure-openkai:latest  # once published
+    container_name: openkai
+    hostname: openkai
+    restart: unless-stopped
+    volumes:
+      - openkai-data:/data
+    environment:
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      OPENKAI_AUTH_TOKEN: ${EXTERNAL_ASSISTANT_TOKEN:-}
+      SURE_API_URL: http://web:3000               # Sure's REST API (internal network, no proxy needed)
+      SURE_API_KEY: ${SURE_API_KEY:-}              # Sure API key (X-Api-Key) with read scope
+      HTTPS_PROXY: http://pipelock:8888            # Claude API calls through Pipelock forward proxy
+      HTTP_PROXY: http://pipelock:8888
+      NO_PROXY: web,pipelock,db,redis,localhost,127.0.0.1
+      OPENKAI_DAILY_BUDGET_USD: ${OPENKAI_DAILY_BUDGET_USD:-5.00}
+      OPENKAI_PER_FAMILY_DAILY_BUDGET_USD: ${OPENKAI_PER_FAMILY_DAILY_BUDGET_USD:-1.00}
+      LOG_LEVEL: ${OPENKAI_LOG_LEVEL:-info}
+    ports:
+      - "${OPENKAI_PORT:-3210}:3210"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3210/health').then(r=>process.exit(r.ok?0:1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    depends_on:
+      pipelock:
+        condition: service_healthy
+    networks:
+      - sure_net
+
 volumes:
   app-storage:
   postgres-data:
   redis-data:
   ollama:
   ollama-webui:
+  openkai-data:
 
 networks:
   sure_net:

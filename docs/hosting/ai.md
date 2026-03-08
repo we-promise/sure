@@ -334,7 +334,9 @@ This is useful when:
 1. User sends a message in the Sure chat UI
 2. Sure sends the conversation to your agent's API endpoint (OpenAI chat completions format)
 3. Your agent processes it using whatever LLM, tools, or context it needs
-4. Your agent can call Sure's `/mcp` endpoint for financial data (accounts, transactions, balance sheet, holdings)
+4. Your agent accesses financial data via one of two methods:
+   - **REST API** (`/api/v1/*`): Direct data access with an API key — recommended for agents that handle their own LLM calls (e.g., [OpenKai](#openkai-memory-powered-financial-assistant))
+   - **MCP** (`/mcp`): JSON-RPC 2.0 protocol for tool discovery and execution — useful for agents using MCP-compatible frameworks
 5. Your agent streams the response back to Sure via Server-Sent Events (SSE)
 
 The agent's API must be **OpenAI chat completions compatible**: accept `POST` with a `messages` array, return SSE with `delta.content` chunks.
@@ -438,6 +440,105 @@ EXTERNAL_ASSISTANT_AGENT_ID=your-agent-name
 # URL uses Kubernetes DNS: <service>.<namespace>.svc.cluster.local:<port>
 EXTERNAL_ASSISTANT_URL=http://my-agent.my-namespace.svc.cluster.local:18789/v1/chat/completions
 ```
+
+### OpenKai: Memory-Powered Financial Assistant
+
+[OpenKai](services/openkai/) is a built-in external assistant that ships with Sure. It gives each family an AI assistant that **learns and remembers** across conversations, using a per-family Knowledge Graph backed by SQLite + FTS5.
+
+**Key differences from a generic external agent:**
+- **Memory**: Remembers goals, spending personality, life events — gets smarter over time
+- **Onboarding**: First conversation learns about the user and generates a financial profile
+- **REST API**: Calls Sure's `/api/v1/*` endpoints directly for financial data (no MCP round-trip, no double-LLM)
+- **Budget tracking**: Global + per-family daily limits on Claude API spend
+- **Model routing**: Sonnet for everyday queries, Opus for complex financial planning
+
+#### Setup
+
+1. **Start the stack with OpenKai:**
+   ```bash
+   docker compose -f compose.example.ai.yml --profile openkai up
+   ```
+
+2. **Set required environment variables in `.env`:**
+   ```bash
+   # Claude API key (required)
+   ANTHROPIC_API_KEY=sk-ant-...
+
+   # Shared auth token between Sure and OpenKai (generate any random string)
+   EXTERNAL_ASSISTANT_TOKEN=your-random-secret
+
+   # Tell Sure to use OpenKai as the external assistant
+   EXTERNAL_ASSISTANT_URL=http://openkai:3210/v1/chat/completions
+   ASSISTANT_TYPE=external
+
+   # Sure API key for OpenKai (so it can read your financial data)
+   # Generate after first boot — see step 3
+   SURE_API_KEY=
+   ```
+
+3. **Generate a Sure API key** (after first boot, when the database exists):
+   ```bash
+   docker exec sure-web-1 bin/rails runner "
+     user = User.find_by(email: 'your-email@example.com')
+     key = ApiKey.generate_secure_key
+     ApiKey.create!(user: user, name: 'openkai', key: key, scopes: ['read'], source: 'web')
+     puts key
+   "
+   ```
+   Copy the output into `SURE_API_KEY=` in your `.env`, then restart OpenKai:
+   ```bash
+   docker compose -f compose.example.ai.yml --profile openkai up -d --force-recreate openkai
+   ```
+
+4. **Verify** — check OpenKai's health:
+   ```bash
+   curl http://localhost:3210/health
+   ```
+   You should see `"claude": {"available": true}` and `"sure_api": "connected"` (or similar).
+
+5. **Chat** — open Sure's chat UI. The first conversation will be an onboarding session where the assistant learns about you.
+
+#### How OpenKai accesses financial data
+
+Unlike generic external agents that use the MCP endpoint (`/mcp`), OpenKai calls Sure's REST API directly:
+
+| Tool | Endpoint | Description |
+|------|----------|-------------|
+| `get_transactions` | `GET /api/v1/transactions` | Transaction history with filters |
+| `get_accounts` | `GET /api/v1/accounts` | Account list with balances |
+| `get_holdings` | `GET /api/v1/holdings` | Investment portfolio |
+| `get_categories` | `GET /api/v1/categories` | Category lookup |
+| `get_merchants` | `GET /api/v1/merchants` | Merchant lookup |
+| `get_tags` | `GET /api/v1/tags` | Tag lookup |
+
+Claude computes aggregations (balance sheets, income analysis, spending trends) from the raw data — no server-side LLM needed for data access.
+
+#### Configuration
+
+| Env Var | Default | Description |
+|---------|---------|-------------|
+| `ANTHROPIC_API_KEY` | (required) | Claude API key |
+| `EXTERNAL_ASSISTANT_TOKEN` | (required) | Shared auth token (Sure ↔ OpenKai) |
+| `SURE_API_KEY` | (required) | Sure API key with `read` scope |
+| `OPENKAI_DAILY_BUDGET_USD` | `5.00` | Global daily Claude spend limit |
+| `OPENKAI_PER_FAMILY_DAILY_BUDGET_USD` | `1.00` | Per-family daily limit |
+| `OPENKAI_LOG_LEVEL` | `info` | Log level (`debug`, `info`, `warn`, `error`) |
+
+See [`services/openkai/README.md`](../../services/openkai/README.md) for the full configuration reference and architecture details.
+
+#### Data storage
+
+Each family gets an isolated data directory:
+```
+/data/tenants/family-<id>/
+  knowledge.db          # SQLite: KG entities, relations, FTS5 index
+  brain/
+    user.md             # Financial profile (generated during onboarding)
+    assistant.md        # Assistant name + persona
+    self-model.md       # Auto-generated reflection
+```
+
+The `/data` volume is mapped via Docker Compose. Data persists across restarts.
 
 ### Security with Pipelock
 

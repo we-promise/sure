@@ -1,0 +1,30 @@
+{
+  "name": "openkai-sure",
+  "version": "0.1.0",
+  "description": "OpenKai financial assistant for Sure — memory-powered AI with per-family knowledge graphs",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
+    "@iarna/toml": "^2.2.5",
+    "better-sqlite3": "^12.6.2",
+    "fastify": "^5.2.1",
+    "https-proxy-agent": "^7.0.6"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^22.13.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0"
+  },
+  "packageManager": "pnpm@9.15.0"
+}

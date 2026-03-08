@@ -41,7 +41,7 @@ mcp_tool_scanning:
   detect_drift: true
 
 mcp_tool_policy:
-  enabled: true
+  enabled: false
   action: warn
 
 mcp_session_binding:
