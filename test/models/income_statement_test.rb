@@ -6,9 +6,9 @@ class IncomeStatementTest < ActiveSupport::TestCase
   setup do
     @family = families(:empty)
 
-    @income_category = @family.categories.create! name: "Income", classification: "income"
-    @food_category = @family.categories.create! name: "Food", classification: "expense"
-    @groceries_category = @family.categories.create! name: "Groceries", classification: "expense", parent: @food_category
+    @income_category = @family.categories.create! name: "Income"
+    @food_category = @family.categories.create! name: "Food"
+    @groceries_category = @family.categories.create! name: "Groceries", parent: @food_category
 
     @checking_account = @family.accounts.create! name: "Checking", currency: @family.currency, balance: 5000, accountable: Depository.new
     @credit_card_account = @family.accounts.create! name: "Credit Card", currency: @family.currency, balance: 1000, accountable: CreditCard.new
@@ -114,7 +114,7 @@ class IncomeStatementTest < ActiveSupport::TestCase
     Entry.joins(:account).where(accounts: { family_id: @family.id }).destroy_all
 
     # Create different amounts for groceries vs other food
-    other_food_category = @family.categories.create! name: "Restaurants", classification: "expense", parent: @food_category
+    other_food_category = @family.categories.create! name: "Restaurants", parent: @food_category
 
     # Groceries: 100, 300, 500 (median = 300)
     create_transaction(account: @checking_account, amount: 100, category: @groceries_category)

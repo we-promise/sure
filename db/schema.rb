@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_03_03_120000) do
+ActiveRecord::Schema[7.2].define(version: 2026_03_08_113006) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -49,8 +49,6 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_03_120000) do
     t.string "institution_name"
     t.string "institution_domain"
     t.text "notes"
-    t.jsonb "holdings_snapshot_data"
-    t.datetime "holdings_snapshot_at"
     t.index ["accountable_id", "accountable_type"], name: "index_accounts_on_accountable_id_and_accountable_type"
     t.index ["accountable_type"], name: "index_accounts_on_accountable_type"
     t.index ["currency"], name: "index_accounts_on_currency"
@@ -184,7 +182,6 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_03_120000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.uuid "parent_id"
-    t.string "classification", default: "expense", null: false
     t.string "lucide_icon", default: "shapes", null: false
     t.index ["family_id"], name: "index_categories_on_family_id"
   end
@@ -501,8 +498,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_03_120000) do
     t.datetime "latest_sync_completed_at", default: -> { "CURRENT_TIMESTAMP" }
     t.boolean "recurring_transactions_disabled", default: false, null: false
     t.integer "month_start_day", default: 1, null: false
-    t.string "vector_store_id"
     t.string "moniker", default: "Family", null: false
+    t.string "vector_store_id"
     t.string "assistant_type", default: "builtin", null: false
     t.check_constraint "month_start_day >= 1 AND month_start_day <= 28", name: "month_start_day_range"
   end
@@ -662,8 +659,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_03_120000) do
     t.string "exchange_operating_mic_col_label"
     t.string "amount_type_strategy", default: "signed_amount"
     t.string "amount_type_inflow_value"
-    t.integer "rows_to_skip", default: 0, null: false
     t.integer "rows_count", default: 0, null: false
+    t.integer "rows_to_skip", default: 0, null: false
     t.string "amount_type_identifier_value"
     t.text "ai_summary"
     t.string "document_type"
@@ -848,7 +845,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_03_120000) do
   create_table "mercury_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "mercury_item_id", null: false
     t.string "name"
-    t.string "account_id", null: false
+    t.string "account_id"
     t.string "currency"
     t.decimal "current_balance", precision: 19, scale: 4
     t.string "account_status"
@@ -859,7 +856,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_03_120000) do
     t.jsonb "raw_transactions_payload"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["account_id"], name: "index_mercury_accounts_on_account_id", unique: true
+    t.index ["account_id"], name: "index_mercury_accounts_on_account_id"
     t.index ["mercury_item_id"], name: "index_mercury_accounts_on_mercury_item_id"
   end
 
@@ -1230,7 +1227,6 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_03_120000) do
   create_table "snaptrade_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "snaptrade_item_id", null: false
     t.string "name"
-    t.string "account_id"
     t.string "snaptrade_account_id"
     t.string "snaptrade_authorization_id"
     t.string "account_number"
@@ -1248,11 +1244,10 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_03_120000) do
     t.jsonb "raw_activities_payload", default: []
     t.datetime "last_holdings_sync"
     t.datetime "last_activities_sync"
+    t.boolean "activities_fetch_pending", default: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.boolean "activities_fetch_pending", default: false
     t.date "sync_start_date"
-    t.index ["account_id"], name: "index_snaptrade_accounts_on_account_id", unique: true
     t.index ["snaptrade_account_id"], name: "index_snaptrade_accounts_on_snaptrade_account_id", unique: true
     t.index ["snaptrade_item_id"], name: "index_snaptrade_accounts_on_snaptrade_item_id"
   end
@@ -1390,15 +1385,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_03_120000) do
     t.datetime "updated_at", null: false
     t.string "currency"
     t.jsonb "locked_attributes", default: {}
-    t.decimal "realized_gain", precision: 19, scale: 4
-    t.decimal "cost_basis_amount", precision: 19, scale: 4
-    t.string "cost_basis_currency"
-    t.integer "holding_period_days"
-    t.string "realized_gain_confidence"
-    t.string "realized_gain_currency"
     t.string "investment_activity_label"
     t.index ["investment_activity_label"], name: "index_trades_on_investment_activity_label"
-    t.index ["realized_gain"], name: "index_trades_on_realized_gain_not_null", where: "(realized_gain IS NOT NULL)"
     t.index ["security_id"], name: "index_trades_on_security_id"
   end
 
@@ -1461,8 +1449,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_03_120000) do
     t.datetime "set_onboarding_goals_at"
     t.string "default_account_order", default: "name_asc"
     t.jsonb "preferences", default: {}, null: false
-    t.string "locale"
     t.string "ui_layout"
+    t.string "locale"
     t.index ["email"], name: "index_users_on_email", unique: true
     t.index ["family_id"], name: "index_users_on_family_id"
     t.index ["last_viewed_chat_id"], name: "index_users_on_last_viewed_chat_id"
