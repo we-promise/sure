@@ -692,33 +692,44 @@ class Balance::ForwardCalculatorTest < ActiveSupport::TestCase
     )
   end
 
-  test "falls back to full recalculation for multi-currency accounts to pick up new exchange rates" do
+  test "multi-currency account falls back to full recalc so late exchange rate imports are picked up" do
+    # Step 1: Create account with a EUR entry but NO exchange rate yet.
+    # SyncCache will use fallback_rate: 1, so the €500 entry is treated as $500.
     account = create_account_with_ledger(
       account: { type: Depository, currency: "USD" },
       entries: [
         { type: "opening_anchor", date: 4.days.ago.to_date, balance: 100 },
         { type: "transaction", date: 3.days.ago.to_date, amount: -100 },
         { type: "transaction", date: 2.days.ago.to_date, amount: -500, currency: "EUR" }
-      ],
-      exchange_rates: [
-        { date: 2.days.ago.to_date, from: "EUR", to: "USD", rate: 1.2 }
       ]
     )
 
-    # Persist balances via full materializer.
+    # First full sync — balances computed with fallback rate (1:1 EUR→USD).
     Balance::Materializer.new(account, strategy: :forward).materialize_balances
+    stale_balance = account.balances.find_by(date: 2.days.ago.to_date)
+    assert stale_balance, "Balance should exist after full sync"
 
-    # Despite having a valid prior balance, incremental mode should fall back to
-    # full recalculation because the account has entries in EUR (not account currency).
-    result = Balance::ForwardCalculator.new(account, window_start_date: 2.days.ago.to_date).calculate
+    # Step 2: Exchange rate arrives later (e.g. daily cron imports it).
+    ExchangeRate.create!(date: 2.days.ago.to_date, from_currency: "EUR", to_currency: "USD", rate: 1.2)
 
-    # Full range returned — all dates from opening_anchor_date, not just the window.
-    assert_includes result.map(&:date), 4.days.ago.to_date
-    assert_not result.empty?
+    # Step 3: Next sync requests incremental from today — but the guard should
+    # force a full recalc because the account has multi-currency entries.
+    calculator = Balance::ForwardCalculator.new(account, window_start_date: 1.day.ago.to_date)
+    result = calculator.calculate
 
-    calculator = Balance::ForwardCalculator.new(account, window_start_date: 2.days.ago.to_date)
-    calculator.calculate
     assert_not calculator.incremental?, "Should not be incremental for multi-currency accounts"
+
+    # Full range returned — includes dates before the window.
+    assert_includes result.map(&:date), 4.days.ago.to_date
+
+    # The EUR entry on 2.days.ago is now converted at 1.2, so the balance
+    # picks up the corrected rate: opening 100 + $100 txn + €500*1.2 = $800
+    # (without the guard, incremental mode would have seeded from the stale
+    # $700 balance computed with fallback_rate 1, and never corrected it).
+    corrected = result.find { |b| b.date == 2.days.ago.to_date }
+    assert corrected
+    assert_equal 800, corrected.balance,
+      "Balance should reflect the corrected EUR→USD rate (€500 * 1.2 = $600, not $500)"
   end
 
   test "falls back to full recalculation for foreign accounts (account currency != family currency)" do
