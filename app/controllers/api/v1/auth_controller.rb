@@ -152,10 +152,10 @@ module Api
           return
         end
 
-        # Create the OIDC identity link
-        OidcIdentity.create_from_omniauth(build_omniauth_hash(cached), user)
+        # Atomically claim the code before creating the identity
+        return render json: { error: "Linking code is invalid or expired" }, status: :unauthorized unless consume_linking_code!(linking_code)
 
-        consume_linking_code!(linking_code)
+        OidcIdentity.create_from_omniauth(build_omniauth_hash(cached), user)
 
         SsoAuditLog.log_link!(
           user: user,
@@ -178,6 +178,9 @@ module Api
           return
         end
 
+        # Atomically claim the code before creating the user
+        return render json: { error: "Linking code is invalid or expired" }, status: :unauthorized unless consume_linking_code!(linking_code)
+
         user = User.new(
           email: email,
           first_name: params[:first_name].presence || cached[:first_name],
@@ -193,8 +196,6 @@ module Api
 
         if user.save
           OidcIdentity.create_from_omniauth(build_omniauth_hash(cached), user)
-
-          consume_linking_code!(linking_code)
 
           SsoAuditLog.log_jit_account_created!(
             user: user,
@@ -342,6 +343,8 @@ module Api
           cached
         end
 
+        # Atomically deletes the linking code from cache.
+        # Returns true only for the first caller; subsequent callers get false.
         def consume_linking_code!(linking_code)
           Rails.cache.delete("mobile_sso_link:#{linking_code}")
         end
