@@ -48,7 +48,6 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   bool _hasEverHadMessages = false;
-  List<Message> _lastNonEmptyMessages = const [];
   String? _activeChatId;
   bool _isInitializingChat = false;
 
