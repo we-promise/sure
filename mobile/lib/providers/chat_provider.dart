@@ -312,16 +312,12 @@ class ChatProvider with ChangeNotifier {
           notifyListeners();
         }
 
-        // Check if last assistant message is complete
-        final lastMessage = updatedChat.messages.lastOrNull;
-        if (lastMessage != null && lastMessage.isAssistant) {
-          if (lastMessage.isComplete) {
-            // Response is complete, stop polling
-            _stopPolling();
-          }
-          // Keep polling while message is still pending (status != 'complete')
-        } else {
-          // No assistant message, stop polling
+        // Stop polling only once an assistant message is fully complete.
+        // Keep polling if there's no assistant message yet (AI hasn't responded)
+        // or if the assistant message exists but isn't complete yet.
+        final hasCompleteAssistant =
+            updatedChat.messages.any((m) => m.isAssistant && m.isComplete);
+        if (hasCompleteAssistant) {
           _stopPolling();
         }
       }
