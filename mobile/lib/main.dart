@@ -9,6 +9,7 @@ import 'providers/chat_provider.dart';
 import 'screens/backend_config_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/main_navigation_screen.dart';
+import 'screens/sso_onboarding_screen.dart';
 import 'services/api_config.dart';
 import 'services/connectivity_service.dart';
 import 'services/log_service.dart';
@@ -284,6 +285,10 @@ class _AppWrapperState extends State<AppWrapper> {
 
         if (authProvider.isAuthenticated) {
           return const MainNavigationScreen();
+        }
+
+        if (authProvider.ssoOnboardingPending) {
+          return const SsoOnboardingScreen();
         }
 
         return LoginScreen(
