@@ -140,6 +140,70 @@ module Api
         }
       end
 
+      def sso_link
+        linking_code = params[:linking_code]
+        cached = validate_and_consume_linking_code(linking_code)
+        return unless cached
+
+        user = User.authenticate_by(email: params[:email], password: params[:password])
+
+        unless user
+          render json: { error: "Invalid email or password" }, status: :unauthorized
+          return
+        end
+
+        # Create the OIDC identity link
+        OidcIdentity.create_from_omniauth(build_omniauth_hash(cached), user)
+
+        SsoAuditLog.log_link!(
+          user: user,
+          provider: cached[:provider],
+          request: request
+        )
+
+        issue_mobile_tokens(user, cached[:device_info])
+      end
+
+      def sso_create_account
+        linking_code = params[:linking_code]
+        cached = validate_and_consume_linking_code(linking_code)
+        return unless cached
+
+        email = cached[:email]
+
+        unless cached[:allow_account_creation]
+          render json: { error: "SSO account creation is disabled. Please contact an administrator." }, status: :forbidden
+          return
+        end
+
+        user = User.new(
+          email: email,
+          first_name: params[:first_name].presence || cached[:first_name],
+          last_name: params[:last_name].presence || cached[:last_name],
+          skip_password_validation: true
+        )
+
+        user.family = Family.new
+
+        provider_config = Rails.configuration.x.auth.sso_providers&.find { |p| p[:name] == cached[:provider] }
+        provider_default_role = provider_config&.dig(:settings, :default_role)
+        user.role = User.role_for_new_family_creator(fallback_role: provider_default_role || :admin)
+
+        if user.save
+          OidcIdentity.create_from_omniauth(build_omniauth_hash(cached), user)
+
+          SsoAuditLog.log_jit_account_created!(
+            user: user,
+            provider: cached[:provider],
+            request: request
+          )
+
+          issue_mobile_tokens(user, cached[:device_info])
+        else
+          render json: { errors: user.errors.full_messages }, status: :unprocessable_entity
+        end
+      end
+
       def enable_ai
         user = current_resource_owner
 
@@ -246,6 +310,47 @@ module Api
             ui_layout: user.ui_layout,
             ai_enabled: user.ai_enabled?
           }
+        end
+
+        def build_omniauth_hash(cached)
+          OpenStruct.new(
+            provider: cached[:provider],
+            uid: cached[:uid],
+            info: OpenStruct.new(cached.slice(:email, :name, :first_name, :last_name)),
+            extra: OpenStruct.new(raw_info: OpenStruct.new)
+          )
+        end
+
+        def validate_and_consume_linking_code(linking_code)
+          if linking_code.blank?
+            render json: { error: "Linking code is required" }, status: :bad_request
+            return nil
+          end
+
+          cache_key = "mobile_sso_link:#{linking_code}"
+          cached = Rails.cache.read(cache_key)
+
+          unless cached.present?
+            render json: { error: "Linking code is invalid or expired" }, status: :unauthorized
+            return nil
+          end
+
+          unless Rails.cache.delete(cache_key)
+            render json: { error: "Linking code is invalid or expired" }, status: :unauthorized
+            return nil
+          end
+
+          cached
+        end
+
+        def issue_mobile_tokens(user, device_info)
+          device_info = device_info.symbolize_keys if device_info.respond_to?(:symbolize_keys)
+          device = MobileDevice.upsert_device!(user, device_info)
+          token_response = device.issue_token!
+
+          render json: token_response.merge(user: mobile_user_payload(user))
+        rescue ActiveRecord::RecordInvalid => e
+          render json: { error: "Failed to register device: #{e.message}" }, status: :unprocessable_entity
         end
 
         def ensure_write_scope
