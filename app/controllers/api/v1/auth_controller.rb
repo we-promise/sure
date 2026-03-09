@@ -322,7 +322,7 @@ module Api
             provider: cached[:provider],
             uid: cached[:uid],
             info: OpenStruct.new(cached.slice(:email, :name, :first_name, :last_name)),
-            extra: OpenStruct.new(raw_info: OpenStruct.new)
+            extra: OpenStruct.new(raw_info: OpenStruct.new(iss: cached[:issuer]))
           )
         end
 

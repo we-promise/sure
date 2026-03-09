@@ -287,6 +287,7 @@ class SessionsController < ApplicationController
           first_name: auth.info&.first_name,
           last_name: auth.info&.last_name,
           name: auth.info&.name,
+          issuer: auth.extra&.raw_info&.iss || auth.extra&.raw_info&.[]("iss"),
           device_info: device_info,
           allow_account_creation: !AuthConfig.jit_link_only? && AuthConfig.allowed_oidc_domain?(email)
         },
