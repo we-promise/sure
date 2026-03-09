@@ -741,11 +741,12 @@ class Balance::ForwardCalculatorTest < ActiveSupport::TestCase
       ]
     )
 
+    # Precondition: account currency must differ from family currency for this test.
+    assert_not_equal account.currency, account.family.currency,
+      "Test requires account currency (#{account.currency}) to differ from family currency (#{account.family.currency})"
+
     # Persist balances via full materializer.
     Balance::Materializer.new(account, strategy: :forward).materialize_balances
-
-    # The account currency (EUR) differs from the family currency (USD by default
-    # in fixtures), so incremental mode should fall back to full recalculation.
     calculator = Balance::ForwardCalculator.new(account, window_start_date: 2.days.ago.to_date)
     result = calculator.calculate
 
