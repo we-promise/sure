@@ -237,13 +237,12 @@ RSpec.configure do |config|
           },
           CategoryCollection: {
             type: :object,
-            required: %w[categories pagination],
+            required: %w[categories],
             properties: {
               categories: {
                 type: :array,
                 items: { '$ref' => '#/components/schemas/CategoryDetail' }
-              },
-              pagination: { '$ref' => '#/components/schemas/Pagination' }
+              }
             }
           },
           Merchant: {

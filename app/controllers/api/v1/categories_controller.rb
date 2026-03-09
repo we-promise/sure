@@ -1,8 +1,6 @@
 # frozen_string_literal: true
 
 class Api::V1::CategoriesController < Api::V1::BaseController
-  include Pagy::Backend
-
   before_action :ensure_read_scope
   before_action :set_category, only: :show
 
@@ -11,16 +9,7 @@ class Api::V1::CategoriesController < Api::V1::BaseController
     categories_query = family.categories.includes(:parent, :subcategories).alphabetically
 
     # Apply filters
-    categories_query = apply_filters(categories_query)
-
-    # Handle pagination with Pagy
-    @pagy, @categories = pagy(
-      categories_query,
-      page: safe_page_param,
-      limit: safe_per_page_param
-    )
-
-    @per_page = safe_per_page_param
+    @categories = apply_filters(categories_query)
 
     render :index
   rescue => e
@@ -80,19 +69,4 @@ class Api::V1::CategoriesController < Api::V1::BaseController
       query
     end
 
-    def safe_page_param
-      page = params[:page].to_i
-      page > 0 ? page : 1
-    end
-
-    def safe_per_page_param
-      per_page = params[:per_page].to_i
-
-      case per_page
-      when 1..100
-        per_page
-      else
-        25
-      end
-    end
 end

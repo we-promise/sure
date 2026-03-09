@@ -66,10 +66,6 @@ RSpec.describe 'API V1 Categories', type: :request do
       tags 'Categories'
       security [ { apiKeyAuth: [] } ]
       produces 'application/json'
-      parameter name: :page, in: :query, type: :integer, required: false,
-                description: 'Page number (default: 1)'
-      parameter name: :per_page, in: :query, type: :integer, required: false,
-                description: 'Items per page (default: 25, max: 100)'
       parameter name: :classification, in: :query, required: false,
                 description: 'Filter by classification (income or expense)',
                 schema: { type: :string, enum: %w[income expense] }

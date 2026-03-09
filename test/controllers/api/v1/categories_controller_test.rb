@@ -44,12 +44,6 @@ class Api::V1::CategoriesControllerTest < ActionDispatch::IntegrationTest
 
     assert response_body.key?("categories")
     assert response_body["categories"].is_a?(Array)
-
-    assert response_body.key?("pagination")
-    assert response_body["pagination"].key?("page")
-    assert response_body["pagination"].key?("per_page")
-    assert response_body["pagination"].key?("total_count")
-    assert response_body["pagination"].key?("total_pages")
   end
 
   test "should not return other family's categories" do
@@ -109,19 +103,6 @@ class Api::V1::CategoriesControllerTest < ActionDispatch::IntegrationTest
     assert subcategory["parent"].present?, "Subcategory should have parent"
     assert_equal @category.id, subcategory["parent"]["id"]
     assert_equal @category.name, subcategory["parent"]["name"]
-  end
-
-  test "should handle pagination parameters" do
-    get "/api/v1/categories", params: { page: 1, per_page: 2 }, headers: {
-      "Authorization" => "Bearer #{@access_token.token}"
-    }
-
-    assert_response :success
-    response_body = JSON.parse(response.body)
-
-    assert response_body["categories"].length <= 2
-    assert_equal 1, response_body["pagination"]["page"]
-    assert_equal 2, response_body["pagination"]["per_page"]
   end
 
   test "should filter by classification" do
