@@ -21,14 +21,14 @@ The Users API allows external applications to manage user account data within Su
 
 ## Authentication requirements
 
-All user endpoints require an OAuth2 access token or API key that grants the `write` scope.
+All user endpoints require an OAuth2 access token or API key that grants the `read_write` scope.
 
 ## Available endpoints
 
 | Endpoint | Scope | Description |
 | --- | --- | --- |
-| `DELETE /api/v1/users/reset` | `write` | Reset account data while preserving the user account. |
-| `DELETE /api/v1/users/me` | `write` | Permanently delete the user account. |
+| `DELETE /api/v1/users/reset` | `read_write` | Reset account data while preserving the user account. |
+| `DELETE /api/v1/users/me` | `read_write` | Permanently delete the user account. |
 
 Refer to the generated [`openapi.yaml`](openapi.yaml) for request/response schemas, reusable components (errors), and security definitions.
 
@@ -76,7 +76,7 @@ No request body required.
 
 ### Error responses
 
-In addition to standard error codes (`unauthorized`, `forbidden`), the delete endpoint may return:
+In addition to standard error codes (`unauthorized`, `insufficient_scope`), the delete endpoint may return:
 
 **422 Unprocessable Entity**
 
@@ -91,7 +91,7 @@ This occurs when the user cannot be deactivated (for example, an admin user with
 
 ## Security considerations
 
-- Both endpoints require the `write` scope. Read-only API keys cannot access these endpoints.
+- Both endpoints require the `read_write` scope. Read-only API keys cannot access these endpoints.
 - Deactivated users cannot access these endpoints.
 - The reset operation preserves the user account, allowing you to continue using Sure with a clean slate.
 - The delete operation is permanent and removes the user account entirely.
@@ -113,5 +113,5 @@ Common error codes include:
 | Code | Description |
 | --- | --- |
 | `unauthorized` | Missing or invalid API key |
-| `forbidden` | API key lacks required `write` scope |
-| `unprocessable_entity` | Account deletion failed (see details field) |
+| `insufficient_scope` | API key lacks required `read_write` scope |
+| `Failed to delete account` | Account deletion failed (see details field) |
