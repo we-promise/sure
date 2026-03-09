@@ -690,6 +690,45 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Linking code is invalid or expired", response_data["error"]
   end
 
+  test "should reject SSO create account without linking code" do
+    post "/api/v1/auth/sso_create_account", params: {
+      first_name: "Test",
+      last_name: "User"
+    }
+
+    assert_response :bad_request
+    response_data = JSON.parse(response.body)
+    assert_equal "Linking code is required", response_data["error"]
+  end
+
+  test "should return 422 when SSO create account fails user validation" do
+    existing_user = users(:family_admin)
+
+    linking_code = SecureRandom.urlsafe_base64(32)
+    Rails.cache.write("mobile_sso_link:#{linking_code}", {
+      provider: "google_oauth2",
+      uid: "google-uid-dup-email",
+      email: existing_user.email,
+      first_name: "Duplicate",
+      last_name: "Email",
+      name: "Duplicate Email",
+      device_info: @device_info.stringify_keys,
+      allow_account_creation: true
+    }, expires_in: 10.minutes)
+
+    assert_no_difference([ "User.count", "OidcIdentity.count" ]) do
+      post "/api/v1/auth/sso_create_account", params: {
+        linking_code: linking_code,
+        first_name: "Duplicate",
+        last_name: "Email"
+      }
+    end
+
+    assert_response :unprocessable_entity
+    response_data = JSON.parse(response.body)
+    assert response_data["errors"].any? { |e| e.match?(/email/i) }, "Expected email validation error in: #{response_data["errors"]}"
+  end
+
   test "sso_create_account linking_code single-use under race" do
     linking_code = SecureRandom.urlsafe_base64(32)
     Rails.cache.write("mobile_sso_link:#{linking_code}", {
