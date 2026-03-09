@@ -709,6 +709,9 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
     assert_response :forbidden
     response_data = JSON.parse(response.body)
     assert_match(/disabled/, response_data["error"])
+
+    # Linking code should NOT be consumed on rejection
+    assert Rails.cache.read("mobile_sso_link:#{linking_code}").present?, "Expected linking code to survive a rejected create account attempt"
   end
 
   test "should reject SSO create account with expired linking code" do
