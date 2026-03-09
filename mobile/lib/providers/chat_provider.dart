@@ -13,6 +13,12 @@ class ChatProvider with ChangeNotifier {
   bool _isSendingMessage = false;
   String? _errorMessage;
   Timer? _pollingTimer;
+  int _pollCount = 0;
+  int _lastSeenMessageCount = 0;
+  String _lastSeenLastMessageContent = '';
+
+  /// Max polling attempts before giving up (2 min at 2-second intervals).
+  static const int _maxPollAttempts = 60;
 
   List<Chat> get chats => _chats;
   Chat? get currentChat => _currentChat;
@@ -201,9 +207,10 @@ class ChatProvider with ChangeNotifier {
           _chats[index] = updatedChat;
         }
 
-        // Update current chat if it's the same
+        // Update current chat title only — don't replace the whole chat
+        // because polling may have newer messages that would be lost.
         if (_currentChat != null && _currentChat!.id == chatId) {
-          _currentChat = updatedChat;
+          _currentChat = _currentChat!.copyWith(title: updatedChat.title);
         }
 
         notifyListeners();
@@ -249,6 +256,9 @@ class ChatProvider with ChangeNotifier {
   /// Start polling for new messages (AI responses)
   void _startPolling(String accessToken, String chatId) {
     _stopPolling();
+    _pollCount = 0;
+    _lastSeenMessageCount = 0;
+    _lastSeenLastMessageContent = '';
 
     _pollingTimer = Timer.periodic(const Duration(seconds: 2), (timer) async {
       await _pollForUpdates(accessToken, chatId);
@@ -263,6 +273,15 @@ class ChatProvider with ChangeNotifier {
 
   /// Poll for updates
   Future<void> _pollForUpdates(String accessToken, String chatId) async {
+    _pollCount++;
+
+    // Safety net: stop polling after max attempts to avoid infinite polling
+    if (_pollCount > _maxPollAttempts) {
+      _stopPolling();
+      notifyListeners();
+      return;
+    }
+
     try {
       final result = await _chatService.getChat(
         accessToken: accessToken,
@@ -272,58 +291,36 @@ class ChatProvider with ChangeNotifier {
       if (result['success'] == true) {
         final updatedChat = result['chat'] as Chat;
 
-        if (_currentChat == null || _currentChat!.id != chatId) return;
-
-        final oldMessages = _currentChat!.messages;
-        final newMessages = updatedChat.messages;
-        final oldMessageCount = oldMessages.length;
-        final newMessageCount = newMessages.length;
-
-        final oldContentLengthById = <String, int>{};
-        final oldStatusById = <String, String?>{};
-        for (final m in oldMessages) {
-          if (m.isAssistant) {
-            oldContentLengthById[m.id] = m.content.length;
-            oldStatusById[m.id] = m.status;
-          }
-        }
-
-        bool shouldUpdate = false;
-
-        // New messages added
-        if (newMessageCount > oldMessageCount) {
-          shouldUpdate = true;
-        } else if (newMessageCount == oldMessageCount) {
-          // Same count: check if any assistant message has more content or status changed
-          for (final m in newMessages) {
-            if (m.isAssistant) {
-              final oldLen = oldContentLengthById[m.id] ?? 0;
-              final oldStatus = oldStatusById[m.id];
-              if (m.content.length > oldLen || m.status != oldStatus) {
-                shouldUpdate = true;
-                break;
-              }
-            }
-          }
-        }
-
-        if (shouldUpdate) {
-          _currentChat = updatedChat;
+        if (_currentChat == null || _currentChat!.id != chatId) {
+          _stopPolling();
           notifyListeners();
+          return;
         }
 
-        // Check if last assistant message is complete
+        _currentChat = updatedChat;
+
+        // The server defaults all messages to status "complete", so we
+        // cannot rely on the status field.  Instead, stop polling only
+        // when the response has truly stabilised: the message count AND
+        // the last message's content are identical to what we saw on the
+        // previous poll, and the last message is from the assistant.
+        final currentCount = updatedChat.messages.length;
         final lastMessage = updatedChat.messages.lastOrNull;
-        if (lastMessage != null && lastMessage.isAssistant) {
-          if (lastMessage.isComplete) {
-            // Response is complete, stop polling
-            _stopPolling();
-          }
-          // Keep polling while message is still pending (status != 'complete')
-        } else {
-          // No assistant message, stop polling
+        final currentContent = lastMessage?.content ?? '';
+
+        final isStable = currentCount == _lastSeenMessageCount &&
+            currentContent == _lastSeenLastMessageContent;
+
+        _lastSeenMessageCount = currentCount;
+        _lastSeenLastMessageContent = currentContent;
+
+        if (isStable &&
+            lastMessage != null &&
+            lastMessage.isAssistant) {
           _stopPolling();
         }
+
+        notifyListeners();
       }
     } catch (e) {
       debugPrint('Polling error: ${e.toString()}');
