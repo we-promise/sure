@@ -692,6 +692,57 @@ class Balance::ForwardCalculatorTest < ActiveSupport::TestCase
     )
   end
 
+  test "falls back to full recalculation for multi-currency accounts to pick up new exchange rates" do
+    account = create_account_with_ledger(
+      account: { type: Depository, currency: "USD" },
+      entries: [
+        { type: "opening_anchor", date: 4.days.ago.to_date, balance: 100 },
+        { type: "transaction", date: 3.days.ago.to_date, amount: -100 },
+        { type: "transaction", date: 2.days.ago.to_date, amount: -500, currency: "EUR" }
+      ],
+      exchange_rates: [
+        { date: 2.days.ago.to_date, from: "EUR", to: "USD", rate: 1.2 }
+      ]
+    )
+
+    # Persist balances via full materializer.
+    Balance::Materializer.new(account, strategy: :forward).materialize_balances
+
+    # Despite having a valid prior balance, incremental mode should fall back to
+    # full recalculation because the account has entries in EUR (not account currency).
+    result = Balance::ForwardCalculator.new(account, window_start_date: 2.days.ago.to_date).calculate
+
+    # Full range returned — all dates from opening_anchor_date, not just the window.
+    assert_includes result.map(&:date), 4.days.ago.to_date
+    assert_not result.empty?
+
+    calculator = Balance::ForwardCalculator.new(account, window_start_date: 2.days.ago.to_date)
+    calculator.calculate
+    assert_not calculator.incremental?, "Should not be incremental for multi-currency accounts"
+  end
+
+  test "falls back to full recalculation for foreign accounts (account currency != family currency)" do
+    account = create_account_with_ledger(
+      account: { type: Depository, currency: "EUR" },
+      entries: [
+        { type: "opening_anchor", date: 3.days.ago.to_date, balance: 1000 },
+        { type: "transaction", date: 2.days.ago.to_date, amount: -100 }
+      ]
+    )
+
+    # Persist balances via full materializer.
+    Balance::Materializer.new(account, strategy: :forward).materialize_balances
+
+    # The account currency (EUR) differs from the family currency (USD by default
+    # in fixtures), so incremental mode should fall back to full recalculation.
+    calculator = Balance::ForwardCalculator.new(account, window_start_date: 2.days.ago.to_date)
+    result = calculator.calculate
+
+    # Full range returned.
+    assert_includes result.map(&:date), 3.days.ago.to_date
+    assert_not calculator.incremental?, "Should not be incremental for foreign currency accounts"
+  end
+
   private
     def assert_balances(calculated_data:, expected_balances:)
       # Sort calculated data by date to ensure consistent ordering

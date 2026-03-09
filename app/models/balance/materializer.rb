@@ -80,7 +80,7 @@ class Balance::Materializer
         # In incremental forward-sync, even when no balances were calculated for the window
         # (e.g. window_start_date is beyond the last entry), purge stale tail records that
         # now fall beyond the prior-balance boundary so orphaned future rows are cleaned up.
-        if strategy == :forward && calculator.incremental?
+        if strategy == :forward && calculator.incremental? && account.opening_anchor_date <= @window_start_date - 1
           deleted_count = account.balances.delete_by(
             "date < ? OR date > ?",
             account.opening_anchor_date,

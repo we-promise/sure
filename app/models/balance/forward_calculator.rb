@@ -73,6 +73,12 @@ class Balance::ForwardCalculator < Balance::BaseCalculator
     #     persisted non-cash seed stale relative to freshly-computed holding prices.
     def resolve_starting_balances
       if @window_start_date.present?
+        if multi_currency_account?
+          Rails.logger.info("Account has multi-currency entries or is foreign, falling back to full recalculation")
+          @fell_back = true
+          return opening_starting_balances
+        end
+
         prior = prior_balance
 
         if prior && (prior.end_non_cash_balance || 0).zero?
@@ -89,6 +95,16 @@ class Balance::ForwardCalculator < Balance::BaseCalculator
       end
 
       opening_starting_balances
+    end
+
+    # Returns true when the account has entries in currencies other than the
+    # account currency, or when the account currency differs from the family
+    # currency. In either case, balance calculations depend on exchange rates
+    # that may have been missing (fallback_rate: 1) on a prior sync and later
+    # imported — so we must do a full recalculation to pick them up.
+    def multi_currency_account?
+      account.entries.where.not(currency: account.currency).exists? ||
+        account.currency != account.family.currency
     end
 
     def opening_starting_balances
