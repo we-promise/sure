@@ -19,6 +19,13 @@ class MainNavigationScreen extends StatefulWidget {
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _currentIndex = 0;
   final _dashboardKey = GlobalKey<DashboardScreenState>();
+  final PageController _pageController = PageController();
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
 
   List<Widget> _buildScreens(bool introLayout, VoidCallback? onStartChat) {
     final screens = <Widget>[];
@@ -55,6 +62,11 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       setState(() {
         _currentIndex = index;
       });
+      _pageController.animateToPage(
+        index,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOutCubic,
+      );
 
       if (!introLayout && index == 0) {
         _dashboardKey.currentState?.reloadPreferences();
@@ -229,12 +241,18 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
 
         if (_currentIndex >= screens.length) {
           _currentIndex = 0;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (_pageController.hasClients) {
+              _pageController.jumpToPage(0);
+            }
+          });
         }
 
         return Scaffold(
           appBar: _buildTopBar(authProvider, introLayout),
-          body: IndexedStack(
-            index: _currentIndex,
+          body: PageView(
+            controller: _pageController,
+            physics: const NeverScrollableScrollPhysics(),
             children: screens,
           ),
           bottomNavigationBar: NavigationBar(
