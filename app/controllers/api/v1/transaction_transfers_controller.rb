@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 class Api::V1::TransactionTransfersController < Api::V1::BaseController
-  before_action :ensure_write_scope
   before_action :set_transaction
 
   # PATCH /api/v1/transactions/:transaction_id/transfer
@@ -9,6 +8,8 @@ class Api::V1::TransactionTransfersController < Api::V1::BaseController
   # Links two transactions together as a transfer.
   # Accepts { transfer: { other_transaction_id: "<uuid>" } } in the request body.
   def update
+    return unless authorize_scope!(:write)
+
     other_transaction_id = transfer_params[:other_transaction_id]
 
     unless other_transaction_id.present?
@@ -102,10 +103,6 @@ class Api::V1::TransactionTransfersController < Api::V1::BaseController
         error: "not_found",
         message: "Transaction not found"
       }, status: :not_found
-    end
-
-    def ensure_write_scope
-      authorize_scope!(:write)
     end
 
     def transfer_params
