@@ -553,6 +553,9 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
     assert_response :unauthorized
     response_data = JSON.parse(response.body)
     assert_equal "Invalid email or password", response_data["error"]
+
+    # Linking code should NOT be consumed on failed password
+    assert Rails.cache.read("mobile_sso_link:#{linking_code}").present?, "Expected linking code to survive a failed attempt"
   end
 
   test "should reject SSO link with expired linking code" do

@@ -142,7 +142,7 @@ module Api
 
       def sso_link
         linking_code = params[:linking_code]
-        cached = validate_and_consume_linking_code(linking_code)
+        cached = validate_linking_code(linking_code)
         return unless cached
 
         user = User.authenticate_by(email: params[:email], password: params[:password])
@@ -155,6 +155,8 @@ module Api
         # Create the OIDC identity link
         OidcIdentity.create_from_omniauth(build_omniauth_hash(cached), user)
 
+        consume_linking_code!(linking_code)
+
         SsoAuditLog.log_link!(
           user: user,
           provider: cached[:provider],
@@ -166,7 +168,7 @@ module Api
 
       def sso_create_account
         linking_code = params[:linking_code]
-        cached = validate_and_consume_linking_code(linking_code)
+        cached = validate_linking_code(linking_code)
         return unless cached
 
         email = cached[:email]
@@ -191,6 +193,8 @@ module Api
 
         if user.save
           OidcIdentity.create_from_omniauth(build_omniauth_hash(cached), user)
+
+          consume_linking_code!(linking_code)
 
           SsoAuditLog.log_jit_account_created!(
             user: user,
@@ -321,7 +325,7 @@ module Api
           )
         end
 
-        def validate_and_consume_linking_code(linking_code)
+        def validate_linking_code(linking_code)
           if linking_code.blank?
             render json: { error: "Linking code is required" }, status: :bad_request
             return nil
@@ -335,12 +339,11 @@ module Api
             return nil
           end
 
-          unless Rails.cache.delete(cache_key)
-            render json: { error: "Linking code is invalid or expired" }, status: :unauthorized
-            return nil
-          end
-
           cached
+        end
+
+        def consume_linking_code!(linking_code)
+          Rails.cache.delete("mobile_sso_link:#{linking_code}")
         end
 
         def issue_mobile_tokens(user, device_info)
