@@ -417,48 +417,50 @@ class _SettingsScreenState extends State<SettingsScreen> {
             onTap: () => _launchContactUrl(context),
           ),
 
-          const Divider(),
+          if (authProvider.user?.email.endsWith('@chancen.international') == true) ...[
+            const Divider(),
 
-          // Environment switcher
-          const Padding(
-            padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
-            child: Text(
-              'Environment',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-                color: Colors.grey,
+            // Environment switcher
+            const Padding(
+              padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
+              child: Text(
+                'Environment',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey,
+                ),
               ),
             ),
-          ),
-          
-          ListTile(
-            leading: const Icon(Icons.public),
-            title: const Text('Environment'),
-            subtitle: Text('Current: ${_selectedEnvironment ?? "Unknown"}'),
-            trailing: PopupMenuButton<String>(
-              onSelected: _changeEnvironment,
-              itemBuilder: (BuildContext context) {
-                return ['Staging', 'Production'].map((String envName) {
-                  return PopupMenuItem<String>(
-                    value: envName,
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (_selectedEnvironment == envName)
-                          Icon(Icons.check, color: colorScheme.primary, size: 20),
-                        if (_selectedEnvironment == envName)
-                          const SizedBox(width: 8),
-                        Text(envName),
-                      ],
-                    ),
-                  );
-                }).toList();
-              },
-              child: const Icon(Icons.settings),
+
+            ListTile(
+              leading: const Icon(Icons.public),
+              title: const Text('Environment'),
+              subtitle: Text('Current: ${_selectedEnvironment ?? "Unknown"}'),
+              trailing: PopupMenuButton<String>(
+                onSelected: _changeEnvironment,
+                itemBuilder: (BuildContext context) {
+                  return ['Staging', 'Production'].map((String envName) {
+                    return PopupMenuItem<String>(
+                      value: envName,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (_selectedEnvironment == envName)
+                            Icon(Icons.check, color: colorScheme.primary, size: 20),
+                          if (_selectedEnvironment == envName)
+                            const SizedBox(width: 8),
+                          Text(envName),
+                        ],
+                      ),
+                    );
+                  }).toList();
+                },
+                child: const Icon(Icons.settings),
+              ),
             ),
-          ),
-          
+          ],
+
           const Divider(),
 
           if (!AppConfig.isCompanion) ...[
