@@ -1,0 +1,86 @@
+# Build and push a Docker image to GHCR under your own fork account.
+#
+# Triggers:
+#   - Push to main branch
+#   - Manual trigger via workflow_dispatch
+#
+# Resulting image:
+#   ghcr.io/<your-github-username>/sure:latest
+#   ghcr.io/<your-github-username>/sure:<short-sha>   (for rollback)
+
+name: Build & Push Fork Image
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - 'charts/**'
+      - 'mobile/**'
+      - 'docs/**'
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  # IMAGE_NAME resolves to  ghcr.io/<your-username>/sure
+  IMAGE_NAME: ${{ github.repository_owner }}/sure
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-and-push:
+    name: Build & push multi-arch image
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4.2.0
+
+      # QEMU lets the single ubuntu runner build arm64 images via emulation.
+      # Remove the arm64 entry from platforms below if you only need amd64
+      # (faster builds, but won't run natively on ARM-based Synology NAS models).
+      - name: Set up QEMU (for cross-platform builds)
+        uses: docker/setup-qemu-action@v3.6.0
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3.10.0
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3.3.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract Docker metadata (tags & labels)
+        id: meta
+        uses: docker/metadata-action@v5.6.0
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          # Always publish a :latest tag plus a short-SHA tag for easy rollback
+          tags: |
+            type=raw,value=latest
+            type=sha,format=short
+          labels: |
+            org.opencontainers.image.title=Sure (fork)
+            org.opencontainers.image.description=Custom fork of Sure finance app
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6.16.0
+        with:
+          context: .
+          # Build for both amd64 (Intel/AMD NAS) and arm64 (ARM-based NAS such
+          # as DS923+, DS224+, etc.).  If you only need one, remove the other.
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: BUILD_COMMIT_SHA=${{ github.sha }}
+          # Layer caching speeds up subsequent builds significantly
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
