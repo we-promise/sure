@@ -560,7 +560,7 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
 
   test "should reject SSO link when user has MFA enabled" do
     user = users(:family_admin)
-    user.update!(otp_required: true, otp_secret: User.generate_otp_secret)
+    user.update!(otp_required: true, otp_secret: ROTP::Base32.random(32))
 
     linking_code = SecureRandom.urlsafe_base64(32)
     Rails.cache.write("mobile_sso_link:#{linking_code}", {
