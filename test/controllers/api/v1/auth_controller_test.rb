@@ -558,6 +558,39 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
     assert Rails.cache.read("mobile_sso_link:#{linking_code}").present?, "Expected linking code to survive a failed attempt"
   end
 
+  test "should reject SSO link when user has MFA enabled" do
+    user = users(:family_admin)
+    user.update!(otp_required: true, otp_secret: User.generate_otp_secret)
+
+    linking_code = SecureRandom.urlsafe_base64(32)
+    Rails.cache.write("mobile_sso_link:#{linking_code}", {
+      provider: "google_oauth2",
+      uid: "google-uid-mfa",
+      email: "mfa@example.com",
+      first_name: "MFA",
+      last_name: "User",
+      name: "MFA User",
+      device_info: @device_info.stringify_keys,
+      allow_account_creation: true
+    }, expires_in: 10.minutes)
+
+    assert_no_difference("OidcIdentity.count") do
+      post "/api/v1/auth/sso_link", params: {
+        linking_code: linking_code,
+        email: user.email,
+        password: user_password_test
+      }
+    end
+
+    assert_response :unauthorized
+    response_data = JSON.parse(response.body)
+    assert_equal true, response_data["mfa_required"]
+    assert_match(/MFA/, response_data["error"])
+
+    # Linking code should NOT be consumed on MFA rejection
+    assert Rails.cache.read("mobile_sso_link:#{linking_code}").present?, "Expected linking code to survive MFA rejection"
+  end
+
   test "should reject SSO link with expired linking code" do
     post "/api/v1/auth/sso_link", params: {
       linking_code: "expired-code",

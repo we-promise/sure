@@ -152,6 +152,11 @@ module Api
           return
         end
 
+        if user.otp_required?
+          render json: { error: "MFA users should sign in with email and password", mfa_required: true }, status: :unauthorized
+          return
+        end
+
         # Atomically claim the code before creating the identity
         return render json: { error: "Linking code is invalid or expired" }, status: :unauthorized unless consume_linking_code!(linking_code)
 
