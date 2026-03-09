@@ -56,7 +56,7 @@ class ApiKey < ApplicationRecord
   end
 
   def key_matches?(plain_key)
-    display_key == plain_key
+    ActiveSupport::SecurityUtils.secure_compare(display_key.to_s, plain_key.to_s)
   end
 
   def revoke!
@@ -99,7 +99,7 @@ class ApiKey < ApplicationRecord
       elsif scopes.is_a?(Array) && scopes.length > 1
         errors.add(:scopes, "can only have one permission level")
       elsif scopes.is_a?(Array) && !%w[read read_write].include?(scopes.first)
-        errors.add(:scopes, "must be either 'read' or 'read_write'")
+        errors.add(:scopes, "must be either \"read\" or \"read_write\"")
       end
     end
 

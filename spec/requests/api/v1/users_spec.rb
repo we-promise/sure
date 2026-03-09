@@ -110,10 +110,8 @@ RSpec.describe 'API V1 Users', type: :request do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 
         before do
+          # Stub only the deactivation call. Avoid stubbing #errors (it breaks validations during fixture creation).
           allow_any_instance_of(User).to receive(:deactivate).and_return(false)
-          allow_any_instance_of(User).to receive(:errors).and_return(
-            double(full_messages: [ 'Cannot deactivate admin with other users' ])
-          )
         end
 
         run_test!

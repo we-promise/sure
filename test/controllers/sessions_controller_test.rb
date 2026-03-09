@@ -678,4 +678,29 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     follow_redirect!
     assert_response :success
   end
+  # ── Security tests added with pentest fixes ──────────────────────────────────
+
+  test "session fixation: new session created on login (reset_session)" do
+    get new_session_url # establish session
+    old_session_id = session.id
+
+    sign_in @user
+
+    assert_not_equal old_session_id, session.id, "Session ID should change on login to prevent fixation"
+  end
+
+  test "password reset invalidates all existing sessions" do
+    sign_in @user
+    session_count_before = @user.reload.sessions.count
+    assert session_count_before >= 1
+
+    # Avoid generating a real password reset token in tests (Pipelock flags tokens-in-URL as secrets).
+    User.stub(:find_by_token_for, @user) do
+      patch password_reset_path(token: "test-token"), params: {
+        user: { password: "NewPassword123!", password_confirmation: "NewPassword123!" }
+      }
+    end
+
+    assert_equal 0, @user.reload.sessions.count, "All sessions should be destroyed after password reset"
+  end
 end

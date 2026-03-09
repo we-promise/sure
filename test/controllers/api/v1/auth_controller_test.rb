@@ -818,4 +818,154 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
     assert_equal "AI is not available for your account", response_data["error"]
     assert_not user.reload.ai_enabled
   end
+  # ── Security tests added with pentest fixes ──────────────────────────────────
+
+  test "login is blocked when local login disabled via AuthConfig" do
+    AuthConfig.stubs(:local_login_enabled?).returns(false)
+
+    post "/api/v1/auth/login", params: {
+      email: users(:family_admin).email,
+      password: user_password_test,
+      device: @device_info
+    }
+
+    assert_response :forbidden
+    assert_equal "Local login is disabled. Please use SSO.", JSON.parse(response.body)["error"]
+  end
+
+  test "login is rejected for deactivated user" do
+    user = users(:family_member)
+    user.update!(active: false)
+
+    post "/api/v1/auth/login", params: {
+      email: user.email,
+      password: user_password_test,
+      device: @device_info
+    }
+
+    assert_response :unauthorized
+    assert_equal "Account has been deactivated", JSON.parse(response.body)["error"]
+  end
+
+  test "signup is blocked when registration is closed on self-hosted" do
+    Rails.application.config.app_mode.stubs(:self_hosted?).returns(true)
+    Setting.stubs(:onboarding_state).returns("closed")
+
+    post "/api/v1/auth/signup", params: {
+      user: { email: "new@example.com", password: "SecurePass123!", first_name: "New", last_name: "User" },
+      device: @device_info
+    }
+
+    assert_response :forbidden
+    assert_equal "Registration is currently closed", JSON.parse(response.body)["error"]
+  end
+
+  test "refresh token is rejected for deactivated user and new token is revoked" do
+    user = users(:family_member)
+    device = user.mobile_devices.create!(@device_info)
+
+    initial_token = Doorkeeper::AccessToken.create!(
+      application: @shared_app,
+      resource_owner_id: user.id,
+      mobile_device_id: device.id,
+      expires_in: 30.days.to_i,
+      scopes: "read_write",
+      use_refresh_token: true
+    )
+
+    user.update!(active: false)
+
+    post "/api/v1/auth/refresh", params: {
+      refresh_token: initial_token.refresh_token,
+      device: @device_info
+    }
+
+    assert_response :unauthorized
+    assert_equal "Account has been deactivated", JSON.parse(response.body)["error"]
+
+    # All tokens for this user must be revoked (including any newly issued one)
+    assert Doorkeeper::AccessToken.where(resource_owner_id: user.id).all?(&:revoked?),
+      "Expected all tokens to be revoked for deactivated user"
+  end
+
+  # ── F-06 OTP rate limiting ─────────────────────────────────────────────────
+
+  test "should block API OTP after 5 failed attempts" do
+    user = users(:family_admin)
+    password = user_password_test
+    user.setup_mfa!
+    user.enable_mfa!
+
+    cache_key = "api_otp_attempts:#{user.id}"
+
+    with_memory_cache do
+      Rails.cache.write(cache_key, 5, expires_in: 5.minutes)
+
+      post "/api/v1/auth/login", params: {
+        email: user.email,
+        password: password,
+        otp_code: "000000",
+        device: @device_info
+      }
+
+      assert_response :too_many_requests
+      assert_match(/Too many OTP/, JSON.parse(response.body)["error"])
+    end
+  end
+
+  test "should increment OTP attempt counter on bad code" do
+    user = users(:family_admin)
+    password = user_password_test
+    user.setup_mfa!
+    user.enable_mfa!
+
+    cache_key = "api_otp_attempts:#{user.id}"
+
+    with_memory_cache do
+      post "/api/v1/auth/login", params: {
+        email: user.email,
+        password: password,
+        otp_code: "000000",
+        device: @device_info
+      }
+
+      assert_response :unauthorized
+      assert_equal 1, Rails.cache.read(cache_key).to_i
+    end
+  end
+
+  test "should clear OTP attempt counter on successful MFA" do
+    user = users(:family_admin)
+    password = user_password_test
+    user.setup_mfa!
+    user.enable_mfa!
+    totp = ROTP::TOTP.new(user.otp_secret)
+
+    cache_key = "api_otp_attempts:#{user.id}"
+
+    with_memory_cache do
+      Rails.cache.write(cache_key, 3, expires_in: 5.minutes)
+
+      post "/api/v1/auth/login", params: {
+        email: user.email,
+        password: password,
+        otp_code: totp.now,
+        device: @device_info
+      }
+
+      assert_response :success
+      assert_nil Rails.cache.read(cache_key)
+    end
+  end
+
+  private
+
+  def with_memory_cache(&block)
+    original = Rails.cache
+    Rails.cache = ActiveSupport::Cache::MemoryStore.new
+    block.call
+  ensure
+    Rails.cache = original
+  end
+
 end

@@ -56,7 +56,8 @@ class Api::V1::BaseController < ApplicationController
       # Check token validity and scope (read_write includes read access)
       has_sufficient_scope = access_token&.scopes&.include?("read") || access_token&.scopes&.include?("read_write")
 
-      unless access_token && !access_token.expired? && has_sufficient_scope
+      # Also reject revoked tokens (revocation is meaningless if we still accept them)
+      unless access_token && !access_token.expired? && !access_token.revoked? && has_sufficient_scope
         render_json({ error: "unauthorized", message: "Access token is invalid, expired, or missing required scope" }, status: :unauthorized)
         return false
       end

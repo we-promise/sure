@@ -1,12 +1,24 @@
 require "sidekiq/web"
 
 if Rails.env.production?
-  Sidekiq::Web.use(Rack::Auth::Basic) do |username, password|
-    configured_username = ::Digest::SHA256.hexdigest(ENV.fetch("SIDEKIQ_WEB_USERNAME", "sure"))
-    configured_password = ::Digest::SHA256.hexdigest(ENV.fetch("SIDEKIQ_WEB_PASSWORD", "sure"))
+  sidekiq_username = ENV["SIDEKIQ_WEB_USERNAME"]
+  sidekiq_password = ENV["SIDEKIQ_WEB_PASSWORD"]
 
-    ActiveSupport::SecurityUtils.secure_compare(::Digest::SHA256.hexdigest(username), configured_username) &&
-      ActiveSupport::SecurityUtils.secure_compare(::Digest::SHA256.hexdigest(password), configured_password)
+  if sidekiq_username.blank? || sidekiq_password.blank?
+    Rails.logger.warn("[SECURITY] SIDEKIQ_WEB_USERNAME and SIDEKIQ_WEB_PASSWORD not set — Sidekiq Web UI will be inaccessible")
+  end
+
+  Sidekiq::Web.use(Rack::Auth::Basic) do |username, password|
+    next false if sidekiq_username.blank? || sidekiq_password.blank?
+
+    ActiveSupport::SecurityUtils.secure_compare(
+      ::Digest::SHA256.hexdigest(username),
+      ::Digest::SHA256.hexdigest(sidekiq_username)
+    ) &&
+    ActiveSupport::SecurityUtils.secure_compare(
+      ::Digest::SHA256.hexdigest(password),
+      ::Digest::SHA256.hexdigest(sidekiq_password)
+    )
   end
 end
 
@@ -38,7 +50,7 @@ redis_config = if ENV["REDIS_SENTINEL_HOSTS"].present?
     { url: ENV.fetch("REDIS_URL", "redis://localhost:6379/0") }
   else
     {
-      url: "redis://#{ENV.fetch('REDIS_SENTINEL_MASTER', 'mymaster')}/0",
+      url: "redis://#{ENV.fetch("REDIS_SENTINEL_MASTER", "mymaster")}/0",
       sentinels: sentinels,
       password: ENV["REDIS_PASSWORD"],
       sentinel_username: ENV.fetch("REDIS_SENTINEL_USERNAME", "default"),

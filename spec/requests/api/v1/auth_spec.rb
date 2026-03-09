@@ -38,6 +38,25 @@ RSpec.describe 'API V1 Auth', type: :request do
       }
 
       response '201', 'user created' do
+        let(:body) do
+          {
+            user: {
+              email: 'new.user@example.com',
+              password: 'Str0ngP@ssword!',
+              first_name: 'New',
+              last_name: 'User'
+            },
+            device: {
+              device_id: 'device-123',
+              device_name: 'Test iPhone',
+              device_type: 'ios',
+              os_version: '17.0',
+              app_version: '1.0.0'
+            },
+            invite_code: nil
+          }
+        end
+
         schema type: :object,
                properties: {
                  access_token: { type: :string },
@@ -61,11 +80,45 @@ RSpec.describe 'API V1 Auth', type: :request do
       end
 
       response '422', 'validation error' do
+        let(:body) do
+          {
+            user: {
+              email: 'bad.user@example.com',
+              password: 'weak'
+            },
+            device: {
+              device_id: 'device-123',
+              device_name: 'Test iPhone',
+              device_type: 'ios',
+              os_version: '17.0',
+              app_version: '1.0.0'
+            },
+            invite_code: nil
+          }
+        end
+
         schema '$ref' => '#/components/schemas/ErrorResponse'
         run_test!
       end
 
       response '403', 'invite code required or invalid' do
+        let(:body) do
+          {
+            user: {
+              email: 'invite.user@example.com',
+              password: 'Str0ngP@ssword!'
+            },
+            device: {
+              device_id: 'device-123',
+              device_name: 'Test iPhone',
+              device_type: 'ios',
+              os_version: '17.0',
+              app_version: '1.0.0'
+            },
+            invite_code: 'invalid-code'
+          }
+        end
+
         schema '$ref' => '#/components/schemas/ErrorResponse'
         run_test!
       end
@@ -99,6 +152,36 @@ RSpec.describe 'API V1 Auth', type: :request do
       }
 
       response '200', 'login successful' do
+        before do
+          # MobileDevice memoizes the Doorkeeper application; reset between specs to avoid FK issues
+          MobileDevice.instance_variable_set(:@shared_oauth_application, nil)
+        end
+
+        let!(:user_record) do
+          family = Family.create!
+          User.create!(
+            family: family,
+            role: 'member',
+            email: 'login.user@example.com',
+            password: 'Str0ngP@ssword!',
+            first_name: 'Login',
+            last_name: 'User'
+          )
+        end
+        let(:body) do
+          {
+            email: user_record.email,
+            password: 'Str0ngP@ssword!',
+            device: {
+              device_id: 'device-123',
+              device_name: 'Test iPhone',
+              device_type: 'ios',
+              os_version: '17.0',
+              app_version: '1.0.0'
+            }
+          }
+        end
+
         schema type: :object,
                properties: {
                  access_token: { type: :string },
@@ -143,6 +226,30 @@ RSpec.describe 'API V1 Auth', type: :request do
       }
 
       response '200', 'tokens issued' do
+        let(:code) { 'test-sso-code' }
+        let(:body) { { code: code } }
+
+        before do
+          Rails.cache = ActiveSupport::Cache::MemoryStore.new
+
+          Rails.cache.write(
+            "mobile_sso:#{code}",
+            {
+              access_token: 'access-token',
+              refresh_token: 'refresh-token',
+              token_type: 'Bearer',
+              expires_in: 2_592_000,
+              created_at: Time.current.to_i,
+              user_id: SecureRandom.uuid,
+              user_email: 'sso.user@example.com',
+              user_first_name: 'SSO',
+              user_last_name: 'User',
+              user_ui_layout: 'dashboard',
+              user_ai_enabled: false
+            }
+          )
+        end
+
         schema type: :object,
                properties: {
                  access_token: { type: :string },
@@ -166,6 +273,7 @@ RSpec.describe 'API V1 Auth', type: :request do
       end
 
       response '401', 'invalid or expired code' do
+        let(:body) { { code: 'invalid' } }
         schema '$ref' => '#/components/schemas/ErrorResponse'
         run_test!
       end
@@ -193,6 +301,53 @@ RSpec.describe 'API V1 Auth', type: :request do
       }
 
       response '200', 'token refreshed' do
+        before do
+          MobileDevice.instance_variable_set(:@shared_oauth_application, nil)
+        end
+
+        let!(:user_record) do
+          family = Family.create!
+          User.create!(
+            family: family,
+            role: 'member',
+            email: 'refresh.user@example.com',
+            password: 'Str0ngP@ssword!',
+            first_name: 'Refresh',
+            last_name: 'User'
+          )
+        end
+
+        let!(:device) do
+          MobileDevice.upsert_device!(
+            user_record,
+            {
+              device_id: 'device-123',
+              device_name: 'Test iPhone',
+              device_type: 'ios',
+              os_version: '17.0',
+              app_version: '1.0.0'
+            }
+          )
+        end
+
+        let!(:existing_token) do
+          Doorkeeper::AccessToken.create!(
+            application: MobileDevice.shared_oauth_application,
+            resource_owner_id: user_record.id,
+            mobile_device_id: device.id,
+            expires_in: 30.days.to_i,
+            scopes: 'read_write',
+            use_refresh_token: true
+          )
+        end
+
+        let(:body) do
+          {
+            refresh_token: existing_token.plaintext_refresh_token,
+            device: { device_id: device.device_id }
+          }
+        end
+
         schema type: :object,
                properties: {
                  access_token: { type: :string },
@@ -205,11 +360,24 @@ RSpec.describe 'API V1 Auth', type: :request do
       end
 
       response '401', 'invalid refresh token' do
+        let(:body) do
+          {
+            refresh_token: 'invalid-refresh-token',
+            device: { device_id: 'device-123' }
+          }
+        end
+
         schema '$ref' => '#/components/schemas/ErrorResponse'
         run_test!
       end
 
       response '400', 'missing refresh token' do
+        let(:body) do
+          {
+            device: { device_id: 'device-123' }
+          }
+        end
+
         schema '$ref' => '#/components/schemas/ErrorResponse'
         run_test!
       end
@@ -342,6 +510,40 @@ RSpec.describe 'API V1 Auth', type: :request do
       security [ { apiKeyAuth: [] } ]
 
       response '200', 'ai enabled' do
+        let(:family) do
+          Family.create!(
+            name: 'AI Family',
+            currency: 'USD',
+            locale: 'en',
+            date_format: '%m-%d-%Y'
+          )
+        end
+
+        let(:user) do
+          family.users.create!(
+            email: 'ai-user@example.com',
+            password: 'password123',
+            password_confirmation: 'password123'
+          )
+        end
+
+        let(:api_key) do
+          key = ApiKey.generate_secure_key
+          ApiKey.create!(
+            user: user,
+            name: 'API Docs Key',
+            key: key,
+            scopes: %w[read_write],
+            source: 'web'
+          )
+        end
+
+        let(:'X-Api-Key') { api_key.plain_key }
+
+        before do
+          ENV['OPENAI_ACCESS_TOKEN'] ||= 'test-token'
+        end
+
         schema type: :object,
                properties: {
                  user: {
@@ -360,11 +562,42 @@ RSpec.describe 'API V1 Auth', type: :request do
       end
 
       response '401', 'unauthorized' do
+        let(:'X-Api-Key') { nil }
         schema '$ref' => '#/components/schemas/ErrorResponse'
         run_test!
       end
 
       response '403', 'insufficient scope' do
+        let(:family) do
+          Family.create!(
+            name: 'AI Family',
+            currency: 'USD',
+            locale: 'en',
+            date_format: '%m-%d-%Y'
+          )
+        end
+
+        let(:user) do
+          family.users.create!(
+            email: 'ai-user@example.com',
+            password: 'password123',
+            password_confirmation: 'password123'
+          )
+        end
+
+        let(:api_key) do
+          key = ApiKey.generate_secure_key
+          ApiKey.create!(
+            user: user,
+            name: 'API Docs Key',
+            key: key,
+            scopes: %w[read],
+            source: 'web'
+          )
+        end
+
+        let(:'X-Api-Key') { api_key.plain_key }
+
         schema '$ref' => '#/components/schemas/ErrorResponse'
         run_test!
       end

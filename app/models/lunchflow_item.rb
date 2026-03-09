@@ -106,7 +106,7 @@ class LunchflowItem < ApplicationRecord
     if total_accounts == 0
       "No accounts found"
     elsif unlinked_count == 0
-      "#{linked_count} #{'account'.pluralize(linked_count)} synced"
+      "#{linked_count} #{"account".pluralize(linked_count)} synced"
     else
       "#{linked_count} synced, #{unlinked_count} need setup"
     end
@@ -153,7 +153,16 @@ class LunchflowItem < ApplicationRecord
     api_key.present?
   end
 
+  ALLOWED_BASE_URLS = [
+    "https://lunchflow.app/api/v1"
+  ].freeze
+
   def effective_base_url
-    base_url.presence || "https://lunchflow.app/api/v1"
+    url = base_url.presence || ALLOWED_BASE_URLS.first
+    unless ALLOWED_BASE_URLS.include?(url)
+      Rails.logger.warn("[SECURITY] Rejected Lunchflow base_url: #{url.inspect}")
+      return ALLOWED_BASE_URLS.first
+    end
+    url
   end
 end
