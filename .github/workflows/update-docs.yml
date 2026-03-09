@@ -1,9 +1,13 @@
 name: Update Docs
 
+# Disabled in fork — requires MINTLIFY_API_KEY + MINTLIFY_PROJECT_ID secrets
+# that only the upstream maintainers possess.
 on:
-  push:
-    branches:
-      - main
+  workflow_dispatch:
+    inputs:
+      _disabled:
+        description: 'This workflow is disabled in this fork'
+        required: false
 
 jobs:
   update-docs:
