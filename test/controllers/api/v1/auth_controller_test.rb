@@ -22,6 +22,14 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
 
     # Clear the memoized class variable so it picks up the test record
     MobileDevice.instance_variable_set(:@shared_oauth_application, nil)
+
+    # Use a real cache store for SSO linking tests (test env uses :null_store by default)
+    @original_cache = Rails.cache
+    Rails.cache = ActiveSupport::Cache::MemoryStore.new
+  end
+
+  teardown do
+    Rails.cache = @original_cache if @original_cache
   end
 
   test "should signup new user and return OAuth tokens" do

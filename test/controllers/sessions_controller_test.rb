@@ -555,7 +555,8 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
 
     assert redirect_url.start_with?("sureapp://oauth/callback?"), "Expected redirect to sureapp://"
     params = Rack::Utils.parse_query(URI.parse(redirect_url).query)
-    assert_equal "account_not_linked", params["error"]
+    assert_equal "account_not_linked", params["status"]
+    assert params["linking_code"].present?, "Expected linking_code in redirect params"
     assert_nil session[:mobile_sso], "Expected mobile_sso session to be cleared"
   end
 
