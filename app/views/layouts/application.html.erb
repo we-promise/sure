@@ -2,8 +2,8 @@
 <% home_path = intro_mode ? chats_path : root_path %>
 <% mobile_nav_items = if intro_mode
   [
-    { name: t(".nav.home"), path: chats_path, icon: "home", icon_custom: false, active: page_active?(chats_path) },
-    { name: "Intro", path: intro_path, icon: "sparkles", icon_custom: false, active: page_active?(intro_path) }
+    { name: "Companion", path: chats_path, icon: "icon-assistant", icon_custom: true, active: page_active?(chats_path) },
+    { name: "Insights*", path: intro_path, icon: "pie-chart", icon_custom: false, active: page_active?(intro_path) }
   ]
 else
   [

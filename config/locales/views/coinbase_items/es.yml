@@ -1,0 +1,78 @@
+---
+es:
+  coinbase_items:
+    create:
+      default_name: Coinbase
+      success: ¡Conexión con Coinbase establecida con éxito! Tus cuentas se están sincronizando.
+    update:
+      success: Configuración de Coinbase actualizada correctamente.
+    destroy:
+      success: Conexión de Coinbase programada para su eliminación.
+    setup_accounts:
+      title: Importar carteras de Coinbase
+      subtitle: Selecciona qué carteras quieres seguir
+      instructions: Selecciona las carteras que quieres importar. Las carteras no seleccionadas seguirán estando disponibles por si quieres añadirlas más tarde.
+      no_accounts: Se han importado todas las carteras.
+      accounts_count:
+        one: "%{count} cartera disponible"
+        other: "%{count} carteras disponibles"
+      select_all: Seleccionar todas
+      import_selected: Importar seleccionadas
+      cancel: Cancelar
+      creating: Importando...
+    complete_account_setup:
+      success:
+        one: "Se ha importado %{count} cartera"
+        other: "Se han importado %{count} carteras"
+      none_selected: No se ha seleccionado ninguna cartera
+      no_accounts: No hay carteras para importar
+    coinbase_item:
+      provider_name: Coinbase
+      syncing: Sincronizando...
+      reconnect: Es necesario actualizar las credenciales
+      deletion_in_progress: Eliminando...
+      sync_status:
+        no_accounts: No se han encontrado cuentas
+        all_synced:
+          one: "%{count} cuenta sincronizada"
+          other: "%{count} cuentas sincronizadas"
+        partial_sync: "%{linked_count} sincronizadas, %{unlinked_count} necesitan configuración"
+      status: "Sincronizado hace %{timestamp}"
+      status_with_summary: "Sincronizado hace %{timestamp} - %{summary}"
+      status_never: Nunca sincronizado
+      update_credentials: Actualizar credenciales
+      delete: Eliminar
+      no_accounts_title: No se han encontrado cuentas
+      no_accounts_message: Tus carteras de Coinbase aparecerán aquí después de la sincronización.
+      setup_needed: Carteras listas para importar
+      setup_description: Selecciona qué carteras de Coinbase quieres seguir.
+      setup_action: Importar carteras
+      import_wallets_menu: Importar carteras
+      more_wallets_available:
+        one: "%{count} cartera más disponible para importar"
+        other: "%{count} carteras más disponibles para importar"
+    select_existing_account:
+      title: Vincular cuenta de Coinbase
+      no_accounts_found: No se han encontrado cuentas de Coinbase.
+      wait_for_sync: Espera a que Coinbase termine de sincronizar
+      check_provider_health: Comprueba que tus credenciales de la API de Coinbase sean válidas
+      balance: Saldo
+      currently_linked_to: "Vinculada actualmente a: %{account_name}"
+      link: Vincular
+      cancel: Cancelar
+    link_existing_account:
+      success: Vinculado correctamente a la cuenta de Coinbase
+      errors:
+        only_manual: Solo las cuentas manuales pueden vincularse a Coinbase
+        invalid_coinbase_account: Cuenta de Coinbase no válida
+  coinbase_item:
+    syncer:
+      checking_credentials: Comprobando credenciales...
+      credentials_invalid: Credenciales de API no válidas. Por favor, comprueba tu clave API y el secreto.
+      importing_accounts: Importando cuentas desde Coinbase...
+      checking_configuration: Comprobando la configuración de la cuenta...
+      accounts_need_setup:
+        one: "%{count} cuenta necesita configuración"
+        other: "%{count} cuentas necesitan configuración"
+      processing_accounts: Procesando datos de la cuenta...
+      calculating_balances: Calculando saldos.

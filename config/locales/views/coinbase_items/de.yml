@@ -1,0 +1,78 @@
+---
+de:
+  coinbase_items:
+    create:
+      default_name: Coinbase
+      success: Mit Coinbase verbunden! Ihre Konten werden synchronisiert.
+    update:
+      success: Coinbase-Konfiguration wurde erfolgreich aktualisiert.
+    destroy:
+      success: Coinbase-Verbindung wurde zur Löschung vorgemerkt.
+    setup_accounts:
+      title: Coinbase-Wallets importieren
+      subtitle: Wählen Sie die zu verfolgenden Wallets
+      instructions: Wählen Sie die Wallets zum Import. Nicht ausgewählte Wallets bleiben verfügbar für einen späteren Import.
+      no_accounts: Alle Wallets wurden bereits importiert.
+      accounts_count:
+        one: "%{count} Wallet verfügbar"
+        other: "%{count} Wallets verfügbar"
+      select_all: Alle auswählen
+      import_selected: Ausgewählte importieren
+      cancel: Abbrechen
+      creating: Importiere...
+    complete_account_setup:
+      success:
+        one: "%{count} Wallet importiert"
+        other: "%{count} Wallets importiert"
+      none_selected: Keine Wallets ausgewählt
+      no_accounts: Keine Wallets zum Import
+    coinbase_item:
+      provider_name: Coinbase
+      syncing: Synchronisiere...
+      reconnect: Zugangsdaten müssen aktualisiert werden
+      deletion_in_progress: Wird gelöscht...
+      sync_status:
+        no_accounts: Keine Konten gefunden
+        all_synced:
+          one: "%{count} Konto synchronisiert"
+          other: "%{count} Konten synchronisiert"
+        partial_sync: "%{linked_count} synchronisiert, %{unlinked_count} müssen eingerichtet werden"
+      status: "Zuletzt synchronisiert vor %{timestamp}"
+      status_with_summary: "Zuletzt synchronisiert vor %{timestamp} – %{summary}"
+      status_never: Noch nie synchronisiert
+      update_credentials: Zugangsdaten aktualisieren
+      delete: Löschen
+      no_accounts_title: Keine Konten gefunden
+      no_accounts_message: Ihre Coinbase-Wallets erscheinen hier nach dem Sync.
+      setup_needed: Wallets bereit zum Import
+      setup_description: Wählen Sie die Coinbase-Wallets, die Sie verfolgen möchten.
+      setup_action: Wallets importieren
+      import_wallets_menu: Wallets importieren
+      more_wallets_available:
+        one: "%{count} weiteres Wallet zum Import verfügbar"
+        other: "%{count} weitere Wallets zum Import verfügbar"
+    select_existing_account:
+      title: Coinbase-Konto verknüpfen
+      no_accounts_found: Keine Coinbase-Konten gefunden.
+      wait_for_sync: Warten Sie, bis Coinbase die Synchronisation abgeschlossen hat
+      check_provider_health: Prüfen Sie, ob Ihre Coinbase-API-Zugangsdaten gültig sind
+      balance: Saldo
+      currently_linked_to: "Aktuell verknüpft mit: %{account_name}"
+      link: Verknüpfen
+      cancel: Abbrechen
+    link_existing_account:
+      success: Erfolgreich mit Coinbase-Konto verknüpft
+      errors:
+        only_manual: Nur manuelle Konten können mit Coinbase verknüpft werden
+        invalid_coinbase_account: Ungültiges Coinbase-Konto
+  coinbase_item:
+    syncer:
+      checking_credentials: Zugangsdaten werden geprüft...
+      credentials_invalid: Ungültige API-Zugangsdaten. Bitte API-Key und Secret prüfen.
+      importing_accounts: Konten werden von Coinbase importiert...
+      checking_configuration: Kontokonfiguration wird geprüft...
+      accounts_need_setup:
+        one: "%{count} Konto muss eingerichtet werden"
+        other: "%{count} Konten müssen eingerichtet werden"
+      processing_accounts: Kontodaten werden verarbeitet...
+      calculating_balances: Salden werden berechnet...
