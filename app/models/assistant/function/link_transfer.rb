@@ -64,37 +64,13 @@ class Assistant::Function::LinkTransfer < Assistant::Function
       return { error: "Transaction #{other_transaction_id} is already linked to a transfer" }
     end
 
-    inflow_txn, outflow_txn = assign_inflow_outflow(txn_a, txn_b)
-
-    transfer = Transfer.new(
-      inflow_transaction: inflow_txn,
-      outflow_transaction: outflow_txn,
-      status: "confirmed"
-    )
-
-    Transfer.transaction do
-      transfer.save!
-
-      destination_account = transfer.inflow_transaction.entry.account
-      outflow_kind = Transfer.kind_for_account(destination_account)
-      outflow_attrs = { kind: outflow_kind }
-
-      if outflow_kind == "investment_contribution"
-        category = destination_account.family.investment_contributions_category
-        outflow_attrs[:category] = category if category.present? && transfer.outflow_transaction.category_id.blank?
-      end
-
-      transfer.outflow_transaction.update!(outflow_attrs)
-      transfer.inflow_transaction.update!(kind: "funds_movement")
-    end
-
-    transfer.sync_account_later
+    transfer = Transfer.link!(txn_a, txn_b)
 
     {
       success: true,
       transfer_id: transfer.id,
-      inflow_transaction_id: inflow_txn.id,
-      outflow_transaction_id: outflow_txn.id,
+      inflow_transaction_id: transfer.inflow_transaction_id,
+      outflow_transaction_id: transfer.outflow_transaction_id,
       message: "Transactions successfully linked as a transfer"
     }
   rescue ActiveRecord::RecordNotFound => e
@@ -105,13 +81,4 @@ class Assistant::Function::LinkTransfer < Assistant::Function
     { error: "Unexpected error: #{e.message}" }
   end
 
-  private
-
-    def assign_inflow_outflow(txn_a, txn_b)
-      if txn_a.entry.amount.negative?
-        [ txn_a, txn_b ]
-      else
-        [ txn_b, txn_a ]
-      end
-    end
 end
