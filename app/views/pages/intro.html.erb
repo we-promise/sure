@@ -1,21 +1,95 @@
 <% content_for :page_header do %>
   <div class="space-y-2">
-    <h1 class="text-2xl font-semibold text-primary">Welcome!</h1>
     <br/>
   </div>
 <% end %>
 
-<div class="mx-auto max-w-3xl">
-  <div class="bg-container shadow-border-xs rounded-2xl p-8 text-center space-y-4">
-    <div class="flex justify-center">
-      <%= image_tag "logomark-color.svg", class: "w-16 h-16" %>
+<div class="max-w-xl mx-auto space-y-8 py-6">
+  <section class="space-y-4 relative">
+    <h1 class="text-2xl font-semibold text-primary">Budget Analyser Preview</h1>
+    <div class="absolute top-0 right-0">
+      <div class="inline-flex items-center gap-1 rounded-full bg-container border border-tertiary px-2 py-1 text-xs font-medium text-primary shadow-sm">
+        <span>Coming Soon!</span>
+      </div>
     </div>
-    <h2 class="text-xl font-semibold text-primary">Intro experience coming soon</h2>
-    <p class="text-secondary">
-      We're building a richer onboarding journey to learn about your goals, milestones, and day-to-day needs. For now, head over to the chat sidebar to start a conversation with Sure and let us know where you are in your financial journey.
+    <p class="text-base text-secondary">
+      See how average students in Nairobi spend their money.
     </p>
-    <div>
-      <%= link_to "Start chatting", chats_path, class: "inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-white font-medium" %>
+  </section>
+  <section class="space-y-3">
+    <div class="w-full h-96">
+      <div data-controller="sankey-chart" data-sankey-chart-data-value="{&quot;nodes&quot;:[{&quot;name&quot;:&quot;Cash Flow&quot;,&quot;value&quot;:7000.0,&quot;percentage&quot;:100.0,&quot;color&quot;:&quot;var(--color-success)&quot;},{&quot;name&quot;:&quot;Loan&quot;,&quot;value&quot;:1500.0,&quot;percentage&quot;:21.4,&quot;color&quot;:&quot;#6172F3&quot;},{&quot;name&quot;:&quot;Side Hustle&quot;,&quot;value&quot;:5500.0,&quot;percentage&quot;:78.6,&quot;color&quot;:&quot;#6ad28a&quot;},{&quot;name&quot;:&quot;Groceries&quot;,&quot;value&quot;:700.0,&quot;percentage&quot;:12.7,&quot;color&quot;:&quot;#6172F3&quot;},{&quot;name&quot;:&quot;Matatu \u0026 Boda&quot;,&quot;value&quot;:556.0,&quot;percentage&quot;:10.1,&quot;color&quot;:&quot;#6172F3&quot;},{&quot;name&quot;:&quot;Airtime&quot;,&quot;value&quot;:350.0,&quot;percentage&quot;:6.3,&quot;color&quot;:&quot;#6172F3&quot;},{&quot;name&quot;:&quot;Clothing&quot;,&quot;value&quot;:200.0,&quot;percentage&quot;:3.6,&quot;color&quot;:&quot;#6172F3&quot;},{&quot;name&quot;:&quot;Transport&quot;,&quot;value&quot;:800.0,&quot;percentage&quot;:14.5,&quot;color&quot;:&quot;#6172F3&quot;},{&quot;name&quot;:&quot;Eating Out&quot;,&quot;value&quot;:350.0,&quot;percentage&quot;:6.3,&quot;color&quot;:&quot;#6172F3&quot;},{&quot;name&quot;:&quot;Family Support&quot;,&quot;value&quot;:1100.0,&quot;percentage&quot;:20.0,&quot;color&quot;:&quot;#6172F3&quot;},{&quot;name&quot;:&quot;Uncategorized&quot;,&quot;value&quot;:1456.5,&quot;percentage&quot;:26.4,&quot;color&quot;:&quot;#737373&quot;},{&quot;name&quot;:&quot;Surplus&quot;,&quot;value&quot;:1487.5,&quot;percentage&quot;:21.3,&quot;color&quot;:&quot;var(--color-success)&quot;}],&quot;links&quot;:[{&quot;source&quot;:1,&quot;target&quot;:0,&quot;value&quot;:1500.0,&quot;color&quot;:&quot;#6172F3&quot;,&quot;percentage&quot;:21.4},{&quot;source&quot;:2,&quot;target&quot;:0,&quot;value&quot;:5500.0,&quot;color&quot;:&quot;#6ad28a&quot;,&quot;percentage&quot;:78.6},{&quot;source&quot;:0,&quot;target&quot;:3,&quot;value&quot;:700.0,&quot;color&quot;:&quot;#6172F3&quot;,&quot;percentage&quot;:12.7},{&quot;source&quot;:0,&quot;target&quot;:4,&quot;value&quot;:556.0,&quot;color&quot;:&quot;#6172F3&quot;,&quot;percentage&quot;:10.1},{&quot;source&quot;:0,&quot;target&quot;:5,&quot;value&quot;:350.0,&quot;color&quot;:&quot;#6172F3&quot;,&quot;percentage&quot;:6.3},{&quot;source&quot;:0,&quot;target&quot;:6,&quot;value&quot;:200.0,&quot;color&quot;:&quot;#6172F3&quot;,&quot;percentage&quot;:3.6},{&quot;source&quot;:0,&quot;target&quot;:7,&quot;value&quot;:800.0,&quot;color&quot;:&quot;#6172F3&quot;,&quot;percentage&quot;:14.5},{&quot;source&quot;:0,&quot;target&quot;:8,&quot;value&quot;:350.0,&quot;color&quot;:&quot;#6172F3&quot;,&quot;percentage&quot;:6.3},{&quot;source&quot;:0,&quot;target&quot;:9,&quot;value&quot;:1100.0,&quot;color&quot;:&quot;#6172F3&quot;,&quot;percentage&quot;:20.0},{&quot;source&quot;:0,&quot;target&quot;:10,&quot;value&quot;:1456.5,&quot;color&quot;:&quot;#737373&quot;,&quot;percentage&quot;:26.4},{&quot;source&quot;:0,&quot;target&quot;:11,&quot;value&quot;:1487.5,&quot;color&quot;:&quot;var(--color-success)&quot;,&quot;percentage&quot;:21.3}],&quot;currency_symbol&quot;:&quot;KSh&quot;}" data-sankey-chart-currency-symbol-value="KSh" class="w-full h-full">
+        <svg width="388" height="384"><defs><linearGradient id="link-gradient-1-0-0" gradientUnits="userSpaceOnUse" x1="31" x2="186.5"><stop offset="0%" stop-color="rgba(97, 114, 243, 0.1)"></stop><stop offset="100%" stop-color="rgba(16, 168, 97, 0.1)"></stop></linearGradient><linearGradient id="link-gradient-2-0-1" gradientUnits="userSpaceOnUse" x1="31" x2="186.5"><stop offset="0%" stop-color="rgba(106, 210, 138, 0.1)"></stop><stop offset="100%" stop-color="rgba(16, 168, 97, 0.1)"></stop></linearGradient><linearGradient id="link-gradient-0-3-2" gradientUnits="userSpaceOnUse" x1="201.5" x2="357"><stop offset="0%" stop-color="rgba(16, 168, 97, 0.1)"></stop><stop offset="100%" stop-color="rgba(97, 114, 243, 0.1)"></stop></linearGradient><linearGradient id="link-gradient-0-4-3" gradientUnits="userSpaceOnUse" x1="201.5" x2="357"><stop offset="0%" stop-color="rgba(16, 168, 97, 0.1)"></stop><stop offset="100%" stop-color="rgba(97, 114, 243, 0.1)"></stop></linearGradient><linearGradient id="link-gradient-0-5-4" gradientUnits="userSpaceOnUse" x1="201.5" x2="357"><stop offset="0%" stop-color="rgba(16, 168, 97, 0.1)"></stop><stop offset="100%" stop-color="rgba(97, 114, 243, 0.1)"></stop></linearGradient><linearGradient id="link-gradient-0-6-5" gradientUnits="userSpaceOnUse" x1="201.5" x2="357"><stop offset="0%" stop-color="rgba(16, 168, 97, 0.1)"></stop><stop offset="100%" stop-color="rgba(97, 114, 243, 0.1)"></stop></linearGradient><linearGradient id="link-gradient-0-7-6" gradientUnits="userSpaceOnUse" x1="201.5" x2="357"><stop offset="0%" stop-color="rgba(16, 168, 97, 0.1)"></stop><stop offset="100%" stop-color="rgba(97, 114, 243, 0.1)"></stop></linearGradient><linearGradient id="link-gradient-0-8-7" gradientUnits="userSpaceOnUse" x1="201.5" x2="357"><stop offset="0%" stop-color="rgba(16, 168, 97, 0.1)"></stop><stop offset="100%" stop-color="rgba(97, 114, 243, 0.1)"></stop></linearGradient><linearGradient id="link-gradient-0-9-8" gradientUnits="userSpaceOnUse" x1="201.5" x2="357"><stop offset="0%" stop-color="rgba(16, 168, 97, 0.1)"></stop><stop offset="100%" stop-color="rgba(97, 114, 243, 0.1)"></stop></linearGradient><linearGradient id="link-gradient-0-10-9" gradientUnits="userSpaceOnUse" x1="201.5" x2="357"><stop offset="0%" stop-color="rgba(16, 168, 97, 0.1)"></stop><stop offset="100%" stop-color="rgba(115, 115, 115, 0.1)"></stop></linearGradient><linearGradient id="link-gradient-0-11-10" gradientUnits="userSpaceOnUse" x1="201.5" x2="357"><stop offset="0%" stop-color="rgba(16, 168, 97, 0.1)"></stop><stop offset="100%" stop-color="rgba(16, 168, 97, 0.1)"></stop></linearGradient></defs><g fill="none"><path class="sankey-link" d="M31,176.57142857142867C108.75,176.57142857142867,108.75,192.16702903849063,186.5,192.16702903849063" stroke="url(#link-gradient-1-0-0)" stroke-width="41.14285714285714" style="transition: opacity 0.3s;"></path><path class="sankey-link" d="M31,292.5714285714286C108.75,292.5714285714286,108.75,288.1670290384906,186.5,288.1670290384906" stroke="url(#link-gradient-2-0-1)" stroke-width="150.85714285714286" style="transition: opacity 0.3s;"></path><path class="sankey-link" d="M201.5,181.19560046706206C279.25,181.19560046706206,279.25,25.599999999999945,357,25.599999999999945" stroke="url(#link-gradient-0-3-2)" stroke-width="19.2" style="transition: opacity 0.3s;"></path><path class="sankey-link" d="M201.5,198.42074332420492C279.25,198.42074332420492,279.25,62.82514285714279,357,62.82514285714279" stroke="url(#link-gradient-0-4-3)" stroke-width="15.250285714285713" style="transition: opacity 0.3s;"></path><path class="sankey-link" d="M201.5,210.8458861813478C279.25,210.8458861813478,279.25,95.25028571428565,357,95.25028571428565" stroke="url(#link-gradient-0-5-4)" stroke-width="9.6" style="transition: opacity 0.3s;"></path><path class="sankey-link" d="M201.5,218.3887433242049C279.25,218.3887433242049,279.25,122.79314285714277,357,122.79314285714277" stroke="url(#link-gradient-0-6-5)" stroke-width="5.485714285714286" style="transition: opacity 0.3s;"></path><path class="sankey-link" d="M201.5,232.10302903849063C279.25,232.10302903849063,279.25,156.5074285714285,357,156.5074285714285" stroke="url(#link-gradient-0-7-6)" stroke-width="21.942857142857143" style="transition: opacity 0.3s;"></path><path class="sankey-link" d="M201.5,247.87445760991923C279.25,247.87445760991923,279.25,192.27885714285708,357,192.27885714285708" stroke="url(#link-gradient-0-8-7)" stroke-width="9.6" style="transition: opacity 0.3s;"></path><path class="sankey-link" d="M201.5,267.7601718956335C279.25,267.7601718956335,279.25,232.16457142857132,357,232.16457142857132" stroke="url(#link-gradient-0-9-8)" stroke-width="30.17142857142857" style="transition: opacity 0.3s;"></path><path class="sankey-link" d="M201.5,302.82074332420495C279.25,302.82074332420495,279.25,287.22514285714277,357,287.22514285714277" stroke="url(#link-gradient-0-10-9)" stroke-width="39.949714285714286" style="transition: opacity 0.3s;"></path><path class="sankey-link" d="M201.5,343.19560046706204C279.25,343.19560046706204,279.25,347.5999999999999,357,347.5999999999999" stroke="url(#link-gradient-0-11-10)" stroke-width="40.8" style="transition: opacity 0.3s;"></path></g><g><g style="transition: opacity 0.3s;"><path d="M 186.5,171.59560046706207 L 201.5,171.59560046706207 L 201.5,363.595600467062 L 186.5,363.595600467062 Z" fill="var(--color-success)" stroke="none"></path><text x="207.5" y="267.595600467062" dy="-0.2em" text-anchor="start" class="text-xs font-medium text-primary fill-current select-none" style="cursor: default;"><tspan>Cash Flow</tspan><tspan x="207.5" dy="1.2em" class="font-mono text-secondary" style="font-size: 0.65rem;"><tspan>KSh7,000.00</tspan></tspan></text></g><g style="transition: opacity 0.3s;">
+          <path d="M 24,156.00000000000009
+                  L 31,156.00000000000009
+                  L 31,197.1428571428572
+                  L 24,197.1428571428572
+                  Q 16,197.1428571428572 16,189.1428571428572
+                  L 16,164.00000000000009
+                  Q 16,156.00000000000009 24,156.00000000000009 Z" fill="#6172F3" stroke="none"></path><text x="37" y="176.57142857142864" dy="-0.2em" text-anchor="start" class="text-xs font-medium text-primary fill-current select-none" style="cursor: default;"><tspan>Loan</tspan><tspan x="37" dy="1.2em" class="font-mono text-secondary" style="font-size: 0.65rem;"><tspan>KSh1,500.00</tspan></tspan></text></g><g style="transition: opacity 0.3s;"><path d="M 24,217.1428571428572
+                  L 31,217.1428571428572
+                  L 31,368
+                  L 24,368
+                  Q 16,368 16,360
+                  L 16,225.1428571428572
+                  Q 16,217.1428571428572 24,217.1428571428572 Z" fill="#6ad28a" stroke="none"></path><text x="37" y="292.5714285714286" dy="-0.2em" text-anchor="start" class="text-xs font-medium text-primary fill-current select-none" style="cursor: default;"><tspan>Side Hustle</tspan><tspan x="37" dy="1.2em" class="font-mono text-secondary" style="font-size: 0.65rem;"><tspan>KSh5,500.00</tspan></tspan></text></g><g style="transition: opacity 0.3s;"><path d="M 357,15.999999999999943
+                  L 364,15.999999999999943
+                  Q 372,15.999999999999943 372,23.999999999999943
+                  L 372,27.199999999999932
+                  Q 372,35.19999999999993 364,35.19999999999993
+                  L 357,35.19999999999993 Z" fill="#6172F3" stroke="none"></path><text x="351" y="25.599999999999937" dy="-0.2em" text-anchor="end" class="text-xs font-medium text-primary fill-current select-none" style="cursor: default;"><tspan>Groceries</tspan><tspan x="351" dy="1.2em" class="font-mono text-secondary" style="font-size: 0.65rem;"><tspan>KSh700.00</tspan></tspan></text></g><g style="transition: opacity 0.3s;"><path d="M 357,55.19999999999993
+                  L 364.37485714285714,55.19999999999993
+                  Q 372,55.19999999999993 372,62.825142857142794
+                  L 372,62.825142857142794
+                  Q 372,70.45028571428566 364.37485714285714,70.45028571428566
+                  L 357,70.45028571428566 Z" fill="#6172F3" stroke="none"></path><text x="351" y="62.825142857142794" dy="-0.2em" text-anchor="end" class="text-xs font-medium text-primary fill-current select-none" style="cursor: default;"><tspan>Matatu &amp; Boda</tspan><tspan x="351" dy="1.2em" class="font-mono text-secondary" style="font-size: 0.65rem;"><tspan>KSh556.00</tspan></tspan></text></g><g style="transition: opacity 0.3s;"><path d="M 357,90.45028571428566
+                  L 367.20000000000005,90.45028571428566
+                  Q 372,90.45028571428566 372,95.25028571428564
+                  L 372,95.25028571428564
+                  Q 372,100.05028571428562 367.20000000000005,100.05028571428562
+                  L 357,100.05028571428562 Z" fill="#6172F3" stroke="none"></path><text x="351" y="95.25028571428564" dy="-0.2em" text-anchor="end" class="text-xs font-medium text-primary fill-current select-none" style="cursor: default;"><tspan>Airtime</tspan><tspan x="351" dy="1.2em" class="font-mono text-secondary" style="font-size: 0.65rem;"><tspan>KSh350.00</tspan></tspan></text></g><g style="transition: opacity 0.3s;"><path d="M 357,120.05028571428562
+                  L 369.25714285714287,120.05028571428562
+                  Q 372,120.05028571428562 372,122.79314285714278
+                  L 372,122.79314285714278
+                  Q 372,125.53599999999994 369.25714285714287,125.53599999999994
+                  L 357,125.53599999999994 Z" fill="#6172F3" stroke="none"></path><text x="351" y="122.79314285714278" dy="-0.2em" text-anchor="end" class="text-xs font-medium text-primary fill-current select-none" style="cursor: default;"><tspan>Clothing</tspan><tspan x="351" dy="1.2em" class="font-mono text-secondary" style="font-size: 0.65rem;"><tspan>KSh200.00</tspan></tspan></text></g><g style="transition: opacity 0.3s;"><path d="M 357,145.53599999999994
+                  L 364,145.53599999999994
+                  Q 372,145.53599999999994 372,153.53599999999994
+                  L 372,159.47885714285707
+                  Q 372,167.47885714285707 364,167.47885714285707
+                  L 357,167.47885714285707 Z" fill="#6172F3" stroke="none"></path><text x="351" y="156.5074285714285" dy="-0.2em" text-anchor="end" class="text-xs font-medium text-primary fill-current select-none" style="cursor: default;"><tspan>Transport</tspan><tspan x="351" dy="1.2em" class="font-mono text-secondary" style="font-size: 0.65rem;"><tspan>KSh800.00</tspan></tspan></text></g><g style="transition: opacity 0.3s;"><path d="M 357,187.47885714285707
+                  L 367.20000000000005,187.47885714285707
+                  Q 372,187.47885714285707 372,192.27885714285705
+                  L 372,192.27885714285705
+                  Q 372,197.07885714285703 367.20000000000005,197.07885714285703
+                  L 357,197.07885714285703 Z" fill="#6172F3" stroke="none"></path><text x="351" y="192.27885714285705" dy="-0.2em" text-anchor="end" class="text-xs font-medium text-primary fill-current select-none" style="cursor: default;"><tspan>Eating Out</tspan><tspan x="351" dy="1.2em" class="font-mono text-secondary" style="font-size: 0.65rem;"><tspan>KSh350.00</tspan></tspan></text></g><g style="transition: opacity 0.3s;"><path d="M 357,217.07885714285703
+                  L 364,217.07885714285703
+                  Q 372,217.07885714285703 372,225.07885714285703
+                  L 372,239.2502857142856
+                  Q 372,247.2502857142856 364,247.2502857142856
+                  L 357,247.2502857142856 Z" fill="#6172F3" stroke="none"></path><text x="351" y="232.16457142857132" dy="-0.2em" text-anchor="end" class="text-xs font-medium text-primary fill-current select-none" style="cursor: default;"><tspan>Family Support</tspan><tspan x="351" dy="1.2em" class="font-mono text-secondary" style="font-size: 0.65rem;"><tspan>KSh1,100.00</tspan></tspan></text></g><g style="transition: opacity 0.3s;"><path d="M 357,267.2502857142856
+                  L 364,267.2502857142856
+                  Q 372,267.2502857142856 372,275.2502857142856
+                  L 372,299.19999999999993
+                  Q 372,307.19999999999993 364,307.19999999999993
+                  L 357,307.19999999999993 Z" fill="#737373" stroke="none"></path><text x="351" y="287.22514285714277" dy="-0.2em" text-anchor="end" class="text-xs font-medium text-primary fill-current select-none" style="cursor: default;"><tspan>Uncategorized</tspan><tspan x="351" dy="1.2em" class="font-mono text-secondary" style="font-size: 0.65rem;"><tspan>KSh1,456.50</tspan></tspan></text></g><g style="transition: opacity 0.3s;"><path d="M 357,327.19999999999993
+                  L 364,327.19999999999993
+                  Q 372,327.19999999999993 372,335.19999999999993
+                  L 372,360
+                  Q 372,368 364,368
+                  L 357,368 Z" fill="var(--color-success)" stroke="none">
+          </path><text x="351" y="347.59999999999997" dy="-0.2em" text-anchor="end" class="text-xs font-medium text-primary fill-current select-none" style="cursor: default;"><tspan>Surplus</tspan><tspan x="351" dy="1.2em" class="font-mono text-secondary" style="font-size: 0.65rem;"><tspan>KSh1,487.50</tspan></tspan></text></g></g>
+        </svg>
+      </div>
     </div>
-  </div>
+    <div class="space-y-2">
+      <% @intro_prompts.each do |prompt| %>
+        <div class="bg-container border border-tertiary rounded-2xl p-4 space-y-1">
+          <p class="font-medium text-primary"><%= prompt[:title] %></p>
+          <p class="text-sm text-secondary"><%= prompt[:description] %></p>
+        </div>
+        <div class="w-full h-96">
+      <% end %>
+    </div>
+  </section>
 </div>

@@ -48,7 +48,6 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   bool _hasEverHadMessages = false;
-  List<Message> _lastNonEmptyMessages = const [];
   String? _activeChatId;
   bool _isInitializingChat = false;
 
@@ -415,16 +414,10 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
           }
 
           final messages = chatProvider.currentChat?.messages ?? [];
-          if (messages.isNotEmpty) {
-            if (!_hasEverHadMessages) {
-              _hasEverHadMessages = true;
-            }
-            _lastNonEmptyMessages = messages;
+          if (messages.isNotEmpty && !_hasEverHadMessages) {
+            _hasEverHadMessages = true;
           }
-          final visibleMessages =
-              messages.isEmpty && _lastNonEmptyMessages.isNotEmpty
-                  ? _lastNonEmptyMessages
-                  : messages;
+          final visibleMessages = messages;
 
           // Auto-scroll to bottom when messages update or typing indicator appears
           if (visibleMessages.isNotEmpty || chatProvider.isAssistantResponding) {

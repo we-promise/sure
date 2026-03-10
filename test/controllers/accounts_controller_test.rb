@@ -16,6 +16,27 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "activity pagination keeps activity tab when loaded from holdings tab" do
+    investment = accounts(:investment)
+
+    11.times do |i|
+      Entry.create!(
+        account: investment,
+        name: "Test investment activity #{i}",
+        date: Date.current - i.days,
+        amount: 10 + i,
+        currency: investment.currency,
+        entryable: Transaction.new
+      )
+    end
+
+    get account_url(investment, tab: "holdings")
+
+    assert_response :success
+    assert_select "a[href*='page=2'][href*='tab=activity']"
+    assert_select "a[href*='page=2'][href*='tab=holdings']", count: 0
+  end
+
   test "should sync account" do
     post sync_account_url(@account)
     assert_redirected_to account_url(@account)

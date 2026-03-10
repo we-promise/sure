@@ -441,7 +441,7 @@ GEM
     ostruct (0.6.2)
     pagy (9.3.5)
     parallel (1.27.0)
-    parser (3.3.8.0)
+    parser (3.3.10.2)
       ast (~> 2.4.1)
       racc
     pdf-reader (2.15.1)

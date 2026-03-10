@@ -1,0 +1,94 @@
+<%# locals: form:, method:, collection:, options: {} %>
+
+<div class="relative" data-controller="select <%= "list-filter" if searchable %> form-dropdown" data-action="dropdown:select->form-dropdown#onSelect">
+  <div class="form-field <%= options[:container_class] %>">
+    <div class="form-field__body">
+        <%= form.label method, options[:label], class: "form-field__label" if options[:label].present? %>
+        <%= form.hidden_field method,
+            value: @selected_value,
+            data: {
+              "form-dropdown-target": "input",
+              "auto-submit-target": "auto"
+            } %>
+        <button type="button"
+                class="form-field__input w-full"
+                data-select-target="button"
+                data-action="click->select#toggle"
+                aria-haspopup="listbox"
+                aria-expanded="<%= @selected_value.present? ? "true" : "false" %>"
+                aria-labelledby="<%= "#{method}_label" %>">
+          <%= selected_item&.dig(:label) || @placeholder %>
+        </button>
+    </div>
+  </div>
+  <div class="absolute z-50 p-1.5 w-full min-w-32 rounded-lg shadow-lg shadow-border-xs bg-container mt-1.5 transition duration-150 ease-out -translate-y-1 opacity-0 hidden" data-select-target="menu">
+    <% if searchable %>
+      <div class="relative flex items-center bg-container border border-secondary rounded-lg mb-1">
+        <input type="search"
+               placeholder="<%= t("helpers.select.search_placeholder") %>"
+               autocomplete="off"
+               class="bg-container text-sm placeholder:text-secondary font-normal h-10 pl-10 w-full border-none rounded-lg focus:outline-hidden focus:ring-0"
+               data-list-filter-target="input"
+               data-action="list-filter#filter">
+        <%= helpers.icon("search", class: "absolute inset-0 ml-2 transform top-1/2 -translate-y-1/2") %>
+      </div>
+    <% end %>
+    <div data-list-filter-target="list" data-select-target="content" class="flex flex-col gap-0.5 max-h-64 overflow-auto" 
+          role="listbox" tabindex="-1">
+      <% items.each do |item| %>
+        <% is_selected = item[:value] == selected_value %>
+        <% obj = item[:object] %>
+
+        <div class="filterable-item text-sm cursor-pointer flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-container-inset-hover <%= "bg-container-inset" if is_selected %>"
+              role="option"
+              tabindex="0"
+              aria-selected="<%= is_selected %>"
+              data-action="click->select#select"
+              data-value="<%= item[:value] %>"
+              data-filter-name="<%= item[:label] %>">
+
+          <span class="check-icon <%= "hidden" unless is_selected %>">
+            <%= helpers.icon("check") %>
+          </span>
+
+          <% case variant %>
+          <% when :simple %>
+            <%= item[:label] %>
+
+          <% when :logo %>
+            <% unless item[:value].nil? %>
+              <% if logo_for(item) %>
+                <%= image_tag logo_for(item),
+                      class: "w-6 h-6 rounded-full border border-secondary",
+                      loading: "lazy" %>
+              <% else %>
+                <%= render DS::FilledIcon.new(
+                      variant: :text,
+                      text: item[:label],
+                      size: "sm",
+                      rounded: true
+                    ) %>
+              <% end %>
+            <% end %>
+            <%= item[:label] %>
+
+          <% when :badge %>
+            <% hex_color = color_for(item) %>
+            <span class="flex items-center gap-2 text-sm font-medium rounded-full px-3 py-1 border truncate"
+                  style="
+                    background-color: color-mix(in oklab, <%= hex_color %> 10%, transparent);
+                    border-color: color-mix(in oklab, <%= hex_color %> 20%, transparent);
+                    color: <%= hex_color %>;">
+              <% if icon_for(item) %>
+                <%= helpers.icon icon_for(item), size: "sm", color: "current" %>
+              <% else %>
+                <span class="size-1.5 rounded-full" style="background-color: <%= hex_color %>;"></span>
+              <% end %>
+              <%= item[:label] %>
+            </span>
+          <% end %>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</div>

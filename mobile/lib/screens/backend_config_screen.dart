@@ -121,9 +121,24 @@ class _BackendConfigScreenState extends State<BackendConfigScreen> {
         '',
       );
 
+      // Check if URL matches a preset environment
+      String? envName;
+      for (final entry in ApiConfig.presetEnvironments.entries) {
+        if (entry.value == normalizedUrl) {
+          envName = entry.key;
+          break;
+        }
+      }
+
       // Save URL to SharedPreferences
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('backend_url', normalizedUrl);
+      if (envName != null) {
+        await prefs.setString('app_environment', envName);
+      } else {
+        // Clear environment if custom URL is used
+        await prefs.remove('app_environment');
+      }
 
       // Update ApiConfig
       ApiConfig.setBaseUrl(normalizedUrl);
@@ -250,7 +265,55 @@ class _BackendConfigScreenState extends State<BackendConfigScreen> {
                 ),
                 const SizedBox(height: 24),
 
-                // Error Message
+                // Preset environments section
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: colorScheme.surfaceContainerHighest
+                        .withValues(alpha: 0.3),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Quick Select Environments',
+                        style: TextStyle(
+                          color: colorScheme.onSurface,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: ApiConfig.presetEnvironments.entries
+                            .map((entry) {
+                          final envName = entry.key;
+                          final envUrl = entry.value;
+                          return ElevatedButton(
+                            onPressed: () {
+                              _urlController.text = envUrl;
+                              setState(() {
+                                _successMessage = null;
+                                _errorMessage = null;
+                              });
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: colorScheme.surfaceContainer,
+                              foregroundColor: colorScheme.onSurface,
+                              side: BorderSide(
+                                color: colorScheme.outline,
+                              ),
+                            ),
+                            child: Text(envName),
+                          );
+                        }).toList(),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
                 if (_errorMessage != null)
                   Container(
                     padding: const EdgeInsets.all(12),

@@ -1,0 +1,21 @@
+<%
+  header_title t(".title")
+%>
+
+<div class="space-y-1 mb-6 text-center">
+  <p class="text-secondary">
+    <%= t(".message", inviter: @invitation.inviter.display_name) %>
+  </p>
+</div>
+
+<div class="space-y-4">
+  <%= link_to new_session_path,
+      class: "block w-full rounded-md border border-secondary bg-container px-4 py-3 text-center text-sm font-medium text-primary hover:bg-secondary transition" do %>
+    <%= t(".sign_in") %>
+  <% end %>
+
+  <%= link_to root_path,
+      class: "block w-full rounded-md border border-secondary bg-container px-4 py-3 text-center text-sm font-medium text-primary hover:bg-secondary transition" do %>
+    <%= t(".go_home") %>
+  <% end %>
+</div>
