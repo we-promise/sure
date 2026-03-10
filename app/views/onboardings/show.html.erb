@@ -18,8 +18,8 @@
     </div>
 
       <%= styled_form_with model: @user do |form| %>
-      <%= form.hidden_field :redirect_to, value: @invitation ? "home" : "onboarding_preferences" %>
-      <%= form.hidden_field :onboarded_at, value: Time.current if @invitation %>
+      <%= form.hidden_field :redirect_to, value: @joined_existing_family ? "home" : "onboarding_preferences" %>
+      <%= form.hidden_field :onboarded_at, value: Time.current if @joined_existing_family %>
 
       <div class="mb-6">
         <%= render "settings/user_avatar_field", form: form, user: @user %>
@@ -30,7 +30,7 @@
         <%= form.text_field :last_name, placeholder: t(".last_name_placeholder"), label: t(".last_name"), container_class: "bg-container md:w-1/2 w-full", required: true %>
       </div>
 
-      <% unless @invitation %>
+      <% unless @joined_existing_family %>
         <div class="space-y-4 mb-4">
           <%= form.fields_for :family do |family_form| %>
             <div class="bg-container rounded-lg shadow-border-xs p-4">
