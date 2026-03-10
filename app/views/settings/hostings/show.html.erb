@@ -22,8 +22,10 @@
 <%= settings_section title: t(".sync_settings") do %>
   <%= render "settings/hostings/sync_settings" %>
 <% end %>
-<%= settings_section title: t(".invites") do %>
-  <%= render "settings/hostings/invite_code_settings" %>
+<% if Current.user.super_admin? %>
+  <%= settings_section title: t(".invites") do %>
+    <%= render "settings/hostings/invite_code_settings" %>
+  <% end %>
 <% end %>
 <%= settings_section title: t(".danger_zone") do %>
   <%= render "settings/hostings/danger_zone_settings" %>
