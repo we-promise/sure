@@ -210,6 +210,9 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
         delete disconnect_external_assistant_settings_hosting_url
 
         assert_redirected_to settings_hosting_url
+        # Force cache refresh so configured? reads fresh DB state after
+        # the disconnect action cleared the settings within its own request.
+        Setting.clear_cache
         assert_not Assistant::External.configured?
         assert_equal "builtin", users(:family_admin).family.reload.assistant_type
       end
