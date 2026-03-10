@@ -15,6 +15,7 @@ class Invitation < ApplicationRecord
   validates :token, presence: true, uniqueness: true
   validates_uniqueness_of :email, scope: :family_id, message: "has already been invited to this family"
   validate :inviter_is_admin
+  validate :no_other_pending_invitation, on: :create
 
   before_validation :generate_token, on: :create
   before_create :set_expiration
@@ -55,6 +56,14 @@ class Invitation < ApplicationRecord
 
     def set_expiration
       self.expires_at = 3.days.from_now
+    end
+
+    def no_other_pending_invitation
+      return if email.blank?
+
+      if self.class.pending.where(email: email.to_s.strip.downcase).where.not(family_id: family_id).exists?
+        errors.add(:email, "already has a pending invitation from another family")
+      end
     end
 
     def inviter_is_admin
