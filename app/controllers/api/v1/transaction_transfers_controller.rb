@@ -47,6 +47,12 @@ class Api::V1::TransactionTransfersController < Api::V1::BaseController
     @transaction = @transaction.reload
     render :show, status: :ok
 
+  rescue ActionController::ParameterMissing
+    render json: {
+      error: "validation_failed",
+      message: "other_transaction_id is required",
+      errors: [ "other_transaction_id is required" ]
+    }, status: :unprocessable_entity
   rescue ActiveRecord::RecordNotFound
     render json: {
       error: "not_found",
