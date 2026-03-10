@@ -124,7 +124,7 @@ class OidcAccountsController < ApplicationController
     if invitation.present?
       @user.family_id = invitation.family_id
       @user.role = invitation.role
-    elsif !assign_invite_only_default_family(@user)
+    elsif !assign_invite_only_default_family(@user, role: sso_provider_default_role(@pending_auth["provider"]))
       @user.family = Family.new
 
       provider_config = Rails.configuration.x.auth.sso_providers&.find { |p| p[:name] == @pending_auth["provider"] }

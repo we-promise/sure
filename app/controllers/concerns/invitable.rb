@@ -15,7 +15,7 @@ module Invitable
       end
     end
 
-    def assign_invite_only_default_family(user)
+    def assign_invite_only_default_family(user, role: :member)
       return false unless Setting.onboarding_state == "invite_only"
 
       default_family_id = Setting.invite_only_default_family_id
@@ -25,8 +25,13 @@ module Invitable
       return false if default_family.nil?
 
       user.family = default_family
-      user.role = :member
+      user.role = role
       true
+    end
+
+    def sso_provider_default_role(provider_name)
+      provider_config = Rails.configuration.x.auth.sso_providers&.find { |p| p[:name] == provider_name }
+      (provider_config&.dig(:settings, :default_role) || :member).to_sym
     end
 
     def self_hosted?
