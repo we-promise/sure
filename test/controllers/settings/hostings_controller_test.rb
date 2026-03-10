@@ -51,6 +51,8 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "can update onboarding state when self hosting is enabled" do
+    sign_in users(:sure_support_staff)
+
     with_self_hosting do
       patch settings_hosting_url, params: { setting: { onboarding_state: "invite_only" } }
 
