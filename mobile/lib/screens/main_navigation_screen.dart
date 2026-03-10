@@ -32,8 +32,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       screens.add(IntroScreen(onStartChat: onStartChat));
     }
 
-    screens.add(const SettingsScreen());
-
     return screens;
   }
 
@@ -62,9 +60,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     }
   }
 
-  Future<void> _handleSelectSettings(AuthProvider authProvider, bool introLayout) async {
-    final settingsIndex = introLayout ? 2 : 3;
-    await _handleDestinationSelected(settingsIndex, authProvider, introLayout);
+  void _handleSelectSettings() {
+    showSettingsPanel(context);
   }
 
   List<NavigationDestination> _buildDestinations(bool introLayout) {
@@ -145,7 +142,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
           child: Center(
             child: InkWell(
               onTap: () {
-                _handleSelectSettings(authProvider, introLayout);
+                _handleSelectSettings();
               },
               child: const SizedBox(
                 width: 36,

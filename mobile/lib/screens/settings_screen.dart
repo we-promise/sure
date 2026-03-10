@@ -86,6 +86,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     final success = await ApiConfig.setEnvironment(envName);
     if (success && mounted) {
+      Navigator.of(context).pop(); // close bottom sheet
       // Clear offline cache when switching environments
       await OfflineStorageService().clearAllData();
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
@@ -323,6 +324,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
 
     if (confirmed == true && context.mounted) {
+      Navigator.of(context).pop(); // close bottom sheet
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       await authProvider.logout();
     }
@@ -334,6 +336,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final authProvider = Provider.of<AuthProvider>(context);
 
     return Scaffold(
+      appBar: AppBar(
+        title: const Text('Settings'),
+        centerTitle: true,
+        automaticallyImplyLeading: false,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.close),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+        ],
+      ),
       body: ListView(
         children: [
           // User info section
@@ -417,48 +430,50 @@ class _SettingsScreenState extends State<SettingsScreen> {
             onTap: () => _launchContactUrl(context),
           ),
 
-          const Divider(),
+          if (authProvider.user?.email.endsWith('@chancen.international') == true) ...[
+            const Divider(),
 
-          // Environment switcher
-          const Padding(
-            padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
-            child: Text(
-              'Environment',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-                color: Colors.grey,
+            // Environment switcher
+            const Padding(
+              padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
+              child: Text(
+                'Environment',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey,
+                ),
               ),
             ),
-          ),
-          
-          ListTile(
-            leading: const Icon(Icons.public),
-            title: const Text('Environment'),
-            subtitle: Text('Current: ${_selectedEnvironment ?? "Unknown"}'),
-            trailing: PopupMenuButton<String>(
-              onSelected: _changeEnvironment,
-              itemBuilder: (BuildContext context) {
-                return ['Staging', 'Production'].map((String envName) {
-                  return PopupMenuItem<String>(
-                    value: envName,
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (_selectedEnvironment == envName)
-                          Icon(Icons.check, color: colorScheme.primary, size: 20),
-                        if (_selectedEnvironment == envName)
-                          const SizedBox(width: 8),
-                        Text(envName),
-                      ],
-                    ),
-                  );
-                }).toList();
-              },
-              child: const Icon(Icons.settings),
+
+            ListTile(
+              leading: const Icon(Icons.public),
+              title: const Text('Environment'),
+              subtitle: Text('Current: ${_selectedEnvironment ?? "Unknown"}'),
+              trailing: PopupMenuButton<String>(
+                onSelected: _changeEnvironment,
+                itemBuilder: (BuildContext context) {
+                  return ['Staging', 'Production'].map((String envName) {
+                    return PopupMenuItem<String>(
+                      value: envName,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (_selectedEnvironment == envName)
+                            Icon(Icons.check, color: colorScheme.primary, size: 20),
+                          if (_selectedEnvironment == envName)
+                            const SizedBox(width: 8),
+                          Text(envName),
+                        ],
+                      ),
+                    );
+                  }).toList();
+                },
+                child: const Icon(Icons.settings),
+              ),
             ),
-          ),
-          
+          ],
+
           const Divider(),
 
           if (!AppConfig.isCompanion) ...[
@@ -570,4 +585,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
     );
   }
+}
+
+/// Shows the settings panel as a dialog that slides in from the top.
+void showSettingsPanel(BuildContext context) {
+  showGeneralDialog(
+    context: context,
+    barrierDismissible: true,
+    barrierLabel: 'Settings',
+    barrierColor: Colors.black54,
+    transitionDuration: const Duration(milliseconds: 300),
+    pageBuilder: (context, animation, secondaryAnimation) {
+      return const SettingsScreen();
+    },
+    transitionBuilder: (context, animation, secondaryAnimation, child) {
+      final curved = CurvedAnimation(parent: animation, curve: Curves.easeOutCubic);
+      return SlideTransition(
+        position: Tween<Offset>(
+          begin: const Offset(0, -1),
+          end: Offset.zero,
+        ).animate(curved),
+        child: child,
+      );
+    },
+  );
 }
