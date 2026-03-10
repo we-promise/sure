@@ -253,16 +253,10 @@ jobs:
       update_gh_pages: true
     secrets: inherit
 
-  mobile:
-    name: Build Mobile Apps
-    if: startsWith(github.ref, 'refs/tags/v')
-    uses: ./.github/workflows/flutter-build.yml
-    secrets: inherit
-
   release:
     name: Create GitHub Release
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [merge, mobile, helm]
+    needs: [merge, helm]
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -270,18 +264,6 @@ jobs:
       contents: write
 
     steps:
-      - name: Download Android APK artifact
-        uses: actions/download-artifact@v4.3.0
-        with:
-          name: app-release-apk
-          path: ${{ runner.temp }}/mobile-artifacts
-
-      - name: Download iOS build artifact
-        uses: actions/download-artifact@v4.3.0
-        with:
-          name: ios-build-unsigned
-          path: ${{ runner.temp }}/ios-build
-
       - name: Download Helm chart artifact
         uses: actions/download-artifact@v4.3.0
         with:
@@ -291,38 +273,6 @@ jobs:
       - name: Prepare release assets
         run: |
           mkdir -p ${{ runner.temp }}/release-assets
-
-          echo "=== Debugging: List downloaded artifacts ==="
-          echo "Mobile artifacts:"
-          ls -laR "${{ runner.temp }}/mobile-artifacts" || echo "No mobile-artifacts directory"
-          echo "iOS build:"
-          ls -laR "${{ runner.temp }}/ios-build" || echo "No ios-build directory"
-          echo "==========================================="
-
-          # Copy debug APK if it exists
-          if [ -f "${{ runner.temp }}/mobile-artifacts/app-debug.apk" ]; then
-            cp "${{ runner.temp }}/mobile-artifacts/app-debug.apk" "${{ runner.temp }}/release-assets/sure-${{ github.ref_name }}-debug.apk"
-            echo "✓ Debug APK prepared"
-          fi
-
-          # Copy release APK if it exists
-          if [ -f "${{ runner.temp }}/mobile-artifacts/app-release.apk" ]; then
-            cp "${{ runner.temp }}/mobile-artifacts/app-release.apk" "${{ runner.temp }}/release-assets/sure-${{ github.ref_name }}.apk"
-            echo "✓ Release APK prepared"
-          fi
-
-          # Create iOS app archive (zip the .app bundle)
-          # Path preserves directory structure from artifact upload
-          if [ -d "${{ runner.temp }}/ios-build/ios/iphoneos/Runner.app" ]; then
-            cd "${{ runner.temp }}/ios-build/ios/iphoneos"
-            zip -r "${{ runner.temp }}/release-assets/sure-${{ github.ref_name }}-ios-unsigned.zip" Runner.app
-            echo "✓ iOS build archive prepared"
-          fi
-
-          # Copy iOS build info
-          if [ -f "${{ runner.temp }}/ios-build/ios-build-info.txt" ]; then
-            cp "${{ runner.temp }}/ios-build/ios-build-info.txt" "${{ runner.temp }}/release-assets/"
-          fi
 
           # Copy Helm chart package(s)
           if compgen -G "${{ runner.temp }}/helm-artifacts/*.tgz" > /dev/null; then
@@ -343,15 +293,6 @@ jobs:
           generate_release_notes: true
           files: |
             ${{ runner.temp }}/release-assets/*
-          body: |
-            ## Mobile Debug Builds
-
-            This release includes debug builds of the mobile applications.  Download from the `Assets` area below.
-
-            - **Android APK**: Debug build for testing on Android devices
-            - **iOS Build**: Unsigned iOS build (requires code signing for installation)
-
-            > **Note**: These are debug builds intended for testing purposes. For production use, please build from source with proper signing credentials.
 
 
   create_release_branch:
