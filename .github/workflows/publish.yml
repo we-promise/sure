@@ -243,20 +243,10 @@ jobs:
           done
 
 
-  helm:
-    name: Package Helm chart
-    if: startsWith(github.ref, 'refs/tags/v')
-    uses: ./.github/workflows/helm-publish.yml
-    with:
-      chart_version: ${{ github.ref_name }}
-      app_version: ${{ github.ref_name }}
-      update_gh_pages: true
-    secrets: inherit
-
   release:
     name: Create GitHub Release
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [merge, helm]
+    needs: [merge]
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -264,25 +254,6 @@ jobs:
       contents: write
 
     steps:
-      - name: Download Helm chart artifact
-        uses: actions/download-artifact@v4.3.0
-        with:
-          name: helm-chart-package
-          path: ${{ runner.temp }}/helm-artifacts
-
-      - name: Prepare release assets
-        run: |
-          mkdir -p ${{ runner.temp }}/release-assets
-
-          # Copy Helm chart package(s)
-          if compgen -G "${{ runner.temp }}/helm-artifacts/*.tgz" > /dev/null; then
-            cp ${{ runner.temp }}/helm-artifacts/*.tgz "${{ runner.temp }}/release-assets/"
-            echo "✓ Helm chart package prepared"
-          fi
-
-          echo "Release assets:"
-          ls -la "${{ runner.temp }}/release-assets/"
-
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
@@ -291,8 +262,6 @@ jobs:
           draft: false
           prerelease: ${{ contains(github.ref_name, 'alpha') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') }}
           generate_release_notes: true
-          files: |
-            ${{ runner.temp }}/release-assets/*
 
 
   create_release_branch:
