@@ -39,11 +39,11 @@ module Api
 
         user = User.new(user_signup_params)
 
-        # Create family for new user
-        # First user of an instance becomes super_admin
-        family = Family.new
-        user.family = family
-        user.role = User.role_for_new_family_creator
+        unless assign_invite_only_default_family(user)
+          family = Family.new
+          user.family = family
+          user.role = User.role_for_new_family_creator
+        end
 
         if user.save
           # Claim invite code if provided
@@ -197,10 +197,9 @@ module Api
         )
 
         if invitation.present?
-          # Accept the pending invitation: join the existing family
           user.family_id = invitation.family_id
           user.role = invitation.role
-        else
+        elsif !assign_invite_only_default_family(user)
           user.family = Family.new
 
           provider_config = Rails.configuration.x.auth.sso_providers&.find { |p| p[:name] == cached[:provider] }

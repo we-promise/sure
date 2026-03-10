@@ -2,7 +2,7 @@ module Invitable
   extend ActiveSupport::Concern
 
   included do
-    helper_method :invite_code_required?
+    helper_method :invite_code_required? if respond_to?(:helper_method)
   end
 
   private
@@ -13,6 +13,20 @@ module Invitable
       else
         ENV["REQUIRE_INVITE_CODE"] == "true"
       end
+    end
+
+    def assign_invite_only_default_family(user)
+      return false unless Setting.onboarding_state == "invite_only"
+
+      default_family_id = Setting.invite_only_default_family_id
+      return false if default_family_id.blank?
+
+      default_family = Family.find_by(id: default_family_id)
+      return false if default_family.nil?
+
+      user.family = default_family
+      user.role = :member
+      true
     end
 
     def self_hosted?

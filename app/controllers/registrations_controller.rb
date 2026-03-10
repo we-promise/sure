@@ -18,12 +18,7 @@ class RegistrationsController < ApplicationController
       @user.family = @invitation.family
       @user.role = @invitation.role
       @user.email = @invitation.email
-    elsif (default_family_id = Setting.invite_only_default_family_id).present? &&
-          Setting.onboarding_state == "invite_only" &&
-          (default_family = Family.find_by(id: default_family_id))
-      @user.family = default_family
-      @user.role = :member
-    else
+    elsif !assign_invite_only_default_family(@user)
       family = Family.new
       @user.family = family
       @user.role = User.role_for_new_family_creator
