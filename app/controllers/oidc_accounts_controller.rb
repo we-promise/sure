@@ -125,6 +125,11 @@ class OidcAccountsController < ApplicationController
       # Accept the pending invitation: join the existing family
       @user.family_id = invitation.family_id
       @user.role = invitation.role
+    elsif (default_family_id = Setting.invite_only_default_family_id).present? &&
+          Setting.onboarding_state == "invite_only" &&
+          (default_family = Family.find_by(id: default_family_id))
+      @user.family = default_family
+      @user.role = :member
     else
       # Create new family for this user
       @user.family = Family.new

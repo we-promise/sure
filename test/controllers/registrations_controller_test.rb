@@ -68,6 +68,27 @@ class RegistrationsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "invite_only mode with default_family_id assigns user to that family" do
+    family = families(:dylan_family)
+
+    with_self_hosting do
+      Setting.onboarding_state = "invite_only"
+      Setting.invite_only_default_family_id = family.id
+
+      assert_difference "User.count", +1 do
+        assert_no_difference "Family.count" do
+          post registration_url, params: { user: {
+            email: "inviteonly@example.com",
+            password: "Password1!" } }
+        end
+      end
+
+      new_user = User.find_by(email: "inviteonly@example.com")
+      assert_equal family, new_user.family
+      assert_equal "member", new_user.role
+    end
+  end
+
   test "creating account from guest invitation assigns guest role and intro layout" do
     invitation = invitations(:one)
     invitation.update!(role: "guest", email: "guest-signup@example.com")

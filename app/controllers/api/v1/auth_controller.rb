@@ -39,11 +39,17 @@ module Api
 
         user = User.new(user_signup_params)
 
-        # Create family for new user
-        # First user of an instance becomes super_admin
-        family = Family.new
-        user.family = family
-        user.role = User.role_for_new_family_creator
+        # Assign user to existing default family in invite_only mode, or create a new one
+        if (default_family_id = Setting.invite_only_default_family_id).present? &&
+           Setting.onboarding_state == "invite_only" &&
+           (default_family = Family.find_by(id: default_family_id))
+          user.family = default_family
+          user.role = :member
+        else
+          family = Family.new
+          user.family = family
+          user.role = User.role_for_new_family_creator
+        end
 
         if user.save
           # Claim invite code if provided
@@ -200,6 +206,11 @@ module Api
           # Accept the pending invitation: join the existing family
           user.family_id = invitation.family_id
           user.role = invitation.role
+        elsif (default_family_id = Setting.invite_only_default_family_id).present? &&
+              Setting.onboarding_state == "invite_only" &&
+              (default_family = Family.find_by(id: default_family_id))
+          user.family = default_family
+          user.role = :member
         else
           user.family = Family.new
 

@@ -187,6 +187,26 @@ class OidcAccountsControllerTest < ActionController::TestCase
     assert_equal new_user_auth["uid"], oidc_identity.uid
   end
 
+  test "create_user in invite_only mode with default_family_id assigns user to that family" do
+    family = families(:dylan_family)
+
+    Setting.stubs(:invite_only_default_family_id).returns(family.id.to_s)
+    Setting.stubs(:onboarding_state).returns("invite_only")
+
+    session[:pending_oidc_auth] = new_user_auth
+
+    assert_difference("User.count", 1) do
+      assert_no_difference("Family.count") do
+        post :create_user
+      end
+    end
+
+    assert_redirected_to root_path
+    new_user = User.find_by(email: new_user_auth["email"])
+    assert_equal family, new_user.family
+    assert_equal "member", new_user.role
+  end
+
   test "create_user uses form params for name when provided" do
     session[:pending_oidc_auth] = new_user_auth
 
