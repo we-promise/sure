@@ -385,7 +385,9 @@ Rails.application.routes.draw do
       resources :merchants, only: %i[index show]
       resources :tags, only: %i[index show create update destroy]
 
-      resources :transactions, only: [ :index, :show, :create, :update, :destroy ]
+      resources :transactions, only: [ :index, :show, :create, :update, :destroy ] do
+        resource :transfer, only: [ :update ], controller: "transaction_transfers"
+      end
       resources :trades, only: [ :index, :show, :create, :update, :destroy ]
       resources :holdings, only: [ :index, :show ]
       resources :valuations, only: [ :create, :update, :show ]
