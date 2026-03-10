@@ -148,7 +148,9 @@ class _SsoOnboardingScreenState extends State<SsoOnboardingScreen> {
                           ),
                           Expanded(
                             child: _TabButton(
-                              label: 'Create New',
+                              label: authProvider.ssoHasPendingInvitation
+                                  ? 'Accept Invitation'
+                                  : 'Create New',
                               isSelected: !_showLinkForm,
                               onTap: () =>
                                   setState(() => _showLinkForm = false),
@@ -258,6 +260,7 @@ class _SsoOnboardingScreenState extends State<SsoOnboardingScreen> {
   }
 
   Widget _buildCreateForm(AuthProvider authProvider, ColorScheme colorScheme) {
+    final hasPendingInvitation = authProvider.ssoHasPendingInvitation;
     return Form(
       key: _createFormKey,
       child: Column(
@@ -271,11 +274,16 @@ class _SsoOnboardingScreenState extends State<SsoOnboardingScreen> {
             ),
             child: Row(
               children: [
-                Icon(Icons.person_add, color: colorScheme.primary),
+                Icon(
+                  hasPendingInvitation ? Icons.mail_outline : Icons.person_add,
+                  color: colorScheme.primary,
+                ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    'Create a new account using your Google identity.',
+                    hasPendingInvitation
+                        ? 'You have a pending invitation. Accept it to join an existing household.'
+                        : 'Create a new account using your Google identity.',
                     style: TextStyle(color: colorScheme.onSurface),
                   ),
                 ),
@@ -318,7 +326,9 @@ class _SsoOnboardingScreenState extends State<SsoOnboardingScreen> {
                     width: 20,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                : const Text('Create Account'),
+                : Text(hasPendingInvitation
+                        ? 'Accept Invitation'
+                        : 'Create Account'),
           ),
         ],
       ),
