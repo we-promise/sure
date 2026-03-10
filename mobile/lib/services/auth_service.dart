@@ -374,6 +374,7 @@ class AuthService {
         'first_name': params['first_name'] ?? '',
         'last_name': params['last_name'] ?? '',
         'allow_account_creation': params['allow_account_creation'] == 'true',
+        'has_pending_invitation': params['has_pending_invitation'] == 'true',
       };
     }
 
