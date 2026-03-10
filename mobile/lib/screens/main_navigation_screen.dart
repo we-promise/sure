@@ -16,14 +16,18 @@ class MainNavigationScreen extends StatefulWidget {
   State<MainNavigationScreen> createState() => _MainNavigationScreenState();
 }
 
-class _MainNavigationScreenState extends State<MainNavigationScreen> {
+class _MainNavigationScreenState extends State<MainNavigationScreen>
+    with TickerProviderStateMixin {
   int _currentIndex = 0;
+  int _previousIndex = 0;
   final _dashboardKey = GlobalKey<DashboardScreenState>();
-  final PageController _pageController = PageController();
+  AnimationController? _slideController;
+  Animation<Offset>? _slideAnimation;
+  bool _isAnimating = false;
 
   @override
   void dispose() {
-    _pageController.dispose();
+    _slideController?.dispose();
     super.dispose();
   }
 
@@ -56,20 +60,45 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       }
     }
 
-    if (mounted) {
-      setState(() {
-        _currentIndex = index;
-      });
-      _pageController.animateToPage(
-        index,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOutCubic,
-      );
+    if (mounted && index != _currentIndex) {
+      _animateToIndex(index);
 
       if (!introLayout && index == 0) {
         _dashboardKey.currentState?.reloadPreferences();
       }
     }
+  }
+
+  void _animateToIndex(int newIndex) {
+    final goingForward = newIndex > _currentIndex;
+    _previousIndex = _currentIndex;
+
+    _slideController?.dispose();
+    _slideController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+
+    _slideAnimation = Tween<Offset>(
+      begin: Offset(goingForward ? 1.0 : -1.0, 0),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _slideController!,
+      curve: Curves.easeOutCubic,
+    ));
+
+    setState(() {
+      _isAnimating = true;
+      _currentIndex = newIndex;
+    });
+
+    _slideController!.forward().then((_) {
+      if (mounted) {
+        setState(() {
+          _isAnimating = false;
+        });
+      }
+    });
   }
 
   void _handleSelectSettings() {
@@ -207,6 +236,37 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     return enabled;
   }
 
+  Widget _buildBody(List<Widget> screens) {
+    if (!_isAnimating || _slideAnimation == null) {
+      // No animation — just show the current screen using IndexedStack
+      // to preserve state of all screens.
+      return IndexedStack(
+        index: _currentIndex,
+        children: screens,
+      );
+    }
+
+    // During animation: show previous screen underneath, new screen sliding
+    // on top — the "card shuffle" effect.
+    return Stack(
+      children: [
+        // Previous screen stays in place as background
+        IndexedStack(
+          index: _previousIndex,
+          children: screens,
+        ),
+        // New screen slides in on top
+        SlideTransition(
+          position: _slideAnimation!,
+          child: IndexedStack(
+            index: _currentIndex,
+            children: screens,
+          ),
+        ),
+      ],
+    );
+  }
+
   int _resolveBottomSelectedIndex(List<NavigationDestination> destinations) {
     if (destinations.isEmpty) {
       return 0;
@@ -238,20 +298,11 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
 
         if (_currentIndex >= screens.length) {
           _currentIndex = 0;
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (_pageController.hasClients) {
-              _pageController.jumpToPage(0);
-            }
-          });
         }
 
         return Scaffold(
           appBar: _buildTopBar(authProvider, introLayout),
-          body: PageView(
-            controller: _pageController,
-            physics: const NeverScrollableScrollPhysics(),
-            children: screens,
-          ),
+          body: _buildBody(screens),
           bottomNavigationBar: NavigationBar(
             selectedIndex: bottomNavIndex,
             onDestinationSelected: (index) {
