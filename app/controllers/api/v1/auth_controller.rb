@@ -178,7 +178,10 @@ module Api
 
         email = cached[:email]
 
-        unless cached[:allow_account_creation]
+        # Check for a pending invitation for this email
+        invitation = Invitation.pending.find_by(email: email)
+
+        unless invitation.present? || cached[:allow_account_creation]
           render json: { error: "SSO account creation is disabled. Please contact an administrator." }, status: :forbidden
           return
         end
@@ -193,13 +196,22 @@ module Api
           skip_password_validation: true
         )
 
-        user.family = Family.new
+        if invitation.present?
+          # Accept the pending invitation: join the existing family
+          user.family_id = invitation.family_id
+          user.role = invitation.role
+        else
+          user.family = Family.new
 
-        provider_config = Rails.configuration.x.auth.sso_providers&.find { |p| p[:name] == cached[:provider] }
-        provider_default_role = provider_config&.dig(:settings, :default_role)
-        user.role = User.role_for_new_family_creator(fallback_role: provider_default_role || :admin)
+          provider_config = Rails.configuration.x.auth.sso_providers&.find { |p| p[:name] == cached[:provider] }
+          provider_default_role = provider_config&.dig(:settings, :default_role)
+          user.role = User.role_for_new_family_creator(fallback_role: provider_default_role || :admin)
+        end
 
         if user.save
+          # Mark invitation as accepted if one was used
+          invitation&.update!(accepted_at: Time.current)
+
           OidcIdentity.create_from_omniauth(build_omniauth_hash(cached), user)
 
           SsoAuditLog.log_jit_account_created!(

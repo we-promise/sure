@@ -29,6 +29,7 @@ class AuthProvider with ChangeNotifier {
   String? _ssoFirstName;
   String? _ssoLastName;
   bool _ssoAllowAccountCreation = false;
+  bool _ssoHasPendingInvitation = false;
 
   User? get user => _user;
   bool get isIntroLayout => _user?.isIntroLayout ?? false;
@@ -51,6 +52,7 @@ class AuthProvider with ChangeNotifier {
   String? get ssoFirstName => _ssoFirstName;
   String? get ssoLastName => _ssoLastName;
   bool get ssoAllowAccountCreation => _ssoAllowAccountCreation;
+  bool get ssoHasPendingInvitation => _ssoHasPendingInvitation;
 
   AuthProvider() {
     _loadStoredAuth();
@@ -294,6 +296,7 @@ class AuthProvider with ChangeNotifier {
         _ssoFirstName = result['first_name'] as String?;
         _ssoLastName = result['last_name'] as String?;
         _ssoAllowAccountCreation = result['allow_account_creation'] == true;
+        _ssoHasPendingInvitation = result['has_pending_invitation'] == true;
         _isLoading = false;
         notifyListeners();
         return false;
@@ -410,6 +413,7 @@ class AuthProvider with ChangeNotifier {
     _ssoFirstName = null;
     _ssoLastName = null;
     _ssoAllowAccountCreation = false;
+    _ssoHasPendingInvitation = false;
   }
 
   Future<void> logout() async {
