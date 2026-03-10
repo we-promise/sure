@@ -80,5 +80,4 @@ class Assistant::Function::LinkTransfer < Assistant::Function
   rescue => e
     { error: "Unexpected error: #{e.message}" }
   end
-
 end
