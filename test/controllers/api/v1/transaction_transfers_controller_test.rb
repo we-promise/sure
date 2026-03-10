@@ -88,6 +88,27 @@ class Api::V1::TransactionTransfersControllerTest < ActionDispatch::IntegrationT
     assert_equal @outflow_transaction, transfer.outflow_transaction
   end
 
+  test "returns 422 when both transactions have the same sign amounts" do
+    # Both amounts are positive — the Transfer model's transfer_has_opposite_amounts validation will reject this
+    same_sign_account = accounts(:connected)
+    same_sign_entry = same_sign_account.entries.create!(
+      name: "Also outflow",
+      date: Date.current,
+      amount: 150.00,  # same sign as @outflow_transaction (+150.00)
+      currency: "USD",
+      entryable: Transaction.new
+    )
+
+    patch api_v1_transaction_transfer_url(@outflow_transaction),
+          params: { transfer: { other_transaction_id: same_sign_entry.transaction.id } },
+          headers: api_headers(@api_key),
+          as: :json
+
+    assert_response :unprocessable_entity
+    response_data = JSON.parse(response.body)
+    assert_equal "validation_failed", response_data["error"]
+  end
+
   test "returns 404 when transaction not found" do
     patch api_v1_transaction_transfer_url("00000000-0000-0000-0000-000000000000"),
           params: { transfer: { other_transaction_id: @inflow_transaction.id } },
