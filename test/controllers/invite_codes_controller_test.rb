@@ -4,17 +4,21 @@ class InviteCodesControllerTest < ActionDispatch::IntegrationTest
   setup do
     Rails.application.config.app_mode.stubs(:self_hosted?).returns(true)
   end
-  test "admin can generate invite codes" do
-    sign_in users(:family_admin)
+  test "super admin can generate invite codes" do
+    sign_in users(:sure_support_staff)
 
     assert_difference("InviteCode.count") do
       post invite_codes_url, params: {}
     end
   end
 
-  test "non-admin cannot generate invite codes" do
-    sign_in users(:family_member)
+  test "non-super-admin cannot generate invite codes" do
+    sign_in users(:family_admin)
 
-    assert_raises(StandardError) { post invite_codes_url, params: {} }
+    assert_no_difference("InviteCode.count") do
+      post invite_codes_url, params: {}
+    end
+
+    assert_redirected_to root_path
   end
 end
