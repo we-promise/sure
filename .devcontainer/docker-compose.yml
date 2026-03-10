@@ -13,9 +13,7 @@ x-rails-env: &rails_env
 
 services:
   app:
-    build:
-      context: ..
-      dockerfile: .devcontainer/Dockerfile
+    image: ghcr.io/stephenyctsedev/sure:latest
     volumes:
       - ./.bashrc:/root/.bashrc:ro,cached
       - ..:/workspace:cached
@@ -30,9 +28,7 @@ services:
       - redis
 
   worker:
-    build:
-      context: ..
-      dockerfile: .devcontainer/Dockerfile
+    image: ghcr.io/stephenyctsedev/sure:latest
     volumes:
       - ..:/workspace:cached
       - bundle_cache:/bundle
