@@ -1,5 +1,8 @@
 ---
 en:
+  breadcrumbs:
+    home: Home
+    merchants: Merchants
   shared:
     confirm_modal:
       accept: Confirm
