@@ -61,13 +61,13 @@ class Transfer < ApplicationRecord
 
     private
 
-    def assign_inflow_outflow(txn_a, txn_b)
-      if txn_a.entry.amount.negative?
-        [ txn_a, txn_b ]
-      else
-        [ txn_b, txn_a ]
+      def assign_inflow_outflow(txn_a, txn_b)
+        if txn_a.entry.amount.negative?
+          [ txn_a, txn_b ]
+        else
+          [ txn_b, txn_a ]
+        end
       end
-    end
   end
 
   def reject!
