@@ -16,9 +16,12 @@ export default class extends Controller {
     new CurrenciesService().get(currency).then((currency) => {
       this.amountTarget.step = currency.step;
 
-      const parsedAmount = parseLocaleFloat(this.amountTarget.value);
-      if (Number.isFinite(parsedAmount)) {
-        this.amountTarget.value = parsedAmount.toFixed(currency.default_precision);
+      const rawValue = this.amountTarget.value.trim();
+      if (rawValue !== "") {
+        const parsedAmount = parseLocaleFloat(rawValue);
+        if (Number.isFinite(parsedAmount)) {
+          this.amountTarget.value = parsedAmount.toFixed(currency.default_precision);
+        }
       }
 
       this.symbolTarget.innerText = currency.symbol;
