@@ -106,6 +106,31 @@ class Api::V1::TransactionTransfersControllerTest < ActionDispatch::IntegrationT
     assert_response :not_found
   end
 
+  test "returns 404 when other_transaction_id belongs to a different family" do
+    # Create a transaction in a different family (empty family has no accounts in fixtures)
+    other_family = families(:empty)
+    other_family_account = other_family.accounts.create!(
+      name: "Other Family Checking",
+      balance: 1000,
+      currency: "USD",
+      accountable: Depository.new
+    )
+    other_entry = other_family_account.entries.create!(
+      name: "Other family transaction",
+      date: Date.current,
+      amount: -150.00,
+      currency: "USD",
+      entryable: Transaction.new
+    )
+
+    patch api_v1_transaction_transfer_url(@outflow_transaction),
+          params: { transfer: { other_transaction_id: other_entry.transaction.id } },
+          headers: api_headers(@api_key),
+          as: :json
+
+    assert_response :not_found
+  end
+
   test "returns 422 when other_transaction_id is missing" do
     patch api_v1_transaction_transfer_url(@outflow_transaction),
           params: { transfer: {} },
