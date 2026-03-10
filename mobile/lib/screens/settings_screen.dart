@@ -405,16 +405,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ListTile(
             leading: const Icon(Icons.info_outline),
             title: Text('App Version: ${_appVersion ?? '…'}'),
-            subtitle: AppConfig.isCompanion
-                ? null
-                : Column(
+            subtitle: authProvider.user?.email.endsWith('@chancen.international') == true
+                ? Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(' > ui_layout: ${authProvider.user?.uiLayout}'),
                       Text(' > ai_enabled: ${authProvider.user?.aiEnabled}'),
                     ],
-                  ),
+                  )
+                : null,
           ),
 
           ListTile(
