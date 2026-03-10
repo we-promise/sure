@@ -332,6 +332,8 @@ class TransactionsController < ApplicationController
 
       nature = entry_params.delete(:nature)
 
+      entry_params.delete(:amount) if entry_params[:amount].blank?
+
       if nature.present? && entry_params[:amount].present?
         signed_amount = nature == "inflow" ? -entry_params[:amount].to_d : entry_params[:amount].to_d
         entry_params = entry_params.merge(amount: signed_amount)
