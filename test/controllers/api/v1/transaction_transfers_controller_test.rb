@@ -28,8 +28,8 @@ class Api::V1::TransactionTransfersControllerTest < ActionDispatch::IntegrationT
     Redis.new.del("api_rate_limit:#{@read_only_api_key.id}")
 
     # Set up two unlinked transactions with opposite amounts on different accounts
-    checking = @family.accounts.find_by!(accountable_type: "Depository")
-    credit_card = @family.accounts.find_by!(accountable_type: "CreditCard")
+    checking = accounts(:depository)
+    credit_card = accounts(:credit_card)
 
     outflow_entry = checking.entries.create!(
       name: "CC payment",
@@ -88,6 +88,27 @@ class Api::V1::TransactionTransfersControllerTest < ActionDispatch::IntegrationT
     assert_equal @outflow_transaction, transfer.outflow_transaction
   end
 
+  test "returns 422 when both transactions have the same sign amounts" do
+    # Both amounts are positive — the Transfer model's transfer_has_opposite_amounts validation will reject this
+    same_sign_account = accounts(:connected)
+    same_sign_entry = same_sign_account.entries.create!(
+      name: "Also outflow",
+      date: Date.current,
+      amount: 150.00,  # same sign as @outflow_transaction (+150.00)
+      currency: "USD",
+      entryable: Transaction.new
+    )
+
+    patch api_v1_transaction_transfer_url(@outflow_transaction),
+          params: { transfer: { other_transaction_id: same_sign_entry.transaction.id } },
+          headers: api_headers(@api_key),
+          as: :json
+
+    assert_response :unprocessable_entity
+    response_data = JSON.parse(response.body)
+    assert_equal "validation_failed", response_data["error"]
+  end
+
   test "returns 404 when transaction not found" do
     patch api_v1_transaction_transfer_url("00000000-0000-0000-0000-000000000000"),
           params: { transfer: { other_transaction_id: @inflow_transaction.id } },
@@ -100,6 +121,31 @@ class Api::V1::TransactionTransfersControllerTest < ActionDispatch::IntegrationT
   test "returns 404 when other_transaction_id not found" do
     patch api_v1_transaction_transfer_url(@outflow_transaction),
           params: { transfer: { other_transaction_id: "00000000-0000-0000-0000-000000000000" } },
+          headers: api_headers(@api_key),
+          as: :json
+
+    assert_response :not_found
+  end
+
+  test "returns 404 when other_transaction_id belongs to a different family" do
+    # Create a transaction in a different family (empty family has no accounts in fixtures)
+    other_family = families(:empty)
+    other_family_account = other_family.accounts.create!(
+      name: "Other Family Checking",
+      balance: 1000,
+      currency: "USD",
+      accountable: Depository.new
+    )
+    other_entry = other_family_account.entries.create!(
+      name: "Other family transaction",
+      date: Date.current,
+      amount: -150.00,
+      currency: "USD",
+      entryable: Transaction.new
+    )
+
+    patch api_v1_transaction_transfer_url(@outflow_transaction),
+          params: { transfer: { other_transaction_id: other_entry.transaction.id } },
           headers: api_headers(@api_key),
           as: :json
 
@@ -124,7 +170,7 @@ class Api::V1::TransactionTransfersControllerTest < ActionDispatch::IntegrationT
     assert_response :ok
 
     # Create a new unlinked transaction and try to link the already-linked one
-    another_account = @family.accounts.find_by!(accountable_type: "Depository")
+    another_account = accounts(:connected)
     extra_entry = another_account.entries.create!(
       name: "Another transaction",
       date: Date.current,
