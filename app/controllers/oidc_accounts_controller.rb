@@ -129,7 +129,9 @@ class OidcAccountsController < ApplicationController
           Setting.onboarding_state == "invite_only" &&
           (default_family = Family.find_by(id: default_family_id))
       @user.family = default_family
-      @user.role = :member
+      provider_config = Rails.configuration.x.auth.sso_providers&.find { |p| p[:name] == @pending_auth["provider"] }
+      provider_default_role = provider_config&.dig(:settings, :default_role)
+      @user.role = provider_default_role || :member
     else
       # Create new family for this user
       @user.family = Family.new

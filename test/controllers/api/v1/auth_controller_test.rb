@@ -746,6 +746,41 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
     assert_equal "member", new_user.role
   end
 
+  test "sso_create_account in invite_only mode uses provider default_role" do
+    family = families(:dylan_family)
+
+    Setting.stubs(:invite_only_default_family_id).returns(family.id.to_s)
+    Setting.stubs(:onboarding_state).returns("invite_only")
+
+    provider_config = [ { name: "google_oauth2", settings: { default_role: "admin" } } ]
+    Rails.configuration.x.auth.stubs(:sso_providers).returns(provider_config)
+
+    linking_code = SecureRandom.urlsafe_base64(32)
+    Rails.cache.write("mobile_sso_link:#{linking_code}", {
+      provider: "google_oauth2",
+      uid: "google-uid-invite-role",
+      email: "inviteonly-role@example.com",
+      first_name: "Role",
+      last_name: "Test",
+      name: "Role Test",
+      device_info: @device_info.stringify_keys,
+      allow_account_creation: true
+    }, expires_in: 10.minutes)
+
+    assert_difference("User.count", 1) do
+      post "/api/v1/auth/sso_create_account", params: {
+        linking_code: linking_code,
+        first_name: "Role",
+        last_name: "Test"
+      }
+    end
+
+    assert_response :success
+    new_user = User.find_by(email: "inviteonly-role@example.com")
+    assert_equal family, new_user.family
+    assert_equal "admin", new_user.role
+  end
+
   test "should reject SSO create account when not allowed" do
     linking_code = SecureRandom.urlsafe_base64(32)
     Rails.cache.write("mobile_sso_link:#{linking_code}", {
