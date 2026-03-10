@@ -75,7 +75,7 @@ es:
         errors_title: "%{count} error impidió que se guardara este proveedor:"
         provisioning_title: "Aprovisionamiento de usuarios"
         default_role_label: "Rol predeterminado para nuevos usuarios"
-        default_role_help: "Rol asignado a los usuarios creados mediante el aprovisionamiento de cuentas SSO Just-In-Time (JIT). Por defecto es Miembro."
+        default_role_help: "Rol asignado a los usuarios creados mediante el aprovisionamiento de cuentas SSO Just-In-Time (JIT). Por defecto es Invitado."
         role_guest: "Invitado"
         role_member: "Miembro"
         role_admin: "Administrador"

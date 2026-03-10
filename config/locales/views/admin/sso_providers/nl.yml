@@ -75,7 +75,7 @@ nl:
         errors_title: "%{count} fout verhinderde het opslaan van deze provider:"
         provisioning_title: "Gebruikers Provisioning"
         default_role_label: "Standaard Rol voor Nieuwe Gebruikers"
-        default_role_help: "Rol toegewezen aan gebruikers die zijn aangemaakt via just-in-time (JIT) SSO account provisioning. Standaard is Lid."
+        default_role_help: "Rol toegewezen aan gebruikers die zijn aangemaakt via just-in-time (JIT) SSO account provisioning. Standaard is Gast."
         role_member: "Lid"
         role_admin: "Beheerder"
         role_super_admin: "Super Beheerder"

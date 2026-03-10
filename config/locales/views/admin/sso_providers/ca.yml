@@ -26,7 +26,7 @@ ca:
         client_secret_placeholder_new: el-teu-secret-client
         copy_button: Copia
         default_role_help: Rol assignat als usuaris creats mitjançant aprovisionament
-          de comptes SSO just-in-time (JIT). Per defecte és Membre.
+          de comptes SSO just-in-time (JIT). Per defecte és Convidat.
         default_role_label: Rol per defecte per a nous usuaris
         enabled_help: Els usuaris poden iniciar sessió amb aquest proveïdor quan està
           habilitat

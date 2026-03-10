@@ -75,7 +75,7 @@ de:
         errors_title: "%{count} Fehler verhinderte das Speichern dieses Providers:"
         provisioning_title: "Benutzer-Bereitstellung"
         default_role_label: "Standardrolle für neue Benutzer"
-        default_role_help: "Rolle für per JIT-SSO bereitgestellte Benutzer. Standard: Mitglied."
+        default_role_help: "Rolle für per JIT-SSO bereitgestellte Benutzer. Standard: Gast."
         role_guest: "Gast"
         role_member: "Mitglied"
         role_admin: "Admin"

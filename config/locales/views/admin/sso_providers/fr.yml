@@ -75,7 +75,7 @@ fr:
         errors_title: "%{count} erreur(s) ont empêché l'enregistrement de ce fournisseur :"
         provisioning_title: "Provisionnement des utilisateurs"
         default_role_label: "Rôle par défaut pour les nouveaux utilisateurs"
-        default_role_help: "Rôle attribué aux utilisateurs créés via le provisionnement SSO juste-à-temps (JIT). Par défaut : Membre."
+        default_role_help: "Rôle attribué aux utilisateurs créés via le provisionnement SSO juste-à-temps (JIT). Par défaut : Invité."
         role_member: "Membre"
         role_admin: "Administrateur"
         role_super_admin: "Super Administrateur"

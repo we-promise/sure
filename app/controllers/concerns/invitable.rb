@@ -31,7 +31,7 @@ module Invitable
 
     def sso_provider_default_role(provider_name)
       provider_config = Rails.configuration.x.auth.sso_providers&.find { |p| p[:name] == provider_name }
-      (provider_config&.dig(:settings, :default_role) || :member).to_sym
+      (provider_config&.dig(:settings, :default_role) || :guest).to_sym
     end
 
     def self_hosted?

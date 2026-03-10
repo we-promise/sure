@@ -75,7 +75,7 @@ en:
         errors_title: "%{count} error prohibited this provider from being saved:"
         provisioning_title: "User Provisioning"
         default_role_label: "Default Role for New Users"
-        default_role_help: "Role assigned to users created via just-in-time (JIT) SSO account provisioning. Defaults to Member."
+        default_role_help: "Role assigned to users created via just-in-time (JIT) SSO account provisioning. Defaults to Guest."
         role_guest: "Guest"
         role_member: "Member"
         role_admin: "Admin"
