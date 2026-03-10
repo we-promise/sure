@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../app_config.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../providers/auth_provider.dart';
+import '../providers/theme_provider.dart';
 import '../services/offline_storage_service.dart';
 import '../services/log_service.dart';
 import '../services/preferences_service.dart';
@@ -405,16 +406,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ListTile(
             leading: const Icon(Icons.info_outline),
             title: Text('App Version: ${_appVersion ?? '…'}'),
-            subtitle: authProvider.user?.email.endsWith('@chancen.international') == true
-                ? Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(' > ui_layout: ${authProvider.user?.uiLayout}'),
-                      Text(' > ai_enabled: ${authProvider.user?.aiEnabled}'),
-                    ],
-                  )
-                : null,
           ),
 
           ListTile(
@@ -428,6 +419,61 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ),
             onTap: () => _launchContactUrl(context),
+          ),
+
+          const Divider(),
+
+          // Theme switcher
+          const Padding(
+            padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: Text(
+              'Appearance',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey,
+              ),
+            ),
+          ),
+
+          Consumer<ThemeProvider>(
+            builder: (context, themeProvider, _) {
+              return ListTile(
+                leading: Icon(
+                  themeProvider.themeMode == ThemeMode.dark
+                      ? Icons.dark_mode
+                      : themeProvider.themeMode == ThemeMode.light
+                          ? Icons.light_mode
+                          : Icons.brightness_auto,
+                ),
+                title: const Text('Theme'),
+                trailing: SegmentedButton<ThemeMode>(
+                  segments: const [
+                    ButtonSegment(
+                      value: ThemeMode.light,
+                      icon: Icon(Icons.light_mode, size: 18),
+                    ),
+                    ButtonSegment(
+                      value: ThemeMode.system,
+                      icon: Icon(Icons.brightness_auto, size: 18),
+                    ),
+                    ButtonSegment(
+                      value: ThemeMode.dark,
+                      icon: Icon(Icons.dark_mode, size: 18),
+                    ),
+                  ],
+                  selected: {themeProvider.themeMode},
+                  onSelectionChanged: (selection) {
+                    themeProvider.setThemeMode(selection.first);
+                  },
+                  showSelectedIcon: false,
+                  style: ButtonStyle(
+                    visualDensity: VisualDensity.compact,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                ),
+              );
+            },
           ),
 
           if (authProvider.user?.email.endsWith('@chancen.international') == true) ...[
