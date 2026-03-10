@@ -28,8 +28,8 @@ class Api::V1::TransactionTransfersControllerTest < ActionDispatch::IntegrationT
     Redis.new.del("api_rate_limit:#{@read_only_api_key.id}")
 
     # Set up two unlinked transactions with opposite amounts on different accounts
-    checking = @family.accounts.find_by!(accountable_type: "Depository")
-    credit_card = @family.accounts.find_by!(accountable_type: "CreditCard")
+    checking = accounts(:depository)
+    credit_card = accounts(:credit_card)
 
     outflow_entry = checking.entries.create!(
       name: "CC payment",
@@ -124,7 +124,7 @@ class Api::V1::TransactionTransfersControllerTest < ActionDispatch::IntegrationT
     assert_response :ok
 
     # Create a new unlinked transaction and try to link the already-linked one
-    another_account = @family.accounts.find_by!(accountable_type: "Depository")
+    another_account = accounts(:connected)
     extra_entry = another_account.entries.create!(
       name: "Another transaction",
       date: Date.current,
