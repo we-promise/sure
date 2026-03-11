@@ -10,7 +10,14 @@ export default class extends Controller {
   };
 
   connect() {
-    this.open();
+    this._disconnected = false;
+    this.open().catch((error) => {
+      console.error("Failed to initialize Plaid Link", error);
+    });
+  }
+
+  disconnect() {
+    this._disconnected = true;
   }
 
   waitForPlaid() {
@@ -34,11 +41,19 @@ export default class extends Controller {
       plaidScript.addEventListener("error", () => {
         reject(new Error("Failed to load Plaid script"));
       }, { once: true });
+
+      // Re-check after attaching listeners in case the script loaded between
+      // the initial typeof check and listener attachment (avoids a permanently
+      // pending promise on retry flows).
+      if (typeof Plaid !== "undefined") {
+        resolve();
+      }
     });
   }
 
   async open() {
     await this.waitForPlaid();
+    if (this._disconnected) return;
 
     const handler = Plaid.create({
       token: this.linkTokenValue,
