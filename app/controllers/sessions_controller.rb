@@ -277,6 +277,9 @@ class SessionsController < ApplicationController
       device_info = session.delete(:mobile_sso)
       email = auth.info&.email
 
+      has_pending_invitation = email.present? && Invitation.pending.exists?(email: email)
+      allow_creation = has_pending_invitation || (!AuthConfig.jit_link_only? && AuthConfig.allowed_oidc_domain?(email))
+
       linking_code = SecureRandom.urlsafe_base64(32)
       Rails.cache.write(
         "mobile_sso_link:#{linking_code}",
@@ -289,7 +292,7 @@ class SessionsController < ApplicationController
           name: auth.info&.name,
           issuer: auth.extra&.raw_info&.iss || auth.extra&.raw_info&.[]("iss"),
           device_info: device_info,
-          allow_account_creation: !AuthConfig.jit_link_only? && AuthConfig.allowed_oidc_domain?(email)
+          allow_account_creation: allow_creation
         },
         expires_in: 10.minutes
       )
@@ -300,7 +303,8 @@ class SessionsController < ApplicationController
         email: email,
         first_name: auth.info&.first_name,
         last_name: auth.info&.last_name,
-        allow_account_creation: !AuthConfig.jit_link_only? && AuthConfig.allowed_oidc_domain?(email)
+        allow_account_creation: allow_creation,
+        has_pending_invitation: has_pending_invitation
       )
     end
 

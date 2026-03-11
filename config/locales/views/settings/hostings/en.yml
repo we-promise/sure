@@ -7,6 +7,9 @@ en:
         email_confirmation_description: When enabled, users must confirm their email
           address when changing it.
         email_confirmation_title: Require email confirmation
+        default_family_title: Default family for new users
+        default_family_description: "Put new users on this family/group only if they have no invitation."
+        default_family_none: None (create new family)
         generate_tokens: Generate new code
         generated_tokens: Generated codes
         title: Onboarding
