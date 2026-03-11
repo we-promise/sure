@@ -30,6 +30,7 @@ class AuthProvider with ChangeNotifier {
   String? _ssoLastName;
   bool _ssoAllowAccountCreation = false;
   bool _ssoHasPendingInvitation = false;
+  bool _ssoAccessDenied = false;
 
   User? get user => _user;
   bool get isIntroLayout => _user?.isIntroLayout ?? false;
@@ -53,6 +54,7 @@ class AuthProvider with ChangeNotifier {
   String? get ssoLastName => _ssoLastName;
   bool get ssoAllowAccountCreation => _ssoAllowAccountCreation;
   bool get ssoHasPendingInvitation => _ssoHasPendingInvitation;
+  bool get ssoAccessDenied => _ssoAccessDenied;
 
   AuthProvider() {
     _loadStoredAuth();
@@ -289,14 +291,25 @@ class AuthProvider with ChangeNotifier {
         notifyListeners();
         return true;
       } else if (result['account_not_linked'] == true) {
+        final allowCreation = result['allow_account_creation'] == true;
+        final hasPendingInvitation = result['has_pending_invitation'] == true;
+
+        if (!allowCreation && !hasPendingInvitation) {
+          // User is not invited — show access denied screen
+          _ssoAccessDenied = true;
+          _isLoading = false;
+          notifyListeners();
+          return false;
+        }
+
         // SSO onboarding needed - store linking data
         _ssoOnboardingPending = true;
         _ssoLinkingCode = result['linking_code'] as String?;
         _ssoEmail = result['email'] as String?;
         _ssoFirstName = result['first_name'] as String?;
         _ssoLastName = result['last_name'] as String?;
-        _ssoAllowAccountCreation = result['allow_account_creation'] == true;
-        _ssoHasPendingInvitation = result['has_pending_invitation'] == true;
+        _ssoAllowAccountCreation = allowCreation;
+        _ssoHasPendingInvitation = hasPendingInvitation;
         _isLoading = false;
         notifyListeners();
         return false;
@@ -406,8 +419,15 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  void dismissAccessDenied() {
+    _ssoAccessDenied = false;
+    _clearSsoOnboardingState();
+    notifyListeners();
+  }
+
   void _clearSsoOnboardingState() {
     _ssoOnboardingPending = false;
+    _ssoAccessDenied = false;
     _ssoLinkingCode = null;
     _ssoEmail = null;
     _ssoFirstName = null;
