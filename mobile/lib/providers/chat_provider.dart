@@ -271,7 +271,11 @@ class ChatProvider with ChangeNotifier {
     _pollingTimer = null;
   }
 
-  /// Poll for updates
+  /// Poll for updates.
+  /// While polling, the assistant's in-progress response is buffered and NOT
+  /// shown to the user.  Only once the response has stabilised (identical
+  /// message count and content on two consecutive polls) is `_currentChat`
+  /// updated so the full message appears all at once.
   Future<void> _pollForUpdates(String accessToken, String chatId) async {
     _pollCount++;
 
@@ -297,8 +301,6 @@ class ChatProvider with ChangeNotifier {
           return;
         }
 
-        _currentChat = updatedChat;
-
         // The server defaults all messages to status "complete", so we
         // cannot rely on the status field.  Instead, stop polling only
         // when the response has truly stabilised: the message count AND
@@ -317,10 +319,13 @@ class ChatProvider with ChangeNotifier {
         if (isStable &&
             lastMessage != null &&
             lastMessage.isAssistant) {
+          // Response is complete — reveal the full message and stop polling
+          _currentChat = updatedChat;
           _stopPolling();
+          notifyListeners();
         }
-
-        notifyListeners();
+        // While still generating, don't update _currentChat so the UI
+        // keeps showing the thinking indicator without partial text.
       }
     } catch (e) {
       debugPrint('Polling error: ${e.toString()}');
