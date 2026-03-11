@@ -185,6 +185,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_08_113006) do
     t.datetime "updated_at", null: false
     t.uuid "parent_id"
     t.string "lucide_icon", default: "shapes", null: false
+    t.string "classification_unused", default: "expense", null: false
     t.index ["family_id"], name: "index_categories_on_family_id"
   end
 
