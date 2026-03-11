@@ -10,6 +10,7 @@ class Category < ApplicationRecord
 
   validates :name, :color, :lucide_icon, :family, presence: true
   validates :name, uniqueness: { scope: :family_id }
+  validates :classification, inclusion: { in: %w[income expense] }
 
   validate :category_level_limit
   validate :nested_category_matches_parent_classification

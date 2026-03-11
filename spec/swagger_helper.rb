@@ -245,6 +245,37 @@ RSpec.configure do |config|
               }
             }
           },
+          CreateCategoryRequest: {
+            type: :object,
+            required: %w[name classification],
+            properties: {
+              name: { type: :string, description: 'Category name' },
+              classification: { type: :string, enum: %w[income expense], description: 'income or expense' },
+              color: { type: :string, description: 'Hex color string (e.g. #6172F3)', nullable: true },
+              icon: { type: :string, description: 'Lucide icon name (e.g. shapes)', nullable: true },
+              parent_id: {
+                type: :string,
+                format: :uuid,
+                description: 'ID of a root category to nest under',
+                nullable: true
+              }
+            }
+          },
+          UpdateCategoryRequest: {
+            type: :object,
+            properties: {
+              name: { type: :string, description: 'Category name', nullable: true },
+              classification: { type: :string, enum: %w[income expense], nullable: true },
+              color: { type: :string, description: 'Hex color string', nullable: true },
+              icon: { type: :string, description: 'Lucide icon name', nullable: true },
+              parent_id: {
+                type: :string,
+                format: :uuid,
+                description: 'Root category ID to nest under (omit to leave unchanged)',
+                nullable: true
+              }
+            }
+          },
           Merchant: {
             type: :object,
             required: %w[id name],

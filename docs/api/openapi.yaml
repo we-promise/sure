@@ -346,6 +346,60 @@ components:
             "$ref": "#/components/schemas/CategoryDetail"
         pagination:
           "$ref": "#/components/schemas/Pagination"
+    CreateCategoryRequest:
+      type: object
+      required:
+      - name
+      - classification
+      properties:
+        name:
+          type: string
+          description: Category name
+        classification:
+          type: string
+          enum:
+          - income
+          - expense
+          description: income or expense
+        color:
+          type: string
+          description: Hex color string (e.g. #6172F3)
+          nullable: true
+        icon:
+          type: string
+          description: Lucide icon name (e.g. shapes)
+          nullable: true
+        parent_id:
+          type: string
+          format: uuid
+          description: ID of a root category to nest under
+          nullable: true
+    UpdateCategoryRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Category name
+          nullable: true
+        classification:
+          type: string
+          enum:
+          - income
+          - expense
+          nullable: true
+        color:
+          type: string
+          description: Hex color string
+          nullable: true
+        icon:
+          type: string
+          description: Lucide icon name
+          nullable: true
+        parent_id:
+          type: string
+          format: uuid
+          description: Root category ID to nest under (omit to leave unchanged)
+          nullable: true
     Merchant:
       type: object
       required:
@@ -1351,6 +1405,35 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/CategoryCollection"
+    post:
+      summary: Create a category
+      tags:
+      - Categories
+      security:
+      - apiKeyAuth: []
+      parameters: []
+      responses:
+        '201':
+          description: category created
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/CategoryDetail"
+        '422':
+          description: validation failed
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                category:
+                  "$ref": "#/components/schemas/CreateCategoryRequest"
+        required: true
   "/api/v1/categories/{id}":
     parameters:
     - name: id
@@ -1378,6 +1461,41 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
+    patch:
+      summary: Update a category
+      tags:
+      - Categories
+      security:
+      - apiKeyAuth: []
+      parameters: []
+      responses:
+        '200':
+          description: category updated
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/CategoryDetail"
+        '404':
+          description: category not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '422':
+          description: validation failed
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                category:
+                  "$ref": "#/components/schemas/UpdateCategoryRequest"
+        required: true
   "/api/v1/chats":
     get:
       summary: List chats
