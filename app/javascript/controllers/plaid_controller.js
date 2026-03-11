@@ -33,6 +33,12 @@ export default class extends Controller {
         'script[src*="link-initialize.js"]'
       );
 
+      // Reject if the CDN request stalls without firing load or error
+      const timeoutId = window.setTimeout(() => {
+        if (plaidScript) plaidScript.dataset.plaidState = "error";
+        reject(new Error("Timed out loading Plaid script"));
+      }, 10_000);
+
       // Remove previously failed script so we can retry with a fresh element
       if (plaidScript?.dataset.plaidState === "error") {
         plaidScript.remove();
@@ -48,10 +54,12 @@ export default class extends Controller {
       }
 
       plaidScript.addEventListener("load", () => {
+        window.clearTimeout(timeoutId);
         plaidScript.dataset.plaidState = "loaded";
         resolve();
       }, { once: true });
       plaidScript.addEventListener("error", () => {
+        window.clearTimeout(timeoutId);
         plaidScript.dataset.plaidState = "error";
         reject(new Error("Failed to load Plaid script"));
       }, { once: true });
@@ -60,6 +68,7 @@ export default class extends Controller {
       // the initial typeof check and listener attachment (avoids a permanently
       // pending promise on retry flows).
       if (typeof Plaid !== "undefined") {
+        window.clearTimeout(timeoutId);
         resolve();
       }
     });
