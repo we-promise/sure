@@ -476,7 +476,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             },
           ),
 
-          if (authProvider.user?.email.endsWith('@chancen.international') == true) ...[
+          if (AppConfig.canSwitchEnvironment(authProvider.user?.email)) ...[
             const Divider(),
 
             // Environment switcher

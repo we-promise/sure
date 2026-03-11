@@ -6,7 +6,6 @@ import 'package:flutter_svg/flutter_svg.dart';
 import '../app_config.dart';
 import '../providers/auth_provider.dart';
 import '../services/api_config.dart';
-import '../services/offline_storage_service.dart';
 
 class LoginScreen extends StatefulWidget {
   final VoidCallback? onGoToSettings;
@@ -26,13 +25,10 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _obscurePassword = true;
   late final TapGestureRecognizer _signUpTapRecognizer;
 
-  String? _selectedEnvironment;
-
   @override
   void initState() {
     super.initState();
     _signUpTapRecognizer = TapGestureRecognizer()..onTap = _openSignUpPage;
-    _loadSelectedEnvironment();
   }
 
   @override
@@ -42,47 +38,6 @@ class _LoginScreenState extends State<LoginScreen> {
     _passwordController.dispose();
     _otpController.dispose();
     super.dispose();
-  }
-
-  Future<void> _loadSelectedEnvironment() async {
-    try {
-      final env = await ApiConfig.getCurrentEnvironment();
-      if (mounted) {
-        setState(() {
-          _selectedEnvironment = env ?? 'Staging';
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _selectedEnvironment = 'Staging';
-        });
-      }
-    }
-  }
-
-  Future<void> _changeEnvironment(String envName) async {
-    final success = await ApiConfig.setEnvironment(envName);
-    if (success && mounted) {
-      setState(() {
-        _selectedEnvironment = envName;
-      });
-      // Clear offline cache when switching environments
-      await OfflineStorageService().clearAllData();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Switched to $envName environment'),
-          duration: const Duration(seconds: 2),
-        ),
-      );
-    } else if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Failed to change environment'),
-          duration: const Duration(seconds: 2),
-        ),
-      );
-    }
   }
 
   Future<void> _openSignUpPage() async {
@@ -535,44 +490,6 @@ class _LoginScreenState extends State<LoginScreen> {
                     ],
                   ],
                 ),
-              ),
-            ),
-            // environment dropdown at top right
-            Positioned(
-              top: 8,
-              right: 8,
-              child: PopupMenuButton<String>(
-                icon: const Icon(Icons.settings),
-                tooltip: 'Environment',
-                onSelected: _changeEnvironment,
-                itemBuilder: (BuildContext context) => [
-                  PopupMenuItem<String>(
-                    value: 'Staging',
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (_selectedEnvironment == 'Staging')
-                          Icon(Icons.check, color: colorScheme.primary, size: 20),
-                        if (_selectedEnvironment == 'Staging')
-                          const SizedBox(width: 8),
-                        const Text('Staging'),
-                      ],
-                    ),
-                  ),
-                  PopupMenuItem<String>(
-                    value: 'Production',
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (_selectedEnvironment == 'Production')
-                          Icon(Icons.check, color: colorScheme.primary, size: 20),
-                        if (_selectedEnvironment == 'Production')
-                          const SizedBox(width: 8),
-                        const Text('Production'),
-                      ],
-                    ),
-                  ),
-                ],
               ),
             ),
             if (!AppConfig.isCompanion && _enableAdvancedLoginOptions)
