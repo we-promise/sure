@@ -100,6 +100,8 @@ jobs:
           if [ -f "${{ runner.temp }}/mobile-artifacts/app-debug.apk" ]; then
             cp "${{ runner.temp }}/mobile-artifacts/app-debug.apk" \
                "${{ runner.temp }}/release-assets/sure-${VERSION}-debug.apk"
+            cp "${{ runner.temp }}/mobile-artifacts/app-debug.apk" \
+               "${{ runner.temp }}/release-assets/companion-${VERSION}-debug.apk"
             echo "✓ Debug APK prepared"
           fi
 
@@ -107,6 +109,8 @@ jobs:
           if [ -f "${{ runner.temp }}/mobile-artifacts/app-release.apk" ]; then
             cp "${{ runner.temp }}/mobile-artifacts/app-release.apk" \
                "${{ runner.temp }}/release-assets/sure-${VERSION}.apk"
+            cp "${{ runner.temp }}/mobile-artifacts/app-release.apk" \
+               "${{ runner.temp }}/release-assets/companion-${VERSION}.apk"
             echo "✓ Release APK prepared"
           fi
 

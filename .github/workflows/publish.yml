@@ -302,12 +302,14 @@ jobs:
           # Copy debug APK if it exists
           if [ -f "${{ runner.temp }}/mobile-artifacts/app-debug.apk" ]; then
             cp "${{ runner.temp }}/mobile-artifacts/app-debug.apk" "${{ runner.temp }}/release-assets/sure-${{ github.ref_name }}-debug.apk"
+            cp "${{ runner.temp }}/mobile-artifacts/app-debug.apk" "${{ runner.temp }}/release-assets/companion-${{ github.ref_name }}-debug.apk"
             echo "✓ Debug APK prepared"
           fi
 
           # Copy release APK if it exists
           if [ -f "${{ runner.temp }}/mobile-artifacts/app-release.apk" ]; then
             cp "${{ runner.temp }}/mobile-artifacts/app-release.apk" "${{ runner.temp }}/release-assets/sure-${{ github.ref_name }}.apk"
+            cp "${{ runner.temp }}/mobile-artifacts/app-release.apk" "${{ runner.temp }}/release-assets/companion-${{ github.ref_name }}.apk"
             echo "✓ Release APK prepared"
           fi
 
