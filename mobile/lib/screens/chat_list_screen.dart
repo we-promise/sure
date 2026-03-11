@@ -39,8 +39,11 @@ class _ChatListScreenState extends State<ChatListScreen> {
     if (mounted) {
       await Navigator.push(
         context,
-        MaterialPageRoute(
-          builder: (context) => const ChatConversationScreen(),
+        PageRouteBuilder(
+          pageBuilder: (_, __, ___) => const ChatConversationScreen(),
+          transitionsBuilder: (_, animation, __, child) =>
+              FadeTransition(opacity: animation, child: child),
+          transitionDuration: const Duration(milliseconds: 300),
         ),
       );
 
@@ -262,8 +265,11 @@ class _ChatListScreenState extends State<ChatListScreen> {
                     onTap: () async {
                       await Navigator.push(
                         context,
-                        MaterialPageRoute(
-                          builder: (context) => ChatConversationScreen(chatId: chat.id),
+                        PageRouteBuilder(
+                          pageBuilder: (_, __, ___) => ChatConversationScreen(chatId: chat.id),
+                          transitionsBuilder: (_, animation, __, child) =>
+                              FadeTransition(opacity: animation, child: child),
+                          transitionDuration: const Duration(milliseconds: 300),
                         ),
                       );
                       _loadChats();
