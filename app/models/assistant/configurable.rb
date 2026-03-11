@@ -84,13 +84,13 @@ module Assistant::Configurable
         )
 
         content = case compiled_prompt
-                  when String
-                    compiled_prompt
-                  when Array
-                    compiled_prompt.filter_map { |message| message[:content] }.join("\n\n")
-                  else
-                    nil
-                  end
+        when String
+          compiled_prompt
+        when Array
+          compiled_prompt.filter_map { |message| message[:content] }.join("\n\n")
+        else
+          nil
+        end
 
         return if content.blank?
 
