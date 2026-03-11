@@ -18,6 +18,8 @@ export default class extends Controller {
   }
 
   disconnect() {
+    this._handler?.destroy();
+    this._handler = null;
     this._connectionToken = (this._connectionToken ?? 0) + 1;
   }
 
@@ -67,7 +69,7 @@ export default class extends Controller {
     await this.waitForPlaid();
     if (connectionToken !== this._connectionToken) return;
 
-    const handler = Plaid.create({
+    this._handler = Plaid.create({
       token: this.linkTokenValue,
       onSuccess: this.handleSuccess,
       onLoad: this.handleLoad,
@@ -75,7 +77,7 @@ export default class extends Controller {
       onEvent: this.handleEvent,
     });
 
-    handler.open();
+    this._handler.open();
   }
 
   handleSuccess = (public_token, metadata) => {
