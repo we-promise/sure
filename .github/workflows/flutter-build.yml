@@ -77,13 +77,16 @@ jobs:
 
       - name: Build APK (Release)
         working-directory: mobile
+        env:
+          ALLOWED_ENV_EMAILS: ${{ secrets.ALLOWED_ENV_EMAILS }}
         run: |
+          DART_DEFINES="--dart-define=ALLOWED_ENV_EMAILS=${ALLOWED_ENV_EMAILS:-}"
           if [ "${{ steps.check_secrets.outputs.has_keystore }}" == "true" ]; then
             echo "Building signed release APK..."
-            flutter build apk --release
+            flutter build apk --release $DART_DEFINES
           else
             echo "Building debug-signed APK..."
-            flutter build apk --debug
+            flutter build apk --debug $DART_DEFINES
           fi
 
       - name: Upload APK artifact
@@ -99,7 +102,9 @@ jobs:
       - name: Build App Bundle (Release)
         if: steps.check_secrets.outputs.has_keystore == 'true'
         working-directory: mobile
-        run: flutter build appbundle --release
+        env:
+          ALLOWED_ENV_EMAILS: ${{ secrets.ALLOWED_ENV_EMAILS }}
+        run: flutter build appbundle --release --dart-define=ALLOWED_ENV_EMAILS=${ALLOWED_ENV_EMAILS:-}
 
       - name: Upload AAB artifact
         if: steps.check_secrets.outputs.has_keystore == 'true'
@@ -150,7 +155,9 @@ jobs:
 
       - name: Build iOS (No Code Signing)
         working-directory: mobile
-        run: flutter build ios --release --no-codesign
+        env:
+          ALLOWED_ENV_EMAILS: ${{ secrets.ALLOWED_ENV_EMAILS }}
+        run: flutter build ios --release --no-codesign --dart-define=ALLOWED_ENV_EMAILS=${ALLOWED_ENV_EMAILS:-}
 
       - name: Create IPA archive info
         working-directory: mobile
