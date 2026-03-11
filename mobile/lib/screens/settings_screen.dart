@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../app_config.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../providers/auth_provider.dart';
@@ -172,6 +173,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  Future<void> _clearAllDeviceData() async {
+    final offlineStorage = OfflineStorageService();
+    await offlineStorage.clearAllData();
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.clear();
+  }
+
   Future<void> _launchContactUrl(BuildContext context) async {
     final uri = Uri.parse('https://chat.whatsapp.com/Ca2yaFwpSOxIMQkuh0IcGM?mode=wwc');
     final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
@@ -291,7 +300,49 @@ class _SettingsScreenState extends State<SettingsScreen> {
       if (!context.mounted) return;
 
       if (result['success'] == true) {
+        var localDataCleared = false;
+
+        try {
+          await _clearAllDeviceData();
+          localDataCleared = true;
+        } catch (e) {
+          final log = LogService.instance;
+          log.error('Settings', 'Failed to clear all device data after account deletion: $e');
+
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Account deleted, but local data cleanup failed: $e'),
+                backgroundColor: Colors.orange,
+                duration: const Duration(seconds: 4),
+              ),
+            );
+          }
+        }
+
         await authProvider.logout();
+
+        if (!context.mounted) return;
+        await Future.delayed(const Duration(milliseconds: 600));
+        if (!context.mounted) return;
+
+        Navigator.of(context, rootNavigator: true).pushNamedAndRemoveUntil(
+          '/login',
+          (route) => false,
+        );
+
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                localDataCleared
+                    ? 'Your account has been deleted and all local data has been cleared.'
+                    : 'Your account has been deleted.',
+              ),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
