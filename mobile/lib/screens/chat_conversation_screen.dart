@@ -365,13 +365,18 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
                   chatProvider.currentChat == null ||
                   chatProvider.currentChat!.id != _activeChatId);
 
-          if (isLoadingExistingChat) {
+          // Only show the full-screen spinner when navigating to an
+          // existing conversation, never when creating a new chat via
+          // the first message (the thinking indicator handles that).
+          if (isLoadingExistingChat && !_hasEverHadMessages) {
             return const Center(
               child: CircularProgressIndicator(),
             );
           }
 
-          if (chatProvider.isLoading && chatProvider.currentChat == null) {
+          if (chatProvider.isLoading &&
+              chatProvider.currentChat == null &&
+              !_hasEverHadMessages) {
             return const Center(
               child: CircularProgressIndicator(),
             );
@@ -524,24 +529,42 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
                               ),
                             ],
                           )
-                        : Center(
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const SizedBox(
-                                  width: 24,
-                                  height: 24,
-                                  child:
-                                      CircularProgressIndicator(strokeWidth: 2),
+                        : ListView(
+                            controller: _scrollController,
+                            padding: const EdgeInsets.all(16),
+                            children: [
+                              // Show thinking indicator while waiting
+                              // for the first AI response
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 16),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    CircleAvatar(
+                                      radius: 16,
+                                      backgroundColor: colorScheme.primaryContainer,
+                                      child: SvgPicture.asset(
+                                        'assets/images/logomark-color.svg',
+                                        width: 18,
+                                        height: 18,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Flexible(
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 16, vertical: 12),
+                                        decoration: BoxDecoration(
+                                          color: colorScheme.surfaceContainerHighest,
+                                          borderRadius: BorderRadius.circular(16),
+                                        ),
+                                        child: const TypingIndicator(),
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                const SizedBox(height: 12),
-                                Text(
-                                  'Loading conversation…',
-                                  style: TextStyle(
-                                      color: colorScheme.onSurfaceVariant),
-                                ),
-                              ],
-                            ),
+                              ),
+                            ],
                           ))
                     : ListView.builder(
                         controller: _scrollController,

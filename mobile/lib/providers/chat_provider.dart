@@ -113,7 +113,31 @@ class ChatProvider with ChangeNotifier {
 
       if (result['success'] == true) {
         final chat = result['chat'] as Chat;
-        _currentChat = chat;
+
+        // Optimistically ensure the user's message is visible immediately.
+        // The API may return the chat without the initial message in its
+        // messages array, so we create a local placeholder if needed.
+        final hasUserMessage = chat.messages.any(
+          (m) => m.isUser && m.content == trimmedMessage,
+        );
+
+        final displayChat = hasUserMessage
+            ? chat
+            : chat.copyWith(
+                messages: [
+                  ...chat.messages,
+                  Message(
+                    id: 'optimistic-${DateTime.now().millisecondsSinceEpoch}',
+                    type: 'user_message',
+                    role: 'user',
+                    content: trimmedMessage,
+                    createdAt: DateTime.now(),
+                    updatedAt: DateTime.now(),
+                  ),
+                ],
+              );
+
+        _currentChat = displayChat;
         _chats.insert(0, chat);
         _errorMessage = null;
 
