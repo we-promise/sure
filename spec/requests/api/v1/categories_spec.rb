@@ -108,6 +108,34 @@ RSpec.describe 'API V1 Categories', type: :request do
     end
   end
 
+  path '/api/v1/categories' do
+    post 'Create a category' do
+      tags 'Categories'
+      security [ { apiKeyAuth: [] } ]
+      consumes 'application/json'
+      produces 'application/json'
+      parameter name: :body, in: :body, required: true, schema: {
+        '$ref' => '#/components/schemas/CreateCategoryRequest'
+      }
+
+      response '201', 'category created' do
+        schema '$ref' => '#/components/schemas/CategoryDetail'
+
+        let(:body) { { category: { name: 'New Category', classification: 'expense' } } }
+
+        run_test!
+      end
+
+      response '422', 'validation failed' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:body) { { category: { classification: 'expense' } } }
+
+        run_test!
+      end
+    end
+  end
+
   path '/api/v1/categories/{id}' do
     parameter name: :id, in: :path, type: :string, required: true, description: 'Category ID'
 
@@ -136,6 +164,43 @@ RSpec.describe 'API V1 Categories', type: :request do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 
         let(:id) { SecureRandom.uuid }
+
+        run_test!
+      end
+    end
+
+    patch 'Update a category' do
+      tags 'Categories'
+      security [ { apiKeyAuth: [] } ]
+      consumes 'application/json'
+      produces 'application/json'
+      parameter name: :body, in: :body, required: true, schema: {
+        '$ref' => '#/components/schemas/UpdateCategoryRequest'
+      }
+
+      let(:id) { parent_category.id }
+
+      response '200', 'category updated' do
+        schema '$ref' => '#/components/schemas/CategoryDetail'
+
+        let(:body) { { category: { name: 'Updated Name' } } }
+
+        run_test!
+      end
+
+      response '404', 'category not found' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:id) { SecureRandom.uuid }
+        let(:body) { { category: { name: 'X' } } }
+
+        run_test!
+      end
+
+      response '422', 'validation failed' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:body) { { category: { parent_id: SecureRandom.uuid } } }
 
         run_test!
       end
