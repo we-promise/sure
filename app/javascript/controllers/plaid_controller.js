@@ -10,14 +10,15 @@ export default class extends Controller {
   };
 
   connect() {
-    this._disconnected = false;
-    this.open().catch((error) => {
+    this._connectionToken = (this._connectionToken ?? 0) + 1;
+    const connectionToken = this._connectionToken;
+    this.open(connectionToken).catch((error) => {
       console.error("Failed to initialize Plaid Link", error);
     });
   }
 
   disconnect() {
-    this._disconnected = true;
+    this._connectionToken = (this._connectionToken ?? 0) + 1;
   }
 
   waitForPlaid() {
@@ -30,15 +31,26 @@ export default class extends Controller {
         'script[src*="link-initialize.js"]'
       );
 
+      // Remove previously failed script so we can retry with a fresh element
+      if (plaidScript?.dataset.plaidState === "error") {
+        plaidScript.remove();
+        plaidScript = null;
+      }
+
       if (!plaidScript) {
         plaidScript = document.createElement("script");
         plaidScript.src = "https://cdn.plaid.com/link/v2/stable/link-initialize.js";
         plaidScript.async = true;
+        plaidScript.dataset.plaidState = "loading";
         document.head.appendChild(plaidScript);
       }
 
-      plaidScript.addEventListener("load", resolve, { once: true });
+      plaidScript.addEventListener("load", () => {
+        plaidScript.dataset.plaidState = "loaded";
+        resolve();
+      }, { once: true });
       plaidScript.addEventListener("error", () => {
+        plaidScript.dataset.plaidState = "error";
         reject(new Error("Failed to load Plaid script"));
       }, { once: true });
 
@@ -51,9 +63,9 @@ export default class extends Controller {
     });
   }
 
-  async open() {
+  async open(connectionToken = this._connectionToken) {
     await this.waitForPlaid();
-    if (this._disconnected) return;
+    if (connectionToken !== this._connectionToken) return;
 
     const handler = Plaid.create({
       token: this.linkTokenValue,
