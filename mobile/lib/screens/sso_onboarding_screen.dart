@@ -11,7 +11,7 @@ class SsoOnboardingScreen extends StatefulWidget {
 }
 
 class _SsoOnboardingScreenState extends State<SsoOnboardingScreen> {
-  bool _showLinkForm = true;
+  bool _showLinkForm = false;
   final _linkFormKey = GlobalKey<FormState>();
   final _createFormKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
@@ -129,38 +129,35 @@ class _SsoOnboardingScreenState extends State<SsoOnboardingScreen> {
                     ),
 
                   // Tab selector
-                  if (authProvider.ssoAllowAccountCreation) ...[
-                    Container(
-                      decoration: BoxDecoration(
-                        color: colorScheme.surfaceContainerHighest
-                            .withValues(alpha: 0.3),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: _TabButton(
-                              label: 'Link Existing',
-                              isSelected: _showLinkForm,
-                              onTap: () =>
-                                  setState(() => _showLinkForm = true),
-                            ),
-                          ),
-                          Expanded(
-                            child: _TabButton(
-                              label: authProvider.ssoHasPendingInvitation
-                                  ? 'Accept Invitation'
-                                  : 'Create New',
-                              isSelected: !_showLinkForm,
-                              onTap: () =>
-                                  setState(() => _showLinkForm = false),
-                            ),
-                          ),
-                        ],
-                      ),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    const SizedBox(height: 24),
-                  ],
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: _TabButton(
+                            label: 'Link Existing',
+                            isSelected: _showLinkForm,
+                            isEnabled: false,
+                            onTap: () => setState(() => _showLinkForm = true),
+                          ),
+                        ),
+                        Expanded(
+                          child: _TabButton(
+                            label: authProvider.ssoHasPendingInvitation
+                                ? 'Accept Invitation'
+                                : 'Create New',
+                            isSelected: !_showLinkForm,
+                            isEnabled: true,
+                            onTap: () => setState(() => _showLinkForm = false),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
 
                   // Link existing account form
                   if (_showLinkForm) _buildLinkForm(authProvider, colorScheme),
@@ -339,11 +336,13 @@ class _SsoOnboardingScreenState extends State<SsoOnboardingScreen> {
 class _TabButton extends StatelessWidget {
   final String label;
   final bool isSelected;
-  final VoidCallback onTap;
+  final bool isEnabled;
+  final VoidCallback? onTap;
 
   const _TabButton({
     required this.label,
     required this.isSelected,
+    required this.isEnabled,
     required this.onTap,
   });
 
@@ -352,7 +351,7 @@ class _TabButton extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
 
     return GestureDetector(
-      onTap: onTap,
+      onTap: isEnabled ? onTap : null,
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
@@ -363,7 +362,11 @@ class _TabButton extends StatelessWidget {
           label,
           textAlign: TextAlign.center,
           style: TextStyle(
-            color: isSelected ? colorScheme.onPrimary : colorScheme.onSurface,
+            color: isSelected
+                ? colorScheme.onPrimary
+                : isEnabled
+                    ? colorScheme.onSurface
+                    : colorScheme.onSurface.withValues(alpha: 0.45),
             fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
           ),
         ),
