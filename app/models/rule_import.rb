@@ -212,7 +212,6 @@ class RuleImport < Import
           category = family.categories.create!(
             name: value,
             color: Category::UNCATEGORIZED_COLOR,
-            classification: "expense",
             lucide_icon: "shapes"
           )
         end
@@ -245,7 +244,6 @@ class RuleImport < Import
           category = family.categories.create!(
             name: value,
             color: Category::UNCATEGORIZED_COLOR,
-            classification: "expense",
             lucide_icon: "shapes"
           )
         end

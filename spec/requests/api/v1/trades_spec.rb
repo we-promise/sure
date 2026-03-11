@@ -54,7 +54,6 @@ RSpec.describe 'API V1 Trades', type: :request do
   let(:category) do
     family.categories.create!(
       name: 'Investments',
-      classification: 'expense',
       color: '#2196F3',
       lucide_icon: 'trending-up'
     )

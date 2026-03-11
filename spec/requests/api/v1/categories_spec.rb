@@ -36,7 +36,6 @@ RSpec.describe 'API V1 Categories', type: :request do
   let!(:parent_category) do
     family.categories.create!(
       name: 'Food & Drink',
-      classification: 'expense',
       color: '#f97316',
       lucide_icon: 'utensils'
     )
@@ -45,7 +44,6 @@ RSpec.describe 'API V1 Categories', type: :request do
   let!(:subcategory) do
     family.categories.create!(
       name: 'Restaurants',
-      classification: 'expense',
       color: '#f97316',
       lucide_icon: 'utensils',
       parent: parent_category
@@ -55,7 +53,6 @@ RSpec.describe 'API V1 Categories', type: :request do
   let!(:income_category) do
     family.categories.create!(
       name: 'Salary',
-      classification: 'income',
       color: '#22c55e',
       lucide_icon: 'circle-dollar-sign'
     )
@@ -70,9 +67,6 @@ RSpec.describe 'API V1 Categories', type: :request do
                 description: 'Page number (default: 1)'
       parameter name: :per_page, in: :query, type: :integer, required: false,
                 description: 'Items per page (default: 25, max: 100)'
-      parameter name: :classification, in: :query, required: false,
-                description: 'Filter by classification (income or expense)',
-                schema: { type: :string, enum: %w[income expense] }
       parameter name: :roots_only, in: :query, required: false,
                 description: 'Return only root categories (no parent)',
                 schema: { type: :boolean }
@@ -82,14 +76,6 @@ RSpec.describe 'API V1 Categories', type: :request do
 
       response '200', 'categories listed' do
         schema '$ref' => '#/components/schemas/CategoryCollection'
-
-        run_test!
-      end
-
-      response '200', 'categories filtered by classification' do
-        schema '$ref' => '#/components/schemas/CategoryCollection'
-
-        let(:classification) { 'expense' }
 
         run_test!
       end

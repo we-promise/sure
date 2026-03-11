@@ -73,7 +73,7 @@ class Family::DataExporterTest < ActiveSupport::TestCase
 
       # Check categories.csv
       categories_csv = zip.read("categories.csv")
-      assert categories_csv.include?("name,color,parent_category,classification,lucide_icon")
+      assert categories_csv.include?("name,color,parent_category,lucide_icon")
 
       # Check rules.csv
       rules_csv = zip.read("rules.csv")

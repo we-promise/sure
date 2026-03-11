@@ -18,7 +18,6 @@ class FamilyTest < ActiveSupport::TestCase
     assert category.persisted?
     assert_equal Category.investment_contributions_name, category.name
     assert_equal "#0d9488", category.color
-    assert_equal "expense", category.classification
     assert_equal "trending-up", category.lucide_icon
   end
 
@@ -26,7 +25,6 @@ class FamilyTest < ActiveSupport::TestCase
     family = families(:dylan_family)
     existing = family.categories.find_or_create_by!(name: Category.investment_contributions_name) do |c|
       c.color = "#0d9488"
-      c.classification = "expense"
       c.lucide_icon = "trending-up"
     end
 
@@ -89,7 +87,6 @@ class FamilyTest < ActiveSupport::TestCase
     legacy_category = family.categories.create!(
       name: "Investment Contributions",
       color: "#0d9488",
-      classification: "expense",
       lucide_icon: "trending-up"
     )
 
@@ -110,14 +107,12 @@ class FamilyTest < ActiveSupport::TestCase
     english_category = family.categories.create!(
       name: "Investment Contributions",
       color: "#0d9488",
-      classification: "expense",
       lucide_icon: "trending-up"
     )
 
     french_category = family.categories.create!(
       name: "Contributions aux investissements",
       color: "#0d9488",
-      classification: "expense",
       lucide_icon: "trending-up"
     )
 
