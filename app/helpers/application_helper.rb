@@ -108,6 +108,11 @@ module ApplicationHelper
     cookies[:admin] == "true"
   end
 
+  def assistant_icon
+    type = ENV["ASSISTANT_TYPE"].presence || Current.family&.assistant_type.presence || "builtin"
+    type == "external" ? "claw" : "ai"
+  end
+
   def default_ai_model
     family = Current.user&.family
     Chat.default_model(family)
@@ -136,6 +141,15 @@ module ApplicationHelper
     )
 
     markdown.render(text).html_safe
+  end
+
+  # Generate the callback URL for Enable Banking OAuth (used in views and controller).
+  # In production, uses the standard Rails route.
+  # In development, uses DEV_WEBHOOKS_URL if set (e.g., ngrok URL).
+  def enable_banking_callback_url
+    return callback_enable_banking_items_url if Rails.env.production?
+
+    ENV.fetch("DEV_WEBHOOKS_URL", root_url).chomp("/") + "/enable_banking_items/callback"
   end
 
   # Formats quantity with adaptive precision based on the value size.

@@ -1,6 +1,7 @@
 ---
 de:
   transactions:
+    unknown_name: Unbekannte Transaktion
     form:
       account: Konto
       account_prompt: Konto auswählen
@@ -29,6 +30,15 @@ de:
       delete_subtitle: Diese Aktion löscht die Transaktion dauerhaft, beeinflusst deine bisherigen Kontostände und kann nicht rückgängig gemacht werden.
       delete_title: Transaktion löschen
       details: Details
+      exclude: Ausschließen
+      exclude_description: Ausgeschlossene Transaktionen werden aus Budgetberechnungen und Berichten entfernt.
+      activity_type: Aktivitätsart
+      activity_type_description: Art der Anlageaktivität (Kauf, Verkauf, Dividende usw.). Wird automatisch erkannt oder manuell gesetzt.
+      one_time_title: Einmalige %{type}
+      one_time_description: Einmalige Transaktionen werden aus bestimmten Budgetberechnungen und Berichten ausgeschlossen, damit du das Wichtige besser erkennst.
+      convert_to_trade_title: In Wertpapier-Trade umwandeln
+      convert_to_trade_description: Diese Transaktion in einen Kauf- oder Verkaufstrade mit Wertpapierdetails für die Portfolioverfolgung umwandeln.
+      convert_to_trade_button: In Trade umwandeln
       merchant_label: Händler
       name_label: Name
       nature: Typ
@@ -38,7 +48,45 @@ de:
       overview: Übersicht
       settings: Einstellungen
       tags_label: Tags
+      tab_transactions: Transaktionen
+      tab_upcoming: Anstehend
       uncategorized: (ohne Kategorie)
+    activity_labels:
+      buy: Kaufen
+      sell: Verkaufen
+      sweep_in: Sweep In
+      sweep_out: Sweep Out
+      dividend: Dividende
+      reinvestment: Reinvestition
+      interest: Zinsen
+      fee: Gebühr
+      transfer: Überweisung
+      contribution: Einlage
+      withdrawal: Entnahme
+      exchange: Umtausch
+      other: Sonstige
+    mark_recurring: Als wiederkehrend markieren
+    mark_recurring_subtitle: Als wiederkehrende Transaktion verfolgen. Die Betragsabweichung wird automatisch aus den letzten 6 Monaten ähnlicher Transaktionen berechnet.
+    mark_recurring_title: Wiederkehrende Transaktion
+    potential_duplicate_title: Mögliches Duplikat erkannt
+    potential_duplicate_description: Diese ausstehende Transaktion könnte mit der unten stehenden gebuchten Transaktion übereinstimmen. Wenn ja, führe sie zusammen, um Doppelzählung zu vermeiden.
+    merge_duplicate: Ja, zusammenführen
+    keep_both: Nein, beide behalten
+    transaction:
+      pending: Ausstehend
+      pending_tooltip: Ausstehende Transaktion — kann sich bei Buchung ändern
+      linked_with_plaid: Mit Plaid verknüpft
+      activity_type_tooltip: Art der Anlageaktivität
+      possible_duplicate: Duplikat?
+      potential_duplicate_tooltip: Dies könnte ein Duplikat einer anderen Transaktion sein
+      review_recommended: Prüfen
+      review_recommended_tooltip: Große Betragsabweichung — Prüfung empfohlen, ob es sich um ein Duplikat handelt
+    merge_duplicate:
+      success: Transaktionen erfolgreich zusammengeführt
+      failure: Transaktionen konnten nicht zusammengeführt werden
+    dismiss_duplicate:
+      success: Als getrennte Transaktionen beibehalten
+      failure: Duplikatshinweis konnte nicht verworfen werden
     header:
       edit_categories: Kategorien bearbeiten
       edit_imports: Importe bearbeiten
@@ -48,6 +96,65 @@ de:
     index:
       transaction: Transaktion
       transactions: Transaktionen
+      import: Import
+    list:
+      drag_drop_title: CSV zum Importieren ablegen
+      drag_drop_subtitle: Transaktionen direkt hochladen
+      transaction: Transaktion
+      transactions: Transaktionen
+    toggle_recurring_section: Anstehende wiederkehrende Transaktionen ein-/ausblenden
+    search:
+      filters:
+        account: Konto
+        date: Datum
+        type: Typ
+        status: Status
+        amount: Betrag
+        category: Kategorie
+        tag: Tag
+        merchant: Händler
+    convert_to_trade:
+      title: In Wertpapier-Trade umwandeln
+      description: Diese Transaktion in einen Trade mit Wertpapierdetails umwandeln
+      date_label: "Datum:"
+      account_label: "Konto:"
+      amount_label: "Betrag:"
+      security_label: Wertpapier
+      security_prompt: Wertpapier auswählen…
+      security_custom: "+ Eigenes Tickersymbol eingeben"
+      security_not_listed_hint: Dein Wertpapier nicht dabei? Wähle unten in der Liste „Eigenes Tickersymbol eingeben“.
+      ticker_placeholder: AAPL
+      ticker_hint: Gib das Aktien-/ETF-Tickersymbol ein (z. B. AAPL, MSFT)
+      ticker_search_placeholder: Nach Ticker suchen…
+      ticker_search_hint: Nach Tickersymbol oder Firmenname suchen oder eigenes Tickersymbol eingeben
+      price_mismatch_title: Preis weicht möglicherweise ab
+      price_mismatch_message: "Dein Preis (%{entered_price}/Aktie) weicht deutlich vom aktuellen Marktpreis von %{ticker} (%{market_price}) ab. Wenn das falsch erscheint, hast du vielleicht das falsche Wertpapier gewählt — versuche „Eigenes Tickersymbol eingeben“, um das richtige anzugeben."
+      quantity_label: Menge (Aktien)
+      quantity_placeholder: z. B. 20
+      quantity_hint: Anzahl der gehandelten Aktien
+      price_label: Preis pro Aktie
+      price_placeholder: z. B. 52,15
+      price_hint: Preis pro Aktie (%{currency})
+      qty_or_price_hint: Gib mindestens Menge ODER Preis ein. Der andere Wert wird aus dem Transaktionsbetrag (%{amount}) berechnet.
+      trade_type_label: Trade-Typ
+      trade_type_hint: Kauf oder Verkauf von Wertpapieranteilen
+      exchange_label: Börse (optional)
+      exchange_placeholder: XNAS
+      exchange_hint: Leer lassen für automatische Erkennung
+      cancel: Abbrechen
+      submit: In Trade umwandeln
+      success: Transaktion in Trade umgewandelt
+      conversion_note: "Umgewandelt aus Transaktion: %{original_name} (%{original_date})"
+      errors:
+        not_investment_account: Nur Transaktionen in Anlagekonten können in Trades umgewandelt werden
+        already_converted: Diese Transaktion wurde bereits umgewandelt oder ausgeschlossen
+        enter_ticker: Bitte gib ein Tickersymbol ein
+        security_not_found: Das gewählte Wertpapier existiert nicht mehr. Bitte wähle ein anderes.
+        select_security: Bitte wähle ein Wertpapier aus oder gib eines ein
+        enter_qty_or_price: Bitte gib entweder Menge oder Preis pro Aktie ein. Der andere Wert wird aus dem Transaktionsbetrag berechnet.
+        invalid_qty_or_price: Ungültige Menge oder Preis. Bitte gib gültige positive Werte ein.
+        conversion_failed: "Transaktion konnte nicht umgewandelt werden: %{error}"
+        unexpected_error: "Unerwarteter Fehler bei der Umwandlung: %{error}"
     searches:
       filters:
         amount_filter:
@@ -61,10 +168,15 @@ de:
           on_or_after: am oder nach %{date}
           on_or_before: am oder vor %{date}
           transfer: Überweisung
+          confirmed: Bestätigt
+          pending: Ausstehend
         type_filter:
           expense: Ausgabe
           income: Einnahme
           transfer: Überweisung
+        status_filter:
+          confirmed: Bestätigt
+          pending: Ausstehend
       menu:
         account_filter: Konto
         amount_filter: Betrag
@@ -74,6 +186,7 @@ de:
         clear_filters: Filter löschen
         date_filter: Datum
         merchant_filter: Händler
+        status_filter: Status
         tag_filter: Tag
         type_filter: Typ
       search:

@@ -152,6 +152,62 @@ Your app is now set up. You can visit it at `http://localhost:3000` in your brow
 
 If you find bugs or have a feature request, be sure to read through our [contributing guide here](https://github.com/we-promise/sure/wiki/How-to-Contribute-Effectively-to-Sure).
 
+## AI features, external assistant, and Pipelock
+
+Sure ships with a separate compose file for AI-related features: `compose.example.ai.yml`. It adds:
+
+- **Pipelock** (always on): AI agent security proxy that scans outbound LLM calls and inbound MCP traffic
+- **Ollama + Open WebUI** (optional `--profile ai`): local LLM inference
+
+### Using the AI compose file
+
+```bash
+# Download both compose files
+curl -o compose.yml https://raw.githubusercontent.com/we-promise/sure/main/compose.example.yml
+curl -o compose.ai.yml https://raw.githubusercontent.com/we-promise/sure/main/compose.example.ai.yml
+curl -o pipelock.example.yaml https://raw.githubusercontent.com/we-promise/sure/main/pipelock.example.yaml
+
+# Run with Pipelock (no local LLM)
+docker compose -f compose.ai.yml up -d
+
+# Run with Pipelock + Ollama
+docker compose -f compose.ai.yml --profile ai up -d
+```
+
+### Setting up the external AI assistant
+
+The external assistant delegates chat to a remote AI agent instead of calling LLMs directly. The agent calls back to Sure's `/mcp` endpoint for financial data (accounts, transactions, balance sheet).
+
+1. Set the MCP endpoint credentials in your `.env`:
+   ```bash
+   MCP_API_TOKEN=generate-a-random-token-here
+   MCP_USER_EMAIL=your@email.com   # must match an existing Sure user
+   ```
+
+2. Set the external assistant connection:
+   ```bash
+   EXTERNAL_ASSISTANT_URL=https://your-agent/v1/chat/completions
+   EXTERNAL_ASSISTANT_TOKEN=your-agent-api-token
+   ```
+
+3. Choose how to activate:
+   - **Per-family (UI):** Go to Settings > Self-Hosting > AI Assistant, select "External"
+   - **Global (env):** Set `ASSISTANT_TYPE=external` to force all families to use external
+
+See [docs/hosting/ai.md](ai.md) for full configuration details including agent ID, session keys, and email allowlisting.
+
+### Pipelock security proxy
+
+Pipelock sits between Sure and external services, scanning AI traffic for:
+
+- **Secret exfiltration** (DLP): catches API keys, tokens, or personal data leaking in prompts
+- **Prompt injection**: detects attempts to override system instructions
+- **Tool poisoning**: validates MCP tool calls against known-safe patterns
+
+When using `compose.example.ai.yml`, Pipelock is always running. External AI agents should connect to port 8889 (MCP reverse proxy) instead of directly to Sure's `/mcp` on port 3000.
+
+For full Pipelock configuration, see [docs/hosting/pipelock.md](pipelock.md).
+
 ## How to update your app
 
 The mechanism that updates your self-hosted Sure app is the GHCR (Github Container Registry) Docker image that you see in the `compose.yml` file:

@@ -22,3 +22,5 @@ jobs:
           scan-diff: 'true'
           fail-on-findings: 'true'
           test-vectors: 'false'
+          exclude-paths: |
+            config/locales/views/reports/

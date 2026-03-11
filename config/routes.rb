@@ -167,6 +167,7 @@ Rails.application.routes.draw do
     resource :preferences, only: :show
     resource :hosting, only: %i[show update] do
       delete :clear_cache, on: :collection
+      delete :disconnect_external_assistant, on: :collection
     end
     resource :payment, only: :show
     resource :security, only: :show
@@ -212,6 +213,7 @@ Rails.application.routes.draw do
   end
 
   resources :budgets, only: %i[index show edit update], param: :month_year do
+    post :copy_previous, on: :member
     get :picker, on: :collection
 
     resources :budget_categories, only: %i[index show update]
@@ -247,6 +249,7 @@ Rails.application.routes.draw do
       post :unlock_cost_basis
       patch :remap_security
       post :reset_security
+      post :sync_prices
     end
   end
   resources :trades, only: %i[show new create update destroy] do
@@ -374,6 +377,8 @@ Rails.application.routes.draw do
       post "auth/login", to: "auth#login"
       post "auth/refresh", to: "auth#refresh"
       post "auth/sso_exchange", to: "auth#sso_exchange"
+      post "auth/sso_link", to: "auth#sso_link"
+      post "auth/sso_create_account", to: "auth#sso_create_account"
       patch "auth/enable_ai", to: "auth#enable_ai"
 
       # Production API endpoints
@@ -473,6 +478,9 @@ Rails.application.routes.draw do
   end
 
   get "redis-configuration-error", to: "pages#redis_configuration_error"
+
+  # MCP server endpoint for external AI assistants (JSON-RPC 2.0)
+  post "mcp", to: "mcp#handle"
 
   # Reveal health status on /up that returns 200 if the app boots with no exceptions, otherwise 500.
   # Can be used by load balancers and uptime monitors to verify that the app is live.
