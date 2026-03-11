@@ -12,7 +12,7 @@ en:
       title: Join %{family}
     not_found:
       title: Not Invited
-      message: Oopsies! Looks like this account has not been invited to Chancen Companion yet. Access is by invitation only. Please make sure you are using the right email address. If you think this is a mistake, get in touch with us.
+      message: Looks like this account has not been invited to Chancen Companion yet. Access is by invitation only. Please make sure you are using the right email address. If you think this is a mistake, get in touch with us.
       sign_in: Sign In
       go_home: Go to Homepage
     expired:
