@@ -9,7 +9,7 @@ class Category < ApplicationRecord
   belongs_to :parent, class_name: "Category", optional: true
 
   validates :name, :color, :lucide_icon, :family, presence: true
-  validates :lucide_icon, inclusion: { in: Category.icon_codes }
+  validates :lucide_icon, inclusion: { in: -> (_) { Category.icon_codes } }
   validates :name, uniqueness: { scope: :family_id }
   validates :classification, inclusion: { in: %w[income expense] }
 
