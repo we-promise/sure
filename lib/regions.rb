@@ -29,8 +29,11 @@ class Regions
     def region_for(country: nil, currency: nil)
       initialize_once
 
-      # Prefer country if provided
-      return country_to_region(country) if country.present?
+      # Prefer country if provided, but fall back to currency when unmapped
+      if country.present?
+        country_region = country_to_region(country)
+        return country_region if country_region.present?
+      end
 
       # Fallback to currency
       currency_to_region(currency) if currency.present?
