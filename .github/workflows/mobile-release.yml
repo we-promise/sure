@@ -33,21 +33,18 @@ jobs:
           set -euo pipefail
 
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            BASE_STABLE_TAG="$(git tag --list 'v*' --sort=-v:refname | { grep -Ev 'alpha|beta|rc' || true; } | head -n 1)"
-            if [ -z "$BASE_STABLE_TAG" ]; then
-              echo "::error::No stable v* tag found to base mobile patch release on"
-              exit 1
+            # Read version from pubspec.yaml
+            PUBSPEC_VERSION="$(grep '^version:' mobile/pubspec.yaml | sed 's/version: *//' | sed 's/+.*//')"
+            TAG_NAME="mobile-v${PUBSPEC_VERSION}"
+
+            # If tag already exists, append incrementing suffix
+            if git rev-parse -q --verify "refs/tags/$TAG_NAME" >/dev/null 2>&1; then
+              TAG_SUFFIX=1
+              while git rev-parse -q --verify "refs/tags/${TAG_NAME}.${TAG_SUFFIX}" >/dev/null 2>&1; do
+                TAG_SUFFIX=$((TAG_SUFFIX + 1))
+              done
+              TAG_NAME="${TAG_NAME}.${TAG_SUFFIX}"
             fi
-
-            STAMP="$(date -u +'%Y%m%d%H%M')"
-            BASE_TAG="mobile-${BASE_STABLE_TAG}-p${STAMP}"
-            TAG_NAME="$BASE_TAG"
-            TAG_SUFFIX=1
-
-            while git rev-parse -q --verify "refs/tags/$TAG_NAME" >/dev/null 2>&1; do
-              TAG_NAME="${BASE_TAG}-${TAG_SUFFIX}"
-              TAG_SUFFIX=$((TAG_SUFFIX + 1))
-            done
 
             echo "Using generated tag: $TAG_NAME"
             git config user.name "${GITHUB_ACTOR}"

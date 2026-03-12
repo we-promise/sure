@@ -18,16 +18,18 @@ jobs:
       tag_name: ${{ steps.stamp.outputs.tag_name }}
 
     steps:
+      - name: Checkout for version read
+        uses: actions/checkout@v4
+
       - name: Generate stamp
         id: stamp
         run: |
           set -euo pipefail
-          STAMP="$(date -u +'%Y%m%d%H%M')"
 
-          # Sanitise branch name for use in file names and git tags
-          # e.g. feature/foo-bar → feature-foo-bar
-          # When workflow_dispatch is triggered from a tag, fall back to the
-          # default branch so filenames use "main" instead of the tag name.
+          # Read version from pubspec.yaml (e.g. "0.6.9+3.4" → "0.6.9")
+          PUBSPEC_VERSION="$(grep '^version:' mobile/pubspec.yaml | sed 's/version: *//' | sed 's/+.*//')"
+
+          # Sanitise branch name
           if [[ "${{ github.ref_type }}" == "tag" ]]; then
             RAW_BRANCH="${{ github.event.repository.default_branch }}"
           else
@@ -35,16 +37,19 @@ jobs:
           fi
           BRANCH="$(echo "$RAW_BRANCH" | sed 's/[^a-zA-Z0-9._-]/-/g' | sed 's/--*/-/g' | sed 's/^-//;s/-$//')"
 
-          VERSION="${BRANCH}-${STAMP}"
-          TAG_NAME="${BRANCH}-build-${STAMP}"
+          # Short commit hash for uniqueness
+          SHORT_SHA="$(git rev-parse --short HEAD)"
 
-          echo "stamp=$STAMP"   >> "$GITHUB_OUTPUT"
+          VERSION="${PUBSPEC_VERSION}"
+          TAG_NAME="mobile-v${PUBSPEC_VERSION}-${BRANCH}-${SHORT_SHA}"
+
+          echo "stamp=$(date -u +'%Y%m%d%H%M')" >> "$GITHUB_OUTPUT"
           echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "tag_name=$TAG_NAME" >> "$GITHUB_OUTPUT"
 
-          echo "Branch (raw): $RAW_BRANCH"
-          echo "Branch (safe): $BRANCH"
+          echo "Pubspec version: $PUBSPEC_VERSION"
+          echo "Branch: $BRANCH"
           echo "Version: $VERSION"
           echo "Tag: $TAG_NAME"
 
