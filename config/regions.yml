@@ -30,7 +30,7 @@ regions:
       - BE
       - NL
       - SE
-      - NO
+      - "NO"
       - CH
       - IT
       - ES
