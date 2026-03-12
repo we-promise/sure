@@ -492,6 +492,49 @@ class Api::V1::CategoriesControllerTest < ActionDispatch::IntegrationTest
     assert_match /Parent category not found/, body["message"]
   end
 
+  test "update should assign parent to a root category (root → subcategory)" do
+    new_parent = @user.family.categories.create!(
+      name: "Big Expense",
+      classification: "expense",
+      color: "#aabbcc",
+      lucide_icon: "bike"
+    )
+    childless_root = @user.family.categories.create!(
+      name: "Childless Expense",
+      classification: "expense",
+      color: "#123456",
+      lucide_icon: "car"
+    )
+
+    patch "/api/v1/categories/#{childless_root.id}",
+      params: { category: { parent_id: new_parent.id } }.to_json,
+      headers: {
+        "Authorization" => "Bearer #{@write_access_token.token}",
+        "Content-Type" => "application/json"
+      }
+
+    assert_response :ok
+    body = JSON.parse(response.body)
+    assert_equal new_parent.id, body["parent"]["id"]
+    assert_equal new_parent.name, body["parent"]["name"]
+    assert_equal new_parent.id, childless_root.reload.parent_id
+  end
+
+  test "update should remove parent from subcategory when parent_id is null" do
+    patch "/api/v1/categories/#{@subcategory.id}",
+      params: { category: { parent_id: nil } }.to_json,
+      headers: {
+        "Authorization" => "Bearer #{@write_access_token.token}",
+        "Content-Type" => "application/json"
+      }
+
+    assert_response :ok
+    body = JSON.parse(response.body)
+    assert_nil body["parent"]
+    assert_equal @subcategory.id, body["id"]
+    assert_nil @subcategory.reload.parent_id
+  end
+
   # ── Icons action tests ────────────────────────────────────────────────────
 
   test "icons returns available icon list without authentication" do

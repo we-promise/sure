@@ -183,7 +183,7 @@ class Category < ApplicationRecord
   end
 
   def subcategory?
-    parent.present?
+    parent_id.present?
   end
 
   def name_with_parent

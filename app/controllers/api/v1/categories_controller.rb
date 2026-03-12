@@ -120,6 +120,7 @@ class Api::V1::CategoriesController < Api::V1::BaseController
     attrs[:parent_id]      = category_params[:parent_id]      if params[:category]&.key?(:parent_id)
 
     if @category.update(attrs)
+      @category = current_resource_owner.family.categories.includes(:parent, :subcategories).find(@category.id)
       render :show
     else
       render json: {
