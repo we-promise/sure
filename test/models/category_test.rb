@@ -40,4 +40,27 @@ class CategoryTest < ActiveSupport::TestCase
     assert names.all? { |name| name.is_a?(String) }
     assert_equal names, names.uniq  # No duplicates
   end
+
+  test "rejects invalid lucide_icon" do
+    category = Category.new(
+      name: "Hiking Trips",
+      classification: "expense",
+      color: "#e99537",
+      lucide_icon: "hiking",
+      family: @family
+    )
+    assert_not category.valid?
+    assert_includes category.errors[:lucide_icon], "is not included in the list"
+  end
+
+  test "accepts valid lucide_icon" do
+    category = Category.new(
+      name: "Cycling",
+      classification: "expense",
+      color: "#e99537",
+      lucide_icon: "bike",
+      family: @family
+    )
+    assert category.valid?
+  end
 end

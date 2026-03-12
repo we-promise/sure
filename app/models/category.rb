@@ -9,6 +9,7 @@ class Category < ApplicationRecord
   belongs_to :parent, class_name: "Category", optional: true
 
   validates :name, :color, :lucide_icon, :family, presence: true
+  validates :lucide_icon, inclusion: { in: Category.icon_codes }
   validates :name, uniqueness: { scope: :family_id }
   validates :classification, inclusion: { in: %w[income expense] }
 
@@ -61,10 +62,10 @@ class Category < ApplicationRecord
   class << self
     def icon_codes
       %w[
-        ambulance apple award baby badge-dollar-sign banknote barcode bar-chart-3 bath
+        ambulance apple award arrow-right arrow-right-left baby badge-dollar-sign banknote barcode bar-chart-3 bath
         battery bed-single beer bike bluetooth bone book book-open briefcase building bus
         cake calculator calendar-heart calendar-range camera car cat chart-line
-        circle-dollar-sign circle-parking coffee coins compass cookie cooking-pot
+        circle-dollar-sign circle-dashed circle-parking coffee coins compass cookie cooking-pot
         credit-card dices dog drama drill droplet drum dumbbell film flame flower flower-2
         fuel gamepad-2 gem gift glasses globe graduation-cap hammer hand-heart
         hand-helping heart-handshake handshake headphones heart heart-pulse home hotel

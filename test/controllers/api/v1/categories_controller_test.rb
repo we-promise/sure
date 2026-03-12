@@ -412,7 +412,7 @@ class Api::V1::CategoriesControllerTest < ActionDispatch::IntegrationTest
       name: "New Root",
       classification: "expense",
       color: "#aabbcc",
-      lucide_icon: "shapes"
+      lucide_icon: "bike"
     )
 
     patch "/api/v1/categories/#{@subcategory.id}",
