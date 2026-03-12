@@ -40,5 +40,4 @@ class CategoryTest < ActiveSupport::TestCase
     assert names.all? { |name| name.is_a?(String) }
     assert_equal names, names.uniq  # No duplicates
   end
-
 end
