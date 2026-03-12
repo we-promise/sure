@@ -33,7 +33,7 @@
                                  min: 0,
                                  step: 0.001 %>
         <%= loan_form.select :insurance_rate_type,
-                           [["Fixed", "fixed"], ["Variable", "variable"], ["Adjustable", "adjustable"]],
+                           [["Level term", "level_term"], ["Decreasing life", "decreasing_life"]],
                            { label: t("loans.form.insurance_rate_type") } %>
       </div>
 
