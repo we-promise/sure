@@ -109,11 +109,11 @@ class IntroScreenPlatform extends StatelessWidget {
             children: <Widget>[
               const _IntroHeaderCard(),
               const SizedBox(height: 16),
-              _SummaryCard(summary: summary),
+              const _SummaryCard(summary: summary),
               const SizedBox(height: 16),
-              _InsightListCard(title: 'Income sources', lines: incomeSources),
+              const _InsightListCard(title: 'Income sources', lines: incomeSources),
               const SizedBox(height: 16),
-              _InsightListCard(title: 'Spending breakdown', lines: spending),
+              const _InsightListCard(title: 'Spending breakdown', lines: spending),
               const SizedBox(height: 16),
               ...prompts.map((prompt) => Padding(
                     padding: const EdgeInsets.only(bottom: 12),
@@ -144,7 +144,7 @@ class _IntroHeaderCard extends StatelessWidget {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.surfaceVariant,
+                  color: theme.colorScheme.surfaceContainerHighest,
                   borderRadius: BorderRadius.circular(999),
                   border: Border.all(color: theme.dividerColor),
                 ),
@@ -382,14 +382,13 @@ class _InsightLine {
     required this.amount,
     required this.percentage,
     required this.color,
-    this.currency = 'KSh',
   });
 
   final String label;
   final double amount;
   final double percentage;
   final Color color;
-  final String currency;
+  String get currency => 'KSh';
 }
 
 class _PromptCardData {
