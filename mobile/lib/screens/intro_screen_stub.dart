@@ -13,6 +13,7 @@ class IntroScreenPlatform extends StatefulWidget {
 class _IntroScreenPlatformState extends State<IntroScreenPlatform>
     with AutomaticKeepAliveClientMixin {
   late final WebViewController _controller;
+  bool? _lastIsDark;
 
   @override
   bool get wantKeepAlive => true;
@@ -20,20 +21,23 @@ class _IntroScreenPlatformState extends State<IntroScreenPlatform>
   @override
   void initState() {
     super.initState();
-
-    final isDark =
-        WidgetsBinding.instance.platformDispatcher.platformBrightness ==
-            Brightness.dark;
-
     _controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.disabled)
-      ..setBackgroundColor(Colors.transparent)
-      ..loadHtmlString(_buildHtml(isDark));
+      ..setBackgroundColor(Colors.transparent);
+  }
+
+  void _reloadIfThemeChanged(bool isDark) {
+    if (isDark != _lastIsDark) {
+      _lastIsDark = isDark;
+      _controller.loadHtmlString(_buildHtml(isDark));
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     super.build(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    _reloadIfThemeChanged(isDark);
     return WebViewWidget(controller: _controller);
   }
 }
@@ -100,21 +104,26 @@ String _buildHtml(bool isDark) {
       border: 1px solid $cardBorder;
       border-radius: 16px;
       padding: 24px;
-      position: relative;
       margin-bottom: 24px;
     }
+    .header-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
     .badge {
-      position: absolute;
-      top: 16px;
-      right: 16px;
+      flex-shrink: 0;
       background: $badgeBg;
       border: 1px solid $cardBorder;
       border-radius: 999px;
       padding: 4px 10px;
       font-size: 11px;
+      white-space: nowrap;
       color: $textPrimary;
     }
-    h1 { font-size: 20px; font-weight: 600; margin-bottom: 8px; }
+    h1 { font-size: 20px; font-weight: 600; margin: 0; }
     .subtitle { color: $textSecondary; font-size: 14px; }
     .chart-container {
       width: 100%;
@@ -139,8 +148,10 @@ String _buildHtml(bool isDark) {
 <body>
   <div class="container">
     <div class="header-card">
-      <div class="badge">Coming Soon!</div>
-      <h1>Budget Analyser Preview</h1>
+      <div class="header-top">
+        <h1>Budget Analyser Preview</h1>
+        <div class="badge">Coming Soon!</div>
+      </div>
       <p class="subtitle">See how average students in Nairobi spend their money.</p>
     </div>
 
