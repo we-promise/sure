@@ -51,6 +51,8 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "can update onboarding state when self hosting is enabled" do
+    sign_in users(:sure_support_staff)
+
     with_self_hosting do
       patch settings_hosting_url, params: { setting: { onboarding_state: "invite_only" } }
 
@@ -201,16 +203,21 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
 
   test "disconnect external assistant clears settings and resets type" do
     with_self_hosting do
-      Setting.external_assistant_url = "https://agent.example.com/v1/chat"
-      Setting.external_assistant_token = "token"
-      Setting.external_assistant_agent_id = "finance-bot"
-      users(:family_admin).family.update!(assistant_type: "external")
+      with_env_overrides("EXTERNAL_ASSISTANT_URL" => nil, "EXTERNAL_ASSISTANT_TOKEN" => nil) do
+        Setting.external_assistant_url = "https://agent.example.com/v1/chat"
+        Setting.external_assistant_token = "token"
+        Setting.external_assistant_agent_id = "finance-bot"
+        users(:family_admin).family.update!(assistant_type: "external")
 
-      delete disconnect_external_assistant_settings_hosting_url
+        delete disconnect_external_assistant_settings_hosting_url
 
-      assert_redirected_to settings_hosting_url
-      assert_not Assistant::External.configured?
-      assert_equal "builtin", users(:family_admin).family.reload.assistant_type
+        assert_redirected_to settings_hosting_url
+        # Force cache refresh so configured? reads fresh DB state after
+        # the disconnect action cleared the settings within its own request.
+        Setting.clear_cache
+        assert_not Assistant::External.configured?
+        assert_equal "builtin", users(:family_admin).family.reload.assistant_type
+      end
     end
   ensure
     Setting.external_assistant_url = nil

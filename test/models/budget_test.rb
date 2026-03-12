@@ -82,8 +82,7 @@ class BudgetTest < ActiveSupport::TestCase
     healthcare = Category.create!(
       name: "Healthcare #{Time.now.to_f}",
       family: family,
-      color: "#e74c3c",
-      classification: "expense"
+      color: "#e74c3c"
     )
 
     budget.sync_budget_categories
@@ -129,8 +128,7 @@ class BudgetTest < ActiveSupport::TestCase
     category = Category.create!(
       name: "Returns Only #{Time.now.to_f}",
       family: family,
-      color: "#3498db",
-      classification: "expense"
+      color: "#3498db"
     )
 
     budget.sync_budget_categories
@@ -266,7 +264,7 @@ class BudgetTest < ActiveSupport::TestCase
     source_budget.update!(budgeted_spending: 4000, expected_income: 6000)
 
     # Create a category only in the source budget
-    temp_category = Category.create!(name: "Temp #{Time.now.to_f}", family: family, color: "#aaa", classification: "expense")
+    temp_category = Category.create!(name: "Temp #{Time.now.to_f}", family: family, color: "#aaa")
     source_budget.budget_categories.create!(category: temp_category, budgeted_spending: 100, currency: "USD")
 
     target_budget = Budget.find_or_bootstrap(family, start_date: 1.month.ago)
@@ -285,7 +283,7 @@ class BudgetTest < ActiveSupport::TestCase
     target_budget = Budget.find_or_bootstrap(family, start_date: 1.month.ago)
 
     # Add a new category only to the target
-    new_category = Category.create!(name: "New #{Time.now.to_f}", family: family, color: "#bbb", classification: "expense")
+    new_category = Category.create!(name: "New #{Time.now.to_f}", family: family, color: "#bbb")
     target_budget.budget_categories.create!(category: new_category, budgeted_spending: 0, currency: "USD")
 
     target_budget.copy_from!(source_budget)
@@ -303,5 +301,31 @@ class BudgetTest < ActiveSupport::TestCase
     )
 
     assert_not_nil budget.previous_budget_param
+  end
+
+  test "uncategorized budget category actual spending reflects uncategorized transactions" do
+    family = families(:dylan_family)
+    budget = Budget.find_or_bootstrap(family, start_date: Date.current.beginning_of_month)
+    account = accounts(:depository)
+
+    # Create an uncategorized expense
+    Entry.create!(
+      account: account,
+      entryable: Transaction.create!(category: nil),
+      date: Date.current,
+      name: "Uncategorized lunch",
+      amount: 75,
+      currency: "USD"
+    )
+
+    budget = Budget.find(budget.id)
+    budget.sync_budget_categories
+
+    uncategorized_bc = budget.uncategorized_budget_category
+    spending = budget.budget_category_actual_spending(uncategorized_bc)
+
+    # Must be > 0 — the nil-key collision between Uncategorized and
+    # Other Investments synthetic categories previously caused this to return 0
+    assert spending >= 75, "Uncategorized actual spending should include the $75 transaction, got #{spending}"
   end
 end

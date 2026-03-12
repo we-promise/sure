@@ -1,9 +1,10 @@
 class Holding::ReverseCalculator
   attr_reader :account, :portfolio_snapshot
 
-  def initialize(account, portfolio_snapshot:)
+  def initialize(account, portfolio_snapshot:, security_ids: nil)
     @account = account
     @portfolio_snapshot = portfolio_snapshot
+    @security_ids = security_ids
   end
 
   def calculate
@@ -19,7 +20,7 @@ class Holding::ReverseCalculator
     # since it is common for a provider to supply "current day" holdings but not all the historical
     # trades that make up those holdings.
     def portfolio_cache
-      @portfolio_cache ||= Holding::PortfolioCache.new(account, use_holdings: true)
+      @portfolio_cache ||= Holding::PortfolioCache.new(account, use_holdings: true, security_ids: @security_ids)
     end
 
     def calculate_holdings
@@ -57,6 +58,8 @@ class Holding::ReverseCalculator
 
     def build_holdings(portfolio, date, price_source: nil)
       portfolio.map do |security_id, qty|
+        next if @security_ids && !@security_ids.include?(security_id)
+
         price = portfolio_cache.get_price(security_id, date, source: price_source)
 
         if price.nil?

@@ -155,7 +155,6 @@ class Family < ApplicationRecord
     I18n.with_locale(locale) do
       categories.find_or_create_by!(name: Category.investment_contributions_name) do |cat|
         cat.color = "#0d9488"
-        cat.classification = "expense"
         cat.lucide_icon = "trending-up"
       end
     end
