@@ -11,8 +11,8 @@
 
     <%= summary_card title: "Remaining loan" do %>
       <% if loan.total_interest.present? %>
-        <% if loan.interest_ratio.present? %>
-          <% percentage = (loan.interest_ratio * 100).round(1) %>
+        <% if loan.elapsed_ratio.present? %>
+          <% percentage = (loan.elapsed_ratio * 100).round(1) %>
           <div class="flex items-center justify-between gap-4">
             <!-- Texte -->
             <div class="text-xs text-zinc-500">
@@ -43,7 +43,7 @@
                   stroke-linecap="round"
                   class="stroke-amber-500 fill-none transition-all duration-500"
                   stroke-dasharray="<%= 2 * Math::PI * 28 %>"
-                  stroke-dashoffset="<%= 2 * Math::PI * 28 * (1 - loan.interest_ratio) %>"
+                  stroke-dashoffset="<%= 2 * Math::PI * 28 * (1 - loan.elapsed_ratio) %>"
                 />
               </svg>
             </div>
