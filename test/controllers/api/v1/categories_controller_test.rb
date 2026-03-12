@@ -412,7 +412,7 @@ class Api::V1::CategoriesControllerTest < ActionDispatch::IntegrationTest
       name: "New Root",
       classification: "expense",
       color: "#aabbcc",
-      lucide_icon: "shapes"
+      lucide_icon: "bike"
     )
 
     patch "/api/v1/categories/#{@subcategory.id}",
@@ -490,5 +490,21 @@ class Api::V1::CategoriesControllerTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
     body = JSON.parse(response.body)
     assert_match /Parent category not found/, body["message"]
+  end
+
+  # ── Icons action tests ────────────────────────────────────────────────────
+
+  test "icons returns available icon list without authentication" do
+    get "/api/v1/categories/icons"
+
+    assert_response :success
+    body = JSON.parse(response.body)
+
+    assert body.key?("icons"), "Response should have 'icons' key"
+    assert body["icons"].is_a?(Array), "'icons' should be an array"
+    assert body["icons"].length > 0, "Icons list should not be empty"
+    assert_includes body["icons"], "bike"
+    assert_includes body["icons"], "utensils"
+    assert_not_includes body["icons"], "hiking"
   end
 end

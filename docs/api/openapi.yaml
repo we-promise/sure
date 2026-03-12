@@ -346,6 +346,16 @@ components:
             "$ref": "#/components/schemas/CategoryDetail"
         pagination:
           "$ref": "#/components/schemas/Pagination"
+    CategoryIconsResponse:
+      type: object
+      required:
+      - icons
+      properties:
+        icons:
+          type: array
+          description: List of valid Lucide icon names for use in categories
+          items:
+            type: string
     CreateCategoryRequest:
       type: object
       required:
@@ -1434,6 +1444,19 @@ paths:
                 category:
                   "$ref": "#/components/schemas/CreateCategoryRequest"
         required: true
+  "/api/v1/categories/icons":
+    get:
+      summary: List available category icons
+      tags:
+      - Categories
+      parameters: []
+      responses:
+        '200':
+          description: icons listed
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/CategoryIconsResponse"
   "/api/v1/categories/{id}":
     parameters:
     - name: id

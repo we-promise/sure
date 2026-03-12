@@ -206,4 +206,17 @@ RSpec.describe 'API V1 Categories', type: :request do
       end
     end
   end
+
+  path '/api/v1/categories/icons' do
+    get 'List available category icons' do
+      tags 'Categories'
+      produces 'application/json'
+
+      response '200', 'icons listed' do
+        schema '$ref' => '#/components/schemas/CategoryIconsResponse'
+
+        run_test!
+      end
+    end
+  end
 end
