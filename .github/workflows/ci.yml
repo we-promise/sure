@@ -3,6 +3,9 @@ name: CI
 on:
   workflow_call:
 
+permissions:
+  contents: read
+
 jobs:
   scan_ruby:
     runs-on: ubuntu-latest
