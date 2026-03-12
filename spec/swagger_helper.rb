@@ -245,6 +245,17 @@ RSpec.configure do |config|
               }
             }
           },
+          CategoryIconsResponse: {
+            type: :object,
+            required: %w[icons],
+            properties: {
+              icons: {
+                type: :array,
+                description: 'List of valid Lucide icon names for use in categories',
+                items: { type: :string }
+              }
+            }
+          },
           CreateCategoryRequest: {
             type: :object,
             required: %w[name classification],
