@@ -4,6 +4,9 @@ class Api::V1::CategoriesController < Api::V1::BaseController
   before_action :ensure_read_scope, only: [ :index, :show ]
   before_action :ensure_write_scope, only: [ :create, :update ]
   before_action :set_category, only: [ :show, :update ]
+  skip_before_action :authenticate_request!, only: [ :icons ]
+  skip_before_action :check_api_key_rate_limit, only: [ :icons ]
+  skip_before_action :log_api_access, only: [ :icons ]
 
   def index
     family = current_resource_owner.family
@@ -134,6 +137,10 @@ class Api::V1::CategoriesController < Api::V1::BaseController
       error: "internal_server_error",
       message: "Error: #{e.message}"
     }, status: :internal_server_error
+  end
+
+  def icons
+    render json: { icons: Category.icon_codes }
   end
 
   private
