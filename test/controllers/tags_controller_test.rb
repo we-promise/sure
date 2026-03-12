@@ -34,12 +34,12 @@ class TagsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "should get edit" do
-    get edit_tag_url(tags.first)
+    get edit_tag_url(tags(:one))
     assert_response :success
   end
 
   test "should update tag" do
-    patch tag_url(tags.first), params: { tag: { name: "Test Tag" } }
+    patch tag_url(tags(:one)), params: { tag: { name: "Test Tag" } }
 
     assert_redirected_to tags_url
     assert_equal "Tag updated", flash[:notice]

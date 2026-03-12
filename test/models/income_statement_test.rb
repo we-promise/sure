@@ -49,12 +49,12 @@ class IncomeStatementTest < ActiveSupport::TestCase
     assert_equal expected_total_income, income_totals.category_totals.find { |ct| ct.category.id == @income_category.id }.total
   end
 
-  test "calculates median expense" do
+  test "expense_totals total matches sum of expenses" do
     income_statement = IncomeStatement.new(@family)
     assert_equal 200 + 300 + 400, income_statement.expense_totals(period: Period.last_30_days).total
   end
 
-  test "calculates median income" do
+  test "income_totals total matches sum of income" do
     income_statement = IncomeStatement.new(@family)
     assert_equal 1000, income_statement.income_totals(period: Period.last_30_days).total
   end

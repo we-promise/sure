@@ -21,11 +21,14 @@ class TrendTest < ActiveSupport::TestCase
   end
 
   test "flat" do
-    trend1 = Trend.new(current: 100, previous: 100)
-    trend2 = Trend.new(current: 100, previous: nil)
-    assert_equal "flat", trend1.direction
-    assert_equal "up", trend2.direction
-    assert_equal "var(--color-gray)", trend1.color
+    trend = Trend.new(current: 100, previous: 100)
+    assert_equal "flat", trend.direction
+    assert_equal "var(--color-gray)", trend.color
+  end
+
+  test "up when previous is nil" do
+    trend = Trend.new(current: 100, previous: nil)
+    assert_equal "up", trend.direction
   end
 
   test "infinitely up" do
