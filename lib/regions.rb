@@ -21,6 +21,7 @@ class Regions
 
     def currency_to_region(currency_code)
       initialize_once
+      currency_code = currency_code&.upcase
 
       @data[:currency_region_map][currency_code]
     end
@@ -52,7 +53,7 @@ class Regions
         end
 
         # Build currency -> region map
-        currency_region_map = (config["currencies"] || {}).transform_keys(&:to_s)
+        currency_region_map = (config["currencies"] || {}).transform_keys { |k| k.to_s.upcase }
 
         {
           country_region_map: country_region_map,
