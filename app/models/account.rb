@@ -244,7 +244,15 @@ class Account < ApplicationRecord
   end
 
   def logo_url
-    provider&.logo_url
+    if institution_domain.present? && Setting.brand_fetch_client_id.present?
+      logo_size = Setting.brand_fetch_logo_size
+
+      "https://cdn.brandfetch.io/#{institution_domain}/icon/fallback/lettermark/w/#{logo_size}/h/#{logo_size}?c=#{Setting.brand_fetch_client_id}"
+    elsif provider&.logo_url.present?
+      provider.logo_url
+    elsif logo.attached?
+      Rails.application.routes.url_helpers.rails_blob_path(logo, only_path: true)
+    end
   end
 
   def destroy_later
