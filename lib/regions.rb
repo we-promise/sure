@@ -59,6 +59,18 @@ class Regions
           country_region_map: country_region_map,
           currency_region_map: currency_region_map
         }
+      rescue Errno::ENOENT, Psych::SyntaxError => e
+        Rails.logger.error("Regions: failed loading config/regions.yml (#{e.class}: #{e.message})")
+        {
+          country_region_map: {},
+          currency_region_map: {}
+        }
+      rescue StandardError => e
+        Rails.logger.error("Regions: unexpected error loading regions config (#{e.class}: #{e.message})")
+        {
+          country_region_map: {},
+          currency_region_map: {}
+        }
       end
   end
 end
