@@ -1,20 +1,28 @@
 class Regions
+  @data = nil
+  @data_mutex = Mutex.new
+
   class << self
     def initialize_once
-      @@data ||= load_regions
+      return @data if @data
+
+      @data_mutex ||= Mutex.new
+      @data_mutex.synchronize do
+        @data ||= load_regions
+      end
     end
 
     def country_to_region(country_code)
       initialize_once
       country_code = country_code.upcase if country_code.present?
 
-      @@data[:country_region_map][country_code]
+      @data[:country_region_map][country_code]
     end
 
     def currency_to_region(currency_code)
       initialize_once
 
-      @@data[:currency_region_map][currency_code]
+      @data[:currency_region_map][currency_code]
     end
 
     def region_for(country: nil, currency: nil)
