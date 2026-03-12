@@ -87,7 +87,6 @@ module ActiveSupport
         family.categories.find_or_create_by!(name: Category.investment_contributions_name) do |c|
           c.color = "#0d9488"
           c.lucide_icon = "trending-up"
-          c.classification = "expense"
         end
       end
     end

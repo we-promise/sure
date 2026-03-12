@@ -30,8 +30,27 @@ de:
         label: "SimpleFin-Setup-Token:"
         placeholder: "Füge hier dein SimpleFin-Setup-Token ein..."
         help_text: "Das Token sollte eine lange Zeichenfolge aus Buchstaben und Zahlen sein."
+    setup_accounts:
+      stale_accounts:
+        title: "Konten nicht mehr in SimpleFIN"
+        description: "Diese Konten existieren in deiner Datenbank, werden aber nicht mehr von SimpleFIN bereitgestellt. Das kann passieren, wenn sich Kontokonfigurationen beim Anbieter ändern."
+        action_prompt: "Was möchtest du tun?"
+        action_delete: "Konto und alle Transaktionen löschen"
+        action_move: "Transaktionen verschieben nach:"
+        action_skip: "Vorerst überspringen"
+        transaction_count:
+          one: "%{count} Transaktion"
+          other: "%{count} Transaktionen"
     complete_account_setup:
-      success: SimpleFin-Konten wurden erfolgreich eingerichtet! Deine Transaktionen und Positionen werden im Hintergrund importiert.
+      all_skipped: "Alle Konten wurden übersprungen. Es wurden keine Konten erstellt."
+      no_accounts: "Keine Konten zum Einrichten."
+      success:
+        one: "Ein SimpleFIN-Konto erfolgreich erstellt! Deine Transaktionen und Positionen werden im Hintergrund importiert."
+        other: "%{count} SimpleFIN-Konten erfolgreich erstellt! Deine Transaktionen und Positionen werden im Hintergrund importiert."
+      stale_accounts_processed: "Veraltete Konten: %{deleted} gelöscht, %{moved} verschoben."
+      stale_accounts_errors:
+        one: "%{count} Aktion für veraltetes Konto fehlgeschlagen. Details in den Logs prüfen."
+        other: "%{count} Aktionen für veraltete Konten fehlgeschlagen. Details in den Logs prüfen."
     simplefin_item:
       add_new: Neue Verbindung hinzufügen
       confirm_accept: Verbindung löschen
@@ -46,8 +65,43 @@ de:
       setup_needed: Neue Konten bereit zur Einrichtung
       setup_description: Wähle die Kontotypen für deine neu importierten SimpleFin-Konten aus.
       setup_action: Neue Konten einrichten
+      setup_accounts_menu: Konten einrichten
+      more_accounts_available:
+        one: "%{count} weiteres Konto kann eingerichtet werden"
+        other: "%{count} weitere Konten können eingerichtet werden"
+      accounts_skipped_tooltip: "Einige Konten wurden aufgrund von Fehlern bei der Synchronisierung übersprungen"
+      accounts_skipped_label: "Übersprungen: %{count}"
+      rate_limited_ago: "Ratenbegrenzung (vor %{time})"
+      rate_limited_recently: "Kürzlich ratenbegrenzt"
       status: Zuletzt vor %{timestamp} synchronisiert
       status_never: Noch nie synchronisiert
       status_with_summary: "Zuletzt vor %{timestamp} synchronisiert • %{summary}"
       syncing: Wird synchronisiert...
       update: Verbindung aktualisieren
+      stale_pending_note: "(von Budgets ausgeschlossen)"
+      stale_pending_accounts: "in: %{accounts}"
+      reconciled_details_note: "(Details siehe Synchronisierungszusammenfassung)"
+      duplicate_accounts_skipped: "Einige Konten wurden als Duplikate übersprungen — nutze „Bestehendes Konto verknüpfen“, um sie zusammenzuführen."
+    select_existing_account:
+      title: "%{account_name} mit SimpleFIN verknüpfen"
+      description: Wähle ein SimpleFIN-Konto aus, das mit deinem bestehenden Konto verknüpft werden soll
+      cancel: Abbrechen
+      link_account: Konto verknüpfen
+      no_accounts_found: "Keine SimpleFIN-Konten für diesen %{moniker} gefunden."
+      wait_for_sync: Wenn du gerade verbunden oder synchronisiert hast, versuche es nach Abschluss der Synchronisierung erneut.
+      unlink_to_move: Um eine Verknüpfung zu verschieben, trenne sie zuerst im Aktionsmenü des Kontos.
+      all_accounts_already_linked: Alle SimpleFIN-Konten scheinen bereits verknüpft zu sein.
+      currently_linked_to: "Aktuell verknüpft mit: %{account_name}"
+    link_existing_account:
+      success: Konto erfolgreich mit SimpleFIN verknüpft
+      errors:
+        only_manual: Nur manuelle Konten können verknüpft werden
+        invalid_simplefin_account: Ungültiges SimpleFIN-Konto ausgewählt
+    reconciled_status:
+      message:
+        one: "%{count} doppelte ausstehende Transaktion abgeglichen"
+        other: "%{count} doppelte ausstehende Transaktionen abgeglichen"
+    stale_pending_status:
+      message:
+        one: "%{count} ausstehende Transaktion älter als %{days} Tage"
+        other: "%{count} ausstehende Transaktionen älter als %{days} Tage"

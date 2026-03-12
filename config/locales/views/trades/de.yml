@@ -24,6 +24,8 @@ de:
       title: Neue Transaktion
     show:
       additional: Zusätzlich
+      buy: Kaufen
+      category_label: Kategorie
       cost_per_share_label: Kosten pro Anteil
       date_label: Datum
       delete: Löschen
@@ -32,7 +34,10 @@ de:
       details: Details
       exclude_subtitle: Dieser Trade wird nicht in Berichten und Berechnungen berücksichtigt
       exclude_title: Von Analysen ausschließen
+      no_category: Keine Kategorie
       note_label: Notiz
       note_placeholder: Füge hier zusätzliche Notizen hinzu …
       quantity_label: Menge
+      sell: Verkaufen
       settings: Einstellungen
+      type_label: Typ

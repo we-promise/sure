@@ -8,12 +8,10 @@ es:
     plaid_item:
       add_new: Añadir nueva conexión
       confirm_accept: Eliminar institución
-      confirm_body: Esto eliminará permanentemente todas las cuentas de este grupo y
-        todos los datos asociados.
+      confirm_body: Esto eliminará permanentemente todas las cuentas de este grupo y todos los datos asociados.
       confirm_title: ¿Eliminar institución?
       connection_lost: Conexión perdida
-      connection_lost_description: Esta conexión ya no es válida. Necesitarás
-        eliminar esta conexión y añadirla de nuevo para continuar sincronizando los datos.
+      connection_lost_description: Esta conexión ya no es válida. Necesitarás eliminar esta conexión y añadirla de nuevo para continuar sincronizando los datos.
       delete: Eliminar
       error: Ocurrió un error mientras se sincronizaban los datos
       no_accounts_description: No pudimos cargar ninguna cuenta de esta institución financiera.
@@ -23,3 +21,8 @@ es:
       status_never: Requiere sincronización de datos
       syncing: Sincronizando...
       update: Actualizar conexión
+    select_existing_account:
+      title: "Vincular %{account_name} a Plaid"
+      description: Selecciona una cuenta de Plaid para vincularla a tu cuenta existente
+      cancel: Cancelar
+      link_account: Vincular cuenta
