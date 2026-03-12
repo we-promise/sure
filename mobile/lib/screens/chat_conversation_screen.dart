@@ -50,6 +50,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
   bool _hasEverHadMessages = false;
   String? _activeChatId;
   bool _isInitializingChat = false;
+  String? _pendingFirstMessage;
 
   @override
   void initState() {
@@ -136,6 +137,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
     if (mounted && !_hasEverHadMessages) {
       setState(() {
         _hasEverHadMessages = true;
+        _pendingFirstMessage = content;
       });
     }
 
@@ -422,6 +424,9 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
           if (messages.isNotEmpty && !_hasEverHadMessages) {
             _hasEverHadMessages = true;
           }
+          if (messages.isNotEmpty && _pendingFirstMessage != null) {
+            _pendingFirstMessage = null;
+          }
           final visibleMessages = messages;
 
           // Auto-scroll to bottom when messages update or typing indicator appears
@@ -533,6 +538,19 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
                             controller: _scrollController,
                             padding: const EdgeInsets.all(16),
                             children: [
+                              // Show the user's pending message
+                              if (_pendingFirstMessage != null)
+                                _MessageBubble(
+                                  message: Message(
+                                    id: 'pending',
+                                    type: 'user_message',
+                                    role: 'user',
+                                    content: _pendingFirstMessage!,
+                                    createdAt: DateTime.now(),
+                                    updatedAt: DateTime.now(),
+                                  ),
+                                  formatTime: _formatTime,
+                                ),
                               // Show thinking indicator while waiting
                               // for the first AI response
                               Padding(
