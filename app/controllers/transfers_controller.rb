@@ -9,7 +9,7 @@ class TransfersController < ApplicationController
   end
 
   def show
-    @categories = Current.family.categories.expenses
+    @categories = Current.family.categories.alphabetically
   end
 
   def create
