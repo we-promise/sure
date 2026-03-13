@@ -73,6 +73,12 @@
       </turbo-frame>
     <% end %>
 
+    <%= settings_section title: "myFund.pl", collapsible: true, open: false do %>
+      <turbo-frame id="myfund-providers-panel">
+        <%= render "settings/providers/myfund_panel" %>
+      </turbo-frame>
+    <% end %>
+
     <%= settings_section title: "Indexa Capital (alpha)", collapsible: true, open: false do %>
       <turbo-frame id="indexa_capital-providers-panel">
         <%= render "settings/providers/indexa_capital_panel" %>

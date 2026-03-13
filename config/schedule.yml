@@ -25,6 +25,12 @@ sync_hourly:
   queue: "scheduled"
   description: "Syncs provider items that opt-in to hourly syncing"
 
+sync_myfund:
+  cron: "0 */6 * * *" # every 6 hours
+  class: "MyfundSyncJob"
+  queue: "scheduled"
+  description: "Syncs myFund.pl portfolios for all families"
+
 clean_data:
   cron: "0 3 * * *" # daily at 3:00 AM
   class: "DataCleanerJob"

@@ -2,7 +2,7 @@ class Family < ApplicationRecord
   include Syncable, AutoTransferMatchable, Subscribeable, VectorSearchable
   include PlaidConnectable, SimplefinConnectable, LunchflowConnectable, EnableBankingConnectable
   include CoinbaseConnectable, CoinstatsConnectable, SnaptradeConnectable, MercuryConnectable
-  include IndexaCapitalConnectable
+  include IndexaCapitalConnectable, MyfundConnectable
 
   DATE_FORMATS = [
     [ "MM-DD-YYYY", "%m-%d-%Y" ],

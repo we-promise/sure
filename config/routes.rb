@@ -71,6 +71,12 @@ Rails.application.routes.draw do
   end
 
   # CoinStats routes
+  resources :myfund_items, only: [ :create, :update, :destroy ] do
+    member do
+      post :sync
+    end
+  end
+
   resources :coinstats_items, only: [ :index, :new, :create, :update, :destroy ] do
     collection do
       post :link_wallet

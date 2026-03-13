@@ -18,6 +18,7 @@ class Family::Syncer
     coinstats_items
     mercury_items
     snaptrade_items
+    myfund_items
   ].freeze
 
   def initialize(family)

@@ -1,0 +1,30 @@
+---
+en:
+  myfund_items:
+    create:
+      success: myFund.pl connection created successfully. Initial sync started.
+    update:
+      success: myFund.pl connection updated successfully
+    destroy:
+      success: myFund.pl connection removed
+    sync:
+      success: myFund.pl sync started
+    panel:
+      setup_title: "Setup instructions:"
+      step_1: "Go to myFund.pl → Menu → Konto → Ustawienia konta → Klucz API and generate your API key"
+      step_2: "Enter your API key and portfolio name below, then click Save"
+      step_3: "Your portfolio will sync automatically every 6 hours, or click Sync Now to sync immediately"
+      fields_title: "Field descriptions:"
+      api_key_label: "API Key"
+      api_key_description: "Your myFund.pl API key for authentication (required)"
+      portfolio_name_label: "Portfolio Name"
+      portfolio_name_description: "The name of your portfolio on myFund.pl (required, must match exactly)"
+      api_key_placeholder: "Paste API key here"
+      api_key_update_placeholder: "Enter new API key to update"
+      portfolio_name_placeholder: "e.g. Mój portfel"
+      save: "Save Configuration"
+      update: "Update Configuration"
+      sync_now: "Sync Now"
+      configured: "Configured and syncing automatically every 6 hours."
+      not_configured: "Not configured"
+      last_synced: "Last synced: %{time}"
