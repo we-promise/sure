@@ -16,9 +16,10 @@ class SimplefinEntry::ProcessorTest < ActiveSupport::TestCase
       account_type: "checking",
       currency: "USD",
       current_balance: 1000,
-      available_balance: 1000,
-      account: @account
+      available_balance: 1000
     )
+    # Link via AccountProvider instead of legacy FK
+    AccountProvider.create!(account: @account, provider: @simplefin_account)
   end
 
   test "persists extra metadata (raw payee/memo/description and provider extra)" do
