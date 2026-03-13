@@ -17,7 +17,7 @@ class AssistantTest < ActiveSupport::TestCase
   end
 
   test "errors get added to chat" do
-    @assistant.expects(:get_model_provider).with("gpt-4.1").returns(@provider)
+    @assistant.expects(:get_model_provider).with("gpt-4.1", family: @chat.user.family).returns(@provider)
 
     error = StandardError.new("test error")
     @provider.expects(:chat_response).returns(provider_error_response(error))
@@ -31,7 +31,7 @@ class AssistantTest < ActiveSupport::TestCase
 
   test "handles missing provider gracefully with helpful error message" do
     # Simulate no provider configured (returns nil)
-    @assistant.expects(:get_model_provider).with("gpt-4.1").returns(nil)
+    @assistant.expects(:get_model_provider).with("gpt-4.1", family: @chat.user.family).returns(nil)
 
     # Mock the registry to return empty providers
     mock_registry = mock("registry")
@@ -51,7 +51,7 @@ class AssistantTest < ActiveSupport::TestCase
 
   test "shows available providers in error message when model not supported" do
     # Simulate provider exists but doesn't support the model
-    @assistant.expects(:get_model_provider).with("claude-3").returns(nil)
+    @assistant.expects(:get_model_provider).with("claude-3", family: @chat.user.family).returns(nil)
 
     # Create mock provider
     mock_provider = mock("openai_provider")
@@ -80,7 +80,7 @@ class AssistantTest < ActiveSupport::TestCase
   end
 
   test "responds to basic prompt" do
-    @assistant.expects(:get_model_provider).with("gpt-4.1").returns(@provider)
+    @assistant.expects(:get_model_provider).with("gpt-4.1", family: @chat.user.family).returns(@provider)
 
     text_chunks = [
       provider_text_chunk("I do not "),
@@ -117,7 +117,7 @@ class AssistantTest < ActiveSupport::TestCase
   end
 
   test "responds with tool function calls" do
-    @assistant.expects(:get_model_provider).with("gpt-4.1").returns(@provider).once
+    @assistant.expects(:get_model_provider).with("gpt-4.1", family: @chat.user.family).returns(@provider).once
 
     # Only first provider call executes function
     Assistant::Function::GetAccounts.any_instance.stubs(:call).returns("test value").once

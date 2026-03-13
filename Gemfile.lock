@@ -555,6 +555,7 @@ GEM
       redis-client (>= 0.22.0)
     redis-client (0.25.0)
       connection_pool
+    redis-prescription (2.6.0)
     regexp_parser (2.10.0)
     reline (0.6.1)
       io-console (~> 0.5)
@@ -673,6 +674,10 @@ GEM
       fugit (~> 1.8, >= 1.11.1)
       globalid (>= 1.0.1)
       sidekiq (>= 6.5.0)
+    sidekiq-throttled (2.1.0)
+      concurrent-ruby (>= 1.2.0)
+      redis-prescription (~> 2.2)
+      sidekiq (>= 8.0)
     sidekiq-unique-jobs (8.0.11)
       concurrent-ruby (~> 1.0, >= 1.0.5)
       sidekiq (>= 7.0.0, < 9.0.0)
@@ -854,6 +859,7 @@ DEPENDENCIES
   sentry-sidekiq
   sidekiq
   sidekiq-cron
+  sidekiq-throttled
   sidekiq-unique-jobs
   simplecov
   skylight
