@@ -37,9 +37,9 @@ class ExchangeRate::Importer
       provider_rate_value = provider_rates[date]&.rate
 
       chosen_rate = if clear_cache
-        provider_rate_value || db_rate_value   # overwrite when possible
+        valid_rate(provider_rate_value) || valid_rate(db_rate_value)   # overwrite when possible
       else
-        db_rate_value || provider_rate_value   # fill gaps
+        valid_rate(db_rate_value) || valid_rate(provider_rate_value)   # fill gaps
       end
 
       # Gapfill with LOCF strategy (last observation carried forward)
@@ -82,10 +82,19 @@ class ExchangeRate::Importer
       total_upsert_count
     end
 
+    # Returns the rate if it is a positive number, nil otherwise
+    def valid_rate(rate)
+      rate.present? && rate.to_f > 0 ? rate : nil
+    end
+
     # Since provider may not return values on weekends and holidays, we grab the first rate from the provider that is on or before the start date
     def start_rate_value
-      provider_rate_value = provider_rates.select { |date, _| date <= start_date }.max_by { |date, _| date }&.last
-      db_rate_value = db_rates[start_date]&.rate
+      provider_rate_value = provider_rates
+        .select { |date, rate| date <= start_date && rate.rate.to_f > 0 }
+        .max_by { |date, _| date }&.last&.rate
+      db_rate_value = db_rates.values
+        .select { |r| r.date <= start_date && r.rate.to_f > 0 }
+        .max_by(&:date)&.rate
       provider_rate_value || db_rate_value
     end
 
@@ -96,7 +105,8 @@ class ExchangeRate::Importer
       first_missing_date = nil
 
       start_date.upto(end_date) do |date|
-        unless db_rates.key?(date)
+        rate = db_rates[date]
+        unless rate && rate.rate.to_f > 0
           first_missing_date = date
           break
         end
@@ -129,7 +139,7 @@ class ExchangeRate::Importer
     end
 
     def all_rates_exist?
-      db_count == expected_count
+      db_count == expected_count && db_rates.values.none? { |r| r.rate.to_f <= 0 }
     end
 
     def expected_count

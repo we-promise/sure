@@ -140,6 +140,64 @@ class ExchangeRate::ImporterTest < ActiveSupport::TestCase
     assert_equal 1, ExchangeRate.count
   end
 
+  test "re-syncs when existing rates contain zero values" do
+    ExchangeRate.delete_all
+
+    # Seed DB with a zero rate (simulating a previously stored bad rate)
+    ExchangeRate.insert_all([
+      { from_currency: "USD", to_currency: "EUR", date: 1.day.ago.to_date, rate: 1.3, created_at: Time.current, updated_at: Time.current },
+      { from_currency: "USD", to_currency: "EUR", date: Date.current, rate: 0.0, created_at: Time.current, updated_at: Time.current }
+    ])
+
+    provider_response = provider_success_response([
+      OpenStruct.new(from: "USD", to: "EUR", date: 1.day.ago.to_date, rate: 1.3),
+      OpenStruct.new(from: "USD", to: "EUR", date: Date.current, rate: 1.5)
+    ])
+
+    # effective_start_date is Date.current (first date with zero rate), so provider
+    # fetch starts 5 days before that
+    @provider.expects(:fetch_exchange_rates)
+             .with(from: "USD", to: "EUR", start_date: get_provider_fetch_start_date(Date.current), end_date: Date.current)
+             .returns(provider_response)
+
+    ExchangeRate::Importer.new(
+      exchange_rate_provider: @provider,
+      from: "USD",
+      to: "EUR",
+      start_date: 1.day.ago.to_date,
+      end_date: Date.current
+    ).import_provider_rates
+
+    db_rates = ExchangeRate.where(from_currency: "USD", to_currency: "EUR").order(:date)
+    assert_equal [ 1.3, 1.5 ], db_rates.map(&:rate)
+  end
+
+  test "gapfills zero rate from provider with previous valid rate" do
+    ExchangeRate.delete_all
+
+    provider_response = provider_success_response([
+      OpenStruct.new(from: "USD", to: "EUR", date: 2.days.ago.to_date, rate: 1.3),
+      OpenStruct.new(from: "USD", to: "EUR", date: 1.day.ago.to_date, rate: 0.0),
+      OpenStruct.new(from: "USD", to: "EUR", date: Date.current, rate: 1.5)
+    ])
+
+    @provider.expects(:fetch_exchange_rates)
+             .with(from: "USD", to: "EUR", start_date: get_provider_fetch_start_date(2.days.ago.to_date), end_date: Date.current)
+             .returns(provider_response)
+
+    ExchangeRate::Importer.new(
+      exchange_rate_provider: @provider,
+      from: "USD",
+      to: "EUR",
+      start_date: 2.days.ago.to_date,
+      end_date: Date.current
+    ).import_provider_rates
+
+    db_rates = ExchangeRate.where(from_currency: "USD", to_currency: "EUR").order(:date)
+    assert_equal 3, db_rates.count
+    assert_equal [ 1.3, 1.3, 1.5 ], db_rates.map(&:rate)
+  end
+
   private
     def get_provider_fetch_start_date(start_date)
       # We fetch with a 5 day buffer to account for weekends and holidays

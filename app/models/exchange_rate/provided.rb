@@ -22,6 +22,7 @@ module ExchangeRate::Provided
       # and trigger redundant API calls.
       nearest = where(from_currency: from, to_currency: to)
                   .where(date: (date - NEAREST_RATE_LOOKBACK_DAYS)..date)
+                  .where("rate > 0")
                   .order(date: :desc)
                   .first
       return nearest if nearest.present?
@@ -33,6 +34,11 @@ module ExchangeRate::Provided
       return nil unless response.success? # Provider error
 
       rate = response.data
+
+      # Providers occasionally return zero rates (e.g. TwelveData API errors).
+      # Treat them as invalid to avoid storing unusable exchange rates.
+      return nil if rate.rate.to_f <= 0
+
       begin
         ExchangeRate.find_or_create_by!(
           from_currency: rate.from,

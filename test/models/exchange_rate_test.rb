@@ -82,6 +82,34 @@ class ExchangeRateTest < ActiveSupport::TestCase
     assert_equal friday, result.date
   end
 
+  test "returns nil when provider returns zero rate" do
+    ExchangeRate.delete_all
+
+    provider_response = provider_success_response(
+      OpenStruct.new(from: "USD", to: "EUR", date: Date.current, rate: 0.0)
+    )
+
+    @provider.expects(:fetch_exchange_rate).returns(provider_response)
+
+    assert_no_difference "ExchangeRate.count" do
+      assert_nil ExchangeRate.find_or_fetch_rate(from: "USD", to: "EUR", date: Date.current, cache: true)
+    end
+  end
+
+  test "skips nearest cached rate with zero value and calls provider" do
+    # Insert a zero-rate record (simulating a previously stored bad rate)
+    ExchangeRate.insert({ from_currency: "USD", to_currency: "JPY", date: 1.day.ago.to_date, rate: 0.0, created_at: Time.current, updated_at: Time.current })
+
+    provider_response = provider_success_response(
+      OpenStruct.new(from: "USD", to: "JPY", date: Date.current, rate: 155.0)
+    )
+
+    @provider.expects(:fetch_exchange_rate).returns(provider_response)
+
+    result = ExchangeRate.find_or_fetch_rate(from: "USD", to: "JPY", date: Date.current)
+    assert_equal 155.0, result.rate
+  end
+
   test "does not reuse cached rate outside lookback window" do
     old_date = (ExchangeRate::NEAREST_RATE_LOOKBACK_DAYS + 1).days.ago.to_date
     ExchangeRate.create!(from_currency: "USD", to_currency: "JPY", date: old_date, rate: 140.0)
