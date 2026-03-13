@@ -10,11 +10,75 @@ export default class extends Controller {
   };
 
   connect() {
-    this.open();
+    this._connectionToken = (this._connectionToken ?? 0) + 1;
+    const connectionToken = this._connectionToken;
+    this.open(connectionToken).catch((error) => {
+      console.error("Failed to initialize Plaid Link", error);
+    });
   }
 
-  open() {
-    const handler = Plaid.create({
+  disconnect() {
+    this._handler?.destroy();
+    this._handler = null;
+    this._connectionToken = (this._connectionToken ?? 0) + 1;
+  }
+
+  waitForPlaid() {
+    if (typeof Plaid !== "undefined") {
+      return Promise.resolve();
+    }
+
+    return new Promise((resolve, reject) => {
+      let plaidScript = document.querySelector(
+        'script[src*="link-initialize.js"]'
+      );
+
+      // Reject if the CDN request stalls without firing load or error
+      const timeoutId = window.setTimeout(() => {
+        if (plaidScript) plaidScript.dataset.plaidState = "error";
+        reject(new Error("Timed out loading Plaid script"));
+      }, 10_000);
+
+      // Remove previously failed script so we can retry with a fresh element
+      if (plaidScript?.dataset.plaidState === "error") {
+        plaidScript.remove();
+        plaidScript = null;
+      }
+
+      if (!plaidScript) {
+        plaidScript = document.createElement("script");
+        plaidScript.src = "https://cdn.plaid.com/link/v2/stable/link-initialize.js";
+        plaidScript.async = true;
+        plaidScript.dataset.plaidState = "loading";
+        document.head.appendChild(plaidScript);
+      }
+
+      plaidScript.addEventListener("load", () => {
+        window.clearTimeout(timeoutId);
+        plaidScript.dataset.plaidState = "loaded";
+        resolve();
+      }, { once: true });
+      plaidScript.addEventListener("error", () => {
+        window.clearTimeout(timeoutId);
+        plaidScript.dataset.plaidState = "error";
+        reject(new Error("Failed to load Plaid script"));
+      }, { once: true });
+
+      // Re-check after attaching listeners in case the script loaded between
+      // the initial typeof check and listener attachment (avoids a permanently
+      // pending promise on retry flows).
+      if (typeof Plaid !== "undefined") {
+        window.clearTimeout(timeoutId);
+        resolve();
+      }
+    });
+  }
+
+  async open(connectionToken = this._connectionToken) {
+    await this.waitForPlaid();
+    if (connectionToken !== this._connectionToken) return;
+
+    this._handler = Plaid.create({
       token: this.linkTokenValue,
       onSuccess: this.handleSuccess,
       onLoad: this.handleLoad,
@@ -22,7 +86,7 @@ export default class extends Controller {
       onEvent: this.handleEvent,
     });
 
-    handler.open();
+    this._handler.open();
   }
 
   handleSuccess = (public_token, metadata) => {
