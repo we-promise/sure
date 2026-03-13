@@ -11,7 +11,8 @@ class Rule::Registry::TransactionResource < Rule::Registry
       Rule::ConditionFilter::TransactionMerchant.new(rule),
       Rule::ConditionFilter::TransactionCategory.new(rule),
       Rule::ConditionFilter::TransactionDetails.new(rule),
-      Rule::ConditionFilter::TransactionNotes.new(rule)
+      Rule::ConditionFilter::TransactionNotes.new(rule),
+      Rule::ConditionFilter::TransactionAccount.new(rule)
     ]
   end
 
