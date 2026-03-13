@@ -26,13 +26,13 @@ The initializer reads these values on boot and automatically enables tracing. If
 
 ## System instructions from Langfuse (optional)
 
-When `LANGFUSE_PUBLIC_KEY` and `LANGFUSE_SECRET_KEY` are set, the built-in assistant can load its **system instructions** from a Langfuse prompt instead of the default in-app text. That keeps prompt editing in the LLM observability platform and avoids schema changes for prompt storage.
+Prompts are managed only in Langfuse; the app does not store or edit prompts in the database. When `LANGFUSE_PUBLIC_KEY` and `LANGFUSE_SECRET_KEY` are set, the built-in assistant loads instructions from Langfuse so experiments and versioning happen there.
 
-1. In your Langfuse project, create a prompt named **`default_instructions`**.
-2. Use the prompt template with variables: `preferred_currency_symbol`, `preferred_currency_iso_code`, `preferred_currency_default_precision`, `preferred_currency_default_format`, `preferred_currency_separator`, `preferred_currency_delimiter`, `preferred_date_format`, `current_date`.
-3. If the prompt is missing or retrieval fails, the app falls back to the built-in default instructions.
+**Main chat:** Create a prompt named **`default_instructions`** with variables: `preferred_currency_symbol`, `preferred_currency_iso_code`, `preferred_currency_default_precision`, `preferred_currency_default_format`, `preferred_currency_separator`, `preferred_currency_delimiter`, `preferred_date_format`, `current_date`.
 
-Chat generations that use a Langfuse-loaded prompt attach prompt name, version, and content to the trace metadata for observability.
+**Intro / welcome flow:** Create a prompt named **`intro_instructions`** with variables: `preferred_currency_symbol`, `preferred_currency_iso_code`, `preferred_date_format`, `current_date`.
+
+If a prompt is missing or retrieval fails, the app falls back to built-in default text. Chat generations that use a Langfuse-loaded prompt attach prompt name, version, and content to the trace metadata.
 
 ## What Gets Tracked
 

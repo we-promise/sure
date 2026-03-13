@@ -1,6 +1,6 @@
 class Settings::AiPromptsController < ApplicationController
   layout "settings"
-  before_action :ensure_admin, only: [ :show, :edit_system_prompt, :update ]
+  before_action :ensure_admin, only: [ :show, :update ]
   before_action :set_family
 
   def show
@@ -11,28 +11,15 @@ class Settings::AiPromptsController < ApplicationController
     @show_openai_prompts = show_openai_prompts?
   end
 
-  def edit_system_prompt
-    @breadcrumbs = [
-      [ "Home", root_path ],
-      [ "AI Prompts", settings_ai_prompts_path ],
-      [ t("settings.ai_prompts.show.edit_system_prompt_title"), nil ]
-    ]
-    @config = builtin_config
-  end
-
   def update
     @config = builtin_config
     if @config.update(builtin_assistant_config_params)
       redirect_to redirect_after_update, notice: t(".success")
     else
-      if params[:from].to_s == "system_prompt"
-        render :edit_system_prompt, status: :unprocessable_entity
-      else
-        @assistant_config = Assistant.config_for(OpenStruct.new(user: Current.user))
-        @effective_model = Chat.default_model(@family)
-        @show_openai_prompts = show_openai_prompts?
-        render :show, status: :unprocessable_entity
-      end
+      @assistant_config = Assistant.config_for(OpenStruct.new(user: Current.user))
+      @effective_model = Chat.default_model(@family)
+      @show_openai_prompts = show_openai_prompts?
+      render :show, status: :unprocessable_entity
     end
   end
 
@@ -55,7 +42,7 @@ class Settings::AiPromptsController < ApplicationController
     end
 
     def builtin_assistant_config_params
-      params.require(:builtin_assistant_config).permit(:custom_system_prompt, :custom_intro_prompt, :preferred_ai_model, :openai_uri_base)
+      params.require(:builtin_assistant_config).permit(:preferred_ai_model, :openai_uri_base)
     end
 
     def show_openai_prompts?

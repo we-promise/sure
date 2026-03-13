@@ -17,19 +17,6 @@ class Settings::AiPromptsControllerTest < ActionDispatch::IntegrationTest
     assert_match(/not authorized/i, flash[:alert].to_s)
   end
 
-  test "edit_system_prompt requires admin" do
-    sign_in users(:family_member)
-    get edit_system_prompt_settings_ai_prompts_url
-    assert_redirected_to root_path
-    assert_match(/not authorized/i, flash[:alert].to_s)
-  end
-
-  test "edit_system_prompt renders form" do
-    get edit_system_prompt_settings_ai_prompts_url
-    assert_response :success
-    assert_match(/Main system prompt|Custom main system prompt/, response.body)
-  end
-
   test "update requires admin" do
     sign_in users(:family_member)
     patch settings_ai_prompts_url, params: { builtin_assistant_config: { preferred_ai_model: "gpt-4" } }
@@ -43,42 +30,14 @@ class Settings::AiPromptsControllerTest < ActionDispatch::IntegrationTest
     assert_match(/Prompt Instructions|Main System Prompt/, response.body)
   end
 
-  test "update saves custom prompts and preferred model" do
+  test "update saves preferred model" do
     patch settings_ai_prompts_url, params: {
-      builtin_assistant_config: {
-        preferred_ai_model: "gpt-4-turbo",
-        custom_system_prompt: "You are a helpful assistant.",
-        custom_intro_prompt: "Welcome! Tell me about yourself."
-      }
+      builtin_assistant_config: { preferred_ai_model: "gpt-4-turbo" }
     }
     assert_redirected_to settings_ai_prompts_path
     config = @family.reload.builtin_assistant_config
     assert config.present?
     assert_equal "gpt-4-turbo", config.preferred_ai_model
-    assert_equal "You are a helpful assistant.", config.custom_system_prompt
-    assert_equal "Welcome! Tell me about yourself.", config.custom_intro_prompt
-  end
-
-  test "update with invalid length returns unprocessable and does not persist" do
-    long_prompt = "x" * (BuiltinAssistantConfig::CUSTOM_PROMPT_MAX_LENGTH + 1)
-    patch settings_ai_prompts_url, params: {
-      builtin_assistant_config: { custom_system_prompt: long_prompt }
-    }
-    assert_response :unprocessable_entity
-    config = @family.reload.builtin_assistant_config
-    assert config.nil? || config.custom_system_prompt != long_prompt
-  end
-
-  test "update from system_prompt form with invalid length renders edit_system_prompt" do
-    long_prompt = "x" * (BuiltinAssistantConfig::CUSTOM_PROMPT_MAX_LENGTH + 1)
-    patch settings_ai_prompts_url, params: {
-      from: "system_prompt",
-      builtin_assistant_config: { custom_system_prompt: long_prompt, custom_intro_prompt: "" }
-    }
-    assert_response :unprocessable_entity
-    assert_match(/Edit main system prompt|Custom main system prompt/, response.body)
-    config = @family.reload.builtin_assistant_config
-    assert config.nil? || config.custom_system_prompt != long_prompt
   end
 
   test "update saves per-family OpenAI endpoint and model" do
@@ -107,15 +66,11 @@ class Settings::AiPromptsControllerTest < ActionDispatch::IntegrationTest
   test "update with blank params clears overrides" do
     @family.builtin_assistant_config || @family.create_builtin_assistant_config!(
       preferred_ai_model: "gpt-4",
-      custom_system_prompt: "Custom",
-      custom_intro_prompt: "Intro",
       openai_uri_base: "https://api.example.com/v1"
     )
     patch settings_ai_prompts_url, params: {
       builtin_assistant_config: {
         preferred_ai_model: "",
-        custom_system_prompt: "",
-        custom_intro_prompt: "",
         openai_uri_base: ""
       }
     }
@@ -123,8 +78,6 @@ class Settings::AiPromptsControllerTest < ActionDispatch::IntegrationTest
     config = @family.reload.builtin_assistant_config
     assert config.present?
     assert config.preferred_ai_model.blank?
-    assert config.custom_system_prompt.blank?
-    assert config.custom_intro_prompt.blank?
     assert config.openai_uri_base.blank?
   end
 end

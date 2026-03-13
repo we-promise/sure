@@ -4,25 +4,56 @@ module Assistant::Configurable
   class_methods do
     def config_for(chat)
       family = chat.user.family
-      config = family.builtin_assistant_config
       preferred_currency = Money::Currency.new(family.currency)
       preferred_date_format = family.date_format
 
       if chat.user.ui_layout_intro?
-        instructions = config&.custom_intro_prompt.presence || intro_instructions(preferred_currency, preferred_date_format)
-        { instructions: instructions, instructions_prompt: nil, functions: [] }
+        instructions_config = intro_instructions_config(preferred_currency, preferred_date_format)
+        { instructions: instructions_config[:content], instructions_prompt: instructions_config[:prompt], functions: [] }
       else
-        if config&.custom_system_prompt.present?
-          { instructions: config.custom_system_prompt, instructions_prompt: nil, functions: default_functions }
-        else
-          instructions_config = default_instructions(preferred_currency, preferred_date_format)
-          { instructions: instructions_config[:content], instructions_prompt: instructions_config[:prompt], functions: default_functions }
-        end
+        instructions_config = default_instructions(preferred_currency, preferred_date_format)
+        { instructions: instructions_config[:content], instructions_prompt: instructions_config[:prompt], functions: default_functions }
       end
     end
 
     private
-      def intro_instructions(preferred_currency, preferred_date_format)
+      def intro_instructions_config(preferred_currency, preferred_date_format)
+        langfuse_intro = langfuse_intro_instructions(preferred_currency, preferred_date_format)
+        if langfuse_intro.present?
+          { content: langfuse_intro[:content], prompt: langfuse_intro }
+        else
+          { content: fallback_intro_instructions(preferred_currency, preferred_date_format), prompt: nil }
+        end
+      end
+
+      def langfuse_intro_instructions(preferred_currency, preferred_date_format)
+        return unless langfuse_client
+
+        prompt = langfuse_client.get_prompt("intro_instructions")
+        compiled_prompt = prompt.compile(
+          preferred_currency_symbol: preferred_currency.symbol,
+          preferred_currency_iso_code: preferred_currency.iso_code,
+          preferred_date_format: preferred_date_format,
+          current_date: Date.current
+        )
+        content = case compiled_prompt
+        when String
+          compiled_prompt
+        when Array
+          compiled_prompt.filter_map { |message| message[:content] }.join("\n\n")
+        else
+          nil
+        end
+        return if content.blank?
+
+        template = prompt.respond_to?(:prompt) ? prompt.prompt : (prompt.respond_to?(:template) ? prompt.template : nil)
+        { name: prompt.name, version: prompt.version, template: template, content: content }
+      rescue => e
+        Rails.logger.warn("Langfuse intro prompt retrieval failed: #{e.message}")
+        nil
+      end
+
+      def fallback_intro_instructions(preferred_currency, preferred_date_format)
         <<~PROMPT
           ## Your identity
 

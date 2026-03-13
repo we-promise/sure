@@ -13,7 +13,7 @@ en:
         disable_ai: Disable AI Assistant
         prompt_instructions: Prompt instructions
         prompt_link: Prompt
-        edit_prompt_link: Edit prompt
+        prompts_managed_in_langfuse: Managed in Langfuse
         edit_prompt_coming_soon: Edit prompt (coming soon!)
         edit_system_prompt_title: Main system prompt
         endpoint_section_title: Endpoint & model
