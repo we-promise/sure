@@ -9,6 +9,9 @@ ca:
         support: "Suport"
         sure: "Sure"
         today: "avui"
+      nav:
+        account_settings: "Configuració del compte"
+        sign_out: "Tanca la sessió"
       redirect_to_stripe: "En el proper pas, se us redirigirà a Stripe, que gestiona les targetes de crèdit per nosaltres."
       trialing: "Les teves dades s'eliminaran en %{days} dies"
       trial_over: "El teu període de prova ha acabat"

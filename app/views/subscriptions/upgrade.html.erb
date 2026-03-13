@@ -4,14 +4,14 @@
 
     <div class="flex justify-end gap-2">
       <%= render DS::Link.new(
-        text: "Account Settings",
+        text: t("subscriptions.upgrade.nav.account_settings"),
         icon: "settings",
         variant: "ghost",
         href: settings_profile_path,
       ) %>
 
       <%= render DS::Button.new(
-        text: "Sign out",
+        text: t("subscriptions.upgrade.nav.sign_out"),
         icon: "log-out",
         icon_position: :right,
         variant: "ghost",
@@ -60,3 +60,4 @@
 
   <%= render "layouts/shared/footer" %>
 </div>
+

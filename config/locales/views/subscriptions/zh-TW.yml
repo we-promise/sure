@@ -9,6 +9,9 @@ zh-TW:
         support: "支持"
         sure: "Sure"
         today: "今天"
+      nav:
+        account_settings: "帳戶設定"
+        sign_out: "登出"
       redirect_to_stripe: "在下一步中，您將被重新導向到 Stripe，它為我們處理信用卡。"
       trialing: "您的資料將在 %{days} 天後刪除"
       trial_over: "您的試用期已結束"

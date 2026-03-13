@@ -9,6 +9,9 @@ pt-BR:
         support: "Apoiar"
         sure: "Sure"
         today: "hoje"
+      nav:
+        account_settings: "Configurações da conta"
+        sign_out: "Sair"
       redirect_to_stripe: "Na próxima etapa, você será redirecionado para o Stripe, que processa cartões de crédito para nós."
       trialing: "Seus dados serão excluídos em %{days} dias"
       trial_over: "Seu período de teste terminou"

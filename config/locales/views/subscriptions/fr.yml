@@ -8,6 +8,9 @@ fr:
         support: "Soutenir"
         sure: "Sure"
         today: "aujourd'hui"
+      nav:
+        account_settings: "Paramètres du compte"
+        sign_out: "Se déconnecter"
       redirect_to_stripe: "Dans l'étape suivante, vous serez redirigé vers Stripe, qui gère les cartes de crédit pour nous."
       trialing: "Vos données seront supprimées dans %{days} jours"
       trial_over: "Votre période d'essai est terminée"
