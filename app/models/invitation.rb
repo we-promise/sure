@@ -13,7 +13,7 @@ class Invitation < ApplicationRecord
   validates :email, presence: true, format: { with: URI::MailTo::EMAIL_REGEXP }
   validates :role, presence: true, inclusion: { in: %w[admin member guest] }
   validates :token, presence: true, uniqueness: true
-  validates_uniqueness_of :email, scope: :family_id, message: "has already been invited to this family"
+  validate :no_duplicate_pending_invitation_in_family
   validate :inviter_is_admin
   validate :no_other_pending_invitation, on: :create
 
@@ -75,6 +75,21 @@ class Invitation < ApplicationRecord
       if existing
         errors.add(:email, "already has a pending invitation from another family")
       end
+    end
+
+    def no_duplicate_pending_invitation_in_family
+      return if email.blank?
+
+      scope = self.class.pending.where(family_id: family_id)
+      scope = scope.where.not(id: id) if persisted?
+
+      exists = if self.class.encryption_ready?
+        scope.where(email: email).exists?
+      else
+        scope.where("LOWER(email) = ?", email.to_s.strip.downcase).exists?
+      end
+
+      errors.add(:email, "has already been invited to this family") if exists
     end
 
     def inviter_is_admin

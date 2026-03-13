@@ -10,7 +10,7 @@ module Admin
 
     def destroy_all
       family = Family.find(params[:id])
-      family.invitations.destroy_all
+      family.invitations.pending.destroy_all
       redirect_to admin_users_path, notice: t(".success")
     end
   end
