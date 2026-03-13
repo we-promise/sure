@@ -37,18 +37,14 @@ class MyfundItem::Syncer
       portfolio_value = portfolio_data["wartosc"]&.to_d || 0
       currency = portfolio_data["waluta"] || "PLN"
 
-      # Find existing account linked to this myfund_item or create a new one
-      account = myfund_item.family.accounts.find_by(
-        "name = ? AND accountable_type = ?",
-        myfund_item.portfolio_name,
-        "Investment"
-      )
+      # Use stored account reference if available
+      account = myfund_item.account
 
       if account.nil?
         account = Account.create_and_sync(
           {
             family: myfund_item.family,
-            name: myfund_item.portfolio_name,
+            name: "myFund: #{myfund_item.portfolio_name}",
             balance: portfolio_value,
             currency: currency,
             accountable_type: "Investment",
@@ -56,6 +52,8 @@ class MyfundItem::Syncer
           },
           skip_initial_sync: true
         )
+
+        myfund_item.update!(account: account)
       else
         account.update!(balance: portfolio_value, currency: currency)
       end

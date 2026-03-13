@@ -21,55 +21,71 @@
     </div>
   <% end %>
 
-  <%
-    myfund_item = Current.family.myfund_items.first_or_initialize(name: "myFund.pl")
-    is_new_record = myfund_item.new_record?
-  %>
-
-  <%= styled_form_with model: myfund_item,
-                       url: is_new_record ? myfund_items_path : myfund_item_path(myfund_item),
-                       scope: :myfund_item,
-                       method: is_new_record ? :post : :patch,
-                       data: { turbo: true },
-                       class: "space-y-3" do |form| %>
-    <%= form.text_field :api_key,
-                        label: t("myfund_items.panel.api_key_label"),
-                        placeholder: is_new_record ? t("myfund_items.panel.api_key_placeholder") : t("myfund_items.panel.api_key_update_placeholder"),
-                        type: :password %>
-
-    <%= form.text_field :portfolio_name,
-                        label: t("myfund_items.panel.portfolio_name_label"),
-                        placeholder: t("myfund_items.panel.portfolio_name_placeholder"),
-                        value: myfund_item.portfolio_name %>
-
-    <div class="flex justify-end gap-2">
-      <% unless is_new_record %>
-        <%= link_to t("myfund_items.panel.sync_now"),
-                    sync_myfund_item_path(myfund_item),
-                    method: :post,
-                    data: { turbo_method: :post },
-                    class: "inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-primary bg-container border border-primary hover:bg-surface-hover focus:outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2 transition-colors" %>
+  <%# List existing portfolios %>
+  <% existing_items = local_assigns[:myfund_items].presence || Current.family.myfund_items.active.ordered %>
+  <% if existing_items.any? %>
+    <div class="space-y-3">
+      <p class="text-sm font-medium text-primary"><%= t("myfund_items.panel.your_portfolios") %></p>
+      <% existing_items.each do |item| %>
+        <div class="flex items-center justify-between p-3 rounded-lg border border-primary bg-container">
+          <div class="flex items-center gap-2">
+            <div class="w-2 h-2 bg-success rounded-full"></div>
+            <div>
+              <p class="text-sm font-medium text-primary"><%= item.portfolio_name %> <% if item.account %><span class="text-secondary font-normal">→ <%= item.account.name %></span><% end %></p>
+              <p class="text-xs text-secondary">
+                <% if item.last_synced_at.present? %>
+                  <%= t("myfund_items.panel.last_synced", time: item.last_synced_at.strftime("%Y-%m-%d %H:%M")) %>
+                <% else %>
+                  <%= t("myfund_items.panel.never_synced") %>
+                <% end %>
+              </p>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <%= link_to t("myfund_items.panel.sync_now"),
+                        sync_myfund_item_path(item),
+                        data: { turbo_method: :post },
+                        class: "inline-flex items-center justify-center rounded-lg px-3 py-1.5 text-xs font-medium text-primary bg-container border border-primary hover:bg-surface-hover transition-colors" %>
+            <%= link_to t("myfund_items.panel.remove"),
+                        myfund_item_path(item),
+                        data: { turbo_method: :delete, turbo_confirm: t("myfund_items.panel.remove_confirm") },
+                        class: "inline-flex items-center justify-center rounded-lg px-3 py-1.5 text-xs font-medium text-destructive hover:bg-destructive/10 transition-colors" %>
+          </div>
+        </div>
       <% end %>
-
-      <%= form.submit is_new_record ? t("myfund_items.panel.save") : t("myfund_items.panel.update"),
-                      class: "inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-white bg-gray-900 hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2 transition-colors" %>
     </div>
   <% end %>
 
-  <% items = local_assigns[:myfund_items] || @myfund_items || Current.family.myfund_items.where.not(api_key: nil) %>
-  <div class="flex items-center gap-2">
-    <% if items&.any? %>
-      <div class="w-2 h-2 bg-success rounded-full"></div>
-      <p class="text-sm text-secondary">
-        <%= t("myfund_items.panel.configured") %>
-        <% item = items.first %>
-        <% if item.respond_to?(:last_synced_at) && item.last_synced_at.present? %>
-          — <%= t("myfund_items.panel.last_synced", time: item.last_synced_at.strftime("%Y-%m-%d %H:%M")) %>
-        <% end %>
-      </p>
-    <% else %>
-      <div class="w-2 h-2 bg-gray-400 rounded-full"></div>
-      <p class="text-sm text-secondary"><%= t("myfund_items.panel.not_configured") %></p>
+  <%# Form to add a new portfolio %>
+  <div class="border-t border-primary pt-4">
+    <p class="text-sm font-medium text-primary mb-3"><%= t("myfund_items.panel.add_portfolio") %></p>
+
+    <%= styled_form_with model: MyfundItem.new,
+                         url: myfund_items_path,
+                         scope: :myfund_item,
+                         method: :post,
+                         data: { turbo: true },
+                         class: "space-y-3" do |form| %>
+      <%= form.text_field :api_key,
+                          label: t("myfund_items.panel.api_key_label"),
+                          placeholder: t("myfund_items.panel.api_key_placeholder"),
+                          type: :password %>
+
+      <%= form.text_field :portfolio_name,
+                          label: t("myfund_items.panel.portfolio_name_label"),
+                          placeholder: t("myfund_items.panel.portfolio_name_placeholder") %>
+
+      <div class="flex justify-end">
+        <%= form.submit t("myfund_items.panel.add"),
+                        class: "inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-white bg-gray-900 hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2 transition-colors" %>
+      </div>
     <% end %>
   </div>
+
+  <% unless existing_items.any? %>
+    <div class="flex items-center gap-2">
+      <div class="w-2 h-2 bg-gray-400 rounded-full"></div>
+      <p class="text-sm text-secondary"><%= t("myfund_items.panel.not_configured") %></p>
+    </div>
+  <% end %>
 </div>

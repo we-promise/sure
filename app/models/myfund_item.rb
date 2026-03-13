@@ -13,6 +13,7 @@ class MyfundItem < ApplicationRecord
   validates :portfolio_name, presence: true
 
   belongs_to :family
+  belongs_to :account, optional: true
 
   scope :active, -> { where(scheduled_for_deletion: false) }
   scope :syncable, -> { active }

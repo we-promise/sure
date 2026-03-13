@@ -2,29 +2,35 @@
 en:
   myfund_items:
     create:
-      success: myFund.pl connection created successfully. Initial sync started.
+      success: "Portfolio added successfully. Initial sync started."
     update:
-      success: myFund.pl connection updated successfully
+      success: "Portfolio updated successfully"
     destroy:
-      success: myFund.pl connection removed
+      success: "Portfolio removed"
     sync:
-      success: myFund.pl sync started
+      success: "Sync started"
     panel:
       setup_title: "Setup instructions:"
       step_1: "Go to myFund.pl → Menu → Konto → Ustawienia konta → Klucz API and generate your API key"
-      step_2: "Enter your API key and portfolio name below, then click Save"
-      step_3: "Your portfolio will sync automatically every 6 hours, or click Sync Now to sync immediately"
+      step_2: "Add each portfolio below with your API key and the exact portfolio name"
+      step_3: "Portfolios sync automatically every 6 hours, or click Sync Now anytime"
       fields_title: "Field descriptions:"
       api_key_label: "API Key"
-      api_key_description: "Your myFund.pl API key for authentication (required)"
+      api_key_description: "Your myFund.pl API key for authentication (same key for all portfolios)"
       portfolio_name_label: "Portfolio Name"
-      portfolio_name_description: "The name of your portfolio on myFund.pl (required, must match exactly)"
+      portfolio_name_description: "The name of your portfolio on myFund.pl (must match exactly)"
       api_key_placeholder: "Paste API key here"
       api_key_update_placeholder: "Enter new API key to update"
       portfolio_name_placeholder: "e.g. Mój portfel"
       save: "Save Configuration"
       update: "Update Configuration"
+      add: "Add Portfolio"
+      add_portfolio: "Add a new portfolio"
+      your_portfolios: "Your portfolios"
       sync_now: "Sync Now"
+      remove: "Remove"
+      remove_confirm: "Are you sure you want to remove this portfolio? The synced account and its data will remain."
       configured: "Configured and syncing automatically every 6 hours."
-      not_configured: "Not configured"
+      not_configured: "No portfolios configured"
       last_synced: "Last synced: %{time}"
+      never_synced: "Never synced"

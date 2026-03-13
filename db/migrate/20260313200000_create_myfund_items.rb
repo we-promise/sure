@@ -7,6 +7,7 @@ class CreateMyfundItems < ActiveRecord::Migration[7.2]
       t.string :portfolio_name, null: false
       t.string :status, null: false, default: "good"
       t.datetime :last_synced_at
+      t.references :account, null: true, foreign_key: true, type: :uuid
       t.boolean :scheduled_for_deletion, default: false, null: false
       t.text :raw_payload
 
