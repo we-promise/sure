@@ -95,10 +95,10 @@ zh-CN:
         save: 保存
     providers:
       coinbase_panel:
-        api_key_label: API 密钥
-        api_key_placeholder: 输入您的 Coinbase API 密钥
-        api_secret_label: API 密钥（Secret）
-        api_secret_placeholder: 输入您的 Coinbase API 密钥（Secret）
+        api_key_label: API Key
+        api_key_placeholder: 输入您的 Coinbase API key
+        api_secret_label: API Secret
+        api_secret_placeholder: 输入您的 Coinbase API secret
         connect_button: 连接 Coinbase
         disconnect_confirm: 您确定要断开此 Coinbase 连接吗？您同步的账户将变为手动账户。
         setup_instructions: '要连接 Coinbase：'
@@ -106,8 +106,8 @@ zh-CN:
         status_not_connected: 未连接。请在下方输入您的 API 凭据以开始使用。
         step1_html: 前往 <a href="https://portal.cdp.coinbase.com/projects/api-keys"
           target="_blank" class="text-primary underline">Coinbase API 设置</a>
-        step2: 创建具有只读权限的新 API 密钥（查看账户、查看交易）
-        step3: 复制您的 API 密钥和 API 密钥，然后粘贴到下方
+        step2: 创建具有只读权限的新 API key（查看账户、查看交易）
+        step3: 复制您的 API key 和 API secret，然后粘贴到下方
         sync: 同步
         syncing: 正在同步...
       enable_banking_panel:
