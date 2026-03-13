@@ -8,7 +8,7 @@ class ApiConfig {
   // Base URL for the API - can be changed to point to different environments
   // For local development, use: http://10.0.2.2:3000 (Android emulator)
   // For iOS simulator, use: http://localhost:3000
-  static const String _defaultBaseUrl = STAGING_ENV;
+  static const String _defaultBaseUrl = PRODUCTION_ENV;
   static const String _backendUrlKey = 'backend_url';
   static const String _environmentKey = 'app_environment';
   static String _baseUrl = _defaultBaseUrl;
@@ -104,7 +104,7 @@ class ApiConfig {
       await prefs.setString(_backendUrlKey, _defaultBaseUrl);
       // Set default environment on first launch
       if (savedEnv == null) {
-        await prefs.setString(_environmentKey, 'Staging');
+        await prefs.setString(_environmentKey, 'Production');
       }
       return true;
     } catch (e) {
