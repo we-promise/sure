@@ -1,0 +1,91 @@
+##
+# Self-hosted deployment for Sure (e.g., Proxmox LXC/VM)
+#
+# Usage:
+#   1. Copy .env.local.example to .env.local and configure
+#   2. Generate secrets:
+#        echo "SECRET_KEY_BASE=$(openssl rand -hex 64)" >> .env.local
+#   3. Start:
+#        docker compose up -d
+#   4. The app auto-runs db:prepare on first boot
+#   5. Access at http://<your-ip>:3000
+#
+# To rebuild after pulling updates:
+#   docker compose build && docker compose up -d
+##
+
+x-app-env: &app-env
+  SELF_HOSTED: "true"
+  RAILS_ENV: production
+  SECRET_KEY_BASE: ${SECRET_KEY_BASE:?Set SECRET_KEY_BASE in .env.local (openssl rand -hex 64)}
+  DB_HOST: db
+  POSTGRES_USER: sure
+  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-sure}
+  POSTGRES_DB: sure_production
+  REDIS_URL: redis://redis:6379/0
+  RAILS_LOG_TO_STDOUT: "true"
+  # Optional — uncomment and fill in as needed:
+  # TWELVE_DATA_API_KEY: ""
+  # OPENAI_ACCESS_TOKEN: ""
+  # OPENAI_MODEL: ""
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "${PORT:-3000}:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    environment:
+      <<: *app-env
+    env_file:
+      - path: .env.local
+        required: false
+    restart: unless-stopped
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: bundle exec sidekiq
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    environment:
+      <<: *app-env
+    env_file:
+      - path: .env.local
+        required: false
+    restart: unless-stopped
+
+  db:
+    image: postgres:16-alpine
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: sure
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-sure}
+      POSTGRES_DB: sure_production
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sure -d sure_production"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - redisdata:/data
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  redisdata:
