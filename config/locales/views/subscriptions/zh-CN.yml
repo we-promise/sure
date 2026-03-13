@@ -9,6 +9,9 @@ zh-CN:
         support: 支持
         sure: Sure
         today: 今天
+      nav:
+        account_settings: 账户设置
+        sign_out: 退出登录
       redirect_to_stripe: 在下一步中，您将被重定向到 Stripe，它为我们处理信用卡。
       trial_over: 您的试用期已结束
       trialing: 您的数据将在 %{days} 天后删除

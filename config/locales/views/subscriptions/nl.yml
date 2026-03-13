@@ -8,6 +8,9 @@ nl:
         support: "Ondersteunen"
         sure: "Sure"
         today: "vandaag"
+      nav:
+        account_settings: "Accountinstellingen"
+        sign_out: "Uitloggen"
       redirect_to_stripe: "In de volgende stap wordt u doorgestuurd naar Stripe, dat creditcards voor ons verwerkt."
       trialing: "Uw gegevens worden over %{days} dagen verwijderd"
       trial_over: "Uw proefperiode is voorbij"

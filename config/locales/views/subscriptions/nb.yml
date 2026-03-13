@@ -9,6 +9,9 @@ nb:
         support: "Støtt"
         sure: "Sure"
         today: "i dag"
+      nav:
+        account_settings: "Kontoinnstillinger"
+        sign_out: "Logg ut"
       redirect_to_stripe: "I neste trinn vil du bli omdirigert til Stripe, som håndterer kredittkort for oss."
       trialing: "Dataene dine vil bli slettet om %{days} dager"
       trial_over: "Prøveperioden din er over"

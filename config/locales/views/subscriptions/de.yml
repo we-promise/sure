@@ -9,6 +9,9 @@ de:
         support: "Unterstützen"
         sure: "Sure"
         today: "heute"
+      nav:
+        account_settings: "Kontoeinstellungen"
+        sign_out: "Abmelden"
       redirect_to_stripe: "Im nächsten Schritt werden Sie zu Stripe weitergeleitet, das Kreditkarten für uns verwaltet."
       trialing: "Ihre Daten werden in %{days} Tagen gelöscht"
       trial_over: "Ihre Testversion ist abgelaufen"

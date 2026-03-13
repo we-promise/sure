@@ -8,6 +8,9 @@ en:
         support: "Support"
         sure: "Sure"
         today: "today"
+      nav:
+        account_settings: "Account Settings"
+        sign_out: "Sign out"
       redirect_to_stripe: "In the next step, you'll be redirected to Stripe which handles credit cards for us."
       trialing: "Your data will be deleted in %{days} days"
       trial_over: "Your trial is over"

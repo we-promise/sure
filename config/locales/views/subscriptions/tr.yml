@@ -9,6 +9,9 @@ tr:
         support: "Destekle"
         sure: "Sure"
         today: "bugün"
+      nav:
+        account_settings: "Hesap ayarları"
+        sign_out: "Çıkış yap"
       redirect_to_stripe: "Bir sonraki adımda, kredi kartlarını bizim için işleyen Stripe'a yönlendirileceksiniz."
       trialing: "Verileriniz %{days} gün içinde silinecek"
       trial_over: "Deneme süreniz sona erdi"
