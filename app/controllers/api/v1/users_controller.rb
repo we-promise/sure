@@ -2,6 +2,7 @@
 
 class Api::V1::UsersController < Api::V1::BaseController
   before_action :ensure_write_scope
+  before_action :ensure_admin, only: :reset
 
   def reset
     FamilyResetJob.perform_later(Current.family)
@@ -23,5 +24,12 @@ class Api::V1::UsersController < Api::V1::BaseController
 
     def ensure_write_scope
       authorize_scope!(:write)
+    end
+
+    def ensure_admin
+      return true if current_resource_owner&.admin?
+
+      render_json({ error: "forbidden", message: I18n.t("users.reset.unauthorized") }, status: :forbidden)
+      false
     end
 end
