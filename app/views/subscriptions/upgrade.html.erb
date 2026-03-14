@@ -4,14 +4,14 @@
 
     <div class="flex justify-end gap-2">
       <%= render DS::Link.new(
-        text: "Account Settings",
+        text: t("subscriptions.upgrade.nav.account_settings"),
         icon: "settings",
         variant: "ghost",
         href: settings_profile_path,
       ) %>
 
       <%= render DS::Button.new(
-        text: "Sign out",
+        text: t("subscriptions.upgrade.nav.sign_out"),
         icon: "log-out",
         icon_position: :right,
         variant: "ghost",
@@ -46,7 +46,7 @@
 
       <div class="text-center space-y-2">
         <%= render DS::Button.new(
-          text: t("subscriptions.upgrade.contribute_and_support_sure"),
+          text: t('subscriptions.upgrade.contribute_and_support_sure', product: product_name),
           variant: "primary",
           full_width: true
         ) %>
@@ -60,3 +60,4 @@
 
   <%= render "layouts/shared/footer" %>
 </div>
+

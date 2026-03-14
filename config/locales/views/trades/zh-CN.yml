@@ -24,6 +24,8 @@ zh-CN:
       title: 新建交易
     show:
       additional: 附加信息
+      buy: 买入
+      category_label: 分类
       cost_per_share_label: 每股成本
       date_label: 日期
       delete: 删除
@@ -32,7 +34,10 @@ zh-CN:
       details: 详情
       exclude_subtitle: 此交易将不计入报表和计算
       exclude_title: 从分析中排除
+      no_category: 无分类
       note_label: 备注
       note_placeholder: 在此添加额外备注...
       quantity_label: 数量
+      sell: 卖出
       settings: 设置
+      type_label: 类型

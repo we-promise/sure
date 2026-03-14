@@ -1,11 +1,11 @@
 ---
 ca:
   sessions:
+    logout:
+      successful: Has tancat la sessió correctament.
     create:
       invalid_credentials: Correu electrònic o contrasenya incorrectes.
       local_login_disabled: L'inici de sessió amb contrasenya local està inhabilitat. Utilitza l'inici de sessió únic.
-    destroy:
-      logout_successful: Has tancat la sessió correctament.
     failure:
       failed: No s'ha pogut autenticar.
       sso_failed: L'autenticació d'inici de sessió únic ha fallat. Torna-ho a provar.
@@ -32,5 +32,3 @@ ca:
       title: Inicia sessió al teu compte
     openid_connect:
       failed: No s'ha pogut autenticar mitjançant OpenID Connect.
-    post_logout:
-      logout_successful: Has tancat la sessió correctament.

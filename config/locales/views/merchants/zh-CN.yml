@@ -6,16 +6,21 @@ zh-CN:
       success: 商户创建成功
     destroy:
       success: 商户删除成功
+      unlinked_success: 商户已从您的交易中移除
     edit:
       title: 编辑商户
     form:
       name_placeholder: 商户名称
+      website_hint: 输入商户网站以自动显示其徽标
+      website_placeholder: 网站（例如：starbucks.com）
     index:
       empty: 暂无商户
       family_empty: 暂无家庭商户
       family_title: 家庭商户
+      merge: 合并商户
       new: 新建商户
       provider_empty: 此家庭尚未关联任何服务提供商商户
+      provider_info: 这些商户是通过您的银行连接或 AI 自动检测到的。您可以编辑它们以创建自己的副本，或将其移除以解除与您交易的关联。
       provider_read_only: 服务提供商商户从您关联的金融机构同步而来，无法在此编辑。
       provider_title: 服务提供商商户
       table:
@@ -23,13 +28,34 @@ zh-CN:
         merchant: 商户名称
         source: 来源
       title: 商户管理
+      unlinked_info: 这些商户最近已从您的交易中移除。除非重新分配给交易，否则它们将在 30 天后从此列表中消失。
+      unlinked_title: 最近移除
     merchant:
       confirm_accept: 确认删除
       confirm_body: 确定要删除此商户吗？删除后将解除所有关联交易，并可能影响您的报表数据。
       confirm_title: 确认删除商户？
       delete: 删除商户
       edit: 编辑商户
+    merge:
+      description: 选择一个目标商户以及要合并到该目标的其他商户。来自被合并商户的所有交易将被重新分配给目标商户。
+      select_target: 选择目标商户...
+      sources_hint: 所选商户将被合并到目标商户。家庭商户将被删除，服务提供商商户将被解除关联。
+      sources_label: 要合并的商户
+      submit: 合并所选
+      target_label: 合并到（目标）
+      title: 合并商户
     new:
       title: 新建商户
+    perform_merge:
+      invalid_merchants: 选择了无效的商户
+      no_merchants_selected: 未选择要合并的商户
+      success: 成功合并 %{count} 个商户
+      target_not_found: 未找到目标商户
+    provider_merchant:
+      edit: 编辑
+      remove: 移除
+      remove_confirm_body: 您确定要移除 %{name} 吗？这将解除此商户所有关联交易的链接，但不会删除商户本身。
+      remove_confirm_title: 移除商户？
     update:
+      converted_success: 商户已转换并更新成功
       success: 商户更新成功

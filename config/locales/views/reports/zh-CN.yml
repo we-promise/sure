@@ -6,6 +6,7 @@ zh-CN:
       no_budgets: 本月未设置预算分类
       over_by: 超支
       remaining: 剩余
+      shared: 共享
       spent: 已支出
       status:
         good: 正常执行
@@ -50,11 +51,104 @@ zh-CN:
         monthly: 月度
         quarterly: 季度
         ytd: 本年度至今
+      print_report: 打印报告
       showing_period: 显示 %{start} 至 %{end} 的数据
       subtitle: 全面洞察您的财务健康状况
       title: 财务报告
       toggle_section: 切换模块显示/隐藏
     invalid_date_range: 结束日期不能早于开始日期。日期已自动交换。
+    investment_flows:
+      contributions: 出资
+      description: 跟踪流入和流出您投资账户的资金
+      net_flow: 净流量
+      title: 投资流量
+      withdrawals: 提取
+    investment_performance:
+      accounts: 投资账户
+      and_more: "还有 %{count} 个"
+      contributions: 期间出资
+      gains_by_tax_treatment: 按税收处理的收益
+      holding: 持仓
+      holdings: 持仓
+      holdings_count:
+        one: "%{count} 个持仓"
+        other: "%{count} 个持仓"
+      no_data: "-"
+      portfolio_value: 投资组合价值
+      realized_gains: 已实现收益
+      return: 收益
+      sell_trades: 卖出交易
+      sells_count:
+        one: "%{count} 笔卖出"
+        other: "%{count} 笔卖出"
+      taxable_realized_note: 这些收益可能需要纳税
+      title: 投资表现
+      top_holdings: 前几大持仓
+      total_gains: 总收益
+      total_return: 总收益
+      unrealized_gains: 未实现收益
+      value: 价值
+      view_details: 查看详情
+      weight: 权重
+      withdrawals: 期间提取
+    net_worth:
+      assets_vs_liabilities: 资产与负债
+      current_net_worth: 当前资产净值
+      no_assets: 无资产
+      no_liabilities: 无负债
+      period_change: 期间变动
+      title: 资产净值
+      total_assets: 资产
+      total_liabilities: 负债
+    print:
+      document_title: 财务报告
+      generated_on: 生成于 %{date}
+      investments:
+        contributions: 出资
+        holding: 持仓
+        portfolio_value: 投资组合价值
+        return: 收益
+        this_period: 本期
+        title: 投资
+        top_holdings: 前几大持仓
+        total_return: 总收益
+        value: 价值
+        weight: 权重
+        withdrawals: 提取
+      net_worth:
+        assets: 资产
+        current_balance: 当前余额
+        liabilities: 负债
+        no_liabilities: 无负债
+        this_period: 本期
+        title: 资产净值
+      spending:
+        amount: 金额
+        category: 分类
+        expenses: 支出
+        income: 收入
+        more_categories: "还有 %{count} 个分类"
+        percent: "%"
+        title: 按分类支出
+      summary:
+        budget: 预算
+        expenses: 支出
+        income: 收入
+        net_savings: 净储蓄
+        of_income: "占收入的 %{percent}%"
+        title: 摘要
+        used: 已使用
+        vs_prior: "较上一期 %{percent}%"
+      title: 财务报告
+      trends:
+        average: 平均
+        current_month_note: "* 当前月份（部分数据）"
+        expenses: 支出
+        income: 收入
+        month: 月份
+        net: 净额
+        savings_rate: 储蓄率
+        title: 月度趋势
     summary:
       budget_performance: 预算执行情况
       income_minus_expenses: 收入减去支出
@@ -97,6 +191,9 @@ zh-CN:
       table:
         amount: 金额
         category: 分类
+        entries:
+          one: "%{count} 条记录"
+          other: "%{count} 条记录"
         expense: 支出
         income: 收入
         percentage: 占总比

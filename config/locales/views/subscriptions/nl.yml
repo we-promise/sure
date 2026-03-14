@@ -2,12 +2,15 @@ nl:
   subscriptions:
     self_hosted_alert: "%{product_name} is niet beschikbaar in zelfgehoste modus."
     upgrade:
-      contribute_and_support_sure: "Bijdragen en Sure ondersteunen"
+      contribute_and_support_sure: "Bijdragen en %{product} ondersteunen"
       cta: "Blijf de ontwikkeling van deze codebase ondersteunen!"
       header:
         support: "Ondersteunen"
         sure: "Sure"
         today: "vandaag"
+      nav:
+        account_settings: "Accountinstellingen"
+        sign_out: "Uitloggen"
       redirect_to_stripe: "In de volgende stap wordt u doorgestuurd naar Stripe, dat creditcards voor ons verwerkt."
       trialing: "Uw gegevens worden over %{days} dagen verwijderd"
       trial_over: "Uw proefperiode is voorbij"

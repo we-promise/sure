@@ -3,12 +3,15 @@ ro:
   subscriptions:
     self_hosted_alert: "%{product_name} nu este disponibil în modul self-hosted."
     upgrade:
-      contribute_and_support_sure: "Contribuie și sprijină Sure"
+      contribute_and_support_sure: "Contribuie și sprijină %{product}"
       cta: "Continuați să sprijiniți dezvoltarea acestei baze de cod!"
       header:
         support: "Sprijină"
         sure: "Sure"
         today: "astăzi"
+      nav:
+        account_settings: "Setări contului"
+        sign_out: "Deconectare"
       redirect_to_stripe: "În pasul următor, veți fi redirecționat către Stripe, care procesează cardurile de credit pentru noi."
       trialing: "Datele dvs. vor fi șterse în %{days} zile"
       trial_over: "Perioada dvs. de probă s-a încheiat"

@@ -14,6 +14,19 @@ zh-CN:
         no_data_title: 此时间段内无现金流数据
         title: 现金流
       drag_to_reorder: 拖动以重新排序模块
+      investment_summary:
+        add_investment: 添加投资账户以跟踪您的投资组合
+        contributions: 出资
+        holding: 持仓
+        no_investments: 无投资账户
+        period_activity: "%{period} 活动"
+        return: 收益
+        title: 投资
+        total_return: 总收益
+        trades: 交易
+        value: 价值
+        weight: 权重
+        withdrawals: 提取
       net_worth_chart:
         data_not_available: 所选时间段内无可用数据
         title: 资产净值
@@ -35,3 +48,11 @@ zh-CN:
       subtitle: 以下是您财务状况的概览
       toggle_section: 切换模块显示/隐藏
       welcome: 欢迎回来，%{name}
+    privacy:
+      heading: 隐私政策
+      placeholder: 隐私政策内容将显示在此处。
+      title: 隐私政策
+    terms:
+      heading: 服务条款
+      placeholder: 服务条款内容将显示在此处。
+      title: 服务条款

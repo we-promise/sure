@@ -1,9 +1,5 @@
 ---
 zh-CN:
-  views:
-    settings:
-      payments:
-        renewal: "您的贡献将在 %{date} 继续。"
   settings:
     ai_prompts:
       show:
@@ -20,14 +16,14 @@ zh-CN:
         transaction_categorizer:
           subtitle: AI 根据您定义的分类自动为交易进行分类
           title: 交易分类器
+    hostings:
+      ensure_admin:
+        not_authorized: 未授权
     payments:
       show:
         page_title: 付款管理
         subscription_subtitle: 更新订阅与付款信息
         subscription_title: 管理订阅
-    hostings:
-      ensure_admin:
-        not_authorized: 未授权
     preferences:
       show:
         country: 国家/地区
@@ -39,6 +35,9 @@ zh-CN:
         general_title: 通用设置
         language: 语言
         language_auto: 浏览器语言
+        month_start_day: 预算月开始于
+        month_start_day_hint: 设置您的预算月开始日期（例如发薪日）
+        month_start_day_warning: 您的预算和月度累计计算将使用此自定义开始日，而不是每月1日。
         page_title: 偏好设置
         theme_dark: 深色模式
         theme_light: 浅色模式
@@ -73,6 +72,9 @@ zh-CN:
         delete_account_warning: 删除账户将永久移除您的所有数据且不可恢复。
         email: 邮箱
         first_name: 名字
+        group_form_input_placeholder: 输入群组名称
+        group_form_label: 群组名称
+        group_title: 群组成员
         household_form_input_placeholder: 请输入家庭名称
         household_form_label: 家庭名称
         household_subtitle: 邀请家庭成员、合作伙伴等人员。被邀请者可登录您的家庭账户并访问共享账户。
@@ -91,9 +93,46 @@ zh-CN:
         reset_account_with_sample_data: 重置并预加载数据
         reset_account_with_sample_data_warning: 删除所有现有数据，然后加载新的示例数据，以便您在预填充环境中进行探索。
         save: 保存
+    providers:
+      coinbase_panel:
+        api_key_label: API Key
+        api_key_placeholder: 输入您的 Coinbase API key
+        api_secret_label: API Secret
+        api_secret_placeholder: 输入您的 Coinbase API secret
+        connect_button: 连接 Coinbase
+        disconnect_confirm: 您确定要断开此 Coinbase 连接吗？您同步的账户将变为手动账户。
+        setup_instructions: '要连接 Coinbase：'
+        status_connected: Coinbase 已连接，正在同步您的加密货币持仓。
+        status_not_connected: 未连接。请在下方输入您的 API 凭据以开始使用。
+        step1_html: 前往 <a href="https://portal.cdp.coinbase.com/projects/api-keys"
+          target="_blank" class="text-primary underline">Coinbase API 设置</a>
+        step2: 创建具有只读权限的新 API key（查看账户、查看交易）
+        step3: 复制您的 API key 和 API secret，然后粘贴到下方
+        sync: 同步
+        syncing: 正在同步...
+      enable_banking_panel:
+        callback_url_instruction: 对于回调 URL，请使用 %{callback_url}。
+        connection_error: 连接错误
+      encryption_error:
+        message: 未配置 Active Record 加密密钥。在使用同步提供程序之前，请确保已在您的 Rails 凭据或环境变量中正确设置加密凭据（active_record_encryption.primary_key、active_record_encryption.deterministic_key 和 active_record_encryption.key_derivation_salt）。
+        title: 需要加密配置
+      show:
+        coinbase_title: Coinbase
     securities:
       show:
         page_title: 安全设置
+        sso_confirm_body: 您确定要断开您的 %{provider} 账户连接吗？您之后可以通过再次使用该提供程序登录来重新连接。
+        sso_confirm_button: 断开连接
+        sso_confirm_title: 断开账户连接？
+        sso_connect_hint: 注销并使用 SSO 提供程序登录以连接账户。
+        sso_disconnect: 断开连接
+        sso_last_used: 最后使用
+        sso_never: 从未
+        sso_no_email: 无邮箱
+        sso_no_identities: 未连接 SSO 账户
+        sso_subtitle: 管理您的单点登录账户连接
+        sso_title: 已连接账户
+        sso_warning_message: 这是您唯一的登录方式。在断开连接之前，您应在安全设置中设置密码，否则可能会被锁定在账户之外。
     settings_nav:
       accounts_label: 账户管理
       advanced_section_title: 高级设置
@@ -101,16 +140,16 @@ zh-CN:
       api_key_label: API 密钥
       api_keys_label: API 密钥
       bank_sync_label: 银行同步
-      payment_label: 付款管理
       categories_label: 分类管理
+      exports_label: 导出记录
       feedback_label: 意见反馈
       general_section_title: 通用设置
       guides_label: 使用指南
       imports_label: 导入记录
-      exports_label: 导出记录
       logout: 退出登录
       merchants_label: 商户管理
       other_section_title: 更多设置
+      payment_label: 付款管理
       preferences_label: 偏好设置
       profile_label: 个人资料信息
       recurring_transactions_label: 定期交易
@@ -127,4 +166,9 @@ zh-CN:
       accepted_formats: 支持 JPG 或 PNG 格式，最大 5MB
       change: 更换头像
       choose: 上传头像
-      choose_label: "（可选）"
+      choose_label: （可选）
+  views:
+    settings:
+      payments:
+        cancellation: 您的贡献将于 %{date} 结束。
+        renewal: 您的贡献将在 %{date} 继续。

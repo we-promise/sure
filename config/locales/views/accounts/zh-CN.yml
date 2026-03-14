@@ -32,9 +32,16 @@ zh-CN:
       new_account: 新建账户
       no_accounts: 暂无账户
     form:
+      additional_details: 附加详情
       balance: 当前余额
+      institution_domain_label: 机构域名
+      institution_domain_placeholder: 例如：chase.com
+      institution_name_label: 机构名称
+      institution_name_placeholder: 例如：Chase Bank
       name_label: 账户名称
       name_placeholder: 例如：储蓄账户
+      notes_label: 备注
+      notes_placeholder: 存储账号、分类代码、IBAN、路由号码等附加信息。
     index:
       accounts: 账户管理
       manual_accounts:
@@ -60,15 +67,22 @@ zh-CN:
       activity:
         amount: 金额
         balance: 余额
+        confirmed: 已确认
         date: 日期
         entries: 条记录
         entry: 条记录
+        filter: 筛选
         new: 新建
+        new_activity: 新建活动
         new_balance: 新增余额
+        new_trade: 新建投资交易
         new_transaction: 新建交易
+        new_transfer: 新建转账
         no_entries: 未找到相关记录
+        pending: 待处理
         search:
           placeholder: 按名称搜索记录
+        status: 状态
         title: 账户活动
       chart:
         balance: 余额
@@ -80,6 +94,8 @@ zh-CN:
         confirm_title: 确认删除账户？
         edit: 编辑
         import: 导入交易记录
+        import_trades: 导入投资交易
+        import_transactions: 导入交易
         manage: 管理账户
     sidebar:
       configure_providers: 在此配置您的服务提供商。
@@ -93,8 +109,25 @@ zh-CN:
         all: 全部
         assets: 资产
         debts: 负债
+    subtype_regions:
+      au: 澳大利亚
+      ca: 加拿大
+      eu: 欧洲
+      generic: 通用
+      uk: 英国
+      us: 美国
     sync_all:
       syncing: 账户同步中...
+    tax_treatment_descriptions:
+      tax_advantaged: 具有条件的特殊税收优惠
+      tax_deferred: 供款可扣除，提取时征税
+      tax_exempt: 税后供款，收益免税
+      taxable: 收益实现时征税
+    tax_treatments:
+      tax_advantaged: 税收优惠
+      tax_deferred: 税收递延
+      tax_exempt: 免税
+      taxable: 应税
     types:
       credit_card: 信用卡账户
       crypto: 加密货币账户

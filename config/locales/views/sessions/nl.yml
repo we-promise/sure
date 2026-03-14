@@ -1,13 +1,11 @@
 ---
 nl:
   sessions:
+    logout:
+      successful: U bent succesvol uitgelogd.
     create:
       invalid_credentials: Ongeldige e-mail of wachtwoord.
       local_login_disabled: Lokale wachtwoordinlog is uitgeschakeld. Gebruik single sign-on.
-    destroy:
-      logout_successful: U bent succesvol uitgelogd.
-    post_logout:
-      logout_successful: U bent succesvol uitgelogd.
     openid_connect:
       failed: Kon niet authenticeren via OpenID Connect.
     failure:

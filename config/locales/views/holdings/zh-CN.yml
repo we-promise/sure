@@ -3,11 +3,29 @@ zh-CN:
   holdings:
     cash:
       brokerage_cash: 经纪账户现金
+    cost_basis_cell:
+      cancel: 取消
+      or_per_share_label: 或输入每股：
+      overwrite_confirm_body: 这将替换当前的成本基础 %{current}。
+      overwrite_confirm_title: 覆盖成本基础？
+      per_share: 每股
+      save: 保存
+      set_cost_basis_header: 设置 %{ticker} (%{qty} 股) 的成本基础
+      total_cost_basis_label: 总成本基础
+      unknown: "--"
+    cost_basis_sources:
+      calculated: 从交易计算
+      manual: 用户设置
+      provider: 从提供商获取
     destroy:
       success: 持仓已删除
+    errors:
+      security_collision: '无法重新映射：您在 %{date} 已有 %{ticker} 的持仓。'
     holding:
+      no_cost_basis: 无成本基础
       per_share: 每股
       shares: "%{qty}股"
+      unknown: "--"
     index:
       average_cost: 平均成本
       holdings: 持仓
@@ -19,17 +37,46 @@ zh-CN:
     missing_price_tooltip:
       description: 此投资缺少价格数据，无法计算其收益或价值。
       missing_data: 数据缺失
+    remap_security:
+      security_not_found: 找不到所选证券。
+      success: 证券更新成功。
+    reset_security:
+      success: 证券已重置为提供商的值。
     show:
       avg_cost_label: 平均成本
+      cancel: 取消
+      cost_basis_locked_description: 您手动设置的成本基础不会被同步更改。
+      cost_basis_locked_label: 成本基础已锁定
       current_market_price_label: 当前市价
       delete: 删除
       delete_subtitle: 此操作将删除该持仓及相关所有交易记录，且不可恢复。
       delete_title: 删除持仓
+      edit_security: 编辑证券
       history: 历史记录
+      no_security_provider: 未配置证券提供商。无法搜索证券。
+      no_trade_history: 此持仓没有可用的交易历史。
+      originally: 原来是 %{ticker}
       overview: 概览
       portfolio_weight_label: 投资组合权重
+      provider_sent: '提供商发送：%{ticker}'
+      remap_security: 保存
+      reset_confirm_body: 这将把证券从 %{current} 改回 %{original}，并移动所有相关交易。
+      reset_confirm_title: 重置为提供商的证券？
+      reset_to_provider: 重置为提供商
+      search_security: 搜索证券
+      search_security_placeholder: 按代码或名称搜索
+      security_label: 证券
+      security_remapped_label: 证券已重新映射
       settings: 设置
       ticker_label: 股票代码
       total_return_label: 总收益
       trade_history_entry: "%{qty}股%{security} @ %{price}"
       unknown: 未知
+      unlock_confirm_body: 这将允许成本基础被提供商同步或交易计算更新。
+      unlock_confirm_title: 解锁成本基础？
+      unlock_cost_basis: 解锁
+    unlock_cost_basis:
+      success: 成本基础已解锁。可能会在下次同步时更新。
+    update:
+      error: 无效的成本基础值。
+      success: 成本基础已保存。

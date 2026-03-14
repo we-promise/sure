@@ -106,12 +106,12 @@ class SessionsController < ApplicationController
 
     # Standard local logout
     SsoAuditLog.log_logout!(user: user, request: request)
-    redirect_to new_session_path, notice: t(".logout_successful")
+    redirect_to new_session_path, notice: t("sessions.logout.successful")
   end
 
   # Handle redirect back from IdP after federated logout
   def post_logout
-    redirect_to new_session_path, notice: t(".logout_successful")
+    redirect_to new_session_path, notice: t("sessions.logout.successful")
   end
 
   def mobile_sso_start

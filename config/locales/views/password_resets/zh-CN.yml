@@ -1,6 +1,7 @@
 ---
 zh-CN:
   password_resets:
+    disabled: 通过 Sure 重置密码已禁用。请通过您的身份提供程序重置密码。
     edit:
       title: 重置密码
     new:
@@ -8,6 +9,7 @@ zh-CN:
       requested: 重置密码链接已发送至您的邮箱，请查收。
       submit: 重置密码
       title: 重置密码
+    sso_only_user: 您的账户使用 SSO 进行身份验证。请联系您的管理员管理您的凭据。
     update:
       invalid_token: 验证令牌无效。
       success: 密码已重置成功。

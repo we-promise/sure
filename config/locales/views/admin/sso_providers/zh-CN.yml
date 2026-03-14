@@ -1,0 +1,116 @@
+---
+zh-CN:
+  admin:
+    sso_providers:
+      create:
+        success: SSO 提供程序创建成功。
+      destroy:
+        confirm: 您确定要删除此提供程序吗？此操作无法撤消。
+        success: SSO 提供程序删除成功。
+      edit:
+        description: 更新 %{label} 的配置
+        title: 编辑 SSO 提供程序
+      form:
+        admin_groups: 管理员组
+        advanced_title: 高级 OIDC 设置
+        basic_information: 基本信息
+        cancel: 取消
+        client_id_help: 来自您的身份提供程序的 OAuth 客户端 ID
+        client_id_label: 客户端 ID
+        client_id_placeholder: your-client-id
+        client_secret_help: OAuth 客户端密钥（在数据库中加密）
+        client_secret_help_existing: " - 留空以保留现有"
+        client_secret_label: 客户端密钥
+        client_secret_placeholder_existing: "••••••••••••••••"
+        client_secret_placeholder_new: your-client-secret
+        copy_button: 复制
+        default_role_help: 分配给通过即时 (JIT) SSO 账户预配创建的用户角色。默认为成员。
+        default_role_label: 新用户的默认角色
+        enabled_help: 启用后，用户可以使用此提供程序登录
+        enabled_label: 启用此提供程序
+        errors_title: "%{count} 个错误阻止了此提供程序的保存："
+        groups_help: 以逗号分隔的 IdP 组名称列表。使用 * 匹配所有组。
+        guest_groups: 访客组
+        icon_help: Lucide 图标名称（可选）
+        icon_label: 图标
+        icon_placeholder: 例如：key, google, github
+        idp_cert_fingerprint: 证书指纹（备选）
+        idp_certificate: IdP 证书
+        idp_certificate_help: PEM 格式的 X.509 证书。如果不使用元数据 URL，则为必需。
+        idp_metadata_url: IdP 元数据 URL
+        idp_metadata_url_help: 指向您的 IdP 的 SAML 元数据的 URL。如果提供，其他 SAML 设置将自动配置。
+        idp_slo_url: IdP SLO URL（可选）
+        idp_sso_url: IdP SSO URL
+        issuer_help: OIDC 颁发者 URL（将验证 .well-known/openid-configuration 端点）
+        issuer_label: 颁发者
+        issuer_placeholder: https://accounts.google.com
+        label_help: 向用户显示的按钮文本
+        label_label: 标签
+        label_placeholder: 例如：通过 Keycloak 登录
+        manual_saml_config: 手动配置（如果不使用元数据 URL）
+        manual_saml_help: 仅在您的 IdP 不提供元数据 URL 时使用这些设置。
+        member_groups: 成员组
+        name_help: 唯一标识符（仅小写、数字、下划线）
+        name_id_email: 电子邮件地址（默认）
+        name_id_format: NameID 格式
+        name_id_persistent: 持久
+        name_id_transient: 瞬态
+        name_id_unspecified: 未指定
+        name_label: 名称
+        name_placeholder: 例如：openid_connect, keycloak, authentik
+        oauth_configuration: OAuth/OIDC 配置
+        prompt_consent: 强制同意（重新授权）
+        prompt_default: 默认（由 IdP 决定）
+        prompt_help: 控制 IdP 在身份验证期间如何提示用户。
+        prompt_label: 身份验证提示
+        prompt_login: 强制登录（重新认证）
+        prompt_none: 无提示（静默认证）
+        prompt_select_account: 账户选择（选择账户）
+        provisioning_title: 用户预配
+        redirect_uri_help: 在您的身份提供程序中配置的回调 URL
+        redirect_uri_label: 重定向 URI
+        redirect_uri_placeholder: https://yourdomain.com/auth/openid_connect/callback
+        role_admin: 管理员
+        role_guest: 访客
+        role_mapping_help: 将 IdP 组/声明映射到应用程序角色。为用户分配匹配的最高角色。留空则使用上面的默认角色。
+        role_mapping_title: 组到角色的映射（可选）
+        role_member: 成员
+        role_super_admin: 超级管理员
+        saml_configuration: SAML 配置
+        scopes_help: 以空格分隔的 OIDC 范围列表。留空则使用默认值（openid email profile）。添加 'groups' 以检索组声明。
+        scopes_label: 自定义范围
+        strategy_help: 要使用的身份验证策略
+        strategy_label: 策略
+        submit: 保存提供程序
+        super_admin_groups: 超级管理员组
+        test_connection: 测试连接
+      index:
+        add_provider: 添加提供程序
+        description: 管理您实例的单点登录身份验证提供程序
+        env_configured: 环境/YAML
+        legacy_providers_notice: 这些提供程序是通过环境变量或 YAML 配置的，无法通过此界面管理。要在此处管理它们，请通过启用 AUTH_PROVIDERS_SOURCE=db 并在 UI 中重新创建它们，将它们迁移到数据库支持的提供程序。
+        legacy_providers_title: 环境配置的提供程序
+        no_providers_message: 请先添加您的第一个 SSO 提供程序以开始。
+        no_providers_title: 没有 SSO 提供程序
+        note: 对 SSO 提供程序的更改需要重新启动服务器才能生效。或者，启用 AUTH_PROVIDERS_SOURCE=db 功能标志以从数据库动态加载提供程序。
+        table:
+          actions: 操作
+          disabled: 已禁用
+          enabled: 已启用
+          issuer: 颁发者
+          name: 名称
+          status: 状态
+          strategy: 策略
+        title: SSO 提供程序
+      new:
+        description: 配置新的单点登录身份验证提供程序
+        title: 添加 SSO 提供程序
+      toggle:
+        confirm_disable: 您确定要禁用此提供程序吗？
+        confirm_enable: 您确定要启用此提供程序吗？
+        success_disabled: SSO 提供程序已成功禁用。
+        success_enabled: SSO 提供程序已成功启用。
+      update:
+        success: SSO 提供程序更新成功。
+    unauthorized: 您无权访问此区域。
+    

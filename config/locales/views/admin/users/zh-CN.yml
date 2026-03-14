@@ -1,0 +1,44 @@
+zh-CN:
+  admin:
+    users:
+      index:
+        description: 管理您实例的用户角色。超级管理员可以访问SSO提供程序设置和用户管理。
+        filters:
+          role: 角色
+          role_all: 所有角色
+          submit: 筛选
+          trial_all: 全部
+          trial_expiring_soon: 7天内到期
+          trial_status: 试用状态
+          trial_trialing: 试用中
+        no_users: 未找到用户。
+        not_available: 不适用
+        role_descriptions:
+          admin: 家庭管理员。可以访问高级设置，如API密钥、导入和AI提示。
+          guest: 以助手为先的体验，为引导工作流程设置有意限制的权限。
+          member: 基本用户访问权限。可以管理自己的账户、交易和设置。
+          super_admin: 实例管理员。可以管理SSO提供程序、用户角色，并可模拟用户以提供支持。
+        role_descriptions_title: 角色描述
+        roles:
+          admin: 管理员
+          guest: 访客
+          member: 成员
+          super_admin: 超级管理员
+        section_title: 用户
+        summary:
+          trials_expiring_7_days: 未来7天内到期的试用
+        table:
+          family_accounts: 家庭账户
+          family_transactions: 家庭交易
+          last_login: 最后登录
+          never: 从未
+          role: 角色
+          session_count: 会话数
+          trial_ends_at: 试用结束
+          user: 用户
+        title: 用户管理
+        trial_ends_at: 试用结束
+        you: （您）
+      update:
+        failure: 更新用户角色失败。
+        success: 用户角色更新成功。

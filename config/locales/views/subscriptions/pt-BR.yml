@@ -3,12 +3,15 @@ pt-BR:
   subscriptions:
     self_hosted_alert: "%{product_name} não está disponível no modo self-hosted."
     upgrade:
-      contribute_and_support_sure: "Contribuir e apoiar o Sure"
+      contribute_and_support_sure: "Contribuir e apoiar o %{product}"
       cta: "Continue apoiando o desenvolvimento desta base de código!"
       header:
         support: "Apoiar"
         sure: "Sure"
         today: "hoje"
+      nav:
+        account_settings: "Configurações da conta"
+        sign_out: "Sair"
       redirect_to_stripe: "Na próxima etapa, você será redirecionado para o Stripe, que processa cartões de crédito para nós."
       trialing: "Seus dados serão excluídos em %{days} dias"
       trial_over: "Seu período de teste terminou"

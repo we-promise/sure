@@ -1,13 +1,11 @@
 ---
 de:
   sessions:
+    logout:
+      successful: Du hast dich erfolgreich abgemeldet.
     create:
       invalid_credentials: Ungültige E-Mail-Adresse oder falsches Passwort.
-      local_login_disabled: Anmeldung mit Passwort ist deaktiviert. Bitte nutze Single Sign-On.
-    destroy:
-      logout_successful: Du hast dich erfolgreich abgemeldet.
-    post_logout:
-      logout_successful: Du hast dich erfolgreich abgemeldet.
+      local_login_disabled: Lokale Passwortanmeldung ist deaktiviert. Bitte nutze Single Sign-On.
     openid_connect:
       account_linked: "Konto erfolgreich mit %{provider} verknüpft"
       failed: Anmeldung über OpenID Connect fehlgeschlagen.
