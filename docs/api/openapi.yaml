@@ -545,6 +545,13 @@ components:
       properties:
         message:
           type: string
+    SuccessMessage:
+      type: object
+      required:
+      - message
+      properties:
+        message:
+          type: string
     ImportConfiguration:
       type: object
       properties:
@@ -2718,3 +2725,66 @@ paths:
                       type: string
                       description: Additional notes
         required: true
+  "/api/v1/users/reset":
+    delete:
+      summary: Reset account
+      tags:
+      - Users
+      description: Resets all financial data (accounts, categories, merchants, tags,
+        etc.) for the current user's family while keeping the user account intact.
+        The reset runs asynchronously in the background. Requires admin role.
+      security:
+      - apiKeyAuth: []
+      responses:
+        '200':
+          description: account reset initiated
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/SuccessMessage"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: "forbidden \u2014 requires read_write scope and admin role"
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+  "/api/v1/users/me":
+    delete:
+      summary: Delete account
+      tags:
+      - Users
+      description: Permanently deactivates the current user account and all associated
+        data. This action cannot be undone.
+      security:
+      - apiKeyAuth: []
+      responses:
+        '200':
+          description: account deleted
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/SuccessMessage"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: insufficient scope
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '422':
+          description: deactivation failed
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"

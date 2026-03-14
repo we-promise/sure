@@ -25,8 +25,8 @@ class Assistant::External < Assistant::Base
 
     def config
       Config.new(
-        url: ENV["EXTERNAL_ASSISTANT_URL"].presence || Setting.external_assistant_url,
-        token: ENV["EXTERNAL_ASSISTANT_TOKEN"].presence || Setting.external_assistant_token,
+        url: ENV["EXTERNAL_ASSISTANT_URL"].presence || Setting.external_assistant_url.presence,
+        token: ENV["EXTERNAL_ASSISTANT_TOKEN"].presence || Setting.external_assistant_token.presence,
         agent_id: ENV["EXTERNAL_ASSISTANT_AGENT_ID"].presence || Setting.external_assistant_agent_id.presence || "main",
         session_key: ENV.fetch("EXTERNAL_ASSISTANT_SESSION_KEY", "agent:main:main")
       )
