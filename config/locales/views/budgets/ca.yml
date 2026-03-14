@@ -2,6 +2,10 @@
 ca:
   budgets:
     show:
+      categories:
+        amount: Quantitat
+        edit: Edita
+        title: Categories
       in_budget_categories:
         short_title: Categories en pressupost
         title: Categories en pressupost
