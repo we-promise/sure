@@ -49,7 +49,7 @@
     <%# Bottom Section: Categories full width %>
     <div class="w-full bg-container rounded-xl shadow-border-xs p-4">
       <div class="flex items-center justify-between mb-4">
-        <h2 class="text-lg font-medium">Categories</h2>
+        <h2 class="text-lg font-medium"><%= t("budgets.show.in_budget_categories.title") %></h2>
 
         <% if @budget.initialized? %>
           <%= render DS::Link.new(
@@ -65,5 +65,7 @@
         <%= render "budgets/budget_categories", budget: @budget %>
       </div>
     </div>
+
+    <%= render "budgets/not_in_budget_categories", budget: @budget %>
   </div>
 </div>
