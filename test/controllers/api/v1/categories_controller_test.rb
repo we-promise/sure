@@ -184,4 +184,197 @@ class Api::V1::CategoriesControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :not_found
   end
+
+  # Create action tests
+
+  test "create requires authentication" do
+    post "/api/v1/categories", params: { category: { name: "New Category" } }
+
+    assert_response :unauthorized
+  end
+
+  test "create requires read_write scope" do
+    post "/api/v1/categories",
+         params: { category: { name: "New Category", classification: "expense" } },
+         headers: { "Authorization" => "Bearer #{@access_token.token}" }
+
+    assert_response :forbidden
+  end
+
+  test "create category successfully" do
+    read_write_token = Doorkeeper::AccessToken.create!(
+      application: @oauth_app,
+      resource_owner_id: @user.id,
+      scopes: "read_write"
+    )
+
+    category_name = "New Category #{SecureRandom.hex(4)}"
+
+    assert_difference -> { @user.family.categories.count }, 1 do
+      post "/api/v1/categories",
+           params: { category: { name: category_name, classification: "expense", color: "#ff0000" } },
+           headers: { "Authorization" => "Bearer #{read_write_token.token}" }
+    end
+
+    assert_response :created
+
+    category = JSON.parse(response.body)
+    assert_equal category_name, category["name"]
+    assert_equal "expense", category["classification"]
+    assert_equal "#ff0000", category["color"]
+  end
+
+  test "create subcategory with parent_id" do
+    read_write_token = Doorkeeper::AccessToken.create!(
+      application: @oauth_app,
+      resource_owner_id: @user.id,
+      scopes: "read_write"
+    )
+
+    subcategory_name = "Sub Category #{SecureRandom.hex(4)}"
+
+    post "/api/v1/categories",
+         params: { category: { name: subcategory_name, classification: "expense", parent_id: @category.id } },
+         headers: { "Authorization" => "Bearer #{read_write_token.token}" }
+
+    assert_response :created
+
+    category = JSON.parse(response.body)
+    assert_equal subcategory_name, category["name"]
+    assert_equal @category.id, category["parent"]["id"]
+  end
+
+  # Update action tests
+
+  test "update requires authentication" do
+    patch "/api/v1/categories/#{@category.id}", params: { category: { name: "Updated" } }
+
+    assert_response :unauthorized
+  end
+
+  test "update requires read_write scope" do
+    patch "/api/v1/categories/#{@category.id}",
+          params: { category: { name: "Updated" } },
+          headers: { "Authorization" => "Bearer #{@access_token.token}" }
+
+    assert_response :forbidden
+  end
+
+  test "update category successfully" do
+    read_write_token = Doorkeeper::AccessToken.create!(
+      application: @oauth_app,
+      resource_owner_id: @user.id,
+      scopes: "read_write"
+    )
+
+    new_name = "Updated Category #{SecureRandom.hex(4)}"
+
+    patch "/api/v1/categories/#{@category.id}",
+          params: { category: { name: new_name, color: "#00ff00" } },
+          headers: { "Authorization" => "Bearer #{read_write_token.token}" }
+
+    assert_response :success
+
+    category = JSON.parse(response.body)
+    assert_equal new_name, category["name"]
+    assert_equal "#00ff00", category["color"]
+  end
+
+  test "update returns 404 for non-existent category" do
+    read_write_token = Doorkeeper::AccessToken.create!(
+      application: @oauth_app,
+      resource_owner_id: @user.id,
+      scopes: "read_write"
+    )
+
+    patch "/api/v1/categories/#{SecureRandom.uuid}",
+          params: { category: { name: "Not Found" } },
+          headers: { "Authorization" => "Bearer #{read_write_token.token}" }
+
+    assert_response :not_found
+  end
+
+  test "update returns 404 for category from another family" do
+    read_write_token = Doorkeeper::AccessToken.create!(
+      application: @oauth_app,
+      resource_owner_id: @user.id,
+      scopes: "read_write"
+    )
+
+    other_family_category = categories(:one)
+
+    patch "/api/v1/categories/#{other_family_category.id}",
+          params: { category: { name: "Hacker Update" } },
+          headers: { "Authorization" => "Bearer #{read_write_token.token}" }
+
+    assert_response :not_found
+  end
+
+  # Destroy action tests
+
+  test "destroy requires authentication" do
+    delete "/api/v1/categories/#{@category.id}"
+
+    assert_response :unauthorized
+  end
+
+  test "destroy requires read_write scope" do
+    delete "/api/v1/categories/#{@category.id}",
+           headers: { "Authorization" => "Bearer #{@access_token.token}" }
+
+    assert_response :forbidden
+  end
+
+  test "destroy category successfully" do
+    read_write_token = Doorkeeper::AccessToken.create!(
+      application: @oauth_app,
+      resource_owner_id: @user.id,
+      scopes: "read_write"
+    )
+
+    category_to_delete = @user.family.categories.create!(
+      name: "Delete Me #{SecureRandom.hex(4)}",
+      classification: "expense",
+      color: "#ff0000"
+    )
+
+    assert_difference -> { @user.family.categories.count }, -1 do
+      delete "/api/v1/categories/#{category_to_delete.id}",
+             headers: { "Authorization" => "Bearer #{read_write_token.token}" }
+    end
+
+    assert_response :success
+    response_body = JSON.parse(response.body)
+    assert_equal "Category deleted successfully", response_body["message"]
+  end
+
+  test "destroy returns 404 for non-existent category" do
+    read_write_token = Doorkeeper::AccessToken.create!(
+      application: @oauth_app,
+      resource_owner_id: @user.id,
+      scopes: "read_write"
+    )
+
+    delete "/api/v1/categories/#{SecureRandom.uuid}",
+           headers: { "Authorization" => "Bearer #{read_write_token.token}" }
+
+    assert_response :not_found
+  end
+
+  test "destroy returns 404 for category from another family" do
+    read_write_token = Doorkeeper::AccessToken.create!(
+      application: @oauth_app,
+      resource_owner_id: @user.id,
+      scopes: "read_write"
+    )
+
+    other_family_category = categories(:one)
+
+    assert_no_difference -> { Category.count } do
+      delete "/api/v1/categories/#{other_family_category.id}",
+             headers: { "Authorization" => "Bearer #{read_write_token.token}" }
+    end
+
+    assert_response :not_found
+  end
 end
