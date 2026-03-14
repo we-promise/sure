@@ -58,7 +58,7 @@ RSpec.describe 'API V1 Users', type: :request do
         run_test!
       end
 
-      response '403', 'forbidden — requires read_write scope and admin role' do
+      response '403', 'forbidden - requires read_write scope and admin role' do
         let(:api_key) do
           key = ApiKey.generate_secure_key
           ApiKey.create!(
