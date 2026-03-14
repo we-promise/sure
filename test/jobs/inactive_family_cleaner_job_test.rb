@@ -43,12 +43,10 @@ class InactiveFamilyCleanerJobTest < ActiveJob::TestCase
       )
     end
 
-    assert_difference "Family.count", -1 do
-      InactiveFamilyCleanerJob.perform_now
-    end
-
     assert_no_difference "ArchivedExport.count" do
-      # Already destroyed above, just verifying no archive was created
+      assert_difference "Family.count", -1 do
+        InactiveFamilyCleanerJob.perform_now
+      end
     end
   end
 
