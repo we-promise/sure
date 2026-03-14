@@ -35,6 +35,10 @@ module Admin
         -(@entries_count_by_family[family.id] || 0)
       end
 
+      @invitations_by_family = Invitation.pending
+        .where(family_id: family_ids)
+        .group_by(&:family_id)
+
       @trials_expiring_in_7_days = Subscription
         .where(status: :trialing)
         .where(trial_ends_at: Time.current..7.days.from_now)

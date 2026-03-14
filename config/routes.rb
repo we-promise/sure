@@ -505,6 +505,12 @@ Rails.application.routes.draw do
       end
     end
     resources :users, only: [ :index, :update ]
+    resources :invitations, only: [ :destroy ]
+    resources :families, only: [] do
+      member do
+        delete :invitations, to: "invitations#destroy_all"
+      end
+    end
   end
 
   # Defines the root path route ("/")
