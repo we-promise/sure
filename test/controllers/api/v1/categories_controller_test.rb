@@ -84,7 +84,7 @@ class Api::V1::CategoriesControllerTest < ActionDispatch::IntegrationTest
     category = response_body["categories"].find { |c| c["name"] == @category.name }
     assert category.present?, "Should find the food_and_drink category"
 
-    required_fields = %w[id name classification color icon subcategories_count created_at updated_at]
+    required_fields = %w[id name color icon subcategories_count created_at updated_at]
     required_fields.each do |field|
       assert category.key?(field), "Category should have #{field} field"
     end
@@ -124,19 +124,6 @@ class Api::V1::CategoriesControllerTest < ActionDispatch::IntegrationTest
     assert_equal 2, response_body["pagination"]["per_page"]
   end
 
-  test "should filter by classification" do
-    get "/api/v1/categories", params: { classification: "expense" }, headers: {
-      "Authorization" => "Bearer #{@access_token.token}"
-    }
-
-    assert_response :success
-    response_body = JSON.parse(response.body)
-
-    response_body["categories"].each do |category|
-      assert_equal "expense", category["classification"]
-    end
-  end
-
   test "should filter for roots only" do
     get "/api/v1/categories", params: { roots_only: true }, headers: {
       "Authorization" => "Bearer #{@access_token.token}"
@@ -174,7 +161,6 @@ class Api::V1::CategoriesControllerTest < ActionDispatch::IntegrationTest
 
     assert_equal @category.id, response_body["id"]
     assert_equal @category.name, response_body["name"]
-    assert_equal @category.classification, response_body["classification"]
     assert_equal @category.color, response_body["color"]
     assert_equal @category.lucide_icon, response_body["icon"]
   end

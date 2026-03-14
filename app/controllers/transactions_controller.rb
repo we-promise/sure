@@ -6,8 +6,7 @@ class TransactionsController < ApplicationController
 
   def new
     super
-    @income_categories = Current.family.categories.incomes.alphabetically
-    @expense_categories = Current.family.categories.expenses.alphabetically
+    @categories = Current.family.categories.alphabetically
   end
 
   def index
@@ -331,6 +330,8 @@ class TransactionsController < ApplicationController
       )
 
       nature = entry_params.delete(:nature)
+
+      entry_params.delete(:amount) if entry_params[:amount].blank?
 
       if nature.present? && entry_params[:amount].present?
         signed_amount = nature == "inflow" ? -entry_params[:amount].to_d : entry_params[:amount].to_d
