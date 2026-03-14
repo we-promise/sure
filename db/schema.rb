@@ -128,11 +128,11 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_14_131357) do
   create_table "archived_exports", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.string "email", null: false
     t.string "family_name"
-    t.string "download_token", null: false
+    t.string "download_token_digest", null: false
     t.datetime "expires_at", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["download_token"], name: "index_archived_exports_on_download_token", unique: true
+    t.index ["download_token_digest"], name: "index_archived_exports_on_download_token_digest", unique: true
     t.index ["expires_at"], name: "index_archived_exports_on_expires_at"
   end
 

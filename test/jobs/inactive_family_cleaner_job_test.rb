@@ -76,7 +76,7 @@ class InactiveFamilyCleanerJobTest < ActiveJob::TestCase
     assert_equal "inactive@example.com", archive.email
     assert_equal "Inactive Trial Family", archive.family_name
     assert archive.export_file.attached?
-    assert archive.download_token.present?
+    assert archive.download_token_digest.present?
     assert archive.expires_at > 89.days.from_now
   end
 
