@@ -134,8 +134,11 @@ en:
           view: View
       empty: No imports yet.
     new:
-      description: You can manually import various types of data via CSV or use one
-        of our import templates like Mint.
+      description: Import from a financial tool or upload raw data files.
+      tab_financial_tools: Financial Tools
+      tab_raw_data: Raw Data
+      coming_soon: Coming soon
+      import_ynab: Import from YNAB
       import_accounts: Import accounts
       import_categories: Import categories
       import_mint: Import from Mint
