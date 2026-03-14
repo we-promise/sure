@@ -740,6 +740,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_14_120000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "token_digest"
+    t.index ["email", "family_id"], name: "index_invitations_on_email_and_family_id_pending", unique: true, where: "(accepted_at IS NULL)"
     t.index ["email"], name: "index_invitations_on_email"
     t.index ["family_id"], name: "index_invitations_on_family_id"
     t.index ["inviter_id"], name: "index_invitations_on_inviter_id"
