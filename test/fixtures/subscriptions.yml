@@ -1,9 +1,14 @@
 active:
-  family: dylan_family 
-  status: active 
+  family: dylan_family
+  status: active
   stripe_id: "test_1234567890"
 
 trialing:
   family: empty
   status: trialing
   trial_ends_at: <%= 12.days.from_now %>
+
+expired_trial:
+  family: inactive_trial
+  status: paused
+  trial_ends_at: <%= 45.days.ago %>
