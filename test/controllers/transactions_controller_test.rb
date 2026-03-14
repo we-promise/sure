@@ -35,6 +35,102 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_enqueued_with(job: SyncJob)
   end
 
+  test "applies rules when creating transaction" do
+    family = @entry.account.family
+    merchant = family.merchants.create!(name: "Test Merchant", type: "FamilyMerchant")
+    category = family.categories.create!(name: "Test Category")
+
+    # Create a rule that should match the new transaction
+    rule = Rule.create!(
+      family: family,
+      resource_type: "transaction",
+      active: true,
+      effective_date: 1.day.ago.to_date,
+      conditions: [
+        Rule::Condition.new(
+          condition_type: "transaction_merchant",
+          operator: "=",
+          value: merchant.id
+        )
+      ],
+      actions: [
+        Rule::Action.new(
+          action_type: "set_transaction_category",
+          value: category.id
+        )
+      ]
+    )
+
+    post transactions_url, params: {
+      entry: {
+        account_id: @entry.account_id,
+        name: "New transaction",
+        date: Date.current,
+        currency: "USD",
+        amount: 100,
+        nature: "inflow",
+        entryable_type: @entry.entryable_type,
+        entryable_attributes: {
+          merchant_id: merchant.id
+        }
+      }
+    }
+
+    created_entry = Entry.order(:created_at).last
+    created_entry.reload
+
+    # Verify rule was applied
+    assert_equal category, created_entry.transaction.category
+  end
+
+  test "applies rules when updating transaction" do
+    family = @entry.account.family
+    merchant = family.merchants.create!(name: "Test Merchant", type: "FamilyMerchant")
+    category = family.categories.create!(name: "Test Category")
+
+    # Create a rule that should match when merchant is set
+    rule = Rule.create!(
+      family: family,
+      resource_type: "transaction",
+      active: true,
+      effective_date: 1.day.ago.to_date,
+      conditions: [
+        Rule::Condition.new(
+          condition_type: "transaction_merchant",
+          operator: "=",
+          value: merchant.id
+        )
+      ],
+      actions: [
+        Rule::Action.new(
+          action_type: "set_transaction_category",
+          value: category.id
+        )
+      ]
+    )
+
+    # Update transaction to set merchant
+    patch transaction_url(@entry), params: {
+      entry: {
+        name: @entry.name,
+        date: @entry.date,
+        currency: @entry.currency,
+        amount: @entry.amount,
+        nature: @entry.amount.negative? ? "outflow" : "inflow",
+        entryable_type: @entry.entryable_type,
+        entryable_attributes: {
+          id: @entry.entryable_id,
+          merchant_id: merchant.id
+        }
+      }
+    }
+
+    @entry.reload
+
+    # Verify rule was applied
+    assert_equal category, @entry.transaction.category
+  end
+
   test "updates with transaction details" do
     assert_no_difference [ "Entry.count", "Transaction.count" ] do
       patch transaction_url(@entry), params: {
