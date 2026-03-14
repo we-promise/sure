@@ -629,7 +629,7 @@ class QifImportTest < ActiveSupport::TestCase
 
   test "create_mappable! reuses existing parent category for hierarchical key" do
     existing_parent = @family.categories.create!(
-      name: "Home", color: "#aabbcc", lucide_icon: "house", classification: "expense"
+      name: "Home", color: "#aabbcc", lucide_icon: "house"
     )
 
     @import.update!(raw_file_str: QIF_WITH_HIERARCHICAL_CATEGORIES)
@@ -649,11 +649,11 @@ class QifImportTest < ActiveSupport::TestCase
 
   test "mappables_by_key pre-matches hierarchical key to existing child category" do
     parent = @family.categories.create!(
-      name: "Home", color: "#aabbcc", lucide_icon: "house", classification: "expense"
+      name: "Home", color: "#aabbcc", lucide_icon: "house"
     )
     child = @family.categories.create!(
       name: "Home Improvement", color: "#aabbcc", lucide_icon: "house",
-      classification: "expense", parent: parent
+      parent: parent
     )
 
     @import.update!(raw_file_str: QIF_WITH_HIERARCHICAL_CATEGORIES)
