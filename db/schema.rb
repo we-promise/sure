@@ -51,6 +51,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_14_131357) do
     t.text "notes"
     t.jsonb "holdings_snapshot_data"
     t.datetime "holdings_snapshot_at"
+    t.boolean "excluded", default: false, null: false
     t.index ["accountable_id", "accountable_type"], name: "index_accounts_on_accountable_id_and_accountable_type"
     t.index ["accountable_type"], name: "index_accounts_on_accountable_type"
     t.index ["currency"], name: "index_accounts_on_currency"

@@ -47,6 +47,7 @@ nb:
       edit_tags: Rediger tagger
       import: Importer
     index:
+      include_excluded_accounts: Inkluder ekskluderte kontoer
       transaction: transaksjon
       transactions: transaksjoner
     searches:

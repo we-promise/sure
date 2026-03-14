@@ -35,7 +35,12 @@
             <div class="flex items-center gap-2 mb-0.5">
               <%= tag.p account.name, class: class_names("text-sm text-primary font-medium truncate", "animate-pulse" => account.syncing?) %>
             </div>
-            <%= tag.p account.short_subtype_label, class: "text-sm text-secondary truncate" %>
+            <div class="flex items-baseline gap-1">
+              <%= tag.p account.short_subtype_label, class: "text-sm text-secondary truncate" %>
+              <% if account.excluded? %>
+                <span class="text-xs text-secondary"><%= t("accounts.accountable_group.excluded_badge") %></span>
+              <% end %>
+            </div>
           </div>
 
           <div class="ml-auto text-right grow h-10">

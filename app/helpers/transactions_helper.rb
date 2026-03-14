@@ -76,4 +76,25 @@ module TransactionsHelper
       }
     end
   end
+
+  # Generates hidden field tags for persisting search query parameters
+  # across form submissions, skipping the active_accounts_only parameter.
+  def hidden_query_params(q_params)
+    return "".html_safe if q_params.blank?
+
+    q_hash = q_params.respond_to?(:to_unsafe_h) ? q_params.to_unsafe_h : q_params.to_h
+
+    fields = q_hash.each_with_object([]) do |(key, value), tags|
+      key_str = key.to_s
+      next if key_str == "active_accounts_only"
+
+      if value.is_a?(Array)
+        value.each { |v| tags << hidden_field_tag("q[#{key_str}][]", v) }
+      else
+        tags << hidden_field_tag("q[#{key_str}]", value)
+      end
+    end
+
+    safe_join(fields)
+  end
 end

@@ -21,6 +21,8 @@ es:
       balance: Saldo actual
       name_label: Nombre de la cuenta
       name_placeholder: Ejemplo de nombre de cuenta
+      exclude_from_reports_label: Excluir de informes y métricas
+      exclude_from_reports_description: Las cuentas excluidas están ocultas en los informes y los cálculos de patrimonio neto.
       additional_details: Detalles adicionales
       institution_name_label: Nombre de la institución
       institution_name_placeholder: ej. Chase Bank
@@ -28,8 +30,14 @@ es:
       institution_domain_placeholder: ej. chase.com
       notes_label: Notas
       notes_placeholder: Guarda información adicional como números de cuenta, códigos de sucursal, IBAN, números de ruta, etc.
+    accountable_group:
+      excluded_badge: "(Excluida)"
     index:
       accounts: Cuentas
+      account_groups:
+        total: Total
+        active: Activa
+        excluded: Excluida
       manual_accounts:
         other_accounts: Otras cuentas
       new_account: Nueva cuenta

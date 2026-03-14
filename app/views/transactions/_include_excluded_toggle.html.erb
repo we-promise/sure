@@ -1,0 +1,20 @@
+<%# locals: (include_excluded:) %>
+<div class="flex items-center gap-2">
+  <label for="include_excluded_accounts" class="text-sm text-secondary cursor-pointer select-none">
+    <%= t("transactions.index.include_excluded_accounts") %>
+  </label>
+  <%= form_with url: transactions_path, method: :get, data: { turbo_frame: "_top", controller: "auto-submit-form" } do |f| %>
+    <%= hidden_query_params(params[:q]) %>
+    <% if params[:tab].present? %>
+      <%= hidden_field_tag "tab", params[:tab] %>
+    <% end %>
+    <%= render DS::Toggle.new(
+      id: "include_excluded_accounts",
+      name: "q[active_accounts_only]",
+      checked: include_excluded,
+      checked_value: "false",
+      unchecked_value: "true",
+      data: { auto_submit_form_target: "auto" }
+    ) %>
+  <% end %>
+</div>
