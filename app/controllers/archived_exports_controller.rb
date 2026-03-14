@@ -5,7 +5,7 @@ class ArchivedExportsController < ApplicationController
     export = ArchivedExport.find_by!(download_token: params[:token])
 
     if export.downloadable?
-      redirect_to export.export_file, allow_other_host: true
+      redirect_to rails_blob_path(export.export_file, disposition: "attachment")
     else
       head :gone
     end
