@@ -91,6 +91,12 @@ en:
     dismiss_duplicate:
       success: Kept as separate transactions
       failure: Could not dismiss duplicate suggestion
+    summary:
+      total_transactions: Total transactions
+      income: Income
+      expenses: Expenses
+      inflow: Inflow
+      outflow: Outflow
     pending_duplicate_merge:
       possible_duplicate: Duplicate?
       possible_duplicate_short: Dup?

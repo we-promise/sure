@@ -48,7 +48,7 @@ class Transaction::Search
   # because those transactions are retirement savings, not daily income/expenses.
   def totals
     @totals ||= begin
-      Rails.cache.fetch("transaction_search_totals/#{cache_key_base}") do
+      Rails.cache.fetch("transaction_search_totals/v2/#{cache_key_base}") do
         scope = transactions_scope
 
         # Exclude tax-advantaged accounts from totals calculation
@@ -65,6 +65,14 @@ class Transaction::Search
                       "COALESCE(SUM(CASE WHEN entries.amount < 0 AND transactions.kind NOT IN (?) THEN ABS(entries.amount * COALESCE(er.rate, 1)) ELSE 0 END), 0) as income_total",
                       Transaction::TRANSFER_KINDS
                     ]),
+                    ActiveRecord::Base.sanitize_sql_array([
+                      "COALESCE(SUM(CASE WHEN entries.amount < 0 AND transactions.kind IN (?) THEN ABS(entries.amount * COALESCE(er.rate, 1)) ELSE 0 END), 0) as transfer_inflow_total",
+                      Transaction::TRANSFER_KINDS
+                    ]),
+                    ActiveRecord::Base.sanitize_sql_array([
+                      "COALESCE(SUM(CASE WHEN entries.amount >= 0 AND transactions.kind IN (?) THEN ABS(entries.amount * COALESCE(er.rate, 1)) ELSE 0 END), 0) as transfer_outflow_total",
+                      Transaction::TRANSFER_KINDS
+                    ]),
                     "COUNT(entries.id) as transactions_count"
                   )
                   .joins(
@@ -78,7 +86,9 @@ class Transaction::Search
         Totals.new(
           count: result.transactions_count.to_i,
           income_money: Money.new(result.income_total, family.currency),
-          expense_money: Money.new(result.expense_total, family.currency)
+          expense_money: Money.new(result.expense_total, family.currency),
+          transfer_inflow_money: Money.new(result.transfer_inflow_total, family.currency),
+          transfer_outflow_money: Money.new(result.transfer_outflow_total, family.currency)
         )
       end
     end
@@ -94,7 +104,7 @@ class Transaction::Search
   end
 
   private
-    Totals = Data.define(:count, :income_money, :expense_money)
+    Totals = Data.define(:count, :income_money, :expense_money, :transfer_inflow_money, :transfer_outflow_money)
 
     def apply_active_accounts_filter(query, active_accounts_only_filter)
       if active_accounts_only_filter
