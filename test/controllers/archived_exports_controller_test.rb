@@ -34,9 +34,8 @@ class ArchivedExportsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "returns 404 for invalid token" do
-    assert_raises ActiveRecord::RecordNotFound do
-      get archived_export_path(token: "nonexistent-token")
-    end
+    get archived_export_path(token: "nonexistent-token")
+    assert_response :not_found
   end
 
   test "does not require authentication" do

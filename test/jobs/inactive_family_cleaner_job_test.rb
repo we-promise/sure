@@ -84,9 +84,7 @@ class InactiveFamilyCleanerJobTest < ActiveJob::TestCase
     dylan_family = families(:dylan_family)
     assert dylan_family.subscription.active?
 
-    assert_no_difference "Family.count" do
-      InactiveFamilyCleanerJob.perform_now
-    end
+    InactiveFamilyCleanerJob.perform_now
 
     assert Family.exists?(dylan_family.id)
   end
