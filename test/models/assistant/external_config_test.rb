@@ -81,6 +81,7 @@ class Assistant::ExternalConfigTest < ActiveSupport::TestCase
   test "configured? returns true only when URL and token are both present" do
     Setting.external_assistant_url = nil
     Setting.external_assistant_token = nil
+    Setting.clear_cache
 
     with_env_overrides("EXTERNAL_ASSISTANT_URL" => "http://x", "EXTERNAL_ASSISTANT_TOKEN" => nil) do
       assert_not Assistant::External.configured?
@@ -89,5 +90,8 @@ class Assistant::ExternalConfigTest < ActiveSupport::TestCase
     with_env_overrides("EXTERNAL_ASSISTANT_URL" => "http://x", "EXTERNAL_ASSISTANT_TOKEN" => "t") do
       assert Assistant::External.configured?
     end
+  ensure
+    Setting.external_assistant_url = nil
+    Setting.external_assistant_token = nil
   end
 end
