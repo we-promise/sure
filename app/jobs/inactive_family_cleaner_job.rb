@@ -43,18 +43,22 @@ class InactiveFamilyCleanerJob < ApplicationJob
       export_data = Family::DataExporter.new(family).generate_export
       email = family.users.order(:created_at).first&.email
 
-      archive = ArchivedExport.create!(
-        email: email || "unknown",
-        family_name: family.name,
-        expires_at: ARCHIVE_EXPIRY.from_now
-      )
+      ActiveRecord::Base.transaction do
+        archive = ArchivedExport.create!(
+          email: email || "unknown",
+          family_name: family.name,
+          expires_at: ARCHIVE_EXPIRY.from_now
+        )
 
-      archive.export_file.attach(
-        io: export_data,
-        filename: "sure_archive_#{family.id}.zip",
-        content_type: "application/zip"
-      )
+        archive.export_file.attach(
+          io: export_data,
+          filename: "sure_archive_#{family.id}.zip",
+          content_type: "application/zip"
+        )
 
-      Rails.logger.info("InactiveFamilyCleanerJob: Archived data for family #{family.id} (email: #{email}, token: #{archive.download_token})")
+        raise ActiveRecord::Rollback, "File attach failed" unless archive.export_file.attached?
+
+        Rails.logger.info("InactiveFamilyCleanerJob: Archived data for family #{family.id} (email: #{email}, token: #{archive.download_token})")
+      end
     end
 end
