@@ -2749,7 +2749,7 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '403':
-          description: forbidden (non-admin user)
+          description: "forbidden \u2014 requires read_write scope and admin role"
           content:
             application/json:
               schema:
