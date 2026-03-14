@@ -4,10 +4,10 @@ zh-CN:
     show:
       in_budget_categories:
         short_title: 预算内分类
-        title: In Budget Categories
+        title: 预算内分类
       not_in_budget_categories:
         short_title: 非预算分类
-        title: Not in Budget Categories
+        title: 非预算分类
       tabs:
         actual: 实际
         budgeted: 预算

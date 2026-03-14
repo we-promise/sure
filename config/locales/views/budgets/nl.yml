@@ -1,6 +1,12 @@
 nl:
   budgets:
     show:
+      in_budget_categories:
+        short_title: Categorieen binnen budget
+        title: Categorieen binnen budget
+      not_in_budget_categories:
+        short_title: Categorieen buiten budget
+        title: Categorieen buiten budget
       tabs:
         actual: "Actueel"
         budgeted: "Begroot"
