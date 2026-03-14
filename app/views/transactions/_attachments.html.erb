@@ -1,0 +1,122 @@
+<div id="transaction_attachments_<%= transaction.id %>" class="pb-4">
+  <!-- Upload Form -->
+  <% if transaction.attachments.count < Transaction::MAX_ATTACHMENTS_PER_TRANSACTION %>
+    <%= styled_form_with url: transaction_attachments_path(transaction),
+          method: :post,
+          multipart: true,
+          local: true,
+          class: "mb-4",
+          data: {
+            controller: "attachment-upload",
+            attachment_upload_max_files_value: Transaction::MAX_ATTACHMENTS_PER_TRANSACTION - transaction.attachments.count,
+            attachment_upload_max_size_value: Transaction::MAX_ATTACHMENT_SIZE
+          } do |form| %>
+      <div class="space-y-3">
+        <div>
+          <div class="flex flex-col items-center justify-center w-full py-8 border border-secondary border-dashed rounded-xl cursor-pointer bg-surface-inset hover:bg-surface-inset-hover transition-colors text-center px-4" 
+               data-action="click->attachment-upload#triggerFileInput">
+
+            <div data-attachment-upload-target="uploadText" class="flex flex-col items-center">
+              <%= icon "plus", size: "lg", class: "mb-2 text-secondary" %>
+              <p class="text-sm font-medium text-primary"><%= t(".browse_to_add") %></p>
+            </div>
+
+            <div data-attachment-upload-target="fileName" class="flex flex-col items-center hidden w-full px-2">
+              <%= icon "file-text", size: "lg", class: "mb-2 text-secondary" %>
+              <p class="text-sm font-medium text-primary truncate w-full"></p>
+            </div>
+
+            <%= form.file_field :attachments,
+                  multiple: true,
+                  accept: Transaction::ALLOWED_CONTENT_TYPES.join(','),
+                  class: "hidden",
+                  data: {
+                    attachment_upload_target: "fileInput",
+                    action: "change->attachment-upload#updateSubmitButton"
+                  } %>
+          </div>
+
+          <p class="text-[10px] text-secondary mt-1 text-center">
+            <%= t(".select_up_to",
+                  count: Transaction::MAX_ATTACHMENTS_PER_TRANSACTION,
+                  size: Transaction::MAX_ATTACHMENT_SIZE / 1.megabyte,
+                  used: transaction.attachments.count) %>
+          </p>
+        </div>
+
+        <div class="flex justify-end">
+          <%= render DS::Button.new(
+                text: t(".upload"),
+                variant: :primary,
+                size: :sm,
+                data: { attachment_upload_target: "submitButton" }
+              ) %>
+        </div>
+      </div>
+    <% end %>
+  <% else %>
+    <div class="p-3 mb-4 rounded-lg border border-warning bg-warning/5 flex items-start gap-3">
+      <%= icon "alert-circle", size: "sm", color: "warning", class: "mt-0.5" %>
+      <div class="text-xs text-warning leading-relaxed font-medium">
+        <%= t(".max_reached", count: transaction.attachments.count, max: Transaction::MAX_ATTACHMENTS_PER_TRANSACTION) %>
+      </div>
+    </div>
+  <% end %>
+
+  <!-- Attachments List -->
+  <% if transaction.attachments.any? %>
+    <div class="space-y-2">
+      <h4 class="text-sm font-medium text-primary"><%= t(".files", count: transaction.attachments.count) %></h4>
+      <div class="space-y-2">
+        <% transaction.attachments.each do |attachment| %>
+          <div class="flex items-center justify-between p-3 border border-primary rounded-lg bg-container">
+            <div class="flex items-center gap-3">
+              <div class="flex-shrink-0">
+                <% if attachment.image? %>
+                  <%= icon "image", size: "sm", color: "secondary" %>
+                <% else %>
+                  <%= icon "file", size: "sm", color: "secondary" %>
+                <% end %>
+              </div>
+              <div class="min-w-0 flex-1">
+                <p class="text-sm font-medium text-primary truncate"><%= attachment.filename %></p>
+                <p class="text-xs text-secondary"><%= number_to_human_size(attachment.byte_size) %></p>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-2">
+              <%= render DS::Link.new(
+                    href: transaction_attachment_path(transaction, attachment, disposition: :inline),
+                    variant: :outline,
+                    size: :sm,
+                    icon: "eye",
+                    text: "",
+                    target: "_blank"
+                  ) %>
+
+              <%= render DS::Link.new(
+                    href: transaction_attachment_path(transaction, attachment, disposition: :attachment),
+                    variant: :outline,
+                    size: :sm,
+                    icon: "download",
+                    text: "",
+                    data: { turbo: false }
+                  ) %>
+
+              <%= render DS::Button.new(
+                    href: transaction_attachment_path(transaction, attachment),
+                    method: :delete,
+                    variant: :outline_destructive,
+                    size: :sm,
+                    icon: "trash-2",
+                    confirm: CustomConfirm.for_resource_deletion("attachment")
+                  ) %>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  <% else %>
+    <p class="text-sm text-secondary"><%= t(".no_attachments") %></p>
+  <% end %>
+</div>
