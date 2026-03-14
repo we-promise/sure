@@ -35,6 +35,55 @@ class Category < ApplicationRecord
   PAYMENT_COLOR = "#db5a54"
   TRADE_COLOR = "#e99537"
 
+  ICON_KEYWORDS = {
+    /income|salary|paycheck|wage|earning/                          => "circle-dollar-sign",
+    /groceries|grocery|supermarket/                                => "shopping-bag",
+    /food|dining|restaurant|meal|lunch|dinner|breakfast/           => "utensils",
+    /coffee|cafe|café/                                             => "coffee",
+    /shopping|retail/                                              => "shopping-cart",
+    /transport|transit|commute|subway|metro/                       => "bus",
+    /parking/                                                      => "circle-parking",
+    /car|auto|vehicle/                                             => "car",
+    /gas|fuel|petrol/                                              => "fuel",
+    /flight|airline/                                               => "plane",
+    /travel|trip|vacation|holiday/                                 => "plane",
+    /hotel|lodging|accommodation/                                  => "hotel",
+    /movie|cinema|film|theater|theatre/                            => "film",
+    /music|concert/                                                => "music",
+    /game|gaming/                                                  => "gamepad-2",
+    /entertainment|leisure/                                        => "drama",
+    /sport|fitness|gym|workout|exercise/                           => "dumbbell",
+    /pharmacy|drug|medicine|pill|medication|dental|dentist/        => "pill",
+    /health|medical|clinic|doctor|physician/                       => "stethoscope",
+    /personal care|beauty|salon|spa|hair/                          => "scissors",
+    /mortgage|rent/                                                => "home",
+    /home|house|apartment|housing/                                 => "home",
+    /improvement|renovation|remodel/                               => "hammer",
+    /repair|maintenance/                                           => "wrench",
+    /electric|power|energy/                                        => "zap",
+    /water|sewage/                                                 => "waves",
+    /internet|cable|broadband|subscription|streaming/              => "wifi",
+    /utilities|utility/                                            => "lightbulb",
+    /phone|telephone/                                              => "phone",
+    /mobile|cell/                                                  => "smartphone",
+    /insurance/                                                    => "shield",
+    /gift|present/                                                 => "gift",
+    /donat|charity|nonprofit/                                      => "hand-helping",
+    /tax|irs|revenue/                                              => "landmark",
+    /loan|debt|credit card/                                        => "credit-card",
+    /service|professional/                                         => "briefcase",
+    /fee|charge/                                                   => "receipt",
+    /bank|banking/                                                 => "landmark",
+    /saving/                                                       => "piggy-bank",
+    /invest|stock|fund|portfolio/                                  => "trending-up",
+    /pet|dog|cat|animal|vet/                                       => "paw-print",
+    /education|school|university|college|tuition/                  => "graduation-cap",
+    /book|reading|library/                                         => "book",
+    /child|kid|baby|infant|daycare/                                => "baby",
+    /cloth|apparel|fashion|wear/                                   => "shirt",
+    /ticket/                                                       => "ticket"
+  }.freeze
+
   # Category name keys for i18n
   UNCATEGORIZED_NAME_KEY = "models.category.uncategorized"
   OTHER_INVESTMENTS_NAME_KEY = "models.category.other_investments"
@@ -58,6 +107,16 @@ class Category < ApplicationRecord
   end
 
   class << self
+    def suggested_icon(name)
+      name_down = name.to_s.downcase
+
+      ICON_KEYWORDS.each do |pattern, icon|
+        return icon if name_down.match?(pattern)
+      end
+
+      "shapes"
+    end
+
     def icon_codes
       %w[
         ambulance apple award baby badge-dollar-sign banknote barcode bar-chart-3 bath
