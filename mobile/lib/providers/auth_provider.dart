@@ -22,6 +22,15 @@ class AuthProvider with ChangeNotifier {
   bool _mfaRequired = false;
   bool _showMfaInput = false; // Track if we should show MFA input field
 
+  // SSO onboarding state
+  bool _ssoOnboardingPending = false;
+  String? _ssoLinkingCode;
+  String? _ssoEmail;
+  String? _ssoFirstName;
+  String? _ssoLastName;
+  bool _ssoAllowAccountCreation = false;
+  bool _ssoHasPendingInvitation = false;
+
   User? get user => _user;
   bool get isIntroLayout => _user?.isIntroLayout ?? false;
   bool get aiEnabled => _user?.aiEnabled ?? false;
@@ -35,6 +44,15 @@ class AuthProvider with ChangeNotifier {
   String? get errorMessage => _errorMessage;
   bool get mfaRequired => _mfaRequired;
   bool get showMfaInput => _showMfaInput; // Expose MFA input state
+
+  // SSO onboarding getters
+  bool get ssoOnboardingPending => _ssoOnboardingPending;
+  String? get ssoLinkingCode => _ssoLinkingCode;
+  String? get ssoEmail => _ssoEmail;
+  String? get ssoFirstName => _ssoFirstName;
+  String? get ssoLastName => _ssoLastName;
+  bool get ssoAllowAccountCreation => _ssoAllowAccountCreation;
+  bool get ssoHasPendingInvitation => _ssoHasPendingInvitation;
 
   AuthProvider() {
     _loadStoredAuth();
@@ -266,9 +284,22 @@ class AuthProvider with ChangeNotifier {
       if (result['success'] == true) {
         _tokens = result['tokens'] as AuthTokens?;
         _user = result['user'] as User?;
+        _ssoOnboardingPending = false;
         _isLoading = false;
         notifyListeners();
         return true;
+      } else if (result['account_not_linked'] == true) {
+        // SSO onboarding needed - store linking data
+        _ssoOnboardingPending = true;
+        _ssoLinkingCode = result['linking_code'] as String?;
+        _ssoEmail = result['email'] as String?;
+        _ssoFirstName = result['first_name'] as String?;
+        _ssoLastName = result['last_name'] as String?;
+        _ssoAllowAccountCreation = result['allow_account_creation'] == true;
+        _ssoHasPendingInvitation = result['has_pending_invitation'] == true;
+        _isLoading = false;
+        notifyListeners();
+        return false;
       } else {
         _errorMessage = result['error'] as String?;
         _isLoading = false;
@@ -282,6 +313,107 @@ class AuthProvider with ChangeNotifier {
       notifyListeners();
       return false;
     }
+  }
+
+  Future<bool> ssoLinkAccount({
+    required String email,
+    required String password,
+  }) async {
+    if (_ssoLinkingCode == null) {
+      _errorMessage = 'No pending SSO session. Please try signing in again.';
+      notifyListeners();
+      return false;
+    }
+
+    _errorMessage = null;
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      final result = await _authService.ssoLink(
+        linkingCode: _ssoLinkingCode!,
+        email: email,
+        password: password,
+      );
+
+      if (result['success'] == true) {
+        _tokens = result['tokens'] as AuthTokens?;
+        _user = result['user'] as User?;
+        _clearSsoOnboardingState();
+        _isLoading = false;
+        notifyListeners();
+        return true;
+      } else {
+        _errorMessage = result['error'] as String?;
+        _isLoading = false;
+        notifyListeners();
+        return false;
+      }
+    } catch (e, stackTrace) {
+      LogService.instance.error('AuthProvider', 'SSO link error: $e\n$stackTrace');
+      _errorMessage = 'Failed to link account. Please try again.';
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> ssoCreateAccount({
+    String? firstName,
+    String? lastName,
+  }) async {
+    if (_ssoLinkingCode == null) {
+      _errorMessage = 'No pending SSO session. Please try signing in again.';
+      notifyListeners();
+      return false;
+    }
+
+    _errorMessage = null;
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      final result = await _authService.ssoCreateAccount(
+        linkingCode: _ssoLinkingCode!,
+        firstName: firstName,
+        lastName: lastName,
+      );
+
+      if (result['success'] == true) {
+        _tokens = result['tokens'] as AuthTokens?;
+        _user = result['user'] as User?;
+        _clearSsoOnboardingState();
+        _isLoading = false;
+        notifyListeners();
+        return true;
+      } else {
+        _errorMessage = result['error'] as String?;
+        _isLoading = false;
+        notifyListeners();
+        return false;
+      }
+    } catch (e, stackTrace) {
+      LogService.instance.error('AuthProvider', 'SSO create account error: $e\n$stackTrace');
+      _errorMessage = 'Failed to create account. Please try again.';
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  void cancelSsoOnboarding() {
+    _clearSsoOnboardingState();
+    notifyListeners();
+  }
+
+  void _clearSsoOnboardingState() {
+    _ssoOnboardingPending = false;
+    _ssoLinkingCode = null;
+    _ssoEmail = null;
+    _ssoFirstName = null;
+    _ssoLastName = null;
+    _ssoAllowAccountCreation = false;
+    _ssoHasPendingInvitation = false;
   }
 
   Future<void> logout() async {

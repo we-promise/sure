@@ -10,6 +10,109 @@ de:
       title: Kontostand eingeben
     show:
       chart_title: Gesamtwert
+    subtypes:
+      brokerage:
+        short: Brokerage
+        long: Brokerage
+      "401k":
+        short: "401(k)"
+        long: "401(k)"
+      roth_401k:
+        short: Roth 401(k)
+        long: Roth 401(k)
+      "403b":
+        short: "403(b)"
+        long: "403(b)"
+      "457b":
+        short: "457(b)"
+        long: "457(b)"
+      tsp:
+        short: TSP
+        long: Thrift Savings Plan
+      ira:
+        short: IRA
+        long: Traditionelles IRA
+      roth_ira:
+        short: Roth IRA
+        long: Roth IRA
+      sep_ira:
+        short: SEP IRA
+        long: SEP IRA
+      simple_ira:
+        short: SIMPLE IRA
+        long: SIMPLE IRA
+      "529_plan":
+        short: "529 Plan"
+        long: "529 Bildungssparplan"
+      hsa:
+        short: HSA
+        long: Health Savings Account
+      ugma:
+        short: UGMA
+        long: UGMA-Treuhandkonto
+      utma:
+        short: UTMA
+        long: UTMA-Treuhandkonto
+      isa:
+        short: ISA
+        long: Individual Savings Account
+      lisa:
+        short: LISA
+        long: Lifetime ISA
+      sipp:
+        short: SIPP
+        long: Self-Invested Personal Pension
+      workplace_pension_uk:
+        short: Pension
+        long: Betriebliche Altersvorsorge
+      rrsp:
+        short: RRSP
+        long: Registered Retirement Savings Plan
+      tfsa:
+        short: TFSA
+        long: Tax-Free Savings Account
+      resp:
+        short: RESP
+        long: Registered Education Savings Plan
+      lira:
+        short: LIRA
+        long: Locked-In Retirement Account
+      rrif:
+        short: RRIF
+        long: Registered Retirement Income Fund
+      super:
+        short: Super
+        long: Superannuation
+      smsf:
+        short: SMSF
+        long: Self-Managed Super Fund
+      pea:
+        short: PEA
+        long: Plan d'Épargne en Actions
+      pillar_3a:
+        short: Säule 3a
+        long: Private Vorsorge (Säule 3a)
+      riester:
+        short: Riester
+        long: Riester-Rente
+      pension:
+        short: Pension
+        long: Pension
+      retirement:
+        short: Ruhestand
+        long: Ruhestandskonto
+      mutual_fund:
+        short: Fonds
+        long: Investmentfonds
+      angel:
+        short: Angel
+        long: Angel-Investment
+      trust:
+        short: Trust
+        long: Trust
+      other:
+        short: Sonstige
+        long: Sonstige Anlage
     value_tooltip:
       cash: Bargeld
       holdings: Positionen

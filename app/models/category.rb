@@ -12,7 +12,6 @@ class Category < ApplicationRecord
   validates :name, uniqueness: { scope: :family_id }
 
   validate :category_level_limit
-  validate :nested_category_matches_parent_classification
 
   before_save :inherit_color_from_parent
 
@@ -24,8 +23,9 @@ class Category < ApplicationRecord
       .order(:name)
   }
   scope :roots, -> { where(parent_id: nil) }
-  scope :incomes, -> { where(classification: "income") }
-  scope :expenses, -> { where(classification: "expense") }
+  # Legacy scopes - classification removed; these now return all categories
+  scope :incomes, -> { all }
+  scope :expenses, -> { all }
 
   COLORS = %w[#e99537 #4da568 #6471eb #db5a54 #df4e92 #c44fe9 #eb5429 #61c9ea #805dee #6ad28a]
 
@@ -34,6 +34,55 @@ class Category < ApplicationRecord
   TRANSFER_COLOR = "#444CE7"
   PAYMENT_COLOR = "#db5a54"
   TRADE_COLOR = "#e99537"
+
+  ICON_KEYWORDS = {
+    /income|salary|paycheck|wage|earning/                          => "circle-dollar-sign",
+    /groceries|grocery|supermarket/                                => "shopping-bag",
+    /food|dining|restaurant|meal|lunch|dinner|breakfast/           => "utensils",
+    /coffee|cafe|café/                                             => "coffee",
+    /shopping|retail/                                              => "shopping-cart",
+    /transport|transit|commute|subway|metro/                       => "bus",
+    /parking/                                                      => "circle-parking",
+    /car|auto|vehicle/                                             => "car",
+    /gas|fuel|petrol/                                              => "fuel",
+    /flight|airline/                                               => "plane",
+    /travel|trip|vacation|holiday/                                 => "plane",
+    /hotel|lodging|accommodation/                                  => "hotel",
+    /movie|cinema|film|theater|theatre/                            => "film",
+    /music|concert/                                                => "music",
+    /game|gaming/                                                  => "gamepad-2",
+    /entertainment|leisure/                                        => "drama",
+    /sport|fitness|gym|workout|exercise/                           => "dumbbell",
+    /pharmacy|drug|medicine|pill|medication|dental|dentist/        => "pill",
+    /health|medical|clinic|doctor|physician/                       => "stethoscope",
+    /personal care|beauty|salon|spa|hair/                          => "scissors",
+    /mortgage|rent/                                                => "home",
+    /home|house|apartment|housing/                                 => "home",
+    /improvement|renovation|remodel/                               => "hammer",
+    /repair|maintenance/                                           => "wrench",
+    /electric|power|energy/                                        => "zap",
+    /water|sewage/                                                 => "waves",
+    /internet|cable|broadband|subscription|streaming/              => "wifi",
+    /utilities|utility/                                            => "lightbulb",
+    /phone|telephone/                                              => "phone",
+    /mobile|cell/                                                  => "smartphone",
+    /insurance/                                                    => "shield",
+    /gift|present/                                                 => "gift",
+    /donat|charity|nonprofit/                                      => "hand-helping",
+    /tax|irs|revenue/                                              => "landmark",
+    /loan|debt|credit card/                                        => "credit-card",
+    /service|professional/                                         => "briefcase",
+    /fee|charge/                                                   => "receipt",
+    /bank|banking/                                                 => "landmark",
+    /saving/                                                       => "piggy-bank",
+    /invest|stock|fund|portfolio/                                  => "trending-up",
+    /pet|dog|cat|animal|vet/                                       => "paw-print",
+    /education|school|university|college|tuition/                  => "graduation-cap",
+    /book|reading|library/                                         => "book",
+    /child|kid|baby|infant|daycare/                                => "baby",
+    /cloth|apparel|fashion|wear/                                   => "shirt",
+    /ticket/                                                       => "ticket"
+  }.freeze
 
   # Category name keys for i18n
   UNCATEGORIZED_NAME_KEY = "models.category.uncategorized"
@@ -58,6 +107,16 @@ class Category < ApplicationRecord
   end
 
   class << self
+    def suggested_icon(name)
+      name_down = name.to_s.downcase
+
+      ICON_KEYWORDS.each do |pattern, icon|
+        return icon if name_down.match?(pattern)
+      end
+
+      "shapes"
+    end
+
     def icon_codes
       %w[
         ambulance apple award baby badge-dollar-sign banknote barcode bar-chart-3 bath
@@ -79,10 +138,9 @@ class Category < ApplicationRecord
     end
 
     def bootstrap!
-      default_categories.each do |name, color, icon, classification|
+      default_categories.each do |name, color, icon|
         find_or_create_by!(name: name) do |category|
           category.color = color
-          category.classification = classification
           category.lucide_icon = icon
         end
       end
@@ -138,28 +196,28 @@ class Category < ApplicationRecord
     private
       def default_categories
         [
-          [ "Income", "#22c55e", "circle-dollar-sign", "income" ],
-          [ "Food & Drink", "#f97316", "utensils", "expense" ],
-          [ "Groceries", "#407706", "shopping-bag", "expense" ],
-          [ "Shopping", "#3b82f6", "shopping-cart", "expense" ],
-          [ "Transportation", "#0ea5e9", "bus", "expense" ],
-          [ "Travel", "#2563eb", "plane", "expense" ],
-          [ "Entertainment", "#a855f7", "drama", "expense" ],
-          [ "Healthcare", "#4da568", "pill", "expense" ],
-          [ "Personal Care", "#14b8a6", "scissors", "expense" ],
-          [ "Home Improvement", "#d97706", "hammer", "expense" ],
-          [ "Mortgage / Rent", "#b45309", "home", "expense" ],
-          [ "Utilities", "#eab308", "lightbulb", "expense" ],
-          [ "Subscriptions", "#6366f1", "wifi", "expense" ],
-          [ "Insurance", "#0284c7", "shield", "expense" ],
-          [ "Sports & Fitness", "#10b981", "dumbbell", "expense" ],
-          [ "Gifts & Donations", "#61c9ea", "hand-helping", "expense" ],
-          [ "Taxes", "#dc2626", "landmark", "expense" ],
-          [ "Loan Payments", "#e11d48", "credit-card", "expense" ],
-          [ "Services", "#7c3aed", "briefcase", "expense" ],
-          [ "Fees", "#6b7280", "receipt", "expense" ],
-          [ "Savings & Investments", "#059669", "piggy-bank", "expense" ],
-          [ investment_contributions_name, "#0d9488", "trending-up", "expense" ]
+          [ "Income", "#22c55e", "circle-dollar-sign" ],
+          [ "Food & Drink", "#f97316", "utensils" ],
+          [ "Groceries", "#407706", "shopping-bag" ],
+          [ "Shopping", "#3b82f6", "shopping-cart" ],
+          [ "Transportation", "#0ea5e9", "bus" ],
+          [ "Travel", "#2563eb", "plane" ],
+          [ "Entertainment", "#a855f7", "drama" ],
+          [ "Healthcare", "#4da568", "pill" ],
+          [ "Personal Care", "#14b8a6", "scissors" ],
+          [ "Home Improvement", "#d97706", "hammer" ],
+          [ "Mortgage / Rent", "#b45309", "home" ],
+          [ "Utilities", "#eab308", "lightbulb" ],
+          [ "Subscriptions", "#6366f1", "wifi" ],
+          [ "Insurance", "#0284c7", "shield" ],
+          [ "Sports & Fitness", "#10b981", "dumbbell" ],
+          [ "Gifts & Donations", "#61c9ea", "hand-helping" ],
+          [ "Taxes", "#dc2626", "landmark" ],
+          [ "Loan Payments", "#e11d48", "credit-card" ],
+          [ "Services", "#7c3aed", "briefcase" ],
+          [ "Fees", "#6b7280", "receipt" ],
+          [ "Savings & Investments", "#059669", "piggy-bank" ],
+          [ investment_contributions_name, "#0d9488", "trending-up" ]
         ]
       end
   end
@@ -208,12 +266,6 @@ class Category < ApplicationRecord
     def category_level_limit
       if (subcategory? && parent.subcategory?) || (parent? && subcategory?)
         errors.add(:parent, "can't have more than 2 levels of subcategories")
-      end
-    end
-
-    def nested_category_matches_parent_classification
-      if subcategory? && parent.classification != classification
-        errors.add(:parent, "must have the same classification as its parent")
       end
     end
 

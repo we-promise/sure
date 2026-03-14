@@ -5,11 +5,14 @@ en:
       index:
         title: "User Management"
         description: "Manage user roles for your instance. Super admins can access SSO provider settings and user management."
-        section_title: "Users"
+        section_title: "Families / Groups"
         you: "(You)"
         trial_ends_at: "Trial ends"
         not_available: "n/a"
         no_users: "No users found."
+        unnamed_family: "Unnamed Family/Group"
+        no_subscription: "No subscription"
+        family_summary: "%{members} members · %{accounts} accounts · %{transactions} transactions"
         filters:
           role: "Role"
           role_all: "All roles"
@@ -40,6 +43,11 @@ en:
           member: "Basic user access. Can manage their own accounts, transactions, and settings."
           admin: "Family administrator. Can access advanced settings like API keys, imports, and AI prompts."
           super_admin: "Instance administrator. Can manage SSO providers, user roles, and impersonate users for support."
+        invitations:
+          pending_label: "Invited (pending)"
+          expires: "Expires %{date}"
+          delete: "Delete"
+          delete_all: "Delete All"
       update:
         success: "User role updated successfully."
         failure: "Failed to update user role."
