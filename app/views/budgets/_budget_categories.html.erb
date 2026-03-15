@@ -1,22 +1,54 @@
 <%# locals: (budget:) %>
 
+<% budgeted = ->(budget_category) { budget_category.display_budgeted_spending.to_d.positive? } %>
+<% unbudgeted_with_spending = ->(budget_category) { budget_category.display_budgeted_spending.to_d <= 0 && budget_category.actual_spending.to_d.positive? } %>
+<% uncategorized_budget_category = budget.uncategorized_budget_category %>
+<% expenses_empty = budget.family.categories.expenses.empty? %>
+<% all_category_groups = expenses_empty ? [] : BudgetCategory::Group.for(budget.budget_categories) %>
+<% category_groups = if !budget.initialized?
+                       all_category_groups
+                     else
+                       all_category_groups.each_with_object([]) do |group, filtered_groups|
+                         visible_subcategories = group.budget_subcategories.select { |budget_subcategory| budgeted.call(budget_subcategory) }
+                         visible_parent = budgeted.call(group.budget_category)
+
+                         next unless visible_parent || visible_subcategories.any?
+
+                         filtered_groups << BudgetCategory::Group.new(group.budget_category, visible_subcategories)
+                       end
+                     end %>
+<% show_uncategorized = !expenses_empty && (!budget.initialized? || budgeted.call(uncategorized_budget_category)) %>
+<% visible_category_count = category_groups.sum { |group| 1 + group.budget_subcategories.count } + (show_uncategorized ? 1 : 0) %>
+<% unbudgeted_groups = if budget.initialized?
+                         all_category_groups.each_with_object([]) do |group, filtered_groups|
+                           visible_parent = unbudgeted_with_spending.call(group.budget_category)
+                           visible_subcategories = group.budget_subcategories.select { |budget_subcategory| unbudgeted_with_spending.call(budget_subcategory) }
+
+                           next unless visible_parent || visible_subcategories.any?
+
+                           filtered_groups << BudgetCategory::Group.new(group.budget_category, visible_subcategories)
+                         end
+                       else
+                         []
+                       end %>
+<% show_unbudgeted_uncategorized = budget.initialized? && unbudgeted_with_spending.call(uncategorized_budget_category) %>
+<% unbudgeted_visible_category_count = unbudgeted_groups.sum { |group| (unbudgeted_with_spending.call(group.budget_category) ? 1 : 0) + group.budget_subcategories.count } + (show_unbudgeted_uncategorized ? 1 : 0) %>
+
 <div>
   <div class="flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-secondary uppercase">
-    <p>Categories</p>
+    <p><%= t("budgets.show.in_budget_categories.short_title") %></p>
     <span class="text-subdued">&middot;</span>
-    <p><%= budget.budget_categories.count %></p>
+    <p><%= visible_category_count %></p>
 
-    <p class="ml-auto">Amount</p>
+    <p class="ml-auto"><%= t("budgets.show.categories.amount") %></p>
   </div>
 
   <div class="bg-container py-1 shadow-border-xs rounded-md">
-    <% if budget.family.categories.expenses.empty? %>
+    <% if expenses_empty %>
       <div class="py-8">
         <%= render "budget_categories/no_categories" %>
       </div>
     <% else %>
-      <% category_groups = BudgetCategory::Group.for(budget.budget_categories) %>
-
       <% category_groups.each_with_index do |group, index| %>
         <div class="py-2">
           <%= render "budget_categories/budget_category", budget_category: group.budget_category %>
@@ -36,9 +68,51 @@
 
         <%= render "shared/ruler" %>
       <% end %>
-      <div class="py-2">
-        <%= render "budget_categories/budget_category", budget_category: budget.uncategorized_budget_category %>
-      </div>
+      <% if show_uncategorized %>
+        <div class="py-2">
+          <%= render "budget_categories/budget_category", budget_category: uncategorized_budget_category %>
+        </div>
+      <% end %>
     <% end %>
   </div>
 </div>
+
+<% if unbudgeted_visible_category_count.positive? %>
+  <div class="mt-4">
+    <div class="flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-secondary uppercase">
+      <p><%= t("budgets.show.not_in_budget_categories.short_title") %></p>
+      <span class="text-subdued">&middot;</span>
+      <p><%= unbudgeted_visible_category_count %></p>
+
+      <p class="ml-auto"><%= t("budgets.show.categories.amount") %></p>
+    </div>
+
+    <div class="bg-container py-1 shadow-border-xs rounded-md">
+      <% unbudgeted_groups.each do |group| %>
+        <% if unbudgeted_with_spending.call(group.budget_category) %>
+          <div class="py-2">
+            <%= render "budget_categories/budget_category", budget_category: group.budget_category, show_budget_meta: false %>
+          </div>
+        <% end %>
+
+        <% group.budget_subcategories.each do |budget_subcategory| %>
+          <div class="py-2 w-full flex items-start">
+            <div class="ml-8 pt-4 flex items-center justify-center text-subdued">
+              <%= icon "corner-down-right" %>
+            </div>
+
+            <%= render "budget_categories/budget_category", budget_category: budget_subcategory, show_budget_meta: false %>
+          </div>
+        <% end %>
+
+        <%= render "shared/ruler" %>
+      <% end %>
+
+      <% if show_unbudgeted_uncategorized %>
+        <div class="py-2">
+          <%= render "budget_categories/budget_category", budget_category: uncategorized_budget_category, show_budget_meta: false %>
+        </div>
+      <% end %>
+    </div>
+  </div>
+<% end %>

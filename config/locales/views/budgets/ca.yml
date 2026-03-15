@@ -2,6 +2,16 @@
 ca:
   budgets:
     show:
+      categories:
+        amount: Quantitat
+        edit: Edita
+        title: Categories
+      in_budget_categories:
+        short_title: Categories en pressupost
+        title: Categories en pressupost
+      not_in_budget_categories:
+        short_title: Categories fora de pressupost
+        title: Categories fora de pressupost
       tabs:
         actual: Real
         budgeted: Pressupostat

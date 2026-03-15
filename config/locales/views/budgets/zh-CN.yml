@@ -2,6 +2,16 @@
 zh-CN:
   budgets:
     show:
+      categories:
+        amount: 金额
+        edit: 编辑
+        title: 分类
+      in_budget_categories:
+        short_title: 预算内分类
+        title: 预算内分类
+      not_in_budget_categories:
+        short_title: 非预算分类
+        title: 非预算分类
       tabs:
         actual: 实际
         budgeted: 预算

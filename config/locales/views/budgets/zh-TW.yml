@@ -2,6 +2,16 @@
 zh-TW:
   budgets:
     show:
+      categories:
+        amount: 金額
+        edit: 編輯
+        title: 分類
+      in_budget_categories:
+        short_title: 預算內分類
+        title: 預算內分類
+      not_in_budget_categories:
+        short_title: 非預算分類
+        title: 非預算分類
       tabs:
         actual: 實際
         budgeted: 預算

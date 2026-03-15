@@ -5,6 +5,16 @@ en:
       custom_range: "%{start} - %{end_date}"
       month_year: "%{month}"
     show:
+      categories:
+        amount: Amount
+        edit: Edit
+        title: Categories
+      in_budget_categories:
+        short_title: In Budget Categories
+        title: In Budget Categories
+      not_in_budget_categories:
+        short_title: Not in Budget Categories
+        title: Not in Budget Categories
       tabs:
         actual: Actual
         budgeted: Budgeted

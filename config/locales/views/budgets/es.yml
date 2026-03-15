@@ -5,6 +5,16 @@ es:
       custom_range: "%{start} - %{end_date}"
       month_year: "%{month}"
     show:
+      categories:
+        amount: Importe
+        edit: Editar
+        title: Categorias
+      in_budget_categories:
+        short_title: Categorias en presupuesto
+        title: Categorias en presupuesto
+      not_in_budget_categories:
+        short_title: Categorias fuera de presupuesto
+        title: Categorias fuera de presupuesto
       tabs:
         actual: Real
         budgeted: Presupuestado
