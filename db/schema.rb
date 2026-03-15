@@ -1474,6 +1474,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_14_131357) do
     t.jsonb "preferences", default: {}, null: false
     t.string "locale"
     t.string "ui_layout"
+    t.uuid "default_account_id"
+    t.index ["default_account_id"], name: "index_users_on_default_account_id"
     t.index ["email"], name: "index_users_on_email", unique: true
     t.index ["family_id"], name: "index_users_on_family_id"
     t.index ["last_viewed_chat_id"], name: "index_users_on_last_viewed_chat_id"
@@ -1584,6 +1586,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_14_131357) do
   add_foreign_key "transactions", "merchants"
   add_foreign_key "transfers", "transactions", column: "inflow_transaction_id", on_delete: :cascade
   add_foreign_key "transfers", "transactions", column: "outflow_transaction_id", on_delete: :cascade
+  add_foreign_key "users", "accounts", column: "default_account_id", on_delete: :nullify
   add_foreign_key "users", "chats", column: "last_viewed_chat_id"
   add_foreign_key "users", "families"
 end

@@ -362,6 +362,33 @@ class UserTest < ActiveSupport::TestCase
       "Should return false when section key is missing from collapsed_sections"
   end
 
+  # Default account for transactions
+  test "default_account_for_transactions returns account when active and manual" do
+    account = accounts(:depository)
+    @user.update!(default_account: account)
+    assert_equal account, @user.default_account_for_transactions
+  end
+
+  test "default_account_for_transactions returns nil when account is disabled" do
+    account = accounts(:depository)
+    @user.update!(default_account: account)
+    account.disable!
+    assert_nil @user.default_account_for_transactions
+  end
+
+  test "default_account_for_transactions returns nil when account is linked" do
+    account = accounts(:depository)
+    @user.update!(default_account: account)
+    plaid_account = plaid_accounts(:one)
+    AccountProvider.create!(account: account, provider: plaid_account)
+    account.reload
+    assert_nil @user.default_account_for_transactions
+  end
+
+  test "default_account_for_transactions returns nil when no default set" do
+    assert_nil @user.default_account_for_transactions
+  end
+
   # SSO-only user security tests
   test "sso_only? returns true for user with OIDC identity and no password" do
     sso_user = users(:sso_only)

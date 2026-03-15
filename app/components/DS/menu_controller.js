@@ -16,6 +16,7 @@ export default class extends Controller {
     show: Boolean,
     placement: { type: String, default: "bottom-end" },
     offset: { type: Number, default: 6 },
+    mobileFullwidth: { type: Boolean, default: true },
   };
 
   connect() {
@@ -105,13 +106,14 @@ export default class extends Controller {
     if (!this.buttonTarget || !this.contentTarget) return;
 
     const isSmallScreen = !window.matchMedia("(min-width: 768px)").matches;
+    const useMobileFullwidth = isSmallScreen && this.mobileFullwidthValue;
 
     computePosition(this.buttonTarget, this.contentTarget, {
-      placement: isSmallScreen ? "bottom" : this.placementValue,
+      placement: useMobileFullwidth ? "bottom" : this.placementValue,
       middleware: [offset(this.offsetValue), shift({ padding: 5 })],
       strategy: "fixed",
     }).then(({ x, y }) => {
-      if (isSmallScreen) {
+      if (useMobileFullwidth) {
         Object.assign(this.contentTarget.style, {
           position: "fixed",
           left: "0px",

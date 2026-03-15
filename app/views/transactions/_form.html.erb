@@ -18,7 +18,7 @@
     <% if @entry.account_id %>
       <%= f.hidden_field :account_id %>
     <% else %>
-      <%= f.collection_select :account_id, Current.family.accounts.manual.active.alphabetically, :id, :name, { prompt: t(".account_prompt"), label: t(".account"), variant: :logo }, required: true, class: "form-field__input text-ellipsis" %>
+      <%= f.collection_select :account_id, Current.family.accounts.manual.active.alphabetically, :id, :name, { prompt: t(".account_prompt"), label: t(".account"), selected: Current.user.default_account_for_transactions&.id, variant: :logo }, required: true, class: "form-field__input text-ellipsis" %>
     <% end %>
 
     <%= f.money_field :amount, label: t(".amount"), required: true %>
