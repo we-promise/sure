@@ -1,7 +1,7 @@
 class Family < ApplicationRecord
   include Syncable, AutoTransferMatchable, Subscribeable, VectorSearchable
   include PlaidConnectable, SimplefinConnectable, LunchflowConnectable, EnableBankingConnectable
-  include CoinbaseConnectable, CoinstatsConnectable, SnaptradeConnectable, MercuryConnectable
+  include CoinbaseConnectable, CoinstatsConnectable, SnaptradeConnectable, MercuryConnectable, SophtronConnectable
   include IndexaCapitalConnectable
 
   DATE_FORMATS = [
