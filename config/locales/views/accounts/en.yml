@@ -10,6 +10,7 @@ en:
       enable: Enable account
       disable: Disable account
       set_default: Set as default
+      remove_default: Unset default
       default_label: Default
       delete: Delete account
     chart:

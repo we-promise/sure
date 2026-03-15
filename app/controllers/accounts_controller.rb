@@ -1,5 +1,5 @@
 class AccountsController < ApplicationController
-  before_action :set_account, only: %i[sync sparkline toggle_active set_default show destroy unlink confirm_unlink select_provider]
+  before_action :set_account, only: %i[sync sparkline toggle_active set_default remove_default show destroy unlink confirm_unlink select_provider]
   include Periodable
 
   def index
@@ -96,6 +96,11 @@ class AccountsController < ApplicationController
     end
 
     Current.user.update!(default_account: @account)
+    redirect_to accounts_path
+  end
+
+  def remove_default
+    Current.user.update!(default_account: nil)
     redirect_to accounts_path
   end
 

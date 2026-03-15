@@ -73,20 +73,10 @@
             <% menu.with_item(variant: "button", text: t("accounts.account.enable"), href: toggle_active_account_path(account), method: :patch, icon: "toggle-left", data: { turbo_frame: :_top }) %>
           <% end %>
 
-          <% can_be_default = account.eligible_for_transaction_default? %>
-          <% if can_be_default || is_default %>
-            <% if is_default %>
-              <% menu.with_custom_content do %>
-                <div class="px-1">
-                  <div class="flex items-center gap-2 p-2 rounded-md w-full opacity-40 cursor-default">
-                    <%= icon("star") %>
-                    <span class="text-sm text-primary"><%= t("accounts.account.set_default") %></span>
-                  </div>
-                </div>
-              <% end %>
-            <% else %>
-              <% menu.with_item(variant: "button", text: t("accounts.account.set_default"), href: set_default_account_path(account), method: :patch, icon: "star", data: { turbo_frame: :_top }) %>
-            <% end %>
+          <% if is_default %>
+            <% menu.with_item(variant: "button", text: t("accounts.account.remove_default"), href: remove_default_account_path(account), method: :patch, icon: "star-off", data: { turbo_frame: :_top }) %>
+          <% elsif account.eligible_for_transaction_default? %>
+            <% menu.with_item(variant: "button", text: t("accounts.account.set_default"), href: set_default_account_path(account), method: :patch, icon: "star", data: { turbo_frame: :_top }) %>
           <% end %>
 
           <% unless account.linked? %>

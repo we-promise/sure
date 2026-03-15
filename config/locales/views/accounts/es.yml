@@ -10,6 +10,7 @@ es:
       enable: Activar cuenta
       disable: Desactivar cuenta
       set_default: Establecer como predeterminada
+      remove_default: Quitar predeterminada
       default_label: Predeterminada
       delete: Eliminar cuenta
     chart:

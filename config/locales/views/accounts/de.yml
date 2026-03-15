@@ -10,6 +10,7 @@ de:
       enable: Konto aktivieren
       disable: Konto deaktivieren
       set_default: Als Standard festlegen
+      remove_default: Standard aufheben
       default_label: Standard
       delete: Konto löschen
     chart:

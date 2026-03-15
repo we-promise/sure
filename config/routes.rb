@@ -331,6 +331,7 @@ Rails.application.routes.draw do
       get :sparkline
       patch :toggle_active
       patch :set_default
+      patch :remove_default
       get :select_provider
       get :confirm_unlink
       delete :unlink

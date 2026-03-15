@@ -249,7 +249,7 @@ class User < ApplicationRecord
     return nil unless default_account_id.present?
 
     account = default_account
-    return nil unless account&.supports_default? && account.active? && !account.linked? && account.family_id == family_id
+    return nil unless account&.eligible_for_transaction_default? && account.family_id == family_id
 
     account
   end

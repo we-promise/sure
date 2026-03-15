@@ -10,6 +10,7 @@ fr:
       enable: Activer le compte
       disable: Désactiver le compte
       set_default: Définir par défaut
+      remove_default: Retirer par défaut
       default_label: Par défaut
       delete: Supprimer le compte
     chart:
