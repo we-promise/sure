@@ -2,6 +2,9 @@
 en:
   transactions:
     unknown_name: Unknown transaction
+    selection_bar:
+      duplicate: Duplicate
+      edit: Edit
     form:
       account: Account
       account_prompt: Select an Account
@@ -13,6 +16,7 @@ en:
       description_placeholder: Describe transaction
       expense: Expense
       income: Income
+      merchant_label: Merchant
       none: (none)
       note_label: Notes
       note_placeholder: Enter a note
