@@ -7,6 +7,23 @@ class Transaction < ApplicationRecord
   has_many :taggings, as: :taggable, dependent: :destroy
   has_many :tags, through: :taggings
 
+  # File attachments (receipts, invoices, etc.) using Active Storage
+  # Supports images (JPEG, PNG, GIF, WebP) and PDFs up to 10MB each
+  # Maximum 10 attachments per transaction, family-scoped access
+  has_many_attached :attachments do |attachable|
+    attachable.variant :thumbnail, resize_to_limit: [ 150, 150 ]
+  end
+
+  # Attachment validation constants
+  MAX_ATTACHMENTS_PER_TRANSACTION = 10
+  MAX_ATTACHMENT_SIZE = 10.megabytes
+  ALLOWED_CONTENT_TYPES = %w[
+    image/jpeg image/jpg image/png image/gif image/webp
+    application/pdf
+  ].freeze
+
+  validate :validate_attachments, if: -> { attachments.attached? }
+
   accepts_nested_attributes_for :taggings, allow_destroy: true
 
   after_save :clear_merchant_unlinked_association, if: :merchant_id_previously_changed?
@@ -38,22 +55,19 @@ class Transaction < ApplicationRecord
   # Internal movement labels that should be excluded from budget (auto cash management)
   INTERNAL_MOVEMENT_LABELS = [ "Transfer", "Sweep In", "Sweep Out", "Exchange" ].freeze
 
+  # Providers that support pending transaction flags
+  PENDING_PROVIDERS = %w[simplefin plaid lunchflow].freeze
+
   # Pending transaction scopes - filter based on provider pending flags in extra JSONB
   # Works with any provider that stores pending status in extra["provider_name"]["pending"]
   scope :pending, -> {
-    where(<<~SQL.squish)
-      (transactions.extra -> 'simplefin' ->> 'pending')::boolean = true
-      OR (transactions.extra -> 'plaid' ->> 'pending')::boolean = true
-      OR (transactions.extra -> 'lunchflow' ->> 'pending')::boolean = true
-    SQL
+    conditions = PENDING_PROVIDERS.map { |provider| "(transactions.extra -> '#{provider}' ->> 'pending')::boolean = true" }
+    where(conditions.join(" OR "))
   }
 
   scope :excluding_pending, -> {
-    where(<<~SQL.squish)
-      (transactions.extra -> 'simplefin' ->> 'pending')::boolean IS DISTINCT FROM true
-      AND (transactions.extra -> 'plaid' ->> 'pending')::boolean IS DISTINCT FROM true
-      AND (transactions.extra -> 'lunchflow' ->> 'pending')::boolean IS DISTINCT FROM true
-    SQL
+    conditions = PENDING_PROVIDERS.map { |provider| "(transactions.extra -> '#{provider}' ->> 'pending')::boolean IS DISTINCT FROM true" }
+    where(conditions.join(" AND "))
   }
 
   # Family-scoped query for Enrichable#clear_ai_cache
@@ -78,9 +92,9 @@ class Transaction < ApplicationRecord
 
   def pending?
     extra_data = extra.is_a?(Hash) ? extra : {}
-    ActiveModel::Type::Boolean.new.cast(extra_data.dig("simplefin", "pending")) ||
-      ActiveModel::Type::Boolean.new.cast(extra_data.dig("plaid", "pending")) ||
-      ActiveModel::Type::Boolean.new.cast(extra_data.dig("lunchflow", "pending"))
+    PENDING_PROVIDERS.any? do |provider|
+      ActiveModel::Type::Boolean.new.cast(extra_data.dig(provider, "pending"))
+    end
   rescue
     false
   end
@@ -157,7 +171,49 @@ class Transaction < ApplicationRecord
     true
   end
 
+  # Find potential posted transactions that might be duplicates of this pending transaction
+  # Returns entries (not transactions) for UI consistency with transfer matcher
+  # Lists recent posted transactions from the same account for manual merging
+  def pending_duplicate_candidates(limit: 20, offset: 0)
+    return Entry.none unless pending? && entry.present?
+
+    account = entry.account
+    currency = entry.currency
+
+    # Find recent posted transactions from the same account
+    conditions = PENDING_PROVIDERS.map { |provider| "(transactions.extra -> '#{provider}' ->> 'pending')::boolean IS NOT TRUE" }
+
+    account.entries
+      .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
+      .where.not(id: entry.id)
+      .where(currency: currency)
+      .where(conditions.join(" AND "))
+      .order(date: :desc, created_at: :desc)
+      .limit(limit)
+      .offset(offset)
+  end
+
   private
+
+    def validate_attachments
+      # Check attachment count limit
+      if attachments.size > MAX_ATTACHMENTS_PER_TRANSACTION
+        errors.add(:attachments, :too_many, max: MAX_ATTACHMENTS_PER_TRANSACTION)
+      end
+
+      # Validate each attachment
+      attachments.each_with_index do |attachment, index|
+        # Check file size
+        if attachment.byte_size > MAX_ATTACHMENT_SIZE
+          errors.add(:attachments, :too_large, index: index + 1, max_mb: MAX_ATTACHMENT_SIZE / 1.megabyte)
+        end
+
+        # Check content type
+        unless ALLOWED_CONTENT_TYPES.include?(attachment.content_type)
+          errors.add(:attachments, :invalid_format, index: index + 1, file_format: attachment.content_type)
+        end
+      end
+    end
 
     def potential_posted_match_data
       return nil unless extra.is_a?(Hash)
