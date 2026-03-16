@@ -15,8 +15,16 @@ class InvitationsController < ApplicationController
     @invitation.inviter = Current.user
 
     if @invitation.save
-      InvitationMailer.invite_email(@invitation).deliver_later unless self_hosted?
-      flash[:notice] = t(".success")
+      normalized_email = @invitation.email.to_s.strip.downcase
+      existing_user = User.find_by(email: normalized_email)
+      if existing_user && @invitation.accept_for(existing_user)
+        flash[:notice] = t(".existing_user_added")
+      elsif existing_user
+        flash[:alert] = t(".failure")
+      else
+        InvitationMailer.invite_email(@invitation).deliver_later unless self_hosted?
+        flash[:notice] = t(".success")
+      end
     else
       flash[:alert] = t(".failure")
     end
@@ -28,7 +36,7 @@ class InvitationsController < ApplicationController
     @invitation = Invitation.find_by!(token: params[:id])
 
     if @invitation.pending?
-      redirect_to new_registration_path(invitation: @invitation.token)
+      render :accept_choice, layout: "auth"
     else
       raise ActiveRecord::RecordNotFound
     end

@@ -3,7 +3,7 @@
     <h2 class="text-lg font-medium text-primary">
       <%= t("reports.budget_performance.title") %>
     </h2>
-    <p class="text-sm text-tertiary">
+    <p class="text-sm text-subdued">
       <%= start_date.strftime("%B %Y") %>
     </p>
   </div>
@@ -62,13 +62,13 @@
           <div class="flex items-center justify-between text-sm">
             <div class="flex items-center gap-4">
               <div>
-                <span class="text-tertiary"><%= t("reports.budget_performance.spent") %>:</span>
+                <span class="text-subdued"><%= t("reports.budget_performance.spent") %>:</span>
                 <span class="font-medium text-primary">
                   <%= Money.new(budget_item[:actual], Current.family.currency).format %>
                 </span>
               </div>
               <div>
-                <span class="text-tertiary"><%= t("reports.budget_performance.budgeted") %>:</span>
+                <span class="text-subdued"><%= t("reports.budget_performance.budgeted") %>:</span>
                 <span class="font-medium text-secondary">
                   <%= Money.new(budget_item[:budgeted], Current.family.currency).format %>
                 </span>
@@ -77,12 +77,12 @@
 
             <div>
               <% if budget_item[:remaining] >= 0 %>
-                <span class="text-tertiary"><%= t("reports.budget_performance.remaining") %>:</span>
+                <span class="text-subdued"><%= t("reports.budget_performance.remaining") %>:</span>
                 <span class="font-medium text-success">
                   <%= Money.new(budget_item[:remaining], Current.family.currency).format %>
                 </span>
               <% else %>
-                <span class="text-tertiary"><%= t("reports.budget_performance.over_by") %>:</span>
+                <span class="text-subdued"><%= t("reports.budget_performance.over_by") %>:</span>
                 <span class="font-medium text-destructive">
                   <%= Money.new(budget_item[:remaining].abs, Current.family.currency).format %>
                 </span>
@@ -95,7 +95,7 @@
             <% days_remaining = (start_date.end_of_month - Date.current).to_i + 1 %>
             <% if days_remaining > 0 %>
               <div class="mt-3 pt-3 border-t border-tertiary">
-                <p class="text-xs text-tertiary">
+                <p class="text-xs text-subdued">
                   <%= t("reports.budget_performance.suggested_daily",
                         amount: Money.new((budget_item[:remaining] / days_remaining), Current.family.currency).format,
                         days: days_remaining) %>
@@ -108,8 +108,8 @@
     </div>
   <% else %>
     <div class="text-center py-12">
-      <%= icon("gauge", class: "w-12 h-12 text-tertiary mx-auto mb-4") %>
-      <p class="text-tertiary">
+      <%= icon("gauge", class: "w-12 h-12 text-subdued mx-auto mb-4") %>
+      <p class="text-subdued">
         <%= t("reports.budget_performance.no_budgets") %>
       </p>
     </div>

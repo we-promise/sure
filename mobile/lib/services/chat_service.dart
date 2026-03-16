@@ -18,10 +18,7 @@ class ChatService {
 
       final response = await http.get(
         url,
-        headers: {
-          'Authorization': 'Bearer $accessToken',
-          'Accept': 'application/json',
-        },
+        headers: ApiConfig.getAuthHeaders(accessToken),
       ).timeout(const Duration(seconds: 30));
 
       if (response.statusCode == 200) {
@@ -78,10 +75,7 @@ class ChatService {
 
       final response = await http.get(
         url,
-        headers: {
-          'Authorization': 'Bearer $accessToken',
-          'Accept': 'application/json',
-        },
+        headers: ApiConfig.getAuthHeaders(accessToken),
       ).timeout(const Duration(seconds: 30));
 
       if (response.statusCode == 200) {
@@ -124,14 +118,11 @@ class ChatService {
     required String accessToken,
     String? title,
     String? initialMessage,
-    String model = 'gpt-4',
   }) async {
     try {
       final url = Uri.parse('${ApiConfig.baseUrl}/api/v1/chats');
 
-      final body = <String, dynamic>{
-        'model': model,
-      };
+      final body = <String, dynamic>{};
 
       if (title != null) {
         body['title'] = title;
@@ -144,8 +135,7 @@ class ChatService {
       final response = await http.post(
         url,
         headers: {
-          'Authorization': 'Bearer $accessToken',
-          'Accept': 'application/json',
+          ...ApiConfig.getAuthHeaders(accessToken),
           'Content-Type': 'application/json',
         },
         body: jsonEncode(body),
@@ -199,8 +189,7 @@ class ChatService {
       final response = await http.post(
         url,
         headers: {
-          'Authorization': 'Bearer $accessToken',
-          'Accept': 'application/json',
+          ...ApiConfig.getAuthHeaders(accessToken),
           'Content-Type': 'application/json',
         },
         body: jsonEncode({
@@ -255,8 +244,7 @@ class ChatService {
       final response = await http.patch(
         url,
         headers: {
-          'Authorization': 'Bearer $accessToken',
-          'Accept': 'application/json',
+          ...ApiConfig.getAuthHeaders(accessToken),
           'Content-Type': 'application/json',
         },
         body: jsonEncode({
@@ -309,10 +297,7 @@ class ChatService {
 
       final response = await http.delete(
         url,
-        headers: {
-          'Authorization': 'Bearer $accessToken',
-          'Accept': 'application/json',
-        },
+        headers: ApiConfig.getAuthHeaders(accessToken),
       ).timeout(const Duration(seconds: 30));
 
       if (response.statusCode == 204) {
@@ -356,10 +341,7 @@ class ChatService {
 
       final response = await http.post(
         url,
-        headers: {
-          'Authorization': 'Bearer $accessToken',
-          'Accept': 'application/json',
-        },
+        headers: ApiConfig.getAuthHeaders(accessToken),
       ).timeout(const Duration(seconds: 30));
 
       if (response.statusCode == 202) {

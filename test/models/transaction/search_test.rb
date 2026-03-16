@@ -119,11 +119,10 @@ class Transaction::SearchTest < ActiveSupport::TestCase
 
     # Should include standard uncategorized transactions
     assert_includes uncategorized_ids, uncategorized_standard.entryable.id
-    # Should include loan_payment since it's treated specially in category logic
-    assert_includes uncategorized_ids, uncategorized_loan_payment.entryable.id
 
-    # Should exclude transfer transactions even if uncategorized
+    # Should exclude all transfer kinds (TRANSFER_KINDS) even if uncategorized
     assert_not_includes uncategorized_ids, uncategorized_transfer.entryable.id
+    assert_not_includes uncategorized_ids, uncategorized_loan_payment.entryable.id
   end
 
   test "filtering for only Uncategorized returns only uncategorized transactions" do
@@ -153,8 +152,7 @@ class Transaction::SearchTest < ActiveSupport::TestCase
     # Create a travel category for testing
     travel_category = @family.categories.create!(
       name: "Travel",
-      color: "#3b82f6",
-      classification: "expense"
+      color: "#3b82f6"
     )
 
     # Create transactions with different categories
@@ -237,8 +235,48 @@ class Transaction::SearchTest < ActiveSupport::TestCase
 
     # Test that the relation builds from family.transactions correctly
     assert_equal @family.transactions.joins(entry: :account).where(
-      "entries.amount >= 0 AND NOT (transactions.kind IN ('funds_movement', 'cc_payment', 'loan_payment'))"
+      "entries.amount >= 0 AND NOT (transactions.kind IN (?))", Transaction::TRANSFER_KINDS
     ).count, results.count
+  end
+
+  test "transfer filter includes investment_contribution transactions" do
+    investment_contribution = create_transaction(
+      account: @checking_account,
+      amount: 500,
+      kind: "investment_contribution"
+    )
+
+    funds_movement = create_transaction(
+      account: @checking_account,
+      amount: 200,
+      kind: "funds_movement"
+    )
+
+    search = Transaction::Search.new(@family, filters: { types: [ "transfer" ] })
+    result_ids = search.transactions_scope.pluck(:id)
+
+    assert_includes result_ids, investment_contribution.entryable.id
+    assert_includes result_ids, funds_movement.entryable.id
+  end
+
+  test "expense filter excludes investment_contribution transactions" do
+    investment_contribution = create_transaction(
+      account: @checking_account,
+      amount: 500,
+      kind: "investment_contribution"
+    )
+
+    standard_expense = create_transaction(
+      account: @checking_account,
+      amount: 100,
+      kind: "standard"
+    )
+
+    search = Transaction::Search.new(@family, filters: { types: [ "expense" ] })
+    result_ids = search.transactions_scope.pluck(:id)
+
+    assert_not_includes result_ids, investment_contribution.entryable.id
+    assert_includes result_ids, standard_expense.entryable.id
   end
 
   test "family-based API requires family parameter" do
@@ -493,5 +531,98 @@ class Transaction::SearchTest < ActiveSupport::TestCase
 
     # Should not match unrelated transactions
     assert_not_includes result_ids, no_match.entryable.id
+  end
+
+  test "uncategorized filter returns same results across all supported locales" do
+    # Create uncategorized transactions
+    uncategorized1 = create_transaction(
+      account: @checking_account,
+      amount: 100,
+      kind: "standard"
+    )
+
+    uncategorized2 = create_transaction(
+      account: @checking_account,
+      amount: 200,
+      kind: "standard"
+    )
+
+    # Create a categorized transaction to ensure filter is working
+    categorized = create_transaction(
+      account: @checking_account,
+      amount: 300,
+      category: categories(:food_and_drink),
+      kind: "standard"
+    )
+
+    # Get the expected count using English locale (known working case)
+    I18n.with_locale(:en) do
+      english_uncategorized_name = Category.uncategorized.name
+      english_results = Transaction::Search.new(@family, filters: { categories: [ english_uncategorized_name ] }).transactions_scope
+      @expected_count = english_results.count
+      assert_equal 2, @expected_count, "English locale should return 2 uncategorized transactions"
+    end
+
+    # Test every supported locale returns the same count when filtering by that locale's uncategorized name
+    LanguagesHelper::SUPPORTED_LOCALES.each do |locale|
+      I18n.with_locale(locale) do
+        localized_uncategorized_name = Category.uncategorized.name
+        results = Transaction::Search.new(@family, filters: { categories: [ localized_uncategorized_name ] }).transactions_scope
+        result_count = results.count
+
+        assert_equal @expected_count, result_count,
+          "Locale '#{locale}' with uncategorized name '#{localized_uncategorized_name}' should return #{@expected_count} transactions but got #{result_count}"
+      end
+    end
+  end
+
+  test "uncategorized filter works with English parameter name regardless of current locale" do
+    # This tests the bug where URL contains English "Uncategorized" but user's locale is different
+    # Bug: /transactions/?q[categories][]=Uncategorized fails when locale is French
+
+    # Create uncategorized transactions
+    uncategorized1 = create_transaction(
+      account: @checking_account,
+      amount: 100,
+      kind: "standard"
+    )
+
+    uncategorized2 = create_transaction(
+      account: @checking_account,
+      amount: 200,
+      kind: "standard"
+    )
+
+    # Create a categorized transaction to ensure filter is working
+    categorized = create_transaction(
+      account: @checking_account,
+      amount: 300,
+      category: categories(:food_and_drink),
+      kind: "standard"
+    )
+
+    # Get the English uncategorized name (this is what URLs typically contain)
+    english_uncategorized_name = I18n.t("models.category.uncategorized", locale: :en)
+
+    # Get the expected count using English locale (known working case)
+    expected_count = nil
+    I18n.with_locale(:en) do
+      results = Transaction::Search.new(@family, filters: { categories: [ english_uncategorized_name ] }).transactions_scope
+      expected_count = results.count
+      assert_equal 2, expected_count, "English locale should return 2 uncategorized transactions"
+    end
+
+    # Test that using the English parameter name works in every supported locale
+    # This catches the bug where French locale fails with English "Uncategorized" parameter
+    LanguagesHelper::SUPPORTED_LOCALES.each do |locale|
+      I18n.with_locale(locale) do
+        # Simulate URL parameter: q[categories][]=Uncategorized (English, regardless of user's locale)
+        results = Transaction::Search.new(@family, filters: { categories: [ english_uncategorized_name ] }).transactions_scope
+        result_count = results.count
+
+        assert_equal expected_count, result_count,
+          "Locale '#{locale}' should return #{expected_count} transactions when filtering with English 'Uncategorized' parameter, but got #{result_count}"
+      end
+    end
   end
 end

@@ -19,6 +19,7 @@ zh-TW:
       title: 登入
       password_placeholder: 輸入您的密碼
       openid_connect: 透過 OpenID Connect 登入
+      oidc: 透過 OpenID Connect 登入
       google_auth_connect: 透過 Google 帳號登入
       local_login_admin_only: 本地登入僅限管理員使用。
       no_auth_methods_enabled: 目前未啟用任何驗證方式。請聯絡管理員。

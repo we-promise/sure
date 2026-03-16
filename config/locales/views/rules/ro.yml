@@ -2,6 +2,7 @@
 ro:
   rules:
     no_action: Nicio acțiune
+    no_condition: Nicio condiție
     recent_runs:
       title: Rulări Recente
       description: Vezi istoricul de execuție al regulilor tale incluzând statusul de succes/eșec și numărul de tranzacții.
@@ -22,4 +23,3 @@ ro:
         pending: În Așteptare
         success: Succes
         failed: Eșuat
-

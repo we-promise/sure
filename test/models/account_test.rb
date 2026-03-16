@@ -1,7 +1,7 @@
 require "test_helper"
 
 class AccountTest < ActiveSupport::TestCase
-  include SyncableInterfaceTest, EntriesTestHelper
+  include SyncableInterfaceTest, EntriesTestHelper, ActiveJob::TestHelper
 
   setup do
     @account = @syncable = accounts(:depository)
@@ -70,6 +70,27 @@ class AccountTest < ActiveSupport::TestCase
     assert_not_nil opening_anchor
     assert_equal "GBP", opening_anchor.entry.currency
     assert_equal 1000, opening_anchor.entry.amount
+  end
+
+  test "create_and_sync uses provided opening balance date" do
+    Account.any_instance.stubs(:sync_later)
+    opening_date = Time.zone.today
+
+    account = Account.create_and_sync(
+      {
+        family: @family,
+        name: "Test Account",
+        balance: 1000,
+        currency: "USD",
+        accountable_type: "Depository",
+        accountable_attributes: {}
+      },
+      skip_initial_sync: true,
+      opening_balance_date: opening_date
+    )
+
+    opening_anchor = account.valuations.opening_anchor.first
+    assert_equal opening_date, opening_anchor.entry.date
   end
 
   test "gets short/long subtype label" do
@@ -154,5 +175,22 @@ class AccountTest < ActiveSupport::TestCase
     # Depository accounts
     assert @account.taxable?
     assert_not @account.tax_advantaged?
+  end
+
+  test "destroying account purges attached logo" do
+    @account.logo.attach(
+      io: StringIO.new("fake-logo-content"),
+      filename: "logo.png",
+      content_type: "image/png"
+    )
+
+    attachment_id = @account.logo.id
+    assert ActiveStorage::Attachment.exists?(attachment_id)
+
+    perform_enqueued_jobs do
+      @account.destroy!
+    end
+
+    assert_not ActiveStorage::Attachment.exists?(attachment_id)
   end
 end

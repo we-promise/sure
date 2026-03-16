@@ -7,6 +7,8 @@ fr:
         description: "Gérez les rôles des utilisateurs pour votre instance. Les super administrateurs peuvent accéder aux paramètres des fournisseurs SSO et à la gestion des utilisateurs."
         section_title: "Utilisateurs"
         you: "(Vous)"
+        trial_ends_at: "Fin de l'essai"
+        not_available: "n/a"
         no_users: "Aucun utilisateur trouvé."
         role_descriptions_title: "Description des rôles"
         roles:

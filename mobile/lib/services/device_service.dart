@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class DeviceService {
@@ -7,20 +8,21 @@ class DeviceService {
   
   Future<Map<String, String>> getDeviceInfo() async {
     final prefs = await SharedPreferences.getInstance();
-    
+    final packageInfo = await PackageInfo.fromPlatform();
+
     // Get or generate device ID
     String? deviceId = prefs.getString(_deviceIdKey);
     if (deviceId == null) {
       deviceId = _generateDeviceId();
       await prefs.setString(_deviceIdKey, deviceId);
     }
-    
+
     return {
       'device_id': deviceId,
       'device_name': _getDeviceName(),
       'device_type': _getDeviceType(),
       'os_version': _getOsVersion(),
-      'app_version': '1.0.0',
+      'app_version': packageInfo.version,
     };
   }
 

@@ -77,10 +77,14 @@ class Account::ProviderImportAdapter
       end
 
       # If still a new entry and this is a POSTED transaction, check for matching pending transactions
-      incoming_pending = extra.is_a?(Hash) && (
-        ActiveModel::Type::Boolean.new.cast(extra.dig("simplefin", "pending")) ||
-        ActiveModel::Type::Boolean.new.cast(extra.dig("plaid", "pending"))
-      )
+      incoming_pending = false
+      if extra.is_a?(Hash)
+        pending_extra = extra.with_indifferent_access
+        incoming_pending =
+          ActiveModel::Type::Boolean.new.cast(pending_extra.dig("simplefin", "pending")) ||
+          ActiveModel::Type::Boolean.new.cast(pending_extra.dig("plaid", "pending")) ||
+          ActiveModel::Type::Boolean.new.cast(pending_extra.dig("lunchflow", "pending"))
+      end
 
       if entry.new_record? && !incoming_pending
         pending_match = nil
@@ -686,6 +690,7 @@ class Account::ProviderImportAdapter
       .where(<<~SQL.squish)
         (transactions.extra -> 'simplefin' ->> 'pending')::boolean = true
         OR (transactions.extra -> 'plaid' ->> 'pending')::boolean = true
+        OR (transactions.extra -> 'lunchflow' ->> 'pending')::boolean = true
       SQL
       .order(date: :desc) # Prefer most recent pending transaction
 
@@ -731,6 +736,7 @@ class Account::ProviderImportAdapter
       .where(<<~SQL.squish)
         (transactions.extra -> 'simplefin' ->> 'pending')::boolean = true
         OR (transactions.extra -> 'plaid' ->> 'pending')::boolean = true
+        OR (transactions.extra -> 'lunchflow' ->> 'pending')::boolean = true
       SQL
 
     # If merchant_id is provided, prioritize matching by merchant
@@ -799,6 +805,7 @@ class Account::ProviderImportAdapter
       .where(<<~SQL.squish)
         (transactions.extra -> 'simplefin' ->> 'pending')::boolean = true
         OR (transactions.extra -> 'plaid' ->> 'pending')::boolean = true
+        OR (transactions.extra -> 'lunchflow' ->> 'pending')::boolean = true
       SQL
 
     # For low confidence, require BOTH merchant AND name match (stronger signal needed)
@@ -835,6 +842,11 @@ class Account::ProviderImportAdapter
 
     # Don't overwrite if already has a suggestion (keep first one found)
     return if existing_extra["potential_posted_match"].present?
+
+    # Don't suggest if the posted entry is also still pending (pending→pending match)
+    # Suggestions are only for pending→posted reconciliation
+    posted_transaction = posted_entry.entryable
+    return if posted_transaction.is_a?(Transaction) && posted_transaction.pending?
 
     pending_transaction.update!(
       extra: existing_extra.merge(

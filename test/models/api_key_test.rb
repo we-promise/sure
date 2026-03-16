@@ -163,6 +163,20 @@ class ApiKeyTest < ActiveSupport::TestCase
     assert second_key.valid?
   end
 
+  test "should allow active monitoring key alongside active web key" do
+    @api_key.save!
+
+    monitoring_key = ApiKey.new(
+      user: @user,
+      name: "Monitoring API Key",
+      key: "monitoring_key_123",
+      scopes: [ "read" ],
+      source: "monitoring"
+    )
+
+    assert monitoring_key.valid?
+  end
+
   test "should include active api keys in active scope" do
     @api_key.save!
     active_keys = ApiKey.active
@@ -203,5 +217,55 @@ class ApiKeyTest < ActiveSupport::TestCase
     @api_key.scopes = [ "invalid_scope" ]
     assert_not @api_key.valid?
     assert_includes @api_key.errors[:scopes], "must be either 'read' or 'read_write'"
+  end
+
+  test "should prevent destroying demo monitoring api key" do
+    demo_key = ApiKey.create!(
+      user: @user,
+      name: "Demo Monitoring Key",
+      display_key: ApiKey::DEMO_MONITORING_KEY,
+      scopes: [ "read" ]
+    )
+
+    assert_raises(ActiveRecord::RecordNotDestroyed) { demo_key.destroy! }
+    assert ApiKey.exists?(demo_key.id)
+  end
+
+  test "should prevent revoking demo monitoring api key" do
+    demo_key = ApiKey.create!(
+      user: @user,
+      name: "Demo Monitoring Key",
+      display_key: ApiKey::DEMO_MONITORING_KEY,
+      scopes: [ "read" ]
+    )
+
+    assert_raises(ActiveRecord::RecordNotDestroyed) { demo_key.revoke! }
+    demo_key.reload
+    assert_nil demo_key.revoked_at
+  end
+
+  test "should prevent deleting demo monitoring api key" do
+    demo_key = ApiKey.create!(
+      user: @user,
+      name: "Demo Monitoring Key",
+      display_key: ApiKey::DEMO_MONITORING_KEY,
+      scopes: [ "read" ]
+    )
+
+    assert_raises(ActiveRecord::RecordNotDestroyed) { demo_key.delete }
+    assert ApiKey.exists?(demo_key.id)
+  end
+
+  test "should allow destroying non-demo api key" do
+    api_key = ApiKey.create!(
+      user: @user,
+      name: "Disposable API Key",
+      display_key: "disposable_key_123",
+      scopes: [ "read" ]
+    )
+
+    assert_difference("ApiKey.count", -1) do
+      api_key.destroy!
+    end
   end
 end

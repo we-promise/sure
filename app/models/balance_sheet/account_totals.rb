@@ -27,37 +27,56 @@ class BalanceSheet::AccountTotals
       @visible_accounts ||= family.accounts.visible.with_attached_logo
     end
 
+    # Wraps each account in an AccountRow with its converted balance and sync status.
     def account_rows
-      @account_rows ||= query.map do |account_row|
+      @account_rows ||= accounts.map do |account|
         AccountRow.new(
-          account: account_row,
-          converted_balance: account_row.converted_balance,
-          is_syncing: sync_status_monitor.account_syncing?(account_row)
+          account: account,
+          converted_balance: converted_balance_for(account),
+          is_syncing: sync_status_monitor.account_syncing?(account)
         )
       end
     end
 
+    # Returns the cache key for storing visible account IDs, invalidated on data updates.
     def cache_key
       family.build_cache_key(
-        "balance_sheet_account_rows",
+        "balance_sheet_account_ids",
         invalidate_on_data_updates: true
       )
     end
 
-    def query
-      @query ||= Rails.cache.fetch(cache_key) do
-        visible_accounts
-          .joins(ActiveRecord::Base.sanitize_sql_array([
-            "LEFT JOIN exchange_rates ON exchange_rates.date = ? AND accounts.currency = exchange_rates.from_currency AND exchange_rates.to_currency = ?",
-            Date.current,
-            family.currency
-          ]))
-          .select(
-            "accounts.*",
-            "SUM(accounts.balance * COALESCE(exchange_rates.rate, 1)) as converted_balance"
-          )
-          .group(:classification, :accountable_type, :id)
-          .to_a
+    # Loads visible accounts, caching their IDs to speed up subsequent requests.
+    # On cache miss, loads records once and writes IDs; on hit, filters by cached IDs.
+    def accounts
+      @accounts ||= begin
+        ids = Rails.cache.read(cache_key)
+
+        if ids
+          visible_accounts.where(id: ids).to_a
+        else
+          records = visible_accounts.to_a
+          Rails.cache.write(cache_key, records.map(&:id))
+          records
+        end
       end
+    end
+
+    # Batch-fetches today's exchange rates for all foreign currencies present in accounts.
+    # @return [Hash{String => Numeric}] currency code to rate mapping
+    def exchange_rates
+      @exchange_rates ||= begin
+        foreign_currencies = accounts.filter_map { |a| a.currency if a.currency != family.currency }
+        ExchangeRate.rates_for(foreign_currencies, to: family.currency, date: Date.current)
+      end
+    end
+
+    # Converts an account's balance to the family's currency using pre-fetched exchange rates.
+    # @return [BigDecimal] balance in the family's currency
+    def converted_balance_for(account)
+      return account.balance if account.currency == family.currency
+
+      rate = exchange_rates[account.currency]
+      account.balance * rate
     end
 end

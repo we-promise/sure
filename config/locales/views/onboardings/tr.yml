@@ -3,25 +3,59 @@ tr:
   onboardings:
     header:
       sign_out: Çıkış yap
+      setup: Kurulum
+      preferences: Tercihler
+      goals: Hedefler
+      start: Başla
+    logout:
+      sign_out: Çıkış yap
+    show:
+      title: Hesabınızı kuralım
+      subtitle: Önce profilinizi tamamlayalım.
+      first_name: Ad
+      first_name_placeholder: Ad
+      last_name: Soyad
+      last_name_placeholder: Soyad
+      household_name: Hane adı
+      household_name_placeholder: Hane adı
+      country: Ülke
+      submit: Devam et
     preferences:
+      title: Tercihlerinizi yapılandırın
+      subtitle: Tercihlerinizi yapılandıralım.
+      example: Örnek hesap
+      preview: Tercihlere göre verilerin nasıl görüntüleneceğinin önizlemesi.
+      color_theme: Renk teması
+      theme_system: Sistem
+      theme_light: Açık
+      theme_dark: Koyu
+      locale: Dil
       currency: Para birimi
       date_format: Tarih formatı
-      example: Örnek hesap
-      locale: Dil
-      preview: Tercihlere göre verilerin nasıl görüneceğini önizleyin.
       submit: Tamamla
-      subtitle: Tercihlerinizi yapılandıralım.
-      title: Tercihlerinizi yapılandırın
-    profile:
-      country: Ülke
-      first_name: Ad
-      household_name: Hane Adı
-      last_name: Soyad
-      profile_image: Profil Resmi
-      submit: Devam et
-      subtitle: Profilinizi tamamlayalım.
-      title: Temel bilgileri ayarlayalım
-    show:
-      message: Burada olduğunuz için çok heyecanlıyız. Sonraki adımda profilinizi tamamlamak için size birkaç soru soracağız ve ardından her şeyi ayarlayacağız.
-      setup: Hesabı ayarla
-      title: Maybe ile Tanışın
+    goals:
+      title: Sizi buraya ne getirdi?
+      subtitle: "%{product_name}'i kişisel finans aracınız olarak kullanmak için bir veya daha fazla hedef seçin."
+      unified_accounts: Tüm hesaplarımı tek bir yerde görmek
+      cashflow: Nakit akışını ve harcamaları anlamak
+      budgeting: Finansal planları ve bütçeleri yönetmek
+      partner: Bir partnerle birlikte finansları yönetmek
+      investments: Yatırımları takip etmek
+      ai_insights: AI'ın finanslarımı anlamama yardım etmesini sağlamak
+      optimization: Hesapları analiz etmek ve optimize etmek
+      reduce_stress: Finansal stresi veya kaygıyı azaltmak
+      submit: Sonraki
+    trial:
+      title: Sure'u 45 gün deneyin
+      data_deletion: Veriler daha sonra silinecek
+      description_html: Bugünden itibaren ürünü detaylı test edebilirsiniz.<br/>Beğenirseniz, kendiniz barındırın veya burada kullanmaya devam etmek için katkıda bulunun.
+      try_button: Sure'u 45 gün dene
+      continue_trial: Denemeye devam et
+      upgrade: Yükselt
+      how_it_works: Nasıl çalışır
+      today: Bugün
+      today_description: AWS'mizde Sure'a 45 gün ücretsiz erişim elde edeceksiniz.
+      in_40_days: 40 gün içinde (%{date})
+      in_40_days_description: Verilerinizi dışa aktarmanızı hatırlatmak için sizi bilgilendireceğiz.
+      in_45_days: 45 gün içinde (%{date})
+      in_45_days_description: Verilerinizi siliyoruz — Sure'u burada kullanmaya devam etmek için katkıda bulunun!

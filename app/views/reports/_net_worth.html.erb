@@ -21,17 +21,17 @@
           <%= trend.value >= 0 ? "+" : "" %><%= trend.percent_formatted %>
         </p>
       <% else %>
-        <p class="text-2xl font-semibold mb-1 text-tertiary">--</p>
+        <p class="text-2xl font-semibold mb-1 text-subdued">--</p>
       <% end %>
     </div>
 
     <%# Assets vs Liabilities %>
     <div class="p-4 bg-surface-inset rounded-lg">
       <p class="text-sm text-secondary mb-2"><%= t("reports.net_worth.assets_vs_liabilities") %></p>
-      <div class="flex items-baseline gap-2">
-        <span class="text-lg font-semibold text-success"><%= net_worth_metrics[:total_assets].format %></span>
-        <span class="text-xs text-tertiary">-</span>
-        <span class="text-lg font-semibold text-destructive"><%= net_worth_metrics[:total_liabilities].format %></span>
+      <div class="flex items-baseline gap-2 flex-wrap">
+        <span class="text-lg font-semibold text-success break-words"><%= net_worth_metrics[:total_assets].format %></span>
+        <span class="text-xs text-subdued shrink-0">-</span>
+        <span class="text-lg font-semibold text-destructive break-words"><%= net_worth_metrics[:total_liabilities].format %></span>
       </div>
     </div>
   </div>
@@ -54,7 +54,7 @@
           <% end %>
         <% end %>
         <% if net_worth_metrics[:asset_groups].empty? %>
-          <p class="text-sm text-secondary p-2 text-center"><%= t("reports.net_worth.no_assets") %></p>
+          <p class="text-sm text-subdued py-3 px-4 lg:px-6"><%= t("reports.net_worth.no_assets") %></p>
         <% end %>
       </div>
     </div>
@@ -75,7 +75,7 @@
           <% end %>
         <% end %>
         <% if net_worth_metrics[:liability_groups].empty? %>
-          <p class="text-sm text-tertiary py-2"><%= t("reports.net_worth.no_liabilities") %></p>
+          <p class="text-sm text-subdued py-3 px-4 lg:px-6"><%= t("reports.net_worth.no_liabilities") %></p>
         <% end %>
       </div>
     </div>

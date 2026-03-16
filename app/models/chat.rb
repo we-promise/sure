@@ -75,10 +75,6 @@ class Chat < ApplicationRecord
   end
 
   def conversation_messages
-    if debug_mode?
-      messages
-    else
-      messages.where(type: [ "UserMessage", "AssistantMessage" ])
-    end
+    messages.where(type: [ "UserMessage", "AssistantMessage" ])
   end
 end

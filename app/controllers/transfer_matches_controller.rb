@@ -10,7 +10,18 @@ class TransferMatchesController < ApplicationController
     @transfer = build_transfer
     Transfer.transaction do
       @transfer.save!
-      @transfer.outflow_transaction.update!(kind: Transfer.kind_for_account(@transfer.outflow_transaction.entry.account))
+
+      # Use DESTINATION (inflow) account for kind, matching Transfer::Creator logic
+      destination_account = @transfer.inflow_transaction.entry.account
+      outflow_kind = Transfer.kind_for_account(destination_account)
+      outflow_attrs = { kind: outflow_kind }
+
+      if outflow_kind == "investment_contribution"
+        category = destination_account.family.investment_contributions_category
+        outflow_attrs[:category] = category if category.present? && @transfer.outflow_transaction.category_id.blank?
+      end
+
+      @transfer.outflow_transaction.update!(outflow_attrs)
       @transfer.inflow_transaction.update!(kind: "funds_movement")
     end
 
@@ -38,6 +49,7 @@ class TransferMatchesController < ApplicationController
             currency: @entry.currency,
             date: @entry.date,
             name: "Transfer to #{@entry.amount.negative? ? @entry.account.name : target_account.name}",
+            user_modified: true,
           )
         )
 

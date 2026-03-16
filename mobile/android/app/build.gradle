@@ -4,6 +4,37 @@ plugins {
     id "dev.flutter.flutter-gradle-plugin"
 }
 
+def localProperties = new Properties()
+def localPropertiesFile = rootProject.file('local.properties')
+if (localPropertiesFile.exists()) {
+    localPropertiesFile.withReader('UTF-8') { reader ->
+        localProperties.load(reader)
+    }
+}
+
+def flutterVersionCode = localProperties.getProperty('flutter.versionCode')
+def flutterVersionName = localProperties.getProperty('flutter.versionName')
+
+if (flutterVersionName == null || flutterVersionCode == null) {
+    def pubspecFile = rootProject.file('../pubspec.yaml')
+    if (pubspecFile.exists()) {
+        def pubspec = pubspecFile.text
+        def versionMatch = pubspec =~ /version:\s*['"]?([^\s'"]+)['"]?/
+        if (versionMatch) {
+            def version = versionMatch[0][1].trim()
+            if (flutterVersionName == null) {
+                flutterVersionName = version.contains('+') ? version.split('+')[0].trim() : version
+            }
+            if (flutterVersionCode == null) {
+                flutterVersionCode = version.contains('+') ? version.split('+')[1].trim() : '1'
+            }
+        }
+    }
+}
+
+if (flutterVersionCode == null) flutterVersionCode = '1'
+if (flutterVersionName == null) flutterVersionName = '1.0'
+
 def keystoreProperties = new Properties()
 def keystorePropertiesFile = rootProject.file('key.properties')
 def hasKeystore = false
@@ -49,8 +80,8 @@ android {
         applicationId "am.sure.mobile"
         minSdkVersion 24
         targetSdkVersion flutter.targetSdkVersion
-        versionCode 1
-        versionName "1.0.0"
+        versionCode flutterVersionCode.toInteger()
+        versionName flutterVersionName
     }
 
     buildTypes {

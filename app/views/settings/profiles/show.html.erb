@@ -25,101 +25,105 @@
   <% end %>
 <% end %>
 
-<%= settings_section title: t(".household_title"), subtitle: t(".household_subtitle") do %>
-  <div class="space-y-4">
-    <%= styled_form_with model: Current.user, class: "space-y-4", data: { controller: "auto-submit-form" } do |form| %>
-      <%= form.fields_for :family do |family_fields| %>
-        <%= family_fields.text_field :name,
-              placeholder: t(".household_form_input_placeholder"),
-              label: t(".household_form_label"),
-              disabled: !Current.user.admin?,
-              "data-auto-submit-form-target": "auto" %>
+<% unless Current.user.ui_layout_intro? %>
+  <%= settings_section title: family_moniker == "Group" ? t(".group_title", default: "Group") : t(".household_title"), subtitle: t(".household_subtitle", moniker_plural: family_moniker_plural_downcase, moniker: family_moniker_downcase) do %>
+    <div class="space-y-4">
+      <%= styled_form_with model: Current.user, class: "space-y-4", data: { controller: "auto-submit-form" } do |form| %>
+        <%= form.fields_for :family do |family_fields| %>
+          <% name_label = family_moniker == "Group" ? t(".group_form_label", default: "Group name") : t(".household_form_label") %>
+          <% name_placeholder = family_moniker == "Group" ? t(".group_form_input_placeholder", default: "Enter group name") : t(".household_form_input_placeholder") %>
+          <%= family_fields.text_field :name,
+                placeholder: name_placeholder,
+                label: name_label,
+                disabled: !Current.user.admin?,
+                "data-auto-submit-form-target": "auto" %>
+        <% end %>
       <% end %>
-    <% end %>
-    <div class="bg-container-inset rounded-xl p-1">
-      <div class="px-4 py-2">
-        <p class="uppercase text-xs text-secondary font-medium"><%= Current.family.name %> &middot; <%= Current.family.users.size %></p>
-      </div>
-      <% @users.each do |user| %>
-        <div class="flex gap-2 mt-2 items-center bg-container p-4 shadow-border-xs rounded-lg">
-          <div class="w-9 h-9 shrink-0">
-            <%= render "settings/user_avatar", avatar_url: user.profile_image&.variant(:small)&.url, initials: user.initials %>
-          </div>
-          <p class="text-primary font-medium text-sm"><%= user.display_name %></p>
-          <div class="rounded-md bg-surface px-1.5 py-0.5">
-            <p class="uppercase text-secondary font-medium text-xs"><%= user.role %></p>
-          </div>
-          <% if Current.user.admin? && user != Current.user %>
-            <div class="ml-auto">
-              <%= render DS::Button.new(
-                variant: "icon",
-                icon: "x",
-                href: settings_profile_path(user_id: user),
-                method: :delete,
-                confirm: CustomConfirm.for_resource_deletion(user.display_name, high_severity: true)
-              ) %>
-            </div>
-          <% end %>
+      <div class="bg-container-inset rounded-xl p-1">
+        <div class="px-4 py-2">
+          <p class="uppercase text-xs text-secondary font-medium"><%= Current.family.name %> &middot; <%= Current.family.users.size %></p>
         </div>
-      <% end %>
-      <% if @pending_invitations.any? %>
-        <% @pending_invitations.each do |invitation| %>
-          <div class="flex gap-2 items-center justify-between bg-container p-4 border border-alpha-black-25 rounded-lg">
-            <div class="flex gap-2 items-center">
-              <div class="w-9 h-9 shrink-0">
-                <div class="fg-inverse w-full h-full bg-surface-inset rounded-full flex items-center justify-center text-lg uppercase"><%= invitation.email[0] %></div>
-              </div>
-              <div class="flex">
-                <p class="text-primary font-medium text-sm"><%= invitation.email %></p>
-                <div class="rounded-md bg-surface px-1.5 py-0.5">
-                  <p class="uppercase text-secondary font-medium text-xs"><%= t(".pending") %></p>
-                </div>
-              </div>
+        <% @users.each do |user| %>
+          <div class="flex gap-2 mt-2 items-center bg-container p-4 shadow-border-xs rounded-lg">
+            <div class="w-9 h-9 shrink-0">
+              <%= render "settings/user_avatar", avatar_url: user.profile_image&.variant(:small)&.url, initials: user.initials %>
             </div>
-            <div class="flex items-center gap-4">
-              <% if self_hosted? %>
-                <div class="flex items-center gap-2" data-controller="clipboard">
-                  <p class="text-secondary text-sm"><%= t(".invitation_link") %></p>
-                  <span data-clipboard-target="source" class="hidden"><%= accept_invitation_url(invitation.token) %></span>
-                  <input type="text"
-                             readonly
-                             autocomplete="off"
-                             value="<%= accept_invitation_url(invitation.token) %>"
-                             class="text-sm bg-gray-50 px-2 py-1 rounded border border-secondary w-72">
-                  <button data-action="clipboard#copy" class="text-secondary hover:text-gray-700">
-                    <span data-clipboard-target="iconDefault">
-                      <%= icon "copy" %>
-                    </span>
-                    <span class="hidden" data-clipboard-target="iconSuccess">
-                      <%= icon "check" %>
-                    </span>
-                  </button>
-                </div>
-              <% end %>
-
-              <% if Current.user.admin? %>
+            <p class="text-primary font-medium text-sm"><%= user.display_name %></p>
+            <div class="rounded-md bg-surface px-1.5 py-0.5">
+              <p class="uppercase text-secondary font-medium text-xs"><%= user.role %></p>
+            </div>
+            <% if Current.user.admin? && user != Current.user %>
+              <div class="ml-auto">
                 <%= render DS::Button.new(
                   variant: "icon",
                   icon: "x",
-                  href: invitation_path(invitation),
+                  href: settings_profile_path(user_id: user),
                   method: :delete,
-                  confirm: CustomConfirm.for_resource_deletion(invitation.email, high_severity: true)
+                  confirm: CustomConfirm.for_resource_deletion(user.display_name, high_severity: true)
                 ) %>
-              <% end %>
-            </div>
+              </div>
+            <% end %>
           </div>
         <% end %>
-      <% end %>
-      <% if Current.user.admin? %>
-        <%= link_to new_invitation_path,
-                class: "bg-container-inset flex items-center justify-center gap-2 text-secondary mt-1 hover:bg-container-inset-hover rounded-lg px-4 py-2 w-full text-center",
-                data: { turbo_frame: :modal } do %>
-          <%= icon("plus") %>
-          <%= t(".invite_member") %>
+        <% if @pending_invitations.any? %>
+          <% @pending_invitations.each do |invitation| %>
+            <div class="flex gap-2 items-center justify-between bg-container p-4 border border-alpha-black-25 rounded-lg">
+              <div class="flex gap-2 items-center">
+                <div class="w-9 h-9 shrink-0">
+                  <div class="fg-inverse w-full h-full bg-surface-inset rounded-full flex items-center justify-center text-lg uppercase"><%= invitation.email[0] %></div>
+                </div>
+                <div class="flex">
+                  <p class="text-primary font-medium text-sm"><%= invitation.email %></p>
+                  <div class="rounded-md bg-surface px-1.5 py-0.5">
+                    <p class="uppercase text-secondary font-medium text-xs"><%= t(".pending") %></p>
+                  </div>
+                </div>
+              </div>
+              <div class="flex items-center gap-4">
+                <% if self_hosted? %>
+                  <div class="flex items-center gap-2" data-controller="clipboard">
+                    <p class="text-secondary text-sm"><%= t(".invitation_link") %></p>
+                    <span data-clipboard-target="source" class="hidden"><%= accept_invitation_url(invitation.token) %></span>
+                    <input type="text"
+                               readonly
+                               autocomplete="off"
+                               value="<%= accept_invitation_url(invitation.token) %>"
+                               class="text-sm bg-gray-50 px-2 py-1 rounded border border-secondary w-72">
+                    <button data-action="clipboard#copy" class="text-secondary hover:text-gray-700">
+                      <span data-clipboard-target="iconDefault">
+                        <%= icon "copy" %>
+                      </span>
+                      <span class="hidden" data-clipboard-target="iconSuccess">
+                        <%= icon "check" %>
+                      </span>
+                    </button>
+                  </div>
+                <% end %>
+
+                <% if Current.user.admin? %>
+                  <%= render DS::Button.new(
+                    variant: "icon",
+                    icon: "x",
+                    href: invitation_path(invitation),
+                    method: :delete,
+                    confirm: CustomConfirm.for_resource_deletion(invitation.email, high_severity: true)
+                  ) %>
+                <% end %>
+              </div>
+            </div>
+          <% end %>
         <% end %>
-      <% end %>
+        <% if Current.user.admin? %>
+          <%= link_to new_invitation_path,
+                  class: "bg-container-inset flex items-center justify-center gap-2 text-secondary mt-1 hover:bg-container-inset-hover rounded-lg px-4 py-2 w-full text-center",
+                  data: { turbo_frame: :modal } do %>
+            <%= icon("plus") %>
+            <%= t(".invite_member") %>
+          <% end %>
+        <% end %>
+      </div>
     </div>
-  </div>
+  <% end %>
 <% end %>
 
 <%= settings_section title: t(".danger_zone_title") do %>

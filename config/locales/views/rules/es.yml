@@ -2,6 +2,22 @@
 es:
   rules:
     no_action: Sin acción
+    no_condition: Sin condición
+    actions:
+      value_placeholder: Introduce un valor
+    apply_all:
+      button: Aplicar todas
+      confirm_title: Aplicar todas las reglas
+      confirm_message: Estás a punto de aplicar %{count} reglas que afectan a %{transactions} transacciones únicas. Por favor, confirma si deseas continuar.
+      confirm_button: Confirmar y aplicar todas
+      success: Todas las reglas han sido puestas en cola para su ejecución
+      ai_cost_title: Estimación de costes de IA
+      ai_cost_message: Esto utilizará IA para categorizar hasta %{transactions} transacciones.
+      estimated_cost: "Coste estimado: ~$%{cost}"
+      cost_unavailable_model: Estimación de costes no disponible para el modelo "%{model}".
+      cost_unavailable_no_provider: Estimación de costes no disponible (no hay proveedor de LLM configurado).
+      cost_warning: Puedes incurrir en costes, consulta con el proveedor del modelo los precios más actualizados.
+      view_usage: Ver historial de uso
     recent_runs:
       title: Ejecuciones Recientes
       description: Ver el historial de ejecución de tus reglas incluyendo el estado de éxito/fallo y los conteos de transacciones.
@@ -22,4 +38,15 @@ es:
         pending: Pendiente
         success: Éxito
         failed: Fallido
-
+    clear_ai_cache:
+      button: Restablecer caché de IA
+      confirm_title: ¿Restablecer caché de IA?
+      confirm_body: ¿Estás seguro de que deseas restablecer la caché de IA? Esto permitirá que las reglas de IA vuelvan a procesar todas las transacciones. Esto puede incurrir en costes adicionales de API.
+      confirm_button: Restablecer caché
+      success: Se está limpiando la caché de IA. Esto puede tardar unos momentos.
+    condition_filters:
+      transaction_type:
+        income: Ingreso
+        expense: Gasto
+        transfer: Transferencia
+        equal_to: Igual a

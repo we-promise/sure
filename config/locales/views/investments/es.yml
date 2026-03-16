@@ -10,6 +10,115 @@ es:
       title: Introduce el saldo de la cuenta
     show:
       chart_title: Valor total
+    subtypes:
+      # Estados Unidos
+      brokerage:
+        short: Corretaje
+        long: Cuenta de corretaje (Brokerage)
+      401k:
+        short: 401(k)
+        long: Plan de jubilación 401(k)
+      roth_401k:
+        short: Roth 401(k)
+        long: Plan de jubilación Roth 401(k)
+      403b:
+        short: 403(b)
+        long: Plan de jubilación 403(b)
+      457b:
+        short: 457(b)
+        long: Plan de jubilación 457(b)
+      tsp:
+        short: TSP
+        long: Thrift Savings Plan (Plan de ahorro para empleados federales)
+      ira:
+        short: IRA
+        long: Cuenta de jubilación individual (Traditional IRA)
+      roth_ira:
+        short: Roth IRA
+        long: Cuenta de jubilación individual Roth (Roth IRA)
+      sep_ira:
+        short: SEP IRA
+        long: SEP IRA (Plan de pensión simplificado para empleados)
+      simple_ira:
+        short: SIMPLE IRA
+        long: SIMPLE IRA (Plan de incentivos para empleados)
+      529_plan:
+        short: Plan 529
+        long: Plan 529 de ahorro para educación
+      hsa:
+        short: HSA
+        long: Cuenta de ahorros para la salud (Health Savings Account)
+      ugma:
+        short: UGMA
+        long: Cuenta de custodia UGMA
+      utma:
+        short: UTMA
+        long: Cuenta de custodia UTMA
+      # Reino Unido
+      isa:
+        short: ISA
+        long: Cuenta de ahorro individual (ISA)
+      lisa:
+        short: LISA
+        long: ISA vitalicia (Lifetime ISA)
+      sipp:
+        short: SIPP
+        long: Pensión personal con gestión propia (SIPP)
+      workplace_pension_uk:
+        short: Pensión
+        long: Pensión del lugar de trabajo
+      # Canadá
+      rrsp:
+        short: RRSP
+        long: Plan registrado de ahorro para la jubilación (RRSP)
+      tfsa:
+        short: TFSA
+        long: Cuenta de ahorros libre de impuestos (TFSA)
+      resp:
+        short: RESP
+        long: Plan registrado de ahorros para educación (RESP)
+      lira:
+        short: LIRA
+        long: Cuenta de jubilación inmovilizada (LIRA)
+      rrif:
+        short: RRIF
+        long: Fondo registrado de ingresos para la jubilación (RRIF)
+      # Australia
+      super:
+        short: Super
+        long: Superannuation (Fondo de pensiones australiano)
+      smsf:
+        short: SMSF
+        long: Fondo de pensiones gestionado por uno mismo (SMSF)
+      # Europa
+      pea:
+        short: PEA
+        long: Plan de ahorro en acciones (PEA - Francia)
+      pillar_3a:
+        short: Pilar 3a
+        long: Pensión privada (Pilar 3a - Suiza)
+      riester:
+        short: Riester
+        long: Plan de pensiones Riester (Riester-Rente - Alemania)
+      # Genéricos
+      pension:
+        short: Pensión
+        long: Plan de pensiones
+      retirement:
+        short: Jubilación
+        long: Cuenta de jubilación
+      mutual_fund:
+        short: Fondo de inversión
+        long: Fondo de inversión (Mutual Fund)
+      angel:
+        short: Angel
+        long: Inversión Angel (Capital riesgo)
+      trust:
+        short: Fideicomiso
+        long: Fideicomiso (Trust)
+      other:
+        short: Otra
+        long: Otra inversión
     value_tooltip:
       cash: Efectivo
       holdings: Inversiones

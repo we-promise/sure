@@ -1,8 +1,15 @@
 require "test_helper"
 
 class UserTest < ActiveSupport::TestCase
+  include ActiveJob::TestHelper
+
   def setup
     @user = users(:family_admin)
+  end
+
+  def teardown
+    clear_enqueued_jobs
+    clear_performed_jobs
   end
 
   test "should be valid" do
@@ -142,7 +149,7 @@ class UserTest < ActiveSupport::TestCase
   test "ai_available? returns true when openai access token set in settings" do
     Rails.application.config.app_mode.stubs(:self_hosted?).returns(true)
     previous = Setting.openai_access_token
-    with_env_overrides OPENAI_ACCESS_TOKEN: nil do
+    with_env_overrides OPENAI_ACCESS_TOKEN: nil, EXTERNAL_ASSISTANT_URL: nil, EXTERNAL_ASSISTANT_TOKEN: nil do
       Setting.openai_access_token = nil
       assert_not @user.ai_available?
 
@@ -151,6 +158,84 @@ class UserTest < ActiveSupport::TestCase
     end
   ensure
     Setting.openai_access_token = previous
+  end
+
+  test "ai_available? returns true when external assistant is configured and family type is external" do
+    Rails.application.config.app_mode.stubs(:self_hosted?).returns(true)
+    previous = Setting.openai_access_token
+    @user.family.update!(assistant_type: "external")
+    with_env_overrides OPENAI_ACCESS_TOKEN: nil, EXTERNAL_ASSISTANT_URL: "http://localhost:18789/v1/chat", EXTERNAL_ASSISTANT_TOKEN: "test-token" do
+      Setting.openai_access_token = nil
+      assert @user.ai_available?
+    end
+  ensure
+    Setting.openai_access_token = previous
+    @user.family.update!(assistant_type: "builtin")
+  end
+
+  test "ai_available? returns false when external assistant is configured but family type is builtin" do
+    Rails.application.config.app_mode.stubs(:self_hosted?).returns(true)
+    previous = Setting.openai_access_token
+    with_env_overrides OPENAI_ACCESS_TOKEN: nil, EXTERNAL_ASSISTANT_URL: "http://localhost:18789/v1/chat", EXTERNAL_ASSISTANT_TOKEN: "test-token" do
+      Setting.openai_access_token = nil
+      assert_not @user.ai_available?
+    end
+  ensure
+    Setting.openai_access_token = previous
+  end
+
+  test "ai_available? returns false when external assistant is configured but user is not in allowlist" do
+    Rails.application.config.app_mode.stubs(:self_hosted?).returns(true)
+    previous = Setting.openai_access_token
+    @user.family.update!(assistant_type: "external")
+    with_env_overrides OPENAI_ACCESS_TOKEN: nil, EXTERNAL_ASSISTANT_URL: "http://localhost:18789/v1/chat", EXTERNAL_ASSISTANT_TOKEN: "test-token", EXTERNAL_ASSISTANT_ALLOWED_EMAILS: "other@example.com" do
+      Setting.openai_access_token = nil
+      assert_not @user.ai_available?
+    end
+  ensure
+    Setting.openai_access_token = previous
+    @user.family.update!(assistant_type: "builtin")
+  end
+
+  test "intro layout collapses sidebars and enables ai" do
+    user = User.new(
+      family: families(:empty),
+      email: "intro-new@example.com",
+      password: "Password1!",
+      password_confirmation: "Password1!",
+      role: :guest,
+      ui_layout: :intro
+    )
+
+    assert user.save, user.errors.full_messages.to_sentence
+    assert user.ui_layout_intro?
+    assert_not user.show_sidebar?
+    assert_not user.show_ai_sidebar?
+    assert user.ai_enabled?
+  end
+
+  test "non-guest role cannot persist intro layout" do
+    user = User.new(
+      family: families(:empty),
+      email: "dashboard-only@example.com",
+      password: "Password1!",
+      password_confirmation: "Password1!",
+      role: :member,
+      ui_layout: :intro
+    )
+
+    assert user.save, user.errors.full_messages.to_sentence
+    assert user.ui_layout_dashboard?
+  end
+
+  test "upgrading guest role restores dashboard layout defaults" do
+    user = users(:intro_user)
+    user.update!(role: :member)
+    user.reload
+
+    assert user.ui_layout_dashboard?
+    assert user.show_sidebar?
+    assert user.show_ai_sidebar?
   end
 
   test "update_dashboard_preferences handles concurrent updates atomically" do
@@ -277,6 +362,33 @@ class UserTest < ActiveSupport::TestCase
       "Should return false when section key is missing from collapsed_sections"
   end
 
+  # Default account for transactions
+  test "default_account_for_transactions returns account when active and manual" do
+    account = accounts(:depository)
+    @user.update!(default_account: account)
+    assert_equal account, @user.default_account_for_transactions
+  end
+
+  test "default_account_for_transactions returns nil when account is disabled" do
+    account = accounts(:depository)
+    @user.update!(default_account: account)
+    account.disable!
+    assert_nil @user.default_account_for_transactions
+  end
+
+  test "default_account_for_transactions returns nil when account is linked" do
+    account = accounts(:depository)
+    @user.update!(default_account: account)
+    plaid_account = plaid_accounts(:one)
+    AccountProvider.create!(account: account, provider: plaid_account)
+    account.reload
+    assert_nil @user.default_account_for_transactions
+  end
+
+  test "default_account_for_transactions returns nil when no default set" do
+    assert_nil @user.default_account_for_transactions
+  end
+
   # SSO-only user security tests
   test "sso_only? returns true for user with OIDC identity and no password" do
     sso_user = users(:sso_only)
@@ -347,5 +459,46 @@ class UserTest < ActiveSupport::TestCase
     assert_equal :admin, User.role_for_new_family_creator
     assert_equal :member, User.role_for_new_family_creator(fallback_role: :member)
     assert_equal "custom_role", User.role_for_new_family_creator(fallback_role: "custom_role")
+  end
+
+  # ActiveStorage attachment cleanup tests
+  test "purging a user removes attached profile image" do
+    user = users(:family_admin)
+    user.profile_image.attach(
+      io: StringIO.new("profile-image-data"),
+      filename: "profile.png",
+      content_type: "image/png"
+    )
+
+    attachment_id = user.profile_image.id
+    assert ActiveStorage::Attachment.exists?(attachment_id)
+
+    perform_enqueued_jobs do
+      user.purge
+    end
+
+    assert_not User.exists?(user.id)
+    assert_not ActiveStorage::Attachment.exists?(attachment_id)
+  end
+
+  test "purging the last user cascades to remove family and its export attachments" do
+    family = Family.create!(name: "Solo Family", locale: "en", date_format: "%m-%d-%Y", currency: "USD")
+    user = User.create!(family: family, email: "solo@example.com", password: "password123")
+    export = family.family_exports.create!
+    export.export_file.attach(
+      io: StringIO.new("export-data"),
+      filename: "export.zip",
+      content_type: "application/zip"
+    )
+
+    export_attachment_id = export.export_file.id
+    assert ActiveStorage::Attachment.exists?(export_attachment_id)
+
+    perform_enqueued_jobs do
+      user.purge
+    end
+
+    assert_not Family.exists?(family.id)
+    assert_not ActiveStorage::Attachment.exists?(export_attachment_id)
   end
 end

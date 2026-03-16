@@ -1,0 +1,8 @@
+<!DOCTYPE html>
+<html><body>
+  <form id="sso_form" action="/auth/<%= ERB::Util.html_escape(@provider) %>" method="post">
+    <input type="hidden" name="authenticity_token" value="<%= form_authenticity_token %>">
+  </form>
+  <script>document.getElementById('sso_form').submit();</script>
+  <noscript><p>Redirecting to sign in... <a href="/auth/<%= ERB::Util.html_escape(@provider) %>">Click here</a> if not redirected.</p></noscript>
+</body></html>

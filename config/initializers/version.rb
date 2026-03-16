@@ -10,6 +10,8 @@ module Sure
       else
         `git rev-parse HEAD`.chomp
       end
+    rescue Errno::ENOENT
+      nil
     end
 
     private
@@ -19,7 +21,7 @@ module Sure
         if version_file.exist?
           version_file.read.strip
         else
-          "0.6.8-alpha.1"
+          "0.6.9-alpha.5"
         end
       end
   end
