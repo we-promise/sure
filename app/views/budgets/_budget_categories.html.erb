@@ -1,42 +1,14 @@
 <%# locals: (budget:) %>
 
-<% budgeted = ->(bc) { bc.display_budgeted_spending.to_d.positive? } %>
-<% unbudgeted_with_spending = ->(bc) { !budgeted.call(bc) && bc.actual_spending.to_d.positive? } %>
-<% over_budget_with_budget = ->(bc) { budgeted.call(bc) && bc.over_budget? } %>
-<% any_over_budget = ->(bc) { unbudgeted_with_spending.call(bc) || over_budget_with_budget.call(bc) } %>
-<% on_track = ->(bc) { budgeted.call(bc) && !bc.over_budget? } %>
-<% filtered_groups_for = lambda do |groups, predicate|
-     groups.each_with_object([]) do |group, filtered|
-       visible_subs = group.budget_subcategories.select { |bc| predicate.call(bc) }
-       next unless predicate.call(group.budget_category) || visible_subs.any?
-       filtered << BudgetCategory::Group.new(group.budget_category, visible_subs)
-     end
-   end %>
-<% visible_count_for = lambda do |groups, predicate|
-     groups.sum { |g| (predicate.call(g.budget_category) ? 1 : 0) + g.budget_subcategories.count }
-   end %>
-
-<% uncategorized_budget_category = budget.uncategorized_budget_category %>
-<% expenses_empty = budget.family.categories.expenses.empty? %>
-<% all_category_groups = expenses_empty ? [] : BudgetCategory::Group.for(budget.budget_categories) %>
-
-<%# Over Budget: no-budget-with-spending OR budgeted-but-exceeded %>
-<% over_budget_groups = if budget.initialized?
-                           filtered_groups_for.call(all_category_groups, any_over_budget)
-                         else
-                           []
-                         end %>
-<% show_over_budget_uncategorized = budget.initialized? && any_over_budget.call(uncategorized_budget_category) %>
-<% over_budget_count = visible_count_for.call(over_budget_groups, any_over_budget) + (show_over_budget_uncategorized ? 1 : 0) %>
-
-<%# On Track: budgeted and not exceeded %>
-<% on_track_groups = if !budget.initialized?
-                        all_category_groups
-                      else
-                        filtered_groups_for.call(all_category_groups, on_track)
-                      end %>
-<% show_on_track_uncategorized = !expenses_empty && (!budget.initialized? || on_track.call(uncategorized_budget_category)) %>
-<% on_track_count = visible_count_for.call(on_track_groups, on_track) + (show_on_track_uncategorized ? 1 : 0) %>
+<% categories_state = budget_categories_view_state(budget) %>
+<% uncategorized_budget_category = categories_state[:uncategorized_budget_category] %>
+<% expenses_empty = categories_state[:expenses_empty] %>
+<% over_budget_groups = categories_state[:over_budget_groups] %>
+<% show_over_budget_uncategorized = categories_state[:show_over_budget_uncategorized] %>
+<% over_budget_count = categories_state[:over_budget_count] %>
+<% on_track_groups = categories_state[:on_track_groups] %>
+<% show_on_track_uncategorized = categories_state[:show_on_track_uncategorized] %>
+<% on_track_count = categories_state[:on_track_count] %>
 
 <div class="space-y-4">
   <% if over_budget_count.positive? %>
@@ -51,10 +23,10 @@
 
       <div class="bg-container py-1 shadow-border-xs rounded-md">
         <% over_budget_groups.each do |group| %>
-          <% parent_visible = any_over_budget.call(group.budget_category) %>
+          <% parent_visible = budget_any_over_budget?(group.budget_category) %>
           <% if parent_visible %>
             <div class="py-2">
-              <%= render "budget_categories/budget_category", budget_category: group.budget_category, show_budget_meta: over_budget_with_budget.call(group.budget_category) %>
+              <%= render "budget_categories/budget_category", budget_category: group.budget_category, show_budget_meta: budget_over_budget_with_budget?(group.budget_category) %>
             </div>
           <% end %>
 
@@ -64,11 +36,11 @@
                 <div class="ml-8 pt-4 flex items-center justify-center text-subdued">
                   <%= icon "corner-down-right" %>
                 </div>
-                <%= render "budget_categories/budget_category", budget_category: budget_subcategory, show_budget_meta: over_budget_with_budget.call(budget_subcategory) %>
+                <%= render "budget_categories/budget_category", budget_category: budget_subcategory, show_budget_meta: budget_over_budget_with_budget?(budget_subcategory) %>
               </div>
             <% else %>
               <div class="py-2">
-                <%= render "budget_categories/budget_category", budget_category: budget_subcategory, show_budget_meta: over_budget_with_budget.call(budget_subcategory) %>
+                <%= render "budget_categories/budget_category", budget_category: budget_subcategory, show_budget_meta: budget_over_budget_with_budget?(budget_subcategory) %>
               </div>
             <% end %>
           <% end %>
@@ -78,7 +50,7 @@
 
         <% if show_over_budget_uncategorized %>
           <div class="py-2">
-            <%= render "budget_categories/budget_category", budget_category: uncategorized_budget_category, show_budget_meta: over_budget_with_budget.call(uncategorized_budget_category) %>
+            <%= render "budget_categories/budget_category", budget_category: uncategorized_budget_category, show_budget_meta: budget_over_budget_with_budget?(uncategorized_budget_category) %>
           </div>
         <% end %>
       </div>
@@ -101,7 +73,7 @@
         </div>
       <% else %>
         <% on_track_groups.each do |group| %>
-          <% parent_visible = on_track.call(group.budget_category) %>
+          <% parent_visible = budget_on_track?(group.budget_category) %>
           <% if parent_visible %>
             <div class="py-2">
               <%= render "budget_categories/budget_category", budget_category: group.budget_category %>
