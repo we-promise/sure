@@ -64,24 +64,24 @@
           </span>
         </div>
         <% if show_budget_meta %>
-          <div class="whitespace-nowrap w-full sm:w-auto inline-flex items-center gap-1">
-            <span class="text-sm text-secondary"><%= t("reports.budget_performance.budgeted") %>:</span>
-            <span class="font-medium text-primary">
-              <%= format_money(budget_category.budgeted_spending_money) %>
-            </span>
-            <% if budget_category.inherits_parent_budget? %>
-              <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-gray-500/5 text-secondary"><%= t("reports.budget_performance.shared") %></span>
-            <% end %>
-
-            <% if budget_category.suggested_daily_spending.present? %>
-              <% daily_info = budget_category.suggested_daily_spending %>
-              <span class="text-xs text-subdued ml-2 whitespace-nowrap">
-                <%= t("reports.budget_performance.suggested_daily",
-                      amount: daily_info[:amount].format,
-                      days: daily_info[:days_remaining]) %>
-              </span>
-            <% end %>
+        <div class="whitespace-nowrap w-full sm:w-auto inline-flex items-center gap-1">
+          <span class="text-sm text-secondary"><%= t("reports.budget_performance.budgeted") %>:</span>
+          <span class="font-medium text-primary">
+            <%= format_money(budget_category.budgeted_spending_money) %>
+          </span>
+          <% if budget_category.inherits_parent_budget? %>
+            <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-gray-500/5 text-secondary"><%= t("reports.budget_performance.shared") %></span>
+          <% end %>
+        </div>
+        <% if budget_category.suggested_daily_spending.present? %>
+          <% daily_info = budget_category.suggested_daily_spending %>
+          <div class="w-full sm:w-auto text-xs text-subdued">
+            <%= t("reports.budget_performance.suggested_daily",
+              amount: daily_info[:amount].format,
+              days: daily_info[:days_remaining])
+            %>
           </div>
+        <% end %>
         <% end %>
         <div class="whitespace-nowrap w-full sm:w-auto lg:ml-auto">
           <% if budget_category.available_to_spend >= 0 %>
