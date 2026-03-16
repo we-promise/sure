@@ -13,6 +13,7 @@ class ImportsTest < ApplicationSystemTestCase
   test "transaction import" do
     visit new_import_path
 
+    click_on "Raw Data"
     click_on "Import transactions"
 
     within_testid("import-tabs") do
@@ -63,6 +64,7 @@ class ImportsTest < ApplicationSystemTestCase
   test "trade import" do
     visit new_import_path
 
+    click_on "Raw Data"
     click_on "Import investments"
 
     within_testid("import-tabs") do
@@ -105,6 +107,7 @@ class ImportsTest < ApplicationSystemTestCase
   test "account import" do
     visit new_import_path
 
+    click_on "Raw Data"
     click_on "Import accounts"
 
     within_testid("import-tabs") do
