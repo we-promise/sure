@@ -4,7 +4,7 @@ nl:
       categories:
         amount: Bedrag
         edit: Bewerken
-        title: Categorieen
+        title: Categorieën
       on_track_categories:
         short_title: Op schema
         title: Op schema

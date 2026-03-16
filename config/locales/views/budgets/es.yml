@@ -8,7 +8,7 @@ es:
       categories:
         amount: Importe
         edit: Editar
-        title: Categorias
+        title: Categorías
       on_track_categories:
         short_title: En camino
         title: En camino
