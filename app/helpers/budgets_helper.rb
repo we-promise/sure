@@ -26,8 +26,7 @@ module BudgetsHelper
 
     def build_budget_categories_view_state(budget)
       uncategorized_budget_category = budget.uncategorized_budget_category
-      expenses_empty = budget.family.categories.expenses.empty?
-      all_category_groups = expenses_empty ? [] : BudgetCategory::Group.for(budget.budget_categories)
+      all_category_groups = BudgetCategory::Group.for(budget.budget_categories)
 
       over_budget_groups = if budget.initialized?
         filtered_groups_for(all_category_groups) { |budget_category| budget_any_over_budget?(budget_category) }
@@ -45,13 +44,14 @@ module BudgetsHelper
         all_category_groups
       end
 
-      show_on_track_uncategorized = !expenses_empty && (!budget.initialized? || budget_on_track?(uncategorized_budget_category))
-      on_track_count = visible_count_for(on_track_groups) { |budget_category| budget_on_track?(budget_category) }
+      show_on_track_uncategorized = all_category_groups.any? && (!budget.initialized? || budget_on_track?(uncategorized_budget_category))
+      on_track_count = visible_count_for(on_track_groups) { |budget_category| parent_visible_for_on_track?(budget, budget_category) }
       on_track_count += 1 if show_on_track_uncategorized
+      visible_expenses_empty = on_track_count.zero?
 
       {
         uncategorized_budget_category: uncategorized_budget_category,
-        expenses_empty: expenses_empty,
+        visible_expenses_empty: visible_expenses_empty,
         over_budget_groups: over_budget_groups,
         show_over_budget_uncategorized: show_over_budget_uncategorized,
         over_budget_count: over_budget_count,
@@ -67,6 +67,10 @@ module BudgetsHelper
 
     def budget_unbudgeted_with_spending?(budget_category)
       !budget_budgeted?(budget_category) && budget_category.actual_spending.to_d.positive?
+    end
+
+    def parent_visible_for_on_track?(budget, budget_category)
+      budget.initialized? ? budget_on_track?(budget_category) : true
     end
 
     def filtered_groups_for(groups)

@@ -2,7 +2,7 @@
 
 <% categories_state = budget_categories_view_state(budget) %>
 <% uncategorized_budget_category = categories_state[:uncategorized_budget_category] %>
-<% expenses_empty = categories_state[:expenses_empty] %>
+<% visible_expenses_empty = categories_state[:visible_expenses_empty] %>
 <% over_budget_groups = categories_state[:over_budget_groups] %>
 <% show_over_budget_uncategorized = categories_state[:show_over_budget_uncategorized] %>
 <% over_budget_count = categories_state[:over_budget_count] %>
@@ -67,13 +67,13 @@
     </div>
 
     <div class="bg-container py-1 shadow-border-xs rounded-md">
-      <% if expenses_empty %>
+      <% if visible_expenses_empty %>
         <div class="py-8">
           <%= render "budget_categories/no_categories" %>
         </div>
       <% else %>
         <% on_track_groups.each do |group| %>
-          <% parent_visible = budget_on_track?(group.budget_category) %>
+          <% parent_visible = budget.initialized? ? budget_on_track?(group.budget_category) : true %>
           <% if parent_visible %>
             <div class="py-2">
               <%= render "budget_categories/budget_category", budget_category: group.budget_category %>
