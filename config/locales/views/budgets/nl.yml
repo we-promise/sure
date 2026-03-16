@@ -5,12 +5,16 @@ nl:
         amount: Bedrag
         edit: Bewerken
         title: Categorieen
-      in_budget_categories:
-        short_title: Categorieen binnen budget
-        title: Categorieen binnen budget
-      not_in_budget_categories:
-        short_title: Categorieen buiten budget
-        title: Categorieen buiten budget
+      on_track_categories:
+        short_title: Op schema
+        title: Op schema
+      over_budget_categories:
+        short_title: Over budget
+        title: Over budget
+      filter:
+        all: Alles
+        on_track: Op schema
+        over_budget: Over budget
       tabs:
         actual: "Actueel"
         budgeted: "Begroot"

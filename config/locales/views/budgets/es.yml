@@ -9,12 +9,16 @@ es:
         amount: Importe
         edit: Editar
         title: Categorias
-      in_budget_categories:
-        short_title: Categorias en presupuesto
-        title: Categorias en presupuesto
-      not_in_budget_categories:
-        short_title: Categorias fuera de presupuesto
-        title: Categorias fuera de presupuesto
+      on_track_categories:
+        short_title: En camino
+        title: En camino
+      over_budget_categories:
+        short_title: Sobre presupuesto
+        title: Sobre presupuesto
+      filter:
+        all: Todas
+        on_track: En camino
+        over_budget: Sobre presupuesto
       tabs:
         actual: Real
         budgeted: Presupuestado

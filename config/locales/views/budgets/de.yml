@@ -9,12 +9,16 @@ de:
         amount: Betrag
         edit: Bearbeiten
         title: Kategorien
-      in_budget_categories:
-        short_title: Kategorien im Budget
-        title: Kategorien im Budget
-      not_in_budget_categories:
-        short_title: Kategorien ausserhalb des Budgets
-        title: Kategorien ausserhalb des Budgets
+      on_track_categories:
+        short_title: Im Plan
+        title: Im Plan
+      over_budget_categories:
+        short_title: Uber Budget
+        title: Uber Budget
+      filter:
+        all: Alle
+        on_track: Im Plan
+        over_budget: Uber Budget
       tabs:
         actual: Ist
         budgeted: Budgetiert

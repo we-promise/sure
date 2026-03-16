@@ -6,12 +6,16 @@ ca:
         amount: Quantitat
         edit: Edita
         title: Categories
-      in_budget_categories:
-        short_title: Categories en pressupost
-        title: Categories en pressupost
-      not_in_budget_categories:
-        short_title: Categories fora de pressupost
-        title: Categories fora de pressupost
+      on_track_categories:
+        short_title: En bon cami
+        title: En bon cami
+      over_budget_categories:
+        short_title: Sobre pressupost
+        title: Sobre pressupost
+      filter:
+        all: Totes
+        on_track: En bon cami
+        over_budget: Sobre pressupost
       tabs:
         actual: Real
         budgeted: Pressupostat
