@@ -5,6 +5,16 @@
 <% over_budget_with_budget = ->(bc) { budgeted.call(bc) && bc.over_budget? } %>
 <% any_over_budget = ->(bc) { unbudgeted_with_spending.call(bc) || over_budget_with_budget.call(bc) } %>
 <% on_track = ->(bc) { budgeted.call(bc) && !bc.over_budget? } %>
+<% filtered_groups_for = lambda do |groups, predicate|
+     groups.each_with_object([]) do |group, filtered|
+       visible_subs = group.budget_subcategories.select { |bc| predicate.call(bc) }
+       next unless predicate.call(group.budget_category) || visible_subs.any?
+       filtered << BudgetCategory::Group.new(group.budget_category, visible_subs)
+     end
+   end %>
+<% visible_count_for = lambda do |groups, predicate|
+     groups.sum { |g| (predicate.call(g.budget_category) ? 1 : 0) + g.budget_subcategories.count }
+   end %>
 
 <% uncategorized_budget_category = budget.uncategorized_budget_category %>
 <% expenses_empty = budget.family.categories.expenses.empty? %>
@@ -12,29 +22,21 @@
 
 <%# Over Budget: no-budget-with-spending OR budgeted-but-exceeded %>
 <% over_budget_groups = if budget.initialized?
-                           all_category_groups.each_with_object([]) do |group, filtered|
-                             visible_subs = group.budget_subcategories.select { |bc| any_over_budget.call(bc) }
-                             next unless any_over_budget.call(group.budget_category) || visible_subs.any?
-                             filtered << BudgetCategory::Group.new(group.budget_category, visible_subs)
-                           end
+                           filtered_groups_for.call(all_category_groups, any_over_budget)
                          else
                            []
                          end %>
 <% show_over_budget_uncategorized = budget.initialized? && any_over_budget.call(uncategorized_budget_category) %>
-<% over_budget_count = over_budget_groups.sum { |g| (any_over_budget.call(g.budget_category) ? 1 : 0) + g.budget_subcategories.count } + (show_over_budget_uncategorized ? 1 : 0) %>
+<% over_budget_count = visible_count_for.call(over_budget_groups, any_over_budget) + (show_over_budget_uncategorized ? 1 : 0) %>
 
 <%# On Track: budgeted and not exceeded %>
 <% on_track_groups = if !budget.initialized?
                         all_category_groups
                       else
-                        all_category_groups.each_with_object([]) do |group, filtered|
-                          visible_subs = group.budget_subcategories.select { |bc| on_track.call(bc) }
-                          next unless on_track.call(group.budget_category) || visible_subs.any?
-                          filtered << BudgetCategory::Group.new(group.budget_category, visible_subs)
-                        end
+                        filtered_groups_for.call(all_category_groups, on_track)
                       end %>
 <% show_on_track_uncategorized = !expenses_empty && (!budget.initialized? || on_track.call(uncategorized_budget_category)) %>
-<% on_track_count = on_track_groups.sum { |g| (on_track.call(g.budget_category) ? 1 : 0) + g.budget_subcategories.count } + (show_on_track_uncategorized ? 1 : 0) %>
+<% on_track_count = visible_count_for.call(on_track_groups, on_track) + (show_on_track_uncategorized ? 1 : 0) %>
 
 <div class="space-y-4">
   <% if over_budget_count.positive? %>
@@ -98,7 +100,7 @@
           <%= render "budget_categories/no_categories" %>
         </div>
       <% else %>
-        <% on_track_groups.each_with_index do |group, index| %>
+        <% on_track_groups.each do |group| %>
           <% parent_visible = on_track.call(group.budget_category) %>
           <% if parent_visible %>
             <div class="py-2">
