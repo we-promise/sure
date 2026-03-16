@@ -5,7 +5,7 @@ export default class extends Controller {
 
   // Short delay to prevent accidental touches on the grip handle
   static values = {
-    holdDelay: { type: Number, default: 150 },
+    holdDelay: { type: Number, default: 500 },
   };
 
   connect() {
@@ -110,11 +110,24 @@ export default class extends Controller {
   }
 
   touchMove(event) {
-    if (!this.holdActivated || !this.isTouching || !this.draggedElement) return;
+    const touchX = event.touches[0].clientX;
+    const touchY = event.touches[0].clientY;
+
+    // If hold hasn't activated yet, cancel it if user moves too far (they're scrolling)
+    if (!this.holdActivated) {
+      const dx = touchX - this.touchStartX;
+      const dy = touchY - this.touchStartY;
+      if (Math.abs(dx) > 10 || Math.abs(dy) > 10) {
+        this.cancelHold();
+      }
+      return;
+    }
+
+    if (!this.isTouching || !this.draggedElement) return;
 
     event.preventDefault();
-    this.currentTouchX = event.touches[0].clientX;
-    this.currentTouchY = event.touches[0].clientY;
+    this.currentTouchX = touchX;
+    this.currentTouchY = touchY;
 
     const afterElement = this.getDragAfterElement(this.currentTouchX, this.currentTouchY);
     this.clearPlaceholders();
