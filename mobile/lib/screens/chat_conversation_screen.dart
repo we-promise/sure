@@ -3,10 +3,12 @@ import 'package:flutter/services.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:provider/provider.dart';
+import '../app_config.dart';
 import '../models/chat.dart';
 import '../providers/auth_provider.dart';
 import '../providers/chat_provider.dart';
 import '../models/message.dart';
+import '../services/api_config.dart';
 import '../widgets/typing_indicator.dart';
 
 class _SendMessageIntent extends Intent {
@@ -314,6 +316,8 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
     final colorScheme = Theme.of(context).colorScheme;
     final authProvider = Provider.of<AuthProvider>(context);
     final firstName = authProvider.user?.firstName ?? 'there';
+    final showToolCallChips = ApiConfig.baseUrl == ApiConfig.STAGING_ENV &&
+        AppConfig.canSwitchEnvironment(authProvider.user?.email);
 
     return Scaffold(
       appBar: AppBar(
@@ -550,6 +554,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
                                     updatedAt: DateTime.now(),
                                   ),
                                   formatTime: _formatTime,
+                                  showToolCallChips: showToolCallChips,
                                 ),
                               // Show thinking indicator while waiting
                               // for the first AI response
@@ -628,6 +633,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
                           return _MessageBubble(
                             message: message,
                             formatTime: _formatTime,
+                            showToolCallChips: showToolCallChips,
                           );
                         },
                       ),
@@ -720,10 +726,12 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
 class _MessageBubble extends StatelessWidget {
   final Message message;
   final String Function(DateTime) formatTime;
+  final bool showToolCallChips;
 
   const _MessageBubble({
     required this.message,
     required this.formatTime,
+    required this.showToolCallChips,
   });
 
   @override
@@ -824,7 +832,8 @@ class _MessageBubble extends StatelessWidget {
                           ),
                         ),
                       ),
-                      if (message.toolCalls != null &&
+                      if (showToolCallChips &&
+                          message.toolCalls != null &&
                           message.toolCalls!.isNotEmpty)
                         Padding(
                           padding: const EdgeInsets.only(top: 8),
