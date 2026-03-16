@@ -511,6 +511,238 @@ x-rails-env: &rails_env
 
 Or configure the assistant via the Settings UI after startup (MCP env vars are still required for callback).
 
+## Assistant Architecture
+
+Sure's AI assistant system uses a modular architecture that allows different assistant implementations to be plugged in based on configuration. This section explains the architecture for contributors who want to understand or extend the system.
+
+### Overview
+
+The assistant system evolved from a monolithic class to a module-based architecture with a registry pattern. This allows Sure to support multiple assistant types (builtin, external) and makes it easy to add new implementations.
+
+**Key benefits:**
+- **Extensible:** Add new assistant types without modifying existing code
+- **Configurable:** Choose assistant type per family or globally
+- **Isolated:** Each implementation has its own logic and dependencies
+- **Testable:** Implementations are independent and can be tested separately
+
+### Component Hierarchy
+
+#### `Assistant` Module
+
+The main entry point for all assistant operations. Located in `app/models/assistant.rb`.
+
+**Key methods:**
+
+| Method | Description |
+|--------|-------------|
+| `.for_chat(chat)` | Returns the appropriate assistant instance for a chat |
+| `.config_for(chat)` | Returns configuration for builtin assistants |
+| `.available_types` | Lists all registered assistant types |
+| `.function_classes` | Returns all available function/tool classes |
+
+**Example usage:**
+
+```ruby
+# Get an assistant for a chat
+assistant = Assistant.for_chat(chat)
+
+# Respond to a message
+assistant.respond_to(message)
+```
+
+#### `Assistant::Base`
+
+Abstract base class that all assistant implementations inherit from. Located in `app/models/assistant/base.rb`.
+
+**Contract:**
+- Must implement `respond_to(message)` instance method
+- Includes `Assistant::Broadcastable` for real-time updates
+- Receives the `chat` object in the initializer
+
+**Example implementation:**
+
+```ruby
+class Assistant::MyCustom < Assistant::Base
+  def respond_to(message)
+    # Your custom logic here
+    assistant_message = AssistantMessage.new(chat: chat, content: "Response")
+    assistant_message.save!
+  end
+end
+```
+
+#### `Assistant::Builtin`
+
+The default implementation that uses the configured OpenAI-compatible LLM provider. Located in `app/models/assistant/builtin.rb`.
+
+**Features:**
+- Uses `Assistant::Provided` for LLM provider selection
+- Uses `Assistant::Configurable` for system prompts and function configuration
+- Supports function calling via `Assistant::FunctionToolCaller`
+- Streams responses in real-time
+
+**Key methods:**
+
+| Method | Description |
+|--------|-------------|
+| `.for_chat(chat)` | Creates a new builtin assistant with config |
+| `#respond_to(message)` | Processes a message using the LLM |
+
+#### `Assistant::External`
+
+Implementation for delegating chat to a remote AI agent. Located in `app/models/assistant/external.rb`.
+
+**Features:**
+- Sends conversation to external agent via OpenAI-compatible API
+- Agent calls back to Sure's `/mcp` endpoint for financial data
+- Supports access control via email allowlist
+- Streams responses from the agent
+
+**Configuration:**
+
+```ruby
+config = Assistant::External.config
+# => #<struct url="...", token="...", agent_id="...", session_key="...">
+```
+
+### Registry Pattern
+
+The `Assistant` module uses a registry to map type names to implementation classes:
+
+```ruby
+REGISTRY = {
+  "builtin" => Assistant::Builtin,
+  "external" => Assistant::External
+}.freeze
+```
+
+**Type selection logic:**
+
+1. Check `ENV["ASSISTANT_TYPE"]` (global override)
+2. Check `chat.user.family.assistant_type` (per-family setting)
+3. Default to `"builtin"`
+
+**Example:**
+
+```ruby
+# Global override
+ENV["ASSISTANT_TYPE"] = "external"
+Assistant.for_chat(chat) # => Assistant::External instance
+
+# Per-family setting
+family.update(assistant_type: "external")
+Assistant.for_chat(chat) # => Assistant::External instance
+
+# Default
+Assistant.for_chat(chat) # => Assistant::Builtin instance
+```
+
+### Function Registry
+
+The `Assistant.function_classes` method centralizes all available financial tools:
+
+```ruby
+def self.function_classes
+  [
+    Function::GetTransactions,
+    Function::GetAccounts,
+    Function::GetHoldings,
+    Function::GetBalanceSheet,
+    Function::GetIncomeStatement,
+    Function::ImportBankStatement,
+    Function::SearchFamilyFiles
+  ]
+end
+```
+
+These functions are:
+- Used by builtin assistants for LLM function calling
+- Exposed via the MCP endpoint for external agents
+- Defined in `app/models/assistant/function/`
+
+### Adding a New Assistant Type
+
+To add a custom assistant implementation:
+
+#### 1. Create the implementation class
+
+```ruby
+# app/models/assistant/my_custom.rb
+class Assistant::MyCustom < Assistant::Base
+  class << self
+    def for_chat(chat)
+      new(chat)
+    end
+  end
+
+  def respond_to(message)
+    # Your implementation here
+    # Must create and save an AssistantMessage
+    assistant_message = AssistantMessage.new(
+      chat: chat,
+      content: "My custom response"
+    )
+    assistant_message.save!
+  end
+end
+```
+
+#### 2. Register the implementation
+
+```ruby
+# app/models/assistant.rb
+REGISTRY = {
+  "builtin" => Assistant::Builtin,
+  "external" => Assistant::External,
+  "my_custom" => Assistant::MyCustom
+}.freeze
+```
+
+#### 3. Add validation
+
+```ruby
+# app/models/family.rb
+ASSISTANT_TYPES = %w[builtin external my_custom].freeze
+```
+
+#### 4. Use the new type
+
+```bash
+# Global override
+ASSISTANT_TYPE=my_custom
+
+# Or set per-family in the database
+family.update(assistant_type: "my_custom")
+```
+
+### Integration Points
+
+#### Pipelock Integration
+
+For external assistants, Pipelock can scan traffic:
+- **Outbound:** Sure -> agent (via `HTTPS_PROXY`)
+- **Inbound:** Agent -> Sure /mcp (via MCP reverse proxy on port 8889)
+
+See the [External AI Assistant](#external-ai-assistant) and [Pipelock](pipelock.md) documentation for configuration.
+
+#### OpenClaw/WebSocket Support
+
+The `Assistant::External` implementation currently uses HTTP streaming. Future implementations could use WebSocket connections via OpenClaw or other gateways.
+
+**Example future implementation:**
+
+```ruby
+class Assistant::WebSocket < Assistant::Base
+  def respond_to(message)
+    # Connect via WebSocket
+    # Stream bidirectional communication
+    # Handle tool calls via MCP
+  end
+end
+```
+
+Register it in the `REGISTRY` and add to `Family::ASSISTANT_TYPES` to activate.
+
 ## AI Cache Management
 
 Sure caches AI-generated results (like auto-categorization and merchant detection) to avoid redundant API calls and costs. However, there are situations where you may want to clear this cache.
