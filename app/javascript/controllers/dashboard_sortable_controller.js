@@ -3,7 +3,7 @@ import { Controller } from "@hotwired/stimulus";
 export default class extends Controller {
   static targets = ["section", "handle"];
 
-  // Short delay to prevent accidental touches on the grip handle
+  // Hold delay to require deliberate press-and-hold before activating drag mode
   static values = {
     holdDelay: { type: Number, default: 500 },
   };
