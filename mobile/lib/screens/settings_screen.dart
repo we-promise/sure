@@ -11,6 +11,7 @@ import '../services/log_service.dart';
 import '../services/preferences_service.dart';
 import '../services/user_service.dart';
 import '../services/api_config.dart';
+import '../services/biometric_service.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -25,6 +26,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _isResettingAccount = false;
   bool _isDeletingAccount = false;
   String? _selectedEnvironment;
+  bool _biometricSupported = false;
+  bool _biometricEnabled = false;
 
   @override
   void initState() {
@@ -32,6 +35,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _loadPreferences();
     _loadAppVersion();
     _loadSelectedEnvironment();
+    _loadBiometricState();
   }
 
   Future<void> _loadAppVersion() async {
@@ -100,6 +104,31 @@ class _SettingsScreenState extends State<SettingsScreen> {
           duration: Duration(seconds: 2),
         ),
       );
+    }
+  }
+
+  Future<void> _loadBiometricState() async {
+    final supported = await BiometricService.instance.isDeviceSupported();
+    final enabled = await PreferencesService.instance.getBiometricEnabled();
+    if (mounted) {
+      setState(() {
+        _biometricSupported = supported;
+        _biometricEnabled = enabled;
+      });
+    }
+  }
+
+  Future<void> _toggleBiometric(bool value) async {
+    if (value) {
+      // Verify biometric works before enabling
+      final success = await BiometricService.instance.authenticate(
+        reason: 'Verify biometric to enable app lock',
+      );
+      if (!success) return;
+    }
+    await PreferencesService.instance.setBiometricEnabled(value);
+    if (mounted) {
+      setState(() => _biometricEnabled = value);
     }
   }
 
@@ -526,6 +555,30 @@ class _SettingsScreenState extends State<SettingsScreen> {
               );
             },
           ),
+
+          if (_biometricSupported) ...[
+            const Divider(),
+
+            const Padding(
+              padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
+              child: Text(
+                'Security',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey,
+                ),
+              ),
+            ),
+
+            SwitchListTile(
+              secondary: const Icon(Icons.fingerprint),
+              title: const Text('Biometric Lock'),
+              subtitle: const Text('Require biometric authentication when resuming the app'),
+              value: _biometricEnabled,
+              onChanged: _toggleBiometric,
+            ),
+          ],
 
           if (AppConfig.canSwitchEnvironment(authProvider.user?.email)) ...[
             const Divider(),

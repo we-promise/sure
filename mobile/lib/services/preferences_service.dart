@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 class PreferencesService {
   static const _groupByTypeKey = 'dashboard_group_by_type';
   static const _themeModeKey = 'theme_mode';
+  static const _biometricEnabledKey = 'biometric_enabled';
 
   static PreferencesService? _instance;
   SharedPreferences? _prefs;
@@ -38,5 +39,15 @@ class PreferencesService {
   Future<void> setThemeMode(String mode) async {
     final prefs = await _preferences;
     await prefs.setString(_themeModeKey, mode);
+  }
+
+  Future<bool> getBiometricEnabled() async {
+    final prefs = await _preferences;
+    return prefs.getBool(_biometricEnabledKey) ?? false;
+  }
+
+  Future<void> setBiometricEnabled(bool value) async {
+    final prefs = await _preferences;
+    await prefs.setBool(_biometricEnabledKey, value);
   }
 }
