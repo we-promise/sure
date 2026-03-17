@@ -113,11 +113,12 @@ export default class extends Controller {
     const touchX = event.touches[0].clientX;
     const touchY = event.touches[0].clientY;
 
-    // If hold hasn't activated yet, cancel it if user moves too far (they're scrolling)
+    // If hold hasn't activated yet, cancel if user moves too far (scrolling or swiping)
+    // Uses Euclidean distance to catch diagonal gestures too
     if (!this.holdActivated) {
       const dx = touchX - this.touchStartX;
       const dy = touchY - this.touchStartY;
-      if (Math.abs(dx) > 10 || Math.abs(dy) > 10) {
+      if (dx * dx + dy * dy > 100) { // 10px radius
         this.cancelHold();
       }
       return;
