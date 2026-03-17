@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../models/account.dart';
+import '../models/transaction.dart';
 import '../providers/auth_provider.dart';
 import '../providers/transactions_provider.dart';
 import '../services/log_service.dart';
@@ -9,10 +10,12 @@ import '../services/connectivity_service.dart';
 
 class TransactionFormScreen extends StatefulWidget {
   final Account account;
+  final Transaction? transaction; // If provided, we're in edit mode
 
   const TransactionFormScreen({
     super.key,
     required this.account,
+    this.transaction,
   });
 
   @override
@@ -24,20 +27,39 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
   final _amountController = TextEditingController();
   final _dateController = TextEditingController();
   final _nameController = TextEditingController();
+  final _notesController = TextEditingController();
   final _log = LogService.instance;
 
   String _nature = 'expense';
   bool _showMoreFields = false;
   bool _isSubmitting = false;
 
+  bool get _isEditMode => widget.transaction != null;
+
   @override
   void initState() {
     super.initState();
-    // Set default values
-    final now = DateTime.now();
-    final formattedDate = DateFormat('yyyy/MM/dd').format(now);
-    _dateController.text = formattedDate;
-    _nameController.text = 'SureApp';
+
+    if (_isEditMode) {
+      final t = widget.transaction!;
+      _amountController.text = t.rawAmount;
+      _nameController.text = t.name;
+      _nature = t.nature;
+      _notesController.text = t.notes ?? '';
+      _showMoreFields = true; // Expand fields in edit mode
+
+      // Parse existing date (yyyy-MM-dd from API) to display format
+      try {
+        final parsed = DateFormat('yyyy-MM-dd').parse(t.date);
+        _dateController.text = DateFormat('yyyy/MM/dd').format(parsed);
+      } catch (_) {
+        _dateController.text = t.date;
+      }
+    } else {
+      final now = DateTime.now();
+      _dateController.text = DateFormat('yyyy/MM/dd').format(now);
+      _nameController.text = 'SureApp';
+    }
   }
 
   @override
@@ -45,6 +67,7 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
     _amountController.dispose();
     _dateController.dispose();
     _nameController.dispose();
+    _notesController.dispose();
     super.dispose();
   }
 
@@ -89,7 +112,7 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
       _isSubmitting = true;
     });
 
-    _log.info('TransactionForm', 'Starting transaction creation...');
+    _log.info('TransactionForm', _isEditMode ? 'Starting transaction update...' : 'Starting transaction creation...');
 
     try {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
@@ -114,51 +137,65 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
       final parsedDate = DateFormat('yyyy/MM/dd').parse(_dateController.text);
       final apiDate = DateFormat('yyyy-MM-dd').format(parsedDate);
 
-      _log.info('TransactionForm', 'Calling TransactionsProvider.createTransaction (offline-first)');
+      final notes = _notesController.text.trim().isEmpty
+          ? (_isEditMode ? null : 'This transaction via mobile app.')
+          : _notesController.text.trim();
 
-      // Use TransactionsProvider for offline-first transaction creation
-      final success = await transactionsProvider.createTransaction(
-        accessToken: accessToken,
-        accountId: widget.account.id,
-        name: _nameController.text.trim(),
-        date: apiDate,
-        amount: _amountController.text.trim(),
-        currency: widget.account.currency,
-        nature: _nature,
-        notes: 'This transaction via mobile app.',
-      );
+      bool success;
+
+      if (_isEditMode) {
+        success = await transactionsProvider.updateTransaction(
+          accessToken: accessToken,
+          transactionId: widget.transaction!.id!,
+          name: _nameController.text.trim(),
+          date: apiDate,
+          amount: _amountController.text.trim(),
+          currency: widget.account.currency,
+          nature: _nature,
+          notes: notes,
+        );
+      } else {
+        success = await transactionsProvider.createTransaction(
+          accessToken: accessToken,
+          accountId: widget.account.id,
+          name: _nameController.text.trim(),
+          date: apiDate,
+          amount: _amountController.text.trim(),
+          currency: widget.account.currency,
+          nature: _nature,
+          notes: notes,
+        );
+      }
 
       if (mounted) {
         if (success) {
-          _log.info('TransactionForm', 'Transaction created successfully (saved locally)');
-          
-          // Check current connectivity status to show appropriate message
           final connectivityService = Provider.of<ConnectivityService>(context, listen: false);
           final isOnline = connectivityService.isOnline;
-          
+
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
-                isOnline
-                    ? 'Transaction created successfully'
-                    : 'Transaction saved (will sync when online)'
+                _isEditMode
+                    ? 'Transaction updated successfully'
+                    : isOnline
+                        ? 'Transaction created successfully'
+                        : 'Transaction saved (will sync when online)'
               ),
               backgroundColor: Colors.green,
             ),
           );
-          Navigator.pop(context, true); // Return true to indicate success
+          Navigator.pop(context, true);
         } else {
-          _log.error('TransactionForm', 'Failed to create transaction');
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Failed to create transaction'),
+            SnackBar(
+              content: Text(_isEditMode ? 'Failed to update transaction' : 'Failed to create transaction'),
               backgroundColor: Colors.red,
             ),
           );
         }
       }
     } catch (e) {
-      _log.error('TransactionForm', 'Exception during transaction creation: $e');
+      _log.error('TransactionForm', 'Exception during transaction ${_isEditMode ? "update" : "creation"}: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -213,7 +250,7 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'New Transaction',
+                      _isEditMode ? 'Edit Transaction' : 'New Transaction',
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
@@ -359,6 +396,18 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
                               helperText: 'Optional (default: SureApp)',
                             ),
                           ),
+                          const SizedBox(height: 16),
+
+                          // Notes field
+                          TextFormField(
+                            controller: _notesController,
+                            maxLines: 3,
+                            decoration: const InputDecoration(
+                              labelText: 'Notes',
+                              prefixIcon: Icon(Icons.notes),
+                              helperText: 'Optional',
+                            ),
+                          ),
                         ],
 
                         const SizedBox(height: 32),
@@ -374,7 +423,7 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
                                     strokeWidth: 2,
                                   ),
                                 )
-                              : const Text('Create Transaction'),
+                              : Text(_isEditMode ? 'Update Transaction' : 'Create Transaction'),
                         ),
                       ],
                     ),

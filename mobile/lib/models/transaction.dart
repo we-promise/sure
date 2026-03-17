@@ -66,4 +66,18 @@ class Transaction {
 
   bool get isExpense => nature == 'expense';
   bool get isIncome => nature == 'income';
+
+  /// Parses the currency-formatted [amount] string (e.g. "$1,234.56", "-KSh700.00")
+  /// back to a plain numeric string (e.g. "1234.56", "700.00") suitable for a text field.
+  String get rawAmount {
+    var s = amount;
+    // Strip everything except digits, dots, and minus
+    s = s.replaceAll(RegExp(r'[^\d.\-]'), '');
+    // Remove leading minus (we track sign via nature)
+    s = s.replaceAll('-', '');
+    // Remove trailing dots
+    if (s.endsWith('.')) s = s.substring(0, s.length - 1);
+    if (s.isEmpty) return '0';
+    return s;
+  }
 }

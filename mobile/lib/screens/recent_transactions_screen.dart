@@ -6,6 +6,7 @@ import '../models/account.dart';
 import '../providers/transactions_provider.dart';
 import '../providers/accounts_provider.dart';
 import '../providers/auth_provider.dart';
+import '../screens/transaction_form_screen.dart';
 
 class RecentTransactionsScreen extends StatefulWidget {
   const RecentTransactionsScreen({super.key});
@@ -221,6 +222,22 @@ class _RecentTransactionsScreenState extends State<RecentTransactionsScreen> {
     }
 
     return ListTile(
+      onTap: account != null
+          ? () async {
+              final result = await showModalBottomSheet<bool>(
+                context: context,
+                isScrollControlled: true,
+                backgroundColor: Colors.transparent,
+                builder: (context) => TransactionFormScreen(
+                  account: account,
+                  transaction: transaction,
+                ),
+              );
+              if (result == true) {
+                _refreshTransactions();
+              }
+            }
+          : null,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       leading: Container(
         padding: const EdgeInsets.all(8),

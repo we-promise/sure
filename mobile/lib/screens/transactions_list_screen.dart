@@ -452,7 +452,20 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
                       child: InkWell(
                         onTap: _isSelectionMode && transaction.id != null
                             ? () => _toggleTransactionSelection(transaction.id!)
-                            : null,
+                            : () async {
+                                final result = await showModalBottomSheet<bool>(
+                                  context: context,
+                                  isScrollControlled: true,
+                                  backgroundColor: Colors.transparent,
+                                  builder: (context) => TransactionFormScreen(
+                                    account: widget.account,
+                                    transaction: transaction,
+                                  ),
+                                );
+                                if (result == true) {
+                                  _loadTransactions();
+                                }
+                              },
                         borderRadius: BorderRadius.circular(12),
                         child: Padding(
                           padding: const EdgeInsets.all(16),

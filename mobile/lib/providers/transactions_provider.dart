@@ -225,6 +225,63 @@ class TransactionsProvider with ChangeNotifier {
     }
   }
 
+  /// Update an existing transaction on the server
+  Future<bool> updateTransaction({
+    required String accessToken,
+    required String transactionId,
+    required String name,
+    required String date,
+    required String amount,
+    required String currency,
+    required String nature,
+    String? notes,
+  }) async {
+    _lastAccessToken = accessToken;
+
+    try {
+      final isOnline = _connectivityService?.isOnline ?? false;
+
+      if (!isOnline) {
+        _error = 'Cannot edit transactions while offline';
+        notifyListeners();
+        return false;
+      }
+
+      _log.info('TransactionsProvider', 'Updating transaction: $transactionId');
+
+      final result = await _transactionsService.updateTransaction(
+        accessToken: accessToken,
+        transactionId: transactionId,
+        name: name,
+        date: date,
+        amount: amount,
+        currency: currency,
+        nature: nature,
+        notes: notes,
+      );
+
+      if (result['success'] == true) {
+        _log.info('TransactionsProvider', 'Transaction updated successfully');
+        // Refresh from server to get consistent state
+        await fetchTransactions(
+          accessToken: accessToken,
+          accountId: _currentAccountId,
+          forceSync: true,
+        );
+        return true;
+      } else {
+        _error = result['error'] as String? ?? 'Failed to update transaction';
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      _log.error('TransactionsProvider', 'Failed to update transaction: $e');
+      _error = 'Something went wrong. Please try again.';
+      notifyListeners();
+      return false;
+    }
+  }
+
   /// Delete a transaction
   Future<bool> deleteTransaction({
     required String accessToken,
