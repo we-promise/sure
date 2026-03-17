@@ -737,26 +737,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 }
 
-/// Shows the settings panel as a dialog that slides in from the top.
+/// Shows the settings panel as a dialog.
 void showSettingsPanel(BuildContext context) {
   showGeneralDialog(
     context: context,
     barrierDismissible: true,
     barrierLabel: 'Settings',
     barrierColor: Colors.black54,
-    transitionDuration: const Duration(milliseconds: 300),
+    transitionDuration: Duration.zero,
     pageBuilder: (context, animation, secondaryAnimation) {
       return const SettingsScreen();
-    },
-    transitionBuilder: (context, animation, secondaryAnimation, child) {
-      final curved = CurvedAnimation(parent: animation, curve: Curves.easeOutCubic);
-      return SlideTransition(
-        position: Tween<Offset>(
-          begin: const Offset(0, -1),
-          end: Offset.zero,
-        ).animate(curved),
-        child: child,
-      );
     },
   );
 }

@@ -375,16 +375,12 @@ class DashboardScreenState extends State<DashboardScreen> {
       appBar: AppBar(
         actions: [
           if (_showSyncSuccess)
-            Padding(
-              padding: const EdgeInsets.only(right: 8),
-              child: AnimatedOpacity(
-                opacity: _showSyncSuccess ? 1.0 : 0.0,
-                duration: const Duration(milliseconds: 300),
-                child: const Icon(
-                  Icons.cloud_done,
-                  color: Colors.green,
-                  size: 28,
-                ),
+            const Padding(
+              padding: EdgeInsets.only(right: 8),
+              child: Icon(
+                Icons.cloud_done,
+                color: Colors.green,
+                size: 28,
               ),
             ),
           Semantics(
