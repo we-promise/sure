@@ -2,26 +2,60 @@
 fr:
   onboardings:
     header:
-      sign_out: Déconnexion
-    preferences:
-      currency: Monnaie
-      date_format: Format de date
-      example: Compte d'exemple
-      locale: Langue
-      preview: Prévisualiser la façon dont les données s'affichent en fonction des préférences.
-      submit: Terminer
-      subtitle: Configurons vos préférences.
-      title: Configurez vos préférences
-    profile:
-      country: Pays
-      first_name: Prénom
-      household_name: Nom du foyer (si applicable)
-      last_name: Nom de famille
-      profile_image: Photo de profil
-      submit: Continuer
-      subtitle: Complétons votre profil.
-      title: Configurons les bases
+      sign_out: Se déconnecter
+      setup: Configuration
+      preferences: Préférences
+      goals: Objectifs
+      start: Démarrer
+    logout:
+      sign_out: Se déconnecter
     show:
-      message: Nous sommes vraiment excités que vous soyez ici. Dans la prochaine étape, nous allons vous poser quelques questions pour compléter votre profil et ensuite configurer votre compte.
-      setup: Configurer le compte
-      title: Rencontrez %{product_name}
+      title: Configurons votre compte
+      subtitle: Commençons par compléter votre profil.
+      first_name: Prénom
+      first_name_placeholder: Prénom
+      last_name: Nom de famille
+      last_name_placeholder: Nom de famille
+      household_name: Nom du foyer
+      household_name_placeholder: Nom du foyer
+      country: Pays
+      submit: Continuer
+    preferences:
+      title: Configurez vos préférences
+      subtitle: Configurons vos préférences.
+      example: Compte exemple
+      preview: Aperçu de l'affichage des données selon vos préférences.
+      color_theme: Thème de couleur
+      theme_system: Système
+      theme_light: Clair
+      theme_dark: Sombre
+      locale: Langue
+      currency: Devise
+      date_format: Format de date
+      submit: Terminer
+    goals:
+      title: Qu'est-ce qui vous amène ici ?
+      subtitle: Sélectionnez un ou plusieurs objectifs que vous souhaitez atteindre avec %{product_name} comme outil de finances personnelles.
+      unified_accounts: Voir tous mes comptes en un seul endroit
+      cashflow: Comprendre les flux de trésorerie et les dépenses
+      budgeting: Gérer les plans financiers et les budgets
+      partner: Gérer les finances avec un partenaire
+      investments: Suivre les investissements
+      ai_insights: Laisser l'IA m'aider à comprendre mes finances
+      optimization: Analyser et optimiser les comptes
+      reduce_stress: Réduire le stress financier ou l'anxiété
+      submit: Suivant
+    trial:
+      title: Essayez Sure pendant 45 jours
+      data_deletion: Les données seront supprimées ensuite
+      description_html: À partir d'aujourd'hui, vous pouvez tester le produit en profondeur.<br/>Si vous l'aimez, hébergez-le vous-même ou contribuez pour continuer à l'utiliser ici.
+      try_button: Essayer Sure pendant 45 jours
+      continue_trial: Continuer l'essai
+      upgrade: Mettre à niveau
+      how_it_works: Comment ça fonctionne
+      today: Aujourd'hui
+      today_description: Vous aurez un accès gratuit à Sure pendant 45 jours sur notre AWS.
+      in_40_days: Dans 40 jours (%{date})
+      in_40_days_description: Nous vous notifierons pour vous rappeler d'exporter vos données.
+      in_45_days: Dans 45 jours (%{date})
+      in_45_days_description: Nous supprimons vos données — contribuez pour continuer à utiliser Sure ici !

@@ -1,0 +1,141 @@
+{{- if .Values.pipelock.enabled }}
+{{- $fwdEnabled := true -}}
+{{- $fwdMaxTunnel := 300 -}}
+{{- $fwdIdleTimeout := 60 -}}
+{{- if .Values.pipelock.forwardProxy -}}
+{{- if hasKey .Values.pipelock.forwardProxy "enabled" -}}
+{{- $fwdEnabled = .Values.pipelock.forwardProxy.enabled -}}
+{{- end -}}
+{{- $fwdMaxTunnel = int (.Values.pipelock.forwardProxy.maxTunnelSeconds | default 300) -}}
+{{- $fwdIdleTimeout = int (.Values.pipelock.forwardProxy.idleTimeoutSeconds | default 60) -}}
+{{- end -}}
+{{- $wsEnabled := false -}}
+{{- $wsMaxMsg := 1048576 -}}
+{{- $wsMaxConns := 128 -}}
+{{- $wsScanText := true -}}
+{{- $wsAllowBinary := false -}}
+{{- $wsForwardCookies := false -}}
+{{- $wsMaxConnSec := 3600 -}}
+{{- $wsIdleTimeout := 300 -}}
+{{- $wsOriginPolicy := "rewrite" -}}
+{{- if .Values.pipelock.websocketProxy -}}
+{{- if hasKey .Values.pipelock.websocketProxy "enabled" -}}
+{{- $wsEnabled = .Values.pipelock.websocketProxy.enabled -}}
+{{- end -}}
+{{- $wsMaxMsg = int (.Values.pipelock.websocketProxy.maxMessageBytes | default 1048576) -}}
+{{- $wsMaxConns = int (.Values.pipelock.websocketProxy.maxConcurrentConnections | default 128) -}}
+{{- if hasKey .Values.pipelock.websocketProxy "scanTextFrames" -}}
+{{- $wsScanText = .Values.pipelock.websocketProxy.scanTextFrames -}}
+{{- end -}}
+{{- if hasKey .Values.pipelock.websocketProxy "allowBinaryFrames" -}}
+{{- $wsAllowBinary = .Values.pipelock.websocketProxy.allowBinaryFrames -}}
+{{- end -}}
+{{- if hasKey .Values.pipelock.websocketProxy "forwardCookies" -}}
+{{- $wsForwardCookies = .Values.pipelock.websocketProxy.forwardCookies -}}
+{{- end -}}
+{{- $wsMaxConnSec = int (.Values.pipelock.websocketProxy.maxConnectionSeconds | default 3600) -}}
+{{- $wsIdleTimeout = int (.Values.pipelock.websocketProxy.idleTimeoutSeconds | default 300) -}}
+{{- $wsOriginPolicy = .Values.pipelock.websocketProxy.originPolicy | default "rewrite" -}}
+{{- end -}}
+{{- $mcpPolicyEnabled := true -}}
+{{- $mcpPolicyAction := "warn" -}}
+{{- if .Values.pipelock.mcpToolPolicy -}}
+{{- if hasKey .Values.pipelock.mcpToolPolicy "enabled" -}}
+{{- $mcpPolicyEnabled = .Values.pipelock.mcpToolPolicy.enabled -}}
+{{- end -}}
+{{- $mcpPolicyAction = .Values.pipelock.mcpToolPolicy.action | default "warn" -}}
+{{- end -}}
+{{- $mcpBindingEnabled := true -}}
+{{- $mcpBindingAction := "warn" -}}
+{{- if .Values.pipelock.mcpSessionBinding -}}
+{{- if hasKey .Values.pipelock.mcpSessionBinding "enabled" -}}
+{{- $mcpBindingEnabled = .Values.pipelock.mcpSessionBinding.enabled -}}
+{{- end -}}
+{{- $mcpBindingAction = .Values.pipelock.mcpSessionBinding.unknownToolAction | default "warn" -}}
+{{- end -}}
+{{- $chainEnabled := true -}}
+{{- $chainAction := "warn" -}}
+{{- $chainWindow := 20 -}}
+{{- $chainGap := 3 -}}
+{{- if .Values.pipelock.toolChainDetection -}}
+{{- if hasKey .Values.pipelock.toolChainDetection "enabled" -}}
+{{- $chainEnabled = .Values.pipelock.toolChainDetection.enabled -}}
+{{- end -}}
+{{- $chainAction = .Values.pipelock.toolChainDetection.action | default "warn" -}}
+{{- $chainWindow = int (.Values.pipelock.toolChainDetection.windowSize | default 20) -}}
+{{- $chainGap = int (.Values.pipelock.toolChainDetection.maxGap | default 3) -}}
+{{- end -}}
+{{- $logFormat := "json" -}}
+{{- $logOutput := "stdout" -}}
+{{- $logIncludeAllowed := false -}}
+{{- $logIncludeBlocked := true -}}
+{{- if .Values.pipelock.logging -}}
+{{- $logFormat = .Values.pipelock.logging.format | default "json" -}}
+{{- $logOutput = .Values.pipelock.logging.output | default "stdout" -}}
+{{- if hasKey .Values.pipelock.logging "includeAllowed" -}}
+{{- $logIncludeAllowed = .Values.pipelock.logging.includeAllowed -}}
+{{- end -}}
+{{- if hasKey .Values.pipelock.logging "includeBlocked" -}}
+{{- $logIncludeBlocked = .Values.pipelock.logging.includeBlocked -}}
+{{- end -}}
+{{- end }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "sure.fullname" . }}-pipelock
+  labels:
+    {{- include "sure.labels" . | nindent 4 }}
+data:
+  pipelock.yaml: |
+    version: 1
+    mode: {{ .Values.pipelock.mode | default "balanced" }}
+    forward_proxy:
+      enabled: {{ $fwdEnabled }}
+      max_tunnel_seconds: {{ $fwdMaxTunnel }}
+      idle_timeout_seconds: {{ $fwdIdleTimeout }}
+    websocket_proxy:
+      enabled: {{ $wsEnabled }}
+      max_message_bytes: {{ $wsMaxMsg }}
+      max_concurrent_connections: {{ $wsMaxConns }}
+      scan_text_frames: {{ $wsScanText }}
+      allow_binary_frames: {{ $wsAllowBinary }}
+      forward_cookies: {{ $wsForwardCookies }}
+      strip_compression: true
+      max_connection_seconds: {{ $wsMaxConnSec }}
+      idle_timeout_seconds: {{ $wsIdleTimeout }}
+      origin_policy: {{ $wsOriginPolicy }}
+    dlp:
+      scan_env: true
+      include_defaults: true
+    response_scanning:
+      enabled: true
+      action: warn
+      include_defaults: true
+    mcp_input_scanning:
+      enabled: true
+      action: block
+      on_parse_error: block
+    mcp_tool_scanning:
+      enabled: true
+      action: warn
+      detect_drift: true
+    mcp_tool_policy:
+      enabled: {{ $mcpPolicyEnabled }}
+      action: {{ $mcpPolicyAction }}
+    mcp_session_binding:
+      enabled: {{ $mcpBindingEnabled }}
+      unknown_tool_action: {{ $mcpBindingAction }}
+    tool_chain_detection:
+      enabled: {{ $chainEnabled }}
+      action: {{ $chainAction }}
+      window_size: {{ $chainWindow }}
+      max_gap: {{ $chainGap }}
+    logging:
+      format: {{ $logFormat }}
+      output: {{ $logOutput }}
+      include_allowed: {{ $logIncludeAllowed }}
+      include_blocked: {{ $logIncludeBlocked }}
+{{- if .Values.pipelock.extraConfig }}
+    {{- toYaml .Values.pipelock.extraConfig | nindent 4 }}
+{{- end }}
+{{- end }}

@@ -27,7 +27,7 @@
   </div>
 <% end %>
 
-<div class="w-full space-y-6 pb-6 lg:pb-12" data-controller="dashboard-sortable" data-action="dragover->dashboard-sortable#dragOver drop->dashboard-sortable#drop" role="list" aria-label="Dashboard sections">
+<div class="grid grid-cols-1 2xl:grid-cols-2 gap-6 pb-6 lg:pb-12" data-controller="dashboard-sortable" data-action="dragover->dashboard-sortable#dragOver drop->dashboard-sortable#drop" role="list" aria-label="Dashboard sections">
   <% if Current.family.accounts.any? %>
     <% @dashboard_sections.each do |section| %>
       <% next unless section[:visible] %>
@@ -35,7 +35,7 @@
         class="bg-container rounded-xl shadow-border-xs transition-all group focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-900 focus-visible:ring-offset-2"
         data-dashboard-sortable-target="section"
         data-section-key="<%= section[:key] %>"
-        data-controller="dashboard-section<%= ' cashflow-expand' if section[:key] == 'cashflow_sankey' %>"
+        data-controller="dashboard-section<%= " cashflow-expand" if section[:key] == "cashflow_sankey" %>"
         data-dashboard-section-section-key-value="<%= section[:key] %>"
         data-dashboard-section-collapsed-value="<%= Current.user.dashboard_section_collapsed?(section[:key]) %>"
         draggable="true"

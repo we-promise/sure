@@ -23,3 +23,8 @@ zh-TW:
       welcome_body: 在開始之前，您必須註冊一個新帳號。註冊完成後，您將能在應用程式內進行進階設定。
       welcome_title: 歡迎使用自行代管的 %{product_name}！
       password_placeholder: 輸入您的密碼
+      password_requirements:
+        length: 至少8個字元
+        case: 大寫和小寫字母
+        number: 一個數字 (0-9)
+        special: "一個特殊字元 (!, @, #, $, %, etc)"

@@ -1,0 +1,93 @@
+name: Chart Release
+
+on:
+  push:
+    tags:
+      - 'chart-v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  prepare_release:
+    runs-on: ubuntu-latest
+    outputs:
+      tag_name: ${{ steps.tag.outputs.tag_name }}
+      chart_version: ${{ steps.tag.outputs.chart_version }}
+      app_version: ${{ steps.tag.outputs.app_version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve chart release tag
+        id: tag
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # Read the canonical version from the Rails app (single source of truth)
+          APP_SEMVER=$(grep -oP '"\K[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?' config/initializers/version.rb | head -n 1 || true)
+          if [ -z "$APP_SEMVER" ]; then
+            echo "::error::Could not extract version from config/initializers/version.rb"
+            exit 1
+          fi
+          echo "App version from version.rb: $APP_SEMVER"
+
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            # Use the app version as the chart version (monorepo: versions stay in sync)
+            TAG_NAME="chart-v${APP_SEMVER}"
+
+            if git rev-parse "refs/tags/${TAG_NAME}" >/dev/null 2>&1; then
+              echo "::error::Tag ${TAG_NAME} already exists. Bump the version in config/initializers/version.rb and charts/sure/Chart.yaml first."
+              exit 1
+            fi
+
+            git config user.name "${GITHUB_ACTOR}"
+            git config user.email "${GITHUB_ACTOR}@users.noreply.github.com"
+            if ! git tag "$TAG_NAME"; then
+              echo "::error::Failed to create tag ${TAG_NAME}"
+              exit 1
+            fi
+            if ! git push origin "$TAG_NAME"; then
+              echo "::error::Failed to push tag ${TAG_NAME} to origin"
+              exit 1
+            fi
+          else
+            TAG_NAME="${GITHUB_REF_NAME}"
+          fi
+
+          CHART_VERSION="${TAG_NAME#chart-v}"
+
+          echo "tag_name=$TAG_NAME" >> "$GITHUB_OUTPUT"
+          echo "chart_version=$CHART_VERSION" >> "$GITHUB_OUTPUT"
+          echo "app_version=$APP_SEMVER" >> "$GITHUB_OUTPUT"
+
+  publish_chart:
+    needs: prepare_release
+    uses: ./.github/workflows/helm-publish.yml
+    with:
+      chart_version: ${{ needs.prepare_release.outputs.chart_version }}
+      app_version: ${{ needs.prepare_release.outputs.app_version }}
+      update_gh_pages: true
+    secrets: inherit
+
+  release:
+    needs: [prepare_release, publish_chart]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Helm chart artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: helm-chart-package
+          path: ${{ runner.temp }}/helm-artifacts
+
+      - name: Create chart GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.prepare_release.outputs.tag_name }}
+          name: ${{ needs.prepare_release.outputs.tag_name }}
+          generate_release_notes: true
+          files: ${{ runner.temp }}/helm-artifacts/*.tgz

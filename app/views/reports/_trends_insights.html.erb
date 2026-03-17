@@ -21,7 +21,7 @@
                   <div class="flex items-center gap-2 <%= trend[:is_current_month] ? "font-medium" : "" %>">
                     <%= trend[:month] %>
                     <% if trend[:is_current_month] %>
-                      <span class="text-xs text-tertiary">(<%= t("reports.trends.current") %>)</span>
+                      <span class="text-xs text-subdued">(<%= t("reports.trends.current") %>)</span>
                     <% end %>
                   </div>
                   <div class="text-right">
@@ -74,7 +74,7 @@
           </div>
         </div>
       <% else %>
-        <div class="text-center py-8 text-tertiary">
+        <div class="text-center py-8 text-subdued">
           <%= t("reports.trends.no_data") %>
         </div>
       <% end %>

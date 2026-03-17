@@ -31,6 +31,7 @@ on:
       - main
     paths-ignore:
       - 'charts/**'
+      - 'mobile/**'
   schedule:
     - cron: '30 1 * * *'
 
@@ -241,6 +242,17 @@ jobs:
             sleep ${delay}
           done
 
+
+  helm:
+    name: Package Helm chart
+    if: startsWith(github.ref, 'refs/tags/v')
+    uses: ./.github/workflows/helm-publish.yml
+    with:
+      chart_version: ${{ github.ref_name }}
+      app_version: ${{ github.ref_name }}
+      update_gh_pages: true
+    secrets: inherit
+
   mobile:
     name: Build Mobile Apps
     if: startsWith(github.ref, 'refs/tags/v')
@@ -250,7 +262,7 @@ jobs:
   release:
     name: Create GitHub Release
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [merge, mobile]
+    needs: [merge, mobile, helm]
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -269,6 +281,12 @@ jobs:
         with:
           name: ios-build-unsigned
           path: ${{ runner.temp }}/ios-build
+
+      - name: Download Helm chart artifact
+        uses: actions/download-artifact@v4.3.0
+        with:
+          name: helm-chart-package
+          path: ${{ runner.temp }}/helm-artifacts
 
       - name: Prepare release assets
         run: |
@@ -306,6 +324,12 @@ jobs:
             cp "${{ runner.temp }}/ios-build/ios-build-info.txt" "${{ runner.temp }}/release-assets/"
           fi
 
+          # Copy Helm chart package(s)
+          if compgen -G "${{ runner.temp }}/helm-artifacts/*.tgz" > /dev/null; then
+            cp ${{ runner.temp }}/helm-artifacts/*.tgz "${{ runner.temp }}/release-assets/"
+            echo "✓ Helm chart package prepared"
+          fi
+
           echo "Release assets:"
           ls -la "${{ runner.temp }}/release-assets/"
 
@@ -329,6 +353,38 @@ jobs:
 
             > **Note**: These are debug builds intended for testing purposes. For production use, please build from source with proper signing credentials.
 
+
+  create_release_branch:
+    name: Create or update release branch
+    if: startsWith(github.ref, 'refs/tags/v') && !contains(github.ref_name, 'alpha') && !contains(github.ref_name, 'beta') && !contains(github.ref_name, 'rc')
+    needs: [release]
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Create/update minor release branch
+        env:
+          TAG_NAME: ${{ github.ref_name }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          BRANCH_NAME="$(echo "$TAG_NAME" | sed -E 's/^v([0-9]+)\.([0-9]+)\..*/v\1.\2-release-branch/')"
+          SHA="${GITHUB_SHA}"
+
+          echo "Updating ${BRANCH_NAME} -> ${SHA}"
+          if ! gh api "repos/${GITHUB_REPOSITORY}/git/refs/heads/${BRANCH_NAME}" \
+            --method PATCH \
+            --field sha="${SHA}" \
+            --field force=true 2>/dev/null; then
+            gh api "repos/${GITHUB_REPOSITORY}/git/refs" \
+              --method POST \
+              --field ref="refs/heads/${BRANCH_NAME}" \
+              --field sha="${SHA}"
+          fi
+
   bump-pre_release-version:
     name: Bump Pre-release Version
     if: startsWith(github.ref, 'refs/tags/v') && (contains(github.ref_name, 'alpha') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc'))
@@ -340,10 +396,34 @@ jobs:
       contents: write
 
     steps:
-      - name: Check out main branch
+      - name: Determine source branch for tag
+        id: source_branch
+        run: |
+          # Fetch all branches to find which one contains this tag's commit
+          git init --quiet
+          git remote add origin "https://github.com/${{ github.repository }}.git"
+          git fetch origin --quiet
+
+          # Find branches containing the tagged commit
+          BRANCHES=$(git branch -r --contains ${{ github.sha }} | grep -v HEAD | sed 's/origin\///' | xargs)
+          echo "Branches containing commit: $BRANCHES"
+
+          # Prefer non-main branches (release branches) over main
+          SOURCE_BRANCH="main"
+          for branch in $BRANCHES; do
+            if [ "$branch" != "main" ] && [ "$branch" != "master" ]; then
+              SOURCE_BRANCH="$branch"
+              break
+            fi
+          done
+
+          echo "Selected source branch: $SOURCE_BRANCH"
+          echo "branch=$SOURCE_BRANCH" >> $GITHUB_OUTPUT
+
+      - name: Check out source branch
         uses: actions/checkout@v4.2.0
         with:
-          ref: main
+          ref: ${{ steps.source_branch.outputs.branch }}
           token: ${{ secrets.GH_PAT }}
 
       - name: Bump pre-release version
@@ -410,6 +490,8 @@ jobs:
            grep -E "^(version|appVersion):" "$CHART_FILE"
 
       - name: Commit and push version bump
+        env:
+          SOURCE_BRANCH: ${{ steps.source_branch.outputs.branch }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -425,9 +507,11 @@ jobs:
 
           git commit -m "Bump version to next iteration after ${{ github.ref_name }} release"
 
+          echo "Pushing to branch: $SOURCE_BRANCH"
+
           # Push with retry logic
           attempts=0
-          until git push origin main; do
+          until git push origin HEAD:$SOURCE_BRANCH; do
             attempts=$((attempts + 1))
             if [[ $attempts -ge 4 ]]; then
               echo "ERROR: Failed to push after 4 attempts." >&2
@@ -436,5 +520,5 @@ jobs:
             delay=$((2 ** attempts))
             echo "Push failed (attempt $attempts). Retrying in ${delay} seconds..."
             sleep ${delay}
-            git pull --rebase origin main
+            git pull --rebase origin $SOURCE_BRANCH
           done

@@ -2,4 +2,32 @@
 zh-TW:
   oidc_accounts:
     link:
-      account_creation_disabled: 透過單一登入建立新帳戶的功能已被禁用。請聯絡管理員為您建立帳戶。
+      title_link: 連結 OIDC 帳戶
+      title_create: 建立帳戶
+      verify_heading: 驗證您的身分
+      verify_description_html: "若要連結您的 %{provider} 帳戶%{email_suffix}，請輸入密碼驗證您的身分。"
+      email_suffix_html: "（<strong>%{email}</strong>）"
+      email_label: 電子郵件
+      email_placeholder: 請輸入您的電子郵件
+      password_label: 密碼
+      password_placeholder: 請輸入您的密碼
+      verify_hint: 這可確保只有您本人能夠將外部帳戶連結到您的個人檔案。
+      submit_link: 連結帳戶
+      create_heading: 建立新帳戶
+      create_description_html: "找不到使用電子郵件 <strong>%{email}</strong> 的帳戶。點擊下方使用您的 %{provider} 身分建立新帳戶。"
+      info_email: 電子郵件：
+      info_name: 姓名：
+      submit_create: 建立帳戶
+      account_creation_disabled: 透過單一登入建立帳戶已停用。請聯絡管理員。
+      cancel: 取消
+    new_user:
+      title: 完成您的帳戶
+      heading: 建立您的帳戶
+      description: 請確認您的資訊以完成使用 %{provider} 身分建立帳戶。
+      email_label: 電子郵件（來自 SSO 提供者）
+      first_name_label: 名
+      first_name_placeholder: 請輸入您的名
+      last_name_label: 姓
+      last_name_placeholder: 請輸入您的姓
+      submit: 建立帳戶
+      cancel: 取消

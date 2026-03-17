@@ -42,7 +42,7 @@ class Provider::Openai::PdfProcessor
       For each document, you must determine:
 
       1. **Document Type**: Classify the document as one of the following:
-         - `bank_statement`: A bank account statement showing transactions, balances, and account activity
+         - `bank_statement`: A bank account statement showing transactions, balances, and account activity. This includes mobile money statements (like M-PESA, Venmo, PayPal, Cash App), digital wallet statements, and any statement showing a list of financial transactions with dates and amounts.
          - `credit_card_statement`: A credit card statement showing charges, payments, and balances
          - `investment_statement`: An investment/brokerage statement showing holdings, trades, or portfolio performance
          - `financial_document`: General financial documents like tax forms, receipts, invoices, or financial reports

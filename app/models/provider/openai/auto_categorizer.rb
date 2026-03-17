@@ -105,7 +105,7 @@ class Provider::Openai::AutoCategorizer
       - Return 1 result per transaction
       - Correlate each transaction by ID (transaction_id)
       - Attempt to match the most specific category possible (i.e. subcategory over parent category)
-      - Category and transaction classifications should match (i.e. if transaction is an "expense", the category must have classification of "expense")
+      - Any category can be used for any transaction regardless of whether the transaction is income or expense
       - If you don't know the category, return "null"
         - You should always favor "null" over false positives
         - Be slightly pessimistic.  Only match a category if you're 60%+ confident it is the correct one.

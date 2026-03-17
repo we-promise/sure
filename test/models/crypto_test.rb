@@ -27,4 +27,10 @@ class CryptoTest < ActiveSupport::TestCase
     assert crypto.tax_deferred?
     assert_not crypto.tax_exempt?
   end
+
+  test "supports_trades? is true only for exchange subtype" do
+    assert Crypto.new(subtype: "exchange").supports_trades?
+    refute Crypto.new(subtype: "wallet").supports_trades?
+    refute Crypto.new(subtype: nil).supports_trades?
+  end
 end

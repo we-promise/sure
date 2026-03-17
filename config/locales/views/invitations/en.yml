@@ -1,7 +1,14 @@
 ---
 en:
   invitations:
+    accept_choice:
+      create_account: Create new account
+      joined_household: You have joined the household.
+      message: "%{inviter} has invited you to join as %{role}."
+      sign_in_existing: I already have an account
+      title: Join %{family}
     create:
+      existing_user_added: User has been added to your household.
       failure: Could not send invitation
       success: Invitation sent successfully
     destroy:
@@ -12,8 +19,9 @@ en:
       email_label: Email Address
       email_placeholder: Enter email address
       role_admin: Administrator
+      role_guest: Guest
       role_label: Role
       role_member: Member
       submit: Send Invitation
-      subtitle: Send an invitation to join your family account on %{product_name}
+      subtitle: Send an invitation to join your %{moniker} account on %{product_name}
       title: Invite Someone

@@ -4,7 +4,7 @@
     <uses-permission android:name="android.permission.INTERNET"/>
     
     <application
-        android:label="Sure Finance"
+        android:label="Sure Finances"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

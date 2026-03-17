@@ -53,7 +53,8 @@
           <div class="flex items-center justify-between bg-container p-4 shadow-border-xs rounded-lg">
             <div class="flex items-center gap-3">
               <div class="w-9 h-9 shrink-0 bg-surface rounded-full flex items-center justify-center">
-                <%= icon identity.provider_config&.dig(:icon) || "key", class: "w-5 h-5 text-secondary" %>
+                <% icon_name = identity.provider_config&.dig(:icon).presence || "key" %>
+                <%= icon icon_name, class: "w-5 h-5 text-secondary" %>
               </div>
               <div>
                 <p class="font-medium text-primary"><%= identity.provider_config&.dig(:label) || identity.provider.titleize %></p>

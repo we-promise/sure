@@ -1,10 +1,11 @@
-<h1><%= t(".greeting", product: product_name) %></h1>
+<h1><%= t(".greeting", product_name: product_name) %></h1>
 
 <p>
   <%= t(
     ".body",
     inviter: @invitation.inviter.display_name,
     family: @invitation.family.name,
+    moniker: @invitation.family.moniker_label.downcase,
     product_name: product_name
   ).html_safe %>
 </p>

@@ -1,9 +1,9 @@
 class DS::Dialog < DesignSystemComponent
-  renders_one :header, ->(title: nil, subtitle: nil, hide_close_icon: false, **opts, &block) do
+  renders_one :header, ->(title: nil, subtitle: nil, custom_header: false, **opts, &block) do
     content_tag(:header, class: "px-4 flex flex-col gap-2", **opts) do
       title_div = content_tag(:div, class: "flex items-center justify-between gap-2") do
         title = content_tag(:h2, title, class: class_names("font-medium text-primary", drawer? ? "text-lg" : "")) if title
-        close_icon = render DS::Button.new(variant: "icon", class: "ml-auto", icon: "x", tabindex: "-1", data: { action: "DS--dialog#close" }) unless hide_close_icon
+        close_icon = close_button unless custom_header
         safe_join([ title, close_icon ].compact)
       end
 
@@ -33,7 +33,7 @@ class DS::Dialog < DesignSystemComponent
     end
   end
 
-  attr_reader :variant, :auto_open, :reload_on_close, :width, :disable_frame, :content_class, :disable_click_outside, :opts
+  attr_reader :variant, :auto_open, :reload_on_close, :width, :disable_frame, :content_class, :disable_click_outside, :opts, :responsive
 
   VARIANTS = %w[modal drawer].freeze
   WIDTHS = {
@@ -43,7 +43,7 @@ class DS::Dialog < DesignSystemComponent
     full: "lg:max-w-full"
   }.freeze
 
-  def initialize(variant: "modal", auto_open: true, reload_on_close: false, width: "md", frame: nil, disable_frame: false, content_class: nil, disable_click_outside: false, **opts)
+  def initialize(variant: "modal", auto_open: true, reload_on_close: false, width: "md", frame: nil, disable_frame: false, content_class: nil, disable_click_outside: false, responsive: false, **opts)
     @variant = variant.to_sym
     @auto_open = auto_open
     @reload_on_close = reload_on_close
@@ -52,6 +52,7 @@ class DS::Dialog < DesignSystemComponent
     @disable_frame = disable_frame
     @content_class = content_class
     @disable_click_outside = disable_click_outside
+    @responsive = responsive
     @opts = opts
   end
 
@@ -69,7 +70,9 @@ class DS::Dialog < DesignSystemComponent
   end
 
   def dialog_outer_classes
-    variant_classes = if drawer?
+    variant_classes = if responsive?
+      "items-center justify-center lg:items-end lg:justify-end"
+    elsif drawer?
       "items-end justify-end"
     else
       "items-center justify-center"
@@ -82,7 +85,9 @@ class DS::Dialog < DesignSystemComponent
   end
 
   def dialog_inner_classes
-    variant_classes = if drawer?
+    variant_classes = if responsive?
+      "max-h-full lg:h-full lg:w-[550px]"
+    elsif drawer?
       "lg:w-[550px] h-full"
     else
       class_names(
@@ -115,5 +120,21 @@ class DS::Dialog < DesignSystemComponent
 
   def drawer?
     variant == :drawer
+  end
+
+  def responsive?
+    @responsive
+  end
+
+  def close_button
+    classes = responsive? ? "ml-auto hidden lg:flex" : "ml-auto"
+    render DS::Button.new(
+      variant: "icon",
+      class: classes,
+      icon: "x",
+      title: I18n.t("common.close"),
+      aria_label: I18n.t("common.close"),
+      data: { action: "DS--dialog#close" }
+    )
   end
 end

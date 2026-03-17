@@ -3,7 +3,7 @@
 <div class="space-y-4">
   <p class="text-secondary mb-4">
     Manage single sign-on authentication providers for your instance.
-    <% unless Flipper.enabled?(:db_sso_providers) %>
+    <% unless FeatureFlags.db_sso_providers? %>
       <span class="text-warning">Changes require a server restart to take effect.</span>
     <% end %>
   </p>
@@ -107,7 +107,7 @@
           <p class="font-medium text-primary">Database-backed providers</p>
           <p class="text-sm text-secondary">Load providers from database instead of YAML config</p>
         </div>
-        <% if Flipper.enabled?(:db_sso_providers) %>
+        <% if FeatureFlags.db_sso_providers? %>
           <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
             Enabled
           </span>
