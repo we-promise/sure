@@ -4,6 +4,11 @@ class PreferencesService {
   static const _groupByTypeKey = 'dashboard_group_by_type';
   static const _themeModeKey = 'theme_mode';
   static const _biometricEnabledKey = 'biometric_enabled';
+  static const _onboardingCompleteKey = 'onboarding_complete';
+  static const _userCountryKey = 'user_country';
+  static const _consentGivenKey = 'consent_given';
+  static const _consentVersionKey = 'consent_version';
+  static const _consentDateKey = 'consent_date';
 
   static PreferencesService? _instance;
   SharedPreferences? _prefs;
@@ -49,5 +54,43 @@ class PreferencesService {
   Future<void> setBiometricEnabled(bool value) async {
     final prefs = await _preferences;
     await prefs.setBool(_biometricEnabledKey, value);
+  }
+
+  // Onboarding
+
+  Future<bool> getOnboardingComplete() async {
+    final prefs = await _preferences;
+    return prefs.getBool(_onboardingCompleteKey) ?? false;
+  }
+
+  Future<void> setOnboardingComplete(bool value) async {
+    final prefs = await _preferences;
+    await prefs.setBool(_onboardingCompleteKey, value);
+  }
+
+  // Country
+
+  Future<String> getUserCountry() async {
+    final prefs = await _preferences;
+    return prefs.getString(_userCountryKey) ?? 'Kenya';
+  }
+
+  Future<void> setUserCountry(String country) async {
+    final prefs = await _preferences;
+    await prefs.setString(_userCountryKey, country);
+  }
+
+  // Legal consent
+
+  Future<bool> getConsentGiven() async {
+    final prefs = await _preferences;
+    return prefs.getBool(_consentGivenKey) ?? false;
+  }
+
+  Future<void> setConsent({required String version}) async {
+    final prefs = await _preferences;
+    await prefs.setBool(_consentGivenKey, true);
+    await prefs.setString(_consentVersionKey, version);
+    await prefs.setString(_consentDateKey, DateTime.now().toIso8601String());
   }
 }

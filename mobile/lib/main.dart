@@ -12,6 +12,7 @@ import 'screens/login_screen.dart';
 import 'screens/main_navigation_screen.dart';
 import 'screens/access_denied_screen.dart';
 import 'screens/biometric_lock_screen.dart';
+import 'screens/onboarding_screen.dart';
 import 'screens/sso_onboarding_screen.dart';
 import 'services/api_config.dart';
 import 'services/connectivity_service.dart';
@@ -199,6 +200,7 @@ class _AppWrapperState extends State<AppWrapper> with WidgetsBindingObserver {
   bool _isCheckingConfig = true;
   bool _hasBackendUrl = false;
   bool _isLocked = false;
+  bool _onboardingComplete = true; // assume complete until checked
   late final AppLinks _appLinks;
   StreamSubscription<Uri>? _linkSubscription;
 
@@ -207,6 +209,7 @@ class _AppWrapperState extends State<AppWrapper> with WidgetsBindingObserver {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _checkBackendConfig();
+    _checkOnboarding();
     _initDeepLinks();
   }
 
@@ -282,6 +285,17 @@ class _AppWrapperState extends State<AppWrapper> with WidgetsBindingObserver {
     }
   }
 
+  Future<void> _checkOnboarding() async {
+    final complete = await PreferencesService.instance.getOnboardingComplete();
+    if (mounted) {
+      setState(() => _onboardingComplete = complete);
+    }
+  }
+
+  void _onOnboardingComplete() {
+    setState(() => _onboardingComplete = true);
+  }
+
   void _onBackendConfigSaved() {
     setState(() {
       _hasBackendUrl = true;
@@ -308,6 +322,11 @@ class _AppWrapperState extends State<AppWrapper> with WidgetsBindingObserver {
       return BackendConfigScreen(
         onConfigSaved: _onBackendConfigSaved,
       );
+    }
+
+    // Show onboarding flow on first launch
+    if (!_onboardingComplete) {
+      return OnboardingScreen(onComplete: _onOnboardingComplete);
     }
 
     return Consumer<AuthProvider>(
