@@ -237,7 +237,7 @@ class _BackendConfigScreenState extends State<BackendConfigScreen> {
                       ),
                       const SizedBox(height: 12),
                       Text(
-                        '• https://demo.sure.am\n'
+                        '• https://app.sure.am\n'
                         '• https://your-domain.com\n'
                         '• http://localhost:3000',
                         style: TextStyle(

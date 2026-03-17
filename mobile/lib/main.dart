@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:app_links/app_links.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'config/app_config.dart';
 import 'providers/auth_provider.dart';
 import 'providers/accounts_provider.dart';
 import 'providers/transactions_provider.dart';
@@ -13,13 +14,14 @@ import 'screens/sso_onboarding_screen.dart';
 import 'services/api_config.dart';
 import 'services/connectivity_service.dart';
 import 'services/log_service.dart';
+import 'theme/sure_theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await ApiConfig.initialize();
 
   // Add initial log entry
-  LogService.instance.info('App', 'Sure app starting...');
+  LogService.instance.info('App', '${AppConfig.productName} Finance app starting...');
 
   runApp(const SureApp());
 }
@@ -63,6 +65,10 @@ class SureApp extends StatelessWidget {
         ),
       ],
       child: MaterialApp(
+        title: AppConfig.appTitle,
+        debugShowCheckedModeBanner: false,
+        theme: SureTheme.light(),
+        darkTheme: SureTheme.dark(),
         title: 'Sure Finances',
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
