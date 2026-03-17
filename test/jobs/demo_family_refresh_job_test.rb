@@ -38,9 +38,17 @@ class DemoFamilyRefreshJobTest < ActiveJob::TestCase
       Session.create!(user: @demo_user)
       Family.create!(name: "New Family Today", created_at: 6.hours.ago)
       Family.create!(name: "Old Family", created_at: 2.days.ago)
+      @demo_user.api_keys.create!(
+        name: "monitoring",
+        key: ApiKey::DEMO_MONITORING_KEY,
+        scopes: [ "read" ],
+        source: "monitoring"
+      )
 
       generator = mock
-      generator.expects(:generate_default_data!).with(skip_clear: true, email: @demo_email)
+      generator.expects(:generate_default_data!).with(skip_clear: true, email: @demo_email) do
+        assert_nil ApiKey.find_by(display_key: ApiKey::DEMO_MONITORING_KEY)
+      end
       Demo::Generator.expects(:new).returns(generator)
 
       assert_enqueued_with(job: DestroyJob, args: [ @demo_family ]) do

@@ -13,6 +13,7 @@ class DemoFamilyRefreshJob < ApplicationJob
     newly_created_families_count = Family.where(created_at: period_start...period_end).count
 
     if old_family
+      delete_old_family_monitoring_key!(old_family)
       anonymize_family_emails!(old_family)
       DestroyJob.perform_later(old_family)
     end
@@ -39,6 +40,13 @@ class DemoFamilyRefreshJob < ApplicationJob
         .where(created_at: period_start...period_end)
         .distinct
         .count(:id)
+    end
+
+
+    def delete_old_family_monitoring_key!(family)
+      ApiKey
+        .where(user_id: family.users.select(:id), display_key: ApiKey::DEMO_MONITORING_KEY)
+        .delete_all
     end
 
     def anonymize_family_emails!(family)
