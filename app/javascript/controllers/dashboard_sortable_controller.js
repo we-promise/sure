@@ -5,7 +5,7 @@ export default class extends Controller {
 
   // Hold delay to require deliberate press-and-hold before activating drag mode
   static values = {
-    holdDelay: { type: Number, default: 500 },
+    holdDelay: { type: Number, default: 750 },
   };
 
   connect() {
