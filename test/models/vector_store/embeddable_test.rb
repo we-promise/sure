@@ -100,6 +100,18 @@ class VectorStore::EmbeddableTest < ActiveSupport::TestCase
     assert_equal 1, chunks.size
   end
 
+  test "chunk_text hard-splits oversized paragraphs" do
+    # A single paragraph longer than CHUNK_SIZE with no paragraph breaks
+    long_para = "X" * 5000
+    chunks = @host.chunk_text(long_para)
+
+    assert chunks.size > 1
+    chunks.each do |chunk|
+      assert chunk.length <= VectorStore::Embeddable::CHUNK_SIZE + VectorStore::Embeddable::CHUNK_OVERLAP + 2,
+        "Chunk too large: #{chunk.length} chars"
+    end
+  end
+
   # --- embed ---
 
   test "embed calls embedding endpoint and returns vector" do

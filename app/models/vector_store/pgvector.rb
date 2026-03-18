@@ -13,6 +13,12 @@
 class VectorStore::Pgvector < VectorStore::Base
   include VectorStore::Embeddable
 
+  PGVECTOR_SUPPORTED_EXTENSIONS = (VectorStore::Embeddable::TEXT_EXTENSIONS + [ ".pdf" ]).uniq.freeze
+
+  def supported_extensions
+    PGVECTOR_SUPPORTED_EXTENSIONS
+  end
+
   def create_store(name:)
     with_response do
       { id: SecureRandom.uuid }
@@ -41,30 +47,32 @@ class VectorStore::Pgvector < VectorStore::Base
       file_id = SecureRandom.uuid
       now = Time.current
 
-      chunks.each_with_index do |chunk_content, index|
-        embedding_literal = "[#{vectors[index].join(',')}]"
+      connection.transaction do
+        chunks.each_with_index do |chunk_content, index|
+          embedding_literal = "[#{vectors[index].join(',')}]"
 
-        connection.exec_insert(
-          <<~SQL,
-            INSERT INTO vector_store_chunks
-              (id, store_id, file_id, filename, chunk_index, content, embedding, metadata, created_at, updated_at)
-            VALUES
-              ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-          SQL
-          "VectorStore::Pgvector InsertChunk",
-          [
-            bind_param("id", SecureRandom.uuid),
-            bind_param("store_id", store_id),
-            bind_param("file_id", file_id),
-            bind_param("filename", filename),
-            bind_param("chunk_index", index),
-            bind_param("content", chunk_content),
-            bind_param("embedding", embedding_literal, ActiveRecord::Type::String.new),
-            bind_param("metadata", "{}"),
-            bind_param("created_at", now),
-            bind_param("updated_at", now)
-          ]
-        )
+          connection.exec_insert(
+            <<~SQL,
+              INSERT INTO vector_store_chunks
+                (id, store_id, file_id, filename, chunk_index, content, embedding, metadata, created_at, updated_at)
+              VALUES
+                ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+            SQL
+            "VectorStore::Pgvector InsertChunk",
+            [
+              bind_param("id", SecureRandom.uuid),
+              bind_param("store_id", store_id),
+              bind_param("file_id", file_id),
+              bind_param("filename", filename),
+              bind_param("chunk_index", index),
+              bind_param("content", chunk_content),
+              bind_param("embedding", embedding_literal, ActiveRecord::Type::String.new),
+              bind_param("metadata", "{}"),
+              bind_param("created_at", now),
+              bind_param("updated_at", now)
+            ]
+          )
+        end
       end
 
       { file_id: file_id }

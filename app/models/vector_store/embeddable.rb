@@ -37,6 +37,8 @@ module VectorStore::Embeddable
     end
 
     # Split text on paragraph boundaries (~2000 char chunks, ~200 char overlap).
+    # Paragraphs longer than CHUNK_SIZE are hard-split to avoid overflowing
+    # embedding model token limits.
     def chunk_text(text)
       return [] if text.blank?
 
@@ -48,21 +50,40 @@ module VectorStore::Embeddable
         para = para.strip
         next if para.empty?
 
-        if current_chunk.empty?
-          current_chunk << para
-        elsif (current_chunk.length + para.length + 2) <= CHUNK_SIZE
-          current_chunk << "\n\n" << para
+        # Hard-split oversized paragraphs into CHUNK_SIZE slices with overlap
+        slices = if para.length > CHUNK_SIZE
+          hard_split(para)
         else
-          chunks << current_chunk.freeze
-          # Start new chunk with overlap from the end of the previous chunk
-          overlap = current_chunk.last(CHUNK_OVERLAP)
-          current_chunk = +""
-          current_chunk << overlap << "\n\n" << para
+          [ para ]
+        end
+
+        slices.each do |slice|
+          if current_chunk.empty?
+            current_chunk << slice
+          elsif (current_chunk.length + slice.length + 2) <= CHUNK_SIZE
+            current_chunk << "\n\n" << slice
+          else
+            chunks << current_chunk.freeze
+            overlap = current_chunk.last(CHUNK_OVERLAP)
+            current_chunk = +""
+            current_chunk << overlap << "\n\n" << slice
+          end
         end
       end
 
       chunks << current_chunk.freeze unless current_chunk.empty?
       chunks
+    end
+
+    # Hard-split a single long string into CHUNK_SIZE slices with CHUNK_OVERLAP.
+    def hard_split(text)
+      slices = []
+      offset = 0
+      while offset < text.length
+        slices << text[offset, CHUNK_SIZE]
+        offset += CHUNK_SIZE - CHUNK_OVERLAP
+      end
+      slices
     end
 
     # Embed a single text string → vector array.

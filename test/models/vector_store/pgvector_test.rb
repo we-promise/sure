@@ -35,6 +35,7 @@ class VectorStore::PgvectorTest < ActiveSupport::TestCase
     @adapter.expects(:embed_batch).with([ "Hello world" ]).returns([ [ 0.1, 0.2, 0.3 ] ])
 
     mock_conn = mock("connection")
+    mock_conn.expects(:transaction).yields
     mock_conn.expects(:exec_insert).once
     @adapter.stubs(:connection).returns(mock_conn)
 
@@ -60,12 +61,13 @@ class VectorStore::PgvectorTest < ActiveSupport::TestCase
     assert_match(/No chunks produced/, response.error.message)
   end
 
-  test "upload_file inserts multiple chunks" do
+  test "upload_file inserts multiple chunks in a transaction" do
     @adapter.expects(:extract_text).returns("chunk1\n\nchunk2")
     @adapter.expects(:chunk_text).returns([ "chunk1", "chunk2" ])
     @adapter.expects(:embed_batch).returns([ [ 0.1 ], [ 0.2 ] ])
 
     mock_conn = mock("connection")
+    mock_conn.expects(:transaction).yields
     mock_conn.expects(:exec_insert).twice
     @adapter.stubs(:connection).returns(mock_conn)
 
@@ -128,9 +130,12 @@ class VectorStore::PgvectorTest < ActiveSupport::TestCase
     assert_equal "unexpected error", response.error.message
   end
 
-  test "supported_extensions returns the default list" do
+  test "supported_extensions matches extractable formats only" do
     assert_includes @adapter.supported_extensions, ".pdf"
     assert_includes @adapter.supported_extensions, ".txt"
     assert_includes @adapter.supported_extensions, ".csv"
+    assert_not_includes @adapter.supported_extensions, ".png"
+    assert_not_includes @adapter.supported_extensions, ".zip"
+    assert_not_includes @adapter.supported_extensions, ".docx"
   end
 end
