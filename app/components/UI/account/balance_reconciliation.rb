@@ -8,13 +8,13 @@ class UI::Account::BalanceReconciliation < ApplicationComponent
 
   def reconciliation_items
     case account.accountable_type
-    when "Depository", "OtherAsset", "OtherLiability"
+    when "Depository", "OtherAsset"
       default_items
     when "CreditCard"
       credit_card_items
     when "Investment"
       investment_items
-    when "Loan"
+    when "Loan", "OtherLiability"
       loan_items
     when "Property", "Vehicle"
       asset_items
