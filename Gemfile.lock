@@ -282,7 +282,7 @@ GEM
       actionview (>= 5.0.0)
       activesupport (>= 5.0.0)
     jmespath (1.6.2)
-    json (2.18.1)
+    json (2.19.2)
     json-jwt (1.16.7)
       activesupport (>= 4.2)
       aes_key_wrap
