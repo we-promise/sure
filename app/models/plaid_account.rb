@@ -19,6 +19,7 @@ class PlaidAccount < ApplicationRecord
   has_one :linked_account, through: :account_provider, source: :account
 
   validates :name, :plaid_type, :currency, presence: true
+  validates :plaid_id, uniqueness: { scope: :plaid_item_id }
   validate :has_balance
 
   # Helper to get account using new system first, falling back to legacy
