@@ -56,6 +56,22 @@ class Rule::ConditionTest < ActiveSupport::TestCase
     assert_equal 3, filtered.count
   end
 
+  test "applies transaction_amount condition with not equal operator using absolute values" do
+    scope = @rule_scope
+
+    condition = Rule::Condition.new(
+      rule: @transaction_rule,
+      condition_type: "transaction_amount",
+      operator: "!=",
+      value: "50"
+    )
+
+    scope = condition.prepare(scope)
+
+    filtered = condition.apply(scope)
+    assert_equal 4, filtered.count
+  end
+
   test "applies transaction_merchant condition" do
     scope = @rule_scope
 
