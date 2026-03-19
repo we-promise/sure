@@ -28,40 +28,43 @@
     <% holdings = investment_statement.top_holdings(limit: 5) %>
     <% if holdings.any? %>
       <div class="bg-container-inset rounded-xl p-1 mx-4 overflow-x-auto">
-        <div class="w-max sm:w-full">
-          <div class="px-4 py-2 grid grid-cols-4 items-center uppercase text-xs font-medium text-secondary">
-            <div class="flex-1"><%= t(".holding") %></div>
-            <div class="text-right"><%= t(".weight") %></div>
-            <div class="text-right"><%= t(".value") %></div>
-            <div class="text-right"><%= t(".return") %></div>
-          </div>
-
-          <div class="shadow-border-xs rounded-lg bg-container font-medium text-sm">
+        <table class="w-full">
+          <thead>
+            <tr class="uppercase text-xs font-medium text-secondary">
+              <th class="px-4 py-2 text-left font-medium"><%= t(".holding") %></th>
+              <th class="px-4 py-2 text-right font-medium"><%= t(".weight") %></th>
+              <th class="px-4 py-2 text-right font-medium"><%= t(".value") %></th>
+              <th class="px-4 py-2 text-right font-medium"><%= t(".return") %></th>
+            </tr>
+          </thead>
+          <tbody class="shadow-border-xs rounded-lg bg-container font-medium text-sm">
             <% holdings.each_with_index do |holding, idx| %>
-              <div class="p-4 grid grid-cols-4 items-center <%= idx < holdings.size - 1 ? "border-b border-primary" : "" %>">
-                <div class="flex-1 flex items-center gap-3">
-                  <% if holding.security.logo_url.present? %>
-                    <img src="<%= holding.security.logo_url %>" alt="<%= holding.ticker %>" class="w-8 h-8 rounded-full">
-                  <% else %>
-                    <div class="w-8 h-8 rounded-full bg-container-inset flex items-center justify-center text-xs font-medium text-secondary">
-                      <%= holding.ticker.to_s.first(2).presence || "—" %>
+              <tr class="<%= idx < holdings.size - 1 ? "border-b border-primary" : "" %>">
+                <td class="p-4">
+                  <div class="flex items-center gap-3">
+                    <% if holding.security.logo_url.present? %>
+                      <img src="<%= holding.security.logo_url %>" alt="<%= holding.ticker %>" class="w-8 h-8 rounded-full">
+                    <% else %>
+                      <div class="w-8 h-8 rounded-full bg-container-inset flex items-center justify-center text-xs font-medium text-secondary">
+                        <%= holding.ticker.to_s.first(2).presence || "—" %>
+                      </div>
+                    <% end %>
+                    <div class="max-w-32">
+                      <p class="font-medium truncate"><%= holding.ticker %></p>
+                      <p class="text-xs text-secondary"><%= truncate(holding.name, length: 20) %></p>
                     </div>
-                  <% end %>
-                  <div class="max-w-32">
-                    <p class="font-medium truncate"><%= holding.ticker %></p>
-                    <p class="text-xs text-secondary"><%= truncate(holding.name, length: 20) %></p>
                   </div>
-                </div>
+                </td>
 
-                <div class="text-right text-secondary privacy-sensitive">
+                <td class="p-4 text-right text-secondary privacy-sensitive">
                   <%= number_to_percentage(holding.weight || 0, precision: 1) %>
-                </div>
+                </td>
 
-                <div class="text-right privacy-sensitive">
+                <td class="p-4 text-right privacy-sensitive">
                   <%= format_money(holding.amount_money) %>
-                </div>
+                </td>
 
-                <div class="text-right">
+                <td class="p-4 text-right">
                   <% if holding.trend %>
                     <span class="privacy-sensitive" style="color: <%= holding.trend.color %>">
                       <%= holding.trend.percent_formatted %>
@@ -69,11 +72,11 @@
                   <% else %>
                     <span class="text-secondary">-</span>
                   <% end %>
-                </div>
-              </div>
+                </td>
+              </tr>
             <% end %>
-          </div>
-        </div>
+          </tbody>
+        </table>
       </div>
     <% end %>
 
