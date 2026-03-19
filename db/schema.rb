@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_02_18_120001) do
+ActiveRecord::Schema[7.2].define(version: 2026_03_14_131357) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -125,6 +125,17 @@ ActiveRecord::Schema[7.2].define(version: 2026_02_18_120001) do
     t.index ["user_id"], name: "index_api_keys_on_user_id"
   end
 
+  create_table "archived_exports", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "email", null: false
+    t.string "family_name"
+    t.string "download_token_digest", null: false
+    t.datetime "expires_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["download_token_digest"], name: "index_archived_exports_on_download_token_digest", unique: true
+    t.index ["expires_at"], name: "index_archived_exports_on_expires_at"
+  end
+
   create_table "balances", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "account_id", null: false
     t.date "date", null: false
@@ -184,8 +195,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_02_18_120001) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.uuid "parent_id"
-    t.string "classification", default: "expense", null: false
     t.string "lucide_icon", default: "shapes", null: false
+    t.string "classification_unused", default: "expense", null: false
     t.index ["family_id"], name: "index_categories_on_family_id"
   end
 
@@ -740,7 +751,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_02_18_120001) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "token_digest"
-    t.index ["email", "family_id"], name: "index_invitations_on_email_and_family_id", unique: true
+    t.index ["email", "family_id"], name: "index_invitations_on_email_and_family_id_pending", unique: true, where: "(accepted_at IS NULL)"
     t.index ["email"], name: "index_invitations_on_email"
     t.index ["family_id"], name: "index_invitations_on_family_id"
     t.index ["inviter_id"], name: "index_invitations_on_inviter_id"
@@ -1463,6 +1474,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_02_18_120001) do
     t.jsonb "preferences", default: {}, null: false
     t.string "locale"
     t.string "ui_layout"
+    t.uuid "default_account_id"
+    t.index ["default_account_id"], name: "index_users_on_default_account_id"
     t.index ["email"], name: "index_users_on_email", unique: true
     t.index ["family_id"], name: "index_users_on_family_id"
     t.index ["last_viewed_chat_id"], name: "index_users_on_last_viewed_chat_id"
@@ -1573,6 +1586,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_02_18_120001) do
   add_foreign_key "transactions", "merchants"
   add_foreign_key "transfers", "transactions", column: "inflow_transaction_id", on_delete: :cascade
   add_foreign_key "transfers", "transactions", column: "outflow_transaction_id", on_delete: :cascade
+  add_foreign_key "users", "accounts", column: "default_account_id", on_delete: :nullify
   add_foreign_key "users", "chats", column: "last_viewed_chat_id"
   add_foreign_key "users", "families"
 end

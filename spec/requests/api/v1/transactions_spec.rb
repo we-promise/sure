@@ -46,7 +46,6 @@ RSpec.describe 'API V1 Transactions', type: :request do
   let(:category) do
     family.categories.create!(
       name: 'Groceries',
-      classification: 'expense',
       color: '#4CAF50',
       lucide_icon: 'shopping-cart'
     )

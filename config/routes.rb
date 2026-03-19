@@ -125,6 +125,8 @@ Rails.application.routes.draw do
     end
   end
 
+  get "exports/archive/:token", to: "archived_exports#show", as: :archived_export
+
   get "changelog", to: "pages#changelog"
   get "feedback", to: "pages#feedback"
   patch "dashboard/preferences", to: "pages#update_preferences"
@@ -167,6 +169,7 @@ Rails.application.routes.draw do
     resource :preferences, only: :show
     resource :hosting, only: %i[show update] do
       delete :clear_cache, on: :collection
+      delete :disconnect_external_assistant, on: :collection
     end
     resource :payment, only: :show
     resource :security, only: :show
@@ -210,6 +213,7 @@ Rails.application.routes.draw do
   end
 
   resources :budgets, only: %i[index show edit update], param: :month_year do
+    post :copy_previous, on: :member
     get :picker, on: :collection
 
     resources :budget_categories, only: %i[index show update]
@@ -235,6 +239,7 @@ Rails.application.routes.draw do
     resource :configuration, only: %i[show update], module: :import
     resource :clean, only: :show, module: :import
     resource :confirm, only: :show, module: :import
+    resource :qif_category_selection, only: %i[show update], module: :import
 
     resources :rows, only: %i[show update], module: :import
     resources :mappings, only: :update, module: :import
@@ -245,6 +250,7 @@ Rails.application.routes.draw do
       post :unlock_cost_basis
       patch :remap_security
       post :reset_security
+      post :sync_prices
     end
   end
   resources :trades, only: %i[show new create update destroy] do
@@ -264,7 +270,9 @@ Rails.application.routes.draw do
 
   resources :transactions, only: %i[index new create show update destroy] do
     resource :transfer_match, only: %i[new create]
+    resource :pending_duplicate_merges, only: %i[new create]
     resource :category, only: :update, controller: :transaction_categories
+    resources :attachments, only: %i[show create destroy], controller: :transaction_attachments
 
     collection do
       delete :clear_filter
@@ -322,6 +330,8 @@ Rails.application.routes.draw do
       post :sync
       get :sparkline
       patch :toggle_active
+      patch :set_default
+      patch :remove_default
       get :select_provider
       get :confirm_unlink
       delete :unlink
@@ -372,6 +382,8 @@ Rails.application.routes.draw do
       post "auth/login", to: "auth#login"
       post "auth/refresh", to: "auth#refresh"
       post "auth/sso_exchange", to: "auth#sso_exchange"
+      post "auth/sso_link", to: "auth#sso_link"
+      post "auth/sso_create_account", to: "auth#sso_create_account"
       patch "auth/enable_ai", to: "auth#enable_ai"
 
       # Production API endpoints
@@ -500,6 +512,12 @@ Rails.application.routes.draw do
       end
     end
     resources :users, only: [ :index, :update ]
+    resources :invitations, only: [ :destroy ]
+    resources :families, only: [] do
+      member do
+        delete :invitations, to: "invitations#destroy_all"
+      end
+    end
   end
 
   # Defines the root path route ("/")

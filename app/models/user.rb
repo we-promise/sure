@@ -24,6 +24,7 @@ class User < ApplicationRecord
 
   belongs_to :family
   belongs_to :last_viewed_chat, class_name: "Chat", optional: true
+  belongs_to :default_account, class_name: "Account", optional: true
   has_many :sessions, dependent: :destroy
   has_many :chats, dependent: :destroy
   has_many :api_keys, dependent: :destroy
@@ -136,7 +137,16 @@ class User < ApplicationRecord
   end
 
   def ai_available?
-    !Rails.application.config.app_mode.self_hosted? || ENV["OPENAI_ACCESS_TOKEN"].present? || Setting.openai_access_token.present?
+    return true unless Rails.application.config.app_mode.self_hosted?
+
+    effective_type = ENV["ASSISTANT_TYPE"].presence || family&.assistant_type.presence || "builtin"
+
+    case effective_type
+    when "external"
+      Assistant::External.available_for?(self)
+    else
+      ENV["OPENAI_ACCESS_TOKEN"].present? || Setting.openai_access_token.present?
+    end
   end
 
   def ai_enabled?
@@ -233,6 +243,15 @@ class User < ApplicationRecord
 
   def account_order
     AccountOrder.find(default_account_order) || AccountOrder.default
+  end
+
+  def default_account_for_transactions
+    return nil unless default_account_id.present?
+
+    account = default_account
+    return nil unless account&.eligible_for_transaction_default? && account.family_id == family_id
+
+    account
   end
 
   # Dashboard preferences management

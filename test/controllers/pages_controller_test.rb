@@ -41,8 +41,8 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
 
   test "dashboard renders sankey chart with subcategories" do
     # Create parent category with subcategory
-    parent_category = @family.categories.create!(name: "Shopping", classification: "expense", color: "#FF5733")
-    subcategory = @family.categories.create!(name: "Groceries", classification: "expense", parent: parent_category, color: "#33FF57")
+    parent_category = @family.categories.create!(name: "Shopping", color: "#FF5733")
+    subcategory = @family.categories.create!(name: "Groceries", parent: parent_category, color: "#33FF57")
 
     # Create transactions using helper
     create_transaction(account: @family.accounts.first, name: "General shopping", amount: 100, category: parent_category)
