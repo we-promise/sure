@@ -6,7 +6,7 @@ class Rule::ConditionFilter
   OPERATORS_MAP = {
     "text" => [ [ "Contains", "like" ], [ "Does not contain", "not_like" ], [ "Equal to", "=" ], [ "Not equal to", "!=" ], [ "Is empty", "is_null" ] ],
     "number" => [ [ "Greater than", ">" ], [ "Greater or equal to", ">=" ], [ "Less than", "<" ], [ "Less than or equal to", "<=" ], [ "Is equal to", "=" ], [ "Not equal to", "!=" ] ],
-    "select" => [ [ "Equal to", "=" ], [ "Is empty", "is_null" ] ]
+    "select" => [ [ "Equal to", "=" ], [ "Not equal to", "!=" ], [ "Is empty", "is_null" ] ]
   }
 
   def initialize(rule)
@@ -94,7 +94,11 @@ class Rule::ConditionFilter
       when "is_null"
         "IS NULL"
       else
-        operator
+        if operator == "!=" && type == "select"
+          "IS DISTINCT FROM"
+        else
+          operator
+        end
       end
     end
 
