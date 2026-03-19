@@ -23,7 +23,11 @@ class Rule::ConditionFilter::TransactionDetails < Rule::ConditionFilter
       # Note: For JSONB fields, both operators use contains semantics rather than exact match
       # because searching within structured JSON data makes contains more useful than exact equality
       sanitized_value = "%#{ActiveRecord::Base.sanitize_sql_like(value)}%"
-      sql_operator = operator == "like" ? "ILIKE" : "LIKE"
+      sql_operator = case operator
+      when "like" then "ILIKE"
+      when "!=" then "NOT LIKE"
+      else "LIKE"
+      end
 
       scope.where("transactions.extra::text #{sql_operator} ?", sanitized_value)
     end

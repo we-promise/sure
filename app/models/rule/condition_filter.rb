@@ -4,7 +4,7 @@ class Rule::ConditionFilter
   TYPES = [ "text", "number", "select" ]
 
   OPERATORS_MAP = {
-    "text" => [ [ "Contains", "like" ], [ "Equal to", "=" ], [ "Is empty", "is_null" ] ],
+    "text" => [ [ "Contains", "like" ], [ "Equal to", "=" ], [ "Not equal to", "!=" ], [ "Is empty", "is_null" ] ],
     "number" => [ [ "Greater than", ">" ], [ "Greater or equal to", ">=" ], [ "Less than", "<" ], [ "Less than or equal to", "<=" ], [ "Is equal to", "=" ] ],
     "select" => [ [ "Equal to", "=" ], [ "Is empty", "is_null" ] ]
   }
