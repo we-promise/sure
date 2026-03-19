@@ -7,13 +7,16 @@
   "full" => "w-full h-full"
 } %>
 
-<% if account.institution_domain.present? && Setting.brand_fetch_client_id.present? %>
-  <% logo_size = Setting.brand_fetch_logo_size %>
-  <%= image_tag "https://cdn.brandfetch.io/#{account.institution_domain}/icon/fallback/lettermark/w/#{logo_size}/h/#{logo_size}?c=#{Setting.brand_fetch_client_id}", class: "shrink-0 rounded-full #{size_classes[size]}" %>
-<% elsif account.logo_url.present? %>
-  <%= image_tag account.logo_url, class: "shrink-0 rounded-full #{size_classes[size]}", loading: "lazy" %>
-<% elsif account.logo.attached? %>
-  <%= image_tag account.logo, class: "shrink-0 rounded-full #{size_classes[size]}" %>
+<% if account.logo_url.present? %>
+  <%= image_tag account.logo_url,
+        class: "shrink-0 rounded-full #{size_classes[size]}",
+        loading: "lazy" %>
 <% else %>
-  <%= render DS::FilledIcon.new(variant: :text, hex_color: color || account.accountable.color, text: account.name, size: size, rounded: true) %>
+  <%= render DS::FilledIcon.new(
+        variant: :text,
+        hex_color: color || account.accountable.color,
+        text: account.name,
+        size: size,
+        rounded: true
+      ) %>
 <% end %>

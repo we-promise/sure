@@ -244,7 +244,15 @@ class Account < ApplicationRecord
   end
 
   def logo_url
-    provider&.logo_url
+    if institution_domain.present? && Setting.brand_fetch_client_id.present?
+      logo_size = Setting.brand_fetch_logo_size
+
+      "https://cdn.brandfetch.io/#{institution_domain}/icon/fallback/lettermark/w/#{logo_size}/h/#{logo_size}?c=#{Setting.brand_fetch_client_id}"
+    elsif provider&.logo_url.present?
+      provider.logo_url
+    elsif logo.attached?
+      Rails.application.routes.url_helpers.rails_blob_path(logo, only_path: true)
+    end
   end
 
   def destroy_later
@@ -300,6 +308,14 @@ class Account < ApplicationRecord
   # Get long version of the subtype label
   def long_subtype_label
     accountable_class.long_subtype_label_for(subtype) || accountable_class.display_name
+  end
+
+  def supports_default?
+    depository? || credit_card?
+  end
+
+  def eligible_for_transaction_default?
+    supports_default? && active? && !linked?
   end
 
   # Determines if this account supports manual trade entry
