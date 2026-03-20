@@ -6,6 +6,11 @@ class SplitsController < ApplicationController
   end
 
   def create
+    unless @entry.transaction.splittable?
+      redirect_back_or_to transactions_path, alert: t("splits.create.not_splittable")
+      return
+    end
+
     raw_splits = split_params[:splits]
     raw_splits = raw_splits.values if raw_splits.respond_to?(:values)
 

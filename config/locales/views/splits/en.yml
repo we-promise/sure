@@ -21,6 +21,7 @@ en:
       split_number: "Split #%{number}"
     create:
       success: Transaction split successfully
+      not_splittable: This transaction cannot be split.
     destroy:
       success: Transaction unsplit successfully
     show:

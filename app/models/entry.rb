@@ -352,7 +352,8 @@ class Entry < ApplicationRecord
       children = splits.map do |split_attrs|
         child_transaction = Transaction.new(
           category_id: split_attrs[:category_id],
-          merchant_id: entryable.try(:merchant_id)
+          merchant_id: entryable.try(:merchant_id),
+          kind: entryable.try(:kind)
         )
 
         child_entries.create!(
