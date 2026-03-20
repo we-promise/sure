@@ -175,21 +175,75 @@
         </div>
       <% end %>
     <% end %>
-    <% dialog.with_section(title: t(".settings")) do %>
-      <div class="pb-4">
-        <%= styled_form_with model: @entry,
-              url: transaction_path(@entry),
-              class: "p-3",
-              data: { controller: "auto-submit-form" } do |f| %>
-          <div class="flex cursor-pointer items-center gap-4 justify-between">
-            <div class="text-sm space-y-1">
-              <h4 class="text-primary"><%= t(".exclude") %></h4>
-              <p class="text-secondary"><%= t(".exclude_description") %></p>
+    <%# Split children list for split parent %>
+    <% if @entry.split_parent? %>
+      <% dialog.with_section(title: t("splits.show.title"), open: true) do %>
+        <div class="px-3 py-2 space-y-2">
+          <p class="text-xs text-secondary"><%= t("splits.show.description") %></p>
+          <% @entry.child_entries.includes(:entryable).each do |child| %>
+            <div class="flex items-center justify-between p-2 rounded-lg border border-primary">
+              <div>
+                <p class="text-sm font-medium text-primary"><%= child.name %></p>
+                <p class="text-xs text-secondary"><%= child.entryable.try(:category)&.name || t("splits.new.uncategorized") %></p>
+              </div>
+              <p class="text-sm font-medium <%= child.amount.negative? ? "text-green-600" : "text-primary" %>">
+                <%= format_money(-child.amount_money) %>
+              </p>
             </div>
-            <%= f.toggle :excluded, { data: { auto_submit_form_target: "auto" } } %>
+          <% end %>
+          <div class="pt-2">
+            <%= render DS::Button.new(
+              text: t("splits.show.unsplit_button"),
+              variant: "outline-destructive",
+              icon: "undo-2",
+              href: transaction_split_path(@entry),
+              method: :delete,
+              confirm: { title: t("splits.show.unsplit_title"), body: t("splits.show.unsplit_confirm"), confirm_text: t("splits.show.unsplit_button") },
+              frame: "_top"
+            ) %>
           </div>
-        <% end %>
-      </div>
+        </div>
+      <% end %>
+    <% end %>
+
+    <%# For split child, show link to parent %>
+    <% if @entry.split_child? %>
+      <% dialog.with_section(title: t("splits.child.title"), open: true) do %>
+        <div class="px-3 py-2">
+          <p class="text-xs text-secondary"><%= t("splits.child.description") %></p>
+          <% parent = @entry.parent_entry %>
+          <% if parent %>
+            <div class="flex items-center justify-between mt-2 p-2 rounded-lg border border-primary">
+              <div>
+                <p class="text-sm font-medium text-primary"><%= parent.name %></p>
+                <p class="text-xs text-secondary"><%= parent.date.strftime("%b %d, %Y") %></p>
+              </div>
+              <p class="text-sm font-medium text-primary">
+                <%= format_money(-parent.amount_money) %>
+              </p>
+            </div>
+          <% end %>
+        </div>
+      <% end %>
+    <% end %>
+
+    <% dialog.with_section(title: t(".settings")) do %>
+      <% unless @entry.split_parent? %>
+        <div class="pb-4">
+          <%= styled_form_with model: @entry,
+                url: transaction_path(@entry),
+                class: "p-3",
+                data: { controller: "auto-submit-form" } do |f| %>
+            <div class="flex cursor-pointer items-center gap-4 justify-between">
+              <div class="text-sm space-y-1">
+                <h4 class="text-primary"><%= t(".exclude") %></h4>
+                <p class="text-secondary"><%= t(".exclude_description") %></p>
+              </div>
+              <%= f.toggle :excluded, { data: { auto_submit_form_target: "auto" } } %>
+            </div>
+          <% end %>
+        </div>
+      <% end %>
       <% if @entry.account.investment? || @entry.account.crypto? %>
         <div class="pb-4">
           <%= styled_form_with model: @entry,
@@ -232,6 +286,22 @@
                   }, "one_time", "standard" %>
             </div>
           <% end %>
+        <% end %>
+        <%# Split Transaction %>
+        <% if @entry.transaction.splittable? %>
+          <div class="flex items-center justify-between gap-4 p-3">
+            <div class="text-sm space-y-1">
+              <h4 class="text-primary"><%= t("splits.show.button_title") %></h4>
+              <p class="text-secondary"><%= t("splits.show.button_description") %></p>
+            </div>
+            <%= render DS::Link.new(
+              text: t("splits.show.button"),
+              icon: "split",
+              variant: "outline",
+              href: new_transaction_split_path(@entry),
+              frame: :modal
+            ) %>
+          </div>
         <% end %>
         <div class="flex items-center justify-between gap-4 p-3">
           <div class="text-sm space-y-1">
@@ -294,21 +364,23 @@
             frame: "_top"
           ) %>
         </div>
-        <!-- Delete Transaction Form -->
-        <div class="flex items-center justify-between gap-2 p-3">
-          <div class="text-sm space-y-1">
-            <h4 class="text-primary"><%= t(".delete_title") %></h4>
-            <p class="text-secondary"><%= t(".delete_subtitle") %></p>
+        <%# Delete Transaction Form - hidden for split children %>
+        <% unless @entry.split_child? %>
+          <div class="flex items-center justify-between gap-2 p-3">
+            <div class="text-sm space-y-1">
+              <h4 class="text-primary"><%= t(".delete_title") %></h4>
+              <p class="text-secondary"><%= t(".delete_subtitle") %></p>
+            </div>
+            <%= render DS::Button.new(
+              text: t(".delete"),
+              variant: "outline-destructive",
+              href: entry_path(@entry),
+              method: :delete,
+              confirm: CustomConfirm.for_resource_deletion("transaction"),
+              frame: "_top"
+            ) %>
           </div>
-          <%= render DS::Button.new(
-            text: t(".delete"),
-            variant: "outline-destructive",
-            href: entry_path(@entry),
-            method: :delete,
-            confirm: CustomConfirm.for_resource_deletion("transaction"),
-            frame: "_top"
-          ) %>
-        </div>
+        <% end %>
       </div>
     <% end %>
   <% end %>

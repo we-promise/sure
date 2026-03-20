@@ -90,6 +90,9 @@ en:
       potential_duplicate_tooltip: This may be a duplicate of another transaction
       review_recommended: Review
       review_recommended_tooltip: Large amount difference — review recommended to check if this is a duplicate
+      split: Split
+      split_tooltip: This transaction has been split into multiple entries
+      split_child_tooltip: Part of a split transaction
     merge_duplicate:
       success: Transactions merged successfully
       failure: Could not merge transactions

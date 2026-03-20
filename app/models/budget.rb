@@ -107,7 +107,7 @@ class Budget < ApplicationRecord
   end
 
   def transactions
-    family.transactions.visible.in_period(period)
+    family.transactions.visible.in_period(period).merge(Entry.excluding_split_parents)
   end
 
   def name

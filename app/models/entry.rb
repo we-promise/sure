@@ -1,11 +1,16 @@
 class Entry < ApplicationRecord
   include Monetizable, Enrichable
 
+  attr_accessor :unsplitting
+
   monetize :amount
 
   belongs_to :account
   belongs_to :transfer, optional: true
   belongs_to :import, optional: true
+  belongs_to :parent_entry, class_name: "Entry", optional: true
+
+  has_many :child_entries, class_name: "Entry", foreign_key: :parent_entry_id, dependent: :destroy
 
   delegated_type :entryable, types: Entryable::TYPES, dependent: :destroy
   accepts_nested_attributes_for :entryable
@@ -14,6 +19,10 @@ class Entry < ApplicationRecord
   validates :date, uniqueness: { scope: [ :account_id, :entryable_type ] }, if: -> { valuation? }
   validates :date, comparison: { greater_than: -> { min_supported_date } }
   validates :external_id, uniqueness: { scope: [ :account_id, :source ] }, if: -> { external_id.present? && source.present? }
+
+  validate :cannot_unexclude_split_parent
+
+  before_destroy :prevent_individual_child_deletion, if: :split_child?
 
   scope :visible, -> {
     joins(:account).where(accounts: { status: [ "draft", "active" ] })
@@ -59,6 +68,14 @@ class Entry < ApplicationRecord
           OR (t.extra -> 'plaid' ->> 'pending')::boolean = true
           OR (t.extra -> 'lunchflow' ->> 'pending')::boolean = true
         )
+      )
+    SQL
+  }
+
+  scope :excluding_split_parents, -> {
+    where(<<~SQL.squish)
+      NOT EXISTS (
+        SELECT 1 FROM entries ce WHERE ce.parent_entry_id = entries.id
       )
     SQL
   }
@@ -313,6 +330,59 @@ class Entry < ApplicationRecord
     end
   end
 
+  def split_parent?
+    child_entries.exists?
+  end
+
+  def split_child?
+    parent_entry_id.present?
+  end
+
+  # Splits this entry into child entries. Marks parent as excluded.
+  #
+  # @param splits [Array<Hash>] array of { name:, amount:, category_id: } hashes
+  # @return [Array<Entry>] the created child entries
+  def split!(splits)
+    total = splits.sum { |s| s[:amount].to_d }
+    unless total == amount
+      raise ActiveRecord::RecordInvalid.new(self), "Split amounts must sum to parent amount (expected #{amount}, got #{total})"
+    end
+
+    self.class.transaction do
+      children = splits.map do |split_attrs|
+        child_transaction = Transaction.new(
+          category_id: split_attrs[:category_id],
+          merchant_id: entryable.try(:merchant_id)
+        )
+
+        child_entries.create!(
+          account: account,
+          date: date,
+          name: split_attrs[:name],
+          amount: split_attrs[:amount],
+          currency: currency,
+          entryable: child_transaction
+        )
+      end
+
+      update!(excluded: true)
+      mark_user_modified!
+
+      children
+    end
+  end
+
+  # Removes split children and restores parent entry.
+  def unsplit!
+    self.class.transaction do
+      child_entries.each do |child|
+        child.unsplitting = true
+        child.destroy!
+      end
+      update!(excluded: false)
+    end
+  end
+
   class << self
     def search(params)
       EntrySearch.new(params).build_query(all)
@@ -373,4 +443,18 @@ class Entry < ApplicationRecord
       all.size
     end
   end
+
+  private
+
+    def cannot_unexclude_split_parent
+      return unless excluded_changed?(from: true, to: false) && split_parent?
+
+      errors.add(:excluded, "cannot be toggled off for a split transaction")
+    end
+
+    def prevent_individual_child_deletion
+      return if destroyed_by_association || unsplitting
+
+      throw :abort
+    end
 end
