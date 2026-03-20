@@ -83,16 +83,17 @@
       </button>
 
       <%# Remaining balance indicator %>
-      <div data-split-transaction-target="remainingContainer" class="flex items-center justify-between p-3 rounded-lg border border-destructive bg-red-25 text-sm transition-colors">
-        <span class="text-secondary font-medium"><%= t("splits.new.remaining") %></span>
-        <span data-split-transaction-target="remaining" class="font-semibold text-destructive">
-          <%= (-@entry.amount).to_f %>
-        </span>
+      <div data-split-transaction-target="remainingContainer" class="p-3 rounded-lg border border-destructive bg-red-25 text-sm">
+        <div class="flex items-center justify-between">
+          <span class="text-secondary font-medium"><%= t("splits.new.remaining") %></span>
+          <span data-split-transaction-target="remaining" class="font-semibold text-destructive">
+            <%= (-@entry.amount).to_f %>
+          </span>
+        </div>
+        <p data-split-transaction-target="error" class="text-destructive text-xs mt-1.5">
+          <%= t("splits.new.amounts_must_match") %>
+        </p>
       </div>
-
-      <p data-split-transaction-target="error" class="text-destructive text-xs hidden">
-        <%= t("splits.new.amounts_must_match") %>
-      </p>
 
       <%# Actions %>
       <div class="flex justify-end gap-3 pt-4 border-t border-primary">
