@@ -17,7 +17,7 @@ en:
       uncategorized: "(uncategorized)"
       original_name: "Name:"
       original_date: "Date:"
-      original_amount: "Amount:"
+      original_amount: "Amount"
       split_number: "Split #%{number}"
     create:
       success: Transaction split successfully
