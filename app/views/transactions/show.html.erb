@@ -191,18 +191,21 @@
               </p>
             </div>
           <% end %>
-          <div class="pt-2 flex items-center gap-2">
+          <div class="flex items-center gap-3 pt-2">
             <%= render DS::Link.new(
               text: t("splits.child.edit_split"),
               icon: "pencil",
-              variant: "outline",
+              variant: "ghost",
+              size: :sm,
               href: edit_transaction_split_path(@entry),
               frame: :modal
             ) %>
             <%= render DS::Button.new(
               text: t("splits.show.unsplit_button"),
-              variant: "outline-destructive",
               icon: "undo-2",
+              variant: "ghost",
+              size: :sm,
+              class: "text-destructive",
               href: transaction_split_path(@entry),
               method: :delete,
               confirm: CustomConfirm.new(title: t("splits.show.unsplit_title"), body: t("splits.show.unsplit_confirm"), btn_text: t("splits.show.unsplit_button"), destructive: true),
@@ -217,35 +220,39 @@
     <% if @entry.split_child? %>
       <% dialog.with_section(title: t("splits.child.title"), open: true) do %>
         <div class="px-3 py-2">
-          <p class="text-xs text-secondary"><%= t("splits.child.description") %></p>
           <% parent = @entry.parent_entry %>
           <% if parent %>
-            <div class="flex items-center justify-between mt-2 p-2 rounded-lg border border-primary">
-              <div>
-                <p class="text-sm font-medium text-primary"><%= parent.name %></p>
-                <p class="text-xs text-secondary"><%= parent.date.strftime("%b %d, %Y") %></p>
+            <div class="p-3 rounded-lg bg-surface-inset space-y-3">
+              <div class="flex items-center justify-between">
+                <div>
+                  <p class="text-sm font-medium text-primary"><%= parent.name %></p>
+                  <p class="text-xs text-secondary"><%= parent.date.strftime("%b %d, %Y") %></p>
+                </div>
+                <p class="text-sm font-medium text-primary">
+                  <%= format_money(-parent.amount_money) %>
+                </p>
               </div>
-              <p class="text-sm font-medium text-primary">
-                <%= format_money(-parent.amount_money) %>
-              </p>
-            </div>
-            <div class="mt-3 flex items-center gap-2">
-              <%= render DS::Link.new(
-                text: t("splits.child.edit_split"),
-                icon: "pencil",
-                variant: "outline",
-                href: edit_transaction_split_path(parent),
-                frame: :modal
-              ) %>
-              <%= render DS::Button.new(
-                text: t("splits.child.unsplit"),
-                variant: "outline-destructive",
-                icon: "undo-2",
-                href: transaction_split_path(parent),
-                method: :delete,
-                confirm: CustomConfirm.new(title: t("splits.show.unsplit_title"), body: t("splits.show.unsplit_confirm"), btn_text: t("splits.show.unsplit_button"), destructive: true),
-                frame: "_top"
-              ) %>
+              <div class="flex items-center gap-3 border-t border-primary pt-2">
+                <%= render DS::Link.new(
+                  text: t("splits.child.edit_split"),
+                  icon: "pencil",
+                  variant: "ghost",
+                  size: :sm,
+                  href: edit_transaction_split_path(parent),
+                  frame: :modal
+                ) %>
+                <%= render DS::Button.new(
+                  text: t("splits.child.unsplit"),
+                  icon: "undo-2",
+                  variant: "ghost",
+                  size: :sm,
+                  class: "text-destructive",
+                  href: transaction_split_path(parent),
+                  method: :delete,
+                  confirm: CustomConfirm.new(title: t("splits.show.unsplit_title"), body: t("splits.show.unsplit_confirm"), btn_text: t("splits.show.unsplit_button"), destructive: true),
+                  frame: "_top"
+                ) %>
+              </div>
             </div>
           <% end %>
         </div>
