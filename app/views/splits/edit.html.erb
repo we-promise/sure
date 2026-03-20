@@ -67,8 +67,9 @@
               </div>
               <button type="button"
                       class="w-8 h-8 shrink-0 flex items-center justify-center rounded-md text-secondary hover:text-primary hover:bg-surface-hover transition-colors"
+                      aria-label="<%= t("splits.new.remove_row") %>"
                       data-action="click->split-transaction#removeRow">
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                <%= icon "x", size: "sm" %>
               </button>
             </div>
           </div>
