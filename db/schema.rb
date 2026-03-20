@@ -1249,6 +1249,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_14_131357) do
   create_table "snaptrade_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "snaptrade_item_id", null: false
     t.string "name"
+    t.string "account_id"
     t.string "snaptrade_account_id"
     t.string "snaptrade_authorization_id"
     t.string "account_number"
