@@ -50,6 +50,24 @@ class Api::V1::UsersControllerTest < ActionDispatch::IntegrationTest
 
   # -- Reset -----------------------------------------------------------------
 
+
+  test "reset requires admin role" do
+    non_admin_api_key = ApiKey.create!(
+      user: users(:family_member),
+      name: "Member Read-Write Key",
+      scopes: [ "read_write" ],
+      display_key: "test_member_#{SecureRandom.hex(8)}"
+    )
+
+    assert_no_enqueued_jobs only: FamilyResetJob do
+      delete "/api/v1/users/reset", headers: api_headers(non_admin_api_key)
+    end
+
+    assert_response :forbidden
+    body = JSON.parse(response.body)
+    assert_equal "You are not authorized to perform this action", body["message"]
+  end
+
   test "reset enqueues FamilyResetJob and returns 200" do
     assert_enqueued_with(job: FamilyResetJob) do
       delete "/api/v1/users/reset", headers: api_headers(@api_key)

@@ -1,8 +1,6 @@
 class AccountsController < ApplicationController
-  before_action :set_account, only: %i[sync sparkline toggle_active toggle_excluded show destroy unlink confirm_unlink select_provider]
+  before_action :set_account, only: %i[sync sparkline toggle_active toggle_excluded set_default remove_default show destroy unlink confirm_unlink select_provider]
   include Periodable
-
-  def index
     @manual_accounts = family.accounts
           .listable_manual
           .order(:name)
@@ -91,6 +89,21 @@ class AccountsController < ApplicationController
 
   def toggle_excluded
     @account.toggle!(:excluded)
+    redirect_to accounts_path
+  end
+
+  def set_default
+    unless @account.eligible_for_transaction_default?
+      redirect_to accounts_path, alert: t("accounts.set_default.depository_only")
+      return
+    end
+
+    Current.user.update!(default_account: @account)
+    redirect_to accounts_path
+  end
+
+  def remove_default
+    Current.user.update!(default_account: nil)
     redirect_to accounts_path
   end
 

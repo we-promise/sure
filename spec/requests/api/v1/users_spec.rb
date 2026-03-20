@@ -12,11 +12,14 @@ RSpec.describe 'API V1 Users', type: :request do
     )
   end
 
+  let(:role) { :admin }
+
   let(:user) do
     family.users.create!(
       email: 'api-user@example.com',
       password: 'password123',
-      password_confirmation: 'password123'
+      password_confirmation: 'password123',
+      role: role
     )
   end
 
@@ -38,7 +41,8 @@ RSpec.describe 'API V1 Users', type: :request do
       tags 'Users'
       description 'Resets all financial data (accounts, categories, merchants, tags, etc.) ' \
                   'for the current user\'s family while keeping the user account intact. ' \
-                  'The reset runs asynchronously in the background.'
+                  'The reset runs asynchronously in the background. ' \
+                  'Requires admin role.'
       security [ { apiKeyAuth: [] } ]
       produces 'application/json'
 
@@ -54,7 +58,7 @@ RSpec.describe 'API V1 Users', type: :request do
         run_test!
       end
 
-      response '403', 'insufficient scope' do
+      response '403', 'forbidden - requires read_write scope and admin role' do
         let(:api_key) do
           key = ApiKey.generate_secure_key
           ApiKey.create!(

@@ -10,9 +10,9 @@ class Setting < RailsSettings::Base
   field :openai_uri_base, type: :string, default: ENV["OPENAI_URI_BASE"]
   field :openai_model, type: :string, default: ENV["OPENAI_MODEL"]
   field :openai_json_mode, type: :string, default: ENV["LLM_JSON_MODE"]
-  field :external_assistant_url, type: :string, default: ENV["EXTERNAL_ASSISTANT_URL"]
-  field :external_assistant_token, type: :string, default: ENV["EXTERNAL_ASSISTANT_TOKEN"]
-  field :external_assistant_agent_id, type: :string, default: ENV.fetch("EXTERNAL_ASSISTANT_AGENT_ID", "main")
+  field :external_assistant_url, type: :string
+  field :external_assistant_token, type: :string
+  field :external_assistant_agent_id, type: :string
   field :brand_fetch_client_id, type: :string, default: ENV["BRAND_FETCH_CLIENT_ID"]
   field :brand_fetch_high_res_logos, type: :boolean, default: ENV.fetch("BRAND_FETCH_HIGH_RES_LOGOS", "false") == "true"
 
@@ -73,6 +73,7 @@ class Setting < RailsSettings::Base
   field :onboarding_state, type: :string, default: DEFAULT_ONBOARDING_STATE
   field :require_invite_for_signup, type: :boolean, default: false
   field :require_email_confirmation, type: :boolean, default: ENV.fetch("REQUIRE_EMAIL_CONFIRMATION", "true") == "true"
+  field :invite_only_default_family_id, type: :string, default: nil
 
   def self.validate_onboarding_state!(state)
     return if ONBOARDING_STATES.include?(state)

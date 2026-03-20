@@ -64,12 +64,17 @@ class SimplefinAccount::Processor
         institution: org[:name]
       ) rescue nil
       is_mapper_liability = inferred && [ "CreditCard", "Loan" ].include?(inferred.accountable_type)
-      is_liability = is_linked_liability || is_mapper_liability
+      is_liability =
+        if account.accountable_type.present?
+          is_linked_liability
+        else
+          is_mapper_liability
+        end
 
       if is_mapper_liability && !is_linked_liability
         Rails.logger.warn(
-          "SimpleFIN liability normalization: linked account #{account.id} type=#{account.accountable_type} " \
-          "appears to be liability via mapper (#{inferred.accountable_type}). Normalizing as liability; consider relinking."
+          "SimpleFIN account type mismatch: linked account #{account.id} type=#{account.accountable_type} " \
+          "differs from mapper inference (#{inferred.accountable_type}). Using linked account type."
         )
       end
 

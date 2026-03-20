@@ -2,6 +2,9 @@
 en:
   transactions:
     unknown_name: Unknown transaction
+    selection_bar:
+      duplicate: Duplicate
+      edit: Edit
     form:
       account: Account
       account_prompt: Select an Account
@@ -13,6 +16,7 @@ en:
       description_placeholder: Describe transaction
       expense: Expense
       income: Income
+      merchant_label: Merchant
       none: (none)
       note_label: Notes
       note_placeholder: Enter a note
@@ -31,6 +35,7 @@ en:
         balances, and cannot be undone.
       delete_title: Delete transaction
       details: Details
+      attachments: Attachments
       exclude: Exclude
       exclude_description: Excluded transactions will be removed from budgeting calculations and reports.
       activity_type: Activity Type
@@ -40,6 +45,9 @@ en:
       convert_to_trade_title: Convert to Security Trade
       convert_to_trade_description: Convert this transaction into a Buy or Sell trade with security details for portfolio tracking.
       convert_to_trade_button: Convert to Trade
+      pending_duplicate_merger_title: Duplicate of Posted Transaction?
+      pending_duplicate_merger_description: Manually merge this pending transaction with its posted version.
+      pending_duplicate_merger_button: Open merger
       merchant_label: Merchant
       name_label: Name
       nature: Type
@@ -88,6 +96,13 @@ en:
     dismiss_duplicate:
       success: Kept as separate transactions
       failure: Could not dismiss duplicate suggestion
+    pending_duplicate_merge:
+      possible_duplicate: Duplicate?
+      possible_duplicate_short: Dup?
+      review_recommended: Review
+      review_recommended_short: Rev
+      confirm_title: "Merge with posted transaction (%{posted_amount})"
+      reject_title: Keep as separate transactions
     header:
       edit_categories: Edit categories
       edit_imports: Edit imports
@@ -197,3 +212,21 @@ en:
         less_than: less than
       form:
         toggle_selection_checkboxes: Toggle all checkboxes
+    attachments:
+      cannot_exceed: "Cannot exceed %{count} attachments per transaction"
+      uploaded_one: "Attachment uploaded successfully"
+      uploaded_many: "%{count} attachments uploaded successfully"
+      failed_upload: "Failed to upload attachment: %{error}"
+      no_files_selected: "No files selected for upload"
+      attachment_deleted: "Attachment deleted successfully"
+      failed_delete: "Failed to delete attachment: %{error}"
+      upload_failed: "Failed to upload attachment. Please try again or contact support."
+      delete_failed: "Failed to delete attachment. Please try again or contact support."
+      upload: "Upload"
+      no_attachments: "No attachments yet"
+      select_up_to: "Select up to %{count} files (images or PDFs, max %{size}MB each) • %{used} of %{count} used"
+      files:
+        one: "File (1)"
+        other: "Files (%{count})"
+      browse_to_add: "Browse to add files"
+      max_reached: "Maximum file limit reached (%{count}/%{max}). Delete an existing file to upload another."
