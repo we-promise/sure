@@ -1,0 +1,47 @@
+---
+en:
+  splits:
+    new:
+      title: Split Transaction
+      description: Split this transaction into multiple entries with different categories and amounts.
+      submit: Split Transaction
+      cancel: Cancel
+      add_row: Add split
+      remove_row: Remove
+      remaining: Remaining
+      amounts_must_match: Split amounts must equal the original transaction amount.
+      name_label: Name
+      name_placeholder: Split name
+      amount_label: Amount
+      category_label: Category
+      uncategorized: "(uncategorized)"
+      original_name: "Name:"
+      original_date: "Date:"
+      original_amount: "Amount"
+      split_number: "Split #%{number}"
+    create:
+      success: Transaction split successfully
+      not_splittable: This transaction cannot be split.
+    destroy:
+      success: Transaction unsplit successfully
+    show:
+      title: Split Entries
+      description: This transaction has been split into the following entries.
+      button_title: Split Transaction
+      button_description: Split this transaction into multiple entries with different categories and amounts.
+      button: Split
+      unsplit_title: Unsplit Transaction
+      unsplit_button: Unsplit
+      unsplit_confirm: This will remove all split entries and restore the original transaction.
+    edit:
+      title: Edit Split
+      description: Modify the split entries for this transaction.
+      submit: Update Split
+      not_split: This transaction is not split.
+    update:
+      success: Split updated successfully
+    child:
+      title: Part of Split
+      description: This entry is part of a split transaction.
+      edit_split: Edit Split
+      unsplit: Unsplit

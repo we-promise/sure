@@ -101,6 +101,19 @@
                       <% end %>
                     <% end %>
 
+                    <%# Split indicator %>
+                    <% if entry.split_parent? %>
+                      <span class="inline-flex items-center gap-1 text-xs font-medium rounded-full px-1.5 py-0.5 border border-accent bg-accent/10 text-accent" title="<%= t("transactions.transaction.split_tooltip") %>">
+                        <%= icon "split", size: "sm", color: "current" %>
+                        <%= t("transactions.transaction.split") %>
+                      </span>
+                    <% end %>
+                    <% if entry.split_child? %>
+                      <span class="text-secondary" title="<%= t("transactions.transaction.split_child_tooltip") %>">
+                        <%= icon "corner-down-right", size: "sm", color: "current" %>
+                      </span>
+                    <% end %>
+
                     <% if transaction.transfer.present? %>
                       <%= render "transactions/transfer_match", transaction: transaction %>
                     <% end %>
