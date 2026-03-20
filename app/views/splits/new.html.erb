@@ -59,16 +59,10 @@
                      data-split-transaction-target="amountInput"
                      data-action="input->split-transaction#updateRemaining">
             </div>
-            <div class="w-36 shrink-0">
-              <label class="text-xs font-medium text-secondary uppercase tracking-wide block mb-1"><%= t("splits.new.category_label") %></label>
-              <select name="split[splits][0][category_id]"
-                      class="form-field__input border border-secondary rounded-md px-2.5 py-1.5 w-full text-sm text-primary bg-container">
-                <option value=""><%= t("splits.new.uncategorized") %></option>
-                <% @categories.each do |category| %>
-                  <option value="<%= category.id %>"><%= category.name %></option>
-                <% end %>
-              </select>
-            </div>
+            <%= render "splits/category_select",
+                       name: "split[splits][0][category_id]",
+                       categories: @categories,
+                       selected_id: nil %>
             <div class="w-8 shrink-0"></div>
           </div>
         </div>

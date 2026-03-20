@@ -62,16 +62,10 @@
                        data-split-transaction-target="amountInput"
                        data-action="input->split-transaction#updateRemaining">
               </div>
-              <div class="w-36 shrink-0">
-                <label class="text-xs font-medium text-secondary uppercase tracking-wide block mb-1"><%= t("splits.new.category_label") %></label>
-                <select name="split[splits][<%= index %>][category_id]"
-                        class="form-field__input border border-secondary rounded-md px-2.5 py-1.5 w-full text-sm text-primary bg-container">
-                  <option value=""><%= t("splits.new.uncategorized") %></option>
-                  <% @categories.each do |category| %>
-                    <option value="<%= category.id %>" <%= "selected" if child.entryable.try(:category_id) == category.id %>><%= category.name %></option>
-                  <% end %>
-                </select>
-              </div>
+              <%= render "splits/category_select",
+                         name: "split[splits][#{index}][category_id]",
+                         categories: @categories,
+                         selected_id: child.entryable.try(:category_id) %>
               <button type="button"
                       class="w-8 h-8 shrink-0 flex items-center justify-center rounded-md text-secondary hover:text-primary hover:bg-surface-hover transition-colors"
                       aria-label="<%= t("splits.new.remove_row") %>"

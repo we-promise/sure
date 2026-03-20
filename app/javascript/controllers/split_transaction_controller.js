@@ -16,19 +16,58 @@ export default class extends Controller {
     const index = this.rowCount
     const container = this.rowsContainerTarget
 
-    // Clone category options from the first row's select, stripping any selection
-    const existingSelect = container.querySelector("select")
-    let categoryOptions = '<option value="">(uncategorized)</option>'
-    if (existingSelect) {
-      const cloned = existingSelect.cloneNode(true)
-      cloned.querySelectorAll("option").forEach(opt => opt.removeAttribute("selected"))
-      cloned.value = ""
-      categoryOptions = cloned.innerHTML
-    }
-
     const row = document.createElement("div")
     row.classList.add("p-3", "rounded-lg", "border", "border-secondary", "bg-container")
     row.dataset.splitTransactionTarget = "row"
+
+    // Clone category select from the first row
+    const existingCategorySelect = container.querySelector(".category-select-container")
+    let categorySelectHTML = ""
+    if (existingCategorySelect) {
+      const cloned = existingCategorySelect.cloneNode(true)
+
+      // Reset hidden input value and update name
+      const hiddenInput = cloned.querySelector("input[type='hidden']")
+      if (hiddenInput) {
+        hiddenInput.value = ""
+        hiddenInput.name = `split[splits][${index}][category_id]`
+      }
+
+      // Reset button to show placeholder text (uncategorized)
+      const button = cloned.querySelector("[data-select-target='button']")
+      if (button) {
+        // Find the uncategorized option text from the menu
+        const uncategorizedOption = cloned.querySelector("[data-value='']")
+        const placeholderText = uncategorizedOption ? uncategorizedOption.dataset.filterName : "(uncategorized)"
+        button.innerHTML = placeholderText
+        button.setAttribute("aria-expanded", "false")
+      }
+
+      // Reset selected states in menu
+      cloned.querySelectorAll("[role='option']").forEach(option => {
+        option.setAttribute("aria-selected", "false")
+        option.classList.remove("bg-container-inset")
+        const checkIcon = option.querySelector(".check-icon")
+        if (checkIcon) checkIcon.classList.add("hidden")
+      })
+
+      // Select the blank/uncategorized option
+      const blankOption = cloned.querySelector("[data-value='']")
+      if (blankOption) {
+        blankOption.setAttribute("aria-selected", "true")
+        blankOption.classList.add("bg-container-inset")
+        const checkIcon = blankOption.querySelector(".check-icon")
+        if (checkIcon) checkIcon.classList.remove("hidden")
+      }
+
+      // Ensure menu is hidden
+      const menu = cloned.querySelector("[data-select-target='menu']")
+      if (menu && !menu.classList.contains("hidden")) {
+        menu.classList.add("hidden")
+      }
+
+      categorySelectHTML = cloned.outerHTML
+    }
 
     row.innerHTML = `
       <div class="flex items-end gap-2">
@@ -54,13 +93,7 @@ export default class extends Controller {
                  data-split-transaction-target="amountInput"
                  data-action="input->split-transaction#updateRemaining">
         </div>
-        <div class="w-36 shrink-0">
-          <label class="text-xs font-medium text-secondary uppercase tracking-wide block mb-1">Category</label>
-          <select name="split[splits][${index}][category_id]"
-                  class="form-field__input border border-secondary rounded-md px-2.5 py-1.5 w-full text-sm text-primary bg-container">
-            ${categoryOptions}
-          </select>
-        </div>
+        ${categorySelectHTML}
         <button type="button"
                 class="w-8 h-8 shrink-0 flex items-center justify-center rounded-md text-secondary hover:text-primary hover:bg-surface-hover transition-colors"
                 data-action="click->split-transaction#removeRow">
@@ -85,7 +118,7 @@ export default class extends Controller {
 
   reindexRows() {
     this.rowTargets.forEach((row, index) => {
-      // Update input names
+      // Update input names (including hidden inputs inside category select)
       row.querySelectorAll("[name]").forEach(input => {
         input.name = input.name.replace(/splits\[\d+\]/, `splits[${index}]`)
       })
