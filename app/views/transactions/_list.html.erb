@@ -39,7 +39,13 @@
 
       <div class="space-y-6">
         <%= entries_by_date(@transactions.map(&:entry), totals: true) do |entries| %>
-            <%= render entries %>
+          <% group_split_entries(entries, @split_parents).each do |item| %>
+            <% if item.is_a?(EntriesHelper::SplitGroup) %>
+              <%= render "entries/split_group", split_group: item %>
+            <% else %>
+              <%= render item %>
+            <% end %>
+          <% end %>
         <% end %>
       </div>
     </div>

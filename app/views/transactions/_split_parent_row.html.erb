@@ -1,0 +1,69 @@
+<%# locals: (entry:) %>
+<% transaction = entry.entryable %>
+
+<div class="group flex lg:grid lg:grid-cols-12 items-center text-sm font-medium p-3 lg:p-4 opacity-50 text-secondary">
+  <div class="pr-4 lg:pr-10 flex items-center gap-3 lg:gap-4 col-span-8 min-w-0">
+    <%# Empty space where checkbox would be, for alignment %>
+    <div class="hidden lg:block w-4 shrink-0"></div>
+
+    <div class="max-w-full">
+      <div class="flex items-center gap-3 lg:gap-4">
+        <div class="hidden lg:flex">
+          <% if transaction.merchant&.logo_url.present? %>
+            <%= image_tag Setting.transform_brand_fetch_url(transaction.merchant.logo_url),
+                class: "w-9 h-9 rounded-full border border-secondary",
+                loading: "lazy" %>
+          <% else %>
+            <div class="hidden lg:flex">
+              <%= render DS::FilledIcon.new(
+                variant: :text,
+                text: entry.name,
+                size: "lg",
+                rounded: true
+              ) %>
+            </div>
+          <% end %>
+        </div>
+
+        <div class="truncate">
+          <div class="space-y-0.5">
+            <div class="flex items-center gap-1 min-w-0">
+              <div class="truncate flex-shrink">
+                <%= link_to entry.name,
+                    edit_transaction_split_path(transaction),
+                    data: { turbo_frame: :modal },
+                    class: "hover:underline" %>
+              </div>
+
+              <div class="flex items-center gap-1 flex-shrink-0">
+                <span class="inline-flex items-center gap-1 text-xs font-medium rounded-full px-1.5 py-0.5 border border-accent bg-accent/10 text-accent">
+                  <%= icon "split", size: "sm", color: "current" %>
+                  <%= t("transactions.split_parent_row.split_label") %>
+                </span>
+              </div>
+            </div>
+
+            <div class="text-secondary text-xs font-normal">
+              <% if transaction.merchant&.present? %>
+                <span class="hidden lg:inline truncate"><%= transaction.merchant.name %> • </span>
+              <% end %>
+              <span class="text-secondary hidden lg:inline">
+                <%= link_to entry.account.name,
+                    account_path(entry.account, tab: "transactions"),
+                    data: { turbo_frame: "_top" },
+                    class: "hover:underline" %>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="hidden md:flex items-center gap-1 col-span-2">
+  </div>
+
+  <div class="shrink-0 col-span-4 lg:col-span-2 ml-auto flex items-center justify-end gap-2">
+    <%= content_tag :p, format_money(-entry.amount_money) %>
+  </div>
+</div>

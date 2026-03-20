@@ -27,6 +27,16 @@ class TransactionsController < ApplicationController
 
     @pagy, @transactions = pagy(base_scope, limit: safe_per_page)
 
+    # Load split parents for grouped display
+    split_parent_ids = @transactions.filter_map { |t| t.entry.parent_entry_id }.uniq
+    @split_parents = if split_parent_ids.any?
+      Entry.where(id: split_parent_ids)
+           .includes(:account, entryable: [ :category, :merchant ])
+           .index_by(&:id)
+    else
+      {}
+    end
+
     # Load projected recurring transactions for next 10 days
     @projected_recurring = Current.family.recurring_transactions
                                   .active
