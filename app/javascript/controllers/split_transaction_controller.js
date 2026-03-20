@@ -68,6 +68,7 @@ export default class extends Controller {
   }
 
   removeRow(event) {
+    event.stopPropagation()
     const row = event.target.closest("[data-split-transaction-target='row']")
     if (row && this.rowCount > 1) {
       row.remove()

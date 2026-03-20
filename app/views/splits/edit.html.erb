@@ -1,0 +1,128 @@
+<%= render DS::Dialog.new(variant: "modal") do |dialog| %>
+  <% dialog.with_header do %>
+    <h2 class="text-lg font-semibold text-primary"><%= t("splits.edit.title") %></h2>
+    <p class="text-sm text-secondary"><%= t("splits.edit.description") %></p>
+  <% end %>
+
+  <% dialog.with_body do %>
+    <%# Original transaction summary %>
+    <div class="space-y-2 p-3 bg-surface-inset rounded-lg border border-secondary">
+      <div class="text-sm">
+        <span class="text-secondary"><%= t("splits.new.original_name") %></span>
+        <span class="font-medium text-primary"><%= @entry.name %></span>
+      </div>
+      <div class="text-sm">
+        <span class="text-secondary"><%= t("splits.new.original_date") %></span>
+        <span class="font-medium text-primary"><%= @entry.date.strftime("%b %d, %Y") %></span>
+      </div>
+      <div class="text-sm">
+        <span class="text-secondary"><%= t("splits.new.original_amount") %></span>
+        <span class="font-medium text-primary"><%= format_money(-@entry.amount_money) %></span>
+      </div>
+    </div>
+
+    <%= form_with(
+          url: transaction_split_path(@entry),
+          method: :patch,
+          scope: :split,
+          class: "space-y-4",
+          data: {
+            controller: "split-transaction",
+            split_transaction_total_value: (-@entry.amount).to_f,
+            split_transaction_currency_value: @entry.currency,
+            turbo_frame: :_top
+          }
+        ) do %>
+
+      <%# Split rows pre-filled from existing children %>
+      <div data-split-transaction-target="rowsContainer" class="space-y-3">
+        <% @children.each_with_index do |child, index| %>
+          <div class="p-3 rounded-lg border border-secondary bg-container space-y-3" data-split-transaction-target="row">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-medium text-secondary uppercase tracking-wide"><%= t("splits.new.split_number", number: index + 1) %></span>
+              <% if @children.size > 1 %>
+                <button type="button"
+                        class="text-xs text-destructive hover:text-destructive/80"
+                        data-action="click->split-transaction#removeRow">
+                  <%= t("splits.new.remove_row") %>
+                </button>
+              <% end %>
+            </div>
+            <div class="space-y-1">
+              <label class="font-medium text-sm text-primary block"><%= t("splits.new.name_label") %></label>
+              <input type="text"
+                     name="split[splits][<%= index %>][name]"
+                     placeholder="<%= t("splits.new.name_placeholder") %>"
+                     class="form-field__input border border-secondary rounded-lg px-3 py-2 w-full text-primary bg-container"
+                     required
+                     autocomplete="off"
+                     value="<%= child.name %>"
+                     data-split-transaction-target="nameInput">
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div class="space-y-1">
+                <label class="font-medium text-sm text-primary block"><%= t("splits.new.amount_label") %></label>
+                <input type="number"
+                       name="split[splits][<%= index %>][amount]"
+                       placeholder="0.00"
+                       step="0.01"
+                       class="form-field__input border border-secondary rounded-lg px-3 py-2 w-full text-primary bg-container"
+                       required
+                       autocomplete="off"
+                       value="<%= (-child.amount).to_f %>"
+                       data-split-transaction-target="amountInput"
+                       data-action="input->split-transaction#updateRemaining">
+              </div>
+              <div class="space-y-1">
+                <label class="font-medium text-sm text-primary block"><%= t("splits.new.category_label") %></label>
+                <select name="split[splits][<%= index %>][category_id]"
+                        class="form-field__input border border-secondary rounded-lg px-3 py-2 w-full text-primary bg-container">
+                  <option value=""><%= t("splits.new.uncategorized") %></option>
+                  <% @categories.each do |category| %>
+                    <option value="<%= category.id %>" <%= "selected" if child.entryable.try(:category_id) == category.id %>><%= category.name %></option>
+                  <% end %>
+                </select>
+              </div>
+            </div>
+          </div>
+        <% end %>
+      </div>
+
+      <%# Add split button %>
+      <button type="button"
+              class="flex items-center justify-center gap-1.5 w-full py-2 text-sm font-medium text-secondary hover:text-primary border border-dashed border-secondary hover:border-primary rounded-lg transition-colors"
+              data-action="click->split-transaction#addRow">
+        <%= icon "plus", size: "sm" %>
+        <%= t("splits.new.add_row") %>
+      </button>
+
+      <%# Remaining balance indicator %>
+      <div class="flex items-center justify-between p-3 bg-surface-inset rounded-lg text-sm">
+        <span class="text-secondary font-medium"><%= t("splits.new.remaining") %></span>
+        <span data-split-transaction-target="remaining" class="font-semibold text-primary">
+          <%= (-@entry.amount).to_f %>
+        </span>
+      </div>
+
+      <p data-split-transaction-target="error" class="text-destructive text-xs hidden">
+        <%= t("splits.new.amounts_must_match") %>
+      </p>
+
+      <%# Actions %>
+      <div class="flex justify-end gap-3 pt-4 border-t border-primary">
+        <%= render DS::Button.new(
+          text: t("splits.new.cancel"),
+          variant: "outline",
+          href: "#",
+          data: { action: "click->ds--dialog#close" }
+        ) %>
+        <%= render DS::Button.new(
+          text: t("splits.edit.submit"),
+          variant: "primary",
+          type: "submit",
+          data: { split_transaction_target: "submitButton" }
+        ) %>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>

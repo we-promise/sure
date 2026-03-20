@@ -32,6 +32,15 @@ en:
       unsplit_title: Unsplit Transaction
       unsplit_button: Unsplit
       unsplit_confirm: This will remove all split entries and restore the original transaction.
+    edit:
+      title: Edit Split
+      description: Modify the split entries for this transaction.
+      submit: Update Split
+      not_split: This transaction is not split.
+    update:
+      success: Split updated successfully
     child:
       title: Part of Split
       description: This entry is part of a split transaction.
+      edit_split: Edit Split
+      unsplit: Unsplit
