@@ -1,7 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
-  static targets = ["rowsContainer", "row", "amountInput", "remaining", "error", "submitButton", "nameInput"]
+  static targets = ["rowsContainer", "row", "amountInput", "remaining", "remainingContainer", "error", "submitButton", "nameInput"]
   static values = { total: Number, currency: String }
 
   connect() {
@@ -105,12 +105,18 @@ export default class extends Controller {
     this.remainingTarget.textContent = balanced ? "0.00" : remaining.toFixed(2)
 
     // Visual feedback on remaining balance
+    const container = this.remainingContainerTarget
+
     if (balanced) {
       this.remainingTarget.classList.remove("text-destructive")
       this.remainingTarget.classList.add("text-success")
+      container.classList.remove("border-destructive", "bg-red-25")
+      container.classList.add("border-green-200", "bg-green-25")
     } else {
       this.remainingTarget.classList.remove("text-success")
-      this.remainingTarget.classList.add("text-primary")
+      this.remainingTarget.classList.add("text-destructive")
+      container.classList.remove("border-green-200", "bg-green-25")
+      container.classList.add("border-destructive", "bg-red-25")
     }
 
     this.errorTarget.classList.toggle("hidden", balanced)

@@ -92,7 +92,7 @@
       </button>
 
       <%# Remaining balance indicator %>
-      <div class="flex items-center justify-between p-3 rounded-lg border border-secondary text-sm">
+      <div data-split-transaction-target="remainingContainer" class="flex items-center justify-between p-3 rounded-lg border border-secondary text-sm transition-colors">
         <span class="text-secondary font-medium"><%= t("splits.new.remaining") %></span>
         <span data-split-transaction-target="remaining" class="font-semibold text-primary">
           <%= (-@entry.amount).to_f %>
