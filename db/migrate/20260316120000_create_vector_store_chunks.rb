@@ -10,7 +10,7 @@ class CreateVectorStoreChunks < ActiveRecord::Migration[7.2]
       t.string :filename
       t.integer :chunk_index, null: false, default: 0
       t.text :content, null: false
-      t.column :embedding, "vector(1024)", null: false
+      t.column :embedding, "vector(#{ENV.fetch('EMBEDDING_DIMENSIONS', '1024')})", null: false
       t.jsonb :metadata, null: false, default: {}
       t.timestamps null: false
     end
