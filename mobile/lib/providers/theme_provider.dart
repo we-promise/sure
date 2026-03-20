@@ -11,8 +11,12 @@ class ThemeProvider extends ChangeNotifier {
   }
 
   Future<void> _loadThemeMode() async {
-    final mode = await PreferencesService.instance.getThemeMode();
-    _themeMode = _fromString(mode);
+    try {
+      final mode = await PreferencesService.instance.getThemeMode();
+      _themeMode = _fromString(mode);
+    } catch (_) {
+      _themeMode = ThemeMode.system;
+    }
     notifyListeners();
   }
 
