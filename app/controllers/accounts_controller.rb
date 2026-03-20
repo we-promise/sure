@@ -1,6 +1,8 @@
 class AccountsController < ApplicationController
   before_action :set_account, only: %i[sync sparkline toggle_active toggle_excluded set_default remove_default show destroy unlink confirm_unlink select_provider]
   include Periodable
+
+  def index
     @manual_accounts = family.accounts
           .listable_manual
           .order(:name)
