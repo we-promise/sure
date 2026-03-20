@@ -17,7 +17,6 @@ class SnaptradeAccount < ApplicationRecord
   has_one :linked_account, through: :account_provider, source: :account
 
   validates :name, :currency, presence: true
-  validates :account_id, uniqueness: { scope: :snaptrade_item_id, allow_nil: true }
   validates :snaptrade_account_id, uniqueness: { scope: :snaptrade_item_id, allow_nil: true }
 
   # Enqueue cleanup job after destruction to avoid blocking transaction with API call
