@@ -68,6 +68,11 @@ class SplitsController < ApplicationController
   def destroy
     resolve_to_parent!
 
+    unless @entry.split_parent?
+      redirect_to transactions_path, alert: t("splits.edit.not_split")
+      return
+    end
+
     @entry.unsplit!
     @entry.sync_account_later
 

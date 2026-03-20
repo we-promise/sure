@@ -4,6 +4,10 @@ export default class extends Controller {
   static targets = ["rowsContainer", "row", "amountInput", "remaining", "error", "submitButton", "nameInput"]
   static values = { total: Number, currency: String }
 
+  connect() {
+    this.updateRemaining()
+  }
+
   get rowCount() {
     return this.rowTargets.length
   }
@@ -12,9 +16,15 @@ export default class extends Controller {
     const index = this.rowCount
     const container = this.rowsContainerTarget
 
-    // Clone category options from the first row's select
+    // Clone category options from the first row's select, stripping any selection
     const existingSelect = container.querySelector("select")
-    const categoryOptions = existingSelect ? existingSelect.innerHTML : '<option value="">(uncategorized)</option>'
+    let categoryOptions = '<option value="">(uncategorized)</option>'
+    if (existingSelect) {
+      const cloned = existingSelect.cloneNode(true)
+      cloned.querySelectorAll("option").forEach(opt => opt.removeAttribute("selected"))
+      cloned.value = ""
+      categoryOptions = cloned.innerHTML
+    }
 
     const row = document.createElement("div")
     row.classList.add("p-3", "rounded-lg", "border", "border-secondary", "bg-container")
