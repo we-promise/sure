@@ -1,31 +1,23 @@
 <%= render DS::Dialog.new(variant: "modal") do |dialog| %>
   <% dialog.with_header do %>
-    <h2 class="text-lg font-semibold text-primary"><%= t("splits.edit.title") %></h2>
-    <p class="text-sm text-secondary"><%= t("splits.edit.description") %></p>
+    <div class="flex items-start justify-between gap-4">
+      <div>
+        <h2 class="text-lg font-semibold text-primary"><%= @entry.name %></h2>
+        <p class="text-sm text-secondary"><%= @entry.date.strftime("%b %d, %Y") %></p>
+      </div>
+      <div class="text-right shrink-0">
+        <p class="text-xs font-medium text-secondary uppercase tracking-wide"><%= t("splits.new.original_amount") %></p>
+        <p class="text-lg font-semibold text-primary"><%= format_money(-@entry.amount_money) %></p>
+      </div>
+    </div>
   <% end %>
 
   <% dialog.with_body do %>
-    <%# Original transaction summary %>
-    <div class="space-y-2 p-3 bg-surface-inset rounded-lg border border-secondary">
-      <div class="text-sm">
-        <span class="text-secondary"><%= t("splits.new.original_name") %></span>
-        <span class="font-medium text-primary"><%= @entry.name %></span>
-      </div>
-      <div class="text-sm">
-        <span class="text-secondary"><%= t("splits.new.original_date") %></span>
-        <span class="font-medium text-primary"><%= @entry.date.strftime("%b %d, %Y") %></span>
-      </div>
-      <div class="text-sm">
-        <span class="text-secondary"><%= t("splits.new.original_amount") %></span>
-        <span class="font-medium text-primary"><%= format_money(-@entry.amount_money) %></span>
-      </div>
-    </div>
-
     <%= form_with(
           url: transaction_split_path(@entry),
           method: :patch,
           scope: :split,
-          class: "space-y-4",
+          class: "space-y-3",
           data: {
             controller: "split-transaction",
             split_transaction_total_value: (-@entry.amount).to_f,
@@ -37,52 +29,47 @@
       <%# Split rows pre-filled from existing children %>
       <div data-split-transaction-target="rowsContainer" class="space-y-3">
         <% @children.each_with_index do |child, index| %>
-          <div class="p-3 rounded-lg border border-secondary bg-container space-y-3" data-split-transaction-target="row">
-            <div class="flex items-center justify-between">
-              <span class="text-xs font-medium text-secondary uppercase tracking-wide"><%= t("splits.new.split_number", number: index + 1) %></span>
-              <% if @children.size > 1 %>
-                <button type="button"
-                        class="text-xs text-destructive hover:text-destructive/80"
-                        data-action="click->split-transaction#removeRow">
-                  <%= t("splits.new.remove_row") %>
-                </button>
-              <% end %>
-            </div>
-            <div class="space-y-1">
-              <label class="font-medium text-sm text-primary block"><%= t("splits.new.name_label") %></label>
-              <input type="text"
-                     name="split[splits][<%= index %>][name]"
-                     placeholder="<%= t("splits.new.name_placeholder") %>"
-                     class="form-field__input border border-secondary rounded-lg px-3 py-2 w-full text-primary bg-container"
-                     required
-                     autocomplete="off"
-                     value="<%= child.name %>"
-                     data-split-transaction-target="nameInput">
-            </div>
-            <div class="grid grid-cols-2 gap-3">
-              <div class="space-y-1">
-                <label class="font-medium text-sm text-primary block"><%= t("splits.new.amount_label") %></label>
+          <div class="p-3 rounded-lg border border-secondary bg-container" data-split-transaction-target="row">
+            <div class="flex items-end gap-2">
+              <div class="flex-1 min-w-0">
+                <label class="text-xs font-medium text-secondary uppercase tracking-wide block mb-1"><%= t("splits.new.name_label") %></label>
+                <input type="text"
+                       name="split[splits][<%= index %>][name]"
+                       placeholder="<%= t("splits.new.name_placeholder") %>"
+                       class="form-field__input border border-secondary rounded-md px-2.5 py-1.5 w-full text-sm text-primary bg-container"
+                       required
+                       autocomplete="off"
+                       value="<%= child.name %>"
+                       data-split-transaction-target="nameInput">
+              </div>
+              <div class="w-28 shrink-0">
+                <label class="text-xs font-medium text-secondary uppercase tracking-wide block mb-1"><%= t("splits.new.amount_label") %></label>
                 <input type="number"
                        name="split[splits][<%= index %>][amount]"
                        placeholder="0.00"
                        step="0.01"
-                       class="form-field__input border border-secondary rounded-lg px-3 py-2 w-full text-primary bg-container"
+                       class="form-field__input border border-secondary rounded-md px-2.5 py-1.5 w-full text-sm text-primary bg-container"
                        required
                        autocomplete="off"
                        value="<%= (-child.amount).to_f %>"
                        data-split-transaction-target="amountInput"
                        data-action="input->split-transaction#updateRemaining">
               </div>
-              <div class="space-y-1">
-                <label class="font-medium text-sm text-primary block"><%= t("splits.new.category_label") %></label>
+              <div class="w-36 shrink-0">
+                <label class="text-xs font-medium text-secondary uppercase tracking-wide block mb-1"><%= t("splits.new.category_label") %></label>
                 <select name="split[splits][<%= index %>][category_id]"
-                        class="form-field__input border border-secondary rounded-lg px-3 py-2 w-full text-primary bg-container">
+                        class="form-field__input border border-secondary rounded-md px-2.5 py-1.5 w-full text-sm text-primary bg-container">
                   <option value=""><%= t("splits.new.uncategorized") %></option>
                   <% @categories.each do |category| %>
                     <option value="<%= category.id %>" <%= "selected" if child.entryable.try(:category_id) == category.id %>><%= category.name %></option>
                   <% end %>
                 </select>
               </div>
+              <button type="button"
+                      class="w-8 h-8 shrink-0 flex items-center justify-center rounded-md text-secondary hover:text-primary hover:bg-surface-hover transition-colors"
+                      data-action="click->split-transaction#removeRow">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+              </button>
             </div>
           </div>
         <% end %>
@@ -97,7 +84,7 @@
       </button>
 
       <%# Remaining balance indicator %>
-      <div class="flex items-center justify-between p-3 bg-surface-inset rounded-lg text-sm">
+      <div class="flex items-center justify-between p-3 rounded-lg border border-secondary text-sm">
         <span class="text-secondary font-medium"><%= t("splits.new.remaining") %></span>
         <span data-split-transaction-target="remaining" class="font-semibold text-primary">
           <%= (-@entry.amount).to_f %>

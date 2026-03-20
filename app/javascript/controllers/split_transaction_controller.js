@@ -10,7 +10,6 @@ export default class extends Controller {
 
   addRow() {
     const index = this.rowCount
-    const number = index + 1
     const container = this.rowsContainerTarget
 
     // Clone category options from the first row's select
@@ -18,48 +17,45 @@ export default class extends Controller {
     const categoryOptions = existingSelect ? existingSelect.innerHTML : '<option value="">(uncategorized)</option>'
 
     const row = document.createElement("div")
-    row.classList.add("p-3", "rounded-lg", "border", "border-secondary", "bg-container", "space-y-3")
+    row.classList.add("p-3", "rounded-lg", "border", "border-secondary", "bg-container")
     row.dataset.splitTransactionTarget = "row"
 
     row.innerHTML = `
-      <div class="flex items-center justify-between">
-        <span class="text-xs font-medium text-secondary uppercase tracking-wide">Split #${number}</span>
-        <button type="button"
-                class="p-1 rounded text-secondary hover:text-primary hover:bg-surface-inset transition-colors"
-                data-action="click->split-transaction#removeRow">
-          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-        </button>
-      </div>
-      <div class="space-y-1">
-        <label class="font-medium text-sm text-primary block">Name</label>
-        <input type="text"
-               name="split[splits][${index}][name]"
-               placeholder="Split name"
-               class="form-field__input border border-secondary rounded-lg px-3 py-2 w-full text-primary bg-container"
-               required
-               autocomplete="off"
-               data-split-transaction-target="nameInput">
-      </div>
-      <div class="grid grid-cols-2 gap-3">
-        <div class="space-y-1">
-          <label class="font-medium text-sm text-primary block">Amount</label>
+      <div class="flex items-end gap-2">
+        <div class="flex-1 min-w-0">
+          <label class="text-xs font-medium text-secondary uppercase tracking-wide block mb-1">Name</label>
+          <input type="text"
+                 name="split[splits][${index}][name]"
+                 placeholder="Split name"
+                 class="form-field__input border border-secondary rounded-md px-2.5 py-1.5 w-full text-sm text-primary bg-container"
+                 required
+                 autocomplete="off"
+                 data-split-transaction-target="nameInput">
+        </div>
+        <div class="w-28 shrink-0">
+          <label class="text-xs font-medium text-secondary uppercase tracking-wide block mb-1">Amount</label>
           <input type="number"
                  name="split[splits][${index}][amount]"
                  placeholder="0.00"
                  step="0.01"
-                 class="form-field__input border border-secondary rounded-lg px-3 py-2 w-full text-primary bg-container"
+                 class="form-field__input border border-secondary rounded-md px-2.5 py-1.5 w-full text-sm text-primary bg-container"
                  required
                  autocomplete="off"
                  data-split-transaction-target="amountInput"
                  data-action="input->split-transaction#updateRemaining">
         </div>
-        <div class="space-y-1">
-          <label class="font-medium text-sm text-primary block">Category</label>
+        <div class="w-36 shrink-0">
+          <label class="text-xs font-medium text-secondary uppercase tracking-wide block mb-1">Category</label>
           <select name="split[splits][${index}][category_id]"
-                  class="form-field__input border border-secondary rounded-lg px-3 py-2 w-full text-primary bg-container">
+                  class="form-field__input border border-secondary rounded-md px-2.5 py-1.5 w-full text-sm text-primary bg-container">
             ${categoryOptions}
           </select>
         </div>
+        <button type="button"
+                class="w-8 h-8 shrink-0 flex items-center justify-center rounded-md text-secondary hover:text-primary hover:bg-surface-hover transition-colors"
+                data-action="click->split-transaction#removeRow">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+        </button>
       </div>
     `
 
@@ -79,12 +75,6 @@ export default class extends Controller {
 
   reindexRows() {
     this.rowTargets.forEach((row, index) => {
-      // Update the split number header
-      const header = row.querySelector(".text-xs.font-medium")
-      if (header) {
-        header.textContent = `Split #${index + 1}`
-      }
-
       // Update input names
       row.querySelectorAll("[name]").forEach(input => {
         input.name = input.name.replace(/splits\[\d+\]/, `splits[${index}]`)
