@@ -49,6 +49,11 @@ class ImportsController < ApplicationController
       return
     end
 
+    if file.present? && sure_import_request?
+      create_sure_import(file)
+      return
+    end
+
     # Handle PDF file uploads - process with AI
     if file.present? && Import::ALLOWED_PDF_MIME_TYPES.include?(file.content_type)
       unless valid_pdf_file?(file)
@@ -205,6 +210,28 @@ class ImportsController < ApplicationController
 
     def document_upload_request?
       params.dig(:import, :type) == "DocumentImport"
+    end
+
+    def sure_import_request?
+      params.dig(:import, :type) == "SureImport"
+    end
+
+    def create_sure_import(file)
+      if file.size > SureImport::MAX_NDJSON_SIZE
+        redirect_to new_import_path, alert: t("imports.create.file_too_large", max_size: SureImport::MAX_NDJSON_SIZE / 1.megabyte)
+        return
+      end
+
+      ext = File.extname(file.original_filename.to_s).downcase
+      unless ext == ".ndjson"
+        redirect_to new_import_path, alert: t("imports.create.invalid_ndjson_file_type")
+        return
+      end
+
+      import = Current.family.imports.create!(type: "SureImport")
+      import.ndjson_file.attach(file)
+
+      redirect_to import_path(import), notice: t("imports.create.ndjson_uploaded")
     end
 
     def valid_pdf_file?(file)
