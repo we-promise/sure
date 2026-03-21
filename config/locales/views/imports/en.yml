@@ -177,7 +177,6 @@ en:
       coming_soon: Coming soon
       import_ynab: Import from YNAB
       import_accounts: Import accounts
-      import_bulk: Import from export (NDJSON)
       import_categories: Import categories
       import_mint: Import from Mint
       import_portfolio: Import investments

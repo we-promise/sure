@@ -148,16 +148,6 @@
               </li>
             <% end %>
 
-            <% if params[:type].nil? || params[:type] == "BulkImport" %>
-              <%= render "imports/import_option",
-                type: "BulkImport",
-                icon_name: "database",
-                icon_bg_class: "bg-emerald-500/5",
-                icon_text_class: "text-emerald-500",
-                label: t(".import_bulk"),
-                enabled: true %>
-            <% end %>
-
             <% if params[:type].nil? || params[:type] == "TransactionImport" %>
               <%= render "imports/import_option",
                 type: "TransactionImport",
