@@ -424,13 +424,19 @@ class Entry < ApplicationRecord
 
       transaction do
         all.each do |entry|
+          changed = false
+
           # Update standard attributes
           if bulk_attributes.present?
             attrs = bulk_attributes.dup
             attrs.delete(:date) if entry.split_child?
-            attrs[:entryable_attributes] = attrs[:entryable_attributes].dup if attrs[:entryable_attributes].present?
-            attrs[:entryable_attributes][:id] = entry.entryable_id if attrs[:entryable_attributes].present?
-            entry.update! attrs
+
+            if attrs.present?
+              attrs[:entryable_attributes] = attrs[:entryable_attributes].dup if attrs[:entryable_attributes].present?
+              attrs[:entryable_attributes][:id] = entry.entryable_id if attrs[:entryable_attributes].present?
+              entry.update! attrs
+              changed = true
+            end
           end
 
           # Handle tags separately - only when explicitly requested
@@ -438,10 +444,13 @@ class Entry < ApplicationRecord
             entry.transaction.tag_ids = tag_ids
             entry.transaction.save!
             entry.entryable.lock_attr!(:tag_ids) if entry.transaction.tags.any?
+            changed = true
           end
 
-          entry.lock_saved_attributes!
-          entry.mark_user_modified!
+          if changed
+            entry.lock_saved_attributes!
+            entry.mark_user_modified!
+          end
         end
       end
 
