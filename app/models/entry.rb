@@ -21,6 +21,7 @@ class Entry < ApplicationRecord
   validates :external_id, uniqueness: { scope: [ :account_id, :source ] }, if: -> { external_id.present? && source.present? }
 
   validate :cannot_unexclude_split_parent
+  validate :split_child_date_matches_parent
 
   before_destroy :prevent_individual_child_deletion, if: :split_child?
 
@@ -425,8 +426,11 @@ class Entry < ApplicationRecord
         all.each do |entry|
           # Update standard attributes
           if bulk_attributes.present?
-            bulk_attributes[:entryable_attributes][:id] = entry.entryable_id if bulk_attributes[:entryable_attributes].present?
-            entry.update! bulk_attributes
+            attrs = bulk_attributes.dup
+            attrs.delete(:date) if entry.split_child?
+            attrs[:entryable_attributes] = attrs[:entryable_attributes].dup if attrs[:entryable_attributes].present?
+            attrs[:entryable_attributes][:id] = entry.entryable_id if attrs[:entryable_attributes].present?
+            entry.update! attrs
           end
 
           # Handle tags separately - only when explicitly requested
@@ -451,6 +455,14 @@ class Entry < ApplicationRecord
       return unless excluded_changed?(from: true, to: false) && split_parent?
 
       errors.add(:excluded, "cannot be toggled off for a split transaction")
+    end
+
+    def split_child_date_matches_parent
+      return unless split_child? && date_changed?
+      return unless parent_entry.present?
+      return if date == parent_entry.date
+
+      errors.add(:date, "must match the parent transaction date for split children")
     end
 
     def prevent_individual_child_deletion
