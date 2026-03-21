@@ -13,7 +13,6 @@ account:
   type: AccountImport
   status: pending
 
-<<<<<<< HEAD
 pdf:
   family: dylan_family
   type: PdfImport
@@ -46,9 +45,8 @@ pdf_with_rows:
         category: "Income"
         notes: ""
   rows_count: 2
-=======
+
 bulk:
   family: dylan_family
   type: BulkImport
   status: pending
->>>>>>> 7cc5c5cf (feat: Add bulk import for NDJSON export files)
