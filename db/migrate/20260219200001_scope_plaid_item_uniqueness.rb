@@ -26,3 +26,7 @@ class ScopePlaidItemUniqueness < ActiveRecord::Migration[7.2]
     add_index :plaid_accounts, :plaid_id, name: "index_plaid_accounts_on_plaid_id", unique: true
   end
 end
+
+# Backwards-compatible alias for environments that may still reference the
+# original migration constant derived from the old filename.
+ScopePlaidAccountUniquenessToItem = ScopePlaidItemUniqueness unless defined?(ScopePlaidAccountUniquenessToItem)
