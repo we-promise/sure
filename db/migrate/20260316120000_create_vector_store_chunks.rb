@@ -28,11 +28,15 @@ class CreateVectorStoreChunks < ActiveRecord::Migration[7.2]
 
   private
 
-    # Check if the pgvector extension is installed in the PostgreSQL server,
-    # not just whether it is enabled in this database. This lets the migration
-    # run harmlessly on plain Postgres (CI, dev without pgvector) while still
-    # creating the table on pgvector-capable servers.
+    # Only run this migration when pgvector is explicitly configured as the
+    # vector store provider AND the extension is actually available on the
+    # PostgreSQL server. Previously we only checked server availability,
+    # which caused failures in production Docker environments where the
+    # extension may be present but the DB user lacks superuser privileges
+    # to enable it.
     def pgvector_available?
+      return false unless ENV["VECTOR_STORE_PROVIDER"].to_s.downcase == "pgvector"
+
       result = ActiveRecord::Base.connection.execute(
         "SELECT 1 FROM pg_available_extensions WHERE name = 'vector' LIMIT 1"
       )
