@@ -84,3 +84,4 @@ class Rule::Condition < ApplicationRecord
       end
     end
 end
+
