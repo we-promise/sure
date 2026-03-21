@@ -101,3 +101,8 @@ pt-BR:
       description: Aqui está um resumo dos novos itens que serão adicionados à sua conta
         assim que você publicar esta importação.
       title: Confirmar seus dados de importação
+      summary_item_label: Item
+      summary_count_label: Quantidade
+      empty_summary: Não foi possível encontrar registros importáveis neste arquivo. Ele pode estar vazio, ou as linhas não correspondem ao formato de exportação esperado (cada linha deve ser um objeto JSON com as chaves «type» e «data», usando tipos suportados por esta importação).
+      publish_import: Publicar importação
+      back_to_imports: Voltar às importações

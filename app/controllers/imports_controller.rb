@@ -91,13 +91,7 @@ class ImportsController < ApplicationController
       # but we have validated size beforehand to prevent memory exhaustion from massive files.
       import.update!(raw_file_str: file.read)
 
-      # BulkImport (NDJSON) skips configuration and goes directly to confirm
-      if type == "BulkImport"
-        import.generate_rows_from_csv # Sets the row count
-        redirect_to import_confirm_path(import), notice: t("imports.create.ndjson_uploaded")
-      else
-        redirect_to import_configuration_path(import), notice: t("imports.create.csv_uploaded")
-      end
+      redirect_to import_configuration_path(import), notice: t("imports.create.csv_uploaded")
     else
       redirect_to import_upload_path(import)
     end
@@ -223,13 +217,25 @@ class ImportsController < ApplicationController
       end
 
       ext = File.extname(file.original_filename.to_s).downcase
-      unless ext == ".ndjson"
+      unless ext.in?(%w[.ndjson .json])
+        redirect_to new_import_path, alert: t("imports.create.invalid_ndjson_file_type")
+        return
+      end
+
+      content = file.read
+      file.rewind
+      unless SureImport.valid_ndjson_first_line?(content)
         redirect_to new_import_path, alert: t("imports.create.invalid_ndjson_file_type")
         return
       end
 
       import = Current.family.imports.create!(type: "SureImport")
-      import.ndjson_file.attach(file)
+      import.ndjson_file.attach(
+        io: StringIO.new(content),
+        filename: file.original_filename,
+        content_type: file.content_type
+      )
+      import.sync_ndjson_rows_count!
 
       redirect_to import_path(import), notice: t("imports.create.ndjson_uploaded")
     end

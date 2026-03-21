@@ -2,32 +2,37 @@
   <%= render "imports/nav", import: @import %>
 <% end %>
 
-<%= content_for :previous_path, @import.type == "BulkImport" ? imports_path : import_clean_path(@import) %>
+<%= content_for :previous_path, @import.is_a?(SureImport) ? imports_path : import_clean_path(@import) %>
 
-<% if @import.type == "BulkImport" %>
+<% if @import.is_a?(SureImport) %>
   <div class="space-y-6 mx-auto max-w-md mb-6">
     <div class="text-center space-y-2">
-      <h1 class="text-3xl text-primary font-medium"><%= t("import.confirms.bulk_import.title") %></h1>
-      <p class="text-secondary text-sm"><%= t("import.confirms.bulk_import.description") %></p>
+      <h1 class="text-3xl text-primary font-medium"><%= t("import.confirms.sure_import.title") %></h1>
+      <p class="text-secondary text-sm"><%= t("import.confirms.sure_import.description") %></p>
     </div>
 
     <div class="bg-container shadow-border-xs rounded-xl p-6 space-y-4">
-      <h3 class="text-sm font-medium text-secondary uppercase"><%= t("import.confirms.bulk_import.summary") %></h3>
+      <h3 class="text-sm font-medium text-secondary uppercase"><%= t("import.confirms.sure_import.summary") %></h3>
       <% dry_run = @import.dry_run %>
-      <ul class="space-y-3">
-        <% dry_run.each do |key, count| %>
-          <% next if count.zero? %>
-          <li class="flex items-center justify-between">
-            <span class="text-primary"><%= key.to_s.humanize %></span>
-            <span class="text-secondary font-medium"><%= count %></span>
-          </li>
-        <% end %>
-      </ul>
+      <% sure_summary_empty = dry_run.values.none?(&:positive?) %>
+      <% if sure_summary_empty %>
+        <p class="text-secondary text-sm text-center py-4"><%= t("import.confirms.sure_import.empty_summary") %></p>
+      <% else %>
+        <ul class="space-y-3">
+          <% dry_run.each do |key, count| %>
+            <% next if count.zero? %>
+            <li class="flex items-center justify-between">
+              <span class="text-primary"><%= key.to_s.humanize %></span>
+              <span class="text-secondary font-medium"><%= count %></span>
+            </li>
+          <% end %>
+        </ul>
+      <% end %>
     </div>
 
     <div class="flex flex-col gap-2">
-      <%= button_to t("import.confirms.bulk_import.publish_button"), publish_import_path(@import), method: :post, class: "btn btn--primary w-full", disabled: !@import.publishable? %>
-      <%= link_to t("import.confirms.bulk_import.cancel"), imports_path, class: "btn btn--ghost w-full text-center" %>
+      <%= button_to t("import.confirms.sure_import.publish_button"), publish_import_path(@import), method: :post, class: "btn btn--primary w-full", disabled: !@import.publishable? %>
+      <%= link_to t("import.confirms.sure_import.cancel"), imports_path, class: "btn btn--ghost w-full text-center" %>
     </div>
   </div>
 <% else %>

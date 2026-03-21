@@ -57,10 +57,11 @@ en:
         date_format_label: Date format
         rows_to_skip_label: Skip first n rows
     confirms:
-      bulk_import:
+      sure_import:
         title: Confirm your import
         description: Review the data that will be imported from your export file.
         summary: Import summary
+        empty_summary: We could not find any importable records in this file. It may be empty, or the lines may not match the expected export format (each line should be a JSON object with "type" and "data" keys, using types this import supports).
         publish_button: Start import
         cancel: Cancel
       mappings:
@@ -107,7 +108,7 @@ en:
         instructions_4: Columns marked with an asterisk (*) are required data.
         instructions_5: No commas, no currency symbols, and no parentheses in numbers.
         title: Import your data
-      bulk_import:
+      sure_import:
         title: Import from export
         description: Upload the all.ndjson file from your data export to restore your accounts, transactions, categories, and more.
         drop_title: Drop NDJSON to upload
@@ -116,6 +117,7 @@ en:
         browse_hint: to add your all.ndjson file here
         upload_button: Upload NDJSON
         hint_html: Upload the <strong>all.ndjson</strong> file from your data export ZIP
+        ndjson_invalid: Must be valid NDJSON with at least one record
   imports:
     type_labels:
       transaction_import: "Transaction import"
@@ -203,7 +205,7 @@ en:
       invalid_document_file_type: Invalid document file type for the active vector store.
       document_uploaded: Document uploaded successfully.
       document_upload_failed: We couldn't upload the document to the vector store. Please try again.
-      invalid_ndjson_file_type: Invalid file type. Please upload an .ndjson file.
+      invalid_ndjson_file_type: Invalid file type or format. Please upload a valid .ndjson or .json export file.
       ndjson_uploaded: NDJSON file uploaded successfully.
       document_provider_not_configured: No vector store is configured for document uploads.
     show:
@@ -213,6 +215,11 @@ en:
       description: Here's a summary of the new items that will be added to your account
         once you publish this import.
       title: Confirm your import data
+      summary_item_label: Item
+      summary_count_label: Count
+      empty_summary: We could not find any importable records in this file. It may be empty, or the lines may not match the expected export format (each line should be a JSON object with "type" and "data" keys, using types this import supports).
+      publish_import: Publish import
+      back_to_imports: Back to imports
     errors:
       custom_column_requires_inflow: "Custom column imports require an inflow column to be selected"
     document_types:

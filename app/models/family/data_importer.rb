@@ -123,7 +123,7 @@ class Family::DataImporter
       category = @family.categories.build(
         name: data["name"],
         color: data["color"] || Category::UNCATEGORIZED_COLOR,
-        classification: data["classification"] || "expense",
+        classification_unused: data["classification_unused"] || data["classification"] || "expense",
         lucide_icon: data["lucide_icon"] || "shapes"
       )
 
@@ -406,7 +406,7 @@ class Family::DataImporter
       category ||= @family.categories.create!(
         name: value,
         color: Category::UNCATEGORIZED_COLOR,
-        classification: "expense",
+        classification_unused: "expense",
         lucide_icon: "shapes"
       )
       return category.id
@@ -434,7 +434,7 @@ class Family::DataImporter
       category ||= @family.categories.create!(
         name: value,
         color: Category::UNCATEGORIZED_COLOR,
-        classification: "expense",
+        classification_unused: "expense",
         lucide_icon: "shapes"
       )
       return category.id

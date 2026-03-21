@@ -1,35 +1,38 @@
 require "test_helper"
 
-class BulkImportTest < ActiveSupport::TestCase
+class SureImportTest < ActiveSupport::TestCase
   include ActiveJob::TestHelper
 
   setup do
     @family = families(:dylan_family)
-    @import = @family.imports.create!(type: "BulkImport")
+    @import = @family.imports.create!(type: "SureImport")
   end
 
-  test "import interface methods exist" do
-    assert_respond_to @import, :publish
-    assert_respond_to @import, :publish_later
-    assert_respond_to @import, :generate_rows_from_csv
-    assert_respond_to @import, :uploaded?
-    assert_respond_to @import, :configured?
-    assert_respond_to @import, :cleaned?
-    assert_respond_to @import, :publishable?
-    assert_respond_to @import, :importing?
-    assert_respond_to @import, :complete?
-    assert_respond_to @import, :failed?
+  test "dry_run reflects attached ndjson content" do
+    ndjson = [
+      { type: "Account", data: { id: "uuid-1", name: "Test", balance: "1000", currency: "USD", accountable_type: "Depository" } },
+      { type: "Transaction", data: { id: "uuid-2" } }
+    ].map(&:to_json).join("\n")
+
+    attach_ndjson(ndjson)
+
+    dry_run = @import.dry_run
+
+    assert_equal 1, dry_run[:accounts]
+    assert_equal 1, dry_run[:transactions]
   end
 
-  test "column_keys returns empty array" do
+  test "publishable? is false when attached file has no supported records" do
+    ndjson = { type: "UnknownType", data: {} }.to_json
+    attach_ndjson(ndjson)
+
+    assert @import.uploaded?
+    assert_not @import.publishable?
+  end
+
+  test "column_keys required_column_keys and mapping_steps are empty" do
     assert_equal [], @import.column_keys
-  end
-
-  test "required_column_keys returns empty array" do
     assert_equal [], @import.required_column_keys
-  end
-
-  test "mapping_steps returns empty array" do
     assert_equal [], @import.mapping_steps
   end
 
@@ -41,62 +44,50 @@ class BulkImportTest < ActiveSupport::TestCase
     assert_nil @import.csv_template
   end
 
-  test "uploaded? returns false without ndjson content" do
+  test "uploaded? returns false without ndjson attachment" do
     assert_not @import.uploaded?
   end
 
-  test "uploaded? returns true with valid ndjson content" do
-    ndjson = build_ndjson([
+  test "uploaded? returns true with valid ndjson attachment" do
+    attach_ndjson(build_ndjson([
       { type: "Account", data: { id: "uuid-1", name: "Test", balance: "1000", currency: "USD", accountable_type: "Depository" } }
-    ])
-    @import.update!(raw_file_str: ndjson)
+    ]))
 
     assert @import.uploaded?
   end
 
-  test "uploaded? returns false with invalid ndjson content" do
-    @import.update!(raw_file_str: "not valid json")
+  test "uploaded? returns false with invalid ndjson attachment" do
+    attach_ndjson("not valid json")
 
     assert_not @import.uploaded?
   end
 
-  test "configured? returns true when uploaded" do
-    ndjson = build_ndjson([
+  test "configured? and cleaned? follow uploaded?" do
+    attach_ndjson(build_ndjson([
       { type: "Account", data: { id: "uuid-1", name: "Test", balance: "1000", currency: "USD", accountable_type: "Depository" } }
-    ])
-    @import.update!(raw_file_str: ndjson)
+    ]))
 
     assert @import.configured?
-  end
-
-  test "cleaned? returns true when uploaded" do
-    ndjson = build_ndjson([
-      { type: "Account", data: { id: "uuid-1", name: "Test", balance: "1000", currency: "USD", accountable_type: "Depository" } }
-    ])
-    @import.update!(raw_file_str: ndjson)
-
     assert @import.cleaned?
   end
 
   test "publishable? returns true when uploaded and valid" do
-    ndjson = build_ndjson([
+    attach_ndjson(build_ndjson([
       { type: "Account", data: { id: "uuid-1", name: "Test", balance: "1000", currency: "USD", accountable_type: "Depository" } }
-    ])
-    @import.update!(raw_file_str: ndjson)
+    ]))
 
     assert @import.publishable?
   end
 
   test "dry_run returns counts by type" do
-    ndjson = build_ndjson([
+    attach_ndjson(build_ndjson([
       { type: "Account", data: { id: "uuid-1" } },
       { type: "Account", data: { id: "uuid-2" } },
       { type: "Category", data: { id: "uuid-3" } },
       { type: "Transaction", data: { id: "uuid-4" } },
       { type: "Transaction", data: { id: "uuid-5" } },
       { type: "Transaction", data: { id: "uuid-6" } }
-    ])
-    @import.update!(raw_file_str: ndjson)
+    ]))
 
     dry_run = @import.dry_run
 
@@ -106,21 +97,20 @@ class BulkImportTest < ActiveSupport::TestCase
     assert_equal 0, dry_run[:tags]
   end
 
-  test "generate_rows_from_csv sets total row count" do
-    ndjson = build_ndjson([
+  test "sync_ndjson_rows_count! sets total row count" do
+    attach_ndjson(build_ndjson([
       { type: "Account", data: { id: "uuid-1" } },
       { type: "Category", data: { id: "uuid-2" } },
       { type: "Transaction", data: { id: "uuid-3" } }
-    ])
-    @import.update!(raw_file_str: ndjson)
+    ]))
 
-    @import.generate_rows_from_csv
+    @import.sync_ndjson_rows_count!
 
     assert_equal 3, @import.rows_count
   end
 
   test "publishes import successfully" do
-    ndjson = build_ndjson([
+    attach_ndjson(build_ndjson([
       { type: "Account", data: {
         id: "uuid-1",
         name: "Import Test Account",
@@ -129,8 +119,7 @@ class BulkImportTest < ActiveSupport::TestCase
         accountable_type: "Depository",
         accountable: { subtype: "checking" }
       } }
-    ])
-    @import.update!(raw_file_str: ndjson)
+    ]))
 
     initial_account_count = @family.accounts.count
 
@@ -147,7 +136,7 @@ class BulkImportTest < ActiveSupport::TestCase
   end
 
   test "import tracks created accounts for revert" do
-    ndjson = build_ndjson([
+    attach_ndjson(build_ndjson([
       { type: "Account", data: {
         id: "uuid-1",
         name: "Revertable Account",
@@ -155,8 +144,7 @@ class BulkImportTest < ActiveSupport::TestCase
         currency: "USD",
         accountable_type: "Depository"
       } }
-    ])
-    @import.update!(raw_file_str: ndjson)
+    ]))
 
     @import.publish
 
@@ -165,7 +153,7 @@ class BulkImportTest < ActiveSupport::TestCase
   end
 
   test "publishes later enqueues job" do
-    ndjson = build_ndjson([
+    attach_ndjson(build_ndjson([
       { type: "Account", data: {
         id: "uuid-1",
         name: "Async Account",
@@ -173,8 +161,7 @@ class BulkImportTest < ActiveSupport::TestCase
         currency: "USD",
         accountable_type: "Depository"
       } }
-    ])
-    @import.update!(raw_file_str: ndjson)
+    ]))
 
     assert_enqueued_with job: ImportJob, args: [ @import ] do
       @import.publish_later
@@ -184,6 +171,15 @@ class BulkImportTest < ActiveSupport::TestCase
   end
 
   private
+
+    def attach_ndjson(ndjson)
+      @import.ndjson_file.attach(
+        io: StringIO.new(ndjson),
+        filename: "all.ndjson",
+        content_type: "application/x-ndjson"
+      )
+      @import.sync_ndjson_rows_count!
+    end
 
     def build_ndjson(records)
       records.map(&:to_json).join("\n")

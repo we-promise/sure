@@ -85,7 +85,7 @@
                     </div>
                     <%= icon("chevron-right") %>
                   </button>
-                  <%= form.file_field :import_file, accept: ".ndjson", class: "sr-only", tabindex: -1, data: { import_file_target: "input", action: "change->import-file#submit" } %>
+                  <%= form.file_field :import_file, accept: ".ndjson,.json", class: "sr-only", tabindex: -1, data: { import_file_target: "input", action: "change->import-file#submit" } %>
                 <% end %>
 
                 <%= render "shared/ruler" %>
@@ -97,8 +97,7 @@
                 type: "MintImport",
                 image: "mint-logo.jpeg",
                 label: t(".import_mint"),
-                enabled: has_accounts,
-                disabled_message: requires_account_message %>
+                enabled: true %>
             <% end %>
 
             <% if params[:type].nil? || params[:type] == "QifImport" %>
@@ -108,8 +107,7 @@
                 icon_bg_class: "bg-teal-500/5",
                 icon_text_class: "text-teal-500",
                 label: t(".import_qif"),
-                enabled: has_accounts,
-                disabled_message: requires_account_message %>
+                enabled: true %>
             <% end %>
 
             <%= render "imports/import_option",

@@ -46,7 +46,7 @@ pdf_with_rows:
         notes: ""
   rows_count: 2
 
-bulk:
+sure:
   family: dylan_family
-  type: BulkImport
+  type: SureImport
   status: pending

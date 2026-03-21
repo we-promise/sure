@@ -16,8 +16,8 @@ class Import::UploadsController < ApplicationController
   def update
     if @import.is_a?(QifImport)
       handle_qif_upload
-    elsif @import.type == "BulkImport"
-      update_bulk_import
+    elsif @import.is_a?(SureImport)
+      update_sure_import_upload
     elsif csv_valid?(csv_str)
       @import.account = Current.family.accounts.find_by(id: import_account_id)
       @import.assign_attributes(raw_file_str: csv_str, col_sep: upload_params[:col_sep])
@@ -44,15 +44,30 @@ class Import::UploadsController < ApplicationController
       end
     end
 
-    def update_bulk_import
-      if ndjson_valid?(file_str)
-        @import.assign_attributes(raw_file_str: file_str)
-        @import.save!(validate: false)
-        @import.generate_rows_from_csv # Sets the row count
+    def update_sure_import_upload
+      uploaded = upload_params[:ndjson_file]
+      unless uploaded.present?
+        flash.now[:alert] = t("import.uploads.sure_import.ndjson_invalid", default: "Must be valid NDJSON with at least one record")
+        render :show, status: :unprocessable_entity
+        return
+      end
 
-        redirect_to import_confirm_path(@import), notice: t("imports.create.ndjson_uploaded")
+      if uploaded.size > SureImport::MAX_NDJSON_SIZE
+        flash.now[:alert] = t("imports.create.file_too_large", max_size: SureImport::MAX_NDJSON_SIZE / 1.megabyte)
+        render :show, status: :unprocessable_entity
+        return
+      end
+
+      content = uploaded.read
+      uploaded.rewind
+
+      if ndjson_valid?(content)
+        uploaded.rewind
+        @import.ndjson_file.attach(uploaded)
+        @import.sync_ndjson_rows_count!
+        redirect_to import_path(@import), notice: t("imports.create.ndjson_uploaded")
       else
-        flash.now[:alert] = t("import.uploads.bulk_import.ndjson_invalid", default: "Must be valid NDJSON with at least one record")
+        flash.now[:alert] = t("import.uploads.sure_import.ndjson_invalid", default: "Must be valid NDJSON with at least one record")
 
         render :show, status: :unprocessable_entity
       end
@@ -82,10 +97,6 @@ class Import::UploadsController < ApplicationController
       end
 
       redirect_to import_qif_category_selection_path(@import), notice: "QIF file uploaded successfully."
-    end
-
-    def file_str
-      @file_str ||= upload_params[:csv_file]&.read || upload_params[:raw_file_str]
     end
 
     def csv_str
@@ -119,7 +130,7 @@ class Import::UploadsController < ApplicationController
     end
 
     def upload_params
-      params.require(:import).permit(:raw_file_str, :import_file, :csv_file, :col_sep)
+      params.require(:import).permit(:raw_file_str, :import_file, :ndjson_file, :col_sep)
     end
 
     def import_account_id
