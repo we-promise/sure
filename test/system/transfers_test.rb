@@ -38,7 +38,7 @@ class TransfersTest < ApplicationSystemTestCase
 
       # If searchable, type in the search input
       if container.has_selector?("input[type='search']", visible: true)
-        container.find("input[type='search']", visible: true).set(option_text)
+        container.find("input[type='search']", visible: true).set(record.name)
       end
 
       # Wait for the listbox to appear inside the relative container
