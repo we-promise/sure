@@ -102,7 +102,7 @@
                     <% end %>
 
                     <%# Split indicator %>
-                    <% if entry.split_parent? %>
+                    <% if @split_parent_entry_ids ? @split_parent_entry_ids.include?(entry.id) : entry.split_parent? %>
                       <span class="inline-flex items-center gap-1 text-xs font-medium rounded-full px-1.5 py-0.5 border border-accent bg-accent/10 text-accent" title="<%= t("transactions.transaction.split_tooltip") %>">
                         <%= icon "split", size: "sm", color: "current" %>
                         <%= t("transactions.transaction.split") %>

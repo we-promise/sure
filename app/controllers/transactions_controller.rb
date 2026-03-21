@@ -28,6 +28,7 @@ class TransactionsController < ApplicationController
     @pagy, @transactions = pagy(base_scope, limit: safe_per_page)
 
     # Load split parents for grouped display
+    entry_ids = @transactions.map { |t| t.entry.id }
     split_parent_ids = @transactions.filter_map { |t| t.entry.parent_entry_id }.uniq
     @split_parents = if split_parent_ids.any?
       Entry.where(id: split_parent_ids)
@@ -35,6 +36,13 @@ class TransactionsController < ApplicationController
            .index_by(&:id)
     else
       {}
+    end
+
+    # Preload which entries on this page are split parents (have children) to avoid N+1
+    @split_parent_entry_ids = if entry_ids.any?
+      Entry.where(parent_entry_id: entry_ids).distinct.pluck(:parent_entry_id).to_set
+    else
+      Set.new
     end
 
     # Load projected recurring transactions for next 10 days
