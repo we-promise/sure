@@ -30,8 +30,8 @@
             <div class="flex items-center gap-1 min-w-0">
               <div class="truncate flex-shrink">
                 <%= link_to entry.name,
-                    edit_transaction_split_path(transaction),
-                    data: { turbo_frame: :modal },
+                    entry_path(entry),
+                    data: { turbo_frame: "drawer", turbo_prefetch: false },
                     class: "hover:underline" %>
               </div>
 
