@@ -18,11 +18,23 @@ class Rule::Registry
     []
   end
 
-  def get_filter!(key)
-    filter = condition_filters.find { |filter| filter.key == key }
-    raise UnsupportedConditionError, "Unsupported condition type: #{key}" unless filter
-    filter
-  end
+def get_filter!(key)
+  filter = condition_filters.find { |filter| filter.key == key }
+  return filter if filter
+
+  legacy_key =
+    case key
+    when "name", "transaction_details"
+      "transaction_name"
+    else
+      key
+    end
+
+  filter = condition_filters.find { |f| f.key == legacy_key }
+  raise UnsupportedConditionError, "Unsupported condition type: #{key}" unless filter
+
+  filter
+end
 
   def get_executor!(key)
     executor = action_executors.find { |executor| executor.key == key }

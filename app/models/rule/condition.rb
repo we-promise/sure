@@ -4,6 +4,8 @@ class Rule::Condition < ApplicationRecord
 
   has_many :sub_conditions, -> { order(:created_at, :id) }, class_name: "Rule::Condition", foreign_key: :parent_id, dependent: :destroy, inverse_of: :parent
 
+  before_validation :normalize_condition_type
+
   validates :condition_type, presence: true
   validates :operator, presence: true
   validates :value, presence: true, unless: -> { compound? || operator == "is_null" }
@@ -60,6 +62,16 @@ class Rule::Condition < ApplicationRecord
   end
 
   private
+    def normalize_condition_type
+      self.condition_type =
+        case condition_type
+        when "name", "transaction_details"
+          "transaction_name"
+        else
+          condition_type
+        end
+    end
+
     def build_compound_scope(scope)
       if operator == "or"
         combined_scope = sub_conditions
