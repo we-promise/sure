@@ -651,7 +651,7 @@ Pipelock is an optional sidecar that scans AI agent traffic for secret exfiltrat
 pipelock:
   enabled: true
   image:
-    tag: "0.3.2"
+    tag: "1.5.0"
   mode: balanced   # strict, balanced, or audit
 ```
 
