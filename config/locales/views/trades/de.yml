@@ -13,6 +13,13 @@ de:
       submit: Transaktion hinzufügen
       ticker_placeholder: AAPL
       type: Typ
+      types:
+        buy: Kauf
+        sell: Verkauf
+        deposit: Einzahlung
+        withdrawal: Auszahlung
+        interest: Zinsen
+        dividend: Dividende
     header:
       buy: Kaufen
       current_market_price_label: Aktueller Marktpreis

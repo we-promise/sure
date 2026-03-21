@@ -271,7 +271,7 @@ class Account < ApplicationRecord
   end
 
   def available_securities
-    Security.where(id: holdings.select(:security_id).distinct)
+    Security.where(id: current_holdings.select(:security_id).distinct)
             .order(:ticker)
   end
 

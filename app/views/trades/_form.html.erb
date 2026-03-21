@@ -10,12 +10,12 @@
 
     <div class="space-y-2">
       <%= form.select :type, [
-          ["Buy", "buy"],
-          ["Sell", "sell"],
-          ["Deposit", "deposit"],
-          ["Withdrawal", "withdrawal"],
-          ["Interest", "interest"],
-          ["Dividend", "dividend"]
+          [t(".types.buy"), "buy"],
+          [t(".types.sell"), "sell"],
+          [t(".types.deposit"), "deposit"],
+          [t(".types.withdrawal"), "withdrawal"],
+          [t(".types.interest"), "interest"],
+          [t(".types.dividend"), "dividend"]
       ],
       { label: t(".type"), selected: type },
       { data: {

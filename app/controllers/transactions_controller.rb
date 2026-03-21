@@ -367,7 +367,12 @@ class TransactionsController < ApplicationController
       # Changing TO Dividend: set name from the submitted or existing security
       if new_label == "Dividend" && current_label != "Dividend"
         sec = resolve_security_from_params(submitted_security_id)
-        return update_params.merge(name: sec ? "Dividend: #{sec.ticker}" : "Dividend")
+        merged = update_params.merge(name: sec ? "Dividend: #{sec.ticker}" : "Dividend")
+        # Clear invalid security_id to avoid InvalidForeignKey errors
+        if submitted_security_id.present? && sec.nil?
+          merged[:entryable_attributes] = merged[:entryable_attributes].except(:security_id)
+        end
+        return merged
       end
 
       # Changing FROM Dividend to something else: clear the dividend-style name
@@ -375,10 +380,15 @@ class TransactionsController < ApplicationController
         return update_params.merge(name: "#{new_label} payment")
       end
 
-      # Already Dividend and security is changing
-      if current_label == "Dividend" && submitted_security_id.present?
+      # Already Dividend and security is changing (including cleared)
+      if current_label == "Dividend" && update_params.dig(:entryable_attributes)&.key?(:security_id)
         sec = submitted_security_id.present? ? Security.find_by(id: submitted_security_id) : nil
-        return update_params.merge(name: sec ? "Dividend: #{sec.ticker}" : "Dividend")
+        merged = update_params.merge(name: sec ? "Dividend: #{sec.ticker}" : "Dividend")
+        # Clear invalid security_id to avoid InvalidForeignKey errors
+        if submitted_security_id.present? && sec.nil?
+          merged[:entryable_attributes] = merged[:entryable_attributes].except(:security_id)
+        end
+        return merged
       end
 
       update_params

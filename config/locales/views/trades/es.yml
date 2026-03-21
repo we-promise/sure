@@ -13,6 +13,13 @@ es:
       submit: Añadir transacción
       ticker_placeholder: AAPL
       type: Tipo
+      types:
+        buy: Compra
+        sell: Venta
+        deposit: Depósito
+        withdrawal: Retiro
+        interest: Interés
+        dividend: Dividendo
     header:
       buy: Comprar
       current_market_price_label: Precio de mercado actual

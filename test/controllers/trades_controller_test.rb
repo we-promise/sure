@@ -315,9 +315,11 @@ class TradesControllerTest < ActionDispatch::IntegrationTest
           date: Date.current,
           amount: 50,
           currency: "USD",
-          security_id: "00000000-0000-0000-0000-000000000000"
+          security_id: "12345678-1234-5678-1234-567812345678"
         }
       }
     end
+
+    assert_response :unprocessable_entity
   end
 end
