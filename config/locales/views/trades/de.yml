@@ -8,6 +8,8 @@ de:
       holding: Tickersymbol
       price: Preis pro Anteil
       qty: Menge
+      security: Wertpapier (optional)
+      security_prompt: Keine
       submit: Transaktion hinzufügen
       ticker_placeholder: AAPL
       type: Typ

@@ -360,4 +360,86 @@ end
     assert_not entry.import_locked?
     assert_not entry.protected_from_sync?
   end
+
+  test "update sets dividend name from submitted security when changing to Dividend label" do
+    account = accounts(:investment)
+    security = securities(:aapl)
+
+    entry = account.entries.create!(
+      name: "Some payment",
+      date: Date.current,
+      amount: -50,
+      currency: "USD",
+      entryable: Transaction.new(investment_activity_label: "Interest")
+    )
+
+    patch transaction_url(entry), params: {
+      entry: {
+        name: "Some payment",
+        entryable_attributes: {
+          id: entry.entryable_id,
+          investment_activity_label: "Dividend",
+          security_id: security.id
+        }
+      }
+    }
+
+    entry.reload
+    assert_equal "Dividend: AAPL", entry.name
+    assert_equal security.id, entry.transaction.security_id
+  end
+
+  test "update clears dividend name when changing from Dividend to another label" do
+    account = accounts(:investment)
+    security = securities(:aapl)
+
+    entry = account.entries.create!(
+      name: "Dividend: AAPL",
+      date: Date.current,
+      amount: -50,
+      currency: "USD",
+      entryable: Transaction.new(investment_activity_label: "Dividend", security: security)
+    )
+
+    patch transaction_url(entry), params: {
+      entry: {
+        name: "Dividend: AAPL",
+        entryable_attributes: {
+          id: entry.entryable_id,
+          investment_activity_label: "Interest"
+        }
+      }
+    }
+
+    entry.reload
+    assert_equal "Interest payment", entry.name
+  end
+
+  test "update changes dividend name when security changes" do
+    account = accounts(:investment)
+    aapl = securities(:aapl)
+    msft = securities(:msft)
+
+    entry = account.entries.create!(
+      name: "Dividend: AAPL",
+      date: Date.current,
+      amount: -50,
+      currency: "USD",
+      entryable: Transaction.new(investment_activity_label: "Dividend", security: aapl)
+    )
+
+    patch transaction_url(entry), params: {
+      entry: {
+        name: "Dividend: AAPL",
+        entryable_attributes: {
+          id: entry.entryable_id,
+          security_id: msft.id
+        }
+      }
+    }
+
+    entry.reload
+    assert_equal "Dividend: MSFT", entry.name
+    assert_equal msft.id, entry.transaction.security_id
+  end
 end

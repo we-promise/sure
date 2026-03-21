@@ -8,6 +8,8 @@ fr:
       holding: Symbole boursier
       price: Prix par action
       qty: Quantité
+      security: Titre (facultatif)
+      security_prompt: Aucun
       submit: Ajouter la transaction
       ticker_placeholder: AAPL
       type: Type

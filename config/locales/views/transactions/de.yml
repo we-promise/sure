@@ -40,6 +40,7 @@ de:
       convert_to_trade_description: Diese Transaktion in einen Kauf- oder Verkaufstrade mit Wertpapierdetails für die Portfolioverfolgung umwandeln.
       convert_to_trade_button: In Trade umwandeln
       merchant_label: Händler
+      security_label: Wertpapier
       name_label: Name
       nature: Typ
       none: (keine)

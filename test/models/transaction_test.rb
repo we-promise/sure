@@ -52,6 +52,20 @@ class TransactionTest < ActiveSupport::TestCase
     end
   end
 
+  test "can associate a security" do
+    transaction = transactions(:one)
+    security = securities(:aapl)
+
+    transaction.update!(security: security)
+
+    assert_equal security, transaction.reload.security
+  end
+
+  test "security association is optional" do
+    transaction = Transaction.new(kind: "standard")
+    assert_nil transaction.security
+  end
+
   test "ACTIVITY_LABELS contains all valid labels" do
     assert_includes Transaction::ACTIVITY_LABELS, "Buy"
     assert_includes Transaction::ACTIVITY_LABELS, "Sell"

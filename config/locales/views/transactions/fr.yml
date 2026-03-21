@@ -30,6 +30,7 @@ fr:
       delete_title: Supprimer la transaction
       details: Détails
       merchant_label: Marchand
+      security_label: Titre
       name_label: Nom
       nature: Type
       none: "(aucun)"

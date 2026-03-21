@@ -14,7 +14,8 @@
           ["Sell", "sell"],
           ["Deposit", "deposit"],
           ["Withdrawal", "withdrawal"],
-          ["Interest", "interest"]
+          ["Interest", "interest"],
+          ["Dividend", "dividend"]
       ],
       { label: t(".type"), selected: type },
       { data: {
@@ -46,6 +47,10 @@
 
       <% if %w[deposit withdrawal].include?(type) %>
         <%= form.collection_select :transfer_account_id, Current.family.accounts.visible.alphabetically, :id, :name, { prompt: t(".account_prompt"), label: t(".account") } %>
+      <% end %>
+
+      <% if type == "dividend" %>
+        <%= form.collection_select :security_id, (account&.available_securities || []), :id, :name_with_ticker, { include_blank: t(".security_prompt"), label: t(".security") } %>
       <% end %>
 
       <% if %w[buy sell].include?(type) %>

@@ -10,6 +10,7 @@ class Security < ApplicationRecord
   before_save :generate_logo_url_from_brandfetch, if: :should_generate_logo?
 
   has_many :trades, dependent: :nullify, class_name: "Trade"
+  has_many :transactions, dependent: :nullify
   has_many :prices, dependent: :destroy
 
   validates :ticker, presence: true
@@ -25,6 +26,10 @@ class Security < ApplicationRecord
 
   def exchange_name
     self.class.exchange_name_for(exchange_operating_mic)
+  end
+
+  def name_with_ticker
+    name.present? ? "#{ticker} - #{name}" : ticker
   end
 
   def current_price

@@ -53,6 +53,7 @@
               data: { controller: "auto-submit-form" } do |f| %>
           <%= f.text_field :name,
                 label: t(".name_label"),
+                disabled: @entry.transaction.investment_activity_label == "Dividend",
                 "data-auto-submit-form-target": "auto" %>
           <%= f.date_field :date,
                 label: t(".date_label"),
@@ -107,6 +108,15 @@
                     label: t(".merchant_label"),
                     class: "text-subdued", variant: :logo, searchable: true },
                   "data-auto-submit-form-target": "auto" %>
+            <% if @entry.account.investment? || @entry.account.crypto? %>
+              <%= ef.collection_select :security_id,
+                    @entry.account.available_securities,
+                    :id, :name_with_ticker,
+                    { include_blank: t(".none"),
+                      label: t(".security_label"),
+                      searchable: true },
+                    "data-auto-submit-form-target": "auto" %>
+            <% end %>
             <%= ef.select :tag_ids,
                   Current.family.tags.alphabetically.pluck(:name, :id),
                   {

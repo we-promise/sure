@@ -263,4 +263,61 @@ class TradesControllerTest < ActionDispatch::IntegrationTest
     assert @entry.trade.locked_attributes.key?("investment_activity_label"), "investment_activity_label should be locked"
     assert @entry.protected_from_sync?, "Entry should be protected from sync"
   end
+
+  test "creates dividend entry" do
+    security = securities(:aapl)
+
+    assert_difference [ "Entry.count", "Transaction.count" ], 1 do
+      post trades_url(account_id: @entry.account_id), params: {
+        model: {
+          type: "dividend",
+          date: Date.current,
+          amount: 50,
+          currency: "USD",
+          security_id: security.id
+        }
+      }
+    end
+
+    created_entry = Entry.order(created_at: :desc).first
+
+    assert created_entry.amount.negative?
+    assert_equal "Dividend: AAPL", created_entry.name
+    assert_equal security, created_entry.transaction.security
+    assert_equal "Dividend", created_entry.transaction.investment_activity_label
+    assert_redirected_to @entry.account
+  end
+
+  test "creates dividend entry without security" do
+    assert_difference [ "Entry.count", "Transaction.count" ], 1 do
+      post trades_url(account_id: @entry.account_id), params: {
+        model: {
+          type: "dividend",
+          date: Date.current,
+          amount: 50,
+          currency: "USD"
+        }
+      }
+    end
+
+    created_entry = Entry.order(created_at: :desc).first
+
+    assert_equal "Dividend", created_entry.name
+    assert_nil created_entry.transaction.security
+    assert_redirected_to @entry.account
+  end
+
+  test "dividend with invalid security_id returns errors" do
+    assert_no_difference [ "Entry.count", "Transaction.count" ] do
+      post trades_url(account_id: @entry.account_id), params: {
+        model: {
+          type: "dividend",
+          date: Date.current,
+          amount: 50,
+          currency: "USD",
+          security_id: "00000000-0000-0000-0000-000000000000"
+        }
+      }
+    end
+  end
 end

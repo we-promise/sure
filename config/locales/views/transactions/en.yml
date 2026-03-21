@@ -49,6 +49,7 @@ en:
       pending_duplicate_merger_description: Manually merge this pending transaction with its posted version.
       pending_duplicate_merger_button: Open merger
       merchant_label: Merchant
+      security_label: Security
       name_label: Name
       nature: Type
       none: "(none)"

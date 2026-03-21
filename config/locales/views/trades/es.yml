@@ -8,6 +8,8 @@ es:
       holding: Símbolo del ticker
       price: Precio por acción
       qty: Cantidad
+      security: Valor (opcional)
+      security_prompt: Ninguno
       submit: Añadir transacción
       ticker_placeholder: AAPL
       type: Tipo

@@ -87,7 +87,10 @@ class TransactionsController < ApplicationController
   end
 
   def update
-    if @entry.update(entry_params)
+    update_params = entry_params
+    update_params = sync_dividend_name(update_params)
+
+    if @entry.update(update_params)
       transaction = @entry.transaction
 
       if needs_rule_notification?(transaction)
@@ -356,10 +359,43 @@ class TransactionsController < ApplicationController
       transaction.eligible_for_category_rule?
     end
 
+    def sync_dividend_name(update_params)
+      new_label = update_params.dig(:entryable_attributes, :investment_activity_label)
+      current_label = @entry.transaction.investment_activity_label
+      submitted_security_id = update_params.dig(:entryable_attributes, :security_id)
+
+      # Changing TO Dividend: set name from the submitted or existing security
+      if new_label == "Dividend" && current_label != "Dividend"
+        sec = resolve_security_from_params(submitted_security_id)
+        return update_params.merge(name: sec ? "Dividend: #{sec.ticker}" : "Dividend")
+      end
+
+      # Changing FROM Dividend to something else: clear the dividend-style name
+      if new_label.present? && new_label != "Dividend" && current_label == "Dividend"
+        return update_params.merge(name: "#{new_label} payment")
+      end
+
+      # Already Dividend and security is changing
+      if current_label == "Dividend" && submitted_security_id.present?
+        sec = submitted_security_id.present? ? Security.find_by(id: submitted_security_id) : nil
+        return update_params.merge(name: sec ? "Dividend: #{sec.ticker}" : "Dividend")
+      end
+
+      update_params
+    end
+
+    def resolve_security_from_params(submitted_security_id)
+      if submitted_security_id.present?
+        Security.find_by(id: submitted_security_id)
+      else
+        @entry.transaction.security
+      end
+    end
+
     def entry_params
       entry_params = params.require(:entry).permit(
         :name, :date, :amount, :currency, :excluded, :notes, :nature, :entryable_type,
-        entryable_attributes: [ :id, :category_id, :merchant_id, :kind, :investment_activity_label, { tag_ids: [] } ]
+        entryable_attributes: [ :id, :category_id, :merchant_id, :security_id, :kind, :investment_activity_label, { tag_ids: [] } ]
       )
 
       nature = entry_params.delete(:nature)

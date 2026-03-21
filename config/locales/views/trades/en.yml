@@ -8,6 +8,8 @@ en:
       holding: Ticker symbol
       price: Price per share
       qty: Quantity
+      security: Security (optional)
+      security_prompt: None
       submit: Add transaction
       ticker_placeholder: AAPL
       type: Type

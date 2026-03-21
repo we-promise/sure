@@ -2,7 +2,7 @@ class Trade::CreateForm
   include ActiveModel::Model
 
   attr_accessor :account, :date, :amount, :currency, :qty,
-                :price, :ticker, :manual_ticker, :type, :transfer_account_id
+                :price, :ticker, :manual_ticker, :type, :transfer_account_id, :security_id
 
   # Either creates a trade, transaction, or transfer based on type
   # Returns the model, regardless of success or failure
@@ -12,6 +12,8 @@ class Trade::CreateForm
       create_trade
     when "interest"
       create_interest_income
+    when "dividend"
+      create_dividend
     when "deposit", "withdrawal"
       create_transfer
     end
@@ -63,6 +65,37 @@ class Trade::CreateForm
         amount: signed_amount,
         currency: currency,
         entryable: Transaction.new
+      )
+
+      if entry.save
+        entry.lock_saved_attributes!
+        account.sync_later
+      end
+
+      entry
+    end
+
+    def create_dividend
+      signed_amount = amount.to_d * -1
+      dividend_security = security_id.present? ? Security.find_by(id: security_id) : nil
+
+      if security_id.present? && dividend_security.nil?
+        entry = account.entries.build(entryable: Transaction.new)
+        entry.errors.add(:base, "Security not found")
+        return entry
+      end
+
+      entry_name = dividend_security ? "Dividend: #{dividend_security.ticker}" : "Dividend"
+
+      entry = account.entries.build(
+        name: entry_name,
+        date: date,
+        amount: signed_amount,
+        currency: currency,
+        entryable: Transaction.new(
+          security: dividend_security,
+          investment_activity_label: "Dividend"
+        )
       )
 
       if entry.save

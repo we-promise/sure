@@ -270,6 +270,11 @@ class Account < ApplicationRecord
     raise e
   end
 
+  def available_securities
+    Security.where(id: holdings.select(:security_id).distinct)
+            .order(:ticker)
+  end
+
   def current_holdings
     holdings
       .where(currency: currency)

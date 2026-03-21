@@ -40,6 +40,7 @@ es:
       convert_to_trade_description: Convierte esta transacción en una operación de compra o venta con detalles del valor para el seguimiento de la cartera.
       convert_to_trade_button: Convertir en operación
       merchant_label: Comerciante
+      security_label: Valor
       name_label: Nombre
       nature: Tipo
       none: "(ninguno)"
