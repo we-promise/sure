@@ -179,7 +179,7 @@ class Api::V1::CategoriesControllerTest < ActionDispatch::IntegrationTest
     other_family_category = families(:empty).categories.create!(
       name: "Other Family Category",
       color: "#FF0000",
-      classification: "expense"
+      classification_unused: "expense"
     )
 
     get "/api/v1/categories/#{other_family_category.id}", params: {}, headers: {
