@@ -5,9 +5,10 @@ All notable changes to the Sure Helm chart will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.6.9-alpha] - 2026-03-02
+## [0.6.9-alpha] - 2026-03-21
 
 ### Added
+- **Bumped** `pipelock.image.tag` from `0.3.2` to `1.5.0`
 - **Pipelock security proxy** (`pipelock.enabled=true`): Separate Deployment + Service that provides two scanning layers
   - **Forward proxy** (port 8888): Scans outbound HTTPS from Faraday-based clients (e.g. ruby-openai). Auto-injects `HTTPS_PROXY`/`HTTP_PROXY`/`NO_PROXY` env vars into app pods
   - **MCP reverse proxy** (port 8889): Scans inbound MCP traffic for DLP, prompt injection, and tool poisoning. Auto-computes upstream URL via `sure.pipelockUpstream` helper

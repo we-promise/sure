@@ -77,7 +77,7 @@ Enable Pipelock in your Helm values:
 pipelock:
   enabled: true
   image:
-    tag: "0.3.2"
+    tag: "1.5.0"
   mode: balanced
 ```
 
