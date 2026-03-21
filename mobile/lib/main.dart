@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:app_links/app_links.dart';
 import 'package:flutter/material.dart';
+import 'package:posthog_flutter/posthog_flutter.dart';
 import 'package:provider/provider.dart';
 import 'providers/auth_provider.dart';
 import 'providers/accounts_provider.dart';
@@ -13,10 +14,12 @@ import 'screens/sso_onboarding_screen.dart';
 import 'services/api_config.dart';
 import 'services/connectivity_service.dart';
 import 'services/log_service.dart';
+import 'services/posthog_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await ApiConfig.initialize();
+  await PosthogService.initialize();
 
   // Add initial log entry
   LogService.instance.info('App', 'Sure app starting...');
@@ -62,90 +65,93 @@ class SureApp extends StatelessWidget {
           },
         ),
       ],
-      child: MaterialApp(
-        title: 'Sure Finances',
-        debugShowCheckedModeBanner: false,
-        theme: ThemeData(
-          fontFamily: 'Geist',
-          fontFamilyFallback: const [
-            'Inter',
-            'Arial',
-            'sans-serif',
-          ],
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: const Color(0xFF6366F1),
-            brightness: Brightness.light,
-          ),
-          useMaterial3: true,
-          appBarTheme: const AppBarTheme(
-            centerTitle: true,
-            elevation: 0,
-          ),
-          cardTheme: CardThemeData(
-            elevation: 2,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+      child: PostHogWidget(
+        child: MaterialApp(
+          navigatorObservers: [PosthogObserver()],
+          title: 'Sure Finances',
+          debugShowCheckedModeBanner: false,
+          theme: ThemeData(
+            fontFamily: 'Geist',
+            fontFamilyFallback: const [
+              'Inter',
+              'Arial',
+              'sans-serif',
+            ],
+            colorScheme: ColorScheme.fromSeed(
+              seedColor: const Color(0xFF6366F1),
+              brightness: Brightness.light,
             ),
-          ),
-          inputDecorationTheme: InputDecorationTheme(
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
+            useMaterial3: true,
+            appBarTheme: const AppBarTheme(
+              centerTitle: true,
+              elevation: 0,
             ),
-            filled: true,
-          ),
-          elevatedButtonTheme: ElevatedButtonThemeData(
-            style: ElevatedButton.styleFrom(
-              minimumSize: const Size(double.infinity, 50),
+            cardTheme: CardThemeData(
+              elevation: 2,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
             ),
-          ),
-        ),
-        darkTheme: ThemeData(
-          fontFamily: 'Geist',
-          fontFamilyFallback: const [
-            'Inter',
-            'Arial',
-            'sans-serif',
-          ],
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: const Color(0xFF6366F1),
-            brightness: Brightness.dark,
-          ),
-          useMaterial3: true,
-          appBarTheme: const AppBarTheme(
-            centerTitle: true,
-            elevation: 0,
-          ),
-          cardTheme: CardThemeData(
-            elevation: 2,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+            inputDecorationTheme: InputDecorationTheme(
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              filled: true,
+            ),
+            elevatedButtonTheme: ElevatedButtonThemeData(
+              style: ElevatedButton.styleFrom(
+                minimumSize: const Size(double.infinity, 50),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
             ),
           ),
-          inputDecorationTheme: InputDecorationTheme(
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
+          darkTheme: ThemeData(
+            fontFamily: 'Geist',
+            fontFamilyFallback: const [
+              'Inter',
+              'Arial',
+              'sans-serif',
+            ],
+            colorScheme: ColorScheme.fromSeed(
+              seedColor: const Color(0xFF6366F1),
+              brightness: Brightness.dark,
             ),
-            filled: true,
-          ),
-          elevatedButtonTheme: ElevatedButtonThemeData(
-            style: ElevatedButton.styleFrom(
-              minimumSize: const Size(double.infinity, 50),
+            useMaterial3: true,
+            appBarTheme: const AppBarTheme(
+              centerTitle: true,
+              elevation: 0,
+            ),
+            cardTheme: CardThemeData(
+              elevation: 2,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
             ),
+            inputDecorationTheme: InputDecorationTheme(
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              filled: true,
+            ),
+            elevatedButtonTheme: ElevatedButtonThemeData(
+              style: ElevatedButton.styleFrom(
+                minimumSize: const Size(double.infinity, 50),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
           ),
+          themeMode: ThemeMode.system,
+          routes: {
+            '/config': (context) => const BackendConfigScreen(),
+            '/login': (context) => const LoginScreen(),
+            '/home': (context) => const MainNavigationScreen(),
+          },
+          home: const AppWrapper(),
         ),
-        themeMode: ThemeMode.system,
-        routes: {
-          '/config': (context) => const BackendConfigScreen(),
-          '/login': (context) => const LoginScreen(),
-          '/home': (context) => const MainNavigationScreen(),
-        },
-        home: const AppWrapper(),
       ),
     );
   }

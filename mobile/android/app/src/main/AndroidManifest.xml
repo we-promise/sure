@@ -34,5 +34,9 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+        <!-- Disable PostHog auto-init so we can configure it in Dart with session replay -->
+        <meta-data
+            android:name="com.posthog.posthog.AUTO_INIT"
+            android:value="false" />
     </application>
 </manifest>

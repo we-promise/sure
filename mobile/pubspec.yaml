@@ -24,6 +24,7 @@ dependencies:
   url_launcher: ^6.2.5
   flutter_svg: ^2.2.0
   package_info_plus: ^8.0.0
+  posthog_flutter: ^4.7.0
 
 dev_dependencies:
   flutter_test:
