@@ -97,7 +97,8 @@
                 type: "MintImport",
                 image: "mint-logo.jpeg",
                 label: t(".import_mint"),
-                enabled: true %>
+                enabled: has_accounts,
+                disabled_message: requires_account_message %>
             <% end %>
 
             <% if params[:type].nil? || params[:type] == "QifImport" %>
@@ -107,7 +108,8 @@
                 icon_bg_class: "bg-teal-500/5",
                 icon_text_class: "text-teal-500",
                 label: t(".import_qif"),
-                enabled: true %>
+                enabled: has_accounts,
+                disabled_message: requires_account_message %>
             <% end %>
 
             <%= render "imports/import_option",
