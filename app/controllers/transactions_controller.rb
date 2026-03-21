@@ -88,7 +88,7 @@ class TransactionsController < ApplicationController
 
   def update
     update_params = entry_params
-    update_params = sync_dividend_name(update_params)
+    update_params = sync_activity_name(update_params)
 
     if @entry.update(update_params)
       transaction = @entry.transaction
@@ -359,46 +359,50 @@ class TransactionsController < ApplicationController
       transaction.eligible_for_category_rule?
     end
 
-    def sync_dividend_name(update_params)
+    SECURITY_ACTIVITY_LABELS = %w[Dividend Interest].freeze
+
+    def sync_activity_name(update_params)
       new_label = update_params.dig(:entryable_attributes, :investment_activity_label)
       current_label = @entry.transaction.investment_activity_label
       submitted_security_id = update_params.dig(:entryable_attributes, :security_id)
 
-      # Changing TO Dividend: set name from the submitted or existing security
-      if new_label == "Dividend" && current_label != "Dividend"
-        sec = resolve_security_from_params(submitted_security_id)
-        merged = update_params.merge(name: sec ? "Dividend: #{sec.ticker}" : "Dividend")
-        # Clear invalid security_id to avoid InvalidForeignKey errors
-        if submitted_security_id.present? && sec.nil?
-          merged[:entryable_attributes] = merged[:entryable_attributes].except(:security_id)
-        end
-        return merged
+      # Sanitize invalid security_id upfront to avoid InvalidForeignKey on any path
+      update_params = sanitize_security_id(update_params, submitted_security_id)
+
+      # Changing activity label
+      if new_label.present? && new_label != current_label
+        sec = resolve_security_for_update(update_params, submitted_security_id)
+        return update_params.merge(name: activity_name(new_label, sec))
       end
 
-      # Changing FROM Dividend to something else: clear the dividend-style name
-      if new_label.present? && new_label != "Dividend" && current_label == "Dividend"
-        return update_params.merge(name: "#{new_label} payment")
-      end
-
-      # Already Dividend and security is changing (including cleared)
-      if current_label == "Dividend" && update_params.dig(:entryable_attributes)&.key?(:security_id)
+      # Same label, but security is changing
+      if current_label.in?(SECURITY_ACTIVITY_LABELS) && update_params.dig(:entryable_attributes)&.key?(:security_id)
         sec = submitted_security_id.present? ? Security.find_by(id: submitted_security_id) : nil
-        merged = update_params.merge(name: sec ? "Dividend: #{sec.ticker}" : "Dividend")
-        # Clear invalid security_id to avoid InvalidForeignKey errors
-        if submitted_security_id.present? && sec.nil?
-          merged[:entryable_attributes] = merged[:entryable_attributes].except(:security_id)
-        end
-        return merged
+        return update_params.merge(name: activity_name(current_label, sec))
       end
 
       update_params
     end
 
-    def resolve_security_from_params(submitted_security_id)
-      if submitted_security_id.present?
-        Security.find_by(id: submitted_security_id)
+    def activity_name(label, security)
+      security ? "#{label}: #{security.ticker}" : label
+    end
+
+    def resolve_security_for_update(update_params, submitted_security_id)
+      security_submitted = update_params.dig(:entryable_attributes)&.key?(:security_id)
+      if security_submitted
+        submitted_security_id.present? ? Security.find_by(id: submitted_security_id) : nil
       else
         @entry.transaction.security
+      end
+    end
+
+    def sanitize_security_id(update_params, submitted_security_id)
+      return update_params unless submitted_security_id.present?
+      return update_params if Security.exists?(id: submitted_security_id)
+
+      update_params.deep_dup.tap do |params|
+        params[:entryable_attributes] = params[:entryable_attributes].except(:security_id)
       end
     end
 

@@ -49,7 +49,7 @@
         <%= form.collection_select :transfer_account_id, Current.family.accounts.visible.alphabetically, :id, :name, { prompt: t(".account_prompt"), label: t(".account") } %>
       <% end %>
 
-      <% if type == "dividend" %>
+      <% if %w[dividend interest].include?(type) %>
         <%= form.collection_select :security_id, (account&.available_securities || []), :id, :name_with_ticker, { include_blank: t(".security_prompt"), label: t(".security") } %>
       <% end %>
 

@@ -53,7 +53,7 @@
               data: { controller: "auto-submit-form" } do |f| %>
           <%= f.text_field :name,
                 label: t(".name_label"),
-                disabled: @entry.transaction.investment_activity_label == "Dividend",
+                disabled: @entry.transaction.investment_activity_label.in?(%w[Dividend Interest]),
                 "data-auto-submit-form-target": "auto" %>
           <%= f.date_field :date,
                 label: t(".date_label"),

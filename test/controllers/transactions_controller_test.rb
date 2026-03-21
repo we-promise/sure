@@ -412,7 +412,7 @@ end
     }
 
     entry.reload
-    assert_equal "Interest payment", entry.name
+    assert_equal "Interest: AAPL", entry.name
   end
 
   test "update changes dividend name when security changes" do

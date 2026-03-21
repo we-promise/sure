@@ -315,7 +315,7 @@ class TradesControllerTest < ActionDispatch::IntegrationTest
           date: Date.current,
           amount: 50,
           currency: "USD",
-          security_id: "12345678-1234-5678-1234-567812345678"
+          security_id: "12345678-1234-5678-1234-567812345678" # pipelock:ignore
         }
       }
     end

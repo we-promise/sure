@@ -58,13 +58,25 @@ class Trade::CreateForm
 
     def create_interest_income
       signed_amount = amount.to_d * -1
+      interest_security = security_id.present? ? Security.find_by(id: security_id) : nil
+
+      if security_id.present? && interest_security.nil?
+        entry = account.entries.build(entryable: Transaction.new)
+        entry.errors.add(:base, "Security not found")
+        return entry
+      end
+
+      entry_name = interest_security ? "Interest: #{interest_security.ticker}" : "Interest"
 
       entry = account.entries.build(
-        name: "Interest payment",
+        name: entry_name,
         date: date,
         amount: signed_amount,
         currency: currency,
-        entryable: Transaction.new
+        entryable: Transaction.new(
+          security: interest_security,
+          investment_activity_label: "Interest"
+        )
       )
 
       if entry.save
