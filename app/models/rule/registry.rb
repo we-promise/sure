@@ -18,7 +18,7 @@ class Rule::Registry
     []
   end
 
-    def get_filter!(key)
+  def get_filter!(key)
     filter = condition_filters.find { |filter| filter.key == key }
     return filter if filter
 
@@ -34,8 +34,7 @@ class Rule::Registry
     raise UnsupportedConditionError, "Unsupported condition type: #{key}" unless filter
 
     filter
-    end
-end
+  end
 
   def get_executor!(key)
     executor = action_executors.find { |executor| executor.key == key }
@@ -57,4 +56,3 @@ end
       rule.family
     end
 end
-
