@@ -516,6 +516,25 @@ RSpec.configure do |config|
               pagination: { '$ref' => '#/components/schemas/Pagination' }
             }
           },
+          Money: {
+            type: :object,
+            required: %w[amount currency formatted],
+            properties: {
+              amount: { type: :string, description: 'Numeric amount as string' },
+              currency: { type: :string, description: 'ISO 4217 currency code' },
+              formatted: { type: :string, description: 'Locale-formatted money string' }
+            }
+          },
+          BalanceSheet: {
+            type: :object,
+            required: %w[currency net_worth assets liabilities],
+            properties: {
+              currency: { type: :string, description: 'Family primary currency' },
+              net_worth: { '$ref' => '#/components/schemas/Money' },
+              assets: { '$ref' => '#/components/schemas/Money' },
+              liabilities: { '$ref' => '#/components/schemas/Money' }
+            }
+          },
           SuccessMessage: {
             type: :object,
             required: %w[message],
