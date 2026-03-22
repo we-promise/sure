@@ -1,4 +1,28 @@
 module EntriesHelper
+  SplitGroup = Data.define(:parent, :children)
+
+  def group_split_entries(entries, split_parents)
+    return entries if split_parents.blank?
+
+    result = []
+    seen_parent_ids = Set.new
+
+    entries.each do |entry|
+      if entry.split_child? && split_parents[entry.parent_entry_id]
+        parent_id = entry.parent_entry_id
+        next if seen_parent_ids.include?(parent_id)
+
+        seen_parent_ids.add(parent_id)
+        children = entries.select { |e| e.parent_entry_id == parent_id }
+        result << SplitGroup.new(parent: split_parents[parent_id], children: children)
+      else
+        result << entry
+      end
+    end
+
+    result
+  end
+
   def entries_by_date(entries, totals: false)
     transfer_groups = entries.group_by do |entry|
       # Only check for transfer if it's a transaction

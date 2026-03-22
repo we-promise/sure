@@ -43,6 +43,13 @@ class VectorStore::RegistryTest < ActiveSupport::TestCase
     end
   end
 
+  test "adapter returns VectorStore::Pgvector instance when pgvector configured" do
+    ClimateControl.modify(VECTOR_STORE_PROVIDER: "pgvector") do
+      adapter = VectorStore::Registry.adapter
+      assert_instance_of VectorStore::Pgvector, adapter
+    end
+  end
+
   test "configured? delegates to adapter presence" do
     VectorStore::Registry.stubs(:adapter).returns(nil)
     assert_not VectorStore.configured?

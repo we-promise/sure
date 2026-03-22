@@ -316,6 +316,10 @@ class User < ApplicationRecord
     preferences&.dig("transactions_collapsed_sections", section_key) == true
   end
 
+  def show_split_grouped?
+    preferences&.dig("show_split_grouped") != false
+  end
+
   def update_transactions_preferences(prefs)
     transaction do
       lock!

@@ -13,7 +13,7 @@
           } do |form| %>
       <div class="space-y-3">
         <div>
-          <div class="flex flex-col items-center justify-center w-full py-8 border border-secondary border-dashed rounded-xl cursor-pointer bg-surface-inset hover:bg-surface-inset-hover transition-colors text-center px-4" 
+          <div class="flex flex-col items-center justify-center w-full py-8 border border-secondary border-dashed rounded-xl cursor-pointer bg-surface-inset hover:bg-surface-inset-hover transition-colors text-center px-4"
                data-action="click->attachment-upload#triggerFileInput">
 
             <div data-attachment-upload-target="uploadText" class="flex flex-col items-center">
@@ -28,7 +28,7 @@
 
             <%= form.file_field :attachments,
                   multiple: true,
-                  accept: Transaction::ALLOWED_CONTENT_TYPES.join(','),
+                  accept: Transaction::ALLOWED_CONTENT_TYPES.join(","),
                   class: "hidden",
                   data: {
                     attachment_upload_target: "fileInput",
