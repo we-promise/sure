@@ -6,6 +6,13 @@ class TransfersController < ApplicationController
   def new
     @transfer = Transfer.new
     @from_account_id = params[:from_account_id]
+
+    @accounts = Current.family.accounts
+    .alphabetically
+    .includes(
+      :account_providers,
+      logo_attachment: :blob
+    )
   end
 
   def show
