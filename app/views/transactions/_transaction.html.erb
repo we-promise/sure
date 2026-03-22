@@ -1,10 +1,10 @@
-<%# locals: (entry:, balance_trend: nil, view_ctx: "global") %>
+<%# locals: (entry:, balance_trend: nil, view_ctx: "global", in_split_group: false) %>
 
 <% transaction = entry.entryable %>
 
 <%= turbo_frame_tag dom_id(entry) do %>
   <%= turbo_frame_tag dom_id(transaction) do %>
-    <div class="flex lg:grid lg:grid-cols-12 items-center text-primary text-sm font-medium p-3 lg:p-4 <%= entry.excluded ? "opacity-50 text-gray-400" : "" %>">
+    <div class="group flex lg:grid lg:grid-cols-12 items-center text-primary text-sm font-medium p-3 lg:p-4 <%= entry.excluded ? "opacity-50 text-secondary" : "" %> <%= "pl-8 lg:pl-12" if in_split_group %>">
 
       <div class="pr-4 lg:pr-10 flex items-center gap-3 lg:gap-4 col-span-8 min-w-0">
         <%= check_box_tag dom_id(entry, "selection"),
@@ -22,7 +22,7 @@
             <div class="hidden lg:flex">
               <% if transaction.merchant&.logo_url.present? %>
                 <%= image_tag Setting.transform_brand_fetch_url(transaction.merchant.logo_url),
-                    class: "w-9 h-9 rounded-full",
+                    class: "w-9 h-9 rounded-full border border-secondary",
                     loading: "lazy" %>
               <% else %>
                 <div class="hidden lg:flex">
@@ -101,6 +101,19 @@
                       <% end %>
                     <% end %>
 
+                    <%# Split indicator %>
+                    <% if @split_parent_entry_ids ? @split_parent_entry_ids.include?(entry.id) : entry.split_parent? %>
+                      <span class="inline-flex items-center gap-1 text-xs font-medium rounded-full px-1.5 py-0.5 border border-accent bg-accent/10 text-accent" title="<%= t("transactions.transaction.split_tooltip") %>">
+                        <%= icon "split", size: "sm", color: "current" %>
+                        <%= t("transactions.transaction.split") %>
+                      </span>
+                    <% end %>
+                    <% if entry.split_child? && !in_split_group %>
+                      <span class="text-secondary" title="<%= t("transactions.transaction.split_child_tooltip") %>">
+                        <%= icon "corner-down-right", size: "sm", color: "current" %>
+                      </span>
+                    <% end %>
+
                     <% if transaction.transfer.present? %>
                       <%= render "transactions/transfer_match", transaction: transaction %>
                     <% end %>
@@ -145,10 +158,19 @@
         <% end %>
       </div>
 
-      <div class="shrink-0 col-span-4 lg:col-span-2 ml-auto text-right">
+      <div class="shrink-0 col-span-4 lg:col-span-2 ml-auto flex items-center justify-end gap-2">
+        <%# Protection indicator - shows on hover when entry is protected from sync %>
+        <% if entry.protected_from_sync? && !entry.excluded? %>
+          <%= link_to entry_path(entry),
+                data: { turbo_frame: "drawer", turbo_prefetch: false },
+                class: "invisible group-hover:visible transition-opacity",
+                title: t("entries.protection.tooltip") do %>
+            <%= icon "lock", size: "sm", class: "text-secondary" %>
+          <% end %>
+        <% end %>
         <%= content_tag :p,
             transaction.transfer? && view_ctx == "global" ? "+/- #{format_money(entry.amount_money.abs)}" : format_money(-entry.amount_money),
-            class: ["text-green-600": entry.amount.negative?] %>
+            class: ["privacy-sensitive", "text-green-600": entry.amount.negative?] %>
       </div>
     </div>
   <% end %>

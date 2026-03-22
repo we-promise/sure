@@ -9,6 +9,7 @@ en:
     post_logout:
       logout_successful: You have signed out successfully.
     openid_connect:
+      account_linked: "Account successfully linked to %{provider}"
       failed: Could not authenticate via OpenID Connect.
     failure:
       failed: Could not authenticate.
@@ -24,6 +25,7 @@ en:
       title: Sure
       password_placeholder: Enter your password
       openid_connect: Sign in with OpenID Connect
+      oidc: Sign in with OpenID Connect
       google_auth_connect: Sign in with Google
       local_login_admin_only: Local login is restricted to administrators.
       no_auth_methods_enabled: No authentication methods are currently enabled. Please contact an administrator.

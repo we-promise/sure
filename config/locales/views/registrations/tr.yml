@@ -23,3 +23,8 @@ tr:
       welcome_body: Başlamak için yeni bir hesap oluşturmalısınız. Daha sonra uygulama içinde ek ayarları yapılandırabileceksiniz.
       welcome_title: Self Hosted %{product_name}'ye Hoş Geldiniz!
       password_placeholder: Şifrenizi girin
+      password_requirements:
+        length: En az 8 karakter
+        case: Büyük ve küçük harfler
+        number: Bir rakam (0-9)
+        special: "Bir özel karakter (!, @, #, $, %, etc)"

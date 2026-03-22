@@ -1,0 +1,17 @@
+# Minimal fixtures for Indexa Capital items
+
+configured_with_token:
+  family: dylan_family
+  name: "Indexa Capital Connection"
+  api_token: "test_api_token_123"
+  status: good
+  scheduled_for_deletion: false
+
+configured_with_credentials:
+  family: empty
+  name: "Indexa Capital Credentials"
+  username: "testuser@example.com"
+  document: "12345678A"
+  password: "test_password"
+  status: good
+  scheduled_for_deletion: false

@@ -2,6 +2,7 @@
 # Handles authentication and requests to the CoinStats OpenAPI.
 class Provider::Coinstats < Provider
   include HTTParty
+  extend SslConfigurable
 
   # Subclass so errors caught in this provider are raised as Provider::Coinstats::Error
   Error = Class.new(Provider::Error)
@@ -9,7 +10,7 @@ class Provider::Coinstats < Provider
   BASE_URL = "https://openapiv1.coinstats.app"
 
   headers "User-Agent" => "Sure Finance CoinStats Client (https://github.com/we-promise/sure)"
-  default_options.merge!(verify: true, ssl_verify_mode: OpenSSL::SSL::VERIFY_PEER, timeout: 120)
+  default_options.merge!({ timeout: 120 }.merge(httparty_ssl_options))
 
   attr_reader :api_key
 

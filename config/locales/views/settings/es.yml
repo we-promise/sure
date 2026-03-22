@@ -4,6 +4,7 @@ es:
     settings:
       payments:
         renewal: "Tu contribución continúa el %{date}."
+        cancellation: "Tu contribución finaliza el %{date}."
   settings:
     ai_prompts:
       show:
@@ -22,9 +23,9 @@ es:
           subtitle: La IA identifica y enriquece los datos de transacciones con información de comerciantes
     payments:
       show:
-        page_title: Pago
-        subscription_subtitle: Actualiza tu suscripción y detalles de pago
-        subscription_title: Gestionar suscripción
+        page_title: Pagos
+        subscription_subtitle: Actualiza los detalles de tu tarjeta de crédito
+        subscription_title: Gestionar contribuciones
     preferences:
       show:
         country: País
@@ -35,6 +36,7 @@ es:
         default_period: Periodo Predeterminado
         default_account_order: Orden Predeterminado de Cuentas
         language: Idioma
+        language_auto: Idioma del navegador
         page_title: Preferencias
         theme_dark: Oscuro
         theme_light: Claro
@@ -42,6 +44,9 @@ es:
         theme_system: Sistema
         theme_title: Tema
         timezone: Zona horaria
+        month_start_day: El mes de presupuesto comienza el
+        month_start_day_hint: Establece cuándo empieza tu mes financiero (ej. el día de cobro)
+        month_start_day_warning: Tus presupuestos y cálculos del mes en curso utilizarán este día personalizado en lugar del día 1 de cada mes.
     profiles:
       destroy:
         cannot_remove_self: No puedes eliminarte a ti mismo de la cuenta.
@@ -73,9 +78,12 @@ es:
         reset_account_with_sample_data_warning: Elimina todos tus datos existentes y luego carga nuevos datos de ejemplo para que puedas explorar con un entorno prellenado.
         email: Correo electrónico
         first_name: Nombre
+        group_form_input_placeholder: Introduce el nombre del grupo
+        group_form_label: Nombre del grupo
+        group_title: Miembros del Grupo
         household_form_input_placeholder: Introduce el nombre del grupo familiar
         household_form_label: Nombre del grupo familiar
-        household_subtitle: Invita a miembros de la familia, socios y otras personas. Los invitados pueden entrar en la cuenta y acceder a las cuentas compartidas.
+        household_subtitle: Los invitados pueden entrar en tu cuenta de %{moniker} y acceder a los recursos compartidos.
         household_title: Grupo Familiar
         invitation_link: Enlace de invitación
         invite_member: Añadir miembro
@@ -90,6 +98,23 @@ es:
     securities:
       show:
         page_title: Seguridad
+        mfa_title: Autenticación de Dos Factores (2FA)
+        mfa_description: Añade una capa extra de seguridad a tu cuenta requiriendo un código de tu aplicación de autenticación al iniciar sesión.
+        enable_mfa: Activar 2FA
+        disable_mfa: Desactivar 2FA
+        disable_mfa_confirm: ¿Estás seguro de que deseas desactivar la autenticación de dos factores?
+        sso_title: Cuentas Conectadas
+        sso_subtitle: Gestiona tus conexiones de inicio de sesión único (SSO)
+        sso_disconnect: Desconectar
+        sso_last_used: Último uso
+        sso_never: Nunca
+        sso_no_email: Sin correo
+        sso_no_identities: No hay cuentas de SSO conectadas
+        sso_connect_hint: Cierra sesión e iníciala con un proveedor de SSO para conectar una cuenta.
+        sso_confirm_title: ¿Desconectar cuenta?
+        sso_confirm_body: ¿Estás seguro de que deseas desconectar tu cuenta de %{provider}? Podrás volver a conectarla más tarde iniciando sesión de nuevo con ese proveedor.
+        sso_confirm_button: Desconectar
+        sso_warning_message: Este es tu único método de acceso. Deberías establecer una contraseña en tus ajustes de seguridad antes de desconectarlo, de lo contrario podrías perder el acceso a tu cuenta.
     settings_nav:
       accounts_label: Cuentas
       advanced_section_title: Avanzado
@@ -124,3 +149,27 @@ es:
       choose: Subir foto
       choose_label: (opcional)
       change: Cambiar foto
+    providers:
+      show:
+        coinbase_title: Coinbase
+      encryption_error:
+        title: Configuración de Cifrado Requerida
+        message: Las claves de cifrado de Active Record no están configuradas. Por favor, asegúrate de que las credenciales de cifrado (active_record_encryption.primary_key, active_record_encryption.deterministic_key y active_record_encryption.key_derivation_salt) estén correctamente configuradas en tus credenciales de Rails o variables de entorno antes de usar proveedores de sincronización.
+      coinbase_panel:
+        setup_instructions: "Para conectar Coinbase:"
+        step1_html: Ve a los <a href="https://portal.cdp.coinbase.com/projects/api-keys" target="_blank" class="text-primary underline">Ajustes de API de Coinbase</a>
+        step2: Crea una nueva clave API con permisos de solo lectura (ver cuentas, ver transacciones)
+        step3: Copia tu clave API y tu secreto de API y pégalos a continuación
+        api_key_label: Clave API
+        api_key_placeholder: Introduce tu clave API de Coinbase
+        api_secret_label: Secreto de API
+        api_secret_placeholder: Introduce tu secreto de API de Coinbase
+        connect_button: Conectar Coinbase
+        syncing: Sincronizando...
+        sync: Sincronizar
+        disconnect_confirm: ¿Estás seguro de que deseas desconectar esta conexión de Coinbase? Tus cuentas sincronizadas pasarán a ser cuentas manuales.
+        status_connected: Coinbase está conectado y sincronizando tus activos de criptomonedas.
+        status_not_connected: No conectado. Introduce tus credenciales de API arriba para comenzar.
+      enable_banking_panel:
+        callback_url_instruction: "Para la URL de retorno (callback), utiliza %{callback_url}."
+        connection_error: Error de conexión

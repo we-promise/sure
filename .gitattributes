@@ -7,3 +7,8 @@ db/schema.rb linguist-generated
 vendor/* linguist-vendored
 config/credentials/*.yml.enc diff=rails_credentials
 config/credentials.yml.enc diff=rails_credentials
+
+# Ensure consistent line endings for scripts and Ruby files to avoid shebang issues on Windows
+bin/* text eol=lf
+*.sh text eol=lf
+*.rb text eol=lf

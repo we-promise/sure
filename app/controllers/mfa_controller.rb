@@ -32,6 +32,7 @@ class MfaController < ApplicationController
     if @user&.verify_otp?(params[:code])
       session.delete(:mfa_user_id)
       @session = create_session_for(@user)
+      flash[:notice] = t("invitations.accept_choice.joined_household") if accept_pending_invitation_for(@user)
       redirect_to root_path
     else
       flash.now[:alert] = t(".invalid_code")

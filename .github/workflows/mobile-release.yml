@@ -1,0 +1,278 @@
+name: Mobile Release
+
+on:
+  push:
+    tags:
+      - 'mobile-v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  prepare_release:
+    name: Prepare release tag
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      tag_name: ${{ steps.release_tag.outputs.tag_name }}
+      release_version: ${{ steps.release_tag.outputs.release_version }}
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve release tag
+        id: release_tag
+        run: |
+          set -euo pipefail
+
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            BASE_STABLE_TAG="$(git tag --list 'v*' --sort=-v:refname | { grep -Ev 'alpha|beta|rc' || true; } | head -n 1)"
+            if [ -z "$BASE_STABLE_TAG" ]; then
+              echo "::error::No stable v* tag found to base mobile patch release on"
+              exit 1
+            fi
+
+            STAMP="$(date -u +'%Y%m%d%H%M')"
+            BASE_TAG="mobile-${BASE_STABLE_TAG}-p${STAMP}"
+            TAG_NAME="$BASE_TAG"
+            TAG_SUFFIX=1
+
+            while git rev-parse -q --verify "refs/tags/$TAG_NAME" >/dev/null 2>&1; do
+              TAG_NAME="${BASE_TAG}-${TAG_SUFFIX}"
+              TAG_SUFFIX=$((TAG_SUFFIX + 1))
+            done
+
+            echo "Using generated tag: $TAG_NAME"
+            git config user.name "${GITHUB_ACTOR}"
+            git config user.email "${GITHUB_ACTOR}@users.noreply.github.com"
+            git tag "$TAG_NAME"
+            git push origin "$TAG_NAME"
+          else
+            TAG_NAME="${GITHUB_REF_NAME}"
+          fi
+
+          echo "tag_name=$TAG_NAME" >> "$GITHUB_OUTPUT"
+
+          if [[ "$TAG_NAME" == mobile-* ]]; then
+            echo "release_version=${TAG_NAME#mobile-}" >> "$GITHUB_OUTPUT"
+          else
+            echo "release_version=$TAG_NAME" >> "$GITHUB_OUTPUT"
+          fi
+
+  build:
+    name: Build Mobile Apps
+    uses: ./.github/workflows/flutter-build.yml
+    secrets: inherit
+
+  testflight:
+    name: Upload iOS to TestFlight
+    needs: [build, release]
+    uses: ./.github/workflows/ios-testflight.yml
+    with:
+      notes: "Mobile release ${{ needs.release.outputs.tag_name }}"
+    secrets: inherit
+
+  release:
+    name: Create Mobile GitHub Release
+    needs: [build, prepare_release]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    permissions:
+      contents: write
+
+    outputs:
+      tag_name: ${{ steps.version.outputs.tag_name }}
+
+    steps:
+      - name: Extract version from tag
+        id: version
+        run: |
+          TAG="${{ needs.prepare_release.outputs.tag_name }}"
+          VERSION="${{ needs.prepare_release.outputs.release_version }}"
+          echo "tag_name=$TAG" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Extracted version: $VERSION"
+
+      - name: Download Android APK artifact
+        uses: actions/download-artifact@v4.3.0
+        with:
+          name: app-release-apk
+          path: ${{ runner.temp }}/mobile-artifacts
+
+      - name: Download iOS build artifact
+        uses: actions/download-artifact@v4.3.0
+        with:
+          name: ios-build-unsigned
+          path: ${{ runner.temp }}/ios-build
+
+      - name: Prepare release assets
+        run: |
+          set -euo pipefail
+          mkdir -p ${{ runner.temp }}/release-assets
+
+          echo "=== Downloaded artifacts ==="
+          echo "Mobile artifacts:"
+          ls -laR "${{ runner.temp }}/mobile-artifacts" || echo "No mobile-artifacts directory"
+          echo "iOS build:"
+          ls -laR "${{ runner.temp }}/ios-build" || echo "No ios-build directory"
+          echo "==========================="
+
+          # Copy debug APK if it exists
+          if [ -f "${{ runner.temp }}/mobile-artifacts/app-debug.apk" ]; then
+            cp "${{ runner.temp }}/mobile-artifacts/app-debug.apk" \
+               "${{ runner.temp }}/release-assets/sure-${{ steps.version.outputs.version }}-debug.apk"
+            echo "✓ Debug APK prepared"
+          fi
+
+          # Copy release APK if it exists
+          if [ -f "${{ runner.temp }}/mobile-artifacts/app-release.apk" ]; then
+            cp "${{ runner.temp }}/mobile-artifacts/app-release.apk" \
+               "${{ runner.temp }}/release-assets/sure-${{ steps.version.outputs.version }}.apk"
+            echo "✓ Release APK prepared"
+          fi
+
+          # Create iOS app archive (zip the .app bundle)
+          if [ -d "${{ runner.temp }}/ios-build/ios/iphoneos/Runner.app" ]; then
+            cd "${{ runner.temp }}/ios-build/ios/iphoneos"
+            zip -r "${{ runner.temp }}/release-assets/sure-${{ steps.version.outputs.version }}-ios-unsigned.zip" Runner.app
+            echo "✓ iOS build archive prepared"
+          fi
+
+          # Copy iOS build info
+          if [ -f "${{ runner.temp }}/ios-build/ios-build-info.txt" ]; then
+            cp "${{ runner.temp }}/ios-build/ios-build-info.txt" "${{ runner.temp }}/release-assets/"
+          fi
+
+          echo "Release assets:"
+          ls -la "${{ runner.temp }}/release-assets/"
+
+          # Fail early if no assets were produced
+          if [ -z "$(ls -A "${{ runner.temp }}/release-assets/")" ]; then
+            echo "::error::No release assets were produced"
+            exit 1
+          fi
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          VERSION="${{ steps.version.outputs.version }}"
+          TAG="${{ steps.version.outputs.tag_name }}"
+
+          cat > /tmp/release-notes.md <<NOTES
+          ## Mobile-Only Release: ${VERSION}
+
+          This is a mobile-only release. It does not include server-side changes.
+
+          ### Downloads
+
+          - **Android APK**: Debug build for testing on Android devices
+          - **iOS Build**: Unsigned iOS build (requires code signing for installation)
+
+          > **Note**: These are builds intended for testing purposes. For production use, please build from source with proper signing credentials.
+          NOTES
+
+          # Strip heredoc indentation
+          sed -i 's/^          //' /tmp/release-notes.md
+
+          PRERELEASE_FLAG=""
+          if [[ "$TAG" == *"alpha"* ]] || [[ "$TAG" == *"beta"* ]] || [[ "$TAG" == *"rc"* ]]; then
+            PRERELEASE_FLAG="--prerelease"
+          fi
+
+          gh release create "$TAG" \
+            --repo "${{ github.repository }}" \
+            --title "$TAG" \
+            --notes-file /tmp/release-notes.md \
+            $PRERELEASE_FLAG \
+            ${{ runner.temp }}/release-assets/*
+
+      - name: Checkout gh-pages branch
+        uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+          path: gh-pages
+
+      - name: Update README with latest mobile release links
+        run: |
+          set -euo pipefail
+          VERSION="${{ steps.version.outputs.version }}"
+          TAG="${{ steps.version.outputs.tag_name }}"
+          REPO="${{ github.repository }}"
+
+          # Build download links based on which assets were produced
+          LINKS=""
+          if [ -f "${{ runner.temp }}/release-assets/sure-${VERSION}.apk" ]; then
+            LINKS="${LINKS}- **Android APK**: [sure-${VERSION}.apk](https://github.com/${REPO}/releases/download/${TAG}/sure-${VERSION}.apk)\n"
+          fi
+          if [ -f "${{ runner.temp }}/release-assets/sure-${VERSION}-debug.apk" ]; then
+            LINKS="${LINKS}- **Android Debug APK**: [sure-${VERSION}-debug.apk](https://github.com/${REPO}/releases/download/${TAG}/sure-${VERSION}-debug.apk)\n"
+          fi
+          if [ -f "${{ runner.temp }}/release-assets/sure-${VERSION}-ios-unsigned.zip" ]; then
+            LINKS="${LINKS}- **iOS Build (unsigned)**: [sure-${VERSION}-ios-unsigned.zip](https://github.com/${REPO}/releases/download/${TAG}/sure-${VERSION}-ios-unsigned.zip)\n"
+          fi
+
+          # Build the mobile downloads section
+          SECTION="$(cat <<BLOCK
+          <!-- MOBILE_DOWNLOADS_START -->
+          ## Latest Mobile Release: ${VERSION}
+
+          **Release page**: [${TAG}](https://github.com/${REPO}/releases/tag/${TAG})
+
+          ### Direct Downloads
+
+          $(echo -e "$LINKS")
+
+          > **Note**: These are builds intended for testing purposes. For production use, please build from source with proper signing credentials.
+          <!-- MOBILE_DOWNLOADS_END -->
+          BLOCK
+          )"
+
+          # Strip leading whitespace from heredoc indentation
+          SECTION="$(echo "$SECTION" | sed 's/^          //')"
+
+          README="gh-pages/README.md"
+
+          if [ ! -f "$README" ]; then
+            # No README yet — create one
+            printf "# Sure\n\n%s\n" "$SECTION" > "$README"
+          elif grep -q '<!-- MOBILE_DOWNLOADS_START -->' "$README"; then
+            # Replace existing mobile section between markers
+            awk '
+              /<!-- MOBILE_DOWNLOADS_START -->/ { skip=1; next }
+              /<!-- MOBILE_DOWNLOADS_END -->/   { skip=0; next }
+              !skip { print }
+            ' "$README" > "${README}.tmp"
+
+            # Re-insert the updated section at the end
+            printf "%s\n\n%s\n" "$(cat "${README}.tmp")" "$SECTION" > "$README"
+            rm "${README}.tmp"
+          else
+            # Append mobile section to existing README
+            printf "\n%s\n" "$SECTION" >> "$README"
+          fi
+
+          echo "Updated README.md:"
+          cat "$README"
+
+      - name: Push updated README to gh-pages
+        run: |
+          cd gh-pages
+          git config user.name "${{ github.actor }}"
+          git config user.email "${{ github.actor }}@users.noreply.github.com"
+          git add README.md
+          if git diff --cached --quiet; then
+            echo "No README changes to push."
+            exit 0
+          fi
+          git commit -m "Update mobile download links for ${{ steps.version.outputs.version }}"
+          git push

@@ -1,0 +1,47 @@
+<%# locals: (entry:, unlock_path:) %>
+
+<%# Protection indicator - shows when entry is protected from sync overwrites %>
+<%= turbo_frame_tag dom_id(entry, :protection) do %>
+  <% if entry.protected_from_sync? && !entry.excluded? %>
+  <details class="group shadow-border-xs bg-container rounded-xl mb-3 text-xs text-secondary">
+    <summary class="flex items-center justify-between gap-2 cursor-pointer px-3 py-2">
+      <div class="flex items-center gap-2">
+        <%= icon "lock", size: "sm", color: "info" %>
+        <span class="font-medium uppercase"><%= t("entries.protection.title") %></span>
+      </div>
+      <%= icon "chevron-down", color: "info", class: "transition-transform [[open]>&]:rotate-180" %>
+    </summary>
+    <div class="px-3 py-2 space-y-2">
+      <p class="text-sm">
+        <%= t("entries.protection.description") %>
+      </p>
+
+      <% if entry.locked_field_names.any? %>
+        <div class="px-3 py-2 space-y-2 bg-surface-inset rounded-lg">
+          <div class="space-y-2">
+            <p class="text-sm font-medium"><%= t("entries.protection.locked_fields_label") %></p>
+            <% entry.locked_fields_with_timestamps.each do |field, timestamp| %>
+              <div class="flex items-center justify-between text-xs gap-2 mb-1">
+                <span><%= entry.class.human_attribute_name(field, moniker: Current.family&.moniker_label || "Family") %></span>
+                <hr class="grow border-dashed border-secondary">
+                <span><%= timestamp.respond_to?(:strftime) ? l(timestamp.to_date, format: :long) : timestamp %></span>
+              </div>
+            <% end %>
+          </div>
+        </div>
+      <% end %>
+
+      <%= link_to unlock_path,
+          class: "w-full flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium rounded-lg border border-secondary text-primary hover:bg-surface-hover transition-colors",
+          data: {
+            turbo_method: :post,
+            turbo_confirm: t("entries.protection.unlock_confirm"),
+            turbo_frame: "_top"
+          } do %>
+        <%= icon "unlock", size: "sm" %>
+        <span><%= t("entries.protection.unlock_button") %></span>
+      <% end %>
+    </div>
+  </details>
+  <% end %>
+<% end %>

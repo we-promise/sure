@@ -8,9 +8,23 @@ module ExchangeRate::Provided
       registry.get_provider(provider.to_sym)
     end
 
+    # Maximum number of days to look back for a cached rate before calling the provider.
+    NEAREST_RATE_LOOKBACK_DAYS = 5
+
     def find_or_fetch_rate(from:, to:, date: Date.current, cache: true)
       rate = find_by(from_currency: from, to_currency: to, date: date)
       return rate if rate.present?
+
+      # Reuse the nearest recently-cached rate before hitting the provider.
+      # Providers like Yahoo Finance return the most recent trading-day rate
+      # (e.g. Friday for a Saturday request) and save it under that date, so
+      # subsequent requests for the weekend date always miss the exact lookup
+      # and trigger redundant API calls.
+      nearest = where(from_currency: from, to_currency: to)
+                  .where(date: (date - NEAREST_RATE_LOOKBACK_DAYS)..date)
+                  .order(date: :desc)
+                  .first
+      return nearest if nearest.present?
 
       return nil unless provider.present? # No provider configured (some self-hosted apps)
 
@@ -37,6 +51,15 @@ module ExchangeRate::Provided
         ) if cache
       end
       rate
+    end
+
+    # Batch-fetches exchange rates for multiple source currencies.
+    # Returns a hash mapping each currency to its numeric rate, defaulting to 1 when unavailable.
+    def rates_for(currencies, to:, date: Date.current)
+      currencies.uniq.each_with_object({}) do |currency, map|
+        rate = find_or_fetch_rate(from: currency, to: to, date: date)
+        map[currency] = rate&.rate || 1
+      end
     end
 
     # @return [Integer] The number of exchange rates synced

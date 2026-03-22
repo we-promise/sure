@@ -283,4 +283,81 @@ end
     assert_redirected_to transactions_path
     assert_equal "An unexpected error occurred while creating the recurring transaction", flash[:alert]
   end
+
+  test "unlock clears protection flags on user-modified entry" do
+    family = families(:empty)
+    sign_in users(:empty)
+    account = family.accounts.create! name: "Test", balance: 0, currency: "USD", accountable: Depository.new
+    entry = create_transaction(account: account, amount: 100)
+    transaction = entry.entryable
+
+    # Mark as protected with locked_attributes on both entry and entryable
+    entry.update!(user_modified: true, locked_attributes: { "date" => Time.current.iso8601 })
+    transaction.update!(locked_attributes: { "category_id" => Time.current.iso8601 })
+
+    assert entry.reload.protected_from_sync?
+
+    post unlock_transaction_path(transaction)
+
+    assert_redirected_to transactions_path
+    assert_equal "Entry unlocked. It may be updated on next sync.", flash[:notice]
+
+    entry.reload
+    assert_not entry.user_modified?
+    assert_empty entry.locked_attributes, "Entry locked_attributes should be cleared"
+    assert_empty entry.entryable.locked_attributes, "Transaction locked_attributes should be cleared"
+    assert_not entry.protected_from_sync?
+  end
+
+  test "new with duplicate_entry_id pre-fills form from source transaction" do
+    @entry.reload
+
+    get new_transaction_url(duplicate_entry_id: @entry.id)
+    assert_response :success
+    assert_select "input[name='entry[name]'][value=?]", @entry.name
+    assert_select "input[type='number'][name='entry[amount]']" do |elements|
+      assert_equal sprintf("%.2f", @entry.amount.abs), elements.first["value"]
+    end
+    assert_select "input[type='hidden'][name='entry[entryable_attributes][merchant_id]']"
+  end
+
+  test "new with invalid duplicate_entry_id renders empty form" do
+    get new_transaction_url(duplicate_entry_id: -1)
+    assert_response :success
+    assert_select "input[name='entry[name]']" do |elements|
+      assert_nil elements.first["value"]
+    end
+  end
+
+  test "new with duplicate_entry_id from another family does not prefill form" do
+    other_family = families(:empty)
+    other_account = other_family.accounts.create!(name: "Other", balance: 0, currency: "USD", accountable: Depository.new)
+    other_entry = create_transaction(account: other_account, name: "Should not leak", amount: 50)
+
+    get new_transaction_url(duplicate_entry_id: other_entry.id)
+    assert_response :success
+    assert_select "input[name='entry[name]']" do |elements|
+      assert_nil elements.first["value"]
+    end
+  end
+
+  test "unlock clears import_locked flag" do
+    family = families(:empty)
+    sign_in users(:empty)
+    account = family.accounts.create! name: "Test", balance: 0, currency: "USD", accountable: Depository.new
+    entry = create_transaction(account: account, amount: 100)
+    transaction = entry.entryable
+
+    # Mark as import locked
+    entry.update!(import_locked: true)
+
+    assert entry.reload.protected_from_sync?
+
+    post unlock_transaction_path(transaction)
+
+    assert_redirected_to transactions_path
+    entry.reload
+    assert_not entry.import_locked?
+    assert_not entry.protected_from_sync?
+  end
 end

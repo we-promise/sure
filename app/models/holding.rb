@@ -112,7 +112,9 @@ class Holding < ApplicationRecord
       return new_source == "calculated"
     end
 
-    new_priority > cost_basis_source_priority
+    # Allow refreshes from the same source (e.g., new trades change calculated cost basis,
+    # or providers send updated cost basis).
+    new_priority >= cost_basis_source_priority
   end
 
   # Set cost_basis from user input (locks the value)

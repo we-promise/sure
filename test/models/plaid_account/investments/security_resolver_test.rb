@@ -11,7 +11,7 @@ class PlaidAccount::Investments::SecurityResolverTest < ActiveSupport::TestCase
     missing_id = "missing_security_id"
 
     # Ensure there are *no* securities that reference the missing ID
-    @plaid_account.update!(raw_investments_payload: {
+    @plaid_account.update!(raw_holdings_payload: {
       securities: [
         {
           "security_id" => "some_other_id",
@@ -35,7 +35,7 @@ class PlaidAccount::Investments::SecurityResolverTest < ActiveSupport::TestCase
   test "identifies brokerage cash plaid securities" do
     brokerage_cash_id = "brokerage_cash_security_id"
 
-    @plaid_account.update!(raw_investments_payload: {
+    @plaid_account.update!(raw_holdings_payload: {
       securities: [
         {
           "security_id" => brokerage_cash_id,
@@ -58,7 +58,7 @@ class PlaidAccount::Investments::SecurityResolverTest < ActiveSupport::TestCase
   test "identifies cash equivalent plaid securities" do
     mmf_security_id = "money_market_security_id"
 
-    @plaid_account.update!(raw_investments_payload: {
+    @plaid_account.update!(raw_holdings_payload: {
       securities: [
         {
           "security_id" => mmf_security_id,
@@ -87,7 +87,7 @@ class PlaidAccount::Investments::SecurityResolverTest < ActiveSupport::TestCase
   test "resolves normal plaid securities" do
     security_id = "regular_security_id"
 
-    @plaid_account.update!(raw_investments_payload: {
+    @plaid_account.update!(raw_holdings_payload: {
       securities: [
         {
           "security_id" => security_id,

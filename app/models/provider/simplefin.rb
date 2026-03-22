@@ -5,9 +5,10 @@ class Provider::Simplefin
   # These are centralized in `Rails.configuration.x.simplefin.*` via
   # `config/initializers/simplefin.rb`.
   include HTTParty
+  extend SslConfigurable
 
   headers "User-Agent" => "Sure Finance SimpleFin Client"
-  default_options.merge!(verify: true, ssl_verify_mode: OpenSSL::SSL::VERIFY_PEER, timeout: 120)
+  default_options.merge!({ timeout: 120 }.merge(httparty_ssl_options))
 
   # Retry configuration for transient network failures
   MAX_RETRIES = 3
@@ -34,8 +35,9 @@ class Provider::Simplefin
 
     # Use retry logic for transient network failures during token claim
     # Claim should be fast; keep request-path latency bounded.
+    # Use self.class.post to inherit class-level SSL and timeout defaults
     response = with_retries("POST /claim", max_retries: 1, sleep: false) do
-      HTTParty.post(claim_url, timeout: 15)
+      self.class.post(claim_url, timeout: 15)
     end
 
     case response.code
@@ -71,8 +73,9 @@ class Provider::Simplefin
 
     # The access URL already contains HTTP Basic Auth credentials
     # Use retry logic with exponential backoff for transient network failures
+    # Use self.class.get to inherit class-level SSL and timeout defaults
     response = with_retries("GET /accounts") do
-      HTTParty.get(accounts_url)
+      self.class.get(accounts_url)
     end
 
     case response.code
@@ -98,7 +101,8 @@ class Provider::Simplefin
   end
 
   def get_info(base_url)
-    response = HTTParty.get("#{base_url}/info")
+    # Use self.class.get to inherit class-level SSL and timeout defaults
+    response = self.class.get("#{base_url}/info")
 
     case response.code
     when 200

@@ -4,6 +4,7 @@ module SettingsHelper
     { name: "Accounts", path: :accounts_path },
     { name: "Bank Sync", path: :settings_bank_sync_path },
     { name: "Preferences", path: :settings_preferences_path },
+    { name: "Appearance", path: :settings_appearance_path },
     { name: "Profile Info", path: :settings_profile_path },
     { name: "Security", path: :settings_security_path },
     { name: "Payment", path: :settings_payment_path, condition: :not_self_hosted? },
@@ -63,7 +64,7 @@ module SettingsHelper
     previous_setting = adjacent_setting(request.path, -1)
     next_setting = adjacent_setting(request.path, 1)
 
-    content_tag :div, class: "md:hidden flex flex-col gap-4" do
+    content_tag :div, class: "md:hidden flex flex-col gap-4 pb-[env(safe-area-inset-bottom)]" do
       concat(previous_setting)
       concat(next_setting)
     end

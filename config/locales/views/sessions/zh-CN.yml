@@ -15,6 +15,7 @@ zh-CN:
       forgot_password: 忘记密码？
       google_auth_connect: 使用 Google 登录
       openid_connect: 使用 OpenID Connect 登录
+      oidc: 使用 OpenID Connect 登录
       password: 密码
       password_placeholder: 请输入密码
       submit: 登录

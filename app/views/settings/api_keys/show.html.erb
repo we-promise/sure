@@ -1,7 +1,5 @@
 <% if @newly_created && @plain_key %>
-  <header class="flex items-center justify-between">
-    <h1 class="text-primary text-xl font-medium">API Key Created Successfully</h1>
-  </header>
+  <%= content_for :page_title, "API Key Created Successfully" %>
 
   <div class="bg-container rounded-xl shadow-border-xs p-4">
     <div class="space-y-4">
@@ -55,14 +53,14 @@
     </div>
   </div>
 <% elsif @current_api_key %>
-  <header class="flex items-center justify-between">
-    <h1 class="text-primary text-xl font-medium">Your API Key</h1>
+  <%= content_for :page_title, "Your API Key" %>
+  <%= content_for :page_actions do %>
     <%= render DS::Link.new(
       text: "Create New Key",
       href: new_settings_api_key_path(regenerate: true),
       variant: "secondary"
     ) %>
-  </header>
+  <% end %>
 
   <div class="bg-container rounded-xl shadow-border-xs p-4">
     <div class="space-y-4">
@@ -147,14 +145,14 @@
     </div>
   </div>
 <% else %>
-  <header class="flex items-center justify-between">
-    <h1 class="text-primary text-xl font-medium"><%= t(".no_api_key.title") %></h1>
+  <%= content_for :page_title, t(".no_api_key.title") %>
+  <%= content_for :page_actions do %>
     <%= render DS::Link.new(
       text: t(".no_api_key.create_api_key"),
       href: new_settings_api_key_path,
       variant: "primary"
     ) %>
-  </header>
+  <% end %>
 
   <div class="bg-container rounded-xl shadow-border-xs p-4">
     <div class="space-y-4">

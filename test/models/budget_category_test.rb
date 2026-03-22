@@ -10,23 +10,20 @@ class BudgetCategoryTest < ActiveSupport::TestCase
       name: "Test Food & Groceries #{Time.now.to_f}",
       family: @family,
       color: "#4da568",
-      lucide_icon: "utensils",
-      classification: "expense"
+      lucide_icon: "utensils"
     )
 
     # Create subcategories with unique names
     @subcategory_with_limit = Category.create!(
       name: "Test Restaurants #{Time.now.to_f}",
       parent: @parent_category,
-      family: @family,
-      classification: "expense"
+      family: @family
     )
 
     @subcategory_inheriting = Category.create!(
       name: "Test Groceries #{Time.now.to_f}",
       parent: @parent_category,
-      family: @family,
-      classification: "expense"
+      family: @family
     )
 
     # Create budget categories
@@ -95,8 +92,7 @@ class BudgetCategoryTest < ActiveSupport::TestCase
     another_inheriting = Category.create!(
       name: "Test Coffee #{Time.now.to_f}",
       parent: @parent_category,
-      family: @family,
-      classification: "expense"
+      family: @family
     )
 
     another_inheriting_bc = BudgetCategory.create!(
@@ -114,8 +110,7 @@ class BudgetCategoryTest < ActiveSupport::TestCase
     new_subcategory_cat = Category.create!(
       name: "Test Fast Food #{Time.now.to_f}",
       parent: @parent_category,
-      family: @family,
-      classification: "expense"
+      family: @family
     )
 
     new_subcategory_bc = BudgetCategory.create!(
@@ -143,8 +138,7 @@ class BudgetCategoryTest < ActiveSupport::TestCase
       name: "Test Entertainment #{Time.now.to_f}",
       family: @family,
       color: "#a855f7",
-      lucide_icon: "drama",
-      classification: "expense"
+      lucide_icon: "drama"
     )
 
     standalone_bc = BudgetCategory.create!(
@@ -160,6 +154,15 @@ class BudgetCategoryTest < ActiveSupport::TestCase
     # Should work exactly as before: 500 - 200 = 300
     assert_equal 300, standalone_bc.available_to_spend
     assert_equal 40.0, standalone_bc.percent_of_budget_spent
+  end
+
+  test "uncategorized budget category returns no subcategories" do
+    uncategorized_bc = BudgetCategory.uncategorized
+    uncategorized_bc.budget = @budget
+
+    # Before the fix, this would return all top-level categories because
+    # category.id is nil, causing WHERE parent_id IS NULL to match all roots
+    assert_empty uncategorized_bc.subcategories
   end
 
   test "parent with only inheriting subcategories shares entire budget" do

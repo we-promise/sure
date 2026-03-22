@@ -5,7 +5,8 @@ class PlaidAccount < ApplicationRecord
   if encryption_ready?
     encrypts :raw_payload
     encrypts :raw_transactions_payload
-    encrypts :raw_investments_payload
+    # Support reading data encrypted under the old column name after rename
+    encrypts :raw_holdings_payload, previous: { attribute: :raw_investments_payload }
     encrypts :raw_liabilities_payload
   end
 
@@ -18,6 +19,7 @@ class PlaidAccount < ApplicationRecord
   has_one :linked_account, through: :account_provider, source: :account
 
   validates :name, :plaid_type, :currency, presence: true
+  validates :plaid_id, uniqueness: { scope: :plaid_item_id }
   validate :has_balance
 
   # Helper to get account using new system first, falling back to legacy
@@ -48,9 +50,9 @@ class PlaidAccount < ApplicationRecord
     save!
   end
 
-  def upsert_plaid_investments_snapshot!(investments_snapshot)
+  def upsert_plaid_holdings_snapshot!(holdings_snapshot)
     assign_attributes(
-      raw_investments_payload: investments_snapshot
+      raw_holdings_payload: holdings_snapshot
     )
 
     save!

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../models/chat.dart';
 import '../providers/auth_provider.dart';
 import '../providers/chat_provider.dart';
 import 'chat_conversation_screen.dart';
@@ -58,7 +59,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
 
     final chat = await chatProvider.createChat(
       accessToken: accessToken,
-      title: 'New Chat',
+      title: Chat.defaultTitle,
     );
 
     // Close loading dialog
@@ -110,12 +111,19 @@ class _ChatListScreenState extends State<ChatListScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('AI Assistant'),
+        title: const Text('Chats'),
+        centerTitle: false,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _handleRefresh,
-            tooltip: 'Refresh',
+          Padding(
+            padding: const EdgeInsets.only(top: 12, right: 12),
+            child: InkWell(
+              onTap: _handleRefresh,
+              child: const SizedBox(
+                width: 36,
+                height: 36,
+                child: Icon(Icons.refresh),
+              ),
+            ),
           ),
         ],
       ),

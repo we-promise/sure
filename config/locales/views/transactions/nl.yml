@@ -40,6 +40,16 @@ nl:
       convert_to_trade_title: Converteer naar Effectentransactie
       convert_to_trade_description: Converteer deze transactie naar een Koop- of Verkooptransactie met effectendetails voor portfoliobeheer.
       convert_to_trade_button: Converteer naar Trade
+      merchant_label: Handelaar
+      name_label: Naam
+      nature: Type
+      none: "(geen)"
+      note_label: Notities
+      note_placeholder: Voer een notitie in
+      overview: Overzicht
+      settings: Instellingen
+      tags_label: Tags
+      uncategorized: "(ongecategoriseerd)"
     activity_labels:
       buy: Kopen
       sell: Verkopen
@@ -57,16 +67,6 @@ nl:
     mark_recurring: Markeer als Terugkerend
     mark_recurring_subtitle: Volg dit als een terugkerende transactie. Bedragvariatie wordt automatisch berekend uit de afgelopen 6 maanden van vergelijkbare transacties.
     mark_recurring_title: Terugkerende Transactie
-    merchant_label: Handelaar
-    name_label: Naam
-    nature: Type
-    none: "(geen)"
-    note_label: Notities
-    note_placeholder: Voer een notitie in
-    overview: Overzicht
-    settings: Instellingen
-    tags_label: Tags
-    uncategorized: "(ongecategoriseerd)"
     potential_duplicate_title: Mogelijk duplicaat gedetecteerd
     potential_duplicate_description: Deze wachtende transactie kan hetzelfde zijn als de geposte transactie hieronder. Indien ja, voeg ze samen om dubbeltelling te voorkomen.
     merge_duplicate: Ja, voeg ze samen

@@ -60,6 +60,34 @@
           <%= t(".plan", plan: @twelve_data_usage.data.plan) %>
         </p>
       </div>
+
+      <% if @plan_restricted_securities.present? %>
+        <div class="bg-amber-50 border border-amber-200 rounded-lg p-3 mt-4">
+          <div class="flex items-start gap-2">
+            <%= icon("alert-triangle", size: "sm", class: "text-amber-600 mt-0.5") %>
+            <div class="text-sm">
+              <p class="font-medium text-amber-800"><%= t(".plan_upgrade_warning_title") %></p>
+              <p class="text-amber-700 mt-1"><%= t(".plan_upgrade_warning_description") %></p>
+              <ul class="mt-2 space-y-1">
+                <% @plan_restricted_securities.each do |security| %>
+                  <li class="text-amber-700">
+                    <span class="font-medium"><%= security[:ticker] %></span>
+                    <% if security[:name].present? %>
+                      <span class="text-amber-600">(<%= security[:name] %>)</span>
+                    <% end %>
+                    <span class="text-amber-600">— <%= t(".requires_plan", plan: security[:required_plan]) %></span>
+                  </li>
+                <% end %>
+              </ul>
+              <p class="mt-2">
+                <a href="https://twelvedata.com/pricing" target="_blank" rel="noopener noreferrer" class="text-amber-800 underline font-medium">
+                  <%= t(".view_pricing") %>
+                </a>
+              </p>
+            </div>
+          </div>
+        </div>
+      <% end %>
     </div>
   <% end %>
 </div>

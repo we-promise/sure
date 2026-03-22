@@ -21,6 +21,8 @@ ca:
         section_title: Usuaris
         title: Gestió d'usuaris
         you: "(Tu)"
+        trial_ends_at: Fi de prova
+        not_available: n/a
       update:
         failure: No s'ha pogut actualitzar el rol d'usuari.
         success: El rol d'usuari s'ha actualitzat correctament.

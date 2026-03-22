@@ -32,6 +32,17 @@ class TransactionTest < ActiveSupport::TestCase
     assert transaction.investment_contribution?
   end
 
+  test "TRANSFER_KINDS constant matches transfer? method" do
+    Transaction::TRANSFER_KINDS.each do |kind|
+      assert Transaction.new(kind: kind).transfer?, "#{kind} should be a transfer kind"
+    end
+
+    non_transfer_kinds = Transaction.kinds.keys - Transaction::TRANSFER_KINDS
+    non_transfer_kinds.each do |kind|
+      assert_not Transaction.new(kind: kind).transfer?, "#{kind} should NOT be a transfer kind"
+    end
+  end
+
   test "all transaction kinds are valid" do
     valid_kinds = %w[standard funds_movement cc_payment loan_payment one_time investment_contribution]
 

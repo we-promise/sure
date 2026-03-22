@@ -1,6 +1,14 @@
 class SnaptradeAccount < ApplicationRecord
-  include CurrencyNormalizable
+  include CurrencyNormalizable, Encryptable
   include SnaptradeAccount::DataHelpers
+
+  # Encrypt raw payloads if ActiveRecord encryption is configured
+  if encryption_ready?
+    encrypts :raw_payload
+    encrypts :raw_transactions_payload
+    encrypts :raw_holdings_payload
+    encrypts :raw_activities_payload
+  end
 
   belongs_to :snaptrade_item
 
@@ -9,6 +17,7 @@ class SnaptradeAccount < ApplicationRecord
   has_one :linked_account, through: :account_provider, source: :account
 
   validates :name, :currency, presence: true
+  validates :snaptrade_account_id, uniqueness: { scope: :snaptrade_item_id, allow_nil: true }
 
   # Enqueue cleanup job after destruction to avoid blocking transaction with API call
   after_destroy :enqueue_connection_cleanup

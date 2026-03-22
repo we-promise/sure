@@ -192,10 +192,11 @@
 
     <%= form.select "settings[default_role]",
         options_for_select([
+          [t("admin.sso_providers.form.role_guest", default: "Guest"), "guest"],
           [t("admin.sso_providers.form.role_member"), "member"],
           [t("admin.sso_providers.form.role_admin"), "admin"],
           [t("admin.sso_providers.form.role_super_admin"), "super_admin"]
-        ], sso_provider.settings&.dig("default_role") || "member"),
+        ], sso_provider.settings&.dig("default_role").to_s.presence || "member"),
         { label: t("admin.sso_providers.form.default_role_label"), include_blank: false } %>
     <p class="text-xs text-secondary -mt-2"><%= t("admin.sso_providers.form.default_role_help") %></p>
 
@@ -229,6 +230,15 @@
                  value="<%= Array(sso_provider.settings&.dig("role_mapping", "member")).join(", ") %>"
                  class="w-full px-3 py-2 border border-primary rounded-lg text-sm"
                  placeholder="* (all groups)"
+                 autocomplete="off">
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-primary mb-1"><%= t("admin.sso_providers.form.guest_groups", default: "Guest Groups") %></label>
+          <input type="text" name="sso_provider[settings][role_mapping][guest]"
+                 value="<%= Array(sso_provider.settings&.dig("role_mapping", "guest").presence || sso_provider.settings&.dig("role_mapping", "intro")).join(", ") %>"
+                 class="w-full px-3 py-2 border border-primary rounded-lg text-sm"
+                 placeholder="Early-Access-Guests"
                  autocomplete="off">
         </div>
       </div>

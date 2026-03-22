@@ -1,7 +1,20 @@
-<%# locals: (user:, placement: "right-start", offset: 16) %>
+<%# locals: (user:, placement: "right-start", offset: 16, intro_mode: false) %>
+
+<% intro_mode = local_assigns.fetch(:intro_mode, false) %>
 
 <div data-testid="user-menu">
-  <%= render DS::Menu.new(variant: "avatar", avatar_url: user.profile_image&.variant(:small)&.url, initials: user.initials, placement: placement, offset: offset) do |menu| %>
+  <%= render DS::Menu.new(
+        variant: "avatar",
+        avatar_url: user.profile_image&.variant(:small)&.url,
+        initials: user.initials,
+        placement: placement,
+        offset: offset
+      ) do |menu| %>
+    <% if intro_mode %>
+      <% menu.with_button do %>
+        <%= render DS::Button.new(variant: "icon", icon: "settings", data: { DS__menu_target: "button" }) %>
+      <% end %>
+    <% end %>
     <%= menu.with_header do %>
       <div class="px-4 py-3 flex items-center gap-3">
         <div class="w-9 h-9 shrink-0">
@@ -30,10 +43,15 @@
       <% end %>
     <% end %>
 
-    <% menu.with_item(variant: "link", text: "Settings", icon: "settings", href: accounts_path(return_to: request.fullpath)) %>
+    <% menu.with_item(
+      variant: "link",
+      text: "Settings",
+      icon: "settings",
+      href: intro_mode ? settings_profile_path : accounts_path(return_to: request.fullpath)
+    ) %>
     <% menu.with_item(variant: "link", text: "Changelog", icon: "box", href: changelog_path) %>
 
-    <% if self_hosted? %>
+    <% if self_hosted? && !intro_mode %>
       <% menu.with_item(variant: "link", text: "Feedback", icon: "megaphone", href: feedback_path) %>
     <% end %>
     <% menu.with_item(variant: "link", text: "Contact", icon: "message-square-more", href: "https://discord.gg/36ZGBsxYEK") %>

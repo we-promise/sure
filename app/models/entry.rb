@@ -1,11 +1,16 @@
 class Entry < ApplicationRecord
   include Monetizable, Enrichable
 
+  attr_accessor :unsplitting
+
   monetize :amount
 
   belongs_to :account
   belongs_to :transfer, optional: true
   belongs_to :import, optional: true
+  belongs_to :parent_entry, class_name: "Entry", optional: true
+
+  has_many :child_entries, class_name: "Entry", foreign_key: :parent_entry_id, dependent: :destroy
 
   delegated_type :entryable, types: Entryable::TYPES, dependent: :destroy
   accepts_nested_attributes_for :entryable
@@ -14,6 +19,11 @@ class Entry < ApplicationRecord
   validates :date, uniqueness: { scope: [ :account_id, :entryable_type ] }, if: -> { valuation? }
   validates :date, comparison: { greater_than: -> { min_supported_date } }
   validates :external_id, uniqueness: { scope: [ :account_id, :source ] }, if: -> { external_id.present? && source.present? }
+
+  validate :cannot_unexclude_split_parent
+  validate :split_child_date_matches_parent
+
+  before_destroy :prevent_individual_child_deletion, if: :split_child?
 
   scope :visible, -> {
     joins(:account).where(accounts: { status: [ "draft", "active" ] })
@@ -42,6 +52,7 @@ class Entry < ApplicationRecord
       .where(<<~SQL.squish)
         (transactions.extra -> 'simplefin' ->> 'pending')::boolean = true
         OR (transactions.extra -> 'plaid' ->> 'pending')::boolean = true
+        OR (transactions.extra -> 'lunchflow' ->> 'pending')::boolean = true
       SQL
   }
 
@@ -56,7 +67,16 @@ class Entry < ApplicationRecord
         AND (
           (t.extra -> 'simplefin' ->> 'pending')::boolean = true
           OR (t.extra -> 'plaid' ->> 'pending')::boolean = true
+          OR (t.extra -> 'lunchflow' ->> 'pending')::boolean = true
         )
+      )
+    SQL
+  }
+
+  scope :excluding_split_parents, -> {
+    where(<<~SQL.squish)
+      NOT EXISTS (
+        SELECT 1 FROM entries ce WHERE ce.parent_entry_id = entries.id
       )
     SQL
   }
@@ -65,6 +85,11 @@ class Entry < ApplicationRecord
   scope :stale_pending, ->(days: 8) {
     pending.where("entries.date < ?", days.days.ago.to_date)
   }
+
+  # Family-scoped query for Enrichable#clear_ai_cache
+  def self.family_scope(family)
+    joins(:account).where(accounts: { family_id: family.id })
+  end
 
   # Auto-exclude stale pending transactions for an account
   # Called during sync to clean up pending transactions that never posted
@@ -113,6 +138,7 @@ class Entry < ApplicationRecord
         .where(<<~SQL.squish)
           (transactions.extra -> 'simplefin' ->> 'pending')::boolean IS NOT TRUE
           AND (transactions.extra -> 'plaid' ->> 'pending')::boolean IS NOT TRUE
+          AND (transactions.extra -> 'lunchflow' ->> 'pending')::boolean IS NOT TRUE
         SQL
         .limit(2) # Only need to know if 0, 1, or 2+ candidates
         .to_a # Load limited records to avoid COUNT(*) on .size
@@ -159,6 +185,7 @@ class Entry < ApplicationRecord
         .where(<<~SQL.squish)
           (transactions.extra -> 'simplefin' ->> 'pending')::boolean IS NOT TRUE
           AND (transactions.extra -> 'plaid' ->> 'pending')::boolean IS NOT TRUE
+          AND (transactions.extra -> 'lunchflow' ->> 'pending')::boolean IS NOT TRUE
         SQL
 
       # Match by name similarity (first 3 words)
@@ -260,6 +287,104 @@ class Entry < ApplicationRecord
     update!(user_modified: true)
   end
 
+  # Returns the reason this entry is protected from sync, or nil if not protected.
+  # Priority: excluded > user_modified > import_locked
+  #
+  # @return [Symbol, nil] :excluded, :user_modified, :import_locked, or nil
+  def protection_reason
+    return :excluded if excluded?
+    return :user_modified if user_modified?
+    return :import_locked if import_locked?
+    nil
+  end
+
+  # Returns array of field names that are locked on entry and entryable.
+  #
+  # @return [Array<String>] locked field names
+  def locked_field_names
+    entry_keys = locked_attributes&.keys || []
+    entryable_keys = entryable&.locked_attributes&.keys || []
+    (entry_keys + entryable_keys).uniq
+  end
+
+  # Returns hash of locked field names to their lock timestamps.
+  # Combines locked_attributes from both entry and entryable.
+  # Parses ISO8601 timestamps stored in locked_attributes.
+  #
+  # @return [Hash{String => Time}] field name to lock timestamp
+  def locked_fields_with_timestamps
+    combined = (locked_attributes || {}).merge(entryable&.locked_attributes || {})
+    combined.transform_values do |timestamp|
+      Time.zone.parse(timestamp.to_s) rescue timestamp
+    end
+  end
+
+  # Clears protection flags so provider sync can update this entry again.
+  # Clears user_modified, import_locked flags, and all locked_attributes
+  # on both the entry and its entryable.
+  #
+  # @return [void]
+  def unlock_for_sync!
+    self.class.transaction do
+      update!(user_modified: false, import_locked: false, locked_attributes: {})
+      entryable&.update!(locked_attributes: {})
+    end
+  end
+
+  def split_parent?
+    child_entries.exists?
+  end
+
+  def split_child?
+    parent_entry_id.present?
+  end
+
+  # Splits this entry into child entries. Marks parent as excluded.
+  #
+  # @param splits [Array<Hash>] array of { name:, amount:, category_id: } hashes
+  # @return [Array<Entry>] the created child entries
+  def split!(splits)
+    total = splits.sum { |s| s[:amount].to_d }
+    unless total == amount
+      raise ActiveRecord::RecordInvalid.new(self), "Split amounts must sum to parent amount (expected #{amount}, got #{total})"
+    end
+
+    self.class.transaction do
+      children = splits.map do |split_attrs|
+        child_transaction = Transaction.new(
+          category_id: split_attrs[:category_id],
+          merchant_id: entryable.try(:merchant_id),
+          kind: entryable.try(:kind)
+        )
+
+        child_entries.create!(
+          account: account,
+          date: date,
+          name: split_attrs[:name],
+          amount: split_attrs[:amount],
+          currency: currency,
+          entryable: child_transaction
+        )
+      end
+
+      update!(excluded: true)
+      mark_user_modified!
+
+      children
+    end
+  end
+
+  # Removes split children and restores parent entry.
+  def unsplit!
+    self.class.transaction do
+      child_entries.each do |child|
+        child.unsplitting = true
+        child.destroy!
+      end
+      update!(excluded: false)
+    end
+  end
+
   class << self
     def search(params)
       EntrySearch.new(params).build_query(all)
@@ -270,31 +395,88 @@ class Entry < ApplicationRecord
       30.years.ago.to_date
     end
 
-    def bulk_update!(bulk_update_params)
+    # Bulk update entries with the given parameters.
+    #
+    # Tags are handled separately from other entryable attributes because they use
+    # a join table (taggings) rather than a direct column. This means:
+    # - category_id: nil means "no category" (column value)
+    # - tag_ids: [] means "delete all taggings" (join table operation)
+    #
+    # To avoid accidentally clearing tags when only updating other fields,
+    # tags are only modified when explicitly requested via update_tags: true.
+    #
+    # @param bulk_update_params [Hash] The parameters to update
+    # @param update_tags [Boolean] Whether to update tags (default: false)
+    def bulk_update!(bulk_update_params, update_tags: false)
       bulk_attributes = {
         date: bulk_update_params[:date],
         notes: bulk_update_params[:notes],
         entryable_attributes: {
           category_id: bulk_update_params[:category_id],
-          merchant_id: bulk_update_params[:merchant_id],
-          tag_ids: bulk_update_params[:tag_ids]
+          merchant_id: bulk_update_params[:merchant_id]
         }.compact_blank
       }.compact_blank
 
-      return 0 if bulk_attributes.blank?
+      tag_ids = Array.wrap(bulk_update_params[:tag_ids]).reject(&:blank?)
+      has_updates = bulk_attributes.present? || update_tags
+
+      return 0 unless has_updates
 
       transaction do
         all.each do |entry|
-          bulk_attributes[:entryable_attributes][:id] = entry.entryable_id if bulk_attributes[:entryable_attributes].present?
-          entry.update! bulk_attributes
+          changed = false
 
-          entry.lock_saved_attributes!
-          entry.mark_user_modified!
-          entry.entryable.lock_attr!(:tag_ids) if entry.transaction? && entry.transaction.tags.any?
+          # Update standard attributes
+          if bulk_attributes.present?
+            attrs = bulk_attributes.dup
+            attrs.delete(:date) if entry.split_child?
+
+            if attrs.present?
+              attrs[:entryable_attributes] = attrs[:entryable_attributes].dup if attrs[:entryable_attributes].present?
+              attrs[:entryable_attributes][:id] = entry.entryable_id if attrs[:entryable_attributes].present?
+              entry.update! attrs
+              changed = true
+            end
+          end
+
+          # Handle tags separately - only when explicitly requested
+          if update_tags && entry.transaction?
+            entry.transaction.tag_ids = tag_ids
+            entry.transaction.save!
+            entry.entryable.lock_attr!(:tag_ids) if entry.transaction.tags.any?
+            changed = true
+          end
+
+          if changed
+            entry.lock_saved_attributes!
+            entry.mark_user_modified!
+          end
         end
       end
 
       all.size
     end
   end
+
+  private
+
+    def cannot_unexclude_split_parent
+      return unless excluded_changed?(from: true, to: false) && split_parent?
+
+      errors.add(:excluded, "cannot be toggled off for a split transaction")
+    end
+
+    def split_child_date_matches_parent
+      return unless split_child? && date_changed?
+      return unless parent_entry.present?
+      return if date == parent_entry.date
+
+      errors.add(:date, "must match the parent transaction date for split children")
+    end
+
+    def prevent_individual_child_deletion
+      return if destroyed_by_association || unsplitting
+
+      throw :abort
+    end
 end

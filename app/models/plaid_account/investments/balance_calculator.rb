@@ -44,7 +44,7 @@ class PlaidAccount::Investments::BalanceCalculator
     attr_reader :plaid_account, :security_resolver
 
     def holdings
-      plaid_account.raw_investments_payload["holdings"] || []
+      plaid_account.raw_holdings_payload&.dig("holdings") || []
     end
 
     def calculate_investment_brokerage_cash

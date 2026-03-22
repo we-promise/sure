@@ -12,6 +12,7 @@ Official Helm chart for deploying the Sure Rails application on Kubernetes. It s
 - Optional subcharts
   - CloudNativePG (operator) + Cluster CR for PostgreSQL with HA support
   - OT-CONTAINER-KIT redis-operator for Redis HA (replication by default, optional Sentinel)
+- Optional Pipelock AI agent security proxy (forward proxy + MCP reverse proxy with DLP, prompt injection, and tool poisoning detection)
 - Security best practices: runAsNonRoot, readOnlyRootFilesystem, optional existingSecret, no hardcoded secrets
 - Scalability
   - Replicas (web/worker), resources, topology spread constraints
@@ -539,9 +540,9 @@ ingress:
       secretName: finance-tls
 ```
 
-## Boot-required secrets (self-hosted)
+## Boot-required secrets
 
-In self-hosted mode the Rails initializer for Active Record Encryption loads on boot. To prevent boot crashes, ensure the following environment variables are present for ALL workloads (web, worker, migrate job/initContainer, CronJobs, and the SimpleFin backfill job):
+The Rails initializer for Active Record Encryption loads on boot. To prevent boot crashes, ensure the following environment variables are present for ALL workloads (web, worker, migrate job/initContainer, CronJobs, and the SimpleFin backfill job):
 
 - `SECRET_KEY_BASE`
 - `ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY`
@@ -558,7 +559,7 @@ rails:
     enabled: true  # set to false to skip injecting the three AR encryption env vars
 ```
 
-Note: Even if `simplefin.encryption.enabled=false`, the app initializer expects these env vars to exist in self-hosted mode.
+Note: In self-hosted mode, if these env vars are not provided, they will be automatically generated from `SECRET_KEY_BASE`. In managed mode, these env vars must be explicitly provided via environment variables or Rails credentials.
 
 ## Advanced environment variable injection
 
@@ -709,6 +710,112 @@ hpa:
     targetCPUUtilizationPercentage: 70
 ```
 
+## Pipelock (AI agent security proxy)
+
+Pipelock is an optional sidecar that scans AI agent traffic for secret exfiltration, prompt injection, and tool poisoning. It runs as a separate Deployment with two listeners:
+
+- **Forward proxy** (port 8888): Scans outbound HTTPS from Faraday-based AI clients. Auto-injected via `HTTPS_PROXY` env vars when enabled.
+- **MCP reverse proxy** (port 8889): Scans inbound MCP traffic from external AI assistants.
+
+### Enabling Pipelock
+
+```yaml
+pipelock:
+  enabled: true
+  image:
+    tag: "1.5.0"
+  mode: balanced   # strict, balanced, or audit
+```
+
+### Exposing MCP to external AI assistants
+
+When running in Kubernetes, external AI agents need network access to the MCP reverse proxy port. Enable the Pipelock Ingress:
+
+```yaml
+pipelock:
+  enabled: true
+  ingress:
+    enabled: true
+    className: nginx
+    annotations:
+      cert-manager.io/cluster-issuer: letsencrypt
+    hosts:
+      - host: pipelock.example.com
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      - hosts: [pipelock.example.com]
+        secretName: pipelock-tls
+```
+
+Security: The Ingress routes to port `mcp` (8889). Ensure `MCP_API_TOKEN` is set so the MCP endpoint requires authentication. The Ingress itself does not add auth.
+
+### Metrics (Prometheus)
+
+Pipelock exposes `/metrics` on the forward proxy port. Enable scraping with a ServiceMonitor:
+
+```yaml
+pipelock:
+  serviceMonitor:
+    enabled: true
+    interval: 30s
+    portName: proxy   # matches Service port name for 8888
+    additionalLabels:
+      release: prometheus   # match your Prometheus Operator selector
+```
+
+### PodDisruptionBudget
+
+Protect Pipelock from node drains:
+
+```yaml
+pipelock:
+  pdb:
+    enabled: true
+    maxUnavailable: 1   # safe for single-replica; use minAvailable when replicas > 1
+```
+
+Note: Setting `minAvailable` with `replicas=1` blocks eviction entirely. Use `maxUnavailable` for single-replica deployments.
+
+### Structured logging
+
+```yaml
+pipelock:
+  logging:
+    format: json        # json or text
+    output: stdout
+    includeAllowed: false
+    includeBlocked: true
+```
+
+### Extra config (escape hatch)
+
+For Pipelock config sections not covered by structured values (session profiling, data budgets, kill switch, etc.), use `extraConfig`:
+
+```yaml
+pipelock:
+  extraConfig:
+    session_profiling:
+      enabled: true
+      max_sessions: 1000
+    data_budget:
+      max_bytes_per_session: 10485760
+```
+
+These are appended verbatim to `pipelock.yaml`. Do not duplicate keys already rendered by the chart.
+
+### Requiring Pipelock for external assistants
+
+To enforce that Pipelock is enabled whenever the external AI assistant feature is active:
+
+```yaml
+pipelock:
+  requireForExternalAssistant: true
+```
+
+This causes `helm template` / `helm install` to fail if `rails.externalAssistant.enabled=true` and `pipelock.enabled=false`. Note: this only guards the `externalAssistant` path. Direct MCP access via `MCP_API_TOKEN` is configured through env vars and not detectable from Helm values.
+
 ## Security Notes
 
 - Never commit secrets in `values.yaml`. Use `rails.existingSecret` or a tool like Sealed Secrets.
@@ -732,6 +839,7 @@ See `values.yaml` for the complete configuration surface, including:
 - `migrations.*`: strategy job or initContainer
 - `simplefin.encryption.*`: enable + backfill options
 - `cronjobs.*`: custom CronJobs
+- `pipelock.*`: AI agent security proxy (forward proxy, MCP reverse proxy, DLP, injection scanning, logging, serviceMonitor, ingress, PDB, extraConfig)
 - `service.*`, `ingress.*`, `serviceMonitor.*`, `hpa.*`
 
 ## Helm tests

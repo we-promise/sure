@@ -2,6 +2,7 @@
 en:
   rules:
     no_action: No Action
+    no_condition: No condition
     actions:
       value_placeholder: Enter a value
     apply_all:
@@ -37,3 +38,15 @@ en:
         pending: Pending
         success: Success
         failed: Failed
+    clear_ai_cache:
+      button: Reset AI cache
+      confirm_title: Reset AI cache?
+      confirm_body: Are you sure you want to reset the AI cache? This will allow AI rules to re-process all transactions. This may incur additional API costs.
+      confirm_button: Reset Cache
+      success: AI cache is being cleared. This may take a few moments.
+    condition_filters:
+      transaction_type:
+        income: Income
+        expense: Expense
+        transfer: Transfer
+        equal_to: Equal to

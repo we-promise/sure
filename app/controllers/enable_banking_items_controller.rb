@@ -540,13 +540,8 @@ class EnableBankingItemsController < ApplicationController
       )
     end
 
-    # Generate the callback URL for Enable Banking OAuth
-    # In production, uses the standard Rails route
-    # In development, uses DEV_WEBHOOKS_URL if set (e.g., ngrok URL)
     def enable_banking_callback_url
-      return callback_enable_banking_items_url if Rails.env.production?
-
-      ENV.fetch("DEV_WEBHOOKS_URL", root_url.chomp("/")) + "/enable_banking_items/callback"
+      helpers.enable_banking_callback_url
     end
 
     # Validate redirect URLs from Enable Banking API to prevent open redirect attacks

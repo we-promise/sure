@@ -12,8 +12,16 @@ class PlaidItem::Syncer
     sync.update!(status_text: "Importing accounts from Plaid...") if sync.respond_to?(:status_text)
     plaid_item.import_latest_plaid_data
 
-    # Phase 2: Collect setup statistics
+    # Phase 2: Process the raw Plaid data and create/update internal domain objects
+    # This must happen before the linked/unlinked check because process_accounts
+    # is what creates Account and AccountProvider records for new PlaidAccounts.
+    sync.update!(status_text: "Processing accounts...") if sync.respond_to?(:status_text)
+    mark_import_started(sync)
+    plaid_item.process_accounts
+
+    # Phase 3: Collect setup statistics (now that accounts have been processed)
     sync.update!(status_text: "Checking account configuration...") if sync.respond_to?(:status_text)
+    plaid_item.plaid_accounts.reload
     collect_setup_stats(sync, provider_accounts: plaid_item.plaid_accounts)
 
     # Check for unlinked accounts and update pending_account_setup flag
@@ -25,14 +33,9 @@ class PlaidItem::Syncer
       plaid_item.update!(pending_account_setup: false) if plaid_item.respond_to?(:pending_account_setup=)
     end
 
-    # Phase 3: Process the raw Plaid data and updates internal domain objects
+    # Phase 4: Schedule balance calculations for linked accounts
     linked_accounts = plaid_item.plaid_accounts.select { |pa| pa.current_account.present? }
     if linked_accounts.any?
-      sync.update!(status_text: "Processing transactions...") if sync.respond_to?(:status_text)
-      mark_import_started(sync)
-      plaid_item.process_accounts
-
-      # Phase 4: Schedule balance calculations
       sync.update!(status_text: "Calculating balances...") if sync.respond_to?(:status_text)
       plaid_item.schedule_account_syncs(
         parent_sync: sync,
@@ -61,7 +64,7 @@ class PlaidItem::Syncer
 
     def count_holdings(plaid_accounts)
       plaid_accounts.sum do |pa|
-        Array(pa.raw_investments_payload).size
+        pa.raw_holdings_payload&.dig("holdings")&.size || 0
       end
     end
 end

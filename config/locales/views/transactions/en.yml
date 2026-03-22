@@ -2,6 +2,9 @@
 en:
   transactions:
     unknown_name: Unknown transaction
+    selection_bar:
+      duplicate: Duplicate
+      edit: Edit
     form:
       account: Account
       account_prompt: Select an Account
@@ -13,6 +16,7 @@ en:
       description_placeholder: Describe transaction
       expense: Expense
       income: Income
+      merchant_label: Merchant
       none: (none)
       note_label: Notes
       note_placeholder: Enter a note
@@ -31,6 +35,7 @@ en:
         balances, and cannot be undone.
       delete_title: Delete transaction
       details: Details
+      attachments: Attachments
       exclude: Exclude
       exclude_description: Excluded transactions will be removed from budgeting calculations and reports.
       activity_type: Activity Type
@@ -40,6 +45,21 @@ en:
       convert_to_trade_title: Convert to Security Trade
       convert_to_trade_description: Convert this transaction into a Buy or Sell trade with security details for portfolio tracking.
       convert_to_trade_button: Convert to Trade
+      pending_duplicate_merger_title: Duplicate of Posted Transaction?
+      pending_duplicate_merger_description: Manually merge this pending transaction with its posted version.
+      pending_duplicate_merger_button: Open merger
+      merchant_label: Merchant
+      name_label: Name
+      nature: Type
+      none: "(none)"
+      note_label: Notes
+      note_placeholder: Enter a note
+      overview: Overview
+      settings: Settings
+      tags_label: Tags
+      tab_transactions: Transactions
+      tab_upcoming: Upcoming
+      uncategorized: "(uncategorized)"
     activity_labels:
       buy: Buy
       sell: Sell
@@ -57,34 +77,37 @@ en:
     mark_recurring: Mark as Recurring
     mark_recurring_subtitle: Track this as a recurring transaction. Amount variance is automatically calculated from past 6 months of similar transactions.
     mark_recurring_title: Recurring Transaction
-    merchant_label: Merchant
-    name_label: Name
-    nature: Type
-    none: "(none)"
-    note_label: Notes
-    note_placeholder: Enter a note
-    overview: Overview
-    settings: Settings
-    tags_label: Tags
-    uncategorized: "(uncategorized)"
     potential_duplicate_title: Possible duplicate detected
     potential_duplicate_description: This pending transaction may be the same as the posted transaction below. If so, merge them to avoid double-counting.
     merge_duplicate: Yes, merge them
     keep_both: No, keep both
+    split_parent_row:
+      split_label: "Split"
     transaction:
       pending: Pending
       pending_tooltip: Pending transaction — may change when posted
+      linked_with_plaid: Linked with Plaid
       activity_type_tooltip: Investment activity type
       possible_duplicate: Duplicate?
       potential_duplicate_tooltip: This may be a duplicate of another transaction
       review_recommended: Review
       review_recommended_tooltip: Large amount difference — review recommended to check if this is a duplicate
+      split: Split
+      split_tooltip: This transaction has been split into multiple entries
+      split_child_tooltip: Part of a split transaction
     merge_duplicate:
       success: Transactions merged successfully
       failure: Could not merge transactions
     dismiss_duplicate:
       success: Kept as separate transactions
       failure: Could not dismiss duplicate suggestion
+    pending_duplicate_merge:
+      possible_duplicate: Duplicate?
+      possible_duplicate_short: Dup?
+      review_recommended: Review
+      review_recommended_short: Rev
+      confirm_title: "Merge with posted transaction (%{posted_amount})"
+      reject_title: Keep as separate transactions
     header:
       edit_categories: Edit categories
       edit_imports: Edit imports
@@ -95,6 +118,11 @@ en:
       transaction: transaction
       transactions: transactions
       import: Import
+    list:
+      drag_drop_title: Drop CSV to import
+      drag_drop_subtitle: Upload transactions directly
+      transaction: transaction
+      transactions: transactions
     toggle_recurring_section: Toggle upcoming recurring transactions
     search:
       filters:
@@ -188,3 +216,21 @@ en:
         less_than: less than
       form:
         toggle_selection_checkboxes: Toggle all checkboxes
+    attachments:
+      cannot_exceed: "Cannot exceed %{count} attachments per transaction"
+      uploaded_one: "Attachment uploaded successfully"
+      uploaded_many: "%{count} attachments uploaded successfully"
+      failed_upload: "Failed to upload attachment: %{error}"
+      no_files_selected: "No files selected for upload"
+      attachment_deleted: "Attachment deleted successfully"
+      failed_delete: "Failed to delete attachment: %{error}"
+      upload_failed: "Failed to upload attachment. Please try again or contact support."
+      delete_failed: "Failed to delete attachment. Please try again or contact support."
+      upload: "Upload"
+      no_attachments: "No attachments yet"
+      select_up_to: "Select up to %{count} files (images or PDFs, max %{size}MB each) • %{used} of %{count} used"
+      files:
+        one: "File (1)"
+        other: "Files (%{count})"
+      browse_to_add: "Browse to add files"
+      max_reached: "Maximum file limit reached (%{count}/%{max}). Delete an existing file to upload another."

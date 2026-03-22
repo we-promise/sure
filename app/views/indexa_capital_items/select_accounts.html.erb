@@ -1,0 +1,80 @@
+<% content_for :title, t("indexa_capital_items.select_accounts.title") %>
+
+<%= render DS::Dialog.new do |dialog| %>
+  <% dialog.with_header(title: t("indexa_capital_items.select_accounts.title")) do %>
+    <div class="flex items-center gap-2">
+      <%= icon "trending-up", class: "text-primary" %>
+      <span class="text-primary"><%= t("indexa_capital_items.select_accounts.description", product_name: "Maybe") %></span>
+    </div>
+  <% end %>
+
+  <% dialog.with_body do %>
+    <% if @indexa_capital_accounts.blank? %>
+      <div class="text-center py-8">
+        <%= icon "alert-circle", class: "text-warning mx-auto mb-4", size: "lg" %>
+        <p class="text-secondary"><%= t("indexa_capital_items.select_accounts.no_accounts_found") %></p>
+      </div>
+      <div class="flex gap-3 justify-center">
+        <%= render DS::Link.new(
+          text: t("indexa_capital_items.select_accounts.cancel"),
+          variant: "secondary",
+          href: accounts_path,
+          frame: "_top"
+        ) %>
+      </div>
+    <% else %>
+      <%= form_with url: link_accounts_indexa_capital_items_path,
+                    method: :post,
+                    data: {
+                      controller: "loading-button",
+                      action: "submit->loading-button#showLoading",
+                      loading_button_loading_text_value: t("indexa_capital_items.loading.loading_message"),
+                      turbo_frame: "_top"
+                    } do |form| %>
+        <%= hidden_field_tag :accountable_type, @accountable_type %>
+        <%= hidden_field_tag :return_to, @return_to %>
+
+        <div class="space-y-4">
+          <% @indexa_capital_accounts.each do |indexa_capital_account| %>
+            <div class="border border-primary rounded-lg p-4 hover:bg-surface transition-colors">
+              <div class="flex items-center gap-3">
+                <input type="checkbox"
+                       id="account_<%= indexa_capital_account.id %>"
+                       name="selected_account_ids[]"
+                       value="<%= indexa_capital_account.id %>"
+                       checked
+                       class="cursor-pointer">
+                <label for="account_<%= indexa_capital_account.id %>" class="flex-1 cursor-pointer">
+                  <h4 class="font-medium text-primary"><%= indexa_capital_account.name.presence || t("indexa_capital_items.select_accounts.no_name_placeholder") %></h4>
+                  <p class="text-sm text-secondary">
+                    <% if indexa_capital_account.account_type.present? %>
+                      <%= indexa_capital_account.account_type.titleize %> &middot;
+                    <% end %>
+                    <%= number_to_currency(indexa_capital_account.current_balance || 0, unit: Money::Currency.new(indexa_capital_account.currency || "EUR").symbol) %>
+                  </p>
+                </label>
+              </div>
+            </div>
+          <% end %>
+        </div>
+
+        <div class="flex gap-3 mt-6">
+          <%= render DS::Button.new(
+            text: t("indexa_capital_items.select_accounts.link_accounts"),
+            variant: "primary",
+            icon: "plus",
+            type: "submit",
+            class: "flex-1",
+            data: { loading_button_target: "button" }
+          ) %>
+          <%= render DS::Link.new(
+            text: t("indexa_capital_items.select_accounts.cancel"),
+            variant: "secondary",
+            href: accounts_path,
+            frame: "_top"
+          ) %>
+        </div>
+      <% end %>
+    <% end %>
+  <% end %>
+<% end %>

@@ -51,7 +51,7 @@ class PlaidAccount::Investments::HoldingsProcessor
     end
 
     def holdings
-      plaid_account.raw_investments_payload&.[]("holdings") || []
+      plaid_account.raw_holdings_payload&.[]("holdings") || []
     end
 
     def parse_decimal(value)

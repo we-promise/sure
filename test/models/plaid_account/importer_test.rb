@@ -38,7 +38,7 @@ class PlaidAccount::ImporterTest < ActiveSupport::TestCase
 
     @plaid_account.expects(:upsert_plaid_snapshot!).with(account_data)
     @plaid_account.expects(:upsert_plaid_transactions_snapshot!).with(transactions_data)
-    @plaid_account.expects(:upsert_plaid_investments_snapshot!).with(investments_data)
+    @plaid_account.expects(:upsert_plaid_holdings_snapshot!).with(investments_data)
     @plaid_account.expects(:upsert_plaid_liabilities_snapshot!).with(liabilities_data)
 
     PlaidAccount::Importer.new(@plaid_account, account_snapshot: @mock_account_snapshot).import

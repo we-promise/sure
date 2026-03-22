@@ -19,6 +19,7 @@ ca:
       success: Totes les regles s'han posat a cua per a execució
       view_usage: Veure l'historial d'ús
     no_action: Sense acció
+    no_condition: Sense condició
     recent_runs:
       columns:
         date_time: Data/Hora

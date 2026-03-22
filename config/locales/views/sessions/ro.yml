@@ -18,4 +18,5 @@ ro:
       title: Conectează-te la contul tău
       password_placeholder: Introdu parola
       openid_connect: Conectează-te cu OpenID Connect
+      oidc: Conectează-te cu OpenID Connect
       google_auth_connect: Conectează-te cu Google

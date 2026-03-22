@@ -1,16 +1,18 @@
 class Rule::Registry::TransactionResource < Rule::Registry
   def resource_scope
-    family.transactions.visible.with_entry.where(entry: { date: rule.effective_date.. })
+    family.transactions.visible.with_entry.merge(Entry.excluding_split_parents).where(entry: { date: rule.effective_date.. })
   end
 
   def condition_filters
     [
       Rule::ConditionFilter::TransactionName.new(rule),
       Rule::ConditionFilter::TransactionAmount.new(rule),
+      Rule::ConditionFilter::TransactionType.new(rule),
       Rule::ConditionFilter::TransactionMerchant.new(rule),
       Rule::ConditionFilter::TransactionCategory.new(rule),
       Rule::ConditionFilter::TransactionDetails.new(rule),
-      Rule::ConditionFilter::TransactionNotes.new(rule)
+      Rule::ConditionFilter::TransactionNotes.new(rule),
+      Rule::ConditionFilter::TransactionAccount.new(rule)
     ]
   end
 
@@ -21,7 +23,8 @@ class Rule::Registry::TransactionResource < Rule::Registry
       Rule::ActionExecutor::SetTransactionMerchant.new(rule),
       Rule::ActionExecutor::SetTransactionName.new(rule),
       Rule::ActionExecutor::SetInvestmentActivityLabel.new(rule),
-      Rule::ActionExecutor::ExcludeTransaction.new(rule)
+      Rule::ActionExecutor::ExcludeTransaction.new(rule),
+      Rule::ActionExecutor::SetAsTransferOrPayment.new(rule)
     ]
 
     if ai_enabled?
