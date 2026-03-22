@@ -143,13 +143,13 @@ export default class extends Controller {
     if (balanced) {
       this.remainingTarget.classList.remove("text-destructive")
       this.remainingTarget.classList.add("text-success")
-      container.classList.remove("border-destructive", "bg-red-25")
-      container.classList.add("border-green-200", "bg-green-25")
+      container.classList.remove("border-destructive", "bg-red-tint-10")
+      container.classList.add("border-green-200", "bg-green-tint-10")
     } else {
       this.remainingTarget.classList.remove("text-success")
       this.remainingTarget.classList.add("text-destructive")
-      container.classList.remove("border-green-200", "bg-green-25")
-      container.classList.add("border-destructive", "bg-red-25")
+      container.classList.remove("border-green-200", "bg-green-tint-10")
+      container.classList.add("border-destructive", "bg-red-tint-10")
     }
 
     this.errorTarget.classList.toggle("hidden", balanced)

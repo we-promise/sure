@@ -81,6 +81,8 @@ en:
     potential_duplicate_description: This pending transaction may be the same as the posted transaction below. If so, merge them to avoid double-counting.
     merge_duplicate: Yes, merge them
     keep_both: No, keep both
+    split_parent_row:
+      split_label: "Split"
     transaction:
       pending: Pending
       pending_tooltip: Pending transaction — may change when posted

@@ -105,6 +105,16 @@ class Api::V1::TransactionsController < Api::V1::BaseController
 end
 
   def update
+    if @entry.split_child?
+      render json: { error: "validation_failed", message: "Split child transactions cannot be edited directly. Use the split editor." }, status: :unprocessable_entity
+      return
+    end
+
+    if @entry.split_parent? && split_financial_fields_changed?
+      render json: { error: "validation_failed", message: "Split parent amount, date, and type cannot be changed directly. Use the split editor." }, status: :unprocessable_entity
+      return
+    end
+
     Entry.transaction do
       if @entry.update(entry_params_for_update)
         # Handle tags separately - only when explicitly provided in the request
@@ -141,6 +151,11 @@ end
   end
 
   def destroy
+    if @entry.split_child?
+      render json: { error: "validation_failed", message: "Split child transactions cannot be deleted individually." }, status: :unprocessable_entity
+      return
+    end
+
     @entry.destroy!
     @entry.sync_account_later
 
@@ -311,6 +326,12 @@ end
     # This distinguishes between "user wants to update tags" vs "user didn't specify tags".
     def tags_provided?
       params[:transaction].key?(:tag_ids)
+    end
+
+    def split_financial_fields_changed?
+      params.dig(:transaction, :amount).present? ||
+        params.dig(:transaction, :date).present? ||
+        params.dig(:transaction, :nature).present?
     end
 
     def calculate_signed_amount
