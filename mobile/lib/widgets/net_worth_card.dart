@@ -9,6 +9,7 @@ class NetWorthCard extends StatelessWidget {
   final ValueChanged<AccountFilter> onFilterChanged;
   final String Function(String currency, double amount) formatAmount;
   final String? netWorthFormatted;
+  final bool isStale;
 
   const NetWorthCard({
     super.key,
@@ -18,6 +19,7 @@ class NetWorthCard extends StatelessWidget {
     required this.onFilterChanged,
     required this.formatAmount,
     this.netWorthFormatted,
+    this.isStale = false,
   });
 
   @override
@@ -40,18 +42,41 @@ class NetWorthCard extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
             child: Column(
               children: [
-                Text(
-                  'Net Worth',
-                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Net Worth',
+                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                    ),
+                    if (isStale) ...[
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                        decoration: BoxDecoration(
+                          color: Colors.amber.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          'Outdated',
+                          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                color: Colors.amber.shade700,
+                                fontWeight: FontWeight.w600,
+                              ),
+                        ),
                       ),
+                    ],
+                  ],
                 ),
                 const SizedBox(height: 4),
                 Text(
                   netWorthFormatted ?? '--',
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                         fontWeight: FontWeight.bold,
-                        color: colorScheme.onSurface,
+                        color: isStale ? Colors.amber.shade700 : colorScheme.onSurface,
                       ),
                 ),
               ],

@@ -26,6 +26,7 @@ class AccountsProvider with ChangeNotifier {
   String? _assetsFormatted;
   String? _liabilitiesFormatted;
   String? _familyCurrency;
+  bool _isBalanceSheetStale = false;
 
   List<Account> get accounts => _accounts;
   bool get isLoading => _isLoading;
@@ -36,6 +37,7 @@ class AccountsProvider with ChangeNotifier {
   String? get assetsFormatted => _assetsFormatted;
   String? get liabilitiesFormatted => _liabilitiesFormatted;
   String? get familyCurrency => _familyCurrency;
+  bool get isBalanceSheetStale => _isBalanceSheetStale;
 
   List<Account> get assetAccounts {
     final assets = _accounts.where((a) => a.isAsset).toList();
@@ -182,7 +184,8 @@ class AccountsProvider with ChangeNotifier {
   }
 
   /// Fetches balance sheet data and updates formatted net worth, assets,
-  /// and liabilities values for display.
+  /// and liabilities values for display. On failure, marks the existing
+  /// values as stale rather than clearing them.
   Future<void> _fetchBalanceSheet(String accessToken) async {
     try {
       final result = await _balanceSheetService.getBalanceSheet(accessToken: accessToken);
@@ -194,9 +197,19 @@ class AccountsProvider with ChangeNotifier {
         _netWorthFormatted = netWorth?['formatted'] as String?;
         _assetsFormatted = assets?['formatted'] as String?;
         _liabilitiesFormatted = liabilities?['formatted'] as String?;
+        _isBalanceSheetStale = false;
+      } else {
+        // Keep existing values but mark as stale
+        if (_netWorthFormatted != null) {
+          _isBalanceSheetStale = true;
+        }
       }
     } catch (e) {
       _log.error('AccountsProvider', 'Error fetching balance sheet: $e');
+      // Keep existing values but mark as stale
+      if (_netWorthFormatted != null) {
+        _isBalanceSheetStale = true;
+      }
     }
   }
 
@@ -209,6 +222,7 @@ class AccountsProvider with ChangeNotifier {
     _assetsFormatted = null;
     _liabilitiesFormatted = null;
     _familyCurrency = null;
+    _isBalanceSheetStale = false;
     notifyListeners();
   }
 

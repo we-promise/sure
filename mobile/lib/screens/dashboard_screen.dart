@@ -517,6 +517,7 @@ class DashboardScreenState extends State<DashboardScreen> {
                     },
                     formatAmount: _formatAmount,
                     netWorthFormatted: accountsProvider.netWorthFormatted,
+                    isStale: accountsProvider.isBalanceSheetStale,
                   ),
                 ),
 

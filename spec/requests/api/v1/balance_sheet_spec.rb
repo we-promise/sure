@@ -26,7 +26,7 @@ RSpec.describe 'API V1 Balance Sheet', type: :request do
       user: user,
       name: 'API Docs Key',
       key: key,
-      scopes: %w[read],
+      scopes: %w[read_write],
       source: 'web'
     )
   end
