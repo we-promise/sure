@@ -1,5 +1,10 @@
 ---
 es:
+  defaults:
+    brand_name: "%{brand_name}"
+    product_name: "%{product_name}"
+  global:
+    expand: "Expandir"
   activerecord:
     errors:
       messages:

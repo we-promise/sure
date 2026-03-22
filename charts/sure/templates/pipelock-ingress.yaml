@@ -1,0 +1,42 @@
+{{- if and .Values.pipelock.enabled .Values.pipelock.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "sure.fullname" . }}-pipelock
+  labels:
+    {{- include "sure.labels" . | nindent 4 }}
+  {{- with .Values.pipelock.ingress.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- if .Values.pipelock.ingress.className }}
+  ingressClassName: {{ .Values.pipelock.ingress.className }}
+  {{- end }}
+  {{- if .Values.pipelock.ingress.hosts }}
+  rules:
+    {{- range .Values.pipelock.ingress.hosts }}
+    {{- if not .paths }}
+    {{- fail "each entry in pipelock.ingress.hosts must include at least one paths item" }}
+    {{- end }}
+    - host: {{ .host | quote }}
+      http:
+        paths:
+          {{- range .paths }}
+          - path: {{ .path }}
+            pathType: {{ .pathType }}
+            backend:
+              service:
+                name: {{ include "sure.fullname" $ }}-pipelock
+                port:
+                  name: mcp
+          {{- end }}
+    {{- end }}
+  {{- else }}
+  {{- fail "pipelock.ingress.enabled=true requires at least one entry in pipelock.ingress.hosts" }}
+  {{- end }}
+  {{- if .Values.pipelock.ingress.tls }}
+  tls:
+    {{- toYaml .Values.pipelock.ingress.tls | nindent 4 }}
+  {{- end }}
+{{- end }}

@@ -40,6 +40,29 @@
   </div>
 
   <% if Setting.onboarding_state == "invite_only" %>
+    <div class="flex items-center justify-between">
+      <div class="space-y-1">
+        <p class="text-sm"><%= t(".default_family_title") %></p>
+        <p class="text-secondary text-sm"><%= t(".default_family_description") %></p>
+      </div>
+
+      <%= styled_form_with model: Setting.new,
+                           url: settings_hosting_path,
+                           method: :patch,
+                           data: { controller: "auto-submit-form", auto_submit_form_trigger_event_value: "change" } do |form| %>
+        <div class="form-field w-fit">
+          <%= form.select :invite_only_default_family_id,
+                          options_for_select(
+                            [ [ t(".default_family_none"), "" ] ] +
+                            Family.all.map { |f| [ f.name, f.id ] },
+                            Setting.invite_only_default_family_id
+                          ),
+                          { label: false },
+                          { data: { auto_submit_form_target: "auto" } } %>
+        </div>
+      <% end %>
+    </div>
+
     <div class="flex items-center justify-between mb-4">
       <div>
         <span class="text-primary text-base font-medium"><%= t(".generated_tokens") %></span>

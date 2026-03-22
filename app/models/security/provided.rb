@@ -114,13 +114,14 @@ module Security::Provided
       return 0
     end
 
-    Security::Price::Importer.new(
+    importer = Security::Price::Importer.new(
       security: self,
       security_provider: provider,
       start_date: start_date,
       end_date: end_date,
       clear_cache: clear_cache
-    ).import_provider_prices
+    )
+    [ importer.import_provider_prices, importer.provider_error ]
   end
 
   private

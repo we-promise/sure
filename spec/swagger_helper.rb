@@ -203,11 +203,10 @@ RSpec.configure do |config|
           },
           Category: {
             type: :object,
-            required: %w[id name classification color icon],
+            required: %w[id name color icon],
             properties: {
               id: { type: :string, format: :uuid },
               name: { type: :string },
-              classification: { type: :string },
               color: { type: :string },
               icon: { type: :string }
             }
@@ -222,11 +221,10 @@ RSpec.configure do |config|
           },
           CategoryDetail: {
             type: :object,
-            required: %w[id name classification color icon subcategories_count created_at updated_at],
+            required: %w[id name color icon subcategories_count created_at updated_at],
             properties: {
               id: { type: :string, format: :uuid },
               name: { type: :string },
-              classification: { type: :string, enum: %w[income expense] },
               color: { type: :string },
               icon: { type: :string },
               parent: { '$ref' => '#/components/schemas/CategoryParent', nullable: true },
@@ -516,6 +514,13 @@ RSpec.configure do |config|
                 items: { '$ref' => '#/components/schemas/Holding' }
               },
               pagination: { '$ref' => '#/components/schemas/Pagination' }
+            }
+          },
+          SuccessMessage: {
+            type: :object,
+            required: %w[message],
+            properties: {
+              message: { type: :string }
             }
           }
         }

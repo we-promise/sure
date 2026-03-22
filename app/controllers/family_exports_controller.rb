@@ -26,7 +26,11 @@ class FamilyExportsController < ApplicationController
       [ t("breadcrumbs.home"), root_path ],
       [ t("breadcrumbs.exports"), family_exports_path ]
     ]
-    render layout: "settings"
+
+    respond_to do |format|
+      format.html { render layout: "settings" }
+      format.turbo_stream { redirect_to family_exports_path }
+    end
   end
 
   def download

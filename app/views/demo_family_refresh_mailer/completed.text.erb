@@ -1,0 +1,6 @@
+Demo family refresh has completed.
+
+Period (UTC): <%= @period_start.iso8601 %> to <%= @period_end.iso8601 %>
+Old demo family: <%= @old_family_name || "not found" %><% if @old_family_id %> (ID: <%= @old_family_id %>)<% end %>
+Unique login sessions for old demo family in period: <%= @old_family_session_count %>
+New family accounts created in period: <%= @newly_created_families_count %>

@@ -1,8 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import '../models/chat.dart';
 import '../providers/auth_provider.dart';
 import '../providers/chat_provider.dart';
 import '../models/message.dart';
+
+class _SendMessageIntent extends Intent {
+  const _SendMessageIntent();
+}
 
 class ChatConversationScreen extends StatefulWidget {
   final String chatId;
@@ -69,14 +75,23 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
       return;
     }
 
-    // Clear input field immediately
+    final shouldUpdateTitle = chatProvider.currentChat?.hasDefaultTitle == true;
+
     _messageController.clear();
 
-    await chatProvider.sendMessage(
+    final delivered = await chatProvider.sendMessage(
       accessToken: accessToken,
       chatId: widget.chatId,
       content: content,
     );
+
+    if (delivered && shouldUpdateTitle) {
+      await chatProvider.updateChatTitle(
+        accessToken: accessToken,
+        chatId: widget.chatId,
+        title: Chat.generateTitle(content),
+      );
+    }
 
     // Scroll to bottom after sending
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -298,34 +313,48 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
                     ),
                   ],
                 ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _messageController,
-                        decoration: InputDecoration(
-                          hintText: 'Type a message...',
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(24),
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 12,
+                child: Shortcuts(
+                  shortcuts: const {
+                    SingleActivator(LogicalKeyboardKey.enter): _SendMessageIntent(),
+                  },
+                  child: Actions(
+                    actions: <Type, Action<Intent>>{
+                      _SendMessageIntent: CallbackAction<_SendMessageIntent>(
+                        onInvoke: (_) {
+                          if (!chatProvider.isSendingMessage) _sendMessage();
+                          return null;
+                        },
+                      ),
+                    },
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _messageController,
+                            decoration: InputDecoration(
+                              hintText: 'Type a message...',
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(24),
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 12,
+                              ),
+                            ),
+                            maxLines: null,
+                            textCapitalization: TextCapitalization.sentences,
                           ),
                         ),
-                        maxLines: null,
-                        textCapitalization: TextCapitalization.sentences,
-                        onSubmitted: (_) => _sendMessage(),
-                      ),
+                        const SizedBox(width: 8),
+                        IconButton(
+                          icon: const Icon(Icons.send),
+                          onPressed: chatProvider.isSendingMessage ? null : _sendMessage,
+                          color: colorScheme.primary,
+                          iconSize: 28,
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 8),
-                    IconButton(
-                      icon: const Icon(Icons.send),
-                      onPressed: chatProvider.isSendingMessage ? null : _sendMessage,
-                      color: colorScheme.primary,
-                      iconSize: 28,
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ],

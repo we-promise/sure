@@ -5,7 +5,6 @@ class CategoryImport < Import
         category_name = row.name.to_s.strip
         category = family.categories.find_or_initialize_by(name: category_name)
         category.color = row.category_color.presence || category.color || Category::UNCATEGORIZED_COLOR
-        category.classification = row.category_classification.presence || category.classification || "expense"
         category.lucide_icon = row.category_icon.presence || category.lucide_icon || "shapes"
         category.parent = nil
         category.save!
@@ -30,7 +29,7 @@ class CategoryImport < Import
   end
 
   def column_keys
-    %i[name category_color category_parent category_classification category_icon]
+    %i[name category_color category_parent category_icon]
   end
 
   def required_column_keys
@@ -47,10 +46,10 @@ class CategoryImport < Import
 
   def csv_template
     template = <<-CSV
-      name*,color,parent_category,classification,lucide_icon
-      Food & Drink,#f97316,,expense,carrot
-      Groceries,#407706,Food & Drink,expense,shopping-basket
-      Salary,#22c55e,,income,briefcase
+      name*,color,parent_category,lucide_icon
+      Food & Drink,#f97316,,carrot
+      Groceries,#407706,Food & Drink,shopping-basket
+      Salary,#22c55e,,briefcase
     CSV
 
     CSV.parse(template, headers: true)
@@ -64,7 +63,6 @@ class CategoryImport < Import
     name_header = header_for("name")
     color_header = header_for("color")
     parent_header = header_for("parent_category", "parent category")
-    classification_header = header_for("classification")
     icon_header = header_for("lucide_icon", "lucide icon", "icon")
 
     csv_rows.each do |row|
@@ -72,7 +70,6 @@ class CategoryImport < Import
         name: row[name_header].to_s.strip,
         category_color: row[color_header].to_s.strip,
         category_parent: row[parent_header].to_s.strip,
-        category_classification: row[classification_header].to_s.strip,
         category_icon: row[icon_header].to_s.strip,
         currency: default_currency
       )
@@ -112,7 +109,6 @@ class CategoryImport < Import
 
       family.categories.find_or_create_by!(name: trimmed_name) do |placeholder|
         placeholder.color = Category::UNCATEGORIZED_COLOR
-        placeholder.classification = "expense"
         placeholder.lucide_icon = "shapes"
       end
     end

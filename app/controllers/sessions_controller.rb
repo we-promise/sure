@@ -188,10 +188,10 @@ class SessionsController < ApplicationController
         redirect_to root_path
       end
     else
-      # Mobile SSO with no linked identity - redirect back with error
+      # Mobile SSO with no linked identity - cache pending auth and redirect
+      # back to the app with a linking code so the user can link or create an account
       if session[:mobile_sso].present?
-        session.delete(:mobile_sso)
-        mobile_sso_redirect(error: "account_not_linked", message: "Please link your Google account from the web app first")
+        handle_mobile_sso_onboarding(auth)
         return
       end
 
@@ -271,6 +271,41 @@ class SessionsController < ApplicationController
     rescue ActiveRecord::RecordInvalid => e
       Rails.logger.warn("[Mobile SSO] Device save failed: #{e.record.errors.full_messages.join(', ')}")
       mobile_sso_redirect(error: "device_error", message: "Unable to register device")
+    end
+
+    def handle_mobile_sso_onboarding(auth)
+      device_info = session.delete(:mobile_sso)
+      email = auth.info&.email
+
+      has_pending_invitation = email.present? && Invitation.pending.exists?(email: email)
+      allow_creation = has_pending_invitation || (!AuthConfig.jit_link_only? && AuthConfig.allowed_oidc_domain?(email))
+
+      linking_code = SecureRandom.urlsafe_base64(32)
+      Rails.cache.write(
+        "mobile_sso_link:#{linking_code}",
+        {
+          provider: auth.provider,
+          uid: auth.uid,
+          email: email,
+          first_name: auth.info&.first_name,
+          last_name: auth.info&.last_name,
+          name: auth.info&.name,
+          issuer: auth.extra&.raw_info&.iss || auth.extra&.raw_info&.[]("iss"),
+          device_info: device_info,
+          allow_account_creation: allow_creation
+        },
+        expires_in: 10.minutes
+      )
+
+      mobile_sso_redirect(
+        status: "account_not_linked",
+        linking_code: linking_code,
+        email: email,
+        first_name: auth.info&.first_name,
+        last_name: auth.info&.last_name,
+        allow_account_creation: allow_creation,
+        has_pending_invitation: has_pending_invitation
+      )
     end
 
     def mobile_sso_redirect(params = {})

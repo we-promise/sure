@@ -3,10 +3,20 @@ es:
   pages:
     changelog:
       title: Novedades
+    privacy:
+      title: Política de privacidad
+      heading: Política de privacidad
+      placeholder: El contenido de la política de privacidad se mostrará aquí.
+    terms:
+      title: Condiciones del servicio
+      heading: Condiciones del servicio
+      placeholder: El contenido de las condiciones del servicio se mostrará aquí.
     dashboard:
       welcome: "Bienvenido de nuevo, %{name}"
       subtitle: "Esto es lo que está pasando con tus finanzas"
       new: "Nuevo"
+      drag_to_reorder: "Arrastra para reordenar la sección"
+      toggle_section: "Alternar visibilidad de la sección"
       net_worth_chart:
         data_not_available: Datos no disponibles para el período seleccionado
         title: Patrimonio neto
@@ -15,6 +25,7 @@ es:
         no_account_subtitle: Como no se han añadido cuentas, no hay datos para mostrar. Añade tus primeras cuentas para empezar a ver los datos del panel.
         no_account_title: Aún no hay cuentas
       balance_sheet:
+        title: "Balance de situación"
         no_items: "Aún no hay %{name}"
         add_accounts: "Añade tus cuentas de %{name} para ver un desglose completo"
       cashflow_sankey:
@@ -29,3 +40,19 @@ es:
       outflows_donut:
         title: "Salidas"
         total_outflows: "Salidas totales"
+        categories: "Categorías"
+        value: "Valor"
+        weight: "Peso"
+      investment_summary:
+        title: "Inversiones"
+        total_return: "Rentabilidad total"
+        holding: "Activo"
+        weight: "Peso"
+        value: "Valor"
+        return: "Rentabilidad"
+        period_activity: "Actividad de %{period}"
+        contributions: "Aportaciones"
+        withdrawals: "Retiradas"
+        trades: "Operaciones"
+        no_investments: "No hay cuentas de inversión"
+        add_investment: "Añade una cuenta de inversión para realizar el seguimiento de tu cartera"

@@ -5,43 +5,45 @@ class Admin::UsersControllerTest < ActionDispatch::IntegrationTest
     sign_in users(:sure_support_staff)
   end
 
-  test "index sorts users by subscription trial end date with nils last" do
-    user_with_trial = User.find_by!(email: "user1@example.com")
-    user_without_trial = User.find_by!(email: "bob@bobdylan.com")
+  test "index groups users by family sorted by transaction count" do
+    family_with_more = users(:family_admin).family
+    family_with_fewer = users(:empty).family
 
-    user_with_trial.family.subscription&.destroy
-    Subscription.create!(
-      family_id: user_with_trial.family_id,
-      status: :trialing,
-      trial_ends_at: 2.days.from_now
-    )
-
-    user_without_trial.family.subscription&.destroy
-    Subscription.create!(
-      family_id: user_without_trial.family_id,
-      status: :active,
-      trial_ends_at: nil,
-      stripe_id: "cus_test_#{user_without_trial.family_id}"
-    )
+    account = Account.create!(family: family_with_more, name: "Test", balance: 0, currency: "USD", accountable: Depository.new)
+    3.times { |i| account.entries.create!(name: "Txn #{i}", date: Date.current, amount: 10, currency: "USD", entryable: Transaction.new) }
 
     get admin_users_url
-
     assert_response :success
 
     body = response.body
-    trial_user_index = body.index("user1@example.com")
-    no_trial_user_index = body.index("bob@bobdylan.com")
+    more_idx = body.index(family_with_more.name)
+    fewer_idx = body.index(family_with_fewer.name)
 
-    assert_not_nil trial_user_index
-    assert_not_nil no_trial_user_index
-    assert_operator trial_user_index, :<, no_trial_user_index,
-      "User with trialing subscription (user1@example.com) should appear before user with non-trial subscription (bob@bobdylan.com)"
+    assert_not_nil more_idx
+    assert_not_nil fewer_idx
+    assert_operator more_idx, :<, fewer_idx,
+      "Family with more transactions should appear before family with fewer"
   end
 
-  test "index shows n/a when trial end date is unavailable" do
-    get admin_users_url
+  test "index shows subscription status for families" do
+    family = users(:family_admin).family
+    family.subscription&.destroy
+    Subscription.create!(
+      family_id: family.id,
+      status: :active,
+      stripe_id: "cus_test_#{family.id}"
+    )
 
+    get admin_users_url
     assert_response :success
-    assert_match(/n\/a/, response.body, "Page should show n/a for users without trial end date")
+    assert_match(/Active/, response.body, "Page should show subscription status for families with active subscriptions")
+  end
+
+  test "index shows no subscription label for families without subscription" do
+    users(:family_admin).family.subscription&.destroy
+
+    get admin_users_url
+    assert_response :success
+    assert_match(/No subscription/, response.body, "Page should show 'No subscription' for families without one")
   end
 end

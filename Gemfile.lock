@@ -282,7 +282,7 @@ GEM
       actionview (>= 5.0.0)
       activesupport (>= 5.0.0)
     jmespath (1.6.2)
-    json (2.18.1)
+    json (2.19.2)
     json-jwt (1.16.7)
       activesupport (>= 4.2)
       aes_key_wrap
@@ -441,7 +441,7 @@ GEM
     ostruct (0.6.2)
     pagy (9.3.5)
     parallel (1.27.0)
-    parser (3.3.8.0)
+    parser (3.3.10.2)
       ast (~> 2.4.1)
       racc
     pdf-reader (2.15.1)

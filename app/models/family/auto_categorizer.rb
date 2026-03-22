@@ -69,8 +69,7 @@ class Family::AutoCategorizer
           id: category.id,
           name: category.name,
           is_subcategory: category.subcategory?,
-          parent_id: category.parent_id,
-          classification: category.classification
+          parent_id: category.parent_id
         }
       end
     end

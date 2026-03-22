@@ -1,0 +1,49 @@
+---
+es:
+  enable_banking_items:
+    authorize:
+      authorization_failed: Error al iniciar la autorización
+      bank_required: Por favor, selecciona un banco.
+      invalid_redirect: La URL de autorización recibida no es válida. Por favor, inténtalo de nuevo.
+      redirect_uri_not_allowed: Redirección no permitida. Por favor, configura `%{callback_url}` en los ajustes de tu aplicación de Enable Banking.
+      unexpected_error: Ha ocurrido un error inesperado. Por favor, inténtalo de nuevo.
+    callback:
+      authorization_error: Error de autorización
+      invalid_callback: Parámetros de retorno (callback) no válidos.
+      item_not_found: Conexión no encontrada.
+      session_failed: No se ha podido completar la autorización
+      success: Conectado correctamente con tu banco. Tus cuentas se están sincronizando.
+      unexpected_error: Ha ocurrido un error inesperado. Por favor, inténtalo de nuevo.
+    complete_account_setup:
+      all_skipped: Se han omitido todas las cuentas. Puedes configurarlas más tarde en la página de cuentas.
+      no_accounts: No hay cuentas disponibles para configurar.
+      success: ¡Se han creado %{count} cuentas correctamente!
+    create:
+      success: Configuración de Enable Banking realizada con éxito.
+    destroy:
+      success: La conexión de Enable Banking se ha puesto en cola para su eliminación.
+    link_accounts:
+      already_linked: Las cuentas seleccionadas ya están vinculadas.
+      link_failed: Error al vincular las cuentas
+      no_accounts_selected: No se ha seleccionado ninguna cuenta.
+      no_session: No hay ninguna conexión activa de Enable Banking. Por favor, conéctate primero a un banco.
+      success: Se han vinculado %{count} cuentas correctamente.
+    link_existing_account:
+      success: Cuenta vinculada correctamente a Enable Banking
+      errors:
+        only_manual: Solo se pueden vincular cuentas manuales
+        invalid_enable_banking_account: Se ha seleccionado una cuenta de Enable Banking no válida
+    new:
+      link_enable_banking_title: Vincular Enable Banking
+    reauthorize:
+      invalid_redirect: La URL de autorización recibida no es válida. Por favor, inténtalo de nuevo.
+      reauthorization_failed: Error en la reautorización
+    select_bank:
+      cancel: Cancelar
+      check_country: Por favor, comprueba los ajustes de tu código de país.
+      credentials_required: Por favor, configura primero tus credenciales de Enable Banking.
+      description: Selecciona el banco que quieres conectar a tus cuentas.
+      no_banks: No hay bancos disponibles para este país/región.
+      title: Selecciona tu banco
+    update:
+      success: Configuración de Enable Banking actualizada.

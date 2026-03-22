@@ -3,7 +3,8 @@ class Settings::HostingsController < ApplicationController
 
   guard_feature unless: -> { self_hosted? }
 
-  before_action :ensure_admin, only: [ :update, :clear_cache ]
+  before_action :ensure_admin, only: [ :update, :clear_cache, :disconnect_external_assistant ]
+  before_action :ensure_super_admin_for_onboarding, only: :update
 
   def show
     @breadcrumbs = [
@@ -41,6 +42,11 @@ class Settings::HostingsController < ApplicationController
 
     if hosting_params.key?(:require_email_confirmation)
       Setting.require_email_confirmation = hosting_params[:require_email_confirmation]
+    end
+
+    if hosting_params.key?(:invite_only_default_family_id)
+      value = hosting_params[:invite_only_default_family_id].presence
+      Setting.invite_only_default_family_id = value
     end
 
     if hosting_params.key?(:brand_fetch_client_id)
@@ -118,6 +124,23 @@ class Settings::HostingsController < ApplicationController
       Setting.openai_json_mode = hosting_params[:openai_json_mode].presence
     end
 
+    if hosting_params.key?(:external_assistant_url)
+      Setting.external_assistant_url = hosting_params[:external_assistant_url]
+    end
+
+    if hosting_params.key?(:external_assistant_token)
+      token_param = hosting_params[:external_assistant_token].to_s.strip
+      unless token_param.blank? || token_param == "********"
+        Setting.external_assistant_token = token_param
+      end
+    end
+
+    if hosting_params.key?(:external_assistant_agent_id)
+      Setting.external_assistant_agent_id = hosting_params[:external_assistant_agent_id]
+    end
+
+    update_assistant_type
+
     redirect_to settings_hosting_path, notice: t(".success")
   rescue Setting::ValidationError => error
     flash.now[:alert] = error.message
@@ -129,13 +152,39 @@ class Settings::HostingsController < ApplicationController
     redirect_to settings_hosting_path, notice: t(".cache_cleared")
   end
 
+  def disconnect_external_assistant
+    Setting.external_assistant_url = nil
+    Setting.external_assistant_token = nil
+    Setting.external_assistant_agent_id = nil
+    Current.family.update!(assistant_type: "builtin") unless ENV["ASSISTANT_TYPE"].present?
+    redirect_to settings_hosting_path, notice: t(".external_assistant_disconnected")
+  rescue => e
+    Rails.logger.error("[External Assistant] Disconnect failed: #{e.message}")
+    redirect_to settings_hosting_path, alert: t("settings.hostings.update.failure")
+  end
+
   private
     def hosting_params
-      params.require(:setting).permit(:onboarding_state, :require_email_confirmation, :brand_fetch_client_id, :brand_fetch_high_res_logos, :twelve_data_api_key, :openai_access_token, :openai_uri_base, :openai_model, :openai_json_mode, :exchange_rate_provider, :securities_provider, :syncs_include_pending, :auto_sync_enabled, :auto_sync_time)
+      return ActionController::Parameters.new unless params.key?(:setting)
+      params.require(:setting).permit(:onboarding_state, :require_email_confirmation, :invite_only_default_family_id, :brand_fetch_client_id, :brand_fetch_high_res_logos, :twelve_data_api_key, :openai_access_token, :openai_uri_base, :openai_model, :openai_json_mode, :exchange_rate_provider, :securities_provider, :syncs_include_pending, :auto_sync_enabled, :auto_sync_time, :external_assistant_url, :external_assistant_token, :external_assistant_agent_id)
+    end
+
+    def update_assistant_type
+      return unless params[:family].present? && params[:family][:assistant_type].present?
+      return if ENV["ASSISTANT_TYPE"].present?
+
+      assistant_type = params[:family][:assistant_type]
+      Current.family.update!(assistant_type: assistant_type) if Family::ASSISTANT_TYPES.include?(assistant_type)
     end
 
     def ensure_admin
       redirect_to settings_hosting_path, alert: t(".not_authorized") unless Current.user.admin?
+    end
+
+    def ensure_super_admin_for_onboarding
+      onboarding_params = %i[onboarding_state invite_only_default_family_id]
+      return unless onboarding_params.any? { |p| hosting_params.key?(p) }
+      redirect_to settings_hosting_path, alert: t(".not_authorized") unless Current.user.super_admin?
     end
 
     def sync_auto_sync_scheduler!

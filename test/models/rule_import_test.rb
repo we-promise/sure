@@ -6,7 +6,6 @@ class RuleImportTest < ActiveSupport::TestCase
     @category = @family.categories.create!(
       name: "Groceries",
       color: "#407706",
-      classification: "expense",
       lucide_icon: "shopping-basket"
     )
     @csv = <<~CSV
@@ -110,7 +109,6 @@ class RuleImportTest < ActiveSupport::TestCase
 
     new_category = Category.find_by!(family: @family, name: "Coffee Shops")
     assert_equal Category::UNCATEGORIZED_COLOR, new_category.color
-    assert_equal "expense", new_category.classification
 
     rule = Rule.find_by!(family: @family, name: "New category rule")
     action = rule.actions.first

@@ -97,7 +97,6 @@ class PlaidAccount::Transactions::CategoryMatcher
       user_categories.map do |user_category|
         {
           id: user_category.id,
-          classification: user_category.classification,
           name: normalize_user_category_name(user_category.name)
         }
       end

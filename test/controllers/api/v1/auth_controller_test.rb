@@ -22,6 +22,14 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
 
     # Clear the memoized class variable so it picks up the test record
     MobileDevice.instance_variable_set(:@shared_oauth_application, nil)
+
+    # Use a real cache store for SSO linking tests (test env uses :null_store by default)
+    @original_cache = Rails.cache
+    Rails.cache = ActiveSupport::Cache::MemoryStore.new
+  end
+
+  teardown do
+    Rails.cache = @original_cache if @original_cache
   end
 
   test "should signup new user and return OAuth tokens" do
@@ -486,6 +494,311 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
     patch "/api/v1/auth/enable_ai", headers: { "Content-Type" => "application/json" }
 
     assert_response :unauthorized
+  end
+
+  # SSO Link tests
+  test "should link existing account via SSO and return tokens" do
+    user = users(:family_admin)
+
+    linking_code = SecureRandom.urlsafe_base64(32)
+    Rails.cache.write("mobile_sso_link:#{linking_code}", {
+      provider: "google_oauth2",
+      uid: "google-uid-123",
+      email: "google@example.com",
+      first_name: "Google",
+      last_name: "User",
+      name: "Google User",
+      device_info: @device_info.stringify_keys,
+      allow_account_creation: true
+    }, expires_in: 10.minutes)
+
+    assert_difference("OidcIdentity.count", 1) do
+      post "/api/v1/auth/sso_link", params: {
+        linking_code: linking_code,
+        email: user.email,
+        password: user_password_test
+      }
+    end
+
+    assert_response :success
+    response_data = JSON.parse(response.body)
+    assert response_data["access_token"].present?
+    assert response_data["refresh_token"].present?
+    assert_equal user.id.to_s, response_data["user"]["id"]
+
+    # Linking code should be consumed
+    assert_nil Rails.cache.read("mobile_sso_link:#{linking_code}")
+  end
+
+  test "should reject SSO link with invalid password" do
+    user = users(:family_admin)
+
+    linking_code = SecureRandom.urlsafe_base64(32)
+    Rails.cache.write("mobile_sso_link:#{linking_code}", {
+      provider: "google_oauth2",
+      uid: "google-uid-123",
+      email: "google@example.com",
+      device_info: @device_info.stringify_keys,
+      allow_account_creation: true
+    }, expires_in: 10.minutes)
+
+    assert_no_difference("OidcIdentity.count") do
+      post "/api/v1/auth/sso_link", params: {
+        linking_code: linking_code,
+        email: user.email,
+        password: "wrong_password"
+      }
+    end
+
+    assert_response :unauthorized
+    response_data = JSON.parse(response.body)
+    assert_equal "Invalid email or password", response_data["error"]
+
+    # Linking code should NOT be consumed on failed password
+    assert Rails.cache.read("mobile_sso_link:#{linking_code}").present?, "Expected linking code to survive a failed attempt"
+  end
+
+  test "should reject SSO link when user has MFA enabled" do
+    user = users(:family_admin)
+    user.update!(otp_required: true, otp_secret: ROTP::Base32.random(32))
+
+    linking_code = SecureRandom.urlsafe_base64(32)
+    Rails.cache.write("mobile_sso_link:#{linking_code}", {
+      provider: "google_oauth2",
+      uid: "google-uid-mfa",
+      email: "mfa@example.com",
+      first_name: "MFA",
+      last_name: "User",
+      name: "MFA User",
+      device_info: @device_info.stringify_keys,
+      allow_account_creation: true
+    }, expires_in: 10.minutes)
+
+    assert_no_difference("OidcIdentity.count") do
+      post "/api/v1/auth/sso_link", params: {
+        linking_code: linking_code,
+        email: user.email,
+        password: user_password_test
+      }
+    end
+
+    assert_response :unauthorized
+    response_data = JSON.parse(response.body)
+    assert_equal true, response_data["mfa_required"]
+    assert_match(/MFA/, response_data["error"])
+
+    # Linking code should NOT be consumed on MFA rejection
+    assert Rails.cache.read("mobile_sso_link:#{linking_code}").present?, "Expected linking code to survive MFA rejection"
+  end
+
+  test "should reject SSO link with expired linking code" do
+    post "/api/v1/auth/sso_link", params: {
+      linking_code: "expired-code",
+      email: "test@example.com",
+      password: "password"
+    }
+
+    assert_response :unauthorized
+    response_data = JSON.parse(response.body)
+    assert_equal "Linking code is invalid or expired", response_data["error"]
+  end
+
+  test "should reject SSO link without linking code" do
+    post "/api/v1/auth/sso_link", params: {
+      email: "test@example.com",
+      password: "password"
+    }
+
+    assert_response :bad_request
+    response_data = JSON.parse(response.body)
+    assert_equal "Linking code is required", response_data["error"]
+  end
+
+  test "linking_code is single-use under race" do
+    user = users(:family_admin)
+
+    linking_code = SecureRandom.urlsafe_base64(32)
+    Rails.cache.write("mobile_sso_link:#{linking_code}", {
+      provider: "google_oauth2",
+      uid: "google-uid-race-test",
+      email: "race@example.com",
+      first_name: "Race",
+      last_name: "Test",
+      name: "Race Test",
+      device_info: @device_info.stringify_keys,
+      allow_account_creation: true
+    }, expires_in: 10.minutes)
+
+    # First request succeeds
+    assert_difference("OidcIdentity.count", 1) do
+      post "/api/v1/auth/sso_link", params: {
+        linking_code: linking_code,
+        email: user.email,
+        password: user_password_test
+      }
+    end
+    assert_response :success
+
+    # Second request with the same code is rejected
+    assert_no_difference("OidcIdentity.count") do
+      post "/api/v1/auth/sso_link", params: {
+        linking_code: linking_code,
+        email: user.email,
+        password: user_password_test
+      }
+    end
+    assert_response :unauthorized
+    assert_equal "Linking code is invalid or expired", JSON.parse(response.body)["error"]
+    assert_nil Rails.cache.read("mobile_sso_link:#{linking_code}")
+  end
+
+  # SSO Create Account tests
+  test "should create new account via SSO and return tokens" do
+    linking_code = SecureRandom.urlsafe_base64(32)
+    Rails.cache.write("mobile_sso_link:#{linking_code}", {
+      provider: "google_oauth2",
+      uid: "google-uid-456",
+      email: "newgoogleuser@example.com",
+      first_name: "New",
+      last_name: "GoogleUser",
+      name: "New GoogleUser",
+      device_info: @device_info.stringify_keys,
+      allow_account_creation: true
+    }, expires_in: 10.minutes)
+
+    assert_difference([ "User.count", "OidcIdentity.count" ], 1) do
+      post "/api/v1/auth/sso_create_account", params: {
+        linking_code: linking_code,
+        first_name: "New",
+        last_name: "GoogleUser"
+      }
+    end
+
+    assert_response :success
+    response_data = JSON.parse(response.body)
+    assert response_data["access_token"].present?
+    assert response_data["refresh_token"].present?
+    assert_equal "newgoogleuser@example.com", response_data["user"]["email"]
+    assert_equal "New", response_data["user"]["first_name"]
+    assert_equal "GoogleUser", response_data["user"]["last_name"]
+
+    # Linking code should be consumed
+    assert_nil Rails.cache.read("mobile_sso_link:#{linking_code}")
+  end
+
+  test "should reject SSO create account when not allowed" do
+    linking_code = SecureRandom.urlsafe_base64(32)
+    Rails.cache.write("mobile_sso_link:#{linking_code}", {
+      provider: "google_oauth2",
+      uid: "google-uid-789",
+      email: "blocked@example.com",
+      first_name: "Blocked",
+      last_name: "User",
+      device_info: @device_info.stringify_keys,
+      allow_account_creation: false
+    }, expires_in: 10.minutes)
+
+    assert_no_difference("User.count") do
+      post "/api/v1/auth/sso_create_account", params: {
+        linking_code: linking_code,
+        first_name: "Blocked",
+        last_name: "User"
+      }
+    end
+
+    assert_response :forbidden
+    response_data = JSON.parse(response.body)
+    assert_match(/disabled/, response_data["error"])
+
+    # Linking code should NOT be consumed on rejection
+    assert Rails.cache.read("mobile_sso_link:#{linking_code}").present?, "Expected linking code to survive a rejected create account attempt"
+  end
+
+  test "should reject SSO create account with expired linking code" do
+    post "/api/v1/auth/sso_create_account", params: {
+      linking_code: "expired-code",
+      first_name: "Test",
+      last_name: "User"
+    }
+
+    assert_response :unauthorized
+    response_data = JSON.parse(response.body)
+    assert_equal "Linking code is invalid or expired", response_data["error"]
+  end
+
+  test "should reject SSO create account without linking code" do
+    post "/api/v1/auth/sso_create_account", params: {
+      first_name: "Test",
+      last_name: "User"
+    }
+
+    assert_response :bad_request
+    response_data = JSON.parse(response.body)
+    assert_equal "Linking code is required", response_data["error"]
+  end
+
+  test "should return 422 when SSO create account fails user validation" do
+    existing_user = users(:family_admin)
+
+    linking_code = SecureRandom.urlsafe_base64(32)
+    Rails.cache.write("mobile_sso_link:#{linking_code}", {
+      provider: "google_oauth2",
+      uid: "google-uid-dup-email",
+      email: existing_user.email,
+      first_name: "Duplicate",
+      last_name: "Email",
+      name: "Duplicate Email",
+      device_info: @device_info.stringify_keys,
+      allow_account_creation: true
+    }, expires_in: 10.minutes)
+
+    assert_no_difference([ "User.count", "OidcIdentity.count" ]) do
+      post "/api/v1/auth/sso_create_account", params: {
+        linking_code: linking_code,
+        first_name: "Duplicate",
+        last_name: "Email"
+      }
+    end
+
+    assert_response :unprocessable_entity
+    response_data = JSON.parse(response.body)
+    assert response_data["errors"].any? { |e| e.match?(/email/i) }, "Expected email validation error in: #{response_data["errors"]}"
+  end
+
+  test "sso_create_account linking_code single-use under race" do
+    linking_code = SecureRandom.urlsafe_base64(32)
+    Rails.cache.write("mobile_sso_link:#{linking_code}", {
+      provider: "google_oauth2",
+      uid: "google-uid-race-create",
+      email: "raceuser@example.com",
+      first_name: "Race",
+      last_name: "CreateUser",
+      name: "Race CreateUser",
+      device_info: @device_info.stringify_keys,
+      allow_account_creation: true
+    }, expires_in: 10.minutes)
+
+    # First request succeeds
+    assert_difference([ "User.count", "OidcIdentity.count" ], 1) do
+      post "/api/v1/auth/sso_create_account", params: {
+        linking_code: linking_code,
+        first_name: "Race",
+        last_name: "CreateUser"
+      }
+    end
+    assert_response :success
+
+    # Second request with the same code is rejected
+    assert_no_difference([ "User.count", "OidcIdentity.count" ]) do
+      post "/api/v1/auth/sso_create_account", params: {
+        linking_code: linking_code,
+        first_name: "Race",
+        last_name: "CreateUser"
+      }
+    end
+    assert_response :unauthorized
+    assert_equal "Linking code is invalid or expired", JSON.parse(response.body)["error"]
+    assert_nil Rails.cache.read("mobile_sso_link:#{linking_code}")
   end
 
   test "should return forbidden when ai is not available" do

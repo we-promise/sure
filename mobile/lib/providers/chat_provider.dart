@@ -14,6 +14,10 @@ class ChatProvider with ChangeNotifier {
   String? _errorMessage;
   Timer? _pollingTimer;
 
+  /// Content length of the last assistant message from the previous poll.
+  /// Used to detect when the LLM has finished writing (no growth between polls).
+  int? _lastAssistantContentLength;
+
   List<Chat> get chats => _chats;
   Chat? get currentChat => _currentChat;
   bool get isLoading => _isLoading;
@@ -85,7 +89,6 @@ class ChatProvider with ChangeNotifier {
     required String accessToken,
     String? title,
     String? initialMessage,
-    String model = 'gpt-4',
   }) async {
     _isLoading = true;
     _errorMessage = null;
@@ -96,7 +99,6 @@ class ChatProvider with ChangeNotifier {
         accessToken: accessToken,
         title: title,
         initialMessage: initialMessage,
-        model: model,
       );
 
       if (result['success'] == true) {
@@ -127,8 +129,9 @@ class ChatProvider with ChangeNotifier {
     }
   }
 
-  /// Send a message to the current chat
-  Future<void> sendMessage({
+  /// Send a message to the current chat.
+  /// Returns true if delivery succeeded, false otherwise.
+  Future<bool> sendMessage({
     required String accessToken,
     required String chatId,
     required String content,
@@ -158,11 +161,14 @@ class ChatProvider with ChangeNotifier {
 
         // Start polling for AI response
         _startPolling(accessToken, chatId);
+        return true;
       } else {
         _errorMessage = result['error'] ?? 'Failed to send message';
+        return false;
       }
     } catch (e) {
       _errorMessage = 'Error: ${e.toString()}';
+      return false;
     } finally {
       _isSendingMessage = false;
       notifyListeners();
@@ -239,6 +245,7 @@ class ChatProvider with ChangeNotifier {
   /// Start polling for new messages (AI responses)
   void _startPolling(String accessToken, String chatId) {
     _stopPolling();
+    _lastAssistantContentLength = null;
 
     _pollingTimer = Timer.periodic(const Duration(seconds: 2), (timer) async {
       await _pollForUpdates(accessToken, chatId);
@@ -262,26 +269,55 @@ class ChatProvider with ChangeNotifier {
       if (result['success'] == true) {
         final updatedChat = result['chat'] as Chat;
 
-        // Check if we have new messages
-        if (_currentChat != null && _currentChat!.id == chatId) {
-          final oldMessageCount = _currentChat!.messages.length;
-          final newMessageCount = updatedChat.messages.length;
+        if (_currentChat == null || _currentChat!.id != chatId) return;
 
-          if (newMessageCount > oldMessageCount) {
-            _currentChat = updatedChat;
-            notifyListeners();
+        final oldMessages = _currentChat!.messages;
+        final newMessages = updatedChat.messages;
+        final oldMessageCount = oldMessages.length;
+        final newMessageCount = newMessages.length;
 
-            // Check if the last message is from assistant and complete
-            final lastMessage = updatedChat.messages.lastOrNull;
-            if (lastMessage != null && lastMessage.isAssistant) {
-              // Stop polling after getting assistant response
-              _stopPolling();
+        final oldContentLengthById = <String, int>{};
+        for (final m in oldMessages) {
+          if (m.isAssistant) oldContentLengthById[m.id] = m.content.length;
+        }
+
+        bool shouldUpdate = false;
+
+        // New messages added
+        if (newMessageCount > oldMessageCount) {
+          shouldUpdate = true;
+          _lastAssistantContentLength = null;
+        } else if (newMessageCount == oldMessageCount) {
+          // Same count: check if any assistant message has more content
+          for (final m in newMessages) {
+            if (m.isAssistant) {
+              final oldLen = oldContentLengthById[m.id] ?? 0;
+              if (m.content.length > oldLen) {
+                shouldUpdate = true;
+                break;
+              }
             }
+          }
+        }
+
+        if (shouldUpdate) {
+          _currentChat = updatedChat;
+          notifyListeners();
+        }
+
+        final lastMessage = updatedChat.messages.lastOrNull;
+        if (lastMessage != null && lastMessage.isAssistant) {
+          final newLen = lastMessage.content.length;
+          if (newLen > (_lastAssistantContentLength ?? 0)) {
+            _lastAssistantContentLength = newLen;
+          } else {
+            // Content stable: no growth since last poll
+            _stopPolling();
+            _lastAssistantContentLength = null;
           }
         }
       }
     } catch (e) {
-      // Silently fail polling errors to avoid interrupting user experience
       debugPrint('Polling error: ${e.toString()}');
     }
   }

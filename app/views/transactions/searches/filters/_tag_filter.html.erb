@@ -16,15 +16,15 @@
                            tag.name,
                            nil %>
         <%= form.label :tags, value: tag.name, class: "text-sm text-primary flex items-center gap-2" do %>
-          <%= render DS::FilledIcon.new(
-            variant: :text,
-            hex_color: tag.color || Tag::UNCATEGORIZED_COLOR,
-            text: tag.name,
-            size: "sm",
-            rounded: true
-          ) %>
-
-          <%= tag.name %>
+          <% tag_color = tag.color.presence || Tag::UNCATEGORIZED_COLOR %>
+          <span class="border text-sm font-medium px-3 py-1 rounded-full inline-flex items-center gap-2"
+                style="
+                  background-color: color-mix(in oklab, <%= tag_color %> 10%, transparent);
+                  border-color: color-mix(in oklab, <%= tag_color%> 20%, transparent);
+                  color: <%= tag_color %>;">
+                <span class="size-1.5 rounded-full" style="background-color: <%= tag_color %>;"></span>
+            <%= tag.name %>
+          </span>
         <% end %>
       </div>
     <% end %>

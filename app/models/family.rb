@@ -19,6 +19,7 @@ class Family < ApplicationRecord
 
 
   MONIKERS = [ "Family", "Group" ].freeze
+  ASSISTANT_TYPES = %w[builtin external].freeze
 
   has_many :users, dependent: :destroy
   has_many :accounts, dependent: :destroy
@@ -47,6 +48,7 @@ class Family < ApplicationRecord
   validates :date_format, inclusion: { in: DATE_FORMATS.map(&:last) }
   validates :month_start_day, inclusion: { in: 1..28 }
   validates :moniker, inclusion: { in: MONIKERS }
+  validates :assistant_type, inclusion: { in: ASSISTANT_TYPES }
 
 
   def moniker_label
@@ -153,7 +155,6 @@ class Family < ApplicationRecord
     I18n.with_locale(locale) do
       categories.find_or_create_by!(name: Category.investment_contributions_name) do |cat|
         cat.color = "#0d9488"
-        cat.classification = "expense"
         cat.lucide_icon = "trending-up"
       end
     end

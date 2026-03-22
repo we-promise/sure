@@ -16,6 +16,7 @@ de:
       show:
         general: Allgemeine Einstellungen
         financial_data_providers: Finanzdatenanbieter
+        sync_settings: Synchronisierungseinstellungen
         invites: Einladungscodes
         title: Self-Hosting
         danger_zone: Gefahrenbereich
@@ -24,11 +25,22 @@ de:
         confirm_clear_cache:
           title: Daten-Cache leeren?
           body: Bist du sicher, dass du den Daten-Cache leeren möchtest? Dadurch werden alle Wechselkurse, Wertpapierpreise, Kontostände und andere Daten entfernt. Diese Aktion kann nicht rückgängig gemacht werden.
+      provider_selection:
+        title: Anbieterauswahl
+        description: Wähle, welcher Dienst für Wechselkurse und Wertpapierpreise verwendet werden soll. Yahoo Finance ist kostenlos und benötigt keinen API-Schlüssel. Twelve Data erfordert einen kostenlosen API-Schlüssel, bietet aber möglicherweise eine bessere Datenabdeckung.
+        exchange_rate_provider_label: Wechselkursanbieter
+        securities_provider_label: Wertpapiere (Aktienkurse) Anbieter
+        env_configured_message: Die Anbieterauswahl ist deaktiviert, weil Umgebungsvariablen (EXCHANGE_RATE_PROVIDER oder SECURITIES_PROVIDER) gesetzt sind. Um die Auswahl hier zu aktivieren, entferne diese Umgebungsvariablen aus deiner Konfiguration.
+        providers:
+          twelve_data: Twelve Data
+          yahoo_finance: Yahoo Finance
       brand_fetch_settings:
         description: Gib die von Brand Fetch bereitgestellte Client-ID ein.
         label: Client-ID
         placeholder: Gib hier deine Client-ID ein
         title: Brand Fetch Einstellungen
+        high_res_label: Hochauflösende Logos aktivieren
+        high_res_description: Wenn aktiviert, werden Logos in 120x120 statt 40x40 abgerufen. Das liefert schärfere Bilder auf hochauflösenden Displays.
       openai_settings:
         description: Gib dein Zugriffstoken ein und konfiguriere optional einen benutzerdefinierten, OpenAI-kompatiblen Anbieter.
         env_configured_message: Erfolgreich über Umgebungsvariablen konfiguriert.
@@ -38,6 +50,12 @@ de:
         uri_base_placeholder: "https://api.openai.com/v1 (Standard)"
         model_label: Modell (optional)
         model_placeholder: "gpt-4.1 (Standard)"
+        json_mode_label: JSON-Modus
+        json_mode_auto: Auto (empfohlen)
+        json_mode_strict: Streng (am besten für Denk-Modelle)
+        json_mode_none: Keiner (am besten für Standard-Modelle)
+        json_mode_json_object: JSON-Objekt
+        json_mode_help: "Der strenge Modus funktioniert am besten mit Denk-Modellen (qwen-thinking, deepseek-reasoner). Der Modus Keiner funktioniert am besten mit Standard-Modellen (llama, mistral, gpt-oss)."
         title: OpenAI
       yahoo_finance_settings:
         title: Yahoo Finance
@@ -53,11 +71,25 @@ de:
         label: API-Schlüssel
         placeholder: Gib hier deinen API-Schlüssel ein
         plan: "%{plan}-Tarif"
+        plan_upgrade_warning_title: Einige Ticker erfordern einen kostenpflichtigen Tarif
+        plan_upgrade_warning_description: Die folgenden Ticker in deinem Portfolio können mit deinem aktuellen Twelve-Data-Tarif keine Kurse synchronisieren.
+        requires_plan: erfordert %{plan}-Tarif
+        view_pricing: Twelve-Data-Preise anzeigen
         title: Twelve Data
       update:
         failure: Ungültiger Einstellungswert
         success: Einstellungen aktualisiert
         invalid_onboarding_state: Ungültiger Onboarding-Status
+        invalid_sync_time: Ungültiges Synchronisierungszeitformat. Bitte verwende das Format HH:MM (z. B. 02:30).
+        scheduler_sync_failed: Einstellungen gespeichert, aber die Synchronisierungsplanung konnte nicht aktualisiert werden. Bitte versuche es erneut oder prüfe die Server-Logs.
       clear_cache:
         cache_cleared: Daten-Cache wurde geleert. Dies kann einige Augenblicke dauern.
       not_authorized: Du bist nicht berechtigt, diese Aktion auszuführen.
+      sync_settings:
+        auto_sync_label: Automatische Synchronisierung aktivieren
+        auto_sync_description: Wenn aktiviert, werden alle Konten täglich zur angegebenen Zeit automatisch synchronisiert.
+        auto_sync_time_label: Synchronisierungszeit (HH:MM)
+        auto_sync_time_description: Lege die Tageszeit fest, zu der die automatische Synchronisierung erfolgen soll.
+        include_pending_label: Ausstehende Transaktionen einbeziehen
+        include_pending_description: Wenn aktiviert, werden ausstehende (noch nicht gebuchte) Transaktionen importiert und bei Buchung automatisch abgeglichen. Deaktivieren, wenn deine Bank unzuverlässige Ausstehend-Daten liefert.
+        env_configured_message: Diese Einstellung ist deaktiviert, weil eine Anbieter-Umgebungsvariable (SIMPLEFIN_INCLUDE_PENDING oder PLAID_INCLUDE_PENDING) gesetzt ist. Entferne sie, um diese Einstellung zu aktivieren.

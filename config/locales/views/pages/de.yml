@@ -3,10 +3,20 @@ de:
   pages:
     changelog:
       title: Was ist neu
+    privacy:
+      title: Datenschutzrichtlinie
+      heading: Datenschutzrichtlinie
+      placeholder: Der Inhalt der Datenschutzrichtlinie wird hier angezeigt.
+    terms:
+      title: Nutzungsbedingungen
+      heading: Nutzungsbedingungen
+      placeholder: Der Inhalt der Nutzungsbedingungen wird hier angezeigt.
     dashboard:
       welcome: "Willkommen zurück, %{name}"
       subtitle: "Hier siehst du, was in deinen Finanzen passiert."
       new: "Neu"
+      drag_to_reorder: "Bereich per Drag & Drop neu anordnen"
+      toggle_section: "Sichtbarkeit des Bereichs umschalten"
       net_worth_chart:
         data_not_available: Für den ausgewählten Zeitraum sind keine Daten verfügbar.
         title: Nettovermögen
@@ -15,6 +25,7 @@ de:
         no_account_subtitle: Da noch keine Konten hinzugefügt wurden, gibt es keine Daten anzuzeigen. Füge dein erstes Konto hinzu, um Dashboard-Daten zu sehen.
         no_account_title: Noch keine Konten vorhanden
       balance_sheet:
+        title: "Bilanz"
         no_items: "Noch keine %{name}"
         add_accounts: "Füge deine %{name}-Konten hinzu, um eine vollständige Übersicht zu erhalten."
       cashflow_sankey:
@@ -29,3 +40,19 @@ de:
       outflows_donut:
         title: "Ausgaben"
         total_outflows: "Gesamtausgaben"
+        categories: "Kategorien"
+        value: "Wert"
+        weight: "Gewicht"
+      investment_summary:
+        title: "Investitionen"
+        total_return: "Gesamtrendite"
+        holding: "Position"
+        weight: "Gewicht"
+        value: "Wert"
+        return: "Rendite"
+        period_activity: "%{period} Aktivität"
+        contributions: "Einlagen"
+        withdrawals: "Entnahmen"
+        trades: "Trades"
+        no_investments: "Keine Anlagekonten"
+        add_investment: "Füge ein Anlagekonto hinzu, um dein Portfolio zu verfolgen"

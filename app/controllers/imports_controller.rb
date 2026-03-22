@@ -92,7 +92,10 @@ class ImportsController < ApplicationController
   end
 
   def show
-    return unless @import.requires_csv_workflow?
+    unless @import.requires_csv_workflow?
+      redirect_to import_upload_path(@import), alert: t("imports.show.finalize_upload") unless @import.uploaded?
+      return
+    end
 
     if !@import.uploaded?
       redirect_to import_upload_path(@import), alert: t("imports.show.finalize_upload")

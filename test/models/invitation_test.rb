@@ -62,6 +62,66 @@ class InvitationTest < ActiveSupport::TestCase
     assert_not result
   end
 
+  test "cannot create invitation when email has pending invitation from another family" do
+    other_family = families(:empty)
+    other_inviter = users(:empty)
+    other_inviter.update_columns(family_id: other_family.id, role: "admin")
+
+    email = "cross-family-test@example.com"
+
+    # Create a pending invitation in the first family
+    @family.invitations.create!(email: email, role: "member", inviter: @inviter)
+
+    # Attempting to create a pending invitation in a different family should fail
+    invitation = other_family.invitations.build(email: email, role: "member", inviter: other_inviter)
+    assert_not invitation.valid?
+    assert_includes invitation.errors[:email], "already has a pending invitation from another family"
+  end
+
+  test "can create invitation when existing invitation from another family is accepted" do
+    other_family = families(:empty)
+    other_inviter = users(:empty)
+    other_inviter.update_columns(family_id: other_family.id, role: "admin")
+
+    email = "cross-family-accepted@example.com"
+
+    # Create an accepted invitation in the first family
+    accepted_invitation = @family.invitations.create!(email: email, role: "member", inviter: @inviter)
+    accepted_invitation.update!(accepted_at: Time.current)
+
+    # Should be able to create a pending invitation in a different family
+    invitation = other_family.invitations.build(email: email, role: "member", inviter: other_inviter)
+    assert invitation.valid?
+  end
+
+  test "can create invitation when existing invitation from another family is expired" do
+    other_family = families(:empty)
+    other_inviter = users(:empty)
+    other_inviter.update_columns(family_id: other_family.id, role: "admin")
+
+    email = "cross-family-expired@example.com"
+
+    # Create an expired invitation in the first family
+    expired_invitation = @family.invitations.create!(email: email, role: "member", inviter: @inviter)
+    expired_invitation.update_columns(expires_at: 1.day.ago)
+
+    # Should be able to create a pending invitation in a different family
+    invitation = other_family.invitations.build(email: email, role: "member", inviter: other_inviter)
+    assert invitation.valid?
+  end
+
+  test "can create invitation in same family (uniqueness scoped to family)" do
+    email = "same-family-test@example.com"
+
+    # Create a pending invitation in the family
+    @family.invitations.create!(email: email, role: "member", inviter: @inviter)
+
+    # Attempting to create another in the same family should fail due to the existing scope validation
+    invitation = @family.invitations.build(email: email, role: "admin", inviter: @inviter)
+    assert_not invitation.valid?
+    assert_includes invitation.errors[:email], "has already been invited to this family"
+  end
+
   test "accept_for applies guest role defaults" do
     user = users(:family_member)
     user.update!(

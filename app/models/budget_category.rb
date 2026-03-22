@@ -209,6 +209,7 @@ class BudgetCategory < ApplicationRecord
 
   def subcategories
     return BudgetCategory.none unless category.parent_id.nil?
+    return BudgetCategory.none if category.id.nil?
 
     budget.budget_categories
       .joins(:category)

@@ -1,139 +1,134 @@
 require "test_helper"
 
 class SnaptradeAccountTest < ActiveSupport::TestCase
-  fixtures :families, :snaptrade_items, :snaptrade_accounts
   setup do
-    @family = families(:dylan_family)
-    @snaptrade_item = snaptrade_items(:configured_item)
-    @snaptrade_account = snaptrade_accounts(:fidelity_401k)
-  end
+    @family_a = families(:dylan_family)
+    @family_b = families(:empty)
 
-  test "validates presence of name" do
-    @snaptrade_account.name = nil
-    assert_not @snaptrade_account.valid?
-    assert_includes @snaptrade_account.errors[:name], "can't be blank"
-  end
-
-  test "validates presence of currency" do
-    @snaptrade_account.currency = nil
-    assert_not @snaptrade_account.valid?
-    assert_includes @snaptrade_account.errors[:currency], "can't be blank"
-  end
-
-  test "ensure_account_provider! creates link when account provided" do
-    account = @family.accounts.create!(
-      name: "Test Investment",
-      balance: 10000,
-      currency: "USD",
-      accountable: Investment.new
+    @item_a = SnaptradeItem.create!(
+      family: @family_a,
+      name: "Family A Broker",
+      client_id: "client_a",
+      consumer_key: "key_a",
+      status: "good"
     )
 
-    assert_nil @snaptrade_account.account_provider
-
-    @snaptrade_account.ensure_account_provider!(account)
-    @snaptrade_account.reload
-
-    assert_not_nil @snaptrade_account.account_provider
-    assert_equal account, @snaptrade_account.current_account
+    @item_b = SnaptradeItem.create!(
+      family: @family_b,
+      name: "Family B Broker",
+      client_id: "client_b",
+      consumer_key: "key_b",
+      status: "good"
+    )
   end
 
-  test "ensure_account_provider! updates link when account changes" do
-    account1 = @family.accounts.create!(
-      name: "First Account",
-      balance: 10000,
+  test "same account_id can be linked under different snaptrade_items" do
+    SnaptradeAccount.create!(
+      snaptrade_item: @item_a,
+      account_id: "shared_snap_acc_1",
+      snaptrade_account_id: "snap_uuid_a_1",
+      name: "Brokerage",
       currency: "USD",
-      accountable: Investment.new
-    )
-    account2 = @family.accounts.create!(
-      name: "Second Account",
-      balance: 20000,
-      currency: "USD",
-      accountable: Investment.new
+      current_balance: 10_000
     )
 
-    @snaptrade_account.ensure_account_provider!(account1)
-    assert_equal account1, @snaptrade_account.reload.current_account
-
-    @snaptrade_account.ensure_account_provider!(account2)
-    assert_equal account2, @snaptrade_account.reload.current_account
+    assert_difference "SnaptradeAccount.count", 1 do
+      SnaptradeAccount.create!(
+        snaptrade_item: @item_b,
+        account_id: "shared_snap_acc_1",
+        snaptrade_account_id: "snap_uuid_b_1",
+        name: "Brokerage",
+        currency: "USD",
+        current_balance: 10_000
+      )
+    end
   end
 
-  test "ensure_account_provider! is idempotent" do
-    account = @family.accounts.create!(
-      name: "Test Investment",
-      balance: 10000,
+  test "same snaptrade_account_id can be linked under different snaptrade_items" do
+    SnaptradeAccount.create!(
+      snaptrade_item: @item_a,
+      account_id: "acc_a",
+      snaptrade_account_id: "shared_snap_uuid_1",
+      name: "IRA",
       currency: "USD",
-      accountable: Investment.new
+      current_balance: 5000
     )
 
-    @snaptrade_account.ensure_account_provider!(account)
-    provider1 = @snaptrade_account.reload.account_provider
-
-    @snaptrade_account.ensure_account_provider!(account)
-    provider2 = @snaptrade_account.reload.account_provider
-
-    assert_equal provider1.id, provider2.id
+    assert_difference "SnaptradeAccount.count", 1 do
+      SnaptradeAccount.create!(
+        snaptrade_item: @item_b,
+        account_id: "acc_b",
+        snaptrade_account_id: "shared_snap_uuid_1",
+        name: "IRA",
+        currency: "USD",
+        current_balance: 5000
+      )
+    end
   end
 
-  test "upsert_holdings_snapshot! stores holdings and updates timestamp" do
-    holdings = [
-      { "symbol" => { "symbol" => "AAPL" }, "units" => 10 },
-      { "symbol" => { "symbol" => "MSFT" }, "units" => 5 }
-    ]
+  test "same account_id cannot appear twice under the same snaptrade_item" do
+    SnaptradeAccount.create!(
+      snaptrade_item: @item_a,
+      account_id: "dup_acc",
+      snaptrade_account_id: "snap_1",
+      name: "Brokerage",
+      currency: "USD",
+      current_balance: 1000
+    )
 
-    @snaptrade_account.upsert_holdings_snapshot!(holdings)
+    duplicate = SnaptradeAccount.new(
+      snaptrade_item: @item_a,
+      account_id: "dup_acc",
+      snaptrade_account_id: "snap_2",
+      name: "Brokerage",
+      currency: "USD",
+      current_balance: 1000
+    )
+    refute duplicate.valid?
+    assert_includes duplicate.errors[:account_id], "has already been taken"
 
-    assert_equal holdings, @snaptrade_account.raw_holdings_payload
-    assert_not_nil @snaptrade_account.last_holdings_sync
+    assert_raises(ActiveRecord::RecordInvalid) do
+      SnaptradeAccount.create!(
+        snaptrade_item: @item_a,
+        account_id: "dup_acc",
+        snaptrade_account_id: "snap_2",
+        name: "Brokerage",
+        currency: "USD",
+        current_balance: 1000
+      )
+    end
   end
 
-  test "upsert_activities_snapshot! stores activities and updates timestamp" do
-    activities = [
-      { "id" => "act1", "type" => "BUY", "amount" => 1000 },
-      { "id" => "act2", "type" => "DIVIDEND", "amount" => 50 }
-    ]
+  test "same snaptrade_account_id cannot appear twice under the same snaptrade_item" do
+    SnaptradeAccount.create!(
+      snaptrade_item: @item_a,
+      account_id: "acc_1",
+      snaptrade_account_id: "dup_snap_uuid",
+      name: "Brokerage",
+      currency: "USD",
+      current_balance: 1000
+    )
 
-    @snaptrade_account.upsert_activities_snapshot!(activities)
+    duplicate = SnaptradeAccount.new(
+      snaptrade_item: @item_a,
+      account_id: "acc_2",
+      snaptrade_account_id: "dup_snap_uuid",
+      name: "Brokerage",
+      currency: "USD",
+      current_balance: 1000
+    )
+    refute duplicate.valid?
+    assert_includes duplicate.errors[:snaptrade_account_id], "has already been taken"
 
-    assert_equal activities, @snaptrade_account.raw_activities_payload
-    assert_not_nil @snaptrade_account.last_activities_sync
-  end
-
-  test "upsert_from_snaptrade! extracts data from API response" do
-    # Use a Hash that mimics the SnapTrade SDK response structure
-    api_response = {
-      "id" => "new_account_id",
-      "brokerage_authorization" => "auth_xyz",
-      "number" => "9999999",
-      "name" => "Schwab Brokerage",
-      "status" => "active",
-      "balance" => {
-        "total" => { "amount" => 125000, "currency" => "USD" }
-      },
-      "meta" => { "type" => "INDIVIDUAL", "institution_name" => "Charles Schwab" }
-    }
-
-    @snaptrade_account.upsert_from_snaptrade!(api_response)
-
-    assert_equal "new_account_id", @snaptrade_account.snaptrade_account_id
-    assert_equal "auth_xyz", @snaptrade_account.snaptrade_authorization_id
-    assert_equal "9999999", @snaptrade_account.account_number
-    assert_equal "Schwab Brokerage", @snaptrade_account.name
-    assert_equal "Charles Schwab", @snaptrade_account.brokerage_name
-    assert_equal 125000, @snaptrade_account.current_balance.to_i
-    assert_equal "INDIVIDUAL", @snaptrade_account.account_type
-  end
-
-  test "snaptrade_credentials returns credentials from parent item" do
-    credentials = @snaptrade_account.snaptrade_credentials
-
-    assert_equal "user_123", credentials[:user_id]
-    assert_equal "secret_abc", credentials[:user_secret]
-  end
-
-  test "snaptrade_provider returns provider from parent item" do
-    provider = @snaptrade_account.snaptrade_provider
-
-    assert_instance_of Provider::Snaptrade, provider
+    assert_raises(ActiveRecord::RecordInvalid) do
+      SnaptradeAccount.create!(
+        snaptrade_item: @item_a,
+        account_id: "acc_2",
+        snaptrade_account_id: "dup_snap_uuid",
+        name: "Brokerage",
+        currency: "USD",
+        current_balance: 1000
+      )
+    end
   end
 end

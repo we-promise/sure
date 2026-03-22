@@ -3,6 +3,7 @@ de:
     settings:
       payments:
         renewal: "Ihr Beitrag wird fortgesetzt am %{date}."
+        cancellation: "Ihr Beitrag endet am %{date}."
   settings:
     ai_prompts:
       show:
@@ -42,6 +43,9 @@ de:
         theme_system: System
         theme_title: Design
         timezone: Zeitzone
+        month_start_day: Budgetmonat beginnt am
+        month_start_day_hint: Lege fest, wann dein Budgetmonat beginnt (z. B. Gehaltstag)
+        month_start_day_warning: Deine Budgets und MTD-Berechnungen verwenden diesen benutzerdefinierten Starttag anstelle des 1. jedes Monats.
     profiles:
       destroy:
         cannot_remove_self: Du kannst dich nicht selbst aus dem Konto entfernen.
@@ -73,6 +77,9 @@ de:
         reset_account_with_sample_data_warning: Löscht alle vorhandenen Daten und lädt anschließend neue Beispieldaten, um eine vorbefüllte Umgebung zu erkunden.
         email: E-Mail
         first_name: Vorname
+        group_form_input_placeholder: Gruppennamen eingeben
+        group_form_label: Gruppenname
+        group_title: Gruppenmitglieder
         household_form_input_placeholder: Haushaltsnamen eingeben
         household_form_label: Haushaltsname
         household_subtitle: Lade Familienmitglieder, Partner oder andere Personen ein. Eingeladene können sich in deinen Haushalt einloggen und auf gemeinsame Konten zugreifen.
@@ -90,6 +97,23 @@ de:
     securities:
       show:
         page_title: Sicherheit
+        mfa_title: Zwei-Faktor-Authentifizierung
+        mfa_description: Erhöhe die Sicherheit deines Kontos, indem du bei der Anmeldung einen Code von deiner Authenticator-App verlangst
+        enable_mfa: 2FA aktivieren
+        disable_mfa: 2FA deaktivieren
+        disable_mfa_confirm: Bist du sicher, dass du die Zwei-Faktor-Authentifizierung deaktivieren möchtest?
+        sso_title: Verbundene Konten
+        sso_subtitle: Verwalte deine Single Sign-On-Kontoverbindungen
+        sso_disconnect: Trennen
+        sso_last_used: Zuletzt verwendet
+        sso_never: Nie
+        sso_no_email: Keine E-Mail
+        sso_no_identities: Keine SSO-Konten verbunden
+        sso_connect_hint: Melde dich ab und mit einem SSO-Anbieter an, um ein Konto zu verbinden.
+        sso_confirm_title: Konto trennen?
+        sso_confirm_body: Bist du sicher, dass du dein %{provider}-Konto trennen möchtest? Du kannst es später erneut verbinden, indem du dich erneut mit diesem Anbieter anmeldest.
+        sso_confirm_button: Trennen
+        sso_warning_message: Dies ist deine einzige Anmeldemethode. Du solltest vor dem Trennen ein Passwort in den Sicherheitseinstellungen festlegen, sonst könntest du dich aus deinem Konto ausschließen.
     settings_nav:
       accounts_label: Konten
       advanced_section_title: Erweitert
@@ -124,3 +148,27 @@ de:
       choose: Foto hochladen
       choose_label: (optional)
       change: Foto ändern
+    providers:
+      show:
+        coinbase_title: Coinbase
+      encryption_error:
+        title: Verschlüsselungskonfiguration erforderlich
+        message: Die Active-Record-Verschlüsselungsschlüssel sind nicht konfiguriert. Bitte stelle die Verschlüsselungszugangsdaten (active_record_encryption.primary_key, active_record_encryption.deterministic_key und active_record_encryption.key_derivation_salt) in deinen Rails-Zugangsdaten oder Umgebungsvariablen ein, bevor du Sync-Anbieter verwendest.
+      coinbase_panel:
+        setup_instructions: "So verbindest du Coinbase:"
+        step1_html: Gehe zu <a href="https://portal.cdp.coinbase.com/projects/api-keys" target="_blank" rel="noopener noreferrer" class="text-primary underline">Coinbase API-Einstellungen</a>
+        step2: Erstelle einen neuen API-Schlüssel mit Leseberechtigung (Konten anzeigen, Transaktionen anzeigen)
+        step3: Kopiere deinen API-Schlüssel und dein API-Geheimnis und füge sie unten ein
+        api_key_label: API-Schlüssel
+        api_key_placeholder: Gib deinen Coinbase-API-Schlüssel ein
+        api_secret_label: API-Geheimnis
+        api_secret_placeholder: Gib dein Coinbase-API-Geheimnis ein
+        connect_button: Coinbase verbinden
+        syncing: Wird synchronisiert…
+        sync: Synchronisieren
+        disconnect_confirm: Bist du sicher, dass du diese Coinbase-Verbindung trennen möchtest? Deine synchronisierten Konten werden zu manuellen Konten.
+        status_connected: Coinbase ist verbunden und synchronisiert deine Krypto-Bestände.
+        status_not_connected: Nicht verbunden. Gib deine API-Zugangsdaten oben ein, um zu starten.
+      enable_banking_panel:
+        callback_url_instruction: "Für die Callback-URL, verwende %{callback_url}."
+        connection_error: Verbindungsfehler
