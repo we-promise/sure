@@ -28,8 +28,9 @@
     <% holdings = investment_statement.top_holdings(limit: 5) %>
     <% if holdings.any? %>
       <div class="bg-container-inset rounded-xl p-1 mx-4 overflow-x-auto">
+        <div class="rounded-lg shadow-border-xs bg-container overflow-hidden">
         <table class="w-full">
-          <thead>
+          <thead class="bg-container-inset">
             <tr class="uppercase text-xs font-medium text-secondary">
               <th class="px-4 py-2 text-left font-medium"><%= t(".holding") %></th>
               <th class="px-4 py-2 text-right font-medium"><%= t(".weight") %></th>
@@ -37,7 +38,7 @@
               <th class="px-4 py-2 text-right font-medium"><%= t(".return") %></th>
             </tr>
           </thead>
-          <tbody class="shadow-border-xs rounded-lg bg-container font-medium text-sm">
+          <tbody class="font-medium text-sm">
             <% holdings.each_with_index do |holding, idx| %>
               <tr class="<%= idx < holdings.size - 1 ? "border-b border-divider" : "" %>">
                 <td class="p-4">
@@ -77,6 +78,7 @@
             <% end %>
           </tbody>
         </table>
+        </div>
       </div>
     <% end %>
 

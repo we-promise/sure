@@ -15,8 +15,9 @@
   </div>
 
   <div class="bg-container-inset rounded-xl p-1 overflow-x-auto">
+    <div class="rounded-lg shadow-border-xs bg-container overflow-hidden">
     <table class="w-full">
-      <thead>
+      <thead class="bg-container-inset">
         <tr class="uppercase text-xs font-medium text-secondary">
           <th class="px-4 py-2 text-left font-medium" colspan="2"><%= t("reports.transactions_breakdown.table.category") %></th>
           <th class="px-4 py-2 text-right font-medium">
@@ -30,7 +31,7 @@
           <th class="px-4 py-2 text-right font-medium"><%= t("reports.transactions_breakdown.table.percentage") %></th>
         </tr>
       </thead>
-      <tbody class="bg-container rounded-lg shadow-border-xs">
+      <tbody>
         <% groups.each_with_index do |group, idx| %>
           <%= render "reports/category_row",
             item: group,
@@ -52,5 +53,6 @@
         <% end %>
       </tbody>
     </table>
+    </div>
   </div>
 </div>

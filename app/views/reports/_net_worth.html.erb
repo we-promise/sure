@@ -40,14 +40,15 @@
   <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
     <%# Assets Summary %>
     <div class="bg-container-inset rounded-xl p-1 overflow-x-auto w-full flex flex-col">
+      <div class="rounded-lg shadow-border-xs bg-container overflow-hidden">
       <table class="w-full">
-        <thead>
+        <thead class="bg-container-inset">
           <tr class="uppercase text-xs font-medium text-secondary">
             <th class="px-4 py-2 text-left font-medium"><%= t("reports.net_worth.total_assets") %></th>
             <th class="px-4 py-2 text-right font-medium"><span class="sr-only"><%= t("reports.transactions_breakdown.table.amount") %></span></th>
           </tr>
         </thead>
-        <tbody class="bg-container rounded-lg shadow-border-xs">
+        <tbody>
           <% net_worth_metrics[:asset_groups].each_with_index do |group, idx| %>
             <tr class="<%= idx < net_worth_metrics[:asset_groups].size - 1 ? "border-b border-divider" : "" %>">
               <td class="py-3 px-4 lg:px-6 text-sm font-medium text-secondary"><%= group[:name] %></td>
@@ -61,18 +62,20 @@
           <% end %>
         </tbody>
       </table>
+      </div>
     </div>
 
     <%# Liabilities Summary %>
     <div class="bg-container-inset rounded-xl p-1 overflow-x-auto w-full flex flex-col">
+      <div class="rounded-lg shadow-border-xs bg-container overflow-hidden">
       <table class="w-full">
-        <thead>
+        <thead class="bg-container-inset">
           <tr class="uppercase text-xs font-medium text-secondary">
             <th class="px-4 py-2 text-left font-medium"><%= t("reports.net_worth.total_liabilities") %></th>
             <th class="px-4 py-2 text-right font-medium"><span class="sr-only"><%= t("reports.transactions_breakdown.table.amount") %></span></th>
           </tr>
         </thead>
-        <tbody class="bg-container rounded-lg shadow-border-xs">
+        <tbody>
           <% net_worth_metrics[:liability_groups].each_with_index do |group, idx| %>
             <tr class="<%= idx < net_worth_metrics[:liability_groups].size - 1 ? "border-b border-divider" : "" %>">
               <td class="py-3 px-4 lg:px-6 text-sm font-medium text-secondary"><%= group[:name] %></td>
@@ -86,6 +89,7 @@
           <% end %>
         </tbody>
       </table>
+      </div>
     </div>
   </div>
 </div>

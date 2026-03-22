@@ -8,8 +8,9 @@
       <% if trends_data.any? %>
         <div class="bg-container-inset rounded-xl p-1 overflow-x-auto">
           <div class="w-max sm:w-full">
+          <div class="rounded-lg shadow-border-xs bg-container overflow-hidden">
           <table class="w-full">
-            <thead>
+            <thead class="bg-container-inset">
               <tr class="uppercase text-xs font-medium text-secondary">
                 <th class="px-4 py-2 text-left font-medium"><%= t("reports.trends.month") %></th>
                 <th class="px-4 py-2 text-right font-medium"><%= t("reports.trends.income") %></th>
@@ -18,7 +19,7 @@
                 <th class="px-4 py-2 text-right font-medium"><%= t("reports.trends.savings_rate") %></th>
               </tr>
             </thead>
-            <tbody class="bg-container rounded-lg shadow-border-xs text-secondary text-sm">
+            <tbody class="text-secondary text-sm">
               <% trends_data.each_with_index do |trend, idx| %>
                 <tr class="<%= idx < trends_data.size - 1 ? "border-b border-divider" : "" %>">
                   <td class="py-3 px-4 lg:px-6">
@@ -46,6 +47,7 @@
               <% end %>
             </tbody>
           </table>
+          </div>
           </div>
         </div>
 
