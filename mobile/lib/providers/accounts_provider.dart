@@ -3,14 +3,14 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../models/account.dart';
 import '../services/accounts_service.dart';
-import '../services/summary_service.dart';
+import '../services/balance_sheet_service.dart';
 import '../services/offline_storage_service.dart';
 import '../services/connectivity_service.dart';
 import '../services/log_service.dart';
 
 class AccountsProvider with ChangeNotifier {
   final AccountsService _accountsService = AccountsService();
-  final SummaryService _summaryService = SummaryService();
+  final BalanceSheetService _balanceSheetService = BalanceSheetService();
   final OfflineStorageService _offlineStorage = OfflineStorageService();
   final LogService _log = LogService.instance;
 
@@ -134,11 +134,13 @@ class AccountsProvider with ChangeNotifier {
             _errorMessage = result['error'] as String? ?? 'Failed to fetch accounts';
           }
         }
-
-        // Fetch summary (net worth) from server
-        await _fetchSummary(accessToken);
       } else if (!isOnline && _accounts.isEmpty) {
         _errorMessage = 'You are offline. Please connect to the internet to load accounts.';
+      }
+
+      // Fetch balance sheet independently — works even with cached accounts
+      if (isOnline) {
+        await _fetchBalanceSheet(accessToken);
       }
 
       _isLoading = false;
@@ -179,9 +181,9 @@ class AccountsProvider with ChangeNotifier {
     }
   }
 
-  Future<void> _fetchSummary(String accessToken) async {
+  Future<void> _fetchBalanceSheet(String accessToken) async {
     try {
-      final result = await _summaryService.getSummary(accessToken: accessToken);
+      final result = await _balanceSheetService.getBalanceSheet(accessToken: accessToken);
       if (result['success'] == true) {
         _familyCurrency = result['currency'] as String?;
         final netWorth = result['net_worth'] as Map<String, dynamic>?;
@@ -192,7 +194,7 @@ class AccountsProvider with ChangeNotifier {
         _liabilitiesFormatted = liabilities?['formatted'] as String?;
       }
     } catch (e) {
-      _log.error('AccountsProvider', 'Error fetching summary: $e');
+      _log.error('AccountsProvider', 'Error fetching balance sheet: $e');
     }
   }
 

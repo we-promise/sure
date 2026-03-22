@@ -388,7 +388,7 @@ Rails.application.routes.draw do
       resources :valuations, only: [ :create, :update, :show ]
       resources :imports, only: [ :index, :show, :create ]
       resource :usage, only: [ :show ], controller: :usage
-      resource :summary, only: [ :show ], controller: :summary
+      resource :balance_sheet, only: [ :show ]
       post :sync, to: "sync#create"
 
       resources :chats, only: [ :index, :show, :create, :update, :destroy ] do
