@@ -60,33 +60,39 @@
         <h4 class="text-lg font-medium"><%= t("reports.investment_performance.top_holdings") %></h4>
         <div class="bg-container-inset rounded-xl p-1 overflow-x-auto">
           <div class="w-max sm:w-full">
-            <div role="columnheader" class="grid grid-cols-4 items-center uppercase text-xs font-medium text-secondary px-4 py-2">
-              <div class="font-medium text-secondary"><%= t("reports.investment_performance.holding") %></div>
-              <div class="text-right font-medium text-secondary"><%= t("reports.investment_performance.weight") %></div>
-              <div class="text-right font-medium text-secondary"><%= t("reports.investment_performance.value") %></div>
-              <div class="text-right font-medium text-secondary"><%= t("reports.investment_performance.return") %></div>
-            </div>
-            <div class="bg-container rounded-lg shadow-border-xs">
+          <div class="rounded-lg shadow-border-xs bg-container overflow-hidden">
+          <table class="w-full">
+            <thead class="bg-container-inset">
+              <tr class="uppercase text-xs font-medium text-secondary">
+                <th class="px-4 py-2 text-left font-medium"><%= t("reports.investment_performance.holding") %></th>
+                <th class="px-4 py-2 text-right font-medium"><%= t("reports.investment_performance.weight") %></th>
+                <th class="px-4 py-2 text-right font-medium"><%= t("reports.investment_performance.value") %></th>
+                <th class="px-4 py-2 text-right font-medium"><%= t("reports.investment_performance.return") %></th>
+              </tr>
+            </thead>
+            <tbody class="text-secondary text-sm">
               <% investment_metrics[:top_holdings].each_with_index do |holding, idx| %>
-                <div class="grid grid-cols-4 items-center text-secondary text-sm py-3 px-4 lg:px-6">
-                  <div class="flex items-center gap-3">
-                    <% if holding.security.brandfetch_icon_url.present? %>
-                      <img src="<%= holding.security.brandfetch_icon_url %>" alt="<%= holding.ticker %>" class="w-6 h-6 rounded-full">
-                    <% elsif holding.security.logo_url.present? %>
-                      <img src="<%= Setting.transform_brand_fetch_url(holding.security.logo_url) %>" alt="<%= holding.ticker %>" class="w-6 h-6 rounded-full">
-                    <% else %>
-                      <div class="w-8 h-8 rounded-full bg-container-inset flex items-center justify-center text-xs font-medium text-secondary">
-                        <%= holding.ticker[0..1] %>
+                <tr class="<%= idx < investment_metrics[:top_holdings].size - 1 ? "border-b border-divider" : "" %>">
+                  <td class="py-3 px-4 lg:px-6">
+                    <div class="flex items-center gap-3">
+                      <% if holding.security.brandfetch_icon_url.present? %>
+                        <img src="<%= holding.security.brandfetch_icon_url %>" alt="<%= holding.ticker %>" class="w-6 h-6 rounded-full">
+                      <% elsif holding.security.logo_url.present? %>
+                        <img src="<%= Setting.transform_brand_fetch_url(holding.security.logo_url) %>" alt="<%= holding.ticker %>" class="w-6 h-6 rounded-full">
+                      <% else %>
+                        <div class="w-8 h-8 rounded-full bg-container-inset flex items-center justify-center text-xs font-medium text-secondary">
+                          <%= holding.ticker[0..1] %>
+                        </div>
+                      <% end %>
+                      <div>
+                        <p class="font-medium text-primary"><%= holding.ticker %></p>
+                        <p class="text-xs text-secondary"><%= truncate(holding.name, length: 25) %></p>
                       </div>
-                    <% end %>
-                    <div>
-                      <p class="font-medium text-primary"><%= holding.ticker %></p>
-                      <p class="text-xs text-secondary"><%= truncate(holding.name, length: 25) %></p>
                     </div>
-                  </div>
-                  <div class="text-right text-secondary"><%= number_to_percentage(holding.weight || 0, precision: 1) %></div>
-                  <div class="text-right font-medium text-primary privacy-sensitive"><%= format_money(holding.amount_money) %></div>
-                  <div class="text-right">
+                  </td>
+                  <td class="py-3 px-4 lg:px-6 text-right text-secondary"><%= number_to_percentage(holding.weight || 0, precision: 1) %></td>
+                  <td class="py-3 px-4 lg:px-6 text-right font-medium text-primary privacy-sensitive"><%= format_money(holding.amount_money) %></td>
+                  <td class="py-3 px-4 lg:px-6 text-right">
                     <% if holding.trend %>
                       <span style="color: <%= holding.trend.color %>">
                         <%= holding.trend.percent_formatted %>
@@ -94,13 +100,12 @@
                     <% else %>
                       <span class="text-secondary"><%= t("reports.investment_performance.no_data") %></span>
                     <% end %>
-                  </div>
-                </div>
-                <% if idx < investment_metrics[:top_holdings].size - 1 %>
-                  <%= render "shared/ruler", classes: "mx-3 lg:mx-4" %>
-                <% end %>
+                  </td>
+                </tr>
               <% end %>
-            </div>
+            </tbody>
+          </table>
+          </div>
           </div>
         </div>
       </div>
