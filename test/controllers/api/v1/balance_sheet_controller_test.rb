@@ -9,11 +9,12 @@ class Api::V1::BalanceSheetControllerTest < ActionDispatch::IntegrationTest
 
     @user.api_keys.active.destroy_all
 
+    key = ApiKey.generate_secure_key
     @api_key = ApiKey.create!(
       user: @user,
       name: "Test Read Key",
-      scopes: [ "read" ],
-      display_key: "test_bs_#{SecureRandom.hex(8)}"
+      key: key,
+      scopes: [ "read" ]
     )
 
     Redis.new.del("api_rate_limit:#{@api_key.id}")
@@ -45,6 +46,6 @@ class Api::V1::BalanceSheetControllerTest < ActionDispatch::IntegrationTest
   private
 
     def api_headers(api_key)
-      { "X-Api-Key" => api_key.display_key }
+      { "X-Api-Key" => api_key.plain_key }
     end
 end
