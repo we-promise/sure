@@ -57,13 +57,13 @@ class NetWorthCard extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
                         decoration: BoxDecoration(
-                          color: Colors.amber.withValues(alpha: 0.2),
+                          color: colorScheme.secondaryContainer.withValues(alpha: 0.5),
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: Text(
                           'Outdated',
                           style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                color: Colors.amber.shade700,
+                                color: colorScheme.secondary,
                                 fontWeight: FontWeight.w600,
                               ),
                         ),
@@ -76,7 +76,7 @@ class NetWorthCard extends StatelessWidget {
                   netWorthFormatted ?? '--',
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                         fontWeight: FontWeight.bold,
-                        color: isStale ? Colors.amber.shade700 : colorScheme.onSurface,
+                        color: isStale ? colorScheme.secondary : colorScheme.onSurface,
                       ),
                 ),
               ],
