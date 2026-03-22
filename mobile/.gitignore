@@ -25,9 +25,11 @@ ios/Pods/
 ios/.symlinks/
 ios/Flutter/Flutter.framework
 ios/Flutter/Flutter.podspec
+ios/Flutter/flutter_export_environment.sh
 ios/Flutter/ephemeral/
 ios/Flutter/Generated.xcconfig
 ios/Runner.xcworkspace/
+ios/Runner.xcodeproj/project.xcworkspace/xcuserdata/*
 ios/Podfile.lock
 
 # IDE

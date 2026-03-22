@@ -2,7 +2,7 @@
   <%= render "imports/nav", import: @import %>
 <% end %>
 
-<%= content_for :previous_path, import_configuration_path(@import) %>
+<%= content_for :previous_path, @import.is_a?(PdfImport) ? import_path(@import) : import_configuration_path(@import) %>
 
 <div class="space-y-4 mx-auto max-w-5xl">
   <div class="text-center space-y-2 max-w-[400px] mx-auto mb-4">
@@ -20,7 +20,7 @@
       <%= render DS::Link.new(
         text: "Next step",
         variant: "primary",
-        href: import_confirm_path(@import),
+        href: @import.is_a?(PdfImport) ? import_path(@import) : import_confirm_path(@import),
         frame: :_top,
         class: "w-full md:w-auto"
       ) %>

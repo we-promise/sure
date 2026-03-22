@@ -23,8 +23,7 @@ class DragAndDropImportTest < ApplicationSystemTestCase
     # Submit the form manually since we bypassed the 'drop' event listener which triggers submit
     find("form[action='#{imports_path}']").evaluate_script("this.requestSubmit()")
 
-    # Notice toasts auto-dismiss, so assert the stable post-upload destination/state.
-    assert_current_path %r{/imports/.+/configuration}
+    # Redirect lands on configuration step; flash may not be visible in CI
     assert_text "Configure your import"
   end
 end

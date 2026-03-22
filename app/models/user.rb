@@ -24,6 +24,7 @@ class User < ApplicationRecord
 
   belongs_to :family
   belongs_to :last_viewed_chat, class_name: "Chat", optional: true
+  belongs_to :default_account, class_name: "Account", optional: true
   has_many :sessions, dependent: :destroy
   has_many :chats, dependent: :destroy
   has_many :api_keys, dependent: :destroy
@@ -50,7 +51,11 @@ class User < ApplicationRecord
 
   normalizes :first_name, :last_name, with: ->(value) { value.strip.presence }
 
-  enum :role, { member: "member", admin: "admin", super_admin: "super_admin" }, validate: true
+  enum :role, { guest: "guest", member: "member", admin: "admin", super_admin: "super_admin" }, validate: true
+  enum :ui_layout, { dashboard: "dashboard", intro: "intro" }, validate: true, prefix: true
+
+  before_validation :apply_ui_layout_defaults
+  before_validation :apply_role_based_ui_defaults
 
   # Returns the appropriate role for a new user creating a family.
   # The very first user of an instance becomes super_admin; subsequent users
@@ -132,11 +137,25 @@ class User < ApplicationRecord
   end
 
   def ai_available?
-    !Rails.application.config.app_mode.self_hosted? || ENV["OPENAI_ACCESS_TOKEN"].present? || Setting.openai_access_token.present?
+    return true unless Rails.application.config.app_mode.self_hosted?
+
+    effective_type = ENV["ASSISTANT_TYPE"].presence || family&.assistant_type.presence || "builtin"
+
+    case effective_type
+    when "external"
+      Assistant::External.available_for?(self)
+    else
+      ENV["OPENAI_ACCESS_TOKEN"].present? || Setting.openai_access_token.present?
+    end
   end
 
   def ai_enabled?
     ai_enabled && ai_available?
+  end
+
+  def self.default_ui_layout
+    layout = Rails.application.config.x.ui&.default_layout || "dashboard"
+    layout.in?(%w[intro dashboard]) ? layout : "dashboard"
   end
 
   # SSO-only users have OIDC identities but no local password.
@@ -226,6 +245,15 @@ class User < ApplicationRecord
     AccountOrder.find(default_account_order) || AccountOrder.default
   end
 
+  def default_account_for_transactions
+    return nil unless default_account_id.present?
+
+    account = default_account
+    return nil unless account&.eligible_for_transaction_default? && account.family_id == family_id
+
+    account
+  end
+
   # Dashboard preferences management
   def dashboard_section_collapsed?(section_key)
     preferences&.dig("collapsed_sections", section_key) == true
@@ -288,6 +316,10 @@ class User < ApplicationRecord
     preferences&.dig("transactions_collapsed_sections", section_key) == true
   end
 
+  def show_split_grouped?
+    preferences&.dig("show_split_grouped") != false
+  end
+
   def update_transactions_preferences(prefs)
     transaction do
       lock!
@@ -307,6 +339,39 @@ class User < ApplicationRecord
   end
 
   private
+    def apply_ui_layout_defaults
+      self.ui_layout = (ui_layout.presence || self.class.default_ui_layout)
+    end
+
+    def apply_role_based_ui_defaults
+      if ui_layout_intro?
+        if guest?
+          self.show_sidebar = false
+          self.show_ai_sidebar = false
+          self.ai_enabled = true
+        else
+          self.ui_layout = "dashboard"
+        end
+      elsif guest?
+        self.ui_layout = "intro"
+        self.show_sidebar = false
+        self.show_ai_sidebar = false
+        self.ai_enabled = true
+      end
+
+      if leaving_guest_role?
+        self.show_sidebar = true unless show_sidebar
+        self.show_ai_sidebar = true unless show_ai_sidebar
+      end
+    end
+
+    def leaving_guest_role?
+      return false unless will_save_change_to_role?
+
+      previous_role, new_role = role_change_to_be_saved
+      previous_role == "guest" && new_role != "guest"
+    end
+
     def skip_password_validation?
       skip_password_validation == true
     end

@@ -1,0 +1,26 @@
+tax_return:
+  family: dylan_family
+  filename: 2024_tax_return.pdf
+  content_type: application/pdf
+  file_size: 102400
+  provider_file_id: file-abc123
+  status: ready
+  metadata: {}
+
+bank_statement:
+  family: dylan_family
+  filename: jan_2025_statement.pdf
+  content_type: application/pdf
+  file_size: 51200
+  provider_file_id: file-def456
+  status: ready
+  metadata: {}
+
+pending_doc:
+  family: dylan_family
+  filename: pending_upload.docx
+  content_type: application/vnd.openxmlformats-officedocument.wordprocessingml.document
+  file_size: 25600
+  provider_file_id:
+  status: pending
+  metadata: {}

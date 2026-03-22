@@ -18,10 +18,10 @@ en:
       new: New merchant
       merge: Merge merchants
       title: Merchants
-      family_title: Family merchants
-      family_empty: No family merchants yet
+      family_title: "%{moniker} merchants"
+      family_empty: "No %{moniker} merchants yet"
       provider_title: Provider merchants
-      provider_empty: No provider merchants linked to this family yet
+      provider_empty: "No provider merchants linked to this %{moniker} yet"
       provider_read_only: Provider merchants are synced from your connected institutions. They cannot be edited here.
       provider_info: These merchants were automatically detected by your bank connections or AI. You can edit them to create your own copy, or remove them to unlink from your transactions.
       unlinked_title: Recently unlinked

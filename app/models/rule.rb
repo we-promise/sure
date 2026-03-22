@@ -86,14 +86,23 @@ class Rule < ApplicationRecord
   end
 
   def primary_condition_title
-    return "No conditions" if conditions.none?
+    condition = displayed_condition
+    return I18n.t("rules.no_condition") if condition.blank?
 
-    first_condition = conditions.first
-    if first_condition.compound? && first_condition.sub_conditions.any?
-      first_sub_condition = first_condition.sub_conditions.first
-      "If #{first_sub_condition.filter.label.downcase} #{first_sub_condition.operator} #{first_sub_condition.value_display}"
-    else
-      "If #{first_condition.filter.label.downcase} #{first_condition.operator} #{first_condition.value_display}"
+    "If #{condition.filter.label.downcase} #{condition.operator} #{condition.value_display}"
+  end
+
+  def displayed_condition
+    displayable_conditions.first
+  end
+
+  def additional_displayable_conditions_count
+    [ displayable_conditions.size - 1, 0 ].max
+  end
+
+  def displayable_conditions
+    conditions.filter_map do |condition|
+      condition.compound? ? condition.sub_conditions.first : condition
     end
   end
 

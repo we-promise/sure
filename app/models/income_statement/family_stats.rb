@@ -37,6 +37,10 @@ class IncomeStatement::FamilyStats
       params
     end
 
+    def budget_excluded_kinds_sql
+      @budget_excluded_kinds_sql ||= Transaction::BUDGET_EXCLUDED_KINDS.map { |k| "'#{k}'" }.join(", ")
+    end
+
     def exclude_tax_advantaged_sql
       ids = @family.tax_advantaged_account_ids
       return "" if ids.empty?
@@ -59,7 +63,7 @@ class IncomeStatement::FamilyStats
             er.to_currency = :target_currency
           )
           WHERE a.family_id = :family_id
-            AND t.kind NOT IN ('funds_movement', 'one_time', 'cc_payment')
+            AND t.kind NOT IN (#{budget_excluded_kinds_sql})
             AND ae.excluded = false
             AND (t.extra -> 'simplefin' ->> 'pending')::boolean IS DISTINCT FROM true
             AND (t.extra -> 'plaid' ->> 'pending')::boolean IS DISTINCT FROM true

@@ -6,6 +6,14 @@
   </div>
 
   <div class="flex items-center gap-1 text-secondary">
+    <%= turbo_frame_tag "bulk_transaction_edit_drawer" %>
+    <%= link_to new_transactions_bulk_update_path,
+                class: "p-1.5 group/edit hover:bg-inverse flex items-center justify-center rounded-md",
+                title: "Edit",
+                data: { turbo_frame: "bulk_transaction_edit_drawer" } do %>
+      <%= icon "pencil-line", class: "group-hover/edit:text-inverse" %>
+    <% end %>
+
     <%= form_with url: transactions_bulk_deletion_path, data: { turbo_confirm: CustomConfirm.for_resource_deletion("entry").to_data_attribute, turbo_frame: "_top" } do %>
       <button type="button" data-bulk-select-scope-param="bulk_delete" data-action="bulk-select#submitBulkRequest" class="p-1.5 group/delete hover:bg-inverse flex items-center justify-center rounded-md" title="Delete">
         <%= icon "trash-2", class: "group-hover/delete:text-inverse" %>

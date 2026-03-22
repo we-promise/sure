@@ -6,6 +6,10 @@ module Api
       skip_before_action :authenticate_request!
       skip_before_action :check_api_key_rate_limit
       skip_before_action :log_api_access
+      before_action :authenticate_request!, only: :enable_ai
+      before_action :ensure_write_scope, only: :enable_ai
+      before_action :check_api_key_rate_limit, only: :enable_ai
+      before_action :log_api_access, only: :enable_ai
 
       def signup
         # Check if invite code is required
@@ -54,14 +58,7 @@ module Api
             return
           end
 
-          render json: token_response.merge(
-            user: {
-              id: user.id,
-              email: user.email,
-              first_name: user.first_name,
-              last_name: user.last_name
-            }
-          ), status: :created
+          render json: token_response.merge(user: mobile_user_payload(user)), status: :created
         else
           render json: { errors: user.errors.full_messages }, status: :unprocessable_entity
         end
@@ -97,14 +94,7 @@ module Api
             return
           end
 
-          render json: token_response.merge(
-            user: {
-              id: user.id,
-              email: user.email,
-              first_name: user.first_name,
-              last_name: user.last_name
-            }
-          )
+          render json: token_response.merge(user: mobile_user_payload(user))
         else
           render json: { error: "Invalid email or password" }, status: :unauthorized
         end
@@ -143,9 +133,112 @@ module Api
             id: cached[:user_id],
             email: cached[:user_email],
             first_name: cached[:user_first_name],
-            last_name: cached[:user_last_name]
+            last_name: cached[:user_last_name],
+            ui_layout: cached[:user_ui_layout],
+            ai_enabled: cached[:user_ai_enabled]
           }
         }
+      end
+
+      def sso_link
+        linking_code = params[:linking_code]
+        cached = validate_linking_code(linking_code)
+        return unless cached
+
+        user = User.authenticate_by(email: params[:email], password: params[:password])
+
+        unless user
+          render json: { error: "Invalid email or password" }, status: :unauthorized
+          return
+        end
+
+        if user.otp_required?
+          render json: { error: "MFA users should sign in with email and password", mfa_required: true }, status: :unauthorized
+          return
+        end
+
+        # Atomically claim the code before creating the identity
+        return render json: { error: "Linking code is invalid or expired" }, status: :unauthorized unless consume_linking_code!(linking_code)
+
+        OidcIdentity.create_from_omniauth(build_omniauth_hash(cached), user)
+
+        SsoAuditLog.log_link!(
+          user: user,
+          provider: cached[:provider],
+          request: request
+        )
+
+        issue_mobile_tokens(user, cached[:device_info])
+      end
+
+      def sso_create_account
+        linking_code = params[:linking_code]
+        cached = validate_linking_code(linking_code)
+        return unless cached
+
+        email = cached[:email]
+
+        # Check for a pending invitation for this email
+        invitation = Invitation.pending.find_by(email: email)
+
+        unless invitation.present? || cached[:allow_account_creation]
+          render json: { error: "SSO account creation is disabled. Please contact an administrator." }, status: :forbidden
+          return
+        end
+
+        # Atomically claim the code before creating the user
+        return render json: { error: "Linking code is invalid or expired" }, status: :unauthorized unless consume_linking_code!(linking_code)
+
+        user = User.new(
+          email: email,
+          first_name: params[:first_name].presence || cached[:first_name],
+          last_name: params[:last_name].presence || cached[:last_name],
+          skip_password_validation: true
+        )
+
+        if invitation.present?
+          # Accept the pending invitation: join the existing family
+          user.family_id = invitation.family_id
+          user.role = invitation.role
+        else
+          user.family = Family.new
+
+          provider_config = Rails.configuration.x.auth.sso_providers&.find { |p| p[:name] == cached[:provider] }
+          provider_default_role = provider_config&.dig(:settings, :default_role)
+          user.role = User.role_for_new_family_creator(fallback_role: provider_default_role || :admin)
+        end
+
+        if user.save
+          # Mark invitation as accepted if one was used
+          invitation&.update!(accepted_at: Time.current)
+
+          OidcIdentity.create_from_omniauth(build_omniauth_hash(cached), user)
+
+          SsoAuditLog.log_jit_account_created!(
+            user: user,
+            provider: cached[:provider],
+            request: request
+          )
+
+          issue_mobile_tokens(user, cached[:device_info])
+        else
+          render json: { errors: user.errors.full_messages }, status: :unprocessable_entity
+        end
+      end
+
+      def enable_ai
+        user = current_resource_owner
+
+        unless user.ai_available?
+          render json: { error: "AI is not available for your account" }, status: :forbidden
+          return
+        end
+
+        if user.update(ai_enabled: true)
+          render json: { user: mobile_user_payload(user) }
+        else
+          render json: { errors: user.errors.full_messages }, status: :unprocessable_entity
+        end
       end
 
       def refresh
@@ -228,6 +321,63 @@ module Api
 
         def sso_exchange_params
           params.require(:code)
+        end
+
+        def mobile_user_payload(user)
+          {
+            id: user.id,
+            email: user.email,
+            first_name: user.first_name,
+            last_name: user.last_name,
+            ui_layout: user.ui_layout,
+            ai_enabled: user.ai_enabled?
+          }
+        end
+
+        def build_omniauth_hash(cached)
+          OpenStruct.new(
+            provider: cached[:provider],
+            uid: cached[:uid],
+            info: OpenStruct.new(cached.slice(:email, :name, :first_name, :last_name)),
+            extra: OpenStruct.new(raw_info: OpenStruct.new(iss: cached[:issuer]))
+          )
+        end
+
+        def validate_linking_code(linking_code)
+          if linking_code.blank?
+            render json: { error: "Linking code is required" }, status: :bad_request
+            return nil
+          end
+
+          cache_key = "mobile_sso_link:#{linking_code}"
+          cached = Rails.cache.read(cache_key)
+
+          unless cached.present?
+            render json: { error: "Linking code is invalid or expired" }, status: :unauthorized
+            return nil
+          end
+
+          cached
+        end
+
+        # Atomically deletes the linking code from cache.
+        # Returns true only for the first caller; subsequent callers get false.
+        def consume_linking_code!(linking_code)
+          Rails.cache.delete("mobile_sso_link:#{linking_code}")
+        end
+
+        def issue_mobile_tokens(user, device_info)
+          device_info = device_info.symbolize_keys if device_info.respond_to?(:symbolize_keys)
+          device = MobileDevice.upsert_device!(user, device_info)
+          token_response = device.issue_token!
+
+          render json: token_response.merge(user: mobile_user_payload(user))
+        rescue ActiveRecord::RecordInvalid => e
+          render json: { error: "Failed to register device: #{e.message}" }, status: :unprocessable_entity
+        end
+
+        def ensure_write_scope
+          authorize_scope!(:write)
         end
     end
   end

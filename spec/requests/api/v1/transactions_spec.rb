@@ -46,7 +46,6 @@ RSpec.describe 'API V1 Transactions', type: :request do
   let(:category) do
     family.categories.create!(
       name: 'Groceries',
-      classification: 'expense',
       color: '#4CAF50',
       lucide_icon: 'shopping-cart'
     )
@@ -282,7 +281,11 @@ RSpec.describe 'API V1 Transactions', type: :request do
               category_id: { type: :string, format: :uuid },
               merchant_id: { type: :string, format: :uuid },
               nature: { type: :string, enum: %w[income expense inflow outflow] },
-              tag_ids: { type: :array, items: { type: :string, format: :uuid } }
+              tag_ids: {
+                type: :array,
+                items: { type: :string, format: :uuid },
+                description: 'Array of tag IDs to assign. Omit to preserve existing tags; use [] to clear all tags.'
+              }
             }
           }
         }

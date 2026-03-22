@@ -74,7 +74,12 @@ class Account < ApplicationRecord
   end
 
   class << self
-    def create_and_sync(attributes, skip_initial_sync: false)
+    def human_attribute_name(attribute, options = {})
+      options = { moniker: Current.family&.moniker_label || "Family" }.merge(options)
+      super(attribute, options)
+    end
+
+    def create_and_sync(attributes, skip_initial_sync: false, opening_balance_date: nil)
       attributes[:accountable_attributes] ||= {} # Ensure accountable is created, even if empty
       # Default cash_balance to balance unless explicitly provided (e.g., Crypto sets it to 0)
       attrs = attributes.dup
@@ -86,7 +91,10 @@ class Account < ApplicationRecord
         account.save!
 
         manager = Account::OpeningBalanceManager.new(account)
-        result = manager.set_opening_balance(balance: initial_balance || account.balance)
+        result = manager.set_opening_balance(
+          balance: initial_balance || account.balance,
+          date: opening_balance_date
+        )
         raise result.error if result.error
       end
 
@@ -236,7 +244,15 @@ class Account < ApplicationRecord
   end
 
   def logo_url
-    provider&.logo_url
+    if institution_domain.present? && Setting.brand_fetch_client_id.present?
+      logo_size = Setting.brand_fetch_logo_size
+
+      "https://cdn.brandfetch.io/#{institution_domain}/icon/fallback/lettermark/w/#{logo_size}/h/#{logo_size}?c=#{Setting.brand_fetch_client_id}"
+    elsif provider&.logo_url.present?
+      provider.logo_url
+    elsif logo.attached?
+      Rails.application.routes.url_helpers.rails_blob_path(logo, only_path: true)
+    end
   end
 
   def destroy_later
@@ -292,6 +308,14 @@ class Account < ApplicationRecord
   # Get long version of the subtype label
   def long_subtype_label
     accountable_class.long_subtype_label_for(subtype) || accountable_class.display_name
+  end
+
+  def supports_default?
+    depository? || credit_card?
+  end
+
+  def eligible_for_transaction_default?
+    supports_default? && active? && !linked?
   end
 
   # Determines if this account supports manual trade entry

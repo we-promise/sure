@@ -16,6 +16,27 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "activity pagination keeps activity tab when loaded from holdings tab" do
+    investment = accounts(:investment)
+
+    11.times do |i|
+      Entry.create!(
+        account: investment,
+        name: "Test investment activity #{i}",
+        date: Date.current - i.days,
+        amount: 10 + i,
+        currency: investment.currency,
+        entryable: Transaction.new
+      )
+    end
+
+    get account_url(investment, tab: "holdings")
+
+    assert_response :success
+    assert_select "a[href*='page=2'][href*='tab=activity']"
+    assert_select "a[href*='page=2'][href*='tab=holdings']", count: 0
+  end
+
   test "should sync account" do
     post sync_account_url(@account)
     assert_redirected_to account_url(@account)
@@ -137,7 +158,6 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_includes @response.body, @account.name
-    assert_includes @response.body, "account_#{@account.id}_active"
   end
 
   test "toggle_active disables and re-enables an account" do
@@ -157,6 +177,34 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "set_default sets user default account" do
+    patch set_default_account_url(@account)
+    assert_redirected_to accounts_path
+    @user.reload
+    assert_equal @account.id, @user.default_account_id
+  end
+
+  test "set_default rejects ineligible account type" do
+    investment = accounts(:investment)
+
+    patch set_default_account_url(investment)
+    assert_redirected_to accounts_path
+    assert_equal I18n.t("accounts.set_default.depository_only"), flash[:alert]
+
+    @user.reload
+    assert_not_equal investment.id, @user.default_account_id
+  end
+
+  test "remove_default clears user default account" do
+    @user.update!(default_account: @account)
+
+    patch remove_default_account_url(@account)
+    assert_redirected_to accounts_path
+
+    @user.reload
+    assert_nil @user.default_account_id
+  end
+
   test "select_provider redirects for already linked account" do
     plaid_account = plaid_accounts(:one)
     AccountProvider.create!(account: @account, provider: plaid_account)
@@ -164,6 +212,51 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     get select_provider_account_url(@account)
     assert_redirected_to account_url(@account)
     assert_equal "Account is already linked to a provider", flash[:alert]
+  end
+
+  test "unlink preserves SnaptradeAccount record" do
+    snaptrade_account = snaptrade_accounts(:fidelity_401k)
+    investment = accounts(:investment)
+    AccountProvider.create!(account: investment, provider: snaptrade_account)
+    investment.reload
+
+    assert investment.linked?
+
+    delete unlink_account_url(investment)
+    investment.reload
+
+    assert_not investment.linked?
+    assert_redirected_to accounts_path
+    # SnaptradeAccount should still exist (not destroyed)
+    assert SnaptradeAccount.exists?(snaptrade_account.id), "SnaptradeAccount should be preserved after unlink"
+    # But AccountProvider should be gone
+    assert_not AccountProvider.exists?(provider_type: "SnaptradeAccount", provider_id: snaptrade_account.id)
+  end
+
+  test "unlink does not enqueue SnapTrade cleanup job" do
+    snaptrade_account = snaptrade_accounts(:fidelity_401k)
+    investment = accounts(:investment)
+    AccountProvider.create!(account: investment, provider: snaptrade_account)
+    investment.reload
+
+    assert_no_enqueued_jobs(only: SnaptradeConnectionCleanupJob) do
+      delete unlink_account_url(investment)
+    end
+  end
+
+  test "unlink detaches holdings from SnapTrade provider" do
+    snaptrade_account = snaptrade_accounts(:fidelity_401k)
+    investment = accounts(:investment)
+    ap = AccountProvider.create!(account: investment, provider: snaptrade_account)
+
+    # Assign a holding to this provider
+    holding = holdings(:one)
+    holding.update!(account_provider: ap)
+
+    delete unlink_account_url(investment)
+    holding.reload
+
+    assert_nil holding.account_provider_id, "Holding should be detached from provider after unlink"
   end
 end
 

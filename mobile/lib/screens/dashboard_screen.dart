@@ -12,7 +12,6 @@ import '../widgets/net_worth_card.dart';
 import '../widgets/currency_filter.dart';
 import 'transaction_form_screen.dart';
 import 'transactions_list_screen.dart';
-import 'log_viewer_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -339,41 +338,12 @@ class DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
-  Future<void> _handleLogout() async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Sign Out'),
-        content: const Text('Are you sure you want to sign out?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Sign Out'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed == true && mounted) {
-      final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      final accountsProvider = Provider.of<AccountsProvider>(context, listen: false);
-
-      accountsProvider.clearAccounts();
-      await authProvider.logout();
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Dashboard'),
         actions: [
           if (_showSyncSuccess)
             Padding(
@@ -388,30 +358,6 @@ class DashboardScreenState extends State<DashboardScreen> {
                 ),
               ),
             ),
-          Semantics(
-            label: 'Open debug logs',
-            button: true,
-            child: IconButton(
-              icon: const Icon(Icons.bug_report),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const LogViewerScreen()),
-                );
-              },
-              tooltip: 'Debug Logs',
-            ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _handleRefresh,
-            tooltip: 'Refresh',
-          ),
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: _handleLogout,
-            tooltip: 'Sign Out',
-          ),
         ],
       ),
       body: Column(
@@ -517,6 +463,8 @@ class DashboardScreenState extends State<DashboardScreen> {
                       });
                     },
                     formatAmount: _formatAmount,
+                    netWorthFormatted: accountsProvider.netWorthFormatted,
+                    isStale: accountsProvider.isBalanceSheetStale,
                   ),
                 ),
 

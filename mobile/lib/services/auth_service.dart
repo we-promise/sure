@@ -56,7 +56,9 @@ class AuthService {
         // Store user data - parse once and reuse
         User? user;
         if (responseData['user'] != null) {
-          user = User.fromJson(responseData['user']);
+          final rawUser = responseData['user'];
+          _logRawUserPayload('login', rawUser);
+          user = User.fromJson(rawUser);
           await _saveUser(user);
         }
 
@@ -160,7 +162,9 @@ class AuthService {
         // Store user data - parse once and reuse
         User? user;
         if (responseData['user'] != null) {
-          user = User.fromJson(responseData['user']);
+          final rawUser = responseData['user'];
+          _logRawUserPayload('signup', rawUser);
+          user = User.fromJson(rawUser);
           await _saveUser(user);
         }
 
@@ -360,6 +364,20 @@ class AuthService {
   Future<Map<String, dynamic>> handleSsoCallback(Uri uri) async {
     final params = uri.queryParameters;
 
+    // Handle account not linked - return linking data for onboarding flow
+    if (params['status'] == 'account_not_linked') {
+      return {
+        'success': false,
+        'account_not_linked': true,
+        'linking_code': params['linking_code'] ?? '',
+        'email': params['email'] ?? '',
+        'first_name': params['first_name'] ?? '',
+        'last_name': params['last_name'] ?? '',
+        'allow_account_creation': params['allow_account_creation'] == 'true',
+        'has_pending_invitation': params['has_pending_invitation'] == 'true',
+      };
+    }
+
     if (params.containsKey('error')) {
       return {
         'success': false,
@@ -406,6 +424,7 @@ class AuthService {
       });
       await _saveTokens(tokens);
 
+      _logRawUserPayload('sso_exchange', data['user']);
       final user = User.fromJson(data['user']);
       await _saveUser(user);
 
@@ -431,6 +450,153 @@ class AuthService {
       return {
         'success': false,
         'error': 'Failed to exchange authorization code',
+      };
+    }
+  }
+
+  Future<Map<String, dynamic>> ssoLink({
+    required String linkingCode,
+    required String email,
+    required String password,
+  }) async {
+    try {
+      final url = Uri.parse('${ApiConfig.baseUrl}/api/v1/auth/sso_link');
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: jsonEncode({
+          'linking_code': linkingCode,
+          'email': email,
+          'password': password,
+        }),
+      ).timeout(const Duration(seconds: 30));
+
+      final responseData = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        final tokens = AuthTokens.fromJson(responseData);
+        await _saveTokens(tokens);
+
+        User? user;
+        if (responseData['user'] != null) {
+          _logRawUserPayload('sso_link', responseData['user']);
+          user = User.fromJson(responseData['user']);
+          await _saveUser(user);
+        }
+
+        return {
+          'success': true,
+          'tokens': tokens,
+          'user': user,
+        };
+      } else {
+        return {
+          'success': false,
+          'error': responseData['error'] ?? responseData['errors']?.join(', ') ?? 'Account linking failed',
+        };
+      }
+    } on SocketException {
+      return {'success': false, 'error': 'Network unavailable'};
+    } on TimeoutException {
+      return {'success': false, 'error': 'Request timed out'};
+    } catch (e, stackTrace) {
+      LogService.instance.error('AuthService', 'SSO link error: $e\n$stackTrace');
+      return {'success': false, 'error': 'Failed to link account'};
+    }
+  }
+
+  Future<Map<String, dynamic>> ssoCreateAccount({
+    required String linkingCode,
+    String? firstName,
+    String? lastName,
+  }) async {
+    try {
+      final url = Uri.parse('${ApiConfig.baseUrl}/api/v1/auth/sso_create_account');
+      final body = <String, dynamic>{
+        'linking_code': linkingCode,
+      };
+      if (firstName != null) body['first_name'] = firstName;
+      if (lastName != null) body['last_name'] = lastName;
+
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: jsonEncode(body),
+      ).timeout(const Duration(seconds: 30));
+
+      final responseData = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        final tokens = AuthTokens.fromJson(responseData);
+        await _saveTokens(tokens);
+
+        User? user;
+        if (responseData['user'] != null) {
+          _logRawUserPayload('sso_create_account', responseData['user']);
+          user = User.fromJson(responseData['user']);
+          await _saveUser(user);
+        }
+
+        return {
+          'success': true,
+          'tokens': tokens,
+          'user': user,
+        };
+      } else {
+        return {
+          'success': false,
+          'error': responseData['error'] ?? responseData['errors']?.join(', ') ?? 'Account creation failed',
+        };
+      }
+    } on SocketException {
+      return {'success': false, 'error': 'Network unavailable'};
+    } on TimeoutException {
+      return {'success': false, 'error': 'Request timed out'};
+    } catch (e, stackTrace) {
+      LogService.instance.error('AuthService', 'SSO create account error: $e\n$stackTrace');
+      return {'success': false, 'error': 'Failed to create account'};
+    }
+  }
+
+  Future<Map<String, dynamic>> enableAi({
+    required String accessToken,
+  }) async {
+    try {
+      final url = Uri.parse('${ApiConfig.baseUrl}/api/v1/auth/enable_ai');
+      final response = await http.patch(
+        url,
+        headers: {
+          ...ApiConfig.getAuthHeaders(accessToken),
+          'Content-Type': 'application/json',
+        },
+      ).timeout(const Duration(seconds: 30));
+
+      final responseData = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        _logRawUserPayload('enable_ai', responseData['user']);
+        final user = User.fromJson(responseData['user']);
+        await _saveUser(user);
+        return {
+          'success': true,
+          'user': user,
+        };
+      }
+
+      return {
+        'success': false,
+        'error': responseData['error'] ?? responseData['errors']?.join(', ') ?? 'Failed to enable AI',
+      };
+    } catch (e) {
+      return {
+        'success': false,
+        'error': 'Network error: ${e.toString()}',
       };
     }
   }
@@ -474,13 +640,25 @@ class AuthService {
   Future<void> _saveUser(User user) async {
     await _storage.write(
       key: _userKey,
-      value: jsonEncode({
-        'id': user.id,
-        'email': user.email,
-        'first_name': user.firstName,
-        'last_name': user.lastName,
-      }),
+      value: jsonEncode(user.toJson()),
     );
+  }
+
+  void _logRawUserPayload(String source, dynamic userPayload) {
+    if (userPayload == null) {
+      LogService.instance.debug('AuthService', '$source user payload: <missing>');
+      return;
+    }
+
+    if (userPayload is Map<String, dynamic>) {
+      try {
+        LogService.instance.debug('AuthService', '$source user payload: ${jsonEncode(userPayload)}');
+      } catch (_) {
+        LogService.instance.debug('AuthService', '$source user payload: $userPayload');
+      }
+    } else {
+      LogService.instance.debug('AuthService', '$source user payload type: ${userPayload.runtimeType}');
+    }
   }
 
   Future<void> _saveApiKey(String apiKey) async {

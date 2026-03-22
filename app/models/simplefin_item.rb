@@ -26,6 +26,7 @@ class SimplefinItem < ApplicationRecord
   has_many :legacy_accounts, through: :simplefin_accounts, source: :account
 
   scope :active, -> { where(scheduled_for_deletion: false) }
+  scope :syncable, -> { active }
   scope :ordered, -> { order(created_at: :desc) }
   scope :needs_update, -> { where(status: :requires_update) }
 

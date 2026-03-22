@@ -9,6 +9,7 @@ en:
     post_logout:
       logout_successful: You have signed out successfully.
     openid_connect:
+      account_linked: "Account successfully linked to %{provider}"
       failed: Could not authenticate via OpenID Connect.
     failure:
       failed: Could not authenticate.

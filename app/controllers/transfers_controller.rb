@@ -6,10 +6,17 @@ class TransfersController < ApplicationController
   def new
     @transfer = Transfer.new
     @from_account_id = params[:from_account_id]
+
+    @accounts = Current.family.accounts
+    .alphabetically
+    .includes(
+      :account_providers,
+      logo_attachment: :blob
+    )
   end
 
   def show
-    @categories = Current.family.categories.expenses
+    @categories = Current.family.categories.alphabetically
   end
 
   def create
@@ -17,7 +24,7 @@ class TransfersController < ApplicationController
       family: Current.family,
       source_account_id: transfer_params[:from_account_id],
       destination_account_id: transfer_params[:to_account_id],
-      date: transfer_params[:date],
+      date: Date.parse(transfer_params[:date]),
       amount: transfer_params[:amount].to_d
     ).create
 

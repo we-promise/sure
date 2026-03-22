@@ -1,17 +1,17 @@
 <% entry, account = @entry, @entry.account %>
-
-<%= render DS::Dialog.new(frame: "drawer") do |dialog| %>
-  <% dialog.with_header(hide_close_icon: true) do %>
-    <%= render "valuations/header", entry: @entry %>
+<%= render DS::Dialog.new(frame: "drawer", responsive: true) do |dialog| %>
+  <% dialog.with_header(custom_header: true) do %>
+    <div class="flex items-start justify-between gap-4">
+      <%= render "valuations/header", entry: @entry %>
+      <%= dialog.close_button %>
+    </div>
   <% end %>
-
   <% dialog.with_body do %>
     <% if @error_message.present? %>
       <div class="mb-4">
         <%= render DS::Alert.new(message: @error_message, variant: :error) %>
       </div>
     <% end %>
-
     <% dialog.with_section(title: t(".overview"), open: true) do %>
       <div class="pb-4">
         <%= styled_form_with model: entry,
@@ -22,11 +22,9 @@
           <%= f.date_field :date,
                 label: t(".date_label"),
                 max: Date.current %>
-
           <%= f.money_field :amount,
                 label: "Account value on date",
                 disable_currency: true %>
-
           <div class="flex justify-end">
             <%= render DS::Button.new(
               text: "Update value",
@@ -37,7 +35,6 @@
         <% end %>
       </div>
     <% end %>
-
     <% dialog.with_section(title: t(".details")) do %>
       <div class="pb-4">
         <%= styled_form_with model: entry,
@@ -53,7 +50,6 @@
         <% end %>
       </div>
     <% end %>
-
     <% dialog.with_section(title: t(".settings")) do %>
       <div class="pb-4">
         <!-- Delete Valuation Form -->
@@ -62,7 +58,6 @@
             <h4 class="text-primary"><%= t(".delete_title") %></h4>
             <p class="text-secondary"><%= t(".delete_subtitle") %></p>
           </div>
-
           <%= button_to t(".delete"),
                 entry_path(entry),
                 method: :delete,

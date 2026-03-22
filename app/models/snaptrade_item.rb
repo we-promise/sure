@@ -35,6 +35,9 @@ class SnaptradeItem < ApplicationRecord
   has_many :linked_accounts, through: :snaptrade_accounts
 
   scope :active, -> { where(scheduled_for_deletion: false) }
+  # Syncable = active + fully configured (user registered with SnapTrade API)
+  # Items without user registration will fail sync, so exclude them from auto-sync
+  scope :syncable, -> { active.where.not(snaptrade_user_id: [ nil, "" ]).where.not(snaptrade_user_secret: [ nil, "" ]) }
   scope :ordered, -> { order(created_at: :desc) }
   scope :needs_update, -> { where(status: :requires_update) }
 

@@ -1,30 +1,42 @@
 <%= render "layouts/shared/htmldoc" do %>
-  <div class="flex flex-col md:flex-row h-full bg-surface">
+  <div class="flex flex-col md:flex-row h-full bg-surface pt-[env(safe-area-inset-top)]">
     <div class="p-4 w-full md:w-96 shrink-0 md:h-full md:overflow-y-auto">
       <%= render "settings/settings_nav" %>
     </div>
 
     <main class="grow flex h-full">
       <div class="relative max-w-4xl mx-auto flex flex-col w-full h-full">
-        <div class="grow space-y-4 overflow-y-auto px-3 md:px-10 pt-2 md:py-4 pb-20 overscroll-contain [-webkit-overflow-scrolling:touch]">
-          <% if content_for?(:breadcrumbs) %>
-            <%= yield :breadcrumbs %>
-          <% else %>
-            <%= render "layouts/shared/breadcrumbs", breadcrumbs: @breadcrumbs %>
-          <% end %>
+        <div class="grow flex flex-col overflow-y-auto overflow-x-hidden overscroll-contain [-webkit-overflow-scrolling:touch]">
+          <div class="sticky top-0 z-10 px-3 md:px-10 pt-1.5 md:pt-3 pb-3 bg-surface border-b border-tertiary shrink-0">
+            <% if content_for?(:breadcrumbs) %>
+              <%= yield :breadcrumbs %>
+            <% else %>
+              <%= render "layouts/shared/breadcrumbs", breadcrumbs: @breadcrumbs %>
+            <% end %>
 
-          <% if content_for?(:page_title) %>
-            <h1 class="text-primary text-3xl md:text-xl font-medium">
-              <%= content_for :page_title %>
-            </h1>
-          <% end %>
+            <div class="flex items-center justify-between gap-4 mt-1.5 min-h-9">
+              <% if content_for?(:page_title) %>
+                <h1 class="text-primary text-xl font-medium">
+                  <%= content_for :page_title %>
+                </h1>
+              <% else %>
+                <div></div>
+              <% end %>
+              <% if content_for?(:page_actions) %>
+                <div class="flex items-center gap-2 shrink-0">
+                  <%= yield :page_actions %>
+                </div>
+              <% end %>
+            </div>
+          </div>
 
-          <%= yield %>
-          <%= settings_nav_footer_mobile %>
-        </div>
-
-        <div class="my-4">
-          <%= settings_nav_footer %>
+          <div class="grow space-y-4 px-3 md:px-10 pb-20 pt-4">
+            <%= yield %>
+            <%= settings_nav_footer_mobile %>
+            <div class="my-4">
+              <%= settings_nav_footer %>
+            </div>
+          </div>
         </div>
       </div>
     </main>

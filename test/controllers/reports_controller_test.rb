@@ -82,8 +82,8 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     get reports_path(period_type: :monthly)
     assert_response :ok
     assert_select "h2", text: I18n.t("reports.trends.title")
-    assert_select '[role="columnheader"]' do
-      assert_select "div", text: I18n.t("reports.trends.month")
+    assert_select "thead" do
+      assert_select "th", text: I18n.t("reports.trends.month")
     end
   end
 
@@ -118,8 +118,7 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
   test "spending patterns returns data when expense transactions exist" do
     # Create expense category
     expense_category = @family.categories.create!(
-      name: "Test Groceries",
-      classification: "expense"
+      name: "Test Groceries"
     )
 
     # Create account
@@ -158,7 +157,7 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_response :ok
 
     # Verify spending patterns shows data (not the "no data" message)
-    assert_select ".text-center.py-8.text-tertiary", { text: /No spending data/, count: 0 }, "Should not show 'No spending data' message when transactions exist"
+    assert_select ".text-center.py-8.text-subdued", { text: /No spending data/, count: 0 }, "Should not show 'No spending data' message when transactions exist"
   end
 
   test "export transactions with API key authentication" do
@@ -228,9 +227,9 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
 
   test "index groups transactions by parent and subcategories" do
     # Create parent category with subcategories
-    parent_category = @family.categories.create!(name: "Entertainment", classification: "expense", color: "#FF5733")
-    subcategory_movies = @family.categories.create!(name: "Movies", classification: "expense", parent: parent_category, color: "#33FF57")
-    subcategory_games = @family.categories.create!(name: "Games", classification: "expense", parent: parent_category, color: "#5733FF")
+    parent_category = @family.categories.create!(name: "Entertainment", color: "#FF5733")
+    subcategory_movies = @family.categories.create!(name: "Movies", parent: parent_category, color: "#33FF57")
+    subcategory_games = @family.categories.create!(name: "Games", parent: parent_category, color: "#5733FF")
 
     # Create transactions using helper
     create_transaction(account: @family.accounts.first, name: "Cinema ticket", amount: 15, category: subcategory_movies)
@@ -240,10 +239,10 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_response :ok
 
     # Parent category
-    assert_select "div[data-category='category-#{parent_category.id}']", text: /^Entertainment/
+    assert_select "tr[data-category='category-#{parent_category.id}']", text: /^Entertainment/
 
     # Subcategories
-    assert_select "div[data-category='category-#{subcategory_movies.id}']", text: /^Movies/
-    assert_select "div[data-category='category-#{subcategory_games.id}']", text: /^Games/
+    assert_select "tr[data-category='category-#{subcategory_movies.id}']", text: /^Movies/
+    assert_select "tr[data-category='category-#{subcategory_games.id}']", text: /^Games/
   end
 end

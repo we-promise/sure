@@ -1,0 +1,77 @@
+<div class="space-y-4">
+  <div class="prose prose-sm text-secondary">
+    <p class="text-primary font-medium"><%= t("indexa_capital_items.panel.setup_instructions") %></p>
+    <ol>
+      <li><%= t("indexa_capital_items.panel.step_1") %></li>
+      <li><%= t("indexa_capital_items.panel.step_2") %></li>
+      <li><%= t("indexa_capital_items.panel.step_3") %></li>
+    </ol>
+  </div>
+
+  <% error_msg = local_assigns[:error_message] || @error_message %>
+  <% if error_msg.present? %>
+    <div class="p-2 rounded-md bg-destructive/10 text-destructive text-sm overflow-hidden">
+      <p class="line-clamp-3" title="<%= error_msg %>"><%= error_msg %></p>
+    </div>
+  <% end %>
+
+  <%
+    indexa_capital_item = Current.family.indexa_capital_items.first_or_initialize(name: "Indexa Capital Connection")
+    is_new_record = indexa_capital_item.new_record?
+  %>
+
+  <%= styled_form_with model: indexa_capital_item,
+                       url: is_new_record ? indexa_capital_items_path : indexa_capital_item_path(indexa_capital_item),
+                       scope: :indexa_capital_item,
+                       method: is_new_record ? :post : :patch,
+                       data: { turbo: true },
+                       class: "space-y-3" do |form| %>
+
+    <div class="bg-surface border border-primary p-3 rounded-lg">
+      <p class="text-sm font-medium text-primary mb-2"><%= t("indexa_capital_items.panel.fields.api_token.label") %></p>
+      <p class="text-xs text-secondary mb-2"><%= t("indexa_capital_items.panel.fields.api_token.description") %></p>
+      <%= form.text_field :api_token,
+                          label: t("indexa_capital_items.panel.fields.api_token.label"),
+                          placeholder: is_new_record ? t("indexa_capital_items.panel.fields.api_token.placeholder_new") : t("indexa_capital_items.panel.fields.api_token.placeholder_update"),
+                          type: :password %>
+    </div>
+
+    <details class="group">
+      <summary class="text-sm text-secondary cursor-pointer hover:text-primary transition-colors">
+        <%= t("indexa_capital_items.panel.alternative_auth") %>
+      </summary>
+      <div class="mt-3 space-y-3 pt-3 border-t border-primary">
+        <%= form.text_field :username,
+                            label: t("indexa_capital_items.panel.fields.username.label"),
+                            placeholder: is_new_record ? t("indexa_capital_items.panel.fields.username.placeholder_new") : t("indexa_capital_items.panel.fields.username.placeholder_update"),
+                            value: indexa_capital_item.username %>
+
+        <%= form.text_field :document,
+                            label: t("indexa_capital_items.panel.fields.document.label"),
+                            placeholder: is_new_record ? t("indexa_capital_items.panel.fields.document.placeholder_new") : t("indexa_capital_items.panel.fields.document.placeholder_update"),
+                            value: indexa_capital_item.document %>
+
+        <%= form.text_field :password,
+                            label: t("indexa_capital_items.panel.fields.password.label"),
+                            placeholder: is_new_record ? t("indexa_capital_items.panel.fields.password.placeholder_new") : t("indexa_capital_items.panel.fields.password.placeholder_update"),
+                            type: :password %>
+      </div>
+    </details>
+
+    <div class="flex justify-end">
+      <%= form.submit is_new_record ? t("indexa_capital_items.panel.save_button") : t("indexa_capital_items.panel.update_button"),
+                      class: "inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium btn btn--primary" %>
+    </div>
+  <% end %>
+
+  <% items = local_assigns[:indexa_capital_items] || @indexa_capital_items || Current.family.indexa_capital_items.where.not(username: [nil, ""], document: [nil, ""], password: [nil, ""]).or(Current.family.indexa_capital_items.where.not(api_token: [nil, ""])) %>
+  <div class="flex items-center gap-2">
+    <% if items&.any? %>
+      <div class="w-2 h-2 bg-success rounded-full"></div>
+      <p class="text-sm text-secondary"><%= t("indexa_capital_items.panel.status_configured_html", accounts_path: accounts_path).html_safe %></p>
+    <% else %>
+      <div class="w-2 h-2 bg-gray-400 rounded-full"></div>
+      <p class="text-sm text-secondary"><%= t("indexa_capital_items.panel.status_not_configured") %></p>
+    <% end %>
+  </div>
+</div>

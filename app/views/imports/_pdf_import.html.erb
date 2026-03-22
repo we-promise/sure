@@ -3,14 +3,14 @@
 <div class="h-full flex flex-col justify-center items-center">
   <div class="space-y-6 max-w-lg w-full">
     <% if import.pending? && import.rows_count > 0 %>
-      <%# Bank statement with rows ready for review %>
+      <%# Statement with rows ready for review %>
       <div class="mx-auto bg-success/10 h-8 w-8 rounded-full flex items-center justify-center">
         <%= icon "check", class: "text-success" %>
       </div>
 
       <div class="text-center space-y-2">
         <h1 class="font-medium text-primary text-center text-3xl"><%= t("imports.pdf_import.ready_for_review_title", default: "Ready for Review") %></h1>
-        <p class="text-sm text-secondary"><%= t("imports.pdf_import.ready_for_review_description", default: "We extracted %{count} transactions from your bank statement. Review and publish them to add to your account.", count: import.rows_count) %></p>
+        <p class="text-sm text-secondary"><%= t("imports.pdf_import.ready_for_review_description", default: "We extracted %{count} transactions from your statement. Review and publish them to add to your account.", count: import.rows_count) %></p>
       </div>
 
       <div class="bg-container border border-primary rounded-xl p-4 space-y-4">
@@ -53,8 +53,9 @@
       <div class="space-y-2 flex flex-col">
         <% if import.publishable? %>
           <%= button_to t("imports.pdf_import.publish_transactions", default: "Publish %{count} Transactions", count: import.rows_count), publish_import_path(import), method: :post, class: "w-full font-medium text-sm px-3 py-2 rounded-lg text-inverse bg-inverse hover:bg-inverse-hover" %>
+          <%= render DS::Link.new(text: t("imports.pdf_import.review_transactions", default: "Review Transactions"), href: import_clean_path(import), variant: "secondary", full_width: true) %>
         <% elsif import.account.present? %>
-          <%= render DS::Link.new(text: t("imports.pdf_import.review_transactions", default: "Review Transactions"), href: import_confirm_path(import), variant: "primary", full_width: true) %>
+          <%= render DS::Link.new(text: t("imports.pdf_import.review_transactions", default: "Review Transactions"), href: import_clean_path(import), variant: "primary", full_width: true) %>
         <% else %>
           <p class="text-center text-sm text-secondary"><%= t("imports.pdf_import.select_account_to_continue", default: "Please select an account above to continue.") %></p>
         <% end %>

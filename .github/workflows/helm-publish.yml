@@ -1,0 +1,161 @@
+name: Helm Publish
+
+on:
+  workflow_call:
+    inputs:
+      chart_version:
+        description: Chart semver version (v-prefix allowed)
+        required: false
+        type: string
+      app_version:
+        description: App version value for Chart.yaml appVersion
+        required: false
+        type: string
+      update_gh_pages:
+        description: Whether to publish packaged chart to gh-pages index
+        required: false
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    if: github.repository == 'we-promise/sure'
+    runs-on: ubuntu-latest
+    outputs:
+      chart_version: ${{ steps.version.outputs.chart_version }}
+      app_version: ${{ steps.version.outputs.app_version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4.3.1
+
+      - name: Resolve chart and app versions
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          normalize_version() {
+            local raw="$1"
+            echo "${raw#v}"
+          }
+
+          if [ -n "${{ inputs.chart_version }}" ]; then
+            CHART_VERSION="$(normalize_version "${{ inputs.chart_version }}")"
+          elif [[ "${GITHUB_REF_TYPE}" == "tag" && "${GITHUB_REF_NAME}" == v* ]]; then
+            CHART_VERSION="$(normalize_version "${GITHUB_REF_NAME}")"
+          else
+            CHART_VERSION="0.0.0-nightly.$(date -u +'%Y%m%d.%H%M%S')"
+          fi
+
+          if [ -n "${{ inputs.app_version }}" ]; then
+            APP_VERSION="${{ inputs.app_version }}"
+          elif [[ "${GITHUB_REF_TYPE}" == "tag" && "${GITHUB_REF_NAME}" == v* ]]; then
+            APP_VERSION="${GITHUB_REF_NAME}"
+          else
+            APP_VERSION="${CHART_VERSION}"
+          fi
+
+          echo "chart_version=${CHART_VERSION}" >> "$GITHUB_OUTPUT"
+          echo "app_version=${APP_VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Update Chart.yaml version
+        shell: bash
+        run: |
+          set -euo pipefail
+          sed -i -E "s/^version:.*/version: ${{ steps.version.outputs.chart_version }}/" charts/sure/Chart.yaml
+          sed -i -E "s/^appVersion:.*/appVersion: \"${{ steps.version.outputs.app_version }}\"/" charts/sure/Chart.yaml
+
+      - name: Add Helm repositories
+        run: |
+          helm repo add cloudnative-pg https://cloudnative-pg.github.io/charts
+          helm repo add ot-helm https://ot-container-kit.github.io/helm-charts
+          helm repo update
+
+      - name: Build dependencies
+        run: helm dependency build charts/sure
+
+      - name: Package chart
+        run: |
+          mkdir -p .cr-release-packages
+          helm package charts/sure -d .cr-release-packages
+
+      - name: Upload packaged chart artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: helm-chart-package
+          path: .cr-release-packages/*.tgz
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Checkout gh-pages
+        if: ${{ inputs.update_gh_pages }}
+        uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+          path: gh-pages
+
+      - name: Update index and push
+        if: ${{ inputs.update_gh_pages }}
+        env:
+          GIT_USER_NAME: ${{ github.actor }}
+          GIT_USER_EMAIL: ${{ github.actor }}@users.noreply.github.com
+        run: |
+          set -euo pipefail
+
+          CHART_VERSION="${{ steps.version.outputs.chart_version }}"
+          MAX_ATTEMPTS=5
+
+          cp .cr-release-packages/*.tgz gh-pages/
+
+          cd gh-pages
+          git config user.name "$GIT_USER_NAME"
+          git config user.email "$GIT_USER_EMAIL"
+
+          index_and_commit() {
+            if [ -f index.yaml ]; then
+              helm repo index . --url https://we-promise.github.io/sure --merge index.yaml
+            else
+              helm repo index . --url https://we-promise.github.io/sure
+            fi
+
+            git add .
+            if git diff --cached --quiet; then
+              echo "No Helm chart updates to publish."
+              return 1
+            fi
+            git commit -m "Publish chart ${CHART_VERSION}"
+          }
+
+          index_and_commit || exit 0
+
+          for attempt in $(seq 1 "$MAX_ATTEMPTS"); do
+            echo "Push attempt ${attempt}/${MAX_ATTEMPTS}..."
+            if git push; then
+              echo "Chart ${CHART_VERSION} published successfully."
+              exit 0
+            fi
+
+            if [ "$attempt" -eq "$MAX_ATTEMPTS" ]; then
+              echo "::error::Failed to push after ${MAX_ATTEMPTS} attempts"
+              exit 1
+            fi
+
+            backoff=$(( attempt * 2 ))
+            echo "Push failed; retrying in ${backoff}s after rebase..."
+            sleep "$backoff"
+
+            git fetch origin gh-pages
+            git rebase origin/gh-pages
+
+            git reset HEAD~1 --soft 2>/dev/null || true
+            index_and_commit || { echo "No changes after rebase."; exit 0; }
+          done

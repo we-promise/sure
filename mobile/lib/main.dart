@@ -9,6 +9,7 @@ import 'providers/chat_provider.dart';
 import 'screens/backend_config_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/main_navigation_screen.dart';
+import 'screens/sso_onboarding_screen.dart';
 import 'services/api_config.dart';
 import 'services/connectivity_service.dart';
 import 'services/log_service.dart';
@@ -18,7 +19,7 @@ void main() async {
   await ApiConfig.initialize();
 
   // Add initial log entry
-  LogService.instance.info('App', 'Sure Finance app starting...');
+  LogService.instance.info('App', 'Sure app starting...');
 
   runApp(const SureApp());
 }
@@ -62,9 +63,15 @@ class SureApp extends StatelessWidget {
         ),
       ],
       child: MaterialApp(
-        title: 'Sure Finance',
+        title: 'Sure Finances',
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
+          fontFamily: 'Geist',
+          fontFamilyFallback: const [
+            'Inter',
+            'Arial',
+            'sans-serif',
+          ],
           colorScheme: ColorScheme.fromSeed(
             seedColor: const Color(0xFF6366F1),
             brightness: Brightness.light,
@@ -96,6 +103,12 @@ class SureApp extends StatelessWidget {
           ),
         ),
         darkTheme: ThemeData(
+          fontFamily: 'Geist',
+          fontFamilyFallback: const [
+            'Inter',
+            'Arial',
+            'sans-serif',
+          ],
           colorScheme: ColorScheme.fromSeed(
             seedColor: const Color(0xFF6366F1),
             brightness: Brightness.dark,
@@ -241,6 +254,10 @@ class _AppWrapperState extends State<AppWrapper> {
 
         if (authProvider.isAuthenticated) {
           return const MainNavigationScreen();
+        }
+
+        if (authProvider.ssoOnboardingPending) {
+          return const SsoOnboardingScreen();
         }
 
         return LoginScreen(

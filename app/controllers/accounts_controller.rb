@@ -1,5 +1,5 @@
 class AccountsController < ApplicationController
-  before_action :set_account, only: %i[sync sparkline toggle_active show destroy unlink confirm_unlink select_provider]
+  before_action :set_account, only: %i[sync sparkline toggle_active set_default remove_default show destroy unlink confirm_unlink select_provider]
   include Periodable
 
   def index
@@ -14,6 +14,7 @@ class AccountsController < ApplicationController
     @mercury_items = family.mercury_items.ordered.includes(:syncs, :mercury_accounts)
     @coinbase_items = family.coinbase_items.ordered.includes(:coinbase_accounts, :accounts, :syncs)
     @snaptrade_items = family.snaptrade_items.ordered.includes(:syncs, :snaptrade_accounts)
+    @indexa_capital_items = family.indexa_capital_items.ordered.includes(:syncs, :indexa_capital_accounts)
 
     # Build sync stats maps for all providers
     build_sync_stats_maps
@@ -41,7 +42,11 @@ class AccountsController < ApplicationController
     @q = params.fetch(:q, {}).permit(:search, status: [])
     entries = @account.entries.where(excluded: false).search(@q).reverse_chronological
 
-    @pagy, @entries = pagy(entries, limit: safe_per_page)
+    @pagy, @entries = pagy(
+      entries,
+      limit: safe_per_page,
+      params: request.query_parameters.except("tab").merge("tab" => "activity")
+    )
 
     @activity_feed_data = Account::ActivityFeedData.new(@account, @entries)
   end
@@ -84,6 +89,21 @@ class AccountsController < ApplicationController
     redirect_to accounts_path
   end
 
+  def set_default
+    unless @account.eligible_for_transaction_default?
+      redirect_to accounts_path, alert: t("accounts.set_default.depository_only")
+      return
+    end
+
+    Current.user.update!(default_account: @account)
+    redirect_to accounts_path
+  end
+
+  def remove_default
+    Current.user.update!(default_account: nil)
+    redirect_to accounts_path
+  end
+
   def destroy
     if @account.linked?
       redirect_to account_path(@account), alert: t("accounts.destroy.cannot_delete_linked")
@@ -116,14 +136,11 @@ class AccountsController < ApplicationController
         # Capture provider accounts before clearing links (so we can destroy them)
         simplefin_account_to_destroy = @account.simplefin_account
 
-        # Capture SnaptradeAccounts linked via AccountProvider
-        # Destroying them will trigger delete_snaptrade_connection callback to free connection slots
-        snaptrade_accounts_to_destroy = @account.account_providers
-          .where(provider_type: "SnaptradeAccount")
-          .map { |ap| SnaptradeAccount.find_by(id: ap.provider_id) }
-          .compact
-
         # Remove new system links (account_providers join table)
+        # SnaptradeAccount records are preserved (not destroyed) so users can relink later.
+        # This follows the Plaid pattern where the provider account survives as "unlinked".
+        # SnapTrade has limited connection slots (5 free), so preserving the record avoids
+        # wasting a slot on reconnect.
         @account.account_providers.destroy_all
 
         # Remove legacy system links (foreign keys)
@@ -135,11 +152,6 @@ class AccountsController < ApplicationController
         # - SimplefinAccount only caches API data which is regenerated on reconnect
         # - If user reconnects SimpleFin later, a new SimplefinAccount will be created
         simplefin_account_to_destroy&.destroy!
-
-        # Destroy SnaptradeAccount records to free up SnapTrade connection slots
-        # The before_destroy callback will delete the connection from SnapTrade API
-        # if no other accounts share the same authorization
-        snaptrade_accounts_to_destroy.each(&:destroy!)
       end
 
       redirect_to accounts_path, notice: t("accounts.unlink.success")
@@ -244,9 +256,11 @@ class AccountsController < ApplicationController
 
       # Enable Banking sync stats
       @enable_banking_sync_stats_map = {}
+      @enable_banking_latest_sync_error_map = {}
       @enable_banking_items.each do |item|
         latest_sync = item.syncs.ordered.first
         @enable_banking_sync_stats_map[item.id] = latest_sync&.sync_stats || {}
+        @enable_banking_latest_sync_error_map[item.id] = latest_sync&.error
       end
 
       # CoinStats sync stats
@@ -276,6 +290,13 @@ class AccountsController < ApplicationController
           .where(account_providers: { id: nil })
           .count
         @coinbase_unlinked_count_map[item.id] = count
+      end
+
+      # IndexaCapital sync stats
+      @indexa_capital_sync_stats_map = {}
+      @indexa_capital_items.each do |item|
+        latest_sync = item.syncs.ordered.first
+        @indexa_capital_sync_stats_map[item.id] = latest_sync&.sync_stats || {}
       end
     end
 end

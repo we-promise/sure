@@ -149,7 +149,7 @@ class UserTest < ActiveSupport::TestCase
   test "ai_available? returns true when openai access token set in settings" do
     Rails.application.config.app_mode.stubs(:self_hosted?).returns(true)
     previous = Setting.openai_access_token
-    with_env_overrides OPENAI_ACCESS_TOKEN: nil do
+    with_env_overrides OPENAI_ACCESS_TOKEN: nil, EXTERNAL_ASSISTANT_URL: nil, EXTERNAL_ASSISTANT_TOKEN: nil do
       Setting.openai_access_token = nil
       assert_not @user.ai_available?
 
@@ -158,6 +158,84 @@ class UserTest < ActiveSupport::TestCase
     end
   ensure
     Setting.openai_access_token = previous
+  end
+
+  test "ai_available? returns true when external assistant is configured and family type is external" do
+    Rails.application.config.app_mode.stubs(:self_hosted?).returns(true)
+    previous = Setting.openai_access_token
+    @user.family.update!(assistant_type: "external")
+    with_env_overrides OPENAI_ACCESS_TOKEN: nil, EXTERNAL_ASSISTANT_URL: "http://localhost:18789/v1/chat", EXTERNAL_ASSISTANT_TOKEN: "test-token" do
+      Setting.openai_access_token = nil
+      assert @user.ai_available?
+    end
+  ensure
+    Setting.openai_access_token = previous
+    @user.family.update!(assistant_type: "builtin")
+  end
+
+  test "ai_available? returns false when external assistant is configured but family type is builtin" do
+    Rails.application.config.app_mode.stubs(:self_hosted?).returns(true)
+    previous = Setting.openai_access_token
+    with_env_overrides OPENAI_ACCESS_TOKEN: nil, EXTERNAL_ASSISTANT_URL: "http://localhost:18789/v1/chat", EXTERNAL_ASSISTANT_TOKEN: "test-token" do
+      Setting.openai_access_token = nil
+      assert_not @user.ai_available?
+    end
+  ensure
+    Setting.openai_access_token = previous
+  end
+
+  test "ai_available? returns false when external assistant is configured but user is not in allowlist" do
+    Rails.application.config.app_mode.stubs(:self_hosted?).returns(true)
+    previous = Setting.openai_access_token
+    @user.family.update!(assistant_type: "external")
+    with_env_overrides OPENAI_ACCESS_TOKEN: nil, EXTERNAL_ASSISTANT_URL: "http://localhost:18789/v1/chat", EXTERNAL_ASSISTANT_TOKEN: "test-token", EXTERNAL_ASSISTANT_ALLOWED_EMAILS: "other@example.com" do
+      Setting.openai_access_token = nil
+      assert_not @user.ai_available?
+    end
+  ensure
+    Setting.openai_access_token = previous
+    @user.family.update!(assistant_type: "builtin")
+  end
+
+  test "intro layout collapses sidebars and enables ai" do
+    user = User.new(
+      family: families(:empty),
+      email: "intro-new@example.com",
+      password: "Password1!",
+      password_confirmation: "Password1!",
+      role: :guest,
+      ui_layout: :intro
+    )
+
+    assert user.save, user.errors.full_messages.to_sentence
+    assert user.ui_layout_intro?
+    assert_not user.show_sidebar?
+    assert_not user.show_ai_sidebar?
+    assert user.ai_enabled?
+  end
+
+  test "non-guest role cannot persist intro layout" do
+    user = User.new(
+      family: families(:empty),
+      email: "dashboard-only@example.com",
+      password: "Password1!",
+      password_confirmation: "Password1!",
+      role: :member,
+      ui_layout: :intro
+    )
+
+    assert user.save, user.errors.full_messages.to_sentence
+    assert user.ui_layout_dashboard?
+  end
+
+  test "upgrading guest role restores dashboard layout defaults" do
+    user = users(:intro_user)
+    user.update!(role: :member)
+    user.reload
+
+    assert user.ui_layout_dashboard?
+    assert user.show_sidebar?
+    assert user.show_ai_sidebar?
   end
 
   test "update_dashboard_preferences handles concurrent updates atomically" do
@@ -282,6 +360,33 @@ class UserTest < ActiveSupport::TestCase
     @user.update!(preferences: { "collapsed_sections" => {} })
     assert_not @user.dashboard_section_collapsed?("net_worth_chart"),
       "Should return false when section key is missing from collapsed_sections"
+  end
+
+  # Default account for transactions
+  test "default_account_for_transactions returns account when active and manual" do
+    account = accounts(:depository)
+    @user.update!(default_account: account)
+    assert_equal account, @user.default_account_for_transactions
+  end
+
+  test "default_account_for_transactions returns nil when account is disabled" do
+    account = accounts(:depository)
+    @user.update!(default_account: account)
+    account.disable!
+    assert_nil @user.default_account_for_transactions
+  end
+
+  test "default_account_for_transactions returns nil when account is linked" do
+    account = accounts(:depository)
+    @user.update!(default_account: account)
+    plaid_account = plaid_accounts(:one)
+    AccountProvider.create!(account: account, provider: plaid_account)
+    account.reload
+    assert_nil @user.default_account_for_transactions
+  end
+
+  test "default_account_for_transactions returns nil when no default set" do
+    assert_nil @user.default_account_for_transactions
   end
 
   # SSO-only user security tests

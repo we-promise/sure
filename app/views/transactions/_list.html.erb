@@ -5,7 +5,7 @@
   data-bulk-select-plural-label-value="<%= t(".transactions") %>"
   class="flex flex-col bg-container rounded-xl shadow-border-xs px-3 py-4 lg:p-4 relative group">
 
-  <%= form_with url: imports_path, method: :post, class: "hidden", data: { drag_and_drop_import_target: "form" } do |f| %>
+  <%= form_with url: imports_path, method: :post, class: "hidden", data: { drag_and_drop_import_target: "form", turbo: false } do |f| %>
     <%= f.hidden_field "import[type]", value: "TransactionImport" %>
     <%= f.file_field "import[import_file]", class: "hidden", data: { drag_and_drop_import_target: "input" }, accept: ".csv" %>
   <% end %>
@@ -39,7 +39,19 @@
 
       <div class="space-y-6">
         <%= entries_by_date(@transactions.map(&:entry), totals: true) do |entries| %>
-            <%= render entries %>
+          <% if Current.user.show_split_grouped? %>
+            <% group_split_entries(entries, @split_parents).each do |item| %>
+              <% if item.is_a?(EntriesHelper::SplitGroup) %>
+                <%= render "entries/split_group", split_group: item %>
+              <% else %>
+                <%= render item %>
+              <% end %>
+            <% end %>
+          <% else %>
+            <% entries.each do |entry| %>
+              <%= render entry %>
+            <% end %>
+          <% end %>
         <% end %>
       </div>
     </div>
