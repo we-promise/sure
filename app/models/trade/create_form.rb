@@ -57,47 +57,24 @@ class Trade::CreateForm
     end
 
     def create_interest_income
-      signed_amount = amount.to_d * -1
-      interest_security = security_id.present? ? Security.find_by(id: security_id) : nil
-
-      if security_id.present? && interest_security.nil?
-        entry = account.entries.build(entryable: Transaction.new)
-        entry.errors.add(:base, "Security not found")
-        return entry
-      end
-
-      entry_name = interest_security ? "Interest: #{interest_security.ticker}" : "Interest"
-
-      entry = account.entries.build(
-        name: entry_name,
-        date: date,
-        amount: signed_amount,
-        currency: currency,
-        entryable: Transaction.new(
-          security: interest_security,
-          investment_activity_label: "Interest"
-        )
-      )
-
-      if entry.save
-        entry.lock_saved_attributes!
-        account.sync_later
-      end
-
-      entry
+      create_security_income("Interest")
     end
 
     def create_dividend
-      signed_amount = amount.to_d * -1
-      dividend_security = security_id.present? ? Security.find_by(id: security_id) : nil
+      create_security_income("Dividend")
+    end
 
-      if security_id.present? && dividend_security.nil?
+    def create_security_income(label)
+      signed_amount = amount.to_d * -1
+      resolved_security = security_id.present? ? Security.find_by(id: security_id) : nil
+
+      if security_id.present? && resolved_security.nil?
         entry = account.entries.build(entryable: Transaction.new)
         entry.errors.add(:base, "Security not found")
         return entry
       end
 
-      entry_name = dividend_security ? "Dividend: #{dividend_security.ticker}" : "Dividend"
+      entry_name = resolved_security ? "#{label}: #{resolved_security.ticker}" : label
 
       entry = account.entries.build(
         name: entry_name,
@@ -105,8 +82,8 @@ class Trade::CreateForm
         amount: signed_amount,
         currency: currency,
         entryable: Transaction.new(
-          security: dividend_security,
-          investment_activity_label: "Dividend"
+          security: resolved_security,
+          investment_activity_label: label
         )
       )
 

@@ -194,6 +194,36 @@ class Transaction < ApplicationRecord
       .offset(offset)
   end
 
+  SECURITY_ACTIVITY_LABELS = %w[Dividend Interest].freeze
+
+  # Computes the entry name override when activity label or security changes.
+  # Returns the new name string, or nil if no override is needed.
+  def resolve_activity_name(new_label:, new_security_id: nil, security_id_submitted: false)
+    current_label = investment_activity_label
+
+    # Activity label is changing
+    if new_label.present? && new_label != current_label
+      sec = if security_id_submitted
+              new_security_id.present? ? Security.find_by(id: new_security_id) : nil
+            else
+              security
+            end
+      return format_activity_name(new_label, sec)
+    end
+
+    # Same label, but security is changing
+    if current_label.in?(SECURITY_ACTIVITY_LABELS) && security_id_submitted
+      sec = new_security_id.present? ? Security.find_by(id: new_security_id) : nil
+      return format_activity_name(current_label, sec)
+    end
+
+    nil
+  end
+
+  def format_activity_name(label, security)
+    security ? "#{label}: #{security.ticker}" : label
+  end
+
   private
 
     def validate_attachments

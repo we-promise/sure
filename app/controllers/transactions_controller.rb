@@ -359,51 +359,28 @@ class TransactionsController < ApplicationController
       transaction.eligible_for_category_rule?
     end
 
-    SECURITY_ACTIVITY_LABELS = %w[Dividend Interest].freeze
-
     def sync_activity_name(update_params)
-      new_label = update_params.dig(:entryable_attributes, :investment_activity_label)
-      current_label = @entry.transaction.investment_activity_label
-      submitted_security_id = update_params.dig(:entryable_attributes, :security_id)
+      entryable_attrs = update_params[:entryable_attributes]
+      return update_params unless entryable_attrs
 
-      # Sanitize invalid security_id upfront to avoid InvalidForeignKey on any path
-      update_params = sanitize_security_id(update_params, submitted_security_id)
+      new_label = entryable_attrs[:investment_activity_label]
+      submitted_security_id = entryable_attrs[:security_id]
+      security_id_submitted = entryable_attrs.key?(:security_id)
 
-      # Changing activity label
-      if new_label.present? && new_label != current_label
-        sec = resolve_security_for_update(update_params, submitted_security_id)
-        return update_params.merge(name: activity_name(new_label, sec))
+      # Sanitize invalid security_id upfront to avoid InvalidForeignKey
+      if submitted_security_id.present? && !Security.exists?(id: submitted_security_id)
+        update_params = update_params.deep_dup
+        update_params[:entryable_attributes] = update_params[:entryable_attributes].except(:security_id)
+        security_id_submitted = false
       end
 
-      # Same label, but security is changing
-      if current_label.in?(SECURITY_ACTIVITY_LABELS) && update_params.dig(:entryable_attributes)&.key?(:security_id)
-        sec = submitted_security_id.present? ? Security.find_by(id: submitted_security_id) : nil
-        return update_params.merge(name: activity_name(current_label, sec))
-      end
+      name = @entry.transaction.resolve_activity_name(
+        new_label: new_label,
+        new_security_id: submitted_security_id,
+        security_id_submitted: security_id_submitted
+      )
 
-      update_params
-    end
-
-    def activity_name(label, security)
-      security ? "#{label}: #{security.ticker}" : label
-    end
-
-    def resolve_security_for_update(update_params, submitted_security_id)
-      security_submitted = update_params.dig(:entryable_attributes)&.key?(:security_id)
-      if security_submitted
-        submitted_security_id.present? ? Security.find_by(id: submitted_security_id) : nil
-      else
-        @entry.transaction.security
-      end
-    end
-
-    def sanitize_security_id(update_params, submitted_security_id)
-      return update_params unless submitted_security_id.present?
-      return update_params if Security.exists?(id: submitted_security_id)
-
-      update_params.deep_dup.tap do |params|
-        params[:entryable_attributes] = params[:entryable_attributes].except(:security_id)
-      end
+      name ? update_params.merge(name: name) : update_params
     end
 
     def entry_params
