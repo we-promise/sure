@@ -181,6 +181,8 @@ class AccountsProvider with ChangeNotifier {
     }
   }
 
+  /// Fetches balance sheet data and updates formatted net worth, assets,
+  /// and liabilities values for display.
   Future<void> _fetchBalanceSheet(String accessToken) async {
     try {
       final result = await _balanceSheetService.getBalanceSheet(accessToken: accessToken);

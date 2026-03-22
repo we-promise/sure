@@ -2,7 +2,13 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'api_config.dart';
 
+/// Service for fetching balance sheet data (net worth, assets, liabilities)
+/// from the Sure API.
 class BalanceSheetService {
+  /// Fetches the family's balance sheet from GET /api/v1/balance_sheet.
+  ///
+  /// Returns a map with 'success' flag and balance sheet fields on success,
+  /// or 'error' message on failure.
   Future<Map<String, dynamic>> getBalanceSheet({
     required String accessToken,
   }) async {
@@ -38,7 +44,7 @@ class BalanceSheetService {
     } catch (e) {
       return {
         'success': false,
-        'error': 'Network error: ${e.toString()}',
+        'error': 'Unable to load balance sheet. Please try again later.',
       };
     }
   }
