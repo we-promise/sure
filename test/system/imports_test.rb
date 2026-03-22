@@ -156,6 +156,8 @@ class ImportsTest < ApplicationSystemTestCase
   test "mint import" do
     visit new_import_path
 
+    # Pending CSV-style imports default the dialog to the Raw Data tab; Mint lives under Financial Tools.
+    click_on "Financial Tools"
     click_on "Import from Mint"
 
     within_testid("import-tabs") do
