@@ -27,7 +27,7 @@ class Transaction::Search
   def transactions_scope
     @transactions_scope ||= begin
       # This already joins entries + accounts. To avoid expensive double-joins, don't join them again (causes full table scan)
-      query = family.transactions
+      query = family.transactions.merge(Entry.excluding_split_parents)
 
       query = apply_active_accounts_filter(query, active_accounts_only)
       query = apply_category_filter(query, categories)

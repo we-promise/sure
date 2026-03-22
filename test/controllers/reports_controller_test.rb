@@ -82,8 +82,8 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     get reports_path(period_type: :monthly)
     assert_response :ok
     assert_select "h2", text: I18n.t("reports.trends.title")
-    assert_select '[role="columnheader"]' do
-      assert_select "div", text: I18n.t("reports.trends.month")
+    assert_select "thead" do
+      assert_select "th", text: I18n.t("reports.trends.month")
     end
   end
 
@@ -239,11 +239,11 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_response :ok
 
     # Parent category
-    assert_select "div[data-category='category-#{parent_category.id}']", text: /^Entertainment/
+    assert_select "tr[data-category='category-#{parent_category.id}']", text: /^Entertainment/
 
     # Subcategories
-    assert_select "div[data-category='category-#{subcategory_movies.id}']", text: /^Movies/
-    assert_select "div[data-category='category-#{subcategory_games.id}']", text: /^Games/
+    assert_select "tr[data-category='category-#{subcategory_movies.id}']", text: /^Movies/
+    assert_select "tr[data-category='category-#{subcategory_games.id}']", text: /^Games/
   end
 
   test "index excludes excluded accounts from reports" do
