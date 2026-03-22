@@ -26,3 +26,5 @@ jobs:
             config/locales/views/reports/
             # False positive: client.rb stores Bearer token and sends Authorization header by design
             app/models/assistant/external/client.rb
+            # False positive: test files create ephemeral API keys for integration testing
+            test/controllers/api/v1/balance_sheet_controller_test.rb
