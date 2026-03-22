@@ -9,15 +9,15 @@ class Api::V1::BalanceSheetControllerTest < ActionDispatch::IntegrationTest
 
     @user.api_keys.active.destroy_all
 
-    key = ApiKey.generate_secure_key
-    @api_key = ApiKey.create!(
+    @auth = ApiKey.create!(
       user: @user,
       name: "Test Read Key",
-      key: key,
-      scopes: [ "read" ]
+      scopes: [ "read" ],
+      display_key: "test_ro_#{SecureRandom.hex(8)}",
+      source: "mobile"
     )
 
-    Redis.new.del("api_rate_limit:#{@api_key.id}")
+    Redis.new.del("api_rate_limit:#{@auth.id}")
   end
 
   test "should require authentication" do
@@ -26,7 +26,7 @@ class Api::V1::BalanceSheetControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "should return balance sheet with net worth data" do
-    get "/api/v1/balance_sheet", headers: api_headers(@api_key)
+    get "/api/v1/balance_sheet", headers: api_headers(@auth)
 
     assert_response :success
     response_body = JSON.parse(response.body)
@@ -45,7 +45,7 @@ class Api::V1::BalanceSheetControllerTest < ActionDispatch::IntegrationTest
 
   private
 
-    def api_headers(api_key)
-      { "X-Api-Key" => api_key.plain_key }
+    def api_headers(auth)
+      { "X-Api-Key" => auth.display_key }
     end
 end
