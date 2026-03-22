@@ -11,7 +11,7 @@
   <div class="text-large mb-4 flex items-center gap-2 text-lg">
     <%= icon(icon_name, class: "w-5 h-5") %>
     <span><%= t(title_key) %>:</span>
-    <span class="font-medium text-secondary <%= color_class %>"> <%= Money.new(total, Current.family.currency).format %></span>
+    <span class="font-medium text-secondary <%= color_class %> privacy-sensitive"> <%= Money.new(total, Current.family.currency).format %></span>
   </div>
 
   <div class="bg-container-inset rounded-xl p-1 overflow-x-auto">

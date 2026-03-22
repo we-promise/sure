@@ -56,6 +56,6 @@
 
   <div class="col-span-2 ml-auto text-right shrink-0">
     <% display_amount = recurring_transaction.manual? && recurring_transaction.expected_amount_avg.present? ? recurring_transaction.expected_amount_avg : recurring_transaction.amount %>
-    <%= content_tag :p, format_money(-Money.new(display_amount, recurring_transaction.currency)), class: ["font-medium", display_amount.negative? ? "text-success" : "text-subdued"] %>
+    <%= content_tag :p, format_money(-Money.new(display_amount, recurring_transaction.currency)), class: ["font-medium", "privacy-sensitive", display_amount.negative? ? "text-success" : "text-subdued"] %>
   </div>
 </div>

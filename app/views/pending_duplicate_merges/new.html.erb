@@ -52,7 +52,7 @@
                     <div class="flex-1 text-sm">
                       <div class="font-medium text-primary"><%= entry.name %></div>
                       <div class="text-xs text-secondary">
-                        <%= I18n.l(entry.date, format: :short) %> • 
+                        <%= I18n.l(entry.date, format: :short) %> •
                         <%= number_to_currency(entry.amount.abs, unit: Money::Currency.new(entry.currency).symbol) %>
                       </div>
                     </div>

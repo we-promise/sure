@@ -57,13 +57,13 @@
       <div class="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
         <div class="whitespace-nowrap w-full sm:w-auto">
           <span class="text-sm text-secondary"><%= t("reports.budget_performance.spent") %>:</span>
-          <span class="font-medium text-primary">
+          <span class="font-medium text-primary privacy-sensitive">
             <%= format_money(budget_category.actual_spending_money) %>
           </span>
         </div>
         <div class="whitespace-nowrap w-full sm:w-auto inline-flex items-center gap-1">
           <span class="text-sm text-secondary"><%= t("reports.budget_performance.budgeted") %>:</span>
-          <span class="font-medium text-primary">
+          <span class="font-medium text-primary privacy-sensitive">
             <%= format_money(budget_category.budgeted_spending_money) %>
           </span>
           <% if budget_category.inherits_parent_budget? %>
@@ -73,12 +73,12 @@
         <div class="whitespace-nowrap w-full sm:w-auto lg:ml-auto">
           <% if budget_category.available_to_spend >= 0 %>
             <span class="text-sm text-secondary"><%= t("reports.budget_performance.remaining") %>:</span>
-            <span class="font-medium <%= (budget_category.near_limit? ? "text-yellow-500" : "text-green-500") %>">
+            <span class="font-medium <%= (budget_category.near_limit? ? "text-yellow-500" : "text-green-500") %> privacy-sensitive">
               <%= format_money(budget_category.available_to_spend_money) %>
             </span>
           <% else %>
             <span class="text-sm text-secondary"><%= t("reports.budget_performance.over_by") %>:</span>
-            <span class="font-medium text-red-500">
+            <span class="font-medium text-red-500 privacy-sensitive">
               <%= format_money(budget_category.available_to_spend_money.abs) %>
             </span>
           <% end %>
@@ -116,13 +116,13 @@
 
         <div class="min-w-0 flex-1">
           <p class="text-sm font-medium text-primary truncate"><%= budget_category.category.name %></p>
-          <p class="text-sm text-secondary font-medium">
+          <p class="text-sm text-secondary font-medium privacy-sensitive">
             <%= budget_category.median_monthly_expense_money.format %> avg
           </p>
         </div>
 
         <div class="ml-auto text-right flex-shrink-0">
-          <p class="text-sm font-medium text-primary whitespace-nowrap"><%= format_money(budget_category.actual_spending_money) %></p>
+          <p class="text-sm font-medium text-primary whitespace-nowrap privacy-sensitive"><%= format_money(budget_category.actual_spending_money) %></p>
         </div>
       </div>
     <% end %>
