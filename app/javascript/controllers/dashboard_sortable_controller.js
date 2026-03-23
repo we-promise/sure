@@ -295,19 +295,10 @@ export default class extends Controller {
     draggableElements.forEach((child) => {
       const rect = child.getBoundingClientRect();
       const centerX = rect.left + rect.width / 2;
+      const centerY = rect.top + rect.height / 2;
 
-      // Use distance to nearest edge instead of center so tall sections
-      // don't require more finger travel than short ones
       const dx = pointerX - centerX;
-      let dy;
-      if (pointerY < rect.top) {
-        dy = rect.top - pointerY;
-      } else if (pointerY > rect.bottom) {
-        dy = pointerY - rect.bottom;
-      } else {
-        dy = 0; // pointer is within this section's vertical bounds
-      }
-
+      const dy = pointerY - centerY;
       const distance = Math.sqrt(dx * dx + dy * dy);
 
       if (distance < minDistance) {
