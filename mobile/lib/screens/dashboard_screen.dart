@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/account.dart';
@@ -24,6 +25,7 @@ class DashboardScreenState extends State<DashboardScreen> {
   final LogService _log = LogService.instance;
   bool _showSyncSuccess = false;
   int _previousPendingCount = 0;
+  Timer? _syncSuccessTimer;
   TransactionsProvider? _transactionsProvider;
 
   // Filter state
@@ -51,6 +53,7 @@ class DashboardScreenState extends State<DashboardScreen> {
 
   @override
   void dispose() {
+    _syncSuccessTimer?.cancel();
     _transactionsProvider?.removeListener(_onTransactionsChanged);
     super.dispose();
   }
@@ -60,26 +63,31 @@ class DashboardScreenState extends State<DashboardScreen> {
     if (transactionsProvider == null || !mounted) {
       return;
     }
-    
+
     final currentPendingCount = transactionsProvider.pendingCount;
 
-    // If pending count decreased, it means transactions were synced
+    // Show sync success when pending count decreased (local transactions uploaded)
     if (_previousPendingCount > 0 && currentPendingCount < _previousPendingCount) {
-      setState(() {
-        _showSyncSuccess = true;
-      });
-
-      // Hide the success indicator after 3 seconds
-      Future.delayed(const Duration(seconds: 3), () {
-        if (mounted) {
-          setState(() {
-            _showSyncSuccess = false;
-          });
-        }
-      });
+      _showSyncSuccessIndicator();
     }
 
     _previousPendingCount = currentPendingCount;
+  }
+
+  void _showSyncSuccessIndicator() {
+    _syncSuccessTimer?.cancel();
+
+    setState(() {
+      _showSyncSuccess = true;
+    });
+
+    _syncSuccessTimer = Timer(const Duration(seconds: 3), () {
+      if (mounted) {
+        setState(() {
+          _showSyncSuccess = false;
+        });
+      }
+    });
   }
 
   Future<void> _loadAccounts() async {
@@ -160,19 +168,23 @@ class DashboardScreenState extends State<DashboardScreen> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).clearSnackBars();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Row(
-              children: [
-                Icon(Icons.check_circle, color: Colors.white),
-                SizedBox(width: 12),
-                Text('Sync completed successfully'),
-              ],
+        if (transactionsProvider.error != null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  const Icon(Icons.error, color: Colors.white),
+                  const SizedBox(width: 12),
+                  const Expanded(child: Text('Sync failed. Please try again.')),
+                ],
+              ),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 3),
             ),
-            backgroundColor: Colors.green,
-            duration: Duration(seconds: 2),
-          ),
-        );
+          );
+        } else {
+          _showSyncSuccessIndicator();
+        }
       }
     } catch (e) {
       _log.error('DashboardScreen', 'Error in _performManualSync: $e');
@@ -343,26 +355,29 @@ class DashboardScreenState extends State<DashboardScreen> {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: AppBar(
-        actions: [
-          if (_showSyncSuccess)
-            Padding(
-              padding: const EdgeInsets.only(right: 8),
-              child: AnimatedOpacity(
-                opacity: _showSyncSuccess ? 1.0 : 0.0,
-                duration: const Duration(milliseconds: 300),
-                child: const Icon(
-                  Icons.cloud_done,
-                  color: Colors.green,
-                  size: 28,
-                ),
-              ),
-            ),
-        ],
-      ),
       body: Column(
         children: [
           const ConnectivityBanner(),
+          if (_showSyncSuccess)
+            AnimatedOpacity(
+              opacity: _showSyncSuccess ? 1.0 : 0.0,
+              duration: const Duration(milliseconds: 300),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                color: Colors.green.withValues(alpha: 0.1),
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.cloud_done, color: Colors.green, size: 18),
+                    SizedBox(width: 8),
+                    Text(
+                      'Synced',
+                      style: TextStyle(color: Colors.green, fontSize: 13),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           Expanded(
             child: Consumer2<AuthProvider, AccountsProvider>(
               builder: (context, authProvider, accountsProvider, _) {
