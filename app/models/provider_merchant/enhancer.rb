@@ -51,8 +51,10 @@ class ProviderMerchant::Enhancer
   private
 
     def deduplicate_by_website(target_merchant, website_url)
-      # Find duplicate merchants assigned to this family with the same website_url
+      # Find duplicate provider merchants assigned to this family with the same website_url.
+      # Excludes FamilyMerchants — user-curated merchants should never be touched by dedup.
       duplicates = @family.assigned_merchants
+                          .where(type: "ProviderMerchant")
                           .where(website_url: website_url)
                           .where.not(id: target_merchant.id)
 

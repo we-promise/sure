@@ -396,7 +396,7 @@ class Provider::Openai::ProviderMerchantEnhancer
 
     def format_merchants_simply
       merchants.map do |m|
-        "- ID: #{m[:id]}, Name: \"#{m[:name]}\""
+        "- ID: #{m[:id]}, Name: #{m[:name].to_json}"
       end.join("\n")
     end
 end
