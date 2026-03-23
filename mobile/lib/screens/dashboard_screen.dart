@@ -175,7 +175,7 @@ class DashboardScreenState extends State<DashboardScreen> {
                 children: [
                   const Icon(Icons.error, color: Colors.white),
                   const SizedBox(width: 12),
-                  Expanded(child: Text(transactionsProvider.error!)),
+                  const Expanded(child: Text('Sync failed. Please try again.')),
                 ],
               ),
               backgroundColor: Colors.red,
