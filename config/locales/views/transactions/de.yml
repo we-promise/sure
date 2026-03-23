@@ -75,7 +75,7 @@ de:
     transaction:
       pending: Ausstehend
       pending_tooltip: Ausstehende Transaktion — kann sich bei Buchung ändern
-      linked_with_plaid: Mit Plaid verknüpft
+      linked_with_provider: Mit %{provider} verknüpft
       activity_type_tooltip: Art der Anlageaktivität
       possible_duplicate: Duplikat?
       potential_duplicate_tooltip: Dies könnte ein Duplikat einer anderen Transaktion sein

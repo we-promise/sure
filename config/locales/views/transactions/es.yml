@@ -76,7 +76,7 @@ es:
     transaction:
       pending: Pendiente
       pending_tooltip: Transacción pendiente — puede cambiar al confirmarse
-      linked_with_plaid: Vinculado con Plaid
+      linked_with_provider: Vinculado con %{provider}
       activity_type_tooltip: Tipo de actividad de inversión
       possible_duplicate: ¿Duplicada?
       potential_duplicate_tooltip: Esto puede ser un duplicado de otra transacción

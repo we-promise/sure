@@ -48,6 +48,8 @@ zh-TW:
       edit_merchants: 編輯商家
       edit_tags: 編輯標籤
       import: 匯入
+    transaction:
+      linked_with_provider: 已與 %{provider} 連結
     index:
       transaction: 筆交易
       transactions: 筆交易

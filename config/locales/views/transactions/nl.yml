@@ -74,6 +74,7 @@ nl:
     transaction:
       pending: Wachtend
       pending_tooltip: Wachtende transactie — kan wijzigen bij posting
+      linked_with_provider: Gekoppeld met %{provider}
       activity_type_tooltip: Beleggingsactiviteitstype
       possible_duplicate: Duplicaat?
       potential_duplicate_tooltip: Dit kan een duplicaat zijn van een andere transactie

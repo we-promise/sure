@@ -45,6 +45,8 @@ fr:
       edit_merchants: Modifier les marchands
       edit_tags: Modifier les étiquettes
       import: Importer
+    transaction:
+      linked_with_provider: Lié avec %{provider}
     index:
       transaction: transaction
       transactions: transactions

@@ -1,11 +1,20 @@
 import { describe, it } from "node:test"
 import assert from "node:assert/strict"
 
-// Inline the function to avoid needing a bundler for ESM imports
-function parseLocaleFloat(value) {
+// Inline the function to avoid needing a bundler for ESM imports.
+// Must be kept in sync with app/javascript/utils/parse_locale_float.js
+function parseLocaleFloat(value, { separator } = {}) {
   if (typeof value !== "string") return Number.parseFloat(value) || 0
 
   const cleaned = value.replace(/\s/g, "")
+
+  if (separator === ",") {
+    return Number.parseFloat(cleaned.replace(/\./g, "").replace(",", ".")) || 0
+  }
+  if (separator === ".") {
+    return Number.parseFloat(cleaned.replace(/,/g, "")) || 0
+  }
+
   const lastComma = cleaned.lastIndexOf(",")
   const lastDot = cleaned.lastIndexOf(".")
 
@@ -74,6 +83,10 @@ describe("parseLocaleFloat", () => {
     it("treats 1,000 as one thousand", () => {
       assert.equal(parseLocaleFloat("1,000"), 1000)
     })
+
+    it("treats 1,000,000 as one million", () => {
+      assert.equal(parseLocaleFloat("1,000,000"), 1000000)
+    })
   })
 
   describe("integers", () => {
@@ -93,6 +106,79 @@ describe("parseLocaleFloat", () => {
 
     it("strips thousands space separator", () => {
       assert.equal(parseLocaleFloat("1 234,56"), 1234.56)
+    })
+  })
+
+  describe("negative numbers", () => {
+    it("parses negative dot-decimal", () => {
+      assert.equal(parseLocaleFloat("-1,234.56"), -1234.56)
+    })
+
+    it("parses negative comma-decimal", () => {
+      assert.equal(parseLocaleFloat("-1.234,56"), -1234.56)
+    })
+
+    it("parses simple negative", () => {
+      assert.equal(parseLocaleFloat("-256.54"), -256.54)
+    })
+
+    it("parses negative European simple", () => {
+      assert.equal(parseLocaleFloat("-256,54"), -256.54)
+    })
+  })
+
+  describe("with separator hint", () => {
+    describe("comma separator (European currencies like EUR)", () => {
+      const opts = { separator: "," }
+
+      it("disambiguates 1,234 as 1.234 (European decimal)", () => {
+        assert.equal(parseLocaleFloat("1,234", opts), 1.234)
+      })
+
+      it("parses 1.234,56 correctly", () => {
+        assert.equal(parseLocaleFloat("1.234,56", opts), 1234.56)
+      })
+
+      it("parses simple comma decimal", () => {
+        assert.equal(parseLocaleFloat("256,54", opts), 256.54)
+      })
+
+      it("parses integer without separators", () => {
+        assert.equal(parseLocaleFloat("1234", opts), 1234)
+      })
+
+      it("parses negative value", () => {
+        assert.equal(parseLocaleFloat("-1.234,56", opts), -1234.56)
+      })
+    })
+
+    describe("dot separator (English currencies like USD)", () => {
+      const opts = { separator: "." }
+
+      it("disambiguates 1,234 as 1234 (English thousands)", () => {
+        assert.equal(parseLocaleFloat("1,234", opts), 1234)
+      })
+
+      it("parses 1,234.56 correctly", () => {
+        assert.equal(parseLocaleFloat("1,234.56", opts), 1234.56)
+      })
+
+      it("parses simple dot decimal", () => {
+        assert.equal(parseLocaleFloat("256.54", opts), 256.54)
+      })
+
+      it("parses integer without separators", () => {
+        assert.equal(parseLocaleFloat("1234", opts), 1234)
+      })
+
+      it("parses negative value", () => {
+        assert.equal(parseLocaleFloat("-1,234.56", opts), -1234.56)
+      })
+    })
+
+    it("falls back to heuristic when no hint given", () => {
+      assert.equal(parseLocaleFloat("1,234"), 1234)
+      assert.equal(parseLocaleFloat("256,54"), 256.54)
     })
   })
 
