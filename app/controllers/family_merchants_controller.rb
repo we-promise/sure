@@ -45,11 +45,21 @@ class FamilyMerchantsController < ApplicationController
 
   def update
     if @merchant.is_a?(ProviderMerchant)
-      # Convert ProviderMerchant to FamilyMerchant for this family only
-      @family_merchant = @merchant.convert_to_family_merchant_for(Current.family, merchant_params)
-      respond_to do |format|
-        format.html { redirect_to family_merchants_path, notice: t(".converted_success") }
-        format.turbo_stream { render turbo_stream: turbo_stream.action(:redirect, family_merchants_path) }
+      if merchant_params[:name].present? && merchant_params[:name] != @merchant.name
+        # Name changed — convert ProviderMerchant to FamilyMerchant for this family only
+        @family_merchant = @merchant.convert_to_family_merchant_for(Current.family, merchant_params)
+        respond_to do |format|
+          format.html { redirect_to family_merchants_path, notice: t(".converted_success") }
+          format.turbo_stream { render turbo_stream: turbo_stream.action(:redirect, family_merchants_path) }
+        end
+      else
+        # Only website changed — update the ProviderMerchant directly
+        @merchant.update!(merchant_params.slice(:website_url))
+        @merchant.generate_logo_url_from_website!
+        respond_to do |format|
+          format.html { redirect_to family_merchants_path, notice: t(".success") }
+          format.turbo_stream { render turbo_stream: turbo_stream.action(:redirect, family_merchants_path) }
+        end
       end
     elsif @merchant.update(merchant_params)
       respond_to do |format|

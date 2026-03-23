@@ -23,6 +23,17 @@ class ProviderMerchant < Merchant
     end
   end
 
+  # Generate logo URL from website_url using BrandFetch, if configured.
+  def generate_logo_url_from_website!
+    if website_url.present? && Setting.brand_fetch_client_id.present?
+      domain = website_url.sub(/\Awww\./, "")
+      size = Setting.brand_fetch_logo_size
+      update!(logo_url: "https://cdn.brandfetch.io/#{domain}/icon/fallback/lettermark/w/#{size}/h/#{size}?c=#{Setting.brand_fetch_client_id}")
+    elsif website_url.blank?
+      update!(logo_url: nil)
+    end
+  end
+
   # Unlink from family's transactions (set merchant_id to null).
   # Does NOT delete the ProviderMerchant since it may be used by other families.
   # Tracks the unlink in FamilyMerchantAssociation so it shows as "recently unlinked".
