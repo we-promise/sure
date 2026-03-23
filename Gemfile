@@ -124,6 +124,13 @@ group :development do
   gem "foreman"
 end
 
+group :development, :test do
+  gem "rspec-rails"
+  gem "rswag-api"
+  gem "rswag-specs"
+  gem "rswag-ui"
+end
+
 group :test do
   gem "capybara"
   gem "selenium-webdriver"
@@ -132,8 +139,4 @@ group :test do
   gem "webmock"
   gem "climate_control"
   gem "simplecov", require: false
-  gem "rspec-rails"
-  gem "rswag-api"
-  gem "rswag-specs"
-  gem "rswag-ui"
 end
