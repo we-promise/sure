@@ -133,7 +133,7 @@
                     <label class="form-field__label"><%= t("holdings.cost_basis_cell.total_cost_basis_label") %></label>
                     <div class="flex items-center gap-1">
                       <span class="text-secondary text-sm font-medium"><%= currency.symbol %></span>
-                      <input type="text" inputmode="decimal"
+                      <input type="number" step="any"
                              name="holding[cost_basis]"
                              class="form-field__input grow"
                              placeholder="0.00"
@@ -153,7 +153,7 @@
                   <label class="text-xs text-secondary block mb-1"><%= t("holdings.cost_basis_cell.or_per_share_label") %></label>
                   <div class="flex items-center gap-1">
                     <span class="text-secondary text-sm font-medium"><%= currency.symbol %></span>
-                    <input type="text" inputmode="decimal"
+                    <input type="number" step="any"
                            class="form-field__input grow"
                            placeholder="0.00"
                            autocomplete="off"

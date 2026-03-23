@@ -1,9 +1,22 @@
 // Parses a float from a string that may use either commas or dots as decimal separators.
 // Handles formats like "1,234.56" (English) and "1.234,56" (French/European).
-export default function parseLocaleFloat(value) {
+//
+// When a `separator` hint is provided (e.g., from currency metadata), parsing is
+// deterministic. Without a hint, a heuristic detects the format from the string.
+export default function parseLocaleFloat(value, { separator } = {}) {
   if (typeof value !== "string") return Number.parseFloat(value) || 0
 
   const cleaned = value.replace(/\s/g, "")
+
+  // Deterministic parsing when the currency's decimal separator is known
+  if (separator === ",") {
+    return Number.parseFloat(cleaned.replace(/\./g, "").replace(",", ".")) || 0
+  }
+  if (separator === ".") {
+    return Number.parseFloat(cleaned.replace(/,/g, "")) || 0
+  }
+
+  // Heuristic: detect separator from the string when no hint is available
   const lastComma = cleaned.lastIndexOf(",")
   const lastDot = cleaned.lastIndexOf(".")
 

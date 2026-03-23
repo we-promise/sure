@@ -18,7 +18,7 @@ export default class extends Controller {
 
       const rawValue = this.amountTarget.value.trim();
       if (rawValue !== "") {
-        const parsedAmount = parseLocaleFloat(rawValue);
+        const parsedAmount = parseLocaleFloat(rawValue, { separator: currency.separator });
         if (Number.isFinite(parsedAmount)) {
           this.amountTarget.value = parsedAmount.toFixed(currency.default_precision);
         }
