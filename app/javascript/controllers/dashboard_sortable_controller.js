@@ -5,7 +5,7 @@ export default class extends Controller {
 
   // Hold delay to require deliberate press-and-hold before activating drag mode
   static values = {
-    holdDelay: { type: Number, default: 1000 },
+    holdDelay: { type: Number, default: 800 },
   };
 
   connect() {
@@ -98,6 +98,10 @@ export default class extends Controller {
     this.currentTouchY = this.touchStartY;
     this.holdActivated = false;
 
+    // Prevent text selection while waiting for hold to activate
+    section.style.userSelect = "none";
+    section.style.webkitUserSelect = "none";
+
     // Start hold timer
     this.holdTimer = setTimeout(() => {
       this.activateDrag();
@@ -183,6 +187,16 @@ export default class extends Controller {
   }
 
   resetTouchState() {
+    // Restore text selection
+    if (this.pendingSection) {
+      this.pendingSection.style.userSelect = "";
+      this.pendingSection.style.webkitUserSelect = "";
+    }
+    if (this.draggedElement) {
+      this.draggedElement.style.userSelect = "";
+      this.draggedElement.style.webkitUserSelect = "";
+    }
+
     this.isTouching = false;
     this.draggedElement = null;
     this.pendingSection = null;
