@@ -33,15 +33,6 @@ class ProviderMerchant < Merchant
     end
   end
 
-  private
-
-    def extract_domain(url)
-      normalized_url = url.start_with?("http://", "https://") ? url : "https://#{url}"
-      URI.parse(normalized_url).host&.sub(/\Awww\./, "")
-    rescue URI::InvalidURIError
-      url.sub(/\Awww\./, "")
-    end
-
   # Unlink from family's transactions (set merchant_id to null).
   # Does NOT delete the ProviderMerchant since it may be used by other families.
   # Tracks the unlink in FamilyMerchantAssociation so it shows as "recently unlinked".
@@ -52,4 +43,13 @@ class ProviderMerchant < Merchant
     association = FamilyMerchantAssociation.find_or_initialize_by(family: family, merchant: self)
     association.update!(unlinked_at: Time.current)
   end
+
+  private
+
+    def extract_domain(url)
+      normalized_url = url.start_with?("http://", "https://") ? url : "https://#{url}"
+      URI.parse(normalized_url).host&.sub(/\Awww\./, "")
+    rescue URI::InvalidURIError
+      url.sub(/\Awww\./, "")
+    end
 end

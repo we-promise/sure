@@ -83,7 +83,16 @@ class ProviderMerchant::Enhancer
 
     def build_logo_url(business_url)
       return nil unless Setting.brand_fetch_client_id.present? && business_url.present?
+      domain = extract_domain(business_url)
+      return nil unless domain.present?
       size = Setting.brand_fetch_logo_size
-      "https://cdn.brandfetch.io/#{business_url}/icon/fallback/lettermark/w/#{size}/h/#{size}?c=#{Setting.brand_fetch_client_id}"
+      "https://cdn.brandfetch.io/#{domain}/icon/fallback/lettermark/w/#{size}/h/#{size}?c=#{Setting.brand_fetch_client_id}"
+    end
+
+    def extract_domain(url)
+      normalized_url = url.start_with?("http://", "https://") ? url : "https://#{url}"
+      URI.parse(normalized_url).host&.sub(/\Awww\./, "")
+    rescue URI::InvalidURIError
+      url.sub(/\Awww\./, "")
     end
 end
