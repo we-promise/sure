@@ -174,7 +174,7 @@ en:
       empty: No imports yet.
     new:
       description: Import from a financial tool or upload raw data files.
-      tab_financial_tools: Financial Tools
+      tab_financial_tools: Financial Tools & Files
       tab_raw_data: Raw Data
       coming_soon: Coming soon
       import_ynab: Import from YNAB
@@ -188,7 +188,7 @@ en:
       import_sure: Import from Sure
       import_sure_description: Full-export .ndjson file
       import_file: Import document
-      import_file_description: AI-powered analysis for PDFs and searchable upload for other supported files
+      import_file_description: AI-powered analysis for PDFs and searchable file upload
       requires_account: Import accounts first to unlock this option.
       resume: Resume %{type}
       sources: Sources
