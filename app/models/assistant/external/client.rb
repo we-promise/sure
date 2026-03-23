@@ -285,6 +285,7 @@ class Assistant::External::Client
 
       if uri.scheme == "wss"
         ctx = OpenSSL::SSL::SSLContext.new
+        ctx.verify_mode = OpenSSL::SSL::VERIFY_PEER
         ssl = OpenSSL::SSL::SSLSocket.new(tcp, ctx)
         ssl.hostname = uri.host # SNI
         ssl.connect
