@@ -24,6 +24,7 @@ class DashboardScreenState extends State<DashboardScreen> {
   final LogService _log = LogService.instance;
   bool _showSyncSuccess = false;
   int _previousPendingCount = 0;
+  bool _wasLoading = false;
   TransactionsProvider? _transactionsProvider;
 
   // Filter state
@@ -45,6 +46,7 @@ class DashboardScreenState extends State<DashboardScreen> {
       if (!mounted) return;
       _transactionsProvider = Provider.of<TransactionsProvider>(context, listen: false);
       _previousPendingCount = _transactionsProvider?.pendingCount ?? 0;
+      _wasLoading = _transactionsProvider?.isLoading ?? false;
       _transactionsProvider?.addListener(_onTransactionsChanged);
     });
   }
@@ -60,26 +62,37 @@ class DashboardScreenState extends State<DashboardScreen> {
     if (transactionsProvider == null || !mounted) {
       return;
     }
-    
+
     final currentPendingCount = transactionsProvider.pendingCount;
+    final currentlyLoading = transactionsProvider.isLoading;
 
-    // If pending count decreased, it means transactions were synced
-    if (_previousPendingCount > 0 && currentPendingCount < _previousPendingCount) {
-      setState(() {
-        _showSyncSuccess = true;
-      });
+    // Show sync success when:
+    // 1. Pending count decreased (local transactions uploaded), OR
+    // 2. Loading just finished (sync completed, including server-only syncs)
+    final pendingDecreased = _previousPendingCount > 0 && currentPendingCount < _previousPendingCount;
+    final syncJustCompleted = _wasLoading && !currentlyLoading && transactionsProvider.error == null;
 
-      // Hide the success indicator after 3 seconds
-      Future.delayed(const Duration(seconds: 3), () {
-        if (mounted) {
-          setState(() {
-            _showSyncSuccess = false;
-          });
-        }
-      });
+    if (pendingDecreased || syncJustCompleted) {
+      _showSyncSuccessIndicator();
     }
 
     _previousPendingCount = currentPendingCount;
+    _wasLoading = currentlyLoading;
+  }
+
+  void _showSyncSuccessIndicator() {
+    setState(() {
+      _showSyncSuccess = true;
+    });
+
+    // Hide the success indicator after 3 seconds
+    Future.delayed(const Duration(seconds: 3), () {
+      if (mounted) {
+        setState(() {
+          _showSyncSuccess = false;
+        });
+      }
+    });
   }
 
   Future<void> _loadAccounts() async {
@@ -160,19 +173,7 @@ class DashboardScreenState extends State<DashboardScreen> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).clearSnackBars();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Row(
-              children: [
-                Icon(Icons.check_circle, color: Colors.white),
-                SizedBox(width: 12),
-                Text('Sync completed successfully'),
-              ],
-            ),
-            backgroundColor: Colors.green,
-            duration: Duration(seconds: 2),
-          ),
-        );
+        _showSyncSuccessIndicator();
       }
     } catch (e) {
       _log.error('DashboardScreen', 'Error in _performManualSync: $e');
