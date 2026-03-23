@@ -41,7 +41,6 @@
 
       <% tabs.with_panel(tab_id: "financial_tools") do %>
         <div class="rounded-xl bg-container-inset p-1">
-          <h3 class="uppercase text-secondary text-xs font-medium px-3 py-1.5"><%= t(".tab_financial_tools") %></h3>
           <ul class="bg-container shadow-border-xs rounded-lg">
             <% if @pending_import.present? && params[:type].present? && params[:type].in?(%w[MintImport QifImport SureImport DocumentImport PdfImport]) %>
               <li>
@@ -153,7 +152,6 @@
 
       <% tabs.with_panel(tab_id: "raw_data") do %>
         <div class="rounded-xl bg-container-inset p-1">
-          <h3 class="uppercase text-secondary text-xs font-medium px-3 py-1.5"><%= t(".tab_raw_data") %></h3>
           <ul class="bg-container shadow-border-xs rounded-lg">
             <% if @pending_import.present? && params[:type].present? && !params[:type].in?(%w[MintImport QifImport SureImport DocumentImport PdfImport]) %>
               <li>
