@@ -18,6 +18,8 @@ class CategoriesProvider with ChangeNotifier {
   bool get hasFetched => _hasFetched;
 
   Future<void> fetchCategories({required String accessToken}) async {
+    if (_isLoading || _hasFetched) return;
+
     _isLoading = true;
     _error = null;
     notifyListeners();

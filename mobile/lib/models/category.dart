@@ -18,10 +18,7 @@ class Category {
   factory Category.fromJson(Map<String, dynamic> json) {
     Category? parent;
     if (json['parent'] != null && json['parent'] is Map) {
-      parent = Category(
-        id: json['parent']['id']?.toString() ?? '',
-        name: json['parent']['name']?.toString() ?? '',
-      );
+      parent = Category.fromJson(Map<String, dynamic>.from(json['parent']));
     }
 
     return Category(
@@ -34,11 +31,14 @@ class Category {
     );
   }
 
-  /// Display name including parent for subcategories
+  /// Display name including full ancestor path for subcategories
   String get displayName {
-    if (parent != null) {
-      return '${parent!.name} > $name';
+    final parts = <String>[];
+    Category? current = this;
+    while (current != null) {
+      parts.add(current.name);
+      current = current.parent;
     }
-    return name;
+    return parts.reversed.join(' > ');
   }
 }

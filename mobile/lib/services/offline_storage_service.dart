@@ -242,8 +242,8 @@ class OfflineStorageService {
         currency: transaction.currency,
         nature: transaction.nature,
         notes: transaction.notes,
-        categoryId: transaction.categoryId,
-        categoryName: transaction.categoryName,
+        categoryId: transaction.categoryId ?? existing.categoryId,
+        categoryName: transaction.categoryName ?? existing.categoryName,
         syncStatus: SyncStatus.synced,
       );
       await _dbHelper.updateTransaction(existing.localId, updated.toDatabaseMap());

@@ -48,7 +48,7 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final categoriesProvider = Provider.of<CategoriesProvider>(context, listen: false);
     final accessToken = await authProvider.getValidAccessToken();
-    if (accessToken != null && !categoriesProvider.hasFetched) {
+    if (accessToken != null) {
       categoriesProvider.fetchCategories(accessToken: accessToken);
     }
   }
