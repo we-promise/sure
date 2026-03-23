@@ -12,8 +12,7 @@ class ProviderMerchant < Merchant
       family_merchant = family.merchants.create!(
         name: attributes[:name].presence || name,
         color: attributes[:color].presence || FamilyMerchant::COLORS.sample,
-        logo_url: logo_url,
-        website_url: website_url
+        website_url: attributes[:website_url].presence || website_url
       )
 
       # Update only this family's transactions to point to new merchant
@@ -26,13 +25,22 @@ class ProviderMerchant < Merchant
   # Generate logo URL from website_url using BrandFetch, if configured.
   def generate_logo_url_from_website!
     if website_url.present? && Setting.brand_fetch_client_id.present?
-      domain = website_url.sub(/\Awww\./, "")
+      domain = extract_domain(website_url)
       size = Setting.brand_fetch_logo_size
       update!(logo_url: "https://cdn.brandfetch.io/#{domain}/icon/fallback/lettermark/w/#{size}/h/#{size}?c=#{Setting.brand_fetch_client_id}")
     elsif website_url.blank?
       update!(logo_url: nil)
     end
   end
+
+  private
+
+    def extract_domain(url)
+      normalized_url = url.start_with?("http://", "https://") ? url : "https://#{url}"
+      URI.parse(normalized_url).host&.sub(/\Awww\./, "")
+    rescue URI::InvalidURIError
+      url.sub(/\Awww\./, "")
+    end
 
   # Unlink from family's transactions (set merchant_id to null).
   # Does NOT delete the ProviderMerchant since it may be used by other families.
