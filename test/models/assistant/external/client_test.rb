@@ -264,45 +264,32 @@ class Assistant::External::ClientTest < ActiveSupport::TestCase
       agent_id: "test-agent"
     )
 
-    call_count = 0
-    ws_client.stubs(:open_ws_socket).with do
-      call_count += 1
-      true
-    end.returns(StringIO.new)
+    mock_socket = StringIO.new
+    mock_socket.stubs(:close)
+    ws_client.stubs(:open_ws_socket).returns(mock_socket)
 
-    mock_driver = mock("driver")
-    open_callback = nil
-    message_callback = nil
-
-    mock_driver.stubs(:set_header)
-    mock_driver.stubs(:on).with(:open).with { |event, &blk| open_callback = blk; true }
-    mock_driver.stubs(:on).with(:message).with { |event, &blk| message_callback = blk; true }
-    mock_driver.stubs(:on).with(:close)
-    mock_driver.stubs(:on).with(:error)
-    mock_driver.stubs(:text)
-    mock_driver.stubs(:close)
-    mock_driver.stubs(:start) do
-      open_callback&.call(nil)
-    end
+    callbacks = {}
+    mock_driver = Object.new
+    mock_driver.define_singleton_method(:set_header) { |_k, _v| }
+    mock_driver.define_singleton_method(:on) { |event, &blk| callbacks[event] = blk }
+    mock_driver.define_singleton_method(:text) { |_json| }
+    mock_driver.define_singleton_method(:close) { callbacks[:close]&.call(nil) }
+    mock_driver.define_singleton_method(:start) { callbacks[:open]&.call(nil) }
+    mock_driver.define_singleton_method(:parse) { |_data| }
 
     WebSocket::Driver::Client.stubs(:new).returns(mock_driver)
+    IO.stubs(:select).returns([ [ mock_socket ] ])
 
-    # Simulate: first IO.select returns data, readpartial triggers message then error
+    # First readpartial delivers a message then raises mid-stream
     first_read = true
-    IO.stubs(:select).returns([ [ StringIO.new ] ])
-    mock_socket = StringIO.new
-    ws_client.stubs(:open_ws_socket).returns(mock_socket)
-    mock_socket.stubs(:close)
     mock_socket.define_singleton_method(:readpartial) do |_|
       if first_read
         first_read = false
         msg_event = OpenStruct.new(data: '{"choices":[{"delta":{"content":"partial"}}],"model":"m"}')
-        message_callback&.call(msg_event)
+        callbacks[:message]&.call(msg_event)
         raise Errno::ECONNRESET, "connection reset"
       end
     end
-
-    mock_driver.stubs(:parse)
 
     chunks = []
     error = assert_raises(Assistant::Error) do
