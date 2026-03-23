@@ -3,5 +3,7 @@ class EnhanceProviderMerchantsJob < ApplicationJob
 
   def perform(family)
     ProviderMerchant::Enhancer.new(family).enhance
+  ensure
+    Rails.cache.delete("enhance_provider_merchants:#{family.id}")
   end
 end

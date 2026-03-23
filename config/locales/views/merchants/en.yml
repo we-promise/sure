@@ -25,8 +25,8 @@ en:
       provider_read_only: Provider merchants are synced from your connected institutions. They cannot be edited here.
       provider_info: These merchants were automatically detected by your bank connections or AI. You can edit them to create your own copy, or remove them to unlink from your transactions.
       enhance_info:
-        one: "%{count} provider merchant is missing website information. Enhance with AI to detect websites and display logos."
-        other: "%{count} provider merchants are missing website information. Enhance with AI to detect websites and display logos."
+        one: "%{count} provider merchant is missing website information. Enhance with AI to detect websites, display logos, and merge duplicate merchants."
+        other: "%{count} provider merchants are missing website information. Enhance with AI to detect websites, display logos, and merge duplicate merchants."
       enhance_button: Enhance with AI
       unlinked_title: Recently unlinked
       unlinked_info: These merchants were recently removed from your transactions. They will disappear from this list after 30 days unless re-assigned to a transaction.
@@ -63,6 +63,7 @@ en:
       remove_confirm_body: Are you sure you want to remove %{name}? This will unlink all associated transactions from this merchant but will not delete the merchant itself.
     enhance:
       success: Provider merchant enhancement started. Merchants will be enhanced and duplicates merged shortly.
+      already_running: Enhancement is already in progress. Please wait for it to finish.
     update:
       success: Merchant updated successfully
       converted_success: Merchant converted and updated successfully
