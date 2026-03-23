@@ -36,4 +36,12 @@ class FamilyMerchantsControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to family_merchants_path
   end
+
+  test "enhance enqueues job and redirects" do
+    assert_enqueued_with(job: EnhanceProviderMerchantsJob) do
+      post enhance_family_merchants_path
+    end
+
+    assert_redirected_to family_merchants_path
+  end
 end

@@ -224,6 +224,7 @@ Rails.application.routes.draw do
     collection do
       get :merge
       post :perform_merge
+      post :enhance
     end
   end
 

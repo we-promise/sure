@@ -68,6 +68,22 @@
       </div>
     </div>
 
+    <% if @enhanceable_count > 0 && @llm_available %>
+      <div class="flex items-center justify-between p-4 bg-container-inset border border-secondary rounded-lg">
+        <div class="flex items-start gap-2">
+          <%= icon "sparkles", class: "w-5 h-5 text-link mt-0.5 flex-shrink-0" %>
+          <p class="text-xs text-secondary leading-relaxed"><%= t(".enhance_info", count: @enhanceable_count) %></p>
+        </div>
+        <%= render DS::Button.new(
+          text: t(".enhance_button"),
+          variant: :outline,
+          size: :sm,
+          icon: "sparkles",
+          href: enhance_family_merchants_path
+        ) %>
+      </div>
+    <% end %>
+
     <% if @provider_merchants.any? %>
       <div class="rounded-xl bg-container-inset space-y-1 p-1">
         <div class="bg-container rounded-lg shadow-border-xs overflow-x-auto">

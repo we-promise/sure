@@ -1,6 +1,7 @@
 import {
   autoUpdate,
   computePosition,
+  flip,
   offset,
   shift,
 } from "@floating-ui/dom";
@@ -110,7 +111,7 @@ export default class extends Controller {
 
     computePosition(this.buttonTarget, this.contentTarget, {
       placement: useMobileFullwidth ? "bottom" : this.placementValue,
-      middleware: [offset(this.offsetValue), shift({ padding: 5 })],
+      middleware: [offset(this.offsetValue), flip({ padding: 5 }), shift({ padding: 5 })],
       strategy: "fixed",
     }).then(({ x, y }) => {
       if (useMobileFullwidth) {

@@ -13,6 +13,12 @@ module Provider::LlmConcept
     raise NotImplementedError, "Subclasses must implement #auto_detect_merchants"
   end
 
+  EnhancedMerchant = Data.define(:merchant_id, :business_url)
+
+  def enhance_provider_merchants(merchants)
+    raise NotImplementedError, "Subclasses must implement #enhance_provider_merchants"
+  end
+
   PdfProcessingResult = Data.define(:summary, :document_type, :extracted_data)
 
   def supports_pdf_processing?
