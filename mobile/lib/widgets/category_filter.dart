@@ -1,8 +1,8 @@
-import 'package:flutter/material.dart' hide Category;
-import '../models/category.dart';
+import 'package:flutter/material.dart';
+import '../models/category.dart' as models;
 
 class CategoryFilter extends StatelessWidget {
-  final List<Category> availableCategories;
+  final List<models.Category> availableCategories;
   final Set<String> selectedCategoryIds;
   final ValueChanged<Set<String>> onSelectionChanged;
 

@@ -1,5 +1,5 @@
-import 'package:flutter/foundation.dart' hide Category;
-import '../models/category.dart';
+import 'package:flutter/foundation.dart';
+import '../models/category.dart' as models;
 import '../services/categories_service.dart';
 import '../services/log_service.dart';
 
@@ -7,12 +7,12 @@ class CategoriesProvider with ChangeNotifier {
   final CategoriesService _categoriesService = CategoriesService();
   final LogService _log = LogService.instance;
 
-  List<Category> _categories = [];
+  List<models.Category> _categories = [];
   bool _isLoading = false;
   String? _error;
   bool _hasFetched = false;
 
-  List<Category> get categories => List.unmodifiable(_categories);
+  List<models.Category> get categories => List.unmodifiable(_categories);
   bool get isLoading => _isLoading;
   String? get error => _error;
   bool get hasFetched => _hasFetched;
@@ -29,7 +29,7 @@ class CategoriesProvider with ChangeNotifier {
       );
 
       if (result['success'] == true) {
-        _categories = result['categories'] as List<Category>;
+        _categories = result['categories'] as List<models.Category>;
         _hasFetched = true;
         _log.info('CategoriesProvider', 'Fetched ${_categories.length} categories');
       } else {

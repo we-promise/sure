@@ -1,8 +1,8 @@
-import 'package:flutter/material.dart' hide Category;
+import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../models/account.dart';
-import '../models/category.dart';
+import '../models/category.dart' as models;
 import '../providers/auth_provider.dart';
 import '../providers/categories_provider.dart';
 import '../providers/transactions_provider.dart';
@@ -31,7 +31,7 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
   String _nature = 'expense';
   bool _showMoreFields = false;
   bool _isSubmitting = false;
-  Category? _selectedCategory;
+  models.Category? _selectedCategory;
 
   @override
   void initState() {
