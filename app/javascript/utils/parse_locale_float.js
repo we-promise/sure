@@ -8,6 +8,13 @@ export default function parseLocaleFloat(value) {
   const lastDot = cleaned.lastIndexOf(".")
 
   if (lastComma > lastDot) {
+    // When there's no dot present and exactly 3 digits follow the last comma,
+    // treat comma as a thousands separator (e.g., "1,234" → 1234, "12,345" → 12345)
+    const digitsAfterComma = cleaned.length - lastComma - 1
+    if (lastDot === -1 && digitsAfterComma === 3) {
+      return Number.parseFloat(cleaned.replace(/,/g, "")) || 0
+    }
+
     // Comma is the decimal separator (e.g., "1.234,56" or "256,54")
     return Number.parseFloat(cleaned.replace(/\./g, "").replace(",", ".")) || 0
   }
