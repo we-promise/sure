@@ -196,6 +196,187 @@ class Assistant::External::ClientTest < ActiveSupport::TestCase
     assert_equal "proxypass", captured_args[5]
   end
 
+  # -- WebSocket transport tests ------------------------------------------
+
+  test "streams text chunks from WebSocket response" do
+    ws_client = Assistant::External::Client.new(
+      url: "wss://localhost:18789/v1/chat",
+      token: "test-token",
+      agent_id: "test-agent"
+    )
+
+    frames = [
+      '{"id":"1","choices":[{"delta":{"role":"assistant"}}],"model":"test-agent"}',
+      '{"id":"1","choices":[{"delta":{"content":"Hello"}}],"model":"test-agent"}',
+      '{"id":"1","choices":[{"delta":{"content":" world"}}],"model":"test-agent"}',
+      "[DONE]"
+    ]
+
+    mock_ws_transport(ws_client, frames)
+
+    chunks = []
+    model = ws_client.chat(messages: [ { role: "user", content: "test" } ]) { |t| chunks << t }
+
+    assert_equal [ "Hello", " world" ], chunks
+    assert_equal "test-agent", model
+  end
+
+  test "WebSocket handles SSE-formatted frames (data: prefix)" do
+    ws_client = Assistant::External::Client.new(
+      url: "wss://localhost:18789/v1/chat",
+      token: "test-token",
+      agent_id: "test-agent"
+    )
+
+    frames = [
+      'data: {"id":"1","choices":[{"delta":{"content":"prefixed"}}],"model":"m"}',
+      "data: [DONE]"
+    ]
+
+    mock_ws_transport(ws_client, frames)
+
+    chunks = []
+    ws_client.chat(messages: [ { role: "user", content: "test" } ]) { |t| chunks << t }
+
+    assert_equal [ "prefixed" ], chunks
+  end
+
+  test "WebSocket retries transient errors then raises" do
+    ws_client = Assistant::External::Client.new(
+      url: "wss://localhost:18789/v1/chat",
+      token: "test-token",
+      agent_id: "test-agent"
+    )
+
+    ws_client.stubs(:open_ws_socket).raises(Errno::ECONNREFUSED, "connection refused")
+
+    error = assert_raises(Assistant::Error) do
+      ws_client.chat(messages: [ { role: "user", content: "test" } ]) { |_| }
+    end
+
+    assert_match(/temporarily unavailable/, error.message)
+  end
+
+  test "WebSocket does not retry after streaming started" do
+    ws_client = Assistant::External::Client.new(
+      url: "wss://localhost:18789/v1/chat",
+      token: "test-token",
+      agent_id: "test-agent"
+    )
+
+    call_count = 0
+    ws_client.stubs(:open_ws_socket).with do
+      call_count += 1
+      true
+    end.returns(StringIO.new)
+
+    mock_driver = mock("driver")
+    open_callback = nil
+    message_callback = nil
+
+    mock_driver.stubs(:set_header)
+    mock_driver.stubs(:on).with(:open).with { |event, &blk| open_callback = blk; true }
+    mock_driver.stubs(:on).with(:message).with { |event, &blk| message_callback = blk; true }
+    mock_driver.stubs(:on).with(:close)
+    mock_driver.stubs(:on).with(:error)
+    mock_driver.stubs(:text)
+    mock_driver.stubs(:close)
+    mock_driver.stubs(:start) do
+      open_callback&.call(nil)
+    end
+
+    WebSocket::Driver::Client.stubs(:new).returns(mock_driver)
+
+    # Simulate: first IO.select returns data, readpartial triggers message then error
+    first_read = true
+    IO.stubs(:select).returns([ [ StringIO.new ] ])
+    mock_socket = StringIO.new
+    ws_client.stubs(:open_ws_socket).returns(mock_socket)
+    mock_socket.stubs(:close)
+    mock_socket.define_singleton_method(:readpartial) do |_|
+      if first_read
+        first_read = false
+        msg_event = OpenStruct.new(data: '{"choices":[{"delta":{"content":"partial"}}],"model":"m"}')
+        message_callback&.call(msg_event)
+        raise Errno::ECONNRESET, "connection reset"
+      end
+    end
+
+    mock_driver.stubs(:parse)
+
+    chunks = []
+    error = assert_raises(Assistant::Error) do
+      ws_client.chat(messages: [ { role: "user", content: "test" } ]) { |t| chunks << t }
+    end
+
+    assert_equal [ "partial" ], chunks
+    assert_match(/connection was interrupted/, error.message)
+  end
+
+  test "raises for unsupported URL scheme" do
+    client = Assistant::External::Client.new(
+      url: "ftp://localhost/v1/chat",
+      token: "test-token"
+    )
+
+    error = assert_raises(Assistant::Error) do
+      client.chat(messages: [ { role: "user", content: "test" } ]) { |_| }
+    end
+
+    assert_match(/Unsupported URL scheme/, error.message)
+  end
+
+  test "auto-detects ws:// scheme for WebSocket transport" do
+    ws_client = Assistant::External::Client.new(
+      url: "ws://localhost:18789/v1/chat",
+      token: "test-token",
+      agent_id: "test-agent"
+    )
+
+    frames = [
+      '{"id":"1","choices":[{"delta":{"content":"ws works"}}],"model":"m"}',
+      "[DONE]"
+    ]
+
+    mock_ws_transport(ws_client, frames)
+
+    chunks = []
+    ws_client.chat(messages: [ { role: "user", content: "test" } ]) { |t| chunks << t }
+
+    assert_equal [ "ws works" ], chunks
+  end
+
+  test "WebSocket sends correct payload and headers" do
+    ws_client = Assistant::External::Client.new(
+      url: "wss://localhost:18789/v1/chat",
+      token: "test-token",
+      agent_id: "test-agent",
+      session_key: "custom:session"
+    )
+
+    frames = [
+      '{"id":"1","choices":[{"delta":{"content":"hi"}}],"model":"m"}',
+      "[DONE]"
+    ]
+    mock_ws_transport(ws_client, frames)
+
+    ws_client.chat(
+      messages: [ { role: "user", content: "Hello" } ],
+      user: "sure-family-42"
+    ) { |_| }
+
+    headers = ws_client._ws_captured_headers
+    payload = ws_client._ws_captured_payload
+
+    assert_equal "Bearer test-token", headers["Authorization"]
+    assert_equal "test-agent", headers["X-Agent-Id"]
+    assert_equal "custom:session", headers["X-Session-Key"]
+    assert_equal "test-agent", payload["model"]
+    assert_equal true, payload["stream"]
+    assert_equal "sure-family-42", payload["user"]
+    assert_equal 1, payload["messages"].size
+  end
+
   test "skips proxy for hosts in NO_PROXY" do
     sse_body = "data: {\"choices\":[{\"delta\":{\"content\":\"hi\"}}],\"model\":\"m\"}\n\ndata: [DONE]\n\n"
 
@@ -264,6 +445,43 @@ class Assistant::External::ClientTest < ActiveSupport::TestCase
       mock_http.stubs(:request).yields(mock_response)
 
       Net::HTTP.stubs(:new).returns(mock_http)
+    end
+
+    def mock_ws_transport(ws_client, frames)
+      mock_socket = StringIO.new
+      mock_socket.stubs(:close)
+      ws_client.stubs(:open_ws_socket).returns(mock_socket)
+
+      captured_headers = {}
+      captured_payload = nil
+
+      mock_driver = Object.new
+      callbacks = {}
+
+      mock_driver.define_singleton_method(:set_header) { |k, v| captured_headers[k] = v }
+      mock_driver.define_singleton_method(:on) { |event, &blk| callbacks[event] = blk }
+      mock_driver.define_singleton_method(:text) { |json| captured_payload = JSON.parse(json) }
+      mock_driver.define_singleton_method(:close) { callbacks[:close]&.call(nil) }
+      mock_driver.define_singleton_method(:start) { callbacks[:open]&.call(nil) }
+      mock_driver.define_singleton_method(:parse) do |_data|
+        frame = frames.shift
+        return unless frame
+        callbacks[:message]&.call(OpenStruct.new(data: frame))
+      end
+
+      WebSocket::Driver::Client.stubs(:new).returns(mock_driver)
+
+      read_count = 0
+      IO.stubs(:select).returns([ [ mock_socket ] ])
+      mock_socket.define_singleton_method(:readpartial) do |_|
+        read_count += 1
+        raise EOFError, "done" if read_count > frames.size + 5 # safety
+        "fake"
+      end
+
+      # Store captures for assertions
+      ws_client.define_singleton_method(:_ws_captured_headers) { captured_headers }
+      ws_client.define_singleton_method(:_ws_captured_payload) { captured_payload }
     end
 
     def mock_http_error_response(code, message)
