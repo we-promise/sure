@@ -23,26 +23,15 @@ class Import::UploadsController < ApplicationController
       @import.assign_attributes(raw_file_str: csv_str, col_sep: upload_params[:col_sep])
       @import.save!(validate: false)
 
-      redirect_to import_configuration_path(@import, template_hint: true), notice: "CSV uploaded successfully."
+      redirect_to import_configuration_path(@import, template_hint: true), notice: t("imports.create.csv_uploaded")
     else
-      update_csv_import
+      flash.now[:alert] = t("import.uploads.show.csv_invalid", default: "Must be valid CSV with headers and at least one row of data")
+
+      render :show, status: :unprocessable_entity
     end
   end
 
   private
-    def update_csv_import
-      if csv_valid?(csv_str)
-        @import.account = Current.family.accounts.find_by(id: params.dig(:import, :account_id))
-        @import.assign_attributes(raw_file_str: csv_str, col_sep: upload_params[:col_sep])
-        @import.save!(validate: false)
-
-        redirect_to import_configuration_path(@import, template_hint: true), notice: t("imports.create.csv_uploaded")
-      else
-        flash.now[:alert] = t("import.uploads.show.csv_invalid", default: "Must be valid CSV with headers and at least one row of data")
-
-        render :show, status: :unprocessable_entity
-      end
-    end
 
     def update_sure_import_upload
       uploaded = upload_params[:ndjson_file]
