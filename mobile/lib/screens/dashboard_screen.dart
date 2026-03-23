@@ -343,26 +343,29 @@ class DashboardScreenState extends State<DashboardScreen> {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: AppBar(
-        actions: [
-          if (_showSyncSuccess)
-            Padding(
-              padding: const EdgeInsets.only(right: 8),
-              child: AnimatedOpacity(
-                opacity: _showSyncSuccess ? 1.0 : 0.0,
-                duration: const Duration(milliseconds: 300),
-                child: const Icon(
-                  Icons.cloud_done,
-                  color: Colors.green,
-                  size: 28,
-                ),
-              ),
-            ),
-        ],
-      ),
       body: Column(
         children: [
           const ConnectivityBanner(),
+          if (_showSyncSuccess)
+            AnimatedOpacity(
+              opacity: _showSyncSuccess ? 1.0 : 0.0,
+              duration: const Duration(milliseconds: 300),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                color: Colors.green.withValues(alpha: 0.1),
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.cloud_done, color: Colors.green, size: 18),
+                    SizedBox(width: 8),
+                    Text(
+                      'Synced',
+                      style: TextStyle(color: Colors.green, fontSize: 13),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           Expanded(
             child: Consumer2<AuthProvider, AccountsProvider>(
               builder: (context, authProvider, accountsProvider, _) {
