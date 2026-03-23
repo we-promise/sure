@@ -103,4 +103,66 @@ class SnaptradeItemsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to settings_providers_path
     assert_match(/not found/i, flash[:alert])
   end
+
+  # --- setup_accounts throttle-sync fix ---
+  #
+  # The fix on setup_accounts ensures sync_later is only called when there are no
+  # accounts AND the item has never been synced (last_synced_at.blank?).  This
+  # prevents the infinite-spinner loop where every page load re-triggered a sync
+  # even after SnapTrade already confirmed 0 linked accounts.
+  #
+  # Three view-state branches we need to cover:
+  #   A) No accounts + never synced  → trigger sync, render spinner
+  #   B) No accounts + synced once, now idle → skip sync, show "no accounts found"
+  #   C) No accounts + synced once, still syncing → show spinner, do NOT re-queue
+
+  test "setup_accounts triggers sync and shows spinner when item has no accounts and has never been synced" do
+    # Pre-condition: no snaptrade_accounts and no completed syncs (last_synced_at is nil)
+    @snaptrade_item.snaptrade_accounts.destroy_all
+    @snaptrade_item.syncs.destroy_all
+
+    assert_difference "Sync.count", 1 do
+      get setup_accounts_snaptrade_item_url(@snaptrade_item)
+    end
+
+    assert_response :success
+    assert assigns(:waiting_for_sync), "Expected @waiting_for_sync to be true on first visit with no accounts"
+    assert_not assigns(:no_accounts_found), "Expected @no_accounts_found to be false while syncing"
+  end
+
+  test "setup_accounts shows no-accounts-found state after a completed sync returns zero accounts" do
+    # Pre-condition: no snaptrade_accounts, but there IS a past completed sync
+    @snaptrade_item.snaptrade_accounts.destroy_all
+    @snaptrade_item.syncs.destroy_all
+    @snaptrade_item.syncs.create!(status: :completed, completed_at: 1.minute.ago)
+
+    # Item is not currently syncing → @syncing is false
+    assert_not @snaptrade_item.reload.syncing?, "Item should not be syncing for this test"
+
+    assert_no_difference "Sync.count" do
+      get setup_accounts_snaptrade_item_url(@snaptrade_item)
+    end
+
+    assert_response :success
+    assert assigns(:no_accounts_found), "Expected @no_accounts_found to be true after a completed sync with zero accounts"
+    assert_not assigns(:waiting_for_sync), "Expected @waiting_for_sync to be false when there is no active sync"
+  end
+
+  test "setup_accounts does not re-queue a sync when a sync is already in progress" do
+    # Pre-condition: no accounts, one past completed sync, + one visible (in-flight) sync
+    @snaptrade_item.snaptrade_accounts.destroy_all
+    @snaptrade_item.syncs.destroy_all
+    @snaptrade_item.syncs.create!(status: :completed, completed_at: 5.minutes.ago)
+    @snaptrade_item.syncs.create!(status: :pending, created_at: 1.minute.ago)   # visible/in-flight
+
+    assert @snaptrade_item.reload.syncing?, "Item should be syncing for this test"
+
+    assert_no_difference "Sync.count" do
+      get setup_accounts_snaptrade_item_url(@snaptrade_item)
+    end
+
+    assert_response :success
+    assert assigns(:waiting_for_sync), "Expected @waiting_for_sync to be true while sync is in progress"
+    assert_not assigns(:no_accounts_found), "Expected @no_accounts_found to be false while a sync is active"
+  end
 end

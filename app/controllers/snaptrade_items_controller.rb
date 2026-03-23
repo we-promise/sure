@@ -149,8 +149,8 @@ class SnaptradeItemsController < ApplicationController
 
     no_accounts = @unlinked_accounts.blank? && @linked_accounts.blank?
 
-    # If no accounts and not syncing, trigger a sync
-    if no_accounts && !@snaptrade_item.syncing?
+    # If no accounts, not syncing, and never synced before, trigger an initial sync
+    if no_accounts && !@snaptrade_item.syncing? && @snaptrade_item.last_synced_at.blank?
       @snaptrade_item.sync_later
     end
 
