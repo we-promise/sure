@@ -90,3 +90,8 @@ zh-CN:
     ready:
       description: 以下是发布导入后将添加到您账户的新项目摘要。
       title: 确认导入数据
+      summary_item_label: 项目
+      summary_count_label: 数量
+      empty_summary: 在此文件中未找到可导入的记录。文件可能为空，或各行不符合预期的导出格式（每行应为包含「type」和「data」键的 JSON 对象，且类型须为本导入支持的类型）。
+      publish_import: 发布导入
+      back_to_imports: 返回导入列表

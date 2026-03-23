@@ -110,3 +110,8 @@ ca:
       description: Aquí tens un resum dels nous elements que s'afegiran al teu compte
         un cop publiquis aquesta importació.
       title: Confirma les teves dades d'importació
+      summary_item_label: Element
+      summary_count_label: Quantitat
+      empty_summary: No s'han trobat registres importables en aquest fitxer. Pot estar buit, o les línies no coincideixen amb el format d'exportació esperat (cada línia ha de ser un objecte JSON amb les claus «type» i «data», amb tipus admesos per aquesta importació).
+      publish_import: Publicar la importació
+      back_to_imports: Tornar a les importacions

@@ -45,3 +45,8 @@ pdf_with_rows:
         category: "Income"
         notes: ""
   rows_count: 2
+
+sure:
+  family: dylan_family
+  type: SureImport
+  status: pending

@@ -152,6 +152,11 @@ es:
     ready:
       description: Aquí tienes un resumen de los nuevos elementos que se añadirán a tu cuenta una vez publiques esta importación.
       title: Confirma tus datos de importación
+      summary_item_label: Elemento
+      summary_count_label: Cantidad
+      empty_summary: No se han encontrado registros importables en este archivo. Puede estar vacío, o las líneas no coinciden con el formato de exportación esperado (cada línea debe ser un objeto JSON con las claves «type» y «data», usando tipos que admite esta importación).
+      publish_import: Publicar importación
+      back_to_imports: Volver a importaciones
     errors:
       custom_column_requires_inflow: "Las importaciones de columnas personalizadas requieren que se seleccione una columna de entrada de fondos (inflow)"
     document_types:

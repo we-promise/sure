@@ -1,7 +1,7 @@
 one:
   type: FamilyMerchant
   name: Test
-  family: empty
+  family: dylan_family
 
 netflix:
   type: FamilyMerchant

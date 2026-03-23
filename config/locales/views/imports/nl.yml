@@ -93,3 +93,8 @@ nl:
     ready:
       description: Hier is een samenvatting van de nieuwe items die aan uw account worden toegevoegd zodra u deze import publiceert.
       title: Uw importgegevens bevestigen
+      summary_item_label: Item
+      summary_count_label: Aantal
+      empty_summary: Er zijn geen importeerbare records in dit bestand gevonden. Het bestand is mogelijk leeg, of de regels voldoen niet aan het verwachte exportformaat (elke regel moet een JSON-object zijn met de sleutels „type“ en „data“, met typen die deze import ondersteunt).
+      publish_import: Import publiceren
+      back_to_imports: Terug naar importen
