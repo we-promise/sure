@@ -2,6 +2,9 @@
 en:
   transactions:
     unknown_name: Unknown transaction
+    selection_bar:
+      duplicate: Duplicate
+      edit: Edit
     form:
       account: Account
       account_prompt: Select an Account
@@ -13,6 +16,7 @@ en:
       description_placeholder: Describe transaction
       expense: Expense
       income: Income
+      merchant_label: Merchant
       none: (none)
       note_label: Notes
       note_placeholder: Enter a note
@@ -77,6 +81,8 @@ en:
     potential_duplicate_description: This pending transaction may be the same as the posted transaction below. If so, merge them to avoid double-counting.
     merge_duplicate: Yes, merge them
     keep_both: No, keep both
+    split_parent_row:
+      split_label: "Split"
     transaction:
       pending: Pending
       pending_tooltip: Pending transaction — may change when posted
@@ -86,6 +92,9 @@ en:
       potential_duplicate_tooltip: This may be a duplicate of another transaction
       review_recommended: Review
       review_recommended_tooltip: Large amount difference — review recommended to check if this is a duplicate
+      split: Split
+      split_tooltip: This transaction has been split into multiple entries
+      split_child_tooltip: Part of a split transaction
     merge_duplicate:
       success: Transactions merged successfully
       failure: Could not merge transactions

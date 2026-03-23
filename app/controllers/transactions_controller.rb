@@ -5,7 +5,11 @@ class TransactionsController < ApplicationController
   before_action :store_params!, only: :index
 
   def new
+    prefill_params_from_duplicate!
     super
+    apply_duplicate_attributes!
+    @income_categories = Current.family.categories.incomes.alphabetically
+    @expense_categories = Current.family.categories.expenses.alphabetically
     @categories = Current.family.categories.alphabetically
   end
 
@@ -22,6 +26,30 @@ class TransactionsController < ApplicationController
                        )
 
     @pagy, @transactions = pagy(base_scope, limit: safe_per_page)
+
+    # Preload split parent data
+    entry_ids = @transactions.map { |t| t.entry.id }
+
+    # Load split parent entries for grouped display (only when grouping is enabled)
+    @split_parents = if Current.user.show_split_grouped?
+      split_parent_ids = @transactions.filter_map { |t| t.entry.parent_entry_id }.uniq
+      if split_parent_ids.any?
+        Entry.where(id: split_parent_ids)
+             .includes(:account, entryable: [ :category, :merchant ])
+             .index_by(&:id)
+      else
+        {}
+      end
+    else
+      {}
+    end
+
+    # Preload which entries on this page are split parents (have children) to avoid N+1
+    @split_parent_entry_ids = if entry_ids.any?
+      Entry.where(parent_entry_id: entry_ids).distinct.pluck(:parent_entry_id).to_set
+    else
+      Set.new
+    end
 
     # Load projected recurring transactions for next 10 days
     @projected_recurring = Current.family.recurring_transactions
@@ -306,6 +334,35 @@ class TransactionsController < ApplicationController
   end
 
   private
+    def duplicate_source
+      return @duplicate_source if defined?(@duplicate_source)
+      @duplicate_source = if params[:duplicate_entry_id].present?
+        source = Current.family.entries.find_by(id: params[:duplicate_entry_id])
+        source if source&.transaction?
+      end
+    end
+
+    def prefill_params_from_duplicate!
+      return unless duplicate_source
+      params[:nature] ||= duplicate_source.amount.negative? ? "inflow" : "outflow"
+      params[:account_id] ||= duplicate_source.account_id.to_s
+    end
+
+    def apply_duplicate_attributes!
+      return unless duplicate_source
+      @entry.assign_attributes(
+        name: duplicate_source.name,
+        amount: duplicate_source.amount.abs,
+        currency: duplicate_source.currency,
+        notes: duplicate_source.notes
+      )
+      @entry.entryable.assign_attributes(
+        category_id: duplicate_source.entryable.category_id,
+        merchant_id: duplicate_source.entryable.merchant_id
+      )
+      @entry.entryable.tag_ids = duplicate_source.entryable.tag_ids
+    end
+
     def set_entry_for_unlock
       transaction = Current.family.transactions.find(params[:id])
       @entry = transaction.entry

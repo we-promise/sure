@@ -24,6 +24,7 @@ class User < ApplicationRecord
 
   belongs_to :family
   belongs_to :last_viewed_chat, class_name: "Chat", optional: true
+  belongs_to :default_account, class_name: "Account", optional: true
   has_many :sessions, dependent: :destroy
   has_many :chats, dependent: :destroy
   has_many :api_keys, dependent: :destroy
@@ -244,6 +245,15 @@ class User < ApplicationRecord
     AccountOrder.find(default_account_order) || AccountOrder.default
   end
 
+  def default_account_for_transactions
+    return nil unless default_account_id.present?
+
+    account = default_account
+    return nil unless account&.eligible_for_transaction_default? && account.family_id == family_id
+
+    account
+  end
+
   # Dashboard preferences management
   def dashboard_section_collapsed?(section_key)
     preferences&.dig("collapsed_sections", section_key) == true
@@ -304,6 +314,10 @@ class User < ApplicationRecord
   # Transactions preferences management
   def transactions_section_collapsed?(section_key)
     preferences&.dig("transactions_collapsed_sections", section_key) == true
+  end
+
+  def show_split_grouped?
+    preferences&.dig("show_split_grouped") != false
   end
 
   def update_transactions_preferences(prefs)

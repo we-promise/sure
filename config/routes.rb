@@ -167,6 +167,7 @@ Rails.application.routes.draw do
   namespace :settings do
     resource :profile, only: [ :show, :destroy ]
     resource :preferences, only: :show
+    resource :appearance, only: %i[show update]
     resource :hosting, only: %i[show update] do
       delete :clear_cache, on: :collection
       delete :disconnect_external_assistant, on: :collection
@@ -269,6 +270,7 @@ Rails.application.routes.draw do
   end
 
   resources :transactions, only: %i[index new create show update destroy] do
+    resource :split, only: %i[new create edit update destroy]
     resource :transfer_match, only: %i[new create]
     resource :pending_duplicate_merges, only: %i[new create]
     resource :category, only: :update, controller: :transaction_categories
@@ -330,6 +332,8 @@ Rails.application.routes.draw do
       post :sync
       get :sparkline
       patch :toggle_active
+      patch :set_default
+      patch :remove_default
       get :select_provider
       get :confirm_unlink
       delete :unlink
@@ -396,6 +400,7 @@ Rails.application.routes.draw do
       resources :valuations, only: [ :create, :update, :show ]
       resources :imports, only: [ :index, :show, :create ]
       resource :usage, only: [ :show ], controller: :usage
+      resource :balance_sheet, only: [ :show ], controller: :balance_sheet
       post :sync, to: "sync#create"
 
       resources :chats, only: [ :index, :show, :create, :update, :destroy ] do

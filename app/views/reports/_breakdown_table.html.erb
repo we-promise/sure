@@ -11,34 +11,34 @@
   <div class="text-large mb-4 flex items-center gap-2 text-lg">
     <%= icon(icon_name, class: "w-5 h-5") %>
     <span><%= t(title_key) %>:</span>
-    <span class="font-medium text-secondary <%= color_class %>"> <%= Money.new(total, Current.family.currency).format %></span>
+    <span class="font-medium text-secondary <%= color_class %> privacy-sensitive"> <%= Money.new(total, Current.family.currency).format %></span>
   </div>
 
   <div class="bg-container-inset rounded-xl p-1 overflow-x-auto">
-    <div class="w-max sm:w-full">
-      <div class="grid grid-cols-4 items-center uppercase text-xs font-medium text-secondary px-4 py-2">
-        <div class="col-span-2 font-medium text-secondary"><%= t("reports.transactions_breakdown.table.category") %></div>
-        <div class="col-span-1 text-right font-medium text-secondary">
-          <%= link_to reports_path(amount_sort_params), class: "inline-flex items-center gap-1 hover:text-primary" do %>
-            <%= t("reports.transactions_breakdown.table.amount") %>
-            <% if current_sort_by == "amount" %>
-              <%= icon(current_sort_direction == "desc" ? "chevron-down" : "chevron-up", class: "w-3 h-3") %>
+    <div class="rounded-lg shadow-border-xs bg-container overflow-hidden">
+    <table class="w-full">
+      <thead class="bg-container-inset">
+        <tr class="uppercase text-xs font-medium text-secondary">
+          <th class="px-4 py-2 text-left font-medium" colspan="2"><%= t("reports.transactions_breakdown.table.category") %></th>
+          <th class="px-4 py-2 text-right font-medium">
+            <%= link_to reports_path(amount_sort_params), class: "inline-flex items-center gap-1 hover:text-primary" do %>
+              <%= t("reports.transactions_breakdown.table.amount") %>
+              <% if current_sort_by == "amount" %>
+                <%= icon(current_sort_direction == "desc" ? "chevron-down" : "chevron-up", class: "w-3 h-3") %>
+              <% end %>
             <% end %>
-          <% end %>
-        </div>
-        <div class="col-span-1 text-right font-medium text-secondary"><%= t("reports.transactions_breakdown.table.percentage") %></div>
-      </div>
-
-      <div class="bg-container rounded-lg shadow-border-xs">
+          </th>
+          <th class="px-4 py-2 text-right font-medium"><%= t("reports.transactions_breakdown.table.percentage") %></th>
+        </tr>
+      </thead>
+      <tbody>
         <% groups.each_with_index do |group, idx| %>
           <%= render "reports/category_row",
             item: group,
             total: total,
             color_class: color_class,
-            level: :category %>
-          <% if idx < groups.size - 1 %>
-            <%= render "shared/ruler", classes: "mx-3 lg:mx-4" %>
-          <% end %>
+            level: :category,
+            show_border: idx < groups.size - 1 || group[:subcategories].present? %>
           <%# Render subcategories if present %>
           <% if group[:subcategories].present? && group[:subcategories].any? %>
             <% group[:subcategories].each_with_index do |subcategory, sub_idx| %>
@@ -46,14 +46,13 @@
                 item: subcategory,
                 total: total,
                 color_class: color_class,
-                level: :subcategory %>
-              <% if sub_idx < group[:subcategories].size - 1 %>
-                <%= render "shared/ruler", classes: "mx-3 lg:mx-4" %>
-              <% end %>
+                level: :subcategory,
+                show_border: sub_idx < group[:subcategories].size - 1 %>
             <% end %>
           <% end %>
         <% end %>
-      </div>
+      </tbody>
+    </table>
     </div>
   </div>
 </div>
