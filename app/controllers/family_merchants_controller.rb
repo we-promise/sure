@@ -17,6 +17,9 @@ class FamilyMerchantsController < ApplicationController
     assigned_ids = @provider_merchants.pluck(:id)
     @unlinked_merchants = ProviderMerchant.where(id: recently_unlinked_ids - assigned_ids).alphabetically
 
+    @enhanceable_count = @provider_merchants.where(website_url: [ nil, "" ]).count
+    @llm_available = Provider::Registry.get_provider(:openai).present?
+
     render layout: "settings"
   end
 
@@ -70,6 +73,11 @@ class FamilyMerchantsController < ApplicationController
       @merchant.destroy!
       redirect_to family_merchants_path, notice: t(".success")
     end
+  end
+
+  def enhance
+    EnhanceProviderMerchantsJob.perform_later(Current.family)
+    redirect_to family_merchants_path, notice: t(".success")
   end
 
   def merge
