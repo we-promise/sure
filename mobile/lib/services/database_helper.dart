@@ -153,8 +153,14 @@ class DatabaseHelper {
 
   Future<void> _upgradeDB(Database db, int oldVersion, int newVersion) async {
     if (oldVersion < 2) {
-      await db.execute('ALTER TABLE transactions ADD COLUMN category_id TEXT');
-      await db.execute('ALTER TABLE transactions ADD COLUMN category_name TEXT');
+      final columns = await db.rawQuery('PRAGMA table_info(transactions)');
+      final columnNames = columns.map((c) => c['name'] as String).toSet();
+      if (!columnNames.contains('category_id')) {
+        await db.execute('ALTER TABLE transactions ADD COLUMN category_id TEXT');
+      }
+      if (!columnNames.contains('category_name')) {
+        await db.execute('ALTER TABLE transactions ADD COLUMN category_name TEXT');
+      }
     }
   }
 
