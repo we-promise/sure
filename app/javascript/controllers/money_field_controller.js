@@ -1,4 +1,5 @@
 import { Controller } from "@hotwired/stimulus";
+import parseLocaleFloat from "utils/parse_locale_float";
 import { CurrenciesService } from "services/currencies_service";
 
 // Connects to data-controller="money-field"
@@ -15,10 +16,12 @@ export default class extends Controller {
     new CurrenciesService().get(currency).then((currency) => {
       this.amountTarget.step = currency.step;
 
-      if (Number.isFinite(this.amountTarget.value)) {
-        this.amountTarget.value = Number.parseFloat(
-          this.amountTarget.value,
-        ).toFixed(currency.default_precision);
+      const rawValue = this.amountTarget.value.trim();
+      if (rawValue !== "") {
+        const parsedAmount = parseLocaleFloat(rawValue);
+        if (Number.isFinite(parsedAmount)) {
+          this.amountTarget.value = parsedAmount.toFixed(currency.default_precision);
+        }
       }
 
       this.symbolTarget.innerText = currency.symbol;
