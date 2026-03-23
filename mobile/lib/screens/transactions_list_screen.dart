@@ -536,11 +536,38 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(
-                                    transaction.name,
-                                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                          fontWeight: FontWeight.w600,
+                                  Row(
+                                    children: [
+                                      Flexible(
+                                        child: Text(
+                                          transaction.name,
+                                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                          overflow: TextOverflow.ellipsis,
                                         ),
+                                      ),
+                                      if (transaction.categoryName != null) ...[
+                                        const SizedBox(width: 8),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: colorScheme.primaryContainer.withValues(alpha: 0.5),
+                                            borderRadius: BorderRadius.circular(12),
+                                            border: Border.all(
+                                              color: colorScheme.primary.withValues(alpha: 0.3),
+                                            ),
+                                          ),
+                                          child: Text(
+                                            transaction.categoryName!,
+                                            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                                  color: colorScheme.onPrimaryContainer,
+                                                  fontWeight: FontWeight.w500,
+                                                ),
+                                          ),
+                                        ),
+                                      ],
+                                    ],
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
