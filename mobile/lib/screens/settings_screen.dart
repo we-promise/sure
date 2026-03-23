@@ -19,7 +19,6 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   bool _groupByType = false;
-  bool _showCategoryFilter = false;
   String? _appVersion;
   bool _isResettingAccount = false;
   bool _isDeletingAccount = false;
@@ -44,11 +43,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _loadPreferences() async {
     final groupByType = await PreferencesService.instance.getGroupByType();
-    final showCategoryFilter = await PreferencesService.instance.getShowCategoryFilter();
     if (mounted) {
       setState(() {
         _groupByType = groupByType;
-        _showCategoryFilter = showCategoryFilter;
       });
     }
   }
@@ -405,19 +402,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
               await PreferencesService.instance.setGroupByType(value);
               setState(() {
                 _groupByType = value;
-              });
-            },
-          ),
-
-          SwitchListTile(
-            secondary: const Icon(Icons.category),
-            title: const Text('Show Category Filter'),
-            subtitle: const Text('Display category filter on the Home page'),
-            value: _showCategoryFilter,
-            onChanged: (value) async {
-              await PreferencesService.instance.setShowCategoryFilter(value);
-              setState(() {
-                _showCategoryFilter = value;
               });
             },
           ),
