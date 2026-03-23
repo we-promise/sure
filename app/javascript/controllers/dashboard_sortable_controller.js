@@ -283,56 +283,31 @@ export default class extends Controller {
   }
 
   getDragAfterElement(pointerX, pointerY) {
-    const siblings = this.sectionTargets.filter(
+    const draggableElements = this.sectionTargets.filter(
       (section) => section !== this.draggedElement,
     );
 
-    if (siblings.length === 0) return null;
+    if (draggableElements.length === 0) return null;
 
-    // On 2xl grid (2 columns), filter to sections in the same column as pointer
-    const column = this.getSameColumnSiblings(siblings, pointerX);
+    let closest = null;
+    let minDistance = Number.POSITIVE_INFINITY;
 
-    // Walk top-to-bottom through gaps between sections.
-    // Return value is passed to insertBefore(), so we return the element
-    // the dragged section should be placed IN FRONT OF, or null for end.
-    for (let i = 0; i < column.length; i++) {
-      const rect = column[i].getBoundingClientRect();
+    draggableElements.forEach((child) => {
+      const rect = child.getBoundingClientRect();
+      const centerX = rect.left + rect.width / 2;
+      const centerY = rect.top + rect.height / 2;
 
-      // Pointer is above the first section — insert before it
-      if (i === 0 && pointerY < rect.top) {
-        return column[0];
+      const dx = pointerX - centerX;
+      const dy = pointerY - centerY;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+
+      if (distance < minDistance) {
+        minDistance = distance;
+        closest = child;
       }
-
-      // Crossing line = midpoint of gap between this section and the next
-      if (i < column.length - 1) {
-        const nextRect = column[i + 1].getBoundingClientRect();
-        const crossingLine = (rect.bottom + nextRect.top) / 2;
-
-        // Pointer is above the crossing line — it belongs before the next section
-        if (pointerY < crossingLine) return column[i + 1];
-      }
-    }
-
-    // Pointer is below all crossing lines — append to end
-    return null;
-  }
-
-  getSameColumnSiblings(siblings, pointerX) {
-    if (siblings.length <= 1) return siblings;
-
-    // Check if we're in a multi-column layout by comparing left positions
-    const firstRect = siblings[0].getBoundingClientRect();
-    const hasMultipleColumns = siblings.some(
-      (s) => Math.abs(s.getBoundingClientRect().left - firstRect.left) > 50,
-    );
-
-    if (!hasMultipleColumns) return siblings;
-
-    // Filter to siblings in the same column as the pointer
-    return siblings.filter((s) => {
-      const rect = s.getBoundingClientRect();
-      return pointerX >= rect.left && pointerX <= rect.right;
     });
+
+    return closest;
   }
 
   showPlaceholder(element, position) {
