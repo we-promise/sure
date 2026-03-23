@@ -126,8 +126,8 @@ class SnaptradeItemsControllerTest < ActionDispatch::IntegrationTest
     end
 
     assert_response :success
-    assert assigns(:waiting_for_sync), "Expected @waiting_for_sync to be true on first visit with no accounts"
-    assert_not assigns(:no_accounts_found), "Expected @no_accounts_found to be false while syncing"
+    assert_select "#snaptrade-sync-spinner", count: 1, message: "Expected the spinner to be shown on first visit with no accounts"
+    assert_select ".no-accounts-found", count: 0, message: "Expected the no-accounts UI to be hidden while syncing"
   end
 
   test "setup_accounts shows no-accounts-found state after a completed sync returns zero accounts" do
@@ -144,8 +144,8 @@ class SnaptradeItemsControllerTest < ActionDispatch::IntegrationTest
     end
 
     assert_response :success
-    assert assigns(:no_accounts_found), "Expected @no_accounts_found to be true after a completed sync with zero accounts"
-    assert_not assigns(:waiting_for_sync), "Expected @waiting_for_sync to be false when there is no active sync"
+    assert_select ".no-accounts-found", count: 1, message: "Expected the no-accounts UI to be shown after a completed sync with zero accounts"
+    assert_select "#snaptrade-sync-spinner", count: 0, message: "Expected the spinner to be hidden when there is no active sync"
   end
 
   test "setup_accounts does not re-queue a sync when a sync is already in progress" do
@@ -162,7 +162,7 @@ class SnaptradeItemsControllerTest < ActionDispatch::IntegrationTest
     end
 
     assert_response :success
-    assert assigns(:waiting_for_sync), "Expected @waiting_for_sync to be true while sync is in progress"
-    assert_not assigns(:no_accounts_found), "Expected @no_accounts_found to be false while a sync is active"
+    assert_select "#snaptrade-sync-spinner", count: 1, message: "Expected the spinner to be shown while sync is in progress"
+    assert_select ".no-accounts-found", count: 0, message: "Expected the no-accounts UI to be hidden while a sync is active"
   end
 end
