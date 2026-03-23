@@ -3,10 +3,12 @@ import 'package:provider/provider.dart';
 import '../models/account.dart';
 import '../providers/auth_provider.dart';
 import '../providers/accounts_provider.dart';
+import '../providers/categories_provider.dart';
 import '../providers/transactions_provider.dart';
 import '../services/log_service.dart';
 import '../services/preferences_service.dart';
 import '../widgets/account_card.dart';
+import '../widgets/category_filter.dart';
 import '../widgets/connectivity_banner.dart';
 import '../widgets/net_worth_card.dart';
 import '../widgets/currency_filter.dart';
@@ -29,9 +31,11 @@ class DashboardScreenState extends State<DashboardScreen> {
   // Filter state
   AccountFilter _accountFilter = AccountFilter.all;
   Set<String> _selectedCurrencies = {};
+  Set<String> _selectedCategoryIds = {};
 
   // Group by type state
   bool _groupByType = false;
+  bool _showCategoryFilter = false;
   final Set<String> _collapsedGroups = {};
 
   @override
@@ -103,15 +107,31 @@ class DashboardScreenState extends State<DashboardScreen> {
 
   Future<void> _loadPreferences() async {
     final groupByType = await PreferencesService.instance.getGroupByType();
+    final showCategoryFilter = await PreferencesService.instance.getShowCategoryFilter();
     if (mounted) {
       setState(() {
         _groupByType = groupByType;
+        _showCategoryFilter = showCategoryFilter;
       });
+    }
+    if (showCategoryFilter) {
+      _loadCategories();
+    }
+  }
+
+  Future<void> _loadCategories() async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final categoriesProvider = Provider.of<CategoriesProvider>(context, listen: false);
+    final accessToken = await authProvider.getValidAccessToken();
+    if (accessToken != null && !categoriesProvider.hasFetched) {
+      categoriesProvider.fetchCategories(accessToken: accessToken);
     }
   }
 
   void reloadPreferences() {
     _loadPreferences();
+    // Clear category selection when preferences reload
+    _selectedCategoryIds = {};
   }
 
   Future<void> _handleRefresh() async {
@@ -480,6 +500,30 @@ class DashboardScreenState extends State<DashboardScreen> {
                     },
                   ),
                 ),
+
+                // Category filter (second row, when enabled)
+                if (_showCategoryFilter)
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Consumer<CategoriesProvider>(
+                        builder: (context, categoriesProvider, _) {
+                          if (categoriesProvider.isLoading) {
+                            return const SizedBox.shrink();
+                          }
+                          return CategoryFilter(
+                            availableCategories: categoriesProvider.categories,
+                            selectedCategoryIds: _selectedCategoryIds,
+                            onSelectionChanged: (categoryIds) {
+                              setState(() {
+                                _selectedCategoryIds = categoryIds;
+                              });
+                            },
+                          );
+                        },
+                      ),
+                    ),
+                  ),
 
                 // Spacing
                 const SliverToBoxAdapter(

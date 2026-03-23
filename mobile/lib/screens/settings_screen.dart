@@ -3,6 +3,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../providers/auth_provider.dart';
+import '../providers/categories_provider.dart';
 import '../services/offline_storage_service.dart';
 import '../services/log_service.dart';
 import '../services/preferences_service.dart';
@@ -18,6 +19,7 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   bool _groupByType = false;
+  bool _showCategoryFilter = false;
   String? _appVersion;
   bool _isResettingAccount = false;
   bool _isDeletingAccount = false;
@@ -41,10 +43,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _loadPreferences() async {
-    final value = await PreferencesService.instance.getGroupByType();
+    final groupByType = await PreferencesService.instance.getGroupByType();
+    final showCategoryFilter = await PreferencesService.instance.getShowCategoryFilter();
     if (mounted) {
       setState(() {
-        _groupByType = value;
+        _groupByType = groupByType;
+        _showCategoryFilter = showCategoryFilter;
       });
     }
   }
@@ -82,6 +86,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
         log.info('Settings', 'Clearing all local data...');
         await offlineStorage.clearAllData();
+        if (context.mounted) {
+          Provider.of<CategoriesProvider>(context, listen: false).clear();
+        }
         log.info('Settings', 'Local data cleared successfully');
 
         if (context.mounted) {
@@ -163,6 +170,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
       if (result['success'] == true) {
         await OfflineStorageService().clearAllData();
+        if (context.mounted) {
+          Provider.of<CategoriesProvider>(context, listen: false).clear();
+        }
 
         if (!context.mounted) return;
 
@@ -395,6 +405,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
               await PreferencesService.instance.setGroupByType(value);
               setState(() {
                 _groupByType = value;
+              });
+            },
+          ),
+
+          SwitchListTile(
+            secondary: const Icon(Icons.category),
+            title: const Text('Show Category Filter'),
+            subtitle: const Text('Display category filter on the Home page'),
+            value: _showCategoryFilter,
+            onChanged: (value) async {
+              await PreferencesService.instance.setShowCategoryFilter(value);
+              setState(() {
+                _showCategoryFilter = value;
               });
             },
           ),
