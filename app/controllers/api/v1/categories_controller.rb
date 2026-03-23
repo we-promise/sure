@@ -3,8 +3,9 @@
 class Api::V1::CategoriesController < Api::V1::BaseController
   include Pagy::Backend
 
-  before_action :ensure_read_scope
-  before_action :set_category, only: :show
+  before_action :ensure_read_scope, only: %i[index show]
+  before_action -> { authorize_scope!(:read_write) }, only: %i[create update destroy]
+  before_action :set_category, only: %i[show update destroy]
 
   def index
     family = current_resource_owner.family
@@ -25,24 +26,89 @@ class Api::V1::CategoriesController < Api::V1::BaseController
     render :index
   rescue => e
     Rails.logger.error "CategoriesController#index error: #{e.message}"
-    Rails.logger.error e.backtrace.join("\n")
-
-    render json: {
-      error: "internal_server_error",
-      message: "Error: #{e.message}"
-    }, status: :internal_server_error
+    render json: { error: "internal_server_error", message: "Error: #{e.message}" }, status: :internal_server_error
   end
 
   def show
     render :show
   rescue => e
     Rails.logger.error "CategoriesController#show error: #{e.message}"
-    Rails.logger.error e.backtrace.join("\n")
+    render json: { error: "internal_server_error", message: "Error: #{e.message}" }, status: :internal_server_error
+  end
 
-    render json: {
-      error: "internal_server_error",
-      message: "Error: #{e.message}"
-    }, status: :internal_server_error
+  def create
+    family = current_resource_owner.family
+
+    @category = family.categories.new(category_params)
+
+    # Auto-assign color if not provided
+    @category.color ||= Category::COLORS.sample
+
+    # Auto-assign icon if not provided
+    @category.lucide_icon ||= Category.suggested_icon(@category.name)
+
+    # Validate parent belongs to same family
+    if @category.parent_id.present?
+      unless family.categories.exists?(id: @category.parent_id)
+        render json: {
+          error: "validation_failed",
+          message: "Parent category not found in this family",
+          errors: [ "Parent category not found in this family" ]
+        }, status: :unprocessable_entity
+        return
+      end
+    end
+
+    if @category.save
+      @category = family.categories.includes(:parent, :subcategories).find(@category.id)
+      render :show, status: :created
+    else
+      render json: {
+        error: "validation_failed",
+        message: @category.errors.full_messages.join(", "),
+        errors: @category.errors.full_messages
+      }, status: :unprocessable_entity
+    end
+  rescue => e
+    Rails.logger.error "CategoriesController#create error: #{e.message}"
+    render json: { error: "internal_server_error", message: "Error: #{e.message}" }, status: :internal_server_error
+  end
+
+  def update
+    # Validate parent belongs to same family if parent_id is being changed
+    if params[:category]&.key?(:parent_id) && params[:category][:parent_id].present?
+      family = current_resource_owner.family
+      unless family.categories.exists?(id: params[:category][:parent_id])
+        render json: {
+          error: "validation_failed",
+          message: "Parent category not found in this family",
+          errors: [ "Parent category not found in this family" ]
+        }, status: :unprocessable_entity
+        return
+      end
+    end
+
+    if @category.update(category_params)
+      @category = current_resource_owner.family.categories.includes(:parent, :subcategories).find(@category.id)
+      render :show
+    else
+      render json: {
+        error: "validation_failed",
+        message: @category.errors.full_messages.join(", "),
+        errors: @category.errors.full_messages
+      }, status: :unprocessable_entity
+    end
+  rescue => e
+    Rails.logger.error "CategoriesController#update error: #{e.message}"
+    render json: { error: "internal_server_error", message: "Error: #{e.message}" }, status: :internal_server_error
+  end
+
+  def destroy
+    @category.destroy!
+    head :no_content
+  rescue => e
+    Rails.logger.error "CategoriesController#destroy error: #{e.message}"
+    render json: { error: "internal_server_error", message: "Error: #{e.message}" }, status: :internal_server_error
   end
 
   private
@@ -59,6 +125,10 @@ class Api::V1::CategoriesController < Api::V1::BaseController
 
     def ensure_read_scope
       authorize_scope!(:read)
+    end
+
+    def category_params
+      params.require(:category).permit(:name, :color, :lucide_icon, :parent_id)
     end
 
     def apply_filters(query)

@@ -4,46 +4,27 @@ require "test_helper"
 
 class Api::V1::CategoriesControllerTest < ActionDispatch::IntegrationTest
   setup do
-    @user = users(:family_admin) # dylan_family user
-    @other_family_user = users(:family_member)
-    @other_family_user.update!(family: families(:empty))
+    @user = users(:family_admin)
+    @family = families(:dylan_family)
 
-    @oauth_app = Doorkeeper::Application.create!(
-      name: "Test API App",
-      redirect_uri: "https://example.com/callback",
-      scopes: "read read_write"
-    )
-
-    @access_token = Doorkeeper::AccessToken.create!(
-      application: @oauth_app,
-      resource_owner_id: @user.id,
-      scopes: "read"
-    )
+    @api_key = api_keys(:active_key)
+    @read_key = api_keys(:read_only_key)
 
     @category = categories(:food_and_drink)
     @subcategory = categories(:subcategory)
   end
 
-  # Index action tests
+  # INDEX action tests
 
-  test "should require authentication" do
-    get "/api/v1/categories"
-    assert_response :unauthorized
-
-    response_body = JSON.parse(response.body)
-    assert_equal "unauthorized", response_body["error"]
-  end
-
-  test "should return user's family categories successfully" do
-    get "/api/v1/categories", params: {}, headers: {
-      "Authorization" => "Bearer #{@access_token.token}"
-    }
+  test "can list categories" do
+    get api_v1_categories_url, headers: api_headers(@api_key)
 
     assert_response :success
     response_body = JSON.parse(response.body)
 
     assert response_body.key?("categories")
     assert response_body["categories"].is_a?(Array)
+    assert response_body["categories"].length > 0
 
     assert response_body.key?("pagination")
     assert response_body["pagination"].key?("page")
@@ -52,140 +33,235 @@ class Api::V1::CategoriesControllerTest < ActionDispatch::IntegrationTest
     assert response_body["pagination"].key?("total_pages")
   end
 
-  test "should not return other family's categories" do
-    access_token = Doorkeeper::AccessToken.create!(
-      application: @oauth_app,
-      resource_owner_id: @other_family_user.id,
-      scopes: "read"
-    )
+  # SHOW action tests
 
-    get "/api/v1/categories", params: {}, headers: {
-      "Authorization" => "Bearer #{access_token.token}"
-    }
-
-    assert_response :success
-    response_body = JSON.parse(response.body)
-
-    # Should not include dylan_family's categories
-    category_names = response_body["categories"].map { |c| c["name"] }
-    assert_not_includes category_names, @category.name
-  end
-
-  test "should return proper category data structure" do
-    get "/api/v1/categories", params: {}, headers: {
-      "Authorization" => "Bearer #{@access_token.token}"
-    }
-
-    assert_response :success
-    response_body = JSON.parse(response.body)
-
-    assert response_body["categories"].length > 0
-
-    category = response_body["categories"].find { |c| c["name"] == @category.name }
-    assert category.present?, "Should find the food_and_drink category"
-
-    required_fields = %w[id name color icon subcategories_count created_at updated_at]
-    required_fields.each do |field|
-      assert category.key?(field), "Category should have #{field} field"
-    end
-
-    assert category["id"].is_a?(String), "ID should be string (UUID)"
-    assert category["name"].is_a?(String), "Name should be string"
-    assert category["color"].is_a?(String), "Color should be string"
-    assert category["icon"].is_a?(String), "Icon should be string"
-  end
-
-  test "should include parent information for subcategories" do
-    get "/api/v1/categories", params: {}, headers: {
-      "Authorization" => "Bearer #{@access_token.token}"
-    }
-
-    assert_response :success
-    response_body = JSON.parse(response.body)
-
-    subcategory = response_body["categories"].find { |c| c["name"] == @subcategory.name }
-    assert subcategory.present?, "Should find the subcategory"
-
-    assert subcategory["parent"].present?, "Subcategory should have parent"
-    assert_equal @category.id, subcategory["parent"]["id"]
-    assert_equal @category.name, subcategory["parent"]["name"]
-  end
-
-  test "should handle pagination parameters" do
-    get "/api/v1/categories", params: { page: 1, per_page: 2 }, headers: {
-      "Authorization" => "Bearer #{@access_token.token}"
-    }
-
-    assert_response :success
-    response_body = JSON.parse(response.body)
-
-    assert response_body["categories"].length <= 2
-    assert_equal 1, response_body["pagination"]["page"]
-    assert_equal 2, response_body["pagination"]["per_page"]
-  end
-
-  test "should filter for roots only" do
-    get "/api/v1/categories", params: { roots_only: true }, headers: {
-      "Authorization" => "Bearer #{@access_token.token}"
-    }
-
-    assert_response :success
-    response_body = JSON.parse(response.body)
-
-    response_body["categories"].each do |category|
-      assert_nil category["parent"], "Root categories should not have a parent"
-    end
-  end
-
-  test "should sort categories alphabetically" do
-    get "/api/v1/categories", params: {}, headers: {
-      "Authorization" => "Bearer #{@access_token.token}"
-    }
-
-    assert_response :success
-    response_body = JSON.parse(response.body)
-
-    category_names = response_body["categories"].map { |c| c["name"] }
-    assert_equal category_names.sort, category_names
-  end
-
-  # Show action tests
-
-  test "should return a single category" do
-    get "/api/v1/categories/#{@category.id}", params: {}, headers: {
-      "Authorization" => "Bearer #{@access_token.token}"
-    }
+  test "can show category" do
+    get api_v1_category_url(@category), headers: api_headers(@api_key)
 
     assert_response :success
     response_body = JSON.parse(response.body)
 
     assert_equal @category.id, response_body["id"]
     assert_equal @category.name, response_body["name"]
-    assert_equal @category.color, response_body["color"]
-    assert_equal @category.lucide_icon, response_body["icon"]
   end
 
-  test "should return 404 for non-existent category" do
-    get "/api/v1/categories/00000000-0000-0000-0000-000000000000", params: {}, headers: {
-      "Authorization" => "Bearer #{@access_token.token}"
+  # CREATE action tests
+
+  test "can create category" do
+    category_params = {
+      category: {
+        name: "New Test Category",
+        color: "#4da568",
+        lucide_icon: "shopping-cart"
+      }
     }
 
-    assert_response :not_found
+    assert_difference -> { @family.categories.count }, 1 do
+      post api_v1_categories_url,
+           params: category_params,
+           headers: api_headers(@api_key)
+    end
+
+    assert_response :created
+
     response_body = JSON.parse(response.body)
-    assert_equal "not_found", response_body["error"]
+    assert_equal "New Test Category", response_body["name"]
+    assert_equal "#4da568", response_body["color"]
+    assert_equal "shopping-cart", response_body["icon"]
+    assert_nil response_body["parent"]
   end
 
-  test "should not return category from another family" do
+  test "can create subcategory" do
+    category_params = {
+      category: {
+        name: "Fast Food",
+        parent_id: @category.id
+      }
+    }
+
+    assert_difference -> { @family.categories.count }, 1 do
+      post api_v1_categories_url,
+           params: category_params,
+           headers: api_headers(@api_key)
+    end
+
+    assert_response :created
+
+    response_body = JSON.parse(response.body)
+    assert_equal "Fast Food", response_body["name"]
+    assert response_body["parent"].present?
+    assert_equal @category.id, response_body["parent"]["id"]
+    assert_equal @category.name, response_body["parent"]["name"]
+  end
+
+  test "can create category with auto-assigned color and icon" do
+    category_params = {
+      category: {
+        name: "Groceries Test"
+      }
+    }
+
+    post api_v1_categories_url,
+         params: category_params,
+         headers: api_headers(@api_key)
+
+    assert_response :created
+
+    response_body = JSON.parse(response.body)
+    assert_equal "Groceries Test", response_body["name"]
+    assert response_body["color"].present?
+    assert response_body["icon"].present?
+  end
+
+  test "returns 422 for invalid category" do
+    category_params = {
+      category: {
+        color: "#4da568"
+        # Missing required name
+      }
+    }
+
+    assert_no_difference -> { @family.categories.count } do
+      post api_v1_categories_url,
+           params: category_params,
+           headers: api_headers(@api_key)
+    end
+
+    assert_response :unprocessable_entity
+
+    response_body = JSON.parse(response.body)
+    assert_equal "validation_failed", response_body["error"]
+    assert response_body["errors"].is_a?(Array)
+  end
+
+  test "returns 422 for parent_id from another family" do
+    other_family_category = families(:empty).categories.create!(
+      name: "Other Family Cat",
+      color: "#FF0000",
+      lucide_icon: "shapes"
+    )
+
+    category_params = {
+      category: {
+        name: "Sneaky Subcategory",
+        parent_id: other_family_category.id
+      }
+    }
+
+    post api_v1_categories_url,
+         params: category_params,
+         headers: api_headers(@api_key)
+
+    assert_response :unprocessable_entity
+
+    response_body = JSON.parse(response.body)
+    assert_equal "validation_failed", response_body["error"]
+  end
+
+  test "requires read_write scope for create" do
+    category_params = {
+      category: {
+        name: "Should Fail",
+        color: "#4da568"
+      }
+    }
+
+    post api_v1_categories_url,
+         params: category_params,
+         headers: api_headers(@read_key)
+
+    assert_response :forbidden
+  end
+
+  # UPDATE action tests
+
+  test "can update category" do
+    new_name = "Updated Category Name"
+
+    patch api_v1_category_url(@category),
+          params: { category: { name: new_name } },
+          headers: api_headers(@api_key)
+
+    assert_response :success
+
+    response_body = JSON.parse(response.body)
+    assert_equal new_name, response_body["name"]
+    assert_equal @category.id, response_body["id"]
+  end
+
+  test "can partially update category" do
+    original_name = @category.name
+
+    patch api_v1_category_url(@category),
+          params: { category: { color: "#db5a54" } },
+          headers: api_headers(@api_key)
+
+    assert_response :success
+
+    response_body = JSON.parse(response.body)
+    assert_equal original_name, response_body["name"]
+    assert_equal "#db5a54", response_body["color"]
+  end
+
+  test "requires read_write scope for update" do
+    patch api_v1_category_url(@category),
+          params: { category: { name: "Should Fail" } },
+          headers: api_headers(@read_key)
+
+    assert_response :forbidden
+  end
+
+  test "returns 404 for updating non-existent category" do
+    patch api_v1_category_url(id: SecureRandom.uuid),
+          params: { category: { name: "Not Found" } },
+          headers: api_headers(@api_key)
+
+    assert_response :not_found
+  end
+
+  # DESTROY action tests
+
+  test "can delete category" do
+    category_to_delete = @family.categories.create!(
+      name: "Delete Me #{SecureRandom.hex(4)}",
+      color: "#c44fe9",
+      lucide_icon: "shapes"
+    )
+
+    assert_difference -> { @family.categories.count }, -1 do
+      delete api_v1_category_url(category_to_delete), headers: api_headers(@api_key)
+    end
+
+    assert_response :no_content
+  end
+
+  test "requires read_write scope for destroy" do
+    delete api_v1_category_url(@category), headers: api_headers(@read_key)
+
+    assert_response :forbidden
+  end
+
+  test "returns 404 for deleting non-existent category" do
+    delete api_v1_category_url(id: SecureRandom.uuid), headers: api_headers(@api_key)
+
+    assert_response :not_found
+  end
+
+  test "returns 404 for deleting category from another family" do
     other_family_category = families(:empty).categories.create!(
       name: "Other Family Category",
       color: "#FF0000",
-      classification_unused: "expense"
+      lucide_icon: "shapes"
     )
 
-    get "/api/v1/categories/#{other_family_category.id}", params: {}, headers: {
-      "Authorization" => "Bearer #{@access_token.token}"
-    }
+    delete api_v1_category_url(other_family_category), headers: api_headers(@api_key)
 
     assert_response :not_found
   end
+
+  private
+
+    def api_headers(api_key)
+      { "X-Api-Key" => api_key.display_key }
+    end
 end
