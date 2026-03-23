@@ -149,8 +149,12 @@ class SnaptradeItemsController < ApplicationController
 
     no_accounts = @unlinked_accounts.blank? && @linked_accounts.blank?
 
-    # If no accounts and not syncing, trigger a sync
-    if no_accounts && !@snaptrade_item.syncing?
+    # We trigger an initial or recovery sync if there are no accounts, we aren't currently syncing,
+    # and the last attempt didn't successfully complete. (If it completed and found 0 accounts, we stop here to avoid an infinite loop.)
+    latest_sync = @snaptrade_item.syncs.ordered.first
+    should_sync = latest_sync.nil? || !latest_sync.completed?
+
+    if no_accounts && !@snaptrade_item.syncing? && should_sync
       @snaptrade_item.sync_later
     end
 
