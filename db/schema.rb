@@ -14,7 +14,6 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_24_100002) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
-  enable_extension "vector"
 
   # Custom types defined in this database.
   # Note that some types may not work with other database engines. Be careful if changing database.
@@ -1504,10 +1503,6 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_24_100002) do
     t.jsonb "locked_attributes", default: {}
     t.string "kind", default: "reconciliation", null: false
   end
-
-# Could not dump table "vector_store_chunks" because of following StandardError
-#   Unknown type 'vector(768)' for column 'embedding'
-
 
   create_table "vehicles", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.datetime "created_at", null: false
