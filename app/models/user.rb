@@ -311,15 +311,6 @@ class User < ApplicationRecord
     end
   end
 
-  # Virtual attribute for UI: inverts rule_prompts_disabled for a more intuitive toggle
-  def rule_prompts_enabled
-    !rule_prompts_disabled
-  end
-
-  def rule_prompts_enabled=(value)
-    self.rule_prompts_disabled = !ActiveModel::Type::Boolean.new.cast(value)
-  end
-
   # Transactions preferences management
   def transactions_section_collapsed?(section_key)
     preferences&.dig("transactions_collapsed_sections", section_key) == true

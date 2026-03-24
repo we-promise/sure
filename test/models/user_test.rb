@@ -501,28 +501,4 @@ class UserTest < ActiveSupport::TestCase
     assert_not Family.exists?(family.id)
     assert_not ActiveStorage::Attachment.exists?(export_attachment_id)
   end
-
-  test "rule_prompts_enabled returns inverse of rule_prompts_disabled" do
-    @user.rule_prompts_disabled = false
-    assert @user.rule_prompts_enabled
-
-    @user.rule_prompts_disabled = true
-    assert_not @user.rule_prompts_enabled
-  end
-
-  test "setting rule_prompts_enabled updates rule_prompts_disabled" do
-    @user.rule_prompts_enabled = true
-    assert_not @user.rule_prompts_disabled
-
-    @user.rule_prompts_enabled = false
-    assert @user.rule_prompts_disabled
-  end
-
-  test "rule_prompts_enabled= coerces string values correctly" do
-    @user.rule_prompts_enabled = "1"
-    assert_not @user.rule_prompts_disabled
-
-    @user.rule_prompts_enabled = "0"
-    assert @user.rule_prompts_disabled
-  end
 end
