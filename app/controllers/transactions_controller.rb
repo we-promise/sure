@@ -409,9 +409,7 @@ class TransactionsController < ApplicationController
     # read_write users can only annotate (category, tags, notes, merchant).
     # read_only users cannot update anything.
     def permitted_entry_params
-      permission = @entry.account.permission_for(Current.user)
-
-      case permission
+      case entry_permission
       when :owner, :full_control
         entry_params
       when :read_write
@@ -425,18 +423,6 @@ class TransactionsController < ApplicationController
         {} # read_only — no edits allowed
       end
     end
-
-    def can_edit_entry?
-      permission = @entry.account.permission_for(Current.user)
-      permission.in?([ :owner, :full_control ])
-    end
-    helper_method :can_edit_entry?
-
-    def can_annotate_entry?
-      permission = @entry.account.permission_for(Current.user)
-      permission.in?([ :owner, :full_control, :read_write ])
-    end
-    helper_method :can_annotate_entry?
 
     def search_params
       cleaned_params = params.fetch(:q, {})

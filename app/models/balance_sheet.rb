@@ -64,7 +64,7 @@ class BalanceSheet
     end
 
     def sorted(accounts)
-      account_order = Current.user&.account_order
+      account_order = user&.account_order
       order_key = account_order&.key || "name_asc"
 
       case order_key

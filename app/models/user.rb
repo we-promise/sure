@@ -413,7 +413,8 @@ class User < ApplicationRecord
     end
 
     def reassign_owned_accounts!
-      return if owned_accounts.none?
+      account_ids = owned_accounts.pluck(:id)
+      return if account_ids.empty?
 
       new_owner = family.users.where.not(id: id)
                         .find_by(role: %w[admin super_admin]) ||
@@ -422,9 +423,9 @@ class User < ApplicationRecord
 
       return unless new_owner
 
-      owned_accounts.update_all(owner_id: new_owner.id)
+      Account.where(id: account_ids).update_all(owner_id: new_owner.id)
       # Remove shares the new owner had for these accounts (they now own them)
-      AccountShare.where(account_id: owned_accounts.select(:id), user_id: new_owner.id).delete_all
+      AccountShare.where(account_id: account_ids, user_id: new_owner.id).delete_all
     end
 
     def deactivated_email

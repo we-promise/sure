@@ -5,6 +5,8 @@ module EntryableResource
     include StreamExtensions, ActionView::RecordIdentifier
 
     before_action :set_entry, only: %i[show update destroy]
+
+    helper_method :can_edit_entry?, :can_annotate_entry?
   end
 
   def show
@@ -29,18 +31,15 @@ module EntryableResource
   end
 
   def destroy
-    account = @entry.account
-    permission = account.permission_for(Current.user)
-
-    unless permission.in?([ :owner, :full_control ])
-      redirect_back_or_to account_path(account), alert: t("accounts.not_authorized")
+    unless can_edit_entry?
+      redirect_back_or_to account_path(@entry.account), alert: t("accounts.not_authorized")
       return
     end
 
     @entry.destroy!
     @entry.sync_account_later
 
-    redirect_back_or_to account_path(account), notice: t("account.entries.destroy.success")
+    redirect_back_or_to account_path(@entry.account), notice: t("account.entries.destroy.success")
   end
 
   private
@@ -53,5 +52,24 @@ module EntryableResource
                  .joins(:account)
                  .merge(Account.accessible_by(Current.user))
                  .find(params[:id])
+    end
+
+    def entry_permission
+      @entry_permission ||= @entry&.account&.permission_for(Current.user)
+    end
+
+    def can_edit_entry?
+      entry_permission.in?([ :owner, :full_control ])
+    end
+
+    def can_annotate_entry?
+      entry_permission.in?([ :owner, :full_control, :read_write ])
+    end
+
+    def require_write_permission!
+      unless can_edit_entry?
+        redirect_back_or_to account_path(@entry.account), alert: t("accounts.not_authorized")
+        nil
+      end
     end
 end

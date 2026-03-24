@@ -103,6 +103,6 @@ class Invitation < ApplicationRecord
           include_in_finances: true, created_at: Time.current, updated_at: Time.current }
       end
 
-      AccountShare.upsert_all(records, unique_by: %i[account_id user_id]) if records.any?
+      AccountShare.insert_all(records, unique_by: %i[account_id user_id]) if records.any?
     end
 end
