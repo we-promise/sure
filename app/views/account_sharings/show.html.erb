@@ -18,7 +18,7 @@
                 <input type="hidden" name="sharing[members][<%= index %>][user_id]" value="<%= member.id %>">
                 <div class="grid grid-cols-3 gap-4 items-center w-full">
                   <div class="flex items-center gap-2">
-                    <div class="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-xs font-medium text-secondary">
+                    <div class="w-8 h-8 rounded-full bg-surface-inset flex items-center justify-center text-xs font-medium text-secondary">
                       <%= member.initials %>
                     </div>
                     <span id="member-name-<%= index %>" class="text-sm text-primary"><%= member.display_name %></span>
@@ -33,12 +33,12 @@
                     </select>
                   </div>
                   <div class="flex justify-end">
-                    <label class="relative inline-flex items-center cursor-pointer">
-                      <input type="hidden" name="sharing[members][<%= index %>][shared]" value="0">
-                      <input type="checkbox" name="sharing[members][<%= index %>][shared]" value="1"
-                        class="sr-only peer" aria-labelledby="member-name-<%= index %>" <%= "checked" if share.present? %>>
-                      <div class="w-9 h-5 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-success"></div>
-                    </label>
+                    <%= render DS::Toggle.new(
+                      id: "sharing_members_#{index}_shared",
+                      name: "sharing[members][#{index}][shared]",
+                      checked: share.present?,
+                      "aria-labelledby": "member-name-#{index}"
+                    ) %>
                   </div>
                 </div>
               </div>
@@ -57,7 +57,7 @@
       <% if share %>
         <div class="space-y-4">
           <div class="flex items-center gap-3">
-            <div class="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-xs font-medium text-secondary">
+            <div class="w-8 h-8 rounded-full bg-surface-inset flex items-center justify-center text-xs font-medium text-secondary">
               <%= @account.owner.initials %>
             </div>
             <div>
@@ -74,12 +74,11 @@
                   <p class="text-sm text-primary font-medium"><%= t(".include_in_finances") %></p>
                   <p class="text-xs text-secondary"><%= t(".finance_toggle_description") %></p>
                 </div>
-                <label class="relative inline-flex items-center cursor-pointer shrink-0">
-                  <input type="hidden" name="include_in_finances" value="0">
-                  <input type="checkbox" name="include_in_finances" value="1"
-                    class="sr-only peer" <%= "checked" if share.include_in_finances? %>>
-                  <div class="w-9 h-5 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-success"></div>
-                </label>
+                <%= render DS::Toggle.new(
+                  id: "include_in_finances",
+                  name: "include_in_finances",
+                  checked: share.include_in_finances?
+                ) %>
               </div>
             </div>
             <div class="flex justify-end">

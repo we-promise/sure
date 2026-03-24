@@ -153,7 +153,7 @@ class ReportsController < ApplicationController
           title: "reports.trends.title",
           partial: "reports/trends_insights",
           locals: { trends_data: @trends_data },
-          visible: Current.family.transactions.any?,
+          visible: @has_accounts,
           collapsible: true
         },
         {
@@ -182,7 +182,7 @@ class ReportsController < ApplicationController
             start_date: @start_date,
             end_date: @end_date
           },
-          visible: Current.family.transactions.any?,
+          visible: @has_accounts,
           collapsible: true
         }
       ]
