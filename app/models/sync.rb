@@ -90,7 +90,7 @@ class Sync < ApplicationRecord
       begin
         syncable.perform_sync(self)
       rescue Provider::TwelveData::RateLimitError
-        reset_for_retry!
+        reset_for_rate_limit_retry!
         raise
       rescue => e
         fail!
@@ -107,6 +107,8 @@ class Sync < ApplicationRecord
       lock!
       # Retry exhaustion can leave the sync in `pending` because we reset it
       # after each rate-limit error to make the next ActiveJob retry retryable.
+      # `fail!` only transitions from `syncing`, so pending syncs need to be
+      # moved back through `start!` before we can mark them failed.
       start! if pending?
       fail!
       update!(error: error_message)
@@ -164,7 +166,7 @@ class Sync < ApplicationRecord
   end
 
   private
-    def reset_for_retry!
+    def reset_for_rate_limit_retry!
       # We intentionally bypass callbacks/state events here so the same sync record
       # can become retryable again without firing post-sync hooks or extra
       # transition side effects while the TwelveData rate-limit error is being
