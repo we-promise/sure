@@ -56,3 +56,17 @@
     <% end %>
   </div>
 <% end %>
+
+<%= settings_section title: t(".automation_title"), subtitle: t(".automation_subtitle") do %>
+  <div class="flex items-center justify-between">
+    <div class="space-y-1">
+      <p class="text-sm"><%= t(".rule_prompts_label") %></p>
+      <p class="text-secondary text-sm"><%= t(".rule_prompts_hint") %></p>
+    </div>
+
+    <%= styled_form_with model: @user, data: { controller: "auto-submit-form" } do |form| %>
+      <%= form.hidden_field :redirect_to, value: "preferences" %>
+      <%= form.toggle :rule_prompts_enabled, data: { auto_submit_form_target: "auto" } %>
+    <% end %>
+  </div>
+<% end %>
