@@ -61,7 +61,7 @@
         </div>
       </div>
 
-      <% if coinbase_item.created_by?(Current.user) %>
+      <% if Current.user&.admin? %>
         <div class="flex items-center gap-2">
           <% if coinbase_item.requires_update? %>
             <%= render DS::Link.new(

@@ -1,6 +1,6 @@
 class PlaidItemsController < ApplicationController
   before_action :set_plaid_item, only: %i[edit destroy sync]
-  before_action :authorize_owner!, only: %i[edit destroy sync]
+  before_action :require_admin!, only: %i[new create select_existing_account link_existing_account edit destroy sync]
 
   def new
     region = params[:region] == "eu" ? :eu : :us
@@ -94,13 +94,6 @@ class PlaidItemsController < ApplicationController
   private
     def set_plaid_item
       @plaid_item = Current.family.plaid_items.find(params[:id])
-    end
-
-    def authorize_owner!
-      unless @plaid_item.created_by?(Current.user)
-        redirect_to accounts_path, alert: "Only the connection owner can perform this action"
-        return
-      end
     end
 
     def plaid_item_params

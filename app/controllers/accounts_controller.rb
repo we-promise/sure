@@ -222,7 +222,7 @@ class AccountsController < ApplicationController
 
     def visible_provider_items(items)
       items.select do |item|
-        item.created_by?(Current.user) ||
+        Current.user.admin? ||
           (item.respond_to?(:accounts) && (item.accounts.map(&:id) & @accessible_account_ids).any?)
       end
     end

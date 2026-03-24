@@ -40,6 +40,13 @@ class ApplicationController < ActionController::Base
       session[:pending_invitation_token] = token if invitation
     end
 
+    def require_admin!
+      unless Current.user&.admin?
+        redirect_to accounts_path, alert: t("shared.require_admin")
+        nil
+      end
+    end
+
     def detect_os
       user_agent = request.user_agent
       @os = case user_agent

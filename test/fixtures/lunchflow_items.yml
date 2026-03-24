@@ -1,6 +1,6 @@
 one:
   family: dylan_family
-  created_by: family_admin
+
   name: "Test Lunchflow Connection"
   api_key: "test_api_key_123"
   status: good

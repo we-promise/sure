@@ -49,7 +49,7 @@
         </div>
       </div>
 
-      <% if enable_banking_item.created_by?(Current.user) %>
+      <% if Current.user&.admin? %>
         <div class="flex items-center gap-2">
           <% if enable_banking_item.requires_update? %>
             <%= button_to reauthorize_enable_banking_item_path(enable_banking_item),

@@ -49,7 +49,7 @@
         </div>
       </div>
 
-      <% if indexa_capital_item.created_by?(Current.user) %>
+      <% if Current.user&.admin? %>
         <div class="flex items-center gap-2">
           <% if indexa_capital_item.requires_update? %>
             <%= render DS::Link.new(

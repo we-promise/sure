@@ -57,7 +57,7 @@
         </div>
       </div>
 
-      <% if snaptrade_item.created_by?(Current.user) %>
+      <% if Current.user&.admin? %>
         <div class="flex items-center gap-2">
           <% if snaptrade_item.requires_update? || !snaptrade_item.user_registered? %>
             <%= render DS::Link.new(

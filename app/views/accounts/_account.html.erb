@@ -67,12 +67,13 @@
           <% end %>
           <% menu.with_item(variant: "link", text: t("accounts.account.sharing"), href: account_sharing_path(account), icon: "users", data: { turbo_frame: :modal }) %>
 
-          <% if permission.in?([ :owner, :full_control ]) %>
+          <% if Current.user&.admin? %>
             <% if !account.linked? && %w[Depository CreditCard Investment Crypto].include?(account.accountable_type) %>
               <% menu.with_item(variant: "link", text: t("accounts.account.link_provider"), href: select_provider_account_path(account), icon: "link", data: { turbo_frame: :modal }) %>
             <% elsif account.linked? %>
               <% menu.with_item(variant: "link", text: t("accounts.account.unlink_provider"), href: confirm_unlink_account_path(account), icon: "unlink", data: { turbo_frame: :modal }) %>
             <% end %>
+          <% end %>
 
             <% menu.with_item(variant: "divider") %>
 

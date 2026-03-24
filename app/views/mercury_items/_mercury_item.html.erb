@@ -54,7 +54,7 @@
         </div>
       </div>
 
-      <% if mercury_item.created_by?(Current.user) %>
+      <% if Current.user&.admin? %>
         <div class="flex items-center gap-2">
           <% if Rails.env.development? %>
             <%= icon(

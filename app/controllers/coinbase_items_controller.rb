@@ -1,6 +1,6 @@
 class CoinbaseItemsController < ApplicationController
   before_action :set_coinbase_item, only: [ :show, :edit, :update, :destroy, :sync, :setup_accounts, :complete_account_setup ]
-  before_action :authorize_owner!, only: [ :edit, :update, :destroy, :sync, :setup_accounts, :complete_account_setup ]
+  before_action :require_admin!, only: [ :new, :create, :preload_accounts, :select_accounts, :link_accounts, :select_existing_account, :link_existing_account, :edit, :update, :destroy, :sync, :setup_accounts, :complete_account_setup ]
 
   def index
     @coinbase_items = Current.family.coinbase_items.ordered
@@ -312,13 +312,6 @@ class CoinbaseItemsController < ApplicationController
 
     def set_coinbase_item
       @coinbase_item = Current.family.coinbase_items.find(params[:id])
-    end
-
-    def authorize_owner!
-      unless @coinbase_item.created_by?(Current.user)
-        redirect_to accounts_path, alert: "Only the connection owner can perform this action"
-        return
-      end
     end
 
     def coinbase_item_params

@@ -1,7 +1,7 @@
 class SimplefinItemsController < ApplicationController
   include SimplefinItems::MapsHelper
   before_action :set_simplefin_item, only: [ :show, :edit, :update, :destroy, :sync, :balances, :setup_accounts, :complete_account_setup ]
-  before_action :authorize_owner!, only: [ :edit, :update, :destroy, :sync, :balances, :setup_accounts, :complete_account_setup ]
+  before_action :require_admin!, only: [ :new, :create, :select_existing_account, :link_existing_account, :edit, :update, :destroy, :sync, :balances, :setup_accounts, :complete_account_setup ]
 
   def index
     @simplefin_items = Current.family.simplefin_items.active.ordered
@@ -473,13 +473,6 @@ class SimplefinItemsController < ApplicationController
 
     def set_simplefin_item
       @simplefin_item = Current.family.simplefin_items.find(params[:id])
-    end
-
-    def authorize_owner!
-      unless @simplefin_item.created_by?(Current.user)
-        redirect_to accounts_path, alert: "Only the connection owner can perform this action"
-        return
-      end
     end
 
     def simplefin_params
