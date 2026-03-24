@@ -6,7 +6,10 @@ class SyncJob < ApplicationJob
   # to ensure the minute window has passed, then increase exponentially
   retry_on Provider::TwelveData::RateLimitError,
            wait: ->(executions) { [ 70 * (2 ** (executions - 1)), 600 ].min },
-           attempts: 5
+           attempts: 5 do |job, error|
+             sync = job.arguments.first
+             sync.fail_for_retry_exhaustion!(error.message)
+           end
 
   # Accept a runtime-only flag to influence sync behavior without persisting config
   def perform(sync, balances_only: false)

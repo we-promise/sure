@@ -89,6 +89,9 @@ class Sync < ApplicationRecord
 
       begin
         syncable.perform_sync(self)
+      rescue Provider::TwelveData::RateLimitError
+        reset_for_retry!
+        raise
       rescue => e
         fail!
         update(error: e.message)
@@ -99,6 +102,17 @@ class Sync < ApplicationRecord
     end
   end
 
+  def fail_for_retry_exhaustion!(error_message)
+    Sync.transaction do
+      lock!
+      start! if may_start?
+      fail! if may_fail?
+      update!(error: error_message)
+    end
+
+    parent&.finalize_if_all_children_finalized
+  end
+
   # Finalizes the current sync AND parent (if it exists)
   def finalize_if_all_children_finalized
     Sync.transaction do
@@ -106,6 +120,7 @@ class Sync < ApplicationRecord
 
       # If this is the "parent" and there are still children running, don't finalize.
       return unless all_children_finalized?
+      return if pending?
 
       if syncing?
         if has_failed_children?
@@ -147,6 +162,18 @@ class Sync < ApplicationRecord
   end
 
   private
+    def reset_for_retry!
+      update_columns(
+        status: "pending",
+        error: nil,
+        pending_at: Time.current,
+        syncing_at: nil,
+        failed_at: nil,
+        completed_at: nil,
+        updated_at: Time.current
+      )
+    end
+
     def log_status_change
       Rails.logger.info("changing from #{aasm.from_state} to #{aasm.to_state} (event: #{aasm.current_event})")
     end
