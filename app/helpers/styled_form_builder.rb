@@ -20,11 +20,41 @@ class StyledFormBuilder < ActionView::Helpers::FormBuilder
   end
 
   def select(method, choices, options = {}, html_options = {})
-    field_options = normalize_options(options, html_options)
+    # fallback to default Rails select if multiple
+    if html_options[:multiple]
+      field_options = normalize_options(options, html_options)
 
-    build_field(method, field_options, html_options) do |merged_html_options|
-      super(method, choices, options, merged_html_options)
+      return build_field(method, field_options, html_options) do |merged_html_options|
+        super(method, choices, options, merged_html_options)
+      end
     end
+
+    selected_value = options[:selected] || @object&.public_send(method)
+
+    placeholder =
+      options[:prompt] ||
+      options[:include_blank] ||
+      options[:placeholder] ||
+      I18n.t("helpers.select.default_label")
+
+    items = normalize_select_choices(choices)
+
+    @template.render(
+      DS::Select.new(
+        form: self,
+        method: method,
+        items: items,
+        selected: selected_value,
+        placeholder: placeholder,
+        searchable: options.fetch(:searchable, false),
+        variant: options.fetch(:variant, :simple),
+        include_blank: options[:include_blank],
+        label: options[:label],
+        container_class: options[:container_class],
+        label_tooltip: options[:label_tooltip],
+        html_options: html_options
+      )
+    )
   end
 
   def collection_select(method, collection, value_method, text_method, options = {}, html_options = {})
@@ -152,6 +182,33 @@ class StyledFormBuilder < ActionView::Helpers::FormBuilder
           @template.icon("help-circle", size: "sm", color: "default", class: "cursor-help"),
           @template.tag.div(tooltip_text, role: "tooltip", data: { tooltip_target: "tooltip" }, class: "tooltip bg-gray-700 text-sm p-2 rounded w-64 text-white")
         ])
+      end
+    end
+
+    def normalize_select_choices(choices)
+      case choices
+      when Array
+        choices.map do |item|
+          case item
+          when Array
+            # [["Label", value]]
+            { value: item[1], label: item[0], object: nil }
+          when String, Symbol
+            { value: item, label: item.to_s.humanize, object: nil }
+          else
+            if item.respond_to?(:id) && item.respond_to?(:name)
+              { value: item.id, label: item.name, object: item }
+            else
+              { value: item, label: item.to_s, object: nil }
+            end
+          end
+        end
+      when Hash
+        choices.map do |label, value|
+          { value: value, label: label, object: nil }
+        end
+      else
+        []
       end
     end
 end

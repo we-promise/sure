@@ -67,11 +67,15 @@
       <% unless options[:hide_currency] %>
         <div>
           <%= form.select currency_method,
-                        Money::Currency.as_options.map(&:iso_code),
-                        { inline: true, selected: currency.iso_code },
+                        Money::Currency.as_options.map { |c| [c.iso_code, c.iso_code] },
+                        { 
+                          inline: true, 
+                          selected: currency.iso_code,
+                          container_class: "border-0 p-0 focus-within:ring-0",
+                        },
                         {
-                          class: "w-fit pr-5 disabled:text-subdued form-field__input",
                           disabled: options[:disable_currency],
+                          no_focus: true,
                           data: {
                             "money-field-target": "currency",
                             action: "change->money-field#handleCurrencyChange",
