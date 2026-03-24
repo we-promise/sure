@@ -28,59 +28,45 @@
   </div>
 
   <%# Main form %>
-  <%= form_with url: transactions_categorize_path, method: :post do |form| %>
+  <%= form_with url: transactions_categorize_path, method: :post, id: "categorize-form",
+                data: { controller: "categorize" } do |form| %>
     <%= form.hidden_field :position, value: @position %>
-    <%= form.hidden_field :grouping_key, value: @group.grouping_key %>
+    <%= form.hidden_field :grouping_key, value: @group.grouping_key, data: { categorize_target: "groupingKeyInput" } %>
 
-    <%# Transaction rows %>
-    <div class="bg-container rounded-xl border border-primary divide-y divide-primary">
-      <% @group.entries.each do |entry| %>
-        <label class="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-surface-hover">
-          <input type="checkbox" name="entry_ids[]" value="<%= entry.id %>"
-                 checked class="checkbox checkbox--light shrink-0" />
-          <span class="flex-1 min-w-0">
-            <span class="block text-sm font-medium text-primary truncate"><%= entry.name %></span>
-          </span>
-          <span class="text-sm text-secondary shrink-0"><%= l(entry.date, format: :short) %></span>
-          <span class="text-sm font-medium shrink-0 <%= entry.amount.negative? ? "text-green-600" : "text-primary" %>">
-            <%= format_money(entry.amount_money.abs) %>
-          </span>
-        </label>
-      <% end %>
-    </div>
-
-    <%# Category picker %>
+    <%# Category picker (above transaction list per iteration 2) %>
     <div>
       <p class="text-sm font-medium text-secondary mb-3"><%= t(".assign_category") %></p>
 
-      <div data-controller="list-filter categorize" class="space-y-3">
+      <div data-controller="list-filter" class="space-y-3">
         <%# Search field %>
         <div class="relative flex items-center bg-container border border-primary rounded-lg">
           <%= icon("search", class: "absolute left-3 text-secondary") %>
           <input type="text"
                  placeholder="<%= t(".filter_placeholder") %>"
                  autocomplete="off"
+                 autofocus
                  class="w-full pl-9 pr-3 py-2 text-sm bg-transparent border-none rounded-lg focus:outline-none focus:ring-0 placeholder:text-secondary"
                  data-list-filter-target="input"
                  data-categorize-target="filter"
                  data-action="input->list-filter#filter keydown->categorize#selectFirst" />
         </div>
 
-        <%# Category pills %>
+        <%# Category pills — trigger confirmation dialog %>
         <div data-list-filter-target="list" data-categorize-target="list"
              class="flex flex-wrap gap-2 max-h-48 overflow-y-auto">
           <p class="hidden text-sm text-secondary w-full py-2" data-list-filter-target="emptyMessage">
             <%= t(".no_categories") %>
           </p>
           <% @categories.each do |category| %>
-            <button type="submit"
-                    name="category_id"
-                    value="<%= category.id %>"
+            <button type="button"
                     class="filterable-item flex items-center gap-1 text-sm font-medium rounded-full px-2.5 py-1 border cursor-pointer hover:opacity-80 transition-opacity focus:outline-none focus:ring-2 focus:ring-offset-1"
                     style="background-color: color-mix(in oklab, <%= category.color %> 10%, transparent);
                            border-color: color-mix(in oklab, <%= category.color %> 20%, transparent);
                            color: <%= category.color %>;"
-                    data-filter-name="<%= category.name %>">
+                    data-filter-name="<%= category.name %>"
+                    data-category-id="<%= category.id %>"
+                    data-category-name="<%= category.name %>"
+                    data-action="click->categorize#showConfirmation">
               <% if category.lucide_icon.present? %>
                 <%= icon(category.lucide_icon, size: "sm", color: "current") %>
               <% end %>
@@ -95,10 +81,60 @@
     <% if @group.entries.size > 1 %>
       <label class="flex items-center gap-2.5 cursor-pointer">
         <input type="checkbox" name="create_rule" value="1" checked
-               class="checkbox checkbox--light" />
+               class="checkbox checkbox--light"
+               data-categorize-target="createRuleCheckbox" />
         <span class="text-sm text-primary"><%= t(".create_rule_label") %></span>
       </label>
     <% end %>
+
+    <%# Hidden category_id input — populated by Stimulus before dialog submit %>
+    <input type="hidden" name="category_id" data-categorize-target="categoryIdInput">
+
+    <%# Inline confirmation dialog %>
+    <dialog data-categorize-target="dialog"
+            class="bg-container rounded-xl border border-primary shadow-xl p-6 space-y-4 max-w-sm w-full backdrop:bg-black/40">
+      <h3 class="text-base font-semibold text-primary" data-categorize-target="dialogTitle"></h3>
+      <p class="text-sm text-secondary" data-categorize-target="dialogBody"></p>
+      <div class="flex items-center gap-3 pt-2">
+        <button type="submit" form="categorize-form"
+                class="flex-1 rounded-lg bg-primary text-inverted text-sm font-medium py-2 px-4 hover:opacity-90 transition-opacity">
+          Confirm
+        </button>
+        <button type="button"
+                class="flex-1 rounded-lg border border-primary text-primary text-sm font-medium py-2 px-4 hover:bg-surface-hover transition-colors"
+                data-action="click->categorize#closeDialog">
+          Cancel
+        </button>
+      </div>
+    </dialog>
+
+    <%# Transaction rows %>
+    <div class="bg-container rounded-xl border border-primary divide-y divide-primary">
+      <% @group.entries.each do |entry| %>
+        <%= turbo_frame_tag "categorize_entry_#{entry.id}" do %>
+          <div class="flex items-center gap-3 px-4 py-3 hover:bg-surface-hover">
+            <input type="checkbox" name="entry_ids[]" value="<%= entry.id %>"
+                   checked class="checkbox checkbox--light shrink-0" />
+            <span class="flex-1 min-w-0 text-sm font-medium text-primary truncate"><%= entry.name %></span>
+            <span class="text-sm text-secondary shrink-0"><%= l(entry.date, format: :short) %></span>
+            <span class="text-sm font-medium shrink-0 <%= entry.amount.negative? ? "text-green-600" : "text-primary" %>">
+              <%= format_money(entry.amount_money.abs) %>
+            </span>
+
+            <%# Individual assignment — removes this row on change %>
+            <%= form_with url: assign_entry_transactions_categorize_path,
+                          method: :patch,
+                          data: { controller: "auto-submit-form", turbo_frame: "categorize_entry_#{entry.id}" } do |f| %>
+              <%= f.hidden_field :entry_id, value: entry.id %>
+              <%= f.collection_select :category_id, @categories, :id, :name,
+                    { prompt: t(".assign_category_prompt") },
+                    { class: "text-xs border border-primary rounded-lg px-1.5 py-0.5 max-w-[120px] bg-container text-secondary",
+                      data: { auto_submit_form_target: "auto", autosubmit_trigger_event: "change" } } %>
+            <% end %>
+          </div>
+        <% end %>
+      <% end %>
+    </div>
 
     <%# Footer actions %>
     <div class="flex items-center justify-between pt-2">

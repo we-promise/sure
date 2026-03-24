@@ -83,27 +83,27 @@ class Transactions::CategorizesControllerTest < ActionDispatch::IntegrationTest
     assert_equal @category, entry.transaction.reload.category
   end
 
-  test "create with create_rule param redirects to new rule path" do
+  test "create with create_rule param creates rule directly and stays in wizard" do
     entry = create_transaction(account: @account, name: "Netflix")
 
-    post transactions_categorize_url, params: {
-      position: 0,
-      grouping_key: "Netflix",
-      entry_ids: [ entry.id ],
-      category_id: @category.id,
-      create_rule: "1"
-    }
+    assert_difference "@family.rules.count", 1 do
+      post transactions_categorize_url, params: {
+        position: 0,
+        grouping_key: "Netflix",
+        entry_ids: [ entry.id ],
+        category_id: @category.id,
+        create_rule: "1"
+      }
+    end
 
-    assert_redirected_to new_rule_path(
-      resource_type: "transaction",
-      name: "Netflix",
-      action_type: "set_transaction_category",
-      action_value: @category.id,
-      return_to: transactions_categorize_path(position: 0)
-    )
+    assert_redirected_to transactions_categorize_url(position: 0)
+
+    rule = @family.rules.find_by(name: "Netflix")
+    assert_not_nil rule
+    assert rule.active
   end
 
-  test "create without create_rule param shows success notice" do
+  test "create shows success notice" do
     entry = create_transaction(account: @account, name: "Starbucks")
 
     post transactions_categorize_url, params: {
@@ -130,5 +130,19 @@ class Transactions::CategorizesControllerTest < ActionDispatch::IntegrationTest
 
     assert_equal @category, entry1.transaction.reload.category
     assert_nil entry2.transaction.reload.category
+  end
+
+  # PATCH /transactions/categorize/assign_entry
+
+  test "assign_entry categorizes a single entry and returns turbo stream removal" do
+    entry = create_transaction(account: @account, name: "Starbucks")
+
+    patch assign_entry_transactions_categorize_url, params: {
+      entry_id: entry.id,
+      category_id: @category.id
+    }
+
+    assert_response :success
+    assert_equal @category, entry.transaction.reload.category
   end
 end

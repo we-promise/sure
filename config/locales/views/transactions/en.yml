@@ -138,6 +138,7 @@ en:
           one: "1 transaction"
           other: "%{count} transactions"
         assign_category: "Assign a category"
+        assign_category_prompt: "→ assign"
         filter_placeholder: "Search categories..."
         create_rule_label: "Create auto-categorization rule"
         no_categories: "No matching categories"

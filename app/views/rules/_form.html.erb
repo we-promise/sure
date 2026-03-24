@@ -1,10 +1,9 @@
-<%# locals: (rule:, return_to: nil) %>
+<%# locals: (rule:) %>
 
 <%= styled_form_with model: rule, class: "space-y-6",
                      data: { controller: "rules", rule_registry_value: rule.registry.to_json } do |f| %>
 
   <%= f.hidden_field :resource_type, value: rule.resource_type %>
-  <%= hidden_field_tag :return_to, return_to if return_to.present? %>
 
   <% if @rule.errors.any? %>
     <%= render "shared/form_errors", model: @rule %>

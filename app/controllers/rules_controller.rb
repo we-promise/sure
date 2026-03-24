@@ -46,19 +46,13 @@ class RulesController < ApplicationController
       )
     end
 
-    @return_to = safe_return_to(params[:return_to])
   end
 
   def create
     @rule = Current.family.rules.build(rule_params)
-    @return_to = safe_return_to(params[:return_to])
 
     if @rule.save
-      if @return_to.present?
-        redirect_to @return_to, notice: t("rules.create.success")
-      else
-        redirect_to confirm_rule_path(@rule, reload_on_close: true)
-      end
+      redirect_to confirm_rule_path(@rule, reload_on_close: true)
     else
       render :new, status: :unprocessable_entity
     end
@@ -158,7 +152,5 @@ class RulesController < ApplicationController
       )
     end
 
-    def safe_return_to(url)
-      url_from(url) rescue nil
-    end
+
 end

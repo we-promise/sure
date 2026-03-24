@@ -1,8 +1,6 @@
 ---
 en:
   rules:
-    create:
-      success: "Rule created"
     no_action: No Action
     no_condition: No condition
     actions:
