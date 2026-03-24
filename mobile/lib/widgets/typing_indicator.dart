@@ -48,7 +48,7 @@ class _TypingIndicatorState extends State<TypingIndicator>
             animation: _controller,
             builder: (context, child) {
               final delay = index * 0.2;
-              final progress = (_controller.value - delay) % 1.0;
+              final progress = (_controller.value - delay + 1.0) % 1.0;
               final opacity = _calculateOpacity(progress);
 
               return Padding(
