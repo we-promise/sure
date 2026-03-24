@@ -1,21 +1,24 @@
 module DS
   class Select < ViewComponent::Base
-    attr_reader :form, :method, :items, :selected_value, :placeholder, :variant, :searchable, :options
+    attr_reader :form, :method, :items, :selected_value, :placeholder, :variant, :searchable, :html_options, :options
 
     VARIANTS = %i[simple logo badge].freeze
     HEX_COLOR_REGEX = /\A#[0-9a-fA-F]{3}(?:[0-9a-fA-F]{3})?\z/
     RGB_COLOR_REGEX = /\Argb\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}\s*\)\z/
     DEFAULT_COLOR = "#737373"
 
-    def initialize(form:, method:, items:, selected: nil, placeholder: I18n.t("helpers.select.default_label"), variant: :simple, include_blank: nil, searchable: false, **options)
+    def initialize(form:, method:, items:, selected: nil, placeholder: I18n.t("helpers.select.default_label"), variant: :simple, include_blank: nil, searchable: false, html_options: {}, **options)
       @form = form
       @method = method
       @placeholder = placeholder
       @variant = variant
       @searchable = searchable
       @options = options
+      @html_options = html_options
 
       normalized_items = normalize_items(items)
+
+      @selected_value = selected
 
       if include_blank
         normalized_items.unshift({
@@ -30,7 +33,31 @@ module DS
     end
 
     def selected_item
-      items.find { |item| item[:value] == selected_value }
+      return nil if selected_value.nil?
+
+      items.find do |item|
+        item[:object] == selected_value ||
+        item[:value] == selected_value ||
+        (item[:value].respond_to?(:id) && selected_value.respond_to?(:id) && item[:value].id == selected_value.id)
+      end
+    end
+
+    def selected_label
+      if selected_item
+        selected_item[:label]
+      else
+        if selected_value.respond_to?(:name)
+          selected_value.name
+        elsif selected_value.respond_to?(:id)
+          selected_value.id.to_s
+        else
+          placeholder
+        end
+      end
+    end
+
+    def disabled?
+      html_options[:disabled].present?
     end
 
     # Returns the color for a given item (used in :badge variant)

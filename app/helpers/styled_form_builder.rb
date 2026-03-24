@@ -29,7 +29,12 @@ class StyledFormBuilder < ActionView::Helpers::FormBuilder
       end
     end
 
-    selected_value = options[:selected] || @object&.public_send(method)
+    selected_value =
+      if options.key?(:selected)
+        options[:selected]
+      elsif @object.respond_to?(method)
+        @object.public_send(method)
+      end
 
     placeholder =
       options[:prompt] ||
@@ -62,8 +67,9 @@ class StyledFormBuilder < ActionView::Helpers::FormBuilder
       if options.key?(:selected)
         options[:selected]
       elsif @object.respond_to?(method)
-        @object.public_send(method)
+        @object.public_send(method) # lasciare così
       end
+
     placeholder = options[:prompt] || options[:include_blank] || options[:placeholder] || I18n.t("helpers.select.default_label")
 
     @template.render(

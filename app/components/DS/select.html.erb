@@ -11,13 +11,14 @@
               "auto-submit-target": "auto"
             } %>
         <button type="button"
-                class="form-field__input w-full"
+                class="form-field__input w-full <%= "pointer-events-none" if disabled? %>"
                 data-select-target="button"
                 data-action="click->select#toggle"
                 aria-haspopup="listbox"
                 aria-expanded="<%= @selected_value.present? ? "true" : "false" %>"
-                aria-labelledby="<%= "#{method}_label" %>">
-          <%= selected_item&.dig(:label) || @placeholder %>
+                aria-labelledby="<%= "#{method}_label" %>"
+                <%= "disabled" if disabled? %>>
+          <%= selected_label %>
         </button>
     </div>
   </div>
