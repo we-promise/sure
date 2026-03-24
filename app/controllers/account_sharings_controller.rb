@@ -11,7 +11,7 @@ class AccountSharingsController < ApplicationController
     if !@account.owned_by?(Current.user) && params[:toggle_finance_inclusion].present?
       share = @account.account_shares.find_by!(user: Current.user)
       share.update!(include_in_finances: !share.include_in_finances)
-      redirect_to account_path(@account), notice: t("account_sharings.update.finance_toggle_success")
+      redirect_back_or_to account_path(@account), notice: t("account_sharings.update.finance_toggle_success")
       return
     end
 
@@ -47,7 +47,7 @@ class AccountSharingsController < ApplicationController
       end
     end
 
-    redirect_to account_sharing_path(@account), notice: t("account_sharings.update.success")
+    redirect_back_or_to accounts_path, notice: t("account_sharings.update.success")
   end
 
   private

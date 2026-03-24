@@ -13,6 +13,7 @@ en:
       remove_default: Unset default
       default_label: Default
       delete: Delete account
+      sharing: Sharing
     chart:
       data_not_available: Data not available for the selected period
     create:
