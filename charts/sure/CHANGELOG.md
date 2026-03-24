@@ -5,6 +5,21 @@ All notable changes to the Sure Helm chart will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+- Bumped `pipelock.image.tag` from `1.5.0` to `2.0.0`
+- CI: Pipelock GitHub Action updated from `@v1` to `@v2`
+- Compose example image changed from pinned `1.5.0` to `latest` with pin comment
+
+### Added
+- **Pipelock v2.0 features**:
+  - `pipelock.trustedDomains`: first-class support for allowing internal services whose public DNS resolves to private IPs (prevents SSRF false positives)
+  - `pipelock.mcpToolPolicy.redirectProfiles`: route matched MCP tool calls to audited handler programs instead of blocking
+  - Updated `pipelock.example.yaml` with v2.0 feature documentation (trusted domains, redirect profiles, attack simulation, security scoring)
+  - Updated `extraConfig` comment to mention new v2.0 sections (sandbox, reverse_proxy)
+- Pipelock v2.0 highlights available via `extraConfig`: process sandbox (Linux/macOS), generic HTTP reverse proxy, adaptive enforcement exempt domains, kill switch API port isolation
+
 ## [0.6.9-alpha] - 2026-03-21
 
 ### Added
