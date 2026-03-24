@@ -26,7 +26,10 @@ class TransfersController < ApplicationController
 
     unless source_account.permission_for(Current.user).in?([ :owner, :full_control ]) &&
            destination_account.permission_for(Current.user).in?([ :owner, :full_control ])
-      redirect_back_or_to transactions_path, alert: t("accounts.not_authorized")
+      respond_to do |format|
+        format.html { redirect_back_or_to transactions_path, alert: t("accounts.not_authorized") }
+        format.turbo_stream { stream_redirect_back_or_to(transactions_path, alert: t("accounts.not_authorized")) }
+      end
       return
     end
 
@@ -51,6 +54,16 @@ class TransfersController < ApplicationController
   end
 
   def update
+    outflow_account = @transfer.outflow_transaction.entry.account
+    permission = outflow_account.permission_for(Current.user)
+    unless permission.in?([ :owner, :full_control ])
+      respond_to do |format|
+        format.html { redirect_back_or_to transactions_url, alert: t("accounts.not_authorized") }
+        format.turbo_stream { stream_redirect_back_or_to(transactions_url, alert: t("accounts.not_authorized")) }
+      end
+      return
+    end
+
     Transfer.transaction do
       update_transfer_status
       update_transfer_details unless transfer_update_params[:status] == "rejected"
@@ -67,7 +80,10 @@ class TransfersController < ApplicationController
     outflow_account = @transfer.outflow_transaction.entry.account
     permission = outflow_account.permission_for(Current.user)
     unless permission.in?([ :owner, :full_control ])
-      redirect_back_or_to transactions_url, alert: t("accounts.not_authorized")
+      respond_to do |format|
+        format.html { redirect_back_or_to transactions_url, alert: t("accounts.not_authorized") }
+        format.turbo_stream { stream_redirect_back_or_to(transactions_url, alert: t("accounts.not_authorized")) }
+      end
       return
     end
 

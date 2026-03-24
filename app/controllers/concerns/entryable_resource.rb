@@ -32,7 +32,10 @@ module EntryableResource
 
   def destroy
     unless can_edit_entry?
-      redirect_back_or_to account_path(@entry.account), alert: t("accounts.not_authorized")
+      respond_to do |format|
+        format.html { redirect_back_or_to account_path(@entry.account), alert: t("accounts.not_authorized") }
+        format.turbo_stream { stream_redirect_back_or_to(account_path(@entry.account), alert: t("accounts.not_authorized")) }
+      end
       return
     end
 
@@ -64,12 +67,5 @@ module EntryableResource
 
     def can_annotate_entry?
       entry_permission.in?([ :owner, :full_control, :read_write ])
-    end
-
-    def require_write_permission!
-      unless can_edit_entry?
-        redirect_back_or_to account_path(@entry.account), alert: t("accounts.not_authorized")
-        nil
-      end
     end
 end

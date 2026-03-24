@@ -2,7 +2,7 @@ module AccountableResource
   extend ActiveSupport::Concern
 
   included do
-    include Periodable
+    include Periodable, StreamExtensions
 
     before_action :set_account, only: [ :show ]
     before_action :set_manageable_account, only: [ :edit, :update ]
@@ -98,7 +98,10 @@ module AccountableResource
       @account = Current.user.accessible_accounts.find(params[:id])
       permission = @account.permission_for(Current.user)
       unless permission.in?([ :owner, :full_control ])
-        redirect_to account_path(@account), alert: t("accounts.not_authorized")
+        respond_to do |format|
+          format.html { redirect_to account_path(@account), alert: t("accounts.not_authorized") }
+          format.turbo_stream { stream_redirect_to(account_path(@account), alert: t("accounts.not_authorized")) }
+        end
         nil
       end
     end

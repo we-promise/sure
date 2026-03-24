@@ -92,6 +92,15 @@ class TransactionsController < ApplicationController
 
   def create
     account = Current.user.accessible_accounts.find(params.dig(:entry, :account_id))
+
+    unless account.permission_for(Current.user).in?([ :owner, :full_control ])
+      respond_to do |format|
+        format.html { redirect_back_or_to account_path(account), alert: t("accounts.not_authorized") }
+        format.turbo_stream { stream_redirect_back_or_to(account_path(account), alert: t("accounts.not_authorized")) }
+      end
+      return
+    end
+
     @entry = account.entries.new(entry_params)
 
     if @entry.save

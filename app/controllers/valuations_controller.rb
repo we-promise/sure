@@ -5,7 +5,10 @@ class ValuationsController < ApplicationController
     @account = accessible_accounts.find(params.dig(:entry, :account_id))
 
     unless @account.permission_for(Current.user).in?([ :owner, :full_control ])
-      redirect_back_or_to account_path(@account), alert: t("accounts.not_authorized")
+      respond_to do |format|
+        format.html { redirect_back_or_to account_path(@account), alert: t("accounts.not_authorized") }
+        format.turbo_stream { stream_redirect_back_or_to(account_path(@account), alert: t("accounts.not_authorized")) }
+      end
       return
     end
 
@@ -24,7 +27,10 @@ class ValuationsController < ApplicationController
     @entry = Current.accessible_entries.find(params[:id])
 
     unless @entry.account.permission_for(Current.user).in?([ :owner, :full_control ])
-      redirect_back_or_to account_path(@entry.account), alert: t("accounts.not_authorized")
+      respond_to do |format|
+        format.html { redirect_back_or_to account_path(@entry.account), alert: t("accounts.not_authorized") }
+        format.turbo_stream { stream_redirect_back_or_to(account_path(@entry.account), alert: t("accounts.not_authorized")) }
+      end
       return
     end
 
@@ -45,7 +51,10 @@ class ValuationsController < ApplicationController
     account = accessible_accounts.find(params.dig(:entry, :account_id))
 
     unless account.permission_for(Current.user).in?([ :owner, :full_control ])
-      redirect_back_or_to account_path(account), alert: t("accounts.not_authorized")
+      respond_to do |format|
+        format.html { redirect_back_or_to account_path(account), alert: t("accounts.not_authorized") }
+        format.turbo_stream { stream_redirect_back_or_to(account_path(account), alert: t("accounts.not_authorized")) }
+      end
       return
     end
 
@@ -67,7 +76,10 @@ class ValuationsController < ApplicationController
 
   def update
     unless can_edit_entry?
-      redirect_back_or_to account_path(@entry.account), alert: t("accounts.not_authorized")
+      respond_to do |format|
+        format.html { redirect_back_or_to account_path(@entry.account), alert: t("accounts.not_authorized") }
+        format.turbo_stream { stream_redirect_back_or_to(account_path(@entry.account), alert: t("accounts.not_authorized")) }
+      end
       return
     end
 

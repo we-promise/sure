@@ -2,6 +2,7 @@ class PropertiesController < ApplicationController
   include AccountableResource, StreamExtensions
 
   before_action :set_property, only: [ :balances, :address, :update_balances, :update_address ]
+  before_action :require_property_write_permission!, only: [ :update_balances, :update_address ]
 
   def new
     @account = Current.family.accounts.build(accountable: Property.new)
@@ -102,5 +103,15 @@ class PropertiesController < ApplicationController
     def set_property
       @account = accessible_accounts.find(params[:id])
       @property = @account.property
+    end
+
+    def require_property_write_permission!
+      permission = @account.permission_for(Current.user)
+      unless permission.in?([ :owner, :full_control ])
+        respond_to do |format|
+          format.html { redirect_back_or_to account_path(@account), alert: t("accounts.not_authorized") }
+          format.turbo_stream { stream_redirect_back_or_to(account_path(@account), alert: t("accounts.not_authorized")) }
+        end
+      end
     end
 end
