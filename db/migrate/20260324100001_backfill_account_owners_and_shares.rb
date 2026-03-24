@@ -11,17 +11,16 @@ class BackfillAccountOwnersAndShares < ActiveRecord::Migration[7.2]
       family.accounts.where(owner_id: nil).update_all(owner_id: admin.id)
 
       # Create shares for non-owner members (preserves current full-access behavior)
-      family.users.where.not(id: admin.id).find_each do |member|
-        family.accounts.find_each do |account|
-          AccountShare.create!(
-            account: account,
-            user: member,
-            permission: "full_control",
-            include_in_finances: true
-          )
-        rescue ActiveRecord::RecordInvalid
-          # Skip duplicates
+      member_ids = family.users.where.not(id: admin.id).pluck(:id)
+      account_ids = family.accounts.pluck(:id)
+
+      if member_ids.any? && account_ids.any?
+        records = member_ids.product(account_ids).map do |user_id, account_id|
+          { user_id: user_id, account_id: account_id, permission: "full_control",
+            include_in_finances: true, created_at: Time.current, updated_at: Time.current }
         end
+
+        AccountShare.upsert_all(records, unique_by: %i[account_id user_id])
       end
     end
 
