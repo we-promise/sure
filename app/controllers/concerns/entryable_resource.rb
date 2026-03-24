@@ -30,6 +30,13 @@ module EntryableResource
 
   def destroy
     account = @entry.account
+    permission = account.permission_for(Current.user)
+
+    unless permission.in?([ :owner, :full_control ])
+      redirect_back_or_to account_path(account), alert: t("accounts.not_authorized")
+      return
+    end
+
     @entry.destroy!
     @entry.sync_account_later
 
@@ -42,6 +49,9 @@ module EntryableResource
     end
 
     def set_entry
-      @entry = Current.family.entries.find(params[:id])
+      @entry = Current.family.entries
+                 .joins(:account)
+                 .merge(Account.accessible_by(Current.user))
+                 .find(params[:id])
     end
 end

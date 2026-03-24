@@ -17,7 +17,9 @@ class TransactionsController < ApplicationController
     @q = search_params
     @search = Transaction::Search.new(Current.family, filters: @q)
 
+    accessible_account_ids = Current.user.accessible_accounts.pluck(:id)
     base_scope = @search.transactions_scope
+                       .where(entries: { account_id: accessible_account_ids })
                        .reverse_chronological
                        .includes(
                          { entry: :account },
@@ -111,7 +113,7 @@ class TransactionsController < ApplicationController
   end
 
   def update
-    if @entry.update(entry_params)
+    if @entry.update(permitted_entry_params)
       transaction = @entry.transaction
 
       if needs_rule_notification?(transaction)
@@ -397,6 +399,39 @@ class TransactionsController < ApplicationController
 
       entry_params
     end
+
+    # Filters entry_params based on the user's permission on the account.
+    # read_write users can only annotate (category, tags, notes, merchant).
+    # read_only users cannot update anything.
+    def permitted_entry_params
+      permission = @entry.account.permission_for(Current.user)
+
+      case permission
+      when :owner, :full_control
+        entry_params
+      when :read_write
+        # Annotate only: category, tags, merchant, notes
+        ep = entry_params.slice(:notes)
+        if entry_params[:entryable_attributes].present?
+          ep[:entryable_attributes] = entry_params[:entryable_attributes].slice(:id, :category_id, :merchant_id, :tag_ids)
+        end
+        ep
+      else
+        {} # read_only — no edits allowed
+      end
+    end
+
+    def can_edit_entry?
+      permission = @entry.account.permission_for(Current.user)
+      permission.in?([ :owner, :full_control ])
+    end
+    helper_method :can_edit_entry?
+
+    def can_annotate_entry?
+      permission = @entry.account.permission_for(Current.user)
+      permission.in?([ :owner, :full_control, :read_write ])
+    end
+    helper_method :can_annotate_entry?
 
     def search_params
       cleaned_params = params.fetch(:q, {})
