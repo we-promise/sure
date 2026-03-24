@@ -36,6 +36,10 @@ en:
         theme_system: System
         transactions_title: Transactions
         transactions_subtitle: Customize how transactions are displayed
+        dashboard_title: Dashboard
+        dashboard_subtitle: Customize how the dashboard is displayed
+        dashboard_two_column_title: Two-column layout
+        dashboard_two_column_description: Display dashboard widgets in two columns on large screens. When off, widgets stack in a single column.
         split_grouped_title: Group split transactions
         split_grouped_description: Show split transactions grouped under their parent in the transaction list. When off, split children appear as individual rows.
     preferences:
