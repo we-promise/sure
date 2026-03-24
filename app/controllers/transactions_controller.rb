@@ -15,11 +15,10 @@ class TransactionsController < ApplicationController
 
   def index
     @q = search_params
-    @search = Transaction::Search.new(Current.family, filters: @q)
-
     accessible_account_ids = Current.user.accessible_accounts.pluck(:id)
+    @search = Transaction::Search.new(Current.family, filters: @q, accessible_account_ids: accessible_account_ids)
+
     base_scope = @search.transactions_scope
-                       .where(entries: { account_id: accessible_account_ids })
                        .reverse_chronological
                        .includes(
                          { entry: :account },
