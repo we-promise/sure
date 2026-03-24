@@ -28,6 +28,7 @@ class TransfersController < ApplicationController
         format.turbo_stream { stream_redirect_back_or_to transactions_path, notice: success_message }
       end
     else
+      @from_account_id = transfer_params[:from_account_id]
       render :new, status: :unprocessable_entity
     end
   end
