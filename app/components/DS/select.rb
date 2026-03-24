@@ -33,12 +33,14 @@ module DS
     end
 
     def selected_item
-      return nil if selected_value.nil?
-
       items.find do |item|
-        item[:object] == selected_value ||
-        item[:value] == selected_value ||
-        (item[:value].respond_to?(:id) && selected_value.respond_to?(:id) && item[:value].id == selected_value.id)
+        item_value = item[:value]
+        item_value = item_value.id if item_value.respond_to?(:id)
+        
+        selected_val = selected_value
+        selected_val = selected_val.id if selected_val.respond_to?(:id)
+
+        item_value.to_s == selected_val.to_s
       end
     end
 
