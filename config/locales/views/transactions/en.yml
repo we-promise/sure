@@ -124,6 +124,28 @@ en:
       transaction: transaction
       transactions: transactions
       import: Import
+      categorize_button:
+        one: "Categorize (1)"
+        other: "Categorize (%{count})"
+    categorizes:
+      show:
+        exit: "Exit"
+        skip: "Skip"
+        remaining:
+          one: "1 uncategorized transaction remaining"
+          other: "%{count} uncategorized transactions remaining"
+        transaction_count:
+          one: "1 transaction"
+          other: "%{count} transactions"
+        assign_category: "Assign a category"
+        filter_placeholder: "Search categories..."
+        create_rule_label: "Create auto-categorization rule"
+        no_categories: "No matching categories"
+        all_done: "All transactions are categorized"
+      create:
+        categorized:
+          one: "1 transaction categorized"
+          other: "%{count} transactions categorized"
     list:
       drag_drop_title: Drop CSV to import
       drag_drop_subtitle: Upload transactions directly

@@ -1,0 +1,116 @@
+<%# Wizard step: categorize one group of uncategorized transactions %>
+<div class="space-y-6 pb-12 max-w-2xl mx-auto">
+  <%# Header %>
+  <div class="flex items-center justify-between">
+    <%= link_to transactions_path, class: "flex items-center gap-1.5 text-sm text-secondary hover:text-primary" do %>
+      <%= icon("arrow-left", size: "sm") %>
+      <%= t(".exit") %>
+    <% end %>
+    <span class="text-sm text-secondary">
+      <%= t(".remaining", count: @total_uncategorized) %>
+    </span>
+  </div>
+
+  <%# Group identity %>
+  <div class="flex items-center gap-3">
+    <div class="w-10 h-10 rounded-full shrink-0 flex items-center justify-center text-sm font-bold text-white"
+         style="background-color: <%= @group.merchant&.color || "#737373" %>;">
+      <%= @group.display_name.first.upcase %>
+    </div>
+    <div>
+      <h2 class="text-lg font-semibold text-primary"><%= @group.display_name %></h2>
+      <p class="text-sm text-secondary">
+        <%= t(".transaction_count", count: @group.entries.size) %>
+        &middot;
+        <%= format_money(@group.entries.sum { |e| e.amount_money.abs }) %>
+      </p>
+    </div>
+  </div>
+
+  <%# Main form %>
+  <%= form_with url: transactions_categorize_path, method: :post do |form| %>
+    <%= form.hidden_field :position, value: @position %>
+    <%= form.hidden_field :grouping_key, value: @group.grouping_key %>
+
+    <%# Transaction rows %>
+    <div class="bg-container rounded-xl border border-primary divide-y divide-primary">
+      <% @group.entries.each do |entry| %>
+        <label class="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-surface-hover">
+          <input type="checkbox" name="entry_ids[]" value="<%= entry.id %>"
+                 checked class="checkbox checkbox--light shrink-0" />
+          <span class="flex-1 min-w-0">
+            <span class="block text-sm font-medium text-primary truncate"><%= entry.name %></span>
+          </span>
+          <span class="text-sm text-secondary shrink-0"><%= l(entry.date, format: :short) %></span>
+          <span class="text-sm font-medium shrink-0 <%= entry.amount.negative? ? "text-green-600" : "text-primary" %>">
+            <%= format_money(entry.amount_money.abs) %>
+          </span>
+        </label>
+      <% end %>
+    </div>
+
+    <%# Category picker %>
+    <div>
+      <p class="text-sm font-medium text-secondary mb-3"><%= t(".assign_category") %></p>
+
+      <div data-controller="list-filter categorize" class="space-y-3">
+        <%# Search field %>
+        <div class="relative flex items-center bg-container border border-primary rounded-lg">
+          <%= icon("search", class: "absolute left-3 text-secondary") %>
+          <input type="text"
+                 placeholder="<%= t(".filter_placeholder") %>"
+                 autocomplete="off"
+                 class="w-full pl-9 pr-3 py-2 text-sm bg-transparent border-none rounded-lg focus:outline-none focus:ring-0 placeholder:text-secondary"
+                 data-list-filter-target="input"
+                 data-categorize-target="filter"
+                 data-action="input->list-filter#filter keydown->categorize#selectFirst" />
+        </div>
+
+        <%# Category pills %>
+        <div data-list-filter-target="list" data-categorize-target="list"
+             class="flex flex-wrap gap-2 max-h-48 overflow-y-auto">
+          <p class="hidden text-sm text-secondary w-full py-2" data-list-filter-target="emptyMessage">
+            <%= t(".no_categories") %>
+          </p>
+          <% @categories.each do |category| %>
+            <button type="submit"
+                    name="category_id"
+                    value="<%= category.id %>"
+                    class="filterable-item flex items-center gap-1 text-sm font-medium rounded-full px-2.5 py-1 border cursor-pointer hover:opacity-80 transition-opacity focus:outline-none focus:ring-2 focus:ring-offset-1"
+                    style="background-color: color-mix(in oklab, <%= category.color %> 10%, transparent);
+                           border-color: color-mix(in oklab, <%= category.color %> 20%, transparent);
+                           color: <%= category.color %>;"
+                    data-filter-name="<%= category.name %>">
+              <% if category.lucide_icon.present? %>
+                <%= icon(category.lucide_icon, size: "sm", color: "current") %>
+              <% end %>
+              <%= category.name %>
+            </button>
+          <% end %>
+        </div>
+      </div>
+    </div>
+
+    <%# Create rule checkbox %>
+    <% if @group.entries.size > 1 %>
+      <label class="flex items-center gap-2.5 cursor-pointer">
+        <input type="checkbox" name="create_rule" value="1" checked
+               class="checkbox checkbox--light" />
+        <span class="text-sm text-primary"><%= t(".create_rule_label") %></span>
+      </label>
+    <% end %>
+
+    <%# Footer actions %>
+    <div class="flex items-center justify-between pt-2">
+      <%= link_to transactions_categorize_path(position: @position + 1),
+            class: "flex items-center gap-1.5 text-sm font-medium text-secondary hover:text-primary" do %>
+        <%= t(".skip") %>
+        <%= icon("arrow-right", size: "sm") %>
+      <% end %>
+      <%= link_to transactions_path,
+            class: "text-sm text-secondary hover:text-primary" do %>
+        <%= t(".exit") %>
+      <% end %>
+    </div>
+  <% end %>
+</div>

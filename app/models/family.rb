@@ -144,6 +144,17 @@ class Family < ApplicationRecord
     AutoMerchantDetector.new(self, transaction_ids: transaction_ids).auto_detect
   end
 
+  def uncategorized_transaction_count
+    Transaction
+      .joins("INNER JOIN entries ON entries.entryable_id = transactions.id AND entries.entryable_type = 'Transaction'")
+      .joins("INNER JOIN accounts ON accounts.id = entries.account_id")
+      .where(accounts: { family_id: id, status: %w[draft active] })
+      .where(transactions: { category_id: nil })
+      .where.not(transactions: { kind: Transaction::TRANSFER_KINDS })
+      .where(entries: { excluded: false })
+      .count
+  end
+
   def balance_sheet(user: Current.user)
     BalanceSheet.new(self, user: user)
   end

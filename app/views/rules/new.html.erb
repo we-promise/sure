@@ -3,6 +3,6 @@
 <%= render DS::Dialog.new do |dialog| %>
   <% dialog.with_header(title: "New #{@rule.resource_type} rule") %>
   <% dialog.with_body do %>
-    <%= render "rules/form", rule: @rule %>
+    <%= render "rules/form", rule: @rule, return_to: @return_to %>
   <% end %>
 <% end %>
