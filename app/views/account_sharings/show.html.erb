@@ -21,10 +21,10 @@
                     <div class="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-xs font-medium text-secondary">
                       <%= member.initials %>
                     </div>
-                    <span class="text-sm text-primary"><%= member.display_name %></span>
+                    <span id="member-name-<%= index %>" class="text-sm text-primary"><%= member.display_name %></span>
                   </div>
                   <div>
-                    <select name="sharing[members][<%= index %>][permission]" class="text-sm border border-primary rounded-lg px-3 py-1.5 bg-container text-primary w-full">
+                    <select name="sharing[members][<%= index %>][permission]" aria-labelledby="member-name-<%= index %>" class="text-sm border border-primary rounded-lg px-3 py-1.5 bg-container text-primary w-full">
                       <% AccountShare::PERMISSIONS.each do |perm| %>
                         <option value="<%= perm %>" <%= "selected" if share&.permission == perm %>>
                           <%= t(".permissions.#{perm}") %>
@@ -36,7 +36,7 @@
                     <label class="relative inline-flex items-center cursor-pointer">
                       <input type="hidden" name="sharing[members][<%= index %>][shared]" value="0">
                       <input type="checkbox" name="sharing[members][<%= index %>][shared]" value="1"
-                        class="sr-only peer" <%= "checked" if share.present? %>>
+                        class="sr-only peer" aria-labelledby="member-name-<%= index %>" <%= "checked" if share.present? %>>
                       <div class="w-9 h-5 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-success"></div>
                     </label>
                   </div>
