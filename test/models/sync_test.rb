@@ -59,6 +59,7 @@ class SyncTest < ActiveSupport::TestCase
     sync.reload
     assert_equal "pending", sync.status
     assert_nil sync.error
+    assert_not_nil sync.pending_at
     assert_nil sync.syncing_at
     assert_nil sync.failed_at
     assert_nil sync.completed_at

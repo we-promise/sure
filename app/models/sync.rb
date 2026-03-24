@@ -105,6 +105,8 @@ class Sync < ApplicationRecord
   def fail_for_retry_exhaustion!(error_message)
     Sync.transaction do
       lock!
+      # Retry exhaustion can leave the sync in `pending` because we reset it
+      # after each rate-limit error to make the next ActiveJob retry retryable.
       start! if pending?
       fail! if may_fail?
       update!(error: error_message)
@@ -118,9 +120,9 @@ class Sync < ApplicationRecord
     Sync.transaction do
       lock!
 
+      return if pending?
       # If this is the "parent" and there are still children running, don't finalize.
       return unless all_children_finalized?
-      return if pending?
 
       if syncing?
         if has_failed_children?
