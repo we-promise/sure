@@ -81,4 +81,14 @@ class ApplicationController < ActionController::Base
     def show_demo_warning?
       demo_host_match?
     end
+
+    def accessible_accounts
+      Current.accessible_accounts
+    end
+    helper_method :accessible_accounts
+
+    def finance_accounts
+      Current.finance_accounts
+    end
+    helper_method :finance_accounts
 end

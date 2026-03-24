@@ -2,7 +2,7 @@ class HoldingsController < ApplicationController
   before_action :set_holding, only: %i[show update destroy unlock_cost_basis remap_security reset_security sync_prices]
 
   def index
-    @account = Current.family.accounts.find(params[:account_id])
+    @account = accessible_accounts.find(params[:account_id])
   end
 
   def show

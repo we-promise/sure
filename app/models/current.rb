@@ -26,4 +26,9 @@ class Current < ActiveSupport::CurrentAttributes
     return family&.accounts unless user
     user.finance_accounts
   end
+
+  def accessible_entries
+    return family&.entries unless user
+    family.entries.joins(:account).merge(Account.accessible_by(user))
+  end
 end

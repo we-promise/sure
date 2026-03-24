@@ -2,7 +2,7 @@ class TransactionCategoriesController < ApplicationController
   include ActionView::RecordIdentifier
 
   def update
-    @entry = Current.family.entries.transactions.find(params[:transaction_id])
+    @entry = Current.accessible_entries.transactions.find(params[:transaction_id])
     @entry.update!(entry_params)
 
     transaction = @entry.transaction

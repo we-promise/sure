@@ -7,7 +7,7 @@ class TransfersController < ApplicationController
     @transfer = Transfer.new
     @from_account_id = params[:from_account_id]
 
-    @accounts = Current.family.accounts
+    @accounts = accessible_accounts
     .alphabetically
     .includes(
       :account_providers,

@@ -2,7 +2,7 @@ class ValuationsController < ApplicationController
   include EntryableResource, StreamExtensions
 
   def confirm_create
-    @account = Current.family.accounts.find(params.dig(:entry, :account_id))
+    @account = accessible_accounts.find(params.dig(:entry, :account_id))
     @entry = @account.entries.build(entry_params.merge(currency: @account.currency))
 
     @reconciliation_dry_run = @entry.account.create_reconciliation(
@@ -15,7 +15,7 @@ class ValuationsController < ApplicationController
   end
 
   def confirm_update
-    @entry = Current.family.entries.find(params[:id])
+    @entry = Current.accessible_entries.find(params[:id])
     @account = @entry.account
     @entry.assign_attributes(entry_params.merge(currency: @account.currency))
 
@@ -30,7 +30,7 @@ class ValuationsController < ApplicationController
   end
 
   def create
-    account = Current.family.accounts.find(params.dig(:entry, :account_id))
+    account = accessible_accounts.find(params.dig(:entry, :account_id))
 
     result = account.create_reconciliation(
       balance: entry_params[:amount],

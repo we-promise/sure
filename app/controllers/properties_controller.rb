@@ -100,7 +100,7 @@ class PropertiesController < ApplicationController
     end
 
     def set_property
-      @account = Current.family.accounts.find(params[:id])
+      @account = accessible_accounts.find(params[:id])
       @property = @account.property
     end
 end

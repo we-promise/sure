@@ -82,7 +82,7 @@ class SplitsController < ApplicationController
   private
 
     def set_entry
-      @entry = Current.family.entries.find(params[:transaction_id])
+      @entry = Current.accessible_entries.find(params[:transaction_id])
     end
 
     def resolve_to_parent!

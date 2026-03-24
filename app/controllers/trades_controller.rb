@@ -5,7 +5,7 @@ class TradesController < ApplicationController
 
   # Defaults to a buy trade
   def new
-    @account = Current.family.accounts.find_by(id: params[:account_id])
+    @account = accessible_accounts.find_by(id: params[:account_id])
     @model = Current.family.entries.new(
       account: @account,
       currency: @account ? @account.currency : Current.family.currency,
@@ -15,7 +15,7 @@ class TradesController < ApplicationController
 
   # Can create a trade, transaction (e.g. "fees"), or transfer (e.g. "withdrawal")
   def create
-    @account = Current.family.accounts.find(params[:account_id])
+    @account = accessible_accounts.find(params[:account_id])
     @model = Trade::CreateForm.new(create_params.merge(account: @account)).create
 
     if @model.persisted?

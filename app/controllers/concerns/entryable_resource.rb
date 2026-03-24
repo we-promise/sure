@@ -11,7 +11,7 @@ module EntryableResource
   end
 
   def new
-    account = Current.family.accounts.find_by(id: params[:account_id])
+    account = accessible_accounts.find_by(id: params[:account_id])
 
     @entry = Current.family.entries.new(
       account: account,

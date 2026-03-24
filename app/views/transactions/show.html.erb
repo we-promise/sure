@@ -98,7 +98,7 @@
         <% unless @entry.transaction.transfer? %>
           <%= f.select :account,
               options_for_select(
-                Current.family.accounts.alphabetically.pluck(:name, :id),
+                accessible_accounts.alphabetically.pluck(:name, :id),
                 @entry.account_id
               ),
               { label: t(".account_label") },

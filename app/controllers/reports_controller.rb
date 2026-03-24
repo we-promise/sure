@@ -127,7 +127,7 @@ class ReportsController < ApplicationController
       @investment_flows = InvestmentFlowStatement.new(Current.family).period_totals(period: @period)
 
       # Flags for view rendering
-      @has_accounts = Current.family.accounts.any?
+      @has_accounts = accessible_accounts.any?
     end
 
     def preferences_params
@@ -145,7 +145,7 @@ class ReportsController < ApplicationController
           title: "reports.net_worth.title",
           partial: "reports/net_worth",
           locals: { net_worth_metrics: @net_worth_metrics },
-          visible: Current.family.accounts.any?,
+          visible: accessible_accounts.any?,
           collapsible: true
         },
         {

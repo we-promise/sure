@@ -2,7 +2,7 @@ class TransferMatchesController < ApplicationController
   before_action :set_entry
 
   def new
-    @accounts = Current.family.accounts.visible.alphabetically.where.not(id: @entry.account_id)
+    @accounts = accessible_accounts.visible.alphabetically.where.not(id: @entry.account_id)
     @transfer_match_candidates = @entry.transaction.transfer_match_candidates
   end
 
@@ -32,7 +32,7 @@ class TransferMatchesController < ApplicationController
 
   private
     def set_entry
-      @entry = Current.family.entries.find(params[:transaction_id])
+      @entry = Current.accessible_entries.find(params[:transaction_id])
     end
 
     def transfer_match_params
@@ -41,7 +41,7 @@ class TransferMatchesController < ApplicationController
 
     def build_transfer
       if transfer_match_params[:method] == "new"
-        target_account = Current.family.accounts.find(transfer_match_params[:target_account_id])
+        target_account = accessible_accounts.find(transfer_match_params[:target_account_id])
 
         missing_transaction = Transaction.new(
           entry: target_account.entries.build(
@@ -60,7 +60,7 @@ class TransferMatchesController < ApplicationController
         transfer.status = "confirmed"
         transfer
       else
-        target_transaction = Current.family.entries.find(transfer_match_params[:matched_entry_id])
+        target_transaction = Current.accessible_entries.find(transfer_match_params[:matched_entry_id])
 
         transfer = Transfer.find_or_initialize_by(
           inflow_transaction: @entry.amount.negative? ? @entry.transaction : target_transaction.transaction,
