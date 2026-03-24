@@ -5,6 +5,7 @@ import '../models/chat.dart';
 import '../providers/auth_provider.dart';
 import '../providers/chat_provider.dart';
 import '../models/message.dart';
+import '../widgets/typing_indicator.dart';
 
 class _SendMessageIntent extends Intent {
   const _SendMessageIntent();
@@ -279,25 +280,9 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
 
               // Loading indicator when sending
               if (chatProvider.isSendingMessage)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  child: Row(
-                    children: [
-                      const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      ),
-                      const SizedBox(width: 12),
-                      Text(
-                        'AI is thinking...',
-                        style: TextStyle(
-                          color: colorScheme.onSurfaceVariant,
-                          fontStyle: FontStyle.italic,
-                        ),
-                      ),
-                    ],
-                  ),
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: TypingIndicator(),
                 ),
 
               // Message input
