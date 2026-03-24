@@ -416,14 +416,25 @@ class TransactionsController < ApplicationController
 
       cleaned_params.delete(:amount_operator) unless cleaned_params[:amount].present?
 
-      if cleaned_params[:active_accounts_only].to_s != "false"
-        if cleaned_params[:account_ids].present?
-          allowed_ids = Current.family.accounts.where(id: cleaned_params[:account_ids], excluded: false).pluck(:id).map(&:to_s)
-          cleaned_params[:account_ids] &= allowed_ids
-          cleaned_params.delete(:account_ids) if cleaned_params[:account_ids].empty?
+      if cleaned_params[:account_ids].present?
+        include_excluded = cleaned_params[:active_accounts_only].to_s == "false"
+        base_accounts = Current.family.accounts.sidebar_visible
+        
+        allowed_ids = if include_excluded
+                        base_accounts.alphabetically.pluck(:id)
+                      else
+                        base_accounts.not_excluded.alphabetically.pluck(:id)
+                      end
+        
+        params_account_ids = Array(cleaned_params[:account_ids]).map(&:to_i)
+        valid_ids = params_account_ids & allowed_ids
+        
+        if valid_ids.empty?
+          cleaned_params.delete(:account_ids)
+        else
+          cleaned_params[:account_ids] = valid_ids.map(&:to_s)
         end
       end
-
 
       cleaned_params
     end

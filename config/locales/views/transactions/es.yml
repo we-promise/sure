@@ -1,6 +1,8 @@
 ---
 es:
   transactions:
+    filters:
+      unknown_account: "Cuenta desconocida"
     unknown_name: Transacción desconocida
     form:
       account: Cuenta

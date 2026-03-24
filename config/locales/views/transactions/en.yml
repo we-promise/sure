@@ -1,6 +1,8 @@
 ---
 en:
   transactions:
+    filters:
+      unknown_account: "Unknown Account"
     unknown_name: Unknown transaction
     selection_bar:
       duplicate: Duplicate
