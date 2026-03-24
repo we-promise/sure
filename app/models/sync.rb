@@ -108,7 +108,7 @@ class Sync < ApplicationRecord
       # Retry exhaustion can leave the sync in `pending` because we reset it
       # after each rate-limit error to make the next ActiveJob retry retryable.
       start! if pending?
-      fail! if may_fail?
+      fail!
       update!(error: error_message)
     end
 
@@ -167,7 +167,8 @@ class Sync < ApplicationRecord
     def reset_for_retry!
       # We intentionally bypass callbacks/state events here so the same sync record
       # can become retryable again without firing post-sync hooks or extra
-      # transition side effects while the job is being retried.
+      # transition side effects while the TwelveData rate-limit error is being
+      # re-raised back to `SyncJob.retry_on`.
       update_columns(
         status: "pending",
         error: nil,

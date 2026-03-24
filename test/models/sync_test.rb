@@ -76,6 +76,18 @@ class SyncTest < ActiveSupport::TestCase
     assert_not_nil sync.failed_at
   end
 
+  test "fail_for_retry_exhaustion! marks syncing sync as failed" do
+    sync = Sync.create!(syncable: accounts(:depository))
+    sync.start!
+
+    sync.fail_for_retry_exhaustion!("rate limited too many times")
+
+    sync.reload
+    assert_equal "failed", sync.status
+    assert_equal "rate limited too many times", sync.error
+    assert_not_nil sync.failed_at
+  end
+
   test "can run nested syncs that alert the parent when complete" do
     family = families(:dylan_family)
     plaid_item = plaid_items(:one)
