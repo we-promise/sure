@@ -30,7 +30,13 @@ export default class extends Controller {
   }
 
   toggle = () => {
+    if ((this.hasInputTarget && this.inputTarget.disabled) || this.buttonTarget.disabled) return
+
     this.isOpen ? this.close() : this.openMenu()
+  }
+
+  focusButton() {
+    if (this.hasButtonTarget) this.buttonTarget.focus()
   }
 
   openMenu() {

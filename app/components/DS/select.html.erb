@@ -2,8 +2,9 @@
 
 <div class="relative" data-controller="select <%= "list-filter" if searchable %> form-dropdown" data-action="dropdown:select->form-dropdown#onSelect">
   <div class="form-field <%= options[:container_class] %>">
-    <div class="form-field__body">
-        <%= form.label method, options[:label], class: "form-field__label" if options[:label].present? %>
+    <div class="form-field__body cursor-pointer"
+        data-action="click->select#toggle click->select#focusButton">
+        <%= form.label method, options[:label], class: "form-field__label cursor-pointer" if options[:label].present? %>
         <%= form.hidden_field method,
             value: @selected_value,
             data: {
@@ -13,7 +14,6 @@
         <button type="button"
                 class="form-field__input w-full <%= "pointer-events-none" if disabled? %>"
                 data-select-target="button"
-                data-action="click->select#toggle"
                 aria-haspopup="listbox"
                 aria-expanded="<%= @selected_value.present? ? "true" : "false" %>"
                 aria-labelledby="<%= "#{method}_label" %>"
