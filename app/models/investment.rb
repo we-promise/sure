@@ -32,6 +32,7 @@ class Investment < ApplicationRecord
     # === Canada ===
     "tfsa" => { short: "TFSA", long: "Tax-Free Savings Account", region: "ca", tax_treatment: :tax_exempt },
     "rrsp" => { short: "RRSP", long: "Registered Retirement Savings Plan", region: "ca", tax_treatment: :tax_deferred },
+    "non-registered" => { short: "Non-Registered", long: "Non-Registered Investment Account", region: "ca", tax_treatment: :taxable },
     "fhsa" => { short: "FHSA", long: "First Home Savings Account", region: "ca", tax_treatment: :tax_exempt },
     "rdsp" => { short: "RDSP", long: "Registered Disability Savings Plan", region: "ca", tax_treatment: :tax_advantaged },
     "resp" => { short: "RESP", long: "Registered Education Savings Plan", region: "ca", tax_treatment: :tax_advantaged },
