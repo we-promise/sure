@@ -1,0 +1,28 @@
+---
+en:
+  account_sharings:
+    show:
+      title: Account Sharing
+      subtitle: Control who can see and interact with this account
+      member: Member
+      permission: Permission
+      shared: Shared
+      no_members: No other members in your %{moniker} to share with
+      permissions:
+        full_control: Full control
+        full_control_description: Can view, edit, and manage transactions
+        read_write: Can annotate
+        read_write_description: Can categorize, tag, and add notes
+        read_only: View only
+        read_only_description: Can only view account data
+      save: Save sharing settings
+      owner_label: "Owner: %{name}"
+      shared_with_count:
+        one: Shared with 1 member
+        other: "Shared with %{count} members"
+      include_in_finances: Include in my budgets & reports
+      exclude_from_finances: Exclude from my budgets & reports
+    update:
+      success: Sharing settings updated
+      not_owner: Only the account owner can manage sharing
+      finance_toggle_success: Finance inclusion preference updated

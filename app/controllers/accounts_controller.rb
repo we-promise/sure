@@ -200,7 +200,7 @@ class AccountsController < ApplicationController
     end
 
     def set_account
-      @account = family.accounts.find(params[:id])
+      @account = Current.user.accessible_accounts.find(params[:id])
     end
 
     # Builds sync stats maps for all provider types to avoid N+1 queries in views

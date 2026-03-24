@@ -1,11 +1,16 @@
 class Account < ApplicationRecord
   include AASM, Syncable, Monetizable, Chartable, Linkable, Enrichable, Anchorable, Reconcileable, TaxTreatable
 
+  before_validation :assign_default_owner, on: :create
+
   validates :name, :balance, :currency, presence: true
 
   belongs_to :family
+  belongs_to :owner, class_name: "User", optional: true
   belongs_to :import, optional: true
 
+  has_many :account_shares, dependent: :destroy
+  has_many :shared_users, through: :account_shares, source: :user
   has_many :import_mappings, as: :mappable, dependent: :destroy, class_name: "Import::Mapping"
   has_many :entries, dependent: :destroy
   has_many :transactions, through: :entries, source: :entryable, source_type: "Transaction"
@@ -34,6 +39,24 @@ class Account < ApplicationRecord
 
   scope :listable_manual, -> {
     manual.where.not(status: :pending_deletion)
+  }
+
+  # All accounts a user can access (owned + shared with them)
+  scope :accessible_by, ->(user) {
+    left_joins(:account_shares)
+      .where("accounts.owner_id = :uid OR account_shares.user_id = :uid", uid: user.id)
+      .distinct
+  }
+
+  # Accounts that count in a user's financial calculations
+  scope :included_in_finances_for, ->(user) {
+    left_joins(:account_shares)
+      .where(
+        "accounts.owner_id = :uid OR " \
+        "(account_shares.user_id = :uid AND account_shares.include_in_finances = true)",
+        uid: user.id
+      )
+      .distinct
   }
 
   has_one_attached :logo, dependent: :purge_later
@@ -138,8 +161,9 @@ class Account < ApplicationRecord
         end
       end
 
+      family = simplefin_account.simplefin_item.family
       attributes = {
-        family: simplefin_account.simplefin_item.family,
+        family: family,
         name: simplefin_account.name,
         balance: balance,
         cash_balance: cash_balance,
@@ -165,8 +189,9 @@ class Account < ApplicationRecord
 
       cash_balance = balance
 
+      family = enable_banking_account.enable_banking_item.family
       attributes = {
-        family: enable_banking_account.enable_banking_item.family,
+        family: family,
         name: enable_banking_account.name,
         balance: balance,
         cash_balance: cash_balance,
@@ -344,4 +369,45 @@ class Account < ApplicationRecord
       raise "Unknown account type: #{accountable_type}"
     end
   end
+
+  def owned_by?(user)
+    user.present? && owner_id == user.id
+  end
+
+  def shared_with?(user)
+    owned_by?(user) || account_shares.exists?(user: user)
+  end
+
+  def shared?
+    account_shares.any?
+  end
+
+  def permission_for(user)
+    return :owner if owned_by?(user)
+    account_shares.find_by(user: user)&.permission&.to_sym
+  end
+
+  def share_with!(user, permission: "read_only", include_in_finances: true)
+    account_shares.create!(user: user, permission: permission, include_in_finances: include_in_finances)
+  end
+
+  def unshare_with!(user)
+    account_shares.where(user: user).destroy_all
+  end
+
+  def auto_share_with_family!
+    family.users.where.not(id: owner_id).find_each do |member|
+      account_shares.find_or_create_by!(user: member) do |share|
+        share.permission = "read_write"
+        share.include_in_finances = true
+      end
+    end
+  end
+
+  private
+
+    def assign_default_owner
+      return if owner.present?
+      self.owner = Current.user || family&.users&.find_by(role: %w[admin super_admin]) || family&.users&.order(:created_at)&.first
+    end
 end

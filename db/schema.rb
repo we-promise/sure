@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_03_20_080659) do
+ActiveRecord::Schema[7.2].define(version: 2026_03_24_100001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -27,6 +27,19 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_20_080659) do
     t.datetime "updated_at", null: false
     t.index ["account_id", "provider_type"], name: "index_account_providers_on_account_and_provider_type", unique: true
     t.index ["provider_type", "provider_id"], name: "index_account_providers_on_provider_type_and_provider_id", unique: true
+  end
+
+  create_table "account_shares", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "account_id", null: false
+    t.uuid "user_id", null: false
+    t.string "permission", default: "read_only", null: false
+    t.boolean "include_in_finances", default: true, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "user_id"], name: "index_account_shares_on_account_id_and_user_id", unique: true
+    t.index ["account_id"], name: "index_account_shares_on_account_id"
+    t.index ["user_id", "include_in_finances"], name: "index_account_shares_on_user_id_and_include_in_finances"
+    t.index ["user_id"], name: "index_account_shares_on_user_id"
   end
 
   create_table "accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -49,6 +62,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_20_080659) do
     t.string "institution_name"
     t.string "institution_domain"
     t.text "notes"
+    t.jsonb "holdings_snapshot_data"
+    t.datetime "holdings_snapshot_at"
+    t.uuid "owner_id"
     t.index ["accountable_id", "accountable_type"], name: "index_accounts_on_accountable_id_and_accountable_type"
     t.index ["accountable_type"], name: "index_accounts_on_accountable_type"
     t.index ["currency"], name: "index_accounts_on_currency"
@@ -58,6 +74,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_20_080659) do
     t.index ["family_id", "status"], name: "index_accounts_on_family_id_and_status"
     t.index ["family_id"], name: "index_accounts_on_family_id"
     t.index ["import_id"], name: "index_accounts_on_import_id"
+    t.index ["owner_id"], name: "index_accounts_on_owner_id"
     t.index ["plaid_account_id"], name: "index_accounts_on_plaid_account_id"
     t.index ["simplefin_account_id"], name: "index_accounts_on_simplefin_account_id"
     t.index ["status"], name: "index_accounts_on_status"
@@ -516,6 +533,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_20_080659) do
     t.string "vector_store_id"
     t.string "moniker", default: "Family", null: false
     t.string "assistant_type", default: "builtin", null: false
+    t.string "default_account_sharing", default: "shared", null: false
     t.check_constraint "month_start_day >= 1 AND month_start_day <= 28", name: "month_start_day_range"
   end
 
@@ -1243,6 +1261,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_20_080659) do
   create_table "snaptrade_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "snaptrade_item_id", null: false
     t.string "name"
+    t.string "account_id"
     t.string "snaptrade_account_id"
     t.string "snaptrade_authorization_id"
     t.string "account_number"
@@ -1264,6 +1283,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_20_080659) do
     t.datetime "updated_at", null: false
     t.boolean "activities_fetch_pending", default: false
     t.date "sync_start_date"
+    t.index ["snaptrade_item_id", "account_id"], name: "index_snaptrade_accounts_on_item_and_account_id", unique: true, where: "(account_id IS NOT NULL)"
     t.index ["snaptrade_item_id", "snaptrade_account_id"], name: "index_snaptrade_accounts_on_item_and_snaptrade_account_id", unique: true, where: "(snaptrade_account_id IS NOT NULL)"
     t.index ["snaptrade_item_id"], name: "index_snaptrade_accounts_on_snaptrade_item_id"
   end
@@ -1401,8 +1421,15 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_20_080659) do
     t.datetime "updated_at", null: false
     t.string "currency"
     t.jsonb "locked_attributes", default: {}
+    t.decimal "realized_gain", precision: 19, scale: 4
+    t.decimal "cost_basis_amount", precision: 19, scale: 4
+    t.string "cost_basis_currency"
+    t.integer "holding_period_days"
+    t.string "realized_gain_confidence"
+    t.string "realized_gain_currency"
     t.string "investment_activity_label"
     t.index ["investment_activity_label"], name: "index_trades_on_investment_activity_label"
+    t.index ["realized_gain"], name: "index_trades_on_realized_gain_not_null", where: "(realized_gain IS NOT NULL)"
     t.index ["security_id"], name: "index_trades_on_security_id"
   end
 
@@ -1416,12 +1443,14 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_20_080659) do
     t.string "external_id"
     t.jsonb "extra", default: {}, null: false
     t.string "investment_activity_label"
+    t.uuid "security_id"
     t.index ["category_id"], name: "index_transactions_on_category_id"
     t.index ["external_id"], name: "index_transactions_on_external_id"
     t.index ["extra"], name: "index_transactions_on_extra", using: :gin
     t.index ["investment_activity_label"], name: "index_transactions_on_investment_activity_label"
     t.index ["kind"], name: "index_transactions_on_kind"
     t.index ["merchant_id"], name: "index_transactions_on_merchant_id"
+    t.index ["security_id"], name: "index_transactions_on_security_id"
   end
 
   create_table "transfers", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1497,10 +1526,13 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_20_080659) do
   end
 
   add_foreign_key "account_providers", "accounts", on_delete: :cascade
+  add_foreign_key "account_shares", "accounts"
+  add_foreign_key "account_shares", "users"
   add_foreign_key "accounts", "families"
   add_foreign_key "accounts", "imports"
   add_foreign_key "accounts", "plaid_accounts"
   add_foreign_key "accounts", "simplefin_accounts"
+  add_foreign_key "accounts", "users", column: "owner_id"
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "api_keys", "users"
@@ -1578,6 +1610,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_20_080659) do
   add_foreign_key "trades", "securities"
   add_foreign_key "transactions", "categories", on_delete: :nullify
   add_foreign_key "transactions", "merchants"
+  add_foreign_key "transactions", "securities"
   add_foreign_key "transfers", "transactions", column: "inflow_transaction_id", on_delete: :cascade
   add_foreign_key "transfers", "transactions", column: "outflow_transaction_id", on_delete: :cascade
   add_foreign_key "users", "accounts", column: "default_account_id", on_delete: :nullify

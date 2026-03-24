@@ -16,4 +16,14 @@ class Current < ActiveSupport::CurrentAttributes
   def true_user
     session&.user
   end
+
+  def accessible_accounts
+    return family&.accounts unless user
+    user.accessible_accounts
+  end
+
+  def finance_accounts
+    return family&.accounts unless user
+    user.finance_accounts
+  end
 end

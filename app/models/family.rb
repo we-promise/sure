@@ -20,6 +20,7 @@ class Family < ApplicationRecord
 
   MONIKERS = [ "Family", "Group" ].freeze
   ASSISTANT_TYPES = %w[builtin external].freeze
+  SHARING_DEFAULTS = %w[shared private].freeze
 
   has_many :users, dependent: :destroy
   has_many :accounts, dependent: :destroy
@@ -49,6 +50,7 @@ class Family < ApplicationRecord
   validates :month_start_day, inclusion: { in: 1..28 }
   validates :moniker, inclusion: { in: MONIKERS }
   validates :assistant_type, inclusion: { in: ASSISTANT_TYPES }
+  validates :default_account_sharing, inclusion: { in: SHARING_DEFAULTS }
 
 
   def moniker_label
@@ -57,6 +59,10 @@ class Family < ApplicationRecord
 
   def moniker_label_plural
     moniker_label == "Group" ? "Groups" : "Families"
+  end
+
+  def share_all_by_default?
+    default_account_sharing == "shared"
   end
 
   def uses_custom_month_start?
@@ -115,12 +121,12 @@ class Family < ApplicationRecord
     AutoMerchantDetector.new(self, transaction_ids: transaction_ids).auto_detect
   end
 
-  def balance_sheet
-    @balance_sheet ||= BalanceSheet.new(self)
+  def balance_sheet(user: Current.user)
+    BalanceSheet.new(self, user: user)
   end
 
-  def income_statement
-    @income_statement ||= IncomeStatement.new(self)
+  def income_statement(user: Current.user)
+    IncomeStatement.new(self, user: user)
   end
 
   # Returns the Investment Contributions category for this family, creating it if it doesn't exist.
@@ -190,8 +196,8 @@ class Family < ApplicationRecord
     end
   end
 
-  def investment_statement
-    @investment_statement ||= InvestmentStatement.new(self)
+  def investment_statement(user: Current.user)
+    InvestmentStatement.new(self, user: user)
   end
 
   def eu?

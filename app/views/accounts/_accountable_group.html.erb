@@ -34,6 +34,9 @@
           <div class="min-w-0 grow">
             <div class="flex items-center gap-2 mb-0.5">
               <%= tag.p account.name, class: class_names("text-sm text-primary font-medium truncate", "animate-pulse" => account.syncing?) %>
+              <% if Current.user && !account.owned_by?(Current.user) %>
+                <%= icon("users", class: "w-3 h-3 text-secondary shrink-0") %>
+              <% end %>
             </div>
             <%= tag.p account.short_subtype_label, class: "text-sm text-secondary truncate" %>
           </div>

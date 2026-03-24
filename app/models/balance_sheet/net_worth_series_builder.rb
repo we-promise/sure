@@ -1,6 +1,7 @@
 class BalanceSheet::NetWorthSeriesBuilder
-  def initialize(family)
+  def initialize(family, user: nil)
     @family = family
+    @user = user
   end
 
   def net_worth_series(period: Period.last_30_days)
@@ -17,15 +18,20 @@ class BalanceSheet::NetWorthSeriesBuilder
   end
 
   private
-    attr_reader :family
+    attr_reader :family, :user
 
     def visible_account_ids
-      @visible_account_ids ||= family.accounts.visible.with_attached_logo.pluck(:id)
+      @visible_account_ids ||= begin
+        scope = family.accounts.visible
+        scope = scope.included_in_finances_for(user) if user
+        scope.pluck(:id)
+      end
     end
 
     def cache_key(period)
       key = [
         "balance_sheet_net_worth_series",
+        user&.id,
         period.start_date,
         period.end_date
       ].compact.join("_")

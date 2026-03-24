@@ -36,6 +36,7 @@ class Invitation < ApplicationRecord
     transaction do
       user.update!(family_id: family_id, role: role.to_s)
       update!(accepted_at: Time.current)
+      auto_share_existing_accounts(user) if family.share_all_by_default?
     end
     true
   end
@@ -94,5 +95,18 @@ class Invitation < ApplicationRecord
 
     def inviter_is_admin
       inviter.admin?
+    end
+
+    def auto_share_existing_accounts(user)
+      family.accounts.where.not(owner_id: user.id).find_each do |account|
+        AccountShare.create!(
+          account: account,
+          user: user,
+          permission: "read_write",
+          include_in_finances: true
+        )
+      rescue ActiveRecord::RecordInvalid
+        # Skip if already shared
+      end
     end
 end

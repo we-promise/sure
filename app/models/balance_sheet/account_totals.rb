@@ -1,6 +1,7 @@
 class BalanceSheet::AccountTotals
-  def initialize(family, sync_status_monitor:)
+  def initialize(family, user: nil, sync_status_monitor:)
     @family = family
+    @user = user
     @sync_status_monitor = sync_status_monitor
   end
 
@@ -13,7 +14,7 @@ class BalanceSheet::AccountTotals
   end
 
   private
-    attr_reader :family, :sync_status_monitor
+    attr_reader :family, :user, :sync_status_monitor
 
     AccountRow = Data.define(:account, :converted_balance, :is_syncing) do
       def syncing? = is_syncing
@@ -24,7 +25,11 @@ class BalanceSheet::AccountTotals
     end
 
     def visible_accounts
-      @visible_accounts ||= family.accounts.visible.with_attached_logo
+      @visible_accounts ||= begin
+        scope = family.accounts.visible.with_attached_logo
+        scope = scope.included_in_finances_for(user) if user
+        scope
+      end
     end
 
     # Wraps each account in an AccountRow with its converted balance and sync status.
@@ -41,7 +46,7 @@ class BalanceSheet::AccountTotals
     # Returns the cache key for storing visible account IDs, invalidated on data updates.
     def cache_key
       family.build_cache_key(
-        "balance_sheet_account_ids",
+        [ "balance_sheet_account_ids", user&.id ].compact.join("_"),
         invalidate_on_data_updates: true
       )
     end

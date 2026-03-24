@@ -40,10 +40,11 @@ module AccountableResource
       nil
     end || (Time.zone.today - 2.years)
     @account = Current.family.accounts.create_and_sync(
-      account_params.except(:return_to, :opening_balance_date),
+      account_params.except(:return_to, :opening_balance_date).merge(owner: Current.user),
       opening_balance_date: opening_balance_date
     )
     @account.lock_saved_attributes!
+    @account.auto_share_with_family! if Current.family.share_all_by_default?
 
     redirect_to account_params[:return_to].presence || @account, notice: t("accounts.create.success", type: accountable_type.name.underscore.humanize)
   end
@@ -87,7 +88,7 @@ module AccountableResource
     end
 
     def set_account
-      @account = Current.family.accounts.find(params[:id])
+      @account = Current.user.accessible_accounts.find(params[:id])
     end
 
     def account_params

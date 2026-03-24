@@ -34,6 +34,9 @@ class User < ApplicationRecord
   has_many :impersonated_support_sessions, class_name: "ImpersonationSession", foreign_key: :impersonated_id, dependent: :destroy
   has_many :oidc_identities, dependent: :destroy
   has_many :sso_audit_logs, dependent: :nullify
+  has_many :owned_accounts, class_name: "Account", foreign_key: :owner_id, dependent: :nullify
+  has_many :account_shares, dependent: :destroy
+  has_many :shared_accounts, through: :account_shares, source: :account
   accepts_nested_attributes_for :family, update_only: true
 
   validates :email, presence: true, uniqueness: true, format: { with: URI::MailTo::EMAIL_REGEXP }
@@ -114,6 +117,14 @@ class User < ApplicationRecord
 
   def admin?
     super_admin? || role == "admin"
+  end
+
+  def accessible_accounts
+    family.accounts.accessible_by(self)
+  end
+
+  def finance_accounts
+    family.accounts.included_in_finances_for(self)
   end
 
   def display_name

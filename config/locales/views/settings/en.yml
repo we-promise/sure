@@ -58,6 +58,11 @@ en:
         month_start_day: Budget month starts on
         month_start_day_hint: Set when your budget month starts (e.g., payday)
         month_start_day_warning: Your budgets and MTD calculations will use this custom start day instead of the 1st of each month.
+        sharing_title: "%{moniker} Sharing"
+        sharing_subtitle: "Control how accounts are shared in your %{moniker}"
+        sharing_default_label: Default sharing for new accounts
+        sharing_shared: Share with all members
+        sharing_private: Keep private by default
     profiles:
       destroy:
         cannot_remove_self: You cannot remove yourself from the account.

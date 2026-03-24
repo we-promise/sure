@@ -1,0 +1,80 @@
+<%= content_for :page_title, t(".title") %>
+
+<%= settings_section title: t(".title"), subtitle: t(".subtitle") do %>
+  <% if @account.owned_by?(Current.user) %>
+    <% if @family_members.any? %>
+      <%= styled_form_with url: account_sharing_path(@account), method: :patch, class: "space-y-4" do |form| %>
+        <div class="bg-container-inset rounded-xl p-1">
+          <div class="px-4 py-2">
+            <div class="grid grid-cols-3 gap-4">
+              <p class="uppercase text-xs text-secondary font-medium"><%= t(".member") %></p>
+              <p class="uppercase text-xs text-secondary font-medium"><%= t(".permission") %></p>
+              <p class="uppercase text-xs text-secondary font-medium text-right"><%= t(".shared") %></p>
+            </div>
+          </div>
+          <% @family_members.each_with_index do |member, index| %>
+            <% share = @account_shares[member.id] %>
+            <div class="flex items-center bg-container p-4 shadow-border-xs rounded-lg mt-2">
+              <input type="hidden" name="sharing[members][<%= index %>][user_id]" value="<%= member.id %>">
+              <div class="grid grid-cols-3 gap-4 items-center w-full">
+                <div class="flex items-center gap-2">
+                  <div class="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-xs font-medium text-secondary">
+                    <%= member.initials %>
+                  </div>
+                  <span class="text-sm text-primary"><%= member.display_name %></span>
+                </div>
+                <div>
+                  <select name="sharing[members][<%= index %>][permission]" class="text-sm border border-primary rounded-lg px-3 py-1.5 bg-container text-primary w-full">
+                    <% AccountShare::PERMISSIONS.each do |perm| %>
+                      <option value="<%= perm %>" <%= "selected" if share&.permission == perm %>>
+                        <%= t(".permissions.#{perm}") %>
+                      </option>
+                    <% end %>
+                  </select>
+                </div>
+                <div class="flex justify-end">
+                  <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="hidden" name="sharing[members][<%= index %>][shared]" value="0">
+                    <input type="checkbox" name="sharing[members][<%= index %>][shared]" value="1"
+                      class="sr-only peer" <%= "checked" if share.present? %>>
+                    <div class="w-9 h-5 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-success"></div>
+                  </label>
+                </div>
+              </div>
+            </div>
+          <% end %>
+        </div>
+        <div class="flex justify-end">
+          <%= render DS::Button.new(text: t(".save"), class: "md:w-auto w-full justify-center") %>
+        </div>
+      <% end %>
+    <% else %>
+      <p class="text-sm text-secondary"><%= t(".no_members", moniker: family_moniker_downcase) %></p>
+    <% end %>
+  <% else %>
+    <%# Non-owner can only toggle finance inclusion %>
+    <% share = @account.account_shares.find_by(user: Current.user) %>
+    <% if share %>
+      <div class="bg-container-inset rounded-xl p-4 space-y-3">
+        <p class="text-sm text-secondary"><%= t(".owner_label", name: @account.owner.display_name) %></p>
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm text-primary font-medium">
+              <% if share.include_in_finances? %>
+                <%= t(".include_in_finances") %>
+              <% else %>
+                <%= t(".exclude_from_finances") %>
+              <% end %>
+            </p>
+          </div>
+          <%= button_to account_sharing_path(@account),
+                method: :patch,
+                params: { toggle_finance_inclusion: true },
+                class: "text-sm text-link hover:underline" do %>
+            <%= share.include_in_finances? ? t(".exclude_from_finances") : t(".include_in_finances") %>
+          <% end %>
+        </div>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>

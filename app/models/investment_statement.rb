@@ -5,10 +5,11 @@ class InvestmentStatement
 
   monetize :total_contributions, :total_dividends, :total_interest, :unrealized_gains
 
-  attr_reader :family
+  attr_reader :family, :user
 
-  def initialize(family)
+  def initialize(family, user: nil)
     @family = family
+    @user = user || Current.user
   end
 
   # Get totals for a specific period
@@ -161,7 +162,11 @@ class InvestmentStatement
 
   # Investment accounts
   def investment_accounts
-    @investment_accounts ||= family.accounts.visible.where(accountable_type: %w[Investment Crypto])
+    @investment_accounts ||= begin
+      scope = family.accounts.visible.where(accountable_type: %w[Investment Crypto])
+      scope = scope.included_in_finances_for(user) if user
+      scope
+    end
   end
 
   private
