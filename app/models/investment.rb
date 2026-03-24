@@ -30,11 +30,20 @@ class Investment < ApplicationRecord
     "workplace_pension_uk" => { short: "Pension", long: "Workplace Pension", region: "uk", tax_treatment: :tax_deferred },
 
     # === Canada ===
-    "rrsp" => { short: "RRSP", long: "Registered Retirement Savings Plan", region: "ca", tax_treatment: :tax_deferred },
     "tfsa" => { short: "TFSA", long: "Tax-Free Savings Account", region: "ca", tax_treatment: :tax_exempt },
+    "rrsp" => { short: "RRSP", long: "Registered Retirement Savings Plan", region: "ca", tax_treatment: :tax_deferred },
+    "non-registered" => { short: "Non-Registered", long: "Non-Registered Investment Account", region: "ca", tax_treatment: :taxable },
+    "fhsa" => { short: "FHSA", long: "First Home Savings Account", region: "ca", tax_treatment: :tax_exempt },
+    "rdsp" => { short: "RDSP", long: "Registered Disability Savings Plan", region: "ca", tax_treatment: :tax_advantaged },
     "resp" => { short: "RESP", long: "Registered Education Savings Plan", region: "ca", tax_treatment: :tax_advantaged },
+    "dpsp" => { short: "DPSP", long: "Deferred Profit Sharing Plan", region: "ca", tax_treatment: :tax_deferred },
+    "prpp" => { short: "PRPP", long: "Pooled Registered Pension Plan", region: "ca", tax_treatment: :tax_deferred },
     "lira" => { short: "LIRA", long: "Locked-In Retirement Account", region: "ca", tax_treatment: :tax_deferred },
     "rrif" => { short: "RRIF", long: "Registered Retirement Income Fund", region: "ca", tax_treatment: :tax_deferred },
+    "lif" => { short: "LIF", long: "Life Income Fund", region: "ca", tax_treatment: :tax_deferred },
+    "lrif" => { short: "LRIF", long: "Locked-In Retirement Income Fund", region: "ca", tax_treatment: :tax_deferred },
+    "prif" => { short: "PRIF", long: "Prescribed Registered Retirement Income Fund", region: "ca", tax_treatment: :tax_deferred },
+    "rlif" => { short: "RLIF", long: "Restricted Life Income Fund", region: "ca", tax_treatment: :tax_deferred },
 
     # === Australia ===
     "super" => { short: "Super", long: "Superannuation", region: "au", tax_treatment: :tax_deferred },
