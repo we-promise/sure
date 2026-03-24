@@ -1,5 +1,6 @@
 class CoinstatsItemsController < ApplicationController
   before_action :set_coinstats_item, only: [ :show, :edit, :update, :destroy, :sync ]
+  before_action :authorize_owner!, only: [ :edit, :update, :destroy, :sync ]
 
   def index
     @coinstats_items = Current.family.coinstats_items.ordered
@@ -92,6 +93,13 @@ class CoinstatsItemsController < ApplicationController
 
     def set_coinstats_item
       @coinstats_item = Current.family.coinstats_items.find(params[:id])
+    end
+
+    def authorize_owner!
+      unless @coinstats_item.created_by?(Current.user)
+        redirect_to accounts_path, alert: "Only the connection owner can perform this action"
+        return
+      end
     end
 
     def coinstats_item_params

@@ -46,34 +46,36 @@
         </div>
       </div>
 
-      <div class="flex items-center gap-2">
-        <% if coinstats_item.requires_update? %>
-          <%= render DS::Link.new(
-            text: t(".update_api_key"),
-            icon: "refresh-cw",
-            variant: "secondary",
-            href: settings_providers_path,
-            frame: "_top"
-          ) %>
-        <% elsif Rails.env.development? %>
-          <%= icon(
-            "refresh-cw",
-            as_button: true,
-            href: sync_coinstats_item_path(coinstats_item)
-          ) %>
-        <% end %>
+      <% if coinstats_item.created_by?(Current.user) %>
+        <div class="flex items-center gap-2">
+          <% if coinstats_item.requires_update? %>
+            <%= render DS::Link.new(
+              text: t(".update_api_key"),
+              icon: "refresh-cw",
+              variant: "secondary",
+              href: settings_providers_path,
+              frame: "_top"
+            ) %>
+          <% elsif Rails.env.development? %>
+            <%= icon(
+              "refresh-cw",
+              as_button: true,
+              href: sync_coinstats_item_path(coinstats_item)
+            ) %>
+          <% end %>
 
-        <%= render DS::Menu.new do |menu| %>
-          <% menu.with_item(
-            variant: "button",
-            text: t(".delete"),
-            icon: "trash-2",
-            href: coinstats_item_path(coinstats_item),
-            method: :delete,
-            confirm: CustomConfirm.for_resource_deletion(coinstats_item.institution_display_name, high_severity: true)
-          ) %>
-        <% end %>
-      </div>
+          <%= render DS::Menu.new do |menu| %>
+            <% menu.with_item(
+              variant: "button",
+              text: t(".delete"),
+              icon: "trash-2",
+              href: coinstats_item_path(coinstats_item),
+              method: :delete,
+              confirm: CustomConfirm.for_resource_deletion(coinstats_item.institution_display_name, high_severity: true)
+            ) %>
+          <% end %>
+        </div>
+      <% end %>
     </summary>
 
     <% unless coinstats_item.scheduled_for_deletion? %>

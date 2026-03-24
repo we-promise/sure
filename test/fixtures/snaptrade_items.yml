@@ -3,6 +3,7 @@
 
 configured_item:
   family: dylan_family
+  created_by: family_admin
   name: "SnapTrade Connection"
   client_id: "test_client_id"
   consumer_key: "test_consumer_key"
@@ -17,6 +18,7 @@ configured_item:
 # but before connecting to SnapTrade portal)
 pending_registration_item:
   family: empty
+  created_by: empty
   name: "Pending Registration"
   client_id: "pending_client_id"
   consumer_key: "pending_consumer_key"

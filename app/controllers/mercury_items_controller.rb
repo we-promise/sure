@@ -1,5 +1,6 @@
 class MercuryItemsController < ApplicationController
   before_action :set_mercury_item, only: [ :show, :edit, :update, :destroy, :sync, :setup_accounts, :complete_account_setup ]
+  before_action :authorize_owner!, only: [ :edit, :update, :destroy, :sync, :setup_accounts, :complete_account_setup ]
 
   def index
     @mercury_items = Current.family.mercury_items.active.ordered
@@ -746,6 +747,13 @@ class MercuryItemsController < ApplicationController
 
     def set_mercury_item
       @mercury_item = Current.family.mercury_items.find(params[:id])
+    end
+
+    def authorize_owner!
+      unless @mercury_item.created_by?(Current.user)
+        redirect_to accounts_path, alert: "Only the connection owner can perform this action"
+        return
+      end
     end
 
     def mercury_item_params

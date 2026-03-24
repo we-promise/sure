@@ -143,44 +143,46 @@
         </div>
       </div>
 
-      <div class="flex items-center gap-2">
-        <% if simplefin_item.requires_update? %>
-          <%= render DS::Link.new(
-            text: t(".update"),
-            icon: "refresh-cw",
-            variant: "secondary",
-            href: edit_simplefin_item_path(simplefin_item),
-            frame: "modal"
-          ) %>
-        <% else %>
-          <%= icon(
-            "refresh-cw",
-            as_button: true,
-            href: sync_simplefin_item_path(simplefin_item),
-            disabled: simplefin_item.syncing?
-          ) %>
-        <% end %>
-
-        <%= render DS::Menu.new do |menu| %>
-          <% if unlinked_count.to_i > 0 %>
-            <% menu.with_item(
-              variant: "link",
-              text: t(".setup_accounts_menu"),
-              icon: "settings",
-              href: setup_accounts_simplefin_item_path(simplefin_item),
-              frame: :modal
+      <% if simplefin_item.created_by?(Current.user) %>
+        <div class="flex items-center gap-2">
+          <% if simplefin_item.requires_update? %>
+            <%= render DS::Link.new(
+              text: t(".update"),
+              icon: "refresh-cw",
+              variant: "secondary",
+              href: edit_simplefin_item_path(simplefin_item),
+              frame: "modal"
+            ) %>
+          <% else %>
+            <%= icon(
+              "refresh-cw",
+              as_button: true,
+              href: sync_simplefin_item_path(simplefin_item),
+              disabled: simplefin_item.syncing?
             ) %>
           <% end %>
-          <% menu.with_item(
-            variant: "button",
-            text: t(".delete"),
-            icon: "trash-2",
-            href: simplefin_item_path(simplefin_item),
-            method: :delete,
-            confirm: CustomConfirm.for_resource_deletion(simplefin_item.name, high_severity: true)
-          ) %>
-        <% end %>
-      </div>
+
+          <%= render DS::Menu.new do |menu| %>
+            <% if unlinked_count.to_i > 0 %>
+              <% menu.with_item(
+                variant: "link",
+                text: t(".setup_accounts_menu"),
+                icon: "settings",
+                href: setup_accounts_simplefin_item_path(simplefin_item),
+                frame: :modal
+              ) %>
+            <% end %>
+            <% menu.with_item(
+              variant: "button",
+              text: t(".delete"),
+              icon: "trash-2",
+              href: simplefin_item_path(simplefin_item),
+              method: :delete,
+              confirm: CustomConfirm.for_resource_deletion(simplefin_item.name, high_severity: true)
+            ) %>
+          <% end %>
+        </div>
+      <% end %>
     </summary>
 
     <% unless simplefin_item.scheduled_for_deletion? %>

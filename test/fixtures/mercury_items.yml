@@ -1,5 +1,6 @@
 one:
   family: dylan_family
+  created_by: family_admin
   name: "Test Mercury Connection"
   token: "test_mercury_token_123"
   base_url: "https://api-sandbox.mercury.com/api/v1"

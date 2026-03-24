@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_03_24_100003) do
+ActiveRecord::Schema[7.2].define(version: 2026_03_24_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -264,6 +264,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_24_100003) do
     t.text "api_secret"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.uuid "created_by_id"
+    t.index ["created_by_id"], name: "index_coinbase_items_on_created_by_id"
     t.index ["family_id"], name: "index_coinbase_items_on_family_id"
     t.index ["status"], name: "index_coinbase_items_on_status"
   end
@@ -304,6 +306,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_24_100003) do
     t.string "api_key", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.uuid "created_by_id"
+    t.index ["created_by_id"], name: "index_coinstats_items_on_created_by_id"
     t.index ["family_id"], name: "index_coinstats_items_on_family_id"
     t.index ["status"], name: "index_coinstats_items_on_status"
   end
@@ -392,6 +396,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_24_100003) do
     t.string "authorization_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.uuid "created_by_id"
+    t.index ["created_by_id"], name: "index_enable_banking_items_on_created_by_id"
     t.index ["family_id"], name: "index_enable_banking_items_on_family_id"
     t.index ["status"], name: "index_enable_banking_items_on_status"
   end
@@ -750,6 +756,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_24_100003) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.text "api_token"
+    t.uuid "created_by_id"
+    t.index ["created_by_id"], name: "index_indexa_capital_items_on_created_by_id"
     t.index ["family_id"], name: "index_indexa_capital_items_on_family_id"
     t.index ["status"], name: "index_indexa_capital_items_on_status"
   end
@@ -856,6 +864,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_24_100003) do
     t.datetime "updated_at", null: false
     t.text "api_key"
     t.string "base_url"
+    t.uuid "created_by_id"
+    t.index ["created_by_id"], name: "index_lunchflow_items_on_created_by_id"
     t.index ["family_id"], name: "index_lunchflow_items_on_family_id"
     t.index ["status"], name: "index_lunchflow_items_on_status"
   end
@@ -914,6 +924,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_24_100003) do
     t.string "base_url"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.uuid "created_by_id"
+    t.index ["created_by_id"], name: "index_mercury_items_on_created_by_id"
     t.index ["family_id"], name: "index_mercury_items_on_family_id"
     t.index ["status"], name: "index_mercury_items_on_status"
   end
@@ -1059,6 +1071,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_24_100003) do
     t.string "status", default: "good", null: false
     t.jsonb "raw_payload", default: {}
     t.jsonb "raw_institution_payload", default: {}
+    t.uuid "created_by_id"
+    t.index ["created_by_id"], name: "index_plaid_items_on_created_by_id"
     t.index ["family_id"], name: "index_plaid_items_on_family_id"
     t.index ["plaid_id"], name: "index_plaid_items_on_plaid_id", unique: true
   end
@@ -1253,6 +1267,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_24_100003) do
     t.string "institution_domain"
     t.string "institution_color"
     t.date "sync_start_date"
+    t.uuid "created_by_id"
+    t.index ["created_by_id"], name: "index_simplefin_items_on_created_by_id"
     t.index ["family_id"], name: "index_simplefin_items_on_family_id"
     t.index ["institution_domain"], name: "index_simplefin_items_on_institution_domain"
     t.index ["institution_id"], name: "index_simplefin_items_on_institution_id"
@@ -1309,6 +1325,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_24_100003) do
     t.string "snaptrade_user_secret"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.uuid "created_by_id"
+    t.index ["created_by_id"], name: "index_snaptrade_items_on_created_by_id"
     t.index ["family_id"], name: "index_snaptrade_items_on_family_id"
     t.index ["status"], name: "index_snaptrade_items_on_status"
   end
@@ -1504,6 +1522,10 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_24_100003) do
     t.string "kind", default: "reconciliation", null: false
   end
 
+# Could not dump table "vector_store_chunks" because of following StandardError
+#   Unknown type 'vector(768)' for column 'embedding'
+
+
   create_table "vehicles", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
@@ -1535,10 +1557,13 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_24_100003) do
   add_foreign_key "chats", "users"
   add_foreign_key "coinbase_accounts", "coinbase_items"
   add_foreign_key "coinbase_items", "families"
+  add_foreign_key "coinbase_items", "users", column: "created_by_id"
   add_foreign_key "coinstats_accounts", "coinstats_items"
   add_foreign_key "coinstats_items", "families"
+  add_foreign_key "coinstats_items", "users", column: "created_by_id"
   add_foreign_key "enable_banking_accounts", "enable_banking_items"
   add_foreign_key "enable_banking_items", "families"
+  add_foreign_key "enable_banking_items", "users", column: "created_by_id"
   add_foreign_key "entries", "accounts", on_delete: :cascade
   add_foreign_key "entries", "entries", column: "parent_entry_id", on_delete: :cascade
   add_foreign_key "entries", "imports"
@@ -1561,14 +1586,17 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_24_100003) do
   add_foreign_key "imports", "families"
   add_foreign_key "indexa_capital_accounts", "indexa_capital_items"
   add_foreign_key "indexa_capital_items", "families"
+  add_foreign_key "indexa_capital_items", "users", column: "created_by_id"
   add_foreign_key "invitations", "families"
   add_foreign_key "invitations", "users", column: "inviter_id"
   add_foreign_key "llm_usages", "families"
   add_foreign_key "lunchflow_accounts", "lunchflow_items"
   add_foreign_key "lunchflow_items", "families"
+  add_foreign_key "lunchflow_items", "users", column: "created_by_id"
   add_foreign_key "merchants", "families"
   add_foreign_key "mercury_accounts", "mercury_items"
   add_foreign_key "mercury_items", "families"
+  add_foreign_key "mercury_items", "users", column: "created_by_id"
   add_foreign_key "messages", "chats"
   add_foreign_key "mobile_devices", "users"
   add_foreign_key "oauth_access_grants", "oauth_applications", column: "application_id"
@@ -1576,6 +1604,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_24_100003) do
   add_foreign_key "oidc_identities", "users"
   add_foreign_key "plaid_accounts", "plaid_items"
   add_foreign_key "plaid_items", "families"
+  add_foreign_key "plaid_items", "users", column: "created_by_id"
   add_foreign_key "recurring_transactions", "families"
   add_foreign_key "recurring_transactions", "merchants"
   add_foreign_key "rejected_transfers", "transactions", column: "inflow_transaction_id"
@@ -1590,8 +1619,10 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_24_100003) do
   add_foreign_key "sessions", "users"
   add_foreign_key "simplefin_accounts", "simplefin_items"
   add_foreign_key "simplefin_items", "families"
+  add_foreign_key "simplefin_items", "users", column: "created_by_id"
   add_foreign_key "snaptrade_accounts", "snaptrade_items"
   add_foreign_key "snaptrade_items", "families"
+  add_foreign_key "snaptrade_items", "users", column: "created_by_id"
   add_foreign_key "sso_audit_logs", "users"
   add_foreign_key "subscriptions", "families"
   add_foreign_key "syncs", "syncs", column: "parent_id"

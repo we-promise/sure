@@ -1,5 +1,6 @@
 class SnaptradeItemsController < ApplicationController
   before_action :set_snaptrade_item, only: [ :show, :edit, :update, :destroy, :sync, :connect, :setup_accounts, :complete_account_setup, :connections, :delete_connection, :delete_orphaned_user ]
+  before_action :authorize_owner!, only: [ :edit, :update, :destroy, :sync, :connect, :setup_accounts, :complete_account_setup, :connections, :delete_connection, :delete_orphaned_user ]
 
   def index
     @snaptrade_items = Current.family.snaptrade_items.ordered
@@ -413,6 +414,13 @@ class SnaptradeItemsController < ApplicationController
 
     def set_snaptrade_item
       @snaptrade_item = Current.family.snaptrade_items.find(params[:id])
+    end
+
+    def authorize_owner!
+      unless @snaptrade_item.created_by?(Current.user)
+        redirect_to accounts_path, alert: "Only the connection owner can perform this action"
+        return
+      end
     end
 
     def snaptrade_item_params

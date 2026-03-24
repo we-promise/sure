@@ -2,6 +2,7 @@
 
 class IndexaCapitalItem < ApplicationRecord
   include Syncable, Provided, Unlinking
+  include ProviderOwnable
 
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
 

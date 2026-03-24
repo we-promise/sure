@@ -57,55 +57,57 @@
         </div>
       </div>
 
-      <div class="flex items-center gap-2">
-        <% if snaptrade_item.requires_update? || !snaptrade_item.user_registered? %>
-          <%= render DS::Link.new(
-            text: t(".reconnect"),
-            icon: "link",
-            variant: "secondary",
-            href: connect_snaptrade_item_path(snaptrade_item)
-          ) %>
-        <% else %>
-          <%= icon(
-            "refresh-cw",
-            as_button: true,
-            href: sync_snaptrade_item_path(snaptrade_item),
-            disabled: snaptrade_item.syncing?
-          ) %>
-        <% end %>
-
-        <%= render DS::Menu.new do |menu| %>
-          <% menu.with_item(
-            variant: "link",
-            text: t(".connect_brokerage"),
-            icon: "plus",
-            href: connect_snaptrade_item_path(snaptrade_item)
-          ) %>
-          <% if unlinked_count > 0 %>
-            <% menu.with_item(
-              variant: "link",
-              text: t(".setup_accounts_menu"),
-              icon: "settings",
-              href: setup_accounts_snaptrade_item_path(snaptrade_item),
-              frame: :modal
+      <% if snaptrade_item.created_by?(Current.user) %>
+        <div class="flex items-center gap-2">
+          <% if snaptrade_item.requires_update? || !snaptrade_item.user_registered? %>
+            <%= render DS::Link.new(
+              text: t(".reconnect"),
+              icon: "link",
+              variant: "secondary",
+              href: connect_snaptrade_item_path(snaptrade_item)
+            ) %>
+          <% else %>
+            <%= icon(
+              "refresh-cw",
+              as_button: true,
+              href: sync_snaptrade_item_path(snaptrade_item),
+              disabled: snaptrade_item.syncing?
             ) %>
           <% end %>
-          <% menu.with_item(
-            variant: "link",
-            text: t(".manage_connections"),
-            icon: "cable",
-            href: settings_providers_path(manage: "1")
-          ) %>
-          <% menu.with_item(
-            variant: "button",
-            text: t(".delete"),
-            icon: "trash-2",
-            href: snaptrade_item_path(snaptrade_item),
-            method: :delete,
-            confirm: CustomConfirm.for_resource_deletion(snaptrade_item.name, high_severity: true)
-          ) %>
-        <% end %>
-      </div>
+
+          <%= render DS::Menu.new do |menu| %>
+            <% menu.with_item(
+              variant: "link",
+              text: t(".connect_brokerage"),
+              icon: "plus",
+              href: connect_snaptrade_item_path(snaptrade_item)
+            ) %>
+            <% if unlinked_count > 0 %>
+              <% menu.with_item(
+                variant: "link",
+                text: t(".setup_accounts_menu"),
+                icon: "settings",
+                href: setup_accounts_snaptrade_item_path(snaptrade_item),
+                frame: :modal
+              ) %>
+            <% end %>
+            <% menu.with_item(
+              variant: "link",
+              text: t(".manage_connections"),
+              icon: "cable",
+              href: settings_providers_path(manage: "1")
+            ) %>
+            <% menu.with_item(
+              variant: "button",
+              text: t(".delete"),
+              icon: "trash-2",
+              href: snaptrade_item_path(snaptrade_item),
+              method: :delete,
+              confirm: CustomConfirm.for_resource_deletion(snaptrade_item.name, high_severity: true)
+            ) %>
+          <% end %>
+        </div>
+      <% end %>
     </summary>
 
     <% unless snaptrade_item.scheduled_for_deletion? %>

@@ -1,5 +1,6 @@
 class PlaidItem < ApplicationRecord
   include Syncable, Provided, Encryptable
+  include ProviderOwnable
 
   enum :plaid_region, { us: "us", eu: "eu" }
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good

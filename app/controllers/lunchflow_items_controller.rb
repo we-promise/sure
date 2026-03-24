@@ -1,5 +1,6 @@
 class LunchflowItemsController < ApplicationController
   before_action :set_lunchflow_item, only: [ :show, :edit, :update, :destroy, :sync, :setup_accounts, :complete_account_setup ]
+  before_action :authorize_owner!, only: [ :edit, :update, :destroy, :sync, :setup_accounts, :complete_account_setup ]
 
   def index
     @lunchflow_items = Current.family.lunchflow_items.active.ordered
@@ -740,6 +741,13 @@ class LunchflowItemsController < ApplicationController
     end
     def set_lunchflow_item
       @lunchflow_item = Current.family.lunchflow_items.find(params[:id])
+    end
+
+    def authorize_owner!
+      unless @lunchflow_item.created_by?(Current.user)
+        redirect_to accounts_path, alert: "Only the connection owner can perform this action"
+        return
+      end
     end
 
     def lunchflow_params

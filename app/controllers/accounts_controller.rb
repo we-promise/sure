@@ -11,15 +11,15 @@ class AccountsController < ApplicationController
           .listable_manual
           .where(id: @accessible_account_ids)
           .order(:name)
-    @plaid_items = family.plaid_items.ordered.includes(:syncs, :plaid_accounts)
-    @simplefin_items = family.simplefin_items.ordered.includes(:syncs)
-    @lunchflow_items = family.lunchflow_items.ordered.includes(:syncs, :lunchflow_accounts)
-    @enable_banking_items = family.enable_banking_items.ordered.includes(:syncs)
-    @coinstats_items = family.coinstats_items.ordered.includes(:coinstats_accounts, :accounts, :syncs)
-    @mercury_items = family.mercury_items.ordered.includes(:syncs, :mercury_accounts)
-    @coinbase_items = family.coinbase_items.ordered.includes(:coinbase_accounts, :accounts, :syncs)
-    @snaptrade_items = family.snaptrade_items.ordered.includes(:syncs, :snaptrade_accounts)
-    @indexa_capital_items = family.indexa_capital_items.ordered.includes(:syncs, :indexa_capital_accounts)
+    @plaid_items = visible_provider_items(family.plaid_items.ordered.includes(:syncs, :plaid_accounts))
+    @simplefin_items = visible_provider_items(family.simplefin_items.ordered.includes(:syncs))
+    @lunchflow_items = visible_provider_items(family.lunchflow_items.ordered.includes(:syncs, :lunchflow_accounts))
+    @enable_banking_items = visible_provider_items(family.enable_banking_items.ordered.includes(:syncs))
+    @coinstats_items = visible_provider_items(family.coinstats_items.ordered.includes(:coinstats_accounts, :accounts, :syncs))
+    @mercury_items = visible_provider_items(family.mercury_items.ordered.includes(:syncs, :mercury_accounts))
+    @coinbase_items = visible_provider_items(family.coinbase_items.ordered.includes(:coinbase_accounts, :accounts, :syncs))
+    @snaptrade_items = visible_provider_items(family.snaptrade_items.ordered.includes(:syncs, :snaptrade_accounts))
+    @indexa_capital_items = visible_provider_items(family.indexa_capital_items.ordered.includes(:syncs, :indexa_capital_accounts))
 
     # Build sync stats maps for all providers
     build_sync_stats_maps
@@ -217,6 +217,13 @@ class AccountsController < ApplicationController
           format.turbo_stream { stream_redirect_to(account_path(@account), alert: t("accounts.not_authorized")) }
         end
         nil
+      end
+    end
+
+    def visible_provider_items(items)
+      items.select do |item|
+        item.created_by?(Current.user) ||
+          (item.respond_to?(:accounts) && (item.accounts.map(&:id) & @accessible_account_ids).any?)
       end
     end
 

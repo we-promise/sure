@@ -4,6 +4,7 @@ class IndexaCapitalItemsController < ApplicationController
   ALLOWED_ACCOUNTABLE_TYPES = %w[Depository CreditCard Investment Loan OtherAsset OtherLiability Crypto Property Vehicle].freeze
 
   before_action :set_indexa_capital_item, only: [ :show, :edit, :update, :destroy, :sync, :setup_accounts, :complete_account_setup ]
+  before_action :authorize_owner!, only: [ :edit, :update, :destroy, :sync, :setup_accounts, :complete_account_setup ]
 
   def index
     @indexa_capital_items = Current.family.indexa_capital_items.ordered
@@ -267,6 +268,13 @@ class IndexaCapitalItemsController < ApplicationController
 
     def set_indexa_capital_item
       @indexa_capital_item = Current.family.indexa_capital_items.find(params[:id])
+    end
+
+    def authorize_owner!
+      unless @indexa_capital_item.created_by?(Current.user)
+        redirect_to accounts_path, alert: "Only the connection owner can perform this action"
+        return
+      end
     end
 
     def indexa_capital_item_params
