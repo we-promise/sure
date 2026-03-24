@@ -257,8 +257,19 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
 
     create_transaction(account: excluded_account, name: "Excluded Transaction", amount: 100)
 
+    non_excluded_account = @family.accounts.create!(
+      name: "Included Account",
+      balance: 1000,
+      currency: "USD",
+      accountable: Depository.new(subtype: "checking"),
+      excluded: false
+    )
+
+    create_transaction(account: non_excluded_account, name: "Included Transaction", amount: 100)
+
     get reports_path(period_type: :monthly)
 
     assert_select "td", text: "Excluded Transaction", count: 0
+    assert_select "td", text: "Included Transaction", count: 1
   end
 end

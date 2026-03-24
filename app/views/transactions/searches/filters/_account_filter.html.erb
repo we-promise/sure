@@ -7,15 +7,15 @@
   <div class="my-2" id="list" data-list-filter-target="list">
     <% @filter_accounts.each do |account| %>
       <div class="filterable-item flex items-center gap-2 p-2" data-filter-name="<%= account.name %>">
-        <%= form.check_box :accounts,
+        <%= form.check_box :account_ids,
                            {
                              multiple: true,
-                             checked: @q[:accounts]&.include?(account.name),
+                             checked: @q[:account_ids]&.include?(account.id.to_s),
                              class: "checkbox checkbox--light"
                            },
-                           account.name,
+                           account.id,
                            nil %>
-        <%= form.label :accounts, value: account.name, class: "text-sm text-primary flex items-center gap-1" do %>
+        <%= form.label :account_ids, value: account.id, class: "text-sm text-primary flex items-center gap-1" do %>
           <%= account.name %>
           <% if account.excluded? %> 
             <span class="text-xs text-secondary"><%= t("accounts.accountable_group.excluded_badge", default: "Excluded") %></span>

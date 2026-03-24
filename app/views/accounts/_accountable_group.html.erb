@@ -36,9 +36,9 @@
               <%= tag.p account.name, class: class_names("text-sm text-primary font-medium truncate", "animate-pulse" => account.syncing?) %>
             </div>
             <div class="flex items-baseline gap-1">
-              <%= tag.p account.short_subtype_label, class: "text-sm text-secondary truncate" %>
+              <%= tag.p account.short_subtype_label, class: "text-sm text-secondary truncate min-w-0 flex-1" %>
               <% if account.excluded? %>
-                <span class="text-xs text-secondary"><%= t("accounts.accountable_group.excluded_badge") %></span>
+                <span class="text-xs text-secondary flex-shrink-0"><%= t("accounts.accountable_group.excluded_badge") %></span>
               <% end %>
             </div>
           </div>

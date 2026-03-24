@@ -81,16 +81,28 @@ class AccountsController < ApplicationController
   end
 
   def toggle_active
-    if @account.active?
-      @account.disable!
-    elsif @account.disabled?
-      @account.enable!
+    active_param = params[:active] || params.dig(:account, :active)
+    if active_param.present?
+      cast_value = ActiveModel::Type::Boolean.new.cast(active_param)
+      cast_value ? @account.enable! : @account.disable!
+    else
+      if @account.active?
+        @account.disable!
+      elsif @account.disabled?
+        @account.enable!
+      end
     end
     redirect_to accounts_path
   end
 
   def toggle_excluded
-    @account.toggle!(:excluded)
+    excluded_param = params[:excluded] || params.dig(:account, :excluded)
+    if excluded_param.present?
+      cast_value = ActiveModel::Type::Boolean.new.cast(excluded_param)
+      @account.update!(excluded: cast_value)
+    else
+      @account.toggle!(:excluded)
+    end
     redirect_to accounts_path
   end
 

@@ -62,6 +62,7 @@
               id: "account_#{account.id}_active",
               name: "active",
               checked: account.active?,
+              aria: { label: t("accounts.account.active", default: "Active") },
               data: { auto_submit_form_target: "auto" }
             ) %>
           <% end %>
@@ -72,6 +73,7 @@
               id: "account_#{account.id}_excluded",
               name: "excluded",
               checked: account.excluded?,
+              aria: { label: t("accounts.account.excluded", default: "Excluded") },
               data: { auto_submit_form_target: "auto" }
             ) %>
           <% end %>

@@ -7,7 +7,6 @@ class Transaction::Search
   attribute :amount_operator, :string
   attribute :types, array: true
   attribute :status, array: true
-  attribute :accounts, array: true
   attribute :account_ids, array: true
   attribute :start_date, :string
   attribute :end_date, :string
@@ -38,7 +37,7 @@ class Transaction::Search
       query = EntrySearch.apply_search_filter(query, search)
       query = EntrySearch.apply_date_filters(query, start_date, end_date)
       query = EntrySearch.apply_amount_filter(query, amount, amount_operator)
-      query = EntrySearch.apply_accounts_filter(query, accounts, account_ids)
+      query = EntrySearch.apply_accounts_filter(query, nil, account_ids)
 
       query
     end
@@ -100,13 +99,8 @@ class Transaction::Search
     # Applies a filter to only include transactions from active, non-excluded accounts,
     # if the active_accounts_only_filter flag is enabled.
     def apply_active_accounts_filter(query, active_accounts_only_filter)
-      query = query.where(accounts: { status: [ "draft", "active" ] })
-
-      if active_accounts_only_filter
-        query.where(accounts: { excluded: false })
-      else
-        query
-      end
+      scope = active_accounts_only_filter ? Account.visible : Account.sidebar_visible
+      query.merge(scope)
     end
 
 

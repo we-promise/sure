@@ -408,7 +408,7 @@ class TransactionsController < ApplicationController
               .permit(
                 :start_date, :end_date, :search, :amount,
                 :amount_operator, :active_accounts_only,
-                accounts: [], account_ids: [],
+                account_ids: [],
                 categories: [], merchants: [], types: [], tags: [], status: []
               )
               .to_h
@@ -417,18 +417,10 @@ class TransactionsController < ApplicationController
       cleaned_params.delete(:amount_operator) unless cleaned_params[:amount].present?
 
       if cleaned_params[:active_accounts_only].to_s != "false"
-        if cleaned_params[:accounts].present? || cleaned_params[:account_ids].present?
-          if cleaned_params[:accounts].present?
-            allowed_names = Current.family.accounts.where(name: cleaned_params[:accounts], excluded: false).pluck(:name)
-            cleaned_params[:accounts] &= allowed_names
-            cleaned_params.delete(:accounts) if cleaned_params[:accounts].empty?
-          end
-
-          if cleaned_params[:account_ids].present?
-            allowed_ids = Current.family.accounts.where(id: cleaned_params[:account_ids], excluded: false).pluck(:id).map(&:to_s)
-            cleaned_params[:account_ids] &= allowed_ids
-            cleaned_params.delete(:account_ids) if cleaned_params[:account_ids].empty?
-          end
+        if cleaned_params[:account_ids].present?
+          allowed_ids = Current.family.accounts.where(id: cleaned_params[:account_ids], excluded: false).pluck(:id).map(&:to_s)
+          cleaned_params[:account_ids] &= allowed_ids
+          cleaned_params.delete(:account_ids) if cleaned_params[:account_ids].empty?
         end
       end
 
