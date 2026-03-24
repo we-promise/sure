@@ -37,7 +37,15 @@
     <div data-list-filter-target="list" data-select-target="content" class="flex flex-col gap-0.5 max-h-64 overflow-auto"
           role="listbox" tabindex="-1">
       <% items.each do |item| %>
-        <% is_selected = item[:value] == selected_value %>
+        <% is_selected = begin
+          item_value = item[:value]
+          item_value = item_value.id if item_value.respond_to?(:id)
+
+          sel_val = @selected_value
+          sel_val = sel_val.id if sel_val.respond_to?(:id)
+
+          item_value.to_s == sel_val.to_s
+        end %>
         <% obj = item[:object] %>
 
         <div class="filterable-item text-sm cursor-pointer flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-container-inset-hover <%= "bg-container-inset" if is_selected %>"
