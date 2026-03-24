@@ -137,7 +137,7 @@ class IncomeStatement::Totals
       params[:tax_advantaged_account_ids] = ids if ids.present?
 
       # Add included account IDs for per-user finance scoping
-      params[:included_account_ids] = @included_account_ids if @included_account_ids.present?
+      params[:included_account_ids] = @included_account_ids if @included_account_ids&.any?
 
       params
     end
@@ -152,7 +152,9 @@ class IncomeStatement::Totals
 
     # Returns SQL clause to filter to only accounts included in the user's finances.
     def include_finance_accounts_sql
-      return "" if @included_account_ids.blank?
+      return "" if @included_account_ids.nil?
+      # Empty array means user has no finance accounts — exclude everything
+      return "AND 1=0" if @included_account_ids.empty?
       "AND a.id IN (:included_account_ids)"
     end
 
