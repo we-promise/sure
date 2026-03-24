@@ -11,7 +11,7 @@ class PagesController < ApplicationController
 
     @balance_sheet = Current.family.balance_sheet
     @investment_statement = Current.family.investment_statement
-    @accounts = Current.family.accounts.visible.with_attached_logo
+    @accounts = Current.user.accessible_accounts.visible.with_attached_logo
 
     family_currency = Current.family.currency
 

@@ -7,10 +7,10 @@ class AccountSharingsController < ApplicationController
   end
 
   def update
-    # Non-owners can only toggle their own include_in_finances
-    if !@account.owned_by?(Current.user) && params[:toggle_finance_inclusion].present?
+    # Non-owners can update their own include_in_finances preference
+    if !@account.owned_by?(Current.user) && params[:update_finance_inclusion].present?
       share = @account.account_shares.find_by!(user: Current.user)
-      share.update!(include_in_finances: !share.include_in_finances)
+      share.update!(include_in_finances: ActiveModel::Type::Boolean.new.cast(params[:include_in_finances]))
       redirect_back_or_to account_path(@account), notice: t("account_sharings.update.finance_toggle_success")
       return
     end

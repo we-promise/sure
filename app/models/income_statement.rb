@@ -193,9 +193,10 @@ class IncomeStatement
 
     def totals_query(transactions_scope:, date_range:)
       sql_hash = Digest::MD5.hexdigest(transactions_scope.to_sql)
+      account_ids_hash = included_account_ids ? Digest::MD5.hexdigest(included_account_ids.sort.join(",")) : nil
 
       Rails.cache.fetch([
-        "income_statement", "totals_query", "v2", family.id, user&.id, sql_hash, family.entries_cache_version
+        "income_statement", "totals_query", "v2", family.id, user&.id, account_ids_hash, sql_hash, family.entries_cache_version
       ]) { Totals.new(family, transactions_scope: transactions_scope, date_range: date_range, included_account_ids: included_account_ids).call }
     end
 
