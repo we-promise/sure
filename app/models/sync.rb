@@ -105,7 +105,7 @@ class Sync < ApplicationRecord
   def fail_for_retry_exhaustion!(error_message)
     Sync.transaction do
       lock!
-      start! if may_start?
+      start! if pending?
       fail! if may_fail?
       update!(error: error_message)
     end
@@ -163,6 +163,9 @@ class Sync < ApplicationRecord
 
   private
     def reset_for_retry!
+      # We intentionally bypass callbacks/state events here so the same sync record
+      # can become retryable again without firing post-sync hooks or extra
+      # transition side effects while the job is being retried.
       update_columns(
         status: "pending",
         error: nil,
