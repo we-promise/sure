@@ -86,7 +86,7 @@ class TradesController < ApplicationController
   end
 
   def unlock
-    unless @entry.account.permission_for(Current.user).in?([:owner, :full_control])
+    unless @entry.account.permission_for(Current.user).in?([ :owner, :full_control ])
       respond_to do |format|
         format.html { redirect_back_or_to account_path(@entry.account), alert: t("accounts.not_authorized") }
         format.turbo_stream { stream_redirect_back_or_to(account_path(@entry.account), alert: t("accounts.not_authorized")) }

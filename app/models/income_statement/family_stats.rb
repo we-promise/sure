@@ -50,7 +50,7 @@ class IncomeStatement::FamilyStats
 
     def scope_to_account_ids_sql
       return "" if @account_ids.blank?
-      ActiveRecord::Base.sanitize_sql(["AND a.id IN (?)", @account_ids])
+      ActiveRecord::Base.sanitize_sql([ "AND a.id IN (?)", @account_ids ])
     end
 
     def query_sql

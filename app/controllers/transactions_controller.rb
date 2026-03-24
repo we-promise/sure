@@ -167,7 +167,7 @@ class TransactionsController < ApplicationController
   def merge_duplicate
     transaction = accessible_transactions.includes(entry: :account).find(params[:id])
 
-    unless transaction.entry.account.permission_for(Current.user).in?([:owner, :full_control])
+    unless transaction.entry.account.permission_for(Current.user).in?([ :owner, :full_control ])
       respond_to do |format|
         format.html { redirect_back_or_to account_path(transaction.entry.account), alert: t("accounts.not_authorized") }
         format.turbo_stream { stream_redirect_back_or_to(account_path(transaction.entry.account), alert: t("accounts.not_authorized")) }
@@ -191,7 +191,7 @@ class TransactionsController < ApplicationController
   def dismiss_duplicate
     transaction = accessible_transactions.includes(entry: :account).find(params[:id])
 
-    unless transaction.entry.account.permission_for(Current.user).in?([:owner, :full_control])
+    unless transaction.entry.account.permission_for(Current.user).in?([ :owner, :full_control ])
       respond_to do |format|
         format.html { redirect_back_or_to account_path(transaction.entry.account), alert: t("accounts.not_authorized") }
         format.turbo_stream { stream_redirect_back_or_to(account_path(transaction.entry.account), alert: t("accounts.not_authorized")) }
@@ -216,7 +216,7 @@ class TransactionsController < ApplicationController
     @transaction = accessible_transactions.includes(entry: :account).find(params[:id])
     @entry = @transaction.entry
 
-    unless @entry.account.permission_for(Current.user).in?([:owner, :full_control])
+    unless @entry.account.permission_for(Current.user).in?([ :owner, :full_control ])
       respond_to do |format|
         format.html { redirect_back_or_to account_path(@entry.account), alert: t("accounts.not_authorized") }
         format.turbo_stream { stream_redirect_back_or_to(account_path(@entry.account), alert: t("accounts.not_authorized")) }
@@ -237,7 +237,7 @@ class TransactionsController < ApplicationController
     @transaction = accessible_transactions.includes(entry: :account).find(params[:id])
     @entry = @transaction.entry
 
-    unless @entry.account.permission_for(Current.user).in?([:owner, :full_control])
+    unless @entry.account.permission_for(Current.user).in?([ :owner, :full_control ])
       respond_to do |format|
         format.html { redirect_back_or_to account_path(@entry.account), alert: t("accounts.not_authorized") }
         format.turbo_stream { stream_redirect_back_or_to(account_path(@entry.account), alert: t("accounts.not_authorized")) }
@@ -319,7 +319,7 @@ class TransactionsController < ApplicationController
   end
 
   def unlock
-    unless @entry.account.permission_for(Current.user).in?([:owner, :full_control])
+    unless @entry.account.permission_for(Current.user).in?([ :owner, :full_control ])
       respond_to do |format|
         format.html { redirect_back_or_to account_path(@entry.account), alert: t("accounts.not_authorized") }
         format.turbo_stream { stream_redirect_back_or_to(account_path(@entry.account), alert: t("accounts.not_authorized")) }
@@ -336,7 +336,7 @@ class TransactionsController < ApplicationController
   def mark_as_recurring
     transaction = accessible_transactions.includes(entry: :account).find(params[:id])
 
-    unless transaction.entry.account.permission_for(Current.user).in?([:owner, :full_control])
+    unless transaction.entry.account.permission_for(Current.user).in?([ :owner, :full_control ])
       respond_to do |format|
         format.html { redirect_back_or_to account_path(transaction.entry.account), alert: t("accounts.not_authorized") }
         format.turbo_stream { stream_redirect_back_or_to(account_path(transaction.entry.account), alert: t("accounts.not_authorized")) }
