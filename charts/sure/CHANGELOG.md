@@ -5,9 +5,23 @@ All notable changes to the Sure Helm chart will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.6.9-alpha] - 2026-03-21
+## [0.6.9-alpha] - 2026-03-24
+
+### Changed
+- Bumped `pipelock.image.tag` from `1.5.0` to `2.0.0`
+- CI: Pipelock GitHub Action updated from `@v1` to `@v2`
+- Compose example image changed from pinned `1.5.0` to `latest` with pin comment
+- Bumped `pipelock.image.tag` from `0.3.1` to `0.3.2`
+- Consolidated `compose.example.pipelock.yml` into `compose.example.ai.yml` — Pipelock now runs alongside Ollama in one compose file with health checks, config volume mount, and MCP env vars (`MCP_API_TOKEN`, `MCP_USER_EMAIL`)
+- CI: Pipelock scan `fail-on-findings` changed from `false` to `true`; added `exclude-paths` for locale help text false positives
 
 ### Added
+- **Pipelock v2.0 features**:
+  - `pipelock.trustedDomains`: first-class support for allowing internal services whose public DNS resolves to private IPs (prevents SSRF false positives)
+  - `pipelock.mcpToolPolicy.redirectProfiles`: route matched MCP tool calls to audited handler programs instead of blocking
+  - Updated `pipelock.example.yaml` with v2.0 feature documentation (trusted domains, redirect profiles, attack simulation, security scoring)
+  - Updated `extraConfig` comment to mention new v2.0 sections (sandbox, reverse_proxy)
+- Pipelock v2.0 highlights available via `extraConfig`: process sandbox (Linux/macOS), generic HTTP reverse proxy, adaptive enforcement exempt domains, kill switch API port isolation
 - **Bumped** `pipelock.image.tag` from `0.3.2` to `1.5.0`
 - **Pipelock security proxy** (`pipelock.enabled=true`): Separate Deployment + Service that provides two scanning layers
   - **Forward proxy** (port 8888): Scans outbound HTTPS from Faraday-based clients (e.g. ruby-openai). Auto-injects `HTTPS_PROXY`/`HTTP_PROXY`/`NO_PROXY` env vars into app pods
@@ -31,11 +45,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `pipelock.requireForExternalAssistant`: Helm guard that fails when externalAssistant is enabled without pipelock
   - Component label (`app.kubernetes.io/component: pipelock`) on Service metadata for selector targeting
   - NOTES.txt: Pipelock health check commands, MCP access info, security notes, metrics status
-
-### Changed
-- Bumped `pipelock.image.tag` from `0.3.1` to `0.3.2`
-- Consolidated `compose.example.pipelock.yml` into `compose.example.ai.yml` — Pipelock now runs alongside Ollama in one compose file with health checks, config volume mount, and MCP env vars (`MCP_API_TOKEN`, `MCP_USER_EMAIL`)
-- CI: Pipelock scan `fail-on-findings` changed from `false` to `true`; added `exclude-paths` for locale help text false positives
 
 ### Fixed
 - Renamed `_asserts.tpl` to `asserts.tpl` — Helm's `_` prefix convention prevented guards from executing

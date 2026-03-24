@@ -77,11 +77,13 @@ Enable Pipelock in your Helm values:
 pipelock:
   enabled: true
   image:
-    tag: "1.5.0"
+    tag: "2.0.0"
   mode: balanced
 ```
 
 This creates a separate Deployment, Service, and ConfigMap. The chart auto-injects `HTTPS_PROXY`/`HTTP_PROXY`/`NO_PROXY` into web and worker pods.
+
+v2.0 adds trusted domain allowlisting, MCP tool redirect profiles, enhanced tool poisoning detection (full JSON schema scanning), and per-read kill switch preemption on long-lived connections. Process sandboxing and attack simulation are also available via `extraConfig` and CLI.
 
 ### Exposing MCP to external agents (Kubernetes)
 
@@ -144,18 +146,19 @@ The `pipelock.example.yaml` file (Docker Compose) or ConfigMap (Helm) controls s
 | Section | What it controls |
 |---------|-----------------|
 | `mode` | `strict` (block threats), `balanced` (warn + block critical), `audit` (log only) |
+| `trusted_domains` | Allow internal services whose public DNS resolves to private IPs |
 | `forward_proxy` | Outbound HTTPS scanning (tunnel timeouts, idle timeouts) |
 | `dlp` | Data loss prevention (scan env vars, built-in patterns) |
 | `response_scanning` | Scan LLM responses for prompt injection |
 | `mcp_input_scanning` | Scan inbound MCP requests |
 | `mcp_tool_scanning` | Validate tool calls, detect drift |
-| `mcp_tool_policy` | Pre-execution rules (shell obfuscation, etc.) |
+| `mcp_tool_policy` | Pre-execution rules, shell obfuscation, redirect profiles |
 | `mcp_session_binding` | Pin tool inventory, detect manipulation |
 | `tool_chain_detection` | Multi-step attack patterns |
 | `websocket_proxy` | WebSocket frame scanning (disabled by default) |
 | `logging` | Output format (json/text), verbosity |
 
-For the Helm chart, most sections are configurable via `values.yaml`. For additional sections not covered by structured values (session profiling, data budgets, kill switch), use the `extraConfig` escape hatch:
+For the Helm chart, most sections are configurable via `values.yaml`. For additional sections not covered by structured values (session profiling, data budgets, kill switch, sandbox, reverse proxy, adaptive enforcement), use the `extraConfig` escape hatch:
 
 ```yaml
 pipelock:

@@ -17,7 +17,7 @@ jobs:
           persist-credentials: false
 
       - name: Pipelock Scan
-        uses: luckyPipewrench/pipelock@v1
+        uses: luckyPipewrench/pipelock@v2
         with:
           scan-diff: 'true'
           fail-on-findings: 'true'
