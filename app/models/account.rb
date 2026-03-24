@@ -375,7 +375,12 @@ class Account < ApplicationRecord
   end
 
   def shared_with?(user)
-    owned_by?(user) || account_shares.exists?(user: user)
+    owned_by?(user) ||
+      if account_shares.loaded?
+        account_shares.any? { |s| s.user_id == user.id }
+      else
+        account_shares.exists?(user: user)
+      end
   end
 
   def shared?
@@ -396,12 +401,12 @@ class Account < ApplicationRecord
   end
 
   def auto_share_with_family!
-    family.users.where.not(id: owner_id).find_each do |member|
-      account_shares.find_or_create_by!(user: member) do |share|
-        share.permission = "read_write"
-        share.include_in_finances = true
-      end
+    records = family.users.where.not(id: owner_id).pluck(:id).map do |user_id|
+      { account_id: id, user_id: user_id, permission: "read_write",
+        include_in_finances: true, created_at: Time.current, updated_at: Time.current }
     end
+
+    AccountShare.upsert_all(records, unique_by: %i[account_id user_id]) if records.any?
   end
 
   private

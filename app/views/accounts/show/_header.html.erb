@@ -9,8 +9,8 @@
         <div class="truncate">
           <div class="flex items-center gap-3">
             <h2 class="font-medium text-xl truncate <%= "animate-pulse" if account.syncing? %>"><%= title %></h2>
-            <% if Current.user && !account.owned_by?(Current.user) %>
-              <%= icon("users", class: "w-4 h-4 text-secondary", title: account.owner&.display_name) %>
+            <% if account.shared? %>
+              <%= icon("users", class: "w-4 h-4 text-secondary", title: account.owned_by?(Current.user) ? nil : account.owner&.display_name) %>
             <% end %>
             <% if account.tax_treatment.present? %>
               <%= render partial: "accounts/tax_treatment_badge", locals: { account: account } %>

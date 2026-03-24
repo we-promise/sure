@@ -98,15 +98,11 @@ class Invitation < ApplicationRecord
     end
 
     def auto_share_existing_accounts(user)
-      family.accounts.where.not(owner_id: user.id).find_each do |account|
-        AccountShare.create!(
-          account: account,
-          user: user,
-          permission: "read_write",
-          include_in_finances: true
-        )
-      rescue ActiveRecord::RecordInvalid
-        # Skip if already shared
+      records = family.accounts.where.not(owner_id: user.id).pluck(:id).map do |account_id|
+        { account_id: account_id, user_id: user.id, permission: "read_write",
+          include_in_finances: true, created_at: Time.current, updated_at: Time.current }
       end
+
+      AccountShare.upsert_all(records, unique_by: %i[account_id user_id]) if records.any?
     end
 end

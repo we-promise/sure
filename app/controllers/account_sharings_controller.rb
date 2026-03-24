@@ -10,7 +10,8 @@ class AccountSharingsController < ApplicationController
     # Non-owners can update their own include_in_finances preference
     if !@account.owned_by?(Current.user) && params[:update_finance_inclusion].present?
       share = @account.account_shares.find_by!(user: Current.user)
-      share.update!(include_in_finances: ActiveModel::Type::Boolean.new.cast(params[:include_in_finances]))
+      include_value = params.permit(:include_in_finances)[:include_in_finances]
+      share.update!(include_in_finances: ActiveModel::Type::Boolean.new.cast(include_value))
       redirect_back_or_to account_path(@account), notice: t("account_sharings.update.finance_toggle_success")
       return
     end
@@ -20,24 +21,21 @@ class AccountSharingsController < ApplicationController
       return
     end
 
-    members_params = params.dig(:sharing, :members)&.values || []
+    eligible_members = Current.family.users.where.not(id: @account.owner_id).where(active: true)
 
     AccountShare.transaction do
-      members_params.each do |member_params|
-        user = Current.family.users.find(member_params[:user_id])
+      sharing_members_params.each do |member_params|
+        user = eligible_members.find_by(id: member_params[:user_id])
+        next unless user
+
         share = @account.account_shares.find_by(user: user)
 
         if ActiveModel::Type::Boolean.new.cast(member_params[:shared])
+          permission = AccountShare::PERMISSIONS.include?(member_params[:permission]) ? member_params[:permission] : (share&.permission || "read_only")
           if share
-            share.update!(
-              permission: member_params[:permission] || share.permission
-            )
+            share.update!(permission: permission)
           else
-            @account.account_shares.create!(
-              user: user,
-              permission: member_params[:permission] || "read_only",
-              include_in_finances: true
-            )
+            @account.account_shares.create!(user: user, permission: permission, include_in_finances: true)
           end
         elsif share
           share.destroy!
@@ -52,5 +50,13 @@ class AccountSharingsController < ApplicationController
 
     def set_account
       @account = Current.user.accessible_accounts.find(params[:account_id])
+    end
+
+    def sharing_members_params
+      return [] unless params.dig(:sharing, :members)
+
+      params.require(:sharing).permit(
+        members: [ :user_id, :shared, :permission ]
+      )[:members]&.values || []
     end
 end

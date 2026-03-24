@@ -1,6 +1,7 @@
 ---
 en:
   accounts:
+    not_authorized: "You don't have permission to manage this account"
     account:
       edit: Edit
       link_lunchflow: Link with Lunch Flow

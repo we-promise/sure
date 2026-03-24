@@ -34,7 +34,7 @@ class User < ApplicationRecord
   has_many :impersonated_support_sessions, class_name: "ImpersonationSession", foreign_key: :impersonated_id, dependent: :destroy
   has_many :oidc_identities, dependent: :destroy
   has_many :sso_audit_logs, dependent: :nullify
-  has_many :owned_accounts, class_name: "Account", foreign_key: :owner_id, dependent: :nullify
+  has_many :owned_accounts, class_name: "Account", foreign_key: :owner_id
   has_many :account_shares, dependent: :destroy
   has_many :shared_accounts, through: :account_shares, source: :account
   accepts_nested_attributes_for :family, update_only: true
@@ -205,6 +205,7 @@ class User < ApplicationRecord
     if last_user_in_family?
       family.destroy
     else
+      reassign_owned_accounts!
       destroy
     end
   end
@@ -409,6 +410,21 @@ class User < ApplicationRecord
 
     def last_user_in_family?
       family.users.count == 1
+    end
+
+    def reassign_owned_accounts!
+      return if owned_accounts.none?
+
+      new_owner = family.users.where.not(id: id)
+                        .find_by(role: %w[admin super_admin]) ||
+                  family.users.where.not(id: id)
+                        .order(:created_at).first
+
+      return unless new_owner
+
+      owned_accounts.update_all(owner_id: new_owner.id)
+      # Remove shares the new owner had for these accounts (they now own them)
+      AccountShare.where(account_id: owned_accounts.select(:id), user_id: new_owner.id).delete_all
     end
 
     def deactivated_email

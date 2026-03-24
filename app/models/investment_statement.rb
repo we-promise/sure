@@ -16,7 +16,7 @@ class InvestmentStatement
   def totals(period: Period.current_month)
     trades_in_period = family.trades
       .joins(:entry)
-      .where(entries: { date: period.date_range })
+      .where(entries: { date: period.date_range, account_id: investment_account_ids })
 
     result = totals_query(trades_scope: trades_in_period)
 
@@ -186,11 +186,15 @@ class InvestmentStatement
 
     HoldingAllocation = Data.define(:security, :amount, :weight, :trend)
 
+    def investment_account_ids
+      @investment_account_ids ||= investment_accounts.pluck(:id)
+    end
+
     def totals_query(trades_scope:)
       sql_hash = Digest::MD5.hexdigest(trades_scope.to_sql)
 
       Rails.cache.fetch([
-        "investment_statement", "totals_query", family.id, sql_hash, family.entries_cache_version
+        "investment_statement", "totals_query", family.id, user&.id, sql_hash, family.entries_cache_version
       ]) { Totals.new(family, trades_scope: trades_scope).call }
     end
 

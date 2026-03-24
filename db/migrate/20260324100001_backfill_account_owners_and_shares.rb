@@ -30,7 +30,6 @@ class BackfillAccountOwnersAndShares < ActiveRecord::Migration[7.2]
   end
 
   def down
-    Account.update_all(owner_id: nil)
-    AccountShare.delete_all
+    raise ActiveRecord::IrreversibleMigration
   end
 end

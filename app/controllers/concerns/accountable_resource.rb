@@ -4,7 +4,8 @@ module AccountableResource
   included do
     include Periodable
 
-    before_action :set_account, only: [ :show, :edit, :update ]
+    before_action :set_account, only: [ :show ]
+    before_action :set_manageable_account, only: [ :edit, :update ]
     before_action :set_link_options, only: :new
   end
 
@@ -39,12 +40,14 @@ module AccountableResource
     rescue Date::Error
       nil
     end || (Time.zone.today - 2.years)
-    @account = Current.family.accounts.create_and_sync(
-      account_params.except(:return_to, :opening_balance_date).merge(owner: Current.user),
-      opening_balance_date: opening_balance_date
-    )
-    @account.lock_saved_attributes!
-    @account.auto_share_with_family! if Current.family.share_all_by_default?
+    Account.transaction do
+      @account = Current.family.accounts.create_and_sync(
+        account_params.except(:return_to, :opening_balance_date).merge(owner: Current.user),
+        opening_balance_date: opening_balance_date
+      )
+      @account.lock_saved_attributes!
+      @account.auto_share_with_family! if Current.family.share_all_by_default?
+    end
 
     redirect_to account_params[:return_to].presence || @account, notice: t("accounts.create.success", type: accountable_type.name.underscore.humanize)
   end
@@ -89,6 +92,15 @@ module AccountableResource
 
     def set_account
       @account = Current.user.accessible_accounts.find(params[:id])
+    end
+
+    def set_manageable_account
+      @account = Current.user.accessible_accounts.find(params[:id])
+      permission = @account.permission_for(Current.user)
+      unless permission.in?([ :owner, :full_control ])
+        redirect_to account_path(@account), alert: t("accounts.not_authorized")
+        nil
+      end
     end
 
     def account_params

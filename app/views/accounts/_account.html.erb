@@ -21,8 +21,8 @@
           <div class="flex items-center gap-1.5">
             <%= link_to account.name, account, class: [(account.active? ? "text-primary" : "text-subdued"), "text-sm font-medium hover:underline"], data: { turbo_frame: "_top" } %>
 
-            <% if Current.user && !account.owned_by?(Current.user) %>
-              <%= icon("users", class: "w-3.5 h-3.5 text-secondary", title: account.owner&.display_name) %>
+            <% if account.shared? %>
+              <%= icon("users", class: "w-3.5 h-3.5 text-secondary", title: account.owned_by?(Current.user) ? nil : account.owner&.display_name) %>
             <% end %>
 
             <% if account.institution_name.present? %>
