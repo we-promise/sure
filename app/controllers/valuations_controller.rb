@@ -3,6 +3,12 @@ class ValuationsController < ApplicationController
 
   def confirm_create
     @account = accessible_accounts.find(params.dig(:entry, :account_id))
+
+    unless @account.permission_for(Current.user).in?([ :owner, :full_control ])
+      redirect_back_or_to account_path(@account), alert: t("accounts.not_authorized")
+      return
+    end
+
     @entry = @account.entries.build(entry_params.merge(currency: @account.currency))
 
     @reconciliation_dry_run = @entry.account.create_reconciliation(
@@ -16,6 +22,12 @@ class ValuationsController < ApplicationController
 
   def confirm_update
     @entry = Current.accessible_entries.find(params[:id])
+
+    unless @entry.account.permission_for(Current.user).in?([ :owner, :full_control ])
+      redirect_back_or_to account_path(@entry.account), alert: t("accounts.not_authorized")
+      return
+    end
+
     @account = @entry.account
     @entry.assign_attributes(entry_params.merge(currency: @account.currency))
 
@@ -31,6 +43,11 @@ class ValuationsController < ApplicationController
 
   def create
     account = accessible_accounts.find(params.dig(:entry, :account_id))
+
+    unless account.permission_for(Current.user).in?([ :owner, :full_control ])
+      redirect_back_or_to account_path(account), alert: t("accounts.not_authorized")
+      return
+    end
 
     result = account.create_reconciliation(
       balance: entry_params[:amount],
@@ -49,6 +66,11 @@ class ValuationsController < ApplicationController
   end
 
   def update
+    unless can_edit_entry?
+      redirect_back_or_to account_path(@entry.account), alert: t("accounts.not_authorized")
+      return
+    end
+
     # Notes updating is independent of reconciliation, just a simple CRUD operation
     @entry.update!(notes: entry_params[:notes]) if entry_params[:notes].present?
 

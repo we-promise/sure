@@ -1,5 +1,6 @@
 class SplitsController < ApplicationController
   before_action :set_entry
+  before_action :require_split_write_permission!, only: %i[create update destroy]
 
   def new
     @categories = Current.family.categories.alphabetically
@@ -83,6 +84,13 @@ class SplitsController < ApplicationController
 
     def set_entry
       @entry = Current.accessible_entries.find(params[:transaction_id])
+    end
+
+    def require_split_write_permission!
+      permission = @entry.account.permission_for(Current.user)
+      unless permission.in?([ :owner, :full_control ])
+        redirect_back_or_to transactions_path, alert: t("accounts.not_authorized")
+      end
     end
 
     def resolve_to_parent!

@@ -16,6 +16,12 @@ class TradesController < ApplicationController
   # Can create a trade, transaction (e.g. "fees"), or transfer (e.g. "withdrawal")
   def create
     @account = accessible_accounts.find(params[:account_id])
+
+    unless @account.permission_for(Current.user).in?([ :owner, :full_control ])
+      redirect_back_or_to account_path(@account), alert: t("accounts.not_authorized")
+      return
+    end
+
     @model = Trade::CreateForm.new(create_params.merge(account: @account)).create
 
     if @model.persisted?
@@ -37,6 +43,11 @@ class TradesController < ApplicationController
   end
 
   def update
+    unless can_edit_entry?
+      redirect_back_or_to account_path(@entry.account), alert: t("accounts.not_authorized")
+      return
+    end
+
     if @entry.update(update_entry_params)
       @entry.lock_saved_attributes!
       @entry.mark_user_modified!
@@ -77,7 +88,10 @@ class TradesController < ApplicationController
 
   private
     def set_entry_for_unlock
-      trade = Current.family.trades.find(params[:id])
+      trade = Current.family.trades
+                .joins(entry: :account)
+                .merge(Account.accessible_by(Current.user))
+                .find(params[:id])
       @entry = trade.entry
     end
 

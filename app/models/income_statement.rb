@@ -176,14 +176,14 @@ class IncomeStatement
     def family_stats(interval: "month")
       @family_stats ||= {}
       @family_stats[interval] ||= Rails.cache.fetch([
-        "income_statement", "family_stats", family.id, interval, family.entries_cache_version
+        "income_statement", "family_stats", family.id, user&.id, interval, family.entries_cache_version
       ]) { FamilyStats.new(family, interval:).call }
     end
 
     def category_stats(interval: "month")
       @category_stats ||= {}
       @category_stats[interval] ||= Rails.cache.fetch([
-        "income_statement", "category_stats", family.id, interval, family.entries_cache_version
+        "income_statement", "category_stats", family.id, user&.id, interval, family.entries_cache_version
       ]) { CategoryStats.new(family, interval:).call }
     end
 

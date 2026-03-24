@@ -20,10 +20,20 @@ class TransfersController < ApplicationController
   end
 
   def create
+    # Validate user has write access to both accounts
+    source_account = accessible_accounts.find(transfer_params[:from_account_id])
+    destination_account = accessible_accounts.find(transfer_params[:to_account_id])
+
+    unless source_account.permission_for(Current.user).in?([ :owner, :full_control ]) &&
+           destination_account.permission_for(Current.user).in?([ :owner, :full_control ])
+      redirect_back_or_to transactions_path, alert: t("accounts.not_authorized")
+      return
+    end
+
     @transfer = Transfer::Creator.new(
       family: Current.family,
-      source_account_id: transfer_params[:from_account_id],
-      destination_account_id: transfer_params[:to_account_id],
+      source_account_id: source_account.id,
+      destination_account_id: destination_account.id,
       date: Date.parse(transfer_params[:date]),
       amount: transfer_params[:amount].to_d
     ).create
@@ -53,16 +63,29 @@ class TransfersController < ApplicationController
   end
 
   def destroy
+    # Require write permission on at least the outflow account
+    outflow_account = @transfer.outflow_transaction.entry.account
+    permission = outflow_account.permission_for(Current.user)
+    unless permission.in?([ :owner, :full_control ])
+      redirect_back_or_to transactions_url, alert: t("accounts.not_authorized")
+      return
+    end
+
     @transfer.destroy!
     redirect_back_or_to transactions_url, notice: t(".success")
   end
 
   private
     def set_transfer
-      # Finds the transfer and ensures the family owns it
+      # Finds the transfer and ensures the user has access to it
+      accessible_transaction_ids = Current.family.transactions
+        .joins(entry: :account)
+        .merge(Account.accessible_by(Current.user))
+        .select(:id)
+
       @transfer = Transfer
                     .where(id: params[:id])
-                    .where(inflow_transaction_id: Current.family.transactions.select(:id))
+                    .where(inflow_transaction_id: accessible_transaction_ids)
                     .first!
     end
 

@@ -1,5 +1,6 @@
 class HoldingsController < ApplicationController
   before_action :set_holding, only: %i[show update destroy unlock_cost_basis remap_security reset_security sync_prices]
+  before_action :require_holding_write_permission!, only: %i[update destroy unlock_cost_basis remap_security reset_security]
 
   def index
     @account = accessible_accounts.find(params[:account_id])
@@ -137,7 +138,17 @@ class HoldingsController < ApplicationController
 
   private
     def set_holding
-      @holding = Current.family.holdings.find(params[:id])
+      @holding = Current.family.holdings
+                   .joins(:account)
+                   .merge(Account.accessible_by(Current.user))
+                   .find(params[:id])
+    end
+
+    def require_holding_write_permission!
+      permission = @holding.account.permission_for(Current.user)
+      unless permission.in?([ :owner, :full_control ])
+        redirect_back_or_to account_path(@holding.account), alert: t("accounts.not_authorized")
+      end
     end
 
     def holding_params

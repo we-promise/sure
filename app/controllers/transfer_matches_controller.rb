@@ -7,6 +7,12 @@ class TransferMatchesController < ApplicationController
   end
 
   def create
+    permission = @entry.account.permission_for(Current.user)
+    unless permission.in?([ :owner, :full_control ])
+      redirect_back_or_to transactions_path, alert: t("accounts.not_authorized")
+      return
+    end
+
     @transfer = build_transfer
     Transfer.transaction do
       @transfer.save!

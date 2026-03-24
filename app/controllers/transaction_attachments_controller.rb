@@ -9,6 +9,11 @@ class TransactionAttachmentsController < ApplicationController
   end
 
   def create
+    unless @can_upload
+      redirect_back_or_to transaction_path(@transaction), alert: t("accounts.not_authorized")
+      return
+    end
+
     attachments = attachment_params
 
     if attachments.present?
@@ -61,6 +66,11 @@ class TransactionAttachmentsController < ApplicationController
   end
 
   def destroy
+    unless @can_delete
+      redirect_back_or_to transaction_path(@transaction), alert: t("accounts.not_authorized")
+      return
+    end
+
     @attachment.purge
     message = t("transactions.attachments.attachment_deleted")
     respond_to do |format|
@@ -78,7 +88,10 @@ class TransactionAttachmentsController < ApplicationController
   private
 
     def set_transaction
-      @transaction = Current.family.transactions.find(params[:transaction_id])
+      @transaction = Current.family.transactions
+                       .joins(entry: :account)
+                       .merge(Account.accessible_by(Current.user))
+                       .find(params[:transaction_id])
     end
 
     def set_attachment
