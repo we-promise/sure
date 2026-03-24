@@ -353,16 +353,19 @@ class ReportsController < ApplicationController
         .where.not(kind: Transaction::BUDGET_EXCLUDED_KINDS)
         .includes(entry: :account, category: :parent)
 
-      # Apply filters
+      # Apply filters (includes finance account scoping)
       transactions = apply_transaction_filters(transactions)
 
       # Get trades in the period (matching income_statement logic)
+      finance_account_ids = Current.user&.finance_accounts&.pluck(:id)
       trades = Trade
         .joins(:entry)
         .joins(entry: :account)
         .where(accounts: { family_id: Current.family.id, status: [ "draft", "active" ] })
         .where(entries: { entryable_type: "Trade", excluded: false, date: @period.date_range })
         .includes(entry: :account, category: :parent)
+
+      trades = trades.where(entries: { account_id: finance_account_ids }) if finance_account_ids
 
       # Get sort parameters
       sort_by = params[:sort_by] || "amount"
@@ -559,6 +562,10 @@ class ReportsController < ApplicationController
     end
 
     def apply_transaction_filters(transactions)
+      # Scope to user's finance accounts
+      finance_account_ids = Current.user&.finance_accounts&.pluck(:id)
+      transactions = transactions.where(entries: { account_id: finance_account_ids }) if finance_account_ids
+
       # Filter by category (including subcategories)
       if params[:filter_category_id].present?
         category_id = params[:filter_category_id]
