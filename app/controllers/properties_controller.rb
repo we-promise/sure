@@ -10,8 +10,9 @@ class PropertiesController < ApplicationController
 
   def create
     @account = Current.family.accounts.create!(
-      property_params.merge(currency: Current.family.currency, balance: 0, status: "draft")
+      property_params.merge(currency: Current.family.currency, balance: 0, status: "draft", owner: Current.user)
     )
+    @account.auto_share_with_family! if Current.family.share_all_by_default?
 
     redirect_to balances_property_path(@account)
   end

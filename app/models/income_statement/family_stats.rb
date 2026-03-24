@@ -1,7 +1,8 @@
 class IncomeStatement::FamilyStats
-  def initialize(family, interval: "month")
+  def initialize(family, interval: "month", account_ids: nil)
     @family = family
     @interval = interval
+    @account_ids = account_ids
   end
 
   def call
@@ -47,6 +48,11 @@ class IncomeStatement::FamilyStats
       "AND a.id NOT IN (:tax_advantaged_account_ids)"
     end
 
+    def scope_to_account_ids_sql
+      return "" if @account_ids.blank?
+      ActiveRecord::Base.sanitize_sql(["AND a.id IN (?)", @account_ids])
+    end
+
     def query_sql
       <<~SQL
         WITH period_totals AS (
@@ -68,6 +74,7 @@ class IncomeStatement::FamilyStats
             AND (t.extra -> 'simplefin' ->> 'pending')::boolean IS DISTINCT FROM true
             AND (t.extra -> 'plaid' ->> 'pending')::boolean IS DISTINCT FROM true
             #{exclude_tax_advantaged_sql}
+            #{scope_to_account_ids_sql}
           GROUP BY period, CASE WHEN t.kind = 'investment_contribution' THEN 'expense' WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END
         )
         SELECT

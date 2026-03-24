@@ -124,7 +124,7 @@ class ReportsController < ApplicationController
       @investment_metrics = build_investment_metrics
 
       # Investment flows (contributions/withdrawals)
-      @investment_flows = InvestmentFlowStatement.new(Current.family).period_totals(period: @period)
+      @investment_flows = InvestmentFlowStatement.new(Current.family, user: Current.user).period_totals(period: @period)
 
       # Flags for view rendering
       @has_accounts = accessible_accounts.any?

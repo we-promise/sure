@@ -167,6 +167,14 @@ class TransactionsController < ApplicationController
   def merge_duplicate
     transaction = accessible_transactions.includes(entry: :account).find(params[:id])
 
+    unless transaction.entry.account.permission_for(Current.user).in?([:owner, :full_control])
+      respond_to do |format|
+        format.html { redirect_back_or_to account_path(transaction.entry.account), alert: t("accounts.not_authorized") }
+        format.turbo_stream { stream_redirect_back_or_to(account_path(transaction.entry.account), alert: t("accounts.not_authorized")) }
+      end
+      return
+    end
+
     if transaction.merge_with_duplicate!
       flash[:notice] = t("transactions.merge_duplicate.success")
     else
@@ -182,6 +190,14 @@ class TransactionsController < ApplicationController
 
   def dismiss_duplicate
     transaction = accessible_transactions.includes(entry: :account).find(params[:id])
+
+    unless transaction.entry.account.permission_for(Current.user).in?([:owner, :full_control])
+      respond_to do |format|
+        format.html { redirect_back_or_to account_path(transaction.entry.account), alert: t("accounts.not_authorized") }
+        format.turbo_stream { stream_redirect_back_or_to(account_path(transaction.entry.account), alert: t("accounts.not_authorized")) }
+      end
+      return
+    end
 
     if transaction.dismiss_duplicate_suggestion!
       flash[:notice] = t("transactions.dismiss_duplicate.success")
@@ -200,6 +216,14 @@ class TransactionsController < ApplicationController
     @transaction = accessible_transactions.includes(entry: :account).find(params[:id])
     @entry = @transaction.entry
 
+    unless @entry.account.permission_for(Current.user).in?([:owner, :full_control])
+      respond_to do |format|
+        format.html { redirect_back_or_to account_path(@entry.account), alert: t("accounts.not_authorized") }
+        format.turbo_stream { stream_redirect_back_or_to(account_path(@entry.account), alert: t("accounts.not_authorized")) }
+      end
+      return
+    end
+
     unless @entry.account.investment?
       flash[:alert] = t("transactions.convert_to_trade.errors.not_investment_account")
       redirect_back_or_to transactions_path
@@ -212,6 +236,14 @@ class TransactionsController < ApplicationController
   def create_trade_from_transaction
     @transaction = accessible_transactions.includes(entry: :account).find(params[:id])
     @entry = @transaction.entry
+
+    unless @entry.account.permission_for(Current.user).in?([:owner, :full_control])
+      respond_to do |format|
+        format.html { redirect_back_or_to account_path(@entry.account), alert: t("accounts.not_authorized") }
+        format.turbo_stream { stream_redirect_back_or_to(account_path(@entry.account), alert: t("accounts.not_authorized")) }
+      end
+      return
+    end
 
     # Pre-transaction validations
     unless @entry.account.investment?
@@ -287,6 +319,14 @@ class TransactionsController < ApplicationController
   end
 
   def unlock
+    unless @entry.account.permission_for(Current.user).in?([:owner, :full_control])
+      respond_to do |format|
+        format.html { redirect_back_or_to account_path(@entry.account), alert: t("accounts.not_authorized") }
+        format.turbo_stream { stream_redirect_back_or_to(account_path(@entry.account), alert: t("accounts.not_authorized")) }
+      end
+      return
+    end
+
     @entry.unlock_for_sync!
     flash[:notice] = t("entries.unlock.success")
 
@@ -295,6 +335,14 @@ class TransactionsController < ApplicationController
 
   def mark_as_recurring
     transaction = accessible_transactions.includes(entry: :account).find(params[:id])
+
+    unless transaction.entry.account.permission_for(Current.user).in?([:owner, :full_control])
+      respond_to do |format|
+        format.html { redirect_back_or_to account_path(transaction.entry.account), alert: t("accounts.not_authorized") }
+        format.turbo_stream { stream_redirect_back_or_to(account_path(transaction.entry.account), alert: t("accounts.not_authorized")) }
+      end
+      return
+    end
 
     # Check if a recurring transaction already exists for this pattern
     existing = Current.family.recurring_transactions.find_by(
