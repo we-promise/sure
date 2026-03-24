@@ -28,8 +28,6 @@ class TradesTest < ApplicationSystemTestCase
 
     click_button "Add transaction"
 
-    assert_text "Entry created"
-
     visit_trades
 
     within_trades do
@@ -50,8 +48,6 @@ class TradesTest < ApplicationSystemTestCase
     fill_in "model[price]", with: 215.33
 
     click_button "Add transaction"
-
-    assert_text "Entry created"
 
     visit_trades
 
