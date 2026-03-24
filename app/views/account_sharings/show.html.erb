@@ -55,18 +55,34 @@
       <%# Non-owner can only toggle finance inclusion %>
       <% share = @account.account_shares.find_by(user: Current.user) %>
       <% if share %>
-        <div class="space-y-3">
-          <p class="text-sm text-secondary"><%= t(".owner_label", name: @account.owner.display_name) %></p>
-          <div class="flex items-center justify-between">
-            <p class="text-sm text-primary font-medium">
-              <%= share.include_in_finances? ? t(".include_in_finances") : t(".exclude_from_finances") %>
-            </p>
-            <%= button_to account_sharing_path(@account),
-                  method: :patch,
-                  params: { toggle_finance_inclusion: true },
-                  class: "text-sm text-link hover:underline" do %>
-              <%= share.include_in_finances? ? t(".exclude_from_finances") : t(".include_in_finances") %>
-            <% end %>
+        <div class="space-y-4">
+          <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-xs font-medium text-secondary">
+              <%= @account.owner.initials %>
+            </div>
+            <div>
+              <p class="text-sm text-primary font-medium"><%= t(".owner_label", name: @account.owner.display_name) %></p>
+              <p class="text-xs text-secondary"><%= t(".permissions.#{share.permission}") %></p>
+            </div>
+          </div>
+
+          <div class="bg-container-inset rounded-xl p-4">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-sm text-primary font-medium"><%= t(".include_in_finances") %></p>
+                <p class="text-xs text-secondary"><%= t(".finance_toggle_description") %></p>
+              </div>
+              <%= button_to account_sharing_path(@account),
+                    method: :patch,
+                    params: { toggle_finance_inclusion: true },
+                    class: "shrink-0" do %>
+                <div class="relative inline-flex items-center cursor-pointer">
+                  <div class="w-9 h-5 rounded-full transition-colors <%= share.include_in_finances? ? "bg-success" : "bg-gray-300" %>">
+                    <div class="absolute top-[2px] h-4 w-4 bg-white rounded-full transition-transform <%= share.include_in_finances? ? "translate-x-4" : "translate-x-[2px]" %>"></div>
+                  </div>
+                </div>
+              <% end %>
+            </div>
           </div>
         </div>
       <% end %>

@@ -3,8 +3,10 @@ class AccountsController < ApplicationController
   include Periodable
 
   def index
+    @accessible_account_ids = Current.user.accessible_accounts.pluck(:id)
     @manual_accounts = family.accounts
           .listable_manual
+          .where(id: @accessible_account_ids)
           .order(:name)
     @plaid_items = family.plaid_items.ordered.includes(:syncs, :plaid_accounts)
     @simplefin_items = family.simplefin_items.ordered.includes(:syncs)

@@ -20,12 +20,10 @@ class AccountSharingsController < ApplicationController
       return
     end
 
-    sharing_params = params.require(:sharing).permit(
-      members: [ :user_id, :shared, :permission, :include_in_finances ]
-    )
+    members_params = params.dig(:sharing, :members)&.values || []
 
     AccountShare.transaction do
-      (sharing_params[:members] || []).each do |member_params|
+      members_params.each do |member_params|
         user = Current.family.users.find(member_params[:user_id])
         share = @account.account_shares.find_by(user: user)
 
