@@ -22,8 +22,10 @@ export default class extends Controller {
 
   // ===== Mouse Drag Events =====
   dragStart(event) {
-    // On touch devices, cancel native drag — use touch events with hold delay instead
-    if (this.isTouchDevice()) {
+    // If a touch interaction is in progress, cancel native drag —
+    // use touch events with hold delay instead.
+    // This avoids blocking mouse/trackpad drag on touch-capable laptops.
+    if (this.isTouching || this.pendingSection) {
       event.preventDefault();
       return;
     }
@@ -32,10 +34,6 @@ export default class extends Controller {
     this.draggedElement.classList.add("opacity-50");
     this.draggedElement.setAttribute("aria-grabbed", "true");
     event.dataTransfer.effectAllowed = "move";
-  }
-
-  isTouchDevice() {
-    return "ontouchstart" in window || navigator.maxTouchPoints > 0;
   }
 
   dragEnd(event) {
