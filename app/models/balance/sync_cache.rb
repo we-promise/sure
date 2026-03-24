@@ -8,7 +8,7 @@ class Balance::SyncCache
   end
 
   def get_holdings(date)
-    holdings_by_date[date]&.dup || []
+    holdings_by_date[date] || []
   end
 
   def get_entries(date)
