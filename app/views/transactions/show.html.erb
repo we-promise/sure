@@ -190,7 +190,7 @@
                 <p class="text-sm font-medium text-primary"><%= child.name %></p>
                 <p class="text-xs text-secondary"><%= child.entryable.try(:category)&.name || t("splits.new.uncategorized") %></p>
               </div>
-              <p class="text-sm font-medium <%= child.amount.negative? ? "text-green-600" : "text-primary" %>">
+              <p class="text-sm font-medium privacy-sensitive <%= child.amount.negative? ? "text-green-600" : "text-primary" %>">
                 <%= format_money(-child.amount_money) %>
               </p>
             </div>
@@ -232,7 +232,7 @@
                   <p class="text-sm font-medium text-primary"><%= parent.name %></p>
                   <p class="text-xs text-secondary"><%= parent.date.strftime("%b %d, %Y") %></p>
                 </div>
-                <p class="text-sm font-medium text-primary">
+                <p class="text-sm font-medium privacy-sensitive text-primary">
                   <%= format_money(-parent.amount_money) %>
                 </p>
               </div>
