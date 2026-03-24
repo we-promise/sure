@@ -22,7 +22,7 @@
 
   <% if show_type_tabs %>
     <section>
-      <%= render "shared/transaction_type_tabs", active_tab: "transfer" %>
+      <%= render "shared/transaction_type_tabs", active_tab: "transfer", account_id: @from_account_id %>
     </section>
   <% end %>
 
