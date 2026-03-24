@@ -132,7 +132,7 @@
     <% end %>
 
     <% dialog.with_section(title: t(".attachments")) do %>
-      <%= render "transactions/attachments", transaction: @entry.transaction, can_modify: can_annotate_entry? %>
+      <%= render "transactions/attachments", transaction: @entry.transaction, can_upload: can_annotate_entry?, can_delete: can_edit_entry? %>
     <% end %>
 
     <% if (details = build_transaction_extra_details(@entry)) %>

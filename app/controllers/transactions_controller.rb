@@ -91,7 +91,7 @@ class TransactionsController < ApplicationController
   end
 
   def create
-    account = Current.family.accounts.find(params.dig(:entry, :account_id))
+    account = Current.user.accessible_accounts.find(params.dig(:entry, :account_id))
     @entry = account.entries.new(entry_params)
 
     if @entry.save
@@ -156,7 +156,7 @@ class TransactionsController < ApplicationController
   end
 
   def merge_duplicate
-    transaction = Current.family.transactions.includes(entry: :account).find(params[:id])
+    transaction = accessible_transactions.includes(entry: :account).find(params[:id])
 
     if transaction.merge_with_duplicate!
       flash[:notice] = t("transactions.merge_duplicate.success")
@@ -172,7 +172,7 @@ class TransactionsController < ApplicationController
   end
 
   def dismiss_duplicate
-    transaction = Current.family.transactions.includes(entry: :account).find(params[:id])
+    transaction = accessible_transactions.includes(entry: :account).find(params[:id])
 
     if transaction.dismiss_duplicate_suggestion!
       flash[:notice] = t("transactions.dismiss_duplicate.success")
@@ -188,7 +188,7 @@ class TransactionsController < ApplicationController
   end
 
   def convert_to_trade
-    @transaction = Current.family.transactions.includes(entry: :account).find(params[:id])
+    @transaction = accessible_transactions.includes(entry: :account).find(params[:id])
     @entry = @transaction.entry
 
     unless @entry.account.investment?
@@ -201,7 +201,7 @@ class TransactionsController < ApplicationController
   end
 
   def create_trade_from_transaction
-    @transaction = Current.family.transactions.includes(entry: :account).find(params[:id])
+    @transaction = accessible_transactions.includes(entry: :account).find(params[:id])
     @entry = @transaction.entry
 
     # Pre-transaction validations
@@ -285,7 +285,7 @@ class TransactionsController < ApplicationController
   end
 
   def mark_as_recurring
-    transaction = Current.family.transactions.includes(entry: :account).find(params[:id])
+    transaction = accessible_transactions.includes(entry: :account).find(params[:id])
 
     # Check if a recurring transaction already exists for this pattern
     existing = Current.family.recurring_transactions.find_by(
@@ -335,10 +335,16 @@ class TransactionsController < ApplicationController
   end
 
   private
+    def accessible_transactions
+      Current.family.transactions
+        .joins(entry: :account)
+        .merge(Account.accessible_by(Current.user))
+    end
+
     def duplicate_source
       return @duplicate_source if defined?(@duplicate_source)
       @duplicate_source = if params[:duplicate_entry_id].present?
-        source = Current.family.entries.find_by(id: params[:duplicate_entry_id])
+        source = Current.family.entries.joins(:account).merge(Account.accessible_by(Current.user)).find_by(id: params[:duplicate_entry_id])
         source if source&.transaction?
       end
     end
@@ -365,7 +371,7 @@ class TransactionsController < ApplicationController
     end
 
     def set_entry_for_unlock
-      transaction = Current.family.transactions.find(params[:id])
+      transaction = accessible_transactions.find(params[:id])
       @entry = transaction.entry
     end
 

@@ -1,6 +1,7 @@
 class TransactionAttachmentsController < ApplicationController
   before_action :set_transaction
   before_action :set_attachment, only: [ :show, :destroy ]
+  before_action :set_permissions, only: [ :create, :destroy ]
 
   def show
     disposition = params[:disposition] == "attachment" ? "attachment" : "inline"
@@ -82,6 +83,12 @@ class TransactionAttachmentsController < ApplicationController
 
     def set_attachment
       @attachment = @transaction.attachments.find(params[:id])
+    end
+
+    def set_permissions
+      permission = @transaction.entry.account.permission_for(Current.user)
+      @can_upload = permission.in?([ :owner, :full_control, :read_write ])
+      @can_delete = permission.in?([ :owner, :full_control ])
     end
 
     def attachment_params
