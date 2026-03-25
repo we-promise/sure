@@ -346,6 +346,7 @@ When enabled:
 When disabled (default):
 - Providers are loaded from `config/auth.yml`
 - Changes require a server restart
+- In production, YAML is the default unless `AUTH_PROVIDERS_SOURCE=db` is explicitly set
 
 ### 6.2 Admin UI for SSO providers
 
