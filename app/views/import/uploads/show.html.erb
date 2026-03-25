@@ -56,7 +56,7 @@
 
     <%= styled_form_with model: @import, scope: :import, url: import_upload_path(@import), multipart: true, class: "space-y-4" do |form| %>
       <%= form.select :account_id,
-            @import.family.accounts.visible.pluck(:name, :id),
+            @import.family.accounts.visible.alphabetically.pluck(:name, :id),
             { label: t(".qif_account_label"), include_blank: t(".qif_account_placeholder"), selected: @import.account_id },
             required: true %>
 
@@ -112,7 +112,7 @@
             <%= form.select :col_sep, Import::SEPARATORS, label: true %>
 
             <% if @import.type == "TransactionImport" || @import.type == "TradeImport" %>
-              <%= form.select :account_id, @import.family.accounts.visible.pluck(:name, :id), { label: "Account (optional)", include_blank: "Multi-account import", selected: @import.account_id } %>
+              <%= form.select :account_id, @import.family.accounts.visible.alphabetically.pluck(:name, :id), { label: "Account (optional)", include_blank: "Multi-account import", selected: @import.account_id } %>
             <% end %>
 
             <label for="import_import_file_csv" class="flex flex-col items-center justify-center w-full h-64 border border-secondary border-dashed rounded-xl cursor-pointer" data-controller="file-upload" data-file-upload-target="uploadArea">
@@ -144,7 +144,7 @@
             <%= form.select :col_sep, Import::SEPARATORS, label: true %>
 
             <% if @import.type == "TransactionImport" || @import.type == "TradeImport" %>
-              <%= form.select :account_id, @import.family.accounts.visible.pluck(:name, :id), { label: "Account (optional)", include_blank: "Multi-account import", selected: @import.account_id } %>
+              <%= form.select :account_id, @import.family.accounts.visible.alphabetically.pluck(:name, :id), { label: "Account (optional)", include_blank: "Multi-account import", selected: @import.account_id } %>
             <% end %>
 
             <%= form.text_area :raw_file_str,
