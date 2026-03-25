@@ -237,7 +237,7 @@ class Provider::Openai::BrokerageStatementExtractor
       end
 
       str = amount.to_s
-      if str.match?(/\d+\.\d{3},\d{1,2}$/)
+      if str.match?(/^\d{1,3}(?:\.\d{3})+,\d{1,2}$/)
         str = str.tr(".", "").tr(",", ".")
       elsif str.match?(/,\d{1,2}$/) && !str.include?(".")
         str = str.tr(",", ".")
