@@ -1,0 +1,188 @@
+---
+zh-CN:
+  snaptrade_items:
+    default_name: SnapTrade 连接
+    create:
+      success: SnapTrade 配置成功。
+    update:
+      success: SnapTrade 配置已成功更新。
+    destroy:
+      success: 已安排删除 SnapTrade 连接。
+    connect:
+      decryption_failed: 无法读取 SnapTrade 凭据。请删除并重新创建此连接。
+      connection_failed: "连接 SnapTrade 失败：%{message}"
+    callback:
+      success: 券商已连接！请选择要关联的账户。
+      no_item: 未找到 SnapTrade 配置。
+    complete_account_setup:
+      success:
+        one: "已成功关联 %{count} 个账户。"
+        other: "已成功关联 %{count} 个账户。"
+      partial_success: "已关联 %{linked} 个账户；%{failed} 个关联失败。"
+      link_failed: "关联账户失败：%{errors}"
+      no_accounts: 未选择任何要关联的账户。
+    preload_accounts:
+      not_configured: SnapTrade 尚未配置。
+    select_accounts:
+      not_configured: SnapTrade 尚未配置。
+    select_existing_account:
+      not_found: 未找到账户或 SnapTrade 配置。
+      title: 关联 SnapTrade 账户
+      header: 关联现有账户
+      subtitle: 选择要关联的 SnapTrade 账户
+      no_accounts: 没有可关联的 SnapTrade 未关联账户。
+      connect_hint: 你可能需要先连接一个券商。
+      settings_link: 前往服务提供商设置
+      linking_to: "正在关联到账户："
+      balance_label: "余额："
+      link_button: 关联
+      cancel_button: 取消
+    link_existing_account:
+      success: 已成功关联到 SnapTrade 账户。
+      failed: "关联账户失败：%{message}"
+      not_found: 未找到账户。
+    connections:
+      unknown_brokerage: 未知券商
+    delete_connection:
+      success: 连接已成功删除，已释放一个名额。
+      failed: "删除连接失败：%{message}"
+      missing_authorization_id: 缺少授权 ID
+      api_deletion_failed: 无法从 SnapTrade 删除该连接——缺少凭据。该连接可能仍存在于你的 SnapTrade 账户中。
+    delete_orphaned_user:
+      success: 已成功删除孤立注册。
+      failed: 删除孤立注册失败。
+    setup_accounts:
+      title: 设置 SnapTrade 账户
+      header: 设置你的 SnapTrade 账户
+      subtitle: 选择要关联的券商账户
+      syncing: 正在获取你的账户…
+      loading: 正在从 SnapTrade 获取账户…
+      loading_hint: 点击“刷新”检查是否已获取到账户。
+      refresh: 刷新
+      info_title: SnapTrade 投资数据
+      info_holdings: 持仓（含当前价格与数量）
+      info_cost_basis: 每个仓位的成本价（如可用）
+      info_activities: 带活动标签的交易历史（买入、卖出、分红等）
+      info_history: 最多 3 年的交易历史
+      free_tier_note: SnapTrade 免费套餐允许 5 个券商连接。请在 SnapTrade 控制台查看当前用量。
+      no_accounts_title: 未找到账户
+      no_accounts_message: 未发现任何券商账户。这可能是因为你取消了连接，或你的券商暂不受支持。
+      try_again: 连接券商
+      back_to_settings: 返回设置
+      available_accounts: 可用账户
+      balance_label: "余额："
+      account_number: "账户："
+      create_button: 创建所选账户
+      cancel_button: 取消
+      creating: 正在创建账户…
+      done_button: 完成
+      or_link_existing: 或者关联到现有账户（不创建新账户）：
+      select_account: 选择一个账户…
+      link_button: 关联
+      linked_accounts: 已关联
+      linked_to: "已关联至："
+    snaptrade_item:
+      accounts_need_setup:
+        one: "%{count} 个账户需要设置"
+        other: "%{count} 个账户需要设置"
+      deletion_in_progress: 删除中…
+      syncing: 同步中…
+      requires_update: 连接需要更新
+      error: 同步错误
+      status: "上次同步于 %{timestamp} 前 - %{summary}"
+      status_never: 从未同步
+      reconnect: 重新连接
+      connect_brokerage: 连接券商
+      add_another_brokerage: 再连接一个券商
+      delete: 删除
+      setup_needed: 账户需要设置
+      setup_description: SnapTrade 导入的一些账户需要关联到 Sure 账户。
+      setup_action: 设置账户
+      setup_accounts_menu: 设置账户
+      manage_connections: 管理连接
+      more_accounts_available:
+        one: "还有 %{count} 个账户可设置"
+        other: "还有 %{count} 个账户可设置"
+      no_accounts_title: 未发现账户
+      no_accounts_description: 连接一个券商以导入你的投资账户。
+
+  providers:
+    snaptrade:
+      name: SnapTrade
+      connection_description: 通过 SnapTrade 连接你的券商（支持 25+ 券商）
+      description: SnapTrade 可连接 25+ 主流券商（Fidelity、Vanguard、Schwab、Robinhood 等），并提供带活动标签与成本价的完整交易历史。
+      setup_title: "配置说明："
+      step_1_html: 在 <a href="https://dashboard.snaptrade.com" target="_blank" rel="noopener noreferrer" class="text-primary underline">dashboard.snaptrade.com</a> 创建账户
+      step_2: 从控制台复制 Client ID 和 Consumer Key
+      step_3: 在下方输入你的凭据并点击“保存”
+      step_4: 前往“账户”页面，使用“再连接一个券商”关联你的投资账户
+      free_tier_warning: 免费套餐包含 5 个券商连接。更多连接需要购买 SnapTrade 付费套餐。
+      client_id_label: Client ID
+      client_id_placeholder: 输入你的 SnapTrade Client ID
+      client_id_update_placeholder: 输入新的 Client ID 以更新
+      consumer_key_label: Consumer Key
+      consumer_key_placeholder: 输入你的 SnapTrade Consumer Key
+      consumer_key_update_placeholder: 输入新的 Consumer Key 以更新
+      save_button: 保存配置
+      update_button: 更新配置
+      status_connected:
+        one: "来自 SnapTrade 的 %{count} 个账户"
+        other: "来自 SnapTrade 的 %{count} 个账户"
+      needs_setup:
+        one: "%{count} 个需要设置"
+        other: "%{count} 个需要设置"
+      status_ready: 已准备好连接券商
+      status_needs_registration: 凭据已保存。前往“账户”页面连接券商。
+      status_not_configured: 未配置
+      setup_accounts_button: 设置账户
+      connect_button: 连接券商
+      connected_brokerages: "已连接："
+      manage_connections: 管理连接
+      connection_limit_info: SnapTrade 免费套餐允许 5 个券商连接。删除不使用的连接以释放名额。
+      loading_connections: 正在加载连接…
+      connections_error: "加载连接失败：%{message}"
+      accounts_count:
+        one: "%{count} 个账户"
+        other: "%{count} 个账户"
+      orphaned_connection: 孤立连接（未在本地同步）
+      needs_linking: 需要关联
+      no_connections: 未找到券商连接。
+      delete_connection: 删除
+      delete_connection_title: 删除券商连接？
+      delete_connection_body: 这将永久从 SnapTrade 删除 %{brokerage} 的连接。该券商的所有账户将被解除关联。你需要重新连接才能再次同步这些账户。
+      delete_connection_confirm: 删除连接
+      orphaned_users_title:
+        one: "%{count} 个孤立注册"
+        other: "%{count} 个孤立注册"
+      orphaned_users_description: 这些是占用连接名额的历史 SnapTrade 用户注册。删除它们可释放名额。
+      orphaned_user: 孤立注册
+      delete_orphaned_user: 删除
+      delete_orphaned_user_title: 删除孤立注册？
+      delete_orphaned_user_body: 这将永久删除该孤立 SnapTrade 用户及其所有券商连接，从而释放连接名额。
+      delete_orphaned_user_confirm: 删除注册
+
+  snaptrade_item:
+    sync_status:
+      no_accounts: 未找到账户
+      synced:
+        one: "已同步 %{count} 个账户"
+        other: "已同步 %{count} 个账户"
+      synced_with_setup: "%{linked} 已同步，%{unlinked} 需要设置"
+    institution_summary:
+      none: 未连接任何机构
+      count:
+        one: "%{count} 个机构"
+        other: "%{count} 个机构"
+    brokerage_summary:
+      none: 未连接任何券商
+      count:
+        one: "%{count} 家券商"
+        other: "%{count} 家券商"
+    syncer:
+      discovering: 正在发现账户…
+      importing: 正在从 SnapTrade 导入账户…
+      processing: 正在处理持仓与活动…
+      calculating: 正在计算余额…
+      checking_config: 正在检查账户配置…
+      needs_setup: "%{count} 个账户需要设置…"
+      activities_fetching_async: 活动数据正在后台拉取。对于新连接的券商，这可能需要最多 1 分钟。
