@@ -20,8 +20,11 @@ class StyledFormBuilder < ActionView::Helpers::FormBuilder
   end
 
   def select(method, choices, options = {}, html_options = {})
-    # fallback to default Rails select if multiple
-    if html_options[:multiple]
+    is_multiple = html_options[:multiple] || options[:multiple]
+
+    if is_multiple
+      html_options[:multiple] = true # normalizza
+
       field_options = normalize_options(options, html_options)
 
       return build_field(method, field_options, html_options) do |merged_html_options|
