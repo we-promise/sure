@@ -128,9 +128,77 @@ class PdfImportTest < ActiveSupport::TestCase
   end
 
   test "mapping_steps does not include AccountMapping even when account is nil" do
-    # PDF imports handle account selection via direct UI, not mapping system
     assert_nil @import.account
     assert_not_includes @import.mapping_steps, Import::AccountMapping
+  end
+
+  test "investment_statement? returns true for investment_statement type" do
+    @import_investment = imports(:pdf_investment)
+    assert @import_investment.investment_statement?
+  end
+
+  test "investment_statement? returns false for bank_statement type" do
+    assert_not @import_with_rows.investment_statement?
+  end
+
+  test "column_keys returns trade columns for investment statements" do
+    @import_investment = imports(:pdf_investment)
+    assert_equal %i[date ticker qty price name], @import_investment.column_keys
+  end
+
+  test "required_column_keys returns trade required columns for investment statements" do
+    @import_investment = imports(:pdf_investment)
+    assert_equal %i[date ticker qty price], @import_investment.required_column_keys
+  end
+
+  test "has_extracted_trades? returns true with trades" do
+    @import_investment = imports(:pdf_investment)
+    assert @import_investment.has_extracted_trades?
+  end
+
+  test "has_extracted_trades? returns false without trades" do
+    assert_not @import.has_extracted_trades?
+  end
+
+  test "extracted_trades returns trades from extracted_data" do
+    @import_investment = imports(:pdf_investment)
+    assert_equal 2, @import_investment.extracted_trades.size
+    assert_equal "AAPL", @import_investment.extracted_trades.first["ticker"]
+  end
+
+  test "generate_rows_from_extracted_data creates trade rows for investment statements" do
+    @import_investment = imports(:pdf_investment)
+    @import_investment.rows.destroy_all
+    @import_investment.update_column(:rows_count, 0)
+
+    @import_investment.generate_rows_from_extracted_data
+
+    assert_equal 2, @import_investment.rows.count
+    assert_equal 2, @import_investment.rows_count
+
+    aapl_row = @import_investment.rows.find_by(ticker: "AAPL")
+    assert_not_nil aapl_row
+    assert_equal "10", aapl_row.qty
+    assert_equal "175.50", aapl_row.price
+    assert_equal "Apple Inc.", aapl_row.name
+
+    msft_row = @import_investment.rows.find_by(ticker: "MSFT")
+    assert_not_nil msft_row
+    assert_equal "-5", msft_row.qty
+    assert_equal "380.00", msft_row.price
+  end
+
+  test "publishable? returns true for investment statement with valid setup" do
+    @import_investment = imports(:pdf_investment)
+    @import_investment.rows.destroy_all
+    @import_investment.generate_rows_from_extracted_data
+
+    assert @import_investment.publishable?
+  end
+
+  test "mapping_steps is empty for investment statements" do
+    @import_investment = imports(:pdf_investment)
+    assert_equal [], @import_investment.mapping_steps
   end
 
   test "destroying import purges attached pdf_file" do
