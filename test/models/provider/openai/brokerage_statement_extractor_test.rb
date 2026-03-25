@@ -385,6 +385,51 @@ class Provider::Openai::BrokerageStatementExtractorTest < ActiveSupport::TestCas
     assert_equal "AAPL", result[:trades].first[:ticker]
   end
 
+  test "parse_amount parses US and European string formats" do
+    extractor = Provider::Openai::BrokerageStatementExtractor.new(
+      client: @client,
+      pdf_content: "dummy",
+      model: @model
+    )
+
+    assert_in_delta 1234.56, extractor.send(:parse_amount, "1,234.56"), 0.001
+    assert_in_delta 1234.56, extractor.send(:parse_amount, "1.234,56"), 0.001
+    assert_in_delta 1234.56, extractor.send(:parse_amount, "1234,56"), 0.001
+    assert_in_delta(-99.99, extractor.send(:parse_amount, "-99,99"), 0.001)
+    assert_equal 175.5, extractor.send(:parse_amount, 175.5)
+    assert_nil extractor.send(:parse_amount, nil)
+  end
+
+  test "normalizes trades with European-formatted price strings" do
+    mock_response = {
+      "choices" => [ {
+        "message" => {
+          "content" => {
+            "trades" => [
+              { "date" => "2024-01-15", "action" => "buy", "ticker" => "VWCE", "quantity" => 10, "price" => "1.234,56", "fees" => "12,50" }
+            ]
+          }.to_json
+        }
+      } ]
+    }
+
+    @client.expects(:chat).returns(mock_response)
+
+    extractor = Provider::Openai::BrokerageStatementExtractor.new(
+      client: @client,
+      pdf_content: "dummy",
+      model: @model
+    )
+
+    extractor.stubs(:extract_pages_from_pdf).returns([ "Page 1 text" ])
+
+    result = extractor.extract
+
+    trade = result[:trades].first
+    assert_in_delta 1234.56, trade[:price], 0.001
+    assert_in_delta 12.50, trade[:fees], 0.001
+  end
+
   test "handles malformed JSON response gracefully" do
     mock_response = {
       "choices" => [ {
