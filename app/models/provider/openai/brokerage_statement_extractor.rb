@@ -235,10 +235,17 @@ class Provider::Openai::BrokerageStatementExtractor
       if amount.is_a?(Numeric)
         amount.to_f
       else
-        cleaned = amount.to_s.gsub(/[^0-9.\-]/, "")
-        return nil if cleaned.blank?
-        cleaned.to_f
+        str = amount.to_s
+        # Handle European format: 1.234,56 -> 1234.56
+        if str.match?(/\d+\.\d{3},\d{1,2}$/)
+          str = str.tr(".", "").tr(",", ".")
+        elsif str.match?(/,\d{1,2}$/) && !str.include?(".")
+          str = str.tr(",", ".")
+        end
+        cleaned = str.gsub(/[^0-9.\-]/, "")
       end
+      return nil if cleaned.blank?
+      cleaned.to_f
     end
 
     def parse_quantity(qty)
