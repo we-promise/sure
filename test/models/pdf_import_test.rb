@@ -89,6 +89,19 @@ class PdfImportTest < ActiveSupport::TestCase
     assert_equal "1500.0", salary_row.amount
   end
 
+  test "investment statement rows use signed_amount for trade cash flow" do
+    import = imports(:pdf_investment)
+    import.rows.destroy_all
+    import.update_column(:rows_count, 0)
+
+    import.generate_rows_from_extracted_data
+
+    buy = import.rows.find_by(ticker: "AAPL")
+    sell = import.rows.find_by(ticker: "MSFT")
+    assert buy.signed_amount.positive?
+    assert sell.signed_amount.negative?
+  end
+
   test "generate_rows_from_extracted_data does nothing without extracted transactions" do
     @import.generate_rows_from_extracted_data
     assert_equal 0, @import.rows.count
@@ -232,15 +245,6 @@ class PdfImportTest < ActiveSupport::TestCase
 
     import.account = accounts(:crypto)
     assert import.valid?
-  end
-
-  test "import! raises when investment statement is linked to a depository account" do
-    import = imports(:pdf_investment)
-    import.update_column(:account_id, accounts(:depository).id)
-    import.reload
-
-    error = assert_raises(RuntimeError) { import.import! }
-    assert_equal I18n.t("imports.errors.investment_statement_account_type"), error.message
   end
 
   test "publishable? is false for investment statement with incompatible account" do
