@@ -2,7 +2,7 @@ class HoldingsController < ApplicationController
   include StreamExtensions
 
   before_action :set_holding, only: %i[show update destroy unlock_cost_basis remap_security reset_security sync_prices]
-  before_action :require_holding_write_permission!, only: %i[update destroy unlock_cost_basis remap_security reset_security]
+  before_action :require_holding_write_permission!, only: %i[update destroy unlock_cost_basis remap_security reset_security sync_prices]
 
   def index
     @account = accessible_accounts.find(params[:account_id])

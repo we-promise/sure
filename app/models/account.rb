@@ -4,6 +4,7 @@ class Account < ApplicationRecord
   before_validation :assign_default_owner, on: :create
 
   validates :name, :balance, :currency, presence: true
+  validate :owner_belongs_to_family, if: -> { owner_id.present? && family_id.present? }
 
   belongs_to :family
   belongs_to :owner, class_name: "User", optional: true
@@ -415,6 +416,16 @@ class Account < ApplicationRecord
 
     def assign_default_owner
       return if owner.present?
-      self.owner = Current.user || family&.users&.find_by(role: %w[admin super_admin]) || family&.users&.order(:created_at)&.first
+
+      if Current.user.present? && Current.user.family_id == family_id
+        self.owner = Current.user
+      else
+        self.owner = family&.users&.find_by(role: %w[admin super_admin]) || family&.users&.order(:created_at)&.first
+      end
+    end
+
+    def owner_belongs_to_family
+      return if User.where(id: owner_id, family_id: family_id).exists?
+      errors.add(:owner, :invalid, message: "must belong to the same family as the account")
     end
 end

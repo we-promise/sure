@@ -18,7 +18,7 @@ class PendingDuplicateMergesController < ApplicationController
 
   def create
     permission = @transaction.entry.account.permission_for(Current.user)
-    unless permission.in?([ :owner, :full_control ])
+    unless permission.in?([ :owner, :full_control, :read_write ])
       redirect_back_or_to transactions_path, alert: t("accounts.not_authorized")
       return
     end

@@ -41,9 +41,13 @@ class ApplicationController < ActionController::Base
     end
 
     def require_admin!
-      unless Current.user&.admin?
-        redirect_to accounts_path, alert: t("shared.require_admin")
-        nil
+      return if Current.user&.admin?
+
+      respond_to do |format|
+        format.html { redirect_to accounts_path, alert: t("shared.require_admin") }
+        format.turbo_stream { head :forbidden }
+        format.json { head :forbidden }
+        format.any { head :forbidden }
       end
     end
 

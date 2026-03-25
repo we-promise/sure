@@ -113,6 +113,7 @@ class PropertiesController < ApplicationController
           format.html { redirect_back_or_to account_path(@account), alert: t("accounts.not_authorized") }
           format.turbo_stream { stream_redirect_back_or_to(account_path(@account), alert: t("accounts.not_authorized")) }
         end
+        throw :abort
       end
     end
 end
