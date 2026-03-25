@@ -1,5 +1,6 @@
 class PlaidItemsController < ApplicationController
   before_action :set_plaid_item, only: %i[edit destroy sync]
+  before_action :require_admin!, only: %i[new create select_existing_account link_existing_account edit destroy sync]
 
   def new
     region = params[:region] == "eu" ? :eu : :us

@@ -74,7 +74,10 @@ class PlaidAccount::Processor
           cash_balance: balance_calculator.cash_balance
         )
 
+        new_account = account.new_record?
         account.save!
+
+        account.auto_share_with_family! if new_account && account.family.share_all_by_default?
 
         # Create account provider link if it doesn't exist
         unless account_provider

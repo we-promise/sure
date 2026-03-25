@@ -105,6 +105,29 @@ class Family < ApplicationRecord
     Merchant.where(id: (assigned_ids + recently_unlinked_ids + family_merchant_ids).uniq)
   end
 
+  def assigned_merchants_for(user)
+    merchant_ids = Transaction.joins(:entry)
+      .where(entries: { account_id: accounts.accessible_by(user).select(:id) })
+      .where.not(merchant_id: nil)
+      .distinct
+      .pluck(:merchant_id)
+    Merchant.where(id: merchant_ids)
+  end
+
+  def available_merchants_for(user)
+    assigned_ids = Transaction.joins(:entry)
+      .where(entries: { account_id: accounts.accessible_by(user).select(:id) })
+      .where.not(merchant_id: nil)
+      .distinct
+      .pluck(:merchant_id)
+    recently_unlinked_ids = FamilyMerchantAssociation
+      .where(family: self)
+      .recently_unlinked
+      .pluck(:merchant_id)
+    family_merchant_ids = merchants.pluck(:id)
+    Merchant.where(id: (assigned_ids + recently_unlinked_ids + family_merchant_ids).uniq)
+  end
+
   def auto_categorize_transactions_later(transactions, rule_run_id: nil)
     AutoCategorizeJob.perform_later(self, transaction_ids: transactions.pluck(:id), rule_run_id: rule_run_id)
   end

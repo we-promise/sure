@@ -16,15 +16,7 @@ class Transactions::BulkDeletionsController < ApplicationController
       params.require(:bulk_delete).permit(entry_ids: [])
     end
 
-    # Accounts where the user can delete entries (owner or full_control)
     def writable_accounts
-      Current.family.accounts
-        .left_joins(:account_shares)
-        .where(
-          "accounts.owner_id = :uid OR (account_shares.user_id = :uid AND account_shares.permission = :perm)",
-          uid: Current.user.id,
-          perm: "full_control"
-        )
-        .distinct
+      Current.family.accounts.writable_by(Current.user)
     end
 end

@@ -6,6 +6,8 @@ class IncomeStatement::FamilyStats
   end
 
   def call
+    return [] if @account_ids&.empty?
+
     ActiveRecord::Base.connection.select_all(sanitized_query_sql).map do |row|
       StatRow.new(
         classification: row["classification"],
@@ -49,7 +51,7 @@ class IncomeStatement::FamilyStats
     end
 
     def scope_to_account_ids_sql
-      return "" if @account_ids.blank?
+      return "" if @account_ids.nil?
       ActiveRecord::Base.sanitize_sql([ "AND a.id IN (?)", @account_ids ])
     end
 

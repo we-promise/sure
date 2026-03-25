@@ -2,7 +2,7 @@ class HoldingsController < ApplicationController
   include StreamExtensions
 
   before_action :set_holding, only: %i[show update destroy unlock_cost_basis remap_security reset_security sync_prices]
-  before_action :require_holding_write_permission!, only: %i[update destroy unlock_cost_basis remap_security reset_security]
+  before_action :require_holding_write_permission!, only: %i[update destroy unlock_cost_basis remap_security reset_security sync_prices]
 
   def index
     @account = accessible_accounts.find(params[:account_id])
@@ -147,13 +147,7 @@ class HoldingsController < ApplicationController
     end
 
     def require_holding_write_permission!
-      permission = @holding.account.permission_for(Current.user)
-      unless permission.in?([ :owner, :full_control ])
-        respond_to do |format|
-          format.html { redirect_back_or_to account_path(@holding.account), alert: t("accounts.not_authorized") }
-          format.turbo_stream { stream_redirect_back_or_to(account_path(@holding.account), alert: t("accounts.not_authorized")) }
-        end
-      end
+      require_account_permission!(@holding.account)
     end
 
     def holding_params

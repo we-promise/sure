@@ -4,7 +4,7 @@ class Rule::ConditionFilter::TransactionAccount < Rule::ConditionFilter
   end
 
   def options
-    family.accounts.alphabetically.pluck(:name, :id)
+    family.accounts.accessible_by(Current.user).alphabetically.pluck(:name, :id)
   end
 
   def apply(scope, operator, value)

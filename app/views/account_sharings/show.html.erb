@@ -24,9 +24,10 @@
                     <span id="member-name-<%= index %>" class="text-sm text-primary"><%= member.display_name %></span>
                   </div>
                   <div>
+                    <% selected_permission = share&.permission || "read_only" %>
                     <select name="sharing[members][<%= index %>][permission]" aria-labelledby="member-name-<%= index %>" class="text-sm border border-primary rounded-lg px-3 py-1.5 bg-container text-primary w-full">
                       <% AccountShare::PERMISSIONS.each do |perm| %>
-                        <option value="<%= perm %>" <%= "selected" if share&.permission == perm %>>
+                        <option value="<%= perm %>" <%= "selected" if selected_permission == perm %>>
                           <%= t(".permissions.#{perm}") %>
                         </option>
                       <% end %>

@@ -6,7 +6,7 @@ class FamilyMerchantsController < ApplicationController
 
     # Show all merchants for this family
     @family_merchants = Current.family.merchants.alphabetically
-    @provider_merchants = Current.family.assigned_merchants.where(type: "ProviderMerchant").alphabetically
+    @provider_merchants = Current.family.assigned_merchants_for(Current.user).where(type: "ProviderMerchant").alphabetically
 
     # Show recently unlinked ProviderMerchants (within last 30 days)
     # Exclude merchants that are already assigned to transactions (they appear in provider_merchants)

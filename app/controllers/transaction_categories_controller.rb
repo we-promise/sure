@@ -3,12 +3,7 @@ class TransactionCategoriesController < ApplicationController
 
   def update
     @entry = Current.accessible_entries.transactions.find(params[:transaction_id])
-
-    permission = @entry.account.permission_for(Current.user)
-    unless permission.in?([ :owner, :full_control, :read_write ])
-      redirect_back_or_to transaction_path(@entry), alert: t("accounts.not_authorized")
-      return
-    end
+    return unless require_account_permission!(@entry.account, :annotate, redirect_path: transaction_path(@entry))
 
     @entry.update!(entry_params)
 

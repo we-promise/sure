@@ -46,7 +46,6 @@ module AccountableResource
         opening_balance_date: opening_balance_date
       )
       @account.lock_saved_attributes!
-      @account.auto_share_with_family! if Current.family.share_all_by_default?
     end
 
     redirect_to account_params[:return_to].presence || @account, notice: t("accounts.create.success", type: accountable_type.name.underscore.humanize)
@@ -96,14 +95,7 @@ module AccountableResource
 
     def set_manageable_account
       @account = Current.user.accessible_accounts.find(params[:id])
-      permission = @account.permission_for(Current.user)
-      unless permission.in?([ :owner, :full_control ])
-        respond_to do |format|
-          format.html { redirect_to account_path(@account), alert: t("accounts.not_authorized") }
-          format.turbo_stream { stream_redirect_to(account_path(@account), alert: t("accounts.not_authorized")) }
-        end
-        nil
-      end
+      require_account_permission!(@account)
     end
 
     def account_params

@@ -1504,6 +1504,10 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_24_100003) do
     t.string "kind", default: "reconciliation", null: false
   end
 
+# Could not dump table "vector_store_chunks" because of following StandardError
+#   Unknown type 'vector(768)' for column 'embedding'
+
+
   create_table "vehicles", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false

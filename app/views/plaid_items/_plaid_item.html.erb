@@ -46,34 +46,36 @@
         </div>
       </div>
 
-      <div class="flex items-center gap-2">
-        <% if plaid_item.requires_update? %>
-          <%= render DS::Link.new(
-            text: t(".update"),
-            icon: "refresh-cw",
-            variant: "secondary",
-            href: edit_plaid_item_path(plaid_item),
-            frame: "modal"
-          ) %>
-        <% elsif Rails.env.development? %>
-          <%= icon(
-            "refresh-cw",
-            as_button: true,
-            href: sync_plaid_item_path(plaid_item)
-          ) %>
-        <% end %>
+      <% if Current.user&.admin? %>
+        <div class="flex items-center gap-2">
+          <% if plaid_item.requires_update? %>
+            <%= render DS::Link.new(
+              text: t(".update"),
+              icon: "refresh-cw",
+              variant: "secondary",
+              href: edit_plaid_item_path(plaid_item),
+              frame: "modal"
+            ) %>
+          <% elsif Rails.env.development? %>
+            <%= icon(
+              "refresh-cw",
+              as_button: true,
+              href: sync_plaid_item_path(plaid_item)
+            ) %>
+          <% end %>
 
-        <%= render DS::Menu.new do |menu| %>
-          <% menu.with_item(
-            variant: "button",
-            text: t(".delete"),
-            icon: "trash-2",
-            href: plaid_item_path(plaid_item),
-            method: :delete,
-            confirm: CustomConfirm.for_resource_deletion(plaid_item.name, high_severity: true)
-          ) %>
-        <% end %>
-      </div>
+          <%= render DS::Menu.new do |menu| %>
+            <% menu.with_item(
+              variant: "button",
+              text: t(".delete"),
+              icon: "trash-2",
+              href: plaid_item_path(plaid_item),
+              method: :delete,
+              confirm: CustomConfirm.for_resource_deletion(plaid_item.name, high_severity: true)
+            ) %>
+          <% end %>
+        </div>
+      <% end %>
     </summary>
 
     <% unless plaid_item.scheduled_for_deletion? %>

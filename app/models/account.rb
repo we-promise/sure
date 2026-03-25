@@ -1,9 +1,10 @@
 class Account < ApplicationRecord
   include AASM, Syncable, Monetizable, Chartable, Linkable, Enrichable, Anchorable, Reconcileable, TaxTreatable
 
-  before_validation :assign_default_owner, on: :create
+  before_validation :assign_default_owner, if: -> { owner_id.blank? }
 
   validates :name, :balance, :currency, presence: true
+  validate :owner_belongs_to_family, if: -> { owner_id.present? && family_id.present? }
 
   belongs_to :family
   belongs_to :owner, class_name: "User", optional: true
@@ -45,6 +46,13 @@ class Account < ApplicationRecord
   scope :accessible_by, ->(user) {
     left_joins(:account_shares)
       .where("accounts.owner_id = :uid OR account_shares.user_id = :uid", uid: user.id)
+      .distinct
+  }
+
+  # Accounts a user can write to (owned or shared with full_control)
+  scope :writable_by, ->(user) {
+    left_joins(:account_shares)
+      .where("accounts.owner_id = :uid OR (account_shares.user_id = :uid AND account_shares.permission = 'full_control')", uid: user.id)
       .distinct
   }
 
@@ -119,6 +127,8 @@ class Account < ApplicationRecord
           date: opening_balance_date
         )
         raise result.error if result.error
+
+        account.auto_share_with_family! if account.family.share_all_by_default?
       end
 
       # Skip initial sync for linked accounts - the provider sync will handle balance creation
@@ -375,6 +385,8 @@ class Account < ApplicationRecord
   end
 
   def shared_with?(user)
+    return false if user.nil?
+
     owned_by?(user) ||
       if account_shares.loaded?
         account_shares.any? { |s| s.user_id == user.id }
@@ -413,6 +425,16 @@ class Account < ApplicationRecord
 
     def assign_default_owner
       return if owner.present?
-      self.owner = Current.user || family&.users&.find_by(role: %w[admin super_admin]) || family&.users&.order(:created_at)&.first
+
+      if Current.user.present? && Current.user.family_id == family_id
+        self.owner = Current.user
+      else
+        self.owner = family&.users&.find_by(role: %w[admin super_admin]) || family&.users&.order(:created_at)&.first
+      end
+    end
+
+    def owner_belongs_to_family
+      return if User.where(id: owner_id, family_id: family_id).exists?
+      errors.add(:owner, :invalid, message: "must belong to the same family as the account")
     end
 end

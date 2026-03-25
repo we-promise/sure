@@ -1,6 +1,7 @@
 class EnableBankingItemsController < ApplicationController
   include EnableBankingItems::MapsHelper
   before_action :set_enable_banking_item, only: [ :update, :destroy, :sync, :select_bank, :authorize, :reauthorize, :setup_accounts, :complete_account_setup, :new_connection ]
+  before_action :require_admin!, only: [ :new, :create, :link_accounts, :select_existing_account, :link_existing_account, :update, :destroy, :sync, :select_bank, :authorize, :reauthorize, :setup_accounts, :complete_account_setup, :new_connection ]
   skip_before_action :verify_authenticity_token, only: [ :callback ]
 
   def new

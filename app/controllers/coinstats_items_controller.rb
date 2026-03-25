@@ -1,5 +1,6 @@
 class CoinstatsItemsController < ApplicationController
   before_action :set_coinstats_item, only: [ :show, :edit, :update, :destroy, :sync ]
+  before_action :require_admin!, only: [ :new, :create, :edit, :update, :destroy, :sync, :link_wallet ]
 
   def index
     @coinstats_items = Current.family.coinstats_items.ordered

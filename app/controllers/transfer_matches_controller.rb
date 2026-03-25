@@ -2,16 +2,15 @@ class TransferMatchesController < ApplicationController
   before_action :set_entry
 
   def new
-    @accounts = accessible_accounts.visible.alphabetically.where.not(id: @entry.account_id)
+    @accounts = Current.family.accounts.writable_by(Current.user).visible.alphabetically.where.not(id: @entry.account_id)
     @transfer_match_candidates = @entry.transaction.transfer_match_candidates
   end
 
   def create
-    permission = @entry.account.permission_for(Current.user)
-    unless permission.in?([ :owner, :full_control ])
-      redirect_back_or_to transactions_path, alert: t("accounts.not_authorized")
-      return
-    end
+    return unless require_account_permission!(@entry.account, redirect_path: transactions_path)
+
+    target_account = resolve_target_account
+    return unless require_account_permission!(target_account, redirect_path: transactions_path)
 
     @transfer = build_transfer
     Transfer.transaction do
@@ -43,6 +42,14 @@ class TransferMatchesController < ApplicationController
 
     def transfer_match_params
       params.require(:transfer_match).permit(:method, :matched_entry_id, :target_account_id)
+    end
+
+    def resolve_target_account
+      if transfer_match_params[:method] == "new"
+        accessible_accounts.find(transfer_match_params[:target_account_id])
+      else
+        Current.accessible_entries.find(transfer_match_params[:matched_entry_id]).account
+      end
     end
 
     def build_transfer

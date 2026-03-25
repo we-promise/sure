@@ -87,10 +87,7 @@ class SplitsController < ApplicationController
     end
 
     def require_split_write_permission!
-      permission = @entry.account.permission_for(Current.user)
-      unless permission.in?([ :owner, :full_control ])
-        redirect_back_or_to transactions_path, alert: t("accounts.not_authorized")
-      end
+      require_account_permission!(@entry.account, redirect_path: transactions_path)
     end
 
     def resolve_to_parent!

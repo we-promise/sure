@@ -2,6 +2,7 @@
 
 configured_with_token:
   family: dylan_family
+
   name: "Indexa Capital Connection"
   api_token: "test_api_token_123"
   status: good
@@ -9,6 +10,7 @@ configured_with_token:
 
 configured_with_credentials:
   family: empty
+
   name: "Indexa Capital Credentials"
   username: "testuser@example.com"
   document: "12345678A"
