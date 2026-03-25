@@ -201,6 +201,56 @@ class PdfImportTest < ActiveSupport::TestCase
     assert_equal [], @import_investment.mapping_steps
   end
 
+  test "trade_entry_name_for uses neutral label for zero quantity" do
+    import = imports(:pdf_investment)
+    row = Import::Row.new(qty: "0", ticker: "AAPL", name: "")
+    assert_equal "Trade AAPL", import.send(:trade_entry_name_for, row)
+  end
+
+  test "trade_entry_name_for uses Imported trade when zero qty and no ticker" do
+    import = imports(:pdf_investment)
+    row = Import::Row.new(qty: "0", ticker: "", name: "")
+    assert_equal "Imported trade", import.send(:trade_entry_name_for, row)
+  end
+
+  test "trade_entry_name_for uses Trade.build_name when quantity is nonzero" do
+    import = imports(:pdf_investment)
+    row = Import::Row.new(qty: "10", ticker: "AAPL", name: "")
+    assert_equal Trade.build_name("buy", "10", "AAPL"), import.send(:trade_entry_name_for, row)
+  end
+
+  test "investment statement rejects accounts that cannot hold trades" do
+    import = imports(:pdf_investment)
+    import.account = accounts(:depository)
+    assert_not import.valid?
+    assert import.errors[:account].present?
+  end
+
+  test "investment statement allows investment and crypto accounts" do
+    import = imports(:pdf_investment)
+    assert import.valid?
+
+    import.account = accounts(:crypto)
+    assert import.valid?
+  end
+
+  test "import! raises when investment statement is linked to a depository account" do
+    import = imports(:pdf_investment)
+    import.update_column(:account_id, accounts(:depository).id)
+    import.reload
+
+    error = assert_raises(RuntimeError) { import.import! }
+    assert_equal I18n.t("imports.errors.investment_statement_account_type"), error.message
+  end
+
+  test "publishable? is false for investment statement with incompatible account" do
+    import = imports(:pdf_investment)
+    import.update_column(:account_id, accounts(:depository).id)
+    import.reload
+
+    assert_not import.publishable?
+  end
+
   test "destroying import purges attached pdf_file" do
     @import.pdf_file.attach(
       io: StringIO.new("fake-pdf-content"),

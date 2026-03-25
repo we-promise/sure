@@ -84,6 +84,39 @@ class Provider::Openai::BrokerageStatementExtractorTest < ActiveSupport::TestCas
     end
   end
 
+  test "splits a single oversized page into multiple chunks under MAX_CHARS_PER_CHUNK" do
+    max = Provider::Openai::BrokerageStatementExtractor::MAX_CHARS_PER_CHUNK
+    huge_page = "x" * (max * 3)
+
+    trade_payload = {
+      "trades" => [
+        { "date" => "2024-01-15", "action" => "buy", "ticker" => "AAPL", "quantity" => 1, "price" => 100.00 }
+      ]
+    }
+    empty_payload = { "trades" => [] }
+
+    responses = [
+      { "choices" => [ { "message" => { "content" => trade_payload.to_json } } ] },
+      { "choices" => [ { "message" => { "content" => empty_payload.to_json } } ] },
+      { "choices" => [ { "message" => { "content" => empty_payload.to_json } } ] }
+    ]
+
+    @client.expects(:chat).times(3).returns(*responses)
+
+    extractor = Provider::Openai::BrokerageStatementExtractor.new(
+      client: @client,
+      pdf_content: "dummy",
+      model: @model
+    )
+
+    extractor.stubs(:extract_pages_from_pdf).returns([ huge_page ])
+
+    result = extractor.extract
+
+    assert_equal 1, result[:trades].size
+    assert_equal "AAPL", result[:trades].first[:ticker]
+  end
+
   test "deduplicates trades across chunk boundaries" do
     first_response = {
       "choices" => [ {
@@ -96,7 +129,7 @@ class Provider::Openai::BrokerageStatementExtractorTest < ActiveSupport::TestCas
             "currency" => "USD",
             "trades" => [
               { "date" => "2024-01-15", "action" => "buy", "ticker" => "AAPL", "quantity" => 10, "price" => 175.50 },
-              { "date" => "2024-01-20", "action" => "buy", "ticker" => "GOOGL", "quantity" => 5, "price" => 140.00 }
+              { "date" => "2024-01-20", "action" => "buy", "ticker" => "GOOGL", "quantity" => 5, "price" => 140.00, "order_id" => "GOOGL-1" }
             ]
           }.to_json
         }
@@ -108,7 +141,7 @@ class Provider::Openai::BrokerageStatementExtractorTest < ActiveSupport::TestCas
         "message" => {
           "content" => {
             "trades" => [
-              { "date" => "2024-01-20", "action" => "buy", "ticker" => "GOOGL", "quantity" => 5, "price" => 140.00 },
+              { "date" => "2024-01-20", "action" => "buy", "ticker" => "GOOGL", "quantity" => 5, "price" => 140.00, "order_id" => "GOOGL-1" },
               { "date" => "2024-02-10", "action" => "sell", "ticker" => "TSLA", "quantity" => 3, "price" => 200.00 }
             ]
           }.to_json
@@ -124,10 +157,9 @@ class Provider::Openai::BrokerageStatementExtractorTest < ActiveSupport::TestCas
       model: @model
     )
 
-    extractor.stubs(:extract_pages_from_pdf).returns([
-      "Page 1 " * 500,
-      "Page 2 " * 500
-    ])
+    max = Provider::Openai::BrokerageStatementExtractor::MAX_CHARS_PER_CHUNK
+    pad = "x" * (max - 500)
+    extractor.stubs(:extract_pages_from_pdf).returns([ "P1#{pad}", "P2#{pad}" ])
 
     result = extractor.extract
 
@@ -136,6 +168,158 @@ class Provider::Openai::BrokerageStatementExtractorTest < ActiveSupport::TestCas
     assert_includes tickers, "AAPL"
     assert_includes tickers, "GOOGL"
     assert_includes tickers, "TSLA"
+  end
+
+  test "keeps weak-identical trades in neighboring chunks when no order id or time" do
+    row = { "date" => "2024-01-15", "action" => "buy", "ticker" => "AAPL", "quantity" => 10, "price" => 175.50 }
+    first_response = {
+      "choices" => [ { "message" => { "content" => { "trades" => [ row ] }.to_json } } ]
+    }
+    second_response = {
+      "choices" => [ { "message" => { "content" => { "trades" => [ row ] }.to_json } } ]
+    }
+
+    @client.expects(:chat).twice.returns(first_response, second_response)
+
+    extractor = Provider::Openai::BrokerageStatementExtractor.new(
+      client: @client,
+      pdf_content: "dummy",
+      model: @model
+    )
+
+    max = Provider::Openai::BrokerageStatementExtractor::MAX_CHARS_PER_CHUNK
+    pad = "x" * (max - 500)
+    extractor.stubs(:extract_pages_from_pdf).returns([ "P1#{pad}", "P2#{pad}" ])
+
+    result = extractor.extract
+
+    assert_equal 2, result[:trades].size
+    assert_equal [ "AAPL", "AAPL" ], result[:trades].map { |t| t[:ticker] }
+  end
+
+  test "deduplicates duplicate weak rows within the same chunk" do
+    row = { "date" => "2024-01-15", "action" => "buy", "ticker" => "AAPL", "quantity" => 10, "price" => 175.50 }
+    mock_response = {
+      "choices" => [ {
+        "message" => {
+          "content" => { "trades" => [ row, row ] }.to_json
+        }
+      } ]
+    }
+
+    @client.expects(:chat).returns(mock_response)
+
+    extractor = Provider::Openai::BrokerageStatementExtractor.new(
+      client: @client,
+      pdf_content: "dummy",
+      model: @model
+    )
+
+    extractor.stubs(:extract_pages_from_pdf).returns([ "short page" ])
+
+    result = extractor.extract
+
+    assert_equal 1, result[:trades].size
+  end
+
+  test "merges summary metadata from later chunks when omitted on first chunk" do
+    first_response = {
+      "choices" => [ {
+        "message" => {
+          "content" => {
+            "broker_name" => "Sample Broker",
+            "statement_period" => { "start_date" => "2024-01-01", "end_date" => "2024-01-31" },
+            "trades" => [
+              { "date" => "2024-01-15", "action" => "buy", "ticker" => "AAPL", "quantity" => 1, "price" => 100.00 }
+            ]
+          }.to_json
+        }
+      } ]
+    }
+
+    second_response = {
+      "choices" => [ {
+        "message" => {
+          "content" => {
+            "cash_balance" => 500.0,
+            "total_value" => 10_000.0,
+            "as_of_date" => "2024-03-31",
+            "statement_period" => { "end_date" => "2024-03-31" },
+            "trades" => [
+              { "date" => "2024-02-01", "action" => "buy", "ticker" => "MSFT", "quantity" => 2, "price" => 200.00 }
+            ]
+          }.to_json
+        }
+      } ]
+    }
+
+    @client.expects(:chat).twice.returns(first_response, second_response)
+
+    extractor = Provider::Openai::BrokerageStatementExtractor.new(
+      client: @client,
+      pdf_content: "dummy",
+      model: @model
+    )
+
+    max = Provider::Openai::BrokerageStatementExtractor::MAX_CHARS_PER_CHUNK
+    pad = "x" * (max - 500)
+    extractor.stubs(:extract_pages_from_pdf).returns([ "P1#{pad}", "P2#{pad}" ])
+
+    result = extractor.extract
+
+    assert_equal "Sample Broker", result[:broker_name]
+    assert_equal 500.0, result[:cash_balance]
+    assert_equal 10_000.0, result[:total_value]
+    assert_equal "2024-03-31", result[:as_of_date]
+    assert_equal "2024-01-01", result[:period][:start_date]
+    assert_equal "2024-03-31", result[:period][:end_date]
+  end
+
+  test "identity metadata from first chunk wins when repeated in later chunk" do
+    first_response = {
+      "choices" => [ {
+        "message" => {
+          "content" => {
+            "broker_name" => "First Broker",
+            "currency" => "USD",
+            "trades" => [
+              { "date" => "2024-01-15", "action" => "buy", "ticker" => "AAPL", "quantity" => 1, "price" => 100.00 }
+            ]
+          }.to_json
+        }
+      } ]
+    }
+
+    second_response = {
+      "choices" => [ {
+        "message" => {
+          "content" => {
+            "broker_name" => "Other Broker",
+            "currency" => "EUR",
+            "trades" => [
+              { "date" => "2024-02-01", "action" => "buy", "ticker" => "MSFT", "quantity" => 2, "price" => 200.00 }
+            ]
+          }.to_json
+        }
+      } ]
+    }
+
+    @client.expects(:chat).twice.returns(first_response, second_response)
+
+    extractor = Provider::Openai::BrokerageStatementExtractor.new(
+      client: @client,
+      pdf_content: "dummy",
+      model: @model
+    )
+
+    max = Provider::Openai::BrokerageStatementExtractor::MAX_CHARS_PER_CHUNK
+    pad = "x" * (max - 500)
+    extractor.stubs(:extract_pages_from_pdf).returns([ "P1#{pad}", "P2#{pad}" ])
+
+    result = extractor.extract
+
+    assert_equal "First Broker", result[:broker_name]
+    assert_equal "USD", result[:currency]
   end
 
   test "normalizes sell actions to negative quantity" do

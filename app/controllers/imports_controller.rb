@@ -13,7 +13,10 @@ class ImportsController < ApplicationController
         redirect_back_or_to import_path(@import), alert: t("imports.update.invalid_account", default: "Account not found.")
         return
       end
-      @import.update!(account: account)
+      unless @import.update(account: account)
+        redirect_back_or_to import_path(@import), alert: @import.errors.full_messages.to_sentence
+        return
+      end
     end
 
     redirect_to import_path(@import), notice: t("imports.update.account_saved", default: "Account saved.")

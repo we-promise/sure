@@ -115,6 +115,18 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_equal I18n.t("imports.create.invalid_document_file_type"), flash[:alert]
   end
 
+  test "update rejects depository account for investment statement PDF import" do
+    import = imports(:pdf_investment)
+    import.update_column(:account_id, nil)
+
+    patch import_url(import), params: { pdf_import: { account_id: accounts(:depository).id } }
+
+    assert_redirected_to import_url(import)
+    assert_includes flash[:alert], I18n.t("imports.errors.investment_statement_account_type")
+    import.reload
+    assert_nil import.account_id
+  end
+
   test "publishes import" do
     import = imports(:transaction)
 

@@ -1,12 +1,18 @@
 class PdfImport < Import
+  INVESTMENT_TRADE_ACCOUNTABLE_TYPES = %w[Investment Crypto].freeze
+
   has_one_attached :pdf_file, dependent: :purge_later
 
   validates :document_type, inclusion: { in: DOCUMENT_TYPES }, allow_nil: true
+  validate :investment_statement_account_must_allow_trades
 
   def import!
     raise "Account required for PDF import" unless account.present?
 
     if investment_statement?
+      unless account.accountable_type.in?(INVESTMENT_TRADE_ACCOUNTABLE_TYPES)
+        raise I18n.t("imports.errors.investment_statement_account_type")
+      end
       import_trades!
     else
       import_transactions!
@@ -155,7 +161,10 @@ class PdfImport < Import
   def publishable?
     return false unless account.present? && cleaned? && mappings.all?(&:valid?)
 
-    statement_with_transactions? || investment_statement?
+    return false unless statement_with_transactions? || investment_statement?
+    return false if investment_statement? && !account_investment_trade_eligible?
+
+    true
   end
 
   def column_keys
@@ -193,6 +202,19 @@ class PdfImport < Import
   end
 
   private
+
+    def account_investment_trade_eligible?
+      account.accountable_type.in?(INVESTMENT_TRADE_ACCOUNTABLE_TYPES)
+    end
+
+    def investment_statement_account_must_allow_trades
+      return unless investment_statement?
+      return if account.nil?
+
+      unless account_investment_trade_eligible?
+        errors.add(:account, I18n.t("imports.errors.investment_statement_account_type"))
+      end
+    end
 
     def import_transactions!
       transaction do
@@ -238,7 +260,7 @@ class PdfImport < Import
               account: account,
               date: row.date_iso,
               amount: (row.qty.to_d * row.price.to_d).abs,
-              name: row.name.presence || Trade.build_name(row.qty.to_d.positive? ? "buy" : "sell", row.qty, row.ticker),
+              name: trade_entry_name_for(row),
               currency: row.currency.presence || account.currency,
               import: self,
               import_locked: true
@@ -253,6 +275,18 @@ class PdfImport < Import
     def investment_activity_label_for(qty)
       return nil if qty.blank? || qty.to_d.zero?
       qty.to_d.positive? ? "Buy" : "Sell"
+    end
+
+    def trade_entry_name_for(row)
+      return row.name if row.name.present?
+
+      qty_d = row.qty.to_d
+      if row.qty.blank? || qty_d.zero?
+        ticker = row.ticker.to_s.strip
+        ticker.present? ? "Trade #{ticker}" : "Imported trade"
+      else
+        Trade.build_name(qty_d.positive? ? "buy" : "sell", row.qty, row.ticker)
+      end
     end
 
     def find_or_create_security(ticker: nil, exchange_operating_mic: nil)
