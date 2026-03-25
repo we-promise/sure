@@ -15,7 +15,7 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
       user: @user,
       name: "Test Read-Write Key",
       scopes: [ "read_write" ],
-      display_key: "test_rw_#{SecureRandom.hex(8)}"
+      key: SecureRandom.hex(16)
     )
   end
 
