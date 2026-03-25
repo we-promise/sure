@@ -5,7 +5,7 @@ class ProcessPdfJob < ApplicationJob
     return unless pdf_import.is_a?(PdfImport)
     return unless pdf_import.pdf_uploaded?
     return if pdf_import.status == "complete"
-    return if pdf_import.ai_processed? && (!pdf_import.statement_with_transactions? || pdf_import.rows_count > 0)
+    return if pdf_import.ai_processed? && (!pdf_import.statement_with_extractable_data? || pdf_import.rows_count > 0)
 
     pdf_import.update!(status: :importing)
 
@@ -14,7 +14,6 @@ class ProcessPdfJob < ApplicationJob
       document_type = resolve_document_type(pdf_import, process_result)
       upload_to_vector_store(pdf_import, document_type: document_type)
 
-      # For statements with transactions (bank/credit card), extract and generate import rows
       if statement_with_transactions?(document_type)
         Rails.logger.info("ProcessPdfJob: Extracting transactions for #{document_type} import #{pdf_import.id}")
         pdf_import.extract_transactions
@@ -23,18 +22,24 @@ class ProcessPdfJob < ApplicationJob
         pdf_import.generate_rows_from_extracted_data
         pdf_import.sync_mappings
         Rails.logger.info("ProcessPdfJob: Generated #{pdf_import.rows_count} import rows")
+      elsif investment_statement?(document_type)
+        Rails.logger.info("ProcessPdfJob: Extracting trades for #{document_type} import #{pdf_import.id}")
+        pdf_import.extract_trades
+        Rails.logger.info("ProcessPdfJob: Extracted #{pdf_import.extracted_trades.size} trades")
+
+        pdf_import.generate_rows_from_extracted_data
+        pdf_import.sync_mappings
+        Rails.logger.info("ProcessPdfJob: Generated #{pdf_import.rows_count} import rows")
       end
 
-      # Find the user who created this import (first admin or any user in the family)
       user = pdf_import.family.users.find_by(role: :admin) || pdf_import.family.users.first
 
       if user
         pdf_import.send_next_steps_email(user)
       end
 
-      # Statements with extracted rows go to pending for user review/publish
-      # Other document types are marked complete (no further action needed)
-      final_status = statement_with_transactions?(document_type) && pdf_import.rows_count > 0 ? :pending : :complete
+      has_extractable_data = statement_with_transactions?(document_type) || investment_statement?(document_type)
+      final_status = has_extractable_data && pdf_import.rows_count > 0 ? :pending : :complete
       pdf_import.update!(status: final_status)
     rescue StandardError => e
       sanitized_error = sanitize_error_message(e)
@@ -84,5 +89,9 @@ class ProcessPdfJob < ApplicationJob
 
     def statement_with_transactions?(document_type)
       document_type.in?(%w[bank_statement credit_card_statement])
+    end
+
+    def investment_statement?(document_type)
+      document_type == "investment_statement"
     end
 end

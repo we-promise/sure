@@ -249,3 +249,27 @@ en:
       unknown_state_description: This import is in an unexpected state. Please return to imports.
       processing_failed_with_message: "%{message}"
       processing_failed_generic: "Processing failed: %{error}"
+      ready_for_review_title: Ready for Review
+      ready_for_review_description: "We extracted %{count} transactions from your statement. Review and publish them to add to your account."
+      ready_for_review_trades_description: "We extracted %{count} trades from your brokerage statement. Review and publish them to add to your investment account."
+      unknown_document_type: Unknown
+      transactions_extracted: Transactions Extracted
+      transactions_extracted_count:
+        one: "%{count} transaction"
+        other: "%{count} transactions"
+      trades_extracted: Trades Extracted
+      trades_extracted_count:
+        one: "%{count} trade"
+        other: "%{count} trades"
+      select_account: Import to Account
+      select_account_placeholder: Select an account...
+      select_account_hint: Choose which account to import these transactions into.
+      select_investment_account_hint: Choose which investment account to import these trades into.
+      no_accounts: No accounts available. Please create an account first.
+      no_investment_accounts: No investment accounts available. Please create an investment account first.
+      create_account: Create Account
+      save_account: Save
+      publish_transactions: "Publish %{count} Transactions"
+      publish_trades: "Publish %{count} Trades"
+      review_before_publish: Review Before Publishing
+      select_account_to_continue: Please select an account above to continue.

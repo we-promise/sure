@@ -46,6 +46,28 @@ pdf_with_rows:
         notes: ""
   rows_count: 2
 
+pdf_investment:
+  family: dylan_family
+  account: investment
+  type: PdfImport
+  status: pending
+  ai_summary: "Brokerage statement with extracted trades"
+  document_type: investment_statement
+  extracted_data:
+    currency: "USD"
+    trades:
+      - date: "2024-01-15"
+        ticker: "AAPL"
+        qty: "10"
+        price: "175.50"
+        name: "Apple Inc."
+      - date: "2024-01-20"
+        ticker: "MSFT"
+        qty: "-5"
+        price: "380.00"
+        name: "Microsoft Corp."
+  rows_count: 2
+
 sure:
   family: dylan_family
   type: SureImport
