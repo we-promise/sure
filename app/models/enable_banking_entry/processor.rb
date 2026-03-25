@@ -80,7 +80,7 @@ class EnableBankingEntry::Processor
         data.dig(:creditor, :name) || data[:creditor_name]
       end
 
-      return counterparty if counterparty.present?
+      return counterparty if counterparty.present? && !counterparty.match?(/\ACARD-\d+\z/i)
 
       # Fall back to bank_transaction_code description
       bank_tx_description = data.dig(:bank_transaction_code, :description)
