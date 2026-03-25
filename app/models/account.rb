@@ -49,6 +49,13 @@ class Account < ApplicationRecord
       .distinct
   }
 
+  # Accounts a user can write to (owned or shared with full_control)
+  scope :writable_by, ->(user) {
+    left_joins(:account_shares)
+      .where("accounts.owner_id = :uid OR (account_shares.user_id = :uid AND account_shares.permission = 'full_control')", uid: user.id)
+      .distinct
+  }
+
   # Accounts that count in a user's financial calculations
   scope :included_in_finances_for, ->(user) {
     left_joins(:account_shares)
@@ -378,6 +385,8 @@ class Account < ApplicationRecord
   end
 
   def shared_with?(user)
+    return false if user.nil?
+
     owned_by?(user) ||
       if account_shares.loaded?
         account_shares.any? { |s| s.user_id == user.id }

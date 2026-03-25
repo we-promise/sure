@@ -126,30 +126,32 @@
           activities_pending: activities_pending
         ) %>
 
-        <% if unlinked_count > 0 && snaptrade_item.accounts.empty? %>
-          <%# No accounts imported yet - show prominent setup prompt %>
-          <div class="p-4 flex flex-col gap-3 items-center justify-center">
-            <p class="text-primary font-medium text-sm"><%= t(".setup_needed") %></p>
-            <p class="text-secondary text-sm"><%= t(".setup_description") %></p>
-            <%= render DS::Link.new(
-              text: t(".setup_action"),
-              icon: "settings",
-              variant: "primary",
-              href: setup_accounts_snaptrade_item_path(snaptrade_item),
-              frame: :modal
-            ) %>
-          </div>
-        <% elsif snaptrade_item.snaptrade_accounts.empty? %>
-          <div class="p-4 flex flex-col gap-3 items-center justify-center">
-            <p class="text-primary font-medium text-sm"><%= t(".no_accounts_title") %></p>
-            <p class="text-secondary text-sm"><%= t(".no_accounts_description") %></p>
-            <%= render DS::Link.new(
-              text: t(".connect_brokerage"),
-              icon: "link",
-              variant: "primary",
-              href: connect_snaptrade_item_path(snaptrade_item)
-            ) %>
-          </div>
+        <% if Current.user&.admin? %>
+          <% if unlinked_count > 0 && snaptrade_item.accounts.empty? %>
+            <%# No accounts imported yet - show prominent setup prompt %>
+            <div class="p-4 flex flex-col gap-3 items-center justify-center">
+              <p class="text-primary font-medium text-sm"><%= t(".setup_needed") %></p>
+              <p class="text-secondary text-sm"><%= t(".setup_description") %></p>
+              <%= render DS::Link.new(
+                text: t(".setup_action"),
+                icon: "settings",
+                variant: "primary",
+                href: setup_accounts_snaptrade_item_path(snaptrade_item),
+                frame: :modal
+              ) %>
+            </div>
+          <% elsif snaptrade_item.snaptrade_accounts.empty? %>
+            <div class="p-4 flex flex-col gap-3 items-center justify-center">
+              <p class="text-primary font-medium text-sm"><%= t(".no_accounts_title") %></p>
+              <p class="text-secondary text-sm"><%= t(".no_accounts_description") %></p>
+              <%= render DS::Link.new(
+                text: t(".connect_brokerage"),
+                icon: "link",
+                variant: "primary",
+                href: connect_snaptrade_item_path(snaptrade_item)
+              ) %>
+            </div>
+          <% end %>
         <% end %>
       </div>
     <% end %>
