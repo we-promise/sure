@@ -1,0 +1,67 @@
+---
+zh-CN:
+  provider_sync_summary:
+    title: 同步摘要
+    last_sync: "上次同步：%{time_ago} 前"
+    accounts:
+      title: 账户
+      total: "总计：%{count}"
+      linked: "已关联：%{count}"
+      unlinked: "未关联：%{count}"
+      institutions: "机构：%{count}"
+    transactions:
+      title: 交易
+      seen: "已扫描：%{count}"
+      imported: "已导入：%{count}"
+      updated: "已更新：%{count}"
+      skipped: "已跳过：%{count}"
+      fetching: "正在从券商拉取…"
+      protected:
+        one: "%{count} 条记录已保护（不会被覆盖）"
+        other: "%{count} 条记录已保护（不会被覆盖）"
+      view_protected: 查看受保护的记录
+    skip_reasons:
+      excluded: 已排除
+      user_modified: 用户已修改
+      import_locked: CSV 导入
+      protected: 受保护
+    holdings:
+      title: 持仓
+      found: "已发现：%{count}"
+      processed: "已处理：%{count}"
+    trades:
+      title: 交易活动
+      imported: "已导入：%{count}"
+      skipped: "已跳过：%{count}"
+      fetching: "正在从券商拉取活动…"
+    health:
+      title: 健康状态
+      view_error_details: 查看错误详情
+      rate_limited: "限流于 %{time_ago} 前"
+      recently: 刚刚
+      errors: "错误：%{count}"
+      pending_reconciled:
+        one: "%{count} 笔重复的待入账交易已对账合并"
+        other: "%{count} 笔重复的待入账交易已对账合并"
+      view_reconciled: 查看已合并交易
+      duplicate_suggestions:
+        one: "%{count} 条可能重复记录需要复核"
+        other: "%{count} 条可能重复记录需要复核"
+      view_duplicate_suggestions: 查看重复建议
+      stale_pending:
+        one: "%{count} 笔过期待入账交易（已从预算中排除）"
+        other: "%{count} 笔过期待入账交易（已从预算中排除）"
+      view_stale_pending: 查看受影响账户
+      stale_pending_count:
+        one: "%{count} 笔交易"
+        other: "%{count} 笔交易"
+      stale_unmatched:
+        one: "%{count} 笔待入账交易需要人工复核"
+        other: "%{count} 笔待入账交易需要人工复核"
+      view_stale_unmatched: 查看需要复核的交易
+      stale_unmatched_count:
+        one: "%{count} 笔交易"
+        other: "%{count} 笔交易"
+      data_warnings: "数据警告：%{count}"
+      notices: "提示：%{count}"
+      view_data_quality: 查看数据质量详情
