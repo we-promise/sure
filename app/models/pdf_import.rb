@@ -10,9 +10,6 @@ class PdfImport < Import
     raise "Account required for PDF import" unless account.present?
 
     if investment_statement?
-      unless account.accountable_type.in?(INVESTMENT_TRADE_ACCOUNTABLE_TYPES)
-        raise I18n.t("imports.errors.investment_statement_account_type")
-      end
       import_trades!
     else
       import_transactions!
@@ -259,7 +256,7 @@ class PdfImport < Import
             entry: Entry.new(
               account: account,
               date: row.date_iso,
-              amount: (row.qty.to_d * row.price.to_d).abs,
+              amount: row.signed_amount,
               name: trade_entry_name_for(row),
               currency: row.currency.presence || account.currency,
               import: self,
@@ -295,7 +292,7 @@ class PdfImport < Import
       @security_cache ||= {}
       cache_key = [ ticker, exchange_operating_mic ].compact.join(":")
 
-      return @security_cache[cache_key] if @security_cache[cache_key].present?
+      return @security_cache[cache_key] if @security_cache.key?(cache_key)
 
       security = Security::Resolver.new(
         ticker,

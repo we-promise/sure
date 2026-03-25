@@ -159,6 +159,7 @@ es:
       back_to_imports: Volver a importaciones
     errors:
       custom_column_requires_inflow: "Las importaciones de columnas personalizadas requieren que se seleccione una columna de entrada de fondos (inflow)"
+      investment_statement_account_type: "Los extractos de inversión deben importarse a una cuenta de inversión o de cripto."
     document_types:
       bank_statement: Extracto bancario
       credit_card_statement: Extracto de tarjeta de crédito
@@ -186,3 +187,35 @@ es:
       unknown_state_description: Esta importación se encuentra en un estado inesperado. Por favor, vuelve a importaciones.
       processing_failed_with_message: "%{message}"
       processing_failed_generic: "Error en el procesamiento: %{error}"
+      ready_for_review_title: Listo para revisar
+      ready_for_review_description:
+        one: "Hemos extraído %{count} transacción de tu extracto. Revísala y publícala para añadirla a tu cuenta."
+        other: "Hemos extraído %{count} transacciones de tu extracto. Revísalas y publícalas para añadirlas a tu cuenta."
+      ready_for_review_trades_description:
+        one: "Hemos extraído %{count} operación de tu extracto de broker. Revísala y publícala para añadirla a tu cuenta de inversión."
+        other: "Hemos extraído %{count} operaciones de tu extracto de broker. Revísalas y publícalas para añadirlas a tu cuenta de inversión."
+      unknown_document_type: Desconocido
+      transactions_extracted: Transacciones extraídas
+      transactions_extracted_count:
+        one: "%{count} transacción"
+        other: "%{count} transacciones"
+      trades_extracted: Operaciones extraídas
+      trades_extracted_count:
+        one: "%{count} operación"
+        other: "%{count} operaciones"
+      select_account: Importar a la cuenta
+      select_account_placeholder: Selecciona una cuenta...
+      select_account_hint: Elige la cuenta a la que importar estas transacciones.
+      select_investment_account_hint: Elige la cuenta de inversión a la que importar estas operaciones.
+      no_accounts: No hay cuentas disponibles. Crea una cuenta primero.
+      no_investment_accounts: No hay cuentas de inversión disponibles. Crea una cuenta de inversión primero.
+      create_account: Crear cuenta
+      save_account: Guardar
+      publish_transactions:
+        one: "Publicar %{count} transacción"
+        other: "Publicar %{count} transacciones"
+      publish_trades:
+        one: "Publicar %{count} operación"
+        other: "Publicar %{count} operaciones"
+      review_before_publish: Revisar antes de publicar
+      select_account_to_continue: Selecciona una cuenta arriba para continuar.

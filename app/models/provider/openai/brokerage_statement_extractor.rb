@@ -48,7 +48,7 @@ class Provider::Openai::BrokerageStatementExtractor
 
       reader = PDF::Reader.new(StringIO.new(pdf_content))
       reader.pages.map(&:text).reject(&:blank?)
-    rescue => e
+    rescue PDF::Reader::MalformedPDFError, PDF::Reader::UnsupportedFeatureError => e
       Rails.logger.error("Failed to extract text from PDF: #{e.message}")
       []
     end
