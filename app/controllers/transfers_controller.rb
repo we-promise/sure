@@ -24,14 +24,8 @@ class TransfersController < ApplicationController
     source_account = accessible_accounts.find(transfer_params[:from_account_id])
     destination_account = accessible_accounts.find(transfer_params[:to_account_id])
 
-    unless source_account.permission_for(Current.user).in?([ :owner, :full_control ]) &&
-           destination_account.permission_for(Current.user).in?([ :owner, :full_control ])
-      respond_to do |format|
-        format.html { redirect_back_or_to transactions_path, alert: t("accounts.not_authorized") }
-        format.turbo_stream { stream_redirect_back_or_to(transactions_path, alert: t("accounts.not_authorized")) }
-      end
-      return
-    end
+    return unless require_account_permission!(source_account, redirect_path: transactions_path)
+    return unless require_account_permission!(destination_account, redirect_path: transactions_path)
 
     @transfer = Transfer::Creator.new(
       family: Current.family,
@@ -55,14 +49,7 @@ class TransfersController < ApplicationController
 
   def update
     outflow_account = @transfer.outflow_transaction.entry.account
-    permission = outflow_account.permission_for(Current.user)
-    unless permission.in?([ :owner, :full_control ])
-      respond_to do |format|
-        format.html { redirect_back_or_to transactions_url, alert: t("accounts.not_authorized") }
-        format.turbo_stream { stream_redirect_back_or_to(transactions_url, alert: t("accounts.not_authorized")) }
-      end
-      return
-    end
+    return unless require_account_permission!(outflow_account, redirect_path: transactions_url)
 
     Transfer.transaction do
       update_transfer_status
@@ -76,16 +63,8 @@ class TransfersController < ApplicationController
   end
 
   def destroy
-    # Require write permission on at least the outflow account
     outflow_account = @transfer.outflow_transaction.entry.account
-    permission = outflow_account.permission_for(Current.user)
-    unless permission.in?([ :owner, :full_control ])
-      respond_to do |format|
-        format.html { redirect_back_or_to transactions_url, alert: t("accounts.not_authorized") }
-        format.turbo_stream { stream_redirect_back_or_to(transactions_url, alert: t("accounts.not_authorized")) }
-      end
-      return
-    end
+    return unless require_account_permission!(outflow_account, redirect_path: transactions_url)
 
     @transfer.destroy!
     redirect_back_or_to transactions_url, notice: t(".success")

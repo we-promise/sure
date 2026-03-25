@@ -17,13 +17,7 @@ class TradesController < ApplicationController
   def create
     @account = accessible_accounts.find(params[:account_id])
 
-    unless @account.permission_for(Current.user).in?([ :owner, :full_control ])
-      respond_to do |format|
-        format.html { redirect_back_or_to account_path(@account), alert: t("accounts.not_authorized") }
-        format.turbo_stream { stream_redirect_back_or_to(account_path(@account), alert: t("accounts.not_authorized")) }
-      end
-      return
-    end
+    return unless require_account_permission!(@account)
 
     @model = Trade::CreateForm.new(create_params.merge(account: @account)).create
 
@@ -46,13 +40,7 @@ class TradesController < ApplicationController
   end
 
   def update
-    unless can_edit_entry?
-      respond_to do |format|
-        format.html { redirect_back_or_to account_path(@entry.account), alert: t("accounts.not_authorized") }
-        format.turbo_stream { stream_redirect_back_or_to(account_path(@entry.account), alert: t("accounts.not_authorized")) }
-      end
-      return
-    end
+    return unless require_account_permission!(@entry.account)
 
     if @entry.update(update_entry_params)
       @entry.lock_saved_attributes!
@@ -86,13 +74,7 @@ class TradesController < ApplicationController
   end
 
   def unlock
-    unless @entry.account.permission_for(Current.user).in?([ :owner, :full_control ])
-      respond_to do |format|
-        format.html { redirect_back_or_to account_path(@entry.account), alert: t("accounts.not_authorized") }
-        format.turbo_stream { stream_redirect_back_or_to(account_path(@entry.account), alert: t("accounts.not_authorized")) }
-      end
-      return
-    end
+    return unless require_account_permission!(@entry.account)
 
     @entry.unlock_for_sync!
     flash[:notice] = t("entries.unlock.success")

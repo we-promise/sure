@@ -17,11 +17,7 @@ class PendingDuplicateMergesController < ApplicationController
   end
 
   def create
-    permission = @transaction.entry.account.permission_for(Current.user)
-    unless permission.in?([ :owner, :full_control, :read_write ])
-      redirect_back_or_to transactions_path, alert: t("accounts.not_authorized")
-      return
-    end
+    return unless require_account_permission!(@transaction.entry.account, :annotate, redirect_path: transactions_path)
 
     # Manually merge the pending transaction with the selected posted transaction
     unless merge_params[:posted_entry_id].present?

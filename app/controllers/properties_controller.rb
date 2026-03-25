@@ -107,13 +107,6 @@ class PropertiesController < ApplicationController
     end
 
     def require_property_write_permission!
-      permission = @account.permission_for(Current.user)
-      unless permission.in?([ :owner, :full_control ])
-        respond_to do |format|
-          format.html { redirect_back_or_to account_path(@account), alert: t("accounts.not_authorized") }
-          format.turbo_stream { stream_redirect_back_or_to(account_path(@account), alert: t("accounts.not_authorized")) }
-        end
-        throw :abort
-      end
+      require_account_permission!(@account)
     end
 end

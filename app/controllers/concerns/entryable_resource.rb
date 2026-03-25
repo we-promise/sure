@@ -31,13 +31,7 @@ module EntryableResource
   end
 
   def destroy
-    unless can_edit_entry?
-      respond_to do |format|
-        format.html { redirect_back_or_to account_path(@entry.account), alert: t("accounts.not_authorized") }
-        format.turbo_stream { stream_redirect_back_or_to(account_path(@entry.account), alert: t("accounts.not_authorized")) }
-      end
-      return
-    end
+    return unless require_account_permission!(@entry.account)
 
     @entry.destroy!
     @entry.sync_account_later

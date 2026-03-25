@@ -27,15 +27,15 @@ class Assistant::Function::GetBalanceSheet < Assistant::Function
       oldest_account_start_date: family.oldest_entry_date,
       currency: family.currency,
       net_worth: {
-        current: family.balance_sheet.net_worth_money.format,
+        current: family.balance_sheet(user: user).net_worth_money.format,
         monthly_history: historical_data(period)
       },
       assets: {
-        current: family.balance_sheet.assets.total_money.format,
+        current: family.balance_sheet(user: user).assets.total_money.format,
         monthly_history: historical_data(period, classification: "asset")
       },
       liabilities: {
-        current: family.balance_sheet.liabilities.total_money.format,
+        current: family.balance_sheet(user: user).liabilities.total_money.format,
         monthly_history: historical_data(period, classification: "liability")
       },
       insights: insights_data
@@ -44,7 +44,7 @@ class Assistant::Function::GetBalanceSheet < Assistant::Function
 
   private
     def historical_data(period, classification: nil)
-      scope = family.accounts.visible
+      scope = user.accessible_accounts.visible
       scope = scope.where(classification: classification) if classification.present?
 
       if period.start_date == Date.current
@@ -65,8 +65,8 @@ class Assistant::Function::GetBalanceSheet < Assistant::Function
     end
 
     def insights_data
-      assets = family.balance_sheet.assets.total
-      liabilities = family.balance_sheet.liabilities.total
+      assets = family.balance_sheet(user: user).assets.total
+      liabilities = family.balance_sheet(user: user).liabilities.total
       ratio = liabilities.zero? ? 0 : (liabilities / assets.to_f)
 
       {

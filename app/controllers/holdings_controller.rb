@@ -147,13 +147,7 @@ class HoldingsController < ApplicationController
     end
 
     def require_holding_write_permission!
-      permission = @holding.account.permission_for(Current.user)
-      unless permission.in?([ :owner, :full_control ])
-        respond_to do |format|
-          format.html { redirect_back_or_to account_path(@holding.account), alert: t("accounts.not_authorized") }
-          format.turbo_stream { stream_redirect_back_or_to(account_path(@holding.account), alert: t("accounts.not_authorized")) }
-        end
-      end
+      require_account_permission!(@holding.account)
     end
 
     def holding_params

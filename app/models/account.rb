@@ -1,7 +1,7 @@
 class Account < ApplicationRecord
   include AASM, Syncable, Monetizable, Chartable, Linkable, Enrichable, Anchorable, Reconcileable, TaxTreatable
 
-  before_validation :assign_default_owner, on: :create
+  before_validation :assign_default_owner, if: -> { owner_id.blank? }
 
   validates :name, :balance, :currency, presence: true
   validate :owner_belongs_to_family, if: -> { owner_id.present? && family_id.present? }
