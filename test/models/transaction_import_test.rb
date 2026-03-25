@@ -409,7 +409,7 @@ class TransactionImportTest < ActiveSupport::TestCase
       entryable: Transaction.new
     )
 
-    # Re-import CSV with same external_id but updated name
+    # Re-import CSV with same external_id but different name
     import_csv = <<~CSV
       date,name,amount,ext_id
       01/01/2024,Coffee Shop Updated,100,txn-uuid-001
@@ -430,13 +430,13 @@ class TransactionImportTest < ActiveSupport::TestCase
     @import.generate_rows_from_csv
     @import.reload
 
-    # Should not create a new entry, should update the existing one
+    # Should not create a new entry, should update metadata only
     assert_no_difference -> { Entry.count } do
       @import.publish
     end
 
     existing_entry.reload
-    assert_equal "Coffee Shop Updated", existing_entry.name
+    assert_equal "Coffee Shop", existing_entry.name  # name is NOT updated on re-import
     assert_equal @import.id, existing_entry.import_id
   end
 
