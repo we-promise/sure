@@ -168,7 +168,7 @@ class Import < ApplicationRecord
         tags: row[tags_col_label].to_s,
         entity_type: row[entity_type_col_label].to_s,
         notes: row[notes_col_label].to_s,
-        external_id: row[external_id_col_label].to_s
+        external_id: row[external_id_col_label].presence
       }
     end
 
