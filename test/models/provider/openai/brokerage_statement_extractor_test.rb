@@ -385,7 +385,7 @@ class Provider::Openai::BrokerageStatementExtractorTest < ActiveSupport::TestCas
     assert_equal "AAPL", result[:trades].first[:ticker]
   end
 
-  test "parse_amount parses US and European string formats" do
+  test "parse_amount parses US and European string formats and JSON numeric types" do
     extractor = Provider::Openai::BrokerageStatementExtractor.new(
       client: @client,
       pdf_content: "dummy",
@@ -396,8 +396,51 @@ class Provider::Openai::BrokerageStatementExtractorTest < ActiveSupport::TestCas
     assert_in_delta 1234.56, extractor.send(:parse_amount, "1.234,56"), 0.001
     assert_in_delta 1234.56, extractor.send(:parse_amount, "1234,56"), 0.001
     assert_in_delta(-99.99, extractor.send(:parse_amount, "-99,99"), 0.001)
-    assert_equal 175.5, extractor.send(:parse_amount, 175.5)
+    assert_in_delta 175.5, extractor.send(:parse_amount, 175.5), 0.001
+    assert_equal 100.0, extractor.send(:parse_amount, 100)
     assert_nil extractor.send(:parse_amount, nil)
+  end
+
+  test "extract keeps trades when JSON parses price and fees as numbers" do
+    payload = JSON.parse({
+      "trades" => [
+        {
+          "date" => "2024-01-15",
+          "action" => "buy",
+          "ticker" => "AAPL",
+          "security" => "Apple Inc.",
+          "quantity" => 10,
+          "price" => 175.5,
+          "fees" => 1.0
+        }
+      ]
+    }.to_json)
+
+    mock_response = {
+      "choices" => [ {
+        "message" => {
+          "content" => payload.to_json
+        }
+      } ]
+    }
+
+    @client.expects(:chat).returns(mock_response)
+
+    extractor = Provider::Openai::BrokerageStatementExtractor.new(
+      client: @client,
+      pdf_content: "dummy",
+      model: @model
+    )
+
+    extractor.stubs(:extract_pages_from_pdf).returns([ "Page 1" ])
+
+    result = extractor.extract
+
+    assert_equal 1, result[:trades].size
+    trade = result[:trades].first
+    assert_equal 10.0, trade[:qty]
+    assert_in_delta 175.5, trade[:price], 0.001
+    assert_in_delta 1.0, trade[:fees], 0.001
   end
 
   test "normalizes trades with European-formatted price strings" do
