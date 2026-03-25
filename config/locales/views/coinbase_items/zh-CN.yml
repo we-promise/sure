@@ -1,0 +1,78 @@
+---
+zh-CN:
+  coinbase_items:
+    create:
+      default_name: Coinbase
+      success: 已成功连接 Coinbase！正在同步你的账户。
+    update:
+      success: Coinbase 配置已成功更新。
+    destroy:
+      success: 已安排删除 Coinbase 连接。
+    setup_accounts:
+      title: 导入 Coinbase 钱包
+      subtitle: 选择要追踪的钱包
+      instructions: 选择你要导入的钱包。未选择的钱包会保留在列表中，之后如需可再添加。
+      no_accounts: 所有钱包均已导入。
+      accounts_count:
+        one: "%{count} 个钱包可用"
+        other: "%{count} 个钱包可用"
+      select_all: 全选
+      import_selected: 导入所选
+      cancel: 取消
+      creating: 正在导入…
+    complete_account_setup:
+      success:
+        one: 已导入 %{count} 个钱包
+        other: 已导入 %{count} 个钱包
+      none_selected: 未选择任何钱包
+      no_accounts: 没有可导入的钱包
+    coinbase_item:
+      provider_name: Coinbase
+      syncing: 同步中…
+      reconnect: 凭据需要更新
+      deletion_in_progress: 删除中…
+      sync_status:
+        no_accounts: 未找到账户
+        all_synced:
+          one: "%{count} 个账户已同步"
+          other: "%{count} 个账户已同步"
+        partial_sync: "%{linked_count} 已同步，%{unlinked_count} 需要设置"
+      status: "上次同步于 %{timestamp} 前"
+      status_with_summary: "上次同步于 %{timestamp} 前 - %{summary}"
+      status_never: 从未同步
+      update_credentials: 更新凭据
+      delete: 删除
+      no_accounts_title: 未找到账户
+      no_accounts_message: Coinbase 钱包将在同步完成后显示在这里。
+      setup_needed: 钱包已准备好导入
+      setup_description: 选择你要追踪的 Coinbase 钱包。
+      setup_action: 导入钱包
+      import_wallets_menu: 导入钱包
+      more_wallets_available:
+        one: "还有 %{count} 个钱包可导入"
+        other: "还有 %{count} 个钱包可导入"
+    select_existing_account:
+      title: 关联 Coinbase 账户
+      no_accounts_found: 未找到 Coinbase 账户。
+      wait_for_sync: 请等待 Coinbase 完成同步
+      check_provider_health: 请确认你的 Coinbase API 凭据有效
+      balance: 余额
+      currently_linked_to: "当前已关联至：%{account_name}"
+      link: 关联
+      cancel: 取消
+    link_existing_account:
+      success: 已成功关联到 Coinbase 账户
+      errors:
+        only_manual: 只能将手动账户关联到 Coinbase
+        invalid_coinbase_account: 无效的 Coinbase 账户
+  coinbase_item:
+    syncer:
+      checking_credentials: 正在检查凭据…
+      credentials_invalid: API 凭据无效。请检查你的 API Key 和 Secret。
+      importing_accounts: 正在从 Coinbase 导入账户…
+      checking_configuration: 正在检查账户配置…
+      accounts_need_setup:
+        one: "%{count} 个账户需要设置"
+        other: "%{count} 个账户需要设置"
+      processing_accounts: 正在处理账户数据…
+      calculating_balances: 正在计算余额…
