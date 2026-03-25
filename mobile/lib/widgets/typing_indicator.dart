@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-/// A typing indicator widget that shows "Thinking" text with animated dots
-/// to indicate that the AI assistant is generating a response.
+/// Animated 3-dot "Thinking..." indicator shown while the AI generates a response.
+/// Each dot bounces up in sequence, giving the classic chat typing indicator feel.
 class TypingIndicator extends StatefulWidget {
   const TypingIndicator({super.key});
 
@@ -17,7 +17,7 @@ class _TypingIndicatorState extends State<TypingIndicator>
   void initState() {
     super.initState();
     _controller = AnimationController(
-      duration: const Duration(milliseconds: 1400),
+      duration: const Duration(milliseconds: 1200),
       vsync: this,
     )..repeat();
   }
@@ -31,9 +31,11 @@ class _TypingIndicatorState extends State<TypingIndicator>
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final dotColor = colorScheme.onSurfaceVariant;
 
     return Row(
       mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Text(
           'Thinking',
@@ -42,43 +44,56 @@ class _TypingIndicatorState extends State<TypingIndicator>
             fontStyle: FontStyle.italic,
           ),
         ),
-        const SizedBox(width: 8),
-        ...List.generate(3, (index) {
-          return AnimatedBuilder(
-            animation: _controller,
-            builder: (context, child) {
-              final delay = index * 0.2;
-              final progress = (_controller.value - delay + 1.0) % 1.0;
-              final opacity = _calculateOpacity(progress);
-
-              return Padding(
-                padding: EdgeInsets.only(
-                  right: index < 2 ? 4 : 0,
-                ),
-                child: Container(
-                  width: 8,
-                  height: 8,
-                  decoration: BoxDecoration(
-                    color:
-                        colorScheme.onSurfaceVariant.withValues(alpha: opacity),
-                    shape: BoxShape.circle,
-                  ),
-                ),
+        const SizedBox(width: 6),
+        SizedBox(
+          height: 20,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: List.generate(3, (index) {
+              return AnimatedBuilder(
+                animation: _controller,
+                builder: (context, child) {
+                  final offset = _dotOffset(index, _controller.value);
+                  return Padding(
+                    padding: EdgeInsets.only(right: index < 2 ? 5 : 0),
+                    child: Transform.translate(
+                      offset: Offset(0, offset),
+                      child: Container(
+                        width: 7,
+                        height: 7,
+                        decoration: BoxDecoration(
+                          color: dotColor.withValues(alpha: 0.75),
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                    ),
+                  );
+                },
               );
-            },
-          );
-        }),
+            }),
+          ),
+        ),
       ],
     );
   }
 
-  double _calculateOpacity(double progress) {
-    if (progress < 0.5) {
-      // Fade in
-      return 0.3 + (progress * 2 * 0.7);
-    } else {
-      // Fade out
-      return 1.0 - ((progress - 0.5) * 2 * 0.7);
+  /// Returns the vertical offset (px) for a dot at [index] given the
+  /// controller's current [value] in [0, 1).
+  /// Each dot is delayed by 1/3 of the cycle so they bounce in sequence.
+  double _dotOffset(int index, double value) {
+    const bounceHeight = 5.0;
+    const dotCount = 3;
+    final phase = (value - index / dotCount + 1.0) % 1.0;
+
+    // Bounce occupies the first 40% of each dot's phase; rest is idle.
+    if (phase < 0.2) {
+      // Rising: 0 → peak
+      return -bounceHeight * (phase / 0.2);
+    } else if (phase < 0.4) {
+      // Falling: peak → 0
+      return -bounceHeight * (1.0 - (phase - 0.2) / 0.2);
     }
+    return 0.0;
   }
 }

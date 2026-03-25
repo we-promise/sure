@@ -30,14 +30,35 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<ChatProvider>(context, listen: false).addListener(_onChatChanged);
+    });
     _loadChat();
   }
 
   @override
   void dispose() {
+    Provider.of<ChatProvider>(context, listen: false).removeListener(_onChatChanged);
     _messageController.dispose();
     _scrollController.dispose();
     super.dispose();
+  }
+
+  void _onChatChanged() {
+    final chatProvider = Provider.of<ChatProvider>(context, listen: false);
+    if (chatProvider.isWaitingForResponse || chatProvider.isSendingMessage) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
+    }
+  }
+
+  void _scrollToBottom() {
+    if (_scrollController.hasClients) {
+      _scrollController.animateTo(
+        _scrollController.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
+    }
   }
 
   Future<void> _loadChat() async {
@@ -267,8 +288,12 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
                     : ListView.builder(
                         controller: _scrollController,
                         padding: const EdgeInsets.all(16),
-                        itemCount: messages.length,
+                        itemCount: messages.length +
+                            (chatProvider.isWaitingForResponse ? 1 : 0),
                         itemBuilder: (context, index) {
+                          if (index == messages.length) {
+                            return const _TypingIndicatorBubble();
+                          }
                           final message = messages[index];
                           return _MessageBubble(
                             message: message,
@@ -277,13 +302,6 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
                         },
                       ),
               ),
-
-              // Loading indicator when sending
-              if (chatProvider.isSendingMessage)
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  child: TypingIndicator(),
-                ),
 
               // Message input
               Container(
@@ -443,6 +461,43 @@ class _MessageBubble extends StatelessWidget {
                 color: colorScheme.onPrimary,
               ),
             ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TypingIndicatorBubble extends StatelessWidget {
+  const _TypingIndicatorBubble();
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          CircleAvatar(
+            radius: 16,
+            backgroundColor: colorScheme.primaryContainer,
+            child: Icon(
+              Icons.smart_toy,
+              size: 18,
+              color: colorScheme.onPrimaryContainer,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: colorScheme.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: const TypingIndicator(),
+          ),
         ],
       ),
     );

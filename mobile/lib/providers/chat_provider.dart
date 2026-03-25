@@ -11,6 +11,7 @@ class ChatProvider with ChangeNotifier {
   Chat? _currentChat;
   bool _isLoading = false;
   bool _isSendingMessage = false;
+  bool _isWaitingForResponse = false;
   String? _errorMessage;
   Timer? _pollingTimer;
 
@@ -22,6 +23,7 @@ class ChatProvider with ChangeNotifier {
   Chat? get currentChat => _currentChat;
   bool get isLoading => _isLoading;
   bool get isSendingMessage => _isSendingMessage;
+  bool get isWaitingForResponse => _isWaitingForResponse;
   String? get errorMessage => _errorMessage;
 
   /// Fetch list of chats
@@ -244,8 +246,10 @@ class ChatProvider with ChangeNotifier {
 
   /// Start polling for new messages (AI responses)
   void _startPolling(String accessToken, String chatId) {
-    _stopPolling();
+    _pollingTimer?.cancel();
     _lastAssistantContentLength = null;
+    _isWaitingForResponse = true;
+    notifyListeners();
 
     _pollingTimer = Timer.periodic(const Duration(seconds: 2), (timer) async {
       await _pollForUpdates(accessToken, chatId);
@@ -256,6 +260,7 @@ class ChatProvider with ChangeNotifier {
   void _stopPolling() {
     _pollingTimer?.cancel();
     _pollingTimer = null;
+    _isWaitingForResponse = false;
   }
 
   /// Poll for updates
@@ -314,6 +319,7 @@ class ChatProvider with ChangeNotifier {
             // Content stable: no growth since last poll
             _stopPolling();
             _lastAssistantContentLength = null;
+            notifyListeners();
           }
         }
       }
