@@ -267,6 +267,8 @@ class AccountTest < ActiveSupport::TestCase
   end
 
   test "auto_share_with_family creates shares for all non-owner members" do
+    @family.update!(default_account_sharing: "private")
+
     account = Account.create_and_sync({
       family: @family,
       owner: @admin,
