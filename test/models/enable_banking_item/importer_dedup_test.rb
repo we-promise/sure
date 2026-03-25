@@ -312,6 +312,33 @@ class EnableBankingItem::ImporterDedupTest < ActiveSupport::TestCase
     assert_equal "ref_1", result.first[:entry_reference]
   end
 
+  test "keeps payment and same-day refund with same amount as separate transactions" do
+    transactions = [
+      {
+        entry_reference: "ref_payment",
+        transaction_id: nil,
+        booking_date: "2026-02-09",
+        transaction_amount: { amount: "25.00", currency: "EUR" },
+        creditor: { name: "Amazon" },
+        credit_debit_indicator: "DBIT",
+        status: "BOOK"
+      },
+      {
+        entry_reference: "ref_refund",
+        transaction_id: nil,
+        booking_date: "2026-02-09",
+        transaction_amount: { amount: "25.00", currency: "EUR" },
+        creditor: { name: "Amazon" },
+        credit_debit_indicator: "CRDT",
+        status: "BOOK"
+      }
+    ]
+
+    result = @importer.send(:deduplicate_api_transactions, transactions)
+
+    assert_equal 2, result.count
+  end
+
   test "returns empty array for empty input" do
     result = @importer.send(:deduplicate_api_transactions, [])
     assert_equal [], result

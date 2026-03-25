@@ -275,16 +275,18 @@ class EnableBankingItem::Importer
 
     # Build a composite key for deduplication. Two transactions with different
     # entry_reference values but identical content fields (including
-    # transaction_id) are considered duplicates. transaction_id is included
-    # as one component — not a standalone key — because the Enable Banking
-    # API docs state it is not guaranteed to be unique. When transaction_id
-    # differs between otherwise-identical transactions, both are preserved.
+    # transaction_id and credit_debit_indicator) are considered duplicates.
+    # transaction_id is included as one component — not a standalone key —
+    # because the Enable Banking API docs state it is not guaranteed to be
+    # unique. credit_debit_indicator (CRDT/DBIT) is included because
+    # transaction_amount.amount is always positive — without it, a payment
+    # and a same-day refund of the same amount would produce identical keys.
     # Known limitation: when transaction_id is nil for both, pure content
     # comparison applies. This means two genuinely distinct transactions
-    # with identical content (same date, amount, creditor, etc.) and no
-    # transaction_id would collapse to one. In practice, banks that omit
-    # transaction_id rarely produce such exact duplicates in the same API
-    # response; timestamps or remittance info usually differ. (Issue #954)
+    # with identical content (same date, amount, direction, creditor, etc.)
+    # and no transaction_id would collapse to one. In practice, banks that
+    # omit transaction_id rarely produce such exact duplicates in the same
+    # API response; timestamps or remittance info usually differ. (Issue #954)
     def build_transaction_content_key(tx)
       date = tx[:booking_date].presence || tx[:value_date]
       amount = tx.dig(:transaction_amount, :amount).presence || tx[:amount]
@@ -295,8 +297,9 @@ class EnableBankingItem::Importer
       remittance_key = remittance.is_a?(Array) ? remittance.compact.map(&:to_s).sort.join("|") : remittance.to_s
       status = tx[:status]
       tid = tx[:transaction_id]
+      direction = tx[:credit_debit_indicator]
 
-      [ date, amount, currency, creditor, debtor, remittance_key, status, tid ].map(&:to_s).join("\x1F")
+      [ date, amount, currency, creditor, debtor, remittance_key, status, tid, direction ].map(&:to_s).join("\x1F")
     end
 
     def determine_sync_start_date(enable_banking_account)
