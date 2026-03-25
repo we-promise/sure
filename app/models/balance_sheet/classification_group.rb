@@ -21,7 +21,7 @@ class BalanceSheet::ClassificationGroup
   end
 
   def total
-    accounts.sum(&:converted_balance)
+    accounts.select { |a| a.respond_to?(:included_in_finances?) ? a.included_in_finances? : true }.sum(&:converted_balance)
   end
 
   def syncing?

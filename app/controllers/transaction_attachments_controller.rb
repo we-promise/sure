@@ -1,6 +1,7 @@
 class TransactionAttachmentsController < ApplicationController
   before_action :set_transaction
   before_action :set_attachment, only: [ :show, :destroy ]
+  before_action :set_permissions, only: [ :create, :destroy ]
 
   def show
     disposition = params[:disposition] == "attachment" ? "attachment" : "inline"
@@ -8,6 +9,11 @@ class TransactionAttachmentsController < ApplicationController
   end
 
   def create
+    unless @can_upload
+      redirect_back_or_to transaction_path(@transaction), alert: t("accounts.not_authorized")
+      return
+    end
+
     attachments = attachment_params
 
     if attachments.present?
@@ -60,6 +66,11 @@ class TransactionAttachmentsController < ApplicationController
   end
 
   def destroy
+    unless @can_delete
+      redirect_back_or_to transaction_path(@transaction), alert: t("accounts.not_authorized")
+      return
+    end
+
     @attachment.purge
     message = t("transactions.attachments.attachment_deleted")
     respond_to do |format|
@@ -77,11 +88,20 @@ class TransactionAttachmentsController < ApplicationController
   private
 
     def set_transaction
-      @transaction = Current.family.transactions.find(params[:transaction_id])
+      @transaction = Current.family.transactions
+                       .joins(entry: :account)
+                       .merge(Account.accessible_by(Current.user))
+                       .find(params[:transaction_id])
     end
 
     def set_attachment
       @attachment = @transaction.attachments.find(params[:id])
+    end
+
+    def set_permissions
+      permission = @transaction.entry.account.permission_for(Current.user)
+      @can_upload = permission.in?([ :owner, :full_control, :read_write ])
+      @can_delete = permission.in?([ :owner, :full_control ])
     end
 
     def attachment_params

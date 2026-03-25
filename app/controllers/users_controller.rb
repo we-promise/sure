@@ -12,7 +12,7 @@ class UsersController < ApplicationController
 
   def update
     @user = Current.user
-    return if moniker_change_requested? && !ensure_admin
+    return if admin_family_change_requested? && !ensure_admin
 
     if email_changed?
       if @user.initiate_email_change(user_params[:email])
@@ -109,7 +109,7 @@ class UsersController < ApplicationController
       params.require(:user).permit(
         :first_name, :last_name, :email, :profile_image, :redirect_to, :delete_profile_image, :onboarded_at,
         :show_sidebar, :default_period, :default_account_order, :show_ai_sidebar, :ai_enabled, :theme, :set_onboarding_preferences_at, :set_onboarding_goals_at, :locale,
-        family_attributes: [ :name, :currency, :country, :date_format, :timezone, :locale, :month_start_day, :moniker, :id ],
+        family_attributes: [ :name, :currency, :country, :date_format, :timezone, :locale, :month_start_day, :moniker, :default_account_sharing, :id ],
         goals: []
       )
     end
@@ -118,11 +118,14 @@ class UsersController < ApplicationController
       @user = Current.user
     end
 
-    def moniker_change_requested?
-      requested_moniker = params.dig(:user, :family_attributes, :moniker)
-      return false if requested_moniker.blank?
+    def admin_family_change_requested?
+      family_attrs = params.dig(:user, :family_attributes)
+      return false if family_attrs.blank?
 
-      requested_moniker != Current.family.moniker
+      moniker_changed = family_attrs[:moniker].present? && family_attrs[:moniker] != Current.family.moniker
+      sharing_changed = family_attrs[:default_account_sharing].present? && family_attrs[:default_account_sharing] != Current.family.default_account_sharing
+
+      moniker_changed || sharing_changed
     end
 
     def ensure_admin

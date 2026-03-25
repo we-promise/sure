@@ -5,17 +5,18 @@ class InvestmentStatement
 
   monetize :total_contributions, :total_dividends, :total_interest, :unrealized_gains
 
-  attr_reader :family
+  attr_reader :family, :user
 
-  def initialize(family)
+  def initialize(family, user: nil)
     @family = family
+    @user = user || Current.user
   end
 
   # Get totals for a specific period
   def totals(period: Period.current_month)
     trades_in_period = family.trades
       .joins(:entry)
-      .where(entries: { date: period.date_range })
+      .where(entries: { date: period.date_range, account_id: investment_account_ids })
 
     result = totals_query(trades_scope: trades_in_period)
 
@@ -161,7 +162,11 @@ class InvestmentStatement
 
   # Investment accounts
   def investment_accounts
-    @investment_accounts ||= family.accounts.visible.where(accountable_type: %w[Investment Crypto])
+    @investment_accounts ||= begin
+      scope = family.accounts.visible.where(accountable_type: %w[Investment Crypto])
+      scope = scope.included_in_finances_for(user) if user
+      scope
+    end
   end
 
   private
@@ -181,11 +186,15 @@ class InvestmentStatement
 
     HoldingAllocation = Data.define(:security, :amount, :weight, :trend)
 
+    def investment_account_ids
+      @investment_account_ids ||= investment_accounts.pluck(:id)
+    end
+
     def totals_query(trades_scope:)
       sql_hash = Digest::MD5.hexdigest(trades_scope.to_sql)
 
       Rails.cache.fetch([
-        "investment_statement", "totals_query", family.id, sql_hash, family.entries_cache_version
+        "investment_statement", "totals_query", family.id, user&.id, sql_hash, family.entries_cache_version
       ]) { Totals.new(family, trades_scope: trades_scope).call }
     end
 

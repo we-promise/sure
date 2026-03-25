@@ -1,5 +1,6 @@
 other_asset:
   family: dylan_family
+  owner: family_admin
   name: Collectable Account
   balance: 550
   currency: USD
@@ -9,6 +10,7 @@ other_asset:
 
 other_liability:
   family: dylan_family
+  owner: family_admin
   name: IOU (personal debt to friend)
   balance: 200
   currency: USD
@@ -18,6 +20,7 @@ other_liability:
 
 depository:
   family: dylan_family
+  owner: family_admin
   name: Checking Account
   balance: 5000
   currency: USD
@@ -27,6 +30,7 @@ depository:
 
 connected:
   family: dylan_family
+  owner: family_admin
   name: Plaid Depository Account
   balance: 5000
   currency: USD
@@ -37,6 +41,7 @@ connected:
 
 credit_card:
   family: dylan_family
+  owner: family_admin
   name: Credit Card
   balance: 1000
   currency: USD
@@ -46,6 +51,7 @@ credit_card:
 
 investment:
   family: dylan_family
+  owner: family_admin
   name: Robinhood Brokerage Account
   balance: 10000
   cash_balance: 5000
@@ -56,6 +62,7 @@ investment:
 
 loan:
   family: dylan_family
+  owner: family_admin
   name: Mortgage Loan
   balance: 500000
   currency: USD
@@ -65,6 +72,7 @@ loan:
 
 property:
   family: dylan_family
+  owner: family_admin
   name: 123 Maybe Court
   balance: 550000
   currency: USD
@@ -74,6 +82,7 @@ property:
 
 vehicle:
   family: dylan_family
+  owner: family_admin
   name: Honda Accord
   balance: 18000
   currency: USD
@@ -83,6 +92,7 @@ vehicle:
 
 crypto:
   family: dylan_family
+  owner: family_admin
   name: Bitcoin
   balance: 10000
   currency: USD

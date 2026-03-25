@@ -19,7 +19,7 @@ class Import::UploadsController < ApplicationController
     elsif @import.is_a?(SureImport)
       update_sure_import_upload
     elsif csv_valid?(csv_str)
-      @import.account = Current.family.accounts.find_by(id: import_account_id)
+      @import.account = accessible_accounts.find_by(id: import_account_id)
       @import.assign_attributes(raw_file_str: csv_str, col_sep: upload_params[:col_sep])
       @import.save!(validate: false)
 
@@ -78,7 +78,7 @@ class Import::UploadsController < ApplicationController
       end
 
       ActiveRecord::Base.transaction do
-        @import.account = Current.family.accounts.find(import_account_id)
+        @import.account = accessible_accounts.find(import_account_id)
         @import.raw_file_str = QifParser.normalize_encoding(csv_str)
         @import.save!(validate: false)
         @import.generate_rows_from_csv

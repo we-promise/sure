@@ -2,7 +2,16 @@ class ValuationsController < ApplicationController
   include EntryableResource, StreamExtensions
 
   def confirm_create
-    @account = Current.family.accounts.find(params.dig(:entry, :account_id))
+    @account = accessible_accounts.find(params.dig(:entry, :account_id))
+
+    unless @account.permission_for(Current.user).in?([ :owner, :full_control ])
+      respond_to do |format|
+        format.html { redirect_back_or_to account_path(@account), alert: t("accounts.not_authorized") }
+        format.turbo_stream { stream_redirect_back_or_to(account_path(@account), alert: t("accounts.not_authorized")) }
+      end
+      return
+    end
+
     @entry = @account.entries.build(entry_params.merge(currency: @account.currency))
 
     @reconciliation_dry_run = @entry.account.create_reconciliation(
@@ -15,7 +24,16 @@ class ValuationsController < ApplicationController
   end
 
   def confirm_update
-    @entry = Current.family.entries.find(params[:id])
+    @entry = Current.accessible_entries.find(params[:id])
+
+    unless @entry.account.permission_for(Current.user).in?([ :owner, :full_control ])
+      respond_to do |format|
+        format.html { redirect_back_or_to account_path(@entry.account), alert: t("accounts.not_authorized") }
+        format.turbo_stream { stream_redirect_back_or_to(account_path(@entry.account), alert: t("accounts.not_authorized")) }
+      end
+      return
+    end
+
     @account = @entry.account
     @entry.assign_attributes(entry_params.merge(currency: @account.currency))
 
@@ -30,7 +48,15 @@ class ValuationsController < ApplicationController
   end
 
   def create
-    account = Current.family.accounts.find(params.dig(:entry, :account_id))
+    account = accessible_accounts.find(params.dig(:entry, :account_id))
+
+    unless account.permission_for(Current.user).in?([ :owner, :full_control ])
+      respond_to do |format|
+        format.html { redirect_back_or_to account_path(account), alert: t("accounts.not_authorized") }
+        format.turbo_stream { stream_redirect_back_or_to(account_path(account), alert: t("accounts.not_authorized")) }
+      end
+      return
+    end
 
     result = account.create_reconciliation(
       balance: entry_params[:amount],
@@ -49,6 +75,14 @@ class ValuationsController < ApplicationController
   end
 
   def update
+    unless can_edit_entry?
+      respond_to do |format|
+        format.html { redirect_back_or_to account_path(@entry.account), alert: t("accounts.not_authorized") }
+        format.turbo_stream { stream_redirect_back_or_to(account_path(@entry.account), alert: t("accounts.not_authorized")) }
+      end
+      return
+    end
+
     # Notes updating is independent of reconciliation, just a simple CRUD operation
     @entry.update!(notes: entry_params[:notes]) if entry_params[:notes].present?
 
