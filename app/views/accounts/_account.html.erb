@@ -75,6 +75,7 @@
             <% end %>
           <% end %>
 
+          <% if permission.in?([ :owner, :full_control ]) %>
             <% menu.with_item(variant: "divider") %>
 
             <% if account.active? %>

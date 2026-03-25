@@ -291,6 +291,7 @@ class IndexaCapitalItemsController < ApplicationController
         accountable: accountable_class.new
       )
 
+      account.auto_share_with_family! if Current.family.share_all_by_default?
       indexa_capital_account.ensure_account_provider!(account)
       account
     end
@@ -304,12 +305,15 @@ class IndexaCapitalItemsController < ApplicationController
         accountable_attrs[:subtype] = config[:subtype]
       end
 
-      Current.family.accounts.create!(
+      account = Current.family.accounts.create!(
         name: indexa_capital_account.name,
         balance: config[:balance].present? ? config[:balance].to_d : (indexa_capital_account.current_balance || 0),
         currency: indexa_capital_account.currency || "EUR",
         accountable: accountable_class.new(accountable_attrs)
       )
+
+      account.auto_share_with_family! if Current.family.share_all_by_default?
+      account
     end
 
     def infer_accountable_type(account_type, subtype = nil)

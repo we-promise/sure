@@ -119,6 +119,8 @@ class Account < ApplicationRecord
           date: opening_balance_date
         )
         raise result.error if result.error
+
+        account.auto_share_with_family! if account.family.share_all_by_default?
       end
 
       # Skip initial sync for linked accounts - the provider sync will handle balance creation

@@ -46,7 +46,6 @@ module AccountableResource
         opening_balance_date: opening_balance_date
       )
       @account.lock_saved_attributes!
-      @account.auto_share_with_family! if Current.family.share_all_by_default?
     end
 
     redirect_to account_params[:return_to].presence || @account, notice: t("accounts.create.success", type: accountable_type.name.underscore.humanize)
