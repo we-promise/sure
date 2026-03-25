@@ -222,6 +222,7 @@ en:
       back_to_imports: Back to imports
     errors:
       custom_column_requires_inflow: "Custom column imports require an inflow column to be selected"
+      investment_statement_account_type: "Investment statement imports must use an investment or crypto account."
     document_types:
       bank_statement: Bank Statement
       credit_card_statement: Credit Card Statement
@@ -250,8 +251,12 @@ en:
       processing_failed_with_message: "%{message}"
       processing_failed_generic: "Processing failed: %{error}"
       ready_for_review_title: Ready for Review
-      ready_for_review_description: "We extracted %{count} transactions from your statement. Review and publish them to add to your account."
-      ready_for_review_trades_description: "We extracted %{count} trades from your brokerage statement. Review and publish them to add to your investment account."
+      ready_for_review_description:
+        one: "We extracted %{count} transaction from your statement. Review and publish it to add to your account."
+        other: "We extracted %{count} transactions from your statement. Review and publish them to add to your account."
+      ready_for_review_trades_description:
+        one: "We extracted %{count} trade from your brokerage statement. Review and publish it to add to your investment account."
+        other: "We extracted %{count} trades from your brokerage statement. Review and publish them to add to your investment account."
       unknown_document_type: Unknown
       transactions_extracted: Transactions Extracted
       transactions_extracted_count:
@@ -269,7 +274,11 @@ en:
       no_investment_accounts: No investment accounts available. Please create an investment account first.
       create_account: Create Account
       save_account: Save
-      publish_transactions: "Publish %{count} Transactions"
-      publish_trades: "Publish %{count} Trades"
+      publish_transactions:
+        one: "Publish %{count} Transaction"
+        other: "Publish %{count} Transactions"
+      publish_trades:
+        one: "Publish %{count} Trade"
+        other: "Publish %{count} Trades"
       review_before_publish: Review Before Publishing
       select_account_to_continue: Please select an account above to continue.

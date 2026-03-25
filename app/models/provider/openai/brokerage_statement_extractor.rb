@@ -20,28 +20,12 @@ class Provider::Openai::BrokerageStatementExtractor
 
     chunks.each_with_index do |chunk, index|
       Rails.logger.info("BrokerageStatementExtractor: Processing chunk #{index + 1}/#{chunks.size}")
-      result = process_chunk(chunk, index == 0)
+      result = process_chunk(chunk)
 
       tagged_trades = (result[:trades] || []).map { |t| t.merge(chunk_index: index) }
       all_trades.concat(tagged_trades)
 
-      if index == 0
-        metadata = {
-          broker_name: result[:broker_name],
-          account_holder: result[:account_holder],
-          account_number: result[:account_number],
-          period: result[:period],
-          currency: result[:currency],
-          cash_balance: result[:cash_balance],
-          total_value: result[:total_value],
-          as_of_date: result[:as_of_date]
-        }
-      end
-
-      if result.dig(:period, :end_date).present?
-        metadata[:period] ||= {}
-        metadata[:period][:end_date] = result.dig(:period, :end_date)
-      end
+      merge_metadata!(metadata, result)
     end
 
     {
@@ -79,7 +63,7 @@ class Provider::Openai::BrokerageStatementExtractor
           chunks << current_chunk.join("\n\n") if current_chunk.any?
           current_chunk = []
           current_size = 0
-          chunks << page_text
+          split_oversized_page(page_text).each { |piece| chunks << piece }
           next
         end
 
@@ -97,12 +81,22 @@ class Provider::Openai::BrokerageStatementExtractor
       chunks
     end
 
-    def process_chunk(text, is_first_chunk)
+    def split_oversized_page(text)
+      pieces = []
+      offset = 0
+      while offset < text.length
+        pieces << text[offset, MAX_CHARS_PER_CHUNK]
+        offset += MAX_CHARS_PER_CHUNK
+      end
+      pieces
+    end
+
+    def process_chunk(text)
       params = {
         model: model,
         messages: [
-          { role: "system", content: is_first_chunk ? instructions_with_metadata : instructions_trades_only },
-          { role: "user", content: "Extract trades from this brokerage statement:\n\n#{text}" }
+          { role: "system", content: instructions_with_metadata },
+          { role: "user", content: "Extract trades and any account summary fields visible in this brokerage statement excerpt:\n\n#{text}" }
         ],
         response_format: { type: "json_object" }
       }
@@ -139,17 +133,40 @@ class Provider::Openai::BrokerageStatementExtractor
     end
 
     def deduplicate_trades(trades)
-      seen = Set.new
+      seen_strong = Set.new
+      weak_by_chunk = Hash.new { |h, k| h[k] = Set.new }
+
       trades.select do |t|
-        key = [ t[:date], t[:ticker], t[:qty], t[:price], t[:chunk_index] ]
+        chunk = t[:chunk_index]
+        if strong_discriminator?(t)
+          key = strong_identity(t)
+          next false if seen_strong.include?(key)
 
-        duplicate = seen.any? do |prev_key|
-          prev_key[0..3] == key[0..3] && (prev_key[4] - key[4]).abs <= 1
+          seen_strong << key
+          true
+        else
+          key = weak_identity(t)
+          next false if weak_by_chunk[chunk].include?(key)
+
+          weak_by_chunk[chunk] << key
+          true
         end
-
-        seen << key
-        !duplicate
       end.map { |t| t.except(:chunk_index) }
+    end
+
+    def strong_discriminator?(t)
+      t[:order_id].present? || t[:execution_time].present? || t[:row_signature].present?
+    end
+
+    def strong_identity(t)
+      [
+        t[:date], t[:ticker], t[:qty], t[:price], t[:fees],
+        t[:order_id].to_s, t[:execution_time].to_s, t[:row_signature].to_s
+      ]
+    end
+
+    def weak_identity(t)
+      [ t[:date], t[:ticker], t[:qty], t[:price], t[:fees], t[:name].to_s.strip ]
     end
 
     def normalize_trades(trades)
@@ -164,18 +181,33 @@ class Provider::Openai::BrokerageStatementExtractor
 
         action = (trade["action"] || trade["type"] || trade["side"])&.strip&.downcase
         signed_qty = apply_action_to_qty(action, qty)
+        name = trade["security"] || trade["name"] || trade["description"]
 
         {
           date: date,
           ticker: ticker,
-          name: trade["security"] || trade["name"] || trade["description"],
+          name: name,
           qty: signed_qty,
           price: price,
           currency: (trade["currency"])&.strip&.upcase,
           exchange_operating_mic: trade["exchange"]&.strip&.upcase,
-          fees: parse_amount(trade["fees"] || trade["commission"])
+          fees: parse_amount(trade["fees"] || trade["commission"]),
+          order_id: trade_string_field(trade, "order_id", "order_confirmation", "confirmation_number", "reference", "transaction_id"),
+          execution_time: trade_string_field(trade, "execution_time", "execution_time_utc", "time", "exec_time", "trade_time"),
+          row_signature: trade_string_field(trade, "row_signature", "row_id", "line_id")
         }
       end
+    end
+
+    def trade_string_field(trade, *keys)
+      keys.flatten.each do |key|
+        v = trade[key]
+        next if v.nil?
+
+        s = v.to_s.strip
+        return s if s.present?
+      end
+      nil
     end
 
     def apply_action_to_qty(action, qty)
@@ -224,7 +256,7 @@ class Provider::Openai::BrokerageStatementExtractor
     def instructions_with_metadata
       <<~INSTRUCTIONS.strip
         Extract brokerage/investment statement data as JSON. Return:
-        {"broker_name":"...","account_holder":"...","account_number":"last 4 digits","statement_period":{"start_date":"YYYY-MM-DD","end_date":"YYYY-MM-DD"},"currency":"USD","cash_balance":null,"total_value":null,"as_of_date":null,"trades":[{"date":"YYYY-MM-DD","action":"buy","ticker":"AAPL","security":"Apple Inc.","quantity":10,"price":175.50,"fees":0.00,"currency":"USD"}]}
+        {"broker_name":"...","account_holder":"...","account_number":"last 4 digits","statement_period":{"start_date":"YYYY-MM-DD","end_date":"YYYY-MM-DD"},"currency":"USD","cash_balance":null,"total_value":null,"as_of_date":null,"trades":[{"date":"YYYY-MM-DD","action":"buy","ticker":"AAPL","security":"Apple Inc.","quantity":10,"price":175.50,"fees":0.00,"currency":"USD","order_id":null,"execution_time":null}]}
 
         Rules:
         - action must be "buy" or "sell"
@@ -232,31 +264,44 @@ class Provider::Openai::BrokerageStatementExtractor
         - quantity is always positive; the action field indicates buy vs sell
         - price is the per-share/per-unit price
         - fees/commission should be extracted if visible, otherwise 0.00
+        - Include order_id, execution_time (time of fill), confirmation/reference, or row identifiers when the statement shows them; use null when absent
         - Dates as YYYY-MM-DD
         - Extract ALL trades visible in the statement
         - Include dividend reinvestments as "buy" trades if present
         - For "closed position" reports (e.g. XTB), each row is a round-trip trade. Extract as TWO trades: a "buy" at open_price on open_time and a "sell" at close_price on close_time, both with the same ticker and volume
         - For "order history" or "trade confirmation" reports, extract each order as a single trade
-        - If cash_balance, total_value, or as_of_date are visible, include them
+        - If cash_balance, total_value, or as_of_date are visible in this excerpt, include them; use null for fields not shown on this page
         - JSON only, no markdown
       INSTRUCTIONS
     end
 
-    def instructions_trades_only
-      <<~INSTRUCTIONS.strip
-        Extract trades from brokerage statement text as JSON. Return:
-        {"trades":[{"date":"YYYY-MM-DD","action":"buy","ticker":"AAPL","security":"Apple Inc.","quantity":10,"price":175.50,"fees":0.00,"currency":"USD"}]}
+    def merge_metadata!(metadata, result)
+      %i[broker_name account_holder account_number currency].each do |key|
+        val = result[key]
+        next unless merge_scalar_present?(val)
+        metadata[key] = val if metadata[key].blank?
+      end
 
-        Rules:
-        - action must be "buy" or "sell"
-        - ticker should be the stock/ETF/fund ticker symbol
-        - quantity is always positive; the action field indicates buy vs sell
-        - price is the per-share/per-unit price
-        - fees/commission should be extracted if visible, otherwise 0.00
-        - Dates as YYYY-MM-DD
-        - Extract ALL trades
-        - For "closed position" rows, extract TWO trades: a "buy" at open_price/open_time and a "sell" at close_price/close_time
-        - JSON only, no markdown
-      INSTRUCTIONS
+      %i[cash_balance total_value as_of_date].each do |key|
+        val = result[key]
+        next if val.nil?
+        next if val.is_a?(String) && val.strip.empty?
+        metadata[key] = val
+      end
+
+      period = result[:period]
+      return unless period.is_a?(Hash)
+
+      metadata[:period] ||= {}
+      if period[:start_date].present?
+        metadata[:period][:start_date] ||= period[:start_date]
+      end
+      metadata[:period][:end_date] = period[:end_date] if period[:end_date].present?
+    end
+
+    def merge_scalar_present?(val)
+      return false if val.nil?
+      return false if val.is_a?(String) && val.strip.empty?
+      true
     end
 end
