@@ -233,18 +233,18 @@ class Provider::Openai::BrokerageStatementExtractor
       return nil if amount.nil?
 
       if amount.is_a?(Numeric)
-        amount.to_f
-      else
-        str = amount.to_s
-        # Handle European format: 1.234,56 -> 1234.56
-        if str.match?(/\d+\.\d{3},\d{1,2}$/)
-          str = str.tr(".", "").tr(",", ".")
-        elsif str.match?(/,\d{1,2}$/) && !str.include?(".")
-          str = str.tr(",", ".")
-        end
-        cleaned = str.gsub(/[^0-9.\-]/, "")
+        return amount.to_f
       end
+
+      str = amount.to_s
+      if str.match?(/\d+\.\d{3},\d{1,2}$/)
+        str = str.tr(".", "").tr(",", ".")
+      elsif str.match?(/,\d{1,2}$/) && !str.include?(".")
+        str = str.tr(",", ".")
+      end
+      cleaned = str.gsub(/[^0-9.\-]/, "")
       return nil if cleaned.blank?
+
       cleaned.to_f
     end
 
