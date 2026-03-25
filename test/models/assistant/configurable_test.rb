@@ -6,10 +6,12 @@ class AssistantConfigurableTest < ActiveSupport::TestCase
 
     config = Assistant.config_for(chat)
 
-    assert config.key?(:instructions_prompt), "config must include :instructions_prompt for Langfuse metadata"
     assert_not_empty config[:functions]
     assert_includes config[:instructions], "You help users understand their financial data"
-    assert_nil config[:instructions_prompt], "Without Langfuse, instructions_prompt should be nil"
+    prompt = config[:instructions_prompt]
+    assert_not_nil prompt, "instructions_prompt should fall back to the default prompt"
+    assert_equal "default_instructions", prompt[:name]
+    assert_equal config[:instructions], prompt[:content]
   end
 
   test "returns intro configuration without functions" do
@@ -17,9 +19,11 @@ class AssistantConfigurableTest < ActiveSupport::TestCase
 
     config = Assistant.config_for(chat)
 
-    assert config.key?(:instructions_prompt), "config must include :instructions_prompt for Langfuse metadata"
     assert_equal [], config[:functions]
     assert_includes config[:instructions], "stage of life"
-    assert_nil config[:instructions_prompt]
+    prompt = config[:instructions_prompt]
+    assert_not_nil prompt, "instructions_prompt should fall back to the intro prompt"
+    assert_equal "intro_instructions", prompt[:name]
+    assert_equal config[:instructions], prompt[:content]
   end
 end

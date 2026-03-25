@@ -22,7 +22,8 @@ module Assistant::Configurable
         if langfuse_intro.present?
           { content: langfuse_intro[:content], prompt: langfuse_intro }
         else
-          { content: fallback_intro_instructions(preferred_currency, preferred_date_format), prompt: nil }
+          content = fallback_intro_instructions(preferred_currency, preferred_date_format)
+          { content: content, prompt: { name: "intro_instructions", version: 0, template: nil, content: content } }
         end
       end
 
@@ -94,7 +95,8 @@ module Assistant::Configurable
         if langfuse_instructions.present?
           { content: langfuse_instructions[:content], prompt: langfuse_instructions }
         else
-          { content: fallback_default_instructions(preferred_currency, preferred_date_format), prompt: nil }
+          content = fallback_default_instructions(preferred_currency, preferred_date_format)
+          { content: content, prompt: { name: "default_instructions", version: 0, template: nil, content: content } }
         end
       end
 
