@@ -137,10 +137,11 @@ en:
         transaction_count:
           one: "1 transaction"
           other: "%{count} transactions"
+        transactions_hint: "Deselect transactions to exclude them from this group, or use the dropdown on a row to assign it a different category individually."
         assign_category: "Assign a category"
         assign_category_prompt: "→ assign"
         filter_placeholder: "Search categories..."
-        create_rule_label: "Create auto-categorization rule"
+        create_rule_label: "Create rule so future %{name} transactions will get added to this category"
         no_categories: "No matching categories"
         all_done: "All transactions are categorized"
       create:

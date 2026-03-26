@@ -1,47 +1,25 @@
 import { Controller } from "@hotwired/stimulus";
 
 export default class extends Controller {
-  static targets = [
-    "list",
-    "dialog",
-    "dialogTitle",
-    "dialogBody",
-    "categoryIdInput",
-    "createRuleCheckbox",
-    "groupingKeyInput",
-  ];
+  static targets = ["list", "createRuleCheckbox", "groupingKeyInput", "filter"];
+  static values = { assignEntryUrl: String, position: Number };
 
-  showConfirmation(event) {
-    const categoryId = event.currentTarget.dataset.categoryId;
-    const categoryName = event.currentTarget.dataset.categoryName;
-    const checkedCount = this.element.querySelectorAll(
-      "input[name='entry_ids[]']:checked"
-    ).length;
-    const createRule = this.hasCreateRuleCheckboxTarget
-      ? this.createRuleCheckboxTarget.checked
-      : false;
-    const groupingKey = this.hasGroupingKeyInputTarget
-      ? this.groupingKeyInputTarget.value
-      : "";
-
-    this.categoryIdInputTarget.value = categoryId;
-    this.dialogTitleTarget.textContent = `Assign ${checkedCount} transaction${checkedCount === 1 ? "" : "s"} to "${categoryName}"`;
-
-    let body = `${checkedCount} transaction${checkedCount === 1 ? "" : "s"} will be categorized as "${categoryName}".`;
-    if (createRule && groupingKey) {
-      body += ` A rule will also be created to automatically categorize future "${groupingKey}" transactions.`;
-    }
-    this.dialogBodyTarget.textContent = body;
-
-    this.dialogTarget.showModal();
+  connect() {
+    this.boundSelectFirst = this.selectFirst.bind(this);
+    document.addEventListener("keydown", this.boundSelectFirst);
   }
 
-  closeDialog() {
-    this.dialogTarget.close();
+  disconnect() {
+    document.removeEventListener("keydown", this.boundSelectFirst);
   }
 
   selectFirst(event) {
     if (event.key !== "Enter") return;
+
+    const tag = event.target.tagName;
+    if (tag === "BUTTON" || tag === "A") return;
+
+    event.preventDefault();
 
     const visible = Array.from(
       this.listTarget.querySelectorAll(".filterable-item")
@@ -49,7 +27,51 @@ export default class extends Controller {
 
     if (visible.length !== 1) return;
 
-    event.preventDefault();
     visible[0].click();
+  }
+
+  clearFilter(event) {
+    if (event.target.tagName !== "BUTTON") return;
+    if (!this.hasFilterTarget) return;
+    this.filterTarget.value = "";
+    this.filterTarget.dispatchEvent(new Event("input"));
+  }
+
+  uncheckRule() {
+    if (this.hasCreateRuleCheckboxTarget) {
+      this.createRuleCheckboxTarget.checked = false;
+    }
+  }
+
+  assignEntry(event) {
+    const select = event.target;
+    const categoryId = select.value;
+    if (!categoryId) return;
+
+    this.uncheckRule();
+
+    const entryId = select.dataset.entryId;
+    const body = new FormData();
+    body.append("entry_id", entryId);
+    body.append("category_id", categoryId);
+    body.append("position", this.positionValue);
+
+    // all_entry_ids[] hidden inputs live inside each Turbo Frame —
+    // automatically stay in sync as frames are removed
+    this.element.querySelectorAll("input[name='all_entry_ids[]']").forEach((input) => {
+      body.append("all_entry_ids[]", input.value);
+    });
+
+    fetch(this.assignEntryUrlValue, {
+      method: "PATCH",
+      credentials: "same-origin",
+      headers: {
+        "X-CSRF-Token": document.querySelector('meta[name="csrf-token"]')?.content,
+        Accept: "text/vnd.turbo-stream.html",
+      },
+      body,
+    })
+      .then((r) => r.text())
+      .then((html) => Turbo.renderStreamMessage(html));
   }
 }

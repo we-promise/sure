@@ -33,7 +33,6 @@ class Transactions::CategorizesControllerTest < ActionDispatch::IntegrationTest
     get transactions_categorize_url(position: 0)
 
     assert_response :success
-    # Starbucks has more transactions so it's first
     assert_select "h2", text: "Starbucks"
   end
 
@@ -69,80 +68,115 @@ class Transactions::CategorizesControllerTest < ActionDispatch::IntegrationTest
 
   # POST /transactions/categorize
 
-  test "create categorizes selected entries and redirects to same position" do
+  test "create categorizes selected entries and returns redirect stream when all assigned" do
     entry = create_transaction(account: @account, name: "Starbucks")
 
-    post transactions_categorize_url, params: {
-      position: 0,
-      grouping_key: "Starbucks",
-      entry_ids: [ entry.id ],
-      category_id: @category.id
-    }
+    post transactions_categorize_url,
+      params: {
+        position: 0,
+        grouping_key: "Starbucks",
+        entry_ids: [ entry.id ],
+        all_entry_ids: [ entry.id ],
+        category_id: @category.id
+      },
+      headers: { "Accept" => "text/vnd.turbo-stream.html" }
 
-    assert_redirected_to transactions_categorize_url(position: 0)
+    assert_response :success
     assert_equal @category, entry.transaction.reload.category
+    assert_includes response.body, "action=\"redirect\""
   end
 
-  test "create with create_rule param creates rule directly and stays in wizard" do
+  test "create removes assigned rows and replaces remaining when partial assignment" do
+    entry1 = create_transaction(account: @account, name: "Starbucks")
+    entry2 = create_transaction(account: @account, name: "Starbucks")
+
+    post transactions_categorize_url,
+      params: {
+        position: 0,
+        grouping_key: "Starbucks",
+        entry_ids: [ entry1.id ],
+        all_entry_ids: [ entry1.id, entry2.id ],
+        category_id: @category.id
+      },
+      headers: { "Accept" => "text/vnd.turbo-stream.html" }
+
+    assert_response :success
+    assert_equal @category, entry1.transaction.reload.category
+    assert_nil entry2.transaction.reload.category
+    # Remove stream for categorized entry
+    assert_includes response.body, "categorize_entry_#{entry1.id}"
+    # Replace stream for remaining entry (re-checked)
+    assert_includes response.body, "categorize_entry_#{entry2.id}"
+    # No redirect stream — still in the group
+    assert_not_includes response.body, "action=\"redirect\""
+  end
+
+  test "create with create_rule param creates rule directly" do
     entry = create_transaction(account: @account, name: "Netflix")
 
     assert_difference "@family.rules.count", 1 do
-      post transactions_categorize_url, params: {
-        position: 0,
-        grouping_key: "Netflix",
-        entry_ids: [ entry.id ],
-        category_id: @category.id,
-        create_rule: "1"
-      }
+      post transactions_categorize_url,
+        params: {
+          position: 0,
+          grouping_key: "Netflix",
+          entry_ids: [ entry.id ],
+          all_entry_ids: [ entry.id ],
+          category_id: @category.id,
+          create_rule: "1"
+        },
+        headers: { "Accept" => "text/vnd.turbo-stream.html" }
     end
-
-    assert_redirected_to transactions_categorize_url(position: 0)
 
     rule = @family.rules.find_by(name: "Netflix")
     assert_not_nil rule
     assert rule.active
   end
 
-  test "create shows success notice" do
+  test "create falls back to html redirect without turbo stream header" do
     entry = create_transaction(account: @account, name: "Starbucks")
 
     post transactions_categorize_url, params: {
       position: 0,
       grouping_key: "Starbucks",
       entry_ids: [ entry.id ],
+      all_entry_ids: [ entry.id ],
       category_id: @category.id
     }
 
+    assert_redirected_to transactions_categorize_url(position: 0)
     assert flash[:notice].present?
-  end
-
-  test "create only categorizes entries included in entry_ids" do
-    entry1 = create_transaction(account: @account, name: "Starbucks")
-    entry2 = create_transaction(account: @account, name: "Starbucks")
-
-    # Only submit entry1
-    post transactions_categorize_url, params: {
-      position: 0,
-      grouping_key: "Starbucks",
-      entry_ids: [ entry1.id ],
-      category_id: @category.id
-    }
-
-    assert_equal @category, entry1.transaction.reload.category
-    assert_nil entry2.transaction.reload.category
   end
 
   # PATCH /transactions/categorize/assign_entry
 
-  test "assign_entry categorizes a single entry and returns turbo stream removal" do
+  test "assign_entry categorizes single entry and returns remove stream" do
     entry = create_transaction(account: @account, name: "Starbucks")
+    other = create_transaction(account: @account, name: "Starbucks")
 
     patch assign_entry_transactions_categorize_url, params: {
       entry_id: entry.id,
-      category_id: @category.id
+      category_id: @category.id,
+      position: 0,
+      all_entry_ids: [ entry.id, other.id ]
     }
 
     assert_response :success
     assert_equal @category, entry.transaction.reload.category
+    assert_includes response.body, "categorize_entry_#{entry.id}"
+    assert_not_includes response.body, "action=\"redirect\""
+  end
+
+  test "assign_entry returns redirect stream when last entry in group" do
+    entry = create_transaction(account: @account, name: "Starbucks")
+
+    patch assign_entry_transactions_categorize_url, params: {
+      entry_id: entry.id,
+      category_id: @category.id,
+      position: 0,
+      all_entry_ids: [ entry.id ]
+    }
+
+    assert_response :success
+    assert_includes response.body, "action=\"redirect\""
   end
 end

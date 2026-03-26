@@ -24,25 +24,66 @@ class Transactions::CategorizesController < ApplicationController
   end
 
   def create
-    @position = params[:position].to_i
-    entry_ids = Array.wrap(params[:entry_ids]).reject(&:blank?)
-    category  = Current.family.categories.find(params[:category_id])
-    entries   = Current.family.entries.excluding_split_parents.where(id: entry_ids)
-    count     = entries.bulk_update!({ category_id: category.id })
+    @position     = params[:position].to_i
+    entry_ids     = Array.wrap(params[:entry_ids]).reject(&:blank?)
+    all_entry_ids = Array.wrap(params[:all_entry_ids]).reject(&:blank?)
+    remaining_ids = all_entry_ids - entry_ids
 
+    category = Current.family.categories.find(params[:category_id])
+    entries  = Current.family.entries.excluding_split_parents.where(id: entry_ids)
+    count    = entries.bulk_update!({ category_id: category.id })
     create_rule_for_group(params[:grouping_key], category) if params[:create_rule] == "1"
 
-    redirect_to transactions_categorize_path(position: @position),
-      notice: t(".categorized", count: count)
+    respond_to do |format|
+      format.turbo_stream do
+        if remaining_ids.empty?
+          render turbo_stream: turbo_stream.action(:redirect, transactions_categorize_path(position: @position))
+        else
+          @categories = Current.family.categories.alphabetically
+          remaining_entries = Current.family.entries.excluding_split_parents.where(id: remaining_ids).to_a
+          streams = entry_ids.map { |id| turbo_stream.remove("categorize_entry_#{id}") }
+          remaining_entries.each do |entry|
+            streams << turbo_stream.replace(
+              "categorize_entry_#{entry.id}",
+              partial: "transactions/categorizes/entry_row",
+              locals: { entry: entry, categories: @categories }
+            )
+          end
+          streams << turbo_stream.replace("categorize_remaining",
+            partial: "transactions/categorizes/remaining_count",
+            locals: { total_uncategorized: Current.family.uncategorized_transaction_count })
+          streams << turbo_stream.replace("categorize_group_summary",
+            partial: "transactions/categorizes/group_summary",
+            locals: { entries: remaining_entries })
+          render turbo_stream: streams
+        end
+      end
+      format.html { redirect_to transactions_categorize_path(position: @position), notice: t(".categorized", count: count) }
+    end
   end
 
   def assign_entry
-    entry    = Current.family.entries.excluding_split_parents.find(params[:entry_id])
-    category = Current.family.categories.find(params[:category_id])
+    entry         = Current.family.entries.excluding_split_parents.find(params[:entry_id])
+    category      = Current.family.categories.find(params[:category_id])
+    position      = params[:position].to_i
+    all_entry_ids = Array.wrap(params[:all_entry_ids]).reject(&:blank?)
+    remaining_ids = all_entry_ids - [ entry.id.to_s ]
 
     Entry.where(id: entry.id).bulk_update!({ category_id: category.id })
 
-    render turbo_stream: turbo_stream.remove("categorize_entry_#{entry.id}")
+    streams = [ turbo_stream.remove("categorize_entry_#{entry.id}") ]
+    if remaining_ids.empty?
+      streams << turbo_stream.action(:redirect, transactions_categorize_path(position: position))
+    else
+      remaining_entries = Current.family.entries.excluding_split_parents.where(id: remaining_ids).to_a
+      streams << turbo_stream.replace("categorize_remaining",
+        partial: "transactions/categorizes/remaining_count",
+        locals: { total_uncategorized: Current.family.uncategorized_transaction_count })
+      streams << turbo_stream.replace("categorize_group_summary",
+        partial: "transactions/categorizes/group_summary",
+        locals: { entries: remaining_entries })
+    end
+    render turbo_stream: streams
   end
 
   private
