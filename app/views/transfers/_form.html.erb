@@ -14,20 +14,21 @@
   <% account_ids << params[:to_account_id] if params[:to_account_id].present? %>
   <% account_ids << transfer.from_account_id if transfer.respond_to?(:from_account_id) && transfer.from_account_id.present? %>
   <% account_ids << transfer.to_account_id if transfer.respond_to?(:to_account_id) && transfer.to_account_id.present? %>
+  <% selected_accounts = @accounts.select { |a| account_ids.include?(a.id) } %>
 
-  <% if account_ids.any? && Current.family.accounts.where(id: account_ids).any? { |a| a.investment? || a.crypto? } %>
+  <% if selected_accounts.any? { |a| a.investment? || a.crypto? } %>
     <% show_type_tabs = false %>
   <% end %>
 
   <% if show_type_tabs %>
     <section>
-      <%= render "shared/transaction_type_tabs", active_tab: "transfer" %>
+      <%= render "shared/transaction_type_tabs", active_tab: "transfer", account_id: @from_account_id %>
     </section>
   <% end %>
 
   <section class="space-y-2">
-    <%= f.collection_select :from_account_id, Current.family.accounts.alphabetically, :id, :name, { prompt: t(".select_account"), label: t(".from"), selected: @from_account_id }, required: true %>
-    <%= f.collection_select :to_account_id, Current.family.accounts.alphabetically, :id, :name, { prompt: t(".select_account"), label: t(".to") }, required: true %>
+    <%= f.collection_select :from_account_id, @accounts, :id, :name, { prompt: t(".select_account"), label: t(".from"), selected: @from_account_id, variant: :logo }, required: true %>
+    <%= f.collection_select :to_account_id, @accounts, :id, :name, { prompt: t(".select_account"), label: t(".to"), variant: :logo }, required: true %>
     <%= f.number_field :amount, label: t(".amount"), required: true, min: 0, placeholder: "100", step: 0.00000001 %>
     <%= f.date_field :date, value: transfer.inflow_transaction&.entry&.date || Date.current, label: t(".date"), required: true, max: Date.current %>
   </section>

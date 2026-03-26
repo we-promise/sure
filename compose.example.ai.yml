@@ -69,6 +69,10 @@ x-rails-env: &rails_env
   OPENAI_ACCESS_TOKEN: token-can-be-any-value-for-ollama
   OPENAI_MODEL: llama3.1:8b # Note: Use tool-enabled model
   OPENAI_URI_BASE: http://ollama:11434/v1
+  # Vector store — pgvector keeps all data local (requires pgvector/pgvector Docker image for db)
+  VECTOR_STORE_PROVIDER: pgvector
+  EMBEDDING_MODEL: nomic-embed-text
+  EMBEDDING_DIMENSIONS: "1024"
   # NOTE: enabling OpenAI will incur costs when you use AI-related features in the app (chat, rules).  Make sure you have set appropriate spend limits on your account before adding this.
   #  OPENAI_ACCESS_TOKEN: ${OPENAI_ACCESS_TOKEN}
   # External AI Assistant — delegates chat to a remote AI agent (e.g., OpenClaw).
@@ -84,7 +88,7 @@ x-rails-env: &rails_env
 
 services:
   pipelock:
-    image: ghcr.io/luckypipewrench/pipelock:latest  # pin to a specific version (e.g., :0.2.7) for production
+    image: ghcr.io/luckypipewrench/pipelock:latest  # pin to a specific version (e.g., :2.0.0) for production
     container_name: pipelock
     hostname: pipelock
     restart: unless-stopped
@@ -128,7 +132,7 @@ services:
       - "11434:11434"
     environment:
       - OLLAMA_KEEP_ALIVE=1h
-      - OLLAMA_MODELS=deepseek-r1:8b,llama3.1:8b # Pre-load model on startup, you can change this to your preferred model
+      - OLLAMA_MODELS=deepseek-r1:8b,llama3.1:8b,nomic-embed-text # Pre-load model on startup, you can change this to your preferred model
     networks:
       - sure_net
     # Recommended: Enable GPU support
@@ -213,7 +217,7 @@ services:
       - sure_net
 
   db:
-    image: postgres:16
+    image: pgvector/pgvector:pg16
     restart: unless-stopped
     volumes:
       - postgres-data:/var/lib/postgresql/data

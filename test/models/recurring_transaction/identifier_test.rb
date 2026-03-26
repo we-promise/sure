@@ -172,6 +172,7 @@ class RecurringTransaction::IdentifierTest < ActiveSupport::TestCase
 
     # Create initial recurring transaction
     existing = @family.recurring_transactions.create!(
+      account: account,
       merchant: merchant,
       amount: 29.99,
       currency: "USD",

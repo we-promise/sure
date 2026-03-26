@@ -2,6 +2,7 @@
 fr:
   layouts:
     application:
+      privacy_mode: Activer/désactiver le mode confidentialité
       nav:
         assistant: Assistant
         budgets: Budgets

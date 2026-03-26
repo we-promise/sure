@@ -1,5 +1,6 @@
 netflix_subscription:
   family: dylan_family
+  account: depository
   merchant: netflix
   amount: 15.99
   currency: USD
@@ -11,6 +12,7 @@ netflix_subscription:
 
 inactive_subscription:
   family: dylan_family
+  account: credit_card
   merchant: amazon
   amount: 9.99
   currency: USD

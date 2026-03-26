@@ -1,0 +1,13 @@
+# Share the checking account with family_member (full control)
+depository_shared_with_member:
+  account: depository
+  user: family_member
+  permission: full_control
+  include_in_finances: true
+
+# Share the credit card with family_member (read only)
+credit_card_shared_with_member:
+  account: credit_card
+  user: family_member
+  permission: read_only
+  include_in_finances: true

@@ -5,7 +5,7 @@ class TradesController < ApplicationController
 
   # Defaults to a buy trade
   def new
-    @account = Current.family.accounts.find_by(id: params[:account_id])
+    @account = accessible_accounts.find_by(id: params[:account_id])
     @model = Current.family.entries.new(
       account: @account,
       currency: @account ? @account.currency : Current.family.currency,
@@ -15,7 +15,10 @@ class TradesController < ApplicationController
 
   # Can create a trade, transaction (e.g. "fees"), or transfer (e.g. "withdrawal")
   def create
-    @account = Current.family.accounts.find(params[:account_id])
+    @account = accessible_accounts.find(params[:account_id])
+
+    return unless require_account_permission!(@account)
+
     @model = Trade::CreateForm.new(create_params.merge(account: @account)).create
 
     if @model.persisted?
@@ -37,6 +40,8 @@ class TradesController < ApplicationController
   end
 
   def update
+    return unless require_account_permission!(@entry.account)
+
     if @entry.update(update_entry_params)
       @entry.lock_saved_attributes!
       @entry.mark_user_modified!
@@ -69,6 +74,8 @@ class TradesController < ApplicationController
   end
 
   def unlock
+    return unless require_account_permission!(@entry.account)
+
     @entry.unlock_for_sync!
     flash[:notice] = t("entries.unlock.success")
 
@@ -77,7 +84,10 @@ class TradesController < ApplicationController
 
   private
     def set_entry_for_unlock
-      trade = Current.family.trades.find(params[:id])
+      trade = Current.family.trades
+                .joins(entry: :account)
+                .merge(Account.accessible_by(Current.user))
+                .find(params[:id])
       @entry = trade.entry
     end
 

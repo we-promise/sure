@@ -21,6 +21,10 @@
           <div class="flex items-center gap-1.5">
             <%= link_to account.name, account, class: [(account.active? ? "text-primary" : "text-subdued"), "text-sm font-medium hover:underline"], data: { turbo_frame: "_top" } %>
 
+            <% if account.shared? %>
+              <%= icon("users", class: "w-3.5 h-3.5 text-secondary", title: account.owned_by?(Current.user) ? nil : account.owner&.display_name) %>
+            <% end %>
+
             <% if account.institution_name.present? %>
               <span class="hidden sm:inline text-secondary">• <%= account.institution_name %></span>
             <% end %>
@@ -43,7 +47,7 @@
       <% elsif account.syncing? %>
         <div class="w-16 h-6 bg-loader rounded-full animate-pulse"></div>
       <% else %>
-        <p class="text-sm font-medium <%= account.active? ? "text-primary" : "text-subdued" %>">
+        <p class="text-sm font-medium privacy-sensitive <%= account.active? ? "text-primary" : "text-subdued" %>">
           <%= format_money account.balance_money %>
         </p>
       <% end %>
@@ -56,21 +60,29 @@
           frame: :modal
         ) %>
       <% elsif !account.pending_deletion? %>
+        <% permission = account.permission_for(Current.user) %>
         <%= render DS::Menu.new(icon_vertical: true, mobile_fullwidth: false, max_width: "280px") do |menu| %>
-          <% menu.with_item(variant: "link", text: t("accounts.account.edit"), href: edit_account_path(account, return_to: return_to), icon: "pencil-line", data: { turbo_frame: :modal }) %>
+          <% if permission.in?([ :owner, :full_control ]) %>
+            <% menu.with_item(variant: "link", text: t("accounts.account.edit"), href: edit_account_path(account, return_to: return_to), icon: "pencil-line", data: { turbo_frame: :modal }) %>
+          <% end %>
+          <% menu.with_item(variant: "link", text: t("accounts.account.sharing"), href: account_sharing_path(account), icon: "users", data: { turbo_frame: :modal }) %>
 
-          <% if !account.linked? && %w[Depository CreditCard Investment Crypto].include?(account.accountable_type) %>
-            <% menu.with_item(variant: "link", text: t("accounts.account.link_provider"), href: select_provider_account_path(account), icon: "link", data: { turbo_frame: :modal }) %>
-          <% elsif account.linked? %>
-            <% menu.with_item(variant: "link", text: t("accounts.account.unlink_provider"), href: confirm_unlink_account_path(account), icon: "unlink", data: { turbo_frame: :modal }) %>
+          <% if Current.user&.admin? %>
+            <% if !account.linked? && %w[Depository CreditCard Investment Crypto].include?(account.accountable_type) %>
+              <% menu.with_item(variant: "link", text: t("accounts.account.link_provider"), href: select_provider_account_path(account), icon: "link", data: { turbo_frame: :modal }) %>
+            <% elsif account.linked? %>
+              <% menu.with_item(variant: "link", text: t("accounts.account.unlink_provider"), href: confirm_unlink_account_path(account), icon: "unlink", data: { turbo_frame: :modal }) %>
+            <% end %>
           <% end %>
 
-          <% menu.with_item(variant: "divider") %>
+          <% if permission.in?([ :owner, :full_control ]) %>
+            <% menu.with_item(variant: "divider") %>
 
-          <% if account.active? %>
-            <% menu.with_item(variant: "button", text: t("accounts.account.disable"), href: toggle_active_account_path(account), method: :patch, icon: "toggle-right", data: { turbo_frame: :_top }) %>
-          <% elsif account.disabled? %>
-            <% menu.with_item(variant: "button", text: t("accounts.account.enable"), href: toggle_active_account_path(account), method: :patch, icon: "toggle-left", data: { turbo_frame: :_top }) %>
+            <% if account.active? %>
+              <% menu.with_item(variant: "button", text: t("accounts.account.disable"), href: toggle_active_account_path(account), method: :patch, icon: "toggle-right", data: { turbo_frame: :_top }) %>
+            <% elsif account.disabled? %>
+              <% menu.with_item(variant: "button", text: t("accounts.account.enable"), href: toggle_active_account_path(account), method: :patch, icon: "toggle-left", data: { turbo_frame: :_top }) %>
+            <% end %>
           <% end %>
 
           <% if is_default %>
@@ -79,7 +91,7 @@
             <% menu.with_item(variant: "button", text: t("accounts.account.set_default"), href: set_default_account_path(account), method: :patch, icon: "star", data: { turbo_frame: :_top }) %>
           <% end %>
 
-          <% unless account.linked? %>
+          <% if account.owned_by?(Current.user) && !account.linked? %>
             <% menu.with_item(variant: "divider") %>
             <% menu.with_item(variant: "button", text: t("accounts.account.delete"), href: account_path(account), method: :delete, icon: "trash-2", confirm: CustomConfirm.for_resource_deletion("account", high_severity: true), data: { turbo_frame: :_top }) %>
           <% end %>

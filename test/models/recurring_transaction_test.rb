@@ -4,6 +4,7 @@ class RecurringTransactionTest < ActiveSupport::TestCase
   def setup
     @family = families(:dylan_family)
     @merchant = merchants(:netflix)
+    @account = accounts(:depository)
     # Clear any existing recurring transactions
     @family.recurring_transactions.destroy_all
   end
@@ -11,13 +12,12 @@ class RecurringTransactionTest < ActiveSupport::TestCase
   test "identify_patterns_for creates recurring transactions for patterns with 3+ occurrences" do
     # Create a series of transactions with same merchant and amount on similar days
     # Use dates within the last 3 months: today, 1 month ago, 2 months ago
-    account = @family.accounts.first
     [ 0, 1, 2 ].each do |months_ago|
       transaction = Transaction.create!(
         merchant: @merchant,
         category: categories(:food_and_drink)
       )
-      account.entries.create!(
+      @account.entries.create!(
         date: months_ago.months.ago.beginning_of_month + 5.days,
         amount: 15.99,
         currency: "USD",
@@ -32,6 +32,7 @@ class RecurringTransactionTest < ActiveSupport::TestCase
 
     recurring = @family.recurring_transactions.last
     assert_equal @merchant, recurring.merchant
+    assert_equal @account, recurring.account
     assert_equal 15.99, recurring.amount
     assert_equal "USD", recurring.currency
     assert_equal "active", recurring.status
@@ -40,13 +41,12 @@ class RecurringTransactionTest < ActiveSupport::TestCase
 
   test "identify_patterns_for does not create recurring transaction for less than 3 occurrences" do
     # Create only 2 transactions
-    account = @family.accounts.first
     2.times do |i|
       transaction = Transaction.create!(
         merchant: @merchant,
         category: categories(:food_and_drink)
       )
-      account.entries.create!(
+      @account.entries.create!(
         date: (i + 1).months.ago.beginning_of_month + 5.days,
         amount: 15.99,
         currency: "USD",
@@ -62,6 +62,7 @@ class RecurringTransactionTest < ActiveSupport::TestCase
 
   test "calculate_next_expected_date handles end of month correctly" do
     recurring = @family.recurring_transactions.create!(
+      account: @account,
       merchant: @merchant,
       amount: 29.99,
       currency: "USD",
@@ -78,6 +79,7 @@ class RecurringTransactionTest < ActiveSupport::TestCase
 
   test "should_be_inactive? returns true when last occurrence is over 2 months ago" do
     recurring = @family.recurring_transactions.create!(
+      account: @account,
       merchant: merchants(:amazon),
       amount: 19.99,
       currency: "USD",
@@ -92,6 +94,7 @@ class RecurringTransactionTest < ActiveSupport::TestCase
 
   test "should_be_inactive? returns false when last occurrence is within 2 months" do
     recurring = @family.recurring_transactions.create!(
+      account: @account,
       merchant: merchants(:amazon),
       amount: 25.99,
       currency: "USD",
@@ -106,6 +109,7 @@ class RecurringTransactionTest < ActiveSupport::TestCase
 
   test "cleanup_stale_for marks inactive when no recent occurrences" do
     recurring = @family.recurring_transactions.create!(
+      account: @account,
       merchant: merchants(:amazon),
       amount: 35.99,
       currency: "USD",
@@ -122,6 +126,7 @@ class RecurringTransactionTest < ActiveSupport::TestCase
 
   test "record_occurrence! updates recurring transaction with new occurrence" do
     recurring = @family.recurring_transactions.create!(
+      account: @account,
       merchant: merchants(:amazon),
       amount: 45.99,
       currency: "USD",
@@ -143,13 +148,12 @@ class RecurringTransactionTest < ActiveSupport::TestCase
 
   test "identify_patterns_for preserves sign for income transactions" do
     # Create recurring income transactions (negative amounts)
-    account = @family.accounts.first
     [ 0, 1, 2 ].each do |months_ago|
       transaction = Transaction.create!(
         merchant: @merchant,
         category: categories(:income)
       )
-      account.entries.create!(
+      @account.entries.create!(
         date: months_ago.months.ago.beginning_of_month + 15.days,
         amount: -1000.00,
         currency: "USD",
@@ -164,6 +168,7 @@ class RecurringTransactionTest < ActiveSupport::TestCase
 
     recurring = @family.recurring_transactions.last
     assert_equal @merchant, recurring.merchant
+    assert_equal @account, recurring.account
     assert_equal(-1000.00, recurring.amount)
     assert recurring.amount.negative?, "Income should have negative amount"
     assert_equal "USD", recurring.currency
@@ -172,12 +177,11 @@ class RecurringTransactionTest < ActiveSupport::TestCase
 
   test "identify_patterns_for creates name-based recurring transactions for transactions without merchants" do
     # Create transactions without merchants (e.g., from CSV imports or standard accounts)
-    account = @family.accounts.first
     [ 0, 1, 2 ].each do |months_ago|
       transaction = Transaction.create!(
         category: categories(:food_and_drink)
       )
-      account.entries.create!(
+      @account.entries.create!(
         date: months_ago.months.ago.beginning_of_month + 10.days,
         amount: 25.00,
         currency: "USD",
@@ -192,6 +196,7 @@ class RecurringTransactionTest < ActiveSupport::TestCase
 
     recurring = @family.recurring_transactions.last
     assert_nil recurring.merchant
+    assert_equal @account, recurring.account
     assert_equal "Local Coffee Shop", recurring.name
     assert_equal 25.00, recurring.amount
     assert_equal "USD", recurring.currency
@@ -201,7 +206,6 @@ class RecurringTransactionTest < ActiveSupport::TestCase
 
   test "identify_patterns_for creates separate patterns for same merchant but different names" do
     # Create two different recurring transactions from the same merchant
-    account = @family.accounts.first
 
     # First pattern: Netflix Standard
     [ 0, 1, 2 ].each do |months_ago|
@@ -209,7 +213,7 @@ class RecurringTransactionTest < ActiveSupport::TestCase
         merchant: @merchant,
         category: categories(:food_and_drink)
       )
-      account.entries.create!(
+      @account.entries.create!(
         date: months_ago.months.ago.beginning_of_month + 5.days,
         amount: 15.99,
         currency: "USD",
@@ -224,7 +228,7 @@ class RecurringTransactionTest < ActiveSupport::TestCase
         merchant: @merchant,
         category: categories(:food_and_drink)
       )
-      account.entries.create!(
+      @account.entries.create!(
         date: months_ago.months.ago.beginning_of_month + 10.days,
         amount: 19.99,
         currency: "USD",
@@ -245,14 +249,12 @@ class RecurringTransactionTest < ActiveSupport::TestCase
       skip "merchant_id is NOT NULL in this schema; name-based patterns disabled"
     end
 
-    account = @family.accounts.first
-
     # Create transactions for pattern
     [ 0, 1, 2 ].each do |months_ago|
       transaction = Transaction.create!(
         category: categories(:food_and_drink)
       )
-      account.entries.create!(
+      @account.entries.create!(
         date: months_ago.months.ago.beginning_of_month + 15.days,
         amount: 50.00,
         currency: "USD",
@@ -272,6 +274,7 @@ class RecurringTransactionTest < ActiveSupport::TestCase
 
   test "validation requires either merchant or name" do
     recurring = @family.recurring_transactions.build(
+      account: @account,
       amount: 25.00,
       currency: "USD",
       expected_day_of_month: 5,
@@ -288,7 +291,6 @@ class RecurringTransactionTest < ActiveSupport::TestCase
     unless RecurringTransaction.columns_hash["merchant_id"].null
       skip "merchant_id is NOT NULL in this schema; name-based patterns disabled"
     end
-    account = @family.accounts.first
 
     # Create merchant-based pattern
     [ 0, 1, 2 ].each do |months_ago|
@@ -296,7 +298,7 @@ class RecurringTransactionTest < ActiveSupport::TestCase
         merchant: @merchant,
         category: categories(:food_and_drink)
       )
-      account.entries.create!(
+      @account.entries.create!(
         date: months_ago.months.ago.beginning_of_month + 5.days,
         amount: 15.99,
         currency: "USD",
@@ -310,7 +312,7 @@ class RecurringTransactionTest < ActiveSupport::TestCase
       transaction = Transaction.create!(
         category: categories(:one)
       )
-      account.entries.create!(
+      @account.entries.create!(
         date: months_ago.months.ago.beginning_of_month + 1.days,
         amount: 1200.00,
         currency: "USD",
@@ -336,12 +338,11 @@ class RecurringTransactionTest < ActiveSupport::TestCase
 
   # Manual recurring transaction tests
   test "create_from_transaction creates a manual recurring transaction" do
-    account = @family.accounts.first
     transaction = Transaction.create!(
       merchant: @merchant,
       category: categories(:food_and_drink)
     )
-    entry = account.entries.create!(
+    entry = @account.entries.create!(
       date: 2.months.ago,
       amount: 50.00,
       currency: "USD",
@@ -357,6 +358,7 @@ class RecurringTransactionTest < ActiveSupport::TestCase
     assert recurring.present?
     assert recurring.manual?
     assert_equal @merchant, recurring.merchant
+    assert_equal @account, recurring.account
     assert_equal 50.00, recurring.amount
     assert_equal "USD", recurring.currency
     assert_equal 2.months.ago.day, recurring.expected_day_of_month
@@ -367,8 +369,6 @@ class RecurringTransactionTest < ActiveSupport::TestCase
   end
 
   test "create_from_transaction automatically calculates amount variance from history" do
-    account = @family.accounts.first
-
     # Create multiple historical transactions with varying amounts on the same day of month
     amounts = [ 90.00, 100.00, 110.00, 120.00 ]
     amounts.each_with_index do |amount, i|
@@ -376,7 +376,7 @@ class RecurringTransactionTest < ActiveSupport::TestCase
         merchant: @merchant,
         category: categories(:food_and_drink)
       )
-      account.entries.create!(
+      @account.entries.create!(
         date: (amounts.size - i).months.ago.beginning_of_month + 14.days, # Day 15
         amount: amount,
         currency: "USD",
@@ -385,11 +385,12 @@ class RecurringTransactionTest < ActiveSupport::TestCase
       )
     end
 
-    # Mark the most recent one as recurring
-    most_recent_entry = account.entries.order(date: :desc).first
+    # Mark the most recent one as recurring (find the 120.00 entry we created last)
+    most_recent_entry = @account.entries.where(amount: 120.00, currency: "USD").order(date: :desc).first
     recurring = RecurringTransaction.create_from_transaction(most_recent_entry.transaction)
 
     assert recurring.manual?
+    assert_equal @account, recurring.account
     assert_equal 90.00, recurring.expected_amount_min
     assert_equal 120.00, recurring.expected_amount_max
     assert_equal 105.00, recurring.expected_amount_avg # (90 + 100 + 110 + 120) / 4
@@ -399,12 +400,11 @@ class RecurringTransactionTest < ActiveSupport::TestCase
   end
 
   test "create_from_transaction with single transaction sets fixed amount" do
-    account = @family.accounts.first
     transaction = Transaction.create!(
       merchant: @merchant,
       category: categories(:food_and_drink)
     )
-    entry = account.entries.create!(
+    entry = @account.entries.create!(
       date: 1.month.ago,
       amount: 50.00,
       currency: "USD",
@@ -415,6 +415,7 @@ class RecurringTransactionTest < ActiveSupport::TestCase
     recurring = RecurringTransaction.create_from_transaction(transaction)
 
     assert recurring.manual?
+    assert_equal @account, recurring.account
     assert_equal 50.00, recurring.expected_amount_min
     assert_equal 50.00, recurring.expected_amount_max
     assert_equal 50.00, recurring.expected_amount_avg
@@ -424,10 +425,9 @@ class RecurringTransactionTest < ActiveSupport::TestCase
   end
 
   test "matching_transactions with amount variance matches within range" do
-    account = @family.accounts.first
-
     # Create manual recurring with variance for day 15 of the month
     recurring = @family.recurring_transactions.create!(
+      account: @account,
       merchant: @merchant,
       amount: 100.00,
       currency: "USD",
@@ -441,9 +441,9 @@ class RecurringTransactionTest < ActiveSupport::TestCase
       expected_amount_avg: 100.00
     )
 
-    # Create transactions with varying amounts on day 14 (within ±2 days of day 15)
+    # Create transactions with varying amounts on day 14 (within +/-2 days of day 15)
     transaction_within_range = Transaction.create!(merchant: @merchant, category: categories(:food_and_drink))
-    entry_within = account.entries.create!(
+    entry_within = @account.entries.create!(
       date: Date.current.next_month.beginning_of_month + 13.days, # Day 14
       amount: 90.00,
       currency: "USD",
@@ -452,7 +452,7 @@ class RecurringTransactionTest < ActiveSupport::TestCase
     )
 
     transaction_outside_range = Transaction.create!(merchant: @merchant, category: categories(:food_and_drink))
-    entry_outside = account.entries.create!(
+    entry_outside = @account.entries.create!(
       date: Date.current.next_month.beginning_of_month + 14.days, # Day 15
       amount: 150.00,
       currency: "USD",
@@ -468,6 +468,7 @@ class RecurringTransactionTest < ActiveSupport::TestCase
   test "should_be_inactive? has longer threshold for manual recurring" do
     # Manual recurring - 6 months threshold
     manual_recurring = @family.recurring_transactions.create!(
+      account: @account,
       merchant: @merchant,
       amount: 50.00,
       currency: "USD",
@@ -480,6 +481,7 @@ class RecurringTransactionTest < ActiveSupport::TestCase
 
     # Auto recurring - 2 months threshold with different amount to avoid unique constraint
     auto_recurring = @family.recurring_transactions.create!(
+      account: @account,
       merchant: @merchant,
       amount: 60.00,
       currency: "USD",
@@ -496,6 +498,7 @@ class RecurringTransactionTest < ActiveSupport::TestCase
 
   test "update_amount_variance updates min/max/avg correctly" do
     recurring = @family.recurring_transactions.create!(
+      account: @account,
       merchant: @merchant,
       amount: 100.00,
       currency: "USD",
@@ -527,10 +530,9 @@ class RecurringTransactionTest < ActiveSupport::TestCase
   end
 
   test "identify_patterns_for updates variance for manual recurring transactions" do
-    account = @family.accounts.first
-
     # Create a manual recurring transaction with initial variance
     manual_recurring = @family.recurring_transactions.create!(
+      account: @account,
       merchant: @merchant,
       amount: 50.00,
       currency: "USD",
@@ -552,7 +554,7 @@ class RecurringTransactionTest < ActiveSupport::TestCase
         merchant: @merchant,
         category: categories(:food_and_drink)
       )
-      account.entries.create!(
+      @account.entries.create!(
         date: (amounts.size - i).months.ago.beginning_of_month + 14.days,
         amount: amount,
         currency: "USD",
@@ -578,6 +580,7 @@ class RecurringTransactionTest < ActiveSupport::TestCase
   test "cleaner does not delete manual recurring transactions" do
     # Create inactive manual recurring
     manual_recurring = @family.recurring_transactions.create!(
+      account: @account,
       merchant: @merchant,
       amount: 50.00,
       currency: "USD",
@@ -593,6 +596,7 @@ class RecurringTransactionTest < ActiveSupport::TestCase
 
     # Create inactive auto recurring with different merchant
     auto_recurring = @family.recurring_transactions.create!(
+      account: @account,
       merchant: merchants(:amazon),
       amount: 30.00,
       currency: "USD",
@@ -611,5 +615,94 @@ class RecurringTransactionTest < ActiveSupport::TestCase
 
     assert RecurringTransaction.exists?(manual_recurring.id)
     assert_not RecurringTransaction.exists?(auto_recurring.id)
+  end
+
+  # Account access scoping tests
+  test "accessible_by scope returns only recurring transactions from accessible accounts" do
+    admin = users(:family_admin)
+    member = users(:family_member)
+
+    # depository is shared with family_member (full_control)
+    # investment is NOT shared with family_member
+    shared_account = accounts(:depository)
+    unshared_account = accounts(:investment)
+
+    shared_recurring = @family.recurring_transactions.create!(
+      account: shared_account,
+      merchant: @merchant,
+      amount: 15.99,
+      currency: "USD",
+      expected_day_of_month: 5,
+      last_occurrence_date: 1.month.ago.to_date,
+      next_expected_date: 5.days.from_now.to_date,
+      status: "active"
+    )
+
+    unshared_recurring = @family.recurring_transactions.create!(
+      account: unshared_account,
+      merchant: merchants(:amazon),
+      amount: 9.99,
+      currency: "USD",
+      expected_day_of_month: 15,
+      last_occurrence_date: 1.month.ago.to_date,
+      next_expected_date: 5.days.from_now.to_date,
+      status: "active"
+    )
+
+    # Admin (owner of all accounts) sees both
+    admin_results = @family.recurring_transactions.accessible_by(admin)
+    assert_includes admin_results, shared_recurring
+    assert_includes admin_results, unshared_recurring
+
+    # Family member only sees the one from the shared account
+    member_results = @family.recurring_transactions.accessible_by(member)
+    assert_includes member_results, shared_recurring
+    assert_not_includes member_results, unshared_recurring
+  end
+
+  test "identifier creates per-account patterns for same merchant on different accounts" do
+    account_a = accounts(:depository)
+    account_b = accounts(:credit_card)
+
+    # Create pattern on account A
+    [ 0, 1, 2 ].each do |months_ago|
+      transaction = Transaction.create!(
+        merchant: @merchant,
+        category: categories(:food_and_drink)
+      )
+      account_a.entries.create!(
+        date: months_ago.months.ago.beginning_of_month + 5.days,
+        amount: 15.99,
+        currency: "USD",
+        name: "Netflix Subscription",
+        entryable: transaction
+      )
+    end
+
+    # Create same pattern on account B
+    [ 0, 1, 2 ].each do |months_ago|
+      transaction = Transaction.create!(
+        merchant: @merchant,
+        category: categories(:food_and_drink)
+      )
+      account_b.entries.create!(
+        date: months_ago.months.ago.beginning_of_month + 5.days,
+        amount: 15.99,
+        currency: "USD",
+        name: "Netflix Subscription",
+        entryable: transaction
+      )
+    end
+
+    assert_difference "@family.recurring_transactions.count", 2 do
+      RecurringTransaction.identify_patterns_for!(@family)
+    end
+
+    recurring_a = @family.recurring_transactions.find_by(account: account_a, merchant: @merchant, amount: 15.99)
+    recurring_b = @family.recurring_transactions.find_by(account: account_b, merchant: @merchant, amount: 15.99)
+
+    assert recurring_a.present?
+    assert recurring_b.present?
+    assert_not_equal recurring_a, recurring_b
   end
 end

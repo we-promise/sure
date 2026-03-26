@@ -2,9 +2,10 @@ module AccountableResource
   extend ActiveSupport::Concern
 
   included do
-    include Periodable
+    include Periodable, StreamExtensions
 
-    before_action :set_account, only: [ :show, :edit, :update ]
+    before_action :set_account, only: [ :show ]
+    before_action :set_manageable_account, only: [ :edit, :update ]
     before_action :set_link_options, only: :new
   end
 
@@ -39,11 +40,13 @@ module AccountableResource
     rescue Date::Error
       nil
     end || (Time.zone.today - 2.years)
-    @account = Current.family.accounts.create_and_sync(
-      account_params.except(:return_to, :opening_balance_date),
-      opening_balance_date: opening_balance_date
-    )
-    @account.lock_saved_attributes!
+    Account.transaction do
+      @account = Current.family.accounts.create_and_sync(
+        account_params.except(:return_to, :opening_balance_date).merge(owner: Current.user),
+        opening_balance_date: opening_balance_date
+      )
+      @account.lock_saved_attributes!
+    end
 
     redirect_to account_params[:return_to].presence || @account, notice: t("accounts.create.success", type: accountable_type.name.underscore.humanize)
   end
@@ -87,7 +90,12 @@ module AccountableResource
     end
 
     def set_account
-      @account = Current.family.accounts.find(params[:id])
+      @account = Current.user.accessible_accounts.find(params[:id])
+    end
+
+    def set_manageable_account
+      @account = Current.user.accessible_accounts.find(params[:id])
+      require_account_permission!(@account)
     end
 
     def account_params
