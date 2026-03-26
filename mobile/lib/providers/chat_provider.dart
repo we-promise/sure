@@ -11,6 +11,7 @@ class ChatProvider with ChangeNotifier {
   Chat? _currentChat;
   bool _isLoading = false;
   bool _isSendingMessage = false;
+  bool _isWaitingForResponse = false;
   String? _errorMessage;
   Timer? _pollingTimer;
 
@@ -22,6 +23,7 @@ class ChatProvider with ChangeNotifier {
   Chat? get currentChat => _currentChat;
   bool get isLoading => _isLoading;
   bool get isSendingMessage => _isSendingMessage;
+  bool get isWaitingForResponse => _isWaitingForResponse;
   String? get errorMessage => _errorMessage;
 
   /// Fetch list of chats
@@ -103,18 +105,31 @@ class ChatProvider with ChangeNotifier {
 
       if (result['success'] == true) {
         final chat = result['chat'] as Chat;
-        _currentChat = chat;
-        _chats.insert(0, chat);
         _errorMessage = null;
 
-        // Start polling for AI response if initial message was sent
         if (initialMessage != null) {
+          // Inject the user message locally so the UI renders it immediately
+          // without waiting for the first poll.
+          final now = DateTime.now();
+          final userMessage = Message(
+            id: 'pending_${now.millisecondsSinceEpoch}',
+            type: 'text',
+            role: 'user',
+            content: initialMessage,
+            createdAt: now,
+            updatedAt: now,
+          );
+          _currentChat = chat.copyWith(messages: [userMessage]);
+          _chats.insert(0, _currentChat!);
           _startPolling(accessToken, chat.id);
+        } else {
+          _currentChat = chat;
+          _chats.insert(0, chat);
         }
 
         _isLoading = false;
         notifyListeners();
-        return chat;
+        return _currentChat!;
       } else {
         _errorMessage = result['error'] ?? 'Failed to create chat';
         _isLoading = false;
@@ -244,8 +259,10 @@ class ChatProvider with ChangeNotifier {
 
   /// Start polling for new messages (AI responses)
   void _startPolling(String accessToken, String chatId) {
-    _stopPolling();
+    _pollingTimer?.cancel();
     _lastAssistantContentLength = null;
+    _isWaitingForResponse = true;
+    notifyListeners();
 
     _pollingTimer = Timer.periodic(const Duration(seconds: 2), (timer) async {
       await _pollForUpdates(accessToken, chatId);
@@ -256,6 +273,7 @@ class ChatProvider with ChangeNotifier {
   void _stopPolling() {
     _pollingTimer?.cancel();
     _pollingTimer = null;
+    _isWaitingForResponse = false;
   }
 
   /// Poll for updates
@@ -302,6 +320,13 @@ class ChatProvider with ChangeNotifier {
 
         if (shouldUpdate) {
           _currentChat = updatedChat;
+          // Hide thinking indicator as soon as the first assistant content arrives.
+          if (_isWaitingForResponse) {
+            final lastMsg = updatedChat.messages.lastOrNull;
+            if (lastMsg != null && lastMsg.isAssistant && lastMsg.content.isNotEmpty) {
+              _isWaitingForResponse = false;
+            }
+          }
           notifyListeners();
         }
 
@@ -311,9 +336,10 @@ class ChatProvider with ChangeNotifier {
           if (newLen > (_lastAssistantContentLength ?? 0)) {
             _lastAssistantContentLength = newLen;
           } else {
-            // Content stable: no growth since last poll
+            // Content stable: no growth since last poll — done.
             _stopPolling();
             _lastAssistantContentLength = null;
+            notifyListeners();
           }
         }
       }
