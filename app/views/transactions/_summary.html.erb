@@ -1,4 +1,8 @@
 <%# locals: (totals:) %>
+<%# Show Inflow/Outflow labels only when the result set contains exclusively transfers
+    (income and expense are both $0). For mixed filters (e.g. Expense+Transfer),
+    we keep Income/Expenses labels — transfer amounts aren't included in the summary
+    bar in that case, though the transaction list still shows both types. %>
 <% show_transfers = totals.income_money.zero? && totals.expense_money.zero? &&
    (totals.transfer_inflow_money.amount > 0 || totals.transfer_outflow_money.amount > 0) %>
 <div class="grid grid-cols-1 md:grid-cols-3 bg-container rounded-xl shadow-border-xs md:divide-x divide-y md:divide-y-0 divide-alpha-black-100 theme-dark:divide-alpha-white-200">
