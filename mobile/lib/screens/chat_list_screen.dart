@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../models/chat.dart';
 import '../providers/auth_provider.dart';
 import '../providers/chat_provider.dart';
 import 'chat_conversation_screen.dart';
@@ -36,56 +35,17 @@ class _ChatListScreenState extends State<ChatListScreen> {
     await _loadChats();
   }
 
-  Future<void> _createNewChat() async {
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final chatProvider = Provider.of<ChatProvider>(context, listen: false);
+  Future<void> _openNewChat() async {
+    if (!mounted) return;
 
-    final accessToken = await authProvider.getValidAccessToken();
-    if (accessToken == null) {
-      await authProvider.logout();
-      return;
-    }
-
-    // Show loading dialog
-    if (mounted) {
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => const Center(
-          child: CircularProgressIndicator(),
-        ),
-      );
-    }
-
-    final chat = await chatProvider.createChat(
-      accessToken: accessToken,
-      title: Chat.defaultTitle,
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const ChatConversationScreen(chatId: null),
+      ),
     );
 
-    // Close loading dialog
-    if (mounted) {
-      Navigator.pop(context);
-    }
-
-    if (chat != null && mounted) {
-      // Navigate to chat conversation
-      await Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => ChatConversationScreen(chatId: chat.id),
-        ),
-      );
-
-      // Refresh list after returning
-      _loadChats();
-    } else if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(chatProvider.errorMessage ?? 'Failed to create chat'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
+    _loadChats();
   }
 
   String _formatDateTime(DateTime dateTime) {
@@ -297,7 +257,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
         },
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: _createNewChat,
+        onPressed: _openNewChat,
         tooltip: 'New Chat',
         child: const Icon(Icons.add),
       ),

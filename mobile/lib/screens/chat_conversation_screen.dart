@@ -12,7 +12,8 @@ class _SendMessageIntent extends Intent {
 }
 
 class ChatConversationScreen extends StatefulWidget {
-  final String chatId;
+  /// Null means this is a brand-new chat — it will be created on first send.
+  final String? chatId;
 
   const ChatConversationScreen({
     super.key,
@@ -27,13 +28,19 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
 
+  /// Tracks the real chat ID once the chat has been created.
+  String? _chatId;
+
   @override
   void initState() {
     super.initState();
+    _chatId = widget.chatId;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Provider.of<ChatProvider>(context, listen: false).addListener(_onChatChanged);
     });
-    _loadChat();
+    if (_chatId != null) {
+      _loadChat();
+    }
   }
 
   @override
@@ -61,9 +68,21 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
     }
   }
 
-  Future<void> _loadChat() async {
+  Future<void> _loadChat({bool forceRefresh = false}) async {
+    if (_chatId == null) return;
+
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final chatProvider = Provider.of<ChatProvider>(context, listen: false);
+
+    // Skip fetch if the provider already has this chat loaded (e.g. just created).
+    if (!forceRefresh && chatProvider.currentChat?.id == _chatId) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_scrollController.hasClients) {
+          _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
+        }
+      });
+      return;
+    }
 
     final accessToken = await authProvider.getValidAccessToken();
     if (accessToken == null) {
@@ -73,10 +92,9 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
 
     await chatProvider.fetchChat(
       accessToken: accessToken,
-      chatId: widget.chatId,
+      chatId: _chatId!,
     );
 
-    // Scroll to bottom after loading
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
         _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
@@ -97,25 +115,36 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
       return;
     }
 
-    final shouldUpdateTitle = chatProvider.currentChat?.hasDefaultTitle == true;
-
     _messageController.clear();
 
-    final delivered = await chatProvider.sendMessage(
-      accessToken: accessToken,
-      chatId: widget.chatId,
-      content: content,
-    );
-
-    if (delivered && shouldUpdateTitle) {
-      await chatProvider.updateChatTitle(
+    if (_chatId == null) {
+      // First message in a new chat — create the chat with it.
+      final chat = await chatProvider.createChat(
         accessToken: accessToken,
-        chatId: widget.chatId,
         title: Chat.generateTitle(content),
+        initialMessage: content,
       );
+      if (chat != null && mounted) {
+        setState(() => _chatId = chat.id);
+      }
+    } else {
+      final shouldUpdateTitle = chatProvider.currentChat?.hasDefaultTitle == true;
+
+      final delivered = await chatProvider.sendMessage(
+        accessToken: accessToken,
+        chatId: _chatId!,
+        content: content,
+      );
+
+      if (delivered && shouldUpdateTitle) {
+        await chatProvider.updateChatTitle(
+          accessToken: accessToken,
+          chatId: _chatId!,
+          title: Chat.generateTitle(content),
+        );
+      }
     }
 
-    // Scroll to bottom after sending
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
         _scrollController.animateTo(
@@ -160,12 +189,13 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
     );
 
     if (newTitle != null && newTitle.isNotEmpty && newTitle != currentTitle && mounted) {
+      if (_chatId == null) return;
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       final accessToken = await authProvider.getValidAccessToken();
       if (accessToken != null) {
         await chatProvider.updateChatTitle(
           accessToken: accessToken,
-          chatId: widget.chatId,
+          chatId: _chatId!,
           title: newTitle,
         );
       }
@@ -186,57 +216,52 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
       appBar: AppBar(
         title: Consumer<ChatProvider>(
           builder: (context, chatProvider, _) {
+            final title = chatProvider.currentChat?.title ?? 'New Conversation';
             return GestureDetector(
-              onTap: _editTitle,
+              onTap: _chatId != null ? _editTitle : null,
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Flexible(
                     child: Text(
-                      chatProvider.currentChat?.title ?? 'Chat',
+                      title,
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  const SizedBox(width: 4),
-                  const Icon(Icons.edit, size: 18),
+                  if (_chatId != null) ...[
+                    const SizedBox(width: 4),
+                    const Icon(Icons.edit, size: 18),
+                  ],
                 ],
               ),
             );
           },
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _loadChat,
-            tooltip: 'Refresh',
-          ),
+          if (widget.chatId != null)
+            IconButton(
+              icon: const Icon(Icons.refresh),
+              onPressed: () => _loadChat(forceRefresh: true),
+              tooltip: 'Refresh',
+            ),
         ],
       ),
       body: Consumer<ChatProvider>(
         builder: (context, chatProvider, _) {
           if (chatProvider.isLoading && chatProvider.currentChat == null) {
-            return const Center(
-              child: CircularProgressIndicator(),
-            );
+            return const Center(child: CircularProgressIndicator());
           }
 
-          if (chatProvider.errorMessage != null && chatProvider.currentChat == null) {
+          if (chatProvider.errorMessage != null && chatProvider.currentChat == null && _chatId != null) {
             return Center(
               child: Padding(
                 padding: const EdgeInsets.all(24),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(
-                      Icons.error_outline,
-                      size: 64,
-                      color: colorScheme.error,
-                    ),
+                    Icon(Icons.error_outline, size: 64, color: colorScheme.error),
                     const SizedBox(height: 16),
-                    Text(
-                      'Failed to load chat',
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
+                    Text('Failed to load chat', style: Theme.of(context).textTheme.titleLarge),
                     const SizedBox(height: 8),
                     Text(
                       chatProvider.errorMessage!,
@@ -259,48 +284,21 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
 
           return Column(
             children: [
-              // Messages list
               Expanded(
-                child: messages.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.chat_bubble_outline,
-                              size: 64,
-                              color: colorScheme.onSurfaceVariant,
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              'Start a conversation',
-                              style: Theme.of(context).textTheme.titleLarge,
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Send a message to begin chatting with the AI assistant.',
-                              style: TextStyle(color: colorScheme.onSurfaceVariant),
-                              textAlign: TextAlign.center,
-                            ),
-                          ],
-                        ),
-                      )
-                    : ListView.builder(
-                        controller: _scrollController,
-                        padding: const EdgeInsets.all(16),
-                        itemCount: messages.length +
-                            (chatProvider.isWaitingForResponse ? 1 : 0),
-                        itemBuilder: (context, index) {
-                          if (index == messages.length) {
-                            return const _TypingIndicatorBubble();
-                          }
-                          final message = messages[index];
-                          return _MessageBubble(
-                            message: message,
-                            formatTime: _formatTime,
-                          );
-                        },
-                      ),
+                child: ListView.builder(
+                  controller: _scrollController,
+                  padding: const EdgeInsets.all(16),
+                  itemCount: messages.length + (chatProvider.isWaitingForResponse ? 1 : 0),
+                  itemBuilder: (context, index) {
+                    if (index == messages.length) {
+                      return const _TypingIndicatorBubble();
+                    }
+                    return _MessageBubble(
+                      message: messages[index],
+                      formatTime: _formatTime,
+                    );
+                  },
+                ),
               ),
 
               // Message input
@@ -346,6 +344,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
                             ),
                             maxLines: null,
                             textCapitalization: TextCapitalization.sentences,
+                            autofocus: _chatId == null,
                           ),
                         ),
                         const SizedBox(width: 8),
