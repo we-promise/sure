@@ -45,7 +45,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
       ),
     );
 
-    _loadChats();
+    if (mounted) _loadChats();
   }
 
   String _formatDateTime(DateTime dateTime) {

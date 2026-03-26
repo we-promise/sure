@@ -31,12 +31,21 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
   /// Tracks the real chat ID once the chat has been created.
   String? _chatId;
 
+  ChatProvider? _chatProvider;
+  bool _listenerAdded = false;
+
   @override
   void initState() {
     super.initState();
     _chatId = widget.chatId;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<ChatProvider>(context, listen: false).addListener(_onChatChanged);
+      if (!mounted) return;
+      _chatProvider = Provider.of<ChatProvider>(context, listen: false);
+      _chatProvider!.addListener(_onChatChanged);
+      _listenerAdded = true;
+      if (_chatId == null) {
+        _chatProvider!.clearCurrentChat();
+      }
     });
     if (_chatId != null) {
       _loadChat();
@@ -45,16 +54,23 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
 
   @override
   void dispose() {
-    Provider.of<ChatProvider>(context, listen: false).removeListener(_onChatChanged);
+    if (_listenerAdded && _chatProvider != null) {
+      _chatProvider!.removeListener(_onChatChanged);
+      _chatProvider = null;
+      _listenerAdded = false;
+    }
     _messageController.dispose();
     _scrollController.dispose();
     super.dispose();
   }
 
   void _onChatChanged() {
+    if (!mounted) return;
     final chatProvider = Provider.of<ChatProvider>(context, listen: false);
     if (chatProvider.isWaitingForResponse || chatProvider.isSendingMessage) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _scrollToBottom();
+      });
     }
   }
 
@@ -124,11 +140,22 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
         title: Chat.generateTitle(content),
         initialMessage: content,
       );
-      if (chat != null && mounted) {
-        setState(() => _chatId = chat.id);
+      if (!mounted) return;
+      if (chat == null) {
+        // Restore the message so the user doesn't lose it.
+        _messageController.text = content;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(chatProvider.errorMessage ?? 'Failed to start conversation. Please try again.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
       }
+      setState(() => _chatId = chat.id);
     } else {
-      final shouldUpdateTitle = chatProvider.currentChat?.hasDefaultTitle == true;
+      final shouldUpdateTitle =
+          chatProvider.currentChat?.hasDefaultTitle == true;
 
       final delivered = await chatProvider.sendMessage(
         accessToken: accessToken,
@@ -188,7 +215,10 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
       },
     );
 
-    if (newTitle != null && newTitle.isNotEmpty && newTitle != currentTitle && mounted) {
+    if (newTitle != null &&
+        newTitle.isNotEmpty &&
+        newTitle != currentTitle &&
+        mounted) {
       if (_chatId == null) return;
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       final accessToken = await authProvider.getValidAccessToken();
@@ -252,16 +282,20 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
             return const Center(child: CircularProgressIndicator());
           }
 
-          if (chatProvider.errorMessage != null && chatProvider.currentChat == null && _chatId != null) {
+          if (chatProvider.errorMessage != null &&
+              chatProvider.currentChat == null &&
+              _chatId != null) {
             return Center(
               child: Padding(
                 padding: const EdgeInsets.all(24),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.error_outline, size: 64, color: colorScheme.error),
+                    Icon(Icons.error_outline,
+                        size: 64, color: colorScheme.error),
                     const SizedBox(height: 16),
-                    Text('Failed to load chat', style: Theme.of(context).textTheme.titleLarge),
+                    Text('Failed to load chat',
+                        style: Theme.of(context).textTheme.titleLarge),
                     const SizedBox(height: 8),
                     Text(
                       chatProvider.errorMessage!,
@@ -288,7 +322,8 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
                 child: ListView.builder(
                   controller: _scrollController,
                   padding: const EdgeInsets.all(16),
-                  itemCount: messages.length + (chatProvider.isWaitingForResponse ? 1 : 0),
+                  itemCount: messages.length +
+                      (chatProvider.isWaitingForResponse ? 1 : 0),
                   itemBuilder: (context, index) {
                     if (index == messages.length) {
                       return const _TypingIndicatorBubble();
@@ -316,7 +351,8 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
                 ),
                 child: Shortcuts(
                   shortcuts: const {
-                    SingleActivator(LogicalKeyboardKey.enter): _SendMessageIntent(),
+                    SingleActivator(LogicalKeyboardKey.enter):
+                        _SendMessageIntent(),
                   },
                   child: Actions(
                     actions: <Type, Action<Intent>>{
@@ -350,7 +386,9 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
                         const SizedBox(width: 8),
                         IconButton(
                           icon: const Icon(Icons.send),
-                          onPressed: chatProvider.isSendingMessage ? null : _sendMessage,
+                          onPressed: chatProvider.isSendingMessage
+                              ? null
+                              : _sendMessage,
                           color: colorScheme.primary,
                           iconSize: 28,
                         ),
@@ -384,7 +422,8 @@ class _MessageBubble extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: Row(
-        mainAxisAlignment: isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+        mainAxisAlignment:
+            isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (!isUser)
@@ -400,12 +439,16 @@ class _MessageBubble extends StatelessWidget {
           const SizedBox(width: 8),
           Flexible(
             child: Column(
-              crossAxisAlignment: isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+              crossAxisAlignment:
+                  isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   decoration: BoxDecoration(
-                    color: isUser ? colorScheme.primary : colorScheme.surfaceContainerHighest,
+                    color: isUser
+                        ? colorScheme.primary
+                        : colorScheme.surfaceContainerHighest,
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Column(
@@ -414,10 +457,13 @@ class _MessageBubble extends StatelessWidget {
                       Text(
                         message.content,
                         style: TextStyle(
-                          color: isUser ? colorScheme.onPrimary : colorScheme.onSurfaceVariant,
+                          color: isUser
+                              ? colorScheme.onPrimary
+                              : colorScheme.onSurfaceVariant,
                         ),
                       ),
-                      if (message.toolCalls != null && message.toolCalls!.isNotEmpty)
+                      if (message.toolCalls != null &&
+                          message.toolCalls!.isNotEmpty)
                         Padding(
                           padding: const EdgeInsets.only(top: 8),
                           child: Wrap(
