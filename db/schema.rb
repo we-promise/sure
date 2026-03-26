@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_03_26_112218) do
+ActiveRecord::Schema[7.2].define(version: 2026_03_26_232057) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -202,15 +202,6 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_26_112218) do
     t.datetime "updated_at", null: false
     t.index ["family_id", "start_date", "end_date"], name: "index_budgets_on_family_id_and_start_date_and_end_date", unique: true
     t.index ["family_id"], name: "index_budgets_on_family_id"
-  end
-
-  create_table "builtin_assistant_configs", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.uuid "family_id", null: false
-    t.string "preferred_ai_model", limit: 128
-    t.string "openai_uri_base", limit: 512
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["family_id"], name: "index_builtin_assistant_configs_on_family_id", unique: true
   end
 
   create_table "categories", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -544,6 +535,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_26_112218) do
     t.string "moniker", default: "Family", null: false
     t.string "assistant_type", default: "builtin", null: false
     t.string "default_account_sharing", default: "shared", null: false
+    t.string "preferred_ai_model", limit: 128
+    t.string "openai_uri_base", limit: 512
     t.check_constraint "default_account_sharing::text = ANY (ARRAY['shared'::character varying, 'private'::character varying]::text[])", name: "chk_families_default_account_sharing"
     t.check_constraint "month_start_day >= 1 AND month_start_day <= 28", name: "month_start_day_range"
   end
@@ -1546,7 +1539,6 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_26_112218) do
   add_foreign_key "budget_categories", "budgets"
   add_foreign_key "budget_categories", "categories"
   add_foreign_key "budgets", "families"
-  add_foreign_key "builtin_assistant_configs", "families"
   add_foreign_key "categories", "families"
   add_foreign_key "chats", "users"
   add_foreign_key "coinbase_accounts", "coinbase_items"

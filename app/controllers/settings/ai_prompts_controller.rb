@@ -5,16 +5,14 @@ class Settings::AiPromptsController < ApplicationController
 
   def show
     @breadcrumbs = [ [ "Home", root_path ], [ "AI Prompts", nil ] ]
-    @config = builtin_config
     @assistant_config = Assistant.config_for(OpenStruct.new(user: Current.user))
     @effective_model = Chat.default_model(@family)
     @show_openai_prompts = show_openai_prompts?
   end
 
   def update
-    @config = builtin_config
-    if @config.update(builtin_assistant_config_params)
-      redirect_to redirect_after_update, notice: t(".success")
+    if @family.update(family_ai_params)
+      redirect_to settings_ai_prompts_path, notice: t(".success")
     else
       @assistant_config = Assistant.config_for(OpenStruct.new(user: Current.user))
       @effective_model = Chat.default_model(@family)
@@ -25,10 +23,6 @@ class Settings::AiPromptsController < ApplicationController
 
   private
 
-    def redirect_after_update
-      settings_ai_prompts_path
-    end
-
     def ensure_admin
       redirect_to root_path, alert: t("settings.ai_prompts.not_authorized") unless Current.user&.admin?
     end
@@ -37,12 +31,8 @@ class Settings::AiPromptsController < ApplicationController
       @family = Current.family
     end
 
-    def builtin_config
-      @family.builtin_assistant_config || @family.build_builtin_assistant_config
-    end
-
-    def builtin_assistant_config_params
-      params.require(:builtin_assistant_config).permit(:preferred_ai_model, :openai_uri_base)
+    def family_ai_params
+      params.require(:family).permit(:preferred_ai_model, :openai_uri_base)
     end
 
     def show_openai_prompts?
