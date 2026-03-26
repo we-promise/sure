@@ -54,6 +54,7 @@ class TransactionsController < ApplicationController
 
     # Load projected recurring transactions for next 10 days
     @projected_recurring = Current.family.recurring_transactions
+                                  .accessible_by(Current.user)
                                   .active
                                   .where("next_expected_date <= ? AND next_expected_date >= ?",
                                          10.days.from_now.to_date,
@@ -304,6 +305,7 @@ class TransactionsController < ApplicationController
 
     # Check if a recurring transaction already exists for this pattern
     existing = Current.family.recurring_transactions.find_by(
+      account_id: transaction.entry.account_id,
       merchant_id: transaction.merchant_id,
       name: transaction.merchant_id.present? ? nil : transaction.entry.name,
       currency: transaction.entry.currency,

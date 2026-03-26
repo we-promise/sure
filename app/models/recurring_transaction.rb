@@ -2,6 +2,7 @@ class RecurringTransaction < ApplicationRecord
   include Monetizable
 
   belongs_to :family
+  belongs_to :account, optional: true
   belongs_to :merchant, optional: true
 
   monetize :amount
@@ -35,6 +36,7 @@ class RecurringTransaction < ApplicationRecord
 
   scope :for_family, ->(family) { where(family: family) }
   scope :expected_soon, -> { active.where("next_expected_date <= ?", 1.month.from_now) }
+  scope :accessible_by, ->(user) { where(account_id: Account.accessible_by(user).select(:id)) }
 
   # Class methods for identification and cleanup
   # Schedules pattern identification with debounce to run after all syncs complete
@@ -66,7 +68,8 @@ class RecurringTransaction < ApplicationRecord
       name: transaction.merchant_id.present? ? nil : entry.name,
       currency: entry.currency,
       expected_day: expected_day,
-      lookback_months: 6
+      lookback_months: 6,
+      account: entry.account
     )
 
     # Calculate amount variance from historical data
@@ -89,6 +92,7 @@ class RecurringTransaction < ApplicationRecord
 
     create!(
       family: family,
+      account: entry.account,
       merchant_id: transaction.merchant_id,
       name: transaction.merchant_id.present? ? nil : entry.name,
       amount: entry.amount,
@@ -106,10 +110,10 @@ class RecurringTransaction < ApplicationRecord
   end
 
   # Find matching transaction entries for variance calculation
-  def self.find_matching_transaction_entries(family:, merchant_id:, name:, currency:, expected_day:, lookback_months: 6)
+  def self.find_matching_transaction_entries(family:, merchant_id:, name:, currency:, expected_day:, lookback_months: 6, account: nil)
     lookback_date = lookback_months.months.ago.to_date
 
-    entries = family.entries
+    entries = (account.present? ? account.entries : family.entries)
       .where(entryable_type: "Transaction")
       .where(currency: currency)
       .where("entries.date >= ?", lookback_date)
@@ -131,14 +135,15 @@ class RecurringTransaction < ApplicationRecord
   end
 
   # Find matching transaction amounts for variance calculation
-  def self.find_matching_transaction_amounts(family:, merchant_id:, name:, currency:, expected_day:, lookback_months: 6)
+  def self.find_matching_transaction_amounts(family:, merchant_id:, name:, currency:, expected_day:, lookback_months: 6, account: nil)
     matching_entries = find_matching_transaction_entries(
       family: family,
       merchant_id: merchant_id,
       name: name,
       currency: currency,
       expected_day: expected_day,
-      lookback_months: lookback_months
+      lookback_months: lookback_months,
+      account: account
     )
 
     matching_entries.map(&:amount)
@@ -173,8 +178,10 @@ class RecurringTransaction < ApplicationRecord
   def matching_transactions
     # For manual recurring with amount variance, match within range
     # For automatic recurring, match exact amount
+    base = account.present? ? account.entries : family.entries
+
     entries = if manual? && has_amount_variance?
-      family.entries
+      base
         .where(entryable_type: "Transaction")
         .where(currency: currency)
         .where("entries.amount BETWEEN ? AND ?", expected_amount_min, expected_amount_max)
@@ -183,7 +190,7 @@ class RecurringTransaction < ApplicationRecord
                [ expected_day_of_month + 2, 31 ].min)
         .order(date: :desc)
     else
-      family.entries
+      base
         .where(entryable_type: "Transaction")
         .where(currency: currency)
         .where("entries.amount = ?", amount)

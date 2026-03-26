@@ -223,6 +223,7 @@ end
 
     # Create existing recurring transaction
     family.recurring_transactions.create!(
+      account: account,
       merchant: merchant,
       amount: entry.amount,
       currency: entry.currency,
