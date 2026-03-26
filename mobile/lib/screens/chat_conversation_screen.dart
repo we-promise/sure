@@ -93,7 +93,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
     // Skip fetch if the provider already has this chat loaded (e.g. just created).
     if (!forceRefresh && chatProvider.currentChat?.id == _chatId) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (_scrollController.hasClients) {
+        if (mounted && _scrollController.hasClients) {
           _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
         }
       });
@@ -112,7 +112,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
     );
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollController.hasClients) {
+      if (mounted && _scrollController.hasClients) {
         _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
       }
     });
