@@ -46,7 +46,6 @@ class Settings::AiPromptsController < ApplicationController
     end
 
     def show_openai_prompts?
-      effective = Chat.default_model(@family)
-      effective.blank? || effective.match?(/\A(gpt-|o1-|gpt4)/i)
+      @effective_model.blank? || @effective_model.match?(/\A(gpt-|o1-|gpt4)/i)
     end
 end

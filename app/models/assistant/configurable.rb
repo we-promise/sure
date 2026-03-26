@@ -28,30 +28,12 @@ module Assistant::Configurable
       end
 
       def langfuse_intro_instructions(preferred_currency, preferred_date_format)
-        return unless langfuse_client
-
-        prompt = langfuse_client.get_prompt("intro_instructions")
-        compiled_prompt = prompt.compile(
+        fetch_langfuse_prompt("intro_instructions",
           preferred_currency_symbol: preferred_currency.symbol,
           preferred_currency_iso_code: preferred_currency.iso_code,
           preferred_date_format: preferred_date_format,
           current_date: Date.current
         )
-        content = case compiled_prompt
-        when String
-          compiled_prompt
-        when Array
-          compiled_prompt.filter_map { |message| message[:content] }.join("\n\n")
-        else
-          nil
-        end
-        return if content.blank?
-
-        template = prompt.respond_to?(:prompt) ? prompt.prompt : (prompt.respond_to?(:template) ? prompt.template : nil)
-        { name: prompt.name, version: prompt.version, template: template, content: content }
-      rescue => e
-        Rails.logger.warn("Langfuse intro prompt retrieval failed: #{e.message}")
-        nil
       end
 
       def fallback_intro_instructions(preferred_currency, preferred_date_format)
@@ -101,11 +83,7 @@ module Assistant::Configurable
       end
 
       def langfuse_default_instructions(preferred_currency, preferred_date_format)
-        return unless langfuse_client
-
-        prompt = langfuse_client.get_prompt("default_instructions")
-
-        compiled_prompt = prompt.compile(
+        fetch_langfuse_prompt("default_instructions",
           preferred_currency_symbol: preferred_currency.symbol,
           preferred_currency_iso_code: preferred_currency.iso_code,
           preferred_currency_default_precision: preferred_currency.default_precision,
@@ -115,28 +93,6 @@ module Assistant::Configurable
           preferred_date_format: preferred_date_format,
           current_date: Date.current
         )
-
-        content = case compiled_prompt
-        when String
-          compiled_prompt
-        when Array
-          compiled_prompt.filter_map { |message| message[:content] }.join("\n\n")
-        else
-          nil
-        end
-
-        return if content.blank?
-
-        template = prompt.respond_to?(:prompt) ? prompt.prompt : (prompt.respond_to?(:template) ? prompt.template : nil)
-        {
-          name: prompt.name,
-          version: prompt.version,
-          template: template,
-          content: content
-        }
-      rescue => e
-        Rails.logger.warn("Langfuse prompt retrieval failed: #{e.message}")
-        nil
       end
 
       def fallback_default_instructions(preferred_currency, preferred_date_format)
@@ -194,6 +150,30 @@ module Assistant::Configurable
           - If you suspect that you do not have enough data to 100% accurately answer, be transparent about it and state exactly what
             the data you're presenting represents and what context it is in (i.e. date range, account, etc.)
         PROMPT
+      end
+
+      def fetch_langfuse_prompt(name, compile_params)
+        return unless langfuse_client
+
+        prompt = langfuse_client.get_prompt(name)
+        compiled_prompt = prompt.compile(**compile_params)
+
+        content = case compiled_prompt
+        when String
+          compiled_prompt
+        when Array
+          compiled_prompt.filter_map { |message| message[:content] }.join("\n\n")
+        else
+          nil
+        end
+
+        return if content.blank?
+
+        template = prompt.respond_to?(:prompt) ? prompt.prompt : (prompt.respond_to?(:template) ? prompt.template : nil)
+        { name: prompt.name, version: prompt.version, template: template, content: content }
+      rescue => e
+        Rails.logger.warn("Langfuse prompt retrieval failed (#{name}): #{e.message}")
+        nil
       end
 
       def langfuse_client

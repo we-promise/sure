@@ -299,6 +299,4 @@ class Family < ApplicationRecord
   def self_hoster?
     Rails.application.config.app_mode.self_hosted?
   end
-
-  private
 end

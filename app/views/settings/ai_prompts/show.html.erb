@@ -73,7 +73,7 @@
                 <div class="mt-2 pt-2 border-t border-primary/10 w-full min-w-0 overflow-hidden">
                   <p class="text-xs text-secondary mb-1">[<%= @effective_model %>]</p>
                   <div class="px-3 py-2 bg-surface-default border border-primary/20 rounded-lg w-full min-w-0 overflow-x-auto">
-                    <pre class="whitespace-pre-wrap text-xs font-mono text-primary"><%= Assistant.config_for(OpenStruct.new(user: Current.user))[:instructions] %></pre>
+                    <pre class="whitespace-pre-wrap text-xs font-mono text-primary"><%= @assistant_config[:instructions] %></pre>
                   </div>
                 </div>
               </details>
