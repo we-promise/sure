@@ -19,6 +19,7 @@ class Account < ApplicationRecord
   has_many :trades, through: :entries, source: :entryable, source_type: "Trade"
   has_many :holdings, dependent: :destroy
   has_many :balances, dependent: :destroy
+  has_many :recurring_transactions, dependent: :destroy
 
   monetize :balance, :cash_balance
 

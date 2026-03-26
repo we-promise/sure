@@ -36,7 +36,9 @@ class RecurringTransaction < ApplicationRecord
 
   scope :for_family, ->(family) { where(family: family) }
   scope :expected_soon, -> { active.where("next_expected_date <= ?", 1.month.from_now) }
-  scope :accessible_by, ->(user) { where(account_id: Account.accessible_by(user).select(:id)) }
+  scope :accessible_by, ->(user) {
+    where(account_id: Account.accessible_by(user).select(:id)).or(where(account_id: nil))
+  }
 
   # Class methods for identification and cleanup
   # Schedules pattern identification with debounce to run after all syncs complete
