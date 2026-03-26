@@ -108,6 +108,12 @@ en:
       review_recommended_short: Rev
       confirm_title: "Merge with posted transaction (%{posted_amount})"
       reject_title: Keep as separate transactions
+    summary:
+      total_transactions: Total transactions
+      income: Income
+      expenses: Expenses
+      inflow: Inflow
+      outflow: Outflow
     header:
       edit_categories: Edit categories
       edit_imports: Edit imports
