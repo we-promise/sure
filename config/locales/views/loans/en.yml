@@ -11,7 +11,7 @@ en:
       term_months: Term (months)
       term_months_placeholder: '360'
       subtype_prompt: Select loan type
-
+      none: None
     new:
       title: Enter loan details
     overview:
