@@ -8,7 +8,7 @@ en:
       subtype_prompt: Select account type
       subtype_none: None
       tax_treatment_label: Tax Treatment
-      tax_treatment_hint: Most cryptocurrency is held in taxable accounts. Select a different option if held in a tax-advantaged account like a self-directed IRA.
+      tax_treatment_hint: Most cryptocurrency is held in taxable accounts. Select a different option if held in a tax-advantaged account.
     new:
       title: Enter account balance
     subtypes:
