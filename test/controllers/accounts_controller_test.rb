@@ -11,6 +11,19 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "auto reopens Plaid Link when returning from OAuth" do
+    Family.any_instance.stubs(:get_link_token).returns("resume-token")
+
+    get new_plaid_item_url(region: "us")
+    assert_equal "resume-token", session[:plaid_link_session]["token"]
+
+    get accounts_url, params: { oauth_state_id: "oauth-123" }
+
+    assert_response :success
+    assert_includes @response.body, "data-controller=\"plaid\""
+    assert_includes @response.body, "resume-token"
+  end
+
   test "should get show" do
     get account_url(@account)
     assert_response :success

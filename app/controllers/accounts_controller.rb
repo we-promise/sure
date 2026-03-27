@@ -19,6 +19,10 @@ class AccountsController < ApplicationController
     # Build sync stats maps for all providers
     build_sync_stats_maps
 
+    if resume_plaid_oauth_flow?
+      @plaid_oauth_link_data = build_plaid_oauth_link_data
+    end
+
     # Prevent Turbo Drive from caching this page to ensure fresh account lists
     expires_now
     render layout: "settings"
@@ -277,5 +281,22 @@ class AccountsController < ApplicationController
         latest_sync = item.syncs.ordered.first
         @indexa_capital_sync_stats_map[item.id] = latest_sync&.sync_stats || {}
       end
+    end
+
+    def resume_plaid_oauth_flow?
+      params[:oauth_state_id].present? && session[:plaid_link_session].present?
+    end
+
+    def build_plaid_oauth_link_data
+      stored = session[:plaid_link_session]
+      return if stored.blank?
+      return if stored["token"].blank?
+
+      {
+        token: stored["token"],
+        region: stored["region"].presence || "us",
+        item_id: stored["item_id"],
+        is_update: stored["mode"] == "update"
+      }
     end
 end

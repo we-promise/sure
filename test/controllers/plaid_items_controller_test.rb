@@ -6,6 +6,18 @@ class PlaidItemsControllerTest < ActionDispatch::IntegrationTest
     sign_in @user = users(:family_admin)
   end
 
+  test "new stores link token for OAuth resume" do
+    Family.any_instance.stubs(:get_link_token).returns("test-link-token")
+
+    get new_plaid_item_url(region: "us")
+
+    stored_session = session[:plaid_link_session]
+    assert_equal "test-link-token", stored_session["token"]
+    assert_equal "us", stored_session["region"]
+    assert_equal "new", stored_session["mode"]
+    assert_nil stored_session["item_id"]
+  end
+
   test "create" do
     @plaid_provider = mock
     Provider::Registry.expects(:plaid_provider_for_region).with("us").returns(@plaid_provider)
@@ -15,6 +27,8 @@ class PlaidItemsControllerTest < ActionDispatch::IntegrationTest
     @plaid_provider.expects(:exchange_public_token).with(public_token).returns(
       OpenStruct.new(access_token: "access-sandbox-1234", item_id: "item-sandbox-1234")
     )
+
+    session[:plaid_link_session] = { "token" => "test-link-token", "region" => "us", "mode" => "new" }
 
     assert_difference "PlaidItem.count", 1 do
       post plaid_items_url, params: {
@@ -26,6 +40,7 @@ class PlaidItemsControllerTest < ActionDispatch::IntegrationTest
       }
     end
 
+    assert_nil session[:plaid_link_session]
     assert_equal "Account linked successfully.  Please wait for accounts to sync.", flash[:notice]
     assert_redirected_to accounts_path
   end
@@ -42,8 +57,16 @@ class PlaidItemsControllerTest < ActionDispatch::IntegrationTest
     plaid_item = plaid_items(:one)
     PlaidItem.any_instance.expects(:sync_later).once
 
+    session[:plaid_link_session] = {
+      "token" => "test-link-token",
+      "region" => "us",
+      "mode" => "update",
+      "item_id" => plaid_item.id
+    }
+
     post sync_plaid_item_url(plaid_item)
 
+    assert_nil session[:plaid_link_session]
     assert_redirected_to accounts_path
   end
 

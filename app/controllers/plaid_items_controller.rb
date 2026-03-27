@@ -11,6 +11,12 @@ class PlaidItemsController < ApplicationController
       accountable_type: params[:accountable_type] || "Depository",
       region: region
     )
+
+    store_plaid_link_session(
+      link_token: @link_token,
+      region: region,
+      mode: :new
+    )
   end
 
   def edit
@@ -20,6 +26,13 @@ class PlaidItemsController < ApplicationController
       webhooks_url: webhooks_url,
       redirect_url: accounts_url,
     )
+
+    store_plaid_link_session(
+      link_token: @link_token,
+      region: @plaid_item.plaid_region,
+      mode: :update,
+      item_id: @plaid_item.id
+    )
   end
 
   def create
@@ -28,6 +41,8 @@ class PlaidItemsController < ApplicationController
       item_name: item_name,
       region: plaid_item_params[:region]
     )
+
+    clear_plaid_link_session
 
     redirect_to accounts_path, notice: t(".success")
   end
@@ -41,6 +56,8 @@ class PlaidItemsController < ApplicationController
     unless @plaid_item.syncing?
       @plaid_item.sync_later
     end
+
+    clear_plaid_link_session_if_updating(@plaid_item)
 
     respond_to do |format|
       format.html { redirect_back_or_to accounts_path }
@@ -113,5 +130,29 @@ class PlaidItemsController < ApplicationController
       return webhooks_plaid_eu_url if Rails.env.production?
 
       ENV.fetch("DEV_WEBHOOKS_URL", root_url.chomp("/")) + "/webhooks/plaid_eu"
+    end
+
+    def store_plaid_link_session(link_token:, region:, mode:, item_id: nil)
+      return if link_token.blank?
+
+      session[:plaid_link_session] = {
+        "token" => link_token,
+        "region" => region.to_s,
+        "mode" => mode.to_s,
+        "item_id" => item_id
+      }
+    end
+
+    def clear_plaid_link_session
+      session.delete(:plaid_link_session)
+    end
+
+    def clear_plaid_link_session_if_updating(plaid_item)
+      stored = session[:plaid_link_session]
+      return if stored.blank?
+      return unless stored["mode"] == "update"
+      return unless stored["item_id"].to_i == plaid_item.id
+
+      clear_plaid_link_session
     end
 end

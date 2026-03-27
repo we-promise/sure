@@ -14,13 +14,20 @@ export default class extends Controller {
   }
 
   open() {
-    const handler = Plaid.create({
+    const config = {
       token: this.linkTokenValue,
       onSuccess: this.handleSuccess,
       onLoad: this.handleLoad,
       onExit: this.handleExit,
       onEvent: this.handleEvent,
-    });
+    };
+
+    const redirectUri = this.receivedRedirectUri();
+    if (redirectUri) {
+      config.receivedRedirectUri = redirectUri;
+    }
+
+    const handler = Plaid.create(config);
 
     handler.open();
   }
@@ -77,4 +84,13 @@ export default class extends Controller {
   handleLoad = () => {
     // no-op
   };
+
+  receivedRedirectUri() {
+    const searchParams = new URLSearchParams(window.location.search);
+    if (searchParams.has("oauth_state_id")) {
+      return window.location.href;
+    }
+
+    return null;
+  }
 }
