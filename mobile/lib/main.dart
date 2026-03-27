@@ -286,13 +286,16 @@ class _AppWrapperState extends State<AppWrapper> with WidgetsBindingObserver {
         }
 
         if (authProvider.isAuthenticated) {
-          if (_isLocked) {
-            return BiometricLockScreen(
-              onUnlocked: _onUnlocked,
-              onLogout: _onLockLogout,
-            );
-          }
-          return const MainNavigationScreen();
+          return Stack(
+            children: [
+              const MainNavigationScreen(),
+              if (_isLocked)
+                BiometricLockScreen(
+                  onUnlocked: _onUnlocked,
+                  onLogout: _onLockLogout,
+                ),
+            ],
+          );
         }
 
         if (authProvider.ssoOnboardingPending) {
