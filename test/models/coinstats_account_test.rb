@@ -290,4 +290,46 @@ class CoinstatsAccountTest < ActiveSupport::TestCase
     # Verify wallet A no longer exists
     assert_nil CoinstatsAccount.find_by(id: wallet_a.id)
   end
+
+  test "portfolio exchange account derives total and cash balances from embedded coins" do
+    @family.update!(currency: "EUR")
+
+    portfolio_account = @coinstats_item.coinstats_accounts.create!(
+      name: "Bitvavo",
+      currency: "EUR",
+      account_id: "exchange_portfolio:test",
+      wallet_address: "portfolio-test",
+      raw_payload: {
+        source: "exchange",
+        portfolio_account: true,
+        portfolio_id: "portfolio-test",
+        exchange_name: "Bitvavo",
+        coins: [
+          {
+            coin: { identifier: "bitcoin", symbol: "BTC", name: "Bitcoin" },
+            count: "0.00335845",
+            price: { EUR: "57950.0491" }
+          },
+          {
+            coin: { identifier: "ethereum", symbol: "ETH", name: "Ethereum" },
+            count: "0.05580825",
+            price: { EUR: "1728.952252246" }
+          },
+          {
+            coin: { identifier: "FiatCoin:eur", symbol: "EUR", name: "Euro", isFiat: true },
+            count: "2.58",
+            price: { EUR: "1" }
+          }
+        ]
+      }
+    )
+
+    assert portfolio_account.exchange_portfolio_account?
+    refute portfolio_account.fiat_asset?
+    assert_equal "EUR", portfolio_account.inferred_currency
+    assert_in_delta 293.2718, portfolio_account.inferred_current_balance.to_f, 0.0001
+    assert_in_delta 2.58, portfolio_account.inferred_cash_balance.to_f, 0.0001
+    assert_equal 2, portfolio_account.portfolio_non_fiat_coins.size
+    assert_equal 1, portfolio_account.portfolio_fiat_coins.size
+  end
 end

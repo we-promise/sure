@@ -1,5 +1,6 @@
 class AccountsController < ApplicationController
   include StreamExtensions
+  SPARKLINE_CACHE_VERSION = "v3"
 
   before_action :set_account, only: %i[show sparkline sync set_default remove_default]
   before_action :set_manageable_account, only: %i[toggle_active destroy unlink confirm_unlink select_provider]
@@ -75,7 +76,7 @@ class AccountsController < ApplicationController
   end
 
   def sparkline
-    etag_key = @account.family.build_cache_key("#{@account.id}_sparkline", invalidate_on_data_updates: true)
+    etag_key = @account.family.build_cache_key("#{@account.id}_sparkline_#{SPARKLINE_CACHE_VERSION}", invalidate_on_data_updates: true)
 
     # Short-circuit with 304 Not Modified when the client already has the latest version.
     # We defer the expensive series computation until we know the content is stale.

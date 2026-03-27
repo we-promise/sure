@@ -1,6 +1,6 @@
 class CoinstatsItemsController < ApplicationController
   before_action :set_coinstats_item, only: [ :show, :edit, :update, :destroy, :sync ]
-  before_action :require_admin!, only: [ :new, :create, :edit, :update, :destroy, :sync, :link_wallet ]
+  before_action :require_admin!, only: [ :new, :create, :edit, :update, :destroy, :sync, :link_wallet, :link_exchange ]
 
   def index
     @coinstats_items = Current.family.coinstats_items.ordered
@@ -13,6 +13,7 @@ class CoinstatsItemsController < ApplicationController
     @coinstats_item = Current.family.coinstats_items.build
     @coinstats_items = Current.family.coinstats_items.where.not(api_key: nil)
     @blockchains = fetch_blockchain_options(@coinstats_items.first)
+    @exchanges = fetch_exchange_options(@coinstats_items.first)
   end
 
   def create
@@ -89,6 +90,44 @@ class CoinstatsItemsController < ApplicationController
     render_link_wallet_error(t(".error", message: e.message))
   end
 
+  def link_exchange
+    coinstats_item_id = params[:coinstats_item_id].presence
+    @exchange_connection_id = params[:exchange_connection_id]&.to_s&.strip.presence
+    @exchange_connection_name = params[:exchange_connection_name]&.to_s&.strip.presence
+    connection_fields_param = params[:connection_fields]
+    connection_fields_hash =
+      if connection_fields_param.respond_to?(:to_unsafe_h)
+        connection_fields_param.to_unsafe_h
+      else
+        connection_fields_param.to_h
+      end
+    @exchange_connection_fields = connection_fields_hash.transform_values { |value| value.to_s.strip }.compact_blank
+
+    unless coinstats_item_id && @exchange_connection_id && @exchange_connection_fields.present?
+      return render_link_exchange_error("Exchange and credentials are required")
+    end
+
+    @coinstats_item = Current.family.coinstats_items.find(coinstats_item_id)
+
+    result = CoinstatsItem::ExchangeLinker.new(
+      @coinstats_item,
+      connection_id: @exchange_connection_id,
+      connection_fields: @exchange_connection_fields,
+      name: @exchange_connection_name
+    ).link
+
+    if result.success?
+      redirect_to accounts_path, notice: "#{@exchange_connection_name.presence || @exchange_connection_id.to_s.titleize} exchange linked", status: :see_other
+    else
+      render_link_exchange_error(result.errors.join("; ").presence || "Failed to link exchange")
+    end
+  rescue Provider::Coinstats::Error => e
+    render_link_exchange_error("Failed to link exchange: #{e.message}")
+  rescue => e
+    Rails.logger.error("CoinStats link exchange error: #{e.class} - #{e.message}")
+    render_link_exchange_error("Failed to link exchange: #{e.message}")
+  end
+
   private
 
     def set_coinstats_item
@@ -149,9 +188,21 @@ class CoinstatsItemsController < ApplicationController
 
     def render_link_wallet_error(error_message)
       @error_message = error_message
-      @coinstats_items = Current.family.coinstats_items.where.not(api_key: nil)
-      @blockchains = fetch_blockchain_options(@coinstats_items.first)
+      prepare_link_form_state
       render :new, status: :unprocessable_entity
+    end
+
+    def render_link_exchange_error(error_message)
+      @error_message = error_message
+      prepare_link_form_state
+      render :new, status: :unprocessable_entity
+    end
+
+    def prepare_link_form_state
+      @coinstats_items = Current.family.coinstats_items.where.not(api_key: nil)
+      selected_item = @coinstats_items.first
+      @blockchains = fetch_blockchain_options(selected_item)
+      @exchanges = fetch_exchange_options(selected_item)
     end
 
     def fetch_blockchain_options(coinstats_item)
@@ -165,6 +216,18 @@ class CoinstatsItemsController < ApplicationController
     rescue StandardError => e
       Rails.logger.error("CoinStats blockchain fetch failed: item_id=#{coinstats_item.id} error=#{e.class} message=#{e.message}")
       flash.now[:alert] = t("coinstats_items.new.blockchain_fetch_error")
+      []
+    end
+
+    def fetch_exchange_options(coinstats_item)
+      return [] unless coinstats_item&.api_key.present?
+
+      Provider::Coinstats.new(coinstats_item.api_key).exchange_options
+    rescue Provider::Coinstats::Error => e
+      Rails.logger.error("CoinStats exchange fetch failed: item_id=#{coinstats_item.id} error=#{e.class} message=#{e.message}")
+      []
+    rescue StandardError => e
+      Rails.logger.error("CoinStats exchange fetch failed: item_id=#{coinstats_item.id} error=#{e.class} message=#{e.message}")
       []
     end
 end
