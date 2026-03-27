@@ -170,7 +170,18 @@ en:
       change: Change photo
     providers:
       show:
+        page_title: Sync Providers
+        description: Configure credentials for third-party sync providers. Settings configured here will override environment variables.
         coinbase_title: Coinbase
+      sections:
+        lunchflow: Lunch Flow
+        simplefin: SimpleFIN
+        enable_banking: Enable Banking (beta)
+        coinstats: CoinStats (beta)
+        mercury: Mercury (beta)
+        coinbase: Coinbase (beta)
+        snaptrade: SnapTrade (beta)
+        indexa_capital: Indexa Capital (alpha)
       encryption_error:
         title: Encryption Configuration Required
         message: Active Record encryption keys are not configured. Please ensure the encryption credentials (active_record_encryption.primary_key, active_record_encryption.deterministic_key, and active_record_encryption.key_derivation_salt) are properly set up in your Rails credentials or environment variables before using sync providers.

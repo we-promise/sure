@@ -1,0 +1,7 @@
+---
+zh-CN:
+  models:
+    category:
+      uncategorized: 未分类
+      other_investments: 其他投资
+      investment_contributions: 投资投入

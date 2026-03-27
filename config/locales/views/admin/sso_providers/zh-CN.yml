@@ -1,0 +1,115 @@
+---
+zh-CN:
+  admin:
+    unauthorized: 你无权访问此区域。
+    sso_providers:
+      index:
+        title: SSO 提供商
+        description: 管理此实例的单点登录（SSO）认证提供商
+        add_provider: 添加提供商
+        no_providers_title: 暂无 SSO 提供商
+        no_providers_message: 从添加第一个 SSO 提供商开始。
+        note: 对 SSO 提供商的更改需要重启服务器后才会生效。或者启用功能开关 AUTH_PROVIDERS_SOURCE=db 以从数据库动态加载提供商。
+        table:
+          name: 名称
+          strategy: 策略
+          status: 状态
+          issuer: Issuer
+          actions: 操作
+          enabled: 已启用
+          disabled: 已禁用
+        legacy_providers_title: 通过环境变量配置的提供商
+        legacy_providers_notice: 这些提供商通过环境变量或 YAML 配置，无法在此界面管理。要在此管理，请启用 AUTH_PROVIDERS_SOURCE=db 并在 UI 中重新创建，将其迁移为数据库托管的提供商。
+        env_configured: Env/YAML
+      new:
+        title: 添加 SSO 提供商
+        description: 配置新的单点登录（SSO）认证提供商
+      edit:
+        title: 编辑 SSO 提供商
+        description: 更新 %{label} 的配置
+      create:
+        success: SSO 提供商创建成功。
+      update:
+        success: SSO 提供商更新成功。
+      destroy:
+        success: SSO 提供商删除成功。
+        confirm: 确定要删除此提供商吗？此操作不可撤销。
+      toggle:
+        success_enabled: SSO 提供商已启用。
+        success_disabled: SSO 提供商已禁用。
+        confirm_enable: 确定要启用此提供商吗？
+        confirm_disable: 确定要禁用此提供商吗？
+      form:
+        basic_information: 基本信息
+        oauth_configuration: OAuth/OIDC 配置
+        strategy_label: 策略
+        strategy_help: 选择要使用的认证策略
+        name_label: 名称
+        name_placeholder: 例如：openid_connect、keycloak、authentik
+        name_help: 唯一标识符（仅小写字母、数字、下划线）
+        label_label: 按钮文案
+        label_placeholder: 例如：使用 Keycloak 登录
+        label_help: 展示给用户的按钮文字
+        icon_label: 图标
+        icon_placeholder: 例如：key、google、github
+        icon_help: Lucide 图标名称（可选）
+        enabled_label: 启用此提供商
+        enabled_help: 启用后，用户可使用此提供商登录
+        issuer_label: Issuer
+        issuer_placeholder: https://accounts.google.com
+        issuer_help: OIDC Issuer URL（会校验 .well-known/openid-configuration 端点）
+        client_id_label: Client ID
+        client_id_placeholder: your-client-id
+        client_id_help: 来自身份提供方（IdP）的 OAuth Client ID
+        client_secret_label: Client Secret
+        client_secret_placeholder_new: your-client-secret
+        client_secret_placeholder_existing: "••••••••••••••••"
+        client_secret_help: OAuth Client Secret（在数据库中加密保存）
+        client_secret_help_existing: " - 留空将保留现有值"
+        redirect_uri_label: Redirect URI
+        redirect_uri_placeholder: https://yourdomain.com/auth/openid_connect/callback
+        redirect_uri_help: 在身份提供方（IdP）中配置的回调 URL
+        copy_button: 复制
+        cancel: 取消
+        submit: 保存提供商
+        errors_title: "%{count} 个错误导致无法保存此提供商："
+        provisioning_title: 用户自动开通（Provisioning）
+        default_role_label: 新用户默认角色
+        default_role_help: 通过即时（JIT）SSO 账户开通创建的用户将分配的角色。默认是 Member。
+        role_guest: Guest
+        role_member: Member
+        role_admin: Admin
+        role_super_admin: Super Admin
+        role_mapping_title: IdP 组到角色映射（可选）
+        role_mapping_help: 将 IdP 的 groups/claims 映射为应用角色。用户将获得匹配到的最高角色。留空则使用上面的默认角色。
+        super_admin_groups: Super Admin 组
+        admin_groups: Admin 组
+        guest_groups: Guest 组
+        member_groups: Member 组
+        groups_help: 以英文逗号分隔的 IdP 组名列表。使用 * 匹配所有组。
+        advanced_title: 高级 OIDC 设置
+        scopes_label: 自定义 Scopes
+        scopes_help: 以空格分隔的 OIDC scope 列表。留空使用默认（openid email profile）。添加 groups 以获取组声明。
+        prompt_label: 认证提示（Prompt）
+        prompt_default: 默认（由 IdP 决定）
+        prompt_login: 强制登录（重新认证）
+        prompt_consent: 强制授权（重新授权）
+        prompt_select_account: 选择账号（选择账户）
+        prompt_none: 不提示（静默认证）
+        prompt_help: 控制认证过程中 IdP 如何提示用户。
+        test_connection: 测试连接
+        saml_configuration: SAML 配置
+        idp_metadata_url: IdP 元数据 URL
+        idp_metadata_url_help: IdP 的 SAML 元数据地址。若提供，将自动配置其他 SAML 设置。
+        manual_saml_config: 手动配置（不使用元数据 URL 时）
+        manual_saml_help: 仅当你的 IdP 不提供元数据 URL 时才使用这些设置。
+        idp_sso_url: IdP SSO URL
+        idp_slo_url: IdP SLO URL（可选）
+        idp_certificate: IdP 证书
+        idp_certificate_help: PEM 格式的 X.509 证书。若不使用元数据 URL，则必须提供。
+        idp_cert_fingerprint: 证书指纹（替代方案）
+        name_id_format: NameID 格式
+        name_id_email: 邮箱地址（默认）
+        name_id_persistent: 持久化
+        name_id_transient: 临时
+        name_id_unspecified: 未指定
