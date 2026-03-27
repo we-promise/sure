@@ -30,7 +30,7 @@
       </div>
 
       <div>
-        <%= form.select :subtype,
+        <%= loan_form.select :subtype,
                   Loan::SUBTYPES.map { |k, v| [v[:long], k] },
                   { label: true, prompt: t("loans.form.subtype_prompt"), include_blank: t("loans.form.none") } %>
       </div>
