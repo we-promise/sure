@@ -111,6 +111,89 @@ class TradesControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to @entry.account
   end
 
+  test "creates trade buy entry with fee" do
+    assert_difference [ "Entry.count", "Trade.count" ], 1 do
+      post trades_url(account_id: @entry.account_id), params: {
+        model: {
+          type: "buy",
+          date: Date.current,
+          ticker: "NVDA (NASDAQ)",
+          qty: 10,
+          price: 20,
+          fee: 9.95,
+          currency: "USD"
+        }
+      }
+    end
+
+    created_entry = Entry.order(created_at: :desc).first
+
+    assert_in_delta 209.95, created_entry.amount.to_f, 0.001
+    assert_in_delta 9.95, created_entry.trade.fee.to_f, 0.001
+    assert_redirected_to account_url(created_entry.account)
+  end
+
+  test "creates trade sell entry with fee" do
+    assert_difference [ "Entry.count", "Trade.count" ], 1 do
+      post trades_url(account_id: @entry.account_id), params: {
+        model: {
+          type: "sell",
+          date: Date.current,
+          ticker: "AAPL (NYSE)",
+          qty: 10,
+          price: 20,
+          fee: 9.95,
+          currency: "USD"
+        }
+      }
+    end
+
+    created_entry = Entry.order(created_at: :desc).first
+
+    # sell: signed_amount = -10 * 20 + 9.95 = -190.05
+    assert_in_delta(-190.05, created_entry.amount.to_f, 0.001)
+    assert_in_delta 9.95, created_entry.trade.fee.to_f, 0.001
+    assert_redirected_to account_url(created_entry.account)
+  end
+
+  test "creates trade buy entry without fee defaults to zero" do
+    post trades_url(account_id: @entry.account_id), params: {
+      model: {
+        type: "buy",
+        date: Date.current,
+        ticker: "NVDA (NASDAQ)",
+        qty: 10,
+        price: 20,
+        currency: "USD"
+      }
+    }
+
+    created_entry = Entry.order(created_at: :desc).first
+
+    assert_in_delta 200, created_entry.amount.to_f, 0.001
+    assert_equal 0, created_entry.trade.fee.to_f
+  end
+
+  test "update includes fee in amount" do
+    patch trade_url(@entry), params: {
+      entry: {
+        currency: "USD",
+        nature: "outflow",
+        entryable_attributes: {
+          id: @entry.entryable_id,
+          qty: 10,
+          price: 20,
+          fee: 9.95
+        }
+      }
+    }
+
+    @entry.reload
+
+    assert_in_delta 209.95, @entry.amount.to_f, 0.001
+    assert_in_delta 9.95, @entry.trade.fee.to_f, 0.001
+  end
+
   test "creates trade buy entry" do
     assert_difference [ "Entry.count", "Trade.count", "Security.count" ], 1 do
       post trades_url(account_id: @entry.account_id), params: {

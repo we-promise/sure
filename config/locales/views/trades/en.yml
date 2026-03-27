@@ -5,6 +5,7 @@ en:
       account: Transfer account (optional)
       account_prompt: Search account
       amount: Amount
+      fee: Transaction fee
       holding: Ticker symbol
       price: Price per share
       qty: Quantity
@@ -29,6 +30,7 @@ en:
       cost_per_share_label: Cost per Share
       date_label: Date
       delete: Delete
+      fee_label: Transaction fee
       delete_subtitle: This action cannot be undone
       delete_title: Delete Trade
       details: Details

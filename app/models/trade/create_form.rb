@@ -2,7 +2,7 @@ class Trade::CreateForm
   include ActiveModel::Model
 
   attr_accessor :account, :date, :amount, :currency, :qty,
-                :price, :ticker, :manual_ticker, :type, :transfer_account_id
+                :price, :fee, :ticker, :manual_ticker, :type, :transfer_account_id
 
   # Either creates a trade, transaction, or transfer based on type
   # Returns the model, regardless of success or failure
@@ -30,7 +30,7 @@ class Trade::CreateForm
 
     def create_trade
       signed_qty = type == "sell" ? -qty.to_d : qty.to_d
-      signed_amount = signed_qty * price.to_d
+      signed_amount = signed_qty * price.to_d + fee.to_d
 
       trade_entry = account.entries.new(
         name: Trade.build_name(type, qty, security.ticker),
@@ -40,6 +40,7 @@ class Trade::CreateForm
         entryable: Trade.new(
           qty: signed_qty,
           price: price,
+          fee: fee.to_d,
           currency: currency,
           security: security,
           investment_activity_label: type.capitalize # "buy" → "Buy", "sell" → "Sell"

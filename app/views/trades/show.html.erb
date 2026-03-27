@@ -40,7 +40,15 @@
                   auto_submit: true,
                   min: 0,
                   step: "any",
-                  precision: 10,
+                  disabled: @entry.linked? %>
+          <% end %>
+          <%= f.fields_for :entryable do |ef| %>
+            <%= ef.money_field :fee,
+                  label: t(".fee_label"),
+                  disable_currency: true,
+                  auto_submit: true,
+                  min: 0,
+                  step: "any",
                   disabled: @entry.linked? %>
           <% end %>
         <% end %>
