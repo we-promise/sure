@@ -9,6 +9,8 @@ class DragAndDropImportTest < ApplicationSystemTestCase
     visit transactions_path
 
     assert_selector "#transactions[data-controller*='drag-and-drop-import']"
+    assert_selector "form[action='#{imports_path}']"
+    assert_selector "input[name='import[import_file]']", visible: :all
 
     # We can't easily simulate a true native drag-and-drop in headless chrome via Capybara without complex JS.
     # However, we can verify that the hidden form exists and works when a file is "dropped" (input populated).
@@ -16,16 +18,7 @@ class DragAndDropImportTest < ApplicationSystemTestCase
 
     file_path = file_fixture("imports/transactions.csv")
 
-    # Manually make form and input visible
-    execute_script("
-      var form = document.querySelector('form[action=\"#{imports_path}\"]');
-      form.classList.remove('hidden');
-      var input = document.querySelector('input[name=\"import[import_file]\"]');
-      input.classList.remove('hidden');
-      input.style.display = 'block';
-    ")
-
-    attach_file "import[import_file]", file_path
+    attach_file "import[import_file]", file_path, make_visible: true
 
     # Submit the form manually since we bypassed the 'drop' event listener which triggers submit
     find("form[action='#{imports_path}']").evaluate_script("this.requestSubmit()")
