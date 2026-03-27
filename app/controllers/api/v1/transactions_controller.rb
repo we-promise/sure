@@ -10,7 +10,9 @@ class Api::V1::TransactionsController < Api::V1::BaseController
 
   def index
     family = current_resource_owner.family
+    accessible_account_ids = family.accounts.accessible_by(current_resource_owner).select(:id)
     transactions_query = family.transactions.visible
+      .joins(:entry).where(entries: { account_id: accessible_account_ids })
 
     # Apply filters
     transactions_query = apply_filters(transactions_query)
@@ -76,7 +78,7 @@ class Api::V1::TransactionsController < Api::V1::BaseController
       return
     end
 
-    account = family.accounts.find(transaction_params[:account_id])
+    account = family.accounts.writable_by(current_resource_owner).find(transaction_params[:account_id])
     @entry = account.entries.new(entry_params_for_create)
 
     if @entry.save
@@ -177,7 +179,10 @@ end
 
     def set_transaction
       family = current_resource_owner.family
-      @transaction = family.transactions.find(params[:id])
+      @transaction = family.transactions
+        .joins(entry: :account)
+        .merge(Account.accessible_by(current_resource_owner))
+        .find(params[:id])
       @entry = @transaction.entry
     rescue ActiveRecord::RecordNotFound
       render json: {

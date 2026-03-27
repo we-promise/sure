@@ -33,25 +33,10 @@ class SimplefinItem::BalancesOnlyJob < ApplicationJob
       target_id = ActionView::RecordIdentifier.dom_id(item)
       Turbo::StreamsChannel.broadcast_replace_to(item.family, target: target_id, html: card_html)
 
-      # Also refresh Manual Accounts so the CTA state and duplicates clear without refresh
-      begin
-        manual_accounts = item.family.accounts
-          .visible_manual
-          .order(:name)
-        if manual_accounts.any?
-          manual_html = ApplicationController.render(
-            partial: "accounts/index/manual_accounts",
-            formats: [ :html ],
-            locals: { accounts: manual_accounts }
-          )
-          Turbo::StreamsChannel.broadcast_update_to(item.family, target: "manual-accounts", html: manual_html)
-        else
-          manual_html = ApplicationController.render(inline: '<div id="manual-accounts"></div>')
-          Turbo::StreamsChannel.broadcast_replace_to(item.family, target: "manual-accounts", html: manual_html)
-        end
-      rescue => inner
-        Rails.logger.warn("SimpleFin BalancesOnlyJob manual-accounts broadcast failed: #{inner.class} - #{inner.message}")
-      end
+      # Broadcast a refresh signal instead of rendered HTML. Each user's browser
+      # re-fetches via their own authenticated request, so the manual accounts
+      # list is correctly scoped to the current user.
+      item.family.broadcast_refresh
     rescue => e
       Rails.logger.warn("SimpleFin BalancesOnlyJob broadcast failed: #{e.class} - #{e.message}")
     end

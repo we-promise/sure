@@ -2,7 +2,7 @@
   <% dialog.with_header(title: t(".title"), subtitle: t(".description")) %>
 
   <% dialog.with_body do %>
-    <% has_accounts = Current.family.accounts.any? %>
+    <% has_accounts = accessible_accounts.any? %>
     <% requires_account_message = t(".requires_account") %>
 
     <% if @pending_import.present? && params[:type].nil? %>

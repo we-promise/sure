@@ -29,8 +29,9 @@
   </div>
 <% end %>
 
-<div class="grid grid-cols-1 2xl:grid-cols-2 gap-6 pb-6 lg:pb-12" data-controller="dashboard-sortable" data-action="dragover->dashboard-sortable#dragOver drop->dashboard-sortable#drop" role="list" aria-label="Dashboard sections">
-  <% if Current.family.accounts.any? %>
+
+<div class="grid grid-cols-1 <%= "2xl:grid-cols-2" if Current.user.dashboard_two_column? %> gap-6 pb-6 lg:pb-12" data-controller="dashboard-sortable" data-action="dragover->dashboard-sortable#dragOver drop->dashboard-sortable#drop" role="list" aria-label="Dashboard sections">
+  <% if accessible_accounts.any? %>
     <% @dashboard_sections.each do |section| %>
       <% next unless section[:visible] %>
       <section
@@ -51,6 +52,7 @@
           touchstart->dashboard-sortable#touchStart
           touchmove->dashboard-sortable#touchMove
           touchend->dashboard-sortable#touchEnd
+          touchcancel->dashboard-sortable#touchEnd
           keydown->dashboard-sortable#handleKeyDown">
         <div class="px-4 py-2 flex items-center justify-between">
           <div class="flex items-center gap-2">
