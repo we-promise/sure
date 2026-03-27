@@ -1,4 +1,5 @@
 import 'package:local_auth/local_auth.dart';
+import 'log_service.dart';
 
 class BiometricService {
   static final BiometricService instance = BiometricService._();
@@ -6,12 +7,14 @@ class BiometricService {
 
   final LocalAuthentication _auth = LocalAuthentication();
 
-  /// Whether the device has biometric hardware and at least one biometric enrolled.
+  /// Returns true when the platform supports biometrics AND at least one
+  /// biometric is enrolled on the device.
   Future<bool> isDeviceSupported() async {
     try {
-      final canCheck = await _auth.canCheckBiometrics;
       final isSupported = await _auth.isDeviceSupported();
-      return canCheck && isSupported;
+      if (!isSupported) return false;
+      final enrolled = await _auth.getAvailableBiometrics();
+      return enrolled.isNotEmpty;
     } catch (_) {
       return false;
     }
@@ -36,7 +39,8 @@ class BiometricService {
           biometricOnly: false,
         ),
       );
-    } catch (_) {
+    } catch (e, stack) {
+      LogService.instance.error('BiometricService', 'authenticate() failed: $e\n$stack');
       return false;
     }
   }

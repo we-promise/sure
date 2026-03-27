@@ -36,6 +36,10 @@ class _BiometricLockScreenState extends State<BiometricLockScreen> {
 
     if (success) {
       widget.onUnlocked();
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Authentication failed. Tap Unlock to try again.')),
+      );
     }
   }
 
