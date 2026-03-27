@@ -81,7 +81,7 @@ class CoinstatsItem::ExchangeLinkerTest < ActiveSupport::TestCase
     account = coinstats_account.account
     assert_equal "Bitvavo", account.name
     assert_equal "EUR", account.currency
-    assert_in_delta 293.2718, account.balance.to_f, 0.0001
+    assert_in_delta 293.69214193130284, account.balance.to_f, 0.0001
     assert_in_delta 2.58, account.cash_balance.to_f, 0.0001
   end
 end

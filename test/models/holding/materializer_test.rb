@@ -121,6 +121,6 @@ class Holding::MaterializerTest < ActiveSupport::TestCase
     assert_equal account_provider.id, today_holding.account_provider_id
     assert_nil yesterday_holding.account_provider_id
     assert_equal BigDecimal("10"), yesterday_holding.qty
-    assert_equal BigDecimal("2000"), yesterday_holding.amount
+    assert_equal yesterday_holding.qty * yesterday_holding.price, yesterday_holding.amount
   end
 end

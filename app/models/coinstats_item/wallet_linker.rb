@@ -135,7 +135,7 @@ class CoinstatsItem::WalletLinker
     # @param token [Hash] Token data from API
     # @return [Hash] Snapshot with balance, address, and metadata
     def build_snapshot(token)
-      token.to_h.merge(
+      token.to_h.except("id", :id).merge(
         id: (token[:coinId] || token[:id])&.to_s,
         currency: "USD",
         address: address,

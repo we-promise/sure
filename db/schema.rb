@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_03_26_112218) do
+ActiveRecord::Schema[7.2].define(version: 2026_03_27_130000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -304,6 +304,10 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_26_112218) do
     t.string "api_key", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "exchange_portfolio_id"
+    t.string "exchange_connection_id"
+    t.index ["exchange_connection_id"], name: "index_coinstats_items_on_exchange_connection_id"
+    t.index ["exchange_portfolio_id"], name: "index_coinstats_items_on_exchange_portfolio_id"
     t.index ["family_id"], name: "index_coinstats_items_on_family_id"
     t.index ["status"], name: "index_coinstats_items_on_status"
   end
@@ -577,7 +581,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_26_112218) do
     t.uuid "account_id", null: false
     t.uuid "security_id", null: false
     t.date "date", null: false
-    t.decimal "qty", precision: 19, scale: 4, null: false
+    t.decimal "qty", precision: 24, scale: 8, null: false
     t.decimal "price", precision: 19, scale: 4, null: false
     t.decimal "amount", precision: 19, scale: 4, null: false
     t.string "currency", null: false
@@ -1417,7 +1421,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_26_112218) do
 
   create_table "trades", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "security_id", null: false
-    t.decimal "qty", precision: 19, scale: 4
+    t.decimal "qty", precision: 24, scale: 8
     t.decimal "price", precision: 19, scale: 10
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false

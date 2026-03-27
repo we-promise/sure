@@ -261,10 +261,7 @@ class CoinstatsAccount < ApplicationRecord
     end
 
     def preferred_exchange_currency
-      return "USD" unless family_currency.present?
-      return family_currency if exchange_rate_available?(from: "USD", to: family_currency)
-
-      "USD"
+      family_currency.presence || "USD"
     end
 
     def exchange_rate_available?(from:, to:)

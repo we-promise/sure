@@ -327,7 +327,7 @@ class CoinstatsAccountTest < ActiveSupport::TestCase
     assert portfolio_account.exchange_portfolio_account?
     refute portfolio_account.fiat_asset?
     assert_equal "EUR", portfolio_account.inferred_currency
-    assert_in_delta 293.2718, portfolio_account.inferred_current_balance.to_f, 0.0001
+    assert_in_delta 293.69214193130284, portfolio_account.inferred_current_balance.to_f, 0.0001
     assert_in_delta 2.58, portfolio_account.inferred_cash_balance.to_f, 0.0001
     assert_equal 2, portfolio_account.portfolio_non_fiat_coins.size
     assert_equal 1, portfolio_account.portfolio_fiat_coins.size

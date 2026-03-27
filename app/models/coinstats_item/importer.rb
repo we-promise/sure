@@ -235,9 +235,13 @@ class CoinstatsItem::Importer
       balance_data = portfolio_coins_data[portfolio_id]
 
       if coinstats_account.exchange_portfolio_account?
-        coinstats_account.upsert_coinstats_snapshot!(
-          normalize_exchange_portfolio_data(balance_data, coinstats_account, portfolio_id: portfolio_id)
-        )
+        if balance_data.present?
+          coinstats_account.upsert_coinstats_snapshot!(
+            normalize_exchange_portfolio_data(balance_data, coinstats_account, portfolio_id: portfolio_id)
+          )
+        else
+          Rails.logger.warn "CoinstatsItem::Importer - Missing exchange portfolio coin data for account #{coinstats_account.id} (portfolio #{portfolio_id}); preserving previous snapshot"
+        end
       else
         matching_coin = find_matching_portfolio_coin(balance_data, coinstats_account)
 
@@ -408,7 +412,7 @@ class CoinstatsItem::Importer
         institution_logo: matching_token&.dig(:imgUrl),
         # Preserve original data
         raw_balance_data: balance_data
-      }.merge(source_snapshot.slice(:amount, :count, :price, :priceUsd, :symbol, :coinId, :id, :isFiat, :name, :imgUrl))
+      }.merge(source_snapshot.slice(:amount, :count, :price, :priceUsd, :symbol, :coinId, :isFiat, :imgUrl))
     end
 
     # Finds the token in balance_data that matches this account.

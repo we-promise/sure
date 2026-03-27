@@ -16,6 +16,7 @@ class CoinstatsItem::ExchangeLinker
     return Result.new(success?: false, created_count: 0, errors: [ "Exchange is required" ]) if connection_id.blank?
     return Result.new(success?: false, created_count: 0, errors: [ "Exchange credentials are required" ]) if connection_fields.blank?
 
+    created_count = 0
     exchange = fetch_exchange_definition
     validate_required_fields!(exchange)
 

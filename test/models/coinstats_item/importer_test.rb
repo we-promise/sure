@@ -220,6 +220,68 @@ class CoinstatsItem::ImporterTest < ActiveSupport::TestCase
     assert_equal 0, result[:transactions_imported]
   end
 
+  test "preserves exchange portfolio snapshot when portfolio coin fetch is missing" do
+    crypto = Crypto.create!
+    account = @family.accounts.create!(
+      accountable: crypto,
+      name: "Bitvavo",
+      balance: 250,
+      cash_balance: 10,
+      currency: "EUR"
+    )
+
+    coinstats_account = @coinstats_item.coinstats_accounts.create!(
+      name: "Bitvavo",
+      currency: "EUR",
+      account_id: "exchange_portfolio:portfolio_123",
+      wallet_address: "portfolio_123",
+      current_balance: 250,
+      raw_payload: {
+        source: "exchange",
+        portfolio_account: true,
+        portfolio_id: "portfolio_123",
+        connection_id: "bitvavo",
+        exchange_name: "Bitvavo",
+        coins: [
+          {
+            coin: { identifier: "bitcoin", symbol: "BTC", name: "Bitcoin" },
+            count: "0.003",
+            price: { EUR: "80000" }
+          },
+          {
+            coin: { identifier: "FiatCoin:eur", symbol: "EUR", name: "Euro", isFiat: true },
+            count: "10",
+            price: { EUR: "1" }
+          }
+        ]
+      },
+      raw_transactions_payload: []
+    )
+    AccountProvider.create!(account: account, provider: coinstats_account)
+
+    @mock_provider.expects(:sync_exchange).with(portfolio_id: "portfolio_123").returns(success_response({}))
+    @mock_provider.expects(:list_exchange_transactions)
+      .with(portfolio_id: "portfolio_123", currency: "USD", from: nil)
+      .returns([])
+    @mock_provider.expects(:list_portfolio_coins)
+      .with(portfolio_id: "portfolio_123")
+      .returns(nil)
+
+    importer = CoinstatsItem::Importer.new(@coinstats_item, coinstats_provider: @mock_provider)
+
+    assert_no_changes -> { coinstats_account.reload.current_balance.to_f } do
+      result = importer.import
+      assert result[:success]
+      assert_equal 1, result[:accounts_updated]
+      assert_equal 0, result[:transactions_imported]
+    end
+
+    reloaded = coinstats_account.reload
+    assert_equal "portfolio_123", reloaded.raw_payload["portfolio_id"]
+    assert_equal 2, reloaded.raw_payload["coins"].size
+    assert_equal 250.0, reloaded.current_balance.to_f
+  end
+
   test "calculates balance from matching token only, not all tokens" do
     # Create two accounts for different tokens in the same wallet
     crypto1 = Crypto.create!
