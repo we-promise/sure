@@ -83,7 +83,8 @@ Rails.application.configure do
     user_name:           ENV["SMTP_USERNAME"],
     password:            ENV["SMTP_PASSWORD"],
     tls:                 ENV["SMTP_TLS_ENABLED"] == "true",
-    openssl_verify_mode: ENV["SMTP_TLS_SKIP_VERIFY"] == "true" ? OpenSSL::SSL::VERIFY_NONE : OpenSSL::SSL::VERIFY_PEER
+    openssl_verify_mode: ENV["SMTP_TLS_SKIP_VERIFY"] == "true" ? OpenSSL::SSL::VERIFY_NONE : OpenSSL::SSL::VERIFY_PEER,
+    ca_file:             Rails.configuration.x.ssl.ca_file
   }
 
   # Ignore bad email addresses and do not raise email delivery errors.
