@@ -94,20 +94,26 @@ class CoinstatsItemsController < ApplicationController
     coinstats_item_id = params[:coinstats_item_id].presence
     @exchange_connection_id = params[:exchange_connection_id]&.to_s&.strip.presence
     @exchange_connection_name = params[:exchange_connection_name]&.to_s&.strip.presence
-    connection_fields_param = params[:connection_fields]
-    connection_fields_hash =
-      if connection_fields_param.respond_to?(:to_unsafe_h)
-        connection_fields_param.to_unsafe_h
-      else
-        connection_fields_param.to_h
-      end
-    @exchange_connection_fields = connection_fields_hash.transform_values { |value| value.to_s.strip }.compact_blank
 
-    unless coinstats_item_id && @exchange_connection_id && @exchange_connection_fields.present?
-      return render_link_exchange_error("Exchange and credentials are required")
+    unless coinstats_item_id && @exchange_connection_id
+      return render_link_exchange_error(t(".missing_params"))
     end
 
     @coinstats_item = Current.family.coinstats_items.find(coinstats_item_id)
+    exchange = find_exchange_option(@coinstats_item, @exchange_connection_id)
+    return render_link_exchange_error(t(".invalid_exchange")) unless exchange
+
+    allowed_field_keys = Array(exchange[:connection_fields]).filter_map { |field| field[:key].presence&.to_s }
+    connection_fields_hash = extract_connection_fields_hash(params[:connection_fields])
+    @exchange_connection_fields = connection_fields_hash
+      .slice(*allowed_field_keys)
+      .transform_values { |value| value.to_s.strip }
+      .compact_blank
+    @exchange_connection_name ||= exchange[:name].presence || @exchange_connection_id.to_s.titleize
+
+    unless @exchange_connection_fields.present?
+      return render_link_exchange_error(t(".missing_params"))
+    end
 
     result = CoinstatsItem::ExchangeLinker.new(
       @coinstats_item,
@@ -117,15 +123,17 @@ class CoinstatsItemsController < ApplicationController
     ).link
 
     if result.success?
-      redirect_to accounts_path, notice: "#{@exchange_connection_name.presence || @exchange_connection_id.to_s.titleize} exchange linked", status: :see_other
+      redirect_to accounts_path,
+                  notice: t(".success", name: @exchange_connection_name.presence || @exchange_connection_id.to_s.titleize),
+                  status: :see_other
     else
-      render_link_exchange_error(result.errors.join("; ").presence || "Failed to link exchange")
+      render_link_exchange_error(result.errors.join("; ").presence || t(".failed"))
     end
   rescue Provider::Coinstats::Error => e
-    render_link_exchange_error("Failed to link exchange: #{e.message}")
+    render_link_exchange_error(t(".error", message: e.message))
   rescue => e
     Rails.logger.error("CoinStats link exchange error: #{e.class} - #{e.message}")
-    render_link_exchange_error("Failed to link exchange: #{e.message}")
+    render_link_exchange_error(t(".error", message: e.message))
   end
 
   private
@@ -229,5 +237,19 @@ class CoinstatsItemsController < ApplicationController
     rescue StandardError => e
       Rails.logger.error("CoinStats exchange fetch failed: item_id=#{coinstats_item.id} error=#{e.class} message=#{e.message}")
       []
+    end
+
+    def extract_connection_fields_hash(connection_fields_param)
+      if connection_fields_param.respond_to?(:to_unsafe_h)
+        connection_fields_param.to_unsafe_h
+      elsif connection_fields_param.respond_to?(:to_h)
+        connection_fields_param.to_h
+      else
+        {}
+      end
+    end
+
+    def find_exchange_option(coinstats_item, connection_id)
+      fetch_exchange_options(coinstats_item).find { |exchange| exchange[:connection_id] == connection_id }
     end
 end

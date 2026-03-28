@@ -24,8 +24,8 @@
         <div class="space-y-5">
           <section class="rounded-xl border border-primary bg-container p-4 space-y-3">
             <div class="space-y-1">
-              <h3 class="text-sm font-medium text-primary">Link Wallet Address</h3>
-              <p class="text-sm text-secondary">Track a self-custody wallet or a single on-chain address through CoinStats.</p>
+              <h3 class="text-sm font-medium text-primary"><%= t(".link_wallet_title") %></h3>
+              <p class="text-sm text-secondary"><%= t(".link_wallet_description") %></p>
             </div>
 
             <%= styled_form_with url: link_wallet_coinstats_items_path,
@@ -53,7 +53,7 @@
               <% end %>
 
               <div class="flex justify-end">
-                <%= form.submit t(".link"),
+                <%= form.submit t(".link_wallet_submit"),
                                 class: "inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-inverse bg-inverse hover:bg-inverse-hover focus:outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2 transition-colors" %>
               </div>
             <% end %>
@@ -65,9 +65,9 @@
                    data-coinstats-exchange-fields-initial-connection-id-value="<%= exchange_connection_id %>"
                    data-coinstats-exchange-fields-initial-fields-value="<%= html_escape(exchange_connection_fields.to_json) %>">
             <div class="space-y-1">
-              <h3 class="text-sm font-medium text-primary">Link Exchange API</h3>
-              <p class="text-sm text-secondary">Use a read-only exchange API key so CoinStats can sync balances and transactions from Bitvavo, Binance, and other supported exchanges.</p>
-              <p class="text-xs text-secondary">If your exchange requires API-key activation or email confirmation, complete that step before linking here.</p>
+              <h3 class="text-sm font-medium text-primary"><%= t(".link_exchange_title") %></h3>
+              <p class="text-sm text-secondary"><%= t(".link_exchange_description") %></p>
+              <p class="text-xs text-secondary"><%= t(".link_exchange_note") %></p>
             </div>
 
             <%= styled_form_with url: link_exchange_coinstats_items_path,
@@ -79,8 +79,8 @@
 
               <%= form.select :exchange_connection_id,
                               options_for_select(exchanges.map { |exchange| [ exchange[:name], exchange[:connection_id] ] }, exchange_connection_id),
-                              { include_blank: "Select an exchange" },
-                              label: "Exchange",
+                              { include_blank: t(".exchange_select_blank") },
+                              label: t(".exchange_label"),
                               class: "w-full rounded-md border border-primary px-3 py-2 text-sm bg-container-inset text-primary",
                               data: {
                                 coinstats_exchange_fields_target: "select",
@@ -90,7 +90,7 @@
               <div data-coinstats-exchange-fields-target="fields" class="space-y-3"></div>
 
               <div class="flex justify-end">
-                <%= form.submit "Link Exchange",
+                <%= form.submit t(".link_exchange_submit"),
                                 class: "inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-inverse bg-inverse hover:bg-inverse-hover focus:outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2 transition-colors" %>
               </div>
             <% end %>

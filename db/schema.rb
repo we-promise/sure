@@ -307,7 +307,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_27_130000) do
     t.string "exchange_portfolio_id"
     t.string "exchange_connection_id"
     t.index ["exchange_connection_id"], name: "index_coinstats_items_on_exchange_connection_id"
-    t.index ["exchange_portfolio_id"], name: "index_coinstats_items_on_exchange_portfolio_id"
+    t.index ["family_id", "exchange_portfolio_id"], name: "index_coinstats_items_on_family_id_and_exchange_portfolio_id", unique: true, where: "(exchange_portfolio_id IS NOT NULL)"
     t.index ["family_id"], name: "index_coinstats_items_on_family_id"
     t.index ["status"], name: "index_coinstats_items_on_status"
   end

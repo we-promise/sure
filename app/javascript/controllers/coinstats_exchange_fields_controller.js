@@ -31,7 +31,9 @@ export default class extends Controller {
       this.connectionNameTarget.value = exchange.name || ""
     }
 
-    exchange.connection_fields.forEach((field) => {
+    const connectionFields = Array.isArray(exchange.connection_fields) ? exchange.connection_fields : []
+
+    connectionFields.forEach((field) => {
       const wrapper = document.createElement("div")
       wrapper.className = "space-y-1"
 

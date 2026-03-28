@@ -84,4 +84,42 @@ class CoinstatsItem::ExchangeLinkerTest < ActiveSupport::TestCase
     assert_in_delta 293.69214193130284, account.balance.to_f, 0.0001
     assert_in_delta 2.58, account.cash_balance.to_f, 0.0001
   end
+
+  test "link defers local account creation when initial portfolio coin fetch is missing" do
+    Provider::Coinstats.any_instance.expects(:exchange_options).returns([
+      {
+        connection_id: "bitvavo",
+        name: "Bitvavo",
+        icon: "https://example.com/bitvavo.png",
+        connection_fields: [
+          { key: "apiKey", name: "API Key" }
+        ]
+      }
+    ])
+
+    Provider::Coinstats.any_instance.expects(:connect_portfolio_exchange)
+      .returns(success_response({ portfolioId: "portfolio_456" }))
+
+    Provider::Coinstats.any_instance.expects(:list_portfolio_coins)
+      .with(portfolio_id: "portfolio_456")
+      .returns(nil)
+
+    @coinstats_item.expects(:sync_later).once
+
+    assert_no_difference [ "CoinstatsAccount.count", "Account.count", "AccountProvider.count" ] do
+      result = CoinstatsItem::ExchangeLinker.new(
+        @coinstats_item,
+        connection_id: "bitvavo",
+        connection_fields: { "apiKey" => "key" }
+      ).link
+
+      assert result.success?
+      assert_equal 0, result.created_count
+    end
+
+    @coinstats_item.reload
+    assert_equal "portfolio_456", @coinstats_item.exchange_portfolio_id
+    assert_equal "bitvavo", @coinstats_item.exchange_connection_id
+    assert_empty @coinstats_item.coinstats_accounts
+  end
 end

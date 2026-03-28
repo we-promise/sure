@@ -235,7 +235,7 @@ class CoinstatsItem::Importer
       balance_data = portfolio_coins_data[portfolio_id]
 
       if coinstats_account.exchange_portfolio_account?
-        if balance_data.present?
+        if !balance_data.nil?
           coinstats_account.upsert_coinstats_snapshot!(
             normalize_exchange_portfolio_data(balance_data, coinstats_account, portfolio_id: portfolio_id)
           )

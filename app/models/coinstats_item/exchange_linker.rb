@@ -45,8 +45,12 @@ class CoinstatsItem::ExchangeLinker
         raw_institution_payload: exchange
       )
 
-      coinstats_account = upsert_exchange_account!(coins, exchange, portfolio_id)
-      created_count = ensure_local_account!(coinstats_account) ? 1 : 0
+      if coins.nil?
+        Rails.logger.warn "CoinstatsItem::ExchangeLinker - Initial portfolio coin fetch missing for item #{coinstats_item.id} portfolio #{portfolio_id}; deferring local account creation to background sync"
+      else
+        coinstats_account = upsert_exchange_account!(coins, exchange, portfolio_id)
+        created_count = ensure_local_account!(coinstats_account) ? 1 : 0
+      end
     end
 
     coinstats_item.sync_later

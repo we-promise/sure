@@ -34,20 +34,22 @@ class CoinstatsEntry::Processor
     end
 
     if exchange_trade? && trade_security.present?
-      remove_legacy_transaction_entry!
+      Account.transaction do
+        remove_legacy_transaction_entry!
 
-      import_adapter.import_trade(
-        external_id: external_id,
-        security: trade_security,
-        quantity: trade_quantity,
-        price: trade_price,
-        amount: trade_amount,
-        currency: currency,
-        date: date,
-        name: name,
-        source: "coinstats",
-        activity_label: trade_activity_label
-      )
+        import_adapter.import_trade(
+          external_id: external_id,
+          security: trade_security,
+          quantity: trade_quantity,
+          price: trade_price,
+          amount: trade_amount,
+          currency: currency,
+          date: date,
+          name: name,
+          source: "coinstats",
+          activity_label: trade_activity_label
+        )
+      end
     else
       import_adapter.import_transaction(
         external_id: external_id,
@@ -432,7 +434,9 @@ class CoinstatsEntry::Processor
 
     def portfolio_trade_item
       crypto_items = transaction_items.reject { |item| portfolio_fiat_item?(item) || item[:count].to_d.zero? }
-      crypto_items.find { |item| item[:count].to_d.positive? } || crypto_items.first
+      crypto_items.find { |item| item[:count].to_d.negative? } ||
+        crypto_items.find { |item| item[:count].to_d.positive? } ||
+        crypto_items.first
     end
 
     def primary_portfolio_item

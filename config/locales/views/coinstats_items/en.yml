@@ -17,15 +17,29 @@ en:
       missing_params: "Missing required parameters: address and blockchain."
       failed: Crypto wallet linking failed.
       error: "Crypto wallet linking failed: %{message}."
+    link_exchange:
+      success: "%{name} exchange linked."
+      missing_params: Exchange and credentials are required.
+      invalid_exchange: Selected exchange is no longer supported.
+      failed: Failed to link exchange.
+      error: "Failed to link exchange: %{message}."
     new:
       title: Link Crypto with CoinStats
       blockchain_fetch_error: Failed load Blockchains. Please try again later.
+      link_wallet_title: Link Wallet Address
+      link_wallet_description: Track a self-custody wallet or a single on-chain address through CoinStats.
       address_label: Address
       address_placeholder: Required
       blockchain_label: Blockchain
       blockchain_placeholder: Required
       blockchain_select_blank: Select a Blockchain
-      link: Link Crypto Wallet
+      link_wallet_submit: Link Crypto Wallet
+      link_exchange_title: Link Exchange API
+      link_exchange_description: Use a read-only exchange API key so CoinStats can sync balances and transactions from Bitvavo, Binance, and other supported exchanges.
+      link_exchange_note: If your exchange requires API-key activation or email confirmation, complete that step before linking here.
+      exchange_select_blank: Select an exchange
+      exchange_label: Exchange
+      link_exchange_submit: Link Exchange
       not_configured_title: CoinStats provider connection not configured
       not_configured_message: To link a crypto wallet or exchange, you must first configure the CoinStats provider connection.
       not_configured_step1_html: Go to <strong>Settings → Providers</strong>

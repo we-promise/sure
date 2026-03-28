@@ -282,6 +282,59 @@ class CoinstatsItem::ImporterTest < ActiveSupport::TestCase
     assert_equal 250.0, reloaded.current_balance.to_f
   end
 
+  test "writes an empty exchange portfolio snapshot when CoinStats returns an empty portfolio" do
+    crypto = Crypto.create!
+    account = @family.accounts.create!(
+      accountable: crypto,
+      name: "Bitvavo",
+      balance: 250,
+      cash_balance: 10,
+      currency: "EUR"
+    )
+
+    coinstats_account = @coinstats_item.coinstats_accounts.create!(
+      name: "Bitvavo",
+      currency: "EUR",
+      account_id: "exchange_portfolio:portfolio_123",
+      wallet_address: "portfolio_123",
+      current_balance: 250,
+      raw_payload: {
+        source: "exchange",
+        portfolio_account: true,
+        portfolio_id: "portfolio_123",
+        connection_id: "bitvavo",
+        exchange_name: "Bitvavo",
+        coins: [
+          {
+            coin: { identifier: "bitcoin", symbol: "BTC", name: "Bitcoin" },
+            count: "0.003",
+            price: { EUR: "80000" }
+          }
+        ]
+      },
+      raw_transactions_payload: []
+    )
+    AccountProvider.create!(account: account, provider: coinstats_account)
+
+    @mock_provider.expects(:sync_exchange).with(portfolio_id: "portfolio_123").returns(success_response({}))
+    @mock_provider.expects(:list_exchange_transactions)
+      .with(portfolio_id: "portfolio_123", currency: "USD", from: nil)
+      .returns([])
+    @mock_provider.expects(:list_portfolio_coins)
+      .with(portfolio_id: "portfolio_123")
+      .returns([])
+
+    importer = CoinstatsItem::Importer.new(@coinstats_item, coinstats_provider: @mock_provider)
+    result = importer.import
+
+    assert result[:success]
+    assert_equal 1, result[:accounts_updated]
+
+    reloaded = coinstats_account.reload
+    assert_equal 0.0, reloaded.current_balance.to_f
+    assert_equal [], reloaded.raw_payload["coins"]
+  end
+
   test "calculates balance from matching token only, not all tokens" do
     # Create two accounts for different tokens in the same wallet
     crypto1 = Crypto.create!

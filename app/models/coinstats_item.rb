@@ -20,6 +20,7 @@ class CoinstatsItem < ApplicationRecord
 
   validates :name, presence: true
   validates :api_key, presence: true
+  validates :exchange_portfolio_id, uniqueness: { scope: :family_id, allow_nil: true }
 
   belongs_to :family
   has_one_attached :logo, dependent: :purge_later
