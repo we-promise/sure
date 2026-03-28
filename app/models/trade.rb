@@ -2,6 +2,7 @@ class Trade < ApplicationRecord
   include Entryable, Monetizable
 
   monetize :price
+  monetize :fee
 
   belongs_to :security
   belongs_to :category, optional: true

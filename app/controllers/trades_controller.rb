@@ -94,13 +94,13 @@ class TradesController < ApplicationController
     def entry_params
       params.require(:entry).permit(
         :name, :date, :amount, :currency, :excluded, :notes, :nature,
-        entryable_attributes: [ :id, :qty, :price, :investment_activity_label ]
+        entryable_attributes: [ :id, :qty, :price, :fee, :investment_activity_label ]
       )
     end
 
     def create_params
       params.require(:model).permit(
-        :date, :amount, :currency, :qty, :price, :ticker, :manual_ticker, :type, :transfer_account_id
+        :date, :amount, :currency, :qty, :price, :fee, :ticker, :manual_ticker, :type, :transfer_account_id
       )
     end
 
@@ -112,13 +112,15 @@ class TradesController < ApplicationController
 
       qty = update_params[:entryable_attributes][:qty]
       price = update_params[:entryable_attributes][:price]
+      fee = update_params[:entryable_attributes][:fee]
       nature = update_params[:nature]
 
       if qty.present? && price.present?
         is_sell = nature == "inflow"
         qty = is_sell ? -qty.to_d.abs : qty.to_d.abs
+        fee_val = fee.present? ? fee.to_d : (@entry.trade&.fee || 0)
         update_params[:entryable_attributes][:qty] = qty
-        update_params[:amount] = qty * price.to_d
+        update_params[:amount] = qty * price.to_d + fee_val
 
         # Sync investment_activity_label with Buy/Sell type if not explicitly set to something else
         # Check both the submitted param and the existing record's label
