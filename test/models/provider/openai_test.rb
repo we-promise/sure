@@ -272,9 +272,22 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
     assert_equal "Custom OpenAI-compatible (https://custom-api.example.com/v1)", custom_provider.provider_name
   end
 
+  test "supports explicitly configured non-openai model on standard provider" do
+    provider = Provider::Openai.new("test-token", model: "llama3.2:3b")
+
+    assert provider.supports_model?("llama3.2:3b")
+    refute provider.supports_model?("mistral:7b")
+  end
+
   test "supported_models_description returns model prefixes for standard provider" do
     expected = "models starting with: gpt-4, gpt-5, o1, o3"
     assert_equal expected, @subject.supported_models_description
+  end
+
+  test "supported_models_description includes explicitly configured non-openai model on standard provider" do
+    provider = Provider::Openai.new("test-token", model: "llama3.2:3b")
+
+    assert_equal "configured model: llama3.2:3b; otherwise models starting with: gpt-4, gpt-5, o1, o3", provider.supported_models_description
   end
 
   test "supported_models_description returns configured model for custom provider" do

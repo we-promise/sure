@@ -32,11 +32,14 @@ class Provider::Openai < Provider
   end
 
   def supports_model?(model)
+    requested_model = model.to_s
+
     # If using custom uri_base, support any model
     return true if custom_provider?
+    return true if requested_model == @default_model
 
     # Otherwise, check if model starts with any supported OpenAI prefix
-    DEFAULT_OPENAI_MODEL_PREFIXES.any? { |prefix| model.start_with?(prefix) }
+    DEFAULT_OPENAI_MODEL_PREFIXES.any? { |prefix| requested_model.start_with?(prefix) }
   end
 
   def provider_name
@@ -46,6 +49,8 @@ class Provider::Openai < Provider
   def supported_models_description
     if custom_provider?
       @default_model.present? ? "configured model: #{@default_model}" : "any model"
+    elsif explicit_non_openai_model?
+      "configured model: #{@default_model}; otherwise models starting with: #{DEFAULT_OPENAI_MODEL_PREFIXES.join(', ')}"
     else
       "models starting with: #{DEFAULT_OPENAI_MODEL_PREFIXES.join(', ')}"
     end
@@ -243,6 +248,10 @@ class Provider::Openai < Provider
 
   private
     attr_reader :client
+
+    def explicit_non_openai_model?
+      @default_model.present? && DEFAULT_OPENAI_MODEL_PREFIXES.none? { |prefix| @default_model.start_with?(prefix) }
+    end
 
     def native_chat_response(
       prompt:,
