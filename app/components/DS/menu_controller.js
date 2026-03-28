@@ -24,7 +24,6 @@ export default class extends Controller {
     this.show = this.showValue;
     this.boundUpdate = this.update.bind(this);
     this.addEventListeners();
-    this.startAutoUpdate();
   }
 
   disconnect() {
@@ -66,14 +65,18 @@ export default class extends Controller {
     this.show = !this.show;
     this.contentTarget.classList.toggle("hidden", !this.show);
     if (this.show) {
+      this.startAutoUpdate();
       this.update();
       this.focusFirstElement();
+    } else {
+      this.stopAutoUpdate();
     }
   };
 
   close() {
     this.show = false;
     this.contentTarget.classList.add("hidden");
+    this.stopAutoUpdate();
   }
 
   focusFirstElement() {
