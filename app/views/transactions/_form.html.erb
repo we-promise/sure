@@ -1,4 +1,4 @@
-<%# locals: (entry:, income_categories:, expense_categories:) %>
+<%# locals: (entry:, categories:) %>
 
 <%= styled_form_with model: entry, url: transactions_path, class: "space-y-4" do |f| %>
   <% if entry.errors.any? %>
@@ -18,12 +18,11 @@
     <% if @entry.account_id %>
       <%= f.hidden_field :account_id %>
     <% else %>
-      <%= f.collection_select :account_id, Current.family.accounts.manual.active.alphabetically, :id, :name, { prompt: t(".account_prompt"), label: t(".account"), variant: :logo }, required: true, class: "form-field__input text-ellipsis" %>
+      <%= f.collection_select :account_id, accessible_accounts.manual.active.alphabetically, :id, :name, { prompt: t(".account_prompt"), label: t(".account"), selected: Current.user.default_account_for_transactions&.id, variant: :logo }, required: true, class: "form-field__input text-ellipsis" %>
     <% end %>
 
     <%= f.money_field :amount, label: t(".amount"), required: true %>
     <%= f.fields_for :entryable do |ef| %>
-      <% categories = params[:nature] == "inflow" ? income_categories : expense_categories %>
       <%= ef.collection_select :category_id, categories, :id, :name, { prompt: t(".category_prompt"), label: t(".category"), variant: :badge, searchable: true } %>
     <% end %>
     <%= f.date_field :date, label: t(".date"), required: true, min: Entry.min_supported_date, max: Date.current, value: Date.current %>
@@ -31,6 +30,11 @@
 
   <%= render DS::Disclosure.new(title: t(".details")) do %>
     <%= f.fields_for :entryable do |ef| %>
+      <%= ef.collection_select :merchant_id,
+                Current.family.available_merchants_for(Current.user).alphabetically,
+                :id, :name,
+                { include_blank: t(".none"),
+                  label: t(".merchant_label") } %>
       <%= ef.select :tag_ids,
                     Current.family.tags.alphabetically.pluck(:name, :id),
                     {

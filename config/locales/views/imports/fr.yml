@@ -1,6 +1,30 @@
 ---
 fr:
   import:
+    qif_category_selections:
+      show:
+        title: "Sélectionner les catégories et étiquettes"
+        description: "Choisissez les catégories et étiquettes de votre fichier QIF à importer dans Sure. Les éléments désélectionnés seront retirés des transactions correspondantes."
+        categories_heading: Catégories
+        categories_found:
+          one: "1 catégorie trouvée"
+          other: "%{count} catégories trouvées"
+        category_name_col: Nom de la catégorie
+        transactions_col: Transactions
+        tags_heading: Étiquettes
+        tags_found:
+          one: "1 étiquette trouvée"
+          other: "%{count} étiquettes trouvées"
+        tag_name_col: Nom de l'étiquette
+        txn_count:
+          one: "1 opération"
+          other: "%{count} opérations"
+        empty_state_primary: Aucune catégorie ou étiquette trouvée dans ce fichier QIF.
+        empty_state_secondary: Toutes les transactions seront importées sans catégories ni étiquettes.
+        submit: Continuer vers la revue
+        split_warning_title: Transactions scindées détectées
+        split_warning_description: "Ce fichier QIF contient des transactions scindées. Les transactions scindées ne sont pas encore prises en charge : chaque transaction scindée sera importée comme une transaction unique avec son montant total et sans catégorie. Les ventilations individuelles ne seront pas conservées."
+        split_badge: scindée
     cleans:
       show:
         description: Modifiez vos données dans le tableau ci-dessous. Les cellules rouges sont invalides.
@@ -29,6 +53,13 @@ fr:
         date_format_label: Format de date
         rows_to_skip_label: Ignorer les n premières lignes
     confirms:
+      sure_import:
+        title: Confirmer votre importation
+        description: Vérifiez les données qui seront importées depuis votre fichier d'export.
+        summary: Résumé de l'importation
+        empty_summary: Aucun enregistrement importable n'a été trouvé dans ce fichier. Il est peut-être vide, ou les lignes ne correspondent pas au format d'export attendu (chaque ligne doit être un objet JSON avec les clés « type » et « data », pour des types pris en charge par cet import).
+        publish_button: Démarrer l'importation
+        cancel: Annuler
       mappings:
         create_account: Créer un compte
         csv_mapping_label: "%{mapping} dans le CSV"
@@ -47,6 +78,15 @@ fr:
         tag_mapping_title: Attribuez vos étiquettes
     uploads:
       show:
+        qif_title: Téléverser le fichier QIF
+        qif_description: Sélectionnez le compte auquel appartient ce fichier QIF, puis téléversez votre export .qif depuis Quicken.
+        qif_account_label: Compte
+        qif_account_placeholder: Sélectionner un compte…
+        qif_file_prompt: pour ajouter votre fichier QIF ici
+        qif_file_hint: Fichiers .qif uniquement
+        qif_submit: Téléverser le QIF
+        browse: Parcourir
+        csv_file_prompt: pour ajouter votre fichier CSV ici
         description: Collez ou téléversez votre fichier CSV ci-dessous. Veuillez examiner les instructions dans le tableau ci-dessous avant de commencer.
         instructions_1: Voici un exemple de CSV avec des colonnes disponibles pour l'importation.
         instructions_2: Votre CSV doit avoir une ligne d'en-tête
@@ -54,8 +94,26 @@ fr:
         instructions_4: Les colonnes marquées avec une étoile (*) sont des données requises.
         instructions_5: Pas de virgules, pas de symboles monétaires et pas de parenthèses dans les nombres.
         title: Importez vos données
+      sure_import:
+        title: Importer depuis l'export
+        description: Téléversez le fichier all.ndjson de votre export de données pour restaurer vos comptes, transactions, catégories et plus encore.
+        drop_title: Déposez le NDJSON pour téléverser
+        drop_subtitle: Votre fichier sera téléversé automatiquement
+        browse: Parcourir
+        browse_hint: pour ajouter votre fichier all.ndjson ici
+        upload_button: Téléverser le NDJSON
+        hint_html: Téléversez le fichier <strong>all.ndjson</strong> de l'archive ZIP d'export de vos données
+        ndjson_invalid: Le fichier doit être un NDJSON valide avec au moins un enregistrement
   imports:
+    steps:
+      upload: Téléverser
+      configure: Configurer
+      clean: Nettoyer
+      map: Mapper
+      confirm: Confirmer
+      select: Sélectionner
     index:
+      title: Importations
       imports: Imports
       new: Nouvelle importation
     table:
@@ -87,9 +145,62 @@ fr:
       import_portfolio: Importer les investissements
       import_rules: Importer les règles
       import_transactions: Importer les transactions
+      import_qif: Importer depuis Quicken (QIF)
+      import_file: Importer un document
+      import_file_description: Analyse par IA pour les PDFs et téléversement avec recherche pour les autres fichiers pris en charge
+      requires_account: Importez d'abord des comptes pour débloquer cette option.
       resume: Reprendre %{type}
       sources: Sources
       title: Nouvelle importation CSV
+    create:
+      file_too_large: Le fichier est trop volumineux. La taille maximale est de %{max_size} Mo.
+      invalid_file_type: Type de fichier invalide. Veuillez téléverser un fichier CSV.
+      csv_uploaded: CSV téléversé avec succès.
+      pdf_too_large: Le fichier PDF est trop volumineux. La taille maximale est de %{max_size} Mo.
+      pdf_processing: Votre PDF est en cours de traitement. Vous recevrez un e-mail lorsque l'analyse sera terminée.
+      invalid_pdf: Le fichier téléversé n'est pas un PDF valide.
+      document_too_large: Le document est trop volumineux. La taille maximale est de %{max_size} Mo.
+      invalid_document_file_type: Type de fichier de document invalide pour le magasin de vecteurs actif.
+      document_uploaded: Document téléversé avec succès.
+      document_upload_failed: Nous n'avons pas pu téléverser le document dans le magasin de vecteurs. Veuillez réessayer.
+      document_provider_not_configured: Aucun magasin de vecteurs n'est configuré pour les téléversements de documents.
+    show:
+      finalize_upload: Veuillez finaliser le téléversement de votre fichier.
+      finalize_mappings: Veuillez finaliser vos correspondances avant de continuer.
+    errors:
+      custom_column_requires_inflow: "Les importations de colonnes personnalisées nécessitent la sélection d'une colonne d'entrée"
+    document_types:
+      bank_statement: Relevé bancaire
+      credit_card_statement: Relevé de carte de crédit
+      investment_statement: Relevé d'investissement
+      financial_document: Document financier
+      contract: Contrat
+      other: Autre document
+      unknown: Document inconnu
+    pdf_import:
+      processing_title: Traitement de votre PDF
+      processing_description: Nous analysons votre document à l'aide de l'IA. Cela peut prendre un moment. Vous recevrez un e-mail lorsque l'analyse sera terminée.
+      check_status: Vérifier le statut
+      back_to_dashboard: Retour au tableau de bord
+      failed_title: Traitement échoué
+      failed_description: Nous n'avons pas pu traiter votre document PDF. Veuillez réessayer ou contacter le support.
+      try_again: Réessayer
+      delete_import: Supprimer l'importation
+      complete_title: Document analysé
+      complete_description: Nous avons analysé votre PDF et voici ce que nous avons trouvé.
+      document_type_label: Type de document
+      summary_label: Résumé
+      email_sent_notice: Un e-mail vous a été envoyé avec les prochaines étapes.
+      back_to_imports: Retour aux importations
+      unknown_state_title: État inconnu
+      unknown_state_description: Cette importation est dans un état inattendu. Veuillez retourner aux importations.
+      processing_failed_with_message: "%{message}"
+      processing_failed_generic: "Traitement échoué : %{error}"
     ready:
       description: Voici un résumé des nouveaux éléments qui seront ajoutés à votre compte une fois que vous aurez publié cette importation.
       title: Confirmez vos données d'importation
+      summary_item_label: Élément
+      summary_count_label: Nombre
+      empty_summary: Aucun enregistrement importable n'a été trouvé dans ce fichier. Il est peut-être vide, ou les lignes ne correspondent pas au format d'export attendu (chaque ligne doit être un objet JSON avec les clés « type » et « data », pour des types pris en charge par cet import).
+      publish_import: Publier l'importation
+      back_to_imports: Retour aux importations

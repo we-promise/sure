@@ -48,7 +48,7 @@
     <% if @mercury_items.any? %>
       <%= render @mercury_items.sort_by(&:created_at) %>
     <% end %>
-    
+
     <% if @coinbase_items.any? %>
       <%= render @coinbase_items.sort_by(&:created_at) %>
     <% end %>
