@@ -30,6 +30,13 @@ class Settings::BankSyncController < ApplicationController
         path: "https://enablebanking.com",
         target: "_blank",
         rel: "noopener noreferrer"
+      },
+      {
+        name: "Binance (beta)",
+        description: "Crypto spot account sync via a read-only Binance API key for balances, transfers, and trade history.",
+        path: "https://developers.binance.com/docs/binance-spot-api-docs/rest-api/request-security",
+        target: "_blank",
+        rel: "noopener noreferrer"
       }
     ]
   end

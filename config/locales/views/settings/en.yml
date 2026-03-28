@@ -189,6 +189,21 @@ en:
         disconnect_confirm: Are you sure you want to disconnect this Coinbase connection? Your synced accounts will become manual accounts.
         status_connected: Coinbase is connected and syncing your crypto holdings.
         status_not_connected: Not connected. Enter your API credentials above to get started.
+      binance_panel:
+        setup_instructions: "To connect Binance:"
+        step1_html: Go to <a href="https://www.binance.com/en/my/settings/api-management" target="_blank" class="text-primary underline">Binance API Management</a>
+        step2: Create a new HMAC API key with read-only USER_DATA access for balances and trading history
+        step3: Copy the API key and secret and paste them below
+        api_key_label: API Key
+        api_key_placeholder: Enter your Binance API key
+        api_secret_label: API Secret
+        api_secret_placeholder: Enter your Binance API secret
+        connect_button: Connect Binance
+        syncing: Syncing...
+        sync: Sync
+        disconnect_confirm: Are you sure you want to disconnect this Binance connection? Your synced accounts will become manual accounts.
+        status_connected: Binance is connected and syncing balances, transfers, and trades.
+        status_not_connected: Not connected. Enter your Binance API credentials above to get started.
       kraken_panel:
         setup_instructions: "To connect Kraken:"
         step1_html: Go to <a href="https://support.kraken.com/bn/articles/how-to-create-an-api-key-on-kraken-pro" target="_blank" rel="noopener noreferrer" class="text-primary underline">Kraken API key settings</a>

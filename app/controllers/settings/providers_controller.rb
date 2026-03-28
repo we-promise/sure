@@ -126,6 +126,7 @@ class Settings::ProvidersController < ApplicationController
       @provider_configurations = Provider::ConfigurationRegistry.all.reject do |config|
         config.provider_key.to_s.casecmp("simplefin").zero? || config.provider_key.to_s.casecmp("lunchflow").zero? || \
         config.provider_key.to_s.casecmp("enable_banking").zero? || \
+        config.provider_key.to_s.casecmp("binance").zero? || \
         config.provider_key.to_s.casecmp("coinstats").zero? || \
         config.provider_key.to_s.casecmp("kraken").zero? || \
         config.provider_key.to_s.casecmp("mercury").zero? || \
@@ -138,6 +139,7 @@ class Settings::ProvidersController < ApplicationController
       @simplefin_items = Current.family.simplefin_items.where.not(access_url: [ nil, "" ]).ordered.select(:id)
       @lunchflow_items = Current.family.lunchflow_items.where.not(api_key: [ nil, "" ]).ordered.select(:id)
       @enable_banking_items = Current.family.enable_banking_items.ordered # Enable Banking panel needs session info for status display
+      @binance_items = Current.family.binance_items.ordered
       @coinstats_items = Current.family.coinstats_items.ordered # CoinStats panel needs account info for status display
       @kraken_items = Current.family.kraken_items.ordered
       @mercury_items = Current.family.mercury_items.ordered.select(:id)

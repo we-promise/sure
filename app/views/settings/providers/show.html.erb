@@ -49,6 +49,12 @@
       </turbo-frame>
     <% end %>
 
+    <%= settings_section title: "Binance (beta)", collapsible: true, open: false do %>
+      <turbo-frame id="binance-providers-panel">
+        <%= render "settings/providers/binance_panel" %>
+      </turbo-frame>
+    <% end %>
+
     <%= settings_section title: "CoinStats (beta)", collapsible: true, open: false do %>
       <turbo-frame id="coinstats-providers-panel">
         <%= render "settings/providers/coinstats_panel" %>

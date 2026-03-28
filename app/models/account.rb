@@ -270,6 +270,25 @@ class Account < ApplicationRecord
       create_and_sync(attributes, skip_initial_sync: true)
     end
 
+    def create_from_binance_account(binance_account)
+      family = binance_account.binance_item.family
+
+      attributes = {
+        family: family,
+        name: binance_account.name,
+        balance: binance_account.current_balance || 0,
+        cash_balance: binance_account.cash_balance || 0,
+        currency: binance_account.currency || family.currency,
+        accountable_type: "Crypto",
+        accountable_attributes: {
+          subtype: "exchange",
+          tax_treatment: "taxable"
+        }
+      }
+
+      create_and_sync(attributes, skip_initial_sync: true)
+    end
+
 
     private
 

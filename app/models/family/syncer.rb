@@ -14,6 +14,7 @@ class Family::Syncer
     lunchflow_items
     enable_banking_items
     indexa_capital_items
+    binance_items
     coinbase_items
     coinstats_items
     kraken_items

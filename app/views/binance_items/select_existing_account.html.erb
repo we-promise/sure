@@ -1,0 +1,42 @@
+<%= turbo_frame_tag "modal" do %>
+  <%= render DS::Dialog.new do |dialog| %>
+    <% dialog.with_header(title: t(".title")) %>
+
+    <% dialog.with_body do %>
+      <% if @available_binance_accounts.blank? %>
+        <div class="p-4 text-sm text-secondary">
+          <p class="mb-2"><%= t(".no_accounts_found") %></p>
+          <ul class="list-disc list-inside space-y-1">
+            <li><%= t(".wait_for_sync") %></li>
+            <li><%= t(".check_provider_health") %></li>
+          </ul>
+        </div>
+      <% else %>
+        <%= form_with url: link_existing_account_binance_items_path, method: :post, class: "space-y-4" do %>
+          <%= hidden_field_tag :account_id, @account.id %>
+          <div class="space-y-2 max-h-64 overflow-auto">
+            <% @available_binance_accounts.each do |ba| %>
+              <label class="flex items-center gap-3 p-2 rounded border border-surface-inset/50 hover:border-primary cursor-pointer">
+                <%= radio_button_tag :binance_account_id, ba.id, false %>
+                <div class="flex flex-col">
+                  <span class="text-sm text-primary font-medium"><%= ba.name.presence || ba.account_id %></span>
+                  <span class="text-xs text-secondary">
+                    <%= t(".balance") %>: <%= number_to_currency(ba.current_balance || 0, unit: "") %> <%= ba.currency %>
+                  </span>
+                  <% if ba.current_account.present? %>
+                    <span class="text-xs text-secondary"><%= t(".currently_linked_to", account_name: ba.current_account.name) %></span>
+                  <% end %>
+                </div>
+              </label>
+            <% end %>
+          </div>
+
+          <div class="flex items-center justify-end gap-2">
+            <%= render DS::Button.new(text: t(".link"), variant: :primary, icon: "link-2", type: :submit) %>
+            <%= render DS::Link.new(text: t(".cancel"), variant: :secondary, href: accounts_path, data: { turbo_frame: "_top" }) %>
+          </div>
+        <% end %>
+      <% end %>
+    <% end %>
+  <% end %>
+<% end %>
