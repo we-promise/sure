@@ -6,11 +6,19 @@ de:
       account_prompt: Konto suchen
       amount: Betrag
       holding: Tickersymbol
+      holding_optional: Tickersymbol (optional)
       price: Preis pro Anteil
       qty: Menge
       submit: Transaktion hinzufügen
       ticker_placeholder: AAPL
       type: Typ
+      type_buy: Kaufen
+      type_sell: Verkaufen
+      type_deposit: Einzahlung
+      type_withdrawal: Auszahlung
+      type_dividend: Dividende
+      type_interest: Zinsen
+      dividend_requires_security: Für Dividenden ist ein Wertpapier erforderlich
     header:
       buy: Kaufen
       current_market_price_label: Aktueller Marktpreis

@@ -10,11 +10,12 @@
 
     <div class="space-y-2">
       <%= form.select :type, [
-          ["Buy", "buy"],
-          ["Sell", "sell"],
-          ["Deposit", "deposit"],
-          ["Withdrawal", "withdrawal"],
-          ["Interest", "interest"]
+          [t(".type_buy"), "buy"],
+          [t(".type_sell"), "sell"],
+          [t(".type_deposit"), "deposit"],
+          [t(".type_withdrawal"), "withdrawal"],
+          [t(".type_dividend"), "dividend"],
+          [t(".type_interest"), "interest"]
       ],
       { label: t(".type"), selected: type },
       { data: {
@@ -23,7 +24,7 @@
           trade_form_key_param: "type",
         }} %>
 
-      <% if %w[buy sell].include?(type) %>
+      <% if %w[buy sell dividend].include?(type) %>
         <% if Security.provider.present? %>
           <div class="form-field combobox">
             <%= form.combobox :ticker,
@@ -34,7 +35,21 @@
                             required: true %>
           </div>
         <% else %>
-          <%= form.text_field :manual_ticker, label: "Ticker symbol", placeholder: "AAPL", required: true %>
+          <%= form.text_field :manual_ticker, label: t(".holding"), placeholder: t(".ticker_placeholder"), required: true %>
+        <% end %>
+      <% end %>
+
+      <% if type == "interest" %>
+        <% if Security.provider.present? %>
+          <div class="form-field combobox">
+            <%= form.combobox :ticker,
+                            securities_path(country_code: Current.family.country),
+                            name_when_new: "entry[manual_ticker]",
+                            label: t(".holding_optional"),
+                            placeholder: t(".ticker_placeholder") %>
+          </div>
+        <% else %>
+          <%= form.text_field :manual_ticker, label: t(".holding_optional"), placeholder: t(".ticker_placeholder") %>
         <% end %>
       <% end %>
 

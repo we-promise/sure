@@ -93,8 +93,8 @@ class TradesControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to @entry.account
   end
 
-  test "creates interest entry" do
-    assert_difference [ "Entry.count", "Transaction.count" ], 1 do
+  test "creates interest entry as trade with synthetic cash security when no ticker given" do
+    assert_difference [ "Entry.count", "Trade.count" ], 1 do
       post trades_url(account_id: @entry.account_id), params: {
         model: {
           type: "interest",
@@ -108,7 +108,69 @@ class TradesControllerTest < ActionDispatch::IntegrationTest
     created_entry = Entry.order(created_at: :desc).first
 
     assert created_entry.amount.negative?
+    assert created_entry.trade?
+    assert created_entry.trade.security.cash?
+    assert_equal "Interest", created_entry.name
     assert_redirected_to @entry.account
+  end
+
+  test "creates interest entry as trade with security when ticker given" do
+    assert_difference [ "Entry.count", "Trade.count" ], 1 do
+      post trades_url(account_id: @entry.account_id), params: {
+        model: {
+          type: "interest",
+          date: Date.current,
+          amount: 10,
+          currency: "USD",
+          ticker: "AAPL|XNAS"
+        }
+      }
+    end
+
+    created_entry = Entry.order(created_at: :desc).first
+
+    assert created_entry.amount.negative?
+    assert created_entry.trade?
+    assert_equal "AAPL", created_entry.trade.security.ticker
+    assert_equal "Interest: AAPL", created_entry.name
+    assert_redirected_to @entry.account
+  end
+
+  test "creates dividend entry as trade with required security" do
+    assert_difference [ "Entry.count", "Trade.count" ], 1 do
+      post trades_url(account_id: @entry.account_id), params: {
+        model: {
+          type: "dividend",
+          date: Date.current,
+          amount: 25,
+          currency: "USD",
+          ticker: "AAPL|XNAS"
+        }
+      }
+    end
+
+    created_entry = Entry.order(created_at: :desc).first
+
+    assert created_entry.amount.negative?
+    assert created_entry.trade?
+    assert_equal 0, created_entry.trade.qty
+    assert_equal "AAPL", created_entry.trade.security.ticker
+    assert_equal "Dividend: AAPL", created_entry.name
+    assert_equal "Dividend", created_entry.trade.investment_activity_label
+    assert_redirected_to @entry.account
+  end
+
+  test "creating dividend without security returns error" do
+    assert_no_difference [ "Entry.count", "Trade.count" ] do
+      post trades_url(account_id: @entry.account_id), params: {
+        model: {
+          type: "dividend",
+          date: Date.current,
+          amount: 25,
+          currency: "USD"
+        }
+      }
+    end
   end
 
   test "creates trade buy entry with fee" do
