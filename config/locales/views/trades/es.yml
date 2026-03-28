@@ -21,6 +21,9 @@ es:
       dividend_requires_security: Se requiere un valor para los dividendos
     header:
       buy: Comprar
+      sell: Vender
+      dividend: Dividendo
+      interest: Interés
       current_market_price_label: Precio de mercado actual
       overview: Resumen
       purchase_price_label: Precio de compra
@@ -32,6 +35,7 @@ es:
       title: Nueva transacción
     show:
       additional: Adicional
+      amount_label: Importe
       buy: Compra
       category_label: Categoría
       cost_per_share_label: Costo por acción

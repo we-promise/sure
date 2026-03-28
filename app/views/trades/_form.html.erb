@@ -24,7 +24,7 @@
           trade_form_key_param: "type",
         }} %>
 
-      <% if %w[buy sell dividend].include?(type) %>
+      <% if %w[buy sell].include?(type) %>
         <% if Security.provider.present? %>
           <div class="form-field combobox">
             <%= form.combobox :ticker,
@@ -39,18 +39,13 @@
         <% end %>
       <% end %>
 
-      <% if type == "interest" %>
-        <% if Security.provider.present? %>
-          <div class="form-field combobox">
-            <%= form.combobox :ticker,
-                            securities_path(country_code: Current.family.country),
-                            name_when_new: "entry[manual_ticker]",
-                            label: t(".holding_optional"),
-                            placeholder: t(".ticker_placeholder") %>
-          </div>
-        <% else %>
-          <%= form.text_field :manual_ticker, label: t(".holding_optional"), placeholder: t(".ticker_placeholder") %>
-        <% end %>
+      <% if %w[dividend interest].include?(type) %>
+        <% account_securities = account ? Security.joins(trades: :entry).where(entries: { account: account }).where.not(kind: "cash").distinct.order(:ticker) : [] %>
+        <% security_options = account_securities.map { |s| [ s.name.presence || s.ticker, s.exchange_operating_mic.present? ? "#{s.ticker}|#{s.exchange_operating_mic}" : s.ticker ] } %>
+        <% select_options = { label: type == "dividend" ? t(".holding") : t(".holding_optional") } %>
+        <% select_options[:include_blank] = true if type == "interest" %>
+        <% select_options[:required] = true if type == "dividend" %>
+        <%= form.select :ticker, security_options, select_options %>
       <% end %>
 
       <%= form.date_field :date, label: true, value: model.date || Date.current, required: true %>

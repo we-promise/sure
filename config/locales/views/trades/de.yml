@@ -21,6 +21,9 @@ de:
       dividend_requires_security: Für Dividenden ist ein Wertpapier erforderlich
     header:
       buy: Kaufen
+      sell: Verkaufen
+      dividend: Dividende
+      interest: Zinsen
       current_market_price_label: Aktueller Marktpreis
       overview: Übersicht
       purchase_price_label: Kaufpreis
@@ -32,6 +35,7 @@ de:
       title: Neue Transaktion
     show:
       additional: Zusätzlich
+      amount_label: Betrag
       buy: Kaufen
       category_label: Kategorie
       cost_per_share_label: Kosten pro Anteil

@@ -21,6 +21,9 @@ fr:
       dividend_requires_security: Un titre est requis pour les dividendes
     header:
       buy: Acheter
+      sell: Vendre
+      dividend: Dividende
+      interest: Intérêts
       current_market_price_label: Prix du marché actuel
       overview: Aperçu
       purchase_price_label: Prix d'achat
@@ -32,6 +35,7 @@ fr:
       title: Nouvelle transaction
     show:
       additional: Détails supplémentaires
+      amount_label: Montant
       cost_per_share_label: Coût par action
       date_label: Date
       delete: Supprimer

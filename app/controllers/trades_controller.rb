@@ -105,9 +105,16 @@ class TradesController < ApplicationController
     end
 
     def update_entry_params
-      return entry_params unless entry_params[:entryable_attributes].present?
-
       update_params = entry_params
+
+      # Income trades (Dividend/Interest) store amounts as negative (inflow convention).
+      # The form displays the absolute value, so we re-negate before saving.
+      if %w[Dividend Interest].include?(@entry.trade&.investment_activity_label) && update_params[:amount].present?
+        update_params = update_params.merge(amount: -update_params[:amount].to_d.abs)
+      end
+
+      return update_params unless update_params[:entryable_attributes].present?
+
       update_params = update_params.merge(entryable_type: "Trade")
 
       qty = update_params[:entryable_attributes][:qty]

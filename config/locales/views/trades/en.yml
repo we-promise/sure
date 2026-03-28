@@ -22,17 +22,20 @@ en:
       dividend_requires_security: Security is required for dividends
     header:
       buy: Buy
+      sell: Sell
+      dividend: Dividend
+      interest: Interest
       current_market_price_label: Current Market Price
       overview: Overview
       purchase_price_label: Purchase Price
       purchase_qty_label: Purchase Quantity
-      sell: Sell
       symbol_label: Symbol
       total_return_label: Unrealized gain/loss
     new:
       title: New transaction
     show:
       additional: Additional
+      amount_label: Amount
       buy: Buy
       category_label: Category
       cost_per_share_label: Cost per Share

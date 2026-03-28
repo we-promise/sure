@@ -19,37 +19,50 @@
                 max: Date.current,
                 disabled: @entry.linked?,
                 "data-auto-submit-form-target": "auto" %>
-          <div class="flex items-center gap-2">
-            <%= f.select :nature,
-                          [[t(".buy"), "outflow"], [t(".sell"), "inflow"]],
-                          { container_class: "w-1/3", label: t(".type_label"), selected: @entry.amount.positive? ? "outflow" : "inflow" },
-                          { data: { "auto-submit-form-target": "auto" }, disabled: @entry.linked? } %>
-            <%= f.fields_for :entryable do |ef| %>
-              <%= ef.number_field :qty,
-                  label: t(".quantity_label"),
-                  step: "any",
-                  value: trade.qty.abs,
-                  "data-auto-submit-form-target": "auto",
-                  disabled: @entry.linked? %>
-            <% end %>
-          </div>
-          <%= f.fields_for :entryable do |ef| %>
-            <%= ef.money_field :price,
-                  label: t(".cost_per_share_label"),
-                  disable_currency: true,
+          <% if trade.qty.zero? %>
+            <%= f.money_field :amount,
+                  label: t(".amount_label"),
+                  value: @entry.amount_money.abs,
                   auto_submit: true,
                   min: 0,
                   step: "any",
                   disabled: @entry.linked? %>
           <% end %>
-          <%= f.fields_for :entryable do |ef| %>
-            <%= ef.money_field :fee,
-                  label: t(".fee_label"),
-                  disable_currency: true,
-                  auto_submit: true,
-                  min: 0,
-                  step: "any",
-                  disabled: @entry.linked? %>
+          <% unless trade.qty.zero? %>
+            <div class="flex items-center gap-2">
+              <%= f.select :nature,
+                            [[t(".buy"), "outflow"], [t(".sell"), "inflow"]],
+                            { container_class: "w-1/3", label: t(".type_label"), selected: @entry.amount.positive? ? "outflow" : "inflow" },
+                            { data: { "auto-submit-form-target": "auto" }, disabled: @entry.linked? } %>
+              <%= f.fields_for :entryable do |ef| %>
+                <%= ef.number_field :qty,
+                    label: t(".quantity_label"),
+                    step: "any",
+                    value: trade.qty.abs,
+                    "data-auto-submit-form-target": "auto",
+                    disabled: @entry.linked? %>
+              <% end %>
+            </div>
+            <%= f.fields_for :entryable do |ef| %>
+              <%= ef.money_field :price,
+                    label: t(".cost_per_share_label"),
+                    disable_currency: true,
+                    auto_submit: true,
+                    min: 0,
+                    step: "any",
+                    disabled: @entry.linked? %>
+            <% end %>
+          <% end %>
+          <% unless trade.qty.zero? %>
+            <%= f.fields_for :entryable do |ef| %>
+              <%= ef.money_field :fee,
+                    label: t(".fee_label"),
+                    disable_currency: true,
+                    auto_submit: true,
+                    min: 0,
+                    step: "any",
+                    disabled: @entry.linked? %>
+            <% end %>
           <% end %>
         <% end %>
       </div>
