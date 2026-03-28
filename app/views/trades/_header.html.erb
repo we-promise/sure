@@ -35,15 +35,16 @@
   <% end %>
 
   <% trade = entry.trade %>
-
+  
+  <% unless trade.security.cash? %>    
   <div class="mb-2">
     <%= render DS::Disclosure.new(title: t(".overview"), open: true) do %>
       <div class="pb-4">
-        <dl class="space-y-3 px-3 py-2">
-          <div class="flex items-center justify-between text-sm">
-            <dt class="text-secondary"><%= t(".symbol_label") %></dt>
-            <dd class="text-primary"><%= trade.security.ticker %></dd>
-          </div>
+        <dl class="space-y-3 px-3 py-2">        
+            <div class="flex items-center justify-between text-sm">
+              <dt class="text-secondary"><%= t(".symbol_label") %></dt>
+              <dd class="text-primary"><%= trade.security.ticker %></dd>
+            </div>         
 
           <% if trade.qty.positive? %>
             <div class="flex items-center justify-between text-sm">
@@ -76,4 +77,5 @@
       </div>
     <% end %>
   </div>
+  <% end %>
 </div>
