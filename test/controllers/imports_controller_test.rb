@@ -34,8 +34,9 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_select "button", text: "Import investments", count: 0
     assert_select "button", text: "Import from Mint", count: 1
     assert_select "button", text: "Import from Quicken (QIF)", count: 1
+    assert_select "button", text: "Import from YNAB", count: 1
     assert_select "span", text: "Import accounts first to unlock this option.", count: 2
-    assert_select "div[aria-disabled=true]", count: 3
+    assert_select "div[aria-disabled=true]", count: 2
   end
 
   test "creates import" do
