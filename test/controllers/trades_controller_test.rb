@@ -171,6 +171,8 @@ class TradesControllerTest < ActionDispatch::IntegrationTest
         }
       }
     end
+
+    assert_response :unprocessable_entity
   end
 
   test "creates trade buy entry with fee" do

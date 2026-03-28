@@ -52,8 +52,6 @@
                     step: "any",
                     disabled: @entry.linked? %>
             <% end %>
-          <% end %>
-          <% unless trade.qty.zero? %>
             <%= f.fields_for :entryable do |ef| %>
               <%= ef.money_field :fee,
                     label: t(".fee_label"),

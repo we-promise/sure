@@ -70,36 +70,20 @@ class Trade::CreateForm
       end
 
       sec = security
-      entry = account.entries.build(
-        name: "Dividend: #{sec.ticker}",
-        date: date,
-        amount: amount.to_d * -1,
-        currency: currency,
-        entryable: Trade.new(
-          qty: 0,
-          price: 0,
-          fee: 0,
-          currency: currency,
-          security: sec,
-          investment_activity_label: "Dividend"
-        )
-      )
-
-      if entry.save
-        entry.lock_saved_attributes!
-        account.sync_later
-      end
-
-      entry
+      create_income_trade(sec: sec, label: "Dividend", name: "Dividend: #{sec.ticker}")
     end
 
     # Interest in an investment account is always a Trade.
     # Falls back to a synthetic cash security when none is selected.
     def create_interest_income
       sec = ticker_present? ? security : Security.cash_for(account)
+      name = sec.cash? ? "Interest" : "Interest: #{sec.ticker}"
+      create_income_trade(sec: sec, label: "Interest", name: name)
+    end
 
+    def create_income_trade(sec:, label:, name:)
       entry = account.entries.build(
-        name: sec.cash? ? "Interest" : "Interest: #{sec.ticker}",
+        name: name,
         date: date,
         amount: amount.to_d * -1,
         currency: currency,
@@ -109,7 +93,7 @@ class Trade::CreateForm
           fee: 0,
           currency: currency,
           security: sec,
-          investment_activity_label: "Interest"
+          investment_activity_label: label
         )
       )
 

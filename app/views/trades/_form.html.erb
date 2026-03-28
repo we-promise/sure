@@ -40,7 +40,7 @@
       <% end %>
 
       <% if %w[dividend interest].include?(type) %>
-        <% account_securities = account ? Security.joins(trades: :entry).where(entries: { account: account }).where.not(kind: "cash").distinct.order(:ticker) : [] %>
+        <% account_securities = account ? account.traded_standard_securities : [] %>
         <% security_options = account_securities.map { |s| [ s.name.presence || s.ticker, s.exchange_operating_mic.present? ? "#{s.ticker}|#{s.exchange_operating_mic}" : s.ticker ] } %>
         <% select_options = { label: type == "dividend" ? t(".holding") : t(".holding_optional") } %>
         <% select_options[:include_blank] = true if type == "interest" %>

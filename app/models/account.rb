@@ -362,6 +362,14 @@ class Account < ApplicationRecord
     false
   end
 
+  def traded_standard_securities
+    Security.joins(trades: :entry)
+            .where(entries: { account: self })
+            .standard
+            .distinct
+            .order(:ticker)
+  end
+
   # The balance type determines which "component" of balance is being tracked.
   # This is primarily used for balance related calculations and updates.
   #
