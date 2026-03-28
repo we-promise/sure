@@ -166,7 +166,7 @@ class PdfImport < Import
 
   def column_keys
     if investment_statement?
-      %i[date ticker qty price name]
+      %i[date ticker qty price fee name]
     else
       %i[date amount name category notes]
     end
@@ -252,6 +252,7 @@ class PdfImport < Import
             qty: row.qty,
             currency: row.currency.presence || account.currency,
             price: row.price,
+            fee: row.fee.present? ? row.fee.to_d : 0,
             investment_activity_label: investment_activity_label_for(row.qty),
             entry: Entry.new(
               account: account,
@@ -349,6 +350,7 @@ class PdfImport < Import
             ticker: trade["ticker"].to_s,
             qty: trade["qty"].to_s,
             price: trade["price"].to_s,
+            fee: trade["fees"].to_s,
             name: trade["name"].to_s,
             currency: trade["currency"].presence || currency,
             exchange_operating_mic: trade["exchange_operating_mic"].to_s

@@ -547,7 +547,7 @@ class Account::ProviderImportAdapter
   # @param source [String] Provider name
   # @param activity_label [String, nil] Investment activity label (e.g., "Buy", "Sell", "Reinvestment")
   # @return [Entry] The created entry with trade
-  def import_trade(security:, quantity:, price:, amount:, currency:, date:, name: nil, external_id: nil, source:, activity_label: nil)
+  def import_trade(security:, quantity:, price:, amount:, currency:, date:, name: nil, external_id: nil, source:, activity_label: nil, fee: 0)
     raise ArgumentError, "security is required" if security.nil?
     raise ArgumentError, "source is required" if source.blank?
 
@@ -584,6 +584,7 @@ class Account::ProviderImportAdapter
         security: security,
         qty: quantity,
         price: price,
+        fee: fee,
         currency: currency,
         investment_activity_label: activity_label || (quantity > 0 ? "Buy" : "Sell")
       )

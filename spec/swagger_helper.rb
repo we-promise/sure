@@ -435,7 +435,7 @@ RSpec.configure do |config|
           },
           Trade: {
             type: :object,
-            required: %w[id date amount currency name qty price account created_at updated_at],
+            required: %w[id date amount currency name qty price fee account created_at updated_at],
             properties: {
               id: { type: :string, format: :uuid },
               date: { type: :string, format: :date },
@@ -445,6 +445,7 @@ RSpec.configure do |config|
               notes: { type: :string, nullable: true },
               qty: { type: :string },
               price: { type: :string },
+              fee: { type: :string },
               investment_activity_label: { type: :string, nullable: true },
               account: { '$ref' => '#/components/schemas/Account' },
               security: {
