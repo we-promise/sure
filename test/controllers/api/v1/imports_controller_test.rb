@@ -11,11 +11,11 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
 
     @user.api_keys.active.destroy_all
 
-    @api_key = ApiKey.create!(
+    @api_key = ApiKey.create!( # pipelock:ignore
       user: @user,
       name: "Test Read-Write Key",
       scopes: [ "read_write" ],
-      key: SecureRandom.hex(16) # pipelock:ignore
+      key: SecureRandom.hex(16)
     )
   end
 
