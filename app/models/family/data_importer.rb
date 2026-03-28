@@ -250,6 +250,7 @@ class Family::DataImporter
           security: security,
           qty: data["qty"].to_d,
           price: data["price"].to_d,
+          fee: data["fee"].present? ? data["fee"].to_d : 0,
           currency: data["currency"] || account.currency
         )
 

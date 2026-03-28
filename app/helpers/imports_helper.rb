@@ -22,6 +22,7 @@ module ImportsHelper
       ticker: "Ticker",
       exchange: "Exchange",
       price: "Price",
+      fee: "Fee",
       entity_type: "Type",
       category_parent: "Parent category",
       category_color: "Color",
