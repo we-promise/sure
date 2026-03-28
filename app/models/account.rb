@@ -247,6 +247,29 @@ class Account < ApplicationRecord
       create_and_sync(attributes, skip_initial_sync: true)
     end
 
+    def create_from_kraken_account(kraken_account)
+      family = kraken_account.kraken_item.family
+
+      native_balance = kraken_account.raw_payload&.dig("native_balance", "amount").to_d
+      native_currency = kraken_account.raw_payload&.dig("native_balance", "currency") || family.currency
+      fiat_asset = ActiveModel::Type::Boolean.new.cast(kraken_account.raw_payload&.dig("fiat_asset"))
+
+      attributes = {
+        family: family,
+        name: kraken_account.name,
+        balance: native_balance,
+        cash_balance: fiat_asset ? native_balance : 0,
+        currency: native_currency,
+        accountable_type: "Crypto",
+        accountable_attributes: {
+          subtype: "exchange",
+          tax_treatment: "taxable"
+        }
+      }
+
+      create_and_sync(attributes, skip_initial_sync: true)
+    end
+
 
     private
 

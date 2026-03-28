@@ -1,0 +1,74 @@
+---
+de:
+  kraken_items:
+    create:
+      default_name: Kraken
+      success: Kraken wurde erfolgreich verbunden. Deine Bestände und Historie werden synchronisiert.
+    update:
+      success: Kraken-Konfiguration erfolgreich aktualisiert.
+    destroy:
+      success: Kraken-Verbindung zum Löschen vorgemerkt.
+    setup_accounts:
+      title: Kraken-Bestände importieren
+      subtitle: Wähle aus, welche Bestände du verfolgen möchtest
+      instructions: Wähle die Kraken-Bestände aus, die du importieren möchtest. Nicht ausgewählte Bestände bleiben für später verfügbar.
+      no_accounts: Alle Bestände wurden importiert.
+      accounts_count:
+        one: "%{count} Bestand verfügbar"
+        other: "%{count} Bestände verfügbar"
+      select_all: Alle auswählen
+      import_selected: Ausgewählte importieren
+      cancel: Abbrechen
+      creating: Importiere...
+    complete_account_setup:
+      success:
+        one: "%{count} Bestand importiert"
+        other: "%{count} Bestände importiert"
+      none_selected: Keine Bestände ausgewählt
+      no_accounts: Keine Bestände zum Importieren
+    kraken_item:
+      provider_name: Kraken
+      syncing: Wird synchronisiert...
+      reconnect: Zugangsdaten müssen aktualisiert werden
+      deletion_in_progress: Wird gelöscht...
+      sync_status:
+        no_accounts: Keine Bestände gefunden
+        all_synced:
+          one: "%{count} Konto synchronisiert"
+          other: "%{count} Konten synchronisiert"
+        partial_sync: "%{linked_count} synchronisiert, %{unlinked_count} müssen eingerichtet werden"
+      status_with_summary: "Zuletzt vor %{timestamp} synchronisiert - %{summary}"
+      status_never: Nie synchronisiert
+      update_credentials: Zugangsdaten aktualisieren
+      delete: Löschen
+      no_accounts_title: Keine Bestände gefunden
+      no_accounts_message: Deine Kraken-Bestände erscheinen hier nach der Synchronisierung.
+      setup_needed: Bestände bereit zum Import
+      setup_description: Wähle aus, welche Kraken-Bestände du verfolgen möchtest.
+      setup_action: Bestände importieren
+      import_accounts_menu: Bestände importieren
+    select_existing_account:
+      title: Kraken-Konto verknüpfen
+      no_accounts_found: Keine Kraken-Bestände gefunden.
+      wait_for_sync: Warte, bis Kraken die Synchronisierung abgeschlossen hat
+      check_provider_health: Prüfe, ob deine Kraken-API-Zugangsdaten gültig sind
+      balance: Kontostand
+      currently_linked_to: "Derzeit verknüpft mit: %{account_name}"
+      link: Verknüpfen
+      cancel: Abbrechen
+    link_existing_account:
+      success: Erfolgreich mit Kraken-Konto verknüpft
+      errors:
+        only_manual: Nur manuelle Konten können mit Kraken verknüpft werden
+        invalid_kraken_account: Ungültiges Kraken-Konto
+  kraken_item:
+    syncer:
+      checking_credentials: Zugangsdaten werden geprüft...
+      credentials_invalid: Ungültige API-Zugangsdaten. Bitte prüfe deinen Kraken-API-Schlüssel und dein Geheimnis.
+      importing_accounts: Kraken-Bestände werden importiert...
+      checking_configuration: Kontokonfiguration wird geprüft...
+      accounts_need_setup:
+        one: "%{count} Konto muss eingerichtet werden"
+        other: "%{count} Konten müssen eingerichtet werden"
+      processing_accounts: Kontodaten werden verarbeitet...
+      calculating_balances: Kontostände werden berechnet...

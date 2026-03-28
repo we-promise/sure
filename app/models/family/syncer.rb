@@ -16,6 +16,7 @@ class Family::Syncer
     indexa_capital_items
     coinbase_items
     coinstats_items
+    kraken_items
     mercury_items
     snaptrade_items
   ].freeze

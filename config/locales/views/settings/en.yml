@@ -189,6 +189,21 @@ en:
         disconnect_confirm: Are you sure you want to disconnect this Coinbase connection? Your synced accounts will become manual accounts.
         status_connected: Coinbase is connected and syncing your crypto holdings.
         status_not_connected: Not connected. Enter your API credentials above to get started.
+      kraken_panel:
+        setup_instructions: "To connect Kraken:"
+        step1_html: Go to <a href="https://support.kraken.com/bn/articles/how-to-create-an-api-key-on-kraken-pro" target="_blank" rel="noopener noreferrer" class="text-primary underline">Kraken API key settings</a>
+        step2: Create a read-only API key with Query Funds, Query Closed Orders & Trades, and Query Ledger Entries enabled
+        step3: Copy your API key and private key and paste them below
+        api_key_label: API Key
+        api_key_placeholder: Enter your Kraken API key
+        api_secret_label: Private Key
+        api_secret_placeholder: Enter your Kraken private key
+        connect_button: Connect Kraken
+        syncing: Syncing...
+        sync: Sync
+        disconnect_confirm: Are you sure you want to disconnect this Kraken connection? Your synced accounts will become manual accounts.
+        status_connected: Kraken is connected and syncing your crypto exchange balances.
+        status_not_connected: Not connected. Enter your API credentials above to get started.
       enable_banking_panel:
         callback_url_instruction: "For the callback URL, use %{callback_url}."
         connection_error: Connection Error

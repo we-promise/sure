@@ -16,6 +16,7 @@ class AccountsController < ApplicationController
     @lunchflow_items = visible_provider_items(family.lunchflow_items.ordered.includes(:syncs, :lunchflow_accounts))
     @enable_banking_items = visible_provider_items(family.enable_banking_items.ordered.includes(:syncs))
     @coinstats_items = visible_provider_items(family.coinstats_items.ordered.includes(:coinstats_accounts, :accounts, :syncs))
+    @kraken_items = visible_provider_items(family.kraken_items.ordered.includes(:kraken_accounts, :accounts, :syncs))
     @mercury_items = visible_provider_items(family.mercury_items.ordered.includes(:syncs, :mercury_accounts))
     @coinbase_items = visible_provider_items(family.coinbase_items.ordered.includes(:coinbase_accounts, :accounts, :syncs))
     @snaptrade_items = visible_provider_items(family.snaptrade_items.ordered.includes(:syncs, :snaptrade_accounts))
@@ -292,6 +293,18 @@ class AccountsController < ApplicationController
       @coinstats_items.each do |item|
         latest_sync = item.syncs.ordered.first
         @coinstats_sync_stats_map[item.id] = latest_sync&.sync_stats || {}
+      end
+
+      # Kraken sync stats
+      @kraken_sync_stats_map = {}
+      @kraken_unlinked_count_map = {}
+      @kraken_items.each do |item|
+        latest_sync = item.syncs.ordered.first
+        @kraken_sync_stats_map[item.id] = latest_sync&.sync_stats || {}
+        @kraken_unlinked_count_map[item.id] = item.kraken_accounts
+          .left_joins(:account_provider)
+          .where(account_providers: { id: nil })
+          .count
       end
 
       # Mercury sync stats

@@ -1,0 +1,74 @@
+---
+es:
+  kraken_items:
+    create:
+      default_name: Kraken
+      success: Kraken se ha conectado correctamente. Tus balances e historial se están sincronizando.
+    update:
+      success: Configuración de Kraken actualizada correctamente.
+    destroy:
+      success: Conexión de Kraken programada para eliminación.
+    setup_accounts:
+      title: Importar balances de Kraken
+      subtitle: Selecciona qué balances quieres seguir
+      instructions: Selecciona los balances de Kraken que quieres importar. Los no seleccionados seguirán disponibles para añadirlos más tarde.
+      no_accounts: Todos los balances ya se importaron.
+      accounts_count:
+        one: "%{count} balance disponible"
+        other: "%{count} balances disponibles"
+      select_all: Seleccionar todo
+      import_selected: Importar seleccionados
+      cancel: Cancelar
+      creating: Importando...
+    complete_account_setup:
+      success:
+        one: "Se importó %{count} balance"
+        other: "Se importaron %{count} balances"
+      none_selected: No se seleccionaron balances
+      no_accounts: No hay balances para importar
+    kraken_item:
+      provider_name: Kraken
+      syncing: Sincronizando...
+      reconnect: Las credenciales necesitan actualización
+      deletion_in_progress: Eliminando...
+      sync_status:
+        no_accounts: No se encontraron balances
+        all_synced:
+          one: "%{count} cuenta sincronizada"
+          other: "%{count} cuentas sincronizadas"
+        partial_sync: "%{linked_count} sincronizadas, %{unlinked_count} necesitan configuración"
+      status_with_summary: "Sincronizado por última vez hace %{timestamp} - %{summary}"
+      status_never: Nunca sincronizado
+      update_credentials: Actualizar credenciales
+      delete: Eliminar
+      no_accounts_title: No se encontraron balances
+      no_accounts_message: Tus balances de Kraken aparecerán aquí después de sincronizar.
+      setup_needed: Balances listos para importar
+      setup_description: Selecciona qué balances de Kraken quieres seguir.
+      setup_action: Importar balances
+      import_accounts_menu: Importar balances
+    select_existing_account:
+      title: Vincular cuenta de Kraken
+      no_accounts_found: No se encontraron balances de Kraken.
+      wait_for_sync: Espera a que Kraken termine de sincronizar
+      check_provider_health: Comprueba que tus credenciales API de Kraken sean válidas
+      balance: Balance
+      currently_linked_to: "Actualmente vinculado a: %{account_name}"
+      link: Vincular
+      cancel: Cancelar
+    link_existing_account:
+      success: Vinculado correctamente a la cuenta de Kraken
+      errors:
+        only_manual: Solo las cuentas manuales se pueden vincular a Kraken
+        invalid_kraken_account: Cuenta de Kraken no válida
+  kraken_item:
+    syncer:
+      checking_credentials: Comprobando credenciales...
+      credentials_invalid: Credenciales API no válidas. Comprueba tu clave API y secreto de Kraken.
+      importing_accounts: Importando balances desde Kraken...
+      checking_configuration: Comprobando la configuración de la cuenta...
+      accounts_need_setup:
+        one: "%{count} cuenta necesita configuración"
+        other: "%{count} cuentas necesitan configuración"
+      processing_accounts: Procesando datos de la cuenta...
+      calculating_balances: Calculando balances...
