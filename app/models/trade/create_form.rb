@@ -69,8 +69,15 @@ class Trade::CreateForm
         return entry
       end
 
-      sec = security
-      create_income_trade(sec: sec, label: "Dividend", name: "Dividend: #{sec.ticker}")
+      begin
+        sec = security
+        create_income_trade(sec: sec, label: "Dividend", name: "Dividend: #{sec.ticker}")
+      rescue => e
+        Rails.logger.warn("Dividend security resolution failed: #{e.class} - #{e.message}")
+        entry = account.entries.build(entryable: Trade.new)
+        entry.errors.add(:base, I18n.t("trades.form.dividend_requires_security"))
+        entry
+      end
     end
 
     # Interest in an investment account is always a Trade.

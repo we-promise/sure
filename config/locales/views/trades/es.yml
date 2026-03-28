@@ -28,7 +28,6 @@ es:
       overview: Resumen
       purchase_price_label: Precio de compra
       purchase_qty_label: Cantidad comprada
-      sell: Vender
       symbol_label: Símbolo
       total_return_label: Ganancia/pérdida no realizada
     new:

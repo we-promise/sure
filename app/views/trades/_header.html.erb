@@ -2,9 +2,10 @@
 
 <div id="<%= dom_id(entry, :header) %>">
   <%= tag.header class: "mb-4 space-y-1" do %>
+    <% label = entry.trade.investment_activity_label %>
+    <% income_trade = %w[Dividend Interest].include?(label) %>
     <span class="text-secondary text-sm">
-      <% label = entry.trade.investment_activity_label %>
-      <% if %w[Dividend Interest].include?(label) %>
+      <% if income_trade %>
         <%= t(".#{label.downcase}") %>
       <% else %>
         <%= entry.amount.positive? ? t(".buy") : t(".sell") %>
@@ -14,7 +15,7 @@
     <div class="flex items-center gap-4">
       <h3 class="font-medium">
         <span class="text-2xl text-primary privacy-sensitive">
-          <%= format_money(%w[Dividend Interest].include?(entry.trade.investment_activity_label) ? entry.amount_money.abs : entry.amount_money) %>
+          <%= format_money(income_trade ? entry.amount_money.abs : entry.amount_money) %>
         </span>
 
         <span class="text-lg text-secondary">
