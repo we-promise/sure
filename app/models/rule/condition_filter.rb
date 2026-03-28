@@ -4,9 +4,9 @@ class Rule::ConditionFilter
   TYPES = [ "text", "number", "select" ]
 
   OPERATORS_MAP = {
-    "text" => [ [ "Contains", "like" ], [ "Equal to", "=" ], [ "Is empty", "is_null" ] ],
-    "number" => [ [ "Greater than", ">" ], [ "Greater or equal to", ">=" ], [ "Less than", "<" ], [ "Less than or equal to", "<=" ], [ "Is equal to", "=" ] ],
-    "select" => [ [ "Equal to", "=" ], [ "Is empty", "is_null" ] ]
+    "text" => [ [ "Contains", "like" ], [ "Does not contain", "not_like" ], [ "Equal to", "=" ], [ "Not equal to", "!=" ], [ "Is empty", "is_null" ] ],
+    "number" => [ [ "Greater than", ">" ], [ "Greater or equal to", ">=" ], [ "Less than", "<" ], [ "Less than or equal to", "<=" ], [ "Is equal to", "=" ], [ "Not equal to", "!=" ] ],
+    "select" => [ [ "Equal to", "=" ], [ "Not equal to", "!=" ], [ "Is empty", "is_null" ] ]
   }
 
   def initialize(rule)
@@ -74,7 +74,7 @@ class Rule::ConditionFilter
       else
         normalized_value = normalize_value(value)
         normalized_field = normalize_field(field)
-        sanitized_value = operator == "like" ? "%#{ActiveRecord::Base.sanitize_sql_like(normalized_value)}%" : normalized_value
+        sanitized_value = %w[like not_like].include?(operator) ? "%#{ActiveRecord::Base.sanitize_sql_like(normalized_value)}%" : normalized_value
 
         ActiveRecord::Base.sanitize_sql_for_conditions([
           "#{normalized_field} #{sanitize_operator(operator)} ?",
@@ -89,10 +89,16 @@ class Rule::ConditionFilter
       case operator
       when "like"
         "ILIKE"
+      when "not_like"
+        "NOT ILIKE"
       when "is_null"
         "IS NULL"
       else
-        operator
+        if operator == "!=" && type == "select"
+          "IS DISTINCT FROM"
+        else
+          operator
+        end
       end
     end
 
