@@ -15,7 +15,7 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
       user: @user,
       name: "Test Read-Write Key",
       scopes: [ "read_write" ],
-      key: SecureRandom.hex(16)
+      key: SecureRandom.hex(16) # pipelock:ignore
     )
   end
 
