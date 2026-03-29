@@ -72,12 +72,12 @@ class Provider::Binance
     end
 
     def timestamp_params
-      { "timestamp" => (Time.now.to_f * 1000).to_i.to_s, "recvWindow" => "10000" }
+      { "timestamp" => (Time.now.to_f * 1000).to_i.to_s, "recvWindow" => "5000" }
     end
 
-    # HMAC-SHA256 of the sorted query string
+    # HMAC-SHA256 of the query string
     def sign(params)
-      query_string = params.sort_by { |k, _| k.to_s }.map { |k, v| "#{k}=#{v}" }.join("&")
+      query_string = params.map { |k, v| "#{k}=#{v}" }.join("&")
       OpenSSL::HMAC.hexdigest("sha256", api_secret, query_string)
     end
 

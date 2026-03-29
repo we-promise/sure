@@ -8,7 +8,7 @@ class Provider::BinanceTest < ActiveSupport::TestCase
   test "sign produces HMAC-SHA256 hex digest" do
     params = { "timestamp" => "1000", "recvWindow" => "5000" }
     sig = @provider.send(:sign, params)
-    expected = OpenSSL::HMAC.hexdigest("sha256", "test_secret", "recvWindow=5000&timestamp=1000")
+    expected = OpenSSL::HMAC.hexdigest("sha256", "test_secret", "timestamp=1000&recvWindow=5000")
     assert_equal expected, sig
   end
 
