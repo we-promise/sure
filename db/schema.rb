@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_03_29_111830) do
+ActiveRecord::Schema[7.2].define(version: 2026_03_29_112235) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -191,6 +191,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_29_111830) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["account_type"], name: "index_binance_accounts_on_account_type"
+    t.index ["binance_item_id", "account_type"], name: "index_binance_accounts_on_item_and_type", unique: true
     t.index ["binance_item_id"], name: "index_binance_accounts_on_binance_item_id"
   end
 
