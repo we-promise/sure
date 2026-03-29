@@ -30,4 +30,12 @@ elsif Rails.application.config.app_mode.self_hosted? && !Rails.application.crede
   Rails.application.config.active_record.encryption.deterministic_key = deterministic_key
   Rails.application.config.active_record.encryption.key_derivation_salt = key_derivation_salt
 end
+
+# Allow reading data that was stored before encryption was enabled.
+# This prevents ActiveRecord::Encryption::Errors::Decryption when accessing
+# columns that have `encrypts` declarations but still contain plaintext values
+# (e.g., after enabling encryption on an existing database).
+# Run `bin/rails security:backfill_encryption` to encrypt existing plaintext data.
+Rails.application.config.active_record.encryption.support_unencrypted_data = true
+
 # If none of the above conditions are met, credentials from application.rb will be used
