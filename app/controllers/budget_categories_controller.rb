@@ -23,9 +23,9 @@ class BudgetCategoriesController < ApplicationController
 
   def update
     @budget_category = Current.family.budget_categories.find(params[:id])
-    previous_budgeted_spending = @budget_category[:budgeted_spending] || 0
 
     BudgetCategory.transaction do
+      previous_budgeted_spending = @budget_category.budgeted_spending || 0
       @budget_category.update!(budget_category_params)
       update_parent_budget!(previous_budgeted_spending)
     end
@@ -45,13 +45,17 @@ class BudgetCategoriesController < ApplicationController
       parent_budget_category = @budget_category.parent_budget_category
       return unless parent_budget_category
 
-      current_budgeted_spending = @budget_category[:budgeted_spending] || 0
+      current_budgeted_spending = @budget_category.budgeted_spending || 0
       delta = current_budgeted_spending - previous_budgeted_spending
       return if delta.zero?
 
       parent_budget_category.update!(
-        budgeted_spending: [ (parent_budget_category[:budgeted_spending] || 0) + delta, 0 ].max
+        budgeted_spending: non_negative_budget((parent_budget_category.budgeted_spending || 0) + delta)
       )
+    end
+
+    def non_negative_budget(amount)
+      [ amount, 0 ].max
     end
 
     def budget_category_params

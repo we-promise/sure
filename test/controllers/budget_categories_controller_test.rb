@@ -9,23 +9,21 @@ class BudgetCategoriesControllerTest < ActionDispatch::IntegrationTest
     @budget = budgets(:one)
     @family = @budget.family
 
-    parent_category_name = "Bills #{SecureRandom.hex(4)}"
-
     @parent_category = Category.create!(
-      name: parent_category_name,
+      name: "Bills controller test",
       family: @family,
       color: "#4da568",
       lucide_icon: "house"
     )
 
     @electric_category = Category.create!(
-      name: "Electric #{SecureRandom.hex(4)}",
+      name: "Electric controller test",
       parent: @parent_category,
       family: @family
     )
 
     @water_category = Category.create!(
-      name: "Water #{SecureRandom.hex(4)}",
+      name: "Water controller test",
       parent: @parent_category,
       family: @family
     )
@@ -73,15 +71,17 @@ class BudgetCategoriesControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "subcategory budget form rerenders without a max allocation cap" do
+  test "sibling subcategory budget form rerenders without a max allocation cap" do
     patch budget_budget_category_path(@budget, @electric_budget_category),
           params: { budget_category: { budgeted_spending: 125 } },
           as: :turbo_stream
 
     assert_response :success
-    assert_no_match(
-      /id="#{dom_id(@water_budget_category, :budgeted_spending)}"[^>]*\smax=/,
-      @response.body
-    )
+
+    fragment = Nokogiri::HTML.fragment(@response.body)
+    input = fragment.at_css("input##{dom_id(@water_budget_category, :budgeted_spending)}")
+
+    assert_not_nil input
+    assert_nil input["max"]
   end
 end
