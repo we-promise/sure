@@ -43,6 +43,21 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     assert_select "[data-controller='sankey-chart']"
   end
 
+  test "dashboard outflows includes investment contributions category" do
+    ensure_investment_contributions_category(@family)
+
+    create_transaction(
+      account: accounts(:depository),
+      amount: 300,
+      kind: "investment_contribution",
+      category: @family.investment_contributions_category
+    )
+
+    get root_path
+    assert_response :ok
+    assert_select "#outflows-donut-section", text: /#{Regexp.escape(Category.investment_contributions_name)}/
+  end
+
   test "changelog" do
     VCR.use_cassette("git_repository_provider/fetch_latest_release_notes") do
       get changelog_path

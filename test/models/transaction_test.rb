@@ -52,6 +52,10 @@ class TransactionTest < ActiveSupport::TestCase
     end
   end
 
+  test "BUDGET_EXCLUDED_KINDS includes investment_contribution" do
+    assert_includes Transaction::BUDGET_EXCLUDED_KINDS, "investment_contribution"
+  end
+
   test "ACTIVITY_LABELS contains all valid labels" do
     assert_includes Transaction::ACTIVITY_LABELS, "Buy"
     assert_includes Transaction::ACTIVITY_LABELS, "Sell"

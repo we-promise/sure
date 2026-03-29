@@ -22,7 +22,10 @@ class PagesController < ApplicationController
     net_totals = income_statement.net_category_totals(period: @period)
 
     @cashflow_sankey_data = build_cashflow_sankey_data(net_totals, income_totals, expense_totals, family_currency)
-    @outflows_data = build_outflows_donut_data(net_totals)
+    @outflows_data = build_outflows_donut_data(
+      net_totals,
+      investment_contributions_total: investment_contributions_outflow_total(@period)
+    )
 
     @dashboard_sections = build_dashboard_sections
 
@@ -313,7 +316,7 @@ class PagesController < ApplicationController
       end
     end
 
-    def build_outflows_donut_data(net_totals)
+    def build_outflows_donut_data(net_totals, investment_contributions_total: 0)
       currency_symbol = Money::Currency.new(net_totals.currency).symbol
       total = net_totals.total_net_expense
 
@@ -333,7 +336,48 @@ class PagesController < ApplicationController
           }
         end
 
-      { categories: categories, total: total.to_f.round(2), currency: net_totals.currency, currency_symbol: currency_symbol }
+      if investment_contributions_total.positive?
+        investment_contributions_category = Current.family.investment_contributions_category
+        categories << {
+          id: investment_contributions_category.id,
+          name: investment_contributions_category.name,
+          amount: investment_contributions_total.to_f.round(2),
+          currency: net_totals.currency,
+          percentage: 0,
+          color: investment_contributions_category.color.presence || Category::UNCATEGORIZED_COLOR,
+          icon: investment_contributions_category.lucide_icon,
+          clickable: true
+        }
+      end
+
+      donut_total = total + investment_contributions_total
+      categories = categories
+        .reject { |category| category[:amount].zero? }
+        .sort_by { |category| -category[:amount] }
+
+      categories.each do |category|
+        category[:percentage] = donut_total.zero? ? 0 : ((category[:amount] / donut_total) * 100).round(1)
+      end
+
+      { categories: categories, total: donut_total.to_f.round(2), currency: net_totals.currency, currency_symbol: currency_symbol }
+    end
+
+    def investment_contributions_outflow_total(period)
+      scope = Current.family.transactions
+        .visible
+        .excluding_pending
+        .in_period(period)
+        .where(kind: "investment_contribution")
+        .joins(entry: :account)
+        .joins(<<~SQL.squish)
+          LEFT JOIN exchange_rates er
+            ON er.date = entries.date
+            AND er.from_currency = entries.currency
+            AND er.to_currency = #{ActiveRecord::Base.connection.quote(Current.family.currency)}
+        SQL
+        .merge(Account.included_in_finances_for(Current.user))
+
+      scope.sum("ABS(entries.amount * COALESCE(er.rate, 1))")
     end
 
     def ensure_intro_guest!
