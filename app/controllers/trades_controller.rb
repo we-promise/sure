@@ -94,31 +94,40 @@ class TradesController < ApplicationController
     def entry_params
       params.require(:entry).permit(
         :name, :date, :amount, :currency, :excluded, :notes, :nature,
-        entryable_attributes: [ :id, :qty, :price, :investment_activity_label ]
+        entryable_attributes: [ :id, :qty, :price, :fee, :investment_activity_label ]
       )
     end
 
     def create_params
       params.require(:model).permit(
-        :date, :amount, :currency, :qty, :price, :ticker, :manual_ticker, :type, :transfer_account_id
+        :date, :amount, :currency, :qty, :price, :fee, :ticker, :manual_ticker, :type, :transfer_account_id
       )
     end
 
     def update_entry_params
-      return entry_params unless entry_params[:entryable_attributes].present?
-
       update_params = entry_params
+
+      # Income trades (Dividend/Interest) store amounts as negative (inflow convention).
+      # The form displays the absolute value, so we re-negate before saving.
+      if %w[Dividend Interest].include?(@entry.trade&.investment_activity_label) && update_params[:amount].present?
+        update_params = update_params.merge(amount: -update_params[:amount].to_d.abs)
+      end
+
+      return update_params unless update_params[:entryable_attributes].present?
+
       update_params = update_params.merge(entryable_type: "Trade")
 
       qty = update_params[:entryable_attributes][:qty]
       price = update_params[:entryable_attributes][:price]
+      fee = update_params[:entryable_attributes][:fee]
       nature = update_params[:nature]
 
       if qty.present? && price.present?
         is_sell = nature == "inflow"
         qty = is_sell ? -qty.to_d.abs : qty.to_d.abs
+        fee_val = fee.present? ? fee.to_d : (@entry.trade&.fee || 0)
         update_params[:entryable_attributes][:qty] = qty
-        update_params[:amount] = qty * price.to_d
+        update_params[:amount] = qty * price.to_d + fee_val
 
         # Sync investment_activity_label with Buy/Sell type if not explicitly set to something else
         # Check both the submitted param and the existing record's label

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_03_27_130000) do
+ActiveRecord::Schema[7.2].define(version: 2026_03_28_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -1179,9 +1179,12 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_27_130000) do
     t.integer "failed_fetch_count", default: 0, null: false
     t.datetime "last_health_check_at"
     t.string "website_url"
+    t.string "kind", default: "standard", null: false
     t.index "upper((ticker)::text), COALESCE(upper((exchange_operating_mic)::text), ''::text)", name: "index_securities_on_ticker_and_exchange_operating_mic_unique", unique: true
     t.index ["country_code"], name: "index_securities_on_country_code"
     t.index ["exchange_operating_mic"], name: "index_securities_on_exchange_operating_mic"
+    t.index ["kind"], name: "index_securities_on_kind"
+    t.check_constraint "kind = ANY (ARRAY['standard'::text, 'cash'::text])", name: "chk_securities_kind"
   end
 
   create_table "security_prices", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1428,6 +1431,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_27_130000) do
     t.string "currency"
     t.jsonb "locked_attributes", default: {}
     t.string "investment_activity_label"
+    t.decimal "fee", precision: 19, scale: 4, default: "0.0", null: false
     t.index ["investment_activity_label"], name: "index_trades_on_investment_activity_label"
     t.index ["security_id"], name: "index_trades_on_security_id"
   end
