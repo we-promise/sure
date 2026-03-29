@@ -1,5 +1,66 @@
 ---
 en:
+  binance_items:
+    create:
+      default_name: Binance
+      success: Successfully connected to Binance! Your account is being synced.
+    update:
+      success: Successfully updated Binance configuration.
+    destroy:
+      success: Scheduled Binance connection for deletion.
+    setup_accounts:
+      title: Import Binance Account
+      subtitle: Select which portfolios to track
+      instructions: Select the Binance portfolios you want to import. Only portfolios with balances are shown.
+      no_accounts: All accounts have been imported.
+      accounts_count:
+        one: "%{count} account available"
+        other: "%{count} accounts available"
+      select_all: Select all
+      import_selected: Import Selected
+      cancel: Cancel
+      creating: Importing...
+    complete_account_setup:
+      success:
+        one: "Imported %{count} account"
+        other: "Imported %{count} accounts"
+      none_selected: No accounts selected
+      no_accounts: No accounts to import
+    binance_item:
+      provider_name: Binance
+      syncing: Syncing...
+      reconnect: Credentials need updating
+      deletion_in_progress: Deleting...
+      sync_status:
+        no_accounts: No accounts found
+        all_synced:
+          one: "%{count} account synced"
+          other: "%{count} accounts synced"
+        partial_sync: "%{linked_count} synced, %{unlinked_count} need setup"
+      status: "Last synced %{timestamp} ago"
+      status_with_summary: "Last synced %{timestamp} ago - %{summary}"
+      status_never: Never synced
+      update_credentials: Update credentials
+      delete: Delete
+      no_accounts_title: No accounts found
+      no_accounts_message: Your Binance portfolio will appear here after syncing.
+      setup_needed: Account ready to import
+      setup_description: Select which Binance portfolios you want to track.
+      setup_action: Import Account
+      import_accounts_menu: Import Account
+    select_existing_account:
+      title: Link Binance Account
+      no_accounts_found: No Binance accounts found.
+      wait_for_sync: Wait for Binance to finish syncing
+      check_provider_health: Check that your Binance API credentials are valid
+      currently_linked_to: "Currently linked to: %{account_name}"
+      link: Link
+      cancel: Cancel
+    link_existing_account:
+      success: Successfully linked to Binance account
+      errors:
+        only_manual: Only manual accounts can be linked to Binance
+        invalid_binance_account: Invalid Binance account
   binance_item:
     syncer:
       checking_credentials: Checking credentials...
@@ -11,11 +72,3 @@ en:
         other: "%{count} accounts need setup"
       processing_accounts: Processing account data...
       calculating_balances: Calculating balances...
-  binance_items:
-    binance_item:
-      sync_status:
-        no_accounts: No accounts found
-        all_synced:
-          one: "%{count} account synced"
-          other: "%{count} accounts synced"
-        partial_sync: "%{linked_count} synced, %{unlinked_count} need setup"
