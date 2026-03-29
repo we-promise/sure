@@ -9,7 +9,7 @@ class BinanceItem::ImporterTest < ActiveSupport::TestCase
     @provider = mock
     @provider.stubs(:get_spot_price).returns("50000.0")
 
-    stub_spot_result([{ symbol: "BTC", free: "1.0", locked: "0.0", total: "1.0" }])
+    stub_spot_result([ { symbol: "BTC", free: "1.0", locked: "0.0", total: "1.0" } ])
     stub_margin_result([])
     stub_earn_result([])
   end
@@ -34,7 +34,7 @@ class BinanceItem::ImporterTest < ActiveSupport::TestCase
   end
 
   test "stablecoins counted at 1.0 without API call" do
-    stub_spot_result([{ symbol: "USDT", free: "1000.0", locked: "0.0", total: "1000.0" }])
+    stub_spot_result([ { symbol: "USDT", free: "1000.0", locked: "0.0", total: "1000.0" } ])
 
     @provider.expects(:get_spot_price).never
 
