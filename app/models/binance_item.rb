@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 class BinanceItem < ApplicationRecord
-  include Syncable, BinanceItem::Provided, BinanceItem::Unlinking
+  include Syncable, Provided, Unlinking
 
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
 
@@ -53,17 +53,32 @@ class BinanceItem < ApplicationRecord
   end
 
   def process_accounts
+    Rails.logger.info "BinanceItem #{id} - process_accounts: total binance_accounts=#{binance_accounts.count}"
+
     return [] if binance_accounts.empty?
 
+    binance_accounts.each do |ba|
+      Rails.logger.info(
+        "BinanceItem #{id} - binance_account #{ba.id}: " \
+        "name='#{ba.name}' " \
+        "account_provider=#{ba.account_provider&.id || 'nil'} " \
+        "account=#{ba.account&.id || 'nil'}"
+      )
+    end
+
     linked = binance_accounts.joins(:account).merge(Account.visible)
+    Rails.logger.info "BinanceItem #{id} - found #{linked.count} linked visible accounts to process"
+
     results = []
 
     linked.each do |ba|
       begin
+        Rails.logger.info "BinanceItem #{id} - processing binance_account #{ba.id}"
         result = BinanceAccount::Processor.new(ba).process
         results << { binance_account_id: ba.id, success: true, result: result }
       rescue => e
         Rails.logger.error "BinanceItem #{id} - Failed to process account #{ba.id}: #{e.message}"
+        Rails.logger.error e.backtrace.first(5).join("\n")
         results << { binance_account_id: ba.id, success: false, error: e.message }
       end
     end
@@ -74,18 +89,22 @@ class BinanceItem < ApplicationRecord
   def schedule_account_syncs(parent_sync: nil, window_start_date: nil, window_end_date: nil)
     return [] if accounts.empty?
 
-    accounts.visible.map do |account|
+    results = []
+    accounts.visible.each do |account|
       begin
         account.sync_later(
           parent_sync: parent_sync,
           window_start_date: window_start_date,
           window_end_date: window_end_date
         )
-        { account_id: account.id, success: true }
+        results << { account_id: account.id, success: true }
       rescue => e
-        { account_id: account.id, success: false, error: e.message }
+        Rails.logger.error "BinanceItem #{id} - Failed to schedule sync for account #{account.id}: #{e.message}"
+        results << { account_id: account.id, success: false, error: e.message }
       end
     end
+
+    results
   end
 
   def upsert_binance_snapshot!(payload)
