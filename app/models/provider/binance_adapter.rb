@@ -46,7 +46,7 @@ class Provider::BinanceAdapter < Provider::Base
     return nil unless family.present?
 
     # Get family-specific credentials
-    binance_item = family.binance_items.where.not(api_key: nil).first
+    binance_item = family.binance_items.where.not(api_key: nil).order(created_at: :desc).first
     return nil unless binance_item&.credentials_configured?
 
     Provider::Binance.new(

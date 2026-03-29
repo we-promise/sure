@@ -14,7 +14,12 @@
   <div class="bg-surface border border-primary p-3 rounded-lg text-sm">
     <p class="font-medium text-primary"><%= t("settings.providers.binance_panel.ip_hint_title") %></p>
     <p class="text-secondary mt-1"><%= t("settings.providers.binance_panel.ip_hint_body") %></p>
-    <code class="mt-1 block text-xs bg-container-inset px-2 py-1 rounded font-mono text-primary"><%= request.remote_ip %></code>
+    <% server_ip = ENV["BINANCE_EGRESS_IP"].presence %>
+    <% if server_ip %>
+      <code class="mt-1 block text-xs bg-container-inset px-2 py-1 rounded font-mono text-primary"><%= server_ip %></code>
+    <% else %>
+      <p class="mt-1 text-xs text-secondary italic"><%= t("settings.providers.binance_panel.ip_hint_contact_admin") %></p>
+    <% end %>
   </div>
 
   <% error_msg = local_assigns[:error_message] || @error_message %>

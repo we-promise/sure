@@ -34,7 +34,7 @@ class BinanceAccount::Processor
 
     def process_account!
       account = binance_account.current_account
-      balance = binance_account.current_balance.to_d
+      balance = (binance_account.current_balance || 0).to_d
 
       account.update!(
         balance: balance,
@@ -78,8 +78,7 @@ class BinanceAccount::Processor
     end
 
     def process_trades(trades_by_symbol)
-      spot = trades_by_symbol["spot"] || {}
-      spot.each do |pair, trades|
+      trades_by_symbol.each do |pair, trades|
         trades.each { |trade| process_spot_trade(trade, pair) }
       end
     rescue => e

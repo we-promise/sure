@@ -253,7 +253,7 @@ class Account < ApplicationRecord
       attributes = {
         family: family,
         name: binance_account.name,
-        balance: binance_account.current_balance.to_d,
+        balance: (binance_account.current_balance || 0).to_d,
         cash_balance: 0,
         currency: binance_account.currency.presence || family.currency,
         accountable_type: "Crypto",

@@ -196,7 +196,8 @@ en:
         step3: "Paste your API Key and Secret below"
         no_withdraw_warning: "Warning: do NOT enable withdrawal permissions"
         ip_hint_title: "IP Whitelisting Required"
-        ip_hint_body: "Add your server IP to the Binance API Key whitelist:"
+        ip_hint_body: "Add the app server's egress IP to the Binance API Key whitelist:"
+        ip_hint_contact_admin: "Contact your administrator to obtain the app server's egress IP address."
         api_key_label: API Key
         api_key_placeholder: Paste your Binance API Key
         api_secret_label: API Secret

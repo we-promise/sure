@@ -101,6 +101,12 @@ class BinanceAccount::HoldingsProcessor
       return 0 unless provider
 
       price_str = provider.get_spot_price("#{symbol}USDT")
+
+      if price_str.nil?
+        Rails.logger.warn "BinanceAccount::HoldingsProcessor - no price returned for #{symbol}"
+        return 0
+      end
+
       price_str.to_d
     rescue => e
       Rails.logger.warn "BinanceAccount::HoldingsProcessor - no price for #{symbol}: #{e.message}"
