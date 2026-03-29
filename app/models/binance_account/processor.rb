@@ -78,9 +78,7 @@ class BinanceAccount::Processor
     end
 
     def process_trades(trades_by_symbol)
-      return unless binance_account.raw_transactions_payload.present?
-
-      spot = binance_account.raw_transactions_payload.dig("spot") || {}
+      spot = trades_by_symbol["spot"] || {}
       spot.each do |pair, trades|
         trades.each { |trade| process_spot_trade(trade, pair) }
       end
