@@ -60,8 +60,8 @@ class IncomeStatement::FamilyStats
         WITH period_totals AS (
           SELECT
             date_trunc(:interval, ae.date) as period,
-            CASE WHEN t.kind = 'investment_contribution' THEN 'expense' WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END as classification,
-            SUM(CASE WHEN t.kind = 'investment_contribution' THEN ABS(ae.amount * COALESCE(er.rate, 1)) ELSE ae.amount * COALESCE(er.rate, 1) END) as total
+            CASE WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END as classification,
+            SUM(ae.amount * COALESCE(er.rate, 1)) as total
           FROM transactions t
           JOIN entries ae ON ae.entryable_id = t.id AND ae.entryable_type = 'Transaction'
           JOIN accounts a ON a.id = ae.account_id
@@ -77,7 +77,7 @@ class IncomeStatement::FamilyStats
             AND (t.extra -> 'plaid' ->> 'pending')::boolean IS DISTINCT FROM true
             #{exclude_tax_advantaged_sql}
             #{scope_to_account_ids_sql}
-          GROUP BY period, CASE WHEN t.kind = 'investment_contribution' THEN 'expense' WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END
+          GROUP BY period, CASE WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END
         )
         SELECT
           classification,

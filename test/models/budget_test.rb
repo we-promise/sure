@@ -197,6 +197,28 @@ class BudgetTest < ActiveSupport::TestCase
     assert_equal 150, spending_without_refund - spending_with_refund
   end
 
+  test "actual_spending excludes investment_contribution transfers" do
+    family = families(:dylan_family)
+    budget = Budget.find_or_bootstrap(family, start_date: Date.current.beginning_of_month)
+    account = accounts(:depository)
+
+    baseline_spending = budget.actual_spending
+
+    Entry.create!(
+      account: account,
+      entryable: Transaction.create!(kind: "investment_contribution"),
+      date: Date.current,
+      name: "Transfer to investment account",
+      amount: 250,
+      currency: "USD"
+    )
+
+    budget = Budget.find(budget.id)
+    budget.sync_budget_categories
+
+    assert_equal baseline_spending, budget.actual_spending
+  end
+
   test "most_recent_initialized_budget returns latest initialized budget before this one" do
     family = families(:dylan_family)
 

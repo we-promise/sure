@@ -43,6 +43,29 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     assert_select "[data-controller='sankey-chart']"
   end
 
+  test "dashboard outflows includes investment contributions category" do
+    ensure_investment_contributions_category(@family)
+
+    create_transaction(
+      account: accounts(:depository),
+      amount: 300,
+      kind: "investment_contribution",
+      category: @family.investment_contributions_category
+    )
+
+    get root_path
+    assert_response :ok
+    expected_name = Category.investment_contributions_name
+    assert_select "#outflows-donut-section", text: /#{Regexp.escape(expected_name)}/
+
+    donut_node = Nokogiri::HTML(response.body).at_css("[data-controller='donut-chart']")
+    segments = JSON.parse(donut_node["data-donut-chart-segments-value"])
+    contribution_segment = segments.find { |segment| segment["name"] == expected_name }
+
+    assert_not_nil contribution_segment
+    assert_equal 300.0, contribution_segment["amount"]
+  end
+
   test "changelog" do
     VCR.use_cassette("git_repository_provider/fetch_latest_release_notes") do
       get changelog_path
