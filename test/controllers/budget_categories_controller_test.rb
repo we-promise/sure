@@ -84,4 +84,14 @@ class BudgetCategoriesControllerTest < ActionDispatch::IntegrationTest
     assert_not_nil input
     assert_nil input["max"]
   end
+
+  test "clearing a subcategory budget switches it back to shared and lowers the parent" do
+    assert_changes -> { @parent_budget_category.reload.budgeted_spending.to_f }, from: 500.0, to: 400.0 do
+      patch budget_budget_category_path(@budget, @electric_budget_category),
+            params: { budget_category: { budgeted_spending: "" } },
+            as: :turbo_stream
+    end
+
+    assert_equal 0.0, @electric_budget_category.reload.budgeted_spending.to_f
+  end
 end

@@ -23,12 +23,7 @@ class BudgetCategoriesController < ApplicationController
 
   def update
     @budget_category = Current.family.budget_categories.find(params[:id])
-
-    BudgetCategory.transaction do
-      previous_budgeted_spending = @budget_category.budgeted_spending || 0
-      @budget_category.update!(budget_category_params)
-      update_parent_budget!(previous_budgeted_spending)
-    end
+    @budget_category.update_budgeted_spending!(budgeted_spending_param)
 
     respond_to do |format|
       format.turbo_stream
@@ -39,29 +34,11 @@ class BudgetCategoriesController < ApplicationController
   end
 
   private
-    def update_parent_budget!(previous_budgeted_spending)
-      return unless @budget_category.subcategory?
-
-      parent_budget_category = @budget_category.parent_budget_category
-      return unless parent_budget_category
-
-      current_budgeted_spending = @budget_category.budgeted_spending || 0
-      delta = current_budgeted_spending - previous_budgeted_spending
-      return if delta.zero?
-
-      parent_budget_category.update!(
-        budgeted_spending: non_negative_budget((parent_budget_category.budgeted_spending || 0) + delta)
-      )
-    end
-
-    def non_negative_budget(amount)
-      [ amount, 0 ].max
-    end
-
-    def budget_category_params
-      params.require(:budget_category).permit(:budgeted_spending).tap do |params|
-        params[:budgeted_spending] = params[:budgeted_spending].presence || 0
-      end
+    def budgeted_spending_param
+      params.require(:budget_category)
+        .permit(:budgeted_spending)
+        .fetch(:budgeted_spending, nil)
+        .presence || 0
     end
 
     def set_budget
