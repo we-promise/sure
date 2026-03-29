@@ -19,7 +19,7 @@
     </div>
 
     <% if totals %>
-      <div id="entry-group-<%= date %>-totals">
+      <div id="entry-group-<%= date %>-totals" class="privacy-sensitive">
         <%= totals_by_currency(collection: entries, money_method: :amount_money, negate: true) %>
       </div>
     <% end %>
