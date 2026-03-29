@@ -69,10 +69,12 @@ class BinanceItem::EarnImporter
     def merge_earn_assets(flexible_totals, locked_totals)
       all_symbols = (flexible_totals.keys + locked_totals.keys).uniq
       all_symbols.filter_map do |symbol|
-        total = (flexible_totals[symbol] || 0) + (locked_totals[symbol] || 0)
+        flex = flexible_totals[symbol] || BigDecimal("0")
+        lock = locked_totals[symbol] || BigDecimal("0")
+        total = flex + lock
         next if total.zero?
 
-        { symbol: symbol, free: total.to_s, locked: "0.0", total: total.to_s }
+        { symbol: symbol, free: flex.to_s, locked: lock.to_s, total: total.to_s }
       end
     end
 end

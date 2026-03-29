@@ -23,8 +23,12 @@ class BinanceItem::EarnImporterTest < ActiveSupport::TestCase
     assert_equal 2, result[:assets].size
     usdt = result[:assets].find { |a| a[:symbol] == "USDT" }
     assert_equal "500.0", usdt[:total]
+    assert_equal "500.0", usdt[:free]
+    assert_equal "0.0", usdt[:locked]
     bnb = result[:assets].find { |a| a[:symbol] == "BNB" }
     assert_equal "10.0", bnb[:total]
+    assert_equal "0.0", bnb[:free]
+    assert_equal "10.0", bnb[:locked]
   end
 
   test "deduplicates assets from flexible and locked by summing" do
@@ -49,5 +53,6 @@ class BinanceItem::EarnImporterTest < ActiveSupport::TestCase
 
     assert_equal "earn", result[:source]
     assert_equal [], result[:assets]
+    assert_equal({ "flexible" => nil, "locked" => nil }, result[:raw])
   end
 end
