@@ -89,6 +89,9 @@ class Sync < ApplicationRecord
 
       begin
         syncable.perform_sync(self)
+      rescue Provider::TwelveData::RateLimitError
+        reset_for_rate_limit_retry!
+        raise
       rescue => e
         fail!
         update(error: e.message)
@@ -99,11 +102,27 @@ class Sync < ApplicationRecord
     end
   end
 
+  def fail_for_retry_exhaustion!(error_message)
+    Sync.transaction do
+      lock!
+      # Retry exhaustion can leave the sync in `pending` because we reset it
+      # after each rate-limit error to make the next ActiveJob retry retryable.
+      # `fail!` only transitions from `syncing`, so pending syncs need to be
+      # moved back through `start!` before we can mark them failed.
+      start! if pending?
+      fail!
+      update!(error: error_message)
+    end
+
+    parent&.finalize_if_all_children_finalized
+  end
+
   # Finalizes the current sync AND parent (if it exists)
   def finalize_if_all_children_finalized
     Sync.transaction do
       lock!
 
+      return if pending?
       # If this is the "parent" and there are still children running, don't finalize.
       return unless all_children_finalized?
 
@@ -147,6 +166,22 @@ class Sync < ApplicationRecord
   end
 
   private
+    def reset_for_rate_limit_retry!
+      # We intentionally bypass callbacks/state events here so the same sync record
+      # can become retryable again without firing post-sync hooks or extra
+      # transition side effects while the TwelveData rate-limit error is being
+      # re-raised back to `SyncJob.retry_on`.
+      update_columns(
+        status: "pending",
+        error: nil,
+        pending_at: Time.current,
+        syncing_at: nil,
+        failed_at: nil,
+        completed_at: nil,
+        updated_at: Time.current
+      )
+    end
+
     def log_status_change
       Rails.logger.info("changing from #{aasm.from_state} to #{aasm.to_state} (event: #{aasm.current_event})")
     end

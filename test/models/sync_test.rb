@@ -43,6 +43,51 @@ class SyncTest < ActiveSupport::TestCase
     assert_equal "test sync error", sync.error
   end
 
+  test "re-raises TwelveData rate limit errors and resets sync to pending" do
+    syncable = accounts(:depository)
+    sync = Sync.create!(syncable: syncable)
+    error = Provider::TwelveData::RateLimitError.new("rate limited")
+
+    syncable.expects(:perform_sync).with(sync).raises(error)
+    syncable.expects(:perform_post_sync).never
+    syncable.expects(:broadcast_sync_complete).never
+
+    assert_raises(Provider::TwelveData::RateLimitError) do
+      sync.perform
+    end
+
+    sync.reload
+    assert_equal "pending", sync.status
+    assert_nil sync.error
+    assert_not_nil sync.pending_at
+    assert_nil sync.syncing_at
+    assert_nil sync.failed_at
+    assert_nil sync.completed_at
+  end
+
+  test "fail_for_retry_exhaustion! marks pending sync as failed" do
+    sync = Sync.create!(syncable: accounts(:depository))
+
+    sync.fail_for_retry_exhaustion!("rate limited too many times")
+
+    sync.reload
+    assert_equal "failed", sync.status
+    assert_equal "rate limited too many times", sync.error
+    assert_not_nil sync.failed_at
+  end
+
+  test "fail_for_retry_exhaustion! marks syncing sync as failed" do
+    sync = Sync.create!(syncable: accounts(:depository))
+    sync.start!
+
+    sync.fail_for_retry_exhaustion!("rate limited too many times")
+
+    sync.reload
+    assert_equal "failed", sync.status
+    assert_equal "rate limited too many times", sync.error
+    assert_not_nil sync.failed_at
+  end
+
   test "can run nested syncs that alert the parent when complete" do
     family = families(:dylan_family)
     plaid_item = plaid_items(:one)
