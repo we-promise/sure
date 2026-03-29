@@ -12,7 +12,6 @@ class BinanceAccount < ApplicationRecord
 
   has_one :account_provider, as: :provider, dependent: :destroy
   has_one :account, through: :account_provider, source: :account
-  has_one :linked_account, through: :account_provider, source: :account
 
   validates :name, :currency, presence: true
 
@@ -30,14 +29,5 @@ class BinanceAccount < ApplicationRecord
         ap.account = acct
         ap.save!
       end
-  rescue => e
-    Rails.logger.warn("Binance provider link failed for #{id}: #{e.class} - #{e.message}")
-    nil
   end
-
-  private
-
-    def log_invalid_currency(currency_value)
-      Rails.logger.warn("Invalid currency '#{currency_value}' for BinanceAccount #{id}, defaulting to USD")
-    end
 end
