@@ -1,0 +1,87 @@
+require "test_helper"
+
+class BudgetCategoriesControllerTest < ActionDispatch::IntegrationTest
+  include ActionView::RecordIdentifier
+
+  setup do
+    sign_in users(:family_admin)
+
+    @budget = budgets(:one)
+    @family = @budget.family
+
+    parent_category_name = "Bills #{SecureRandom.hex(4)}"
+
+    @parent_category = Category.create!(
+      name: parent_category_name,
+      family: @family,
+      color: "#4da568",
+      lucide_icon: "house"
+    )
+
+    @electric_category = Category.create!(
+      name: "Electric #{SecureRandom.hex(4)}",
+      parent: @parent_category,
+      family: @family
+    )
+
+    @water_category = Category.create!(
+      name: "Water #{SecureRandom.hex(4)}",
+      parent: @parent_category,
+      family: @family
+    )
+
+    @parent_budget_category = BudgetCategory.create!(
+      budget: @budget,
+      category: @parent_category,
+      budgeted_spending: 500,
+      currency: "USD"
+    )
+
+    @electric_budget_category = BudgetCategory.create!(
+      budget: @budget,
+      category: @electric_category,
+      budgeted_spending: 100,
+      currency: "USD"
+    )
+
+    @water_budget_category = BudgetCategory.create!(
+      budget: @budget,
+      category: @water_category,
+      budgeted_spending: 50,
+      currency: "USD"
+    )
+  end
+
+  test "updating a subcategory adjusts the parent budget by the same delta" do
+    assert_changes -> { @parent_budget_category.reload.budgeted_spending.to_f }, from: 500.0, to: 550.0 do
+      patch budget_budget_category_path(@budget, @electric_budget_category),
+            params: { budget_category: { budgeted_spending: 150 } },
+            as: :turbo_stream
+    end
+
+    assert_response :success
+    assert_includes @response.body, dom_id(@parent_budget_category, :form)
+  end
+
+  test "manual parent budget remains on top of subcategory changes" do
+    @parent_budget_category.update!(budgeted_spending: 900)
+
+    assert_changes -> { @parent_budget_category.reload.budgeted_spending.to_f }, from: 900.0, to: 975.0 do
+      patch budget_budget_category_path(@budget, @water_budget_category),
+            params: { budget_category: { budgeted_spending: 125 } },
+            as: :turbo_stream
+    end
+  end
+
+  test "subcategory budget form rerenders without a max allocation cap" do
+    patch budget_budget_category_path(@budget, @electric_budget_category),
+          params: { budget_category: { budgeted_spending: 125 } },
+          as: :turbo_stream
+
+    assert_response :success
+    assert_no_match(
+      /id="#{dom_id(@water_budget_category, :budgeted_spending)}"[^>]*\smax=/,
+      @response.body
+    )
+  end
+end

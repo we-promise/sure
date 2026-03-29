@@ -23,18 +23,37 @@ class BudgetCategoriesController < ApplicationController
 
   def update
     @budget_category = Current.family.budget_categories.find(params[:id])
+    previous_budgeted_spending = @budget_category[:budgeted_spending] || 0
 
-    if @budget_category.update(budget_category_params)
-      respond_to do |format|
-        format.turbo_stream
-        format.html { redirect_to budget_budget_categories_path(@budget) }
-      end
-    else
-      render :index, status: :unprocessable_entity
+    BudgetCategory.transaction do
+      @budget_category.update!(budget_category_params)
+      update_parent_budget!(previous_budgeted_spending)
     end
+
+    respond_to do |format|
+      format.turbo_stream
+      format.html { redirect_to budget_budget_categories_path(@budget) }
+    end
+  rescue ActiveRecord::RecordInvalid
+    render :index, status: :unprocessable_entity
   end
 
   private
+    def update_parent_budget!(previous_budgeted_spending)
+      return unless @budget_category.subcategory?
+
+      parent_budget_category = @budget_category.parent_budget_category
+      return unless parent_budget_category
+
+      current_budgeted_spending = @budget_category[:budgeted_spending] || 0
+      delta = current_budgeted_spending - previous_budgeted_spending
+      return if delta.zero?
+
+      parent_budget_category.update!(
+        budgeted_spending: [ (parent_budget_category[:budgeted_spending] || 0) + delta, 0 ].max
+      )
+    end
+
     def budget_category_params
       params.require(:budget_category).permit(:budgeted_spending).tap do |params|
         params[:budgeted_spending] = params[:budgeted_spending].presence || 0

@@ -5,6 +5,10 @@
 <%= turbo_stream.replace dom_id(@budget, :confirm_button), partial: "budget_categories/confirm_button", locals: { budget: @budget } %>
 
 <% if @budget_category.subcategory? %>
+  <% if (parent_budget_category = @budget_category.parent_budget_category) %>
+    <%= turbo_stream.update dom_id(parent_budget_category, :form), partial: "budget_categories/budget_category_form", locals: { budget_category: parent_budget_category } %>
+  <% end %>
+
   <%# Update sibling subcategories when a subcategory changes %>
   <% @budget_category.siblings.each do |sibling| %>
     <%= turbo_stream.update dom_id(sibling, :form), partial: "budget_categories/budget_category_form", locals: { budget_category: sibling } %>
