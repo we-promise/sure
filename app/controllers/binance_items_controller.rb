@@ -175,6 +175,7 @@ class BinanceItemsController < ApplicationController
       @manual_accounts = Account.uncached { Current.family.accounts.visible_manual.order(:name).to_a }
 
       flash[:notice] = t(".success")
+      @account.reload
       manual_accounts_stream = if @manual_accounts.any?
         turbo_stream.update("manual-accounts", partial: "accounts/index/manual_accounts", locals: { accounts: @manual_accounts })
       else
