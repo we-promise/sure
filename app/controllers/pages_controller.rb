@@ -351,9 +351,8 @@ class PagesController < ApplicationController
       end
 
       donut_total = total + investment_contributions_total
-      categories = categories
-        .reject { |category| category[:amount].zero? }
-        .sort_by { |category| -category[:amount] }
+      categories.reject! { |category| category[:amount].zero? }
+      categories.sort_by! { |category| -category[:amount] }
 
       categories.each do |category|
         category[:percentage] = donut_total.zero? ? 0 : ((category[:amount] / donut_total) * 100).round(1)
@@ -362,6 +361,9 @@ class PagesController < ApplicationController
       { categories: categories, total: donut_total.to_f.round(2), currency: net_totals.currency, currency_symbol: currency_symbol }
     end
 
+    # Total transfer outflows to investment/crypto accounts for dashboard outflow visibility.
+    # These transactions are excluded from budget/report expense analytics, but still shown
+    # in outflows so users can track where cash moved during the selected period.
     def investment_contributions_outflow_total(period)
       scope = Current.family.transactions
         .visible
@@ -369,12 +371,12 @@ class PagesController < ApplicationController
         .in_period(period)
         .where(kind: "investment_contribution")
         .joins(entry: :account)
-        .joins(<<~SQL.squish)
-          LEFT JOIN exchange_rates er
-            ON er.date = entries.date
-            AND er.from_currency = entries.currency
-            AND er.to_currency = #{ActiveRecord::Base.connection.quote(Current.family.currency)}
-        SQL
+        .joins(ApplicationRecord.sanitize_sql_array(
+          [
+            "LEFT JOIN exchange_rates er ON er.date = entries.date AND er.from_currency = entries.currency AND er.to_currency = ?",
+            Current.family.currency
+          ]
+        ))
         .merge(Account.included_in_finances_for(Current.user))
 
       scope.sum("ABS(entries.amount * COALESCE(er.rate, 1))")
