@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class Provider::BinanceAdapter < Provider::Base
   include Provider::Syncable
   include Provider::InstitutionMetadata
