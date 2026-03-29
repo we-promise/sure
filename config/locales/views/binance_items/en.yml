@@ -1,5 +1,16 @@
 ---
 en:
+  binance_item:
+    syncer:
+      checking_credentials: Checking credentials...
+      credentials_invalid: Invalid API credentials. Please check your API key and secret.
+      importing_accounts: Importing accounts from Binance...
+      checking_configuration: Checking account configuration...
+      accounts_need_setup:
+        one: "%{count} account needs setup"
+        other: "%{count} accounts need setup"
+      processing_accounts: Processing account data...
+      calculating_balances: Calculating balances...
   binance_items:
     binance_item:
       sync_status:
