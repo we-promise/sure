@@ -294,6 +294,13 @@ class AccountsController < ApplicationController
         @coinstats_sync_stats_map[item.id] = latest_sync&.sync_stats || {}
       end
 
+      # Sophtron sync stats
+      @sophtron_sync_stats_map = {}
+      @sophtron_items.each do |item|
+        latest_sync = item.syncs.ordered.first
+        @sophtron_sync_stats_map[item.id] = latest_sync&.sync_stats || {}
+      end
+
       # Mercury sync stats
       @mercury_sync_stats_map = {}
       @mercury_items.each do |item|
