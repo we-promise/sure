@@ -70,8 +70,8 @@ export default class extends Controller {
     }
 
     row.innerHTML = `
-      <div class="flex items-end gap-2">
-        <div class="flex-1 min-w-0">
+      <div class="flex flex-wrap md:flex-nowrap items-end gap-2">
+        <div class="w-full md:flex-1 md:w-auto min-w-0">
           <label class="text-xs font-medium text-secondary uppercase tracking-wide block mb-1">Name</label>
           <input type="text"
                  name="split[splits][${index}][name]"
@@ -81,7 +81,7 @@ export default class extends Controller {
                  autocomplete="off"
                  data-split-transaction-target="nameInput">
         </div>
-        <div class="w-28 shrink-0">
+        <div class="flex-1 md:flex-none md:w-28">
           <label class="text-xs font-medium text-secondary uppercase tracking-wide block mb-1">Amount</label>
           <input type="number"
                  name="split[splits][${index}][amount]"
