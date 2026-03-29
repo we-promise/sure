@@ -73,6 +73,10 @@ compose.yml
 
 plaid_test_accounts/
 
+# Added by Claude
+.claude/settings.local.json
+docs/superpowers/
+
 # Added by Claude Task Master
 # Logs
 logs
@@ -116,6 +120,6 @@ scripts/
 .auto-claude-security.json
 .auto-claude-status
 .claude_settings.json
-.worktrees/
 .security-key
 logs/security/
+.worktrees/
