@@ -33,17 +33,21 @@ class Transaction::Grouper::ByMerchantOrName < Transaction::Grouper
     end
 
     def grouping_key_for(entry)
-      entry.entryable.merchant&.name.presence || entry.name
+      name = entry.entryable.merchant&.name.presence || entry.name
+      type = entry.amount.negative? ? "income" : "expense"
+      [ name, type ]
     end
 
     def build_group(key, entries)
+      name, type = key
       merchant = entries.find { |e| e.entryable.merchant.present? }&.entryable&.merchant
 
       Transaction::Grouper::Group.new(
-        grouping_key: key,
-        display_name: key,
+        grouping_key: name,
+        display_name: name,
         entries: entries,
-        merchant: merchant
+        merchant: merchant,
+        transaction_type: type
       )
     end
 end

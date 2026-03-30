@@ -1,21 +1,18 @@
 <%= turbo_frame_tag "categorize_entry_#{entry.id}" do %>
-  <%# Hidden input lives inside the frame — removed automatically when the frame is removed %>
   <input type="hidden" name="all_entry_ids[]" value="<%= entry.id %>">
-  <div class="flex items-center gap-3 px-4 py-3 hover:bg-surface-hover">
+  <div class="grid grid-cols-[1rem_1fr_5rem_6rem_6.5rem] gap-3 items-center px-5 py-3 bg-container hover:bg-container-hover">
     <input type="checkbox" name="entry_ids[]" value="<%= entry.id %>"
            checked class="checkbox checkbox--light shrink-0"
            data-action="change->categorize#uncheckRule" />
-    <span class="flex-1 min-w-0 text-sm font-medium text-primary truncate"><%= entry.name %></span>
-    <span class="text-sm text-secondary shrink-0"><%= l(entry.date, format: :short) %></span>
-    <span class="text-sm font-medium shrink-0 <%= entry.amount.negative? ? "text-green-600" : "text-primary" %>">
+    <span class="min-w-0 font-medium text-primary truncate"><%= entry.name %></span>
+    <span class="text-secondary whitespace-nowrap"><%= l(entry.date, format: :short) %></span>
+    <span class="font-medium text-right whitespace-nowrap <%= entry.amount.negative? ? "text-green-600" : "text-primary" %>">
       <%= format_money(entry.amount_money.abs) %>
     </span>
-
-    <%# Individual assignment — removes this row on change %>
     <%= select_tag "category_id",
           options_from_collection_for_select(categories, :id, :name),
           prompt: t("transactions.categorizes.show.assign_category_prompt"),
-          class: "text-xs border border-primary rounded-lg px-1.5 py-0.5 max-w-[120px] bg-container text-secondary",
+          class: "w-full text-xs border border-primary rounded-lg px-1.5 py-0.5 bg-container text-secondary",
           data: { entry_id: entry.id, action: "change->categorize#assignEntry" } %>
   </div>
 <% end %>

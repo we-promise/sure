@@ -4,13 +4,14 @@
     <div class="flex items-center gap-5">
       <div class="flex items-center gap-2">
         <% if @uncategorized_count > 0 %>
-          <%= render DS::Link.new(
-            text: t(".categorize_button", count: @uncategorized_count),
-            icon: "tag",
-            variant: :outline,
-            href: transactions_categorize_path,
-            class: "hidden md:inline-flex"
-          ) %>
+          <div class="hidden md:flex">
+            <%= render DS::Link.new(
+              text: t(".categorize_button", count: @uncategorized_count),
+              icon: "tag",
+              variant: :outline,
+              href: transactions_categorize_path,
+            ) %>
+          </div>
         <% end %>
         <%= render DS::Menu.new do |menu| %>
           <% menu.with_item(variant: "link", text: "New rule", href: new_rule_path(resource_type: "transaction"), icon: "plus", data: { turbo_frame: :modal }) %>

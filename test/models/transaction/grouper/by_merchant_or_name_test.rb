@@ -42,6 +42,33 @@ class Transaction::Grouper::ByMerchantOrNameTest < ActiveSupport::TestCase
     assert_equal 2, groups.size
   end
 
+  test "creates separate groups for same name with different types" do
+    create_transaction(account: @account, name: "Refund", amount: 50)   # expense
+    create_transaction(account: @account, name: "Refund", amount: -50)  # income
+
+    groups = Transaction::Grouper::ByMerchantOrName.call(@family)
+
+    assert_equal 2, groups.size
+    types = groups.map(&:transaction_type).sort
+    assert_equal %w[expense income], types
+  end
+
+  test "sets transaction_type to income for negative amounts" do
+    create_transaction(account: @account, name: "Paycheck", amount: -1000)
+
+    groups = Transaction::Grouper::ByMerchantOrName.call(@family)
+
+    assert_equal "income", groups.first.transaction_type
+  end
+
+  test "sets transaction_type to expense for positive amounts" do
+    create_transaction(account: @account, name: "Coffee", amount: 5)
+
+    groups = Transaction::Grouper::ByMerchantOrName.call(@family)
+
+    assert_equal "expense", groups.first.transaction_type
+  end
+
   test "excludes transfer kinds" do
     create_transaction(account: @account, name: "CC Payment", kind: "cc_payment")
     create_transaction(account: @account, name: "Funds Move", kind: "funds_movement")

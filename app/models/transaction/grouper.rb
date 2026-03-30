@@ -1,5 +1,5 @@
 class Transaction::Grouper
-  Group = Data.define(:grouping_key, :display_name, :entries, :merchant)
+  Group = Data.define(:grouping_key, :display_name, :entries, :merchant, :transaction_type)
 
   # Returns the active grouping strategy class.
   # Change this method to swap algorithms without touching the wizard.

@@ -32,7 +32,10 @@ class Transactions::CategorizesController < ApplicationController
     category = Current.family.categories.find(params[:category_id])
     entries  = Current.family.entries.excluding_split_parents.where(id: entry_ids)
     count    = entries.bulk_update!({ category_id: category.id })
-    create_rule_for_group(params[:grouping_key], category) if params[:create_rule] == "1"
+
+    if params[:create_rule] == "1"
+      create_rule_for_group(params[:grouping_key], category, params[:transaction_type])
+    end
 
     respond_to do |format|
       format.turbo_stream do
@@ -62,6 +65,25 @@ class Transactions::CategorizesController < ApplicationController
     end
   end
 
+  def preview_rule
+    filter           = params[:filter].to_s.strip
+    transaction_type = params[:transaction_type].presence
+    entries          = filter.present? ? preview_entries_for(filter, transaction_type) : []
+    @categories      = Current.family.categories.alphabetically
+
+    render turbo_stream: [
+      turbo_stream.replace("categorize_group_title",
+        partial: "transactions/categorizes/group_title",
+        locals: { display_name: filter.presence || "…", color: "#737373", transaction_type: transaction_type }),
+      turbo_stream.replace("categorize_group_summary",
+        partial: "transactions/categorizes/group_summary",
+        locals: { entries: entries }),
+      turbo_stream.replace("categorize_transaction_list",
+        partial: "transactions/categorizes/transaction_list",
+        locals: { entries: entries, categories: @categories })
+    ]
+  end
+
   def assign_entry
     entry         = Current.family.entries.excluding_split_parents.find(params[:entry_id])
     category      = Current.family.categories.find(params[:category_id])
@@ -88,13 +110,34 @@ class Transactions::CategorizesController < ApplicationController
 
   private
 
-    def create_rule_for_group(grouping_key, category)
+    def preview_entries_for(filter, transaction_type = nil)
+      sanitized = ActiveRecord::Base.sanitize_sql_like(filter.gsub(/\s+/, " ").strip)
+      scope = Current.family.entries
+                     .joins(:account)
+                     .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
+                     .where(accounts: { status: %w[draft active] })
+                     .where(transactions: { category_id: nil })
+                     .where.not(transactions: { kind: Transaction::TRANSFER_KINDS })
+                     .where(entries: { excluded: false })
+                     .where("BTRIM(REGEXP_REPLACE(entries.name, '[[:space:]]+', ' ', 'g')) ILIKE ?", "%#{sanitized}%")
+
+      scope = case transaction_type
+              when "income"   then scope.where("entries.amount < 0")
+              when "expense"  then scope.where("entries.amount >= 0")
+              else scope
+              end
+
+      scope.includes(entryable: :merchant).order(entries: { date: :desc }).to_a
+    end
+
+    def create_rule_for_group(grouping_key, category, transaction_type = nil)
       rule = Current.family.rules.build(
         name: grouping_key,
         resource_type: "transaction",
         active: true
       )
       rule.conditions.build(condition_type: "transaction_name", operator: "like", value: grouping_key)
+      rule.conditions.build(condition_type: "transaction_type", operator: "=", value: transaction_type) if transaction_type.present?
       rule.actions.build(action_type: "set_transaction_category", value: category.id.to_s)
       rule.save!
     rescue ActiveRecord::RecordInvalid

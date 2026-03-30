@@ -60,6 +60,38 @@ class Transactions::CategorizesControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to new_session_url
   end
 
+  # GET /transactions/categorize/preview_rule
+
+  test "preview_rule returns matching entries for a filter" do
+    create_transaction(account: @account, name: "Amazon Prime")
+    create_transaction(account: @account, name: "Amazon Music")
+    create_transaction(account: @account, name: "Starbucks")
+
+    get preview_rule_transactions_categorize_url(filter: "Amazon"),
+      headers: { "Accept" => "text/vnd.turbo-stream.html" }
+
+    assert_response :success
+    assert_includes response.body, "Amazon Prime"
+    assert_includes response.body, "Amazon Music"
+    assert_not_includes response.body, "Starbucks"
+  end
+
+  test "preview_rule returns empty list for blank filter" do
+    create_transaction(account: @account, name: "Amazon")
+
+    get preview_rule_transactions_categorize_url(filter: ""),
+      headers: { "Accept" => "text/vnd.turbo-stream.html" }
+
+    assert_response :success
+    assert_not_includes response.body, "Amazon"
+  end
+
+  test "preview_rule requires authentication" do
+    sign_out
+    get preview_rule_transactions_categorize_url(filter: "Amazon")
+    assert_redirected_to new_session_url
+  end
+
   private
 
     def sign_out
@@ -111,14 +143,15 @@ class Transactions::CategorizesControllerTest < ActionDispatch::IntegrationTest
     assert_not_includes response.body, "action=\"redirect\""
   end
 
-  test "create with create_rule param creates rule directly" do
-    entry = create_transaction(account: @account, name: "Netflix")
+  test "create with create_rule param creates rule with name and type conditions" do
+    entry = create_transaction(account: @account, name: "Netflix", amount: 15)
 
     assert_difference "@family.rules.count", 1 do
       post transactions_categorize_url,
         params: {
           position: 0,
           grouping_key: "Netflix",
+          transaction_type: "expense",
           entry_ids: [ entry.id ],
           all_entry_ids: [ entry.id ],
           category_id: @category.id,
@@ -130,6 +163,8 @@ class Transactions::CategorizesControllerTest < ActionDispatch::IntegrationTest
     rule = @family.rules.find_by(name: "Netflix")
     assert_not_nil rule
     assert rule.active
+    assert rule.conditions.any? { |c| c.condition_type == "transaction_name" && c.value == "Netflix" }
+    assert rule.conditions.any? { |c| c.condition_type == "transaction_type" && c.value == "expense" }
   end
 
   test "create falls back to html redirect without turbo stream header" do

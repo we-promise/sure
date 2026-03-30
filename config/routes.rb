@@ -276,6 +276,7 @@ Rails.application.routes.draw do
     resource :bulk_update, only: %i[new create]
     resource :categorize, only: %i[show create] do
       patch :assign_entry, on: :collection
+      get :preview_rule, on: :collection
     end
   end
 
