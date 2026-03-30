@@ -101,6 +101,9 @@ class Provider::BinanceAdapter < Provider::Base
   end
 
   def institution_color
-    item&.institution_color
+    metadata = provider_account.institution_metadata
+    return nil unless metadata.present?
+
+    metadata["color"] || item&.institution_color
   end
 end
