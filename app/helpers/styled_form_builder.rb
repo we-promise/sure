@@ -70,7 +70,7 @@ class StyledFormBuilder < ActionView::Helpers::FormBuilder
       if options.key?(:selected)
         options[:selected]
       elsif @object.respond_to?(method)
-        @object.public_send(method) # lasciare così
+        @object.public_send(method)
       end
 
     placeholder = options[:prompt] || options[:include_blank] || options[:placeholder] || I18n.t("helpers.select.default_label")
