@@ -27,17 +27,17 @@ class CoinstatsEntry::Processor
   # @return [Transaction, nil] Created transaction or nil if no linked account
   # @raise [ArgumentError] If transaction data is invalid
   # @raise [StandardError] If import fails
-    def process
-      unless account.present?
-        Rails.logger.warn "CoinstatsEntry::Processor - No linked account for coinstats_account #{coinstats_account.id}, skipping transaction #{external_id}"
-        return nil
-      end
+  def process
+    unless account.present?
+      Rails.logger.warn "CoinstatsEntry::Processor - No linked account for coinstats_account #{coinstats_account.id}, skipping transaction #{external_id}"
+      return nil
+    end
 
-      if exchange_trade? && trade_security.present?
-        return legacy_transaction_entry if skip_legacy_transaction_migration?
+    if exchange_trade? && trade_security.present?
+      return legacy_transaction_entry if skip_legacy_transaction_migration?
 
-        Account.transaction do
-          remove_legacy_transaction_entry!
+      Account.transaction do
+        remove_legacy_transaction_entry!
 
         import_adapter.import_trade(
           external_id: external_id,
@@ -139,7 +139,7 @@ class CoinstatsEntry::Processor
 
     def data
       @data ||= coinstats_transaction.with_indifferent_access
-    end
+      end
 
     # Helper accessors for nested data structures
     def hash_data
