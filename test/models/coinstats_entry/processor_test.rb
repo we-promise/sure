@@ -408,4 +408,58 @@ class CoinstatsEntry::ProcessorTest < ActiveSupport::TestCase
     assert_equal BigDecimal("100"), entry.amount
     assert_equal "Trade BTC", entry.name
   end
+
+  test "preserves protected legacy transaction when migrating exchange trade" do
+    exchange_crypto = Crypto.create!
+    exchange_account_record = @family.accounts.create!(
+      accountable: exchange_crypto,
+      name: "Bitvavo",
+      balance: 1000,
+      currency: "USD"
+    )
+    exchange_account = @coinstats_item.coinstats_accounts.create!(
+      name: "Bitvavo",
+      currency: "USD",
+      account_id: "exchange_portfolio:portfolio_123",
+      raw_payload: {
+        source: "exchange",
+        portfolio_account: true,
+        portfolio_id: "portfolio_123",
+        coins: []
+      }
+    )
+    AccountProvider.create!(account: exchange_account_record, provider: exchange_account)
+
+    legacy_entry = exchange_account_record.entries.create!(
+      entryable: Transaction.new,
+      external_id: "coinstats_trade_protected",
+      source: "coinstats",
+      amount: 100,
+      currency: "USD",
+      date: Date.new(2025, 1, 15),
+      name: "Trade BTC"
+    )
+    legacy_entry.mark_user_modified!
+
+    transaction_data = {
+      type: "Trade",
+      date: "2025-01-15T10:00:00.000Z",
+      hash: { id: "trade_protected" },
+      transactions: [
+        {
+          items: [
+            { coin: { id: "bitcoin", symbol: "BTC" }, count: "-0.00335845", totalWorth: "100" },
+            { coin: { id: "ethereum", symbol: "ETH" }, count: "0.05580825", totalWorth: "100" }
+          ]
+        }
+      ]
+    }
+
+    Security::Resolver.any_instance.stubs(:resolve).returns(securities(:aapl))
+
+    processor = CoinstatsEntry::Processor.new(transaction_data, coinstats_account: exchange_account)
+
+    assert_no_difference("Trade.count") { assert_equal legacy_entry, processor.process }
+    assert_equal "Transaction", legacy_entry.reload.entryable_type
+  end
 end

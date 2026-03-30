@@ -27,15 +27,17 @@ class CoinstatsEntry::Processor
   # @return [Transaction, nil] Created transaction or nil if no linked account
   # @raise [ArgumentError] If transaction data is invalid
   # @raise [StandardError] If import fails
-  def process
-    unless account.present?
-      Rails.logger.warn "CoinstatsEntry::Processor - No linked account for coinstats_account #{coinstats_account.id}, skipping transaction #{external_id}"
-      return nil
-    end
+    def process
+      unless account.present?
+        Rails.logger.warn "CoinstatsEntry::Processor - No linked account for coinstats_account #{coinstats_account.id}, skipping transaction #{external_id}"
+        return nil
+      end
 
-    if exchange_trade? && trade_security.present?
-      Account.transaction do
-        remove_legacy_transaction_entry!
+      if exchange_trade? && trade_security.present?
+        return legacy_transaction_entry if skip_legacy_transaction_migration?
+
+        Account.transaction do
+          remove_legacy_transaction_entry!
 
         import_adapter.import_trade(
           external_id: external_id,
@@ -189,8 +191,9 @@ class CoinstatsEntry::Processor
     def amount
       if portfolio_exchange_account?
         absolute_amount = matched_item_total_worth.abs.nonzero? ||
-          coin_data[:currentValue].to_d.abs ||
-          profit_loss[:currentValue].to_d.abs
+          coin_data[:currentValue]&.to_d&.abs&.nonzero? ||
+          profit_loss[:currentValue]&.to_d&.abs&.nonzero? ||
+          0.to_d
 
         return portfolio_outflow? ? absolute_amount : -absolute_amount
       end
@@ -378,13 +381,25 @@ class CoinstatsEntry::Processor
     end
 
     def remove_legacy_transaction_entry!
-      legacy_entry = account.entries.find_by(
+      legacy_transaction_entry&.destroy!
+    end
+
+    def legacy_transaction_entry
+      @legacy_transaction_entry ||= account.entries.find_by(
         external_id: external_id,
         source: "coinstats",
         entryable_type: "Transaction"
       )
+    end
 
-      legacy_entry&.destroy!
+    def skip_legacy_transaction_migration?
+      return false unless legacy_transaction_entry.present?
+
+      skip_reason = import_adapter.send(:determine_skip_reason, legacy_transaction_entry)
+      return false if skip_reason.blank?
+
+      import_adapter.send(:record_skip, legacy_transaction_entry, skip_reason)
+      true
     end
 
     def matched_symbol

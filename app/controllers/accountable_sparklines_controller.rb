@@ -48,24 +48,13 @@ class AccountableSparklinesController < ApplicationController
     end
 
     def aggregate_normalized_series
-      series_list = accounts.filter_map do |account|
-        series = Balance::ChartSeriesBuilder.new(
-          account_ids: [ account.id ],
-          currency: family.currency,
-          period: Period.last_30_days,
-          favorable_direction: account.favorable_direction,
-          interval: "1 day"
-        ).balance_series
-
-        Balance::LinkedInvestmentSeriesNormalizer.new(account: account, series: series).normalize
-      end
-
-      Balance::SeriesAggregator.new(
-        series_list: series_list,
+      Balance::LinkedInvestmentSeriesNormalizer.aggregate_accounts(
+        accounts: accounts,
         currency: family.currency,
+        period: Period.last_30_days,
         favorable_direction: @accountable.favorable_direction,
-        align_to_common_start: true
-      ).aggregate
+        interval: "1 day"
+      )
     end
 
     def cache_key
