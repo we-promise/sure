@@ -348,7 +348,10 @@ end
     assert_select "input[type='number'][name='entry[amount]']" do |elements|
       assert_equal sprintf("%.2f", @entry.amount.abs), elements.first["value"]
     end
-    assert_select "input[type='hidden'][name='entry[entryable_attributes][merchant_id]']"
+    assert_select "select[name='entry[entryable_attributes][merchant_id]'] option[selected]" do |options|
+      selected_value = options.first["value"]
+      assert_equal @entry.entryable.merchant_id.to_s, selected_value
+    end
   end
 
   test "new with invalid duplicate_entry_id renders empty form" do
