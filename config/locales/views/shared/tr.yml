@@ -8,6 +8,12 @@ tr:
       title: Emin misiniz?
     money_field:
       label: Tutar
+    exchange_rate_tabs:
+      calculate_rate_tab: Döviz Kuru Hesapla
+      convert_tab: Döviz Kuru ile Dönüştür
+      destination_amount: Hedef Tutar
+      exchange_rate: Döviz Kuru
+      exchange_rate_help: Tutar girişiniz için yöntemi seçin.
     syncing_notice:
       syncing: Hesap verileri senkronize ediliyor...
     trend_change:
