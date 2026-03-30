@@ -156,7 +156,7 @@ class PdfImportTest < ActiveSupport::TestCase
 
   test "column_keys returns trade columns for investment statements" do
     @import_investment = imports(:pdf_investment)
-    assert_equal %i[date ticker qty price name], @import_investment.column_keys
+    assert_equal %i[date ticker qty price fee name], @import_investment.column_keys
   end
 
   test "required_column_keys returns trade required columns for investment statements" do
