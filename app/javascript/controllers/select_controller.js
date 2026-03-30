@@ -30,7 +30,7 @@ export default class extends Controller {
   }
 
   toggle = () => {
-    if ((this.hasInputTarget && this.inputTarget.disabled) || this.buttonTarget.disabled) return
+    if ((this.hasFieldTarget && this.inputTarget.disabled) || this.buttonTarget.disabled) return
 
     this.isOpen ? this.close() : this.openMenu()
   }
@@ -68,7 +68,7 @@ export default class extends Controller {
     const label = selectedElement.dataset.filterName || selectedElement.textContent.trim()
 
     this.buttonTarget.textContent = label
-    if (this.hasInputTarget) {
+    if (this.hasFieldTarget) {
       this.fieldTarget.value = value
       this.inputTarget.dispatchEvent(new Event("change", { bubbles: true }))
     }

@@ -20,13 +20,13 @@ class StyledFormBuilder < ActionView::Helpers::FormBuilder
   end
 
   def select(method, choices, options = {}, html_options = {})
-    field_options = normalize_options(options, html_options)
 
     is_multiple = html_options[:multiple] || options[:multiple]
     is_html_string = choices.is_a?(ActiveSupport::SafeBuffer)
 
     if is_multiple || is_html_string
       html_options[:multiple] = true if is_multiple
+      field_options = normalize_options(options, html_options)
 
       return build_field(method, field_options, html_options) do |merged_html_options|
         super(method, choices, options, merged_html_options)
