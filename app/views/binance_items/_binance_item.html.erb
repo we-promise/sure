@@ -102,6 +102,17 @@
       <div class="space-y-4 mt-4">
         <% if binance_item.accounts.any? %>
           <%= render "accounts/index/account_groups", accounts: binance_item.accounts %>
+          <% stale_accounts = binance_item.accounts.select { |a| a.extra&.dig("binance", "stale_rate") } %>
+          <% stale_accounts.each do |stale_account| %>
+            <div class="flex items-center gap-2 text-xs text-warning px-1">
+              <span class="font-mono">~</span>
+              <%= icon "triangle-alert", size: "sm" %>
+              <span>
+                <%= t(".stale_rate_warning",
+                      date: stale_account.extra.dig("binance", "rate_target_date")) %>
+              </span>
+            </div>
+          <% end %>
         <% end %>
 
         <% stats = binance_item.syncs.ordered.first&.sync_stats || {} %>

@@ -48,6 +48,7 @@ en:
       setup_description: Select which Binance portfolios you want to track.
       setup_action: Import Account
       import_accounts_menu: Import Account
+      stale_rate_warning: "Balance is approximate — the exact exchange rate for %{date} was unavailable. Will update on next sync."
     select_existing_account:
       title: Link Binance Account
       no_accounts_found: No Binance accounts found.
