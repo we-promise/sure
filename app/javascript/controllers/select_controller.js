@@ -92,7 +92,7 @@ export default class extends Controller {
     }))
 
     this.close()
-    this.buttonTarget.focus()
+    if (!this.element.dataset.noFocus) this.buttonTarget.focus()
   }
 
   focusSearch() {

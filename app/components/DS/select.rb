@@ -36,7 +36,7 @@ module DS
       items.find do |item|
         item_value = item[:value]
         item_value = item_value.id if item_value.respond_to?(:id)
-        
+
         selected_val = selected_value
         selected_val = selected_val.id if selected_val.respond_to?(:id)
 

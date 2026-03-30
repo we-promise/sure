@@ -21,11 +21,10 @@ class StyledFormBuilder < ActionView::Helpers::FormBuilder
 
   def select(method, choices, options = {}, html_options = {})
     is_multiple = html_options[:multiple] || options[:multiple]
+    is_html_string = choices.is_a?(ActiveSupport::SafeBuffer)
 
-    if is_multiple
-      html_options[:multiple] = true # normalizza
-
-      field_options = normalize_options(options, html_options)
+    if is_multiple || is_html_string
+      html_options[:multiple] = true if is_multiple
 
       return build_field(method, field_options, html_options) do |merged_html_options|
         super(method, choices, options, merged_html_options)
@@ -69,7 +68,7 @@ class StyledFormBuilder < ActionView::Helpers::FormBuilder
     selected_value =
       if options.key?(:selected)
         options[:selected]
-      elsif @object.respond_to?(method)
+      elsif @object&.respond_to?(method)
         @object.public_send(method)
       end
 
@@ -217,7 +216,7 @@ class StyledFormBuilder < ActionView::Helpers::FormBuilder
           { value: value, label: label, object: nil }
         end
       else
-        []
+        raise ArgumentError, "Unsupported choices type: #{choices.class}"
       end
     end
 end
