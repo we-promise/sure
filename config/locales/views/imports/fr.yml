@@ -169,6 +169,7 @@ fr:
       finalize_mappings: Veuillez finaliser vos correspondances avant de continuer.
     errors:
       custom_column_requires_inflow: "Les importations de colonnes personnalisées nécessitent la sélection d'une colonne d'entrée"
+      investment_statement_account_type: "Les relevés d'investissement doivent être importés vers un compte d'investissement ou crypto."
     document_types:
       bank_statement: Relevé bancaire
       credit_card_statement: Relevé de carte de crédit
@@ -196,6 +197,38 @@ fr:
       unknown_state_description: Cette importation est dans un état inattendu. Veuillez retourner aux importations.
       processing_failed_with_message: "%{message}"
       processing_failed_generic: "Traitement échoué : %{error}"
+      ready_for_review_title: Prêt pour révision
+      ready_for_review_description:
+        one: "Nous avons extrait %{count} transaction de votre relevé. Vérifiez-la et publiez-la pour l'ajouter à votre compte."
+        other: "Nous avons extrait %{count} transactions de votre relevé. Vérifiez-les et publiez-les pour les ajouter à votre compte."
+      ready_for_review_trades_description:
+        one: "Nous avons extrait %{count} opération de votre relevé de courtage. Vérifiez-la et publiez-la pour l'ajouter à votre compte d'investissement."
+        other: "Nous avons extrait %{count} opérations de votre relevé de courtage. Vérifiez-les et publiez-les pour les ajouter à votre compte d'investissement."
+      unknown_document_type: Inconnu
+      transactions_extracted: Transactions extraites
+      transactions_extracted_count:
+        one: "%{count} transaction"
+        other: "%{count} transactions"
+      trades_extracted: Opérations extraites
+      trades_extracted_count:
+        one: "%{count} opération"
+        other: "%{count} opérations"
+      select_account: Importer vers le compte
+      select_account_placeholder: Sélectionnez un compte...
+      select_account_hint: Choisissez le compte dans lequel importer ces transactions.
+      select_investment_account_hint: Choisissez le compte d'investissement dans lequel importer ces opérations.
+      no_accounts: Aucun compte disponible. Veuillez d'abord créer un compte.
+      no_investment_accounts: Aucun compte d'investissement disponible. Veuillez d'abord créer un compte d'investissement.
+      create_account: Créer un compte
+      save_account: Enregistrer
+      publish_transactions:
+        one: "Publier %{count} transaction"
+        other: "Publier %{count} transactions"
+      publish_trades:
+        one: "Publier %{count} opération"
+        other: "Publier %{count} opérations"
+      review_before_publish: Vérifier avant de publier
+      select_account_to_continue: Veuillez sélectionner un compte ci-dessus pour continuer.
     ready:
       description: Voici un résumé des nouveaux éléments qui seront ajoutés à votre compte une fois que vous aurez publié cette importation.
       title: Confirmez vos données d'importation

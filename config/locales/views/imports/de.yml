@@ -151,6 +151,7 @@ de:
       finalize_mappings: Bitte schließen Sie die Zuordnungen ab, bevor Sie fortfahren.
     errors:
       custom_column_requires_inflow: "Bei benutzerdefinierten Spalten muss eine Einnahmen-Spalte ausgewählt werden."
+      investment_statement_account_type: "Wertpapierauszüge müssen in ein Investment- oder Krypto-Konto importiert werden."
     document_types:
       bank_statement: Kontoauszug
       credit_card_statement: Kreditkartenabrechnung
@@ -178,6 +179,38 @@ de:
       unknown_state_description: Dieser Import befindet sich in einem unerwarteten Zustand. Bitte kehren Sie zu den Importen zurück.
       processing_failed_with_message: "%{message}"
       processing_failed_generic: "Verarbeitung fehlgeschlagen: %{error}"
+      ready_for_review_title: Bereit zur Prüfung
+      ready_for_review_description:
+        one: "Wir haben %{count} Transaktion aus Ihrem Auszug extrahiert. Prüfen und veröffentlichen Sie sie, um sie Ihrem Konto hinzuzufügen."
+        other: "Wir haben %{count} Transaktionen aus Ihrem Auszug extrahiert. Prüfen und veröffentlichen Sie sie, um sie Ihrem Konto hinzuzufügen."
+      ready_for_review_trades_description:
+        one: "Wir haben %{count} Order aus Ihrem Depotauszug extrahiert. Prüfen und veröffentlichen Sie sie, um sie Ihrem Investmentkonto hinzuzufügen."
+        other: "Wir haben %{count} Orders aus Ihrem Depotauszug extrahiert. Prüfen und veröffentlichen Sie sie, um sie Ihrem Investmentkonto hinzuzufügen."
+      unknown_document_type: Unbekannt
+      transactions_extracted: Extrahierte Transaktionen
+      transactions_extracted_count:
+        one: "%{count} Transaktion"
+        other: "%{count} Transaktionen"
+      trades_extracted: Extrahierte Orders
+      trades_extracted_count:
+        one: "%{count} Order"
+        other: "%{count} Orders"
+      select_account: Importieren auf Konto
+      select_account_placeholder: Konto auswählen...
+      select_account_hint: Wählen Sie das Konto, in das diese Transaktionen importiert werden sollen.
+      select_investment_account_hint: Wählen Sie das Investmentkonto, in das diese Orders importiert werden sollen.
+      no_accounts: Keine Konten verfügbar. Bitte legen Sie zuerst ein Konto an.
+      no_investment_accounts: Keine Investmentkonten verfügbar. Bitte legen Sie zuerst ein Investmentkonto an.
+      create_account: Konto anlegen
+      save_account: Speichern
+      publish_transactions:
+        one: "%{count} Transaktion veröffentlichen"
+        other: "%{count} Transaktionen veröffentlichen"
+      publish_trades:
+        one: "%{count} Order veröffentlichen"
+        other: "%{count} Orders veröffentlichen"
+      review_before_publish: Vor dem Veröffentlichen prüfen
+      select_account_to_continue: Bitte wählen Sie oben ein Konto aus, um fortzufahren.
     ready:
       description: Hier ist eine Zusammenfassung der neuen Elemente, die deinem Konto hinzugefügt werden, sobald du diesen Import veröffentlichst.
       title: Importdaten bestätigen

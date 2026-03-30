@@ -73,7 +73,8 @@ class PlaidAccount::Investments::TransactionsProcessor
         date: transaction["date"],
         name: transaction["name"],
         source: "plaid",
-        activity_label: label_from_plaid_type(transaction)
+        activity_label: label_from_plaid_type(transaction),
+        fee: transaction["fees"] || 0
       )
     end
 
