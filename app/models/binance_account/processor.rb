@@ -2,6 +2,8 @@
 
 # Updates account balance and imports spot trades.
 class BinanceAccount::Processor
+  include BinanceAccount::UsdConverter
+
   attr_reader :binance_account
 
   def initialize(binance_account)
@@ -32,14 +34,21 @@ class BinanceAccount::Processor
 
   private
 
+    def target_currency
+      binance_account.binance_item.family.currency
+    end
+
     def process_account!
-      account = binance_account.current_account
-      balance = (binance_account.current_balance || 0).to_d
+      account  = binance_account.current_account
+      raw_usd  = (binance_account.current_balance || 0).to_d
+      amount, stale, rate_date = convert_from_usd(raw_usd, date: Date.current)
+      stale_extra = build_stale_extra(stale, rate_date, Date.current)
 
       account.update!(
-        balance: balance,
+        balance:      amount,
         cash_balance: 0,
-        currency: "USD"
+        currency:     target_currency,
+        extra:        account.extra.to_h.deep_merge(stale_extra)
       )
     end
 
@@ -62,7 +71,7 @@ class BinanceAccount::Processor
       end
 
       binance_account.update!(raw_transactions_payload: {
-        "spot" => trades_by_symbol,
+        "spot"       => trades_by_symbol,
         "fetched_at" => Time.current.iso8601
       })
 
@@ -108,41 +117,44 @@ class BinanceAccount::Processor
       external_id = "binance_spot_#{trade["id"]}"
       return if account.entries.exists?(external_id: external_id)
 
-      date      = Time.zone.at(trade["time"].to_i / 1000).to_date
-      qty       = trade["qty"].to_d
-      price     = trade["price"].to_d
-      total_usd = (qty * price).round(2)
-      is_buyer  = trade["isBuyer"]
+      date       = Time.zone.at(trade["time"].to_i / 1000).to_date
+      qty        = trade["qty"].to_d
+      price      = trade["price"].to_d
+      quote_qty  = trade["quoteQty"].to_d.round(2)
+      commission = trade["commission"].to_d
+      is_buyer   = trade["isBuyer"]
 
       if is_buyer
         account.entries.create!(
-          date: date,
-          name: "Buy #{qty.round(8)} #{base_symbol}",
-          amount: -total_usd,
-          currency: "USD",
+          date:        date,
+          name:        "Buy #{qty.round(8)} #{base_symbol}",
+          amount:      -quote_qty,
+          currency:    "USD",
           external_id: external_id,
-          source: "binance",
-          entryable: Trade.new(
-            security: security,
-            qty: qty,
-            price: price,
-            currency: "USD",
+          source:      "binance",
+          entryable:   Trade.new(
+            security:                  security,
+            qty:                       qty,
+            price:                     price,
+            currency:                  "USD",
+            fee:                       commission,
             investment_activity_label: "Buy"
           )
         )
       else
         account.entries.create!(
-          date: date,
-          name: "Sell #{qty.round(8)} #{base_symbol}",
-          amount: total_usd,
-          currency: "USD",
+          date:        date,
+          name:        "Sell #{qty.round(8)} #{base_symbol}",
+          amount:      quote_qty,
+          currency:    "USD",
           external_id: external_id,
-          source: "binance",
-          entryable: Trade.new(
-            security: security,
-            qty: -qty,
-            price: price,
-            currency: "USD",
+          source:      "binance",
+          entryable:   Trade.new(
+            security:                  security,
+            qty:                       -qty,
+            price:                     price,
+            currency:                  "USD",
+            fee:                       commission,
             investment_activity_label: "Sell"
           )
         )
