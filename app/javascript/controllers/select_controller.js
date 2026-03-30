@@ -2,7 +2,7 @@ import { Controller } from "@hotwired/stimulus"
 import { autoUpdate } from "@floating-ui/dom"
 
 export default class extends Controller {
-  static targets = ["button", "menu", "input"]
+  static targets = ["button", "menu", "field"]
   static values = {
     placement: { type: String, default: "bottom-start" },
     offset: { type: Number, default: 6 }
@@ -69,7 +69,7 @@ export default class extends Controller {
 
     this.buttonTarget.textContent = label
     if (this.hasInputTarget) {
-      this.inputTarget.value = value
+      this.fieldTarget.value = value
       this.inputTarget.dispatchEvent(new Event("change", { bubbles: true }))
     }
 
