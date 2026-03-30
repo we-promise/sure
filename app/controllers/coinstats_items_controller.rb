@@ -133,7 +133,7 @@ class CoinstatsItemsController < ApplicationController
     render_link_exchange_error(t(".error", message: e.message))
   rescue => e
     Rails.logger.error("CoinStats link exchange error: #{e.class} - #{e.message}")
-    render_link_exchange_error(t(".error", message: e.message))
+    render_link_exchange_error(t(".failed"))
   end
 
   private
@@ -230,7 +230,8 @@ class CoinstatsItemsController < ApplicationController
     def fetch_exchange_options(coinstats_item)
       return [] unless coinstats_item&.api_key.present?
 
-      Provider::Coinstats.new(coinstats_item.api_key).exchange_options
+      @exchange_options_by_item ||= {}
+      @exchange_options_by_item[coinstats_item.id] ||= Provider::Coinstats.new(coinstats_item.api_key).exchange_options
     rescue Provider::Coinstats::Error => e
       Rails.logger.error("CoinStats exchange fetch failed: item_id=#{coinstats_item.id} error=#{e.class} message=#{e.message}")
       []

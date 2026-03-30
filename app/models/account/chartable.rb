@@ -1,6 +1,6 @@
 module Account::Chartable
   extend ActiveSupport::Concern
-  SPARKLINE_CACHE_VERSION = "v2"
+  SPARKLINE_CACHE_VERSION = "v4"
 
   def favorable_direction
     classification == "asset" ? "up" : "down"

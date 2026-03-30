@@ -1,6 +1,4 @@
 class AccountableSparklinesController < ApplicationController
-  CACHE_VERSION = "v3"
-
   def show
     @accountable = Accountable.from_type(params[:accountable_type]&.classify)
 
@@ -71,6 +69,6 @@ class AccountableSparklinesController < ApplicationController
     end
 
     def cache_key
-      family.build_cache_key("#{@accountable.name}_sparkline_#{CACHE_VERSION}", invalidate_on_data_updates: true)
+      family.build_cache_key("#{@accountable.name}_sparkline_#{Account::Chartable::SPARKLINE_CACHE_VERSION}", invalidate_on_data_updates: true)
     end
 end

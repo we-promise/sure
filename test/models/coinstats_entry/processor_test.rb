@@ -363,4 +363,49 @@ class CoinstatsEntry::ProcessorTest < ActiveSupport::TestCase
     assert_equal "Trade BTC", entry.name
     assert_equal "Sell", entry.trade.investment_activity_label
   end
+
+  test "portfolio exchange fallback keeps disposed asset sign when trade import is skipped" do
+    exchange_crypto = Crypto.create!
+    exchange_account_record = @family.accounts.create!(
+      accountable: exchange_crypto,
+      name: "Bitvavo",
+      balance: 1000,
+      currency: "USD"
+    )
+    exchange_account = @coinstats_item.coinstats_accounts.create!(
+      name: "Bitvavo",
+      currency: "USD",
+      account_id: "exchange_portfolio:portfolio_123",
+      raw_payload: {
+        source: "exchange",
+        portfolio_account: true,
+        portfolio_id: "portfolio_123",
+        coins: []
+      }
+    )
+    AccountProvider.create!(account: exchange_account_record, provider: exchange_account)
+
+    transaction_data = {
+      type: "Trade",
+      date: "2025-01-15T10:00:00.000Z",
+      hash: { id: "trade_fallback_sign" },
+      transactions: [
+        {
+          items: [
+            { coin: { id: "bitcoin", symbol: "BTC" }, count: "-0.00335845", totalWorth: "100" },
+            { coin: { id: "ethereum", symbol: "ETH" }, count: "0.05580825", totalWorth: "100" }
+          ]
+        }
+      ]
+    }
+
+    Security::Resolver.any_instance.stubs(:resolve).returns(nil)
+
+    processor = CoinstatsEntry::Processor.new(transaction_data, coinstats_account: exchange_account)
+    processor.process
+
+    entry = exchange_account_record.entries.order(created_at: :desc).first
+    assert_equal BigDecimal("100"), entry.amount
+    assert_equal "Trade BTC", entry.name
+  end
 end

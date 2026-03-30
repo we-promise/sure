@@ -192,7 +192,7 @@ class CoinstatsEntry::Processor
           coin_data[:currentValue].to_d.abs ||
           profit_loss[:currentValue].to_d.abs
 
-        return outgoing_transaction_type? ? absolute_amount : -absolute_amount
+        return portfolio_outflow? ? absolute_amount : -absolute_amount
       end
 
       if coinstats_account.exchange_source? && coinstats_account.fiat_asset?
@@ -458,6 +458,13 @@ class CoinstatsEntry::Processor
             Array(entry.with_indifferent_access[:items]).map(&:with_indifferent_access)
           end
       end
+    end
+
+    def portfolio_outflow?
+      outgoing_transaction_type? ||
+        trade_item_count.negative? ||
+        matched_item_count.negative? ||
+        coin_data[:count].to_d.negative?
     end
 
     def formatted_currency_amount(amount)
