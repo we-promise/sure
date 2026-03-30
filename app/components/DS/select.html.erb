@@ -4,7 +4,7 @@
   <div class="form-field <%= options[:container_class] %>">
     <div class="form-field__body cursor-pointer"
         data-action="click->select#toggle click->select#focusButton">
-        <%= form.label method, options[:label], class: "form-field__label cursor-pointer" id: "#{method}_label" if options[:label].present? %>
+        <%= form.label method, options[:label], class: "form-field__label cursor-pointer", id: "#{method}_label" if options[:label].present? %>
         <%= form.hidden_field method,
             value: @selected_value,
             data: {
