@@ -20,6 +20,8 @@ class StyledFormBuilder < ActionView::Helpers::FormBuilder
   end
 
   def select(method, choices, options = {}, html_options = {})
+    field_options = normalize_options(options, html_options)
+
     is_multiple = html_options[:multiple] || options[:multiple]
     is_html_string = choices.is_a?(ActiveSupport::SafeBuffer)
 
