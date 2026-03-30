@@ -36,7 +36,7 @@ export default class extends Controller {
   }
 
   focusButton() {
-    if (this.hasButtonTarget) this.buttonTarget.focus()
+    if (this.hasButtonTarget && !this.element.dataset.noFocus) this.buttonTarget.focus()
   }
 
   openMenu() {
