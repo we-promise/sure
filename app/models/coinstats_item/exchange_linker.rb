@@ -26,9 +26,7 @@ class CoinstatsItem::ExchangeLinker
       name: name.presence || default_portfolio_name(exchange)
     )
 
-    unless response.success?
-      return Result.new(success?: false, created_count: 0, errors: [ response.error.message ])
-    end
+    return Result.new(success?: false, created_count: 0, errors: [ response.error.message ]) unless response.success?
 
     payload = response.data.with_indifferent_access
     portfolio_id = payload[:portfolioId]
@@ -48,8 +46,15 @@ class CoinstatsItem::ExchangeLinker
       if coins.nil?
         Rails.logger.warn "CoinstatsItem::ExchangeLinker - Initial portfolio coin fetch missing for item #{coinstats_item.id} portfolio #{portfolio_id}; deferring local account creation to background sync"
       else
-        coinstats_account = upsert_exchange_account!(coins, exchange, portfolio_id)
-        created_count = ensure_local_account!(coinstats_account) ? 1 : 0
+        coinstats_account = exchange_portfolio_account_manager.upsert_account!(
+          coins_data: coins,
+          portfolio_id: portfolio_id,
+          connection_id: exchange[:connection_id],
+          exchange_name: exchange[:name],
+          account_name: name.presence || exchange[:name],
+          institution_logo: exchange[:icon]
+        )
+        created_count = exchange_portfolio_account_manager.ensure_local_account!(coinstats_account) ? 1 : 0
       end
     end
 
@@ -61,9 +66,12 @@ class CoinstatsItem::ExchangeLinker
   end
 
   private
-
     def provider
       @provider ||= Provider::Coinstats.new(coinstats_item.api_key)
+    end
+
+    def exchange_portfolio_account_manager
+      @exchange_portfolio_account_manager ||= CoinstatsItem::ExchangePortfolioAccountManager.new(coinstats_item)
     end
 
     def fetch_exchange_definition
@@ -86,67 +94,5 @@ class CoinstatsItem::ExchangeLinker
 
     def default_portfolio_name(exchange)
       "#{exchange[:name]} Portfolio"
-    end
-
-    def upsert_exchange_account!(coins, exchange, portfolio_id)
-      account_name = name.presence || exchange[:name]
-      coinstats_account = coinstats_item.coinstats_accounts.find_or_initialize_by(
-        account_id: portfolio_account_id(portfolio_id),
-        wallet_address: portfolio_id
-      )
-
-      coinstats_account.name = account_name
-      coinstats_account.provider = exchange[:name]
-      coinstats_account.account_status = "active"
-      coinstats_account.wallet_address = portfolio_id
-      coinstats_account.institution_metadata = {
-        logo: exchange[:icon],
-        exchange_logo: exchange[:icon]
-      }.compact
-      coinstats_account.raw_payload = build_snapshot(coins, exchange, portfolio_id, account_name)
-      coinstats_account.currency = coinstats_account.inferred_currency
-      coinstats_account.current_balance = coinstats_account.inferred_current_balance
-      coinstats_account.save!
-      coinstats_account
-    end
-
-    def ensure_local_account!(coinstats_account)
-      return false if coinstats_account.account.present?
-
-      attributes = {
-        family: coinstats_item.family,
-        name: coinstats_account.name,
-        balance: coinstats_account.current_balance || 0,
-        cash_balance: coinstats_account.inferred_cash_balance,
-        currency: coinstats_account.currency || coinstats_item.family.currency || "USD",
-        accountable_type: "Crypto",
-        accountable_attributes: {
-          subtype: "exchange",
-          tax_treatment: "taxable"
-        }
-      }
-
-      account = Account.create_and_sync(attributes, skip_initial_sync: true)
-
-      AccountProvider.create!(account: account, provider: coinstats_account)
-      true
-    end
-
-    def build_snapshot(coins, exchange, portfolio_id, account_name)
-      {
-        source: "exchange",
-        portfolio_account: true,
-        portfolio_id: portfolio_id,
-        connection_id: exchange[:connection_id],
-        exchange_name: exchange[:name],
-        id: portfolio_account_id(portfolio_id),
-        name: account_name,
-        institution_logo: exchange[:icon],
-        coins: Array(coins).map(&:to_h)
-      }
-    end
-
-    def portfolio_account_id(portfolio_id)
-      "exchange_portfolio:#{portfolio_id}"
     end
 end
