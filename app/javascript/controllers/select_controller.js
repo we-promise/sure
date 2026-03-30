@@ -30,7 +30,7 @@ export default class extends Controller {
   }
 
   toggle = () => {
-    if ((this.hasFieldTarget && this.inputTarget.disabled) || this.buttonTarget.disabled) return
+    if ((this.hasFieldTarget && this.fieldTarget.disabled) || this.buttonTarget.disabled) return
 
     this.isOpen ? this.close() : this.openMenu()
   }
@@ -70,7 +70,7 @@ export default class extends Controller {
     this.buttonTarget.textContent = label
     if (this.hasFieldTarget) {
       this.fieldTarget.value = value
-      this.inputTarget.dispatchEvent(new Event("change", { bubbles: true }))
+      this.fieldTarget.dispatchEvent(new Event("change", { bubbles: true }))
     }
 
     const previousSelected = this.menuTarget.querySelector("[aria-selected='true']")
