@@ -13,8 +13,10 @@
             class: "hidden",
             disabled: disabled?,
             data: { "form-dropdown-target": "input" } do %>
+        <% normalized_selected = @selected_value.respond_to?(:id) ? @selected_value.id : @selected_value %>
         <% items.each do |item| %>
-          <option value="<%= item[:value] %>" <%= "selected" if item[:value].to_s == @selected_value.to_s %>>
+          <% option_value = item[:value].respond_to?(:id) ? item[:value].id : item[:value] %>
+          <option value="<%= option_value %>" <%= "selected" if option_value.to_s == normalized_selected.to_s %>>
             <%= item[:label] %>
           </option>
         <% end %>
@@ -24,7 +26,9 @@
               class="form-field__input w-full <%= "pointer-events-none" if disabled? %>"
               data-select-target="button"
               aria-haspopup="listbox"
-              aria-expanded="<%= @selected_value.present? ? "true" : "false" %>"
+              aria-expanded="false"
+              <%= %(aria-labelledby="#{form.field_id(method)}_label") if options[:label].present? %>
+              <%= %(aria-label="#{method.to_s.humanize}") unless options[:label].present? %>
               aria-labelledby="<%= "#{form.field_id(method)}_label" %>"
               <%= "disabled" if disabled? %>>
         <%= selected_label %>
