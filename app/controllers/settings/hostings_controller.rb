@@ -3,7 +3,7 @@ class Settings::HostingsController < ApplicationController
 
   guard_feature unless: -> { self_hosted? }
 
-  before_action :ensure_admin, only: [ :update, :clear_cache, :disconnect_external_assistant ]
+  before_action :ensure_admin, only: [ :update, :clear_cache, :disconnect_external_assistant, :import_gus_inflation_rates ]
   before_action :ensure_super_admin_for_onboarding, only: :update
 
   def show
@@ -59,6 +59,14 @@ class Settings::HostingsController < ApplicationController
 
     if hosting_params.key?(:twelve_data_api_key)
       Setting.twelve_data_api_key = hosting_params[:twelve_data_api_key]
+    end
+
+    if hosting_params.key?(:gus_sdp_api_key)
+      Setting.gus_sdp_api_key = hosting_params[:gus_sdp_api_key]
+    end
+
+    if hosting_params.key?(:gus_inflation_import_enabled)
+      Setting.gus_inflation_import_enabled = hosting_params[:gus_inflation_import_enabled] == "1"
     end
 
     if hosting_params.key?(:exchange_rate_provider)
@@ -163,10 +171,31 @@ class Settings::HostingsController < ApplicationController
     redirect_to settings_hosting_path, alert: t("settings.hostings.update.failure")
   end
 
+  def import_gus_inflation_rates
+    unless Setting.gus_inflation_import_enabled
+      return redirect_to settings_hosting_path, alert: t(".import_disabled")
+    end
+
+    start_year = import_params[:gus_inflation_start_year].presence&.to_i || (Date.current.year - 20)
+    end_year = import_params[:gus_inflation_end_year].presence&.to_i || (Date.current.year - 1)
+
+    if start_year > end_year
+      return redirect_to settings_hosting_path, alert: t(".invalid_import_range")
+    end
+
+    ImportGusInflationRatesJob.perform_later(start_year:, end_year:, force: true)
+
+    redirect_to settings_hosting_path, notice: t(".import_enqueued")
+  end
+
   private
     def hosting_params
       return ActionController::Parameters.new unless params.key?(:setting)
-      params.require(:setting).permit(:onboarding_state, :require_email_confirmation, :invite_only_default_family_id, :brand_fetch_client_id, :brand_fetch_high_res_logos, :twelve_data_api_key, :openai_access_token, :openai_uri_base, :openai_model, :openai_json_mode, :exchange_rate_provider, :securities_provider, :syncs_include_pending, :auto_sync_enabled, :auto_sync_time, :external_assistant_url, :external_assistant_token, :external_assistant_agent_id)
+      params.require(:setting).permit(:onboarding_state, :require_email_confirmation, :invite_only_default_family_id, :brand_fetch_client_id, :brand_fetch_high_res_logos, :twelve_data_api_key, :gus_sdp_api_key, :gus_inflation_import_enabled, :openai_access_token, :openai_uri_base, :openai_model, :openai_json_mode, :exchange_rate_provider, :securities_provider, :syncs_include_pending, :auto_sync_enabled, :auto_sync_time, :external_assistant_url, :external_assistant_token, :external_assistant_agent_id)
+    end
+
+    def import_params
+      params.fetch(:setting, ActionController::Parameters.new).permit(:gus_inflation_start_year, :gus_inflation_end_year)
     end
 
     def update_assistant_type

@@ -1,0 +1,96 @@
+<div class="space-y-4">
+  <div>
+    <h2 class="font-medium mb-1"><%= t(".title") %></h2>
+    <p class="text-secondary text-sm mb-4"><%= t(".description") %></p>
+    <% if ENV["GUS_SDP_API_KEY"].present? %>
+      <p class="text-sm text-secondary"><%= t(".env_configured_message") %></p>
+    <% else %>
+      <p class="text-sm text-secondary"><%= t(".free_default_message") %></p>
+    <% end %>
+  </div>
+
+  <%= styled_form_with model: Setting.new,
+                       url: settings_hosting_path,
+                       method: :patch,
+                       data: {
+                         controller: "auto-submit-form",
+                         "auto-submit-form-trigger-event-value": "change"
+                       } do |form| %>
+    <div class="flex items-center justify-between">
+      <div class="space-y-1">
+        <p class="text-sm"><%= t(".import_enabled_label") %></p>
+        <p class="text-secondary text-sm"><%= t(".import_enabled_help") %></p>
+      </div>
+
+      <%= form.toggle :gus_inflation_import_enabled,
+                      checked: Setting.gus_inflation_import_enabled,
+                      disabled: ENV["GUS_INFLATION_IMPORT_ENABLED"].present?,
+                      data: { auto_submit_form_target: "auto" } %>
+    </div>
+    <% if ENV["GUS_INFLATION_IMPORT_ENABLED"].present? %>
+      <p class="text-xs text-secondary mt-1"><%= t(".import_enabled_env_locked") %></p>
+    <% end %>
+  <% end %>
+
+  <%= styled_form_with model: Setting.new,
+                       url: settings_hosting_path,
+                       method: :patch,
+                       data: {
+                         controller: "auto-submit-form",
+                         "auto-submit-form-trigger-event-value": "blur"
+                       } do |form| %>
+    <%= form.text_field :gus_sdp_api_key,
+                        label: t(".label"),
+                        type: "password",
+                        placeholder: t(".placeholder"),
+                        value: ENV.fetch("GUS_SDP_API_KEY", Setting.gus_sdp_api_key),
+                        disabled: ENV["GUS_SDP_API_KEY"].present?,
+                        data: { "auto-submit-form-target": "auto" } %>
+  <% end %>
+
+  <%= styled_form_with model: Setting.new,
+                       url: import_gus_inflation_rates_settings_hosting_path,
+                       method: :post do |form| %>
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+      <%= form.number_field :gus_inflation_start_year,
+                            label: t(".start_year"),
+                            value: Date.current.year - 20,
+                            min: 1990,
+                            max: Date.current.year,
+                            disabled: !Setting.gus_inflation_import_enabled %>
+      <%= form.number_field :gus_inflation_end_year,
+                            label: t(".end_year"),
+                            value: Date.current.year - 1,
+                            min: 1990,
+                            max: Date.current.year,
+                            disabled: !Setting.gus_inflation_import_enabled %>
+    </div>
+
+    <div class="mt-3">
+      <%= form.submit t(".import_now"), disabled: !Setting.gus_inflation_import_enabled %>
+    </div>
+  <% end %>
+
+  <div class="text-sm text-secondary">
+    <p>
+      <strong><%= t(".last_import") %>:</strong>
+      <%= Setting.gus_inflation_last_import_at.present? ? l(Setting.gus_inflation_last_import_at, format: :long) : t(".never") %>
+    </p>
+    <% if Setting.gus_inflation_last_import_range.present? %>
+      <p><strong><%= t(".last_range") %>:</strong> <%= Setting.gus_inflation_last_import_range %></p>
+    <% end %>
+    <% if Setting.gus_inflation_last_import_count.present? %>
+      <p><strong><%= t(".last_count") %>:</strong> <%= Setting.gus_inflation_last_import_count %></p>
+    <% end %>
+    <% if Setting.gus_inflation_last_import_error.present? %>
+      <p class="text-destructive"><strong><%= t(".last_error") %>:</strong> <%= Setting.gus_inflation_last_import_error %></p>
+    <% end %>
+    <p><strong><%= t(".stored_records") %>:</strong> <%= GusInflationRate.count %></p>
+    <% if GusInflationRate.exists? %>
+      <p>
+        <strong><%= t(".stored_range") %>:</strong>
+        <%= GusInflationRate.minimum(:year) %>-<%= GusInflationRate.maximum(:year) %>
+      </p>
+    <% end %>
+  </div>
+</div>

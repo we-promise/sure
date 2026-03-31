@@ -6,6 +6,12 @@ class Setting < RailsSettings::Base
 
   # Third-party API keys
   field :twelve_data_api_key, type: :string, default: ENV["TWELVE_DATA_API_KEY"]
+  field :gus_sdp_api_key, type: :string, default: ENV["GUS_SDP_API_KEY"]
+  field :gus_inflation_import_enabled, type: :boolean, default: ENV.fetch("GUS_INFLATION_IMPORT_ENABLED", "false") == "true"
+  field :gus_inflation_last_import_at, type: :datetime
+  field :gus_inflation_last_import_count, type: :integer
+  field :gus_inflation_last_import_range, type: :string
+  field :gus_inflation_last_import_error, type: :string
   field :openai_access_token, type: :string, default: ENV["OPENAI_ACCESS_TOKEN"]
   field :openai_uri_base, type: :string, default: ENV["OPENAI_URI_BASE"]
   field :openai_model, type: :string, default: ENV["OPENAI_MODEL"]
@@ -58,6 +64,12 @@ class Setting < RailsSettings::Base
   def self.valid_auto_sync_timezone?(timezone_str)
     return false if timezone_str.blank?
     ActiveSupport::TimeZone[timezone_str].present?
+  end
+
+  def self.gus_inflation_import_enabled_effective
+    return ActiveModel::Type::Boolean.new.cast(ENV["GUS_INFLATION_IMPORT_ENABLED"]) if ENV["GUS_INFLATION_IMPORT_ENABLED"].present?
+
+    gus_inflation_import_enabled
   end
 
   # Dynamic fields are now stored as individual entries with "dynamic:" prefix

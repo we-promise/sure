@@ -9,9 +9,12 @@ class PagesController < ApplicationController
       redirect_to chats_path and return
     end
 
+    show_bond_rate_review_notice!
+
     @balance_sheet = Current.family.balance_sheet
     @investment_statement = Current.family.investment_statement
     @accounts = Current.user.accessible_accounts.visible.with_attached_logo
+    @bond_accounts = @accounts.select(&:bond?)
 
     family_currency = Current.family.currency
 
@@ -107,6 +110,14 @@ class PagesController < ApplicationController
           partial: "pages/dashboard/investment_summary",
           locals: { investment_statement: @investment_statement, period: @period },
           visible: @accounts.any? && @investment_statement.investment_accounts.any?,
+          collapsible: true
+        },
+        {
+          key: "bond_summary",
+          title: "pages.dashboard.bond_summary.title",
+          partial: "pages/dashboard/bond_summary",
+          locals: { bond_accounts: @bond_accounts },
+          visible: @accounts.any? && @bond_accounts.any?,
           collapsible: true
         },
         {
@@ -340,5 +351,16 @@ class PagesController < ApplicationController
       return if Current.user&.guest?
 
       redirect_to root_path, alert: t("pages.intro.not_authorized", default: "Intro is only available to guest users.")
+    end
+
+    def show_bond_rate_review_notice!
+      return if session[:bond_rate_review_prompted]
+
+      pending_lots = BondLot.needs_rate_review.joins(bond: :account).merge(Account.accessible_by(Current.user))
+      return if pending_lots.empty?
+
+      account_names = pending_lots.includes(bond: :account).map { |lot| lot.account.name }.uniq.first(3).join(", ")
+      flash.now[:notice] = t("pages.dashboard.bond_rate_review_notice", count: pending_lots.count, accounts: account_names)
+      session[:bond_rate_review_prompted] = true
     end
 end

@@ -42,3 +42,15 @@ refresh_demo_family:
   class: "DemoFamilyRefreshJob"
   queue: "scheduled"
   description: "Refreshes demo family data and emails super admins with daily usage summary"
+
+import_gus_inflation_rates:
+  cron: "30 6 15 * *" # monthly around CPI publication window
+  class: "ImportGusInflationRatesJob"
+  queue: "scheduled"
+  description: "Imports monthly CPI YoY rates from GUS SDP for current and previous year"
+
+settle_matured_bond_lots:
+  cron: "15 2 * * *" # daily at 2:15 AM
+  class: "SettleMaturedBondLotsJob"
+  queue: "scheduled"
+  description: "Automatically settles matured bond lots into cash based on per-lot settings"

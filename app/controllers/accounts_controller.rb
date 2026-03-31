@@ -42,6 +42,8 @@ class AccountsController < ApplicationController
   end
 
   def show
+    @account.bond&.settle_matured_lots! if @account.bond?
+
     @chart_view = params[:chart_view] || "balance"
     @tab = params[:tab]
     @q = params.fetch(:q, {}).permit(:search, status: [])
