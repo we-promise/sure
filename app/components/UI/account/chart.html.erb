@@ -9,10 +9,10 @@
         <% end %>
       </div>
       <div class="flex flex-row gap-2 items-baseline">
-        <%= tag.p view_balance_money.format, class: "text-primary text-3xl font-medium truncate" %>
+        <%= tag.p view_balance_money.format, class: "text-primary text-3xl font-medium truncate privacy-sensitive" %>
 
         <% if converted_balance_money %>
-          <%= tag.p converted_balance_money.format, class: "text-sm font-medium text-secondary" %>
+          <%= tag.p converted_balance_money.format, class: "text-sm font-medium text-secondary privacy-sensitive" %>
         <% end %>
       </div>
     </div>
@@ -45,7 +45,7 @@
       <% if series.any? %>
         <div
         id="lineChart"
-        class="w-full h-full"
+        class="w-full h-full privacy-sensitive"
         data-controller="time-series-chart"
         data-time-series-chart-data-value="<%= series.to_json %>"></div>
       <% else %>

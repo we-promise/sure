@@ -8,6 +8,8 @@ class NetWorthCard extends StatelessWidget {
   final AccountFilter currentFilter;
   final ValueChanged<AccountFilter> onFilterChanged;
   final String Function(String currency, double amount) formatAmount;
+  final String? netWorthFormatted;
+  final bool isStale;
 
   const NetWorthCard({
     super.key,
@@ -16,6 +18,8 @@ class NetWorthCard extends StatelessWidget {
     required this.currentFilter,
     required this.onFilterChanged,
     required this.formatAmount,
+    this.netWorthFormatted,
+    this.isStale = false,
   });
 
   @override
@@ -33,14 +37,49 @@ class NetWorthCard extends StatelessWidget {
       ),
       child: Column(
         children: [
-          // Net Worth Section (Placeholder)
+          // Net Worth Section
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
-            child: Text(
-              'Net Worth — coming soon',
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: colorScheme.onSurfaceVariant,
-                  ),
+            child: Column(
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Net Worth',
+                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                    ),
+                    if (isStale) ...[
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                        decoration: BoxDecoration(
+                          color: colorScheme.secondaryContainer.withValues(alpha: 0.5),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          'Outdated',
+                          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                color: colorScheme.secondary,
+                                fontWeight: FontWeight.w600,
+                              ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  netWorthFormatted ?? '--',
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: isStale ? colorScheme.secondary : colorScheme.onSurface,
+                      ),
+                ),
+              ],
             ),
           ),
 

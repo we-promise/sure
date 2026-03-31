@@ -12,7 +12,7 @@
       </div>
 
       <div class="ml-auto text-right grow">
-        <%= tag.p format_money(account_group.total_money), class: "text-sm font-medium text-primary" %>
+        <%= tag.p format_money(account_group.total_money), class: "text-sm font-medium text-primary privacy-sensitive" %>
         <%= turbo_frame_tag "#{account_group.key}_sparkline", src: accountable_sparkline_path(account_group.key), loading: "lazy", data: { controller: "turbo-frame-timeout", turbo_frame_timeout_timeout_value: 10000 } do %>
           <div class="flex items-center w-8 h-4 ml-auto">
             <div class="w-6 h-px bg-loader"></div>
@@ -34,12 +34,15 @@
           <div class="min-w-0 grow">
             <div class="flex items-center gap-2 mb-0.5">
               <%= tag.p account.name, class: class_names("text-sm text-primary font-medium truncate", "animate-pulse" => account.syncing?) %>
+              <% if account.shared? %>
+                <%= icon("users", class: "w-3 h-3 text-secondary shrink-0") %>
+              <% end %>
             </div>
             <%= tag.p account.short_subtype_label, class: "text-sm text-secondary truncate" %>
           </div>
 
           <div class="ml-auto text-right grow h-10">
-            <%= tag.p format_money(account.balance_money), class: "text-sm font-medium text-primary whitespace-nowrap" %>
+            <%= tag.p format_money(account.balance_money), class: "text-sm font-medium text-primary whitespace-nowrap privacy-sensitive" %>
             <%= turbo_frame_tag dom_id(account, :sparkline), src: sparkline_account_path(account), loading: "lazy", data: { controller: "turbo-frame-timeout", turbo_frame_timeout_timeout_value: 10000 } do %>
               <div class="flex items-center w-8 h-4 ml-auto">
                 <div class="w-6 h-px bg-loader"></div>

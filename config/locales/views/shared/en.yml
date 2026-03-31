@@ -10,5 +10,6 @@ en:
       label: Amount
     syncing_notice:
       syncing: Syncing accounts data...
+    require_admin: "Only admins can perform this action"
     trend_change:
       no_change: "no change"

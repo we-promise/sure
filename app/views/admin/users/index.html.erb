@@ -53,7 +53,7 @@
           <% pending_invitations = @invitations_by_family[family.id] || [] %>
           <details class="bg-container-inset rounded-lg overflow-hidden group"
                    data-controller="admin-invitation-delete"
-                   data-admin-invitation-delete-delete-all-label-value="<%= t('.invitations.delete_all') %>">
+                   data-admin-invitation-delete-delete-all-label-value="<%= t(".invitations.delete_all") %>">
             <summary class="flex items-center justify-between gap-4 px-4 py-3 cursor-pointer select-none hover:bg-surface-hover">
               <div class="flex items-center gap-3">
                 <%= icon "users", class: "w-5 h-5 text-secondary shrink-0" %>
@@ -75,7 +75,7 @@
                   </span>
                 <% elsif sub %>
                   <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium
-                    <%= sub.active? ? 'bg-green-100 text-green-800' : 'bg-surface text-secondary' %>">
+                    <%= sub.active? ? "bg-green-100 text-green-800" : "bg-surface text-secondary" %>">
                     <%= sub.status.humanize %>
                   </span>
                 <% else %>

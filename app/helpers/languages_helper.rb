@@ -261,6 +261,7 @@ module LanguagesHelper
     KP: "🇰🇵 North Korea",
     KR: "🇰🇷 South Korea",
     KW: "🇰🇼 Kuwait",
+    XK: "🇽🇰 Kosovo",
     KG: "🇰🇬 Kyrgyzstan",
     LA: "🇱🇦 Laos",
     LV: "🇱🇻 Latvia",

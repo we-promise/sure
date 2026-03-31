@@ -25,6 +25,8 @@ zh-CN:
       edit_merchants: 编辑商户
       edit_tags: 编辑标签
       import: 导入
+    transaction:
+      linked_with_provider: 已与 %{provider} 关联
     index:
       import: 导入
       transaction: 交易

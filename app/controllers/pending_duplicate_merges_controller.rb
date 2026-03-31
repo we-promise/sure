@@ -17,6 +17,8 @@ class PendingDuplicateMergesController < ApplicationController
   end
 
   def create
+    return unless require_account_permission!(@transaction.entry.account, :annotate, redirect_path: transactions_path)
+
     # Manually merge the pending transaction with the selected posted transaction
     unless merge_params[:posted_entry_id].present?
       redirect_back_or_to transactions_path, alert: "Please select a posted transaction to merge with"
@@ -54,7 +56,7 @@ class PendingDuplicateMergesController < ApplicationController
 
   private
     def set_transaction
-      entry = Current.family.entries.find(params[:transaction_id])
+      entry = Current.accessible_entries.find(params[:transaction_id])
       @transaction = entry.entryable
 
       unless @transaction.is_a?(Transaction) && @transaction.pending?
