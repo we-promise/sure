@@ -52,6 +52,26 @@ class TransactionTest < ActiveSupport::TestCase
     end
   end
 
+  test "category_editable? returns true for standard transactions" do
+    assert Transaction.new(kind: "standard").category_editable?
+  end
+
+  test "category_editable? returns true for investment_contribution without Transfer record" do
+    assert Transaction.new(kind: "investment_contribution").category_editable?
+  end
+
+  test "category_editable? returns true for loan_payment without Transfer record" do
+    assert Transaction.new(kind: "loan_payment").category_editable?
+  end
+
+  test "category_editable? returns false for funds_movement without Transfer record" do
+    refute Transaction.new(kind: "funds_movement").category_editable?
+  end
+
+  test "category_editable? returns false for cc_payment without Transfer record" do
+    refute Transaction.new(kind: "cc_payment").category_editable?
+  end
+
   test "ACTIVITY_LABELS contains all valid labels" do
     assert_includes Transaction::ACTIVITY_LABELS, "Buy"
     assert_includes Transaction::ACTIVITY_LABELS, "Sell"
