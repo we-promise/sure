@@ -143,7 +143,7 @@ class SimplefinEntry::Processor
     # UI/entry date selection by account type:
     # - Credit cards/loans: prefer transaction date (matches statements), then posted
     # - Others: prefer posted date, then transaction date
-    # Epochs parsed as UTC timestamps via DateUtils
+    # Epochs are normalized through Simplefin::DateUtils without forcing UTC.
     def date
       # Prefer transaction date for revolving debt (credit cards/loans); otherwise prefer posted date
       acct_type = simplefin_account&.account_type.to_s.strip.downcase.tr(" ", "_")

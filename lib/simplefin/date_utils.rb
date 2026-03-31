@@ -16,7 +16,9 @@ module Simplefin
         val.to_date
       when Integer, Float
         return nil if val.to_i == 0
-        Time.at(val).utc.to_date
+        # Provider epochs should resolve to the app's calendar date, not be shifted
+        # backward by forcing UTC around local-midnight timestamps.
+        Time.at(val).to_date
       when String
         Date.parse(val)
       else

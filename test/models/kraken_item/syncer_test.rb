@@ -13,12 +13,7 @@ class KrakenItem::SyncerTest < ActiveSupport::TestCase
   end
 
   test "perform_sync imports data from kraken api" do
-    mock_sync = mock("sync")
-    mock_sync.stubs(:respond_to?).with(:status_text).returns(true)
-    mock_sync.stubs(:respond_to?).with(:sync_stats).returns(true)
-    mock_sync.stubs(:window_start_date).returns(nil)
-    mock_sync.stubs(:window_end_date).returns(nil)
-    mock_sync.expects(:update!).at_least_once
+    mock_sync = build_sync_mock
 
     @kraken_item.expects(:import_latest_kraken_data).once
 
@@ -31,12 +26,7 @@ class KrakenItem::SyncerTest < ActiveSupport::TestCase
       currency: "USD"
     )
 
-    mock_sync = mock("sync")
-    mock_sync.stubs(:respond_to?).with(:status_text).returns(true)
-    mock_sync.stubs(:respond_to?).with(:sync_stats).returns(true)
-    mock_sync.stubs(:window_start_date).returns(nil)
-    mock_sync.stubs(:window_end_date).returns(nil)
-    mock_sync.expects(:update!).at_least_once
+    mock_sync = build_sync_mock
 
     @kraken_item.expects(:import_latest_kraken_data).once
     @syncer.perform_sync(mock_sync)
@@ -58,13 +48,7 @@ class KrakenItem::SyncerTest < ActiveSupport::TestCase
     )
     AccountProvider.create!(account: account, provider: kraken_account)
 
-    mock_sync = mock("sync")
-    mock_sync.stubs(:respond_to?).with(:status_text).returns(true)
-    mock_sync.stubs(:respond_to?).with(:sync_stats).returns(true)
-    mock_sync.stubs(:sync_stats).returns({})
-    mock_sync.stubs(:window_start_date).returns(nil)
-    mock_sync.stubs(:window_end_date).returns(nil)
-    mock_sync.expects(:update!).at_least_once
+    mock_sync = build_sync_mock
 
     @kraken_item.expects(:import_latest_kraken_data).once
     @kraken_item.expects(:process_accounts).once
@@ -76,4 +60,17 @@ class KrakenItem::SyncerTest < ActiveSupport::TestCase
 
     @syncer.perform_sync(mock_sync)
   end
+
+  private
+    def build_sync_mock
+      mock("sync").tap do |mock_sync|
+        mock_sync.stubs(:respond_to?).with(:status_text).returns(true)
+        mock_sync.stubs(:respond_to?).with(:sync_stats).returns(true)
+        mock_sync.stubs(:sync_stats).returns({})
+        mock_sync.stubs(:window_start_date).returns(nil)
+        mock_sync.stubs(:window_end_date).returns(nil)
+        mock_sync.stubs(:created_at).returns(Time.current)
+        mock_sync.expects(:update!).at_least_once
+      end
+    end
 end
