@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_03_28_120000) do
+ActiveRecord::Schema[7.2].define(version: 2026_03_31_211000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -40,7 +40,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_28_120000) do
     t.index ["account_id"], name: "index_account_shares_on_account_id"
     t.index ["user_id", "include_in_finances"], name: "index_account_shares_on_user_id_and_include_in_finances"
     t.index ["user_id"], name: "index_account_shares_on_user_id"
-    t.check_constraint "permission::text = ANY (ARRAY['full_control'::character varying, 'read_write'::character varying, 'read_only'::character varying]::text[])", name: "chk_account_shares_permission"
+    t.check_constraint "permission::text = ANY (ARRAY['full_control'::character varying::text, 'read_write'::character varying::text, 'read_only'::character varying::text])", name: "chk_account_shares_permission"
   end
 
   create_table "accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -175,6 +175,61 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_28_120000) do
     t.index ["account_id", "date", "currency"], name: "index_account_balances_on_account_id_date_currency_unique", unique: true
     t.index ["account_id", "date"], name: "index_balances_on_account_id_and_date", order: { date: :desc }
     t.index ["account_id"], name: "index_balances_on_account_id"
+  end
+
+  create_table "bond_lots", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "bond_id", null: false
+    t.date "purchased_on", null: false
+    t.decimal "amount", precision: 19, scale: 4, null: false
+    t.integer "term_months", null: false
+    t.date "maturity_date", null: false
+    t.decimal "interest_rate", precision: 10, scale: 3
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.string "subtype"
+    t.string "rate_type"
+    t.string "coupon_frequency"
+    t.uuid "entry_id"
+    t.date "issue_date"
+    t.decimal "first_period_rate", precision: 10, scale: 3
+    t.decimal "inflation_margin", precision: 10, scale: 3
+    t.decimal "inflation_rate_assumption", precision: 10, scale: 3
+    t.integer "cpi_lag_months"
+    t.decimal "early_redemption_fee", precision: 19, scale: 4
+    t.decimal "units", precision: 12, scale: 2
+    t.decimal "nominal_per_unit", precision: 19, scale: 4
+    t.boolean "auto_fetch_inflation", default: true, null: false
+    t.boolean "auto_close_on_maturity", default: true, null: false
+    t.date "closed_on"
+    t.decimal "settlement_amount", precision: 19, scale: 4
+    t.decimal "tax_withheld", precision: 19, scale: 4
+    t.string "tax_strategy", default: "standard", null: false
+    t.decimal "tax_rate", precision: 6, scale: 3, default: "19.0", null: false
+    t.boolean "requires_rate_review", default: false, null: false
+    t.index ["bond_id", "closed_on"], name: "index_bond_lots_on_bond_id_and_closed_on"
+    t.index ["bond_id", "purchased_on"], name: "index_bond_lots_on_bond_id_and_purchased_on"
+    t.index ["bond_id"], name: "index_bond_lots_on_bond_id"
+    t.index ["closed_on"], name: "index_bond_lots_on_closed_on"
+    t.index ["entry_id"], name: "index_bond_lots_on_entry_id"
+    t.index ["issue_date"], name: "index_bond_lots_on_issue_date"
+    t.index ["requires_rate_review"], name: "index_bond_lots_on_requires_rate_review"
+    t.index ["subtype"], name: "index_bond_lots_on_subtype"
+  end
+
+  create_table "bonds", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.decimal "initial_balance", precision: 19, scale: 4
+    t.decimal "interest_rate", precision: 10, scale: 3
+    t.integer "term_months"
+    t.string "rate_type"
+    t.date "maturity_date"
+    t.string "coupon_frequency"
+    t.string "subtype"
+    t.jsonb "locked_attributes", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.string "tax_wrapper", default: "none", null: false
+    t.boolean "auto_buy_new_issues", default: false, null: false
+    t.index ["tax_wrapper"], name: "index_bonds_on_tax_wrapper"
   end
 
   create_table "budget_categories", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -537,7 +592,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_28_120000) do
     t.string "moniker", default: "Family", null: false
     t.string "assistant_type", default: "builtin", null: false
     t.string "default_account_sharing", default: "shared", null: false
-    t.check_constraint "default_account_sharing::text = ANY (ARRAY['shared'::character varying, 'private'::character varying]::text[])", name: "chk_families_default_account_sharing"
+    t.check_constraint "default_account_sharing::text = ANY (ARRAY['shared'::character varying::text, 'private'::character varying::text])", name: "chk_families_default_account_sharing"
     t.check_constraint "month_start_day >= 1 AND month_start_day <= 28", name: "month_start_day_range"
   end
 
@@ -573,6 +628,16 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_28_120000) do
     t.index ["family_id", "merchant_id"], name: "idx_on_family_id_merchant_id_23e883e08f", unique: true
     t.index ["family_id"], name: "index_family_merchant_associations_on_family_id"
     t.index ["merchant_id"], name: "index_family_merchant_associations_on_merchant_id"
+  end
+
+  create_table "gus_inflation_rates", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.integer "year", null: false
+    t.integer "month", null: false
+    t.decimal "rate_yoy", precision: 8, scale: 4, null: false
+    t.string "source", default: "sdp", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["year", "month"], name: "index_gus_inflation_rates_on_year_and_month", unique: true
   end
 
   create_table "holdings", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1536,6 +1601,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_28_120000) do
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "api_keys", "users"
   add_foreign_key "balances", "accounts", on_delete: :cascade
+  add_foreign_key "bond_lots", "bonds"
+  add_foreign_key "bond_lots", "entries"
   add_foreign_key "budget_categories", "budgets"
   add_foreign_key "budget_categories", "categories"
   add_foreign_key "budgets", "families"

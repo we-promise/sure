@@ -1,0 +1,74 @@
+<%# locals: (lot:, account:) %>
+
+<%= turbo_frame_tag dom_id(lot) do %>
+  <% label = Bond.long_subtype_label_for(lot.subtype) || t(".unknown") %>
+  <% total_balance = account.balance.to_d %>
+  <% weight = total_balance.zero? ? 0 : lot.amount.to_d / total_balance * 100 %>
+  <% total_return_amount = lot.total_return_amount %>
+  <% total_return_percent = lot.total_return_percent %>
+  <% return_label = t(".since_purchase") %>
+  <% if total_return_amount.abs < 0.01 && lot.projected_total_return_amount.positive? %>
+    <% total_return_amount = lot.projected_total_return_amount %>
+    <% total_return_percent = lot.projected_total_return_percent %>
+    <% return_label = t(".projected_to_maturity") %>
+  <% end %>
+  <% total_return_class = total_return_amount.negative? ? "text-destructive" : "text-success" %>
+
+  <div class="grid grid-cols-[4fr_2fr_2fr_2fr_2fr_2fr] items-center text-primary text-sm font-medium p-4">
+    <div class="flex items-center gap-4">
+      <%= render DS::FilledIcon.new(variant: :text, text: label, size: "md", rounded: true) %>
+
+      <div class="space-y-0.5">
+        <%= link_to label, bond_lot_path(lot), data: { turbo_frame: :drawer }, class: "hover:underline" %>
+        <%= tag.p t(".purchased", date: l(lot.purchased_on)), class: "text-secondary text-xs uppercase" %>
+      </div>
+    </div>
+
+    <div class="flex justify-end items-center gap-2">
+      <%= render "shared/progress_circle", progress: weight %>
+      <%= tag.p number_to_percentage(weight, precision: 1) %>
+    </div>
+
+    <div class="text-right">
+      <% if lot.inflation_linked? %>
+        <% current_rate = lot.current_rate_percent %>
+        <% rate_text = lot.requires_rate_review? ? t(".update_needed") : current_rate.present? ? number_to_percentage(current_rate, precision: 3) : t(".unknown") %>
+        <%= tag.p(rate_text, class: "privacy-sensitive") %>
+        <% inflation_component = lot.current_inflation_component_percent %>
+        <% margin_component = lot.current_margin_percent %>
+        <% meta_text = if lot.requires_rate_review?
+          t(".pending_review")
+        elsif lot.auto_fetch_inflation?
+          t(".inflation_meta_gus",
+            inflation: number_to_percentage(inflation_component.to_d, precision: 3),
+            margin: number_to_percentage(margin_component.to_d, precision: 3),
+            indicator: lot.current_inflation_indicator_id)
+        else
+          t(".inflation_meta_manual",
+            inflation: number_to_percentage(inflation_component.to_d, precision: 3),
+            margin: number_to_percentage(margin_component.to_d, precision: 3))
+        end %>
+        <%= tag.p meta_text, class: "font-normal text-secondary" %>
+      <% else %>
+        <%= tag.p(lot.interest_rate.present? ? number_to_percentage(lot.interest_rate, precision: 3) : t(".unknown"), class: "privacy-sensitive") %>
+        <%= tag.p t(".bond_meta", rate_type: lot.rate_type&.titleize || t(".unknown"), coupon: lot.coupon_frequency&.humanize || t(".unknown")), class: "font-normal text-secondary" %>
+      <% end %>
+    </div>
+
+    <div class="text-right">
+      <%= tag.p format_money(Money.new(lot.amount, account.currency)), class: "privacy-sensitive" %>
+      <%= tag.p t(".principal_term", term: t(".term_months", months: lot.term_months)), class: "font-normal text-secondary" %>
+    </div>
+
+    <div class="text-right">
+      <%= tag.p lot.maturity_date ? l(lot.maturity_date) : t(".unknown"), class: "privacy-sensitive" %>
+      <%= tag.p t(".maturity_label"), class: "font-normal text-secondary" %>
+    </div>
+
+    <div class="text-right">
+      <%= tag.p format_money(Money.new(total_return_amount, account.currency)), class: ["privacy-sensitive", total_return_class] %>
+      <%= tag.p "(#{number_to_percentage(total_return_percent, precision: 1)})", class: ["privacy-sensitive", total_return_class] %>
+      <%= tag.p return_label, class: "font-normal text-secondary" %>
+    </div>
+  </div>
+<% end %>

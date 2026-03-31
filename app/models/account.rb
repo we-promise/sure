@@ -342,11 +342,15 @@ class Account < ApplicationRecord
 
   # Get short version of the subtype label
   def short_subtype_label
+    return accountable.wrapper_label(format: :short) if bond? && accountable.respond_to?(:wrapper_label)
+
     accountable_class.short_subtype_label_for(subtype) || accountable_class.display_name
   end
 
   # Get long version of the subtype label
   def long_subtype_label
+    return accountable.wrapper_label(format: :long) if bond? && accountable.respond_to?(:wrapper_label)
+
     accountable_class.long_subtype_label_for(subtype) || accountable_class.display_name
   end
 
@@ -385,7 +389,7 @@ class Account < ApplicationRecord
       :cash
     when "Property", "Vehicle", "OtherAsset", "Loan", "OtherLiability"
       :non_cash
-    when "Investment", "Crypto"
+    when "Investment", "Crypto", "Bond"
       :investment
     else
       raise "Unknown account type: #{accountable_type}"
