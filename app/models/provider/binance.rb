@@ -69,8 +69,9 @@ class Provider::Binance
   end
 
   def get_daily_klines(symbol:, date:)
-    day_start = date.to_time.utc.beginning_of_day.to_i * 1000
-    day_end = date.to_time.utc.end_of_day.to_i * 1000
+    utc_day_start = Time.utc(date.year, date.month, date.day)
+    day_start = utc_day_start.to_i * 1000
+    day_end = utc_day_start.end_of_day.to_i * 1000
 
     public_get(
       "/api/v3/klines",
@@ -133,17 +134,23 @@ class Provider::Binance
 
     def handle_response(response)
       parsed = response.parsed_response
+      parsed = JSON.parse(response.body) if parsed.is_a?(String)
+      message = extract_error_message(parsed)
 
-      case response.code
+      case response.code.to_i
       when 200..299
         parsed
-      when 401, 403
-        raise AuthenticationError, extract_error_message(parsed) || "Unauthorized - check your Binance API key permissions"
-      when 418, 429
-        raise RateLimitError, extract_error_message(parsed) || "Binance rate limit exceeded"
       else
-        raise ApiError, extract_error_message(parsed) || "Binance API error: #{response.code}"
+        if authentication_error?(response.code, message)
+          raise AuthenticationError, message.presence || "Unauthorized - check your Binance API key permissions"
+        elsif rate_limit_error?(response.code, message)
+          raise RateLimitError, message.presence || "Binance rate limit exceeded"
+        else
+          raise ApiError, message.presence || "Binance API error: #{response.code}"
+        end
       end
+    rescue JSON::ParserError => e
+      raise ApiError, "Binance API returned invalid JSON: #{e.message}"
     end
 
     def extract_error_message(parsed)
@@ -151,5 +158,21 @@ class Provider::Binance
       return nil unless parsed.is_a?(Hash)
 
       parsed["msg"] || parsed["message"] || parsed["error"]
+    end
+
+    def authentication_error?(status_code, message)
+      return true if status_code.to_i.in?([ 401, 403 ])
+      return false if message.blank?
+
+      message.match?(
+        /invalid api[- ]?key|invalid signature|signature for this request|timestamp for this request|recvwindow|permissions for action/i
+      )
+    end
+
+    def rate_limit_error?(status_code, message)
+      return true if status_code.to_i.in?([ 418, 429 ])
+      return false if message.blank?
+
+      message.match?(/rate limit|too many requests|too much request weight/i)
     end
 end

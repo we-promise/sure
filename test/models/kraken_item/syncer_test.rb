@@ -61,15 +61,53 @@ class KrakenItem::SyncerTest < ActiveSupport::TestCase
     @syncer.perform_sync(mock_sync)
   end
 
+  test "perform_sync clears requires_update after a successful import" do
+    @kraken_item.update!(status: :requires_update)
+    mock_sync = build_sync_mock
+
+    @kraken_item.expects(:import_latest_kraken_data).once
+
+    @syncer.perform_sync(mock_sync)
+
+    assert @kraken_item.reload.good?
+  end
+
+  test "perform_sync marks item for update when kraken authentication fails" do
+    mock_sync = build_failure_sync_mock
+
+    @kraken_item.stubs(:import_latest_kraken_data).raises(
+      Provider::Kraken::AuthenticationError,
+      "Invalid key"
+    )
+
+    @syncer.perform_sync(mock_sync)
+
+    assert @kraken_item.reload.requires_update?
+  end
+
   private
     def build_sync_mock
       mock("sync").tap do |mock_sync|
+        mock_sync.stubs(:respond_to?).returns(false)
         mock_sync.stubs(:respond_to?).with(:status_text).returns(true)
         mock_sync.stubs(:respond_to?).with(:sync_stats).returns(true)
         mock_sync.stubs(:sync_stats).returns({})
         mock_sync.stubs(:window_start_date).returns(nil)
         mock_sync.stubs(:window_end_date).returns(nil)
         mock_sync.stubs(:created_at).returns(Time.current)
+        mock_sync.expects(:update!).at_least_once
+      end
+    end
+
+    def build_failure_sync_mock
+      mock("sync").tap do |mock_sync|
+        mock_sync.stubs(:respond_to?).returns(false)
+        mock_sync.stubs(:respond_to?).with(:status_text).returns(true)
+        mock_sync.stubs(:respond_to?).with(:error).returns(true)
+        mock_sync.stubs(:respond_to?).with(:status).returns(true)
+        mock_sync.stubs(:status).returns("pending")
+        mock_sync.stubs(:may_start?).returns(false)
+        mock_sync.stubs(:may_fail?).returns(false)
         mock_sync.expects(:update!).at_least_once
       end
     end

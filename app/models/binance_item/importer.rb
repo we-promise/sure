@@ -249,13 +249,22 @@ class BinanceItem::Importer
           date: date,
           valuation_currency: valuation_currency
         )
+        commission_rate, commission_source = valued_rate_for(
+          asset: trade["commissionAsset"],
+          date: date,
+          valuation_currency: valuation_currency
+        )
 
         trade.merge(
           "valuation_currency" => valuation_currency,
           "valuation_rate" => rate ? decimal_string(rate.round(8)) : nil,
           "valuation_amount" => rate ? decimal_string((decimal(trade["quoteQty"]) * rate).round(2)) : nil,
           "valuation_price" => rate ? decimal_string((decimal(trade["price"]) * rate).round(8)) : nil,
-          "valuation_source" => source
+          "valuation_source" => source,
+          "commission_asset" => trade["commissionAsset"],
+          "commission_valuation_rate" => commission_rate ? decimal_string(commission_rate.round(8)) : nil,
+          "commission_valuation_amount" => commission_rate ? decimal_string((decimal(trade["commission"]) * commission_rate).round(2)) : nil,
+          "commission_valuation_source" => commission_source
         )
       end
     end

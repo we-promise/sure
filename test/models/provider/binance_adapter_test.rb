@@ -87,4 +87,14 @@ class Provider::BinanceAdapterTest < ActiveSupport::TestCase
   test "build_provider returns Provider::Binance when credentials configured" do
     assert_instance_of Provider::Binance, Provider::BinanceAdapter.build_provider(family: @family)
   end
+
+  test "institution metadata falls back to item defaults" do
+    @binance_item.set_binance_institution_defaults!
+    @binance_account.update!(institution_metadata: {})
+
+    assert_equal "Binance", @adapter.institution_name
+    assert_equal "binance.com", @adapter.institution_domain
+    assert_equal "https://www.binance.com", @adapter.institution_url
+    assert_equal "#F0B90B", @adapter.institution_color
+  end
 end

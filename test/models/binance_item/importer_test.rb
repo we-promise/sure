@@ -64,5 +64,6 @@ class BinanceItem::ImporterTest < ActiveSupport::TestCase
     assert_equal 2, provider_account.raw_holdings_payload.size
     assert_equal 1, provider_account.raw_transactions_payload["trades"].size
     assert_equal "5000.0", provider_account.raw_transactions_payload["trades"].first["valuation_amount"]
+    assert_equal "5.0", provider_account.raw_transactions_payload["trades"].first["commission_valuation_amount"]
   end
 end

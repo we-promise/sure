@@ -56,18 +56,18 @@ class Provider::BinanceAdapter < Provider::Base
   end
 
   def institution_domain
-    provider_account.institution_metadata&.dig("domain") || item&.institution_domain
+    provider_account.institution_metadata&.dig("domain") || item&.institution_domain || "binance.com"
   end
 
   def institution_name
-    provider_account.institution_metadata&.dig("name") || item&.institution_name
+    provider_account.institution_metadata&.dig("name") || item&.institution_name || "Binance"
   end
 
   def institution_url
-    provider_account.institution_metadata&.dig("url") || item&.institution_url
+    provider_account.institution_metadata&.dig("url") || item&.institution_url || "https://www.binance.com"
   end
 
   def institution_color
-    item&.institution_color
+    item&.institution_color || "#F0B90B"
   end
 end

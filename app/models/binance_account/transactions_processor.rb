@@ -29,13 +29,13 @@ class BinanceAccount::TransactionsProcessor
 
     def process_deposits
       Array(payload[:deposits]).sort_by { |deposit| deposit["completeTime"] || deposit["insertTime"] || 0 }.each do |deposit|
-        amount = decimal(deposit["valuation_amount"])
+        amount, currency = deposit_amount_and_currency(deposit)
         next if amount.zero?
 
         import_adapter.import_transaction(
-          external_id: "binance_deposit_#{deposit['id']}",
-          amount: -amount.abs,
-          currency: binance_account.currency,
+          external_id: "binance_deposit_#{deposit_identifier(deposit)}",
+          amount: amount.abs,
+          currency: currency,
           date: parse_date(deposit["completeTime"]) || parse_date(deposit["insertTime"]) || Date.current,
           name: "Deposit #{deposit['coin']}",
           source: "binance",
@@ -52,22 +52,20 @@ class BinanceAccount::TransactionsProcessor
               "valuation_source" => deposit["valuation_source"]
             }.compact
           },
-          investment_activity_label: "Transfer"
+          investment_activity_label: "Contribution"
         )
       end
     end
 
     def process_withdrawals
       Array(payload[:withdrawals]).sort_by { |withdrawal| withdrawal["completeTime"] || withdrawal["applyTime"] || "" }.each do |withdrawal|
-        amount = decimal(withdrawal["valuation_amount"])
-        fee_amount = decimal(withdrawal["fee_valuation_amount"])
-        total_amount = amount + fee_amount
+        total_amount, currency = withdrawal_amount_and_currency(withdrawal)
         next if total_amount.zero?
 
         import_adapter.import_transaction(
-          external_id: "binance_withdraw_#{withdrawal['id']}",
-          amount: total_amount.abs,
-          currency: binance_account.currency,
+          external_id: "binance_withdraw_#{withdrawal_identifier(withdrawal)}",
+          amount: -total_amount.abs,
+          currency: currency,
           date: parse_date(withdrawal["completeTime"]) || parse_date(withdrawal["applyTime"]) || Date.current,
           name: "Withdrawal #{withdrawal['coin']}",
           source: "binance",
@@ -86,18 +84,17 @@ class BinanceAccount::TransactionsProcessor
               "valuation_source" => withdrawal["valuation_source"]
             }.compact
           },
-          investment_activity_label: "Transfer"
+          investment_activity_label: "Withdrawal"
         )
       end
     end
 
     def process_trades
       Array(payload[:trades]).sort_by { |trade| trade["time"].to_i }.each do |trade|
-        amount = decimal(trade["valuation_amount"])
-        price = decimal(trade["valuation_price"])
-        next if amount.zero? || price.zero?
-
         quantity = decimal(trade["qty"]).abs
+        amount, price, currency = trade_amount_price_and_currency(trade)
+        next if amount.zero? || price.zero? || quantity.zero?
+
         quantity *= -1 unless ActiveModel::Type::Boolean.new.cast(trade["isBuyer"])
 
         security = resolve_security(trade["base_asset"])
@@ -108,8 +105,8 @@ class BinanceAccount::TransactionsProcessor
           security: security,
           quantity: quantity,
           price: price,
-          amount: quantity.positive? ? amount.abs : -amount.abs,
-          currency: binance_account.currency,
+          amount: quantity.positive? ? -amount.abs : amount.abs,
+          currency: currency,
           date: Time.zone.at(trade["time"].to_i / 1000.0).to_date,
           name: trade_name(trade, quantity),
           source: "binance",
@@ -187,5 +184,94 @@ class BinanceAccount::TransactionsProcessor
       BigDecimal(value.to_s)
     rescue ArgumentError
       BigDecimal("0")
+    end
+
+    def deposit_amount_and_currency(deposit)
+      valuation_amount = decimal(deposit["valuation_amount"])
+      return [ valuation_amount, deposit["valuation_currency"].presence || binance_account.currency ] if valuation_amount.positive?
+
+      [ decimal(deposit["amount"]), deposit["coin"].presence || binance_account.currency ]
+    end
+
+    def withdrawal_amount_and_currency(withdrawal)
+      valuation_amount = decimal(withdrawal["valuation_amount"])
+      if valuation_amount.positive?
+        fee_amount = decimal(withdrawal["fee_valuation_amount"])
+        return [
+          valuation_amount + fee_amount.abs,
+          withdrawal["valuation_currency"].presence || binance_account.currency
+        ]
+      end
+
+      [
+        decimal(withdrawal["amount"]) + decimal(withdrawal["transactionFee"]).abs,
+        withdrawal["coin"].presence || binance_account.currency
+      ]
+    end
+
+    def trade_amount_price_and_currency(trade)
+      valuation_amount = decimal(trade["valuation_amount"])
+      valuation_price = decimal(trade["valuation_price"])
+
+      if valuation_amount.positive? && valuation_price.positive?
+        fee_amount = decimal(trade["commission_valuation_amount"])
+        net_amount = apply_trade_fee(
+          base_amount: valuation_amount,
+          fee_amount: fee_amount,
+          buyer: ActiveModel::Type::Boolean.new.cast(trade["isBuyer"])
+        )
+
+        return [
+          net_amount,
+          valuation_price,
+          trade["valuation_currency"].presence || binance_account.currency
+        ]
+      end
+
+      quote_amount = decimal(trade["quoteQty"])
+      raw_price = decimal(trade["price"])
+      fee_amount = trade["commission_asset"].to_s.upcase == trade["quote_asset"].to_s.upcase ? decimal(trade["commission"]) : 0.to_d
+
+      [
+        apply_trade_fee(
+          base_amount: quote_amount,
+          fee_amount: fee_amount,
+          buyer: ActiveModel::Type::Boolean.new.cast(trade["isBuyer"])
+        ),
+        raw_price,
+        trade["quote_asset"].presence || binance_account.currency
+      ]
+    end
+
+    def apply_trade_fee(base_amount:, fee_amount:, buyer:)
+      buyer ? base_amount + fee_amount.abs : base_amount - fee_amount.abs
+    end
+
+    def deposit_identifier(deposit)
+      event_identifier(
+        deposit,
+        primary_keys: %w[id txId tranId],
+        fallback_keys: %w[coin amount completeTime insertTime]
+      )
+    end
+
+    def withdrawal_identifier(withdrawal)
+      event_identifier(
+        withdrawal,
+        primary_keys: %w[id txId tranId],
+        fallback_keys: %w[coin amount transactionFee completeTime applyTime]
+      )
+    end
+
+    def event_identifier(event, primary_keys:, fallback_keys:)
+      primary_keys.each do |key|
+        value = event[key].presence
+        return value if value.present?
+      end
+
+      fallback_values = fallback_keys.filter_map { |key| event[key].presence }
+      return fallback_values.join("_") if fallback_values.any?
+
+      SecureRandom.uuid
     end
 end

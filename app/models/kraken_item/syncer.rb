@@ -18,6 +18,7 @@ class KrakenItem::Syncer
 
     sync.update!(status_text: I18n.t("kraken_item.syncer.importing_accounts")) if sync.respond_to?(:status_text)
     kraken_item.import_latest_kraken_data
+    kraken_item.update!(status: :good)
 
     sync.update!(status_text: I18n.t("kraken_item.syncer.checking_configuration")) if sync.respond_to?(:status_text)
     collect_setup_stats(sync, provider_accounts: kraken_item.kraken_accounts.to_a)
@@ -46,6 +47,9 @@ class KrakenItem::Syncer
 
     account_ids = linked_accounts.map { |account| account.current_account&.id }.compact
     collect_transaction_stats(sync, account_ids: account_ids, source: "kraken") if account_ids.any?
+  rescue Provider::Kraken::AuthenticationError => e
+    kraken_item.update!(status: :requires_update)
+    mark_failed(sync, e.message)
   end
 
   def perform_post_sync
