@@ -9,8 +9,7 @@ class Api::V1::ImportsController < Api::V1::BaseController
   before_action :set_import, only: [ :show ]
 
   def index
-    family = current_resource_owner.family
-    imports_query = family.imports.ordered
+    imports_query = current_resource_owner.family.imports.accessible_by(current_resource_owner).ordered
 
     # Apply filters
     if params[:status].present?
@@ -54,7 +53,7 @@ class Api::V1::ImportsController < Api::V1::BaseController
     # 2. Build the import object with permitted config attributes
     @import = family.imports.build(import_config_params)
     @import.type = type
-    @import.account_id = params[:account_id] if params[:account_id].present?
+    @import.account = writable_accounts_scope.find(params[:account_id]) if params[:account_id].present?
 
     # 3. Attach the uploaded file if present (with validation)
     if params[:file].present?
@@ -114,6 +113,8 @@ class Api::V1::ImportsController < Api::V1::BaseController
       }, status: :unprocessable_entity
     end
 
+  rescue ActiveRecord::RecordNotFound
+    render json: { error: "not_found", message: "Account not found" }, status: :not_found
   rescue StandardError => e
     Rails.logger.error "ImportsController#create error: #{e.message}"
     render json: { error: "internal_server_error", message: e.message }, status: :internal_server_error
@@ -122,7 +123,7 @@ class Api::V1::ImportsController < Api::V1::BaseController
   private
 
     def set_import
-      @import = current_resource_owner.family.imports.includes(:rows).find(params[:id])
+      @import = current_resource_owner.family.imports.accessible_by(current_resource_owner).includes(:rows).find(params[:id])
     rescue ActiveRecord::RecordNotFound
       render json: { error: "not_found", message: "Import not found" }, status: :not_found
     end

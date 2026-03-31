@@ -36,6 +36,7 @@ RSpec.describe 'API V1 Imports', type: :request do
   let(:account) do
     Account.create!(
       family: family,
+      owner: user,
       name: 'Test Checking',
       balance: 1000,
       currency: 'USD',
@@ -63,7 +64,7 @@ RSpec.describe 'API V1 Imports', type: :request do
 
   path '/api/v1/imports' do
     get 'List imports' do
-      description 'List all imports for the user\'s family with pagination and filtering.'
+      description 'List imports for the user\'s family that are either accountless or attached to accounts the authenticated user can access.'
       tags 'Imports'
       security [ { apiKeyAuth: [] } ]
       produces 'application/json'
@@ -102,7 +103,7 @@ RSpec.describe 'API V1 Imports', type: :request do
     end
 
     post 'Create import' do
-      description 'Create a new import from raw CSV content.'
+      description 'Create a new import from raw CSV content. When `account_id` is provided, it must reference an account the authenticated user can write to.'
       tags 'Imports'
       security [ { apiKeyAuth: [] } ]
       consumes 'application/json'
@@ -204,6 +205,20 @@ RSpec.describe 'API V1 Imports', type: :request do
 
         run_test!
       end
+
+      response '404', 'account not found' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:body) do
+          {
+            raw_file_content: "date,amount,name\n01/15/2024,50.00,New Transaction",
+            type: 'TransactionImport',
+            account_id: SecureRandom.uuid
+          }
+        end
+
+        run_test!
+      end
     end
   end
 
@@ -211,7 +226,7 @@ RSpec.describe 'API V1 Imports', type: :request do
     parameter name: :id, in: :path, type: :string, required: true, description: 'Import ID'
 
     get 'Retrieve an import' do
-      description 'Retrieve detailed information about a specific import, including configuration and row statistics.'
+      description 'Retrieve detailed information about an import the authenticated user can access, including configuration and row statistics.'
       tags 'Imports'
       security [ { apiKeyAuth: [] } ]
       produces 'application/json'

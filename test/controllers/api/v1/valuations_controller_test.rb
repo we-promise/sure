@@ -5,12 +5,22 @@ require "test_helper"
 class Api::V1::ValuationsControllerTest < ActionDispatch::IntegrationTest
   setup do
     @user = users(:family_admin)
+    @member = users(:family_member)
     @family = @user.family
     @account = @family.accounts.first
+    @private_account = accounts(:investment)
     @valuation = @family.entries.valuations.first.entryable
+    @private_valuation_entry = @private_account.entries.create!(
+      name: Valuation.build_reconciliation_name(@private_account.accountable_type),
+      date: Date.current,
+      amount: 12_000,
+      currency: @private_account.currency,
+      entryable: Valuation.new(kind: :reconciliation)
+    )
 
     # Destroy existing active API keys to avoid validation errors
     @user.api_keys.active.destroy_all
+    @member.api_keys.active.destroy_all
 
     # Create fresh API keys instead of using fixtures to avoid parallel test conflicts (rate limiting in test)
     @api_key = ApiKey.create!(
@@ -31,6 +41,14 @@ class Api::V1::ValuationsControllerTest < ActionDispatch::IntegrationTest
     # Clear any existing rate limit data
     Redis.new.del("api_rate_limit:#{@api_key.id}")
     Redis.new.del("api_rate_limit:#{@read_only_api_key.id}")
+
+    @member_api_key = ApiKey.create!(
+      user: @member,
+      name: "Member Read-Write Key",
+      scopes: [ "read_write" ],
+      display_key: "member_rw_#{SecureRandom.hex(8)}"
+    )
+    Redis.new.del("api_rate_limit:#{@member_api_key.id}")
   end
 
   # CREATE action tests
@@ -105,6 +123,28 @@ class Api::V1::ValuationsControllerTest < ActionDispatch::IntegrationTest
     assert_response :unauthorized
   end
 
+  test "should not show valuation on inaccessible account" do
+    get api_v1_valuation_url(@private_valuation_entry), headers: api_headers(@member_api_key)
+
+    assert_response :not_found
+  end
+
+  test "should reject create for inaccessible account" do
+    assert_no_difference("@family.entries.valuations.count") do
+      post api_v1_valuations_url,
+           params: {
+             valuation: {
+               account_id: @private_account.id,
+               amount: 15_000,
+               date: Date.current
+             }
+           },
+           headers: api_headers(@member_api_key)
+    end
+
+    assert_response :not_found
+  end
+
   # UPDATE action tests
   test "should update valuation with valid parameters" do
     entry = @valuation.entry
@@ -166,6 +206,15 @@ class Api::V1::ValuationsControllerTest < ActionDispatch::IntegrationTest
     entry = @valuation.entry
     put api_v1_valuation_url(entry), params: { valuation: { amount: 15000.00 } }
     assert_response :unauthorized
+  end
+
+  test "should reject update for valuation on inaccessible account" do
+    put api_v1_valuation_url(@private_valuation_entry),
+        params: { valuation: { notes: "Not allowed" } },
+        headers: api_headers(@member_api_key)
+
+    assert_response :not_found
+    assert_nil @private_valuation_entry.reload.notes
   end
 
   # JSON structure tests

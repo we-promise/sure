@@ -36,6 +36,7 @@ RSpec.describe 'API V1 Trades', type: :request do
   let(:account) do
     Account.create!(
       family: family,
+      owner: user,
       name: 'Investment Account',
       balance: 50_000,
       currency: 'USD',
@@ -79,6 +80,7 @@ RSpec.describe 'API V1 Trades', type: :request do
 
   path '/api/v1/trades' do
     get 'List trades' do
+      description 'List trades for accounts the authenticated user can access.'
       tags 'Trades'
       security [ { apiKeyAuth: [] } ]
       produces 'application/json'
@@ -148,6 +150,7 @@ RSpec.describe 'API V1 Trades', type: :request do
     end
 
     post 'Create trade' do
+      description 'Create a trade in an account the authenticated user can write to.'
       tags 'Trades'
       security [ { apiKeyAuth: [] } ]
       consumes 'application/json'
@@ -284,6 +287,7 @@ RSpec.describe 'API V1 Trades', type: :request do
     parameter name: :id, in: :path, type: :string, required: true, description: 'Trade ID'
 
     get 'Retrieve trade' do
+      description 'Retrieve a trade from an account the authenticated user can access.'
       tags 'Trades'
       security [ { apiKeyAuth: [] } ]
       produces 'application/json'
@@ -315,6 +319,7 @@ RSpec.describe 'API V1 Trades', type: :request do
     end
 
     patch 'Update trade' do
+      description 'Update a trade in an account the authenticated user can write to.'
       tags 'Trades'
       security [ { apiKeyAuth: [] } ]
       consumes 'application/json'
@@ -369,6 +374,7 @@ RSpec.describe 'API V1 Trades', type: :request do
     end
 
     delete 'Delete trade' do
+      description 'Delete a trade from an account the authenticated user can write to.'
       tags 'Trades'
       security [ { apiKeyAuth: [] } ]
       produces 'application/json'

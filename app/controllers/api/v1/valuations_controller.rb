@@ -45,7 +45,7 @@ class Api::V1::ValuationsController < Api::V1::BaseController
       return
     end
 
-    account = current_resource_owner.family.accounts.find(valuation_account_id)
+    account = writable_accounts_scope.find(valuation_account_id)
 
     create_success = false
     error_payload = nil
@@ -190,7 +190,7 @@ class Api::V1::ValuationsController < Api::V1::BaseController
     def set_valuation
       @entry = current_resource_owner.family
                  .entries
-                 .where(entryable_type: "Valuation")
+                 .where(entryable_type: "Valuation", account_id: valuation_account_ids_for_action)
                  .find(params[:id])
       @valuation = @entry.entryable
     rescue ActiveRecord::RecordNotFound
@@ -206,6 +206,23 @@ class Api::V1::ValuationsController < Api::V1::BaseController
 
     def ensure_write_scope
       authorize_scope!(:write)
+    end
+
+    def readable_valuation_account_ids
+      accessible_accounts_scope.select(:id)
+    end
+
+    def writable_valuation_account_ids
+      writable_accounts_scope.select(:id)
+    end
+
+    def valuation_account_ids_for_action
+      case action_name
+      when "show"
+        readable_valuation_account_ids
+      else
+        writable_valuation_account_ids
+      end
     end
 
     def valuation_account_id
