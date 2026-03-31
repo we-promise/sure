@@ -321,7 +321,7 @@ class User < ApplicationRecord
   end
 
   def dashboard_two_column?
-    preferences&.dig("dashboard_two_column") != false
+    preferences&.dig("dashboard_two_column") == true
   end
 
   def update_transactions_preferences(prefs)
