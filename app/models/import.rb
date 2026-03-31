@@ -29,6 +29,14 @@ class Import < ApplicationRecord
   before_validation :ensure_utf8_encoding
 
   scope :ordered, -> { order(created_at: :desc) }
+  scope :accessible_by, ->(user) {
+    account_ids = user.family.accounts.accessible_by(user).select(:id)
+    where(account_id: nil).or(where(account_id: account_ids))
+  }
+  scope :writable_by, ->(user) {
+    account_ids = user.family.accounts.writable_by(user).select(:id)
+    where(account_id: nil).or(where(account_id: account_ids))
+  }
 
   enum :status, {
     pending: "pending",

@@ -4,9 +4,18 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
   setup do
     @family = families(:dylan_family)
     @user = users(:family_admin)
+    @member = users(:family_member)
     @account = accounts(:depository)
+    @private_account = accounts(:investment)
     @import = imports(:transaction)
+    @private_import = @family.imports.create!(
+      type: "TransactionImport",
+      status: :pending,
+      account: @private_account,
+      raw_file_str: "date,amount,name\n2023-01-01,-10.00,Private Transaction"
+    )
     @token = valid_token_for(@user)
+    @member_token = valid_token_for(@member)
   end
 
   test "should list imports" do
@@ -15,7 +24,17 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
 
     json_response = JSON.parse(response.body)
     assert_not_empty json_response["data"]
-    assert_equal @family.imports.count, json_response["meta"]["total_count"]
+    assert_equal @family.imports.accessible_by(@user).count, json_response["meta"]["total_count"]
+  end
+
+  test "should exclude imports for inaccessible accounts" do
+    get api_v1_imports_url, headers: { Authorization: "Bearer #{@member_token}" }
+
+    assert_response :success
+
+    import_ids = JSON.parse(response.body).fetch("data").map { |item| item.fetch("id") }
+    assert_includes import_ids, @import.id
+    assert_not_includes import_ids, @private_import.id
   end
 
   test "should show import" do
@@ -25,6 +44,12 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
     json_response = JSON.parse(response.body)
     assert_equal @import.id, json_response["data"]["id"]
     assert_equal @import.status, json_response["data"]["status"]
+  end
+
+  test "should not show import for inaccessible account" do
+    get api_v1_import_url(@private_import), headers: { Authorization: "Bearer #{@member_token}" }
+
+    assert_response :not_found
   end
 
   test "should create import with raw content" do
@@ -110,9 +135,22 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
           },
           headers: { Authorization: "Bearer #{@token}" }
 
-    assert_response :unprocessable_entity
-    json_response = JSON.parse(response.body)
-    assert_includes json_response["errors"], "Account must belong to your family"
+    assert_response :not_found
+  end
+
+  test "should not create import for inaccessible account in same family" do
+    csv_content = "date,amount,name\n2023-01-01,-10.00,Test Transaction"
+
+    assert_no_difference("Import.count") do
+      post api_v1_imports_url,
+           params: {
+             raw_file_content: csv_content,
+             account_id: @private_account.id
+           },
+           headers: { Authorization: "Bearer #{@member_token}" }
+    end
+
+    assert_response :not_found
   end
 
   test "should reject file upload exceeding max size" do

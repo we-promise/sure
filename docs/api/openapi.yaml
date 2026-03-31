@@ -1600,6 +1600,7 @@ paths:
   "/api/v1/holdings":
     get:
       summary: List holdings
+      description: List holdings for accounts the authenticated user can access.
       tags:
       - Holdings
       security:
@@ -1687,6 +1688,7 @@ paths:
         type: string
     get:
       summary: Retrieve holding
+      description: Retrieve a holding from an account the authenticated user can access.
       tags:
       - Holdings
       security:
@@ -1713,7 +1715,7 @@ paths:
   "/api/v1/imports":
     get:
       summary: List imports
-      description: List all imports for the user's family with pagination and filtering.
+      description: List imports for the user's family that are either accountless or attached to accounts the authenticated user can access.
       tags:
       - Imports
       security:
@@ -1766,7 +1768,7 @@ paths:
                 "$ref": "#/components/schemas/ImportCollection"
     post:
       summary: Create import
-      description: Create a new import from raw CSV content.
+      description: Create a new import from raw CSV content. When `account_id` is provided, it must reference an account the authenticated user can write to.
       tags:
       - Imports
       security:
@@ -1781,6 +1783,12 @@ paths:
                 "$ref": "#/components/schemas/ImportResponse"
         '422':
           description: validation error - file too large
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '404':
+          description: account not found
           content:
             application/json:
               schema:
@@ -1864,8 +1872,8 @@ paths:
         type: string
     get:
       summary: Retrieve an import
-      description: Retrieve detailed information about a specific import, including
-        configuration and row statistics.
+      description: Retrieve detailed information about an import the authenticated
+        user can access, including configuration and row statistics.
       tags:
       - Imports
       security:
@@ -2013,6 +2021,7 @@ paths:
   "/api/v1/trades":
     get:
       summary: List trades
+      description: List trades for accounts the authenticated user can access.
       tags:
       - Trades
       security:
@@ -2079,6 +2088,7 @@ paths:
                 "$ref": "#/components/schemas/ErrorResponse"
     post:
       summary: Create trade
+      description: Create a trade in an account the authenticated user can write to.
       tags:
       - Trades
       security:
@@ -2172,6 +2182,7 @@ paths:
         type: string
     get:
       summary: Retrieve trade
+      description: Retrieve a trade from an account the authenticated user can access.
       tags:
       - Trades
       security:
@@ -2197,6 +2208,7 @@ paths:
                 "$ref": "#/components/schemas/ErrorResponse"
     patch:
       summary: Update trade
+      description: Update a trade in an account the authenticated user can write to.
       tags:
       - Trades
       security:
@@ -2255,6 +2267,7 @@ paths:
         required: true
     delete:
       summary: Delete trade
+      description: Delete a trade from an account the authenticated user can write to.
       tags:
       - Trades
       security:
@@ -2586,17 +2599,11 @@ paths:
   "/api/v1/valuations":
     post:
       summary: Create valuation
+      description: Create a valuation in an account the authenticated user can write to.
       tags:
       - Valuations
       security:
       - apiKeyAuth: []
-      parameters:
-      - name: Authorization
-        in: header
-        required: true
-        schema:
-          type: string
-        description: Bearer token with write scope
       responses:
         '201':
           description: valuation created
@@ -2648,12 +2655,6 @@ paths:
         required: true
   "/api/v1/valuations/{id}":
     parameters:
-    - name: Authorization
-      in: header
-      required: true
-      schema:
-        type: string
-      description: Bearer token
     - name: id
       in: path
       required: true
@@ -2662,6 +2663,7 @@ paths:
         type: string
     get:
       summary: Retrieve a valuation
+      description: Retrieve a valuation from an account the authenticated user can access.
       tags:
       - Valuations
       security:
@@ -2681,6 +2683,7 @@ paths:
                 "$ref": "#/components/schemas/ErrorResponse"
     patch:
       summary: Update a valuation
+      description: Update a valuation in an account the authenticated user can write to.
       tags:
       - Valuations
       security:

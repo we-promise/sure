@@ -254,6 +254,14 @@ class Api::V1::BaseController < ApplicationController
       true
     end
 
+    def accessible_accounts_scope
+      current_resource_owner.family.accounts.accessible_by(current_resource_owner)
+    end
+
+    def writable_accounts_scope
+      current_resource_owner.family.accounts.writable_by(current_resource_owner)
+    end
+
     # Manual doorkeeper_token accessor for compatibility with manual token verification
     def doorkeeper_token
       @_doorkeeper_token
