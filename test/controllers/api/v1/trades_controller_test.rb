@@ -40,17 +40,11 @@ class Api::V1::TradesControllerTest < ActionDispatch::IntegrationTest
         investment_activity_label: "Buy"
       )
     ).trade
-
-    @oauth_app = Doorkeeper::Application.create!(
-      name: "Trades API Test App",
-      redirect_uri: "urn:ietf:wg:oauth:2.0:oob",
-      scopes: "read read_write"
-    )
-    @token = access_token_for(@member)
+    @auth_headers = oauth_headers_for(@member)
   end
 
   test "index excludes trades from inaccessible accounts" do
-    get api_v1_trades_url, headers: bearer_headers(@token)
+    get api_v1_trades_url, headers: @auth_headers
 
     assert_response :success
 
@@ -60,7 +54,7 @@ class Api::V1::TradesControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "show returns not found for trade on inaccessible account" do
-    get api_v1_trade_url(@private_trade), headers: bearer_headers(@token)
+    get api_v1_trade_url(@private_trade), headers: @auth_headers
 
     assert_response :not_found
   end
@@ -78,7 +72,7 @@ class Api::V1::TradesControllerTest < ActionDispatch::IntegrationTest
                security_id: @security.id
              }
            },
-           headers: bearer_headers(@token)
+           headers: @auth_headers
     end
 
     assert_response :not_found
@@ -87,7 +81,7 @@ class Api::V1::TradesControllerTest < ActionDispatch::IntegrationTest
   test "update rejects trades on readable but non-writable accounts" do
     patch api_v1_trade_url(@shared_trade),
           params: { trade: { qty: 2, price: 210, type: "buy" } },
-          headers: bearer_headers(@token)
+          headers: @auth_headers
 
     assert_response :not_found
     assert_equal 1.to_d, @shared_trade.reload.qty
@@ -95,7 +89,7 @@ class Api::V1::TradesControllerTest < ActionDispatch::IntegrationTest
 
   test "destroy rejects trades on readable but non-writable accounts" do
     assert_no_difference("Trade.count") do
-      delete api_v1_trade_url(@shared_trade), headers: bearer_headers(@token)
+      delete api_v1_trade_url(@shared_trade), headers: @auth_headers
     end
 
     assert_response :not_found
@@ -103,15 +97,20 @@ class Api::V1::TradesControllerTest < ActionDispatch::IntegrationTest
 
   private
 
-    def access_token_for(user, scopes: "read_write")
-      Doorkeeper::AccessToken.create!(
-        application: @oauth_app,
+    def oauth_headers_for(user, scopes: "read_write")
+      access_grant = Doorkeeper::AccessToken.create!(
+        application: oauth_application,
         resource_owner_id: user.id,
         scopes: scopes
-      ).token
+      )
+      { "Authorization" => "Bearer #{access_grant.token}" }
     end
 
-    def bearer_headers(token)
-      { "Authorization" => "Bearer #{token}" }
+    def oauth_application
+      @oauth_application ||= Doorkeeper::Application.create!(
+        name: "Trades API Test App",
+        redirect_uri: "urn:ietf:wg:oauth:2.0:oob",
+        scopes: "read read_write"
+      )
     end
 end

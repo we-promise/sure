@@ -15,17 +15,11 @@ class Api::V1::HoldingsControllerTest < ActionDispatch::IntegrationTest
       amount: 400,
       currency: "USD"
     )
-
-    @oauth_app = Doorkeeper::Application.create!(
-      name: "Holdings API Test App",
-      redirect_uri: "urn:ietf:wg:oauth:2.0:oob",
-      scopes: "read read_write"
-    )
-    @token = access_token_for(@member)
+    @auth_headers = oauth_headers_for(@member)
   end
 
   test "index excludes holdings from inaccessible accounts" do
-    get api_v1_holdings_url, headers: bearer_headers(@token)
+    get api_v1_holdings_url, headers: @auth_headers
 
     assert_response :success
 
@@ -35,22 +29,27 @@ class Api::V1::HoldingsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "show returns not found for holding on inaccessible account" do
-    get api_v1_holding_url(@private_holding), headers: bearer_headers(@token)
+    get api_v1_holding_url(@private_holding), headers: @auth_headers
 
     assert_response :not_found
   end
 
   private
 
-    def access_token_for(user, scopes: "read_write")
-      Doorkeeper::AccessToken.create!(
-        application: @oauth_app,
+    def oauth_headers_for(user, scopes: "read_write")
+      access_grant = Doorkeeper::AccessToken.create!(
+        application: oauth_application,
         resource_owner_id: user.id,
         scopes: scopes
-      ).token
+      )
+      { "Authorization" => "Bearer #{access_grant.token}" }
     end
 
-    def bearer_headers(token)
-      { "Authorization" => "Bearer #{token}" }
+    def oauth_application
+      @oauth_application ||= Doorkeeper::Application.create!(
+        name: "Holdings API Test App",
+        redirect_uri: "urn:ietf:wg:oauth:2.0:oob",
+        scopes: "read read_write"
+      )
     end
 end
