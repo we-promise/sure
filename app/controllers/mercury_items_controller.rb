@@ -539,7 +539,7 @@ class MercuryItemsController < ApplicationController
 
     # Helper to translate subtype options
     translate_subtypes = ->(type_key, subtypes_hash) {
-      subtypes_hash.keys.map { |k| [ t(".subtypes.#{type_key}.#{k}"), k ] }
+      subtypes_hash.map { |k, v| [ t(".subtypes.#{type_key}.#{k}", default: v[:long] || k.humanize), k ] }
     }
 
     # Subtype options for each account type (only include supported types)
