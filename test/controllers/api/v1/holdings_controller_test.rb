@@ -18,7 +18,7 @@ class Api::V1::HoldingsControllerTest < ActionDispatch::IntegrationTest
 
     @oauth_app = Doorkeeper::Application.create!(
       name: "Holdings API Test App",
-      redirect_uri: "https://example.com/callback",
+      redirect_uri: "urn:ietf:wg:oauth:2.0:oob",
       scopes: "read read_write"
     )
     @token = access_token_for(@member)

@@ -43,7 +43,7 @@ class Api::V1::TradesControllerTest < ActionDispatch::IntegrationTest
 
     @oauth_app = Doorkeeper::Application.create!(
       name: "Trades API Test App",
-      redirect_uri: "https://example.com/callback",
+      redirect_uri: "urn:ietf:wg:oauth:2.0:oob",
       scopes: "read read_write"
     )
     @token = access_token_for(@member)
