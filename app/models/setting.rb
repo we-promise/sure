@@ -7,7 +7,7 @@ class Setting < RailsSettings::Base
   # Third-party API keys
   field :twelve_data_api_key, type: :string, default: ENV["TWELVE_DATA_API_KEY"]
   field :gus_sdp_api_key, type: :string, default: ENV["GUS_SDP_API_KEY"]
-  field :gus_inflation_import_enabled, type: :boolean, default: ENV.fetch("GUS_INFLATION_IMPORT_ENABLED", "false") == "true"
+  field :gus_inflation_import_enabled, type: :boolean, default: ActiveModel::Type::Boolean.new.cast(ENV["GUS_INFLATION_IMPORT_ENABLED"])
   field :gus_inflation_last_import_at, type: :datetime
   field :gus_inflation_last_import_count, type: :integer
   field :gus_inflation_last_import_range, type: :string
