@@ -14,7 +14,7 @@
 <% else %>
   <%= render DS::FilledIcon.new(
         variant: :text,
-        hex_color: color || account.accountable.color,
+        hex_color: color || account.accountable&.color,
         text: account.name,
         size: size,
         rounded: true
