@@ -578,6 +578,9 @@ class BondLot < ApplicationRecord
         start_year = [ purchased_on.year - 1, Date.current.year - 20 ].max
         end_year = Date.current.year
 
+        # Skip if CPI data already covers the required range
+        return if GusInflationRate.where(year: start_year..end_year).count >= ((end_year - start_year + 1) * 12)
+
         ImportGusInflationRatesJob.perform_later(start_year:, end_year:)
       end
 
