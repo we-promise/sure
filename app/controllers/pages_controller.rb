@@ -28,7 +28,7 @@ class PagesController < ApplicationController
     end
     @bond_top_lots = @bond_open_lots.sort_by { |(account, lot)|
       -Money.new(lot.estimated_current_value.to_d, account.currency).exchange_to(family_currency, fallback_rate: 1).amount
-    }.first(5)
+    }.first(BondLot::TOP_LOTS_LIMIT)
 
     # Use IncomeStatement for all cashflow data (now includes categorized trades)
     income_statement = Current.family.income_statement
@@ -371,7 +371,7 @@ class PagesController < ApplicationController
       pending_lots = BondLot.needs_rate_review.joins(bond: :account).includes(bond: :account).merge(Account.visible.accessible_by(Current.user)).load
       return if pending_lots.empty?
 
-      account_names = pending_lots.map { |lot| lot.account.name }.uniq.first(3).join(", ")
+      account_names = pending_lots.map { |lot| lot.account&.name }.compact.uniq.first(3).join(", ")
       flash.now[:notice] = t("pages.dashboard.bond_rate_review_notice", count: pending_lots.size, accounts: account_names)
       session[:bond_rate_review_prompted] = true
     end

@@ -21,7 +21,7 @@ class GusInflationRate < ApplicationRecord
   class << self
     def for_date(date:, lag_months: 0)
       target_date = date.beginning_of_month - lag_months.to_i.months
-      find_by(year: target_date.year, month: target_date.month) || latest_before_or_on(target_date)
+      find_by(year: target_date.year, month: target_date.month)
     end
 
     def yoy_index_for(date:, lag_months: 0)
@@ -34,7 +34,7 @@ class GusInflationRate < ApplicationRecord
       response = provider.fetch_cpi_yoy_for_year(year: year)
       unless response.success?
         return 0 if not_found_error?(response.error) || rate_limited_error?(response.error)
-        raise response.error
+        raise response.error.is_a?(Exception) ? response.error : RuntimeError.new(response.error.to_s)
       end
 
       rows = response.data
@@ -51,12 +51,11 @@ class GusInflationRate < ApplicationRecord
         rate_yoy = value.to_d
         next if rate_yoy.zero?
 
-        record = find_or_initialize_by(year: year.to_i, month: month)
-        next if !force && record.persisted? && record.rate_yoy == rate_yoy
+        existing = find_by(year: year.to_i, month: month)
+        next if !force && existing.present? && existing.rate_yoy == rate_yoy
 
-        record.rate_yoy = rate_yoy
-        record.source = "sdp"
-        record.save!
+        upsert({ year: year.to_i, month: month, rate_yoy: rate_yoy, source: "sdp" },
+               unique_by: :index_gus_inflation_rates_on_year_and_month)
         imported += 1
       end
 

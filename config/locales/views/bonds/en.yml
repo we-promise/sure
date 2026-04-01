@@ -124,6 +124,15 @@ en:
         standard: Standard tax
         reduced: Reduced tax
         exempt: Tax exempt (IKE/IKZE)
+      rate_types:
+        fixed: Fixed
+        variable: Variable
+      coupon_frequencies:
+        monthly: Monthly
+        quarterly: Quarterly
+        semi_annual: Semi-annual
+        annual: Annual
+        at_maturity: At maturity
       submit: Add purchase
       update: Update purchase
     activity:

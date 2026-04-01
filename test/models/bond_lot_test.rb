@@ -305,8 +305,9 @@ class BondLotTest < ActiveSupport::TestCase
     Setting.gus_inflation_import_enabled = false
   end
 
-  test "falls back to latest available GUS CPI when exact lagged month is missing" do
+  test "falls back to manual assumption when exact lagged CPI month is missing from GUS" do
     Setting.gus_inflation_import_enabled = true
+    # Only 2025-12 exists; query for 2026-03-31 with lag=2 needs 2026-01 which is missing.
     GusInflationRate.create!(year: 2025, month: 12, rate_yoy: 103.3, source: "sdp")
 
     lot = BondLot.new(
@@ -316,7 +317,7 @@ class BondLotTest < ActiveSupport::TestCase
       subtype: "rod",
       first_period_rate: 4.0,
       inflation_margin: 2.0,
-      inflation_rate_assumption: 0.0,
+      inflation_rate_assumption: 3.0,
       auto_fetch_inflation: true,
       cpi_lag_months: 2,
       units: 10,
@@ -324,8 +325,9 @@ class BondLotTest < ActiveSupport::TestCase
       issue_date: Date.new(2014, 5, 31)
     )
 
-    assert_in_delta 5.3, lot.current_rate_percent(on: Date.new(2026, 3, 31)).to_f, 0.001
-    assert_in_delta 3.3, lot.current_inflation_component_percent(on: Date.new(2026, 3, 31)).to_f, 0.001
+    # Without exact CPI month, falls back to manual assumption (3.0) + margin (2.0) = 5.0
+    assert_in_delta 5.0, lot.current_rate_percent(on: Date.new(2026, 3, 31)).to_f, 0.001
+    assert_in_delta 3.0, lot.current_inflation_component_percent(on: Date.new(2026, 3, 31)).to_f, 0.001
   ensure
     Setting.gus_inflation_import_enabled = false
   end
