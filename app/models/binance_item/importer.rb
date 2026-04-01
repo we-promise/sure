@@ -2,8 +2,6 @@
 
 # Orchestrates all Binance sub-importers and upserts a single combined BinanceAccount.
 class BinanceItem::Importer
-  STABLECOINS = %w[USDT BUSD FDUSD TUSD USDC DAI].freeze
-
   attr_reader :binance_item, :binance_provider
 
   def initialize(binance_item, binance_provider:)
@@ -61,7 +59,7 @@ class BinanceItem::Importer
     end
 
     def price_for(symbol)
-      return 1.0 if STABLECOINS.include?(symbol)
+      return 1.0 if BinanceAccount::STABLECOINS.include?(symbol)
 
       price = binance_provider.get_spot_price("#{symbol}USDT")
       price.to_d

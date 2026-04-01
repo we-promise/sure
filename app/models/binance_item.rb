@@ -125,7 +125,7 @@ class BinanceItem < ApplicationRecord
     binance_accounts
       .joins(:account)
       .where(accounts: { status: "active" })
-      .select { |ba| ba.extra&.dig("binance", "stale_rate") }
+      .where("binance_accounts.extra -> 'binance' ->> 'stale_rate' = 'true'")
   end
 
   def linked_accounts_count
