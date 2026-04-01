@@ -16,7 +16,7 @@ class BondLot < ApplicationRecord
   before_validation :normalize_tax_settings
   before_validation :clear_rate_review_flag
 
-  after_commit :enqueue_inflation_backfill, on: %i[create update], if: :needs_inflation_backfill?
+  after_commit :enqueue_inflation_backfill, on: %i[create update], if: :should_enqueue_inflation_backfill?
 
   validates :purchased_on, :amount, :subtype, presence: true
   validates :auto_fetch_inflation, inclusion: { in: [ true, false ] }
@@ -537,6 +537,15 @@ class BondLot < ApplicationRecord
 
       def needs_inflation_backfill?
         inflation_linked? && auto_fetch_inflation? && purchased_on.present?
+      end
+
+      def should_enqueue_inflation_backfill?
+        return false unless needs_inflation_backfill?
+        saved_change_to_purchased_on? ||
+          saved_change_to_issue_date? ||
+          saved_change_to_cpi_lag_months? ||
+          saved_change_to_auto_fetch_inflation? ||
+          saved_change_to_subtype?
       end
 
       def should_auto_buy_new_issue?(net_value:)
