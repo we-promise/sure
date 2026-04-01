@@ -40,4 +40,19 @@ class CategoryTest < ActiveSupport::TestCase
     assert names.all? { |name| name.is_a?(String) }
     assert_equal names, names.uniq  # No duplicates
   end
+
+  test "should accept valid 6-digit hex colors" do
+    [ "#FFFFFF", "#000000", "#123456", "#ABCDEF", "#abcdef" ].each do |color|
+      category = Category.new(name: "Category #{color}", color: color, lucide_icon: "shapes", family: @family)
+      assert category.valid?, "#{color} should be valid"
+    end
+  end
+
+  test "should reject invalid colors" do
+    [ "invalid", "#123", "#1234567", "#GGGGGG", "red", "ffffff", "#ffff", "" ].each do |color|
+      category = Category.new(name: "Category #{color}", color: color, lucide_icon: "shapes", family: @family)
+      assert_not category.valid?, "#{color} should be invalid"
+      assert_includes category.errors[:color], "is invalid"
+    end
+  end
 end

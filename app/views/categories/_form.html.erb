@@ -30,7 +30,7 @@
               <div class="flex gap-2 items-center hidden flex-col" data-category-target="paletteSection">
                 <div class="flex gap-2 items-center w-full">
                   <div class="w-6 h-6 p-4 rounded-full cursor-pointer" style="background-color: <%= category.color %>" data-category-target="colorPreview"></div>
-                  <%= f.text_field :color , data: { category_target: "colorInput"}, inline: true %>
+                  <%= f.text_field :color, data: { category_target: "colorInput" }, inline: true, pattern: "^#[0-9A-Fa-f]{6}$" %>
                   <%= icon "palette", size: "2xl", data: { action: "click->category#toggleSections" } %>
                 </div>
                 <div data-category-target="validationMessage" class="hidden self-start flex gap-1 items-center text-xs text-destructive ">
