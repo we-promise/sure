@@ -18,11 +18,14 @@ class BondLotsController < ApplicationController
 
   def edit
     @account = @bond_lot.account
+    # Last expression — if permission fails, require_account_permission! redirects internally;
+    # no `return unless` needed (rubocop: Style/RedundantReturn).
     require_account_permission!(@account)
   end
 
   def show
     @account = @bond_lot.account
+    # See edit — last expression, redirect handled internally.
     require_account_permission!(@account)
   end
 
@@ -65,7 +68,8 @@ class BondLotsController < ApplicationController
       end
       @bond_lot.account.sync_later(window_start_date: [ old_purchased_on, @bond_lot.purchased_on ].min)
       redirect_back_or_to account_path(@account), notice: t("bond_lots.update.success")
-    rescue ActiveRecord::RecordInvalid
+    rescue ActiveRecord::RecordInvalid => e
+      @bond_lot.errors.add(:base, e.record.errors.full_messages.to_sentence) if e.record != @bond_lot
       render :edit, status: :unprocessable_entity
     end
   end
@@ -108,7 +112,6 @@ class BondLotsController < ApplicationController
         :units,
         :nominal_per_unit,
         :term_months,
-        :maturity_date,
         :interest_rate,
         :first_period_rate,
         :inflation_margin,
