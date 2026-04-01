@@ -7,7 +7,8 @@
 <% total_return_amount = settlement_amount - lot.amount.to_d %>
 <% total_return_percent = lot.amount.to_d.zero? ? 0 : (total_return_amount / lot.amount.to_d) * 100 %>
 <% total_return_class = total_return_amount.negative? ? "text-destructive" : "text-success" %>
-<% history = lot.capitalization_history(on: lot.closed_on || lot.maturity_date || Date.current) %>
+<% effective_on = lot.closed_on || lot.maturity_date || Date.current %>
+<% history = lot.capitalization_history(on: effective_on) %>
 <% total_interest = history.sum { |event| event[:interest_earned].to_d } %>
 <% tax_withheld = lot.tax_withheld.to_d %>
 
@@ -17,7 +18,8 @@
 
     <div class="space-y-0.5">
       <%= link_to label, bond_lot_path(lot), data: { turbo_frame: :drawer }, class: "hover:underline" %>
-      <%= tag.p t(".closed_meta", purchased: l(lot.purchased_on), closed: l(lot.closed_on)), class: "text-secondary text-xs uppercase" %>
+      <% closed_label = lot.closed_on ? l(lot.closed_on) : t("bonds.purchase_holding.unknown") %>
+      <%= tag.p t(".closed_meta", purchased: l(lot.purchased_on), closed: closed_label), class: "text-secondary text-xs uppercase" %>
     </div>
   </div>
 
@@ -28,7 +30,7 @@
 
   <div class="text-right">
     <% if lot.inflation_linked? %>
-      <% rate_on_close = lot.current_rate_percent(on: lot.closed_on || Date.current) %>
+      <% rate_on_close = lot.current_rate_percent(on: effective_on) %>
       <%= tag.p(rate_on_close.present? ? number_to_percentage(rate_on_close, precision: 3) : t("bonds.purchase_holding.unknown"), class: "privacy-sensitive") %>
       <%= tag.p t(".closed_rate_meta", periods: history.size), class: "font-normal text-secondary" %>
     <% else %>
