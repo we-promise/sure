@@ -6,10 +6,10 @@
   <%= turbo_frame_tag dom_id(transaction) do %>
     <div class="group flex lg:grid lg:grid-cols-12 items-center text-primary text-sm font-medium p-3 lg:p-4 <%= "pl-8 lg:pl-12" if in_split_group %>">
 
-      <div class="pr-4 lg:pr-10 flex items-center gap-3 lg:gap-4 col-span-8 min-w-0 <%= entry.excluded ? "opacity-50 text-secondary" : "" %>">
+      <div class="pr-4 lg:pr-10 flex items-center gap-3 lg:gap-4 col-span-8 min-w-0">
         <%= check_box_tag dom_id(entry, "selection"),
             disabled: transaction.transfer.present?,
-            class: "checkbox checkbox--light hidden lg:block",
+            class: "checkbox checkbox--light hidden lg:block #{'opacity-50' if entry.excluded}",
             data: {
               id: entry.id,
               "bulk-select-target": "row",
@@ -17,7 +17,16 @@
               checkbox_toggle_target: "selectionEntry"
             } %>
 
-        <div class="max-w-full">
+        <div class="flex md:hidden items-center gap-1 col-span-2 relative shrink-0">
+          <%= render "transactions/transaction_category", transaction: transaction, variant: "mobile" %>
+          <% if transaction.merchant&.logo_url.present? %>
+            <%= image_tag Setting.transform_brand_fetch_url(transaction.merchant.logo_url),
+                class: "w-5 h-5 rounded-full absolute -bottom-1 -right-1 border border-secondary pointer-events-none",
+                loading: "lazy" %>
+          <% end %>
+        </div>
+
+        <div class="max-w-full <%= 'opacity-50 text-secondary' if entry.excluded %>">
           <%= content_tag :div, class: ["flex items-center gap-3 lg:gap-4"] do %>
             <div class="hidden lg:flex">
               <% if transaction.merchant&.logo_url.present? %>
@@ -33,14 +42,6 @@
                     rounded: true
                   ) %>
                 </div>
-              <% end %>
-            </div>
-            <div class="flex md:hidden items-center gap-1 col-span-2 relative">
-              <%= render "transactions/transaction_category", transaction: transaction, variant: "mobile" %>
-              <% if transaction.merchant&.logo_url.present? %>
-                <%= image_tag Setting.transform_brand_fetch_url(transaction.merchant.logo_url),
-                    class: "w-5 h-5 rounded-full absolute -bottom-1 -right-1 border border-secondary pointer-events-none",
-                    loading: "lazy" %>
               <% end %>
             </div>
 
@@ -158,7 +159,7 @@
         <% end %>
       </div>
 
-      <div class="shrink-0 col-span-4 lg:col-span-2 ml-auto flex items-center justify-end gap-2 <%= entry.excluded ? "opacity-50 text-secondary" : "" %>">
+      <div class="shrink-0 col-span-4 lg:col-span-2 ml-auto flex items-center justify-end gap-2 <%= 'opacity-50 text-secondary' if entry.excluded %>">
         <%# Protection indicator - shows on hover when entry is protected from sync %>
         <% if entry.protected_from_sync? && !entry.excluded? %>
           <%= link_to entry_path(entry),
