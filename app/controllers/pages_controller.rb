@@ -18,7 +18,6 @@ class PagesController < ApplicationController
 
     family_currency = Current.family.currency
     bond_summary = BondLot.dashboard_summary(@bond_accounts, family_currency)
-    @bond_open_lots = bond_summary.open_lots
     @bond_total_value = bond_summary.total_value
     @bond_total_return = bond_summary.total_return
     @bond_top_lots = bond_summary.top_lots
@@ -121,7 +120,7 @@ class PagesController < ApplicationController
           key: "bond_summary",
           title: "pages.dashboard.bond_summary.title",
           partial: "pages/dashboard/bond_summary",
-          locals: { bond_accounts: @bond_accounts, open_lots: @bond_open_lots, total_value: @bond_total_value, total_return: @bond_total_return, top_lots: @bond_top_lots },
+          locals: { bond_accounts: @bond_accounts, total_value: @bond_total_value, total_return: @bond_total_return, top_lots: @bond_top_lots },
           visible: @accounts.any? && @bond_accounts.any?,
           collapsible: true
         },

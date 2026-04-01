@@ -114,6 +114,8 @@ en:
         configured_in_settings_message: API key configured in settings.
         configured_via_env: API key is configured via the GUS_SDP_API_KEY environment variable.
         free_default_message: No API key configured. Using free anonymous access by default.
+        clear_api_key: Clear stored API key
+        clear_api_key_confirm: Remove the stored GUS API key?
         label: API Key
         placeholder: Enter your GUS SDP API key
         import_enabled_label: Enable automatic GUS CPI imports

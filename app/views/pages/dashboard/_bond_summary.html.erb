@@ -1,4 +1,4 @@
-<%# locals: (bond_accounts:, open_lots:, total_value:, total_return:, top_lots:, **args) %>
+<%# locals: (bond_accounts:, total_value:, total_return:, top_lots:, **args) %>
 
 <% if bond_accounts.any? %>
   <div id="bond-summary" class="space-y-4">
@@ -24,81 +24,22 @@
     <% if top_lots.any? %>
       <div class="bg-container-inset rounded-xl p-1 mx-4 overflow-x-auto">
         <div class="rounded-lg shadow-border-xs bg-container overflow-hidden">
-          <div class="grid grid-cols-[4fr_2fr_2fr_2fr_2fr] bg-container-inset px-4 py-2 uppercase text-xs font-medium text-secondary">
-            <div><%= t(".bond") %></div>
-            <div class="text-right"><%= t(".rate") %></div>
-            <div class="text-right"><%= t(".principal") %></div>
-            <div class="text-right"><%= t(".maturity") %></div>
-            <div class="text-right"><%= t(".total_return") %></div>
-          </div>
-
-          <% top_lots.each_with_index do |(account, lot), index| %>
-            <% label = Bond.long_subtype_label_for(lot.subtype) || t("bonds.purchase_holding.unknown") %>
-            <% total_return_amount = lot.total_return_amount %>
-            <% total_return_label = t("bonds.purchase_holding.since_purchase") %>
-            <% if total_return_amount.abs < 0.01 && lot.projected_total_return_amount.positive? %>
-              <% total_return_amount = lot.projected_total_return_amount %>
-              <% total_return_label = t("bonds.purchase_holding.projected_to_maturity") %>
-            <% end %>
-            <% total_return_class = total_return_amount.negative? ? "text-destructive" : "text-success" %>
-            <% rate_text = if lot.inflation_linked?
-              if lot.requires_rate_review?
-                t("bonds.purchase_holding.update_needed")
-              elsif lot.current_rate_percent.present?
-                number_to_percentage(lot.current_rate_percent, precision: 3)
-              else
-                t("bonds.purchase_holding.unknown")
-              end
-            else
-              lot.interest_rate.present? ? number_to_percentage(lot.interest_rate, precision: 3) : t("bonds.purchase_holding.unknown")
-            end %>
-            <% inflation_component = lot.current_inflation_component_percent %>
-            <% margin_component = lot.current_margin_percent %>
-            <% inflation_source = lot.current_inflation_source %>
-            <% rate_meta = if lot.inflation_linked?
-              lot.requires_rate_review? ?
-                t("bonds.purchase_holding.pending_review") :
-                if inflation_component.nil? || margin_component.nil?
-                  t("bonds.purchase_holding.first_period_fixed_rate")
-                elsif inflation_source == "gus"
-                  t("bonds.purchase_holding.inflation_meta_gus", inflation: number_to_percentage(inflation_component.to_d, precision: 3), margin: number_to_percentage(margin_component.to_d, precision: 3), indicator: lot.current_inflation_indicator_id)
-                else
-                  t("bonds.purchase_holding.inflation_meta_manual", inflation: number_to_percentage(inflation_component.to_d, precision: 3), margin: number_to_percentage(margin_component.to_d, precision: 3))
-                end
-            else
-              t("bonds.purchase_holding.bond_meta", rate_type: lot.rate_type&.titleize || t("bonds.purchase_holding.unknown"), coupon: lot.coupon_frequency&.humanize || t("bonds.purchase_holding.unknown"))
-            end %>
-
-            <div class="grid grid-cols-[4fr_2fr_2fr_2fr_2fr] items-center p-4 text-sm font-medium text-primary <%= index < top_lots.size - 1 ? "border-b border-divider" : "" %>">
-              <div class="flex items-center gap-4">
-                <%= render DS::FilledIcon.new(variant: :text, text: label, size: "md", rounded: true) %>
-                <div class="space-y-0.5 min-w-0">
-                  <%= link_to label, account_path(account, tab: "positions"), class: "truncate hover:underline" %>
-                  <p class="text-xs text-secondary truncate"><%= t(".account_wrapper", account: account.name, wrapper: account.short_subtype_label) %></p>
-                </div>
-              </div>
-
-              <div class="text-right">
-                <p class="privacy-sensitive"><%= rate_text %></p>
-                <p class="font-normal text-secondary"><%= rate_meta %></p>
-              </div>
-
-              <div class="text-right">
-                <p class="privacy-sensitive"><%= format_money(Money.new(lot.amount, account.currency)) %></p>
-                <p class="font-normal text-secondary"><%= t(".principal_term", term: t(".term_months", count: lot.term_months)) %></p>
-              </div>
-
-              <div class="text-right">
-                <p class="privacy-sensitive"><%= lot.maturity_date ? l(lot.maturity_date) : t("bonds.purchase_holding.unknown") %></p>
-                <p class="font-normal text-secondary"><%= t(".maturity_label") %></p>
-              </div>
-
-              <div class="text-right">
-                <p class="privacy-sensitive <%= total_return_class %>"><%= format_money(Money.new(total_return_amount, account.currency)) %></p>
-                <p class="font-normal text-secondary"><%= total_return_label %></p>
-              </div>
-            </div>
-          <% end %>
+          <table class="w-full">
+            <thead class="bg-container-inset uppercase text-xs font-medium text-secondary">
+              <tr>
+                <th scope="col" class="px-4 py-2 text-left"><%= t(".bond") %></th>
+                <th scope="col" class="px-4 py-2 text-right"><%= t(".rate") %></th>
+                <th scope="col" class="px-4 py-2 text-right"><%= t(".principal") %></th>
+                <th scope="col" class="px-4 py-2 text-right"><%= t(".maturity") %></th>
+                <th scope="col" class="px-4 py-2 text-right"><%= t(".total_return") %></th>
+              </tr>
+            </thead>
+            <tbody>
+              <% top_lots.each_with_index do |(account, lot), index| %>
+                <%= render UI::Dashboard::BondSummaryRow.new(account:, lot:, show_border: index < top_lots.size - 1) %>
+              <% end %>
+            </tbody>
+          </table>
         </div>
       </div>
     <% end %>

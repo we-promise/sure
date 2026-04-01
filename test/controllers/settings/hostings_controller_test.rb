@@ -50,6 +50,19 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "can clear stored gus api key when env override is absent" do
+    with_self_hosting do
+      Setting.gus_sdp_api_key = "secret-key"
+
+      patch settings_hosting_url, params: { setting: { clear_gus_sdp_api_key: "1" } }
+
+      assert_redirected_to settings_hosting_url
+      assert_nil Setting.gus_sdp_api_key
+    end
+  ensure
+    Setting.gus_sdp_api_key = nil
+  end
+
   test "can update onboarding state when self hosting is enabled" do
     sign_in users(:sure_support_staff)
 
@@ -280,6 +293,25 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
 
         assert_redirected_to settings_hosting_url
         assert_equal I18n.t("settings.hostings.import_gus_inflation_rates.import_disabled"), flash[:alert]
+      ensure
+        Setting.gus_inflation_import_enabled = old_val
+      end
+    end
+  end
+
+  test "rejects malformed manual gus inflation import years" do
+    with_self_hosting do
+      old_val = Setting.gus_inflation_import_enabled
+      Setting.gus_inflation_import_enabled = true
+
+      begin
+        assert_no_enqueued_jobs only: ImportGusInflationRatesJob do
+          post import_gus_inflation_rates_settings_hosting_url,
+               params: { setting: { gus_inflation_start_year: "2020foo", gus_inflation_end_year: 2024 } }
+        end
+
+        assert_redirected_to settings_hosting_url
+        assert_equal I18n.t("settings.hostings.import_gus_inflation_rates.invalid_import_range"), flash[:alert]
       ensure
         Setting.gus_inflation_import_enabled = old_val
       end

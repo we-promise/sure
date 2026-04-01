@@ -9,7 +9,7 @@ class BondLot < ApplicationRecord
   scope :open, -> { where(closed_on: nil) }
   scope :needs_rate_review, -> { open.where(requires_rate_review: true) }
 
-  # Returns an OpenStruct with :open_lots, :total_value, :total_return, :top_lots
+  # Returns an OpenStruct with :total_value, :total_return, :top_lots
   # for the dashboard summary card.
   def self.dashboard_summary(bond_accounts, family_currency)
     lots_with_accounts = open
@@ -28,7 +28,7 @@ class BondLot < ApplicationRecord
     total_return = enriched.sum { |_, _, _, cr| cr }
     top_lots = enriched.sort_by { |_, _, cv, _| -cv }.first(TOP_LOTS_LIMIT).map { |a, l, _, _| [ a, l ] }
 
-    OpenStruct.new(open_lots: lots_with_accounts, total_value: total_value, total_return: total_return, top_lots: top_lots)
+    OpenStruct.new(total_value: total_value, total_return: total_return, top_lots: top_lots)
   end
 
   before_validation :inherit_defaults_from_bond
