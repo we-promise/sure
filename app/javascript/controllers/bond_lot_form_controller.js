@@ -8,12 +8,12 @@ export default class extends Controller {
     "inflationInput",
     "otherRequiredInput",
     "manualInflationField",
-    "manualInflationInput",
-    "autoFetchToggle"
+    "manualInflationInput"
   ]
   static values = {
     inflationSubtypes: Array,
-    globalAutoFetchEnabled: Boolean
+    globalAutoFetchEnabled: Boolean,
+    lotAutoFetch: Boolean
   }
 
   connect() {
@@ -49,9 +49,7 @@ export default class extends Controller {
     if (!this.hasManualInflationFieldTarget || !this.hasManualInflationInputTarget) return
 
     const inflationLinked = this.inflationSubtypesValue.includes(this.subtypeSelectTarget.value)
-    const autoFetch = this.hasAutoFetchToggleTarget
-      ? this.autoFetchToggleTarget.checked
-      : this.globalAutoFetchEnabledValue
+    const autoFetch = this.globalAutoFetchEnabledValue && this.lotAutoFetchValue
     const showManualField = inflationLinked && !autoFetch
 
     this.manualInflationFieldTarget.classList.toggle("hidden", !showManualField)

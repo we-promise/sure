@@ -46,7 +46,9 @@ class GusInflationRate < ApplicationRecord
         month = PERIOD_TO_MONTH[row[:period_id].to_i]
         next if month.blank?
 
-        rate_yoy = row[:value].to_d
+        value = row[:value]
+        next if value.blank?
+        rate_yoy = value.to_d
         next if rate_yoy.zero?
 
         record = find_or_initialize_by(year: year.to_i, month: month)
