@@ -2,7 +2,7 @@
   <div>
     <h2 class="font-medium mb-1"><%= t(".title") %></h2>
     <p class="text-secondary text-sm mb-4"><%= t(".description") %></p>
-    <% if ENV["GUS_SDP_API_KEY"].present? %>
+    <% if ENV["GUS_SDP_API_KEY"].present? || Setting.gus_sdp_api_key.present? %>
       <p class="text-sm text-secondary"><%= t(".env_configured_message") %></p>
     <% else %>
       <p class="text-sm text-secondary"><%= t(".free_default_message") %></p>
@@ -24,10 +24,10 @@
 
       <%= form.toggle :gus_inflation_import_enabled,
                       checked: Setting.gus_inflation_import_enabled_effective,
-                      disabled: ENV["GUS_INFLATION_IMPORT_ENABLED"].present?,
+                      disabled: ENV.key?("GUS_INFLATION_IMPORT_ENABLED"),
                       data: { auto_submit_form_target: "auto" } %>
     </div>
-    <% if ENV["GUS_INFLATION_IMPORT_ENABLED"].present? %>
+    <% if ENV.key?("GUS_INFLATION_IMPORT_ENABLED") %>
       <p class="text-xs text-secondary mt-1"><%= t(".import_enabled_env_locked") %></p>
     <% end %>
   <% end %>

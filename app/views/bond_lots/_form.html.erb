@@ -74,12 +74,12 @@
 
             <div data-bond-lot-form-target="otherFields">
         <%= form.select :rate_type,
-          Bond::RATE_TYPES.map { |value| [ value.titleize, value ] },
+          Bond::RATE_TYPES.map { |value| [ t("bond_lots.form.rate_types.#{value}", default: value.titleize), value ] },
           { label: t("bond_lots.form.rate_type"), required: true },
           { data: { bond_lot_form_target: "otherRequiredInput" } } %>
 
         <%= form.select :coupon_frequency,
-          Bond::COUPON_FREQUENCIES.map { |value| [ value.humanize, value ] },
+          Bond::COUPON_FREQUENCIES.map { |value| [ t("bond_lots.form.coupon_frequencies.#{value}", default: value.humanize), value ] },
           { label: t("bond_lots.form.coupon_frequency"), required: true },
           { data: { bond_lot_form_target: "otherRequiredInput" } } %>
             </div>

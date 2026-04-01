@@ -74,6 +74,8 @@ class BondLotsController < ApplicationController
     entry = @bond_lot.entry
 
     ActiveRecord::Base.transaction do
+      # Entry has_one :bond_lot, dependent: :destroy — destroying entry cascades to lot.
+      # Only destroy lot directly when no entry exists.
       if entry
         entry.destroy!
       else
@@ -128,7 +130,7 @@ class BondLotsController < ApplicationController
         amount: bond_lot.amount,
         entryable_attributes: {
           id: bond_lot.entry.entryable_id,
-          extra: bond_lot.entry.entryable.extra.merge(
+          extra: (bond_lot.entry.entryable.extra || {}).merge(
             "bond_subtype" => bond_lot.subtype,
             "bond_term_months" => bond_lot.term_months,
             "bond_interest_rate" => bond_lot.interest_rate

@@ -4,6 +4,7 @@ class BondLot < ApplicationRecord
 
   TAX_STRATEGIES = %w[standard reduced exempt].freeze
   DEFAULT_TAX_RATE_PERCENT = 19
+  TOP_LOTS_LIMIT = 5
 
   scope :open, -> { where(closed_on: nil) }
   scope :needs_rate_review, -> { open.where(requires_rate_review: true) }
@@ -36,6 +37,7 @@ class BondLot < ApplicationRecord
   validates :coupon_frequency, inclusion: { in: Bond::COUPON_FREQUENCIES }, allow_nil: true
   validates :tax_strategy, inclusion: { in: TAX_STRATEGIES }
   validates :tax_rate, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
+  validates :entry_id, uniqueness: true, allow_nil: true
 
   with_options if: :inflation_linked? do
     validates :issue_date, presence: true
@@ -80,15 +82,10 @@ class BondLot < ApplicationRecord
 
     value = principal
     cursor = purchased_on
-
-    # Use issue_date as the anniversary base so rate-period boundaries align with the bond's schedule.
-    issue_base = (inflation_linked? && issue_date.present?) ? issue_date : purchased_on
+    issue_base = anniversary_issue_base
 
     while cursor < period_end
-      years_since_issue = 0
-      years_since_issue += 1 while issue_base + years_since_issue.years <= cursor
-      next_anniversary = issue_base + years_since_issue.years
-      anniversary_start = issue_base + (years_since_issue - 1).years
+      next_anniversary, anniversary_start = anniversary_boundaries(cursor:, issue_base:)
 
       next_cursor = [ next_anniversary, period_end ].min
       days_in_step = [ (next_cursor - cursor).to_i, 0 ].max
@@ -222,15 +219,10 @@ class BondLot < ApplicationRecord
     period_number = 1
     opening_balance = principal
     cursor = purchased_on
-
-    # Use issue_date as the anniversary base so rate-period boundaries align with the bond's schedule.
-    issue_base = (inflation_linked? && issue_date.present?) ? issue_date : purchased_on
+    issue_base = anniversary_issue_base
 
     while cursor < history_end
-      years_since_issue = 0
-      years_since_issue += 1 while issue_base + years_since_issue.years <= cursor
-      next_anniversary = issue_base + years_since_issue.years
-      anniversary_start = issue_base + (years_since_issue - 1).years
+      next_anniversary, anniversary_start = anniversary_boundaries(cursor:, issue_base:)
 
       next_cursor = [ next_anniversary, history_end ].min
       days_in_step = [ (next_cursor - cursor).to_i, 0 ].max
@@ -274,333 +266,347 @@ class BondLot < ApplicationRecord
     events
   end
 
-    private
-      def rate_context_for(on:)
-        if inflation_linked?
-          inflation_linked_rate_context(on:)
-        else
-          annual_rate = interest_rate.presence || bond&.interest_rate
-          {
-            annual_rate_decimal: annual_rate&.to_d&./(100),
-            inflation_component_percent: nil,
-            margin_component_percent: nil,
-            inflation_source: nil,
-            inflation_reference_on: nil,
-            inflation_indicator_id: nil
-          }
-        end
-      end
-
-      def annual_rate_for(on:)
-        rate_context_for(on:)[:annual_rate_decimal]
-      end
-
-      def inflation_linked_rate_context(on:)
-        if purchased_on.blank?
-          return {
-            annual_rate_decimal: nil,
-            inflation_component_percent: nil,
-            margin_component_percent: nil,
-            inflation_source: nil,
-            inflation_reference_on: nil,
-            inflation_indicator_id: nil
-          }
-        end
-
-        # Use issue_date as the anniversary base so rate-period boundaries align with the bond's schedule.
-        period_base = issue_date.presence || purchased_on
-        years_elapsed = 0
-        years_elapsed += 1 while period_base + (years_elapsed + 1).years <= on
-
-        if years_elapsed <= 0
-          {
-            annual_rate_decimal: first_period_rate&.to_d&./(100),
-            inflation_component_percent: nil,
-            margin_component_percent: nil,
-            inflation_source: "first_period",
-            inflation_reference_on: nil,
-            inflation_indicator_id: nil
-          }
-        else
-          inflation_snapshot = inflation_snapshot_for(on:)
-          inflation_component = inflation_snapshot[:inflation_component_percent]
-          margin_component = inflation_margin&.to_d || 0.to_d
-
-          # Cannot compute rate without inflation component — do not coerce nil CPI to 0.
-          return { annual_rate_decimal: nil } if inflation_component.nil?
-
-          # Polish treasury bonds have a 0% rate floor — deflation cannot reduce the rate below 0.
-          annual_rate = [ (inflation_component + margin_component) / 100, 0.to_d ].max
-
-          {
-            annual_rate_decimal: annual_rate,
-            inflation_component_percent: inflation_component,
-            margin_component_percent: margin_component,
-            inflation_source: inflation_snapshot[:source],
-            inflation_reference_on: inflation_snapshot[:reference_on],
-            inflation_indicator_id: inflation_snapshot[:indicator_id]
-          }
-        end
-      end
-
-      def inflation_snapshot_for(on:)
-        if auto_fetch_inflation?
-          source_record = GusInflationRate.for_date(date: on, lag_months: cpi_lag_months.to_i)
-          if source_record.present?
-            return {
-              inflation_component_percent: source_record.rate_yoy.to_d - 100,
-              source: "gus",
-              reference_on: Date.new(source_record.year, source_record.month, 1),
-              indicator_id: current_inflation_indicator_id
-            }
-          end
-        end
-
+  private
+    def rate_context_for(on:)
+      if inflation_linked?
+        inflation_linked_rate_context(on:)
+      else
+        annual_rate = interest_rate.presence || bond&.interest_rate
         {
-          inflation_component_percent: inflation_rate_assumption&.to_d,
-          source: "manual",
-          reference_on: nil,
-          indicator_id: nil
+          annual_rate_decimal: annual_rate&.to_d&./(100),
+          inflation_component_percent: nil,
+          margin_component_percent: nil,
+          inflation_source: nil,
+          inflation_reference_on: nil,
+          inflation_indicator_id: nil
+        }
+      end
+    end
+
+    def annual_rate_for(on:)
+      rate_context_for(on:)[:annual_rate_decimal]
+    end
+
+    def anniversary_issue_base
+      (inflation_linked? && issue_date.present?) ? issue_date : purchased_on
+    end
+
+    # Returns [next_anniversary, anniversary_start] for the period containing cursor.
+    def anniversary_boundaries(cursor:, issue_base:)
+      years_since = 0
+      years_since += 1 while issue_base + years_since.years <= cursor
+      [ issue_base + years_since.years, issue_base + (years_since - 1).years ]
+    end
+
+    def inflation_linked_rate_context(on:)
+      if purchased_on.blank?
+        return {
+          annual_rate_decimal: nil,
+          inflation_component_percent: nil,
+          margin_component_percent: nil,
+          inflation_source: nil,
+          inflation_reference_on: nil,
+          inflation_indicator_id: nil
         }
       end
 
-      def inherit_defaults_from_bond
-        self.subtype ||= bond&.subtype
-        self.rate_type ||= bond&.rate_type
-        self.coupon_frequency ||= bond&.coupon_frequency
-        self.interest_rate = bond.interest_rate if interest_rate.blank? && bond&.interest_rate.present?
-        self.term_months ||= bond&.term_months
+      # Use issue_date as the anniversary base so rate-period boundaries align with the bond's schedule.
+      period_base = issue_date.presence || purchased_on
+      years_elapsed = 0
+      years_elapsed += 1 while period_base + (years_elapsed + 1).years <= on
+
+      if years_elapsed <= 0
+        {
+          annual_rate_decimal: first_period_rate&.to_d&./(100),
+          inflation_component_percent: nil,
+          margin_component_percent: nil,
+          inflation_source: "first_period",
+          inflation_reference_on: nil,
+          inflation_indicator_id: nil
+        }
+      else
+        inflation_snapshot = inflation_snapshot_for(on:)
+        inflation_component = inflation_snapshot[:inflation_component_percent]
+        margin_component = inflation_margin&.to_d || 0.to_d
+
+        # Cannot compute rate without inflation component — do not coerce nil CPI to 0.
+        return { annual_rate_decimal: nil } if inflation_component.nil?
+
+        # Polish treasury bonds have a 0% rate floor — deflation cannot reduce the rate below 0.
+        annual_rate = [ (inflation_component + margin_component) / 100, 0.to_d ].max
+
+        {
+          annual_rate_decimal: annual_rate,
+          inflation_component_percent: inflation_component,
+          margin_component_percent: margin_component,
+          inflation_source: inflation_snapshot[:source],
+          inflation_reference_on: inflation_snapshot[:reference_on],
+          inflation_indicator_id: inflation_snapshot[:indicator_id]
+        }
+      end
+    end
+
+    def inflation_snapshot_for(on:)
+      if auto_fetch_inflation?
+        source_record = GusInflationRate.for_date(date: on, lag_months: cpi_lag_months.to_i)
+        if source_record.present?
+          return {
+            inflation_component_percent: source_record.rate_yoy.to_d - 100,
+            source: "gus",
+            reference_on: Date.new(source_record.year, source_record.month, 1),
+            indicator_id: current_inflation_indicator_id
+          }
+        end
       end
 
-      def apply_product_defaults
-        defaults = Bond::PRODUCT_DEFAULTS[subtype]
-        return if defaults.blank?
+      {
+        inflation_component_percent: inflation_rate_assumption&.to_d,
+        source: "manual",
+        reference_on: nil,
+        indicator_id: nil
+      }
+    end
 
-        # Known product subtypes (EOD 10Y, ROD 12Y) have regulatory fixed terms — intentional overwrite
-        self.term_months = defaults[:term_months] if defaults[:term_months].present?
-        self.rate_type ||= defaults[:rate_type]
-        self.coupon_frequency ||= defaults[:coupon_frequency]
-        self.cpi_lag_months ||= defaults[:cpi_lag_months]
-        self.nominal_per_unit ||= 100
-        self.issue_date ||= purchased_on
-        self.auto_fetch_inflation = true if auto_fetch_inflation.nil?
-      end
+    def inherit_defaults_from_bond
+      self.subtype ||= bond&.subtype
+      self.rate_type ||= bond&.rate_type
+      self.coupon_frequency ||= bond&.coupon_frequency
+      self.interest_rate = bond.interest_rate if interest_rate.blank? && bond&.interest_rate.present?
+      self.term_months ||= bond&.term_months
+    end
 
-      def normalize_auto_fetch_inflation
-        self.auto_fetch_inflation = true if auto_fetch_inflation.nil?
-        return if inflation_linked?
+    def apply_product_defaults
+      defaults = Bond::PRODUCT_DEFAULTS[subtype]
+      return if defaults.blank?
 
-        self.auto_fetch_inflation = false
-      end
+      # Known product subtypes (EOD 10Y, ROD 12Y) have regulatory fixed terms — intentional overwrite
+      self.term_months = defaults[:term_months] if defaults[:term_months].present?
+      self.rate_type ||= defaults[:rate_type]
+      self.coupon_frequency ||= defaults[:coupon_frequency]
+      self.cpi_lag_months ||= defaults[:cpi_lag_months]
+      self.nominal_per_unit ||= 100
+      self.issue_date ||= purchased_on
+      self.auto_fetch_inflation = true if auto_fetch_inflation.nil?
+    end
 
-      def create_settlement_entry!(settlement_date:, net_value:, tax_withheld_amount:, gross_value:)
-        subtype_label = Bond.long_subtype_label_for(subtype) || Bond.display_name.singularize
-        interest_amount = (gross_value - amount.to_d).round(4)
+    def normalize_auto_fetch_inflation
+      self.auto_fetch_inflation = true if auto_fetch_inflation.nil?
+      return if inflation_linked?
 
-        settlement_entry = account.entries.create!(
-          date: settlement_date,
-          name: I18n.t("bond_lots.activity.maturity_settlement_name", subtype: subtype_label),
-          notes: settlement_notes(
-            purchase_amount: amount.to_d,
-            interest_amount: interest_amount,
-            tax_withheld_amount: tax_withheld_amount
-          ),
-          amount: -net_value,
-          currency: account.currency,
-          entryable: Transaction.new(
-            kind: :funds_movement,
-            extra: {
-              "bond_lot_id" => id,
-              "bond_lot_settlement" => true,
-              "bond_subtype" => subtype,
-              "bond_maturity_date" => maturity_date,
-              "bond_settlement_gross" => gross_value,
-              "bond_settlement_net" => net_value,
-              "bond_settlement_tax_withheld" => tax_withheld_amount,
-              "bond_settlement_tax_strategy" => tax_strategy,
-              "bond_settlement_tax_rate" => settlement_tax_rate_percent
-            }
-          )
+      self.auto_fetch_inflation = false
+    end
+
+    def create_settlement_entry!(settlement_date:, net_value:, tax_withheld_amount:, gross_value:)
+      subtype_label = Bond.long_subtype_label_for(subtype) || Bond.display_name.singularize
+      interest_amount = (gross_value - amount.to_d).round(4)
+
+      settlement_entry = account.entries.create!(
+        date: settlement_date,
+        name: I18n.t("bond_lots.activity.maturity_settlement_name", subtype: subtype_label),
+        notes: settlement_notes(
+          purchase_amount: amount.to_d,
+          interest_amount: interest_amount,
+          tax_withheld_amount: tax_withheld_amount
+        ),
+        amount: -net_value,
+        currency: account.currency,
+        entryable: Transaction.new(
+          kind: :funds_movement,
+          extra: {
+            "bond_lot_id" => id,
+            "bond_lot_settlement" => true,
+            "bond_subtype" => subtype,
+            "bond_maturity_date" => maturity_date,
+            "bond_settlement_gross" => gross_value,
+            "bond_settlement_net" => net_value,
+            "bond_settlement_tax_withheld" => tax_withheld_amount,
+            "bond_settlement_tax_strategy" => tax_strategy,
+            "bond_settlement_tax_rate" => settlement_tax_rate_percent
+          }
         )
+      )
 
-        settlement_entry.lock_saved_attributes!
-        settlement_entry.mark_user_modified!
+      settlement_entry.lock_saved_attributes!
+      settlement_entry.mark_user_modified!
+    end
+
+    def create_reinvestment_lot!(settlement_date:, net_value:)
+      nominal = nominal_per_unit.presence || 100
+      replacement_units = inflation_linked? ? (net_value.to_d / nominal.to_d).floor : nil
+      replacement_amount = if inflation_linked?
+        replacement_units.to_d * nominal.to_d
+      else
+        net_value.to_d
       end
 
-      def create_reinvestment_lot!(settlement_date:, net_value:)
-        nominal = nominal_per_unit.presence || 100
-        replacement_units = inflation_linked? ? (net_value.to_d / nominal.to_d).floor : nil
-        replacement_amount = if inflation_linked?
-          replacement_units.to_d * nominal.to_d
-        else
-          net_value.to_d
-        end
+      return if replacement_amount <= 0
 
-        return if replacement_amount <= 0
+      reinvest_entry = nil
+      replacement_lot = bond.bond_lots.new(
+        purchased_on: settlement_date,
+        issue_date: inflation_linked? ? settlement_date : nil,
+        amount: replacement_amount,
+        units: replacement_units,
+        nominal_per_unit: inflation_linked? ? nominal : nil,
+        subtype: subtype,
+        interest_rate: inflation_linked? ? nil : interest_rate,
+        rate_type: inflation_linked? ? nil : rate_type,
+        coupon_frequency: inflation_linked? ? nil : coupon_frequency,
+        first_period_rate: nil,
+        inflation_margin: nil,
+        inflation_rate_assumption: inflation_rate_assumption,
+        cpi_lag_months: cpi_lag_months,
+        auto_fetch_inflation: auto_fetch_inflation,
+        auto_close_on_maturity: auto_close_on_maturity,
+        early_redemption_fee: early_redemption_fee,
+        tax_strategy: tax_strategy,
+        tax_rate: tax_rate,
+        requires_rate_review: true
+      )
+      replacement_lot.save!
+      reinvest_entry = create_purchase_entry_for!(replacement_lot)
+      replacement_lot.update!(entry: reinvest_entry)
+    end
 
-        reinvest_entry = nil
-        replacement_lot = bond.bond_lots.new(
-          purchased_on: settlement_date,
-          issue_date: inflation_linked? ? settlement_date : nil,
-          amount: replacement_amount,
-          units: replacement_units,
-          nominal_per_unit: inflation_linked? ? nominal : nil,
-          subtype: subtype,
-          interest_rate: inflation_linked? ? nil : interest_rate,
-          rate_type: inflation_linked? ? nil : rate_type,
-          coupon_frequency: inflation_linked? ? nil : coupon_frequency,
-          first_period_rate: nil,
-          inflation_margin: nil,
-          inflation_rate_assumption: inflation_rate_assumption,
-          cpi_lag_months: cpi_lag_months,
-          auto_fetch_inflation: auto_fetch_inflation,
-          auto_close_on_maturity: auto_close_on_maturity,
-          early_redemption_fee: early_redemption_fee,
-          tax_strategy: tax_strategy,
-          tax_rate: tax_rate,
-          requires_rate_review: true
+    def create_purchase_entry_for!(replacement_lot)
+      subtype_label = Bond.long_subtype_label_for(replacement_lot.subtype) || Bond.display_name.singularize
+
+      entry = account.entries.create!(
+        date: replacement_lot.purchased_on,
+        name: I18n.t("bond_lots.activity.purchase_name", subtype: subtype_label),
+        amount: replacement_lot.amount,
+        currency: account.currency,
+        entryable: Transaction.new(
+          kind: :funds_movement,
+          extra: {
+            "bond_lot_id" => replacement_lot.id,
+            "bond_subtype" => replacement_lot.subtype,
+            "bond_term_months" => replacement_lot.term_months,
+            "bond_interest_rate" => replacement_lot.interest_rate,
+            "bond_auto_purchased" => true,
+            "bond_requires_rate_review" => true
+          }
         )
-        replacement_lot.save!
-        reinvest_entry = create_purchase_entry_for!(replacement_lot)
-        replacement_lot.update!(entry: reinvest_entry)
-      end
+      )
 
-      def create_purchase_entry_for!(replacement_lot)
-        subtype_label = Bond.long_subtype_label_for(replacement_lot.subtype) || Bond.display_name.singularize
+      entry.lock_saved_attributes!
+      entry.mark_user_modified!
+      entry
+    end
 
-        entry = account.entries.create!(
-          date: replacement_lot.purchased_on,
-          name: I18n.t("bond_lots.activity.purchase_name", subtype: subtype_label),
-          amount: replacement_lot.amount,
-          currency: account.currency,
-          entryable: Transaction.new(
-            kind: :funds_movement,
-            extra: {
-              "bond_lot_id" => replacement_lot.id,
-              "bond_subtype" => replacement_lot.subtype,
-              "bond_term_months" => replacement_lot.term_months,
-              "bond_interest_rate" => replacement_lot.interest_rate,
-              "bond_auto_purchased" => true,
-              "bond_requires_rate_review" => true
-            }
-          )
+    def settlement_notes(purchase_amount:, interest_amount:, tax_withheld_amount:)
+      formatted_purchase_amount = Money.new(purchase_amount, account.currency).format
+      formatted_interest_amount = Money.new(interest_amount, account.currency).format
+
+      if tax_withheld_amount.to_d.positive?
+        I18n.t(
+          "bond_lots.activity.maturity_settlement_notes_with_tax",
+          purchase_amount: formatted_purchase_amount,
+          interest_amount: formatted_interest_amount,
+          tax_withheld_amount: Money.new(tax_withheld_amount, account.currency).format
         )
+      else
+        I18n.t(
+          "bond_lots.activity.maturity_settlement_notes_without_tax",
+          purchase_amount: formatted_purchase_amount,
+          interest_amount: formatted_interest_amount
+        )
+      end
+    end
 
-        entry.lock_saved_attributes!
-        entry.mark_user_modified!
-        entry
+    def derive_amount_from_units
+      return if amount.present?
+      return if units.blank? || nominal_per_unit.blank?
+
+      self.amount = units.to_d * nominal_per_unit.to_d
+    end
+
+    def normalize_tax_settings
+      if bond&.tax_exempt_wrapper?
+        self.tax_strategy = "exempt"
+        self.tax_rate = 0
+        return
       end
 
-      def settlement_notes(purchase_amount:, interest_amount:, tax_withheld_amount:)
-        formatted_purchase_amount = Money.new(purchase_amount, account.currency).format
-        formatted_interest_amount = Money.new(interest_amount, account.currency).format
+      self.tax_strategy = "standard" if tax_strategy.blank?
+      self.tax_rate = if tax_strategy == "exempt"
+        0
+      else
+        tax_rate.presence || DEFAULT_TAX_RATE_PERCENT
+      end
+    end
 
-        if tax_withheld_amount.to_d.positive?
-          I18n.t(
-            "bond_lots.activity.maturity_settlement_notes_with_tax",
-            purchase_amount: formatted_purchase_amount,
-            interest_amount: formatted_interest_amount,
-            tax_withheld_amount: Money.new(tax_withheld_amount, account.currency).format
-          )
-        else
-          I18n.t(
-            "bond_lots.activity.maturity_settlement_notes_without_tax",
-            purchase_amount: formatted_purchase_amount,
-            interest_amount: formatted_interest_amount
-          )
-        end
+    def clear_rate_review_flag
+      return unless requires_rate_review?
+
+      self.requires_rate_review = false if rates_present_for_review?
+    end
+
+    def rates_present_for_review?
+      if inflation_linked?
+        first_period_rate.present? && inflation_margin.present?
+      else
+        interest_rate.present?
+      end
+    end
+
+    def assign_maturity_date_from_term
+      return if term_months.blank? || maturity_date.present?
+      base_date = (issue_date.present? && (purchased_on.blank? || issue_date < purchased_on)) ? issue_date : purchased_on
+      return if base_date.blank?
+      self.maturity_date = base_date + term_months.months
+    end
+
+    def needs_inflation_backfill?
+      inflation_linked? && auto_fetch_inflation? && purchased_on.present?
+    end
+
+    def should_enqueue_inflation_backfill?
+      return false unless needs_inflation_backfill?
+      saved_change_to_purchased_on? ||
+        saved_change_to_issue_date? ||
+        saved_change_to_cpi_lag_months? ||
+        saved_change_to_auto_fetch_inflation? ||
+        saved_change_to_subtype?
+    end
+
+    def should_auto_buy_new_issue?(net_value:)
+      return false unless bond&.auto_buy_new_issues?
+      return false unless bond&.tax_exempt_wrapper?
+      return false unless inflation_linked?
+
+      nominal = nominal_per_unit.presence || 100
+      (net_value.to_d / nominal.to_d).floor.positive?
+    end
+
+    def enqueue_inflation_backfill
+      start_year = [ purchased_on.year - 1, Date.current.year - 20 ].max
+      end_year = Date.current.year
+
+      # Current year won't have all 12 months yet — only expect up to the current month.
+      today = Date.current
+      required_months = (start_year..end_year).sum { |y| y == today.year ? today.month : 12 }
+
+      return if required_months <= 0 || GusInflationRate.where(year: start_year..end_year).count >= required_months
+
+      ImportGusInflationRatesJob.perform_later(start_year:, end_year:)
+    end
+
+    # Returns false if any annual rate period between purchased_on and date cannot be resolved.
+    # Used by settle_if_matured! to abort settlement when GUS data or rates are missing.
+    def rates_resolvable_through?(date:)
+      return true unless purchased_on.present?
+
+      issue_base = anniversary_issue_base
+      cursor = purchased_on
+
+      while cursor < date
+        return false if annual_rate_for(on: cursor).blank?
+
+        next_anniversary, _ = anniversary_boundaries(cursor:, issue_base:)
+        cursor = [ next_anniversary, date ].min
       end
 
-      def derive_amount_from_units
-        return if amount.present?
-        return if units.blank? || nominal_per_unit.blank?
-
-        self.amount = units.to_d * nominal_per_unit.to_d
-      end
-
-      def normalize_tax_settings
-        if bond&.tax_exempt_wrapper?
-          self.tax_strategy = "exempt"
-          self.tax_rate = 0
-          return
-        end
-
-        self.tax_strategy = "standard" if tax_strategy.blank?
-        self.tax_rate = if tax_strategy == "exempt"
-          0
-        else
-          tax_rate.presence || DEFAULT_TAX_RATE_PERCENT
-        end
-      end
-
-      def clear_rate_review_flag
-        return unless requires_rate_review?
-
-        self.requires_rate_review = false if rates_present_for_review?
-      end
-
-      def rates_present_for_review?
-        if inflation_linked?
-          first_period_rate.present? && inflation_margin.present?
-        else
-          interest_rate.present?
-        end
-      end
-
-      def assign_maturity_date_from_term
-        return if purchased_on.blank? || term_months.blank? || maturity_date.present?
-        self.maturity_date = purchased_on + term_months.months
-      end
-
-      def needs_inflation_backfill?
-        inflation_linked? && auto_fetch_inflation? && purchased_on.present?
-      end
-
-      def should_enqueue_inflation_backfill?
-        return false unless needs_inflation_backfill?
-        saved_change_to_purchased_on? ||
-          saved_change_to_issue_date? ||
-          saved_change_to_cpi_lag_months? ||
-          saved_change_to_auto_fetch_inflation? ||
-          saved_change_to_subtype?
-      end
-
-      def should_auto_buy_new_issue?(net_value:)
-        return false unless bond&.auto_buy_new_issues?
-        return false unless bond&.tax_exempt_wrapper?
-        return false unless inflation_linked?
-
-        nominal = nominal_per_unit.presence || 100
-        (net_value.to_d / nominal.to_d).floor.positive?
-      end
-
-      def enqueue_inflation_backfill
-        start_year = [ purchased_on.year - 1, Date.current.year - 20 ].max
-        end_year = Date.current.year
-
-        # Skip if CPI data already covers the required range
-        return if GusInflationRate.where(year: start_year..end_year).count >= ((end_year - start_year + 1) * 12)
-
-        ImportGusInflationRatesJob.perform_later(start_year:, end_year:)
-      end
-
-      # Returns false if any annual rate period between purchased_on and date cannot be resolved.
-      # Used by settle_if_matured! to abort settlement when GUS data or rates are missing.
-      def rates_resolvable_through?(date:)
-        return true unless purchased_on.present?
-
-        issue_base = (inflation_linked? && issue_date.present?) ? issue_date : purchased_on
-        cursor = purchased_on
-
-        while cursor < date
-          return false if annual_rate_for(on: cursor).blank?
-
-          years_since_issue = 0
-          years_since_issue += 1 while issue_base + years_since_issue.years <= cursor
-          next_anniversary = issue_base + years_since_issue.years
-          cursor = [ next_anniversary, date ].min
-        end
-
-        true
-      end
+      true
+    end
 end
