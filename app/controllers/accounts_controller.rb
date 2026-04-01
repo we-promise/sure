@@ -42,10 +42,6 @@ class AccountsController < ApplicationController
   end
 
   def show
-    # Only settle matured lots when the user has manage permissions.
-    # Wrap in rescue to prevent GET show from crashing if user lacks permissions.
-    settle_matured_bond_lots_for_manageable_account
-
     @chart_view = params[:chart_view] || "balance"
     @tab = params[:tab]
     @q = params.fetch(:q, {}).permit(:search, status: [])
@@ -204,17 +200,6 @@ class AccountsController < ApplicationController
   end
 
   private
-    def settle_matured_bond_lots_for_manageable_account
-      return unless @account.bond?
-
-      manageable = Current.user.writable_accounts.exists?(id: @account.id)
-      return unless manageable
-
-      @account.bond&.settle_matured_lots!
-    rescue StandardError => error
-      Rails.logger.error("[BondSettlement] Failed to settle matured lots for account #{@account.id}: #{error.class} - #{error.message}")
-    end
-
     def family
       Current.family
     end

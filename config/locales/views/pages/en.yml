@@ -16,8 +16,8 @@ en:
       subtitle: "Here's what's happening with your finances"
       new: "New"
       bond_rate_review_notice:
-        one: "1 bond lot needs updated issue rate."
-        other: "%{count} bond lots need updated issue rates."
+        one: "1 bond lot needs updated issue rate (%{accounts})."
+        other: "%{count} bond lots need updated issue rates (%{accounts})."
       drag_to_reorder: "Drag to reorder section"
       toggle_section: "Toggle section visibility"
       net_worth_chart:

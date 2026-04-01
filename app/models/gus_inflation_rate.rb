@@ -24,7 +24,7 @@ class GusInflationRate < ApplicationRecord
       find_by(year: target_date.year, month: target_date.month) || latest_before_or_on(target_date)
     end
 
-    def yoy_percent_for(date:, lag_months: 0)
+    def yoy_index_for(date:, lag_months: 0)
       for_date(date:, lag_months:)&.rate_yoy
     end
 

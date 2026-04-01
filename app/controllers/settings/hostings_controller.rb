@@ -5,6 +5,7 @@ class Settings::HostingsController < ApplicationController
 
   before_action :ensure_admin, only: [ :update, :clear_cache, :disconnect_external_assistant, :import_gus_inflation_rates ]
   before_action :ensure_super_admin_for_onboarding, only: :update
+  before_action :set_gus_stats, only: [ :show, :update ]
 
   def show
     @breadcrumbs = [
@@ -204,6 +205,15 @@ class Settings::HostingsController < ApplicationController
 
       assistant_type = params[:family][:assistant_type]
       Current.family.update!(assistant_type: assistant_type) if Family::ASSISTANT_TYPES.include?(assistant_type)
+    end
+
+    def set_gus_stats
+      gus_count = GusInflationRate.count
+      @gus_stats = {
+        count: gus_count,
+        min_year: gus_count > 0 ? GusInflationRate.minimum(:year) : nil,
+        max_year: gus_count > 0 ? GusInflationRate.maximum(:year) : nil
+      }
     end
 
     def ensure_admin

@@ -3,6 +3,7 @@ class BondLot < ApplicationRecord
   belongs_to :entry, optional: true
 
   TAX_STRATEGIES = %w[standard reduced exempt].freeze
+  DEFAULT_TAX_RATE_PERCENT = 19
 
   scope :open, -> { where(closed_on: nil) }
   scope :needs_rate_review, -> { open.where(requires_rate_review: true) }
@@ -12,7 +13,6 @@ class BondLot < ApplicationRecord
   before_validation :assign_maturity_date_from_term
   before_validation :derive_amount_from_units
   before_validation :normalize_auto_fetch_inflation
-  before_validation :apply_bond_tax_wrapper
   before_validation :normalize_tax_settings
   before_validation :clear_rate_review_flag
 
@@ -53,9 +53,7 @@ class BondLot < ApplicationRecord
     validates :coupon_frequency, presence: true, unless: :requires_rate_review?
   end
 
-  def account
-    bond.account
-  end
+  delegate :account, to: :bond
 
   def open?
     closed_on.blank?
@@ -83,17 +81,25 @@ class BondLot < ApplicationRecord
     value = principal
     cursor = purchased_on
 
+    # Use issue_date as the anniversary base so rate-period boundaries align with the bond's schedule.
+    issue_base = (inflation_linked? && issue_date.present?) ? issue_date : purchased_on
+
     while cursor < period_end
-      next_cursor = [ cursor + 1.year, period_end ].min
+      years_since_issue = 0
+      years_since_issue += 1 while issue_base + years_since_issue.years <= cursor
+      next_anniversary = issue_base + years_since_issue.years
+      anniversary_start = issue_base + (years_since_issue - 1).years
+
+      next_cursor = [ next_anniversary, period_end ].min
       days_in_step = [ (next_cursor - cursor).to_i, 0 ].max
       break if days_in_step.zero?
 
       annual_rate_decimal = annual_rate_for(on: cursor)
       break if annual_rate_decimal.blank?
 
-      days_in_year = [ (cursor + 1.year - cursor).to_i, 1 ].max
+      days_in_year = [ (next_anniversary - anniversary_start).to_i, 1 ].max
 
-      if next_cursor == cursor + 1.year
+      if next_cursor == next_anniversary
         value *= (1 + annual_rate_decimal)
       else
         value *= (1 + annual_rate_decimal * (days_in_step.to_d / days_in_year))
@@ -161,7 +167,7 @@ class BondLot < ApplicationRecord
   def settlement_tax_rate_percent
     return 0.to_d if tax_strategy == "exempt"
 
-    rate = tax_rate.presence || 19
+    rate = tax_rate.presence || DEFAULT_TAX_RATE_PERCENT
     rate.to_d
   end
 
@@ -173,6 +179,13 @@ class BondLot < ApplicationRecord
       return false unless matured?(on:)
 
       settlement_date = [ on, maturity_date ].compact.min
+
+      # Abort if any rate period cannot be resolved — prevents closing the lot with a wrong value.
+      unless rates_resolvable_through?(date: settlement_date)
+        update_column(:requires_rate_review, true)
+        return false
+      end
+
       gross_value = estimated_current_value(on: settlement_date)
       gain = [ gross_value - amount.to_d, 0.to_d ].max
       tax_withheld_amount = (gain * settlement_tax_rate_percent / 100).round(4)
@@ -189,6 +202,11 @@ class BondLot < ApplicationRecord
       end
 
       account.sync_later(window_start_date: settlement_date)
+
+      Rails.logger.info(
+        "[BondSettlement] Settled lot_id=#{id} account_id=#{account.id}: " \
+        "gross=#{gross_value} tax=#{tax_withheld_amount} net=#{net_value}"
+      )
       true
     end
   end
@@ -205,8 +223,16 @@ class BondLot < ApplicationRecord
     opening_balance = principal
     cursor = purchased_on
 
+    # Use issue_date as the anniversary base so rate-period boundaries align with the bond's schedule.
+    issue_base = (inflation_linked? && issue_date.present?) ? issue_date : purchased_on
+
     while cursor < history_end
-      next_cursor = [ cursor + 1.year, history_end ].min
+      years_since_issue = 0
+      years_since_issue += 1 while issue_base + years_since_issue.years <= cursor
+      next_anniversary = issue_base + years_since_issue.years
+      anniversary_start = issue_base + (years_since_issue - 1).years
+
+      next_cursor = [ next_anniversary, history_end ].min
       days_in_step = [ (next_cursor - cursor).to_i, 0 ].max
       break if days_in_step.zero?
 
@@ -214,8 +240,8 @@ class BondLot < ApplicationRecord
       annual_rate_decimal = rate_context[:annual_rate_decimal]
       break if annual_rate_decimal.blank?
 
-      days_in_year = [ (cursor + 1.year - cursor).to_i, 1 ].max
-      full_year_capitalization = (next_cursor == cursor + 1.year)
+      days_in_year = [ (next_anniversary - anniversary_start).to_i, 1 ].max
+      full_year_capitalization = (next_cursor == next_anniversary)
       interest_earned = if full_year_capitalization
         opening_balance * annual_rate_decimal
       else
@@ -281,14 +307,10 @@ class BondLot < ApplicationRecord
           }
         end
 
-        # Anniversary-based calculation avoids leap year issues with simple 365-day division.
+        # Use issue_date as the anniversary base so rate-period boundaries align with the bond's schedule.
+        period_base = issue_date.presence || purchased_on
         years_elapsed = 0
-        current_check_date = purchased_on
-        until current_check_date > on
-          current_check_date = purchased_on + (years_elapsed + 1).years
-          break if current_check_date > on
-          years_elapsed += 1
-        end
+        years_elapsed += 1 while period_base + (years_elapsed + 1).years <= on
 
         if years_elapsed <= 0
           {
@@ -304,11 +326,14 @@ class BondLot < ApplicationRecord
           inflation_component = inflation_snapshot[:inflation_component_percent]
           margin_component = inflation_margin&.to_d || 0.to_d
 
-          # Guard against nil margin in requires_rate_review lots.
-          return { annual_rate_decimal: nil } if inflation_component.nil? && margin_component.zero?
+          # Cannot compute rate without inflation component — do not coerce nil CPI to 0.
+          return { annual_rate_decimal: nil } if inflation_component.nil?
+
+          # Polish treasury bonds have a 0% rate floor — deflation cannot reduce the rate below 0.
+          annual_rate = [ (inflation_component + margin_component) / 100, 0.to_d ].max
 
           {
-            annual_rate_decimal: ((inflation_component || 0.to_d) + margin_component) / 100,
+            annual_rate_decimal: annual_rate,
             inflation_component_percent: inflation_component,
             margin_component_percent: margin_component,
             inflation_source: inflation_snapshot[:source],
@@ -332,7 +357,7 @@ class BondLot < ApplicationRecord
         end
 
         {
-          inflation_component_percent: inflation_rate_assumption.to_d,
+          inflation_component_percent: inflation_rate_assumption&.to_d,
           source: "manual",
           reference_on: nil,
           indicator_id: nil
@@ -412,15 +437,15 @@ class BondLot < ApplicationRecord
 
         return if replacement_amount <= 0
 
-        replacement_lot = bond.bond_lots.create!(
+        reinvest_entry = nil
+        replacement_lot = bond.bond_lots.new(
           purchased_on: settlement_date,
           issue_date: inflation_linked? ? settlement_date : nil,
           amount: replacement_amount,
           units: replacement_units,
           nominal_per_unit: inflation_linked? ? nominal : nil,
-          term_months: inflation_linked? ? nil : term_months,
           subtype: subtype,
-          interest_rate: inflation_linked? ? nil : nil,
+          interest_rate: inflation_linked? ? nil : interest_rate,
           rate_type: inflation_linked? ? nil : rate_type,
           coupon_frequency: inflation_linked? ? nil : coupon_frequency,
           first_period_rate: nil,
@@ -434,8 +459,9 @@ class BondLot < ApplicationRecord
           tax_rate: tax_rate,
           requires_rate_review: true
         )
-
-        replacement_lot.update!(entry: create_purchase_entry_for!(replacement_lot))
+        replacement_lot.save!
+        reinvest_entry = create_purchase_entry_for!(replacement_lot)
+        replacement_lot.update!(entry: reinvest_entry)
       end
 
       def create_purchase_entry_for!(replacement_lot)
@@ -492,28 +518,18 @@ class BondLot < ApplicationRecord
       end
 
       def normalize_tax_settings
-        return self.tax_rate = 0 if apply_tax_exempt_wrapper!
+        if bond&.tax_exempt_wrapper?
+          self.tax_strategy = "exempt"
+          self.tax_rate = 0
+          return
+        end
 
         self.tax_strategy = "standard" if tax_strategy.blank?
         self.tax_rate = if tax_strategy == "exempt"
           0
         else
-          tax_rate.presence || 19
+          tax_rate.presence || DEFAULT_TAX_RATE_PERCENT
         end
-      end
-
-      def apply_bond_tax_wrapper
-        return unless bond&.tax_exempt_wrapper?
-
-        self.tax_strategy = "exempt"
-        self.tax_rate = 0
-      end
-
-      def apply_tax_exempt_wrapper!
-        return false unless bond&.tax_exempt_wrapper?
-
-        self.tax_strategy = "exempt"
-        true
       end
 
       def clear_rate_review_flag
@@ -562,5 +578,25 @@ class BondLot < ApplicationRecord
         end_year = Date.current.year
 
         ImportGusInflationRatesJob.perform_later(start_year:, end_year:)
+      end
+
+      # Returns false if any annual rate period between purchased_on and date cannot be resolved.
+      # Used by settle_if_matured! to abort settlement when GUS data or rates are missing.
+      def rates_resolvable_through?(date:)
+        return true unless purchased_on.present?
+
+        issue_base = (inflation_linked? && issue_date.present?) ? issue_date : purchased_on
+        cursor = purchased_on
+
+        while cursor < date
+          return false if annual_rate_for(on: cursor).blank?
+
+          years_since_issue = 0
+          years_since_issue += 1 while issue_base + years_since_issue.years <= cursor
+          next_anniversary = issue_base + years_since_issue.years
+          cursor = [ next_anniversary, date ].min
+        end
+
+        true
       end
 end

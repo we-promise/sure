@@ -17,6 +17,17 @@ class PagesController < ApplicationController
     @bond_accounts = Current.user.accessible_accounts.visible.where(accountable_type: "Bond").includes(accountable: :bond_lots)
 
     family_currency = Current.family.currency
+    @bond_open_lots = @bond_accounts.flat_map do |account|
+      lots = account.bond&.bond_lots&.select(&:open?) || []
+      lots.map { |lot| [ account, lot ] }
+    end
+    @bond_total_value = @bond_accounts.sum { |a| a.balance_money.exchange_to(family_currency, fallback_rate: 1).amount }
+    @bond_total_return = @bond_open_lots.sum do |(account, lot)|
+      Money.new(lot.total_return_amount, account.currency).exchange_to(family_currency, fallback_rate: 1).amount
+    end
+    @bond_top_lots = @bond_open_lots.sort_by { |(account, lot)|
+      -Money.new(lot.estimated_current_value.to_d, account.currency).exchange_to(family_currency, fallback_rate: 1).amount
+    }.first(5)
 
     # Use IncomeStatement for all cashflow data (now includes categorized trades)
     income_statement = Current.family.income_statement
@@ -116,7 +127,7 @@ class PagesController < ApplicationController
           key: "bond_summary",
           title: "pages.dashboard.bond_summary.title",
           partial: "pages/dashboard/bond_summary",
-          locals: { bond_accounts: @bond_accounts },
+          locals: { bond_accounts: @bond_accounts, open_lots: @bond_open_lots, total_value: @bond_total_value, total_return: @bond_total_return, top_lots: @bond_top_lots },
           visible: @accounts.any? && @bond_accounts.any?,
           collapsible: true
         },
@@ -356,11 +367,11 @@ class PagesController < ApplicationController
     def show_bond_rate_review_notice!
       return if session[:bond_rate_review_prompted]
 
-      pending_lots = BondLot.needs_rate_review.joins(bond: :account).merge(Account.accessible_by(Current.user))
+      pending_lots = BondLot.needs_rate_review.joins(bond: :account).includes(bond: :account).merge(Account.accessible_by(Current.user)).load
       return if pending_lots.empty?
 
-      account_names = pending_lots.includes(bond: :account).map { |lot| lot.account.name }.uniq.first(3).join(", ")
-      flash.now[:notice] = t("pages.dashboard.bond_rate_review_notice", count: pending_lots.count, accounts: account_names)
+      account_names = pending_lots.map { |lot| lot.account.name }.uniq.first(3).join(", ")
+      flash.now[:notice] = t("pages.dashboard.bond_rate_review_notice", count: pending_lots.size, accounts: account_names)
       session[:bond_rate_review_prompted] = true
     end
 end
