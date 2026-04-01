@@ -376,7 +376,8 @@ class BondLot < ApplicationRecord
         defaults = Bond::PRODUCT_DEFAULTS[subtype]
         return if defaults.blank?
 
-        self.term_months = defaults[:term_months]
+        # Known product subtypes (EOD 10Y, ROD 12Y) have regulatory fixed terms — intentional overwrite
+        self.term_months = defaults[:term_months] if defaults[:term_months].present?
         self.rate_type ||= defaults[:rate_type]
         self.coupon_frequency ||= defaults[:coupon_frequency]
         self.cpi_lag_months ||= defaults[:cpi_lag_months]

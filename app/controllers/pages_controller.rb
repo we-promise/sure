@@ -17,10 +17,11 @@ class PagesController < ApplicationController
     @bond_accounts = Current.user.accessible_accounts.visible.where(accountable_type: "Bond").includes(accountable: :bond_lots)
 
     family_currency = Current.family.currency
-    @bond_open_lots = @bond_accounts.flat_map do |account|
-      lots = account.bond&.bond_lots&.select(&:open?) || []
-      lots.map { |lot| [ account, lot ] }
-    end
+    open_lots_relation = BondLot.open
+      .joins(bond: :account)
+      .includes(bond: :account)
+      .where(accounts: { id: @bond_accounts.select(:id) })
+    @bond_open_lots = open_lots_relation.map { |lot| [ lot.account, lot ] }
     @bond_total_value = @bond_accounts.sum { |a| a.balance_money.exchange_to(family_currency, fallback_rate: 1).amount }
     @bond_total_return = @bond_open_lots.sum do |(account, lot)|
       Money.new(lot.total_return_amount, account.currency).exchange_to(family_currency, fallback_rate: 1).amount
@@ -367,7 +368,7 @@ class PagesController < ApplicationController
     def show_bond_rate_review_notice!
       return if session[:bond_rate_review_prompted]
 
-      pending_lots = BondLot.needs_rate_review.joins(bond: :account).includes(bond: :account).merge(Account.accessible_by(Current.user)).load
+      pending_lots = BondLot.needs_rate_review.joins(bond: :account).includes(bond: :account).merge(Account.visible.accessible_by(Current.user)).load
       return if pending_lots.empty?
 
       account_names = pending_lots.map { |lot| lot.account.name }.uniq.first(3).join(", ")
