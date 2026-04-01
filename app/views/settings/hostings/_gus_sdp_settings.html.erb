@@ -24,10 +24,10 @@
 
       <%= form.toggle :gus_inflation_import_enabled,
                       checked: Setting.gus_inflation_import_enabled_effective,
-                      disabled: ENV.key?("GUS_INFLATION_IMPORT_ENABLED"),
+                      disabled: ENV["GUS_INFLATION_IMPORT_ENABLED"].present?,
                       data: { auto_submit_form_target: "auto" } %>
     </div>
-    <% if ENV.key?("GUS_INFLATION_IMPORT_ENABLED") %>
+    <% if ENV["GUS_INFLATION_IMPORT_ENABLED"].present? %>
       <p class="text-xs text-secondary mt-1"><%= t(".import_enabled_env_locked") %></p>
     <% end %>
   <% end %>
