@@ -35,11 +35,11 @@ class UI::Dashboard::BondSummaryRow < ApplicationComponent
     if lot.inflation_linked?
       return t("bonds.purchase_holding.update_needed") if lot.requires_rate_review?
 
-      return number_to_percentage(lot.current_rate_percent, precision: 3) if lot.current_rate_percent.present?
+      return helpers.number_to_percentage(lot.current_rate_percent, precision: 3) if lot.current_rate_percent.present?
 
       t("bonds.purchase_holding.unknown")
     else
-      lot.interest_rate.present? ? number_to_percentage(lot.interest_rate, precision: 3) : t("bonds.purchase_holding.unknown")
+      lot.interest_rate.present? ? helpers.number_to_percentage(lot.interest_rate, precision: 3) : t("bonds.purchase_holding.unknown")
     end
   end
 
@@ -72,15 +72,15 @@ class UI::Dashboard::BondSummaryRow < ApplicationComponent
       if lot.current_inflation_source == "gus"
         t(
           "bonds.purchase_holding.inflation_meta_gus",
-          inflation: number_to_percentage(inflation_component.to_d, precision: 3),
-          margin: number_to_percentage(margin_component.to_d, precision: 3),
+          inflation: helpers.number_to_percentage(inflation_component.to_d, precision: 3),
+          margin: helpers.number_to_percentage(margin_component.to_d, precision: 3),
           indicator: lot.current_inflation_indicator_id
         )
       else
         t(
           "bonds.purchase_holding.inflation_meta_manual",
-          inflation: number_to_percentage(inflation_component.to_d, precision: 3),
-          margin: number_to_percentage(margin_component.to_d, precision: 3)
+          inflation: helpers.number_to_percentage(inflation_component.to_d, precision: 3),
+          margin: helpers.number_to_percentage(margin_component.to_d, precision: 3)
         )
       end
     end

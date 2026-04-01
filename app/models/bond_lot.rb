@@ -75,8 +75,8 @@ class BondLot < ApplicationRecord
 
   with_options unless: :inflation_linked? do
     validates :interest_rate, presence: true, unless: :requires_rate_review?
-    validates :rate_type, presence: true, unless: :requires_rate_review?
-    validates :coupon_frequency, presence: true, unless: :requires_rate_review?
+    validates :rate_type, presence: true
+    validates :coupon_frequency, presence: true
   end
 
   delegate :account, to: :bond
