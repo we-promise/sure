@@ -609,7 +609,7 @@ class BondLot < ApplicationRecord
 
     def validate_issue_date_not_after_purchased_on
       return if issue_date.blank? || purchased_on.blank?
-      errors.add(:issue_date, "cannot be after purchased_on") if issue_date > purchased_on
+      errors.add(:issue_date, "cannot be after purchase date") if issue_date > purchased_on
     end
 
     def validate_maturity_date_not_before_purchased_on
