@@ -386,7 +386,7 @@ class BondLot < ApplicationRecord
 
       {
         inflation_component_percent: inflation_rate_assumption&.to_d,
-        source: "manual",
+        source: inflation_rate_assumption.present? ? "manual" : nil,
         reference_on: nil,
         indicator_id: nil
       }
