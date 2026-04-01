@@ -7,7 +7,20 @@ class BondLot < ApplicationRecord
   TOP_LOTS_LIMIT = 5
 
   scope :open, -> { where(closed_on: nil) }
-  scope :needs_rate_review, -> { open.where(requires_rate_review: true) }
+
+  def self.needs_rate_review
+    # Lots explicitly flagged for manual rate entry (fast DB filter).
+    flagged_ids = open.where(requires_rate_review: true).pluck(:id)
+
+    # Inflation-linked lots where the live rate cannot be resolved right now
+    # (e.g. GUS data unavailable for the current CPI reference period).
+    # We only load this narrower set to avoid a full-table scan.
+    unresolvable_ids = open.where(subtype: %w[eod rod])
+                           .select { |lot| lot.current_rate_percent(on: Date.current).nil? }
+                           .map(&:id)
+
+    open.where(id: (flagged_ids + unresolvable_ids).uniq)
+  end
 
   # Returns an OpenStruct with :total_value, :total_return, :top_lots
   # for the dashboard summary card.
@@ -23,8 +36,10 @@ class BondLot < ApplicationRecord
 
     lots_relation.each do |lot|
       account = lot.account
-      converted_value = Money.new(lot.estimated_current_value.to_d, account.currency).exchange_to(family_currency, fallback_rate: 1).amount
-      converted_return = Money.new(lot.total_return_amount, account.currency).exchange_to(family_currency, fallback_rate: 1).amount
+      lot_value = lot.estimated_current_value.to_d
+      lot_return = lot_value - lot.amount.to_d
+      converted_value = Money.new(lot_value, account.currency).exchange_to(family_currency, fallback_rate: 1).amount
+      converted_return = Money.new(lot_return, account.currency).exchange_to(family_currency, fallback_rate: 1).amount
 
       total_value += converted_value
       total_return += converted_return

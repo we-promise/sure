@@ -32,7 +32,13 @@
     <div class="text-right">
       <% if lot.inflation_linked? %>
         <% current_rate = lot.current_rate_percent %>
-        <% rate_text = lot.requires_rate_review? ? t(".update_needed") : current_rate.present? ? number_to_percentage(current_rate, precision: 3) : t(".unknown") %>
+        <% rate_text = if lot.requires_rate_review?
+                         t(".update_needed")
+                       elsif current_rate.present?
+                         number_to_percentage(current_rate, precision: 3)
+                       else
+                         t(".unknown")
+                       end %>
         <%= tag.p(rate_text, class: "privacy-sensitive") %>
         <% inflation_component = lot.current_inflation_component_percent %>
         <% inflation_source = lot.current_inflation_source %>
