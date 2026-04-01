@@ -43,11 +43,8 @@ class Bond < ApplicationRecord
   validates :tax_wrapper, inclusion: { in: TAX_WRAPPERS.keys }
 
   def original_balance
-    principal_amount = if bond_lots.exists?
-      bond_lots.sum(:amount)
-    else
-      account.first_valuation_amount
-    end
+    total = bond_lots.sum(:amount)
+    principal_amount = total.positive? ? total : account.first_valuation_amount
 
     Money.new(principal_amount, account.currency)
   end
@@ -115,6 +112,6 @@ class Bond < ApplicationRecord
     def assign_maturity_date_from_term
       return if term_months.blank? || maturity_date.present?
 
-      self.maturity_date = Time.zone.today + term_months.months
+      self.maturity_date = Date.current + term_months.months
     end
 end

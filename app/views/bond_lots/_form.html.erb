@@ -31,7 +31,7 @@
       <div class="flex items-center gap-2" data-bond-lot-form-target="inflationFields">
         <%= form.number_field :units,
                               label: t("bond_lots.form.units"),
-                              min: 0,
+                              min: 1,
                               step: 0.01,
                               data: { bond_lot_form_target: "inflationInput" } %>
 
@@ -121,11 +121,7 @@
       </div>
 
       <%= form.hidden_field :auto_fetch_inflation,
-                            value: if bond_lot.auto_fetch_inflation.nil?
-                                     Setting.gus_inflation_import_enabled_effective ? 1 : 0
-                                   else
-                                     bond_lot.auto_fetch_inflation? ? 1 : 0
-                                   end %>
+                            value: bond_lot.auto_fetch_inflation ? 1 : 0 %>
 
       <div data-bond-lot-form-target="inflationFields">
         <%= form.money_field :early_redemption_fee,

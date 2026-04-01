@@ -1,13 +1,4 @@
-<%# locals: (bond_accounts:, **args) %>
-
-<% open_lots = bond_accounts.flat_map do |account|
-     lots = account.bond&.bond_lots&.select(&:open?) || []
-     lots.map { |lot| [ account, lot ] }
-   end %>
-<% total_value = bond_accounts.sum { |account| account.balance_money.exchange_to(Current.family.currency, fallback_rate: 1).amount } %>
-<% total_return = open_lots.sum do |(account, lot)|
-     Money.new(lot.total_return_amount, account.currency).exchange_to(Current.family.currency, fallback_rate: 1).amount
-   end %>
+<%# locals: (bond_accounts:, open_lots:, total_value:, total_return:, top_lots:, **args) %>
 
 <% if bond_accounts.any? %>
   <div id="bond-summary" class="space-y-4">
@@ -30,7 +21,6 @@
       </div>
     </div>
 
-    <% top_lots = open_lots.sort_by { |(_, lot)| -lot.estimated_current_value.to_d }.first(5) %>
     <% if top_lots.any? %>
       <div class="bg-container-inset rounded-xl p-1 mx-4 overflow-x-auto">
         <div class="rounded-lg shadow-border-xs bg-container overflow-hidden">
@@ -66,7 +56,7 @@
               lot.requires_rate_review? ?
                 t("bonds.purchase_holding.pending_review") :
                 if lot.current_inflation_source == "gus"
-                  t("bonds.purchase_holding.inflation_meta_gus", inflation: number_to_percentage(lot.current_inflation_component_percent&.to_d || 0, precision: 3), margin: number_to_percentage(lot.current_margin_percent&.to_d || 0, precision: 3))
+                  t("bonds.purchase_holding.inflation_meta_gus", inflation: number_to_percentage(lot.current_inflation_component_percent&.to_d || 0, precision: 3), margin: number_to_percentage(lot.current_margin_percent&.to_d || 0, precision: 3), indicator: lot.current_inflation_indicator_id)
                 else
                   t("bonds.purchase_holding.inflation_meta_manual", inflation: number_to_percentage(lot.current_inflation_component_percent&.to_d || 0, precision: 3), margin: number_to_percentage(lot.current_margin_percent&.to_d || 0, precision: 3))
                 end

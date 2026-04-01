@@ -47,7 +47,7 @@
                           value: "",
                           data: { "auto-submit-form-target": "auto" } %>
     <% else %>
-      <div class="text-secondary-600 text-sm">
+      <div class="text-secondary text-sm">
         <%= t(".configured_via_env") %>
       </div>
     <% end %>
@@ -90,11 +90,11 @@
     <% if Setting.gus_inflation_last_import_error.present? %>
       <p class="text-destructive"><strong><%= t(".last_error") %>:</strong> <%= Setting.gus_inflation_last_import_error %></p>
     <% end %>
-    <p><strong><%= t(".stored_records") %>:</strong> <%= GusInflationRate.count %></p>
-    <% if GusInflationRate.exists? %>
+    <p><strong><%= t(".stored_records") %>:</strong> <%= @gus_stats[:count] %></p>
+    <% if @gus_stats[:count] > 0 %>
       <p>
         <strong><%= t(".stored_range") %>:</strong>
-        <%= GusInflationRate.minimum(:year) %>-<%= GusInflationRate.maximum(:year) %>
+        <%= @gus_stats[:min_year] %>-<%= @gus_stats[:max_year] %>
       </p>
     <% end %>
   </div>

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_03_31_211000) do
+ActiveRecord::Schema[7.2].define(version: 2026_04_01_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -208,6 +208,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_31_211000) do
     t.string "tax_strategy", default: "standard", null: false
     t.decimal "tax_rate", precision: 6, scale: 3, default: "19.0", null: false
     t.boolean "requires_rate_review", default: false, null: false
+    t.index ["auto_close_on_maturity", "maturity_date", "closed_on"], name: "index_bond_lots_on_settlement_eligibility"
     t.index ["bond_id", "closed_on"], name: "index_bond_lots_on_bond_id_and_closed_on"
     t.index ["bond_id", "purchased_on"], name: "index_bond_lots_on_bond_id_and_purchased_on"
     t.index ["bond_id"], name: "index_bond_lots_on_bond_id"

@@ -18,19 +18,19 @@ class BondLotsController < ApplicationController
 
   def edit
     @account = @bond_lot.account
-    nil unless require_account_permission!(@account)
+    require_account_permission!(@account)
   end
 
   def show
     @account = @bond_lot.account
-    nil unless require_account_permission!(@account)
+    require_account_permission!(@account)
   end
 
   def create
     @account = accessible_accounts.find(params[:account_id])
     return unless require_account_permission!(@account)
 
-    return render :new, status: :unprocessable_entity unless @account.bond?
+    return redirect_back_or_to(account_path(@account), alert: t("bond_lots.not_bond_account")) unless @account.bond?
 
     @bond_lot = @account.bond.bond_lots.build(bond_lot_params)
 
