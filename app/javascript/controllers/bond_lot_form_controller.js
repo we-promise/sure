@@ -8,7 +8,8 @@ export default class extends Controller {
     "inflationInput",
     "otherRequiredInput",
     "manualInflationField",
-    "manualInflationInput"
+    "manualInflationInput",
+    "autoFetchInput"
   ]
   static values = {
     inflationSubtypes: Array,
@@ -48,11 +49,20 @@ export default class extends Controller {
     if (!this.hasManualInflationFieldTarget || !this.hasManualInflationInputTarget) return
 
     const inflationLinked = this.inflationSubtypesValue.includes(this.subtypeSelectTarget.value)
-    const autoFetch = this.lotAutoFetchValue
+    const autoFetch = this.currentAutoFetchValue()
     const showManualField = inflationLinked && !autoFetch
 
     this.manualInflationFieldTarget.classList.toggle("hidden", !showManualField)
     this.manualInflationInputTarget.disabled = !showManualField
     this.manualInflationInputTarget.required = showManualField
+  }
+
+  currentAutoFetchValue() {
+    if (this.hasAutoFetchInputTarget) {
+      const value = `${this.autoFetchInputTarget.value}`.trim().toLowerCase()
+      return value === "1" || value === "true"
+    }
+
+    return this.lotAutoFetchValue
   }
 }

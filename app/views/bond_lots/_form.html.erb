@@ -6,7 +6,7 @@
                        data: {
                          controller: "bond-lot-form",
                          bond_lot_form_inflation_subtypes_value: Bond::INFLATION_LINKED_SUBTYPES.to_json,
-                         bond_lot_form_lot_auto_fetch_value: bond_lot.auto_fetch_inflation?
+                         bond_lot_form_lot_auto_fetch_value: bond_lot.auto_fetch_inflation.nil? ? true : bond_lot.auto_fetch_inflation
                        }
                      } do |form| %>
   <div class="space-y-4">
@@ -120,14 +120,15 @@
                               data: { bond_lot_form_target: "manualInflationInput" } %>
       </div>
 
-      <%# auto_fetch_inflation attribute is normalized server-side by normalize_auto_fetch_inflation
-          (forced off for non-inflation-linked lots, defaulted to true otherwise). The server-side
-          value MUST be baked into lot_auto_fetch_value so the Stimulus controller can determine
-          whether to show the manual CPI field on initial render. Global GUS import enablement
-          is enforced at query time via auto_fetch_inflation?, not the stored attribute.
-          Do NOT move this logic client-side — the callback is the source of truth. %>
+        <%# auto_fetch_inflation attribute is normalized server-side by normalize_auto_fetch_inflation
+          (forced off for non-inflation-linked lots, defaulted to true otherwise). The initial
+          value is baked into lot_auto_fetch_value and mirrored in the hidden input so Stimulus
+          can react consistently when subtype changes. Global GUS import enablement is handled on
+          import/backfill scheduling paths (e.g., should_enqueue_inflation_backfill?), while
+          read-time rate resolution still follows the lot-level auto_fetch_inflation setting. %>
       <%= form.hidden_field :auto_fetch_inflation,
-                            value: bond_lot.auto_fetch_inflation ? 1 : 0 %>
+                  value: bond_lot.auto_fetch_inflation.nil? ? 1 : (bond_lot.auto_fetch_inflation ? 1 : 0),
+                  data: { bond_lot_form_target: "autoFetchInput" } %>
 
       <div data-bond-lot-form-target="inflationFields">
         <%= form.money_field :early_redemption_fee,

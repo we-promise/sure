@@ -130,19 +130,22 @@ class BondLotsController < ApplicationController
       return unless bond_lot.entry
 
       subtype_label = Bond.long_subtype_label_for(bond_lot.subtype) || Bond.display_name.singularize
-      bond_lot.entry.update!(
+      entry = bond_lot.entry
+      entry.update!(
         date: bond_lot.purchased_on,
         name: t("bond_lots.activity.purchase_name", subtype: subtype_label),
         amount: bond_lot.amount,
         entryable_attributes: {
-          id: bond_lot.entry.entryable_id,
-          extra: (bond_lot.entry.entryable.extra || {}).merge(
+          id: entry.entryable_id,
+          extra: (entry.entryable.extra || {}).merge(
             "bond_subtype" => bond_lot.subtype,
             "bond_term_months" => bond_lot.term_months,
             "bond_interest_rate" => bond_lot.interest_rate
           )
         }
       )
+      entry.lock_saved_attributes!
+      entry.mark_user_modified!
     end
 
     def create_purchase_entry!(account, bond_lot)
