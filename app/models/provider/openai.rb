@@ -205,7 +205,7 @@ class Provider::Openai < Provider
     prompt,
     model:,
     instructions: nil,
-    instructions_prompt: nil,
+    prompt_metadata: nil,
     functions: [],
     function_results: [],
     streamer: nil,
@@ -219,7 +219,7 @@ class Provider::Openai < Provider
         prompt: prompt,
         model: model,
         instructions: instructions,
-        instructions_prompt: instructions_prompt,
+        prompt_metadata: prompt_metadata,
         functions: functions,
         function_results: function_results,
         streamer: streamer,
@@ -232,7 +232,7 @@ class Provider::Openai < Provider
         prompt: prompt,
         model: model,
         instructions: instructions,
-        instructions_prompt: instructions_prompt,
+        prompt_metadata: prompt_metadata,
         functions: functions,
         function_results: function_results,
         streamer: streamer,
@@ -251,7 +251,7 @@ class Provider::Openai < Provider
       prompt:,
       model:,
       instructions: nil,
-      instructions_prompt: nil,
+      prompt_metadata: nil,
       functions: [],
       function_results: [],
       streamer: nil,
@@ -309,7 +309,7 @@ class Provider::Openai < Provider
               usage: usage,
               session_id: session_id,
               user_identifier: user_identifier,
-              prompt: instructions_prompt
+              prompt: prompt_metadata
             )
             record_llm_usage(family: family, model: model, operation: "chat", usage: usage)
             response
@@ -324,7 +324,7 @@ class Provider::Openai < Provider
               usage: raw_response["usage"],
               session_id: session_id,
               user_identifier: user_identifier,
-              prompt: instructions_prompt
+              prompt: prompt_metadata
             )
             record_llm_usage(family: family, model: model, operation: "chat", usage: raw_response["usage"])
             parsed
@@ -337,7 +337,7 @@ class Provider::Openai < Provider
             error: e,
             session_id: session_id,
             user_identifier: user_identifier,
-            prompt: instructions_prompt
+            prompt: prompt_metadata
           )
           record_llm_usage(family: family, model: model, operation: "chat", error: e)
           raise
@@ -349,7 +349,7 @@ class Provider::Openai < Provider
       prompt:,
       model:,
       instructions: nil,
-      instructions_prompt: nil,
+      prompt_metadata: nil,
       functions: [],
       function_results: [],
       streamer: nil,
@@ -386,7 +386,7 @@ class Provider::Openai < Provider
             usage: raw_response["usage"],
             session_id: session_id,
             user_identifier: user_identifier,
-            prompt: instructions_prompt
+            prompt: prompt_metadata
           )
 
           record_llm_usage(family: family, model: model, operation: "chat", usage: raw_response["usage"])
@@ -414,7 +414,7 @@ class Provider::Openai < Provider
             error: e,
             session_id: session_id,
             user_identifier: user_identifier,
-            prompt: instructions_prompt
+            prompt: prompt_metadata
           )
           record_llm_usage(family: family, model: model, operation: "chat", error: e)
           raise

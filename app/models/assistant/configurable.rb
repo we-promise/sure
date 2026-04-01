@@ -9,10 +9,10 @@ module Assistant::Configurable
 
       if chat.user.ui_layout_intro?
         instructions_config = intro_instructions_config(preferred_currency, preferred_date_format)
-        { instructions: instructions_config[:content], instructions_prompt: instructions_config[:prompt], functions: [] }
+        { instructions: instructions_config[:content], prompt_metadata: instructions_config[:prompt], functions: [] }
       else
         instructions_config = default_instructions(preferred_currency, preferred_date_format)
-        { instructions: instructions_config[:content], instructions_prompt: instructions_config[:prompt], functions: default_functions }
+        { instructions: instructions_config[:content], prompt_metadata: instructions_config[:prompt], functions: default_functions }
       end
     end
 

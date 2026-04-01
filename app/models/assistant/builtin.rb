@@ -2,7 +2,7 @@ class Assistant::Builtin < Assistant::Base
   include Assistant::Provided
   include Assistant::Configurable
 
-  attr_reader :instructions, :instructions_prompt
+  attr_reader :instructions, :prompt_metadata
 
   class << self
     def for_chat(chat)
@@ -10,16 +10,16 @@ class Assistant::Builtin < Assistant::Base
       new(
         chat,
         instructions: config[:instructions],
-        instructions_prompt: config[:instructions_prompt],
+        prompt_metadata: config[:prompt_metadata],
         functions: config[:functions]
       )
     end
   end
 
-  def initialize(chat, instructions: nil, instructions_prompt: nil, functions: [])
+  def initialize(chat, instructions: nil, prompt_metadata: nil, functions: [])
     super(chat)
     @instructions = instructions
-    @instructions_prompt = instructions_prompt
+    @prompt_metadata = prompt_metadata
     @functions = functions
   end
 
@@ -38,7 +38,7 @@ class Assistant::Builtin < Assistant::Base
     responder = Assistant::Responder.new(
       message: message,
       instructions: instructions,
-      instructions_prompt: instructions_prompt,
+      prompt_metadata: prompt_metadata,
       function_tool_caller: function_tool_caller,
       llm: llm_provider
     )
