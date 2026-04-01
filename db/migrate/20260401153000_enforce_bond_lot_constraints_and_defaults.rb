@@ -26,7 +26,7 @@ class EnforceBondLotConstraintsAndDefaults < ActiveRecord::Migration[7.2]
     remove_check_constraint :bond_lots, name: "check_bond_lots_positive_term", if_exists: true
     remove_check_constraint :bond_lots, name: "check_bond_lots_positive_amount", if_exists: true
 
-    change_column_null :bond_lots, :subtype, true
+    change_column_null :bond_lots, :subtype, false
     change_column_default :bond_lots, :subtype, from: "other_bond", to: "other"
   end
 end

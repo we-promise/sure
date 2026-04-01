@@ -268,8 +268,10 @@ class BondLot < ApplicationRecord
   end
 
   def settle_if_matured!(on: Date.current)
+    settlement_date_for_sync = nil
+
     # Lock the row to prevent concurrent settlements.
-    with_lock do
+    settled = with_lock do
       return false unless auto_close_on_maturity?
       return false unless open?
       return false unless matured?(on:)
@@ -296,8 +298,7 @@ class BondLot < ApplicationRecord
         )
         create_reinvestment_lot!(settlement_date:, net_value:) if should_auto_buy_new_issue?(net_value:)
       end
-
-      account.sync_later(window_start_date: settlement_date)
+      settlement_date_for_sync = settlement_date
 
       Rails.logger.info(
         "[BondSettlement] Settled lot_id=#{id} account_id=#{account.id}: " \
@@ -305,6 +306,9 @@ class BondLot < ApplicationRecord
       )
       true
     end
+
+    account.sync_later(window_start_date: settlement_date_for_sync) if settled
+    settled
   end
 
   def capitalization_history(on: Date.current)
