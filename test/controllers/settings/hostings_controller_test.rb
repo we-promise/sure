@@ -250,8 +250,8 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
 
   test "can enqueue manual gus inflation import when enabled" do
     with_self_hosting do
-      Setting.gus_inflation_import_enabled = true
       old_val = Setting.gus_inflation_import_enabled
+      Setting.gus_inflation_import_enabled = true
 
       begin
         assert_enqueued_with(job: ImportGusInflationRatesJob, args: [ { start_year: 2015, end_year: 2024, force: true } ]) do
@@ -269,8 +269,8 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
 
   test "does not enqueue manual gus inflation import when disabled" do
     with_self_hosting do
-      Setting.gus_inflation_import_enabled = false
       old_val = Setting.gus_inflation_import_enabled
+      Setting.gus_inflation_import_enabled = false
 
       begin
         assert_no_enqueued_jobs only: ImportGusInflationRatesJob do

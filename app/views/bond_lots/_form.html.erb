@@ -6,7 +6,7 @@
                        data: {
                          controller: "bond-lot-form",
                          bond_lot_form_inflation_subtypes_value: Bond::INFLATION_LINKED_SUBTYPES.to_json,
-                         bond_lot_form_global_auto_fetch_enabled_value: Setting.gus_inflation_import_enabled
+                         bond_lot_form_global_auto_fetch_enabled_value: Setting.gus_inflation_import_enabled_effective
                        }
                      } do |form| %>
   <div class="space-y-4">
@@ -97,7 +97,7 @@
                               data: { bond_lot_form_target: "inflationInput" } %>
       </div>
 
-      <% if Setting.gus_inflation_import_enabled %>
+      <% if Setting.gus_inflation_import_enabled_effective %>
         <div class="flex items-center gap-2" data-bond-lot-form-target="inflationFields">
           <%= form.number_field :cpi_lag_months,
                                 label: t("bond_lots.form.cpi_lag_months"),
@@ -106,7 +106,7 @@
                                 data: { bond_lot_form_target: "inflationInput" } %>
         </div>
       <% end %>
-      <% unless Setting.gus_inflation_import_enabled %>
+      <% unless Setting.gus_inflation_import_enabled_effective %>
         <p class="text-xs text-secondary" data-bond-lot-form-target="inflationFields">
           <%= t("bond_lots.form.auto_fetch_disabled_hint") %>
         </p>

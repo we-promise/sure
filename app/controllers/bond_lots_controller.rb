@@ -4,6 +4,7 @@ class BondLotsController < ApplicationController
   def new
     @account = accessible_accounts.find(params[:account_id])
     return unless require_account_permission!(@account)
+    return redirect_back_or_to(account_path(@account), alert: t("bond_lots.not_bond_account")) unless @account.bond?
 
     @bond_lot = @account.bond.bond_lots.build(
       purchased_on: Date.current,

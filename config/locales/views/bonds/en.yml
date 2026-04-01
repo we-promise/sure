@@ -136,3 +136,4 @@ en:
       closed_rate_meta: "%{periods} capitalization periods"
       settled_net: "Settled net %{net}"
       history_meta: "Interest %{interest}, tax %{tax}"
+      not_bond_account: "This account is not a bond account."

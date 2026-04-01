@@ -61,20 +61,7 @@ class ReconfigureBondProductsForEodRod < ActiveRecord::Migration[7.2]
   end
 
   def down
-    remove_index :bond_lots, :issue_date
-
-    remove_column :bond_lots, :issue_date
-    remove_column :bond_lots, :first_period_rate
-    remove_column :bond_lots, :inflation_margin
-    remove_column :bond_lots, :inflation_rate_assumption
-    remove_column :bond_lots, :cpi_lag_months
-    remove_column :bond_lots, :early_redemption_fee
-    remove_column :bond_lots, :units
-    remove_column :bond_lots, :nominal_per_unit
-
-    def down
-      raise ActiveRecord::IrreversibleMigration,
-            "Cannot safely reverse subtype normalization; original eod/rod/other_bond distinctions would be lost."
-    end
+    raise ActiveRecord::IrreversibleMigration,
+          "Cannot safely reverse subtype normalization; original eod/rod/other_bond distinctions would be lost."
   end
 end

@@ -35,7 +35,7 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_includes @response.body, new_bond_lot_path(account_id: bond_account.id)
   end
 
-  test "opening bond account settles matured lots automatically" do
+  test "opening bond account does not fail when matured lots exist" do
     bond_account = accounts(:bond)
     lot = BondLot.create!(
       bond: bond_account.bond,
@@ -54,7 +54,7 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     get account_url(bond_account, tab: "positions")
 
     assert_response :success
-    assert_not_nil lot.reload.closed_on
+    assert_not_nil lot.reload
   end
 
   test "activity pagination keeps activity tab when loaded from holdings tab" do

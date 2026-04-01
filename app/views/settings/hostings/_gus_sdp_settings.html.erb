@@ -23,7 +23,7 @@
       </div>
 
       <%= form.toggle :gus_inflation_import_enabled,
-                      checked: Setting.gus_inflation_import_enabled,
+                      checked: Setting.gus_inflation_import_enabled_effective,
                       disabled: ENV["GUS_INFLATION_IMPORT_ENABLED"].present?,
                       data: { auto_submit_form_target: "auto" } %>
     </div>
@@ -44,7 +44,7 @@
                           label: t(".label"),
                           type: "password",
                           placeholder: t(".placeholder"),
-                          value: Setting.gus_sdp_api_key,
+                          value: "",
                           data: { "auto-submit-form-target": "auto" } %>
     <% else %>
       <div class="text-secondary-600 text-sm">
@@ -62,17 +62,17 @@
                             value: Date.current.year - 20,
                             min: 1990,
                             max: Date.current.year,
-                            disabled: !Setting.gus_inflation_import_enabled %>
+                            disabled: !Setting.gus_inflation_import_enabled_effective %>
       <%= form.number_field :gus_inflation_end_year,
                             label: t(".end_year"),
                             value: Date.current.year - 1,
                             min: 1990,
                             max: Date.current.year,
-                            disabled: !Setting.gus_inflation_import_enabled %>
+                            disabled: !Setting.gus_inflation_import_enabled_effective %>
     </div>
 
     <div class="mt-3">
-      <%= form.submit t(".import_now"), disabled: !Setting.gus_inflation_import_enabled %>
+      <%= form.submit t(".import_now"), disabled: !Setting.gus_inflation_import_enabled_effective %>
     </div>
   <% end %>
 
