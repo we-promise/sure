@@ -9,18 +9,60 @@ class BondLot < ApplicationRecord
   scope :open, -> { where(closed_on: nil) }
 
   def self.needs_rate_review
+    review_on = Date.current
     flagged_ids = open.where(requires_rate_review: true).pluck(:id)
 
-    # Process inflation-linked lots in batches to avoid loading the full set.
     unresolvable_ids = []
     open.where(subtype: %w[eod rod]).includes(:bond).find_in_batches(batch_size: 200) do |batch|
+      cpi_by_lag = cpi_rates_by_lag(on: review_on, lag_months_values: batch.filter_map { |lot| lot.auto_fetch_inflation? ? lot.cpi_lag_months.to_i : nil }.uniq)
+
       batch.each do |lot|
-        unresolvable_ids << lot.id if lot.current_rate_percent(on: Date.current).nil?
+        unresolvable_ids << lot.id if unresolved_rate_for_review?(lot:, on: review_on, cpi_by_lag: cpi_by_lag)
       end
     end
 
     ids = (flagged_ids + unresolvable_ids).uniq
     ids.empty? ? none : open.where(id: ids)
+  end
+
+  def self.cpi_rates_by_lag(on:, lag_months_values:)
+    return {} if lag_months_values.blank?
+
+    month_start = on.beginning_of_month
+    target_dates = lag_months_values.map { |lag| month_start - lag.months }
+    rates_by_month = GusInflationRate.where(year: target_dates.map(&:year).uniq, month: target_dates.map(&:month).uniq)
+                                   .index_by { |record| [ record.year, record.month ] }
+
+    lag_months_values.index_with do |lag|
+      target_date = month_start - lag.months
+      rates_by_month[[ target_date.year, target_date.month ]]
+    end
+  end
+
+  def self.unresolved_rate_for_review?(lot:, on:, cpi_by_lag:)
+    return true if lot.purchased_on.blank?
+
+    period_base = lot.issue_date.presence || lot.purchased_on
+    return true if period_base.blank?
+
+    years_elapsed = 0
+    years_elapsed += 1 while period_base + (years_elapsed + 1).years <= on
+
+    if years_elapsed <= 0
+      return lot.first_period_rate.blank?
+    end
+
+    inflation_component = nil
+    if lot.auto_fetch_inflation?
+      source_record = cpi_by_lag[lot.cpi_lag_months.to_i]
+      inflation_component = source_record.rate_yoy.to_d - 100 if source_record.present?
+    end
+
+    if inflation_component.nil? && lot.inflation_rate_assumption.present?
+      inflation_component = lot.inflation_rate_assumption.to_d
+    end
+
+    inflation_component.nil?
   end
 
   # Returns an OpenStruct with :total_value, :total_return, :top_lots
@@ -35,7 +77,7 @@ class BondLot < ApplicationRecord
     total_return = 0.to_d
     top_enriched = []
 
-    lots_relation.each do |lot|
+    lots_relation.find_each(batch_size: 200) do |lot|
       account = lot.account
       lot_value = lot.estimated_current_value.to_d
       lot_return = lot_value - lot.amount.to_d

@@ -6,7 +6,8 @@
                        data: {
                          controller: "bond-lot-form",
                          bond_lot_form_inflation_subtypes_value: Bond::INFLATION_LINKED_SUBTYPES.to_json,
-                         bond_lot_form_lot_auto_fetch_value: bond_lot.auto_fetch_inflation.nil? ? true : bond_lot.auto_fetch_inflation
+                         bond_lot_form_lot_auto_fetch_value: bond_lot.auto_fetch_inflation.nil? ? true : bond_lot.auto_fetch_inflation,
+                         bond_lot_form_global_import_enabled_value: Setting.gus_inflation_import_enabled_effective
                        }
                      } do |form| %>
   <div class="space-y-4">
