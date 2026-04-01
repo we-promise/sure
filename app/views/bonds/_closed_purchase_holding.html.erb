@@ -39,7 +39,7 @@
 
   <div class="text-right">
     <%= tag.p format_money(Money.new(lot.amount, account.currency)), class: "privacy-sensitive" %>
-    <%= tag.p t("bonds.purchase_holding.principal_term", term: t("bonds.purchase_holding.term_months", months: lot.term_months)), class: "font-normal text-secondary" %>
+    <%= tag.p t("bonds.purchase_holding.principal_term", term: t("bonds.purchase_holding.term_months", count: lot.term_months)), class: "font-normal text-secondary" %>
   </div>
 
   <div class="text-right">

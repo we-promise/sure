@@ -12,21 +12,33 @@ class BondLot < ApplicationRecord
   # Returns an OpenStruct with :total_value, :total_return, :top_lots
   # for the dashboard summary card.
   def self.dashboard_summary(bond_accounts, family_currency)
-    lots_with_accounts = open
+    lots_relation = open
       .joins(bond: :account)
       .includes(bond: :account)
       .where(accounts: { id: bond_accounts.select(:id) })
-      .map { |lot| [ lot.account, lot ] }
 
-    enriched = lots_with_accounts.map do |(account, lot)|
+    total_value = 0.to_d
+    total_return = 0.to_d
+    top_enriched = []
+
+    lots_relation.each do |lot|
+      account = lot.account
       converted_value = Money.new(lot.estimated_current_value.to_d, account.currency).exchange_to(family_currency, fallback_rate: 1).amount
       converted_return = Money.new(lot.total_return_amount, account.currency).exchange_to(family_currency, fallback_rate: 1).amount
-      [ account, lot, converted_value, converted_return ]
+
+      total_value += converted_value
+      total_return += converted_return
+
+      top_enriched << [ account, lot, converted_value ]
+      if top_enriched.size > TOP_LOTS_LIMIT
+        top_enriched.sort_by! { |_, _, cv| cv }
+        top_enriched.shift
+      end
     end
 
-    total_value = enriched.sum { |_, _, cv, _| cv }
-    total_return = enriched.sum { |_, _, _, cr| cr }
-    top_lots = enriched.sort_by { |_, _, cv, _| -cv }.first(TOP_LOTS_LIMIT).map { |a, l, _, _| [ a, l ] }
+    top_lots = top_enriched
+      .sort_by { |_, _, cv| -cv }
+      .map { |account, lot, _| [ account, lot ] }
 
     OpenStruct.new(total_value: total_value, total_return: total_return, top_lots: top_lots)
   end
@@ -172,6 +184,10 @@ class BondLot < ApplicationRecord
 
     source = rate_context_for(on:)[:inflation_source]
     source == "first_period" ? nil : source
+  end
+
+  def gus_inflation_source?(on: Date.current)
+    current_inflation_source(on:) == "gus"
   end
 
   def current_margin_percent(on: Date.current)
