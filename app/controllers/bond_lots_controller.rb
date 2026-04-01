@@ -97,6 +97,7 @@ class BondLotsController < ApplicationController
   private
     def set_bond_lot
       @bond_lot = BondLot.joins(bond: :account)
+                         .where(accounts: { family_id: Current.family.id })
                          .merge(Account.accessible_by(Current.user))
                          .find(params[:id])
     end

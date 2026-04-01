@@ -17,7 +17,18 @@
     <% if @show_twelve_data_settings %>
       <%= render "settings/hostings/twelve_data_settings" %>
     <% end %>
-    <%= render "settings/hostings/gus_sdp_settings" %>
+    <%= render Settings::Hostings::GusSdpSettingsComponent.new(
+      inflation_import_enabled_effective: Setting.gus_inflation_import_enabled_effective,
+      gus_sdp_api_key: Setting.gus_sdp_api_key,
+      env_gus_sdp_api_key: ENV["GUS_SDP_API_KEY"],
+      env_gus_inflation_import_enabled: ENV["GUS_INFLATION_IMPORT_ENABLED"],
+      gus_stats: @gus_stats,
+      last_import_at: Setting.gus_inflation_last_import_at,
+      last_import_range: Setting.gus_inflation_last_import_range,
+      last_import_count: Setting.gus_inflation_last_import_count,
+      last_import_error: Setting.gus_inflation_last_import_error,
+      current_year: Date.current.year
+    ) %>
   </div>
 <% end %>
 <%= settings_section title: t(".sync_settings") do %>

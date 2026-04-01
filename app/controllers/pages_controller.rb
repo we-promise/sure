@@ -361,7 +361,12 @@ class PagesController < ApplicationController
       session_key = "bond_rate_review_prompted_#{Current.family&.id}"
       return if session[session_key]
 
-      pending_lots = BondLot.needs_rate_review.joins(bond: :account).includes(bond: :account).merge(Account.visible.accessible_by(Current.user)).load
+      pending_lots = BondLot.needs_rate_review
+                .joins(bond: :account)
+                .where(accounts: { family_id: Current.family.id })
+                .includes(bond: :account)
+                .merge(Account.visible.accessible_by(Current.user))
+                .load
       return if pending_lots.empty?
 
       account_names = pending_lots.map { |lot| lot.account&.name }.compact.uniq.first(3).join(", ")
