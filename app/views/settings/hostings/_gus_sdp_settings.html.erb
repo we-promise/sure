@@ -39,13 +39,18 @@
                          controller: "auto-submit-form",
                          "auto-submit-form-trigger-event-value": "blur"
                        } do |form| %>
-    <%= form.text_field :gus_sdp_api_key,
-                        label: t(".label"),
-                        type: "password",
-                        placeholder: t(".placeholder"),
-                        value: ENV.fetch("GUS_SDP_API_KEY", Setting.gus_sdp_api_key),
-                        disabled: ENV["GUS_SDP_API_KEY"].present?,
-                        data: { "auto-submit-form-target": "auto" } %>
+    <% if ENV["GUS_SDP_API_KEY"].blank? %>
+      <%= form.text_field :gus_sdp_api_key,
+                          label: t(".label"),
+                          type: "password",
+                          placeholder: t(".placeholder"),
+                          value: Setting.gus_sdp_api_key,
+                          data: { "auto-submit-form-target": "auto" } %>
+    <% else %>
+      <div class="text-secondary-600 text-sm">
+        <%= t(".configured_via_env") %>
+      </div>
+    <% end %>
   <% end %>
 
   <%= styled_form_with model: Setting.new,

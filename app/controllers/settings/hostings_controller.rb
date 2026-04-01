@@ -61,11 +61,11 @@ class Settings::HostingsController < ApplicationController
       Setting.twelve_data_api_key = hosting_params[:twelve_data_api_key]
     end
 
-    if hosting_params.key?(:gus_sdp_api_key)
+    if hosting_params.key?(:gus_sdp_api_key) && !ENV.key?("GUS_SDP_API_KEY")
       Setting.gus_sdp_api_key = hosting_params[:gus_sdp_api_key]
     end
 
-    if hosting_params.key?(:gus_inflation_import_enabled)
+    if hosting_params.key?(:gus_inflation_import_enabled) && !ENV.key?("GUS_INFLATION_IMPORT_ENABLED")
       Setting.gus_inflation_import_enabled = hosting_params[:gus_inflation_import_enabled] == "1"
     end
 

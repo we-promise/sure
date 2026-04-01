@@ -12,5 +12,11 @@ class CreateBondLots < ActiveRecord::Migration[7.2]
     end
 
     add_index :bond_lots, [ :bond_id, :purchased_on ]
+
+    # Database-level constraints for domain invariants
+    add_check_constraint :bond_lots, "amount > 0", name: "check_bond_lots_positive_amount"
+    add_check_constraint :bond_lots, "term_months > 0", name: "check_bond_lots_positive_term"
+    add_check_constraint :bond_lots, "maturity_date >= purchased_on", name: "check_bond_lots_maturity_after_purchase"
+  end
   end
 end

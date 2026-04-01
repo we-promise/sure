@@ -72,16 +72,9 @@ class ReconfigureBondProductsForEodRod < ActiveRecord::Migration[7.2]
     remove_column :bond_lots, :units
     remove_column :bond_lots, :nominal_per_unit
 
-    execute <<~SQL
-      UPDATE bonds
-      SET subtype = 'other'
-      WHERE subtype NOT IN ('other')
-    SQL
-
-    execute <<~SQL
-      UPDATE bond_lots
-      SET subtype = 'other'
-      WHERE subtype NOT IN ('other')
-    SQL
+    def down
+      raise ActiveRecord::IrreversibleMigration,
+            "Cannot safely reverse subtype normalization; original eod/rod/other_bond distinctions would be lost."
+    end
   end
 end

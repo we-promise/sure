@@ -251,28 +251,38 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
   test "can enqueue manual gus inflation import when enabled" do
     with_self_hosting do
       Setting.gus_inflation_import_enabled = true
+      old_val = Setting.gus_inflation_import_enabled
 
-      assert_enqueued_with(job: ImportGusInflationRatesJob, args: [ { start_year: 2015, end_year: 2024, force: true } ]) do
-        post import_gus_inflation_rates_settings_hosting_url,
-             params: { setting: { gus_inflation_start_year: 2015, gus_inflation_end_year: 2024 } }
+      begin
+        assert_enqueued_with(job: ImportGusInflationRatesJob, args: [ { start_year: 2015, end_year: 2024, force: true } ]) do
+          post import_gus_inflation_rates_settings_hosting_url,
+               params: { setting: { gus_inflation_start_year: 2015, gus_inflation_end_year: 2024 } }
+        end
+
+        assert_redirected_to settings_hosting_url
+        assert_equal I18n.t("settings.hostings.import_gus_inflation_rates.import_enqueued"), flash[:notice]
+      ensure
+        Setting.gus_inflation_import_enabled = old_val
       end
-
-      assert_redirected_to settings_hosting_url
-      assert_equal I18n.t("settings.hostings.import_gus_inflation_rates.import_enqueued"), flash[:notice]
     end
   end
 
   test "does not enqueue manual gus inflation import when disabled" do
     with_self_hosting do
       Setting.gus_inflation_import_enabled = false
+      old_val = Setting.gus_inflation_import_enabled
 
-      assert_no_enqueued_jobs only: ImportGusInflationRatesJob do
-        post import_gus_inflation_rates_settings_hosting_url,
-             params: { setting: { gus_inflation_start_year: 2015, gus_inflation_end_year: 2024 } }
+      begin
+        assert_no_enqueued_jobs only: ImportGusInflationRatesJob do
+          post import_gus_inflation_rates_settings_hosting_url,
+               params: { setting: { gus_inflation_start_year: 2015, gus_inflation_end_year: 2024 } }
+        end
+
+        assert_redirected_to settings_hosting_url
+        assert_equal I18n.t("settings.hostings.import_gus_inflation_rates.import_disabled"), flash[:alert]
+      ensure
+        Setting.gus_inflation_import_enabled = old_val
       end
-
-      assert_redirected_to settings_hosting_url
-      assert_equal I18n.t("settings.hostings.import_gus_inflation_rates.import_disabled"), flash[:alert]
     end
   end
 end

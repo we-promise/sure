@@ -20,7 +20,13 @@ class Provider::GusSdp < Provider
       end
 
       parsed = JSON.parse(response.body)
-      rows = parsed.is_a?(Array) ? parsed : parsed.fetch("data", [])
+      rows = if parsed.is_a?(Array)
+        parsed
+      elsif parsed.is_a?(Hash)
+        parsed.fetch("data", [])
+      else
+        []
+      end
 
       rows.map do |row|
         {
@@ -43,6 +49,8 @@ class Provider::GusSdp < Provider
           backoff_factor: 2,
           retry_statuses: [ 429, 500, 502, 503, 504 ]
         })
+        faraday.options.timeout = 10
+        faraday.options.open_timeout = 10
         faraday.response :raise_error
         faraday.headers["X-ClientId"] = api_key if api_key.present?
       end
