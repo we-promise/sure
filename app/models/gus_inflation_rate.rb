@@ -71,7 +71,8 @@ class GusInflationRate < ApplicationRecord
 
     private
       def provider
-        @provider ||= Provider::GusSdp.new(api_key: api_key, cpi_indicator_id: cpi_indicator_id)
+        # Don't memoize; allow credential changes without restart.
+        Provider::GusSdp.new(api_key: api_key, cpi_indicator_id: cpi_indicator_id)
       end
 
       def api_key

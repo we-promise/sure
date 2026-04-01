@@ -25,7 +25,7 @@
             <p class="text-sm text-primary"><%= t("bonds.form.auto_buy_new_issues") %></p>
             <p class="text-xs text-secondary"><%= t("bonds.form.auto_buy_new_issues_hint") %></p>
           </div>
-          <%= bond_form.toggle :auto_buy_new_issues, checked: account.accountable.auto_buy_new_issues? %>
+          <%= bond_form.toggle :auto_buy_new_issues, checked: account.accountable&.auto_buy_new_issues? %>
         </div>
       </div>
     <% end %>

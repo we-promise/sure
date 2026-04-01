@@ -120,7 +120,12 @@
                               data: { bond_lot_form_target: "manualInflationInput" } %>
       </div>
 
-      <%= form.hidden_field :auto_fetch_inflation, value: Setting.gus_inflation_import_enabled ? 1 : 0 %>
+      <%= form.hidden_field :auto_fetch_inflation,
+                            value: if bond_lot.auto_fetch_inflation.nil?
+                                     Setting.gus_inflation_import_enabled_effective ? 1 : 0
+                                   else
+                                     bond_lot.auto_fetch_inflation? ? 1 : 0
+                                   end %>
 
       <div data-bond-lot-form-target="inflationFields">
         <%= form.money_field :early_redemption_fee,

@@ -29,6 +29,8 @@ class BondLotsController < ApplicationController
     @account = accessible_accounts.find(params[:account_id])
     return unless require_account_permission!(@account)
 
+    return render :new, status: :unprocessable_entity unless @account.bond?
+
     @bond_lot = @account.bond.bond_lots.build(bond_lot_params)
 
     if @bond_lot.valid?
@@ -50,11 +52,14 @@ class BondLotsController < ApplicationController
 
     old_purchased_on = @bond_lot.purchased_on
 
-    if @bond_lot.update(bond_lot_params)
-      update_purchase_entry!(@bond_lot)
+    begin
+      ActiveRecord::Base.transaction do
+        @bond_lot.update!(bond_lot_params)
+        update_purchase_entry!(@bond_lot)
+      end
       @bond_lot.account.sync_later(window_start_date: [ old_purchased_on, @bond_lot.purchased_on ].min)
       redirect_back_or_to account_path(@account), notice: t("bond_lots.update.success")
-    else
+    rescue ActiveRecord::RecordInvalid
       render :edit, status: :unprocessable_entity
     end
   end

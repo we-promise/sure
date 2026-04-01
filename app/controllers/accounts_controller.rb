@@ -42,7 +42,14 @@ class AccountsController < ApplicationController
   end
 
   def show
-    @account.bond&.settle_matured_lots! if @account.bond?
+    # Only settle matured lots when the user has manage permissions.
+    # Wrap in rescue to prevent GET show from crashing if user lacks permissions.
+    begin
+      set_manageable_account
+      @account.bond&.settle_matured_lots! if @account.bond?
+    rescue ActiveRecord::RecordNotFound
+      # User does not have manage permissions; skip settlement.
+    end
 
     @chart_view = params[:chart_view] || "balance"
     @tab = params[:tab]

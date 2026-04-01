@@ -94,7 +94,7 @@ class Bond < ApplicationRecord
   end
 
   def inflation_linked?
-    subtype.in?(INFLATION_LINKED_SUBTYPES)
+    subtype&.in?(INFLATION_LINKED_SUBTYPES) || false
   end
 
   private

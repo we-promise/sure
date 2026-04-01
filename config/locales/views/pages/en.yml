@@ -15,7 +15,9 @@ en:
       welcome: "Welcome back, %{name}"
       subtitle: "Here's what's happening with your finances"
       new: "New"
-      bond_rate_review_notice: "%{count} bond lot(s) need updated issue rates: %{accounts}."
+      bond_rate_review_notice:
+        one: "1 bond lot needs updated issue rate."
+        other: "%{count} bond lots need updated issue rates."
       drag_to_reorder: "Drag to reorder section"
       toggle_section: "Toggle section visibility"
       net_worth_chart:

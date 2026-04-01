@@ -111,6 +111,7 @@ en:
         title: GUS SDP (Inflation)
         description: Optional API key for GUS SDP inflation data. Leave empty to use the free anonymous tier.
         env_configured_message: Successfully configured through the GUS_SDP_API_KEY environment variable.
+        configured_via_env: API key is configured via the GUS_SDP_API_KEY environment variable.
         free_default_message: No API key configured. Using free anonymous access by default.
         label: API Key
         placeholder: Enter your GUS SDP API key

@@ -60,7 +60,7 @@
             <% rate_meta = if lot.inflation_linked?
               lot.requires_rate_review? ?
                 t("bonds.purchase_holding.pending_review") :
-                t("bonds.purchase_holding.inflation_meta", inflation: number_to_percentage(lot.current_inflation_component_percent.to_d, precision: 3), margin: number_to_percentage(lot.current_margin_percent.to_d, precision: 3))
+                t("bonds.purchase_holding.inflation_meta_gus", inflation: number_to_percentage(lot.current_inflation_component_percent&.to_d || 0, precision: 3), margin: number_to_percentage(lot.current_margin_percent&.to_d || 0, precision: 3))
             else
               t("bonds.purchase_holding.bond_meta", rate_type: lot.rate_type&.titleize || t("bonds.purchase_holding.unknown"), coupon: lot.coupon_frequency&.humanize || t("bonds.purchase_holding.unknown"))
             end %>

@@ -13,7 +13,7 @@ class PagesController < ApplicationController
 
     @balance_sheet = Current.family.balance_sheet
     @investment_statement = Current.family.investment_statement
-    @accounts = Current.user.accessible_accounts.visible.with_attached_logo
+    @accounts = Current.user.accessible_accounts.visible.with_attached_logo.includes(accountable: :bond_lots)
     @bond_accounts = @accounts.select(&:bond?)
 
     family_currency = Current.family.currency
