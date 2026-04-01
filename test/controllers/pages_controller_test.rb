@@ -32,7 +32,7 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
 
     get root_path
     assert_response :ok
-    assert_equal "1 bond lot(s) need updated issue rates: US T-Bill.", flash[:notice]
+    assert_equal "1 bond lot needs updated issue rate.", flash[:notice]
 
     get root_path
     assert_response :ok

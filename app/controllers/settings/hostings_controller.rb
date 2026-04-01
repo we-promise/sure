@@ -172,7 +172,7 @@ class Settings::HostingsController < ApplicationController
   end
 
   def import_gus_inflation_rates
-    unless Setting.gus_inflation_import_enabled
+    unless Setting.gus_inflation_import_enabled_effective
       return redirect_to settings_hosting_path, alert: t(".import_disabled")
     end
 

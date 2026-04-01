@@ -1,8 +1,13 @@
 <%# locals: (bond_accounts:, **args) %>
 
-<% open_lots = bond_accounts.flat_map { |account| account.bond.bond_lots.open.map { |lot| [ account, lot ] } } %>
-<% total_value = bond_accounts.sum { |account| account.balance_money.amount } %>
-<% total_return = open_lots.sum { |(_, lot)| lot.total_return_amount.to_d } %>
+<% open_lots = bond_accounts.flat_map do |account|
+     lots = account.bond&.bond_lots&.select(&:open?) || []
+     lots.map { |lot| [ account, lot ] }
+   end %>
+<% total_value = bond_accounts.sum { |account| account.balance_money.exchange_to(Current.family.currency, fallback_rate: 1).amount } %>
+<% total_return = open_lots.sum do |(account, lot)|
+     Money.new(lot.total_return_amount, account.currency).exchange_to(Current.family.currency, fallback_rate: 1).amount
+   end %>
 
 <% if bond_accounts.any? %>
   <div id="bond-summary" class="space-y-4">
@@ -60,7 +65,11 @@
             <% rate_meta = if lot.inflation_linked?
               lot.requires_rate_review? ?
                 t("bonds.purchase_holding.pending_review") :
-                t("bonds.purchase_holding.inflation_meta_gus", inflation: number_to_percentage(lot.current_inflation_component_percent&.to_d || 0, precision: 3), margin: number_to_percentage(lot.current_margin_percent&.to_d || 0, precision: 3))
+                if lot.current_inflation_source == "gus"
+                  t("bonds.purchase_holding.inflation_meta_gus", inflation: number_to_percentage(lot.current_inflation_component_percent&.to_d || 0, precision: 3), margin: number_to_percentage(lot.current_margin_percent&.to_d || 0, precision: 3))
+                else
+                  t("bonds.purchase_holding.inflation_meta_manual", inflation: number_to_percentage(lot.current_inflation_component_percent&.to_d || 0, precision: 3), margin: number_to_percentage(lot.current_margin_percent&.to_d || 0, precision: 3))
+                end
             else
               t("bonds.purchase_holding.bond_meta", rate_type: lot.rate_type&.titleize || t("bonds.purchase_holding.unknown"), coupon: lot.coupon_frequency&.humanize || t("bonds.purchase_holding.unknown"))
             end %>
