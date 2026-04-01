@@ -151,7 +151,7 @@ pt-BR:
       choose: Enviar foto
       choose_label: (opcional)
       change: Alterar foto
-    provedores:
+    providers:
       show:
         coinbase_title: Coinbase
       encryption_error:
