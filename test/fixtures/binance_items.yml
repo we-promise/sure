@@ -1,0 +1,18 @@
+one:
+  family: dylan_family
+  name: My Binance
+  api_key: test_api_key_123
+  api_secret: test_api_secret_456
+  status: good
+  institution_name: Binance
+  institution_domain: binance.com
+  institution_url: https://www.binance.com
+  institution_color: "#F0B90B"
+
+requires_update:
+  family: dylan_family
+  name: Stale Binance
+  api_key: old_key
+  api_secret: old_secret
+  status: requires_update
+  institution_name: Binance
