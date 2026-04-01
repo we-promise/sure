@@ -64,6 +64,7 @@ en:
       confirm_remove: Remove this purchase?
 
   bond_lots:
+    not_bond_account: "This account is not a bond account."
     new:
       title: Add purchase for %{account}
     edit:
