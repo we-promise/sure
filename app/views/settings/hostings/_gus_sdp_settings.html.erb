@@ -2,8 +2,10 @@
   <div>
     <h2 class="font-medium mb-1"><%= t(".title") %></h2>
     <p class="text-secondary text-sm mb-4"><%= t(".description") %></p>
-    <% if ENV["GUS_SDP_API_KEY"].present? || Setting.gus_sdp_api_key.present? %>
+    <% if ENV["GUS_SDP_API_KEY"].present? %>
       <p class="text-sm text-secondary"><%= t(".env_configured_message") %></p>
+    <% elsif Setting.gus_sdp_api_key.present? %>
+      <p class="text-sm text-secondary"><%= t(".configured_in_settings_message") %></p>
     <% else %>
       <p class="text-sm text-secondary"><%= t(".free_default_message") %></p>
     <% end %>

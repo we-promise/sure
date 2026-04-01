@@ -95,11 +95,5 @@ class GusInflationRate < ApplicationRecord
       def year_complete?(year)
         where(year: year.to_i).count >= 12
       end
-
-      def latest_before_or_on(target_date)
-        where("make_date(year, month, 1) <= ?", target_date)
-          .order(year: :desc, month: :desc)
-          .first
-      end
   end
 end

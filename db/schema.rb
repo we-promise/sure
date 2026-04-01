@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_04_01_140000) do
+ActiveRecord::Schema[7.2].define(version: 2026_04_01_153000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -188,7 +188,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_04_01_140000) do
     t.decimal "interest_rate", precision: 10, scale: 3
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.string "subtype"
+    t.string "subtype", default: "other_bond", null: false
     t.string "rate_type"
     t.string "coupon_frequency"
     t.uuid "entry_id"
@@ -217,6 +217,11 @@ ActiveRecord::Schema[7.2].define(version: 2026_04_01_140000) do
     t.index ["issue_date"], name: "index_bond_lots_on_issue_date"
     t.index ["requires_rate_review"], name: "index_bond_lots_on_requires_rate_review"
     t.index ["subtype"], name: "index_bond_lots_on_subtype"
+    t.check_constraint "(subtype::text = ANY (ARRAY['eod'::character varying, 'rod'::character varying]::text[])) OR rate_type IS NOT NULL AND coupon_frequency IS NOT NULL", name: "check_bond_lots_non_inflation_rate_fields_present"
+    t.check_constraint "amount > 0::numeric", name: "check_bond_lots_positive_amount"
+    t.check_constraint "maturity_date >= purchased_on", name: "check_bond_lots_maturity_after_purchase"
+    t.check_constraint "subtype IS NOT NULL", name: "check_bond_lots_subtype_not_null"
+    t.check_constraint "term_months > 0", name: "check_bond_lots_positive_term"
   end
 
   create_table "bonds", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|

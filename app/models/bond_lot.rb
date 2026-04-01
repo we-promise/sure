@@ -18,14 +18,13 @@ class BondLot < ApplicationRecord
       .where(accounts: { id: bond_accounts.select(:id) })
       .map { |lot| [ lot.account, lot ] }
 
-    total_value = bond_accounts.sum { |a| a.balance_money.exchange_to(family_currency, fallback_rate: 1).amount }
-
     enriched = lots_with_accounts.map do |(account, lot)|
       converted_value = Money.new(lot.estimated_current_value.to_d, account.currency).exchange_to(family_currency, fallback_rate: 1).amount
       converted_return = Money.new(lot.total_return_amount, account.currency).exchange_to(family_currency, fallback_rate: 1).amount
       [ account, lot, converted_value, converted_return ]
     end
 
+    total_value = enriched.sum { |_, _, cv, _| cv }
     total_return = enriched.sum { |_, _, _, cr| cr }
     top_lots = enriched.sort_by { |_, _, cv, _| -cv }.first(TOP_LOTS_LIMIT).map { |a, l, _, _| [ a, l ] }
 

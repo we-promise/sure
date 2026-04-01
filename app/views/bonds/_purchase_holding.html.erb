@@ -35,10 +35,13 @@
         <% rate_text = lot.requires_rate_review? ? t(".update_needed") : current_rate.present? ? number_to_percentage(current_rate, precision: 3) : t(".unknown") %>
         <%= tag.p(rate_text, class: "privacy-sensitive") %>
         <% inflation_component = lot.current_inflation_component_percent %>
+        <% inflation_source = lot.current_inflation_source %>
         <% margin_component = lot.current_margin_percent %>
         <% meta_text = if lot.requires_rate_review?
           t(".pending_review")
-        elsif lot.auto_fetch_inflation?
+        elsif inflation_component.nil? || margin_component.nil?
+          t(".first_period_fixed_rate")
+        elsif inflation_source == "gus"
           t(".inflation_meta_gus",
             inflation: number_to_percentage(inflation_component.to_d, precision: 3),
             margin: number_to_percentage(margin_component.to_d, precision: 3),

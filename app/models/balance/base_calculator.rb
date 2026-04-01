@@ -73,6 +73,9 @@ class Balance::BaseCalculator
 
       txn_inflow_sum = entries.select { |e| e.amount < 0 && e.transaction? }.sum(&:amount)
       txn_outflow_sum = entries.select { |e| e.amount >= 0 && e.transaction? }.sum(&:amount)
+      bond_lot_transaction_entries = entries.select { |e| bond_lot_transaction_entry?(e) }
+      bond_lot_cash_inflow_sum = bond_lot_transaction_entries.select { |e| e.amount < 0 }.sum(&:amount)
+      bond_lot_cash_outflow_sum = bond_lot_transaction_entries.select { |e| e.amount >= 0 }.sum(&:amount)
 
       trade_cash_inflow_sum = entries.select { |e| e.amount < 0 && e.trade? }.sum(&:amount)
       trade_cash_outflow_sum = entries.select { |e| e.amount >= 0 && e.trade? }.sum(&:amount)
@@ -84,9 +87,10 @@ class Balance::BaseCalculator
         cash_inflows = txn_inflow_sum.abs + trade_cash_inflow_sum.abs
         cash_outflows = txn_outflow_sum + trade_cash_outflow_sum
 
-        # Trades are inverse (a "buy" is outflow of cash, but "inflow" of non-cash, aka "holdings")
-        non_cash_outflows = trade_cash_inflow_sum.abs
-        non_cash_inflows = trade_cash_outflow_sum
+        # Trades and bond lot-linked transactions are inverse (a "buy" is outflow of cash,
+        # but "inflow" of non-cash, aka holdings).
+        non_cash_outflows = trade_cash_inflow_sum.abs + bond_lot_cash_inflow_sum.abs
+        non_cash_inflows = trade_cash_outflow_sum + bond_lot_cash_outflow_sum
       end
 
       {
@@ -143,5 +147,12 @@ class Balance::BaseCalculator
         net_market_flows: args[:net_market_flows] || 0,
         flows_factor: account.classification == "asset" ? 1 : -1
       )
+    end
+
+    def bond_lot_transaction_entry?(entry)
+      return false unless entry.transaction?
+
+      extra = entry.entryable&.extra
+      extra.is_a?(Hash) && extra["bond_lot_id"].present?
     end
 end
