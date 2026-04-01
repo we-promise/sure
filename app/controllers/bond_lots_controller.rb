@@ -139,6 +139,7 @@ class BondLotsController < ApplicationController
         entryable_attributes: {
           id: entry.entryable_id,
           extra: (entry.entryable.extra || {}).merge(
+            "bond_lot_id" => bond_lot.id,
             "bond_subtype" => bond_lot.subtype,
             "bond_term_months" => bond_lot.term_months,
             "bond_interest_rate" => bond_lot.interest_rate
