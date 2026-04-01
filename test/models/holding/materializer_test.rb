@@ -93,4 +93,34 @@ class Holding::MaterializerTest < ActiveSupport::TestCase
     assert_equal "calculated", holding.cost_basis_source
     assert_equal BigDecimal("2750.0"), holding.cost_basis
   end
+
+  test "preserves calculated history for provider-sourced holdings on reverse materialization" do
+    coinstats_item = @family.coinstats_items.create!(name: "CoinStats", api_key: "test-key")
+    coinstats_account = coinstats_item.coinstats_accounts.create!(
+      name: "Brokerage",
+      currency: "USD"
+    )
+    account_provider = AccountProvider.create!(account: @account, provider: coinstats_account)
+
+    Holding.create!(
+      account: @account,
+      security: @aapl,
+      qty: 10,
+      price: 200,
+      amount: 2000,
+      currency: "USD",
+      date: Date.current,
+      account_provider: account_provider
+    )
+
+    Holding::Materializer.new(@account, strategy: :reverse).materialize_holdings
+
+    today_holding = @account.holdings.find_by!(security: @aapl, date: Date.current, currency: "USD")
+    yesterday_holding = @account.holdings.find_by!(security: @aapl, date: Date.yesterday, currency: "USD")
+
+    assert_equal account_provider.id, today_holding.account_provider_id
+    assert_nil yesterday_holding.account_provider_id
+    assert_equal BigDecimal("10"), yesterday_holding.qty
+    assert_equal yesterday_holding.qty * yesterday_holding.price, yesterday_holding.amount
+  end
 end

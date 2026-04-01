@@ -19,6 +19,7 @@ class CoinstatsItem::Importer
 
     # CoinStats works differently from bank providers - wallets are added manually
     # via the setup_accounts flow. During sync, we just update existing linked accounts.
+    sync_exchange_accounts!
 
     # Get all linked coinstats accounts (ones with account_provider associations)
     linked_accounts = coinstats_item.coinstats_accounts
@@ -34,15 +35,30 @@ class CoinstatsItem::Importer
     accounts_failed = 0
     transactions_imported = 0
 
-    # Fetch balance data using bulk endpoint
-    bulk_balance_data = fetch_balances_for_accounts(linked_accounts)
+    wallet_accounts = linked_accounts.select(&:wallet_source?)
+    exchange_accounts = linked_accounts.select(&:exchange_source?)
 
-    # Fetch transaction data using bulk endpoint
-    bulk_transactions_data = fetch_transactions_for_accounts(linked_accounts)
+    bulk_balance_data = fetch_balances_for_accounts(wallet_accounts)
+    bulk_transactions_data = fetch_transactions_for_accounts(wallet_accounts)
+    portfolio_coins_data = fetch_portfolio_coins_for_exchange(exchange_accounts)
+    portfolio_transactions_data = fetch_portfolio_transactions_for_exchange(exchange_accounts)
 
     linked_accounts.each do |coinstats_account|
       begin
-        result = update_account(coinstats_account, bulk_balance_data: bulk_balance_data, bulk_transactions_data: bulk_transactions_data)
+        result =
+          if coinstats_account.exchange_source?
+            update_exchange_account(
+              coinstats_account,
+              portfolio_coins_data: portfolio_coins_data,
+              portfolio_transactions_data: portfolio_transactions_data
+            )
+          else
+            update_wallet_account(
+              coinstats_account,
+              bulk_balance_data: bulk_balance_data,
+              bulk_transactions_data: bulk_transactions_data
+            )
+          end
         accounts_updated += 1 if result[:success]
         transactions_imported += result[:transactions_count] || 0
       rescue => e
@@ -62,6 +78,26 @@ class CoinstatsItem::Importer
   end
 
   private
+
+    def sync_exchange_accounts!
+      return unless coinstats_item.exchange_configured?
+      return if coinstats_item.coinstats_accounts.any?(&:exchange_source?)
+
+      exchange_portfolio_configurations.each do |config|
+        portfolio_coins = coinstats_provider.list_portfolio_coins(portfolio_id: config[:portfolio_id])
+        coinstats_account = exchange_portfolio_account_manager.upsert_account!(
+          coins_data: portfolio_coins,
+          portfolio_id: config[:portfolio_id],
+          connection_id: config[:connection_id],
+          exchange_name: config[:exchange_name],
+          account_name: config[:exchange_name],
+          institution_logo: coinstats_item.raw_institution_payload.to_h.with_indifferent_access[:icon]
+        )
+        exchange_portfolio_account_manager.ensure_local_account!(coinstats_account)
+      end
+    rescue => e
+      Rails.logger.warn "CoinstatsItem::Importer - Exchange account discovery failed: #{e.message}"
+    end
 
     # Fetch balance data for all linked accounts using the bulk endpoint
     # @param linked_accounts [Array<CoinstatsAccount>] Accounts to fetch balances for
@@ -87,6 +123,18 @@ class CoinstatsItem::Importer
     rescue => e
       Rails.logger.warn "CoinstatsItem::Importer - Bulk balance fetch failed: #{e.message}"
       nil
+    end
+
+    def fetch_portfolio_coins_for_exchange(linked_accounts)
+      return {} if linked_accounts.empty? && !coinstats_item.exchange_configured?
+
+      exchange_portfolio_configurations(linked_accounts).each_with_object({}) do |config, results|
+        Rails.logger.info "CoinstatsItem::Importer - Fetching portfolio coins for CoinStats exchange #{config[:portfolio_id]}"
+        results[config[:portfolio_id]] = coinstats_provider.list_portfolio_coins(portfolio_id: config[:portfolio_id])
+      end
+    rescue => e
+      Rails.logger.warn "CoinstatsItem::Importer - Portfolio coins fetch failed: #{e.message}"
+      {}
     end
 
     # Fetch transaction data for all linked accounts using the bulk endpoint
@@ -115,12 +163,49 @@ class CoinstatsItem::Importer
       nil
     end
 
+    def fetch_portfolio_transactions_for_exchange(linked_accounts)
+      return {} if linked_accounts.empty? && !coinstats_item.exchange_configured?
+
+      from = coinstats_item.sync_start_date&.iso8601
+
+      exchange_portfolio_configurations(linked_accounts).each_with_object({}) do |config, results|
+        Rails.logger.info "CoinstatsItem::Importer - Fetching exchange transactions for CoinStats exchange #{config[:portfolio_id]} in #{family_currency}"
+
+        begin
+          coinstats_provider.sync_exchange(portfolio_id: config[:portfolio_id])
+
+          results[config[:portfolio_id]] = coinstats_provider.list_exchange_transactions(
+            portfolio_id: config[:portfolio_id],
+            currency: family_currency,
+            from: from
+          )
+        rescue => e
+          Rails.logger.warn "CoinstatsItem::Importer - Exchange transactions fetch failed for #{config[:portfolio_id]}: #{e.message}; falling back to portfolio transactions"
+
+          begin
+            coinstats_provider.sync_portfolio(portfolio_id: config[:portfolio_id])
+            results[config[:portfolio_id]] = coinstats_provider.list_portfolio_transactions(
+              portfolio_id: config[:portfolio_id],
+              currency: family_currency,
+              from: from
+            )
+          rescue => fallback_error
+            Rails.logger.warn "CoinstatsItem::Importer - Portfolio transaction fallback failed for #{config[:portfolio_id]}: #{fallback_error.message}"
+            results[config[:portfolio_id]] = []
+          end
+        end
+      end
+    rescue => e
+      Rails.logger.warn "CoinstatsItem::Importer - Exchange transactions fetch failed: #{e.message}"
+      {}
+    end
+
     # Updates a single account with balance and transaction data.
     # @param coinstats_account [CoinstatsAccount] Account to update
     # @param bulk_balance_data [Array, nil] Pre-fetched balance data
     # @param bulk_transactions_data [Array, nil] Pre-fetched transaction data
     # @return [Hash] Result with :success and :transactions_count
-    def update_account(coinstats_account, bulk_balance_data:, bulk_transactions_data:)
+    def update_wallet_account(coinstats_account, bulk_balance_data:, bulk_transactions_data:)
       # Get the wallet address and blockchain from the raw payload
       raw = coinstats_account.raw_payload || {}
       address = raw["address"] || raw[:address]
@@ -143,6 +228,35 @@ class CoinstatsItem::Importer
 
       # Extract and merge transactions from bulk response
       transactions_count = fetch_and_merge_transactions(coinstats_account, address, blockchain, bulk_transactions_data)
+
+      { success: true, transactions_count: transactions_count }
+    end
+
+    def update_exchange_account(coinstats_account, portfolio_coins_data:, portfolio_transactions_data:)
+      portfolio_id = exchange_portfolio_id_for(coinstats_account)
+      balance_data = portfolio_coins_data[portfolio_id]
+
+      if coinstats_account.exchange_portfolio_account?
+        if !balance_data.nil?
+          coinstats_account.upsert_coinstats_snapshot!(
+            normalize_exchange_portfolio_data(balance_data, coinstats_account, portfolio_id: portfolio_id)
+          )
+        else
+          Rails.logger.warn "CoinstatsItem::Importer - Missing exchange portfolio coin data for account #{coinstats_account.id} (portfolio #{portfolio_id}); preserving previous snapshot"
+        end
+      else
+        matching_coin = find_matching_portfolio_coin(balance_data, coinstats_account)
+
+        if matching_coin.present?
+          coinstats_account.upsert_coinstats_snapshot!(
+            normalize_portfolio_coin_data(matching_coin, coinstats_account, portfolio_id: portfolio_id)
+          )
+        else
+          Rails.logger.warn "CoinstatsItem::Importer - No matching exchange coin found for account #{coinstats_account.id} (#{coinstats_account.account_id}) in portfolio #{portfolio_id}; preserving previous snapshot"
+        end
+      end
+
+      transactions_count = fetch_and_merge_portfolio_transactions(coinstats_account, portfolio_transactions_data[portfolio_id])
 
       { success: true, transactions_count: transactions_count }
     end
@@ -192,6 +306,34 @@ class CoinstatsItem::Importer
       relevant_transactions.count
     end
 
+    def fetch_and_merge_portfolio_transactions(coinstats_account, portfolio_transactions_data)
+      return 0 if portfolio_transactions_data.blank?
+
+      relevant_transactions =
+        if coinstats_account.exchange_portfolio_account?
+          Array(portfolio_transactions_data)
+        else
+          filter_transactions_by_coin(portfolio_transactions_data, coinstats_account.account_id)
+        end
+      return 0 if relevant_transactions.empty?
+
+      existing_transactions = coinstats_account.raw_transactions_payload.to_a
+      existing_ids = existing_transactions.map { |tx| extract_coinstats_transaction_id(tx) }.compact.to_set
+
+      transactions_to_add = relevant_transactions.select do |tx|
+        tx_id = extract_coinstats_transaction_id(tx)
+        tx_id.present? && !existing_ids.include?(tx_id)
+      end
+
+      if transactions_to_add.any?
+        merged_transactions = existing_transactions + transactions_to_add
+        coinstats_account.upsert_coinstats_transactions_snapshot!(merged_transactions)
+        Rails.logger.info "CoinstatsItem::Importer - Added #{transactions_to_add.count} new exchange transactions for account #{coinstats_account.id}"
+      end
+
+      relevant_transactions.count
+    end
+
     # Filter transactions to only include those relevant to a specific coin
     # Transactions can be matched by:
     # - coinData.symbol matching the coin (case-insensitive)
@@ -206,10 +348,11 @@ class CoinstatsItem::Importer
 
       transactions.select do |tx|
         tx = tx.with_indifferent_access
+        coin_identifier = tx.dig(:coinData, :identifier)&.to_s&.downcase
 
         # Check nested transactions items for coin match
         inner_transactions = tx[:transactions] || []
-        inner_transactions.any? do |inner_tx|
+        matches_nested_item = inner_transactions.any? do |inner_tx|
           inner_tx = inner_tx.with_indifferent_access
           items = inner_tx[:items] || []
           items.any? do |item|
@@ -218,9 +361,29 @@ class CoinstatsItem::Importer
             next false unless coin.present?
 
             coin = coin.with_indifferent_access
-            coin[:id]&.downcase == coin_id_downcase
+            coin[:id]&.downcase == coin_id_downcase ||
+              coin[:identifier]&.downcase == coin_id_downcase ||
+              coin[:symbol]&.downcase == coin_id_downcase
           end
         end
+
+        transfer_transactions = tx[:transfers] || []
+        matches_transfer_item = transfer_transactions.any? do |transfer_tx|
+          transfer_tx = transfer_tx.with_indifferent_access
+          items = transfer_tx[:items] || []
+          items.any? do |item|
+            item = item.with_indifferent_access
+            coin = item[:coin]
+            next false unless coin.present?
+
+            coin = coin.with_indifferent_access
+            coin[:id]&.downcase == coin_id_downcase ||
+              coin[:identifier]&.downcase == coin_id_downcase ||
+              coin[:symbol]&.downcase == coin_id_downcase
+          end
+        end
+
+        coin_identifier == coin_id_downcase || matches_nested_item || matches_transfer_item
       end
     end
 
@@ -237,23 +400,21 @@ class CoinstatsItem::Importer
       # Find the matching token for this account to extract id, logo, and balance
       matching_token = find_matching_token(balance_data, coinstats_account)
 
-      # Calculate balance from the matching token only, not all tokens
-      # Each coinstats_account represents a single token/coin in the wallet
-      token_balance = calculate_token_balance(matching_token)
+      source_snapshot = (matching_token || {}).to_h.with_indifferent_access
 
       {
         # Use existing account_id if set, otherwise extract from matching token
         id: coinstats_account.account_id.presence || matching_token&.dig(:coinId) || matching_token&.dig(:id),
         name: coinstats_account.name,
-        balance: token_balance,
-        currency: "USD", # CoinStats returns values in USD
+        balance: coinstats_account.inferred_current_balance(source_snapshot),
+        currency: coinstats_account.inferred_currency(source_snapshot),
         address: existing_raw["address"] || existing_raw[:address],
         blockchain: existing_raw["blockchain"] || existing_raw[:blockchain],
         # Extract logo from the matching token
         institution_logo: matching_token&.dig(:imgUrl),
         # Preserve original data
         raw_balance_data: balance_data
-      }
+      }.merge(source_snapshot.slice(:amount, :count, :price, :priceUsd, :symbol, :coinId, :isFiat, :imgUrl))
     end
 
     # Finds the token in balance_data that matches this account.
@@ -302,14 +463,117 @@ class CoinstatsItem::Importer
       end
     end
 
-    # Calculates USD balance from token amount and price.
-    # @param token [Hash, nil] Token with :amount/:balance and :price/:priceUsd
-    # @return [Float] Balance in USD (0 if token is nil)
-    def calculate_token_balance(token)
-      return 0 if token.blank?
+    def find_matching_portfolio_coin(balance_data, coinstats_account)
+      Array(balance_data).map(&:with_indifferent_access).find do |coin_data|
+        coin = coin_data[:coin].to_h.with_indifferent_access
+        identifier = coin[:identifier].presence || coin_data[:coinId].presence
+        symbol = coin[:symbol].presence || coin_data[:symbol].presence
+        base_name = coinstats_account.name.to_s.sub(/\s+\([^)]*\)\z/, "").downcase
 
-      amount = token[:amount] || token[:balance] || 0
-      price = token[:price] || token[:priceUsd] || 0
-      (amount.to_f * price.to_f)
+        identifier.to_s.casecmp?(coinstats_account.account_id.to_s) ||
+          symbol.to_s.casecmp?(coinstats_account.account_id.to_s) ||
+          symbol.to_s.casecmp?(coinstats_account.asset_symbol.to_s) ||
+          coin[:name].to_s.downcase == base_name
+      end
+    end
+
+    def normalize_portfolio_coin_data(balance_data, coinstats_account, portfolio_id:)
+      existing_raw = coinstats_account.raw_payload.to_h.with_indifferent_access
+      portfolio_coin = balance_data.to_h.with_indifferent_access
+      coin = portfolio_coin[:coin].to_h.with_indifferent_access
+      source_snapshot = {
+        source: existing_raw[:source] || "exchange",
+        portfolio_id: portfolio_id,
+        connection_id: existing_raw[:connection_id] || coinstats_item.exchange_connection_id,
+        exchange_name: existing_raw[:exchange_name] || exchange_display_name,
+        coin: coin
+      }.merge(portfolio_coin)
+
+      {
+        id: coin[:identifier].presence || coinstats_account.account_id,
+        name: coinstats_account.name,
+        balance: coinstats_account.inferred_current_balance(source_snapshot),
+        currency: coinstats_account.inferred_currency(source_snapshot),
+        provider: existing_raw[:exchange_name].presence || exchange_display_name,
+        account_status: "active",
+        portfolio_id: portfolio_id,
+        connection_id: existing_raw[:connection_id] || coinstats_item.exchange_connection_id,
+        institution_logo: coin[:icon],
+        raw_balance_data: portfolio_coin
+      }.merge(existing_raw.slice(:source, :exchange_name))
+       .merge(portfolio_coin.slice(:coin, :count, :price, :averageBuy, :averageSell, :profit, :profitPercent, :coinId, :isFiat))
+    end
+
+    def normalize_exchange_portfolio_data(balance_data, coinstats_account, portfolio_id:)
+      existing_raw = coinstats_account.raw_payload.to_h.with_indifferent_access
+      coins = Array(balance_data).map { |coin| coin.with_indifferent_access.to_h }
+
+      snapshot = existing_raw.merge(
+        source: "exchange",
+        portfolio_account: true,
+        portfolio_id: portfolio_id,
+        connection_id: existing_raw[:connection_id] || coinstats_item.exchange_connection_id,
+        exchange_name: existing_raw[:exchange_name] || exchange_display_name,
+        name: coinstats_account.name,
+        institution_logo: existing_raw[:institution_logo].presence || coinstats_item.raw_institution_payload.to_h.with_indifferent_access[:icon],
+        coins: coins
+      )
+
+      {
+        id: coinstats_account.account_id.presence || exchange_portfolio_account_manager.portfolio_account_id(portfolio_id),
+        name: coinstats_account.name,
+        balance: coinstats_account.inferred_current_balance(snapshot),
+        currency: coinstats_account.inferred_currency(snapshot),
+        provider: snapshot[:exchange_name],
+        account_status: "active",
+        portfolio_id: portfolio_id,
+        connection_id: snapshot[:connection_id],
+        institution_logo: snapshot[:institution_logo],
+        portfolio_account: true,
+        coins: coins
+      }.merge(snapshot.slice(:source, :exchange_name))
+    end
+
+    def exchange_display_name
+      coinstats_item.institution_name.presence || coinstats_item.exchange_connection_id.to_s.titleize
+    end
+
+    def exchange_portfolio_account_manager
+      @exchange_portfolio_account_manager ||= CoinstatsItem::ExchangePortfolioAccountManager.new(coinstats_item)
+    end
+
+    def exchange_portfolio_configurations(linked_accounts = [])
+      configurations = []
+
+      if coinstats_item.exchange_configured?
+        configurations << {
+          portfolio_id: coinstats_item.exchange_portfolio_id,
+          connection_id: coinstats_item.exchange_connection_id,
+          exchange_name: exchange_display_name
+        }
+      end
+
+      Array(linked_accounts).select(&:exchange_source?).each do |account|
+        raw = account.raw_payload.to_h.with_indifferent_access
+        portfolio_id = raw[:portfolio_id].presence || account.wallet_address.presence
+        next if portfolio_id.blank?
+
+        configurations << {
+          portfolio_id: portfolio_id,
+          connection_id: raw[:connection_id].presence || coinstats_item.exchange_connection_id,
+          exchange_name: raw[:exchange_name].presence || exchange_display_name
+        }
+      end
+
+      configurations.uniq { |config| config[:portfolio_id] }
+    end
+
+    def exchange_portfolio_id_for(coinstats_account)
+      raw = coinstats_account.raw_payload.to_h.with_indifferent_access
+      raw[:portfolio_id].presence || coinstats_account.wallet_address.presence || coinstats_item.exchange_portfolio_id
+    end
+
+    def family_currency
+      coinstats_item.family.currency.presence || "USD"
     end
 end

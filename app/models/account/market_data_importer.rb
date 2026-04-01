@@ -51,7 +51,7 @@ class Account::MarketDataImporter
   def import_security_prices
     return unless Security.provider
 
-    account_securities = account.trades.map(&:security).uniq
+    account_securities = (account.trades.map(&:security) + account.current_holdings.map(&:security)).uniq
 
     return if account_securities.empty?
 
@@ -68,10 +68,17 @@ class Account::MarketDataImporter
   private
     # Calculates the first date we require a price for the given security scoped to this account
     def first_required_price_date(security)
-      account.trades.with_entry
-                    .where(security: security)
-                    .where(entries: { account_id: account.id })
-                    .minimum("entries.date")
+      trade_start_date = account.trades.with_entry
+                              .where(security: security)
+                              .where(entries: { account_id: account.id })
+                              .minimum("entries.date")
+
+      holding_start_date =
+        if account.holdings.where(security: security).where.not(account_provider_id: nil).exists?
+          account.start_date
+        end
+
+      [ trade_start_date, holding_start_date ].compact.min
     end
 
     def needs_exchange_rates?

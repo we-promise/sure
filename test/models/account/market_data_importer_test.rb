@@ -167,6 +167,58 @@ class Account::MarketDataImporterTest < ActiveSupport::TestCase
     assert_equal 0, Security::Price.where(security: security, date: trade_date).count
   end
 
+  test "syncs security prices for provider-held securities without trades" do
+    family = Family.create!(name: "Smith", currency: "USD")
+
+    account = family.accounts.create!(
+      name: "Brokerage",
+      currency: "USD",
+      balance: 0,
+      accountable: Investment.new
+    )
+
+    security = Security.create!(ticker: "PE500", exchange_operating_mic: "XPAR")
+
+    coinstats_item = family.coinstats_items.create!(name: "CoinStats", api_key: "test-key")
+    coinstats_account = coinstats_item.coinstats_accounts.create!(name: "Provider", currency: "USD")
+    account_provider = AccountProvider.create!(account: account, provider: coinstats_account)
+
+    account.holdings.create!(
+      security: security,
+      date: Date.current,
+      qty: 1,
+      price: 100,
+      amount: 100,
+      currency: "USD",
+      account_provider: account_provider
+    )
+
+    expected_start_date = account.start_date - SECURITY_PRICE_BUFFER
+    end_date = Date.current.in_time_zone("America/New_York").to_date
+
+    @provider.expects(:fetch_security_prices)
+             .with(symbol: security.ticker,
+                   exchange_operating_mic: security.exchange_operating_mic,
+                   start_date: expected_start_date,
+                   end_date: end_date)
+             .returns(provider_success_response([
+               OpenStruct.new(security: security,
+                              date: account.start_date,
+                              price: 100,
+                              currency: "USD")
+             ]))
+
+    @provider.stubs(:fetch_security_info)
+             .with(symbol: security.ticker, exchange_operating_mic: security.exchange_operating_mic)
+             .returns(provider_success_response(OpenStruct.new(name: "PE500", logo_url: "logo")))
+
+    @provider.stubs(:fetch_exchange_rates).returns(provider_success_response([]))
+
+    Account::MarketDataImporter.new(account).import_all
+
+    assert_equal 1, Security::Price.where(security: security, date: account.start_date).count
+  end
+
   test "handles provider error response gracefully for exchange rates" do
     family = Family.create!(name: "Smith", currency: "USD")
 

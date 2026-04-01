@@ -47,7 +47,7 @@ class CoinstatsAccount::ProcessorTest < ActiveSupport::TestCase
 
     @account.reload
     assert_equal BigDecimal("5000.50"), @account.balance
-    assert_equal BigDecimal("5000.50"), @account.cash_balance
+    assert_equal BigDecimal("0"), @account.cash_balance
   end
 
   test "updates account currency from coinstats account" do

@@ -47,4 +47,41 @@ class Holding::PortfolioSnapshotTest < ActiveSupport::TestCase
     assert_equal 1, portfolio.size
     assert_equal 0, portfolio[@aapl.id]
   end
+
+  test "prefers the latest provider snapshot over newer calculated holdings" do
+    @account.holdings.destroy_all
+    @account.entries.destroy_all
+
+    create_trade(@aapl, account: @account, qty: 10, price: 100, date: 5.days.ago)
+    create_trade(@msft, account: @account, qty: 5, price: 200, date: 5.days.ago)
+
+    coinstats_item = @account.family.coinstats_items.create!(name: "CoinStats", api_key: "test-key")
+    coinstats_account = coinstats_item.coinstats_accounts.create!(name: "Provider", currency: "USD")
+    account_provider = AccountProvider.create!(account: @account, provider: coinstats_account)
+
+    @account.holdings.create!(
+      security: @aapl,
+      date: 1.day.ago,
+      qty: 10,
+      price: 100,
+      amount: 1000,
+      currency: "USD",
+      account_provider: account_provider
+    )
+
+    @account.holdings.create!(
+      security: @msft,
+      date: Date.current,
+      qty: 5,
+      price: 200,
+      amount: 1000,
+      currency: "USD"
+    )
+
+    portfolio = Holding::PortfolioSnapshot.new(@account).to_h
+
+    assert_equal 2, portfolio.size
+    assert_equal 10, portfolio[@aapl.id]
+    assert_equal 0, portfolio[@msft.id]
+  end
 end
