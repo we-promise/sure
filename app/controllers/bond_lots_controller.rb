@@ -32,7 +32,7 @@ class BondLotsController < ApplicationController
 
     return redirect_back_or_to(account_path(@account), alert: t("bond_lots.not_bond_account")) unless @account.bond?
 
-    @bond_lot = @account.bond.bond_lots.build(bond_lot_params)
+    @bond_lot = @account.bond.bond_lots.build(bond_lot_params(@account.bond))
 
     if @bond_lot.valid?
       begin
@@ -60,7 +60,7 @@ class BondLotsController < ApplicationController
 
     begin
       ActiveRecord::Base.transaction do
-        @bond_lot.update!(bond_lot_params)
+        @bond_lot.update!(bond_lot_params(@bond_lot.bond))
         update_purchase_entry!(@bond_lot)
       end
       @bond_lot.account.sync_later(window_start_date: [ old_purchased_on, @bond_lot.purchased_on ].min)
@@ -103,7 +103,7 @@ class BondLotsController < ApplicationController
                          .find(params[:id])
     end
 
-    def bond_lot_params
+    def bond_lot_params(bond = nil)
       params.require(:bond_lot).permit(
         :purchased_on,
         :issue_date,
@@ -118,13 +118,16 @@ class BondLotsController < ApplicationController
         :cpi_lag_months,
         :auto_fetch_inflation,
         :auto_close_on_maturity,
-        :tax_strategy,
-        :tax_rate,
         :early_redemption_fee,
         :subtype,
         :rate_type,
         :coupon_frequency
-      )
+      ).tap do |permitted|
+        # Allow tax fields only if bond is not tax-exempt
+        if !bond&.tax_exempt_wrapper?
+          permitted.merge!(params.require(:bond_lot).permit(:tax_strategy, :tax_rate))
+        end
+      end
     end
 
     def update_purchase_entry!(bond_lot)
