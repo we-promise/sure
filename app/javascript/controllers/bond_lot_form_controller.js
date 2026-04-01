@@ -59,6 +59,10 @@ export default class extends Controller {
 
   currentAutoFetchValue() {
     if (this.hasAutoFetchInputTarget) {
+      if (this.autoFetchInputTarget.type === "checkbox") {
+        return this.autoFetchInputTarget.checked
+      }
+
       const value = `${this.autoFetchInputTarget.value}`.trim().toLowerCase()
       return value === "1" || value === "true"
     }
