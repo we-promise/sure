@@ -35,9 +35,14 @@ class BondLotsController < ApplicationController
     @bond_lot = @account.bond.bond_lots.build(bond_lot_params)
 
     if @bond_lot.valid?
-      ActiveRecord::Base.transaction do
-        @bond_lot.save!
-        @bond_lot.update!(entry: create_purchase_entry!(@account, @bond_lot))
+      begin
+        ActiveRecord::Base.transaction do
+          @bond_lot.save!
+          @bond_lot.update!(entry: create_purchase_entry!(@account, @bond_lot))
+        end
+      rescue ActiveRecord::RecordInvalid => e
+        @bond_lot.errors.add(:base, e.record.errors.full_messages.to_sentence)
+        return render :new, status: :unprocessable_entity
       end
 
       @account.sync_later(window_start_date: @bond_lot.purchased_on)

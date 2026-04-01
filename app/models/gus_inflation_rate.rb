@@ -33,7 +33,7 @@ class GusInflationRate < ApplicationRecord
 
       response = provider.fetch_cpi_yoy_for_year(year: year)
       unless response.success?
-        return 0 if not_found_error?(response.error) || rate_limited_error?(response.error)
+        return 0 if not_found_error?(response.error)
         raise response.error.is_a?(Exception) ? response.error : RuntimeError.new(response.error.to_s)
       end
 
@@ -90,13 +90,6 @@ class GusInflationRate < ApplicationRecord
 
         message = error.message.to_s
         message.include?("status 404") || message.include?("404")
-      end
-
-      def rate_limited_error?(error)
-        return false if error.blank?
-
-        message = error.message.to_s
-        message.include?("status 429") || message.include?("429")
       end
 
       def year_complete?(year)

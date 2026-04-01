@@ -9,6 +9,28 @@ class BondLot < ApplicationRecord
   scope :open, -> { where(closed_on: nil) }
   scope :needs_rate_review, -> { open.where(requires_rate_review: true) }
 
+  # Returns an OpenStruct with :open_lots, :total_value, :total_return, :top_lots
+  # for the dashboard summary card.
+  def self.dashboard_summary(bond_accounts, family_currency)
+    lots_with_accounts = open
+      .joins(bond: :account)
+      .includes(bond: :account)
+      .where(accounts: { id: bond_accounts.select(:id) })
+      .map { |lot| [ lot.account, lot ] }
+
+    total_value = bond_accounts.sum { |a| a.balance_money.exchange_to(family_currency, fallback_rate: 1).amount }
+
+    total_return = lots_with_accounts.sum do |(account, lot)|
+      Money.new(lot.total_return_amount, account.currency).exchange_to(family_currency, fallback_rate: 1).amount
+    end
+
+    top_lots = lots_with_accounts.sort_by { |(account, lot)|
+      -Money.new(lot.estimated_current_value.to_d, account.currency).exchange_to(family_currency, fallback_rate: 1).amount
+    }.first(TOP_LOTS_LIMIT)
+
+    OpenStruct.new(open_lots: lots_with_accounts, total_value: total_value, total_return: total_return, top_lots: top_lots)
+  end
+
   before_validation :inherit_defaults_from_bond
   before_validation :apply_product_defaults
   before_validation :assign_maturity_date_from_term
@@ -38,6 +60,7 @@ class BondLot < ApplicationRecord
   validates :tax_strategy, inclusion: { in: TAX_STRATEGIES }
   validates :tax_rate, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
   validates :entry_id, uniqueness: true, allow_nil: true
+  validate :validate_issue_date_not_after_purchased_on
 
   with_options if: :inflation_linked? do
     validates :issue_date, presence: true
@@ -515,10 +538,10 @@ class BondLot < ApplicationRecord
     end
 
     def derive_amount_from_units
-      return if amount.present?
       return if units.blank? || nominal_per_unit.blank?
 
-      self.amount = units.to_d * nominal_per_unit.to_d
+      expected = units.to_d * nominal_per_unit.to_d
+      self.amount = expected if amount.blank? || inflation_linked?
     end
 
     def normalize_tax_settings
@@ -548,6 +571,11 @@ class BondLot < ApplicationRecord
       else
         interest_rate.present?
       end
+    end
+
+    def validate_issue_date_not_after_purchased_on
+      return if issue_date.blank? || purchased_on.blank?
+      errors.add(:issue_date, "cannot be after purchased_on") if issue_date > purchased_on
     end
 
     def assign_maturity_date_from_term
