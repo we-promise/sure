@@ -11,13 +11,14 @@
     <% end %>
   </div>
 
-  <%= helpers.styled_form_with model: Setting.new,
-                       url: settings_hosting_path,
-                       method: :patch,
-                       data: {
-                         controller: "auto-submit-form",
-                         "auto-submit-form-trigger-event-value": "change"
-                       } do |form| %>
+  <%= form_with model: Setting.new,
+                builder: StyledFormBuilder,
+                url: settings_hosting_path,
+                method: :patch,
+                data: {
+                  controller: "auto-submit-form",
+                  "auto-submit-form-trigger-event-value": "change"
+                } do |form| %>
     <div class="flex items-center justify-between">
       <div class="space-y-1">
         <p class="text-sm"><%= t("settings.hostings.gus_sdp_settings.import_enabled_label") %></p>
@@ -34,13 +35,14 @@
     <% end %>
   <% end %>
 
-  <%= helpers.styled_form_with model: Setting.new,
-                       url: settings_hosting_path,
-                       method: :patch,
-                       data: {
-                         controller: "auto-submit-form",
-                         "auto-submit-form-trigger-event-value": "blur"
-                       } do |form| %>
+  <%= form_with model: Setting.new,
+                builder: StyledFormBuilder,
+                url: settings_hosting_path,
+                method: :patch,
+                data: {
+                  controller: "auto-submit-form",
+                  "auto-submit-form-trigger-event-value": "blur"
+                } do |form| %>
     <% if api_key_input_unlocked? %>
       <%= form.text_field :gus_sdp_api_key,
                           label: t("settings.hostings.gus_sdp_settings.label"),
@@ -56,17 +58,19 @@
   <% end %>
 
   <% if show_clear_api_key_button? %>
-    <%= helpers.styled_form_with model: Setting.new,
-                         url: settings_hosting_path,
-                         method: :patch do |form| %>
+    <%= form_with model: Setting.new,
+            builder: StyledFormBuilder,
+            url: settings_hosting_path,
+            method: :patch do |form| %>
       <%= form.hidden_field :clear_gus_sdp_api_key, value: "1" %>
       <%= form.submit t("settings.hostings.gus_sdp_settings.clear_api_key"), data: { turbo_confirm: t("settings.hostings.gus_sdp_settings.clear_api_key_confirm") } %>
     <% end %>
   <% end %>
 
-  <%= helpers.styled_form_with model: Setting.new,
-                       url: import_gus_inflation_rates_settings_hosting_path,
-                       method: :post do |form| %>
+  <%= form_with model: Setting.new,
+                builder: StyledFormBuilder,
+                url: import_gus_inflation_rates_settings_hosting_path,
+                method: :post do |form| %>
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
       <%= form.number_field :gus_inflation_start_year,
                             label: t("settings.hostings.gus_sdp_settings.start_year"),

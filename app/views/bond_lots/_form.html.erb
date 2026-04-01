@@ -105,10 +105,23 @@
                                 step: 1,
                                 data: { bond_lot_form_target: "inflationInput" } %>
         </div>
+
+        <%= form.hidden_field :auto_fetch_inflation,
+                              value: bond_lot.auto_fetch_inflation.nil? ? 1 : (bond_lot.auto_fetch_inflation ? 1 : 0),
+                              data: { bond_lot_form_target: "autoFetchInput" } %>
       <% else %>
         <p class="text-xs text-secondary" data-bond-lot-form-target="inflationFields">
           <%= t("bond_lots.form.auto_fetch_disabled_hint") %>
         </p>
+
+        <div data-bond-lot-form-target="inflationFields">
+          <%= form.toggle :auto_fetch_inflation,
+                          checked: bond_lot.auto_fetch_inflation.nil? ? true : bond_lot.auto_fetch_inflation,
+                          data: {
+                            bond_lot_form_target: "autoFetchInput",
+                            action: "change->bond-lot-form#toggleManualInflationField"
+                          } %>
+        </div>
       <% end %>
 
       <div data-bond-lot-form-target="manualInflationField">
@@ -119,15 +132,9 @@
                               data: { bond_lot_form_target: "manualInflationInput" } %>
       </div>
 
-        <%# auto_fetch_inflation attribute is normalized server-side by normalize_auto_fetch_inflation
-          (forced off for non-inflation-linked lots, defaulted to true otherwise). The initial
-          value is baked into lot_auto_fetch_value and mirrored in the hidden input so Stimulus
-          can react consistently when subtype changes. Global GUS import enablement is handled on
-          import/backfill scheduling paths (e.g., should_enqueue_inflation_backfill?), while
-          read-time rate resolution still follows the lot-level auto_fetch_inflation setting. %>
-      <%= form.hidden_field :auto_fetch_inflation,
-                  value: bond_lot.auto_fetch_inflation.nil? ? 1 : (bond_lot.auto_fetch_inflation ? 1 : 0),
-                  data: { bond_lot_form_target: "autoFetchInput" } %>
+      <%# auto_fetch_inflation is normalized server-side by normalize_auto_fetch_inflation.
+          When global GUS import is enabled we keep it hidden; when global import is disabled
+          we expose a toggle so users can switch to manual CPI entry on the lot. %>
 
       <div data-bond-lot-form-target="inflationFields">
         <%= form.money_field :early_redemption_fee,

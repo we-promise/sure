@@ -6,7 +6,7 @@ class EnforceBondLotConstraintsAndDefaults < ActiveRecord::Migration[7.2]
       WHERE subtype IS NULL
     SQL
 
-    change_column_default :bond_lots, :subtype, from: nil, to: "other_bond"
+    change_column_default :bond_lots, :subtype, from: "other", to: "other_bond"
     change_column_null :bond_lots, :subtype, false
 
     add_check_constraint :bond_lots, "amount > 0", name: "check_bond_lots_positive_amount", if_not_exists: true
@@ -27,6 +27,6 @@ class EnforceBondLotConstraintsAndDefaults < ActiveRecord::Migration[7.2]
     remove_check_constraint :bond_lots, name: "check_bond_lots_positive_amount", if_exists: true
 
     change_column_null :bond_lots, :subtype, true
-    change_column_default :bond_lots, :subtype, from: "other_bond", to: nil
+    change_column_default :bond_lots, :subtype, from: "other_bond", to: "other"
   end
 end
