@@ -95,7 +95,7 @@ class BondLot < ApplicationRecord
   end
 
   def auto_fetch_inflation?
-    inflation_linked? && auto_fetch_inflation && Setting.gus_inflation_import_enabled_effective
+    inflation_linked? && auto_fetch_inflation
   end
 
   def estimated_current_value(on: Date.current)
@@ -165,19 +165,20 @@ class BondLot < ApplicationRecord
   def current_inflation_component_percent(on: Date.current)
     return nil unless inflation_linked?
 
-    inflation_snapshot_for(on:)[:inflation_component_percent]
+    rate_context_for(on:)[:inflation_component_percent]
   end
 
   def current_inflation_source(on: Date.current)
     return nil unless inflation_linked?
 
-    inflation_snapshot_for(on:)[:source]
+    source = rate_context_for(on:)[:inflation_source]
+    source == "first_period" ? nil : source
   end
 
-  def current_margin_percent
+  def current_margin_percent(on: Date.current)
     return nil unless inflation_linked?
 
-    inflation_margin.presence&.to_d
+    rate_context_for(on:)[:margin_component_percent]
   end
 
   def current_inflation_indicator_id
@@ -561,15 +562,11 @@ class BondLot < ApplicationRecord
       end
     end
 
-    # NOTE: This flag means "user needs to fill in static rate fields" (first_period_rate,
-    # inflation_margin, or interest_rate). It is intentionally NOT gated on rates_resolvable_through?
-    # which checks whether CPI data covers the full term — that's a separate concern used only
-    # by settle_if_matured! to gate settlement. Mixing the two would make this callback slow
-    # (DB queries per save) and conflate two distinct responsibilities.
     def clear_rate_review_flag
       return unless requires_rate_review?
 
-      self.requires_rate_review = false if rates_present_for_review?
+      review_date = [ Date.current, maturity_date ].compact.min
+      self.requires_rate_review = false if rates_present_for_review? && review_date.present? && rates_resolvable_through?(date: review_date)
     end
 
     def rates_present_for_review?
@@ -591,14 +588,17 @@ class BondLot < ApplicationRecord
     end
 
     def assign_maturity_date_from_term
-      return if term_months.blank? || maturity_date.present?
+      return if term_months.blank?
       base_date = (issue_date.present? && (purchased_on.blank? || issue_date < purchased_on)) ? issue_date : purchased_on
       return if base_date.blank?
+
+      return unless maturity_date.blank? || will_save_change_to_term_months? || will_save_change_to_issue_date? || will_save_change_to_purchased_on?
+
       self.maturity_date = base_date + term_months.months
     end
 
     def needs_inflation_backfill?
-      inflation_linked? && auto_fetch_inflation? && purchased_on.present?
+      inflation_linked? && auto_fetch_inflation? && Setting.gus_inflation_import_enabled_effective && purchased_on.present?
     end
 
     def should_enqueue_inflation_backfill?

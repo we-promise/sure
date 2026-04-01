@@ -18,6 +18,25 @@ class BondLotTest < ActiveSupport::TestCase
     assert_equal Date.new(2026, 4, 15), lot.maturity_date
   end
 
+  test "recomputes maturity date when term changes" do
+    lot = BondLot.create!(
+      bond: bonds(:one),
+      purchased_on: Date.new(2026, 1, 15),
+      term_months: 3,
+      amount: 1000,
+      subtype: "other_bond",
+      rate_type: "fixed",
+      coupon_frequency: "at_maturity",
+      interest_rate: 5.0
+    )
+
+    assert_equal Date.new(2026, 4, 15), lot.maturity_date
+
+    lot.update!(term_months: 6)
+
+    assert_equal Date.new(2026, 7, 15), lot.reload.maturity_date
+  end
+
   test "requires positive principal and term" do
     lot = BondLot.new(
       bond: bonds(:one),
@@ -254,7 +273,7 @@ class BondLotTest < ActiveSupport::TestCase
     Setting.gus_inflation_import_enabled = false
   end
 
-  test "requires manual inflation assumption when global auto-import is disabled" do
+  test "does not require manual inflation assumption when global auto-import is disabled" do
     Setting.gus_inflation_import_enabled = false
 
     lot = BondLot.new(
@@ -273,8 +292,7 @@ class BondLotTest < ActiveSupport::TestCase
       coupon_frequency: "at_maturity"
     )
 
-    assert_not lot.valid?
-    assert_includes lot.errors[:inflation_rate_assumption], "can't be blank"
+    assert lot.valid?
   end
 
   test "current_rate_percent uses current inflation-linked period instead of first year rate" do
@@ -328,6 +346,90 @@ class BondLotTest < ActiveSupport::TestCase
     # Without exact CPI month, falls back to manual assumption (3.0) + margin (2.0) = 5.0
     assert_in_delta 5.0, lot.current_rate_percent(on: Date.new(2026, 3, 31)).to_f, 0.001
     assert_in_delta 3.0, lot.current_inflation_component_percent(on: Date.new(2026, 3, 31)).to_f, 0.001
+  ensure
+    Setting.gus_inflation_import_enabled = false
+  end
+
+  test "keeps CPI read path enabled when global import toggle is off" do
+    Setting.gus_inflation_import_enabled = false
+    GusInflationRate.create!(year: 2025, month: 1, rate_yoy: 108.0, source: "sdp")
+
+    lot = BondLot.new(
+      bond: bonds(:one),
+      purchased_on: Date.new(2014, 5, 31),
+      amount: 1000,
+      subtype: "rod",
+      first_period_rate: 4.0,
+      inflation_margin: 0.9,
+      inflation_rate_assumption: 1.0,
+      auto_fetch_inflation: true,
+      cpi_lag_months: 2,
+      units: 10,
+      nominal_per_unit: 100,
+      issue_date: Date.new(2014, 5, 31),
+      rate_type: "variable",
+      coupon_frequency: "at_maturity"
+    )
+
+    assert_in_delta 8.0, lot.current_inflation_component_percent(on: Date.new(2025, 3, 31)).to_f, 0.001
+    assert_equal "gus", lot.current_inflation_source(on: Date.new(2025, 3, 31))
+    assert_in_delta 0.9, lot.current_margin_percent(on: Date.new(2025, 3, 31)).to_f, 0.001
+  ensure
+    Setting.gus_inflation_import_enabled = false
+  end
+
+  test "hides inflation breakdown during first period" do
+    Setting.gus_inflation_import_enabled = true
+    GusInflationRate.create!(year: 2024, month: 3, rate_yoy: 106.0, source: "sdp")
+
+    lot = BondLot.new(
+      bond: bonds(:one),
+      purchased_on: Date.new(2024, 5, 31),
+      amount: 1000,
+      subtype: "rod",
+      first_period_rate: 4.0,
+      inflation_margin: 0.9,
+      inflation_rate_assumption: 1.0,
+      auto_fetch_inflation: true,
+      cpi_lag_months: 2,
+      units: 10,
+      nominal_per_unit: 100,
+      issue_date: Date.new(2024, 5, 31),
+      rate_type: "variable",
+      coupon_frequency: "at_maturity"
+    )
+
+    assert_nil lot.current_inflation_component_percent(on: Date.new(2024, 10, 1))
+    assert_nil lot.current_inflation_source(on: Date.new(2024, 10, 1))
+    assert_nil lot.current_margin_percent(on: Date.new(2024, 10, 1))
+  ensure
+    Setting.gus_inflation_import_enabled = false
+  end
+
+  test "does not clear requires_rate_review while CPI periods are unresolved" do
+    Setting.gus_inflation_import_enabled = true
+
+    lot = BondLot.new(
+      bond: bonds(:one),
+      purchased_on: Date.new(2024, 1, 1),
+      amount: 1000,
+      subtype: "rod",
+      term_months: 24,
+      first_period_rate: 4.0,
+      inflation_margin: 0.9,
+      auto_fetch_inflation: true,
+      cpi_lag_months: 2,
+      units: 10,
+      nominal_per_unit: 100,
+      issue_date: Date.new(2024, 1, 1),
+      requires_rate_review: true,
+      rate_type: "variable",
+      coupon_frequency: "at_maturity"
+    )
+
+    lot.valid?
+
+    assert lot.requires_rate_review?
   ensure
     Setting.gus_inflation_import_enabled = false
   end

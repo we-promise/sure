@@ -18,15 +18,12 @@ class BondLotsController < ApplicationController
 
   def edit
     @account = @bond_lot.account
-    # Last expression — if permission fails, require_account_permission! redirects internally;
-    # no `return unless` needed (rubocop: Style/RedundantReturn).
-    require_account_permission!(@account)
+    return unless require_account_permission!(@account) # rubocop:disable Style/RedundantReturn
   end
 
   def show
     @account = @bond_lot.account
-    # See edit — last expression, redirect handled internally.
-    require_account_permission!(@account)
+    return unless require_account_permission!(@account) # rubocop:disable Style/RedundantReturn
   end
 
   def create

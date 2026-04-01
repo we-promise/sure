@@ -79,8 +79,9 @@ x-rails-env: &rails_env
   OPENAI_MODEL: llama3.1:8b # Note: Use tool-enabled model
   OPENAI_URI_BASE: http://ollama:11434/v1
   # GUS CPI import for inflation-linked bonds (EOD/ROD)
-  GUS_INFLATION_IMPORT_ENABLED: ${GUS_INFLATION_IMPORT_ENABLED:-false}
-  GUS_SDP_API_KEY: ${GUS_SDP_API_KEY:-}
+  # Leave unset to manage via Settings UI; set to "true" to override from environment.
+  GUS_INFLATION_IMPORT_ENABLED: ${GUS_INFLATION_IMPORT_ENABLED}
+  GUS_SDP_API_KEY: ${GUS_SDP_API_KEY}
   # Vector store — pgvector keeps all data local (requires pgvector/pgvector Docker image for db)
   VECTOR_STORE_PROVIDER: pgvector
   EMBEDDING_MODEL: nomic-embed-text
