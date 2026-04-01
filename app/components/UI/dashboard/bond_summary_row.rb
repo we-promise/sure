@@ -14,13 +14,13 @@ class UI::Dashboard::BondSummaryRow < ApplicationComponent
   def total_return_amount
     @total_return_amount ||= begin
       amount = lot.total_return_amount
-      amount = lot.projected_total_return_amount if amount.abs < 0.01 && lot.projected_total_return_amount.positive?
+      amount = lot.projected_total_return_amount if amount.abs < 0.01.to_d && lot.projected_total_return_amount.positive?
       amount
     end
   end
 
   def total_return_label
-    if lot.total_return_amount.abs < 0.01 && lot.projected_total_return_amount.positive?
+    if lot.total_return_amount.abs < 0.01.to_d && lot.projected_total_return_amount.positive?
       t("bonds.purchase_holding.projected_to_maturity")
     else
       t("bonds.purchase_holding.since_purchase")

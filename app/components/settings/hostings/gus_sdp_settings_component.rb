@@ -66,7 +66,15 @@ class Settings::Hostings::GusSdpSettingsComponent < ApplicationComponent
     gus_stats[:count].to_i
   end
 
-  def has_stats_range?
+  def stats_min_year
+    gus_stats[:min_year]
+  end
+
+  def stats_max_year
+    gus_stats[:max_year]
+  end
+
+  def stats_range?
     stats_count.positive?
   end
 end

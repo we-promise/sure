@@ -102,10 +102,10 @@
       <p class="text-destructive"><strong><%= t("settings.hostings.gus_sdp_settings.last_error") %>:</strong> <%= last_import_error %></p>
     <% end %>
     <p><strong><%= t("settings.hostings.gus_sdp_settings.stored_records") %>:</strong> <%= stats_count %></p>
-    <% if has_stats_range? %>
+    <% if stats_range? %>
       <p>
         <strong><%= t("settings.hostings.gus_sdp_settings.stored_range") %>:</strong>
-        <%= gus_stats[:min_year] %>-<%= gus_stats[:max_year] %>
+        <%= stats_min_year %>-<%= stats_max_year %>
       </p>
     <% end %>
   </div>
