@@ -9,17 +9,18 @@ class BondLot < ApplicationRecord
   scope :open, -> { where(closed_on: nil) }
 
   def self.needs_rate_review
-    # Lots explicitly flagged for manual rate entry (fast DB filter).
     flagged_ids = open.where(requires_rate_review: true).pluck(:id)
 
-    # Inflation-linked lots where the live rate cannot be resolved right now
-    # (e.g. GUS data unavailable for the current CPI reference period).
-    # We only load this narrower set to avoid a full-table scan.
-    unresolvable_ids = open.where(subtype: %w[eod rod])
-                           .select { |lot| lot.current_rate_percent(on: Date.current).nil? }
-                           .map(&:id)
+    # Process inflation-linked lots in batches to avoid loading the full set.
+    unresolvable_ids = []
+    open.where(subtype: %w[eod rod]).includes(:bond).find_in_batches(batch_size: 200) do |batch|
+      batch.each do |lot|
+        unresolvable_ids << lot.id if lot.current_rate_percent(on: Date.current).nil?
+      end
+    end
 
-    open.where(id: (flagged_ids + unresolvable_ids).uniq)
+    ids = (flagged_ids + unresolvable_ids).uniq
+    ids.empty? ? none : open.where(id: ids)
   end
 
   # Returns an OpenStruct with :total_value, :total_return, :top_lots
@@ -574,7 +575,7 @@ class BondLot < ApplicationRecord
       return if units.blank? || nominal_per_unit.blank?
 
       expected = units.to_d * nominal_per_unit.to_d
-      self.amount = expected if amount.blank? || inflation_linked?
+      self.amount = expected if amount.blank? || inflation_linked? || amount.to_d != expected
     end
 
     def normalize_tax_settings
