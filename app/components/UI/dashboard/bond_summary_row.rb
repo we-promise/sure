@@ -1,0 +1,99 @@
+class UI::Dashboard::BondSummaryRow < ApplicationComponent
+  attr_reader :account, :lot, :show_border
+
+  def initialize(account:, lot:, show_border: false)
+    @account = account
+    @lot = lot
+    @show_border = show_border
+  end
+
+  def subtype_label
+    Bond.long_subtype_label_for(lot.subtype) || t("bonds.purchase_holding.unknown")
+  end
+
+  def total_return_amount
+    @total_return_amount ||= begin
+      amount = lot.total_return_amount
+      amount = lot.projected_total_return_amount if amount.abs < 0.01 && lot.projected_total_return_amount.positive?
+      amount
+    end
+  end
+
+  def total_return_label
+    if lot.total_return_amount.abs < 0.01 && lot.projected_total_return_amount.positive?
+      t("bonds.purchase_holding.projected_to_maturity")
+    else
+      t("bonds.purchase_holding.since_purchase")
+    end
+  end
+
+  def total_return_class
+    total_return_amount.negative? ? "text-destructive" : "text-success"
+  end
+
+  def rate_text
+    if lot.inflation_linked?
+      return t("bonds.purchase_holding.update_needed") if lot.requires_rate_review?
+
+      return number_to_percentage(lot.current_rate_percent, precision: 3) if lot.current_rate_percent.present?
+
+      t("bonds.purchase_holding.unknown")
+    else
+      lot.interest_rate.present? ? number_to_percentage(lot.interest_rate, precision: 3) : t("bonds.purchase_holding.unknown")
+    end
+  end
+
+  def rate_meta
+    if lot.inflation_linked?
+      inflation_linked_rate_meta
+    else
+      t(
+        "bonds.purchase_holding.bond_meta",
+        rate_type: localized_rate_type,
+        coupon: localized_coupon_frequency
+      )
+    end
+  end
+
+  def row_classes
+    classes = [ "text-sm", "font-medium", "text-primary" ]
+    classes << "border-b border-divider" if show_border
+    classes.join(" ")
+  end
+
+  private
+    def inflation_linked_rate_meta
+      return t("bonds.purchase_holding.pending_review") if lot.requires_rate_review?
+
+      inflation_component = lot.current_inflation_component_percent
+      margin_component = lot.current_margin_percent
+      return t("bonds.purchase_holding.first_period_fixed_rate") if inflation_component.nil? || margin_component.nil?
+
+      if lot.current_inflation_source == "gus"
+        t(
+          "bonds.purchase_holding.inflation_meta_gus",
+          inflation: number_to_percentage(inflation_component.to_d, precision: 3),
+          margin: number_to_percentage(margin_component.to_d, precision: 3),
+          indicator: lot.current_inflation_indicator_id
+        )
+      else
+        t(
+          "bonds.purchase_holding.inflation_meta_manual",
+          inflation: number_to_percentage(inflation_component.to_d, precision: 3),
+          margin: number_to_percentage(margin_component.to_d, precision: 3)
+        )
+      end
+    end
+
+    def localized_rate_type
+      return t("bonds.purchase_holding.unknown") if lot.rate_type.blank?
+
+      t("bond_lots.form.rate_types.#{lot.rate_type}", default: t("bonds.purchase_holding.unknown"))
+    end
+
+    def localized_coupon_frequency
+      return t("bonds.purchase_holding.unknown") if lot.coupon_frequency.blank?
+
+      t("bond_lots.form.coupon_frequencies.#{lot.coupon_frequency}", default: t("bonds.purchase_holding.unknown"))
+    end
+end

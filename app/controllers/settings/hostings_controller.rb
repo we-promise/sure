@@ -62,7 +62,9 @@ class Settings::HostingsController < ApplicationController
       Setting.twelve_data_api_key = hosting_params[:twelve_data_api_key]
     end
 
-    if hosting_params.key?(:gus_sdp_api_key) && ENV["GUS_SDP_API_KEY"].blank?
+    if hosting_params[:clear_gus_sdp_api_key] == "1" && ENV["GUS_SDP_API_KEY"].blank?
+      Setting.gus_sdp_api_key = nil
+    elsif hosting_params.key?(:gus_sdp_api_key) && ENV["GUS_SDP_API_KEY"].blank?
       key_value = hosting_params[:gus_sdp_api_key].to_s.strip
       # Ignore blanks and redaction placeholders to prevent accidental overwrite
       Setting.gus_sdp_api_key = key_value unless key_value.blank? || key_value == "********"
@@ -179,11 +181,14 @@ class Settings::HostingsController < ApplicationController
       return redirect_to settings_hosting_path, alert: t(".import_disabled")
     end
 
-    start_year = import_params[:gus_inflation_start_year].presence&.to_i || (Date.current.year - 20)
-    end_year = import_params[:gus_inflation_end_year].presence&.to_i || (Date.current.year - 1)
+    start_year_param = import_params[:gus_inflation_start_year].presence
+    end_year_param = import_params[:gus_inflation_end_year].presence
+
+    start_year = start_year_param.nil? ? (Date.current.year - 20) : Integer(start_year_param, exception: false)
+    end_year = end_year_param.nil? ? (Date.current.year - 1) : Integer(end_year_param, exception: false)
     valid_range = 1990..Date.current.year
 
-    unless valid_range.cover?(start_year) && valid_range.cover?(end_year) && start_year <= end_year
+    unless start_year && end_year && valid_range.cover?(start_year) && valid_range.cover?(end_year) && start_year <= end_year
       return redirect_to settings_hosting_path, alert: t(".invalid_import_range")
     end
 
@@ -195,7 +200,7 @@ class Settings::HostingsController < ApplicationController
   private
     def hosting_params
       return ActionController::Parameters.new unless params.key?(:setting)
-      params.require(:setting).permit(:onboarding_state, :require_email_confirmation, :invite_only_default_family_id, :brand_fetch_client_id, :brand_fetch_high_res_logos, :twelve_data_api_key, :gus_sdp_api_key, :gus_inflation_import_enabled, :openai_access_token, :openai_uri_base, :openai_model, :openai_json_mode, :exchange_rate_provider, :securities_provider, :syncs_include_pending, :auto_sync_enabled, :auto_sync_time, :external_assistant_url, :external_assistant_token, :external_assistant_agent_id)
+      params.require(:setting).permit(:onboarding_state, :require_email_confirmation, :invite_only_default_family_id, :brand_fetch_client_id, :brand_fetch_high_res_logos, :twelve_data_api_key, :gus_sdp_api_key, :clear_gus_sdp_api_key, :gus_inflation_import_enabled, :openai_access_token, :openai_uri_base, :openai_model, :openai_json_mode, :exchange_rate_provider, :securities_provider, :syncs_include_pending, :auto_sync_enabled, :auto_sync_time, :external_assistant_url, :external_assistant_token, :external_assistant_agent_id)
     end
 
     def import_params

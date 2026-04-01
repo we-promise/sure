@@ -12,7 +12,6 @@ export default class extends Controller {
   ]
   static values = {
     inflationSubtypes: Array,
-    globalAutoFetchEnabled: Boolean,
     lotAutoFetch: Boolean
   }
 
@@ -49,7 +48,7 @@ export default class extends Controller {
     if (!this.hasManualInflationFieldTarget || !this.hasManualInflationInputTarget) return
 
     const inflationLinked = this.inflationSubtypesValue.includes(this.subtypeSelectTarget.value)
-    const autoFetch = this.globalAutoFetchEnabledValue && this.lotAutoFetchValue
+    const autoFetch = this.lotAutoFetchValue
     const showManualField = inflationLinked && !autoFetch
 
     this.manualInflationFieldTarget.classList.toggle("hidden", !showManualField)

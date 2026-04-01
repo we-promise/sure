@@ -13,7 +13,7 @@ class Provider::GusSdp < Provider
 
   def fetch_cpi_yoy_for_year(year:)
     with_provider_response do
-      response = client.get("/indicators/indicator-data-indicator") do |req|
+      response = client.get("indicators/indicator-data-indicator") do |req|
         req.params["id-wskaznik"] = cpi_indicator_id
         req.params["id-rok"] = year
         req.params["lang"] = "pl"
