@@ -57,7 +57,7 @@ class GusInflationRateTest < ActiveSupport::TestCase
     assert_equal 0, GusInflationRate.import_year!(year: 2026)
   end
 
-  test "import_year returns zero when provider responds with 429 rate limit" do
+  test "import_year raises error when provider responds with 429 rate limit" do
     fake_provider = mock("provider")
     fake_provider.expects(:fetch_cpi_yoy_for_year).with(year: 2026).returns(
       Provider::Response.new(success?: false, data: nil, error: Provider::Error.new("the server responded with status 429"))
@@ -65,7 +65,8 @@ class GusInflationRateTest < ActiveSupport::TestCase
 
     GusInflationRate.stubs(:provider).returns(fake_provider)
 
-    assert_equal 0, GusInflationRate.import_year!(year: 2026)
+    error = assert_raises(Provider::Error) { GusInflationRate.import_year!(year: 2026) }
+    assert_match(/429/, error.message)
   end
 
   test "import_year skips provider call for complete year when force is false" do

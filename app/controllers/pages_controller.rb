@@ -17,18 +17,11 @@ class PagesController < ApplicationController
     @bond_accounts = Current.user.accessible_accounts.visible.where(accountable_type: "Bond").includes(accountable: :bond_lots)
 
     family_currency = Current.family.currency
-    open_lots_relation = BondLot.open
-      .joins(bond: :account)
-      .includes(bond: :account)
-      .where(accounts: { id: @bond_accounts.select(:id) })
-    @bond_open_lots = open_lots_relation.map { |lot| [ lot.account, lot ] }
-    @bond_total_value = @bond_accounts.sum { |a| a.balance_money.exchange_to(family_currency, fallback_rate: 1).amount }
-    @bond_total_return = @bond_open_lots.sum do |(account, lot)|
-      Money.new(lot.total_return_amount, account.currency).exchange_to(family_currency, fallback_rate: 1).amount
-    end
-    @bond_top_lots = @bond_open_lots.sort_by { |(account, lot)|
-      -Money.new(lot.estimated_current_value.to_d, account.currency).exchange_to(family_currency, fallback_rate: 1).amount
-    }.first(BondLot::TOP_LOTS_LIMIT)
+    bond_summary = BondLot.dashboard_summary(@bond_accounts, family_currency)
+    @bond_open_lots = bond_summary.open_lots
+    @bond_total_value = bond_summary.total_value
+    @bond_total_return = bond_summary.total_return
+    @bond_top_lots = bond_summary.top_lots
 
     # Use IncomeStatement for all cashflow data (now includes categorized trades)
     income_statement = Current.family.income_statement
@@ -366,13 +359,14 @@ class PagesController < ApplicationController
     end
 
     def show_bond_rate_review_notice!
-      return if session[:bond_rate_review_prompted]
+      session_key = "bond_rate_review_prompted_#{Current.family&.id}"
+      return if session[session_key]
 
       pending_lots = BondLot.needs_rate_review.joins(bond: :account).includes(bond: :account).merge(Account.visible.accessible_by(Current.user)).load
       return if pending_lots.empty?
 
       account_names = pending_lots.map { |lot| lot.account&.name }.compact.uniq.first(3).join(", ")
       flash.now[:notice] = t("pages.dashboard.bond_rate_review_notice", count: pending_lots.size, accounts: account_names)
-      session[:bond_rate_review_prompted] = true
+      session[session_key] = true
     end
 end
