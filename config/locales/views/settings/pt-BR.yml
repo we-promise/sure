@@ -159,7 +159,7 @@ pt-BR:
         message: As chaves de criptografia do Active Record não estão configuradas. Certifique-se de que as credenciais de criptografia (active_record_encryption.primary_key, active_record_encryption.deterministic_key e active_record_encryption.key_derivation_salt) estejam configuradas corretamente em suas credenciais do Rails ou variáveis ​​de ambiente antes de usar provedores de sincronização.
       coinbase_panel:
         setup_instructions: "Para conectar à Coinbase:"
-        step1_html: Acesse <a href="https://portal.cdp.coinbase.com/projects/api-keys" target="_blank" class="text-primary underline">Configurações da API da Coinbase</a>
+        step1_html: Acesse <a href="https://portal.cdp.coinbase.com/projects/api-keys" target="_blank" rel="noopener noreferrer" class="text-primary underline">Configurações da API da Coinbase</a>
         step2: Crie uma nova chave de API com permissões somente leitura (visualizar contas, visualizar transações)
         step3: Copie sua chave de API e o segredo da API e cole-os abaixo
         api_key_label: Chave de API
