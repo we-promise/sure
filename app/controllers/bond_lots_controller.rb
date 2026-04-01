@@ -67,7 +67,8 @@ class BondLotsController < ApplicationController
       redirect_back_or_to account_path(@account), notice: t("bond_lots.update.success")
     rescue ActiveRecord::RecordInvalid => e
       @bond_lot.errors.add(:base, e.record.errors.full_messages.to_sentence) if e.record != @bond_lot
-      render :edit, status: :unprocessable_entity
+      template = request.headers["Turbo-Frame"] == "drawer" ? :show : :edit
+      render template, status: :unprocessable_entity
     end
   end
 

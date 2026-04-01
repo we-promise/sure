@@ -167,6 +167,25 @@ class BondLotsControllerTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
   end
 
+  test "update returns drawer show on invalid params for drawer frame requests" do
+    lot = @account.bond.bond_lots.create!(
+      purchased_on: Date.new(2026, 1, 1),
+      amount: 500,
+      term_months: 6,
+      interest_rate: 3.5,
+      subtype: "other_bond",
+      rate_type: "fixed",
+      coupon_frequency: "at_maturity"
+    )
+
+    patch bond_lot_path(lot),
+          params: { bond_lot: { amount: -1 } },
+          headers: { "Turbo-Frame" => "drawer" }
+
+    assert_response :unprocessable_entity
+    assert_select "turbo-frame#drawer"
+  end
+
   test "creates EOD purchase without term months input" do
     purchase_date = Date.new(2026, 4, 1)
 
