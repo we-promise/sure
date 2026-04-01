@@ -43,7 +43,8 @@ class TradesTest < ApplicationSystemTestCase
 
     open_new_trade_modal
 
-    select "Sell", from: "Type"
+    find("label", text: "Type").click
+    click_on "Sell"
     fill_in "Ticker symbol", with: "AAPL"
     fill_in "Date", with: Date.current
     fill_in "Quantity", with: qty
