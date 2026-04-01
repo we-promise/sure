@@ -74,8 +74,11 @@ class BondLotsController < ApplicationController
     entry = @bond_lot.entry
 
     ActiveRecord::Base.transaction do
-      @bond_lot.destroy!
-      entry&.destroy!
+      if entry
+        entry.destroy!
+      else
+        @bond_lot.destroy!
+      end
     end
 
     account.sync_later(window_start_date: sync_start_date)

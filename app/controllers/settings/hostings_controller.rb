@@ -63,7 +63,8 @@ class Settings::HostingsController < ApplicationController
     end
 
     if hosting_params.key?(:gus_sdp_api_key) && !ENV.key?("GUS_SDP_API_KEY")
-      Setting.gus_sdp_api_key = hosting_params[:gus_sdp_api_key]
+      key_value = hosting_params[:gus_sdp_api_key].to_s.strip
+      Setting.gus_sdp_api_key = key_value unless key_value.blank?
     end
 
     if hosting_params.key?(:gus_inflation_import_enabled) && !ENV.key?("GUS_INFLATION_IMPORT_ENABLED")
@@ -179,8 +180,9 @@ class Settings::HostingsController < ApplicationController
 
     start_year = import_params[:gus_inflation_start_year].presence&.to_i || (Date.current.year - 20)
     end_year = import_params[:gus_inflation_end_year].presence&.to_i || (Date.current.year - 1)
+    valid_range = 1990..Date.current.year
 
-    if start_year > end_year
+    unless valid_range.cover?(start_year) && valid_range.cover?(end_year) && start_year <= end_year
       return redirect_to settings_hosting_path, alert: t(".invalid_import_range")
     end
 
@@ -208,12 +210,9 @@ class Settings::HostingsController < ApplicationController
     end
 
     def set_gus_stats
-      gus_count = GusInflationRate.count
-      @gus_stats = {
-        count: gus_count,
-        min_year: gus_count > 0 ? GusInflationRate.minimum(:year) : nil,
-        max_year: gus_count > 0 ? GusInflationRate.maximum(:year) : nil
-      }
+      row = GusInflationRate.pick(Arel.sql("COUNT(*), MIN(year), MAX(year)"))
+      cnt, min_yr, max_yr = row || [ 0, nil, nil ]
+      @gus_stats = { count: cnt.to_i, min_year: cnt.to_i > 0 ? min_yr : nil, max_year: cnt.to_i > 0 ? max_yr : nil }
     end
 
     def ensure_admin
