@@ -70,7 +70,7 @@ class UI::Dashboard::BondSummaryRow < ApplicationComponent
       margin_component = lot.current_margin_percent
       return t("bonds.purchase_holding.first_period_fixed_rate") if inflation_component.nil? || margin_component.nil?
 
-      if lot.current_inflation_source == "gus"
+      if lot.gus_inflation_source?
         t(
           "bonds.purchase_holding.inflation_meta_gus",
           inflation: helpers.number_to_percentage(inflation_component.to_d, precision: 3),

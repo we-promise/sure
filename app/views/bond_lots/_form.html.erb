@@ -71,7 +71,7 @@
                 }
               } %>
 
-            <div data-bond-lot-form-target="otherFields">
+          <div data-bond-lot-form-target="otherFields">
         <%= form.select :rate_type,
           Bond::RATE_TYPES.map { |value| [ t("bond_lots.form.rate_types.#{value}", default: value.titleize), value ] },
           { label: t("bond_lots.form.rate_type"), required: true },
@@ -81,7 +81,7 @@
           Bond::COUPON_FREQUENCIES.map { |value| [ t("bond_lots.form.coupon_frequencies.#{value}", default: value.humanize), value ] },
           { label: t("bond_lots.form.coupon_frequency"), required: true },
           { data: { bond_lot_form_target: "otherRequiredInput" } } %>
-            </div>
+      </div>
 
       <div class="flex items-center gap-2" data-bond-lot-form-target="inflationFields">
         <%= form.number_field :first_period_rate,
@@ -105,8 +105,7 @@
                                 step: 1,
                                 data: { bond_lot_form_target: "inflationInput" } %>
         </div>
-      <% end %>
-      <% unless Setting.gus_inflation_import_enabled_effective %>
+      <% else %>
         <p class="text-xs text-secondary" data-bond-lot-form-target="inflationFields">
           <%= t("bond_lots.form.auto_fetch_disabled_hint") %>
         </p>

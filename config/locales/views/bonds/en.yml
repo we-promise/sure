@@ -49,7 +49,9 @@ en:
       unknown: Unknown
       update_needed: Update needed
       purchased: "Purchased %{date}"
-      term_months: "%{months} months"
+      term_months:
+        one: "%{count} month"
+        other: "%{count} months"
       principal_term: "Principal, %{term}"
       bond_meta: "%{rate_type} / %{coupon}"
       inflation_meta_gus: "%{inflation} inflation + %{margin} margin (GUS SDP %{indicator})"
