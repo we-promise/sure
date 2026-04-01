@@ -54,6 +54,7 @@ en:
       bond_meta: "%{rate_type} / %{coupon}"
       inflation_meta_gus: "%{inflation} inflation + %{margin} margin (GUS SDP %{indicator})"
       inflation_meta_manual: "%{inflation} inflation + %{margin} margin (manual)"
+      first_period_fixed_rate: First-period fixed rate
       maturity: "Matures %{date}"
       maturity_label: Maturity date
       since_purchase: Since purchase
