@@ -64,7 +64,8 @@ class Settings::HostingsController < ApplicationController
 
     if hosting_params.key?(:gus_sdp_api_key) && !ENV.key?("GUS_SDP_API_KEY")
       key_value = hosting_params[:gus_sdp_api_key].to_s.strip
-      Setting.gus_sdp_api_key = key_value unless key_value.blank?
+      # Ignore blanks and redaction placeholders to prevent accidental overwrite
+      Setting.gus_sdp_api_key = key_value unless key_value.blank? || key_value == "********"
     end
 
     if hosting_params.key?(:gus_inflation_import_enabled) && !ENV.key?("GUS_INFLATION_IMPORT_ENABLED")
