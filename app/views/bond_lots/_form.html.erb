@@ -121,10 +121,12 @@
                               data: { bond_lot_form_target: "manualInflationInput" } %>
       </div>
 
-      <%# auto_fetch_inflation attribute is normalized by normalize_auto_fetch_inflation
-          (e.g. forced off for non-inflation-linked lots). Global GUS import enablement is
-          enforced via auto_fetch_inflation? / Setting.gus_inflation_import_enabled_effective,
-          so no user toggle is needed — the manual CPI field shows when auto-fetch is unavailable. %>
+      <%# auto_fetch_inflation attribute is normalized server-side by normalize_auto_fetch_inflation
+          (forced off for non-inflation-linked lots, defaulted to true otherwise). The server-side
+          value MUST be baked into lot_auto_fetch_value so the Stimulus controller can determine
+          whether to show the manual CPI field on initial render. Global GUS import enablement
+          is enforced at query time via auto_fetch_inflation?, not the stored attribute.
+          Do NOT move this logic client-side — the callback is the source of truth. %>
       <%= form.hidden_field :auto_fetch_inflation,
                             value: bond_lot.auto_fetch_inflation ? 1 : 0 %>
 

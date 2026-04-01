@@ -20,13 +20,14 @@ class BondLot < ApplicationRecord
 
     total_value = bond_accounts.sum { |a| a.balance_money.exchange_to(family_currency, fallback_rate: 1).amount }
 
-    total_return = lots_with_accounts.sum do |(account, lot)|
-      Money.new(lot.total_return_amount, account.currency).exchange_to(family_currency, fallback_rate: 1).amount
+    enriched = lots_with_accounts.map do |(account, lot)|
+      converted_value = Money.new(lot.estimated_current_value.to_d, account.currency).exchange_to(family_currency, fallback_rate: 1).amount
+      converted_return = Money.new(lot.total_return_amount, account.currency).exchange_to(family_currency, fallback_rate: 1).amount
+      [ account, lot, converted_value, converted_return ]
     end
 
-    top_lots = lots_with_accounts.sort_by { |(account, lot)|
-      -Money.new(lot.estimated_current_value.to_d, account.currency).exchange_to(family_currency, fallback_rate: 1).amount
-    }.first(TOP_LOTS_LIMIT)
+    total_return = enriched.sum { |_, _, _, cr| cr }
+    top_lots = enriched.sort_by { |_, _, cv, _| -cv }.first(TOP_LOTS_LIMIT).map { |a, l, _, _| [ a, l ] }
 
     OpenStruct.new(open_lots: lots_with_accounts, total_value: total_value, total_return: total_return, top_lots: top_lots)
   end
@@ -61,6 +62,7 @@ class BondLot < ApplicationRecord
   validates :tax_rate, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
   validates :entry_id, uniqueness: true, allow_nil: true
   validate :validate_issue_date_not_after_purchased_on
+  validate :validate_maturity_date_not_before_purchased_on
 
   with_options if: :inflation_linked? do
     validates :issue_date, presence: true
@@ -559,6 +561,11 @@ class BondLot < ApplicationRecord
       end
     end
 
+    # NOTE: This flag means "user needs to fill in static rate fields" (first_period_rate,
+    # inflation_margin, or interest_rate). It is intentionally NOT gated on rates_resolvable_through?
+    # which checks whether CPI data covers the full term — that's a separate concern used only
+    # by settle_if_matured! to gate settlement. Mixing the two would make this callback slow
+    # (DB queries per save) and conflate two distinct responsibilities.
     def clear_rate_review_flag
       return unless requires_rate_review?
 
@@ -576,6 +583,11 @@ class BondLot < ApplicationRecord
     def validate_issue_date_not_after_purchased_on
       return if issue_date.blank? || purchased_on.blank?
       errors.add(:issue_date, "cannot be after purchased_on") if issue_date > purchased_on
+    end
+
+    def validate_maturity_date_not_before_purchased_on
+      return if purchased_on.blank? || maturity_date.blank?
+      errors.add(:maturity_date, "must be on or after purchase date") if maturity_date < purchased_on
     end
 
     def assign_maturity_date_from_term

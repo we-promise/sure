@@ -210,8 +210,11 @@ class Settings::HostingsController < ApplicationController
     end
 
     def set_gus_stats
-      row = GusInflationRate.pick(Arel.sql("COUNT(*), MIN(year), MAX(year)"))
-      cnt, min_yr, max_yr = row || [ 0, nil, nil ]
+      cnt, min_yr, max_yr = GusInflationRate.pick(
+        Arel.sql("COUNT(*)"),
+        Arel.sql("MIN(year)"),
+        Arel.sql("MAX(year)")
+      ) || [ 0, nil, nil ]
       @gus_stats = { count: cnt.to_i, min_year: cnt.to_i > 0 ? min_yr : nil, max_year: cnt.to_i > 0 ? max_yr : nil }
     end
 
