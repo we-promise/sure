@@ -12,15 +12,11 @@ class UI::Dashboard::BondSummaryRow < ApplicationComponent
   end
 
   def total_return_amount
-    @total_return_amount ||= begin
-      amount = lot.total_return_amount
-      amount = lot.projected_total_return_amount if amount.abs < 0.01.to_d && lot.projected_total_return_amount.positive?
-      amount
-    end
+    @total_return_amount ||= projected_total_return? ? lot.projected_total_return_amount : lot.total_return_amount
   end
 
   def total_return_label
-    if lot.total_return_amount.abs < 0.01.to_d && lot.projected_total_return_amount.positive?
+    if projected_total_return?
       t("bonds.purchase_holding.projected_to_maturity")
     else
       t("bonds.purchase_holding.since_purchase")
@@ -35,7 +31,8 @@ class UI::Dashboard::BondSummaryRow < ApplicationComponent
     if lot.inflation_linked?
       return t("bonds.purchase_holding.update_needed") if lot.requires_rate_review?
 
-      return helpers.number_to_percentage(lot.current_rate_percent, precision: 3) if lot.current_rate_percent.present?
+      current_rate = lot.current_rate_percent
+      return helpers.number_to_percentage(current_rate, precision: 3) if current_rate.present?
 
       t("bonds.purchase_holding.unknown")
     else
@@ -62,6 +59,10 @@ class UI::Dashboard::BondSummaryRow < ApplicationComponent
   end
 
   private
+    def projected_total_return?
+      lot.total_return_amount.abs < 0.01.to_d && lot.projected_total_return_amount.positive?
+    end
+
     def inflation_linked_rate_meta
       return t("bonds.purchase_holding.pending_review") if lot.requires_rate_review?
 
