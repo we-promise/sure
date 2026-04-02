@@ -7,6 +7,8 @@ on:
 
 jobs:
   update-docs:
+    if: github.repository == 'we-promise/sure'
+    permissions: {}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/github-script@v8
