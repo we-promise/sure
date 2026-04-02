@@ -194,6 +194,10 @@ services:
         "node",
         "dist/index.js",
         "gateway",
+        # OpenClaw may exit with "Missing config" on first boot in example setups.
+        # `--allow-unconfigured` keeps the gateway running until you complete `openclaw setup`.
+        "pass",
+        "--allow-unconfigured",
         "--bind",
         "${OPENCLAW_GATEWAY_BIND:-lan}",
         "--port",
