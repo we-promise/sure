@@ -172,6 +172,8 @@ flutter build apk --release
 flutter build appbundle --release
 ```
 
+Android release metadata comes from `pubspec.yaml` (`version: <name>+<code>`). Keep the numeric build code increasing for every release so Android can install upgrades over older APKs.
+
 ### iOS
 
 ```bash
