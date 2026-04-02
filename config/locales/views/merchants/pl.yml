@@ -26,6 +26,8 @@ pl:
       provider_info: Ci kontrahenci zostali automatycznie wykryci przez połączenia bankowe lub AI. Możesz ich edytować, aby utworzyć własną kopię, albo usunąć, aby odłączyć ich od transakcji.
       enhance_info:
         one: "%{count} kontrahentowi dostawcy brakuje informacji o stronie internetowej. Ulepsz dane z pomocą AI, aby wykryć strony, wyświetlić loga i scalić duplikaty kontrahentów."
+        few: "%{count} kontrahentom dostawcy brakuje informacji o stronie internetowej. Ulepsz dane z pomocą AI, aby wykryć strony, wyświetlić loga i scalić duplikaty kontrahentów."
+        many: "%{count} kontrahentom dostawcy brakuje informacji o stronie internetowej. Ulepsz dane z pomocą AI, aby wykryć strony, wyświetlić loga i scalić duplikaty kontrahentów."
         other: "%{count} kontrahentom dostawcy brakuje informacji o stronie internetowej. Ulepsz dane z pomocą AI, aby wykryć strony, wyświetlić loga i scalić duplikaty kontrahentów."
       enhance_button: Ulepsz z pomocą AI
       unlinked_title: Ostatnio odłączone

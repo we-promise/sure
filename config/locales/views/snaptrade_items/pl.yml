@@ -17,6 +17,8 @@ pl:
     complete_account_setup:
       success:
         one: Pomyślnie połączono %{count} konto.
+        few: Pomyślnie połączono %{count} konta.
+        many: Pomyślnie połączono %{count} kont.
         other: Pomyślnie połączono %{count} konta.
       partial_success: Połączono %{linked} konto(a). %{failed} nie udało się połączyć.
       link_failed: 'Nie udało się połączyć kont: %{errors}'
@@ -84,6 +86,8 @@ pl:
     snaptrade_item:
       accounts_need_setup:
         one: "%{count} konto wymaga konfiguracji"
+        few: "%{count} konta wymagają konfiguracji"
+        many: "%{count} kont wymaga konfiguracji"
         other: "%{count} kont wymaga konfiguracji"
       deletion_in_progress: Usuwanie w toku...
       syncing: Synchronizacja...
@@ -102,6 +106,8 @@ pl:
       manage_connections: Zarządzaj połączeniami
       more_accounts_available:
         one: "%{count} dodatkowe konto dostępne do konfiguracji"
+        few: "%{count} dodatkowe konta dostępne do konfiguracji"
+        many: "%{count} dodatkowych kont dostępnych do konfiguracji"
         other: "%{count} dodatkowych kont dostępnych do konfiguracji"
       no_accounts_title: Nie wykryto kont
       no_accounts_description: Połącz biuro maklerskie, aby zaimportować swoje konta inwestycyjne.
@@ -126,9 +132,13 @@ pl:
       update_button: Zaktualizuj konfigurację
       status_connected:
         one: "%{count} konto z SnapTrade"
+        few: "%{count} konta z SnapTrade"
+        many: "%{count} kont z SnapTrade"
         other: "%{count} konta z SnapTrade"
       needs_setup:
         one: "%{count} wymaga konfiguracji"
+        few: "%{count} wymagają konfiguracji"
+        many: "%{count} wymaga konfiguracji"
         other: "%{count} wymaga konfiguracji"
       status_ready: Gotowe do połączenia z biurami maklerskimi
       status_needs_registration: Dane uwierzytelniające zapisane. Przejdź do strony Konta, aby połączyć biura maklerskie.
@@ -142,6 +152,8 @@ pl:
       connections_error: 'Nie udało się załadować połączeń: %{message}'
       accounts_count:
         one: "%{count} konto"
+        few: "%{count} konta"
+        many: "%{count} kont"
         other: "%{count} kont"
       orphaned_connection: Osierocoło połączenie (niezsynchronizowane lokalnie)
       needs_linking: wymaga połączenia
@@ -152,6 +164,8 @@ pl:
       delete_connection_confirm: Usuń połączenie
       orphaned_users_title:
         one: "%{count} osierocoła rejestracja"
+        few: "%{count} osierocone rejestracje"
+        many: "%{count} osieroconych rejestracji"
         other: "%{count} osieroconych rejestracji"
       orphaned_users_description: Są to poprzednie rejestracje użytkowników SnapTrade, które zajmują Twoje miejsca połączeń. Usuń je, aby zwolnić miejsca.
       orphaned_user: Osierocoła rejestracja
@@ -164,17 +178,23 @@ pl:
       no_accounts: Nie znaleziono kont
       synced:
         one: "%{count} konto zsynchronizowane"
+        few: "%{count} konta zsynchronizowane"
+        many: "%{count} kont zsynchronizowanych"
         other: "%{count} kont zsynchronizowanych"
       synced_with_setup: "%{linked} zsynchronizowane, %{unlinked} wymagają konfiguracji"
     institution_summary:
       none: Brak połączonych instytucji
       count:
         one: "%{count} instytucja"
+        few: "%{count} instytucje"
+        many: "%{count} instytucji"
         other: "%{count} instytucji"
     brokerage_summary:
       none: Brak połączonych biur maklerskich
       count:
         one: "%{count} biuro maklerskie"
+        few: "%{count} biura maklerskie"
+        many: "%{count} biur maklerskich"
         other: "%{count} biur maklerskich"
     syncer:
       discovering: Odnajdywanie kont...

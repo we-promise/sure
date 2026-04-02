@@ -101,7 +101,7 @@ pl:
         household_form_label: Nazwa gospodarstwa domowego
         household_subtitle: Zaproszone osoby mogą zalogować się do Twojego konta %{moniker} i uzyskać dostęp do współdzielonych zasobów.
         household_title: Gospodarstwo domowe
-        invitation_link: Link do zaproszenia
+        invitation_link: Odnośnik do zaproszenia
         invite_member: Dodaj członka
         last_name: Nazwisko
         page_title: Informacje profilowe

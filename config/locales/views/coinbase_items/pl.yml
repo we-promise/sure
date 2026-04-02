@@ -15,6 +15,8 @@ pl:
       no_accounts: Wszystkie portfele zostały zaimportowane.
       accounts_count:
         one: "Dostępny %{count} portfel"
+        few: "Dostępne %{count} portfele"
+        many: "Dostępnych %{count} portfeli"
         other: "Dostępne %{count} portfeli"
       select_all: Wybierz wszystkie
       import_selected: Importuj wybrane
@@ -23,6 +25,8 @@ pl:
     complete_account_setup:
       success:
         one: Zaimportowano %{count} portfel
+        few: Zaimportowano %{count} portfele
+        many: Zaimportowano %{count} portfeli
         other: Zaimportowano %{count} portfeli
       none_selected: Nie wybrano portfeli
       no_accounts: Brak portfeli do importu
@@ -35,6 +39,8 @@ pl:
         no_accounts: Nie znaleziono kont
         all_synced:
           one: "%{count} konto zsynchronizowane"
+          few: "%{count} konta zsynchronizowane"
+          many: "%{count} kont zsynchronizowanych"
           other: "%{count} kont zsynchronizowanych"
         partial_sync: "%{linked_count} zsynchronizowanych, %{unlinked_count} wymaga konfiguracji"
       status: Ostatnia synchronizacja %{timestamp} temu
@@ -50,6 +56,8 @@ pl:
       import_wallets_menu: Importuj portfele
       more_wallets_available:
         one: "Jeszcze %{count} portfel do zaimportowania"
+        few: "Jeszcze %{count} portfele do zaimportowania"
+        many: "Jeszcze %{count} portfeli do zaimportowania"
         other: "Jeszcze %{count} portfeli do zaimportowania"
     select_existing_account:
       title: Połącz konto Coinbase
@@ -73,6 +81,8 @@ pl:
       checking_configuration: Sprawdzanie konfiguracji kont...
       accounts_need_setup:
         one: "%{count} konto wymaga konfiguracji"
+        few: "%{count} konta wymagają konfiguracji"
+        many: "%{count} kont wymaga konfiguracji"
         other: "%{count} kont wymaga konfiguracji"
       processing_accounts: Przetwarzanie danych kont...
       calculating_balances: Obliczanie sald...

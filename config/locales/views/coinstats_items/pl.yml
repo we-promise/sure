@@ -51,6 +51,8 @@ pl:
         no_accounts: Nie znaleziono portfeli kryptowalutowych
         all_synced:
           one: "Zsynchronizowano %{count} portfel kryptowalutowy"
+          few: "Zsynchronizowano %{count} portfele kryptowalutowe"
+          many: "Zsynchronizowano %{count} portfeli kryptowalutowych"
           other: "Zsynchronizowano %{count} portfeli kryptowalutowych"
         partial_sync: "Zsynchronizowano %{linked_count} portfeli kryptowalutowych, %{unlinked_count} wymaga konfiguracji"
       reconnect: Połącz ponownie

@@ -8,6 +8,8 @@ pl:
     expected_today: Oczekiwane dziś
     expected_in:
       one: Oczekiwane za %{count} dzień
+      few: Oczekiwane za %{count} dni
+      many: Oczekiwane za %{count} dni
       other: Oczekiwane za %{count} dni
     day_of_month: Dzień %{day} miesiąca
     identify_patterns: Wykryj wzorce

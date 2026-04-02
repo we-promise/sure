@@ -841,6 +841,7 @@ DEPENDENCIES
   rack-cors
   rack-mini-profiler
   rails (~> 7.2.2)
+  rails-i18n
   rails-settings-cached
   rchardet
   redcarpet
