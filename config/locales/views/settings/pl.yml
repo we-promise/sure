@@ -1,0 +1,192 @@
+---
+pl:
+  views:
+    settings:
+      payments:
+        renewal: Twoje wsparcie będzie kontynuowane %{date}.
+        cancellation: Twoje wsparcie kończy się %{date}.
+  settings:
+    ai_prompts:
+      show:
+        page_title: Prompty AI
+        openai_label: OpenAI
+        disable_ai: Wyłącz asystenta AI
+        prompt_instructions: Instrukcje promptów
+        main_system_prompt:
+          title: Główny prompt systemowy
+          subtitle: Podstawowe instrukcje definiujące, jak asystent AI zachowuje się we wszystkich rozmowach
+        transaction_categorizer:
+          title: Kategoryzator transakcji
+          subtitle: AI automatycznie kategoryzuje Twoje transakcje na podstawie zdefiniowanych kategorii
+        merchant_detector:
+          title: Wykrywanie sprzedawcy
+          subtitle: AI identyfikuje i wzbogaca dane transakcji o informacje o sprzedawcy
+    payments:
+      show:
+        page_title: Płatności
+        subscription_subtitle: Zaktualizuj dane swojej karty kredytowej
+        subscription_title: Zarządzaj wpłatami
+    appearances:
+      show:
+        page_title: Wygląd
+        theme_title: Motyw
+        theme_subtitle: Wybierz preferowany motyw aplikacji
+        theme_dark: Ciemny
+        theme_light: Jasny
+        theme_system: Systemowy
+        transactions_title: Transakcje
+        transactions_subtitle: Dostosuj sposób wyświetlania transakcji
+        dashboard_title: Pulpit
+        dashboard_subtitle: Dostosuj sposób wyświetlania pulpitu
+        dashboard_two_column_title: Układ dwukolumnowy
+        dashboard_two_column_description: Wyświetlaj widżety pulpitu w dwóch kolumnach na dużych ekranach. Gdy opcja jest wyłączona, widżety układają się w jednej kolumnie.
+        split_grouped_title: Grupuj podzielone transakcje
+        split_grouped_description: Pokazuj podzielone transakcje zgrupowane pod transakcją nadrzędną na liście transakcji. Gdy opcja jest wyłączona, pozycje podrzędne pojawiają się jako osobne wiersze.
+    preferences:
+      show:
+        country: Kraj
+        currency: Waluta
+        date_format: Format daty
+        general_subtitle: Skonfiguruj swoje preferencje
+        general_title: Ogólne
+        default_period: Domyślny okres
+        default_account_order: Domyślna kolejność kont
+        language: Język
+        language_auto: Język przeglądarki
+        page_title: Preferencje
+        timezone: Strefa czasowa
+        month_start_day: Miesiąc budżetowy zaczyna się
+        month_start_day_hint: Ustaw, kiedy zaczyna się Twój miesiąc budżetowy (np. dzień wypłaty)
+        month_start_day_warning: Twoje budżety i obliczenia MTD będą używać tego niestandardowego dnia startowego zamiast 1. dnia każdego miesiąca.
+        sharing_title: "Udostępnianie %{moniker}"
+        sharing_subtitle: Kontroluj, jak konta są udostępniane w Twoim %{moniker}
+        sharing_default_label: Domyślne udostępnianie dla nowych kont
+        sharing_shared: Udostępnij wszystkim członkom
+        sharing_private: Domyślnie ustaw jako prywatne
+    profiles:
+      destroy:
+        cannot_remove_self: Nie możesz usunąć siebie z konta.
+        member_removal_failed: Wystąpił problem podczas usuwania członka.
+        member_removed: Członek został pomyślnie usunięty.
+        not_authorized: Nie masz uprawnień do usuwania członków.
+      show:
+        confirm_delete:
+          body: Czy na pewno chcesz trwale usunąć swoje konto? Tej akcji nie można cofnąć.
+          title: Usunąć konto?
+        confirm_reset:
+          body: Czy na pewno chcesz zresetować swoje konto? Spowoduje to usunięcie wszystkich kont, kategorii, sprzedawców, tagów i innych danych. Tej akcji nie można cofnąć.
+          title: Zresetować konto?
+        confirm_reset_with_sample_data:
+          body: Czy na pewno chcesz zresetować swoje konto i załadować przykładowe dane? Spowoduje to usunięcie istniejących danych i zastąpienie ich danymi demonstracyjnymi, aby bezpiecznie poznawać Sure.
+          title: Zresetować konto i załadować przykładowe dane?
+        confirm_remove_invitation:
+          body: Czy na pewno chcesz usunąć zaproszenie dla %{email}?
+          title: Usuń zaproszenie
+        confirm_remove_member:
+          body: Czy na pewno chcesz usunąć %{name} ze swojego konta?
+          title: Usuń członka
+        danger_zone_title: Strefa ryzyka
+        delete_account: Usuń konto
+        delete_account_warning: Usunięcie konta trwale usunie wszystkie Twoje dane i nie można tego cofnąć.
+        reset_account: Zresetuj konto
+        reset_account_warning: Reset konta usunie wszystkie konta, kategorie, sprzedawców, tagi i inne dane, ale pozostawi Twoje konto użytkownika.
+        reset_account_with_sample_data: Zresetuj i załaduj dane
+        reset_account_with_sample_data_warning: Usuń wszystkie istniejące dane i załaduj nowe dane przykładowe, aby poznawać aplikację na gotowym środowisku.
+        email: E-mail
+        first_name: Imię
+        group_form_input_placeholder: Wprowadź nazwę grupy
+        group_form_label: Nazwa grupy
+        group_title: Członkowie grupy
+        household_form_input_placeholder: Wprowadź nazwę gospodarstwa domowego
+        household_form_label: Nazwa gospodarstwa domowego
+        household_subtitle: Zaproszone osoby mogą zalogować się do Twojego konta %{moniker} i uzyskać dostęp do współdzielonych zasobów.
+        household_title: Gospodarstwo domowe
+        invitation_link: Link do zaproszenia
+        invite_member: Dodaj członka
+        last_name: Nazwisko
+        page_title: Informacje profilowe
+        pending: Oczekujące
+        profile_subtitle: Dostosuj sposób, w jaki wyświetlasz się w %{product_name}
+        profile_title: Dane osobiste
+        remove_invitation: Usuń zaproszenie
+        remove_member: Usuń członka
+        save: Zapisz
+    securities:
+      show:
+        page_title: Bezpieczeństwo
+        mfa_title: Uwierzytelnianie dwuskładnikowe
+        mfa_description: Dodaj dodatkową warstwę bezpieczeństwa do konta, wymagając kodu z aplikacji uwierzytelniającej podczas logowania
+        enable_mfa: Włącz 2FA
+        disable_mfa: Wyłącz 2FA
+        disable_mfa_confirm: Czy na pewno chcesz wyłączyć uwierzytelnianie dwuskładnikowe?
+        sso_title: Połączone konta
+        sso_subtitle: Zarządzaj połączeniami kont jednokrotnego logowania
+        sso_disconnect: Odłącz
+        sso_last_used: Ostatnio używane
+        sso_never: Nigdy
+        sso_no_email: Brak adresu e-mail
+        sso_no_identities: Brak połączonych kont SSO
+        sso_connect_hint: Wyloguj się i zaloguj przez dostawcę SSO, aby połączyć konto.
+        sso_confirm_title: Odłączyć konto?
+        sso_confirm_body: Czy na pewno chcesz odłączyć konto %{provider}? Możesz je połączyć ponownie później, logując się ponownie przez tego dostawcę.
+        sso_confirm_button: Odłącz
+        sso_warning_message: To jest Twoja jedyna metoda logowania. Przed odłączeniem ustaw hasło w ustawieniach bezpieczeństwa, w przeciwnym razie możesz utracić dostęp do konta.
+    settings_nav:
+      accounts_label: Konta
+      advanced_section_title: Zaawansowane
+      ai_prompts_label: Prompty AI
+      api_key_label: Klucz API
+      payment_label: Płatności
+      categories_label: Kategorie
+      feedback_label: Opinie
+      general_section_title: Ogólne
+      imports_label: Importy
+      exports_label: Eksporty
+      logout: Wyloguj
+      merchants_label: Sprzedawcy
+      guides_label: Przewodniki
+      other_section_title: Więcej
+      preferences_label: Preferencje
+      profile_label: Informacje profilowe
+      recurring_transactions_label: Cykliczne
+      rules_label: Reguły
+      security_label: Bezpieczeństwo
+      self_hosting_label: Self-Hosting
+      tags_label: Tagi
+      transactions_section_title: Transakcje
+      whats_new_label: Co nowego
+      api_keys_label: Klucz API
+      appearance_label: Wygląd
+      bank_sync_label: Synchronizacja banku
+    settings_nav_link_large:
+      next: Dalej
+      previous: Wstecz
+    user_avatar_field:
+      accepted_formats: JPG lub PNG. Maks. 5 MB.
+      choose: Prześlij zdjęcie
+      choose_label: "(opcjonalne)"
+      change: Zmień zdjęcie
+    providers:
+      show:
+        coinbase_title: Coinbase
+      encryption_error:
+        title: Wymagana konfiguracja szyfrowania
+        message: Klucze szyfrowania Active Record nie są skonfigurowane. Upewnij się, że dane uwierzytelniające szyfrowania (active_record_encryption.primary_key, active_record_encryption.deterministic_key oraz active_record_encryption.key_derivation_salt) są poprawnie ustawione w poświadczeniach Rails lub zmiennych środowiskowych przed użyciem dostawców synchronizacji.
+      coinbase_panel:
+        setup_instructions: 'Aby połączyć Coinbase:'
+        step1_html: Przejdź do <a href="https://portal.cdp.coinbase.com/projects/api-keys" target="_blank" class="text-primary underline">Ustawień API Coinbase</a>
+        step2: Utwórz nowy klucz API z uprawnieniami tylko do odczytu (podgląd kont, podgląd transakcji)
+        step3: Skopiuj klucz API i sekret API, a następnie wklej je poniżej
+        api_key_label: Klucz API
+        api_key_placeholder: Wprowadź klucz API Coinbase
+        api_secret_label: Sekret API
+        api_secret_placeholder: Wprowadź sekret API Coinbase
+        connect_button: Połącz Coinbase
+        syncing: Synchronizacja...
+        sync: Synchronizuj
+        disconnect_confirm: Czy na pewno chcesz odłączyć to połączenie Coinbase? Twoje zsynchronizowane konta staną się kontami ręcznymi.
+        status_connected: Coinbase jest połączony i synchronizuje Twoje zasoby kryptowalutowe.
+        status_not_connected: Brak połączenia. Wprowadź powyżej dane API, aby rozpocząć.
+      enable_banking_panel:
+        callback_url_instruction: Dla URL callback użyj %{callback_url}.
+        connection_error: Błąd połączenia

@@ -1,0 +1,78 @@
+---
+pl:
+  coinbase_items:
+    create:
+      default_name: Coinbase
+      success: Pomyślnie połączono z Coinbase! Twoje konta są synchronizowane.
+    update:
+      success: Pomyślnie zaktualizowano konfigurację Coinbase.
+    destroy:
+      success: Zaplanowano usunięcie połączenia Coinbase.
+    setup_accounts:
+      title: Importuj portfele Coinbase
+      subtitle: Wybierz portfele do śledzenia
+      instructions: Wybierz portfele, które chcesz zaimportować. Niewybrane portfele pozostaną dostępne, jeśli zechcesz dodać je później.
+      no_accounts: Wszystkie portfele zostały zaimportowane.
+      accounts_count:
+        one: "Dostępny %{count} portfel"
+        other: "Dostępne %{count} portfeli"
+      select_all: Wybierz wszystkie
+      import_selected: Importuj wybrane
+      cancel: Anuluj
+      creating: Importowanie...
+    complete_account_setup:
+      success:
+        one: Zaimportowano %{count} portfel
+        other: Zaimportowano %{count} portfeli
+      none_selected: Nie wybrano portfeli
+      no_accounts: Brak portfeli do importu
+    coinbase_item:
+      provider_name: Coinbase
+      syncing: Synchronizacja...
+      reconnect: Dane uwierzytelniające wymagają aktualizacji
+      deletion_in_progress: Usuwanie...
+      sync_status:
+        no_accounts: Nie znaleziono kont
+        all_synced:
+          one: "%{count} konto zsynchronizowane"
+          other: "%{count} kont zsynchronizowanych"
+        partial_sync: "%{linked_count} zsynchronizowanych, %{unlinked_count} wymaga konfiguracji"
+      status: Ostatnia synchronizacja %{timestamp} temu
+      status_with_summary: Ostatnia synchronizacja %{timestamp} temu - %{summary}
+      status_never: Nigdy nie synchronizowano
+      update_credentials: Zaktualizuj dane uwierzytelniające
+      delete: Usuń
+      no_accounts_title: Nie znaleziono kont
+      no_accounts_message: Twoje portfele Coinbase pojawią się tutaj po synchronizacji.
+      setup_needed: Portfele gotowe do importu
+      setup_description: Wybierz portfele Coinbase, które chcesz śledzić.
+      setup_action: Importuj portfele
+      import_wallets_menu: Importuj portfele
+      more_wallets_available:
+        one: "Jeszcze %{count} portfel do zaimportowania"
+        other: "Jeszcze %{count} portfeli do zaimportowania"
+    select_existing_account:
+      title: Połącz konto Coinbase
+      no_accounts_found: Nie znaleziono kont Coinbase.
+      wait_for_sync: Poczekaj, aż Coinbase zakończy synchronizację
+      check_provider_health: Sprawdź, czy dane API Coinbase są prawidłowe
+      balance: Saldo
+      currently_linked_to: 'Aktualnie połączone z: %{account_name}'
+      link: Połącz
+      cancel: Anuluj
+    link_existing_account:
+      success: Pomyślnie połączono z kontem Coinbase
+      errors:
+        only_manual: Z Coinbase można łączyć tylko konta manualne
+        invalid_coinbase_account: Nieprawidłowe konto Coinbase
+  coinbase_item:
+    syncer:
+      checking_credentials: Sprawdzanie danych uwierzytelniających...
+      credentials_invalid: Nieprawidłowe dane API. Sprawdź klucz i sekret API.
+      importing_accounts: Importowanie kont z Coinbase...
+      checking_configuration: Sprawdzanie konfiguracji kont...
+      accounts_need_setup:
+        one: "%{count} konto wymaga konfiguracji"
+        other: "%{count} kont wymaga konfiguracji"
+      processing_accounts: Przetwarzanie danych kont...
+      calculating_balances: Obliczanie sald...

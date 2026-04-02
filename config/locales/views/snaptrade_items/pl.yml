@@ -1,0 +1,186 @@
+---
+pl:
+  snaptrade_items:
+    default_name: Połączenie SnapTrade
+    create:
+      success: Pomyślnie skonfigurowano SnapTrade.
+    update:
+      success: Pomyślnie zaktualizowano konfigurację SnapTrade.
+    destroy:
+      success: Zaplanowano usunięcie połączenia SnapTrade.
+    connect:
+      decryption_failed: Nie można odczytać danych uwierzytelniających SnapTrade. Usuń i utwórz ponownie to połączenie.
+      connection_failed: 'Nie udało się połączyć z SnapTrade: %{message}'
+    callback:
+      success: Biuro maklerskie zostało połączone! Wybierz konta do połączenia.
+      no_item: Nie znaleziono konfiguracji SnapTrade.
+    complete_account_setup:
+      success:
+        one: Pomyślnie połączono %{count} konto.
+        other: Pomyślnie połączono %{count} konta.
+      partial_success: Połączono %{linked} konto(a). %{failed} nie udało się połączyć.
+      link_failed: 'Nie udało się połączyć kont: %{errors}'
+      no_accounts: Nie wybrano żadnych kont do połączenia.
+    preload_accounts:
+      not_configured: SnapTrade nie jest skonfigurowane.
+    select_accounts:
+      not_configured: SnapTrade nie jest skonfigurowane.
+    select_existing_account:
+      not_found: Konto lub konfiguracja SnapTrade nie zostało znalezione.
+      title: Połącz z kontem SnapTrade
+      header: Połącz istniejące konto
+      subtitle: Wybierz konto SnapTrade do połączenia
+      no_accounts: Brak niepołączonych kont SnapTrade.
+      connect_hint: Może najpierw musisz połączyć biuro maklerskie.
+      settings_link: Przejdź do ustawień dostawcy
+      linking_to: 'Łączenie z kontem:'
+      balance_label: 'Saldo:'
+      link_button: Połącz
+      cancel_button: Anuluj
+    link_existing_account:
+      success: Pomyślnie połączono z kontem SnapTrade.
+      failed: 'Nie udało się połączyć konta: %{message}'
+      not_found: Konto nie zostało znalezione.
+    connections:
+      unknown_brokerage: Nieznane biuro maklerskie
+    delete_connection:
+      success: Połączenie zostało pomyślnie usunięte. Zwolniono jedno miejsce.
+      failed: 'Nie udało się usunąć połączenia: %{message}'
+      missing_authorization_id: Brak identyfikatora autoryzacji
+      api_deletion_failed: Nie można usunąć połączenia z SnapTrade — brak danych uwierzytelniających. Połączenie może nadal istnieć na koncie SnapTrade.
+    delete_orphaned_user:
+      success: Osierocoła rejestracja została usunięta pomyślnie.
+      failed: Nie udało się usunąć osieroconej rejestracji.
+    setup_accounts:
+      title: Skonfiguruj konta SnapTrade
+      header: Skonfiguruj swoje konta SnapTrade
+      subtitle: Wybierz konta maklerskie do połączenia
+      syncing: Pobieranie kont...
+      loading: Pobieranie kont z SnapTrade...
+      loading_hint: Kliknij Odśwież, aby sprawdzić konta.
+      refresh: Odśwież
+      info_title: Dane inwestycyjne SnapTrade
+      info_holdings: Aktywa z aktualnymi cenami i ilościami
+      info_cost_basis: Podstawa kosztowa na pozycję (gdy dostępna)
+      info_activities: Historia transakcji z etykietami aktywności (Kupno, Sprzedaż, Dywidenda itp.)
+      info_history: Do 3 lat historii transakcji
+      free_tier_note: Plan bezpłatny SnapTrade umożliwia 5 połączeń z biurami maklerskimi. Sprawdź swój pulpit SnapTrade, aby zobaczyć bieżące użycie.
+      no_accounts_title: Nie znaleziono kont
+      no_accounts_message: Nie znaleziono kont maklerskich. Może to nastąpić, jeśli anulowałeś połączenie lub Twoje biuro maklerskie nie jest obsługiwane.
+      try_again: Połącz biuro maklerskie
+      back_to_settings: Powrót do ustawień
+      available_accounts: Dostępne konta
+      balance_label: 'Saldo:'
+      account_number: 'Konto:'
+      create_button: Utwórz wybrane konta
+      cancel_button: Anuluj
+      creating: Tworzenie kont...
+      done_button: Gotowe
+      or_link_existing: 'Lub połącz z istniejącym kontem zamiast tworzyć nowe:'
+      select_account: Wybierz konto...
+      link_button: Połącz
+      linked_accounts: Już połączone
+      linked_to: 'Połączono z:'
+    snaptrade_item:
+      accounts_need_setup:
+        one: "%{count} konto wymaga konfiguracji"
+        other: "%{count} kont wymaga konfiguracji"
+      deletion_in_progress: Usuwanie w toku...
+      syncing: Synchronizacja...
+      requires_update: Połączenie wymaga aktualizacji
+      error: Błąd synchronizacji
+      status: Ostatnia synchronizacja %{timestamp} temu — %{summary}
+      status_never: Nigdy nie synchronizowano
+      reconnect: Połącz ponownie
+      connect_brokerage: Połącz biuro maklerskie
+      add_another_brokerage: Połącz kolejne biuro maklerskie
+      delete: Usuń
+      setup_needed: Konta wymagają konfiguracji
+      setup_description: Niektóre konta z SnapTrade muszą zostać połączone z kontami Sure.
+      setup_action: Konfiguruj konta
+      setup_accounts_menu: Skonfiguruj konta
+      manage_connections: Zarządzaj połączeniami
+      more_accounts_available:
+        one: "%{count} dodatkowe konto dostępne do konfiguracji"
+        other: "%{count} dodatkowych kont dostępnych do konfiguracji"
+      no_accounts_title: Nie wykryto kont
+      no_accounts_description: Połącz biuro maklerskie, aby zaimportować swoje konta inwestycyjne.
+  providers:
+    snaptrade:
+      name: SnapTrade
+      connection_description: Połącz się ze swoim biurem maklerskim przez SnapTrade (obsługuje 25+ brokerów)
+      description: SnapTrade laczy sie z ponad 25 glownymi biurami maklerskimi (Fidelity, Vanguard, Schwab, Robinhood itp.) i udostepnia pelna historie transakcji z etykietami aktywnosci oraz podstawa kosztowa.
+      setup_title: 'Instrukcje konfiguracji:'
+      step_1_html: Utworz konto na <a href="https://dashboard.snaptrade.com" target="_blank" rel="noopener noreferrer" class="text-primary underline">dashboard.snaptrade.com</a>
+      step_2: Skopiuj swój Client ID i Consumer Key z pulpitu nawigacyjnego
+      step_3: Wprowadź swoje dane uwierzytelniające poniżej i kliknij Zapisz
+      step_4: Przejdź do strony Konta i użyj opcji „Połącz kolejne biuro maklerskie", aby połączyć swoje konta inwestycyjne
+      free_tier_warning: Plan bezpłatny obejmuje 5 połączeń z biurami maklerskimi. Dodatkowe połączenia wymagają płatnego planu SnapTrade.
+      client_id_label: Client ID
+      client_id_placeholder: Wprowadz Client ID SnapTrade
+      client_id_update_placeholder: Wprowadz nowy Client ID, aby zaktualizowac
+      consumer_key_label: Consumer Key
+      consumer_key_placeholder: Wprowadz Consumer Key SnapTrade
+      consumer_key_update_placeholder: Wprowadz nowy Consumer Key, aby zaktualizowac
+      save_button: Zapisz konfigurację
+      update_button: Zaktualizuj konfigurację
+      status_connected:
+        one: "%{count} konto z SnapTrade"
+        other: "%{count} konta z SnapTrade"
+      needs_setup:
+        one: "%{count} wymaga konfiguracji"
+        other: "%{count} wymaga konfiguracji"
+      status_ready: Gotowe do połączenia z biurami maklerskimi
+      status_needs_registration: Dane uwierzytelniające zapisane. Przejdź do strony Konta, aby połączyć biura maklerskie.
+      status_not_configured: Nieskonfigurowane
+      setup_accounts_button: Konfiguruj konta
+      connect_button: Połącz biuro maklerskie
+      connected_brokerages: 'Połączone:'
+      manage_connections: Zarządzaj połączeniami
+      connection_limit_info: Plan bezpłatny SnapTrade umożliwia 5 połączeń z biurami maklerskimi. Usuń nieużywane połączenia, aby zwolnić miejsca.
+      loading_connections: Ładowanie połączeń...
+      connections_error: 'Nie udało się załadować połączeń: %{message}'
+      accounts_count:
+        one: "%{count} konto"
+        other: "%{count} kont"
+      orphaned_connection: Osierocoło połączenie (niezsynchronizowane lokalnie)
+      needs_linking: wymaga połączenia
+      no_connections: Nie znaleziono połączeń z biurami maklerskimi.
+      delete_connection: Usuń
+      delete_connection_title: Usunąć połączenie z biurem maklerskim?
+      delete_connection_body: Spowoduje to trwałe usunięcie połączenia %{brokerage} z SnapTrade. Wszystkie konta tego biura maklerskiego zostaną odłączone. Będziesz musiał ponownie się połączyć, aby synchronizować te konta.
+      delete_connection_confirm: Usuń połączenie
+      orphaned_users_title:
+        one: "%{count} osierocoła rejestracja"
+        other: "%{count} osieroconych rejestracji"
+      orphaned_users_description: Są to poprzednie rejestracje użytkowników SnapTrade, które zajmują Twoje miejsca połączeń. Usuń je, aby zwolnić miejsca.
+      orphaned_user: Osierocoła rejestracja
+      delete_orphaned_user: Usuń
+      delete_orphaned_user_title: Usunąć osieroconą rejestrację?
+      delete_orphaned_user_body: Spowoduje to trwałe usunięcie tej osieroconej rejestracji użytkownika SnapTrade i wszystkich jego połączeń z biurami maklerskimi, zwalniając miejsca połączeń.
+      delete_orphaned_user_confirm: Usuń rejestrację
+  snaptrade_item:
+    sync_status:
+      no_accounts: Nie znaleziono kont
+      synced:
+        one: "%{count} konto zsynchronizowane"
+        other: "%{count} kont zsynchronizowanych"
+      synced_with_setup: "%{linked} zsynchronizowane, %{unlinked} wymagają konfiguracji"
+    institution_summary:
+      none: Brak połączonych instytucji
+      count:
+        one: "%{count} instytucja"
+        other: "%{count} instytucji"
+    brokerage_summary:
+      none: Brak połączonych biur maklerskich
+      count:
+        one: "%{count} biuro maklerskie"
+        other: "%{count} biur maklerskich"
+    syncer:
+      discovering: Odnajdywanie kont...
+      importing: Importowanie kont z SnapTrade...
+      processing: Przetwarzanie aktywów i aktywności...
+      calculating: Obliczanie sald...
+      checking_config: Sprawdzanie konfiguracji konta...
+      needs_setup: "%{count} kont wymaga konfiguracji..."
+      activities_fetching_async: Aktywności są pobierane w tle. Może to potrwać do minuty dla nowych połączeń z biurami maklerskimi.
