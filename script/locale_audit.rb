@@ -2,6 +2,7 @@
 # frozen_string_literal: true
 
 require "optparse"
+require "date"
 require "yaml"
 
 PLURAL_KEYS = %w[zero one two few many other].freeze

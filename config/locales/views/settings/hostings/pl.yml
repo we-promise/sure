@@ -21,7 +21,7 @@ pl:
         ai_assistant: Asystent AI
         financial_data_providers: Dostawcy danych finansowych
         sync_settings: Ustawienia synchronizacji
-        invites: Kody zaproszen
+        invites: Kody zaproszeń
         title: Self-Hosting
         danger_zone: Strefa ryzyka
         clear_cache: Wyczyść pamięć podręczną danych
@@ -42,22 +42,22 @@ pl:
         title: Asystent AI
         description: Wybierz, jak odpowiada asystent czatu. Wbudowany asystent korzysta bezpośrednio ze skonfigurowanego dostawcy LLM. Zewnętrzny deleguje zapytania do zdalnego agenta AI, który może korzystać z narzędzi finansowych Sure przez MCP.
         type_label: Typ asystenta
-        type_builtin: Wbudowany (bezposredni LLM)
-        type_external: Zewnetrzny (zdalny agent)
-        external_status: Endpoint zewnetrznego asystenta
+        type_builtin: Wbudowany (bezpośredni LLM)
+        type_external: Zewnętrzny (zdalny agent)
+        external_status: Endpoint zewnętrznego asystenta
         external_configured: Skonfigurowany
-        external_not_configured: Nieskonfigurowany. Wprowadz ponizej URL i token albo ustaw zmienne srodowiskowe EXTERNAL_ASSISTANT_URL i EXTERNAL_ASSISTANT_TOKEN.
+        external_not_configured: Nieskonfigurowany. Wprowadź poniżej URL i token albo ustaw zmienne środowiskowe EXTERNAL_ASSISTANT_URL i EXTERNAL_ASSISTANT_TOKEN.
         env_notice: Typ asystenta jest zablokowany na '%{type}' przez zmienną środowiskową ASSISTANT_TYPE.
         env_configured_external: Pomyślnie skonfigurowano przez zmienne środowiskowe.
         url_label: URL endpointu
         url_placeholder: https://your-agent-host/v1/chat
-        url_help: Pelny URL endpointu API Twojego agenta. Otrzymasz go od dostawcy agenta.
+        url_help: Pełny URL endpointu API Twojego agenta. Otrzymasz go od dostawcy agenta.
         token_label: Token API
-        token_placeholder: Wprowadz token od dostawcy agenta
+        token_placeholder: Wprowadź token od dostawcy agenta
         token_help: Token uwierzytelniający dostarczony przez zewnętrznego agenta. Jest wysyłany jako token Bearer z każdym żądaniem.
         agent_id_label: ID agenta (opcjonalne)
-        agent_id_placeholder: main (domyslnie)
-        agent_id_help: Kieruje do konkretnego agenta, gdy dostawca hostuje ich wiele. Pozostaw puste, aby uzyc domyslnego.
+        agent_id_placeholder: main (domyślnie)
+        agent_id_help: Kieruje do konkretnego agenta, gdy dostawca hostuje ich wiele. Pozostaw puste, aby użyć domyślnego.
         disconnect_title: Połączenie zewnętrzne
         disconnect_description: Usuń połączenie z zewnętrznym asystentem i przełącz z powrotem na asystenta wbudowanego.
         disconnect_button: Rozłącz
