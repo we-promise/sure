@@ -74,6 +74,44 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "-10.00", import.rows.first.amount # Normalized
   end
 
+  test "should instantiate RuleImport before generating rows" do
+    @family.categories.create!(
+      name: "Groceries",
+      color: "#407706",
+      lucide_icon: "shopping-basket"
+    )
+
+    csv_content = <<~CSV
+      name,resource_type,active,effective_date,conditions,actions
+      "Categorize groceries","transaction",true,2024-01-01,"[{""condition_type"":""transaction_name"",""operator"":""like"",""value"":""grocery""}]","[{""action_type"":""set_transaction_category"",""value"":""Groceries""}]"
+    CSV
+
+    assert_difference([ "Import.count", "Import::Row.count" ], 1) do
+      post api_v1_imports_url,
+           params: {
+             type: "RuleImport",
+             raw_file_content: csv_content,
+             col_sep: ","
+           },
+           headers: { Authorization: "Bearer #{@token}" }
+    end
+
+    assert_response :created
+
+    json_response = JSON.parse(response.body)
+    import = Import.find(json_response["data"]["id"])
+    row = import.rows.first
+
+    assert_instance_of RuleImport, import
+    assert_equal 1, import.rows_count
+    assert_equal "Categorize groceries", row.name
+    assert_equal "transaction", row.resource_type
+    assert_equal true, row.active
+    assert_equal "2024-01-01", row.effective_date
+    assert_equal '[{"condition_type":"transaction_name","operator":"like","value":"grocery"}]', row.conditions
+    assert_equal '[{"action_type":"set_transaction_category","value":"Groceries"}]', row.actions
+  end
+
   test "should create import and auto-publish when configured and requested" do
     csv_content = "date,amount,name\n2023-01-01,-10.00,Test Transaction"
 
