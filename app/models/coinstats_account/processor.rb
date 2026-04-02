@@ -21,6 +21,13 @@ class CoinstatsAccount::Processor
     Rails.logger.info "CoinstatsAccount::Processor - Processing coinstats_account #{coinstats_account.id}"
 
     begin
+      process_holdings
+    rescue StandardError => e
+      Rails.logger.error "CoinstatsAccount::Processor - Failed to process holdings for #{coinstats_account.id}: #{e.message}"
+      report_exception(e, "holdings")
+    end
+
+    begin
       process_account!
     rescue StandardError => e
       Rails.logger.error "CoinstatsAccount::Processor - Failed to process account #{coinstats_account.id}: #{e.message}"
@@ -34,17 +41,24 @@ class CoinstatsAccount::Processor
 
   private
 
+    def process_holdings
+      CoinstatsAccount::HoldingsProcessor.new(coinstats_account).process
+    end
+
     # Updates the linked Account with current balance from CoinStats.
     def process_account!
       account = coinstats_account.current_account
       balance = coinstats_account.current_balance || 0
       currency = parse_currency(coinstats_account.currency) || account.currency || "USD"
+      cash_balance = coinstats_account.inferred_cash_balance
 
       account.update!(
         balance: balance,
-        cash_balance: balance,
+        cash_balance: cash_balance,
         currency: currency
       )
+
+      account.set_current_balance(balance)
     end
 
     # Delegates transaction processing to the specialized processor.
