@@ -39,7 +39,7 @@ module BudgetsHelper
       over_budget_count += 1 if show_over_budget_uncategorized
 
       on_track_groups = if budget.initialized?
-        filtered_groups_for(all_category_groups) { |budget_category| budget_on_track?(budget_category) }
+        filtered_groups_for(all_category_groups) { |budget_category| visible_for_on_track?(budget_category) }
       else
         all_category_groups
       end
@@ -70,7 +70,16 @@ module BudgetsHelper
     end
 
     def parent_visible_for_on_track?(budget, budget_category)
-      budget.initialized? ? budget_on_track?(budget_category) : true
+      budget.initialized? ? visible_for_on_track?(budget_category) : true
+    end
+
+    def visible_for_on_track?(budget_category)
+      return false unless budget_on_track?(budget_category)
+
+      # Subcategories inheriting parent budget are hidden until they have spending.
+      return true unless budget_category.subcategory? && budget_category.inherits_parent_budget?
+
+      budget_category.actual_spending.to_d.positive?
     end
 
     def filtered_groups_for(groups)
