@@ -27,7 +27,8 @@
 #
 #   Ollama + Open WebUI + OpenClaw — external AI assistant
 #   (optional, --profile external-assistant)
-#     - Starts an OpenClaw gateway locally for Sure's external assistant mode.
+#     - Local LLM inference available via Ollama + Open WebUI
+#     - Starts an OpenClaw locally for Sure's external assistant mode.
 #     - Set EXTERNAL_ASSISTANT_URL to http://openclaw:18789 for internal routing.
 #
 # Setup:
