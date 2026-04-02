@@ -13,7 +13,11 @@ pl:
     destroy:
       success: Połączenie z dostawcą CoinStats zostało zaplanowane do usunięcia.
     link_wallet:
-      success: "Pomyślnie połączono %{count} portfeli kryptowalutowych."
+      success:
+        one: "Pomyślnie połączono %{count} portfel kryptowalutowy."
+        few: "Pomyślnie połączono %{count} portfele kryptowalutowe."
+        many: "Pomyślnie połączono %{count} portfeli kryptowalutowych."
+        other: "Pomyślnie połączono %{count} portfela kryptowalutowego."
       missing_params: 'Brak wymaganych parametrów: address i blockchain.'
       failed: Łączenie portfela kryptowalutowego nie powiodło się.
       error: 'Łączenie portfela kryptowalutowego nie powiodło się: %{message}.'

@@ -142,7 +142,11 @@ pl:
       all_skipped: Wszystkie konta zostały pominięte. Nie utworzono żadnych kont.
       creation_failed: 'Nie udało się utworzyć kont: %{error}'
       no_accounts: Brak kont do skonfigurowania.
-      success: Pomyślnie utworzono %{count} konto/kont.
+      success:
+        one: Pomyślnie utworzono %{count} konto.
+        few: Pomyślnie utworzono %{count} konta.
+        many: Pomyślnie utworzono %{count} kont.
+        other: Pomyślnie utworzono %{count} konta.
     sync:
       success: Rozpoczęto synchronizację
     update:

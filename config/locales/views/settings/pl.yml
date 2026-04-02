@@ -151,7 +151,7 @@ pl:
       recurring_transactions_label: Cykliczne
       rules_label: Reguły
       security_label: Bezpieczeństwo
-      self_hosting_label: Self-Hosting
+      self_hosting_label: Hosting własny
       tags_label: Tagi
       transactions_section_title: Transakcje
       whats_new_label: Co nowego
@@ -174,7 +174,7 @@ pl:
         message: Klucze szyfrowania Active Record nie są skonfigurowane. Upewnij się, że dane uwierzytelniające szyfrowania (active_record_encryption.primary_key, active_record_encryption.deterministic_key oraz active_record_encryption.key_derivation_salt) są poprawnie ustawione w poświadczeniach Rails lub zmiennych środowiskowych przed użyciem dostawców synchronizacji.
       coinbase_panel:
         setup_instructions: 'Aby połączyć Coinbase:'
-        step1_html: Przejdź do <a href="https://portal.cdp.coinbase.com/projects/api-keys" target="_blank" class="text-primary underline">Ustawień API Coinbase</a>
+        step1_html: Przejdź do <a href="https://portal.cdp.coinbase.com/projects/api-keys" target="_blank" rel="noopener noreferrer" class="text-primary underline">Ustawień API Coinbase</a>
         step2: Utwórz nowy klucz API z uprawnieniami tylko do odczytu (podgląd kont, podgląd transakcji)
         step3: Skopiuj klucz API i sekret API, a następnie wklej je poniżej
         api_key_label: Klucz API

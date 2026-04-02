@@ -5,7 +5,10 @@ require "optparse"
 require "yaml"
 
 PLURAL_KEYS = %w[zero one two few many other].freeze
-CANONICAL_PLURAL_KEYS = %w[one few many other].freeze
+
+LOCALE_PLURAL_REQUIREMENTS = {
+  "pl" => %w[one few many other]
+}.freeze
 
 COMMON_ENGLISH_UI = [
   /\b(add|edit|delete|remove|save|cancel|confirm|create|update|export|upload|download|link|unlink|sync|loading|overview|settings|details|summary|dashboard|account|accounts|transaction|transactions|trade|trades|holding|holdings|report|reports|budget|budgets|category|categories|filter|filters|search|view|open|close|continue|back|next|previous|title|description|warning|error|success|failed|pending|confirmed|income|expense|expenses|assets|debts|cash|loan|loans|credit card|provider|providers|document|documents|privacy policy|terms of service|net worth|cashflow|outflows)\b/i,
@@ -23,14 +26,16 @@ ENGLISH_SIGNAL_WORDS = %w[
   please choose select showing ready drop browse processing missing configure copy
 ].freeze
 
-POLISH_SIGNAL_SNIPPETS = %w[
-  ąć ę ł ń ó ś ź ż
-  nie jest został została zostały włącz wyłącz
-  konto konta kont transakcj ustawień ustawienia
-  wybierz dodaj usuń usun edytuj zaktualizuj synchronizuj
-  plik dane brak pomyślnie wymaga konfiguracji przejdź
-  połącz zaimportuj kategoria tagów
-].freeze
+LOCALE_LANGUAGE_SIGNALS = {
+  "pl" => %w[
+    ąć ę ł ń ó ś ź ż
+    nie jest został została zostały włącz wyłącz
+    konto konta kont transakcj ustawień ustawienia
+    wybierz dodaj usuń usun edytuj zaktualizuj synchronizuj
+    plik dane brak pomyślnie wymaga konfiguracji przejdź
+    połącz zaimportuj kategoria tagów
+  ]
+}.freeze
 
 ENGLISH_WHITELIST = [
   /Doorkeeper/, /OAuth/, /OIDC/, /SAML/, /Lucide/, /Google Sheets/, /Google/, /CSV/, /PDF/, /QIF/, /NDJSON/,
@@ -42,7 +47,8 @@ ENGLISH_WHITELIST = [
 def parse_args!
   options = {
     locale: nil,
-    write_reports: false
+    write_reports: false,
+    plural_categories: nil
   }
 
   parser = OptionParser.new do |opts|
@@ -54,6 +60,10 @@ def parse_args!
 
     opts.on("--write-reports", "Write markdown reports into docs/localization/") do
       options[:write_reports] = true
+    end
+
+    opts.on("--plural-categories LIST", "Comma-separated required plural keys (e.g. one,other or one,few,many,other)") do |value|
+      options[:plural_categories] = value
     end
   end
 
@@ -68,9 +78,28 @@ def parse_args!
   options
 end
 
+def base_locale(locale)
+  locale.to_s.split(/[-_]/).first
+end
+
+def expected_plural_categories(locale, override)
+  return override.split(",").map(&:strip).reject(&:empty?).uniq if override
+
+  LOCALE_PLURAL_REQUIREMENTS.fetch(base_locale(locale), %w[one other])
+end
+
 def locale_file?(path, locale)
   base = File.basename(path)
   base == "#{locale}.yml" || base.end_with?(".#{locale}.yml")
+end
+
+def load_yaml_file(file)
+  YAML.safe_load(
+    File.read(file),
+    permitted_classes: [ Symbol, Date, Time ],
+    permitted_symbols: [],
+    aliases: true
+  )
 end
 
 def walk(obj, path = [], &block)
@@ -83,7 +112,7 @@ def walk(obj, path = [], &block)
   end
 end
 
-def suspicious_english?(value)
+def suspicious_english?(value, language_signals)
   return false unless value.is_a?(String)
 
   stripped = value.strip
@@ -98,11 +127,11 @@ def suspicious_english?(value)
 
   # Guard against false positives on correctly translated strings containing
   # shared words like "status", "tag", "import" or technical terms.
-  polish_signals = POLISH_SIGNAL_SNIPPETS.count { |snippet| lowered.include?(snippet) }
+  locale_signals = language_signals.count { |snippet| lowered.include?(snippet) }
   english_tokens = lowered.scan(/[a-z]+/)
   english_signal_hits = english_tokens.count { |token| ENGLISH_SIGNAL_WORDS.include?(token) }
 
-  return false if polish_signals >= 1 && english_signal_hits < 3
+  return false if locale_signals >= 1 && english_signal_hits < 3
 
   COMMON_ENGLISH_UI.any? { |pattern| normalized.match?(pattern) } || english_signal_hits >= 3
 end
@@ -117,8 +146,8 @@ def real_plural_block?(node)
   node.values.all? { |v| v.is_a?(String) || v.is_a?(Numeric) }
 end
 
-def audit_file(file)
-  data = YAML.load_file(file)
+def audit_file(file, required_plural_categories, language_signals)
+  data = load_yaml_file(file)
   english_hits = []
   plural_missing = []
 
@@ -126,7 +155,7 @@ def audit_file(file)
     if node.is_a?(Hash)
       node.each do |k, v|
         next unless v.is_a?(String)
-        next unless suspicious_english?(v)
+        next unless suspicious_english?(v, language_signals)
 
         english_hits << [ path + [ k.to_s ], v ]
       end
@@ -134,8 +163,11 @@ def audit_file(file)
       next unless real_plural_block?(node)
 
       keys = node.keys.map(&:to_s)
-      if keys.include?("one") && keys.include?("other") && !(keys.include?("few") && keys.include?("many"))
-        plural_missing << [ path, keys.sort ]
+      next unless keys.include?("one") && keys.include?("other")
+
+      missing = required_plural_categories - keys
+      if missing.any?
+        plural_missing << [ path, keys.sort, missing ]
       end
     end
   end
@@ -148,12 +180,12 @@ def audit_file(file)
 end
 
 def readiness_status(result)
-  result[:english_hits].empty? && result[:plural_missing].empty? ? "OK" : "DO_DALSZEJ_PRACY"
+  result[:english_hits].empty? && result[:plural_missing].empty? ? "OK" : "NEEDS_WORK"
 end
 
-def build_readiness_report(locale, results)
+def build_readiness_report(locale, results, required_plural_categories)
   ok = results.select { |r| readiness_status(r) == "OK" }
-  needs = results.select { |r| readiness_status(r) == "DO_DALSZEJ_PRACY" }
+  needs = results.select { |r| readiness_status(r) == "NEEDS_WORK" }
 
   lines = []
   lines << "# Locale production readiness (#{locale})"
@@ -162,16 +194,17 @@ def build_readiness_report(locale, results)
   lines << ""
   lines << "Summary:"
   lines << "- OK: #{ok.size}"
-  lines << "- DO_DALSZEJ_PRACY: #{needs.size}"
+  lines << "- NEEDS_WORK: #{needs.size}"
   lines << ""
   lines << "Criteria:"
-  lines << "- OK: no suspicious untranslated English strings and no one/other-only pluralization blocks"
-  lines << "- DO_DALSZEJ_PRACY: contains suspicious untranslated English strings or one/other-only pluralization blocks"
+  lines << "- OK: no suspicious untranslated English strings and no plural blocks missing required categories"
+  lines << "- NEEDS_WORK: contains suspicious untranslated English strings or plural blocks missing required categories"
+  lines << "- Required plural categories for #{locale}: #{required_plural_categories.join(', ')}"
   lines << ""
   lines << "## OK"
   ok.each { |r| lines << "- #{r[:file]}" }
   lines << ""
-  lines << "## DO_DALSZEJ_PRACY"
+  lines << "## NEEDS_WORK"
 
   if needs.empty?
     lines << "- None"
@@ -184,8 +217,8 @@ def build_readiness_report(locale, results)
         lines << "  examples: #{sample.join(' | ')}"
       end
       if r[:plural_missing].any?
-        lines << "  reason: plural blocks missing few/many (#{r[:plural_missing].size})"
-        sample = r[:plural_missing].first(3).map { |path, keys| "#{path.join('.')} keys=#{keys.join(',')}" }
+        lines << "  reason: plural blocks missing required categories (#{r[:plural_missing].size})"
+        sample = r[:plural_missing].first(3).map { |path, keys, missing| "#{path.join('.')} keys=#{keys.join(',')} missing=#{missing.join(',')}" }
         lines << "  examples: #{sample.join(' | ')}"
       end
     end
@@ -194,11 +227,11 @@ def build_readiness_report(locale, results)
   lines.join("\n") + "\n"
 end
 
-def build_plural_report(locale, results)
+def build_plural_report(locale, results, required_plural_categories)
   missing = []
   results.each do |r|
-    r[:plural_missing].each do |path, keys|
-      missing << [ r[:file], path.join('.'), keys.join(',') ]
+    r[:plural_missing].each do |path, keys, missing_keys|
+      missing << [ r[:file], path.join('.'), keys.join(','), missing_keys.join(',') ]
     end
   end
 
@@ -207,14 +240,15 @@ def build_plural_report(locale, results)
   lines << ""
   lines << "Scope: #{results.size} files"
   lines << ""
-  lines << "Result: #{missing.size} pluralization blocks still use only one/other (missing few and/or many)."
+  lines << "Required plural categories for #{locale}: #{required_plural_categories.join(', ')}"
+  lines << "Result: #{missing.size} pluralization blocks are missing one or more required categories."
   lines << ""
   lines << "## Findings"
   if missing.empty?
-    lines << "- None. All detected pluralization blocks include few and many alongside one/other."
+    lines << "- None. All detected pluralization blocks include required categories."
   else
-    missing.each do |file, path, keys|
-      lines << "- #{file} | #{path} | keys=#{keys}"
+    missing.each do |file, path, keys, missing_keys|
+      lines << "- #{file} | #{path} | keys=#{keys} | missing=#{missing_keys}"
     end
   end
 
@@ -223,14 +257,17 @@ end
 
 options = parse_args!
 locale = options[:locale]
+required_plural_categories = expected_plural_categories(locale, options[:plural_categories])
+language_signals = LOCALE_LANGUAGE_SIGNALS.fetch(base_locale(locale), [])
 
 files = Dir["config/locales/**/*.yml"].sort.select { |path| locale_file?(path, locale) }
-results = files.map { |file| audit_file(file) }
+results = files.map { |file| audit_file(file, required_plural_categories, language_signals) }
 
 puts "LOCALE=#{locale}"
+puts "REQUIRED_PLURAL_CATEGORIES=#{required_plural_categories.join(',')}"
 puts "FILES=#{files.size}"
 puts "FILES_WITH_ENGLISH_HITS=#{results.count { |r| r[:english_hits].any? }}"
-puts "PLURAL_BLOCKS_MISSING_FEW_MANY=#{results.sum { |r| r[:plural_missing].size }}"
+puts "PLURAL_BLOCKS_MISSING_REQUIRED_CATEGORIES=#{results.sum { |r| r[:plural_missing].size }}"
 
 if options[:write_reports]
   Dir.mkdir("docs/localization") unless Dir.exist?("docs/localization")
@@ -238,8 +275,8 @@ if options[:write_reports]
   readiness_path = "docs/localization/#{locale}_production_readiness.md"
   plural_path = "docs/localization/#{locale}_pluralization_audit.md"
 
-  File.write(readiness_path, build_readiness_report(locale, results))
-  File.write(plural_path, build_plural_report(locale, results))
+  File.write(readiness_path, build_readiness_report(locale, results, required_plural_categories))
+  File.write(plural_path, build_plural_report(locale, results, required_plural_categories))
 
   puts "WROTE #{readiness_path}"
   puts "WROTE #{plural_path}"

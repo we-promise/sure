@@ -74,13 +74,13 @@ pl:
         rows_label: Wiersze
         unassigned_account: Chcesz utworzyć nowe konto dla nieprzypisanych wierszy?
       show:
-        account_mapping_description: Przypisz wszystkie konta z importowanego pliku do istniejących kont Maybe. Możesz też dodać nowe konta lub zostawić je bez przypisania.
+        account_mapping_description: Przypisz wszystkie konta z importowanego pliku do istniejących kont %{product}. Możesz też dodać nowe konta lub zostawić je bez przypisania.
         account_mapping_title: Przypisz konta
-        account_type_mapping_description: Przypisz wszystkie typy kont z importowanego pliku do typów używanych w Maybe.
+        account_type_mapping_description: Przypisz wszystkie typy kont z importowanego pliku do typów używanych w %{product}.
         account_type_mapping_title: Przypisz typy kont
-        category_mapping_description: Przypisz wszystkie kategorie z importowanego pliku do istniejących kategorii Maybe. Możesz też dodać nowe kategorie lub zostawić je bez przypisania.
+        category_mapping_description: Przypisz wszystkie kategorie z importowanego pliku do istniejących kategorii %{product}. Możesz też dodać nowe kategorie lub zostawić je bez przypisania.
         category_mapping_title: Przypisz kategorie
-        tag_mapping_description: Przypisz wszystkie tagi z importowanego pliku do istniejących tagów Maybe. Możesz też dodać nowe tagi lub zostawić je bez przypisania.
+        tag_mapping_description: Przypisz wszystkie tagi z importowanego pliku do istniejących tagów %{product}. Możesz też dodać nowe tagi lub zostawić je bez przypisania.
         tag_mapping_title: Przypisz tagi
     uploads:
       show:

@@ -151,4 +151,3 @@ pl:
       closed_rate_meta: "%{periods} okresów kapitalizacji"
       settled_net: "Rozliczono netto %{net}"
       history_meta: "Odsetki %{interest}, podatek %{tax}"
-      not_bond_account: "To konto nie jest kontem obligacji."

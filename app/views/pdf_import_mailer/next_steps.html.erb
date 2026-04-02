@@ -1,6 +1,6 @@
 <h1><%= t(".greeting", name: @user.display_name) %></h1>
 
-<p><%= t(".intro", product: product_name) %></p>
+<p><%= t(".intro", product_name: product_name, product: product_name) %></p>
 
 <h2><%= t(".document_type_label") %></h2>
 <p><strong><%= @pdf_import.document_type.present? ? t("imports.document_types.#{@pdf_import.document_type}") : t("imports.document_types.other") %></strong></p>

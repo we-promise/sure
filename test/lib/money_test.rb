@@ -161,7 +161,7 @@ class MoneyTest < ActiveSupport::TestCase
 
   test "all supported locales can format money without errors" do
     # Ensure all supported locales from LanguagesHelper::SUPPORTED_LOCALES work
-    supported_locales = %w[en fr de es tr nb ca ro pl pt-BR zh-CN zh-TW nl]
+    supported_locales = LanguagesHelper::SUPPORTED_LOCALES
 
     supported_locales.each do |locale|
       locale_sym = locale.to_sym

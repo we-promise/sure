@@ -3,7 +3,7 @@ pl:
   pdf_import_mailer:
     next_steps:
       greeting: "Cześć %{name},"
-      intro: "Zakończyliśmy analizę dokumentu PDF przesłanego do %{product}."
+      intro: "Zakończyliśmy analizę dokumentu PDF przesłanego do %{product_name}."
       document_type_label: Typ dokumentu
       summary_label: Podsumowanie AI
       transactions_note: Ten dokument wygląda na zawierający transakcje. Możesz je teraz wyodrębnić i przejrzeć.

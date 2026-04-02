@@ -17,15 +17,23 @@ Examples:
 ruby script/locale_audit.rb --locale pl --write-reports
 ruby script/locale_audit.rb --locale fr --write-reports
 ruby script/locale_audit.rb --locale de
+# Optional override for locale-specific plural categories:
+ruby script/locale_audit.rb --locale fr --plural-categories one,other --write-reports
 ```
 
 ## What it checks
 
 1. Suspicious untranslated English UI text (heuristic-based, false-positive-resistant)
-2. Real CLDR plural blocks that still use only `one/other` and are missing `few/many`
+2. Real CLDR plural blocks that are missing required categories for the selected locale
+
+Plural category behavior:
+- Default: locale-aware required categories
+- Current built-in special case: `pl` requires `one,few,many,other`
+- Fallback for other locales: `one,other`
+- Optional override: `--plural-categories`
 
 ## Notes
 
-- The script scans locale files where the filename is `<locale>.yml` or `*. <locale>.yml`.
+- The script scans locale files where the filename is `<locale>.yml` or `*.<locale>.yml`.
 - The script does not modify locale files.
 - `script/pl_locale_audit.rb` is kept as a wrapper for backward compatibility and delegates to the generic script.

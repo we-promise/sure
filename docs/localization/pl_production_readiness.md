@@ -4,11 +4,12 @@ Audit scope: 90 files
 
 Summary:
 - OK: 90
-- DO_DALSZEJ_PRACY: 0
+- NEEDS_WORK: 0
 
 Criteria:
-- OK: no suspicious untranslated English strings and no one/other-only pluralization blocks
-- DO_DALSZEJ_PRACY: contains suspicious untranslated English strings or one/other-only pluralization blocks
+- OK: no suspicious untranslated English strings and no plural blocks missing required categories
+- NEEDS_WORK: contains suspicious untranslated English strings or plural blocks missing required categories
+- Required plural categories for pl: one, few, many, other
 
 ## OK
 - config/locales/breadcrumbs/pl.yml
@@ -102,5 +103,5 @@ Criteria:
 - config/locales/views/valuations/pl.yml
 - config/locales/views/vehicles/pl.yml
 
-## DO_DALSZEJ_PRACY
+## NEEDS_WORK
 - None

@@ -1,6 +1,6 @@
 <%= t(".greeting", name: @user.display_name) %>
 
-<%= t(".intro", product: product_name) %>
+<%= t(".intro", product_name: product_name, product: product_name) %>
 
 <%= t(".document_type_label") %>
 <%= @pdf_import.document_type ? t("imports.document_types.#{@pdf_import.document_type}") : t("imports.document_types.unknown") %>

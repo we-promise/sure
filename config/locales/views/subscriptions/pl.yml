@@ -10,5 +10,9 @@ pl:
         sure: "Sure"
         today: "już dziś"
       redirect_to_stripe: "W kolejnym kroku nastąpi przekierowanie do Stripe, który obsługuje płatności kartą."
-      trialing: "Twoje dane zostaną usunięte za %{days} dni"
+      trialing:
+        one: "Twoje dane zostaną usunięte za %{count} dzień"
+        few: "Twoje dane zostaną usunięte za %{count} dni"
+        many: "Twoje dane zostaną usunięte za %{count} dni"
+        other: "Twoje dane zostaną usunięte za %{count} dnia"
       trial_over: "Okres próbny dobiegł końca"

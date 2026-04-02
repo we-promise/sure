@@ -20,7 +20,18 @@ pl:
         few: Pomyślnie połączono %{count} konta.
         many: Pomyślnie połączono %{count} kont.
         other: Pomyślnie połączono %{count} konta.
-      partial_success: Połączono %{linked} konto(a). %{failed} nie udało się połączyć.
+      partial_success:
+        template: "%{linked}. %{failed}."
+        linked:
+          one: Połączono %{count} konto
+          few: Połączono %{count} konta
+          many: Połączono %{count} kont
+          other: Połączono %{count} konta
+        failed:
+          one: "%{count} nie udało się połączyć"
+          few: "%{count} nie udało się połączyć"
+          many: "%{count} nie udało się połączyć"
+          other: "%{count} nie udało się połączyć"
       link_failed: 'Nie udało się połączyć kont: %{errors}'
       no_accounts: Nie wybrano żadnych kont do połączenia.
     preload_accounts:
@@ -51,7 +62,7 @@ pl:
       missing_authorization_id: Brak identyfikatora autoryzacji
       api_deletion_failed: Nie można usunąć połączenia z SnapTrade — brak danych uwierzytelniających. Połączenie może nadal istnieć na koncie SnapTrade.
     delete_orphaned_user:
-      success: Osierocoła rejestracja została usunięta pomyślnie.
+      success: Osierocona rejestracja została usunięta pomyślnie.
       failed: Nie udało się usunąć osieroconej rejestracji.
     setup_accounts:
       title: Skonfiguruj konta SnapTrade
@@ -115,19 +126,19 @@ pl:
     snaptrade:
       name: SnapTrade
       connection_description: Połącz się ze swoim biurem maklerskim przez SnapTrade (obsługuje 25+ brokerów)
-      description: SnapTrade laczy sie z ponad 25 glownymi biurami maklerskimi (Fidelity, Vanguard, Schwab, Robinhood itp.) i udostepnia pelna historie transakcji z etykietami aktywnosci oraz podstawa kosztowa.
+      description: SnapTrade łączy się z ponad 25 głównymi biurami maklerskimi (Fidelity, Vanguard, Schwab, Robinhood itp.) i udostępnia pełną historię transakcji z etykietami aktywności oraz podstawą kosztową.
       setup_title: 'Instrukcje konfiguracji:'
-      step_1_html: Utworz konto na <a href="https://dashboard.snaptrade.com" target="_blank" rel="noopener noreferrer" class="text-primary underline">dashboard.snaptrade.com</a>
+      step_1_html: Utwórz konto na <a href="https://dashboard.snaptrade.com" target="_blank" rel="noopener noreferrer" class="text-primary underline">dashboard.snaptrade.com</a>
       step_2: Skopiuj swój Client ID i Consumer Key z pulpitu nawigacyjnego
       step_3: Wprowadź swoje dane uwierzytelniające poniżej i kliknij Zapisz
       step_4: Przejdź do strony Konta i użyj opcji „Połącz kolejne biuro maklerskie", aby połączyć swoje konta inwestycyjne
       free_tier_warning: Plan bezpłatny obejmuje 5 połączeń z biurami maklerskimi. Dodatkowe połączenia wymagają płatnego planu SnapTrade.
       client_id_label: Client ID
-      client_id_placeholder: Wprowadz Client ID SnapTrade
-      client_id_update_placeholder: Wprowadz nowy Client ID, aby zaktualizowac
+      client_id_placeholder: Wprowadź Client ID SnapTrade
+      client_id_update_placeholder: Wprowadź nowy Client ID, aby zaktualizować
       consumer_key_label: Consumer Key
-      consumer_key_placeholder: Wprowadz Consumer Key SnapTrade
-      consumer_key_update_placeholder: Wprowadz nowy Consumer Key, aby zaktualizowac
+      consumer_key_placeholder: Wprowadź Consumer Key SnapTrade
+      consumer_key_update_placeholder: Wprowadź nowy Consumer Key, aby zaktualizować
       save_button: Zapisz konfigurację
       update_button: Zaktualizuj konfigurację
       status_connected:
@@ -163,12 +174,12 @@ pl:
       delete_connection_body: Spowoduje to trwałe usunięcie połączenia %{brokerage} z SnapTrade. Wszystkie konta tego biura maklerskiego zostaną odłączone. Będziesz musiał ponownie się połączyć, aby synchronizować te konta.
       delete_connection_confirm: Usuń połączenie
       orphaned_users_title:
-        one: "%{count} osierocoła rejestracja"
+        one: "%{count} osierocona rejestracja"
         few: "%{count} osierocone rejestracje"
         many: "%{count} osieroconych rejestracji"
         other: "%{count} osieroconych rejestracji"
       orphaned_users_description: Są to poprzednie rejestracje użytkowników SnapTrade, które zajmują Twoje miejsca połączeń. Usuń je, aby zwolnić miejsca.
-      orphaned_user: Osierocoła rejestracja
+      orphaned_user: Osierocona rejestracja
       delete_orphaned_user: Usuń
       delete_orphaned_user_title: Usunąć osieroconą rejestrację?
       delete_orphaned_user_body: Spowoduje to trwałe usunięcie tej osieroconej rejestracji użytkownika SnapTrade i wszystkich jego połączeń z biurami maklerskimi, zwalniając miejsca połączeń.

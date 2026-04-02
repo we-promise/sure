@@ -4,5 +4,26 @@
 # Backward-compatible wrapper.
 # Prefer: ruby script/locale_audit.rb --locale pl [--write-reports]
 
-args = [ "--locale", "pl" ] + ARGV
+filtered_argv = []
+skip_next = false
+
+ARGV.each_with_index do |arg, idx|
+  if skip_next
+    skip_next = false
+    next
+  end
+
+  if arg == "--locale"
+    skip_next = true
+    next
+  end
+
+  if arg.start_with?("--locale=")
+    next
+  end
+
+  filtered_argv << arg
+end
+
+args = [ "--locale", "pl" ] + filtered_argv
 exec("ruby", "script/locale_audit.rb", *args)

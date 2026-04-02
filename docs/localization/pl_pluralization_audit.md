@@ -2,7 +2,8 @@
 
 Scope: 90 files
 
-Result: 0 pluralization blocks still use only one/other (missing few and/or many).
+Required plural categories for pl: one, few, many, other
+Result: 0 pluralization blocks are missing one or more required categories.
 
 ## Findings
-- None. All detected pluralization blocks include few and many alongside one/other.
+- None. All detected pluralization blocks include required categories.
