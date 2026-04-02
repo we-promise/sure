@@ -1,12 +1,12 @@
 # ===========================================================================
-# Example Docker Compose file with Ollama (local LLM) and Pipelock (agent
-# security proxy)
+# Example Docker Compose file with Ollama (local LLM), OpenClaw (external
+# assistant gateway), and Pipelock (agent security proxy)
 # ===========================================================================
 #
 # Purpose:
 # --------
 #
-# This file extends the standard Sure setup with two optional capabilities:
+# This file extends the standard Sure setup with optional AI capabilities:
 #
 #   Pipelock — agent security proxy (always runs)
 #     - Forward proxy (port 8888): scans outbound HTTPS from Faraday-based
@@ -22,6 +22,10 @@
 #
 #   Ollama + Open WebUI — local LLM inference (optional, --profile ai)
 #     - Only starts when you run: docker compose --profile ai up
+#
+#   OpenClaw — external assistant gateway (optional, --profile external-assistant)
+#     - Starts an OpenClaw gateway locally for Sure's external assistant mode.
+#     - Set EXTERNAL_ASSISTANT_URL to http://openclaw-gateway:18789 for internal routing.
 #
 # Setup:
 # ------
@@ -63,7 +67,7 @@ x-rails-env: &rails_env
   HTTPS_PROXY: "http://pipelock:8888"
   HTTP_PROXY: "http://pipelock:8888"
   # Skip proxy for internal Docker network services (including ollama for local LLM calls)
-  NO_PROXY: "db,redis,pipelock,ollama,localhost,127.0.0.1"
+  NO_PROXY: "db,redis,pipelock,ollama,openclaw-gateway,localhost,127.0.0.1"
   AI_DEBUG_MODE: "true" # Useful for debugging, set to "false" in production
   # Ollama using OpenAI API compatible endpoints
   OPENAI_ACCESS_TOKEN: token-can-be-any-value-for-ollama
@@ -80,7 +84,7 @@ x-rails-env: &rails_env
   # Set EXTERNAL_ASSISTANT_URL + TOKEN to activate, then either set ASSISTANT_TYPE=external
   # here (forces all families) or choose "External" in Settings > Self-Hosting > AI Assistant.
   ASSISTANT_TYPE: ${ASSISTANT_TYPE:-}
-  EXTERNAL_ASSISTANT_URL: ${EXTERNAL_ASSISTANT_URL:-}
+  EXTERNAL_ASSISTANT_URL: ${EXTERNAL_ASSISTANT_URL:-http://openclaw-gateway:18789}
   EXTERNAL_ASSISTANT_TOKEN: ${EXTERNAL_ASSISTANT_TOKEN:-}
   EXTERNAL_ASSISTANT_AGENT_ID: ${EXTERNAL_ASSISTANT_AGENT_ID:-main}
   EXTERNAL_ASSISTANT_SESSION_KEY: ${EXTERNAL_ASSISTANT_SESSION_KEY:-agent:main:main}
@@ -166,6 +170,54 @@ services:
     extra_hosts:
       - host.docker.internal:host-gateway
     restart: unless-stopped
+    networks:
+      - sure_net
+
+  # OpenClaw gateway for Sure's "external assistant" mode.
+  # Based on OpenClaw Docker install docs:
+  # https://docs.openclaw.ai/install/docker
+  openclaw-gateway:
+    profiles:
+      - external-assistant
+    image: ${OPENCLAW_IMAGE:-ghcr.io/openclaw/openclaw:latest}
+    container_name: openclaw-gateway
+    hostname: openclaw-gateway
+    restart: unless-stopped
+    init: true
+    environment:
+      HOME: /home/node
+      TERM: xterm-256color
+      TZ: ${OPENCLAW_TZ:-UTC}
+      OPENCLAW_GATEWAY_TOKEN: ${EXTERNAL_ASSISTANT_TOKEN:-changeme}
+      OPENCLAW_ALLOW_INSECURE_PRIVATE_WS: ${OPENCLAW_ALLOW_INSECURE_PRIVATE_WS:-}
+    command:
+      [
+        "node",
+        "dist/index.js",
+        "gateway",
+        "--bind",
+        "${OPENCLAW_GATEWAY_BIND:-lan}",
+        "--port",
+        "18789",
+      ]
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:18789/healthz').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    ports:
+      # Expose for local onboarding/debugging. Sure uses the internal service name.
+      - "${OPENCLAW_GATEWAY_PORT:-18789}:18789"
+    volumes:
+      - openclaw-config:/home/node/.openclaw
+      - openclaw-workspace:/home/node/.openclaw/workspace
     networks:
       - sure_net
 
@@ -271,6 +323,8 @@ volumes:
   redis-data:
   ollama:
   ollama-webui:
+  openclaw-config:
+  openclaw-workspace:
 
 networks:
   sure_net:
