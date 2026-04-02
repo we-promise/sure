@@ -180,7 +180,6 @@ services:
     profiles:
       - external-assistant
     image: ${OPENCLAW_IMAGE:-ghcr.io/openclaw/openclaw:latest}
-    container_name: openclaw-gateway
     hostname: openclaw-gateway
     restart: unless-stopped
     init: true
@@ -329,3 +328,4 @@ volumes:
 networks:
   sure_net:
     driver: bridge
+    name: sure_net
