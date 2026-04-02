@@ -22,8 +22,8 @@
 #       but Docker Compose cannot enforce network-level routing.
 #
 #   Ollama + Open WebUI — local LLM inference
-#   (optional, --profile ai)
-#     - Only starts when you run: docker compose --profile ai up
+#   (optional, --profile local-ai)
+#     - Only starts when you run: docker compose --profile local-ai up
 #
 #   Ollama + Open WebUI + OpenClaw — external AI assistant
 #   (optional, --profile external-assistant)
@@ -128,7 +128,7 @@ services:
   # Note: You still have to download models manually using the ollama CLI or via Open WebUI
   ollama:
     profiles:
-      - ai
+      - local-ai
       - external-assistant
     volumes:
       - ollama:/root/.ollama
@@ -154,7 +154,7 @@ services:
 
   ollama-webui:
     profiles:
-      - ai
+      - local-ai
       - external-assistant
     image: ghcr.io/open-webui/open-webui
     container_name: ollama-webui
