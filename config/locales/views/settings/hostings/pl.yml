@@ -77,9 +77,9 @@ pl:
         access_token_label: Token dostępu
         access_token_placeholder: Wprowadź tutaj token dostępu
         uri_base_label: Bazowy URL API (opcjonalne)
-        uri_base_placeholder: https://api.openai.com/v1 (domyslnie)
+        uri_base_placeholder: https://api.openai.com/v1 (domyślnie)
         model_label: Model (opcjonalne)
-        model_placeholder: gpt-4.1 (domyslnie)
+        model_placeholder: gpt-4.1 (domyślnie)
         json_mode_label: Tryb JSON
         json_mode_auto: Auto (zalecane)
         json_mode_strict: Ścisły (najlepszy dla modeli rozumujących)
@@ -89,11 +89,11 @@ pl:
         title: OpenAI
       yahoo_finance_settings:
         title: Yahoo Finance
-        description: Yahoo Finance zapewnia bezplatny dostep do cen akcji, kursow walut i danych finansowych bez potrzeby klucza API.
-        status_active: Yahoo Finance jest aktywne i dziala
+        description: Yahoo Finance zapewnia bezpłatny dostęp do cen akcji, kursów walut i danych finansowych bez potrzeby klucza API.
+        status_active: Yahoo Finance jest aktywne i działa
         status_inactive: Połączenie z Yahoo Finance nie powiodło się
         connection_failed: Nie można połączyć z Yahoo Finance
-        troubleshooting: Sprawdz polaczenie internetowe i ustawienia zapory. Yahoo Finance moze byc tymczasowo niedostepne.
+        troubleshooting: Sprawdź połączenie internetowe i ustawienia zapory. Yahoo Finance może być tymczasowo niedostępne.
       twelve_data_settings:
         api_calls_used: "%{used} / %{limit} wykorzystanych dziennych wywołań API (%{percentage})"
         description: Wprowadź klucz API otrzymany od Twelve Data
@@ -101,7 +101,7 @@ pl:
         label: Klucz API
         placeholder: Wprowadź tutaj klucz API
         plan: "plan %{plan}"
-        plan_upgrade_warning_title: Niektore tickery wymagaja platnego planu
+        plan_upgrade_warning_title: Niektóre tickery wymagają płatnego planu
         plan_upgrade_warning_description: Poniższych tickerów w Twoim portfelu nie można synchronizować przy Twoim aktualnym planie Twelve Data.
         requires_plan: wymaga planu %{plan}
         view_pricing: Zobacz cennik Twelve Data
@@ -122,7 +122,7 @@ pl:
         import_enabled_env_locked: To ustawienie jest zablokowane przez zmienną środowiskową GUS_INFLATION_IMPORT_ENABLED.
         start_year: Rok początkowy
         end_year: Rok końcowy
-        import_now: Importuj historie CPI teraz
+        import_now: Importuj historię CPI teraz
         last_import: Ostatni import
         last_range: Ostatni zakres
         last_count: Zaimportowane rekordy

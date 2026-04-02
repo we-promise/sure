@@ -7,7 +7,7 @@
 filtered_argv = []
 skip_next = false
 
-ARGV.each_with_index do |arg, idx|
+ARGV.each do |arg|
   if skip_next
     skip_next = false
     next
