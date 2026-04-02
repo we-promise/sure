@@ -1,0 +1,10 @@
+---
+pl:
+  settings:
+    securities:
+      show:
+        disable_mfa: Wyłącz 2FA
+        disable_mfa_confirm: Czy na pewno chcesz wyłączyć uwierzytelnianie dwuskładnikowe? To obniży poziom bezpieczeństwa konta.
+        enable_mfa: Włącz 2FA
+        mfa_description: Dodaj dodatkową warstwę bezpieczeństwa, wymagając kodu z aplikacji uwierzytelniającej podczas logowania
+        mfa_title: Uwierzytelnianie dwuskładnikowe

@@ -1,0 +1,154 @@
+---
+pl:
+  bonds:
+    edit:
+      edit: Edytuj %{account}
+    form:
+      initial_balance: Początkowe saldo obligacji
+      tax_wrapper: Otoczka podatkowa
+      auto_buy_new_issues: Automatycznie kupuj nowe emisje obligacji
+      auto_buy_new_issues_hint: Po rozliczeniu zapadalności automatycznie kup kolejną emisję z dostępnych środków dla kont IKE/IKZE.
+    subtypes:
+      eod:
+        short: EOD
+        long: 10-letnia obligacja oszczędnościowa Skarbu Państwa
+      rod:
+        short: ROD
+        long: 12-letnia rodzinna obligacja oszczędnościowa
+      other_bond:
+        short: Inna
+        long: Inna obligacja
+    new:
+      title: Wprowadź dane obligacji
+    tabs:
+      positions:
+        positions: Pozycje obligacji
+        new_activity: Nowa aktywność
+        name: Nazwa
+        weight: Udział
+        rate: Oprocentowanie
+        holdings: Stan
+        maturity: Zapadalność
+        total_return: Łączny zwrot
+        no_purchases: Nie dodano jeszcze żadnych zakupów.
+      closed:
+        closed: Zamknięte partie obligacji
+        name: Nazwa
+        weight: Udział
+        rate: Oprocentowanie
+        holdings: Stan
+        maturity: Zapadalność
+        total_return: Łączny zwrot
+        no_closed_lots: Brak zamkniętych partii obligacji.
+        closed_lots: Zamknięte partie obligacji
+        closed_lot_meta: "Zakupiono %{purchased}, zamknięto %{closed}"
+        settled_net: Rozliczono netto
+    cash_holding:
+      cash_position: Gotówka z obligacji
+    purchase_holding:
+      unknown: Nieznane
+      update_needed: Wymagana aktualizacja
+      purchased: "Zakupiono %{date}"
+      term_months:
+        one: "%{count} miesiąc"
+        few: "%{count} miesiące"
+        many: "%{count} miesięcy"
+        other: "%{count} miesiąca"
+      principal_term: "Kapitał, %{term}"
+      bond_meta: "%{rate_type} / %{coupon}"
+      inflation_meta_gus: "%{inflation} inflacji + %{margin} marży (GUS SDP %{indicator})"
+      inflation_meta_manual: "%{inflation} inflacji + %{margin} marży (ręcznie)"
+      first_period_fixed_rate: Stałe oprocentowanie pierwszego okresu
+      maturity: "Zapada %{date}"
+      maturity_label: Data zapadalności
+      since_purchase: Od zakupu
+      projected_to_maturity: Prognoza do zapadalności
+      pending_review: Oczekiwanie na zaktualizowane stawki emisji
+      edit: Edytuj
+      remove: Usuń
+      confirm_remove: Usunąć ten zakup?
+
+  bond_lots:
+    not_bond_account: "To konto nie jest kontem obligacji."
+    new:
+      title: Dodaj zakup dla %{account}
+    edit:
+      title: Edytuj zakup dla %{account}
+    show:
+      settings: Ustawienia
+      history: Historia
+      no_history: Brak historii kapitalizacji.
+      overview_principal: Kapitał
+      overview_settlement: Kwota rozliczenia
+      overview_maturity: Data zapadalności
+      overview_closed_on: Zamknięto
+      history_period: "Okres %{period}: %{start} - %{end}"
+      history_balance: "Saldo %{opening} -> %{closing}"
+      history_interest: "Odsetki %{interest} przy %{rate}"
+      history_capitalized: Skapitalizowano
+      history_partial: Okres częściowy
+      history_inflation_gus: "Użyta inflacja: %{inflation} + %{margin} marży (GUS SDP %{indicator}, odn. %{reference})"
+      history_inflation_manual: "Użyta inflacja: %{inflation} + %{margin} marży (założenie ręczne)"
+      history_inflation_first_period: "Stała stopa pierwszego okresu"
+      unknown: Nieznane
+      purchased: "Zakupiono %{date}"
+      delete_title: Usuń zakup
+      delete_subtitle: Usuń ten zakup i powiązany wpis aktywności.
+      delete: Usuń
+      delete_confirm: Usunąć ten zakup?
+    create:
+      success: Dodano zakup obligacji
+    update:
+      success: Zaktualizowano zakup obligacji
+    destroy:
+      success: Usunięto zakup obligacji
+    form:
+      purchased_on: Data zakupu
+      issue_date: Data emisji
+      amount: Kwota kapitału
+      units: Jednostki
+      nominal_per_unit: Nominał na jednostkę
+      term_months: Okres (miesiące)
+      subtype: Typ obligacji
+      rate_type: Typ oprocentowania
+      coupon_frequency: Częstotliwość kuponu
+      interest_rate: Oprocentowanie
+      interest_rate_placeholder: "4.25"
+      first_period_rate: Oprocentowanie pierwszego okresu (%)
+      inflation_margin: Marża inflacyjna (%)
+      auto_fetch_inflation: Pobieraj inflację automatycznie z GUS
+      auto_fetch_disabled_hint: Automatyczny import CPI jest globalnie wyłączony w ustawieniach self-hosting. Wprowadź inflację ręcznie.
+      inflation_rate_assumption: Założenie CPI (%)
+      cpi_lag_months: Opóźnienie CPI (miesiące)
+      early_redemption_fee: Opłata za wcześniejszy wykup
+      auto_close_on_maturity: Automatycznie zamknij w dniu zapadalności
+      auto_close_on_maturity_hint: Automatycznie rozlicz tę partię w dniu zapadalności i przeksięguj środki na gotówkę konta.
+      tax_strategy: Obsługa podatku przy zapadalności
+      tax_rate: Stawka podatku (%)
+      tax_strategies:
+        standard: Podatek standardowy
+        reduced: Podatek obniżony
+        exempt: Zwolnione z podatku (IKE/IKZE)
+      rate_types:
+        fixed: Stałe
+        variable: Zmienne
+      coupon_frequencies:
+        monthly: Miesięcznie
+        quarterly: Kwartalnie
+        semi_annual: Półrocznie
+        annual: Rocznie
+        at_maturity: W terminie zapadalności
+      submit: Dodaj zakup
+      update: Zaktualizuj zakup
+    activity:
+      purchase_name: "Zakup obligacji: %{subtype}"
+      maturity_settlement_name: "Rozliczenie zapadalności obligacji: %{subtype}"
+      maturity_settlement_notes_with_tax: "Kwota zakupu: %{purchase_amount}\nŁączne odsetki: %{interest_amount}\nPotrącony podatek: %{tax_withheld_amount}"
+      maturity_settlement_notes_without_tax: "Kwota zakupu: %{purchase_amount}\nŁączne odsetki: %{interest_amount}\nPotrącony podatek: brak"
+
+    closed_purchase_holding:
+      closed_meta: "Zakupiono %{purchased}, zamknięto %{closed}"
+      closed_rate_meta: "%{periods} okresów kapitalizacji"
+      settled_net: "Rozliczono netto %{net}"
+      history_meta: "Odsetki %{interest}, podatek %{tax}"
+      not_bond_account: "To konto nie jest kontem obligacji."

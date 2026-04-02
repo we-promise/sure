@@ -1,0 +1,14 @@
+---
+pl:
+  subscriptions:
+    self_hosted_alert: "%{product_name} nie jest dostępny w trybie self-hosted."
+    upgrade:
+      contribute_and_support_sure: "Wspieraj i rozwijaj Sure"
+      cta: "Wesprzyj dalszy rozwój tej bazy kodu!"
+      header:
+        support: "Wesprzyj"
+        sure: "Sure"
+        today: "już dziś"
+      redirect_to_stripe: "W kolejnym kroku nastąpi przekierowanie do Stripe, który obsługuje płatności kartą."
+      trialing: "Twoje dane zostaną usunięte za %{days} dni"
+      trial_over: "Okres próbny dobiegł końca"

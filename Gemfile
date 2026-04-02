@@ -69,6 +69,7 @@ gem "faraday-multipart"
 gem "inline_svg"
 gem "octokit"
 gem "pagy"
+gem "rails-i18n"
 gem "rails-settings-cached"
 gem "tzinfo-data", platforms: %i[windows jruby]
 gem "csv"

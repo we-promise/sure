@@ -1,0 +1,49 @@
+---
+pl:
+  enable_banking_items:
+    authorize:
+      authorization_failed: Nie udało się rozpocząć autoryzacji
+      bank_required: Wybierz bank.
+      invalid_redirect: Otrzymany adres URL autoryzacji jest nieprawidłowy. Spróbuj ponownie.
+      redirect_uri_not_allowed: Przekierowanie niedozwolone. Skonfiguruj `%{callback_url}` w ustawieniach aplikacji Enable Banking.
+      unexpected_error: Wystąpił nieoczekiwany błąd. Spróbuj ponownie.
+    callback:
+      authorization_error: Autoryzacja nie powiodła się
+      invalid_callback: Nieprawidłowe parametry callback.
+      item_not_found: Nie znaleziono połączenia.
+      session_failed: Nie udało się zakończyć autoryzacji
+      success: Pomyślnie połączono z bankiem. Twoje konta są synchronizowane.
+      unexpected_error: Wystąpił nieoczekiwany błąd. Spróbuj ponownie.
+    complete_account_setup:
+      all_skipped: Wszystkie konta zostały pominięte. Możesz skonfigurować je później na stronie kont.
+      no_accounts: Brak kont dostępnych do konfiguracji.
+      success: Pomyślnie utworzono %{count} kont!
+    create:
+      success: Konfiguracja Enable Banking zakończona pomyślnie.
+    destroy:
+      success: Połączenie Enable Banking zostało dodane do kolejki usuwania.
+    link_accounts:
+      already_linked: Wybrane konta są już połączone.
+      link_failed: Nie udało się połączyć kont
+      no_accounts_selected: Nie wybrano żadnych kont.
+      no_session: Brak aktywnego połączenia Enable Banking. Najpierw połącz się z bankiem.
+      success: Pomyślnie połączono %{count} kont.
+    link_existing_account:
+      success: Konto zostało pomyślnie połączone z Enable Banking
+      errors:
+        only_manual: Można połączyć tylko konta manualne
+        invalid_enable_banking_account: Wybrano nieprawidłowe konto Enable Banking
+    new:
+      link_enable_banking_title: Połącz Enable Banking
+    reauthorize:
+      invalid_redirect: Otrzymany adres URL autoryzacji jest nieprawidłowy. Spróbuj ponownie.
+      reauthorization_failed: Ponowna autoryzacja nie powiodła się
+    select_bank:
+      cancel: Anuluj
+      check_country: Sprawdź ustawienia kodu kraju.
+      credentials_required: Najpierw skonfiguruj dane uwierzytelniające Enable Banking.
+      description: Wybierz bank, który chcesz połączyć ze swoimi kontami.
+      no_banks: Brak dostępnych banków dla tego kraju/regionu.
+      title: Wybierz swój bank
+    update:
+      success: Konfiguracja Enable Banking została zaktualizowana.

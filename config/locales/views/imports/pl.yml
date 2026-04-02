@@ -1,0 +1,241 @@
+---
+pl:
+  import:
+    qif_category_selections:
+      show:
+        title: Wybierz kategorie i tagi
+        description: Wybierz, które kategorie i tagi z pliku QIF chcesz zaimportować do Sure. Odznaczone elementy zostaną usunięte z tych transakcji.
+        categories_heading: Kategorie
+        categories_found:
+          one: Znaleziono 1 kategorię
+          few: Znaleziono %{count} kategorie
+          many: Znaleziono %{count} kategorii
+          other: Znaleziono %{count} kategorii
+        category_name_col: Nazwa kategorii
+        transactions_col: Transakcje
+        tags_heading: Tagi
+        tags_found:
+          one: Znaleziono 1 tag
+          few: Znaleziono %{count} tagi
+          many: Znaleziono %{count} tagów
+          other: Znaleziono %{count} tagów
+        tag_name_col: Nazwa tagu
+        txn_count:
+          one: 1 transakcja
+          few: "%{count} transakcje"
+          many: "%{count} transakcji"
+          other: "%{count} transakcji"
+        split_warning_title: Wykryto transakcje dzielone
+        split_warning_description: Ten plik QIF zawiera transakcje dzielone. Podziały nie są jeszcze obsługiwane, więc każda taka transakcja zostanie zaimportowana jako pojedyncza transakcja z pełną kwotą i bez kategorii. Szczegółowy podział nie zostanie zachowany.
+        split_badge: podział
+        empty_state_primary: W tym pliku QIF nie znaleziono kategorii ani tagów.
+        empty_state_secondary: Wszystkie transakcje zostaną zaimportowane bez kategorii i tagów.
+        submit: Przejdź do podsumowania
+    cleans:
+      show:
+        description: Edytuj swoje dane w tabeli poniżej. Czerwone komórki są nieprawidłowe.
+        errors_notice: Masz błędy w danych. Najedź na błąd, aby zobaczyć szczegóły.
+        errors_notice_mobile: Masz błędy w danych. Dotknij dymku błędu, aby zobaczyć szczegóły.
+        title: Wyczyść dane
+    configurations:
+      update:
+        success: Import został pomyślnie skonfigurowany.
+      category_import:
+        button_label: Dalej
+        description: Prześlij prosty plik CSV, taki jak ten generowany podczas eksportu danych. Kolumny zostaną automatycznie zmapowane.
+        instructions: Wybierz Dalej, aby przeanalizować plik CSV i przejść do etapu czyszczenia.
+      mint_import:
+        date_format_label: Format daty
+      rule_import:
+        description: Skonfiguruj import reguł. Reguły zostaną utworzone lub zaktualizowane na podstawie danych z CSV.
+        process_button: Przetwórz reguły
+        process_help: Kliknij poniższy przycisk, aby przetworzyć CSV i wygenerować wiersze reguł.
+      show:
+        description: Wybierz kolumny odpowiadające poszczególnym polom w pliku CSV.
+        title: Skonfiguruj import
+      trade_import:
+        date_format_label: Format daty
+      transaction_import:
+        date_format_label: Format daty
+        rows_to_skip_label: Pomiń pierwsze n wierszy
+    confirms:
+      sure_import:
+        title: Potwierdź import
+        description: Przejrzyj dane, które zostaną zaimportowane z pliku eksportu.
+        summary: Podsumowanie importu
+        empty_summary: Nie udało się znaleźć w tym pliku żadnych rekordów nadających się do importu. Plik może być pusty albo jego wiersze nie pasują do oczekiwanego formatu eksportu. Każdy wiersz powinien być obiektem JSON z kluczami "type" i "data" oraz typami obsługiwanymi przez ten import.
+        publish_button: Rozpocznij import
+        cancel: Anuluj
+      mappings:
+        create_account: Utwórz konto
+        csv_mapping_label: "%{mapping} w CSV"
+        sure_mapping_label: "%{mapping} w %{product_name}"
+        no_accounts: Nie masz jeszcze żadnych kont. Utwórz konto, którego można użyć dla nieprzypisanych wierszy w CSV, albo wróć do etapu czyszczenia i podaj nazwę konta, której można użyć.
+        rows_label: Wiersze
+        unassigned_account: Chcesz utworzyć nowe konto dla nieprzypisanych wierszy?
+      show:
+        account_mapping_description: Przypisz wszystkie konta z importowanego pliku do istniejących kont Maybe. Możesz też dodać nowe konta lub zostawić je bez przypisania.
+        account_mapping_title: Przypisz konta
+        account_type_mapping_description: Przypisz wszystkie typy kont z importowanego pliku do typów używanych w Maybe.
+        account_type_mapping_title: Przypisz typy kont
+        category_mapping_description: Przypisz wszystkie kategorie z importowanego pliku do istniejących kategorii Maybe. Możesz też dodać nowe kategorie lub zostawić je bez przypisania.
+        category_mapping_title: Przypisz kategorie
+        tag_mapping_description: Przypisz wszystkie tagi z importowanego pliku do istniejących tagów Maybe. Możesz też dodać nowe tagi lub zostawić je bez przypisania.
+        tag_mapping_title: Przypisz tagi
+    uploads:
+      show:
+        qif_title: Prześlij plik QIF
+        qif_description: Wybierz konto, do którego należy ten plik QIF, a następnie prześlij eksport .qif z Quicken.
+        qif_account_label: Konto
+        qif_account_placeholder: Wybierz konto…
+        qif_file_prompt: aby dodać tutaj plik QIF
+        qif_file_hint: tylko pliki .qif
+        qif_submit: Prześlij QIF
+        browse: Przeglądaj
+        csv_file_prompt: aby dodać tutaj plik CSV
+        description: Wklej lub prześlij poniżej swój plik CSV. Przed rozpoczęciem zapoznaj się z instrukcjami w tabeli poniżej.
+        instructions_1: Poniżej znajduje się przykładowy plik CSV z kolumnami dostępnymi do importu.
+        instructions_2: Twój plik CSV musi zawierać wiersz nagłówka.
+        instructions_3: Możesz nazwać kolumny dowolnie. Zmapujesz je na późniejszym etapie.
+        instructions_4: Kolumny oznaczone gwiazdką (*) są wymagane.
+        instructions_5: W liczbach nie używaj przecinków, symboli walut ani nawiasów.
+        title: Zaimportuj dane
+      sure_import:
+        title: Importuj z eksportu
+        description: Prześlij plik all.ndjson z eksportu danych, aby przywrócić konta, transakcje, kategorie i inne dane.
+        drop_title: Upuść plik NDJSON, aby go przesłać
+        drop_subtitle: Plik zostanie przesłany automatycznie
+        browse: Przeglądaj
+        browse_hint: aby dodać tutaj plik all.ndjson
+        upload_button: Prześlij NDJSON
+        hint_html: Prześlij plik <strong>all.ndjson</strong> z archiwum ZIP eksportu danych
+        ndjson_invalid: Plik musi być poprawnym NDJSON i zawierać co najmniej jeden rekord
+  imports:
+    type_labels:
+      transaction_import: Import transakcji
+      trade_import: Import transakcji giełdowych
+      account_import: Import kont
+      mint_import: Import z Mint
+      qif_import: Import QIF
+      category_import: Import kategorii
+      rule_import: Import reguł
+      pdf_import: Import PDF
+      document_import: Import dokumentu
+      sure_import: Import z Sure
+    steps:
+      upload: Przesyłanie
+      configure: Konfiguracja
+      clean: Czyszczenie
+      map: Mapowanie
+      confirm: Potwierdzenie
+      select: Wybór
+    index:
+      title: Importy
+      new: Nowy import
+    table:
+      title: Importy
+      header:
+        date: Data
+        operation: Operacja
+        status: Status
+        actions: Akcje
+      row:
+        type_labels:
+          transaction_import: Transakcja
+          trade_import: Transakcja giełdowa
+          account_import: Konto
+          mint_import: "Mint"
+          qif_import: "QIF"
+          category_import: Kategoria
+          rule_import: Reguła
+          pdf_import: "PDF"
+          document_import: Dokument
+          sure_import: "Sure"
+        status:
+          in_progress: W toku
+          uploading: Przetwarzanie wierszy
+          reverting: Cofanie
+          revert_failed: Nie udało się cofnąć
+          complete: Zakończono
+          failed: Niepowodzenie
+        actions:
+          revert: Cofnij
+          confirm_revert: To usunie zaimportowane transakcje, ale nadal będzie można w każdej chwili przejrzeć i ponownie zaimportować dane.
+          delete: Usuń
+          view: Zobacz
+      empty: Brak importów.
+    new:
+      description: Importuj dane z narzędzia finansowego lub prześlij surowe pliki danych.
+      tab_financial_tools: Narzędzia i pliki finansowe
+      tab_raw_data: Surowe dane
+      coming_soon: Wkrótce
+      import_ynab: Importuj z YNAB
+      import_accounts: Importuj konta
+      import_categories: Importuj kategorie
+      import_mint: Importuj z Mint
+      import_portfolio: Importuj inwestycje
+      import_rules: Importuj reguły
+      import_transactions: Importuj transakcje
+      import_qif: Importuj z Quicken (QIF)
+      import_sure: Importuj z Sure
+      import_sure_description: Pełny plik eksportu .ndjson
+      import_file: Importuj dokument
+      import_file_description: Analiza PDF wspierana przez AI oraz przesyłanie przeszukiwalnych plików
+      requires_account: Najpierw zaimportuj konta, aby odblokować tę opcję.
+      resume: Wznów %{type}
+      sources: Źródła
+      title: Nowy import
+    create:
+      file_too_large: Plik jest zbyt duży. Maksymalny rozmiar to %{max_size} MB.
+      invalid_file_type: Nieprawidłowy typ pliku. Prześlij plik CSV.
+      csv_uploaded: Plik CSV został pomyślnie przesłany.
+      ndjson_uploaded: Plik NDJSON został pomyślnie przesłany.
+      pdf_too_large: Plik PDF jest zbyt duży. Maksymalny rozmiar to %{max_size} MB.
+      pdf_processing: Twój plik PDF jest przetwarzany. Po zakończeniu analizy otrzymasz wiadomość e-mail.
+      invalid_pdf: Przesłany plik nie jest prawidłowym plikiem PDF.
+      document_too_large: Plik dokumentu jest zbyt duży. Maksymalny rozmiar to %{max_size} MB.
+      invalid_document_file_type: Nieprawidłowy typ pliku dokumentu dla aktywnego magazynu wektorowego.
+      document_uploaded: Dokument został pomyślnie przesłany.
+      document_upload_failed: Nie udało się przesłać dokumentu do magazynu wektorowego. Spróbuj ponownie.
+      invalid_ndjson_file_type: Nieprawidłowy typ lub format pliku. Prześlij poprawny plik eksportu .ndjson lub .json.
+      document_provider_not_configured: Nie skonfigurowano magazynu wektorowego dla przesyłania dokumentów.
+    show:
+      finalize_upload: Dokończ przesyłanie pliku.
+      finalize_mappings: Dokończ mapowanie przed przejściem dalej.
+    ready:
+      description: Oto podsumowanie nowych elementów, które zostaną dodane do konta po opublikowaniu tego importu.
+      title: Potwierdź dane importu
+      summary_item_label: Element
+      summary_count_label: Liczba
+      empty_summary: Nie udało się znaleźć w tym pliku żadnych rekordów nadających się do importu. Plik może być pusty albo jego wiersze nie pasują do oczekiwanego formatu eksportu. Każdy wiersz powinien być obiektem JSON z kluczami "type" i "data" oraz typami obsługiwanymi przez ten import.
+      publish_import: Opublikuj import
+      back_to_imports: Wróć do importów
+    errors:
+      custom_column_requires_inflow: Import niestandardowych kolumn wymaga wybrania kolumny wpływu
+    document_types:
+      bank_statement: Wyciąg bankowy
+      credit_card_statement: Wyciąg z karty kredytowej
+      investment_statement: Wyciąg inwestycyjny
+      financial_document: Dokument finansowy
+      contract: Umowa
+      other: Inny dokument
+      unknown: Nieznany dokument
+    pdf_import:
+      processing_title: Przetwarzanie PDF
+      processing_description: Analizujemy Twój dokument przy użyciu AI. Może to chwilę potrwać. Po zakończeniu analizy otrzymasz wiadomość e-mail.
+      check_status: Sprawdź status
+      back_to_dashboard: Wróć do pulpitu
+      failed_title: Przetwarzanie nie powiodło się
+      failed_description: Nie udało się przetworzyć dokumentu PDF. Spróbuj ponownie lub skontaktuj się ze wsparciem.
+      try_again: Spróbuj ponownie
+      delete_import: Usuń import
+      complete_title: Dokument przeanalizowany
+      complete_description: Przeanalizowaliśmy Twój plik PDF. Oto, co znaleźliśmy.
+      document_type_label: Typ dokumentu
+      summary_label: Podsumowanie
+      email_sent_notice: Wysłano do Ciebie wiadomość e-mail z dalszymi krokami.
+      back_to_imports: Wróć do importów
+      unknown_state_title: Nieznany stan
+      unknown_state_description: Ten import jest w nieoczekiwanym stanie. Wróć do listy importów.
+      processing_failed_with_message: "%{message}"
+      processing_failed_generic: "Przetwarzanie nie powiodło się: %{error}"
