@@ -48,11 +48,9 @@
 
     <%# Bottom Section: Categories full width %>
     <% has_over_budget = budget_has_over_budget?(@budget) %>
-    <% if has_over_budget %>
-      <div class="w-full bg-container rounded-xl shadow-border-xs p-4" data-controller="budget-filter">
-    <% else %>
-      <div class="w-full bg-container rounded-xl shadow-border-xs p-4">
-    <% end %>
+    <%= content_tag :div,
+      class: "w-full bg-container rounded-xl shadow-border-xs p-4",
+      data: (has_over_budget ? { controller: "budget-filter" } : {}) do %>
       <div class="flex items-center mb-4">
         <h2 class="text-lg font-medium w-32 flex-shrink-0"><%= t("budgets.show.categories.title") %></h2>
 
@@ -96,6 +94,6 @@
       <div class="bg-container-inset rounded-xl p-1">
         <%= render "budgets/budget_categories", budget: @budget %>
       </div>
-    </div>
+    <% end %>
   </div>
 </div>

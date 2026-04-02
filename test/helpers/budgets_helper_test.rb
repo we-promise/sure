@@ -58,4 +58,50 @@ class BudgetsHelperTest < ActionView::TestCase
     assert group.present?
     assert_includes group.budget_subcategories.map(&:category_id), @child_category.id
   end
+
+  test "keeps group when only subcategory is over budget" do
+    parent = Category.create!(
+      name: "Helper Group Parent #{SecureRandom.hex(4)}",
+      family: @family,
+      color: "#22c55e",
+      lucide_icon: "utensils"
+    )
+
+    child = Category.create!(
+      name: "Helper Group Child #{SecureRandom.hex(4)}",
+      parent: parent,
+      family: @family
+    )
+
+    BudgetCategory.create!(
+      budget: @budget,
+      category: parent,
+      budgeted_spending: 300,
+      currency: "USD"
+    )
+
+    BudgetCategory.create!(
+      budget: @budget,
+      category: child,
+      budgeted_spending: 50,
+      currency: "USD"
+    )
+
+    Entry.create!(
+      account: accounts(:depository),
+      entryable: Transaction.create!(category: child),
+      date: Date.current,
+      name: "Helper Child Over Budget",
+      amount: 100,
+      currency: "USD"
+    )
+
+    state = budget_categories_view_state(Budget.find(@budget.id))
+    group = state[:over_budget_groups].find { |g| g.budget_category.category_id == parent.id }
+
+    assert group.present?
+    refute group.budget_category.any_over_budget?
+    assert_equal [ child.id ], group.budget_subcategories.map(&:category_id)
+    assert group.budget_subcategories.first.any_over_budget?
+  end
 end

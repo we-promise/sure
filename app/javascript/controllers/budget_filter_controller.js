@@ -7,12 +7,11 @@ export default class extends Controller {
   connect() {
     const filterParam = new URLSearchParams(window.location.search).get("filter");
 
-    if (this.#isValidFilter(filterParam)) {
+    if (this.#isValidFilter(filterParam) && filterParam !== this.filterValue) {
       this.filterValue = filterParam;
-      return;
+    } else if (filterParam && !this.#isValidFilter(filterParam)) {
+      this.#syncFilterParam();
     }
-
-    this.filterValueChanged();
   }
 
   setFilter(event) {

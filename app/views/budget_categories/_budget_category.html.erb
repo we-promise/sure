@@ -1,7 +1,5 @@
 <%# locals: (budget_category:, show_budget_meta: true) %>
 
-<% show_budget_meta = local_assigns.fetch(:show_budget_meta, true) %>
-
 <%= turbo_frame_tag dom_id(budget_category), class: "flex-1 min-w-0 block" do %>
   <%= link_to budget_budget_category_path(budget_category.budget, budget_category), class: "group block w-full px-4 py-2 bg-container", data: { turbo_frame: "drawer" } do %>
 
@@ -51,7 +49,7 @@
         <div class="h-1.5 bg-container-inset rounded-full overflow-hidden">
           <% bar_color = budget_category.over_budget? ? "bg-red-500" : (budget_category.near_limit? ? "bg-yellow-500" : "bg-green-500") %>
           <div class="h-full <%= bar_color %> rounded-full transition-all duration-500"
-               style="width: <%= budget_category.bar_width_percent %>%"></div>
+            style="inline-size: <%= budget_category.bar_width_percent %>%"></div>
         </div>
       </div>
 

@@ -2,24 +2,12 @@ module BudgetsHelper
   def budget_has_over_budget?(budget)
     return false unless budget.initialized?
 
-    budget.budget_categories.any? { |budget_category| budget_any_over_budget?(budget_category) }
+    budget.budget_categories.any?(&:any_over_budget?)
   end
 
   def budget_categories_view_state(budget)
     @budget_categories_view_state ||= {}
     @budget_categories_view_state[budget.object_id] ||= build_budget_categories_view_state(budget)
-  end
-
-  def budget_any_over_budget?(budget_category)
-    budget_unbudgeted_with_spending?(budget_category) || budget_over_budget_with_budget?(budget_category)
-  end
-
-  def budget_on_track?(budget_category)
-    budget_budgeted?(budget_category) && !budget_category.over_budget?
-  end
-
-  def budget_over_budget_with_budget?(budget_category)
-    budget_budgeted?(budget_category) && budget_category.over_budget?
   end
 
   private
@@ -29,22 +17,22 @@ module BudgetsHelper
       all_category_groups = BudgetCategory::Group.for(budget.budget_categories)
 
       over_budget_groups = if budget.initialized?
-        filtered_groups_for(all_category_groups) { |budget_category| budget_any_over_budget?(budget_category) }
+        filtered_groups_for(all_category_groups) { |budget_category| budget_category.any_over_budget? }
       else
         []
       end
 
-      show_over_budget_uncategorized = budget.initialized? && budget_any_over_budget?(uncategorized_budget_category)
-      over_budget_count = visible_count_for(over_budget_groups) { |budget_category| budget_any_over_budget?(budget_category) }
+      show_over_budget_uncategorized = budget.initialized? && uncategorized_budget_category.any_over_budget?
+      over_budget_count = visible_count_for(over_budget_groups) { |budget_category| budget_category.any_over_budget? }
       over_budget_count += 1 if show_over_budget_uncategorized
 
       on_track_groups = if budget.initialized?
-        filtered_groups_for(all_category_groups) { |budget_category| visible_for_on_track?(budget_category) }
+        filtered_groups_for(all_category_groups) { |budget_category| budget_category.visible_on_track? }
       else
         all_category_groups
       end
 
-      show_on_track_uncategorized = all_category_groups.any? && (!budget.initialized? || budget_on_track?(uncategorized_budget_category))
+      show_on_track_uncategorized = all_category_groups.any? && (!budget.initialized? || uncategorized_budget_category.on_track?)
       on_track_count = visible_count_for(on_track_groups) { |budget_category| parent_visible_for_on_track?(budget, budget_category) }
       on_track_count += 1 if show_on_track_uncategorized
       visible_expenses_empty = on_track_count.zero?
@@ -61,25 +49,8 @@ module BudgetsHelper
       }
     end
 
-    def budget_budgeted?(budget_category)
-      budget_category.display_budgeted_spending.to_d.positive?
-    end
-
-    def budget_unbudgeted_with_spending?(budget_category)
-      !budget_budgeted?(budget_category) && budget_category.actual_spending.to_d.positive?
-    end
-
     def parent_visible_for_on_track?(budget, budget_category)
-      budget.initialized? ? visible_for_on_track?(budget_category) : true
-    end
-
-    def visible_for_on_track?(budget_category)
-      return false unless budget_on_track?(budget_category)
-
-      # Subcategories inheriting parent budget are hidden until they have spending.
-      return true unless budget_category.subcategory? && budget_category.inherits_parent_budget?
-
-      budget_category.actual_spending.to_d.positive?
+      budget.initialized? ? budget_category.visible_on_track? : true
     end
 
     def filtered_groups_for(groups)

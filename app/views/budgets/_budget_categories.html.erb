@@ -23,34 +23,19 @@
 
       <div class="bg-container py-1 shadow-border-xs rounded-md">
         <% over_budget_groups.each do |group| %>
-          <% parent_visible = budget_any_over_budget?(group.budget_category) %>
-          <% if parent_visible %>
-            <div class="py-2">
-              <%= render "budget_categories/budget_category", budget_category: group.budget_category, show_budget_meta: budget_over_budget_with_budget?(group.budget_category) %>
-            </div>
-          <% end %>
-
-          <% group.budget_subcategories.each do |budget_subcategory| %>
-            <% if parent_visible %>
-              <div class="py-2 w-full flex items-start">
-                <div class="ml-8 pt-4 flex items-center justify-center text-subdued">
-                  <%= icon "corner-down-right" %>
-                </div>
-                <%= render "budget_categories/budget_category", budget_category: budget_subcategory, show_budget_meta: budget_over_budget_with_budget?(budget_subcategory) %>
-              </div>
-            <% else %>
-              <div class="py-2">
-                <%= render "budget_categories/budget_category", budget_category: budget_subcategory, show_budget_meta: budget_over_budget_with_budget?(budget_subcategory) %>
-              </div>
-            <% end %>
-          <% end %>
+          <%= render "budgets/category_group",
+            group: group,
+            parent_visible: group.budget_category.any_over_budget?,
+            over_budget_mode: true %>
 
           <%= render "shared/ruler" %>
         <% end %>
 
         <% if show_over_budget_uncategorized %>
           <div class="py-2">
-            <%= render "budget_categories/budget_category", budget_category: uncategorized_budget_category, show_budget_meta: budget_over_budget_with_budget?(uncategorized_budget_category) %>
+            <%= render "budget_categories/budget_category",
+              budget_category: uncategorized_budget_category,
+              show_budget_meta: uncategorized_budget_category.over_budget_with_budget? %>
           </div>
         <% end %>
       </div>
@@ -73,30 +58,9 @@
         </div>
       <% else %>
         <% on_track_groups.each do |group| %>
-          <% parent_visible = budget.initialized? ? budget_on_track?(group.budget_category) : true %>
-          <% if parent_visible %>
-            <div class="py-2">
-              <%= render "budget_categories/budget_category", budget_category: group.budget_category %>
-
-              <div>
-                <% group.budget_subcategories.each do |budget_subcategory| %>
-                  <div class="w-full flex items-start">
-                    <div class="ml-8 pt-4 flex items-center justify-center text-subdued">
-                      <%= icon "corner-down-right" %>
-                    </div>
-
-                    <%= render "budget_categories/budget_category", budget_category: budget_subcategory %>
-                  </div>
-                <% end %>
-              </div>
-            </div>
-          <% else %>
-            <% group.budget_subcategories.each do |budget_subcategory| %>
-              <div class="py-2">
-                <%= render "budget_categories/budget_category", budget_category: budget_subcategory %>
-              </div>
-            <% end %>
-          <% end %>
+          <%= render "budgets/category_group",
+            group: group,
+            parent_visible: (budget.initialized? ? group.budget_category.visible_on_track? : true) %>
 
           <%= render "shared/ruler" %>
         <% end %>
