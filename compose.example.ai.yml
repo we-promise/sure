@@ -29,7 +29,8 @@
 #   (optional, --profile external-assistant)
 #     - Local LLM inference available via Ollama + Open WebUI
 #     - Starts an OpenClaw locally for Sure's external assistant mode.
-#     - Set EXTERNAL_ASSISTANT_URL to http://openclaw:18789 for internal routing.
+#     - Set EXTERNAL_ASSISTANT_URL to http://openclaw:18789/v1/chat/completions
+#       for internal routing.
 #
 # Setup:
 # ------
@@ -88,7 +89,7 @@ x-rails-env: &rails_env
   # Set EXTERNAL_ASSISTANT_URL + TOKEN to activate, then either set ASSISTANT_TYPE=external
   # here (forces all families) or choose "External" in Settings > Self-Hosting > AI Assistant.
   ASSISTANT_TYPE: ${ASSISTANT_TYPE:-}
-  EXTERNAL_ASSISTANT_URL: ${EXTERNAL_ASSISTANT_URL:-http://openclaw:18789}
+  EXTERNAL_ASSISTANT_URL: ${EXTERNAL_ASSISTANT_URL:-http://openclaw:18789/v1/chat/completions}
   EXTERNAL_ASSISTANT_TOKEN: ${EXTERNAL_ASSISTANT_TOKEN:-}
   EXTERNAL_ASSISTANT_AGENT_ID: ${EXTERNAL_ASSISTANT_AGENT_ID:-main}
   EXTERNAL_ASSISTANT_SESSION_KEY: ${EXTERNAL_ASSISTANT_SESSION_KEY:-agent:main:main}
