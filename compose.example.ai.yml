@@ -126,6 +126,7 @@ services:
   ollama:
     profiles:
       - ai
+      - external-assistant
     volumes:
       - ollama:/root/.ollama
     container_name: ollama
