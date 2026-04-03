@@ -29,7 +29,7 @@
           <div class="form-field combobox">
             <%= form.combobox :ticker,
                             securities_path(country_code: Current.family.country),
-                            name_when_new: "entry[manual_ticker]",
+                            name_when_new: "model[manual_ticker]",
                             label: t(".holding"),
                             placeholder: t(".ticker_placeholder"),
                             required: true %>
