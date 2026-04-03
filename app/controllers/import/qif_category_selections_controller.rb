@@ -19,7 +19,7 @@ class Import::QifCategorySelectionsController < ApplicationController
     # If the user changed the date format, re-generate rows with the new format.
     if selection_params[:date_format].present? && selection_params[:date_format] != @import.qif_date_format
       @import.qif_date_format = selection_params[:date_format]
-      @import.save!(validate: false)
+      @import.update_column(:column_mappings, @import.column_mappings)
       @import.generate_rows_from_csv
       @import.sync_mappings
     end

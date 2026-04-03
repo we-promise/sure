@@ -20,7 +20,9 @@ class Import < ApplicationRecord
     "1,234"    => { separator: "",  delimiter: "," }   # Zero-decimal currencies like JPY
   }.freeze
 
-  REASONABLE_DATE_RANGE = (Date.new(1970, 1, 1)..Date.today.next_year(5)).freeze
+  def self.reasonable_date_range
+    Date.new(1970, 1, 1)..Date.today.next_year(5)
+  end
 
   AMOUNT_TYPE_STRATEGIES = %w[signed_amount custom_column].freeze
 
@@ -85,14 +87,18 @@ class Import < ApplicationRecord
       cleaned = samples.map(&:to_s).reject(&:blank?).uniq.first(50)
       return fallback if cleaned.empty?
 
-      reasonable_range = REASONABLE_DATE_RANGE
+      reasonable_range = reasonable_date_range
 
       scored = candidates.map do |fmt|
         parsed_count     = 0
         reasonable_count = 0
 
         cleaned.each do |s|
-          date = Date.strptime(s, fmt) rescue nil
+          begin
+            date = Date.strptime(s, fmt)
+          rescue Date::Error, ArgumentError
+            next
+          end
           next unless date
 
           parsed_count += 1
@@ -298,7 +304,7 @@ class Import < ApplicationRecord
   end
 
   # Returns date formats that can successfully parse the file's date samples,
-  # filtered to dates within REASONABLE_DATE_RANGE.
+  # filtered to dates within reasonable_date_range.
   # Result: array of { label:, format:, preview: } hashes.
   # Subclasses should override #raw_date_samples to provide date strings.
   def valid_date_formats_with_preview
@@ -308,7 +314,7 @@ class Import < ApplicationRecord
     Family::DATE_FORMATS.filter_map do |label, fmt|
       parsed = try_parse_date_sample(first_sample, format: fmt)
       next unless parsed
-      next unless REASONABLE_DATE_RANGE.cover?(Date.parse(parsed))
+      next unless self.class.reasonable_date_range.cover?(Date.parse(parsed))
 
       { label: label, format: fmt, preview: parsed }
     end

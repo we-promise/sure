@@ -13,7 +13,7 @@
   <%= form_with url: import_qif_category_selection_path(@import), method: :put, class: "space-y-8" do |form| %>
 
     <%# ── Date format ─────────────────────────────────────────────── %>
-    <div class="space-y-3" data-controller="qif-date-format" data-qif-date-format-previews-value="<%= @date_previews.to_json %>">
+    <%= tag.div class: "space-y-3", data: { controller: "qif-date-format", qif_date_format_previews_value: @date_previews.to_json } do %>
       <h2 class="text-lg font-medium text-primary"><%= t("imports.date_format.heading") %></h2>
       <p class="text-sm text-secondary"><%= t("imports.date_format.description") %></p>
 
@@ -37,7 +37,7 @@
           </div>
         </div>
       <% end %>
-    </div>
+    <% end %>
 
     <%# ── Split transaction warning ────────────────────────────── %>
     <% if @has_split_transactions %>
