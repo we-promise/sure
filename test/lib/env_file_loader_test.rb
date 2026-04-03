@@ -83,7 +83,7 @@ class EnvFileLoaderTest < ActiveSupport::TestCase
     file.close!
   end
 
-  test "denylisted _FILE variables are ignored without attempting to read them" do
+  test "denylisted runtime _FILE variables are ignored without warnings" do
     env = {
       "SSL_CA_FILE" => "/path/that/does/not/exist"
     }
@@ -92,9 +92,7 @@ class EnvFileLoaderTest < ActiveSupport::TestCase
     Sure::EnvFileLoader.load!(env: env, warn_io: warning_output)
 
     assert_nil env["SSL_CA"]
-    assert_includes warning_output.string, "Ignoring SSL_CA_FILE"
-    assert_includes warning_output.string, "not eligible"
-    refute_includes warning_output.string, "Unable to load SSL_CA_FILE"
+    assert_empty warning_output.string
   end
 
   test "_FILE indirection cannot create a denylisted source key" do
@@ -111,9 +109,7 @@ class EnvFileLoaderTest < ActiveSupport::TestCase
 
     assert_nil env["SSL_CA_FILE"]
     assert_nil env["SSL_CA"]
-    assert_includes warning_output.string, "Ignoring SSL_CA_FILE_FILE"
-    assert_includes warning_output.string, "SSL_CA_FILE is not eligible"
-    refute_includes warning_output.string, "Unable to load SSL_CA_FILE_FILE"
+    assert_empty warning_output.string
   ensure
     file.close!
   end
