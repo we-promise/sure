@@ -97,8 +97,8 @@ end
 def load_yaml_file(file)
   YAML.safe_load(
     File.read(file),
-    permitted_classes: [ Symbol, Date, Time ],
-    permitted_symbols: [],
+    permitted_classes: [ Date, Time ],
+    permitted_symbols: [ :one, :few, :many, :other ],
     aliases: true
   )
 end

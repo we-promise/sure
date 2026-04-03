@@ -165,7 +165,7 @@ pl:
         few: "%{count} konta"
         many: "%{count} kont"
         other: "%{count} kont"
-      orphaned_connection: Osierocoło połączenie (niezsynchronizowane lokalnie)
+      orphaned_connection: Osierocone połączenie (niezsynchronizowane lokalnie)
       needs_linking: wymaga połączenia
       no_connections: Nie znaleziono połączeń z biurami maklerskimi.
       delete_connection: Usuń

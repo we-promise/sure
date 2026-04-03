@@ -26,4 +26,4 @@ ARGV.each do |arg|
 end
 
 args = [ "--locale", "pl" ] + filtered_argv
-exec("ruby", "script/locale_audit.rb", *args)
+exec(RbConfig.ruby, "script/locale_audit.rb", *args)
