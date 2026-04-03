@@ -146,7 +146,7 @@ pt-BR:
         one: "%{count} holding"
         other: "%{count} holdings"
       sells_count:
-        one: "%{count} vender"
+        one: "%{count} venda"
         other: "%{count} vendas"
       holdings: Holdings
       sell_trades: Venda de Negócios
@@ -155,7 +155,7 @@ pt-BR:
       title: Fluxos de investimento
       description: Acompanhe o fluxo de dinheiro que entra e sai de suas contas de investimento.
       contributions: Contribuições
-        withdrawals: Saques
+      withdrawals: Saques
       net_flow: Fluxo Líquido
     google_sheets_instructions:
       title_with_key: "✅ Copiar URL para Google Sheets"
@@ -191,7 +191,7 @@ pt-BR:
       net_worth:
         title: Patrimônio Líquido
         current_balance: Saldo Atual
-        this_period: this period
+        this_period: neste período
         assets: Ativos
         liabilities: Passivos
         no_liabilities: Sem passivos
