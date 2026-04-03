@@ -68,6 +68,21 @@ class EnvFileLoaderTest < ActiveSupport::TestCase
     assert_includes warning_output.string, "OPENAI_ACCESS_TOKEN_FILE"
   end
 
+  test "warns and leaves base env var unset when path raises another system call error" do
+    file = Tempfile.new("not-a-directory")
+    env = {
+      "OPENAI_ACCESS_TOKEN_FILE" => File.join(file.path, "nested", "secret")
+    }
+    warning_output = StringIO.new
+
+    Sure::EnvFileLoader.load!(env: env, warn_io: warning_output)
+
+    assert_nil env["OPENAI_ACCESS_TOKEN"]
+    assert_includes warning_output.string, "OPENAI_ACCESS_TOKEN_FILE"
+  ensure
+    file.close!
+  end
+
   test "denylisted variables are ignored" do
     file = Tempfile.new("secret")
     file.write("/tmp/custom-ca.pem\n")
