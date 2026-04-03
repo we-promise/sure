@@ -7,7 +7,10 @@
                    end
    currency = Money::Currency.new(currency_value || options[:default_currency] || "USD") %>
 
-<div class="form-field <%= options[:container_class] %>" data-controller="money-field">
+<div class="form-field <%= options[:container_class] %>"
+     data-controller="money-field"
+     <% if options[:precision].present? %>data-money-field-precision-value="<%= options[:precision] %>"<% end %>
+     <% if options[:step].present? %>data-money-field-step-value="<%= options[:step] %>"<% end %>>
   <% if options[:label_tooltip] %>
     <div class="form-field__header">
       <%= form.label options[:label] || t(".label"), class: "form-field__label" do %>
