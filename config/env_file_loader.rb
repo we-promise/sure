@@ -14,7 +14,7 @@ module Sure
     def load!(env: ENV, warn_io: $stderr)
       env.keys.grep(/_FILE\z/).sort.each do |file_key|
         base_key = file_key.delete_suffix("_FILE")
-        next if denylisted?(base_key, file_key, warn_io)
+        next if denylisted?(file_key, base_key, warn_io)
         next if env.key?(base_key)
 
         path = env[file_key].to_s.strip
@@ -32,10 +32,11 @@ module Sure
       nil
     end
 
-    def denylisted?(base_key, file_key, warn_io)
-      return false unless DENYLIST.include?(base_key)
+    def denylisted?(file_key, base_key, warn_io)
+      denylisted_key = [file_key, base_key].find { |key| DENYLIST.include?(key) }
+      return false unless denylisted_key
 
-      warn_io.puts("[env] Ignoring #{file_key}: #{base_key} is not eligible for *_FILE loading")
+      warn_io.puts("[env] Ignoring #{file_key}: #{denylisted_key} is not eligible for *_FILE loading")
       true
     end
   end
