@@ -27,7 +27,7 @@ module Sure
 
     def read(path, file_key:, base_key:, warn_io: $stderr)
       File.read(path).chomp
-    rescue Errno::ENOENT, Errno::EACCES, Errno::EISDIR => e
+    rescue SystemCallError => e
       warn_io.puts("[env] Unable to load #{file_key} for #{base_key} from #{path}: #{e.message}")
       nil
     end
