@@ -851,4 +851,205 @@ class QifImportTest < ActiveSupport::TestCase
 
     refute import.will_adjust_opening_anchor?
   end
+
+  # ── QifParser: normalize_qif_date ──────────────────────────────────────────
+
+  test "normalize_qif_date converts apostrophe 2-digit year" do
+    assert_equal "6/4/2020", QifParser.send(:normalize_qif_date, "6/ 4'20")
+  end
+
+  test "normalize_qif_date converts apostrophe 4-digit year" do
+    assert_equal "6/4/2020", QifParser.send(:normalize_qif_date, "6/ 4'2020")
+  end
+
+  test "normalize_qif_date handles dot-separated dates" do
+    assert_equal "04.06.2020", QifParser.send(:normalize_qif_date, "04.06.2020")
+  end
+
+  test "normalize_qif_date handles dot with apostrophe year" do
+    assert_equal "04.06.2020", QifParser.send(:normalize_qif_date, "04.06'20")
+  end
+
+  test "normalize_qif_date handles dash-separated dates" do
+    assert_equal "2020-06-04", QifParser.send(:normalize_qif_date, "2020-06-04")
+  end
+
+  test "normalize_qif_date returns nil for blank input" do
+    assert_nil QifParser.send(:normalize_qif_date, nil)
+    assert_nil QifParser.send(:normalize_qif_date, "")
+  end
+
+  # ── QifParser: parse_qif_date with different formats ───────────────────────
+
+  test "parse_qif_date parses US format (MM/DD/YYYY)" do
+    assert_equal "2020-06-04", QifParser.send(:parse_qif_date, "6/ 4'20", date_format: "%m/%d/%Y")
+  end
+
+  test "parse_qif_date parses European slash format (DD/MM/YYYY)" do
+    # 4/ 6'20 → day=4, month=6 → June 4th
+    assert_equal "2020-06-04", QifParser.send(:parse_qif_date, "4/ 6'20", date_format: "%d/%m/%Y")
+  end
+
+  test "parse_qif_date parses European dot format (DD.MM.YYYY)" do
+    assert_equal "2020-06-04", QifParser.send(:parse_qif_date, "04.06.2020", date_format: "%d.%m.%Y")
+  end
+
+  test "parse_qif_date parses ISO format (YYYY-MM-DD)" do
+    assert_equal "2020-06-04", QifParser.send(:parse_qif_date, "2020-06-04", date_format: "%Y-%m-%d")
+  end
+
+  test "parse_qif_date returns nil for invalid date" do
+    assert_nil QifParser.send(:parse_qif_date, "13/32/2020", date_format: "%m/%d/%Y")
+  end
+
+  # ── QifParser: extract_raw_dates ───────────────────────────────────────────
+
+  test "extract_raw_dates returns normalized date strings from D-fields" do
+    dates = QifParser.extract_raw_dates(SAMPLE_QIF)
+    assert_includes dates, "6/4/2020"
+    assert_includes dates, "3/29/2021"
+    assert_includes dates, "10/1/2020"
+  end
+
+  test "extract_raw_dates returns empty for blank content" do
+    assert_empty QifParser.extract_raw_dates(nil)
+    assert_empty QifParser.extract_raw_dates("")
+  end
+
+  # ── QifParser: parse with European date format ─────────────────────────────
+
+  EUROPEAN_QIF = <<~QIF
+    !Type:Bank
+    D04/06/2020
+    U-99.00
+    T-99.00
+    PMerchant A
+    ^
+    D29/03/2021
+    U-50.00
+    T-50.00
+    PMerchant B
+    ^
+  QIF
+
+  test "parse with DD/MM/YYYY format parses dates correctly" do
+    transactions = QifParser.parse(EUROPEAN_QIF, date_format: "%d/%m/%Y")
+    assert_equal "2020-06-04", transactions[0].date
+    assert_equal "2021-03-29", transactions[1].date
+  end
+
+  # ── Import.detect_date_format ──────────────────────────────────────────────
+
+  test "detect_date_format identifies US slash format" do
+    samples = %w[6/4/2020 3/29/2021 10/1/2020]
+    # 3/29 cannot be DD/MM (month 29 invalid), so must be MM/DD
+    assert_equal "%m/%d/%Y", Import.detect_date_format(samples)
+  end
+
+  test "detect_date_format identifies European slash format" do
+    samples = %w[04/06/2020 29/03/2021 01/10/2020]
+    # 29/03 cannot be MM/DD (month 29 invalid), so must be DD/MM
+    assert_equal "%d/%m/%Y", Import.detect_date_format(samples)
+  end
+
+  test "detect_date_format identifies European dot format" do
+    samples = %w[04.06.2020 29.03.2021 01.10.2020]
+    assert_equal "%d.%m.%Y", Import.detect_date_format(samples)
+  end
+
+  test "detect_date_format identifies ISO format" do
+    samples = %w[2020-06-04 2021-03-29 2020-10-01]
+    assert_equal "%Y-%m-%d", Import.detect_date_format(samples)
+  end
+
+  test "detect_date_format returns fallback for blank samples" do
+    assert_equal "%Y-%m-%d", Import.detect_date_format([])
+    assert_equal "%Y-%m-%d", Import.detect_date_format(nil)
+  end
+
+  test "detect_date_format returns fallback when no format matches" do
+    samples = %w[not-a-date garbage]
+    assert_equal "%Y-%m-%d", Import.detect_date_format(samples)
+  end
+
+  # ── QifImport: auto-detection integration ──────────────────────────────────
+
+  test "generate_rows_from_csv auto-detects US date format" do
+    @import.update!(raw_file_str: SAMPLE_QIF)
+    @import.generate_rows_from_csv
+
+    assert_equal "%m/%d/%Y", @import.reload.qif_date_format
+    row = @import.rows.find_by(name: "Merchant A")
+    assert_equal "2020-06-04", row.date
+  end
+
+  EUROPEAN_BANK_QIF = <<~QIF
+    !Type:Bank
+    D13/01/2024
+    U-100.00
+    T-100.00
+    PEuropean Store
+    ^
+    D25/12/2023
+    U-50.00
+    T-50.00
+    PChristmas Shop
+    ^
+  QIF
+
+  test "generate_rows_from_csv auto-detects European DD/MM/YYYY format" do
+    @import.update!(raw_file_str: EUROPEAN_BANK_QIF)
+    @import.generate_rows_from_csv
+
+    assert_equal "%d/%m/%Y", @import.reload.qif_date_format
+    row = @import.rows.find_by(name: "European Store")
+    assert_equal "2024-01-13", row.date
+  end
+
+  test "generate_rows_from_csv respects manually set qif_date_format" do
+    @import.update!(raw_file_str: EUROPEAN_BANK_QIF)
+    @import.qif_date_format = "%d/%m/%Y"
+    @import.save!(validate: false)
+    @import.generate_rows_from_csv
+
+    # Should not re-detect since qif_date_format is already set
+    assert_equal "%d/%m/%Y", @import.reload.qif_date_format
+  end
+
+  # ── QifParser: try_parse_date ───────────────────────────────────────────────
+
+  test "try_parse_date returns ISO date for valid format" do
+    assert_equal "2020-06-04", QifParser.try_parse_date("6/ 4'20", date_format: "%m/%d/%Y")
+  end
+
+  test "try_parse_date returns nil for incompatible format" do
+    assert_nil QifParser.try_parse_date("2020-06-04", date_format: "%d.%m.%Y")
+  end
+
+  # ── QifImport: valid_date_formats_with_preview ──────────────────────────────
+
+  test "valid_date_formats_with_preview excludes formats that cannot parse the file dates" do
+    @import.update!(raw_file_str: EUROPEAN_BANK_QIF)
+    formats = @import.valid_date_formats_with_preview
+
+    format_strs = formats.map { |f| f[:format] }
+
+    # DD/MM/YYYY should be valid (13/01/2024)
+    assert_includes format_strs, "%d/%m/%Y"
+
+    # MM/DD/YYYY should be excluded (month 13 is invalid)
+    assert_not_includes format_strs, "%m/%d/%Y"
+
+    # Each valid format should have a preview date
+    formats.each do |f|
+      assert_not_nil f[:preview], "Expected preview for #{f[:label]}"
+    end
+  end
+
+  test "valid_date_formats_with_preview returns all formats when no raw dates" do
+    @import.update!(raw_file_str: "")
+    formats = @import.valid_date_formats_with_preview
+
+    assert_equal Family::DATE_FORMATS.size, formats.size
+  end
 end

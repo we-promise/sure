@@ -1,9 +1,25 @@
 class QifImport < Import
   after_create :set_default_config
 
+  # The date format used to parse the raw QIF file's D-fields (e.g. "%m/%d/%Y").
+  # Stored in column_mappings so it doesn't conflict with date_format, which is
+  # always "%Y-%m-%d" because QIF rows store dates in ISO 8601 after parsing.
+  def qif_date_format
+    column_mappings&.dig("qif_date_format") || "%m/%d/%Y"
+  end
+
+  def qif_date_format=(fmt)
+    self.column_mappings = (column_mappings || {}).merge("qif_date_format" => fmt)
+  end
+
   # Parses the stored QIF content and creates Import::Row records.
   # Overrides the base CSV-based method with QIF-specific parsing.
+  #
+  # On first run (qif_date_format not yet set), auto-detects the date format
+  # from the QIF file's D-field samples.
   def generate_rows_from_csv
+    detect_and_set_qif_date_format! unless column_mappings&.key?("qif_date_format")
+
     rows.destroy_all
 
     if investment_account?
@@ -24,7 +40,7 @@ class QifImport < Import
       else
         import_transaction_rows!
 
-        if (ob = QifParser.parse_opening_balance(raw_file_str))
+        if (ob = QifParser.parse_opening_balance(raw_file_str, date_format: qif_date_format))
           Account::OpeningBalanceManager.new(account).set_opening_balance(
             balance: ob[:amount],
             date:    ob[:date]
@@ -119,6 +135,16 @@ class QifImport < Import
     [ Import::CategoryMapping, Import::TagMapping ]
   end
 
+  # QIF dates need normalization (apostrophe → separator, 2-digit year expansion)
+  # before strptime can parse them, so we delegate to QifParser.
+  def raw_date_samples
+    QifParser.extract_raw_dates(raw_file_str)
+  end
+
+  def try_parse_date_sample(sample, format:)
+    QifParser.try_parse_date(sample, date_format: format)
+  end
+
   private
 
     def parsed_transactions_with_splits
@@ -134,7 +160,7 @@ class QifImport < Import
     # ------------------------------------------------------------------
 
     def generate_transaction_rows
-      transactions = QifParser.parse(raw_file_str)
+      transactions = QifParser.parse(raw_file_str, date_format: qif_date_format)
 
       mapped_rows = transactions.map do |trn|
         {
@@ -161,7 +187,7 @@ class QifImport < Import
     end
 
     def generate_investment_rows
-      inv_transactions = QifParser.parse_investment_transactions(raw_file_str)
+      inv_transactions = QifParser.parse_investment_transactions(raw_file_str, date_format: qif_date_format)
 
       mapped_rows = inv_transactions.map do |trn|
         if QifParser::TRADE_ACTIONS.include?(trn.action)
@@ -325,6 +351,15 @@ class QifImport < Import
         date_format:        "%Y-%m-%d",
         number_format:      "1,234.56"
       )
+    end
+
+    # Auto-detects the QIF file's date format from D-field samples and persists it.
+    # Falls back to "%m/%d/%Y" (US convention) if detection is inconclusive.
+    def detect_and_set_qif_date_format!
+      samples = QifParser.extract_raw_dates(raw_file_str)
+      detected = Import.detect_date_format(samples, fallback: "%m/%d/%Y")
+      self.qif_date_format = detected
+      update_column(:column_mappings, column_mappings)
     end
 
     # Returns the signed qty for a trade row:

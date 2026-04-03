@@ -3,8 +3,8 @@ fr:
   import:
     qif_category_selections:
       show:
-        title: "Sélectionner les catégories et étiquettes"
-        description: "Choisissez les catégories et étiquettes de votre fichier QIF à importer dans Sure. Les éléments désélectionnés seront retirés des transactions correspondantes."
+        title: "Configurer et sélectionner"
+        description: "Vérifiez le format de date détecté, puis choisissez les catégories et étiquettes de votre fichier QIF à importer dans Sure."
         categories_heading: Catégories
         categories_found:
           one: "1 catégorie trouvée"
@@ -105,6 +105,12 @@ fr:
         hint_html: Téléversez le fichier <strong>all.ndjson</strong> de l'archive ZIP d'export de vos données
         ndjson_invalid: Le fichier doit être un NDJSON valide avec au moins un enregistrement
   imports:
+    date_format:
+      heading: Format de date
+      description: "Le format de date a été détecté automatiquement depuis votre fichier. Modifiez-le si les dates semblent incorrectes."
+      preview: "Première date analysée"
+      error_title: "Impossible de détecter le format de date"
+      error_description: "Aucun des formats de date pris en charge n'a pu analyser les dates dans ce fichier. Veuillez vérifier que le fichier contient des entrées de date valides."
     steps:
       upload: Téléverser
       configure: Configurer

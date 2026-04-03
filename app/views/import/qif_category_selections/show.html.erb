@@ -12,6 +12,33 @@
 
   <%= form_with url: import_qif_category_selection_path(@import), method: :put, class: "space-y-8" do |form| %>
 
+    <%# ── Date format ─────────────────────────────────────────────── %>
+    <div class="space-y-3" data-controller="qif-date-format" data-qif-date-format-previews-value="<%= @date_previews.to_json %>">
+      <h2 class="text-lg font-medium text-primary"><%= t("imports.date_format.heading") %></h2>
+      <p class="text-sm text-secondary"><%= t("imports.date_format.description") %></p>
+
+      <% if @date_formats.any? %>
+        <%= form.select :date_format,
+              options_for_select(@date_formats, @import.qif_date_format),
+              {},
+              { class: "w-full rounded-lg border border-secondary bg-container px-3 py-2 text-sm text-primary",
+                data: { action: "change->qif-date-format#change" } } %>
+
+        <div class="text-xs text-secondary">
+          <%= t("imports.date_format.preview") %>:
+          <span class="font-medium text-primary" data-qif-date-format-target="preview"><%= @date_previews[@import.qif_date_format] %></span>
+        </div>
+      <% else %>
+        <div class="flex gap-3 items-start rounded-xl border border-destructive bg-destructive/5 px-4 py-3">
+          <%= icon("circle-alert", size: "md", class: "text-destructive shrink-0 mt-0.5") %>
+          <div class="text-sm text-primary space-y-1">
+            <p class="font-medium"><%= t("imports.date_format.error_title") %></p>
+            <p class="text-secondary"><%= t("imports.date_format.error_description") %></p>
+          </div>
+        </div>
+      <% end %>
+    </div>
+
     <%# ── Split transaction warning ────────────────────────────── %>
     <% if @has_split_transactions %>
       <div class="flex gap-3 items-start rounded-xl border border-warning bg-warning/5 px-4 py-3">
@@ -121,7 +148,8 @@
     <%# ── Submit ──────────────────────────────────────────────────── %>
     <div class="flex justify-center">
       <%= form.submit t(".submit"),
-            class: "btn btn-primary w-full md:w-auto" %>
+            class: "btn btn-primary w-full md:w-auto",
+            disabled: @date_formats.empty? %>
     </div>
 
   <% end %>

@@ -20,6 +20,8 @@ class Import < ApplicationRecord
     "1,234"    => { separator: "",  delimiter: "," }   # Zero-decimal currencies like JPY
   }.freeze
 
+  REASONABLE_DATE_RANGE = (Date.new(1970, 1, 1)..Date.today.next_year(5)).freeze
+
   AMOUNT_TYPE_STRATEGIES = %w[signed_amount custom_column].freeze
 
   belongs_to :family
@@ -63,6 +65,49 @@ class Import < ApplicationRecord
         converters: [ ->(str) { str&.strip } ],
         liberal_parsing: true
       )
+    end
+
+    # Attempts to identify the best-matching date format from a list of candidates
+    # by trying to parse sample date strings with each format.
+    #
+    # Returns the strptime format string (e.g. "%m-%d-%Y") that best matches the
+    # samples, or the +fallback+ when no candidate can parse any sample.
+    #
+    # Scoring:
+    #   1. Formats that parse ALL samples beat those that only parse some.
+    #   2. Among equal parse counts, formats whose parsed dates fall within a
+    #      reasonable range (1970..today+5y) score higher.
+    #   3. Ambiguous formats (where month and day could be swapped and both parse)
+    #      score lower than unambiguous ones.
+    def detect_date_format(samples, candidates: Family::DATE_FORMATS.map(&:last), fallback: "%Y-%m-%d")
+      return fallback if samples.blank?
+
+      cleaned = samples.map(&:to_s).reject(&:blank?).uniq.first(50)
+      return fallback if cleaned.empty?
+
+      reasonable_range = REASONABLE_DATE_RANGE
+
+      scored = candidates.map do |fmt|
+        parsed_count     = 0
+        reasonable_count = 0
+
+        cleaned.each do |s|
+          date = Date.strptime(s, fmt) rescue nil
+          next unless date
+
+          parsed_count += 1
+          reasonable_count += 1 if reasonable_range.cover?(date)
+        end
+
+        { format: fmt, parsed: parsed_count, reasonable: reasonable_count }
+      end
+
+      # Filter to candidates that parsed at least one sample
+      viable = scored.select { |s| s[:parsed] > 0 }
+      return fallback if viable.empty?
+
+      best = viable.max_by { |s| [ s[:parsed], s[:reasonable] ] }
+      best[:format]
     end
   end
 
@@ -250,6 +295,38 @@ class Import < ApplicationRecord
         "rows_to_skip"
       )
     )
+  end
+
+  # Returns date formats that can successfully parse the file's date samples,
+  # filtered to dates within REASONABLE_DATE_RANGE.
+  # Result: array of { label:, format:, preview: } hashes.
+  # Subclasses should override #raw_date_samples to provide date strings.
+  def valid_date_formats_with_preview
+    first_sample = raw_date_samples.first
+    return Family::DATE_FORMATS.map { |label, fmt| { label: label, format: fmt, preview: nil } } if first_sample.blank?
+
+    Family::DATE_FORMATS.filter_map do |label, fmt|
+      parsed = try_parse_date_sample(first_sample, format: fmt)
+      next unless parsed
+      next unless REASONABLE_DATE_RANGE.cover?(Date.parse(parsed))
+
+      { label: label, format: fmt, preview: parsed }
+    end
+  end
+
+  # Returns raw date strings from the import file for format detection/preview.
+  # Subclasses should override to extract dates from their specific format.
+  def raw_date_samples
+    []
+  end
+
+  # Attempts to parse a raw date sample with the given strptime format.
+  # Returns ISO 8601 date string or nil. Subclasses can override for
+  # format-specific normalization (e.g. QIF apostrophe dates).
+  def try_parse_date_sample(sample, format:)
+    Date.strptime(sample, format).iso8601
+  rescue Date::Error, ArgumentError
+    nil
   end
 
   def max_row_count

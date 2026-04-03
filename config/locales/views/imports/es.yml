@@ -3,8 +3,8 @@ es:
   import:
     qif_category_selections:
       show:
-        title: "Seleccionar categorías y etiquetas"
-        description: "Elige qué categorías y etiquetas de tu archivo QIF importar en Sure. Los elementos deseleccionados se eliminarán de esas transacciones."
+        title: "Configurar y seleccionar"
+        description: "Revisa el formato de fecha detectado y luego elige qué categorías y etiquetas de tu archivo QIF importar en Sure."
         categories_heading: Categorías
         categories_found:
           one: "1 categoría encontrada"
@@ -88,6 +88,12 @@ es:
         instructions_5: Sin comas, sin símbolos de moneda y sin paréntesis en los números.
         title: Importa tus datos
   imports:
+    date_format:
+      heading: Formato de fecha
+      description: "El formato de fecha se detectó automáticamente desde tu archivo. Cámbialo si las fechas parecen incorrectas."
+      preview: "Primera fecha analizada"
+      error_title: "No se puede detectar el formato de fecha"
+      error_description: "Ninguno de los formatos de fecha compatibles pudo analizar las fechas de este archivo. Por favor, comprueba que el archivo contiene entradas de fecha válidas."
     steps:
       upload: Subir
       configure: Configurar
