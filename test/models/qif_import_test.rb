@@ -1046,10 +1046,10 @@ class QifImportTest < ActiveSupport::TestCase
     end
   end
 
-  test "valid_date_formats_with_preview returns all formats when no raw dates" do
+  test "valid_date_formats_with_preview returns empty array when no raw dates" do
     @import.update!(raw_file_str: "")
     formats = @import.valid_date_formats_with_preview
 
-    assert_equal Family::DATE_FORMATS.size, formats.size
+    assert_empty formats
   end
 end

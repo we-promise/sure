@@ -79,8 +79,6 @@ class Import < ApplicationRecord
     #   1. Formats that parse ALL samples beat those that only parse some.
     #   2. Among equal parse counts, formats whose parsed dates fall within a
     #      reasonable range (1970..today+5y) score higher.
-    #   3. Ambiguous formats (where month and day could be swapped and both parse)
-    #      score lower than unambiguous ones.
     def detect_date_format(samples, candidates: Family::DATE_FORMATS.map(&:last), fallback: "%Y-%m-%d")
       return fallback if samples.blank?
 
@@ -308,8 +306,8 @@ class Import < ApplicationRecord
   # Result: array of { label:, format:, preview: } hashes.
   # Subclasses should override #raw_date_samples to provide date strings.
   def valid_date_formats_with_preview
-    first_sample = raw_date_samples.first
-    return Family::DATE_FORMATS.map { |label, fmt| { label: label, format: fmt, preview: nil } } if first_sample.blank?
+    first_sample = raw_date_samples.find(&:present?)
+    return [] if first_sample.blank?
 
     Family::DATE_FORMATS.filter_map do |label, fmt|
       parsed = try_parse_date_sample(first_sample, format: fmt)

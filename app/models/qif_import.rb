@@ -77,7 +77,7 @@ class QifImport < Import
   # that predate the current anchor date. Used to show a notice in the confirm step.
   def will_adjust_opening_anchor?
     return false if investment_account?
-    return false if QifParser.parse_opening_balance(raw_file_str).present?
+    return false if QifParser.parse_opening_balance(raw_file_str, date_format: qif_date_format).present?
     return false unless account.present?
 
     manager = Account::OpeningBalanceManager.new(account)

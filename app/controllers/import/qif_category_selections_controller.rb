@@ -17,7 +17,9 @@ class Import::QifCategorySelectionsController < ApplicationController
 
   def update
     # If the user changed the date format, re-generate rows with the new format.
+    format_changed = false
     if selection_params[:date_format].present? && selection_params[:date_format] != @import.qif_date_format
+      format_changed = true
       @import.qif_date_format = selection_params[:date_format]
       @import.update_column(:column_mappings, @import.column_mappings)
       @import.generate_rows_from_csv
@@ -49,7 +51,7 @@ class Import::QifCategorySelectionsController < ApplicationController
         end
       end
 
-      @import.sync_mappings
+      @import.sync_mappings unless format_changed
     end
 
     redirect_to import_clean_path(@import), notice: "Categories and tags saved."
@@ -61,7 +63,7 @@ class Import::QifCategorySelectionsController < ApplicationController
       @import = Current.family.imports.find(params[:import_id])
 
       unless @import.is_a?(QifImport)
-        redirect_to imports_path
+        redirect_to imports_path and return
       end
     end
 

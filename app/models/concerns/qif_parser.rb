@@ -394,7 +394,9 @@ module QifParser
   # +date_format+ should be a strptime format string such as "%m/%d/%Y" or
   # "%d.%m.%Y".  Defaults to "%m/%d/%Y" (US convention) for backwards
   # compatibility.
-  def self.parse_qif_date(date_str, date_format: "%m/%d/%Y")
+  # Attempts to parse a raw QIF date string with the given format.
+  # Returns the parsed ISO 8601 date string, or nil if parsing fails.
+  def self.try_parse_date(date_str, date_format: "%m/%d/%Y")
     normalized = normalize_qif_date(date_str)
     return nil unless normalized
 
@@ -402,18 +404,9 @@ module QifParser
   rescue Date::Error, ArgumentError
     nil
   end
-  private_class_method :parse_qif_date
 
-  # Attempts to parse a raw QIF date string with the given format.
-  # Returns the parsed ISO 8601 date string, or nil if parsing fails.
-  # Unlike parse_qif_date this is public so callers can preview date results.
-  def self.try_parse_date(date_str, date_format:)
-    normalized = normalize_qif_date(date_str)
-    return nil unless normalized
-
-    Date.strptime(normalized, date_format).iso8601
-  rescue Date::Error, ArgumentError
-    nil
+  private_class_method def self.parse_qif_date(date_str, date_format: "%m/%d/%Y")
+    try_parse_date(date_str, date_format: date_format)
   end
 
   # Extracts all raw date strings from D-fields in transaction sections only.

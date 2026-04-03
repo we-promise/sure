@@ -18,6 +18,7 @@
       <p class="text-sm text-secondary"><%= t("imports.date_format.description") %></p>
 
       <% if @date_formats.any? %>
+        <%= form.label :date_format, t("imports.date_format.heading"), class: "sr-only" %>
         <%= form.select :date_format,
               options_for_select(@date_formats, @import.qif_date_format),
               {},
