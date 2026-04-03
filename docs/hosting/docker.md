@@ -110,7 +110,7 @@ OIDC_CLIENT_SECRET_FILE=/run/secrets/oidc_client_secret
 
 Notes:
 
-- If both `FOO` and `FOO_FILE` are set, Sure uses `FOO`.
+- If both `FOO` and `FOO_FILE` are set, Sure uses `FOO`, even if `FOO` is an empty string.
 - Secret files may include a trailing newline; Sure strips it automatically.
 - This support is implemented by Sure itself, so it applies to app secrets loaded during boot such as `SECRET_KEY_BASE`, OpenAI tokens, OIDC secrets, SMTP passwords, and Active Record encryption keys.
 - Some variables are intentionally denylisted and do not support `*_FILE` indirection, especially low-level path/runtime variables such as `SSL_CA_FILE` and `SSL_CERT_FILE`.

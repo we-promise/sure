@@ -15,7 +15,7 @@ module Sure
       env.keys.grep(/_FILE\z/).sort.each do |file_key|
         base_key = file_key.delete_suffix("_FILE")
         next if denylisted?(base_key, file_key, warn_io)
-        next if env[base_key].to_s != ""
+        next if env.key?(base_key)
 
         path = env[file_key].to_s.strip
         next if path.empty?
