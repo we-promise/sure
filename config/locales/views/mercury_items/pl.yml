@@ -91,7 +91,7 @@ pl:
       no_accounts_to_setup: Brak kont do konfiguracji
       no_api_token: Token API Mercury nie jest skonfigurowany. Sprawdź ustawienia połączenia.
       account_types:
-        skip: Pomin to konto
+        skip: Pomiń to konto
         depository: Konto bieżące lub oszczędnościowe
         credit_card: Karta kredytowa
         investment: Konto inwestycyjne
