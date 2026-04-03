@@ -11,13 +11,18 @@ export default class extends Controller {
     step: String,
   };
 
+  requestSequence = 0;
+
   handleCurrencyChange(e) {
     const selectedCurrency = e.target.value;
     this.updateAmount(selectedCurrency);
   }
 
   updateAmount(currency) {
+    const requestId = ++this.requestSequence;
     new CurrenciesService().get(currency).then((currencyData) => {
+      if (requestId !== this.requestSequence) return;
+
       this.amountTarget.step =
         this.hasStepValue &&
         this.stepValue !== "" &&
@@ -39,6 +44,7 @@ export default class extends Controller {
 
       this.symbolTarget.innerText = currencyData.symbol;
     }).catch((error) => {
+      if (requestId !== this.requestSequence) return;
       console.error("Failed to fetch currency data for", currency, error);
     });
   }
