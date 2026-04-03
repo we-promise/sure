@@ -12,9 +12,9 @@ module Sure
     ].freeze
 
     def load!(env: ENV, warn_io: $stderr)
-      env.keys.grep(/_FILE\z/).sort.each do |file_key|
+      env.keys.grep(/_FILE\z/).reject { |file_key| DENYLIST.include?(file_key) }.sort.each do |file_key|
         base_key = file_key.delete_suffix("_FILE")
-        next if denylisted?(file_key, base_key, warn_io)
+        next if DENYLIST.include?(base_key)
         next if env.key?(base_key)
 
         path = env[file_key].to_s.strip
@@ -30,14 +30,6 @@ module Sure
     rescue SystemCallError => e
       warn_io.puts("[env] Unable to load #{file_key} for #{base_key} from #{path}: #{e.message}")
       nil
-    end
-
-    def denylisted?(file_key, base_key, warn_io)
-      denylisted_key = [file_key, base_key].find { |key| DENYLIST.include?(key) }
-      return false unless denylisted_key
-
-      warn_io.puts("[env] Ignoring #{file_key}: #{denylisted_key} is not eligible for *_FILE loading")
-      true
     end
   end
 end
