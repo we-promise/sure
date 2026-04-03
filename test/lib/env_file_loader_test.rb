@@ -39,6 +39,23 @@ class EnvFileLoaderTest < ActiveSupport::TestCase
     file.close!
   end
 
+  test "empty direct env var still takes precedence over matching _FILE value" do
+    file = Tempfile.new("secret")
+    file.write("file-secret\n")
+    file.flush
+
+    env = {
+      "OPENAI_ACCESS_TOKEN" => "",
+      "OPENAI_ACCESS_TOKEN_FILE" => file.path
+    }
+
+    Sure::EnvFileLoader.load!(env: env)
+
+    assert_equal "", env["OPENAI_ACCESS_TOKEN"]
+  ensure
+    file.close!
+  end
+
   test "warns and leaves base env var unset when file cannot be read" do
     env = {
       "OPENAI_ACCESS_TOKEN_FILE" => "/path/that/does/not/exist"
