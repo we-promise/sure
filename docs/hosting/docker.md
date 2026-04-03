@@ -51,7 +51,7 @@ At this point, the only file in your current working directory should be `compos
 
 ### Step 3 (optional): Configure your environment
 
-By default, our `compose.example.yml` file runs without any configuration.  
+By default, our `compose.example.yml` file runs without any configuration.
 That said, if you would like extra security (important if you're running outside of a local network), you can follow the steps below to set things up.
 
 If you're running the app locally and don't care much about security, you can skip this step.
@@ -95,11 +95,34 @@ SECRET_KEY_BASE="replacemewiththegeneratedstringfromthepriorstep"
 POSTGRES_PASSWORD="replacemewithyourdesireddatabasepassword"
 ```
 
+#### Using Docker secrets with `*_FILE` variables
+
+Sure supports Docker/Kubernetes-style secret files for application secrets. For most Sure application environment variables, you can provide a matching `*_FILE` variable that points to a file containing the secret value.
+
+For example:
+
+```txt
+SECRET_KEY_BASE_FILE=/run/secrets/secret_key_base
+OPENAI_ACCESS_TOKEN_FILE=/run/secrets/openai_access_token
+SMTP_PASSWORD_FILE=/run/secrets/smtp_password
+OIDC_CLIENT_SECRET_FILE=/run/secrets/oidc_client_secret
+```
+
+Notes:
+
+- If both `FOO` and `FOO_FILE` are set, Sure uses `FOO`.
+- Secret files may include a trailing newline; Sure strips it automatically.
+- This support is implemented by Sure itself, so it applies to app secrets loaded during boot such as `SECRET_KEY_BASE`, OpenAI tokens, OIDC secrets, SMTP passwords, and Active Record encryption keys.
+- Some variables are intentionally denylisted and do not support `*_FILE` indirection, especially low-level path/runtime variables such as `SSL_CA_FILE` and `SSL_CERT_FILE`.
+- Non-app containers in your compose stack (such as Postgres) may have their own secret-file conventions; check their image documentation separately.
+
+If you want to use Docker secrets, add the relevant `*_FILE` variables to the `web` and `worker` services in your `compose.yml`.
+
 #### Using HTTPS
 
-Assuming you want to access your instance from the internet, you should have secured your URL address with an SSL certificate.  
-The Docker instance runs in plain HTTP and you need to tell it that you are redirecting your HTTPS stream to the HTTP one.  
-To do this, edit the `compose.yml` file and find the line stating:  
+Assuming you want to access your instance from the internet, you should have secured your URL address with an SSL certificate.
+The Docker instance runs in plain HTTP and you need to tell it that you are redirecting your HTTPS stream to the HTTP one.
+To do this, edit the `compose.yml` file and find the line stating:
 
 ```yaml
 RAILS_ASSUME_SSL: "false"
@@ -179,12 +202,14 @@ docker compose -f compose.ai.yml --profile ai up -d
 The external assistant delegates chat to a remote AI agent instead of calling LLMs directly. The agent calls back to Sure's `/mcp` endpoint for financial data (accounts, transactions, balance sheet).
 
 1. Set the MCP endpoint credentials in your `.env`:
+
    ```bash
    MCP_API_TOKEN=generate-a-random-token-here
    MCP_USER_EMAIL=your@email.com   # must match an existing Sure user
    ```
 
 2. Set the external assistant connection:
+
    ```bash
    EXTERNAL_ASSISTANT_URL=https://your-agent/v1/chat/completions
    EXTERNAL_ASSISTANT_TOKEN=your-agent-api-token
@@ -254,7 +279,7 @@ If you are trying to get Sure started for the **first time** and run into databa
 
 If you run into this issue, you can optionally **reset the database**.
 
-**PLEASE NOTE: this will delete any existing data that you have in your Sure database, so proceed with caution.**  For first-time users of the app just trying to get started, you're generally safe to run the commands below.
+**PLEASE NOTE: this will delete any existing data that you have in your Sure database, so proceed with caution.** For first-time users of the app just trying to get started, you're generally safe to run the commands below.
 
 By running the commands below, you will delete your existing Sure database and "reset" it.
 
