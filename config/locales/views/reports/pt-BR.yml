@@ -173,7 +173,7 @@ pt-BR:
       open_sheets: Abrir Google Sheets
       go_to_api_keys: Ir para Chaves de API
       close: Entendi
-   print:
+    print:
       document_title: Relatório Financeiro
       title: Relatório Financeiro
       generated_on: "Gerado em %{date}"
