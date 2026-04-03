@@ -54,11 +54,6 @@ pt-BR:
         language: Idioma
         language_auto: Idioma do navegador
         page_title: Preferências
-        theme_dark: Escuro
-        theme_light: Claro
-        theme_subtitle: Escolha um tema preferido para o aplicativo
-        theme_system: Sistema
-        theme_title: Tema
         timezone: Fuso horário
         month_start_day: O mês do orçamento começa em
         month_start_day_hint: Defina quando começa o seu mês de orçamento (por exemplo, no dia do pagamento).
