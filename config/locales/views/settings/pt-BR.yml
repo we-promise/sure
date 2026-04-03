@@ -26,6 +26,22 @@ pt-BR:
         page_title: Pagamento
         subscription_subtitle: Atualize sua assinatura e detalhes de pagamento
         subscription_title: Gerenciar assinatura
+    appearances:
+      show:
+        page_title: Aparência
+        theme_title: Tema
+        theme_subtitle: Escolha um tema preferido para o aplicativo
+        theme_dark: Escuro
+        theme_light: Claro
+        theme_system: Sistema
+        transactions_title: Transações
+        transactions_subtitle: Personalize como as transações são exibidas
+        dashboard_title: Painel
+        dashboard_subtitle: Personalize como o painel é exibido
+        dashboard_two_column_title: Layout de duas colunas
+        dashboard_two_column_description: Exibe os widgets do painel em duas colunas em telas grandes. Quando desativado, os widgets ficam empilhados em uma única coluna.
+        split_grouped_title: Agrupar transações divididas
+        split_grouped_description: Mostra as transações divididas agrupadas sob o registro principal na lista de transações. Quando desativado, as subdivisões aparecem como linhas individuais.
     preferences:
       show:
         country: País
@@ -47,6 +63,11 @@ pt-BR:
         month_start_day: O mês do orçamento começa em
         month_start_day_hint: Defina quando começa o seu mês de orçamento (por exemplo, no dia do pagamento).
         month_start_day_warning: Seus orçamentos e cálculos MTD usarão essa data de início personalizada em vez do dia 1º de cada mês.
+        sharing_title: "Compartilhamento %{moniker}"
+        sharing_subtitle: "Controle como as contas são compartilhadas no seu %{moniker}"
+        sharing_default_label: Compartilhamento padrão para novas contas
+        sharing_shared: Compartilhar com todos os membros
+        sharing_private: Manter privado por padrão
     profiles:
       destroy:
         cannot_remove_self: Você não pode se remover da conta.
