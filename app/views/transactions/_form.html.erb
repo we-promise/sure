@@ -35,14 +35,13 @@
                 :id, :name,
                 { include_blank: t(".none"),
                   label: t(".merchant_label") } %>
-      <%= ef.select :tag_ids,
-                    Current.family.tags.alphabetically.pluck(:name, :id),
-                    {
-                      include_blank: t(".none"),
-                      multiple: true,
-                      label:    t(".tags_label")
-                    },
-                    { "data-controller": "multi-select" } %>
+      <%= render DS::MultiSelectTags.new(
+            form: ef,
+            method: :tag_ids,
+            tags: Current.family.tags.alphabetically,
+            selected_ids: @entry.entryable&.tag_ids || [],
+            label: t(".tags_label")
+          ) %>
     <% end %>
     <%= f.text_area :notes,
                     label: t(".note_label"),
