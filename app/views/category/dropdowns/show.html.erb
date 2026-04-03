@@ -6,13 +6,17 @@
           placeholder="<%= t(".search_placeholder") %>"
           autocomplete="nope"
           type="search"
+          role="combobox"
+          aria-label="<%= t(".search_placeholder") %>"
+          aria-expanded="false"
+          aria-autocomplete="list"
           class="bg-container placeholder:text-sm placeholder:text-secondary font-normal h-10 relative pl-10 w-full border-none rounded-lg focus:outline-hidden focus:ring-0"
           data-list-filter-target="input"
           data-action="list-filter#filter keydown->list-filter#handleKeydown">
           <%= icon("search", class: "absolute inset-0 ml-2 transform top-1/2 -translate-y-1/2") %>
         </div>
       </div>
-      <div data-list-filter-target="list" class="flex flex-col gap-0.5 p-1.5 mt-0.5 mr-2 max-h-64 overflow-y-scroll scrollbar">
+      <div data-list-filter-target="list" role="listbox" class="flex flex-col gap-0.5 p-1.5 mt-0.5 mr-2 max-h-64 overflow-y-scroll scrollbar">
         <div class="pb-2 pl-4 mr-2 text-secondary hidden" data-list-filter-target="emptyMessage">
           <%= t(".no_categories") %>
         </div>

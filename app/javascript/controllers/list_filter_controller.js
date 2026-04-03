@@ -7,6 +7,7 @@ export default class extends Controller {
   connect() {
     this.inputTarget.focus();
     this.highlightedIndex = -1;
+    this.updateAriaActiveDescendant();
   }
 
   filter() {
@@ -34,6 +35,7 @@ export default class extends Controller {
 
     this.highlightedIndex = -1;
     this.clearHighlights();
+    this.updateAriaActiveDescendant();
   }
 
   handleKeydown(event) {
@@ -56,6 +58,7 @@ export default class extends Controller {
     this.clearHighlights();
     this.highlightedIndex = Math.min(this.highlightedIndex + 1, items.length - 1);
     this.highlightItem(items[this.highlightedIndex]);
+    this.updateAriaActiveDescendant();
   }
 
   highlightPrevious() {
@@ -65,16 +68,19 @@ export default class extends Controller {
     this.clearHighlights();
     this.highlightedIndex = Math.max(this.highlightedIndex - 1, 0);
     this.highlightItem(items[this.highlightedIndex]);
+    this.updateAriaActiveDescendant();
   }
 
   highlightItem(item) {
     item.classList.add("bg-container-inset-hover");
+    item.setAttribute("aria-selected", "true");
     item.scrollIntoView({ block: "nearest" });
   }
 
   clearHighlights() {
     this.listTarget.querySelectorAll(".filterable-item").forEach((item) => {
       item.classList.remove("bg-container-inset-hover");
+      item.setAttribute("aria-selected", "false");
     });
   }
 
@@ -86,6 +92,16 @@ export default class extends Controller {
     const form = item.querySelector("form");
     if (form) {
       form.requestSubmit();
+    }
+  }
+
+  updateAriaActiveDescendant() {
+    const items = this.visibleItems;
+    if (this.highlightedIndex >= 0 && this.highlightedIndex < items.length) {
+      const item = items[this.highlightedIndex];
+      this.inputTarget.setAttribute("aria-activedescendant", item.id);
+    } else {
+      this.inputTarget.removeAttribute("aria-activedescendant");
     }
   }
 
