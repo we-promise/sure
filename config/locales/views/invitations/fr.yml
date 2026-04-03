@@ -1,7 +1,14 @@
 ---
 fr:
   invitations:
+    accept_choice:
+      create_account: "Créer un nouveau compte"
+      joined_household: "Vous avez rejoint le foyer."
+      message: "%{inviter} vous a invité à rejoindre en tant que %{role}."
+      sign_in_existing: "J'ai déjà un compte"
+      title: "Rejoindre %{family}"
     create:
+      existing_user_added: "L'utilisateur a été ajouté à votre foyer."
       failure: Impossible d'envoyer l'invitation
       success: Invitation envoyée avec succès
     destroy:
@@ -12,6 +19,7 @@ fr:
       email_label: Adresse e-mail
       email_placeholder: Saisissez une adresse e-mail
       role_admin: Administrateur
+      role_guest: "Invité"
       role_label: Rôle
       role_member: Membre
       submit: Envoyer l'invitation

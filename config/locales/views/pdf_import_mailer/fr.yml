@@ -1,0 +1,17 @@
+---
+fr:
+  pdf_import_mailer:
+    next_steps:
+      greeting: "Bonjour %{name},"
+      intro: "Nous avons terminé l'analyse du document PDF que vous avez téléchargé sur %{product_name}."
+      document_type_label: Type de document
+      summary_label: Résumé par IA
+      transactions_note: Ce document semble contenir des transactions. Vous pouvez les extraire et les examiner dès maintenant.
+      document_stored_note: Ce document a été conservé pour votre référence. Il pourra être utilisé pour fournir du contexte dans vos futures conversations avec l'IA.
+      next_steps_label: Prochaines étapes
+      next_steps_intro: "Plusieurs options s'offrent à vous :"
+      option_extract_transactions: Extraire les transactions de ce relevé
+      option_keep_reference: Conserver ce document comme référence pour vos futures conversations avec l'IA
+      option_delete: Supprimer cet import si vous n'en avez plus besoin
+      view_import_button: Voir les détails de l'import
+      footer_note: Ceci est un message automatique. Merci de ne pas répondre directement à cet e-mail.

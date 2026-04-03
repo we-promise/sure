@@ -5,6 +5,8 @@ fr:
       account: Compte de transfert (facultatif)
       account_prompt: Rechercher un compte
       amount: Montant
+      dividend_requires_security: Un titre est requis pour les dividendes
+      fee: Frais de transaction
       holding: Symbole boursier
       holding_optional: Symbole boursier (facultatif)
       price: Prix par action
@@ -13,21 +15,20 @@ fr:
       ticker_placeholder: AAPL
       type: Type
       type_buy: Acheter
-      type_sell: Vendre
       type_deposit: Dépôt
-      type_withdrawal: Retrait
       type_dividend: Dividende
       type_interest: Intérêts
-      dividend_requires_security: Un titre est requis pour les dividendes
+      type_sell: Vendre
+      type_withdrawal: Retrait
     header:
       buy: Acheter
-      sell: Vendre
+      current_market_price_label: Prix du marché actuel
       dividend: Dividende
       interest: Intérêts
-      current_market_price_label: Prix du marché actuel
       overview: Aperçu
       purchase_price_label: Prix d'achat
       purchase_qty_label: Quantité achetée
+      sell: Vendre
       symbol_label: Symbole
       total_return_label: Gain/perte non réalisé(e)
     new:
@@ -35,15 +36,23 @@ fr:
     show:
       additional: Détails supplémentaires
       amount_label: Montant
+      buy: Achat
+      category_label: Catégorie
       cost_per_share_label: Coût par action
       date_label: Date
       delete: Supprimer
       delete_subtitle: Cette action ne peut pas être annulée
       delete_title: Supprimer la transaction
       details: Détails
-      exclude_subtitle: Cette transaction ne sera pas incluse dans les rapports et les calculs
+      exclude_subtitle: Cette transaction ne sera pas incluse dans les rapports et
+        les calculs
       exclude_title: Exclure des analyses
+      fee_label: Frais de transaction
+      no_category: Aucune catégorie
       note_label: Note
       note_placeholder: Ajoutez tout commentaire supplémentaire ici...
       quantity_label: Quantité
+      sell: Vente
       settings: Paramètres
+
+      type_label: Type

@@ -3,15 +3,35 @@ fr:
   sessions:
     create:
       invalid_credentials: Adresse e-mail ou mot de passe invalide.
+      local_login_disabled: La connexion locale est désactivée. Veuillez utiliser l'authentification unique (SSO).
     destroy:
       logout_successful: Vous avez été déconnecté avec succès.
+    failure:
+      failed: L'authentification a échoué.
+      sso_failed: L'authentification par SSO a échoué. Veuillez réessayer.
+      sso_invalid_response: Réponse invalide du fournisseur SSO. Veuillez réessayer.
+      sso_provider_unavailable: Le fournisseur SSO est indisponible. Veuillez réessayer
+        plus tard ou contacter un administrateur.
     new:
+      demo_banner_message: Ceci est un environnement de démonstration. Les identifiants
+        ont été pré-remplis pour votre commodité. Veuillez ne pas entrer d'informations
+        réelles ou sensibles.
+      demo_banner_title: Mode démo actif
       email: Adresse e-mail
       email_placeholder: nom@exemple.fr
       forgot_password: Mot de passe oublié ?
+      google_auth_connect: Se connecter avec Google
+      local_login_admin_only: La connexion locale est réservée aux administrateurs.
+      no_auth_methods_enabled: Aucune méthode d'authentification n'est activée. Veuillez
+        contacter un administrateur.
+      oidc: Se connecter avec OpenID Connect
+      openid_connect: Se connecter avec OpenID Connect
       password: Mot de passe
+      password_placeholder: Entrez votre mot de passe
       submit: Se connecter
       title: Connectez-vous à votre compte
-      password_placeholder: Entrez votre mot de passe
-      openid_connect: Se connecter avec OpenID Connect
-      oidc: Se connecter avec OpenID Connect
+    openid_connect:
+      account_linked: Compte lié avec succès à %{provider}
+      failed: Impossible de s'authentifier via OpenID Connect.
+    post_logout:
+      logout_successful: Vous avez été déconnecté avec succès.

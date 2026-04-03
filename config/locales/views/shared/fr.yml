@@ -1,17 +1,17 @@
 ---
 fr:
   breadcrumbs:
-    home: Accueil
-    dashboard: Tableau de bord
     accounts: Comptes
-    merchants: Marchands
-    categories: Catégories
-    tags: Étiquettes
-    rules: Règles
-    transactions: Transactions
     budgets: Budgets
-    imports: Importations
+    categories: Catégories
     chats: Assistant
+    dashboard: Tableau de bord
+    home: Accueil
+    imports: Importations
+    merchants: Marchands
+    rules: Règles
+    tags: Étiquettes
+    transactions: Transactions
   shared:
     confirm_modal:
       accept: Confirmer
@@ -20,7 +20,12 @@ fr:
       title: Êtes-vous sûr ?
     money_field:
       label: Montant
+    require_admin: "Seuls les administrateurs peuvent effectuer cette action"
     syncing_notice:
       syncing: Synchronisation des données de compte...
+    transaction_tabs:
+      expense: "Dépense"
+      income: "Revenu"
+      transfer: "Transfert"
     trend_change:
-      no_change: "pas de changement"
+      no_change: pas de changement

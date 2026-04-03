@@ -1,13 +1,16 @@
 ---
 fr:
   password_resets:
+    disabled: "La réinitialisation du mot de passe via %{product_name} est désactivée. Veuillez réinitialiser votre mot de passe via votre fournisseur d'identité."
     edit:
       title: Réinitialiser votre mot de passe
     new:
-      requested: Veuillez vérifier votre boîte mail pour un lien de réinitialisation de votre mot de passe.
+      back: Retour
+      requested: Veuillez vérifier votre boîte mail pour un lien de réinitialisation
+        de votre mot de passe.
       submit: Réinitialiser votre mot de passe
       title: Réinitialiser votre mot de passe
-      back: Retour
+    sso_only_user: "Votre compte utilise le SSO pour l'authentification. Veuillez contacter votre administrateur pour gérer vos identifiants."
     update:
       invalid_token: Jeton invalide.
       success: Votre mot de passe a été réinitialisé.

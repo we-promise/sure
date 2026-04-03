@@ -3,11 +3,29 @@ fr:
   holdings:
     cash:
       brokerage_cash: Liquidités de courtage
+    cost_basis_cell:
+      cancel: Annuler
+      or_per_share_label: "Ou saisissez par action :"
+      overwrite_confirm_body: "Cela remplacera le coût d'acquisition actuel de %{current}."
+      overwrite_confirm_title: "Remplacer le coût d'acquisition ?"
+      per_share: par action
+      save: Enregistrer
+      set_cost_basis_header: "Définir le coût d'acquisition pour %{ticker} (%{qty} actions)"
+      total_cost_basis_label: "Coût d'acquisition total"
+      unknown: "--"
+    cost_basis_sources:
+      calculated: "À partir des opérations"
+      manual: "Défini par l'utilisateur"
+      provider: "À partir du fournisseur"
     destroy:
       success: Position supprimée
+    errors:
+      security_collision: 'Impossible de réaffecter : vous avez déjà une position pour %{ticker} le %{date}.'
     holding:
+      no_cost_basis: Aucun coût d'acquisition
       per_share: par action
       shares: "%{qty} actions"
+      unknown: "--"
     index:
       average_cost: Coût moyen
       holdings: Positions
@@ -17,23 +35,62 @@ fr:
       return: Rendement total
       weight: Poids
     missing_price_tooltip:
-      description: Cet investissement a des valeurs manquantes et nous ne pouvons pas calculer
-        son retour ou sa valeur.
+      description: Cet investissement a des valeurs manquantes et nous ne pouvons
+        pas calculer son rendement ou sa valeur.
       missing_data: Données manquantes
+    remap_security:
+      security_not_found: "Impossible de trouver le titre sélectionné."
+      success: "Titre mis à jour avec succès."
+    reset_security:
+      success: "Titre réinitialisé à la valeur du fournisseur."
     show:
       avg_cost_label: Coût moyen
+      book_value_label: Valeur comptable
+      cancel: "Annuler"
+      cost_basis_locked_description: "Votre coût d'acquisition défini manuellement ne sera pas modifié par les synchronisations."
+      cost_basis_locked_label: "Le coût d'acquisition est verrouillé"
       current_market_price_label: Prix de marché actuel
       delete: Supprimer
-      delete_subtitle: Cela supprimera la position et toutes vos opérations associées sur ce compte. Cette action ne peut pas être annulée.
+      delete_subtitle: Cela supprimera la position et toutes vos opérations associées
+        sur ce compte. Cette action ne peut pas être annulée.
       delete_title: Supprimer la position
+      edit_security: "Modifier le titre"
       history: Historique
+      last_price_update: "Dernière mise à jour du prix"
+      market_data_label: "Données de marché"
+      market_data_sync_button: "Actualiser"
+      market_value_label: Valeur marchande
+      never: Jamais
+      no_security_provider: "Fournisseur de titres non configuré. Impossible de rechercher des titres."
+      no_trade_history: "Aucun historique d'opérations disponible pour cette position."
+      originally: "était %{ticker}"
       overview: Aperçu
       portfolio_weight_label: Poids du portefeuille
+      provider_sent: "Envoyé par le fournisseur : %{ticker}"
+      remap_security: "Enregistrer"
+      reset_confirm_body: "Cela changera le titre de %{current} à %{original} et déplacera toutes les opérations associées."
+      reset_confirm_title: "Réinitialiser le titre au fournisseur ?"
+      reset_to_provider: "Réinitialiser au fournisseur"
+      search_security: "Rechercher un titre"
+      search_security_placeholder: "Rechercher par ticker ou nom"
+      security_label: Titre
+      security_remapped_label: Titre réaffecté
       settings: Paramètres
-      ticker_label: Ticker
-      trade_history_entry: "%{qty} actions de %{security} à %{price}"
-      total_return_label: Rendement total
       shares_label: Actions
-      book_value_label: Valeur comptable
-      market_value_label: Valeur marchande
-      unknown: Inconnu
+      syncing: "Synchronisation..."
+      ticker_label: Ticker
+      total_return_label: Rendement total
+      trade_history_entry: "%{qty} actions de %{security} à %{price}"
+      unknown: "Inconnu"
+      unlock_confirm_body: "Cela permettra au coût d'acquisition d'être mis à jour par les synchronisations du fournisseur ou les calculs d'opérations."
+      unlock_confirm_title: "Déverrouiller le coût d'acquisition ?"
+      unlock_cost_basis: "Déverrouiller"
+    sync_prices:
+      provider_error: "Impossible de récupérer les derniers prix. Veuillez réessayer dans quelques minutes."
+      success: "Données de marché synchronisées avec succès."
+      unavailable: "La synchronisation des données de marché n'est pas disponible pour les titres hors ligne."
+    unlock_cost_basis:
+      success: "Coût d'acquisition déverrouillé. Il pourra être mis à jour lors de la prochaine synchronisation."
+    update:
+      error: "Valeur de coût d'acquisition invalide."
+      success: "Coût d'acquisition enregistré."

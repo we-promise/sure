@@ -1,0 +1,8 @@
+---
+fr:
+  simplefin_items:
+    update:
+      success: "Connexion SimpleFIN mise à jour."
+      errors:
+        blank_token: "Jeton d'accès SimpleFIN manquant. Veuillez fournir un jeton ou utiliser 'Lier des comptes existants' pour continuer."
+        update_failed: "Échec de la mise à jour de la connexion SimpleFIN : %{message}"

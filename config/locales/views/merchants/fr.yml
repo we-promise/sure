@@ -6,22 +6,65 @@ fr:
       success: Marchand créé avec succès
     destroy:
       success: Marchand supprimé avec succès
+      unlinked_success: Marchand retiré de vos transactions
     edit:
       title: Modifier le marchand
+    enhance:
+      already_running: "L'amélioration est déjà en cours. Veuillez patienter jusqu'à la fin."
+      success: "L'amélioration du marchand fournisseur a commencé. Les marchands seront améliorés et les doublons fusionnés sous peu."
     form:
       name_placeholder: Nom du marchand
+      website_hint: "Saisissez le site web du marchand pour afficher automatiquement son logo"
+      website_placeholder: "Site web (ex: starbucks.com)"
     index:
       empty: Aucun marchand pour l'instant
+      enhance_button: "Améliorer avec l'IA"
+      enhance_info:
+        one: "%{count} marchand fournisseur manque d'informations sur le site web. Améliorez avec l'IA pour détecter les sites web, afficher les logos et fusionner les marchands en double."
+        other: "%{count} marchands fournisseurs manquent d'informations sur le site web. Améliorez avec l'IA pour détecter les sites web, afficher les logos et fusionner les marchands en double."
+      family_empty: "Pas encore de marchands %{moniker}"
+      family_title: "Marchands %{moniker}"
+      merge: "Fusionner les marchands"
       new: Nouveau marchand
+      provider_empty: "Pas encore de marchands fournisseurs liés à ce %{moniker}"
+      provider_info: "Ces marchands ont été automatiquement détectés par vos connexions bancaires ou par l'IA. Vous pouvez les modifier pour créer votre propre copie, ou les supprimer pour les dissocier de vos transactions."
+      provider_read_only: "Les marchands fournisseurs sont synchronisés depuis vos institutions connectées. Ils ne peuvent pas être modifiés ici."
+      provider_title: "Marchands fournisseurs"
+      table:
+        actions: Actions
+        merchant: Marchand
+        source: Source
       title: Marchands
+      unlinked_info: "Ces marchands ont été récemment retirés de vos transactions. Ils disparaîtront de cette liste après 30 jours, à moins d'être réattribués à une transaction."
+      unlinked_title: "Récemment retirés"
     merchant:
       confirm_accept: Supprimer le marchand
-      confirm_body: Êtes-vous sûr de vouloir supprimer ce marchand ? La suppression de ce marchand
-        dissocierait toutes les transactions associées et pourrait affecter vos rapports.
+      confirm_body: Êtes-vous sûr de vouloir supprimer ce marchand ? La suppression
+        de ce marchand dissocierait toutes les transactions associées et pourrait
+        affecter vos rapports.
       confirm_title: Supprimer le marchand ?
       delete: Supprimer le marchand
       edit: Modifier le marchand
+    merge:
+      description: "Sélectionnez un marchand cible et les marchands à fusionner avec lui. Toutes les transactions des marchands fusionnés seront réattribuées à la cible."
+      select_target: "Sélectionner le marchand cible..."
+      sources_hint: "Les marchands sélectionnés seront fusionnés avec la cible. Les marchands de la famille seront supprimés, les marchands fournisseurs seront dissociés."
+      sources_label: "Marchands à fusionner"
+      submit: "Fusionner la sélection"
+      target_label: "Fusionner dans (cible)"
+      title: "Fusionner les marchands"
     new:
       title: Nouveau marchand
+    perform_merge:
+      invalid_merchants: "Marchands sélectionnés invalides"
+      no_merchants_selected: "Aucun marchand sélectionné pour la fusion"
+      success: "%{count} marchands fusionnés avec succès"
+      target_not_found: "Marchand cible non trouvé"
+    provider_merchant:
+      edit: "Modifier"
+      remove: "Supprimer"
+      remove_confirm_body: "Êtes-vous sûr de vouloir supprimer %{name} ? Cela dissociera toutes les transactions associées de ce marchand mais ne supprimera pas le marchand lui-même."
+      remove_confirm_title: "Supprimer le marchand ?"
     update:
+      converted_success: "Marchand converti et mis à jour avec succès"
       success: Marchand mis à jour avec succès

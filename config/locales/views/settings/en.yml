@@ -117,6 +117,12 @@ en:
       show:
         page_title: Security
         mfa_title: Two-Factor Authentication
+        mfa_disabled: "Two-factor authentication is"
+        mfa_disabled_description: "Enable two-factor authentication to add an extra layer of security to your account."
+        mfa_enabled: "Two-factor authentication is"
+        mfa_enabled_description: "Your account is protected by an extra layer of security."
+        status_disabled: "disabled"
+        status_enabled: "enabled"
         mfa_description: Add an extra layer of security to your account by requiring a code from your authenticator app when signing in
         enable_mfa: Enable 2FA
         disable_mfa: Disable 2FA

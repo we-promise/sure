@@ -17,7 +17,7 @@
     <%= image_tag "logo-color.png", class: "w-16 mb-6" %>
 
     <p class="text-xl lg:text-3xl text-primary font-display font-medium">
-      <%= t(".title") %>
+      <%= t(".title", product_name: product_name) %>
     </p>
 
     <h2 class="text-xl lg:text-3xl font-display text-secondary font-medium mb-2">
@@ -31,7 +31,7 @@
     <div class="w-full">
       <% if Current.family.can_start_trial? %>
         <%= render DS::Button.new(
-          text: t(".try_button"),
+          text: t(".try_button", product_name: product_name),
           href: subscription_path,
           full_width: true,
           data: { turbo: false }
@@ -65,7 +65,7 @@
       <div class="space-y-12">
         <div class="space-y-1.5 text-sm">
           <p class="text-primary font-medium"><%= t(".today") %></p>
-          <p class="text-secondary"><%= t(".today_description") %></p>
+          <p class="text-secondary"><%= t(".today_description", product_name: product_name) %></p>
         </div>
 
         <div class="space-y-1.5 text-sm">
@@ -75,7 +75,7 @@
 
         <div class="space-y-1.5 text-sm">
           <p class="text-primary font-medium"><%= t(".in_45_days", date: l(45.days.from_now.to_date, format: :long)) %></p>
-          <p class="text-secondary"><%= t(".in_45_days_description") %></p>
+          <p class="text-secondary"><%= t(".in_45_days_description", product_name: product_name) %></p>
         </div>
       </div>
     </div>

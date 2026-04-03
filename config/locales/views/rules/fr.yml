@@ -1,40 +1,61 @@
 ---
 fr:
   rules:
-    no_action: Aucune action
-    no_condition: Aucune condition
     actions:
       value_placeholder: Entrez une valeur
     apply_all:
-      button: Appliquer tout
-      confirm_title: Appliquer toutes les règles
-      confirm_message: Vous êtes sur le point d'appliquer %{count} règles affectant %{transactions} transactions uniques. Veuillez confirmer si vous souhaitez continuer.
-      confirm_button: Confirmer et appliquer tout
-      success: Toutes les règles ont été mises en file d'attente pour exécution
+      ai_cost_message: Cela utilisera l'IA pour catégoriser jusqu'à %{transactions}
+        transactions.
       ai_cost_title: Estimation du coût IA
-      ai_cost_message: Cela utilisera l'IA pour catégoriser jusqu'à %{transactions} transactions.
-      estimated_cost: "Coût estimé : ~%{cost} $"
+      button: Appliquer tout
+      confirm_button: Confirmer et appliquer tout
+      confirm_message: Vous êtes sur le point d'appliquer %{count} règles affectant
+        %{transactions} transactions uniques. Veuillez confirmer si vous souhaitez
+        continuer.
+      confirm_title: Appliquer toutes les règles
       cost_unavailable_model: Estimation du coût non disponible pour le modèle "%{model}".
-      cost_unavailable_no_provider: Estimation du coût non disponible (aucun fournisseur LLM configuré).
-      cost_warning: Vous pourriez encourir des frais, veuillez vérifier auprès du fournisseur du modèle pour les prix les plus récents.
+      cost_unavailable_no_provider: Estimation du coût non disponible (aucun fournisseur
+        LLM configuré).
+      cost_warning: Vous pourriez encourir des frais, veuillez vérifier auprès du
+        fournisseur du modèle pour les prix les plus récents.
+      estimated_cost: 'Coût estimé : ~%{cost} $'
+      success: Toutes les règles ont été mises en file d'attente pour exécution
       view_usage: Voir l'historique d'utilisation
+    clear_ai_cache:
+      button: Réinitialiser le cache de l'IA
+      confirm_body: Êtes-vous sûr de vouloir réinitialiser le cache de l'IA ? Cela
+        permettra aux règles de l'IA de retraiter toutes les transactions. Cela
+        pourrait entraîner des coûts d'API supplémentaires.
+      confirm_button: Réinitialiser le cache
+      confirm_title: Réinitialiser le cache de l'IA ?
+      success: Le cache de l'IA est en cours de réinitialisation. Cela peut prendre
+        quelques instants.
+    condition_filters:
+      transaction_type:
+        equal_to: Égal à
+        expense: Dépense
+        income: Revenu
+        transfer: Transfert
+    no_action: Aucune action
+    no_condition: Aucune condition
     recent_runs:
-      title: Exécutions récentes
-      description: Consultez l'historique d'exécution de vos règles, y compris le statut de réussite/échec et le nombre de transactions.
-      unnamed_rule: Règle sans nom
       columns:
         date_time: Date/Heure
         execution_type: Type
-        status: Statut
         rule_name: Nom de la règle
+        status: Statut
         transactions_counts:
-          queued: En file d'attente
-          processed: Traitées
           modified: Modifiées
+          processed: Traitées
+          queued: En file d'attente
+      description: Consultez l'historique d'exécution de vos règles, y compris le
+        statut de réussite/échec et le nombre de transactions.
       execution_types:
         manual: Manuel
         scheduled: Planifié
       statuses:
+        failed: Échoué
         pending: En attente
         success: Réussi
-        failed: Échoué
+      title: Exécutions récentes
+      unnamed_rule: Règle sans nom

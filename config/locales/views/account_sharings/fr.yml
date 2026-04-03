@@ -1,0 +1,29 @@
+---
+fr:
+  account_sharings:
+    show:
+      title: Partage de compte
+      subtitle: Contrôlez qui peut voir et interagir avec ce compte
+      member: Membre
+      permission: Autorisation
+      shared: Partagé
+      no_members: Aucun autre membre dans votre %{moniker} avec qui partager
+      permissions:
+        full_control: Contrôle total
+        full_control_description: Peut voir, modifier et gérer les opérations
+        read_write: Peut annoter
+        read_write_description: Peut catégoriser, étiqueter et ajouter des notes
+        read_only: Lecture seule
+        read_only_description: Peut seulement voir les données du compte
+      save: Enregistrer les paramètres de partage
+      owner_label: "Propriétaire : %{name}"
+      shared_with_count:
+        one: Partagé avec 1 membre
+        other: "Partagé avec %{count} membres"
+      include_in_finances: Inclure dans mes budgets et rapports
+      exclude_from_finances: Exclure de mes budgets et rapports
+      finance_toggle_description: Comptabiliser ce compte dans votre patrimoine net, vos budgets et vos rapports
+    update:
+      success: Paramètres de partage mis à jour
+      not_owner: Seul le propriétaire du compte peut gérer le partage
+      finance_toggle_success: Préférence d'inclusion financière mise à jour

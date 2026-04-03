@@ -1,0 +1,47 @@
+---
+fr:
+  splits:
+    new:
+      title: Ventiler l'opération
+      description: Ventilez cette opération en plusieurs entrées avec des catégories et des montants différents.
+      submit: Ventiler l'opération
+      cancel: Annuler
+      add_row: Ajouter une ventilation
+      remove_row: Supprimer
+      remaining: Restant
+      amounts_must_match: Les montants ventilés doivent être égaux au montant de l'opération d'origine.
+      name_label: Nom
+      name_placeholder: Nom de la ventilation
+      amount_label: Montant
+      category_label: Catégorie
+      uncategorized: "(non catégorisé)"
+      original_name: "Nom :"
+      original_date: "Date :"
+      original_amount: "Montant :"
+      split_number: "Ventilation n°%{number}"
+    create:
+      success: Opération ventilée avec succès
+      not_splittable: Cette opération ne peut pas être ventilée.
+    destroy:
+      success: Ventilation de l'opération annulée avec succès
+    show:
+      title: Entrées ventilées
+      description: Cette opération a été ventilée en les entrées suivantes.
+      button_title: Ventiler l'opération
+      button_description: Ventilez cette opération en plusieurs entrées avec des catégories et des montants différents.
+      button: Ventiler
+      unsplit_title: Annuler la ventilation
+      unsplit_button: Annuler la ventilation
+      unsplit_confirm: Cela supprimera toutes les entrées ventilées et restaurera l'opération d'origine.
+    edit:
+      title: Modifier la ventilation
+      description: Modifiez les entrées ventilées pour cette opération.
+      submit: Mettre à jour la ventilation
+      not_split: Cette opération n'est pas ventilée.
+    update:
+      success: Ventilation mise à jour avec succès
+    child:
+      title: Fait partie d'une ventilation
+      description: Cette entrée fait partie d'une opération ventilée.
+      edit_split: Modifier la ventilation
+      unsplit: Annuler la ventilation

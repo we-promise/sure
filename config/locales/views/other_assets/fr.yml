@@ -2,6 +2,8 @@
 fr:
   other_assets:
     edit:
+      balance_tracking_info: "Les actifs divers sont suivis via des évaluations manuelles en utilisant 'Nouveau solde', et non via des transactions. Les flux de trésorerie n'affecteront pas le solde du compte."
       edit: Modifier %{account}
     new:
+      balance_tracking_info: "Les actifs divers sont suivis via des évaluations manuelles en utilisant 'Nouveau solde', et non via des transactions. Les flux de trésorerie n'affecteront pas le solde du compte."
       title: Saisir les détails de l'actif

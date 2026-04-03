@@ -3,7 +3,7 @@ fr:
   tags:
     create:
       created: Étiquette créée
-      error: "Erreur lors de la création de l'étiquette : %{error}"
+      error: 'Erreur lors de la création de l''étiquette : %{error}'
     destroy:
       deleted: Étiquette supprimée
     edit:

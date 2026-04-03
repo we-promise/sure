@@ -1,51 +1,67 @@
 ---
 fr:
   provider_sync_summary:
-    title: Résumé de la synchronisation
-    last_sync: "Dernière synchronisation : il y a %{time_ago}"
     accounts:
+      institutions: 'Institutions : %{count}'
+      linked: 'Liés : %{count}'
       title: Comptes
-      total: "Total : %{count}"
-      linked: "Liés : %{count}"
-      unlinked: "Non liés : %{count}"
-      institutions: "Institutions : %{count}"
-    transactions:
-      title: Transactions
-      seen: "Vues : %{count}"
-      imported: "Importées : %{count}"
-      updated: "Mises à jour : %{count}"
-      skipped: "Ignorées : %{count}"
-    holdings:
-      title: Avoirs
-      found: "Trouvés : %{count}"
-      processed: "Traités : %{count}"
+      total: 'Total : %{count}'
+      unlinked: 'Non liés : %{count}'
     health:
-      title: Santé
-      rate_limited: "Limité %{time_ago}"
-      recently: récemment
-      errors: "Erreurs : %{count}"
-      pending_reconciled:
-        one: "%{count} transaction en attente dupliquée réconciliée"
-        other: "%{count} transactions en attente dupliquées réconciliées"
-      view_reconciled: Voir les transactions réconciliées
+      data_warnings: 'Avertissements de données : %{count}'
       duplicate_suggestions:
         one: "%{count} doublon possible nécessite une vérification"
         other: "%{count} doublons possibles nécessitent une vérification"
-      view_duplicate_suggestions: Voir les doublons suggérés
+      errors: 'Erreurs : %{count}'
+      notices: 'Notifications : %{count}'
+      pending_reconciled:
+        one: "%{count} transaction en attente dupliquée réconciliée"
+        other: "%{count} transactions en attente dupliquées réconciliées"
+      rate_limited: Limité il y a %{time_ago}
+      recently: récemment
       stale_pending:
         one: "%{count} transaction en attente obsolète (exclue des budgets)"
         other: "%{count} transactions en attente obsolètes (exclues des budgets)"
-      view_stale_pending: Voir les comptes affectés
       stale_pending_count:
         one: "%{count} transaction"
         other: "%{count} transactions"
       stale_unmatched:
         one: "%{count} transaction en attente nécessite une vérification manuelle"
         other: "%{count} transactions en attente nécessitent une vérification manuelle"
-      view_stale_unmatched: Voir les transactions à vérifier
       stale_unmatched_count:
         one: "%{count} transaction"
         other: "%{count} transactions"
-      data_warnings: "Avertissements de données : %{count}"
-      notices: "Notifications : %{count}"
+      title: Santé
       view_data_quality: Voir les détails de qualité des données
+      view_duplicate_suggestions: Voir les doublons suggérés
+      view_error_details: Afficher les détails de l'erreur
+      view_reconciled: Voir les transactions réconciliées
+      view_stale_pending: Voir les comptes affectés
+      view_stale_unmatched: Voir les transactions à vérifier
+    holdings:
+      found: 'Trouvés : %{count}'
+      processed: 'Traités : %{count}'
+      title: Avoirs
+    last_sync: 'Dernière synchronisation : il y a %{time_ago}'
+    skip_reasons:
+      excluded: Exclu
+      import_locked: Import CSV
+      protected: Protégé
+      user_modified: Modifié par l'utilisateur
+    title: Résumé de la synchronisation
+    trades:
+      fetching: Récupération des activités de courtage...
+      imported: 'Importé : %{count}'
+      skipped: 'Ignoré : %{count}'
+      title: Transactions de titres
+    transactions:
+      fetching: Récupération auprès du courtier...
+      imported: 'Importées : %{count}'
+      protected:
+        one: "%{count} entrée protégée (non écrasée)"
+        other: "%{count} entrées protégées (non écrasées)"
+      seen: 'Vues : %{count}'
+      skipped: 'Ignorées : %{count}'
+      title: Transactions
+      updated: 'Mises à jour : %{count}'
+      view_protected: Voir les entrées protégées

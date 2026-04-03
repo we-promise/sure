@@ -1,0 +1,19 @@
+---
+fr:
+  budgets:
+    name:
+      custom_range: "%{start} - %{end_date}"
+      month_year: "%{month}"
+    show:
+      tabs:
+        actual: Réel
+        budgeted: Budgétisé
+    copy_previous_prompt:
+      title: "Configurez votre budget"
+      description: "Vous pouvez copier votre budget de %{source_name} ou commencer de zéro."
+      copy_button: "Copier de %{source_name}"
+      fresh_button: "Commencer de zéro"
+    copy_previous:
+      success: "Budget copié de %{source_name}"
+      no_source: "Aucun budget précédent trouvé pour la copie"
+      already_initialized: "Ce budget a déjà été configuré"

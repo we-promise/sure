@@ -2,88 +2,156 @@
 fr:
   settings:
     hostings:
-      invite_code_settings:
-        description: Contrôlez comment les nouvelles personnes s'inscrivent à votre instance de %{product}.
-        email_confirmation_description: Lorsque cette option est activée, les utilisateurs doivent confirmer leur adresse e-mail lors du changement.
-        email_confirmation_title: Exiger la confirmation de l'e-mail
-        generate_tokens: Générer un nouveau code
-        generated_tokens: Codes générés
-        title: Inscription
-        states:
-          open: Ouvert
-          closed: Fermé
-          invite_only: Sur invitation uniquement
-      show:
-        general: Paramètres généraux
-        financial_data_providers: Fournisseurs de données financières
-        sync_settings: Paramètres de synchronisation
-        invites: Codes d'invitation
-        title: Auto-hébergement
-        danger_zone: Zone dangereuse
-        clear_cache: Effacer le cache de données
-        clear_cache_warning: L'effacement du cache de données supprimera tous les taux de change, les cours des titres, les soldes des comptes et d'autres données. Cela ne supprimera pas les comptes, les transactions, les catégories ou d'autres données possédées par les utilisateurs.
-        confirm_clear_cache:
-          title: Effacer le cache de données ?
-          body: Êtes-vous sûr(e) de vouloir effacer le cache de données ? Cela supprimera tous les taux de change, les cours des titres, les soldes des comptes et d'autres données. Cette action ne peut pas être annulée.
-      provider_selection:
-        title: Sélection du fournisseur
-        description: Choisissez le service à utiliser pour récupérer les taux de change et les cours des titres. Yahoo Finance est gratuit et ne nécessite pas de clé API. Twelve Data nécessite une clé API gratuite mais peut offrir une meilleure couverture des données.
-        exchange_rate_provider_label: Fournisseur de taux de change
-        securities_provider_label: Fournisseur de titres (cours boursiers)
-        env_configured_message: La sélection du fournisseur est désactivée car des variables d'environnement (EXCHANGE_RATE_PROVIDER ou SECURITIES_PROVIDER) sont définies. Pour activer la sélection ici, supprimez ces variables d'environnement de votre configuration.
-        providers:
-          twelve_data: Twelve Data
-          yahoo_finance: Yahoo Finance
+      assistant_settings:
+        agent_id_help: Oriente vers un agent spécifique lorsque le fournisseur en héberge plusieurs. Laissez vide pour la valeur par défaut.
+        agent_id_label: ID de l'agent (Optionnel)
+        agent_id_placeholder: main (par défaut)
+        confirm_disconnect:
+          body: Cela supprimera l'URL, le jeton et l'ID de l'agent enregistrés, et basculera vers l'assistant intégré. Vous pourrez vous reconnecter plus tard en saisissant de nouveaux identifiants.
+          title: Déconnecter l'assistant externe ?
+        description: Choisissez comment l'assistant de chat répond. Intégré utilise directement votre fournisseur de LLM configuré. Externe délègue à un agent IA distant qui peut rappeler les outils financiers de %{product_name} via MCP.
+        disconnect_button: Déconnecter
+        disconnect_description: Supprime la connexion à l'assistant externe et revient à l'assistant intégré.
+        disconnect_title: Connexion externe
+        env_configured_external: Configuré avec succès via les variables d'environnement.
+        env_notice: Le type d'assistant est verrouillé sur '%{type}' via la variable d'environnement ASSISTANT_TYPE.
+        external_configured: Configuré
+        external_not_configured: Non configuré. Entrez l'URL et le jeton ci-dessous, ou définissez les variables d'environnement EXTERNAL_ASSISTANT_URL et EXTERNAL_ASSISTANT_TOKEN.
+        external_status: Point de terminaison de l'assistant externe
+        title: Assistant IA
+        token_help: Le jeton d'authentification fourni par votre agent externe. Il est envoyé comme jeton Bearer à chaque requête.
+        token_label: Jeton d'API
+        token_placeholder: Entrez le jeton de votre fournisseur d'agent
+        type_builtin: Intégré (LLM direct)
+        type_external: Externe (agent distant)
+        type_label: Type d'assistant
+        url_help: L'URL complète du point de terminaison de l'API de votre agent. Votre fournisseur d'agent vous la donnera.
+        url_label: URL du point de terminaison
+        url_placeholder: https://votre-hote-agent/v1/chat
       brand_fetch_settings:
         description: Saisissez l'ID client fourni par Brand Fetch
+        high_res_description: Lorsqu'elle est activée, les logos seront récupérés en résolution 120x120 au lieu de 40x40. Cela permet d'obtenir des images plus nettes sur les écrans haute densité.
+        high_res_label: Activer les logos haute résolution
         label: ID client
         placeholder: Entrez votre ID client ici
         title: Brand Fetch
+      clear_cache:
+        cache_cleared: Le cache de données a été effacé. Cela peut prendre quelques
+          instants.
+      disconnect_external_assistant:
+        external_assistant_disconnected: Assistant externe déconnecté
+      invite_code_settings:
+        default_family_description: Place les nouveaux utilisateurs dans cette famille/groupe uniquement s'ils n'ont pas d'invitation.
+        default_family_none: Aucune (créer une nouvelle famille)
+        default_family_title: Famille par défaut pour les nouveaux utilisateurs
+        description: Contrôlez comment les nouvelles personnes s'inscrivent à votre
+          instance de %{product}.
+        email_confirmation_description: Lorsque cette option est activée, les utilisateurs
+          doivent confirmer leur adresse e-mail lors du changement.
+        email_confirmation_title: Exiger la confirmation de l'e-mail
+        generate_tokens: Générer un nouveau code
+        generated_tokens: Codes générés
+        states:
+          closed: Fermé
+          invite_only: Sur invitation uniquement
+          open: Ouvert
+        title: Inscription
+      not_authorized: Vous n'êtes pas autorisé(e) à effectuer cette action
       openai_settings:
-        description: Saisissez le jeton d'accès et configurez éventuellement un fournisseur compatible OpenAI personnalisé
-        env_configured_message: Configuré avec succès via les variables d'environnement.
         access_token_label: Jeton d'accès
         access_token_placeholder: Entrez votre jeton d'accès ici
-        uri_base_label: URL de base de l'API (Optionnel)
-        uri_base_placeholder: "https://api.openai.com/v1 (par défaut)"
-        model_label: Modèle (Optionnel)
-        model_placeholder: "gpt-4.1 (par défaut)"
-        json_mode_label: Mode JSON
+        description: Saisissez le jeton d'accès et configurez éventuellement un fournisseur
+          compatible OpenAI personnalisé
+        env_configured_message: Configuré avec succès via les variables d'environnement.
         json_mode_auto: Auto (recommandé)
-        json_mode_strict: Strict (meilleur pour les modèles de raisonnement)
-        json_mode_none: Aucun (meilleur pour les modèles standard)
+        json_mode_help: Le mode strict fonctionne mieux avec les modèles de raisonnement
+          (qwen-thinking, deepseek-reasoner). Le mode aucun fonctionne mieux avec
+          les modèles standard (llama, mistral, gpt-oss).
         json_mode_json_object: Objet JSON
-        json_mode_help: "Le mode strict fonctionne mieux avec les modèles de raisonnement (qwen-thinking, deepseek-reasoner). Le mode aucun fonctionne mieux avec les modèles standard (llama, mistral, gpt-oss)."
+        json_mode_label: Mode JSON
+        json_mode_none: Aucun (meilleur pour les modèles standard)
+        json_mode_strict: Strict (meilleur pour les modèles de raisonnement)
+        model_label: Modèle (Optionnel)
+        model_placeholder: gpt-4.1 (par défaut)
         title: OpenAI
-      yahoo_finance_settings:
-        title: Yahoo Finance
-        description: Yahoo Finance fournit un accès gratuit aux cours boursiers, taux de change et données financières sans nécessiter de clé API.
-        status_active: Yahoo Finance est actif et fonctionne
-        status_inactive: La connexion à Yahoo Finance a échoué
-        connection_failed: Impossible de se connecter à Yahoo Finance
-        troubleshooting: Vérifiez votre connexion Internet et les paramètres de votre pare-feu. Yahoo Finance peut être temporairement indisponible.
+        uri_base_label: URL de base de l'API (Optionnel)
+        uri_base_placeholder: https://api.openai.com/v1 (par défaut)
+      provider_selection:
+        description: Choisissez le service à utiliser pour récupérer les taux de change
+          et les cours des titres. Yahoo Finance est gratuit et ne nécessite pas de
+          clé API. Twelve Data nécessite une clé API gratuite mais peut offrir une
+          meilleure couverture des données.
+        env_configured_message: La sélection du fournisseur est désactivée car des
+          variables d'environnement (EXCHANGE_RATE_PROVIDER ou SECURITIES_PROVIDER)
+          sont définies. Pour activer la sélection ici, supprimez ces variables d'environnement
+          de votre configuration.
+        exchange_rate_provider_label: Fournisseur de taux de change
+        providers:
+          twelve_data: Twelve Data
+          yahoo_finance: Yahoo Finance
+        securities_provider_label: Fournisseur de titres (cours boursiers)
+        title: Sélection du fournisseur
+      show:
+        ai_assistant: Assistant IA
+        clear_cache: Effacer le cache de données
+        clear_cache_warning: L'effacement du cache de données supprimera tous les
+          taux de change, les cours des titres, les soldes des comptes et d'autres
+          données. Cela ne supprimera pas les comptes, les transactions, les catégories
+          ou d'autres données possédées par les utilisateurs.
+        confirm_clear_cache:
+          body: Êtes-vous sûr(e) de vouloir effacer le cache de données ? Cela supprimera
+            tous les taux de change, les cours des titres, les soldes des comptes
+            et d'autres données. Cette action ne peut pas être annulée.
+          title: Effacer le cache de données ?
+        danger_zone: Zone dangereuse
+        financial_data_providers: Fournisseurs de données financières
+        general: Paramètres généraux
+        invites: Codes d'invitation
+        sync_settings: Paramètres de synchronisation
+        title: Auto-hébergement
+      sync_settings:
+        auto_sync_description: Lorsque cette option est activée, tous les comptes
+          seront automatiquement synchronisés quotidiennement à l'heure spécifiée.
+        auto_sync_label: Activer la synchronisation automatique
+        auto_sync_time_description: Spécifiez l'heure à laquelle la synchronisation
+          automatique doit se produire.
+        auto_sync_time_label: Heure de synchronisation (HH:MM)
+        env_configured_message: Ce paramètre est désactivé car une variable d'environnement
+          du fournisseur (SIMPLEFIN_INCLUDE_PENDING ou PLAID_INCLUDE_PENDING) est
+          définie. Supprimez-la pour activer ce paramètre.
+        include_pending_description: Lorsque cette option est activée, les transactions
+          en attente (non confirmées) seront importées et automatiquement réconciliées
+          lors de leur validation. Désactivez si votre banque fournit des données
+          de transactions en attente peu fiables.
+        include_pending_label: Inclure les transactions en attente
       twelve_data_settings:
         api_calls_used: "%{used} / %{limit} appels API quotidiens utilisés (%{percentage})"
         description: Saisissez la clé API fournie par Twelve Data
-        env_configured_message: Configurée avec succès via la variable d'environnement TWELVE_DATA_API_KEY.
+        env_configured_message: Configurée avec succès via la variable d'environnement
+          TWELVE_DATA_API_KEY.
         label: Clé API
         placeholder: Entrez votre clé API ici
-        plan: "Plan %{plan}"
+        plan: Plan %{plan}
+        plan_upgrade_warning_description: Les symboles suivants dans votre portefeuille ne peuvent pas synchroniser leurs prix avec votre plan Twelve Data actuel.
+        plan_upgrade_warning_title: Certains symboles nécessitent un plan payant
+        requires_plan: nécessite le plan %{plan}
         title: Twelve Data
+        view_pricing: Voir les tarifs de Twelve Data
       update:
         failure: Valeur de paramètre invalide
-        success: Paramètres mis à jour
         invalid_onboarding_state: État d'inscription invalide
-        invalid_sync_time: Format d'heure de synchronisation invalide. Veuillez utiliser le format HH:MM (ex. 02:30).
-        scheduler_sync_failed: Paramètres enregistrés, mais la mise à jour du planning de synchronisation a échoué. Veuillez réessayer ou vérifier les journaux du serveur.
-      clear_cache:
-        cache_cleared: Le cache de données a été effacé. Cela peut prendre quelques instants.
-      not_authorized: Vous n'êtes pas autorisé(e) à effectuer cette action
-      sync_settings:
-        auto_sync_label: Activer la synchronisation automatique
-        auto_sync_description: Lorsque cette option est activée, tous les comptes seront automatiquement synchronisés quotidiennement à l'heure spécifiée.
-        auto_sync_time_label: Heure de synchronisation (HH:MM)
-        auto_sync_time_description: Spécifiez l'heure à laquelle la synchronisation automatique doit se produire.
-        include_pending_label: Inclure les transactions en attente
-        include_pending_description: Lorsque cette option est activée, les transactions en attente (non confirmées) seront importées et automatiquement réconciliées lors de leur validation. Désactivez si votre banque fournit des données de transactions en attente peu fiables.
-        env_configured_message: Ce paramètre est désactivé car une variable d'environnement du fournisseur (SIMPLEFIN_INCLUDE_PENDING ou PLAID_INCLUDE_PENDING) est définie. Supprimez-la pour activer ce paramètre.
+        invalid_sync_time: Format d'heure de synchronisation invalide. Veuillez utiliser
+          le format HH:MM (ex. 02:30).
+        scheduler_sync_failed: Paramètres enregistrés, mais la mise à jour du planning
+          de synchronisation a échoué. Veuillez réessayer ou vérifier les journaux
+          du serveur.
+        success: Paramètres mis à jour
+      yahoo_finance_settings:
+        connection_failed: Impossible de se connecter à Yahoo Finance
+        description: Yahoo Finance fournit un accès gratuit aux cours boursiers, taux
+          de change et données financières sans nécessiter de clé API.
+        status_active: Yahoo Finance est actif et fonctionne
+        status_inactive: La connexion à Yahoo Finance a échoué
+        title: Yahoo Finance
+        troubleshooting: Vérifiez votre connexion Internet et les paramètres de votre
+          pare-feu. Yahoo Finance peut être temporairement indisponible.

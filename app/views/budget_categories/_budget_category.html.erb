@@ -91,6 +91,7 @@
         <div class="py-2">
           <p class="text-xs text-subdued break-words">
             <%= t("reports.budget_performance.suggested_daily",
+                  count: daily_info[:days_remaining],
                   amount: daily_info[:amount].format,
                   days: daily_info[:days_remaining]) %>
           </p>

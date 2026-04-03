@@ -12,6 +12,7 @@ fr:
     models:
       account: Compte
       account/credit: Carte de Crédit
+      account/crypto: Cryptomonnaie
       account/depository: Compte Bancaire
       account/investment: Investissement
       account/loan: Prêt
@@ -19,4 +20,3 @@ fr:
       account/other_liability: Autre Passif
       account/property: Immobilier
       account/vehicle: Véhicule
-      account/crypto: Cryptomonnaie

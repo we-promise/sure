@@ -16,15 +16,17 @@ fr:
     new:
       invitation_message: "%{inviter} vous a invité à rejoindre en tant que %{role}"
       join_family_title: Rejoindre %{family}
+      password_placeholder: Entrez votre mot de passe
+      password_requirements:
+        case: Majuscules et minuscules
+        length: Minimum 8 caractères
+        number: Un chiffre (0-9)
+        special: 'Un caractère spécial (!, @, #, $, %, etc)'
       role_admin: administrateur
+      role_guest: invité
       role_member: membre
       submit: Créer un compte
       title: Créez votre compte
-      welcome_body: Pour commencer, vous devez créer un nouveau compte. Vous pourrez ensuite configurer des paramètres supplémentaires à l'intérieur de l'application.
+      welcome_body: Pour commencer, vous devez créer un nouveau compte. Vous pourrez
+        ensuite configurer des paramètres supplémentaires à l'intérieur de l'application.
       welcome_title: Bienvenue sur %{product_name} !
-      password_placeholder: Entrez votre mot de passe
-      password_requirements:
-        length: Minimum 8 caractères
-        case: Majuscules et minuscules
-        number: Un chiffre (0-9)
-        special: "Un caractère spécial (!, @, #, $, %, etc)"

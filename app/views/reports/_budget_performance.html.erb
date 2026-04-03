@@ -97,6 +97,7 @@
               <div class="mt-3 pt-3 border-t border-tertiary">
                 <p class="text-xs text-subdued">
                   <%= t("reports.budget_performance.suggested_daily",
+                        count: days_remaining,
                         amount: Money.new((budget_item[:remaining] / days_remaining), Current.family.currency).format,
                         days: days_remaining) %>
                 </p>

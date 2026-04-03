@@ -1,63 +1,87 @@
 ---
 fr:
   coinstats_items:
-    create:
-      success: Connexion au fournisseur CoinStats configurée avec succès.
-      default_name: Connexion CoinStats
-      errors:
-        validation_failed: "Validation échouée : %{message}."
-    update:
-      success: Connexion au fournisseur CoinStats mise à jour avec succès.
-      errors:
-        validation_failed: "Validation échouée : %{message}."
-    destroy:
-      success: Connexion au fournisseur CoinStats planifiée pour suppression.
-    link_wallet:
-      success: "%{count} portefeuille(s) crypto lié(s) avec succès."
-      missing_params: "Paramètres requis manquants : adresse et blockchain."
-      failed: Échec de la liaison du portefeuille crypto.
-      error: "Échec de la liaison du portefeuille crypto : %{message}."
-    new:
-      title: Lier un portefeuille crypto avec CoinStats
-      blockchain_fetch_error: Échec du chargement des blockchains. Veuillez réessayer plus tard.
-      address_label: Adresse
-      address_placeholder: Requis
-      blockchain_label: Blockchain
-      blockchain_placeholder: Requis
-      blockchain_select_blank: Sélectionnez une blockchain
-      link: Lier le portefeuille crypto
-      not_configured_title: Connexion au fournisseur CoinStats non configurée
-      not_configured_message: Pour lier un portefeuille crypto, vous devez d'abord configurer la connexion au fournisseur CoinStats.
-      not_configured_step1_html: Allez dans <strong>Paramètres → Fournisseurs</strong>
-      not_configured_step2_html: Localisez le fournisseur <strong>CoinStats</strong>
-      not_configured_step3_html: Suivez les <strong>instructions de configuration</strong> fournies pour terminer la configuration du fournisseur
-      go_to_settings: Aller aux paramètres du fournisseur
-      setup_instructions: "Instructions de configuration :"
-      step1_html: Visitez le <a href="https://openapi.coinstats.app/" class="link" target="_blank" rel="noopener noreferrer">tableau de bord de l'API publique CoinStats</a> pour obtenir une clé API.
-      step2: Entrez votre clé API ci-dessous et cliquez sur Configurer.
-      step3_html: Après une connexion réussie, visitez l'onglet <a href="%{accounts_url}" class="link" data-turbo-frame="_top">Comptes</a> pour configurer les portefeuilles crypto.
-      api_key_label: Clé API
-      api_key_placeholder: Requis
-      configure: Configurer
-      update_configuration: Reconfigurer
-      default_name: Connexion CoinStats
-      status_configured_html: Prêt à utiliser
-      status_not_configured: Non configuré
     coinstats_item:
+      delete: Supprimer
       deletion_in_progress: Les données du portefeuille crypto sont en cours de suppression…
+      no_wallets_message: Aucun portefeuille crypto n'est actuellement connecté à
+        CoinStats.
+      no_wallets_title: Aucun portefeuille crypto connecté
       provider_name: CoinStats
-      syncing: Synchronisation…
-      sync_status:
-        no_accounts: Aucun portefeuille crypto trouvé
-        all_synced:
-          one: "%{count} portefeuille crypto synchronisé"
-          other: "%{count} portefeuilles crypto synchronisés"
-        partial_sync: "%{linked_count} portefeuilles crypto synchronisés, %{unlinked_count} nécessitent une configuration"
       reconnect: Reconnecter
       status: Dernière synchronisation il y a %{timestamp}
       status_never: Jamais synchronisé
-      status_with_summary: "Dernière synchronisation il y a %{timestamp} • %{summary}"
+      status_with_summary: Dernière synchronisation il y a %{timestamp} • %{summary}
+      sync_status:
+        all_synced:
+          one: "%{count} portefeuille crypto synchronisé"
+          other: "%{count} portefeuilles crypto synchronisés"
+        no_accounts: Aucun portefeuille crypto trouvé
+        partial_sync: "%{linked_count} portefeuilles crypto synchronisés, %{unlinked_count}
+          nécessitent une configuration"
+      syncing: Synchronisation…
       update_api_key: Mettre à jour la clé API
-      delete: Supprimer
-      no_wallets_title: Aucun portefeuille crypto connecté
-      no_wallets_message: Aucun portefeuille crypto n'est actuellement connecté à CoinStats.
+    create:
+      default_name: Connexion CoinStats
+      errors:
+        validation_failed: 'Validation échouée : %{message}.'
+      success: Connexion au fournisseur CoinStats configurée avec succès.
+    destroy:
+      success: Connexion au fournisseur CoinStats planifiée pour suppression.
+    link_exchange:
+      error: "Échec de la liaison de la plateforme : %{message}."
+      failed: "Échec de la liaison de la plateforme."
+      invalid_exchange: "La plateforme sélectionnée n'est plus supportée."
+      missing_params: "La plateforme et les identifiants sont requis."
+      success: "Plateforme %{name} liée."
+    link_wallet:
+      error: 'Échec de la liaison du portefeuille crypto : %{message}.'
+      failed: Échec de la liaison du portefeuille crypto.
+      missing_params: 'Paramètres requis manquants : adresse et blockchain.'
+      success: "%{count} portefeuille(s) crypto lié(s) avec succès."
+    new:
+      address_label: Adresse
+      address_placeholder: Requis
+      api_key_label: Clé API
+      api_key_placeholder: Requis
+      blockchain_fetch_error: Échec du chargement des blockchains. Veuillez réessayer
+        plus tard.
+      blockchain_label: Blockchain
+      blockchain_placeholder: Requis
+      blockchain_select_blank: Sélectionnez une blockchain
+      configure: Configurer
+      default_name: Connexion CoinStats
+      exchange_label: "Plateforme"
+      exchange_select_blank: "Sélectionnez une plateforme"
+      go_to_settings: Aller aux paramètres du fournisseur
+      link: Lier le portefeuille crypto
+      link_exchange_description: "Utilisez une clé API de plateforme en lecture seule pour que CoinStats puisse synchroniser les soldes et les transactions depuis Bitvavo, Binance et d'autres plateformes supportées."
+      link_exchange_note: "Si votre plateforme nécessite une activation de clé API ou une confirmation par e-mail, complétez cette étape avant de lier ici."
+      link_exchange_submit: "Lier la plateforme"
+      link_exchange_title: "Lier l'API de la plateforme"
+      link_wallet_description: "Suivez un portefeuille auto-détenu ou une adresse unique sur la blockchain via CoinStats."
+      link_wallet_submit: "Lier le portefeuille crypto"
+      link_wallet_title: "Lier l'adresse du portefeuille"
+      not_configured_message: Pour lier un portefeuille crypto, vous devez d'abord
+        configurer la connexion au fournisseur CoinStats.
+      not_configured_step1_html: Allez dans <strong>Paramètres → Fournisseurs</strong>
+      not_configured_step2_html: Localisez le fournisseur <strong>CoinStats</strong>
+      not_configured_step3_html: Suivez les <strong>instructions de configuration</strong>
+        fournies pour terminer la configuration du fournisseur
+      not_configured_title: Connexion au fournisseur CoinStats non configurée
+      setup_instructions: 'Instructions de configuration :'
+      status_configured_html: Prêt à utiliser
+      status_not_configured: Non configuré
+      step1_html: Visitez le <a href="https://openapi.coinstats.app/" class="link"
+        target="_blank" rel="noopener noreferrer">tableau de bord de l'API publique
+        CoinStats</a> pour obtenir une clé API.
+      step2: Entrez votre clé API ci-dessous et cliquez sur Configurer.
+      step3_html: Après une connexion réussie, visitez l'onglet <a href="%{accounts_url}"
+        class="link" data-turbo-frame="_top">Comptes</a> pour configurer les portefeuilles
+        crypto.
+      title: Lier un portefeuille crypto avec CoinStats
+      update_configuration: Reconfigurer
+    update:
+      errors:
+        validation_failed: 'Validation échouée : %{message}.'
+      success: Connexion au fournisseur CoinStats mise à jour avec succès.

@@ -1,8 +1,5 @@
 ---
 fr:
-  defaults:
-    brand_name: "%{brand_name}"
-    product_name: "%{product_name}"
   activerecord:
     errors:
       messages:
@@ -113,6 +110,9 @@ fr:
       month: Mois
       second: Seconde
       year: Année
+  defaults:
+    brand_name: "%{brand_name}"
+    product_name: "%{product_name}"
   errors:
     format: "%{attribute} %{message}"
     messages:
@@ -152,9 +152,13 @@ fr:
       header:
         one: 'Impossible d''enregistrer ce(tte) %{model} : %{count} erreur'
         other: 'Impossible d''enregistrer ce(tte) %{model} : %{count} erreurs'
+  global:
+    expand: Développer
   helpers:
     select:
+      default_label: Sélectionner...
       prompt: Veuillez sélectionner
+      search_placeholder: Rechercher
     submit:
       create: Créer un(e) %{model}
       submit: Enregistrer ce(tte) %{model}
@@ -162,13 +166,8 @@ fr:
   number:
     currency:
       format:
-        delimiter: " "
-        format: "%n %u"
-        precision: 2
-        separator: ","
         significant: false
         strip_insignificant_zeros: false
-        unit: "€"
     format:
       delimiter: " "
       precision: 3
@@ -222,7 +221,7 @@ fr:
   time:
     am: am
     formats:
-      default: "%d %B %Y %Hh %Mmin %Ss"
-      long: "%A %d %B %Y %Hh%M"
-      short: "%d %b %Hh%M"
+      default: "%d %B %Y %H:%M:%S"
+      long: "%A %d %B %Y %H:%M"
+      short: "%d %b %H:%M"
     pm: pm

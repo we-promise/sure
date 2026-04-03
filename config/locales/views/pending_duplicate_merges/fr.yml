@@ -1,0 +1,14 @@
+---
+fr:
+  pending_duplicate_merges:
+    new:
+      title: Fusionner avec l'opération confirmée
+      warning_title: Fusion manuelle de doublons
+      warning_description: Utilisez cette option pour fusionner manuellement une opération en attente avec sa version confirmée. Cela supprimera l'opération en attente et ne conservera que celle confirmée.
+      pending_transaction: Opération en attente
+      select_posted: Sélectionnez l'opération confirmée avec laquelle fusionner
+      showing_range: "Affichage de %{start} à %{end}"
+      previous: "← Précédents 10"
+      next: "Suivants 10 →"
+      no_candidates: Aucune opération confirmée trouvée dans ce compte.
+      submit_button: Fusionner les opérations

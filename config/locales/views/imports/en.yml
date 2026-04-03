@@ -4,7 +4,7 @@ en:
     qif_category_selections:
       show:
         title: "Select categories & tags"
-        description: "Choose which categories and tags from your QIF file to bring into Sure. Deselected items will be removed from those transactions."
+        description: "Choose which categories and tags from your QIF file to bring into %{product_name}. Deselected items will be removed from those transactions."
         categories_heading: Categories
         categories_found:
           one: "1 category found"
@@ -129,7 +129,7 @@ en:
       rule_import: "Rule import"
       pdf_import: "PDF import"
       document_import: "Document import"
-      sure_import: "Sure import"
+      sure_import: "%{product_name} import"
     steps:
       upload: Upload
       configure: Configure
@@ -139,6 +139,7 @@ en:
       select: Select
     index:
       title: Imports
+      imports: Imports
       new: New Import
     table:
       title: Imports
@@ -158,7 +159,7 @@ en:
           rule_import: "Rule"
           pdf_import: "PDF"
           document_import: "Document"
-          sure_import: "Sure"
+          sure_import: "%{product_name}"
         status:
           in_progress: In progress
           uploading: Processing rows

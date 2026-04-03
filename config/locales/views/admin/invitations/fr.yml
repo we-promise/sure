@@ -1,0 +1,8 @@
+---
+fr:
+  admin:
+    invitations:
+      destroy:
+        success: "Invitation supprimée."
+      destroy_all:
+        success: "Toutes les invitations pour cette famille ont été supprimées."

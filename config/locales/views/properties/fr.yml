@@ -30,3 +30,11 @@ fr:
       trend: Tendance
       unknown: Inconnu
       year_built: Année de construction
+    tabs:
+      overview:
+        living_area: Surface habitable
+        market_value: Valeur du marché
+        purchase_price: Prix d'achat
+        trend: Tendance
+        unknown: Inconnu
+        year_built: Année de construction

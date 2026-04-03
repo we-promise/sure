@@ -1,60 +1,89 @@
 ---
 fr:
+  account:
+    entries:
+      destroy:
+        success: Succès
   accounts:
     account:
-      edit: Modifier
-      link_lunchflow: Lier avec Lunch Flow
-      link_provider: Lier avec un fournisseur
-      unlink_provider: Délier du fournisseur
-      troubleshoot: Dépannage
-      enable: Activer le compte
-      disable: Désactiver le compte
-      set_default: Définir par défaut
-      remove_default: Retirer par défaut
       default_label: Par défaut
       delete: Supprimer le compte
+      disable: Désactiver le compte
+      edit: Modifier
+      enable: Activer le compte
+      link_lunchflow: Lier avec Lunch Flow
+      link_provider: Lier avec un fournisseur
+      remove_default: Retirer par défaut
+      set_default: Définir par défaut
+      sharing: Partage
+      troubleshoot: Dépannage
+      unlink_provider: Délier du fournisseur
     chart:
       data_not_available: Données non disponibles pour la période sélectionnée
+    confirm_unlink:
+      confirm_button: Confirmer et délier
+      description_html: Vous êtes sur le point de délier <strong>%{account_name}</strong>
+        de <strong>%{provider_name}</strong>. Cela le convertira en compte manuel.
+      title: Délier le compte du fournisseur ?
+      warning_can_delete: Après la déliaison, vous pourrez supprimer le compte si
+        nécessaire
+      warning_manual_updates: Vous devrez ajouter des transactions et mettre à jour
+        les soldes manuellement
+      warning_no_sync: Le compte ne se synchronisera plus automatiquement avec votre
+        fournisseur
+      warning_title: Ce que cela signifie
+      warning_transactions_kept: Toutes les transactions et soldes existants seront
+        conservés
     create:
-      success: "Compte %{type} créé"
-    set_default:
-      depository_only: "Seuls les comptes de liquidités et de carte de crédit peuvent être définis par défaut."
+      success: Compte %{type} créé
     destroy:
-      success: "Le compte %{type} a été préparé à la suppression"
-      cannot_delete_linked: "Impossible de supprimer un compte lié. Veuillez d'abord le délier."
+      cannot_delete_linked: Impossible de supprimer un compte lié. Veuillez d'abord
+        le délier.
+      success: Le compte %{type} a été préparé à la suppression
     empty:
-      empty_message: Ajoutez un compte via une connexion, une importation ou en entrant manuellement.
+      empty_message: Ajoutez un compte via une connexion, une importation ou en entrant
+        manuellement.
       new_account: Nouveau compte
       no_accounts: Aucun compte pour l'instant
     form:
-      balance: Solde actuel
-      name_label: Nom du compte
-      name_placeholder: Nom de compte d'exemple
       additional_details: Détails supplémentaires
-      institution_name_label: Nom de l'institution
-      institution_name_placeholder: ex., Banque Populaire
+      balance: Solde actuel
       institution_domain_label: Domaine de l'institution
       institution_domain_placeholder: ex., banquepopulaire.fr
+      institution_name_label: Nom de l'institution
+      institution_name_placeholder: ex., Banque Populaire
+      name_label: Nom du compte
+      name_placeholder: Nom de compte d'exemple
       notes_label: Notes
-      notes_placeholder: Stockez des informations supplémentaires comme les numéros de compte, codes de tri, IBAN, numéros de routage, etc.
+      notes_placeholder: Stockez des informations supplémentaires comme les numéros
+        de compte, codes de tri, IBAN, numéros de routage, etc.
+      opening_balance_date_label: "Date du solde d'ouverture"
     index:
       accounts: Comptes
       manual_accounts:
         other_accounts: Autres comptes
       new_account: Nouveau compte
       sync: Tout synchroniser
-    sync_all:
-      syncing: "Synchronisation des comptes..."
     new:
       import_accounts: Importer des comptes
       method_selector:
         connected_entry: Lier un compte
         connected_entry_eu: Lier un compte européen
-        link_with_provider: "Lier avec %{provider}"
+        link_with_provider: Lier avec %{provider}
         lunchflow_entry: Lier un compte Lunch Flow
         manual_entry: Saisir le solde du compte
         title: Comment voulez-vous l'ajouter ?
       title: Que voulez-vous ajouter ?
+    not_authorized: Vous n'avez pas la permission de gérer ce compte
+    select_provider:
+      already_linked: Le compte est déjà lié à un fournisseur
+      description: Choisissez le fournisseur que vous souhaitez utiliser pour lier
+        %{account_name}
+      no_providers: Aucun fournisseur n'est actuellement configuré
+      title: Sélectionner un fournisseur à lier
+    set_default:
+      depository_only: Seuls les comptes de liquidités et de carte de crédit peuvent
+        être définis par défaut.
     show:
       activity:
         amount: Montant
@@ -65,8 +94,11 @@ fr:
         entry: entrée
         filter: Filtrer
         new: Nouveau
+        new_activity: Nouvelle activité
         new_balance: Nouveau solde
+        new_trade: Nouvelle opération
         new_transaction: Nouvelle transaction
+        new_transfer: Nouveau transfert
         no_entries: Aucune entrée trouvée
         pending: En attente
         search:
@@ -78,57 +110,70 @@ fr:
         owed: Montant dû
       menu:
         confirm_accept: Supprimer "%{name}"
-        confirm_body_html: "<p>En supprimant ce compte, vous effacerez son historique de valeur,
-          affectant divers aspects de votre solde global. Cette action aura un impact direct sur vos calculs de valeur nette et les graphiques des comptes.</p><br /> <p>Après la suppression, il n'y a aucun moyen de restaurer l'information du compte car vous aurez besoin d'en ajouter un nouveau.</p>"
+        confirm_body_html: "<p>En supprimant ce compte, vous effacerez son historique
+          de valeur, affectant divers aspects de votre solde global. Cette action
+          aura un impact direct sur vos calculs de valeur nette et les graphiques
+          des comptes.</p><br /> <p>Après la suppression, il n'y a aucun moyen de
+          restaurer l'information du compte car vous aurez besoin d'en ajouter un
+          nouveau.</p>"
         confirm_title: Supprimer le compte ?
         edit: Modifier
         import: Importer des transactions
+        import_trades: "Importer les opérations"
+        import_transactions: "Importer les transactions"
         manage: Gérer les comptes
-    update:
-      success: "Compte %{type} mis à jour"
     sidebar:
-      missing_data: Données historiques manquantes
-      missing_data_description: "%{product} utilise des fournisseurs tiers pour récupérer l'historique des taux de change, des cours des titres, etc. Ces données sont nécessaires au calcul précis des soldes historiques des comptes."
       configure_providers: Configurez vos fournisseurs ici.
+      missing_data: Données historiques manquantes
+      missing_data_description: "%{product} utilise des fournisseurs tiers pour récupérer
+        l'historique des taux de change, des cours des titres, etc. Ces données sont
+        nécessaires au calcul précis des soldes historiques des comptes."
+      new_account: Nouveau compte
+      new_account_group: Nouveau %{account_group}
+      new_asset: Nouvel actif
+      new_debt: Nouvelle dette
       tabs:
         all: Tout
         assets: Actifs
         debts: Dettes
-      new_asset: Nouvel actif
-      new_debt: Nouvelle dette
-      new_account: Nouveau compte
-      new_account_group: "Nouveau %{account_group}"
+    subtype_regions:
+      au: "Australie"
+      ca: "Canada"
+      eu: "Europe"
+      generic: "Général"
+      uk: "Royaume-Uni"
+      us: "États-Unis"
+    sync_all:
+      syncing: Synchronisation des comptes...
+    tax_treatment_descriptions:
+      tax_advantaged: Avantages fiscaux spéciaux sous conditions
+      tax_deferred: Cotisations déductibles, imposées lors du retrait
+      tax_exempt: Cotisations après impôts, gains non imposés
+      taxable: Gains imposés lors de la réalisation
+    tax_treatments:
+      tax_advantaged: À avantage fiscal
+      tax_deferred: À impôt différé
+      tax_exempt: Exonéré d'impôt
+      taxable: Imposable
     types:
+      credit_card: Carte de crédit
+      crypto: Crypto
       depository: Liquidités
       investment: Investissement
-      crypto: Crypto
+      loan: Prêt
+      other_asset: Autre actif
+      other_liability: Autre passif
       property: Propriété
       vehicle: Véhicule
-      other_asset: Autre actif
-      credit_card: Carte de crédit
-      loan: Prêt
-      other_liability: Autre passif
-    confirm_unlink:
-      title: Délier le compte du fournisseur ?
-      description_html: "Vous êtes sur le point de délier <strong>%{account_name}</strong> de <strong>%{provider_name}</strong>. Cela le convertira en compte manuel."
-      warning_title: Ce que cela signifie
-      warning_no_sync: Le compte ne se synchronisera plus automatiquement avec votre fournisseur
-      warning_manual_updates: Vous devrez ajouter des transactions et mettre à jour les soldes manuellement
-      warning_transactions_kept: Toutes les transactions et soldes existants seront conservés
-      warning_can_delete: Après la déliaison, vous pourrez supprimer le compte si nécessaire
-      confirm_button: Confirmer et délier
     unlink:
-      success: "Compte délié avec succès. C'est maintenant un compte manuel."
-      not_linked: "Le compte n'est pas lié à un fournisseur"
-      error: "Échec de la déliaison du compte : %{error}"
-      generic_error: "Une erreur inattendue s'est produite. Veuillez réessayer."
-    select_provider:
-      title: Sélectionner un fournisseur à lier
-      description: "Choisissez le fournisseur que vous souhaitez utiliser pour lier %{account_name}"
-      already_linked: "Le compte est déjà lié à un fournisseur"
-      no_providers: "Aucun fournisseur n'est actuellement configuré"
-
+      error: 'Échec de la déliaison du compte : %{error}'
+      generic_error: Une erreur inattendue s'est produite. Veuillez réessayer.
+      not_linked: Le compte n'est pas lié à un fournisseur
+      success: Compte délié avec succès. C'est maintenant un compte manuel.
+    update:
+      success: Compte %{type} mis à jour
   email_confirmations:
     new:
       invalid_token: Lien de confirmation invalide ou expiré.
-      success_login: Votre email a été confirmé. Veuillez vous identifier avec votre nouvelle adresse email.
+      success_login: Votre email a été confirmé. Veuillez vous identifier avec votre
+        nouvelle adresse email.

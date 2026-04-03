@@ -49,7 +49,7 @@ class PasswordResetsController < ApplicationController
     def ensure_password_resets_enabled
       return if AuthConfig.password_features_enabled?
 
-      redirect_to new_session_path, alert: t("password_resets.disabled")
+      redirect_to new_session_path, alert: t("password_resets.disabled", product_name: Rails.configuration.x.product_name)
     end
 
     def set_user_by_token

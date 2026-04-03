@@ -5,7 +5,8 @@ fr:
       authorization_failed: Échec de l'initiation de l'autorisation
       bank_required: Veuillez sélectionner une banque.
       invalid_redirect: L'URL d'autorisation reçue est invalide. Veuillez réessayer.
-      redirect_uri_not_allowed: Redirection non autorisée. Veuillez configurer `%{callback_url}` dans les paramètres de votre application Enable Banking.
+      redirect_uri_not_allowed: Redirection non autorisée. Veuillez configurer `%{callback_url}`
+        dans les paramètres de votre application Enable Banking.
       unexpected_error: Une erreur inattendue s'est produite. Veuillez réessayer.
     callback:
       authorization_error: Échec de l'autorisation
@@ -15,7 +16,8 @@ fr:
       success: Connexion réussie à votre banque. Vos comptes sont en cours de synchronisation.
       unexpected_error: Une erreur inattendue s'est produite. Veuillez réessayer.
     complete_account_setup:
-      all_skipped: Tous les comptes ont été ignorés. Vous pouvez les configurer plus tard sur la page des comptes.
+      all_skipped: Tous les comptes ont été ignorés. Vous pouvez les configurer plus
+        tard sur la page des comptes.
       no_accounts: Aucun compte disponible à configurer.
       success: "%{count} compte(s) créé(s) avec succès !"
     create:
@@ -26,13 +28,14 @@ fr:
       already_linked: Les comptes sélectionnés sont déjà liés.
       link_failed: Échec de la liaison des comptes
       no_accounts_selected: Aucun compte sélectionné.
-      no_session: Aucune connexion Enable Banking active. Veuillez d'abord vous connecter à une banque.
+      no_session: Aucune connexion Enable Banking active. Veuillez d'abord vous connecter
+        à une banque.
       success: "%{count} compte(s) lié(s) avec succès."
     link_existing_account:
-      success: Compte lié avec succès à Enable Banking
       errors:
-        only_manual: Seuls les comptes manuels peuvent être liés
         invalid_enable_banking_account: Compte Enable Banking sélectionné invalide
+        only_manual: Seuls les comptes manuels peuvent être liés
+      success: Compte lié avec succès à Enable Banking
     new:
       link_enable_banking_title: Lier Enable Banking
     reauthorize:

@@ -4,22 +4,69 @@ fr:
     changelog:
       title: Nouveautés
     dashboard:
-      welcome_back: Content de vous revoir
-      happening_with_finance: Voici ce qui se passe avec vos finances
-      new: Nouveau
+      balance_sheet:
+        add_accounts: Ajoutez vos comptes %{name} pour voir une répartition complète
+        no_items: Pas encore de %{name}
+        title: Bilan
       cashflow:
-        title: Flux de trésorerie
-        no_cashflow: Aucune donnée de flux de trésorerie pour cette période
-        add_transactions_to_display_cashflow: Ajoutez des transactions pour afficher les données de flux de trésorerie ou étendre la période
+        add_transactions_to_display_cashflow: Ajoutez des transactions pour afficher
+          les données de flux de trésorerie ou étendre la période
         new: Ajouter une transaction
+        no_cashflow: Aucune donnée de flux de trésorerie pour cette période
+        title: Flux de trésorerie
+      cashflow_sankey:
+        add_transaction: Ajouter une transaction
+        no_data_description: Ajoutez des transactions pour afficher les données de
+          flux de trésorerie ou étendre la période
+        no_data_title: Aucune donnée de flux de trésorerie pour cette période
+        title: Flux de trésorerie
+      drag_to_reorder: Faire glisser pour réorganiser la section
+      investment_summary:
+        add_investment: Ajoutez un compte d'investissement pour suivre votre portefeuille
+        contributions: Apports
+        holding: Position
+        no_investments: Pas encore de compte d'investissement
+        period_activity: Activité %{period}
+        return: Rendement
+        title: Investissements
+        total_return: Rendement total
+        trades: Opérations
+        value: Valeur
+        weight: Poids
+        withdrawals: Retraits
       net_worth_chart:
         data_not_available: Données indisponibles pour la période sélectionnée
-        title: Valeur nette
+        title: Patrimoine net
+      new: Nouveau
       no_account_empty_state:
         new_account: Nouveau compte
-        no_account_subtitle: Comme aucun compte n'a été ajouté, il n'y a pas de données à afficher. Ajoutez vos premiers comptes pour commencer à consulter les données du tableau de bord.
+        no_account_subtitle: Comme aucun compte n'a été ajouté, il n'y a pas de données
+          à afficher. Ajoutez vos premiers comptes pour commencer à consulter les
+          données du tableau de bord.
         no_account_title: Pas encore de comptes
       no_account_graph_placeholder:
-        no_account_yet: Pas encore de compte
-        add_account_to_display: Ajouter des comptes pour afficher les données de valeur nette
+        add_account_to_display: Ajouter des comptes pour afficher les données de patrimoine
+          net
         new: Ajouter un compte
+        no_account_yet: Pas encore de compte
+      no_accounts:
+        add_account: Ajouter un compte
+        description: Ajoutez des comptes pour afficher les données de patrimoine net
+        title: Aucun compte pour l'instant
+      outflows_donut:
+        categories: Catégories
+        title: Sorties
+        total_outflows: Total des sorties
+        value: Valeur
+        weight: Poids
+      subtitle: Voici ce qui se passe avec vos finances
+      toggle_section: Basculer la visibilité de la section
+      welcome: Bon retour, %{name}
+    privacy:
+      heading: Politique de confidentialité
+      placeholder: Le contenu de la politique de confidentialité s'affichera ici.
+      title: Politique de confidentialité
+    terms:
+      heading: Conditions d'utilisation
+      placeholder: Le contenu des conditions d'utilisation s'affichera ici.
+      title: Conditions d'utilisation

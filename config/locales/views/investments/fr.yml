@@ -10,8 +10,113 @@ fr:
       title: Saisir le solde du compte
     show:
       chart_title: Valeur totale
+    subtypes:
+      401k:
+        long: 401(k)
+        short: 401(k)
+      403b:
+        long: 403(b)
+        short: 403(b)
+      457b:
+        long: 457(b)
+        short: 457(b)
+      529_plan:
+        long: Plan d'épargne-études 529
+        short: Plan 529
+      angel:
+        long: Investissement providentiel
+        short: Providentiel
+      brokerage:
+        long: Courtage
+        short: Courtage
+      hsa:
+        long: Compte d'épargne santé (HSA)
+        short: HSA
+      ira:
+        long: IRA traditionnel
+        short: IRA
+      isa:
+        long: Compte d'épargne individuel (ISA)
+        short: ISA
+      lira:
+        long: Compte de retraite immobilisé (CRI)
+        short: CRI
+      lisa:
+        long: ISA viager (LISA)
+        short: LISA
+      mutual_fund:
+        long: Fonds commun de placement
+        short: FCP
+      other:
+        long: Autre investissement
+        short: Autre
+      pea:
+        long: Plan d'Épargne en Actions
+        short: PEA
+      pension:
+        long: Retraite
+        short: Retraite
+      pillar_3a:
+        long: Prévoyance liée (Pilier 3a)
+        short: Pilier 3a
+      resp:
+        long: Régime enregistré d'épargne-études (REEE)
+        short: REEE
+      retirement:
+        long: Compte de retraite
+        short: Retraite
+      riester:
+        long: Riester-Rente
+        short: Riester
+      roth_401k:
+        long: Roth 401(k)
+        short: Roth 401(k)
+      roth_ira:
+        long: Roth IRA
+        short: Roth IRA
+      rrif:
+        long: Fonds enregistré de revenus de retraite (FERR)
+        short: FERR
+      rrsp:
+        long: Régime enregistré d'épargne-retraite (REER)
+        short: REER
+      sep_ira:
+        long: SEP IRA
+        short: SEP IRA
+      simple_ira:
+        long: SIMPLE IRA
+        short: SIMPLE IRA
+      sipp:
+        long: Pension personnelle auto-gérée (SIPP)
+        short: SIPP
+      smsf:
+        long: Fonds de pension auto-géré (SMSF)
+        short: SMSF
+      super:
+        long: Superannuation
+        short: Super
+      tfsa:
+        long: Compte d'épargne libre d'impôt (CELI)
+        short: CELI
+      trust:
+        long: Fiducie
+        short: Fiducie
+      tsp:
+        long: Thrift Savings Plan (TSP)
+        short: TSP
+      ugma:
+        long: Compte de garde UGMA
+        short: UGMA
+      utma:
+        long: Compte de garde UTMA
+        short: UTMA
+      workplace_pension_uk:
+        long: Pension d'entreprise
+        short: Retraite
     value_tooltip:
       cash: Liquidités
       holdings: Titres
       total: Valeur totale du portefeuille
-      total_value_tooltip: Le solde total du portefeuille correspond à la somme des liquidités (disponibles pour la négociation) et de la valeur marchande actuelle de vos titres.
+      total_value_tooltip: Le solde total du portefeuille correspond à la somme des
+        liquidités (disponibles pour la négociation) et de la valeur marchande actuelle
+        de vos titres.

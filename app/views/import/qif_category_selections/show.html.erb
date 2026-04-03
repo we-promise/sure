@@ -7,7 +7,7 @@
 <div class="space-y-8 mx-auto max-w-2xl mb-6">
   <div class="text-center space-y-2">
     <h1 class="text-3xl text-primary font-medium"><%= t(".title") %></h1>
-    <p class="text-secondary text-sm"><%= t(".description") %></p>
+    <p class="text-secondary text-sm"><%= t(".description", product_name: product_name) %></p>
   </div>
 
   <%= form_with url: import_qif_category_selection_path(@import), method: :put, class: "space-y-8" do |form| %>

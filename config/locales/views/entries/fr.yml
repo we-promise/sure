@@ -6,9 +6,22 @@ fr:
     destroy:
       success: Entrée supprimée
     empty:
-      description: Essayez d'ajouter une entrée, de modifier les filtres ou d'affiner votre recherche
+      description: Essayez d'ajouter une entrée, de modifier les filtres ou d'affiner
+        votre recherche
       title: Aucune entrée trouvée
     loading:
       loading: Chargement des entrées...
+    protection:
+      description: Vos modifications à cette entrée ne seront pas écrasées par la
+        synchronisation du fournisseur.
+      locked_fields_label: 'Champs verrouillés :'
+      title: Protégé de la synchronisation
+      tooltip: Protégé de la synchronisation
+      unlock_button: Autoriser la mise à jour par synchronisation
+      unlock_confirm: Autoriser la synchronisation à mettre à jour cette entrée ?
+        Vos modifications pourraient être écrasées lors de la prochaine synchronisation.
+    unlock:
+      success: Entrée déverrouillée. Elle pourra être mise à jour lors de la prochaine
+        synchronisation.
     update:
       success: Entrée mise à jour

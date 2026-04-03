@@ -4,7 +4,7 @@
     <% if ENV["ASSISTANT_TYPE"].present? %>
       <p class="text-sm text-secondary"><%= t(".env_notice", type: ENV["ASSISTANT_TYPE"]) %></p>
     <% else %>
-      <p class="text-secondary text-sm mb-4"><%= t(".description") %></p>
+      <p class="text-secondary text-sm mb-4"><%= t(".description", product_name: product_name) %></p>
     <% end %>
   </div>
 

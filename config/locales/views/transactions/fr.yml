@@ -1,6 +1,83 @@
 ---
 fr:
   transactions:
+    activity_labels:
+      buy: "Achat"
+      contribution: "Apport"
+      dividend: "Dividende"
+      exchange: "Échange"
+      fee: "Frais"
+      interest: "Intérêt"
+      other: "Autre"
+      reinvestment: "Réinvestissement"
+      sell: "Vente"
+      sweep_in: "Transfert entrant"
+      sweep_out: "Transfert sortant"
+      transfer: "Transfert"
+      withdrawal: "Retrait"
+    attachments:
+      attachment_deleted: "Pièce jointe supprimée avec succès"
+      browse_to_add: "Parcourir pour ajouter des fichiers"
+      cannot_exceed: "Impossible de dépasser %{count} pièces jointes par transaction"
+      delete_failed: "Échec de la suppression de la pièce jointe. Veuillez réessayer ou contacter le support."
+      failed_delete: "Échec de la suppression de la pièce jointe : %{error}"
+      failed_upload: "Échec du téléchargement de la pièce jointe : %{error}"
+      files:
+        one: "Fichier (1)"
+        other: "Fichiers (%{count})"
+      max_reached: "Limite de fichiers atteinte (%{count}/%{max}). Supprimeez un fichier existant pour en télécharger un autre."
+      no_attachments: "Pas encore de pièce jointe"
+      no_files_selected: "Aucun fichier sélectionné pour le téléchargement"
+      select_up_to: "Sélectionnez jusqu'à %{count} fichiers (images ou PDFs, max %{size}Mo chacun) • %{used} sur %{count} utilisés"
+      upload: "Télécharger"
+      upload_failed: "Échec du téléchargement de la pièce jointe. Veuillez réessayer ou contacter le support."
+      uploaded_many: "%{count} pièces jointes téléchargées avec succès"
+      uploaded_one: "Pièce jointe téléchargée avec succès"
+    convert_to_trade:
+      account_label: "Compte :"
+      amount_label: "Montant :"
+      cancel: "Annuler"
+      conversion_note: "Converti depuis la transaction : %{original_name} (%{original_date})"
+      date_label: "Date :"
+      description: "Convertir cette transaction en une opération de titre avec des détails de sécurité"
+      errors:
+        already_converted: "Cette transaction a déjà été convertie ou exclue"
+        conversion_failed: "Échec de la conversion de la transaction : %{error}"
+        enter_qty_or_price: "Veuillez saisir soit la quantité, soit le prix par action. L'autre sera calculé à partir du montant de la transaction."
+        enter_ticker: "Veuillez saisir un symbole boursier"
+        invalid_qty_or_price: "Quantité ou prix invalide. Veuillez saisir des valeurs positives valides."
+        not_investment_account: "Seules les transactions des comptes d'investissement peuvent être converties en opérations de titres"
+        security_not_found: "Le titre sélectionné n'existe plus. Veuillez en sélectionner un autre."
+        select_security: "Veuillez sélectionner ou saisir un titre"
+        unexpected_error: "Erreur inattendue lors de la conversion : %{error}"
+      exchange_hint: "Laisser vide pour auto-détection"
+      exchange_label: "Plateforme (Optionnel)"
+      exchange_placeholder: XNAS
+      price_hint: "Prix par action (%{currency})"
+      price_label: "Prix par action"
+      price_mismatch_message: "Votre prix (%{entered_price}/action) diffère considérablement du prix de marché actuel de %{ticker} (%{market_price})."
+      price_mismatch_title: "Le prix peut ne pas correspondre"
+      price_placeholder: ex. 52.15
+      qty_or_price_hint: "Saisissez au moins la quantité OU le prix. L'autre sera calculé à partir du montant de la transaction (%{amount})."
+      quantity_hint: "Nombre d'actions échangées"
+      quantity_label: "Quantité (Actions)"
+      quantity_placeholder: ex. 20
+      security_custom: "+ Entrer un ticker personnalisé"
+      security_label: "Titre"
+      security_not_listed_hint: "Vous ne voyez pas votre titre ? Sélectionnez \"Entrer un ticker personnalisé\" en bas de la liste."
+      security_prompt: "Sélectionnez un titre..."
+      submit: "Convertir en opération"
+      success: "Transaction convertie en opération"
+      ticker_hint: "Entrez le symbole du titre (ex: AAPL, MSFT)"
+      ticker_placeholder: AAPL
+      ticker_search_hint: "Recherchez par symbole ou nom d'entreprise, ou saisissez un ticker personnalisé"
+      ticker_search_placeholder: "Rechercher un ticker..."
+      title: "Convertir en opération de titre"
+      trade_type_hint: "Acheter ou vendre des actions d'un titre"
+      trade_type_label: "Type d'opération"
+    dismiss_duplicate:
+      failure: "Impossible d'ignorer la suggestion de doublon"
+      success: "Conservé comme transactions distinctes"
     form:
       account: Compte
       account_prompt: Sélectionnez un compte
@@ -10,46 +87,69 @@ fr:
       date: Date
       description: Libellé
       description_placeholder: Libellé de la transaction
+      details: Détails
       expense: Dépense
       income: Revenu
-      none: (aucun)
+      merchant_label: "Marchand"
+      none: "(aucun)"
       note_label: Notes
       note_placeholder: Entrez une note
       submit: Ajouter la transaction
       tags_label: Étiquettes
       transfer: Transfert
-    new:
-      new_transaction: Nouvelle transaction
-    show:
-      account_label: Compte
-      amount: Montant
-      category_label: Catégorie
-      date_label: Date
-      delete: Supprimer
-      delete_subtitle: Cette action supprime définitivement la transaction, affecte vos soldes historiques et ne peut pas être annulée.
-      delete_title: Supprimer la transaction
-      details: Détails
-      merchant_label: Marchand
-      name_label: Nom
-      nature: Type
-      none: "(aucun)"
-      note_label: Notes
-      note_placeholder: Entrez une note
-      overview: Aperçu
-      settings: Paramètres
-      tags_label: Étiquettes
-      uncategorized: "(non catégorisée)"
     header:
       edit_categories: Modifier les catégories
       edit_imports: Modifier les importations
       edit_merchants: Modifier les marchands
       edit_tags: Modifier les étiquettes
       import: Importer
-    transaction:
-      linked_with_provider: Lié avec %{provider}
     index:
+      empty: Aucune transaction trouvée
+      filters:
+        account: Compte
+        amount: Montant
+        category: Catégorie
+        date: Date
+        merchant: "Marchand"
+        status: Statut
+        tag: Étiquette
+        type: Type
+      import: Importer
       transaction: transaction
       transactions: transactions
+    keep_both: "Non, garder les deux"
+    list:
+      drag_drop_subtitle: Téléchargez des transactions directement
+      drag_drop_title: Déposez un CSV pour importer
+      transaction: transaction
+      transactions: transactions
+    mark_recurring: Marquer comme récurrente
+    mark_recurring_subtitle: Suivez ceci comme une transaction récurrente. La variance du montant est automatiquement calculée à partir des 6 derniers mois de transactions similaires.
+    mark_recurring_title: Transaction récurrente
+    merge_duplicate:
+      failure: Impossible de fusionner les transactions
+      success: Transactions fusionnées avec succès
+    new:
+      new_transaction: Nouvelle transaction
+    pending_duplicate_merge:
+      confirm_title: Fusionner avec la transaction comptabilisée (%{posted_amount})
+      possible_duplicate: Doublon ?
+      possible_duplicate_short: Dup?
+      reject_title: Garder comme transactions distinctes
+      review_recommended: Vérifier
+      review_recommended_short: Rev
+    potential_duplicate_description: Cette transaction en attente peut être la même que la transaction comptabilisée ci-dessous. Si c'est le cas, fusionnez-les pour éviter un double comptage.
+    potential_duplicate_title: Doublon potentiel détecté
+    search:
+      filters:
+        account: Compte
+        amount: Montant
+        category: Catégorie
+        date: Date
+        merchant: "Marchand"
+        status: Statut
+        tag: Étiquette
+        type: Type
     searches:
       filters:
         amount_filter:
@@ -58,15 +158,22 @@ fr:
           less_than: Inférieur à
           placeholder: '0'
         badge:
+          confirmed: Confirmé
           expense: Dépense
           income: Revenu
           on_or_after: le %{date} et après
           on_or_before: le %{date} et avant
+          pending: En attente
           transfer: Transfert
+        status_filter:
+          confirmed: Confirmé
+          pending: En attente
         type_filter:
           expense: Dépense
           income: Revenu
           transfer: Transfert
+      form:
+        toggle_selection_checkboxes: Tout cocher/décocher
       menu:
         account_filter: Compte
         amount_filter: Montant
@@ -75,10 +182,80 @@ fr:
         category_filter: Catégorie
         clear_filters: Effacer les filtres
         date_filter: Date
-        merchant_filter: Marchand
+        merchant_filter: "Marchand"
+        status_filter: Statut
         tag_filter: Étiquette
         type_filter: Type
       search:
         equal_to: égal à
         greater_than: supérieur à
         less_than: inférieur à
+    selection_bar:
+      duplicate: Doublon
+      edit: Modifier
+    show:
+      account_label: Compte
+      activity_type: Type d'activité
+      activity_type_description: Type d'activité d'investissement (Achat, Vente, Dividende, etc.). Auto-détecté ou défini manuellement.
+      amount: Montant
+      attachments: Pièces jointes
+      category_label: Catégorie
+      convert_to_trade_button: Convertir en opération
+      convert_to_trade_description: Convertir cette transaction en un achat ou une vente de titre pour le suivi du portefeuille.
+      convert_to_trade_title: Convertir en opération de titre
+      date_label: Date
+      delete: Supprimer
+      delete_subtitle: Cette action supprime définitivement la transaction, affecte
+        vos soldes historiques et ne peut pas être annulée.
+      delete_title: Supprimer la transaction
+      details: Détails
+      exclude: Exclure
+      exclude_description: Les transactions exclues seront retirées des calculs budgétaires et des rapports.
+      keep_both: Garder les deux
+      loan_payment: Paiement de prêt
+      mark_recurring: Marquer comme récurrent
+      mark_recurring_subtitle: Marquer cette transaction comme récurrente pour automatiser les entrées futures.
+      mark_recurring_title: Marquer comme récurrente
+      merchant_label: Marchand
+      merge_duplicate: Fusionner le doublon
+      name_label: Nom
+      nature: Type
+      none: "(aucun)"
+      note_label: Notes
+      note_placeholder: Entrez une note
+      one_time_description: Les transactions ponctuelles seront exclues de certains calculs budgétaires et rapports.
+      one_time_title: "%{type} ponctuel"
+      overview: Aperçu
+      pending_duplicate_merger_button: Ouvrir le fusionneur
+      pending_duplicate_merger_description: Fusionner manuellement cette transaction en attente avec sa version comptabilisée.
+      pending_duplicate_merger_title: Doublon de transaction comptabilisée ?
+      potential_duplicate_description: Cette transaction pourrait être un doublon d'une autre entrée.
+      potential_duplicate_title: Doublon potentiel
+      settings: Paramètres
+      tab_transactions: Transactions
+      tab_upcoming: À venir
+      tags_label: Étiquettes
+      transfer: Transfert
+      uncategorized: "(non catégorisée)"
+    split_parent_row:
+      split_label: Ventilation
+    summary:
+      expenses: Dépenses
+      income: Revenus
+      inflow: Entrées
+      outflow: Sorties
+      total_transactions: Total des transactions
+    toggle_recurring_section: Afficher/Masquer les transactions récurrentes à venir
+    transaction:
+      activity_type_tooltip: Type d'activité d'investissement
+      linked_with_provider: Lié avec %{provider}
+      pending: En attente
+      pending_tooltip: Transaction en attente — peut changer lors de la comptabilisation
+      possible_duplicate: Doublon ?
+      potential_duplicate_tooltip: Ceci pourrait être un doublon d'une autre transaction
+      review_recommended: Vérifier
+      review_recommended_tooltip: Grande différence de montant — vérification recommandée pour voir s'il s'agit d'un doublon
+      split: Ventilé
+      split_child_tooltip: Fait partie d'une transaction ventilée
+      split_tooltip: Cette transaction a été ventilée en plusieurs entrées
+    unknown_name: Transaction inconnue

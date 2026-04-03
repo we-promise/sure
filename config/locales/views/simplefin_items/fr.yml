@@ -1,47 +1,111 @@
 ---
 fr:
   simplefin_items:
+    complete_account_setup:
+      all_skipped: Tous les comptes ont été ignorés
+      no_accounts: Aucun compte trouvé
+      stale_accounts_errors:
+        one: "Échec de l'action sur %{count} compte obsolète. Consultez les journaux pour plus de détails."
+        other: "Échec des actions sur %{count} comptes obsolètes. Consultez les journaux pour plus de détails."
+      stale_accounts_processed: 'Comptes obsolètes : %{deleted} supprimés, %{moved} déplacés.'
+      success: Les comptes SimpleFIN ont été configurés avec succès ! Vos transactions
+        et positions sont en cours d'importation en arrière-plan.
+    update:
+      errors:
+        invalid_token: Jeton de configuration invalide. Veuillez vérifier que vous
+          avez copié le jeton complet depuis SimpleFIN Bridge.
+        token_compromised: Le jeton de configuration est peut-être compromis, expiré
+          ou déjà utilisé. Veuillez en créer un nouveau.
+        unexpected: Une erreur inattendue s'est produite. Veuillez réessayer.
     create:
-      success: Connexion SimpleFIN ajoutée avec succès ! Vos comptes apparaîtront sous peu lors de la synchronisation en arrière-plan.
       errors:
         blank_token: Veuillez entrer un jeton de configuration SimpleFIN.
-        invalid_token: Jeton de configuration invalide. Veuillez vérifier que vous avez copié le jeton complet depuis SimpleFIN Bridge.
-        token_compromised: Le jeton de configuration est peut-être compromis, expiré ou déjà utilisé. Veuillez en créer un nouveau.
-        create_failed: "Échec de la connexion : %{message}"
+        create_failed: 'Échec de la création de la connexion : %{message}'
+        invalid_token: Jeton de configuration invalide. Veuillez vérifier que vous
+          avez copié le jeton complet depuis SimpleFIN Bridge.
+        token_compromised: Le jeton de configuration est peut-être compromis, expiré
+          ou déjà utilisé. Veuillez en créer un nouveau.
         unexpected: Une erreur inattendue s'est produite. Veuillez réessayer.
+      success: Connexion SimpleFIN ajoutée avec succès ! Vos comptes apparaîtront
+        sous peu lors de la synchronisation en arrière-plan.
     destroy:
       success: La connexion SimpleFIN va être supprimée
-    update:
-      success: Connexion SimpleFIN mise à jour avec succès ! Vos comptes sont en cours de reconnexion.
-      errors:
-        blank_token: Veuillez entrer un jeton de configuration SimpleFIN.
-        invalid_token: Jeton de configuration invalide. Veuillez vérifier que vous avez copié le jeton complet depuis SimpleFIN Bridge.
-        token_compromised: Le jeton de configuration est peut-être compromis, expiré ou déjà utilisé. Veuillez en créer un nouveau.
-        update_failed: "Échec de la mise à jour de la connexion : %{message}"
-        unexpected: Une erreur inattendue s'est produite. Veuillez réessayer.
     edit:
       setup_token:
-        label: "Jeton de configuration SimpleFIN :"
-        placeholder: "Collez votre jeton de configuration SimpleFIN ici..."
-        help_text: "Le jeton doit être une longue chaîne commençant par des lettres et des chiffres"
-    complete_account_setup:
-      success: Les comptes SimpleFIN ont été configurés avec succès ! Vos transactions et positions sont en cours d'importation en arrière-plan.
+        help_text: Le jeton doit être une longue chaîne commençant par des lettres
+          et des chiffres
+        label: 'Jeton de configuration SimpleFIN :'
+        placeholder: Collez votre jeton de configuration SimpleFIN ici...
+    link_existing_account:
+      errors:
+        invalid_simplefin_account: Compte SimpleFIN sélectionné invalide
+        only_manual: Seuls les comptes manuels peuvent être liés
+      success: Compte lié avec succès à SimpleFIN
+    new:
+      cancel: Annuler
+      connect: Se connecter
+      setup_token: Jeton de configuration
+      setup_token_placeholder: Collez votre jeton de configuration SimpleFIN ici
+      title: Connecter SimpleFIN
+    reconciled_status:
+      message: Dernière réconciliation il y a %{time_ago}
+    select_existing_account:
+      all_accounts_already_linked: Tous les comptes SimpleFIN semblent déjà liés.
+      cancel: Annuler
+      check_provider_health: Vérifier l'état du fournisseur
+      currently_linked_to: 'Actuellement lié à : %{account_name}'
+      description: Sélectionnez un compte SimpleFIN à lier à votre compte existant
+      link_account: Lier le compte
+      no_accounts_found: Aucun compte SimpleFIN trouvé pour ce %{moniker}.
+      title: Lier %{account_name} à SimpleFIN
+      unlink_to_move: Pour déplacer un lien, déliez-le d'abord depuis le menu des actions du compte.
+      wait_for_sync: Si vous venez de vous connecter ou de synchroniser, réessayez une fois la synchronisation terminée.
+    setup_accounts:
+      stale_accounts:
+        action_delete: Supprimer le compte et toutes les transactions
+        action_move: 'Déplacer les transactions vers :'
+        action_prompt: Que souhaitez-vous faire ?
+        action_skip: Ignorer pour l'instant
+        description: Ces comptes existent dans votre base de données mais ne sont plus fournis
+          par SimpleFIN. Cela peut arriver lorsque les configurations de compte changent en amont.
+        title: Comptes plus présents dans SimpleFIN
+        transaction_count:
+          one: "%{count} transaction"
+          other: "%{count} transactions"
     simplefin_item:
+      accounts_skipped_label: 'Ignoré : %{count}'
+      accounts_skipped_tooltip: Certains comptes ont été ignorés en raison d'erreurs lors de la synchronisation
       add_new: Ajouter une nouvelle connexion
       confirm_accept: Supprimer la connexion
-      confirm_body: Cela supprimera définitivement tous les comptes de ce groupe et toutes les données associées.
+      confirm_body: Cela supprimera définitivement tous les comptes de ce groupe et
+        toutes les données associées.
       confirm_title: Supprimer la connexion SimpleFIN ?
       delete: Supprimer
       deletion_in_progress: "(suppression en cours...)"
+      duplicate_accounts_skipped: "Doublons ignorés : %{count}"
       error: Une erreur s'est produite lors de la synchronisation des données
+      more_accounts_available: Plus de comptes disponibles
       no_accounts_description: Cette connexion n'a pas encore de comptes synchronisés.
       no_accounts_title: Aucun compte trouvé
+      rate_limited_ago: Taux limité (il y a %{time})
+      rate_limited_recently: Taux limité récemment
+      reconciled_details_note: "(voir le résumé de synchronisation pour plus de détails)"
       requires_update: Nécessite une ré-authentification
-      setup_needed: Nouveaux comptes prêts à être configurés
-      setup_description: Choisissez les types de comptes pour vos comptes SimpleFIN nouvellement importés.
+      setup_accounts_menu: Configurer les comptes
       setup_action: Configurer les nouveaux comptes
+      setup_description: Choisissez les types de comptes pour vos comptes SimpleFIN
+        nouvellement importés.
+      setup_needed: Nouveaux comptes prêts à être configurés
+      stale_pending_accounts: 'dans : %{accounts}'
+      stale_pending_note: "(exclu des budgets)"
       status: Dernière synchronisation il y a %{timestamp}
+      status_connected: Connecté
+      status_failed: Échec de la connexion
       status_never: Jamais synchronisé
-      status_with_summary: "Dernière synchronisation il y a %{timestamp} • %{summary}"
+      status_reauth_required: Ré-authentification requise
+      status_with_summary: Dernière synchronisation il y a %{timestamp} • %{summary}
       syncing: Synchronisation...
-      update: Mettre à jour la connexion
+    stale_pending_status:
+      message:
+        one: "%{count} transaction en attente de plus de %{days} jours"
+        other: "%{count} transactions en attente de plus de %{days} jours"

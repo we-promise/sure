@@ -1,0 +1,7 @@
+---
+fr:
+  settings:
+    sso_identities:
+      destroy:
+        cannot_unlink_last: Impossible de délier la dernière identité
+        success: "Identité SSO déliée avec succès"
