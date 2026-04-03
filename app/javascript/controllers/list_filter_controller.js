@@ -83,9 +83,9 @@ export default class extends Controller {
     if (this.highlightedIndex < 0 || this.highlightedIndex >= items.length) return;
 
     const item = items[this.highlightedIndex];
-    const button = item.querySelector("button[type='submit']");
-    if (button) {
-      button.click();
+    const form = item.querySelector("form");
+    if (form) {
+      form.requestSubmit();
     }
   }
 
