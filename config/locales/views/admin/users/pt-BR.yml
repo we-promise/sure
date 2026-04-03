@@ -35,7 +35,7 @@ pt-BR:
         role_descriptions_title: "Descrições de Cargos"
         roles:
           guest: "Convidado"
-          member: "Menbro"
+          member: "Membro"
           admin: "Admin"
           super_admin: "Super Admin"
         role_descriptions:
