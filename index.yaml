@@ -2,8 +2,42 @@ apiVersion: v1
 entries:
   sure:
   - apiVersion: v2
+    appVersion: v0.7.0-alpha.1
+    created: "2026-04-03T00:25:21.965496818Z"
+    dependencies:
+    - condition: cnpg.enabled
+      name: cloudnative-pg
+      repository: https://cloudnative-pg.github.io/charts
+      version: ~0.27
+    - alias: redisOperator
+      condition: redisOperator.enabled
+      name: redis-operator
+      repository: https://ot-container-kit.github.io/helm-charts
+      version: ~0.23.0
+    description: Official Helm chart for deploying the Sure Rails app (web + Sidekiq)
+      on Kubernetes with optional HA PostgreSQL (CloudNativePG) and Redis.
+    digest: 071389e56409ab0005fcd157ddb59aa56c32d88e5a0c4f175f0ff805ad2879d2
+    home: https://github.com/we-promise/sure
+    keywords:
+    - rails
+    - sidekiq
+    - personal-finance
+    - cloudnativepg
+    - redis
+    kubeVersion: '>=1.25.0-0'
+    maintainers:
+    - name: Sure maintainers
+      url: https://github.com/we-promise/sure
+    name: sure
+    sources:
+    - https://github.com/we-promise/sure
+    type: application
+    urls:
+    - https://we-promise.github.io/sure/sure-0.7.0-alpha.1.tgz
+    version: 0.7.0-alpha.1
+  - apiVersion: v2
     appVersion: v0.6.9
-    created: "2026-03-31T16:22:35.540103227Z"
+    created: "2026-04-03T00:25:21.951669427Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -37,7 +71,7 @@ entries:
     version: 0.6.9
   - apiVersion: v2
     appVersion: v0.6.9-rc.3
-    created: "2026-03-31T16:22:35.52707203Z"
+    created: "2026-04-03T00:25:21.939350737Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -71,7 +105,7 @@ entries:
     version: 0.6.9-rc.3
   - apiVersion: v2
     appVersion: v0.6.9-rc.2
-    created: "2026-03-31T16:22:35.51200367Z"
+    created: "2026-04-03T00:25:21.924765898Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -105,7 +139,7 @@ entries:
     version: 0.6.9-rc.2
   - apiVersion: v2
     appVersion: v0.6.9-rc.1
-    created: "2026-03-31T16:22:35.498310079Z"
+    created: "2026-04-03T00:25:21.906308818Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -139,7 +173,7 @@ entries:
     version: 0.6.9-rc.1
   - apiVersion: v2
     appVersion: v0.6.9-alpha.9
-    created: "2026-03-31T16:22:35.484264391Z"
+    created: "2026-04-03T00:25:21.893771544Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -173,7 +207,7 @@ entries:
     version: 0.6.9-alpha.9
   - apiVersion: v2
     appVersion: v0.6.9-alpha.8
-    created: "2026-03-31T16:22:35.470261444Z"
+    created: "2026-04-03T00:25:21.881391667Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -207,7 +241,7 @@ entries:
     version: 0.6.9-alpha.8
   - apiVersion: v2
     appVersion: v0.6.9-alpha.7
-    created: "2026-03-31T16:22:35.456933714Z"
+    created: "2026-04-03T00:25:21.868202542Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -241,7 +275,7 @@ entries:
     version: 0.6.9-alpha.7
   - apiVersion: v2
     appVersion: v0.6.9-alpha.6
-    created: "2026-03-31T16:22:35.444141447Z"
+    created: "2026-04-03T00:25:21.855105417Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -275,7 +309,7 @@ entries:
     version: 0.6.9-alpha.6
   - apiVersion: v2
     appVersion: v0.6.9-alpha.5
-    created: "2026-03-31T16:22:35.430596608Z"
+    created: "2026-04-03T00:25:21.841604752Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -309,7 +343,7 @@ entries:
     version: 0.6.9-alpha.5
   - apiVersion: v2
     appVersion: v0.6.9-alpha.4
-    created: "2026-03-31T16:22:35.415329995Z"
+    created: "2026-04-03T00:25:21.826317318Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -343,7 +377,7 @@ entries:
     version: 0.6.9-alpha.4
   - apiVersion: v2
     appVersion: v0.6.9-alpha.3
-    created: "2026-03-31T16:22:35.402969669Z"
+    created: "2026-04-03T00:25:21.812470854Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -377,7 +411,7 @@ entries:
     version: 0.6.9-alpha.3
   - apiVersion: v2
     appVersion: v0.6.9-alpha.2
-    created: "2026-03-31T16:22:35.389912528Z"
+    created: "2026-04-03T00:25:21.800384349Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -411,7 +445,7 @@ entries:
     version: 0.6.9-alpha.2
   - apiVersion: v2
     appVersion: v0.6.9-alpha.1
-    created: "2026-03-31T16:22:35.374214879Z"
+    created: "2026-04-03T00:25:21.78722884Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -445,7 +479,7 @@ entries:
     version: 0.6.9-alpha.1
   - apiVersion: v2
     appVersion: v0.6.8
-    created: "2026-03-31T16:22:35.361965884Z"
+    created: "2026-04-03T00:25:21.772498131Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -479,7 +513,7 @@ entries:
     version: 0.6.8
   - apiVersion: v2
     appVersion: v0.6.8-alpha.13
-    created: "2026-03-31T16:22:35.349413112Z"
+    created: "2026-04-03T00:25:21.760553739Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -511,4 +545,4 @@ entries:
     urls:
     - https://we-promise.github.io/sure/sure-0.6.8-alpha.13.tgz
     version: 0.6.8-alpha.13
-generated: "2026-03-31T16:22:35.336660884Z"
+generated: "2026-04-03T00:25:21.747305905Z"
