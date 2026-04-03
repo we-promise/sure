@@ -12,6 +12,7 @@ class IndexaCapitalAccount < ApplicationRecord
   has_one :linked_account, through: :account_provider, source: :account
 
   validates :name, :currency, presence: true
+  validates :indexa_capital_account_id, uniqueness: { scope: :indexa_capital_item_id, allow_nil: true }
 
   # Scopes
   scope :with_linked, -> { joins(:account_provider) }

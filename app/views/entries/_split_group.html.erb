@@ -1,0 +1,10 @@
+<%# locals: (split_group:) %>
+<div class="split-group">
+  <%= render "transactions/split_parent_row", entry: split_group.parent %>
+  <% split_group.children.each do |child_entry| %>
+    <% if child_entry.entryable.present? %>
+      <%= render partial: child_entry.entryable.to_partial_path,
+                locals: { entry: child_entry, in_split_group: true } %>
+    <% end %>
+  <% end %>
+</div>

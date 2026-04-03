@@ -5,30 +5,32 @@
     <div class="flex items-center justify-between mb-4" data-testid="activity-menu">
       <%= tag.h2 t(".title"), class: "font-medium text-lg" %>
       <% unless @account.linked? %>
-        <%= render DS::Menu.new(variant: "button") do |menu| %>
-          <% menu.with_button(text: "New", variant: "secondary", icon: "plus") %>
+        <% if @account.permission_for(Current.user).in?([ :owner, :full_control ]) %>
+          <%= render DS::Menu.new(variant: "button") do |menu| %>
+            <% menu.with_button(text: "New", variant: "secondary", icon: "plus") %>
 
-          <% menu.with_item(
-              variant: "link",
-              text: "New balance",
-              icon: "circle-dollar-sign",
-              href: new_valuation_path(account_id: @account.id),
-              data: { turbo_frame: :modal }) %>
-
-          <% if @account.supports_trades? %>
             <% menu.with_item(
                 variant: "link",
-                text: t(".new_trade"),
-                icon: "credit-card",
-                href: new_trade_path(account_id: @account.id),
+                text: "New balance",
+                icon: "circle-dollar-sign",
+                href: new_valuation_path(account_id: @account.id),
                 data: { turbo_frame: :modal }) %>
-          <% elsif !@account.crypto? %>
-            <% menu.with_item(
-                variant: "link",
-                text: t(".new_transaction"),
-                icon: "credit-card",
-                href: new_transaction_path(account_id: @account.id),
-                data: { turbo_frame: :modal }) %>
+
+            <% if @account.supports_trades? %>
+              <% menu.with_item(
+                  variant: "link",
+                  text: t(".new_trade"),
+                  icon: "credit-card",
+                  href: new_trade_path(account_id: @account.id),
+                  data: { turbo_frame: :modal }) %>
+            <% elsif !@account.crypto? %>
+              <% menu.with_item(
+                  variant: "link",
+                  text: t(".new_transaction"),
+                  icon: "credit-card",
+                  href: new_transaction_path(account_id: @account.id),
+                  data: { turbo_frame: :modal }) %>
+            <% end %>
           <% end %>
         <% end %>
       <% end %>

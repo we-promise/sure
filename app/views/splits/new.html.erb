@@ -1,0 +1,109 @@
+<%= render DS::Dialog.new(variant: "modal") do |dialog| %>
+  <% dialog.with_header do %>
+    <div class="flex items-start justify-between gap-4">
+      <div>
+        <h2 class="text-lg font-semibold text-primary"><%= @entry.name %></h2>
+        <p class="text-sm text-secondary flex items-center gap-1.5">
+          <span><%= @entry.date.strftime("%b %d, %Y") %></span>
+          <% if (category = @entry.entryable.try(:category)) %>
+            <span class="text-secondary">&middot;</span>
+            <span style="color: <%= category.color %>"><%= icon category.lucide_icon, size: "xs", color: "current" %></span>
+            <span><%= category.name %></span>
+          <% end %>
+        </p>
+      </div>
+      <div class="text-right shrink-0">
+        <p class="text-xs font-medium text-secondary uppercase tracking-wide"><%= t("splits.new.original_amount") %></p>
+        <p class="text-lg font-semibold text-primary"><%= format_money(-@entry.amount_money) %></p>
+      </div>
+    </div>
+  <% end %>
+
+  <% dialog.with_body do %>
+    <%= form_with(
+          url: transaction_split_path(@entry),
+          scope: :split,
+          class: "space-y-3",
+          data: {
+            controller: "split-transaction",
+            split_transaction_total_value: (-@entry.amount).to_f,
+            split_transaction_currency_value: @entry.currency,
+            turbo_frame: :_top
+          }
+        ) do %>
+
+      <%# Split rows %>
+      <div data-split-transaction-target="rowsContainer" class="space-y-3">
+        <div class="p-3 rounded-lg border border-secondary bg-container" data-split-transaction-target="row">
+          <div class="flex flex-wrap md:flex-nowrap items-end gap-2">
+            <div class="w-full md:flex-1 md:w-auto min-w-0">
+              <label class="text-xs font-medium text-secondary uppercase tracking-wide block mb-1"><%= t("splits.new.name_label") %></label>
+              <input type="text"
+                     name="split[splits][0][name]"
+                     placeholder="<%= t("splits.new.name_placeholder") %>"
+                     class="form-field__input border border-secondary rounded-md px-2.5 py-1.5 w-full text-sm text-primary bg-container"
+                     required
+                     autocomplete="off"
+                     value="<%= @entry.name %>"
+                     data-split-transaction-target="nameInput">
+            </div>
+            <div class="flex-1 md:flex-none md:w-28">
+              <label class="text-xs font-medium text-secondary uppercase tracking-wide block mb-1"><%= t("splits.new.amount_label") %></label>
+              <input type="number"
+                     name="split[splits][0][amount]"
+                     placeholder="0.00"
+                     step="0.01"
+                     class="form-field__input border border-secondary rounded-md px-2.5 py-1.5 w-full text-sm text-primary bg-container"
+                     required
+                     autocomplete="off"
+                     data-split-transaction-target="amountInput"
+                     data-action="input->split-transaction#updateRemaining">
+            </div>
+            <%= render "splits/category_select",
+                       name: "split[splits][0][category_id]",
+                       categories: @categories,
+                       selected_id: nil %>
+            <div class="w-8 shrink-0 hidden md:block"></div>
+          </div>
+        </div>
+      </div>
+
+      <%# Add split button %>
+      <button type="button"
+              class="flex items-center justify-center gap-1.5 w-full py-2 text-sm font-medium text-secondary hover:text-primary border border-dashed border-secondary hover:border-primary rounded-lg transition-colors"
+              data-action="click->split-transaction#addRow">
+        <%= icon "plus", size: "sm" %>
+        <%= t("splits.new.add_row") %>
+      </button>
+
+      <%# Remaining balance indicator %>
+      <div data-split-transaction-target="remainingContainer" class="p-3 rounded-lg border border-destructive bg-red-tint-10 text-sm">
+        <div class="flex items-center justify-between">
+          <span class="text-secondary font-medium"><%= t("splits.new.remaining") %></span>
+          <span data-split-transaction-target="remaining" class="font-semibold text-destructive">
+            <%= (-@entry.amount).to_f %>
+          </span>
+        </div>
+        <p data-split-transaction-target="error" class="text-destructive text-xs mt-1.5">
+          <%= t("splits.new.amounts_must_match") %>
+        </p>
+      </div>
+
+      <%# Actions %>
+      <div class="flex justify-end gap-3 pt-4 border-t border-primary">
+        <%= render DS::Button.new(
+          text: t("splits.new.cancel"),
+          variant: "outline",
+          type: "button",
+          data: { action: "click->DS--dialog#close" }
+        ) %>
+        <%= render DS::Button.new(
+          text: t("splits.new.submit"),
+          variant: "primary",
+          type: "submit",
+          data: { split_transaction_target: "submitButton" }
+        ) %>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>
