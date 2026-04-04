@@ -17,7 +17,7 @@
                   method: :tag_ids,
                   tags: Current.family.tags.alphabetically,
                   selected_ids: [],
-                  label: "Tags"
+                  label: t(".tags_label")
                 ) %>
             <%= form.text_area :notes, label: "Notes", placeholder: "Enter a note that will be applied to selected transactions", rows: 5 %>
           </div>

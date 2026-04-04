@@ -7,6 +7,9 @@
     <% end %>
 
     <div class="pt-2" data-controller="tag-picker">
+      <%# Ensure the key is always submitted even when all checkboxes are unchecked %>
+      <%= form.hidden_field method, multiple: true, value: "" %>
+
       <%# Hidden checkboxes — one per tag, drive form submission and trigger refresh %>
       <% tags.each do |tag| %>
         <%= form.check_box method,
@@ -63,7 +66,8 @@
               <% color = tag_color(tag) %>
               <% is_disabled = disabled || selected?(tag) %>
               <button type="button"
-                      class="inline-flex rounded-md transition-opacity duration-150 hover:opacity-80 <%= "opacity-30 cursor-not-allowed" if is_disabled %>"
+                      class="inline-flex rounded-md transition-opacity duration-150 hover:opacity-80 <%= "cursor-not-allowed" if is_disabled %>"
+                      style="<%= "opacity: 0.3" if is_disabled %>"
                       data-tag-picker-target="option"
                       data-tag-id="<%= tag.id %>"
                       data-tag-name="<%= tag.name %>"
@@ -77,7 +81,7 @@
               </button>
             <% end %>
             <p class="hidden text-sm text-secondary px-2 py-1" data-tag-picker-target="emptyMessage">
-              <%= t("helpers.select.no_results", default: "No tags found") %>
+              <%= t("helpers.select.no_results") %>
             </p>
           </div>
         </div>

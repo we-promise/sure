@@ -9,6 +9,8 @@ export default class extends Controller {
     this.refresh();
   }
 
+  // The toggle event fires after the open attribute has changed, so
+  // dropdownTarget.open === true means the dropdown just opened.
   handleDropdownToggle() {
     if (this.dropdownTarget?.open && this.hasSearchTarget) {
       this.searchTarget.focus();
@@ -66,10 +68,10 @@ export default class extends Controller {
         const isDisabled = selected || input.disabled;
         option.disabled = isDisabled;
 
-        // Keep visual state deterministic even if disabled: variants are not applied.
-        option.classList.toggle("opacity-30", isDisabled);
+        // Use inline style for opacity so it reliably overrides the static hover:opacity-80 class.
+        // Toggling hover:* classes in JS won't work in production — Tailwind JIT only scans templates.
+        option.style.opacity = isDisabled ? "0.3" : "";
         option.classList.toggle("cursor-not-allowed", isDisabled);
-        option.classList.toggle("hover:opacity-80", !isDisabled);
       }
     });
 
