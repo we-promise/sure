@@ -1,34 +1,27 @@
 require "test_helper"
+require "securerandom"
 
 class PolishPluralizationTest < ActiveSupport::TestCase
   test "uses rails i18n plural rules for polish" do
-    translations = I18n.backend.send(:translations)
-    previous = translations.dig(:pl, :test_pluralization)&.deep_dup
+    translation_key = "test_pluralization_#{SecureRandom.hex(6)}"
 
-    begin
-      I18n.backend.store_translations(:pl, test_pluralization: {
-        sample: {
-          one: "one",
-          few: "few",
-          many: "many",
-          other: "other"
-        }
-      })
+    I18n.backend.store_translations(:pl, translation_key => {
+      sample: {
+        one: "one",
+        few: "few",
+        many: "many",
+        other: "other"
+      }
+    })
 
-      assert_equal "many", I18n.t("test_pluralization.sample", locale: :pl, count: 0)
-      assert_equal "one", I18n.t("test_pluralization.sample", locale: :pl, count: 1)
-      assert_equal "few", I18n.t("test_pluralization.sample", locale: :pl, count: 2)
-      assert_equal "many", I18n.t("test_pluralization.sample", locale: :pl, count: 5)
-      assert_equal "many", I18n.t("test_pluralization.sample", locale: :pl, count: 12)
-      assert_equal "few", I18n.t("test_pluralization.sample", locale: :pl, count: 22)
-      assert_equal "many", I18n.t("test_pluralization.sample", locale: :pl, count: 25)
-    ensure
-      if previous.nil?
-        translations[:pl]&.delete(:test_pluralization)
-      else
-        translations[:pl] ||= {}
-        translations[:pl][:test_pluralization] = previous
-      end
-    end
+    path = "#{translation_key}.sample"
+
+    assert_equal "many", I18n.t(path, locale: :pl, count: 0)
+    assert_equal "one", I18n.t(path, locale: :pl, count: 1)
+    assert_equal "few", I18n.t(path, locale: :pl, count: 2)
+    assert_equal "many", I18n.t(path, locale: :pl, count: 5)
+    assert_equal "many", I18n.t(path, locale: :pl, count: 12)
+    assert_equal "few", I18n.t(path, locale: :pl, count: 22)
+    assert_equal "many", I18n.t(path, locale: :pl, count: 25)
   end
 end

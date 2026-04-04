@@ -221,18 +221,8 @@ class SnaptradeItemsController < ApplicationController
 
       if errors.any?
         # Partial success - some linked, some failed
-        linked_message = if I18n.exists?("#{controller_path.tr('/', '.')}.#{action_name}.partial_success_linked", I18n.locale)
-          t(".partial_success_linked", count: linked_count)
-        else
-          linked_count
-        end
-        failed_message = if I18n.exists?("#{controller_path.tr('/', '.')}.#{action_name}.partial_success_failed", I18n.locale)
-          t(".partial_success_failed", count: errors.size)
-        else
-          errors.size
-        end
         redirect_to accounts_path,
-                    notice: t(".partial_success", linked: linked_message, failed: failed_message,
+                    notice: t(".partial_success", count: linked_count, failed_count: errors.size,
                               default: "Linked #{linked_count} account(s). #{errors.size} failed to link.")
       else
         redirect_to accounts_path, notice: t(".success", count: linked_count, default: "Successfully linked #{linked_count} account(s).")

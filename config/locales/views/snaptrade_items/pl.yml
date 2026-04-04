@@ -20,17 +20,11 @@ pl:
         few: Pomyślnie połączono %{count} konta.
         many: Pomyślnie połączono %{count} kont.
         other: Pomyślnie połączono %{count} konta.
-      partial_success: "%{linked}. Nie udało się połączyć %{failed}."
-      partial_success_linked:
-        one: Połączono %{count} konto
-        few: Połączono %{count} konta
-        many: Połączono %{count} kont
-        other: Połączono %{count} konta
-      partial_success_failed:
-        one: "%{count} konta"
-        few: "%{count} kont"
-        many: "%{count} kont"
-        other: "%{count} kont"
+      partial_success:
+        one: "Połączono %{count} konto. Nie udało się połączyć %{failed_count}."
+        few: "Połączono %{count} konta. Nie udało się połączyć %{failed_count}."
+        many: "Połączono %{count} kont. Nie udało się połączyć %{failed_count}."
+        other: "Połączono %{count} konta. Nie udało się połączyć %{failed_count}."
       link_failed: 'Nie udało się połączyć kont: %{errors}'
       no_accounts: Nie wybrano żadnych kont do połączenia.
     preload_accounts:
