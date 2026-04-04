@@ -5,7 +5,7 @@ class Settings::PaymentsController < ApplicationController
 
   def show
     @family = Current.family
-    @one_time_contribution_url = stripe&.payment_link_url(payment_link_id:)
+    @one_time_contribution_url = stripe&.payment_link_url(payment_link_id:) if payment_link_id.present?
   end
 
   private

@@ -49,4 +49,19 @@ class Settings::PaymentsControllerTest < ActionDispatch::IntegrationTest
     )
     assert_select "p", text: I18n.t("views.settings.payments.show.payment_via_stripe")
   end
+
+  test "shows payment settings without contribution link when payment link id is missing" do
+    @family.update!(stripe_customer_id: "cus_test123")
+    ENV.stubs(:[]).with("STRIPE_PAYMENT_LINK_ID").returns(nil)
+    Provider::Registry.expects(:get_provider).with(:stripe).never
+
+    get settings_payment_path
+    assert_response :success
+    assert_select(
+      "a",
+      text: I18n.t("views.settings.payments.show.one_time_contribution_link_text"),
+      count: 0
+    )
+    assert_select "p", text: I18n.t("views.settings.payments.show.payment_via_stripe")
+  end
 end
