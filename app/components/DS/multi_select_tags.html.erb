@@ -14,7 +14,7 @@
                              multiple: true,
                              class: "sr-only",
                              id: checkbox_id(tag),
-                             checked: selected_ids.include?(tag.id.to_s),
+                             checked: selected?(tag),
                              disabled: disabled,
                              "data-tag-picker-target": "input",
                              "data-tag-id": tag.id,
@@ -28,15 +28,15 @@
       <%# Selected chips — click to deselect %>
       <div class="flex flex-wrap gap-2 mb-2">
         <% tags.each do |tag| %>
-          <% tag_color = tag.color.presence || Tag::UNCATEGORIZED_COLOR %>
+          <% color = tag_color(tag) %>
           <button type="button"
-                  class="border text-sm font-medium px-3 py-1 rounded-full items-center gap-2 transition-opacity duration-150 hover:opacity-70 <%= selected_ids.include?(tag.id.to_s) ? "inline-flex" : "hidden" %> <%= "opacity-50 pointer-events-none" if disabled %>"
+                  class="border text-sm font-medium px-3 py-1 rounded-full items-center gap-2 transition-opacity duration-150 hover:opacity-70 <%= selected?(tag) ? "inline-flex" : "hidden" %> <%= "opacity-50 pointer-events-none" if disabled %>"
                   data-tag-picker-target="chip"
                   data-tag-id="<%= tag.id %>"
                   data-action="click->tag-picker#deselect"
                   <%= "disabled" if disabled %>
-                  style="background-color: color-mix(in oklab, <%= tag_color %> 14%, transparent); border-color: color-mix(in oklab, <%= tag_color %> 28%, transparent); color: <%= tag_color %>">
-            <span class="size-1.5 rounded-full" style="background-color: <%= tag_color %>"></span>
+                  style="<%= selected_chip_style(color) %>">
+            <span class="size-1.5 rounded-full" style="background-color: <%= color %>"></span>
             <%= tag.name %>
           </button>
         <% end %>
@@ -60,21 +60,25 @@
           </div>
           <div class="max-h-44 overflow-auto flex flex-wrap gap-2">
             <% tags.each do |tag| %>
-              <% tag_color = tag.color.presence || Tag::UNCATEGORIZED_COLOR %>
+              <% color = tag_color(tag) %>
+              <% is_disabled = disabled || selected?(tag) %>
               <button type="button"
-                      class="inline-flex rounded-md transition-opacity duration-150 hover:opacity-80 disabled:opacity-30 disabled:cursor-not-allowed disabled:pointer-events-none"
+                      class="inline-flex rounded-md transition-opacity duration-150 hover:opacity-80 <%= "opacity-30 cursor-not-allowed" if is_disabled %>"
                       data-tag-picker-target="option"
                       data-tag-id="<%= tag.id %>"
-                      data-tag-name="<%= tag.name.downcase %>"
+                      data-tag-name="<%= tag.name %>"
                       data-action="click->tag-picker#select"
-                      <%= "disabled" if disabled || selected_ids.include?(tag.id.to_s) %>>
+                      <%= "disabled" if is_disabled %>>
                 <span class="border text-sm font-medium px-3 py-1 rounded-full inline-flex items-center gap-2"
-                      style="background-color: color-mix(in oklab, <%= tag_color %> 10%, transparent); border-color: color-mix(in oklab, <%= tag_color %> 20%, transparent); color: <%= tag_color %>">
-                  <span class="size-1.5 rounded-full" style="background-color: <%= tag_color %>"></span>
+                      style="<%= option_chip_style(color) %>">
+                  <span class="size-1.5 rounded-full" style="background-color: <%= color %>"></span>
                   <%= tag.name %>
                 </span>
               </button>
             <% end %>
+            <p class="hidden text-sm text-secondary px-2 py-1" data-tag-picker-target="emptyMessage">
+              <%= t("helpers.select.no_results", default: "No tags found") %>
+            </p>
           </div>
         </div>
       </details>

@@ -1,7 +1,7 @@
 import { Controller } from "@hotwired/stimulus";
 
 export default class extends Controller {
-  static targets = ["input", "chip", "option", "dropdown", "search"];
+  static targets = ["input", "chip", "option", "dropdown", "search", "emptyMessage"];
 
   connect() {
     this.#buildIndex();
@@ -33,11 +33,19 @@ export default class extends Controller {
   filterOptions() {
     if (!this.hasSearchTarget) return;
 
-    const query = this.searchTarget.value.trim().toLowerCase();
+    const query = this.searchTarget.value.trim().toLocaleLowerCase();
+    let hasVisible = false;
+
     this.optionTargets.forEach((option) => {
-      const match = option.dataset.tagName.includes(query);
+      const name = (option.dataset.tagName || "").toLocaleLowerCase();
+      const match = name.includes(query);
       option.style.display = match ? "" : "none";
+      if (match) hasVisible = true;
     });
+
+    if (this.hasEmptyMessageTarget) {
+      this.emptyMessageTarget.classList.toggle("hidden", hasVisible);
+    }
   }
 
   // Syncs chip visibility and option disabled state with checkbox state.
@@ -54,7 +62,14 @@ export default class extends Controller {
       }
 
       const option = this.optionByTagId.get(tagId);
-      if (option) option.disabled = selected || input.disabled;
+      if (option) {
+        const isDisabled = selected || input.disabled;
+        option.disabled = isDisabled;
+
+        // Keep visual state deterministic even if disabled: variants are not applied.
+        option.classList.toggle("opacity-30", isDisabled);
+        option.classList.toggle("cursor-not-allowed", isDisabled);
+      }
     });
 
     this.filterOptions();
