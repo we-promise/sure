@@ -27,4 +27,20 @@ class Settings::PaymentsControllerTest < ActionDispatch::IntegrationTest
       text: I18n.t("views.settings.payments.show.one_time_contribution_link_text")
     )
   end
+
+  test "shows payment settings without contribution link when payment link is unavailable" do
+    @family.update!(stripe_customer_id: "cus_test123")
+    stripe = mock
+    stripe.expects(:payment_link_url).returns(nil)
+    Provider::Registry.stubs(:get_provider).with(:stripe).returns(stripe)
+
+    get settings_payment_path
+    assert_response :success
+    assert_select(
+      "a",
+      text: I18n.t("views.settings.payments.show.one_time_contribution_link_text"),
+      count: 0
+    )
+    assert_select "p", text: I18n.t("views.settings.payments.show.payment_via_stripe")
+  end
 end

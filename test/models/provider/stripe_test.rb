@@ -60,4 +60,20 @@ class Provider::StripeTest < ActiveSupport::TestCase
       stripe.payment_link_url(payment_link_id: "plink_test123")
     )
   end
+
+  test "returns nil when payment link retrieval fails" do
+    payment_links = mock
+    payment_links.expects(:retrieve)
+      .with("plink_test123")
+      .raises(StandardError, "not found")
+
+    client = mock
+    client.stubs(:v1).returns(OpenStruct.new(payment_links: payment_links))
+
+    Stripe::StripeClient.stubs(:new).returns(client)
+    Sentry.expects(:capture_exception).with(instance_of(StandardError))
+    stripe = Provider::Stripe.new(secret_key: "foo", webhook_secret: "bar")
+
+    assert_nil stripe.payment_link_url(payment_link_id: "plink_test123")
+  end
 end
