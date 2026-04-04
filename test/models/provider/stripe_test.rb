@@ -72,6 +72,8 @@ class Provider::StripeTest < ActiveSupport::TestCase
 
     Stripe::StripeClient.stubs(:new).returns(client)
     Sentry.expects(:capture_exception).with(instance_of(StandardError))
+    Rails.logger.expects(:error)
+      .with("Error fetching payment link plink_test123: not found")
     stripe = Provider::Stripe.new(secret_key: "foo", webhook_secret: "bar")
 
     assert_nil stripe.payment_link_url(payment_link_id: "plink_test123")

@@ -5,10 +5,14 @@ class Settings::PaymentsController < ApplicationController
 
   def show
     @family = Current.family
-    @one_time_contribution_url = stripe&.payment_link_url
+    @one_time_contribution_url = stripe&.payment_link_url(payment_link_id:)
   end
 
   private
+    def payment_link_id
+      ENV["STRIPE_PAYMENT_LINK_ID"]
+    end
+
     def stripe
       @stripe ||= Provider::Registry.get_provider(:stripe)
     end

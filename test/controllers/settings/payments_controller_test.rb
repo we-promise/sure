@@ -15,8 +15,11 @@ class Settings::PaymentsControllerTest < ActionDispatch::IntegrationTest
 
   test "shows payment settings when family has stripe_customer_id" do
     @family.update!(stripe_customer_id: "cus_test123")
+    ENV.stubs(:[]).with("STRIPE_PAYMENT_LINK_ID").returns("plink_test123")
     stripe = mock
-    stripe.expects(:payment_link_url).returns("https://buy.stripe.com/test_payment_link")
+    stripe.expects(:payment_link_url)
+      .with(payment_link_id: "plink_test123")
+      .returns("https://buy.stripe.com/test_payment_link")
     Provider::Registry.stubs(:get_provider).with(:stripe).returns(stripe)
 
     get settings_payment_path
@@ -30,8 +33,11 @@ class Settings::PaymentsControllerTest < ActionDispatch::IntegrationTest
 
   test "shows payment settings without contribution link when payment link is unavailable" do
     @family.update!(stripe_customer_id: "cus_test123")
+    ENV.stubs(:[]).with("STRIPE_PAYMENT_LINK_ID").returns("plink_test123")
     stripe = mock
-    stripe.expects(:payment_link_url).returns(nil)
+    stripe.expects(:payment_link_url)
+      .with(payment_link_id: "plink_test123")
+      .returns(nil)
     Provider::Registry.stubs(:get_provider).with(:stripe).returns(stripe)
 
     get settings_payment_path
