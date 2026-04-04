@@ -24,8 +24,7 @@ module DS
     end
 
     def tag_color(tag)
-      color = tag.color.presence
-      color&.match?(/\A#[0-9A-Fa-f]{6}\z/) ? color : Tag::UNCATEGORIZED_COLOR
+      helpers.tag_display_color(tag)
     end
 
     def selected_chip_style(color)

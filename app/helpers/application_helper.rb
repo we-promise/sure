@@ -178,6 +178,11 @@ module ApplicationHelper
     number_with_precision(qty, precision: precision, strip_insignificant_zeros: true)
   end
 
+  def tag_display_color(tag)
+    color = tag.color.presence
+    color&.match?(/\A#[0-9A-Fa-f]{6}\z/) ? color : Tag::UNCATEGORIZED_COLOR
+  end
+
   private
     def calculate_total(item, money_method, negate)
       # Filter out transfer-type transactions from entries
