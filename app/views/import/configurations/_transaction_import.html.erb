@@ -31,14 +31,14 @@
   <div class="flex items-center gap-4">
     <%= form.select :amount_col_label,
                     import.csv_headers,
-                    { label: "Amount", container_class: "w-2/5", prompt: "Select column" },
+                    { label: "Amount", prompt: "Select column" },
                     required: true %>
     <%= form.select :currency_col_label,
                     import.csv_headers,
-                    { include_blank: "Default", label: "Currency", container_class: "w-1/5" } %>
+                    { include_blank: "Default", label: "Currency" } %>
     <%= form.select :number_format,
                     Import::NUMBER_FORMATS.keys,
-                    { label: "Format", prompt: "Select format", container_class: "w-2/5" },
+                    { label: "Format", prompt: "Select format" },
                     required: true %>
   </div>
 

@@ -1,6 +1,6 @@
 <%# locals: form:, method:, collection:, options: {} %>
 
-<div class="relative" data-controller="select <%= "list-filter" if searchable %> form-dropdown" data-action="dropdown:select->form-dropdown#onSelect" <%= tag.attributes(html_options.slice("data-no-focus")) %>>
+<div class="relative w-full" data-controller="select <%= "list-filter" if searchable %> form-dropdown" data-action="dropdown:select->form-dropdown#onSelect" <%= tag.attributes(html_options.slice("data-no-focus")) %>>
   <div class="form-field <%= options[:container_class] %>">
     <div class="form-field__body cursor-pointer"
      data-action="click->select#toggle click->select#focusButton">
