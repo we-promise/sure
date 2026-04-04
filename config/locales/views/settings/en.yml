@@ -24,6 +24,7 @@ en:
     payments:
       show:
         page_title: Payments
+        payment_via_stripe: Payment via Stripe
         payment_via_stripe_html: Payment via Stripe (%{contribution_link})
         one_time_contribution_link_text: one-time contribution here
         subscription_subtitle: Update your credit card details

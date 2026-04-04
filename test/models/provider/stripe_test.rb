@@ -42,4 +42,22 @@ class Provider::StripeTest < ActiveSupport::TestCase
       assert_match /sub_.*/, result.subscription_id
     end
   end
+
+  test "retrieves payment link url from stripe" do
+    payment_links = mock
+    payment_links.expects(:retrieve)
+      .with("plink_test123")
+      .returns(OpenStruct.new(url: "https://buy.stripe.com/test_payment_link"))
+
+    client = mock
+    client.stubs(:v1).returns(OpenStruct.new(payment_links: payment_links))
+
+    Stripe::StripeClient.stubs(:new).returns(client)
+    stripe = Provider::Stripe.new(secret_key: "foo", webhook_secret: "bar")
+
+    assert_equal(
+      "https://buy.stripe.com/test_payment_link",
+      stripe.payment_link_url(payment_link_id: "plink_test123")
+    )
+  end
 end
