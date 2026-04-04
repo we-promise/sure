@@ -4,7 +4,7 @@ de:
     qif_category_selections:
       show:
         title: "Konfigurieren und auswählen"
-        description: "Überprüfe das erkannte Datumsformat und wähle dann die Kategorien und Tags aus deiner QIF-Datei aus, die in Sure importiert werden sollen."
+        description: "Überprüfe das erkannte Datumsformat und wähle dann die Kategorien und Tags aus deiner QIF-Datei aus, die in %{product_name} importiert werden sollen."
         categories_heading: Kategorien
         categories_found:
           one: "1 Kategorie gefunden"

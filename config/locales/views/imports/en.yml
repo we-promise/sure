@@ -4,7 +4,7 @@ en:
     qif_category_selections:
       show:
         title: "Configure & select"
-        description: "Review the detected date format, then choose which categories and tags from your QIF file to bring into Sure."
+        description: "Review the detected date format, then choose which categories and tags from your QIF file to bring into %{product_name}."
         categories_heading: Categories
         categories_found:
           one: "1 category found"

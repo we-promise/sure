@@ -4,7 +4,7 @@ fr:
     qif_category_selections:
       show:
         title: "Configurer et sélectionner"
-        description: "Vérifiez le format de date détecté, puis choisissez les catégories et étiquettes de votre fichier QIF à importer dans Sure."
+        description: "Vérifiez le format de date détecté, puis choisissez les catégories et étiquettes de votre fichier QIF à importer dans %{product_name}."
         categories_heading: Catégories
         categories_found:
           one: "1 catégorie trouvée"
