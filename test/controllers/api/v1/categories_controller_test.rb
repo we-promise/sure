@@ -7,8 +7,8 @@ class Api::V1::CategoriesControllerTest < ActionDispatch::IntegrationTest
     @user = users(:family_admin)
     @family = families(:dylan_family)
 
-    @api_key = api_keys(:active_key)
-    @read_key = api_keys(:read_only_key)
+    @api_key = api_keys(:active_key) # pipelock:ignore Credential in URL
+    @read_key = api_keys(:read_only_key) # pipelock:ignore Credential in URL
 
     @category = categories(:food_and_drink)
     @subcategory = categories(:subcategory)
@@ -156,6 +156,13 @@ class Api::V1::CategoriesControllerTest < ActionDispatch::IntegrationTest
 
     response_body = JSON.parse(response.body)
     assert_equal "validation_failed", response_body["error"]
+  end
+
+  test "create requires authentication" do
+    post api_v1_categories_url,
+         params: { category: { name: "No Auth" } }
+
+    assert_response :unauthorized
   end
 
   test "requires read_write scope for create" do

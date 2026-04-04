@@ -3,7 +3,7 @@
 class Api::V1::CategoriesController < Api::V1::BaseController
   include Pagy::Backend
 
-  before_action :ensure_read_scope, only: %i[index show]
+  before_action -> { authorize_scope!(:read) }, only: %i[index show]
   before_action -> { authorize_scope!(:read_write) }, only: %i[create update destroy]
   before_action :set_category, only: %i[show update destroy]
 
@@ -121,10 +121,6 @@ class Api::V1::CategoriesController < Api::V1::BaseController
         error: "not_found",
         message: "Category not found"
       }, status: :not_found
-    end
-
-    def ensure_read_scope
-      authorize_scope!(:read)
     end
 
     def category_params

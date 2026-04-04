@@ -11,7 +11,7 @@ class FamilyMerchant < Merchant
 
   private
     def set_default_color
-      self.color = COLORS.sample
+      self.color ||= COLORS.sample
     end
 
     def should_generate_logo?

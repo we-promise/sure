@@ -12,8 +12,8 @@ class Api::V1::MerchantsControllerTest < ActionDispatch::IntegrationTest
     assert_not_equal @user.family_id, @other_family_user.family_id,
       "Test setup error: @other_family_user must belong to a different family"
 
-    @api_key = api_keys(:active_key)
-    @read_only_api_key = api_keys(:read_only_key)
+    @api_key = api_keys(:active_key) # pipelock:ignore Credential in URL
+    @read_only_api_key = api_keys(:read_only_key) # pipelock:ignore Credential in URL
 
     @merchant = @family.merchants.first || @family.merchants.create!(
       name: "Test Merchant"
@@ -113,7 +113,7 @@ class Api::V1::MerchantsControllerTest < ActionDispatch::IntegrationTest
 
     assert_difference -> { @family.merchants.count }, 1 do
       post api_v1_merchants_url,
-           params: { merchant: { name: merchant_name, color: "#e99537" } },
+           params: { merchant: { name: merchant_name, color: "#123456" } },
            headers: api_headers(@api_key)
     end
 
@@ -121,7 +121,7 @@ class Api::V1::MerchantsControllerTest < ActionDispatch::IntegrationTest
 
     merchant = JSON.parse(response.body)
     assert_equal merchant_name, merchant["name"]
-    assert merchant["color"].present?
+    assert_equal "#123456", merchant["color"]
     assert_equal "FamilyMerchant", merchant["type"]
   end
 
@@ -165,7 +165,7 @@ class Api::V1::MerchantsControllerTest < ActionDispatch::IntegrationTest
   test "create fails without name" do
     assert_no_difference -> { @family.merchants.count } do
       post api_v1_merchants_url,
-           params: { merchant: { color: "#e99537" } },
+           params: { merchant: { color: "#123456" } },
            headers: api_headers(@api_key)
     end
 
