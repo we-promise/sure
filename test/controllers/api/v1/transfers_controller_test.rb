@@ -150,6 +150,27 @@ class Api::V1::TransfersControllerTest < ActionDispatch::IntegrationTest
     assert_response :not_found
   end
 
+  test "create returns 404 for account from another family" do
+    other_family = families(:empty)
+    other_account = Account.create!(
+      family: other_family, name: "Other Account", currency: "USD",
+      balance: 100, accountable: Depository.new
+    )
+
+    post api_v1_transfers_url,
+         params: {
+           transfer: {
+             source_account_id: @source_account.id,
+             destination_account_id: other_account.id,
+             date: Date.current.to_s,
+             amount: "100.00"
+           }
+         },
+         headers: api_headers(@rw_api_key)
+
+    assert_response :not_found
+  end
+
   test "create returns 422 for invalid date" do
     assert_no_difference -> { Transfer.count } do
       post api_v1_transfers_url,
