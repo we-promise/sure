@@ -25,7 +25,7 @@ class Settings::PaymentsControllerTest < ActionDispatch::IntegrationTest
     assert_select(
       "a[href=?]",
       "https://buy.stripe.com/test_payment_link",
-      text: I18n.t("views.settings.payments.show.one_time_contribution_link_text")
+      text: I18n.t("settings.payments.show.one_time_contribution_link_text")
     )
   end
 
@@ -40,10 +40,9 @@ class Settings::PaymentsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select(
       "a",
-      text: I18n.t("views.settings.payments.show.one_time_contribution_link_text"),
+      text: I18n.t("settings.payments.show.one_time_contribution_link_text"),
       count: 0
     )
-    assert_select "p", text: I18n.t("views.settings.payments.show.payment_via_stripe")
+    assert_select "p", text: I18n.t("settings.payments.show.payment_via_stripe")
   end
-
 end
