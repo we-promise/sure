@@ -69,6 +69,7 @@ export default class extends Controller {
         // Keep visual state deterministic even if disabled: variants are not applied.
         option.classList.toggle("opacity-30", isDisabled);
         option.classList.toggle("cursor-not-allowed", isDisabled);
+        option.classList.toggle("hover:opacity-80", !isDisabled);
       }
     });
 
