@@ -8,14 +8,13 @@
 
     <div class="pt-2" data-controller="tag-picker">
       <%# Ensure the key is always submitted even when all checkboxes are unchecked %>
-      <%= form.hidden_field method, multiple: true, value: "" %>
-
+      <%= form.hidden_field method, multiple: true, value: "", disabled: disabled %>
       <%# Hidden checkboxes — one per tag, drive form submission and trigger refresh %>
       <% tags.each do |tag| %>
         <%= form.check_box method,
                            {
                              multiple: true,
-                             class: "sr-only",
+                             hidden: true,
                              id: checkbox_id(tag),
                              checked: selected?(tag),
                              disabled: disabled,
