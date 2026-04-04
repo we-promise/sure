@@ -7,8 +7,8 @@ class Api::V1::TransfersControllerTest < ActionDispatch::IntegrationTest
     @user = users(:family_admin)
     @family = families(:dylan_family)
 
-    @rw_api_key = api_keys(:active_key)
-    @ro_api_key = api_keys(:read_only_key)
+    @rw_api_key = api_keys(:active_key) # pipelock:ignore Credential in URL
+    @ro_api_key = api_keys(:read_only_key) # pipelock:ignore Credential in URL
 
     @source_account = accounts(:depository)
     @destination_account = accounts(:credit_card)
@@ -73,61 +73,113 @@ class Api::V1::TransfersControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "create returns 404 for non-existent source account" do
-    post api_v1_transfers_url,
-         params: {
-           transfer: {
-             source_account_id: SecureRandom.uuid,
-             destination_account_id: @destination_account.id,
-             date: Date.current.to_s,
-             amount: "100.00"
-           }
-         },
-         headers: api_headers(@rw_api_key)
+    assert_no_difference -> { Transfer.count } do
+      post api_v1_transfers_url,
+           params: {
+             transfer: {
+               source_account_id: SecureRandom.uuid,
+               destination_account_id: @destination_account.id,
+               date: Date.current.to_s,
+               amount: "100.00"
+             }
+           },
+           headers: api_headers(@rw_api_key)
+    end
 
     assert_response :not_found
   end
 
   test "create returns 404 for non-existent destination account" do
-    post api_v1_transfers_url,
-         params: {
-           transfer: {
-             source_account_id: @source_account.id,
-             destination_account_id: SecureRandom.uuid,
-             date: Date.current.to_s,
-             amount: "100.00"
-           }
-         },
-         headers: api_headers(@rw_api_key)
+    assert_no_difference -> { Transfer.count } do
+      post api_v1_transfers_url,
+           params: {
+             transfer: {
+               source_account_id: @source_account.id,
+               destination_account_id: SecureRandom.uuid,
+               date: Date.current.to_s,
+               amount: "100.00"
+             }
+           },
+           headers: api_headers(@rw_api_key)
+    end
+
+    assert_response :not_found
+  end
+
+  test "create returns 404 for destination account from another family" do
+    other_account = Account.create!(
+      family: families(:empty), name: "Other Account", currency: "USD",
+      balance: 100, accountable: Depository.new
+    )
+
+    assert_no_difference -> { Transfer.count } do
+      post api_v1_transfers_url,
+           params: {
+             transfer: {
+               source_account_id: @source_account.id,
+               destination_account_id: other_account.id,
+               date: Date.current.to_s,
+               amount: "100.00"
+             }
+           },
+           headers: api_headers(@rw_api_key)
+    end
+
+    assert_response :not_found
+  end
+
+  test "create returns 404 for source account from another family" do
+    other_account = Account.create!(
+      family: families(:empty), name: "Other Account", currency: "USD",
+      balance: 100, accountable: Depository.new
+    )
+
+    assert_no_difference -> { Transfer.count } do
+      post api_v1_transfers_url,
+           params: {
+             transfer: {
+               source_account_id: other_account.id,
+               destination_account_id: @destination_account.id,
+               date: Date.current.to_s,
+               amount: "100.00"
+             }
+           },
+           headers: api_headers(@rw_api_key)
+    end
 
     assert_response :not_found
   end
 
   test "create returns 422 for invalid date" do
-    post api_v1_transfers_url,
-         params: {
-           transfer: {
-             source_account_id: @source_account.id,
-             destination_account_id: @destination_account.id,
-             date: "not-a-date",
-             amount: "100.00"
-           }
-         },
-         headers: api_headers(@rw_api_key)
+    assert_no_difference -> { Transfer.count } do
+      post api_v1_transfers_url,
+           params: {
+             transfer: {
+               source_account_id: @source_account.id,
+               destination_account_id: @destination_account.id,
+               date: "not-a-date",
+               amount: "100.00"
+             }
+           },
+           headers: api_headers(@rw_api_key)
+    end
 
     assert_response :unprocessable_entity
   end
 
   test "create returns 422 for same source and destination account" do
-    post api_v1_transfers_url,
-         params: {
-           transfer: {
-             source_account_id: @source_account.id,
-             destination_account_id: @source_account.id,
-             date: Date.current.to_s,
-             amount: "100.00"
-           }
-         },
-         headers: api_headers(@rw_api_key)
+    assert_no_difference -> { Transfer.count } do
+      post api_v1_transfers_url,
+           params: {
+             transfer: {
+               source_account_id: @source_account.id,
+               destination_account_id: @source_account.id,
+               date: Date.current.to_s,
+               amount: "100.00"
+             }
+           },
+           headers: api_headers(@rw_api_key)
+    end
 
     assert_response :unprocessable_entity
   end
