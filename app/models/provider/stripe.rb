@@ -67,6 +67,10 @@ class Provider::Stripe
     client.v1.customers.update(customer_id, metadata: metadata)
   end
 
+  def one_time_contribution_url
+    payment_link_url(payment_link_id: ENV["STRIPE_PAYMENT_LINK_ID"])
+  end
+
   def payment_link_url(payment_link_id:)
     return nil if payment_link_id.blank?
 

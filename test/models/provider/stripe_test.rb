@@ -61,6 +61,32 @@ class Provider::StripeTest < ActiveSupport::TestCase
     )
   end
 
+  test "retrieves one-time contribution url from configured payment link" do
+    stripe = Provider::Stripe.new(secret_key: "foo", webhook_secret: "bar")
+    stripe.expects(:payment_link_url)
+      .with(payment_link_id: "plink_test123")
+      .returns("https://buy.stripe.com/test_payment_link")
+
+    original_payment_link_id = ENV["STRIPE_PAYMENT_LINK_ID"]
+    ENV["STRIPE_PAYMENT_LINK_ID"] = "plink_test123"
+
+    assert_equal "https://buy.stripe.com/test_payment_link", stripe.one_time_contribution_url
+  ensure
+    ENV["STRIPE_PAYMENT_LINK_ID"] = original_payment_link_id
+  end
+
+  test "returns nil for one-time contribution url when payment link id is missing" do
+    stripe = Provider::Stripe.new(secret_key: "foo", webhook_secret: "bar")
+    stripe.expects(:payment_link_url).with(payment_link_id: nil).returns(nil)
+
+    original_payment_link_id = ENV["STRIPE_PAYMENT_LINK_ID"]
+    ENV.delete("STRIPE_PAYMENT_LINK_ID")
+
+    assert_nil stripe.one_time_contribution_url
+  ensure
+    ENV["STRIPE_PAYMENT_LINK_ID"] = original_payment_link_id
+  end
+
   test "returns nil when payment link retrieval fails" do
     payment_links = mock
     payment_links.expects(:retrieve)
