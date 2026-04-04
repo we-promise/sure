@@ -18,6 +18,10 @@ class Settings::PaymentsControllerTest < ActionDispatch::IntegrationTest
 
     get settings_payment_path
     assert_response :success
-    assert_select "a[href=?]", "https://buy.stripe.com/3cIcN6euM23D7GQ3wT97G00", text: "one-time contribution here"
+    assert_select(
+      "a[href=?]",
+      Rails.application.config.x.stripe.one_time_contribution_url,
+      text: I18n.t("views.settings.payments.show.one_time_contribution_link_text")
+    )
   end
 end

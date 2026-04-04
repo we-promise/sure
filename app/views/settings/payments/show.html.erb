@@ -60,12 +60,16 @@
     <div class="flex items-center gap-2">
       <%= image_tag "stripe-logo.svg", class: "w-5 h-5 shrink-0" %>
       <p class="text-secondary text-sm">
-        Payment via Stripe
-        (<%= link_to "one-time contribution here",
-                     "https://buy.stripe.com/3cIcN6euM23D7GQ3wT97G00",
-                     class: "font-medium text-primary hover:underline transition",
-                     target: "_blank",
-                     rel: "noopener" %>)
+        <%= t(
+          ".payment_via_stripe_html",
+          contribution_link: link_to(
+            t(".one_time_contribution_link_text"),
+            Rails.application.config.x.stripe.one_time_contribution_url,
+            class: "font-medium text-primary hover:underline transition",
+            target: "_blank",
+            rel: "noopener"
+          )
+        ) %>
       </p>
     </div>
   </div>
