@@ -18,5 +18,6 @@ class Settings::PaymentsControllerTest < ActionDispatch::IntegrationTest
 
     get settings_payment_path
     assert_response :success
+    assert_select "a[href=?]", "https://buy.stripe.com/3cIcN6euM23D7GQ3wT97G00", text: "one-time contribution here"
   end
 end
