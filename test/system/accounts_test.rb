@@ -28,7 +28,7 @@ class AccountsTest < ApplicationSystemTestCase
 
     account_name = "[system test] Property Account"
     fill_in "Name*", with: account_name
-    select_label "Property type*", "Single Family Home"
+    select_custom "Property type*", "Single Family Home"
     fill_in "Year Built (optional)", with: 2005
     fill_in "Area (optional)", with: 2250
 
@@ -86,7 +86,7 @@ class AccountsTest < ApplicationSystemTestCase
     assert_account_created "Loan" do
       fill_in "account[accountable_attributes][initial_balance]", with: 1000
       fill_in "Interest rate", with: 5.25
-      select_label "Rate type", "Fixed"
+      select_custom "Rate type", "Fixed"
       fill_in "Term (months)", with: 360
     end
   end
@@ -161,16 +161,6 @@ class AccountsTest < ApplicationSystemTestCase
       assert_equal updated_institution_name, created_account[:institution_name]
       assert_equal updated_institution_domain, created_account[:institution_domain]
       assert_equal updated_notes, created_account[:notes]
-    end
-
-    def select_label(label_text, value)
-      normalized = label_text.gsub("*", "").strip
-
-      label = find("label", text: /#{Regexp.escape(normalized)}/i)
-      field = label.find(:xpath, "./ancestor::*[contains(@class, 'form-field')][1]")
-      field.find("[data-select-target='button']").click
-
-      find("[role='option']", text: value).click
     end
 
     def humanized_accountable(accountable_type)
