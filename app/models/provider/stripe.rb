@@ -75,9 +75,8 @@ class Provider::Stripe
     return nil if payment_link_id.blank?
 
     client.v1.payment_links.retrieve(payment_link_id).url
-  rescue StandardError => e
-    Sentry.capture_exception(e)
-    Rails.logger.error "Error fetching payment link #{payment_link_id}: #{e.message}"
+  rescue Stripe::StripeError => e
+    Rails.logger.debug { "Unable to fetch optional Stripe payment link #{payment_link_id}: #{e.message}" }
     nil
   end
 

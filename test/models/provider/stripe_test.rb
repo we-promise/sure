@@ -85,17 +85,25 @@ class Provider::StripeTest < ActiveSupport::TestCase
     payment_links = mock
     payment_links.expects(:retrieve)
       .with("plink_test123")
-      .raises(StandardError, "not found")
+      .raises(Stripe::StripeError, "not found")
 
     client = mock
     client.stubs(:v1).returns(OpenStruct.new(payment_links: payment_links))
 
+    captured_message = nil
+    logger = Object.new
+    logger.define_singleton_method(:debug) do |&block|
+      captured_message = block.call
+    end
+
     Stripe::StripeClient.stubs(:new).returns(client)
-    Sentry.expects(:capture_exception).with(instance_of(StandardError))
-    Rails.logger.expects(:error)
-      .with("Error fetching payment link plink_test123: not found")
+    Rails.stubs(:logger).returns(logger)
     stripe = Provider::Stripe.new(secret_key: "foo", webhook_secret: "bar")
 
     assert_nil stripe.payment_link_url(payment_link_id: "plink_test123")
+    assert_equal(
+      "Unable to fetch optional Stripe payment link plink_test123: not found",
+      captured_message
+    )
   end
 end
