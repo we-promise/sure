@@ -79,6 +79,7 @@ class Assistant::Responder
         instructions: instructions,
         functions: function_tool_caller.function_definitions,
         function_results: function_results,
+        messages: conversation_history,
         streamer: streamer,
         previous_response_id: previous_response_id,
         session_id: chat_session_id,
@@ -113,5 +114,43 @@ class Assistant::Responder
 
     def chat
       @chat ||= message.chat
+    end
+
+    def conversation_history
+      messages = []
+      return messages unless chat&.messages
+
+      chat.messages.eager_load(:tool_calls).where(type: [ "UserMessage", "AssistantMessage" ]).ordered.each do |chat_message|
+        if chat_message.tool_calls.any?
+          messages << {
+            role: chat_message.role,
+            content: chat_message.content || "",
+            tool_calls: chat_message.tool_calls.map(&:to_tool_call)
+          }
+
+          chat_message.tool_calls.map(&:to_result).each do |fn_result|
+            # Handle nil explicitly to avoid serializing to "null"
+            output = fn_result[:output]
+            content = if output.nil?
+              ""
+            elsif output.is_a?(String)
+              output
+            else
+              output.to_json
+            end
+
+            messages << {
+              role: "tool",
+              tool_call_id: fn_result[:call_id],
+              name: fn_result[:name],
+              content: content
+            }
+          end
+
+        elsif !chat_message.content.blank?
+          messages << { role: chat_message.role, content: chat_message.content || "" }
+        end
+      end
+      messages
     end
 end
