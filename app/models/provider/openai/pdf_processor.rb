@@ -62,6 +62,14 @@ class Provider::Openai::PdfProcessor
          - Opening and closing balances (if visible)
          - Currency used
 
+      4. **Reconciliation Check** (ONLY for bank_statement or credit_card_statement):
+         - First, use available tools to get accounts and their transactions for the relevant time period
+         - Match the statement to the correct account by comparing institution name, account holder, or account number
+         - Compare the statement closing balance with the account current balance
+         - Count transactions in the statement and compare with synced transaction count for that period
+         - Match individual transactions (by date within ±1 day, amount within ±$0.10, similar description)
+         - Report which transactions are new (in statement but not synced) and which are missing (synced but not in statement)
+
       IMPORTANT GUIDELINES:
       - Be factual and precise - only report what you can clearly see in the document
       - If information is unclear or redacted, note it as "not clearly visible" or "redacted"
@@ -83,6 +91,18 @@ class Provider::Openai::PdfProcessor
           "closing_balance": number or null,
           "currency": "USD/EUR/etc or null",
           "account_holder": "Name or null"
+        },
+        "reconciliation": {
+          "performed": true|false,
+          "account_id": "account_id or null",
+          "balance_match": true|false|null,
+          "statement_transaction_count": number|null,
+          "synced_transaction_count": number|null,
+          "matched_count": number|null,
+          "new_count": number|null,
+          "missing_count": number|null,
+          "new_transactions": [{"date":"YYYY-MM-DD","amount":0.00,"description":"..."}],
+          "missing_transactions": [{"date":"YYYY-MM-DD","amount":0.00,"description":"..."}]
         }
       }
     INSTRUCTIONS
@@ -225,7 +245,8 @@ class Provider::Openai::PdfProcessor
       PdfProcessingResult.new(
         summary: parsed["summary"],
         document_type: normalize_document_type(parsed["document_type"]),
-        extracted_data: parsed["extracted_data"] || {}
+        extracted_data: parsed["extracted_data"] || {},
+        reconciliation: parsed["reconciliation"]
       )
     end
 
