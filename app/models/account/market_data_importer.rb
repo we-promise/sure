@@ -90,6 +90,7 @@ class Account::MarketDataImporter
     end
 
     def foreign_account?
+      return false if account.family.nil?
       account.currency != account.family.currency
     end
 end
