@@ -20,7 +20,14 @@
         <div class="max-w-full">
           <%= content_tag :div, class: ["flex items-center gap-3 lg:gap-4"] do %>
             <div class="hidden lg:flex">
-              <% if transaction.merchant&.logo_url.present? %>
+              <% if transaction.transfer? %>
+                <%= render DS::FilledIcon.new(
+                  icon: "arrow-right-left",
+                  hex_color: Category::TRANSFER_COLOR,
+                  size: "lg",
+                  rounded: true
+                ) %>
+              <% elsif transaction.merchant&.logo_url.present? %>
                 <%= image_tag Setting.transform_brand_fetch_url(transaction.merchant.logo_url),
                     class: "w-9 h-9 rounded-full border border-secondary",
                     loading: "lazy" %>
