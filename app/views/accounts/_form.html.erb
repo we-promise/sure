@@ -18,7 +18,7 @@
     <% if account.new_record? && !account.linked? %>
       <%= form.date_field :opening_balance_date,
           label: t(".opening_balance_date_label"),
-          value: Time.zone.today - 2.years,
+          value: Time.zone.today,
           required: true %>
     <% end %>
 
