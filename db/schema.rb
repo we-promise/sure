@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_04_06_120000) do
+ActiveRecord::Schema[7.2].define(version: 2026_04_06_123000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -207,12 +207,14 @@ ActiveRecord::Schema[7.2].define(version: 2026_04_06_120000) do
     t.decimal "tax_rate", precision: 6, scale: 3, default: "19.0", null: false
     t.boolean "requires_rate_review", default: false, null: false
     t.string "product_code"
+    t.string "inflation_provider"
     t.index ["auto_close_on_maturity", "maturity_date", "closed_on"], name: "index_bond_lots_on_settlement_eligibility"
     t.index ["bond_id", "closed_on"], name: "index_bond_lots_on_bond_id_and_closed_on"
     t.index ["bond_id", "purchased_on"], name: "index_bond_lots_on_bond_id_and_purchased_on"
     t.index ["bond_id"], name: "index_bond_lots_on_bond_id"
     t.index ["closed_on"], name: "index_bond_lots_on_closed_on"
     t.index ["entry_id"], name: "index_bond_lots_on_entry_id", unique: true, where: "(entry_id IS NOT NULL)"
+    t.index ["inflation_provider"], name: "index_bond_lots_on_inflation_provider"
     t.index ["issue_date"], name: "index_bond_lots_on_issue_date"
     t.index ["product_code"], name: "index_bond_lots_on_product_code"
     t.index ["requires_rate_review"], name: "index_bond_lots_on_requires_rate_review"

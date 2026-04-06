@@ -108,6 +108,7 @@ class BondLot < ApplicationRecord
   before_validation :assign_maturity_date_from_term
   before_validation :derive_amount_from_units
   before_validation :normalize_auto_fetch_inflation
+  before_validation :normalize_inflation_provider
   before_validation :normalize_tax_settings
   before_validation :clear_rate_review_flag
 
@@ -128,6 +129,7 @@ class BondLot < ApplicationRecord
   validates :cpi_lag_months, numericality: { only_integer: true, greater_than_or_equal_to: 0 }, allow_nil: true
   validates :subtype, inclusion: { in: Bond::SUBTYPES.keys }
   validates :product_code, inclusion: { in: Bond::PRODUCT_DEFAULTS.keys }, allow_nil: true
+  validates :inflation_provider, inclusion: { in: Bond::InflationProvider::PROVIDERS.keys }, allow_nil: true
   validates :rate_type, inclusion: { in: Bond::RATE_TYPES }, allow_nil: true
   validates :coupon_frequency, inclusion: { in: Bond::COUPON_FREQUENCIES }, allow_nil: true
   validates :tax_strategy, inclusion: { in: TAX_STRATEGIES }
@@ -313,6 +315,8 @@ class BondLot < ApplicationRecord
 
   def current_inflation_indicator_id
     return nil unless inflation_linked? && auto_fetch_inflation?
+
+    return nil unless inflation_provider_key == "gus_sdp"
 
     ENV["GUS_SDP_CPI_INDICATOR_ID"].presence || Provider::GusSdp::DEFAULT_CPI_INDICATOR_ID
   end
@@ -508,11 +512,11 @@ class BondLot < ApplicationRecord
 
     def inflation_snapshot_for(on:)
       if auto_fetch_inflation?
-        source_record = GusInflationRate.for_date(date: on, lag_months: cpi_lag_months.to_i)
+        source_record = inflation_rate_record_for(on:)
         if source_record.present?
           return {
             inflation_component_percent: source_record.rate_yoy.to_d - 100,
-            source: "gus",
+            source: inflation_source_label,
             reference_on: Date.new(source_record.year, source_record.month, 1),
             indicator_id: current_inflation_indicator_id
           }
@@ -579,6 +583,30 @@ class BondLot < ApplicationRecord
       return if inflation_linked?
 
       self.auto_fetch_inflation = false
+      self.inflation_provider = nil
+    end
+
+    def normalize_inflation_provider
+      inflation_like = canonical_subtype.in?(Bond::INFLATION_LINKED_SUBTYPES)
+      self.inflation_provider = nil unless inflation_like
+      self.inflation_provider = "gus_sdp" if inflation_like && auto_fetch_inflation && inflation_provider.blank?
+    end
+
+    def inflation_provider_key
+      inflation_provider.presence || "gus_sdp"
+    end
+
+    def inflation_rate_record_for(on:)
+      case inflation_provider_key
+      when "gus_sdp"
+        GusInflationRate.for_date(date: on, lag_months: cpi_lag_months.to_i)
+      else
+        nil
+      end
+    end
+
+    def inflation_source_label
+      inflation_provider_key == "gus_sdp" ? "gus" : inflation_provider_key
     end
 
     def create_settlement_entry!(settlement_date:, net_value:, tax_withheld_amount:, gross_value:)
@@ -749,7 +777,7 @@ class BondLot < ApplicationRecord
     end
 
     def needs_inflation_backfill?
-      inflation_linked? && auto_fetch_inflation? && Setting.gus_inflation_import_enabled_effective && purchased_on.present?
+      inflation_linked? && inflation_provider_key == "gus_sdp" && auto_fetch_inflation? && Setting.gus_inflation_import_enabled_effective && purchased_on.present?
     end
 
     def should_enqueue_inflation_backfill?

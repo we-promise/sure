@@ -117,6 +117,7 @@ class BondLotsController < ApplicationController
         :inflation_rate_assumption,
         :cpi_lag_months,
         :auto_fetch_inflation,
+        :inflation_provider,
         :auto_close_on_maturity,
         :early_redemption_fee,
         :subtype,

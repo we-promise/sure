@@ -107,6 +107,15 @@
       </div>
 
       <% if Setting.gus_inflation_import_enabled_effective %>
+        <div data-bond-lot-form-target="inflationFields">
+          <%= form.select :inflation_provider,
+                          Bond::InflationProvider::PROVIDERS.map { |key, _klass| [key.humanize, key] },
+                          {
+                            label: t("bond_lots.form.inflation_provider"),
+                            include_blank: t("bond_lots.form.inflation_provider_blank")
+                          } %>
+        </div>
+
         <div class="flex items-center gap-2" data-bond-lot-form-target="inflationFields">
           <%= form.number_field :cpi_lag_months,
                                 label: t("bond_lots.form.cpi_lag_months"),

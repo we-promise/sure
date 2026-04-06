@@ -312,6 +312,66 @@ class BondLotTest < ActiveSupport::TestCase
     Setting.gus_inflation_import_enabled = false
   end
 
+  test "defaults inflation_provider to gus_sdp for inflation linked lots with auto fetch" do
+    lot = BondLot.new(
+      bond: bonds(:one),
+      purchased_on: Date.current,
+      amount: 1000,
+      subtype: "inflation_linked",
+      auto_fetch_inflation: true,
+      first_period_rate: 6.0,
+      inflation_margin: 1.0,
+      inflation_rate_assumption: 2.0,
+      cpi_lag_months: 2,
+      units: 10,
+      nominal_per_unit: 100,
+      issue_date: Date.current,
+      rate_type: "variable",
+      coupon_frequency: "at_maturity"
+    )
+
+    lot.valid?
+
+    assert_equal "gus_sdp", lot.inflation_provider
+  end
+
+  test "clears inflation_provider for non-inflation-linked lot" do
+    lot = BondLot.new(
+      bond: bonds(:one),
+      purchased_on: Date.current,
+      amount: 1000,
+      subtype: "other",
+      auto_fetch_inflation: true,
+      inflation_provider: "gus_sdp",
+      term_months: 12,
+      interest_rate: 4.0,
+      rate_type: "fixed",
+      coupon_frequency: "at_maturity"
+    )
+
+    lot.valid?
+
+    assert_nil lot.inflation_provider
+    assert_not lot.auto_fetch_inflation?
+  end
+
+  test "coupon_amount_per_period computes value for periodic coupon bonds" do
+    lot = BondLot.new(
+      bond: bonds(:one),
+      purchased_on: Date.current,
+      amount: 1200,
+      subtype: "fixed_coupon",
+      term_months: 24,
+      interest_rate: 6,
+      rate_type: "fixed",
+      coupon_frequency: "semi_annual"
+    )
+
+    coupon = lot.coupon_amount_per_period
+
+    assert_in_delta 36.0, coupon.amount.to_f, 0.001
+  end
+
   test "falls back to manual inflation assumption when GUS value missing" do
     Setting.gus_inflation_import_enabled = true
     lot = BondLot.new(

@@ -123,6 +123,8 @@ en:
       first_period_rate: First-period rate (%)
       inflation_margin: Inflation margin (%)
       auto_fetch_inflation: Fetch inflation automatically from GUS
+      inflation_provider: Inflation data provider
+      inflation_provider_blank: Manual CPI (no provider)
       auto_fetch_disabled_hint: Automatic CPI import is disabled globally in Self-Hosting settings. Enter inflation manually.
       inflation_rate_assumption: CPI assumption (%)
       cpi_lag_months: CPI lag (months)
