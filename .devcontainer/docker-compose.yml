@@ -10,6 +10,7 @@ x-rails-env: &rails_env
   POSTGRES_PASSWORD: postgres
   BUNDLE_PATH: /bundle
   REDIS_URL: redis://redis:6379/1
+  SELENIUM_REMOTE_URL: http://selenium:4444
 
 services:
   app:
@@ -28,6 +29,7 @@ services:
     depends_on:
       - db
       - redis
+      - selenium
 
   worker:
     build:
@@ -58,6 +60,14 @@ services:
     restart: unless-stopped
     environment:
       <<: *db_env
+
+  selenium:
+    image: selenium/standalone-chromium:latest
+    ports:
+      - "4444:4444"
+      - "7900:7900"
+    shm_size: 2gb
+    restart: unless-stopped
 
 volumes:
   postgres-data:
