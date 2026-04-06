@@ -107,10 +107,22 @@ class PdfImport < Import
     extracted_data&.dig("reconciliation")
   end
 
+  def reconciliation_reportable?
+    recon = reconciliation_data
+    return false unless recon.present?
+    return false unless recon["performed"] == true
+    return false unless recon["account_id"].present?
+    return false if recon["statement_transaction_count"].to_i == 0
+    true
+  end
+
   def reconciliation_matched?
-    reconciliation_data.present? &&
-      reconciliation_data["performed"] == true &&
-      reconciliation_data["balance_match"] == true
+    reconciliation_reportable? && reconciliation_data["balance_match"] == true
+  end
+
+  def reconciliation_account
+    return nil unless reconciliation_data&.dig("account_id").present?
+    family.accounts.find_by(id: reconciliation_data["account_id"])
   end
 
   def has_extracted_transactions?
