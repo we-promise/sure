@@ -60,22 +60,7 @@
     <div class="flex items-center gap-2">
       <%= image_tag "stripe-logo.svg", class: "w-5 h-5 shrink-0" %>
       <p class="text-secondary text-sm">
-        <% if @one_time_contribution_url.present? %>
-          <% contribution_link = link_to(
-               t(".one_time_contribution_link_text"),
-               @one_time_contribution_url,
-               class: "font-medium text-primary hover:underline transition",
-               target: "_blank",
-               rel: "noopener noreferrer"
-             ) %>
-
-          <%= t(
-            ".payment_via_stripe_html",
-            contribution_link: contribution_link
-          ) %>
-        <% else %>
-          <%= t(".payment_via_stripe") %>
-        <% end %>
+        <%= stripe_one_time_contribution_text(@one_time_contribution_url) %>
       </p>
     </div>
   </div>
