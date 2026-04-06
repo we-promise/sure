@@ -91,6 +91,20 @@ class Entry < ApplicationRecord
     joins(:account).where(accounts: { family_id: family.id })
   end
 
+  # Counts uncategorized, non-transfer entries in the given scope.
+  # Used by the Quick Categorize Wizard to show the remaining count.
+  # @param entries [ActiveRecord::Relation] pre-scoped entries (caller controls authorization)
+  def self.uncategorized_count(entries)
+    entries
+      .joins(:account)
+      .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
+      .where(accounts: { status: %w[draft active] })
+      .where(transactions: { category_id: nil })
+      .where.not(transactions: { kind: Transaction::TRANSFER_KINDS })
+      .where(entries: { excluded: false })
+      .count
+  end
+
   # Returns uncategorized, non-transfer entries whose name matches the given filter string.
   # Used by the Quick Categorize Wizard to preview which transactions a rule would affect.
   # @param entries [ActiveRecord::Relation] pre-scoped entries (caller controls authorization)
