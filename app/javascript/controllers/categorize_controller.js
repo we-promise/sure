@@ -121,8 +121,9 @@ export default class extends Controller {
           Accept: "text/vnd.turbo-stream.html",
         },
       })
-        .then((r) => r.text())
-        .then((html) => Turbo.renderStreamMessage(html));
+        .then((r) => { if (!r.ok) throw new Error(r.statusText); return r.text(); })
+        .then((html) => Turbo.renderStreamMessage(html))
+        .catch((err) => console.error("Rule preview failed:", err));
     }, 300);
   }
 
@@ -154,7 +155,11 @@ export default class extends Controller {
       },
       body,
     })
-      .then((r) => r.text())
-      .then((html) => Turbo.renderStreamMessage(html));
+      .then((r) => { if (!r.ok) throw new Error(r.statusText); return r.text(); })
+      .then((html) => Turbo.renderStreamMessage(html))
+      .catch((err) => {
+        console.error("Entry assignment failed:", err);
+        select.value = "";
+      });
   }
 }
