@@ -96,6 +96,8 @@ class Provider::Openai::PdfProcessor
           "performed": true|false,
           "account_id": "account_id or null",
           "balance_match": true|false|null,
+          "statement_closing_balance": number|null,
+          "synced_closing_balance": number|null,
           "statement_transaction_count": number|null,
           "synced_transaction_count": number|null,
           "matched_count": number|null,

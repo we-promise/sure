@@ -59,10 +59,16 @@ class PdfImport < Import
     end
 
     result = response.data
-    update!(
+
+    attrs = {
       ai_summary: result.summary,
       document_type: result.document_type
-    )
+    }
+    if result.reconciliation.present?
+      attrs[:extracted_data] = (result.extracted_data || {}).merge("reconciliation" => result.reconciliation)
+    end
+
+    update!(attrs)
 
     result
   end
@@ -93,6 +99,16 @@ class PdfImport < Import
 
   def statement_with_transactions?
     document_type.in?(%w[bank_statement credit_card_statement])
+  end
+
+  def reconciliation_data
+    extracted_data&.dig("reconciliation")
+  end
+
+  def reconciliation_matched?
+    reconciliation_data.present? &&
+      reconciliation_data["performed"] == true &&
+      reconciliation_data["balance_match"] == true
   end
 
   def has_extracted_transactions?
