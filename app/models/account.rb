@@ -318,6 +318,10 @@ class Account < ApplicationRecord
       .order(amount: :desc)
   end
 
+  def latest_provider_holdings_snapshot_date
+    holdings.where.not(account_provider_id: nil).maximum(:date)
+  end
+
   def start_date
     first_entry_date = entries.minimum(:date) || Date.current
     first_entry_date - 1.day
