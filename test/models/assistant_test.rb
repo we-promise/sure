@@ -15,8 +15,8 @@ class AssistantTest < ActiveSupport::TestCase
     @expected_session_id = @chat.id.to_s
     @expected_user_identifier = ::Digest::SHA256.hexdigest(@chat.user_id.to_s)
     @expected_conversation_history = [
-      {role: "user", content: "Can you help me understand my spending habits?"},
-      {role: "user", content: "What is my net worth?"}
+      { role: "user", content: "Can you help me understand my spending habits?" },
+      { role: "user", content: "What is my net worth?" }
     ]
   end
 
