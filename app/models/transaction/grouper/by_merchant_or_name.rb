@@ -1,10 +1,10 @@
 class Transaction::Grouper::ByMerchantOrName < Transaction::Grouper
-  def self.call(family, limit: 20, offset: 0)
-    new(family).call(limit: limit, offset: offset)
+  def self.call(entries, limit: 20, offset: 0)
+    new(entries).call(limit: limit, offset: offset)
   end
 
-  def initialize(family)
-    @family = family
+  def initialize(entries)
+    @entries = entries
   end
 
   def call(limit: 20, offset: 0)
@@ -18,18 +18,18 @@ class Transaction::Grouper::ByMerchantOrName < Transaction::Grouper
 
   private
 
-    attr_reader :family
+    attr_reader :entries
 
     def uncategorized_entries
-      family.entries
-            .joins(:account)
-            .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
-            .where(accounts: { status: %w[draft active] })
-            .where(transactions: { category_id: nil })
-            .where.not(transactions: { kind: Transaction::TRANSFER_KINDS })
-            .where(entries: { excluded: false })
-            .includes(entryable: :merchant)
-            .order(entries: { date: :desc })
+      entries
+        .joins(:account)
+        .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
+        .where(accounts: { status: %w[draft active] })
+        .where(transactions: { category_id: nil })
+        .where.not(transactions: { kind: Transaction::TRANSFER_KINDS })
+        .where(entries: { excluded: false })
+        .includes(entryable: :merchant)
+        .order(entries: { date: :desc })
     end
 
     def grouping_key_for(entry)
