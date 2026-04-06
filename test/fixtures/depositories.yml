@@ -1,2 +1,6 @@
 one: { }
 two: { subtype: checking }
+savings_with_interest:
+  subtype: savings
+  interest_rate: 2.75
+  interest_enabled: true

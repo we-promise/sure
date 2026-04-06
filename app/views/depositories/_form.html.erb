@@ -4,4 +4,24 @@
   <%= form.select :subtype,
                  Depository::SUBTYPES.map { |k, v| [v[:long], k] },
                  { label: true, prompt: t("depositories.form.subtype_prompt"), include_blank: t("depositories.form.none") } %>
+
+  <%= render "shared/ruler", classes: "my-4" %>
+
+  <div class="space-y-2">
+    <%= form.fields_for :accountable do |dep_form| %>
+      <div class="flex items-center gap-2">
+        <%= dep_form.number_field :interest_rate,
+                                  label: t("depositories.form.interest_rate"),
+                                  placeholder: t("depositories.form.interest_rate_placeholder"),
+                                  min: 0,
+                                  max: 100,
+                                  step: 0.01 %>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <%= dep_form.check_box :interest_enabled, class: "checkbox checkbox--dark" %>
+        <span class="text-sm text-secondary"><%= t("depositories.form.interest_enabled") %></span>
+      </div>
+    <% end %>
+  </div>
 <% end %>

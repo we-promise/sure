@@ -63,6 +63,24 @@ Sidekiq.configure_server do |config|
   config.on(:startup) do
     AutoSyncScheduler.sync!
     Rails.logger.info("[AutoSyncScheduler] Initialized sync_all_accounts cron job")
+
+    Sidekiq::Cron::Job.create(
+      name: "interest_accrual_daily",
+      cron: "0 3 * * *",
+      class: "InterestAccrualJob",
+      queue: "scheduled",
+      description: "Accrues daily interest for interest-enabled depository accounts"
+    )
+
+    Sidekiq::Cron::Job.create(
+      name: "interest_payout_monthly",
+      cron: "0 4 1 * *",
+      class: "InterestPayoutJob",
+      queue: "scheduled",
+      description: "Creates interest payment transactions on the 1st of each month"
+    )
+
+    Rails.logger.info("[InterestJobs] Initialized interest accrual and payout cron jobs")
   rescue => e
     Rails.logger.error("[AutoSyncScheduler] Failed to initialize: #{e.message}")
   end

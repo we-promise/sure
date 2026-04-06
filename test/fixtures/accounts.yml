@@ -99,3 +99,13 @@ crypto:
   accountable_type: Crypto
   accountable: one
   status: active
+
+savings_with_interest:
+  family: dylan_family
+  owner: family_admin
+  name: Savings with Interest
+  balance: 10000
+  currency: USD
+  accountable_type: Depository
+  accountable: savings_with_interest
+  status: active

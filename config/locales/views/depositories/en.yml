@@ -6,5 +6,16 @@ en:
     form:
       none: None
       subtype_prompt: Select account type
+      interest_rate: Annual Interest Rate (APY %)
+      interest_rate_placeholder: "2.75"
+      interest_enabled: Enable automatic interest calculation
     new:
       title: Enter account balance
+    tabs:
+      overview:
+        interest_rate: Interest Rate
+        apy: APY
+        accrued_this_month: Accrued This Month
+        total_this_year: Total This Year
+        edit_details: Edit account details
+        unknown: Unknown

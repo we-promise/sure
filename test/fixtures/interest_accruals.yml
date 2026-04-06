@@ -1,0 +1,15 @@
+one:
+  depository: savings_with_interest
+  date: <%= Date.current - 2.days %>
+  balance_used: 10000.0000
+  daily_rate: 0.000075342466
+  amount: 0.7534
+  paid_out: false
+
+two:
+  depository: savings_with_interest
+  date: <%= Date.current - 1.day %>
+  balance_used: 10000.0000
+  daily_rate: 0.000075342466
+  amount: 0.7534
+  paid_out: false

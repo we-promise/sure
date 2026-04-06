@@ -1,0 +1,28 @@
+<%# locals: (account:) %>
+
+<div class="grid grid-cols-3 gap-2">
+  <%= summary_card title: t(".interest_rate") do %>
+    <% if account.depository.interest_rate.present? %>
+      <%= number_to_percentage(account.depository.interest_rate, precision: 2) %> <%= t(".apy") %>
+    <% else %>
+      <%= t(".unknown") %>
+    <% end %>
+  <% end %>
+
+  <%= summary_card title: t(".accrued_this_month") do %>
+    <%= format_money Money.new(account.depository.accrued_interest_this_month, account.currency) %>
+  <% end %>
+
+  <%= summary_card title: t(".total_this_year") do %>
+    <%= format_money Money.new(account.depository.total_interest_this_year, account.currency) %>
+  <% end %>
+</div>
+
+<div class="flex justify-center py-8">
+  <%= render DS::Link.new(
+    text: t(".edit_details"),
+    variant: "ghost",
+    href: edit_depository_path(account),
+    frame: :modal
+  ) %>
+</div>

@@ -42,6 +42,8 @@ class UI::AccountPage < ApplicationComponent
       [ :activity, :holdings ]
     when "Property", "Vehicle", "Loan"
       [ :activity, :overview ]
+    when "Depository"
+      account.depository.interest_eligible? ? [ :activity, :overview ] : [ :activity ]
     else
       [ :activity ]
     end
