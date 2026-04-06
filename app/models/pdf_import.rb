@@ -89,8 +89,10 @@ class PdfImport < Import
       raise error_message
     end
 
-    update!(extracted_data: response.data)
-    response.data
+    new_data = response.data.deep_stringify_keys
+    merged = (extracted_data || {}).deep_merge(new_data)
+    update!(extracted_data: merged)
+    merged
   end
 
   def bank_statement?
