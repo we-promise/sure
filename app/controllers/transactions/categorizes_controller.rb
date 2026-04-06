@@ -5,7 +5,7 @@ class Transactions::CategorizesController < ApplicationController
       [ "Transactions", transactions_path ],
       [ "Categorize", nil ]
     ]
-    @position = params[:position].to_i
+    @position = [ params[:position].to_i, 0 ].max
     groups = Transaction::Grouper.strategy.call(
       Current.accessible_entries,
       limit: 1,
