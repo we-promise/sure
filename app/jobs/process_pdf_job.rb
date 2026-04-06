@@ -14,6 +14,8 @@ class ProcessPdfJob < ApplicationJob
       document_type = resolve_document_type(pdf_import, process_result)
       upload_to_vector_store(pdf_import, document_type: document_type)
 
+      # For statements with transactions (bank/credit card), extract and generate import rows
+      # unless reconciliation already confirmed balances match
       if pdf_import.reconciliation_matched?
         Rails.logger.info("ProcessPdfJob: Reconciliation matched for import #{pdf_import.id}, skipping transaction extraction")
       elsif statement_with_transactions?(document_type)
