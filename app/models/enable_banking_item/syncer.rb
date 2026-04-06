@@ -32,11 +32,10 @@ class EnableBankingItem::Syncer
 
     # Phase 2: Check account setup status and collect sync statistics
     sync.update!(status_text: "Checking account configuration...") if sync.respond_to?(:status_text)
+    collect_setup_stats(sync, provider_accounts: enable_banking_item.enable_banking_accounts)
 
     linked_accounts = enable_banking_item.enable_banking_accounts.joins(:account_provider).joins(:account).merge(Account.visible)
     unlinked_accounts = enable_banking_item.enable_banking_accounts.left_joins(:account_provider).where(account_providers: { id: nil })
-
-    collect_setup_stats(sync, provider_accounts: enable_banking_item.enable_banking_accounts)
 
     if unlinked_accounts.any?
       enable_banking_item.update!(pending_account_setup: true)
@@ -45,10 +44,10 @@ class EnableBankingItem::Syncer
       enable_banking_item.update!(pending_account_setup: false)
     end
 
-    # Phase 3: Process transactions for linked accounts only
+    # Phase 3: Process transactions for linked and visible accounts only
     if linked_accounts.any?
       sync.update!(status_text: "Processing transactions...") if sync.respond_to?(:status_text)
-      account_ids = linked_accounts.filter_map { |a| a.current_account&.id }
+      account_ids = linked_accounts.includes(:account_provider).filter_map { |a| a.current_account&.id }
       enable_banking_item.process_accounts
 
       # Collect transaction statistics
