@@ -45,7 +45,6 @@ class RulesController < ApplicationController
         value: params[:action_value]
       )
     end
-
   end
 
   def create
@@ -151,6 +150,4 @@ class RulesController < ApplicationController
         ]
       )
     end
-
-
 end

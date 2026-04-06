@@ -42,6 +42,19 @@ class Rule < ApplicationRecord
 
   # Calculates total unique resources affected across multiple rules
   # This handles overlapping rules by deduplicating transaction IDs
+  # Creates a categorization rule for the Quick Categorize Wizard.
+  # Returns the saved rule, or nil if a duplicate or invalid rule already exists.
+  def self.create_from_grouping!(family, grouping_key, category, transaction_type: nil)
+    rule = family.rules.build(name: grouping_key, resource_type: "transaction", active: true)
+    rule.conditions.build(condition_type: "transaction_name", operator: "like", value: grouping_key)
+    rule.conditions.build(condition_type: "transaction_type", operator: "=", value: transaction_type) if transaction_type.present?
+    rule.actions.build(action_type: "set_transaction_category", value: category.id.to_s)
+    rule.save!
+    rule
+  rescue ActiveRecord::RecordInvalid
+    nil
+  end
+
   def self.total_affected_resource_count(rules)
     return 0 if rules.empty?
 

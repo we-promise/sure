@@ -34,7 +34,12 @@ class Transactions::CategorizesController < ApplicationController
     count    = entries.bulk_update!({ category_id: category.id })
 
     if params[:create_rule] == "1"
-      create_rule_for_group(params[:grouping_key], category, params[:transaction_type])
+      Rule.create_from_grouping!(
+        Current.family,
+        params[:grouping_key],
+        category,
+        transaction_type: params[:transaction_type]
+      )
     end
 
     respond_to do |format|
@@ -68,7 +73,7 @@ class Transactions::CategorizesController < ApplicationController
   def preview_rule
     filter           = params[:filter].to_s.strip
     transaction_type = params[:transaction_type].presence
-    entries          = filter.present? ? preview_entries_for(filter, transaction_type) : []
+    entries          = filter.present? ? Entry.uncategorized_matching(Current.family, filter, transaction_type) : []
     @categories      = Current.family.categories.alphabetically
 
     render turbo_stream: [
@@ -107,40 +112,4 @@ class Transactions::CategorizesController < ApplicationController
     end
     render turbo_stream: streams
   end
-
-  private
-
-    def preview_entries_for(filter, transaction_type = nil)
-      sanitized = ActiveRecord::Base.sanitize_sql_like(filter.gsub(/\s+/, " ").strip)
-      scope = Current.family.entries
-                     .joins(:account)
-                     .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
-                     .where(accounts: { status: %w[draft active] })
-                     .where(transactions: { category_id: nil })
-                     .where.not(transactions: { kind: Transaction::TRANSFER_KINDS })
-                     .where(entries: { excluded: false })
-                     .where("BTRIM(REGEXP_REPLACE(entries.name, '[[:space:]]+', ' ', 'g')) ILIKE ?", "%#{sanitized}%")
-
-      scope = case transaction_type
-              when "income"   then scope.where("entries.amount < 0")
-              when "expense"  then scope.where("entries.amount >= 0")
-              else scope
-              end
-
-      scope.includes(entryable: :merchant).order(entries: { date: :desc }).to_a
-    end
-
-    def create_rule_for_group(grouping_key, category, transaction_type = nil)
-      rule = Current.family.rules.build(
-        name: grouping_key,
-        resource_type: "transaction",
-        active: true
-      )
-      rule.conditions.build(condition_type: "transaction_name", operator: "like", value: grouping_key)
-      rule.conditions.build(condition_type: "transaction_type", operator: "=", value: transaction_type) if transaction_type.present?
-      rule.actions.build(action_type: "set_transaction_category", value: category.id.to_s)
-      rule.save!
-    rescue ActiveRecord::RecordInvalid
-      # Rule already exists or is invalid — skip silently
-    end
 end

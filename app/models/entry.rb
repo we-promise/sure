@@ -91,6 +91,28 @@ class Entry < ApplicationRecord
     joins(:account).where(accounts: { family_id: family.id })
   end
 
+  # Returns uncategorized, non-transfer entries whose name matches the given filter string.
+  # Used by the Quick Categorize Wizard to preview which transactions a rule would affect.
+  def self.uncategorized_matching(family, filter, transaction_type = nil)
+    sanitized = sanitize_sql_like(filter.gsub(/\s+/, " ").strip)
+    scope = family.entries
+                  .joins(:account)
+                  .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
+                  .where(accounts: { status: %w[draft active] })
+                  .where(transactions: { category_id: nil })
+                  .where.not(transactions: { kind: Transaction::TRANSFER_KINDS })
+                  .where(entries: { excluded: false })
+                  .where("BTRIM(REGEXP_REPLACE(entries.name, '[[:space:]]+', ' ', 'g')) ILIKE ?", "%#{sanitized}%")
+
+    scope = case transaction_type
+    when "income"  then scope.where("entries.amount < 0")
+    when "expense" then scope.where("entries.amount >= 0")
+    else scope
+    end
+
+    scope.includes(entryable: :merchant).order(entries: { date: :desc }).to_a
+  end
+
   # Auto-exclude stale pending transactions for an account
   # Called during sync to clean up pending transactions that never posted
   # @param account [Account] The account to clean up
