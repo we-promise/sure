@@ -140,7 +140,7 @@ class BondLotsControllerTest < ActionDispatch::IntegrationTest
     lot.reload
     assert_equal 1200.to_d, lot.amount
     assert_equal 4.5.to_d, lot.interest_rate
-    assert_equal "rod", lot.subtype
+    assert_equal "inflation_linked", lot.subtype
     assert_equal "at_maturity", lot.coupon_frequency
     assert_equal Date.new(2026, 2, 15), lot.purchased_on
 

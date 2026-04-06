@@ -9,13 +9,19 @@ en:
       auto_buy_new_issues: Auto-buy new bond issues
       auto_buy_new_issues_hint: After maturity settlement, automatically buy the next issue with available proceeds for IKE/IKZE accounts.
     subtypes:
-      eod:
-        short: EOD
-        long: 10-year Treasury Savings Bond
-      rod:
-        short: ROD
-        long: 12-year Family Treasury Savings Bond
-      other_bond:
+      zero_coupon:
+        short: Zero-Coupon
+        long: Zero-Coupon Bill
+      fixed_coupon:
+        short: Fixed
+        long: Fixed Coupon Bond
+      inflation_linked:
+        short: ILB
+        long: Inflation-Linked Bond
+      savings:
+        short: Savings
+        long: Savings Bond
+      other:
         short: Other
         long: Other Bond
     new:
@@ -104,6 +110,8 @@ en:
       purchased_on: Purchase date
       issue_date: Issue date
       amount: Principal amount
+      product_code: Product label
+      product_code_blank: Custom / no preset
       units: Units
       nominal_per_unit: Nominal per unit
       term_months: Term (months)

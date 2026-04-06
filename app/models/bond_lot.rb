@@ -13,7 +13,7 @@ class BondLot < ApplicationRecord
     flagged_ids = open.where(requires_rate_review: true).pluck(:id)
 
     unresolvable_ids = []
-    open.where(subtype: %w[eod rod]).includes(:bond).find_in_batches(batch_size: 200) do |batch|
+    open.where(subtype: Bond::INFLATION_LINKED_SUBTYPES).includes(:bond).find_in_batches(batch_size: 200) do |batch|
       cpi_by_lag = cpi_rates_by_lag(on: review_on, lag_months_values: batch.filter_map { |lot| lot.auto_fetch_inflation? ? lot.cpi_lag_months.to_i : nil }.uniq)
 
       batch.each do |lot|
@@ -102,6 +102,8 @@ class BondLot < ApplicationRecord
   end
 
   before_validation :inherit_defaults_from_bond
+  before_validation :normalize_legacy_subtype
+  before_validation :normalize_subtype_from_product
   before_validation :apply_product_defaults
   before_validation :assign_maturity_date_from_term
   before_validation :derive_amount_from_units
@@ -125,6 +127,7 @@ class BondLot < ApplicationRecord
   validates :nominal_per_unit, numericality: { greater_than: 0 }, allow_nil: true
   validates :cpi_lag_months, numericality: { only_integer: true, greater_than_or_equal_to: 0 }, allow_nil: true
   validates :subtype, inclusion: { in: Bond::SUBTYPES.keys }
+  validates :product_code, inclusion: { in: Bond::PRODUCT_DEFAULTS.keys }, allow_nil: true
   validates :rate_type, inclusion: { in: Bond::RATE_TYPES }, allow_nil: true
   validates :coupon_frequency, inclusion: { in: Bond::COUPON_FREQUENCIES }, allow_nil: true
   validates :tax_strategy, inclusion: { in: TAX_STRATEGIES }
@@ -160,7 +163,7 @@ class BondLot < ApplicationRecord
   end
 
   def inflation_linked?
-    subtype.in?(%w[eod rod])
+    canonical_subtype.in?(Bond::INFLATION_LINKED_SUBTYPES)
   end
 
   def auto_fetch_inflation?
@@ -225,6 +228,22 @@ class BondLot < ApplicationRecord
     return 0 if principal.zero?
 
     (projected_total_return_amount / principal) * 100
+  end
+
+  def coupon_amount_per_period
+    return nil if coupon_frequency.blank? || coupon_frequency == "at_maturity"
+    return nil if interest_rate.blank?
+
+    periods = {
+      "monthly" => 12,
+      "quarterly" => 4,
+      "semi_annual" => 2,
+      "annual" => 1
+    }
+    per_year = periods[coupon_frequency]
+    return nil if per_year.blank?
+
+    Money.new((amount.to_d * interest_rate.to_d / 100 / per_year).round(4), account.currency)
   end
 
   def create_purchase_entry!(auto_purchased: false, requires_rate_review: false)
@@ -516,11 +535,36 @@ class BondLot < ApplicationRecord
       self.term_months ||= bond&.term_months
     end
 
-    def apply_product_defaults
-      defaults = Bond::PRODUCT_DEFAULTS[subtype]
+    def normalize_legacy_subtype
+      return if subtype.blank?
+
+      mapped = Bond::LEGACY_SUBTYPE_ALIASES[subtype]
+      return unless mapped
+
+      self.product_code ||= (subtype == "eod" ? "pl_eod" : subtype == "rod" ? "pl_rod" : nil)
+      self.subtype = mapped
+    end
+
+    def normalize_subtype_from_product
+      return if product_code.blank?
+
+      defaults = Bond::PRODUCT_DEFAULTS[product_code]
       return if defaults.blank?
 
-      # Known product subtypes (EOD 10Y, ROD 12Y) have regulatory fixed terms — intentional overwrite
+      self.subtype = defaults[:subtype]
+    end
+
+    def apply_product_defaults
+      defaults = if product_code.present?
+        Bond::PRODUCT_DEFAULTS[product_code]
+      elsif canonical_subtype == "inflation_linked"
+        nil
+      else
+        Bond::PRODUCT_DEFAULTS[canonical_subtype]
+      end
+      return if defaults.blank?
+
+      self.subtype = defaults[:subtype] if subtype.blank? || Bond::LEGACY_SUBTYPE_ALIASES.key?(subtype)
       self.term_months = defaults[:term_months] if defaults[:term_months].present?
       self.rate_type ||= defaults[:rate_type]
       self.coupon_frequency ||= defaults[:coupon_frequency]
@@ -608,7 +652,11 @@ class BondLot < ApplicationRecord
     end
 
     def subtype_label
-      Bond.long_subtype_label_for(subtype) || Bond.display_name.singularize
+      Bond.long_subtype_label_for(canonical_subtype) || Bond.display_name.singularize
+    end
+
+    def canonical_subtype
+      Bond::LEGACY_SUBTYPE_ALIASES.fetch(subtype.to_s, subtype)
     end
 
     def purchase_entry_extra(auto_purchased: false, requires_rate_review: false)

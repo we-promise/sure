@@ -5,7 +5,7 @@ one:
   term_months: 12
   maturity_date: <%= Date.current + 9.months %>
   interest_rate: 4.25
-  subtype: other_bond
+  subtype: other
   rate_type: fixed
   coupon_frequency: at_maturity
 
@@ -16,6 +16,6 @@ two:
   term_months: 6
   maturity_date: <%= Date.current + 5.months %>
   interest_rate: 4.15
-  subtype: other_bond
+  subtype: other
   rate_type: fixed
   coupon_frequency: semi_annual

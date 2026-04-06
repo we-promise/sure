@@ -61,7 +61,7 @@ class BondLotTest < ActiveSupport::TestCase
     )
 
     assert lot.valid?
-    assert_equal "other_bond", lot.subtype
+    assert_equal "other", lot.subtype
     assert_equal "fixed", lot.rate_type
     assert_equal "at_maturity", lot.coupon_frequency
   end
@@ -87,7 +87,7 @@ class BondLotTest < ActiveSupport::TestCase
     assert_equal Date.new(2026, 2, 1), lot.entry.date
     assert_equal 1000.to_d, lot.entry.amount
     assert_equal lot.id, lot.entry.entryable.extra["bond_lot_id"]
-    assert_equal "other_bond", lot.entry.entryable.extra["bond_subtype"]
+    assert_equal "other", lot.entry.entryable.extra["bond_subtype"]
     assert_equal 12, lot.entry.entryable.extra["bond_term_months"]
     assert_equal 4.0.to_d, lot.entry.entryable.extra["bond_interest_rate"].to_d
   end
@@ -127,7 +127,7 @@ class BondLotTest < ActiveSupport::TestCase
     assert_equal 1200.to_d, entry_record.amount
     assert_equal "keep", entry_record.entryable.extra["custom"]
     assert_equal lot.id, entry_record.entryable.extra["bond_lot_id"]
-    assert_equal "other_bond", entry_record.entryable.extra["bond_subtype"]
+    assert_equal "other", entry_record.entryable.extra["bond_subtype"]
     assert_equal 24, entry_record.entryable.extra["bond_term_months"]
     assert_equal 4.5.to_d, entry_record.entryable.extra["bond_interest_rate"].to_d
   end
@@ -584,7 +584,7 @@ class BondLotTest < ActiveSupport::TestCase
     replacement_lot = account.bond.bond_lots.order(created_at: :desc).first
 
     assert replacement_lot.requires_rate_review?
-    assert_equal "rod", replacement_lot.subtype
+    assert_equal "inflation_linked", replacement_lot.subtype
     assert_nil replacement_lot.first_period_rate
     assert_nil replacement_lot.inflation_margin
     assert replacement_lot.entry.present?

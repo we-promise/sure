@@ -29,6 +29,13 @@
                            default_currency: account.currency,
                            required: true %>
 
+      <%= form.select :product_code,
+              Bond.product_options_for_select,
+              {
+                label: t("bond_lots.form.product_code"),
+                include_blank: t("bond_lots.form.product_code_blank")
+              } %>
+
       <div class="flex items-center gap-2" data-bond-lot-form-target="inflationFields">
         <%= form.number_field :units,
                               label: t("bond_lots.form.units"),
@@ -58,12 +65,13 @@
                               data: { bond_lot_form_target: "otherRequiredInput" } %>
       </div>
 
+      <% selected_subtype = Bond::LEGACY_SUBTYPE_ALIASES.fetch(bond_lot.subtype.to_s, bond_lot.subtype.presence || "other") %>
       <%= form.select :subtype,
               Bond::SUBTYPES.map { |key, labels| [ labels[:long], key ] },
               {
                 label: t("bond_lots.form.subtype"),
                 required: false,
-                selected: bond_lot.subtype.presence || "other_bond"
+                selected: selected_subtype
               },
               {
                 data: {

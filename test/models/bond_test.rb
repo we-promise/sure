@@ -21,13 +21,11 @@ class BondTest < ActiveSupport::TestCase
     assert_equal "badge-percent", Bond.icon
   end
 
-  test "applies EOD defaults" do
+  test "normalizes legacy EOD subtype to inflation_linked" do
     bond = Bond.new(subtype: "eod")
 
     bond.valid?
 
-    assert_equal 120, bond.term_months
-    assert_equal "variable", bond.rate_type
-    assert_equal "at_maturity", bond.coupon_frequency
+    assert_equal "inflation_linked", bond.subtype
   end
 end

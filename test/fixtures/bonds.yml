@@ -5,4 +5,4 @@ one:
   initial_balance: 10000
   maturity_date: <%= 1.year.from_now.to_date %>
   coupon_frequency: at_maturity
-  subtype: other_bond
+  subtype: other

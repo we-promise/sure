@@ -120,6 +120,7 @@ class BondLotsController < ApplicationController
         :auto_close_on_maturity,
         :early_redemption_fee,
         :subtype,
+        :product_code,
         :rate_type,
         :coupon_frequency
       ).tap do |permitted|
