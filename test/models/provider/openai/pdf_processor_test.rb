@@ -56,21 +56,11 @@ class Provider::Openai::PdfProcessorTest < ActiveSupport::TestCase
       "usage" => { "total_tokens" => 50, "prompt_tokens" => 30, "completion_tokens" => 20 }
     }
 
-    client.expects(:chat).with do |parameters:|
-      assert parameters[:tools].present?
-      assert_equal 2, parameters[:messages].size
-      assert_equal "system", parameters[:messages][0][:role]
-      assert_equal "user", parameters[:messages][1][:role]
+    captured_calls = []
+    client.stubs(:chat).with do |parameters:|
+      captured_calls << parameters.deep_dup
       true
-    end.returns(first_response)
-
-    client.expects(:chat).with do |parameters:|
-      tool_message = parameters[:messages].find { |m| m[:role] == "tool" }
-      assert tool_message.present?
-      assert_equal "call_1", tool_message[:tool_call_id]
-      assert_equal "get_accounts", tool_message[:name]
-      true
-    end.returns(second_response)
+    end.returns(first_response).then.returns(second_response)
 
     assert_difference "LlmUsage.count", 1 do
       result = processor.process
@@ -78,6 +68,20 @@ class Provider::Openai::PdfProcessorTest < ActiveSupport::TestCase
       assert_equal true, result.reconciliation["performed"]
       assert_equal @account.id, result.reconciliation["account_id"]
     end
+
+    assert_equal 2, captured_calls.size
+
+    first_call = captured_calls[0]
+    assert first_call[:tools].present?
+    assert_equal 2, first_call[:messages].size
+    assert_equal "system", first_call[:messages][0][:role]
+    assert_equal "user", first_call[:messages][1][:role]
+
+    second_call = captured_calls[1]
+    tool_message = second_call[:messages].find { |m| m[:role] == "tool" }
+    assert tool_message.present?, "Expected a tool message in the second call"
+    assert_equal "call_1", tool_message[:tool_call_id]
+    assert_equal "get_accounts", tool_message[:name]
   end
 
   test "get_transactions augmentation uses balance as of statement end date" do
