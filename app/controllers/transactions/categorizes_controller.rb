@@ -1,9 +1,9 @@
 class Transactions::CategorizesController < ApplicationController
   def show
     @breadcrumbs = [
-      [ "Home", root_path ],
-      [ "Transactions", transactions_path ],
-      [ "Categorize", nil ]
+      [ t("breadcrumbs.home"), root_path ],
+      [ t("breadcrumbs.transactions"), transactions_path ],
+      [ t("breadcrumbs.categorize"), nil ]
     ]
     @position = [ params[:position].to_i, 0 ].max
     groups = Transaction::Grouper.strategy.call(
