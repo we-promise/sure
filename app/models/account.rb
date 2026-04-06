@@ -19,6 +19,7 @@ class Account < ApplicationRecord
   has_many :trades, through: :entries, source: :entryable, source_type: "Trade"
   has_many :holdings, dependent: :destroy
   has_many :balances, dependent: :destroy
+  has_many :recurring_transactions, dependent: :destroy
 
   monetize :balance, :cash_balance
 
@@ -317,6 +318,10 @@ class Account < ApplicationRecord
       .order(amount: :desc)
   end
 
+  def latest_provider_holdings_snapshot_date
+    holdings.where.not(account_provider_id: nil).maximum(:date)
+  end
+
   def start_date
     first_entry_date = entries.minimum(:date) || Date.current
     first_entry_date - 1.day
@@ -359,6 +364,13 @@ class Account < ApplicationRecord
     return true if investment?
     return accountable.supports_trades? if crypto? && accountable.respond_to?(:supports_trades?)
     false
+  end
+
+  def traded_standard_securities
+    Security.where(id: holdings.select(:security_id))
+            .standard
+            .distinct
+            .order(:ticker)
   end
 
   # The balance type determines which "component" of balance is being tracked.

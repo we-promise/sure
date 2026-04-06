@@ -113,7 +113,7 @@ module QifParser
 
   # Parses all transactions from the file, excluding the Opening Balance entry.
   # Returns an array of ParsedTransaction structs.
-  def self.parse(content)
+  def self.parse(content, date_format: "%m/%d/%Y")
     return [] unless valid?(content)
 
     content = normalize_encoding(content)
@@ -125,7 +125,7 @@ module QifParser
     section = extract_section(content, type)
     return [] unless section
 
-    parse_records(section).filter_map { |record| build_transaction(record) }
+    parse_records(section).filter_map { |record| build_transaction(record, date_format: date_format) }
   end
 
   # Returns the opening balance entry from the QIF file, if present.
@@ -134,7 +134,7 @@ module QifParser
   # real transaction – it is the account's starting balance.
   #
   # Returns a hash { date: Date, amount: BigDecimal } or nil.
-  def self.parse_opening_balance(content)
+  def self.parse_opening_balance(content, date_format: "%m/%d/%Y")
     return nil unless valid?(content)
 
     content = normalize_encoding(content)
@@ -149,7 +149,7 @@ module QifParser
     record = parse_records(section).find { |r| r["P"]&.strip == "Opening Balance" }
     return nil unless record
 
-    date   = parse_qif_date(record["D"])
+    date   = parse_qif_date(record["D"], date_format: date_format)
     amount = parse_qif_amount(record["T"] || record["U"])
     return nil unless date && amount
 
@@ -228,7 +228,7 @@ module QifParser
   # Parses investment transactions from the !Type:Invst section.
   # Uses the !Type:Security sections to resolve security names to tickers.
   # Returns an array of ParsedInvestmentTransaction structs.
-  def self.parse_investment_transactions(content)
+  def self.parse_investment_transactions(content, date_format: "%m/%d/%Y")
     return [] unless valid?(content)
 
     content = normalize_encoding(content)
@@ -239,7 +239,7 @@ module QifParser
     section = extract_section(content, "Invst")
     return [] unless section
 
-    parse_records(section).filter_map { |record| build_investment_transaction(record, ticker_by_name) }
+    parse_records(section).filter_map { |record| build_investment_transaction(record, ticker_by_name, date_format: date_format) }
   end
 
   # ------------------------------------------------------------------
@@ -292,7 +292,7 @@ module QifParser
   end
   private_class_method :parse_records
 
-  def self.build_transaction(record)
+  def self.build_transaction(record, date_format: "%m/%d/%Y")
     # "Opening Balance" is a Quicken convention for the account's starting balance –
     # it is not a real transaction and must not be imported as one.
     return nil if record["P"]&.strip == "Opening Balance"
@@ -302,7 +302,7 @@ module QifParser
 
     return nil unless raw_date.present? && raw_amount.present?
 
-    date   = parse_qif_date(raw_date)
+    date   = parse_qif_date(raw_date, date_format: date_format)
     amount = parse_qif_amount(raw_amount)
 
     return nil unless date && amount
@@ -347,38 +347,82 @@ module QifParser
   end
   private_class_method :parse_category_and_tags
 
-  # Parses a QIF date string into an ISO 8601 date string.
+  # Normalizes a QIF date string into a standard format that Date.strptime can
+  # handle.  QIF files use Quicken-specific conventions:
   #
-  # Quicken uses several variants:
-  #   M/D'YY        →  6/ 4'20  →  2020-06-04
-  #   M/ D'YY       →  6/ 4'20  →  2020-06-04
-  #   MM/DD/YYYY    →  06/04/2020 (less common)
-  def self.parse_qif_date(date_str)
+  #   - Apostrophe as year separator:  6/ 4'20  or  6/ 4'2020
+  #   - Optional spaces around components:  6/ 4'20  →  6/4/20
+  #   - Dot separators:  04.06.2020
+  #   - Dash separators:  04-06-2020
+  #
+  # This method:
+  #   1. Strips whitespace
+  #   2. Replaces the Quicken apostrophe with the file's date separator
+  #   3. Expands 2-digit years to 4-digit (00-99 → 2000-2099, capped at current year)
+  #   4. Returns a cleaned date string suitable for Date.strptime
+  def self.normalize_qif_date(date_str)
     return nil if date_str.blank?
 
-    # Primary format: M/D'YY  or  M/ D'YY  (spaces around day are optional)
-    if (m = date_str.match(%r{\A(\d{1,2})/\s*(\d{1,2})'(\d{2,4})\z}))
-      month = m[1].to_i
-      day   = m[2].to_i
-      if m[3].length == 2
-        year = 2000 + m[3].to_i
-        year -= 100 if year > Date.today.year
-      else
-        year = m[3].to_i
-      end
-      return Date.new(year, month, day).iso8601
+    s = date_str.strip
+
+    # Replace Quicken apostrophe year separator with the preceding separator
+    if s.include?("'")
+      sep = s.match(%r{[/.\-]})&.to_s || "/"
+      s = s.gsub("'", sep)
     end
 
-    # Fallback: MM/DD/YYYY
-    if (m = date_str.match(%r{\A(\d{1,2})/(\d{1,2})/(\d{4})\z}))
-      return Date.new(m[3].to_i, m[1].to_i, m[2].to_i).iso8601
+    # Remove internal spaces (e.g. "6/ 4/20" → "6/4/20")
+    s = s.gsub(/\s+/, "")
+
+    # Expand 2-digit year at end to 4-digit, but only when the string doesn't
+    # already contain a 4-digit number (which would be a full year).
+    if !s.match?(/\d{4}/) && (m = s.match(%r{\A(.+[/.\-])(\d{2})\z}))
+      short_year = m[2].to_i
+      full_year  = 2000 + short_year
+      full_year -= 100 if full_year > Date.today.year
+      s = "#{m[1]}#{full_year}"
     end
 
-    nil
+    s
+  end
+  private_class_method :normalize_qif_date
+
+  # Parses a QIF date string into an ISO 8601 date string using the given
+  # strptime format.  The date is first normalized (apostrophe → separator,
+  # 2-digit year expansion, whitespace removal) before parsing.
+  #
+  # +date_format+ should be a strptime format string such as "%m/%d/%Y" or
+  # "%d.%m.%Y".  Defaults to "%m/%d/%Y" (US convention) for backwards
+  # compatibility.
+  # Attempts to parse a raw QIF date string with the given format.
+  # Returns the parsed ISO 8601 date string, or nil if parsing fails.
+  def self.try_parse_date(date_str, date_format: "%m/%d/%Y")
+    normalized = normalize_qif_date(date_str)
+    return nil unless normalized
+
+    Date.strptime(normalized, date_format).iso8601
   rescue Date::Error, ArgumentError
     nil
   end
-  private_class_method :parse_qif_date
+
+  private_class_method def self.parse_qif_date(date_str, date_format: "%m/%d/%Y")
+    try_parse_date(date_str, date_format: date_format)
+  end
+
+  # Extracts all raw date strings from D-fields in transaction sections only.
+  # Skips metadata sections (Cat, Tag, Security) where D means "description".
+  # Used by Import.detect_date_format to sample dates before parsing.
+  def self.extract_raw_dates(content)
+    return [] if content.blank?
+
+    content = normalize_encoding(content)
+    content = normalize_line_endings(content)
+
+    transaction_sections = TRANSACTION_TYPES.filter_map { |type| extract_section(content, type) }
+    transaction_sections.flat_map { |section| section.scan(/^D(.+)$/i).flatten }
+                        .map { |d| normalize_qif_date(d) }
+                        .compact
+  end
 
   # Strips thousands-separator commas and returns a clean decimal string.
   def self.parse_qif_amount(amount_str)
@@ -391,14 +435,14 @@ module QifParser
 
   # Builds a ParsedInvestmentTransaction from a raw record hash.
   # ticker_by_name maps security names (N field in !Type:Security) to tickers (S field).
-  def self.build_investment_transaction(record, ticker_by_name)
+  def self.build_investment_transaction(record, ticker_by_name, date_format: "%m/%d/%Y")
     action = record["N"]&.strip
     return nil unless action.present?
 
     raw_date = record["D"]
     return nil unless raw_date.present?
 
-    date = parse_qif_date(raw_date)
+    date = parse_qif_date(raw_date, date_format: date_format)
     return nil unless date
 
     security_name   = record["Y"]&.strip

@@ -52,7 +52,7 @@ mcp_tool_scanning:
   detect_drift: true
 
 mcp_tool_policy:
-  enabled: true
+  enabled: false
   action: warn
   # Redirect profiles (v2.0): route matched tool calls to audited handler programs
   # instead of blocking. The handler returns a synthetic MCP response.
