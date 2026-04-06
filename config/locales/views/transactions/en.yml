@@ -156,6 +156,10 @@ en:
         categorized:
           one: "1 transaction categorized"
           other: "%{count} transactions categorized"
+        rule_creation_failed: "Transactions categorized, but the rule could not be created (it may already exist)."
+      entry_row:
+        include_checkbox: "Include %{name}"
+        assign_category_select: "Assign category for %{name}"
     list:
       drag_drop_title: Drop CSV to import
       drag_drop_subtitle: Upload transactions directly

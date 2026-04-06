@@ -32,12 +32,13 @@ class Transactions::CategorizesController < ApplicationController
     count    = entries.bulk_update!({ category_id: category.id })
 
     if params[:create_rule] == "1"
-      Rule.create_from_grouping!(
+      rule = Rule.create_from_grouping!(
         Current.family,
         params[:grouping_key],
         category,
         transaction_type: params[:transaction_type]
       )
+      flash[:alert] = t(".rule_creation_failed") if rule.nil?
     end
 
     respond_to do |format|
@@ -61,6 +62,7 @@ class Transactions::CategorizesController < ApplicationController
           streams << turbo_stream.replace("categorize_group_summary",
             partial: "transactions/categorizes/group_summary",
             locals: { entries: remaining_entries })
+          streams.concat(flash_notification_stream_items)
           render turbo_stream: streams
         end
       end

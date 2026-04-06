@@ -3,6 +3,7 @@
   <div class="grid grid-cols-[1rem_1fr_5rem_6rem_6.5rem] gap-3 items-center px-5 py-3 bg-container hover:bg-container-hover">
     <input type="checkbox" name="entry_ids[]" value="<%= entry.id %>"
            checked class="checkbox checkbox--light shrink-0"
+           aria-label="<%= t("transactions.categorizes.entry_row.include_checkbox", name: entry.name) %>"
            data-action="change->categorize#uncheckRule">
     <span class="min-w-0 font-medium text-primary truncate"><%= entry.name %></span>
     <span class="text-secondary whitespace-nowrap"><%= l(entry.date, format: :short) %></span>
@@ -12,6 +13,7 @@
     <%= select_tag "category_id",
           options_from_collection_for_select(categories, :id, :name),
           prompt: t("transactions.categorizes.show.assign_category_prompt"),
+          aria: { label: t("transactions.categorizes.entry_row.assign_category_select", name: entry.name) },
           class: "w-full text-xs border border-primary rounded-lg px-1.5 py-0.5 bg-container text-secondary",
           data: { entry_id: entry.id, action: "change->categorize#assignEntry" } %>
   </div>
