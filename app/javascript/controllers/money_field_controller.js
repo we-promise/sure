@@ -43,9 +43,9 @@ export default class extends Controller {
       }
 
       this.symbolTarget.innerText = currencyData.symbol;
-    }).catch((error) => {
-      if (requestId !== this.requestSequence) return;
-      console.error("Failed to fetch currency data for", currency, error);
+    }).catch(() => {
+      // Catch prevents Unhandled Promise Rejection for network failures.
+      // Silently ignored as they are unactionable by the user.
     });
   }
 }
