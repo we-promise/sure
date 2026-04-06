@@ -40,8 +40,6 @@ class Rule < ApplicationRecord
     matching_resources_scope.count
   end
 
-  # Calculates total unique resources affected across multiple rules
-  # This handles overlapping rules by deduplicating transaction IDs
   # Creates a categorization rule for the Quick Categorize Wizard.
   # Returns the saved rule, or nil if a duplicate or invalid rule already exists.
   def self.create_from_grouping!(family, grouping_key, category, transaction_type: nil)
@@ -55,6 +53,8 @@ class Rule < ApplicationRecord
     nil
   end
 
+  # Calculates total unique resources affected across multiple rules
+  # This handles overlapping rules by deduplicating transaction IDs
   def self.total_affected_resource_count(rules)
     return 0 if rules.empty?
 
