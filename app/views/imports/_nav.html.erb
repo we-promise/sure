@@ -8,7 +8,7 @@
 elsif import.is_a?(PdfImport)
   # PDF imports have a simplified flow: Upload -> Confirm
   # Upload/Configure/Clean are always complete for processed PDF imports
-  finalized = import.complete?
+  finalized = import.complete? || (import.respond_to?(:reconciliation_reportable?) && import.reconciliation_reportable?)
   [
     { name: t("imports.steps.upload", default: "Upload"), path: nil, is_complete: import.pdf_uploaded?, step_number: 1 },
     { name: t("imports.steps.configure", default: "Configure"), path: nil, is_complete: finalized || import.configured?, step_number: 2 },
