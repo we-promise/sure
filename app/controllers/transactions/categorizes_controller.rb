@@ -73,7 +73,7 @@ class Transactions::CategorizesController < ApplicationController
   def preview_rule
     filter           = params[:filter].to_s.strip
     transaction_type = params[:transaction_type].presence
-    entries          = filter.present? ? Entry.uncategorized_matching(Current.family, filter, transaction_type) : []
+    entries          = filter.present? ? Entry.uncategorized_matching(Current.accessible_entries, filter, transaction_type) : []
     @categories      = Current.family.categories.alphabetically
 
     render turbo_stream: [

@@ -93,10 +93,11 @@ class Entry < ApplicationRecord
 
   # Returns uncategorized, non-transfer entries whose name matches the given filter string.
   # Used by the Quick Categorize Wizard to preview which transactions a rule would affect.
-  def self.uncategorized_matching(family, filter, transaction_type = nil)
+  # @param entries [ActiveRecord::Relation] pre-scoped entries (caller controls authorization)
+  def self.uncategorized_matching(entries, filter, transaction_type = nil)
     sanitized = sanitize_sql_like(filter.gsub(/\s+/, " ").strip)
-    scope = family.entries
-                  .joins(:account)
+    scope = entries
+              .joins(:account)
                   .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
                   .where(accounts: { status: %w[draft active] })
                   .where(transactions: { category_id: nil })
