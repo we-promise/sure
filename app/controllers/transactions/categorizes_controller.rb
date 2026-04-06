@@ -1,6 +1,4 @@
 class Transactions::CategorizesController < ApplicationController
-  GROUPS_PER_BATCH = 20
-
   def show
     @breadcrumbs = [
       [ "Home", root_path ],
@@ -10,7 +8,7 @@ class Transactions::CategorizesController < ApplicationController
     @position = params[:position].to_i
     groups = Transaction::Grouper.strategy.call(
       Current.family,
-      limit: GROUPS_PER_BATCH,
+      limit: 1,
       offset: @position
     )
 

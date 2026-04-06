@@ -4,8 +4,7 @@
      data-categorize-assign-entry-url-value="<%= assign_entry_transactions_categorize_path %>"
      data-categorize-preview-rule-url-value="<%= preview_rule_transactions_categorize_path %>"
      data-categorize-position-value="<%= @position %>"
-     data-categorize-transaction-type-value="<%= @group.transaction_type %>"
->
+     data-categorize-transaction-type-value="<%= @group.transaction_type %>">
   <%# Top bar: remaining count + skip %>
   <div class="flex items-center justify-between">
     <%= turbo_frame_tag "categorize_remaining" do %>
@@ -50,14 +49,14 @@
                    <%= "checked" if @group.entries.size > 1 %>
                    class="checkbox checkbox--light"
                    data-categorize-target="createRuleCheckbox"
-                   data-action="change->categorize#toggleRuleDetails" />
+                   data-action="change->categorize#toggleRuleDetails">
             <span class="text-sm font-medium text-primary"><%= t(".create_rule_label") %></span>
           </label>
 
-          <div data-categorize-target="ruleDetails" class="<%= 'opacity-40' unless @group.entries.size > 1 %>">
+          <div data-categorize-target="ruleDetails" class="<%= "opacity-40" unless @group.entries.size > 1 %>">
             <input type="hidden" name="grouping_key"
                    value="<%= @group.grouping_key %>"
-                   data-categorize-target="groupingKeyHidden" />
+                   data-categorize-target="groupingKeyHidden">
 
             <p class="text-sm text-secondary leading-relaxed">
               <%= t(".rule_description_prefix", type: t(".type_#{@group.transaction_type}").downcase) %>
@@ -74,7 +73,7 @@
                          autocomplete="off"
                          class="text-sm border border-primary rounded-lg px-2 py-0.5 bg-container focus:outline-none focus:ring-1 focus:ring-offset-0 w-36 shadow-md"
                          data-categorize-target="filterInput"
-                         data-action="keydown.enter->categorize#confirmFilterEdit keydown.escape->categorize#cancelFilterEdit" />
+                         data-action="keydown.enter->categorize#confirmFilterEdit keydown.escape->categorize#cancelFilterEdit">
                   <button type="button"
                           class="flex items-center justify-center w-6 h-6 rounded-md bg-primary text-inverted hover:opacity-80 transition-opacity shrink-0"
                           data-action="click->categorize#confirmFilterEdit">
@@ -111,7 +110,7 @@
                      class="w-full pl-9 pr-3 py-2 text-sm bg-transparent border-none rounded-lg focus:outline-none focus:ring-0 placeholder:text-secondary"
                      data-list-filter-target="input"
                      data-categorize-target="filter"
-                     data-action="input->list-filter#filter" />
+                     data-action="input->list-filter#filter">
             </div>
 
             <%# Category pills — submit the form directly %>

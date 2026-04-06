@@ -3,7 +3,7 @@
   <div class="grid grid-cols-[1rem_1fr_5rem_6rem_6.5rem] gap-3 items-center px-5 py-3 bg-container hover:bg-container-hover">
     <input type="checkbox" name="entry_ids[]" value="<%= entry.id %>"
            checked class="checkbox checkbox--light shrink-0"
-           data-action="change->categorize#uncheckRule" />
+           data-action="change->categorize#uncheckRule">
     <span class="min-w-0 font-medium text-primary truncate"><%= entry.name %></span>
     <span class="text-secondary whitespace-nowrap"><%= l(entry.date, format: :short) %></span>
     <span class="font-medium text-right whitespace-nowrap <%= entry.amount.negative? ? "text-green-600" : "text-primary" %>">
