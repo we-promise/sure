@@ -65,7 +65,7 @@ class Provider::Openai::PdfProcessor
       4. **Reconciliation Check** (ONLY for bank_statement or credit_card_statement):
          - First, use available tools to get accounts and their transactions for the relevant time period
          - Match the statement to the correct account by comparing institution name, account holder, or account number
-         - Compare the statement closing balance with the account current balance
+         - Compare the statement closing balance with the account balance as of statement_period_end (NOT current balance)
          - Count transactions in the statement and compare with synced transaction count for that period
          - Match individual transactions (by date within ±1 day, amount within ±$0.10, similar description)
          - Report which transactions are new (in statement but not synced) and which are missing (synced but not in statement)
@@ -134,13 +134,13 @@ class Provider::Openai::PdfProcessor
         response_format: { type: "json_object" }
       }
 
-      response = client.chat(parameters: params)
+      response, total_usage = run_reconciliation_tool_loop(params)
 
-      Rails.logger.info("Tokens used to process PDF: #{response.dig("usage", "total_tokens")}")
+      Rails.logger.info("Tokens used to process PDF: #{total_usage["total_tokens"]}")
 
       record_usage(
         effective_model,
-        response.dig("usage"),
+        total_usage,
         operation: "process_pdf",
         metadata: { pdf_size: pdf_content&.bytesize }
       )
@@ -198,13 +198,13 @@ class Provider::Openai::PdfProcessor
         max_tokens: 4096
       }
 
-      response = client.chat(parameters: params)
+      response, total_usage = run_reconciliation_tool_loop(params)
 
-      Rails.logger.info("Tokens used to process PDF via vision: #{response.dig("usage", "total_tokens")}")
+      Rails.logger.info("Tokens used to process PDF via vision: #{total_usage["total_tokens"]}")
 
       record_usage(
         effective_model,
-        response.dig("usage"),
+        total_usage,
         operation: "process_pdf_vision",
         metadata: { pdf_size: pdf_content&.bytesize, pages: images_base64.size }
       )
@@ -239,6 +239,156 @@ class Provider::Openai::PdfProcessor
       parsed = parse_json_flexibly(raw)
 
       build_result(parsed)
+    end
+
+    def run_reconciliation_tool_loop(initial_params)
+      tools = reconciliation_tools
+      params = initial_params.deep_dup
+      params[:tools] = tools if tools.present?
+
+      response = nil
+      total_usage = empty_usage_hash
+      iteration = 0
+
+      loop do
+        response = client.chat(parameters: params)
+        accumulate_usage!(total_usage, response["usage"])
+
+        message = response.dig("choices", 0, "message") || {}
+        tool_calls = message["tool_calls"] || []
+        break if tool_calls.blank?
+
+        iteration += 1
+        if iteration > 8
+          raise Provider::Openai::Error, "PDF reconciliation exceeded maximum tool-call iterations"
+        end
+
+        params[:messages] << {
+          role: "assistant",
+          content: message["content"] || "",
+          tool_calls: tool_calls
+        }
+
+        tool_calls.each do |tool_call|
+          tool_result = execute_reconciliation_tool_call(tool_call)
+
+          params[:messages] << {
+            role: "tool",
+            tool_call_id: tool_call["id"],
+            name: tool_call.dig("function", "name"),
+            content: tool_result.to_json
+          }
+        end
+      end
+
+      [ response, total_usage ]
+    end
+
+    def reconciliation_tools
+      return [] unless family.present?
+
+      get_accounts_tool = Assistant::Function::GetAccounts.new(tool_user)
+      get_transactions_tool = Assistant::Function::GetTransactions.new(tool_user)
+
+      [
+        {
+          type: "function",
+          function: {
+            name: get_accounts_tool.name,
+            description: get_accounts_tool.description,
+            parameters: get_accounts_tool.params_schema
+          }
+        },
+        {
+          type: "function",
+          function: {
+            name: get_transactions_tool.name,
+            description: get_transactions_tool.description,
+            parameters: get_transactions_tool.params_schema
+          }
+        }
+      ]
+    end
+
+    def execute_reconciliation_tool_call(tool_call)
+      function_name = tool_call.dig("function", "name")
+      args_raw = tool_call.dig("function", "arguments")
+      args = args_raw.present? ? JSON.parse(args_raw) : {}
+
+      case function_name
+      when "get_accounts"
+        Assistant::Function::GetAccounts.new(tool_user).call(args)
+      when "get_transactions"
+        normalized_args = normalize_get_transactions_args(args)
+        result = Assistant::Function::GetTransactions.new(tool_user).call(normalized_args)
+        augment_get_transactions_result_with_balance(result, normalized_args)
+      else
+        { error: "Unknown tool", function_name: function_name }
+      end
+    rescue JSON::ParserError => e
+      { error: "Invalid tool arguments JSON", details: e.message }
+    rescue => e
+      { error: "Tool execution failed", function_name: function_name, details: e.message }
+    end
+
+    def tool_user
+      @tool_user ||= family.users.find_by(role: "admin") || family.users.first
+    end
+
+    def normalize_get_transactions_args(args)
+      normalized = args.deep_dup
+      normalized["order"] ||= "desc"
+      normalized["page"] ||= 1
+
+      if normalized["account_id"].present? && normalized["accounts"].blank?
+        account = family.accounts.find_by(id: normalized["account_id"])
+        normalized["accounts"] = [ account.name ] if account.present?
+      end
+
+      normalized
+    end
+
+    def augment_get_transactions_result_with_balance(result, normalized_args)
+      account_name = Array.wrap(normalized_args["accounts"]).first
+      end_date = normalized_args["end_date"]
+      return result unless account_name.present? && end_date.present?
+
+      account = family.accounts.find_by(name: account_name)
+      return result unless account
+
+      parsed_end_date = Date.iso8601(end_date.to_s)
+      balance_record = account.balances
+        .where(currency: account.currency)
+        .where("date <= ?", parsed_end_date)
+        .order(date: :desc)
+        .first
+
+      result.merge(
+        "balance_as_of_end_date" => balance_record&.end_balance&.to_f,
+        "balance_record_date" => balance_record&.date&.iso8601
+      )
+    rescue ArgumentError
+      result
+    end
+
+    def empty_usage_hash
+      {
+        "prompt_tokens" => 0,
+        "completion_tokens" => 0,
+        "input_tokens" => 0,
+        "output_tokens" => 0,
+        "total_tokens" => 0
+      }
+    end
+
+    def accumulate_usage!(total_usage, usage)
+      return if usage.blank?
+
+      total_usage["prompt_tokens"] += usage["prompt_tokens"].to_i
+      total_usage["completion_tokens"] += usage["completion_tokens"].to_i
+      total_usage["input_tokens"] += usage["input_tokens"].to_i
+      total_usage["output_tokens"] += usage["output_tokens"].to_i
+      total_usage["total_tokens"] += usage["total_tokens"].to_i
     end
 
     def build_result(parsed)
