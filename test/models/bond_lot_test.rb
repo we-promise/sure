@@ -66,6 +66,72 @@ class BondLotTest < ActiveSupport::TestCase
     assert_equal "at_maturity", lot.coupon_frequency
   end
 
+  test "create_purchase_entry! creates and attaches entry with bond metadata" do
+    account = accounts(:bond)
+    lot = account.bond.bond_lots.create!(
+      purchased_on: Date.new(2026, 2, 1),
+      amount: 1000,
+      term_months: 12,
+      interest_rate: 4.0,
+      subtype: "other_bond",
+      rate_type: "fixed",
+      coupon_frequency: "at_maturity"
+    )
+
+    assert_difference [ "Entry.count", "Transaction.count" ], 1 do
+      lot.create_purchase_entry!
+    end
+
+    lot.reload
+    assert_not_nil lot.entry
+    assert_equal Date.new(2026, 2, 1), lot.entry.date
+    assert_equal 1000.to_d, lot.entry.amount
+    assert_equal lot.id, lot.entry.entryable.extra["bond_lot_id"]
+    assert_equal "other_bond", lot.entry.entryable.extra["bond_subtype"]
+    assert_equal 12, lot.entry.entryable.extra["bond_term_months"]
+    assert_equal 4.0.to_d, lot.entry.entryable.extra["bond_interest_rate"].to_d
+  end
+
+  test "update_purchase_entry! updates entry and preserves unrelated extra fields" do
+    account = accounts(:bond)
+    entry_record = account.entries.create!(
+      date: Date.new(2026, 2, 1),
+      name: "Bond purchase",
+      amount: 1000,
+      currency: account.currency,
+      entryable: Transaction.new(kind: :funds_movement, extra: { "custom" => "keep" })
+    )
+
+    lot = account.bond.bond_lots.create!(
+      purchased_on: Date.new(2026, 2, 1),
+      amount: 1000,
+      term_months: 12,
+      interest_rate: 4.0,
+      subtype: "other_bond",
+      rate_type: "fixed",
+      coupon_frequency: "at_maturity",
+      entry: entry_record
+    )
+
+    lot.update!(
+      purchased_on: Date.new(2026, 2, 15),
+      amount: 1200,
+      term_months: 24,
+      interest_rate: 4.5,
+      subtype: "other_bond"
+    )
+    lot.update_purchase_entry!
+
+    entry_record.reload
+    assert_equal Date.new(2026, 2, 15), entry_record.date
+    assert_equal 1200.to_d, entry_record.amount
+    assert_equal "keep", entry_record.entryable.extra["custom"]
+    assert_equal lot.id, entry_record.entryable.extra["bond_lot_id"]
+    assert_equal "other_bond", entry_record.entryable.extra["bond_subtype"]
+    assert_equal 24, entry_record.entryable.extra["bond_term_months"]
+    assert_equal 4.5.to_d, entry_record.entryable.extra["bond_interest_rate"].to_d
+  end
+
   test "calculates total return from elapsed time and annual rate" do
     lot = BondLot.new(
       bond: bonds(:one),

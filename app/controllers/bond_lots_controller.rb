@@ -38,7 +38,7 @@ class BondLotsController < ApplicationController
       begin
         ActiveRecord::Base.transaction do
           @bond_lot.save!
-          @bond_lot.update!(entry: create_purchase_entry!(@account, @bond_lot))
+          @bond_lot.create_purchase_entry!
         end
       rescue ActiveRecord::RecordInvalid => e
         @bond_lot.errors.add(:base, e.record.errors.full_messages.to_sentence)
@@ -61,7 +61,7 @@ class BondLotsController < ApplicationController
     begin
       ActiveRecord::Base.transaction do
         @bond_lot.update!(bond_lot_params(@bond_lot.bond))
-        update_purchase_entry!(@bond_lot)
+        @bond_lot.update_purchase_entry!
       end
       @bond_lot.account.sync_later(window_start_date: [ old_purchased_on, @bond_lot.purchased_on ].min)
       redirect_back_or_to account_path(@account), notice: t("bond_lots.update.success")
@@ -128,52 +128,5 @@ class BondLotsController < ApplicationController
           permitted.merge!(params.require(:bond_lot).permit(:tax_strategy, :tax_rate))
         end
       end
-    end
-
-    def update_purchase_entry!(bond_lot)
-      return unless bond_lot.entry
-
-      subtype_label = Bond.long_subtype_label_for(bond_lot.subtype) || Bond.display_name.singularize
-      entry = bond_lot.entry
-      entry.update!(
-        date: bond_lot.purchased_on,
-        name: t("bond_lots.activity.purchase_name", subtype: subtype_label),
-        amount: bond_lot.amount,
-        entryable_attributes: {
-          id: entry.entryable_id,
-          extra: (entry.entryable.extra || {}).merge(
-            "bond_lot_id" => bond_lot.id,
-            "bond_subtype" => bond_lot.subtype,
-            "bond_term_months" => bond_lot.term_months,
-            "bond_interest_rate" => bond_lot.interest_rate
-          )
-        }
-      )
-      entry.lock_saved_attributes!
-      entry.mark_user_modified!
-    end
-
-    def create_purchase_entry!(account, bond_lot)
-      subtype_label = Bond.long_subtype_label_for(bond_lot.subtype) || Bond.display_name.singularize
-
-      entry = account.entries.create!(
-        date: bond_lot.purchased_on,
-        name: t("bond_lots.activity.purchase_name", subtype: subtype_label),
-        amount: bond_lot.amount,
-        currency: account.currency,
-        entryable: Transaction.new(
-          kind: :funds_movement,
-          extra: {
-            "bond_lot_id" => bond_lot.id,
-            "bond_subtype" => bond_lot.subtype,
-            "bond_term_months" => bond_lot.term_months,
-            "bond_interest_rate" => bond_lot.interest_rate
-          }
-        )
-      )
-
-      entry.lock_saved_attributes!
-      entry.mark_user_modified!
-      entry
     end
 end

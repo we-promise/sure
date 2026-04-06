@@ -227,6 +227,44 @@ class BondLot < ApplicationRecord
     (projected_total_return_amount / principal) * 100
   end
 
+  def create_purchase_entry!(auto_purchased: false, requires_rate_review: false)
+    raise ActiveRecord::RecordInvalid, self unless persisted?
+
+    created_entry = account.entries.create!(
+      date: purchased_on,
+      name: I18n.t("bond_lots.activity.purchase_name", subtype: subtype_label),
+      amount: amount,
+      currency: account.currency,
+      entryable: Transaction.new(
+        kind: :funds_movement,
+        extra: purchase_entry_extra(auto_purchased:, requires_rate_review:)
+      )
+    )
+
+    created_entry.lock_saved_attributes!
+    created_entry.mark_user_modified!
+
+    update!(entry: created_entry)
+    created_entry
+  end
+
+  def update_purchase_entry!
+    return unless entry
+
+    existing_extra = entry.entryable&.extra || {}
+    entry.update!(
+      date: purchased_on,
+      name: I18n.t("bond_lots.activity.purchase_name", subtype: subtype_label),
+      amount: amount,
+      entryable_attributes: {
+        id: entry.entryable_id,
+        extra: existing_extra.merge(purchase_entry_extra)
+      }
+    )
+    entry.lock_saved_attributes!
+    entry.mark_user_modified!
+  end
+
   def current_rate_percent(on: Date.current)
     annual_rate_for(on:)&.*(100)
   end
@@ -544,7 +582,6 @@ class BondLot < ApplicationRecord
 
       return if replacement_amount <= 0
 
-      reinvest_entry = nil
       replacement_lot = bond.bond_lots.new(
         purchased_on: settlement_date,
         issue_date: inflation_linked? ? settlement_date : nil,
@@ -567,34 +604,23 @@ class BondLot < ApplicationRecord
         requires_rate_review: true
       )
       replacement_lot.save!
-      reinvest_entry = create_purchase_entry_for!(replacement_lot)
-      replacement_lot.update!(entry: reinvest_entry)
+      replacement_lot.create_purchase_entry!(auto_purchased: true, requires_rate_review: true)
     end
 
-    def create_purchase_entry_for!(replacement_lot)
-      subtype_label = Bond.long_subtype_label_for(replacement_lot.subtype) || Bond.display_name.singularize
+    def subtype_label
+      Bond.long_subtype_label_for(subtype) || Bond.display_name.singularize
+    end
 
-      entry = account.entries.create!(
-        date: replacement_lot.purchased_on,
-        name: I18n.t("bond_lots.activity.purchase_name", subtype: subtype_label),
-        amount: replacement_lot.amount,
-        currency: account.currency,
-        entryable: Transaction.new(
-          kind: :funds_movement,
-          extra: {
-            "bond_lot_id" => replacement_lot.id,
-            "bond_subtype" => replacement_lot.subtype,
-            "bond_term_months" => replacement_lot.term_months,
-            "bond_interest_rate" => replacement_lot.interest_rate,
-            "bond_auto_purchased" => true,
-            "bond_requires_rate_review" => true
-          }
-        )
-      )
-
-      entry.lock_saved_attributes!
-      entry.mark_user_modified!
-      entry
+    def purchase_entry_extra(auto_purchased: false, requires_rate_review: false)
+      {
+        "bond_lot_id" => id,
+        "bond_subtype" => subtype,
+        "bond_term_months" => term_months,
+        "bond_interest_rate" => interest_rate
+      }.tap do |extra|
+        extra["bond_auto_purchased"] = true if auto_purchased
+        extra["bond_requires_rate_review"] = true if requires_rate_review
+      end
     end
 
     def settlement_notes(purchase_amount:, interest_amount:, tax_withheld_amount:)
