@@ -1,4 +1,6 @@
 class EnableBankingItem::Syncer
+  include SyncStats::Collector
+
   attr_reader :enable_banking_item
 
   def initialize(enable_banking_item)
@@ -51,7 +53,11 @@ class EnableBankingItem::Syncer
     # Phase 3: Process transactions for linked accounts only
     if linked_accounts.any?
       sync.update!(status_text: "Processing transactions...") if sync.respond_to?(:status_text)
+      account_ids = linked_accounts.filter_map { |a| a.current_account&.id }
       enable_banking_item.process_accounts
+
+      # Collect transaction statistics
+      collect_transaction_stats(sync, account_ids: account_ids, source: "enable_banking")
 
       # Phase 4: Schedule balance calculations for linked accounts
       sync.update!(status_text: "Calculating balances...") if sync.respond_to?(:status_text)
