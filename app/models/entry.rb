@@ -4,6 +4,7 @@ class Entry < ApplicationRecord
   attr_accessor :unsplitting
 
   monetize :amount
+  monetize :personal_amount
 
   belongs_to :account
   belongs_to :transfer, optional: true
@@ -16,6 +17,7 @@ class Entry < ApplicationRecord
   accepts_nested_attributes_for :entryable
 
   validates :date, :name, :amount, :currency, presence: true
+  validate :personal_amount_not_greater_than_amount
   validates :date, uniqueness: { scope: [ :account_id, :entryable_type ] }, if: -> { valuation? }
   validates :date, comparison: { greater_than: -> { min_supported_date } }
   validates :external_id, uniqueness: { scope: [ :account_id, :source ] }, if: -> { external_id.present? && source.present? }
@@ -244,6 +246,16 @@ class Entry < ApplicationRecord
     stats
   end
 
+  # Returns personal_amount if set, otherwise the bank amount.
+  # Used for reports/statistics where the user's real share matters.
+  def effective_amount
+    personal_amount || amount
+  end
+
+  def effective_amount_money
+    personal_amount_money || amount_money
+  end
+
   def classification
     amount.negative? ? "income" : "expense"
   end
@@ -459,6 +471,14 @@ class Entry < ApplicationRecord
   end
 
   private
+
+    def personal_amount_not_greater_than_amount
+      return if personal_amount.blank?
+
+      if personal_amount.abs > amount.abs
+        errors.add(:personal_amount, :greater_than_amount)
+      end
+    end
 
     def cannot_unexclude_split_parent
       return unless excluded_changed?(from: true, to: false) && split_parent?

@@ -43,6 +43,8 @@ es:
       name_label: Nombre
       nature: Tipo
       none: "(ninguno)"
+      personal_amount_label: Tu parte
+      personal_amount_hint: "Total: %{total} · Tu parte: %{share} (%{percent}%%)"
       note_label: Notas
       note_placeholder: Introduce una nota
       overview: Resumen
@@ -76,6 +78,7 @@ es:
     transaction:
       pending: Pendiente
       pending_tooltip: Transacción pendiente — puede cambiar al confirmarse
+      bank_amount: "Total: %{amount}"
       linked_with_provider: Vinculado con %{provider}
       activity_type_tooltip: Tipo de actividad de inversión
       possible_duplicate: ¿Duplicada?

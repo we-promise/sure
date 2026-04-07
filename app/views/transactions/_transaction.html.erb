@@ -169,9 +169,20 @@
             <%= icon "lock", size: "sm", class: "text-secondary" %>
           <% end %>
         <% end %>
-        <%= content_tag :p,
-            transaction.transfer? && view_ctx == "global" ? "+/- #{format_money(entry.amount_money.abs)}" : format_money(-entry.amount_money),
-            class: ["privacy-sensitive", "text-green-600": entry.amount.negative?] %>
+        <div class="text-right">
+          <% if entry.personal_amount.present? %>
+            <%= content_tag :p,
+                format_money(-entry.personal_amount_money),
+                class: ["privacy-sensitive", "text-green-600": entry.amount.negative?] %>
+            <p class="privacy-sensitive text-xs text-secondary">
+              <%= t("transactions.transaction.bank_amount", amount: format_money(-entry.amount_money)) %>
+            </p>
+          <% else %>
+            <%= content_tag :p,
+                transaction.transfer? && view_ctx == "global" ? "+/- #{format_money(entry.amount_money.abs)}" : format_money(-entry.amount_money),
+                class: ["privacy-sensitive", "text-green-600": entry.amount.negative?] %>
+          <% end %>
+        </div>
       </div>
     </div>
   <% end %>

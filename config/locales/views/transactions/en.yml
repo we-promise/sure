@@ -52,6 +52,8 @@ en:
       name_label: Name
       nature: Type
       none: "(none)"
+      personal_amount_label: Your share
+      personal_amount_hint: "Total: %{total} · Your share: %{share} (%{percent}%%)"
       note_label: Notes
       note_placeholder: Enter a note
       overview: Overview
@@ -86,6 +88,7 @@ en:
     transaction:
       pending: Pending
       pending_tooltip: Pending transaction — may change when posted
+      bank_amount: "Total: %{amount}"
       linked_with_provider: Linked with %{provider}
       activity_type_tooltip: Investment activity type
       possible_duplicate: Duplicate?

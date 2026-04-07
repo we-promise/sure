@@ -8,3 +8,5 @@ es:
             base:
               invalid_sell_quantity: no se pueden vender %{sell_qty} acciones de %{ticker} porque
                 solo posees %{current_qty} acciones
+            personal_amount:
+              greater_than_amount: no puede ser mayor que el importe total

@@ -62,7 +62,7 @@ class Family::DataExporter
 
     def generate_transactions_csv
       CSV.generate do |csv|
-        csv << [ "date", "account_name", "amount", "name", "category", "tags", "notes", "currency" ]
+        csv << [ "date", "account_name", "amount", "personal_amount", "name", "category", "tags", "notes", "currency" ]
 
         # Only export transactions from accounts belonging to this family
         # Exclude split parents (export children instead)
@@ -74,6 +74,7 @@ class Family::DataExporter
               transaction.entry.date.iso8601,
               transaction.entry.account.name,
               transaction.entry.amount.to_s,
+              transaction.entry.personal_amount&.to_s,
               transaction.entry.name,
               transaction.category&.name,
               transaction.tags.pluck(:name).join(","),

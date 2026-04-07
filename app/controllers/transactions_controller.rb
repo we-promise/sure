@@ -406,13 +406,25 @@ class TransactionsController < ApplicationController
 
     def entry_params
       entry_params = params.require(:entry).permit(
-        :name, :date, :amount, :currency, :excluded, :notes, :nature, :entryable_type,
+        :name, :date, :amount, :currency, :excluded, :notes, :nature, :entryable_type, :personal_amount,
         entryable_attributes: [ :id, :category_id, :merchant_id, :kind, :investment_activity_label, { tag_ids: [] } ]
       )
 
       nature = entry_params.delete(:nature)
 
       entry_params.delete(:amount) if entry_params[:amount].blank?
+
+      # Allow clearing personal_amount by sending blank or 0
+      if entry_params.key?(:personal_amount)
+        if entry_params[:personal_amount].blank? || entry_params[:personal_amount].to_d.zero?
+          entry_params[:personal_amount] = nil
+        else
+          pa = entry_params[:personal_amount].to_d
+          if nature.present?
+            entry_params[:personal_amount] = nature == "inflow" ? -pa : pa
+          end
+        end
+      end
 
       if nature.present? && entry_params[:amount].present?
         signed_amount = nature == "inflow" ? -entry_params[:amount].to_d : entry_params[:amount].to_d

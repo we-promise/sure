@@ -283,7 +283,7 @@ end
     def transaction_params
       params.require(:transaction).permit(
         :account_id, :date, :amount, :name, :description, :notes, :currency,
-        :category_id, :merchant_id, :nature, tag_ids: []
+        :category_id, :merchant_id, :nature, :personal_amount, tag_ids: []
       )
     end
 
@@ -294,6 +294,7 @@ end
         amount: calculate_signed_amount,
         currency: transaction_params[:currency] || current_resource_owner.family.currency,
         notes: transaction_params[:notes],
+        personal_amount: calculate_signed_personal_amount,
         entryable_type: "Transaction",
         entryable_attributes: {
           category_id: transaction_params[:category_id],
@@ -324,6 +325,15 @@ end
         entry_params[:amount] = calculate_signed_amount
       end
 
+      # Handle personal_amount: explicit null clears it, value sets it
+      if params[:transaction].key?(:personal_amount)
+        if transaction_params[:personal_amount].blank? || transaction_params[:personal_amount].to_d.zero?
+          entry_params[:personal_amount] = nil
+        else
+          entry_params[:personal_amount] = calculate_signed_personal_amount
+        end
+      end
+
       entry_params.compact
     end
 
@@ -350,6 +360,22 @@ end
         amount.abs   # Expense is positive
       else
         amount       # Use as provided
+      end
+    end
+
+    def calculate_signed_personal_amount
+      return nil if transaction_params[:personal_amount].blank?
+
+      pa = transaction_params[:personal_amount].to_f
+      nature = transaction_params[:nature]
+
+      case nature&.downcase
+      when "income", "inflow"
+        -pa.abs
+      when "expense", "outflow"
+        pa.abs
+      else
+        pa
       end
     end
 

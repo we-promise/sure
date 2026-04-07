@@ -15,6 +15,17 @@ json.amount_cents amount_cents
 json.signed_amount_cents(transaction.entry.classification == "income" ? amount_cents : -amount_cents)
 
 json.currency transaction.entry.currency
+
+if transaction.entry.personal_amount.present?
+  json.personal_amount transaction.entry.personal_amount_money.format
+  pa_money = transaction.entry.personal_amount_money
+  pa_cents = (pa_money.amount * pa_money.currency.minor_unit_conversion).round(0).to_i.abs
+  json.personal_amount_cents pa_cents
+else
+  json.personal_amount nil
+  json.personal_amount_cents nil
+end
+
 json.name transaction.entry.name
 json.notes transaction.entry.notes
 json.classification transaction.entry.classification

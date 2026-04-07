@@ -77,6 +77,22 @@
                     disabled: @entry.linked? || split_locked || edit_locked,
                     disable_currency: @entry.linked? || split_locked || edit_locked %>
             </div>
+            <%= f.money_field :personal_amount,
+                  label: t(".personal_amount_label"),
+                  auto_submit: true,
+                  min: 0,
+                  value: @entry.personal_amount&.abs,
+                  disabled: split_locked || edit_locked,
+                  hide_currency: true %>
+            <% if @entry.personal_amount.present? %>
+              <% pct = (@entry.personal_amount.abs / @entry.amount.abs * 100).round(0) %>
+              <p class="text-xs text-secondary -mt-1">
+                <%= t(".personal_amount_hint",
+                      total: format_money(@entry.amount_money.abs),
+                      share: format_money(@entry.personal_amount_money.abs),
+                      percent: pct) %>
+              </p>
+            <% end %>
             <%= f.fields_for :entryable do |ef| %>
               <%= ef.collection_select :category_id,
                       Current.family.categories.alphabetically,
