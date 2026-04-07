@@ -212,8 +212,7 @@ class Settings::HostingsController < ApplicationController
       start_year:,
       end_year:,
       force: true,
-      providers: [ "gus_sdp", "us_bls", "es_ine" ],
-      respect_global_toggle: false
+      providers: [ "gus_sdp", "us_bls", "es_ine" ]
     )
 
     redirect_to settings_hosting_path, notice: t(".import_enqueued")

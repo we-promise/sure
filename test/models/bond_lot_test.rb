@@ -446,6 +446,23 @@ class BondLotTest < ActiveSupport::TestCase
     assert_equal 24, lot.term_months
   end
 
+  test "product presets set inflation provider for TIPS lots" do
+    lot = BondLot.new(
+      bond: bonds(:one),
+      purchased_on: Date.current,
+      amount: 1000,
+      product_code: "us_tips_10y",
+      first_period_rate: 4.0,
+      inflation_margin: 1.0,
+      units: 10,
+      nominal_per_unit: 100,
+      issue_date: Date.current
+    )
+
+    assert lot.valid?
+    assert_equal "us_bls", lot.inflation_provider
+  end
+
   test "falls back to manual inflation assumption when GUS value missing" do
     old_val = Setting.gus_inflation_import_enabled
     Setting.gus_inflation_import_enabled = true
@@ -694,6 +711,91 @@ class BondLotTest < ActiveSupport::TestCase
     assert lot.requires_rate_review?
   ensure
     Setting.gus_inflation_import_enabled = old_val
+  end
+
+  test "needs_rate_review ignores stale persisted flags once CPI is resolvable" do
+    old_val = Setting.gus_inflation_import_enabled
+    Setting.gus_inflation_import_enabled = true
+    GusInflationRate.create!(year: 2025, month: 11, rate_yoy: 108.0, source: "sdp")
+
+    lot = BondLot.create!(
+      bond: bonds(:one),
+      purchased_on: Date.new(2024, 1, 1),
+      amount: 1000,
+      subtype: "inflation_linked",
+      term_months: 24,
+      first_period_rate: 4.0,
+      inflation_margin: 0.9,
+      auto_fetch_inflation: true,
+      cpi_lag_months: 2,
+      units: 10,
+      nominal_per_unit: 100,
+      issue_date: Date.new(2024, 1, 1),
+      requires_rate_review: true,
+      rate_type: "variable",
+      coupon_frequency: "at_maturity"
+    )
+
+    assert_not_includes BondLot.needs_rate_review, lot
+  ensure
+    Setting.gus_inflation_import_enabled = old_val
+  end
+
+  test "needs_rate_review uses maturity date when lot is already matured" do
+    old_val = Setting.gus_inflation_import_enabled
+    Setting.gus_inflation_import_enabled = true
+    GusInflationRate.create!(year: 2024, month: 11, rate_yoy: 106.0, source: "sdp")
+
+    lot = BondLot.create!(
+      bond: bonds(:one),
+      purchased_on: Date.new(2024, 1, 1),
+      amount: 1000,
+      subtype: "inflation_linked",
+      term_months: 12,
+      maturity_date: Date.new(2025, 1, 1),
+      first_period_rate: 4.0,
+      inflation_margin: 0.9,
+      auto_fetch_inflation: true,
+      cpi_lag_months: 2,
+      units: 10,
+      nominal_per_unit: 100,
+      issue_date: Date.new(2024, 1, 1),
+      requires_rate_review: true,
+      rate_type: "variable",
+      coupon_frequency: "at_maturity"
+    )
+
+    assert_not_includes BondLot.needs_rate_review, lot
+  ensure
+    Setting.gus_inflation_import_enabled = old_val
+  end
+
+  test "does not enqueue inflation backfill for ES lots without series id" do
+    old_series_id = Setting.es_ine_cpi_series_id
+    Setting.es_ine_cpi_series_id = nil
+
+    account = accounts(:bond)
+    lot = account.bond.bond_lots.create!(
+      purchased_on: Date.current,
+      amount: 1000,
+      subtype: "inflation_linked",
+      term_months: 120,
+      first_period_rate: 4.0,
+      inflation_margin: 1.0,
+      auto_fetch_inflation: true,
+      inflation_provider: "es_ine",
+      cpi_lag_months: 2,
+      units: 10,
+      nominal_per_unit: 100,
+      issue_date: Date.current,
+      rate_type: "variable",
+      coupon_frequency: "at_maturity"
+    )
+
+    assert_not lot.send(:needs_inflation_backfill?)
+  ensure
+    Setting.es_ine_cpi_series_id = old_series_id
+    lot&.destroy
   end
 
   test "auto-settles matured lot and withholds standard tax" do

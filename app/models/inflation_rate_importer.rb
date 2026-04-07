@@ -1,6 +1,4 @@
 class InflationRateImporter
-  SUPPORTED_PROVIDERS = %w[gus_sdp us_bls es_ine].freeze
-
   def initialize(start_year:, end_year:, force: false, providers: nil)
     @start_year = start_year.to_i
     @end_year = end_year.to_i
@@ -16,8 +14,9 @@ class InflationRateImporter
     attr_reader :start_year, :end_year, :force, :providers
 
     def normalize_providers(providers)
-      selected = Array(providers).presence || SUPPORTED_PROVIDERS
-      selected.map(&:to_s).uniq.select { |provider| SUPPORTED_PROVIDERS.include?(provider) }
+      supported_providers = Bond::InflationProvider::PROVIDERS.keys
+      selected = Array(providers).presence || supported_providers
+      selected.map(&:to_s).uniq.select { |provider| supported_providers.include?(provider) }
     end
 
     def import_provider(provider)

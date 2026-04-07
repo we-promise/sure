@@ -11,6 +11,20 @@ class ImportInflationRatesJobTest < ActiveJob::TestCase
     Setting.gus_inflation_import_enabled = false
   end
 
+  test "runs importer when forced even if global toggle is disabled" do
+    Setting.gus_inflation_import_enabled = false
+
+    importer = mock
+    InflationRateImporter.expects(:new).with(start_year: 2023, end_year: 2024, force: true, providers: [ "gus_sdp" ]).returns(importer)
+    importer.expects(:import_all).returns({ "gus_sdp" => 12 })
+
+    ImportInflationRatesJob.perform_now(start_year: 2023, end_year: 2024, force: true, providers: [ "gus_sdp" ])
+
+    assert_equal 12, Setting.gus_inflation_last_import_count
+  ensure
+    Setting.gus_inflation_import_enabled = false
+  end
+
   test "imports and stores summary status when enabled" do
     Setting.gus_inflation_import_enabled = true
 

@@ -302,7 +302,7 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
         Setting.gus_inflation_import_enabled = false
 
         begin
-          assert_enqueued_with(job: ImportInflationRatesJob, args: [ { start_year: 2015, end_year: 2024, force: true, providers: [ "gus_sdp", "us_bls", "es_ine" ], respect_global_toggle: false } ]) do
+          assert_enqueued_with(job: ImportInflationRatesJob, args: [ { start_year: 2015, end_year: 2024, force: true, providers: [ "gus_sdp", "us_bls", "es_ine" ] } ]) do
             post import_gus_inflation_rates_settings_hosting_url,
                  params: { setting: { gus_inflation_start_year: 2015, gus_inflation_end_year: 2024 } }
           end

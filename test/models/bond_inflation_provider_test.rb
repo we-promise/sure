@@ -106,4 +106,22 @@ class BondInflationProviderTest < ActiveSupport::TestCase
 
     assert_nil missing
   end
+
+  test "record_for_date does not attempt ES import when series id is missing" do
+    old_series_id = Setting.es_ine_cpi_series_id
+    Setting.es_ine_cpi_series_id = nil
+
+    Bond::InflationProvider.expects(:provider_class).never
+
+    record = Bond::InflationProvider.record_for_date(
+      provider: "es_ine",
+      date: Date.new(2025, 3, 10),
+      lag_months: 2,
+      allow_import: true
+    )
+
+    assert_nil record
+  ensure
+    Setting.es_ine_cpi_series_id = old_series_id
+  end
 end

@@ -9,24 +9,23 @@ class BondLot < ApplicationRecord
   scope :open, -> { where(closed_on: nil) }
 
   def self.needs_rate_review
-    review_on = Date.current
-    flagged_ids = open.where(requires_rate_review: true).pluck(:id)
-
-    unresolvable_ids = []
+    unresolved_ids = []
     open.where(subtype: Bond::INFLATION_LINKED_SUBTYPES).includes(:bond).find_in_batches(batch_size: 200) do |batch|
-      provider_lag_pairs = batch.filter_map do |lot|
-        next unless lot.auto_fetch_inflation?
+      batch.group_by { |lot| [ Date.current, lot.maturity_date ].compact.min }.each do |review_on, review_batch|
+        provider_lag_pairs = review_batch.filter_map do |lot|
+          next unless lot.auto_fetch_inflation?
 
-        [ Bond::InflationProvider.key_for(lot.inflation_provider), lot.cpi_lag_months.to_i ]
-      end.uniq
-      cpi_by_provider_lag = cpi_rates_by_provider_lag(on: review_on, provider_lag_pairs: provider_lag_pairs)
+          [ Bond::InflationProvider.key_for(lot.inflation_provider), lot.cpi_lag_months.to_i ]
+        end.uniq
+        cpi_by_provider_lag = cpi_rates_by_provider_lag(on: review_on, provider_lag_pairs: provider_lag_pairs)
 
-      batch.each do |lot|
-        unresolvable_ids << lot.id if unresolved_rate_for_review?(lot:, on: review_on, cpi_by_provider_lag: cpi_by_provider_lag)
+        review_batch.each do |lot|
+          unresolved_ids << lot.id if unresolved_rate_for_review?(lot:, on: review_on, cpi_by_provider_lag: cpi_by_provider_lag)
+        end
       end
     end
 
-    ids = (flagged_ids + unresolvable_ids).uniq
+    ids = unresolved_ids.uniq
     ids.empty? ? none : open.where(id: ids)
   end
 
@@ -631,6 +630,7 @@ class BondLot < ApplicationRecord
       self.rate_type = defaults[:rate_type] if defaults[:rate_type].present?
       self.coupon_frequency = defaults[:coupon_frequency] if defaults[:coupon_frequency].present?
       self.cpi_lag_months = defaults[:cpi_lag_months] if defaults[:cpi_lag_months].present?
+      self.inflation_provider = defaults[:inflation_provider] if defaults[:inflation_provider].present? && inflation_provider.blank?
       self.nominal_per_unit ||= 100
       self.issue_date ||= purchased_on
       self.auto_fetch_inflation = true if auto_fetch_inflation.nil?
@@ -847,7 +847,7 @@ class BondLot < ApplicationRecord
     end
 
     def needs_inflation_backfill?
-      inflation_linked? && auto_fetch_inflation? && Setting.gus_inflation_import_enabled_effective && purchased_on.present?
+      inflation_linked? && auto_fetch_inflation? && purchased_on.present? && Bond::InflationProvider.automatic_import_enabled?(inflation_provider_key)
     end
 
     def should_enqueue_inflation_backfill?
@@ -880,6 +880,8 @@ class BondLot < ApplicationRecord
       return if required_months <= 0
 
       provider = inflation_provider_key
+      return unless Bond::InflationProvider.automatic_import_enabled?(provider)
+
       existing_count =
         if provider == "gus_sdp"
           GusInflationRate.where(year: start_year..end_year).count

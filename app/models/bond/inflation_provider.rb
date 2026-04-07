@@ -34,6 +34,7 @@ module Bond::InflationProvider
       return InflationRecord.new(year: persisted.year, month: persisted.month, rate_yoy: persisted.rate_yoy)
     end
     return nil unless allow_import
+    return nil if provider_key == "es_ine" && es_ine_series_id.blank?
 
     provider_klass = provider_class(provider_key)
     provider_instance = provider_instance_for(provider_key, provider_klass)
@@ -51,6 +52,19 @@ module Bond::InflationProvider
   rescue Faraday::Error, Provider::Error, ActiveRecord::RecordInvalid => e
     Rails.logger.warn("[Bond::InflationProvider] record_for_date failed: #{e.class} - #{e.message}")
     nil
+  end
+
+  def automatic_import_enabled?(provider)
+    case key_for(provider)
+    when "gus_sdp"
+      Setting.gus_inflation_import_enabled_effective
+    when "es_ine"
+      es_ine_series_id.present?
+    when "us_bls"
+      true
+    else
+      false
+    end
   end
 
   def provider_class(provider)
@@ -77,5 +91,9 @@ module Bond::InflationProvider
     else
       provider_klass.new
     end
+  end
+
+  def es_ine_series_id
+    ENV["ES_INE_CPI_SERIES_ID"].presence || Setting.es_ine_cpi_series_id.presence
   end
 end

@@ -1,8 +1,8 @@
 class ImportInflationRatesJob < ApplicationJob
   queue_as :scheduled
 
-  def perform(start_year: Date.current.year - 1, end_year: Date.current.year, force: false, providers: nil, respect_global_toggle: true)
-    return if respect_global_toggle && !Setting.gus_inflation_import_enabled_effective
+  def perform(start_year: Date.current.year - 1, end_year: Date.current.year, force: false, providers: nil)
+    return if !Setting.gus_inflation_import_enabled_effective && !force
 
     imported_by_provider = InflationRateImporter.new(
       start_year:,

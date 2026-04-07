@@ -58,7 +58,9 @@ class Bond < ApplicationRecord
       subtype: "inflation_linked",
       term_months: 120,
       rate_type: "variable",
-      coupon_frequency: "semi_annual"
+      coupon_frequency: "semi_annual",
+      cpi_lag_months: 3,
+      inflation_provider: "us_bls"
     },
     "us_i_bond" => {
       subtype: "savings",

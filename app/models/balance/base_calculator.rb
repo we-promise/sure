@@ -16,7 +16,7 @@ class Balance::BaseCalculator
 
     def holdings_value_for_date(date)
       @holdings_value_for_date ||= {}
-      @holdings_value_for_date[date] ||= if account.accountable_type == "Bond"
+      @holdings_value_for_date[date] ||= if account.bond?
         bond_lots_for_holdings.sum do |lot|
           lot.purchased_on <= date && (lot.closed_on.nil? || lot.closed_on > date) ? lot.amount.to_d : 0.to_d
         end

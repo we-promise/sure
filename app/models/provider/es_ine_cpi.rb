@@ -85,7 +85,7 @@ class Provider::EsIneCpi < Provider
 
       normalized = raw.to_s.tr(",", ".")
       BigDecimal(normalized)
-    rescue ArgumentError
+    rescue ArgumentError, TypeError
       nil
     end
 end
