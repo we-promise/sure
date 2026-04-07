@@ -18,7 +18,7 @@ class Transactions::CategorizesController < ApplicationController
 
     @group      = groups.first
     @categories = Current.family.categories.alphabetically
-    @total_uncategorized = Entry.uncategorized_count(Current.accessible_entries)
+    @total_uncategorized = Current.accessible_entries.uncategorized_transactions.count
   end
 
   def create
@@ -60,7 +60,7 @@ class Transactions::CategorizesController < ApplicationController
           end
           streams << turbo_stream.replace("categorize_remaining",
             partial: "transactions/categorizes/remaining_count",
-            locals: { total_uncategorized: Entry.uncategorized_count(Current.accessible_entries) })
+            locals: { total_uncategorized: Current.accessible_entries.uncategorized_transactions.count })
           streams << turbo_stream.replace("categorize_group_summary",
             partial: "transactions/categorizes/group_summary",
             locals: { entries: remaining_entries })
@@ -109,7 +109,7 @@ class Transactions::CategorizesController < ApplicationController
     else
       streams << turbo_stream.replace("categorize_remaining",
         partial: "transactions/categorizes/remaining_count",
-        locals: { total_uncategorized: Entry.uncategorized_count(Current.accessible_entries) })
+        locals: { total_uncategorized: Current.accessible_entries.uncategorized_transactions.count })
       streams << turbo_stream.replace("categorize_group_summary",
         partial: "transactions/categorizes/group_summary",
         locals: { entries: remaining_entries })
@@ -124,8 +124,7 @@ class Transactions::CategorizesController < ApplicationController
       Current.accessible_entries
         .excluding_split_parents
         .where(id: ids)
-        .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
-        .where(transactions: { category_id: nil })
+        .uncategorized_transactions
         .to_a
     end
 end

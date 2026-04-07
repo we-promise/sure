@@ -91,19 +91,16 @@ class Entry < ApplicationRecord
     joins(:account).where(accounts: { family_id: family.id })
   end
 
-  # Counts uncategorized, non-transfer entries in the given scope.
-  # Used by the Quick Categorize Wizard to show the remaining count.
-  # @param entries [ActiveRecord::Relation] pre-scoped entries (caller controls authorization)
-  def self.uncategorized_count(entries)
-    entries
-      .joins(:account)
+  # Uncategorized, non-transfer transaction entries on active accounts.
+  # Caller is responsible for scoping to accessible entries before applying this scope.
+  scope :uncategorized_transactions, -> {
+    joins(:account)
       .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
       .where(accounts: { status: %w[draft active] })
       .where(transactions: { category_id: nil })
       .where.not(transactions: { kind: Transaction::TRANSFER_KINDS })
       .where(entries: { excluded: false })
-      .count
-  end
+  }
 
   # Returns uncategorized, non-transfer entries whose name matches the given filter string.
   # Used by the Quick Categorize Wizard to preview which transactions a rule would affect.
@@ -111,13 +108,8 @@ class Entry < ApplicationRecord
   def self.uncategorized_matching(entries, filter, transaction_type = nil)
     sanitized = sanitize_sql_like(filter.gsub(/\s+/, " ").strip)
     scope = entries
-              .joins(:account)
-                  .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
-                  .where(accounts: { status: %w[draft active] })
-                  .where(transactions: { category_id: nil })
-                  .where.not(transactions: { kind: Transaction::TRANSFER_KINDS })
-                  .where(entries: { excluded: false })
-                  .where("BTRIM(REGEXP_REPLACE(entries.name, '[[:space:]]+', ' ', 'g')) ILIKE ?", "%#{sanitized}%")
+              .uncategorized_transactions
+              .where("BTRIM(REGEXP_REPLACE(entries.name, '[[:space:]]+', ' ', 'g')) ILIKE ?", "%#{sanitized}%")
 
     scope = case transaction_type
     when "income"  then scope.where("entries.amount < 0")

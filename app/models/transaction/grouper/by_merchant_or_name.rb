@@ -22,12 +22,7 @@ class Transaction::Grouper::ByMerchantOrName < Transaction::Grouper
 
     def uncategorized_entries
       entries
-        .joins(:account)
-        .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
-        .where(accounts: { status: %w[draft active] })
-        .where(transactions: { category_id: nil })
-        .where.not(transactions: { kind: Transaction::TRANSFER_KINDS })
-        .where(entries: { excluded: false })
+        .uncategorized_transactions
         .includes(entryable: :merchant)
         .order(entries: { date: :desc })
     end
