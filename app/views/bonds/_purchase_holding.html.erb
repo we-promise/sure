@@ -4,12 +4,12 @@
   <% label = Bond.long_subtype_label_for(lot.subtype) || t(".unknown") %>
   <% total_balance = account.balance.to_d %>
   <% weight = total_balance.zero? ? 0 : lot.amount.to_d / total_balance * 100 %>
-  <% total_return_amount = lot.total_return_amount %>
-  <% total_return_percent = lot.total_return_percent %>
+  <% total_return_amount = lot.total_return_amount(allow_import: false) %>
+  <% total_return_percent = lot.total_return_percent(allow_import: false) %>
   <% return_label = t(".since_purchase") %>
-  <% if total_return_amount.abs < 0.01 && lot.projected_total_return_amount.positive? %>
-    <% total_return_amount = lot.projected_total_return_amount %>
-    <% total_return_percent = lot.projected_total_return_percent %>
+  <% if total_return_amount.abs < 0.01 && lot.projected_total_return_amount(allow_import: false).positive? %>
+    <% total_return_amount = lot.projected_total_return_amount(allow_import: false) %>
+    <% total_return_percent = lot.projected_total_return_percent(allow_import: false) %>
     <% return_label = t(".projected_to_maturity") %>
   <% end %>
   <% total_return_class = total_return_amount.negative? ? "text-destructive" : "text-success" %>
@@ -31,7 +31,7 @@
 
     <div class="text-right">
       <% if lot.inflation_linked? %>
-        <% current_rate = lot.current_rate_percent %>
+        <% current_rate = lot.current_rate_percent(allow_import: false) %>
         <% rate_text = if lot.requires_rate_review?
                          t(".update_needed")
                        elsif current_rate.present?
@@ -40,9 +40,9 @@
                          t(".unknown")
                        end %>
         <%= tag.p(rate_text, class: "privacy-sensitive") %>
-        <% inflation_component = lot.current_inflation_component_percent %>
-        <% inflation_source = lot.current_inflation_source %>
-        <% margin_component = lot.current_margin_percent %>
+        <% inflation_component = lot.current_inflation_component_percent(allow_import: false) %>
+        <% inflation_source = lot.current_inflation_source(allow_import: false) %>
+        <% margin_component = lot.current_margin_percent(allow_import: false) %>
         <% inflation_text = number_to_percentage(inflation_component.to_d, precision: 3) %>
         <% margin_text = number_to_percentage(margin_component.to_d, precision: 3) %>
         <% meta_text = if lot.requires_rate_review?

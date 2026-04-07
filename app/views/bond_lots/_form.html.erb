@@ -19,7 +19,10 @@
     <% end %>
 
     <div class="space-y-2">
-      <%= form.date_field :purchased_on, label: t("bond_lots.form.purchased_on"), required: true %>
+      <%= form.date_field :purchased_on,
+              label: t("bond_lots.form.purchased_on"),
+              required: true,
+              data: { action: "change->bond-lot-form#syncIssueDateWithPurchase" } %>
 
       <div data-bond-lot-form-target="inflationFields">
         <%= form.date_field :issue_date,

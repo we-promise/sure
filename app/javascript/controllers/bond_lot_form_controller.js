@@ -54,6 +54,16 @@ export default class extends Controller {
     this.#toggleManualInflationField()
   }
 
+  syncIssueDateWithPurchase() {
+    const purchasedOnInput = this.element.querySelector('input[name="bond_lot[purchased_on]"]')
+    const issueDateInput = this.element.querySelector('input[name="bond_lot[issue_date]"]')
+    if (!purchasedOnInput || !issueDateInput) return
+
+    if (!issueDateInput.value && purchasedOnInput.value) {
+      issueDateInput.value = purchasedOnInput.value
+    }
+  }
+
   syncAutoFetchWithProvider() {
     if (!this.globalImportEnabledValue) return
 

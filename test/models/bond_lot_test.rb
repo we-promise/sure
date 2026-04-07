@@ -807,6 +807,30 @@ class BondLotTest < ActiveSupport::TestCase
     assert_includes settlement_entry.notes, "Tax withheld:"
   end
 
+  test "auto-settles lot immediately when created already after maturity" do
+    account = accounts(:bond)
+    lot = account.bond.bond_lots.build(
+      bond: account.bond,
+      purchased_on: Date.new(2013, 4, 7),
+      amount: 1000,
+      subtype: "fixed_coupon",
+      term_months: 120,
+      issue_date: Date.new(2013, 4, 7),
+      interest_rate: 5.0,
+      rate_type: "fixed",
+      coupon_frequency: "at_maturity",
+      auto_close_on_maturity: true
+    )
+
+    lot.save_with_purchase_entry!
+
+    lot.reload
+
+    assert lot.closed_on.present?
+    assert_equal lot.maturity_date, lot.closed_on
+    assert lot.settlement_amount.to_d.positive?
+  end
+
   test "auto-settles matured lot tax exempt for IKE/IKZE scenario" do
     account = accounts(:bond)
     account.bond.update!(tax_wrapper: "ike")

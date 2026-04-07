@@ -82,6 +82,7 @@ class BondLot < ApplicationRecord
   before_validation :clear_rate_review_flag
 
   after_commit :enqueue_inflation_backfill, on: %i[create update], if: :should_enqueue_inflation_backfill?
+  after_commit :settle_if_already_matured!, on: %i[create update], if: :should_settle_if_already_matured?
 
   validates :purchased_on, :amount, :subtype, presence: true
   validates :auto_fetch_inflation, inclusion: { in: [ true, false ] }
@@ -847,6 +848,14 @@ class BondLot < ApplicationRecord
         saved_change_to_inflation_provider? ||
         saved_change_to_auto_fetch_inflation? ||
         saved_change_to_subtype?
+    end
+
+    def should_settle_if_already_matured?
+      open? && auto_close_on_maturity? && maturity_date.present? && maturity_date <= Date.current && entry_id.present?
+    end
+
+    def settle_if_already_matured!
+      settle_if_matured!(on: Date.current)
     end
 
     def should_auto_buy_new_issue?(net_value:)

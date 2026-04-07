@@ -108,7 +108,7 @@ GUS_SDP_API_KEY=
 ```
 
 When enabled, you can also trigger a manual historical import from:
-Settings > Self-Hosting > Financial Data Providers > GUS SDP (Inflation).
+Settings > Self-Hosting > Inflation.
 
 #### Using HTTPS
 

@@ -361,16 +361,19 @@ class Account < ApplicationRecord
 
   # Get short version of the subtype label
   def short_subtype_label
-    return accountable.wrapper_label(format: :short) if bond? && accountable.respond_to?(:wrapper_label)
-
     accountable_class.short_subtype_label_for(subtype) || accountable_class.display_name
   end
 
   # Get long version of the subtype label
   def long_subtype_label
-    return accountable.wrapper_label(format: :long) if bond? && accountable.respond_to?(:wrapper_label)
-
     accountable_class.long_subtype_label_for(subtype) || accountable_class.display_name
+  end
+
+  # Bond-specific helper for rendering tax wrapper where needed.
+  def bond_wrapper_label(format: :short)
+    return unless bond? && accountable.respond_to?(:wrapper_label)
+
+    accountable.wrapper_label(format: format)
   end
 
   def supports_default?
