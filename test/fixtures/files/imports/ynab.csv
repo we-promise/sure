@@ -1,5 +1,0 @@
-"Account","Flag","Date","Payee","Category Group/Category","Category Group","Category","Memo","Outflow","Inflow","Cleared"
-"Checking","","01/15/2024","Grocery Store","Immediate Obligations: Groceries","Immediate Obligations","Groceries","Weekly groceries","$78.32","$0.00","Cleared"
-"Checking","","01/16/2024","ACME Corp","Income: Salary","Income","Salary","Bi-weekly paycheck","$0.00","$2,500.00","Cleared"
-"Credit Card","","01/17/2024","Coffee Shop","Quality of Life: Dining Out","Quality of Life","Dining Out","Morning coffee","$4.25","$0.00","Uncleared"
-"Checking","","01/18/2024","[Transfer: Credit Card]","","","","Payment to credit card","$200.00","$0.00","Cleared"

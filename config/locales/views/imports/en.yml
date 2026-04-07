@@ -3,8 +3,8 @@ en:
   import:
     qif_category_selections:
       show:
-        title: "Configure & select"
-        description: "Review the detected date format, then choose which categories and tags from your QIF file to bring into %{product_name}."
+        title: "Select categories & tags"
+        description: "Choose which categories and tags from your QIF file to bring into Sure. Deselected items will be removed from those transactions."
         categories_heading: Categories
         categories_found:
           one: "1 category found"
@@ -42,9 +42,6 @@ en:
           export your data). We'll automatically map the columns for you.
         instructions: Select continue to parse your CSV and move on to the clean step.
       mint_import:
-        date_format_label: Date format
-      ynab_import:
-        pre_configured: We have pre-configured your YNAB import for you. Outflow and Inflow columns will be merged automatically. Please proceed to the next step.
         date_format_label: Date format
       rule_import:
         description: Configure your rule import. Rules will be created or updated based
@@ -122,12 +119,6 @@ en:
         hint_html: Upload the <strong>all.ndjson</strong> file from your data export ZIP
         ndjson_invalid: Must be valid NDJSON with at least one record
   imports:
-    date_format:
-      heading: Date format
-      description: "The date format was auto-detected from your file. Change it if dates look incorrect."
-      preview: "First parsed date"
-      error_title: "Unable to detect date format"
-      error_description: "None of the supported date formats could parse the dates in this file. Please check that the file contains valid date entries."
     type_labels:
       transaction_import: "Transaction import"
       trade_import: "Trade import"

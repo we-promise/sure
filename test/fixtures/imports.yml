@@ -13,11 +13,6 @@ account:
   type: AccountImport
   status: pending
 
-ynab:
-  family: dylan_family
-  type: YnabImport
-  status: pending
-
 pdf:
   family: dylan_family
   type: PdfImport
