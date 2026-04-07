@@ -8,10 +8,7 @@ export default class extends Controller {
     "inflationFields",
     "otherFields",
     "inflationInput",
-    "otherRequiredInput",
-    "manualInflationField",
-    "manualInflationInput",
-    "autoFetchInput"
+    "otherRequiredInput"
   ]
   static values = {
     inflationSubtypes: Array,
@@ -22,7 +19,7 @@ export default class extends Controller {
 
   connect() {
     this.syncSubtypeWithProduct()
-    this.toggleSubtypeFields()
+    this.#toggleSubtypeFields()
   }
 
   syncSubtypeWithProduct() {
@@ -42,10 +39,18 @@ export default class extends Controller {
       this.subtypeDerivedHintTarget.classList.toggle("hidden", !subtypeDerived)
     }
 
-    this.toggleSubtypeFields()
+    this.#toggleSubtypeFields()
   }
 
   toggleSubtypeFields() {
+    this.#toggleSubtypeFields()
+  }
+
+  toggleManualInflationField() {
+    this.#toggleManualInflationField()
+  }
+
+  #toggleSubtypeFields() {
     const subtype = this.subtypeSelectTarget.value
     const inflationLinked = this.inflationSubtypesValue.includes(subtype)
 
@@ -67,29 +72,33 @@ export default class extends Controller {
       input.required = !inflationLinked
     })
 
-    this.toggleManualInflationField()
+    this.#toggleManualInflationField()
   }
 
-  toggleManualInflationField() {
-    if (!this.hasManualInflationFieldTarget || !this.hasManualInflationInputTarget) return
+  #toggleManualInflationField() {
+    const manualInflationField = this.element.querySelector('[data-bond-lot-form-target="manualInflationField"]')
+    const manualInflationInput = this.element.querySelector('[data-bond-lot-form-target="manualInflationInput"]')
+    if (!manualInflationField || !manualInflationInput) return
 
     const inflationLinked = this.inflationSubtypesValue.includes(this.subtypeSelectTarget.value)
-    const autoFetch = this.currentAutoFetchValue()
-    const showManualField = inflationLinked && (!autoFetch || this.globalImportEnabledValue)
+    const autoFetch = this.#currentAutoFetchValue()
+    const showManualField = inflationLinked && (!autoFetch || !this.globalImportEnabledValue)
     const required = inflationLinked && !autoFetch
 
-    this.manualInflationFieldTarget.classList.toggle("hidden", !showManualField)
-    this.manualInflationInputTarget.disabled = !showManualField
-    this.manualInflationInputTarget.required = required
+    manualInflationField.classList.toggle("hidden", !showManualField)
+    manualInflationInput.disabled = !showManualField
+    manualInflationInput.required = required
   }
 
-  currentAutoFetchValue() {
-    if (this.hasAutoFetchInputTarget) {
-      if (this.autoFetchInputTarget.type === "checkbox") {
-        return this.autoFetchInputTarget.checked
+  #currentAutoFetchValue() {
+    const autoFetchInput = this.element.querySelector('[data-bond-lot-form-target="autoFetchInput"]')
+
+    if (autoFetchInput) {
+      if (autoFetchInput.type === "checkbox") {
+        return autoFetchInput.checked
       }
 
-      const value = `${this.autoFetchInputTarget.value}`.trim().toLowerCase()
+      const value = `${autoFetchInput.value}`.trim().toLowerCase()
       return value === "1" || value === "true"
     }
 

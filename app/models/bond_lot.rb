@@ -127,7 +127,7 @@ class BondLot < ApplicationRecord
   validates :purchased_on, :amount, :subtype, presence: true
   validates :auto_fetch_inflation, inclusion: { in: [ true, false ] }
   validates :amount, numericality: { greater_than: 0 }
-  validates :term_months, presence: true, unless: :inflation_linked?
+  validates :term_months, presence: true
   validates :term_months, numericality: { only_integer: true, greater_than: 0 }, allow_nil: true
   validates :interest_rate, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
   validates :first_period_rate, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
@@ -138,8 +138,8 @@ class BondLot < ApplicationRecord
   validates :nominal_per_unit, numericality: { greater_than: 0 }, allow_nil: true
   validates :cpi_lag_months, numericality: { only_integer: true, greater_than_or_equal_to: 0 }, allow_nil: true
   validates :subtype, inclusion: { in: Bond::SUBTYPES.keys }
-  validates :product_code, inclusion: { in: Bond::PRODUCT_DEFAULTS.keys }, allow_nil: true
-  validates :inflation_provider, inclusion: { in: Bond::InflationProvider::PROVIDERS.keys }, allow_nil: true
+  validates :product_code, inclusion: { in: Bond::PRODUCT_DEFAULTS.keys }, allow_blank: true
+  validates :inflation_provider, inclusion: { in: Bond::InflationProvider::PROVIDERS.keys }, allow_blank: true
   validates :rate_type, inclusion: { in: Bond::RATE_TYPES }, allow_nil: true
   validates :coupon_frequency, inclusion: { in: Bond::COUPON_FREQUENCIES }, allow_nil: true
   validates :tax_strategy, inclusion: { in: TAX_STRATEGIES }

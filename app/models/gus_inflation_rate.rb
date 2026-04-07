@@ -73,10 +73,10 @@ class GusInflationRate < ApplicationRecord
     private
       def provider
         # Don't memoize; allow credential changes without restart.
-        Provider::GusSdp.new(api_key: api_key, cpi_indicator_id: cpi_indicator_id)
+        Provider::GusSdp.new(client_id: gus_client_id, cpi_indicator_id: cpi_indicator_id)
       end
 
-      def api_key
+      def gus_client_id
         ENV["GUS_SDP_API_KEY"].presence || Setting.gus_sdp_api_key
       end
 

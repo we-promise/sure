@@ -52,7 +52,7 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
 
   test "can clear stored gus api key when env override is absent" do
     with_self_hosting do
-      Setting.gus_sdp_api_key = "secret-key"
+      Setting.gus_sdp_api_key = "example-client-id"
 
       patch settings_hosting_url, params: { setting: { clear_gus_sdp_api_key: "1" } }
 

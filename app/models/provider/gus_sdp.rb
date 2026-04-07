@@ -5,8 +5,10 @@ class Provider::GusSdp < Provider
   # CPI (consumer prices) monthly indicator used by GUS SDP.
   DEFAULT_CPI_INDICATOR_ID = 639
 
-  def initialize(api_key: nil, base_url: DEFAULT_BASE_URL, cpi_indicator_id: DEFAULT_CPI_INDICATOR_ID)
-    @api_key = api_key
+  # Optional GUS SDP client identifier (X-ClientId header). Not a secret — public API identifier.
+  # Set via ENV["GUS_SDP_API_KEY"] or the hosting settings page.
+  def initialize(client_id: nil, base_url: DEFAULT_BASE_URL, cpi_indicator_id: DEFAULT_CPI_INDICATOR_ID)
+    @client_id = client_id
     @base_url = base_url
     @cpi_indicator_id = cpi_indicator_id
   end
@@ -38,7 +40,7 @@ class Provider::GusSdp < Provider
   end
 
   private
-    attr_reader :api_key, :base_url, :cpi_indicator_id
+    attr_reader :client_id, :base_url, :cpi_indicator_id
 
     def client
       @client ||= Faraday.new(url: base_url) do |faraday|
@@ -52,7 +54,7 @@ class Provider::GusSdp < Provider
         faraday.options.timeout = 10
         faraday.options.open_timeout = 10
         faraday.response :raise_error
-        faraday.headers["X-ClientId"] = api_key if api_key.present?
+        faraday.headers["X-ClientId"] = client_id if client_id.present?
       end
     end
 end

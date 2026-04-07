@@ -29,9 +29,10 @@ class InflationRate < ApplicationRecord
         month = row[:month].to_i
         next if month <= 0
 
-        rate_yoy = row[:rate_yoy].to_d
+        raw_rate_yoy = row[:rate_yoy]
         # Skip rows with no rate data. Zero is valid (0% YoY change) and must not be dropped.
-        next if row[:rate_yoy].nil?
+        next if raw_rate_yoy.blank?
+        rate_yoy = raw_rate_yoy.to_d
 
         existing = find_by(source: source_key, year: target_year, month: month)
         next if !force && existing.present? && existing.rate_yoy == rate_yoy

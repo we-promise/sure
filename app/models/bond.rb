@@ -122,9 +122,10 @@ class Bond < ApplicationRecord
 
   def original_balance
     total = bond_lots.sum(:amount)
-    principal_amount = total.positive? ? total : account.first_valuation_amount
+    return Money.new(total, account.currency) if total.positive?
 
-    Money.new(principal_amount, account.currency)
+    fallback = account.first_valuation_amount
+    Money.new(fallback.amount, fallback.currency)
   end
 
   def holdings_balance
