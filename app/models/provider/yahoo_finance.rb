@@ -438,7 +438,7 @@ class Provider::YahooFinance < Provider
           date: Time.at(timestamp).utc.to_date,
           from: from,
           to: to,
-          rate: (1.0 / close_rate.to_f).round(8)
+          rate: (BigDecimal("1") / BigDecimal(close_rate.to_s)).round(12)
         )
       end
 

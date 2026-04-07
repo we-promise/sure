@@ -15,6 +15,7 @@ class ExchangeRate::Importer
   def import_provider_rates
     if !clear_cache && all_rates_exist?
       Rails.logger.info("No new rates to sync for #{from} to #{to} between #{start_date} and #{end_date}, skipping")
+      backfill_inverse_rates_if_needed
       return
     end
 
@@ -59,6 +60,25 @@ class ExchangeRate::Importer
     end
 
     upsert_rows(gapfilled_rates)
+
+    # Compute and upsert inverse rates (e.g., EUR→USD from USD→EUR) to avoid
+    # separate API calls for the reverse direction.
+    inverse_rates = gapfilled_rates.filter_map do |row|
+      next if row[:rate].to_f <= 0
+
+      {
+        from_currency: row[:to_currency],
+        to_currency: row[:from_currency],
+        date: row[:date],
+        rate: (BigDecimal("1") / BigDecimal(row[:rate].to_s)).round(12)
+      }
+    end
+
+    upsert_rows(inverse_rates)
+
+    # Also backfill inverse rows for any forward rates that existed in the DB
+    # before effective_start_date (i.e. dates not covered by gapfilled_rates).
+    backfill_inverse_rates_if_needed
   end
 
   private
@@ -84,7 +104,7 @@ class ExchangeRate::Importer
 
     # Since provider may not return values on weekends and holidays, we grab the first rate from the provider that is on or before the start date
     def start_rate_value
-      provider_rate_value = provider_rates.select { |date, _| date <= start_date }.max_by { |date, _| date }&.last
+      provider_rate_value = provider_rates.select { |date, _| date <= start_date }.max_by { |date, _| date }&.last&.rate
       db_rate_value = db_rates[start_date]&.rate
       provider_rate_value || db_rate_value
     end
@@ -126,6 +146,28 @@ class ExchangeRate::Importer
           {}
         end
       end
+    end
+
+    # When forward rates already exist but inverse rates are missing (e.g. from a
+    # deployment before inverse computation was added), backfill them from the DB
+    # without making any provider API calls.
+    def backfill_inverse_rates_if_needed
+      existing_inverse_dates = ExchangeRate.where(from_currency: to, to_currency: from, date: start_date..end_date).pluck(:date).to_set
+      return if existing_inverse_dates.size >= expected_count
+
+      inverse_rows = db_rates.filter_map do |_date, rate|
+        next if existing_inverse_dates.include?(rate.date)
+        next if rate.rate.to_f <= 0
+
+        {
+          from_currency: to,
+          to_currency: from,
+          date: rate.date,
+          rate: (BigDecimal("1") / BigDecimal(rate.rate.to_s)).round(12)
+        }
+      end
+
+      upsert_rows(inverse_rows) if inverse_rows.any?
     end
 
     def all_rates_exist?
