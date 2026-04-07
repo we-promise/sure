@@ -37,7 +37,7 @@
                   label: t(".merchant_label"),
                   variant: :logo,
                   searchable: true,
-                  menu_placement: :down } %>
+                  menu_placement: :auto } %>
       <%= ef.select :tag_ids,
                     Current.family.tags.alphabetically.pluck(:name, :id),
                     {
