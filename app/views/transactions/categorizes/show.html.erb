@@ -1,0 +1,145 @@
+<%# Wizard step: categorize one group of uncategorized transactions %>
+<div class="w-full space-y-6 pb-12"
+     data-controller="categorize"
+     data-categorize-assign-entry-url-value="<%= assign_entry_transactions_categorize_path %>"
+     data-categorize-preview-rule-url-value="<%= preview_rule_transactions_categorize_path %>"
+     data-categorize-position-value="<%= @position %>"
+     data-categorize-transaction-type-value="<%= @group.transaction_type %>">
+  <%# Top bar: remaining count + skip %>
+  <div class="flex items-center justify-between">
+    <%= turbo_frame_tag "categorize_remaining" do %>
+      <span class="text-sm text-secondary">
+        <%= t(".remaining", count: @total_uncategorized) %>
+      </span>
+    <% end %>
+    <%= link_to transactions_categorize_path(position: @position + 1),
+          class: "flex items-center gap-1.5 text-sm font-medium text-secondary hover:text-primary" do %>
+      <%= t(".skip") %>
+      <%= icon("arrow-right", size: "sm") %>
+    <% end %>
+  </div>
+
+  <%# Group identity — above columns %>
+  <div>
+    <div class="flex items-center gap-3 mb-1">
+      <%= render partial: "transactions/categorizes/group_title",
+                 locals: { display_name: @group.display_name, color: @group.merchant&.color || "#737373", transaction_type: @group.transaction_type } %>
+    </div>
+    <%= turbo_frame_tag "categorize_group_summary" do %>
+      <p class="text-sm text-secondary">
+        <%= t(".transaction_count", count: @group.entries.size) %>
+        &middot;
+        <%= format_money(@group.entries.sum { |e| e.amount_money.abs }) %>
+      </p>
+    <% end %>
+  </div>
+
+  <%# Main form %>
+  <%= form_with url: transactions_categorize_path, method: :post, id: "categorize-form", class: "w-full" do |form| %>
+    <%= form.hidden_field :position, value: @position %>
+    <%= form.hidden_field :transaction_type, value: @group.transaction_type %>
+
+    <div class="grid grid-cols-[3fr_2fr] gap-4 items-start w-full">
+      <%# Left column (60%): rule creation + transaction list %>
+      <div class="space-y-4">
+        <%# Rule creation %>
+        <div class="bg-container shadow-border-xs rounded-xl p-4 space-y-3">
+          <label class="flex items-center gap-2.5 cursor-pointer">
+            <input type="checkbox" name="create_rule" value="1"
+                   <%= "checked" if @group.entries.size > 1 %>
+                   class="checkbox checkbox--light"
+                   data-categorize-target="createRuleCheckbox"
+                   data-action="change->categorize#toggleRuleDetails">
+            <span class="text-sm font-medium text-primary"><%= t(".create_rule_label") %></span>
+          </label>
+
+          <div data-categorize-target="ruleDetails" class="<%= "opacity-40" unless @group.entries.size > 1 %>">
+            <input type="hidden" name="grouping_key"
+                   value="<%= @group.grouping_key %>"
+                   data-categorize-target="groupingKeyHidden">
+
+            <p class="text-sm text-secondary leading-relaxed">
+              <%= t(".rule_description_prefix", type: t(".type_#{@group.transaction_type}").downcase) %>
+              <span class="inline-flex items-center gap-1 align-middle">
+                <span class="font-medium text-primary" data-categorize-target="filterDisplay">"<%= @group.grouping_key %>"</span>
+                <button type="button"
+                        class="text-secondary hover:text-primary transition-colors"
+                        data-action="click->categorize#startFilterEdit"
+                        data-categorize-target="filterEditTrigger">
+                  <%= icon("pencil", size: "sm") %>
+                </button>
+                <span class="hidden items-center gap-1" data-categorize-target="filterEditArea">
+                  <input type="text" value="<%= @group.grouping_key %>"
+                         autocomplete="off"
+                         class="text-sm border border-primary rounded-lg px-2 py-0.5 bg-container focus:outline-none focus:ring-1 focus:ring-offset-0 w-36 shadow-md"
+                         data-categorize-target="filterInput"
+                         data-action="keydown.enter->categorize#confirmFilterEdit keydown.escape->categorize#cancelFilterEdit">
+                  <button type="button"
+                          class="flex items-center justify-center w-6 h-6 rounded-md bg-primary text-inverted hover:opacity-80 transition-opacity shrink-0"
+                          data-action="click->categorize#confirmFilterEdit">
+                    <%= icon("check", size: "sm") %>
+                  </button>
+                </span>
+              </span>
+              <%= t(".rule_description_suffix") %>
+            </p>
+          </div>
+        </div>
+
+        <%# Transaction list %>
+        <div class="bg-container rounded-xl shadow-border-xs p-4 space-y-3">
+          <p class="text-xs text-secondary"><%= t(".transactions_hint") %></p>
+          <%= render partial: "transactions/categorizes/transaction_list",
+                     locals: { entries: @group.entries, categories: @categories } %>
+        </div>
+      </div>
+
+      <%# Right column (40%): category picker %>
+      <div>
+        <div class="bg-container shadow-border-xs rounded-xl p-4 space-y-3">
+          <p class="text-sm font-medium text-secondary"><%= t(".assign_category") %></p>
+
+          <div data-controller="list-filter" class="space-y-3">
+            <%# Search field %>
+            <div class="relative flex items-center bg-container border border-primary rounded-lg">
+              <%= icon("search", class: "absolute left-3 text-secondary") %>
+              <input type="text"
+                     placeholder="<%= t(".filter_placeholder") %>"
+                     autocomplete="off"
+                     autofocus
+                     class="w-full pl-9 pr-3 py-2 text-sm bg-transparent border-none rounded-lg focus:outline-none focus:ring-0 placeholder:text-secondary"
+                     data-list-filter-target="input"
+                     data-categorize-target="filter"
+                     data-action="input->list-filter#filter">
+            </div>
+
+            <%# Category pills — submit the form directly %>
+            <div data-list-filter-target="list" data-categorize-target="list"
+                 data-action="click->categorize#clearFilter"
+                 class="flex flex-wrap gap-2">
+              <p class="hidden text-sm text-secondary w-full py-2" data-list-filter-target="emptyMessage">
+                <%= t(".no_categories") %>
+              </p>
+              <% @categories.each do |category| %>
+                <button type="submit"
+                        name="category_id"
+                        value="<%= category.id %>"
+                        class="filterable-item flex items-center gap-1 text-sm font-medium rounded-full px-2.5 py-1 border cursor-pointer hover:opacity-80 transition-opacity focus:outline-none focus:ring-2 focus:ring-offset-1"
+                        style="background-color: color-mix(in oklab, <%= category.color %> 10%, transparent);
+                               border-color: color-mix(in oklab, <%= category.color %> 20%, transparent);
+                               color: <%= category.color %>;"
+                        data-filter-name="<%= category.name %>">
+                  <% if category.lucide_icon.present? %>
+                    <%= icon(category.lucide_icon, size: "sm", color: "current") %>
+                  <% end %>
+                  <%= category.name %>
+                </button>
+              <% end %>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  <% end %>
+</div>

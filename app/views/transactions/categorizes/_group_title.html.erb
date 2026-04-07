@@ -1,0 +1,10 @@
+<%= turbo_frame_tag "categorize_group_title" do %>
+  <div class="flex items-center gap-2">
+    <h2 class="text-lg font-semibold text-primary"><%= display_name %></h2>
+    <% if transaction_type == "income" %>
+      <span class="text-xs font-medium px-1.5 py-0.5 rounded-full bg-green-100 text-green-700"><%= t("transactions.categorizes.show.type_income") %></span>
+    <% elsif transaction_type == "expense" %>
+      <span class="text-xs font-medium px-1.5 py-0.5 rounded-full bg-surface text-secondary border border-primary"><%= t("transactions.categorizes.show.type_expense") %></span>
+    <% end %>
+  </div>
+<% end %>

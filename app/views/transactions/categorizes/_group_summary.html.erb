@@ -1,0 +1,7 @@
+<%= turbo_frame_tag "categorize_group_summary" do %>
+  <p class="text-sm text-secondary">
+    <%= t("transactions.categorizes.show.transaction_count", count: entries.size) %>
+    &middot;
+    <%= format_money(entries.sum { |e| e.amount_money.abs }) %>
+  </p>
+<% end %>
