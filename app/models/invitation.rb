@@ -36,6 +36,7 @@ class Invitation < ApplicationRecord
     transaction do
       user.update!(family_id: family_id, role: role.to_s)
       update!(accepted_at: Time.current)
+      auto_share_existing_accounts(user) if family.share_all_by_default?
     end
     true
   end
@@ -94,5 +95,14 @@ class Invitation < ApplicationRecord
 
     def inviter_is_admin
       inviter.admin?
+    end
+
+    def auto_share_existing_accounts(user)
+      records = family.accounts.where.not(owner_id: user.id).pluck(:id).map do |account_id|
+        { account_id: account_id, user_id: user.id, permission: "read_write",
+          include_in_finances: true, created_at: Time.current, updated_at: Time.current }
+      end
+
+      AccountShare.insert_all(records, unique_by: %i[account_id user_id]) if records.any?
     end
 end

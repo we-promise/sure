@@ -49,6 +49,21 @@ Rails.application.routes.draw do
     end
   end
 
+  resources :binance_items, only: [ :index, :new, :create, :show, :edit, :update, :destroy ] do
+    collection do
+      get :select_accounts
+      post :link_accounts
+      get :select_existing_account
+      post :link_existing_account
+    end
+
+    member do
+      post :sync
+      get :setup_accounts
+      post :complete_account_setup
+    end
+  end
+
   resources :snaptrade_items, only: [ :index, :new, :create, :show, :edit, :update, :destroy ] do
     collection do
       get :preload_accounts
@@ -74,6 +89,7 @@ Rails.application.routes.draw do
   resources :coinstats_items, only: [ :index, :new, :create, :update, :destroy ] do
     collection do
       post :link_wallet
+      post :link_exchange
     end
     member do
       post :sync
@@ -106,6 +122,11 @@ Rails.application.routes.draw do
   end
 
   mount Lookbook::Engine, at: "/design-system"
+
+  if Rails.env.development?
+    mount Rswag::Api::Engine => "/api-docs"
+    mount Rswag::Ui::Engine => "/api-docs"
+  end
 
   # Uses basic auth - see config/initializers/sidekiq.rb
   mount Sidekiq::Web => "/sidekiq"
@@ -167,6 +188,7 @@ Rails.application.routes.draw do
   namespace :settings do
     resource :profile, only: [ :show, :destroy ]
     resource :preferences, only: :show
+    resource :appearance, only: %i[show update]
     resource :hosting, only: %i[show update] do
       delete :clear_cache, on: :collection
       delete :disconnect_external_assistant, on: :collection
@@ -223,6 +245,7 @@ Rails.application.routes.draw do
     collection do
       get :merge
       post :perform_merge
+      post :enhance
     end
   end
 
@@ -266,9 +289,14 @@ Rails.application.routes.draw do
   namespace :transactions do
     resource :bulk_deletion, only: :create
     resource :bulk_update, only: %i[new create]
+    resource :categorize, only: %i[show create] do
+      patch :assign_entry, on: :collection
+      get :preview_rule, on: :collection
+    end
   end
 
   resources :transactions, only: %i[index new create show update destroy] do
+    resource :split, only: %i[new create edit update destroy]
     resource :transfer_match, only: %i[new create]
     resource :pending_duplicate_merges, only: %i[new create]
     resource :category, only: :update, controller: :transaction_categories
@@ -340,6 +368,8 @@ Rails.application.routes.draw do
     collection do
       post :sync_all
     end
+
+    resource :sharing, only: [ :show, :update ], controller: "account_sharings"
   end
 
   # Convenience routes for polymorphic paths
@@ -398,6 +428,7 @@ Rails.application.routes.draw do
       resources :valuations, only: [ :create, :update, :show ]
       resources :imports, only: [ :index, :show, :create ]
       resource :usage, only: [ :show ], controller: :usage
+      resource :balance_sheet, only: [ :show ], controller: :balance_sheet
       post :sync, to: "sync#create"
 
       resources :chats, only: [ :index, :show, :create, :update, :destroy ] do

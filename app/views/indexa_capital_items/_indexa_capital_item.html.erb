@@ -49,50 +49,52 @@
         </div>
       </div>
 
-      <div class="flex items-center gap-2">
-        <% if indexa_capital_item.requires_update? %>
-          <%= render DS::Link.new(
-            text: t(".update_credentials"),
-            icon: "refresh-cw",
-            variant: "secondary",
-            href: settings_providers_path,
-            frame: "_top"
-          ) %>
-        <% else %>
-          <%= icon(
-            "refresh-cw",
-            as_button: true,
-            href: sync_indexa_capital_item_path(indexa_capital_item),
-            disabled: indexa_capital_item.syncing?
-          ) %>
-        <% end %>
-
-        <%= render DS::Menu.new do |menu| %>
-          <% if unlinked_count > 0 %>
-            <% menu.with_item(
-              variant: "link",
-              text: t(".setup_action"),
-              icon: "settings",
-              href: setup_accounts_indexa_capital_item_path(indexa_capital_item),
-              frame: :modal
+      <% if Current.user&.admin? %>
+        <div class="flex items-center gap-2">
+          <% if indexa_capital_item.requires_update? %>
+            <%= render DS::Link.new(
+              text: t(".update_credentials"),
+              icon: "refresh-cw",
+              variant: "secondary",
+              href: settings_providers_path,
+              frame: "_top"
+            ) %>
+          <% else %>
+            <%= icon(
+              "refresh-cw",
+              as_button: true,
+              href: sync_indexa_capital_item_path(indexa_capital_item),
+              disabled: indexa_capital_item.syncing?
             ) %>
           <% end %>
-          <% menu.with_item(
-            variant: "link",
-            text: t(".update_credentials"),
-            icon: "cable",
-            href: settings_providers_path(manage: "1")
-          ) %>
-          <% menu.with_item(
-            variant: "button",
-            text: t(".delete"),
-            icon: "trash-2",
-            href: indexa_capital_item_path(indexa_capital_item),
-            method: :delete,
-            confirm: CustomConfirm.for_resource_deletion(indexa_capital_item.name, high_severity: true)
-          ) %>
-        <% end %>
-      </div>
+
+          <%= render DS::Menu.new do |menu| %>
+            <% if unlinked_count > 0 %>
+              <% menu.with_item(
+                variant: "link",
+                text: t(".setup_action"),
+                icon: "settings",
+                href: setup_accounts_indexa_capital_item_path(indexa_capital_item),
+                frame: :modal
+              ) %>
+            <% end %>
+            <% menu.with_item(
+              variant: "link",
+              text: t(".update_credentials"),
+              icon: "cable",
+              href: settings_providers_path(manage: "1")
+            ) %>
+            <% menu.with_item(
+              variant: "button",
+              text: t(".delete"),
+              icon: "trash-2",
+              href: indexa_capital_item_path(indexa_capital_item),
+              method: :delete,
+              confirm: CustomConfirm.for_resource_deletion(indexa_capital_item.name, high_severity: true)
+            ) %>
+          <% end %>
+        </div>
+      <% end %>
     </summary>
 
     <% unless indexa_capital_item.scheduled_for_deletion? %>

@@ -43,6 +43,7 @@ class MarketDataImporterTest < ActiveSupport::TestCase
     expected_start_date = (SNAPSHOT_START_DATE + 1.day) - EXCHANGE_RATE_BUFFER
     end_date            = Date.current.in_time_zone("America/New_York").to_date
 
+    # Only the forward pair (CAD→USD) should be fetched; inverse (USD→CAD) is computed automatically
     @provider.expects(:fetch_exchange_rates)
              .with(from: "CAD",
                    to: "USD",
@@ -52,20 +53,11 @@ class MarketDataImporterTest < ActiveSupport::TestCase
                OpenStruct.new(from: "CAD", to: "USD", date: SNAPSHOT_START_DATE, rate: 1.5)
              ]))
 
-    @provider.expects(:fetch_exchange_rates)
-             .with(from: "USD",
-                   to: "CAD",
-                   start_date: expected_start_date,
-                   end_date: end_date)
-             .returns(provider_success_response([
-               OpenStruct.new(from: "USD", to: "CAD", date: SNAPSHOT_START_DATE, rate: 0.67)
-             ]))
-
     before = ExchangeRate.count
     MarketDataImporter.new(mode: :snapshot).import_exchange_rates
     after  = ExchangeRate.count
 
-    assert_operator after, :>, before + 1, "Should insert at least two new exchange-rate rows"
+    assert_operator after, :>, before + 1, "Should insert at least two new exchange-rate rows (forward + computed inverse)"
   end
 
   test "syncs security prices" do

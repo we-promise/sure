@@ -3,6 +3,8 @@ class Budget < ApplicationRecord
 
   PARAM_DATE_FORMAT = "%b-%Y"
 
+  attr_accessor :current_user
+
   belongs_to :family
 
   has_many :budget_categories, -> { includes(:category) }, dependent: :destroy
@@ -38,7 +40,7 @@ class Budget < ApplicationRecord
       end
     end
 
-    def find_or_bootstrap(family, start_date:)
+    def find_or_bootstrap(family, start_date:, user: nil)
       return nil unless budget_date_valid?(start_date, family: family)
 
       Budget.transaction do
@@ -58,6 +60,7 @@ class Budget < ApplicationRecord
           b.currency = family.currency
         end
 
+        budget.current_user = user
         budget.sync_budget_categories
 
         budget
@@ -107,7 +110,11 @@ class Budget < ApplicationRecord
   end
 
   def transactions
-    family.transactions.visible.in_period(period)
+    scope = family.transactions.visible.in_period(period)
+    if current_user
+      scope = scope.joins(:entry).where(entries: { account_id: family.accounts.accessible_by(current_user).select(:id) })
+    end
+    scope
   end
 
   def name
@@ -298,7 +305,7 @@ class Budget < ApplicationRecord
 
   private
     def income_statement
-      @income_statement ||= family.income_statement
+      @income_statement ||= family.income_statement(user: current_user)
     end
 
     def net_totals

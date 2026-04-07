@@ -3,8 +3,8 @@ fr:
   import:
     qif_category_selections:
       show:
-        title: "Sélectionner les catégories et étiquettes"
-        description: "Choisissez les catégories et étiquettes de votre fichier QIF à importer dans Sure. Les éléments désélectionnés seront retirés des transactions correspondantes."
+        title: "Configurer et sélectionner"
+        description: "Vérifiez le format de date détecté, puis choisissez les catégories et étiquettes de votre fichier QIF à importer dans %{product_name}."
         categories_heading: Catégories
         categories_found:
           one: "1 catégorie trouvée"
@@ -53,6 +53,13 @@ fr:
         date_format_label: Format de date
         rows_to_skip_label: Ignorer les n premières lignes
     confirms:
+      sure_import:
+        title: Confirmer votre importation
+        description: Vérifiez les données qui seront importées depuis votre fichier d'export.
+        summary: Résumé de l'importation
+        empty_summary: Aucun enregistrement importable n'a été trouvé dans ce fichier. Il est peut-être vide, ou les lignes ne correspondent pas au format d'export attendu (chaque ligne doit être un objet JSON avec les clés « type » et « data », pour des types pris en charge par cet import).
+        publish_button: Démarrer l'importation
+        cancel: Annuler
       mappings:
         create_account: Créer un compte
         csv_mapping_label: "%{mapping} dans le CSV"
@@ -87,7 +94,23 @@ fr:
         instructions_4: Les colonnes marquées avec une étoile (*) sont des données requises.
         instructions_5: Pas de virgules, pas de symboles monétaires et pas de parenthèses dans les nombres.
         title: Importez vos données
+      sure_import:
+        title: Importer depuis l'export
+        description: Téléversez le fichier all.ndjson de votre export de données pour restaurer vos comptes, transactions, catégories et plus encore.
+        drop_title: Déposez le NDJSON pour téléverser
+        drop_subtitle: Votre fichier sera téléversé automatiquement
+        browse: Parcourir
+        browse_hint: pour ajouter votre fichier all.ndjson ici
+        upload_button: Téléverser le NDJSON
+        hint_html: Téléversez le fichier <strong>all.ndjson</strong> de l'archive ZIP d'export de vos données
+        ndjson_invalid: Le fichier doit être un NDJSON valide avec au moins un enregistrement
   imports:
+    date_format:
+      heading: Format de date
+      description: "Le format de date a été détecté automatiquement depuis votre fichier. Modifiez-le si les dates semblent incorrectes."
+      preview: "Première date analysée"
+      error_title: "Impossible de détecter le format de date"
+      error_description: "Aucun des formats de date pris en charge n'a pu analyser les dates dans ce fichier. Veuillez vérifier que le fichier contient des entrées de date valides."
     steps:
       upload: Téléverser
       configure: Configurer
@@ -182,3 +205,8 @@ fr:
     ready:
       description: Voici un résumé des nouveaux éléments qui seront ajoutés à votre compte une fois que vous aurez publié cette importation.
       title: Confirmez vos données d'importation
+      summary_item_label: Élément
+      summary_count_label: Nombre
+      empty_summary: Aucun enregistrement importable n'a été trouvé dans ce fichier. Il est peut-être vide, ou les lignes ne correspondent pas au format d'export attendu (chaque ligne doit être un objet JSON avec les clés « type » et « data », pour des types pris en charge par cet import).
+      publish_import: Publier l'importation
+      back_to_imports: Retour aux importations

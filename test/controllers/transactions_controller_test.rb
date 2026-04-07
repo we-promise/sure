@@ -159,10 +159,12 @@ end
     totals = OpenStruct.new(
       count: 1,
       expense_money: Money.new(10000, "USD"),
-      income_money: Money.new(0, "USD")
+      income_money: Money.new(0, "USD"),
+      transfer_inflow_money: Money.new(0, "USD"),
+      transfer_outflow_money: Money.new(0, "USD")
     )
 
-    Transaction::Search.expects(:new).with(family, filters: {}).returns(search)
+    Transaction::Search.expects(:new).with(family, filters: {}, accessible_account_ids: [ account.id ]).returns(search)
     search.expects(:totals).once.returns(totals)
 
     get transactions_url
@@ -181,14 +183,41 @@ end
     totals = OpenStruct.new(
       count: 1,
       expense_money: Money.new(10000, "USD"),
-      income_money: Money.new(0, "USD")
+      income_money: Money.new(0, "USD"),
+      transfer_inflow_money: Money.new(0, "USD"),
+      transfer_outflow_money: Money.new(0, "USD")
     )
 
-    Transaction::Search.expects(:new).with(family, filters: { "categories" => [ "Food" ], "types" => [ "expense" ] }).returns(search)
+    Transaction::Search.expects(:new).with(family, filters: { "categories" => [ "Food" ], "types" => [ "expense" ] }, accessible_account_ids: [ account.id ]).returns(search)
     search.expects(:totals).once.returns(totals)
 
     get transactions_url(q: { categories: [ "Food" ], types: [ "expense" ] })
     assert_response :success
+  end
+
+  test "shows inflow/outflow labels when filtering by transfers only" do
+    family = families(:empty)
+    sign_in users(:empty)
+    account = family.accounts.create! name: "Test", balance: 0, currency: "USD", accountable: Depository.new
+
+    create_transaction(account: account, amount: 100)
+
+    search = Transaction::Search.new(family, filters: { "types" => [ "transfer" ] })
+    totals = OpenStruct.new(
+      count: 2,
+      expense_money: Money.new(0, "USD"),
+      income_money: Money.new(0, "USD"),
+      transfer_inflow_money: Money.new(5000, "USD"),
+      transfer_outflow_money: Money.new(3000, "USD")
+    )
+
+    Transaction::Search.expects(:new).with(family, filters: { "types" => [ "transfer" ] }, accessible_account_ids: [ account.id ]).returns(search)
+    search.expects(:totals).once.returns(totals)
+
+    get transactions_url(q: { types: [ "transfer" ] })
+    assert_response :success
+    assert_select "#total-income", text: totals.transfer_inflow_money.format
+    assert_select "#total-expense", text: totals.transfer_outflow_money.format
   end
 
   test "mark_as_recurring creates a manual recurring transaction" do
@@ -223,6 +252,7 @@ end
 
     # Create existing recurring transaction
     family.recurring_transactions.create!(
+      account: account,
       merchant: merchant,
       amount: entry.amount,
       currency: entry.currency,

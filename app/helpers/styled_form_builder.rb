@@ -28,7 +28,12 @@ class StyledFormBuilder < ActionView::Helpers::FormBuilder
   end
 
   def collection_select(method, collection, value_method, text_method, options = {}, html_options = {})
-    selected_value = @object.public_send(method) if @object.respond_to?(method)
+    selected_value =
+      if options.key?(:selected)
+        options[:selected]
+      elsif @object.respond_to?(method)
+        @object.public_send(method)
+      end
     placeholder = options[:prompt] || options[:include_blank] || options[:placeholder] || I18n.t("helpers.select.default_label")
 
     @template.render(

@@ -1,0 +1,30 @@
+---
+pl:
+  transfers:
+    create:
+      success: Przelew został utworzony
+    destroy:
+      success: Przelew został usunięty
+    form:
+      amount: Kwota
+      date: Data
+      expense: Wydatek
+      from: Z
+      income: Przychód
+      select_account: Wybierz konto
+      submit: Utwórz przelew
+      to: Do
+      transfer: Przelew
+    new:
+      title: Nowy przelew
+    show:
+      delete: Usuń przelew
+      delete_subtitle: Ta operacja usuwa przelew. Nie usunie transakcji źródłowych.
+      delete_title: Usunąć przelew?
+      details: Szczegóły
+      note_label: Notatki
+      note_placeholder: Dodaj notatkę do tego przelewu
+      overview: Przegląd
+      settings: Ustawienia
+    update:
+      success: Przelew został zaktualizowany
