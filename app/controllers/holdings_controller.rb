@@ -1,11 +1,15 @@
 class HoldingsController < ApplicationController
-  before_action :set_holding, only: %i[show update destroy unlock_cost_basis remap_security reset_security]
+  include StreamExtensions
+
+  before_action :set_holding, only: %i[show update destroy unlock_cost_basis remap_security reset_security sync_prices]
+  before_action :require_holding_write_permission!, only: %i[update destroy unlock_cost_basis remap_security reset_security sync_prices]
 
   def index
-    @account = Current.family.accounts.find(params[:account_id])
+    @account = accessible_accounts.find(params[:account_id])
   end
 
   def show
+    @last_price_updated = @holding.security.prices.maximum(:updated_at)
   end
 
   def update
@@ -70,12 +74,57 @@ class HoldingsController < ApplicationController
       return
     end
 
+    # The user explicitly selected this security from provider search results,
+    # so we know the provider can handle it. Bring it back online if it was
+    # previously marked offline (e.g. by a failed QIF import resolution).
+    if new_security.offline?
+      new_security.update!(offline: false, failed_fetch_count: 0, failed_fetch_at: nil)
+    end
+
     @holding.remap_security!(new_security)
     flash[:notice] = t(".success")
 
     respond_to do |format|
       format.html { redirect_to account_path(@holding.account, tab: "holdings") }
       format.turbo_stream { render turbo_stream: turbo_stream.action(:redirect, account_path(@holding.account, tab: "holdings")) }
+    end
+  end
+
+  def sync_prices
+    security = @holding.security
+
+    if security.offline?
+      redirect_to account_path(@holding.account, tab: "holdings"),
+                  alert: t("holdings.sync_prices.unavailable")
+      return
+    end
+
+    prices_updated, @provider_error = security.import_provider_prices(
+      start_date: 31.days.ago.to_date,
+      end_date: Date.current,
+      clear_cache: true
+    )
+    security.import_provider_details
+
+    @last_price_updated = @holding.security.prices.maximum(:updated_at)
+
+    if prices_updated == 0
+      @provider_error = @provider_error.presence || t("holdings.sync_prices.provider_error")
+      respond_to do |format|
+        format.html { redirect_to account_path(@holding.account, tab: "holdings"), alert: @provider_error }
+        format.turbo_stream
+      end
+      return
+    end
+
+    strategy = @holding.account.linked? ? :reverse : :forward
+    Balance::Materializer.new(@holding.account, strategy: strategy, security_ids: [ @holding.security_id ]).materialize_balances
+    @holding.reload
+    @last_price_updated = @holding.security.prices.maximum(:updated_at)
+
+    respond_to do |format|
+      format.html { redirect_to account_path(@holding.account, tab: "holdings"), notice: t("holdings.sync_prices.success") }
+      format.turbo_stream
     end
   end
 
@@ -91,7 +140,14 @@ class HoldingsController < ApplicationController
 
   private
     def set_holding
-      @holding = Current.family.holdings.find(params[:id])
+      @holding = Current.family.holdings
+                   .joins(:account)
+                   .merge(Account.accessible_by(Current.user))
+                   .find(params[:id])
+    end
+
+    def require_holding_write_permission!
+      require_account_permission!(@holding.account)
     end
 
     def holding_params

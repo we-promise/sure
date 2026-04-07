@@ -1,24 +1,37 @@
 ---
 en:
   accounts:
+    not_authorized: "You don't have permission to manage this account"
     account:
+      edit: Edit
       link_lunchflow: Link with Lunch Flow
       link_provider: Link with provider
       unlink_provider: Unlink from provider
       troubleshoot: Troubleshoot
+      enable: Enable account
+      disable: Disable account
+      set_default: Set as default
+      remove_default: Unset default
+      default_label: Default
+      delete: Delete account
+      sharing: Sharing
     chart:
       data_not_available: Data not available for the selected period
     create:
       success: "%{type} account created"
+    set_default:
+      depository_only: "Only cash and credit card accounts can be set as default."
     destroy:
       success: "%{type} account scheduled for deletion"
       cannot_delete_linked: "Cannot delete a linked account. Please unlink it first."
+      failed: "Resource deletion failed. Try again later."
     empty:
       empty_message: Add an account either via connection, importing or entering manually.
       new_account: New account
       no_accounts: No accounts yet
     form:
-      balance: Current balance
+      balance: "Balance on date:"
+      opening_balance_date_label: Opening balance date
       name_label: Account name
       name_placeholder: Example account name
       additional_details: Additional details

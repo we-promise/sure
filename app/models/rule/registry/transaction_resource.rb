@@ -1,6 +1,6 @@
 class Rule::Registry::TransactionResource < Rule::Registry
   def resource_scope
-    family.transactions.visible.with_entry.where(entry: { date: rule.effective_date.. })
+    family.transactions.visible.with_entry.merge(Entry.excluding_split_parents).where(entry: { date: rule.effective_date.. })
   end
 
   def condition_filters
@@ -11,7 +11,8 @@ class Rule::Registry::TransactionResource < Rule::Registry
       Rule::ConditionFilter::TransactionMerchant.new(rule),
       Rule::ConditionFilter::TransactionCategory.new(rule),
       Rule::ConditionFilter::TransactionDetails.new(rule),
-      Rule::ConditionFilter::TransactionNotes.new(rule)
+      Rule::ConditionFilter::TransactionNotes.new(rule),
+      Rule::ConditionFilter::TransactionAccount.new(rule)
     ]
   end
 

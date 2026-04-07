@@ -39,6 +39,19 @@ class TradeTest < ActiveSupport::TestCase
     assert_equal precise_price, trade.price
   end
 
+  test "fee defaults to 0" do
+    security = Security.create!(ticker: "FEETEST", exchange_operating_mic: "XNAS")
+    trade = Trade.create!(
+      security: security,
+      price: 100,
+      qty: 10,
+      currency: "USD",
+      investment_activity_label: "Buy"
+    )
+
+    assert_equal 0, trade.fee
+  end
+
   test "price is rounded to 10 decimal places" do
     security = Security.create!(ticker: "TEST", exchange_operating_mic: "XNAS")
 

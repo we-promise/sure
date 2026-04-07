@@ -12,3 +12,12 @@ pt-BR:
       loading: Carregando entradas...
     update:
       success: Entrada atualizada
+    unlock:
+      success: Entrada desbloqueada. Ela poderá ser atualizada na próxima sincronização.
+    protection:
+      tooltip: Protegido contra sincronização
+      title: Protegido contra sincronização
+      description: As suas edições nesta entrada não serão sobrescritas pela sincronização do provedor.
+      locked_fields_label: "Campos bloqueados:"
+      unlock_button: Permitir sincronização para atualizar
+      unlock_confirm: Permitir que a sincronização atualize esta entrada? Suas alterações poderão ser sobrescritas na próxima sincronização.

@@ -1,0 +1,21 @@
+{{- if and .Values.pipelock.enabled .Values.pipelock.serviceMonitor.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "sure.fullname" . }}-pipelock
+  labels:
+    {{- include "sure.labels" . | nindent 4 }}
+    {{- with .Values.pipelock.serviceMonitor.additionalLabels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: pipelock
+      {{- include "sure.selectorLabels" . | nindent 6 }}
+  endpoints:
+    - interval: {{ .Values.pipelock.serviceMonitor.interval }}
+      scrapeTimeout: {{ .Values.pipelock.serviceMonitor.scrapeTimeout }}
+      path: {{ .Values.pipelock.serviceMonitor.path }}
+      port: {{ .Values.pipelock.serviceMonitor.portName }}
+{{- end }}

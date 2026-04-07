@@ -1,0 +1,72 @@
+# Pipelock configuration for Docker Compose
+# See https://github.com/luckyPipewrench/pipelock for full options.
+#
+# New in v2.0: trusted_domains, redirect profiles, attack simulation,
+# security scoring, process sandbox, and enhanced tool poisoning detection.
+# Run `pipelock simulate --config <file>` to test your config against 24 attack scenarios.
+# Run `pipelock audit score --config <file>` for a security posture score (0-100).
+
+version: 1
+mode: balanced
+
+# Trusted domains: allow services whose public DNS resolves to private IPs.
+# Prevents SSRF scanner from blocking legitimate internal traffic.
+# trusted_domains:
+#   - "api.internal.example.com"
+#   - "*.corp.example.com"
+
+forward_proxy:
+  enabled: true
+  max_tunnel_seconds: 300
+  idle_timeout_seconds: 60
+
+websocket_proxy:
+  enabled: false
+  max_message_bytes: 1048576
+  max_concurrent_connections: 128
+  scan_text_frames: true
+  allow_binary_frames: false
+  forward_cookies: false
+  strip_compression: true
+  max_connection_seconds: 3600
+  idle_timeout_seconds: 300
+  origin_policy: rewrite
+
+dlp:
+  scan_env: true
+  include_defaults: true
+
+response_scanning:
+  enabled: true
+  action: warn
+  include_defaults: true
+
+mcp_input_scanning:
+  enabled: true
+  action: block
+  on_parse_error: block
+
+mcp_tool_scanning:
+  enabled: true
+  action: warn
+  detect_drift: true
+
+mcp_tool_policy:
+  enabled: false
+  action: warn
+  # Redirect profiles (v2.0): route matched tool calls to audited handler programs
+  # instead of blocking. The handler returns a synthetic MCP response.
+  # redirect_profiles:
+  #   safe-fetch:
+  #     exec: ["/pipelock", "internal-redirect", "fetch-proxy"]
+  #     reason: "Route fetch calls through audited proxy"
+
+mcp_session_binding:
+  enabled: true
+  unknown_tool_action: warn
+
+tool_chain_detection:
+  enabled: true
+  action: warn
+  window_size: 20
+  max_gap: 3

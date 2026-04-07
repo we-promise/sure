@@ -1,6 +1,6 @@
 <%# locals: { trend:, comparison_label: nil } %>
 
-<p class="text-sm" style="color: <%= trend.color %>">
+<p class="text-sm privacy-sensitive" style="color: <%= trend.color %>">
   <% if trend.direction.flat? %>
     <%= t(".no_change") %><%= " #{comparison_label}" if defined?(comparison_label) && comparison_label.present? %>
   <% else %>
