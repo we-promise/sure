@@ -4,8 +4,8 @@ class Api::V1::AccountsController < Api::V1::BaseController
   include Pagy::Backend
 
   before_action -> { authorize_scope!(:read) }, only: %i[index show]
-  before_action -> { authorize_scope!(:read_write) }, only: %i[create]
-  before_action :set_account, only: %i[show]
+  before_action -> { authorize_scope!(:read_write) }, only: %i[create update destroy]
+  before_action :set_account, only: %i[show update destroy]
 
   def index
     family = current_resource_owner.family
@@ -49,6 +49,52 @@ class Api::V1::AccountsController < Api::V1::BaseController
     render json: { error: "validation_failed", message: e.message }, status: :unprocessable_entity
   rescue => e
     Rails.logger.error "AccountsController#create error: #{e.message}"
+    render json: { error: "internal_server_error", message: "Error: #{e.message}" }, status: :internal_server_error
+  end
+
+  def update
+    if account_params[:balance].present?
+      result = @account.set_current_balance(account_params[:balance].to_d)
+      unless result.success?
+        render json: {
+          error: "validation_failed",
+          message: "Balance could not be updated",
+          errors: [ result.error ]
+        }, status: :unprocessable_entity
+        return
+      end
+      @account.sync_later
+    end
+
+    update_params = account_params.except(:balance, :currency, :accountable_type, :subtype)
+    if @account.update(update_params)
+      render :show
+    else
+      render json: {
+        error: "validation_failed",
+        message: "Account could not be updated",
+        errors: @account.errors.full_messages
+      }, status: :unprocessable_entity
+    end
+  rescue => e
+    Rails.logger.error "AccountsController#update error: #{e.message}"
+    render json: { error: "internal_server_error", message: "Error: #{e.message}" }, status: :internal_server_error
+  end
+
+  def destroy
+    if @account.linked?
+      render json: {
+        error: "validation_failed",
+        message: "Cannot delete linked account. Unlink the account first."
+      }, status: :unprocessable_entity
+      return
+    end
+
+    @account.destroy_later
+
+    render json: { message: "Account deleted successfully" }, status: :ok
+  rescue => e
+    Rails.logger.error "AccountsController#destroy error: #{e.message}"
     render json: { error: "internal_server_error", message: "Error: #{e.message}" }, status: :internal_server_error
   end
 

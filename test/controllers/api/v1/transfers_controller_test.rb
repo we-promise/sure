@@ -7,8 +7,28 @@ class Api::V1::TransfersControllerTest < ActionDispatch::IntegrationTest
     @user = users(:family_admin)
     @family = families(:dylan_family)
 
-    @rw_api_key = api_keys(:active_key) # pipelock:ignore Credential in URL
-    @ro_api_key = api_keys(:read_only_key) # pipelock:ignore Credential in URL
+    # Destroy existing active API keys to avoid validation errors
+    @user.api_keys.active.destroy_all
+
+    # Create fresh API keys instead of using fixtures to avoid parallel test conflicts (rate limiting)
+    @rw_api_key = ApiKey.create!(
+      user: @user,
+      name: "Test Read-Write Key",
+      scopes: [ "read_write" ],
+      display_key: "test_rw_#{SecureRandom.hex(8)}"
+    )
+
+    @ro_api_key = ApiKey.create!(
+      user: @user,
+      name: "Test Read-Only Key",
+      scopes: [ "read" ],
+      display_key: "test_ro_#{SecureRandom.hex(8)}",
+      source: "mobile"
+    )
+
+    # Clear any existing rate limit data
+    Redis.new.del("api_rate_limit:#{@rw_api_key.id}")
+    Redis.new.del("api_rate_limit:#{@ro_api_key.id}")
 
     @source_account = accounts(:depository)
     @destination_account = accounts(:credit_card)
