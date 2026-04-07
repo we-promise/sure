@@ -13,7 +13,8 @@ class BondLot < ApplicationRecord
     open.where(subtype: Bond::INFLATION_LINKED_SUBTYPES).includes(:bond).find_in_batches(batch_size: 200) do |batch|
       batch.each do |lot|
         review_on = [ Date.current, lot.maturity_date ].compact.min
-        unresolved_ids << lot.id unless lot.rates_resolvable_through?(date: review_on, allow_import: false)
+        unresolvable = lot.first_period_rate.blank? || !lot.rates_resolvable_through?(date: review_on, allow_import: false)
+        unresolved_ids << lot.id if unresolvable
       end
     end
 
