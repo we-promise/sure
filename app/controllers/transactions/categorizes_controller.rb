@@ -18,7 +18,7 @@ class Transactions::CategorizesController < ApplicationController
 
     @group      = groups.first
     @categories = Current.family.categories.alphabetically
-    @total_uncategorized = Current.accessible_entries.uncategorized_transactions.count
+    @total_uncategorized = uncategorized_count
   end
 
   def create
@@ -60,7 +60,7 @@ class Transactions::CategorizesController < ApplicationController
           end
           streams << turbo_stream.replace("categorize_remaining",
             partial: "transactions/categorizes/remaining_count",
-            locals: { total_uncategorized: Current.accessible_entries.uncategorized_transactions.count })
+            locals: { total_uncategorized: uncategorized_count })
           streams << turbo_stream.replace("categorize_group_summary",
             partial: "transactions/categorizes/group_summary",
             locals: { entries: remaining_entries })
@@ -118,6 +118,10 @@ class Transactions::CategorizesController < ApplicationController
   end
 
   private
+
+    def uncategorized_count
+      Current.accessible_entries.uncategorized_transactions.count
+    end
 
     def uncategorized_entries_for(ids)
       return [] if ids.blank?
