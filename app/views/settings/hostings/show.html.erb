@@ -28,12 +28,12 @@
       </div>
 
       <%= render Settings::Hostings::InflationImportSettingsComponent.new(
-        inflation_import_enabled_effective: Setting.gus_inflation_import_enabled_effective,
-        env_gus_inflation_import_enabled: ENV["GUS_INFLATION_IMPORT_ENABLED"],
-        last_import_at: Setting.gus_inflation_last_import_at,
-        last_import_range: Setting.gus_inflation_last_import_range,
-        last_import_count: Setting.gus_inflation_last_import_count,
-        last_import_error: Setting.gus_inflation_last_import_error,
+        inflation_import_enabled_effective: Setting.inflation_import_enabled_effective,
+        env_inflation_import_enabled: ENV["INFLATION_IMPORT_ENABLED"].presence || ENV["GUS_INFLATION_IMPORT_ENABLED"],
+        last_import_at: Setting.inflation_last_import_at,
+        last_import_range: Setting.inflation_last_import_range,
+        last_import_count: Setting.inflation_last_import_count,
+        last_import_error: Setting.inflation_last_import_error,
         provider_stats: @inflation_provider_stats,
         last_import_details: @inflation_last_import_details,
         current_year: Date.current.year

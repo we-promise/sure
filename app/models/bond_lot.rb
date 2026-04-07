@@ -14,7 +14,8 @@ class BondLot < ApplicationRecord
       open.where(subtype: Bond::INFLATION_LINKED_SUBTYPES).includes(:bond).find_in_batches(batch_size: 200) do |batch|
         batch.each do |lot|
           review_on = [ Date.current, lot.maturity_date ].compact.min
-          unresolvable = lot.first_period_rate.blank? || !lot.rates_resolvable_through?(date: review_on, allow_import: false)
+          unresolvable = (lot.needs_first_period_rate?(on: review_on) && lot.first_period_rate.blank?) ||
+            !lot.rates_resolvable_through?(date: review_on, allow_import: false)
           unresolved_ids << lot.id if unresolvable
         end
       end
@@ -112,7 +113,7 @@ class BondLot < ApplicationRecord
     validates :issue_date, presence: true
     validates :units, presence: true
     validates :nominal_per_unit, presence: true
-    validates :first_period_rate, presence: true, unless: :requires_rate_review?
+    validates :first_period_rate, presence: true, if: -> { needs_first_period_rate? && !requires_rate_review? }
     validates :inflation_margin, presence: true, unless: :requires_rate_review?
     validates :cpi_lag_months, presence: true
     validates :inflation_rate_assumption, presence: true, unless: -> { auto_fetch_inflation? || requires_rate_review? }
@@ -159,7 +160,14 @@ class BondLot < ApplicationRecord
   def current_cpi_reference_on(on: Date.current)
     return nil unless inflation_linked?
 
-    on.beginning_of_month - cpi_lag_months.to_i.months
+    rate_period_start = current_rate_period_start(on:)
+    return nil if rate_period_start.blank?
+
+    rate_period_start.beginning_of_month - cpi_lag_months.to_i.months
+  end
+
+  def needs_first_period_rate?(on: purchased_on || Date.current)
+    inflation_linked? && in_first_rate_period?(on:)
   end
 
   def estimated_current_value(on: Date.current, allow_import: true)
@@ -481,6 +489,15 @@ class BondLot < ApplicationRecord
       (inflation_linked? && issue_date.present?) ? issue_date : purchased_on
     end
 
+    def current_rate_period_start(on:)
+      return nil if purchased_on.blank?
+
+      issue_base = anniversary_issue_base
+      years_since = 0
+      years_since += 1 while issue_base + (years_since + 1).years <= on
+      issue_base + years_since.years
+    end
+
     # Returns [next_anniversary, anniversary_start] for the period containing cursor.
     def anniversary_boundaries(cursor:, issue_base:)
       years_since = 0
@@ -518,12 +535,10 @@ class BondLot < ApplicationRecord
         }
       end
 
-      # Use issue_date as the anniversary base so rate-period boundaries align with the bond's schedule.
-      period_base = issue_date.presence || purchased_on
-      years_elapsed = 0
-      years_elapsed += 1 while period_base + (years_elapsed + 1).years <= on
+      rate_period_start = current_rate_period_start(on:)
+      return { annual_rate_decimal: nil } if rate_period_start.blank?
 
-      if years_elapsed <= 0
+      if needs_first_period_rate?(on: rate_period_start)
         {
           annual_rate_decimal: first_period_rate&.to_d&./(100),
           inflation_component_percent: nil,
@@ -533,7 +548,7 @@ class BondLot < ApplicationRecord
           inflation_indicator_id: nil
         }
       else
-        inflation_snapshot = inflation_snapshot_for(on:, allow_import:)
+        inflation_snapshot = inflation_snapshot_for(on: rate_period_start, allow_import:)
         inflation_component = inflation_snapshot[:inflation_component_percent]
         margin_component = inflation_margin&.to_d
 
@@ -556,13 +571,15 @@ class BondLot < ApplicationRecord
     end
 
     def inflation_snapshot_for(on:, allow_import: true)
+      reference_on = current_cpi_reference_on(on:)
+
       if auto_fetch_inflation?
         source_record = inflation_rate_record_for(on:, allow_import:)
         if source_record.present?
           return {
             inflation_component_percent: source_record.rate_yoy.to_d - 100,
             source: inflation_source_label,
-            reference_on: Date.new(source_record.year, source_record.month, 1),
+            reference_on: reference_on || Date.new(source_record.year, source_record.month, 1),
             indicator_id: current_inflation_indicator_id
           }
         end
@@ -635,7 +652,7 @@ class BondLot < ApplicationRecord
       # If GUS is globally disabled we keep auto_fetch_inflation as-is; downstream safeguards
       # (needs_inflation_backfill? and inflation_snapshot_for) prevent unsafe backfills and
       # gracefully fall back to manual assumptions when provider data is unavailable.
-      if inflation_like && auto_fetch_inflation && inflation_provider.blank? && Setting.gus_inflation_import_enabled_effective
+      if inflation_like && auto_fetch_inflation && inflation_provider.blank? && Setting.inflation_import_enabled_effective
         self.auto_fetch_inflation = false
       end
     end
@@ -805,12 +822,12 @@ class BondLot < ApplicationRecord
       return unless requires_rate_review?
 
       review_date = [ Date.current, maturity_date ].compact.min
-      self.requires_rate_review = false if rates_present_for_review? && review_date.present? && rates_resolvable_through?(date: review_date, allow_import: false)
+      self.requires_rate_review = false if rates_present_for_review?(on: review_date) && review_date.present? && rates_resolvable_through?(date: review_date, allow_import: false)
     end
 
-    def rates_present_for_review?
+    def rates_present_for_review?(on: purchased_on || Date.current)
       if inflation_linked?
-        first_period_rate.present? && inflation_margin.present?
+        (!needs_first_period_rate?(on:) || first_period_rate.present?) && inflation_margin.present?
       else
         interest_rate.present?
       end

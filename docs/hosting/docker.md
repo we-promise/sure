@@ -101,7 +101,7 @@ If you use inflation-linked bonds, you can enable automatic CPI imports from GUS
 
 ```txt
 # default is off
-GUS_INFLATION_IMPORT_ENABLED=false
+INFLATION_IMPORT_ENABLED=false
 
 # optional API key for higher limits (anonymous mode works without this)
 GUS_SDP_API_KEY=

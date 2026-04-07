@@ -71,10 +71,12 @@ class Setting < RailsSettings::Base
     ActiveSupport::TimeZone[timezone_str].present?
   end
 
-  def self.gus_inflation_import_enabled_effective
-    return ActiveModel::Type::Boolean.new.cast(ENV["GUS_INFLATION_IMPORT_ENABLED"]) if ENV["GUS_INFLATION_IMPORT_ENABLED"].present?
+  def inflation_import_enabled
+    self.class.inflation_import_enabled
+  end
 
-    gus_inflation_import_enabled
+  def inflation_import_enabled=(value)
+    self.class.inflation_import_enabled = value
   end
 
   # Dynamic fields are now stored as individual entries with "dynamic:" prefix
@@ -103,6 +105,16 @@ class Setting < RailsSettings::Base
     alias_method :raw_onboarding_state=, :onboarding_state=
     alias_method :raw_openai_model, :openai_model
     alias_method :raw_openai_model=, :openai_model=
+    alias_method :raw_gus_inflation_import_enabled, :gus_inflation_import_enabled
+    alias_method :raw_gus_inflation_import_enabled=, :gus_inflation_import_enabled=
+    alias_method :raw_gus_inflation_last_import_at, :gus_inflation_last_import_at
+    alias_method :raw_gus_inflation_last_import_at=, :gus_inflation_last_import_at=
+    alias_method :raw_gus_inflation_last_import_count, :gus_inflation_last_import_count
+    alias_method :raw_gus_inflation_last_import_count=, :gus_inflation_last_import_count=
+    alias_method :raw_gus_inflation_last_import_range, :gus_inflation_last_import_range
+    alias_method :raw_gus_inflation_last_import_range=, :gus_inflation_last_import_range=
+    alias_method :raw_gus_inflation_last_import_error, :gus_inflation_last_import_error
+    alias_method :raw_gus_inflation_last_import_error=, :gus_inflation_last_import_error=
 
     def onboarding_state
       value = raw_onboarding_state
@@ -127,6 +139,57 @@ class Setting < RailsSettings::Base
           ClearAiCacheJob.perform_later(family)
         end
       end
+    end
+
+    def inflation_import_enabled
+      raw_gus_inflation_import_enabled
+    end
+
+    def inflation_import_enabled=(value)
+      self.raw_gus_inflation_import_enabled = value
+    end
+
+    def inflation_import_enabled_effective
+      env_value = ENV["INFLATION_IMPORT_ENABLED"].presence || ENV["GUS_INFLATION_IMPORT_ENABLED"].presence
+      return ActiveModel::Type::Boolean.new.cast(env_value) if env_value.present?
+
+      inflation_import_enabled
+    end
+
+    def gus_inflation_import_enabled_effective
+      inflation_import_enabled_effective
+    end
+
+    def inflation_last_import_at
+      raw_gus_inflation_last_import_at
+    end
+
+    def inflation_last_import_at=(value)
+      self.raw_gus_inflation_last_import_at = value
+    end
+
+    def inflation_last_import_count
+      raw_gus_inflation_last_import_count
+    end
+
+    def inflation_last_import_count=(value)
+      self.raw_gus_inflation_last_import_count = value
+    end
+
+    def inflation_last_import_range
+      raw_gus_inflation_last_import_range
+    end
+
+    def inflation_last_import_range=(value)
+      self.raw_gus_inflation_last_import_range = value
+    end
+
+    def inflation_last_import_error
+      raw_gus_inflation_last_import_error
+    end
+
+    def inflation_last_import_error=(value)
+      self.raw_gus_inflation_last_import_error = value
     end
 
     # Support dynamic field access via bracket notation

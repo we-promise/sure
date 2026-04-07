@@ -55,6 +55,18 @@ class CreateBondLots < ActiveRecord::Migration[7.2]
     add_check_constraint :bond_lots, "maturity_date >= purchased_on", name: "check_bond_lots_maturity_after_purchase"
     add_check_constraint :bond_lots, "subtype IS NOT NULL", name: "check_bond_lots_subtype_not_null"
     add_check_constraint :bond_lots,
+                         "subtype IN ('zero_coupon','fixed_coupon','inflation_linked','savings','other')",
+                         name: "check_bond_lots_subtype_valid"
+    add_check_constraint :bond_lots,
+                         "rate_type IS NULL OR rate_type IN ('fixed','variable')",
+                         name: "check_bond_lots_rate_type_valid"
+    add_check_constraint :bond_lots,
+                         "coupon_frequency IS NULL OR coupon_frequency IN ('monthly','quarterly','semi_annual','annual','at_maturity')",
+                         name: "check_bond_lots_coupon_frequency_valid"
+    add_check_constraint :bond_lots,
+                         "tax_strategy IN ('standard','reduced','exempt')",
+                         name: "check_bond_lots_tax_strategy_valid"
+    add_check_constraint :bond_lots,
                          "(subtype IN ('inflation_linked')) OR (rate_type IS NOT NULL AND coupon_frequency IS NOT NULL)",
                          name: "check_bond_lots_non_inflation_rate_fields_present"
   end

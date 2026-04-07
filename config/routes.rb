@@ -192,7 +192,7 @@ Rails.application.routes.draw do
     resource :hosting, only: %i[show update] do
       delete :clear_cache, on: :collection
       delete :disconnect_external_assistant, on: :collection
-      post :import_gus_inflation_rates, on: :collection
+      post :import_inflation_rates, on: :collection
     end
     resource :payment, only: :show
     resource :security, only: :show

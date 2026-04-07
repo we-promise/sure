@@ -10,7 +10,7 @@
                          bond_lot_form_product_term_map_value: Bond::PRODUCT_DEFAULTS.transform_values { |defaults| defaults[:term_months] }.to_json,
                          bond_lot_form_product_provider_map_value: Bond::PRODUCT_DEFAULTS.transform_values { |defaults| defaults[:inflation_provider] }.to_json,
                          bond_lot_form_lot_auto_fetch_value: bond_lot.auto_fetch_inflation.nil? ? true : bond_lot.auto_fetch_inflation,
-                         bond_lot_form_global_import_enabled_value: Setting.gus_inflation_import_enabled_effective
+                         bond_lot_form_global_import_enabled_value: Setting.inflation_import_enabled_effective
                        }
                      } do |form| %>
   <div class="space-y-4">
@@ -137,7 +137,7 @@
                         } %>
       </div>
 
-      <% if Setting.gus_inflation_import_enabled_effective %>
+      <% if Setting.inflation_import_enabled_effective %>
 
         <div class="flex items-center gap-2" data-bond-lot-form-target="inflationFields">
           <%= form.number_field :cpi_lag_months,
@@ -173,8 +173,8 @@
                               data: { bond_lot_form_target: "manualInflationInput" } %>
       </div>
 
-      <%# auto_fetch_inflation is normalized server-side by normalize_auto_fetch_inflation.
-          When global GUS import is enabled we keep it hidden; when global import is disabled
+        <%# auto_fetch_inflation is normalized server-side by normalize_auto_fetch_inflation.
+          When global CPI import is enabled we keep it hidden; when global import is disabled
           we expose a toggle so users can switch to manual CPI entry on the lot. %>
 
       <div data-bond-lot-form-target="inflationFields">

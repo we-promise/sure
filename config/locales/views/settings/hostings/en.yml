@@ -130,7 +130,7 @@ en:
         import_description: Import controls below apply to all configured CPI providers (GUS, US BLS, ES INE).
         import_enabled_label: Enable automatic CPI imports
         import_enabled_help: Disabled by default. Enable this if you want CPI rates auto-imported for inflation-linked bond calculations.
-        import_enabled_env_locked: This setting is locked by the GUS_INFLATION_IMPORT_ENABLED environment variable.
+        import_enabled_env_locked: This setting is locked by the INFLATION_IMPORT_ENABLED environment variable. Legacy GUS_INFLATION_IMPORT_ENABLED is also supported.
         start_year: Start year
         end_year: End year
         import_now: Import CPI history now
@@ -152,7 +152,7 @@ en:
         series_id: Series ID
         es_ine_series_placeholder: Enter ES INE series ID
         locked_by_env: This field is locked by the %{var} environment variable.
-      import_gus_inflation_rates:
+      import_inflation_rates:
         import_enqueued: CPI import has been queued.
         manual_import_disabled_when_auto_enabled: Manual CPI import is available only when automatic imports are disabled.
         invalid_import_range: Invalid year range for CPI import.

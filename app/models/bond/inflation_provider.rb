@@ -57,7 +57,7 @@ module Bond::InflationProvider
   def automatic_import_enabled?(provider)
     case key_for(provider)
     when "gus_sdp"
-      Setting.gus_inflation_import_enabled_effective
+      Setting.inflation_import_enabled_effective
     when "es_ine"
       es_ine_series_id.present?
     when "us_bls"

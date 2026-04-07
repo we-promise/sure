@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_04_07_162000) do
+ActiveRecord::Schema[7.2].define(version: 2026_04_07_183000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -258,10 +258,14 @@ ActiveRecord::Schema[7.2].define(version: 2026_04_07_162000) do
     t.index ["product_code"], name: "index_bond_lots_on_product_code"
     t.index ["requires_rate_review"], name: "index_bond_lots_on_requires_rate_review"
     t.index ["subtype"], name: "index_bond_lots_on_subtype"
-    t.check_constraint "(subtype::text = ANY (ARRAY['inflation_linked'::character varying::text, 'savings'::character varying::text])) OR rate_type IS NOT NULL AND coupon_frequency IS NOT NULL", name: "check_bond_lots_non_inflation_rate_fields_present"
     t.check_constraint "amount > 0::numeric", name: "check_bond_lots_positive_amount"
+    t.check_constraint "coupon_frequency IS NULL OR (coupon_frequency::text = ANY (ARRAY['monthly'::character varying, 'quarterly'::character varying, 'semi_annual'::character varying, 'annual'::character varying, 'at_maturity'::character varying]::text[]))", name: "check_bond_lots_coupon_frequency_valid"
     t.check_constraint "maturity_date >= purchased_on", name: "check_bond_lots_maturity_after_purchase"
+    t.check_constraint "rate_type IS NULL OR (rate_type::text = ANY (ARRAY['fixed'::character varying, 'variable'::character varying]::text[]))", name: "check_bond_lots_rate_type_valid"
     t.check_constraint "subtype IS NOT NULL", name: "check_bond_lots_subtype_not_null"
+    t.check_constraint "subtype::text = 'inflation_linked'::text OR rate_type IS NOT NULL AND coupon_frequency IS NOT NULL", name: "check_bond_lots_non_inflation_rate_fields_present"
+    t.check_constraint "subtype::text = ANY (ARRAY['zero_coupon'::character varying, 'fixed_coupon'::character varying, 'inflation_linked'::character varying, 'savings'::character varying, 'other'::character varying]::text[])", name: "check_bond_lots_subtype_valid"
+    t.check_constraint "tax_strategy::text = ANY (ARRAY['standard'::character varying, 'reduced'::character varying, 'exempt'::character varying]::text[])", name: "check_bond_lots_tax_strategy_valid"
     t.check_constraint "term_months > 0", name: "check_bond_lots_positive_term"
   end
 

@@ -4,7 +4,7 @@
       <%= render DS::FilledIcon.new(variant: :text, text: subtype_label, size: "md", rounded: true) %>
       <div class="space-y-0.5 min-w-0">
         <%= link_to subtype_label, account_path(account, tab: "positions"), class: "truncate hover:underline" %>
-        <p class="text-xs text-secondary truncate"><%= t("pages.dashboard.bond_summary.account_wrapper", account: account.name, wrapper: account.short_subtype_label) %></p>
+        <p class="text-xs text-secondary truncate"><%= t("pages.dashboard.bond_summary.account_wrapper", account: account.name, wrapper: account.bond_wrapper_label || account.short_subtype_label) %></p>
       </div>
     </div>
   </td>

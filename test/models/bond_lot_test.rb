@@ -159,7 +159,7 @@ class BondLotTest < ActiveSupport::TestCase
       bond: bonds(:one),
       purchased_on: Date.new(2024, 1, 1),
       maturity_date: Date.new(2026, 1, 1),
-      term_months: 24,
+      term_months: 48,
       amount: 1000,
       interest_rate: 10,
       subtype: "other_bond",
@@ -283,7 +283,7 @@ class BondLotTest < ActiveSupport::TestCase
   end
 
   test "uses fetched GUS inflation when auto-fetch is enabled" do
-    Setting.stubs(:gus_inflation_import_enabled_effective).returns(true)
+    Setting.stubs(:inflation_import_enabled_effective).returns(true)
     GusInflationRate.create!(year: 2024, month: 11, rate_yoy: 105.0, source: "sdp")
 
     lot = BondLot.new(
@@ -313,7 +313,7 @@ class BondLotTest < ActiveSupport::TestCase
   end
 
   test "disables auto fetch when inflation provider is blank" do
-    Setting.stubs(:gus_inflation_import_enabled_effective).returns(true)
+    Setting.stubs(:inflation_import_enabled_effective).returns(true)
 
     lot = BondLot.new(
       bond: bonds(:one),
@@ -336,6 +336,29 @@ class BondLotTest < ActiveSupport::TestCase
 
     assert_not lot.auto_fetch_inflation
     assert_nil lot.inflation_provider
+  end
+
+  test "does not require first period rate for late-purchase inflation linked lot" do
+    lot = BondLot.new(
+      bond: bonds(:one),
+      purchased_on: Date.new(2026, 2, 1),
+      amount: 1000,
+      subtype: "inflation_linked",
+      term_months: 48,
+      first_period_rate: nil,
+      inflation_margin: 1.0,
+      inflation_rate_assumption: 3.0,
+      auto_fetch_inflation: false,
+      cpi_lag_months: 2,
+      units: 10,
+      nominal_per_unit: 100,
+      issue_date: Date.new(2024, 1, 1),
+      rate_type: "variable",
+      coupon_frequency: "at_maturity"
+    )
+
+    assert lot.valid?
+    assert_not lot.needs_first_period_rate?
   end
 
   test "clears inflation_provider for non-inflation-linked lot" do
@@ -465,7 +488,7 @@ class BondLotTest < ActiveSupport::TestCase
   end
 
   test "falls back to manual inflation assumption when GUS value missing" do
-    Setting.stubs(:gus_inflation_import_enabled_effective).returns(true)
+    Setting.stubs(:inflation_import_enabled_effective).returns(true)
     lot = BondLot.new(
       bond: bonds(:one),
       purchased_on: Date.new(2024, 1, 1),
@@ -491,7 +514,7 @@ class BondLotTest < ActiveSupport::TestCase
   end
 
   test "does not require manual inflation assumption when global auto-import is disabled" do
-    Setting.stubs(:gus_inflation_import_enabled_effective).returns(false)
+    Setting.stubs(:inflation_import_enabled_effective).returns(false)
 
     lot = BondLot.new(
       bond: bonds(:one),
@@ -513,8 +536,8 @@ class BondLotTest < ActiveSupport::TestCase
   end
 
   test "current_rate_percent uses current inflation-linked period instead of first year rate" do
-    Setting.stubs(:gus_inflation_import_enabled_effective).returns(true)
-    GusInflationRate.create!(year: 2025, month: 1, rate_yoy: 108.0, source: "sdp")
+    Setting.stubs(:inflation_import_enabled_effective).returns(true)
+    GusInflationRate.create!(year: 2024, month: 3, rate_yoy: 108.0, source: "sdp")
 
     lot = BondLot.new(
       bond: bonds(:one),
@@ -540,8 +563,8 @@ class BondLotTest < ActiveSupport::TestCase
   end
 
   test "uses us_bls provider when selected on inflation-linked lot" do
-    Bond::InflationProvider.stubs(:record_for_date).with(provider: "us_bls", date: Date.new(2025, 3, 31), lag_months: 2, allow_import: true)
-                           .returns(Bond::InflationProvider::InflationRecord.new(year: 2025, month: 1, rate_yoy: 106.2))
+    Bond::InflationProvider.stubs(:record_for_date).with(provider: "us_bls", date: Date.new(2024, 5, 31), lag_months: 2, allow_import: true)
+                           .returns(Bond::InflationProvider::InflationRecord.new(year: 2024, month: 3, rate_yoy: 106.2))
 
     lot = BondLot.new(
       bond: bonds(:one),
@@ -567,7 +590,7 @@ class BondLotTest < ActiveSupport::TestCase
   end
 
   test "falls back to manual assumption when non-gus provider returns no CPI data" do
-    Bond::InflationProvider.stubs(:record_for_date).with(provider: "es_ine", date: Date.new(2025, 3, 31), lag_months: 2, allow_import: true)
+    Bond::InflationProvider.stubs(:record_for_date).with(provider: "es_ine", date: Date.new(2024, 5, 31), lag_months: 2, allow_import: true)
                            .returns(nil)
 
     lot = BondLot.new(
@@ -593,7 +616,7 @@ class BondLotTest < ActiveSupport::TestCase
   end
 
   test "falls back to manual assumption when exact lagged CPI month is missing from GUS" do
-    Setting.stubs(:gus_inflation_import_enabled_effective).returns(true)
+    Setting.stubs(:inflation_import_enabled_effective).returns(true)
     # Only 2025-12 exists; query for 2026-03-31 with lag=2 needs 2026-01 which is missing.
     GusInflationRate.create!(year: 2025, month: 12, rate_yoy: 103.3, source: "sdp")
 
@@ -618,9 +641,38 @@ class BondLotTest < ActiveSupport::TestCase
     assert_in_delta 3.0, lot.current_inflation_component_percent(on: Date.new(2026, 3, 31)).to_f, 0.001
   end
 
+  test "keeps CPI reference stable within the same annual reset period" do
+    Setting.stubs(:inflation_import_enabled_effective).returns(true)
+    GusInflationRate.create!(year: 2024, month: 11, rate_yoy: 105.0, source: "sdp")
+    GusInflationRate.create!(year: 2025, month: 7, rate_yoy: 109.0, source: "sdp")
+
+    lot = BondLot.new(
+      bond: bonds(:one),
+      purchased_on: Date.new(2024, 1, 15),
+      amount: 1000,
+      subtype: "rod",
+      first_period_rate: 4.0,
+      inflation_margin: 1.0,
+      inflation_rate_assumption: 3.0,
+      auto_fetch_inflation: true,
+      inflation_provider: "gus_sdp",
+      cpi_lag_months: 2,
+      units: 10,
+      nominal_per_unit: 100,
+      issue_date: Date.new(2024, 1, 15),
+      rate_type: "variable",
+      coupon_frequency: "at_maturity"
+    )
+
+    assert_equal Date.new(2024, 11, 1), lot.current_cpi_reference_on(on: Date.new(2025, 3, 31))
+    assert_equal Date.new(2024, 11, 1), lot.current_cpi_reference_on(on: Date.new(2025, 9, 30))
+    assert_in_delta 6.0, lot.current_rate_percent(on: Date.new(2025, 3, 31)).to_f, 0.001
+    assert_in_delta 6.0, lot.current_rate_percent(on: Date.new(2025, 9, 30)).to_f, 0.001
+  end
+
   test "keeps CPI read path enabled when global import toggle is off" do
-    Setting.stubs(:gus_inflation_import_enabled_effective).returns(false)
-    GusInflationRate.create!(year: 2025, month: 1, rate_yoy: 108.0, source: "sdp")
+    Setting.stubs(:inflation_import_enabled_effective).returns(false)
+    GusInflationRate.create!(year: 2024, month: 3, rate_yoy: 108.0, source: "sdp")
 
     lot = BondLot.new(
       bond: bonds(:one),
@@ -646,7 +698,7 @@ class BondLotTest < ActiveSupport::TestCase
   end
 
   test "hides inflation breakdown during first period" do
-    Setting.stubs(:gus_inflation_import_enabled_effective).returns(true)
+    Setting.stubs(:inflation_import_enabled_effective).returns(true)
     GusInflationRate.create!(year: 2024, month: 3, rate_yoy: 106.0, source: "sdp")
 
     lot = BondLot.new(
@@ -673,7 +725,7 @@ class BondLotTest < ActiveSupport::TestCase
   end
 
   test "does not clear requires_rate_review while CPI periods are unresolved" do
-    Setting.stubs(:gus_inflation_import_enabled_effective).returns(true)
+    Setting.stubs(:inflation_import_enabled_effective).returns(true)
 
     lot = BondLot.new(
       bond: bonds(:one),
@@ -700,7 +752,7 @@ class BondLotTest < ActiveSupport::TestCase
   end
 
   test "needs_rate_review ignores stale persisted flags once CPI is resolvable" do
-    Setting.stubs(:gus_inflation_import_enabled_effective).returns(true)
+    Setting.stubs(:inflation_import_enabled_effective).returns(true)
     # Period 2 starts at 2025-01-01; CPI reference = 2025-01-01 - 2 lag months = Nov 2024
     GusInflationRate.create!(year: 2024, month: 11, rate_yoy: 108.0, source: "sdp")
 
@@ -727,7 +779,7 @@ class BondLotTest < ActiveSupport::TestCase
   end
 
   test "needs_rate_review uses maturity date when lot is already matured" do
-    Setting.stubs(:gus_inflation_import_enabled_effective).returns(true)
+    Setting.stubs(:inflation_import_enabled_effective).returns(true)
     GusInflationRate.create!(year: 2024, month: 11, rate_yoy: 106.0, source: "sdp")
 
     lot = BondLot.create!(
@@ -746,6 +798,28 @@ class BondLotTest < ActiveSupport::TestCase
       nominal_per_unit: 100,
       issue_date: Date.new(2024, 1, 1),
       requires_rate_review: true,
+      rate_type: "variable",
+      coupon_frequency: "at_maturity"
+    )
+
+    assert_not_includes BondLot.needs_rate_review, lot
+  end
+
+  test "needs_rate_review ignores missing first period rate after intro period" do
+    lot = BondLot.create!(
+      bond: bonds(:one),
+      purchased_on: Date.new(2026, 2, 1),
+      amount: 1000,
+      subtype: "inflation_linked",
+      term_months: 48,
+      first_period_rate: nil,
+      inflation_margin: 1.0,
+      inflation_rate_assumption: 3.0,
+      auto_fetch_inflation: false,
+      cpi_lag_months: 2,
+      units: 10,
+      nominal_per_unit: 100,
+      issue_date: Date.new(2024, 1, 1),
       rate_type: "variable",
       coupon_frequency: "at_maturity"
     )

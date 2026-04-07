@@ -129,7 +129,7 @@ pl:
         import_description: Poniższe sterowanie importem dotyczy wszystkich skonfigurowanych źródeł CPI (GUS, US BLS, ES INE).
         import_enabled_label: Włącz automatyczny import CPI
         import_enabled_help: Domyślnie wyłączone. Włącz, jeśli chcesz automatycznie importować stawki CPI do obliczeń obligacji indeksowanych inflacją.
-        import_enabled_env_locked: To ustawienie jest zablokowane przez zmienną środowiskową GUS_INFLATION_IMPORT_ENABLED.
+        import_enabled_env_locked: To ustawienie jest zablokowane przez zmienną środowiskową INFLATION_IMPORT_ENABLED. Starsze GUS_INFLATION_IMPORT_ENABLED jest nadal wspierane.
         start_year: Rok początkowy
         end_year: Rok końcowy
         import_now: Importuj historię CPI teraz
@@ -151,7 +151,7 @@ pl:
         series_id: ID serii
         es_ine_series_placeholder: Wprowadź ID serii ES INE
         locked_by_env: To pole jest zablokowane przez zmienną środowiskową %{var}.
-      import_gus_inflation_rates:
+      import_inflation_rates:
         import_enqueued: Import CPI został dodany do kolejki.
         manual_import_disabled_when_auto_enabled: Ręczny import CPI jest dostępny tylko wtedy, gdy automatyczny import jest wyłączony.
         invalid_import_range: Nieprawidłowy zakres lat dla importu CPI.

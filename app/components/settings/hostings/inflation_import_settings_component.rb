@@ -2,7 +2,7 @@ class Settings::Hostings::InflationImportSettingsComponent < ApplicationComponen
   PROVIDERS = %w[gus_sdp us_bls es_ine].freeze
 
   attr_reader :inflation_import_enabled_effective,
-              :env_gus_inflation_import_enabled,
+              :env_inflation_import_enabled,
               :last_import_at,
               :last_import_range,
               :last_import_count,
@@ -13,7 +13,7 @@ class Settings::Hostings::InflationImportSettingsComponent < ApplicationComponen
 
   def initialize(
     inflation_import_enabled_effective:,
-    env_gus_inflation_import_enabled:,
+    env_inflation_import_enabled:,
     last_import_at:,
     last_import_range:,
     last_import_count:,
@@ -23,7 +23,7 @@ class Settings::Hostings::InflationImportSettingsComponent < ApplicationComponen
     current_year:
   )
     @inflation_import_enabled_effective = inflation_import_enabled_effective
-    @env_gus_inflation_import_enabled = env_gus_inflation_import_enabled
+    @env_inflation_import_enabled = env_inflation_import_enabled
     @last_import_at = last_import_at
     @last_import_range = last_import_range
     @last_import_count = last_import_count
@@ -34,7 +34,7 @@ class Settings::Hostings::InflationImportSettingsComponent < ApplicationComponen
   end
 
   def import_toggle_locked_by_env?
-    env_gus_inflation_import_enabled.present?
+    env_inflation_import_enabled.present?
   end
 
   def start_year_default

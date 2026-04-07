@@ -78,9 +78,9 @@ x-rails-env: &rails_env
   OPENAI_ACCESS_TOKEN: token-can-be-any-value-for-ollama
   OPENAI_MODEL: llama3.1:8b # Note: Use tool-enabled model
   OPENAI_URI_BASE: http://ollama:11434/v1
-  # GUS CPI import for inflation-linked bonds (EOD/ROD)
+  # Global CPI import for inflation-linked bonds (GUS SDP, US BLS, ES INE)
   # Leave unset to manage via Settings UI; set to "true" to override from environment.
-  GUS_INFLATION_IMPORT_ENABLED: ${GUS_INFLATION_IMPORT_ENABLED:-}
+  INFLATION_IMPORT_ENABLED: ${INFLATION_IMPORT_ENABLED:-}
   GUS_SDP_API_KEY: ${GUS_SDP_API_KEY:-}
   # Optional CPI provider overrides for international inflation-linked bonds
   US_BLS_CPI_BASE_URL: ${US_BLS_CPI_BASE_URL:-}

@@ -2,18 +2,18 @@
 
 ## Current status
 
-- Bond and GUS CPI features are implemented and verified by targeted tests.
+- Bond and CPI provider features are implemented and verified by targeted tests.
 - UI tab split for Bond is implemented as: Activity, Positions, Closed.
 - Obsolete Bond holdings tab partial was removed.
 - Polish locale files for Bond/views are present and actively maintained.
 
 ## Verification performed
 
-- Bond and GUS suite:
+- Bond and CPI provider suite:
   - test/models/bond_test.rb
   - test/models/bond_lot_test.rb
   - test/models/gus_inflation_rate_test.rb
-  - test/jobs/import_gus_inflation_rates_job_test.rb
+  - test/jobs/import_inflation_rates_job_test.rb
   - test/jobs/settle_matured_bond_lots_job_test.rb
   - test/controllers/bonds_controller_test.rb
   - test/controllers/bond_lots_controller_test.rb

@@ -3,7 +3,7 @@ class Settings::HostingsController < ApplicationController
 
   guard_feature unless: -> { self_hosted? }
 
-  before_action :ensure_admin, only: [ :update, :clear_cache, :disconnect_external_assistant, :import_gus_inflation_rates ]
+  before_action :ensure_admin, only: [ :update, :clear_cache, :disconnect_external_assistant, :import_inflation_rates ]
   before_action :ensure_super_admin_for_onboarding, only: :update
   before_action :set_inflation_stats, only: [ :show, :update ]
 
@@ -70,8 +70,8 @@ class Settings::HostingsController < ApplicationController
       Setting.gus_sdp_api_key = key_value unless key_value.blank? || key_value == "********"
     end
 
-    if hosting_params.key?(:gus_inflation_import_enabled) && ENV["GUS_INFLATION_IMPORT_ENABLED"].blank?
-      Setting.gus_inflation_import_enabled = hosting_params[:gus_inflation_import_enabled] == "1"
+    if hosting_params.key?(:inflation_import_enabled) && ENV["INFLATION_IMPORT_ENABLED"].blank? && ENV["GUS_INFLATION_IMPORT_ENABLED"].blank?
+      Setting.inflation_import_enabled = hosting_params[:inflation_import_enabled] == "1"
     end
 
     if hosting_params.key?(:us_bls_cpi_base_url) && ENV["US_BLS_CPI_BASE_URL"].blank?
@@ -192,13 +192,13 @@ class Settings::HostingsController < ApplicationController
     redirect_to settings_hosting_path, alert: t("settings.hostings.update.failure")
   end
 
-  def import_gus_inflation_rates
-    if Setting.gus_inflation_import_enabled_effective
+  def import_inflation_rates
+    if Setting.inflation_import_enabled_effective
       return redirect_to settings_hosting_path, alert: t(".manual_import_disabled_when_auto_enabled")
     end
 
-    start_year_param = import_params[:gus_inflation_start_year].presence
-    end_year_param = import_params[:gus_inflation_end_year].presence
+    start_year_param = import_params[:inflation_start_year].presence
+    end_year_param = import_params[:inflation_end_year].presence
 
     start_year = start_year_param.nil? ? (Date.current.year - 20) : Integer(start_year_param, exception: false)
     end_year = end_year_param.nil? ? (Date.current.year - 1) : Integer(end_year_param, exception: false)
@@ -221,11 +221,11 @@ class Settings::HostingsController < ApplicationController
   private
     def hosting_params
       return ActionController::Parameters.new unless params.key?(:setting)
-      params.require(:setting).permit(:onboarding_state, :require_email_confirmation, :invite_only_default_family_id, :brand_fetch_client_id, :brand_fetch_high_res_logos, :twelve_data_api_key, :gus_sdp_api_key, :clear_gus_sdp_api_key, :gus_inflation_import_enabled, :us_bls_cpi_base_url, :us_bls_cpi_series_id, :es_ine_cpi_base_url, :es_ine_cpi_series_id, :openai_access_token, :openai_uri_base, :openai_model, :openai_json_mode, :exchange_rate_provider, :securities_provider, :syncs_include_pending, :auto_sync_enabled, :auto_sync_time, :external_assistant_url, :external_assistant_token, :external_assistant_agent_id)
+      params.require(:setting).permit(:onboarding_state, :require_email_confirmation, :invite_only_default_family_id, :brand_fetch_client_id, :brand_fetch_high_res_logos, :twelve_data_api_key, :gus_sdp_api_key, :clear_gus_sdp_api_key, :inflation_import_enabled, :us_bls_cpi_base_url, :us_bls_cpi_series_id, :es_ine_cpi_base_url, :es_ine_cpi_series_id, :openai_access_token, :openai_uri_base, :openai_model, :openai_json_mode, :exchange_rate_provider, :securities_provider, :syncs_include_pending, :auto_sync_enabled, :auto_sync_time, :external_assistant_url, :external_assistant_token, :external_assistant_agent_id)
     end
 
     def import_params
-      params.fetch(:setting, ActionController::Parameters.new).permit(:gus_inflation_start_year, :gus_inflation_end_year)
+      params.fetch(:setting, ActionController::Parameters.new).permit(:inflation_start_year, :inflation_end_year)
     end
 
     def update_assistant_type

@@ -298,19 +298,19 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
   test "can enqueue manual inflation import when auto import is disabled" do
     with_self_hosting do
       with_env_overrides("GUS_INFLATION_IMPORT_ENABLED" => nil) do
-        old_val = Setting.gus_inflation_import_enabled
-        Setting.gus_inflation_import_enabled = false
+        old_val = Setting.inflation_import_enabled
+        Setting.inflation_import_enabled = false
 
         begin
           assert_enqueued_with(job: ImportInflationRatesJob, args: [ { start_year: 2015, end_year: 2024, force: true, providers: [ "gus_sdp", "us_bls", "es_ine" ] } ]) do
-            post import_gus_inflation_rates_settings_hosting_url,
-                 params: { setting: { gus_inflation_start_year: 2015, gus_inflation_end_year: 2024 } }
+            post import_inflation_rates_settings_hosting_url,
+              params: { setting: { inflation_start_year: 2015, inflation_end_year: 2024 } }
           end
 
           assert_redirected_to settings_hosting_url
-          assert_equal I18n.t("settings.hostings.import_gus_inflation_rates.import_enqueued"), flash[:notice]
+          assert_equal I18n.t("settings.hostings.import_inflation_rates.import_enqueued"), flash[:notice]
         ensure
-          Setting.gus_inflation_import_enabled = old_val
+          Setting.inflation_import_enabled = old_val
         end
       end
     end
@@ -319,40 +319,40 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
   test "does not enqueue manual inflation import when auto import is enabled" do
     with_self_hosting do
       with_env_overrides("GUS_INFLATION_IMPORT_ENABLED" => nil) do
-        old_val = Setting.gus_inflation_import_enabled
-        Setting.gus_inflation_import_enabled = true
+        old_val = Setting.inflation_import_enabled
+        Setting.inflation_import_enabled = true
 
         begin
           assert_no_enqueued_jobs only: ImportInflationRatesJob do
-            post import_gus_inflation_rates_settings_hosting_url,
-                 params: { setting: { gus_inflation_start_year: 2015, gus_inflation_end_year: 2024 } }
+            post import_inflation_rates_settings_hosting_url,
+              params: { setting: { inflation_start_year: 2015, inflation_end_year: 2024 } }
           end
 
           assert_redirected_to settings_hosting_url
-          assert_equal I18n.t("settings.hostings.import_gus_inflation_rates.manual_import_disabled_when_auto_enabled"), flash[:alert]
+          assert_equal I18n.t("settings.hostings.import_inflation_rates.manual_import_disabled_when_auto_enabled"), flash[:alert]
         ensure
-          Setting.gus_inflation_import_enabled = old_val
+          Setting.inflation_import_enabled = old_val
         end
       end
     end
   end
 
-  test "rejects malformed manual gus inflation import years" do
+  test "rejects malformed manual inflation import years" do
     with_self_hosting do
       with_env_overrides("GUS_INFLATION_IMPORT_ENABLED" => nil) do
-        old_val = Setting.gus_inflation_import_enabled
-        Setting.gus_inflation_import_enabled = false
+        old_val = Setting.inflation_import_enabled
+        Setting.inflation_import_enabled = false
 
         begin
           assert_no_enqueued_jobs only: ImportInflationRatesJob do
-            post import_gus_inflation_rates_settings_hosting_url,
-                 params: { setting: { gus_inflation_start_year: "2020foo", gus_inflation_end_year: 2024 } }
+            post import_inflation_rates_settings_hosting_url,
+              params: { setting: { inflation_start_year: "2020foo", inflation_end_year: 2024 } }
           end
 
           assert_redirected_to settings_hosting_url
-          assert_equal I18n.t("settings.hostings.import_gus_inflation_rates.invalid_import_range"), flash[:alert]
+          assert_equal I18n.t("settings.hostings.import_inflation_rates.invalid_import_range"), flash[:alert]
         ensure
-          Setting.gus_inflation_import_enabled = old_val
+          Setting.inflation_import_enabled = old_val
         end
       end
     end

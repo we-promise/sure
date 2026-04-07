@@ -3,7 +3,7 @@ class ImportInflationRatesJob < ApplicationJob
 
   def perform(start_year: Date.current.year - 1, end_year: Date.current.year, force: false, providers: nil)
     scheduled_full_import = providers.blank?
-    return if scheduled_full_import && !Setting.gus_inflation_import_enabled_effective && !force
+    return if scheduled_full_import && !Setting.inflation_import_enabled_effective && !force
 
     imported_by_provider = InflationRateImporter.new(
       start_year:,
@@ -12,13 +12,13 @@ class ImportInflationRatesJob < ApplicationJob
       providers:
     ).import_all
 
-    Setting.gus_inflation_last_import_at = Time.current
-    Setting.gus_inflation_last_import_count = imported_by_provider.values.sum
-    Setting.gus_inflation_last_import_range = "#{start_year}-#{end_year}"
+    Setting.inflation_last_import_at = Time.current
+    Setting.inflation_last_import_count = imported_by_provider.values.sum
+    Setting.inflation_last_import_range = "#{start_year}-#{end_year}"
     Setting.inflation_last_import_details = imported_by_provider.stringify_keys.to_json
-    Setting.gus_inflation_last_import_error = nil
+    Setting.inflation_last_import_error = nil
   rescue StandardError => error
-    Setting.gus_inflation_last_import_error = error.message
+    Setting.inflation_last_import_error = error.message
     raise
   end
 end
