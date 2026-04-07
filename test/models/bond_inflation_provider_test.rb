@@ -24,7 +24,7 @@ class BondInflationProviderTest < ActiveSupport::TestCase
         data: [ { month: 1, rate_yoy: 106.4.to_d } ],
         error: nil
       )
-    )
+    ).once
 
     Bond::InflationProvider.stubs(:provider_class).with("us_bls").returns(stub(new: fake_adapter))
 
@@ -34,9 +34,19 @@ class BondInflationProviderTest < ActiveSupport::TestCase
       lag_months: 2
     )
 
+    # Second call should use persisted data and avoid extra provider call.
+    second_record = Bond::InflationProvider.record_for_date(
+      provider: "us_bls",
+      date: Date.new(2025, 3, 10),
+      lag_months: 2
+    )
+
     assert_not_nil record
     assert_equal 2025, record.year
     assert_equal 1, record.month
     assert_equal 106.4.to_d, record.rate_yoy
+    assert_not_nil second_record
+    assert_equal 106.4.to_d, second_record.rate_yoy
+    assert_equal 1, InflationRate.where(source: "us_bls", year: 2025, month: 1).count
   end
 end

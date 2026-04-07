@@ -26,17 +26,23 @@ module Bond::InflationProvider
     end
 
     target_date = date.beginning_of_month - lag_months.to_i.months
-    response = provider_class(provider_key).new.fetch_cpi_yoy_for_year(year: target_date.year)
-    return nil unless response.success?
+    source_key = provider_key
+    persisted = InflationRate.for_date(source: source_key, date: date, lag_months: lag_months)
+    return persisted if persisted.present?
 
-    month_data = response.data.find { |row| row[:month].to_i == target_date.month }
-    return nil if month_data.blank?
+    provider_klass = provider_class(provider_key)
+    return nil if provider_klass.blank?
 
-    InflationRecord.new(
-      year: target_date.year,
-      month: target_date.month,
-      rate_yoy: month_data[:rate_yoy].to_d
+    InflationRate.import_year!(
+      source: source_key,
+      provider: provider_klass.new,
+      year: target_date.year
     )
+
+    InflationRate.for_date(source: source_key, date: date, lag_months: lag_months)
+  rescue StandardError
+    # Do not break lot valuation path when external source is unavailable.
+    nil
   end
 
   def provider_class(provider)
