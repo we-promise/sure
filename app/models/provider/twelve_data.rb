@@ -260,7 +260,7 @@ class Provider::TwelveData < Provider
           interval_randomness: 0.5,
           backoff_factor: 2,
           retry_statuses: [ 429 ],
-          exceptions: [ Faraday::ConnectionFailed, Faraday::TimeoutError ]
+          exceptions: Faraday::Retry::Middleware::DEFAULT_EXCEPTIONS + [ Faraday::ConnectionFailed ]
         })
 
         faraday.request :json

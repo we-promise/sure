@@ -169,34 +169,25 @@ class ExchangeRate::ImporterTest < ActiveSupport::TestCase
     assert_in_delta (1.0 / 0.85), inverse.rate.to_f, 0.0001
   end
 
-  test "retries once on rate limit error" do
+  test "returns rate_limited symbol on rate limit error" do
     ExchangeRate.delete_all
 
     rate_limit_error = Provider::TwelveData::RateLimitError.new("Rate limit exceeded")
-    success_response = provider_success_response([
-      OpenStruct.new(from: "USD", to: "EUR", date: Date.current, rate: 1.1)
-    ])
 
-    # First call returns rate limit error, second succeeds
-    @provider.expects(:fetch_exchange_rates).twice.returns(
-      provider_error_response(rate_limit_error),
-    ).then.returns(success_response)
+    @provider.expects(:fetch_exchange_rates).once.returns(
+      provider_error_response(rate_limit_error)
+    )
 
-    importer = ExchangeRate::Importer.new(
+    result = ExchangeRate::Importer.new(
       exchange_rate_provider: @provider,
       from: "USD",
       to: "EUR",
       start_date: Date.current,
       end_date: Date.current
-    )
+    ).import_provider_rates
 
-    # Stub sleep to avoid actually waiting 61 seconds in tests
-    importer.expects(:sleep).with(61).once
-
-    importer.import_provider_rates
-
-    assert ExchangeRate.find_by(from_currency: "USD", to_currency: "EUR", date: Date.current),
-           "Rate should be imported after retry"
+    assert_equal :rate_limited, result
+    assert_equal 0, ExchangeRate.count, "No rates should be imported on rate limit"
   end
 
   private

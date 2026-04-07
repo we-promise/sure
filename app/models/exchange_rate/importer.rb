@@ -19,6 +19,8 @@ class ExchangeRate::Importer
       return
     end
 
+    return :rate_limited if provider_rates == :rate_limited
+
     if provider_rates.empty?
       Rails.logger.warn("Could not fetch rates for #{from} to #{to} between #{start_date} and #{end_date} because provider returned no rates")
       return
@@ -130,10 +132,17 @@ class ExchangeRate::Importer
         # Always fetch with a 5 day buffer to ensure we have a starting rate (for weekends and holidays)
         provider_fetch_start_date = effective_start_date - 5.days
 
-        provider_response = fetch_with_rate_limit_retry(provider_fetch_start_date)
+        provider_response = exchange_rate_provider.fetch_exchange_rates(
+          from: from,
+          to: to,
+          start_date: provider_fetch_start_date,
+          end_date: end_date
+        )
 
         if provider_response.success?
           provider_response.data.index_by(&:date)
+        elsif rate_limit_error?(provider_response)
+          :rate_limited
         else
           message = "#{exchange_rate_provider.class.name} could not fetch exchange rate pair from: #{from} to: #{to} between: #{effective_start_date} and: #{Date.current}.  Provider error: #{provider_response.error.message}"
           Rails.logger.warn(message)
@@ -141,31 +150,6 @@ class ExchangeRate::Importer
           {}
         end
       end
-    end
-
-    def fetch_with_rate_limit_retry(provider_fetch_start_date)
-      provider_response = exchange_rate_provider.fetch_exchange_rates(
-        from: from,
-        to: to,
-        start_date: provider_fetch_start_date,
-        end_date: end_date
-      )
-
-      # Retry once on rate limit errors after waiting for the next minute window
-      if !provider_response.success? && rate_limit_error?(provider_response)
-        wait = 61
-        Rails.logger.info("Rate limit hit for #{from}/#{to}, retrying in #{wait}s...")
-        sleep(wait)
-
-        provider_response = exchange_rate_provider.fetch_exchange_rates(
-          from: from,
-          to: to,
-          start_date: provider_fetch_start_date,
-          end_date: end_date
-        )
-      end
-
-      provider_response
     end
 
     def rate_limit_error?(response)
