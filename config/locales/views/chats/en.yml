@@ -3,3 +3,6 @@ en:
   chats:
     demo_banner_title: "Demo Mode Active"
     demo_banner_message: "You are using an open-weights Qwen3 LLM with credits provided by Cloudflare Workers AI.  Result may vary since the codebase was mostly tested on `gpt-4.1` but your tokens don't go anywhere else to be trained with! 🤖"
+  errors:
+    llm:
+      function_calling_not_supported: "The model '%{model}' does not appear to support function calling (tools). The AI assistant requires a model that supports function calling to retrieve your financial data. Please select a different model that supports this feature in your AI settings, or contact your provider (%{provider_url}) to verify model capabilities."
