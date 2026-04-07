@@ -6,7 +6,8 @@ class Provider::EsIneCpi < Provider
   DEFAULT_BASE_URL = ENV["ES_INE_CPI_BASE_URL"].presence || "https://servicios.ine.es/wstempus/js/EN/DATOS_SERIE/".freeze
 
   def initialize(base_url: DEFAULT_BASE_URL, series_id: ENV["ES_INE_CPI_SERIES_ID"])
-    @base_url = base_url
+    # Ensure trailing slash for proper path segment appending
+    @base_url = base_url&.end_with?("/") ? base_url : "#{base_url}/"
     @series_id = series_id
   end
 
