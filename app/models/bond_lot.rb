@@ -14,10 +14,15 @@ class BondLot < ApplicationRecord
 
     unresolvable_ids = []
     open.where(subtype: Bond::INFLATION_LINKED_SUBTYPES).includes(:bond).find_in_batches(batch_size: 200) do |batch|
-      cpi_by_lag = cpi_rates_by_lag(on: review_on, lag_months_values: batch.filter_map { |lot| lot.auto_fetch_inflation? ? lot.cpi_lag_months.to_i : nil }.uniq)
+      provider_lag_pairs = batch.filter_map do |lot|
+        next unless lot.auto_fetch_inflation?
+
+        [ Bond::InflationProvider.key_for(lot.inflation_provider), lot.cpi_lag_months.to_i ]
+      end.uniq
+      cpi_by_provider_lag = cpi_rates_by_provider_lag(on: review_on, provider_lag_pairs: provider_lag_pairs)
 
       batch.each do |lot|
-        unresolvable_ids << lot.id if unresolved_rate_for_review?(lot:, on: review_on, cpi_by_lag: cpi_by_lag)
+        unresolvable_ids << lot.id if unresolved_rate_for_review?(lot:, on: review_on, cpi_by_provider_lag: cpi_by_provider_lag)
       end
     end
 
@@ -25,21 +30,15 @@ class BondLot < ApplicationRecord
     ids.empty? ? none : open.where(id: ids)
   end
 
-  def self.cpi_rates_by_lag(on:, lag_months_values:)
-    return {} if lag_months_values.blank?
+  def self.cpi_rates_by_provider_lag(on:, provider_lag_pairs:)
+    return {} if provider_lag_pairs.blank?
 
-    month_start = on.beginning_of_month
-    target_dates = lag_months_values.map { |lag| month_start - lag.months }
-    rates_by_month = GusInflationRate.where(year: target_dates.map(&:year).uniq, month: target_dates.map(&:month).uniq)
-                                   .index_by { |record| [ record.year, record.month ] }
-
-    lag_months_values.index_with do |lag|
-      target_date = month_start - lag.months
-      rates_by_month[[ target_date.year, target_date.month ]]
+    provider_lag_pairs.index_with do |provider, lag|
+      Bond::InflationProvider.record_for_date(provider:, date: on, lag_months: lag)
     end
   end
 
-  def self.unresolved_rate_for_review?(lot:, on:, cpi_by_lag:)
+  def self.unresolved_rate_for_review?(lot:, on:, cpi_by_provider_lag:)
     return true if lot.purchased_on.blank?
 
     period_base = lot.issue_date.presence || lot.purchased_on
@@ -54,7 +53,8 @@ class BondLot < ApplicationRecord
 
     inflation_component = nil
     if lot.auto_fetch_inflation?
-      source_record = cpi_by_lag[lot.cpi_lag_months.to_i]
+      provider_key = Bond::InflationProvider.key_for(lot.inflation_provider)
+      source_record = cpi_by_provider_lag[[ provider_key, lot.cpi_lag_months.to_i ]]
       inflation_component = source_record.rate_yoy.to_d - 100 if source_record.present?
     end
 
@@ -604,12 +604,11 @@ class BondLot < ApplicationRecord
     end
 
     def inflation_rate_record_for(on:)
-      case inflation_provider_key
-      when "gus_sdp"
-        GusInflationRate.for_date(date: on, lag_months: cpi_lag_months.to_i)
-      else
-        nil
-      end
+      Bond::InflationProvider.record_for_date(
+        provider: inflation_provider_key,
+        date: on,
+        lag_months: cpi_lag_months.to_i
+      )
     end
 
     def inflation_source_label

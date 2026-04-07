@@ -495,6 +495,59 @@ class BondLotTest < ActiveSupport::TestCase
     Setting.gus_inflation_import_enabled = false
   end
 
+  test "uses us_bls provider when selected on inflation-linked lot" do
+    Bond::InflationProvider.stubs(:record_for_date).with(provider: "us_bls", date: Date.new(2025, 3, 31), lag_months: 2)
+                           .returns(Bond::InflationProvider::InflationRecord.new(year: 2025, month: 1, rate_yoy: 106.2))
+
+    lot = BondLot.new(
+      bond: bonds(:one),
+      purchased_on: Date.new(2014, 5, 31),
+      amount: 1000,
+      subtype: "inflation_linked",
+      first_period_rate: 4.0,
+      inflation_margin: 0.9,
+      inflation_rate_assumption: 1.0,
+      inflation_provider: "us_bls",
+      auto_fetch_inflation: true,
+      cpi_lag_months: 2,
+      units: 10,
+      nominal_per_unit: 100,
+      issue_date: Date.new(2014, 5, 31),
+      rate_type: "variable",
+      coupon_frequency: "at_maturity"
+    )
+
+    assert_in_delta 7.1, lot.current_rate_percent(on: Date.new(2025, 3, 31)).to_f, 0.001
+    assert_equal "us_bls", lot.current_inflation_source(on: Date.new(2025, 3, 31))
+    assert_in_delta 6.2, lot.current_inflation_component_percent(on: Date.new(2025, 3, 31)).to_f, 0.001
+  end
+
+  test "falls back to manual assumption when non-gus provider returns no CPI data" do
+    Bond::InflationProvider.stubs(:record_for_date).with(provider: "es_ine", date: Date.new(2025, 3, 31), lag_months: 2)
+                           .returns(nil)
+
+    lot = BondLot.new(
+      bond: bonds(:one),
+      purchased_on: Date.new(2014, 5, 31),
+      amount: 1000,
+      subtype: "inflation_linked",
+      first_period_rate: 4.0,
+      inflation_margin: 2.0,
+      inflation_rate_assumption: 3.0,
+      inflation_provider: "es_ine",
+      auto_fetch_inflation: true,
+      cpi_lag_months: 2,
+      units: 10,
+      nominal_per_unit: 100,
+      issue_date: Date.new(2014, 5, 31),
+      rate_type: "variable",
+      coupon_frequency: "at_maturity"
+    )
+
+    assert_in_delta 5.0, lot.current_rate_percent(on: Date.new(2025, 3, 31)).to_f, 0.001
+    assert_equal "manual", lot.current_inflation_source(on: Date.new(2025, 3, 31))
+  end
+
   test "falls back to manual assumption when exact lagged CPI month is missing from GUS" do
     Setting.gus_inflation_import_enabled = true
     # Only 2025-12 exists; query for 2026-03-31 with lag=2 needs 2026-01 which is missing.
