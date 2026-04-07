@@ -169,7 +169,7 @@ class ExchangeRate::ImporterTest < ActiveSupport::TestCase
     assert_in_delta (1.0 / 0.85), inverse.rate.to_f, 0.0001
   end
 
-  test "returns rate_limited symbol on rate limit error" do
+  test "handles rate limit error gracefully" do
     ExchangeRate.delete_all
 
     rate_limit_error = Provider::TwelveData::RateLimitError.new("Rate limit exceeded")
@@ -178,7 +178,8 @@ class ExchangeRate::ImporterTest < ActiveSupport::TestCase
       provider_error_response(rate_limit_error)
     )
 
-    result = ExchangeRate::Importer.new(
+    # Should not raise — logs warning and returns without importing
+    ExchangeRate::Importer.new(
       exchange_rate_provider: @provider,
       from: "USD",
       to: "EUR",
@@ -186,8 +187,7 @@ class ExchangeRate::ImporterTest < ActiveSupport::TestCase
       end_date: Date.current
     ).import_provider_rates
 
-    assert_equal :rate_limited, result
-    assert_equal 0, ExchangeRate.count, "No rates should be imported on rate limit"
+    assert_equal 0, ExchangeRate.count, "No rates should be imported on rate limit error"
   end
 
   private

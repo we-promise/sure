@@ -87,7 +87,7 @@ module ExchangeRate::Provided
       end
 
       begin
-        result = ExchangeRate::Importer.new(
+        ExchangeRate::Importer.new(
           exchange_rate_provider: provider,
           from: from,
           to: to,
@@ -95,19 +95,6 @@ module ExchangeRate::Provided
           end_date: end_date,
           clear_cache: clear_cache
         ).import_provider_rates
-
-        if result == :rate_limited
-          Rails.logger.info("Rate limit hit for #{from}/#{to}, scheduling retry job")
-          ExchangeRateImportJob.perform_later(
-            from: from,
-            to: to,
-            start_date: start_date,
-            end_date: end_date,
-            clear_cache: clear_cache
-          )
-        end
-
-        result
       ensure
         # Only delete the lock if we still own it (it hasn't expired and been
         # re-acquired by another worker).

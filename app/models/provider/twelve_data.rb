@@ -259,7 +259,6 @@ class Provider::TwelveData < Provider
           interval: 1.0,
           interval_randomness: 0.5,
           backoff_factor: 2,
-          retry_statuses: [ 429 ],
           exceptions: Faraday::Retry::Middleware::DEFAULT_EXCEPTIONS + [ Faraday::ConnectionFailed ]
         })
 
@@ -269,6 +268,10 @@ class Provider::TwelveData < Provider
       end
     end
 
+    # Paces API requests to stay within TwelveData's rate limits. Sleeps inline
+    # because the API physically cannot be called faster — this is unavoidable
+    # with a rate-limited provider. The 5-minute cache lock TTL in
+    # ExchangeRate::Provided accounts for worst-case throttle waits.
     def throttle_request(credits: 1)
       # Layer 1: Per-instance minimum interval between calls
       @last_request_time ||= Time.at(0)
