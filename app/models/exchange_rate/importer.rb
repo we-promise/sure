@@ -152,10 +152,11 @@ class ExchangeRate::Importer
     # deployment before inverse computation was added), backfill them from the DB
     # without making any provider API calls.
     def backfill_inverse_rates_if_needed
-      inverse_count = ExchangeRate.where(from_currency: to, to_currency: from, date: start_date..end_date).count
-      return if inverse_count >= expected_count
+      existing_inverse_dates = ExchangeRate.where(from_currency: to, to_currency: from, date: start_date..end_date).pluck(:date).to_set
+      return if existing_inverse_dates.size >= expected_count
 
       inverse_rows = db_rates.filter_map do |_date, rate|
+        next if existing_inverse_dates.include?(rate.date)
         next if rate.rate.to_f <= 0
 
         {

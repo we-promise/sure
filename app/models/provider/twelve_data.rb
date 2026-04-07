@@ -70,7 +70,7 @@ class Provider::TwelveData < Provider
       end
 
       parsed = JSON.parse(response.body)
-      check_rate_limit!(parsed)
+      check_api_error!(parsed)
 
       Rate.new(date: date.to_date, from:, to:, rate: parsed.dig("rate"))
     end
@@ -88,7 +88,7 @@ class Provider::TwelveData < Provider
       end
 
       parsed = JSON.parse(response.body)
-      check_rate_limit!(parsed)
+      check_api_error!(parsed)
       data = parsed.dig("values")
 
       # If currency pair is not available, try to fetch via the time_series/cross API (consumes 5 credits)
@@ -104,7 +104,7 @@ class Provider::TwelveData < Provider
         end
 
         parsed = JSON.parse(response.body)
-        check_rate_limit!(parsed)
+        check_api_error!(parsed)
         data = parsed.dig("values")
       end
 
@@ -140,7 +140,7 @@ class Provider::TwelveData < Provider
       end
 
       parsed = JSON.parse(response.body)
-      check_rate_limit!(parsed)
+      check_api_error!(parsed)
       data = parsed.dig("data")
 
       if data.nil?
@@ -172,7 +172,7 @@ class Provider::TwelveData < Provider
       end
 
       profile = JSON.parse(response.body)
-      check_rate_limit!(profile)
+      check_api_error!(profile)
 
       throttle_request
       response = client.get("#{base_url}/logo") do |req|
@@ -181,7 +181,7 @@ class Provider::TwelveData < Provider
       end
 
       logo = JSON.parse(response.body)
-      check_rate_limit!(logo)
+      check_api_error!(logo)
 
       SecurityInfo.new(
         symbol: symbol,
@@ -217,7 +217,7 @@ class Provider::TwelveData < Provider
       end
 
       parsed = JSON.parse(response.body)
-      check_rate_limit!(parsed)
+      check_api_error!(parsed)
       values = parsed.dig("values")
 
       if values.nil?
@@ -278,7 +278,6 @@ class Provider::TwelveData < Provider
       elapsed = Time.current - @last_request_time
       sleep_time = min_request_interval - elapsed
       sleep(sleep_time) if sleep_time > 0
-      @last_request_time = Time.current
 
       # Layer 2: Global per-minute credit counter via cache (Redis in prod).
       # Read current usage first — if adding these credits would exceed the limit,
@@ -297,6 +296,10 @@ class Provider::TwelveData < Provider
       # Charge credits to the minute the request actually fires in
       active_minute_key = "twelve_data:credits:#{Time.current.to_i / 60}"
       Rails.cache.increment(active_minute_key, credits, expires_in: 120.seconds)
+
+      # Set timestamp after all waits so the next call's 1s pacing is measured
+      # from when this request actually fires, not from before the minute wait.
+      @last_request_time = Time.current
     end
 
     def min_request_interval
@@ -307,10 +310,14 @@ class Provider::TwelveData < Provider
       ENV.fetch("TWELVE_DATA_MAX_REQUESTS_PER_MINUTE", 7).to_i
     end
 
-    def check_rate_limit!(parsed)
-      if parsed.is_a?(Hash) && parsed["code"] == 429
+    def check_api_error!(parsed)
+      return unless parsed.is_a?(Hash) && parsed["code"].present?
+
+      if parsed["code"] == 429
         raise RateLimitError, parsed["message"] || "Rate limit exceeded"
       end
+
+      raise Error, "API error (code: #{parsed["code"]}): #{parsed["message"] || "Unknown error"}"
     end
 
     def default_error_transformer(error)
