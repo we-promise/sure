@@ -2,6 +2,21 @@ require "sidekiq/web"
 require "sidekiq/cron/web"
 
 Rails.application.routes.draw do
+  resources :indexa_capital_items, only: [ :index, :new, :create, :show, :edit, :update, :destroy ] do
+    collection do
+      get :preload_accounts
+      get :select_accounts
+      post :link_accounts
+      get :select_existing_account
+      post :link_existing_account
+    end
+
+    member do
+      post :sync
+      get :setup_accounts
+      post :complete_account_setup
+    end
+  end
   resources :mercury_items, only: %i[index new create show edit update destroy] do
     collection do
       get :preload_accounts
@@ -21,6 +36,21 @@ Rails.application.routes.draw do
   resources :coinbase_items, only: [ :index, :new, :create, :show, :edit, :update, :destroy ] do
     collection do
       get :preload_accounts
+      get :select_accounts
+      post :link_accounts
+      get :select_existing_account
+      post :link_existing_account
+    end
+
+    member do
+      post :sync
+      get :setup_accounts
+      post :complete_account_setup
+    end
+  end
+
+  resources :binance_items, only: [ :index, :new, :create, :show, :edit, :update, :destroy ] do
+    collection do
       get :select_accounts
       post :link_accounts
       get :select_existing_account
@@ -59,6 +89,7 @@ Rails.application.routes.draw do
   resources :coinstats_items, only: [ :index, :new, :create, :update, :destroy ] do
     collection do
       post :link_wallet
+      post :link_exchange
     end
     member do
       post :sync
@@ -92,6 +123,11 @@ Rails.application.routes.draw do
 
   mount Lookbook::Engine, at: "/design-system"
 
+  if Rails.env.development?
+    mount Rswag::Api::Engine => "/api-docs"
+    mount Rswag::Ui::Engine => "/api-docs"
+  end
+
   # Uses basic auth - see config/initializers/sidekiq.rb
   mount Sidekiq::Web => "/sidekiq"
 
@@ -110,6 +146,8 @@ Rails.application.routes.draw do
     end
   end
 
+  get "exports/archive/:token", to: "archived_exports#show", as: :archived_export
+
   get "changelog", to: "pages#changelog"
   get "feedback", to: "pages#feedback"
   patch "dashboard/preferences", to: "pages#update_preferences"
@@ -118,6 +156,7 @@ Rails.application.routes.draw do
 
   resource :registration, only: %i[new create]
   resources :sessions, only: %i[index new create destroy]
+  get "/auth/mobile/:provider", to: "sessions#mobile_sso_start"
   match "/auth/:provider/callback", to: "sessions#openid_connect", via: %i[get post]
   match "/auth/failure", to: "sessions#failure", via: %i[get post]
   get "/auth/logout/callback", to: "sessions#post_logout"
@@ -149,8 +188,10 @@ Rails.application.routes.draw do
   namespace :settings do
     resource :profile, only: [ :show, :destroy ]
     resource :preferences, only: :show
+    resource :appearance, only: %i[show update]
     resource :hosting, only: %i[show update] do
       delete :clear_cache, on: :collection
+      delete :disconnect_external_assistant, on: :collection
     end
     resource :payment, only: :show
     resource :security, only: :show
@@ -194,6 +235,7 @@ Rails.application.routes.draw do
   end
 
   resources :budgets, only: %i[index show edit update], param: :month_year do
+    post :copy_previous, on: :member
     get :picker, on: :collection
 
     resources :budget_categories, only: %i[index show update]
@@ -203,12 +245,13 @@ Rails.application.routes.draw do
     collection do
       get :merge
       post :perform_merge
+      post :enhance
     end
   end
 
   resources :transfers, only: %i[new create destroy show update]
 
-  resources :imports, only: %i[index new show create destroy] do
+  resources :imports, only: %i[index new show create update destroy] do
     member do
       post :publish
       put :revert
@@ -219,6 +262,7 @@ Rails.application.routes.draw do
     resource :configuration, only: %i[show update], module: :import
     resource :clean, only: :show, module: :import
     resource :confirm, only: :show, module: :import
+    resource :qif_category_selection, only: %i[show update], module: :import
 
     resources :rows, only: %i[show update], module: :import
     resources :mappings, only: :update, module: :import
@@ -229,6 +273,7 @@ Rails.application.routes.draw do
       post :unlock_cost_basis
       patch :remap_security
       post :reset_security
+      post :sync_prices
     end
   end
   resources :trades, only: %i[show new create update destroy] do
@@ -244,11 +289,18 @@ Rails.application.routes.draw do
   namespace :transactions do
     resource :bulk_deletion, only: :create
     resource :bulk_update, only: %i[new create]
+    resource :categorize, only: %i[show create] do
+      patch :assign_entry, on: :collection
+      get :preview_rule, on: :collection
+    end
   end
 
   resources :transactions, only: %i[index new create show update destroy] do
+    resource :split, only: %i[new create edit update destroy]
     resource :transfer_match, only: %i[new create]
+    resource :pending_duplicate_merges, only: %i[new create]
     resource :category, only: :update, controller: :transaction_categories
+    resources :attachments, only: %i[show create destroy], controller: :transaction_attachments
 
     collection do
       delete :clear_filter
@@ -306,6 +358,8 @@ Rails.application.routes.draw do
       post :sync
       get :sparkline
       patch :toggle_active
+      patch :set_default
+      patch :remove_default
       get :select_provider
       get :confirm_unlink
       delete :unlink
@@ -314,6 +368,8 @@ Rails.application.routes.draw do
     collection do
       post :sync_all
     end
+
+    resource :sharing, only: [ :show, :update ], controller: "account_sharings"
   end
 
   # Convenience routes for polymorphic paths
@@ -355,6 +411,10 @@ Rails.application.routes.draw do
       post "auth/signup", to: "auth#signup"
       post "auth/login", to: "auth#login"
       post "auth/refresh", to: "auth#refresh"
+      post "auth/sso_exchange", to: "auth#sso_exchange"
+      post "auth/sso_link", to: "auth#sso_link"
+      post "auth/sso_create_account", to: "auth#sso_create_account"
+      patch "auth/enable_ai", to: "auth#enable_ai"
 
       # Production API endpoints
       resources :accounts, only: [ :index, :show ]
@@ -363,8 +423,12 @@ Rails.application.routes.draw do
       resources :tags, only: %i[index show create update destroy]
 
       resources :transactions, only: [ :index, :show, :create, :update, :destroy ]
+      resources :trades, only: [ :index, :show, :create, :update, :destroy ]
+      resources :holdings, only: [ :index, :show ]
+      resources :valuations, only: [ :create, :update, :show ]
       resources :imports, only: [ :index, :show, :create ]
       resource :usage, only: [ :show ], controller: :usage
+      resource :balance_sheet, only: [ :show ], controller: :balance_sheet
       post :sync, to: "sync#create"
 
       resources :chats, only: [ :index, :show, :create, :update, :destroy ] do
@@ -372,6 +436,9 @@ Rails.application.routes.draw do
           post :retry, on: :collection
         end
       end
+
+      delete "users/reset", to: "users#reset"
+      delete "users/me", to: "users#destroy"
 
       # Test routes for API controller testing (only available in test environment)
       if Rails.env.test?
@@ -448,6 +515,9 @@ Rails.application.routes.draw do
 
   get "redis-configuration-error", to: "pages#redis_configuration_error"
 
+  # MCP server endpoint for external AI assistants (JSON-RPC 2.0)
+  post "mcp", to: "mcp#handle"
+
   # Reveal health status on /up that returns 200 if the app boots with no exceptions, otherwise 500.
   # Can be used by load balancers and uptime monitors to verify that the app is live.
   get "up" => "rails/health#show", as: :rails_health_check
@@ -462,6 +532,7 @@ Rails.application.routes.draw do
   terms_url = ENV["LEGAL_TERMS_URL"].presence
   get "privacy", to: privacy_url ? redirect(privacy_url) : "pages#privacy"
   get "terms", to: terms_url ? redirect(terms_url) : "pages#terms"
+  get "intro", to: "pages#intro"
 
   # Admin namespace for super admin functionality
   namespace :admin do
@@ -472,6 +543,12 @@ Rails.application.routes.draw do
       end
     end
     resources :users, only: [ :index, :update ]
+    resources :invitations, only: [ :destroy ]
+    resources :families, only: [] do
+      member do
+        delete :invitations, to: "invitations#destroy_all"
+      end
+    end
   end
 
   # Defines the root path route ("/")

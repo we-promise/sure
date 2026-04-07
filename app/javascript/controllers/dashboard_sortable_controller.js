@@ -3,15 +3,16 @@ import { Controller } from "@hotwired/stimulus";
 export default class extends Controller {
   static targets = ["section", "handle"];
 
-  // Short delay to prevent accidental touches on the grip handle
+  // Hold delay to require deliberate press-and-hold before activating drag mode
   static values = {
-    holdDelay: { type: Number, default: 150 },
+    holdDelay: { type: Number, default: 800 },
   };
 
   connect() {
     this.draggedElement = null;
     this.placeholder = null;
     this.touchStartY = 0;
+    this.currentTouchX = 0;
     this.currentTouchY = 0;
     this.isTouching = false;
     this.keyboardGrabbedElement = null;
@@ -21,6 +22,14 @@ export default class extends Controller {
 
   // ===== Mouse Drag Events =====
   dragStart(event) {
+    // If a touch interaction is in progress, cancel native drag —
+    // use touch events with hold delay instead.
+    // This avoids blocking mouse/trackpad drag on touch-capable laptops.
+    if (this.isTouching || this.pendingSection) {
+      event.preventDefault();
+      return;
+    }
+
     this.draggedElement = event.currentTarget;
     this.draggedElement.classList.add("opacity-50");
     this.draggedElement.setAttribute("aria-grabbed", "true");
@@ -37,7 +46,7 @@ export default class extends Controller {
     event.preventDefault();
     event.dataTransfer.dropEffect = "move";
 
-    const afterElement = this.getDragAfterElement(event.clientY);
+    const afterElement = this.getDragAfterElement(event.clientX, event.clientY);
     const container = this.element;
 
     this.clearPlaceholders();
@@ -53,7 +62,7 @@ export default class extends Controller {
     event.preventDefault();
     event.stopPropagation();
 
-    const afterElement = this.getDragAfterElement(event.clientY);
+    const afterElement = this.getDragAfterElement(event.clientX, event.clientY);
     const container = this.element;
 
     if (afterElement == null) {
@@ -81,9 +90,15 @@ export default class extends Controller {
     if (section.getAttribute("draggable") === "false") return;
 
     this.pendingSection = section;
+    this.touchStartX = event.touches[0].clientX;
     this.touchStartY = event.touches[0].clientY;
+    this.currentTouchX = this.touchStartX;
     this.currentTouchY = this.touchStartY;
     this.holdActivated = false;
+
+    // Prevent text selection while waiting for hold to activate
+    section.style.userSelect = "none";
+    section.style.webkitUserSelect = "none";
 
     // Start hold timer
     this.holdTimer = setTimeout(() => {
@@ -107,12 +122,27 @@ export default class extends Controller {
   }
 
   touchMove(event) {
-    if (!this.holdActivated || !this.isTouching || !this.draggedElement) return;
+    const touchX = event.touches[0].clientX;
+    const touchY = event.touches[0].clientY;
+
+    // If hold hasn't activated yet, cancel if user moves too far (scrolling or swiping)
+    // Uses Euclidean distance to catch diagonal gestures too
+    if (!this.holdActivated) {
+      const dx = touchX - this.touchStartX;
+      const dy = touchY - this.touchStartY;
+      if (dx * dx + dy * dy > 100) { // 10px radius
+        this.cancelHold();
+      }
+      return;
+    }
+
+    if (!this.isTouching || !this.draggedElement) return;
 
     event.preventDefault();
-    this.currentTouchY = event.touches[0].clientY;
+    this.currentTouchX = touchX;
+    this.currentTouchY = touchY;
 
-    const afterElement = this.getDragAfterElement(this.currentTouchY);
+    const afterElement = this.getDragAfterElement(this.currentTouchX, this.currentTouchY);
     this.clearPlaceholders();
 
     if (afterElement == null) {
@@ -130,7 +160,7 @@ export default class extends Controller {
       return;
     }
 
-    const afterElement = this.getDragAfterElement(this.currentTouchY);
+    const afterElement = this.getDragAfterElement(this.currentTouchX, this.currentTouchY);
     const container = this.element;
 
     if (afterElement == null) {
@@ -155,6 +185,16 @@ export default class extends Controller {
   }
 
   resetTouchState() {
+    // Restore text selection
+    if (this.pendingSection) {
+      this.pendingSection.style.userSelect = "";
+      this.pendingSection.style.webkitUserSelect = "";
+    }
+    if (this.draggedElement) {
+      this.draggedElement.style.userSelect = "";
+      this.draggedElement.style.webkitUserSelect = "";
+    }
+
     this.isTouching = false;
     this.draggedElement = null;
     this.pendingSection = null;
@@ -240,23 +280,32 @@ export default class extends Controller {
     }
   }
 
-  getDragAfterElement(y) {
-    const draggableElements = [
-      ...this.sectionTargets.filter((section) => section !== this.draggedElement),
-    ];
+  getDragAfterElement(pointerX, pointerY) {
+    const draggableElements = this.sectionTargets.filter(
+      (section) => section !== this.draggedElement,
+    );
 
-    return draggableElements.reduce(
-      (closest, child) => {
-        const box = child.getBoundingClientRect();
-        const offset = y - box.top - box.height / 2;
+    if (draggableElements.length === 0) return null;
 
-        if (offset < 0 && offset > closest.offset) {
-          return { offset: offset, element: child };
-        }
-        return closest;
-      },
-      { offset: Number.NEGATIVE_INFINITY },
-    ).element;
+    let closest = null;
+    let minDistance = Number.POSITIVE_INFINITY;
+
+    draggableElements.forEach((child) => {
+      const rect = child.getBoundingClientRect();
+      const centerX = rect.left + rect.width / 2;
+      const centerY = rect.top + rect.height / 2;
+
+      const dx = pointerX - centerX;
+      const dy = pointerY - centerY;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+
+      if (distance < minDistance) {
+        minDistance = distance;
+        closest = child;
+      }
+    });
+
+    return closest;
   }
 
   showPlaceholder(element, position) {

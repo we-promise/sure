@@ -23,26 +23,26 @@ class BudgetCategoriesController < ApplicationController
 
   def update
     @budget_category = Current.family.budget_categories.find(params[:id])
+    @budget_category.update_budgeted_spending!(budgeted_spending_param)
 
-    if @budget_category.update(budget_category_params)
-      respond_to do |format|
-        format.turbo_stream
-        format.html { redirect_to budget_budget_categories_path(@budget) }
-      end
-    else
-      render :index, status: :unprocessable_entity
+    respond_to do |format|
+      format.turbo_stream
+      format.html { redirect_to budget_budget_categories_path(@budget) }
     end
+  rescue ActiveRecord::RecordInvalid
+    render :index, status: :unprocessable_entity
   end
 
   private
-    def budget_category_params
-      params.require(:budget_category).permit(:budgeted_spending).tap do |params|
-        params[:budgeted_spending] = params[:budgeted_spending].presence || 0
-      end
+    def budgeted_spending_param
+      params.require(:budget_category)
+        .permit(:budgeted_spending)
+        .fetch(:budgeted_spending, nil)
+        .presence || 0
     end
 
     def set_budget
-      start_date = Budget.param_to_date(params[:budget_month_year])
+      start_date = Budget.param_to_date(params[:budget_month_year], family: Current.family)
       @budget = Current.family.budgets.find_by(start_date: start_date)
     end
 end

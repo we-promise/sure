@@ -1,0 +1,33 @@
+---
+pt-BR:
+  oidc_accounts:
+    link:
+      title_link: Vincular conta OIDC
+      title_create: Criar conta
+      verify_heading: Verificar sua identidade
+      verify_description_html: "Para vincular sua conta %{provider}%{email_suffix}, verifique sua identidade digitando sua senha."
+      email_suffix_html: " (<strong>%{email}</strong>)"
+      email_label: E-mail
+      email_placeholder: Digite seu e-mail
+      password_label: Senha
+      password_placeholder: Digite sua senha
+      verify_hint: Isso garante que apenas você possa vincular contas externas ao seu perfil.
+      submit_link: Vincular conta
+      create_heading: Criar nova conta
+      create_description_html: "Nenhuma conta encontrada com o e-mail <strong>%{email}</strong>. Clique abaixo para criar uma nova conta usando sua identidade %{provider}."
+      info_email: "E-mail:"
+      info_name: "Nome:"
+      submit_create: Criar conta
+      account_creation_disabled: A criação de contas via login único está desativada. Entre em contato com um administrador.
+      cancel: Cancelar
+    new_user:
+      title: Completar sua conta
+      heading: Criar sua conta
+      description: Confirme seus dados para concluir a criação da conta com sua identidade %{provider}.
+      email_label: E-mail (do provedor SSO)
+      first_name_label: Nome
+      first_name_placeholder: Digite seu nome
+      last_name_label: Sobrenome
+      last_name_placeholder: Digite seu sobrenome
+      submit: Criar conta
+      cancel: Cancelar

@@ -1,6 +1,7 @@
 class BalanceSheet::AccountTotals
-  def initialize(family, sync_status_monitor:)
+  def initialize(family, user: nil, sync_status_monitor:)
     @family = family
+    @user = user
     @sync_status_monitor = sync_status_monitor
   end
 
@@ -13,10 +14,11 @@ class BalanceSheet::AccountTotals
   end
 
   private
-    attr_reader :family, :sync_status_monitor
+    attr_reader :family, :user, :sync_status_monitor
 
-    AccountRow = Data.define(:account, :converted_balance, :is_syncing) do
+    AccountRow = Data.define(:account, :converted_balance, :is_syncing, :included_in_finances) do
       def syncing? = is_syncing
+      def included_in_finances? = included_in_finances
 
       # Allows Rails path helpers to generate URLs from the wrapper
       def to_param = account.to_param
@@ -24,40 +26,73 @@ class BalanceSheet::AccountTotals
     end
 
     def visible_accounts
-      @visible_accounts ||= family.accounts.visible.with_attached_logo
+      @visible_accounts ||= begin
+        scope = family.accounts.visible.with_attached_logo.includes(:account_shares)
+        scope = scope.accessible_by(user) if user
+        scope
+      end
     end
 
+    def finance_account_ids
+      @finance_account_ids ||= if user
+        family.accounts.included_in_finances_for(user).pluck(:id).to_set
+      else
+        nil
+      end
+    end
+
+    # Wraps each account in an AccountRow with its converted balance and sync status.
     def account_rows
-      @account_rows ||= query.map do |account_row|
+      @account_rows ||= accounts.map do |account|
         AccountRow.new(
-          account: account_row,
-          converted_balance: account_row.converted_balance,
-          is_syncing: sync_status_monitor.account_syncing?(account_row)
+          account: account,
+          converted_balance: converted_balance_for(account),
+          is_syncing: sync_status_monitor.account_syncing?(account),
+          included_in_finances: finance_account_ids.nil? || finance_account_ids.include?(account.id)
         )
       end
     end
 
+    # Returns the cache key for storing visible account IDs, invalidated on data updates.
     def cache_key
+      shares_version = user ? AccountShare.where(user: user).maximum(:updated_at)&.to_i : nil
       family.build_cache_key(
-        "balance_sheet_account_rows",
+        [ "balance_sheet_account_ids", user&.id, shares_version ].compact.join("_"),
         invalidate_on_data_updates: true
       )
     end
 
-    def query
-      @query ||= Rails.cache.fetch(cache_key) do
-        visible_accounts
-          .joins(ActiveRecord::Base.sanitize_sql_array([
-            "LEFT JOIN exchange_rates ON exchange_rates.date = ? AND accounts.currency = exchange_rates.from_currency AND exchange_rates.to_currency = ?",
-            Date.current,
-            family.currency
-          ]))
-          .select(
-            "accounts.*",
-            "SUM(accounts.balance * COALESCE(exchange_rates.rate, 1)) as converted_balance"
-          )
-          .group(:classification, :accountable_type, :id)
-          .to_a
+    # Loads visible accounts, caching their IDs to speed up subsequent requests.
+    # On cache miss, loads records once and writes IDs; on hit, filters by cached IDs.
+    def accounts
+      @accounts ||= begin
+        ids = Rails.cache.read(cache_key)
+
+        if ids
+          visible_accounts.where(id: ids).to_a
+        else
+          records = visible_accounts.to_a
+          Rails.cache.write(cache_key, records.map(&:id))
+          records
+        end
       end
+    end
+
+    # Batch-fetches today's exchange rates for all foreign currencies present in accounts.
+    # @return [Hash{String => Numeric}] currency code to rate mapping
+    def exchange_rates
+      @exchange_rates ||= begin
+        foreign_currencies = accounts.filter_map { |a| a.currency if a.currency != family.currency }
+        ExchangeRate.rates_for(foreign_currencies, to: family.currency, date: Date.current)
+      end
+    end
+
+    # Converts an account's balance to the family's currency using pre-fetched exchange rates.
+    # @return [BigDecimal] balance in the family's currency
+    def converted_balance_for(account)
+      return account.balance if account.currency == family.currency
+
+      rate = exchange_rates[account.currency]
+      account.balance * rate
     end
 end

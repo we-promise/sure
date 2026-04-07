@@ -49,34 +49,36 @@
         </div>
       </div>
 
-      <div class="flex items-center gap-2">
-        <% if enable_banking_item.requires_update? %>
-          <%= button_to reauthorize_enable_banking_item_path(enable_banking_item),
-                        method: :post,
-                        class: "inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium rounded-lg text-white bg-warning hover:opacity-90 transition-colors",
-                        data: { turbo: false } do %>
-            <%= icon "refresh-cw", size: "sm" %>
-            Update
+      <% if Current.user&.admin? %>
+        <div class="flex items-center gap-2">
+          <% if enable_banking_item.requires_update? %>
+            <%= button_to reauthorize_enable_banking_item_path(enable_banking_item),
+                          method: :post,
+                          class: "inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium rounded-lg text-white bg-warning hover:opacity-90 transition-colors",
+                          data: { turbo: false } do %>
+              <%= icon "refresh-cw", size: "sm" %>
+              Update
+            <% end %>
+          <% elsif Rails.env.development? %>
+            <%= icon(
+              "refresh-cw",
+              as_button: true,
+              href: sync_enable_banking_item_path(enable_banking_item)
+            ) %>
           <% end %>
-        <% elsif Rails.env.development? %>
-          <%= icon(
-            "refresh-cw",
-            as_button: true,
-            href: sync_enable_banking_item_path(enable_banking_item)
-          ) %>
-        <% end %>
 
-        <%= render DS::Menu.new do |menu| %>
-          <% menu.with_item(
-            variant: "button",
-            text: "Delete",
-            icon: "trash-2",
-            href: enable_banking_item_path(enable_banking_item),
-            method: :delete,
-            confirm: CustomConfirm.for_resource_deletion(enable_banking_item.institution_display_name, high_severity: true)
-          ) %>
-        <% end %>
-      </div>
+          <%= render DS::Menu.new do |menu| %>
+            <% menu.with_item(
+              variant: "button",
+              text: "Delete",
+              icon: "trash-2",
+              href: enable_banking_item_path(enable_banking_item),
+              method: :delete,
+              confirm: CustomConfirm.for_resource_deletion(enable_banking_item.institution_display_name, high_severity: true)
+            ) %>
+          <% end %>
+        </div>
+      <% end %>
     </summary>
 
     <% unless enable_banking_item.scheduled_for_deletion? %>
@@ -86,11 +88,20 @@
         <% end %>
 
         <%# Sync summary (collapsible) - using shared ProviderSyncSummary component %>
-        <% stats = if defined?(@enable_banking_sync_stats_map) && @enable_banking_sync_stats_map
-             @enable_banking_sync_stats_map[enable_banking_item.id] || {}
-           else
-             enable_banking_item.syncs.ordered.first&.sync_stats || {}
-           end %>
+        <% if defined?(@enable_banking_sync_stats_map) && @enable_banking_sync_stats_map %>
+          <% stats = @enable_banking_sync_stats_map[enable_banking_item.id] || {} %>
+          <% latest_sync_error = defined?(@enable_banking_latest_sync_error_map) && @enable_banking_latest_sync_error_map ? @enable_banking_latest_sync_error_map[enable_banking_item.id] : nil %>
+        <% else %>
+          <% latest_sync = enable_banking_item.syncs.ordered.first %>
+          <% stats = latest_sync&.sync_stats || {} %>
+          <% latest_sync_error = latest_sync&.error %>
+        <% end %>
+        <% if latest_sync_error.present? && stats.is_a?(Hash) %>
+          <% stats = stats.merge(
+            "total_errors" => 1,
+            "errors" => [{ "message" => latest_sync_error }]
+          ) %>
+        <% end %>
         <%= render ProviderSyncSummary.new(
           stats: stats,
           provider_item: enable_banking_item

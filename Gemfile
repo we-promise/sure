@@ -31,6 +31,7 @@ gem "lookbook", "2.3.11"
 gem "hotwire_combobox"
 
 # Background Jobs
+gem "connection_pool", "~> 2.5" # pin to 2.x; 3.0 breaks sidekiq 8.x
 gem "sidekiq"
 gem "sidekiq-cron"
 gem "sidekiq-unique-jobs"
@@ -68,6 +69,7 @@ gem "faraday-multipart"
 gem "inline_svg"
 gem "octokit"
 gem "pagy"
+gem "rails-i18n"
 gem "rails-settings-cached"
 gem "tzinfo-data", platforms: %i[windows jruby]
 gem "csv"
@@ -81,6 +83,7 @@ gem "rotp", "~> 6.3"
 gem "rqrcode", "~> 3.0"
 gem "activerecord-import"
 gem "rubyzip", "~> 2.3"
+gem "pdf-reader", "~> 2.12"
 
 # OpenID Connect, OAuth & SAML authentication
 gem "omniauth", "~> 2.1"
@@ -93,10 +96,6 @@ gem "omniauth-saml", "~> 2.1"
 # State machines
 gem "aasm"
 gem "after_commit_everywhere", "~> 1.0"
-
-# Feature flags
-gem "flipper"
-gem "flipper-active_record"
 
 # AI
 gem "ruby-openai"
@@ -127,6 +126,13 @@ group :development do
   gem "foreman"
 end
 
+group :development, :test do
+  gem "rspec-rails"
+  gem "rswag-api"
+  gem "rswag-specs"
+  gem "rswag-ui"
+end
+
 group :test do
   gem "capybara"
   gem "selenium-webdriver"
@@ -135,8 +141,4 @@ group :test do
   gem "webmock"
   gem "climate_control"
   gem "simplecov", require: false
-  gem "rspec-rails"
-  gem "rswag-api"
-  gem "rswag-specs"
-  gem "rswag-ui"
 end

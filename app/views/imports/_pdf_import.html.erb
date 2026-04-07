@@ -1,0 +1,144 @@
+<%# locals: (import:) %>
+
+<div class="h-full flex flex-col justify-center items-center">
+  <div class="space-y-6 max-w-lg w-full">
+    <% if import.pending? && import.rows_count > 0 %>
+      <%# Statement with rows ready for review %>
+      <div class="mx-auto bg-success/10 h-8 w-8 rounded-full flex items-center justify-center">
+        <%= icon "check", class: "text-success" %>
+      </div>
+
+      <div class="text-center space-y-2">
+        <h1 class="font-medium text-primary text-center text-3xl"><%= t("imports.pdf_import.ready_for_review_title", default: "Ready for Review") %></h1>
+        <p class="text-sm text-secondary"><%= t("imports.pdf_import.ready_for_review_description", default: "We extracted %{count} transactions from your statement. Review and publish them to add to your account.", count: import.rows_count) %></p>
+      </div>
+
+      <div class="bg-container border border-primary rounded-xl p-4 space-y-4">
+        <div class="space-y-2">
+          <h2 class="font-medium text-primary"><%= t("imports.pdf_import.document_type_label") %></h2>
+          <p class="text-sm text-secondary px-3 py-2 bg-gray-500/5 rounded-lg">
+            <%= t("imports.document_types.#{import.document_type}", default: import.document_type&.humanize || t("imports.pdf_import.unknown_document_type", default: "Unknown")) %>
+          </p>
+        </div>
+
+        <div class="space-y-2">
+          <h2 class="font-medium text-primary"><%= t("imports.pdf_import.transactions_extracted", default: "Transactions Extracted") %></h2>
+          <p class="text-sm text-secondary px-3 py-2 bg-gray-500/5 rounded-lg">
+            <%= t("imports.pdf_import.transactions_extracted_count", count: import.rows_count, default: "%{count} transactions") %>
+          </p>
+        </div>
+
+        <div class="space-y-2">
+          <h2 class="font-medium text-primary"><%= t("imports.pdf_import.select_account", default: "Import to Account") %></h2>
+          <%= form_with model: import, url: import_path(import), method: :patch, class: "space-y-2" do |f| %>
+            <% accounts = import.family.accounts.manual.alphabetically %>
+            <% if accounts.any? %>
+              <%= f.select :account_id, options_for_select(accounts.map { |a| [a.name, a.id] }, import.account_id), { include_blank: t("imports.pdf_import.select_account_placeholder", default: "Select an account...") }, class: "form-field__input" %>
+              <% if import.account.nil? %>
+                <p class="text-xs text-secondary"><%= t("imports.pdf_import.select_account_hint", default: "Choose which account to import these transactions into.") %></p>
+              <% end %>
+            <% else %>
+              <p class="text-sm text-secondary px-3 py-2 bg-yellow-500/10 rounded-lg">
+                <%= t("imports.pdf_import.no_accounts", default: "No accounts available. Please create an account first.") %>
+              </p>
+              <%= render DS::Link.new(text: t("imports.pdf_import.create_account", default: "Create Account"), href: new_account_path(return_to: import_path(import)), variant: "primary", full_width: true, frame: :modal) %>
+            <% end %>
+            <% if accounts.any? %>
+              <%= f.submit t("imports.pdf_import.save_account", default: "Save"), class: "w-full font-medium text-sm px-3 py-2 rounded-lg text-inverse bg-inverse hover:bg-inverse-hover" %>
+            <% end %>
+          <% end %>
+        </div>
+      </div>
+
+      <div class="space-y-2 flex flex-col">
+        <% if import.publishable? %>
+          <%= button_to t("imports.pdf_import.publish_transactions", default: "Publish %{count} Transactions", count: import.rows_count), publish_import_path(import), method: :post, class: "w-full font-medium text-sm px-3 py-2 rounded-lg text-inverse bg-inverse hover:bg-inverse-hover" %>
+          <%= render DS::Link.new(text: t("imports.pdf_import.review_transactions", default: "Review Transactions"), href: import_clean_path(import), variant: "secondary", full_width: true) %>
+        <% elsif import.account.present? %>
+          <%= render DS::Link.new(text: t("imports.pdf_import.review_transactions", default: "Review Transactions"), href: import_clean_path(import), variant: "primary", full_width: true) %>
+        <% else %>
+          <p class="text-center text-sm text-secondary"><%= t("imports.pdf_import.select_account_to_continue", default: "Please select an account above to continue.") %></p>
+        <% end %>
+        <%= render DS::Link.new(text: t("imports.pdf_import.back_to_imports"), href: imports_path, variant: "secondary", full_width: true) %>
+      </div>
+
+    <% elsif import.importing? || import.pending? %>
+      <div class="mx-auto bg-gray-500/5 h-8 w-8 rounded-full flex items-center justify-center">
+        <%= icon "loader", class: "animate-pulse" %>
+      </div>
+
+      <div class="text-center space-y-2">
+        <h1 class="font-medium text-primary text-center text-3xl"><%= t("imports.pdf_import.processing_title") %></h1>
+        <p class="text-sm text-secondary"><%= t("imports.pdf_import.processing_description") %></p>
+      </div>
+
+      <div class="space-y-2 flex flex-col">
+        <%= render DS::Link.new(text: t("imports.pdf_import.check_status"), href: import_path(import), variant: "primary", full_width: true) %>
+        <%= render DS::Link.new(text: t("imports.pdf_import.back_to_dashboard"), href: root_path, variant: "secondary", full_width: true) %>
+      </div>
+
+    <% elsif import.failed? %>
+      <div class="mx-auto bg-destructive/10 h-8 w-8 rounded-full flex items-center justify-center">
+        <%= icon "x", class: "text-destructive" %>
+      </div>
+
+      <div class="text-center space-y-2">
+        <h1 class="font-medium text-primary text-center text-3xl"><%= t("imports.pdf_import.failed_title") %></h1>
+        <p class="text-sm text-secondary"><%= t("imports.pdf_import.failed_description") %></p>
+        <% if import.error.present? %>
+          <p class="text-sm text-destructive"><%= import.error %></p>
+        <% end %>
+      </div>
+
+      <div class="space-y-2 flex flex-col">
+        <%= render DS::Link.new(text: t("imports.pdf_import.try_again"), href: new_import_path, variant: "primary", full_width: true) %>
+        <%= button_to t("imports.pdf_import.delete_import"), import_path(import), method: :delete, class: "w-full font-medium text-sm px-3 py-2 rounded-lg text-primary bg-gray-200 hover:bg-gray-300" %>
+      </div>
+
+    <% elsif import.complete? && import.ai_processed? %>
+      <div class="mx-auto bg-success/10 h-8 w-8 rounded-full flex items-center justify-center">
+        <%= icon "check", class: "text-success" %>
+      </div>
+
+      <div class="text-center space-y-2">
+        <h1 class="font-medium text-primary text-center text-3xl"><%= t("imports.pdf_import.complete_title") %></h1>
+        <p class="text-sm text-secondary"><%= t("imports.pdf_import.complete_description") %></p>
+      </div>
+
+      <div class="bg-container border border-primary rounded-xl p-4 space-y-4">
+        <div class="space-y-2">
+          <h2 class="font-medium text-primary"><%= t("imports.pdf_import.document_type_label") %></h2>
+          <p class="text-sm text-secondary px-3 py-2 bg-gray-500/5 rounded-lg">
+            <%= t("imports.document_types.#{import.document_type}", default: import.document_type&.humanize || t("imports.pdf_import.unknown_document_type", default: "Unknown")) %>
+          </p>
+        </div>
+
+        <div class="space-y-2">
+          <h2 class="font-medium text-primary"><%= t("imports.pdf_import.summary_label") %></h2>
+          <p class="text-sm text-secondary px-3 py-2 bg-gray-500/5 rounded-lg whitespace-pre-wrap">
+            <%= import.ai_summary %>
+          </p>
+        </div>
+      </div>
+
+      <div class="text-center">
+        <p class="text-sm text-secondary"><%= t("imports.pdf_import.email_sent_notice") %></p>
+      </div>
+
+      <div class="space-y-2 flex flex-col">
+        <%= render DS::Link.new(text: t("imports.pdf_import.back_to_imports"), href: imports_path, variant: "primary", full_width: true) %>
+        <%= button_to t("imports.pdf_import.delete_import"), import_path(import), method: :delete, class: "w-full font-medium text-sm px-3 py-2 rounded-lg text-primary bg-gray-200 hover:bg-gray-300" %>
+      </div>
+
+    <% else %>
+      <div class="text-center space-y-2">
+        <h1 class="font-medium text-primary text-center text-3xl"><%= t("imports.pdf_import.unknown_state_title") %></h1>
+        <p class="text-sm text-secondary"><%= t("imports.pdf_import.unknown_state_description") %></p>
+      </div>
+
+      <div class="space-y-2 flex flex-col">
+        <%= render DS::Link.new(text: t("imports.pdf_import.back_to_imports"), href: imports_path, variant: "primary", full_width: true) %>
+      </div>
+    <% end %>
+  </div>
+</div>

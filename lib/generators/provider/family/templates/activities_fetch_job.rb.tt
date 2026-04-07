@@ -2,7 +2,6 @@
 
 class <%= class_name %>ActivitiesFetchJob < ApplicationJob
   include <%= class_name %>Account::DataHelpers
-  include Sidekiq::Throttled::Job
 
   queue_as :default
 

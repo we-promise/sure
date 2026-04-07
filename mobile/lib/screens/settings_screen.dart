@@ -1,11 +1,54 @@
 import 'package:flutter/material.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../providers/auth_provider.dart';
+import '../providers/theme_provider.dart';
 import '../services/offline_storage_service.dart';
 import '../services/log_service.dart';
+import '../services/preferences_service.dart';
+import '../services/user_service.dart';
+import 'log_viewer_screen.dart';
 
-class SettingsScreen extends StatelessWidget {
+class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
+
+  @override
+  State<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends State<SettingsScreen> {
+  bool _groupByType = false;
+  String? _appVersion;
+  bool _isResettingAccount = false;
+  bool _isDeletingAccount = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPreferences();
+    _loadAppVersion();
+  }
+
+  Future<void> _loadAppVersion() async {
+    final packageInfo = await PackageInfo.fromPlatform();
+    if (mounted) {
+      final build = packageInfo.buildNumber;
+      final display = build.isNotEmpty
+          ? '${packageInfo.version} (${build})'
+          : packageInfo.version;
+      setState(() => _appVersion = display);
+    }
+  }
+
+  Future<void> _loadPreferences() async {
+    final value = await PreferencesService.instance.getGroupByType();
+    if (mounted) {
+      setState(() {
+        _groupByType = value;
+      });
+    }
+  }
 
   Future<void> _handleClearLocalData(BuildContext context) async {
     final confirmed = await showDialog<bool>(
@@ -68,6 +111,139 @@ class SettingsScreen extends StatelessWidget {
     }
   }
 
+  Future<void> _launchContactUrl(BuildContext context) async {
+    final uri = Uri.parse('https://discord.com/invite/36ZGBsxYEK');
+    final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!launched && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Unable to open link')),
+      );
+    }
+  }
+
+  Future<void> _handleResetAccount(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Reset Account'),
+        content: const Text(
+          'Resetting your account will delete all your accounts, categories, '
+          'merchants, tags, and other data, but keep your user account intact.\n\n'
+          'This action cannot be undone. Are you sure?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(
+              foregroundColor: Theme.of(context).colorScheme.error,
+            ),
+            child: const Text('Reset Account'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !context.mounted) return;
+
+    setState(() => _isResettingAccount = true);
+    try {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final accessToken = await authProvider.getValidAccessToken();
+      if (accessToken == null) {
+        await authProvider.logout();
+        return;
+      }
+
+      final result = await UserService().resetAccount(accessToken: accessToken);
+
+      if (!context.mounted) return;
+
+      if (result['success'] == true) {
+        await OfflineStorageService().clearAllData();
+
+        if (!context.mounted) return;
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Account reset has been initiated. This may take a moment.'),
+            backgroundColor: Colors.green,
+          ),
+        );
+
+        await authProvider.logout();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['error'] ?? 'Failed to reset account'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isResettingAccount = false);
+    }
+  }
+
+  Future<void> _handleDeleteAccount(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Account'),
+        content: const Text(
+          'Deleting your account will permanently remove all your data '
+          'and cannot be undone.\n\n'
+          'Are you sure you want to delete your account?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(
+              foregroundColor: Theme.of(context).colorScheme.error,
+            ),
+            child: const Text('Delete Account'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !context.mounted) return;
+
+    setState(() => _isDeletingAccount = true);
+    try {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final accessToken = await authProvider.getValidAccessToken();
+      if (accessToken == null) {
+        await authProvider.logout();
+        return;
+      }
+
+      final result = await UserService().deleteAccount(accessToken: accessToken);
+
+      if (!context.mounted) return;
+
+      if (result['success'] == true) {
+        await authProvider.logout();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['error'] ?? 'Failed to delete account'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isDeletingAccount = false);
+    }
+  }
+
   Future<void> _handleLogout(BuildContext context) async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -99,9 +275,6 @@ class SettingsScreen extends StatelessWidget {
     final authProvider = Provider.of<AuthProvider>(context);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Settings'),
-      ),
       body: ListView(
         children: [
           // User info section
@@ -157,10 +330,105 @@ class SettingsScreen extends StatelessWidget {
           ),
 
           // App version
-          const ListTile(
-            leading: Icon(Icons.info_outline),
-            title: Text('App Version'),
-            subtitle: Text('1.0.0'),
+          ListTile(
+            leading: const Icon(Icons.info_outline),
+            title: Text('App Version: ${_appVersion ?? '…'}'),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(' > ui_layout: ${authProvider.user?.uiLayout}'),
+                Text(' > ai_enabled: ${authProvider.user?.aiEnabled}'),
+              ],
+            ),
+          ),
+
+          ListTile(
+            leading: const Icon(Icons.chat_bubble_outline),
+            title: const Text('Contact us'),
+            subtitle: Text(
+              'https://discord.com/invite/36ZGBsxYEK',
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.primary,
+                decoration: TextDecoration.underline,
+              ),
+            ),
+            onTap: () => _launchContactUrl(context),
+          ),
+
+          Semantics(
+            label: 'Open debug logs',
+            button: true,
+            child: ListTile(
+              leading: const Icon(Icons.bug_report),
+              title: const Text('Debug Logs'),
+              subtitle: const Text('View app diagnostic logs'),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const LogViewerScreen()),
+                );
+              },
+            ),
+          ),
+
+          const Divider(),
+
+          // Display Settings Section
+          const Padding(
+            padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: Text(
+              'Display',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey,
+              ),
+            ),
+          ),
+
+          SwitchListTile(
+            secondary: const Icon(Icons.view_list),
+            title: const Text('Group by Account Type'),
+            subtitle: const Text('Group accounts by type (Crypto, Bank, etc.)'),
+            value: _groupByType,
+            onChanged: (value) async {
+              await PreferencesService.instance.setGroupByType(value);
+              setState(() {
+                _groupByType = value;
+              });
+            },
+          ),
+
+          Consumer<ThemeProvider>(
+            builder: (context, themeProvider, _) {
+              return ListTile(
+                leading: const Icon(Icons.brightness_6_outlined),
+                title: const Text('Theme'),
+                trailing: SegmentedButton<ThemeMode>(
+                  segments: const [
+                    ButtonSegment(
+                      value: ThemeMode.light,
+                      icon: Icon(Icons.light_mode, size: 18),
+                      tooltip: 'Light',
+                    ),
+                    ButtonSegment(
+                      value: ThemeMode.system,
+                      icon: Icon(Icons.brightness_auto, size: 18),
+                      tooltip: 'System',
+                    ),
+                    ButtonSegment(
+                      value: ThemeMode.dark,
+                      icon: Icon(Icons.dark_mode, size: 18),
+                      tooltip: 'Dark',
+                    ),
+                  ],
+                  selected: {themeProvider.themeMode},
+                  onSelectionChanged: (modes) => themeProvider.setThemeMode(modes.first),
+                  showSelectedIcon: false,
+                ),
+              );
+            },
           ),
 
           const Divider(),
@@ -184,6 +452,47 @@ class SettingsScreen extends StatelessWidget {
             title: const Text('Clear Local Data'),
             subtitle: const Text('Remove all cached transactions and accounts'),
             onTap: () => _handleClearLocalData(context),
+          ),
+
+          const Divider(),
+
+          // Danger Zone Section
+          const Padding(
+            padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: Text(
+              'Danger Zone',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: Colors.red,
+              ),
+            ),
+          ),
+
+          ListTile(
+            leading: const Icon(Icons.restart_alt, color: Colors.red),
+            title: const Text('Reset Account'),
+            subtitle: const Text(
+              'Delete all accounts, categories, merchants, and tags but keep your user account',
+            ),
+            trailing: _isResettingAccount
+                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                : null,
+            enabled: !_isResettingAccount && !_isDeletingAccount,
+            onTap: _isResettingAccount || _isDeletingAccount ? null : () => _handleResetAccount(context),
+          ),
+
+          ListTile(
+            leading: const Icon(Icons.delete_forever, color: Colors.red),
+            title: const Text('Delete Account'),
+            subtitle: const Text(
+              'Permanently remove all your data. This cannot be undone.',
+            ),
+            trailing: _isDeletingAccount
+                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                : null,
+            enabled: !_isDeletingAccount && !_isResettingAccount,
+            onTap: _isDeletingAccount || _isResettingAccount ? null : () => _handleDeleteAccount(context),
           ),
 
           const Divider(),

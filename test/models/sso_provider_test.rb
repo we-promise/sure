@@ -232,6 +232,38 @@ class SsoProviderTest < ActiveSupport::TestCase
     assert_equal 1, oidc_providers.count
   end
 
+
+
+  test "normalizes icon by stripping whitespace before validation" do
+    provider = SsoProvider.new(
+      strategy: "openid_connect",
+      name: "icon_normalized",
+      label: "Icon Normalized",
+      icon: "  key  ",
+      issuer: "https://test.example.com",
+      client_id: "test_client",
+      client_secret: "test_secret"
+    )
+
+    assert provider.valid?
+    assert_equal "key", provider.icon
+  end
+
+  test "normalizes whitespace-only icon to nil" do
+    provider = SsoProvider.new(
+      strategy: "openid_connect",
+      name: "icon_nil",
+      label: "Icon Nil",
+      icon: "   ",
+      issuer: "https://test.example.com",
+      client_id: "test_client",
+      client_secret: "test_secret"
+    )
+
+    assert provider.valid?
+    assert_nil provider.icon
+  end
+
   test "to_omniauth_config returns correct hash" do
     provider = SsoProvider.create!(
       strategy: "openid_connect",

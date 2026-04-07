@@ -22,6 +22,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
   Map<String, double> _dailyChanges = {};
   bool _isLoading = false;
   String _accountType = 'asset'; // 'asset' or 'liability'
+  DateTime? _selectedDate; // Track selected date for tap interaction
+  List<Transaction> _transactions = []; // Store transactions for filtering
 
   @override
   void initState() {
@@ -90,6 +92,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
         _log.debug('CalendarScreen', 'Sample transaction - name: ${transactions.first.name}, amount: ${transactions.first.amount}, nature: ${transactions.first.nature}');
       }
 
+      // Store transactions for date filtering
+      _transactions = List.from(transactions);
+
       _calculateDailyChanges(transactions);
       _log.info('CalendarScreen', 'Calculated ${_dailyChanges.length} days with changes');
     }
@@ -155,13 +160,139 @@ class _CalendarScreenState extends State<CalendarScreen> {
   void _previousMonth() {
     setState(() {
       _currentMonth = DateTime(_currentMonth.year, _currentMonth.month - 1);
+      _selectedDate = null; // Clear selection when changing month
     });
   }
 
   void _nextMonth() {
     setState(() {
       _currentMonth = DateTime(_currentMonth.year, _currentMonth.month + 1);
+      _selectedDate = null; // Clear selection when changing month
     });
+  }
+
+  void _onDayCellTap(DateTime date) {
+    if (_selectedDate != null &&
+        _selectedDate!.year == date.year &&
+        _selectedDate!.month == date.month &&
+        _selectedDate!.day == date.day) {
+      // Second tap on same date - show transactions dialog
+      _showTransactionsDialog(date);
+    } else {
+      // First tap - select the date
+      setState(() {
+        _selectedDate = date;
+      });
+    }
+  }
+
+  List<Transaction> _getTransactionsForDate(DateTime date) {
+    final dateKey = DateFormat('yyyy-MM-dd').format(date);
+    return _transactions.where((transaction) {
+      try {
+        final transactionDate = DateTime.parse(transaction.date);
+        final transactionDateKey = DateFormat('yyyy-MM-dd').format(transactionDate);
+        return transactionDateKey == dateKey;
+      } catch (e) {
+        return false;
+      }
+    }).toList();
+  }
+
+  void _showTransactionsDialog(DateTime date) {
+    final transactions = _getTransactionsForDate(date);
+    final formattedDate = DateFormat('yyyy-MM-dd').format(date);
+    final colorScheme = Theme.of(context).colorScheme;
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(
+            formattedDate,
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: transactions.isEmpty
+                ? Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Text(
+                        'No transactions on this day',
+                        style: TextStyle(
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                  )
+                : ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: transactions.length,
+                    itemBuilder: (context, index) {
+                      final transaction = transactions[index];
+                      return _buildTransactionTile(transaction);
+                    },
+                  ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Close'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildTransactionTile(Transaction transaction) {
+    // Parse amount to determine if positive or negative
+    String trimmedAmount = transaction.amount.trim();
+    trimmedAmount = trimmedAmount.replaceAll('\u2212', '-');
+    bool isNegative = trimmedAmount.startsWith('-') || trimmedAmount.endsWith('-');
+
+    // For asset accounts, flip the sign interpretation
+    if (_selectedAccount?.isAsset == true || _selectedAccount?.isLiability == true) {
+      isNegative = !isNegative;
+    }
+
+    final isExpense = isNegative;
+    final iconData = isExpense ? Icons.remove_circle : Icons.add_circle;
+    final iconColor = isExpense ? Colors.red : Colors.green;
+    final amountColor = isExpense ? Colors.red.shade700 : Colors.green.shade700;
+
+    return ListTile(
+      leading: Icon(
+        iconData,
+        color: iconColor,
+        size: 28,
+      ),
+      title: Text(
+        transaction.name,
+        style: const TextStyle(
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+      subtitle: transaction.notes != null && transaction.notes!.isNotEmpty
+          ? Text(
+              transaction.notes!,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                fontSize: 12,
+              ),
+            )
+          : null,
+      trailing: Text(
+        transaction.amount,
+        style: TextStyle(
+          color: amountColor,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
   }
 
   double _getTotalForMonth() {
@@ -231,6 +362,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
                       final filteredAccounts = _getFilteredAccounts(accountsProvider.accounts);
                       _selectedAccount = filteredAccounts.isNotEmpty ? filteredAccounts.first : null;
                       _dailyChanges = {};
+                      _transactions = [];
+                      _selectedDate = null; // Clear selection when changing account type
                     });
                     if (_selectedAccount != null) {
                       _loadTransactionsForAccount();
@@ -275,6 +408,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 setState(() {
                   _selectedAccount = newAccount;
                   _dailyChanges = {};
+                  _transactions = [];
+                  _selectedDate = null; // Clear selection when changing account
                 });
                 _loadTransactionsForAccount();
               },
@@ -405,6 +540,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
                     return Expanded(
                       child: _buildDayCell(
+                        date,
                         dayNumber,
                         change,
                         hasChange,
@@ -421,9 +557,15 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 
-  Widget _buildDayCell(int day, double change, bool hasChange, ColorScheme colorScheme) {
+  Widget _buildDayCell(DateTime date, int day, double change, bool hasChange, ColorScheme colorScheme) {
     Color? backgroundColor;
     Color? textColor;
+
+    // Check if this date is selected
+    final isSelected = _selectedDate != null &&
+        _selectedDate!.year == date.year &&
+        _selectedDate!.month == date.month &&
+        _selectedDate!.day == date.day;
 
     if (hasChange) {
       if (change > 0) {
@@ -435,47 +577,50 @@ class _CalendarScreenState extends State<CalendarScreen> {
       }
     }
 
-    return Container(
-      margin: const EdgeInsets.all(2),
-      decoration: BoxDecoration(
-        color: backgroundColor ?? colorScheme.surface,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: colorScheme.outlineVariant,
-          width: 1,
+    return GestureDetector(
+      onTap: () => _onDayCellTap(date),
+      child: Container(
+        margin: const EdgeInsets.all(2),
+        decoration: BoxDecoration(
+          color: backgroundColor ?? colorScheme.surface,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: isSelected ? Theme.of(context).primaryColor : colorScheme.outlineVariant,
+            width: isSelected ? 3 : 1,
+          ),
         ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(4),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              day.toString(),
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 14,
-                color: colorScheme.onSurface,
-              ),
-            ),
-            if (hasChange) ...[
-              const SizedBox(height: 2),
-              Flexible(
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Text(
-                    _formatAmount(change),
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: textColor,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
+        child: Padding(
+          padding: const EdgeInsets.all(4),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                day.toString(),
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                  color: colorScheme.onSurface,
                 ),
               ),
+              if (hasChange) ...[
+                const SizedBox(height: 2),
+                Flexible(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      _formatAmount(change),
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: textColor,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );

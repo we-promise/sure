@@ -35,7 +35,7 @@ default: &default
     - id: "oidc"
       strategy: "openid_connect"
       name: "openid_connect"
-      label: <%= ENV.fetch("OIDC_BUTTON_LABEL", "Sign in with OpenID Connect") %>
+      label: <%= ENV.fetch("OIDC_BUTTON_LABEL", "") %>
       icon:  <%= ENV.fetch("OIDC_BUTTON_ICON", "key") %>
       # Per-provider credentials (optional, falls back to global OIDC_* vars)
       issuer: <%= ENV["OIDC_ISSUER"] %>

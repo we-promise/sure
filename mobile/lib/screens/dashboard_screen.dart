@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/account.dart';
@@ -5,31 +6,41 @@ import '../providers/auth_provider.dart';
 import '../providers/accounts_provider.dart';
 import '../providers/transactions_provider.dart';
 import '../services/log_service.dart';
+import '../services/preferences_service.dart';
 import '../widgets/account_card.dart';
 import '../widgets/connectivity_banner.dart';
+import '../widgets/net_worth_card.dart';
+import '../widgets/currency_filter.dart';
 import 'transaction_form_screen.dart';
 import 'transactions_list_screen.dart';
-import 'log_viewer_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
 
   @override
-  State<DashboardScreen> createState() => _DashboardScreenState();
+  DashboardScreenState createState() => DashboardScreenState();
 }
 
-class _DashboardScreenState extends State<DashboardScreen> {
+class DashboardScreenState extends State<DashboardScreen> {
   final LogService _log = LogService.instance;
-  bool _assetsExpanded = true;
-  bool _liabilitiesExpanded = true;
   bool _showSyncSuccess = false;
   int _previousPendingCount = 0;
+  Timer? _syncSuccessTimer;
   TransactionsProvider? _transactionsProvider;
+
+  // Filter state
+  AccountFilter _accountFilter = AccountFilter.all;
+  Set<String> _selectedCurrencies = {};
+
+  // Group by type state
+  bool _groupByType = false;
+  final Set<String> _collapsedGroups = {};
 
   @override
   void initState() {
     super.initState();
     _loadAccounts();
+    _loadPreferences();
 
     // Listen for sync completion to show success indicator
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -42,6 +53,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   void dispose() {
+    _syncSuccessTimer?.cancel();
     _transactionsProvider?.removeListener(_onTransactionsChanged);
     super.dispose();
   }
@@ -51,26 +63,31 @@ class _DashboardScreenState extends State<DashboardScreen> {
     if (transactionsProvider == null || !mounted) {
       return;
     }
-    
+
     final currentPendingCount = transactionsProvider.pendingCount;
 
-    // If pending count decreased, it means transactions were synced
+    // Show sync success when pending count decreased (local transactions uploaded)
     if (_previousPendingCount > 0 && currentPendingCount < _previousPendingCount) {
-      setState(() {
-        _showSyncSuccess = true;
-      });
-
-      // Hide the success indicator after 3 seconds
-      Future.delayed(const Duration(seconds: 3), () {
-        if (mounted) {
-          setState(() {
-            _showSyncSuccess = false;
-          });
-        }
-      });
+      _showSyncSuccessIndicator();
     }
 
     _previousPendingCount = currentPendingCount;
+  }
+
+  void _showSyncSuccessIndicator() {
+    _syncSuccessTimer?.cancel();
+
+    setState(() {
+      _showSyncSuccess = true;
+    });
+
+    _syncSuccessTimer = Timer(const Duration(seconds: 3), () {
+      if (mounted) {
+        setState(() {
+          _showSyncSuccess = false;
+        });
+      }
+    });
   }
 
   Future<void> _loadAccounts() async {
@@ -90,6 +107,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
     if (accountsProvider.errorMessage == 'unauthorized') {
       await authProvider.logout();
     }
+  }
+
+  Future<void> _loadPreferences() async {
+    final groupByType = await PreferencesService.instance.getGroupByType();
+    if (mounted) {
+      setState(() {
+        _groupByType = groupByType;
+      });
+    }
+  }
+
+  void reloadPreferences() {
+    _loadPreferences();
   }
 
   Future<void> _handleRefresh() async {
@@ -138,19 +168,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).clearSnackBars();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Row(
-              children: [
-                Icon(Icons.check_circle, color: Colors.white),
-                SizedBox(width: 12),
-                Text('Sync completed successfully'),
-              ],
+        if (transactionsProvider.error != null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  const Icon(Icons.error, color: Colors.white),
+                  const SizedBox(width: 12),
+                  const Expanded(child: Text('Sync failed. Please try again.')),
+                ],
+              ),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 3),
             ),
-            backgroundColor: Colors.green,
-            duration: Duration(seconds: 2),
-          ),
-        );
+          );
+        } else {
+          _showSyncSuccessIndicator();
+        }
       }
     } catch (e) {
       _log.error('DashboardScreen', 'Error in _performManualSync: $e');
@@ -173,7 +207,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
-  List<String> _formatCurrencyItem(String currency, double amount) {
+  String _formatAmount(String currency, double amount) {
     final symbol = _getCurrencySymbol(currency);
     final isSmallAmount = amount.abs() < 1 && amount != 0;
     final formattedAmount = amount.toStringAsFixed(isSmallAmount ? 4 : 0);
@@ -186,7 +220,40 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
 
     final finalAmount = parts.length > 1 ? '$integerPart.${parts[1]}' : integerPart;
-    return [currency, '$symbol$finalAmount'];
+    return '$symbol$finalAmount $currency';
+  }
+
+  Set<String> _getAllCurrencies(AccountsProvider accountsProvider) {
+    final currencies = <String>{};
+    for (var account in accountsProvider.accounts) {
+      currencies.add(account.currency);
+    }
+    return currencies;
+  }
+
+  List<Account> _getFilteredAccounts(AccountsProvider accountsProvider) {
+    var accounts = accountsProvider.accounts.toList();
+
+    // Filter by account type
+    switch (_accountFilter) {
+      case AccountFilter.assets:
+        accounts = accounts.where((a) => a.isAsset).toList();
+        break;
+      case AccountFilter.liabilities:
+        accounts = accounts.where((a) => a.isLiability).toList();
+        break;
+      case AccountFilter.all:
+        // Show all accounts (assets and liabilities)
+        accounts = accounts.where((a) => a.isAsset || a.isLiability).toList();
+        break;
+    }
+
+    // Filter by currency if any selected
+    if (_selectedCurrencies.isNotEmpty) {
+      accounts = accounts.where((a) => _selectedCurrencies.contains(a.currency)).toList();
+    }
+
+    return accounts;
   }
 
   String _getCurrencySymbol(String currency) {
@@ -283,84 +350,34 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
-  Future<void> _handleLogout() async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Sign Out'),
-        content: const Text('Are you sure you want to sign out?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Sign Out'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed == true && mounted) {
-      final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      final accountsProvider = Provider.of<AccountsProvider>(context, listen: false);
-
-      accountsProvider.clearAccounts();
-      await authProvider.logout();
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Dashboard'),
-        actions: [
-          if (_showSyncSuccess)
-            Padding(
-              padding: const EdgeInsets.only(right: 8),
-              child: AnimatedOpacity(
-                opacity: _showSyncSuccess ? 1.0 : 0.0,
-                duration: const Duration(milliseconds: 300),
-                child: const Icon(
-                  Icons.cloud_done,
-                  color: Colors.green,
-                  size: 28,
-                ),
-              ),
-            ),
-          Semantics(
-            label: 'Open debug logs',
-            button: true,
-            child: IconButton(
-              icon: const Icon(Icons.bug_report),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const LogViewerScreen()),
-                );
-              },
-              tooltip: 'Debug Logs',
-            ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _handleRefresh,
-            tooltip: 'Refresh',
-          ),
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: _handleLogout,
-            tooltip: 'Sign Out',
-          ),
-        ],
-      ),
       body: Column(
         children: [
           const ConnectivityBanner(),
+          if (_showSyncSuccess)
+            AnimatedOpacity(
+              opacity: _showSyncSuccess ? 1.0 : 0.0,
+              duration: const Duration(milliseconds: 300),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                color: Colors.green.withValues(alpha: 0.1),
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.cloud_done, color: Colors.green, size: 18),
+                    SizedBox(width: 8),
+                    Text(
+                      'Synced',
+                      style: TextStyle(color: Colors.green, fontSize: 13),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           Expanded(
             child: Consumer2<AuthProvider, AccountsProvider>(
               builder: (context, authProvider, accountsProvider, _) {
@@ -449,124 +466,43 @@ class _DashboardScreenState extends State<DashboardScreen> {
             onRefresh: _handleRefresh,
             child: CustomScrollView(
               slivers: [
-                // Welcome header
+                // Net Worth Card with Asset/Liability filter
                 SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Welcome${authProvider.user != null ? ', ${authProvider.user!.displayName}' : ''}',
-                          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Here\'s your financial overview',
-                          style: TextStyle(color: colorScheme.onSurfaceVariant),
-                        ),
-                      ],
-                    ),
+                  child: NetWorthCard(
+                    assetTotalsByCurrency: accountsProvider.assetTotalsByCurrency,
+                    liabilityTotalsByCurrency: accountsProvider.liabilityTotalsByCurrency,
+                    currentFilter: _accountFilter,
+                    onFilterChanged: (filter) {
+                      setState(() {
+                        _accountFilter = filter;
+                      });
+                    },
+                    formatAmount: _formatAmount,
+                    netWorthFormatted: accountsProvider.netWorthFormatted,
+                    isStale: accountsProvider.isBalanceSheetStale,
                   ),
                 ),
 
-                // Summary cards
+                // Currency filter
                 SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Column(
-                      children: [
-                        if (accountsProvider.assetAccounts.isNotEmpty)
-                          _SummaryCard(
-                            title: 'Assets Total',
-                            totals: accountsProvider.assetTotalsByCurrency,
-                            color: Colors.green,
-                            formatCurrencyItem: _formatCurrencyItem,
-                          ),
-                        if (accountsProvider.liabilityAccounts.isNotEmpty)
-                          _SummaryCard(
-                            title: 'Liabilities Total',
-                            totals: accountsProvider.liabilityTotalsByCurrency,
-                            color: Colors.red,
-                            formatCurrencyItem: _formatCurrencyItem,
-                          ),
-                      ],
-                    ),
+                  child: CurrencyFilter(
+                    availableCurrencies: _getAllCurrencies(accountsProvider),
+                    selectedCurrencies: _selectedCurrencies,
+                    onSelectionChanged: (currencies) {
+                      setState(() {
+                        _selectedCurrencies = currencies;
+                      });
+                    },
                   ),
                 ),
 
-                // Assets section
-                if (accountsProvider.assetAccounts.isNotEmpty) ...[
-                  SliverToBoxAdapter(
-                    child: _CollapsibleSectionHeader(
-                      title: 'Assets',
-                      count: accountsProvider.assetAccounts.length,
-                      color: Colors.green,
-                      isExpanded: _assetsExpanded,
-                      onToggle: () {
-                        setState(() {
-                          _assetsExpanded = !_assetsExpanded;
-                        });
-                      },
-                    ),
-                  ),
-                  if (_assetsExpanded)
-                    SliverPadding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      sliver: SliverList(
-                        delegate: SliverChildBuilderDelegate(
-                          (context, index) {
-                            final account = accountsProvider.assetAccounts[index];
-                            return AccountCard(
-                              account: account,
-                              onTap: () => _handleAccountTap(account),
-                              onSwipe: () => _handleAccountSwipe(account),
-                            );
-                          },
-                          childCount: accountsProvider.assetAccounts.length,
-                        ),
-                      ),
-                    ),
-                ],
+                // Spacing
+                const SliverToBoxAdapter(
+                  child: SizedBox(height: 8),
+                ),
 
-                // Liabilities section
-                if (accountsProvider.liabilityAccounts.isNotEmpty) ...[
-                  SliverToBoxAdapter(
-                    child: _CollapsibleSectionHeader(
-                      title: 'Liabilities',
-                      count: accountsProvider.liabilityAccounts.length,
-                      color: Colors.red,
-                      isExpanded: _liabilitiesExpanded,
-                      onToggle: () {
-                        setState(() {
-                          _liabilitiesExpanded = !_liabilitiesExpanded;
-                        });
-                      },
-                    ),
-                  ),
-                  if (_liabilitiesExpanded)
-                    SliverPadding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      sliver: SliverList(
-                        delegate: SliverChildBuilderDelegate(
-                          (context, index) {
-                            final account = accountsProvider.liabilityAccounts[index];
-                            return AccountCard(
-                              account: account,
-                              onTap: () => _handleAccountTap(account),
-                              onSwipe: () => _handleAccountSwipe(account),
-                            );
-                          },
-                          childCount: accountsProvider.liabilityAccounts.length,
-                        ),
-                      ),
-                    ),
-                ],
-
-                // Uncategorized accounts
-                ..._buildUncategorizedSection(accountsProvider),
+                // Filtered accounts section
+                ..._buildFilteredAccountsSection(accountsProvider),
 
                 // Bottom padding
                 const SliverToBoxAdapter(
@@ -583,310 +519,224 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  List<Widget> _buildUncategorizedSection(AccountsProvider accountsProvider) {
-    final uncategorized = accountsProvider.accounts
-        .where((a) => !a.isAsset && !a.isLiability)
-        .toList();
+  List<Widget> _buildFilteredAccountsSection(AccountsProvider accountsProvider) {
+    final filteredAccounts = _getFilteredAccounts(accountsProvider);
 
-    if (uncategorized.isEmpty) {
-      return [];
+    if (filteredAccounts.isEmpty) {
+      return [
+        SliverToBoxAdapter(
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(32),
+              child: Column(
+                children: [
+                  Icon(
+                    Icons.account_balance_wallet_outlined,
+                    size: 48,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No accounts match the current filter',
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ];
     }
 
+    // Sort accounts: by type, then currency, then balance
+    filteredAccounts.sort((a, b) {
+      if (a.isAsset && !b.isAsset) return -1;
+      if (!a.isAsset && b.isAsset) return 1;
+      int typeComparison = a.accountType.compareTo(b.accountType);
+      if (typeComparison != 0) return typeComparison;
+      int currencyComparison = a.currency.compareTo(b.currency);
+      if (currencyComparison != 0) return currencyComparison;
+      return b.balanceAsDouble.compareTo(a.balanceAsDouble);
+    });
+
+    if (_groupByType) {
+      return _buildGroupedAccountsList(filteredAccounts);
+    }
+
+    return _buildFlatAccountsList(filteredAccounts);
+  }
+
+  List<Widget> _buildFlatAccountsList(List<Account> accounts) {
     return [
-      SliverToBoxAdapter(
-        child: _SimpleSectionHeader(
-          title: 'Other Accounts',
-          count: uncategorized.length,
-          color: Colors.grey,
-        ),
-      ),
       SliverPadding(
         padding: const EdgeInsets.symmetric(horizontal: 16),
         sliver: SliverList(
           delegate: SliverChildBuilderDelegate(
             (context, index) {
-              final account = uncategorized[index];
+              final account = accounts[index];
               return AccountCard(
                 account: account,
                 onTap: () => _handleAccountTap(account),
                 onSwipe: () => _handleAccountSwipe(account),
               );
             },
-            childCount: uncategorized.length,
+            childCount: accounts.length,
           ),
         ),
       ),
     ];
   }
-}
 
-class _SummaryCard extends StatelessWidget {
-  final String title;
-  final Map<String, double> totals;
-  final Color color;
-  final List<String> Function(String currency, double amount) formatCurrencyItem;
+  List<Widget> _buildGroupedAccountsList(List<Account> accounts) {
+    // Group accounts by accountType
+    final groups = <String, List<Account>>{};
+    for (final account in accounts) {
+      groups.putIfAbsent(account.accountType, () => []).add(account);
+    }
 
-  const _SummaryCard({
-    required this.title,
-    required this.totals,
-    required this.color,
-    required this.formatCurrencyItem,
-  });
+    final slivers = <Widget>[];
+    for (final entry in groups.entries) {
+      final accountType = entry.key;
+      final groupAccounts = entry.value;
+      final isCollapsed = _collapsedGroups.contains(accountType);
 
-  @override
-  Widget build(BuildContext context) {
-    final entries = totals.entries.toList();
-    final rows = <Widget>[];
+      // Use first account to get display name and icon
+      final displayName = groupAccounts.first.displayAccountType;
 
-    // Group currencies into pairs (2 per row)
-    for (int i = 0; i < entries.length; i += 2) {
-      final first = entries[i];
-      final firstFormatted = formatCurrencyItem(first.key, first.value);
+      slivers.add(
+        SliverToBoxAdapter(
+          child: _CollapsibleTypeHeader(
+            title: displayName,
+            count: groupAccounts.length,
+            accountType: accountType,
+            isCollapsed: isCollapsed,
+            onToggle: () {
+              setState(() {
+                if (isCollapsed) {
+                  _collapsedGroups.remove(accountType);
+                } else {
+                  _collapsedGroups.add(accountType);
+                }
+              });
+            },
+          ),
+        ),
+      );
 
-      if (i + 1 < entries.length) {
-        // Two items in this row
-        final second = entries[i + 1];
-        final secondFormatted = formatCurrencyItem(second.key, second.value);
-
-        rows.add(
-          Row(
-            children: [
-              Expanded(
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      firstFormatted[0],
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    Text(
-                      firstFormatted[1],
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
+      if (!isCollapsed) {
+        slivers.add(
+          SliverPadding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            sliver: SliverList(
+              delegate: SliverChildBuilderDelegate(
+                (context, index) {
+                  final account = groupAccounts[index];
+                  return AccountCard(
+                    account: account,
+                    onTap: () => _handleAccountTap(account),
+                    onSwipe: () => _handleAccountSwipe(account),
+                  );
+                },
+                childCount: groupAccounts.length,
               ),
-              Text(
-                ' | ',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.w300,
-                  color: color.withValues(alpha: 0.5),
-                ),
-              ),
-              Expanded(
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      secondFormatted[0],
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    Text(
-                      secondFormatted[1],
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+            ),
           ),
         );
-      } else {
-        // Only one item in this row
-        rows.add(
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                firstFormatted[0],
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              Text(
-                firstFormatted[1],
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
-        );
-      }
-
-      if (i + 2 < entries.length) {
-        rows.add(const SizedBox(height: 4));
       }
     }
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: color.withValues(alpha: 0.3),
-          width: 1,
-        ),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 4,
-            height: 40,
-            decoration: BoxDecoration(
-              color: color,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: color,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                ...rows,
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
+    return slivers;
   }
 }
 
-class _CollapsibleSectionHeader extends StatelessWidget {
+class _CollapsibleTypeHeader extends StatelessWidget {
   final String title;
   final int count;
-  final Color color;
-  final bool isExpanded;
+  final String accountType;
+  final bool isCollapsed;
   final VoidCallback onToggle;
 
-  const _CollapsibleSectionHeader({
+  const _CollapsibleTypeHeader({
     required this.title,
     required this.count,
-    required this.color,
-    required this.isExpanded,
+    required this.accountType,
+    required this.isCollapsed,
     required this.onToggle,
   });
 
+  IconData _getTypeIcon() {
+    switch (accountType) {
+      case 'depository':
+        return Icons.account_balance;
+      case 'credit_card':
+        return Icons.credit_card;
+      case 'investment':
+        return Icons.trending_up;
+      case 'loan':
+        return Icons.receipt_long;
+      case 'property':
+        return Icons.home;
+      case 'vehicle':
+        return Icons.directions_car;
+      case 'crypto':
+        return Icons.currency_bitcoin;
+      case 'other_asset':
+        return Icons.category;
+      case 'other_liability':
+        return Icons.payment;
+      default:
+        return Icons.account_balance_wallet;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return InkWell(
       onTap: onToggle,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
         child: Row(
           children: [
-            Container(
-              width: 4,
-              height: 24,
-              decoration: BoxDecoration(
-                color: color,
-                borderRadius: BorderRadius.circular(2),
-              ),
+            Icon(
+              _getTypeIcon(),
+              size: 18,
+              color: colorScheme.onSurfaceVariant,
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 10),
             Text(
               title,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
             ),
             const SizedBox(width: 8),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
               decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(12),
+                color: colorScheme.primaryContainer.withValues(alpha: 0.5),
+                borderRadius: BorderRadius.circular(10),
               ),
               child: Text(
                 count.toString(),
                 style: TextStyle(
-                  color: color,
+                  color: colorScheme.onPrimaryContainer,
                   fontWeight: FontWeight.bold,
-                  fontSize: 12,
+                  fontSize: 11,
                 ),
               ),
             ),
             const Spacer(),
             Icon(
-              isExpanded ? Icons.expand_less : Icons.expand_more,
-              color: color,
+              isCollapsed ? Icons.expand_more : Icons.expand_less,
+              size: 20,
+              color: colorScheme.onSurfaceVariant,
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _SimpleSectionHeader extends StatelessWidget {
-  final String title;
-  final int count;
-  final Color color;
-
-  const _SimpleSectionHeader({
-    required this.title,
-    required this.count,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
-      child: Row(
-        children: [
-          Container(
-            width: 4,
-            height: 24,
-            decoration: BoxDecoration(
-              color: color,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Text(
-            title,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(width: 8),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Text(
-              count.toString(),
-              style: TextStyle(
-                color: color,
-                fontWeight: FontWeight.bold,
-                fontSize: 12,
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }

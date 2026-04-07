@@ -1,10 +1,13 @@
 class IncomeStatement::FamilyStats
-  def initialize(family, interval: "month")
+  def initialize(family, interval: "month", account_ids: nil)
     @family = family
     @interval = interval
+    @account_ids = account_ids
   end
 
   def call
+    return [] if @account_ids&.empty?
+
     ActiveRecord::Base.connection.select_all(sanitized_query_sql).map do |row|
       StatRow.new(
         classification: row["classification"],
@@ -37,10 +40,19 @@ class IncomeStatement::FamilyStats
       params
     end
 
+    def budget_excluded_kinds_sql
+      @budget_excluded_kinds_sql ||= Transaction::BUDGET_EXCLUDED_KINDS.map { |k| "'#{k}'" }.join(", ")
+    end
+
     def exclude_tax_advantaged_sql
       ids = @family.tax_advantaged_account_ids
       return "" if ids.empty?
       "AND a.id NOT IN (:tax_advantaged_account_ids)"
+    end
+
+    def scope_to_account_ids_sql
+      return "" if @account_ids.nil?
+      ActiveRecord::Base.sanitize_sql([ "AND a.id IN (?)", @account_ids ])
     end
 
     def query_sql
@@ -59,11 +71,12 @@ class IncomeStatement::FamilyStats
             er.to_currency = :target_currency
           )
           WHERE a.family_id = :family_id
-            AND t.kind NOT IN ('funds_movement', 'one_time', 'cc_payment')
+            AND t.kind NOT IN (#{budget_excluded_kinds_sql})
             AND ae.excluded = false
             AND (t.extra -> 'simplefin' ->> 'pending')::boolean IS DISTINCT FROM true
             AND (t.extra -> 'plaid' ->> 'pending')::boolean IS DISTINCT FROM true
             #{exclude_tax_advantaged_sql}
+            #{scope_to_account_ids_sql}
           GROUP BY period, CASE WHEN t.kind = 'investment_contribution' THEN 'expense' WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END
         )
         SELECT

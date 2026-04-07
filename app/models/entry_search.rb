@@ -70,6 +70,7 @@ class EntrySearch
           AND (
             (t.extra -> 'simplefin' ->> 'pending')::boolean = true
             OR (t.extra -> 'plaid' ->> 'pending')::boolean = true
+            OR (t.extra -> 'lunchflow' ->> 'pending')::boolean = true
           )
         )
       SQL
@@ -82,6 +83,7 @@ class EntrySearch
           AND (
             (t.extra -> 'simplefin' ->> 'pending')::boolean = true
             OR (t.extra -> 'plaid' ->> 'pending')::boolean = true
+            OR (t.extra -> 'lunchflow' ->> 'pending')::boolean = true
           )
         )
       SQL

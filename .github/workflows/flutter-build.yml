@@ -1,24 +1,6 @@
 name: Flutter Mobile Build
 
 on:
-  push:
-    branches:
-      - main
-    tags:
-      - 'v*'
-    paths:
-      - 'mobile/lib/**'
-      - 'mobile/android/**'
-      - 'mobile/ios/**'
-      - 'mobile/pubspec.yaml'
-      - '.github/workflows/flutter-build.yml'
-  pull_request:
-    paths:
-      - 'mobile/lib/**'
-      - 'mobile/android/**'
-      - 'mobile/ios/**'
-      - 'mobile/pubspec.yaml'
-      - '.github/workflows/flutter-build.yml'
   workflow_call:
   workflow_dispatch:
 
@@ -51,6 +33,9 @@ jobs:
       - name: Get dependencies
         working-directory: mobile
         run: flutter pub get
+
+      - name: Copy Sure icons from public/
+        run: cp public/android-chrome-512x512.png mobile/assets/icon/app_icon.png
 
       - name: Generate app icons
         working-directory: mobile
@@ -143,6 +128,9 @@ jobs:
       - name: Get dependencies
         working-directory: mobile
         run: flutter pub get
+
+      - name: Copy Sure icons from public/
+        run: cp public/android-chrome-512x512.png mobile/assets/icon/app_icon.png
 
       - name: Generate app icons
         working-directory: mobile

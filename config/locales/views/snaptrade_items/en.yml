@@ -8,8 +8,8 @@ en:
     destroy:
       success: "Scheduled SnapTrade connection for deletion."
     connect:
-      registration_failed: "Failed to register with SnapTrade: %{message}"
-      portal_error: "Failed to connect to SnapTrade: %{message}"
+      decryption_failed: "Unable to read SnapTrade credentials. Please delete and recreate this connection."
+      connection_failed: "Failed to connect to SnapTrade: %{message}"
     callback:
       success: "Brokerage connected! Please select which accounts to link."
       no_item: "SnapTrade configuration not found."
@@ -17,7 +17,9 @@ en:
       success:
         one: "Successfully linked %{count} account."
         other: "Successfully linked %{count} accounts."
-      partial_success: "Linked %{linked} account(s). %{failed} failed to link."
+      partial_success:
+        one: "Linked %{count} account. %{failed_count} failed to link."
+        other: "Linked %{count} accounts. %{failed_count} failed to link."
       link_failed: "Failed to link accounts: %{errors}"
       no_accounts: "No accounts were selected for linking."
     preload_accounts:
@@ -75,6 +77,9 @@ en:
       cancel_button: "Cancel"
       creating: "Creating Accounts..."
       done_button: "Done"
+      or_link_existing: "Or link to an existing account instead of creating a new one:"
+      select_account: "Select an account..."
+      link_button: "Link"
       linked_accounts: "Already Linked"
       linked_to: "Linked to:"
     snaptrade_item:

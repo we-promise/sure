@@ -2,6 +2,7 @@ class Trade < ApplicationRecord
   include Entryable, Monetizable
 
   monetize :price
+  monetize :fee
 
   belongs_to :security
   belongs_to :category, optional: true
@@ -30,7 +31,7 @@ class Trade < ApplicationRecord
   end
 
   def unrealized_gain_loss
-    return nil if qty.negative?
+    return nil unless qty.positive?
     current_price = security.current_price
     return nil if current_price.nil?
 

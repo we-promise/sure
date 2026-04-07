@@ -1,6 +1,30 @@
 ---
 en:
   import:
+    qif_category_selections:
+      show:
+        title: "Configure & select"
+        description: "Review the detected date format, then choose which categories and tags from your QIF file to bring into %{product_name}."
+        categories_heading: Categories
+        categories_found:
+          one: "1 category found"
+          other: "%{count} categories found"
+        category_name_col: Category name
+        transactions_col: Transactions
+        tags_heading: Tags
+        tags_found:
+          one: "1 tag found"
+          other: "%{count} tags found"
+        tag_name_col: Tag name
+        txn_count:
+          one: "1 txn"
+          other: "%{count} txns"
+        split_warning_title: Split transactions detected
+        split_warning_description: "This QIF file contains split transactions. Splits are not yet supported, so each split transaction will be imported as a single transaction with its full amount and no category. The individual split breakdowns will not be preserved."
+        split_badge: split
+        empty_state_primary: No categories or tags were found in this QIF file.
+        empty_state_secondary: All transactions will be imported without categories or tags.
+        submit: Continue to review
     cleans:
       show:
         description: Edit your data in the table below.  Red cells are invalid.
@@ -33,6 +57,13 @@ en:
         date_format_label: Date format
         rows_to_skip_label: Skip first n rows
     confirms:
+      sure_import:
+        title: Confirm your import
+        description: Review the data that will be imported from your export file.
+        summary: Import summary
+        empty_summary: We could not find any importable records in this file. It may be empty, or the lines may not match the expected export format (each line should be a JSON object with "type" and "data" keys, using types this import supports).
+        publish_button: Start import
+        cancel: Cancel
       mappings:
         create_account: Create account
         csv_mapping_label: "%{mapping} in CSV"
@@ -59,6 +90,15 @@ en:
         tag_mapping_title: Assign your tags
     uploads:
       show:
+        qif_title: Upload QIF file
+        qif_description: Select the account this QIF file belongs to, then upload your .qif export from Quicken.
+        qif_account_label: Account
+        qif_account_placeholder: Select an account…
+        qif_file_prompt: to add your QIF file here
+        qif_file_hint: .qif files only
+        qif_submit: Upload QIF
+        browse: Browse
+        csv_file_prompt: to add your CSV file here
         description: Paste or upload your CSV file below.  Please review the instructions
           in the table below before beginning.
         instructions_1: Below is an example CSV with columns available for import.
@@ -68,7 +108,41 @@ en:
         instructions_4: Columns marked with an asterisk (*) are required data.
         instructions_5: No commas, no currency symbols, and no parentheses in numbers.
         title: Import your data
+      sure_import:
+        title: Import from export
+        description: Upload the all.ndjson file from your data export to restore your accounts, transactions, categories, and more.
+        drop_title: Drop NDJSON to upload
+        drop_subtitle: Your file will be uploaded automatically
+        browse: Browse
+        browse_hint: to add your all.ndjson file here
+        upload_button: Upload NDJSON
+        hint_html: Upload the <strong>all.ndjson</strong> file from your data export ZIP
+        ndjson_invalid: Must be valid NDJSON with at least one record
   imports:
+    date_format:
+      heading: Date format
+      description: "The date format was auto-detected from your file. Change it if dates look incorrect."
+      preview: "First parsed date"
+      error_title: "Unable to detect date format"
+      error_description: "None of the supported date formats could parse the dates in this file. Please check that the file contains valid date entries."
+    type_labels:
+      transaction_import: "Transaction import"
+      trade_import: "Trade import"
+      account_import: "Account import"
+      mint_import: "Mint import"
+      qif_import: "QIF import"
+      category_import: "Category import"
+      rule_import: "Rule import"
+      pdf_import: "PDF import"
+      document_import: "Document import"
+      sure_import: "Sure import"
+    steps:
+      upload: Upload
+      configure: Configure
+      clean: Clean
+      map: Map
+      confirm: Confirm
+      select: Select
     index:
       title: Imports
       new: New Import
@@ -80,6 +154,17 @@ en:
         status: Status
         actions: Actions
       row:
+        type_labels:
+          transaction_import: "Transaction"
+          trade_import: "Trade"
+          account_import: "Account"
+          mint_import: "Mint"
+          qif_import: "QIF"
+          category_import: "Category"
+          rule_import: "Rule"
+          pdf_import: "PDF"
+          document_import: "Document"
+          sure_import: "Sure"
         status:
           in_progress: In progress
           uploading: Processing rows
@@ -94,20 +179,79 @@ en:
           view: View
       empty: No imports yet.
     new:
-      description: You can manually import various types of data via CSV or use one
-        of our import templates like Mint.
+      description: Import from a financial tool or upload raw data files.
+      tab_financial_tools: Financial Tools & Files
+      tab_raw_data: Raw Data
+      coming_soon: Coming soon
+      import_ynab: Import from YNAB
       import_accounts: Import accounts
       import_categories: Import categories
       import_mint: Import from Mint
       import_portfolio: Import investments
       import_rules: Import rules
       import_transactions: Import transactions
+      import_qif: Import from Quicken (QIF)
+      import_sure: Import from Sure
+      import_sure_description: Full-export .ndjson file
+      import_file: Import document
+      import_file_description: AI-powered analysis for PDFs and searchable file upload
+      requires_account: Import accounts first to unlock this option.
       resume: Resume %{type}
       sources: Sources
-      title: New CSV Import
+      title: New Import
+    create:
+      file_too_large: File is too large. Maximum size is %{max_size}MB.
+      invalid_file_type: Invalid file type. Please upload a CSV file.
+      csv_uploaded: CSV uploaded successfully.
+      ndjson_uploaded: NDJSON file uploaded successfully.
+      pdf_too_large: PDF file is too large. Maximum size is %{max_size}MB.
+      pdf_processing: Your PDF is being processed. You will receive an email when analysis is complete.
+      invalid_pdf: The uploaded file is not a valid PDF.
+      document_too_large: Document file is too large. Maximum size is %{max_size}MB.
+      invalid_document_file_type: Invalid document file type for the active vector store.
+      document_uploaded: Document uploaded successfully.
+      document_upload_failed: We couldn't upload the document to the vector store. Please try again.
+      invalid_ndjson_file_type: Invalid file type or format. Please upload a valid .ndjson or .json export file.
+      ndjson_uploaded: NDJSON file uploaded successfully.
+      document_provider_not_configured: No vector store is configured for document uploads.
+    show:
+      finalize_upload: Please finalize your file upload.
+      finalize_mappings: Please finalize your mappings before proceeding.
     ready:
       description: Here's a summary of the new items that will be added to your account
         once you publish this import.
       title: Confirm your import data
+      summary_item_label: Item
+      summary_count_label: Count
+      empty_summary: We could not find any importable records in this file. It may be empty, or the lines may not match the expected export format (each line should be a JSON object with "type" and "data" keys, using types this import supports).
+      publish_import: Publish import
+      back_to_imports: Back to imports
     errors:
       custom_column_requires_inflow: "Custom column imports require an inflow column to be selected"
+    document_types:
+      bank_statement: Bank Statement
+      credit_card_statement: Credit Card Statement
+      investment_statement: Investment Statement
+      financial_document: Financial Document
+      contract: Contract
+      other: Other Document
+      unknown: Unknown Document
+    pdf_import:
+      processing_title: Processing your PDF
+      processing_description: We're analyzing your document using AI. This may take a moment. You'll receive an email when the analysis is complete.
+      check_status: Check status
+      back_to_dashboard: Back to dashboard
+      failed_title: Processing failed
+      failed_description: We were unable to process your PDF document. Please try again or contact support.
+      try_again: Try again
+      delete_import: Delete import
+      complete_title: Document analyzed
+      complete_description: We've analyzed your PDF and here's what we found.
+      document_type_label: Document Type
+      summary_label: Summary
+      email_sent_notice: An email has been sent to you with next steps.
+      back_to_imports: Back to imports
+      unknown_state_title: Unknown state
+      unknown_state_description: This import is in an unexpected state. Please return to imports.
+      processing_failed_with_message: "%{message}"
+      processing_failed_generic: "Processing failed: %{error}"

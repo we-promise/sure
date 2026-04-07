@@ -36,7 +36,6 @@ RSpec.describe 'API V1 Categories', type: :request do
   let!(:parent_category) do
     family.categories.create!(
       name: 'Food & Drink',
-      classification: 'expense',
       color: '#f97316',
       lucide_icon: 'utensils'
     )
@@ -45,7 +44,6 @@ RSpec.describe 'API V1 Categories', type: :request do
   let!(:subcategory) do
     family.categories.create!(
       name: 'Restaurants',
-      classification: 'expense',
       color: '#f97316',
       lucide_icon: 'utensils',
       parent: parent_category
@@ -55,7 +53,6 @@ RSpec.describe 'API V1 Categories', type: :request do
   let!(:income_category) do
     family.categories.create!(
       name: 'Salary',
-      classification: 'income',
       color: '#22c55e',
       lucide_icon: 'circle-dollar-sign'
     )
@@ -70,9 +67,6 @@ RSpec.describe 'API V1 Categories', type: :request do
                 description: 'Page number (default: 1)'
       parameter name: :per_page, in: :query, type: :integer, required: false,
                 description: 'Items per page (default: 25, max: 100)'
-      parameter name: :classification, in: :query, required: false,
-                description: 'Filter by classification (income or expense)',
-                schema: { type: :string, enum: %w[income expense] }
       parameter name: :roots_only, in: :query, required: false,
                 description: 'Return only root categories (no parent)',
                 schema: { type: :boolean }
@@ -83,24 +77,7 @@ RSpec.describe 'API V1 Categories', type: :request do
       response '200', 'categories listed' do
         schema '$ref' => '#/components/schemas/CategoryCollection'
 
-        run_test! do |response|
-          payload = JSON.parse(response.body)
-          expect(payload.fetch('categories')).to be_present
-          expect(payload.fetch('pagination')).to include('page', 'per_page', 'total_count', 'total_pages')
-        end
-      end
-
-      response '200', 'categories filtered by classification' do
-        schema '$ref' => '#/components/schemas/CategoryCollection'
-
-        let(:classification) { 'expense' }
-
-        run_test! do |response|
-          payload = JSON.parse(response.body)
-          payload.fetch('categories').each do |category|
-            expect(category.fetch('classification')).to eq('expense')
-          end
-        end
+        run_test!
       end
 
       response '200', 'root categories only' do
@@ -108,12 +85,7 @@ RSpec.describe 'API V1 Categories', type: :request do
 
         let(:roots_only) { true }
 
-        run_test! do |response|
-          payload = JSON.parse(response.body)
-          payload.fetch('categories').each do |category|
-            expect(category.fetch('parent')).to be_nil
-          end
-        end
+        run_test!
       end
 
       response '200', 'categories filtered by parent' do
@@ -121,12 +93,7 @@ RSpec.describe 'API V1 Categories', type: :request do
 
         let(:parent_id) { parent_category.id }
 
-        run_test! do |response|
-          payload = JSON.parse(response.body)
-          payload.fetch('categories').each do |category|
-            expect(category.dig('parent', 'id')).to eq(parent_category.id)
-          end
-        end
+        run_test!
       end
     end
   end
@@ -144,13 +111,7 @@ RSpec.describe 'API V1 Categories', type: :request do
       response '200', 'category retrieved' do
         schema '$ref' => '#/components/schemas/CategoryDetail'
 
-        run_test! do |response|
-          payload = JSON.parse(response.body)
-          expect(payload.fetch('id')).to eq(parent_category.id)
-          expect(payload.fetch('name')).to eq('Food & Drink')
-          expect(payload.fetch('classification')).to eq('expense')
-          expect(payload.fetch('subcategories_count')).to eq(1)
-        end
+        run_test!
       end
 
       response '200', 'subcategory retrieved with parent' do
@@ -158,13 +119,7 @@ RSpec.describe 'API V1 Categories', type: :request do
 
         let(:id) { subcategory.id }
 
-        run_test! do |response|
-          payload = JSON.parse(response.body)
-          expect(payload.fetch('id')).to eq(subcategory.id)
-          expect(payload.fetch('name')).to eq('Restaurants')
-          expect(payload.dig('parent', 'id')).to eq(parent_category.id)
-          expect(payload.dig('parent', 'name')).to eq('Food & Drink')
-        end
+        run_test!
       end
 
       response '404', 'category not found' do

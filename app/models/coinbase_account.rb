@@ -1,5 +1,11 @@
 class CoinbaseAccount < ApplicationRecord
-  include CurrencyNormalizable
+  include CurrencyNormalizable, Encryptable
+
+  # Encrypt raw payloads if ActiveRecord encryption is configured
+  if encryption_ready?
+    encrypts :raw_payload
+    encrypts :raw_transactions_payload
+  end
 
   belongs_to :coinbase_item
 
@@ -9,6 +15,7 @@ class CoinbaseAccount < ApplicationRecord
   has_one :linked_account, through: :account_provider, source: :account
 
   validates :name, :currency, presence: true
+  validates :account_id, uniqueness: { scope: :coinbase_item_id, allow_nil: true }
 
   # Helper to get account using account_providers system
   def current_account

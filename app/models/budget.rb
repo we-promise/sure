@@ -3,6 +3,8 @@ class Budget < ApplicationRecord
 
   PARAM_DATE_FORMAT = "%b-%Y"
 
+  attr_accessor :current_user
+
   belongs_to :family
 
   has_many :budget_categories, -> { includes(:category) }, dependent: :destroy
@@ -19,28 +21,46 @@ class Budget < ApplicationRecord
       date.strftime(PARAM_DATE_FORMAT).downcase
     end
 
-    def param_to_date(param)
-      Date.strptime(param, PARAM_DATE_FORMAT).beginning_of_month
+    def param_to_date(param, family: nil)
+      base_date = Date.strptime(param, PARAM_DATE_FORMAT)
+      if family&.uses_custom_month_start?
+        Date.new(base_date.year, base_date.month, family.month_start_day)
+      else
+        base_date.beginning_of_month
+      end
     end
 
     def budget_date_valid?(date, family:)
-      beginning_of_month = date.beginning_of_month
-
-      beginning_of_month >= oldest_valid_budget_date(family) && beginning_of_month <= Date.current.end_of_month
+      if family.uses_custom_month_start?
+        budget_start = family.custom_month_start_for(date)
+        budget_start >= oldest_valid_budget_date(family) && budget_start <= family.custom_month_end_for(Date.current)
+      else
+        beginning_of_month = date.beginning_of_month
+        beginning_of_month >= oldest_valid_budget_date(family) && beginning_of_month <= Date.current.end_of_month
+      end
     end
 
-    def find_or_bootstrap(family, start_date:)
+    def find_or_bootstrap(family, start_date:, user: nil)
       return nil unless budget_date_valid?(start_date, family: family)
 
       Budget.transaction do
+        if family.uses_custom_month_start?
+          budget_start = family.custom_month_start_for(start_date)
+          budget_end = family.custom_month_end_for(start_date)
+        else
+          budget_start = start_date.beginning_of_month
+          budget_end = start_date.end_of_month
+        end
+
         budget = Budget.find_or_create_by!(
           family: family,
-          start_date: start_date.beginning_of_month,
-          end_date: start_date.end_of_month
+          start_date: budget_start,
+          end_date: budget_end
         ) do |b|
           b.currency = family.currency
         end
 
+        budget.current_user = user
         budget.sync_budget_categories
 
         budget
@@ -49,7 +69,6 @@ class Budget < ApplicationRecord
 
     private
       def oldest_valid_budget_date(family)
-        # Allow going back to either the earliest entry date OR 2 years ago, whichever is earlier
         two_years_ago = 2.years.ago.beginning_of_month
         oldest_entry_date = family.oldest_entry_date.beginning_of_month
         [ two_years_ago, oldest_entry_date ].min
@@ -65,7 +84,7 @@ class Budget < ApplicationRecord
   end
 
   def sync_budget_categories
-    current_category_ids = family.categories.expenses.pluck(:id).to_set
+    current_category_ids = family.categories.pluck(:id).to_set
     existing_budget_category_ids = budget_categories.pluck(:category_id).to_set
     categories_to_add = current_category_ids - existing_budget_category_ids
     categories_to_remove = existing_budget_category_ids - current_category_ids
@@ -91,27 +110,74 @@ class Budget < ApplicationRecord
   end
 
   def transactions
-    family.transactions.visible.in_period(period)
+    scope = family.transactions.visible.in_period(period)
+    if current_user
+      scope = scope.joins(:entry).where(entries: { account_id: family.accounts.accessible_by(current_user).select(:id) })
+    end
+    scope
   end
 
   def name
-    start_date.strftime("%B %Y")
+    if family.uses_custom_month_start?
+      I18n.t(
+        "budgets.name.custom_range",
+        start: start_date.strftime("%b %d"),
+        end_date: end_date.strftime("%b %d, %Y")
+      )
+    else
+      I18n.t("budgets.name.month_year", month: start_date.strftime("%B %Y"))
+    end
   end
 
   def initialized?
     budgeted_spending.present?
   end
 
+  def most_recent_initialized_budget
+    family.budgets
+      .includes(:budget_categories)
+      .where("start_date < ?", start_date)
+      .where.not(budgeted_spending: nil)
+      .order(start_date: :desc)
+      .first
+  end
+
+  def copy_from!(source_budget)
+    raise ArgumentError, "source budget must belong to the same family" unless source_budget.family_id == family_id
+    raise ArgumentError, "source budget must precede target budget" unless source_budget.start_date < start_date
+
+    Budget.transaction do
+      update!(
+        budgeted_spending: source_budget.budgeted_spending,
+        expected_income: source_budget.expected_income
+      )
+
+      target_by_category = budget_categories.index_by(&:category_id)
+
+      source_budget.budget_categories.each do |source_bc|
+        target_bc = target_by_category[source_bc.category_id]
+        next unless target_bc
+
+        target_bc.update!(budgeted_spending: source_bc.budgeted_spending)
+      end
+    end
+  end
+
   def income_category_totals
-    income_totals.category_totals.reject { |ct| ct.category.subcategory? || ct.total.zero? }.sort_by(&:weight).reverse
+    net_totals.net_income_categories.reject { |ct| ct.total.zero? }.sort_by(&:weight).reverse
   end
 
   def expense_category_totals
-    expense_totals.category_totals.reject { |ct| ct.category.subcategory? || ct.total.zero? }.sort_by(&:weight).reverse
+    net_totals.net_expense_categories.reject { |ct| ct.total.zero? }.sort_by(&:weight).reverse
   end
 
   def current?
-    start_date == Date.today.beginning_of_month && end_date == Date.today.end_of_month
+    if family.uses_custom_month_start?
+      current_period = family.current_custom_month_period
+      start_date == current_period.start_date && end_date == current_period.end_date
+    else
+      start_date == Date.current.beginning_of_month && end_date == Date.current.end_of_month
+    end
   end
 
   def previous_budget_param
@@ -155,11 +221,14 @@ class Budget < ApplicationRecord
   end
 
   def actual_spending
-    expense_totals.total
+    net_totals.total_net_expense
   end
 
   def budget_category_actual_spending(budget_category)
-    expense_totals.category_totals.find { |ct| ct.category.id == budget_category.category.id }&.total || 0
+    key = budget_category.category_id || stable_synthetic_key(budget_category.category)
+    expense = expense_totals_by_category[key]&.total || 0
+    refund = income_totals_by_category[key]&.total || 0
+    [ expense - refund, 0 ].max
   end
 
   def category_median_monthly_expense(category)
@@ -236,7 +305,11 @@ class Budget < ApplicationRecord
 
   private
     def income_statement
-      @income_statement ||= family.income_statement
+      @income_statement ||= family.income_statement(user: current_user)
+    end
+
+    def net_totals
+      @net_totals ||= income_statement.net_category_totals(period: period)
     end
 
     def expense_totals
@@ -244,6 +317,22 @@ class Budget < ApplicationRecord
     end
 
     def income_totals
-      @income_totals ||= family.income_statement.income_totals(period: period)
+      @income_totals ||= income_statement.income_totals(period: period)
+    end
+
+    def expense_totals_by_category
+      @expense_totals_by_category ||= expense_totals.category_totals.index_by { |ct| ct.category.id || stable_synthetic_key(ct.category) }
+    end
+
+    def income_totals_by_category
+      @income_totals_by_category ||= income_totals.category_totals.index_by { |ct| ct.category.id || stable_synthetic_key(ct.category) }
+    end
+
+    def stable_synthetic_key(category)
+      if category.uncategorized?
+        :uncategorized
+      elsif category.other_investments?
+        :other_investments
+      end
     end
 end

@@ -1,0 +1,6 @@
+one:
+  binance_item: one
+  name: Binance
+  account_type: combined
+  currency: USD
+  current_balance: 15000.00

@@ -18,7 +18,8 @@ class EnableBankingItem::Importer
 
     session_data = fetch_session_data
     unless session_data
-      return { success: false, error: "Failed to fetch session data", accounts_updated: 0, transactions_imported: 0 }
+      error_msg = @session_error || "Failed to fetch session data"
+      return { success: false, error: error_msg, accounts_updated: 0, transactions_imported: 0 }
     end
 
     # Store raw payload
@@ -92,16 +93,40 @@ class EnableBankingItem::Importer
       end
     end
 
-    {
+    result = {
       success: accounts_failed == 0 && transactions_failed == 0,
       accounts_updated: accounts_updated,
       accounts_failed: accounts_failed,
       transactions_imported: transactions_imported,
       transactions_failed: transactions_failed
     }
+    if !result[:success] && (accounts_failed > 0 || transactions_failed > 0)
+      parts = []
+      parts << "#{accounts_failed} #{'account'.pluralize(accounts_failed)} failed" if accounts_failed > 0
+      parts << "#{transactions_failed} #{'transaction'.pluralize(transactions_failed)} failed" if transactions_failed > 0
+      result[:error] = parts.join(", ")
+    end
+    result
   end
 
   private
+
+    def extract_friendly_error_message(exception)
+      [ exception, exception.cause ].compact.each do |ex|
+        case ex
+        when SocketError then return "DNS resolution failed: check your network/DNS configuration"
+        when Net::OpenTimeout, Net::ReadTimeout then return "Connection timed out: the Enable Banking API may be unreachable"
+        when Errno::ECONNREFUSED then return "Connection refused: the Enable Banking API is unreachable"
+        end
+      end
+
+      msg = exception.message.to_s
+      return "DNS resolution failed: check your network/DNS configuration" if msg.include?("getaddrinfo") || msg.match?(/name or service not known/i)
+      return "Connection timed out: the Enable Banking API may be unreachable" if msg.include?("execution expired") || msg.include?("timeout") || msg.match?(/timed out/i)
+      return "Connection refused: the Enable Banking API is unreachable" if msg.include?("ECONNREFUSED") || msg.match?(/connection refused/i)
+
+      msg
+    end
 
     def fetch_session_data
       enable_banking_provider.get_session(session_id: enable_banking_item.session_id)
@@ -110,9 +135,11 @@ class EnableBankingItem::Importer
         enable_banking_item.update!(status: :requires_update)
       end
       Rails.logger.error "EnableBankingItem::Importer - Enable Banking API error: #{e.message}"
+      @session_error = extract_friendly_error_message(e)
       nil
     rescue => e
       Rails.logger.error "EnableBankingItem::Importer - Unexpected error fetching session: #{e.class} - #{e.message}"
+      @session_error = extract_friendly_error_message(e)
       nil
     end
 
@@ -203,6 +230,11 @@ class EnableBankingItem::Importer
         break if continuation_key.blank?
       end
 
+      # Deduplicate API response: Enable Banking sometimes returns the same logical
+      # transaction with different entry_reference IDs in the same response.
+      # Remove content-level duplicates before storing. (Issue #954)
+      all_transactions = deduplicate_api_transactions(all_transactions)
+
       transactions_count = all_transactions.count
 
       if all_transactions.any?
@@ -230,6 +262,71 @@ class EnableBankingItem::Importer
     rescue => e
       Rails.logger.error "EnableBankingItem::Importer - Unexpected error fetching transactions for account #{enable_banking_account.uid}: #{e.class} - #{e.message}"
       { success: false, transactions_count: 0, error: e.message }
+    end
+
+    # Deduplicate transactions from the Enable Banking API response.
+    # Some banks return the same logical transaction multiple times with different
+    # entry_reference IDs. We build a composite content key that includes
+    # transaction_id (when present) alongside date, amount, currency, creditor,
+    # debtor, remittance_information, and status. Per the Enable Banking API docs
+    # transaction_id is not guaranteed to be unique, so it cannot be used as
+    # the sole dedup criterion. Including it in the composite key preserves
+    # legitimately distinct transactions with identical content but different
+    # transaction_ids (e.g. two laundromat payments on the same day). (Issue #954)
+    def deduplicate_api_transactions(transactions)
+      seen = {}
+      duplicates_removed = 0
+
+      result = transactions.select do |tx|
+        tx = tx.with_indifferent_access
+        key = build_transaction_content_key(tx)
+
+        if seen[key]
+          duplicates_removed += 1
+          false
+        else
+          seen[key] = true
+          true
+        end
+      end
+
+      if duplicates_removed > 0
+        Rails.logger.info(
+          "EnableBankingItem::Importer - Removed #{duplicates_removed} content-level " \
+          "duplicate(s) from API response (#{transactions.count} → #{result.count} transactions)"
+        )
+      end
+
+      result
+    end
+
+    # Build a composite key for deduplication. Two transactions with different
+    # entry_reference values but identical content fields (including
+    # transaction_id and credit_debit_indicator) are considered duplicates.
+    # transaction_id is included as one component — not a standalone key —
+    # because the Enable Banking API docs state it is not guaranteed to be
+    # unique. credit_debit_indicator (CRDT/DBIT) is included because
+    # transaction_amount.amount is always positive — without it, a payment
+    # and a same-day refund of the same amount would produce identical keys.
+    # Known limitation: when transaction_id is nil for both, pure content
+    # comparison applies. This means two genuinely distinct transactions
+    # with identical content (same date, amount, direction, creditor, etc.)
+    # and no transaction_id would collapse to one. In practice, banks that
+    # omit transaction_id rarely produce such exact duplicates in the same
+    # API response; timestamps or remittance info usually differ. (Issue #954)
+    def build_transaction_content_key(tx)
+      date = tx[:booking_date].presence || tx[:value_date]
+      amount = tx.dig(:transaction_amount, :amount).presence || tx[:amount]
+      currency = tx.dig(:transaction_amount, :currency).presence || tx[:currency]
+      creditor = tx.dig(:creditor, :name).presence || tx[:creditor_name]
+      debtor = tx.dig(:debtor, :name).presence || tx[:debtor_name]
+      remittance = tx[:remittance_information]
+      remittance_key = remittance.is_a?(Array) ? remittance.compact.map(&:to_s).sort.join("|") : remittance.to_s
+      status = tx[:status]
+      tid = tx[:transaction_id]
+      direction = tx[:credit_debit_indicator]
+
+      [ date, amount, currency, creditor, debtor, remittance_key, status, tid, direction ].map(&:to_s).join("\x1F")
     end
 
     def determine_sync_start_date(enable_banking_account)

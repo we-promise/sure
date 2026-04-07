@@ -3,25 +3,59 @@ zh-TW:
   onboardings:
     header:
       sign_out: 登出
-    preferences:
-      currency: 幣別
-      date_format: 日期格式
-      example: 帳戶範例
-      locale: 語言
-      preview: 預覽根據偏好設定顯示的資料。
-      submit: 完成
-      subtitle: 讓我們來設定您的偏好設定。
-      title: 設定您的偏好設定
-    profile:
-      country: 國家
-      first_name: 名字
-      household_name: 家戶名稱
-      last_name: 姓氏
-      profile_image: 個人頭像
-      submit: 繼續
-      subtitle: 讓我們完成您的個人資料。
-      title: 進行基礎設定
+      setup: 設定
+      preferences: 偏好設定
+      goals: 目標
+      start: 開始
+    logout:
+      sign_out: 登出
     show:
-      message: 我們很高興您的加入！接下來我們會詢問幾個問題來完善您的個人資料，並完成所有設定。
-      setup: 開始設定帳號
-      title: 認識 %{product_name}
+      title: 讓我們設定您的帳戶
+      subtitle: 首先，讓我們完善您的個人檔案。
+      first_name: 名
+      first_name_placeholder: 名
+      last_name: 姓
+      last_name_placeholder: 姓
+      household_name: 家庭名稱
+      household_name_placeholder: 家庭名稱
+      country: 國家
+      submit: 繼續
+    preferences:
+      title: 設定您的偏好
+      subtitle: 讓我們設定您的偏好。
+      example: 範例帳戶
+      preview: 根據偏好設定預覽資料顯示方式。
+      color_theme: 顏色主題
+      theme_system: 跟隨系統
+      theme_light: 淺色
+      theme_dark: 深色
+      locale: 語言
+      currency: 貨幣
+      date_format: 日期格式
+      submit: 完成
+    goals:
+      title: 是什麼讓您來到這裡？
+      subtitle: 選擇一個或多個您使用 %{product_name} 作為個人財務工具的目標。
+      unified_accounts: 在一個地方查看所有帳戶
+      cashflow: 了解現金流和支出
+      budgeting: 管理財務計劃和預算
+      partner: 與伴侶共同管理財務
+      investments: 追蹤投資
+      ai_insights: 讓 AI 幫助我了解我的財務狀況
+      optimization: 分析和優化帳戶
+      reduce_stress: 減輕財務壓力或焦慮
+      submit: 下一步
+    trial:
+      title: 免費試用 Sure 45 天
+      data_deletion: 屆時資料將被刪除
+      description_html: 從今天開始，您可以深入體驗產品。<br/>如果您喜歡，可以自行託管或貢獻以繼續在這裡使用。
+      try_button: 試用 Sure 45 天
+      continue_trial: 繼續試用
+      upgrade: 升級
+      how_it_works: 運作方式
+      today: 今天
+      today_description: 您將在我們的 AWS 上獲得 45 天免費存取 Sure 的權限。
+      in_40_days: 40 天後（%{date}）
+      in_40_days_description: 我們會通知您提醒匯出資料。
+      in_45_days: 45 天後（%{date}）
+      in_45_days_description: 我們將刪除您的資料 — 貢獻以繼續在這裡使用 Sure！

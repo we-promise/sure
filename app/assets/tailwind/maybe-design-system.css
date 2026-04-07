@@ -248,6 +248,18 @@
   color: theme(colors.white) !important;
 }
 
+/* Specific override for headings in prose under dark mode */
+.prose:where([data-theme=dark], [data-theme=dark] *) h1,
+.prose:where([data-theme=dark], [data-theme=dark] *) h2,
+.prose:where([data-theme=dark], [data-theme=dark] *) h3,
+.prose:where([data-theme=dark], [data-theme=dark] *) h4,
+.prose:where([data-theme=dark], [data-theme=dark] *) h5,
+.prose:where([data-theme=dark], [data-theme=dark] *) h6,
+.prose:where([data-theme=dark], [data-theme=dark] *) blockquote,
+.prose:where([data-theme=dark], [data-theme=dark] *) thead th {
+  color: theme(colors.white) !important;
+}
+
 @layer base {
   [data-theme="dark"] { 
     --color-success: var(--color-green-500);
@@ -368,12 +380,14 @@
     text-overflow: clip;
   }
   
-  select.form-field__input {
+  select.form-field__input,
+  button.form-field__input  {
     @apply pr-10 appearance-none;
     background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
     background-position: right -0.15rem center;
     background-repeat: no-repeat;
     background-size: 1.25rem 1.25rem;
+    text-align: left;
   }
 
   .form-field__radio {

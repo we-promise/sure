@@ -20,6 +20,9 @@ class Provider::Openai < Provider
   DEFAULT_OPENAI_MODEL_PREFIXES = %w[gpt-4 gpt-5 o1 o3]
   DEFAULT_MODEL = "gpt-4.1"
 
+  # Models that support PDF/vision input (not all OpenAI models have vision capabilities)
+  VISION_CAPABLE_MODEL_PREFIXES = %w[gpt-4o gpt-4-turbo gpt-4.1 gpt-5 o1 o3].freeze
+
   # Returns the effective model that would be used by the provider
   # Uses the same logic as Provider::Registry and the initializer
   def self.effective_model
@@ -30,6 +33,7 @@ class Provider::Openai < Provider
   def initialize(access_token, uri_base: nil, model: nil)
     client_options = { access_token: access_token }
     client_options[:uri_base] = uri_base if uri_base.present?
+    client_options[:request_timeout] = ENV.fetch("OPENAI_REQUEST_TIMEOUT", 60).to_i
 
     @client = ::OpenAI::Client.new(**client_options)
     @uri_base = uri_base
@@ -90,7 +94,7 @@ class Provider::Openai < Provider
         json_mode: json_mode
       ).auto_categorize
 
-      trace&.update(output: result.map(&:to_h))
+      upsert_langfuse_trace(trace: trace, output: result.map(&:to_h))
 
       result
     end
@@ -118,7 +122,92 @@ class Provider::Openai < Provider
         json_mode: json_mode
       ).auto_detect_merchants
 
-      trace&.update(output: result.map(&:to_h))
+      upsert_langfuse_trace(trace: trace, output: result.map(&:to_h))
+
+      result
+    end
+  end
+
+  def enhance_provider_merchants(merchants: [], model: "", family: nil, json_mode: nil)
+    with_provider_response do
+      raise Error, "Too many merchants to enhance. Max is 25 per request." if merchants.size > 25
+
+      effective_model = model.presence || @default_model
+
+      trace = create_langfuse_trace(
+        name: "openai.enhance_provider_merchants",
+        input: { merchants: merchants }
+      )
+
+      result = ProviderMerchantEnhancer.new(
+        client,
+        model: effective_model,
+        merchants: merchants,
+        custom_provider: custom_provider?,
+        langfuse_trace: trace,
+        family: family,
+        json_mode: json_mode
+      ).enhance_merchants
+
+      upsert_langfuse_trace(trace: trace, output: result.map(&:to_h))
+
+      result
+    end
+  end
+
+  # Can be disabled via ENV for OpenAI-compatible endpoints that don't support vision
+  # Only vision-capable models (gpt-4o, gpt-4-turbo, gpt-4.1, etc.) support PDF input
+  def supports_pdf_processing?(model: @default_model)
+    return false unless ENV.fetch("OPENAI_SUPPORTS_PDF_PROCESSING", "true").to_s.downcase.in?(%w[true 1 yes])
+
+    # Custom providers manage their own model capabilities
+    return true if custom_provider?
+
+    # Check if the specified model supports vision/PDF input
+    VISION_CAPABLE_MODEL_PREFIXES.any? { |prefix| model.start_with?(prefix) }
+  end
+
+  def process_pdf(pdf_content:, model: "", family: nil)
+    with_provider_response do
+      effective_model = model.presence || @default_model
+      raise Error, "Model does not support PDF/vision processing: #{effective_model}" unless supports_pdf_processing?(model: effective_model)
+
+      trace = create_langfuse_trace(
+        name: "openai.process_pdf",
+        input: { pdf_size: pdf_content&.bytesize }
+      )
+
+      result = PdfProcessor.new(
+        client,
+        model: effective_model,
+        pdf_content: pdf_content,
+        custom_provider: custom_provider?,
+        langfuse_trace: trace,
+        family: family
+      ).process
+
+      upsert_langfuse_trace(trace: trace, output: result.to_h)
+
+      result
+    end
+  end
+
+  def extract_bank_statement(pdf_content:, model: "", family: nil)
+    with_provider_response do
+      effective_model = model.presence || @default_model
+
+      trace = create_langfuse_trace(
+        name: "openai.extract_bank_statement",
+        input: { pdf_size: pdf_content&.bytesize }
+      )
+
+      result = BankStatementExtractor.new(
+        client: client,
+        pdf_content: pdf_content,
+        model: effective_model
+      ).extract
+
+      upsert_langfuse_trace(trace: trace, output: { transaction_count: result[:transactions].size })
 
       result
     end
@@ -456,7 +545,7 @@ class Provider::Openai < Provider
         environment: Rails.env
       )
     rescue => e
-      Rails.logger.warn("Langfuse trace creation failed: #{e.message}")
+      Rails.logger.warn("Langfuse trace creation failed: #{e.message}\n#{e.full_message}")
       nil
     end
 
@@ -481,16 +570,32 @@ class Provider::Openai < Provider
           output: { error: error.message, details: error.respond_to?(:details) ? error.details : nil },
           level: "ERROR"
         )
-        trace&.update(
+        upsert_langfuse_trace(
+          trace: trace,
           output: { error: error.message },
           level: "ERROR"
         )
       else
         generation&.end(output: output, usage: usage)
-        trace&.update(output: output)
+        upsert_langfuse_trace(trace: trace, output: output)
       end
     rescue => e
-      Rails.logger.warn("Langfuse logging failed: #{e.message}")
+      Rails.logger.warn("Langfuse logging failed: #{e.message}\n#{e.full_message}")
+    end
+
+    def upsert_langfuse_trace(trace:, output:, level: nil)
+      return unless langfuse_client && trace&.id
+
+      payload = {
+        id: trace.id,
+        output: output
+      }
+      payload[:level] = level if level.present?
+
+      langfuse_client.trace(**payload)
+    rescue => e
+      Rails.logger.warn("Langfuse trace upsert failed for trace_id=#{trace&.id}: #{e.message}\n#{e.full_message}")
+      nil
     end
 
     def record_llm_usage(family:, model:, operation:, usage: nil, error: nil)
@@ -498,7 +603,7 @@ class Provider::Openai < Provider
 
       # For error cases, record with zero tokens
       if error.present?
-        Rails.logger.info("Recording failed LLM usage - Error: #{error.message}")
+        Rails.logger.info("Recording failed LLM usage - Error: #{safe_error_message(error)}")
 
         # Extract HTTP status code if available from the error
         http_status_code = extract_http_status_code(error)
@@ -513,7 +618,7 @@ class Provider::Openai < Provider
           total_tokens: 0,
           estimated_cost: nil,
           metadata: {
-            error: error.message,
+            error: safe_error_message(error),
             http_status_code: http_status_code
           }
         )
@@ -574,11 +679,17 @@ class Provider::Openai < Provider
         error.status_code
       elsif error.respond_to?(:response) && error.response.respond_to?(:code)
         error.response.code.to_i
-      elsif error.message =~ /(\d{3})/
+      elsif safe_error_message(error) =~ /(\d{3})/
         # Extract 3-digit HTTP status code from error message
         $1.to_i
       else
         nil
       end
+    end
+
+    def safe_error_message(error)
+      error&.message
+    rescue => e
+      "(message unavailable: #{e.class})"
     end
 end

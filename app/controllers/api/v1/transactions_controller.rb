@@ -10,7 +10,9 @@ class Api::V1::TransactionsController < Api::V1::BaseController
 
   def index
     family = current_resource_owner.family
+    accessible_account_ids = family.accounts.accessible_by(current_resource_owner).select(:id)
     transactions_query = family.transactions.visible
+      .joins(:entry).where(entries: { account_id: accessible_account_ids })
 
     # Apply filters
     transactions_query = apply_filters(transactions_query)
@@ -76,7 +78,7 @@ class Api::V1::TransactionsController < Api::V1::BaseController
       return
     end
 
-    account = family.accounts.find(transaction_params[:account_id])
+    account = family.accounts.writable_by(current_resource_owner).find(transaction_params[:account_id])
     @entry = account.entries.new(entry_params_for_create)
 
     if @entry.save
@@ -105,19 +107,39 @@ class Api::V1::TransactionsController < Api::V1::BaseController
 end
 
   def update
-    if @entry.update(entry_params_for_update)
-      @entry.sync_account_later
-      @entry.lock_saved_attributes!
-      @entry.transaction.lock_attr!(:tag_ids) if @entry.transaction.tags.any?
+    if @entry.split_child?
+      render json: { error: "validation_failed", message: "Split child transactions cannot be edited directly. Use the split editor." }, status: :unprocessable_entity
+      return
+    end
 
-      @transaction = @entry.transaction
-      render :show
-    else
-      render json: {
-        error: "validation_failed",
-        message: "Transaction could not be updated",
-        errors: @entry.errors.full_messages
-      }, status: :unprocessable_entity
+    if @entry.split_parent? && split_financial_fields_changed?
+      render json: { error: "validation_failed", message: "Split parent amount, date, and type cannot be changed directly. Use the split editor." }, status: :unprocessable_entity
+      return
+    end
+
+    Entry.transaction do
+      if @entry.update(entry_params_for_update)
+        # Handle tags separately - only when explicitly provided in the request
+        # This allows clearing tags with tag_ids: [] while preserving tags when not specified
+        if tags_provided?
+          @entry.transaction.tag_ids = transaction_params[:tag_ids] || []
+          @entry.transaction.save!
+          @entry.transaction.lock_attr!(:tag_ids) if @entry.transaction.tags.any?
+        end
+
+        @entry.sync_account_later
+        @entry.lock_saved_attributes!
+
+        @transaction = @entry.transaction
+        render :show
+      else
+        render json: {
+          error: "validation_failed",
+          message: "Transaction could not be updated",
+          errors: @entry.errors.full_messages
+        }, status: :unprocessable_entity
+        raise ActiveRecord::Rollback
+      end
     end
 
   rescue => e
@@ -131,6 +153,11 @@ end
   end
 
   def destroy
+    if @entry.split_child?
+      render json: { error: "validation_failed", message: "Split child transactions cannot be deleted individually." }, status: :unprocessable_entity
+      return
+    end
+
     @entry.destroy!
     @entry.sync_account_later
 
@@ -152,7 +179,10 @@ end
 
     def set_transaction
       family = current_resource_owner.family
-      @transaction = family.transactions.find(params[:id])
+      @transaction = family.transactions
+        .joins(entry: :account)
+        .merge(Account.accessible_by(current_resource_owner))
+        .find(params[:id])
       @entry = @transaction.entry
     rescue ActiveRecord::RecordNotFound
       render json: {
@@ -283,8 +313,9 @@ end
         entryable_attributes: {
           id: @entry.entryable_id,
           category_id: transaction_params[:category_id],
-          merchant_id: transaction_params[:merchant_id],
-          tag_ids: transaction_params[:tag_ids]
+          merchant_id: transaction_params[:merchant_id]
+          # Note: tag_ids handled separately in update action to distinguish
+          # "not provided" from "explicitly set to empty"
         }.compact_blank
       }
 
@@ -294,6 +325,18 @@ end
       end
 
       entry_params.compact
+    end
+
+    # Check if tag_ids was explicitly provided in the request.
+    # This distinguishes between "user wants to update tags" vs "user didn't specify tags".
+    def tags_provided?
+      params[:transaction].key?(:tag_ids)
+    end
+
+    def split_financial_fields_changed?
+      params.dig(:transaction, :amount).present? ||
+        params.dig(:transaction, :date).present? ||
+        params.dig(:transaction, :nature).present?
     end
 
     def calculate_signed_amount

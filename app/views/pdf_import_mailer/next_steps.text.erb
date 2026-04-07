@@ -1,0 +1,28 @@
+<%= t(".greeting", name: @user.display_name) %>
+
+<%= t(".intro", product: product_name) %>
+
+<%= t(".document_type_label") %>
+<%= @pdf_import.document_type ? t("imports.document_types.#{@pdf_import.document_type}") : t("imports.document_types.unknown") %>
+
+<%= t(".summary_label") %>
+<%= @pdf_import.ai_summary %>
+
+<% if @pdf_import.document_type.in?(%w[bank_statement credit_card_statement investment_statement]) %>
+<%= t(".transactions_note") %>
+<% else %>
+<%= t(".document_stored_note") %>
+<% end %>
+
+<%= t(".next_steps_label") %>
+<%= t(".next_steps_intro") %>
+
+<% if @pdf_import.document_type.in?(%w[bank_statement credit_card_statement investment_statement]) %>
+- <%= t(".option_extract_transactions") %>
+<% end %>
+- <%= t(".option_keep_reference") %>
+- <%= t(".option_delete") %>
+
+<%= t(".view_import_button") %>: <%= @import_url %>
+
+<%= t(".footer_note") %>

@@ -23,11 +23,26 @@ require "minitest/autorun"
 require "mocha/minitest"
 require "aasm/minitest"
 require "webmock/minitest"
+require "uri"
 
 VCR.configure do |config|
   config.cassette_library_dir = "test/vcr_cassettes"
   config.hook_into :webmock
   config.ignore_localhost = true
+  config.ignore_request do |request|
+    selenium_remote_url = ENV["SELENIUM_REMOTE_URL"]
+    next false if selenium_remote_url.blank?
+
+    request_uri = URI(request.uri)
+    selenium_uri = URI(selenium_remote_url)
+
+    request_uri.host.present? &&
+      selenium_uri.host.present? &&
+      request_uri.host == selenium_uri.host &&
+      request_uri.port == selenium_uri.port
+  rescue URI::InvalidURIError
+    false
+  end
   config.default_cassette_options = { erb: true }
   config.filter_sensitive_data("<OPENAI_ACCESS_TOKEN>") { ENV["OPENAI_ACCESS_TOKEN"] }
   config.filter_sensitive_data("<OPENAI_ORGANIZATION_ID>") { ENV["OPENAI_ORGANIZATION_ID"] }
@@ -81,11 +96,13 @@ module ActiveSupport
 
     # Ensures the Investment Contributions category exists for a family
     # Used in transfer tests where this bootstrapped category is required
+    # Uses family locale to ensure consistent naming
     def ensure_investment_contributions_category(family)
-      family.categories.find_or_create_by!(name: Category.investment_contributions_name) do |c|
-        c.color = "#0d9488"
-        c.lucide_icon = "trending-up"
-        c.classification = "expense"
+      I18n.with_locale(family.locale) do
+        family.categories.find_or_create_by!(name: Category.investment_contributions_name) do |c|
+          c.color = "#0d9488"
+          c.lucide_icon = "trending-up"
+        end
       end
     end
   end

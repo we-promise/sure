@@ -5,7 +5,7 @@
     <%= icon("search", class: "absolute inset-y-0 left-2 top-1/2 transform -translate-y-1/2") %>
   </div>
   <div class="my-2" id="list" data-list-filter-target="list">
-    <% Current.family.assigned_merchants.alphabetically.each do |merchant| %>
+    <% Current.family.assigned_merchants_for(Current.user).alphabetically.each do |merchant| %>
       <div class="filterable-item flex items-center gap-2 p-2" data-filter-name="<%= merchant.name %>">
         <%= form.check_box :merchants,
                            {
@@ -16,14 +16,21 @@
                            merchant.name,
                            nil %>
         <%= form.label :merchants, value: merchant.name, class: "text-sm text-primary flex items-center gap-2" do %>
-          <%= render DS::FilledIcon.new(
-            variant: :text,
-            hex_color: merchant.color,
-            text: merchant.name,
-            size: "sm",
-            rounded: true
-          ) %>
-
+          <div class="hidden lg:flex">
+            <% if merchant.logo_url.present? %>
+              <%= image_tag Setting.transform_brand_fetch_url(merchant.logo_url),
+                  class: "w-6 h-6 rounded-full border border-secondary",
+                  loading: "lazy" %>
+            <% else %>
+              <%= render DS::FilledIcon.new(
+                variant: :text,
+                hex_color: merchant.color,
+                text: merchant.name,
+                size: "sm",
+                rounded: true
+              ) %>
+            <% end %>
+          </div>
           <%= merchant.name %>
         <% end %>
       </div>

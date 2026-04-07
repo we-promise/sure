@@ -1,8 +1,10 @@
-<%= render DS::Dialog.new(frame: "drawer") do |dialog| %>
-  <% dialog.with_header(hide_close_icon: true) do %>
-    <%= render "transactions/header", entry: @entry %>
+<%= render DS::Dialog.new(frame: "drawer", responsive: true) do |dialog| %>
+  <% dialog.with_header(custom_header: true) do %>
+    <div class="flex items-start justify-between gap-4">
+      <%= render "transactions/header", entry: @entry %>
+      <%= dialog.close_button %>
+    </div>
   <% end %>
-
   <% dialog.with_body do %>
     <%# Potential duplicate alert %>
     <% if @entry.transaction.has_potential_duplicate? %>
@@ -14,7 +16,6 @@
             <div class="flex-1 space-y-2">
               <h4 class="text-sm font-medium text-primary"><%= t("transactions.show.potential_duplicate_title") %></h4>
               <p class="text-sm text-secondary"><%= t("transactions.show.potential_duplicate_description") %></p>
-
               <div class="mt-3 p-3 rounded bg-container border border-primary">
                 <div class="flex items-center justify-between">
                   <div>
@@ -26,7 +27,6 @@
                   </p>
                 </div>
               </div>
-
               <div class="flex items-center gap-2 mt-3">
                 <%= button_to t("transactions.show.merge_duplicate"),
                     merge_duplicate_transaction_path(@entry.transaction),
@@ -44,100 +44,95 @@
         </div>
       <% end %>
     <% end %>
-
     <%= render "entries/protection_indicator", entry: @entry, unlock_path: unlock_transaction_path(@entry.transaction) %>
-
     <% dialog.with_section(title: t(".overview"), open: true) do %>
-      <div class="pb-4">
+      <div>
+        <% split_locked = @entry.split_child? || @entry.split_parent? %>
+        <% edit_locked = !can_edit_entry? %>
+        <% annotate_locked = !can_annotate_entry? %>
         <%= styled_form_with model: @entry,
               url: transaction_path(@entry),
               class: "space-y-2",
               data: { controller: "auto-submit-form" } do |f| %>
-
           <%= f.text_field :name,
                 label: t(".name_label"),
+                disabled: @entry.split_child? || edit_locked,
                 "data-auto-submit-form-target": "auto" %>
-
           <%= f.date_field :date,
                 label: t(".date_label"),
                 max: Date.current,
-                disabled: @entry.linked?,
+                disabled: @entry.linked? || split_locked || edit_locked,
                 "data-auto-submit-form-target": "auto" %>
-
           <% unless @entry.transaction.transfer? %>
             <div class="flex items-center gap-2">
               <%= f.select :nature,
                     [["Expense", "outflow"], ["Income", "inflow"]],
                     { container_class: "w-1/3", label: t(".nature"), selected: @entry.amount.negative? ? "inflow" : "outflow" },
-                    { data: { "auto-submit-form-target": "auto" }, disabled: @entry.linked? } %>
-
+                    { data: { "auto-submit-form-target": "auto" }, disabled: @entry.linked? || split_locked || edit_locked } %>
               <%= f.money_field :amount, label: t(".amount"),
                     container_class: "w-2/3",
                     auto_submit: true,
                     min: 0,
                     value: @entry.amount.abs,
-                    disabled: @entry.linked?,
-                    disable_currency: @entry.linked? %>
+                    disabled: @entry.linked? || split_locked || edit_locked,
+                    disable_currency: @entry.linked? || split_locked || edit_locked %>
             </div>
-
             <%= f.fields_for :entryable do |ef| %>
               <%= ef.collection_select :category_id,
                       Current.family.categories.alphabetically,
                     :id, :name,
                     { label: t(".category_label"),
-                      class: "text-subdued", include_blank: t(".uncategorized") },
+                      class: "text-subdued", include_blank: t(".uncategorized"),
+                      variant: :badge, searchable: true, disabled: @entry.split_child? || annotate_locked },
                     "data-auto-submit-form-target": "auto" %>
             <% end %>
           <% end %>
-
         <% end %>
       </div>
     <% end %>
-
     <% dialog.with_section(title: t(".details")) do %>
-      <div class="pb-4">
-        <%= styled_form_with model: @entry,
-              url: transaction_path(@entry),
-              class: "space-y-2",
-              data: { controller: "auto-submit-form" } do |f| %>
-          <% unless @entry.transaction.transfer? %>
-            <%= f.select :account,
-                options_for_select(
-                  Current.family.accounts.alphabetically.pluck(:name, :id),
-                  @entry.account_id
-                ),
-                { label: t(".account_label") },
-                { disabled: true } %>
-
-            <%= f.fields_for :entryable do |ef| %>
-
-              <%= ef.collection_select :merchant_id,
-                    Current.family.available_merchants.alphabetically,
-                    :id, :name,
-                    { include_blank: t(".none"),
-                      label: t(".merchant_label"),
-                      class: "text-subdued" },
-                    "data-auto-submit-form-target": "auto" %>
-
-              <%= ef.select :tag_ids,
-                    Current.family.tags.alphabetically.pluck(:name, :id),
-                    {
-                      include_blank: t(".none"),
-                      multiple: true,
-                      label:    t(".tags_label")
-                    },
-                    { "data-controller": "multi-select", "data-auto-submit-form-target": "auto" } %>
-            <% end %>
-          <% end %>
-
-          <%= f.text_area :notes,
-                  label: t(".note_label"),
-                  placeholder: t(".note_placeholder"),
-                  rows: 5,
+      <%= styled_form_with model: @entry,
+            url: transaction_path(@entry),
+            class: "space-y-2",
+            data: { controller: "auto-submit-form" } do |f| %>
+        <% unless @entry.transaction.transfer? %>
+          <%= f.select :account,
+              options_for_select(
+                accessible_accounts.alphabetically.pluck(:name, :id),
+                @entry.account_id
+              ),
+              { label: t(".account_label") },
+              { disabled: true } %>
+          <%= f.fields_for :entryable do |ef| %>
+            <%= ef.collection_select :merchant_id,
+                  Current.family.available_merchants_for(Current.user).alphabetically,
+                  :id, :name,
+                  { include_blank: t(".none"),
+                    label: t(".merchant_label"),
+                    class: "text-subdued", variant: :logo, searchable: true, disabled: @entry.split_child? || !can_annotate_entry? },
                   "data-auto-submit-form-target": "auto" %>
-
+            <%= ef.select :tag_ids,
+                  Current.family.tags.alphabetically.pluck(:name, :id),
+                  {
+                    include_blank: t(".none"),
+                    multiple: true,
+                    label:    t(".tags_label"),
+                    disabled: @entry.split_child? || !can_annotate_entry?
+                  },
+                  { "data-controller": "multi-select", "data-auto-submit-form-target": "auto" } %>
+          <% end %>
         <% end %>
-      </div>
+        <%= f.text_area :notes,
+                label: t(".note_label"),
+                placeholder: t(".note_placeholder"),
+                rows: 5,
+                disabled: @entry.split_child? || !can_annotate_entry?,
+                "data-auto-submit-form-target": "auto" %>
+      <% end %>
+    <% end %>
+
+    <% dialog.with_section(title: t(".attachments")) do %>
+      <%= render "transactions/attachments", transaction: @entry.transaction, can_upload: can_annotate_entry?, can_delete: can_edit_entry? %>
     <% end %>
 
     <% if (details = build_transaction_extra_details(@entry)) %>
@@ -167,7 +162,6 @@
                 <% end %>
               </dl>
             <% end %>
-
             <% if details[:provider_extras].present? %>
               <div class="pt-2">
                 <h4 class="text-sm text-secondary mb-1">Provider extras</h4>
@@ -187,139 +181,252 @@
         </div>
       <% end %>
     <% end %>
-
-    <% dialog.with_section(title: t(".settings")) do %>
-      <div class="pb-4">
-        <%= styled_form_with model: @entry,
-              url: transaction_path(@entry),
-              class: "p-3",
-              data: { controller: "auto-submit-form" } do |f| %>
-          <div class="flex cursor-pointer items-center gap-4 justify-between">
-            <div class="text-sm space-y-1">
-              <h4 class="text-primary"><%= t(".exclude") %></h4>
-              <p class="text-secondary"><%= t(".exclude_description") %></p>
-            </div>
-
-            <%= f.toggle :excluded, { data: { auto_submit_form_target: "auto" } } %>
-          </div>
-        <% end %>
-      </div>
-
-      <% if @entry.account.investment? || @entry.account.crypto? %>
-        <div class="pb-4">
-          <%= styled_form_with model: @entry,
-                url: transaction_path(@entry),
-                class: "p-3",
-                data: { controller: "auto-submit-form" } do |f| %>
-            <%= f.fields_for :entryable do |ef| %>
-              <div class="flex cursor-pointer items-center gap-4 justify-between">
-                <div class="text-sm space-y-1">
-                  <h4 class="text-primary"><%= t(".activity_type") %></h4>
-                  <p class="text-secondary"><%= t(".activity_type_description") %></p>
-                </div>
-
-                <%= ef.select :investment_activity_label,
-                      options_for_select(
-                        [["—", nil]] + Transaction::ACTIVITY_LABELS.map { |l| [t("transactions.activity_labels.#{l.parameterize(separator: '_')}"), l] },
-                        @entry.entryable.investment_activity_label
-                      ),
-                      { label: false },
-                      { class: "form-field__input border border-secondary rounded-lg px-3 py-1.5 max-w-40 text-sm",
-                        data: { auto_submit_form_target: "auto" } } %>
+    <%# Split children list for split parent %>
+    <% if @entry.split_parent? %>
+      <% dialog.with_section(title: t("splits.show.title"), open: true) do %>
+        <div class="px-3 py-2 space-y-2">
+          <p class="text-xs text-secondary"><%= t("splits.show.description") %></p>
+          <% @entry.child_entries.includes(:entryable).each do |child| %>
+            <div class="flex items-center justify-between p-2 rounded-lg border border-primary">
+              <div>
+                <p class="text-sm font-medium text-primary"><%= child.name %></p>
+                <p class="text-xs text-secondary"><%= child.entryable.try(:category)&.name || t("splits.new.uncategorized") %></p>
               </div>
-            <% end %>
+              <p class="text-sm font-medium privacy-sensitive <%= child.amount.negative? ? "text-green-600" : "text-primary" %>">
+                <%= format_money(-child.amount_money) %>
+              </p>
+            </div>
+          <% end %>
+          <div class="flex items-center gap-3 pt-2">
+            <%= render DS::Link.new(
+              text: t("splits.child.edit_split"),
+              icon: "pencil",
+              variant: "ghost",
+              size: :sm,
+              href: edit_transaction_split_path(@entry),
+              frame: :modal
+            ) %>
+            <%= render DS::Button.new(
+              text: t("splits.show.unsplit_button"),
+              icon: "undo-2",
+              variant: "ghost",
+              size: :sm,
+              class: "text-destructive",
+              href: transaction_split_path(@entry),
+              method: :delete,
+              confirm: CustomConfirm.new(title: t("splits.show.unsplit_title"), body: t("splits.show.unsplit_confirm"), btn_text: t("splits.show.unsplit_button"), destructive: true),
+              frame: "_top"
+            ) %>
+          </div>
+        </div>
+      <% end %>
+    <% end %>
+
+    <%# For split child, show parent info and actions %>
+    <% if @entry.split_child? %>
+      <% dialog.with_section(title: t("splits.child.title"), open: true) do %>
+        <div class="px-3 py-2">
+          <% parent = @entry.parent_entry %>
+          <% if parent %>
+            <div class="p-3 rounded-lg border border-secondary space-y-3">
+              <div class="flex items-center justify-between">
+                <div>
+                  <p class="text-sm font-medium text-primary"><%= parent.name %></p>
+                  <p class="text-xs text-secondary"><%= parent.date.strftime("%b %d, %Y") %></p>
+                </div>
+                <p class="text-sm font-medium privacy-sensitive text-primary">
+                  <%= format_money(-parent.amount_money) %>
+                </p>
+              </div>
+              <div class="flex items-center gap-3 border-t border-primary pt-2">
+                <%= render DS::Link.new(
+                  text: t("splits.child.edit_split"),
+                  icon: "pencil",
+                  variant: "ghost",
+                  size: :sm,
+                  href: edit_transaction_split_path(parent),
+                  frame: :modal
+                ) %>
+                <%= render DS::Button.new(
+                  text: t("splits.child.unsplit"),
+                  icon: "undo-2",
+                  variant: "ghost",
+                  size: :sm,
+                  class: "text-destructive",
+                  href: transaction_split_path(parent),
+                  method: :delete,
+                  confirm: CustomConfirm.new(title: t("splits.show.unsplit_title"), body: t("splits.show.unsplit_confirm"), btn_text: t("splits.show.unsplit_button"), destructive: true),
+                  frame: "_top"
+                ) %>
+              </div>
+            </div>
           <% end %>
         </div>
       <% end %>
+    <% end %>
 
-      <div class="pb-4">
-        <%= styled_form_with model: @entry,
-              url: transaction_path(@entry),
-              class: "p-3",
-              data: { controller: "auto-submit-form" } do |f| %>
-          <%= f.fields_for :entryable do |ef| %>
-            <div class="flex cursor-pointer items-center gap-4 justify-between">
-              <div class="text-sm space-y-1">
-                <h4 class="text-primary"><%= t(".one_time_title", type: @entry.amount.negative? ? t("transactions.form.income") : t("transactions.form.expense")) %></h4>
-                <p class="text-secondary"><%= t(".one_time_description") %></p>
+    <% if can_edit_entry? %>
+      <% dialog.with_section(title: t(".settings")) do %>
+        <% unless @entry.split_parent? || @entry.split_child? %>
+          <div class="pb-4">
+            <%= styled_form_with model: @entry,
+                  url: transaction_path(@entry),
+                  class: "p-3",
+                  data: { controller: "auto-submit-form" } do |f| %>
+              <div class="flex cursor-pointer items-center gap-4 justify-between">
+                <div class="text-sm space-y-1">
+                  <h4 class="text-primary"><%= t(".exclude") %></h4>
+                  <p class="text-secondary"><%= t(".exclude_description") %></p>
+                </div>
+                <%= f.toggle :excluded, { data: { auto_submit_form_target: "auto" } } %>
               </div>
-
-              <%= ef.toggle :kind, {
-                    checked: @entry.transaction.one_time?,
-                    data: { auto_submit_form_target: "auto" }
-                  }, "one_time", "standard" %>
-            </div>
-          <% end %>
-        <% end %>
-
-        <div class="flex items-center justify-between gap-4 p-3">
-          <div class="text-sm space-y-1">
-            <h4 class="text-primary">Transfer or Debt Payment?</h4>
-            <p class="text-secondary">Transfers and payments are special types of transactions that indicate money movement between 2 accounts.</p>
+            <% end %>
           </div>
-
-          <%= render DS::Link.new(
-            text: "Open matcher",
-            icon: "arrow-left-right",
-            variant: "outline",
-            href: new_transaction_transfer_match_path(@entry),
-            frame: :modal
-          ) %>
-        </div>
-
-        <!-- Convert to Trade (Investment Accounts Only, not already converted) -->
-        <% if @entry.account.investment? && @entry.entryable.is_a?(Transaction) && !@entry.excluded? %>
-          <div class="flex items-center justify-between gap-2 p-3">
+        <% end %>
+        <% if @entry.account.investment? || @entry.account.crypto? %>
+          <div class="pb-4">
+            <%= styled_form_with model: @entry,
+                  url: transaction_path(@entry),
+                  class: "p-3",
+                  data: { controller: "auto-submit-form" } do |f| %>
+              <%= f.fields_for :entryable do |ef| %>
+                <div class="flex cursor-pointer items-center gap-4 justify-between">
+                  <div class="text-sm space-y-1">
+                    <h4 class="text-primary"><%= t(".activity_type") %></h4>
+                    <p class="text-secondary"><%= t(".activity_type_description") %></p>
+                  </div>
+                  <%= ef.select :investment_activity_label,
+                        options_for_select(
+                          [["—", nil]] + Transaction::ACTIVITY_LABELS.map { |l| [t("transactions.activity_labels.#{l.parameterize(separator: '_')}"), l] },
+                          @entry.entryable.investment_activity_label
+                        ),
+                        { label: false },
+                        { class: "form-field__input border border-secondary rounded-lg px-3 py-1.5 max-w-40 text-sm",
+                          data: { auto_submit_form_target: "auto" } } %>
+                </div>
+              <% end %>
+            <% end %>
+          </div>
+        <% end %>
+        <% unless @entry.split_child? %>
+          <div class="pb-4">
+            <%= styled_form_with model: @entry,
+                  url: transaction_path(@entry),
+                  class: "p-3",
+                  data: { controller: "auto-submit-form" } do |f| %>
+              <%= f.fields_for :entryable do |ef| %>
+                <div class="flex cursor-pointer items-center gap-4 justify-between">
+                  <div class="text-sm space-y-1">
+                    <h4 class="text-primary"><%= t(".one_time_title", type: @entry.amount.negative? ? t("transactions.form.income") : t("transactions.form.expense")) %></h4>
+                    <p class="text-secondary"><%= t(".one_time_description") %></p>
+                  </div>
+                  <%= ef.toggle :kind, {
+                        checked: @entry.transaction.one_time?,
+                        data: { auto_submit_form_target: "auto" }
+                      }, "one_time", "standard" %>
+                </div>
+              <% end %>
+            <% end %>
+          </div>
+        <% end %>
+        <%# Split Transaction %>
+        <% if @entry.transaction.splittable? %>
+          <div class="flex items-center justify-between gap-4 p-3">
             <div class="text-sm space-y-1">
-              <h4 class="text-primary">Convert to Security Trade</h4>
-              <p class="text-secondary">Convert this transaction into a security trade (buy/sell) by providing ticker, shares, and price.</p>
+              <h4 class="text-primary"><%= t("splits.show.button_title") %></h4>
+              <p class="text-secondary"><%= t("splits.show.button_description") %></p>
             </div>
-
-            <%= render DS::Button.new(
-              text: "Convert",
+            <%= render DS::Link.new(
+              text: t("splits.show.button"),
+              icon: "split",
               variant: "outline",
-              icon: "arrow-right-left",
-              href: convert_to_trade_transaction_path(@entry.transaction),
-              method: :get,
+              href: new_transaction_split_path(@entry),
               frame: :modal
             ) %>
           </div>
         <% end %>
-
-        <!-- Mark as Recurring Form -->
-        <div class="flex items-center justify-between gap-2 p-3">
-          <div class="text-sm space-y-1">
-            <h4 class="text-primary"><%= t(".mark_recurring_title") %></h4>
-            <p class="text-secondary"><%= t(".mark_recurring_subtitle") %></p>
+        <% unless @entry.split_child? %>
+          <div class="flex items-center justify-between gap-4 p-3">
+            <div class="text-sm space-y-1">
+              <h4 class="text-primary">Transfer or Debt Payment?</h4>
+              <p class="text-secondary">Transfers and payments are special types of transactions that indicate money movement between 2 accounts.</p>
+            </div>
+            <%= render DS::Link.new(
+              text: "Open matcher",
+              icon: "arrow-left-right",
+              variant: "outline",
+              href: new_transaction_transfer_match_path(@entry),
+              frame: :modal
+            ) %>
           </div>
-
-          <%= render DS::Button.new(
-            text: t(".mark_recurring"),
-            variant: "outline",
-            icon: "repeat",
-            href: mark_as_recurring_transaction_path(@entry.transaction),
-            method: :post,
-            frame: "_top"
-          ) %>
-        </div>
-
-        <!-- Delete Transaction Form -->
-        <div class="flex items-center justify-between gap-2 p-3">
-          <div class="text-sm space-y-1">
-            <h4 class="text-primary"><%= t(".delete_title") %></h4>
-            <p class="text-secondary"><%= t(".delete_subtitle") %></p>
+          <!-- Pending Duplicate Merger -->
+          <% if @entry.entryable.is_a?(Transaction) && @entry.entryable.pending? %>
+            <div class="flex items-center justify-between gap-4 p-3">
+              <div class="text-sm space-y-1">
+                <h4 class="text-primary"><%= t("transactions.show.pending_duplicate_merger_title") %></h4>
+                <p class="text-secondary"><%= t("transactions.show.pending_duplicate_merger_description") %></p>
+              </div>
+              <%= render DS::Link.new(
+                text: t("transactions.show.pending_duplicate_merger_button"),
+                icon: "merge",
+                variant: "outline",
+                href: new_transaction_pending_duplicate_merges_path(@entry),
+                frame: :modal
+              ) %>
+            </div>
+          <% end %>
+          <!-- Convert to Trade (Investment Accounts Only, not already converted) -->
+          <% if @entry.account.investment? && @entry.entryable.is_a?(Transaction) && !@entry.excluded? %>
+            <div class="flex items-center justify-between gap-2 p-3">
+              <div class="text-sm space-y-1">
+                <h4 class="text-primary">Convert to Security Trade</h4>
+                <p class="text-secondary">Convert this transaction into a security trade (buy/sell) by providing ticker, shares, and price.</p>
+              </div>
+              <%= render DS::Button.new(
+                text: "Convert",
+                variant: "outline",
+                icon: "arrow-right-left",
+                href: convert_to_trade_transaction_path(@entry.transaction),
+                method: :get,
+                frame: :modal
+              ) %>
+            </div>
+          <% end %>
+          <!-- Mark as Recurring Form -->
+          <div class="flex items-center justify-between gap-2 p-3">
+            <div class="text-sm space-y-1">
+              <h4 class="text-primary"><%= t(".mark_recurring_title") %></h4>
+              <p class="text-secondary"><%= t(".mark_recurring_subtitle") %></p>
+            </div>
+            <%= render DS::Button.new(
+              text: t(".mark_recurring"),
+              variant: "outline",
+              icon: "repeat",
+              href: mark_as_recurring_transaction_path(@entry.transaction),
+              method: :post,
+              frame: "_top"
+            ) %>
           </div>
-
-          <%= render DS::Button.new(
-            text: t(".delete"),
-            variant: "outline-destructive",
-            href: entry_path(@entry),
-            method: :delete,
-            confirm: CustomConfirm.for_resource_deletion("transaction"),
-            frame: "_top"
-          ) %>
+        <% end %>
+        <%# Delete Transaction Form - hidden for split children %>
+        <% unless @entry.split_child? %>
+          <div class="flex items-center justify-between gap-2 p-3">
+            <div class="text-sm space-y-1">
+              <h4 class="text-primary"><%= t(".delete_title") %></h4>
+              <p class="text-secondary"><%= t(".delete_subtitle") %></p>
+            </div>
+            <%= render DS::Button.new(
+              text: t(".delete"),
+              variant: "outline-destructive",
+              href: entry_path(@entry),
+              method: :delete,
+              confirm: CustomConfirm.for_resource_deletion("transaction"),
+              frame: "_top"
+            ) %>
+          </div>
+        <% end %>
         </div>
-      </div>
+      <% end %>
     <% end %>
   <% end %>
 <% end %>

@@ -59,6 +59,9 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
     networks:
       - sure_net
 
@@ -73,6 +76,9 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
     environment:
       <<: *rails_env
     networks:

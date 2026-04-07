@@ -1,12 +1,16 @@
+import 'dart:async';
+import 'package:app_links/app_links.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'providers/auth_provider.dart';
 import 'providers/accounts_provider.dart';
 import 'providers/transactions_provider.dart';
 import 'providers/chat_provider.dart';
+import 'providers/theme_provider.dart';
 import 'screens/backend_config_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/main_navigation_screen.dart';
+import 'screens/sso_onboarding_screen.dart';
 import 'services/api_config.dart';
 import 'services/connectivity_service.dart';
 import 'services/log_service.dart';
@@ -16,7 +20,7 @@ void main() async {
   await ApiConfig.initialize();
 
   // Add initial log entry
-  LogService.instance.info('App', 'Sure Finance app starting...');
+  LogService.instance.info('App', 'Sure app starting...');
 
   runApp(const SureApp());
 }
@@ -32,6 +36,7 @@ class SureApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => ConnectivityService()),
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => ChatProvider()),
+        ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProxyProvider<ConnectivityService, AccountsProvider>(
           create: (_) => AccountsProvider(),
           update: (_, connectivityService, accountsProvider) {
@@ -59,10 +64,17 @@ class SureApp extends StatelessWidget {
           },
         ),
       ],
-      child: MaterialApp(
-        title: 'Sure Finance',
+      child: Consumer<ThemeProvider>(
+        builder: (context, themeProvider, _) => MaterialApp(
+        title: 'Sure Finances',
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
+          fontFamily: 'Geist',
+          fontFamilyFallback: const [
+            'Inter',
+            'Arial',
+            'sans-serif',
+          ],
           colorScheme: ColorScheme.fromSeed(
             seedColor: const Color(0xFF6366F1),
             brightness: Brightness.light,
@@ -94,6 +106,12 @@ class SureApp extends StatelessWidget {
           ),
         ),
         darkTheme: ThemeData(
+          fontFamily: 'Geist',
+          fontFamilyFallback: const [
+            'Inter',
+            'Arial',
+            'sans-serif',
+          ],
           colorScheme: ColorScheme.fromSeed(
             seedColor: const Color(0xFF6366F1),
             brightness: Brightness.dark,
@@ -124,14 +142,14 @@ class SureApp extends StatelessWidget {
             ),
           ),
         ),
-        themeMode: ThemeMode.system,
+        themeMode: themeProvider.themeMode,
         routes: {
           '/config': (context) => const BackendConfigScreen(),
           '/login': (context) => const LoginScreen(),
           '/home': (context) => const MainNavigationScreen(),
         },
         home: const AppWrapper(),
-      ),
+      )),
     );
   }
 }
@@ -146,11 +164,46 @@ class AppWrapper extends StatefulWidget {
 class _AppWrapperState extends State<AppWrapper> {
   bool _isCheckingConfig = true;
   bool _hasBackendUrl = false;
+  late final AppLinks _appLinks;
+  StreamSubscription<Uri>? _linkSubscription;
 
   @override
   void initState() {
     super.initState();
     _checkBackendConfig();
+    _initDeepLinks();
+  }
+
+  @override
+  void dispose() {
+    _linkSubscription?.cancel();
+    super.dispose();
+  }
+
+  void _initDeepLinks() {
+    _appLinks = AppLinks();
+
+    // Handle deep link that launched the app (cold start)
+    _appLinks.getInitialLink().then((uri) {
+      if (uri != null) _handleDeepLink(uri);
+    }).catchError((e, stackTrace) {
+      LogService.instance.error('DeepLinks', 'Initial link error: $e\n$stackTrace');
+    });
+
+    // Listen for deep links while app is running
+    _linkSubscription = _appLinks.uriLinkStream.listen(
+      (uri) => _handleDeepLink(uri),
+      onError: (e, stackTrace) {
+        LogService.instance.error('DeepLinks', 'Link stream error: $e\n$stackTrace');
+      },
+    );
+  }
+
+  void _handleDeepLink(Uri uri) {
+    if (uri.scheme == 'sureapp' && uri.host == 'oauth') {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      authProvider.handleSsoCallback(uri);
+    }
   }
 
   Future<void> _checkBackendConfig() async {
@@ -204,6 +257,10 @@ class _AppWrapperState extends State<AppWrapper> {
 
         if (authProvider.isAuthenticated) {
           return const MainNavigationScreen();
+        }
+
+        if (authProvider.ssoOnboardingPending) {
+          return const SsoOnboardingScreen();
         }
 
         return LoginScreen(
