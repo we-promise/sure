@@ -232,9 +232,8 @@ class BondLot < ApplicationRecord
     (projected_total_return_amount / principal) * 100
   end
 
-  def coupon_amount_per_period
+  def coupon_amount_per_period(on: Date.current)
     return nil if coupon_frequency.blank? || coupon_frequency == "at_maturity"
-    return nil if interest_rate.blank?
 
     periods = {
       "monthly" => 12,
@@ -245,7 +244,14 @@ class BondLot < ApplicationRecord
     per_year = periods[coupon_frequency]
     return nil if per_year.blank?
 
-    Money.new((amount.to_d * interest_rate.to_d / 100 / per_year).round(4), account.currency)
+    annual_rate_decimal = if inflation_linked?
+      annual_rate_for(on:)
+    else
+      interest_rate&.to_d&./(100)
+    end
+    return nil if annual_rate_decimal.blank?
+
+    Money.new((amount.to_d * annual_rate_decimal / per_year).round(4), account.currency)
   end
 
   def create_purchase_entry!(auto_purchased: false, requires_rate_review: false)
@@ -431,9 +437,9 @@ class BondLot < ApplicationRecord
   end
 
   private
-    def rate_context_for(on:)
+    def rate_context_for(on:, allow_import: true)
       if inflation_linked?
-        inflation_linked_rate_context(on:)
+        inflation_linked_rate_context(on:, allow_import:)
       else
         annual_rate = interest_rate.presence || bond&.interest_rate
         {
@@ -447,8 +453,8 @@ class BondLot < ApplicationRecord
       end
     end
 
-    def annual_rate_for(on:)
-      rate_context_for(on:)[:annual_rate_decimal]
+    def annual_rate_for(on:, allow_import: true)
+      rate_context_for(on:, allow_import:)[:annual_rate_decimal]
     end
 
     def anniversary_issue_base
@@ -462,7 +468,7 @@ class BondLot < ApplicationRecord
       [ issue_base + years_since.years, issue_base + (years_since - 1).years ]
     end
 
-    def inflation_linked_rate_context(on:)
+    def inflation_linked_rate_context(on:, allow_import: true)
       if purchased_on.blank?
         return {
           annual_rate_decimal: nil,
@@ -489,7 +495,7 @@ class BondLot < ApplicationRecord
           inflation_indicator_id: nil
         }
       else
-        inflation_snapshot = inflation_snapshot_for(on:)
+        inflation_snapshot = inflation_snapshot_for(on:, allow_import:)
         inflation_component = inflation_snapshot[:inflation_component_percent]
         margin_component = inflation_margin&.to_d || 0.to_d
 
@@ -510,9 +516,9 @@ class BondLot < ApplicationRecord
       end
     end
 
-    def inflation_snapshot_for(on:)
+    def inflation_snapshot_for(on:, allow_import: true)
       if auto_fetch_inflation?
-        source_record = inflation_rate_record_for(on:)
+        source_record = inflation_rate_record_for(on:, allow_import:)
         if source_record.present?
           return {
             inflation_component_percent: source_record.rate_yoy.to_d - 100,
@@ -603,11 +609,12 @@ class BondLot < ApplicationRecord
       inflation_provider.presence || "gus_sdp"
     end
 
-    def inflation_rate_record_for(on:)
+    def inflation_rate_record_for(on:, allow_import: true)
       Bond::InflationProvider.record_for_date(
         provider: inflation_provider_key,
         date: on,
-        lag_months: cpi_lag_months.to_i
+        lag_months: cpi_lag_months.to_i,
+        allow_import:
       )
     end
 
@@ -751,7 +758,7 @@ class BondLot < ApplicationRecord
       return unless requires_rate_review?
 
       review_date = [ Date.current, maturity_date ].compact.min
-      self.requires_rate_review = false if rates_present_for_review? && review_date.present? && rates_resolvable_through?(date: review_date)
+      self.requires_rate_review = false if rates_present_for_review? && review_date.present? && rates_resolvable_through?(date: review_date, allow_import: false)
     end
 
     def rates_present_for_review?
@@ -819,14 +826,14 @@ class BondLot < ApplicationRecord
 
     # Returns false if any annual rate period between purchased_on and date cannot be resolved.
     # Used by settle_if_matured! to abort settlement when GUS data or rates are missing.
-    def rates_resolvable_through?(date:)
+    def rates_resolvable_through?(date:, allow_import: true)
       return true unless purchased_on.present?
 
       issue_base = anniversary_issue_base
       cursor = purchased_on
 
       while cursor < date
-        return false if annual_rate_for(on: cursor).blank?
+        return false if annual_rate_for(on: cursor, allow_import:).blank?
 
         next_anniversary, _ = anniversary_boundaries(cursor:, issue_base:)
         cursor = [ next_anniversary, date ].min

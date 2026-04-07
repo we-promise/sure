@@ -9,7 +9,11 @@ class CreateBonds < ActiveRecord::Migration[7.2]
       t.string :coupon_frequency
       t.string :subtype
       t.jsonb :locked_attributes, default: {}, null: false
+      t.string :tax_wrapper, default: "none", null: false
+      t.boolean :auto_buy_new_issues, default: false, null: false
       t.timestamps
     end
+
+    add_index :bonds, :tax_wrapper
   end
 end

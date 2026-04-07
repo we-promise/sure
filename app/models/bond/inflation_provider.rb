@@ -17,7 +17,7 @@ module Bond::InflationProvider
     provider.presence || "gus_sdp"
   end
 
-  def record_for_date(provider:, date:, lag_months: 0)
+  def record_for_date(provider:, date:, lag_months: 0, allow_import: true)
     provider_key = key_for(provider)
     return nil unless PROVIDERS.key?(provider_key)
 
@@ -29,6 +29,7 @@ module Bond::InflationProvider
     source_key = provider_key
     persisted = InflationRate.for_date(source: source_key, date: date, lag_months: lag_months)
     return persisted if persisted.present?
+    return nil unless allow_import
 
     provider_klass = provider_class(provider_key)
     return nil if provider_klass.blank?

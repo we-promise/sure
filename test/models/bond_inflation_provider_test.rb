@@ -49,4 +49,29 @@ class BondInflationProviderTest < ActiveSupport::TestCase
     assert_equal 106.4.to_d, second_record.rate_yoy
     assert_equal 1, InflationRate.where(source: "us_bls", year: 2025, month: 1).count
   end
+
+  test "record_for_date with allow_import false reads only persisted non-gus data" do
+    InflationRate.create!(source: "us_bls", year: 2025, month: 1, rate_yoy: 105.7)
+
+    Bond::InflationProvider.expects(:provider_class).never
+
+    record = Bond::InflationProvider.record_for_date(
+      provider: "us_bls",
+      date: Date.new(2025, 3, 10),
+      lag_months: 2,
+      allow_import: false
+    )
+
+    assert_not_nil record
+    assert_equal 105.7.to_d, record.rate_yoy
+
+    missing = Bond::InflationProvider.record_for_date(
+      provider: "es_ine",
+      date: Date.new(2025, 3, 10),
+      lag_months: 2,
+      allow_import: false
+    )
+
+    assert_nil missing
+  end
 end

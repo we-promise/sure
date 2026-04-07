@@ -245,4 +245,31 @@ class BondLotsControllerTest < ActionDispatch::IntegrationTest
     assert_equal 24, lot.term_months
     assert_redirected_to account_path(@account)
   end
+
+  test "ignores incoming tax params for tax-exempt wrapper" do
+    @account.bond.update!(tax_wrapper: "ike")
+
+    assert_difference [ "BondLot.count", "Entry.count", "Transaction.count" ], 1 do
+      assert_enqueued_jobs 1, only: SyncJob do
+        post bond_lots_path, params: {
+          account_id: @account.id,
+          bond_lot: {
+            purchased_on: Date.new(2026, 6, 1),
+            amount: 1000,
+            term_months: 12,
+            interest_rate: 4.0,
+            subtype: "other",
+            rate_type: "fixed",
+            coupon_frequency: "at_maturity",
+            tax_strategy: "standard",
+            tax_rate: 19
+          }
+        }
+      end
+    end
+
+    lot = BondLot.order(:created_at).last
+    assert_equal "exempt", lot.tax_strategy
+    assert_equal 0.to_d, lot.tax_rate.to_d
+  end
 end

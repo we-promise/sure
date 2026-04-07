@@ -10,7 +10,5 @@ class AddGusInflationRatesAndAutoFetchToBondLots < ActiveRecord::Migration[7.2]
     end
 
     add_index :gus_inflation_rates, %i[year month], unique: true
-
-    add_column :bond_lots, :auto_fetch_inflation, :boolean, null: false, default: true
   end
 end
