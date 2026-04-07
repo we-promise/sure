@@ -68,37 +68,47 @@ class BondLot < ApplicationRecord
   # Returns an OpenStruct with :total_value, :total_return, :top_lots
   # for the dashboard summary card.
   def self.dashboard_summary(bond_accounts, family_currency)
-    lots_relation = open
-      .joins(bond: :account)
-      .includes(bond: :account)
-      .where(accounts: { id: bond_accounts.select(:id) })
+    with_inflation_lookup_cache do
+      lots_relation = open
+        .joins(bond: :account)
+        .includes(bond: :account)
+        .where(accounts: { id: bond_accounts.select(:id) })
 
-    total_value = 0.to_d
-    total_return = 0.to_d
-    top_enriched = []
+      total_value = 0.to_d
+      total_return = 0.to_d
+      top_enriched = []
 
-    lots_relation.find_each(batch_size: 200) do |lot|
-      account = lot.account
-      lot_value = lot.estimated_current_value.to_d
-      lot_return = lot_value - lot.amount.to_d
-      converted_value = Money.new(lot_value, account.currency).exchange_to(family_currency, fallback_rate: 1).amount
-      converted_return = Money.new(lot_return, account.currency).exchange_to(family_currency, fallback_rate: 1).amount
+      lots_relation.find_each(batch_size: 200) do |lot|
+        account = lot.account
+        lot_value = lot.estimated_current_value.to_d
+        lot_return = lot_value - lot.amount.to_d
+        converted_value = Money.new(lot_value, account.currency).exchange_to(family_currency, fallback_rate: 1).amount
+        converted_return = Money.new(lot_return, account.currency).exchange_to(family_currency, fallback_rate: 1).amount
 
-      total_value += converted_value
-      total_return += converted_return
+        total_value += converted_value
+        total_return += converted_return
 
-      top_enriched << [ account, lot, converted_value ]
-      if top_enriched.size > TOP_LOTS_LIMIT
-        top_enriched.sort_by! { |_, _, cv| cv }
-        top_enriched.shift
+        top_enriched << [ account, lot, converted_value ]
+        if top_enriched.size > TOP_LOTS_LIMIT
+          top_enriched.sort_by! { |_, _, cv| cv }
+          top_enriched.shift
+        end
       end
+
+      top_lots = top_enriched
+        .sort_by { |_, _, cv| -cv }
+        .map { |account, lot, _| [ account, lot ] }
+
+      OpenStruct.new(total_value: total_value, total_return: total_return, top_lots: top_lots)
     end
+  end
 
-    top_lots = top_enriched
-      .sort_by { |_, _, cv| -cv }
-      .map { |account, lot, _| [ account, lot ] }
-
-    OpenStruct.new(total_value: total_value, total_return: total_return, top_lots: top_lots)
+  def self.with_inflation_lookup_cache
+    previous_cache = Thread.current[:bond_inflation_record_cache]
+    Thread.current[:bond_inflation_record_cache] = {}
+    yield
+  ensure
+    Thread.current[:bond_inflation_record_cache] = previous_cache
   end
 
   before_validation :inherit_defaults_from_bond
@@ -275,6 +285,13 @@ class BondLot < ApplicationRecord
     created_entry
   end
 
+  def save_with_purchase_entry!
+    ActiveRecord::Base.transaction do
+      save!
+      create_purchase_entry!
+    end
+  end
+
   def update_purchase_entry!
     return unless entry
 
@@ -290,6 +307,23 @@ class BondLot < ApplicationRecord
     )
     entry.lock_saved_attributes!
     entry.mark_user_modified!
+  end
+
+  def update_with_purchase_entry!(attributes)
+    ActiveRecord::Base.transaction do
+      update!(attributes)
+      update_purchase_entry!
+    end
+  end
+
+  def destroy_with_purchase_entry!
+    ActiveRecord::Base.transaction do
+      if entry
+        entry.destroy!
+      else
+        destroy!
+      end
+    end
   end
 
   def current_rate_percent(on: Date.current)
@@ -610,12 +644,18 @@ class BondLot < ApplicationRecord
     end
 
     def inflation_rate_record_for(on:, allow_import: true)
+      cache_key = [ inflation_provider_key, on.to_date, cpi_lag_months.to_i, allow_import ]
+      cache = Thread.current[:bond_inflation_record_cache]
+      return cache[cache_key] if cache&.key?(cache_key)
+
       Bond::InflationProvider.record_for_date(
         provider: inflation_provider_key,
         date: on,
         lag_months: cpi_lag_months.to_i,
         allow_import:
-      )
+      ).tap do |result|
+        cache[cache_key] = result if cache
+      end
     end
 
     def inflation_source_label

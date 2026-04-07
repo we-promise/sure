@@ -21,12 +21,12 @@
 - [x] **Dodać test: walidacja nie robi live importu CPI**  
   Dla `requires_rate_review` + provider non-GUS walidacja ma używać tylko danych lokalnych/persisted.
 
-- [ ] **Dashboard summary — ryzyko N+1 / koszt obliczeniowy**  
+- [x] **Dashboard summary — ryzyko N+1 / koszt obliczeniowy**  
   Dla każdego lotu: `estimated_current_value` (iteracja po okresach + rate lookup)  
   Brak cache dla rate context per data/provider.  
   Rozważ: memoizacja, cache, lub batch loading.
 
-- [ ] **Controller zbyt gruby (skinny controllers!)**  
+- [x] **Controller zbyt gruby (skinny controllers!)**  
   Tworzenie/aktualizacja lotu + entry + sync + mapowanie błędów  
   Przenieść do modelu lub command object (PORO).
 
@@ -41,11 +41,11 @@
 
 ### 🟡 INFO
 
-- [ ] **Autoryzacja OK**  
+- [x] **Autoryzacja OK**  
   `family + accessible_by + require_account_permission!` — wszystko git.  
   *(Niczego nie robić)*
 
-- [ ] **SQL injection — OK**  
+- [x] **SQL injection — OK**  
   Brak dynamicznego SQL z user input.  
   *(Niczego nie robić)*
 

@@ -36,10 +36,7 @@ class BondLotsController < ApplicationController
 
     if @bond_lot.valid?
       begin
-        ActiveRecord::Base.transaction do
-          @bond_lot.save!
-          @bond_lot.create_purchase_entry!
-        end
+        @bond_lot.save_with_purchase_entry!
       rescue ActiveRecord::RecordInvalid => e
         @bond_lot.errors.add(:base, e.record.errors.full_messages.to_sentence)
         return render :new, status: :unprocessable_entity
@@ -59,10 +56,7 @@ class BondLotsController < ApplicationController
     old_purchased_on = @bond_lot.purchased_on
 
     begin
-      ActiveRecord::Base.transaction do
-        @bond_lot.update!(bond_lot_params(@bond_lot.bond))
-        @bond_lot.update_purchase_entry!
-      end
+      @bond_lot.update_with_purchase_entry!(bond_lot_params(@bond_lot.bond))
       @bond_lot.account.sync_later(window_start_date: [ old_purchased_on, @bond_lot.purchased_on ].min)
       redirect_back_or_to account_path(@account), notice: t("bond_lots.update.success")
     rescue ActiveRecord::RecordInvalid => e
@@ -78,17 +72,7 @@ class BondLotsController < ApplicationController
     account = @bond_lot.account
     sync_start_date = @bond_lot.purchased_on
 
-    entry = @bond_lot.entry
-
-    ActiveRecord::Base.transaction do
-      # Entry has_one :bond_lot, dependent: :destroy — destroying entry cascades to lot.
-      # Only destroy lot directly when no entry exists.
-      if entry
-        entry.destroy!
-      else
-        @bond_lot.destroy!
-      end
-    end
+    @bond_lot.destroy_with_purchase_entry!
 
     account.sync_later(window_start_date: sync_start_date)
 
