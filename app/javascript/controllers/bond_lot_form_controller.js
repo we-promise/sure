@@ -59,7 +59,7 @@ export default class extends Controller {
 
     this.inflationInputTargets.forEach((input) => {
       input.disabled = !inflationLinked
-      input.required = inflationLinked && input.name !== "bond_lot[early_redemption_fee]"
+      input.required = inflationLinked && !input.dataset.optional
     })
 
     this.otherRequiredInputTargets.forEach((input) => {

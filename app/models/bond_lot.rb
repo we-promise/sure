@@ -34,7 +34,7 @@ class BondLot < ApplicationRecord
     return {} if provider_lag_pairs.blank?
 
     provider_lag_pairs.index_with do |provider, lag|
-      Bond::InflationProvider.record_for_date(provider:, date: on, lag_months: lag)
+      Bond::InflationProvider.record_for_date(provider:, date: on, lag_months: lag, allow_import: false)
     end
   end
 
@@ -310,9 +310,11 @@ class BondLot < ApplicationRecord
   end
 
   def update_with_purchase_entry!(attributes)
-    ActiveRecord::Base.transaction do
-      update!(attributes)
-      update_purchase_entry!
+    with_lock do
+      ActiveRecord::Base.transaction do
+        update!(attributes)
+        update_purchase_entry!
+      end
     end
   end
 

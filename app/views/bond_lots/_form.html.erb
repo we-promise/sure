@@ -90,7 +90,7 @@
         <%= t("bond_lots.form.subtype_derived_hint") %>
       </p>
 
-          <div data-bond-lot-form-target="otherFields">
+      <div data-bond-lot-form-target="otherFields">
         <%= form.select :rate_type,
           Bond::RATE_TYPES.map { |value| [ t("bond_lots.form.rate_types.#{value}", default: value.titleize), value ] },
           { label: t("bond_lots.form.rate_type"), required: true },
@@ -168,7 +168,7 @@
         <%= form.money_field :early_redemption_fee,
                              label: t("bond_lots.form.early_redemption_fee"),
                              default_currency: account.currency,
-                             data: { bond_lot_form_target: "inflationInput" } %>
+                             data: { bond_lot_form_target: "inflationInput", optional: true } %>
       </div>
 
       <div class="space-y-2">

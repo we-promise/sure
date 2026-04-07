@@ -30,7 +30,8 @@ class InflationRate < ApplicationRecord
         next if month <= 0
 
         rate_yoy = row[:rate_yoy].to_d
-        next if rate_yoy.zero?
+        # Skip rows with no rate data. Zero is valid (0% YoY change) and must not be dropped.
+        next if row[:rate_yoy].nil?
 
         existing = find_by(source: source_key, year: target_year, month: month)
         next if !force && existing.present? && existing.rate_yoy == rate_yoy
@@ -52,9 +53,10 @@ class InflationRate < ApplicationRecord
 
       def not_found_error?(error)
         return false if error.blank?
+        return true if error.respond_to?(:response) && error.response&.dig(:status) == 404
 
         message = error.message.to_s
-        message.include?("status 404") || message.include?("404")
+        message.include?("status 404") || message.match?(/\b404\b/)
       end
   end
 end

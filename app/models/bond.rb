@@ -10,7 +10,6 @@ class Bond < ApplicationRecord
   }.freeze
 
   before_validation :assign_maturity_date_from_term
-  before_validation :apply_subtype_defaults
   before_validation :normalize_tax_wrapper_settings
   before_validation :normalize_legacy_subtype
 
@@ -185,15 +184,6 @@ class Bond < ApplicationRecord
     def normalize_tax_wrapper_settings
       self.tax_wrapper = "none" if tax_wrapper.blank?
       self.auto_buy_new_issues = false unless tax_exempt_wrapper?
-    end
-
-    def apply_subtype_defaults
-      defaults = PRODUCT_DEFAULTS[subtype]
-      return if defaults.blank?
-
-      self.term_months ||= defaults[:term_months]
-      self.rate_type ||= defaults[:rate_type]
-      self.coupon_frequency ||= defaults[:coupon_frequency]
     end
 
     def assign_maturity_date_from_term

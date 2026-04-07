@@ -2,7 +2,8 @@ class Provider::EsIneCpi < Provider
   Error = Class.new(Provider::Error)
 
   # Override via env when deploying, because INE endpoint can vary by dataset code.
-  DEFAULT_BASE_URL = ENV["ES_INE_CPI_BASE_URL"].presence || "https://servicios.ine.es/wstempus/js/EN/DATOS_SERIE".freeze
+  # Trailing slash required so Faraday appends series_id as a path segment, not a replacement.
+  DEFAULT_BASE_URL = ENV["ES_INE_CPI_BASE_URL"].presence || "https://servicios.ine.es/wstempus/js/EN/DATOS_SERIE/".freeze
 
   def initialize(base_url: DEFAULT_BASE_URL, series_id: ENV["ES_INE_CPI_SERIES_ID"])
     @base_url = base_url
@@ -46,7 +47,7 @@ class Provider::EsIneCpi < Provider
     end
 
     def fetch_rows(from:, to:)
-      response = client.get("/#{series_id}") do |req|
+      response = client.get(series_id) do |req|
         req.params["tip"] = "AM"
         req.params["date"] = from.strftime("%Y%m%d")
         req.params["datef"] = to.strftime("%Y%m%d")
