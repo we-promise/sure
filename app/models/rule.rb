@@ -42,7 +42,7 @@ class Rule < ApplicationRecord
 
   # Creates a categorization rule for the Quick Categorize Wizard.
   # Returns the saved rule, or nil if a duplicate or invalid rule already exists.
-  def self.create_from_grouping!(family, grouping_key, category, transaction_type: nil)
+  def self.create_from_grouping(family, grouping_key, category, transaction_type: nil)
     rule = family.rules.build(name: grouping_key, resource_type: "transaction", active: true)
     rule.conditions.build(condition_type: "transaction_name", operator: "like", value: grouping_key)
     rule.conditions.build(condition_type: "transaction_type", operator: "=", value: transaction_type) if transaction_type.present?

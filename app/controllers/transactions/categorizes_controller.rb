@@ -32,7 +32,7 @@ class Transactions::CategorizesController < ApplicationController
     count    = entries.bulk_update!({ category_id: category.id })
 
     if params[:create_rule] == "1"
-      rule = Rule.create_from_grouping!(
+      rule = Rule.create_from_grouping(
         Current.family,
         params[:grouping_key],
         category,
