@@ -617,7 +617,9 @@ class BondLot < ApplicationRecord
     def normalize_inflation_provider
       inflation_like = canonical_subtype.in?(Bond::INFLATION_LINKED_SUBTYPES)
       self.inflation_provider = nil unless inflation_like
-      self.inflation_provider = "gus_sdp" if inflation_like && auto_fetch_inflation && inflation_provider.blank?
+      if inflation_like && auto_fetch_inflation && inflation_provider.blank? && Setting.gus_inflation_import_enabled_effective
+        self.auto_fetch_inflation = false
+      end
     end
 
     def deflation_floor_applies?

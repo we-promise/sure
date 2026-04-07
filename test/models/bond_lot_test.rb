@@ -295,6 +295,7 @@ class BondLotTest < ActiveSupport::TestCase
       inflation_margin: 1.5,
       inflation_rate_assumption: 1.0,
       auto_fetch_inflation: true,
+      inflation_provider: "gus_sdp",
       cpi_lag_months: 2,
       units: 10,
       nominal_per_unit: 100,
@@ -311,7 +312,9 @@ class BondLotTest < ActiveSupport::TestCase
     assert_in_delta 1139.55, value.to_f, 1.0
   end
 
-  test "defaults inflation_provider to gus_sdp for inflation linked lots with auto fetch" do
+  test "disables auto fetch when inflation provider is blank" do
+    Setting.stubs(:gus_inflation_import_enabled_effective).returns(true)
+
     lot = BondLot.new(
       bond: bonds(:one),
       purchased_on: Date.current,
@@ -331,7 +334,8 @@ class BondLotTest < ActiveSupport::TestCase
 
     lot.valid?
 
-    assert_equal "gus_sdp", lot.inflation_provider
+    assert_not lot.auto_fetch_inflation
+    assert_nil lot.inflation_provider
   end
 
   test "clears inflation_provider for non-inflation-linked lot" do
@@ -471,6 +475,7 @@ class BondLotTest < ActiveSupport::TestCase
       inflation_margin: 1.5,
       inflation_rate_assumption: 4.0,
       auto_fetch_inflation: true,
+      inflation_provider: "gus_sdp",
       cpi_lag_months: 2,
       units: 10,
       nominal_per_unit: 100,
@@ -520,6 +525,7 @@ class BondLotTest < ActiveSupport::TestCase
       inflation_margin: 0.9,
       inflation_rate_assumption: 1.0,
       auto_fetch_inflation: true,
+      inflation_provider: "gus_sdp",
       cpi_lag_months: 2,
       units: 10,
       nominal_per_unit: 100,
@@ -600,6 +606,7 @@ class BondLotTest < ActiveSupport::TestCase
       inflation_margin: 2.0,
       inflation_rate_assumption: 3.0,
       auto_fetch_inflation: true,
+      inflation_provider: "gus_sdp",
       cpi_lag_months: 2,
       units: 10,
       nominal_per_unit: 100,
@@ -624,6 +631,7 @@ class BondLotTest < ActiveSupport::TestCase
       inflation_margin: 0.9,
       inflation_rate_assumption: 1.0,
       auto_fetch_inflation: true,
+      inflation_provider: "gus_sdp",
       cpi_lag_months: 2,
       units: 10,
       nominal_per_unit: 100,
@@ -650,6 +658,7 @@ class BondLotTest < ActiveSupport::TestCase
       inflation_margin: 0.9,
       inflation_rate_assumption: 1.0,
       auto_fetch_inflation: true,
+      inflation_provider: "gus_sdp",
       cpi_lag_months: 2,
       units: 10,
       nominal_per_unit: 100,
@@ -675,6 +684,7 @@ class BondLotTest < ActiveSupport::TestCase
       first_period_rate: 4.0,
       inflation_margin: 0.9,
       auto_fetch_inflation: true,
+      inflation_provider: "gus_sdp",
       cpi_lag_months: 2,
       units: 10,
       nominal_per_unit: 100,
@@ -703,6 +713,7 @@ class BondLotTest < ActiveSupport::TestCase
       first_period_rate: 4.0,
       inflation_margin: 0.9,
       auto_fetch_inflation: true,
+      inflation_provider: "gus_sdp",
       cpi_lag_months: 2,
       units: 10,
       nominal_per_unit: 100,
@@ -729,6 +740,7 @@ class BondLotTest < ActiveSupport::TestCase
       first_period_rate: 4.0,
       inflation_margin: 0.9,
       auto_fetch_inflation: true,
+      inflation_provider: "gus_sdp",
       cpi_lag_months: 2,
       units: 10,
       nominal_per_unit: 100,
@@ -742,8 +754,7 @@ class BondLotTest < ActiveSupport::TestCase
   end
 
   test "does not enqueue inflation backfill for ES lots without series id" do
-    old_series_id = Setting.es_ine_cpi_series_id
-    Setting.es_ine_cpi_series_id = nil
+    Setting.stubs(:es_ine_cpi_series_id).returns(nil)
 
     account = accounts(:bond)
     lot = account.bond.bond_lots.create!(
@@ -765,7 +776,6 @@ class BondLotTest < ActiveSupport::TestCase
 
     assert_not lot.send(:needs_inflation_backfill?)
   ensure
-    Setting.es_ine_cpi_series_id = old_series_id
     lot&.destroy
   end
 

@@ -117,12 +117,20 @@
       </div>
 
       <% if Setting.gus_inflation_import_enabled_effective %>
+        <% selected_provider = (bond_lot.auto_fetch_inflation.nil? || bond_lot.auto_fetch_inflation) ? (bond_lot.inflation_provider.presence || "gus_sdp") : bond_lot.inflation_provider %>
         <div data-bond-lot-form-target="inflationFields">
           <%= form.select :inflation_provider,
                           Bond::InflationProvider::PROVIDERS.map { |key, _klass| [key.humanize, key] },
                           {
                             label: t("bond_lots.form.inflation_provider"),
-                            include_blank: t("bond_lots.form.inflation_provider_blank")
+                            include_blank: t("bond_lots.form.inflation_provider_blank"),
+                            selected: selected_provider
+                          },
+                          {
+                            data: {
+                              bond_lot_form_target: "providerSelect",
+                              action: "change->bond-lot-form#syncAutoFetchWithProvider"
+                            }
                           } %>
         </div>
 

@@ -5,6 +5,10 @@ export default class extends Controller {
     "productCodeSelect",
     "subtypeSelect",
     "subtypeDerivedHint",
+    "providerSelect",
+    "autoFetchInput",
+    "manualInflationField",
+    "manualInflationInput",
     "inflationFields",
     "otherFields",
     "inflationInput",
@@ -50,6 +54,14 @@ export default class extends Controller {
     this.#toggleManualInflationField()
   }
 
+  syncAutoFetchWithProvider() {
+    if (!this.globalImportEnabledValue || !this.hasAutoFetchInputTarget || !this.hasProviderSelectTarget) return
+
+    const provider = `${this.providerSelectTarget.value || ""}`.trim()
+    this.autoFetchInputTarget.value = provider === "" ? "0" : "1"
+    this.#toggleManualInflationField()
+  }
+
   #toggleSubtypeFields() {
     const subtype = this.subtypeSelectTarget.value
     const inflationLinked = this.inflationSubtypesValue.includes(subtype)
@@ -76,29 +88,25 @@ export default class extends Controller {
   }
 
   #toggleManualInflationField() {
-    const manualInflationField = this.element.querySelector('[data-bond-lot-form-target="manualInflationField"]')
-    const manualInflationInput = this.element.querySelector('[data-bond-lot-form-target="manualInflationInput"]')
-    if (!manualInflationField || !manualInflationInput) return
+    if (!this.hasManualInflationFieldTarget || !this.hasManualInflationInputTarget) return
 
     const inflationLinked = this.inflationSubtypesValue.includes(this.subtypeSelectTarget.value)
     const autoFetch = this.#currentAutoFetchValue()
     const showManualField = inflationLinked && (!autoFetch || !this.globalImportEnabledValue)
     const required = inflationLinked && !autoFetch
 
-    manualInflationField.classList.toggle("hidden", !showManualField)
-    manualInflationInput.disabled = !showManualField
-    manualInflationInput.required = required
+    this.manualInflationFieldTarget.classList.toggle("hidden", !showManualField)
+    this.manualInflationInputTarget.disabled = !showManualField
+    this.manualInflationInputTarget.required = required
   }
 
   #currentAutoFetchValue() {
-    const autoFetchInput = this.element.querySelector('[data-bond-lot-form-target="autoFetchInput"]')
-
-    if (autoFetchInput) {
-      if (autoFetchInput.type === "checkbox") {
-        return autoFetchInput.checked
+    if (this.hasAutoFetchInputTarget) {
+      if (this.autoFetchInputTarget.type === "checkbox") {
+        return this.autoFetchInputTarget.checked
       }
 
-      const value = `${autoFetchInput.value}`.trim().toLowerCase()
+      const value = `${this.autoFetchInputTarget.value}`.trim().toLowerCase()
       return value === "1" || value === "true"
     }
 
