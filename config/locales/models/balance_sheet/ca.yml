@@ -1,0 +1,7 @@
+---
+ca:
+  models:
+    balance_sheet:
+      classifications:
+        asset: "Actius"
+        liability: "Passius"

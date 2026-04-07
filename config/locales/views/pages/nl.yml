@@ -18,6 +18,9 @@ nl:
         no_account_title: Nog geen accounts
       balance_sheet:
         title: "Balans"
+        name: "Naam"
+        weight: "Gewicht"
+        value: "Waarde"
         no_items: "Nog geen %{name}"
         add_accounts: "Voeg uw %{name} accounts toe om een volledig overzicht te zien"
       cashflow_sankey:

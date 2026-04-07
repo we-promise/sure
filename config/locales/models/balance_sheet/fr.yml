@@ -1,0 +1,7 @@
+---
+fr:
+  models:
+    balance_sheet:
+      classifications:
+        asset: "Actifs"
+        liability: "Passifs"

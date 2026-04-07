@@ -1,0 +1,7 @@
+---
+nl:
+  models:
+    balance_sheet:
+      classifications:
+        asset: "Activa"
+        liability: "Passiva"

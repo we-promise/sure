@@ -1,0 +1,7 @@
+---
+zh-CN:
+  models:
+    balance_sheet:
+      classifications:
+        asset: "资产"
+        liability: "负债"

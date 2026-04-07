@@ -1,0 +1,55 @@
+---
+ca:
+  models:
+    period:
+      custom_period: "Període personalitzat"
+      custom: "Personalitzat"
+      periods:
+        last_day:
+          label_short: "1D"
+          label: "Últim dia"
+          comparison_label: "vs. ahir"
+        current_week:
+          label_short: "WTD"
+          label: "Setmana actual"
+          comparison_label: "vs. inici de setmana"
+        last_7_days:
+          label_short: "7D"
+          label: "Últims 7 dies"
+          comparison_label: "vs. setmana passada"
+        current_month:
+          label_short: "MTD"
+          label: "Mes actual"
+          comparison_label: "vs. inici de mes"
+        last_month:
+          label_short: "LM"
+          label: "Mes passat"
+          comparison_label: "vs. mes passat"
+        last_30_days:
+          label_short: "30D"
+          label: "Últims 30 dies"
+          comparison_label: "vs. últims 30 dies"
+        last_90_days:
+          label_short: "90D"
+          label: "Últims 90 dies"
+          comparison_label: "vs. últim trimestre"
+        current_year:
+          label_short: "YTD"
+          label: "Any actual"
+          comparison_label: "vs. inici d'any"
+        last_365_days:
+          label_short: "365D"
+          label: "Últims 365 dies"
+          comparison_label: "vs. fa 1 any"
+        last_5_years:
+          label_short: "5Y"
+          label: "Últims 5 anys"
+          comparison_label: "vs. fa 5 anys"
+        last_10_years:
+          label_short: "10Y"
+          label: "Últims 10 anys"
+          comparison_label: "vs. fa 10 anys"
+        all_time:
+          label_short: "All"
+          label: "Tot el temps"
+          comparison_label: "vs. l'inici"

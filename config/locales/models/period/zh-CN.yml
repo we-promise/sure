@@ -1,0 +1,55 @@
+---
+zh-CN:
+  models:
+    period:
+      custom_period: "自定义时段"
+      custom: "自定义"
+      periods:
+        last_day:
+          label_short: "1D"
+          label: "最近一天"
+          comparison_label: "vs. 昨天"
+        current_week:
+          label_short: "WTD"
+          label: "本周"
+          comparison_label: "vs. 本周初"
+        last_7_days:
+          label_short: "7D"
+          label: "最近7天"
+          comparison_label: "vs. 上周"
+        current_month:
+          label_short: "MTD"
+          label: "本月"
+          comparison_label: "vs. 本月初"
+        last_month:
+          label_short: "LM"
+          label: "上月"
+          comparison_label: "vs. 上月"
+        last_30_days:
+          label_short: "30D"
+          label: "最近30天"
+          comparison_label: "vs. 最近30天"
+        last_90_days:
+          label_short: "90D"
+          label: "最近90天"
+          comparison_label: "vs. 上季度"
+        current_year:
+          label_short: "YTD"
+          label: "今年"
+          comparison_label: "vs. 年初"
+        last_365_days:
+          label_short: "365D"
+          label: "最近365天"
+          comparison_label: "vs. 1年前"
+        last_5_years:
+          label_short: "5Y"
+          label: "最近5年"
+          comparison_label: "vs. 5年前"
+        last_10_years:
+          label_short: "10Y"
+          label: "最近10年"
+          comparison_label: "vs. 10年前"
+        all_time:
+          label_short: "All"
+          label: "所有时间"
+          comparison_label: "vs. 最初"

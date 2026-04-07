@@ -15,6 +15,10 @@ ro:
         no_account_subtitle: Deoarece nu au fost adăugate conturi, nu există date de afișat. Adaugă primele tale conturi pentru a începe să vezi datele din tabloul de bord.
         no_account_title: Niciun cont încă
       balance_sheet:
+        title: "Bilanț"
+        name: "Nume"
+        weight: "Pondere"
+        value: "Valoare"
         no_items: "Niciun %{name} încă"
         add_accounts: "Adaugă conturile tale de %{name} pentru a vedea o defalcare completă"
       cashflow_sankey:

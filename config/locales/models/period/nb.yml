@@ -1,0 +1,55 @@
+---
+nb:
+  models:
+    period:
+      custom_period: "Egendefinert periode"
+      custom: "Egendefinert"
+      periods:
+        last_day:
+          label_short: "1D"
+          label: "Siste dag"
+          comparison_label: "vs. i går"
+        current_week:
+          label_short: "WTD"
+          label: "Denne uken"
+          comparison_label: "vs. starten av uken"
+        last_7_days:
+          label_short: "7D"
+          label: "Siste 7 dager"
+          comparison_label: "vs. forrige uke"
+        current_month:
+          label_short: "MTD"
+          label: "Denne måneden"
+          comparison_label: "vs. starten av måneden"
+        last_month:
+          label_short: "LM"
+          label: "Forrige måned"
+          comparison_label: "vs. forrige måned"
+        last_30_days:
+          label_short: "30D"
+          label: "Siste 30 dager"
+          comparison_label: "vs. siste 30 dager"
+        last_90_days:
+          label_short: "90D"
+          label: "Siste 90 dager"
+          comparison_label: "vs. forrige kvartal"
+        current_year:
+          label_short: "YTD"
+          label: "Dette året"
+          comparison_label: "vs. starten av året"
+        last_365_days:
+          label_short: "365D"
+          label: "Siste 365 dager"
+          comparison_label: "vs. 1 år siden"
+        last_5_years:
+          label_short: "5Y"
+          label: "Siste 5 år"
+          comparison_label: "vs. 5 år siden"
+        last_10_years:
+          label_short: "10Y"
+          label: "Siste 10 år"
+          comparison_label: "vs. 10 år siden"
+        all_time:
+          label_short: "All"
+          label: "Hele perioden"
+          comparison_label: "vs. begynnelsen"

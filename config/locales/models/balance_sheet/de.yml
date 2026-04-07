@@ -1,0 +1,7 @@
+---
+de:
+  models:
+    balance_sheet:
+      classifications:
+        asset: "Vermögen"
+        liability: "Verbindlichkeiten"

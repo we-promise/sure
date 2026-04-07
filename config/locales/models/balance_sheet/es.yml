@@ -1,0 +1,7 @@
+---
+es:
+  models:
+    balance_sheet:
+      classifications:
+        asset: "Activos"
+        liability: "Pasivos"

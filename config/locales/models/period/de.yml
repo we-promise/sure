@@ -1,0 +1,55 @@
+---
+de:
+  models:
+    period:
+      custom_period: "Benutzerdefinierter Zeitraum"
+      custom: "Benutzerdefiniert"
+      periods:
+        last_day:
+          label_short: "1D"
+          label: "Letzter Tag"
+          comparison_label: "vs. gestern"
+        current_week:
+          label_short: "WTD"
+          label: "Aktuelle Woche"
+          comparison_label: "vs. Wochenbeginn"
+        last_7_days:
+          label_short: "7D"
+          label: "Letzte 7 Tage"
+          comparison_label: "vs. letzte Woche"
+        current_month:
+          label_short: "MTD"
+          label: "Aktueller Monat"
+          comparison_label: "vs. Monatsbeginn"
+        last_month:
+          label_short: "LM"
+          label: "Letzter Monat"
+          comparison_label: "vs. letzter Monat"
+        last_30_days:
+          label_short: "30D"
+          label: "Letzte 30 Tage"
+          comparison_label: "vs. letzte 30 Tage"
+        last_90_days:
+          label_short: "90D"
+          label: "Letzte 90 Tage"
+          comparison_label: "vs. letztes Quartal"
+        current_year:
+          label_short: "YTD"
+          label: "Aktuelles Jahr"
+          comparison_label: "vs. Jahresbeginn"
+        last_365_days:
+          label_short: "365D"
+          label: "Letzte 365 Tage"
+          comparison_label: "vs. vor 1 Jahr"
+        last_5_years:
+          label_short: "5Y"
+          label: "Letzte 5 Jahre"
+          comparison_label: "vs. vor 5 Jahren"
+        last_10_years:
+          label_short: "10Y"
+          label: "Letzte 10 Jahre"
+          comparison_label: "vs. vor 10 Jahren"
+        all_time:
+          label_short: "All"
+          label: "Gesamter Zeitraum"
+          comparison_label: "vs. Anfang"

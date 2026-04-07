@@ -1,0 +1,7 @@
+---
+ro:
+  models:
+    balance_sheet:
+      classifications:
+        asset: "Active"
+        liability: "Datorii"

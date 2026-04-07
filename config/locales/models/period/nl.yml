@@ -1,0 +1,55 @@
+---
+nl:
+  models:
+    period:
+      custom_period: "Aangepaste periode"
+      custom: "Aangepast"
+      periods:
+        last_day:
+          label_short: "1D"
+          label: "Laatste dag"
+          comparison_label: "vs. gisteren"
+        current_week:
+          label_short: "WTD"
+          label: "Huidige week"
+          comparison_label: "vs. begin van de week"
+        last_7_days:
+          label_short: "7D"
+          label: "Laatste 7 dagen"
+          comparison_label: "vs. vorige week"
+        current_month:
+          label_short: "MTD"
+          label: "Huidige maand"
+          comparison_label: "vs. begin van de maand"
+        last_month:
+          label_short: "LM"
+          label: "Vorige maand"
+          comparison_label: "vs. vorige maand"
+        last_30_days:
+          label_short: "30D"
+          label: "Laatste 30 dagen"
+          comparison_label: "vs. laatste 30 dagen"
+        last_90_days:
+          label_short: "90D"
+          label: "Laatste 90 dagen"
+          comparison_label: "vs. vorig kwartaal"
+        current_year:
+          label_short: "YTD"
+          label: "Huidig jaar"
+          comparison_label: "vs. begin van het jaar"
+        last_365_days:
+          label_short: "365D"
+          label: "Laatste 365 dagen"
+          comparison_label: "vs. 1 jaar geleden"
+        last_5_years:
+          label_short: "5Y"
+          label: "Laatste 5 jaar"
+          comparison_label: "vs. 5 jaar geleden"
+        last_10_years:
+          label_short: "10Y"
+          label: "Laatste 10 jaar"
+          comparison_label: "vs. 10 jaar geleden"
+        all_time:
+          label_short: "All"
+          label: "Altijd"
+          comparison_label: "vs. begin"

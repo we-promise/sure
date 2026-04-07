@@ -26,6 +26,9 @@ de:
         no_account_title: Noch keine Konten vorhanden
       balance_sheet:
         title: "Bilanz"
+        name: "Name"
+        weight: "Gewicht"
+        value: "Wert"
         no_items: "Noch keine %{name}"
         add_accounts: "Füge deine %{name}-Konten hinzu, um eine vollständige Übersicht zu erhalten."
       cashflow_sankey:

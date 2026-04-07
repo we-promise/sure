@@ -1,0 +1,7 @@
+---
+tr:
+  models:
+    balance_sheet:
+      classifications:
+        asset: "Varlıklar"
+        liability: "Borçlar"

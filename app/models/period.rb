@@ -11,70 +11,37 @@ class Period
 
   PERIODS = {
     "last_day" => {
-      date_range: -> { [ 1.day.ago.to_date, Date.current ] },
-      label_short: "1D",
-      label: "Last Day",
-      comparison_label: "vs. yesterday"
+      date_range: -> { [ 1.day.ago.to_date, Date.current ] }
     },
     "current_week" => {
-      date_range: -> { [ Date.current.beginning_of_week, Date.current ] },
-      label_short: "WTD",
-      label: "Current Week",
-      comparison_label: "vs. start of week"
+      date_range: -> { [ Date.current.beginning_of_week, Date.current ] }
     },
     "last_7_days" => {
-      date_range: -> { [ 7.days.ago.to_date, Date.current ] },
-      label_short: "7D",
-      label: "Last 7 Days",
-      comparison_label: "vs. last week"
+      date_range: -> { [ 7.days.ago.to_date, Date.current ] }
     },
     "current_month" => {
-      date_range: -> { [ Date.current.beginning_of_month, Date.current ] },
-      label_short: "MTD",
-      label: "Current Month",
-      comparison_label: "vs. start of month"
+      date_range: -> { [ Date.current.beginning_of_month, Date.current ] }
     },
     "last_month" => {
-      date_range: -> { [ 1.month.ago.beginning_of_month.to_date, 1.month.ago.end_of_month.to_date ] },
-      label_short: "LM",
-      label: "Last Month",
-      comparison_label: "vs. last month"
+      date_range: -> { [ 1.month.ago.beginning_of_month.to_date, 1.month.ago.end_of_month.to_date ] }
     },
     "last_30_days" => {
-      date_range: -> { [ 30.days.ago.to_date, Date.current ] },
-      label_short: "30D",
-      label: "Last 30 Days",
-      comparison_label: "vs. last 30 days"
+      date_range: -> { [ 30.days.ago.to_date, Date.current ] }
     },
     "last_90_days" => {
-      date_range: -> { [ 90.days.ago.to_date, Date.current ] },
-      label_short: "90D",
-      label: "Last 90 Days",
-      comparison_label: "vs. last quarter"
+      date_range: -> { [ 90.days.ago.to_date, Date.current ] }
     },
     "current_year" => {
-      date_range: -> { [ Date.current.beginning_of_year, Date.current ] },
-      label_short: "YTD",
-      label: "Current Year",
-      comparison_label: "vs. start of year"
+      date_range: -> { [ Date.current.beginning_of_year, Date.current ] }
     },
     "last_365_days" => {
-      date_range: -> { [ 365.days.ago.to_date, Date.current ] },
-      label_short: "365D",
-      label: "Last 365 Days",
-      comparison_label: "vs. 1 year ago"
+      date_range: -> { [ 365.days.ago.to_date, Date.current ] }
     },
     "last_5_years" => {
-      date_range: -> { [ 5.years.ago.to_date, Date.current ] },
-      label_short: "5Y",
-      label: "Last 5 Years",
-      comparison_label: "vs. 5 years ago"
+      date_range: -> { [ 5.years.ago.to_date, Date.current ] }
     },
     "last_10_years" => {
-      date_range: -> { [ 10.years.ago.to_date, Date.current ] },
-      label_short: "10Y",
-      label: "Last 10 Years",
-      comparison_label: "vs. 10 years ago"
+      date_range: -> { [ 10.years.ago.to_date, Date.current ] }
     },
     "all_time" => {
       date_range: -> {
@@ -87,10 +54,7 @@ class Period
           5.years.ago.to_date
         end
         [ start_date, Date.current ]
-      },
-      label_short: "All",
-      label: "All Time",
-      comparison_label: "vs. beginning"
+      }
     }
   }
 
@@ -173,34 +137,30 @@ class Period
   end
 
   def label
-    if key_metadata
-      key_metadata.fetch(:label)
+    if key
+      I18n.t("models.period.periods.#{key}.label")
     else
-      "Custom Period"
+      I18n.t("models.period.custom_period")
     end
   end
 
   def label_short
-    if key_metadata
-      key_metadata.fetch(:label_short)
+    if key
+      I18n.t("models.period.periods.#{key}.label_short")
     else
-      "Custom"
+      I18n.t("models.period.custom")
     end
   end
 
   def comparison_label
-    if key_metadata
-      key_metadata.fetch(:comparison_label)
+    if key
+      I18n.t("models.period.periods.#{key}.comparison_label")
     else
       "#{start_date.strftime(@date_format)} to #{end_date.strftime(@date_format)}"
     end
   end
 
   private
-    def key_metadata
-      @key_metadata ||= PERIODS[key]
-    end
-
     def must_be_valid_date_range
       return if start_date.nil? || end_date.nil?
       unless start_date.is_a?(Date) && end_date.is_a?(Date)

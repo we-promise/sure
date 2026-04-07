@@ -18,6 +18,9 @@ pt-BR:
         no_account_title: Nenhuma conta ainda
       balance_sheet:
         title: "Balanço Patrimonial"
+        name: "Nome"
+        weight: "Peso"
+        value: "Valor"
         no_items: "Nenhuma %{name} ainda"
         add_accounts: "Adicione suas contas de %{name} para ver um detalhamento completo"
       cashflow_sankey:

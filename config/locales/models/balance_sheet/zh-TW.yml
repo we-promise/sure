@@ -1,0 +1,7 @@
+---
+zh-TW:
+  models:
+    balance_sheet:
+      classifications:
+        asset: "資產"
+        liability: "負債"

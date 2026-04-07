@@ -18,6 +18,9 @@ zh-TW:
         no_account_title: 尚無帳戶
       balance_sheet:
         title: "資產負債表"
+        name: "名稱"
+        weight: "權重"
+        value: "價值"
         no_items: "尚無 %{name}"
         add_accounts: "新增您的 %{name} 帳戶以查看詳細分析"
       cashflow_sankey:

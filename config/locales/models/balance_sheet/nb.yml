@@ -1,0 +1,7 @@
+---
+nb:
+  models:
+    balance_sheet:
+      classifications:
+        asset: "Eiendeler"
+        liability: "Gjeld"

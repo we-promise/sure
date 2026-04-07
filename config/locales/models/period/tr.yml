@@ -1,0 +1,55 @@
+---
+tr:
+  models:
+    period:
+      custom_period: "Özel Dönem"
+      custom: "Özel"
+      periods:
+        last_day:
+          label_short: "1D"
+          label: "Son Gün"
+          comparison_label: "vs. dün"
+        current_week:
+          label_short: "WTD"
+          label: "Bu Hafta"
+          comparison_label: "vs. hafta başı"
+        last_7_days:
+          label_short: "7D"
+          label: "Son 7 Gün"
+          comparison_label: "vs. geçen hafta"
+        current_month:
+          label_short: "MTD"
+          label: "Bu Ay"
+          comparison_label: "vs. ay başı"
+        last_month:
+          label_short: "LM"
+          label: "Geçen Ay"
+          comparison_label: "vs. geçen ay"
+        last_30_days:
+          label_short: "30D"
+          label: "Son 30 Gün"
+          comparison_label: "vs. son 30 gün"
+        last_90_days:
+          label_short: "90D"
+          label: "Son 90 Gün"
+          comparison_label: "vs. geçen çeyrek"
+        current_year:
+          label_short: "YTD"
+          label: "Bu Yıl"
+          comparison_label: "vs. yıl başı"
+        last_365_days:
+          label_short: "365D"
+          label: "Son 365 Gün"
+          comparison_label: "vs. 1 yıl önce"
+        last_5_years:
+          label_short: "5Y"
+          label: "Son 5 Yıl"
+          comparison_label: "vs. 5 yıl önce"
+        last_10_years:
+          label_short: "10Y"
+          label: "Son 10 Yıl"
+          comparison_label: "vs. 10 yıl önce"
+        all_time:
+          label_short: "All"
+          label: "Tüm Zamanlar"
+          comparison_label: "vs. başlangıç"

@@ -26,6 +26,9 @@ en:
         no_account_title: No accounts yet
       balance_sheet:
         title: "Balance Sheet"
+        name: "Name"
+        weight: "Weight"
+        value: "Value"
         no_items: "No %{name} yet"
         add_accounts: "Add your %{name} accounts to see a full breakdown"
       cashflow_sankey:

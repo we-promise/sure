@@ -1,0 +1,55 @@
+---
+ro:
+  models:
+    period:
+      custom_period: "Perioadă personalizată"
+      custom: "Personalizat"
+      periods:
+        last_day:
+          label_short: "1D"
+          label: "Ultima zi"
+          comparison_label: "vs. ieri"
+        current_week:
+          label_short: "WTD"
+          label: "Săptămâna curentă"
+          comparison_label: "vs. începutul săptămânii"
+        last_7_days:
+          label_short: "7D"
+          label: "Ultimele 7 zile"
+          comparison_label: "vs. săptămâna trecută"
+        current_month:
+          label_short: "MTD"
+          label: "Luna curentă"
+          comparison_label: "vs. începutul lunii"
+        last_month:
+          label_short: "LM"
+          label: "Luna trecută"
+          comparison_label: "vs. luna trecută"
+        last_30_days:
+          label_short: "30D"
+          label: "Ultimele 30 de zile"
+          comparison_label: "vs. ultimele 30 de zile"
+        last_90_days:
+          label_short: "90D"
+          label: "Ultimele 90 de zile"
+          comparison_label: "vs. ultimul trimestru"
+        current_year:
+          label_short: "YTD"
+          label: "Anul curent"
+          comparison_label: "vs. începutul anului"
+        last_365_days:
+          label_short: "365D"
+          label: "Ultimele 365 de zile"
+          comparison_label: "vs. acum 1 an"
+        last_5_years:
+          label_short: "5Y"
+          label: "Ultimii 5 ani"
+          comparison_label: "vs. acum 5 ani"
+        last_10_years:
+          label_short: "10Y"
+          label: "Ultimii 10 ani"
+          comparison_label: "vs. acum 10 ani"
+        all_time:
+          label_short: "All"
+          label: "Tot timpul"
+          comparison_label: "vs. început"
