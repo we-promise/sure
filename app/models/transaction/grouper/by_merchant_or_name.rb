@@ -12,7 +12,7 @@ class Transaction::Grouper::ByMerchantOrName < Transaction::Grouper
       .group_by { |entry| grouping_key_for(entry) }
       .map { |key, entries| build_group(key, entries) }
       .sort_by { |g| [ -g.entries.size, g.display_name ] }
-      .drop(offset)
+      .drop([ offset, 0 ].max)
       .first(limit)
   end
 
