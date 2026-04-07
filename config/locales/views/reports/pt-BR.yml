@@ -5,6 +5,7 @@ pt-BR:
       title: Relatórios
       subtitle: Insights completos sobre sua saúde financeira
       export: Exportar CSV
+      print_report: Imprimir Relatório
       drag_to_reorder: "Arraste para reordenar a seção"
       toggle_section: "Alternar visibilidade da seção"
       periods:
@@ -33,6 +34,7 @@ pt-BR:
       budgeted: Orçado
       remaining: Restante
       over_by: Excedido em
+      shared: compartilhado
       suggested_daily: "%{amount} sugerido por dia para os %{days} dias restantes"
       no_budgets: Nenhuma categoria de orçamento configurada para este mês
       status:
@@ -102,12 +104,59 @@ pt-BR:
         expense: Despesas
         income: Receitas
         uncategorized: Sem Categoria
-        transactions: transações
+        entries:
+          one: "%{count} entrada"
+          other: "%{count} entradas"
         percentage: "% do Total"
       pagination:
-        showing: Exibindo %{count} transações
+        showing:
+          one: Exibindo %{count} entrada
+          other: Exibindo %{count} entradas
         previous: Anterior
         next: Próximo
+    net_worth:
+      title: Patrimônio líquido
+      current_net_worth: Patrimônio líquido atual
+      period_change: Alteração de período
+      assets_vs_liabilities: Ativos versus Passivos
+      total_assets: Ativos
+      total_liabilities: Passivos
+      no_assets: Sem ativos
+      no_liabilities: Sem passivos
+    investment_performance:
+      title: Desempenho de Investimentos
+      portfolio_value: Valor do Portfólio
+      total_return: Retorno Total
+      contributions: Contribuições do Período
+      withdrawals: Saques do Período
+      top_holdings: Principais Aplicações
+      holding: Holding
+      weight: Peso
+      value: Valor
+      return: Retorno
+      accounts: Contas de Investimento
+      gains_by_tax_treatment: Ganhos por tratamento tributário
+      unrealized_gains: Ganhos Não Realizados
+      realized_gains: Ganhos Realizados
+      total_gains: Ganhos Totais
+      taxable_realized_note: Esses ganhos podem estar sujeitos a impostos
+      no_data: "-"
+      view_details: Ver detalhes
+      holdings_count:
+        one: "%{count} holding"
+        other: "%{count} holdings"
+      sells_count:
+        one: "%{count} venda"
+        other: "%{count} vendas"
+      holdings: Holdings
+      sell_trades: Venda de Negócios
+      and_more: "+%{count} mais"
+    investment_flows:
+      title: Fluxos de investimento
+      description: Acompanhe o fluxo de dinheiro que entra e sai de suas contas de investimento.
+      contributions: Contribuições
+      withdrawals: Saques
+      net_flow: Fluxo Líquido
     google_sheets_instructions:
       title_with_key: "✅ Copiar URL para Google Sheets"
       title_no_key: "⚠️ Chave de API Necessária"
@@ -124,3 +173,57 @@ pt-BR:
       open_sheets: Abrir Google Sheets
       go_to_api_keys: Ir para Chaves de API
       close: Entendi
+    print:
+      document_title: Relatório Financeiro
+      title: Relatório Financeiro
+      generated_on: "Gerado em %{date}"
+      # Summary section
+      summary:
+        title: Resumo
+        income: Receita
+        expenses: Despesas
+        net_savings: Poupança Líquida
+        budget: Orçamento
+        vs_prior: "%{percent}% vs anterior"
+        of_income: "%{percent}% da Receita"
+        used: usado
+      # Net Worth section
+      net_worth:
+        title: Patrimônio Líquido
+        current_balance: Saldo Atual
+        this_period: neste período
+        assets: Ativos
+        liabilities: Passivos
+        no_liabilities: Sem passivos
+      # Monthly Trends section
+      trends:
+        title: Tendências Mensais
+        month: Mês
+        income: Receita
+        expenses: Despesas
+        net: Líquido
+        savings_rate: Taxa de Poupança
+        average: Média
+        current_month_note: "* Mês atual (dados parciais)"
+      # Investments section
+      investments:
+        title: Investimentos
+        portfolio_value: Valor do Portfólio
+        total_return: Retorno Total
+        contributions: Contribuições
+        withdrawals: Saques
+        this_period: este período
+        top_holdings: Principais Aplicações
+        holding: Holding
+        weight: Peso
+        value: Valor
+        return: Retorno
+      # Spending by Category section
+      spending:
+        title: Gastos por Categoria
+        income: Receita
+        expenses: Despesas
+        category: Categoria
+        amount: Quantia
+        percent: "%"
+        more_categories: "+ %{count} mais categorias"

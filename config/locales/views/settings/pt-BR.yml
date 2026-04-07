@@ -4,6 +4,7 @@ pt-BR:
     settings:
       payments:
         renewal: "Sua contribuição continua em %{date}."
+        cancellation: "Sua contribuição termina em %{date}."
   settings:
     ai_prompts:
       show:
@@ -25,6 +26,22 @@ pt-BR:
         page_title: Pagamento
         subscription_subtitle: Atualize sua assinatura e detalhes de pagamento
         subscription_title: Gerenciar assinatura
+    appearances:
+      show:
+        page_title: Aparência
+        theme_title: Tema
+        theme_subtitle: Escolha um tema preferido para o aplicativo
+        theme_dark: Escuro
+        theme_light: Claro
+        theme_system: Sistema
+        transactions_title: Transações
+        transactions_subtitle: Personalize como as transações são exibidas
+        dashboard_title: Painel
+        dashboard_subtitle: Personalize como o painel é exibido
+        dashboard_two_column_title: Layout de duas colunas
+        dashboard_two_column_description: Exibe os widgets do painel em duas colunas em telas grandes. Quando desativado, os widgets ficam empilhados em uma única coluna.
+        split_grouped_title: Agrupar transações divididas
+        split_grouped_description: Mostra as transações divididas agrupadas sob o registro principal na lista de transações. Quando desativado, as subdivisões aparecem como linhas individuais.
     preferences:
       show:
         country: País
@@ -33,15 +50,19 @@ pt-BR:
         general_subtitle: Configure suas preferências
         general_title: Geral
         default_period: Período Padrão
+        default_account_order: Ordem de conta padrão
         language: Idioma
         language_auto: Idioma do navegador
         page_title: Preferências
-        theme_dark: Escuro
-        theme_light: Claro
-        theme_subtitle: Escolha um tema preferido para o aplicativo
-        theme_system: Sistema
-        theme_title: Tema
         timezone: Fuso horário
+        month_start_day: O mês do orçamento começa em
+        month_start_day_hint: Defina quando começa o seu mês de orçamento (por exemplo, no dia do pagamento).
+        month_start_day_warning: Seus orçamentos e cálculos MTD usarão essa data de início personalizada em vez do dia 1º de cada mês.
+        sharing_title: "Compartilhamento %{moniker}"
+        sharing_subtitle: "Controle como as contas são compartilhadas no seu %{moniker}"
+        sharing_default_label: Compartilhamento padrão para novas contas
+        sharing_shared: Compartilhar com todos os membros
+        sharing_private: Manter privado por padrão
     profiles:
       destroy:
         cannot_remove_self: Você não pode se remover da conta.
@@ -56,6 +77,9 @@ pt-BR:
         confirm_reset:
           body: Tem certeza de que deseja resetar sua conta? Isso excluirá todas as suas contas, categorias, comerciantes, tags e outros dados. Esta ação não pode ser desfeita.
           title: Resetar conta?
+        confirm_reset_with_sample_data:
+          body: Tem certeza de que deseja redefinir sua conta e carregar dados de exemplo? Isso excluirá seus dados existentes e os substituirá por dados de demonstração para que você possa explorar o Sure com segurança.
+          title: Redefinir conta e carregar dados de exemplo?
         confirm_remove_invitation:
           body: Tem certeza de que deseja remover o convite para %{email}?
           title: Remover Convite
@@ -68,12 +92,16 @@ pt-BR:
           os seus dados e não pode ser desfeito.
         reset_account: Resetar conta
         reset_account_warning: Resetar sua conta excluirá todas as suas contas, categorias, comerciantes, tags e outros dados, mas manterá sua conta de usuário intacta.
+        reset_account_with_sample_data: Reiniciar e pré-carregar
+        reset_account_with_sample_data_warning: Exclua todos os seus dados existentes e, em seguida, carregue novos dados de amostra para que você possa explorar um ambiente pré-configurado.
         email: E-mail
         first_name: Primeiro Nome
+        group_form_input_placeholder: Digite o nome do grupo
+        group_form_label: Nome do grupo
+        group_title: Membros do grupo
         household_form_input_placeholder: Digite o nome da família
         household_form_label: Nome da família
-        household_subtitle: Convide membros da família, parceiros e outros indivíduos. Os convidados
-          podem fazer login na sua família e acessar suas contas compartilhadas.
+        household_subtitle: Os convidados podem entrar na sua conta %{moniker} e acessar os recursos compartilhados.
         household_title: Família
         invitation_link: Link de convite
         invite_member: Adicionar membro
@@ -88,8 +116,27 @@ pt-BR:
     securities:
       show:
         page_title: Segurança
+        mfa_title: Autenticação de Dois Fatores
+        mfa_description: Adicione uma camada extra de segurança à sua conta, exigindo um código do seu aplicativo autenticador ao fazer login.
+        enable_mfa: Ativar 2FA
+        disable_mfa: Desativar 2FA
+        disable_mfa_confirm: Tem certeza de que deseja desativar a autenticação de dois fatores?
+        sso_title: Contas Conectadas
+        sso_subtitle: Gerencie suas conexões de contas de login único (SSO)
+        sso_disconnect: Desconectar
+        sso_last_used: Último uso
+        sso_never: Nunca
+        sso_no_email: Sem e-mail
+        sso_no_identities: Nenhuma conta SSO conectada
+        sso_connect_hint: Saia da sua conta e entre novamente com um provedor SSO para conectar uma conta.
+        sso_confirm_title: Desconectar Conta?
+        sso_confirm_body: Tem certeza de que deseja desconectar sua conta %{provider}? Você poderá reconectá-la posteriormente fazendo login novamente com esse provedor.
+        sso_confirm_button: Desconectar
+        sso_warning_message: Este é o seu único método de login. Você deve definir uma senha nas suas configurações de segurança antes de desconectar, caso contrário, você poderá ficar bloqueado na sua conta.
     settings_nav:
       accounts_label: Contas
+      advanced_section_title: Avançado
+      ai_prompts_label: Sugestões de IA
       api_key_label: Chave da API
       payment_label: Pagamento
       categories_label: Categorias
@@ -99,15 +146,19 @@ pt-BR:
       exports_label: Exportações
       logout: Sair
       merchants_label: Comerciantes
+      guides_label: Guias
       other_section_title: Mais
       preferences_label: Preferências
       profile_label: Conta
+      recurring_transactions_label: Recorrente
       rules_label: Regras
       security_label: Segurança
       self_hosting_label: Auto hospedagem
       tags_label: Tags
       transactions_section_title: Transações
       whats_new_label: Novidades
+      api_keys_label: Chave da API
+      bank_sync_label: Sincronização bancária
     settings_nav_link_large:
       next: Próximo
       previous: Voltar
@@ -116,3 +167,27 @@ pt-BR:
       choose: Enviar foto
       choose_label: (opcional)
       change: Alterar foto
+    providers:
+      show:
+        coinbase_title: Coinbase
+      encryption_error:
+        title: Configuração de criptografia necessária
+        message: As chaves de criptografia do Active Record não estão configuradas. Certifique-se de que as credenciais de criptografia (active_record_encryption.primary_key, active_record_encryption.deterministic_key e active_record_encryption.key_derivation_salt) estejam configuradas corretamente em suas credenciais do Rails ou variáveis ​​de ambiente antes de usar provedores de sincronização.
+      coinbase_panel:
+        setup_instructions: "Para conectar à Coinbase:"
+        step1_html: Acesse <a href="https://portal.cdp.coinbase.com/projects/api-keys" target="_blank" rel="noopener noreferrer" class="text-primary underline">Configurações da API da Coinbase</a>
+        step2: Crie uma nova chave de API com permissões somente leitura (visualizar contas, visualizar transações)
+        step3: Copie sua chave de API e o segredo da API e cole-os abaixo
+        api_key_label: Chave de API
+        api_key_placeholder: Insira sua chave de API da Coinbase
+        api_secret_label: Segredo da API
+        api_secret_placeholder: Insira seu segredo da API da Coinbase
+        connect_button: Conectar à Coinbase
+        syncing: Sincronizando...
+        sync: Sincronizar
+        disconnect_confirm: Tem certeza de que deseja desconectar esta conexão com a Coinbase? Suas contas sincronizadas se tornarão contas manuais.
+        status_connected: A Coinbase está conectada e sincronizando seus ativos em criptomoedas.
+        status_not_connected: Não conectado. Insira suas credenciais de API acima para começar.
+      enable_banking_panel:
+        callback_url_instruction: "Para a URL de retorno de chamada, use %{callback_url}."
+        connection_error: Erro de conexão
