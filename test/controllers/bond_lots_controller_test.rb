@@ -216,4 +216,33 @@ class BondLotsControllerTest < ActionDispatch::IntegrationTest
     assert_equal Date.new(2036, 4, 1), lot.maturity_date
     assert_redirected_to account_path(@account)
   end
+
+  test "creates lot with product preset and normalizes rate and coupon fields" do
+    purchase_date = Date.new(2026, 5, 1)
+
+    assert_difference [ "BondLot.count", "Entry.count", "Transaction.count" ], 1 do
+      assert_enqueued_jobs 1, only: SyncJob do
+        post bond_lots_path, params: {
+          account_id: @account.id,
+          bond_lot: {
+            purchased_on: purchase_date,
+            amount: 1500,
+            product_code: "us_t_note_2y",
+            subtype: "other",
+            term_months: 6,
+            interest_rate: 4.2,
+            rate_type: "variable",
+            coupon_frequency: "at_maturity"
+          }
+        }
+      end
+    end
+
+    lot = BondLot.order(:created_at).last
+    assert_equal "fixed_coupon", lot.subtype
+    assert_equal "fixed", lot.rate_type
+    assert_equal "semi_annual", lot.coupon_frequency
+    assert_equal 24, lot.term_months
+    assert_redirected_to account_path(@account)
+  end
 end

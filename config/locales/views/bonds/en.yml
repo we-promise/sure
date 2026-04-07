@@ -60,6 +60,7 @@ en:
         other: "%{count} months"
       principal_term: "Principal, %{term}"
       bond_meta: "%{rate_type} / %{coupon}"
+      bond_meta_with_coupon_amount: "%{rate_type} / %{coupon} / coupon %{coupon_amount}"
       inflation_meta_gus: "%{inflation} inflation + %{margin} margin (GUS SDP %{indicator})"
       inflation_meta_manual: "%{inflation} inflation + %{margin} margin (manual)"
       first_period_fixed_rate: First-period fixed rate
@@ -116,6 +117,7 @@ en:
       nominal_per_unit: Nominal per unit
       term_months: Term (months)
       subtype: Bond type
+      subtype_derived_hint: Bond type is derived automatically from selected product preset.
       rate_type: Rate type
       coupon_frequency: Coupon frequency
       interest_rate: Interest rate

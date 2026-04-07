@@ -1,0 +1,193 @@
+Super komentarz i bardzo sensowny kierunek. Sprawdziłem aktualny stan Twojej gałęzi i dokładnie te obszary są teraz "polsko-specyficzne":
+
+twarde subtype EOD/ROD w bond.rb
+logika inflation linked pod EOD/ROD w bond_lot.rb
+formularz oparty o ten model w _form.html.erb
+provider GUS jako jedyny w gus_sdp.rb
+dużo migracji bondowych od 20260330 do 20260401 w folderze migrate
+Proponuję taki plan krok po kroku, żeby zrobić to bez rozwalenia obecnych danych:
+
+Ustalenie kontraktu domenowego
+Wprowadzić rozróżnienie:
+subtype jako mechanika obligacji (zero_coupon, fixed_coupon, inflation_linked, savings, other)
+product_code jako konkretny produkt rynku (pl_eod, pl_rod, us_t_bill_4w, es_letra_3m itd.)
+To pozwoli spełnić wymaganie "produkt jako label", a nie hardcoded subtype.
+Migracja danych i kompatybilność wsteczna
+Dodać kolumnę product_code do bonds lub bond_lots (rekomendacja: bond_lots, bo lot może reprezentować konkretną emisję).
+Dodać migrację backfill:
+eod -> subtype inflation_linked + product_code pl_eod
+rod -> subtype inflation_linked + product_code pl_rod
+other_bond -> subtype other
+Dzięki temu UI i kalkulacje nadal działają na istniejących danych.
+Uogólnienie stałych i defaults
+W bond.rb:
+podmienić SUBTYPES na generyczne
+rozbudować PRODUCT_DEFAULTS o katalog produktów z komentarza
+dodać helper mapujący product_code -> domyślne rate_type/coupon_frequency/term
+Zostawić PL produkty jako pierwsze-class citizens, ale już w nowym schemacie.
+Pluggable inflation provider
+Dodać w bond_lots pole inflation_provider (nullable).
+Wydzielić adapter/registry np. Bond::InflationProviderRegistry:
+gus_sdp -> istniejący model/provider
+us_bls/es_ine jako stuby na start
+W bond_lot.rb:
+zamienić warunki "subtype eod/rod" na "inflation_linked subtype + provider/manual".
+Domyślna ścieżka dla istniejących lotów: gus_sdp dla pl_eod/pl_rod.
+Coupon calculation engine
+Dodać metodę coupon_amount_per_period dla monthly/quarterly/semi_annual/annual.
+Dla at_maturity zostawić nil.
+Rozdzielić:
+kapitalizacja at_maturity (obecny flow)
+kupony okresowe (nowy flow)
+Na tym etapie minimum: poprawne wyliczenie kwoty kuponu i testy modelu.
+UI i i18n pod nowy model
+W _form.html.erb:
+wybór product_code (label produktu)
+subtype wyliczany/readonly albo ukryty
+wybór inflation_provider dla inflation_linked/savings
+Utrzymać obecną funkcjonalność PL bez regresji.
+Testy regresji i nowe scenariusze
+Rozszerzyć testy:
+PL EOD/ROD działają jak wcześniej
+US T-Bill i ES Letra jako zero_coupon fixed at_maturity
+coupon_frequency semi_annual dla fixed_coupon działa
+provider nil (manual CPI) i provider gus_sdp
+Kluczowe pliki testów:
+bond_lot_test.rb
+bond_lots_controller_test.rb
+bonds_controller_test.rb
+Squash migrations
+Na końcu (po stabilizacji) squash do:
+create_bonds
+create_bond_lots
+create_gus_inflation_rates
+Technicznie najlepiej zrobić to jako osobny commit "history cleanup", żeby review logiki i review migracji się nie mieszały.
+Podział na wdrożenie PR-owe
+Etap A: model danych + backfill + subtype/product_code + testy regresji
+Etap B: inflation provider abstraction
+Etap C: coupon frequencies + UI
+Etap D: squash migracji
+Rekomendacja praktyczna
+
+Nie robić wszystkiego w jednym potężnym commicie.
+Najbezpieczniej: najpierw Etap A i B, bo to spełni większość komentarza maintenera i otworzy drogę do US/ES bez ryzyka natychmiastowych regresji UI.
+
+---
+
+## 🇵🇱 Analiza EOD/ROD w kontekście generalized framework
+
+### Czy EOD/ROD pasują do nowego modelu?
+
+| Element | EOD/ROD | Zgodne z generalized framework? |
+|---------|---------|----------------------------------|
+| subtype | inflation_linked | ✅ Tak |
+| rate_type | variable | ✅ Tak |
+| coupon_frequency | at_maturity | ✅ Tak (kapitalizacja) |
+| inflation_provider | gus_sdp | ✅ Tak |
+| product_code | pl_eod, pl_rod | ✅ Tak — label jako kod |
+
+**Polskie obligacje idealnie pasują** — EOD i ROD to inflation_linked z gus_sdp provider.
+
+### Problem: kapitalizacja vs kupony okresowe
+
+Sure Admin pisze żeby dodać obsługę coupon_frequency dla semi_annual, quarterly itp. Ale EOD/ROD mają `at_maturity` — odsetki kapitalizują się do końca, nie ma okresowych kuponów.
+
+**Propozycja rozwiązania:**
+
+```ruby
+# bond_lot.rb
+def coupon_amount_per_period
+  return nil if coupon_frequency == "at_maturity"
+  # ... oblicz dla semi_annual, quarterly, monthly, annual
+end
+
+# Dla EOD/ROD — zwraca nil (brak kuponów, kapitalizacja)
+# Dla TIPS, es_letra z kuponami — oblicza kwotę kuponu
+```
+
+### Model decyzyjny:
+
+| product_code | subtype | coupon_frequency | Obsługa |
+|-------------|---------|------------------|----------|
+| pl_eod | inflation_linked | at_maturity | Kapitalizacja (brak kuponu) |
+| pl_rod | inflation_linked | at_maturity | Kapitalizacja (brak kuponu) |
+| us_tips_10y | inflation_linked | semi_annual | Obliczany kupon |
+| es_letra_3m | zero_coupon | at_maturity | Zero-coupon (brak kuponu) |
+| us_t_note_2y | fixed_coupon | semi_annual | Obliczany kupon |
+
+### Dla EOD/ROD — uproszczony model:
+
+Odsetki = (current_cpi_index - purchase_cpi_index) * principal
+
+Nie ma "kuponu" w tradycyjnym sensie — po prostu kapitalizacja. Logika pozostaje prosta:
+
+```ruby
+def accrued_interest
+  return Money.zero(currency) unless inflation_linked?
+  
+  current_index = inflation_rate_for(Date.current)
+  purchase_index = self.purchase_index || initial_index
+  
+  (current_index - purchase_index) * amount
+end
+```
+
+### Rekomendacja Etap A dla EOD/ROD:
+
+1. subtype = inflation_linked
+2. product_code = pl_eod / pl_rod
+3. inflation_provider = gus_sdp
+4. coupon_frequency = at_maturity (pozostaje)
+5. coupon_amount_per_period = nil (nie ma kuponu)
+6. Logika odsetek: kapitalizacja przez CPI diff
+
+To pozwala zachować obecne EOD/ROD działające bez zmian, a jednocześnie otwiera drzwi dla US/ES bonds z prawdziwymi kuponami.
+
+---
+
+## Status realizacji (aktualny)
+
+### Ustalenie kontraktu domenowego
+- [x] subtype jako mechanika obligacji (zero_coupon, fixed_coupon, inflation_linked, savings, other)
+- [x] product_code jako kod produktu rynkowego
+
+### Migracja danych i kompatybilność wsteczna
+- [x] dodana kolumna product_code do bond_lots
+- [x] migracja backfill legacy subtype -> nowa taksonomia + product_code dla PL
+- [x] zachowana kompatybilność wsteczna (legacy aliases eod/rod/other_bond)
+
+### Uogólnienie stałych i defaults
+- [x] SUBTYPES podmienione na generyczne
+- [x] PRODUCT_DEFAULTS rozszerzone o katalog US/ES/PL
+- [x] helper opcji produktów do formularza
+
+### Pluggable inflation provider
+- [x] dodane pole inflation_provider do bond_lots
+- [x] dodany registry providerów (gus_sdp, us_bls, es_ine)
+- [x] BondLot używa provider key + fallback kompatybilny z dotychczasowym zachowaniem
+- [ ] równoległe implementacje providerów us_bls i es_ine (na razie stub-level registry)
+
+### Coupon calculation engine
+- [x] dodana metoda coupon_amount_per_period (monthly/quarterly/semi_annual/annual)
+- [x] at_maturity zwraca nil
+- [x] podpięcie kuponów okresowych do UI listy lotów (metadata z kwotą kuponu per okres)
+
+### UI i i18n pod nowy model
+- [x] formularz ma wybór product_code
+- [x] formularz ma wybór inflation_provider
+- [x] en locale uzupełnione o nowe subtype i pola formularza
+- [x] subtype readonly/derived z product_code w formularzu
+
+### Testy
+- [x] zaktualizowane testy modelu i kontrolera pod nową taksonomię
+- [x] testy regresji Bond/BondLot/BondLotsController przechodzą
+- [ ] rozszerzenie scenariuszy US/ES na osobny krok
+
+### Squash migrations
+- [ ] jeszcze nie zrobione (świadomie odłożone na etap końcowy)
+
+### Etapy PR-owe
+- [x] Etap A: model danych + backfill + subtype/product_code + testy regresji
+- [x] Etap B: inflation provider abstraction
+- [x] Etap C: coupon frequencies + UI
+- [ ] Etap D: squash migracji

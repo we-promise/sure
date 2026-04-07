@@ -559,7 +559,8 @@ class BondLot < ApplicationRecord
     end
 
     def apply_product_defaults
-      defaults = if product_code.present?
+      product_selected = product_code.present?
+      defaults = if product_selected
         Bond::PRODUCT_DEFAULTS[product_code]
       elsif canonical_subtype == "inflation_linked"
         nil
@@ -570,9 +571,15 @@ class BondLot < ApplicationRecord
 
       self.subtype = defaults[:subtype] if subtype.blank? || Bond::LEGACY_SUBTYPE_ALIASES.key?(subtype)
       self.term_months = defaults[:term_months] if defaults[:term_months].present?
-      self.rate_type ||= defaults[:rate_type]
-      self.coupon_frequency ||= defaults[:coupon_frequency]
-      self.cpi_lag_months ||= defaults[:cpi_lag_months]
+      if product_selected
+        self.rate_type = defaults[:rate_type] if defaults[:rate_type].present?
+        self.coupon_frequency = defaults[:coupon_frequency] if defaults[:coupon_frequency].present?
+        self.cpi_lag_months = defaults[:cpi_lag_months] if defaults[:cpi_lag_months].present?
+      else
+        self.rate_type ||= defaults[:rate_type]
+        self.coupon_frequency ||= defaults[:coupon_frequency]
+        self.cpi_lag_months ||= defaults[:cpi_lag_months]
+      end
       self.nominal_per_unit ||= 100
       self.issue_date ||= purchased_on
       self.auto_fetch_inflation = true if auto_fetch_inflation.nil?

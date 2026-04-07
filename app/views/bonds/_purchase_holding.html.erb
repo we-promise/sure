@@ -62,7 +62,13 @@
         <%= tag.p(lot.interest_rate.present? ? number_to_percentage(lot.interest_rate, precision: 3) : t(".unknown"), class: "privacy-sensitive") %>
         <% rate_type_label = lot.rate_type.present? ? t("bond_lots.form.rate_types.#{lot.rate_type}", default: t(".unknown")) : t(".unknown") %>
         <% coupon_label = lot.coupon_frequency.present? ? t("bond_lots.form.coupon_frequencies.#{lot.coupon_frequency}", default: t(".unknown")) : t(".unknown") %>
-        <%= tag.p t(".bond_meta", rate_type: rate_type_label, coupon: coupon_label), class: "font-normal text-secondary" %>
+        <% coupon_amount = lot.coupon_amount_per_period %>
+        <% meta_text = if coupon_amount.present?
+          t(".bond_meta_with_coupon_amount", rate_type: rate_type_label, coupon: coupon_label, coupon_amount: format_money(coupon_amount))
+        else
+          t(".bond_meta", rate_type: rate_type_label, coupon: coupon_label)
+        end %>
+        <%= tag.p meta_text, class: "font-normal text-secondary" %>
       <% end %>
     </div>
 

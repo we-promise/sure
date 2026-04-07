@@ -372,6 +372,52 @@ class BondLotTest < ActiveSupport::TestCase
     assert_in_delta 36.0, coupon.amount.to_f, 0.001
   end
 
+  test "coupon_amount_per_period supports all periodic frequencies" do
+    lot = BondLot.new(
+      bond: bonds(:one),
+      purchased_on: Date.current,
+      amount: 1200,
+      subtype: "fixed_coupon",
+      term_months: 24,
+      interest_rate: 6,
+      rate_type: "fixed"
+    )
+
+    {
+      "monthly" => 6.0,
+      "quarterly" => 18.0,
+      "semi_annual" => 36.0,
+      "annual" => 72.0
+    }.each do |frequency, expected_amount|
+      lot.coupon_frequency = frequency
+      coupon = lot.coupon_amount_per_period
+      assert_in_delta expected_amount, coupon.amount.to_f, 0.001
+    end
+
+    lot.coupon_frequency = "at_maturity"
+    assert_nil lot.coupon_amount_per_period
+  end
+
+  test "product presets override conflicting rate and coupon settings" do
+    lot = BondLot.new(
+      bond: bonds(:one),
+      purchased_on: Date.current,
+      amount: 1000,
+      product_code: "us_t_note_2y",
+      subtype: "other",
+      rate_type: "variable",
+      coupon_frequency: "at_maturity",
+      term_months: 6,
+      interest_rate: 4.5
+    )
+
+    assert lot.valid?
+    assert_equal "fixed_coupon", lot.subtype
+    assert_equal "fixed", lot.rate_type
+    assert_equal "semi_annual", lot.coupon_frequency
+    assert_equal 24, lot.term_months
+  end
+
   test "falls back to manual inflation assumption when GUS value missing" do
     Setting.gus_inflation_import_enabled = true
     lot = BondLot.new(

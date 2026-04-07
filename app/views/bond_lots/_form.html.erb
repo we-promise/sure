@@ -6,6 +6,7 @@
                        data: {
                          controller: "bond-lot-form",
                          bond_lot_form_inflation_subtypes_value: Bond::INFLATION_LINKED_SUBTYPES.to_json,
+                         bond_lot_form_product_subtype_map_value: Bond::PRODUCT_DEFAULTS.transform_values { |defaults| defaults[:subtype] }.to_json,
                          bond_lot_form_lot_auto_fetch_value: bond_lot.auto_fetch_inflation.nil? ? true : bond_lot.auto_fetch_inflation,
                          bond_lot_form_global_import_enabled_value: Setting.gus_inflation_import_enabled_effective
                        }
@@ -34,6 +35,12 @@
               {
                 label: t("bond_lots.form.product_code"),
                 include_blank: t("bond_lots.form.product_code_blank")
+              },
+              {
+                data: {
+                  action: "change->bond-lot-form#syncSubtypeWithProduct",
+                  bond_lot_form_target: "productCodeSelect"
+                }
               } %>
 
       <div class="flex items-center gap-2" data-bond-lot-form-target="inflationFields">
@@ -79,6 +86,9 @@
                   bond_lot_form_target: "subtypeSelect"
                 }
               } %>
+      <p class="text-xs text-secondary" data-bond-lot-form-target="subtypeDerivedHint">
+        <%= t("bond_lots.form.subtype_derived_hint") %>
+      </p>
 
           <div data-bond-lot-form-target="otherFields">
         <%= form.select :rate_type,

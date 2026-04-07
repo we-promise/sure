@@ -2,7 +2,9 @@ import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
   static targets = [
+    "productCodeSelect",
     "subtypeSelect",
+    "subtypeDerivedHint",
     "inflationFields",
     "otherFields",
     "inflationInput",
@@ -13,11 +15,33 @@ export default class extends Controller {
   ]
   static values = {
     inflationSubtypes: Array,
+    productSubtypeMap: Object,
     lotAutoFetch: Boolean,
     globalImportEnabled: Boolean
   }
 
   connect() {
+    this.syncSubtypeWithProduct()
+    this.toggleSubtypeFields()
+  }
+
+  syncSubtypeWithProduct() {
+    if (!this.hasProductCodeSelectTarget || !this.hasSubtypeSelectTarget) return
+
+    const productCode = this.productCodeSelectTarget.value
+    const mappedSubtype = this.productSubtypeMapValue?.[productCode]
+    const subtypeDerived = Boolean(mappedSubtype)
+
+    if (subtypeDerived) {
+      this.subtypeSelectTarget.value = mappedSubtype
+    }
+
+    this.subtypeSelectTarget.disabled = subtypeDerived
+
+    if (this.hasSubtypeDerivedHintTarget) {
+      this.subtypeDerivedHintTarget.classList.toggle("hidden", !subtypeDerived)
+    }
+
     this.toggleSubtypeFields()
   }
 
