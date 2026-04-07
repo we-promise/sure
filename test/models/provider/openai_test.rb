@@ -353,6 +353,8 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
       assert_not custom_provider.send(:function_calling_not_supported_error?, error),
         "Did not expect '#{error.message}' to be detected as function calling not supported"
     end
+  end
+
   test "upsert_langfuse_trace uses client trace upsert" do
     trace = Struct.new(:id).new("trace_123")
     fake_client = mock
