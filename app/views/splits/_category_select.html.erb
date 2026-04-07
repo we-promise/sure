@@ -1,0 +1,87 @@
+<%# locals: (name:, categories:, selected_id: nil) %>
+<%
+  selected_category = categories.find { |c| c.id == selected_id }
+  default_color = "#737373"
+%>
+
+<div class="category-select-container relative flex-1 md:flex-none md:w-44" data-controller="select list-filter form-dropdown category-badge-select" data-action="dropdown:select->form-dropdown#onSelect dropdown:select->category-badge-select#updateButton">
+  <label class="text-xs font-medium text-secondary uppercase tracking-wide block mb-1"><%= t("splits.new.category_label") %></label>
+  <input type="hidden"
+         name="<%= name %>"
+         value="<%= selected_id %>"
+         data-form-dropdown-target="input">
+  <button type="button"
+          class="form-field__input w-full overflow-hidden border border-secondary rounded-md pl-2.5 pr-7 py-1.5 text-sm text-primary bg-container"
+          data-select-target="button"
+          data-category-badge-select-target="button"
+          data-action="click->select#toggle"
+          aria-haspopup="listbox"
+          aria-expanded="false">
+    <% if selected_category %>
+      <% hex_color = selected_category.color.presence || default_color %>
+      <span class="flex items-center gap-2 text-sm font-medium rounded-full px-3 py-1 border truncate"
+            style="background-color: color-mix(in oklab, <%= hex_color %> 10%, transparent); border-color: color-mix(in oklab, <%= hex_color %> 20%, transparent); color: <%= hex_color %>;">
+        <% if selected_category.lucide_icon.present? %>
+          <%= icon selected_category.lucide_icon, size: "sm", color: "current" %>
+        <% else %>
+          <span class="size-1.5 rounded-full" style="background-color: <%= hex_color %>;"></span>
+        <% end %>
+        <%= selected_category.name %>
+      </span>
+    <% else %>
+      <%= t("splits.new.uncategorized") %>
+    <% end %>
+  </button>
+  <div class="absolute z-50 p-1.5 w-full min-w-48 rounded-lg shadow-lg shadow-border-xs bg-container mt-1.5 transition duration-150 ease-out -translate-y-1 opacity-0 hidden" data-select-target="menu">
+    <div class="relative flex items-center bg-container border border-secondary rounded-lg mb-1">
+      <input type="search"
+             placeholder="<%= t("helpers.select.search_placeholder") %>"
+             autocomplete="off"
+             class="bg-container text-sm placeholder:text-secondary font-normal h-10 pl-10 w-full border-none rounded-lg focus:outline-hidden focus:ring-0"
+             data-list-filter-target="input"
+             data-action="list-filter#filter">
+      <%= icon("search", class: "absolute inset-0 ml-2 transform top-1/2 -translate-y-1/2") %>
+    </div>
+    <div data-list-filter-target="list" data-select-target="content" class="flex flex-col gap-0.5 max-h-64 overflow-auto" role="listbox" tabindex="-1">
+      <%# Uncategorized option %>
+      <% is_blank_selected = selected_id.blank? %>
+      <div class="filterable-item text-sm cursor-pointer flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-container-inset-hover <%= "bg-container-inset" if is_blank_selected %>"
+           role="option"
+           tabindex="0"
+           aria-selected="<%= is_blank_selected %>"
+           data-action="click->select#select"
+           data-value=""
+           data-filter-name="<%= t("splits.new.uncategorized") %>">
+        <span class="check-icon <%= "hidden" unless is_blank_selected %>">
+          <%= icon("check") %>
+        </span>
+        <%= t("splits.new.uncategorized") %>
+      </div>
+
+      <% categories.each do |category| %>
+        <% is_selected = category.id == selected_id %>
+        <% hex_color = category.color.presence || default_color %>
+        <div class="filterable-item text-sm cursor-pointer flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-container-inset-hover <%= "bg-container-inset" if is_selected %>"
+             role="option"
+             tabindex="0"
+             aria-selected="<%= is_selected %>"
+             data-action="click->select#select"
+             data-value="<%= category.id %>"
+             data-filter-name="<%= category.name %>">
+          <span class="check-icon <%= "hidden" unless is_selected %>">
+            <%= icon("check") %>
+          </span>
+          <span class="flex items-center gap-2 text-sm font-medium rounded-full px-3 py-1 border truncate"
+                style="background-color: color-mix(in oklab, <%= hex_color %> 10%, transparent); border-color: color-mix(in oklab, <%= hex_color %> 20%, transparent); color: <%= hex_color %>;">
+            <% if category.lucide_icon.present? %>
+              <%= icon category.lucide_icon, size: "sm", color: "current" %>
+            <% else %>
+              <span class="size-1.5 rounded-full" style="background-color: <%= hex_color %>;"></span>
+            <% end %>
+            <%= category.name %>
+          </span>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</div>

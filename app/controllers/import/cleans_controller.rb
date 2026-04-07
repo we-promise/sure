@@ -9,7 +9,7 @@ class Import::CleansController < ApplicationController
       return redirect_to redirect_path, alert: "Please configure your import before proceeding."
     end
 
-    rows = @import.rows.ordered
+    rows = @import.rows_ordered
 
     if params[:view] == "errors"
       rows = rows.reject { |row| row.valid? }

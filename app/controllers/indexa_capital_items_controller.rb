@@ -4,6 +4,7 @@ class IndexaCapitalItemsController < ApplicationController
   ALLOWED_ACCOUNTABLE_TYPES = %w[Depository CreditCard Investment Loan OtherAsset OtherLiability Crypto Property Vehicle].freeze
 
   before_action :set_indexa_capital_item, only: [ :show, :edit, :update, :destroy, :sync, :setup_accounts, :complete_account_setup ]
+  before_action :require_admin!, only: [ :new, :create, :preload_accounts, :select_accounts, :link_accounts, :select_existing_account, :link_existing_account, :edit, :update, :destroy, :sync, :setup_accounts, :complete_account_setup ]
 
   def index
     @indexa_capital_items = Current.family.indexa_capital_items.ordered
@@ -290,6 +291,7 @@ class IndexaCapitalItemsController < ApplicationController
         accountable: accountable_class.new
       )
 
+      account.auto_share_with_family! if Current.family.share_all_by_default?
       indexa_capital_account.ensure_account_provider!(account)
       account
     end
@@ -303,12 +305,15 @@ class IndexaCapitalItemsController < ApplicationController
         accountable_attrs[:subtype] = config[:subtype]
       end
 
-      Current.family.accounts.create!(
+      account = Current.family.accounts.create!(
         name: indexa_capital_account.name,
         balance: config[:balance].present? ? config[:balance].to_d : (indexa_capital_account.current_balance || 0),
         currency: indexa_capital_account.currency || "EUR",
         accountable: accountable_class.new(accountable_attrs)
       )
+
+      account.auto_share_with_family! if Current.family.share_all_by_default?
+      account
     end
 
     def infer_accountable_type(account_type, subtype = nil)

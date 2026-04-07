@@ -3,3 +3,7 @@ empty:
 
 dylan_family:
   name: The Dylan Family
+
+inactive_trial:
+  name: Inactive Trial Family
+  created_at: <%= 90.days.ago %>

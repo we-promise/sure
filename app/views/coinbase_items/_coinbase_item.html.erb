@@ -61,44 +61,46 @@
         </div>
       </div>
 
-      <div class="flex items-center gap-2">
-        <% if coinbase_item.requires_update? %>
-          <%= render DS::Link.new(
-            text: t(".update_credentials"),
-            icon: "refresh-cw",
-            variant: "secondary",
-            href: settings_providers_path,
-            frame: "_top"
-          ) %>
-        <% else %>
-          <%= icon(
-            "refresh-cw",
-            as_button: true,
-            href: sync_coinbase_item_path(coinbase_item),
-            disabled: coinbase_item.syncing?
-          ) %>
-        <% end %>
-
-        <%= render DS::Menu.new do |menu| %>
-          <% if unlinked_count.to_i > 0 %>
-            <% menu.with_item(
-              variant: "link",
-              text: t(".import_wallets_menu"),
-              icon: "plus",
-              href: setup_accounts_coinbase_item_path(coinbase_item),
-              frame: :modal
+      <% if Current.user&.admin? %>
+        <div class="flex items-center gap-2">
+          <% if coinbase_item.requires_update? %>
+            <%= render DS::Link.new(
+              text: t(".update_credentials"),
+              icon: "refresh-cw",
+              variant: "secondary",
+              href: settings_providers_path,
+              frame: "_top"
+            ) %>
+          <% else %>
+            <%= icon(
+              "refresh-cw",
+              as_button: true,
+              href: sync_coinbase_item_path(coinbase_item),
+              disabled: coinbase_item.syncing?
             ) %>
           <% end %>
-          <% menu.with_item(
-            variant: "button",
-            text: t(".delete"),
-            icon: "trash-2",
-            href: coinbase_item_path(coinbase_item),
-            method: :delete,
-            confirm: CustomConfirm.for_resource_deletion(coinbase_item.institution_display_name, high_severity: true)
-          ) %>
-        <% end %>
-      </div>
+
+          <%= render DS::Menu.new do |menu| %>
+            <% if unlinked_count.to_i > 0 %>
+              <% menu.with_item(
+                variant: "link",
+                text: t(".import_wallets_menu"),
+                icon: "plus",
+                href: setup_accounts_coinbase_item_path(coinbase_item),
+                frame: :modal
+              ) %>
+            <% end %>
+            <% menu.with_item(
+              variant: "button",
+              text: t(".delete"),
+              icon: "trash-2",
+              href: coinbase_item_path(coinbase_item),
+              method: :delete,
+              confirm: CustomConfirm.for_resource_deletion(coinbase_item.institution_display_name, high_severity: true)
+            ) %>
+          <% end %>
+        </div>
+      <% end %>
     </summary>
 
     <% unless coinbase_item.scheduled_for_deletion? %>

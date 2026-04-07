@@ -13,7 +13,7 @@
         <div class="text-sm space-y-1">
           <% if @family.has_active_subscription? %>
             <p class="text-primary">
-              <span>Currently on the <span class="font-medium"><%= @family.subscription.name %></span>.</span> <br />
+              <span>Currently on the <span class="font-medium"><%= @family.subscription.name %></span>.</span> <br>
 
               <% if @family.next_payment_date %>
                 <% if @family.subscription_pending_cancellation? %>
@@ -25,7 +25,7 @@
             </p>
           <% elsif @family.trialing? %>
             <p class="text-primary">
-              Currently using the open demo of <%= product_name %> <br />
+              Currently using the open demo of <%= product_name %> <br>
               <span class="text-secondary">
                 (Data will be deleted in <%= @family.days_left_in_trial %> days)
               </span>

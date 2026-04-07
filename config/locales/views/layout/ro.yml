@@ -2,6 +2,7 @@
 ro:
   layouts:
     application:
+      privacy_mode: Comutare mod confidențialitate
       nav:
         assistant: Asistent
         budgets: Bugete

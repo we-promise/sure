@@ -18,6 +18,7 @@ en:
       info_email: "Email:"
       info_name: "Name:"
       submit_create: Create Account
+      submit_accept_invitation: Accept Invitation
       account_creation_disabled: New account creation via single sign-on is disabled. Please contact an administrator to create your account.
       cancel: Cancel
     new_user:

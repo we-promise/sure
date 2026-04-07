@@ -2,6 +2,7 @@ class PropertiesController < ApplicationController
   include AccountableResource, StreamExtensions
 
   before_action :set_property, only: [ :balances, :address, :update_balances, :update_address ]
+  before_action :require_property_write_permission!, only: [ :update_balances, :update_address ]
 
   def new
     @account = Current.family.accounts.build(accountable: Property.new)
@@ -9,8 +10,9 @@ class PropertiesController < ApplicationController
 
   def create
     @account = Current.family.accounts.create!(
-      property_params.merge(currency: Current.family.currency, balance: 0, status: "draft")
+      property_params.merge(currency: Current.family.currency, balance: 0, status: "draft", owner: Current.user)
     )
+    @account.auto_share_with_family! if Current.family.share_all_by_default?
 
     redirect_to balances_property_path(@account)
   end
@@ -100,7 +102,11 @@ class PropertiesController < ApplicationController
     end
 
     def set_property
-      @account = Current.family.accounts.find(params[:id])
+      @account = accessible_accounts.find(params[:id])
       @property = @account.property
+    end
+
+    def require_property_write_permission!
+      require_account_permission!(@account)
     end
 end

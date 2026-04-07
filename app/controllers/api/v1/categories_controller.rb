@@ -62,11 +62,6 @@ class Api::V1::CategoriesController < Api::V1::BaseController
     end
 
     def apply_filters(query)
-      # Filter by classification (income/expense)
-      if params[:classification].present?
-        query = query.where(classification: params[:classification])
-      end
-
       # Filter for root categories only (no parent)
       if params[:roots_only].present? && ActiveModel::Type::Boolean.new.cast(params[:roots_only])
         query = query.roots

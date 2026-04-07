@@ -16,4 +16,19 @@ class Current < ActiveSupport::CurrentAttributes
   def true_user
     session&.user
   end
+
+  def accessible_accounts
+    return family&.accounts unless user
+    user.accessible_accounts
+  end
+
+  def finance_accounts
+    return family&.accounts unless user
+    user.finance_accounts
+  end
+
+  def accessible_entries
+    return family&.entries unless user
+    family.entries.joins(:account).merge(Account.accessible_by(user))
+  end
 end

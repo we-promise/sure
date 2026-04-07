@@ -3,9 +3,9 @@ class Loan < ApplicationRecord
 
   SUBTYPES = {
     "mortgage" => { short: "Mortgage", long: "Mortgage" },
-    "student" => { short: "Student", long: "Student Loan" },
-    "auto" => { short: "Auto", long: "Auto Loan" },
-    "other" => { short: "Other", long: "Other Loan" }
+    "student" => { short: "Student Loan", long: "Student Loan" },
+    "auto" => { short: "Auto Loan", long: "Auto Loan" },
+    "other" => { short: "Other Loan", long: "Other Loan" }
   }.freeze
 
   def monthly_payment

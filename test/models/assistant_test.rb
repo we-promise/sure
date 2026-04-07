@@ -237,6 +237,12 @@ class AssistantTest < ActiveSupport::TestCase
       "EXTERNAL_ASSISTANT_URL" => nil,
       "EXTERNAL_ASSISTANT_TOKEN" => nil
     ) do
+      # Ensure Settings are also cleared to avoid test pollution from
+      # other tests that may have set these values in the same process.
+      Setting.external_assistant_url = nil
+      Setting.external_assistant_token = nil
+      Setting.clear_cache
+
       assert_no_difference "AssistantMessage.count" do
         assistant.respond_to(@message)
       end
@@ -245,6 +251,9 @@ class AssistantTest < ActiveSupport::TestCase
       assert @chat.error.present?
       assert_includes @chat.error, "not configured"
     end
+  ensure
+    Setting.external_assistant_url = nil
+    Setting.external_assistant_token = nil
   end
 
   test "external assistant adds error on connection failure" do
@@ -323,6 +332,10 @@ class AssistantTest < ActiveSupport::TestCase
 
     # Phase 1: Without config, errors gracefully
     with_env_overrides("EXTERNAL_ASSISTANT_URL" => nil, "EXTERNAL_ASSISTANT_TOKEN" => nil) do
+      Setting.external_assistant_url = nil
+      Setting.external_assistant_token = nil
+      Setting.clear_cache
+
       assistant = Assistant::External.new(@chat)
       assistant.respond_to(@message)
       @chat.reload

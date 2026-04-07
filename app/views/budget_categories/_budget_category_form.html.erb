@@ -22,7 +22,6 @@
                             step: currency.step,
                             id: dom_id(budget_category, :budgeted_spending),
                             min: 0,
-                            max: budget_category.max_allocation,
                             data: { auto_submit_form_target: "auto" },
                             title: budget_category.subcategory? ? "Leave empty to share parent's budget" : nil %>
         </div>

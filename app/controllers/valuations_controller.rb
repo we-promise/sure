@@ -2,7 +2,9 @@ class ValuationsController < ApplicationController
   include EntryableResource, StreamExtensions
 
   def confirm_create
-    @account = Current.family.accounts.find(params.dig(:entry, :account_id))
+    @account = accessible_accounts.find(params.dig(:entry, :account_id))
+    return unless require_account_permission!(@account)
+
     @entry = @account.entries.build(entry_params.merge(currency: @account.currency))
 
     @reconciliation_dry_run = @entry.account.create_reconciliation(
@@ -15,7 +17,9 @@ class ValuationsController < ApplicationController
   end
 
   def confirm_update
-    @entry = Current.family.entries.find(params[:id])
+    @entry = Current.accessible_entries.find(params[:id])
+    return unless require_account_permission!(@entry.account)
+
     @account = @entry.account
     @entry.assign_attributes(entry_params.merge(currency: @account.currency))
 
@@ -30,7 +34,8 @@ class ValuationsController < ApplicationController
   end
 
   def create
-    account = Current.family.accounts.find(params.dig(:entry, :account_id))
+    account = accessible_accounts.find(params.dig(:entry, :account_id))
+    return unless require_account_permission!(account)
 
     result = account.create_reconciliation(
       balance: entry_params[:amount],
@@ -49,6 +54,8 @@ class ValuationsController < ApplicationController
   end
 
   def update
+    return unless require_account_permission!(@entry.account)
+
     # Notes updating is independent of reconciliation, just a simple CRUD operation
     @entry.update!(notes: entry_params[:notes]) if entry_params[:notes].present?
 

@@ -1,7 +1,7 @@
 class ApplicationController < ActionController::Base
   include RestoreLayoutPreferences, Onboardable, Localize, AutoSync, Authentication, Invitable,
           SelfHostable, StoreLocation, Impersonatable, Breadcrumbable,
-          FeatureGuardable, Notifiable, SafePagination
+          FeatureGuardable, Notifiable, SafePagination, AccountAuthorizable
   include Pundit::Authorization
 
   include Pagy::Backend
@@ -38,6 +38,17 @@ class ApplicationController < ActionController::Base
 
       invitation = Invitation.pending.find_by(token: token)
       session[:pending_invitation_token] = token if invitation
+    end
+
+    def require_admin!
+      return if Current.user&.admin?
+
+      respond_to do |format|
+        format.html { redirect_to accounts_path, alert: t("shared.require_admin") }
+        format.turbo_stream { head :forbidden }
+        format.json { head :forbidden }
+        format.any { head :forbidden }
+      end
     end
 
     def detect_os
@@ -81,4 +92,14 @@ class ApplicationController < ActionController::Base
     def show_demo_warning?
       demo_host_match?
     end
+
+    def accessible_accounts
+      Current.accessible_accounts
+    end
+    helper_method :accessible_accounts
+
+    def finance_accounts
+      Current.finance_accounts
+    end
+    helper_method :finance_accounts
 end

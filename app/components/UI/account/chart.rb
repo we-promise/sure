@@ -69,4 +69,15 @@ class UI::Account::Chart < ApplicationComponent
   def trend
     series.trend
   end
+
+  def comparison_label
+    start_date = series.start_date
+    return period.comparison_label if start_date.blank?
+
+    if start_date > period.start_date
+      "vs. available history"
+    else
+      period.comparison_label
+    end
+  end
 end

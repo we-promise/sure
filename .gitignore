@@ -4,6 +4,9 @@
 # or operating system, you probably want to add a global ignore instead:
 #   git config --global core.excludesfile '~/.gitignore_global'
 
+# Git Worktrees
+.worktrees/
+
 # Ignore bundler config.
 /.bundle
 /vendor/bundle
@@ -73,6 +76,10 @@ compose.yml
 
 plaid_test_accounts/
 
+# Added by Claude
+.claude/settings.local.json
+docs/superpowers/
+
 # Added by Claude Task Master
 # Logs
 logs
@@ -108,7 +115,6 @@ scripts/
 .cursor/rules/dev_workflow.mdc
 .cursor/rules/taskmaster.mdc
 
-
 # Auto Claude data directory
 .auto-claude/
 
@@ -116,6 +122,5 @@ scripts/
 .auto-claude-security.json
 .auto-claude-status
 .claude_settings.json
-.worktrees/
 .security-key
 logs/security/

@@ -3,7 +3,7 @@
     <div class="flex items-start justify-between gap-4">
       <div>
         <h3 class="font-medium flex items-center gap-2">
-          <span class="text-2xl text-primary">
+          <span class="text-2xl text-primary privacy-sensitive">
             <%= format_money @transfer.amount_abs %>
           </span>
           <span class="text-lg text-secondary">
@@ -35,7 +35,7 @@
           </dl>
           <dl class="flex items-center gap-2 justify-between">
             <dt class="text-secondary">Amount</dt>
-            <dd class="font-medium text-red-500"><%= format_money @transfer.outflow_transaction.entry.amount_money * -1 %></dd>
+            <dd class="font-medium text-red-500 privacy-sensitive"><%= format_money @transfer.outflow_transaction.entry.amount_money * -1 %></dd>
           </dl>
         </div>
         <%= render "shared/ruler", classes: "my-2" %>
@@ -53,7 +53,7 @@
           </dl>
           <dl class="flex items-center gap-2 justify-between">
             <dt class="text-secondary">Amount</dt>
-            <dd class="font-medium text-green-500">+<%= format_money @transfer.inflow_transaction.entry.amount_money * -1 %></dd>
+            <dd class="font-medium text-green-500 privacy-sensitive">+<%= format_money @transfer.inflow_transaction.entry.amount_money * -1 %></dd>
           </dl>
         </div>
       </div>

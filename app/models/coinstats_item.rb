@@ -1,5 +1,5 @@
 # Represents a CoinStats API connection for a family.
-# Stores credentials and manages associated crypto wallet accounts.
+# Stores credentials and manages associated wallet and exchange portfolio accounts.
 class CoinstatsItem < ApplicationRecord
   include Syncable, Provided, Unlinking
 
@@ -20,6 +20,7 @@ class CoinstatsItem < ApplicationRecord
 
   validates :name, presence: true
   validates :api_key, presence: true
+  validates :exchange_portfolio_id, uniqueness: { scope: :family_id, allow_nil: true }
 
   belongs_to :family
   has_one_attached :logo, dependent: :purge_later
@@ -141,11 +142,15 @@ class CoinstatsItem < ApplicationRecord
 
   # @return [String] Display name for the CoinStats connection
   def institution_display_name
-    name.presence || "CoinStats"
+    institution_name.presence || name.presence || "CoinStats"
   end
 
   # @return [Boolean] true if API key is set
   def credentials_configured?
     api_key.present?
+  end
+
+  def exchange_configured?
+    exchange_portfolio_id.present? && exchange_connection_id.present?
   end
 end

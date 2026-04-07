@@ -87,6 +87,7 @@ class CoinstatsAccount::Transactions::Processor
     # @return [Array<Hash>] Transactions matching this account's token
     def filter_transactions_for_account(transactions)
       return [] unless transactions.present?
+      return transactions if coinstats_account.exchange_portfolio_account?
       return transactions unless coinstats_account.account_id.present?
 
       account_id = coinstats_account.account_id.to_s.downcase
@@ -94,20 +95,31 @@ class CoinstatsAccount::Transactions::Processor
       transactions.select do |tx|
         tx = tx.with_indifferent_access
 
-        # Check coin ID in transactions[0].items[0].coin.id (most common location)
-        coin_id = tx.dig(:transactions, 0, :items, 0, :coin, :id)&.to_s&.downcase
-
-        # Also check coinData for symbol match as fallback
+        coin_identifier = tx.dig(:coinData, :identifier)&.to_s&.downcase
         coin_symbol = tx.dig(:coinData, :symbol)&.to_s&.downcase
+        nested_coin_matches = transaction_items(tx).any? do |item|
+          coin = item[:coin].to_h.with_indifferent_access
+          coin[:id]&.to_s&.downcase == account_id ||
+            coin[:identifier]&.to_s&.downcase == account_id ||
+            coin[:symbol]&.to_s&.downcase == account_id
+        end
 
         # Match if coin ID equals account_id, or if symbol matches account name precisely.
         # We use strict matching to avoid false positives (e.g., "ETH" should not match
         # "Ethereum Classic" which has symbol "ETC"). The symbol must appear as:
         # - A whole word (bounded by word boundaries), OR
         # - Inside parentheses like "(ETH)" which is common in wallet naming conventions
-        coin_id == account_id ||
+        nested_coin_matches ||
+          coin_identifier == account_id ||
           (coin_symbol.present? && symbol_matches_name?(coin_symbol, coinstats_account.name))
       end
+    end
+
+    def transaction_items(transaction)
+      tx = transaction.with_indifferent_access
+
+      Array(tx[:transactions]).flat_map { |entry| Array(entry.with_indifferent_access[:items]) } +
+        Array(tx[:transfers]).flat_map { |entry| Array(entry.with_indifferent_access[:items]) }
     end
 
     # Checks if a coin symbol matches the account name using strict matching.

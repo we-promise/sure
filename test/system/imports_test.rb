@@ -13,6 +13,7 @@ class ImportsTest < ApplicationSystemTestCase
   test "transaction import" do
     visit new_import_path
 
+    click_on "Raw Data"
     click_on "Import transactions"
 
     within_testid("import-tabs") do
@@ -63,6 +64,7 @@ class ImportsTest < ApplicationSystemTestCase
   test "trade import" do
     visit new_import_path
 
+    click_on "Raw Data"
     click_on "Import investments"
 
     within_testid("import-tabs") do
@@ -105,6 +107,7 @@ class ImportsTest < ApplicationSystemTestCase
   test "account import" do
     visit new_import_path
 
+    click_on "Raw Data"
     click_on "Import accounts"
 
     within_testid("import-tabs") do
@@ -153,6 +156,8 @@ class ImportsTest < ApplicationSystemTestCase
   test "mint import" do
     visit new_import_path
 
+    # Pending CSV-style imports default the dialog to the Raw Data tab; Mint lives under Financial Tools.
+    click_on "Financial Tools"
     click_on "Import from Mint"
 
     within_testid("import-tabs") do

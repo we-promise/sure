@@ -49,6 +49,8 @@ pt-BR:
       edit_merchants: Editar comerciantes
       edit_tags: Editar tags
       import: Importar
+    transaction:
+      linked_with_provider: Vinculado com %{provider}
     index:
       transaction: transação
       transactions: transações

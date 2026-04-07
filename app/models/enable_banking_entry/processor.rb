@@ -6,7 +6,7 @@ class EnableBankingEntry::Processor
   # enable_banking_transaction is the raw hash fetched from Enable Banking API
   # Transaction structure from Enable Banking:
   # {
-  #   transaction_id, entry_reference, booking_date, value_date,
+  #   transaction_id, entry_reference, booking_date, value_date, transaction_date,
   #   transaction_amount: { amount, currency },
   #   creditor_name, debtor_name, remittance_information, ...
   # }
@@ -173,8 +173,8 @@ class EnableBankingEntry::Processor
     end
 
     def date
-      # Prefer booking_date, fall back to value_date
-      date_value = data[:booking_date] || data[:value_date]
+      # Prefer booking_date, fall back to value_date, then transaction_date
+      date_value = data[:booking_date] || data[:value_date] || data[:transaction_date]
 
       case date_value
       when String

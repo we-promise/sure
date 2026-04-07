@@ -89,6 +89,12 @@ data:
   pipelock.yaml: |
     version: 1
     mode: {{ .Values.pipelock.mode | default "balanced" }}
+{{- if .Values.pipelock.trustedDomains }}
+    trusted_domains:
+{{- range .Values.pipelock.trustedDomains }}
+      - {{ . | quote }}
+{{- end }}
+{{- end }}
     forward_proxy:
       enabled: {{ $fwdEnabled }}
       max_tunnel_seconds: {{ $fwdMaxTunnel }}
@@ -122,6 +128,10 @@ data:
     mcp_tool_policy:
       enabled: {{ $mcpPolicyEnabled }}
       action: {{ $mcpPolicyAction }}
+{{- if and .Values.pipelock.mcpToolPolicy .Values.pipelock.mcpToolPolicy.redirectProfiles }}
+      redirect_profiles:
+        {{- toYaml .Values.pipelock.mcpToolPolicy.redirectProfiles | nindent 8 }}
+{{- end }}
     mcp_session_binding:
       enabled: {{ $mcpBindingEnabled }}
       unknown_tool_action: {{ $mcpBindingAction }}

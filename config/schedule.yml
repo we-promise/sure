@@ -29,4 +29,16 @@ clean_data:
   cron: "0 3 * * *" # daily at 3:00 AM
   class: "DataCleanerJob"
   queue: "scheduled"
-  description: "Cleans up old data (e.g., expired merchant associations)"
+  description: "Cleans up old data (e.g., expired merchant associations, expired archived exports)"
+
+clean_inactive_families:
+  cron: "0 4 * * *" # daily at 4:00 AM
+  class: "InactiveFamilyCleanerJob"
+  queue: "scheduled"
+  description: "Archives and destroys families that expired their trial without subscribing (managed mode only)"
+
+refresh_demo_family:
+  cron: "0 5 * * *" # daily at 5:00 AM UTC
+  class: "DemoFamilyRefreshJob"
+  queue: "scheduled"
+  description: "Refreshes demo family data and emails super admins with daily usage summary"

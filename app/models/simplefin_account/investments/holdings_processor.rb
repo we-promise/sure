@@ -42,9 +42,12 @@ class SimplefinAccount::Investments::HoldingsProcessor
         end
 
         # Parse provider data with robust fallbacks across SimpleFin sources
+        # NOTE: "value" is intentionally excluded from the market_value fallback chain
+        # because some brokerages (e.g. Vanguard, Fidelity) use "value" to mean cost basis,
+        # which would cause the system to display average cost as current price. (GH #1182)
         qty = parse_decimal(any_of(simplefin_holding, %w[shares quantity qty units]))
-        market_value = parse_decimal(any_of(simplefin_holding, %w[market_value value current_value]))
-        cost_basis = parse_decimal(any_of(simplefin_holding, %w[cost_basis basis total_cost]))
+        market_value = parse_decimal(any_of(simplefin_holding, %w[market_value current_value]))
+        cost_basis = parse_decimal(any_of(simplefin_holding, %w[cost_basis basis total_cost value]))
 
         # Derive price from market_value when possible; otherwise fall back to any price field
         fallback_price = parse_decimal(any_of(simplefin_holding, %w[purchase_price price unit_price average_cost avg_cost]))

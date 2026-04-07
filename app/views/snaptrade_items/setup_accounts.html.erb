@@ -34,7 +34,7 @@
 
       <% if @waiting_for_sync %>
         <%# Syncing state - show spinner with manual refresh option %>
-        <div class="flex flex-col items-center justify-center py-6 space-y-3">
+        <div id="snaptrade-sync-spinner" class="flex flex-col items-center justify-center py-6 space-y-3">
           <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
           <p class="text-secondary text-center">
             <%= t("snaptrade_items.setup_accounts.loading", default: "Fetching accounts from SnapTrade...") %>
@@ -60,7 +60,7 @@
         </div>
       <% elsif @no_accounts_found %>
         <%# No accounts found after sync completed %>
-        <div class="flex flex-col items-center justify-center py-6 space-y-3">
+        <div class="no-accounts-found flex flex-col items-center justify-center py-6 space-y-3">
           <%= icon "alert-circle", size: "lg", class: "text-warning" %>
           <p class="text-primary text-center font-medium">
             <%= t("snaptrade_items.setup_accounts.no_accounts_title", default: "No Accounts Found") %>

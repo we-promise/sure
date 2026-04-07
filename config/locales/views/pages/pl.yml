@@ -1,0 +1,79 @@
+---
+pl:
+  pages:
+    changelog:
+      title: Co nowego
+    privacy:
+      title: Polityka prywatności
+      heading: Polityka prywatności
+      placeholder: Treść polityki prywatności będzie wyświetlana tutaj.
+    terms:
+      title: Warunki korzystania z usługi
+      heading: Warunki korzystania z usługi
+      placeholder: Treść warunków korzystania z usługi będzie wyświetlana tutaj.
+    dashboard:
+      welcome: Witaj ponownie, %{name}
+      subtitle: Zobacz, co dzieje się z Twoimi finansami
+      new: Nowe
+      bond_rate_review_notice:
+        one: "1 partia obligacji wymaga aktualizacji stopy emisji (%{accounts})."
+        few: "%{count} partie obligacji wymagają aktualizacji stopy emisji (%{accounts})."
+        many: "%{count} partii obligacji wymaga aktualizacji stopy emisji (%{accounts})."
+        other: "%{count} partii obligacji wymaga aktualizacji stopy emisji (%{accounts})."
+      drag_to_reorder: Przeciągnij, aby zmienić kolejność sekcji
+      toggle_section: Przełącz widoczność sekcji
+      net_worth_chart:
+        data_not_available: Dane niedostępne dla wybranego okresu
+        title: Majątek netto
+      no_account_empty_state:
+        new_account: Nowe konto
+        no_account_subtitle: Ponieważ nie dodano jeszcze żadnych kont, nie ma danych do wyświetlenia. Dodaj pierwsze konto, aby zacząć przeglądać dane pulpitu.
+        no_account_title: Brak kont
+      balance_sheet:
+        title: Bilans
+        no_items: Brak %{name}
+        add_accounts: Dodaj konta %{name}, aby zobaczyć pełny podział
+      cashflow_sankey:
+        title: Przepływy pieniężne
+        no_data_title: Brak danych o przepływach pieniężnych dla tego okresu
+        no_data_description: Dodaj transakcje, aby wyświetlić dane o przepływach pieniężnych, albo poszerz zakres czasu
+        add_transaction: Dodaj transakcję
+      no_accounts:
+        title: Brak kont
+        description: Dodaj konta, aby wyświetlić dane o majątku netto
+        add_account: Dodaj konto
+      outflows_donut:
+        title: Wydatki
+        total_outflows: Łączne wydatki
+        categories: Kategorie
+        value: Wartość
+        weight: Udział
+      investment_summary:
+        title: Inwestycje
+        total_return: Łączny zwrot
+        holding: Pozycja
+        weight: Udział
+        value: Wartość
+        return: Zwrot
+        period_activity: Aktywność za %{period}
+        contributions: Wpłaty
+        withdrawals: Wypłaty
+        trades: Transakcje giełdowe
+        no_investments: Brak kont inwestycyjnych
+        add_investment: Dodaj konto inwestycyjne, aby śledzić swój portfel
+      bond_summary:
+        title: Obligacje
+        total_return: Łączny zwrot
+        bond: Obligacja
+        rate: Oprocentowanie
+        principal: Kapitał
+        maturity: Zapadalność
+        maturity_label: Data zapadalności
+        principal_term: Kapitał, %{term}
+        term_months:
+          one: 1 miesiąc
+          few: "%{count} miesiące"
+          many: "%{count} miesięcy"
+          other: "%{count} miesiąca"
+        no_bonds: Brak kont obligacji
+        account_wrapper: "%{account} • %{wrapper}"

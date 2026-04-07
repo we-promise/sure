@@ -9,33 +9,35 @@
       </p>
     </div>
 
-    <%= render DS::Link.new(
-      icon: "plus",
-      text: t("pages.dashboard.new"),
-      href: new_account_path,
-      frame: :modal,
-      class: "hidden lg:inline-flex"
-    ) %>
-
-    <%= render DS::Link.new(
-        variant: "icon-inverse",
+    <div class="flex items-center gap-2">
+      <%= render DS::Link.new(
         icon: "plus",
+        text: t("pages.dashboard.new"),
         href: new_account_path,
         frame: :modal,
-        class: "rounded-full lg:hidden"
+        class: "hidden lg:inline-flex"
       ) %>
+
+      <%= render DS::Link.new(
+          variant: "icon-inverse",
+          icon: "plus",
+          href: new_account_path,
+          frame: :modal,
+          class: "rounded-full lg:hidden"
+        ) %>
+    </div>
   </div>
 <% end %>
 
-<div class="grid grid-cols-1 2xl:grid-cols-2 gap-6 pb-6 lg:pb-12" data-controller="dashboard-sortable" data-action="dragover->dashboard-sortable#dragOver drop->dashboard-sortable#drop" role="list" aria-label="Dashboard sections">
-  <% if Current.family.accounts.any? %>
+<div class="grid grid-cols-1 <%= "2xl:grid-cols-2" if Current.user.dashboard_two_column? %> gap-6 pb-6 lg:pb-12" data-controller="dashboard-sortable" data-action="dragover->dashboard-sortable#dragOver drop->dashboard-sortable#drop" role="list" aria-label="Dashboard sections">
+  <% if accessible_accounts.any? %>
     <% @dashboard_sections.each do |section| %>
       <% next unless section[:visible] %>
       <section
         class="bg-container rounded-xl shadow-border-xs transition-all group focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-900 focus-visible:ring-offset-2"
         data-dashboard-sortable-target="section"
         data-section-key="<%= section[:key] %>"
-        data-controller="dashboard-section<%= ' cashflow-expand' if section[:key] == 'cashflow_sankey' %>"
+        data-controller="dashboard-section<%= " cashflow-expand" if section[:key] == "cashflow_sankey" %>"
         data-dashboard-section-section-key-value="<%= section[:key] %>"
         data-dashboard-section-collapsed-value="<%= Current.user.dashboard_section_collapsed?(section[:key]) %>"
         draggable="true"
@@ -49,6 +51,7 @@
           touchstart->dashboard-sortable#touchStart
           touchmove->dashboard-sortable#touchMove
           touchend->dashboard-sortable#touchEnd
+          touchcancel->dashboard-sortable#touchEnd
           keydown->dashboard-sortable#handleKeyDown">
         <div class="px-4 py-2 flex items-center justify-between">
           <div class="flex items-center gap-2">

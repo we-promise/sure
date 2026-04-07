@@ -248,6 +248,18 @@
   color: theme(colors.white) !important;
 }
 
+/* Specific override for headings in prose under dark mode */
+.prose:where([data-theme=dark], [data-theme=dark] *) h1,
+.prose:where([data-theme=dark], [data-theme=dark] *) h2,
+.prose:where([data-theme=dark], [data-theme=dark] *) h3,
+.prose:where([data-theme=dark], [data-theme=dark] *) h4,
+.prose:where([data-theme=dark], [data-theme=dark] *) h5,
+.prose:where([data-theme=dark], [data-theme=dark] *) h6,
+.prose:where([data-theme=dark], [data-theme=dark] *) blockquote,
+.prose:where([data-theme=dark], [data-theme=dark] *) thead th {
+  color: theme(colors.white) !important;
+}
+
 @layer base {
   [data-theme="dark"] { 
     --color-success: var(--color-green-500);

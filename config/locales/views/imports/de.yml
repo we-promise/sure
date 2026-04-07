@@ -1,6 +1,30 @@
 ---
 de:
   import:
+    qif_category_selections:
+      show:
+        title: "Konfigurieren und auswählen"
+        description: "Überprüfe das erkannte Datumsformat und wähle dann die Kategorien und Tags aus deiner QIF-Datei aus, die in %{product_name} importiert werden sollen."
+        categories_heading: Kategorien
+        categories_found:
+          one: "1 Kategorie gefunden"
+          other: "%{count} Kategorien gefunden"
+        category_name_col: Kategoriename
+        transactions_col: Buchungen
+        tags_heading: Tags
+        tags_found:
+          one: "1 Tag gefunden"
+          other: "%{count} Tags gefunden"
+        tag_name_col: Tag-Name
+        txn_count:
+          one: "1 Buchung"
+          other: "%{count} Buchungen"
+        empty_state_primary: In dieser QIF-Datei wurden keine Kategorien oder Tags gefunden.
+        empty_state_secondary: Alle Transaktionen werden ohne Kategorien und Tags importiert.
+        submit: Weiter zur Überprüfung
+        split_warning_title: Aufgeteilte Buchungen erkannt
+        split_warning_description: "Diese QIF-Datei enthält aufgeteilte Buchungen. Aufgeteilte Buchungen werden noch nicht unterstützt – jede aufgeteilte Buchung wird als einzelne Buchung mit ihrem Gesamtbetrag und ohne Kategorie importiert. Die einzelnen Aufteilungsdetails werden nicht übernommen."
+        split_badge: aufgeteilt
     cleans:
       show:
         description: Bearbeite deine Daten in der Tabelle unten. Rote Zellen sind ungültig.
@@ -47,6 +71,15 @@ de:
         tag_mapping_title: Tags zuweisen
     uploads:
       show:
+        qif_title: QIF-Datei hochladen
+        qif_description: Wähle das Konto, zu dem diese QIF-Datei gehört, und lade deinen .qif-Export aus Quicken hoch.
+        qif_account_label: Konto
+        qif_account_placeholder: Konto auswählen…
+        qif_file_prompt: um deine QIF-Datei hier hinzuzufügen
+        qif_file_hint: Nur .qif-Dateien
+        qif_submit: QIF hochladen
+        browse: Durchsuchen
+        csv_file_prompt: um deine CSV-Datei hier hinzuzufügen
         description: Füge unten deine CSV-Datei ein oder lade sie hoch. Bitte lies die Anweisungen in der Tabelle unten, bevor du beginnst.
         instructions_1: Unten siehst du ein Beispiel einer CSV-Datei mit verfügbaren Spalten für den Import.
         instructions_2: Deine CSV muss eine Kopfzeile enthalten.
@@ -55,6 +88,19 @@ de:
         instructions_5: Keine Kommas, Währungssymbole oder Klammern in Zahlen verwenden.
         title: Daten importieren
   imports:
+    date_format:
+      heading: Datumsformat
+      description: "Das Datumsformat wurde automatisch aus deiner Datei erkannt. Ändere es, wenn die Datumsangaben falsch aussehen."
+      preview: "Erstes erkanntes Datum"
+      error_title: "Datumsformat konnte nicht erkannt werden"
+      error_description: "Keines der unterstützten Datumsformate konnte die Datumsangaben in dieser Datei lesen. Bitte überprüfe, ob die Datei gültige Datumseinträge enthält."
+    steps:
+      upload: Hochladen
+      configure: Konfigurieren
+      clean: Bereinigen
+      map: Zuordnen
+      confirm: Bestätigen
+      select: Auswählen
     index:
       title: Importe
       new: Neuer Import
@@ -89,6 +135,7 @@ de:
       import_portfolio: Investitionen importieren
       import_rules: Regeln importieren
       import_transactions: Transaktionen importieren
+      import_qif: Von Quicken importieren (QIF)
       requires_account: Importiere zuerst Konten, um diese Option zu nutzen.
       resume: "%{type} fortsetzen"
       sources: Quellen
@@ -140,3 +187,8 @@ de:
     ready:
       description: Hier ist eine Zusammenfassung der neuen Elemente, die deinem Konto hinzugefügt werden, sobald du diesen Import veröffentlichst.
       title: Importdaten bestätigen
+      summary_item_label: Eintrag
+      summary_count_label: Anzahl
+      empty_summary: In dieser Datei wurden keine importierbaren Datensätze gefunden. Sie ist möglicherweise leer, oder die Zeilen entsprechen nicht dem erwarteten Exportformat (jede Zeile sollte ein JSON-Objekt mit den Schlüsseln „type“ und „data“ und unterstützten Typen sein).
+      publish_import: Import veröffentlichen
+      back_to_imports: Zurück zu Importen

@@ -2,6 +2,9 @@
 <% is_selected = category.id === @selected_category&.id %>
 
 <%= content_tag :div,
+      id: dom_id(category, "category_option"),
+      role: "option",
+      aria_selected: is_selected.to_s,
       class: ["filterable-item flex justify-between items-center border-none rounded-lg px-2 py-1 group w-full hover:bg-container-inset-hover",
               { "bg-container-inset": is_selected }],
       data: { filter_name: category.name } do %>

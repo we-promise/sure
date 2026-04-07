@@ -1,5 +1,6 @@
 class LunchflowItemsController < ApplicationController
   before_action :set_lunchflow_item, only: [ :show, :edit, :update, :destroy, :sync, :setup_accounts, :complete_account_setup ]
+  before_action :require_admin!, only: [ :new, :create, :preload_accounts, :select_accounts, :link_accounts, :select_existing_account, :link_existing_account, :edit, :update, :destroy, :sync, :setup_accounts, :complete_account_setup ]
 
   def index
     @lunchflow_items = Current.family.lunchflow_items.active.ordered
@@ -534,7 +535,7 @@ class LunchflowItemsController < ApplicationController
 
     # Helper to translate subtype options
     translate_subtypes = ->(type_key, subtypes_hash) {
-      subtypes_hash.keys.map { |k| [ t(".subtypes.#{type_key}.#{k}"), k ] }
+      subtypes_hash.map { |k, v| [ t(".subtypes.#{type_key}.#{k}", default: v[:long] || k.humanize), k ] }
     }
 
     # Subtype options for each account type (only include supported types)

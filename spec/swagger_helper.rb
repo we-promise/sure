@@ -203,11 +203,10 @@ RSpec.configure do |config|
           },
           Category: {
             type: :object,
-            required: %w[id name classification color icon],
+            required: %w[id name color icon],
             properties: {
               id: { type: :string, format: :uuid },
               name: { type: :string },
-              classification: { type: :string },
               color: { type: :string },
               icon: { type: :string }
             }
@@ -222,11 +221,10 @@ RSpec.configure do |config|
           },
           CategoryDetail: {
             type: :object,
-            required: %w[id name classification color icon subcategories_count created_at updated_at],
+            required: %w[id name color icon subcategories_count created_at updated_at],
             properties: {
               id: { type: :string, format: :uuid },
               name: { type: :string },
-              classification: { type: :string, enum: %w[income expense] },
               color: { type: :string },
               icon: { type: :string },
               parent: { '$ref' => '#/components/schemas/CategoryParent', nullable: true },
@@ -516,6 +514,25 @@ RSpec.configure do |config|
                 items: { '$ref' => '#/components/schemas/Holding' }
               },
               pagination: { '$ref' => '#/components/schemas/Pagination' }
+            }
+          },
+          Money: {
+            type: :object,
+            required: %w[amount currency formatted],
+            properties: {
+              amount: { type: :string, description: 'Numeric amount as string' },
+              currency: { type: :string, description: 'ISO 4217 currency code' },
+              formatted: { type: :string, description: 'Locale-formatted money string' }
+            }
+          },
+          BalanceSheet: {
+            type: :object,
+            required: %w[currency net_worth assets liabilities],
+            properties: {
+              currency: { type: :string, description: 'Family primary currency' },
+              net_worth: { '$ref' => '#/components/schemas/Money' },
+              assets: { '$ref' => '#/components/schemas/Money' },
+              liabilities: { '$ref' => '#/components/schemas/Money' }
             }
           },
           SuccessMessage: {

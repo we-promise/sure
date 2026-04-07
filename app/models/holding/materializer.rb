@@ -17,9 +17,16 @@ class Holding::Materializer
       purge_stale_holdings
     end
 
-    # Clean up calculated holdings for securities that now have provider-sourced holdings
-    # This prevents duplicates when a manually-entered account gets linked to a provider
-    cleanup_calculated_holdings_for_provider_securities
+    # Clean up only calculated holdings that are directly shadowed by a provider snapshot
+    # on the same date/security/currency. Historical calculated rows for provider-linked
+    # securities are still needed to derive sane balance charts between sync snapshots.
+    cleanup_shadowed_calculated_holdings
+
+    # Also remove calculated rows on the provider's latest snapshot date when those
+    # securities are no longer present in the provider payload. This keeps "current"
+    # holdings/balance composition aligned with the provider snapshot while preserving
+    # older calculated history.
+    cleanup_stale_calculated_rows_on_latest_provider_snapshot
 
     # Reload holdings association to clear any cached stale data
     # This ensures subsequent Balance calculations see the fresh holdings
@@ -48,9 +55,6 @@ class Holding::Materializer
       holdings_to_upsert_without_cost = []
 
       @holdings.each do |holding|
-        # Skip securities that have provider-sourced holdings - don't overwrite provider data
-        next if provider_sourced_security_ids.include?(holding.security_id)
-
         key = holding_key(holding)
         existing = existing_holdings_map[key]
 
@@ -118,27 +122,48 @@ class Holding::Materializer
         .index_by { |h| holding_key(h) }
     end
 
-    # Get security IDs that have provider-sourced holdings (any date)
-    # These should be preserved and not overwritten by calculated holdings
-    def provider_sourced_security_ids
-      @provider_sourced_security_ids ||= account.holdings
-        .where.not(account_provider_id: nil)
-        .distinct
-        .pluck(:security_id)
-    end
-
-    # Remove calculated holdings (account_provider_id IS NULL) for securities
-    # that now have provider-sourced holdings. This prevents duplicates when
-    # a manually-entered account gets linked to a provider.
-    def cleanup_calculated_holdings_for_provider_securities
-      return if provider_sourced_security_ids.empty?
-
+    # Remove only calculated holdings that collide with an authoritative provider snapshot
+    # on the exact same key. This preserves reverse-calculated history for linked accounts.
+    def cleanup_shadowed_calculated_holdings
       deleted_count = account.holdings
         .where(account_provider_id: nil)
-        .where(security_id: provider_sourced_security_ids)
+        .where(<<~SQL)
+          EXISTS (
+            SELECT 1
+            FROM holdings provider_holdings
+            WHERE provider_holdings.account_id = holdings.account_id
+              AND provider_holdings.security_id = holdings.security_id
+              AND provider_holdings.date = holdings.date
+              AND provider_holdings.currency = holdings.currency
+              AND provider_holdings.account_provider_id IS NOT NULL
+          )
+        SQL
         .delete_all
 
-      Rails.logger.info("Cleaned up #{deleted_count} calculated holdings for provider-sourced securities") if deleted_count > 0
+      Rails.logger.info("Cleaned up #{deleted_count} calculated holdings shadowed by provider snapshots") if deleted_count > 0
+    end
+
+    def cleanup_stale_calculated_rows_on_latest_provider_snapshot
+      provider_snapshot_date = account.latest_provider_holdings_snapshot_date
+      return unless provider_snapshot_date
+
+      provider_security_ids = account.holdings
+        .where.not(account_provider_id: nil)
+        .where(date: provider_snapshot_date)
+        .distinct
+        .pluck(:security_id)
+
+      scope = account.holdings
+        .where(account_provider_id: nil, date: provider_snapshot_date)
+
+      scope = if provider_security_ids.any?
+        scope.where.not(security_id: provider_security_ids)
+      else
+        scope
+      end
+
+      deleted_count = scope.delete_all
+      Rails.logger.info("Cleaned up #{deleted_count} stale calculated holdings on latest provider snapshot date") if deleted_count > 0
     end
 
     def holding_key(holding)

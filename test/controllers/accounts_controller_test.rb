@@ -158,7 +158,6 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_includes @response.body, @account.name
-    assert_includes @response.body, "account_#{@account.id}_active"
   end
 
   test "toggle_active disables and re-enables an account" do
@@ -176,6 +175,34 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
   test "select_provider shows available providers" do
     get select_provider_account_url(@account)
     assert_response :success
+  end
+
+  test "set_default sets user default account" do
+    patch set_default_account_url(@account)
+    assert_redirected_to accounts_path
+    @user.reload
+    assert_equal @account.id, @user.default_account_id
+  end
+
+  test "set_default rejects ineligible account type" do
+    investment = accounts(:investment)
+
+    patch set_default_account_url(investment)
+    assert_redirected_to accounts_path
+    assert_equal I18n.t("accounts.set_default.depository_only"), flash[:alert]
+
+    @user.reload
+    assert_not_equal investment.id, @user.default_account_id
+  end
+
+  test "remove_default clears user default account" do
+    @user.update!(default_account: @account)
+
+    patch remove_default_account_url(@account)
+    assert_redirected_to accounts_path
+
+    @user.reload
+    assert_nil @user.default_account_id
   end
 
   test "select_provider redirects for already linked account" do

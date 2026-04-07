@@ -22,13 +22,7 @@
 <div class="bg-container rounded-xl shadow-border-xs p-4">
   <% if @categories.any? %>
     <div class="space-y-4">
-      <% if @categories.incomes.any? %>
-        <%= render "categories/category_list_group", title: t(".categories_incomes"), categories: @categories.incomes %>
-      <% end %>
-
-      <% if @categories.expenses.any? %>
-        <%= render "categories/category_list_group", title: t(".categories_expenses"), categories: @categories.expenses %>
-      <% end %>
+      <%= render "categories/category_list_group", title: t(".categories"), categories: @categories %>
     </div>
   <% else %>
     <div class="flex justify-center items-center py-20">

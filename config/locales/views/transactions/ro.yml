@@ -45,6 +45,8 @@ ro:
       edit_merchants: Editează comercianți
       edit_tags: Editează etichete
       import: Importă
+    transaction:
+      linked_with_provider: Conectat cu %{provider}
     index:
       transaction: tranzacție
       transactions: tranzacții

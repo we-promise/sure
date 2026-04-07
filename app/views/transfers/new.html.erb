@@ -1,4 +1,4 @@
-<%= render DS::Dialog.new do |dialog| %>
+<%= render DS::Dialog.new(scrollable: false) do |dialog| %>
   <% dialog.with_header(title: t(".title")) %>
   <% dialog.with_body do %>
     <%= render "form", transfer: @transfer %>

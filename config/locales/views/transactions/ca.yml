@@ -122,6 +122,7 @@ ca:
     transaction:
       pending: Pendent
       pending_tooltip: Transacció pendent — pot canviar quan es publiqui
+      linked_with_provider: Vinculat amb %{provider}
       possible_duplicate: Duplicat?
       potential_duplicate_tooltip: Això pot ser un duplicat d'una altra transacció
       review_recommended: Revisa

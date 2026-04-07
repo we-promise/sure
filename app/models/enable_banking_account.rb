@@ -16,6 +16,7 @@ class EnableBankingAccount < ApplicationRecord
 
   validates :name, :currency, presence: true
   validates :uid, presence: true, uniqueness: { scope: :enable_banking_item_id }
+  # account_id is not uniquely scoped: uid already enforces one-account-per-identifier per item
 
   # Helper to get account using account_providers system
   def current_account

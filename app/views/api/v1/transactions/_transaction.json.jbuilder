@@ -31,7 +31,6 @@ if transaction.category.present?
   json.category do
     json.id transaction.category.id
     json.name transaction.category.name
-    json.classification transaction.category.classification
     json.color transaction.category.color
     json.icon transaction.category.lucide_icon
   end

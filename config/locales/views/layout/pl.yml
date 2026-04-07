@@ -1,0 +1,24 @@
+---
+pl:
+  layouts:
+    application:
+      privacy_mode: Przełącz tryb prywatności
+      nav:
+        assistant: Asystent
+        budgets: Budżety
+        home: Strona główna
+        reports: Raporty
+        transactions: Transakcje
+    auth:
+      existing_account: Masz już konto?
+      no_account: Nowy użytkownik w %{product_name}?
+      sign_in: Zaloguj się
+      sign_up: Załóż konto
+    shared:
+      footer:
+        privacy_policy: Polityka prywatności
+        terms_of_service: Warunki korzystania
+    trial:
+      open_demo: Otwórz demo
+      data_deleted_in_days: Dane zostaną usunięte za %{days} dni
+      contribute: Wesprzyj

@@ -6,24 +6,35 @@ fr:
       account_prompt: Rechercher un compte
       amount: Montant
       holding: Symbole boursier
+      holding_optional: Symbole boursier (facultatif)
       price: Prix par action
       qty: Quantité
       submit: Ajouter la transaction
       ticker_placeholder: AAPL
       type: Type
+      type_buy: Acheter
+      type_sell: Vendre
+      type_deposit: Dépôt
+      type_withdrawal: Retrait
+      type_dividend: Dividende
+      type_interest: Intérêts
+      dividend_requires_security: Un titre est requis pour les dividendes
     header:
       buy: Acheter
+      sell: Vendre
+      dividend: Dividende
+      interest: Intérêts
       current_market_price_label: Prix du marché actuel
       overview: Aperçu
       purchase_price_label: Prix d'achat
       purchase_qty_label: Quantité achetée
-      sell: Vendre
       symbol_label: Symbole
       total_return_label: Gain/perte non réalisé(e)
     new:
       title: Nouvelle transaction
     show:
       additional: Détails supplémentaires
+      amount_label: Montant
       cost_per_share_label: Coût par action
       date_label: Date
       delete: Supprimer

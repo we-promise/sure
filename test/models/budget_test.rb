@@ -82,8 +82,7 @@ class BudgetTest < ActiveSupport::TestCase
     healthcare = Category.create!(
       name: "Healthcare #{Time.now.to_f}",
       family: family,
-      color: "#e74c3c",
-      classification: "expense"
+      color: "#e74c3c"
     )
 
     budget.sync_budget_categories
@@ -129,8 +128,7 @@ class BudgetTest < ActiveSupport::TestCase
     category = Category.create!(
       name: "Returns Only #{Time.now.to_f}",
       family: family,
-      color: "#3498db",
-      classification: "expense"
+      color: "#3498db"
     )
 
     budget.sync_budget_categories
@@ -266,7 +264,7 @@ class BudgetTest < ActiveSupport::TestCase
     source_budget.update!(budgeted_spending: 4000, expected_income: 6000)
 
     # Create a category only in the source budget
-    temp_category = Category.create!(name: "Temp #{Time.now.to_f}", family: family, color: "#aaa", classification: "expense")
+    temp_category = Category.create!(name: "Temp #{Time.now.to_f}", family: family, color: "#aaaaaa")
     source_budget.budget_categories.create!(category: temp_category, budgeted_spending: 100, currency: "USD")
 
     target_budget = Budget.find_or_bootstrap(family, start_date: 1.month.ago)
@@ -285,7 +283,7 @@ class BudgetTest < ActiveSupport::TestCase
     target_budget = Budget.find_or_bootstrap(family, start_date: 1.month.ago)
 
     # Add a new category only to the target
-    new_category = Category.create!(name: "New #{Time.now.to_f}", family: family, color: "#bbb", classification: "expense")
+    new_category = Category.create!(name: "New #{Time.now.to_f}", family: family, color: "#bbbbbb")
     target_budget.budget_categories.create!(category: new_category, budgeted_spending: 0, currency: "USD")
 
     target_budget.copy_from!(source_budget)

@@ -45,6 +45,8 @@ tr:
       edit_merchants: Satıcıları düzenle
       edit_tags: Etiketleri düzenle
       import: İçe aktar
+    transaction:
+      linked_with_provider: "%{provider} ile bağlantılı"
     index:
       transaction: işlem
       transactions: işlemler

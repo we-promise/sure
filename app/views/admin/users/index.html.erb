@@ -50,7 +50,10 @@
     <% if @families_with_users.any? %>
       <div class="space-y-4">
         <% @families_with_users.each do |family, users| %>
-          <details class="bg-container-inset rounded-lg overflow-hidden group">
+          <% pending_invitations = @invitations_by_family[family.id] || [] %>
+          <details class="bg-container-inset rounded-lg overflow-hidden group"
+                   data-controller="admin-invitation-delete"
+                   data-admin-invitation-delete-delete-all-label-value="<%= t(".invitations.delete_all") %>">
             <summary class="flex items-center justify-between gap-4 px-4 py-3 cursor-pointer select-none hover:bg-surface-hover">
               <div class="flex items-center gap-3">
                 <%= icon "users", class: "w-5 h-5 text-secondary shrink-0" %>
@@ -72,7 +75,7 @@
                   </span>
                 <% elsif sub %>
                   <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium
-                    <%= sub.active? ? 'bg-green-100 text-green-800' : 'bg-surface text-secondary' %>">
+                    <%= sub.active? ? "bg-green-100 text-green-800" : "bg-surface text-secondary" %>">
                     <%= sub.status.humanize %>
                   </span>
                 <% else %>
@@ -133,7 +136,46 @@
                     </tr>
                   <% end %>
                 </tbody>
+                <% if pending_invitations.any? %>
+                  <tbody class="divide-y divide-primary border-t border-dashed border-primary">
+                    <% pending_invitations.each do |invitation| %>
+                      <tr class="bg-red-50/30 dark:bg-red-950/20">
+                        <td class="px-4 py-3">
+                          <div class="flex items-center gap-3">
+                            <%= icon "mail", class: "w-5 h-5 text-secondary shrink-0" %>
+                            <div>
+                              <p class="font-medium text-secondary italic"><%= invitation.email %></p>
+                              <p class="text-xs text-secondary"><%= t(".invitations.pending_label") %></p>
+                            </div>
+                          </div>
+                        </td>
+                        <td class="px-4 py-3 text-sm text-secondary whitespace-nowrap">
+                          <%= t(".invitations.expires", date: invitation.expires_at.to_fs(:long)) %>
+                        </td>
+                        <td class="px-4 py-3 text-sm text-secondary text-right whitespace-nowrap">
+                          —
+                        </td>
+                        <td class="px-4 py-3 text-right">
+                          <%= form_with url: admin_invitation_path(invitation), method: :delete, class: "inline" do |f| %>
+                            <button type="submit"
+                                    data-admin-invitation-delete-target="button"
+                                    data-action="click->admin-invitation-delete#handleClick"
+                                    class="text-sm text-red-600 hover:text-red-800 border border-red-300 rounded-lg px-2 py-1 hover:bg-red-50 transition-colors">
+                              <%= t(".invitations.delete") %>
+                            </button>
+                          <% end %>
+                        </td>
+                      </tr>
+                    <% end %>
+                  </tbody>
+                <% end %>
               </table>
+              <% if pending_invitations.any? %>
+                <%= form_with url: invitations_admin_family_path(family), method: :delete,
+                              data: { admin_invitation_delete_target: "destroyAllForm" },
+                              class: "hidden" do |f| %>
+                <% end %>
+              <% end %>
             </div>
           </details>
         <% end %>

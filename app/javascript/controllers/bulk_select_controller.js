@@ -8,6 +8,7 @@ export default class extends Controller {
     "selectionBar",
     "selectionBarText",
     "bulkEditDrawerHeader",
+    "duplicateLink",
   ];
   static values = {
     singularLabel: String,
@@ -135,6 +136,18 @@ export default class extends Controller {
     this.selectionBarTarget.classList.toggle("hidden", count === 0);
     this.selectionBarTarget.querySelector("input[type='checkbox']").checked =
       count > 0;
+
+    if (this.hasDuplicateLinkTarget) {
+      this.duplicateLinkTarget.classList.toggle("hidden", count !== 1);
+      if (count === 1) {
+        const url = new URL(
+          this.duplicateLinkTarget.href,
+          window.location.origin,
+        );
+        url.searchParams.set("duplicate_entry_id", this.selectedIdsValue[0]);
+        this.duplicateLinkTarget.href = url.toString();
+      }
+    }
   }
 
   _pluralizedResourceName() {

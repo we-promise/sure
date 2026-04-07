@@ -6,6 +6,8 @@ class Security < ApplicationRecord
   # Data stored in config/exchanges.yml
   EXCHANGES = YAML.safe_load_file(Rails.root.join("config", "exchanges.yml")).freeze
 
+  KINDS = %w[standard cash].freeze
+
   before_validation :upcase_symbols
   before_save :generate_logo_url_from_brandfetch, if: :should_generate_logo?
 
@@ -14,8 +16,24 @@ class Security < ApplicationRecord
 
   validates :ticker, presence: true
   validates :ticker, uniqueness: { scope: :exchange_operating_mic, case_sensitive: false }
+  validates :kind, inclusion: { in: KINDS }
 
   scope :online, -> { where(offline: false) }
+  scope :standard, -> { where(kind: "standard") }
+
+  # Lazily finds or creates a synthetic cash security for an account.
+  # Used as fallback when creating an interest Trade without a user-selected security.
+  def self.cash_for(account)
+    ticker = "CASH-#{account.id}".upcase
+    find_or_create_by!(ticker: ticker, kind: "cash") do |s|
+      s.name = "Cash"
+      s.offline = true
+    end
+  end
+
+  def cash?
+    kind == "cash"
+  end
 
   # Returns user-friendly exchange name for a MIC code
   def self.exchange_name_for(mic)
@@ -73,6 +91,7 @@ class Security < ApplicationRecord
     end
 
     def should_generate_logo?
+      return false if cash?
       url = brandfetch_icon_url
       return false unless url.present?
 

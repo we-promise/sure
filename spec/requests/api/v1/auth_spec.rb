@@ -216,6 +216,124 @@ RSpec.describe 'API V1 Auth', type: :request do
     end
   end
 
+  path '/api/v1/auth/sso_link' do
+    post 'Link an existing account via SSO' do
+      tags 'Auth'
+      consumes 'application/json'
+      produces 'application/json'
+      description 'Authenticates with email/password and links the SSO identity from a previously issued linking code. Creates an OidcIdentity, logs the link via SsoAuditLog, and issues mobile OAuth tokens.'
+      parameter name: :body, in: :body, required: true, schema: {
+        type: :object,
+        properties: {
+          linking_code: { type: :string, description: 'One-time linking code from mobile SSO onboarding redirect' },
+          email: { type: :string, format: :email, description: 'Email of the existing account to link' },
+          password: { type: :string, description: 'Password for the existing account' }
+        },
+        required: %w[linking_code email password]
+      }
+
+      response '200', 'account linked and tokens issued' do
+        schema type: :object,
+               properties: {
+                 access_token: { type: :string },
+                 refresh_token: { type: :string },
+                 token_type: { type: :string },
+                 expires_in: { type: :integer },
+                 created_at: { type: :integer },
+                 user: {
+                   type: :object,
+                   properties: {
+                     id: { type: :string, format: :uuid },
+                     email: { type: :string },
+                     first_name: { type: :string },
+                     last_name: { type: :string },
+                     ui_layout: { type: :string, enum: %w[dashboard intro] },
+                     ai_enabled: { type: :boolean }
+                   }
+                 }
+               }
+        run_test!
+      end
+
+      response '400', 'missing linking code' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+        run_test!
+      end
+
+      response '401', 'invalid credentials or expired linking code' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+        run_test!
+      end
+    end
+  end
+
+  path '/api/v1/auth/sso_create_account' do
+    post 'Create a new account via SSO' do
+      tags 'Auth'
+      consumes 'application/json'
+      produces 'application/json'
+      description 'Creates a new user and family from a previously issued linking code. Links the SSO identity via OidcIdentity, logs the JIT account creation via SsoAuditLog, and issues mobile OAuth tokens. The linking code must have allow_account_creation enabled.'
+      parameter name: :body, in: :body, required: true, schema: {
+        type: :object,
+        properties: {
+          linking_code: { type: :string, description: 'One-time linking code from mobile SSO onboarding redirect' },
+          first_name: { type: :string, description: 'First name (overrides value from SSO provider if provided)' },
+          last_name: { type: :string, description: 'Last name (overrides value from SSO provider if provided)' }
+        },
+        required: %w[linking_code]
+      }
+
+      response '200', 'account created and tokens issued' do
+        schema type: :object,
+               properties: {
+                 access_token: { type: :string },
+                 refresh_token: { type: :string },
+                 token_type: { type: :string },
+                 expires_in: { type: :integer },
+                 created_at: { type: :integer },
+                 user: {
+                   type: :object,
+                   properties: {
+                     id: { type: :string, format: :uuid },
+                     email: { type: :string },
+                     first_name: { type: :string },
+                     last_name: { type: :string },
+                     ui_layout: { type: :string, enum: %w[dashboard intro] },
+                     ai_enabled: { type: :boolean }
+                   }
+                 }
+               }
+        run_test!
+      end
+
+      response '400', 'missing linking code' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+        run_test!
+      end
+
+      response '401', 'invalid or expired linking code' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+        run_test!
+      end
+
+      response '403', 'account creation disabled' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+        run_test!
+      end
+
+      response '422', 'user validation error' do
+        schema type: :object,
+               properties: {
+                 errors: {
+                   type: :array,
+                   items: { type: :string }
+                 }
+               }
+        run_test!
+      end
+    end
+  end
+
   path '/api/v1/auth/enable_ai' do
     patch 'Enable AI features for the authenticated user' do
       tags 'Auth'

@@ -4,6 +4,7 @@ class Settings::HostingsController < ApplicationController
   guard_feature unless: -> { self_hosted? }
 
   before_action :ensure_admin, only: [ :update, :clear_cache, :disconnect_external_assistant ]
+  before_action :ensure_super_admin_for_onboarding, only: :update
 
   def show
     @breadcrumbs = [
@@ -41,6 +42,11 @@ class Settings::HostingsController < ApplicationController
 
     if hosting_params.key?(:require_email_confirmation)
       Setting.require_email_confirmation = hosting_params[:require_email_confirmation]
+    end
+
+    if hosting_params.key?(:invite_only_default_family_id)
+      value = hosting_params[:invite_only_default_family_id].presence
+      Setting.invite_only_default_family_id = value
     end
 
     if hosting_params.key?(:brand_fetch_client_id)
@@ -160,7 +166,7 @@ class Settings::HostingsController < ApplicationController
   private
     def hosting_params
       return ActionController::Parameters.new unless params.key?(:setting)
-      params.require(:setting).permit(:onboarding_state, :require_email_confirmation, :brand_fetch_client_id, :brand_fetch_high_res_logos, :twelve_data_api_key, :openai_access_token, :openai_uri_base, :openai_model, :openai_json_mode, :exchange_rate_provider, :securities_provider, :syncs_include_pending, :auto_sync_enabled, :auto_sync_time, :external_assistant_url, :external_assistant_token, :external_assistant_agent_id)
+      params.require(:setting).permit(:onboarding_state, :require_email_confirmation, :invite_only_default_family_id, :brand_fetch_client_id, :brand_fetch_high_res_logos, :twelve_data_api_key, :openai_access_token, :openai_uri_base, :openai_model, :openai_json_mode, :exchange_rate_provider, :securities_provider, :syncs_include_pending, :auto_sync_enabled, :auto_sync_time, :external_assistant_url, :external_assistant_token, :external_assistant_agent_id)
     end
 
     def update_assistant_type
@@ -173,6 +179,12 @@ class Settings::HostingsController < ApplicationController
 
     def ensure_admin
       redirect_to settings_hosting_path, alert: t(".not_authorized") unless Current.user.admin?
+    end
+
+    def ensure_super_admin_for_onboarding
+      onboarding_params = %i[onboarding_state invite_only_default_family_id]
+      return unless onboarding_params.any? { |p| hosting_params.key?(p) }
+      redirect_to settings_hosting_path, alert: t(".not_authorized") unless Current.user.super_admin?
     end
 
     def sync_auto_sync_scheduler!

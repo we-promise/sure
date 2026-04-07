@@ -1,11 +1,16 @@
 class Entry < ApplicationRecord
   include Monetizable, Enrichable
 
+  attr_accessor :unsplitting
+
   monetize :amount
 
   belongs_to :account
   belongs_to :transfer, optional: true
   belongs_to :import, optional: true
+  belongs_to :parent_entry, class_name: "Entry", optional: true
+
+  has_many :child_entries, class_name: "Entry", foreign_key: :parent_entry_id, dependent: :destroy
 
   delegated_type :entryable, types: Entryable::TYPES, dependent: :destroy
   accepts_nested_attributes_for :entryable
@@ -14,6 +19,11 @@ class Entry < ApplicationRecord
   validates :date, uniqueness: { scope: [ :account_id, :entryable_type ] }, if: -> { valuation? }
   validates :date, comparison: { greater_than: -> { min_supported_date } }
   validates :external_id, uniqueness: { scope: [ :account_id, :source ] }, if: -> { external_id.present? && source.present? }
+
+  validate :cannot_unexclude_split_parent
+  validate :split_child_date_matches_parent
+
+  before_destroy :prevent_individual_child_deletion, if: :split_child?
 
   scope :visible, -> {
     joins(:account).where(accounts: { status: [ "draft", "active" ] })
@@ -63,6 +73,14 @@ class Entry < ApplicationRecord
     SQL
   }
 
+  scope :excluding_split_parents, -> {
+    where(<<~SQL.squish)
+      NOT EXISTS (
+        SELECT 1 FROM entries ce WHERE ce.parent_entry_id = entries.id
+      )
+    SQL
+  }
+
   # Find stale pending transactions (pending for more than X days with no matching posted version)
   scope :stale_pending, ->(days: 8) {
     pending.where("entries.date < ?", days.days.ago.to_date)
@@ -71,6 +89,35 @@ class Entry < ApplicationRecord
   # Family-scoped query for Enrichable#clear_ai_cache
   def self.family_scope(family)
     joins(:account).where(accounts: { family_id: family.id })
+  end
+
+  # Uncategorized, non-transfer transaction entries on draft or active accounts.
+  # Caller is responsible for scoping to accessible entries before applying this scope.
+  scope :uncategorized_transactions, -> {
+    joins(:account)
+      .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
+      .where(accounts: { status: %w[draft active] })
+      .where(transactions: { category_id: nil })
+      .where.not(transactions: { kind: Transaction::TRANSFER_KINDS })
+      .where(entries: { excluded: false })
+  }
+
+  # Returns uncategorized, non-transfer entries whose name matches the given filter string.
+  # Used by the Quick Categorize Wizard to preview which transactions a rule would affect.
+  # @param entries [ActiveRecord::Relation] pre-scoped entries (caller controls authorization)
+  def self.uncategorized_matching(entries, filter, transaction_type = nil)
+    sanitized = sanitize_sql_like(filter.gsub(/\s+/, " ").strip)
+    scope = entries
+              .uncategorized_transactions
+              .where("BTRIM(REGEXP_REPLACE(entries.name, '[[:space:]]+', ' ', 'g')) ILIKE ?", "%#{sanitized}%")
+
+    scope = case transaction_type
+    when "income"  then scope.where("entries.amount < 0")
+    when "expense" then scope.where("entries.amount >= 0")
+    else scope
+    end
+
+    scope.includes(entryable: :merchant).order(entries: { date: :desc }).to_a
   end
 
   # Auto-exclude stale pending transactions for an account
@@ -313,6 +360,60 @@ class Entry < ApplicationRecord
     end
   end
 
+  def split_parent?
+    child_entries.exists?
+  end
+
+  def split_child?
+    parent_entry_id.present?
+  end
+
+  # Splits this entry into child entries. Marks parent as excluded.
+  #
+  # @param splits [Array<Hash>] array of { name:, amount:, category_id: } hashes
+  # @return [Array<Entry>] the created child entries
+  def split!(splits)
+    total = splits.sum { |s| s[:amount].to_d }
+    unless total == amount
+      raise ActiveRecord::RecordInvalid.new(self), "Split amounts must sum to parent amount (expected #{amount}, got #{total})"
+    end
+
+    self.class.transaction do
+      children = splits.map do |split_attrs|
+        child_transaction = Transaction.new(
+          category_id: split_attrs[:category_id],
+          merchant_id: entryable.try(:merchant_id),
+          kind: entryable.try(:kind)
+        )
+
+        child_entries.create!(
+          account: account,
+          date: date,
+          name: split_attrs[:name],
+          amount: split_attrs[:amount],
+          currency: currency,
+          entryable: child_transaction
+        )
+      end
+
+      update!(excluded: true)
+      mark_user_modified!
+
+      children
+    end
+  end
+
+  # Removes split children and restores parent entry.
+  def unsplit!
+    self.class.transaction do
+      child_entries.each do |child|
+        child.unsplitting = true
+        child.destroy!
+      end
+      update!(excluded: false)
+    end
+  end
+
   class << self
     def search(params)
       EntrySearch.new(params).build_query(all)
@@ -352,10 +453,19 @@ class Entry < ApplicationRecord
 
       transaction do
         all.each do |entry|
+          changed = false
+
           # Update standard attributes
           if bulk_attributes.present?
-            bulk_attributes[:entryable_attributes][:id] = entry.entryable_id if bulk_attributes[:entryable_attributes].present?
-            entry.update! bulk_attributes
+            attrs = bulk_attributes.dup
+            attrs.delete(:date) if entry.split_child?
+
+            if attrs.present?
+              attrs[:entryable_attributes] = attrs[:entryable_attributes].dup if attrs[:entryable_attributes].present?
+              attrs[:entryable_attributes][:id] = entry.entryable_id if attrs[:entryable_attributes].present?
+              entry.update! attrs
+              changed = true
+            end
           end
 
           # Handle tags separately - only when explicitly requested
@@ -363,14 +473,39 @@ class Entry < ApplicationRecord
             entry.transaction.tag_ids = tag_ids
             entry.transaction.save!
             entry.entryable.lock_attr!(:tag_ids) if entry.transaction.tags.any?
+            changed = true
           end
 
-          entry.lock_saved_attributes!
-          entry.mark_user_modified!
+          if changed
+            entry.lock_saved_attributes!
+            entry.mark_user_modified!
+          end
         end
       end
 
       all.size
     end
   end
+
+  private
+
+    def cannot_unexclude_split_parent
+      return unless excluded_changed?(from: true, to: false) && split_parent?
+
+      errors.add(:excluded, "cannot be toggled off for a split transaction")
+    end
+
+    def split_child_date_matches_parent
+      return unless split_child? && date_changed?
+      return unless parent_entry.present?
+      return if date == parent_entry.date
+
+      errors.add(:date, "must match the parent transaction date for split children")
+    end
+
+    def prevent_individual_child_deletion
+      return if destroyed_by_association || unsplitting
+
+      throw :abort
+    end
 end

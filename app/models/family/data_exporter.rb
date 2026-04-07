@@ -65,8 +65,10 @@ class Family::DataExporter
         csv << [ "date", "account_name", "amount", "name", "category", "tags", "notes", "currency" ]
 
         # Only export transactions from accounts belonging to this family
+        # Exclude split parents (export children instead)
         @family.transactions
           .includes(:category, :tags, entry: :account)
+          .merge(Entry.excluding_split_parents)
           .find_each do |transaction|
             csv << [
               transaction.entry.date.iso8601,
@@ -105,7 +107,7 @@ class Family::DataExporter
 
     def generate_categories_csv
       CSV.generate do |csv|
-        csv << [ "name", "color", "parent_category", "classification", "lucide_icon" ]
+        csv << [ "name", "color", "parent_category", "lucide_icon" ]
 
         # Only export categories belonging to this family
         @family.categories.includes(:parent).find_each do |category|
@@ -113,7 +115,6 @@ class Family::DataExporter
             category.name,
             category.color,
             category.parent&.name,
-            category.classification,
             category.lucide_icon
           ]
         end
@@ -177,8 +178,8 @@ class Family::DataExporter
         }.to_json
       end
 
-      # Export transactions with full data
-      @family.transactions.includes(:category, :merchant, :tags, entry: :account).find_each do |transaction|
+      # Export transactions with full data (exclude split parents, export children instead)
+      @family.transactions.includes(:category, :merchant, :tags, entry: :account).merge(Entry.excluding_split_parents).find_each do |transaction|
         lines << {
           type: "Transaction",
           data: {

@@ -16,7 +16,7 @@ Purpose: provide short, actionable guidance so Copilot suggestions match project
 ### Testing
 - `bin/rails test` - Run all tests
 - `bin/rails test:db` - Run tests with database reset
-- `bin/rails test:system` - Run system tests only (use sparingly - they take longer)
+- `DISABLE_PARALLELIZATION=true bin/rails test:system` - Run system tests only (use sparingly - they take longer)
 - `bin/rails test test/models/account_test.rb` - Run specific test file
 - `bin/rails test test/models/account_test.rb:42` - Run specific test at line
 
@@ -37,7 +37,7 @@ Purpose: provide short, actionable guidance so Copilot suggestions match project
 - `bin/setup` - Initial project setup (installs dependencies, prepares database)
 
 ## Pre-PR workflow (run locally before opening PR)
-- Tests: bin/rails test (all), bin/rails test:system (when applicable)
+- Tests: bin/rails test (all), DISABLE_PARALLELIZATION=true bin/rails test:system (when applicable)
 - Linters: bin/rubocop -f github -a; bundle exec erb_lint ./app/**/*.erb -a
 - Security: bin/brakeman --no-pager
 

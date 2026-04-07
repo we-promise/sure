@@ -2,6 +2,7 @@
 nl:
   layouts:
     application:
+      privacy_mode: Privacymodus in-/uitschakelen
       nav:
         assistant: Assistent
         budgets: Budgetten

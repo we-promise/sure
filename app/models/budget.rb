@@ -3,6 +3,8 @@ class Budget < ApplicationRecord
 
   PARAM_DATE_FORMAT = "%b-%Y"
 
+  attr_accessor :current_user
+
   belongs_to :family
 
   has_many :budget_categories, -> { includes(:category) }, dependent: :destroy
@@ -38,7 +40,7 @@ class Budget < ApplicationRecord
       end
     end
 
-    def find_or_bootstrap(family, start_date:)
+    def find_or_bootstrap(family, start_date:, user: nil)
       return nil unless budget_date_valid?(start_date, family: family)
 
       Budget.transaction do
@@ -58,6 +60,7 @@ class Budget < ApplicationRecord
           b.currency = family.currency
         end
 
+        budget.current_user = user
         budget.sync_budget_categories
 
         budget
@@ -81,7 +84,7 @@ class Budget < ApplicationRecord
   end
 
   def sync_budget_categories
-    current_category_ids = family.categories.expenses.pluck(:id).to_set
+    current_category_ids = family.categories.pluck(:id).to_set
     existing_budget_category_ids = budget_categories.pluck(:category_id).to_set
     categories_to_add = current_category_ids - existing_budget_category_ids
     categories_to_remove = existing_budget_category_ids - current_category_ids
@@ -107,7 +110,11 @@ class Budget < ApplicationRecord
   end
 
   def transactions
-    family.transactions.visible.in_period(period)
+    scope = family.transactions.visible.in_period(period)
+    if current_user
+      scope = scope.joins(:entry).where(entries: { account_id: family.accounts.accessible_by(current_user).select(:id) })
+    end
+    scope
   end
 
   def name
@@ -157,11 +164,11 @@ class Budget < ApplicationRecord
   end
 
   def income_category_totals
-    income_totals.category_totals.reject { |ct| ct.category.subcategory? || ct.total.zero? }.sort_by(&:weight).reverse
+    net_totals.net_income_categories.reject { |ct| ct.total.zero? }.sort_by(&:weight).reverse
   end
 
   def expense_category_totals
-    expense_totals.category_totals.reject { |ct| ct.category.subcategory? || ct.total.zero? }.sort_by(&:weight).reverse
+    net_totals.net_expense_categories.reject { |ct| ct.total.zero? }.sort_by(&:weight).reverse
   end
 
   def current?
@@ -214,11 +221,11 @@ class Budget < ApplicationRecord
   end
 
   def actual_spending
-    [ expense_totals.total - refunds_in_expense_categories, 0 ].max
+    net_totals.total_net_expense
   end
 
   def budget_category_actual_spending(budget_category)
-    key = budget_category.category_id || budget_category.category.name
+    key = budget_category.category_id || stable_synthetic_key(budget_category.category)
     expense = expense_totals_by_category[key]&.total || 0
     refund = income_totals_by_category[key]&.total || 0
     [ expense - refund, 0 ].max
@@ -297,16 +304,12 @@ class Budget < ApplicationRecord
   end
 
   private
-    def refunds_in_expense_categories
-      expense_category_ids = budget_categories.map(&:category_id).to_set
-      income_totals.category_totals
-        .reject { |ct| ct.category.subcategory? }
-        .select { |ct| expense_category_ids.include?(ct.category.id) || ct.category.uncategorized? }
-        .sum(&:total)
+    def income_statement
+      @income_statement ||= family.income_statement(user: current_user)
     end
 
-    def income_statement
-      @income_statement ||= family.income_statement
+    def net_totals
+      @net_totals ||= income_statement.net_category_totals(period: period)
     end
 
     def expense_totals
@@ -314,14 +317,22 @@ class Budget < ApplicationRecord
     end
 
     def income_totals
-      @income_totals ||= family.income_statement.income_totals(period: period)
+      @income_totals ||= income_statement.income_totals(period: period)
     end
 
     def expense_totals_by_category
-      @expense_totals_by_category ||= expense_totals.category_totals.index_by { |ct| ct.category.id || ct.category.name }
+      @expense_totals_by_category ||= expense_totals.category_totals.index_by { |ct| ct.category.id || stable_synthetic_key(ct.category) }
     end
 
     def income_totals_by_category
-      @income_totals_by_category ||= income_totals.category_totals.index_by { |ct| ct.category.id || ct.category.name }
+      @income_totals_by_category ||= income_totals.category_totals.index_by { |ct| ct.category.id || stable_synthetic_key(ct.category) }
+    end
+
+    def stable_synthetic_key(category)
+      if category.uncategorized?
+        :uncategorized
+      elsif category.other_investments?
+        :other_investments
+      end
     end
 end

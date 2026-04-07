@@ -80,7 +80,7 @@ class DS::Buttonish < DesignSystemComponent
       merged_base_classes,
       full_width ? "w-full justify-center" : nil,
       container_size_classes,
-      size_data.dig(:text_classes),
+      icon_only? ? nil : size_data.dig(:text_classes),
       variant_data.dig(:container_classes)
     )
   end
@@ -108,7 +108,7 @@ class DS::Buttonish < DesignSystemComponent
   end
 
   def icon_only?
-    variant.in?([ :icon, :icon_inverse ])
+    variant.in?([ :icon, :icon_inverse ]) || (icon.present? && text.blank?)
   end
 
   private

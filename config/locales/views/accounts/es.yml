@@ -2,14 +2,23 @@
 es:
   accounts:
     account:
+      edit: Editar
       link_lunchflow: Vincular con Lunch Flow
       link_provider: Vincular con proveedor
       unlink_provider: Desvincular de proveedor
       troubleshoot: Solucionar problemas
+      enable: Activar cuenta
+      disable: Desactivar cuenta
+      set_default: Establecer como predeterminada
+      remove_default: Quitar predeterminada
+      default_label: Predeterminada
+      delete: Eliminar cuenta
     chart:
       data_not_available: Datos no disponibles para el período seleccionado
     create:
       success: "Cuenta %{type} creada"
+    set_default:
+      depository_only: "Solo las cuentas de efectivo y tarjeta de crédito pueden establecerse como predeterminadas."
     destroy:
       success: "Cuenta %{type} programada para eliminación"
       cannot_delete_linked: "No se puede eliminar una cuenta vinculada. Por favor, desvincúlela primero."

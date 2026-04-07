@@ -80,3 +80,8 @@ tr:
     ready:
       description: Bu içe aktarmayı yayınladığınızda hesabınıza eklenecek yeni öğelerin özeti aşağıdadır.
       title: İçe aktarma verilerinizi onaylayın
+      summary_item_label: Öğe
+      summary_count_label: Adet
+      empty_summary: Bu dosyada içe aktarılabilir kayıt bulunamadı. Dosya boş olabilir veya satırlar beklenen dışa aktarma biçimiyle eşleşmiyor (her satır, bu içe aktarmanın desteklediği türlerle «type» ve «data» anahtarlarına sahip bir JSON nesnesi olmalıdır).
+      publish_import: İçe aktarmayı yayınla
+      back_to_imports: İçe aktarmalara dön

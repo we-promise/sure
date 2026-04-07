@@ -24,18 +24,12 @@ class Account::MarketDataImporter
            .each do |source_currency, date|
       key = [ source_currency, account.currency ]
       pair_dates[key] = [ pair_dates[key], date ].compact.min
-
-      inverse_key = [ account.currency, source_currency ]
-      pair_dates[inverse_key] = [ pair_dates[inverse_key], date ].compact.min
     end
 
     # 2. ACCOUNT-BASED PAIR – convert the account currency to the family currency (if different)
     if foreign_account?
       key = [ account.currency, account.family.currency ]
       pair_dates[key] = [ pair_dates[key], account.start_date ].compact.min
-
-      inverse_key = [ account.family.currency, account.currency ]
-      pair_dates[inverse_key] = [ pair_dates[inverse_key], account.start_date ].compact.min
     end
 
     pair_dates.each do |(source, target), start_date|
@@ -51,7 +45,7 @@ class Account::MarketDataImporter
   def import_security_prices
     return unless Security.provider
 
-    account_securities = account.trades.map(&:security).uniq
+    account_securities = (account.trades.map(&:security) + account.current_holdings.map(&:security)).uniq
 
     return if account_securities.empty?
 
@@ -68,10 +62,17 @@ class Account::MarketDataImporter
   private
     # Calculates the first date we require a price for the given security scoped to this account
     def first_required_price_date(security)
-      account.trades.with_entry
-                    .where(security: security)
-                    .where(entries: { account_id: account.id })
-                    .minimum("entries.date")
+      trade_start_date = account.trades.with_entry
+                              .where(security: security)
+                              .where(entries: { account_id: account.id })
+                              .minimum("entries.date")
+
+      holding_start_date =
+        if account.holdings.where(security: security).where.not(account_provider_id: nil).exists?
+          account.start_date
+        end
+
+      [ trade_start_date, holding_start_date ].compact.min
     end
 
     def needs_exchange_rates?
@@ -83,6 +84,7 @@ class Account::MarketDataImporter
     end
 
     def foreign_account?
+      return false if account.family.nil?
       account.currency != account.family.currency
     end
 end

@@ -9,6 +9,9 @@ class CoinstatsItemsControllerTest < ActionDispatch::IntegrationTest
       name: "Test CoinStats Connection",
       api_key: "test_api_key_123"
     )
+    tailwind_build = Rails.root.join("app/assets/builds/tailwind.css")
+    FileUtils.mkdir_p(tailwind_build.dirname)
+    File.write(tailwind_build, "/* test */") unless tailwind_build.exist?
   end
 
   # Helper to wrap data in Provider::Response
@@ -174,5 +177,39 @@ class CoinstatsItemsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :unprocessable_entity
     assert_match(/No tokens found/, response.body)
+  end
+
+  test "link_exchange filters unexpected connection fields" do
+    Provider::Coinstats.any_instance.expects(:get_exchanges).returns(success_response([
+      {
+        connectionId: "bitvavo",
+        name: "Bitvavo",
+        connectionFields: [
+          { key: "apiKey", name: "API Key" },
+          { key: "apiSecret", name: "API Secret" }
+        ]
+      }
+    ])).once
+
+    linker_result = CoinstatsItem::ExchangeLinker::Result.new(success?: true, created_count: 0, errors: [])
+    CoinstatsItem::ExchangeLinker.expects(:new).with(
+      @coinstats_item,
+      connection_id: "bitvavo",
+      connection_fields: { "apiKey" => "key", "apiSecret" => "secret" },
+      name: "Bitvavo"
+    ).returns(stub(link: linker_result))
+
+    post link_exchange_coinstats_items_url, params: {
+      coinstats_item_id: @coinstats_item.id,
+      exchange_connection_id: "bitvavo",
+      exchange_connection_name: "Bitvavo",
+      connection_fields: {
+        apiKey: " key ",
+        apiSecret: " secret ",
+        unexpected: "should_not_be_forwarded"
+      }
+    }
+
+    assert_redirected_to accounts_path
   end
 end

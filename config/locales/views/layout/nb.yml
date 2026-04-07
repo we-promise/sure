@@ -2,6 +2,7 @@
 nb:
   layouts:
     application:
+      privacy_mode: Veksle personvernmodus
       nav:
         assistant: Assistent
         budgets: Budsjett

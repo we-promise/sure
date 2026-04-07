@@ -3,8 +3,10 @@ class Transactions::BulkUpdatesController < ApplicationController
   end
 
   def create
+    # Skip split parents from bulk update - update children instead
     updated = Current.family
                      .entries
+                     .excluding_split_parents
                      .where(id: bulk_update_params[:entry_ids])
                      .bulk_update!(bulk_update_params, update_tags: tags_provided?)
 

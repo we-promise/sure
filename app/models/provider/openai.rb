@@ -116,6 +116,33 @@ class Provider::Openai < Provider
     end
   end
 
+  def enhance_provider_merchants(merchants: [], model: "", family: nil, json_mode: nil)
+    with_provider_response do
+      raise Error, "Too many merchants to enhance. Max is 25 per request." if merchants.size > 25
+
+      effective_model = model.presence || @default_model
+
+      trace = create_langfuse_trace(
+        name: "openai.enhance_provider_merchants",
+        input: { merchants: merchants }
+      )
+
+      result = ProviderMerchantEnhancer.new(
+        client,
+        model: effective_model,
+        merchants: merchants,
+        custom_provider: custom_provider?,
+        langfuse_trace: trace,
+        family: family,
+        json_mode: json_mode
+      ).enhance_merchants
+
+      upsert_langfuse_trace(trace: trace, output: result.map(&:to_h))
+
+      result
+    end
+  end
+
   # Can be disabled via ENV for OpenAI-compatible endpoints that don't support vision
   # Only vision-capable models (gpt-4o, gpt-4-turbo, gpt-4.1, etc.) support PDF input
   def supports_pdf_processing?(model: @default_model)

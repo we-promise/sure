@@ -152,8 +152,7 @@ class Transaction::SearchTest < ActiveSupport::TestCase
     # Create a travel category for testing
     travel_category = @family.categories.create!(
       name: "Travel",
-      color: "#3b82f6",
-      classification: "expense"
+      color: "#3b82f6"
     )
 
     # Create transactions with different categories

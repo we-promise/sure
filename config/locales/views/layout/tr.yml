@@ -2,6 +2,7 @@
 tr:
   layouts:
     application:
+      privacy_mode: Gizlilik modunu değiştir
       nav:
         assistant: Asistan
         budgets: Bütçeler
