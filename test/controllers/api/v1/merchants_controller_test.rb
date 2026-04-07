@@ -16,7 +16,7 @@ class Api::V1::MerchantsControllerTest < ActionDispatch::IntegrationTest
     @user.api_keys.active.destroy_all
 
     # Create fresh API keys instead of using fixtures to avoid parallel test conflicts (rate limiting)
-    @api_key = ApiKey.create!(
+    @api_key = ApiKey.create!( # pipelock:ignore Credential in URL
       user: @user,
       name: "Test Read-Write Key",
       scopes: [ "read_write" ],
