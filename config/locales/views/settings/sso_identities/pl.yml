@@ -1,0 +1,7 @@
+---
+pl:
+  settings:
+    sso_identities:
+      destroy:
+        cannot_unlink_last: Nie można odłączyć ostatniej tożsamości
+        success: Tożsamość została odłączona

@@ -1,0 +1,25 @@
+---
+pl:
+  credit_cards:
+    edit:
+      edit: Edytuj %{account}
+    form:
+      annual_fee: Opłata roczna
+      annual_fee_placeholder: '99'
+      apr: RRSO
+      apr_placeholder: '15.99'
+      available_credit: Dostępny limit kredytowy
+      available_credit_placeholder: '10000'
+      expiration_date: Data ważności
+      minimum_payment: Minimalna spłata
+      minimum_payment_placeholder: '100'
+    new:
+      title: Wprowadź dane karty kredytowej
+    overview:
+      amount_owed: Kwota zadłużenia
+      annual_fee: Opłata roczna
+      apr: RRSO
+      available_credit: Dostępny limit kredytowy
+      expiration_date: Data ważności
+      minimum_payment: Minimalna spłata
+      unknown: Nieznane

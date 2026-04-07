@@ -1,0 +1,157 @@
+---
+pl:
+  mercury_items:
+    create:
+      success: Połączenie Mercury zostało pomyślnie utworzone
+    destroy:
+      success: Połączenie Mercury zostało usunięte
+    index:
+      title: Połączenia Mercury
+    loading:
+      loading_message: Ładowanie kont Mercury...
+      loading_title: Ładowanie
+    link_accounts:
+      all_already_linked:
+        one: Wybrane konto (%{names}) jest już połączone
+        few: 'Wszystkie %{count} wybrane konta są już połączone: %{names}'
+        many: 'Wszystkie %{count} wybranych kont jest już połączonych: %{names}'
+        other: 'Wszystkie %{count} wybrane konta są już połączone: %{names}'
+      api_error: 'Błąd API: %{message}'
+      invalid_account_names:
+        one: Nie można połączyć konta bez nazwy
+        few: Nie można połączyć %{count} kont bez nazwy
+        many: Nie można połączyć %{count} kont bez nazwy
+        other: Nie można połączyć %{count} kont bez nazwy
+      link_failed: Nie udało się połączyć kont
+      no_accounts_selected: Wybierz co najmniej jedno konto
+      no_api_token: Nie znaleziono tokenu API Mercury. Skonfiguruj go w Ustawieniach dostawcy.
+      partial_invalid: Pomyślnie połączono %{created_count} konto(a), %{already_linked_count} było już połączonych, %{invalid_count} konto(a) miało nieprawidłowe nazwy
+      partial_success: 'Pomyślnie połączono %{created_count} konto(a). %{already_linked_count} konto(a) było już połączonych: %{already_linked_names}'
+      success:
+        one: Pomyślnie połączono %{count} konto
+        few: Pomyślnie połączono %{count} konta
+        many: Pomyślnie połączono %{count} kont
+        other: Pomyślnie połączono %{count} kont
+    mercury_item:
+      accounts_need_setup: Konta wymagają konfiguracji
+      delete: Usuń połączenie
+      deletion_in_progress: usuwanie w toku...
+      error: Błąd
+      no_accounts_description: To połączenie nie ma jeszcze żadnych połączonych kont.
+      no_accounts_title: Brak kont
+      setup_action: Skonfiguruj nowe konta
+      setup_description: "%{linked} z %{total} kont połączonych. Wybierz typy kont dla nowo zaimportowanych kont Mercury."
+      setup_needed: Nowe konta gotowe do konfiguracji
+      status: Zsynchronizowano %{timestamp} temu
+      status_never: Nigdy nie synchronizowano
+      status_with_summary: Ostatnia synchronizacja %{timestamp} temu - %{summary}
+      syncing: Synchronizacja...
+      total: Łącznie
+      unlinked: Niepodłączone
+    select_accounts:
+      accounts_selected: wybranych kont
+      api_error: 'Błąd API: %{message}'
+      cancel: Anuluj
+      configure_name_in_mercury: Nie można zaimportować — skonfiguruj nazwę konta w Mercury
+      description: Wybierz konta, które chcesz połączyć z kontem %{product_name}.
+      link_accounts: Połącz wybrane konta
+      no_accounts_found: Nie znaleziono kont. Sprawdź konfigurację tokenu API.
+      no_api_token: Token API Mercury nie jest skonfigurowany. Skonfiguruj go w Ustawieniach.
+      no_credentials_configured: Skonfiguruj token API Mercury najpierw w Ustawieniach dostawcy.
+      no_name_placeholder: "(Brak nazwy)"
+      title: Wybierz konta Mercury
+    select_existing_account:
+      account_already_linked: To konto jest już połączone z dostawcą
+      all_accounts_already_linked: Wszystkie konta Mercury są już połączone
+      api_error: 'Błąd API: %{message}'
+      cancel: Anuluj
+      configure_name_in_mercury: Nie można zaimportować — skonfiguruj nazwę konta w Mercury
+      description: Wybierz konto Mercury do połączenia z tym kontem. Transakcje będą synchronizowane i deduplikowane automatycznie.
+      link_account: Połącz konto
+      no_account_specified: Nie podano konta
+      no_accounts_found: Nie znaleziono kont Mercury. Sprawdź konfigurację tokenu API.
+      no_api_token: Token API Mercury nie jest skonfigurowany. Skonfiguruj go w Ustawieniach.
+      no_credentials_configured: Skonfiguruj token API Mercury najpierw w Ustawieniach dostawcy.
+      no_name_placeholder: "(Brak nazwy)"
+      title: Połącz %{account_name} z Mercury
+    link_existing_account:
+      account_already_linked: To konto jest już połączone z dostawcą
+      api_error: 'Błąd API: %{message}'
+      invalid_account_name: Nie można połączyć konta bez nazwy
+      mercury_account_already_linked: To konto Mercury jest już połączone z innym kontem
+      mercury_account_not_found: Nie znaleziono konta Mercury
+      missing_parameters: Brak wymaganych parametrów
+      no_api_token: Nie znaleziono tokenu API Mercury. Skonfiguruj go w Ustawieniach dostawcy.
+      success: Pomyślnie połączono %{account_name} z Mercury
+    setup_accounts:
+      account_type_label: 'Typ konta:'
+      all_accounts_linked: Wszystkie Twoje konta Mercury są już skonfigurowane.
+      api_error: 'Błąd API: %{message}'
+      fetch_failed: Nie udało się pobrać kont
+      no_accounts_to_setup: Brak kont do konfiguracji
+      no_api_token: Token API Mercury nie jest skonfigurowany. Sprawdź ustawienia połączenia.
+      account_types:
+        skip: Pomiń to konto
+        depository: Konto bieżące lub oszczędnościowe
+        credit_card: Karta kredytowa
+        investment: Konto inwestycyjne
+        loan: Pożyczka lub kredyt hipoteczny
+        other_asset: Inne aktywa
+      subtype_labels:
+        depository: 'Podtyp konta:'
+        credit_card: 'Podtyp karty kredytowej:'
+        investment: 'Typ inwestycji:'
+        loan: 'Typ pożyczki:'
+        other_asset: 'Podtyp aktywa:'
+      subtype_messages:
+        credit_card: Karty kredytowe zostaną automatycznie skonfigurowane jako konta kart kredytowych.
+        other_asset: Dla innych aktywów nie są potrzebne dodatkowe opcje.
+      subtypes:
+        depository:
+          checking: Konto bieżące
+          savings: Oszczędnościowe
+          hsa: Konto oszczędnościowe na cele zdrowotne
+          cd: Lokata terminowa
+          money_market: Rynek pieniężny
+        investment:
+          brokerage: Maklerskie
+          pension: Emerytura
+          retirement: Emerytalne
+          401k: 401(k)
+          roth_401k: Roth 401(k)
+          403b: 403(b)
+          tsp: Plan oszczędnościowy Thrift
+          529_plan: 529 Plan
+          hsa: Konto oszczędnościowe na cele zdrowotne
+          mutual_fund: Fundusz inwestycyjny
+          ira: Tradycyjne IRA
+          roth_ira: Roth IRA
+          angel: Anielska
+        loan:
+          mortgage: Kredyt hipoteczny
+          student: Pożyczka studencka
+          auto: Pożyczka na samochód
+          other: Inna pożyczka
+      balance: Saldo
+      cancel: Anuluj
+      choose_account_type: 'Wybierz poprawny typ dla każdego konta Mercury:'
+      create_accounts: Utwórz konta
+      creating_accounts: Tworzenie kont...
+      historical_data_range: 'Zakres danych historycznych:'
+      subtitle: Wybierz poprawne typy dla importowanych kont
+      sync_start_date_help: Wybierz, jak daleko wstecz chcesz synchronizować historię transakcji. Dostępne są maksymalnie 3 lata historii.
+      sync_start_date_label: 'Synchronizuj transakcje od:'
+      title: Skonfiguruj swoje konta Mercury
+    complete_account_setup:
+      all_skipped: Wszystkie konta zostały pominięte. Nie utworzono żadnych kont.
+      creation_failed: 'Nie udało się utworzyć kont: %{error}'
+      no_accounts: Brak kont do skonfigurowania.
+      success:
+        one: Pomyślnie utworzono %{count} konto.
+        few: Pomyślnie utworzono %{count} konta.
+        many: Pomyślnie utworzono %{count} kont.
+        other: Pomyślnie utworzono %{count} konta.
+    sync:
+      success: Rozpoczęto synchronizację
+    update:
+      success: Połączenie Mercury zostało zaktualizowane

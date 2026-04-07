@@ -1,0 +1,34 @@
+---
+pl:
+  mfa:
+    backup_codes:
+      backup_codes_description: Każdy kod można użyć tylko raz. Przechowuj je bezpiecznie.
+      backup_codes_title: Twoje kody zapasowe
+      continue: Przejdź do ustawień bezpieczeństwa
+      description: Przechowuj te kody zapasowe w bezpiecznym miejscu — będą potrzebne, jeśli utracisz dostęp do aplikacji uwierzytelniającej
+      page_title: Kody zapasowe
+      title: Zapisz swoje kody zapasowe
+    create:
+      invalid_code: Nieprawidłowy kod weryfikacyjny. Spróbuj ponownie.
+    disable:
+      success: Uwierzytelnianie dwuskładnikowe zostało wyłączone
+    new:
+      code_label: Kod weryfikacyjny
+      code_placeholder: Wpisz 6-cyfrowy kod
+      description: Zwiększ bezpieczeństwo konta, konfigurując uwierzytelnianie dwuskładnikowe
+      page_title: Konfiguracja uwierzytelniania dwuskładnikowego
+      scan_description: Użyj aplikacji uwierzytelniającej, np. Google Authenticator lub 1Password, aby zeskanować ten kod QR
+      scan_title: 1. Zeskanuj kod QR
+      secret_description: Jeśli nie możesz zeskanować kodu QR, wpisz ręcznie ten klucz tajny w aplikacji uwierzytelniającej
+      secret_title: Kod do ręcznego wpisania
+      title: Skonfiguruj uwierzytelnianie dwuskładnikowe
+      verify_button: Zweryfikuj i włącz 2FA
+      verify_description: Wpisz 6-cyfrowy kod z aplikacji uwierzytelniającej
+      verify_title: 2. Wprowadź kod weryfikacyjny
+    verify:
+      description: Wpisz kod z aplikacji uwierzytelniającej, aby kontynuować
+      page_title: Zweryfikuj uwierzytelnianie dwuskładnikowe
+      title: Uwierzytelnianie dwuskładnikowe
+      verify_button: Zweryfikuj
+    verify_code:
+      invalid_code: Nieprawidłowy kod uwierzytelniający. Spróbuj ponownie.

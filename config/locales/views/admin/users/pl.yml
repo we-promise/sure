@@ -1,0 +1,53 @@
+---
+pl:
+  admin:
+    users:
+      index:
+        title: Zarządzanie użytkownikami
+        description: Zarządzaj rolami użytkowników w swojej instancji. Superadministratorzy mają dostęp do ustawień dostawców SSO i zarządzania użytkownikami.
+        section_title: Rodziny / Grupy
+        you: "(Ty)"
+        trial_ends_at: Koniec okresu próbnego
+        not_available: brak danych
+        no_users: Nie znaleziono użytkowników.
+        unnamed_family: Nienazwana rodzina/grupa
+        no_subscription: Brak subskrypcji
+        family_summary: "%{members} członków · %{accounts} kont · %{transactions} transakcji"
+        filters:
+          role: Rola
+          role_all: Wszystkie role
+          trial_status: Status okresu próbnego
+          trial_all: Wszystkie
+          trial_expiring_soon: Wygasa za 7 dni
+          trial_trialing: W okresie próbnym
+          submit: Filtruj
+        summary:
+          trials_expiring_7_days: Okresy próbne wygasające w ciągu 7 dni
+        table:
+          user: Użytkownik
+          trial_ends_at: Koniec okresu próbnego
+          family_accounts: Konta rodziny
+          family_transactions: Transakcje rodziny
+          last_login: Ostatnie logowanie
+          session_count: Liczba sesji
+          never: Nigdy
+          role: Rola
+        role_descriptions_title: Opisy ról
+        roles:
+          guest: Gość
+          member: Członek
+          admin: Administrator
+          super_admin: Superadministrator
+        role_descriptions:
+          guest: Tryb skupiony na Asystencie z celowo ograniczonymi uprawnieniami dla przepływów wprowadzających.
+          member: Podstawowy dostęp użytkownika. Może zarządzać własnymi kontami, transakcjami i ustawieniami.
+          admin: Administrator rodziny. Ma dostęp do ustawień zaawansowanych, takich jak klucze API, importy i prompty AI.
+          super_admin: Administrator instancji. Może zarządzać dostawcami SSO, rolami użytkowników i wcielać się w użytkowników na potrzeby wsparcia.
+        invitations:
+          pending_label: Zaproszony (oczekuje)
+          expires: Wygasa %{date}
+          delete: Usuń
+          delete_all: Usuń wszystkie
+      update:
+        success: Rola użytkownika została pomyślnie zaktualizowana.
+        failure: Nie udało się zaktualizować roli użytkownika.

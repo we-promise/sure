@@ -1,0 +1,10 @@
+---
+pl:
+  depositories:
+    edit:
+      edit: Edytuj %{account}
+    form:
+      none: Brak
+      subtype_prompt: Wybierz typ konta
+    new:
+      title: Wprowadź saldo konta

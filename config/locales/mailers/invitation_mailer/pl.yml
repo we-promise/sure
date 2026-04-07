@@ -1,0 +1,5 @@
+---
+pl:
+  invitation_mailer:
+    invite_email:
+      subject: "%{inviter} zaprosił(a) Cię do dołączenia do swojego gospodarstwa domowego w %{product_name}!"

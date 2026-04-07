@@ -1,0 +1,23 @@
+---
+pl:
+  loans:
+    edit:
+      edit: Edytuj %{account}
+    form:
+      interest_rate: Oprocentowanie
+      interest_rate_placeholder: '5.25'
+      initial_balance: Początkowe saldo pożyczki
+      rate_type: Typ oprocentowania
+      term_months: Okres (miesiące)
+      term_months_placeholder: '360'
+    new:
+      title: Wprowadź dane pożyczki
+    overview:
+      interest_rate: Oprocentowanie
+      monthly_payment: Rata miesięczna
+      not_applicable: Nie dotyczy
+      original_principal: Kapitał początkowy
+      remaining_principal: Pozostały kapitał
+      term: Okres
+      type: Typ
+      unknown: Nieznane

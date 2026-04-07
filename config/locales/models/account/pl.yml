@@ -1,0 +1,23 @@
+---
+pl:
+  activerecord:
+    attributes:
+      account:
+        balance: Saldo
+        currency: Waluta
+        family: "%{moniker}"
+        family_id: "%{moniker}"
+        name: Nazwa
+        subtype: Podtyp
+    models:
+      account: Konto
+      account/bond: Obligacje
+      account/credit_card: Karta kredytowa
+      account/crypto: Kryptowaluty
+      account/depository: Konto bankowe
+      account/investment: Inwestycje
+      account/loan: Pożyczka
+      account/other_asset: Inne aktywa
+      account/other_liability: Inne zobowiązania
+      account/property: Nieruchomość
+      account/vehicle: Pojazd

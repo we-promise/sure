@@ -1,0 +1,155 @@
+---
+pl:
+  settings:
+    hostings:
+      invite_code_settings:
+        description: Kontroluj, jak nowe osoby rejestrują się w Twojej instancji %{product}.
+        email_confirmation_description: Gdy opcja jest włączona, użytkownicy muszą potwierdzić adres e-mail przy jego zmianie.
+        email_confirmation_title: Wymagaj potwierdzenia e-mail
+        default_family_title: Domyślna rodzina dla nowych użytkowników
+        default_family_description: Dodaj nowych użytkowników do tej rodziny/grupy tylko wtedy, gdy nie mają zaproszenia.
+        default_family_none: Brak (utwórz nową rodzinę)
+        generate_tokens: Wygeneruj nowy kod
+        generated_tokens: Wygenerowane kody
+        title: Onboarding
+        states:
+          open: Otwarty
+          closed: Zamknięty
+          invite_only: Tylko na zaproszenie
+      show:
+        general: Ustawienia ogólne
+        ai_assistant: Asystent AI
+        financial_data_providers: Dostawcy danych finansowych
+        sync_settings: Ustawienia synchronizacji
+        invites: Kody zaproszeń
+        title: Self-Hosting
+        danger_zone: Strefa ryzyka
+        clear_cache: Wyczyść pamięć podręczną danych
+        clear_cache_warning: Wyczyszczenie pamięci podręcznej danych usunie wszystkie kursy walut, ceny papierów wartościowych, salda kont i inne dane. Nie usunie to kont, transakcji, kategorii ani innych danych należących do użytkownika.
+        confirm_clear_cache:
+          title: Wyczyścić pamięć podręczną danych?
+          body: Czy na pewno chcesz wyczyścić pamięć podręczną danych? Spowoduje to usunięcie wszystkich kursów walut, cen papierów wartościowych, sald kont i innych danych. Tej akcji nie można cofnąć.
+      provider_selection:
+        title: Wybór dostawcy
+        description: Wybierz usługę do pobierania kursów walut i cen papierów wartościowych. Yahoo Finance jest darmowe i nie wymaga klucza API. Twelve Data wymaga darmowego klucza API, ale może oferować szersze pokrycie danych.
+        exchange_rate_provider_label: Dostawca kursów walut
+        securities_provider_label: Dostawca papierów wartościowych (cen akcji)
+        env_configured_message: Wybór dostawcy jest wyłączony, ponieważ ustawiono zmienne środowiskowe (EXCHANGE_RATE_PROVIDER lub SECURITIES_PROVIDER). Aby włączyć wybór tutaj, usuń te zmienne z konfiguracji.
+        providers:
+          twelve_data: Twelve Data
+          yahoo_finance: Yahoo Finance
+      assistant_settings:
+        title: Asystent AI
+        description: Wybierz, jak odpowiada asystent czatu. Wbudowany asystent korzysta bezpośrednio ze skonfigurowanego dostawcy LLM. Zewnętrzny deleguje zapytania do zdalnego agenta AI, który może korzystać z narzędzi finansowych Sure przez MCP.
+        type_label: Typ asystenta
+        type_builtin: Wbudowany (bezpośredni LLM)
+        type_external: Zewnętrzny (zdalny agent)
+        external_status: Endpoint zewnętrznego asystenta
+        external_configured: Skonfigurowany
+        external_not_configured: Nieskonfigurowany. Wprowadź poniżej URL i token albo ustaw zmienne środowiskowe EXTERNAL_ASSISTANT_URL i EXTERNAL_ASSISTANT_TOKEN.
+        env_notice: Typ asystenta jest zablokowany na '%{type}' przez zmienną środowiskową ASSISTANT_TYPE.
+        env_configured_external: Pomyślnie skonfigurowano przez zmienne środowiskowe.
+        url_label: URL endpointu
+        url_placeholder: https://your-agent-host/v1/chat
+        url_help: Pełny URL endpointu API Twojego agenta. Otrzymasz go od dostawcy agenta.
+        token_label: Token API
+        token_placeholder: Wprowadź token od dostawcy agenta
+        token_help: Token uwierzytelniający dostarczony przez zewnętrznego agenta. Jest wysyłany jako token Bearer z każdym żądaniem.
+        agent_id_label: ID agenta (opcjonalne)
+        agent_id_placeholder: main (domyślnie)
+        agent_id_help: Kieruje do konkretnego agenta, gdy dostawca hostuje ich wiele. Pozostaw puste, aby użyć domyślnego.
+        disconnect_title: Połączenie zewnętrzne
+        disconnect_description: Usuń połączenie z zewnętrznym asystentem i przełącz z powrotem na asystenta wbudowanego.
+        disconnect_button: Rozłącz
+        confirm_disconnect:
+          title: Rozłączyć zewnętrznego asystenta?
+          body: To usunie zapisany URL, token i ID agenta oraz przełączy na asystenta wbudowanego. Możesz połączyć ponownie później, podając nowe dane.
+      brand_fetch_settings:
+        description: Wprowadź Client ID otrzymany od Brand Fetch
+        label: Client ID
+        placeholder: Wprowadź tutaj swój Client ID
+        title: Ustawienia Brand Fetch
+        high_res_label: Włącz logotypy o wysokiej rozdzielczości
+        high_res_description: Gdy włączone, logotypy będą pobierane w rozdzielczości 120x120 zamiast 40x40. Zapewnia to ostrzejsze obrazy na ekranach o wysokim DPI.
+      openai_settings:
+        description: Wprowadź token dostępu i opcjonalnie skonfiguruj niestandardowego dostawcę zgodnego z OpenAI
+        env_configured_message: Pomyślnie skonfigurowano przez zmienne środowiskowe.
+        access_token_label: Token dostępu
+        access_token_placeholder: Wprowadź tutaj token dostępu
+        uri_base_label: Bazowy URL API (opcjonalne)
+        uri_base_placeholder: https://api.openai.com/v1 (domyślnie)
+        model_label: Model (opcjonalne)
+        model_placeholder: gpt-4.1 (domyślnie)
+        json_mode_label: Tryb JSON
+        json_mode_auto: Auto (zalecane)
+        json_mode_strict: Ścisły (najlepszy dla modeli rozumujących)
+        json_mode_none: Brak (najlepszy dla modeli standardowych)
+        json_mode_json_object: Obiekt JSON
+        json_mode_help: Tryb ścisły najlepiej działa z modelami rozumującymi (qwen-thinking, deepseek-reasoner). Tryb brak najlepiej działa z modelami standardowymi (llama, mistral, gpt-oss).
+        title: OpenAI
+      yahoo_finance_settings:
+        title: Yahoo Finance
+        description: Yahoo Finance zapewnia bezpłatny dostęp do cen akcji, kursów walut i danych finansowych bez potrzeby klucza API.
+        status_active: Yahoo Finance jest aktywne i działa
+        status_inactive: Połączenie z Yahoo Finance nie powiodło się
+        connection_failed: Nie można połączyć z Yahoo Finance
+        troubleshooting: Sprawdź połączenie internetowe i ustawienia zapory. Yahoo Finance może być tymczasowo niedostępne.
+      twelve_data_settings:
+        api_calls_used: "%{used} / %{limit} wykorzystanych dziennych wywołań API (%{percentage})"
+        description: Wprowadź klucz API otrzymany od Twelve Data
+        env_configured_message: Pomyślnie skonfigurowano przez zmienną środowiskową TWELVE_DATA_API_KEY.
+        label: Klucz API
+        placeholder: Wprowadź tutaj klucz API
+        plan: "plan %{plan}"
+        plan_upgrade_warning_title: Niektóre tickery wymagają płatnego planu
+        plan_upgrade_warning_description: Poniższych tickerów w Twoim portfelu nie można synchronizować przy Twoim aktualnym planie Twelve Data.
+        requires_plan: wymaga planu %{plan}
+        view_pricing: Zobacz cennik Twelve Data
+        title: Twelve Data
+      gus_sdp_settings:
+        title: GUS SDP (Inflacja)
+        description: Opcjonalny klucz API do danych inflacyjnych GUS SDP. Pozostaw puste, aby korzystać z bezpłatnego poziomu anonimowego.
+        env_configured_message: Pomyślnie skonfigurowano przez zmienną środowiskową GUS_SDP_API_KEY.
+        configured_in_settings_message: Klucz API skonfigurowany w ustawieniach.
+        configured_via_env: Klucz API jest skonfigurowany przez zmienną środowiskową GUS_SDP_API_KEY.
+        free_default_message: Brak skonfigurowanego klucza API. Domyślnie używany jest bezpłatny dostęp anonimowy.
+        clear_api_key: Wyczyść zapisany klucz API
+        clear_api_key_confirm: Usunąć zapisany klucz API GUS?
+        label: Klucz API
+        placeholder: Wprowadź klucz API GUS SDP
+        import_enabled_label: Włącz automatyczny import CPI GUS
+        import_enabled_help: Domyślnie wyłączone. Włącz tylko, jeśli chcesz automatycznie importować stawki CPI do obliczeń EOD/ROD.
+        import_enabled_env_locked: To ustawienie jest zablokowane przez zmienną środowiskową GUS_INFLATION_IMPORT_ENABLED.
+        start_year: Rok początkowy
+        end_year: Rok końcowy
+        import_now: Importuj historię CPI teraz
+        last_import: Ostatni import
+        last_range: Ostatni zakres
+        last_count: Zaimportowane rekordy
+        last_error: Ostatni błąd
+        stored_records: Zapisane rekordy
+        stored_range: Zapisany zakres
+        never: Nigdy
+      import_gus_inflation_rates:
+        import_enqueued: Import CPI został dodany do kolejki.
+        import_disabled: Import CPI jest wyłączony. Najpierw włącz go w ustawieniach.
+        invalid_import_range: Nieprawidłowy zakres lat dla importu CPI.
+      update:
+        failure: Nieprawidłowa wartość ustawienia
+        success: Ustawienia zostały zaktualizowane
+        invalid_onboarding_state: Nieprawidłowy stan onboardingu
+        invalid_sync_time: Nieprawidłowy format czasu synchronizacji. Użyj formatu HH:MM (np. 02:30).
+        scheduler_sync_failed: Ustawienia zapisano, ale nie udało się zaktualizować harmonogramu synchronizacji. Spróbuj ponownie lub sprawdź logi serwera.
+      disconnect_external_assistant:
+        external_assistant_disconnected: Zewnętrzny asystent został rozłączony
+      clear_cache:
+        cache_cleared: Pamięć podręczna danych została wyczyszczona. Zakończenie operacji może zająć chwilę.
+      not_authorized: Nie masz uprawnień do wykonania tej akcji
+      sync_settings:
+        auto_sync_label: Włącz automatyczną synchronizację
+        auto_sync_description: Gdy włączone, wszystkie konta będą automatycznie synchronizowane codziennie o wskazanej godzinie.
+        auto_sync_time_label: Czas synchronizacji (HH:MM)
+        auto_sync_time_description: Określ godzinę dnia, o której ma odbywać się automatyczna synchronizacja.
+        include_pending_label: Uwzględniaj transakcje oczekujące
+        include_pending_description: Gdy włączone, transakcje oczekujące (niezaksięgowane) będą importowane i automatycznie uzgadniane po zaksięgowaniu. Wyłącz, jeśli Twój bank dostarcza niewiarygodne dane oczekujące.
+        env_configured_message: To ustawienie jest wyłączone, ponieważ ustawiono zmienną środowiskową dostawcy (SIMPLEFIN_INCLUDE_PENDING lub PLAID_INCLUDE_PENDING). Usuń ją, aby włączyć to ustawienie.

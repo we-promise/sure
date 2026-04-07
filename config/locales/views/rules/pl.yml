@@ -1,0 +1,52 @@
+---
+pl:
+  rules:
+    no_action: Brak akcji
+    no_condition: Brak warunku
+    actions:
+      value_placeholder: Wprowadź wartość
+    apply_all:
+      button: Zastosuj wszystkie
+      confirm_title: Zastosować wszystkie reguły
+      confirm_message: Za chwilę zastosujesz %{count} reguł wpływających na %{transactions} unikalnych transakcji. Potwierdź, jeśli chcesz kontynuować.
+      confirm_button: Potwierdź i zastosuj wszystkie
+      success: Wszystkie reguły zostały dodane do kolejki wykonania
+      ai_cost_title: Szacowanie kosztu AI
+      ai_cost_message: To użyje AI do kategoryzacji maksymalnie %{transactions} transakcji.
+      estimated_cost: 'Szacowany koszt: ~$%{cost}'
+      cost_unavailable_model: Szacowanie kosztu niedostępne dla modelu "%{model}".
+      cost_unavailable_no_provider: Szacowanie kosztu niedostępne (brak skonfigurowanego dostawcy LLM).
+      cost_warning: Mogą zostać naliczone koszty, sprawdź u dostawcy modelu aktualny cennik.
+      view_usage: Zobacz historię użycia
+    recent_runs:
+      title: Ostatnie uruchomienia
+      description: Zobacz historię wykonania reguł, w tym status powodzenia/niepowodzenia oraz liczbę transakcji.
+      unnamed_rule: Reguła bez nazwy
+      columns:
+        date_time: Data/godzina
+        execution_type: Typ
+        status: Status
+        rule_name: Nazwa reguły
+        transactions_counts:
+          queued: W kolejce
+          processed: Przetworzone
+          modified: Zmodyfikowane
+      execution_types:
+        manual: Ręczne
+        scheduled: Zaplanowane
+      statuses:
+        pending: Oczekujące
+        success: Pomyślnie
+        failed: Błąd
+    clear_ai_cache:
+      button: Zresetuj cache AI
+      confirm_title: Zresetować cache AI?
+      confirm_body: Czy na pewno chcesz zresetować cache AI? Umożliwi to regułom AI ponowne przetworzenie wszystkich transakcji. Może to wygenerować dodatkowe koszty API.
+      confirm_button: Zresetuj cache
+      success: Trwa czyszczenie cache AI. To może potrwać chwilę.
+    condition_filters:
+      transaction_type:
+        income: Przychód
+        expense: Wydatek
+        transfer: Przelew
+        equal_to: Równe

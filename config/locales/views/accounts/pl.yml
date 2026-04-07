@@ -1,0 +1,158 @@
+---
+pl:
+  accounts:
+    not_authorized: Nie masz uprawnień do zarządzania tym kontem
+    account:
+      edit: Edytuj
+      link_lunchflow: Połącz z Lunch Flow
+      link_provider: Połącz z dostawcą
+      unlink_provider: Odłącz od dostawcy
+      troubleshoot: Rozwiąż problem
+      enable: Włącz konto
+      disable: Wyłącz konto
+      set_default: Ustaw jako domyślne
+      remove_default: Usuń status domyślnego
+      default_label: Domyślne
+      delete: Usuń konto
+      sharing: Udostępnianie
+    chart:
+      data_not_available: Dane niedostępne dla wybranego okresu
+    create:
+      success: Utworzono konto %{type}
+    set_default:
+      depository_only: Tylko konta gotówkowe i karty kredytowe mogą być ustawione jako domyślne.
+    destroy:
+      success: Zaplanowano usunięcie konta %{type}
+      cannot_delete_linked: Nie można usunąć połączonego konta. Najpierw je odłącz.
+    empty:
+      empty_message: Dodaj konto przez połączenie, import lub ręczne wprowadzenie.
+      new_account: Nowe konto
+      no_accounts: Brak kont
+    form:
+      balance: 'Saldo na dzień:'
+      opening_balance_date_label: Data salda początkowego
+      name_label: Nazwa konta
+      name_placeholder: Przykładowa nazwa konta
+      additional_details: Dodatkowe informacje
+      institution_name_label: Nazwa instytucji
+      institution_name_placeholder: np. PKO Bank Polski
+      institution_domain_label: Domena instytucji
+      institution_domain_placeholder: np. pkobp.pl
+      notes_label: Notatki
+      notes_placeholder: Zapisz dodatkowe informacje, takie jak numery kont, kody rozliczeniowe, IBAN, numery routingowe itp.
+    index:
+      accounts: Konta
+      manual_accounts:
+        other_accounts: Inne konta
+      new_account: Nowe konto
+      sync: Synchronizuj wszystko
+    sync_all:
+      syncing: Trwa synchronizacja kont...
+    new:
+      import_accounts: Importuj konta
+      method_selector:
+        connected_entry: Połącz konto
+        connected_entry_eu: Połącz konto z UE
+        link_with_provider: Połącz z %{provider}
+        lunchflow_entry: Połącz konto Lunch Flow
+        manual_entry: Wprowadź saldo konta
+        title: Jak chcesz je dodać?
+      title: Co chcesz dodać?
+    show:
+      activity:
+        amount: Kwota
+        balance: Saldo
+        confirmed: Potwierdzone
+        date: Data
+        entries: wpisy
+        entry: wpis
+        filter: Filtr
+        new: Nowy
+        new_activity: Nowa aktywność
+        new_balance: Nowe saldo
+        new_trade: Nowa transakcja giełdowa
+        new_transaction: Nowa transakcja
+        new_transfer: Nowy przelew
+        no_entries: Nie znaleziono wpisów
+        pending: Oczekujące
+        search:
+          placeholder: Szukaj wpisów po nazwie
+        status: Status
+        title: Aktywność
+      chart:
+        balance: Saldo
+        owed: Kwota zadłużenia
+      menu:
+        confirm_accept: Usuń "%{name}"
+        confirm_body_html: "<p>Usuwając to konto, usuniesz jego historię wartości, co wpłynie na różne aspekty Twojego ogólnego bilansu. Ta akcja będzie miała bezpośredni wpływ na obliczenia majątku netto i wykresy konta.</p><br /> <p>Po usunięciu nie będzie możliwości przywrócenia informacji o koncie, ponieważ trzeba będzie dodać je ponownie jako nowe konto.</p>"
+        confirm_title: Usunąć konto?
+        edit: Edytuj
+        import: Importuj transakcje
+        import_trades: Importuj transakcje giełdowe
+        import_transactions: Importuj transakcje
+        manage: Zarządzaj kontami
+    update:
+      success: Zaktualizowano konto %{type}
+    sidebar:
+      missing_data: Brak danych historycznych
+      missing_data_description: "%{product} używa zewnętrznych dostawców do pobierania historycznych kursów walut, cen papierów wartościowych i innych danych. Te dane są wymagane do dokładnego obliczania historycznych sald kont."
+      configure_providers: Skonfiguruj tutaj swoich dostawców.
+      tabs:
+        all: Wszystkie
+        assets: Aktywa
+        debts: Zobowiązania
+      new_asset: Nowe aktywo
+      new_debt: Nowe zobowiązanie
+      new_account: Nowe konto
+      new_account_group: Nowe %{account_group}
+    types:
+      depository: Gotówka
+      investment: Inwestycje
+      crypto: Kryptowaluty
+      property: Nieruchomość
+      vehicle: Pojazd
+      bond: Obligacje
+      other_asset: Inne aktywo
+      credit_card: Karta kredytowa
+      loan: Pożyczka
+      other_liability: Inne zobowiązanie
+    tax_treatments:
+      taxable: Opodatkowane
+      tax_deferred: Odroczony podatek
+      tax_exempt: Zwolnione z podatku
+      tax_advantaged: Preferencyjne podatkowo
+    tax_treatment_descriptions:
+      taxable: Zyski opodatkowane przy realizacji
+      tax_deferred: Wpłaty odliczalne, opodatkowanie przy wypłacie
+      tax_exempt: Wpłaty po opodatkowaniu, zyski nieopodatkowane
+      tax_advantaged: Specjalne korzyści podatkowe pod pewnymi warunkami
+    subtype_regions:
+      us: Stany Zjednoczone
+      uk: Wielka Brytania
+      ca: Kanada
+      au: Australia
+      eu: Europa
+      generic: Ogólne
+    confirm_unlink:
+      title: Odłączyć konto od dostawcy?
+      description_html: Zaraz odłączysz <strong>%{account_name}</strong> od <strong>%{provider_name}</strong>. Konto zostanie przekształcone w konto ręczne.
+      warning_title: Co to oznacza
+      warning_no_sync: Konto nie będzie już synchronizować się automatycznie z dostawcą
+      warning_manual_updates: Trzeba będzie ręcznie dodawać transakcje i aktualizować salda
+      warning_transactions_kept: Wszystkie istniejące transakcje i salda zostaną zachowane
+      warning_can_delete: Po odłączeniu będzie można usunąć konto, jeśli zajdzie taka potrzeba
+      confirm_button: Potwierdź i odłącz
+    unlink:
+      success: Konto zostało pomyślnie odłączone. Teraz jest kontem ręcznym.
+      not_linked: Konto nie jest połączone z dostawcą
+      error: 'Nie udało się odłączyć konta: %{error}'
+      generic_error: Wystąpił nieoczekiwany błąd. Spróbuj ponownie.
+    select_provider:
+      title: Wybierz dostawcę do połączenia
+      description: Wybierz dostawcę, którego chcesz użyć do połączenia %{account_name}
+      already_linked: Konto jest już połączone z dostawcą
+      no_providers: Obecnie nie skonfigurowano żadnych dostawców
+  email_confirmations:
+    new:
+      invalid_token: Nieprawidłowy lub wygasły link potwierdzający.
+      success_login: Twój adres e-mail został potwierdzony. Zaloguj się przy użyciu nowego adresu e-mail.

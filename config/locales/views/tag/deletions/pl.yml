@@ -1,0 +1,13 @@
+---
+pl:
+  tag:
+    deletions:
+      create:
+        deleted: Tag został usunięty
+      new:
+        delete_and_leave_uncategorized: Usuń "%{tag_name}"
+        delete_and_recategorize: Usuń "%{tag_name}" i przypisz nowy tag
+        delete_tag: Usunąć tag?
+        explanation: "%{tag_name} zostanie usunięty z transakcji i innych obiektów oznaczonych tagami. Zamiast pozostawiać je bez tagu, możesz poniżej przypisać nowy tag."
+        replacement_tag_prompt: Wybierz tag
+        tag: Tag
