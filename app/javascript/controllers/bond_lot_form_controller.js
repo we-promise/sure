@@ -5,10 +5,6 @@ export default class extends Controller {
     "productCodeSelect",
     "subtypeSelect",
     "subtypeDerivedHint",
-    "providerSelect",
-    "autoFetchInput",
-    "manualInflationField",
-    "manualInflationInput",
     "inflationFields",
     "otherFields",
     "inflationInput",
@@ -17,13 +13,13 @@ export default class extends Controller {
   static values = {
     inflationSubtypes: Array,
     productSubtypeMap: Object,
+    productTermMap: Object,
     lotAutoFetch: Boolean,
     globalImportEnabled: Boolean
   }
 
   connect() {
     this.syncSubtypeWithProduct()
-    this.#toggleSubtypeFields()
   }
 
   syncSubtypeWithProduct() {
@@ -43,6 +39,8 @@ export default class extends Controller {
       this.subtypeDerivedHintTarget.classList.toggle("hidden", !subtypeDerived)
     }
 
+    this.#syncTermWithProduct(productCode)
+
     this.#toggleSubtypeFields()
   }
 
@@ -55,10 +53,14 @@ export default class extends Controller {
   }
 
   syncAutoFetchWithProvider() {
-    if (!this.globalImportEnabledValue || !this.hasAutoFetchInputTarget || !this.hasProviderSelectTarget) return
+    if (!this.globalImportEnabledValue) return
 
-    const provider = `${this.providerSelectTarget.value || ""}`.trim()
-    this.autoFetchInputTarget.value = provider === "" ? "0" : "1"
+    const autoFetchInput = this.element.querySelector('[data-bond-lot-form-target="autoFetchInput"]')
+    const providerSelect = this.element.querySelector('[data-bond-lot-form-target="providerSelect"]')
+    if (!autoFetchInput || !providerSelect) return
+
+    const provider = `${providerSelect.value || ""}`.trim()
+    autoFetchInput.value = provider === "" ? "0" : "1"
     this.#toggleManualInflationField()
   }
 
@@ -87,26 +89,44 @@ export default class extends Controller {
     this.#toggleManualInflationField()
   }
 
+  #syncTermWithProduct(productCode) {
+    const termInput = this.element.querySelector('input[name="bond_lot[term_months]"]')
+    if (!termInput) return
+
+    const mappedTerm = this.productTermMapValue?.[productCode]
+    const termDerived = mappedTerm !== undefined && mappedTerm !== null && `${mappedTerm}` !== ""
+
+    if (termDerived) {
+      termInput.value = mappedTerm
+    }
+
+    termInput.readOnly = termDerived
+  }
+
   #toggleManualInflationField() {
-    if (!this.hasManualInflationFieldTarget || !this.hasManualInflationInputTarget) return
+    const manualInflationField = this.element.querySelector('[data-bond-lot-form-target="manualInflationField"]')
+    const manualInflationInput = this.element.querySelector('[data-bond-lot-form-target="manualInflationInput"]')
+    if (!manualInflationField || !manualInflationInput) return
 
     const inflationLinked = this.inflationSubtypesValue.includes(this.subtypeSelectTarget.value)
     const autoFetch = this.#currentAutoFetchValue()
     const showManualField = inflationLinked && (!autoFetch || !this.globalImportEnabledValue)
     const required = inflationLinked && !autoFetch
 
-    this.manualInflationFieldTarget.classList.toggle("hidden", !showManualField)
-    this.manualInflationInputTarget.disabled = !showManualField
-    this.manualInflationInputTarget.required = required
+    manualInflationField.classList.toggle("hidden", !showManualField)
+    manualInflationInput.disabled = !showManualField
+    manualInflationInput.required = required
   }
 
   #currentAutoFetchValue() {
-    if (this.hasAutoFetchInputTarget) {
-      if (this.autoFetchInputTarget.type === "checkbox") {
-        return this.autoFetchInputTarget.checked
+    const autoFetchInput = this.element.querySelector('[data-bond-lot-form-target="autoFetchInput"]')
+
+    if (autoFetchInput) {
+      if (autoFetchInput.type === "checkbox") {
+        return autoFetchInput.checked
       }
 
-      const value = `${this.autoFetchInputTarget.value}`.trim().toLowerCase()
+      const value = `${autoFetchInput.value}`.trim().toLowerCase()
       return value === "1" || value === "true"
     }
 

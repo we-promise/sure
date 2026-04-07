@@ -617,6 +617,10 @@ class BondLot < ApplicationRecord
     def normalize_inflation_provider
       inflation_like = canonical_subtype.in?(Bond::INFLATION_LINKED_SUBTYPES)
       self.inflation_provider = nil unless inflation_like
+      # When provider selection is available and left blank, treat it as explicit manual CPI mode.
+      # If GUS is globally disabled we keep auto_fetch_inflation as-is; downstream safeguards
+      # (needs_inflation_backfill? and inflation_snapshot_for) prevent unsafe backfills and
+      # gracefully fall back to manual assumptions when provider data is unavailable.
       if inflation_like && auto_fetch_inflation && inflation_provider.blank? && Setting.gus_inflation_import_enabled_effective
         self.auto_fetch_inflation = false
       end
