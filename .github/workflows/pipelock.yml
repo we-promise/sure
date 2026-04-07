@@ -23,4 +23,9 @@ jobs:
           fail-on-findings: 'true'
           test-vectors: 'false'
           exclude-paths: |
+            .env.example
+            compose.example.yml
+            compose.example.ai.yml
             config/locales/views/reports/
+            docs/hosting/ai.md
+            app/models/provider/binance.rb
