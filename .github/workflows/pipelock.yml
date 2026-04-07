@@ -28,3 +28,4 @@ jobs:
             compose.example.ai.yml
             config/locales/views/reports/
             docs/hosting/ai.md
+            app/models/provider/binance.rb

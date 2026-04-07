@@ -137,7 +137,7 @@ class SimplefinEntry::ProcessorTest < ActiveSupport::TestCase
 
     entry = @account.entries.find_by!(external_id: "simplefin_tx_pending_zero_posted_1", source: "simplefin")
     # For depository accounts, processor prefers posted, then transacted; posted==0 should be treated as missing
-    assert_equal Time.at(t_epoch).to_date, entry.date, "expected entry.date to use transacted_at when posted==0"
+    assert_equal Time.at(t_epoch).utc.to_date, entry.date, "expected entry.date to use transacted_at when posted==0"
     sf = entry.transaction.extra.fetch("simplefin")
     assert_equal true, sf["pending"], "expected pending flag to be true when posted==0 and/or pending=true"
   end
