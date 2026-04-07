@@ -109,7 +109,7 @@ class Transactions::CategorizesController < ApplicationController
     else
       streams << turbo_stream.replace("categorize_remaining",
         partial: "transactions/categorizes/remaining_count",
-        locals: { total_uncategorized: Current.accessible_entries.uncategorized_transactions.count })
+        locals: { total_uncategorized: uncategorized_count })
       streams << turbo_stream.replace("categorize_group_summary",
         partial: "transactions/categorizes/group_summary",
         locals: { entries: remaining_entries })
