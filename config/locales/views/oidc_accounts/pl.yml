@@ -1,0 +1,34 @@
+---
+pl:
+  oidc_accounts:
+    link:
+      title_link: Połącz konto OIDC
+      title_create: Utwórz konto
+      verify_heading: Zweryfikuj swoją tożsamość
+      verify_description_html: "Aby połączyć konto %{provider}%{email_suffix}, zweryfikuj tożsamość, wpisując hasło."
+      email_suffix_html: " (adres: <strong>%{email}</strong>)"
+      email_label: E-mail
+      email_placeholder: Wpisz e-mail
+      password_label: Hasło
+      password_placeholder: Wpisz hasło
+      verify_hint: To pomaga upewnić się, że tylko Ty możesz łączyć zewnętrzne konta ze swoim profilem.
+      submit_link: Połącz konto
+      create_heading: Utwórz nowe konto
+      create_description_html: "Nie znaleziono konta dla adresu <strong>%{email}</strong>. Kliknij poniżej, aby utworzyć nowe konto używając tożsamości %{provider}."
+      info_email: "E-mail:"
+      info_name: "Imię i nazwisko:"
+      submit_create: Utwórz konto
+      submit_accept_invitation: Zaakceptuj zaproszenie
+      account_creation_disabled: Tworzenie nowych kont przez logowanie jednokrotne jest wyłączone. Skontaktuj się z administratorem, aby utworzyć konto.
+      cancel: Anuluj
+    new_user:
+      title: Dokończ tworzenie konta
+      heading: Utwórz swoje konto
+      description: Potwierdź swoje dane, aby dokończyć tworzenie konta przy użyciu tożsamości %{provider}.
+      email_label: E-mail (od dostawcy SSO)
+      first_name_label: Imię
+      first_name_placeholder: Wpisz imię
+      last_name_label: Nazwisko
+      last_name_placeholder: Wpisz nazwisko
+      submit: Utwórz konto
+      cancel: Anuluj

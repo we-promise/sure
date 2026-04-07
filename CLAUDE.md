@@ -12,9 +12,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ### Testing
 - `bin/rails test` - Run all tests
 - `bin/rails test:db` - Run tests with database reset
-- `bin/rails test:system` - Run system tests only (use sparingly - they take longer)
+- `DISABLE_PARALLELIZATION=true bin/rails test:system` - Run system tests only (use sparingly - they take longer)
 - `bin/rails test test/models/account_test.rb` - Run specific test file
 - `bin/rails test test/models/account_test.rb:42` - Run specific test at line
+
+#### System Tests in the Dev Container
+When running inside the Dev Container, the `SELENIUM_REMOTE_URL` environment variable is automatically set to the bundled `selenium/standalone-chromium` service. System tests will connect to that remote browser — no local Chrome installation is required.
+
+```bash
+DISABLE_PARALLELIZATION=true bin/rails test:system
+```
+
+To watch the browser live, open `http://localhost:7900` or `http://localhost:4444` in your host browser (password: `secret`).
 
 ### Linting & Formatting
 - `bin/rubocop` - Run Ruby linter
@@ -38,7 +47,7 @@ ALWAYS run these commands before opening a pull request:
 
 1. **Tests** (Required):
    - `bin/rails test` - Run all tests (always required)
-   - `bin/rails test:system` - Run system tests (only when applicable, they take longer)
+   - `DISABLE_PARALLELIZATION=true bin/rails test:system` - Run system tests (only when applicable, they take longer)
 
 2. **Linting** (Required):
    - `bin/rubocop -f github -a` - Ruby linting with auto-correct
