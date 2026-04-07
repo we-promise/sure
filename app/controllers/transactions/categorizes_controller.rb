@@ -98,7 +98,7 @@ class Transactions::CategorizesController < ApplicationController
     all_entry_ids = Array.wrap(params[:all_entry_ids]).reject(&:blank?)
     remaining_ids = all_entry_ids - [ entry.id.to_s ]
 
-    Entry.where(id: entry.id).bulk_update!({ category_id: category.id })
+    Current.accessible_entries.where(id: entry.id).bulk_update!({ category_id: category.id })
 
     remaining_entries = uncategorized_entries_for(remaining_ids)
     remaining_ids     = remaining_entries.map { |e| e.id.to_s }
