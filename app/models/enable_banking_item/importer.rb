@@ -3,6 +3,10 @@ class EnableBankingItem::Importer
   # Enable Banking typically returns ~100 transactions per page, so 100 pages = ~10,000 transactions
   MAX_PAGINATION_PAGES = 100
 
+  # Balance type priority: prefer booked balances over available balances.
+  # Available types (CLAV, ITAV) include overdraft/credit capacity and inflate balances.
+  BALANCE_TYPE_PRIORITY = %w[CLBD XPCD ITBD CLAV ITAV].freeze
+
   attr_reader :enable_banking_item, :enable_banking_provider
 
   def initialize(enable_banking_item, enable_banking_provider:)
@@ -161,12 +165,8 @@ class EnableBankingItem::Importer
       balances = balance_data[:balances] || []
       return if balances.empty?
 
-      # Find the most relevant balance (prefer "ITAV" or "CLAV" types)
-      balance = balances.find { |b| b[:balance_type] == "ITAV" } ||
-                balances.find { |b| b[:balance_type] == "CLAV" } ||
-                balances.find { |b| b[:balance_type] == "ITBD" } ||
-                balances.find { |b| b[:balance_type] == "CLBD" } ||
-                balances.first
+      # Find the most relevant balance (prefer booked over available types)
+      balance = select_balance(balances)
 
       if balance.present?
         amount = balance.dig(:balance_amount, :amount) || balance[:amount]
@@ -181,6 +181,14 @@ class EnableBankingItem::Importer
       end
     rescue Provider::EnableBanking::EnableBankingError => e
       Rails.logger.error "EnableBankingItem::Importer - Error fetching balance for account #{enable_banking_account.uid}: #{e.message}"
+    end
+
+    def select_balance(balances)
+      BALANCE_TYPE_PRIORITY.each do |type|
+        found = balances.find { |b| b[:balance_type] == type }
+        return found if found
+      end
+      balances.first
     end
 
     def fetch_and_store_transactions(enable_banking_account)
