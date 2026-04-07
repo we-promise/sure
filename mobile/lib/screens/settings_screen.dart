@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../providers/auth_provider.dart';
 import '../providers/categories_provider.dart';
+import '../providers/theme_provider.dart';
 import '../services/offline_storage_service.dart';
 import '../services/log_service.dart';
 import '../services/preferences_service.dart';
@@ -403,6 +404,37 @@ class _SettingsScreenState extends State<SettingsScreen> {
               setState(() {
                 _groupByType = value;
               });
+            },
+          ),
+
+          Consumer<ThemeProvider>(
+            builder: (context, themeProvider, _) {
+              return ListTile(
+                leading: const Icon(Icons.brightness_6_outlined),
+                title: const Text('Theme'),
+                trailing: SegmentedButton<ThemeMode>(
+                  segments: const [
+                    ButtonSegment(
+                      value: ThemeMode.light,
+                      icon: Icon(Icons.light_mode, size: 18),
+                      tooltip: 'Light',
+                    ),
+                    ButtonSegment(
+                      value: ThemeMode.system,
+                      icon: Icon(Icons.brightness_auto, size: 18),
+                      tooltip: 'System',
+                    ),
+                    ButtonSegment(
+                      value: ThemeMode.dark,
+                      icon: Icon(Icons.dark_mode, size: 18),
+                      tooltip: 'Dark',
+                    ),
+                  ],
+                  selected: {themeProvider.themeMode},
+                  onSelectionChanged: (modes) => themeProvider.setThemeMode(modes.first),
+                  showSelectedIcon: false,
+                ),
+              );
             },
           ),
 

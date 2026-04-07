@@ -36,6 +36,10 @@ en:
         theme_system: System
         transactions_title: Transactions
         transactions_subtitle: Customize how transactions are displayed
+        dashboard_title: Dashboard
+        dashboard_subtitle: Customize how the dashboard is displayed
+        dashboard_two_column_title: Two-column layout
+        dashboard_two_column_description: Display dashboard widgets in two columns on large screens. When off, widgets stack in a single column.
         split_grouped_title: Group split transactions
         split_grouped_description: Show split transactions grouped under their parent in the transaction list. When off, split children appear as individual rows.
     preferences:
@@ -54,6 +58,11 @@ en:
         month_start_day: Budget month starts on
         month_start_day_hint: Set when your budget month starts (e.g., payday)
         month_start_day_warning: Your budgets and MTD calculations will use this custom start day instead of the 1st of each month.
+        sharing_title: "%{moniker} Sharing"
+        sharing_subtitle: "Control how accounts are shared in your %{moniker}"
+        sharing_default_label: Default sharing for new accounts
+        sharing_shared: Share with all members
+        sharing_private: Keep private by default
     profiles:
       destroy:
         cannot_remove_self: You cannot remove yourself from the account.
@@ -180,6 +189,25 @@ en:
         disconnect_confirm: Are you sure you want to disconnect this Coinbase connection? Your synced accounts will become manual accounts.
         status_connected: Coinbase is connected and syncing your crypto holdings.
         status_not_connected: Not connected. Enter your API credentials above to get started.
+      binance_panel:
+        setup_instructions: "To connect Binance, create a read-only API key:"
+        step1_html: 'Go to <a href="https://www.binance.com/en/my/settings/api-management" target="_blank" class="underline">Binance API Management</a>'
+        step2: "Create a new API key with Enable Reading permission only"
+        step3: "Paste your API Key and Secret below"
+        no_withdraw_warning: "Warning: do NOT enable withdrawal permissions"
+        ip_hint_title: "IP Whitelisting Required"
+        ip_hint_body: "Add the app server's egress IP to the Binance API Key whitelist:"
+        ip_hint_contact_admin: "Contact your administrator to obtain the app server's egress IP address."
+        api_key_label: API Key
+        api_key_placeholder: Paste your Binance API Key
+        api_secret_label: API Secret
+        api_secret_placeholder: Paste your Binance API Secret
+        connect_button: Connect Binance
+        syncing: Syncing...
+        sync: Sync
+        disconnect_confirm: "Are you sure you want to disconnect Binance?"
+        status_connected: Binance connected
+        status_not_connected: Binance not connected
       enable_banking_panel:
         callback_url_instruction: "For the callback URL, use %{callback_url}."
         connection_error: Connection Error

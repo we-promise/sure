@@ -18,7 +18,7 @@
     <% if @entry.account_id %>
       <%= f.hidden_field :account_id %>
     <% else %>
-      <%= f.collection_select :account_id, Current.family.accounts.manual.active.alphabetically, :id, :name, { prompt: t(".account_prompt"), label: t(".account"), selected: Current.user.default_account_for_transactions&.id, variant: :logo }, required: true, class: "form-field__input text-ellipsis" %>
+      <%= f.collection_select :account_id, accessible_accounts.manual.active.alphabetically, :id, :name, { prompt: t(".account_prompt"), label: t(".account"), selected: Current.user.default_account_for_transactions&.id, variant: :logo }, required: true, class: "form-field__input text-ellipsis" %>
     <% end %>
 
     <%= f.money_field :amount, label: t(".amount"), required: true %>
@@ -31,7 +31,7 @@
   <%= render DS::Disclosure.new(title: t(".details")) do %>
     <%= f.fields_for :entryable do |ef| %>
       <%= ef.collection_select :merchant_id,
-                Current.family.available_merchants.alphabetically,
+                Current.family.available_merchants_for(Current.user).alphabetically,
                 :id, :name,
                 { include_blank: t(".none"),
                   label: t(".merchant_label") } %>

@@ -1,5 +1,6 @@
 class SplitsController < ApplicationController
   before_action :set_entry
+  before_action :require_split_write_permission!, only: %i[create update destroy]
 
   def new
     @categories = Current.family.categories.alphabetically
@@ -82,7 +83,11 @@ class SplitsController < ApplicationController
   private
 
     def set_entry
-      @entry = Current.family.entries.find(params[:transaction_id])
+      @entry = Current.accessible_entries.find(params[:transaction_id])
+    end
+
+    def require_split_write_permission!
+      require_account_permission!(@entry.account, redirect_path: transactions_path)
     end
 
     def resolve_to_parent!

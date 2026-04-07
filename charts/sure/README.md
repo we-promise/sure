@@ -640,10 +640,12 @@ hpa:
 
 ## Pipelock (AI agent security proxy)
 
-Pipelock is an optional sidecar that scans AI agent traffic for secret exfiltration, prompt injection, and tool poisoning. It runs as a separate Deployment with two listeners:
+[Pipelock](https://github.com/luckyPipewrench/pipelock) is an optional security proxy that scans AI agent traffic for secret exfiltration, prompt injection, tool poisoning, and SSRF. It runs as a separate Deployment with two listeners:
 
 - **Forward proxy** (port 8888): Scans outbound HTTPS from Faraday-based AI clients. Auto-injected via `HTTPS_PROXY` env vars when enabled.
 - **MCP reverse proxy** (port 8889): Scans inbound MCP traffic from external AI assistants.
+
+v2.0 adds enhanced tool poisoning detection (full JSON schema scanning), per-read kill switch preemption on long-lived connections, trusted domain allowlisting, and MCP tool redirect profiles. Process sandboxing and attack simulation are also available via `extraConfig` and CLI.
 
 ### Enabling Pipelock
 
@@ -651,8 +653,46 @@ Pipelock is an optional sidecar that scans AI agent traffic for secret exfiltrat
 pipelock:
   enabled: true
   image:
-    tag: "1.5.0"
+    tag: "2.0.0"
   mode: balanced   # strict, balanced, or audit
+```
+
+### Trusted domains
+
+In Kubernetes, services often have public DNS records that resolve to private IPs. Without `trustedDomains`, the SSRF scanner blocks this legitimate traffic. Add trusted domains to allow them through:
+
+```yaml
+pipelock:
+  trustedDomains:
+    - "api.internal.example.com"
+    - "*.corp.example.com"
+```
+
+### MCP tool redirect profiles
+
+Redirect profiles route matched MCP tool calls to an audited handler program instead of blocking. The handler returns a synthetic MCP response, keeping the agent's flow intact while enforcing policy:
+
+```yaml
+pipelock:
+  mcpToolPolicy:
+    enabled: true
+    action: redirect      # or use per-rule action overrides
+    redirectProfiles:
+      safe-fetch:
+        exec: ["/pipelock", "internal-redirect", "fetch-proxy"]
+        reason: "Route fetch calls through audited proxy"
+```
+
+### Validating your config
+
+Pipelock v2.0 includes two CLI tools for config validation:
+
+```bash
+# Run 24 synthetic attack scenarios against your config
+pipelock simulate --config pipelock.yaml
+
+# Score your config's security posture (0-100)
+pipelock audit score --config pipelock.yaml
 ```
 
 ### Exposing MCP to external AI assistants
@@ -719,7 +759,7 @@ pipelock:
 
 ### Extra config (escape hatch)
 
-For Pipelock config sections not covered by structured values (session profiling, data budgets, kill switch, etc.), use `extraConfig`:
+For Pipelock config sections not covered by structured values (session profiling, data budgets, kill switch, sandbox, reverse proxy, adaptive enforcement, etc.), use `extraConfig`:
 
 ```yaml
 pipelock:
@@ -727,8 +767,12 @@ pipelock:
     session_profiling:
       enabled: true
       max_sessions: 1000
-    data_budget:
-      max_bytes_per_session: 10485760
+    adaptive_enforcement:
+      enabled: true
+      exempt_domains:
+        - "*.example.com"
+    kill_switch:
+      api_listen: ":9090"    # dedicated port for kill switch API
 ```
 
 These are appended verbatim to `pipelock.yaml`. Do not duplicate keys already rendered by the chart.
@@ -767,7 +811,7 @@ See `values.yaml` for the complete configuration surface, including:
 - `migrations.*`: strategy job or initContainer
 - `simplefin.encryption.*`: enable + backfill options
 - `cronjobs.*`: custom CronJobs
-- `pipelock.*`: AI agent security proxy (forward proxy, MCP reverse proxy, DLP, injection scanning, logging, serviceMonitor, ingress, PDB, extraConfig)
+- `pipelock.*`: AI agent security proxy (forward proxy, MCP reverse proxy, DLP, injection scanning, trusted domains, tool redirect profiles, logging, serviceMonitor, ingress, PDB, extraConfig)
 - `service.*`, `ingress.*`, `serviceMonitor.*`, `hpa.*`
 
 ## Helm tests
