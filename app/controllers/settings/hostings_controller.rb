@@ -221,7 +221,7 @@ class Settings::HostingsController < ApplicationController
         Arel.sql("MIN(year)"),
         Arel.sql("MAX(year)")
       ) || [ 0, nil, nil ]
-      @gus_stats = { count: cnt.to_i, min_year: cnt.to_i > 0 ? min_yr : nil, max_year: cnt.to_i > 0 ? max_yr : nil }
+      @gus_stats = { count: cnt.to_i, min_year: min_yr, max_year: max_yr }
     end
 
     def ensure_admin

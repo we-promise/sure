@@ -73,9 +73,6 @@ class Balance::BaseCalculator
 
       txn_inflow_sum = entries.select { |e| e.amount < 0 && e.transaction? }.sum(&:amount)
       txn_outflow_sum = entries.select { |e| e.amount >= 0 && e.transaction? }.sum(&:amount)
-      bond_lot_transaction_entries = entries.select { |e| bond_lot_transaction_entry?(e) }
-      bond_lot_cash_inflow_sum = bond_lot_transaction_entries.select { |e| e.amount < 0 }.sum(&:amount)
-      bond_lot_cash_outflow_sum = bond_lot_transaction_entries.select { |e| e.amount >= 0 }.sum(&:amount)
 
       trade_cash_inflow_sum = entries.select { |e| e.amount < 0 && e.trade? }.sum(&:amount)
       trade_cash_outflow_sum = entries.select { |e| e.amount >= 0 && e.trade? }.sum(&:amount)
@@ -84,6 +81,14 @@ class Balance::BaseCalculator
         non_cash_inflows = txn_inflow_sum.abs
         non_cash_outflows = txn_outflow_sum
       elsif account.balance_type != :non_cash
+        bond_lot_cash_inflow_sum = 0
+        bond_lot_cash_outflow_sum = 0
+        if account.bond?
+          bond_lot_transaction_entries = entries.select { |e| bond_lot_transaction_entry?(e) }
+          bond_lot_cash_inflow_sum = bond_lot_transaction_entries.select { |e| e.amount < 0 }.sum(&:amount)
+          bond_lot_cash_outflow_sum = bond_lot_transaction_entries.select { |e| e.amount >= 0 }.sum(&:amount)
+        end
+
         cash_inflows = txn_inflow_sum.abs + trade_cash_inflow_sum.abs
         cash_outflows = txn_outflow_sum + trade_cash_outflow_sum
 

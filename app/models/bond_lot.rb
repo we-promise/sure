@@ -159,7 +159,7 @@ class BondLot < ApplicationRecord
   end
 
   with_options unless: :inflation_linked? do
-    validates :interest_rate, presence: true, unless: :requires_rate_review?
+    validates :interest_rate, presence: true, unless: -> { requires_rate_review? || inflation_linked_selection? }
     validates :rate_type, presence: true
     validates :coupon_frequency, presence: true
   end
@@ -176,6 +176,13 @@ class BondLot < ApplicationRecord
 
   def inflation_linked?
     canonical_subtype.in?(Bond::INFLATION_LINKED_SUBTYPES)
+  end
+
+  def inflation_linked_selection?
+    return true if inflation_linked?
+
+    preset_subtype = Bond::PRODUCT_DEFAULTS.dig(product_code, :subtype)
+    preset_subtype == "inflation_linked"
   end
 
   def auto_fetch_inflation?
@@ -267,22 +274,24 @@ class BondLot < ApplicationRecord
   def create_purchase_entry!(auto_purchased: false, requires_rate_review: false)
     raise ActiveRecord::RecordInvalid, self unless persisted?
 
-    created_entry = account.entries.create!(
-      date: purchased_on,
-      name: I18n.t("bond_lots.activity.purchase_name", subtype: subtype_label),
-      amount: amount,
-      currency: account.currency,
-      entryable: Transaction.new(
-        kind: :funds_movement,
-        extra: purchase_entry_extra(auto_purchased:, requires_rate_review:)
+    ActiveRecord::Base.transaction do
+      created_entry = account.entries.create!(
+        date: purchased_on,
+        name: I18n.t("bond_lots.activity.purchase_name", subtype: subtype_label),
+        amount: amount,
+        currency: account.currency,
+        entryable: Transaction.new(
+          kind: :funds_movement,
+          extra: purchase_entry_extra(auto_purchased:, requires_rate_review:)
+        )
       )
-    )
 
-    created_entry.lock_saved_attributes!
-    created_entry.mark_user_modified!
+      created_entry.lock_saved_attributes!
+      created_entry.mark_user_modified!
 
-    update!(entry: created_entry)
-    created_entry
+      update!(entry: created_entry)
+      created_entry
+    end
   end
 
   def save_with_purchase_entry!
@@ -320,11 +329,10 @@ class BondLot < ApplicationRecord
 
   def destroy_with_purchase_entry!
     ActiveRecord::Base.transaction do
-      if entry
-        entry.destroy!
-      else
-        destroy!
-      end
+      purchase_entry = entry
+
+      destroy!
+      purchase_entry.destroy! if purchase_entry && !purchase_entry.destroyed?
     end
   end
 

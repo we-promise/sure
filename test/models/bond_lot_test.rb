@@ -247,6 +247,7 @@ class BondLotTest < ActiveSupport::TestCase
     assert_not eod_lot.valid?
     assert_includes eod_lot.errors[:first_period_rate], "can't be blank"
     assert_includes eod_lot.errors[:inflation_margin], "can't be blank"
+    assert_not_includes eod_lot.errors[:interest_rate], "can't be blank"
 
     other_lot = BondLot.new(
       bond: bonds(:one),

@@ -5,6 +5,7 @@
 - Bond and GUS CPI features are implemented and verified by targeted tests.
 - UI tab split for Bond is implemented as: Activity, Positions, Closed.
 - Obsolete Bond holdings tab partial was removed.
+- Polish locale files for Bond/views are present and actively maintained.
 
 ## Verification performed
 
@@ -23,27 +24,24 @@
 
 ## PL scope for next phase
 
-The repository currently has only one Polish locale file:
-- config/locales/defaults/pl.yml
+Polish localization baseline is no longer limited to `config/locales/defaults/pl.yml`.
+Bond locale files already exist (including `config/locales/views/bonds/pl.yml`) and should be iterated, not created from scratch.
 
-For the next full PL phase, prioritize these files first:
+For the next PL phase, prioritize incremental coverage in:
 
-1. Bond domain
-- config/locales/views/bonds/pl.yml (missing)
+1. Dashboard additions
+- config/locales/views/pages/pl.yml (add/adjust bond summary and rate review notice)
 
-2. Dashboard additions
-- config/locales/views/pages/pl.yml (update, add bond summary and rate review notice)
+2. Self-hosting settings additions
+- config/locales/views/settings/hostings/pl.yml (add/adjust GUS CPI settings labels/messages)
 
-3. Self-hosting settings additions
-- config/locales/views/settings/hostings/pl.yml (update, add GUS CPI settings labels/messages)
-
-4. Accounts additions
-- config/locales/views/accounts/pl.yml (update, add Bond type labels if needed)
+3. Accounts additions
+- config/locales/views/accounts/pl.yml (review account-type labels and new bond-related strings)
 
 ## Recommended execution order
 
-1. Create config/locales/views/bonds/pl.yml from the structure in config/locales/views/bonds/en.yml.
-2. Translate only newly introduced keys in pages/settings/accounts files.
+1. Diff PL vs EN locale trees and translate only missing or changed keys.
+2. Keep Bond translations aligned with current subtype/product terminology.
 3. Run focused smoke checks in Bond views and settings pages.
 4. Run targeted controller/model tests for Bond and hostings.
 5. Open separate PR for PL localization only.

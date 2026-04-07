@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_04_07_103000) do
+ActiveRecord::Schema[7.2].define(version: 2026_04_07_143000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -63,6 +63,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_04_07_103000) do
     t.string "institution_name"
     t.string "institution_domain"
     t.text "notes"
+    t.jsonb "holdings_snapshot_data"
+    t.datetime "holdings_snapshot_at"
     t.uuid "owner_id"
     t.index ["accountable_id", "accountable_type"], name: "index_accounts_on_accountable_id_and_accountable_type"
     t.index ["accountable_type"], name: "index_accounts_on_accountable_type"
@@ -648,6 +650,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_04_07_103000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["year", "month"], name: "index_gus_inflation_rates_on_year_and_month", unique: true
+    t.check_constraint "month >= 1 AND month <= 12", name: "chk_gus_inflation_rates_month_range"
   end
 
   create_table "holdings", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -839,6 +842,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_04_07_103000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["source", "year", "month"], name: "index_inflation_rates_on_source_and_year_and_month", unique: true
+    t.check_constraint "month >= 1 AND month <= 12", name: "chk_inflation_rates_month_range"
   end
 
   create_table "investments", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1267,7 +1271,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_04_07_103000) do
     t.index ["country_code"], name: "index_securities_on_country_code"
     t.index ["exchange_operating_mic"], name: "index_securities_on_exchange_operating_mic"
     t.index ["kind"], name: "index_securities_on_kind"
-    t.check_constraint "kind::text = ANY (ARRAY['standard'::character varying, 'cash'::character varying]::text[])", name: "chk_securities_kind"
+    t.check_constraint "kind::text = ANY (ARRAY['standard'::text, 'cash'::text])", name: "chk_securities_kind"
   end
 
   create_table "security_prices", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|

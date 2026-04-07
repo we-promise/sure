@@ -20,11 +20,15 @@ class Provider::EsIneCpi < Provider
       to = Date.new(year.to_i, 12, 31)
       rows = fetch_rows(from:, to:)
 
-      rows.filter_map do |row|
+      year_rows = rows.filter_map do |row|
         next unless row[:year] == year.to_i
 
         { month: row[:month], rate_yoy: row[:rate_yoy] }
       end
+
+      raise Error, "No ES INE CPI data returned for #{year}" if year_rows.empty?
+
+      year_rows
     end
   end
 

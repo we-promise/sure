@@ -26,4 +26,17 @@ class Provider::EsIneCpiTest < ActiveSupport::TestCase
     assert_instance_of Provider::EsIneCpi::Error, result.error
     assert_match(/Missing ES_INE_CPI_SERIES_ID/, result.error.message)
   end
+
+  test "fetch_cpi_yoy_for_year returns error when requested year has no rows" do
+    provider = Provider::EsIneCpi.new(series_id: "IPC_TEST")
+    provider.stubs(:fetch_rows).returns([
+      { year: 2024, month: 12, rate_yoy: 102.1.to_d }
+    ])
+
+    result = provider.fetch_cpi_yoy_for_year(year: 2025)
+
+    assert_not result.success?
+    assert_instance_of Provider::EsIneCpi::Error, result.error
+    assert_match(/No ES INE CPI data returned for 2025/, result.error.message)
+  end
 end

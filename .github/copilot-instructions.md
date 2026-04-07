@@ -286,6 +286,10 @@ Notes from repository config
 
 ## Bond Feature (PR #1330 - UberDudePL/feature/bond)
 
+### Review context
+- Polish localization PR has already been merged.
+- Do not flag updates in `config/locales/views/**/pl.yml` as out-of-scope by default for Bond follow-up fixes.
+
 ### Architecture
 - `Bond` → has many `BondLot` → references inflation provider
 - Subtypes: `zero_coupon`, `fixed_coupon`, `inflation_linked`, `savings`, `other`
