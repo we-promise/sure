@@ -17,13 +17,16 @@ class Balance::BaseCalculator
     def holdings_value_for_date(date)
       @holdings_value_for_date ||= {}
       @holdings_value_for_date[date] ||= if account.accountable_type == "Bond"
-        account.bond.bond_lots
-          .where("purchased_on <= ?", date)
-          .where("closed_on IS NULL OR closed_on > ?", date)
-          .sum(:amount)
+        bond_lots_for_holdings.sum do |lot|
+          lot.purchased_on <= date && (lot.closed_on.nil? || lot.closed_on > date) ? lot.amount.to_d : 0.to_d
+        end
       else
         sync_cache.get_holdings(date).sum(&:amount)
       end
+    end
+
+    def bond_lots_for_holdings
+      @bond_lots_for_holdings ||= account.bond.bond_lots.select(:purchased_on, :closed_on, :amount).to_a
     end
 
     def derive_cash_balance_on_date_from_total(total_balance:, date:)

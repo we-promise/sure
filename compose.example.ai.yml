@@ -82,6 +82,11 @@ x-rails-env: &rails_env
   # Leave unset to manage via Settings UI; set to "true" to override from environment.
   GUS_INFLATION_IMPORT_ENABLED: ${GUS_INFLATION_IMPORT_ENABLED:-}
   GUS_SDP_API_KEY: ${GUS_SDP_API_KEY:-}
+  # Optional CPI provider overrides for international inflation-linked bonds
+  US_BLS_CPI_BASE_URL: ${US_BLS_CPI_BASE_URL:-}
+  US_BLS_CPI_SERIES_ID: ${US_BLS_CPI_SERIES_ID:-}
+  ES_INE_CPI_BASE_URL: ${ES_INE_CPI_BASE_URL:-}
+  ES_INE_CPI_SERIES_ID: ${ES_INE_CPI_SERIES_ID:-}
   # Vector store — pgvector keeps all data local (requires pgvector/pgvector Docker image for db)
   VECTOR_STORE_PROVIDER: pgvector
   EMBEDDING_MODEL: nomic-embed-text

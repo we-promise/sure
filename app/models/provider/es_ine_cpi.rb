@@ -14,7 +14,7 @@ class Provider::EsIneCpi < Provider
   # Expected payload supports records containing date + value pairs.
   def fetch_cpi_yoy_for_year(year:)
     with_provider_response do
-      raise Error.new("Missing ES_INE_CPI_SERIES_ID configuration") if series_id.blank?
+      raise Error, "Missing ES_INE_CPI_SERIES_ID configuration" if series_id.blank?
 
       from = Date.new(year.to_i, 1, 1)
       to = Date.new(year.to_i, 12, 31)

@@ -36,11 +36,12 @@ module Bond::InflationProvider
     return nil unless allow_import
 
     provider_klass = provider_class(provider_key)
-    return nil if provider_klass.blank?
+    provider_instance = provider_instance_for(provider_key, provider_klass)
+    return nil if provider_instance.blank?
 
     InflationRate.import_year!(
       source: source_key,
-      provider: provider_klass.new,
+      provider: provider_instance,
       year: target_date.year
     )
 
@@ -57,5 +58,24 @@ module Bond::InflationProvider
     return nil if klass_name.blank?
 
     klass_name.constantize
+  end
+
+  def provider_instance_for(provider_key, provider_klass)
+    return nil if provider_klass.blank?
+
+    case provider_key
+    when "us_bls"
+      provider_klass.new(
+        base_url: ENV["US_BLS_CPI_BASE_URL"].presence || Setting.us_bls_cpi_base_url.presence || Provider::UsBlsCpi::DEFAULT_BASE_URL,
+        series_id: ENV["US_BLS_CPI_SERIES_ID"].presence || Setting.us_bls_cpi_series_id.presence || Provider::UsBlsCpi::DEFAULT_SERIES_ID
+      )
+    when "es_ine"
+      provider_klass.new(
+        base_url: ENV["ES_INE_CPI_BASE_URL"].presence || Setting.es_ine_cpi_base_url.presence || Provider::EsIneCpi::DEFAULT_BASE_URL,
+        series_id: ENV["ES_INE_CPI_SERIES_ID"].presence || Setting.es_ine_cpi_series_id.presence
+      )
+    else
+      provider_klass.new
+    end
   end
 end

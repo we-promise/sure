@@ -45,9 +45,9 @@ refresh_demo_family:
 
 import_gus_inflation_rates:
   cron: "30 6 15 * *" # monthly around CPI publication window
-  class: "ImportGusInflationRatesJob"
+  class: "ImportInflationRatesJob"
   queue: "scheduled"
-  description: "Imports monthly CPI YoY rates from GUS SDP for current and previous year"
+  description: "Imports CPI YoY rates (GUS, US BLS, ES INE) for current and previous year"
 
 settle_matured_bond_lots:
   cron: "15 2 * * *" # daily at 2:15 AM

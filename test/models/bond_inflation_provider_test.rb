@@ -26,7 +26,9 @@ class BondInflationProviderTest < ActiveSupport::TestCase
       )
     ).once
 
-    Bond::InflationProvider.stubs(:provider_class).with("us_bls").returns(stub(new: fake_adapter))
+    provider_klass = mock("provider_klass")
+    provider_klass.stubs(:new).returns(fake_adapter)
+    Bond::InflationProvider.stubs(:provider_class).with("us_bls").returns(provider_klass)
 
     record = Bond::InflationProvider.record_for_date(
       provider: "us_bls",
@@ -48,6 +50,36 @@ class BondInflationProviderTest < ActiveSupport::TestCase
     assert_not_nil second_record
     assert_equal 106.4.to_d, second_record.rate_yoy
     assert_equal 1, InflationRate.where(source: "us_bls", year: 2025, month: 1).count
+  end
+
+  test "record_for_date uses self-hosted settings to configure us_bls provider" do
+    fake_adapter = mock("adapter")
+    fake_adapter.expects(:fetch_cpi_yoy_for_year).with(year: 2025).returns(
+      Provider::Response.new(success?: true, data: [ { month: 1, rate_yoy: 104.0.to_d } ], error: nil)
+    ).once
+
+    provider_klass = mock("provider_klass")
+    provider_klass.expects(:new).with(base_url: "https://example-bsl.test", series_id: "SERIES_123").returns(fake_adapter)
+    Bond::InflationProvider.stubs(:provider_class).with("us_bls").returns(provider_klass)
+
+    old_base_url = Setting.us_bls_cpi_base_url
+    old_series_id = Setting.us_bls_cpi_series_id
+    Setting.us_bls_cpi_base_url = "https://example-bsl.test"
+    Setting.us_bls_cpi_series_id = "SERIES_123"
+
+    begin
+      record = Bond::InflationProvider.record_for_date(
+        provider: "us_bls",
+        date: Date.new(2025, 3, 10),
+        lag_months: 2
+      )
+
+      assert_not_nil record
+      assert_equal 104.0.to_d, record.rate_yoy
+    ensure
+      Setting.us_bls_cpi_base_url = old_base_url
+      Setting.us_bls_cpi_series_id = old_series_id
+    end
   end
 
   test "record_for_date with allow_import false reads only persisted non-gus data" do

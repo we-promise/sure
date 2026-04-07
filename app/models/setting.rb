@@ -8,10 +8,15 @@ class Setting < RailsSettings::Base
   field :twelve_data_api_key, type: :string, default: ENV["TWELVE_DATA_API_KEY"]
   field :gus_sdp_api_key, type: :string, default: ENV["GUS_SDP_API_KEY"]
   field :gus_inflation_import_enabled, type: :boolean, default: ActiveModel::Type::Boolean.new.cast(ENV["GUS_INFLATION_IMPORT_ENABLED"])
+  field :us_bls_cpi_base_url, type: :string, default: ENV["US_BLS_CPI_BASE_URL"]
+  field :us_bls_cpi_series_id, type: :string, default: ENV["US_BLS_CPI_SERIES_ID"]
+  field :es_ine_cpi_base_url, type: :string, default: ENV["ES_INE_CPI_BASE_URL"]
+  field :es_ine_cpi_series_id, type: :string, default: ENV["ES_INE_CPI_SERIES_ID"]
   field :gus_inflation_last_import_at, type: :datetime
   field :gus_inflation_last_import_count, type: :integer
   field :gus_inflation_last_import_range, type: :string
   field :gus_inflation_last_import_error, type: :string
+  field :inflation_last_import_details, type: :string
   field :openai_access_token, type: :string, default: ENV["OPENAI_ACCESS_TOKEN"]
   field :openai_uri_base, type: :string, default: ENV["OPENAI_URI_BASE"]
   field :openai_model, type: :string, default: ENV["OPENAI_MODEL"]

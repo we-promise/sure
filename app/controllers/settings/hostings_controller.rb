@@ -5,7 +5,7 @@ class Settings::HostingsController < ApplicationController
 
   before_action :ensure_admin, only: [ :update, :clear_cache, :disconnect_external_assistant, :import_gus_inflation_rates ]
   before_action :ensure_super_admin_for_onboarding, only: :update
-  before_action :set_gus_stats, only: [ :show, :update ]
+  before_action :set_inflation_stats, only: [ :show, :update ]
 
   def show
     @breadcrumbs = [
@@ -72,6 +72,22 @@ class Settings::HostingsController < ApplicationController
 
     if hosting_params.key?(:gus_inflation_import_enabled) && ENV["GUS_INFLATION_IMPORT_ENABLED"].blank?
       Setting.gus_inflation_import_enabled = hosting_params[:gus_inflation_import_enabled] == "1"
+    end
+
+    if hosting_params.key?(:us_bls_cpi_base_url) && ENV["US_BLS_CPI_BASE_URL"].blank?
+      Setting.us_bls_cpi_base_url = hosting_params[:us_bls_cpi_base_url].to_s.strip.presence
+    end
+
+    if hosting_params.key?(:us_bls_cpi_series_id) && ENV["US_BLS_CPI_SERIES_ID"].blank?
+      Setting.us_bls_cpi_series_id = hosting_params[:us_bls_cpi_series_id].to_s.strip.presence
+    end
+
+    if hosting_params.key?(:es_ine_cpi_base_url) && ENV["ES_INE_CPI_BASE_URL"].blank?
+      Setting.es_ine_cpi_base_url = hosting_params[:es_ine_cpi_base_url].to_s.strip.presence
+    end
+
+    if hosting_params.key?(:es_ine_cpi_series_id) && ENV["ES_INE_CPI_SERIES_ID"].blank?
+      Setting.es_ine_cpi_series_id = hosting_params[:es_ine_cpi_series_id].to_s.strip.presence
     end
 
     if hosting_params.key?(:exchange_rate_provider)
@@ -177,8 +193,8 @@ class Settings::HostingsController < ApplicationController
   end
 
   def import_gus_inflation_rates
-    unless Setting.gus_inflation_import_enabled_effective
-      return redirect_to settings_hosting_path, alert: t(".import_disabled")
+    if Setting.gus_inflation_import_enabled_effective
+      return redirect_to settings_hosting_path, alert: t(".manual_import_disabled_when_auto_enabled")
     end
 
     start_year_param = import_params[:gus_inflation_start_year].presence
@@ -192,7 +208,12 @@ class Settings::HostingsController < ApplicationController
       return redirect_to settings_hosting_path, alert: t(".invalid_import_range")
     end
 
-    ImportGusInflationRatesJob.perform_later(start_year:, end_year:, force: true)
+    ImportInflationRatesJob.perform_later(
+      start_year:,
+      end_year:,
+      force: true,
+      providers: [ "gus_sdp", "us_bls", "es_ine" ]
+    )
 
     redirect_to settings_hosting_path, notice: t(".import_enqueued")
   end
@@ -200,7 +221,7 @@ class Settings::HostingsController < ApplicationController
   private
     def hosting_params
       return ActionController::Parameters.new unless params.key?(:setting)
-      params.require(:setting).permit(:onboarding_state, :require_email_confirmation, :invite_only_default_family_id, :brand_fetch_client_id, :brand_fetch_high_res_logos, :twelve_data_api_key, :gus_sdp_api_key, :clear_gus_sdp_api_key, :gus_inflation_import_enabled, :openai_access_token, :openai_uri_base, :openai_model, :openai_json_mode, :exchange_rate_provider, :securities_provider, :syncs_include_pending, :auto_sync_enabled, :auto_sync_time, :external_assistant_url, :external_assistant_token, :external_assistant_agent_id)
+      params.require(:setting).permit(:onboarding_state, :require_email_confirmation, :invite_only_default_family_id, :brand_fetch_client_id, :brand_fetch_high_res_logos, :twelve_data_api_key, :gus_sdp_api_key, :clear_gus_sdp_api_key, :gus_inflation_import_enabled, :us_bls_cpi_base_url, :us_bls_cpi_series_id, :es_ine_cpi_base_url, :es_ine_cpi_series_id, :openai_access_token, :openai_uri_base, :openai_model, :openai_json_mode, :exchange_rate_provider, :securities_provider, :syncs_include_pending, :auto_sync_enabled, :auto_sync_time, :external_assistant_url, :external_assistant_token, :external_assistant_agent_id)
     end
 
     def import_params
@@ -215,13 +236,37 @@ class Settings::HostingsController < ApplicationController
       Current.family.update!(assistant_type: assistant_type) if Family::ASSISTANT_TYPES.include?(assistant_type)
     end
 
-    def set_gus_stats
+    def set_inflation_stats
+      @inflation_provider_stats = {
+        "gus_sdp" => provider_stats_for_gus,
+        "us_bls" => provider_stats_for("us_bls"),
+        "es_ine" => provider_stats_for("es_ine")
+      }
+
+      raw_details = Setting.inflation_last_import_details.to_s
+      @inflation_last_import_details = raw_details.present? ? JSON.parse(raw_details) : {}
+    rescue JSON::ParserError
+      @inflation_last_import_details = {}
+    end
+
+    def provider_stats_for_gus
       cnt, min_yr, max_yr = GusInflationRate.pick(
         Arel.sql("COUNT(*)"),
         Arel.sql("MIN(year)"),
         Arel.sql("MAX(year)")
       ) || [ 0, nil, nil ]
-      @gus_stats = { count: cnt.to_i, min_year: min_yr, max_year: max_yr }
+
+      { count: cnt.to_i, min_year: min_yr, max_year: max_yr }
+    end
+
+    def provider_stats_for(source)
+      cnt, min_yr, max_yr = InflationRate.where(source: source).pick(
+        Arel.sql("COUNT(*)"),
+        Arel.sql("MIN(year)"),
+        Arel.sql("MAX(year)")
+      ) || [ 0, nil, nil ]
+
+      { count: cnt.to_i, min_year: min_yr, max_year: max_yr }
     end
 
     def ensure_admin

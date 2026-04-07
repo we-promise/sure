@@ -1,38 +1,13 @@
 <div class="space-y-4">
-  <div>
-    <h2 class="font-medium mb-1"><%= t("settings.hostings.gus_sdp_settings.title") %></h2>
-    <p class="text-secondary text-sm mb-4"><%= t("settings.hostings.gus_sdp_settings.description") %></p>
-    <% if env_api_key_configured? %>
-      <p class="text-sm text-secondary"><%= t("settings.hostings.gus_sdp_settings.env_configured_message") %></p>
-    <% elsif db_api_key_configured? %>
-      <p class="text-sm text-secondary"><%= t("settings.hostings.gus_sdp_settings.configured_in_settings_message") %></p>
-    <% else %>
-      <p class="text-sm text-secondary"><%= t("settings.hostings.gus_sdp_settings.free_default_message") %></p>
-    <% end %>
-  </div>
+  <p class="font-medium"><%= t("settings.hostings.gus_sdp_settings.title") %></p>
+  <p class="text-sm text-secondary"><%= t("settings.hostings.gus_sdp_settings.description") %></p>
 
-  <%= form_with model: Setting.new,
-                builder: StyledFormBuilder,
-                url: settings_hosting_path,
-                method: :patch,
-                data: {
-                  controller: "auto-submit-form",
-                  "auto-submit-form-trigger-event-value": "change"
-                } do |form| %>
-    <div class="flex items-center justify-between">
-      <div class="space-y-1">
-        <p class="text-sm"><%= t("settings.hostings.gus_sdp_settings.import_enabled_label") %></p>
-        <p class="text-secondary text-sm"><%= t("settings.hostings.gus_sdp_settings.import_enabled_help") %></p>
-      </div>
-
-      <%= form.toggle :gus_inflation_import_enabled,
-                      checked: inflation_import_enabled_effective,
-                      disabled: import_toggle_locked_by_env?,
-                      data: { auto_submit_form_target: "auto" } %>
-    </div>
-    <% if import_toggle_locked_by_env? %>
-      <p class="text-xs text-secondary mt-1"><%= t("settings.hostings.gus_sdp_settings.import_enabled_env_locked") %></p>
-    <% end %>
+  <% if env_api_key_configured? %>
+    <p class="text-sm text-secondary"><%= t("settings.hostings.gus_sdp_settings.env_configured_message") %></p>
+  <% elsif db_api_key_configured? %>
+    <p class="text-sm text-secondary"><%= t("settings.hostings.gus_sdp_settings.configured_in_settings_message") %></p>
+  <% else %>
+    <p class="text-sm text-secondary"><%= t("settings.hostings.gus_sdp_settings.free_default_message") %></p>
   <% end %>
 
   <%= form_with model: Setting.new,
@@ -67,50 +42,4 @@
     <% end %>
   <% end %>
 
-  <%= form_with model: Setting.new,
-                builder: StyledFormBuilder,
-                url: import_gus_inflation_rates_settings_hosting_path,
-                method: :post do |form| %>
-    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-      <%= form.number_field :gus_inflation_start_year,
-                            label: t("settings.hostings.gus_sdp_settings.start_year"),
-                            value: start_year_default,
-                            min: 1990,
-                            max: current_year,
-                            disabled: !inflation_import_enabled_effective %>
-      <%= form.number_field :gus_inflation_end_year,
-                            label: t("settings.hostings.gus_sdp_settings.end_year"),
-                            value: end_year_default,
-                            min: 1990,
-                            max: current_year,
-                            disabled: !inflation_import_enabled_effective %>
-    </div>
-
-    <div class="mt-3">
-      <%= form.submit t("settings.hostings.gus_sdp_settings.import_now"), disabled: !inflation_import_enabled_effective %>
-    </div>
-  <% end %>
-
-  <div class="text-sm text-secondary">
-    <p>
-      <strong><%= t("settings.hostings.gus_sdp_settings.last_import") %>:</strong>
-      <%= last_import_at.present? ? l(last_import_at, format: :long) : t("settings.hostings.gus_sdp_settings.never") %>
-    </p>
-    <% if last_import_range.present? %>
-      <p><strong><%= t("settings.hostings.gus_sdp_settings.last_range") %>:</strong> <%= last_import_range %></p>
-    <% end %>
-    <% if last_import_count.present? %>
-      <p><strong><%= t("settings.hostings.gus_sdp_settings.last_count") %>:</strong> <%= last_import_count %></p>
-    <% end %>
-    <% if last_import_error.present? %>
-      <p class="text-destructive"><strong><%= t("settings.hostings.gus_sdp_settings.last_error") %>:</strong> <%= last_import_error %></p>
-    <% end %>
-    <p><strong><%= t("settings.hostings.gus_sdp_settings.stored_records") %>:</strong> <%= stats_count %></p>
-    <% if stats_range? %>
-      <p>
-        <strong><%= t("settings.hostings.gus_sdp_settings.stored_range") %>:</strong>
-        <%= stats_min_year %>-<%= stats_max_year %>
-      </p>
-    <% end %>
-  </div>
 </div>

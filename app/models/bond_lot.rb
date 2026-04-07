@@ -80,7 +80,7 @@ class BondLot < ApplicationRecord
 
       lots_relation.find_each(batch_size: 200) do |lot|
         account = lot.account
-        lot_value = lot.estimated_current_value.to_d
+        lot_value = lot.estimated_current_value(allow_import: false).to_d
         lot_return = lot_value - lot.amount.to_d
         converted_value = Money.new(lot_value, account.currency).exchange_to(family_currency, fallback_rate: 1).amount
         converted_return = Money.new(lot_return, account.currency).exchange_to(family_currency, fallback_rate: 1).amount
@@ -189,7 +189,7 @@ class BondLot < ApplicationRecord
     inflation_linked? && auto_fetch_inflation
   end
 
-  def estimated_current_value(on: Date.current)
+  def estimated_current_value(on: Date.current, allow_import: true)
     principal = amount.to_d
     return principal if principal.zero? || purchased_on.blank?
 
@@ -201,22 +201,18 @@ class BondLot < ApplicationRecord
     issue_base = anniversary_issue_base
 
     while cursor < period_end
+      next_accrual_boundary, _accrual_start = accrual_boundaries(cursor:, issue_base:)
       next_anniversary, anniversary_start = anniversary_boundaries(cursor:, issue_base:)
 
-      next_cursor = [ next_anniversary, period_end ].min
+      next_cursor = [ next_accrual_boundary, period_end ].min
       days_in_step = [ (next_cursor - cursor).to_i, 0 ].max
       break if days_in_step.zero?
 
-      annual_rate_decimal = annual_rate_for(on: cursor)
+      annual_rate_decimal = annual_rate_for(on: cursor, allow_import:)
       break if annual_rate_decimal.blank?
 
       days_in_year = [ (next_anniversary - anniversary_start).to_i, 1 ].max
-
-      if next_cursor == next_anniversary
-        value *= (1 + annual_rate_decimal)
-      else
-        value *= (1 + annual_rate_decimal * (days_in_step.to_d / days_in_year))
-      end
+      value *= (1 + annual_rate_decimal * (days_in_step.to_d / days_in_year))
 
       cursor = next_cursor
     end
@@ -436,9 +432,10 @@ class BondLot < ApplicationRecord
     issue_base = anniversary_issue_base
 
     while cursor < history_end
+      next_accrual_boundary, _accrual_start = accrual_boundaries(cursor:, issue_base:)
       next_anniversary, anniversary_start = anniversary_boundaries(cursor:, issue_base:)
 
-      next_cursor = [ next_anniversary, history_end ].min
+      next_cursor = [ next_accrual_boundary, history_end ].min
       days_in_step = [ (next_cursor - cursor).to_i, 0 ].max
       break if days_in_step.zero?
 
@@ -447,12 +444,8 @@ class BondLot < ApplicationRecord
       break if annual_rate_decimal.blank?
 
       days_in_year = [ (next_anniversary - anniversary_start).to_i, 1 ].max
-      full_year_capitalization = (next_cursor == next_anniversary)
-      interest_earned = if full_year_capitalization
-        opening_balance * annual_rate_decimal
-      else
-        opening_balance * annual_rate_decimal * (days_in_step.to_d / days_in_year)
-      end
+      full_year_capitalization = (days_in_step == days_in_year)
+      interest_earned = opening_balance * annual_rate_decimal * (days_in_step.to_d / days_in_year)
 
       closing_balance = opening_balance + interest_earned
 
@@ -510,6 +503,24 @@ class BondLot < ApplicationRecord
       years_since = 0
       years_since += 1 while issue_base + years_since.years <= cursor
       [ issue_base + years_since.years, issue_base + (years_since - 1).years ]
+    end
+
+    # Returns [next_accrual_boundary, accrual_start] for the period containing cursor.
+    def accrual_boundaries(cursor:, issue_base:)
+      months = accrual_period_months
+      periods_since = 0
+      periods_since += 1 while issue_base + ((periods_since + 1) * months).months <= cursor
+      [ issue_base + ((periods_since + 1) * months).months, issue_base + (periods_since * months).months ]
+    end
+
+    def accrual_period_months
+      {
+        "monthly" => 1,
+        "quarterly" => 3,
+        "semi_annual" => 6,
+        "annual" => 12,
+        "at_maturity" => 12
+      }.fetch(coupon_frequency.to_s, 12)
     end
 
     def inflation_linked_rate_context(on:, allow_import: true)
@@ -715,6 +726,7 @@ class BondLot < ApplicationRecord
         purchased_on: settlement_date,
         issue_date: inflation_linked? ? settlement_date : nil,
         amount: replacement_amount,
+        product_code: product_code,
         units: replacement_units,
         nominal_per_unit: inflation_linked? ? nominal : nil,
         subtype: subtype,
@@ -835,7 +847,7 @@ class BondLot < ApplicationRecord
     end
 
     def needs_inflation_backfill?
-      inflation_linked? && inflation_provider_key == "gus_sdp" && auto_fetch_inflation? && Setting.gus_inflation_import_enabled_effective && purchased_on.present?
+      inflation_linked? && auto_fetch_inflation? && Setting.gus_inflation_import_enabled_effective && purchased_on.present?
     end
 
     def should_enqueue_inflation_backfill?
@@ -843,6 +855,7 @@ class BondLot < ApplicationRecord
       saved_change_to_purchased_on? ||
         saved_change_to_issue_date? ||
         saved_change_to_cpi_lag_months? ||
+        saved_change_to_inflation_provider? ||
         saved_change_to_auto_fetch_inflation? ||
         saved_change_to_subtype?
     end
@@ -864,9 +877,19 @@ class BondLot < ApplicationRecord
       today = Date.current
       required_months = (start_year..end_year).sum { |y| y == today.year ? today.month : 12 }
 
-      return if required_months <= 0 || GusInflationRate.where(year: start_year..end_year).count >= required_months
+      return if required_months <= 0
 
-      ImportGusInflationRatesJob.perform_later(start_year:, end_year:)
+      provider = inflation_provider_key
+      existing_count =
+        if provider == "gus_sdp"
+          GusInflationRate.where(year: start_year..end_year).count
+        else
+          InflationRate.where(source: provider, year: start_year..end_year).count
+        end
+
+      return if existing_count >= required_months
+
+      ImportInflationRatesJob.perform_later(start_year:, end_year:, providers: [ provider ])
     end
 
     # Returns false if any annual rate period between purchased_on and date cannot be resolved.

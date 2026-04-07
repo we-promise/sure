@@ -29,6 +29,7 @@ class Balance::SyncCache
     def converted_entries
       @converted_entries ||= account.entries.excluding_split_parents.includes(:entryable).order(:date).to_a.map do |e|
         converted_entry = e.dup
+        converted_entry.entryable = e.entryable if e.association(:entryable).loaded?
         converted_entry.amount = converted_entry.amount_money.exchange_to(
           account.currency,
           date: e.date,

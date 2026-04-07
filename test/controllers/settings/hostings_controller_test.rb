@@ -50,6 +50,37 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "can update international inflation provider settings when env overrides are absent" do
+    with_self_hosting do
+      with_env_overrides(
+        "US_BLS_CPI_BASE_URL" => nil,
+        "US_BLS_CPI_SERIES_ID" => nil,
+        "ES_INE_CPI_BASE_URL" => nil,
+        "ES_INE_CPI_SERIES_ID" => nil
+      ) do
+        patch settings_hosting_url, params: {
+          setting: {
+            us_bls_cpi_base_url: "https://api.bls.gov/publicAPI/v2",
+            us_bls_cpi_series_id: "CUUR0000SA0",
+            es_ine_cpi_base_url: "https://servicios.ine.es/wstempus/js/EN/DATOS_SERIE/",
+            es_ine_cpi_series_id: "IPC123"
+          }
+        }
+
+        assert_redirected_to settings_hosting_url
+        assert_equal "https://api.bls.gov/publicAPI/v2", Setting.us_bls_cpi_base_url
+        assert_equal "CUUR0000SA0", Setting.us_bls_cpi_series_id
+        assert_equal "https://servicios.ine.es/wstempus/js/EN/DATOS_SERIE/", Setting.es_ine_cpi_base_url
+        assert_equal "IPC123", Setting.es_ine_cpi_series_id
+      end
+    end
+  ensure
+    Setting.us_bls_cpi_base_url = nil
+    Setting.us_bls_cpi_series_id = nil
+    Setting.es_ine_cpi_base_url = nil
+    Setting.es_ine_cpi_series_id = nil
+  end
+
   test "can clear stored gus api key when env override is absent" do
     old_val = Setting.gus_sdp_api_key
     with_self_hosting do
@@ -264,14 +295,14 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "can enqueue manual gus inflation import when enabled" do
+  test "can enqueue manual inflation import when auto import is disabled" do
     with_self_hosting do
       with_env_overrides("GUS_INFLATION_IMPORT_ENABLED" => nil) do
         old_val = Setting.gus_inflation_import_enabled
-        Setting.gus_inflation_import_enabled = true
+        Setting.gus_inflation_import_enabled = false
 
         begin
-          assert_enqueued_with(job: ImportGusInflationRatesJob, args: [ { start_year: 2015, end_year: 2024, force: true } ]) do
+          assert_enqueued_with(job: ImportInflationRatesJob, args: [ { start_year: 2015, end_year: 2024, force: true, providers: [ "gus_sdp", "us_bls", "es_ine" ] } ]) do
             post import_gus_inflation_rates_settings_hosting_url,
                  params: { setting: { gus_inflation_start_year: 2015, gus_inflation_end_year: 2024 } }
           end
@@ -285,20 +316,20 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "does not enqueue manual gus inflation import when disabled" do
+  test "does not enqueue manual inflation import when auto import is enabled" do
     with_self_hosting do
       with_env_overrides("GUS_INFLATION_IMPORT_ENABLED" => nil) do
         old_val = Setting.gus_inflation_import_enabled
-        Setting.gus_inflation_import_enabled = false
+        Setting.gus_inflation_import_enabled = true
 
         begin
-          assert_no_enqueued_jobs only: ImportGusInflationRatesJob do
+          assert_no_enqueued_jobs only: ImportInflationRatesJob do
             post import_gus_inflation_rates_settings_hosting_url,
                  params: { setting: { gus_inflation_start_year: 2015, gus_inflation_end_year: 2024 } }
           end
 
           assert_redirected_to settings_hosting_url
-          assert_equal I18n.t("settings.hostings.import_gus_inflation_rates.import_disabled"), flash[:alert]
+          assert_equal I18n.t("settings.hostings.import_gus_inflation_rates.manual_import_disabled_when_auto_enabled"), flash[:alert]
         ensure
           Setting.gus_inflation_import_enabled = old_val
         end
@@ -310,10 +341,10 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     with_self_hosting do
       with_env_overrides("GUS_INFLATION_IMPORT_ENABLED" => nil) do
         old_val = Setting.gus_inflation_import_enabled
-        Setting.gus_inflation_import_enabled = true
+        Setting.gus_inflation_import_enabled = false
 
         begin
-          assert_no_enqueued_jobs only: ImportGusInflationRatesJob do
+          assert_no_enqueued_jobs only: ImportInflationRatesJob do
             post import_gus_inflation_rates_settings_hosting_url,
                  params: { setting: { gus_inflation_start_year: "2020foo", gus_inflation_end_year: 2024 } }
           end
