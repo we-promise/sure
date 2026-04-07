@@ -9,17 +9,19 @@ class BondLot < ApplicationRecord
   scope :open, -> { where(closed_on: nil) }
 
   def self.needs_rate_review
-    unresolved_ids = []
-    open.where(subtype: Bond::INFLATION_LINKED_SUBTYPES).includes(:bond).find_in_batches(batch_size: 200) do |batch|
-      batch.each do |lot|
-        review_on = [ Date.current, lot.maturity_date ].compact.min
-        unresolvable = lot.first_period_rate.blank? || !lot.rates_resolvable_through?(date: review_on, allow_import: false)
-        unresolved_ids << lot.id if unresolvable
+    with_inflation_lookup_cache do
+      unresolved_ids = []
+      open.where(subtype: Bond::INFLATION_LINKED_SUBTYPES).includes(:bond).find_in_batches(batch_size: 200) do |batch|
+        batch.each do |lot|
+          review_on = [ Date.current, lot.maturity_date ].compact.min
+          unresolvable = lot.first_period_rate.blank? || !lot.rates_resolvable_through?(date: review_on, allow_import: false)
+          unresolved_ids << lot.id if unresolvable
+        end
       end
-    end
 
-    ids = unresolved_ids.uniq
-    ids.empty? ? none : open.where(id: ids)
+      ids = unresolved_ids.uniq
+      ids.empty? ? none : open.where(id: ids)
+    end
   end
 
   # Returns an OpenStruct with :total_value, :total_return, :top_lots
@@ -154,6 +156,7 @@ class BondLot < ApplicationRecord
     return principal if period_end.blank? || period_end <= purchased_on
 
     value = principal
+    coupons_accrued = 0.to_d
     cursor = purchased_on
     issue_base = anniversary_issue_base
 
@@ -169,37 +172,42 @@ class BondLot < ApplicationRecord
       break if annual_rate_decimal.blank?
 
       days_in_year = [ (next_anniversary - anniversary_start).to_i, 1 ].max
-      value *= (1 + annual_rate_decimal * (days_in_step.to_d / days_in_year))
+      interest_earned = value * annual_rate_decimal * (days_in_step.to_d / days_in_year)
+      if coupon_reinvested?
+        value += interest_earned
+      else
+        coupons_accrued += interest_earned
+      end
 
       cursor = next_cursor
     end
 
-    value
+    value + coupons_accrued
   end
 
-  def total_return_amount(on: Date.current)
-    estimated_current_value(on:) - amount.to_d
+  def total_return_amount(on: Date.current, allow_import: true)
+    estimated_current_value(on:, allow_import:) - amount.to_d
   end
 
-  def total_return_percent(on: Date.current)
+  def total_return_percent(on: Date.current, allow_import: true)
     principal = amount.to_d
     return 0 if principal.zero?
 
-    (total_return_amount(on:) / principal) * 100
+    (total_return_amount(on:, allow_import:) / principal) * 100
   end
 
-  def projected_total_return_amount
+  def projected_total_return_amount(allow_import: true)
     maturity = maturity_date || (purchased_on + term_months.to_i.months if term_months.present?)
     return 0.to_d if maturity.blank?
 
-    estimated_current_value(on: maturity) - amount.to_d
+    estimated_current_value(on: maturity, allow_import:) - amount.to_d
   end
 
-  def projected_total_return_percent
+  def projected_total_return_percent(allow_import: true)
     principal = amount.to_d
     return 0 if principal.zero?
 
-    (projected_total_return_amount / principal) * 100
+    (projected_total_return_amount(allow_import:) / principal) * 100
   end
 
   def coupon_amount_per_period(on: Date.current)
@@ -289,31 +297,31 @@ class BondLot < ApplicationRecord
     end
   end
 
-  def current_rate_percent(on: Date.current)
-    annual_rate_for(on:)&.*(100)
+  def current_rate_percent(on: Date.current, allow_import: true)
+    annual_rate_for(on:, allow_import:)&.*(100)
   end
 
-  def current_inflation_component_percent(on: Date.current)
+  def current_inflation_component_percent(on: Date.current, allow_import: true)
     return nil unless inflation_linked?
 
-    rate_context_for(on:)[:inflation_component_percent]
+    rate_context_for(on:, allow_import:)[:inflation_component_percent]
   end
 
-  def current_inflation_source(on: Date.current)
+  def current_inflation_source(on: Date.current, allow_import: true)
     return nil unless inflation_linked?
 
-    source = rate_context_for(on:)[:inflation_source]
+    source = rate_context_for(on:, allow_import:)[:inflation_source]
     source == "first_period" ? nil : source
   end
 
-  def gus_inflation_source?(on: Date.current)
-    current_inflation_source(on:) == "gus"
+  def gus_inflation_source?(on: Date.current, allow_import: true)
+    current_inflation_source(on:, allow_import:) == "gus"
   end
 
-  def current_margin_percent(on: Date.current)
+  def current_margin_percent(on: Date.current, allow_import: true)
     return nil unless inflation_linked?
 
-    rate_context_for(on:)[:margin_component_percent]
+    rate_context_for(on:, allow_import:)[:margin_component_percent]
   end
 
   def current_inflation_indicator_id
@@ -401,10 +409,10 @@ class BondLot < ApplicationRecord
       break if annual_rate_decimal.blank?
 
       days_in_year = [ (next_anniversary - anniversary_start).to_i, 1 ].max
-      full_year_capitalization = (days_in_step == days_in_year)
+      full_year_capitalization = coupon_reinvested? && (days_in_step == days_in_year)
       interest_earned = opening_balance * annual_rate_decimal * (days_in_step.to_d / days_in_year)
 
-      closing_balance = opening_balance + interest_earned
+      closing_balance = coupon_reinvested? ? opening_balance + interest_earned : opening_balance
 
       events << {
         period_number: period_number,
@@ -431,6 +439,10 @@ class BondLot < ApplicationRecord
   end
 
   private
+    def coupon_reinvested?
+      coupon_frequency.to_s == "at_maturity"
+    end
+
     def rate_context_for(on:, allow_import: true)
       if inflation_linked?
         inflation_linked_rate_context(on:, allow_import:)

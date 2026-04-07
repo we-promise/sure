@@ -12,7 +12,11 @@ class UI::Dashboard::BondSummaryRow < ApplicationComponent
   end
 
   def total_return_amount
-    @total_return_amount ||= projected_total_return? ? lot.projected_total_return_amount : lot.total_return_amount
+    @total_return_amount ||= if projected_total_return?
+      lot.projected_total_return_amount(allow_import: false)
+    else
+      lot.total_return_amount(allow_import: false)
+    end
   end
 
   def total_return_label
@@ -31,7 +35,7 @@ class UI::Dashboard::BondSummaryRow < ApplicationComponent
     if lot.inflation_linked?
       return t("bonds.purchase_holding.update_needed") if lot.requires_rate_review?
 
-      current_rate = lot.current_rate_percent
+      current_rate = lot.current_rate_percent(allow_import: false)
       return helpers.number_to_percentage(current_rate, precision: 3) if current_rate.present?
 
       t("bonds.purchase_holding.unknown")
@@ -60,20 +64,20 @@ class UI::Dashboard::BondSummaryRow < ApplicationComponent
 
   private
     def projected_total_return?
-      lot.total_return_amount.abs < 0.01.to_d && lot.projected_total_return_amount.positive?
+      lot.total_return_amount(allow_import: false).abs < 0.01.to_d && lot.projected_total_return_amount(allow_import: false).positive?
     end
 
     def inflation_linked_rate_meta
       return t("bonds.purchase_holding.pending_review") if lot.requires_rate_review?
 
-      inflation_component = lot.current_inflation_component_percent
-      margin_component = lot.current_margin_percent
+      inflation_component = lot.current_inflation_component_percent(allow_import: false)
+      margin_component = lot.current_margin_percent(allow_import: false)
       return t("bonds.purchase_holding.first_period_fixed_rate") if inflation_component.nil? || margin_component.nil?
 
       inflation = helpers.number_to_percentage(inflation_component.to_d, precision: 3)
       margin = helpers.number_to_percentage(margin_component.to_d, precision: 3)
 
-      if lot.gus_inflation_source?
+      if lot.gus_inflation_source?(allow_import: false)
         t(
           "bonds.purchase_holding.inflation_meta_gus",
           inflation: inflation,
@@ -97,7 +101,7 @@ class UI::Dashboard::BondSummaryRow < ApplicationComponent
     end
 
     def current_inflation_source_key
-      lot.current_inflation_source.to_s.presence
+      lot.current_inflation_source(allow_import: false).to_s.presence
     end
 
     def localized_inflation_provider

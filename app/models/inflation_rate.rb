@@ -1,7 +1,7 @@
 class InflationRate < ApplicationRecord
   validates :source, :year, :month, :rate_yoy, presence: true
   validates :month, inclusion: { in: 1..12 }
-  validates :year, uniqueness: { scope: %i[source month] }
+  validates :month, uniqueness: { scope: %i[source year] }
 
   class << self
     def for_date(source:, date:, lag_months: 0)
