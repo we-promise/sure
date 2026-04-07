@@ -34,7 +34,10 @@
                 Current.family.available_merchants_for(Current.user).alphabetically,
                 :id, :name,
                 { include_blank: t(".none"),
-                  label: t(".merchant_label") } %>
+                  label: t(".merchant_label"),
+                  variant: :logo,
+                  searchable: true,
+                  menu_placement: :auto } %>
       <%= ef.select :tag_ids,
                     Current.family.tags.alphabetically.pluck(:name, :id),
                     {
