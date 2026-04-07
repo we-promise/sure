@@ -8,6 +8,7 @@
                          bond_lot_form_inflation_subtypes_value: Bond::INFLATION_LINKED_SUBTYPES.to_json,
                          bond_lot_form_product_subtype_map_value: Bond::PRODUCT_DEFAULTS.transform_values { |defaults| defaults[:subtype] }.to_json,
                          bond_lot_form_product_term_map_value: Bond::PRODUCT_DEFAULTS.transform_values { |defaults| defaults[:term_months] }.to_json,
+                         bond_lot_form_product_provider_map_value: Bond::PRODUCT_DEFAULTS.transform_values { |defaults| defaults[:inflation_provider] }.to_json,
                          bond_lot_form_lot_auto_fetch_value: bond_lot.auto_fetch_inflation.nil? ? true : bond_lot.auto_fetch_inflation,
                          bond_lot_form_global_import_enabled_value: Setting.gus_inflation_import_enabled_effective
                        }
@@ -74,7 +75,7 @@
 
       <% selected_subtype = Bond::LEGACY_SUBTYPE_ALIASES.fetch(bond_lot.subtype.to_s, bond_lot.subtype.presence || "other") %>
       <%= form.select :subtype,
-              Bond::SUBTYPES.map { |key, labels| [ labels[:long], key ] },
+              Bond::SUBTYPES.map { |key, labels| [ Bond.long_subtype_label_for(key) || labels[:long], key ] },
               {
                 label: t("bond_lots.form.subtype"),
                 required: false,
@@ -116,23 +117,24 @@
                               data: { bond_lot_form_target: "inflationInput" } %>
       </div>
 
+      <% selected_provider = (bond_lot.auto_fetch_inflation.nil? || bond_lot.auto_fetch_inflation) ? (bond_lot.inflation_provider.presence || "gus_sdp") : bond_lot.inflation_provider %>
+      <div data-bond-lot-form-target="inflationFields">
+        <%= form.select :inflation_provider,
+                        Bond::InflationProvider::PROVIDERS.map { |key, _klass| [t("bonds.purchase_holding.inflation_providers.#{key}", default: key.to_s.humanize), key] },
+                        {
+                          label: t("bond_lots.form.inflation_provider"),
+                          include_blank: t("bond_lots.form.inflation_provider_blank"),
+                          selected: selected_provider
+                        },
+                        {
+                          data: {
+                            bond_lot_form_target: "providerSelect",
+                            action: "change->bond-lot-form#syncAutoFetchWithProvider"
+                          }
+                        } %>
+      </div>
+
       <% if Setting.gus_inflation_import_enabled_effective %>
-        <% selected_provider = (bond_lot.auto_fetch_inflation.nil? || bond_lot.auto_fetch_inflation) ? (bond_lot.inflation_provider.presence || "gus_sdp") : bond_lot.inflation_provider %>
-        <div data-bond-lot-form-target="inflationFields">
-          <%= form.select :inflation_provider,
-                          Bond::InflationProvider::PROVIDERS.map { |key, _klass| [key.humanize, key] },
-                          {
-                            label: t("bond_lots.form.inflation_provider"),
-                            include_blank: t("bond_lots.form.inflation_provider_blank"),
-                            selected: selected_provider
-                          },
-                          {
-                            data: {
-                              bond_lot_form_target: "providerSelect",
-                              action: "change->bond-lot-form#syncAutoFetchWithProvider"
-                            }
-                          } %>
-        </div>
 
         <div class="flex items-center gap-2" data-bond-lot-form-target="inflationFields">
           <%= form.number_field :cpi_lag_months,

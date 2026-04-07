@@ -72,6 +72,7 @@ pl:
         es_ine: ES INE
         manual: ręcznie
       first_period_fixed_rate: Stałe oprocentowanie pierwszego okresu
+      inflation_data_unavailable: "Brak bieżącej stopy: brak CPI dla mies. odn. %{reference}"
       maturity: "Zapada %{date}"
       maturity_label: Data zapadalności
       since_purchase: Od zakupu

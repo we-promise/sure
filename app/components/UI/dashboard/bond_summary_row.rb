@@ -72,7 +72,13 @@ class UI::Dashboard::BondSummaryRow < ApplicationComponent
 
       inflation_component = lot.current_inflation_component_percent(allow_import: false)
       margin_component = lot.current_margin_percent(allow_import: false)
-      return t("bonds.purchase_holding.first_period_fixed_rate") if inflation_component.nil? || margin_component.nil?
+      if inflation_component.nil? || margin_component.nil?
+        if lot.in_first_rate_period?
+          return t("bonds.purchase_holding.first_period_fixed_rate")
+        else
+          return t("bonds.purchase_holding.inflation_data_unavailable", reference: lot.current_cpi_reference_on&.strftime("%m-%Y"))
+        end
+      end
 
       inflation = helpers.number_to_percentage(inflation_component.to_d, precision: 3)
       margin = helpers.number_to_percentage(margin_component.to_d, precision: 3)

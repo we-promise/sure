@@ -48,7 +48,11 @@
         <% meta_text = if lot.requires_rate_review?
           t(".pending_review")
         elsif inflation_component.nil? || margin_component.nil?
-          t(".first_period_fixed_rate")
+          if lot.in_first_rate_period?
+            t(".first_period_fixed_rate")
+          else
+            t(".inflation_data_unavailable", reference: lot.current_cpi_reference_on&.strftime("%m-%Y"))
+          end
         elsif inflation_source == "gus"
           t(".inflation_meta_gus",
             inflation: inflation_text,

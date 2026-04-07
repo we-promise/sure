@@ -14,6 +14,7 @@ export default class extends Controller {
     inflationSubtypes: Array,
     productSubtypeMap: Object,
     productTermMap: Object,
+    productProviderMap: Object,
     lotAutoFetch: Boolean,
     globalImportEnabled: Boolean
   }
@@ -40,6 +41,7 @@ export default class extends Controller {
     }
 
     this.#syncTermWithProduct(productCode)
+    this.#syncProviderWithProduct(productCode)
 
     this.#toggleSubtypeFields()
   }
@@ -101,6 +103,23 @@ export default class extends Controller {
     }
 
     termInput.readOnly = termDerived
+  }
+
+  #syncProviderWithProduct(productCode) {
+    const providerSelect = this.element.querySelector('select[name="bond_lot[inflation_provider]"]')
+    if (!providerSelect) return
+
+    const mappedProvider = this.productProviderMapValue?.[productCode]
+    const providerDerived = mappedProvider !== undefined && mappedProvider !== null && `${mappedProvider}` !== ""
+
+    if (providerDerived) {
+      providerSelect.value = mappedProvider
+    } else if (productCode) {
+      providerSelect.value = ""
+    }
+
+    providerSelect.disabled = providerDerived
+    this.syncAutoFetchWithProvider()
   }
 
   #toggleManualInflationField() {

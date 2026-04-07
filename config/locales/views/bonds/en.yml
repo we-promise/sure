@@ -70,6 +70,7 @@ en:
         es_ine: ES INE
         manual: Manual
       first_period_fixed_rate: First-period fixed rate
+      inflation_data_unavailable: "Current rate unavailable: missing CPI for ref %{reference}"
       maturity: "Matures %{date}"
       maturity_label: Maturity date
       since_purchase: Since purchase

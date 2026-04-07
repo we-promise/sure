@@ -148,6 +148,19 @@ class BondLot < ApplicationRecord
     inflation_linked? && auto_fetch_inflation
   end
 
+  def in_first_rate_period?(on: Date.current)
+    return false if purchased_on.blank?
+
+    period_base = issue_date.presence || purchased_on
+    on < period_base + 1.year
+  end
+
+  def current_cpi_reference_on(on: Date.current)
+    return nil unless inflation_linked?
+
+    on.beginning_of_month - cpi_lag_months.to_i.months
+  end
+
   def estimated_current_value(on: Date.current, allow_import: true)
     principal = amount.to_d
     return principal if principal.zero? || purchased_on.blank?
