@@ -16,19 +16,26 @@
                 href: new_valuation_path(account_id: @account.id),
                 data: { turbo_frame: :modal }) %>
 
-            <% if @account.supports_trades? %>
+            <% if @account.investment? %>
               <% menu.with_item(
                   variant: "link",
-                  text: t(".new_trade"),
-                  icon: "credit-card",
+                  text: t(".new_activity", default: "New activity"),
+                  icon: "arrow-left-right",
                   href: new_trade_path(account_id: @account.id),
+                  data: { turbo_frame: :modal }) %>
+            <% elsif @account.bond? %>
+              <% menu.with_item(
+                  variant: "link",
+                  text: t(".new_activity", default: "New activity"),
+                  icon: "arrow-left-right",
+                  href: new_bond_lot_path(account_id: @account.id),
                   data: { turbo_frame: :modal }) %>
             <% elsif !@account.crypto? %>
               <% menu.with_item(
                   variant: "link",
-                text: t(".new_activity", default: "New activity"),
-                  icon: "arrow-left-right",
-                href: @account.bond? ? new_bond_lot_path(account_id: @account.id) : new_transaction_path(account_id: @account.id),
+                  text: t(".new_transaction"),
+                  icon: "credit-card",
+                  href: new_transaction_path(account_id: @account.id),
                   data: { turbo_frame: :modal }) %>
             <% end %>
           <% end %>

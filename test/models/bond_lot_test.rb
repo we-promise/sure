@@ -716,7 +716,8 @@ class BondLotTest < ActiveSupport::TestCase
   test "needs_rate_review ignores stale persisted flags once CPI is resolvable" do
     old_val = Setting.gus_inflation_import_enabled
     Setting.gus_inflation_import_enabled = true
-    GusInflationRate.create!(year: 2025, month: 11, rate_yoy: 108.0, source: "sdp")
+    # Period 2 starts at 2025-01-01; CPI reference = 2025-01-01 - 2 lag months = Nov 2024
+    GusInflationRate.create!(year: 2024, month: 11, rate_yoy: 108.0, source: "sdp")
 
     lot = BondLot.create!(
       bond: bonds(:one),

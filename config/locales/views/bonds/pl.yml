@@ -133,7 +133,7 @@ pl:
       interest_rate_placeholder: "4.25"
       first_period_rate: Oprocentowanie pierwszego okresu (%)
       inflation_margin: Marża inflacyjna (%)
-      auto_fetch_inflation: Pobieraj inflację automatycznie z GUS
+      auto_fetch_inflation: Pobieraj inflację automatycznie od dostawcy
       inflation_provider: Dostawca danych o inflacji
       inflation_provider_blank: Ręczne CPI (bez dostawcy)
       auto_fetch_disabled_hint: Automatyczny import CPI jest globalnie wyłączony w ustawieniach self-hosting. Wprowadź inflację ręcznie.

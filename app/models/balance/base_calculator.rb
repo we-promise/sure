@@ -16,12 +16,49 @@ class Balance::BaseCalculator
 
     def holdings_value_for_date(date)
       @holdings_value_for_date ||= {}
-      @holdings_value_for_date[date] ||= if account.bond?
-        bond_lots_for_holdings.sum do |lot|
-          lot.purchased_on <= date && (lot.closed_on.nil? || lot.closed_on > date) ? lot.amount.to_d : 0.to_d
-        end
+      return @holdings_value_for_date[date] if @holdings_value_for_date.key?(date)
+
+      @holdings_value_for_date[date] = if account.bond?
+        bond_holdings_value_for_date(date)
       else
         sync_cache.get_holdings(date).sum(&:amount)
+      end
+    end
+
+    def bond_holdings_value_for_date(date)
+      return 0.to_d if bond_lot_change_dates.empty?
+
+      next_change_index = bond_lot_change_dates.bsearch_index { |change_date| change_date > date }
+
+      if next_change_index.nil?
+        bond_lot_running_totals.last || 0.to_d
+      elsif next_change_index.zero?
+        0.to_d
+      else
+        bond_lot_running_totals[next_change_index - 1]
+      end
+    end
+
+    def bond_lot_change_dates
+      @bond_lot_change_dates ||= bond_lot_changes_by_date.keys.sort
+    end
+
+    def bond_lot_running_totals
+      @bond_lot_running_totals ||= begin
+        running_total = 0.to_d
+
+        bond_lot_change_dates.map do |change_date|
+          running_total += bond_lot_changes_by_date[change_date]
+        end
+      end
+    end
+
+    def bond_lot_changes_by_date
+      @bond_lot_changes_by_date ||= bond_lots_for_holdings.each_with_object(Hash.new(0.to_d)) do |lot, changes|
+        amount = lot.amount.to_d
+
+        changes[lot.purchased_on] += amount
+        changes[lot.closed_on] -= amount if lot.closed_on.present?
       end
     end
 

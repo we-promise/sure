@@ -11,57 +11,14 @@ class BondLot < ApplicationRecord
   def self.needs_rate_review
     unresolved_ids = []
     open.where(subtype: Bond::INFLATION_LINKED_SUBTYPES).includes(:bond).find_in_batches(batch_size: 200) do |batch|
-      batch.group_by { |lot| [ Date.current, lot.maturity_date ].compact.min }.each do |review_on, review_batch|
-        provider_lag_pairs = review_batch.filter_map do |lot|
-          next unless lot.auto_fetch_inflation?
-
-          [ Bond::InflationProvider.key_for(lot.inflation_provider), lot.cpi_lag_months.to_i ]
-        end.uniq
-        cpi_by_provider_lag = cpi_rates_by_provider_lag(on: review_on, provider_lag_pairs: provider_lag_pairs)
-
-        review_batch.each do |lot|
-          unresolved_ids << lot.id if unresolved_rate_for_review?(lot:, on: review_on, cpi_by_provider_lag: cpi_by_provider_lag)
-        end
+      batch.each do |lot|
+        review_on = [ Date.current, lot.maturity_date ].compact.min
+        unresolved_ids << lot.id unless lot.rates_resolvable_through?(date: review_on, allow_import: false)
       end
     end
 
     ids = unresolved_ids.uniq
     ids.empty? ? none : open.where(id: ids)
-  end
-
-  def self.cpi_rates_by_provider_lag(on:, provider_lag_pairs:)
-    return {} if provider_lag_pairs.blank?
-
-    provider_lag_pairs.index_with do |provider, lag|
-      Bond::InflationProvider.record_for_date(provider:, date: on, lag_months: lag, allow_import: false)
-    end
-  end
-
-  def self.unresolved_rate_for_review?(lot:, on:, cpi_by_provider_lag:)
-    return true if lot.purchased_on.blank?
-
-    period_base = lot.issue_date.presence || lot.purchased_on
-    return true if period_base.blank?
-
-    years_elapsed = 0
-    years_elapsed += 1 while period_base + (years_elapsed + 1).years <= on
-
-    if years_elapsed <= 0
-      return lot.first_period_rate.blank?
-    end
-
-    inflation_component = nil
-    if lot.auto_fetch_inflation?
-      provider_key = Bond::InflationProvider.key_for(lot.inflation_provider)
-      source_record = cpi_by_provider_lag[[ provider_key, lot.cpi_lag_months.to_i ]]
-      inflation_component = source_record.rate_yoy.to_d - 100 if source_record.present?
-    end
-
-    if inflation_component.nil? && lot.inflation_rate_assumption.present?
-      inflation_component = lot.inflation_rate_assumption.to_d
-    end
-
-    inflation_component.nil?
   end
 
   # Returns an OpenStruct with :total_value, :total_return, :top_lots
@@ -896,6 +853,7 @@ class BondLot < ApplicationRecord
 
     # Returns false if any annual rate period between purchased_on and date cannot be resolved.
     # Used by settle_if_matured! to abort settlement when GUS data or rates are missing.
+    # Also used by needs_rate_review class method to identify lots with unresolvable rates.
     def rates_resolvable_through?(date:, allow_import: true)
       return true unless purchased_on.present?
 
@@ -911,4 +869,5 @@ class BondLot < ApplicationRecord
 
       true
     end
+    public :rates_resolvable_through?
 end

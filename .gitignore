@@ -124,3 +124,6 @@ scripts/
 .claude_settings.json
 .security-key
 logs/security/
+# Local bond implementation notes
+Bond.md
+Bond.txt

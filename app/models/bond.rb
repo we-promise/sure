@@ -63,10 +63,12 @@ class Bond < ApplicationRecord
       inflation_provider: "us_bls"
     },
     "us_i_bond" => {
-      subtype: "savings",
+      subtype: "inflation_linked",
       term_months: 120,
       rate_type: "variable",
-      coupon_frequency: "at_maturity"
+      coupon_frequency: "at_maturity",
+      cpi_lag_months: 6,
+      inflation_provider: "us_bls"
     },
     "es_letra_3m" => {
       subtype: "zero_coupon",
@@ -153,7 +155,7 @@ class Bond < ApplicationRecord
   end
 
   def pending_rate_review_lots
-    bond_lots.open.where(requires_rate_review: true)
+    BondLot.needs_rate_review.where(bond: self)
   end
 
   def wrapper_label(format: :short)
