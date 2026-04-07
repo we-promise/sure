@@ -292,8 +292,10 @@ class Account < ApplicationRecord
   end
 
   def destroy_later
-    mark_for_deletion!
-    DestroyJob.perform_later(self)
+    transaction do
+      mark_for_deletion!
+      DestroyJob.perform_later(self)
+    end
   end
 
   # Override destroy to handle error recovery for accounts
