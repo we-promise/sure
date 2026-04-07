@@ -29,7 +29,7 @@
       <p class="text-sm text-secondary">
         <%= t(".transaction_count", count: @group.entries.size) %>
         &middot;
-        <%= format_money(@group.entries.sum { |e| e.amount_money.abs }) %>
+        <span class="privacy-sensitive"><%= format_money(@group.entries.sum { |e| e.amount_money.abs }) %></span>
       </p>
     <% end %>
   </div>

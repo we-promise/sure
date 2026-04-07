@@ -7,7 +7,7 @@
            data-action="change->categorize#uncheckRule">
     <span class="min-w-0 font-medium text-primary truncate"><%= entry.name %></span>
     <span class="text-secondary whitespace-nowrap"><%= l(entry.date, format: :short) %></span>
-    <span class="font-medium text-right whitespace-nowrap <%= entry.amount.negative? ? "text-green-600" : "text-primary" %>">
+    <span class="privacy-sensitive font-medium text-right whitespace-nowrap <%= entry.amount.negative? ? "text-green-600" : "text-primary" %>">
       <%= format_money(entry.amount_money.abs) %>
     </span>
     <%= select_tag "category_id",
