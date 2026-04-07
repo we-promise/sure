@@ -27,5 +27,6 @@ jobs:
             compose.example.yml
             compose.example.ai.yml
             config/locales/views/reports/
+            db/seeds/api_keys.rb
             docs/hosting/ai.md
             app/models/provider/binance.rb
