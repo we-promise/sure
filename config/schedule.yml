@@ -43,7 +43,7 @@ refresh_demo_family:
   queue: "scheduled"
   description: "Refreshes demo family data and emails super admins with daily usage summary"
 
-import_gus_inflation_rates:
+import_inflation_rates:
   cron: "30 6 15 * *" # monthly around CPI publication window
   class: "ImportInflationRatesJob"
   queue: "scheduled"

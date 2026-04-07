@@ -65,6 +65,12 @@ pl:
       bond_meta_with_coupon_amount: "%{rate_type} / %{coupon} / kupon %{coupon_amount}"
       inflation_meta_gus: "%{inflation} inflacji + %{margin} marży (GUS SDP %{indicator})"
       inflation_meta_manual: "%{inflation} inflacji + %{margin} marży (ręcznie)"
+      inflation_meta_provider: "%{inflation} inflacji + %{margin} marży (%{provider})"
+      inflation_providers:
+        gus: GUS
+        us_bls: US BLS
+        es_ine: ES INE
+        manual: ręcznie
       first_period_fixed_rate: Stałe oprocentowanie pierwszego okresu
       maturity: "Zapada %{date}"
       maturity_label: Data zapadalności
@@ -96,6 +102,7 @@ pl:
       history_partial: Okres częściowy
       history_inflation_gus: "Użyta inflacja: %{inflation} + %{margin} marży (GUS SDP %{indicator}, odn. %{reference})"
       history_inflation_manual: "Użyta inflacja: %{inflation} + %{margin} marży (założenie ręczne)"
+      history_inflation_provider: "Użyta inflacja: %{inflation} + %{margin} marży (%{provider})"
       history_inflation_first_period: "Stała stopa pierwszego okresu"
       unknown: Nieznane
       purchased: "Zakupiono %{date}"

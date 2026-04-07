@@ -63,6 +63,12 @@ en:
       bond_meta_with_coupon_amount: "%{rate_type} / %{coupon} / coupon %{coupon_amount}"
       inflation_meta_gus: "%{inflation} inflation + %{margin} margin (GUS SDP %{indicator})"
       inflation_meta_manual: "%{inflation} inflation + %{margin} margin (manual)"
+      inflation_meta_provider: "%{inflation} inflation + %{margin} margin (%{provider})"
+      inflation_providers:
+        gus: GUS
+        us_bls: US BLS
+        es_ine: ES INE
+        manual: manual
       first_period_fixed_rate: First-period fixed rate
       maturity: "Matures %{date}"
       maturity_label: Maturity date
@@ -94,6 +100,7 @@ en:
       history_partial: Partial period
       history_inflation_gus: "Inflation used: %{inflation} + %{margin} margin (GUS SDP %{indicator}, ref %{reference})"
       history_inflation_manual: "Inflation used: %{inflation} + %{margin} margin (manual assumption)"
+      history_inflation_provider: "Inflation used: %{inflation} + %{margin} margin (%{provider})"
       history_inflation_first_period: "First-period fixed rate"
       unknown: Unknown
       purchased: "Purchased %{date}"

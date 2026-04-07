@@ -1,5 +1,6 @@
 class Provider::EsIneCpi < Provider
   Error = Class.new(Provider::Error)
+  MIN_CPI_YEAR = 1950
 
   # Override via env when deploying, because INE endpoint can vary by dataset code.
   # Trailing slash required so Faraday appends series_id as a path segment, not a replacement.
@@ -74,8 +75,12 @@ class Provider::EsIneCpi < Provider
       raw = record["Fecha"] || record["fecha"] || record["date"]
       return nil if raw.blank?
 
-      Date.parse(raw.to_s)
-    rescue ArgumentError
+      parsed = Date.parse(raw.to_s)
+      max_year = Date.current.year + 1
+      return nil unless parsed.year.between?(MIN_CPI_YEAR, max_year)
+
+      parsed
+    rescue ArgumentError, TypeError, Date::Error
       nil
     end
 

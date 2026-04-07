@@ -43,19 +43,26 @@
         <% inflation_component = lot.current_inflation_component_percent %>
         <% inflation_source = lot.current_inflation_source %>
         <% margin_component = lot.current_margin_percent %>
+        <% inflation_text = number_to_percentage(inflation_component.to_d, precision: 3) %>
+        <% margin_text = number_to_percentage(margin_component.to_d, precision: 3) %>
         <% meta_text = if lot.requires_rate_review?
           t(".pending_review")
         elsif inflation_component.nil? || margin_component.nil?
           t(".first_period_fixed_rate")
         elsif inflation_source == "gus"
           t(".inflation_meta_gus",
-            inflation: number_to_percentage(inflation_component.to_d, precision: 3),
-            margin: number_to_percentage(margin_component.to_d, precision: 3),
+            inflation: inflation_text,
+            margin: margin_text,
             indicator: lot.current_inflation_indicator_id)
-        else
+        elsif inflation_source == "manual" || inflation_source.blank?
           t(".inflation_meta_manual",
-            inflation: number_to_percentage(inflation_component.to_d, precision: 3),
-            margin: number_to_percentage(margin_component.to_d, precision: 3))
+            inflation: inflation_text,
+            margin: margin_text)
+        else
+          t(".inflation_meta_provider",
+            inflation: inflation_text,
+            margin: margin_text,
+            provider: t(".inflation_providers.#{inflation_source}", default: inflation_source.to_s.humanize))
         end %>
         <%= tag.p meta_text, class: "font-normal text-secondary" %>
       <% else %>

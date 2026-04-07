@@ -70,20 +70,41 @@ class UI::Dashboard::BondSummaryRow < ApplicationComponent
       margin_component = lot.current_margin_percent
       return t("bonds.purchase_holding.first_period_fixed_rate") if inflation_component.nil? || margin_component.nil?
 
+      inflation = helpers.number_to_percentage(inflation_component.to_d, precision: 3)
+      margin = helpers.number_to_percentage(margin_component.to_d, precision: 3)
+
       if lot.gus_inflation_source?
         t(
           "bonds.purchase_holding.inflation_meta_gus",
-          inflation: helpers.number_to_percentage(inflation_component.to_d, precision: 3),
-          margin: helpers.number_to_percentage(margin_component.to_d, precision: 3),
+          inflation: inflation,
+          margin: margin,
           indicator: lot.current_inflation_indicator_id
+        )
+      elsif current_inflation_source_key.blank? || current_inflation_source_key == "manual"
+        t(
+          "bonds.purchase_holding.inflation_meta_manual",
+          inflation: inflation,
+          margin: margin
         )
       else
         t(
-          "bonds.purchase_holding.inflation_meta_manual",
-          inflation: helpers.number_to_percentage(inflation_component.to_d, precision: 3),
-          margin: helpers.number_to_percentage(margin_component.to_d, precision: 3)
+          "bonds.purchase_holding.inflation_meta_provider",
+          inflation: inflation,
+          margin: margin,
+          provider: localized_inflation_provider
         )
       end
+    end
+
+    def current_inflation_source_key
+      lot.current_inflation_source.to_s.presence
+    end
+
+    def localized_inflation_provider
+      provider = current_inflation_source_key
+      return t("bonds.purchase_holding.unknown") if provider.blank?
+
+      t("bonds.purchase_holding.inflation_providers.#{provider}", default: provider.to_s.humanize)
     end
 
     def localized_rate_type

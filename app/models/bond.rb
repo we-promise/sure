@@ -137,8 +137,10 @@ class Bond < ApplicationRecord
   end
 
   def settle_matured_lots!(on: Date.current)
-    bond_lots.open.find_each do |lot|
-      lot.settle_if_matured!(on:)
+    bond_lots.open.find_in_batches(batch_size: 1000) do |batch|
+      batch.each do |lot|
+        lot.settle_if_matured!(on:)
+      end
     end
   end
 

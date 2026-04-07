@@ -27,7 +27,6 @@ module Bond::InflationProvider
       return InflationRecord.new(year: record.year, month: record.month, rate_yoy: record.rate_yoy)
     end
 
-    target_date = date.beginning_of_month - lag_months.to_i.months
     source_key = provider_key
     persisted = InflationRate.for_date(source: source_key, date: date, lag_months: lag_months)
     if persisted.present?
@@ -40,6 +39,7 @@ module Bond::InflationProvider
     provider_instance = provider_instance_for(provider_key, provider_klass)
     return nil if provider_instance.blank?
 
+    target_date = date.beginning_of_month - lag_months.to_i.months
     InflationRate.import_year!(
       source: source_key,
       provider: provider_instance,

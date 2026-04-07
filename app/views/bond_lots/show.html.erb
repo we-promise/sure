@@ -62,6 +62,8 @@
                       <%= t(".history_inflation_gus", inflation: inflation_text, margin: margin_text, reference: event[:inflation_reference_on]&.strftime("%m-%Y"), indicator: event[:inflation_indicator_id]) %>
                     <% elsif event[:inflation_source] == "manual" %>
                       <%= t(".history_inflation_manual", inflation: inflation_text, margin: margin_text) %>
+                    <% elsif event[:inflation_source].present? %>
+                      <%= t(".history_inflation_provider", inflation: inflation_text, margin: margin_text, provider: t("bonds.purchase_holding.inflation_providers.#{event[:inflation_source]}", default: event[:inflation_source].to_s.humanize)) %>
                     <% else %>
                       <%= t(".history_inflation_first_period") %>
                     <% end %>
