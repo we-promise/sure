@@ -69,14 +69,29 @@ module ExchangeRate::Provided
         return 0
       end
 
-      ExchangeRate::Importer.new(
-        exchange_rate_provider: provider,
-        from: from,
-        to: to,
-        start_date: start_date,
-        end_date: end_date,
-        clear_cache: clear_cache
-      ).import_provider_rates
+      # Prevent concurrent syncs from fetching the same currency pair for overlapping
+      # date ranges. The lock is scoped to (pair + start_date) so that a broader range
+      # (e.g. daily job needing older history) is not blocked by a narrower account sync.
+      lock_key = "exchange_rate_import:#{from}:#{to}:#{start_date}"
+      acquired = Rails.cache.write(lock_key, true, expires_in: 2.minutes, unless_exist: true)
+
+      unless acquired
+        Rails.logger.info("Skipping exchange rate import for #{from}/#{to} from #{start_date} — already in progress")
+        return 0
+      end
+
+      begin
+        ExchangeRate::Importer.new(
+          exchange_rate_provider: provider,
+          from: from,
+          to: to,
+          start_date: start_date,
+          end_date: end_date,
+          clear_cache: clear_cache
+        ).import_provider_rates
+      ensure
+        Rails.cache.delete(lock_key)
+      end
     end
   end
 end
