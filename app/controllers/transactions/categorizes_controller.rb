@@ -43,11 +43,13 @@ class Transactions::CategorizesController < ApplicationController
 
     respond_to do |format|
       format.turbo_stream do
+        remaining_entries = uncategorized_entries_for(remaining_ids)
+        remaining_ids     = remaining_entries.map { |e| e.id.to_s }
+
         if remaining_ids.empty?
           render turbo_stream: turbo_stream.action(:redirect, transactions_categorize_path(position: @position))
         else
           @categories = Current.family.categories.alphabetically
-          remaining_entries = Current.accessible_entries.excluding_split_parents.where(id: remaining_ids).to_a
           streams = entry_ids.map { |id| turbo_stream.remove("categorize_entry_#{id}") }
           remaining_entries.each do |entry|
             streams << turbo_stream.replace(
@@ -98,11 +100,13 @@ class Transactions::CategorizesController < ApplicationController
 
     Entry.where(id: entry.id).bulk_update!({ category_id: category.id })
 
+    remaining_entries = uncategorized_entries_for(remaining_ids)
+    remaining_ids     = remaining_entries.map { |e| e.id.to_s }
+
     streams = [ turbo_stream.remove("categorize_entry_#{entry.id}") ]
     if remaining_ids.empty?
       streams << turbo_stream.action(:redirect, transactions_categorize_path(position: position))
     else
-      remaining_entries = Current.accessible_entries.excluding_split_parents.where(id: remaining_ids).to_a
       streams << turbo_stream.replace("categorize_remaining",
         partial: "transactions/categorizes/remaining_count",
         locals: { total_uncategorized: Entry.uncategorized_count(Current.accessible_entries) })
@@ -112,4 +116,16 @@ class Transactions::CategorizesController < ApplicationController
     end
     render turbo_stream: streams
   end
+
+  private
+
+    def uncategorized_entries_for(ids)
+      return [] if ids.blank?
+      Current.accessible_entries
+        .excluding_split_parents
+        .where(id: ids)
+        .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
+        .where(transactions: { category_id: nil })
+        .to_a
+    end
 end
