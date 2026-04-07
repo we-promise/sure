@@ -278,16 +278,22 @@ class Provider::TwelveData < Provider
       @last_request_time = Time.current
 
       # Layer 2: Global per-minute credit counter via cache (Redis in prod).
-      # The cross-rate endpoint (time_series/cross) consumes 5 credits per call,
-      # so callers pass credits: 5 to accurately track usage.
+      # Read current usage first — if adding these credits would exceed the limit,
+      # wait for the next minute BEFORE incrementing. This ensures credits are
+      # charged to the minute the request actually fires in, not a stale minute
+      # we slept through (which would undercount the new minute's usage).
       minute_key = "twelve_data:credits:#{Time.current.to_i / 60}"
-      current_count = Rails.cache.increment(minute_key, credits, expires_in: 120.seconds)
+      current_count = Rails.cache.read(minute_key).to_i
 
-      if current_count.present? && current_count > max_requests_per_minute
+      if current_count + credits > max_requests_per_minute
         wait_seconds = 60 - (Time.current.to_i % 60) + 1
-        Rails.logger.info("TwelveData: #{current_count}/#{max_requests_per_minute} credits this minute, waiting #{wait_seconds}s")
+        Rails.logger.info("TwelveData: #{current_count + credits}/#{max_requests_per_minute} credits this minute, waiting #{wait_seconds}s")
         sleep(wait_seconds)
       end
+
+      # Charge credits to the minute the request actually fires in
+      active_minute_key = "twelve_data:credits:#{Time.current.to_i / 60}"
+      Rails.cache.increment(active_minute_key, credits, expires_in: 120.seconds)
     end
 
     def min_request_interval

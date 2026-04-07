@@ -111,7 +111,8 @@ class Provider::TwelveDataTest < ActiveSupport::TestCase
     sleep_called_with = nil
     @provider.define_singleton_method(:sleep) { |duration| sleep_called_with = duration }
 
-    # Stub cache increment to return below limit
+    # Stub cache to return under limit (read returns current count, increment charges)
+    Rails.cache.stubs(:read).returns(0)
     Rails.cache.stubs(:increment).returns(1)
 
     @provider.send(:throttle_request)
@@ -121,7 +122,8 @@ class Provider::TwelveDataTest < ActiveSupport::TestCase
   end
 
   test "throttle_request waits when per-minute credit limit is exceeded" do
-    # Stub cache increment to return above limit
+    # Stub cache read to return count at limit (adding 1 more would exceed 7)
+    Rails.cache.stubs(:read).returns(7)
     Rails.cache.stubs(:increment).returns(8)
 
     sleep_called = false
@@ -136,8 +138,9 @@ class Provider::TwelveDataTest < ActiveSupport::TestCase
     # Set last_request_time far in the past so per-instance throttle doesn't trigger
     @provider.send(:instance_variable_set, :@last_request_time, Time.at(0))
 
-    # Stub cache increment to return under limit
-    Rails.cache.stubs(:increment).returns(3)
+    # Stub cache to return under limit
+    Rails.cache.stubs(:read).returns(3)
+    Rails.cache.stubs(:increment).returns(4)
 
     sleep_called = false
     @provider.define_singleton_method(:sleep) { |_duration| sleep_called = true }

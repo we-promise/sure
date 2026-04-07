@@ -72,8 +72,14 @@ module ExchangeRate::Provided
       # Prevent concurrent syncs from fetching the same currency pair for overlapping
       # date ranges. The lock is scoped to (pair + start_date) so that a broader range
       # (e.g. daily job needing older history) is not blocked by a narrower account sync.
+      #
+      # Uses an owner-token pattern: the lock value is a unique token so the ensure
+      # block only deletes its own lock, not one acquired by a different worker after
+      # expiry. TTL is 5 minutes to cover worst-case throttle + rate-limit retry waits
+      # (~3 minutes with TwelveData).
       lock_key = "exchange_rate_import:#{from}:#{to}:#{start_date}"
-      acquired = Rails.cache.write(lock_key, true, expires_in: 2.minutes, unless_exist: true)
+      lock_token = SecureRandom.uuid
+      acquired = Rails.cache.write(lock_key, lock_token, expires_in: 5.minutes, unless_exist: true)
 
       unless acquired
         Rails.logger.info("Skipping exchange rate import for #{from}/#{to} from #{start_date} — already in progress")
@@ -90,7 +96,9 @@ module ExchangeRate::Provided
           clear_cache: clear_cache
         ).import_provider_rates
       ensure
-        Rails.cache.delete(lock_key)
+        # Only delete the lock if we still own it (it hasn't expired and been
+        # re-acquired by another worker).
+        Rails.cache.delete(lock_key) if Rails.cache.read(lock_key) == lock_token
       end
     end
   end
