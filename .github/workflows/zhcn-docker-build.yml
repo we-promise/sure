@@ -1,0 +1,260 @@
+name: zh-CN Docker Build (Sure)
+
+on:
+  push:
+    branches:
+      - i18n/zh-cn-complete-1
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      push:
+        description: 'Push the image to GHCR'
+        required: false
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository_owner }}/sure
+
+jobs:
+  ci:
+    uses: ./.github/workflows/ci.yml
+
+  i18n-validate:
+    name: i18n YAML validate + missing report
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate all zh-CN YAML files load
+        run: |
+          python3 - <<'PY'
+          import glob, yaml, sys
+
+          files = sorted(glob.glob('config/locales/**/zh-CN.yml', recursive=True))
+          if not files:
+              print('No zh-CN locale files found')
+              sys.exit(1)
+
+          bad = []
+          for f in files:
+              try:
+                  with open(f, 'r', encoding='utf-8') as fp:
+                      yaml.safe_load(fp)
+              except Exception as e:
+                  bad.append((f, str(e)))
+
+          if bad:
+              print('YAML load failures:')
+              for f, e in bad:
+                  print('-', f, e)
+              sys.exit(1)
+
+          print('OK:', len(files), 'zh-CN files')
+          PY
+
+      - name: Compute missing zh-CN keys (vs en.yml)
+        run: |
+          python3 - <<'PY'
+          import glob, os, json, yaml
+
+          def deep_flatten(obj, prefix=None, out=None):
+              prefix = prefix or []
+              out = out or {}
+              if isinstance(obj, dict):
+                  for k, v in obj.items():
+                      deep_flatten(v, prefix + [str(k)], out)
+              else:
+                  out['.'.join(prefix)] = obj
+              return out
+
+          base = os.path.join('config', 'locales')
+          en_files = sorted(glob.glob(os.path.join(base, '**', 'en.yml'), recursive=True))
+          total = 0
+          files_with_missing = []
+
+          for en_path in en_files:
+              zh_path = en_path[:-len('en.yml')] + 'zh-CN.yml'
+              if not os.path.exists(zh_path):
+                  continue
+
+              en = yaml.safe_load(open(en_path, 'r', encoding='utf-8')) or {}
+              zh = yaml.safe_load(open(zh_path, 'r', encoding='utf-8')) or {}
+
+              en_root = en.get('en', en)
+              zh_root = zh.get('zh-CN', zh)
+              if not isinstance(en_root, dict) or not isinstance(zh_root, dict):
+                  continue
+
+              en_flat = deep_flatten(en_root)
+              zh_flat = deep_flatten(zh_root)
+
+              missing_count = 0
+              for k, v in en_flat.items():
+                  if v is None or isinstance(v, (int, float, bool)):
+                      continue
+                  if k not in zh_flat or zh_flat.get(k) in (None, ''):
+                      missing_count += 1
+
+              if missing_count:
+                  files_with_missing.append((en_path, missing_count))
+                  total += missing_count
+
+          files_with_missing.sort(key=lambda x: x[1], reverse=True)
+          out = {
+              'total_missing': total,
+              'files_with_missing': len(files_with_missing),
+              'top_files': files_with_missing[:20],
+          }
+
+          print(json.dumps(out, ensure_ascii=False, indent=2))
+          with open('i18n_missing_summary.json', 'w', encoding='utf-8') as fp:
+              json.dump(out, fp, ensure_ascii=False, indent=2)
+          PY
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: i18n-missing-summary
+          path: i18n_missing_summary.json
+
+  smoke-build-amd64:
+    name: Smoke build + boot check (amd64)
+    needs: [ci, i18n-validate]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3.10.0
+
+      - name: Build amd64 image locally
+        uses: docker/build-push-action@v6.16.0
+        with:
+          context: .
+          build-args: |
+            BUILD_COMMIT_SHA=${{ github.sha }}
+          platforms: linux/amd64
+          provenance: false
+          load: true
+          tags: sure-zhcn-smoke:${{ github.sha }}
+
+      - name: Boot smoke test
+        shell: bash -xeuo pipefail {0}
+        run: |
+          docker run --rm \
+            -e SECRET_KEY_BASE=dummy \
+            -e RAILS_ENV=production \
+            -e REDIS_URL=redis://localhost:6379/1 \
+            -e DB_HOST=localhost \
+            -e DB_PORT=5432 \
+            -e POSTGRES_USER=dummy \
+            -e POSTGRES_PASSWORD=dummy \
+            -e POSTGRES_DB=dummy \
+            --entrypoint bash \
+            sure-zhcn-smoke:${GITHUB_SHA} \
+            -lc 'bundle exec ruby -e "require_relative \"config/environment\"; puts :boot_ok"'
+
+  build:
+    name: Build Docker image
+    needs: [ci, i18n-validate, smoke-build-amd64]
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [amd64, arm64]
+    timeout-minutes: 60
+    runs-on: ${{ matrix.platform == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-24.04' }}
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3.10.0
+
+      - name: Log in to GHCR
+        if: github.event_name == 'push' || github.event.inputs.push == 'true'
+        uses: docker/login-action@v3.3.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and export digest
+        id: build
+        uses: docker/build-push-action@v6.16.0
+        with:
+          context: .
+          build-args: |
+            BUILD_COMMIT_SHA=${{ github.sha }}
+          platforms: linux/${{ matrix.platform }}
+          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:cache-${{ matrix.platform }}
+          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:cache-${{ matrix.platform }},mode=max
+          provenance: false
+          push: true
+          outputs: type=image,name=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }},name-canonical=true,push-by-digest=true,oci-mediatypes=true
+
+      - name: Export digest
+        if: github.event_name == 'push' || github.event.inputs.push == 'true'
+        run: |
+          mkdir -p "${RUNNER_TEMP}/digests"
+          echo "${DIGEST#sha256:}" > "${RUNNER_TEMP}/digests/digest-${PLATFORM}"
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
+          PLATFORM: ${{ matrix.platform }}
+
+      - name: Upload digest artifact
+        if: github.event_name == 'push' || github.event.inputs.push == 'true'
+        uses: actions/upload-artifact@v4.6.2
+        with:
+          name: digest-${{ matrix.platform }}
+          path: ${{ runner.temp }}/digests/*
+          if-no-files-found: error
+          retention-days: 1
+
+  merge:
+    name: Merge multi-arch manifest & push tags
+    if: github.event_name == 'push' || github.event.inputs.push == 'true'
+    needs: [build]
+    runs-on: ubuntu-24.04
+    permissions:
+      packages: write
+    steps:
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3.10.0
+
+      - name: Download Docker image digests
+        uses: actions/download-artifact@v4.3.0
+        with:
+          path: ${{ runner.temp }}/digests
+          pattern: digest-*
+          merge-multiple: true
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3.3.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Merge and push Docker image
+        env:
+          DIGESTS_DIR: ${{ runner.temp }}/digests
+        shell: bash -xeuo pipefail {0}
+        run: |
+          IMAGE_BASE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"
+          docker buildx imagetools create \
+            --tag "${IMAGE_BASE}:zhcn-i18n-${GITHUB_SHA}" \
+            --tag "${IMAGE_BASE}:zhcn-i18n-latest" \
+            "${IMAGE_BASE}@sha256:$(<"${DIGESTS_DIR}/digest-amd64")" \
+            "${IMAGE_BASE}@sha256:$(<"${DIGESTS_DIR}/digest-arm64")"

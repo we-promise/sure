@@ -1,0 +1,63 @@
+---
+zh-CN:
+  coinstats_items:
+    create:
+      success: CoinStats 服务提供商连接配置成功。
+      default_name: CoinStats 连接
+      errors:
+        validation_failed: "校验失败：%{message}。"
+    update:
+      success: CoinStats 服务提供商连接更新成功。
+      errors:
+        validation_failed: "校验失败：%{message}。"
+    destroy:
+      success: 已安排删除 CoinStats 服务提供商连接。
+    link_wallet:
+      success: "已成功关联 %{count} 个加密钱包。"
+      missing_params: "缺少必填参数：address 和 blockchain。"
+      failed: 加密钱包关联失败。
+      error: "加密钱包关联失败：%{message}。"
+    new:
+      title: 使用 CoinStats 关联加密钱包
+      blockchain_fetch_error: 获取区块链列表失败，请稍后重试。
+      address_label: 地址
+      address_placeholder: 必填
+      blockchain_label: 区块链
+      blockchain_placeholder: 必填
+      blockchain_select_blank: 选择区块链
+      link: 关联加密钱包
+      not_configured_title: CoinStats 服务提供商连接未配置
+      not_configured_message: 要关联加密钱包，你需要先配置 CoinStats 服务提供商连接。
+      not_configured_step1_html: 前往 <strong>设置 → 服务提供商</strong>
+      not_configured_step2_html: 找到 <strong>CoinStats</strong> 服务提供商
+      not_configured_step3_html: 按照页面提供的 <strong>安装/配置说明</strong> 完成配置
+      go_to_settings: 前往服务提供商设置
+      setup_instructions: "配置说明："
+      step1_html: 访问 <a href="https://openapi.coinstats.app/" class="link" target="_blank" rel="noopener noreferrer">CoinStats Public API Dashboard</a> 获取 API Key。
+      step2: 在下方输入你的 API Key 并点击“配置”。
+      step3_html: 连接成功后，前往 <a href="%{accounts_url}" class="link" data-turbo-frame="_top">账户</a> 标签页设置加密钱包。
+      api_key_label: API Key
+      api_key_placeholder: 必填
+      configure: 配置
+      update_configuration: 重新配置
+      default_name: CoinStats 连接
+      status_configured_html: 可使用
+      status_not_configured: 未配置
+    coinstats_item:
+      deletion_in_progress: 正在删除加密钱包数据…
+      provider_name: CoinStats
+      syncing: 同步中…
+      sync_status:
+        no_accounts: 未找到加密钱包
+        all_synced:
+          one: "%{count} 个加密钱包已同步"
+          other: "%{count} 个加密钱包已同步"
+        partial_sync: "%{linked_count} 个加密钱包已同步，%{unlinked_count} 个需要设置"
+      reconnect: 重新连接
+      status: "上次同步于 %{timestamp} 前"
+      status_never: 从未同步
+      status_with_summary: "上次同步于 %{timestamp} 前 • %{summary}"
+      update_api_key: 更新 API Key
+      delete: 删除
+      no_wallets_title: 未连接任何加密钱包
+      no_wallets_message: 当前没有任何加密钱包连接到 CoinStats。

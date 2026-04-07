@@ -1,6 +1,10 @@
 ---
 zh-CN:
   transactions:
+    unknown_name: 未知交易
+    selection_bar:
+      duplicate: 重复
+      edit: 编辑
     form:
       account: 账户
       account_prompt: 选择账户
@@ -9,30 +13,168 @@ zh-CN:
       category_prompt: 选择分类
       date: 日期
       description: 描述
-      description_placeholder: 请输入交易描述
-      details: 详情
+      description_placeholder: 描述这笔交易
       expense: 支出
       income: 收入
-      none: "（无）"
+      merchant_label: 商户
+      none: （无）
       note_label: 备注
-      note_placeholder: 请输入备注
+      note_placeholder: 输入备注
       submit: 添加交易
       tags_label: 标签
       transfer: 转账
+    new:
+      new_transaction: 新建交易
+    show:
+      account_label: 账户
+      amount: 金额
+      category_label: 分类
+      date_label: 日期
+      delete: 删除
+      delete_subtitle: 此操作将永久删除该交易，会影响历史余额数据，且不可恢复。
+      delete_title: 删除交易
+      details: 详情
+      attachments: 附件
+      exclude: 排除
+      exclude_description: 被排除的交易将从预算计算和报表中移除。
+      activity_type: 活动类型
+      activity_type_description: 投资活动类型（买入、卖出、分红等）。可自动识别，也可手动设置。
+      one_time_title: 一次性%{type}
+      one_time_description: 一次性交易将从某些预算计算与报表中排除，帮助你关注真正重要的长期项。
+      convert_to_trade_title: 转换为证券交易
+      convert_to_trade_description: 将此交易转换为买入/卖出交易，并附上证券信息用于投资组合追踪。
+      convert_to_trade_button: 转换为交易
+      pending_duplicate_merger_title: 与已入账交易重复？
+      pending_duplicate_merger_description: 手动将此待入账交易与其已入账版本合并。
+      pending_duplicate_merger_button: 打开合并工具
+      merchant_label: 商户
+      name_label: 名称
+      nature: 类型
+      none: （无）
+      note_label: 备注
+      note_placeholder: 输入备注
+      overview: 概览
+      settings: 设置
+      tags_label: 标签
+      tab_transactions: 交易
+      tab_upcoming: 即将发生
+      uncategorized: （未分类）
+    activity_labels:
+      buy: 买入
+      sell: 卖出
+      sweep_in: 转入
+      sweep_out: 转出
+      dividend: 分红
+      reinvestment: 再投资
+      interest: 利息
+      fee: 手续费
+      transfer: 转账
+      contribution: 投入
+      withdrawal: 取出
+      exchange: 兑换
+      other: 其他
+    mark_recurring: 标记为定期交易
+    mark_recurring_subtitle: 将其作为定期交易跟踪。金额波动将基于过去 6 个月的相似交易自动计算。
+    mark_recurring_title: 定期交易
+    potential_duplicate_title: 检测到可能重复
+    potential_duplicate_description: 这笔待入账交易可能与下方已入账交易相同。如确认为同一笔，请合并以避免重复统计。
+    merge_duplicate: 是的，合并
+    keep_both: 不是，保留两条
+    split_parent_row:
+      split_label: 拆分
+    transaction:
+      pending: 待入账
+      pending_tooltip: 待入账交易——入账后可能发生变化
+      linked_with_provider: 已与 %{provider} 关联
+      activity_type_tooltip: 投资活动类型
+      possible_duplicate: 重复？
+      potential_duplicate_tooltip: 该交易可能与另一笔交易重复
+      review_recommended: 建议复核
+      review_recommended_tooltip: 金额差异较大——建议复核是否为重复交易
+      split: 拆分
+      split_tooltip: 此交易已拆分为多条记录
+      split_child_tooltip: 拆分交易的一部分
+    merge_duplicate:
+      success: 交易合并成功
+      failure: 无法合并交易
+    dismiss_duplicate:
+      success: 已保留为两笔独立交易
+      failure: 无法忽略重复建议
+    pending_duplicate_merge:
+      possible_duplicate: 重复？
+      possible_duplicate_short: 重复
+      review_recommended: 复核
+      review_recommended_short: 复核
+      confirm_title: "与已入账交易合并（%{posted_amount}）"
+      reject_title: 保留为两笔独立交易
     header:
       edit_categories: 编辑分类
       edit_imports: 编辑导入
       edit_merchants: 编辑商户
       edit_tags: 编辑标签
       import: 导入
-    transaction:
-      linked_with_provider: 已与 %{provider} 关联
     index:
+      transaction: 笔交易
+      transactions: 笔交易
       import: 导入
-      transaction: 交易
-      transactions: 交易记录
-    new:
-      new_transaction: 新建交易
+    list:
+      drag_drop_title: 拖放 CSV 以导入
+      drag_drop_subtitle: 直接上传交易
+      transaction: 笔交易
+      transactions: 笔交易
+    toggle_recurring_section: 切换即将发生的定期交易显示
+    search:
+      filters:
+        account: 账户
+        date: 日期
+        type: 类型
+        status: 状态
+        amount: 金额
+        category: 分类
+        tag: 标签
+        merchant: 商户
+    convert_to_trade:
+      title: 转换为证券交易
+      description: 将此交易转换为带证券信息的交易
+      date_label: "日期："
+      account_label: "账户："
+      amount_label: "金额："
+      security_label: 证券
+      security_prompt: 选择证券…
+      security_custom: "+ 输入自定义代码"
+      security_not_listed_hint: 找不到你的证券？在列表底部选择“输入自定义代码”。
+      ticker_placeholder: AAPL
+      ticker_hint: 输入股票/ETF 代码（例如：AAPL、MSFT）
+      ticker_search_placeholder: 搜索代码…
+      ticker_search_hint: 可按代码或公司名搜索，也可直接输入自定义代码
+      price_mismatch_title: 价格可能不匹配
+      price_mismatch_message: "你输入的价格（%{entered_price}/股）与 %{ticker} 的当前市场价（%{market_price}）差异较大。如果看起来不对，可能选错了证券——请尝试使用“输入自定义代码”指定正确的标的。"
+      quantity_label: 数量（股）
+      quantity_placeholder: 例如：20
+      quantity_hint: 交易的股数
+      price_label: 每股价格
+      price_placeholder: 例如：52.15
+      price_hint: 每股价格（%{currency}）
+      qty_or_price_hint: 至少输入“数量”或“每股价格”之一。另一个将根据交易金额（%{amount}）自动计算。
+      trade_type_label: 交易类型
+      trade_type_hint: 买入或卖出证券
+      exchange_label: 交易所（可选）
+      exchange_placeholder: XNAS
+      exchange_hint: 留空则自动识别
+      cancel: 取消
+      submit: 转换为交易
+      success: 已将交易转换为证券交易
+      conversion_note: "由交易转换：%{original_name}（%{original_date}）"
+      errors:
+        not_investment_account: 仅投资账户中的交易可转换为证券交易
+        already_converted: 该交易已被转换或已被排除
+        enter_ticker: 请输入证券代码
+        security_not_found: 所选证券已不存在。请选择其他证券。
+        select_security: 请选择或输入一个证券
+        enter_qty_or_price: 请填写“数量”或“每股价格”之一；另一个将根据交易金额自动计算。
+        invalid_qty_or_price: 数量或价格无效。请输入有效的正数。
+        conversion_failed: "转换交易失败：%{error}"
+        unexpected_error: "转换过程中发生意外错误：%{error}"
     searches:
       filters:
         amount_filter:
@@ -46,10 +188,15 @@ zh-CN:
           on_or_after: 在 %{date} 或之后
           on_or_before: 在 %{date} 或之前
           transfer: 转账
+          confirmed: 已确认
+          pending: 待入账
         type_filter:
           expense: 支出
           income: 收入
           transfer: 转账
+        status_filter:
+          confirmed: 已确认
+          pending: 待入账
       menu:
         account_filter: 账户
         amount_filter: 金额
@@ -59,6 +206,7 @@ zh-CN:
         clear_filters: 清除筛选
         date_filter: 日期
         merchant_filter: 商户
+        status_filter: 状态
         tag_filter: 标签
         type_filter: 类型
       search:
@@ -67,26 +215,21 @@ zh-CN:
         less_than: 小于
       form:
         toggle_selection_checkboxes: 切换所有复选框
-    show:
-      account_label: 账户
-      amount: 金额
-      category_label: 分类
-      date_label: 日期
-      delete: 删除
-      delete_subtitle: 此操作将永久删除该交易，影响历史余额数据，且不可恢复。
-      delete_title: 删除交易
-      details: 详情
-      mark_recurring: 标记为定期交易
-      mark_recurring_subtitle: 将此交易标记为定期交易跟踪。金额波动将根据过去6个月的类似交易自动计算。
-      mark_recurring_title: 定期交易设置
-      merchant_label: 商户
-      name_label: 名称
-      nature: 类型
-      none: "（无）"
-      note_label: 备注
-      note_placeholder: 请输入备注
-      overview: 概览
-      settings: 设置
-      tags_label: 标签
-      uncategorized: "（未分类）"
-    toggle_recurring_section: 切换即将发生的定期交易显示
+    attachments:
+      cannot_exceed: "每笔交易最多只能添加 %{count} 个附件"
+      uploaded_one: 附件上传成功
+      uploaded_many: "已成功上传 %{count} 个附件"
+      failed_upload: "上传附件失败：%{error}"
+      no_files_selected: 未选择要上传的文件
+      attachment_deleted: 附件删除成功
+      failed_delete: "删除附件失败：%{error}"
+      upload_failed: 上传附件失败。请重试或联系支持。
+      delete_failed: 删除附件失败。请重试或联系支持。
+      upload: 上传
+      no_attachments: 暂无附件
+      select_up_to: "最多选择 %{count} 个文件（图片或 PDF，每个最大 %{size}MB）• 已使用 %{used}/%{count}"
+      files:
+        one: 文件（1）
+        other: "文件（%{count}）"
+      browse_to_add: 浏览并添加文件
+      max_reached: "已达到最大文件数量（%{count}/%{max}）。请先删除一个现有文件再上传。"

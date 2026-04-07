@@ -120,6 +120,20 @@ zh-CN:
       tags_label: 标签管理
       transactions_section_title: 交易管理
       whats_new_label: 更新日志
+    providers:
+      show:
+        page_title: 同步服务商
+        description: 配置第三方同步服务商的凭据。在此处配置的设置将覆盖环境变量。
+      sections:
+        lunchflow: Lunch Flow
+        simplefin: SimpleFIN
+        enable_banking: 启用银行连接（Beta）
+        coinstats: CoinStats（Beta）
+        mercury: Mercury（Beta）
+        coinbase: Coinbase（Beta）
+        snaptrade: SnapTrade（Beta）
+        indexa_capital: Indexa Capital（Alpha）
+
     settings_nav_link_large:
       next: 下一步
       previous: 上一步

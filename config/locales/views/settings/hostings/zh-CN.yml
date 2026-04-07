@@ -7,12 +7,17 @@ zh-CN:
         label: Client ID
         placeholder: 在此输入您的 Client ID
         title: Brand Fetch 设置
+        high_res_label: 启用高清 Logo
+        high_res_description: 启用后，Logo 将以 120×120 分辨率获取（而不是 40×40），在高 DPI 屏幕上更清晰。
       clear_cache:
         cache_cleared: 数据缓存已清除，此操作可能需要一些时间完成。
       invite_code_settings:
         description: 控制新用户如何注册您的 %{product} 实例。
         email_confirmation_description: 启用后，用户在更改邮箱地址时必须进行邮箱确认。
         email_confirmation_title: 要求邮箱确认
+        default_family_title: 新用户默认加入的家庭/组
+        default_family_description: 仅当新用户没有邀请码时，才会把他们加入这个家庭/组。
+        default_family_none: 无（为其创建新的家庭/组）
         generate_tokens: 生成新代码
         generated_tokens: 已生成的代码
         states:
@@ -56,6 +61,8 @@ zh-CN:
         danger_zone: 高风险操作
         financial_data_providers: 金融数据提供商
         general: 通用设置
+        ai_assistant: AI 助手
+        sync_settings: 同步设置
         invites: 邀请码设置
         title: 自托管配置
       twelve_data_settings:
@@ -65,10 +72,16 @@ zh-CN:
         label: API 密钥
         placeholder: 在此输入您的 API 密钥
         plan: "%{plan} 套餐"
+        plan_upgrade_warning_title: 部分代码需要付费套餐
+        plan_upgrade_warning_description: 你持仓中的以下标的无法在当前 Twelve Data 套餐下同步价格。
+        requires_plan: 需要 %{plan} 套餐
+        view_pricing: 查看 Twelve Data 定价
         title: Twelve Data 设置
       update:
         failure: 设置值无效
         invalid_onboarding_state: 无效的新用户注册状态
+        invalid_sync_time: 无效的同步时间格式。请使用 HH:MM 格式（例如：02:30）。
+        scheduler_sync_failed: 设置已保存，但更新同步计划失败。请重试或检查服务器日志。
         success: 设置已更新
       yahoo_finance_settings:
         connection_failed: 无法连接到 Yahoo Finance
@@ -77,3 +90,43 @@ zh-CN:
         status_inactive: Yahoo Finance 连接失败
         title: Yahoo Finance 设置
         troubleshooting: 请检查您的互联网连接和防火墙设置。Yahoo Finance 可能暂时不可用。
+
+      assistant_settings:
+        title: AI 助手
+        description: 选择聊天助手的响应方式。内置（Builtin）将直接使用你配置的 LLM 提供商。外部（External）会把请求委托给远程 AI 代理，代理可通过 MCP 回调 Sure 的金融工具。
+        type_label: 助手类型
+        type_builtin: 内置（直连 LLM）
+        type_external: 外部（远程代理）
+        external_status: 外部助手端点
+        external_configured: 已配置
+        external_not_configured: 未配置。请在下方填写 URL 与令牌，或设置环境变量 EXTERNAL_ASSISTANT_URL 和 EXTERNAL_ASSISTANT_TOKEN。
+        env_notice: "助手类型已通过 ASSISTANT_TYPE 环境变量锁定为 '%{type}'。"
+        env_configured_external: 已通过环境变量成功配置。
+        url_label: 端点 URL
+        url_placeholder: https://your-agent-host/v1/chat
+        url_help: 外部代理的 API 端点完整 URL。由你的代理服务提供方提供。
+        token_label: API 令牌
+        token_placeholder: 输入代理服务提供方提供的令牌
+        token_help: 外部代理的鉴权令牌。会在每次请求时作为 Bearer token 发送。
+        agent_id_label: Agent ID（可选）
+        agent_id_placeholder: main（默认）
+        agent_id_help: 当服务提供方托管多个 agent 时，用于路由到指定 agent；留空则使用默认。
+        disconnect_title: 外部连接
+        disconnect_description: 移除外部助手连接并切换回内置助手。
+        disconnect_button: 断开连接
+        confirm_disconnect:
+          title: 断开外部助手连接？
+          body: 这将移除已保存的 URL、令牌和 Agent ID，并切换回内置助手。你可以稍后通过输入新的凭据重新连接。
+
+      sync_settings:
+        auto_sync_label: 启用自动同步
+        auto_sync_description: 启用后，所有账户将每天在指定时间自动同步。
+        auto_sync_time_label: 同步时间（HH:MM）
+        auto_sync_time_description: 指定每天执行自动同步的时间。
+        include_pending_label: 包含待入账交易
+        include_pending_description: 启用后，将导入待入账（未清算）交易，并在交易正式入账后自动对账合并。若你的银行待入账数据不可靠，可关闭。
+        env_configured_message: 此设置已禁用，因为已设置服务提供商环境变量（SIMPLEFIN_INCLUDE_PENDING 或 PLAID_INCLUDE_PENDING）。移除该环境变量即可在此处启用。
+
+      disconnect_external_assistant:
+        external_assistant_disconnected: 已断开外部 AI 助手连接
+

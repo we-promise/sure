@@ -1,4 +1,4 @@
-<%= content_for :page_title, "Sync Providers" %>
+<%= content_for :page_title, t("settings.providers.show.page_title") %>
 
 <div class="space-y-4">
   <% if @encryption_error %>
@@ -14,7 +14,7 @@
   <% else %>
     <div>
       <p class="text-secondary mb-4">
-        Configure credentials for third-party sync providers. Settings configured here will override environment variables.
+        <%= t("settings.providers.show.description") %>
       </p>
     </div>
   <% end %>
@@ -31,49 +31,49 @@
     <%# They require custom UI for connection management, status display, and sync actions.         %>
     <%# The controller excludes them from @provider_configurations (see prepare_show_context).      %>
 
-    <%= settings_section title: "Lunch Flow", collapsible: true, open: false do %>
+    <%= settings_section title: t("settings.providers.sections.lunchflow"), collapsible: true, open: false do %>
       <turbo-frame id="lunchflow-providers-panel">
         <%= render "settings/providers/lunchflow_panel" %>
       </turbo-frame>
     <% end %>
 
-    <%= settings_section title: "SimpleFIN", collapsible: true, open: false do %>
+    <%= settings_section title: t("settings.providers.sections.simplefin"), collapsible: true, open: false do %>
       <turbo-frame id="simplefin-providers-panel">
         <%= render "settings/providers/simplefin_panel" %>
       </turbo-frame>
     <% end %>
 
-    <%= settings_section title: "Enable Banking (beta)", collapsible: true, open: false do %>
+    <%= settings_section title: t("settings.providers.sections.enable_banking"), collapsible: true, open: false do %>
       <turbo-frame id="enable_banking-providers-panel">
         <%= render "settings/providers/enable_banking_panel" %>
       </turbo-frame>
     <% end %>
 
-    <%= settings_section title: "CoinStats (beta)", collapsible: true, open: false do %>
+    <%= settings_section title: t("settings.providers.sections.coinstats"), collapsible: true, open: false do %>
       <turbo-frame id="coinstats-providers-panel">
         <%= render "settings/providers/coinstats_panel" %>
       </turbo-frame>
     <% end %>
 
-    <%= settings_section title: "Mercury (beta)", collapsible: true, open: false do %>
+    <%= settings_section title: t("settings.providers.sections.mercury"), collapsible: true, open: false do %>
       <turbo-frame id="mercury-providers-panel">
         <%= render "settings/providers/mercury_panel" %>
       </turbo-frame>
     <% end %>
 
-    <%= settings_section title: "Coinbase (beta)", collapsible: true, open: false do %>
+    <%= settings_section title: t("settings.providers.sections.coinbase"), collapsible: true, open: false do %>
       <turbo-frame id="coinbase-providers-panel">
         <%= render "settings/providers/coinbase_panel" %>
       </turbo-frame>
     <% end %>
 
-    <%= settings_section title: "SnapTrade (beta)", collapsible: true, open: false, auto_open_param: "manage" do %>
+    <%= settings_section title: t("settings.providers.sections.snaptrade"), collapsible: true, open: false, auto_open_param: "manage" do %>
       <turbo-frame id="snaptrade-providers-panel">
         <%= render "settings/providers/snaptrade_panel" %>
       </turbo-frame>
     <% end %>
 
-    <%= settings_section title: "Indexa Capital (alpha)", collapsible: true, open: false do %>
+    <%= settings_section title: t("settings.providers.sections.indexa_capital"), collapsible: true, open: false do %>
       <turbo-frame id="indexa_capital-providers-panel">
         <%= render "settings/providers/indexa_capital_panel" %>
       </turbo-frame>
