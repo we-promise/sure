@@ -43,80 +43,152 @@
     </div>
   </div>
 
-  <!-- Users table -->
+  <!-- Families/Groups & Users -->
   <div>
     <h2 class="text-lg font-semibold text-primary mb-3"><%= t(".section_title") %></h2>
-    <div class="bg-container-inset rounded-lg overflow-hidden">
-      <% if @users.any? %>
-        <table class="w-full">
-          <thead class="bg-surface-default border-b border-primary">
-            <tr>
-              <th class="px-4 py-3 text-left text-xs font-medium text-secondary uppercase"><%= t(".table.user") %></th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-secondary uppercase"><%= t(".table.trial_ends_at") %></th>
-              <th class="px-4 py-3 text-right text-xs font-medium text-secondary uppercase"><%= t(".table.family_accounts") %></th>
-              <th class="px-4 py-3 text-right text-xs font-medium text-secondary uppercase"><%= t(".table.family_transactions") %></th>
-              <th class="px-4 py-3 text-right text-xs font-medium text-secondary uppercase"><%= t(".table.role") %></th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-primary">
-            <% @users.each do |user| %>
-              <tr>
-                <td class="px-4 py-3">
-                  <div class="flex items-center gap-3">
-                    <div class="w-8 h-8 rounded-full bg-surface flex items-center justify-center shrink-0">
-                      <span class="text-sm font-medium text-primary"><%= user.initials %></span>
-                    </div>
-                    <div>
-                      <p class="font-medium text-primary"><%= user.display_name %></p>
-                      <p class="text-sm text-secondary"><%= user.email %></p>
-                      <p class="text-xs text-secondary mt-1 space-y-0.5">
-                        <span class="block"><%= t(".table.last_login") %>: <%= @last_login_by_user[user.id]&.to_fs(:long) || t(".table.never") %></span>
-                        <span class="block"><%= t(".table.session_count") %>: <%= number_with_delimiter(@sessions_count_by_user[user.id] || 0) %></span>
-                      </p>
-                    </div>
-                  </div>
-                </td>
-                <td class="px-4 py-3 text-sm text-primary whitespace-nowrap">
-                  <%= user.family.subscription&.trial_ends_at&.to_fs(:long) || t(".not_available") %>
-                </td>
-                <td class="px-4 py-3 text-sm text-primary text-right whitespace-nowrap">
-                  <%= number_with_delimiter(@accounts_count_by_family[user.family_id] || 0) %>
-                </td>
-                <td class="px-4 py-3 text-sm text-primary text-right whitespace-nowrap">
-                  <%= number_with_delimiter(@entries_count_by_family[user.family_id] || 0) %>
-                </td>
-                <td class="px-4 py-3 text-right">
-                  <% if user.id == Current.user.id %>
-                    <span class="text-sm text-secondary"><%= t(".you") %></span>
-                  <% else %>
-                    <%= form_with model: [:admin, user], method: :patch, class: "flex items-center justify-end gap-2" do |form| %>
-                      <%= form.select :role,
-                          options_for_select([
-                            [t(".roles.guest"), "guest"],
-                            [t(".roles.member", default: "Member"), "member"],
-                            [t(".roles.admin"), "admin"],
-                            [t(".roles.super_admin"), "super_admin"]
-                          ], user.role),
-                          {},
-                          class: "text-sm rounded-lg border border-primary bg-container text-primary px-2 py-1",
-                          onchange: "this.form.requestSubmit()" %>
-                    <% end %>
+
+    <% if @families_with_users.any? %>
+      <div class="space-y-4">
+        <% @families_with_users.each do |family, users| %>
+          <% pending_invitations = @invitations_by_family[family.id] || [] %>
+          <details class="bg-container-inset rounded-lg overflow-hidden group"
+                   data-controller="admin-invitation-delete"
+                   data-admin-invitation-delete-delete-all-label-value="<%= t(".invitations.delete_all") %>">
+            <summary class="flex items-center justify-between gap-4 px-4 py-3 cursor-pointer select-none hover:bg-surface-hover">
+              <div class="flex items-center gap-3">
+                <%= icon "users", class: "w-5 h-5 text-secondary shrink-0" %>
+                <div>
+                  <p class="font-semibold text-primary"><%= family.name.presence || t(".unnamed_family") %></p>
+                  <p class="text-xs text-secondary">
+                    <%= t(".family_summary",
+                          members: users.size,
+                          accounts: number_with_delimiter(@accounts_count_by_family[family.id] || 0),
+                          transactions: number_with_delimiter(@entries_count_by_family[family.id] || 0)) %>
+                  </p>
+                </div>
+              </div>
+              <div class="flex items-center gap-4 shrink-0">
+                <% sub = family.subscription %>
+                <% if sub&.trialing? %>
+                  <span class="text-xs text-secondary">
+                    <%= t(".table.trial_ends_at") %>: <%= sub.trial_ends_at&.to_fs(:long) || t(".not_available") %>
+                  </span>
+                <% elsif sub %>
+                  <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium
+                    <%= sub.active? ? "bg-green-100 text-green-800" : "bg-surface text-secondary" %>">
+                    <%= sub.status.humanize %>
+                  </span>
+                <% else %>
+                  <span class="text-xs text-secondary"><%= t(".no_subscription") %></span>
+                <% end %>
+                <%= icon "chevron-down", class: "w-4 h-4 text-secondary transition-transform group-open:rotate-180" %>
+              </div>
+            </summary>
+
+            <div class="border-t border-primary">
+              <table class="w-full">
+                <thead class="bg-surface-default border-b border-primary">
+                  <tr>
+                    <th class="px-4 py-2 text-left text-xs font-medium text-secondary uppercase"><%= t(".table.user") %></th>
+                    <th class="px-4 py-2 text-left text-xs font-medium text-secondary uppercase"><%= t(".table.last_login") %></th>
+                    <th class="px-4 py-2 text-right text-xs font-medium text-secondary uppercase"><%= t(".table.session_count") %></th>
+                    <th class="px-4 py-2 text-right text-xs font-medium text-secondary uppercase"><%= t(".table.role") %></th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-primary">
+                  <% users.each do |user| %>
+                    <tr>
+                      <td class="px-4 py-3">
+                        <div class="flex items-center gap-3">
+                          <div class="w-8 h-8 rounded-full bg-surface flex items-center justify-center shrink-0">
+                            <span class="text-sm font-medium text-primary"><%= user.initials %></span>
+                          </div>
+                          <div>
+                            <p class="font-medium text-primary"><%= user.display_name %></p>
+                            <p class="text-sm text-secondary"><%= user.email %></p>
+                          </div>
+                        </div>
+                      </td>
+                      <td class="px-4 py-3 text-sm text-primary whitespace-nowrap">
+                        <%= @last_login_by_user[user.id]&.to_fs(:long) || t(".table.never") %>
+                      </td>
+                      <td class="px-4 py-3 text-sm text-primary text-right whitespace-nowrap">
+                        <%= number_with_delimiter(@sessions_count_by_user[user.id] || 0) %>
+                      </td>
+                      <td class="px-4 py-3 text-right">
+                        <% if user.id == Current.user.id %>
+                          <span class="text-sm text-secondary"><%= t(".you") %></span>
+                        <% else %>
+                          <%= form_with model: [:admin, user], method: :patch, class: "flex items-center justify-end gap-2", data: { controller: "auto-submit-form" } do |form| %>
+                            <%= form.select :role,
+                                options_for_select([
+                                  [t(".roles.guest"), "guest"],
+                                  [t(".roles.member", default: "Member"), "member"],
+                                  [t(".roles.admin"), "admin"],
+                                  [t(".roles.super_admin"), "super_admin"]
+                                ], user.role),
+                                {},
+                                class: "text-sm rounded-lg border border-primary bg-container text-primary px-2 py-1",
+                                data: { auto_submit_form_target: "auto" } %>
+                          <% end %>
+                        <% end %>
+                      </td>
+                    </tr>
                   <% end %>
-                </td>
-              </tr>
-            <% end %>
-          </tbody>
-        </table>
-      <% else %>
-        <div class="p-8 text-center">
-          <%= icon "users", class: "w-12 h-12 mx-auto text-secondary mb-3" %>
-          <p class="text-secondary"><%= t(".no_users") %></p>
-        </div>
-      <% end %>
-    </div>
+                </tbody>
+                <% if pending_invitations.any? %>
+                  <tbody class="divide-y divide-primary border-t border-dashed border-primary">
+                    <% pending_invitations.each do |invitation| %>
+                      <tr class="bg-red-50/30 dark:bg-red-950/20">
+                        <td class="px-4 py-3">
+                          <div class="flex items-center gap-3">
+                            <%= icon "mail", class: "w-5 h-5 text-secondary shrink-0" %>
+                            <div>
+                              <p class="font-medium text-secondary italic"><%= invitation.email %></p>
+                              <p class="text-xs text-secondary"><%= t(".invitations.pending_label") %></p>
+                            </div>
+                          </div>
+                        </td>
+                        <td class="px-4 py-3 text-sm text-secondary whitespace-nowrap">
+                          <%= t(".invitations.expires", date: invitation.expires_at.to_fs(:long)) %>
+                        </td>
+                        <td class="px-4 py-3 text-sm text-secondary text-right whitespace-nowrap">
+                          —
+                        </td>
+                        <td class="px-4 py-3 text-right">
+                          <%= form_with url: admin_invitation_path(invitation), method: :delete, class: "inline" do |f| %>
+                            <button type="submit"
+                                    data-admin-invitation-delete-target="button"
+                                    data-action="click->admin-invitation-delete#handleClick"
+                                    class="text-sm text-red-600 hover:text-red-800 border border-red-300 rounded-lg px-2 py-1 hover:bg-red-50 transition-colors">
+                              <%= t(".invitations.delete") %>
+                            </button>
+                          <% end %>
+                        </td>
+                      </tr>
+                    <% end %>
+                  </tbody>
+                <% end %>
+              </table>
+              <% if pending_invitations.any? %>
+                <%= form_with url: invitations_admin_family_path(family), method: :delete,
+                              data: { admin_invitation_delete_target: "destroyAllForm" },
+                              class: "hidden" do |f| %>
+                <% end %>
+              <% end %>
+            </div>
+          </details>
+        <% end %>
+      </div>
+    <% else %>
+      <div class="bg-container-inset rounded-lg p-8 text-center">
+        <%= icon "users", class: "w-12 h-12 mx-auto text-secondary mb-3" %>
+        <p class="text-secondary"><%= t(".no_users") %></p>
+      </div>
+    <% end %>
   </div>
 
-  <%= settings_section title: t(".role_descriptions_title"), collapsible: true, open: false do %>
+  <%= settings_section title: t(".role_descriptions_title"), collapsible: true, open: true do %>
     <div class="space-y-3 text-sm">
       <div class="flex items-start gap-3">
         <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-surface text-primary shrink-0">

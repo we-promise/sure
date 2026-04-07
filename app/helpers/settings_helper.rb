@@ -4,6 +4,7 @@ module SettingsHelper
     { name: "Accounts", path: :accounts_path },
     { name: "Bank Sync", path: :settings_bank_sync_path },
     { name: "Preferences", path: :settings_preferences_path },
+    { name: "Appearance", path: :settings_appearance_path },
     { name: "Profile Info", path: :settings_profile_path },
     { name: "Security", path: :settings_security_path },
     { name: "Payment", path: :settings_payment_path, condition: :not_self_hosted? },

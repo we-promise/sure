@@ -24,6 +24,7 @@ class User < ApplicationRecord
 
   belongs_to :family
   belongs_to :last_viewed_chat, class_name: "Chat", optional: true
+  belongs_to :default_account, class_name: "Account", optional: true
   has_many :sessions, dependent: :destroy
   has_many :chats, dependent: :destroy
   has_many :api_keys, dependent: :destroy
@@ -33,6 +34,9 @@ class User < ApplicationRecord
   has_many :impersonated_support_sessions, class_name: "ImpersonationSession", foreign_key: :impersonated_id, dependent: :destroy
   has_many :oidc_identities, dependent: :destroy
   has_many :sso_audit_logs, dependent: :nullify
+  has_many :owned_accounts, class_name: "Account", foreign_key: :owner_id
+  has_many :account_shares, dependent: :destroy
+  has_many :shared_accounts, through: :account_shares, source: :account
   accepts_nested_attributes_for :family, update_only: true
 
   validates :email, presence: true, uniqueness: true, format: { with: URI::MailTo::EMAIL_REGEXP }
@@ -115,6 +119,14 @@ class User < ApplicationRecord
     super_admin? || role == "admin"
   end
 
+  def accessible_accounts
+    family.accounts.accessible_by(self)
+  end
+
+  def finance_accounts
+    family.accounts.included_in_finances_for(self)
+  end
+
   def display_name
     [ first_name, last_name ].compact.join(" ").presence || email
   end
@@ -136,7 +148,16 @@ class User < ApplicationRecord
   end
 
   def ai_available?
-    !Rails.application.config.app_mode.self_hosted? || ENV["OPENAI_ACCESS_TOKEN"].present? || Setting.openai_access_token.present?
+    return true unless Rails.application.config.app_mode.self_hosted?
+
+    effective_type = ENV["ASSISTANT_TYPE"].presence || family&.assistant_type.presence || "builtin"
+
+    case effective_type
+    when "external"
+      Assistant::External.available_for?(self)
+    else
+      ENV["OPENAI_ACCESS_TOKEN"].present? || Setting.openai_access_token.present?
+    end
   end
 
   def ai_enabled?
@@ -184,6 +205,7 @@ class User < ApplicationRecord
     if last_user_in_family?
       family.destroy
     else
+      reassign_owned_accounts!
       destroy
     end
   end
@@ -233,6 +255,15 @@ class User < ApplicationRecord
 
   def account_order
     AccountOrder.find(default_account_order) || AccountOrder.default
+  end
+
+  def default_account_for_transactions
+    return nil unless default_account_id.present?
+
+    account = default_account
+    return nil unless account&.eligible_for_transaction_default? && account.family_id == family_id
+
+    account
   end
 
   # Dashboard preferences management
@@ -295,6 +326,14 @@ class User < ApplicationRecord
   # Transactions preferences management
   def transactions_section_collapsed?(section_key)
     preferences&.dig("transactions_collapsed_sections", section_key) == true
+  end
+
+  def show_split_grouped?
+    preferences&.dig("show_split_grouped") != false
+  end
+
+  def dashboard_two_column?
+    preferences&.dig("dashboard_two_column") == true
   end
 
   def update_transactions_preferences(prefs)
@@ -371,6 +410,22 @@ class User < ApplicationRecord
 
     def last_user_in_family?
       family.users.count == 1
+    end
+
+    def reassign_owned_accounts!
+      account_ids = owned_accounts.pluck(:id)
+      return if account_ids.empty?
+
+      new_owner = family.users.where.not(id: id)
+                        .find_by(role: %w[admin super_admin]) ||
+                  family.users.where.not(id: id)
+                        .order(:created_at).first
+
+      return unless new_owner
+
+      Account.where(id: account_ids).update_all(owner_id: new_owner.id)
+      # Remove shares the new owner had for these accounts (they now own them)
+      AccountShare.where(account_id: account_ids, user_id: new_owner.id).delete_all
     end
 
     def deactivated_email

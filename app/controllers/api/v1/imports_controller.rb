@@ -52,8 +52,7 @@ class Api::V1::ImportsController < Api::V1::BaseController
     type = "TransactionImport" unless Import::TYPES.include?(type)
 
     # 2. Build the import object with permitted config attributes
-    @import = family.imports.build(import_config_params)
-    @import.type = type
+    @import = family.imports.build(import_config_params.merge(type: type))
     @import.account_id = params[:account_id] if params[:account_id].present?
 
     # 3. Attach the uploaded file if present (with validation)

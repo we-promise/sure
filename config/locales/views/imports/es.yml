@@ -1,6 +1,30 @@
 ---
 es:
   import:
+    qif_category_selections:
+      show:
+        title: "Configurar y seleccionar"
+        description: "Revisa el formato de fecha detectado y luego elige qué categorías y etiquetas de tu archivo QIF importar en %{product_name}."
+        categories_heading: Categorías
+        categories_found:
+          one: "1 categoría encontrada"
+          other: "%{count} categorías encontradas"
+        category_name_col: Nombre de categoría
+        transactions_col: Transacciones
+        tags_heading: Etiquetas
+        tags_found:
+          one: "1 etiqueta encontrada"
+          other: "%{count} etiquetas encontradas"
+        tag_name_col: Nombre de etiqueta
+        txn_count:
+          one: "1 transacción"
+          other: "%{count} transacciones"
+        empty_state_primary: No se encontraron categorías ni etiquetas en este archivo QIF.
+        empty_state_secondary: Todas las transacciones se importarán sin categorías ni etiquetas.
+        submit: Continuar a la revisión
+        split_warning_title: Transacciones divididas detectadas
+        split_warning_description: "Este archivo QIF contiene transacciones divididas. Las divisiones aún no son compatibles, por lo que cada transacción dividida se importará como una única transacción con su importe total y sin categoría. Los desgloses individuales de las divisiones no se conservarán."
+        split_badge: dividida
     cleans:
       show:
         description: Edita tus datos en la tabla de abajo. Las celdas rojas son inválidas.
@@ -8,8 +32,18 @@ es:
         errors_notice_mobile: Tienes errores en tus datos. Toca el tooltip del error para ver los detalles.
         title: Limpia tus datos
     configurations:
+      update:
+        success: Importación configurada correctamente.
+      category_import:
+        button_label: Continuar
+        description: Sube un archivo CSV sencillo (como el que generamos al exportar tus datos). Mapearemos las columnas automáticamente.
+        instructions: Selecciona continuar para analizar tu CSV y pasar al paso de limpieza.
       mint_import:
         date_format_label: Formato de fecha
+      rule_import:
+        description: Configura tu importación de reglas. Las reglas se crearán o actualizarán basándose en los datos del CSV.
+        process_button: Procesar reglas
+        process_help: Haz clic en el botón de abajo para procesar tu CSV y generar las filas de reglas.
       show:
         description: Selecciona las columnas que corresponden a cada campo en tu CSV.
         title: Configura tu importación
@@ -17,29 +51,35 @@ es:
         date_format_label: Formato de fecha
       transaction_import:
         date_format_label: Formato de fecha
+        rows_to_skip_label: Omitir las primeras n filas
     confirms:
       mappings:
         create_account: Crear cuenta
         csv_mapping_label: "%{mapping} en CSV"
         sure_mapping_label: "%{mapping} en %{product_name}"
-        no_accounts: Aún no tienes cuentas. Por favor, crea una cuenta que podamos usar para las filas 
-          (sin asignar) en tu CSV o vuelve al paso de Limpieza y proporciona un nombre de cuenta que podamos usar.
+        no_accounts: Aún no tienes cuentas. Por favor, crea una cuenta que podamos usar para las filas (sin asignar) en tu CSV o vuelve al paso de Limpieza y proporciona un nombre de cuenta que podamos usar.
         rows_label: Filas
         unassigned_account: ¿Necesitas crear una nueva cuenta para las filas sin asignar?
       show:
-        account_mapping_description: Asigna todas las cuentas de tu archivo importado a las cuentas existentes de Sure. 
-          También puedes añadir nuevas cuentas o dejarlas sin categorizar.
+        account_mapping_description: Asigna todas las cuentas de tu archivo importado a las cuentas existentes de Sure. También puedes añadir nuevas cuentas o dejarlas sin categorizar.
         account_mapping_title: Asigna tus cuentas
         account_type_mapping_description: Asigna todos los tipos de cuenta de tu archivo importado a los de Sure.
         account_type_mapping_title: Asigna tus tipos de cuenta
-        category_mapping_description: Asigna todas las categorías de tu archivo importado a las categorías existentes de Sure. 
-          También puedes añadir nuevas categorías o dejarlas sin categorizar.
+        category_mapping_description: Asigna todas las categorías de tu archivo importado a las categorías existentes de Sure. También puedes añadir nuevas categorías o dejarlas sin categorizar.
         category_mapping_title: Asigna tus categorías
-        tag_mapping_description: Asigna todas las etiquetas de tu archivo importado a las etiquetas existentes de Sure. 
-          También puedes añadir nuevas etiquetas o dejarlas sin categorizar.
+        tag_mapping_description: Asigna todas las etiquetas de tu archivo importado a las etiquetas existentes de Sure. También puedes añadir nuevas etiquetas o dejarlas sin categorizar.
         tag_mapping_title: Asigna tus etiquetas
     uploads:
       show:
+        qif_title: Subir archivo QIF
+        qif_description: Selecciona la cuenta a la que pertenece este archivo QIF y sube tu exportación .qif desde Quicken.
+        qif_account_label: Cuenta
+        qif_account_placeholder: Seleccionar una cuenta…
+        qif_file_prompt: para añadir tu archivo QIF aquí
+        qif_file_hint: Solo archivos .qif
+        qif_submit: Subir QIF
+        browse: Examinar
+        csv_file_prompt: para añadir tu archivo CSV aquí
         description: Pega o sube tu archivo CSV abajo. Por favor, revisa las instrucciones en la tabla de abajo antes de comenzar.
         instructions_1: Abajo hay un ejemplo de CSV con columnas disponibles para importar.
         instructions_2: Tu CSV debe tener una fila de encabezado.
@@ -48,14 +88,27 @@ es:
         instructions_5: Sin comas, sin símbolos de moneda y sin paréntesis en los números.
         title: Importa tus datos
   imports:
+    date_format:
+      heading: Formato de fecha
+      description: "El formato de fecha se detectó automáticamente desde tu archivo. Cámbialo si las fechas parecen incorrectas."
+      preview: "Primera fecha analizada"
+      error_title: "No se puede detectar el formato de fecha"
+      error_description: "Ninguno de los formatos de fecha compatibles pudo analizar las fechas de este archivo. Por favor, comprueba que el archivo contiene entradas de fecha válidas."
+    steps:
+      upload: Subir
+      configure: Configurar
+      clean: Limpiar
+      map: Mapear
+      confirm: Confirmar
+      select: Seleccionar
     index:
       title: Importaciones
       new: Nueva importación
     table:
-      title: Imports
+      title: Importaciones
       header:
         date: Fecha
-        operation: Operation
+        operation: Operación
         status: Estado
         actions: Acciones
       row:
@@ -68,19 +121,74 @@ es:
           failed: Fallido
         actions:
           revert: Revertir
-          confirm_revert: Esto eliminará las transacciones que se importaron, pero aún podrá revisar y volver a importar sus datos en cualquier momento.
+          confirm_revert: Esto eliminará las transacciones que se importaron, pero aún podrás revisar y volver a importar tus datos en cualquier momento.
           delete: Eliminar
           view: Ver
       empty: Aún no hay importaciones.
     new:
       description: Puedes importar manualmente varios tipos de datos mediante CSV o usar una de nuestras plantillas de importación como Mint.
       import_accounts: Importar cuentas
+      import_categories: Importar categorías
       import_mint: Importar desde Mint
       import_portfolio: Importar inversiones
+      import_rules: Importar reglas
       import_transactions: Importar transacciones
+      import_qif: Importar desde Quicken (QIF)
+      import_file: Importar documento
+      import_file_description: Análisis potenciado por IA para PDFs y subida con búsqueda para otros archivos compatibles
+      requires_account: Importa cuentas primero para desbloquear esta opción.
       resume: Reanudar %{type}
       sources: Fuentes
-      title: Nueva importación CSV
+      title: Nueva importación
+    create:
+      file_too_large: El archivo es demasiado grande. El tamaño máximo es %{max_size}MB.
+      invalid_file_type: Tipo de archivo no válido. Por favor, sube un archivo CSV.
+      csv_uploaded: CSV subido correctamente.
+      pdf_too_large: El archivo PDF es demasiado grande. El tamaño máximo es %{max_size}MB.
+      pdf_processing: Tu PDF se está procesando. Recibirás un correo electrónico cuando el análisis haya finalizado.
+      invalid_pdf: El archivo subido no es un PDF válido.
+      document_too_large: El documento es demasiado grande. El tamaño máximo es %{max_size}MB.
+      invalid_document_file_type: Tipo de archivo de documento no válido para el almacén de vectores activo.
+      document_uploaded: Documento subido correctamente.
+      document_upload_failed: No hemos podido subir el documento al almacén de vectores. Por favor, inténtalo de nuevo.
+      document_provider_not_configured: No hay ningún almacén de vectores configurado para la subida de documentos.
+    show:
+      finalize_upload: Por favor, finaliza la subida de tu archivo.
+      finalize_mappings: Por favor, finaliza tus mapeos antes de continuar.
     ready:
       description: Aquí tienes un resumen de los nuevos elementos que se añadirán a tu cuenta una vez publiques esta importación.
       title: Confirma tus datos de importación
+      summary_item_label: Elemento
+      summary_count_label: Cantidad
+      empty_summary: No se han encontrado registros importables en este archivo. Puede estar vacío, o las líneas no coinciden con el formato de exportación esperado (cada línea debe ser un objeto JSON con las claves «type» y «data», usando tipos que admite esta importación).
+      publish_import: Publicar importación
+      back_to_imports: Volver a importaciones
+    errors:
+      custom_column_requires_inflow: "Las importaciones de columnas personalizadas requieren que se seleccione una columna de entrada de fondos (inflow)"
+    document_types:
+      bank_statement: Extracto bancario
+      credit_card_statement: Extracto de tarjeta de crédito
+      investment_statement: Extracto de inversiones
+      financial_document: Documento financiero
+      contract: Contrato
+      other: Otro documento
+      unknown: Documento desconocido
+    pdf_import:
+      processing_title: Procesando tu PDF
+      processing_description: Estamos analizando tu documento mediante IA. Esto puede tardar un momento. Recibirás un correo electrónico cuando el análisis finalice.
+      check_status: Comprobar estado
+      back_to_dashboard: Volver al panel
+      failed_title: Error en el procesamiento
+      failed_description: No hemos podido procesar tu documento PDF. Por favor, inténtalo de nuevo o contacta con soporte.
+      try_again: Reintentar
+      delete_import: Eliminar importación
+      complete_title: Documento analizado
+      complete_description: Hemos analizado tu PDF y esto es lo que hemos encontrado.
+      document_type_label: Tipo de documento
+      summary_label: Resumen
+      email_sent_notice: Se te ha enviado un correo electrónico con los siguientes pasos.
+      back_to_imports: Volver a importaciones
+      unknown_state_title: Estado desconocido
+      unknown_state_description: Esta importación se encuentra en un estado inesperado. Por favor, vuelve a importaciones.
+      processing_failed_with_message: "%{message}"
+      processing_failed_generic: "Error en el procesamiento: %{error}"

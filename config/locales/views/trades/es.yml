@@ -6,24 +6,37 @@ es:
       account_prompt: Buscar cuenta
       amount: Importe
       holding: Símbolo del ticker
+      holding_optional: Símbolo del ticker (opcional)
       price: Precio por acción
       qty: Cantidad
       submit: Añadir transacción
       ticker_placeholder: AAPL
       type: Tipo
+      type_buy: Comprar
+      type_sell: Vender
+      type_deposit: Depósito
+      type_withdrawal: Retiro
+      type_dividend: Dividendo
+      type_interest: Interés
+      dividend_requires_security: Se requiere un valor para los dividendos
     header:
       buy: Comprar
+      sell: Vender
+      dividend: Dividendo
+      interest: Interés
       current_market_price_label: Precio de mercado actual
       overview: Resumen
       purchase_price_label: Precio de compra
       purchase_qty_label: Cantidad comprada
-      sell: Vender
       symbol_label: Símbolo
       total_return_label: Ganancia/pérdida no realizada
     new:
       title: Nueva transacción
     show:
       additional: Adicional
+      amount_label: Importe
+      buy: Compra
+      category_label: Categoría
       cost_per_share_label: Costo por acción
       date_label: Fecha
       delete: Eliminar
@@ -32,7 +45,10 @@ es:
       details: Detalles
       exclude_subtitle: Esta operación no se incluirá en informes y cálculos
       exclude_title: Excluir de los análisis
+      no_category: Sin categoría
       note_label: Nota
       note_placeholder: Añade aquí cualquier nota adicional...
       quantity_label: Cantidad
+      sell: Venta
       settings: Configuración
+      type_label: Tipo

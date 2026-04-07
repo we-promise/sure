@@ -5,9 +5,9 @@ class PlaidAccount::Transactions::CategoryMatcherTest < ActiveSupport::TestCase
     @family = families(:empty)
 
     # User income categories
-    @income = @family.categories.create!(name: "Income", classification: "income")
-    @dividend_income = @family.categories.create!(name: "Dividend Income", parent: @income, classification: "income")
-    @interest_income = @family.categories.create!(name: "Interest Income", parent: @income, classification: "income")
+    @income = @family.categories.create!(name: "Income")
+    @dividend_income = @family.categories.create!(name: "Dividend Income", parent: @income)
+    @interest_income = @family.categories.create!(name: "Interest Income", parent: @income)
 
     # User expense categories
     @loan_payments = @family.categories.create!(name: "Loan Payments")

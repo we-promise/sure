@@ -1,0 +1,190 @@
+---
+es:
+  snaptrade_items:
+    default_name: "Conexión de SnapTrade"
+    create:
+      success: "SnapTrade configurado correctamente."
+    update:
+      success: "Configuración de SnapTrade actualizada correctamente."
+    destroy:
+      success: "Conexión de SnapTrade programada para su eliminación."
+    connect:
+      decryption_failed: "No se han podido leer las credenciales de SnapTrade. Por favor, elimina y vuelve a crear esta conexión."
+      connection_failed: "Error al conectar con SnapTrade: %{message}"
+    callback:
+      success: "¡Bróker conectado! Por favor, selecciona qué cuentas quieres vincular."
+      no_item: "No se ha encontrado la configuración de SnapTrade."
+    complete_account_setup:
+      success:
+        one: "Se ha vinculado %{count} cuenta correctamente."
+        other: "Se han vinculado %{count} cuentas correctamente."
+      partial_success:
+        one: "Se ha vinculado %{count} cuenta. %{failed_count} ha fallado."
+        other: "Se han vinculado %{count} cuentas. %{failed_count} han fallado."
+      link_failed: "Error al vincular las cuentas: %{errors}"
+      no_accounts: "No se ha seleccionado ninguna cuenta para vincular."
+    preload_accounts:
+      not_configured: "SnapTrade no está configurado."
+    select_accounts:
+      not_configured: "SnapTrade no está configurado."
+    select_existing_account:
+      not_found: "No se ha encontrado la cuenta o la configuración de SnapTrade."
+      title: "Vincular a cuenta de SnapTrade"
+      header: "Vincular cuenta existente"
+      subtitle: "Selecciona una cuenta de SnapTrade para realizar la vinculación"
+      no_accounts: "No hay cuentas de SnapTrade disponibles sin vincular."
+      connect_hint: "Es posible que primero debas conectar un bróker."
+      settings_link: "Ir a Ajustes del proveedor"
+      linking_to: "Vinculando a la cuenta:"
+      balance_label: "Saldo:"
+      link_button: "Vincular"
+      cancel_button: "Cancelar"
+    link_existing_account:
+      success: "Vinculado correctamente a la cuenta de SnapTrade."
+      failed: "Error al vincular la cuenta: %{message}"
+      not_found: "Cuenta no encontrada."
+    connections:
+      unknown_brokerage: "Bróker desconocido"
+    delete_connection:
+      success: "Conexión eliminada correctamente. Se ha liberado un espacio."
+      failed: "Error al eliminar la conexión: %{message}"
+      missing_authorization_id: "Falta el ID de autorización"
+      api_deletion_failed: "No se pudo eliminar la conexión de SnapTrade por falta de credenciales. Es posible que la conexión aún exista en tu cuenta de SnapTrade."
+    delete_orphaned_user:
+      success: "Registro huérfano eliminado correctamente."
+      failed: "Error al eliminar el registro huérfano."
+    setup_accounts:
+      title: "Configurar cuentas de SnapTrade"
+      header: "Configura tus cuentas de SnapTrade"
+      subtitle: "Selecciona qué cuentas de bróker quieres vincular"
+      syncing: "Obteniendo tus cuentas..."
+      loading: "Obteniendo cuentas de SnapTrade..."
+      loading_hint: "Haz clic en Actualizar para buscar cuentas."
+      refresh: "Actualizar"
+      info_title: "Datos de inversión de SnapTrade"
+      info_holdings: "Posiciones con precios y cantidades actuales"
+      info_cost_basis: "Base de costes por posición (cuando esté disponible)"
+      info_activities: "Historial de operaciones con etiquetas de actividad (Compra, Venta, Dividendo, etc.)"
+      info_history: "Hasta 3 años de historial de transacciones"
+      free_tier_note: "El nivel gratuito de SnapTrade permite 5 conexiones de bróker. Consulta tu panel de SnapTrade para ver el uso actual."
+      no_accounts_title: "No se han encontrado cuentas"
+      no_accounts_message: "No se han encontrado cuentas de bróker. Esto puede ocurrir si cancelaste la conexión o si tu bróker no es compatible."
+      try_again: "Conectar bróker"
+      back_to_settings: "Volver a Ajustes"
+      available_accounts: "Cuentas disponibles"
+      balance_label: "Saldo:"
+      account_number: "Cuenta:"
+      create_button: "Crear cuentas seleccionadas"
+      cancel_button: "Cancelar"
+      creating: "Creando cuentas..."
+      done_button: "Listo"
+      or_link_existing: "O vincula a una cuenta existente en lugar de crear una nueva:"
+      select_account: "Selecciona una cuenta..."
+      link_button: "Vincular"
+      linked_accounts: "Ya vinculadas"
+      linked_to: "Vinculada a:"
+    snaptrade_item:
+      accounts_need_setup:
+        one: "%{count} cuenta necesita configuración"
+        other: "%{count} cuentas necesitan configuración"
+      deletion_in_progress: "Eliminación en curso..."
+      syncing: "Sincronizando..."
+      requires_update: "La conexión necesita una actualización"
+      error: "Error de sincronización"
+      status: "Sincronizado hace %{timestamp} - %{summary}"
+      status_never: "Nunca sincronizado"
+      reconnect: "Reconectar"
+      connect_brokerage: "Conectar bróker"
+      add_another_brokerage: "Conectar otro bróker"
+      delete: "Eliminar"
+      setup_needed: "Las cuentas necesitan configuración"
+      setup_description: "Algunas cuentas de SnapTrade deben vincularse a cuentas de Sure."
+      setup_action: "Configurar cuentas"
+      setup_accounts_menu: "Configurar cuentas"
+      manage_connections: "Gestionar conexiones"
+      more_accounts_available:
+        one: "Hay %{count} cuenta más disponible para configurar"
+        other: "Hay %{count} cuentas más disponibles para configurar"
+      no_accounts_title: "No se han detectado cuentas"
+      no_accounts_description: "Conecta un bróker para importar tus cuentas de inversión."
+
+  providers:
+    snaptrade:
+      name: "SnapTrade"
+      connection_description: "Conecta con tu bróker a través de SnapTrade (más de 25 brókers compatibles)"
+      description: "SnapTrade conecta con más de 25 brókers principales (Fidelity, Vanguard, Schwab, Robinhood, etc.) y proporciona un historial completo de operaciones con etiquetas de actividad y base de costes."
+      setup_title: "Instrucciones de configuración:"
+      step_1_html: "Crea una cuenta en <a href=\"https://dashboard.snaptrade.com\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"text-primary underline\">dashboard.snaptrade.com</a>"
+      step_2: "Copia tu Client ID y tu Consumer Key desde el panel"
+      step_3: "Introduce tus credenciales a continuación y haz clic en Guardar"
+      step_4: "Ve a la página de Cuentas y usa 'Conectar otro bróker' para vincular tus cuentas de inversión"
+      free_tier_warning: "El nivel gratuito incluye 5 conexiones de bróker. Las conexiones adicionales requieren un plan de pago de SnapTrade."
+      client_id_label: "Client ID"
+      client_id_placeholder: "Introduce tu Client ID de SnapTrade"
+      client_id_update_placeholder: "Introduce el nuevo Client ID para actualizar"
+      consumer_key_label: "Consumer Key"
+      consumer_key_placeholder: "Introduce tu Consumer Key de SnapTrade"
+      consumer_key_update_placeholder: "Introduce la nueva Consumer Key para actualizar"
+      save_button: "Guardar configuración"
+      update_button: "Actualizar configuración"
+      status_connected:
+        one: "%{count} cuenta de SnapTrade"
+        other: "%{count} cuentas de SnapTrade"
+      needs_setup:
+        one: "%{count} necesita configuración"
+        other: "%{count} necesitan configuración"
+      status_ready: "Listo para conectar brókers"
+      status_needs_registration: "Credenciales guardadas. Ve a la página de Cuentas para conectar brókers."
+      status_not_configured: "No configurado"
+      setup_accounts_button: "Configurar cuentas"
+      connect_button: "Conectar bróker"
+      connected_brokerages: "Conectados:"
+      manage_connections: "Gestionar conexiones"
+      connection_limit_info: "El nivel gratuito de SnapTrade permite 5 conexiones de bróker. Elimina conexiones sin usar para liberar espacios."
+      loading_connections: "Cargando conexiones..."
+      connections_error: "Error al cargar las conexiones: %{message}"
+      accounts_count:
+        one: "%{count} cuenta"
+        other: "%{count} cuentas"
+      orphaned_connection: "Conexión huérfana (no sincronizada localmente)"
+      needs_linking: "necesita vincularse"
+      no_connections: "No se han encontrado conexiones de bróker."
+      delete_connection: "Eliminar"
+      delete_connection_title: "¿Eliminar conexión del bróker?"
+      delete_connection_body: "Esto eliminará permanentemente la conexión de %{brokerage} de SnapTrade. Todas las cuentas de este bróker se desvincularán. Deberás volver a conectar para sincronizar estas cuentas de nuevo."
+      delete_connection_confirm: "Eliminar conexión"
+      orphaned_users_title:
+        one: "%{count} registro huérfano"
+        other: "%{count} registros huérfanos"
+      orphaned_users_description: "Estos son registros de usuario de SnapTrade anteriores que están ocupando tus espacios de conexión. Elimínalos para liberar espacio."
+      orphaned_user: "Registro huérfano"
+      delete_orphaned_user: "Eliminar"
+      delete_orphaned_user_title: "¿Eliminar registro huérfano?"
+      delete_orphaned_user_body: "Esto eliminará permanentemente este usuario de SnapTrade huérfano y todas sus conexiones de bróker, liberando espacios de conexión."
+      delete_orphaned_user_confirm: "Eliminar registro"
+
+  snaptrade_item:
+    sync_status:
+      no_accounts: "No se han encontrado cuentas"
+      synced:
+        one: "%{count} cuenta sincronizada"
+        other: "%{count} cuentas sincronizadas"
+      synced_with_setup: "%{linked} sincronizadas, %{unlinked} necesitan configuración"
+    institution_summary:
+      none: "No hay instituciones conectadas"
+      count:
+        one: "%{count} institución"
+        other: "%{count} instituciones"
+    brokerage_summary:
+      none: "No hay brókers conectados"
+      count:
+        one: "%{count} bróker"
+        other: "%{count} brókers"
+    syncer:
+      discovering: "Detectando cuentas..."
+      importing: "Importando cuentas de SnapTrade..."
+      processing: "Procesando posiciones y actividades..."
+      calculating: "Calculando saldos..."
+      checking_config: "Comprobando la configuración de la cuenta..."
+      needs_setup: "%{count} cuentas necesitan configuración..."
+      activities_fetching_async: "Las actividades se están obteniendo en segundo plano. Esto puede tardar hasta un minuto para conexiones de bróker recientes."

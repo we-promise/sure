@@ -38,4 +38,34 @@ class SecurityTest < ActiveSupport::TestCase
     assert_not duplicate.valid?
     assert_equal [ "has already been taken" ], duplicate.errors[:ticker]
   end
+
+  test "cash_for lazily creates a per-account synthetic cash security" do
+    account = accounts(:investment)
+
+    cash = Security.cash_for(account)
+
+    assert cash.persisted?
+    assert cash.cash?
+    assert cash.offline?
+    assert_equal "Cash", cash.name
+    assert_includes cash.ticker, account.id.upcase
+  end
+
+  test "cash_for returns the same security on repeated calls" do
+    account = accounts(:investment)
+
+    first  = Security.cash_for(account)
+    second = Security.cash_for(account)
+
+    assert_equal first.id, second.id
+  end
+
+  test "standard scope excludes cash securities" do
+    account = accounts(:investment)
+    Security.cash_for(account)
+
+    standard_tickers = Security.standard.pluck(:ticker)
+
+    assert_not_includes standard_tickers, "CASH-#{account.id.upcase}"
+  end
 end

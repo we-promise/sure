@@ -44,6 +44,7 @@ class SettingsTest < ApplicationSystemTestCase
   end
 
   test "can update self hosting settings" do
+    sign_in users(:sure_support_staff)
     Rails.application.config.app_mode.stubs(:self_hosted?).returns(true)
     Provider::Registry.stubs(:get_provider).with(:twelve_data).returns(nil)
     Provider::Registry.stubs(:get_provider).with(:yahoo_finance).returns(nil)
@@ -59,6 +60,7 @@ class SettingsTest < ApplicationSystemTestCase
     click_button "Generate new code"
     assert_selector 'span[data-clipboard-target="source"]', visible: true, count: 1 # invite code copy widget
     copy_button = find('button[data-action="clipboard#copy"]', match: :first) # Find the first copy button (adjust if needed)
+    page.execute_script("Object.defineProperty(navigator, 'clipboard', { value: { writeText: () => Promise.resolve() }, writable: true, configurable: true })") # Mock clipboard API due to browser security restrictions in tests
     copy_button.click
     assert_selector 'span[data-clipboard-target="iconSuccess"]', visible: true, count: 1 # text copied and icon changed to checkmark
   end

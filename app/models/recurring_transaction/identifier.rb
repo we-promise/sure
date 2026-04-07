@@ -24,12 +24,12 @@ class RecurringTransaction
           transaction = entry.entryable
           # Use merchant_id if present, otherwise use entry name
           identifier = transaction.merchant_id.present? ? [ :merchant, transaction.merchant_id ] : [ :name, entry.name ]
-          [ identifier, entry.amount.round(2), entry.currency ]
+          [ identifier, entry.amount.round(2), entry.currency, entry.account_id ]
         end
 
       recurring_patterns = []
 
-      grouped_transactions.each do |(identifier, amount, currency), entries|
+      grouped_transactions.each do |(identifier, amount, currency, account_id), entries|
         next if entries.size < 3  # Must have at least 3 occurrences
 
         # Check if the last occurrence was within the last 45 days
@@ -49,6 +49,7 @@ class RecurringTransaction
           pattern = {
             amount: amount,
             currency: currency,
+            account_id: account_id,
             expected_day_of_month: expected_day,
             last_occurrence_date: last_occurrence.date,
             occurrence_count: entries.size,
@@ -70,7 +71,8 @@ class RecurringTransaction
         # Build find conditions based on whether it's merchant-based or name-based
         find_conditions = {
           amount: pattern[:amount],
-          currency: pattern[:currency]
+          currency: pattern[:currency],
+          account_id: pattern[:account_id]
         }
 
         if pattern[:merchant_id].present?
@@ -148,7 +150,8 @@ class RecurringTransaction
           name: recurring.name,
           currency: recurring.currency,
           expected_day: recurring.expected_day_of_month,
-          lookback_months: 6
+          lookback_months: 6,
+          account: recurring.account
         )
 
         next if matching_entries.empty?
@@ -180,7 +183,8 @@ class RecurringTransaction
           name: recurring_transaction.name,
           currency: recurring_transaction.currency,
           expected_day: recurring_transaction.expected_day_of_month,
-          lookback_months: 6
+          lookback_months: 6,
+          account: recurring_transaction.account
         )
 
         # Update if we have any matching transactions

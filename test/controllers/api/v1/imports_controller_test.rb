@@ -4,19 +4,30 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
   include ActiveJob::TestHelper
 
   setup do
-    @family = families(:dylan_family)
     @user = users(:family_admin)
+    @family = @user.family
     @account = accounts(:depository)
     @import = imports(:transaction)
 
     @user.api_keys.active.destroy_all
 
-    @api_key = ApiKey.create!( # pipelock:ignore
+    @api_key = ApiKey.create!(
       user: @user,
       name: "Test Read-Write Key",
       scopes: [ "read_write" ],
-      key: SecureRandom.hex(16)
+      display_key: "test_rw_#{SecureRandom.hex(8)}"
     )
+
+    @read_only_api_key = ApiKey.create!(
+      user: @user,
+      name: "Test Read-Only Key",
+      scopes: [ "read" ],
+      display_key: "test_ro_#{SecureRandom.hex(8)}",
+      source: "mobile"
+    )
+
+    Redis.new.del("api_rate_limit:#{@api_key.id}")
+    Redis.new.del("api_rate_limit:#{@read_only_api_key.id}")
   end
 
   test "should list imports" do
@@ -82,6 +93,44 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_equal 1, import.rows_count
     assert_equal "Test Transaction", import.rows.first.name
     assert_equal "-10.00", import.rows.first.amount # Normalized
+  end
+
+  test "should instantiate RuleImport before generating rows" do
+    @family.categories.create!(
+      name: "Groceries",
+      color: "#407706",
+      lucide_icon: "shopping-basket"
+    )
+
+    csv_content = <<~CSV
+      name,resource_type,active,effective_date,conditions,actions
+      "Categorize groceries","transaction",true,2024-01-01,"[{""condition_type"":""transaction_name"",""operator"":""like"",""value"":""grocery""}]","[{""action_type"":""set_transaction_category"",""value"":""Groceries""}]"
+    CSV
+
+    assert_difference([ "Import.count", "Import::Row.count" ], 1) do
+      post api_v1_imports_url,
+           params: {
+             type: "RuleImport",
+             raw_file_content: csv_content,
+             col_sep: ","
+           },
+           headers: api_headers(@api_key)
+    end
+
+    assert_response :created
+
+    json_response = JSON.parse(response.body)
+    import = Import.find(json_response["data"]["id"])
+    row = import.rows.first
+
+    assert_instance_of RuleImport, import
+    assert_equal 1, import.rows_count
+    assert_equal "Categorize groceries", row.name
+    assert_equal "transaction", row.resource_type
+    assert_equal true, row.active
+    assert_equal "2024-01-01", row.effective_date
+    assert_equal '[{"condition_type":"transaction_name","operator":"like","value":"grocery"}]', row.conditions
+    assert_equal '[{"action_type":"set_transaction_category","value":"Groceries"}]', row.actions
   end
 
   test "should create import and auto-publish when configured and requested" do
