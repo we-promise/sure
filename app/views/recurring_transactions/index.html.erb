@@ -59,7 +59,7 @@
     <div class="bg-container rounded-xl shadow-border-xs p-4">
       <% if @recurring_transactions.empty? %>
         <div class="text-center py-12">
-          <div class="text-secondary mb-4">
+          <div class="flex justify-center text-secondary mb-4">
             <%= icon "repeat", size: "xl" %>
           </div>
           <p class="text-primary font-medium mb-2"><%= t("recurring_transactions.empty.title") %></p>

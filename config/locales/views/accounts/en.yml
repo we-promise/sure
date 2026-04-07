@@ -24,6 +24,7 @@ en:
     destroy:
       success: "%{type} account scheduled for deletion"
       cannot_delete_linked: "Cannot delete a linked account. Please unlink it first."
+      failed: "Resource deletion failed. Try again later."
     empty:
       empty_message: Add an account either via connection, importing or entering manually.
       new_account: New account

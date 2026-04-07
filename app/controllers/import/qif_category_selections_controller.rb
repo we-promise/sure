@@ -4,15 +4,28 @@ class Import::QifCategorySelectionsController < ApplicationController
   before_action :set_import
 
   def show
-    @categories       = @import.row_categories
-    @tags             = @import.row_tags
-    @category_counts  = @import.rows.group(:category).count.reject { |k, _| k.blank? }
-    @tag_counts       = compute_tag_counts
+    valid_formats         = @import.valid_date_formats_with_preview
+    @date_formats         = valid_formats.map { |f| [ f[:label], f[:format] ] }
+    @date_previews        = valid_formats.each_with_object({}) { |f, h| h[f[:format]] = f[:preview] }
+    @categories           = @import.row_categories
+    @tags                 = @import.row_tags
+    @category_counts      = @import.rows.group(:category).count.reject { |k, _| k.blank? }
+    @tag_counts           = compute_tag_counts
     @split_categories      = @import.split_categories
     @has_split_transactions = @import.has_split_transactions?
   end
 
   def update
+    # If the user changed the date format, re-generate rows with the new format.
+    format_changed = false
+    if selection_params[:date_format].present? && selection_params[:date_format] != @import.qif_date_format
+      format_changed = true
+      @import.qif_date_format = selection_params[:date_format]
+      @import.update_column(:column_mappings, @import.column_mappings)
+      @import.generate_rows_from_csv
+      @import.sync_mappings
+    end
+
     all_categories = @import.row_categories
     all_tags       = @import.row_tags
 
@@ -38,7 +51,7 @@ class Import::QifCategorySelectionsController < ApplicationController
         end
       end
 
-      @import.sync_mappings
+      @import.sync_mappings unless format_changed
     end
 
     redirect_to import_clean_path(@import), notice: "Categories and tags saved."
@@ -50,7 +63,7 @@ class Import::QifCategorySelectionsController < ApplicationController
       @import = Current.family.imports.find(params[:import_id])
 
       unless @import.is_a?(QifImport)
-        redirect_to imports_path
+        redirect_to imports_path and return
       end
     end
 
@@ -63,6 +76,6 @@ class Import::QifCategorySelectionsController < ApplicationController
     end
 
     def selection_params
-      params.permit(categories: [], tags: [])
+      params.permit(:date_format, categories: [], tags: [])
     end
 end

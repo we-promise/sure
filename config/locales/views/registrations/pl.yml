@@ -1,0 +1,31 @@
+---
+pl:
+  helpers:
+    label:
+      user:
+        invite_code: Kod zaproszenia
+    submit:
+      user:
+        create: Kontynuuj
+  registrations:
+    closed: Rejestracja jest obecnie zamknięta.
+    create:
+      failure: Wystąpił problem podczas rejestracji.
+      invalid_invite_code: Nieprawidłowy kod zaproszenia, spróbuj ponownie.
+      success: Rejestracja zakończyła się pomyślnie.
+    new:
+      invitation_message: "%{inviter} zaprosił(a) Cię do dołączenia jako %{role}"
+      join_family_title: Dołącz do %{family} %{moniker}
+      role_admin: administrator
+      role_guest: gość
+      role_member: członek
+      submit: Utwórz konto
+      title: Utwórz swoje konto
+      welcome_body: Aby rozpocząć, musisz zarejestrować nowe konto. Następnie będzie można skonfigurować dodatkowe ustawienia w aplikacji.
+      welcome_title: Witamy w Self Hosted %{product_name}!
+      password_placeholder: Wpisz hasło
+      password_requirements:
+        length: Minimum 8 znaków
+        case: Wielkie i małe litery
+        number: Liczba (0-9)
+        special: "Znak specjalny (!, @, #, $, %, itp.)"
