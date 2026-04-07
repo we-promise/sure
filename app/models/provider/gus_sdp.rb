@@ -3,7 +3,9 @@ class Provider::GusSdp < Provider
 
   DEFAULT_BASE_URL = "https://api-sdp.stat.gov.pl/api".freeze
   # CPI (consumer prices) monthly indicator used by GUS SDP.
-  DEFAULT_CPI_INDICATOR_ID = 639
+  # 1832 = "analogiczny okres roku poprzedniego=100" (YoY index, id-sposob-prezentacji-miara=5).
+  # 639  = "okres poprzedni=100" (MoM index) — do NOT use for bond inflation calculations.
+  DEFAULT_CPI_INDICATOR_ID = 1832
 
   # Optional GUS SDP client identifier (X-ClientId header). Not a secret — public API identifier.
   # Set via ENV["GUS_SDP_API_KEY"] or the hosting settings page.
@@ -30,10 +32,14 @@ class Provider::GusSdp < Provider
         []
       end
 
-      rows.map do |row|
+      rows.filter_map do |row|
+        period_id = row["id-okres"] || row["period_id"]
+        value = row["wartosc"] || row["value"] || row["rate_yoy"]
+        next if period_id.blank? || value.blank?
+
         {
-          period_id: row["id-okres"],
-          value: row["wartosc"]
+          period_id: period_id,
+          value: value
         }
       end
     end
