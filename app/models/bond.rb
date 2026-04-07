@@ -27,7 +27,7 @@ class Bond < ApplicationRecord
     "other_bond" => "other"
   }.freeze
 
-  INFLATION_LINKED_SUBTYPES = %w[inflation_linked savings].freeze
+  INFLATION_LINKED_SUBTYPES = %w[inflation_linked].freeze
 
   PRODUCT_DEFAULTS = {
     "us_t_bill_4w" => {
@@ -118,6 +118,8 @@ class Bond < ApplicationRecord
   COUPON_FREQUENCIES = %w[monthly quarterly semi_annual annual at_maturity].freeze
 
   validates :subtype, inclusion: { in: SUBTYPES.keys }, allow_nil: true
+  validates :rate_type, inclusion: { in: RATE_TYPES }, allow_nil: true
+  validates :coupon_frequency, inclusion: { in: COUPON_FREQUENCIES }, allow_nil: true
   validates :tax_wrapper, inclusion: { in: TAX_WRAPPERS.keys }
 
   def original_balance
@@ -166,6 +168,10 @@ class Bond < ApplicationRecord
 
     def classification
       "asset"
+    end
+
+    def display_name
+      I18n.t("accounts.sidebar.types.bond", default: super)
     end
 
     def product_options_for_select

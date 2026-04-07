@@ -48,8 +48,12 @@ class GusInflationRate < ApplicationRecord
 
         value = row[:value]
         next if value.blank?
-        rate_yoy = value.to_d
-        next if rate_yoy.zero?
+
+        begin
+          rate_yoy = BigDecimal(value.to_s)
+        rescue ArgumentError
+          next
+        end
 
         existing = find_by(year: year.to_i, month: month)
         next if !force && existing.present? && existing.rate_yoy == rate_yoy

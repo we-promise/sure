@@ -533,13 +533,14 @@ class BondLot < ApplicationRecord
       else
         inflation_snapshot = inflation_snapshot_for(on:, allow_import:)
         inflation_component = inflation_snapshot[:inflation_component_percent]
-        margin_component = inflation_margin&.to_d || 0.to_d
+        margin_component = inflation_margin&.to_d
 
-        # Cannot compute rate without inflation component — do not coerce nil CPI to 0.
-        return { annual_rate_decimal: nil } if inflation_component.nil?
+        # Cannot compute rate without inflation component or margin — do not coerce nil values to 0.
+        return { annual_rate_decimal: nil } if inflation_component.nil? || margin_component.nil?
 
-        # Polish treasury bonds have a 0% rate floor — deflation cannot reduce the rate below 0.
-        annual_rate = [ (inflation_component + margin_component) / 100, 0.to_d ].max
+        raw_rate = (inflation_component + margin_component) / 100
+        # Apply 0% floor only for products where deflation protection applies (e.g. Polish treasury bonds).
+        annual_rate = deflation_floor_applies? ? [ raw_rate, 0.to_d ].max : raw_rate
 
         {
           annual_rate_decimal: annual_rate,
@@ -601,27 +602,16 @@ class BondLot < ApplicationRecord
     end
 
     def apply_product_defaults
-      product_selected = product_code.present?
-      defaults = if product_selected
-        Bond::PRODUCT_DEFAULTS[product_code]
-      elsif canonical_subtype == "inflation_linked"
-        nil
-      else
-        Bond::PRODUCT_DEFAULTS[canonical_subtype]
-      end
+      return unless product_code.present?
+
+      defaults = Bond::PRODUCT_DEFAULTS[product_code]
       return if defaults.blank?
 
       self.subtype = defaults[:subtype] if subtype.blank? || Bond::LEGACY_SUBTYPE_ALIASES.key?(subtype)
       self.term_months = defaults[:term_months] if defaults[:term_months].present?
-      if product_selected
-        self.rate_type = defaults[:rate_type] if defaults[:rate_type].present?
-        self.coupon_frequency = defaults[:coupon_frequency] if defaults[:coupon_frequency].present?
-        self.cpi_lag_months = defaults[:cpi_lag_months] if defaults[:cpi_lag_months].present?
-      else
-        self.rate_type ||= defaults[:rate_type]
-        self.coupon_frequency ||= defaults[:coupon_frequency]
-        self.cpi_lag_months ||= defaults[:cpi_lag_months]
-      end
+      self.rate_type = defaults[:rate_type] if defaults[:rate_type].present?
+      self.coupon_frequency = defaults[:coupon_frequency] if defaults[:coupon_frequency].present?
+      self.cpi_lag_months = defaults[:cpi_lag_months] if defaults[:cpi_lag_months].present?
       self.nominal_per_unit ||= 100
       self.issue_date ||= purchased_on
       self.auto_fetch_inflation = true if auto_fetch_inflation.nil?
@@ -639,6 +629,10 @@ class BondLot < ApplicationRecord
       inflation_like = canonical_subtype.in?(Bond::INFLATION_LINKED_SUBTYPES)
       self.inflation_provider = nil unless inflation_like
       self.inflation_provider = "gus_sdp" if inflation_like && auto_fetch_inflation && inflation_provider.blank?
+    end
+
+    def deflation_floor_applies?
+      product_code&.start_with?("pl_")
     end
 
     def inflation_provider_key
@@ -722,6 +716,7 @@ class BondLot < ApplicationRecord
         first_period_rate: nil,
         inflation_margin: nil,
         inflation_rate_assumption: inflation_rate_assumption,
+        inflation_provider: inflation_provider,
         cpi_lag_months: cpi_lag_months,
         auto_fetch_inflation: auto_fetch_inflation,
         auto_close_on_maturity: auto_close_on_maturity,

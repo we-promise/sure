@@ -27,7 +27,7 @@ class InflationRate < ApplicationRecord
 
       rows.each do |row|
         month = row[:month].to_i
-        next if month <= 0
+        next unless month.between?(1, 12)
 
         raw_rate_yoy = row[:rate_yoy]
         # Skip rows with no rate data. Zero is valid (0% YoY change) and must not be dropped.
