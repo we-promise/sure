@@ -25,5 +25,4 @@ class Settings::Hostings::GusSdpSettingsComponent < ApplicationComponent
   def api_key_input_unlocked?
     !env_api_key_configured?
   end
-
 end
