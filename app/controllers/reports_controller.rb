@@ -124,10 +124,10 @@ class ReportsController < ApplicationController
       @investment_metrics = build_investment_metrics
 
       # Investment flows (contributions/withdrawals)
-      @investment_flows = InvestmentFlowStatement.new(Current.family).period_totals(period: @period)
+      @investment_flows = InvestmentFlowStatement.new(Current.family, user: Current.user).period_totals(period: @period)
 
       # Flags for view rendering
-      @has_accounts = Current.family.accounts.any?
+      @has_accounts = accessible_accounts.any?
     end
 
     def preferences_params
@@ -145,7 +145,7 @@ class ReportsController < ApplicationController
           title: "reports.net_worth.title",
           partial: "reports/net_worth",
           locals: { net_worth_metrics: @net_worth_metrics },
-          visible: Current.family.accounts.any?,
+          visible: accessible_accounts.any?,
           collapsible: true
         },
         {
@@ -153,7 +153,7 @@ class ReportsController < ApplicationController
           title: "reports.trends.title",
           partial: "reports/trends_insights",
           locals: { trends_data: @trends_data },
-          visible: Current.family.transactions.any?,
+          visible: @has_accounts,
           collapsible: true
         },
         {
@@ -182,7 +182,7 @@ class ReportsController < ApplicationController
             start_date: @start_date,
             end_date: @end_date
           },
-          visible: Current.family.transactions.any?,
+          visible: @has_accounts,
           collapsible: true
         }
       ]
@@ -300,7 +300,7 @@ class ReportsController < ApplicationController
       # Only calculate if we're looking at current month
       return nil unless @period_type == :monthly && @start_date.beginning_of_month.to_date == Date.current.beginning_of_month.to_date
 
-      budget = Budget.find_or_bootstrap(Current.family, start_date: @start_date.beginning_of_month.to_date)
+      budget = Budget.find_or_bootstrap(Current.family, start_date: @start_date.beginning_of_month.to_date, user: Current.user)
       return 0 if budget.nil? || budget.allocated_spending.zero?
 
       (budget.actual_spending / budget.allocated_spending * 100).round(1)
@@ -353,7 +353,7 @@ class ReportsController < ApplicationController
         .where.not(kind: Transaction::BUDGET_EXCLUDED_KINDS)
         .includes(entry: :account, category: :parent)
 
-      # Apply filters
+      # Apply filters (includes finance account scoping)
       transactions = apply_transaction_filters(transactions)
 
       # Get trades in the period (matching income_statement logic)
@@ -363,6 +363,8 @@ class ReportsController < ApplicationController
         .where(accounts: { family_id: Current.family.id, status: [ "draft", "active" ] })
         .where(entries: { entryable_type: "Trade", excluded: false, date: @period.date_range })
         .includes(entry: :account, category: :parent)
+
+      trades = apply_entry_filters(trades)
 
       # Get sort parameters
       sort_by = params[:sort_by] || "amount"
@@ -558,49 +560,60 @@ class ReportsController < ApplicationController
       }
     end
 
-    def apply_transaction_filters(transactions)
+    def apply_transaction_filters(scope)
+      scope = apply_entry_filters(scope)
+
+      # Filter by tag (Transaction-specific — trades don't have taggings)
+      if params[:filter_tag_id].present?
+        scope = scope.joins(:taggings).where(taggings: { tag_id: params[:filter_tag_id] })
+      end
+
+      scope
+    end
+
+    # Filters applicable to both transactions and trades (entry-level + category)
+    def apply_entry_filters(scope)
+      # Scope to user's finance accounts
+      finance_account_ids = Current.user&.finance_accounts&.pluck(:id) || []
+      scope = scope.where(entries: { account_id: finance_account_ids })
+
       # Filter by category (including subcategories)
       if params[:filter_category_id].present?
         category_id = params[:filter_category_id]
         # Scope to family's categories to prevent cross-family data access
         subcategory_ids = Current.family.categories.where(parent_id: category_id).pluck(:id)
         all_category_ids = [ category_id ] + subcategory_ids
-        transactions = transactions.where(category_id: all_category_ids)
+        scope = scope.where(category_id: all_category_ids)
       end
 
       # Filter by account
       if params[:filter_account_id].present?
-        transactions = transactions.where(entries: { account_id: params[:filter_account_id] })
-      end
-
-      # Filter by tag
-      if params[:filter_tag_id].present?
-        transactions = transactions.joins(:taggings).where(taggings: { tag_id: params[:filter_tag_id] })
+        scope = scope.where(entries: { account_id: params[:filter_account_id] })
       end
 
       # Filter by amount range
       if params[:filter_amount_min].present?
-        transactions = transactions.where("ABS(entries.amount) >= ?", params[:filter_amount_min].to_f)
+        scope = scope.where("ABS(entries.amount) >= ?", params[:filter_amount_min].to_f)
       end
 
       if params[:filter_amount_max].present?
-        transactions = transactions.where("ABS(entries.amount) <= ?", params[:filter_amount_max].to_f)
+        scope = scope.where("ABS(entries.amount) <= ?", params[:filter_amount_max].to_f)
       end
 
       # Filter by date range (within the period)
       if params[:filter_date_start].present?
         filter_start = Date.parse(params[:filter_date_start])
-        transactions = transactions.where("entries.date >= ?", filter_start) if filter_start >= @start_date
+        scope = scope.where("entries.date >= ?", filter_start) if filter_start >= @start_date
       end
 
       if params[:filter_date_end].present?
         filter_end = Date.parse(params[:filter_date_end])
-        transactions = transactions.where("entries.date <= ?", filter_end) if filter_end <= @end_date
+        scope = scope.where("entries.date <= ?", filter_end) if filter_end <= @end_date
       end
 
-      transactions
+      scope
     rescue Date::Error
-      transactions
+      scope
     end
 
     def build_transactions_breakdown_for_export

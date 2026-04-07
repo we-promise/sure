@@ -12,7 +12,7 @@ class Assistant::Function::GetAccounts < Assistant::Function
   def call(params = {})
     {
       as_of_date: Date.current,
-      accounts: family.accounts.includes(:balances, :account_providers).map do |account|
+      accounts: user.accessible_accounts.includes(:balances, :account_providers).map do |account|
         {
           name: account.name,
           balance: account.balance,

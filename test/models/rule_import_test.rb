@@ -6,7 +6,6 @@ class RuleImportTest < ActiveSupport::TestCase
     @category = @family.categories.create!(
       name: "Groceries",
       color: "#407706",
-      classification: "expense",
       lucide_icon: "shopping-basket"
     )
     @csv = <<~CSV
@@ -110,7 +109,6 @@ class RuleImportTest < ActiveSupport::TestCase
 
     new_category = Category.find_by!(family: @family, name: "Coffee Shops")
     assert_equal Category::UNCATEGORIZED_COLOR, new_category.color
-    assert_equal "expense", new_category.classification
 
     rule = Rule.find_by!(family: @family, name: "New category rule")
     action = rule.actions.first
@@ -234,5 +232,84 @@ class RuleImportTest < ActiveSupport::TestCase
     assert_raises ActiveRecord::RecordInvalid do
       import.send(:import!)
     end
+  end
+
+  test "imports valid JSON conditions whose values contain escaped quotes" do
+    csv = CSV.generate do |out|
+      out << %w[name resource_type active effective_date conditions actions]
+      out << [
+        "Quoted value rule",
+        "transaction",
+        true,
+        "",
+        [ { condition_type: "transaction_name", operator: "=", value: "ני\\u0022ע-קניה" } ].to_json,
+        [ { action_type: "set_transaction_name", value: "Quoted transfer" } ].to_json
+      ]
+    end
+
+    import = @family.imports.create!(type: "RuleImport", raw_file_str: csv, col_sep: ",")
+    import.generate_rows_from_csv
+
+    assert_nothing_raised do
+      import.send(:import!)
+    end
+
+    rule = Rule.find_by!(family: @family, name: "Quoted value rule")
+    condition = rule.conditions.first
+    assert_equal "ני\"ע-קניה", condition.value
+  end
+
+  test "imports wrapped JSON payloads from legacy rows" do
+    wrapped_conditions = [ { condition_type: "transaction_name", operator: "like", value: "legacy grocery" } ].to_json.to_json
+    wrapped_actions = [ { action_type: "set_transaction_category", value: "Groceries" } ].to_json.to_json
+
+    csv = CSV.generate do |out|
+      out << %w[name resource_type active effective_date conditions actions]
+      out << [
+        "Wrapped payload rule",
+        "transaction",
+        true,
+        "",
+        wrapped_conditions,
+        wrapped_actions
+      ]
+    end
+
+    import = @family.imports.create!(type: "RuleImport", raw_file_str: csv, col_sep: ",")
+    import.generate_rows_from_csv
+
+    assert_nothing_raised do
+      import.send(:import!)
+    end
+
+    rule = Rule.find_by!(family: @family, name: "Wrapped payload rule")
+    condition = rule.conditions.first
+    action = rule.actions.first
+
+    assert_equal "legacy grocery", condition.value
+    assert_equal @category.id, action.value
+  end
+
+  test "preserves literal backslash sequences in valid JSON values" do
+    csv = CSV.generate do |out|
+      out << %w[name resource_type active effective_date conditions actions]
+      out << [
+        "Literal backslash rule",
+        "transaction",
+        true,
+        "",
+        [ { condition_type: "transaction_name", operator: "=", value: 'C:\new\test' } ].to_json,
+        [ { action_type: "set_transaction_name", value: "Path rule" } ].to_json
+      ]
+    end
+
+    import = @family.imports.create!(type: "RuleImport", raw_file_str: csv, col_sep: ",")
+    import.generate_rows_from_csv
+    import.send(:import!)
+
+    rule = Rule.find_by!(family: @family, name: "Literal backslash rule")
+    condition = rule.conditions.first
+
+    assert_equal 'C:\new\test', condition.value
   end
 end

@@ -2,14 +2,20 @@
 
 <div id="<%= dom_id(entry, :header) %>">
   <%= tag.header class: "mb-4 space-y-1" do %>
+    <% label = entry.trade.investment_activity_label %>
+    <% income_trade = %w[Dividend Interest].include?(label) %>
     <span class="text-secondary text-sm">
-      <%= entry.amount.positive? ? t(".buy") : t(".sell") %>
+      <% if income_trade %>
+        <%= t(".#{label.downcase}") %>
+      <% else %>
+        <%= entry.amount.positive? ? t(".buy") : t(".sell") %>
+      <% end %>
     </span>
 
     <div class="flex items-center gap-4">
       <h3 class="font-medium">
-        <span class="text-2xl text-primary">
-          <%= format_money entry.amount_money %>
+        <span class="text-2xl text-primary privacy-sensitive">
+          <%= format_money(income_trade ? entry.amount_money.abs : entry.amount_money) %>
         </span>
 
         <span class="text-lg text-secondary">
@@ -18,7 +24,7 @@
       </h3>
 
       <% if entry.linked? %>
-        <span title="Linked with Plaid">
+        <span title="<%= t("transactions.transaction.linked_with_provider", provider: entry.account.provider_name&.titleize) %>">
           <%= icon("refresh-ccw", size: "sm") %>
         </span>
       <% end %>
@@ -31,14 +37,15 @@
 
   <% trade = entry.trade %>
 
+  <% unless trade.security.cash? %>
   <div class="mb-2">
     <%= render DS::Disclosure.new(title: t(".overview"), open: true) do %>
       <div class="pb-4">
         <dl class="space-y-3 px-3 py-2">
-          <div class="flex items-center justify-between text-sm">
-            <dt class="text-secondary"><%= t(".symbol_label") %></dt>
-            <dd class="text-primary"><%= trade.security.ticker %></dd>
-          </div>
+            <div class="flex items-center justify-between text-sm">
+              <dt class="text-secondary"><%= t(".symbol_label") %></dt>
+              <dd class="text-primary"><%= trade.security.ticker %></dd>
+            </div>
 
           <% if trade.qty.positive? %>
             <div class="flex items-center justify-between text-sm">
@@ -48,14 +55,14 @@
 
             <div class="flex items-center justify-between text-sm">
               <dt class="text-secondary"><%= t(".purchase_price_label") %></dt>
-              <dd class="text-primary"><%= format_money trade.price_money %></dd>
+              <dd class="text-primary privacy-sensitive"><%= format_money trade.price_money %></dd>
             </div>
           <% end %>
 
-          <% if trade.security.current_price.present? %>
+          <% if trade.qty.positive? && trade.security.current_price.present? %>
             <div class="flex items-center justify-between text-sm">
               <dt class="text-secondary"><%= t(".current_market_price_label") %></dt>
-              <dd class="text-primary"><%= format_money trade.security.current_price %></dd>
+              <dd class="text-primary privacy-sensitive"><%= format_money trade.security.current_price %></dd>
             </div>
           <% end %>
 
@@ -71,4 +78,5 @@
       </div>
     <% end %>
   </div>
+  <% end %>
 </div>

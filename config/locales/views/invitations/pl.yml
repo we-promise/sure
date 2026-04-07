@@ -1,0 +1,27 @@
+---
+pl:
+  invitations:
+    accept_choice:
+      create_account: Utwórz nowe konto
+      joined_household: Dołączono do gospodarstwa domowego.
+      message: "%{inviter} zaprosił(a) Cię jako %{role}."
+      sign_in_existing: Mam już konto
+      title: Dołącz do %{family}
+    create:
+      existing_user_added: Użytkownik został dodany do Twojego gospodarstwa domowego.
+      failure: Nie udało się wysłać zaproszenia
+      success: Zaproszenie zostało wysłane
+    destroy:
+      failure: Wystąpił problem podczas usuwania zaproszenia.
+      not_authorized: Nie masz uprawnień do zarządzania zaproszeniami.
+      success: Zaproszenie zostało pomyślnie usunięte.
+    new:
+      email_label: Adres e-mail
+      email_placeholder: Wpisz adres e-mail
+      role_admin: Administrator
+      role_guest: Gość
+      role_label: Rola
+      role_member: Członek
+      submit: Wyślij zaproszenie
+      subtitle: Wyślij zaproszenie do dołączenia do Twojego konta %{moniker} w %{product_name}
+      title: Zaproś kogoś

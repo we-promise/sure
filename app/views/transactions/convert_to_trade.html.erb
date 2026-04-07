@@ -119,7 +119,7 @@
           <div class="space-y-1">
             <%= f.label :price, t(".price_label"), class: "font-medium text-sm text-primary block" %>
             <%= f.number_field :price,
-                  step: "0.0001",
+                  step: "any",
                   min: "0",
                   placeholder: t(".price_placeholder"),
                   class: "form-field__input border border-secondary rounded-lg px-3 py-2 w-full text-primary bg-container",

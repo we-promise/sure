@@ -1,6 +1,30 @@
 ---
 es:
   import:
+    qif_category_selections:
+      show:
+        title: "Configurar y seleccionar"
+        description: "Revisa el formato de fecha detectado y luego elige qué categorías y etiquetas de tu archivo QIF importar en %{product_name}."
+        categories_heading: Categorías
+        categories_found:
+          one: "1 categoría encontrada"
+          other: "%{count} categorías encontradas"
+        category_name_col: Nombre de categoría
+        transactions_col: Transacciones
+        tags_heading: Etiquetas
+        tags_found:
+          one: "1 etiqueta encontrada"
+          other: "%{count} etiquetas encontradas"
+        tag_name_col: Nombre de etiqueta
+        txn_count:
+          one: "1 transacción"
+          other: "%{count} transacciones"
+        empty_state_primary: No se encontraron categorías ni etiquetas en este archivo QIF.
+        empty_state_secondary: Todas las transacciones se importarán sin categorías ni etiquetas.
+        submit: Continuar a la revisión
+        split_warning_title: Transacciones divididas detectadas
+        split_warning_description: "Este archivo QIF contiene transacciones divididas. Las divisiones aún no son compatibles, por lo que cada transacción dividida se importará como una única transacción con su importe total y sin categoría. Los desgloses individuales de las divisiones no se conservarán."
+        split_badge: dividida
     cleans:
       show:
         description: Edita tus datos en la tabla de abajo. Las celdas rojas son inválidas.
@@ -47,6 +71,15 @@ es:
         tag_mapping_title: Asigna tus etiquetas
     uploads:
       show:
+        qif_title: Subir archivo QIF
+        qif_description: Selecciona la cuenta a la que pertenece este archivo QIF y sube tu exportación .qif desde Quicken.
+        qif_account_label: Cuenta
+        qif_account_placeholder: Seleccionar una cuenta…
+        qif_file_prompt: para añadir tu archivo QIF aquí
+        qif_file_hint: Solo archivos .qif
+        qif_submit: Subir QIF
+        browse: Examinar
+        csv_file_prompt: para añadir tu archivo CSV aquí
         description: Pega o sube tu archivo CSV abajo. Por favor, revisa las instrucciones en la tabla de abajo antes de comenzar.
         instructions_1: Abajo hay un ejemplo de CSV con columnas disponibles para importar.
         instructions_2: Tu CSV debe tener una fila de encabezado.
@@ -55,6 +88,19 @@ es:
         instructions_5: Sin comas, sin símbolos de moneda y sin paréntesis en los números.
         title: Importa tus datos
   imports:
+    date_format:
+      heading: Formato de fecha
+      description: "El formato de fecha se detectó automáticamente desde tu archivo. Cámbialo si las fechas parecen incorrectas."
+      preview: "Primera fecha analizada"
+      error_title: "No se puede detectar el formato de fecha"
+      error_description: "Ninguno de los formatos de fecha compatibles pudo analizar las fechas de este archivo. Por favor, comprueba que el archivo contiene entradas de fecha válidas."
+    steps:
+      upload: Subir
+      configure: Configurar
+      clean: Limpiar
+      map: Mapear
+      confirm: Confirmar
+      select: Seleccionar
     index:
       title: Importaciones
       new: Nueva importación
@@ -87,6 +133,7 @@ es:
       import_portfolio: Importar inversiones
       import_rules: Importar reglas
       import_transactions: Importar transacciones
+      import_qif: Importar desde Quicken (QIF)
       import_file: Importar documento
       import_file_description: Análisis potenciado por IA para PDFs y subida con búsqueda para otros archivos compatibles
       requires_account: Importa cuentas primero para desbloquear esta opción.
@@ -111,6 +158,11 @@ es:
     ready:
       description: Aquí tienes un resumen de los nuevos elementos que se añadirán a tu cuenta una vez publiques esta importación.
       title: Confirma tus datos de importación
+      summary_item_label: Elemento
+      summary_count_label: Cantidad
+      empty_summary: No se han encontrado registros importables en este archivo. Puede estar vacío, o las líneas no coinciden con el formato de exportación esperado (cada línea debe ser un objeto JSON con las claves «type» y «data», usando tipos que admite esta importación).
+      publish_import: Publicar importación
+      back_to_imports: Volver a importaciones
     errors:
       custom_column_requires_inflow: "Las importaciones de columnas personalizadas requieren que se seleccione una columna de entrada de fondos (inflow)"
     document_types:

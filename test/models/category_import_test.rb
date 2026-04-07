@@ -4,10 +4,10 @@ class CategoryImportTest < ActiveSupport::TestCase
   setup do
     @family = families(:dylan_family)
     @csv = <<~CSV
-      name,color,parent_category,classification,icon
-      Food & Drink,#f97316,,expense,carrot
-      Groceries,#407706,Food & Drink,expense,shopping-basket
-      Salary,#22c55e,,income,briefcase
+      name,color,parent_category,icon
+      Food & Drink,#f97316,,carrot
+      Groceries,#407706,Food & Drink,shopping-basket
+      Salary,#22c55e,,briefcase
     CSV
   end
 
@@ -26,19 +26,17 @@ class CategoryImportTest < ActiveSupport::TestCase
     groceries = Category.find_by!(family: @family, name: "Groceries")
     salary = Category.find_by!(family: @family, name: "Salary")
 
-    assert_equal "expense", food.classification
     assert_equal "carrot", food.lucide_icon
     assert_equal food, groceries.parent
     assert_equal "shopping-basket", groceries.lucide_icon
-    assert_equal "income", salary.classification
     assert_equal "briefcase", salary.lucide_icon
   end
 
   test "imports subcategories even when parent row comes later" do
     csv = <<~CSV
-      name,color,parent_category,classification,icon
-      Utilities,#407706,Household,expense,plug
-      Household,#f97316,,expense,house
+      name,color,parent_category,icon
+      Utilities,#407706,Household,plug
+      Household,#f97316,,house
     CSV
 
     import = @family.imports.create!(type: "CategoryImport", raw_file_str: csv, col_sep: ",")
@@ -55,9 +53,9 @@ class CategoryImportTest < ActiveSupport::TestCase
 
   test "updates categories when duplicate rows are provided" do
     csv = <<~CSV
-      name,color,parent_category,classification,icon
-      Snacks,#aaaaaa,,expense,cookie
-      Snacks,#bbbbbb,,expense,pizza
+      name,color,parent_category,icon
+      Snacks,#aaaaaa,,cookie
+      Snacks,#bbbbbb,,pizza
     CSV
 
     import = @family.imports.create!(type: "CategoryImport", raw_file_str: csv, col_sep: ",")
@@ -72,8 +70,8 @@ class CategoryImportTest < ActiveSupport::TestCase
 
   test "accepts required headers with an asterisk suffix" do
     csv = <<~CSV
-      name*,color,parent_category,classification,icon
-      Food & Drink,#f97316,,expense,carrot
+      name*,color,parent_category,icon
+      Food & Drink,#f97316,,carrot
     CSV
 
     import = @family.imports.create!(type: "CategoryImport", raw_file_str: csv, col_sep: ",")
@@ -85,8 +83,8 @@ class CategoryImportTest < ActiveSupport::TestCase
 
   test "fails fast when required headers are missing" do
     csv = <<~CSV
-      title,color,parent_category,classification,icon
-      Food & Drink,#f97316,,expense,carrot
+      title,color,parent_category,icon
+      Food & Drink,#f97316,,carrot
     CSV
 
     import = @family.imports.create!(type: "CategoryImport", raw_file_str: csv, col_sep: ",")

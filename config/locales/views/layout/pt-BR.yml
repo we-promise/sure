@@ -2,6 +2,7 @@
 pt-BR:
   layouts:
     application:
+      privacy_mode: Alternar modo de privacidade
       nav:
         assistant: Assistente
         budgets: Orçamentos

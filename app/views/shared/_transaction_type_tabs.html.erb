@@ -19,7 +19,7 @@
     <% end %>
   <% end %>
 
-  <%= link_to new_transfer_path,
+  <%= link_to new_transfer_path(from_account_id: account_id),
               data: { turbo_frame: :modal },
               class: "flex-1 min-w-0 flex px-4 py-1 rounded-lg items-center space-x-2 justify-center text-sm #{active_tab == 'transfer' ? 'bg-container text-primary shadow-sm' : 'hover:bg-container text-subdued hover:text-primary hover:shadow-sm'}" do %>
     <%= icon "arrow-right-left" %>

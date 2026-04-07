@@ -54,7 +54,7 @@
 
     <% if @allow_account_creation %>
       <%= render DS::Button.new(
-        text: t("oidc_accounts.link.submit_create"),
+        text: @pending_invitation ? t("oidc_accounts.link.submit_accept_invitation") : t("oidc_accounts.link.submit_create"),
         href: create_user_oidc_account_path,
         full_width: true,
         variant: :primary,

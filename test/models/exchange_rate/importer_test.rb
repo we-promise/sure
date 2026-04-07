@@ -61,9 +61,9 @@ class ExchangeRate::ImporterTest < ActiveSupport::TestCase
       end_date: Date.current
     ).import_provider_rates
 
-    db_rates = ExchangeRate.order(:date)
-    assert_equal 4, db_rates.count
-    assert_equal [ 1.2, 1.25, 1.3, 1.3 ], db_rates.map(&:rate)
+    forward_rates = ExchangeRate.where(from_currency: "USD", to_currency: "EUR").order(:date)
+    assert_equal 4, forward_rates.count
+    assert_equal [ 1.2, 1.25, 1.3, 1.3 ], forward_rates.map(&:rate)
   end
 
   test "no provider calls when all rates exist" do
@@ -137,7 +137,57 @@ class ExchangeRate::ImporterTest < ActiveSupport::TestCase
       end_date: future_date
     ).import_provider_rates
 
-    assert_equal 1, ExchangeRate.count
+    # 1 forward rate + 1 inverse rate
+    assert_equal 2, ExchangeRate.count
+  end
+
+  test "upserts inverse rates alongside forward rates" do
+    ExchangeRate.delete_all
+
+    provider_response = provider_success_response([
+      OpenStruct.new(from: "USD", to: "EUR", date: Date.current, rate: 0.85)
+    ])
+
+    @provider.expects(:fetch_exchange_rates)
+             .with(from: "USD", to: "EUR", start_date: get_provider_fetch_start_date(Date.current), end_date: Date.current)
+             .returns(provider_response)
+
+    ExchangeRate::Importer.new(
+      exchange_rate_provider: @provider,
+      from: "USD",
+      to: "EUR",
+      start_date: Date.current,
+      end_date: Date.current
+    ).import_provider_rates
+
+    forward = ExchangeRate.find_by(from_currency: "USD", to_currency: "EUR", date: Date.current)
+    inverse = ExchangeRate.find_by(from_currency: "EUR", to_currency: "USD", date: Date.current)
+
+    assert_not_nil forward, "Forward rate should be stored"
+    assert_not_nil inverse, "Inverse rate should be computed and stored"
+    assert_in_delta 0.85, forward.rate.to_f, 0.0001
+    assert_in_delta (1.0 / 0.85), inverse.rate.to_f, 0.0001
+  end
+
+  test "handles rate limit error gracefully" do
+    ExchangeRate.delete_all
+
+    rate_limit_error = Provider::TwelveData::RateLimitError.new("Rate limit exceeded")
+
+    @provider.expects(:fetch_exchange_rates).once.returns(
+      provider_error_response(rate_limit_error)
+    )
+
+    # Should not raise — logs warning and returns without importing
+    ExchangeRate::Importer.new(
+      exchange_rate_provider: @provider,
+      from: "USD",
+      to: "EUR",
+      start_date: Date.current,
+      end_date: Date.current
+    ).import_provider_rates
+
+    assert_equal 0, ExchangeRate.count, "No rates should be imported on rate limit error"
   end
 
   private

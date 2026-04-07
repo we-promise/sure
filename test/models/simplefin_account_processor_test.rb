@@ -158,24 +158,43 @@ class SimplefinAccountProcessorTest < ActiveSupport::TestCase
     assert_equal BigDecimal("-25"), acct.reload.balance
   end
 
-  test "mislinked as asset but mapper infers credit → normalize as liability" do
+  test "linked depository account type takes precedence over mapper-inferred liability" do
     sfin_acct = SimplefinAccount.create!(
       simplefin_item: @item,
       name: "Visa Signature",
-      account_id: "cc_mislinked",
+      account_id: "cc_mislinked_asset",
       currency: "USD",
       account_type: "credit",
       current_balance: BigDecimal("100.00"),
       available_balance: BigDecimal("5000.00")
     )
 
-    # Link to an asset account intentionally
     acct = accounts(:depository)
     acct.update!(simplefin_account: sfin_acct)
 
     SimplefinAccount::Processor.new(sfin_acct).send(:process_account!)
 
-    # Mapper should infer liability from name; final should be negative
+    # Manual selection as depository; final should be the same
+    assert_equal BigDecimal("100.00"), acct.reload.balance
+  end
+
+  test "linked credit card account type takes precedence over mapper-inferred liability" do
+    sfin_acct = SimplefinAccount.create!(
+      simplefin_item: @item,
+      name: "Visa Signature",
+      account_id: "cc_mislinked_liability",
+      currency: "USD",
+      account_type: "credit",
+      current_balance: BigDecimal("100.00"),
+      available_balance: BigDecimal("5000.00")
+    )
+
+    acct = accounts(:credit_card)
+    acct.update!(simplefin_account: sfin_acct)
+
+    SimplefinAccount::Processor.new(sfin_acct).send(:process_account!)
+
+    # Liability has flipped sign; final should be negative
     assert_equal BigDecimal("-100.00"), acct.reload.balance
   end
 

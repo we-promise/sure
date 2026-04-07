@@ -4,7 +4,7 @@
   <div class="p-4 border-b border-secondary">
     <h3 class="text-sm text-secondary mb-2">Expected income</h3>
 
-    <span class="inline-block mb-2 text-xl font-medium text-primary">
+    <span class="inline-block mb-2 text-xl font-medium text-primary privacy-sensitive">
       <%= format_money(budget.expected_income_money) %>
     </span>
 
@@ -18,7 +18,7 @@
           <div class="rounded-md h-1.5 bg-surface-inset" style="width: <%= 100 - budget.actual_income_percent %>%"></div>
         <% end %>
       </div>
-      <div class="flex justify-between text-sm">
+      <div class="flex justify-between text-sm privacy-sensitive">
         <p class="text-secondary"><%= format_money(budget.actual_income_money) %> earned</p>
         <p class="font-medium">
           <% if budget.remaining_expected_income.negative? %>
@@ -34,7 +34,7 @@
   <div class="p-4">
     <h3 class="text-sm text-secondary mb-2">Budgeted</h3>
 
-    <span class="inline-block mb-2 text-xl font-medium text-primary">
+    <span class="inline-block mb-2 text-xl font-medium text-primary privacy-sensitive">
       <%= format_money(budget.budgeted_spending_money) %>
     </span>
 
@@ -48,7 +48,7 @@
           <div class="rounded-md h-1.5 bg-surface-inset" style="width: <%= 100 - budget.percent_of_budget_spent %>%"></div>
         <% end %>
       </div>
-      <div class="flex justify-between text-sm">
+      <div class="flex justify-between text-sm privacy-sensitive">
         <p class="text-secondary"><%= format_money(budget.actual_spending_money) %> spent</p>
         <p class="font-medium">
           <% if budget.available_to_spend.negative? %>
