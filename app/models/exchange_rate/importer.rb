@@ -75,6 +75,10 @@ class ExchangeRate::Importer
     end
 
     upsert_rows(inverse_rates)
+
+    # Also backfill inverse rows for any forward rates that existed in the DB
+    # before effective_start_date (i.e. dates not covered by gapfilled_rates).
+    backfill_inverse_rates_if_needed
   end
 
   private
@@ -165,7 +169,7 @@ class ExchangeRate::Importer
     end
 
     def rate_limit_error?(response)
-      response.error.class.name.to_s.demodulize == "RateLimitError"
+      response.error.is_a?(Provider::Error) && response.error.class.name.to_s.demodulize == "RateLimitError"
     end
 
     # When forward rates already exist but inverse rates are missing (e.g. from a
