@@ -242,6 +242,41 @@ ActiveRecord::Schema[7.2].define(version: 2026_04_07_151000) do
     t.string "tax_wrapper", default: "none", null: false
     t.boolean "auto_buy_new_issues", default: false, null: false
     t.index ["tax_wrapper"], name: "index_bonds_on_tax_wrapper"
+  create_table "binance_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "binance_item_id", null: false
+    t.string "name"
+    t.string "account_type"
+    t.string "currency"
+    t.decimal "current_balance", precision: 19, scale: 4
+    t.jsonb "institution_metadata"
+    t.jsonb "raw_payload"
+    t.jsonb "raw_transactions_payload"
+    t.jsonb "extra", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_type"], name: "index_binance_accounts_on_account_type"
+    t.index ["binance_item_id", "account_type"], name: "index_binance_accounts_on_item_and_type", unique: true
+    t.index ["binance_item_id"], name: "index_binance_accounts_on_binance_item_id"
+  end
+
+  create_table "binance_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "family_id", null: false
+    t.string "name"
+    t.string "institution_name"
+    t.string "institution_domain"
+    t.string "institution_url"
+    t.string "institution_color"
+    t.string "status", default: "good"
+    t.boolean "scheduled_for_deletion", default: false
+    t.boolean "pending_account_setup", default: false
+    t.datetime "sync_start_date"
+    t.jsonb "raw_payload"
+    t.text "api_key"
+    t.text "api_secret"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["family_id"], name: "index_binance_items_on_family_id"
+    t.index ["status"], name: "index_binance_items_on_status"
   end
 
   create_table "budget_categories", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1627,6 +1662,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_04_07_151000) do
   add_foreign_key "balances", "accounts", on_delete: :cascade
   add_foreign_key "bond_lots", "bonds", on_delete: :cascade
   add_foreign_key "bond_lots", "entries", on_delete: :cascade
+  add_foreign_key "binance_accounts", "binance_items"
+  add_foreign_key "binance_items", "families"
   add_foreign_key "budget_categories", "budgets"
   add_foreign_key "budget_categories", "categories"
   add_foreign_key "budgets", "families"

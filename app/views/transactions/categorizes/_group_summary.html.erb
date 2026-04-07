@@ -2,6 +2,6 @@
   <p class="text-sm text-secondary">
     <%= t("transactions.categorizes.show.transaction_count", count: entries.size) %>
     &middot;
-    <%= format_money(entries.sum { |e| e.amount_money.abs }) %>
+    <span class="privacy-sensitive"><%= format_money(entries.sum { |e| e.amount_money.abs }) %></span>
   </p>
 <% end %>

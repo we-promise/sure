@@ -18,7 +18,7 @@ class Transactions::CategorizesController < ApplicationController
 
     @group      = groups.first
     @categories = Current.family.categories.alphabetically
-    @total_uncategorized = Entry.uncategorized_count(Current.accessible_entries)
+    @total_uncategorized = uncategorized_count
   end
 
   def create
@@ -60,7 +60,7 @@ class Transactions::CategorizesController < ApplicationController
           end
           streams << turbo_stream.replace("categorize_remaining",
             partial: "transactions/categorizes/remaining_count",
-            locals: { total_uncategorized: Entry.uncategorized_count(Current.accessible_entries) })
+            locals: { total_uncategorized: uncategorized_count })
           streams << turbo_stream.replace("categorize_group_summary",
             partial: "transactions/categorizes/group_summary",
             locals: { entries: remaining_entries })
@@ -98,7 +98,7 @@ class Transactions::CategorizesController < ApplicationController
     all_entry_ids = Array.wrap(params[:all_entry_ids]).reject(&:blank?)
     remaining_ids = all_entry_ids - [ entry.id.to_s ]
 
-    Entry.where(id: entry.id).bulk_update!({ category_id: category.id })
+    Current.accessible_entries.where(id: entry.id).bulk_update!({ category_id: category.id })
 
     remaining_entries = uncategorized_entries_for(remaining_ids)
     remaining_ids     = remaining_entries.map { |e| e.id.to_s }
@@ -109,7 +109,7 @@ class Transactions::CategorizesController < ApplicationController
     else
       streams << turbo_stream.replace("categorize_remaining",
         partial: "transactions/categorizes/remaining_count",
-        locals: { total_uncategorized: Entry.uncategorized_count(Current.accessible_entries) })
+        locals: { total_uncategorized: uncategorized_count })
       streams << turbo_stream.replace("categorize_group_summary",
         partial: "transactions/categorizes/group_summary",
         locals: { entries: remaining_entries })
@@ -119,13 +119,16 @@ class Transactions::CategorizesController < ApplicationController
 
   private
 
+    def uncategorized_count
+      Current.accessible_entries.uncategorized_transactions.count
+    end
+
     def uncategorized_entries_for(ids)
       return [] if ids.blank?
       Current.accessible_entries
         .excluding_split_parents
         .where(id: ids)
-        .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
-        .where(transactions: { category_id: nil })
+        .uncategorized_transactions
         .to_a
     end
 end

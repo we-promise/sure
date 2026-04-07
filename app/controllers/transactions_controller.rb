@@ -52,7 +52,7 @@ class TransactionsController < ApplicationController
       Set.new
     end
 
-    @uncategorized_count = Current.family.uncategorized_transaction_count
+    @uncategorized_count = Current.accessible_entries.uncategorized_transactions.count
 
     # Load projected recurring transactions for next 10 days
     @projected_recurring = Current.family.recurring_transactions
