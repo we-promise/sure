@@ -32,7 +32,7 @@ class Security::Resolver
     # Prevents tampered combobox values from persisting invalid provider names.
     def validated_price_provider(value)
       return nil if value.blank?
-      return nil unless Security::VALID_PRICE_PROVIDERS.include?(value.to_s)
+      return nil unless Security.valid_price_providers.include?(value.to_s)
       return nil unless Setting.enabled_securities_providers.include?(value.to_s)
       value.to_s
     end
@@ -64,11 +64,10 @@ class Security::Resolver
 
       return nil unless security
 
-      # Only set price_provider when the record has none yet. Mutating the
-      # provider on a shared security row would silently repoint every
-      # holding/trade that references it — use the explicit "remap security"
-      # flow in HoldingsController for intentional provider changes.
-      if security.price_provider.blank? && price_provider.present?
+      # When the caller provides an explicit provider (e.g. user selected from
+      # search results), honor that choice. Automated syncs (Plaid, SimpleFIN)
+      # pass price_provider: nil and will not overwrite.
+      if price_provider.present? && security.price_provider != price_provider
         security.update!(price_provider: price_provider)
       end
 
@@ -134,13 +133,14 @@ class Security::Resolver
 
       security.country_code = match.country_code
 
-      # Only set price_provider on new records or when blank. Overwriting the
-      # provider on an existing security would silently repoint every
-      # holding/trade that references it.
-      if security.new_record? || security.price_provider.blank?
-        effective_provider = price_provider.presence ||
-          (match.respond_to?(:price_provider) ? match.price_provider.presence : nil)
-        security.price_provider = effective_provider if effective_provider
+      # Set provider when explicitly provided (user selection) or when the
+      # record is new / has no provider yet. Automated syncs pass nil and
+      # will not overwrite an existing choice.
+      effective_provider = price_provider.presence ||
+        (match.respond_to?(:price_provider) ? match.price_provider.presence : nil)
+
+      if effective_provider.present?
+        security.price_provider = effective_provider
       end
 
       security.save!
@@ -155,10 +155,10 @@ class Security::Resolver
     # back online so the MarketDataImporter picks it up again.
     def reactivate_if_provider_available!(security)
       return unless security.offline?
-      return if security.price_provider.blank?
-      return unless Setting.enabled_securities_providers.include?(security.price_provider)
+      return unless security.offline_reason == "provider_disabled"
+      return unless security.price_data_provider.present?
 
-      security.update!(offline: false, failed_fetch_count: 0, failed_fetch_at: nil)
+      security.update!(offline: false, offline_reason: nil, failed_fetch_count: 0, failed_fetch_at: nil)
     end
 
     def provider_search_result

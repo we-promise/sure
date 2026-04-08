@@ -118,7 +118,7 @@ class Provider::Mfapi < Provider
         nav = entry["nav"]
         date_str = entry["date"]
 
-        next if nav.nil? || nav.to_f <= 0
+        next if nav.nil? || nav.to_f <= 0 || date_str.blank?
 
         # MFAPI returns dates as DD-MM-YYYY
         date = Date.strptime(date_str, "%d-%m-%Y")
@@ -165,5 +165,4 @@ class Provider::Mfapi < Provider
         raise Error, "API error: #{parsed['message'] || parsed['status']}"
       end
     end
-
 end

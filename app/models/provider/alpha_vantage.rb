@@ -246,7 +246,7 @@ class Provider::AlphaVantage < Provider
       day_key = "alpha_vantage:daily:#{Date.current}"
       new_count = Rails.cache.increment(day_key, 1, expires_in: 24.hours).to_i
 
-      if new_count > max_requests_per_day
+      if new_count >= max_requests_per_day
         Rails.logger.warn("AlphaVantage: daily request limit reached (#{new_count}/#{max_requests_per_day})")
         raise RateLimitError, "Alpha Vantage daily request limit reached (#{max_requests_per_day} per day)"
       end
@@ -337,5 +337,4 @@ class Provider::AlphaVantage < Provider
         raise Error, "API error: #{parsed["Error Message"]}"
       end
     end
-
 end

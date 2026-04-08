@@ -285,7 +285,7 @@ class Provider::Eodhd < Provider
     def enforce_daily_limit!
       new_count = Rails.cache.increment(daily_cache_key, 1, expires_in: 24.hours).to_i
 
-      if new_count > max_requests_per_day
+      if new_count >= max_requests_per_day
         raise RateLimitError, "EODHD daily rate limit of #{max_requests_per_day} requests exhausted"
       end
     end
@@ -301,5 +301,4 @@ class Provider::Eodhd < Provider
 
       raise Error, "API error: #{parsed["error"]}"
     end
-
 end

@@ -216,7 +216,7 @@ class Provider::Tiingo < Provider
       hour_key = "tiingo:requests:#{Time.current.to_i / 3600}"
       new_count = Rails.cache.increment(hour_key, 1, expires_in: 7200.seconds).to_i
 
-      if new_count > max_requests_per_hour
+      if new_count >= max_requests_per_hour
         raise RateLimitError, "Tiingo hourly request limit reached (#{new_count}/#{max_requests_per_hour})"
       end
     end
@@ -235,7 +235,7 @@ class Provider::Tiingo < Provider
 
       new_count = Rails.cache.increment(count_key, 1, expires_in: 35.days).to_i
 
-      if new_count > MAX_SYMBOLS_PER_MONTH
+      if new_count >= MAX_SYMBOLS_PER_MONTH
         Rails.cache.decrement(count_key, 1)
         Rails.cache.delete(symbol_key)
         raise RateLimitError, "Tiingo unique symbol limit reached (#{MAX_SYMBOLS_PER_MONTH} per month)"
@@ -260,6 +260,7 @@ class Provider::Tiingo < Provider
       end
 
       parsed = JSON.parse(response.body)
+      check_api_error!(parsed)
 
       if parsed.is_a?(Array)
         match = parsed.find { |s| s["ticker"]&.upcase == symbol.upcase }
@@ -290,5 +291,4 @@ class Provider::Tiingo < Provider
 
       raise Error, "API error: #{detail}"
     end
-
 end

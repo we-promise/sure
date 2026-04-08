@@ -111,6 +111,7 @@ class Security::HealthChecker
       Security.transaction do
         security.update!(
           offline: true,
+          offline_reason: "health_check_failed",
           failed_fetch_count: MAX_CONSECUTIVE_FAILURES + 1,
           failed_fetch_at: Time.current
         )

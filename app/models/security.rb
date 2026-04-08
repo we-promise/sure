@@ -13,7 +13,10 @@ class Security < ApplicationRecord
 
   # Known securities provider keys — derived from the registry so adding a new
   # provider to Registry#available_providers automatically allows it here.
-  VALID_PRICE_PROVIDERS = Provider::Registry.for_concept(:securities).provider_keys.map(&:to_s).freeze
+  # Evaluated at runtime (not boot) so runtime-enabled providers are accepted.
+  def self.valid_price_providers
+    Provider::Registry.for_concept(:securities).provider_keys.map(&:to_s)
+  end
 
   before_validation :upcase_symbols
   before_save :generate_logo_url_from_brandfetch, if: :should_generate_logo?
@@ -24,10 +27,16 @@ class Security < ApplicationRecord
   validates :ticker, presence: true
   validates :ticker, uniqueness: { scope: :exchange_operating_mic, case_sensitive: false }
   validates :kind, inclusion: { in: KINDS }
-  validates :price_provider, inclusion: { in: VALID_PRICE_PROVIDERS }, allow_nil: true
+  validates :price_provider, inclusion: { in: ->(_) { Security.valid_price_providers } }, allow_nil: true
 
   scope :online, -> { where(offline: false) }
   scope :standard, -> { where(kind: "standard") }
+
+  # Parses the combobox ID format "SYMBOL|EXCHANGE|PROVIDER" into a hash.
+  def self.parse_combobox_id(value)
+    parts = value.to_s.split("|", 3)
+    { ticker: parts[0].presence, exchange_operating_mic: parts[1].presence, price_provider: parts[2].presence }
+  end
 
   # Lazily finds or creates a synthetic cash security for an account.
   # Used as fallback when creating an interest Trade without a user-selected security.

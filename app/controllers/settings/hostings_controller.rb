@@ -58,12 +58,7 @@ class Settings::HostingsController < ApplicationController
       Setting.brand_fetch_high_res_logos = hosting_params[:brand_fetch_high_res_logos] == "1"
     end
 
-    if hosting_params.key?(:twelve_data_api_key)
-      key_param = hosting_params[:twelve_data_api_key].to_s.strip
-      unless key_param.blank? || key_param == "********"
-        Setting.twelve_data_api_key = key_param
-      end
-    end
+    update_encrypted_setting(:twelve_data_api_key)
 
     if hosting_params.key?(:exchange_rate_provider)
       Setting.exchange_rate_provider = hosting_params[:exchange_rate_provider]
@@ -90,37 +85,22 @@ class Settings::HostingsController < ApplicationController
       # provider_status can report :provider_unavailable.
       removed = old_providers - new_providers
       removed.each do |removed_provider|
-        Security.where(price_provider: removed_provider).in_batches.update_all(offline: true)
+        Security.where(price_provider: removed_provider, offline: false)
+                .in_batches.update_all(offline: true, offline_reason: "provider_disabled")
       end
 
-      # Bring securities back online when their provider is re-enabled.
+      # Bring securities back online when their provider is re-enabled — but only
+      # those that were taken offline by a provider toggle, not by health checks.
       added = new_providers - old_providers
       added.each do |added_provider|
-        Security.where(price_provider: added_provider, offline: true)
-                .in_batches.update_all(offline: false, failed_fetch_count: 0, failed_fetch_at: nil)
+        Security.where(price_provider: added_provider, offline: true, offline_reason: "provider_disabled")
+                .in_batches.update_all(offline: false, offline_reason: nil, failed_fetch_count: 0, failed_fetch_at: nil)
       end
     end
 
-    if hosting_params.key?(:tiingo_api_key)
-      key_param = hosting_params[:tiingo_api_key].to_s.strip
-      unless key_param.blank? || key_param == "********"
-        Setting.tiingo_api_key = key_param
-      end
-    end
-
-    if hosting_params.key?(:eodhd_api_key)
-      key_param = hosting_params[:eodhd_api_key].to_s.strip
-      unless key_param.blank? || key_param == "********"
-        Setting.eodhd_api_key = key_param
-      end
-    end
-
-    if hosting_params.key?(:alpha_vantage_api_key)
-      key_param = hosting_params[:alpha_vantage_api_key].to_s.strip
-      unless key_param.blank? || key_param == "********"
-        Setting.alpha_vantage_api_key = key_param
-      end
-    end
+    update_encrypted_setting(:tiingo_api_key)
+    update_encrypted_setting(:eodhd_api_key)
+    update_encrypted_setting(:alpha_vantage_api_key)
 
     if hosting_params.key?(:syncs_include_pending)
       Setting.syncs_include_pending = hosting_params[:syncs_include_pending] == "1"
@@ -246,6 +226,12 @@ class Settings::HostingsController < ApplicationController
       Rails.logger.error("[AutoSyncScheduler] Failed to sync scheduler: #{error.message}")
       Rails.logger.error(error.backtrace.join("\n"))
       flash[:alert] = t(".scheduler_sync_failed")
+    end
+
+    def update_encrypted_setting(param_key)
+      return unless hosting_params.key?(param_key)
+      value = hosting_params[param_key].to_s.strip
+      Setting.public_send(:"#{param_key}=", value) unless value.blank? || value == "********"
     end
 
     def current_user_timezone

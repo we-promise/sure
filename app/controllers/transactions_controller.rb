@@ -525,12 +525,12 @@ class TransactionsController < ApplicationController
         # User selected "Enter custom ticker" - check for combobox selection or manual entry
         if params[:ticker].present?
           # Combobox selection: format is "SYMBOL|EXCHANGE|PROVIDER"
-          ticker_symbol, exchange_operating_mic, price_prov = params[:ticker].split("|")
+          parsed = Security.parse_combobox_id(params[:ticker])
           Security::Resolver.new(
-            ticker_symbol.strip,
-            exchange_operating_mic: exchange_operating_mic.presence || params[:exchange_operating_mic].presence,
+            parsed[:ticker].strip,
+            exchange_operating_mic: parsed[:exchange_operating_mic] || params[:exchange_operating_mic].presence,
             country_code: user_country,
-            price_provider: price_prov.presence
+            price_provider: parsed[:price_provider]
           ).resolve
         elsif params[:custom_ticker].present?
           # Manual entry from combobox's name_when_new or fallback text field
@@ -554,12 +554,12 @@ class TransactionsController < ApplicationController
         found
       elsif params[:ticker].present?
         # Direct combobox (no existing holdings) - format is "SYMBOL|EXCHANGE|PROVIDER"
-        ticker_symbol, exchange_operating_mic, price_prov = params[:ticker].split("|")
+        parsed = Security.parse_combobox_id(params[:ticker])
         Security::Resolver.new(
-          ticker_symbol.strip,
-          exchange_operating_mic: exchange_operating_mic.presence || params[:exchange_operating_mic].presence,
+          parsed[:ticker].strip,
+          exchange_operating_mic: parsed[:exchange_operating_mic] || params[:exchange_operating_mic].presence,
           country_code: user_country,
-          price_provider: price_prov.presence
+          price_provider: parsed[:price_provider]
         ).resolve
       elsif params[:custom_ticker].present?
         # Manual entry from combobox's name_when_new (no existing holdings path)

@@ -53,20 +53,20 @@ class HoldingsController < ApplicationController
 
   def remap_security
     # Combobox returns "TICKER|EXCHANGE|PROVIDER" format
-    ticker, exchange, provider = params[:security_id].to_s.split("|")
+    parsed = Security.parse_combobox_id(params[:security_id])
 
     # Validate ticker is present (form has required: true, but can be bypassed)
-    if ticker.blank?
+    if parsed[:ticker].blank?
       flash[:alert] = t(".security_not_found")
       redirect_to account_path(@holding.account, tab: "holdings")
       return
     end
 
     new_security = Security::Resolver.new(
-      ticker,
-      exchange_operating_mic: exchange,
+      parsed[:ticker],
+      exchange_operating_mic: parsed[:exchange_operating_mic],
       country_code: Current.family.country,
-      price_provider: provider.presence
+      price_provider: parsed[:price_provider]
     ).resolve
 
     if new_security.nil?

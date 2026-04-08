@@ -57,15 +57,18 @@ module Security::Provided
         end
       end
 
-      # Collect results with a per-provider timeout
+      # Wait for all futures with a single wall-clock timeout so total wait
+      # is at most PROVIDER_SEARCH_TIMEOUT regardless of provider count.
+      combined = Concurrent::Promises.zip(*futures)
+      results_array = combined.value(PROVIDER_SEARCH_TIMEOUT)
+
       all_results = []
       seen_keys = Set.new
 
-      futures.zip(active_providers).each do |future, prov|
-        provider_key = provider_key_for(prov)
-        provider_results = future.value(PROVIDER_SEARCH_TIMEOUT)
-
+      (results_array || Array.new(futures.size)).each_with_index do |provider_results, idx|
         next if provider_results.nil?
+
+        provider_key = provider_key_for(active_providers[idx])
 
         provider_results.each do |ps|
           # Dedup key includes provider so the same ticker on the same exchange can
@@ -88,6 +91,10 @@ module Security::Provided
         end
       end
 
+      if all_results.empty? && active_providers.any?
+        Rails.logger.warn("Security search: all #{active_providers.size} providers returned no results for '#{symbol}'")
+      end
+
       rank_search_results(all_results, symbol, country_code).first(MAX_SEARCH_RESULTS)
     end
 
@@ -100,9 +107,9 @@ module Security::Provided
       # Designed to run inside a Concurrent::Promises.future.
       def fetch_provider_results(prov, symbol, params)
         provider_key = provider_key_for(prov)
-        cache_key = "security_search:#{provider_key}:#{symbol.upcase}:#{params.sort_by { |k, _| k }.to_s}"
+        cache_key = "security_search:#{provider_key}:#{symbol.upcase}:#{Digest::SHA256.hexdigest(params.sort_by { |k, _| k }.to_json)}"
 
-        Rails.cache.fetch(cache_key, expires_in: SEARCH_CACHE_TTL) do
+        Rails.cache.fetch(cache_key, expires_in: SEARCH_CACHE_TTL, skip_nil: true) do
           response = prov.search_securities(symbol, **params)
           next nil unless response.success?
 
