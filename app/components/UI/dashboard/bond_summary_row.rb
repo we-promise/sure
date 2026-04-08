@@ -86,15 +86,16 @@ class UI::Dashboard::BondSummaryRow < ApplicationComponent
 
       inflation = helpers.number_to_percentage(inflation_component.to_d, precision: 3)
       margin = helpers.number_to_percentage(margin_component.to_d, precision: 3)
+      source = current_inflation_source_key
 
-      if lot.gus_inflation_source?(allow_import: false)
+      if source == "gus_sdp"
         t(
           "bonds.purchase_holding.inflation_meta_gus",
           inflation: inflation,
           margin: margin,
           indicator: lot.current_inflation_indicator_id
         )
-      elsif current_inflation_source_key.blank? || current_inflation_source_key == "manual"
+      elsif source.blank? || source == "manual"
         t(
           "bonds.purchase_holding.inflation_meta_manual",
           inflation: inflation,
@@ -111,7 +112,7 @@ class UI::Dashboard::BondSummaryRow < ApplicationComponent
     end
 
     def current_inflation_source_key
-      lot.current_inflation_source(allow_import: false).to_s.presence
+      @current_inflation_source_key ||= lot.current_inflation_source(allow_import: false).to_s.presence
     end
 
     def localized_inflation_provider
