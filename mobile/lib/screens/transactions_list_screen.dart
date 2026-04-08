@@ -106,7 +106,7 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
 
   String? _getCategoryDisplayName(String? categoryId, String? fallbackName) {
     if (categoryId == null) return fallbackName;
-    final categoriesProvider = Provider.of<CategoriesProvider>(context, listen: false);
+    final categoriesProvider = Provider.of<CategoriesProvider>(context);
     for (final cat in categoriesProvider.categories) {
       if (cat.id == categoryId) return cat.displayName;
     }
@@ -466,11 +466,19 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
                 ),
                 Expanded(
                   child: transactions.isEmpty
-                    ? Center(
-                        child: Text(
-                          'No transactions match this category',
-                          style: TextStyle(color: colorScheme.onSurfaceVariant),
-                        ),
+                    ? ListView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        children: [
+                          SizedBox(
+                            height: MediaQuery.of(context).size.height * 0.4,
+                            child: Center(
+                              child: Text(
+                                'No transactions match this category',
+                                style: TextStyle(color: colorScheme.onSurfaceVariant),
+                              ),
+                            ),
+                          ),
+                        ],
                       )
                     : ListView.builder(
               padding: const EdgeInsets.all(16),
