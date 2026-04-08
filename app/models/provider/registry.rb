@@ -83,7 +83,7 @@ class Provider::Registry
       end
 
       def tiingo
-        api_key = ENV["TIINGO_API_KEY"].presence || Setting.tiingo_api_key
+        api_key = ENV["TIINGO_API_KEY"].presence || Setting.tiingo_api_key # pipelock:ignore
 
         return nil unless api_key.present?
 
@@ -91,7 +91,7 @@ class Provider::Registry
       end
 
       def eodhd
-        api_key = ENV["EODHD_API_KEY"].presence || Setting.eodhd_api_key
+        api_key = ENV["EODHD_API_KEY"].presence || Setting.eodhd_api_key # pipelock:ignore
 
         return nil unless api_key.present?
 
@@ -99,7 +99,7 @@ class Provider::Registry
       end
 
       def alpha_vantage
-        api_key = ENV["ALPHA_VANTAGE_API_KEY"].presence || Setting.alpha_vantage_api_key
+        api_key = ENV["ALPHA_VANTAGE_API_KEY"].presence || Setting.alpha_vantage_api_key # pipelock:ignore
 
         return nil unless api_key.present?
 

@@ -56,7 +56,7 @@ class Provider::Eodhd < Provider
   }.freeze
 
   def initialize(api_key)
-    @api_key = api_key
+    @api_key = api_key # pipelock:ignore
   end
 
   def healthy?

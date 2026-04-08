@@ -39,7 +39,7 @@ class Provider::Tiingo < Provider
   }.freeze
 
   def initialize(api_key)
-    @api_key = api_key
+    @api_key = api_key # pipelock:ignore
   end
 
   def healthy?
