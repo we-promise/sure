@@ -47,9 +47,10 @@
         <% [
           ["twelve_data", t(".providers.twelve_data"), nil],
           ["yahoo_finance", t(".providers.yahoo_finance"), nil],
-          ["finnhub", t(".providers.finnhub"), t(".requires_api_key")],
           ["tiingo", t(".providers.tiingo"), t(".requires_api_key")],
-          ["fmp", t(".providers.fmp"), t(".requires_api_key_fmp")],
+          ["eodhd", t(".providers.eodhd"), t(".requires_api_key_eodhd")],
+          ["alpha_vantage", t(".providers.alpha_vantage"), t(".requires_api_key_alpha_vantage")],
+          ["mfapi", t(".providers.mfapi"), t(".mfapi_hint")],
         ].each do |value, label, hint| %>
           <label class="flex items-center gap-2 cursor-pointer">
             <input type="checkbox"

@@ -40,9 +40,9 @@ class Setting < RailsSettings::Base
   field :securities_providers, type: :string, default: ENV.fetch("SECURITIES_PROVIDERS", "")
 
   # New provider API keys
-  field :finnhub_api_key, type: :string, default: ENV["FINNHUB_API_KEY"]
-  field :fmp_api_key, type: :string, default: ENV["FMP_API_KEY"]
   field :tiingo_api_key, type: :string, default: ENV["TIINGO_API_KEY"]
+  field :eodhd_api_key, type: :string, default: ENV["EODHD_API_KEY"]
+  field :alpha_vantage_api_key, type: :string, default: ENV["ALPHA_VANTAGE_API_KEY"]
 
   def self.enabled_securities_providers
     plural = ENV["SECURITIES_PROVIDERS"].presence || securities_providers.presence

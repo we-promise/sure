@@ -82,28 +82,32 @@ class Provider::Registry
         Provider::YahooFinance.new
       end
 
-      def finnhub
-        api_key = ENV["FINNHUB_API_KEY"].presence || Setting.finnhub_api_key
-
-        return nil unless api_key.present?
-
-        Provider::Finnhub.new(api_key)
-      end
-
-      def fmp
-        api_key = ENV["FMP_API_KEY"].presence || Setting.fmp_api_key
-
-        return nil unless api_key.present?
-
-        Provider::Fmp.new(api_key)
-      end
-
       def tiingo
         api_key = ENV["TIINGO_API_KEY"].presence || Setting.tiingo_api_key
 
         return nil unless api_key.present?
 
         Provider::Tiingo.new(api_key)
+      end
+
+      def eodhd
+        api_key = ENV["EODHD_API_KEY"].presence || Setting.eodhd_api_key
+
+        return nil unless api_key.present?
+
+        Provider::Eodhd.new(api_key)
+      end
+
+      def alpha_vantage
+        api_key = ENV["ALPHA_VANTAGE_API_KEY"].presence || Setting.alpha_vantage_api_key
+
+        return nil unless api_key.present?
+
+        Provider::AlphaVantage.new(api_key)
+      end
+
+      def mfapi
+        Provider::Mfapi.new
       end
   end
 
@@ -132,7 +136,7 @@ class Provider::Registry
       when :exchange_rates
         %i[twelve_data yahoo_finance]
       when :securities
-        %i[twelve_data yahoo_finance finnhub fmp tiingo]
+        %i[twelve_data yahoo_finance tiingo eodhd alpha_vantage mfapi]
       when :llm
         %i[openai]
       else

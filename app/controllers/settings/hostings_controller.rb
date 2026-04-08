@@ -19,9 +19,9 @@ class Settings::HostingsController < ApplicationController
     # Show provider settings if used for FX or enabled for securities
     @show_twelve_data_settings = exchange_rate_provider == "twelve_data" || enabled_securities.include?("twelve_data")
     @show_yahoo_finance_settings = exchange_rate_provider == "yahoo_finance" || enabled_securities.include?("yahoo_finance")
-    @show_finnhub_settings = enabled_securities.include?("finnhub")
     @show_tiingo_settings = enabled_securities.include?("tiingo")
-    @show_fmp_settings = enabled_securities.include?("fmp")
+    @show_eodhd_settings = enabled_securities.include?("eodhd")
+    @show_alpha_vantage_settings = enabled_securities.include?("alpha_vantage")
 
     # Only fetch provider data if we're showing the section
     if @show_twelve_data_settings
@@ -83,16 +83,16 @@ class Settings::HostingsController < ApplicationController
       end
     end
 
-    if hosting_params.key?(:finnhub_api_key)
-      Setting.finnhub_api_key = hosting_params[:finnhub_api_key]
-    end
-
     if hosting_params.key?(:tiingo_api_key)
       Setting.tiingo_api_key = hosting_params[:tiingo_api_key]
     end
 
-    if hosting_params.key?(:fmp_api_key)
-      Setting.fmp_api_key = hosting_params[:fmp_api_key]
+    if hosting_params.key?(:eodhd_api_key)
+      Setting.eodhd_api_key = hosting_params[:eodhd_api_key]
+    end
+
+    if hosting_params.key?(:alpha_vantage_api_key)
+      Setting.alpha_vantage_api_key = hosting_params[:alpha_vantage_api_key]
     end
 
     if hosting_params.key?(:syncs_include_pending)
@@ -192,7 +192,7 @@ class Settings::HostingsController < ApplicationController
   private
     def hosting_params
       return ActionController::Parameters.new unless params.key?(:setting)
-      params.require(:setting).permit(:onboarding_state, :require_email_confirmation, :invite_only_default_family_id, :brand_fetch_client_id, :brand_fetch_high_res_logos, :twelve_data_api_key, :finnhub_api_key, :tiingo_api_key, :fmp_api_key, :openai_access_token, :openai_uri_base, :openai_model, :openai_json_mode, :exchange_rate_provider, :securities_provider, :syncs_include_pending, :auto_sync_enabled, :auto_sync_time, :external_assistant_url, :external_assistant_token, :external_assistant_agent_id, securities_providers: [])
+      params.require(:setting).permit(:onboarding_state, :require_email_confirmation, :invite_only_default_family_id, :brand_fetch_client_id, :brand_fetch_high_res_logos, :twelve_data_api_key, :tiingo_api_key, :eodhd_api_key, :alpha_vantage_api_key, :openai_access_token, :openai_uri_base, :openai_model, :openai_json_mode, :exchange_rate_provider, :securities_provider, :syncs_include_pending, :auto_sync_enabled, :auto_sync_time, :external_assistant_url, :external_assistant_token, :external_assistant_agent_id, securities_providers: [])
     end
 
     def update_assistant_type

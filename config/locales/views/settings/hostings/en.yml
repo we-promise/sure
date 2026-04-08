@@ -38,13 +38,16 @@ en:
         securities_description: Enable one or more providers for fetching stock, ETF, and mutual fund prices. When searching, all enabled providers are queried and results are merged.
         env_configured_message: Provider selection is disabled because environment variables are set. To enable selection here, remove these environment variables from your configuration.
         requires_api_key: requires API key
-        requires_api_key_fmp: requires API key, 250 calls/day limit
+        requires_api_key_eodhd: requires API key, 20 calls/day limit
+        requires_api_key_alpha_vantage: requires API key, 25 calls/day limit
+        mfapi_hint: free, no API key -- Indian mutual funds only
         providers:
           twelve_data: Twelve Data
           yahoo_finance: Yahoo Finance
-          finnhub: Finnhub
           tiingo: Tiingo
-          fmp: Financial Modeling Prep
+          eodhd: EODHD
+          alpha_vantage: Alpha Vantage
+          mfapi: MFAPI.in
       assistant_settings:
         title: AI Assistant
         description: Choose how the chat assistant responds. Builtin uses your configured LLM provider directly. External delegates to a remote AI agent that can call back to Sure's financial tools via MCP.
@@ -101,25 +104,26 @@ en:
         status_inactive: Yahoo Finance connection failed
         connection_failed: Unable to connect to Yahoo Finance
         troubleshooting: Check your internet connection and firewall settings. Yahoo Finance may be temporarily unavailable.
-      finnhub_settings:
-        title: Finnhub
-        description: Enter the API key provided by Finnhub. Free tier includes 60 requests per minute.
-        env_configured_message: Successfully configured through the FINNHUB_API_KEY environment variable.
-        label: API Key
-        placeholder: Enter your Finnhub API key here
       tiingo_settings:
         title: Tiingo
         description: Enter the API token provided by Tiingo. Free tier supports 50 unique symbols per hour with 30+ years of historical data.
         env_configured_message: Successfully configured through the TIINGO_API_KEY environment variable.
         label: API Token
         placeholder: Enter your Tiingo API token here
-      fmp_settings:
-        title: Financial Modeling Prep
-        description: Enter the API key provided by Financial Modeling Prep. Best for international ETFs and mutual funds.
-        env_configured_message: Successfully configured through the FMP_API_KEY environment variable.
+      eodhd_settings:
+        title: EODHD
+        description: Enter the API token provided by EODHD. Supports EU ETFs on LSE, XETRA, and other international exchanges.
+        env_configured_message: Successfully configured through the EODHD_API_KEY environment variable.
+        label: API Token
+        placeholder: Enter your EODHD API token here
+        rate_limit_warning: "EODHD free tier is limited to 20 API calls per day. Best used as a supplementary provider for EU ETFs not available from other providers."
+      alpha_vantage_settings:
+        title: Alpha Vantage
+        description: Enter the API key from Alpha Vantage. Supports EU ETFs on London Stock Exchange, XETRA, and other exchanges.
+        env_configured_message: Successfully configured through the ALPHA_VANTAGE_API_KEY environment variable.
         label: API Key
-        placeholder: Enter your FMP API key here
-        rate_limit_warning: "FMP free tier is limited to 250 API calls per day. This provider is best used for international ETFs and securities not available from other providers. Consider using Finnhub or Twelve Data as your primary provider."
+        placeholder: Enter your Alpha Vantage API key here
+        rate_limit_warning: "Alpha Vantage free tier is limited to 25 API calls per day. Best used as a supplementary provider for EU ETFs not available from other providers."
       twelve_data_settings:
         api_calls_used: "%{used} / %{limit} API daily calls used (%{percentage})"
         description: Enter the API key provided by Twelve Data
