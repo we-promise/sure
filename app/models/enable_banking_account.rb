@@ -72,6 +72,11 @@ class EnableBankingAccount < ApplicationRecord
     "ODFT" => { type: "Depository", subtype: "checking" },
     "TRAN" => { type: "Depository", subtype: "checking" },
     "SALA" => { type: "Depository", subtype: "checking" },
+    "MOMA" => { type: "Depository", subtype: "savings" },
+    "NREX" => { type: "Depository", subtype: "checking" },
+    "TAXE" => { type: "Depository", subtype: "checking" },
+    "TRAS" => { type: "Depository", subtype: "checking" },
+    "ONDP" => { type: "Depository", subtype: "savings" },
     "CASH" => { type: "Depository", subtype: "checking" },
     "OTHR" => nil
   }.freeze

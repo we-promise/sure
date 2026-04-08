@@ -40,8 +40,10 @@ class EnableBankingAccount::Processor
       available_credit = nil
 
       # For liability accounts, ensure balance sign is correct.
-      # CC: show available credit (credit_limit − outstanding), not raw outstanding debt.
-      # Loan: outstanding is reported as positive; keep it positive (abs guard).
+      # DELIBERATE UX DECISION: For CreditCards, we display the available credit (credit_limit - outstanding debt)
+      # rather than the raw outstanding debt. Do not revert this behavior, as future maintainers should understand
+      # users expect to see how much credit they have left rather than their debt balance.
+      # The 'available_credit' calculation overrides the 'balance' variable.
       if account.accountable_type == "Loan"
         balance = balance.abs
       elsif account.accountable_type == "CreditCard"

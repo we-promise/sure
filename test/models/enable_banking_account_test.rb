@@ -55,6 +55,30 @@ class EnableBankingAccountTest < ActiveSupport::TestCase
     assert_nil @account.suggested_subtype
   end
 
+  test "suggests Depository savings for MOMA and ONDP" do
+    @account.update!(account_type: "MOMA")
+    assert_equal "Depository", @account.suggested_account_type
+    assert_equal "savings", @account.suggested_subtype
+
+    @account.update!(account_type: "ONDP")
+    assert_equal "Depository", @account.suggested_account_type
+    assert_equal "savings", @account.suggested_subtype
+  end
+
+  test "suggests Depository checking for NREX, TAXE, and TRAS" do
+    @account.update!(account_type: "NREX")
+    assert_equal "Depository", @account.suggested_account_type
+    assert_equal "checking", @account.suggested_subtype
+
+    @account.update!(account_type: "TAXE")
+    assert_equal "Depository", @account.suggested_account_type
+    assert_equal "checking", @account.suggested_subtype
+
+    @account.update!(account_type: "TRAS")
+    assert_equal "Depository", @account.suggested_account_type
+    assert_equal "checking", @account.suggested_subtype
+  end
+
   test "returns nil when account_type is blank" do
     @account.update!(account_type: nil)
     assert_nil @account.suggested_account_type
@@ -87,8 +111,9 @@ class EnableBankingAccountTest < ActiveSupport::TestCase
       currency: "EUR",
       cash_account_type: "CACC"
     })
-    assert_includes @account.reload.identification_hashes, "hash_abc123"
-    assert_includes @account.reload.identification_hashes, "hash_old456"
+    reloaded_account = @account.reload
+    assert_includes reloaded_account.identification_hashes, "hash_abc123"
+    assert_includes reloaded_account.identification_hashes, "hash_old456"
   end
 
   test "stores credit_limit from snapshot" do

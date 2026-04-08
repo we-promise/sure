@@ -47,6 +47,7 @@ fr:
       description: Sélectionnez la banque que vous souhaitez connecter à vos comptes.
       no_banks: Aucune banque disponible pour ce pays/région.
       search_placeholder: Recherchez votre banque...
+      search_label: "Rechercher votre banque"
       title: Sélectionnez votre banque
     setup_accounts:
       psd2_savings_notice: "Remarque : Certains comptes d'épargne réglementés français (Livret A, PEL, LEP, LDDS) peuvent avoir un accès limité ou inexistant via l'Open Banking (DSP2). Si un compte d'épargne est manquant, vous pouvez l'ajouter manuellement."

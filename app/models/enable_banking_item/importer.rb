@@ -209,6 +209,21 @@ class EnableBankingItem::Importer
         transaction_status: "PDNG",
         psu_headers: enable_banking_item.build_psu_headers
       )
+
+      book_ids = all_transactions
+        .map { |tx| tx.with_indifferent_access[:transaction_id].presence }
+        .compact.to_set
+
+      book_entry_refs = all_transactions
+        .select { |tx| tx.with_indifferent_access[:transaction_id].blank? }
+        .map { |tx| tx.with_indifferent_access[:entry_reference].presence }
+        .compact.to_set
+
+      pending_transactions.reject! do |tx|
+        tx = tx.with_indifferent_access
+        tx[:transaction_id].present? ? book_ids.include?(tx[:transaction_id]) : book_entry_refs.include?(tx[:entry_reference].presence)
+      end
+
       all_transactions = all_transactions + tag_as_pending(pending_transactions)
 
       # Deduplicate API response: Enable Banking sometimes returns the same logical

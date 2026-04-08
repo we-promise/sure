@@ -85,12 +85,13 @@ class EnableBankingItem < ApplicationRecord
       language: language
     )
 
-    update!(
+    attributes = {
       authorization_id: result[:authorization_id],
       aspsp_name: aspsp_name
-    )
+    }
+    attributes[:psu_type] = psu_type if psu_type.present?
 
-    update!(psu_type: psu_type) if psu_type.present?
+    update!(attributes)
 
     result[:url]
   end

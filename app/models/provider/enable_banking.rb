@@ -170,7 +170,7 @@ class Provider::EnableBanking
 
     response = self.class.get(
       "#{BASE_URL}/accounts/#{encoded_id}/transactions",
-      headers: auth_headers.merge(psu_headers),
+      headers: auth_headers.merge(safe_psu_headers(psu_headers)),
       query: query_params.presence
     )
 
@@ -180,6 +180,10 @@ class Provider::EnableBanking
   end
 
   private
+
+    def safe_psu_headers(headers)
+      headers.except("Authorization", :Authorization, "Accept", :Accept, "Content-Type", :"Content-Type")
+    end
 
     def extract_private_key(certificate_pem)
       # Extract private key from PEM certificate
