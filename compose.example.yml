@@ -26,11 +26,11 @@
 #
 # https://github.com/we-promise/sure/discussions/categories/general
 #
-# Yahoo Finance Sync Note:
-# -------------------------
-# If you encounter "Failed to open TCP connection to fc.yahoo.com" errors
-# in a Podman/IPv6 environment, the issue may be that DNS resolves to an
-# IPv6 address first. Since IPv6 may not be configured in the container,
+# IPv6 Note (Yahoo Finance Sync, others?):
+# ----------------------------------------
+# If you encounter "Failed to open TCP connection" errors to hosts like
+# fc.yahoo.com in your environment, the issue may be that DNS resolves
+# to an IPv6 address first. Since IPv6 may not be configured in the container,
 # the connection hangs. To work around this, you can hardcode the IPv4
 # addresses in your container's /etc/hosts or set custom DNS:
 #
