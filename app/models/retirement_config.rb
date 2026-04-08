@@ -167,6 +167,7 @@ class RetirementConfig < ApplicationRecord
   private
 
     def latest_pension_entry
-      @latest_pension_entry ||= pension_entries.order(recorded_at: :desc).first
+      return @latest_pension_entry if defined?(@latest_pension_entry)
+      @latest_pension_entry = pension_entries.order(recorded_at: :desc).first
     end
 end

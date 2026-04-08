@@ -151,24 +151,24 @@
       <%= form_with url: add_pension_entry_retirement_path, method: :post, scope: :pension_entry, class: "space-y-4" do |f| %>
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <div>
-            <label class="block text-sm font-medium text-secondary mb-1"><%= t(".date") %></label>
+            <%= f.label :recorded_at, t(".date"), class: "block text-sm font-medium text-secondary mb-1" %>
             <%= f.date_field :recorded_at, value: Date.current, class: "form-input w-full rounded-lg border border-secondary bg-container text-sm text-primary px-3 py-2", required: true %>
           </div>
           <div>
-            <label class="block text-sm font-medium text-secondary mb-1"><%= t(".pension_points") %></label>
+            <%= f.label :current_points, t(".pension_points"), class: "block text-sm font-medium text-secondary mb-1" %>
             <%= f.number_field :current_points, step: 0.0001, min: 0, class: "form-input w-full rounded-lg border border-secondary bg-container text-sm text-primary px-3 py-2", required: true %>
           </div>
           <div>
-            <label class="block text-sm font-medium text-secondary mb-1"><%= t(".current_pension") %></label>
+            <%= f.label :current_monthly_pension, t(".current_pension"), class: "block text-sm font-medium text-secondary mb-1" %>
             <%= f.number_field :current_monthly_pension, step: 0.01, min: 0, class: "form-input w-full rounded-lg border border-secondary bg-container text-sm text-primary px-3 py-2" %>
           </div>
           <div>
-            <label class="block text-sm font-medium text-secondary mb-1"><%= t(".projected_pension") %></label>
+            <%= f.label :projected_monthly_pension, t(".projected_pension"), class: "block text-sm font-medium text-secondary mb-1" %>
             <%= f.number_field :projected_monthly_pension, step: 0.01, min: 0, class: "form-input w-full rounded-lg border border-secondary bg-container text-sm text-primary px-3 py-2" %>
           </div>
         </div>
         <div>
-          <label class="block text-sm font-medium text-secondary mb-1"><%= t(".notes") %></label>
+          <%= f.label :notes, t(".notes"), class: "block text-sm font-medium text-secondary mb-1" %>
           <%= f.text_field :notes, class: "form-input w-full rounded-lg border border-secondary bg-container text-sm text-primary px-3 py-2", placeholder: t(".notes_placeholder") %>
         </div>
         <div>
