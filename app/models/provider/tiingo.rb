@@ -110,7 +110,7 @@ class Provider::Tiingo < Provider
       throttle_request
       track_symbol(symbol)
 
-      response = client.get("#{base_url}/tiingo/daily/#{symbol}")
+      response = client.get("#{base_url}/tiingo/daily/#{CGI.escape(symbol)}")
 
       parsed = JSON.parse(response.body)
       check_api_error!(parsed)
@@ -146,7 +146,7 @@ class Provider::Tiingo < Provider
       throttle_request
       track_symbol(symbol)
 
-      response = client.get("#{base_url}/tiingo/daily/#{symbol}/prices") do |req|
+      response = client.get("#{base_url}/tiingo/daily/#{CGI.escape(symbol)}/prices") do |req|
         req.params["startDate"] = start_date.to_s
         req.params["endDate"] = end_date.to_s
       end

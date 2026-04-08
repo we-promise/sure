@@ -1221,6 +1221,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_04_08_151837) do
     t.index ["country_code"], name: "index_securities_on_country_code"
     t.index ["exchange_operating_mic"], name: "index_securities_on_exchange_operating_mic"
     t.index ["kind"], name: "index_securities_on_kind"
+    t.index ["price_provider", "offline_reason"], name: "index_securities_on_price_provider_and_offline_reason"
     t.index ["price_provider"], name: "index_securities_on_price_provider"
     t.check_constraint "kind::text = ANY (ARRAY['standard'::character varying, 'cash'::character varying]::text[])", name: "chk_securities_kind"
   end

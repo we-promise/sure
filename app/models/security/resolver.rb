@@ -82,8 +82,8 @@ class Security::Resolver
       return nil unless exchange_operating_mic.present?
 
       match = provider_search_result.find do |s|
-        ticker_matches = s.ticker.upcase.to_s == symbol.upcase.to_s
-        exchange_matches = s.exchange_operating_mic.upcase.to_s == exchange_operating_mic.upcase.to_s
+        ticker_matches = s.ticker&.upcase.to_s == symbol.upcase.to_s
+        exchange_matches = s.exchange_operating_mic&.upcase.to_s == exchange_operating_mic.upcase.to_s
 
         if country_code && exchange_operating_mic
           ticker_matches && exchange_matches && s.country_code&.upcase.to_s == country_code.upcase.to_s

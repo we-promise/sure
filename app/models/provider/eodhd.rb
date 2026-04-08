@@ -161,7 +161,7 @@ class Provider::Eodhd < Provider
 
       ticker = eodhd_symbol(symbol, exchange_operating_mic)
 
-      response = client.get("#{base_url}/api/fundamentals/#{ticker}") do |req|
+      response = client.get("#{base_url}/api/fundamentals/#{CGI.escape(ticker)}") do |req|
         req.params["api_token"] = api_key
         req.params["fmt"] = "json"
       end
@@ -201,7 +201,7 @@ class Provider::Eodhd < Provider
 
       ticker = eodhd_symbol(symbol, exchange_operating_mic)
 
-      response = client.get("#{base_url}/api/eod/#{ticker}") do |req|
+      response = client.get("#{base_url}/api/eod/#{CGI.escape(ticker)}") do |req|
         req.params["api_token"] = api_key
         req.params["fmt"] = "json"
         req.params["from"] = start_date.to_s
@@ -285,7 +285,7 @@ class Provider::Eodhd < Provider
     def enforce_daily_limit!
       new_count = Rails.cache.increment(daily_cache_key, 1, expires_in: 24.hours).to_i
 
-      if new_count >= max_requests_per_day
+      if new_count > max_requests_per_day
         raise RateLimitError, "EODHD daily rate limit of #{max_requests_per_day} requests exhausted"
       end
     end

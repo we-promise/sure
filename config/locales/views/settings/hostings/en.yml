@@ -43,6 +43,7 @@ en:
         requires_api_key_eodhd: requires API key, 20 calls/day limit
         requires_api_key_alpha_vantage: requires API key, 25 calls/day limit
         mfapi_hint: free, no API key -- Indian mutual funds only
+        save_providers: Save provider selection
         providers:
           twelve_data: Twelve Data
           yahoo_finance: Yahoo Finance

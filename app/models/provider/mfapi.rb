@@ -66,7 +66,7 @@ class Provider::Mfapi < Provider
   def fetch_security_info(symbol:, exchange_operating_mic:)
     with_provider_response do
       throttle_request
-      response = client.get("#{base_url}/mf/#{symbol}/latest")
+      response = client.get("#{base_url}/mf/#{CGI.escape(symbol)}/latest")
 
       parsed = JSON.parse(response.body)
       check_api_error!(parsed)
@@ -100,7 +100,7 @@ class Provider::Mfapi < Provider
   def fetch_security_prices(symbol:, exchange_operating_mic: nil, start_date:, end_date:)
     with_provider_response do
       throttle_request
-      response = client.get("#{base_url}/mf/#{symbol}") do |req|
+      response = client.get("#{base_url}/mf/#{CGI.escape(symbol)}") do |req|
         req.params["startDate"] = start_date.to_s
         req.params["endDate"] = end_date.to_s
       end

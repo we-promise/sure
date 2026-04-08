@@ -69,7 +69,7 @@ class Settings::HostingsController < ApplicationController
     end
 
     if hosting_params.key?(:securities_providers)
-      new_providers = Array(hosting_params[:securities_providers]).reject(&:blank?)
+      new_providers = Array(hosting_params[:securities_providers]).reject(&:blank?) & Security.valid_price_providers
       old_providers = Setting.enabled_securities_providers
 
       Setting.securities_providers = new_providers.join(",")
