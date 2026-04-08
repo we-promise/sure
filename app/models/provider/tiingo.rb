@@ -10,8 +10,8 @@ class Provider::Tiingo < Provider
   # Minimum delay between requests to avoid rate limiting (in seconds)
   MIN_REQUEST_INTERVAL = 1.5
 
-  # Maximum unique symbols per hour (Tiingo free tier limit)
-  MAX_SYMBOLS_PER_HOUR = 50
+  # Maximum unique symbols per month (Tiingo free tier limit)
+  MAX_SYMBOLS_PER_MONTH = 500
 
   # Maximum requests per hour
   MAX_REQUESTS_PER_HOUR = 1000
@@ -25,7 +25,10 @@ class Provider::Tiingo < Provider
     "BATS" => "BATS",
     "LSE" => "XLON",
     "SHE" => "XSHE",
-    "SHG" => "XSHG"
+    "SHG" => "XSHG",
+    "OTCMKTS" => "XOTC",
+    "OTCD" => "XOTC",
+    "PINK" => "XOTC"
   }.freeze
 
   # Tiingo asset types to normalized kinds
@@ -49,14 +52,13 @@ class Provider::Tiingo < Provider
 
   def usage
     with_provider_response do
-      hour_key = Time.current.to_i / 3600
-      symbols_key = "tiingo:symbols:#{hour_key}"
-      symbols_used = Rails.cache.read(symbols_key)&.size || 0
+      month_key = "tiingo:symbols:#{Date.current.strftime('%Y-%m')}"
+      symbols_used = Rails.cache.read(month_key)&.size || 0
 
       UsageData.new(
         used: symbols_used,
-        limit: MAX_SYMBOLS_PER_HOUR,
-        utilization: (symbols_used.to_f / MAX_SYMBOLS_PER_HOUR * 100).round(1),
+        limit: MAX_SYMBOLS_PER_MONTH,
+        utilization: (symbols_used.to_f / MAX_SYMBOLS_PER_MONTH * 100).round(1),
         plan: "Free"
       )
     end
@@ -88,7 +90,7 @@ class Provider::Tiingo < Provider
           name: security["name"],
           logo_url: nil,
           exchange_operating_mic: map_exchange_to_mic(security["exchange"]),
-          country_code: country_code
+          country_code: security["countryCode"].presence || country_code
         )
       end
     end
@@ -104,6 +106,9 @@ class Provider::Tiingo < Provider
       parsed = JSON.parse(response.body)
       check_api_error!(parsed)
 
+      # The daily metadata endpoint returns exchangeCode (e.g., "NYSE ARCA", "OTCD")
+      resolved_mic = exchange_operating_mic.presence || map_exchange_to_mic(parsed["exchangeCode"])
+
       SecurityInfo.new(
         symbol: parsed["ticker"] || symbol,
         name: parsed["name"],
@@ -111,7 +116,7 @@ class Provider::Tiingo < Provider
         logo_url: nil,
         description: parsed["description"],
         kind: nil,
-        exchange_operating_mic: exchange_operating_mic
+        exchange_operating_mic: resolved_mic
       )
     end
   end
@@ -214,17 +219,18 @@ class Provider::Tiingo < Provider
       @last_request_time = Time.current
     end
 
-    # Tracks unique symbols queried per hour to stay within Tiingo's symbol limit
+    # Tracks unique symbols queried per month to stay within Tiingo's 500 symbols/month limit
     def track_symbol(symbol)
-      hour_key = "tiingo:symbols:#{Time.current.to_i / 3600}"
-      symbols = Rails.cache.read(hour_key) || Set.new
+      month_key = "tiingo:symbols:#{Date.current.strftime('%Y-%m')}"
+      symbols = Rails.cache.read(month_key) || Set.new
 
-      if !symbols.include?(symbol.upcase) && symbols.size >= MAX_SYMBOLS_PER_HOUR
-        raise RateLimitError, "Tiingo unique symbol limit reached (#{MAX_SYMBOLS_PER_HOUR} per hour)"
+      if !symbols.include?(symbol.upcase) && symbols.size >= MAX_SYMBOLS_PER_MONTH
+        raise RateLimitError, "Tiingo unique symbol limit reached (#{MAX_SYMBOLS_PER_MONTH} per month)"
       end
 
       symbols.add(symbol.upcase)
-      Rails.cache.write(hour_key, symbols, expires_in: 7200.seconds)
+      # Expire at end of month + buffer
+      Rails.cache.write(month_key, symbols, expires_in: 35.days)
     end
 
     def min_request_interval

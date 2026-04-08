@@ -26,6 +26,9 @@ module Security::Provided
       nil
     end
 
+    # Cache duration for search results (avoids burning through provider rate limits)
+    SEARCH_CACHE_TTL = 5.minutes
+
     def search_provider(symbol, country_code: nil, exchange_operating_mic: nil)
       return [] if symbol.blank?
 
@@ -35,27 +38,38 @@ module Security::Provided
       providers.each do |prov|
         next if prov.nil?
 
+        provider_key = provider_key_for(prov)
+
         params = {
           country_code: country_code,
           exchange_operating_mic: exchange_operating_mic
         }.compact_blank
 
-        response = prov.search_securities(symbol, **params)
-        next unless response.success?
+        # Cache search results per provider+query to avoid repeated API calls
+        cache_key = "security_search:#{provider_key}:#{symbol.upcase}:#{params.sort}"
+        provider_results = Rails.cache.fetch(cache_key, expires_in: SEARCH_CACHE_TTL) do
+          response = prov.search_securities(symbol, **params)
+          next nil unless response.success?
 
-        provider_key = provider_key_for(prov)
+          response.data.map do |ps|
+            { symbol: ps.symbol, name: ps.name, logo_url: ps.logo_url,
+              exchange_operating_mic: ps.exchange_operating_mic, country_code: ps.country_code }
+          end
+        end
 
-        response.data.each do |provider_security|
-          dedup_key = "#{provider_security.symbol}|#{provider_security.exchange_operating_mic}".upcase
+        next if provider_results.nil?
+
+        provider_results.each do |ps|
+          dedup_key = "#{ps[:symbol]}|#{ps[:exchange_operating_mic]}".upcase
           next if seen_keys.include?(dedup_key)
           seen_keys.add(dedup_key)
 
           security = Security.new(
-            ticker: provider_security.symbol,
-            name: provider_security.name,
-            logo_url: provider_security.logo_url,
-            exchange_operating_mic: provider_security.exchange_operating_mic,
-            country_code: provider_security.country_code,
+            ticker: ps[:symbol],
+            name: ps[:name],
+            logo_url: ps[:logo_url],
+            exchange_operating_mic: ps[:exchange_operating_mic],
+            country_code: ps[:country_code],
             price_provider: provider_key
           )
           all_results << security
