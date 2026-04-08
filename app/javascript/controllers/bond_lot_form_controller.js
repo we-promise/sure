@@ -69,9 +69,21 @@ export default class extends Controller {
   }
 
   syncAutoFetchWithProvider() {
+    this.#syncAutoFetchWithProvider()
+  }
+
+  #syncAutoFetchWithProvider({ preserveExisting = false } = {}) {
     if (!this.globalImportEnabledValue) return
 
     if (!this.hasAutoFetchInputTarget || !this.hasProviderSelectTarget) return
+
+    if (preserveExisting) {
+      const currentValue = `${this.autoFetchInputTarget.value || ""}`.trim()
+      if (currentValue !== "") {
+        this.#toggleManualInflationField()
+        return
+      }
+    }
 
     const provider = `${this.providerSelectTarget.value || ""}`.trim()
     this.autoFetchInputTarget.value = provider === "" ? "0" : "1"
@@ -132,7 +144,7 @@ export default class extends Controller {
     }
 
     providerSelect.disabled = providerDerived
-    this.syncAutoFetchWithProvider()
+    this.#syncAutoFetchWithProvider({ preserveExisting: true })
   }
 
   #toggleManualInflationField() {

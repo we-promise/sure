@@ -3,7 +3,7 @@ pl:
   settings:
     hostings:
       breadcrumbs:
-        home: Strona glowna
+        home: Strona główna
         self_hosting: Self-Hosting
       invite_code_settings:
         description: Kontroluj, jak nowe osoby rejestrują się w Twojej instancji %{product}.

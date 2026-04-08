@@ -53,6 +53,7 @@ en:
       cash_position: Bond cash
     purchase_holding:
       unknown: Unknown
+      month_year_format: "%m-%Y"
       update_needed: Update needed
       purchased: "Purchased %{date}"
       term_months:

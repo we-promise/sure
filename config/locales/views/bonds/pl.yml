@@ -53,6 +53,7 @@ pl:
       cash_position: Gotówka z obligacji
     purchase_holding:
       unknown: Nieznane
+      month_year_format: "%m-%Y"
       update_needed: Wymagana aktualizacja
       purchased: "Zakupiono %{date}"
       term_months:

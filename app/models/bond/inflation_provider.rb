@@ -62,7 +62,7 @@ module Bond::InflationProvider
     result = InflationRate.for_date(source: source_key, date: date, lag_months: lag_months)
     return nil if result.nil?
     InflationRecord.new(year: result.year, month: result.month, rate_yoy: result.rate_yoy)
-  rescue Faraday::Error, Provider::Error, ActiveRecord::RecordInvalid => e
+  rescue Faraday::Error, Provider::Error, ActiveRecord::RecordInvalid, RuntimeError => e
     Rails.logger.warn("[Bond::InflationProvider] record_for_date failed: #{e.class} - #{e.message}")
     nil
   end

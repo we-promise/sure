@@ -84,11 +84,13 @@ class BondInflationProviderTest < ActiveSupport::TestCase
     Setting.us_bls_cpi_series_id = "SERIES_123"
 
     begin
-      record = Bond::InflationProvider.record_for_date(
-        provider: "us_bls",
-        date: Date.new(2025, 3, 10),
-        lag_months: 2
-      )
+      record = with_env_overrides("US_BLS_CPI_BASE_URL" => nil, "US_BLS_CPI_SERIES_ID" => nil) do
+        Bond::InflationProvider.record_for_date(
+          provider: "us_bls",
+          date: Date.new(2025, 3, 10),
+          lag_months: 2
+        )
+      end
 
       assert_not_nil record
       assert_equal 104.0.to_d, record.rate_yoy
@@ -129,12 +131,14 @@ class BondInflationProviderTest < ActiveSupport::TestCase
 
     Bond::InflationProvider.expects(:provider_class).never
 
-    record = Bond::InflationProvider.record_for_date(
-      provider: "es_ine",
-      date: Date.new(2025, 3, 10),
-      lag_months: 2,
-      allow_import: true
-    )
+    record = with_env_overrides("ES_INE_CPI_SERIES_ID" => nil) do
+      Bond::InflationProvider.record_for_date(
+        provider: "es_ine",
+        date: Date.new(2025, 3, 10),
+        lag_months: 2,
+        allow_import: true
+      )
+    end
 
     assert_nil record
   ensure

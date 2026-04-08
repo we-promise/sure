@@ -92,6 +92,26 @@ class BondLotTest < ActiveSupport::TestCase
     assert_equal 4.0.to_d, lot.entry.entryable.extra["bond_interest_rate"].to_d
   end
 
+  test "create_purchase_entry! is idempotent when entry already exists" do
+    account = accounts(:bond)
+    lot = account.bond.bond_lots.create!(
+      purchased_on: Date.new(2026, 2, 1),
+      amount: 1000,
+      term_months: 12,
+      interest_rate: 4.0,
+      subtype: "other_bond",
+      rate_type: "fixed",
+      coupon_frequency: "at_maturity"
+    )
+
+    first_entry = lot.create_purchase_entry!
+
+    assert_no_difference [ "Entry.count", "Transaction.count" ] do
+      second_entry = lot.create_purchase_entry!
+      assert_equal first_entry.id, second_entry.id
+    end
+  end
+
   test "update_purchase_entry! updates entry and preserves unrelated extra fields" do
     account = accounts(:bond)
     entry_record = account.entries.create!(
@@ -501,6 +521,38 @@ class BondLotTest < ActiveSupport::TestCase
 
     # Year 2+ annual rate = inflation assumption (3.0) + margin (2.0) = 5.0%
     # Semi-annual coupon for 1200 principal = 1200 * 5% / 2 = 30.0
+    assert_in_delta 30.0, coupon.amount.to_f, 0.001
+  end
+
+  test "coupon_amount_per_period does not import inflation data by default" do
+    lot = BondLot.new(
+      bond: bonds(:one),
+      purchased_on: Date.new(2024, 1, 1),
+      issue_date: Date.new(2024, 1, 1),
+      amount: 1200,
+      subtype: "inflation_linked",
+      product_code: "us_tips_10y",
+      term_months: 120,
+      coupon_frequency: "semi_annual",
+      first_period_rate: 4.0,
+      inflation_margin: 2.0,
+      inflation_rate_assumption: 3.0,
+      auto_fetch_inflation: true,
+      cpi_lag_months: 2,
+      units: 12,
+      nominal_per_unit: 100,
+      rate_type: "variable"
+    )
+
+    Bond::InflationProvider.expects(:record_for_date).with(
+      provider: "us_bls",
+      date: Date.new(2026, 1, 1),
+      lag_months: 2,
+      allow_import: false
+    ).returns(nil)
+
+    coupon = lot.coupon_amount_per_period(on: Date.new(2026, 3, 31))
+
     assert_in_delta 30.0, coupon.amount.to_f, 0.001
   end
 

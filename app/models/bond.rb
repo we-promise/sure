@@ -155,7 +155,7 @@ class Bond < ApplicationRecord
   end
 
   def pending_rate_review_lots
-    BondLot.needs_rate_review.where(bond: self)
+    BondLot.needs_rate_review(BondLot.where(bond: self))
   end
 
   def wrapper_label(format: :short)

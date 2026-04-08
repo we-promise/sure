@@ -233,7 +233,7 @@ class BondLot < ApplicationRecord
     (projected_total_return_amount(allow_import:) / principal) * 100
   end
 
-  def coupon_amount_per_period(on: Date.current)
+  def coupon_amount_per_period(on: Date.current, allow_import: false)
     return nil if coupon_frequency.blank? || coupon_frequency == "at_maturity"
 
     periods = {
@@ -246,7 +246,7 @@ class BondLot < ApplicationRecord
     return nil if per_year.blank?
 
     annual_rate_decimal = if inflation_linked?
-      annual_rate_for(on:)
+      annual_rate_for(on:, allow_import:)
     else
       interest_rate&.to_d&./(100)
     end
@@ -257,6 +257,7 @@ class BondLot < ApplicationRecord
 
   def create_purchase_entry!(auto_purchased: false, requires_rate_review: false)
     raise ArgumentError, "BondLot must be persisted before creating purchase entry" unless persisted?
+    return entry if entry.present?
 
     ActiveRecord::Base.transaction do
       created_entry = account.entries.create!(
@@ -396,8 +397,7 @@ class BondLot < ApplicationRecord
       settlement_date_for_sync = settlement_date
 
       Rails.logger.info(
-        "[BondSettlement] Settled lot_id=#{id} account_id=#{account.id}: " \
-        "gross=#{gross_value} tax=#{tax_withheld_amount} net=#{net_value}"
+        "[BondSettlement] Settled lot_id=#{id} account_id=#{account.id}"
       )
       true
     end
@@ -427,7 +427,7 @@ class BondLot < ApplicationRecord
       days_in_step = [ (next_cursor - cursor).to_i, 0 ].max
       break if days_in_step.zero?
 
-      rate_context = rate_context_for(on: cursor)
+      rate_context = rate_context_for(on: cursor, allow_import: false)
       annual_rate_decimal = rate_context[:annual_rate_decimal]
       break if annual_rate_decimal.blank?
 
@@ -748,7 +748,7 @@ class BondLot < ApplicationRecord
         subtype: subtype,
         interest_rate: inflation_linked? ? nil : interest_rate,
         rate_type: inflation_linked? ? nil : rate_type,
-        coupon_frequency: inflation_linked? ? nil : coupon_frequency,
+        coupon_frequency: coupon_frequency,
         first_period_rate: nil,
         inflation_margin: nil,
         inflation_rate_assumption: inflation_rate_assumption,
