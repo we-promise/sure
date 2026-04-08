@@ -84,10 +84,14 @@ class Settings::HostingsController < ApplicationController
       # the user just unchecked.
       Setting.securities_provider = nil if new_providers.empty?
 
-      # Clear price_provider for securities linked to removed providers
+      # Mark securities linked to removed providers as offline so they aren't
+      # silently queried against an incompatible fallback provider (e.g. MFAPI
+      # scheme codes sent to TwelveData). The price_provider is preserved so
+      # provider_status can report :provider_unavailable and re-enabling the
+      # provider restores the link automatically.
       removed = old_providers - new_providers
       removed.each do |removed_provider|
-        Security.where(price_provider: removed_provider).update_all(price_provider: nil)
+        Security.where(price_provider: removed_provider).in_batches.update_all(offline: true)
       end
     end
 

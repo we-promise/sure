@@ -3,7 +3,7 @@ class Security::Resolver
     @symbol = validate_symbol!(symbol)
     @exchange_operating_mic = exchange_operating_mic
     @country_code = country_code
-    @price_provider = price_provider
+    @price_provider = validated_price_provider(price_provider)
   end
 
   # Attempts several paths to resolve a security:
@@ -26,6 +26,15 @@ class Security::Resolver
     def validate_symbol!(symbol)
       raise ArgumentError, "Symbol is required and cannot be blank" if symbol.blank?
       symbol.strip.upcase
+    end
+
+    # Only accept price_provider values that are known and currently enabled.
+    # Prevents tampered combobox values from persisting invalid provider names.
+    def validated_price_provider(value)
+      return nil if value.blank?
+      return nil unless Security::VALID_PRICE_PROVIDERS.include?(value.to_s)
+      return nil unless Setting.enabled_securities_providers.include?(value.to_s)
+      value.to_s
     end
 
     def offline_security

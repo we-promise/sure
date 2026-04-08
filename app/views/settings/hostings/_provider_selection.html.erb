@@ -71,10 +71,10 @@
   </div>
 
   <% if ENV["EXCHANGE_RATE_PROVIDER"].present? || ENV["SECURITIES_PROVIDERS"].present? || ENV["SECURITIES_PROVIDER"].present? %>
-    <div class="bg-warning-50 border border-warning-200 rounded-lg p-3">
+    <div class="bg-amber-50 border border-amber-200 rounded-lg p-3">
       <div class="flex items-start gap-2">
-        <%= icon("alert-circle", class: "w-5 h-5 text-warning-600 mt-0.5 shrink-0") %>
-        <p class="text-sm text-warning-800">
+        <%= icon("alert-triangle", size: "sm", class: "text-amber-600 mt-0.5 shrink-0") %>
+        <p class="text-sm text-amber-700">
           <%= t(".env_configured_message") %>
         </p>
       </div>

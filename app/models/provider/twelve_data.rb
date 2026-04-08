@@ -200,7 +200,7 @@ class Provider::TwelveData < Provider
     with_provider_response do
       historical_data = fetch_security_prices(symbol:, exchange_operating_mic:, start_date: date, end_date: date)
 
-      raise ProviderError, "No prices found for security #{symbol} on date #{date}" if historical_data.data.empty?
+      raise InvalidSecurityPriceError, "No prices found for security #{symbol} on date #{date}" if historical_data.data.empty?
 
       historical_data.data.first
     end

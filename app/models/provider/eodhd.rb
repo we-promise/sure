@@ -178,7 +178,7 @@ class Provider::Eodhd < Provider
     with_provider_response do
       historical_data = fetch_security_prices(symbol:, exchange_operating_mic:, start_date: date, end_date: date)
 
-      raise ProviderError, "No prices found for security #{symbol} on date #{date}" if historical_data.data.empty?
+      raise InvalidSecurityPriceError, "No prices found for security #{symbol} on date #{date}" if historical_data.data.empty?
 
       historical_data.data.first
     end
@@ -271,15 +271,13 @@ class Provider::Eodhd < Provider
     end
 
     # Enforces the daily rate limit. Raises RateLimitError if the limit is exhausted.
+    # Uses atomic increment-then-check to avoid TOCTOU races between concurrent workers.
     def enforce_daily_limit!
-      daily_key = daily_cache_key
-      current_count = Rails.cache.read(daily_key).to_i
+      new_count = Rails.cache.increment(daily_cache_key, 1, expires_in: 24.hours).to_i
 
-      if current_count >= max_requests_per_day
+      if new_count > max_requests_per_day
         raise RateLimitError, "EODHD daily rate limit of #{max_requests_per_day} requests exhausted"
       end
-
-      Rails.cache.increment(daily_key, 1, expires_in: 24.hours)
     end
 
     # Paces API requests to stay within EODHD's rate limits. Sleeps inline

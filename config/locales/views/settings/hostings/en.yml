@@ -144,6 +144,10 @@ en:
         env_configured_message: Successfully configured through the TWELVE_DATA_API_KEY environment variable.
         label: API Key
         placeholder: Enter your API key here
+        show_details: "(show details)"
+        step_1_html: 'Visit <a href="https://twelvedata.com/register" target="_blank" rel="noopener noreferrer" class="underline">twelvedata.com</a> and create a free Twelve Data Developer account.'
+        step_2_html: 'Go to the <a href="https://twelvedata.com/account/api-keys" target="_blank" rel="noopener noreferrer" class="underline">API Keys</a> page.'
+        step_3: Reveal your Secret Key and paste it below.
         plan: "%{plan} plan"
         plan_upgrade_warning_title: Some tickers require a paid plan
         plan_upgrade_warning_description: The following tickers in your portfolio cannot sync prices with your current Twelve Data plan.

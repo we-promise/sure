@@ -63,6 +63,9 @@ module Security::Provided
         next if provider_results.nil?
 
         provider_results.each do |ps|
+          # Dedup key intentionally includes provider so the same ticker on the same
+          # exchange can appear once per provider — the user picks which provider's
+          # price feed they want and that choice is stored in price_provider.
           dedup_key = "#{ps[:symbol]}|#{ps[:exchange_operating_mic]}|#{provider_key}".upcase
           next if seen_keys.include?(dedup_key)
           seen_keys.add(dedup_key)
@@ -101,12 +104,16 @@ module Security::Provided
   end
 
   # Public method: resolves the provider for this specific security.
-  # Uses the security's assigned price_provider if available and configured,
-  # otherwise falls back to the first available enabled provider.
+  # Uses the security's assigned price_provider if available and configured.
+  # Falls back to the first enabled provider only when no specific provider
+  # was ever assigned. When an assigned provider becomes unavailable, returns
+  # nil so the security is skipped rather than queried against an incompatible
+  # provider (e.g. MFAPI scheme codes sent to TwelveData).
   def price_data_provider
     if price_provider.present?
       assigned = self.class.provider_for(price_provider)
       return assigned if assigned.present?
+      return nil # assigned provider is unavailable — don't silently fall back
     end
     self.class.providers.first
   end
@@ -169,11 +176,13 @@ module Security::Provided
     )
 
     if response.success?
-      update(
-        name: response.data.name,
-        logo_url: response.data.logo_url,
-        website_url: response.data.links
-      )
+      # Only overwrite fields the provider actually returned, so providers that
+      # don't support metadata (e.g. Alpha Vantage) won't blank existing values.
+      attrs = {}
+      attrs[:name]        = response.data.name    if response.data.name.present?
+      attrs[:logo_url]    = response.data.logo_url if response.data.logo_url.present?
+      attrs[:website_url] = response.data.links   if response.data.links.present?
+      update(attrs) if attrs.any?
     else
       Rails.logger.warn("Failed to fetch security info for #{ticker} from #{price_data_provider.class.name}: #{response.error.message}")
       Sentry.capture_exception(SecurityInfoMissingError.new("Failed to get security info"), level: :warning) do |scope|

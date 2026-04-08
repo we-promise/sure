@@ -11,6 +11,10 @@ class Security < ApplicationRecord
 
   KINDS = %w[standard cash].freeze
 
+  # Known securities provider keys — validated on save to prevent garbage data
+  # from tampered combobox values persisting to the DB.
+  VALID_PRICE_PROVIDERS = %w[twelve_data yahoo_finance tiingo eodhd alpha_vantage mfapi].freeze
+
   before_validation :upcase_symbols
   before_save :generate_logo_url_from_brandfetch, if: :should_generate_logo?
 
@@ -20,6 +24,7 @@ class Security < ApplicationRecord
   validates :ticker, presence: true
   validates :ticker, uniqueness: { scope: :exchange_operating_mic, case_sensitive: false }
   validates :kind, inclusion: { in: KINDS }
+  validates :price_provider, inclusion: { in: VALID_PRICE_PROVIDERS }, allow_nil: true
 
   scope :online, -> { where(offline: false) }
   scope :standard, -> { where(kind: "standard") }

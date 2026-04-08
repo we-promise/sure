@@ -52,8 +52,8 @@ class Provider::Tiingo < Provider
 
   def usage
     with_provider_response do
-      month_key = "tiingo:symbols:#{Date.current.strftime('%Y-%m')}"
-      symbols_used = Rails.cache.read(month_key)&.size || 0
+      count_key = "tiingo:symbol_count:#{Date.current.strftime('%Y-%m')}"
+      symbols_used = Rails.cache.read(count_key).to_i
 
       UsageData.new(
         used: symbols_used,
@@ -203,32 +203,38 @@ class Provider::Tiingo < Provider
       sleep_time = min_request_interval - elapsed
       sleep(sleep_time) if sleep_time > 0
 
-      # Layer 2: Global per-hour request counter via cache
+      # Layer 2: Global per-hour request counter via cache.
+      # Atomic increment-then-check avoids the TOCTOU of read-check-increment.
       hour_key = "tiingo:requests:#{Time.current.to_i / 3600}"
-      current_count = Rails.cache.read(hour_key).to_i
+      new_count = Rails.cache.increment(hour_key, 1, expires_in: 7200.seconds).to_i
 
-      if current_count >= max_requests_per_hour
-        raise RateLimitError, "Tiingo hourly request limit reached (#{current_count}/#{max_requests_per_hour})"
+      if new_count > max_requests_per_hour
+        raise RateLimitError, "Tiingo hourly request limit reached (#{new_count}/#{max_requests_per_hour})"
       end
-
-      active_hour_key = "tiingo:requests:#{Time.current.to_i / 3600}"
-      Rails.cache.increment(active_hour_key, 1, expires_in: 7200.seconds)
 
       @last_request_time = Time.current
     end
 
-    # Tracks unique symbols queried per month to stay within Tiingo's 500 symbols/month limit
+    # Tracks unique symbols queried per month to stay within Tiingo's 500 symbols/month limit.
+    # Uses a per-symbol cache key with atomic counter to avoid read-mutate-write races
+    # that occur when multiple workers concurrently modify a shared Set in cache.
     def track_symbol(symbol)
-      month_key = "tiingo:symbols:#{Date.current.strftime('%Y-%m')}"
-      symbols = Rails.cache.read(month_key) || Set.new
+      symbol_key = "tiingo:symbol:#{Date.current.strftime('%Y-%m')}:#{symbol.upcase}"
+      count_key  = "tiingo:symbol_count:#{Date.current.strftime('%Y-%m')}"
 
-      if !symbols.include?(symbol.upcase) && symbols.size >= MAX_SYMBOLS_PER_MONTH
+      # Already tracked this symbol this month — nothing to do
+      return if Rails.cache.read(symbol_key).present?
+
+      # Atomically increment the unique symbol counter
+      new_count = Rails.cache.increment(count_key, 1, expires_in: 35.days).to_i
+
+      if new_count > MAX_SYMBOLS_PER_MONTH
+        # Roll back the increment since we won't actually query this symbol
+        Rails.cache.decrement(count_key, 1)
         raise RateLimitError, "Tiingo unique symbol limit reached (#{MAX_SYMBOLS_PER_MONTH} per month)"
       end
 
-      symbols.add(symbol.upcase)
-      # Expire at end of month + buffer
-      Rails.cache.write(month_key, symbols, expires_in: 35.days)
+      Rails.cache.write(symbol_key, true, expires_in: 35.days)
     end
 
     def min_request_interval

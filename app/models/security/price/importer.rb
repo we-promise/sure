@@ -197,6 +197,13 @@ class Security::Price::Importer
 
         return provider_price_value if provider_price_value.present? && provider_price_value.to_f > 0
         return db_price_value if db_price_value.present? && db_price_value.to_f > 0
+
+        # When the provider's history window was clamped (e.g. Alpha Vantage 140 days),
+        # all provider prices may be newer than start_date. Use the earliest available
+        # provider price so the import can still proceed for the serviceable window.
+        earliest_provider = provider_prices.min_by { |date, _| date }&.last&.price
+        return earliest_provider if earliest_provider.present? && earliest_provider.to_f > 0
+
         return nil
       end
 
