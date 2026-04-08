@@ -5,7 +5,7 @@ class Settings::HostingsController < ApplicationController
 
   before_action :ensure_admin, only: [ :update, :clear_cache, :disconnect_external_assistant, :import_inflation_rates ]
   before_action :ensure_super_admin_for_onboarding, only: :update
-  before_action :set_hosting_page_state, only: [ :show, :update ]
+  before_action :set_hosting_page_state, only: :show
 
   def show
   end
@@ -147,6 +147,7 @@ class Settings::HostingsController < ApplicationController
 
     redirect_to settings_hosting_path, notice: t(".success")
   rescue Setting::ValidationError => error
+    set_hosting_page_state
     flash.now[:alert] = error.message
     render :show, status: :unprocessable_entity
   end
@@ -205,8 +206,8 @@ class Settings::HostingsController < ApplicationController
 
     def set_hosting_page_state
       @breadcrumbs = [
-        [ "Home", root_path ],
-        [ "Self-Hosting", nil ]
+        [ t("settings.hostings.breadcrumbs.home"), root_path ],
+        [ t("settings.hostings.breadcrumbs.self_hosting"), nil ]
       ]
 
       exchange_rate_provider = ENV["EXCHANGE_RATE_PROVIDER"].presence || Setting.exchange_rate_provider
@@ -238,33 +239,13 @@ class Settings::HostingsController < ApplicationController
 
     def set_inflation_stats
       @inflation_provider_stats = Bond::InflationProvider::PROVIDERS.keys.index_with do |key|
-        key == "gus_sdp" ? provider_stats_for_gus : provider_stats_for(key)
+        Bond::InflationProvider.stats_for(key)
       end
 
       raw_details = Setting.inflation_last_import_details.to_s
       @inflation_last_import_details = raw_details.present? ? JSON.parse(raw_details) : {}
     rescue JSON::ParserError
       @inflation_last_import_details = {}
-    end
-
-    def provider_stats_for_gus
-      cnt, min_yr, max_yr = GusInflationRate.pick(
-        Arel.sql("COUNT(*)"),
-        Arel.sql("MIN(year)"),
-        Arel.sql("MAX(year)")
-      ) || [ 0, nil, nil ]
-
-      { count: cnt.to_i, min_year: min_yr, max_year: max_yr }
-    end
-
-    def provider_stats_for(source)
-      cnt, min_yr, max_yr = InflationRate.where(source: source).pick(
-        Arel.sql("COUNT(*)"),
-        Arel.sql("MIN(year)"),
-        Arel.sql("MAX(year)")
-      ) || [ 0, nil, nil ]
-
-      { count: cnt.to_i, min_year: min_yr, max_year: max_yr }
     end
 
     def ensure_admin

@@ -19,6 +19,16 @@ class GusInflationRate < ApplicationRecord
   validates :year, uniqueness: { scope: :month }
 
   class << self
+    def stats
+      cnt, min_yr, max_yr = pick(
+        Arel.sql("COUNT(*)"),
+        Arel.sql("MIN(year)"),
+        Arel.sql("MAX(year)")
+      ) || [ 0, nil, nil ]
+
+      { count: cnt.to_i, min_year: min_yr, max_year: max_yr }
+    end
+
     def for_date(date:, lag_months: 0)
       target_date = date.beginning_of_month - lag_months.to_i.months
       find_by(year: target_date.year, month: target_date.month)

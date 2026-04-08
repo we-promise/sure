@@ -2,6 +2,9 @@
 en:
   settings:
     hostings:
+      breadcrumbs:
+        home: Home
+        self_hosting: Self-Hosting
       invite_code_settings:
         description: Control how new people sign up for your instance of %{product}.
         email_confirmation_description: When enabled, users must confirm their email

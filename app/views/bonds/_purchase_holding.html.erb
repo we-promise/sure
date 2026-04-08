@@ -7,7 +7,7 @@
   <% total_return_amount = lot.total_return_amount(allow_import: false) %>
   <% total_return_percent = lot.total_return_percent(allow_import: false) %>
   <% return_label = t(".since_purchase") %>
-  <% if total_return_amount.abs < 0.01 && lot.projected_total_return_amount(allow_import: false).positive? %>
+  <% if total_return_amount.abs < 0.01.to_d && lot.projected_total_return_amount(allow_import: false).positive? %>
     <% total_return_amount = lot.projected_total_return_amount(allow_import: false) %>
     <% total_return_percent = lot.projected_total_return_percent(allow_import: false) %>
     <% return_label = t(".projected_to_maturity") %>

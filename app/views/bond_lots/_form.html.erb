@@ -141,15 +141,15 @@
                         } %>
       </div>
 
-      <% if Setting.inflation_import_enabled_effective %>
+      <div class="flex items-center gap-2" data-bond-lot-form-target="inflationFields">
+        <%= form.number_field :cpi_lag_months,
+                              label: t("bond_lots.form.cpi_lag_months"),
+                              min: 0,
+                              step: 1,
+                              data: { bond_lot_form_target: "inflationInput" } %>
+      </div>
 
-        <div class="flex items-center gap-2" data-bond-lot-form-target="inflationFields">
-          <%= form.number_field :cpi_lag_months,
-                                label: t("bond_lots.form.cpi_lag_months"),
-                                min: 0,
-                                step: 1,
-                                data: { bond_lot_form_target: "inflationInput" } %>
-        </div>
+      <% if Setting.inflation_import_enabled_effective %>
 
         <%= form.hidden_field :auto_fetch_inflation,
                               value: bond_lot.auto_fetch_inflation.nil? ? 1 : (bond_lot.auto_fetch_inflation ? 1 : 0),

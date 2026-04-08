@@ -2,6 +2,9 @@
 pl:
   settings:
     hostings:
+      breadcrumbs:
+        home: Strona glowna
+        self_hosting: Self-Hosting
       invite_code_settings:
         description: Kontroluj, jak nowe osoby rejestrują się w Twojej instancji %{product}.
         email_confirmation_description: Gdy opcja jest włączona, użytkownicy muszą potwierdzić adres e-mail przy jego zmianie.

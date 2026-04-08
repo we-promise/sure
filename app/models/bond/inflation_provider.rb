@@ -84,6 +84,16 @@ module Bond::InflationProvider
     end
   end
 
+  def stats_for(provider)
+    provider_key = key_for(provider)
+
+    if provider_key == "gus_sdp"
+      GusInflationRate.stats
+    else
+      InflationRate.stats_for(source: provider_key)
+    end
+  end
+
   def provider_class(provider)
     klass_name = PROVIDERS[key_for(provider)]
     return nil if klass_name.blank?

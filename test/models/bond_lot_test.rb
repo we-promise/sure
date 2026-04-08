@@ -901,6 +901,7 @@ class BondLotTest < ActiveSupport::TestCase
 
   test "does not enqueue inflation backfill for ES lots without series id" do
     Bond::InflationProvider.stubs(:automatic_import_enabled?).with("es_ine").returns(false)
+    ImportInflationRatesJob.expects(:perform_later).never
 
     account = accounts(:bond)
     lot = account.bond.bond_lots.create!(
@@ -919,8 +920,6 @@ class BondLotTest < ActiveSupport::TestCase
       rate_type: "variable",
       coupon_frequency: "at_maturity"
     )
-
-    assert_not lot.send(:needs_inflation_backfill?)
   ensure
     lot&.destroy
   end

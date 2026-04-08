@@ -4,6 +4,16 @@ class InflationRate < ApplicationRecord
   validates :month, uniqueness: { scope: %i[source year] }
 
   class << self
+    def stats_for(source:)
+      cnt, min_yr, max_yr = where(source: source).pick(
+        Arel.sql("COUNT(*)"),
+        Arel.sql("MIN(year)"),
+        Arel.sql("MAX(year)")
+      ) || [ 0, nil, nil ]
+
+      { count: cnt.to_i, min_year: min_yr, max_year: max_yr }
+    end
+
     def for_date(source:, date:, lag_months: 0)
       target_date = date.beginning_of_month - lag_months.to_i.months
       find_by(source: source.to_s, year: target_date.year, month: target_date.month)

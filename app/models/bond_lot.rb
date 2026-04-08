@@ -8,10 +8,11 @@ class BondLot < ApplicationRecord
 
   scope :open, -> { where(closed_on: nil) }
 
-  def self.needs_rate_review
+  def self.needs_rate_review(scope = all)
     with_inflation_lookup_cache do
       unresolved_ids = []
-      open.where(subtype: Bond::INFLATION_LINKED_SUBTYPES).includes(:bond).find_in_batches(batch_size: 200) do |batch|
+      scoped_relation = scope.open.where(subtype: Bond::INFLATION_LINKED_SUBTYPES)
+      scoped_relation.includes(:bond).find_in_batches(batch_size: 200) do |batch|
         batch.each do |lot|
           review_on = [ Date.current, lot.maturity_date ].compact.min
           unresolvable = (lot.needs_first_period_rate?(on: review_on) && lot.first_period_rate.blank?) ||
@@ -21,7 +22,7 @@ class BondLot < ApplicationRecord
       end
 
       ids = unresolved_ids.uniq
-      ids.empty? ? none : open.where(id: ids)
+      ids.empty? ? scope.none : scope.open.where(id: ids)
     end
   end
 
