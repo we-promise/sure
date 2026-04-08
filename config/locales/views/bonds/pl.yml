@@ -63,11 +63,11 @@ pl:
       principal_term: "Kapitał, %{term}"
       bond_meta: "%{rate_type} / %{coupon}"
       bond_meta_with_coupon_amount: "%{rate_type} / %{coupon} / kupon %{coupon_amount}"
-      inflation_meta_gus: "%{inflation} inflacji + %{margin} marży (GUS SDP %{indicator})"
+      inflation_meta_gus: "%{inflation} inflacji + %{margin} marży (PL GUS %{indicator})"
       inflation_meta_manual: "%{inflation} inflacji + %{margin} marży (ręcznie)"
       inflation_meta_provider: "%{inflation} inflacji + %{margin} marży (%{provider})"
       inflation_providers:
-        gus: GUS
+        gus_sdp: PL GUS
         us_bls: US BLS
         es_ine: ES INE
         manual: ręcznie

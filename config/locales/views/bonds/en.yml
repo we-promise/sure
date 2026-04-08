@@ -61,11 +61,11 @@ en:
       principal_term: "Principal, %{term}"
       bond_meta: "%{rate_type} / %{coupon}"
       bond_meta_with_coupon_amount: "%{rate_type} / %{coupon} / coupon %{coupon_amount}"
-      inflation_meta_gus: "%{inflation} inflation + %{margin} margin (GUS SDP %{indicator})"
+      inflation_meta_gus: "%{inflation} inflation + %{margin} margin (PL GUS %{indicator})"
       inflation_meta_manual: "%{inflation} inflation + %{margin} margin (manual)"
       inflation_meta_provider: "%{inflation} inflation + %{margin} margin (%{provider})"
       inflation_providers:
-        gus: GUS
+        gus_sdp: PL GUS
         us_bls: US BLS
         es_ine: ES INE
         manual: Manual

@@ -54,6 +54,10 @@ module Bond::InflationProvider
     nil
   end
 
+  # automatic_import_enabled? intentionally differs by key_for(provider):
+  # - "gus_sdp" respects Setting.inflation_import_enabled_effective
+  # - "es_ine" requires configured es_ine_series_id
+  # - "us_bls" is always enabled because it uses public defaults and needs no tenant-specific setup
   def automatic_import_enabled?(provider)
     case key_for(provider)
     when "gus_sdp"

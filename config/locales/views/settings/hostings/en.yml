@@ -127,7 +127,7 @@ en:
         global_import_hint: Controls for scheduling and manual CPI backfill across all configured providers.
         providers_title: Inflation Providers
         providers_hint: Configure credentials and endpoints for all CPI providers used in inflation-linked bond calculations.
-        import_description: Import controls below apply to all configured CPI providers (GUS, US BLS, ES INE).
+        import_description: Import controls below apply to all configured CPI providers (PL GUS, US BLS, ES INE).
         import_enabled_label: Enable automatic CPI imports
         import_enabled_help: Disabled by default. Enable this if you want CPI rates auto-imported for inflation-linked bond calculations.
         import_enabled_env_locked: This setting is locked by the INFLATION_IMPORT_ENABLED environment variable. Legacy GUS_INFLATION_IMPORT_ENABLED is also supported.

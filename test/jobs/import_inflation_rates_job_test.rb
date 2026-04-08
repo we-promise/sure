@@ -1,4 +1,5 @@
 require "test_helper"
+require "json"
 
 class ImportInflationRatesJobTest < ActiveJob::TestCase
   test "does not run importer when global toggle is disabled" do
@@ -46,6 +47,8 @@ class ImportInflationRatesJobTest < ActiveJob::TestCase
     assert_equal "2023-2024", Setting.inflation_last_import_range
     assert Setting.inflation_last_import_at.present?
     assert_nil Setting.inflation_last_import_error
+    assert_kind_of String, Setting.inflation_last_import_details
+    assert_equal({ "gus_sdp" => 12, "us_bls" => 10 }, JSON.parse(Setting.inflation_last_import_details))
   end
 
   test "stores error and re-raises when importer fails" do

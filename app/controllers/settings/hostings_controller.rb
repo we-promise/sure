@@ -5,34 +5,9 @@ class Settings::HostingsController < ApplicationController
 
   before_action :ensure_admin, only: [ :update, :clear_cache, :disconnect_external_assistant, :import_inflation_rates ]
   before_action :ensure_super_admin_for_onboarding, only: :update
-  before_action :set_inflation_stats, only: [ :show, :update ]
+  before_action :set_hosting_page_state, only: [ :show, :update ]
 
   def show
-    @breadcrumbs = [
-      [ "Home", root_path ],
-      [ "Self-Hosting", nil ]
-    ]
-
-    # Determine which providers are currently selected
-    exchange_rate_provider = ENV["EXCHANGE_RATE_PROVIDER"].presence || Setting.exchange_rate_provider
-    securities_provider = ENV["SECURITIES_PROVIDER"].presence || Setting.securities_provider
-
-    # Show Twelve Data settings if either provider is set to twelve_data
-    @show_twelve_data_settings = exchange_rate_provider == "twelve_data" || securities_provider == "twelve_data"
-
-    # Show Yahoo Finance settings if either provider is set to yahoo_finance
-    @show_yahoo_finance_settings = exchange_rate_provider == "yahoo_finance" || securities_provider == "yahoo_finance"
-
-    # Only fetch provider data if we're showing the section
-    if @show_twelve_data_settings
-      twelve_data_provider = Provider::Registry.get_provider(:twelve_data)
-      @twelve_data_usage = twelve_data_provider&.usage
-      @plan_restricted_securities = Current.family.securities_with_plan_restrictions(provider: "TwelveData")
-    end
-
-    if @show_yahoo_finance_settings
-      @yahoo_finance_provider = Provider::Registry.get_provider(:yahoo_finance)
-    end
   end
 
   def update
@@ -226,6 +201,31 @@ class Settings::HostingsController < ApplicationController
 
     def import_params
       params.fetch(:setting, ActionController::Parameters.new).permit(:inflation_start_year, :inflation_end_year)
+    end
+
+    def set_hosting_page_state
+      @breadcrumbs = [
+        [ "Home", root_path ],
+        [ "Self-Hosting", nil ]
+      ]
+
+      exchange_rate_provider = ENV["EXCHANGE_RATE_PROVIDER"].presence || Setting.exchange_rate_provider
+      securities_provider = ENV["SECURITIES_PROVIDER"].presence || Setting.securities_provider
+
+      @show_twelve_data_settings = exchange_rate_provider == "twelve_data" || securities_provider == "twelve_data"
+      @show_yahoo_finance_settings = exchange_rate_provider == "yahoo_finance" || securities_provider == "yahoo_finance"
+
+      if @show_twelve_data_settings
+        twelve_data_provider = Provider::Registry.get_provider(:twelve_data)
+        @twelve_data_usage = twelve_data_provider&.usage
+        @plan_restricted_securities = Current.family.securities_with_plan_restrictions(provider: "TwelveData")
+      end
+
+      if @show_yahoo_finance_settings
+        @yahoo_finance_provider = Provider::Registry.get_provider(:yahoo_finance)
+      end
+
+      set_inflation_stats
     end
 
     def update_assistant_type

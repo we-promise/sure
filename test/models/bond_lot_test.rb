@@ -693,7 +693,7 @@ class BondLotTest < ActiveSupport::TestCase
     )
 
     assert_in_delta 8.0, lot.current_inflation_component_percent(on: Date.new(2025, 3, 31)).to_f, 0.001
-    assert_equal "gus", lot.current_inflation_source(on: Date.new(2025, 3, 31))
+    assert_equal "gus_sdp", lot.current_inflation_source(on: Date.new(2025, 3, 31))
     assert_in_delta 0.9, lot.current_margin_percent(on: Date.new(2025, 3, 31)).to_f, 0.001
   end
 

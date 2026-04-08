@@ -126,7 +126,7 @@ pl:
         global_import_hint: Sterowanie harmonogramem i ręcznym backfillem CPI dla wszystkich skonfigurowanych źródeł.
         providers_title: Dostawcy inflacji
         providers_hint: Skonfiguruj dane dostępowe i endpointy dla wszystkich źródeł CPI używanych w obliczeniach obligacji indeksowanych inflacją.
-        import_description: Poniższe sterowanie importem dotyczy wszystkich skonfigurowanych źródeł CPI (GUS, US BLS, ES INE).
+        import_description: Poniższe sterowanie importem dotyczy wszystkich skonfigurowanych źródeł CPI (PL GUS, US BLS, ES INE).
         import_enabled_label: Włącz automatyczny import CPI
         import_enabled_help: Domyślnie wyłączone. Włącz, jeśli chcesz automatycznie importować stawki CPI do obliczeń obligacji indeksowanych inflacją.
         import_enabled_env_locked: To ustawienie jest zablokowane przez zmienną środowiskową INFLATION_IMPORT_ENABLED. Starsze GUS_INFLATION_IMPORT_ENABLED jest nadal wspierane.

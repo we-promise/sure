@@ -255,7 +255,7 @@ class BondLot < ApplicationRecord
   end
 
   def create_purchase_entry!(auto_purchased: false, requires_rate_review: false)
-    raise ActiveRecord::RecordInvalid, self unless persisted?
+    raise ArgumentError, "BondLot must be persisted before creating purchase entry" unless persisted?
 
     ActiveRecord::Base.transaction do
       created_entry = account.entries.create!(
@@ -337,7 +337,7 @@ class BondLot < ApplicationRecord
   end
 
   def gus_inflation_source?(on: Date.current, allow_import: true)
-    current_inflation_source(on:, allow_import:) == "gus"
+    current_inflation_source(on:, allow_import:) == "gus_sdp"
   end
 
   def current_margin_percent(on: Date.current, allow_import: true)
@@ -648,10 +648,9 @@ class BondLot < ApplicationRecord
     def normalize_inflation_provider
       inflation_like = canonical_subtype.in?(Bond::INFLATION_LINKED_SUBTYPES)
       self.inflation_provider = nil unless inflation_like
-      # When provider selection is available and left blank, treat it as explicit manual CPI mode.
-      # If GUS is globally disabled we keep auto_fetch_inflation as-is; downstream safeguards
-      # (needs_inflation_backfill? and inflation_snapshot_for) prevent unsafe backfills and
-      # gracefully fall back to manual assumptions when provider data is unavailable.
+      # Blank provider is treated as manual CPI mode only when global import is enabled.
+      # When global import is disabled, we keep auto_fetch_inflation as-is so rate evaluation
+      # can still fall back through downstream safeguards and defaults.
       if inflation_like && auto_fetch_inflation && inflation_provider.blank? && Setting.inflation_import_enabled_effective
         self.auto_fetch_inflation = false
       end
@@ -681,7 +680,7 @@ class BondLot < ApplicationRecord
     end
 
     def inflation_source_label
-      inflation_provider_key == "gus_sdp" ? "gus" : inflation_provider_key
+      inflation_provider_key
     end
 
     def create_settlement_entry!(settlement_date:, net_value:, tax_withheld_amount:, gross_value:)
