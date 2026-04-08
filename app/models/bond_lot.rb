@@ -1,4 +1,6 @@
 class BondLot < ApplicationRecord
+  attr_accessor :_preserve_coupon_frequency
+
   belongs_to :bond
   belongs_to :entry, optional: true
 
@@ -15,9 +17,7 @@ class BondLot < ApplicationRecord
       scoped_relation.includes(:bond).find_in_batches(batch_size: 200) do |batch|
         batch.each do |lot|
           review_on = [ Date.current, lot.maturity_date ].compact.min
-          unresolvable = (lot.needs_first_period_rate?(on: review_on) && lot.first_period_rate.blank?) ||
-            !lot.rates_resolvable_through?(date: review_on, allow_import: false)
-          unresolved_ids << lot.id if unresolvable
+          unresolved_ids << lot.id unless lot.rate_review_complete?(on: review_on)
         end
       end
 
@@ -257,25 +257,28 @@ class BondLot < ApplicationRecord
 
   def create_purchase_entry!(auto_purchased: false, requires_rate_review: false)
     raise ArgumentError, "BondLot must be persisted before creating purchase entry" unless persisted?
-    return entry if entry.present?
 
-    ActiveRecord::Base.transaction do
-      created_entry = account.entries.create!(
-        date: purchased_on,
-        name: I18n.t("bond_lots.activity.purchase_name", subtype: subtype_label),
-        amount: amount,
-        currency: account.currency,
-        entryable: Transaction.new(
-          kind: :funds_movement,
-          extra: purchase_entry_extra(auto_purchased:, requires_rate_review:)
+    with_lock do
+      return entry if entry.present?
+
+      ActiveRecord::Base.transaction do
+        created_entry = account.entries.create!(
+          date: purchased_on,
+          name: I18n.t("bond_lots.activity.purchase_name", subtype: subtype_label),
+          amount: amount,
+          currency: account.currency,
+          entryable: Transaction.new(
+            kind: :funds_movement,
+            extra: purchase_entry_extra(auto_purchased:, requires_rate_review:)
+          )
         )
-      )
 
-      created_entry.lock_saved_attributes!
-      created_entry.mark_user_modified!
+        created_entry.lock_saved_attributes!
+        created_entry.mark_user_modified!
 
-      update!(entry: created_entry)
-      created_entry
+        update!(entry: created_entry)
+        created_entry
+      end
     end
   end
 
@@ -461,6 +464,10 @@ class BondLot < ApplicationRecord
     events
   end
 
+  def rate_review_complete?(on: Date.current)
+    rates_present_for_review?(on:) && rates_resolvable_through?(date: on, allow_import: false)
+  end
+
   private
     def coupon_reinvested?
       coupon_frequency.to_s == "at_maturity"
@@ -631,11 +638,16 @@ class BondLot < ApplicationRecord
       defaults = Bond::PRODUCT_DEFAULTS[product_code]
       return if defaults.blank?
 
+      # Override all fields if product_code is freshly set (new record or changed),
+      # but preserve if explicitly requested (e.g., during reinvestment)
+      preserve_existing = _preserve_coupon_frequency
+      is_product_new = !persisted? || product_code_changed?
+
       self.subtype = defaults[:subtype] if subtype.blank? || Bond::LEGACY_SUBTYPE_ALIASES.key?(subtype)
-      self.term_months = defaults[:term_months] if defaults[:term_months].present?
-      self.rate_type = defaults[:rate_type] if defaults[:rate_type].present?
-      self.coupon_frequency = defaults[:coupon_frequency] if defaults[:coupon_frequency].present?
-      self.cpi_lag_months = defaults[:cpi_lag_months] if defaults[:cpi_lag_months].present?
+      self.term_months = defaults[:term_months] if defaults[:term_months].present? && (term_months.blank? || is_product_new)
+      self.rate_type = defaults[:rate_type] if defaults[:rate_type].present? && (rate_type.blank? || is_product_new)
+      self.coupon_frequency = defaults[:coupon_frequency] if defaults[:coupon_frequency].present? && (coupon_frequency.blank? || (is_product_new && !preserve_existing))
+      self.cpi_lag_months = defaults[:cpi_lag_months] if defaults[:cpi_lag_months].present? && (cpi_lag_months.blank? || is_product_new)
       self.inflation_provider = defaults[:inflation_provider] if defaults[:inflation_provider].present? && inflation_provider.blank?
       self.nominal_per_unit ||= 100
       self.issue_date ||= purchased_on
@@ -761,6 +773,7 @@ class BondLot < ApplicationRecord
         tax_rate: tax_rate,
         requires_rate_review: true
       )
+      replacement_lot._preserve_coupon_frequency = true
       replacement_lot.save!
       replacement_lot.create_purchase_entry!(auto_purchased: true, requires_rate_review: true)
     end
@@ -831,7 +844,7 @@ class BondLot < ApplicationRecord
       return unless requires_rate_review?
 
       review_date = [ Date.current, maturity_date ].compact.min
-      self.requires_rate_review = false if rates_present_for_review?(on: review_date) && review_date.present? && rates_resolvable_through?(date: review_date, allow_import: false)
+      self.requires_rate_review = false if review_date.present? && rate_review_complete?(on: review_date)
     end
 
     def rates_present_for_review?(on: purchased_on || Date.current)

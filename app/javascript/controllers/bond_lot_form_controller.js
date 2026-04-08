@@ -1,30 +1,15 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
-  static targets = [
-    "productCodeSelect",
-    "subtypeSelect",
-    "subtypeDerivedHint",
-    "inflationFields",
-    "otherFields",
-    "inflationInput",
-    "otherRequiredInput",
-    "providerSelect",
-    "autoFetchInput",
-    "manualInflationField",
-    "manualInflationInput"
-  ]
+  static targets = ["productCodeSelect", "subtypeSelect", "subtypeDerivedHint", "providerSelect"]
   static values = {
-    inflationSubtypes: Array,
     productSubtypeMap: Object,
     productTermMap: Object,
-    productProviderMap: Object,
-    lotAutoFetch: Boolean,
-    globalImportEnabled: Boolean
+    productProviderMap: Object
   }
 
   connect() {
-    this.syncSubtypeWithProduct()
+    queueMicrotask(() => this.syncSubtypeWithProduct())
   }
 
   syncSubtypeWithProduct() {
@@ -46,16 +31,7 @@ export default class extends Controller {
 
     this.#syncTermWithProduct(productCode)
     this.#syncProviderWithProduct(productCode)
-
-    this.#toggleSubtypeFields()
-  }
-
-  toggleSubtypeFields() {
-    this.#toggleSubtypeFields()
-  }
-
-  toggleManualInflationField() {
-    this.#toggleManualInflationField()
+    this.#inflationController()?.toggleSubtypeFields()
   }
 
   syncIssueDateWithPurchase() {
@@ -66,53 +42,6 @@ export default class extends Controller {
     if (!issueDateInput.value && purchasedOnInput.value) {
       issueDateInput.value = purchasedOnInput.value
     }
-  }
-
-  syncAutoFetchWithProvider() {
-    this.#syncAutoFetchWithProvider()
-  }
-
-  #syncAutoFetchWithProvider({ preserveExisting = false } = {}) {
-    if (!this.globalImportEnabledValue) return
-
-    if (!this.hasAutoFetchInputTarget || !this.hasProviderSelectTarget) return
-
-    if (preserveExisting) {
-      const currentValue = `${this.autoFetchInputTarget.value || ""}`.trim()
-      if (currentValue !== "") {
-        this.#toggleManualInflationField()
-        return
-      }
-    }
-
-    const provider = `${this.providerSelectTarget.value || ""}`.trim()
-    this.autoFetchInputTarget.value = provider === "" ? "0" : "1"
-    this.#toggleManualInflationField()
-  }
-
-  #toggleSubtypeFields() {
-    const subtype = this.subtypeSelectTarget.value
-    const inflationLinked = this.inflationSubtypesValue.includes(subtype)
-
-    this.inflationFieldsTargets.forEach((element) => {
-      element.classList.toggle("hidden", !inflationLinked)
-    })
-
-    this.otherFieldsTargets.forEach((element) => {
-      element.classList.toggle("hidden", inflationLinked)
-    })
-
-    this.inflationInputTargets.forEach((input) => {
-      input.disabled = !inflationLinked
-      input.required = inflationLinked && !input.dataset.optional
-    })
-
-    this.otherRequiredInputTargets.forEach((input) => {
-      input.disabled = inflationLinked
-      input.required = !inflationLinked
-    })
-
-    this.#toggleManualInflationField()
   }
 
   #syncTermWithProduct(productCode) {
@@ -144,33 +73,10 @@ export default class extends Controller {
     }
 
     providerSelect.disabled = providerDerived
-    this.#syncAutoFetchWithProvider({ preserveExisting: true })
+    this.#inflationController()?.syncAutoFetchWithProvider({ preserveExisting: true })
   }
 
-  #toggleManualInflationField() {
-    if (!this.hasManualInflationFieldTarget || !this.hasManualInflationInputTarget) return
-
-    const inflationLinked = this.inflationSubtypesValue.includes(this.subtypeSelectTarget.value)
-    const autoFetch = this.#currentAutoFetchValue()
-    const showManualField = inflationLinked && (!autoFetch || !this.globalImportEnabledValue)
-    const required = inflationLinked && !autoFetch
-
-    this.manualInflationFieldTarget.classList.toggle("hidden", !showManualField)
-    this.manualInflationInputTarget.disabled = !showManualField
-    this.manualInflationInputTarget.required = required
-  }
-
-  #currentAutoFetchValue() {
-
-    if (this.hasAutoFetchInputTarget) {
-      if (this.autoFetchInputTarget.type === "checkbox") {
-        return this.autoFetchInputTarget.checked
-      }
-
-      const value = `${this.autoFetchInputTarget.value}`.trim().toLowerCase()
-      return value === "1" || value === "true"
-    }
-
-    return this.lotAutoFetchValue
+  #inflationController() {
+    return this.application.getControllerForElementAndIdentifier(this.element, "bond-lot-inflation")
   }
 }

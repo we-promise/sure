@@ -1100,6 +1100,8 @@ class BondLotTest < ActiveSupport::TestCase
       issue_date: Date.new(2014, 5, 31),
       auto_close_on_maturity: true
     )
+    lot.update_column(:coupon_frequency, "annual")
+    lot.reload
 
     assert_difference -> { account.bond.bond_lots.count }, 1 do
       assert lot.settle_if_matured!(on: Date.new(2026, 6, 1))
@@ -1109,6 +1111,7 @@ class BondLotTest < ActiveSupport::TestCase
 
     assert replacement_lot.requires_rate_review?
     assert_equal "inflation_linked", replacement_lot.subtype
+    assert_equal "annual", replacement_lot.coupon_frequency
     assert_nil replacement_lot.first_period_rate
     assert_nil replacement_lot.inflation_margin
     assert replacement_lot.entry.present?

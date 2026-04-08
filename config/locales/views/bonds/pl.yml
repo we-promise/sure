@@ -24,6 +24,16 @@ pl:
       other:
         short: Inna
         long: Inna obligacja
+      # Legacy aliases for persisted lots during migration
+      eod:
+        short: EOD
+        long: 10-letnia obligacja oszczędnościowa Skarbu Państwa
+      rod:
+        short: ROD
+        long: 12-letnia rodzinna obligacja oszczędnościowa
+      other_bond:
+        short: Inna
+        long: Inna obligacja
     new:
       title: Wprowadź dane obligacji
     tabs:

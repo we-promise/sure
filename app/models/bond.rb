@@ -135,7 +135,13 @@ class Bond < ApplicationRecord
   end
 
   def holdings_balance
-    Money.new(bond_lots.open.sum(:amount), account.currency)
+    total = 0.to_d
+    BondLot.with_inflation_lookup_cache do
+      bond_lots.open.find_each(batch_size: 200) do |lot|
+        total += lot.estimated_current_value(allow_import: false)
+      end
+    end
+    Money.new(total, account.currency)
   end
 
   def settle_matured_lots!(on: Date.current)
