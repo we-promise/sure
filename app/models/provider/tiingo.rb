@@ -20,7 +20,7 @@ class Provider::Tiingo < Provider
   TIINGO_EXCHANGE_TO_MIC = {
     "NASDAQ" => "XNAS",
     "NYSE" => "XNYS",
-    "NYSE ARCA" => "XNYS",
+    "NYSE ARCA" => "XARC",
     "NYSE MKT" => "XASE",
     "BATS" => "BATS",
     "LSE" => "XLON",

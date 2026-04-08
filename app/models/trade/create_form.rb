@@ -22,11 +22,12 @@ class Trade::CreateForm
   private
     # Users can either look up a ticker from a provider or enter a manual, "offline" ticker (that we won't fetch prices for)
     def security
-      ticker_symbol, exchange_operating_mic = ticker.present? ? ticker.split("|") : [ manual_ticker, nil ]
+      ticker_symbol, exchange_operating_mic, price_prov = ticker.present? ? ticker.split("|") : [ manual_ticker, nil, nil ]
 
       Security::Resolver.new(
         ticker_symbol,
-        exchange_operating_mic: exchange_operating_mic
+        exchange_operating_mic: exchange_operating_mic,
+        price_provider: price_prov.presence
       ).resolve
     end
 

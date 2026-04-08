@@ -52,8 +52,8 @@ class HoldingsController < ApplicationController
   end
 
   def remap_security
-    # Combobox returns "TICKER|EXCHANGE" format
-    ticker, exchange = params[:security_id].to_s.split("|")
+    # Combobox returns "TICKER|EXCHANGE|PROVIDER" format
+    ticker, exchange, provider = params[:security_id].to_s.split("|")
 
     # Validate ticker is present (form has required: true, but can be bypassed)
     if ticker.blank?
@@ -65,7 +65,8 @@ class HoldingsController < ApplicationController
     new_security = Security::Resolver.new(
       ticker,
       exchange_operating_mic: exchange,
-      country_code: Current.family.country
+      country_code: Current.family.country,
+      price_provider: provider.presence
     ).resolve
 
     if new_security.nil?

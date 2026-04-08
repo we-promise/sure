@@ -1,8 +1,9 @@
 class Security::Resolver
-  def initialize(symbol, exchange_operating_mic: nil, country_code: nil)
+  def initialize(symbol, exchange_operating_mic: nil, country_code: nil, price_provider: nil)
     @symbol = validate_symbol!(symbol)
     @exchange_operating_mic = exchange_operating_mic
     @country_code = country_code
+    @price_provider = price_provider
   end
 
   # Attempts several paths to resolve a security:
@@ -20,7 +21,7 @@ class Security::Resolver
   end
 
   private
-    attr_reader :symbol, :exchange_operating_mic, :country_code
+    attr_reader :symbol, :exchange_operating_mic, :country_code, :price_provider
 
     def validate_symbol!(symbol)
       raise ArgumentError, "Symbol is required and cannot be blank" if symbol.blank?
@@ -44,13 +45,20 @@ class Security::Resolver
     end
 
     def exact_match_from_db
-      Security.find_by(
+      security = Security.find_by(
         {
           ticker: symbol,
           exchange_operating_mic: exchange_operating_mic,
           country_code: country_code.presence
         }.compact
       )
+
+      # If the caller explicitly requested a provider, update the existing record
+      if security && price_provider.present? && security.price_provider != price_provider
+        security.update!(price_provider: price_provider)
+      end
+
+      security
     end
 
     # If provided a ticker + exchange (and optionally, a country code), we can find exact matches
@@ -110,8 +118,11 @@ class Security::Resolver
 
       security.country_code = match.country_code
 
-      # Set price_provider if the security is new or doesn't have one assigned
-      if security.new_record? || security.price_provider.blank?
+      # If the caller explicitly requested a provider (user selected from search),
+      # always honor it. Otherwise, only set if the security doesn't have one yet.
+      if price_provider.present?
+        security.price_provider = price_provider
+      elsif security.new_record? || security.price_provider.blank?
         security.price_provider = match.price_provider if match.respond_to?(:price_provider) && match.price_provider.present?
       end
 

@@ -61,7 +61,7 @@ module Security::Provided
         next if provider_results.nil?
 
         provider_results.each do |ps|
-          dedup_key = "#{ps[:symbol]}|#{ps[:exchange_operating_mic]}".upcase
+          dedup_key = "#{ps[:symbol]}|#{ps[:exchange_operating_mic]}|#{provider_key}".upcase
           next if seen_keys.include?(dedup_key)
           seen_keys.add(dedup_key)
 

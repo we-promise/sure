@@ -102,14 +102,14 @@ class Provider::AlphaVantage < Provider
       end
 
       data.map do |match|
-        ticker = match["1. symbol"]
+        av_ticker = match["1. symbol"]
         region = match["4. region"]
 
         Security.new(
-          symbol: ticker,
+          symbol: strip_av_suffix(av_ticker),
           name: match["2. name"],
           logo_url: nil,
-          exchange_operating_mic: extract_mic_from_symbol(ticker),
+          exchange_operating_mic: extract_mic_from_symbol(av_ticker),
           country_code: AV_REGION_TO_COUNTRY[region] || country_code,
           currency: match["8. currency"]
         )
@@ -269,9 +269,18 @@ class Provider::AlphaVantage < Provider
       "#{symbol}#{suffix}"
     end
 
+    # Strips the Alpha Vantage exchange suffix to get the canonical ticker
+    # e.g., "CSPX.LON" -> "CSPX", "AAPL" -> "AAPL"
+    def strip_av_suffix(symbol)
+      return symbol unless symbol.include?(".")
+
+      parts = symbol.split(".", 2)
+      AV_SUFFIX_TO_MIC.key?(parts.last) ? parts.first : symbol
+    end
+
     # Extracts MIC code from Alpha Vantage symbol suffix (e.g., "CSPX.LON" -> "XLON")
     def extract_mic_from_symbol(symbol)
-      return "XNYS" unless symbol.include?(".")
+      return nil unless symbol.include?(".")
 
       suffix = symbol.split(".").last
       AV_SUFFIX_TO_MIC[suffix]

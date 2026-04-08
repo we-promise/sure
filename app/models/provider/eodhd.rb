@@ -239,13 +239,14 @@ class Provider::Eodhd < Provider
 
     # Builds the EODHD ticker format: {SYMBOL}.{EXCHANGE}
     def eodhd_symbol(symbol, exchange_operating_mic)
-      eodhd_exchange = MIC_TO_EODHD_EXCHANGE[exchange_operating_mic]
+      eodhd_exchange = MIC_TO_EODHD_EXCHANGE[exchange_operating_mic] if exchange_operating_mic.present?
 
       if eodhd_exchange.present?
         "#{symbol}.#{eodhd_exchange}"
-      else
-        # Fall back to using the MIC directly if no mapping exists
+      elsif exchange_operating_mic.present?
         "#{symbol}.#{exchange_operating_mic}"
+      else
+        "#{symbol}.US"
       end
     end
 
