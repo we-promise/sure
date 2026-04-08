@@ -995,7 +995,7 @@ class BondLotTest < ActiveSupport::TestCase
     ImportInflationRatesJob.expects(:perform_later).never
 
     account = accounts(:bond)
-    lot = account.bond.bond_lots.create!(
+    account.bond.bond_lots.create!(
       purchased_on: Date.current,
       amount: 1000,
       subtype: "inflation_linked",
