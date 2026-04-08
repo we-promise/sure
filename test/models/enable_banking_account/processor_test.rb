@@ -23,7 +23,7 @@ class EnableBankingAccount::ProcessorTest < ActiveSupport::TestCase
 
   test "calls set_current_balance instead of direct account update" do
     @enable_banking_account.stubs(:current_account).returns(@account)
-    @account.expects(:set_current_balance).with(1500.0).once
+    @account.expects(:set_current_balance).with(1500.0).once.returns(OpenStruct.new(success?: true))
 
     EnableBankingAccount::Processor.new(@enable_banking_account).process
   end
@@ -55,7 +55,7 @@ class EnableBankingAccount::ProcessorTest < ActiveSupport::TestCase
     AccountProvider.create!(account: cc_account, provider: @enable_banking_account)
     @enable_banking_account.stubs(:current_account).returns(cc_account)
 
-    cc_account.expects(:set_current_balance).with(550.0).once
+    cc_account.expects(:set_current_balance).with(550.0).once.returns(OpenStruct.new(success?: true))
 
     EnableBankingAccount::Processor.new(@enable_banking_account).process
   end
@@ -68,7 +68,7 @@ class EnableBankingAccount::ProcessorTest < ActiveSupport::TestCase
     @enable_banking_account.stubs(:current_account).returns(cc_account)
 
     # No credit_limit — balance stays as raw outstanding
-    cc_account.expects(:set_current_balance).with(300.0).once
+    cc_account.expects(:set_current_balance).with(300.0).once.returns(OpenStruct.new(success?: true))
 
     EnableBankingAccount::Processor.new(@enable_banking_account).process
   end

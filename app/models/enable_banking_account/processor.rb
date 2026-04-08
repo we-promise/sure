@@ -64,7 +64,7 @@ class EnableBankingAccount::Processor
 
       # Wrap both writes in a transaction so a failure on either rolls back both.
       ActiveRecord::Base.transaction do
-        if account.accountable.present?
+        if account.accountable.present? && account.accountable.respond_to?(:available_credit=)
           account.accountable.update!(available_credit: available_credit)
         end
         account.update!(currency: currency, cash_balance: balance)
