@@ -415,6 +415,22 @@ class _MessageBubble extends StatelessWidget {
     required this.formatTime,
   });
 
+  /// Builds the markdown stylesheet once per render context instead of inline,
+  /// avoiding redundant TextStyle allocations per message bubble.
+  MarkdownStyleSheet _markdownStyle(BuildContext context) {
+    final color = Theme.of(context).colorScheme.onSurfaceVariant;
+    return MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
+      p: TextStyle(color: color),
+      strong: TextStyle(color: color, fontWeight: FontWeight.bold),
+      em: TextStyle(color: color, fontStyle: FontStyle.italic),
+      listBullet: TextStyle(color: color),
+      h1: TextStyle(color: color, fontSize: 20, fontWeight: FontWeight.bold),
+      h2: TextStyle(color: color, fontSize: 18, fontWeight: FontWeight.bold),
+      h3: TextStyle(color: color, fontSize: 16, fontWeight: FontWeight.bold),
+      code: TextStyle(color: color, fontFamily: 'monospace'),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
@@ -468,37 +484,14 @@ class _MessageBubble extends StatelessWidget {
                           data: message.content,
                           selectable: false,
                           softLineBreak: true,
-                          styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
-                            p: TextStyle(color: colorScheme.onSurfaceVariant),
-                            strong: TextStyle(
-                              color: colorScheme.onSurfaceVariant,
-                              fontWeight: FontWeight.bold,
-                            ),
-                            em: TextStyle(
-                              color: colorScheme.onSurfaceVariant,
-                              fontStyle: FontStyle.italic,
-                            ),
-                            listBullet: TextStyle(color: colorScheme.onSurfaceVariant),
-                            h1: TextStyle(
-                              color: colorScheme.onSurfaceVariant,
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                            ),
-                            h2: TextStyle(
-                              color: colorScheme.onSurfaceVariant,
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                            h3: TextStyle(
-                              color: colorScheme.onSurfaceVariant,
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                            code: TextStyle(
-                              color: colorScheme.onSurfaceVariant,
-                              fontFamily: 'monospace',
-                            ),
-                          ),
+                          styleSheet: _markdownStyle(context),
+                          sizedImageBuilder: (config) {
+                            // Block remote images to prevent unsolicited network requests.
+                            if (config.uri.scheme == 'http' || config.uri.scheme == 'https') {
+                              return const SizedBox.shrink();
+                            }
+                            return Image.asset(config.uri.toString());
+                          },
                         ),
                       if (message.toolCalls != null &&
                           message.toolCalls!.isNotEmpty)
