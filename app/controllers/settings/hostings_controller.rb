@@ -79,6 +79,11 @@ class Settings::HostingsController < ApplicationController
 
       Setting.securities_providers = new_providers.join(",")
 
+      # Clear the legacy singular setting so the fallback in
+      # enabled_securities_providers doesn't re-enable a provider
+      # the user just unchecked.
+      Setting.securities_provider = nil if new_providers.empty?
+
       # Clear price_provider for securities linked to removed providers
       removed = old_providers - new_providers
       removed.each do |removed_provider|
