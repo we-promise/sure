@@ -43,8 +43,8 @@ class BondLot < ApplicationRecord
         account = lot.account
         lot_value = lot.estimated_current_value(allow_import: false).to_d
         lot_return = lot_value - lot.amount.to_d
-        converted_value = Money.new(lot_value, account.currency).exchange_to(family_currency, custom_rate: 1).amount
-        converted_return = Money.new(lot_return, account.currency).exchange_to(family_currency, custom_rate: 1).amount
+        converted_value = Money.new(lot_value, account.currency).exchange_to(family_currency).amount
+        converted_return = Money.new(lot_return, account.currency).exchange_to(family_currency).amount
 
         total_value += converted_value
         total_return += converted_return
@@ -172,7 +172,7 @@ class BondLot < ApplicationRecord
   end
 
   def estimated_current_value(on: Date.current, allow_import: true)
-    principal = amount.to_d
+    principal = cashflow_principal
     return principal if principal.zero? || purchased_on.blank?
 
     period_end = [ on, maturity_date ].compact.min
@@ -253,7 +253,7 @@ class BondLot < ApplicationRecord
     end
     return nil if annual_rate_decimal.blank?
 
-    Money.new((amount.to_d * annual_rate_decimal / per_year).round(4), account.currency)
+    Money.new((cashflow_principal * annual_rate_decimal / per_year).round(4), account.currency)
   end
 
   def create_purchase_entry!(auto_purchased: false, requires_rate_review: false)
@@ -411,7 +411,7 @@ class BondLot < ApplicationRecord
   end
 
   def capitalization_history(on: Date.current)
-    principal = amount.to_d
+    principal = cashflow_principal
     return [] if principal.zero? || purchased_on.blank?
 
     history_end = [ on, maturity_date, closed_on ].compact.min
@@ -816,6 +816,14 @@ class BondLot < ApplicationRecord
           purchase_amount: formatted_purchase_amount,
           interest_amount: formatted_interest_amount
         )
+      end
+    end
+
+    def cashflow_principal
+      if units.present? && nominal_per_unit.present?
+        units.to_d * nominal_per_unit.to_d
+      else
+        amount.to_d
       end
     end
 

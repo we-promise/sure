@@ -64,7 +64,10 @@ class UI::Dashboard::BondSummaryRow < ApplicationComponent
 
   private
     def projected_total_return?
-      lot.total_return_amount(allow_import: false).abs < 0.01.to_d && lot.projected_total_return_amount(allow_import: false).positive?
+      return @projected_total_return if defined?(@projected_total_return)
+
+      @projected_total_return = lot.total_return_amount(allow_import: false).abs < 0.01.to_d &&
+        lot.projected_total_return_amount(allow_import: false).positive?
     end
 
     def inflation_linked_rate_meta
@@ -76,7 +79,8 @@ class UI::Dashboard::BondSummaryRow < ApplicationComponent
         if lot.in_first_rate_period?
           return t("bonds.purchase_holding.first_period_fixed_rate")
         else
-          return t("bonds.purchase_holding.inflation_data_unavailable", reference: lot.current_cpi_reference_on&.strftime("%m-%Y"))
+          reference_str = lot.current_cpi_reference_on&.strftime("%m-%Y") || t("bonds.purchase_holding.unknown")
+          return t("bonds.purchase_holding.inflation_data_unavailable", reference: reference_str)
         end
       end
 

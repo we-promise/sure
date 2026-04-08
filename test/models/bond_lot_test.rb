@@ -611,6 +611,7 @@ class BondLotTest < ActiveSupport::TestCase
 
     assert lot.valid?
     assert_equal 950.to_d, lot.amount.to_d
+    assert_equal 1000.to_d, lot.send(:cashflow_principal), "cashflow_principal uses face value (units * nominal_per_unit), not purchase price"
   end
 
   test "product presets override conflicting rate and coupon settings" do
