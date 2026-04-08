@@ -14,6 +14,16 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     assert_response :ok
   end
 
+  test "dashboard includes inflows donut section when family has income in period" do
+    income_category = @family.categories.incomes.first
+    income_category ||= @family.categories.create!(name: "Wages", classification: "income", color: "#22c55e")
+    create_transaction(account: @family.accounts.first, name: "Salary", amount: -2000, category: income_category)
+
+    get root_path
+    assert_response :ok
+    assert_select "#inflows-donut-section"
+  end
+
   test "intro page requires guest role" do
     get intro_path
 

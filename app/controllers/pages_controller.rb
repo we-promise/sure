@@ -22,7 +22,9 @@ class PagesController < ApplicationController
     net_totals = income_statement.net_category_totals(period: @period)
 
     @cashflow_sankey_data = build_cashflow_sankey_data(net_totals, income_totals, expense_totals, family_currency)
-    @outflows_data = build_outflows_donut_data(net_totals)
+    @outflows_data = build_outflows_donut_data(expense_totals)
+    @inflows_data = build_inflows_donut_data(income_totals)
+
 
     @dashboard_sections = build_dashboard_sections
 
@@ -99,6 +101,14 @@ class PagesController < ApplicationController
           partial: "pages/dashboard/outflows_donut",
           locals: { outflows_data: @outflows_data, period: @period },
           visible: @accounts.any? && @outflows_data[:categories].present?,
+          collapsible: true
+        },
+        {
+          key: "inflows_donut",
+          title: "pages.dashboard.inflows_donut.title",
+          partial: "pages/dashboard/inflows_donut",
+          locals: { inflows_data: @inflows_data, period: @period },
+          visible: Current.family.accounts.any?,
           collapsible: true
         },
         {
@@ -234,6 +244,31 @@ class PagesController < ApplicationController
       result
     end
 
+    def build_inflows_donut_data(income_totals)
+      currency_symbol = Money::Currency.new(income_totals.currency).symbol
+      total = income_totals.total
+
+      categories = income_totals.category_totals
+        .reject { |ct| ct.category.parent_id.present? || ct.total.zero? }
+        .sort_by { |ct| -ct.total }
+        .map do |ct|
+          {
+            id: ct.category.id,
+            name: ct.category.name,
+            amount: ct.total.to_f.round(2),
+            currency: ct.currency,
+            percentage: ct.weight.round(1),
+            color: ct.category.color.presence || Category::UNCATEGORIZED_COLOR,
+            icon: ct.category.lucide_icon,
+            clickable: !ct.category.other_investments?
+          }
+        end
+
+      { categories: categories, total: total.to_f.round(2), currency: income_totals.currency, currency_symbol: currency_symbol }
+    end
+
+    # Processes category totals for sankey diagram, handling parent/subcategory relationships.
+    # flow_direction: :inbound (subcategory -> parent -> cash_flow) for income
     # Builds sankey nodes/links for net categories with subcategory hierarchy.
     # Subcategories matching the parent's flow direction are shown as children.
     # Subcategories with opposite net direction appear on the OTHER side of the
