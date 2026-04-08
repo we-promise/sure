@@ -1,6 +1,23 @@
 require "test_helper"
 
 class GusInflationRateTest < ActiveSupport::TestCase
+  test "enforces uniqueness per year and month" do
+    GusInflationRate.create!(year: 2025, month: 1, rate_yoy: 104.7, source: "sdp")
+
+    duplicate = GusInflationRate.new(year: 2025, month: 1, rate_yoy: 105.0, source: "sdp")
+
+    assert_not duplicate.valid?
+    assert_includes duplicate.errors[:month], "has already been taken"
+  end
+
+  test "allows same month in different years" do
+    GusInflationRate.create!(year: 2025, month: 1, rate_yoy: 104.7, source: "sdp")
+
+    next_year = GusInflationRate.new(year: 2026, month: 1, rate_yoy: 102.1, source: "sdp")
+
+    assert next_year.valid?
+  end
+
   test "for_date applies lag months" do
     GusInflationRate.create!(year: 2025, month: 12, rate_yoy: 104.7, source: "sdp")
 

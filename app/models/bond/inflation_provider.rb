@@ -37,6 +37,11 @@ module Bond::InflationProvider
 
     if provider_key == "gus_sdp"
       record = GusInflationRate.for_date(date: date, lag_months: lag_months)
+      if record.nil? && allow_import && automatic_import_enabled?(provider_key)
+        target_date = date.beginning_of_month - lag_months.to_i.months
+        GusInflationRate.import_year!(year: target_date.year)
+        record = GusInflationRate.for_date(date: date, lag_months: lag_months)
+      end
       return nil if record.nil?
       return InflationRecord.new(year: record.year, month: record.month, rate_yoy: record.rate_yoy)
     end

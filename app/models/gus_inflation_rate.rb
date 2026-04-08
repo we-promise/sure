@@ -16,7 +16,7 @@ class GusInflationRate < ApplicationRecord
 
   validates :year, :month, :rate_yoy, presence: true
   validates :month, inclusion: { in: 1..12 }
-  validates :year, uniqueness: { scope: :month }
+  validates :month, uniqueness: { scope: :year }
 
   class << self
     def stats

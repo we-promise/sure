@@ -58,7 +58,9 @@ class PurchaseHoldingPresenter
     end
 
     def projected_total_return?
-      @projected_total_return ||= begin
+      return @projected_total_return if defined?(@projected_total_return)
+
+      @projected_total_return = begin
         current = lot.total_return_amount(allow_import: false)
         projected = lot.projected_total_return_amount(allow_import: false)
         current.abs < 0.01.to_d && projected.positive?

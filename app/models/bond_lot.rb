@@ -200,6 +200,7 @@ class BondLot < ApplicationRecord
         value += interest_earned
       else
         unpaid_coupon_accrual += interest_earned
+        unpaid_coupon_accrual = 0.to_d if coupon_paid_before_maturity?(next_cursor:, next_accrual_boundary:)
       end
 
       cursor = next_cursor
@@ -648,7 +649,13 @@ class BondLot < ApplicationRecord
       self.rate_type = defaults[:rate_type] if defaults[:rate_type].present? && (rate_type.blank? || is_product_new)
       self.coupon_frequency = defaults[:coupon_frequency] if defaults[:coupon_frequency].present? && (coupon_frequency.blank? || (is_product_new && !preserve_existing))
       self.cpi_lag_months = defaults[:cpi_lag_months] if defaults[:cpi_lag_months].present? && (cpi_lag_months.blank? || is_product_new)
-      self.inflation_provider = defaults[:inflation_provider] if defaults[:inflation_provider].present? && inflation_provider.blank?
+      resolved_provider = Bond::InflationProvider.default_provider_for(
+        account: account,
+        bond: bond,
+        lot: self,
+        product_code: product_code
+      )
+      self.inflation_provider = resolved_provider if is_product_new
       self.nominal_per_unit ||= 100
       self.issue_date ||= purchased_on
       self.auto_fetch_inflation = true if auto_fetch_inflation.nil?
@@ -665,12 +672,6 @@ class BondLot < ApplicationRecord
     def normalize_inflation_provider
       inflation_like = canonical_subtype.in?(Bond::INFLATION_LINKED_SUBTYPES)
       self.inflation_provider = nil unless inflation_like
-      # Blank provider is treated as manual CPI mode only when global import is enabled.
-      # When global import is disabled, we keep auto_fetch_inflation as-is so rate evaluation
-      # can still fall back through downstream safeguards and defaults.
-      if inflation_like && auto_fetch_inflation && inflation_provider.blank? && Setting.inflation_import_enabled_effective
-        self.auto_fetch_inflation = false
-      end
     end
 
     def deflation_floor_applies?
@@ -822,7 +823,7 @@ class BondLot < ApplicationRecord
       return if units.blank? || nominal_per_unit.blank?
 
       expected = units.to_d * nominal_per_unit.to_d
-      self.amount = expected if amount.blank? || inflation_linked? || amount.to_d != expected
+      self.amount = expected if amount.blank? || inflation_linked?
     end
 
     def normalize_tax_settings

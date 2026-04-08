@@ -32,6 +32,24 @@ class BondInflationProviderTest < ActiveSupport::TestCase
     assert_equal 105.2.to_d, record.rate_yoy
   end
 
+  test "record_for_date attempts GUS on-demand import when allow_import is true" do
+    target_date = Date.new(2025, 3, 10)
+
+    Bond::InflationProvider.expects(:automatic_import_enabled?).with("gus_sdp").returns(true)
+
+    GusInflationRate.expects(:for_date).with(date: target_date, lag_months: 2).twice.returns(nil)
+    GusInflationRate.expects(:import_year!).with(year: 2025).once
+
+    record = Bond::InflationProvider.record_for_date(
+      provider: "gus_sdp",
+      date: target_date,
+      lag_months: 2,
+      allow_import: true
+    )
+
+    assert_nil record
+  end
+
   test "record_for_date reads from provider adapter for non-gus providers" do
     fake_adapter = mock("adapter")
     fake_adapter.expects(:fetch_cpi_yoy_for_year).with(year: 2025).returns(
