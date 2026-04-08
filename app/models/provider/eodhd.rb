@@ -129,7 +129,7 @@ class Provider::Eodhd < Provider
         raise Error, "Unexpected response format from search API"
       end
 
-      parsed.map do |security|
+      parsed.first(25).map do |security|
         eodhd_exchange = security.dig("Exchange")
         mic = EODHD_EXCHANGE_TO_MIC[eodhd_exchange]
         country = EODHD_COUNTRY_TO_CODE[security.dig("Country")]

@@ -83,7 +83,7 @@ class Provider::Tiingo < Provider
         raise Error, "Unexpected response format from search endpoint"
       end
 
-      parsed.map do |security|
+      parsed.first(25).map do |security|
         ticker = security["ticker"]
         currency = security["priceCurrency"]
 

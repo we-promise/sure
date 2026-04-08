@@ -32,7 +32,10 @@
 
     <%= styled_form_with model: Setting.new,
                          url: settings_hosting_path,
-                         method: :patch do |form| %>
+                         method: :patch,
+                         data: {
+                           controller: "auto-submit-form"
+                         } do |form| %>
       <% disabled = ENV["SECURITIES_PROVIDERS"].present? || ENV["SECURITIES_PROVIDER"].present? %>
       <% enabled_providers = Setting.enabled_securities_providers %>
 
@@ -54,7 +57,8 @@
                    value="<%= value %>"
                    class="rounded border-primary text-primary focus:ring-primary"
                    <%= "checked" if enabled_providers.include?(value) %>
-                   <%= "disabled" if disabled %>>
+                   <%= "disabled" if disabled %>
+                   data-auto-submit-form-target="auto">
             <span class="text-sm"><%= label %></span>
             <% if hint %>
               <span class="text-xs text-secondary">(<%= hint %>)</span>
@@ -62,12 +66,6 @@
           </label>
         <% end %>
       </div>
-
-      <% unless disabled %>
-        <div class="mt-3">
-          <%= form.submit t(".save_providers"), class: "btn btn--primary text-sm" %>
-        </div>
-      <% end %>
     <% end %>
   </div>
 

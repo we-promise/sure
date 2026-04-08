@@ -171,4 +171,125 @@ class Security::ProvidedTest < ActiveSupport::TestCase
 
     assert_equal :ok, @security.provider_status
   end
+
+  # --- rank_search_results ---
+
+  # Helper to build unsaved Security objects for ranking tests
+  def build_result(ticker:, name: nil, country_code: nil, exchange_operating_mic: nil)
+    Security.new(
+      ticker: ticker,
+      name: name || ticker,
+      country_code: country_code,
+      exchange_operating_mic: exchange_operating_mic
+    )
+  end
+
+  def rank(results, query, country_code = nil)
+    Security.send(:rank_search_results, results, query, country_code)
+  end
+
+  test "ranking: AAPL exact match ranks above AAPL-prefixed and unrelated" do
+    results = [
+      build_result(ticker: "AAPLX", name: "Some AAPL Fund"),
+      build_result(ticker: "AAPL", name: "Apple Inc", country_code: "US", exchange_operating_mic: "XNAS"),
+      build_result(ticker: "AAPL", name: "Apple Inc", country_code: "GB", exchange_operating_mic: "XLON"),
+      build_result(ticker: "AAPLD", name: "AAPL Dividend ETF"),
+    ]
+
+    ranked = rank(results, "AAPL", "US")
+
+    # Exact matches first, US preferred over GB
+    assert_equal "AAPL", ranked[0].ticker
+    assert_equal "US", ranked[0].country_code
+    assert_equal "AAPL", ranked[1].ticker
+    assert_equal "GB", ranked[1].country_code
+    # Prefix matches after
+    assert ranked[2..].all? { |s| s.ticker.start_with?("AAPL") && s.ticker != "AAPL" }
+  end
+
+  test "ranking: Apple name search surfaces Apple Inc above unrelated" do
+    results = [
+      build_result(ticker: "PINEAPPLE", name: "Pineapple Corp"),
+      build_result(ticker: "AAPL", name: "Apple Inc", country_code: "US"),
+      build_result(ticker: "APLE", name: "Apple Hospitality REIT"),
+      build_result(ticker: "APPL", name: "Appell Petroleum"),
+    ]
+
+    ranked = rank(results, "Apple", "US")
+
+    # No ticker matches "APPLE", so all fall to name-contains or worse.
+    # "Apple Inc" and "Apple Hospitality" and "Pineapple" contain "APPLE" in name.
+    # "Appell Petroleum" does not contain "APPLE".
+    # Among name matches, alphabetical ticker breaks ties.
+    name_matches = ranked.select { |s| s.name.upcase.include?("APPLE") }
+    non_matches = ranked.reject { |s| s.name.upcase.include?("APPLE") }
+    assert name_matches.size >= 2
+    assert_equal non_matches, ranked.last(non_matches.size)
+  end
+
+  test "ranking: SPX exact match first, then SPX-prefixed" do
+    results = [
+      build_result(ticker: "SPXL", name: "Direxion Daily S&P 500 Bull 3X"),
+      build_result(ticker: "SPXS", name: "Direxion Daily S&P 500 Bear 3X"),
+      build_result(ticker: "SPX", name: "S&P 500 Index", country_code: "US"),
+      build_result(ticker: "SPXU", name: "ProShares UltraPro Short S&P 500"),
+    ]
+
+    ranked = rank(results, "SPX", "US")
+
+    assert_equal "SPX", ranked[0].ticker, "Exact match should be first"
+    assert ranked[1..].all? { |s| s.ticker.start_with?("SPX") }
+  end
+
+  test "ranking: VTTI exact match first regardless of country" do
+    results = [
+      build_result(ticker: "VTI", name: "Vanguard Total Stock Market ETF", country_code: "US"),
+      build_result(ticker: "VTTI", name: "VTTI Energy Partners", country_code: "US"),
+      build_result(ticker: "VTTIX", name: "Vanguard Target 2060 Fund"),
+    ]
+
+    ranked = rank(results, "VTTI", "US")
+
+    assert_equal "VTTI", ranked[0].ticker, "Exact match should be first"
+    assert_equal "VTTIX", ranked[1].ticker, "Prefix match second"
+    assert_equal "VTI", ranked[2].ticker, "Non-matching ticker last"
+  end
+
+  test "ranking: iShares S&P multi-word query is contiguous substring match" do
+    results = [
+      build_result(ticker: "IVV", name: "iShares S&P 500 ETF", country_code: "US"),
+      build_result(ticker: "CSPX", name: "iShares Core S&P 500 UCITS ETF", country_code: "GB"),
+      build_result(ticker: "IJH", name: "iShares S&P Mid-Cap ETF", country_code: "US"),
+      build_result(ticker: "UNRELATED", name: "Something Else Corp"),
+    ]
+
+    ranked = rank(results, "iShares S&P", "US")
+
+    # Only names containing the exact substring "iShares S&P" match tier 2.
+    # "iShares Core S&P" does NOT match (word "Core" breaks contiguity).
+    contiguous_matches = ranked.select { |s| s.name.upcase.include?("ISHARES S&P") }
+    assert_equal 2, contiguous_matches.size, "Only IVV and IJH contain the exact substring"
+    # US contiguous matches should come first
+    assert_equal "IJH", ranked[0].ticker  # US, name match, alphabetically before IVV? No...
+    assert_includes [ "IVV", "IJH" ], ranked[0].ticker
+    assert_includes [ "IVV", "IJH" ], ranked[1].ticker
+    # Non-contiguous and unrelated should be last
+    assert_equal "UNRELATED", ranked.last.ticker
+  end
+
+  test "ranking: tesla name search finds TSLA" do
+    results = [
+      build_result(ticker: "TSLA", name: "Tesla Inc", country_code: "US"),
+      build_result(ticker: "TSLA", name: "Tesla Inc", country_code: "DE"),
+      build_result(ticker: "TL0", name: "Tesla Inc", country_code: "DE", exchange_operating_mic: "XETR"),
+      build_result(ticker: "TELSA", name: "Telsa Mining Ltd"),
+    ]
+
+    ranked = rank(results, "tesla", "US")
+
+    # No ticker matches "TESLA", so all go to name matching
+    # "Tesla Inc" contains "TESLA" → tier 2, US preferred
+    assert_equal "TSLA", ranked[0].ticker
+    assert_equal "US", ranked[0].country_code, "US Tesla should rank first for US user"
+  end
 end

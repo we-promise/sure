@@ -106,7 +106,7 @@ class Provider::AlphaVantage < Provider
         raise Error, "No data returned from search endpoint"
       end
 
-      data.map do |match|
+      data.first(25).map do |match|
         av_ticker = match["1. symbol"]
         region = match["4. region"]
         currency = match["8. currency"]
