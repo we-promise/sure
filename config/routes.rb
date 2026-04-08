@@ -423,6 +423,7 @@ Rails.application.routes.draw do
       resources :tags, only: %i[index show create update destroy]
 
       resources :transactions, only: [ :index, :show, :create, :update, :destroy ]
+      resources :transfers, only: %i[index show create update destroy]
       resources :trades, only: [ :index, :show, :create, :update, :destroy ]
       resources :holdings, only: [ :index, :show ]
       resources :valuations, only: [ :create, :update, :show ]

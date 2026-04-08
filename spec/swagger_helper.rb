@@ -535,6 +535,64 @@ RSpec.configure do |config|
               liabilities: { '$ref' => '#/components/schemas/Money' }
             }
           },
+          TransferAccount: {
+            type: :object,
+            required: %w[id name account_type],
+            properties: {
+              id: { type: :string, format: :uuid },
+              name: { type: :string },
+              account_type: { type: :string }
+            }
+          },
+          TransferTransaction: {
+            type: :object,
+            required: %w[id entry_id amount currency],
+            properties: {
+              id: { type: :string, format: :uuid },
+              entry_id: { type: :string, format: :uuid },
+              amount: { type: :string },
+              currency: { type: :string }
+            }
+          },
+          TransferDetail: {
+            type: :object,
+            required: %w[id status date amount currency name transfer_type inflow_transaction outflow_transaction created_at updated_at],
+            properties: {
+              id: { type: :string, format: :uuid },
+              status: { type: :string, enum: %w[pending confirmed] },
+              date: { type: :string, format: :date },
+              amount: { type: :string },
+              currency: { type: :string },
+              name: { type: :string },
+              transfer_type: { type: :string, enum: %w[transfer loan_payment liability_payment] },
+              notes: { type: :string, nullable: true },
+              from_account: { '$ref' => '#/components/schemas/TransferAccount', nullable: true },
+              to_account: { '$ref' => '#/components/schemas/TransferAccount', nullable: true },
+              inflow_transaction: { '$ref' => '#/components/schemas/TransferTransaction' },
+              outflow_transaction: { '$ref' => '#/components/schemas/TransferTransaction' },
+              category: {
+                type: :object,
+                nullable: true,
+                properties: {
+                  id: { type: :string, format: :uuid },
+                  name: { type: :string }
+                }
+              },
+              created_at: { type: :string, format: :'date-time' },
+              updated_at: { type: :string, format: :'date-time' }
+            }
+          },
+          TransferCollection: {
+            type: :object,
+            required: %w[transfers pagination],
+            properties: {
+              transfers: {
+                type: :array,
+                items: { '$ref' => '#/components/schemas/TransferDetail' }
+              },
+              pagination: { '$ref' => '#/components/schemas/Pagination' }
+            }
+          },
           SuccessMessage: {
             type: :object,
             required: %w[message],
