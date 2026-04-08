@@ -118,8 +118,9 @@ export default class extends Controller {
   }
 
   #syncProviderWithProduct(productCode) {
-    const providerSelect = this.element.querySelector('select[name="bond_lot[inflation_provider]"]')
-    if (!providerSelect) return
+    if (!this.hasProviderSelectTarget) return
+
+    const providerSelect = this.providerSelectTarget
 
     const mappedProvider = this.productProviderMapValue?.[productCode]
     const providerDerived = mappedProvider !== undefined && mappedProvider !== null && `${mappedProvider}` !== ""
