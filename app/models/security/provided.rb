@@ -53,7 +53,8 @@ module Security::Provided
 
           response.data.map do |ps|
             { symbol: ps.symbol, name: ps.name, logo_url: ps.logo_url,
-              exchange_operating_mic: ps.exchange_operating_mic, country_code: ps.country_code }
+              exchange_operating_mic: ps.exchange_operating_mic, country_code: ps.country_code,
+              currency: ps.respond_to?(:currency) ? ps.currency : nil }
           end
         end
 
@@ -70,6 +71,7 @@ module Security::Provided
             logo_url: ps[:logo_url],
             exchange_operating_mic: ps[:exchange_operating_mic],
             country_code: ps[:country_code],
+            search_currency: ps[:currency],
             price_provider: provider_key
           )
           all_results << security

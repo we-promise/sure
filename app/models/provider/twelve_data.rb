@@ -157,7 +157,8 @@ class Provider::TwelveData < Provider
           name: security.dig("instrument_name"),
           logo_url: nil,
           exchange_operating_mic: security.dig("mic_code"),
-          country_code: country ? country.alpha2 : nil
+          country_code: country ? country.alpha2 : nil,
+          currency: security.dig("currency")
         )
       end
     end

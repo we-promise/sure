@@ -110,7 +110,8 @@ class Provider::AlphaVantage < Provider
           name: match["2. name"],
           logo_url: nil,
           exchange_operating_mic: extract_mic_from_symbol(ticker),
-          country_code: AV_REGION_TO_COUNTRY[region] || country_code
+          country_code: AV_REGION_TO_COUNTRY[region] || country_code,
+          currency: match["8. currency"]
         )
       end
     end

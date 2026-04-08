@@ -1,7 +1,11 @@
 module Provider::SecurityConcept
   extend ActiveSupport::Concern
 
-  Security = Data.define(:symbol, :name, :logo_url, :exchange_operating_mic, :country_code)
+  Security = Data.define(:symbol, :name, :logo_url, :exchange_operating_mic, :country_code, :currency) do
+    def initialize(symbol:, name:, logo_url:, exchange_operating_mic:, country_code:, currency: nil)
+      super
+    end
+  end
   SecurityInfo = Data.define(:symbol, :name, :links, :logo_url, :description, :kind, :exchange_operating_mic)
   Price = Data.define(:symbol, :date, :price, :currency, :exchange_operating_mic)
 

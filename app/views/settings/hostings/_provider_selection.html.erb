@@ -45,8 +45,8 @@
         <input type="hidden" name="setting[securities_providers][]" value="">
 
         <% [
-          ["twelve_data", t(".providers.twelve_data"), nil],
-          ["yahoo_finance", t(".providers.yahoo_finance"), nil],
+          ["twelve_data", t(".providers.twelve_data"), t(".twelve_data_hint")],
+          ["yahoo_finance", t(".providers.yahoo_finance"), t(".yahoo_finance_hint")],
           ["tiingo", t(".providers.tiingo"), t(".requires_api_key")],
           ["eodhd", t(".providers.eodhd"), t(".requires_api_key_eodhd")],
           ["alpha_vantage", t(".providers.alpha_vantage"), t(".requires_api_key_alpha_vantage")],

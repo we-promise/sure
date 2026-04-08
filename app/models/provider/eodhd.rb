@@ -125,7 +125,8 @@ class Provider::Eodhd < Provider
           name: security.dig("Name"),
           logo_url: nil,
           exchange_operating_mic: mic,
-          country_code: country
+          country_code: country,
+          currency: security.dig("Currency")
         )
       end
     end

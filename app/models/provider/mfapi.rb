@@ -55,7 +55,8 @@ class Provider::Mfapi < Provider
           name: fund["schemeName"],
           logo_url: nil,
           exchange_operating_mic: "XBOM",
-          country_code: "IN"
+          country_code: "IN",
+          currency: "INR"
         )
       end
     end
