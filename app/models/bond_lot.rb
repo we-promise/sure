@@ -665,7 +665,12 @@ class BondLot < ApplicationRecord
     end
 
     def inflation_provider_key
-      inflation_provider.presence || "gus_sdp"
+      inflation_provider.presence || Bond::InflationProvider.default_provider_for(
+        account: account,
+        bond: bond,
+        lot: self,
+        product_code: product_code
+      )
     end
 
     def inflation_rate_record_for(on:, allow_import: true)

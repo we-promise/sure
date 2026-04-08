@@ -1,6 +1,22 @@
 require "test_helper"
 
 class BondInflationProviderTest < ActiveSupport::TestCase
+  test "default_provider_for derives provider from product code market" do
+    assert_equal "gus_sdp", Bond::InflationProvider.default_provider_for(product_code: "pl_eod")
+    assert_equal "us_bls", Bond::InflationProvider.default_provider_for(product_code: "us_tips_10y")
+    assert_equal "es_ine", Bond::InflationProvider.default_provider_for(product_code: "es_letra_3m")
+  end
+
+  test "default_provider_for falls back to locale when product code is absent" do
+    assert_equal "gus_sdp", Bond::InflationProvider.default_provider_for(locale: "pl")
+    assert_equal "us_bls", Bond::InflationProvider.default_provider_for(locale: "en-US")
+    assert_equal "es_ine", Bond::InflationProvider.default_provider_for(locale: "es")
+  end
+
+  test "default_provider_for falls back to gus_sdp for unknown locale" do
+    assert_equal "gus_sdp", Bond::InflationProvider.default_provider_for(locale: "de")
+  end
+
   test "record_for_date reads from GUS storage for gus_sdp provider" do
     GusInflationRate.create!(year: 2025, month: 1, rate_yoy: 105.2, source: "sdp")
 

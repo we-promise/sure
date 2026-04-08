@@ -1,5 +1,11 @@
 module Bond::InflationProvider
   InflationRecord = Data.define(:year, :month, :rate_yoy)
+  DEFAULT_PROVIDER_BY_LOCALE = {
+    "pl" => "gus_sdp",
+    "es" => "es_ine",
+    "us" => "us_bls",
+    "en-us" => "us_bls"
+  }.freeze
 
   PROVIDERS = {
     "gus_sdp" => "Provider::GusSdp",
@@ -15,6 +21,13 @@ module Bond::InflationProvider
 
   def key_for(provider)
     provider.presence || "gus_sdp"
+  end
+
+  def default_provider_for(account: nil, bond: nil, lot: nil, product_code: nil, locale: nil)
+    resolved_product_code = product_code.presence || lot&.product_code
+    provider_for_product_code(resolved_product_code) ||
+      provider_for_locale(locale.presence || lot_locale(lot:, bond:, account:)) ||
+      "gus_sdp"
   end
 
   def record_for_date(provider:, date:, lag_months: 0, allow_import: true)
@@ -99,5 +112,36 @@ module Bond::InflationProvider
 
   def es_ine_series_id
     ENV["ES_INE_CPI_SERIES_ID"].presence || Setting.es_ine_cpi_series_id.presence
+  end
+
+  def provider_for_product_code(product_code)
+    return nil if product_code.blank?
+
+    Bond::PRODUCT_DEFAULTS.dig(product_code, :inflation_provider) ||
+      case product_code.to_s
+      when /^pl_/
+        "gus_sdp"
+      when /^us_/
+        "us_bls"
+      when /^es_/
+        "es_ine"
+      end
+  end
+
+  def provider_for_locale(locale)
+    normalized_locale = locale.to_s.strip.downcase
+    return nil if normalized_locale.blank?
+
+    DEFAULT_PROVIDER_BY_LOCALE[normalized_locale] ||
+      DEFAULT_PROVIDER_BY_LOCALE[normalized_locale.split(/[_-]/).first]
+  end
+
+  def lot_locale(lot:, bond:, account:)
+    lot&.account&.family&.locale.presence ||
+      bond&.account&.family&.locale.presence ||
+      account&.family&.locale.presence ||
+      Current.family&.locale.presence ||
+      Current.user&.family&.locale.presence ||
+      I18n.locale
   end
 end

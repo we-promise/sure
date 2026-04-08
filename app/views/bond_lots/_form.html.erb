@@ -120,7 +120,11 @@
                               data: { bond_lot_form_target: "inflationInput" } %>
       </div>
 
-      <% selected_provider = (bond_lot.auto_fetch_inflation.nil? || bond_lot.auto_fetch_inflation) ? (bond_lot.inflation_provider.presence || "gus_sdp") : bond_lot.inflation_provider %>
+      <% selected_provider = if bond_lot.auto_fetch_inflation.nil? || bond_lot.auto_fetch_inflation
+                               bond_lot.inflation_provider.presence || Bond::InflationProvider.default_provider_for(account:, lot: bond_lot, product_code: bond_lot.product_code)
+                             else
+                               bond_lot.inflation_provider
+                             end %>
       <div data-bond-lot-form-target="inflationFields">
         <%= form.select :inflation_provider,
                         Bond::InflationProvider::PROVIDERS.map { |key, _klass| [t("bonds.purchase_holding.inflation_providers.#{key}", default: key.to_s.humanize), key] },

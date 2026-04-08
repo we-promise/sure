@@ -381,6 +381,60 @@ class BondLotTest < ActiveSupport::TestCase
     assert_not lot.auto_fetch_inflation?
   end
 
+  test "inflation_provider_key uses product market fallback when provider is blank" do
+    lot = BondLot.new(
+      bond: bonds(:one),
+      purchased_on: Date.current,
+      amount: 1000,
+      subtype: "inflation_linked",
+      product_code: "es_letra_3m",
+      first_period_rate: 4.0,
+      inflation_margin: 1.0,
+      rate_type: "variable",
+      coupon_frequency: "at_maturity"
+    )
+
+    assert_equal "es_ine", lot.send(:inflation_provider_key)
+  end
+
+  test "inflation_provider_key uses family locale fallback when provider and product are blank" do
+    account = accounts(:bond)
+
+    lot = BondLot.new(
+      bond: account.bond,
+      purchased_on: Date.current,
+      amount: 1000,
+      subtype: "inflation_linked",
+      first_period_rate: 4.0,
+      inflation_margin: 1.0,
+      rate_type: "variable",
+      coupon_frequency: "at_maturity"
+    )
+
+    lot.account.family.stubs(:locale).returns("es")
+
+    assert_equal "es_ine", lot.send(:inflation_provider_key)
+  end
+
+  test "inflation_provider_key preserves explicit provider over derived defaults" do
+    account = accounts(:bond)
+    account.family.stubs(:locale).returns("pl")
+
+    lot = BondLot.new(
+      bond: account.bond,
+      purchased_on: Date.current,
+      amount: 1000,
+      subtype: "inflation_linked",
+      first_period_rate: 4.0,
+      inflation_margin: 1.0,
+      inflation_provider: "us_bls",
+      rate_type: "variable",
+      coupon_frequency: "at_maturity"
+    )
+
+    assert_equal "us_bls", lot.send(:inflation_provider_key)
+  end
+
   test "coupon_amount_per_period computes value for periodic coupon bonds" do
     lot = BondLot.new(
       bond: bonds(:one),
