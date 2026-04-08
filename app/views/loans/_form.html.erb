@@ -28,6 +28,12 @@
                                  label: t("loans.form.term_months"),
                                  placeholder: t("loans.form.term_months_placeholder") %>
       </div>
+
+      <div>
+        <%= loan_form.select :subtype,
+                  Loan::SUBTYPES.map { |k, v| [v[:long], k] },
+                  { label: true, prompt: t("loans.form.subtype_prompt"), include_blank: t("loans.form.none") } %>
+      </div>
     <% end %>
   </div>
 <% end %>

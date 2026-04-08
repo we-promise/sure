@@ -1,0 +1,17 @@
+---
+pl:
+  users:
+    destroy:
+      success: Twoje konto zostało usunięte.
+    update:
+      email_change_failed: Nie udało się zmienić adresu e-mail.
+      email_change_initiated: Sprawdź nowy adres e-mail, aby dokończyć potwierdzenie zmiany.
+      success: Twój profil został zaktualizowany.
+    resend_confirmation_email:
+      success: Nowa wiadomość potwierdzająca została dodana do kolejki wysyłki.
+      no_pending_change: Brak oczekującej zmiany adresu e-mail!
+    reset:
+      success: Twoje konto zostało zresetowane. Dane zostaną usunięte w tle za jakiś czas.
+      unauthorized: Nie masz uprawnień do wykonania tej akcji
+    reset_with_sample_data:
+      success: Twoje konto zostało zresetowane, a dane przykładowe są przygotowywane. Dane demo pojawią się wkrótce.

@@ -17,7 +17,9 @@ en:
       success:
         one: "Successfully linked %{count} account."
         other: "Successfully linked %{count} accounts."
-      partial_success: "Linked %{linked} account(s). %{failed} failed to link."
+      partial_success:
+        one: "Linked %{count} account. %{failed_count} failed to link."
+        other: "Linked %{count} accounts. %{failed_count} failed to link."
       link_failed: "Failed to link accounts: %{errors}"
       no_accounts: "No accounts were selected for linking."
     preload_accounts:

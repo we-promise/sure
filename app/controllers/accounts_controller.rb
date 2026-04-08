@@ -113,8 +113,13 @@ class AccountsController < ApplicationController
     if @account.linked?
       redirect_to account_path(@account), alert: t("accounts.destroy.cannot_delete_linked")
     else
-      @account.destroy_later
-      redirect_to accounts_path, notice: t("accounts.destroy.success", type: @account.accountable_type)
+      begin
+        @account.destroy_later
+        redirect_to accounts_path, notice: t("accounts.destroy.success", type: @account.accountable_type)
+      rescue => e
+        Rails.logger.error "Failed to schedule account #{@account.id} for deletion: #{e.message}"
+        redirect_to accounts_path, alert: t("accounts.destroy.failed")
+      end
     end
   end
 

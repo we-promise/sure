@@ -1,0 +1,119 @@
+---
+pl:
+  simplefin_items:
+    new:
+      title: Połącz SimpleFIN
+      setup_token: Token konfiguracji
+      setup_token_placeholder: wklej token konfiguracji SimpleFIN
+      connect: Połącz
+      cancel: Anuluj
+    create:
+      success: Połączenie SimpleFIN zostało pomyślnie dodane! Twoje konta pojawią się wkrótce po synchronizacji w tle.
+      errors:
+        blank_token: Wprowadź token konfiguracji SimpleFIN.
+        invalid_token: Nieprawidłowy token konfiguracji. Sprawdź, czy skopiowano pełny token z SimpleFIN Bridge.
+        token_compromised: Token konfiguracji może być naruszony, wygasły albo już użyty. Utwórz nowy.
+        create_failed: 'Nie udało się połączyć: %{message}'
+        unexpected: Wystąpił nieoczekiwany błąd. Spróbuj ponownie.
+    destroy:
+      success: Połączenie SimpleFIN zostanie usunięte
+    update:
+      success: Połączenie SimpleFIN zostało pomyślnie zaktualizowane! Trwa ponowne łączenie kont.
+      errors:
+        blank_token: Wprowadź token konfiguracji SimpleFIN.
+        invalid_token: Nieprawidłowy token konfiguracji. Sprawdź, czy skopiowano pełny token z SimpleFIN Bridge.
+        token_compromised: Token konfiguracji może być naruszony, wygasły albo już użyty. Utwórz nowy.
+        update_failed: 'Nie udało się zaktualizować połączenia: %{message}'
+        unexpected: Wystąpił nieoczekiwany błąd. Spróbuj ponownie.
+    edit:
+      setup_token:
+        label: 'Token konfiguracji SimpleFIN:'
+        placeholder: Wklej tutaj token konfiguracji SimpleFIN...
+        help_text: Token powinien być długim ciągiem znaków zaczynającym się od liter i cyfr
+    setup_accounts:
+      stale_accounts:
+        title: Konta, których nie ma już w SimpleFIN
+        description: Te konta istnieją w bazie danych, ale nie są już dostarczane przez SimpleFIN. Może się to zdarzyć przy zmianie konfiguracji kont po stronie dostawcy.
+        action_prompt: Co chcesz zrobić?
+        action_delete: Usuń konto i wszystkie transakcje
+        action_move: 'Przenieś transakcje do:'
+        action_skip: Pomiń na razie
+        transaction_count:
+          one: "%{count} transakcja"
+          few: "%{count} transakcje"
+          many: "%{count} transakcji"
+          other: "%{count} transakcji"
+    complete_account_setup:
+      all_skipped: Wszystkie konta zostały pominięte. Nie utworzono żadnych kont.
+      no_accounts: Brak kont do skonfigurowania.
+      success:
+        one: Pomyślnie utworzono %{count} konto SimpleFIN! Twoje transakcje i pozycje są importowane w tle.
+        few: Pomyślnie utworzono %{count} konta SimpleFIN! Twoje transakcje i pozycje są importowane w tle.
+        many: Pomyślnie utworzono %{count} kont SimpleFIN! Twoje transakcje i pozycje są importowane w tle.
+        other: Pomyślnie utworzono %{count} kont SimpleFIN! Twoje transakcje i pozycje są importowane w tle.
+      stale_accounts_processed: 'Przestarzałe konta: %{deleted} usuniętych, %{moved} przeniesionych.'
+      stale_accounts_errors:
+        one: "%{count} akcja dla przestarzałego konta nie powiodła się. Sprawdź logi."
+        few: "%{count} akcje dla przestarzałych kont nie powiodły się. Sprawdź logi."
+        many: "%{count} akcji dla przestarzałych kont nie powiodło się. Sprawdź logi."
+        other: "%{count} akcji dla przestarzałych kont nie powiodło się. Sprawdź logi."
+    simplefin_item:
+      add_new: Dodaj nowe połączenie
+      confirm_accept: Usuń połączenie
+      confirm_body: Spowoduje to trwałe usunięcie wszystkich kont w tej grupie i wszystkich powiązanych danych.
+      confirm_title: Usunąć połączenie SimpleFIN?
+      delete: Usuń
+      deletion_in_progress: "(usuwanie w toku...)"
+      error: Wystąpił błąd podczas synchronizacji danych
+      no_accounts_description: To połączenie nie ma jeszcze żadnych zsynchronizowanych kont.
+      no_accounts_title: Nie znaleziono kont
+      requires_update: Połącz ponownie
+      setup_needed: Nowe konta gotowe do konfiguracji
+      setup_description: Wybierz typy kont dla nowo zaimportowanych kont SimpleFIN.
+      setup_action: Skonfiguruj nowe konta
+      setup_accounts_menu: Skonfiguruj konta
+      more_accounts_available:
+        one: "%{count} dodatkowe konto do skonfigurowania"
+        few: "%{count} dodatkowe konta do skonfigurowania"
+        many: "%{count} dodatkowych kont do skonfigurowania"
+        other: "%{count} dodatkowych kont do skonfigurowania"
+      accounts_skipped_tooltip: Niektóre konta zostały pominięte z powodu błędów podczas synchronizacji
+      accounts_skipped_label: 'Pominięte: %{count}'
+      rate_limited_ago: Ograniczenie limitu (%{time} temu)
+      rate_limited_recently: Ostatnio ograniczono limitem
+      status: Ostatnia synchronizacja %{timestamp} temu
+      status_never: Nigdy nie synchronizowano
+      status_with_summary: Ostatnia synchronizacja %{timestamp} temu • %{summary}
+      syncing: Synchronizacja...
+      update: Aktualizuj
+      stale_pending_note: "(wykluczone z budżetów)"
+      stale_pending_accounts: 'w: %{accounts}'
+      reconciled_details_note: "(szczegóły w podsumowaniu synchronizacji)"
+      duplicate_accounts_skipped: Niektóre konta zostały pominięte jako duplikaty — użyj opcji „Połącz istniejące konta”, aby je scalić.
+    select_existing_account:
+      title: Połącz %{account_name} z SimpleFIN
+      description: Wybierz konto SimpleFIN do połączenia z istniejącym kontem
+      cancel: Anuluj
+      link_account: Połącz konto
+      no_accounts_found: Nie znaleziono kont SimpleFIN dla tej/tego %{moniker}.
+      wait_for_sync: Jeśli właśnie połączyłeś lub zsynchronizowałeś, spróbuj ponownie po zakończeniu synchronizacji.
+      unlink_to_move: Aby przenieść połączenie, najpierw odłącz je z menu akcji konta.
+      all_accounts_already_linked: Wszystkie konta SimpleFIN są już połączone.
+      currently_linked_to: 'Aktualnie połączone z: %{account_name}'
+    link_existing_account:
+      success: Konto zostało pomyślnie połączone z SimpleFIN
+      errors:
+        only_manual: Można połączyć tylko konta manualne
+        invalid_simplefin_account: Wybrano nieprawidłowe konto SimpleFIN
+    reconciled_status:
+      message:
+        one: "%{count} oczekująca zduplikowana transakcja została uzgodniona"
+        few: "%{count} oczekujące zduplikowane transakcje zostały uzgodnione"
+        many: "%{count} oczekujących zduplikowanych transakcji zostało uzgodnionych"
+        other: "%{count} oczekujących zduplikowanych transakcji zostało uzgodnionych"
+    stale_pending_status:
+      message:
+        one: "%{count} oczekująca transakcja starsza niż %{days} dni"
+        few: "%{count} oczekujące transakcje starsze niż %{days} dni"
+        many: "%{count} oczekujących transakcji starszych niż %{days} dni"
+        other: "%{count} oczekujących transakcji starszych niż %{days} dni"

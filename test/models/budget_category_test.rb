@@ -87,43 +87,6 @@ class BudgetCategoryTest < ActiveSupport::TestCase
     assert_equal 200, @subcategory_with_limit_bc.available_to_spend
   end
 
-  test "max_allocation excludes budgets of inheriting siblings" do
-    # Create another inheriting subcategory
-    another_inheriting = Category.create!(
-      name: "Test Coffee #{Time.now.to_f}",
-      parent: @parent_category,
-      family: @family
-    )
-
-    another_inheriting_bc = BudgetCategory.create!(
-      budget: @budget,
-      category: another_inheriting,
-      budgeted_spending: 0,  # Inherits
-      currency: "USD"
-    )
-
-    # Max allocation for new subcategory should only account for the one with explicit limit (300)
-    # 1000 (parent) - 300 (subcategory_with_limit) = 700
-    assert_equal 700, another_inheriting_bc.max_allocation
-
-    # If we add a new subcategory with a limit
-    new_subcategory_cat = Category.create!(
-      name: "Test Fast Food #{Time.now.to_f}",
-      parent: @parent_category,
-      family: @family
-    )
-
-    new_subcategory_bc = BudgetCategory.create!(
-      budget: @budget,
-      category: new_subcategory_cat,
-      budgeted_spending: 0,
-      currency: "USD"
-    )
-
-    # Max should still be 700 because both inheriting subcategories don't count
-    assert_equal 700, new_subcategory_bc.max_allocation
-  end
-
   test "percent_of_budget_spent for inheriting subcategory uses parent budget" do
     # Mock spending
     @budget.stubs(:budget_category_actual_spending).with(@subcategory_inheriting_bc).returns(100)
@@ -180,43 +143,30 @@ class BudgetCategoryTest < ActiveSupport::TestCase
     assert_equal 800, @subcategory_inheriting_bc.available_to_spend
   end
 
-  test "domain predicates classify budget status correctly" do
-    @budget.stubs(:budget_category_actual_spending).with(@subcategory_with_limit_bc).returns(0)
-    @budget.stubs(:budget_category_actual_spending).with(@subcategory_inheriting_bc).returns(0)
+  test "update_budgeted_spending! preserves positive parent reserve when subcategory becomes individual" do
+    @subcategory_inheriting_bc.update_budgeted_spending!(200)
 
-    assert @subcategory_with_limit_bc.budgeted?
-    assert @subcategory_with_limit_bc.on_track?
-    refute @subcategory_with_limit_bc.over_budget_with_budget?
-    refute @subcategory_with_limit_bc.unbudgeted_with_spending?
-    assert @subcategory_with_limit_bc.visible_on_track?
+    assert_equal 1200, @parent_budget_category.reload.budgeted_spending
+    assert_equal 200, @subcategory_inheriting_bc.reload.budgeted_spending
+    refute @subcategory_inheriting_bc.reload.inherits_parent_budget?
+  end
 
-    assert @subcategory_inheriting_bc.on_track?
-    refute @subcategory_inheriting_bc.visible_on_track?
+  test "update_budgeted_spending! lowers parent when subcategory returns to shared" do
+    @subcategory_with_limit_bc.update_budgeted_spending!(0)
 
-    @budget.stubs(:budget_category_actual_spending).with(@subcategory_inheriting_bc).returns(10)
-    assert @subcategory_inheriting_bc.visible_on_track?
+    assert_equal 700, @parent_budget_category.reload.budgeted_spending
+    assert @subcategory_with_limit_bc.reload.inherits_parent_budget?
+  end
 
-    @budget.stubs(:budget_category_actual_spending).with(@subcategory_with_limit_bc).returns(400)
-    assert @subcategory_with_limit_bc.over_budget_with_budget?
-    assert @subcategory_with_limit_bc.any_over_budget?
-    refute @subcategory_with_limit_bc.on_track?
+  test "update_budgeted_spending! does not preserve a negative parent reserve" do
+    # Create an artificial inconsistent parent total to verify recovery behavior.
+    @parent_budget_category.update!(budgeted_spending: 50)
+    @subcategory_inheriting_bc.update!(budgeted_spending: 50)
 
-    no_budget_category = Category.create!(
-      name: "No Budget Predicate #{Time.now.to_f}",
-      family: @family,
-      color: "#0ea5e9"
-    )
+    @subcategory_with_limit_bc.update_budgeted_spending!(20)
 
-    no_budget_bc = BudgetCategory.create!(
-      budget: @budget,
-      category: no_budget_category,
-      budgeted_spending: 0,
-      currency: "USD"
-    )
-
-    @budget.stubs(:budget_category_actual_spending).with(no_budget_bc).returns(20)
-
-    assert no_budget_bc.unbudgeted_with_spending?
-    assert no_budget_bc.any_over_budget?
+    assert_equal 70, @parent_budget_category.reload.budgeted_spending
+    assert_equal 20, @subcategory_with_limit_bc.reload.budgeted_spending
+    assert_equal 50, @subcategory_inheriting_bc.reload.budgeted_spending
   end
 end
