@@ -126,6 +126,7 @@ en:
         label: API Key
         placeholder: Enter your Alpha Vantage API key here
         rate_limit_warning: "Alpha Vantage free tier is limited to 25 API calls per day. Best used as a supplementary provider for EU ETFs not available from other providers."
+        no_health_check_note: "Connection health check is unavailable for this provider due to the strict rate limit."
       twelve_data_settings:
         api_calls_used: "%{used} / %{limit} API daily calls used (%{percentage})"
         description: Enter the API key provided by Twelve Data

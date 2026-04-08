@@ -105,6 +105,18 @@ class Security::Price::Importer
       @provider_prices ||= begin
         provider_fetch_start_date = effective_start_date - PROVISIONAL_LOOKBACK_DAYS.days
 
+        # Clamp to the provider's maximum lookback window so we don't waste
+        # API calls requesting data the provider cannot return.
+        max_days = security_provider.respond_to?(:max_history_days) ? security_provider.max_history_days : nil
+        if max_days && (end_date - provider_fetch_start_date).to_i > max_days
+          clamped_start = end_date - max_days.days
+          Rails.logger.info(
+            "#{security_provider.class.name} max history is #{max_days} days; " \
+            "clamping #{security.ticker} start_date from #{provider_fetch_start_date} to #{clamped_start}"
+          )
+          provider_fetch_start_date = clamped_start
+        end
+
         response = security_provider.fetch_security_prices(
           symbol: security.ticker,
           exchange_operating_mic: security.exchange_operating_mic,

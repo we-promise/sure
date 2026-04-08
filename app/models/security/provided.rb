@@ -19,8 +19,10 @@ module Security::Provided
     end
 
     # Get a specific provider by key name (e.g., "finnhub", "twelve_data")
+    # Returns nil if the provider is disabled in settings or not configured.
     def provider_for(name)
       return nil if name.blank?
+      return nil unless Setting.enabled_securities_providers.include?(name.to_s)
       Provider::Registry.for_concept(:securities).get_provider(name.to_sym)
     rescue Provider::Registry::Error
       nil

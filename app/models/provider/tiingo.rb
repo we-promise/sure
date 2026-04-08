@@ -71,7 +71,6 @@ class Provider::Tiingo < Provider
   def search_securities(symbol, country_code: nil, exchange_operating_mic: nil)
     with_provider_response do
       throttle_request
-      track_symbol(symbol)
 
       response = client.get("#{base_url}/tiingo/utilities/search") do |req|
         req.params["query"] = symbol
@@ -90,7 +89,8 @@ class Provider::Tiingo < Provider
           name: security["name"],
           logo_url: nil,
           exchange_operating_mic: map_exchange_to_mic(security["exchange"]),
-          country_code: security["countryCode"].presence || country_code
+          country_code: security["countryCode"].presence || country_code,
+          currency: security["priceCurrency"]
         )
       end
     end
@@ -208,9 +208,7 @@ class Provider::Tiingo < Provider
       current_count = Rails.cache.read(hour_key).to_i
 
       if current_count >= max_requests_per_hour
-        wait_seconds = 3600 - (Time.current.to_i % 3600) + 1
-        Rails.logger.info("Tiingo: #{current_count}/#{max_requests_per_hour} requests this hour, waiting #{wait_seconds}s")
-        sleep(wait_seconds)
+        raise RateLimitError, "Tiingo hourly request limit reached (#{current_count}/#{max_requests_per_hour})"
       end
 
       active_hour_key = "tiingo:requests:#{Time.current.to_i / 3600}"

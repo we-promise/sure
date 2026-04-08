@@ -13,6 +13,11 @@ class Provider::Eodhd < Provider
   # Maximum API calls per day (EODHD free/basic plans are very restrictive)
   MAX_REQUESTS_PER_DAY = 20
 
+  # EODHD free tier provides ~1 year of EOD data
+  def max_history_days
+    365
+  end
+
   # EODHD uses {SYMBOL}.{EXCHANGE} ticker format with its own exchange codes
   MIC_TO_EODHD_EXCHANGE = {
     "XNYS" => "US", "XNAS" => "US", "XASE" => "US",
@@ -119,14 +124,22 @@ class Provider::Eodhd < Provider
         eodhd_exchange = security.dig("Exchange")
         mic = EODHD_EXCHANGE_TO_MIC[eodhd_exchange]
         country = EODHD_COUNTRY_TO_CODE[security.dig("Country")]
+        code = security.dig("Code")
+        currency = security.dig("Currency")
+
+        # Cache the API-returned currency so fetch_security_prices can use it
+        if currency.present? && mic.present?
+          cache_key = "eodhd:currency:#{code.upcase}:#{mic}"
+          Rails.cache.write(cache_key, currency, expires_in: 24.hours)
+        end
 
         Security.new(
-          symbol: security.dig("Code"),
+          symbol: code,
           name: security.dig("Name"),
           logo_url: nil,
           exchange_operating_mic: mic,
           country_code: country,
-          currency: security.dig("Currency")
+          currency: currency
         )
       end
     end
@@ -192,8 +205,10 @@ class Provider::Eodhd < Provider
         raise InvalidSecurityPriceError, "Unexpected response format from EOD API"
       end
 
+      # Prefer cached currency from search results; fall back to hardcoded map
+      cache_key = "eodhd:currency:#{symbol.upcase}:#{exchange_operating_mic}"
       eodhd_exchange = MIC_TO_EODHD_EXCHANGE[exchange_operating_mic]
-      currency = EXCHANGE_CURRENCY[eodhd_exchange]
+      currency = Rails.cache.read(cache_key) || EXCHANGE_CURRENCY[eodhd_exchange]
 
       parsed.map do |resp|
         price = resp.dig("close")

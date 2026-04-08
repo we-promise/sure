@@ -31,11 +31,12 @@
                          controller: "auto-submit-form",
                          "auto-submit-form-trigger-event-value": "blur"
                        } do |form| %>
+    <% has_key = ENV["EODHD_API_KEY"].present? || Setting.eodhd_api_key.present? %>
     <%= form.text_field :eodhd_api_key,
                         label: t(".label"),
                         type: "password",
                         placeholder: t(".placeholder"),
-                        value: ENV.fetch("EODHD_API_KEY", Setting.eodhd_api_key),
+                        value: has_key ? "********" : "",
                         disabled: ENV["EODHD_API_KEY"].present?,
                         data: { "auto-submit-form-target": "auto" } %>
   <% end %>

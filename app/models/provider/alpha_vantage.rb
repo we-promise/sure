@@ -13,6 +13,12 @@ class Provider::AlphaVantage < Provider
   # Maximum requests per day (Alpha Vantage free tier limit)
   MAX_REQUESTS_PER_DAY = 25
 
+  # Free tier "compact" returns ~100 trading days (~140 calendar days).
+  # "full" requires a paid plan.
+  def max_history_days
+    140
+  end
+
   # MIC code to Alpha Vantage symbol suffix mapping
   MIC_TO_AV_SUFFIX = {
     "XNYS" => "", "XNAS" => "", "XASE" => "",
@@ -32,13 +38,12 @@ class Provider::AlphaVantage < Provider
     "XHEL" => ".HEL"
   }.freeze
 
-  # Alpha Vantage symbol suffix to MIC code mapping (reverse)
-  AV_SUFFIX_TO_MIC = {
-    "LON" => "XLON", "DEX" => "XETR", "TRT" => "XTSE",
-    "PAR" => "XPAR", "AMS" => "XAMS", "SWX" => "XSWX",
-    "HKG" => "XHKG", "ASX" => "XASX", "MIL" => "XMIL",
-    "BME" => "XMAD", "FRK" => "XFRA"
-  }.freeze
+  # Alpha Vantage symbol suffix to MIC code mapping (auto-generated from forward map)
+  AV_SUFFIX_TO_MIC = MIC_TO_AV_SUFFIX
+    .reject { |_, suffix| suffix.empty? }
+    .each_with_object({}) { |(mic, suffix), h| h[suffix.delete(".")] = mic }
+    .merge("FRK" => "XFRA") # FRK is not in the forward map (no MIC→FRK entry)
+    .freeze
 
   # Alpha Vantage region names to ISO country codes
   AV_REGION_TO_COUNTRY = {
@@ -53,17 +58,12 @@ class Provider::AlphaVantage < Provider
     @api_key = api_key # pipelock:ignore
   end
 
+  # Alpha Vantage has no non-quota endpoint — every API call counts against
+  # the 25/day free-tier limit. Rather than burn a call, we just check that
+  # the API key is configured.
   def healthy?
     with_provider_response do
-      throttle_request
-      response = client.get("#{base_url}/query") do |req|
-        req.params["function"] = "GLOBAL_QUOTE"
-        req.params["symbol"] = "AAPL"
-      end
-
-      parsed = JSON.parse(response.body)
-      check_api_error!(parsed)
-      parsed.dig("Global Quote", "01. symbol").present?
+      api_key.present?
     end
   end
 
@@ -104,6 +104,14 @@ class Provider::AlphaVantage < Provider
       data.map do |match|
         av_ticker = match["1. symbol"]
         region = match["4. region"]
+        currency = match["8. currency"]
+
+        # Cache the API-returned currency so fetch_security_prices can use it
+        # instead of relying solely on the hardcoded suffix→currency fallback
+        if currency.present?
+          cache_key = "alpha_vantage:currency:#{av_ticker.upcase}"
+          Rails.cache.write(cache_key, currency, expires_in: 24.hours)
+        end
 
         Security.new(
           symbol: strip_av_suffix(av_ticker),
@@ -111,7 +119,7 @@ class Provider::AlphaVantage < Provider
           logo_url: nil,
           exchange_operating_mic: extract_mic_from_symbol(av_ticker),
           country_code: AV_REGION_TO_COUNTRY[region] || country_code,
-          currency: match["8. currency"]
+          currency: currency
         )
       end
     end
@@ -234,15 +242,14 @@ class Provider::AlphaVantage < Provider
       sleep(sleep_time) if sleep_time > 0
 
       # Layer 2: Global per-day request counter via cache (Redis in prod).
+      # Atomic increment-then-check avoids the TOCTOU of read-check-increment.
       day_key = "alpha_vantage:daily:#{Date.current}"
-      current_count = Rails.cache.read(day_key).to_i
+      new_count = Rails.cache.increment(day_key, 1, expires_in: 24.hours).to_i
 
-      if current_count >= max_requests_per_day
-        Rails.logger.warn("AlphaVantage: daily request limit reached (#{current_count}/#{max_requests_per_day})")
+      if new_count > max_requests_per_day
+        Rails.logger.warn("AlphaVantage: daily request limit reached (#{new_count}/#{max_requests_per_day})")
         raise RateLimitError, "Alpha Vantage daily request limit reached (#{max_requests_per_day} per day)"
       end
-
-      Rails.cache.increment(day_key, 1, expires_in: 24.hours)
 
       @last_request_time = Time.current
     end
@@ -304,7 +311,9 @@ class Provider::AlphaVantage < Provider
       when "SWX" then "CHF"
       when "HKG" then "HKD"
       when "ASX" then "AUD"
-      when "STO", "CPH", "OSL" then "SEK"
+      when "STO" then "SEK"
+      when "CPH" then "DKK"
+      when "OSL" then "NOK"
       else "USD"
       end
 

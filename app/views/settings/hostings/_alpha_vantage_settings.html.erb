@@ -28,11 +28,12 @@
                          controller: "auto-submit-form",
                          "auto-submit-form-trigger-event-value": "blur"
                        } do |form| %>
+    <% has_key = ENV["ALPHA_VANTAGE_API_KEY"].present? || Setting.alpha_vantage_api_key.present? %>
     <%= form.text_field :alpha_vantage_api_key,
                         label: t(".label"),
                         type: "password",
                         placeholder: t(".placeholder"),
-                        value: ENV.fetch("ALPHA_VANTAGE_API_KEY", Setting.alpha_vantage_api_key),
+                        value: has_key ? "********" : "",
                         disabled: ENV["ALPHA_VANTAGE_API_KEY"].present?,
                         data: { "auto-submit-form-target": "auto" } %>
   <% end %>
@@ -40,9 +41,10 @@
   <div class="bg-amber-50 border border-amber-200 rounded-lg p-3">
     <div class="flex items-start gap-2">
       <%= icon("alert-triangle", size: "sm", class: "text-amber-600 mt-0.5") %>
-      <p class="text-sm text-amber-700">
-        <%= t(".rate_limit_warning") %>
-      </p>
+      <div class="text-sm text-amber-700">
+        <p><%= t(".rate_limit_warning") %></p>
+        <p class="mt-1"><%= t(".no_health_check_note") %></p>
+      </div>
     </div>
   </div>
 </div>

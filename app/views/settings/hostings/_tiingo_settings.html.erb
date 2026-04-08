@@ -31,11 +31,12 @@
                          controller: "auto-submit-form",
                          "auto-submit-form-trigger-event-value": "blur"
                        } do |form| %>
+    <% has_key = ENV["TIINGO_API_KEY"].present? || Setting.tiingo_api_key.present? %>
     <%= form.text_field :tiingo_api_key,
                         label: t(".label"),
                         type: "password",
                         placeholder: t(".placeholder"),
-                        value: ENV.fetch("TIINGO_API_KEY", Setting.tiingo_api_key),
+                        value: has_key ? "********" : "",
                         disabled: ENV["TIINGO_API_KEY"].present?,
                         data: { "auto-submit-form-target": "auto" } %>
   <% end %>

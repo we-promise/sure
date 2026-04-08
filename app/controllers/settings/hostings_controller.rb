@@ -59,7 +59,10 @@ class Settings::HostingsController < ApplicationController
     end
 
     if hosting_params.key?(:twelve_data_api_key)
-      Setting.twelve_data_api_key = hosting_params[:twelve_data_api_key]
+      key_param = hosting_params[:twelve_data_api_key].to_s.strip
+      unless key_param.blank? || key_param == "********"
+        Setting.twelve_data_api_key = key_param
+      end
     end
 
     if hosting_params.key?(:exchange_rate_provider)
@@ -84,15 +87,24 @@ class Settings::HostingsController < ApplicationController
     end
 
     if hosting_params.key?(:tiingo_api_key)
-      Setting.tiingo_api_key = hosting_params[:tiingo_api_key]
+      key_param = hosting_params[:tiingo_api_key].to_s.strip
+      unless key_param.blank? || key_param == "********"
+        Setting.tiingo_api_key = key_param
+      end
     end
 
     if hosting_params.key?(:eodhd_api_key)
-      Setting.eodhd_api_key = hosting_params[:eodhd_api_key]
+      key_param = hosting_params[:eodhd_api_key].to_s.strip
+      unless key_param.blank? || key_param == "********"
+        Setting.eodhd_api_key = key_param
+      end
     end
 
     if hosting_params.key?(:alpha_vantage_api_key)
-      Setting.alpha_vantage_api_key = hosting_params[:alpha_vantage_api_key]
+      key_param = hosting_params[:alpha_vantage_api_key].to_s.strip
+      unless key_param.blank? || key_param == "********"
+        Setting.alpha_vantage_api_key = key_param
+      end
     end
 
     if hosting_params.key?(:syncs_include_pending)

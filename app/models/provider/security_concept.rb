@@ -24,4 +24,11 @@ module Provider::SecurityConcept
   def fetch_security_prices(symbol:, exchange_operating_mic:, start_date:, end_date:)
     raise NotImplementedError, "Subclasses must implement #fetch_security_prices"
   end
+
+  # Maximum number of calendar days of historical data the provider can return.
+  # Callers should clamp start_date to avoid requesting data beyond this window.
+  # Override in subclasses with provider-specific limits.
+  def max_history_days
+    nil # nil means no known limit
+  end
 end
