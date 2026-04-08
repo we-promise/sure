@@ -30,10 +30,16 @@ class Balance::SyncCache
       @converted_entries ||= account.entries.excluding_split_parents.includes(:entryable).order(:date).to_a.map do |e|
         converted_entry = e.dup
         converted_entry.entryable = e.entryable if e.association(:entryable).loaded?
+
+        # Respect per-transaction custom FX rate when available.
+        custom_rate = if e.entryable.is_a?(Transaction)
+          e.entryable.extra&.dig("exchange_rate")
+        end
+
         converted_entry.amount = converted_entry.amount_money.exchange_to(
           account.currency,
           date: e.date,
-          fallback_rate: 1
+          fallback_rate: custom_rate || 1
         ).amount
         converted_entry.currency = account.currency
         converted_entry
