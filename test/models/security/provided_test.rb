@@ -193,7 +193,7 @@ class Security::ProvidedTest < ActiveSupport::TestCase
       build_result(ticker: "AAPLX", name: "Some AAPL Fund"),
       build_result(ticker: "AAPL", name: "Apple Inc", country_code: "US", exchange_operating_mic: "XNAS"),
       build_result(ticker: "AAPL", name: "Apple Inc", country_code: "GB", exchange_operating_mic: "XLON"),
-      build_result(ticker: "AAPLD", name: "AAPL Dividend ETF"),
+      build_result(ticker: "AAPLD", name: "AAPL Dividend ETF")
     ]
 
     ranked = rank(results, "AAPL", "US")
@@ -212,7 +212,7 @@ class Security::ProvidedTest < ActiveSupport::TestCase
       build_result(ticker: "PINEAPPLE", name: "Pineapple Corp"),
       build_result(ticker: "AAPL", name: "Apple Inc", country_code: "US"),
       build_result(ticker: "APLE", name: "Apple Hospitality REIT"),
-      build_result(ticker: "APPL", name: "Appell Petroleum"),
+      build_result(ticker: "APPL", name: "Appell Petroleum")
     ]
 
     ranked = rank(results, "Apple", "US")
@@ -232,7 +232,7 @@ class Security::ProvidedTest < ActiveSupport::TestCase
       build_result(ticker: "SPXL", name: "Direxion Daily S&P 500 Bull 3X"),
       build_result(ticker: "SPXS", name: "Direxion Daily S&P 500 Bear 3X"),
       build_result(ticker: "SPX", name: "S&P 500 Index", country_code: "US"),
-      build_result(ticker: "SPXU", name: "ProShares UltraPro Short S&P 500"),
+      build_result(ticker: "SPXU", name: "ProShares UltraPro Short S&P 500")
     ]
 
     ranked = rank(results, "SPX", "US")
@@ -245,7 +245,7 @@ class Security::ProvidedTest < ActiveSupport::TestCase
     results = [
       build_result(ticker: "VTI", name: "Vanguard Total Stock Market ETF", country_code: "US"),
       build_result(ticker: "VTTI", name: "VTTI Energy Partners", country_code: "US"),
-      build_result(ticker: "VTTIX", name: "Vanguard Target 2060 Fund"),
+      build_result(ticker: "VTTIX", name: "Vanguard Target 2060 Fund")
     ]
 
     ranked = rank(results, "VTTI", "US")
@@ -260,7 +260,7 @@ class Security::ProvidedTest < ActiveSupport::TestCase
       build_result(ticker: "IVV", name: "iShares S&P 500 ETF", country_code: "US"),
       build_result(ticker: "CSPX", name: "iShares Core S&P 500 UCITS ETF", country_code: "GB"),
       build_result(ticker: "IJH", name: "iShares S&P Mid-Cap ETF", country_code: "US"),
-      build_result(ticker: "UNRELATED", name: "Something Else Corp"),
+      build_result(ticker: "UNRELATED", name: "Something Else Corp")
     ]
 
     ranked = rank(results, "iShares S&P", "US")
@@ -282,7 +282,7 @@ class Security::ProvidedTest < ActiveSupport::TestCase
       build_result(ticker: "TSLA", name: "Tesla Inc", country_code: "US"),
       build_result(ticker: "TSLA", name: "Tesla Inc", country_code: "DE"),
       build_result(ticker: "TL0", name: "Tesla Inc", country_code: "DE", exchange_operating_mic: "XETR"),
-      build_result(ticker: "TELSA", name: "Telsa Mining Ltd"),
+      build_result(ticker: "TELSA", name: "Telsa Mining Ltd")
     ]
 
     ranked = rank(results, "tesla", "US")

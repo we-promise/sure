@@ -20,6 +20,14 @@
   <% dialog.with_body do %>
     <% dialog.with_section(title: t(".overview"), open: true) do %>
       <div class="pb-4">
+        <% if @holding.security.provider_status == :provider_unavailable %>
+          <div class="px-3 pt-2">
+            <%= render DS::Alert.new(
+              message: t(".provider_disabled_warning", provider: @holding.security.price_provider&.humanize || "Unknown"),
+              variant: :warning
+            ) %>
+          </div>
+        <% end %>
         <dl class="space-y-3 px-3 py-2">
           <div data-controller="holding-security-remap">
             <div class="flex items-center justify-between text-sm">
@@ -41,7 +49,7 @@
               </dd>
             </div>
             <div data-holding-security-remap-target="form" class="hidden mt-3 space-y-3">
-              <% if Security.provider.present? %>
+              <% if Security.providers.any? %>
                 <%= form_with url: remap_security_holding_path(@holding), method: :patch, class: "space-y-3" do |f| %>
                   <div class="form-field combobox">
                     <%= f.combobox :security_id,
@@ -229,9 +237,30 @@
         </div>
       </div>
     <% end %>
-    <% if @holding.cost_basis_locked? || @holding.security_remapped? || @holding.account.can_delete_holdings? || !@holding.security.offline? %>
+    <% if @holding.cost_basis_locked? || @holding.security_remapped? || @holding.account.can_delete_holdings? || !@holding.security.offline? || @holding.security.provider_status == :provider_unavailable %>
       <% dialog.with_section(title: t(".settings"), open: true) do %>
         <div class="pb-4">
+          <% if @holding.security.provider_status == :provider_unavailable %>
+            <div class="flex items-center justify-between gap-2 p-3 border-b border-tertiary">
+              <div class="text-sm space-y-1 flex-1">
+                <h4 class="text-primary"><%= t(".switch_provider_label") %></h4>
+                <p class="text-secondary"><%= t(".switch_provider_description", provider: @holding.security.price_provider&.humanize || "Unknown") %></p>
+                <% if Security.providers.any? %>
+                  <%= form_with url: remap_security_holding_path(@holding), method: :patch, data: { controller: "auto-submit-form", "auto-submit-form-trigger-event-value": "change" } do |f| %>
+                    <div class="form-field combobox mt-2">
+                      <%= f.combobox :security_id,
+                                    securities_path(country_code: Current.family.country),
+                                    id: "switch_provider_security_id",
+                                    placeholder: t(".search_security_placeholder"),
+                                    data: { "auto-submit-form-target": "auto" } %>
+                    </div>
+                  <% end %>
+                <% else %>
+                  <p class="text-xs text-secondary mt-2"><%= t(".no_security_provider") %></p>
+                <% end %>
+              </div>
+            </div>
+          <% end %>
           <% if @holding.security_remapped? %>
             <div class="flex items-center justify-between gap-2 p-3 border-b border-tertiary">
               <div class="text-sm space-y-1">

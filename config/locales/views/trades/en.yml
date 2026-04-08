@@ -45,6 +45,7 @@ en:
       delete_subtitle: This action cannot be undone
       delete_title: Delete Trade
       details: Details
+      provider_disabled_warning: "Price updates paused — %{provider} provider is disabled. Re-enable it in Settings or remap the holding to another provider."
       exclude_subtitle: This trade will not be included in reports and calculations
       exclude_title: Exclude from analytics
       no_category: No category
