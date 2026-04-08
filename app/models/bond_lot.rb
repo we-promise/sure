@@ -43,8 +43,8 @@ class BondLot < ApplicationRecord
         account = lot.account
         lot_value = lot.estimated_current_value(allow_import: false).to_d
         lot_return = lot_value - lot.amount.to_d
-        converted_value = Money.new(lot_value, account.currency).exchange_to(family_currency, fallback_rate: 1).amount
-        converted_return = Money.new(lot_return, account.currency).exchange_to(family_currency, fallback_rate: 1).amount
+        converted_value = Money.new(lot_value, account.currency).exchange_to(family_currency, custom_rate: 1).amount
+        converted_return = Money.new(lot_return, account.currency).exchange_to(family_currency, custom_rate: 1).amount
 
         total_value += converted_value
         total_return += converted_return
