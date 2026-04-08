@@ -187,7 +187,7 @@ class Settings::HostingsController < ApplicationController
       start_year:,
       end_year:,
       force: true,
-      providers: [ "gus_sdp", "us_bls", "es_ine" ]
+      providers: Bond::InflationProvider::PROVIDERS.keys
     )
 
     redirect_to settings_hosting_path, notice: t(".import_enqueued")
@@ -237,11 +237,9 @@ class Settings::HostingsController < ApplicationController
     end
 
     def set_inflation_stats
-      @inflation_provider_stats = {
-        "gus_sdp" => provider_stats_for_gus,
-        "us_bls" => provider_stats_for("us_bls"),
-        "es_ine" => provider_stats_for("es_ine")
-      }
+      @inflation_provider_stats = Bond::InflationProvider::PROVIDERS.keys.index_with do |key|
+        key == "gus_sdp" ? provider_stats_for_gus : provider_stats_for(key)
+      end
 
       raw_details = Setting.inflation_last_import_details.to_s
       @inflation_last_import_details = raw_details.present? ? JSON.parse(raw_details) : {}

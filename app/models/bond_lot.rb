@@ -178,7 +178,7 @@ class BondLot < ApplicationRecord
     return principal if period_end.blank? || period_end <= purchased_on
 
     value = principal
-    coupons_accrued = 0.to_d
+    unpaid_coupon_accrual = 0.to_d
     cursor = purchased_on
     issue_base = anniversary_issue_base
 
@@ -198,13 +198,13 @@ class BondLot < ApplicationRecord
       if coupon_reinvested?
         value += interest_earned
       else
-        coupons_accrued += interest_earned
+        unpaid_coupon_accrual = coupon_paid_before_maturity?(next_cursor:, next_accrual_boundary:) ? 0.to_d : interest_earned
       end
 
       cursor = next_cursor
     end
 
-    value + coupons_accrued
+    value + unpaid_coupon_accrual
   end
 
   def total_return_amount(on: Date.current, allow_import: true)
@@ -463,6 +463,10 @@ class BondLot < ApplicationRecord
   private
     def coupon_reinvested?
       coupon_frequency.to_s == "at_maturity"
+    end
+
+    def coupon_paid_before_maturity?(next_cursor:, next_accrual_boundary:)
+      next_cursor == next_accrual_boundary && maturity_date.present? && next_cursor < maturity_date
     end
 
     def rate_context_for(on:, allow_import: true)

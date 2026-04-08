@@ -157,7 +157,8 @@
 
         <div data-bond-lot-form-target="inflationFields">
           <%= form.toggle :auto_fetch_inflation,
-                          checked: bond_lot.auto_fetch_inflation.nil? ? true : bond_lot.auto_fetch_inflation,
+                          checked: false,
+                          disabled: true,
                           data: {
                             bond_lot_form_target: "autoFetchInput",
                             action: "change->bond-lot-form#toggleManualInflationField"
