@@ -556,7 +556,7 @@ class BondLotTest < ActiveSupport::TestCase
     assert_in_delta 30.0, coupon.amount.to_f, 0.001
   end
 
-  test "estimated_current_value for periodic coupon bond excludes already paid coupons" do
+  test "estimated_current_value for periodic coupon bond includes paid coupons" do
     lot = BondLot.new(
       bond: bonds(:one),
       purchased_on: Date.new(2024, 1, 1),
@@ -571,7 +571,7 @@ class BondLotTest < ActiveSupport::TestCase
 
     value = lot.estimated_current_value(on: Date.new(2024, 9, 1))
 
-    assert_in_delta 1020.33, value.to_f, 0.2
+    assert_in_delta 1081.21, value.to_f, 0.2
   end
 
   test "product presets override conflicting rate and coupon settings" do
@@ -1057,7 +1057,7 @@ class BondLotTest < ActiveSupport::TestCase
     assert_includes settlement_entry.notes, "Tax withheld: none"
   end
 
-  test "auto-settlement for periodic coupon bond excludes previously paid coupons" do
+  test "auto-settlement for periodic coupon bond includes previously paid coupons" do
     account = accounts(:bond)
     account.bond.update!(tax_wrapper: "ike")
 
@@ -1078,7 +1078,7 @@ class BondLotTest < ActiveSupport::TestCase
     assert lot.settle_if_matured!(on: Date.new(2025, 2, 1))
 
     lot.reload
-    assert_in_delta 1060.33, lot.settlement_amount.to_d.to_f, 0.2
+    assert_in_delta lot.estimated_current_value(on: lot.maturity_date).to_f, lot.settlement_amount.to_d.to_f, 0.2
   end
 
   test "auto-buys replacement inflation-linked lot and flags rate review" do

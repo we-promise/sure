@@ -105,7 +105,7 @@ class BondLot < ApplicationRecord
   validates :rate_type, inclusion: { in: Bond::RATE_TYPES }, allow_nil: true
   validates :coupon_frequency, inclusion: { in: Bond::COUPON_FREQUENCIES }, allow_nil: true
   validates :tax_strategy, inclusion: { in: TAX_STRATEGIES }
-  validates :tax_rate, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
+  validates :tax_rate, numericality: { greater_than_or_equal_to: 0, less_than_or_equal_to: 100 }, allow_nil: true
   validates :entry_id, uniqueness: true, allow_nil: true
   validate :validate_issue_date_not_after_purchased_on
   validate :validate_maturity_date_not_before_purchased_on
@@ -196,10 +196,10 @@ class BondLot < ApplicationRecord
 
       days_in_year = [ (next_anniversary - anniversary_start).to_i, 1 ].max
       interest_earned = value * annual_rate_decimal * (days_in_step.to_d / days_in_year)
-      if coupon_reinvested?
+      if coupon_reinvested? || coupon_paid_before_maturity?(next_cursor:, next_accrual_boundary:)
         value += interest_earned
       else
-        unpaid_coupon_accrual = coupon_paid_before_maturity?(next_cursor:, next_accrual_boundary:) ? 0.to_d : interest_earned
+        unpaid_coupon_accrual = interest_earned
       end
 
       cursor = next_cursor
@@ -907,7 +907,9 @@ class BondLot < ApplicationRecord
     end
 
     def enqueue_inflation_backfill
-      start_year = [ purchased_on.year - 1, Date.current.year - 20 ].max
+      max_lag_months = cpi_lag_months.to_i
+      earliest_needed_date = purchased_on.beginning_of_month - max_lag_months.months
+      start_year = [ earliest_needed_date.year, Date.current.year - 20 ].max
       end_year = Date.current.year
 
       # Current year won't have all 12 months yet — only expect up to the current month.
