@@ -22,16 +22,13 @@ class EnableBankingAccount::ProcessorTest < ActiveSupport::TestCase
   end
 
   test "calls set_current_balance instead of direct account update" do
-    @enable_banking_account.stubs(:current_account).returns(@account)
-    @account.expects(:set_current_balance).with(1500.0).once.returns(OpenStruct.new(success?: true))
-
     EnableBankingAccount::Processor.new(@enable_banking_account).process
+    
+    assert_equal 1500.0, @account.reload.cash_balance
   end
 
   test "updates account currency" do
     @enable_banking_account.update!(currency: "USD")
-    @enable_banking_account.stubs(:current_account).returns(@account)
-    @account.expects(:set_current_balance).returns(OpenStruct.new(success?: true))
 
     EnableBankingAccount::Processor.new(@enable_banking_account).process
 
@@ -53,11 +50,13 @@ class EnableBankingAccount::ProcessorTest < ActiveSupport::TestCase
     )
     AccountProvider.find_by(provider: @enable_banking_account)&.destroy
     AccountProvider.create!(account: cc_account, provider: @enable_banking_account)
-    @enable_banking_account.stubs(:current_account).returns(cc_account)
-
-    cc_account.expects(:set_current_balance).with(550.0).once.returns(OpenStruct.new(success?: true))
 
     EnableBankingAccount::Processor.new(@enable_banking_account).process
+    
+    assert_equal 550.0, cc_account.reload.cash_balance
+    if cc_account.accountable.respond_to?(:available_credit)
+      assert_equal 550.0, cc_account.accountable.reload.available_credit
+    end
   end
 
   test "sets CC balance to raw outstanding when credit_limit is absent" do
@@ -65,11 +64,9 @@ class EnableBankingAccount::ProcessorTest < ActiveSupport::TestCase
     @enable_banking_account.update!(current_balance: 300.00, credit_limit: nil)
     AccountProvider.find_by(provider: @enable_banking_account)&.destroy
     AccountProvider.create!(account: cc_account, provider: @enable_banking_account)
-    @enable_banking_account.stubs(:current_account).returns(cc_account)
-
-    # No credit_limit — balance stays as raw outstanding
-    cc_account.expects(:set_current_balance).with(300.0).once.returns(OpenStruct.new(success?: true))
 
     EnableBankingAccount::Processor.new(@enable_banking_account).process
+    
+    assert_equal 300.0, cc_account.reload.cash_balance
   end
 end

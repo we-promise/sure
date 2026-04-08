@@ -44,6 +44,12 @@ class IncomeStatement::FamilyStats
       @budget_excluded_kinds_sql ||= Transaction::BUDGET_EXCLUDED_KINDS.map { |k| "'#{k}'" }.join(", ")
     end
 
+    def pending_providers_sql
+      Transaction::PENDING_PROVIDERS.map do |provider|
+        "AND (t.extra -> '#{provider}' ->> 'pending')::boolean IS DISTINCT FROM true"
+      end.join("\n            ")
+    end
+
     def exclude_tax_advantaged_sql
       ids = @family.tax_advantaged_account_ids
       return "" if ids.empty?
@@ -60,8 +66,8 @@ class IncomeStatement::FamilyStats
         WITH period_totals AS (
           SELECT
             date_trunc(:interval, ae.date) as period,
-            CASE WHEN t.kind = 'investment_contribution' THEN 'expense' WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END as classification,
-            SUM(CASE WHEN t.kind = 'investment_contribution' THEN ABS(ae.amount * COALESCE(er.rate, 1)) ELSE ae.amount * COALESCE(er.rate, 1) END) as total
+            CASE WHEN t.kind IN ('investment_contribution', 'loan_payment') THEN 'expense' WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END as classification,
+            SUM(CASE WHEN t.kind IN ('investment_contribution', 'loan_payment') THEN ABS(ae.amount * COALESCE(er.rate, 1)) ELSE ae.amount * COALESCE(er.rate, 1) END) as total
           FROM transactions t
           JOIN entries ae ON ae.entryable_id = t.id AND ae.entryable_type = 'Transaction'
           JOIN accounts a ON a.id = ae.account_id
@@ -73,11 +79,10 @@ class IncomeStatement::FamilyStats
           WHERE a.family_id = :family_id
             AND t.kind NOT IN (#{budget_excluded_kinds_sql})
             AND ae.excluded = false
-            AND (t.extra -> 'simplefin' ->> 'pending')::boolean IS DISTINCT FROM true
-            AND (t.extra -> 'plaid' ->> 'pending')::boolean IS DISTINCT FROM true
+            #{pending_providers_sql}
             #{exclude_tax_advantaged_sql}
             #{scope_to_account_ids_sql}
-          GROUP BY period, CASE WHEN t.kind = 'investment_contribution' THEN 'expense' WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END
+          GROUP BY period, CASE WHEN t.kind IN ('investment_contribution', 'loan_payment') THEN 'expense' WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END
         )
         SELECT
           classification,

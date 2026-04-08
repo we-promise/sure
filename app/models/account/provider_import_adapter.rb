@@ -161,6 +161,10 @@ class Account::ProviderImportAdapter
       elsif detected_label == "Contribution"
         auto_kind = "investment_contribution"
         auto_category = account.family.investment_contributions_category
+      elsif account.accountable_type == "Loan" && amount.negative?
+        auto_kind = "loan_payment"
+      elsif account.accountable_type == "CreditCard" && amount.negative?
+        auto_kind = "cc_payment"
       end
 
       # Set investment activity label, kind, and category if detected
