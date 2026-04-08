@@ -1,0 +1,56 @@
+<%# locals: (budget:, count:, groups:, uncategorized:, show_uncategorized:, over_budget_mode:) %>
+
+<%# derive display config from over_budget_mode %>
+<%
+  if over_budget_mode
+    target = "overBudget"
+    title = t("budgets.show.over_budget_categories.short_title")
+  else
+    target = "onTrack"
+    title = t("budgets.show.on_track_categories.short_title")
+  end
+%>
+
+<div data-budget-filter-target="<%= target %>">
+
+  <!-- Section Header -->
+  <div class="flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-secondary uppercase">
+    <p><%= title %></p>
+    <span class="text-subdued">&middot;</span>
+    <p><%= count %></p>
+    <p class="ml-auto"><%= t("budgets.show.categories.amount") %></p>
+  </div>
+
+  <!-- Section Body -->
+  <div class="bg-container py-1 shadow-border-xs rounded-md">
+
+    <% groups.each do |group| %>
+
+      <%# derive parent visibility based on mode %>
+      <%
+        parent_visible =
+          if over_budget_mode
+            group.budget_category.any_over_budget?
+          else
+            budget.initialized? ? group.budget_category.visible_on_track? : true
+          end
+      %>
+
+      <%= render "budgets/category_group",
+        group: group,
+        parent_visible: parent_visible,
+        over_budget_mode: over_budget_mode %>
+
+      <%= render "shared/ruler" %>
+    <% end %>
+
+    <% if show_uncategorized %>
+      <div class="py-2">
+        <%= render "budget_categories/budget_category",
+          budget_category: uncategorized,
+          show_budget_meta: (over_budget_mode ? uncategorized.over_budget_with_budget? : true) %>
+      </div>
+    <% end %>
+
+  </div>
+</div>

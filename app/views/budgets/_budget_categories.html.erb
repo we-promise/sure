@@ -11,65 +11,24 @@
 <% on_track_count = categories_state[:on_track_count] %>
 
 <div class="space-y-4">
+
   <% if over_budget_count.positive? %>
-    <%# Over Budget section: unbudgeted-with-spending + budgeted-but-exceeded %>
-    <div data-budget-filter-target="overBudget">
-      <div class="flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-secondary uppercase">
-        <p><%= t("budgets.show.over_budget_categories.short_title") %></p>
-        <span class="text-subdued">&middot;</span>
-        <p><%= over_budget_count %></p>
-        <p class="ml-auto"><%= t("budgets.show.categories.amount") %></p>
-      </div>
-
-      <div class="bg-container py-1 shadow-border-xs rounded-md">
-        <% over_budget_groups.each do |group| %>
-          <%= render "budgets/category_group",
-            group: group,
-            parent_visible: group.budget_category.any_over_budget?,
-            over_budget_mode: true %>
-
-          <%= render "shared/ruler" %>
-        <% end %>
-
-        <% if show_over_budget_uncategorized %>
-          <div class="py-2">
-            <%= render "budget_categories/budget_category",
-              budget_category: uncategorized_budget_category,
-              show_budget_meta: uncategorized_budget_category.over_budget_with_budget? %>
-          </div>
-        <% end %>
-      </div>
-    </div>
+    <%= render "budgets/category_section",
+      budget: budget,
+      count: over_budget_count,
+      groups: over_budget_groups,
+      uncategorized: uncategorized_budget_category,
+      show_uncategorized: show_over_budget_uncategorized,
+      over_budget_mode: true %>
   <% end %>
 
-  <%# On Track section: budgeted and not exceeded %>
-  <div data-budget-filter-target="onTrack">
-    <div class="flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-secondary uppercase">
-      <p><%= t("budgets.show.on_track_categories.short_title") %></p>
-      <span class="text-subdued">&middot;</span>
-      <p><%= on_track_count %></p>
-      <p class="ml-auto"><%= t("budgets.show.categories.amount") %></p>
-    </div>
+  <%= render "budgets/category_section",
+    budget: budget,
+    count: on_track_count,
+    groups: on_track_groups,
+    uncategorized: uncategorized_budget_category,
+    show_uncategorized: show_on_track_uncategorized,
+    over_budget_mode: false
+  %>
 
-    <div class="bg-container py-1 shadow-border-xs rounded-md">
-      <% if visible_expenses_empty %>
-        <div class="py-8">
-          <%= render "budget_categories/no_categories" %>
-        </div>
-      <% else %>
-        <% on_track_groups.each do |group| %>
-          <%= render "budgets/category_group",
-            group: group,
-            parent_visible: (budget.initialized? ? group.budget_category.visible_on_track? : true) %>
-
-          <%= render "shared/ruler" %>
-        <% end %>
-        <% if show_on_track_uncategorized %>
-          <div class="py-2">
-            <%= render "budget_categories/budget_category", budget_category: uncategorized_budget_category %>
-          </div>
-        <% end %>
-      <% end %>
-    </div>
-  </div>
 </div>
