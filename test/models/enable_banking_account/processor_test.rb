@@ -23,7 +23,7 @@ class EnableBankingAccount::ProcessorTest < ActiveSupport::TestCase
 
   test "calls set_current_balance instead of direct account update" do
     EnableBankingAccount::Processor.new(@enable_banking_account).process
-    
+
     assert_equal 1500.0, @account.reload.cash_balance
   end
 
@@ -52,7 +52,7 @@ class EnableBankingAccount::ProcessorTest < ActiveSupport::TestCase
     AccountProvider.create!(account: cc_account, provider: @enable_banking_account)
 
     EnableBankingAccount::Processor.new(@enable_banking_account).process
-    
+
     assert_equal 550.0, cc_account.reload.cash_balance
     if cc_account.accountable.respond_to?(:available_credit)
       assert_equal 550.0, cc_account.accountable.reload.available_credit
@@ -66,7 +66,7 @@ class EnableBankingAccount::ProcessorTest < ActiveSupport::TestCase
     AccountProvider.create!(account: cc_account, provider: @enable_banking_account)
 
     EnableBankingAccount::Processor.new(@enable_banking_account).process
-    
+
     assert_equal 300.0, cc_account.reload.cash_balance
   end
 end
