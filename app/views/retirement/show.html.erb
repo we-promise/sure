@@ -24,9 +24,7 @@
 
   <%# Estimated Pension %>
   <div class="bg-container shadow-border-xs rounded-lg p-4">
-    <p class="text-sm text-secondary mb-1">
-      <%= @retirement_config.pension_system == "de_grv" ? t(".estimated_pension_grv") : t(".estimated_pension") %>
-    </p>
+    <p class="text-sm text-secondary mb-1"><%= t(".estimated_pension") %></p>
     <p class="text-2xl font-semibold text-primary">
       <%= number_to_currency(@retirement_config.estimated_monthly_pension, unit: retirement_currency_unit(@retirement_config)) %>
     </p>
@@ -154,10 +152,12 @@
             <%= f.label :recorded_at, t(".date"), class: "block text-sm font-medium text-secondary mb-1" %>
             <%= f.date_field :recorded_at, value: Date.current, class: "form-input w-full rounded-lg border border-secondary bg-container text-sm text-primary px-3 py-2", required: true %>
           </div>
-          <div>
-            <%= f.label :current_points, t(".pension_points"), class: "block text-sm font-medium text-secondary mb-1" %>
-            <%= f.number_field :current_points, step: 0.0001, min: 0, class: "form-input w-full rounded-lg border border-secondary bg-container text-sm text-primary px-3 py-2", required: true %>
-          </div>
+          <% if @retirement_config.points_based? %>
+            <div>
+              <%= f.label :current_points, t(".pension_points"), class: "block text-sm font-medium text-secondary mb-1" %>
+              <%= f.number_field :current_points, step: 0.0001, min: 0, class: "form-input w-full rounded-lg border border-secondary bg-container text-sm text-primary px-3 py-2" %>
+            </div>
+          <% end %>
           <div>
             <%= f.label :current_monthly_pension, t(".current_pension"), class: "block text-sm font-medium text-secondary mb-1" %>
             <%= f.number_field :current_monthly_pension, step: 0.01, min: 0, class: "form-input w-full rounded-lg border border-secondary bg-container text-sm text-primary px-3 py-2" %>
@@ -185,8 +185,10 @@
         <thead>
           <tr class="border-b border-secondary">
             <th class="text-left text-secondary font-medium py-2 px-3"><%= t(".date") %></th>
-            <th class="text-right text-secondary font-medium py-2 px-3"><%= t(".pension_points") %></th>
-            <th class="text-right text-secondary font-medium py-2 px-3"><%= t(".points_gained") %></th>
+            <% if @retirement_config.points_based? %>
+              <th class="text-right text-secondary font-medium py-2 px-3"><%= t(".pension_points") %></th>
+              <th class="text-right text-secondary font-medium py-2 px-3"><%= t(".points_gained") %></th>
+            <% end %>
             <th class="text-right text-secondary font-medium py-2 px-3"><%= t(".current_pension") %></th>
             <th class="text-right text-secondary font-medium py-2 px-3"><%= t(".projected_pension") %></th>
             <th class="text-left text-secondary font-medium py-2 px-3"><%= t(".notes") %></th>
@@ -197,12 +199,24 @@
           <% @pension_entries.each do |entry| %>
             <tr class="border-b border-secondary/50 hover:bg-surface-hover">
               <td class="py-3 px-3 text-primary"><%= l(entry.recorded_at) %></td>
-              <td class="py-3 px-3 text-right text-primary"><%= number_with_precision(entry.current_points, precision: 4) %></td>
-              <td class="py-3 px-3 text-right">
-                <span class="<%= entry.points_gained > 0 ? 'text-success' : entry.points_gained < 0 ? 'text-destructive' : 'text-secondary' %>">
-                  <%= entry.points_gained >= 0 ? '+' : '' %><%= number_with_precision(entry.points_gained, precision: 4) %>
-                </span>
-              </td>
+              <% if @retirement_config.points_based? %>
+                <td class="py-3 px-3 text-right text-primary">
+                  <% if entry.current_points %>
+                    <%= number_with_precision(entry.current_points, precision: 4) %>
+                  <% else %>
+                    <span class="text-secondary">—</span>
+                  <% end %>
+                </td>
+                <td class="py-3 px-3 text-right">
+                  <% if entry.points_gained %>
+                    <span class="<%= entry.points_gained > 0 ? 'text-success' : entry.points_gained < 0 ? 'text-destructive' : 'text-secondary' %>">
+                      <%= entry.points_gained >= 0 ? '+' : '' %><%= number_with_precision(entry.points_gained, precision: 4) %>
+                    </span>
+                  <% else %>
+                    <span class="text-secondary">—</span>
+                  <% end %>
+                </td>
+              <% end %>
               <td class="py-3 px-3 text-right text-primary">
                 <% if entry.current_monthly_pension %>
                   <%= number_to_currency(entry.current_monthly_pension, unit: retirement_currency_unit(@retirement_config)) %>

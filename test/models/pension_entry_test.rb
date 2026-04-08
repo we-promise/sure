@@ -15,9 +15,9 @@ class PensionEntryTest < ActiveSupport::TestCase
     assert_not @entry_2024.valid?
   end
 
-  test "requires current_points" do
+  test "current_points is optional" do
     @entry_2024.current_points = nil
-    assert_not @entry_2024.valid?
+    assert @entry_2024.valid?
   end
 
   test "current_points must be non-negative" do

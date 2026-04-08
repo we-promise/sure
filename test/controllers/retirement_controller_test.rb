@@ -44,7 +44,12 @@ class RetirementControllerTest < ActionDispatch::IntegrationTest
           country: "DE",
           expected_return_pct: 7.0,
           inflation_pct: 2.0,
-          tax_rate_pct: 26.38
+          tax_rate_pct: 26.38,
+          pension_params: {
+            expected_annual_points: 1.0,
+            rentenwert: 39.32,
+            contribution_start_year: 2015
+          }
         }
       }
     end

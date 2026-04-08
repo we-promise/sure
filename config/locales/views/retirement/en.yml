@@ -9,7 +9,6 @@ en:
         one: "%{count} year to retirement"
         other: "%{count} years to retirement"
       estimated_pension: Estimated Monthly Pension
-      estimated_pension_grv: Estimated GRV Pension
       after_tax: After tax
       pension_gap: Monthly Pension Gap
       target: "Target"
@@ -28,7 +27,7 @@ en:
       inflation: Inflation Rate
       tax_rate: Tax Rate
       monthly_savings: Monthly Savings
-      pension_history: Pension History (Renteninformation)
+      pension_history: Pension History
       add_entry: Add new pension entry
       date: Date
       pension_points: Pension Points
@@ -36,11 +35,11 @@ en:
       current_pension: Current Pension
       projected_pension: Projected Pension
       notes: Notes
-      notes_placeholder: "e.g. Annual Renteninformation 2024"
+      notes_placeholder: "e.g. Annual pension statement 2024"
       save_entry: Save Entry
       confirm_delete: Are you sure you want to delete this entry?
       no_entries: No pension entries yet
-      no_entries_hint: Add entries from your Renteninformation to track your pension progress
+      no_entries_hint: Add entries from your pension statements to track your progress
       setup_required: Please set up retirement planning first
     form_fields: &retirement_form_fields_en
       personal_section: Personal Information
@@ -53,11 +52,30 @@ en:
       pension_section: Pension System
       pension_system: Pension System
       country: Country
-      expected_annual_points: Expected Annual Points
-      expected_annual_points_hint: Average salary = ~1.0 points/year
-      rentenwert: Current Pension Value (Rentenwert)
-      rentenwert_hint: Current value in EUR (2025 ~ 39.32)
-      contribution_start_year: Contribution Start Year
+      # German GRV
+      de_expected_annual_points: Expected Annual Points
+      de_expected_annual_points_hint: Average salary = ~1.0 points/year
+      de_rentenwert: Current Pension Value (Rentenwert)
+      de_rentenwert_hint: Current value in EUR (2025 ~ 39.32)
+      de_contribution_start_year: Contribution Start Year
+      # US Social Security
+      us_estimated_monthly_benefit: Estimated Monthly Benefit
+      us_estimated_monthly_benefit_hint: From your SSA statement (ssa.gov)
+      # UK State Pension
+      uk_qualifying_years: Qualifying Years (NI)
+      uk_qualifying_years_hint: "35 years for full new State Pension"
+      uk_full_weekly_rate: Full Weekly Rate (£)
+      uk_full_weekly_rate_hint: "2024/25: £221.20/week"
+      # France Régime Général
+      fr_estimated_monthly_pension: Estimated Monthly Pension
+      fr_estimated_monthly_pension_hint: From your relevé de situation individuelle
+      fr_trimestres: Trimestres Validated
+      # Spain Social Security
+      es_estimated_monthly_pension: Estimated Monthly Pension
+      es_estimated_monthly_pension_hint: From your informe de vida laboral
+      es_contribution_years: Contribution Years
+      # Custom
+      custom_hint: Add pension entries manually to track your estimated pension.
       assumptions_section: Assumptions
       expected_return: Expected Annual Return (%)
       inflation: Expected Inflation (%)
@@ -82,4 +100,8 @@ en:
       pension_entry_removed: Pension entry removed
     pension_systems:
       de_grv: German Statutory Pension (GRV)
+      us_ss: US Social Security
+      uk_sp: UK State Pension
+      fr_regime: French Régime Général
+      es_ss: Spanish Social Security
       custom: Custom / Other

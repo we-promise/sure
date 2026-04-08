@@ -80,17 +80,15 @@ class RetirementController < ApplicationController
         :country, :pension_system, :birth_year, :retirement_age,
         :target_monthly_income, :currency, :expected_return_pct,
         :inflation_pct, :tax_rate_pct, :current_monthly_savings,
-        :contribution_start_year, :expected_annual_points, :rentenwert
+        pension_params: {}
       )
     end
 
-    # Params are scoped under :pension_entry because the form uses
-    # form_with url: ..., scope: :pension_entry. Switching to form_with model:
-    # would change the nesting — update this permit list accordingly.
     def pension_entry_params
       params.require(:pension_entry).permit(
         :recorded_at, :current_points, :current_monthly_pension,
-        :projected_monthly_pension, :notes
+        :projected_monthly_pension, :notes,
+        data: {}
       )
     end
 end

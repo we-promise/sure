@@ -9,7 +9,6 @@ de:
         one: "%{count} Jahr bis zur Rente"
         other: "%{count} Jahre bis zur Rente"
       estimated_pension: Geschätzte monatliche Rente
-      estimated_pension_grv: Geschätzte GRV-Rente
       after_tax: Nach Steuern
       pension_gap: Monatliche Rentenlücke
       target: "Ziel"
@@ -28,7 +27,7 @@ de:
       inflation: Inflationsrate
       tax_rate: Steuersatz
       monthly_savings: Monatliche Sparrate
-      pension_history: Rentenhistorie (Renteninformation)
+      pension_history: Rentenhistorie
       add_entry: Neuen Eintrag hinzufügen
       date: Datum
       pension_points: Entgeltpunkte
@@ -53,11 +52,30 @@ de:
       pension_section: Rentensystem
       pension_system: Rentensystem
       country: Land
-      expected_annual_points: Erwartete jährliche Entgeltpunkte
-      expected_annual_points_hint: Durchschnittsgehalt = ~1,0 Punkte/Jahr
-      rentenwert: Aktueller Rentenwert
-      rentenwert_hint: Aktueller Wert in EUR (2025 ~ 39,32)
-      contribution_start_year: Beitragsbeginn (Jahr)
+      # German GRV
+      de_expected_annual_points: Erwartete jährliche Entgeltpunkte
+      de_expected_annual_points_hint: Durchschnittsgehalt = ~1,0 Punkte/Jahr
+      de_rentenwert: Aktueller Rentenwert
+      de_rentenwert_hint: Aktueller Wert in EUR (2025 ~ 39,32)
+      de_contribution_start_year: Beitragsbeginn (Jahr)
+      # US Social Security
+      us_estimated_monthly_benefit: Geschätzte monatliche Leistung
+      us_estimated_monthly_benefit_hint: Aus deiner SSA-Bescheinigung (ssa.gov)
+      # UK State Pension
+      uk_qualifying_years: Anspruchsjahre (NI)
+      uk_qualifying_years_hint: "35 Jahre für volle State Pension"
+      uk_full_weekly_rate: Voller Wochensatz (£)
+      uk_full_weekly_rate_hint: "2024/25: £221,20/Woche"
+      # France Régime Général
+      fr_estimated_monthly_pension: Geschätzte monatliche Rente
+      fr_estimated_monthly_pension_hint: Aus deinem relevé de situation individuelle
+      fr_trimestres: Validierte Trimester
+      # Spain Social Security
+      es_estimated_monthly_pension: Geschätzte monatliche Rente
+      es_estimated_monthly_pension_hint: Aus deinem informe de vida laboral
+      es_contribution_years: Beitragsjahre
+      # Custom
+      custom_hint: Füge Renteneinträge manuell hinzu, um deine geschätzte Rente zu verfolgen.
       assumptions_section: Annahmen
       expected_return: Erwartete jährliche Rendite (%)
       inflation: Erwartete Inflation (%)
@@ -82,4 +100,8 @@ de:
       pension_entry_removed: Renteneintrag entfernt
     pension_systems:
       de_grv: Deutsche Gesetzliche Rentenversicherung (GRV)
+      us_ss: US-Sozialversicherung
+      uk_sp: UK State Pension
+      fr_regime: Französisches Régime Général
+      es_ss: Spanische Sozialversicherung
       custom: Benutzerdefiniert / Andere

@@ -1,13 +1,20 @@
 class RetirementConfig < ApplicationRecord
-  PENSION_SYSTEMS = %w[de_grv custom].freeze
-  DEFAULT_RENTENWERT = 39.32 # Updated annually by German government (as of 2025)
-  SAFE_WITHDRAWAL_RATE = 0.04 # 4% rule for safe withdrawal
+  PENSION_SYSTEMS = {
+    "custom"    => { calculator: "RetirementConfig::PensionCalculator::Base" },
+    "de_grv"    => { calculator: "RetirementConfig::PensionCalculator::DeGrv" },
+    "us_ss"     => { calculator: "RetirementConfig::PensionCalculator::UsSocialSecurity" },
+    "uk_sp"     => { calculator: "RetirementConfig::PensionCalculator::UkStatePension" },
+    "fr_regime" => { calculator: "RetirementConfig::PensionCalculator::FrRegimeGeneral" },
+    "es_ss"     => { calculator: "RetirementConfig::PensionCalculator::EsSocialSecurity" }
+  }.freeze
+
+  SAFE_WITHDRAWAL_RATE = 0.04
 
   belongs_to :family
   has_many :pension_entries, dependent: :destroy
 
   validates :country, presence: true
-  validates :pension_system, inclusion: { in: PENSION_SYSTEMS }
+  validates :pension_system, inclusion: { in: PENSION_SYSTEMS.keys }
   validates :birth_year, presence: true,
             numericality: { greater_than: 1900, less_than_or_equal_to: -> { Date.current.year } }
   validates :retirement_age, presence: true,
@@ -17,50 +24,49 @@ class RetirementConfig < ApplicationRecord
   validates :inflation_pct, numericality: { greater_than_or_equal_to: 0, less_than_or_equal_to: 20 }
   validates :tax_rate_pct, numericality: { greater_than_or_equal_to: 0, less_than_or_equal_to: 100 }
 
-  # Current age based on birth year
   def current_age
     Date.current.year - birth_year
   end
 
-  # Years until retirement
   def years_to_retirement
     [ retirement_age - current_age, 0 ].max
   end
 
-  # Whether the user has already reached retirement age
   def retired?
     current_age >= retirement_age
   end
 
-  # Estimated monthly pension.
-  # GRV: calculated from Entgeltpunkte × Rentenwert, with latest statement override.
-  # Custom: uses latest pension entry's projected value if available, otherwise 0.
+  # Delegates pension estimation to the active calculator
   def estimated_monthly_pension
-    if latest_pension_entry&.projected_monthly_pension
-      return latest_pension_entry.projected_monthly_pension
+    if pension_system == "custom"
+      return latest_pension_entry&.projected_monthly_pension || 0
     end
 
-    return 0 unless pension_system == "de_grv"
-
-    points = total_projected_points
-    rw = rentenwert || DEFAULT_RENTENWERT
-    points * rw
+    pension_calculator.estimated_monthly_pension
   end
 
-  # Total projected pension points at retirement
-  def total_projected_points
-    current = latest_pension_entry&.current_points || 0
-    annual = expected_annual_points || 1.0
-    current + (annual * years_to_retirement)
+  def pension_calculator
+    @pension_calculator ||= begin
+      klass_name = PENSION_SYSTEMS.dig(pension_system, :calculator)
+      klass_name.constantize.new(self)
+    end
   end
 
-  # Monthly pension gap: how much more you need beyond GRV pension
+  # Whether the current system uses pension points (e.g. DE Entgeltpunkte)
+  def points_based?
+    pension_calculator.points_based?
+  end
+
+  # Read a system-specific parameter from JSONB
+  def pension_param(key)
+    pension_params&.dig(key.to_s)
+  end
+
   def monthly_pension_gap
     gap = target_monthly_income - estimated_monthly_pension_after_tax
     [ gap, 0 ].max
   end
 
-  # Estimated pension after taxes
   def estimated_monthly_pension_after_tax
     estimated_monthly_pension * (1 - (tax_rate_pct / 100.0))
   end
@@ -158,7 +164,11 @@ class RetirementConfig < ApplicationRecord
     sorted = pension_entries.chronological.to_a
     sorted.each_with_index do |entry, idx|
       prev = idx > 0 ? sorted[idx - 1] : nil
-      delta = prev ? entry.current_points - prev.current_points : entry.current_points
+      if points_based? && entry.current_points
+        delta = prev&.current_points ? entry.current_points - prev.current_points : entry.current_points
+      else
+        delta = nil
+      end
       entry.define_singleton_method(:points_gained) { delta }
     end
     sorted.reverse
