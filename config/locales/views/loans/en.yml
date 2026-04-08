@@ -10,6 +10,8 @@ en:
       rate_type: Rate type
       term_months: Term (months)
       term_months_placeholder: '360'
+      subtype_prompt: Select loan type
+      subtype_none: None
     new:
       title: Enter loan details
     overview:

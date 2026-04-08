@@ -26,6 +26,21 @@
 #
 # https://github.com/we-promise/sure/discussions/categories/general
 #
+# IPv6 Note (Yahoo Finance Sync, others?):
+# ----------------------------------------
+# If you encounter "Failed to open TCP connection" errors to hosts like
+# fc.yahoo.com in your environment, the issue may be that DNS resolves
+# to an IPv6 address first. Since IPv6 may not be configured in the container,
+# the connection hangs. To work around this, you can hardcode the IPv4
+# addresses in your container's /etc/hosts or set custom DNS:
+#
+#   extra_hosts:
+#     - "fc.yahoo.com:173.223.12.81"
+#     - "query1.finance.yahoo.com:98.136.48.169"
+#     - "query2.finance.yahoo.com:98.136.48.169"
+#
+# Or use explicit DNS servers that prefer IPv4 (already configured below).
+#
 
 x-db-env: &db_env
   POSTGRES_USER: ${POSTGRES_USER:-sure_user}

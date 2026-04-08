@@ -75,7 +75,7 @@ class AccountsController < ApplicationController
   end
 
   def sparkline
-    etag_key = @account.family.build_cache_key("#{@account.id}_sparkline", invalidate_on_data_updates: true)
+    etag_key = @account.family.build_cache_key("#{@account.id}_sparkline_#{Account::Chartable::SPARKLINE_CACHE_VERSION}", invalidate_on_data_updates: true)
 
     # Short-circuit with 304 Not Modified when the client already has the latest version.
     # We defer the expensive series computation until we know the content is stale.
@@ -113,8 +113,13 @@ class AccountsController < ApplicationController
     if @account.linked?
       redirect_to account_path(@account), alert: t("accounts.destroy.cannot_delete_linked")
     else
-      @account.destroy_later
-      redirect_to accounts_path, notice: t("accounts.destroy.success", type: @account.accountable_type)
+      begin
+        @account.destroy_later
+        redirect_to accounts_path, notice: t("accounts.destroy.success", type: @account.accountable_type)
+      rescue => e
+        Rails.logger.error "Failed to schedule account #{@account.id} for deletion: #{e.message}"
+        redirect_to accounts_path, alert: t("accounts.destroy.failed")
+      end
     end
   end
 

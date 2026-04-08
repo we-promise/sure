@@ -1,0 +1,20 @@
+---
+pl:
+  cryptos:
+    edit:
+      edit: Edytuj %{account}
+    form:
+      subtype_label: Typ konta
+      subtype_prompt: Wybierz typ...
+      subtype_none: Nie określono
+      tax_treatment_label: Sposób opodatkowania
+      tax_treatment_hint: Większość kryptowalut jest utrzymywana na kontach opodatkowanych. Wybierz inną opcję, jeśli środki są trzymane na koncie uprzywilejowanym podatkowo, np. samodzielnie prowadzonym IRA.
+    new:
+      title: Wprowadź saldo konta
+    subtypes:
+      wallet:
+        short: Portfel
+        long: Portfel kryptowalutowy
+      exchange:
+        short: Giełda
+        long: Giełda kryptowalut

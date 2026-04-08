@@ -58,8 +58,35 @@ class BudgetTest < ActiveSupport::TestCase
     refute Budget.budget_date_valid?(3.years.ago.beginning_of_month, family: @family)
   end
 
-  test "budget_date_valid? does not allow future dates beyond current month" do
-    refute Budget.budget_date_valid?(2.months.from_now, family: @family)
+  test "budget_date_valid? allows future dates up to 2 years ahead" do
+    travel_to Date.current.beginning_of_month do
+      assert Budget.budget_date_valid?(Date.current.beginning_of_month + 1.month, family: @family)
+      assert Budget.budget_date_valid?(Date.current.beginning_of_month + 2.years, family: @family)
+    end
+  end
+
+  test "budget_date_valid? does not allow future dates beyond 2 years ahead" do
+    travel_to Date.current.beginning_of_month do
+      refute Budget.budget_date_valid?(Date.current.beginning_of_month + 2.years + 1.month, family: @family)
+    end
+  end
+
+  test "budget_date_valid? for custom month start allows dates up to 2 years ahead" do
+    @family.update!(month_start_day: 15)
+
+    travel_to Date.current.beginning_of_month do
+      cap_start = @family.current_custom_month_period.start_date + 2.years
+      assert Budget.budget_date_valid?(cap_start, family: @family)
+    end
+  end
+
+  test "budget_date_valid? for custom month start does not allow dates beyond 2 years ahead" do
+    @family.update!(month_start_day: 15)
+
+    travel_to Date.current.beginning_of_month do
+      beyond_cap = @family.current_custom_month_period.start_date + 2.years + 1.month
+      refute Budget.budget_date_valid?(beyond_cap, family: @family)
+    end
   end
 
   test "previous_budget_param returns nil when date is too old" do
@@ -73,6 +100,49 @@ class BudgetTest < ActiveSupport::TestCase
     )
 
     assert_nil budget.previous_budget_param
+  end
+
+  test "next_budget_param returns next month when current month budget is selected" do
+    travel_to Date.current.beginning_of_month do
+      budget = Budget.create!(
+        family: @family,
+        start_date: Date.current.beginning_of_month,
+        end_date: Date.current.end_of_month,
+        currency: "USD"
+      )
+
+      assert_equal Budget.date_to_param(Date.current.beginning_of_month + 1.month), budget.next_budget_param
+    end
+  end
+
+  test "next_budget_param returns nil at future cap" do
+    travel_to Date.current.beginning_of_month do
+      cap_start = Date.current.beginning_of_month + 2.years
+      budget = Budget.create!(
+        family: @family,
+        start_date: cap_start,
+        end_date: cap_start.end_of_month,
+        currency: "USD"
+      )
+
+      assert_nil budget.next_budget_param
+    end
+  end
+
+  test "next_budget_param returns nil at future cap for custom month start" do
+    @family.update!(month_start_day: 15)
+
+    travel_to Date.current.beginning_of_month do
+      cap_start = @family.current_custom_month_period.start_date + 2.years
+      budget = Budget.create!(
+        family: @family,
+        start_date: cap_start,
+        end_date: cap_start + 1.month - 1.day,
+        currency: "USD"
+      )
+
+      assert_nil budget.next_budget_param
+    end
   end
 
   test "actual_spending nets refunds against expenses in same category" do
@@ -264,7 +334,7 @@ class BudgetTest < ActiveSupport::TestCase
     source_budget.update!(budgeted_spending: 4000, expected_income: 6000)
 
     # Create a category only in the source budget
-    temp_category = Category.create!(name: "Temp #{Time.now.to_f}", family: family, color: "#aaa")
+    temp_category = Category.create!(name: "Temp #{Time.now.to_f}", family: family, color: "#aaaaaa")
     source_budget.budget_categories.create!(category: temp_category, budgeted_spending: 100, currency: "USD")
 
     target_budget = Budget.find_or_bootstrap(family, start_date: 1.month.ago)
@@ -283,7 +353,7 @@ class BudgetTest < ActiveSupport::TestCase
     target_budget = Budget.find_or_bootstrap(family, start_date: 1.month.ago)
 
     # Add a new category only to the target
-    new_category = Category.create!(name: "New #{Time.now.to_f}", family: family, color: "#bbb")
+    new_category = Category.create!(name: "New #{Time.now.to_f}", family: family, color: "#bbbbbb")
     target_budget.budget_categories.create!(category: new_category, budgeted_spending: 0, currency: "USD")
 
     target_budget.copy_from!(source_budget)
