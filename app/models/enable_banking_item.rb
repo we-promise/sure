@@ -50,6 +50,15 @@ class EnableBankingItem < ApplicationRecord
 
   # TODO: implement data retention policy for last_psu_ip (GDPR/CCPA — nullify after session expiry or 90 days)
 
+  validate :psu_type_in_aspsp_types
+
+  def psu_type_in_aspsp_types
+    return if psu_type.blank? || aspsp_psu_types.blank?
+    unless aspsp_psu_types.include?(psu_type)
+      errors.add(:psu_type, "must be one of the ASPSP supported types")
+    end
+  end
+
   # Start the OAuth authorization flow
   # @param aspsp_name [String] Name of the selected ASPSP
   # @param redirect_url [String] Callback URL
@@ -63,16 +72,20 @@ class EnableBankingItem < ApplicationRecord
     provider = enable_banking_provider
     raise StandardError.new("Enable Banking provider is not configured") unless provider
 
+    validated_psu_type = psu_type
+
     # Store ASPSP metadata before calling provider so it's available even if auth fails
     if aspsp_data.present?
       aspsp_data = aspsp_data.with_indifferent_access
       first_auth_method = aspsp_data.dig(:auth_methods, 0) || aspsp_data.dig("auth_methods", 0)
+      aspsp_types = aspsp_data[:psu_types] || []
       update!(
         aspsp_required_psu_headers: aspsp_data[:required_psu_headers] || [],
         aspsp_maximum_consent_validity: aspsp_data[:maximum_consent_validity],
         aspsp_auth_approach: first_auth_method&.dig(:approach) || first_auth_method&.dig("approach"),
-        aspsp_psu_types: aspsp_data[:psu_types] || []
+        aspsp_psu_types: aspsp_types
       )
+      validated_psu_type = psu_type.present? && aspsp_types.include?(psu_type) ? psu_type : nil
     end
 
     result = provider.start_authorization(
@@ -80,7 +93,7 @@ class EnableBankingItem < ApplicationRecord
       aspsp_country: country_code,
       redirect_url: redirect_url,
       state: state,
-      psu_type: psu_type,
+      psu_type: validated_psu_type,
       maximum_consent_validity: aspsp_maximum_consent_validity,
       language: language
     )
@@ -89,7 +102,7 @@ class EnableBankingItem < ApplicationRecord
       authorization_id: result[:authorization_id],
       aspsp_name: aspsp_name
     }
-    attributes[:psu_type] = psu_type if psu_type.present?
+    attributes[:psu_type] = validated_psu_type if validated_psu_type.present?
 
     update!(attributes)
 

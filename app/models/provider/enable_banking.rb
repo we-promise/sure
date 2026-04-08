@@ -42,8 +42,8 @@ class Provider::EnableBanking
   # @return [Hash] Contains :url and :authorization_id
   def start_authorization(aspsp_name:, aspsp_country:, redirect_url:, state: nil,
                           psu_type: "personal", maximum_consent_validity: nil, language: nil)
-    max_days = maximum_consent_validity ? [ (maximum_consent_validity / 86400).floor, 1 ].max : 90
-    valid_until = [ Time.current + max_days.days, Time.current + 90.days ].min
+    max_seconds = maximum_consent_validity ? [ maximum_consent_validity, 1 ].max : 90.days.to_i
+    valid_until = [ Time.current + max_seconds.seconds, Time.current + 90.days ].min
 
     body = {
       access: {

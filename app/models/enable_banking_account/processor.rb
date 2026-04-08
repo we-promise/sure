@@ -68,12 +68,14 @@ class EnableBankingAccount::Processor
           account.accountable.update!(available_credit: available_credit)
         end
         account.update!(currency: currency, cash_balance: balance)
+        
+        # Use set_current_balance to create a current_anchor valuation entry.
+        # This enables Balance::ReverseCalculator, which works backward from the
+        # bank-reported balance — eliminating spurious cash adjustment spikes.
+        result = account.set_current_balance(balance)
+        raise "Failed to set current balance: #{result.error}" unless result.success?
       end
 
-      # Use set_current_balance to create a current_anchor valuation entry.
-      # This enables Balance::ReverseCalculator, which works backward from the
-      # bank-reported balance — eliminating spurious cash adjustment spikes.
-      account.set_current_balance(balance)
       # TODO: pass explicit window_start_date to sync_later to avoid full history recalculation on every sync
       # Currently relies on set_current_balance's implicit sync trigger; window params would require refactor
     end

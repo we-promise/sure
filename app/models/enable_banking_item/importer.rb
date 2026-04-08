@@ -250,11 +250,10 @@ class EnableBankingItem::Importer
         # Fallback: collect entry_references for BOOK rows that have no transaction_id
         book_entry_refs = all_transactions
           .reject { |tx| tx.with_indifferent_access[:_pending] }
-          .select { |tx| tx.with_indifferent_access[:transaction_id].blank? }
           .map { |tx| tx.with_indifferent_access[:entry_reference].presence }
           .compact.to_set
 
-        existing_transactions.reject! do |tx|
+        removed_pending = existing_transactions.reject! do |tx|
           tx = tx.with_indifferent_access
           pending_flag = tx.dig(:extra, :enable_banking, :pending) || tx[:_pending]
           next false unless pending_flag
@@ -272,7 +271,7 @@ class EnableBankingItem::Importer
           tx_id.present? && !existing_ids.include?(tx_id)
         end
 
-        if new_transactions.any?
+        if new_transactions.any? || removed_pending
           enable_banking_account.upsert_enable_banking_transactions_snapshot!(existing_transactions + new_transactions)
         end
       end
@@ -352,6 +351,8 @@ class EnableBankingItem::Importer
       [ date, amount, currency, creditor, debtor, remittance_key, tid, direction ].map(&:to_s).join("\x1F")
     end
 
+    class PaginationTruncatedError < StandardError; end
+
     def fetch_paginated_transactions(enable_banking_account, start_date:, transaction_status:, psu_headers: {})
       all_transactions = []
       continuation_key = nil
@@ -362,11 +363,9 @@ class EnableBankingItem::Importer
         page_count += 1
 
         if page_count > MAX_PAGINATION_PAGES
-          Rails.logger.error(
-            "EnableBankingItem::Importer - Pagination limit exceeded for account #{enable_banking_account.uid} " \
-            "(status=#{transaction_status}). Stopped after #{MAX_PAGINATION_PAGES} pages."
-          )
-          break
+          msg = "EnableBankingItem::Importer - Pagination limit exceeded for account #{enable_banking_account.uid} (status=#{transaction_status}). Stopped after #{MAX_PAGINATION_PAGES} pages."
+          Rails.logger.error(msg)
+          raise PaginationTruncatedError, msg
         end
 
         transactions_data = enable_banking_provider.get_account_transactions(
@@ -384,11 +383,9 @@ class EnableBankingItem::Importer
         continuation_key = transactions_data[:continuation_key]
 
         if continuation_key.present? && continuation_key == previous_continuation_key
-          Rails.logger.error(
-            "EnableBankingItem::Importer - Repeated continuation_key detected for account #{enable_banking_account.uid} " \
-            "(status=#{transaction_status}). Breaking after #{page_count} pages."
-          )
-          break
+          msg = "EnableBankingItem::Importer - Repeated continuation_key detected for account #{enable_banking_account.uid} (status=#{transaction_status}). Breaking after #{page_count} pages."
+          Rails.logger.error(msg)
+          raise PaginationTruncatedError, msg
         end
 
         break if continuation_key.blank?
@@ -466,3 +463,4 @@ class EnableBankingItem::Importer
       end
     end
 end
+d
