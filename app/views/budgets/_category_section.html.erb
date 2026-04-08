@@ -41,10 +41,10 @@
         parent_visible: parent_visible,
         over_budget_mode: over_budget_mode %>
 
-       
     <% end %>
 
     <% if show_uncategorized %>
+      <%= render "shared/ruler" unless groups.size == 0 %>
       <div class="py-2">
         <%= render "budget_categories/budget_category",
           budget_category: uncategorized,
