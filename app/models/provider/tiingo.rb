@@ -258,33 +258,29 @@ class Provider::Tiingo < Provider
     end
 
     # Fetches the price currency for a symbol via the search endpoint.
-    # Caches the result to avoid repeated lookups.
+    # Only called as a fallback when the cache (populated by search_securities)
+    # doesn't have the currency. Raises on failure to avoid silently mislabeling
+    # non-USD instruments as USD.
     def fetch_currency_for_symbol(symbol)
-      cache_key = "tiingo:currency:#{symbol.upcase}"
-      cached = Rails.cache.read(cache_key)
-      return cached if cached.present?
+      throttle_request
 
-      begin
-        response = client.get("#{base_url}/tiingo/utilities/search") do |req|
-          req.params["query"] = symbol
-        end
-
-        parsed = JSON.parse(response.body)
-
-        if parsed.is_a?(Array)
-          match = parsed.find { |s| s["ticker"]&.upcase == symbol.upcase }
-          currency = match&.dig("priceCurrency")
-
-          if currency.present?
-            Rails.cache.write(cache_key, currency, expires_in: 24.hours)
-            return currency
-          end
-        end
-      rescue => e
-        Rails.logger.warn("#{self.class.name}: Failed to fetch currency for #{symbol}: #{e.message}")
+      response = client.get("#{base_url}/tiingo/utilities/search") do |req|
+        req.params["query"] = symbol
       end
 
-      "USD"
+      parsed = JSON.parse(response.body)
+
+      if parsed.is_a?(Array)
+        match = parsed.find { |s| s["ticker"]&.upcase == symbol.upcase }
+        currency = match&.dig("priceCurrency")
+
+        if currency.present?
+          Rails.cache.write("tiingo:currency:#{symbol.upcase}", currency, expires_in: 24.hours)
+          return currency
+        end
+      end
+
+      raise Error, "Could not determine currency for #{symbol} from Tiingo search"
     end
 
     def map_exchange_to_mic(exchange_name)
