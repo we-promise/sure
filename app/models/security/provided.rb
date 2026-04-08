@@ -57,15 +57,19 @@ module Security::Provided
         end
       end
 
-      # Wait for all futures with a single wall-clock timeout so total wait
-      # is at most PROVIDER_SEARCH_TIMEOUT regardless of provider count.
-      combined = Concurrent::Promises.zip(*futures)
-      results_array = combined.value(PROVIDER_SEARCH_TIMEOUT)
+      # Collect results from each future individually with a shared deadline.
+      # Unlike zip (which is all-or-nothing), this keeps results from fast
+      # providers even when a slow one times out.
+      deadline = Time.current + PROVIDER_SEARCH_TIMEOUT
+      results_array = futures.map do |future|
+        remaining = [ (deadline - Time.current), 0 ].max
+        future.value(remaining)
+      end
 
       all_results = []
       seen_keys = Set.new
 
-      (results_array || Array.new(futures.size)).each_with_index do |provider_results, idx|
+      results_array.each_with_index do |provider_results, idx|
         next if provider_results.nil?
 
         provider_key = provider_key_for(active_providers[idx])

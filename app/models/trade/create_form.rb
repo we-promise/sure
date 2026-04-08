@@ -23,6 +23,7 @@ class Trade::CreateForm
     # Users can either look up a ticker from a provider or enter a manual, "offline" ticker (that we won't fetch prices for)
     def security
       parsed = ticker.present? ? Security.parse_combobox_id(ticker) : { ticker: manual_ticker }
+      return nil if parsed[:ticker].blank?
 
       Security::Resolver.new(
         parsed[:ticker],

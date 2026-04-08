@@ -526,6 +526,11 @@ class TransactionsController < ApplicationController
         if params[:ticker].present?
           # Combobox selection: format is "SYMBOL|EXCHANGE|PROVIDER"
           parsed = Security.parse_combobox_id(params[:ticker])
+          if parsed[:ticker].blank?
+            flash[:alert] = t("transactions.convert_to_trade.errors.enter_ticker")
+            redirect_back_or_to transactions_path
+            return nil
+          end
           Security::Resolver.new(
             parsed[:ticker].strip,
             exchange_operating_mic: parsed[:exchange_operating_mic] || params[:exchange_operating_mic].presence,
@@ -555,6 +560,11 @@ class TransactionsController < ApplicationController
       elsif params[:ticker].present?
         # Direct combobox (no existing holdings) - format is "SYMBOL|EXCHANGE|PROVIDER"
         parsed = Security.parse_combobox_id(params[:ticker])
+        if parsed[:ticker].blank?
+          flash[:alert] = t("transactions.convert_to_trade.errors.enter_ticker")
+          redirect_back_or_to transactions_path
+          return nil
+        end
         Security::Resolver.new(
           parsed[:ticker].strip,
           exchange_operating_mic: parsed[:exchange_operating_mic] || params[:exchange_operating_mic].presence,
