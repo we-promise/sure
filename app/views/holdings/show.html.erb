@@ -34,7 +34,7 @@
               <dt class="text-secondary"><%= t(".security_label") %></dt>
               <dd class="text-primary flex items-center gap-2">
                 <%= @holding.ticker %>
-                <% if @holding.security_remapped? %>
+                <% if @holding.security_remapped? && @holding.account.linked? %>
                   <span class="text-xs text-secondary">
                     (<%= t(".originally", ticker: @holding.provider_security.ticker) %>)
                   </span>
@@ -237,7 +237,7 @@
         </div>
       </div>
     <% end %>
-    <% if @holding.cost_basis_locked? || @holding.security_remapped? || @holding.account.can_delete_holdings? || !@holding.security.offline? || @holding.security.provider_status == :provider_unavailable %>
+    <% if @holding.cost_basis_locked? || (@holding.security_remapped? && @holding.account.linked?) || @holding.account.can_delete_holdings? || !@holding.security.offline? || @holding.security.provider_status == :provider_unavailable %>
       <% dialog.with_section(title: t(".settings"), open: true) do %>
         <div class="pb-4">
           <% if @holding.security.provider_status == :provider_unavailable %>
@@ -261,7 +261,7 @@
               </div>
             </div>
           <% end %>
-          <% if @holding.security_remapped? %>
+          <% if @holding.security_remapped? && @holding.account.linked? %>
             <div class="flex items-center justify-between gap-2 p-3 border-b border-tertiary">
               <div class="text-sm space-y-1">
                 <h4 class="text-primary"><%= t(".security_remapped_label") %></h4>
