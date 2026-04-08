@@ -8,6 +8,12 @@ pt-BR:
       title: Tem certeza?
     money_field:
       label: Valor
+    exchange_rate_tabs:
+      calculate_rate_tab: Calcular taxa de câmbio
+      convert_tab: Converter com taxa de câmbio
+      destination_amount: Valor de destino
+      exchange_rate: Taxa de câmbio
+      exchange_rate_help: Escolha como inserir o valor.
     syncing_notice:
       syncing: Sincronizando dados das contas...
     trend_change:

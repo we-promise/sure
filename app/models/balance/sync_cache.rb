@@ -31,16 +31,18 @@ class Balance::SyncCache
         converted_entry = e.dup
         converted_entry.entryable = e.entryable if e.association(:entryable).loaded?
 
-        # Respect per-transaction custom FX rate when available.
+        # Extract custom exchange rate if present on Transaction
         custom_rate = if e.entryable.is_a?(Transaction)
           e.entryable.extra&.dig("exchange_rate")
         end
 
+        # Use Money#exchange_to with custom rate if available, standard lookup otherwise
         converted_entry.amount = converted_entry.amount_money.exchange_to(
           account.currency,
           date: e.date,
-          fallback_rate: custom_rate || 1
+          custom_rate: custom_rate
         ).amount
+
         converted_entry.currency = account.currency
         converted_entry
       end
@@ -51,8 +53,7 @@ class Balance::SyncCache
         converted_holding = h.dup
         converted_holding.amount = converted_holding.amount_money.exchange_to(
           account.currency,
-          date: h.date,
-          fallback_rate: 1
+          date: h.date
         ).amount
         converted_holding.currency = account.currency
         converted_holding

@@ -41,6 +41,7 @@ class Account::MarketDataImporterTest < ActiveSupport::TestCase
     expected_start_date = (existing_date + 1.day) - EXCHANGE_RATE_BUFFER
     end_date            = Date.current.in_time_zone("America/New_York").to_date
 
+    # Only the forward pair (CAD→USD) should be fetched; inverse (USD→CAD) is computed automatically
     @provider.expects(:fetch_exchange_rates)
              .with(from: "CAD",
                    to: "USD",
@@ -50,20 +51,15 @@ class Account::MarketDataImporterTest < ActiveSupport::TestCase
                OpenStruct.new(from: "CAD", to: "USD", date: existing_date, rate: 1.5)
              ]))
 
-    @provider.expects(:fetch_exchange_rates)
-             .with(from: "USD",
-                   to: "CAD",
-                   start_date: expected_start_date,
-                   end_date: end_date)
-             .returns(provider_success_response([
-               OpenStruct.new(from: "USD", to: "CAD", date: existing_date, rate: 0.67)
-             ]))
-
     before = ExchangeRate.count
     Account::MarketDataImporter.new(account).import_all
     after  = ExchangeRate.count
 
-    assert_operator after, :>, before + 1, "Should insert at least two new exchange-rate rows"
+    assert_operator after, :>, before + 1, "Should insert at least two new exchange-rate rows (forward + computed inverse)"
+
+    # Verify inverse rates were computed from the forward rates
+    assert ExchangeRate.where(from_currency: "USD", to_currency: "CAD").where("date > ?", existing_date).exists?,
+           "Inverse rates should be computed automatically"
   end
 
   test "syncs security prices for securities traded by the account" do
@@ -237,19 +233,10 @@ class Account::MarketDataImporterTest < ActiveSupport::TestCase
     expected_start_date = (existing_date + 1.day) - EXCHANGE_RATE_BUFFER
     end_date            = Date.current.in_time_zone("America/New_York").to_date
 
-    # Simulate provider returning an error response
+    # Only the forward pair (CAD→USD) should be fetched; inverse is computed automatically
     @provider.expects(:fetch_exchange_rates)
              .with(from: "CAD",
                    to: "USD",
-                   start_date: expected_start_date,
-                   end_date: end_date)
-             .returns(provider_error_response(
-               Provider::TwelveData::Error.new("Rate limit exceeded", details: { code: 429, message: "Rate limit exceeded" })
-             ))
-
-    @provider.expects(:fetch_exchange_rates)
-             .with(from: "USD",
-                   to: "CAD",
                    start_date: expected_start_date,
                    end_date: end_date)
              .returns(provider_error_response(
