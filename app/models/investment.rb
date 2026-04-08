@@ -54,6 +54,18 @@ class Investment < ApplicationRecord
     "pillar_3a" => { short: "Pillar 3a", long: "Private Pension (Pillar 3a)", region: "eu", tax_treatment: :tax_deferred },
     "riester" => { short: "Riester", long: "Riester-Rente", region: "eu", tax_treatment: :tax_deferred },
 
+    # === India ===
+    "indian_demat" => { short: "Demat A/C", long: "Demat Account (NSDL/CDSL)", region: "in", tax_treatment: :taxable },
+    "indian_equity" => { short: "Equity", long: "Indian Equity (NSE/BSE)", region: "in", tax_treatment: :taxable },
+    "indian_etf" => { short: "ETF", long: "Exchange-Traded Fund (NSE/BSE)", region: "in", tax_treatment: :taxable },
+    "indian_mf" => { short: "Mutual Fund", long: "Indian Mutual Fund", region: "in", tax_treatment: :taxable },
+    "ppf" => { short: "PPF", long: "Public Provident Fund", region: "in", tax_treatment: :tax_exempt },
+    "scss" => { short: "SCSS", long: "Senior Citizens Savings Scheme", region: "in", tax_treatment: :taxable },
+    "nsc" => { short: "NSC", long: "National Savings Certificate", region: "in", tax_treatment: :tax_exempt },
+    "nps" => { short: "NPS", long: "National Pension System", region: "in", tax_treatment: :tax_deferred },
+    "apy" => { short: "APY", long: "Atal Pension Yojana", region: "in", tax_treatment: :tax_deferred },
+    "ol_assurance" => { short: "Life Insurance", long: "Life Insurance (Endowment/ULIP)", region: "in", tax_treatment: :taxable },
+
     # === Generic (available everywhere) ===
     "pension" => { short: "Pension", long: "Pension", region: nil, tax_treatment: :tax_deferred },
     "retirement" => { short: "Retirement", long: "Retirement Account", region: nil, tax_treatment: :tax_deferred },
@@ -91,7 +103,8 @@ class Investment < ApplicationRecord
       "CAD" => "ca",
       "AUD" => "au",
       "EUR" => "eu",
-      "CHF" => "eu"
+      "CHF" => "eu",
+      "INR" => "in"
     }.freeze
 
     # Returns subtypes grouped by region for use with grouped_options_for_select
@@ -101,7 +114,7 @@ class Investment < ApplicationRecord
       grouped = SUBTYPES.group_by { |_, v| v[:region] }
 
       # Build region order: user's region first (if known), then Generic, then others
-      other_regions = %w[us uk ca au eu] - [ user_region ].compact
+      other_regions = %w[us uk ca au eu in] - [ user_region ].compact
       region_order = [ user_region, nil, *other_regions ].compact.uniq
 
       region_order.filter_map do |region|

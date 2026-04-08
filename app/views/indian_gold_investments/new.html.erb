@@ -1,0 +1,13 @@
+<% if params[:step] == "method_select" %>
+  <%= render "accounts/new/method_selector",
+             path: new_indian_gold_investment_path(return_to: params[:return_to]),
+             provider_configs: @provider_configs,
+             accountable_type: "IndianGoldInvestment" %>
+<% else %>
+  <%= render DS::Dialog.new do |dialog| %>
+    <% dialog.with_header(title: t(".title")) %>
+    <% dialog.with_body do %>
+      <%= render "indian_gold_investments/form", account: @account, url: indian_gold_investments_path %>
+    <% end %>
+  <% end %>
+<% end %>

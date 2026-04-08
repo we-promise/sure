@@ -3,7 +3,7 @@ class Provider::Registry
 
   Error = Class.new(StandardError)
 
-  CONCEPTS = %i[exchange_rates securities llm]
+  CONCEPTS = %i[exchange_rates securities llm indian_mutual_funds]
 
   validates :concept, inclusion: { in: CONCEPTS }
 
@@ -81,6 +81,10 @@ class Provider::Registry
       def yahoo_finance
         Provider::YahooFinance.new
       end
+
+      def mfapi
+        Provider::Mfapi.new
+      end
   end
 
   def initialize(concept)
@@ -108,7 +112,9 @@ class Provider::Registry
       when :exchange_rates
         %i[twelve_data yahoo_finance]
       when :securities
-        %i[twelve_data yahoo_finance]
+        %i[twelve_data yahoo_finance mfapi]
+      when :indian_mutual_funds
+        %i[mfapi]
       when :llm
         %i[openai]
       else

@@ -1,0 +1,6 @@
+<%= render DS::Dialog.new do |dialog| %>
+  <% dialog.with_header(title: t(".edit", account: @account.name)) %>
+  <% dialog.with_body do %>
+    <%= render "indian_gold_investments/form", account: @account, url: indian_gold_investment_path(@account) %>
+  <% end %>
+<% end %>

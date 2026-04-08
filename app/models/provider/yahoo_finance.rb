@@ -772,6 +772,10 @@ class Provider::YahooFinance < Provider
         "XJPX" # Japan Exchange Group
       when "ASX"
         "XASX" # Australian Securities Exchange
+      when "NSI"
+        "XNSE" # National Stock Exchange of India
+      when "BSE"
+        "XBOM" # Bombay Stock Exchange
       else
         exchange_code.upcase
       end

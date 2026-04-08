@@ -4,7 +4,7 @@ class SimplefinItemsController < ApplicationController
   before_action :require_admin!, only: [ :new, :create, :select_existing_account, :link_existing_account, :edit, :update, :destroy, :sync, :balances, :setup_accounts, :complete_account_setup ]
 
   def index
-    @simplefin_items = Current.family.simplefin_items.active.ordered
+    @simplefin_items = Current.family.simplefin_items.active.ordered.includes(:accounts)
     render layout: "settings"
   end
 
@@ -311,7 +311,7 @@ class SimplefinItemsController < ApplicationController
           .order(:name)
           .to_a
       }
-      @simplefin_items = Current.family.simplefin_items.ordered.includes(:syncs)
+      @simplefin_items = Current.family.simplefin_items.ordered.includes(:syncs, :accounts)
       build_simplefin_maps_for(@simplefin_items)
 
       manual_accounts_stream = if @manual_accounts.any?
@@ -437,7 +437,7 @@ class SimplefinItemsController < ApplicationController
           .order(:name)
           .to_a
       }
-      @simplefin_items = Current.family.simplefin_items.ordered.includes(:syncs)
+      @simplefin_items = Current.family.simplefin_items.ordered.includes(:syncs, :accounts)
       build_simplefin_maps_for(@simplefin_items)
 
       flash[:notice] = t("simplefin_items.link_existing_account.success")

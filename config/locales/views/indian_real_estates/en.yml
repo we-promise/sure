@@ -1,0 +1,39 @@
+---
+en:
+  indian_real_estates:
+    subtypes:
+      apartment:
+        short: Apartment
+        long: Apartment/Flat
+      plot:
+        short: Plot
+        long: Land/Plot
+      commercial_property:
+        short: Commercial
+        long: Commercial Property
+      rented_property:
+        short: Rented
+        long: Rented Property
+      under_construction:
+        short: Under Construction
+        long: Property Under Construction
+      agricultural_land:
+        short: Agri Land
+        long: Agricultural Land
+    form:
+      area_value_label: Area
+      area_unit_label: Area Unit
+      registration_number_label: Registration Number
+      property_type_label: Property Type Classification
+      area_unit_options:
+        sqft: Square Feet
+        sqm: Square Meters
+        gaj: Gaj (Sq. Yards)
+        bigha: Bigha
+        acre: Acres
+        hectare: Hectares
+    show:
+      area: Area
+      registration_number: Registration Number
+      property_type: Property Type
+      location: Location

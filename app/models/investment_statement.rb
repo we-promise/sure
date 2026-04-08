@@ -37,8 +37,9 @@ class InvestmentStatement
   end
 
   # Total portfolio value across all investment accounts
+  # Memoized per instance to avoid repeated queries
   def portfolio_value
-    investment_accounts.sum(&:balance)
+    @portfolio_value ||= investment_accounts.sum(&:balance)
   end
 
   def portfolio_value_money
@@ -46,8 +47,9 @@ class InvestmentStatement
   end
 
   # Total cash in investment accounts
+  # Memoized per instance to avoid repeated queries
   def cash_balance
-    investment_accounts.sum(&:cash_balance)
+    @cash_balance ||= investment_accounts.sum(&:cash_balance)
   end
 
   def cash_balance_money
@@ -64,25 +66,28 @@ class InvestmentStatement
   end
 
   # All current holdings across investment accounts
+  # Cached for 5 minutes to avoid repeated expensive queries
   def current_holdings
     return Holding.none unless investment_accounts.any?
 
-    account_ids = investment_accounts.pluck(:id)
+    @current_holdings ||= begin
+      account_ids = investment_account_ids
 
-    # Get the latest holding for each security per account
-    Holding
-      .where(account_id: account_ids)
-      .where(currency: family.currency)
-      .where.not(qty: 0)
-      .where(
-        id: Holding
-          .where(account_id: account_ids)
-          .where(currency: family.currency)
-          .select("DISTINCT ON (holdings.account_id, holdings.security_id) holdings.id")
-          .order(Arel.sql("holdings.account_id, holdings.security_id, holdings.date DESC"))
-      )
-      .includes(:security, :account)
-      .order(amount: :desc)
+      # Get the latest holding for each security per account
+      Holding
+        .where(account_id: account_ids)
+        .where(currency: family.currency)
+        .where.not(qty: 0)
+        .where(
+          id: Holding
+            .where(account_id: account_ids)
+            .where(currency: family.currency)
+            .select("DISTINCT ON (holdings.account_id, holdings.security_id) holdings.id")
+            .order(Arel.sql("holdings.account_id, holdings.security_id, holdings.date DESC"))
+        )
+        .includes(:security, :account)
+        .order(amount: :desc)
+    end
   end
 
   # Top holdings by value
@@ -91,19 +96,22 @@ class InvestmentStatement
   end
 
   # Portfolio allocation by security type/sector (simplified for now)
+  # Memoized to avoid repeated calculations
   def allocation
-    holdings = current_holdings.to_a
-    total = holdings.sum(&:amount)
+    @allocation ||= begin
+      holdings = current_holdings.to_a
+      total = holdings.sum(&:amount)
 
-    return [] if total.zero?
+      return [] if total.zero?
 
-    holdings.map do |holding|
-      HoldingAllocation.new(
-        security: holding.security,
-        amount: holding.amount_money,
-        weight: (holding.amount / total * 100).round(2),
-        trend: holding.trend
-      )
+      holdings.map do |holding|
+        HoldingAllocation.new(
+          security: holding.security,
+          amount: holding.amount_money,
+          weight: (holding.amount / total * 100).round(2),
+          trend: holding.trend
+        )
+      end
     end
   end
 

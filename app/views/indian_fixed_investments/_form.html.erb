@@ -1,0 +1,21 @@
+<%# locals: (account:, url:) %>
+<%= render "accounts/form", account: account, url: url do |form| %>
+  <%= form.fields_for :accountable do |fixed_form| %>
+    <%= fixed_form.select :subtype,
+                       grouped_options_for_select(IndianFixedInvestment.subtypes_grouped_for_select, account.accountable.subtype),
+                       { label: true, prompt: t(".subtype_prompt"), include_blank: t(".none") } %>
+    <%= fixed_form.text_field :interest_rate,
+                          step: "0.01",
+                          min: "0",
+                          max: "20",
+                          label: t(".interest_rate_label") %>
+    <%= fixed_form.text_field :deposit_amount,
+                          label: t(".deposit_amount_label"),
+                          value: number_to_currency(form.object.accountable.deposit_amount, unit: "", delimiter: "", precision: 4) %>
+    <%= fixed_form.select :deposit_frequency,
+                        IndianFixedInvestment::SUBTYPES.values.flat_map { |v| v[:deposit_frequency] if v[:deposit_frequency] }.compact.uniq.map { |f| [t(".frequency_options.#{f}"), f] },
+                        { label: true, include_blank: true } %>
+    <%= fixed_form.date_field :maturity_date,
+                           label: t(".maturity_date_label") %>
+  <% end %>
+<% end %>

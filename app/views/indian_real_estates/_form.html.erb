@@ -1,0 +1,36 @@
+<%# locals: (account:, url:) %>
+<%= render "accounts/form", account: account, url: url do |form| %>
+  <%= form.fields_for :accountable do |real_estate_form| %>
+    <%= real_estate_form.select :subtype,
+                       grouped_options_for_select(IndianRealEstate.subtypes_grouped_for_select, account.accountable.subtype),
+                       { label: true, prompt: t(".subtype_prompt"), include_blank: t(".none") } %>
+    <div class="flex gap-2">
+      <%= real_estate_form.text_field :area_value,
+                            step: "0.01",
+                            min: "0",
+                            label: false,
+                            wrapper_html: { class: "flex-1" } %>
+      <%= real_estate_form.select :area_unit,
+                              options_for_select([
+                                [t(".area_unit_options.sqft"), "sqft"],
+                                [t(".area_unit_options.sqm"), "sqm"],
+                                [t(".area_unit_options.gaj"), "gaj"],
+                                [t(".area_unit_options.bigha"), "bigha"],
+                                [t(".area_unit_options.acre"), "acre"],
+                                [t(".area_unit_options.hectare"), "hectare"]
+                              ], real_estate_form.object.area_unit || "sqft"),
+                              { label: false, include_blank: false, wrapper_html: { class: "w-1/3" } } %>
+    </div>
+    <%= real_estate_form.text_field :registration_number,
+                          label: t(".registration_number_label") %>
+    <%= real_estate_form.text_field :property_type_classification,
+                          label: t(".property_type_label") %>
+    <% if real_estate_form.object.address %>
+      <%= real_estate_form.fields_for :address, real_estate_form.object.address do |address_fields| %>
+        <%= render "addresses/fields", form: address_fields %>
+      <% end %>
+    <% else %>
+      <%# Render address partial if needed %>
+    <% end %>
+  <% end %>
+<% end %>

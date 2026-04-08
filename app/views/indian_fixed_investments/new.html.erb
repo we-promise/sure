@@ -1,0 +1,13 @@
+<% if params[:step] == "method_select" %>
+  <%= render "accounts/new/method_selector",
+             path: new_indian_fixed_investment_path(return_to: params[:return_to]),
+             provider_configs: @provider_configs,
+             accountable_type: "IndianFixedInvestment" %>
+<% else %>
+  <%= render DS::Dialog.new do |dialog| %>
+    <% dialog.with_header(title: t(".title")) %>
+    <% dialog.with_body do %>
+      <%= render "indian_fixed_investments/form", account: @account, url: indian_fixed_investments_path %>
+    <% end %>
+  <% end %>
+<% end %>

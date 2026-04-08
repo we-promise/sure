@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_03_30_050801) do
+ActiveRecord::Schema[7.2].define(version: 2026_04_08_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -793,6 +793,52 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_30_050801) do
     t.index ["status"], name: "index_indexa_capital_items_on_status"
   end
 
+  create_table "indian_bonds", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.jsonb "locked_attributes"
+    t.string "subtype"
+    t.decimal "face_value", precision: 19, scale: 4
+    t.decimal "coupon_rate", precision: 5, scale: 2
+    t.date "maturity_date"
+    t.string "isin"
+    t.string "rating"
+    t.string "interest_frequency", default: "quarterly"
+  end
+
+  create_table "indian_fixed_investments", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.jsonb "locked_attributes"
+    t.string "subtype"
+    t.decimal "interest_rate", precision: 5, scale: 2
+    t.date "maturity_date"
+    t.decimal "deposit_amount", precision: 19, scale: 4
+    t.string "deposit_frequency", default: "monthly"
+  end
+
+  create_table "indian_gold_investments", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.jsonb "locked_attributes"
+    t.string "subtype"
+    t.decimal "quantity_grams", precision: 10, scale: 4
+    t.string "purity"
+    t.decimal "purchase_price_per_gram", precision: 19, scale: 2
+    t.string "weight_unit", default: "grams"
+  end
+
+  create_table "indian_real_estates", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.jsonb "locked_attributes"
+    t.string "subtype"
+    t.decimal "area_value", precision: 19, scale: 4
+    t.string "area_unit", default: "sqft"
+    t.string "registration_number"
+    t.string "property_type_classification"
+  end
+
   create_table "investments", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
@@ -1219,7 +1265,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_30_050801) do
     t.index ["country_code"], name: "index_securities_on_country_code"
     t.index ["exchange_operating_mic"], name: "index_securities_on_exchange_operating_mic"
     t.index ["kind"], name: "index_securities_on_kind"
-    t.check_constraint "kind::text = ANY (ARRAY['standard'::character varying, 'cash'::character varying]::text[])", name: "chk_securities_kind"
+    t.check_constraint "kind::text = ANY (ARRAY['standard'::character varying::text, 'cash'::character varying::text])", name: "chk_securities_kind"
   end
 
   create_table "security_prices", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|

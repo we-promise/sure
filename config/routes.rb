@@ -396,6 +396,16 @@ Rails.application.routes.draw do
   resources :other_assets, only: %i[new create edit update]
   resources :other_liabilities, only: %i[new create edit update]
 
+  resources :indian_fixed_investments, only: %i[new create edit update]
+  resources :indian_gold_investments, only: %i[new create edit update]
+  resources :indian_real_estates, only: %i[new create edit update] do
+    member do
+      get :address
+      patch :update_address
+    end
+  end
+  resources :indian_bonds, only: %i[new create edit update]
+
   resources :securities, only: :index
 
   resources :invite_codes, only: %i[index create destroy]

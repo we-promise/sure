@@ -1,0 +1,56 @@
+---
+en:
+  indian_bonds:
+    subtypes:
+      govt_securities:
+        short: G-Sec
+        long: Government Securities (G-Sec)
+      state_development_loans:
+        short: SDL
+        long: State Development Loans
+      corporate_bonds:
+        short: Corp Bond
+        long: Corporate Bonds
+      psu_bonds:
+        short: PSU Bond
+        long: PSU Bonds
+      infrastructure_bonds:
+        short: Infra Bond
+        long: Infrastructure Bonds (Section 54EC)
+      capital_gains_bonds:
+        short: 54EC Bond
+        long: Capital Gains Bonds (Section 54EC)
+      tax_free_bonds:
+        short: Tax-Free
+        long: Tax-Free Bonds
+      ncd:
+        short: NCD
+        long: Non-Convertible Debentures
+      debentures:
+        short: Debenture
+        long: Debentures
+      commercial_paper:
+        short: CP
+        long: Commercial Paper
+    form:
+      face_value_label: Face Value
+      coupon_rate_label: Coupon Rate (% p.a.)
+      maturity_date_label: Maturity Date
+      isin_label: ISIN
+      rating_label: Credit Rating
+      interest_frequency_label: Interest Payment Frequency
+      frequency_options:
+        monthly: Monthly
+        quarterly: Quarterly
+        semi_annually: Semi-Annually
+        annually: Annually
+        at_maturity: At Maturity
+    show:
+      face_value: Face Value
+      coupon_rate: Coupon Rate
+      maturity_date: Maturity Date
+      isin: ISIN
+      rating: Credit Rating
+      interest_frequency: Interest Frequency
+      days_to_maturity: Days to Maturity
+      maturity_status: Status

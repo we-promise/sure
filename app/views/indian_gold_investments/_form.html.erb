@@ -1,0 +1,28 @@
+<%# locals: (account:, url:) %>
+<%= render "accounts/form", account: account, url: url do |form| %>
+  <%= form.fields_for :accountable do |gold_form| %>
+    <%= gold_form.select :subtype,
+                       grouped_options_for_select(IndianGoldInvestment.subtypes_grouped_for_select, account.accountable.subtype),
+                       { label: true, prompt: t(".subtype_prompt"), include_blank: t(".none") } %>
+    <%= gold_form.text_field :quantity_grams,
+                          step: "0.001",
+                          min: "0",
+                          label: t(".quantity_label") %>
+    <%= gold_form.select :purity,
+                        options_for_select([
+                          [t(".purity_options.24k"), "24k"],
+                          [t(".purity_options.22k"), "22k"],
+                          [t(".purity_options.18k"), "18k"],
+                          [t(".purity_options.14k"), "14k"]
+                        ], gold_form.object.purity),
+                        { label: true, include_blank: true } %>
+    <%= gold_form.text_field :purchase_price_per_gram,
+                          step: "0.01",
+                          min: "0",
+                          label: t(".purchase_price_per_gram_label"),
+                          value: number_to_currency(gold_form.object.purchase_price_per_gram, unit: "", delimiter: "", precision: 2) %>
+    <%= gold_form.text_field :weight_unit,
+                          value: gold_form.object.weight_unit || "grams",
+                          label: t(".weight_unit_label") %>
+  <% end %>
+<% end %>

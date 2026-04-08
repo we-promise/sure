@@ -1,0 +1,51 @@
+---
+en:
+  indian_fixed_investments:
+    subtypes:
+      ppf:
+        short: PPF
+        long: Public Provident Fund
+      ssy:
+        short: SSY
+        long: Sukanya Samriddhi Yojana
+      nsc:
+        short: NSC
+        long: National Savings Certificate
+      scss:
+        short: SCSS
+        long: Senior Citizens Savings Scheme
+      fd:
+        short: Bank FD
+        long: Fixed Deposit
+      rd:
+        short: Recurring Deposit
+        long: Recurring Deposit
+      pomis:
+        short: POMIS
+        long: Post Office Monthly Income Scheme
+      kisan_vikas_patra:
+        short: KVP
+        long: Kisan Vikas Patra
+      sukanya_samriddhi_2:
+        short: SSY 2
+        long: Sukanya Samriddhi Yojana 2
+      mahila_samman_savings:
+        short: MSS
+        long: Mahila Samman Savings Certificate
+    form:
+      interest_rate_label: Interest Rate (% p.a.)
+      maturity_date_label: Maturity Date
+      deposit_amount_label: Deposit Amount
+      deposit_frequency_label: Deposit Frequency
+      frequency_options:
+        monthly: Monthly
+        quarterly: Quarterly
+        annually: Annually
+        lump_sum: Lump Sum
+    show:
+      interest_rate: Interest Rate
+      maturity_date: Maturity Date
+      days_to_maturity: Days to Maturity
+      deposit_amount: Deposit Amount
+      deposit_frequency: Deposit Frequency
+      maturity_status: Status

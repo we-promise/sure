@@ -12,7 +12,7 @@ class AccountsController < ApplicationController
           .where(id: @accessible_account_ids)
           .order(:name)
     @plaid_items = visible_provider_items(family.plaid_items.ordered.includes(:syncs, :plaid_accounts))
-    @simplefin_items = visible_provider_items(family.simplefin_items.ordered.includes(:syncs))
+    @simplefin_items = visible_provider_items(family.simplefin_items.ordered.includes(:syncs, :accounts))
     @lunchflow_items = visible_provider_items(family.lunchflow_items.ordered.includes(:syncs, :lunchflow_accounts))
     @enable_banking_items = visible_provider_items(family.enable_banking_items.ordered.includes(:syncs))
     @coinstats_items = visible_provider_items(family.coinstats_items.ordered.includes(:coinstats_accounts, :accounts, :syncs))

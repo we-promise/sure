@@ -1,0 +1,35 @@
+<%# locals: (account:, url:) %>
+<%= render "accounts/form", account: account, url: url do |form| %>
+  <%= form.fields_for :accountable do |bond_form| %>
+    <%= bond_form.select :subtype,
+                       grouped_options_for_select(IndianBond.subtypes_grouped_for_select, account.accountable.subtype),
+                       { label: true, prompt: t(".subtype_prompt"), include_blank: t(".none") } %>
+    <%= bond_form.text_field :face_value,
+                          step: "0.01",
+                          min: "0",
+                          label: t(".face_value_label"),
+                          value: number_to_currency(bond_form.object.face_value, unit: "", delimiter: "", precision: 4) %>
+    <%= bond_form.text_field :coupon_rate,
+                          step: "0.01",
+                          min: "0",
+                          max: "20",
+                          label: t(".coupon_rate_label") %>
+    <%= bond_form.select :interest_frequency,
+                        options_for_select([
+                          [t(".frequency_options.monthly"), "monthly"],
+                          [t(".frequency_options.quarterly"), "quarterly"],
+                          [t(".frequency_options.semi_annually"), "semi_annually"],
+                          [t(".frequency_options.annually"), "annually"],
+                          [t(".frequency_options.at_maturity"), "at_maturity"]
+                        ], bond_form.object.interest_frequency || "quarterly"),
+                        { label: true, include_blank: true } %>
+    <%= bond_form.date_field :maturity_date,
+                           label: t(".maturity_date_label") %>
+    <%= bond_form.text_field :isin,
+                          label: t(".isin_label"),
+                          maxlength: 12 %>
+    <%= bond_form.text_field :rating,
+                          label: t(".rating_label"),
+                          placeholder: "e.g., AAA, AA+, CRISIL AAA" %>
+  <% end %>
+<% end %>

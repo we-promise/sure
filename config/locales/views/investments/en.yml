@@ -100,6 +100,37 @@ en:
       riester:
         short: Riester
         long: Riester-Rente
+      # India
+      indian_demat:
+        short: Demat A/C
+        long: Demat Account (NSDL/CDSL)
+      indian_equity:
+        short: Equity
+        long: Indian Equity (NSE/BSE)
+      indian_etf:
+        short: ETF
+        long: Exchange-Traded Fund (NSE/BSE)
+      indian_mf:
+        short: Mutual Fund
+        long: Indian Mutual Fund
+      ppf:
+        short: PPF
+        long: Public Provident Fund
+      scss:
+        short: SCSS
+        long: Senior Citizens Savings Scheme
+      nsc:
+        short: NSC
+        long: National Savings Certificate
+      nps:
+        short: NPS
+        long: National Pension System
+      apy:
+        short: APY
+        long: Atal Pension Yojana
+      ol_assurance:
+        short: Life Insurance
+        long: Life Insurance (Endowment/ULIP)
       # Generic
       pension:
         short: Pension

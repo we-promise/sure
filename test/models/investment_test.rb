@@ -129,7 +129,7 @@ class InvestmentTest < ActiveSupport::TestCase
   end
 
   test "all subtypes have valid region values" do
-    valid_regions = [ "us", "uk", "ca", "au", "eu", nil ]
+    valid_regions = [ "us", "uk", "ca", "au", "eu", "in", nil ]
 
     Investment::SUBTYPES.each do |key, metadata|
       assert_includes valid_regions, metadata[:region],

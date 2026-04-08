@@ -120,6 +120,10 @@ en:
       credit_card: Credit Card
       loan: Loan
       other_liability: Other Liability
+      indian_fixed_investment: Fixed Investment
+      indian_gold_investment: Gold Investment
+      indian_real_estate: Indian Real Estate
+      indian_bond: Bond
     tax_treatments:
       taxable: Taxable
       tax_deferred: Tax-Deferred
@@ -130,12 +134,17 @@ en:
       tax_deferred: Contributions deductible, taxed on withdrawal
       tax_exempt: Contributions after-tax, gains not taxed
       tax_advantaged: Special tax benefits with conditions
+      ppf: EEE status - contributions eligible for tax deduction, interest tax-free, maturity amount tax-free
+      ssy: EEE status - contributions eligible for tax deduction under Section 80C, interest and maturity tax-free
+      sgb: No capital gains tax on redemption if held till maturity, taxed at capital gains rate otherwise
+      nps: Partial tax exemption under Section 80CCD, maturity amount partially tax-free
     subtype_regions:
       us: United States
       uk: United Kingdom
       ca: Canada
       au: Australia
       eu: Europe
+      in: India
       generic: General
     confirm_unlink:
       title: Unlink account from provider?

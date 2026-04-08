@@ -1,0 +1,35 @@
+---
+en:
+  indian_gold_investments:
+    subtypes:
+      physical_gold:
+        short: Physical Gold
+        long: Physical Gold (Jewelry/Bars/Coins)
+      gold_etf:
+        short: Gold ETF
+        long: Gold Exchange-Traded Fund
+      sgb:
+        short: SGB
+        long: Sovereign Gold Bond
+      gold_mutual_fund:
+        short: Gold MF
+        long: Gold Mutual Fund
+      digital_gold:
+        short: Digital Gold
+        long: Digital Gold (Online/Gold Locker)
+    form:
+      quantity_label: Quantity (Grams)
+      purity_label: Purity
+      purchase_price_per_gram_label: Purchase Price per Gram
+      weight_unit_label: Weight Unit
+      purity_options:
+        "24k": 24 Karat (99.9% pure)
+        "22k": 22 Karat (91.6% pure)
+        "18k": 18 Karat (75% pure)
+        "14k": 14 Karat (58.5% pure)
+    show:
+      quantity: Quantity
+      purity: Purity
+      purchase_price_per_gram: Purchase Price/Gram
+      total_purchase_value: Total Purchase Value
+      weight_unit: Weight Unit

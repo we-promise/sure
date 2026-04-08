@@ -417,6 +417,10 @@ class Account < ApplicationRecord
     user.present? && owner_id == user.id
   end
 
+  def accountable_name
+    accountable_type.underscore
+  end
+
   def shared_with?(user)
     return false if user.nil?
 
