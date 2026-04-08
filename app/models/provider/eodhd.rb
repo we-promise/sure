@@ -45,19 +45,28 @@ class Provider::Eodhd < Provider
     "US" => "XNYS", "LSE" => "XLON", "XETRA" => "XETR",
     "TO" => "XTSE", "PA" => "XPAR", "AS" => "XAMS",
     "SW" => "XSWX", "HK" => "XHKG", "AU" => "XASX",
-    "TSE" => "XTKS", "MI" => "XMIL", "MC" => "XMAD"
+    "TSE" => "XTKS", "MI" => "XMIL", "MC" => "XMAD",
+    "OL" => "XOSL", "HE" => "XHEL", "CO" => "XCSE",
+    "ST" => "XSTO", "KS" => "XKRX", "BSE" => "XBOM",
+    "NSE" => "XNSE"
   }.freeze
 
   EODHD_COUNTRY_TO_CODE = {
     "USA" => "US", "UK" => "GB", "Germany" => "DE", "France" => "FR",
     "Netherlands" => "NL", "Switzerland" => "CH", "Canada" => "CA",
-    "Japan" => "JP", "Australia" => "AU", "Hong Kong" => "HK"
+    "Japan" => "JP", "Australia" => "AU", "Hong Kong" => "HK",
+    "Italy" => "IT", "Spain" => "ES", "Norway" => "NO",
+    "Finland" => "FI", "Denmark" => "DK", "Sweden" => "SE",
+    "South Korea" => "KR", "India" => "IN"
   }.freeze
 
   EXCHANGE_CURRENCY = {
     "US" => "USD", "LSE" => "GBP", "XETRA" => "EUR", "TO" => "CAD",
     "PA" => "EUR", "AS" => "EUR", "SW" => "CHF", "HK" => "HKD",
-    "AU" => "AUD", "TSE" => "JPY"
+    "AU" => "AUD", "TSE" => "JPY", "MI" => "EUR", "MC" => "EUR",
+    "OL" => "NOK", "HE" => "EUR", "CO" => "DKK",
+    "ST" => "SEK", "KS" => "KRW", "BSE" => "INR",
+    "NSE" => "INR"
   }.freeze
 
   def initialize(api_key)

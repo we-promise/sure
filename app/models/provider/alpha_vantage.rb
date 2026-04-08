@@ -51,7 +51,12 @@ class Provider::AlphaVantage < Provider
     "Frankfurt" => "DE", "XETRA" => "DE",
     "Amsterdam" => "NL", "Paris/Brussels" => "FR",
     "Switzerland" => "CH", "Toronto" => "CA",
-    "Brazil/Sao Paolo" => "BR"
+    "Brazil/Sao Paolo" => "BR",
+    "India/Bombay" => "IN", "Hong Kong" => "HK",
+    "Milan" => "IT", "Madrid" => "ES",
+    "Oslo" => "NO", "Helsinki" => "FI",
+    "Copenhagen" => "DK", "Stockholm" => "SE",
+    "Australia" => "AU", "Japan" => "JP"
   }.freeze
 
   def initialize(api_key)
@@ -118,7 +123,7 @@ class Provider::AlphaVantage < Provider
           name: match["2. name"],
           logo_url: nil,
           exchange_operating_mic: extract_mic_from_symbol(av_ticker),
-          country_code: AV_REGION_TO_COUNTRY[region] || country_code,
+          country_code: AV_REGION_TO_COUNTRY[region],
           currency: currency
         )
       end
