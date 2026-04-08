@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:provider/provider.dart';
 import '../models/chat.dart';
 import '../providers/auth_provider.dart';
@@ -455,14 +456,50 @@ class _MessageBubble extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        message.content,
-                        style: TextStyle(
-                          color: isUser
-                              ? colorScheme.onPrimary
-                              : colorScheme.onSurfaceVariant,
+                      if (isUser)
+                        Text(
+                          message.content,
+                          style: TextStyle(
+                            color: colorScheme.onPrimary,
+                          ),
+                        )
+                      else
+                        MarkdownBody(
+                          data: message.content,
+                          selectable: false,
+                          softLineBreak: true,
+                          styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
+                            p: TextStyle(color: colorScheme.onSurfaceVariant),
+                            strong: TextStyle(
+                              color: colorScheme.onSurfaceVariant,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            em: TextStyle(
+                              color: colorScheme.onSurfaceVariant,
+                              fontStyle: FontStyle.italic,
+                            ),
+                            listBullet: TextStyle(color: colorScheme.onSurfaceVariant),
+                            h1: TextStyle(
+                              color: colorScheme.onSurfaceVariant,
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            h2: TextStyle(
+                              color: colorScheme.onSurfaceVariant,
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            h3: TextStyle(
+                              color: colorScheme.onSurfaceVariant,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            code: TextStyle(
+                              color: colorScheme.onSurfaceVariant,
+                              fontFamily: 'monospace',
+                            ),
+                          ),
                         ),
-                      ),
                       if (message.toolCalls != null &&
                           message.toolCalls!.isNotEmpty)
                         Padding(
