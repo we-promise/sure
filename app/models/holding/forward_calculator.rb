@@ -89,7 +89,11 @@ class Holding::ForwardCalculator
 
         # Convert trade price to account currency if needed
         trade_price = Money.new(trade.price, trade.currency)
-        converted_price = trade_price.exchange_to(account.currency, fallback_rate: 1).amount
+        begin
+          converted_price = trade_price.exchange_to(account.currency).amount
+        rescue Money::ConversionError
+          converted_price = trade.price
+        end
 
         tracker[:total_cost] += converted_price * trade.qty
         tracker[:total_qty] += trade.qty

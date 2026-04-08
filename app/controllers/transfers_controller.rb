@@ -2,17 +2,11 @@ class TransfersController < ApplicationController
   include StreamExtensions
 
   before_action :set_transfer, only: %i[show destroy update]
+  before_action :set_accounts, only: %i[new create]
 
   def new
     @transfer = Transfer.new
     @from_account_id = params[:from_account_id]
-
-    @accounts = accessible_accounts
-    .alphabetically
-    .includes(
-      :account_providers,
-      logo_attachment: :blob
-    )
   end
 
   def show
@@ -31,8 +25,9 @@ class TransfersController < ApplicationController
       family: Current.family,
       source_account_id: source_account.id,
       destination_account_id: destination_account.id,
-      date: Date.parse(transfer_params[:date]),
-      amount: transfer_params[:amount].to_d
+      date: transfer_params[:date].present? ? Date.parse(transfer_params[:date]) : Date.current,
+      amount: transfer_params[:amount].to_d,
+      exchange_rate: transfer_params[:exchange_rate].presence&.to_d
     ).create
 
     if @transfer.persisted?
@@ -45,6 +40,14 @@ class TransfersController < ApplicationController
       @from_account_id = transfer_params[:from_account_id]
       render :new, status: :unprocessable_entity
     end
+  rescue Money::ConversionError
+    @transfer ||= Transfer.new
+    @transfer.errors.add(:base, "Exchange rate unavailable for selected currencies and date")
+    render :new, status: :unprocessable_entity
+  rescue ArgumentError
+    @transfer ||= Transfer.new
+    @transfer.errors.add(:date, "is invalid")
+    render :new, status: :unprocessable_entity
   end
 
   def update
@@ -85,7 +88,16 @@ class TransfersController < ApplicationController
     end
 
     def transfer_params
-      params.require(:transfer).permit(:from_account_id, :to_account_id, :amount, :date, :name, :excluded)
+      params.require(:transfer).permit(:from_account_id, :to_account_id, :amount, :date, :name, :excluded, :exchange_rate)
+    end
+
+    def set_accounts
+      @accounts = accessible_accounts
+        .alphabetically
+        .includes(
+          :account_providers,
+          logo_attachment: :blob
+        )
     end
 
     def transfer_update_params

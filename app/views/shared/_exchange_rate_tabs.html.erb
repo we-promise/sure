@@ -1,0 +1,39 @@
+<%# locals: (controller_id:, controller_key:, help_text:, convert_tab_label:, calculate_rate_tab_label:, destination_amount_label:, exchange_rate_label:, convert_input:, destination_input:) %>
+
+<div class="hidden px-1 pt-2" data-action="click-><%= controller_id %>#onExchangeRateTabClick" data-<%= controller_id %>-target="exchangeRateContainer">
+  <p class="text-xs text-secondary mb-2"><%= help_text %></p>
+
+  <%= render DS::Tabs.new(active_tab: "convert") do |tabs| %>
+    <%= tabs.with_nav do |nav| %>
+      <%= nav.with_btn(id: "convert", label: convert_tab_label) %>
+      <%= nav.with_btn(id: "calculateRate", label: calculate_rate_tab_label) %>
+    <% end %>
+
+    <%= tabs.with_panel(tab_id: "convert") do %>
+      <div class="space-y-2 mb-3">
+        <%= convert_input %>
+
+        <div class="flex items-center justify-between p-2 bg-container-inset rounded text-sm">
+          <span class="text-secondary"><%= destination_amount_label %></span>
+          <span class="font-medium text-primary" data-<%= controller_id %>-target="convertDestinationDisplay">-</span>
+        </div>
+      </div>
+    <% end %>
+
+    <%= tabs.with_panel(tab_id: "calculateRate") do %>
+      <div class="space-y-2 mb-3">
+        <div class="form-field">
+          <div class="form-field__body">
+            <label class="form-field__label" for="<%= "#{controller_key}_destination_amount" %>"><%= destination_amount_label %></label>
+            <%= destination_input %>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-between p-2 bg-container-inset rounded text-sm">
+          <span class="text-secondary"><%= exchange_rate_label %></span>
+          <span class="font-medium text-primary" data-<%= controller_id %>-target="calculateRateDisplay">-</span>
+        </div>
+      </div>
+    <% end %>
+  <% end %>
+</div>

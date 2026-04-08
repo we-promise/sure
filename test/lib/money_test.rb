@@ -180,18 +180,27 @@ class MoneyTest < ActiveSupport::TestCase
     assert_equal Money.new(1000).exchange_to(:eur), Money.new(1000 * 1.2, :eur)
   end
 
-  test "raises when no conversion rate available and no fallback rate provided" do
+  test "raises when no conversion rate available and no fallback provided" do
     ExchangeRate.expects(:find_or_fetch_rate).returns(nil)
 
-    assert_raises Money::ConversionError do
+    assert_raises(Money::ConversionError) do
       Money.new(1000).exchange_to(:jpy)
     end
   end
 
-  test "converts currency with a fallback rate" do
-    ExchangeRate.expects(:find_or_fetch_rate).returns(nil).twice
+  test "uses custom rate when provided" do
+    ExchangeRate.expects(:find_or_fetch_rate).never
 
-    assert_equal 0, Money.new(1000).exchange_to(:jpy, fallback_rate: 0)
-    assert_equal Money.new(1000, :jpy), Money.new(1000, :usd).exchange_to(:jpy, fallback_rate: 1)
+    assert_equal Money.new(1250, :jpy), Money.new(1000, :usd).exchange_to(:jpy, custom_rate: 1.25)
   end
+
+  test "raises error when custom rate is invalid" do
+  assert_raises(Money::ConversionError) do
+    Money.new(1000).exchange_to(:jpy, custom_rate: 0)
+  end
+
+  assert_raises(Money::ConversionError) do
+    Money.new(1000).exchange_to(:jpy, custom_rate: -1)
+  end
+end
 end

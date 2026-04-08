@@ -7,11 +7,19 @@ en:
       success: Transfer removed
     form:
       amount: Amount
+      calculate_rate_tab: Calculate FX rate
+      convert_tab: Convert with FX rate
       date: Date
+      destination_amount: Destination amount
+      destination_amount_display: "Destination amount: %{amount}"
+      exchange_rate: Exchange rate
+      exchange_rate_display: "Exchange rate: %{rate}"
+      exchange_rate_help: Choose how to enter the transfer amount.
       expense: Expense
       from: From
       income: Income
       select_account: Select account
+      source_amount: Source amount
       submit: Create transfer
       to: To
       transfer: Transfer

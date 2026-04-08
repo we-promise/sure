@@ -36,7 +36,11 @@ class Holding::PortfolioCache
 
     price_money = Money.new(price.price, price.currency)
 
-    converted_amount = price_money.exchange_to(account.currency, fallback_rate: 1).amount
+    begin
+      converted_amount = price_money.exchange_to(account.currency).amount
+    rescue Money::ConversionError
+      converted_amount = price.price
+    end
 
     Security::Price.new(
       security_id: security_id,

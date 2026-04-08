@@ -390,4 +390,157 @@ end
     assert_not entry.import_locked?
     assert_not entry.protected_from_sync?
   end
+
+  test "exchange_rate endpoint returns rate for different currencies" do
+    ExchangeRate.expects(:find_or_fetch_rate)
+                .with(from: "EUR", to: "USD", date: Date.current)
+                .returns(1.2)
+
+    get exchange_rate_url, params: {
+      from: "EUR",
+      to: "USD",
+      date: Date.current
+    }
+
+    assert_response :success
+    json_response = JSON.parse(response.body)
+    assert_equal 1.2, json_response["rate"]
+  end
+
+  test "exchange_rate endpoint returns same_currency for matching currencies" do
+    get exchange_rate_url, params: {
+      from: "USD",
+      to: "USD"
+    }
+
+    assert_response :success
+    json_response = JSON.parse(response.body)
+    assert json_response["same_currency"]
+    assert_equal 1.0, json_response["rate"]
+  end
+
+  test "exchange_rate endpoint uses provided date" do
+    custom_date = 3.days.ago.to_date
+    ExchangeRate.expects(:find_or_fetch_rate)
+                .with(from: "EUR", to: "USD", date: custom_date)
+                .returns(1.25)
+
+    get exchange_rate_url, params: {
+      from: "EUR",
+      to: "USD",
+      date: custom_date
+    }
+
+    assert_response :success
+    json_response = JSON.parse(response.body)
+    assert_equal 1.25, json_response["rate"]
+  end
+
+  test "exchange_rate endpoint returns 400 when from currency is missing" do
+    get exchange_rate_url, params: {
+      to: "USD"
+    }
+
+    assert_response :bad_request
+    json_response = JSON.parse(response.body)
+    assert_equal "from and to currencies are required", json_response["error"]
+  end
+
+  test "exchange_rate endpoint returns 400 when to currency is missing" do
+    get exchange_rate_url, params: {
+      from: "EUR"
+    }
+
+    assert_response :bad_request
+    json_response = JSON.parse(response.body)
+    assert_equal "from and to currencies are required", json_response["error"]
+  end
+
+  test "exchange_rate endpoint returns 400 on invalid date format" do
+    get exchange_rate_url, params: {
+      from: "EUR",
+      to: "USD",
+      date: "not-a-date"
+    }
+
+    assert_response :bad_request
+    json_response = JSON.parse(response.body)
+    assert_equal "Invalid date format", json_response["error"]
+  end
+
+  test "exchange_rate endpoint returns 404 when rate not found" do
+    ExchangeRate.expects(:find_or_fetch_rate)
+                .with(from: "EUR", to: "USD", date: Date.current)
+                .returns(nil)
+
+    get exchange_rate_url, params: {
+      from: "EUR",
+      to: "USD"
+    }
+
+    assert_response :not_found
+    json_response = JSON.parse(response.body)
+    assert_equal "Exchange rate not found", json_response["error"]
+  end
+
+  test "creates transaction with custom exchange rate" do
+    account = @user.family.accounts.create!(
+      name: "USD Account",
+      currency: "USD",
+      balance: 1000,
+      accountable: Depository.new
+    )
+
+    assert_difference [ "Entry.count", "Transaction.count" ], 1 do
+      post transactions_url, params: {
+        entry: {
+          account_id: account.id,
+          name: "EUR transaction with custom rate",
+          date: Date.current,
+          currency: "EUR",
+          amount: 100,
+          nature: "outflow",
+          entryable_type: "Transaction",
+          entryable_attributes: {
+            category_id: Category.first.id,
+            exchange_rate: "1.5"
+          }
+        }
+      }
+    end
+
+    created_entry = Entry.order(:created_at).last
+    assert_equal "EUR", created_entry.currency
+    assert_equal 100, created_entry.amount
+    assert_equal 1.5, created_entry.transaction.extra["exchange_rate"]
+  end
+
+  test "creates transaction without custom exchange rate" do
+    account = @user.family.accounts.create!(
+      name: "USD Account",
+      currency: "USD",
+      balance: 1000,
+      accountable: Depository.new
+    )
+
+    assert_difference [ "Entry.count", "Transaction.count" ], 1 do
+      post transactions_url, params: {
+        entry: {
+          account_id: account.id,
+          name: "EUR transaction without custom rate",
+          date: Date.current,
+          currency: "EUR",
+          amount: 100,
+          nature: "outflow",
+          entryable_type: "Transaction",
+          entryable_attributes: {
+            category_id: Category.first.id
+          }
+        }
+      }
+    end
+
+    created_entry = Entry.order(:created_at).last
+    assert_nil created_entry.transaction.extra["exchange_rate"]
+  end
 end

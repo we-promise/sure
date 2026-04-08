@@ -67,4 +67,64 @@ class TransactionTest < ActiveSupport::TestCase
     assert_includes Transaction::ACTIVITY_LABELS, "Exchange"
     assert_includes Transaction::ACTIVITY_LABELS, "Other"
   end
+
+  test "exchange_rate getter returns nil when extra is nil" do
+    transaction = Transaction.new
+    assert_nil transaction.exchange_rate
+  end
+
+  test "exchange_rate setter stores normalized numeric value" do
+    transaction = Transaction.new
+    transaction.exchange_rate = "1.5"
+
+    assert_equal 1.5, transaction.exchange_rate
+  end
+
+  test "exchange_rate setter marks invalid input" do
+    transaction = Transaction.new
+    transaction.exchange_rate = "not a number"
+
+    assert_equal "not a number", transaction.extra["exchange_rate"]
+    assert transaction.extra["exchange_rate_invalid"]
+  end
+
+  test "exchange_rate validation rejects non-numeric input" do
+    transaction = Transaction.new(
+      category: categories(:income),
+      extra: { "exchange_rate" => "invalid" }
+    )
+    transaction.exchange_rate = "not a number"
+
+    assert_not transaction.valid?
+    assert_includes transaction.errors[:exchange_rate], "must be a number"
+  end
+
+  test "exchange_rate validation rejects zero values" do
+    transaction = Transaction.new(
+      category: categories(:income)
+    )
+    transaction.exchange_rate = 0
+
+    assert_not transaction.valid?
+    assert_includes transaction.errors[:exchange_rate], "must be greater than 0"
+  end
+
+  test "exchange_rate validation rejects negative values" do
+    transaction = Transaction.new(
+      category: categories(:income)
+    )
+    transaction.exchange_rate = -1.5
+
+    assert_not transaction.valid?
+    assert_includes transaction.errors[:exchange_rate], "must be greater than 0"
+  end
+
+  test "exchange_rate validation allows positive values" do
+    transaction = Transaction.new(
+      category: categories(:income)
+    )
+    transaction.exchange_rate = 1.5
+
+    assert transaction.valid?
+  end
 end

@@ -249,6 +249,8 @@ Rails.application.routes.draw do
     end
   end
 
+  get :exchange_rate, to: "exchange_rates#show"
+
   resources :transfers, only: %i[new create destroy show update]
 
   resources :imports, only: %i[index new show create update destroy] do

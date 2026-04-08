@@ -8,6 +8,12 @@ de:
       title: Bist du sicher
     money_field:
       label: Betrag
+    exchange_rate_tabs:
+      calculate_rate_tab: FX-Kurs berechnen
+      convert_tab: Mit FX-Kurs konvertieren
+      destination_amount: Zielbetrag
+      exchange_rate: Wechselkurs
+      exchange_rate_help: Wählen Sie, wie Sie den Betrag eingeben möchten.
     syncing_notice:
       syncing: Kontodaten werden synchronisiert...
     trend_change:
