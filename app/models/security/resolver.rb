@@ -111,8 +111,8 @@ class Security::Resolver
       # 4. Rank by exchange_operating_mic relevance (lower index in the list is more relevant)
       sorted_candidates = filtered_candidates.sort_by do |s|
         [
-          s.ticker.upcase.to_s == symbol.upcase.to_s ? 0 : 1,
-          exchange_operating_mic.present? && s.exchange_operating_mic.upcase.to_s == exchange_operating_mic.upcase.to_s ? 0 : 1,
+          s.ticker&.upcase.to_s == symbol.upcase.to_s ? 0 : 1,
+          exchange_operating_mic.present? && s.exchange_operating_mic&.upcase.to_s == exchange_operating_mic.upcase.to_s ? 0 : 1,
           sorted_country_codes_by_relevance.index(s.country_code&.upcase.to_s) || sorted_country_codes_by_relevance.length,
           sorted_exchange_operating_mics_by_relevance.index(s.exchange_operating_mic&.upcase.to_s) || sorted_exchange_operating_mics_by_relevance.length
         ]
