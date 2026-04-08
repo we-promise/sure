@@ -38,6 +38,8 @@ class PreferencesService {
   Future<void> setShowCategoryFilter(bool value) async {
     final prefs = await _preferences;
     await prefs.setBool(_showCategoryFilterKey, value);
+  }
+
   /// Returns 'light', 'dark', or 'system' (default).
   Future<String> getThemeMode() async {
     final prefs = await _preferences;
