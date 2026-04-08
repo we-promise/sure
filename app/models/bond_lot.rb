@@ -196,10 +196,10 @@ class BondLot < ApplicationRecord
 
       days_in_year = [ (next_anniversary - anniversary_start).to_i, 1 ].max
       interest_earned = value * annual_rate_decimal * (days_in_step.to_d / days_in_year)
-      if coupon_reinvested? || coupon_paid_before_maturity?(next_cursor:, next_accrual_boundary:)
+      if coupon_reinvested?
         value += interest_earned
       else
-        unpaid_coupon_accrual = interest_earned
+        unpaid_coupon_accrual += interest_earned
       end
 
       cursor = next_cursor

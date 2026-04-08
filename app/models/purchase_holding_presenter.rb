@@ -58,7 +58,11 @@ class PurchaseHoldingPresenter
     end
 
     def projected_total_return?
-      lot.total_return_amount(allow_import: false).abs < 0.01.to_d && lot.projected_total_return_amount(allow_import: false).positive?
+      @projected_total_return ||= begin
+        current = lot.total_return_amount(allow_import: false)
+        projected = lot.projected_total_return_amount(allow_import: false)
+        current.abs < 0.01.to_d && projected.positive?
+      end
     end
 
     def inflation_meta

@@ -111,7 +111,7 @@
                               label: t("bond_lots.form.first_period_rate"),
                               min: 0,
                               step: 0.005,
-                              data: { bond_lot_inflation_target: "inflationInput", optional: true } %>
+                              data: { bond_lot_inflation_target: "inflationInput", optional: true, requires_first_period_check: true } %>
 
         <%= form.number_field :inflation_margin,
                               label: t("bond_lots.form.inflation_margin"),
@@ -168,8 +168,7 @@
                           checked: false,
                           disabled: true,
                           data: {
-                            bond_lot_inflation_target: "autoFetchInput",
-                            action: "change->bond-lot-inflation#toggleManualInflationField"
+                            bond_lot_inflation_target: "autoFetchInput"
                           } %>
         </div>
       <% end %>

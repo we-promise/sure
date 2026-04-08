@@ -36,7 +36,7 @@ export default class extends Controller {
 
     this.inflationInputTargets.forEach((input) => {
       input.disabled = !inflationLinked
-      if (input.name === "bond_lot[first_period_rate]") {
+      if (input.dataset.requiresFirstPeriodCheck) {
         input.required = inflationLinked && firstPeriodRateRequired
       } else {
         input.required = inflationLinked && !input.dataset.optional

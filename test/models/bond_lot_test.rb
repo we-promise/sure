@@ -556,7 +556,7 @@ class BondLotTest < ActiveSupport::TestCase
     assert_in_delta 30.0, coupon.amount.to_f, 0.001
   end
 
-  test "estimated_current_value for periodic coupon bond includes paid coupons" do
+  test "estimated_current_value for periodic coupon bond does not compound paid coupons" do
     lot = BondLot.new(
       bond: bonds(:one),
       purchased_on: Date.new(2024, 1, 1),
@@ -571,7 +571,7 @@ class BondLotTest < ActiveSupport::TestCase
 
     value = lot.estimated_current_value(on: Date.new(2024, 9, 1))
 
-    assert_in_delta 1081.21, value.to_f, 0.2
+    assert_in_delta 1080.0, value.to_f, 0.2
   end
 
   test "product presets override conflicting rate and coupon settings" do
@@ -972,8 +972,6 @@ class BondLotTest < ActiveSupport::TestCase
       rate_type: "variable",
       coupon_frequency: "at_maturity"
     )
-  ensure
-    lot&.destroy
   end
 
   test "auto-settles matured lot and withholds standard tax" do

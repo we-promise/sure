@@ -3,6 +3,7 @@ module Bond::InflationProvider
   DEFAULT_PROVIDER_BY_LOCALE = {
     "pl" => "gus_sdp",
     "es" => "es_ine",
+    "en" => "us_bls",
     "us" => "us_bls",
     "en-us" => "us_bls"
   }.freeze
