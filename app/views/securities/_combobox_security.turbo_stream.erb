@@ -9,6 +9,9 @@
       </span>
       <span class="text-xs text-secondary">
         <%= t("securities.combobox.exchange_label", symbol: combobox_security.symbol, exchange: combobox_security.exchange_name) %>
+        <% if combobox_security.price_provider.present? %>
+          <span class="text-xs text-tertiary">&middot; <%= combobox_security.price_provider.humanize %></span>
+        <% end %>
       </span>
     </div>
     <% if combobox_security.country_code.present? %>

@@ -14,13 +14,14 @@ class Settings::HostingsController < ApplicationController
 
     # Determine which providers are currently selected
     exchange_rate_provider = ENV["EXCHANGE_RATE_PROVIDER"].presence || Setting.exchange_rate_provider
-    securities_provider = ENV["SECURITIES_PROVIDER"].presence || Setting.securities_provider
+    enabled_securities = Setting.enabled_securities_providers
 
-    # Show Twelve Data settings if either provider is set to twelve_data
-    @show_twelve_data_settings = exchange_rate_provider == "twelve_data" || securities_provider == "twelve_data"
-
-    # Show Yahoo Finance settings if either provider is set to yahoo_finance
-    @show_yahoo_finance_settings = exchange_rate_provider == "yahoo_finance" || securities_provider == "yahoo_finance"
+    # Show provider settings if used for FX or enabled for securities
+    @show_twelve_data_settings = exchange_rate_provider == "twelve_data" || enabled_securities.include?("twelve_data")
+    @show_yahoo_finance_settings = exchange_rate_provider == "yahoo_finance" || enabled_securities.include?("yahoo_finance")
+    @show_finnhub_settings = enabled_securities.include?("finnhub")
+    @show_tiingo_settings = enabled_securities.include?("tiingo")
+    @show_fmp_settings = enabled_securities.include?("fmp")
 
     # Only fetch provider data if we're showing the section
     if @show_twelve_data_settings
@@ -67,6 +68,31 @@ class Settings::HostingsController < ApplicationController
 
     if hosting_params.key?(:securities_provider)
       Setting.securities_provider = hosting_params[:securities_provider]
+    end
+
+    if hosting_params.key?(:securities_providers)
+      new_providers = Array(hosting_params[:securities_providers]).reject(&:blank?)
+      old_providers = Setting.enabled_securities_providers
+
+      Setting.securities_providers = new_providers.join(",")
+
+      # Clear price_provider for securities linked to removed providers
+      removed = old_providers - new_providers
+      removed.each do |removed_provider|
+        Security.where(price_provider: removed_provider).update_all(price_provider: nil)
+      end
+    end
+
+    if hosting_params.key?(:finnhub_api_key)
+      Setting.finnhub_api_key = hosting_params[:finnhub_api_key]
+    end
+
+    if hosting_params.key?(:tiingo_api_key)
+      Setting.tiingo_api_key = hosting_params[:tiingo_api_key]
+    end
+
+    if hosting_params.key?(:fmp_api_key)
+      Setting.fmp_api_key = hosting_params[:fmp_api_key]
     end
 
     if hosting_params.key?(:syncs_include_pending)
@@ -166,7 +192,7 @@ class Settings::HostingsController < ApplicationController
   private
     def hosting_params
       return ActionController::Parameters.new unless params.key?(:setting)
-      params.require(:setting).permit(:onboarding_state, :require_email_confirmation, :invite_only_default_family_id, :brand_fetch_client_id, :brand_fetch_high_res_logos, :twelve_data_api_key, :openai_access_token, :openai_uri_base, :openai_model, :openai_json_mode, :exchange_rate_provider, :securities_provider, :syncs_include_pending, :auto_sync_enabled, :auto_sync_time, :external_assistant_url, :external_assistant_token, :external_assistant_agent_id)
+      params.require(:setting).permit(:onboarding_state, :require_email_confirmation, :invite_only_default_family_id, :brand_fetch_client_id, :brand_fetch_high_res_logos, :twelve_data_api_key, :finnhub_api_key, :tiingo_api_key, :fmp_api_key, :openai_access_token, :openai_uri_base, :openai_model, :openai_json_mode, :exchange_rate_provider, :securities_provider, :syncs_include_pending, :auto_sync_enabled, :auto_sync_time, :external_assistant_url, :external_assistant_token, :external_assistant_agent_id, securities_providers: [])
     end
 
     def update_assistant_type

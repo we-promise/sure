@@ -66,7 +66,7 @@ class Security::HealthChecker
     attr_reader :security
 
     def provider
-      Security.provider
+      security.price_data_provider
     end
 
     def latest_provider_price

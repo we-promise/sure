@@ -1,7 +1,7 @@
 class Security::ComboboxOption
   include ActiveModel::Model
 
-  attr_accessor :symbol, :name, :logo_url, :exchange_operating_mic, :country_code
+  attr_accessor :symbol, :name, :logo_url, :exchange_operating_mic, :country_code, :price_provider
 
   def id
     "#{symbol}|#{exchange_operating_mic}"

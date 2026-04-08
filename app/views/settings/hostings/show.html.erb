@@ -17,6 +17,15 @@
     <% if @show_twelve_data_settings %>
       <%= render "settings/hostings/twelve_data_settings" %>
     <% end %>
+    <% if @show_finnhub_settings %>
+      <%= render "settings/hostings/finnhub_settings" %>
+    <% end %>
+    <% if @show_tiingo_settings %>
+      <%= render "settings/hostings/tiingo_settings" %>
+    <% end %>
+    <% if @show_fmp_settings %>
+      <%= render "settings/hostings/fmp_settings" %>
+    <% end %>
   </div>
 <% end %>
 <%= settings_section title: t(".sync_settings") do %>

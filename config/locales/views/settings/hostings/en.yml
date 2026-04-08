@@ -31,14 +31,20 @@ en:
           title: Clear data cache?
           body: Are you sure you want to clear the data cache? This will remove all exchange rates, security prices, account balances, and other data. This action cannot be undone.
       provider_selection:
-        title: Provider Selection
-        description: Choose which service to use for fetching exchange rates and security prices. Yahoo Finance is free and doesn't require an API key. Twelve Data requires a free API key but may offer more data coverage.
+        exchange_rate_title: Exchange Rate Provider
+        exchange_rate_description: Select a single provider for fetching currency exchange rates.
         exchange_rate_provider_label: Exchange Rate Provider
-        securities_provider_label: Securities (Stock Prices) Provider
-        env_configured_message: Provider selection is disabled because environment variables (EXCHANGE_RATE_PROVIDER or SECURITIES_PROVIDER) are set. To enable selection here, remove these environment variables from your configuration.
+        securities_title: Securities Providers
+        securities_description: Enable one or more providers for fetching stock, ETF, and mutual fund prices. When searching, all enabled providers are queried and results are merged.
+        env_configured_message: Provider selection is disabled because environment variables are set. To enable selection here, remove these environment variables from your configuration.
+        requires_api_key: requires API key
+        requires_api_key_fmp: requires API key, 250 calls/day limit
         providers:
           twelve_data: Twelve Data
           yahoo_finance: Yahoo Finance
+          finnhub: Finnhub
+          tiingo: Tiingo
+          fmp: Financial Modeling Prep
       assistant_settings:
         title: AI Assistant
         description: Choose how the chat assistant responds. Builtin uses your configured LLM provider directly. External delegates to a remote AI agent that can call back to Sure's financial tools via MCP.
@@ -95,6 +101,25 @@ en:
         status_inactive: Yahoo Finance connection failed
         connection_failed: Unable to connect to Yahoo Finance
         troubleshooting: Check your internet connection and firewall settings. Yahoo Finance may be temporarily unavailable.
+      finnhub_settings:
+        title: Finnhub
+        description: Enter the API key provided by Finnhub. Free tier includes 60 requests per minute.
+        env_configured_message: Successfully configured through the FINNHUB_API_KEY environment variable.
+        label: API Key
+        placeholder: Enter your Finnhub API key here
+      tiingo_settings:
+        title: Tiingo
+        description: Enter the API token provided by Tiingo. Free tier supports 50 unique symbols per hour with 30+ years of historical data.
+        env_configured_message: Successfully configured through the TIINGO_API_KEY environment variable.
+        label: API Token
+        placeholder: Enter your Tiingo API token here
+      fmp_settings:
+        title: Financial Modeling Prep
+        description: Enter the API key provided by Financial Modeling Prep. Best for international ETFs and mutual funds.
+        env_configured_message: Successfully configured through the FMP_API_KEY environment variable.
+        label: API Key
+        placeholder: Enter your FMP API key here
+        rate_limit_warning: "FMP free tier is limited to 250 API calls per day. This provider is best used for international ETFs and securities not available from other providers. Consider using Finnhub or Twelve Data as your primary provider."
       twelve_data_settings:
         api_calls_used: "%{used} / %{limit} API daily calls used (%{percentage})"
         description: Enter the API key provided by Twelve Data

@@ -1,0 +1,51 @@
+<div class="space-y-4">
+  <div>
+    <h2 class="font-medium mb-1"><%= t(".title") %></h2>
+    <% if ENV["FMP_API_KEY"].present? %>
+      <p class="text-sm text-secondary"><%= t(".env_configured_message") %></p>
+    <% else %>
+      <div class="text-secondary text-sm mb-4">
+        <span><%= t(".description") %></span>
+        <details class="inline">
+          <summary class="cursor-pointer font-medium text-secondary underline inline"> (show details)</summary>
+          <ol class="text-sm text-secondary mt-2 list-decimal ml-6 space-y-2">
+            <li>
+              Visit <a href="https://site.financialmodelingprep.com/register" target="_blank" rel="noopener noreferrer" class="underline">financialmodelingprep.com</a> and create a free account.
+            </li>
+            <li>
+              Go to your <a href="https://site.financialmodelingprep.com/developer/docs/dashboard" target="_blank" rel="noopener noreferrer" class="underline">Dashboard</a> to find your API key.
+            </li>
+            <li>
+              Copy your API key and paste it below.
+            </li>
+          </ol>
+        </details>
+      </div>
+    <% end %>
+  </div>
+
+  <%= styled_form_with model: Setting.new,
+                       url: settings_hosting_path,
+                       method: :patch,
+                       data: {
+                         controller: "auto-submit-form",
+                         "auto-submit-form-trigger-event-value": "blur"
+                       } do |form| %>
+    <%= form.text_field :fmp_api_key,
+                        label: t(".label"),
+                        type: "password",
+                        placeholder: t(".placeholder"),
+                        value: ENV.fetch("FMP_API_KEY", Setting.fmp_api_key),
+                        disabled: ENV["FMP_API_KEY"].present?,
+                        data: { "auto-submit-form-target": "auto" } %>
+  <% end %>
+
+  <div class="bg-amber-50 border border-amber-200 rounded-lg p-3">
+    <div class="flex items-start gap-2">
+      <%= icon("alert-triangle", size: "sm", class: "text-amber-600 mt-0.5") %>
+      <p class="text-sm text-amber-700">
+        <%= t(".rate_limit_warning") %>
+      </p>
+    </div>
+  </div>
+</div>

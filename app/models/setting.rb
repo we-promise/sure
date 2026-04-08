@@ -36,6 +36,24 @@ class Setting < RailsSettings::Base
   field :exchange_rate_provider, type: :string, default: ENV.fetch("EXCHANGE_RATE_PROVIDER", "twelve_data")
   field :securities_provider, type: :string, default: ENV.fetch("SECURITIES_PROVIDER", "twelve_data")
 
+  # Multi-provider: comma-separated list of enabled securities providers
+  field :securities_providers, type: :string, default: ENV.fetch("SECURITIES_PROVIDERS", "")
+
+  # New provider API keys
+  field :finnhub_api_key, type: :string, default: ENV["FINNHUB_API_KEY"]
+  field :fmp_api_key, type: :string, default: ENV["FMP_API_KEY"]
+  field :tiingo_api_key, type: :string, default: ENV["TIINGO_API_KEY"]
+
+  def self.enabled_securities_providers
+    plural = ENV["SECURITIES_PROVIDERS"].presence || securities_providers.presence
+    if plural.present?
+      plural.to_s.split(",").map(&:strip).reject(&:blank?)
+    else
+      # Backward compat: fall back to singular setting
+      [ ENV["SECURITIES_PROVIDER"].presence || securities_provider ].compact
+    end
+  end
+
   # Sync settings - check both provider env vars for default
   # Only defaults to true if neither provider explicitly disables pending
   SYNCS_INCLUDE_PENDING_DEFAULT = begin

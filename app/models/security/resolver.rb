@@ -109,6 +109,12 @@ class Security::Resolver
       )
 
       security.country_code = match.country_code
+
+      # Set price_provider if the security is new or doesn't have one assigned
+      if security.new_record? || security.price_provider.blank?
+        security.price_provider = match.price_provider if match.respond_to?(:price_provider) && match.price_provider.present?
+      end
+
       security.save!
 
       security

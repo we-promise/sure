@@ -81,6 +81,30 @@ class Provider::Registry
       def yahoo_finance
         Provider::YahooFinance.new
       end
+
+      def finnhub
+        api_key = ENV["FINNHUB_API_KEY"].presence || Setting.finnhub_api_key
+
+        return nil unless api_key.present?
+
+        Provider::Finnhub.new(api_key)
+      end
+
+      def fmp
+        api_key = ENV["FMP_API_KEY"].presence || Setting.fmp_api_key
+
+        return nil unless api_key.present?
+
+        Provider::Fmp.new(api_key)
+      end
+
+      def tiingo
+        api_key = ENV["TIINGO_API_KEY"].presence || Setting.tiingo_api_key
+
+        return nil unless api_key.present?
+
+        Provider::Tiingo.new(api_key)
+      end
   end
 
   def initialize(concept)
@@ -108,7 +132,7 @@ class Provider::Registry
       when :exchange_rates
         %i[twelve_data yahoo_finance]
       when :securities
-        %i[twelve_data yahoo_finance]
+        %i[twelve_data yahoo_finance finnhub fmp tiingo]
       when :llm
         %i[openai]
       else
