@@ -64,11 +64,11 @@ class EnableBankingAccount::Processor
 
       # Wrap both writes in a transaction so a failure on either rolls back both.
       ActiveRecord::Base.transaction do
-        if available_credit && account.accountable.present?
+        if account.accountable.present?
           account.accountable.update!(available_credit: available_credit)
         end
         account.update!(currency: currency, cash_balance: balance)
-        
+
         # Use set_current_balance to create a current_anchor valuation entry.
         # This enables Balance::ReverseCalculator, which works backward from the
         # bank-reported balance — eliminating spurious cash adjustment spikes.

@@ -127,7 +127,7 @@ class Provider::EnableBanking
     encoded_id = CGI.escape(account_id.to_s)
     response = self.class.get(
       "#{BASE_URL}/accounts/#{encoded_id}/details",
-      headers: auth_headers.merge(psu_headers)
+      headers: auth_headers.merge(safe_psu_headers(psu_headers))
     )
 
     handle_response(response)
@@ -143,7 +143,7 @@ class Provider::EnableBanking
     encoded_id = CGI.escape(account_id.to_s)
     response = self.class.get(
       "#{BASE_URL}/accounts/#{encoded_id}/balances",
-      headers: auth_headers.merge(psu_headers)
+      headers: auth_headers.merge(safe_psu_headers(psu_headers))
     )
 
     handle_response(response)
