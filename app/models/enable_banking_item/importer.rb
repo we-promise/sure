@@ -29,6 +29,8 @@ class EnableBankingItem::Importer
       Rails.logger.error "EnableBankingItem::Importer - Failed to store session snapshot: #{e.message}"
     end
 
+    sync_uids_from_accounts_data(session_data[:accounts])
+
     # Update accounts from session
     accounts_updated = 0
     accounts_failed = 0
@@ -147,7 +149,7 @@ class EnableBankingItem::Importer
       # Use identification_hash as the stable identifier across sessions
       uid = account_data[:identification_hash] || account_data[:uid]
 
-      enable_banking_account = enable_banking_item.enable_banking_accounts.find_by(uid: uid.to_s)
+      enable_banking_account = find_enable_banking_account_by_hash(uid)
       return unless enable_banking_account
 
       enable_banking_account.upsert_enable_banking_snapshot!(account_data)
@@ -155,7 +157,10 @@ class EnableBankingItem::Importer
     end
 
     def fetch_and_update_balance(enable_banking_account)
-      balance_data = enable_banking_provider.get_account_balances(account_id: enable_banking_account.api_account_id)
+      balance_data = enable_banking_provider.get_account_balances(
+        account_id: enable_banking_account.api_account_id,
+        psu_headers: enable_banking_item.build_psu_headers
+      )
 
       # Enable Banking returns an array of balances
       balances = balance_data[:balances] || []
@@ -173,8 +178,12 @@ class EnableBankingItem::Importer
         currency = balance.dig(:balance_amount, :currency) || balance[:currency]
 
         if amount.present?
+          indicator = balance[:credit_debit_indicator]
+          parsed_amount = amount.to_d
+          parsed_amount = -parsed_amount if indicator == "DBIT"
+
           enable_banking_account.update!(
-            current_balance: amount.to_d,
+            current_balance: parsed_amount,
             currency: currency.presence || enable_banking_account.currency
           )
         end
@@ -186,59 +195,57 @@ class EnableBankingItem::Importer
     def fetch_and_store_transactions(enable_banking_account)
       start_date = determine_sync_start_date(enable_banking_account)
 
-      all_transactions = []
-      continuation_key = nil
-      previous_continuation_key = nil
-      page_count = 0
+      all_transactions = fetch_paginated_transactions(
+        enable_banking_account,
+        start_date: start_date,
+        transaction_status: "BOOK",
+        psu_headers: enable_banking_item.build_psu_headers
+      )
 
-      # Paginate through all transactions with safeguards against infinite loops
-      loop do
-        page_count += 1
-
-        # Safeguard: prevent infinite loops from excessive pagination
-        if page_count > MAX_PAGINATION_PAGES
-          Rails.logger.error(
-            "EnableBankingItem::Importer - Pagination limit exceeded for account #{enable_banking_account.uid}. " \
-            "Stopped after #{MAX_PAGINATION_PAGES} pages (#{all_transactions.count} transactions). " \
-            "Last continuation_key: #{continuation_key.inspect}"
-          )
-          break
-        end
-
-        transactions_data = enable_banking_provider.get_account_transactions(
-          account_id: enable_banking_account.api_account_id,
-          date_from: start_date,
-          continuation_key: continuation_key
-        )
-
-        transactions = transactions_data[:transactions] || []
-        all_transactions.concat(transactions)
-
-        previous_continuation_key = continuation_key
-        continuation_key = transactions_data[:continuation_key]
-
-        # Safeguard: detect repeated continuation_key (provider returning same key)
-        if continuation_key.present? && continuation_key == previous_continuation_key
-          Rails.logger.error(
-            "EnableBankingItem::Importer - Repeated continuation_key detected for account #{enable_banking_account.uid}. " \
-            "Breaking loop after #{page_count} pages (#{all_transactions.count} transactions). " \
-            "Repeated key: #{continuation_key.inspect}, last response had #{transactions.count} transactions"
-          )
-          break
-        end
-
-        break if continuation_key.blank?
-      end
+      # Also fetch pending transactions (visible for 1-3 days before they become BOOK)
+      pending_transactions = fetch_paginated_transactions(
+        enable_banking_account,
+        start_date: start_date,
+        transaction_status: "PDNG",
+        psu_headers: enable_banking_item.build_psu_headers
+      )
+      all_transactions = all_transactions + tag_as_pending(pending_transactions)
 
       # Deduplicate API response: Enable Banking sometimes returns the same logical
       # transaction with different entry_reference IDs in the same response.
       # Remove content-level duplicates before storing. (Issue #954)
       all_transactions = deduplicate_api_transactions(all_transactions)
 
+      # Post-fetch safety filter: some ASPSPs ignore date_from or return extra transactions
+      all_transactions = filter_transactions_by_date(all_transactions, start_date)
+
       transactions_count = all_transactions.count
 
       if all_transactions.any?
         existing_transactions = enable_banking_account.raw_transactions_payload.to_a
+
+        # C4: Remove stored PDNG entries that have now settled as BOOK.
+        # When a BOOK transaction arrives with the same transaction_id as a stored
+        # PDNG entry, the pending entry is stale — drop it to avoid duplicates.
+        book_ids = all_transactions
+          .reject { |tx| tx.with_indifferent_access[:_pending] }
+          .map { |tx| tx.with_indifferent_access[:transaction_id].presence }
+          .compact.to_set
+
+        # Fallback: collect entry_references for BOOK rows that have no transaction_id
+        book_entry_refs = all_transactions
+          .reject { |tx| tx.with_indifferent_access[:_pending] }
+          .select { |tx| tx.with_indifferent_access[:transaction_id].blank? }
+          .map { |tx| tx.with_indifferent_access[:entry_reference].presence }
+          .compact.to_set
+
+        existing_transactions.reject! do |tx|
+          tx = tx.with_indifferent_access
+          pending_flag = tx.dig(:extra, :enable_banking, :pending) || tx[:_pending]
+          next false unless pending_flag
+          tx[:transaction_id].present? ? book_ids.include?(tx[:transaction_id]) : book_entry_refs.include?(tx[:entry_reference].presence)
+        end
+
         existing_ids = existing_transactions.map { |tx|
           tx = tx.with_indifferent_access
           tx[:transaction_id].presence || tx[:entry_reference].presence
@@ -308,6 +315,8 @@ class EnableBankingItem::Importer
     # unique. credit_debit_indicator (CRDT/DBIT) is included because
     # transaction_amount.amount is always positive — without it, a payment
     # and a same-day refund of the same amount would produce identical keys.
+    # status (BOOK/PDNG) is intentionally excluded: the same logical transaction
+    # may appear as PDNG then BOOK across imports and must not create duplicates.
     # Known limitation: when transaction_id is nil for both, pure content
     # comparison applies. This means two genuinely distinct transactions
     # with identical content (same date, amount, direction, creditor, etc.)
@@ -322,11 +331,105 @@ class EnableBankingItem::Importer
       debtor = tx.dig(:debtor, :name).presence || tx[:debtor_name]
       remittance = tx[:remittance_information]
       remittance_key = remittance.is_a?(Array) ? remittance.compact.map(&:to_s).sort.join("|") : remittance.to_s
-      status = tx[:status]
       tid = tx[:transaction_id]
       direction = tx[:credit_debit_indicator]
 
-      [ date, amount, currency, creditor, debtor, remittance_key, status, tid, direction ].map(&:to_s).join("\x1F")
+      [ date, amount, currency, creditor, debtor, remittance_key, tid, direction ].map(&:to_s).join("\x1F")
+    end
+
+    def fetch_paginated_transactions(enable_banking_account, start_date:, transaction_status:, psu_headers: {})
+      all_transactions = []
+      continuation_key = nil
+      previous_continuation_key = nil
+      page_count = 0
+
+      loop do
+        page_count += 1
+
+        if page_count > MAX_PAGINATION_PAGES
+          Rails.logger.error(
+            "EnableBankingItem::Importer - Pagination limit exceeded for account #{enable_banking_account.uid} " \
+            "(status=#{transaction_status}). Stopped after #{MAX_PAGINATION_PAGES} pages."
+          )
+          break
+        end
+
+        transactions_data = enable_banking_provider.get_account_transactions(
+          account_id: enable_banking_account.api_account_id,
+          date_from: start_date,
+          continuation_key: continuation_key,
+          transaction_status: transaction_status,
+          psu_headers: psu_headers
+        )
+
+        transactions = transactions_data[:transactions] || []
+        all_transactions.concat(transactions)
+
+        previous_continuation_key = continuation_key
+        continuation_key = transactions_data[:continuation_key]
+
+        if continuation_key.present? && continuation_key == previous_continuation_key
+          Rails.logger.error(
+            "EnableBankingItem::Importer - Repeated continuation_key detected for account #{enable_banking_account.uid} " \
+            "(status=#{transaction_status}). Breaking after #{page_count} pages."
+          )
+          break
+        end
+
+        break if continuation_key.blank?
+      end
+
+      all_transactions
+    end
+
+    def filter_transactions_by_date(transactions, start_date)
+      return transactions unless start_date
+
+      transactions.reject do |tx|
+        tx = tx.with_indifferent_access
+        date_str = tx[:booking_date] || tx[:value_date] || tx[:transaction_date]
+        next false if date_str.blank?  # Keep if no date (cannot determine)
+
+        begin
+          Date.parse(date_str.to_s) < start_date
+        rescue ArgumentError
+          false  # Keep if date is unparseable
+        end
+      end
+    end
+
+    def tag_as_pending(transactions)
+      transactions.map { |tx| tx.merge(_pending: true) }
+    end
+
+    def find_enable_banking_account_by_hash(hash_value)
+      return nil if hash_value.blank?
+
+      # First: exact uid match (primary identification_hash)
+      account = enable_banking_item.enable_banking_accounts.find_by(uid: hash_value.to_s)
+      return account if account
+
+      # Second: search in identification_hashes array (PostgreSQL JSONB contains operator)
+      enable_banking_item.enable_banking_accounts
+        .where("identification_hashes @> ?", [ hash_value.to_s ].to_json)
+        .first
+    end
+
+    def sync_uids_from_accounts_data(accounts_data)
+      return if accounts_data.blank?
+
+      accounts_data.each do |ad|
+        next unless ad.is_a?(Hash)
+        ad = ad.with_indifferent_access
+        identification_hash = ad[:identification_hash]
+        current_uid = ad[:uid]
+        next if identification_hash.blank? || current_uid.blank?
+
+        eb_acc = find_enable_banking_account_by_hash(identification_hash)
+        next unless eb_acc
+        # Update the API account_id (UUID) if it has changed (UIDs are session-scoped)
+        eb_acc.update!(account_id: current_uid) if eb_acc.account_id != current_uid
+      end
     end
 
     def determine_sync_start_date(enable_banking_account)

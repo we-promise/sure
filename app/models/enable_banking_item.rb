@@ -48,24 +48,49 @@ class EnableBankingItem < ApplicationRecord
     !session_valid?
   end
 
+  # TODO: implement data retention policy for last_psu_ip (GDPR/CCPA — nullify after session expiry or 90 days)
+
   # Start the OAuth authorization flow
-  # Returns a redirect URL for the user
-  def start_authorization(aspsp_name:, redirect_url:, state: nil)
+  # @param aspsp_name [String] Name of the selected ASPSP
+  # @param redirect_url [String] Callback URL
+  # @param state [String, nil] State parameter (passed through to callback)
+  # @param psu_type [String] "personal" or "business"
+  # @param aspsp_data [Hash, nil] Full ASPSP object from GET /aspsps (used to store metadata)
+  # @param language [String, nil] Two-letter language code
+  # @return [String] Redirect URL for the user
+  def start_authorization(aspsp_name:, redirect_url:, state: nil, psu_type: "personal",
+                          aspsp_data: nil, language: nil)
     provider = enable_banking_provider
     raise StandardError.new("Enable Banking provider is not configured") unless provider
+
+    # Store ASPSP metadata before calling provider so it's available even if auth fails
+    if aspsp_data.present?
+      aspsp_data = aspsp_data.with_indifferent_access
+      first_auth_method = aspsp_data.dig(:auth_methods, 0) || aspsp_data.dig("auth_methods", 0)
+      update!(
+        aspsp_required_psu_headers: aspsp_data[:required_psu_headers] || [],
+        aspsp_maximum_consent_validity: aspsp_data[:maximum_consent_validity],
+        aspsp_auth_approach: first_auth_method&.dig(:approach) || first_auth_method&.dig("approach"),
+        aspsp_psu_types: aspsp_data[:psu_types] || []
+      )
+    end
 
     result = provider.start_authorization(
       aspsp_name: aspsp_name,
       aspsp_country: country_code,
       redirect_url: redirect_url,
-      state: state
+      state: state,
+      psu_type: psu_type,
+      maximum_consent_validity: aspsp_maximum_consent_validity,
+      language: language
     )
 
-    # Store the authorization ID for later use
     update!(
       authorization_id: result[:authorization_id],
       aspsp_name: aspsp_name
     )
+
+    update!(psu_type: psu_type) if psu_type.present?
 
     result[:url]
   end
@@ -250,14 +275,13 @@ class EnableBankingItem < ApplicationRecord
   private
 
     def parse_session_expiry(session_result)
-      # Enable Banking sessions typically last 90 days
-      # The exact expiry depends on the ASPSP consent
       if session_result[:access].present? && session_result[:access][:valid_until].present?
-        Time.parse(session_result[:access][:valid_until])
+        parsed = Time.zone.parse(session_result[:access][:valid_until])
+        parsed || 90.days.from_now
       else
         90.days.from_now
       end
-    rescue => e
+    rescue ArgumentError, TypeError => e
       Rails.logger.warn "EnableBankingItem #{id} - Failed to parse session expiry: #{e.message}"
       90.days.from_now
     end

@@ -37,23 +37,43 @@ class EnableBankingAccount::Processor
 
       account = enable_banking_account.current_account
       balance = enable_banking_account.current_balance || 0
+      available_credit = nil
 
-      # For credit cards, compute balance based on credit limit
-      if account.accountable_type == "CreditCard"
-        available_credit = account.accountable.available_credit || 0
-        balance = available_credit - balance
-      # For liability accounts, ensure positive balances
-      elsif account.accountable_type == "Loan"
-        balance = -balance
+      # For liability accounts, ensure balance sign is correct.
+      # CC: show available credit (credit_limit − outstanding), not raw outstanding debt.
+      # Loan: outstanding is reported as positive; keep it positive (abs guard).
+      if account.accountable_type == "Loan"
+        balance = balance.abs
+      elsif account.accountable_type == "CreditCard"
+        if enable_banking_account.credit_limit.present?
+          available = enable_banking_account.credit_limit - balance.abs
+          available_credit = [ available, 0 ].max
+          balance = available_credit
+          unless account.accountable.present?
+            Rails.logger.warn "EnableBankingAccount::Processor - CreditCard accountable missing for account #{account.id}"
+          end
+        else
+          # Fallback: no credit_limit from API — display raw outstanding balance
+          # We cannot derive available credit without knowing the limit; leave balance unchanged.
+        end
       end
 
       currency = parse_currency(enable_banking_account.currency) || account.currency || "EUR"
 
-      account.update!(
-        balance: balance,
-        cash_balance: balance,
-        currency: currency
-      )
+      # Wrap both writes in a transaction so a failure on either rolls back both.
+      ActiveRecord::Base.transaction do
+        if available_credit && account.accountable.present?
+          account.accountable.update!(available_credit: available_credit)
+        end
+        account.update!(currency: currency, cash_balance: balance)
+      end
+
+      # Use set_current_balance to create a current_anchor valuation entry.
+      # This enables Balance::ReverseCalculator, which works backward from the
+      # bank-reported balance — eliminating spurious cash adjustment spikes.
+      account.set_current_balance(balance)
+      # TODO: pass explicit window_start_date to sync_later to avoid full history recalculation on every sync
+      # Currently relies on set_current_balance's implicit sync trigger; window params would require refactor
     end
 
     def process_transactions

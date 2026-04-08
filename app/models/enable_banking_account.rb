@@ -62,38 +62,60 @@ class EnableBankingAccount < ApplicationRecord
     type_mappings[account_type.upcase] || account_type.titleize
   end
 
+  CASH_ACCOUNT_TYPE_MAP = {
+    "CACC" => { type: "Depository", subtype: "checking" },
+    "SVGS" => { type: "Depository", subtype: "savings" },
+    "CARD" => { type: "CreditCard", subtype: "credit_card" },
+    "CRCD" => { type: "CreditCard", subtype: "credit_card" },
+    "LOAN" => { type: "Loan",       subtype: nil },
+    "MORT" => { type: "Loan",       subtype: "mortgage" },
+    "ODFT" => { type: "Depository", subtype: "checking" },
+    "TRAN" => { type: "Depository", subtype: "checking" },
+    "SALA" => { type: "Depository", subtype: "checking" },
+    "CASH" => { type: "Depository", subtype: "checking" },
+    "OTHR" => nil
+  }.freeze
+
+  def suggested_account_type
+    CASH_ACCOUNT_TYPE_MAP[account_type&.upcase]&.dig(:type)
+  end
+
+  def suggested_subtype
+    CASH_ACCOUNT_TYPE_MAP[account_type&.upcase]&.dig(:subtype)
+  end
+
   def upsert_enable_banking_snapshot!(account_snapshot)
-    # Convert to symbol keys or handle both string and symbol keys
     snapshot = account_snapshot.with_indifferent_access
 
-    # Map Enable Banking field names to our field names
-    # Enable Banking API returns: { uid, iban, account_id: { iban }, currency, cash_account_type, ... }
-    # account_id can be a hash with iban, or an array of account identifiers
     raw_account_id = snapshot[:account_id]
     account_id_data = if raw_account_id.is_a?(Hash)
       raw_account_id
     elsif raw_account_id.is_a?(Array) && raw_account_id.first.is_a?(Hash)
-      # If it's an array of hashes, find the one with iban
       raw_account_id.find { |item| item[:iban].present? } || {}
     else
       {}
     end
 
+    credit_limit_amount = snapshot.dig(:credit_limit, :amount)
+
     update!(
-      current_balance: nil, # Balance fetched separately via /accounts/{uid}/balances
+      current_balance: nil,
       currency: parse_currency(snapshot[:currency]) || "EUR",
       name: build_account_name(snapshot),
-      # account_id stores the API UUID for fetching balances/transactions
       account_id: snapshot[:uid],
-      # uid is the stable identifier (identification_hash) for matching accounts across sessions
       uid: snapshot[:identification_hash] || snapshot[:uid],
       iban: account_id_data[:iban] || snapshot[:iban],
       account_type: snapshot[:cash_account_type] || snapshot[:account_type],
       account_status: "active",
       provider: "enable_banking",
+      product: snapshot[:product],
+      credit_limit: parse_decimal_safe(credit_limit_amount),
+      identification_hashes: snapshot[:identification_hashes] || [],
       institution_metadata: {
         name: enable_banking_item&.aspsp_name,
-        aspsp_name: enable_banking_item&.aspsp_name
+        aspsp_name: enable_banking_item&.aspsp_name,
+        bic: snapshot.dig(:account_servicer, :bic_fi),
+        servicer_name: snapshot.dig(:account_servicer, :name)
       }.compact,
       raw_payload: account_snapshot
     )
@@ -133,5 +155,12 @@ class EnableBankingAccount < ApplicationRecord
 
     def log_invalid_currency(currency_value)
       Rails.logger.warn("Invalid currency code '#{currency_value}' for EnableBanking account #{id}, defaulting to EUR")
+    end
+
+    def parse_decimal_safe(value)
+      return nil if value.blank?
+      BigDecimal(value.to_s)
+    rescue ArgumentError, TypeError
+      nil
     end
 end
