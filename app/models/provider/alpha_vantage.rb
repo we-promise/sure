@@ -1,5 +1,5 @@
 class Provider::AlphaVantage < Provider
-  include SecurityConcept
+  include SecurityConcept, RateLimitable
   extend SslConfigurable
 
   # Subclass so errors caught in this provider are raised as Provider::AlphaVantage::Error
@@ -237,17 +237,11 @@ class Provider::AlphaVantage < Provider
       end
     end
 
-    # Paces API requests to stay within Alpha Vantage's rate limits. Sleeps inline
-    # because the API physically cannot be called faster -- this is unavoidable
-    # with a rate-limited provider.
+    # Adds daily request counter on top of the interval throttle from RateLimitable.
     def throttle_request
-      # Layer 1: Per-instance minimum interval between calls
-      @last_request_time ||= Time.at(0)
-      elapsed = Time.current - @last_request_time
-      sleep_time = min_request_interval - elapsed
-      sleep(sleep_time) if sleep_time > 0
+      super
 
-      # Layer 2: Global per-day request counter via cache (Redis in prod).
+      # Global per-day request counter via cache (Redis).
       # Atomic increment-then-check avoids the TOCTOU of read-check-increment.
       day_key = "alpha_vantage:daily:#{Date.current}"
       new_count = Rails.cache.increment(day_key, 1, expires_in: 24.hours).to_i
@@ -256,12 +250,6 @@ class Provider::AlphaVantage < Provider
         Rails.logger.warn("AlphaVantage: daily request limit reached (#{new_count}/#{max_requests_per_day})")
         raise RateLimitError, "Alpha Vantage daily request limit reached (#{max_requests_per_day} per day)"
       end
-
-      @last_request_time = Time.current
-    end
-
-    def min_request_interval
-      ENV.fetch("ALPHA_VANTAGE_MIN_REQUEST_INTERVAL", MIN_REQUEST_INTERVAL).to_f
     end
 
     def max_requests_per_day
@@ -350,16 +338,4 @@ class Provider::AlphaVantage < Provider
       end
     end
 
-    def default_error_transformer(error)
-      case error
-      when RateLimitError
-        error
-      when Faraday::TooManyRequestsError
-        RateLimitError.new("Alpha Vantage rate limit exceeded", details: error.response&.dig(:body))
-      when Faraday::Error
-        self.class::Error.new(error.message, details: error.response&.dig(:body))
-      else
-        self.class::Error.new(error.message)
-      end
-    end
 end

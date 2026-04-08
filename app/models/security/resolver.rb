@@ -62,10 +62,17 @@ class Security::Resolver
         }.compact
       )
 
-      # If the caller explicitly requested a provider, update the existing record
-      if security && price_provider.present? && security.price_provider != price_provider
+      return nil unless security
+
+      # Only set price_provider when the record has none yet. Mutating the
+      # provider on a shared security row would silently repoint every
+      # holding/trade that references it — use the explicit "remap security"
+      # flow in HoldingsController for intentional provider changes.
+      if security.price_provider.blank? && price_provider.present?
         security.update!(price_provider: price_provider)
       end
+
+      reactivate_if_provider_available!(security)
 
       security
     end
@@ -127,17 +134,31 @@ class Security::Resolver
 
       security.country_code = match.country_code
 
-      # If the caller explicitly requested a provider (user selected from search),
-      # always honor it. Otherwise, only set if the security doesn't have one yet.
-      if price_provider.present?
-        security.price_provider = price_provider
-      elsif security.new_record? || security.price_provider.blank?
-        security.price_provider = match.price_provider if match.respond_to?(:price_provider) && match.price_provider.present?
+      # Only set price_provider on new records or when blank. Overwriting the
+      # provider on an existing security would silently repoint every
+      # holding/trade that references it.
+      if security.new_record? || security.price_provider.blank?
+        effective_provider = price_provider.presence ||
+          (match.respond_to?(:price_provider) ? match.price_provider.presence : nil)
+        security.price_provider = effective_provider if effective_provider
       end
 
       security.save!
 
+      reactivate_if_provider_available!(security)
+
       security
+    end
+
+    # If a security was marked offline (e.g. its provider was temporarily
+    # removed in settings) but now has a valid, enabled provider, bring it
+    # back online so the MarketDataImporter picks it up again.
+    def reactivate_if_provider_available!(security)
+      return unless security.offline?
+      return if security.price_provider.blank?
+      return unless Setting.enabled_securities_providers.include?(security.price_provider)
+
+      security.update!(offline: false, failed_fetch_count: 0, failed_fetch_at: nil)
     end
 
     def provider_search_result

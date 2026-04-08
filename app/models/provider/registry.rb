@@ -120,6 +120,11 @@ class Provider::Registry
     available_providers.map { |p| self.class.send(p) }.compact
   end
 
+  # Returns the list of provider key names (symbols) registered for this concept.
+  def provider_keys
+    available_providers
+  end
+
   def get_provider(name)
     provider_method = available_providers.find { |p| p == name.to_sym }
 

@@ -1,6 +1,9 @@
 module Provider::SecurityConcept
   extend ActiveSupport::Concern
 
+  # NOTE: This `Security` is a lightweight Data value object used for search results.
+  # Inside provider classes that `include SecurityConcept`, unqualified `Security`
+  # resolves to this Data class — NOT to `::Security` (the ActiveRecord model).
   Security = Data.define(:symbol, :name, :logo_url, :exchange_operating_mic, :country_code, :currency) do
     def initialize(symbol:, name:, logo_url:, exchange_operating_mic:, country_code:, currency: nil)
       super

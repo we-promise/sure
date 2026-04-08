@@ -87,11 +87,17 @@ class Settings::HostingsController < ApplicationController
       # Mark securities linked to removed providers as offline so they aren't
       # silently queried against an incompatible fallback provider (e.g. MFAPI
       # scheme codes sent to TwelveData). The price_provider is preserved so
-      # provider_status can report :provider_unavailable and re-enabling the
-      # provider restores the link automatically.
+      # provider_status can report :provider_unavailable.
       removed = old_providers - new_providers
       removed.each do |removed_provider|
         Security.where(price_provider: removed_provider).in_batches.update_all(offline: true)
+      end
+
+      # Bring securities back online when their provider is re-enabled.
+      added = new_providers - old_providers
+      added.each do |added_provider|
+        Security.where(price_provider: added_provider, offline: true)
+                .in_batches.update_all(offline: false, failed_fetch_count: 0, failed_fetch_at: nil)
       end
     end
 

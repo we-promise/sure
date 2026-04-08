@@ -101,28 +101,34 @@ class Security::Price::Importer
   private
     attr_reader :security, :security_provider, :start_date, :end_date, :clear_cache
 
-    def provider_prices
-      @provider_prices ||= begin
-        provider_fetch_start_date = effective_start_date - PROVISIONAL_LOOKBACK_DAYS.days
-
-        # Clamp to the provider's maximum lookback window so we don't waste
-        # API calls requesting data the provider cannot return.
+    # The start date sent to the provider API, clamped to the provider's max
+    # lookback window when applicable. Computed independently of provider_prices
+    # so fill_start_date can reference it without relying on method call order.
+    def provider_fetch_start_date
+      @provider_fetch_start_date ||= begin
+        base = effective_start_date - PROVISIONAL_LOOKBACK_DAYS.days
         max_days = security_provider.respond_to?(:max_history_days) ? security_provider.max_history_days : nil
-        if max_days && (end_date - provider_fetch_start_date).to_i > max_days
-          clamped_start = end_date - max_days.days
+
+        if max_days && (end_date - base).to_i > max_days
+          clamped = end_date - max_days.days
           Rails.logger.info(
             "#{security_provider.class.name} max history is #{max_days} days; " \
-            "clamping #{security.ticker} start_date from #{provider_fetch_start_date} to #{clamped_start}"
+            "clamping #{security.ticker} start_date from #{base} to #{clamped}"
           )
-          provider_fetch_start_date = clamped_start
-          @clamped_provider_start = clamped_start
+          clamped
+        else
+          base
         end
+      end
+    end
 
+    def provider_prices
+      @provider_prices ||= begin
         response = security_provider.fetch_security_prices(
           symbol: security.ticker,
           exchange_operating_mic: security.exchange_operating_mic,
           start_date: provider_fetch_start_date,
-          end_date:   end_date
+          end_date: end_date
         )
 
         if response.success?
@@ -193,11 +199,7 @@ class Security::Price::Importer
     # instead of the original effective_start_date to avoid writing hundreds of
     # LOCF-filled prices for dates the provider can't actually serve.
     def fill_start_date
-      @fill_start_date ||= if @clamped_provider_start && @clamped_provider_start > effective_start_date
-        @clamped_provider_start
-      else
-        effective_start_date
-      end
+      @fill_start_date ||= [ provider_fetch_start_date, effective_start_date ].max
     end
 
     def start_price_value

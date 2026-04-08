@@ -1,5 +1,5 @@
 class Provider::Eodhd < Provider
-  include SecurityConcept
+  include SecurityConcept, RateLimitable
   extend SslConfigurable
 
   # Subclass so errors caught in this provider are raised as Provider::Eodhd::Error
@@ -290,21 +290,7 @@ class Provider::Eodhd < Provider
       end
     end
 
-    # Paces API requests to stay within EODHD's rate limits. Sleeps inline
-    # because the API physically cannot be called faster - this is unavoidable
-    # with a rate-limited provider.
-    def throttle_request
-      @last_request_time ||= Time.at(0)
-      elapsed = Time.current - @last_request_time
-      sleep_time = min_request_interval - elapsed
-      sleep(sleep_time) if sleep_time > 0
-
-      @last_request_time = Time.current
-    end
-
-    def min_request_interval
-      ENV.fetch("EODHD_MIN_REQUEST_INTERVAL", MIN_REQUEST_INTERVAL).to_f
-    end
+    # throttle_request and min_request_interval provided by RateLimitable
 
     def max_requests_per_day
       ENV.fetch("EODHD_MAX_REQUESTS_PER_DAY", MAX_REQUESTS_PER_DAY).to_i
@@ -316,16 +302,4 @@ class Provider::Eodhd < Provider
       raise Error, "API error: #{parsed["error"]}"
     end
 
-    def default_error_transformer(error)
-      case error
-      when RateLimitError
-        error
-      when Faraday::TooManyRequestsError
-        RateLimitError.new("EODHD rate limit exceeded", details: error.response&.dig(:body))
-      when Faraday::Error
-        self.class::Error.new(error.message, details: error.response&.dig(:body))
-      else
-        self.class::Error.new(error.message)
-      end
-    end
 end

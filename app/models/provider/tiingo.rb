@@ -1,5 +1,5 @@
 class Provider::Tiingo < Provider
-  include SecurityConcept
+  include SecurityConcept, RateLimitable
   extend SslConfigurable
 
   # Subclass so errors caught in this provider are raised as Provider::Tiingo::Error
@@ -207,15 +207,11 @@ class Provider::Tiingo < Provider
       end
     end
 
-    # Paces API requests to stay within Tiingo's rate limits.
+    # Adds hourly request counter on top of the interval throttle from RateLimitable.
     def throttle_request
-      # Layer 1: Per-instance minimum interval between calls
-      @last_request_time ||= Time.at(0)
-      elapsed = Time.current - @last_request_time
-      sleep_time = min_request_interval - elapsed
-      sleep(sleep_time) if sleep_time > 0
+      super
 
-      # Layer 2: Global per-hour request counter via cache.
+      # Global per-hour request counter via cache (Redis).
       # Atomic increment-then-check avoids the TOCTOU of read-check-increment.
       hour_key = "tiingo:requests:#{Time.current.to_i / 3600}"
       new_count = Rails.cache.increment(hour_key, 1, expires_in: 7200.seconds).to_i
@@ -223,35 +219,30 @@ class Provider::Tiingo < Provider
       if new_count > max_requests_per_hour
         raise RateLimitError, "Tiingo hourly request limit reached (#{new_count}/#{max_requests_per_hour})"
       end
-
-      @last_request_time = Time.current
     end
 
     # Tracks unique symbols queried per month to stay within Tiingo's 500 symbols/month limit.
-    # Uses a per-symbol cache key with atomic counter to avoid read-mutate-write races
-    # that occur when multiple workers concurrently modify a shared Set in cache.
+    # Uses atomic set-if-absent (Redis SETNX) to eliminate the read-then-write race
+    # where two concurrent workers could both see the symbol as untracked and both
+    # increment the counter.
     def track_symbol(symbol)
       symbol_key = "tiingo:symbol:#{Date.current.strftime('%Y-%m')}:#{symbol.upcase}"
       count_key  = "tiingo:symbol_count:#{Date.current.strftime('%Y-%m')}"
 
-      # Already tracked this symbol this month — nothing to do
-      return if Rails.cache.read(symbol_key).present?
+      # Atomic write-if-absent: returns false when the key already exists (Redis SETNX).
+      # Only the first worker to claim this symbol will proceed to increment the counter.
+      return unless Rails.cache.write(symbol_key, true, expires_in: 35.days, unless_exist: true)
 
-      # Atomically increment the unique symbol counter
       new_count = Rails.cache.increment(count_key, 1, expires_in: 35.days).to_i
 
       if new_count > MAX_SYMBOLS_PER_MONTH
-        # Roll back the increment since we won't actually query this symbol
         Rails.cache.decrement(count_key, 1)
+        Rails.cache.delete(symbol_key)
         raise RateLimitError, "Tiingo unique symbol limit reached (#{MAX_SYMBOLS_PER_MONTH} per month)"
       end
-
-      Rails.cache.write(symbol_key, true, expires_in: 35.days)
     end
 
-    def min_request_interval
-      ENV.fetch("TIINGO_MIN_REQUEST_INTERVAL", MIN_REQUEST_INTERVAL).to_f
-    end
+    # min_request_interval provided by RateLimitable
 
     def max_requests_per_hour
       ENV.fetch("TIINGO_MAX_REQUESTS_PER_HOUR", MAX_REQUESTS_PER_HOUR).to_i
@@ -300,16 +291,4 @@ class Provider::Tiingo < Provider
       raise Error, "API error: #{detail}"
     end
 
-    def default_error_transformer(error)
-      case error
-      when RateLimitError
-        error
-      when Faraday::TooManyRequestsError
-        RateLimitError.new("Tiingo rate limit exceeded", details: error.response&.dig(:body))
-      when Faraday::Error
-        self.class::Error.new(error.message, details: error.response&.dig(:body))
-      else
-        self.class::Error.new(error.message)
-      end
-    end
 end

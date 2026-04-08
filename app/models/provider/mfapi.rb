@@ -1,5 +1,5 @@
 class Provider::Mfapi < Provider
-  include SecurityConcept
+  include SecurityConcept, RateLimitable
   extend SslConfigurable
 
   Error = Class.new(Provider::Error)
@@ -44,6 +44,7 @@ class Provider::Mfapi < Provider
       end
 
       parsed = JSON.parse(response.body)
+      check_api_error!(parsed)
 
       unless parsed.is_a?(Array)
         raise Error, "Unexpected response format from search endpoint"
@@ -155,17 +156,7 @@ class Provider::Mfapi < Provider
       end
     end
 
-    def throttle_request
-      @last_request_time ||= Time.at(0)
-      elapsed = Time.current - @last_request_time
-      sleep_time = min_request_interval - elapsed
-      sleep(sleep_time) if sleep_time > 0
-      @last_request_time = Time.current
-    end
-
-    def min_request_interval
-      ENV.fetch("MFAPI_MIN_REQUEST_INTERVAL", MIN_REQUEST_INTERVAL).to_f
-    end
+    # throttle_request and min_request_interval provided by RateLimitable
 
     def check_api_error!(parsed)
       return unless parsed.is_a?(Hash)
@@ -175,16 +166,4 @@ class Provider::Mfapi < Provider
       end
     end
 
-    def default_error_transformer(error)
-      case error
-      when RateLimitError
-        error
-      when Faraday::TooManyRequestsError
-        RateLimitError.new("MFAPI rate limit exceeded", details: error.response&.dig(:body))
-      when Faraday::Error
-        self.class::Error.new(error.message, details: error.response&.dig(:body))
-      else
-        self.class::Error.new(error.message)
-      end
-    end
 end

@@ -31,41 +31,46 @@ module Security::Provided
     # Cache duration for search results (avoids burning through provider rate limits)
     SEARCH_CACHE_TTL = 5.minutes
 
+    # Maximum number of results returned to the combobox dropdown
+    MAX_SEARCH_RESULTS = 30
+
+    # Per-provider timeout so one slow provider can't stall the entire search
+    PROVIDER_SEARCH_TIMEOUT = 8.seconds
+
     def search_provider(symbol, country_code: nil, exchange_operating_mic: nil)
       return [] if symbol.blank?
 
+      active_providers = providers.compact
+      return [] if active_providers.empty?
+
+      params = {
+        country_code: country_code,
+        exchange_operating_mic: exchange_operating_mic
+      }.compact_blank
+
+      # Query all providers concurrently so the total wall time is max(provider
+      # latencies) instead of sum. Each future runs in the concurrent-ruby thread
+      # pool, keeping Puma threads unblocked during individual provider sleeps.
+      futures = active_providers.map do |prov|
+        Concurrent::Promises.future(prov) do |provider|
+          fetch_provider_results(provider, symbol, params)
+        end
+      end
+
+      # Collect results with a per-provider timeout
       all_results = []
       seen_keys = Set.new
 
-      providers.each do |prov|
-        next if prov.nil?
-
+      futures.zip(active_providers).each do |future, prov|
         provider_key = provider_key_for(prov)
-
-        params = {
-          country_code: country_code,
-          exchange_operating_mic: exchange_operating_mic
-        }.compact_blank
-
-        # Cache search results per provider+query to avoid repeated API calls
-        cache_key = "security_search:#{provider_key}:#{symbol.upcase}:#{params.sort}"
-        provider_results = Rails.cache.fetch(cache_key, expires_in: SEARCH_CACHE_TTL) do
-          response = prov.search_securities(symbol, **params)
-          next nil unless response.success?
-
-          response.data.map do |ps|
-            { symbol: ps.symbol, name: ps.name, logo_url: ps.logo_url,
-              exchange_operating_mic: ps.exchange_operating_mic, country_code: ps.country_code,
-              currency: ps.respond_to?(:currency) ? ps.currency : nil }
-          end
-        end
+        provider_results = future.value(PROVIDER_SEARCH_TIMEOUT)
 
         next if provider_results.nil?
 
         provider_results.each do |ps|
-          # Dedup key intentionally includes provider so the same ticker on the same
-          # exchange can appear once per provider — the user picks which provider's
-          # price feed they want and that choice is stored in price_provider.
+          # Dedup key includes provider so the same ticker on the same exchange can
+          # appear once per provider — the user picks which provider's price feed
+          # they want and that choice is stored in price_provider.
           dedup_key = "#{ps[:symbol]}|#{ps[:exchange_operating_mic]}|#{provider_key}".upcase
           next if seen_keys.include?(dedup_key)
           seen_keys.add(dedup_key)
@@ -83,23 +88,62 @@ module Security::Provided
         end
       end
 
-      # Sort results to prioritize user's country if provided
-      if country_code.present?
-        user_country = country_code.upcase
-        all_results.sort_by do |s|
-          [
-            s.country_code&.upcase == user_country ? 0 : 1, # User's country first
-            s.ticker.upcase == symbol.upcase ? 0 : 1        # Exact ticker match second
-          ]
-        end
-      else
-        all_results
-      end
+      rank_search_results(all_results, symbol, country_code).first(MAX_SEARCH_RESULTS)
     end
 
     private
       def provider_key_for(provider_instance)
         provider_instance.class.name.demodulize.underscore
+      end
+
+      # Fetches (or reads from cache) search results for a single provider.
+      # Designed to run inside a Concurrent::Promises.future.
+      def fetch_provider_results(prov, symbol, params)
+        provider_key = provider_key_for(prov)
+        cache_key = "security_search:#{provider_key}:#{symbol.upcase}:#{params.sort_by { |k, _| k }.to_s}"
+
+        Rails.cache.fetch(cache_key, expires_in: SEARCH_CACHE_TTL) do
+          response = prov.search_securities(symbol, **params)
+          next nil unless response.success?
+
+          response.data.map do |ps|
+            { symbol: ps.symbol, name: ps.name, logo_url: ps.logo_url,
+              exchange_operating_mic: ps.exchange_operating_mic, country_code: ps.country_code,
+              currency: ps.respond_to?(:currency) ? ps.currency : nil }
+          end
+        end
+      rescue => e
+        Rails.logger.warn("Security search failed for #{provider_key}: #{e.message}")
+        nil
+      end
+
+      # Scores and sorts search results so the most relevant matches appear first.
+      # Scoring criteria (lower = better):
+      #   0: exact ticker match
+      #   1: ticker starts with query
+      #   2: name contains query
+      #   3: everything else
+      # Within the same relevance tier, user's country is preferred.
+      def rank_search_results(results, symbol, country_code)
+        query = symbol.upcase
+        user_country = country_code&.upcase
+
+        results.sort_by do |s|
+          ticker_up = s.ticker.upcase
+          relevance = if ticker_up == query
+            0
+          elsif ticker_up.start_with?(query)
+            1
+          elsif s.name&.upcase&.include?(query)
+            2
+          else
+            3
+          end
+
+          country_match = (user_country.present? && s.country_code&.upcase == user_country) ? 0 : 1
+
+          [ relevance, country_match, ticker_up ]
+        end
       end
   end
 
@@ -118,16 +162,16 @@ module Security::Provided
     self.class.providers.first
   end
 
-  # Returns the health status of this security's provider link
+  # Returns the health status of this security's provider link.
+  # Delegates to price_data_provider to avoid duplicating provider lookup logic.
   def provider_status
-    return :ok if offline?
-    return :no_provider if price_data_provider.nil?
+    resolved = price_data_provider
 
-    if price_provider.present?
-      assigned = self.class.provider_for(price_provider)
-      return :provider_unavailable if assigned.nil?
-    end
+    # Had a specific provider assigned but it's now unavailable
+    return :provider_unavailable if resolved.nil? && price_provider.present?
 
+    return :offline if offline?
+    return :no_provider if resolved.nil?
     return :stale if failed_fetch_count.to_i > 0
     :ok
   end

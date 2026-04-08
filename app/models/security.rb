@@ -11,9 +11,9 @@ class Security < ApplicationRecord
 
   KINDS = %w[standard cash].freeze
 
-  # Known securities provider keys — validated on save to prevent garbage data
-  # from tampered combobox values persisting to the DB.
-  VALID_PRICE_PROVIDERS = %w[twelve_data yahoo_finance tiingo eodhd alpha_vantage mfapi].freeze
+  # Known securities provider keys — derived from the registry so adding a new
+  # provider to Registry#available_providers automatically allows it here.
+  VALID_PRICE_PROVIDERS = Provider::Registry.for_concept(:securities).provider_keys.map(&:to_s).freeze
 
   before_validation :upcase_symbols
   before_save :generate_logo_url_from_brandfetch, if: :should_generate_logo?
