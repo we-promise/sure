@@ -31,20 +31,20 @@ class Security::Price::Importer
     prev_currency = prev_price_currency || db_price_currency || "USD"
 
     unless prev_price_value.present?
-      Rails.logger.error("Could not find a start price for #{security.ticker} on or before #{start_date}")
+      Rails.logger.error("Could not find a start price for #{security.ticker} on or before #{fill_start_date}")
 
       Sentry.capture_exception(MissingStartPriceError.new("Could not determine start price for ticker")) do |scope|
         scope.set_tags(security_id: security.id)
         scope.set_context("security", {
           id: security.id,
-          start_date: start_date
+          start_date: fill_start_date
         })
       end
 
       return 0
     end
 
-    gapfilled_prices = effective_start_date.upto(end_date).map do |date|
+    gapfilled_prices = fill_start_date.upto(end_date).map do |date|
       db_price             = db_prices[date]
       db_price_value       = db_price&.price
       provider_price       = provider_prices[date]
@@ -115,6 +115,7 @@ class Security::Price::Importer
             "clamping #{security.ticker} start_date from #{provider_fetch_start_date} to #{clamped_start}"
           )
           provider_fetch_start_date = clamped_start
+          @clamped_provider_start = clamped_start
         end
 
         response = security_provider.fetch_security_prices(
@@ -187,9 +188,21 @@ class Security::Price::Importer
       end || end_date
     end
 
+    # The date the gap-fill loop starts from. When the provider's history was
+    # clamped (e.g. Alpha Vantage 140 days), we start from the clamped window
+    # instead of the original effective_start_date to avoid writing hundreds of
+    # LOCF-filled prices for dates the provider can't actually serve.
+    def fill_start_date
+      @fill_start_date ||= if @clamped_provider_start && @clamped_provider_start > effective_start_date
+        @clamped_provider_start
+      else
+        effective_start_date
+      end
+    end
+
     def start_price_value
       # When processing full range (first sync), use original behavior
-      if effective_start_date == start_date
+      if fill_start_date == start_date
         provider_price_value = provider_prices.select { |date, _| date <= start_date }
                                               .max_by { |date, _| date }
                                               &.last&.price
@@ -197,19 +210,11 @@ class Security::Price::Importer
 
         return provider_price_value if provider_price_value.present? && provider_price_value.to_f > 0
         return db_price_value if db_price_value.present? && db_price_value.to_f > 0
-
-        # When the provider's history window was clamped (e.g. Alpha Vantage 140 days),
-        # all provider prices may be newer than start_date. Use the earliest available
-        # provider price so the import can still proceed for the serviceable window.
-        earliest_provider = provider_prices.min_by { |date, _| date }&.last&.price
-        return earliest_provider if earliest_provider.present? && earliest_provider.to_f > 0
-
         return nil
       end
 
-      # For partial range (effective_start_date > start_date), use recent data
-      # This prevents stale prices from old trade dates propagating to current gap-fills
-      cutoff_date = effective_start_date
+      # For partial range or clamped range, use the most recent data before fill_start_date
+      cutoff_date = fill_start_date
 
       # First try provider prices (most recent before cutoff)
       provider_price_value = provider_prices

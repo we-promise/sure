@@ -84,13 +84,22 @@ class Provider::Tiingo < Provider
       end
 
       parsed.map do |security|
+        ticker = security["ticker"]
+        currency = security["priceCurrency"]
+
+        # Cache the API-returned currency so fetch_security_prices can use it
+        # without making a second search request
+        if currency.present? && ticker.present?
+          Rails.cache.write("tiingo:currency:#{ticker.upcase}", currency, expires_in: 24.hours)
+        end
+
         Security.new(
-          symbol: security["ticker"],
+          symbol: ticker,
           name: security["name"],
           logo_url: nil,
           exchange_operating_mic: map_exchange_to_mic(security["exchange"]),
           country_code: security["countryCode"].presence || country_code,
-          currency: security["priceCurrency"]
+          currency: currency
         )
       end
     end
@@ -125,7 +134,8 @@ class Provider::Tiingo < Provider
     with_provider_response do
       historical_data = fetch_security_prices(symbol:, exchange_operating_mic:, start_date: date, end_date: date)
 
-      raise InvalidSecurityPriceError, "No prices found for security #{symbol} on date #{date}" if historical_data.data.empty?
+      raise historical_data.error if historical_data.error.present?
+      raise InvalidSecurityPriceError, "No prices found for security #{symbol} on date #{date}" if historical_data.data.blank?
 
       historical_data.data.first
     end
@@ -149,7 +159,9 @@ class Provider::Tiingo < Provider
         raise InvalidSecurityPriceError, "API error: #{error_message}"
       end
 
-      currency = fetch_currency_for_symbol(symbol)
+      # Prefer cached currency from search results to avoid a second API call
+      cache_key = "tiingo:currency:#{symbol.upcase}"
+      currency = Rails.cache.read(cache_key) || fetch_currency_for_symbol(symbol)
 
       parsed.map do |resp|
         price = resp["close"]

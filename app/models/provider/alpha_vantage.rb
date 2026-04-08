@@ -131,25 +131,25 @@ class Provider::AlphaVantage < Provider
 
       throttle_request
       response = client.get("#{base_url}/query") do |req|
-        req.params["function"] = "GLOBAL_QUOTE"
+        req.params["function"] = "OVERVIEW"
         req.params["symbol"] = av_symbol
       end
 
       parsed = JSON.parse(response.body)
       check_api_error!(parsed)
-      quote = parsed.dig("Global Quote")
 
-      if quote.nil? || quote.empty?
-        raise Error, "No data returned for symbol #{av_symbol}"
+      name = parsed["Name"]
+      if name.blank?
+        raise Error, "No metadata returned for symbol #{av_symbol}"
       end
 
       SecurityInfo.new(
-        symbol: symbol,
-        name: nil,
-        links: nil,
+        symbol: parsed["Symbol"] || symbol,
+        name: name,
+        links: parsed["OfficialSite"].presence,
         logo_url: nil,
-        description: nil,
-        kind: nil,
+        description: parsed["Description"].presence,
+        kind: parsed["AssetType"]&.downcase,
         exchange_operating_mic: exchange_operating_mic
       )
     end
@@ -159,7 +159,8 @@ class Provider::AlphaVantage < Provider
     with_provider_response do
       historical_data = fetch_security_prices(symbol:, exchange_operating_mic:, start_date: date, end_date: date)
 
-      raise InvalidSecurityPriceError, "No prices found for security #{symbol} on date #{date}" if historical_data.data.empty?
+      raise historical_data.error if historical_data.error.present?
+      raise InvalidSecurityPriceError, "No prices found for security #{symbol} on date #{date}" if historical_data.data.blank?
 
       historical_data.data.first
     end
