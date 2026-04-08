@@ -24,7 +24,7 @@
   <!-- Section Body -->
   <div class="bg-container py-1 shadow-border-xs rounded-md">
 
-    <% groups.each do |group| %>
+    <% groups.each_with_index do |group, index| %>
 
       <%# derive parent visibility based on mode %>
       <%
@@ -35,13 +35,13 @@
             budget.initialized? ? group.budget_category.visible_on_track? : true
           end
       %>
-
+    <%= render "shared/ruler" unless index == 0 %>
       <%= render "budgets/category_group",
         group: group,
         parent_visible: parent_visible,
         over_budget_mode: over_budget_mode %>
 
-      <%= render "shared/ruler" %>
+       
     <% end %>
 
     <% if show_uncategorized %>
