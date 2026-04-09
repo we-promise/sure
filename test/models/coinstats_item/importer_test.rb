@@ -654,7 +654,7 @@ class CoinstatsItem::ImporterTest < ActiveSupport::TestCase
       end
     end
 
-    defi_account = @coinstats_item.coinstats_accounts.find_by(account_id: "defi:lido:staking:ethereum:deposit")
+    defi_account = @coinstats_item.coinstats_accounts.find_by(account_id: "defi:ethereum:lido:staking:ethereum:deposit")
     assert_not_nil defi_account
     assert_equal "defi", defi_account.raw_payload["source"]
     # Balance must be the total position value ($70,272), NOT 32 * $70,272
@@ -689,7 +689,7 @@ class CoinstatsItem::ImporterTest < ActiveSupport::TestCase
     defi_account = @coinstats_item.coinstats_accounts.create!(
       name: "ETH (Lido Staking)",
       currency: "USD",
-      account_id: "defi:lido:staking:ethereum:deposit",
+      account_id: "defi:ethereum:lido:staking:ethereum:deposit",
       wallet_address: "0x123abc",
       current_balance: 70272,
       raw_payload: {
@@ -745,7 +745,7 @@ class CoinstatsItem::ImporterTest < ActiveSupport::TestCase
     defi_account = @coinstats_item.coinstats_accounts.create!(
       name: "ETH (Lido Staking)",
       currency: "USD",
-      account_id: "defi:lido:staking:ethereum:deposit",
+      account_id: "defi:ethereum:lido:staking:ethereum:deposit",
       wallet_address: "0x123abc",
       current_balance: 1000,
       raw_payload: {

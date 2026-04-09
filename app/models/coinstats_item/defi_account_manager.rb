@@ -34,7 +34,7 @@ class CoinstatsItem::DefiAccountManager
           next if asset[:amount].to_f.zero?
           next if asset[:coinId].blank? && asset[:symbol].blank?
 
-          account_id = build_account_id(protocol, investment, asset)
+          account_id = build_account_id(protocol, investment, asset, blockchain: blockchain)
           active_defi_ids << account_id
           upsert_account!(address: address, blockchain: blockchain, protocol: protocol, investment: investment, asset: asset, account_id: account_id)
         end
@@ -70,14 +70,17 @@ class CoinstatsItem::DefiAccountManager
   private
 
     # Builds a stable, unique account_id for a DeFi asset position.
-    # Format: "defi:<protocol_id>:<investment_type>:<coin_id>:<asset_title>"
-    def build_account_id(protocol, investment, asset)
+    # Format: "defi:<blockchain>:<protocol_id>:<investment_type>:<coin_id>:<asset_title>"
+    # Blockchain is included to avoid collisions when the same wallet address exists on
+    # multiple EVM-compatible chains (e.g. Ethereum and Polygon).
+    def build_account_id(protocol, investment, asset, blockchain:)
+      chain = blockchain.to_s.downcase.gsub(/\s+/, "_").presence || "unknown"
       protocol_id = protocol[:id].to_s.downcase.gsub(/\s+/, "_").presence || "unknown"
       coin_id = (asset[:coinId] || asset[:symbol]).to_s.downcase
       title = asset[:title].to_s.downcase.gsub(/\s+/, "_").presence || "position"
       investment_type = investment[:name].to_s.downcase.gsub(/\s+/, "_").presence
-      parts = [ "defi", protocol_id, coin_id, title ]
-      parts.insert(2, investment_type) if investment_type.present?
+      parts = [ "defi", chain, protocol_id, coin_id, title ]
+      parts.insert(3, investment_type) if investment_type.present?
       parts.join(":")
     end
 
@@ -150,7 +153,7 @@ class CoinstatsItem::DefiAccountManager
         next unless raw[:blockchain].to_s.casecmp?(blockchain.to_s)
         next if active_defi_ids.include?(account.account_id)
 
-        account.update!(current_balance: 0, raw_payload: raw.merge(amount: 0))
+        account.update!(current_balance: 0, raw_payload: raw.merge(amount: 0, balance: 0, priceUsd: 0))
       end
     end
 end
