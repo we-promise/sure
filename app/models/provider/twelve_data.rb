@@ -157,7 +157,8 @@ class Provider::TwelveData < Provider
           name: security.dig("instrument_name"),
           logo_url: nil,
           exchange_operating_mic: security.dig("mic_code"),
-          country_code: country ? country.alpha2 : nil
+          country_code: country ? country.alpha2 : nil,
+          currency: security.dig("currency")
         )
       end
     end
@@ -199,7 +200,8 @@ class Provider::TwelveData < Provider
     with_provider_response do
       historical_data = fetch_security_prices(symbol:, exchange_operating_mic:, start_date: date, end_date: date)
 
-      raise ProviderError, "No prices found for security #{symbol} on date #{date}" if historical_data.data.empty?
+      raise historical_data.error if historical_data.error.present?
+      raise InvalidSecurityPriceError, "No prices found for security #{symbol} on date #{date}" if historical_data.data.blank?
 
       historical_data.data.first
     end

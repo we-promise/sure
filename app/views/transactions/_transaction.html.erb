@@ -26,7 +26,7 @@
           <% end %>
         </div>
 
-        <div class="max-w-full <%= 'opacity-50 text-secondary' if entry.excluded %>">
+        <div class="max-w-full <%= "opacity-50 text-secondary" if entry.excluded %>">
           <%= content_tag :div, class: ["flex items-center gap-3 lg:gap-4"] do %>
             <div class="hidden lg:flex">
               <% if transaction.merchant&.logo_url.present? %>
@@ -159,7 +159,7 @@
         <% end %>
       </div>
 
-      <div class="shrink-0 col-span-4 lg:col-span-2 ml-auto flex items-center justify-end gap-2 <%= 'opacity-50' if entry.excluded %>">
+      <div class="shrink-0 col-span-4 lg:col-span-2 ml-auto flex items-center justify-end gap-2 <%= "opacity-50" if entry.excluded %>">
         <%# Protection indicator - shows on hover when entry is protected from sync %>
         <% if entry.protected_from_sync? && !entry.excluded? %>
           <%= link_to entry_path(entry),
