@@ -337,7 +337,8 @@ class Family < ApplicationRecord
 
       normalized_codes = normalize_currency_codes([ primary_currency_code, *Array(enabled_currencies) ])
       all_codes = Money::Currency.as_options.map(&:iso_code)
-      self.enabled_currencies = normalized_codes == all_codes ? nil : normalized_codes
+      all_selected = normalized_codes.size == all_codes.size && (normalized_codes - all_codes).empty?
+      self.enabled_currencies = all_selected ? nil : normalized_codes
     end
 
     def normalize_currency_codes(values)
