@@ -12,11 +12,7 @@ class UI::Dashboard::BondSummaryRow < ApplicationComponent
   end
 
   def total_return_amount
-    @total_return_amount ||= if projected_total_return?
-      lot.projected_total_return_amount(allow_import: false)
-    else
-      lot.total_return_amount(allow_import: false)
-    end
+    @total_return_amount ||= projected_total_return? ? projected_return_amount : current_return_amount
   end
 
   def total_return_label
@@ -36,11 +32,12 @@ class UI::Dashboard::BondSummaryRow < ApplicationComponent
       return t("bonds.purchase_holding.update_needed") if lot.requires_rate_review?
 
       current_rate = lot.current_rate_percent(allow_import: false)
-      return helpers.number_to_percentage(current_rate, precision: 3) if current_rate.present?
+      return "#{current_rate.round(3)}%" if current_rate.present?
 
       t("bonds.purchase_holding.unknown")
     else
-      lot.interest_rate.present? ? helpers.number_to_percentage(lot.interest_rate, precision: 3) : t("bonds.purchase_holding.unknown")
+      rate = lot.interest_rate
+      rate.present? ? "#{(rate * 100).round(3)}%" : t("bonds.purchase_holding.unknown")
     end
   end
 
@@ -63,11 +60,19 @@ class UI::Dashboard::BondSummaryRow < ApplicationComponent
   end
 
   private
+    def current_return_amount
+      @current_return_amount ||= lot.total_return_amount(allow_import: false)
+    end
+
+    def projected_return_amount
+      @projected_return_amount ||= lot.projected_total_return_amount(allow_import: false)
+    end
+
     def projected_total_return?
       return @projected_total_return if defined?(@projected_total_return)
 
-      @projected_total_return = lot.total_return_amount(allow_import: false).abs < 0.01.to_d &&
-        lot.projected_total_return_amount(allow_import: false).positive?
+      @projected_total_return = current_return_amount.abs < 0.01.to_d &&
+        projected_return_amount.positive?
     end
 
     def inflation_linked_rate_meta
