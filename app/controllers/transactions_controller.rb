@@ -503,13 +503,26 @@ class TransactionsController < ApplicationController
       query_text = query.to_s.squish
       return [] if query_text.length < 2
 
+      normalized_query = normalize_transaction_name(query_text)
+      escaped_query = ActiveRecord::Base.sanitize_sql_like(normalized_query)
+      normalized_name_sql = "lower(regexp_replace(trim(entries.name), '\\s+', ' ', 'g'))"
+      match_rank_sql = <<~SQL.squish
+        CASE
+          WHEN #{normalized_name_sql} = #{ActiveRecord::Base.connection.quote(normalized_query)} THEN 0
+          WHEN #{normalized_name_sql} LIKE #{ActiveRecord::Base.connection.quote("#{escaped_query}%")} THEN 1
+          WHEN #{normalized_name_sql} LIKE #{ActiveRecord::Base.connection.quote("% #{escaped_query}%")} THEN 2
+          ELSE 3
+        END
+      SQL
+
       rows = Current.accessible_entries
         .where(entryable_type: "Transaction", parent_entry_id: nil)
         .where.not(name: [ nil, "" ])
-        .where("entries.name ILIKE ?", "%#{ActiveRecord::Base.sanitize_sql_like(query_text)}%")
-        .order(created_at: :desc)
+        .where("#{normalized_name_sql} LIKE ?", "%#{escaped_query}%")
+        .select("entries.name, entries.created_at, #{match_rank_sql} AS transaction_name_match_rank")
+        .order(Arel.sql("#{match_rank_sql} ASC, entries.created_at DESC"))
         .limit(500)
-        .pluck(:name, :created_at)
+        .map { |entry| [ entry.name, entry.created_at ] }
 
       deduplicate_transaction_name_rows(rows, query: query_text, limit: limit)
     end
