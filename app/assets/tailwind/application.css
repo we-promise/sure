@@ -203,31 +203,3 @@
 .turbo-progress-bar {
   margin-top: env(safe-area-inset-top);
 }
-
-/* Sidebar Borders & Transitions */
-[data-app-layout-target="leftSidebar"],
-[data-app-layout-target="rightSidebar"] {
-  @apply border-divider overflow-hidden;
-}
-
-[data-app-layout-target="leftSidebar"] > div,
-[data-app-layout-target="rightSidebar"] > div {
-  @apply overflow-hidden;
-}
-
-[data-app-layout-target="leftSidebar"].w-full {
-  @apply border-r;
-}
-[data-app-layout-target="leftSidebar"].w-0 {
-  @apply border-r-0;
-}
-
-[data-app-layout-target="rightSidebar"] {
-  @apply border-divider;
-}
-[data-app-layout-target="rightSidebar"].w-full {
-  @apply border-l;
-}
-[data-app-layout-target="rightSidebar"].w-0 {
-  @apply border-l-0;
-}
