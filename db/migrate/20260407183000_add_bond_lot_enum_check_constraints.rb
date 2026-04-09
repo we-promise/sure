@@ -26,9 +26,6 @@ class AddBondLotEnumCheckConstraints < ActiveRecord::Migration[7.2]
   end
 
   def down
-    remove_check_constraint :bond_lots, name: "check_bond_lots_subtype_valid" if check_constraint_exists?(:bond_lots, name: "check_bond_lots_subtype_valid")
-    remove_check_constraint :bond_lots, name: "check_bond_lots_rate_type_valid" if check_constraint_exists?(:bond_lots, name: "check_bond_lots_rate_type_valid")
-    remove_check_constraint :bond_lots, name: "check_bond_lots_coupon_frequency_valid" if check_constraint_exists?(:bond_lots, name: "check_bond_lots_coupon_frequency_valid")
-    remove_check_constraint :bond_lots, name: "check_bond_lots_tax_strategy_valid" if check_constraint_exists?(:bond_lots, name: "check_bond_lots_tax_strategy_valid")
+    # No-op: constraints already exist in CreateBondLots baseline.
   end
 end

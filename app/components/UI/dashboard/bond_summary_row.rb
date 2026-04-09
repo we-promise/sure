@@ -112,7 +112,9 @@ class UI::Dashboard::BondSummaryRow < ApplicationComponent
     end
 
     def current_inflation_source_key
-      @current_inflation_source_key ||= lot.current_inflation_source(allow_import: false).to_s.presence
+      return @current_inflation_source_key if defined?(@current_inflation_source_key)
+
+      @current_inflation_source_key = lot.current_inflation_source(allow_import: false).to_s.presence
     end
 
     def localized_inflation_provider
