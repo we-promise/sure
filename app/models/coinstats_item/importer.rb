@@ -38,7 +38,7 @@ class CoinstatsItem::Importer
     wallet_accounts = linked_accounts.select(&:wallet_source?)
     exchange_accounts = linked_accounts.select(&:exchange_source?)
 
-    sync_defi_for_wallets!(wallet_accounts)
+    accounts_failed += sync_defi_for_wallets!(wallet_accounts)
 
     bulk_balance_data = fetch_balances_for_accounts(wallet_accounts)
     bulk_transactions_data = fetch_transactions_for_accounts(wallet_accounts)
@@ -584,22 +584,32 @@ class CoinstatsItem::Importer
 
     # Syncs DeFi/staking positions for all unique wallet addresses by delegating
     # to DefiAccountManager, which owns discovery, upsert, and zero-out logic.
+    # Returns the number of wallets that failed to sync so the caller can track failures.
     def sync_defi_for_wallets!(wallet_accounts)
-      unique_wallets = wallet_accounts.filter_map do |account|
+      # Include existing DeFi accounts as address sources so staking positions stay
+      # current even if the parent wallet account has been removed.
+      defi_accounts = coinstats_item.coinstats_accounts.joins(:account_provider).select(&:defi_source?)
+
+      unique_wallets = (wallet_accounts + defi_accounts).uniq(&:id).filter_map do |account|
         raw = account.raw_payload.to_h.with_indifferent_access
         next unless raw[:address].present? && raw[:blockchain].present?
 
         { address: raw[:address], blockchain: raw[:blockchain] }
       end.uniq { |w| [ w[:address].downcase, w[:blockchain].downcase ] }
 
-      return if unique_wallets.empty?
+      return 0 if unique_wallets.empty?
 
       manager = CoinstatsItem::DefiAccountManager.new(coinstats_item)
+      failed = 0
 
       unique_wallets.each do |wallet|
-        manager.sync_wallet!(address: wallet[:address], blockchain: wallet[:blockchain], provider: coinstats_provider)
+        result = manager.sync_wallet!(address: wallet[:address], blockchain: wallet[:blockchain], provider: coinstats_provider)
+        failed += 1 unless result
       end
+
+      failed
     rescue => e
       Rails.logger.warn "CoinstatsItem::Importer - DeFi sync failed: #{e.message}"
+      0
     end
 end

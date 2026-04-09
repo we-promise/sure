@@ -12,11 +12,12 @@ class CoinstatsItem::DefiAccountManager
 
   # Fetches DeFi positions for the given wallet and creates/updates CoinstatsAccounts.
   # Positions that disappear from the API (fully unstaked) are zeroed out.
+  # Returns true on success, false on failure.
   def sync_wallet!(address:, blockchain:, provider:)
     response = provider.get_wallet_defi(address: address, connection_id: blockchain)
     unless response.success?
       Rails.logger.warn "CoinstatsItem::DefiAccountManager - DeFi fetch failed for #{blockchain}:#{address}"
-      return
+      return false
     end
 
     defi_data = response.data.to_h.with_indifferent_access
@@ -35,15 +36,21 @@ class CoinstatsItem::DefiAccountManager
           next if asset[:coinId].blank? && asset[:symbol].blank?
 
           account_id = build_account_id(protocol, investment, asset, blockchain: blockchain)
-          active_defi_ids << account_id
-          upsert_account!(address: address, blockchain: blockchain, protocol: protocol, investment: investment, asset: asset, account_id: account_id)
+
+          # Only mark position active if the upsert actually succeeds, so failed
+          # positions don't shield truly-inactive accounts from being zeroed out.
+          if upsert_account!(address: address, blockchain: blockchain, protocol: protocol, investment: investment, asset: asset, account_id: account_id)
+            active_defi_ids << account_id
+          end
         end
       end
     end
 
     zero_out_inactive_accounts!(address, blockchain, active_defi_ids)
+    true
   rescue => e
     Rails.logger.warn "CoinstatsItem::DefiAccountManager - Sync failed for #{blockchain}:#{address}: #{e.message}"
+    false
   end
 
   # Creates the local Account for a DeFi CoinstatsAccount if it doesn't exist yet.
@@ -55,7 +62,7 @@ class CoinstatsItem::DefiAccountManager
       name: coinstats_account.name,
       balance: coinstats_account.current_balance || 0,
       cash_balance: 0,
-      currency: "USD",
+      currency: coinstats_account.currency,
       accountable_type: "Crypto",
       accountable_attributes: {
         subtype: "wallet",
@@ -99,6 +106,7 @@ class CoinstatsItem::DefiAccountManager
       end
     end
 
+    # Returns true on success, false on failure (so the caller can track active positions correctly).
     def upsert_account!(address:, blockchain:, protocol:, investment:, asset:, account_id:)
       coinstats_account = coinstats_item.coinstats_accounts.find_or_initialize_by(
         account_id: account_id,
@@ -107,11 +115,19 @@ class CoinstatsItem::DefiAccountManager
 
       # The DeFi API returns asset.price as a TotalValueDto (total position value, not per-token price).
       # Store it as `balance` so inferred_current_balance uses it directly instead of quantity * price.
-      # Also derive the per-token price so the holdings processor records the correct share price.
-      price_data = asset[:price].is_a?(Hash) ? asset[:price].with_indifferent_access : {}
-      total_balance_usd = (price_data[:USD] || price_data["USD"] || asset[:price]).to_f
+      # Guard against a missing USD key falling back to the whole hash (which would raise on .to_f).
+      total_balance_usd = if asset[:price].is_a?(Hash)
+        price_hash = asset[:price].with_indifferent_access
+        (price_hash[:USD] || price_hash["USD"] || 0).to_f
+      else
+        asset[:price].to_f
+      end
+
+      # Convert the USD balance to the family's base currency for consistent portfolio reporting.
+      target_currency = family_currency
+      balance = convert_usd_balance(total_balance_usd, target_currency)
       quantity = asset[:amount].to_f
-      per_token_price_usd = quantity > 0 ? total_balance_usd / quantity : 0
+      per_token_price = quantity > 0 ? balance / quantity : 0
 
       snapshot = {
         source: "defi",
@@ -126,23 +142,25 @@ class CoinstatsItem::DefiAccountManager
         symbol: asset[:symbol],
         name: asset[:symbol].to_s.upcase,
         amount: asset[:amount],
-        balance: total_balance_usd,
-        priceUsd: per_token_price_usd,
+        balance: balance,
+        priceUsd: per_token_price,
         asset_title: asset[:title],
-        currency: "USD",
+        currency: target_currency,
         institution_logo: protocol[:logo]
       }.compact
 
       coinstats_account.name = build_account_name(protocol, asset) unless coinstats_account.persisted?
-      coinstats_account.currency = "USD"
+      coinstats_account.currency = target_currency
       coinstats_account.raw_payload = snapshot
       coinstats_account.current_balance = coinstats_account.inferred_current_balance(snapshot)
       coinstats_account.institution_metadata = { logo: protocol[:logo] }.compact
       coinstats_account.save!
 
       ensure_local_account!(coinstats_account)
+      true
     rescue => e
       Rails.logger.warn "CoinstatsItem::DefiAccountManager - Failed to upsert account #{account_id}: #{e.message}"
+      false
     end
 
     # Sets balance to zero for DeFi accounts no longer present in the API response.
@@ -155,5 +173,20 @@ class CoinstatsItem::DefiAccountManager
 
         account.update!(current_balance: 0, raw_payload: raw.merge(amount: 0, balance: 0, priceUsd: 0))
       end
+    end
+
+    def family_currency
+      coinstats_item.family.currency.presence || "USD"
+    end
+
+    # Converts a USD amount to the target currency using Money exchange rates.
+    # Falls back to the original USD amount if conversion is unavailable.
+    def convert_usd_balance(usd_amount, target_currency)
+      return usd_amount if target_currency == "USD" || usd_amount.zero?
+
+      Money.new(usd_amount, "USD").exchange_to(target_currency).amount
+    rescue => e
+      Rails.logger.warn "CoinstatsItem::DefiAccountManager - FX conversion USD->#{target_currency} failed: #{e.message}"
+      usd_amount
     end
 end

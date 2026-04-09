@@ -776,4 +776,36 @@ class CoinstatsItem::ImporterTest < ActiveSupport::TestCase
 
     assert result[:success]
   end
+
+  test "propagates DeFi sync failure into accounts_failed count" do
+    crypto = Crypto.create!
+    account = @family.accounts.create!(
+      accountable: crypto,
+      name: "Ethereum Wallet",
+      balance: 1000,
+      currency: "USD"
+    )
+    coinstats_account = @coinstats_item.coinstats_accounts.create!(
+      name: "Ethereum",
+      currency: "USD",
+      account_id: "ethereum",
+      raw_payload: { address: "0x123abc", blockchain: "ethereum" }
+    )
+    AccountProvider.create!(account: account, provider: coinstats_account)
+
+    @mock_provider.expects(:get_wallet_defi)
+      .with(address: "0x123abc", connection_id: "ethereum")
+      .raises(Provider::Coinstats::Error.new("DeFi endpoint unavailable"))
+
+    @mock_provider.stubs(:get_wallet_balances).returns(success_response([]))
+    @mock_provider.stubs(:extract_wallet_balance).returns([])
+    @mock_provider.stubs(:get_wallet_transactions).returns(success_response([]))
+    @mock_provider.stubs(:extract_wallet_transactions).returns([])
+
+    result = CoinstatsItem::Importer.new(@coinstats_item, coinstats_provider: @mock_provider).import
+
+    # Wallet account still updated, but DeFi failure is counted
+    assert_equal 1, result[:accounts_failed]
+    refute result[:success]
+  end
 end
