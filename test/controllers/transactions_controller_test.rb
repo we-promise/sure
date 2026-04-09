@@ -49,6 +49,24 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal [ "Cost", "Cost Center", "Warehouse Cost" ], suggestions.first(3)
   end
 
+  test "name_suggestions keeps older exact matches ahead of many newer substring matches" do
+    family = families(:empty)
+    sign_in users(:empty)
+    account = family.accounts.create! name: "Test", balance: 0, currency: "USD", accountable: Depository.new
+
+    create_transaction(account: account, name: "Cost")
+
+    501.times do |index|
+      create_transaction(account: account, name: "Miscost Example #{index}")
+    end
+
+    get name_suggestions_transactions_url(query: "cost"), as: :json
+
+    assert_response :success
+    suggestions = response.parsed_body["suggestions"]
+    assert_equal "Cost", suggestions.first
+  end
+
   test "name_suggestions returns empty for very short queries" do
     get name_suggestions_transactions_url(query: "c"), as: :json
 
