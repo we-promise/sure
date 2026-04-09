@@ -82,13 +82,13 @@ class HoldingsController < ApplicationController
 
     @holding.remap_security!(new_security)
 
-    # Materialize in UTC so holdings up to today (UTC) are covered regardless
-    # of the family's configured timezone (which may lag behind).
+    # Re-materialize holdings with the new security's prices.
+    # Reload account to avoid stale associations from remap_security!.
+    # The around_action :switch_timezone already sets the family timezone
+    # for this request, so Date.current is correct here.
     account = Account.find(@holding.account_id)
     strategy = account.linked? ? :reverse : :forward
-    Time.use_zone("UTC") do
-      Balance::Materializer.new(account, strategy: strategy, security_ids: [ new_security.id ]).materialize_balances
-    end
+    Balance::Materializer.new(account, strategy: strategy, security_ids: [ new_security.id ]).materialize_balances
 
     flash[:notice] = t(".success")
 
