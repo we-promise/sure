@@ -56,6 +56,22 @@ class Rule::ConditionTest < ActiveSupport::TestCase
     assert_equal 3, filtered.count
   end
 
+  test "applies transaction_amount condition with not equal operator using absolute values" do
+    scope = @rule_scope
+
+    condition = Rule::Condition.new(
+      rule: @transaction_rule,
+      condition_type: "transaction_amount",
+      operator: "!=",
+      value: "50"
+    )
+
+    scope = condition.prepare(scope)
+
+    filtered = condition.apply(scope)
+    assert_equal 4, filtered.count
+  end
+
   test "applies transaction_merchant condition" do
     scope = @rule_scope
 
@@ -70,6 +86,23 @@ class Rule::ConditionTest < ActiveSupport::TestCase
 
     filtered = condition.apply(scope)
     assert_equal 2, filtered.count
+  end
+
+  test "applies transaction_merchant condition with not equal operator including transactions without merchant" do
+    scope = @rule_scope
+
+    condition = Rule::Condition.new(
+      rule: @transaction_rule,
+      condition_type: "transaction_merchant",
+      operator: "!=",
+      value: @whole_foods_merchant.id
+    )
+
+    scope = condition.prepare(scope)
+    filtered = condition.apply(scope)
+
+    assert_equal 3, filtered.count
+    assert(filtered.none? { |t| t.merchant_id == @whole_foods_merchant.id })
   end
 
   test "applies compound and condition" do
@@ -144,6 +177,25 @@ class Rule::ConditionTest < ActiveSupport::TestCase
 
     assert_equal 1, filtered.count
     assert_equal @grocery_category.id, filtered.first.category_id
+  end
+
+  test "applies transaction_category condition with not equal operator including uncategorized" do
+    scope = @rule_scope
+
+    @account.transactions.first.update!(category: @grocery_category)
+
+    condition = Rule::Condition.new(
+      rule: @transaction_rule,
+      condition_type: "transaction_category",
+      operator: "!=",
+      value: @grocery_category.id
+    )
+
+    scope = condition.prepare(scope)
+    filtered = condition.apply(scope)
+
+    assert_equal 4, filtered.count
+    assert(filtered.none? { |t| t.category_id == @grocery_category.id })
   end
 
   test "applies is_null condition for transaction_category" do

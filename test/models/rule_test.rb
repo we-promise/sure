@@ -118,6 +118,48 @@ class RuleTest < ActiveSupport::TestCase
     assert_equal @groceries_category, transaction_entry.transaction.category
   end
 
+  test "transaction name not equal operator matches other names only" do
+    coffee_entry = create_transaction(date: Date.current, account: @account, name: "Coffee", amount: 10)
+    tea_entry = create_transaction(date: Date.current, account: @account, name: "Tea", amount: 20)
+
+    rule = Rule.create!(
+      family: @family,
+      resource_type: "transaction",
+      effective_date: 1.day.ago.to_date,
+      conditions: [ Rule::Condition.new(condition_type: "transaction_name", operator: "!=", value: "Coffee") ],
+      actions: [ Rule::Action.new(action_type: "set_transaction_category", value: @groceries_category.id) ]
+    )
+
+    rule.apply
+
+    coffee_entry.reload
+    tea_entry.reload
+
+    assert_nil coffee_entry.transaction.category
+    assert_equal @groceries_category, tea_entry.transaction.category
+  end
+
+  test "transaction name does not contain operator excludes substring matches" do
+    coffee_entry = create_transaction(date: Date.current, account: @account, name: "Coffee Shop Daily", amount: 10)
+    tea_entry = create_transaction(date: Date.current, account: @account, name: "Tea House", amount: 20)
+
+    rule = Rule.create!(
+      family: @family,
+      resource_type: "transaction",
+      effective_date: 1.day.ago.to_date,
+      conditions: [ Rule::Condition.new(condition_type: "transaction_name", operator: "not_like", value: "Coffee") ],
+      actions: [ Rule::Action.new(action_type: "set_transaction_category", value: @groceries_category.id) ]
+    )
+
+    rule.apply
+
+    coffee_entry.reload
+    tea_entry.reload
+
+    assert_nil coffee_entry.transaction.category
+    assert_equal @groceries_category, tea_entry.transaction.category
+  end
+
   # Artificial limitation put in place to prevent users from creating overly complex rules
   # Rules should be shallow and wide
   test "no nested compound conditions" do
@@ -220,6 +262,98 @@ class RuleTest < ActiveSupport::TestCase
 
     assert_equal @groceries_category, paypal_entry.transaction.category, "PayPal transaction with 'Whole Foods' in details should be categorized"
     assert_nil paypal_entry2.transaction.category, "PayPal transaction without 'Whole Foods' in details should not be categorized"
+  end
+
+  test "rule matching on transaction details with not equal operator" do
+    paypal_entry = create_transaction(
+      date: Date.current,
+      account: @account,
+      name: "PayPal",
+      amount: 50
+    )
+    paypal_entry.transaction.update!(
+      extra: {
+        "simplefin" => {
+          "payee" => "Whole Foods via PayPal"
+        }
+      }
+    )
+
+    paypal_entry2 = create_transaction(
+      date: Date.current,
+      account: @account,
+      name: "PayPal",
+      amount: 100
+    )
+    paypal_entry2.transaction.update!(
+      extra: {
+        "simplefin" => {
+          "payee" => "Amazon via PayPal"
+        }
+      }
+    )
+
+    rule = Rule.create!(
+      family: @family,
+      resource_type: "transaction",
+      effective_date: 1.day.ago.to_date,
+      conditions: [ Rule::Condition.new(condition_type: "transaction_details", operator: "!=", value: "Whole Foods") ],
+      actions: [ Rule::Action.new(action_type: "set_transaction_category", value: @groceries_category.id) ]
+    )
+
+    rule.apply
+
+    paypal_entry.reload
+    paypal_entry2.reload
+
+    assert_nil paypal_entry.transaction.category, "Details containing 'Whole Foods' should not match !="
+    assert_equal @groceries_category, paypal_entry2.transaction.category, "Details without 'Whole Foods' should match !="
+  end
+
+  test "rule matching on transaction details with does not contain operator" do
+    paypal_entry = create_transaction(
+      date: Date.current,
+      account: @account,
+      name: "PayPal",
+      amount: 50
+    )
+    paypal_entry.transaction.update!(
+      extra: {
+        "simplefin" => {
+          "payee" => "Whole Foods via PayPal"
+        }
+      }
+    )
+
+    paypal_entry2 = create_transaction(
+      date: Date.current,
+      account: @account,
+      name: "PayPal",
+      amount: 100
+    )
+    paypal_entry2.transaction.update!(
+      extra: {
+        "simplefin" => {
+          "payee" => "Amazon via PayPal"
+        }
+      }
+    )
+
+    rule = Rule.create!(
+      family: @family,
+      resource_type: "transaction",
+      effective_date: 1.day.ago.to_date,
+      conditions: [ Rule::Condition.new(condition_type: "transaction_details", operator: "not_like", value: "Whole Foods") ],
+      actions: [ Rule::Action.new(action_type: "set_transaction_category", value: @groceries_category.id) ]
+    )
+
+    rule.apply
+
+    paypal_entry.reload
+    paypal_entry2.reload
+
+    assert_nil paypal_entry.transaction.category, "Details containing 'Whole Foods' should not match not_like"
+    assert_equal @groceries_category, paypal_entry2.transaction.category, "Details without 'Whole Foods' should match not_like"
   end
 
   test "rule matching on transaction notes" do
