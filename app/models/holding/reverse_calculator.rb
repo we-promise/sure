@@ -97,7 +97,11 @@ class Holding::ReverseCalculator
           if trade.qty > 0 # Only track buys
             security_id = trade.security_id
             trade_price = Money.new(trade.price, trade.currency)
-            converted_price = trade_price.exchange_to(account.currency, fallback_rate: 1).amount
+            begin
+              converted_price = trade_price.exchange_to(account.currency).amount
+            rescue Money::ConversionError
+              converted_price = trade.price
+            end
 
             tracker[security_id][:total_cost] += converted_price * trade.qty
             tracker[security_id][:total_qty] += trade.qty

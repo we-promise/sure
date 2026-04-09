@@ -1,8 +1,9 @@
 class Security::Resolver
-  def initialize(symbol, exchange_operating_mic: nil, country_code: nil)
+  def initialize(symbol, exchange_operating_mic: nil, country_code: nil, price_provider: nil)
     @symbol = validate_symbol!(symbol)
     @exchange_operating_mic = exchange_operating_mic
     @country_code = country_code
+    @price_provider = validated_price_provider(price_provider)
   end
 
   # Attempts several paths to resolve a security:
@@ -20,11 +21,20 @@ class Security::Resolver
   end
 
   private
-    attr_reader :symbol, :exchange_operating_mic, :country_code
+    attr_reader :symbol, :exchange_operating_mic, :country_code, :price_provider
 
     def validate_symbol!(symbol)
       raise ArgumentError, "Symbol is required and cannot be blank" if symbol.blank?
       symbol.strip.upcase
+    end
+
+    # Only accept price_provider values that are known and currently enabled.
+    # Prevents tampered combobox values from persisting invalid provider names.
+    def validated_price_provider(value)
+      return nil if value.blank?
+      return nil unless Security.valid_price_providers.include?(value.to_s)
+      return nil unless Setting.enabled_securities_providers.include?(value.to_s)
+      value.to_s
     end
 
     def offline_security
@@ -44,13 +54,26 @@ class Security::Resolver
     end
 
     def exact_match_from_db
-      Security.find_by(
+      security = Security.find_by(
         {
           ticker: symbol,
           exchange_operating_mic: exchange_operating_mic,
           country_code: country_code.presence
         }.compact
       )
+
+      return nil unless security
+
+      # When the caller provides an explicit provider (e.g. user selected from
+      # search results), honor that choice. Automated syncs (Plaid, SimpleFIN)
+      # pass price_provider: nil and will not overwrite.
+      if price_provider.present? && security.price_provider != price_provider
+        security.update!(price_provider: price_provider)
+      end
+
+      reactivate_if_provider_available!(security)
+
+      security
     end
 
     # If provided a ticker + exchange (and optionally, a country code), we can find exact matches
@@ -59,8 +82,8 @@ class Security::Resolver
       return nil unless exchange_operating_mic.present?
 
       match = provider_search_result.find do |s|
-        ticker_matches = s.ticker.upcase.to_s == symbol.upcase.to_s
-        exchange_matches = s.exchange_operating_mic.upcase.to_s == exchange_operating_mic.upcase.to_s
+        ticker_matches = s.ticker&.upcase.to_s == symbol.upcase.to_s
+        exchange_matches = s.exchange_operating_mic&.upcase.to_s == exchange_operating_mic.upcase.to_s
 
         if country_code && exchange_operating_mic
           ticker_matches && exchange_matches && s.country_code&.upcase.to_s == country_code.upcase.to_s
@@ -88,8 +111,8 @@ class Security::Resolver
       # 4. Rank by exchange_operating_mic relevance (lower index in the list is more relevant)
       sorted_candidates = filtered_candidates.sort_by do |s|
         [
-          s.ticker.upcase.to_s == symbol.upcase.to_s ? 0 : 1,
-          exchange_operating_mic.present? && s.exchange_operating_mic.upcase.to_s == exchange_operating_mic.upcase.to_s ? 0 : 1,
+          s.ticker&.upcase.to_s == symbol.upcase.to_s ? 0 : 1,
+          exchange_operating_mic.present? && s.exchange_operating_mic&.upcase.to_s == exchange_operating_mic.upcase.to_s ? 0 : 1,
           sorted_country_codes_by_relevance.index(s.country_code&.upcase.to_s) || sorted_country_codes_by_relevance.length,
           sorted_exchange_operating_mics_by_relevance.index(s.exchange_operating_mic&.upcase.to_s) || sorted_exchange_operating_mics_by_relevance.length
         ]
@@ -109,9 +132,33 @@ class Security::Resolver
       )
 
       security.country_code = match.country_code
+
+      # Set provider when explicitly provided (user selection) or when the
+      # record is new / has no provider yet. Automated syncs pass nil and
+      # will not overwrite an existing choice.
+      effective_provider = price_provider.presence ||
+        (match.respond_to?(:price_provider) ? match.price_provider.presence : nil)
+
+      if effective_provider.present?
+        security.price_provider = effective_provider
+      end
+
       security.save!
 
+      reactivate_if_provider_available!(security)
+
       security
+    end
+
+    # If a security was marked offline (e.g. its provider was temporarily
+    # removed in settings) but now has a valid, enabled provider, bring it
+    # back online so the MarketDataImporter picks it up again.
+    def reactivate_if_provider_available!(security)
+      return unless security.offline?
+      return unless security.offline_reason == "provider_disabled"
+      return unless security.price_data_provider.present?
+
+      security.update!(offline: false, offline_reason: nil, failed_fetch_count: 0, failed_fetch_at: nil)
     end
 
     def provider_search_result

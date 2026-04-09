@@ -28,6 +28,43 @@ class Transaction < ApplicationRecord
 
   after_save :clear_merchant_unlinked_association, if: :merchant_id_previously_changed?
 
+  # Accessors for exchange_rate stored in extra jsonb field
+  def exchange_rate
+    extra&.dig("exchange_rate")
+  end
+
+  def exchange_rate=(value)
+    if value.blank?
+      self.extra = (extra || {}).merge("exchange_rate" => nil)
+    else
+      begin
+        normalized_value = Float(value)
+        self.extra = (extra || {}).merge("exchange_rate" => normalized_value)
+      rescue ArgumentError, TypeError
+        # Store the raw value for validation error reporting
+        self.extra = (extra || {}).merge("exchange_rate" => value, "exchange_rate_invalid" => true)
+      end
+    end
+  end
+
+  validate :exchange_rate_must_be_valid
+
+  private
+
+    def exchange_rate_must_be_valid
+      if extra&.dig("exchange_rate_invalid")
+        errors.add(:exchange_rate, "must be a number")
+      elsif exchange_rate.present?
+        # Convert to float for comparison
+        numeric_rate = exchange_rate.to_d rescue nil
+        if numeric_rate.nil? || numeric_rate <= 0
+          errors.add(:exchange_rate, "must be greater than 0")
+        end
+      end
+    end
+
+  public
+
   enum :kind, {
     standard: "standard", # A regular transaction, included in budget analytics
     funds_movement: "funds_movement", # Movement of funds between accounts, excluded from budget analytics

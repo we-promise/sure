@@ -9,6 +9,9 @@ export default class extends Controller {
     const inputEvent = new Event("input", { bubbles: true })
     this.inputTarget.dispatchEvent(inputEvent)
 
+    const changeEvent = new Event("change", { bubbles: true })
+    this.inputTarget.dispatchEvent(changeEvent)
+
     const form = this.element.closest("form")
     const controllers = (form?.dataset.controller || "").split(/\s+/)
     if (form && controllers.includes("auto-submit-form")) {
