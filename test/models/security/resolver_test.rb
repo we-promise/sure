@@ -1,11 +1,6 @@
 require "test_helper"
 
 class Security::ResolverTest < ActiveSupport::TestCase
-  setup do
-    @provider = mock
-    Security.stubs(:provider).returns(@provider)
-  end
-
   test "resolves DB security" do
     # Given an existing security in the DB that exactly matches the lookup params
     db_security = Security.create!(ticker: "TSLA", exchange_operating_mic: "XNAS", country_code: "US")
@@ -74,5 +69,74 @@ class Security::ResolverTest < ActiveSupport::TestCase
   test "returns nil when symbol blank" do
     assert_raises(ArgumentError) { Security::Resolver.new(nil).resolve }
     assert_raises(ArgumentError) { Security::Resolver.new("").resolve }
+  end
+
+  test "persists explicit price_provider on DB match" do
+    db_security = Security.create!(ticker: "CSPX", exchange_operating_mic: "XLON", country_code: "GB")
+
+    Security.expects(:search_provider).never
+    Setting.stubs(:enabled_securities_providers).returns([ "tiingo" ])
+
+    resolved = Security::Resolver.new(
+      "CSPX",
+      exchange_operating_mic: "XLON",
+      country_code: "GB",
+      price_provider: "tiingo"
+    ).resolve
+
+    assert_equal db_security, resolved
+    assert_equal "tiingo", resolved.reload.price_provider
+  end
+
+  test "persists price_provider on provider match" do
+    match = Security.new(ticker: "VWCE", exchange_operating_mic: "XETR", country_code: "DE", price_provider: "eodhd")
+
+    Security.expects(:search_provider)
+            .with("VWCE", exchange_operating_mic: "XETR")
+            .returns([ match ])
+
+    Setting.stubs(:enabled_securities_providers).returns([ "eodhd" ])
+
+    resolved = Security::Resolver.new(
+      "VWCE",
+      exchange_operating_mic: "XETR",
+      price_provider: "eodhd"
+    ).resolve
+
+    assert resolved.persisted?
+    assert_equal "eodhd", resolved.price_provider
+  end
+
+  test "rejects unknown price_provider" do
+    db_security = Security.create!(ticker: "AAPL2", exchange_operating_mic: "XNAS", country_code: "US")
+
+    Security.expects(:search_provider).never
+
+    resolved = Security::Resolver.new(
+      "AAPL2",
+      exchange_operating_mic: "XNAS",
+      country_code: "US",
+      price_provider: "fake_provider"
+    ).resolve
+
+    assert_equal db_security, resolved
+    assert_nil resolved.reload.price_provider, "Unknown providers should be rejected"
+  end
+
+  test "rejects disabled price_provider" do
+    db_security = Security.create!(ticker: "GOOG2", exchange_operating_mic: "XNAS", country_code: "US")
+
+    Security.expects(:search_provider).never
+    Setting.stubs(:enabled_securities_providers).returns([ "twelve_data" ])
+
+    resolved = Security::Resolver.new(
+      "GOOG2",
+      exchange_operating_mic: "XNAS",
+      country_code: "US",
+      price_provider: "tiingo"
+    ).resolve
+
+    assert_equal db_security, resolved
+    assert_nil resolved.reload.price_provider, "Disabled providers should be rejected"
   end
 end

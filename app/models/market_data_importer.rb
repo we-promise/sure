@@ -17,7 +17,7 @@ class MarketDataImporter
 
   # Syncs historical security prices (and details)
   def import_security_prices
-    unless Security.provider
+    unless Security.providers.any?
       Rails.logger.warn("No provider configured for MarketDataImporter.import_security_prices, skipping sync")
       return
     end

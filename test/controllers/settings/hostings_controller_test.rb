@@ -247,4 +247,71 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
       assert_equal I18n.t("settings.hostings.not_authorized"), flash[:alert]
     end
   end
+
+  # --- Securities provider toggle ---
+
+  test "can update securities providers" do
+    with_self_hosting do
+      patch settings_hosting_url, params: { setting: { securities_providers: [ "twelve_data", "yahoo_finance" ] } }
+
+      assert_redirected_to settings_hosting_url
+      assert_equal "twelve_data,yahoo_finance", Setting.securities_providers
+    end
+  ensure
+    Setting.securities_providers = ""
+  end
+
+  test "filters out invalid provider names" do
+    with_self_hosting do
+      patch settings_hosting_url, params: { setting: { securities_providers: [ "twelve_data", "fake_provider", "hacked" ] } }
+
+      assert_redirected_to settings_hosting_url
+      # Only valid providers are stored
+      enabled = Setting.enabled_securities_providers
+      assert_includes enabled, "twelve_data"
+      refute_includes enabled, "fake_provider"
+      refute_includes enabled, "hacked"
+    end
+  ensure
+    Setting.securities_providers = ""
+  end
+
+  test "removing a provider marks linked securities offline" do
+    with_self_hosting do
+      security = Security.create!(ticker: "CSPX", exchange_operating_mic: "XLON", price_provider: "tiingo", offline: false)
+
+      # First enable tiingo
+      Setting.securities_providers = "twelve_data,tiingo"
+
+      # Then remove tiingo
+      patch settings_hosting_url, params: { setting: { securities_providers: [ "twelve_data" ] } }
+
+      security.reload
+      assert security.offline?, "Security should be marked offline when its provider is removed"
+      assert_equal "provider_disabled", security.offline_reason
+    end
+  ensure
+    Setting.securities_providers = ""
+  end
+
+  test "re-adding a provider brings securities back online" do
+    with_self_hosting do
+      security = Security.create!(
+        ticker: "CSPX2", exchange_operating_mic: "XLON",
+        price_provider: "tiingo", offline: true, offline_reason: "provider_disabled"
+      )
+
+      # Start without tiingo
+      Setting.securities_providers = "twelve_data"
+
+      # Re-add tiingo
+      patch settings_hosting_url, params: { setting: { securities_providers: [ "twelve_data", "tiingo" ] } }
+
+      security.reload
+      refute security.offline?, "Security should come back online when its provider is re-added"
+      assert_nil security.offline_reason
+    end
+  ensure
+    Setting.securities_providers = ""
+  end
 end

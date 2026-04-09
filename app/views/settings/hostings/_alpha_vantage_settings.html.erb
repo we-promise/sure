@@ -1,0 +1,46 @@
+<div class="space-y-4">
+  <div>
+    <h2 class="font-medium mb-1"><%= t(".title") %></h2>
+    <% if ENV["ALPHA_VANTAGE_API_KEY"].present? %>
+      <p class="text-sm text-secondary"><%= t(".env_configured_message") %></p>
+    <% else %>
+      <div class="text-secondary text-sm mb-4">
+        <span><%= t(".description") %></span>
+        <details class="inline">
+          <summary class="cursor-pointer font-medium text-secondary underline inline"> <%= t(".show_details") %></summary>
+          <ol class="text-sm text-secondary mt-2 list-decimal ml-6 space-y-2">
+            <li><%= t(".step_1_html") %></li>
+            <li><%= t(".step_2") %></li>
+          </ol>
+        </details>
+      </div>
+    <% end %>
+  </div>
+
+  <%= styled_form_with model: Setting.new,
+                       url: settings_hosting_path,
+                       method: :patch,
+                       data: {
+                         controller: "auto-submit-form",
+                         "auto-submit-form-trigger-event-value": "blur"
+                       } do |form| %>
+    <% has_key = ENV["ALPHA_VANTAGE_API_KEY"].present? || Setting.alpha_vantage_api_key.present? %>
+    <%= form.text_field :alpha_vantage_api_key,
+                        label: t(".label"),
+                        type: "password",
+                        placeholder: t(".placeholder"),
+                        value: has_key ? "********" : "",
+                        disabled: ENV["ALPHA_VANTAGE_API_KEY"].present?,
+                        data: { "auto-submit-form-target": "auto" } %>
+  <% end %>
+
+  <div class="bg-amber-50 border border-amber-200 rounded-lg p-3">
+    <div class="flex items-start gap-2">
+      <%= icon("alert-triangle", size: "sm", class: "text-amber-600 mt-0.5") %>
+      <div class="text-sm text-amber-700">
+        <p><%= t(".rate_limit_warning") %></p>
+        <p class="mt-1"><%= t(".no_health_check_note") %></p>
+      </div>
+    </div>
+  </div>
+</div>

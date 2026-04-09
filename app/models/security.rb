@@ -1,12 +1,22 @@
 class Security < ApplicationRecord
   include Provided, PlanRestrictionTracker
 
+  # Transient attribute for search results -- not persisted
+  attr_accessor :search_currency
+
   # ISO 10383 MIC codes mapped to user-friendly exchange names
   # Source: https://www.iso20022.org/market-identifier-codes
   # Data stored in config/exchanges.yml
   EXCHANGES = YAML.safe_load_file(Rails.root.join("config", "exchanges.yml")).freeze
 
   KINDS = %w[standard cash].freeze
+
+  # Known securities provider keys — derived from the registry so adding a new
+  # provider to Registry#available_providers automatically allows it here.
+  # Evaluated at runtime (not boot) so runtime-enabled providers are accepted.
+  def self.valid_price_providers
+    Provider::Registry.for_concept(:securities).provider_keys.map(&:to_s)
+  end
 
   before_validation :upcase_symbols
   before_save :generate_logo_url_from_brandfetch, if: :should_generate_logo?
@@ -17,9 +27,16 @@ class Security < ApplicationRecord
   validates :ticker, presence: true
   validates :ticker, uniqueness: { scope: :exchange_operating_mic, case_sensitive: false }
   validates :kind, inclusion: { in: KINDS }
+  validates :price_provider, inclusion: { in: ->(_) { Security.valid_price_providers } }, allow_nil: true
 
   scope :online, -> { where(offline: false) }
   scope :standard, -> { where(kind: "standard") }
+
+  # Parses the combobox ID format "SYMBOL|EXCHANGE|PROVIDER" into a hash.
+  def self.parse_combobox_id(value)
+    parts = value.to_s.split("|", 3)
+    { ticker: parts[0].presence, exchange_operating_mic: parts[1].presence, price_provider: parts[2].presence }
+  end
 
   # Lazily finds or creates a synthetic cash security for an account.
   # Used as fallback when creating an interest Trade without a user-selected security.
@@ -57,7 +74,9 @@ class Security < ApplicationRecord
       name: name,
       logo_url: logo_url,
       exchange_operating_mic: exchange_operating_mic,
-      country_code: country_code
+      country_code: country_code,
+      price_provider: price_provider,
+      currency: search_currency
     )
   end
 

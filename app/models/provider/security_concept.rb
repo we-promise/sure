@@ -1,7 +1,14 @@
 module Provider::SecurityConcept
   extend ActiveSupport::Concern
 
-  Security = Data.define(:symbol, :name, :logo_url, :exchange_operating_mic, :country_code)
+  # NOTE: This `Security` is a lightweight Data value object used for search results.
+  # Inside provider classes that `include SecurityConcept`, unqualified `Security`
+  # resolves to this Data class — NOT to `::Security` (the ActiveRecord model).
+  Security = Data.define(:symbol, :name, :logo_url, :exchange_operating_mic, :country_code, :currency) do
+    def initialize(symbol:, name:, logo_url:, exchange_operating_mic:, country_code:, currency: nil)
+      super
+    end
+  end
   SecurityInfo = Data.define(:symbol, :name, :links, :logo_url, :description, :kind, :exchange_operating_mic)
   Price = Data.define(:symbol, :date, :price, :currency, :exchange_operating_mic)
 
@@ -19,5 +26,12 @@ module Provider::SecurityConcept
 
   def fetch_security_prices(symbol:, exchange_operating_mic:, start_date:, end_date:)
     raise NotImplementedError, "Subclasses must implement #fetch_security_prices"
+  end
+
+  # Maximum number of calendar days of historical data the provider can return.
+  # Callers should clamp start_date to avoid requesting data beyond this window.
+  # Override in subclasses with provider-specific limits.
+  def max_history_days
+    nil # nil means no known limit
   end
 end

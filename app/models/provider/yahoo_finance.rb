@@ -20,6 +20,10 @@ class Provider::YahooFinance < Provider
   # Maximum lookback window for historical data (configurable)
   MAX_LOOKBACK_WINDOW = 10.years
 
+  def max_history_days
+    (MAX_LOOKBACK_WINDOW / 1.day).to_i
+  end
+
   # Minimum delay between requests to avoid rate limiting (in seconds)
   MIN_REQUEST_INTERVAL = 0.5
 
