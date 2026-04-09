@@ -6,18 +6,13 @@ class EncryptExistingImportsRawFileStr < ActiveRecord::Migration[7.2]
       ActiveRecord::Base.transaction do
         batch.each do |import|
           import.encrypt
+          import.save!
         end
       end
     end
   end
 
   def down
-    Import.unscoped.find_in_batches do |batch|
-      ActiveRecord::Base.transaction do
-        batch.each do |import|
-          import.decrypt
-        end
-      end
-    end
+    raise ActiveRecord::IrreversibleMigration
   end
 end

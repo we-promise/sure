@@ -176,29 +176,6 @@ ActiveRecord::Schema[7.2].define(version: 2026_04_09_154221) do
     t.index ["account_id"], name: "index_balances_on_account_id"
   end
 
-  create_table "banking_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.string "bankable_type", null: false
-    t.uuid "bankable_id", null: false
-    t.uuid "family_id", null: false
-    t.string "name", default: "", null: false
-    t.string "status", default: "good", null: false
-    t.boolean "scheduled_for_deletion", default: false, null: false
-    t.boolean "pending_account_setup", default: false, null: false
-    t.string "institution_id"
-    t.string "institution_name"
-    t.string "institution_domain"
-    t.string "institution_url"
-    t.string "institution_color"
-    t.jsonb "raw_payload"
-    t.jsonb "raw_institution_payload"
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["bankable_type", "bankable_id"], name: "index_banking_items_on_bankable_type_and_bankable_id", unique: true
-    t.index ["family_id"], name: "index_banking_items_on_family_id"
-    t.index ["scheduled_for_deletion"], name: "index_banking_items_on_scheduled_for_deletion"
-    t.index ["status"], name: "index_banking_items_on_status"
-  end
-
   create_table "binance_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "binance_item_id", null: false
     t.string "name"
@@ -1598,8 +1575,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_04_09_154221) do
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "api_keys", "users"
-  add_foreign_key "balances", "accounts", on_delete: :cascade
-  add_foreign_key "banking_items", "families"
+  add_foreign_key "balances", "accounts"
   add_foreign_key "binance_accounts", "binance_items"
   add_foreign_key "binance_items", "families"
   add_foreign_key "budget_categories", "budgets"

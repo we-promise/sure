@@ -41,7 +41,7 @@ namespace :benchmarking do
 
   desc "Shorthand task for running warm/cold benchmark"
   task endpoint: :environment do
-    system(
+    result = system(
       {
         "RAILS_ENV" => "production",
         "BENCHMARKING_ENABLED" => "true",
@@ -50,6 +50,7 @@ namespace :benchmarking do
       "rake",
       "benchmarking:warm_cold_endpoint_ips"
     )
+    abort "Benchmarking failed" unless result
   end
 
   # When to use: Track overall endpoint speed improvements over time (recommended, most practical test)
@@ -130,12 +131,18 @@ namespace :benchmarking do
   private
     def execute_and_stream(env, *cmd_args)
       combined_output = ""
-      Open3.popen2e(env, *cmd_args) do |_stdin, stdout_err, _wait_thr|
+      status = Open3.popen2e(env, *cmd_args) do |_stdin, stdout_err, wait_thr|
         stdout_err.each do |line|
           print line
           combined_output << line
         end
+        wait_thr.value
       end
+
+      unless status.success?
+        raise "Command failed with status #{status.exitstatus}: #{cmd_args.join(' ')}"
+      end
+
       combined_output
     end
 
