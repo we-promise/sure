@@ -582,7 +582,8 @@ class CoinstatsItem::Importer
       coinstats_item.family.currency.presence || "USD"
     end
 
-    # Fetches DeFi/staking positions for all unique wallets and upserts CoinstatsAccounts.
+    # Syncs DeFi/staking positions for all unique wallet addresses by delegating
+    # to DefiAccountManager, which owns discovery, upsert, and zero-out logic.
     def sync_defi_for_wallets!(wallet_accounts)
       unique_wallets = wallet_accounts.filter_map do |account|
         raw = account.raw_payload.to_h.with_indifferent_access
@@ -593,169 +594,12 @@ class CoinstatsItem::Importer
 
       return if unique_wallets.empty?
 
+      manager = CoinstatsItem::DefiAccountManager.new(coinstats_item)
+
       unique_wallets.each do |wallet|
-        sync_wallet_defi(wallet[:address], wallet[:blockchain])
+        manager.sync_wallet!(address: wallet[:address], blockchain: wallet[:blockchain], provider: coinstats_provider)
       end
     rescue => e
       Rails.logger.warn "CoinstatsItem::Importer - DeFi sync failed: #{e.message}"
-    end
-
-    # Fetches DeFi positions for a single wallet and creates/updates corresponding accounts.
-    def sync_wallet_defi(address, blockchain)
-      response = coinstats_provider.get_wallet_defi(address: address, connection_id: blockchain)
-      unless response.success?
-        Rails.logger.warn "CoinstatsItem::Importer - DeFi fetch failed for #{blockchain}:#{address}"
-        return
-      end
-
-      defi_data = response.data.to_h.with_indifferent_access
-      protocols = Array(defi_data[:protocols])
-
-      active_defi_ids = []
-
-      protocols.each do |protocol|
-        protocol = protocol.with_indifferent_access
-        investments = Array(protocol[:investments])
-
-        investments.each do |investment|
-          investment = investment.with_indifferent_access
-          assets = Array(investment[:assets])
-
-          assets.each do |asset|
-            asset = asset.with_indifferent_access
-            next if asset[:amount].to_f.zero?
-            next if asset[:coinId].blank? && asset[:symbol].blank?
-
-            account_id = build_defi_account_id(protocol, investment, asset)
-            active_defi_ids << account_id
-
-            upsert_defi_account!(
-              address: address,
-              blockchain: blockchain,
-              protocol: protocol,
-              investment: investment,
-              asset: asset,
-              account_id: account_id
-            )
-          end
-        end
-      end
-
-      zero_out_inactive_defi_accounts!(address, blockchain, active_defi_ids)
-    rescue => e
-      Rails.logger.warn "CoinstatsItem::Importer - DeFi sync failed for #{blockchain}:#{address}: #{e.message}"
-    end
-
-    def build_defi_account_id(protocol, investment, asset)
-      protocol_id = protocol[:id].to_s.downcase.gsub(/\s+/, "_").presence || "unknown"
-      coin_id = (asset[:coinId] || asset[:symbol]).to_s.downcase
-      title = asset[:title].to_s.downcase.gsub(/\s+/, "_").presence || "position"
-      investment_type = investment[:name].to_s.downcase.gsub(/\s+/, "_").presence
-      parts = [ "defi", protocol_id, coin_id, title ]
-      parts.insert(2, investment_type) if investment_type.present?
-      parts.join(":")
-    end
-
-    def build_defi_account_name(protocol, asset)
-      protocol_name = protocol[:name].to_s
-      symbol = asset[:symbol].to_s.upcase
-      title = asset[:title].to_s.downcase
-
-      case title
-      when "deposit", "supplied"
-        "#{symbol} (#{protocol_name} Staking)"
-      when "reward", "yield"
-        "#{symbol} (#{protocol_name} Rewards)"
-      else
-        label = asset[:title].to_s.presence || "Position"
-        "#{symbol} (#{protocol_name} #{label})"
-      end
-    end
-
-    def upsert_defi_account!(address:, blockchain:, protocol:, investment:, asset:, account_id:)
-      coinstats_account = coinstats_item.coinstats_accounts.find_or_initialize_by(
-        account_id: account_id,
-        wallet_address: address
-      )
-
-      # The DeFi API returns asset.price as a TotalValueDto (total position value, not per-token price).
-      # Store it as `balance` so inferred_current_balance uses it directly instead of quantity * price.
-      # Also derive the per-token price so the holdings processor can record the correct share price.
-      price_data = asset[:price].is_a?(Hash) ? asset[:price].with_indifferent_access : {}
-      total_balance_usd = (price_data[:USD] || price_data["USD"] || asset[:price]).to_f
-      quantity = asset[:amount].to_f
-      per_token_price_usd = quantity > 0 ? total_balance_usd / quantity : 0
-
-      snapshot = {
-        source: "defi",
-        id: account_id,
-        address: address,
-        blockchain: blockchain,
-        protocol_id: protocol[:id],
-        protocol_name: protocol[:name],
-        protocol_logo: protocol[:logo],
-        investment_type: investment[:name],
-        coinId: asset[:coinId],
-        symbol: asset[:symbol],
-        name: asset[:symbol].to_s.upcase,
-        amount: asset[:amount],
-        balance: total_balance_usd,
-        priceUsd: per_token_price_usd,
-        asset_title: asset[:title],
-        currency: "USD",
-        institution_logo: protocol[:logo]
-      }.compact
-
-      unless coinstats_account.persisted?
-        coinstats_account.name = build_defi_account_name(protocol, asset)
-      end
-
-      coinstats_account.currency = "USD"
-      coinstats_account.raw_payload = snapshot
-      coinstats_account.current_balance = coinstats_account.inferred_current_balance(snapshot)
-      coinstats_account.institution_metadata = { logo: protocol[:logo] }.compact
-      coinstats_account.save!
-
-      ensure_local_defi_account!(coinstats_account)
-    rescue => e
-      Rails.logger.warn "CoinstatsItem::Importer - Failed to upsert DeFi account #{account_id}: #{e.message}"
-    end
-
-    # Creates the local Account for a DeFi CoinstatsAccount if it doesn't exist yet.
-    def ensure_local_defi_account!(coinstats_account)
-      return false if coinstats_account.account.present?
-
-      account = Account.create_and_sync({
-        family: coinstats_item.family,
-        name: coinstats_account.name,
-        balance: coinstats_account.current_balance || 0,
-        cash_balance: 0,
-        currency: "USD",
-        accountable_type: "Crypto",
-        accountable_attributes: {
-          subtype: "wallet",
-          tax_treatment: "taxable"
-        }
-      }, skip_initial_sync: true)
-
-      AccountProvider.create!(account: account, provider: coinstats_account)
-      true
-    end
-
-    # Sets balance to zero for DeFi accounts that are no longer present in the API response.
-    def zero_out_inactive_defi_accounts!(address, blockchain, active_defi_ids)
-      inactive = coinstats_item.coinstats_accounts.where(wallet_address: address).select do |account|
-        raw = account.raw_payload.to_h.with_indifferent_access
-        raw[:source] == "defi" && raw[:blockchain].to_s.downcase == blockchain.to_s.downcase &&
-          !active_defi_ids.include?(account.account_id)
-      end
-
-      inactive.each do |account|
-        raw = account.raw_payload.to_h.with_indifferent_access
-        account.update!(
-          current_balance: 0,
-          raw_payload: raw.merge(amount: 0)
-        )
-      end
     end
 end
