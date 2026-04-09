@@ -38,7 +38,8 @@ class CoinstatsItem::Importer
     wallet_accounts = linked_accounts.select(&:wallet_source?)
     exchange_accounts = linked_accounts.select(&:exchange_source?)
 
-    accounts_failed += sync_defi_for_wallets!(wallet_accounts)
+    failed_defi_wallet_keys = sync_defi_for_wallets!(wallet_accounts)
+    accounts_failed += failed_defi_wallet_keys.size
 
     bulk_balance_data = fetch_balances_for_accounts(wallet_accounts)
     bulk_transactions_data = fetch_transactions_for_accounts(wallet_accounts)
@@ -55,8 +56,11 @@ class CoinstatsItem::Importer
               portfolio_transactions_data: portfolio_transactions_data
             )
           elsif coinstats_account.defi_source?
-            # DeFi/staking accounts are kept up to date by sync_defi_for_wallets! above
-            { success: true, transactions_count: 0 }
+            # DeFi/staking accounts are kept up to date by sync_defi_for_wallets! above.
+            # Mark as failed if the wallet sync for this account's address didn't succeed.
+            raw = coinstats_account.raw_payload.to_h.with_indifferent_access
+            wallet_key = "#{raw[:blockchain]}:#{raw[:address]}".downcase
+            { success: !failed_defi_wallet_keys.include?(wallet_key), transactions_count: 0 }
           else
             update_wallet_account(
               coinstats_account,
@@ -584,7 +588,8 @@ class CoinstatsItem::Importer
 
     # Syncs DeFi/staking positions for all unique wallet addresses by delegating
     # to DefiAccountManager, which owns discovery, upsert, and zero-out logic.
-    # Returns the number of wallets that failed to sync so the caller can track failures.
+    # Returns a Set of "blockchain:address" keys for wallets that failed to sync,
+    # so the caller can accurately mark individual DeFi accounts as failed.
     def sync_defi_for_wallets!(wallet_accounts)
       # Include existing DeFi accounts as address sources so staking positions stay
       # current even if the parent wallet account has been removed.
@@ -597,19 +602,19 @@ class CoinstatsItem::Importer
         { address: raw[:address], blockchain: raw[:blockchain] }
       end.uniq { |w| [ w[:address].downcase, w[:blockchain].downcase ] }
 
-      return 0 if unique_wallets.empty?
+      return Set.new if unique_wallets.empty?
 
       manager = CoinstatsItem::DefiAccountManager.new(coinstats_item)
-      failed = 0
+      failed_wallet_keys = Set.new
 
       unique_wallets.each do |wallet|
         result = manager.sync_wallet!(address: wallet[:address], blockchain: wallet[:blockchain], provider: coinstats_provider)
-        failed += 1 unless result
+        failed_wallet_keys << "#{wallet[:blockchain]}:#{wallet[:address]}".downcase unless result
       end
 
-      failed
+      failed_wallet_keys
     rescue => e
       Rails.logger.warn "CoinstatsItem::Importer - DeFi sync failed: #{e.message}"
-      0
+      Set.new
     end
 end
