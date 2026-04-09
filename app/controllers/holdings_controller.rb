@@ -82,12 +82,17 @@ class HoldingsController < ApplicationController
 
     @holding.remap_security!(new_security)
 
-    # The remapped holdings retain the old security's currency/price/amount.
-    # Delete stale calculated holdings so the materializer can recreate them
-    # with the correct currency and price from the new security.
-    @holding.account.holdings
-      .where(security: new_security, account_provider_id: nil)
-      .delete_all
+    # The remapped holdings retain the old security's currency/price. If the new
+    # security's prices are in a different currency, the materializer's upsert key
+    # (account, security, date, currency) won't match the stale records. Align
+    # the currency so the materializer can update them in place.
+    latest_price = new_security.prices.order(date: :desc).first
+    if latest_price
+      @holding.account.holdings
+        .where(security: new_security, account_provider_id: nil)
+        .where.not(currency: latest_price.currency)
+        .update_all(currency: latest_price.currency)
+    end
 
     strategy = @holding.account.linked? ? :reverse : :forward
     Balance::Materializer.new(@holding.account, strategy: strategy, security_ids: [ new_security.id ]).materialize_balances
