@@ -353,6 +353,30 @@ class TransactionsController < ApplicationController
     head :unprocessable_entity
   end
 
+  def exchange_rate
+    account = Current.family.accounts.find(params[:account_id])
+    currency_from = params[:currency]
+    date = params[:date]&.to_date || Date.current
+
+    if account.currency == currency_from
+      render json: { same_currency: true, rate: 1.0 }
+    else
+      rate_obj = ExchangeRate.find_or_fetch_rate(
+        from: currency_from,
+        to: account.currency,
+        date: date
+      )
+
+      if rate_obj.nil?
+        return render json: { error: "Exchange rate not found" }, status: :not_found
+      end
+
+      rate_value = rate_obj.is_a?(Numeric) ? rate_obj : rate_obj.rate
+
+      render json: { rate: rate_value.to_f, account_currency: account.currency }
+    end
+  end
+
   private
     def accessible_transactions
       Current.family.transactions
@@ -409,7 +433,7 @@ class TransactionsController < ApplicationController
     def entry_params
       entry_params = params.require(:entry).permit(
         :name, :date, :amount, :currency, :excluded, :notes, :nature, :entryable_type,
-        entryable_attributes: [ :id, :category_id, :merchant_id, :kind, :investment_activity_label, { tag_ids: [] } ]
+        entryable_attributes: [ :id, :category_id, :merchant_id, :kind, :investment_activity_label, :exchange_rate, { tag_ids: [] } ]
       )
 
       nature = entry_params.delete(:nature)
@@ -500,12 +524,18 @@ class TransactionsController < ApplicationController
       if params[:security_id] == "__custom__"
         # User selected "Enter custom ticker" - check for combobox selection or manual entry
         if params[:ticker].present?
-          # Combobox selection: format is "SYMBOL|EXCHANGE"
-          ticker_symbol, exchange_operating_mic = params[:ticker].split("|")
+          # Combobox selection: format is "SYMBOL|EXCHANGE|PROVIDER"
+          parsed = Security.parse_combobox_id(params[:ticker])
+          if parsed[:ticker].blank?
+            flash[:alert] = t("transactions.convert_to_trade.errors.enter_ticker")
+            redirect_back_or_to transactions_path
+            return nil
+          end
           Security::Resolver.new(
-            ticker_symbol.strip,
-            exchange_operating_mic: exchange_operating_mic.presence || params[:exchange_operating_mic].presence,
-            country_code: user_country
+            parsed[:ticker].strip,
+            exchange_operating_mic: parsed[:exchange_operating_mic] || params[:exchange_operating_mic].presence,
+            country_code: user_country,
+            price_provider: parsed[:price_provider]
           ).resolve
         elsif params[:custom_ticker].present?
           # Manual entry from combobox's name_when_new or fallback text field
@@ -528,12 +558,18 @@ class TransactionsController < ApplicationController
         end
         found
       elsif params[:ticker].present?
-        # Direct combobox (no existing holdings) - format is "SYMBOL|EXCHANGE"
-        ticker_symbol, exchange_operating_mic = params[:ticker].split("|")
+        # Direct combobox (no existing holdings) - format is "SYMBOL|EXCHANGE|PROVIDER"
+        parsed = Security.parse_combobox_id(params[:ticker])
+        if parsed[:ticker].blank?
+          flash[:alert] = t("transactions.convert_to_trade.errors.enter_ticker")
+          redirect_back_or_to transactions_path
+          return nil
+        end
         Security::Resolver.new(
-          ticker_symbol.strip,
-          exchange_operating_mic: exchange_operating_mic.presence || params[:exchange_operating_mic].presence,
-          country_code: user_country
+          parsed[:ticker].strip,
+          exchange_operating_mic: parsed[:exchange_operating_mic] || params[:exchange_operating_mic].presence,
+          country_code: user_country,
+          price_provider: parsed[:price_provider]
         ).resolve
       elsif params[:custom_ticker].present?
         # Manual entry from combobox's name_when_new (no existing holdings path)

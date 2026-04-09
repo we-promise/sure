@@ -11,7 +11,7 @@ class Security::HealthCheckerTest < ActiveSupport::TestCase
     Security.delete_all
 
     @provider = mock
-    Security.stubs(:provider).returns(@provider)
+    Security.any_instance.stubs(:price_data_provider).returns(@provider)
 
     # Brand new, no health check has been run yet
     @new_security = Security.create!(

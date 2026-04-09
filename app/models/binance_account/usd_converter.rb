@@ -21,7 +21,7 @@ module BinanceAccount::UsdConverter
         return [ amount.to_d, true, nil ]
       end
 
-      converted = Money.new(amount, "USD").exchange_to(target_currency, fallback_rate: rate.rate).amount
+      converted = Money.new(amount, "USD").exchange_to(target_currency, custom_rate: rate.rate).amount
       stale     = rate.date != date
       rate_date = stale ? rate.date : nil
 
