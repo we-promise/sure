@@ -52,6 +52,34 @@ class Family < ApplicationRecord
   validates :assistant_type, inclusion: { in: ASSISTANT_TYPES }
   validates :default_account_sharing, inclusion: { in: SHARING_DEFAULTS }
 
+  before_validation :normalize_enabled_currencies!
+
+  def primary_currency_code
+    normalize_currency_code(currency) || "USD"
+  end
+
+  def custom_enabled_currencies?
+    enabled_currencies.present?
+  end
+
+  def enabled_currency_codes(extra: [])
+    selected_codes = if custom_enabled_currencies?
+      [ primary_currency_code, *Array(enabled_currencies) ]
+    else
+      Money::Currency.as_options.map(&:iso_code)
+    end
+
+    normalize_currency_codes([ *selected_codes, *Array(extra) ])
+  end
+
+  def enabled_currency_objects(extra: [])
+    enabled_currency_codes(extra:).map { |code| Money::Currency.new(code) }
+  end
+
+  def secondary_enabled_currency_objects(extra: [])
+    enabled_currency_objects(extra:).reject { |currency| currency.iso_code == primary_currency_code }
+  end
+
 
   def moniker_label
     moniker.presence || "Family"
@@ -299,4 +327,28 @@ class Family < ApplicationRecord
   def self_hoster?
     Rails.application.config.app_mode.self_hosted?
   end
+
+  private
+    def normalize_enabled_currencies!
+      if enabled_currencies.blank?
+        self.enabled_currencies = nil
+        return
+      end
+
+      normalized_codes = normalize_currency_codes([ primary_currency_code, *Array(enabled_currencies) ])
+      all_codes = Money::Currency.as_options.map(&:iso_code)
+      self.enabled_currencies = normalized_codes == all_codes ? nil : normalized_codes
+    end
+
+    def normalize_currency_codes(values)
+      Array(values).filter_map { |value| normalize_currency_code(value) }.uniq
+    end
+
+    def normalize_currency_code(value)
+      return if value.blank?
+
+      Money::Currency.new(value).iso_code
+    rescue Money::Currency::UnknownCurrencyError, ArgumentError
+      nil
+    end
 end

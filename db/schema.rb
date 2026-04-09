@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_03_30_050801) do
+ActiveRecord::Schema[7.2].define(version: 2026_04_10_100000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -574,6 +574,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_30_050801) do
     t.string "moniker", default: "Family", null: false
     t.string "assistant_type", default: "builtin", null: false
     t.string "default_account_sharing", default: "shared", null: false
+    t.string "enabled_currencies", array: true
     t.check_constraint "default_account_sharing::text = ANY (ARRAY['shared'::character varying::text, 'private'::character varying::text])", name: "chk_families_default_account_sharing"
     t.check_constraint "month_start_day >= 1 AND month_start_day <= 28", name: "month_start_day_range"
   end
@@ -1219,7 +1220,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_30_050801) do
     t.index ["country_code"], name: "index_securities_on_country_code"
     t.index ["exchange_operating_mic"], name: "index_securities_on_exchange_operating_mic"
     t.index ["kind"], name: "index_securities_on_kind"
-    t.check_constraint "kind::text = ANY (ARRAY['standard'::character varying, 'cash'::character varying]::text[])", name: "chk_securities_kind"
+    t.check_constraint "kind::text = ANY (ARRAY['standard'::character varying::text, 'cash'::character varying::text])", name: "chk_securities_kind"
   end
 
   create_table "security_prices", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
