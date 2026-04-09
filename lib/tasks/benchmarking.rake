@@ -1,3 +1,5 @@
+require "open3"
+
 # Benchmarking requires a production-like data sample, so requires some up-front setup.
 #
 # 1. Load a scrubbed production-like slice of data into sure_benchmarking DB locally
@@ -40,7 +42,13 @@ namespace :benchmarking do
   desc "Shorthand task for running warm/cold benchmark"
   task endpoint: :environment do
     system(
-      "RAILS_ENV=production BENCHMARKING_ENABLED=true ENDPOINT=#{ENV.fetch("ENDPOINT", "/")} rake benchmarking:warm_cold_endpoint_ips"
+      {
+        "RAILS_ENV" => "production",
+        "BENCHMARKING_ENABLED" => "true",
+        "ENDPOINT" => ENV.fetch("ENDPOINT", "/")
+      },
+      "rake",
+      "benchmarking:warm_cold_endpoint_ips"
     )
   end
 
@@ -78,12 +86,12 @@ namespace :benchmarking do
     # 1️⃣  Cold measurement
     # ---------------------------
     puts "❄️  Running cold benchmark for #{path} (#{cold_iterations} iteration)..."
-    cold_cmd = "IPS_WARMUP=#{cold_warmup} IPS_TIME=0 IPS_ITERATIONS=#{cold_iterations} " \
-               "bundle exec derailed exec perf:ips"
-    cold_output = `#{cold_cmd} 2>&1`
-
-    puts "Cold output:"
-    puts cold_output
+    cold_env = {
+      "IPS_WARMUP" => cold_warmup.to_s,
+      "IPS_TIME" => "0",
+      "IPS_ITERATIONS" => cold_iterations.to_s
+    }
+    cold_output = execute_and_stream(cold_env, "bundle", "exec", "derailed", "exec", "perf:ips")
 
     cold_result = extract_clean_results(cold_output)
 
@@ -91,12 +99,11 @@ namespace :benchmarking do
     # 2️⃣  Warm measurement
     # ---------------------------
     puts "🔥 Running warm benchmark for #{path} (#{warm_time}s sample)..."
-    warm_cmd = "IPS_WARMUP=#{warm_warmup} IPS_TIME=#{warm_time} " \
-               "bundle exec derailed exec perf:ips"
-    warm_output = `#{warm_cmd} 2>&1`
-
-    puts "Warm output:"
-    puts warm_output
+    warm_env = {
+      "IPS_WARMUP" => warm_warmup.to_s,
+      "IPS_TIME" => warm_time.to_s
+    }
+    warm_output = execute_and_stream(warm_env, "bundle", "exec", "derailed", "exec", "perf:ips")
 
     warm_result = extract_clean_results(warm_output)
 
@@ -121,6 +128,17 @@ namespace :benchmarking do
   end
 
   private
+    def execute_and_stream(env, *cmd_args)
+      combined_output = ""
+      Open3.popen2e(env, *cmd_args) do |_stdin, stdout_err, _wait_thr|
+        stdout_err.each do |line|
+          print line
+          combined_output << line
+        end
+      end
+      combined_output
+    end
+
     def setup_benchmark_env(path)
       ENV["USE_AUTH"]      = "true"
       ENV["USE_SERVER"]    = "puma"
