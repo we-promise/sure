@@ -81,6 +81,17 @@ class HoldingsController < ApplicationController
     new_security.save!
 
     @holding.remap_security!(new_security)
+
+    # The remapped holdings retain the old security's currency/price/amount.
+    # Delete stale calculated holdings so the materializer can recreate them
+    # with the correct currency and price from the new security.
+    @holding.account.holdings
+      .where(security: new_security, account_provider_id: nil)
+      .delete_all
+
+    strategy = @holding.account.linked? ? :reverse : :forward
+    Balance::Materializer.new(@holding.account, strategy: strategy, security_ids: [ new_security.id ]).materialize_balances
+
     flash[:notice] = t(".success")
 
     respond_to do |format|
