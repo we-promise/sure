@@ -136,8 +136,9 @@ class CoinstatsItem::DefiAccountManager
       end
 
       # Convert the USD balance to the family's base currency for consistent portfolio reporting.
-      target_currency = family_currency
-      balance = convert_usd_balance(total_balance_usd, target_currency)
+      # convert_usd_balance returns the actual currency used — it may fall back to "USD" if the
+      # exchange rate is unavailable, so we use the returned currency rather than assuming success.
+      balance, actual_currency = convert_usd_balance(total_balance_usd, family_currency)
       quantity = asset[:amount].to_f
       per_token_price = quantity > 0 ? balance / quantity : 0
 
@@ -157,12 +158,12 @@ class CoinstatsItem::DefiAccountManager
         balance: balance,
         priceUsd: per_token_price,
         asset_title: asset[:title],
-        currency: target_currency,
+        currency: actual_currency,
         institution_logo: protocol[:logo]
       }.compact
 
       coinstats_account.name = build_account_name(protocol, asset) unless coinstats_account.persisted?
-      coinstats_account.currency = target_currency
+      coinstats_account.currency = actual_currency
       coinstats_account.raw_payload = snapshot
       coinstats_account.current_balance = coinstats_account.inferred_current_balance(snapshot)
       coinstats_account.institution_metadata = { logo: protocol[:logo] }.compact
@@ -192,13 +193,14 @@ class CoinstatsItem::DefiAccountManager
     end
 
     # Converts a USD amount to the target currency using Money exchange rates.
-    # Falls back to the original USD amount if conversion is unavailable.
+    # Returns [amount, currency] so the caller always knows what currency the amount is in.
+    # Falls back to [usd_amount, "USD"] if conversion is unavailable.
     def convert_usd_balance(usd_amount, target_currency)
-      return usd_amount if target_currency == "USD" || usd_amount.zero?
+      return [ usd_amount, "USD" ] if target_currency == "USD" || usd_amount.zero?
 
-      Money.new(usd_amount, "USD").exchange_to(target_currency).amount
+      [ Money.new(usd_amount, "USD").exchange_to(target_currency).amount, target_currency ]
     rescue => e
       Rails.logger.warn "CoinstatsItem::DefiAccountManager - FX conversion USD->#{target_currency} failed: #{e.message}"
-      usd_amount
+      [ usd_amount, "USD" ]
     end
 end
