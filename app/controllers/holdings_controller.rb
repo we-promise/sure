@@ -62,25 +62,23 @@ class HoldingsController < ApplicationController
       return
     end
 
-    new_security = Security::Resolver.new(
-      parsed[:ticker],
-      exchange_operating_mic: parsed[:exchange_operating_mic],
-      country_code: Current.family.country,
-      price_provider: parsed[:price_provider]
-    ).resolve
-
-    if new_security.nil?
-      flash[:alert] = t(".security_not_found")
-      redirect_to account_path(@holding.account, tab: "holdings")
-      return
-    end
-
     # The user explicitly selected this security from provider search results,
-    # so we know the provider can handle it. Bring it back online if it was
-    # previously marked offline (e.g. by a failed QIF import resolution).
-    if new_security.offline?
-      new_security.update!(offline: false, failed_fetch_count: 0, failed_fetch_at: nil)
-    end
+    # so we use the combobox data directly — no need to re-resolve via provider APIs.
+    new_security = Security.find_or_initialize_by(
+      ticker: parsed[:ticker],
+      exchange_operating_mic: parsed[:exchange_operating_mic]
+    )
+
+    # Honor the user's provider choice (validated by model inclusion check on save)
+    new_security.price_provider = parsed[:price_provider] if parsed[:price_provider].present?
+
+    # Bring it online — user explicitly selected it from provider search results,
+    # so we know the provider can handle it.
+    new_security.offline = false
+    new_security.failed_fetch_count = 0
+    new_security.failed_fetch_at = nil
+
+    new_security.save!
 
     @holding.remap_security!(new_security)
     flash[:notice] = t(".success")
