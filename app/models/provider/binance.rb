@@ -108,7 +108,7 @@ class Provider::Binance
 
     # HMAC-SHA256 of the query string
     def sign(params)
-      query_string = URI.encode_www_form(params.sort)
+      query_string = URI.encode_www_form(params)
       OpenSSL::HMAC.hexdigest("sha256", api_secret, query_string)
     end
 
