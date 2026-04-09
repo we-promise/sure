@@ -14,15 +14,19 @@ class CoinstatsItem::DefiAccountManager
   # Positions that disappear from the API (fully unstaked) are zeroed out.
   # Returns true on success, false on failure.
   def sync_wallet!(address:, blockchain:, provider:)
+    normalized_address = address.to_s.downcase
+    normalized_blockchain = blockchain.to_s.downcase
+
     response = provider.get_wallet_defi(address: address, connection_id: blockchain)
     unless response.success?
-      Rails.logger.warn "CoinstatsItem::DefiAccountManager - DeFi fetch failed for #{blockchain}:#{address}"
+      Rails.logger.warn "CoinstatsItem::DefiAccountManager - DeFi fetch failed for #{normalized_blockchain}:#{normalized_address}"
       return false
     end
 
     defi_data = response.data.to_h.with_indifferent_access
     protocols = Array(defi_data[:protocols])
     active_defi_ids = []
+    had_upsert_failures = false
 
     protocols.each do |protocol|
       protocol = protocol.with_indifferent_access
@@ -35,18 +39,22 @@ class CoinstatsItem::DefiAccountManager
           next if asset[:amount].to_f.zero?
           next if asset[:coinId].blank? && asset[:symbol].blank?
 
-          account_id = build_account_id(protocol, investment, asset, blockchain: blockchain)
+          account_id = build_account_id(protocol, investment, asset, blockchain: normalized_blockchain)
 
-          # Only mark position active if the upsert actually succeeds, so failed
-          # positions don't shield truly-inactive accounts from being zeroed out.
-          if upsert_account!(address: address, blockchain: blockchain, protocol: protocol, investment: investment, asset: asset, account_id: account_id)
+          if upsert_account!(address: normalized_address, blockchain: normalized_blockchain, protocol: protocol, investment: investment, asset: asset, account_id: account_id)
             active_defi_ids << account_id
+          else
+            had_upsert_failures = true
           end
         end
       end
     end
 
-    zero_out_inactive_accounts!(address, blockchain, active_defi_ids)
+    # Skip zero-out when upserts failed — active_defi_ids is incomplete and we'd risk
+    # zeroing accounts that are still active but failed to save this cycle.
+    return false if had_upsert_failures
+
+    zero_out_inactive_accounts!(normalized_address, normalized_blockchain, active_defi_ids)
     true
   rescue => e
     Rails.logger.warn "CoinstatsItem::DefiAccountManager - Sync failed for #{blockchain}:#{address}: #{e.message}"
