@@ -8,6 +8,72 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     @entry = entries(:transaction)
   end
 
+  test "new renders custom description suggestions UI without datalist" do
+    get new_transaction_url(account_id: @entry.account_id)
+
+    assert_response :success
+    assert_dom "[data-controller='transaction-name-suggestions']", count: 1
+    assert_dom "#transaction-name-suggestions-listbox", count: 1
+    assert_dom "datalist#transaction-name-suggestions", count: 0
+  end
+
+  test "name_suggestions returns case-insensitive deduped names" do
+    family = families(:empty)
+    sign_in users(:empty)
+    account = family.accounts.create! name: "Test", balance: 0, currency: "USD", accountable: Depository.new
+
+    create_transaction(account: account, name: "Sample Vendor")
+    create_transaction(account: account, name: "sample vendor")
+    create_transaction(account: account, name: "Sample Vendor")
+
+    get name_suggestions_transactions_url(query: "sample"), as: :json
+
+    assert_response :success
+    suggestions = response.parsed_body["suggestions"]
+    assert_equal 1, suggestions.count { |name| name.downcase == "sample vendor" }
+  end
+
+  test "name_suggestions prioritizes exact then prefix matches" do
+    family = families(:empty)
+    sign_in users(:empty)
+    account = family.accounts.create! name: "Test", balance: 0, currency: "USD", accountable: Depository.new
+
+    create_transaction(account: account, name: "Cost")
+    create_transaction(account: account, name: "Cost Center")
+    create_transaction(account: account, name: "Warehouse Cost")
+
+    get name_suggestions_transactions_url(query: "cost"), as: :json
+
+    assert_response :success
+    suggestions = response.parsed_body["suggestions"]
+    assert_equal [ "Cost", "Cost Center", "Warehouse Cost" ], suggestions.first(3)
+  end
+
+  test "name_suggestions returns empty for very short queries" do
+    get name_suggestions_transactions_url(query: "c"), as: :json
+
+    assert_response :success
+    assert_equal [], response.parsed_body["suggestions"]
+  end
+
+  test "create failure rerenders new form with custom suggestions UI" do
+    post transactions_url, params: {
+      entry: {
+        account_id: @entry.account_id,
+        name: "",
+        date: Date.current,
+        currency: "USD",
+        amount: 100,
+        nature: "outflow",
+        entryable_type: @entry.entryable_type
+      }
+    }
+
+    assert_response :unprocessable_entity
+    assert_dom "[data-controller='transaction-name-suggestions']", count: 1
+    assert_dom "#transaction-name-suggestions-listbox", count: 1
+  end
+
   test "creates with transaction details" do
     assert_difference [ "Entry.count", "Transaction.count" ], 1 do
       post transactions_url, params: {

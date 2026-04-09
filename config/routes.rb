@@ -311,6 +311,7 @@ Rails.application.routes.draw do
 
     collection do
       delete :clear_filter
+      get :name_suggestions
       patch :update_preferences
     end
 
