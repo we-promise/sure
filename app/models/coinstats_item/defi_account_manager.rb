@@ -81,8 +81,8 @@ class CoinstatsItem::DefiAccountManager
     AccountProvider.create!(account: account, provider: coinstats_account)
     true
   rescue ActiveRecord::RecordNotUnique
-    # Another concurrent sync created the AccountProvider between our presence check and this create.
-    # The account exists and is linked — nothing to do.
+    # Another concurrent sync created the AccountProvider; destroy the orphaned Account we just created.
+    account&.destroy
     false
   end
 
