@@ -95,6 +95,21 @@ SECRET_KEY_BASE="replacemewiththegeneratedstringfromthepriorstep"
 POSTGRES_PASSWORD="replacemewithyourdesireddatabasepassword"
 ```
 
+#### Optional: GUS inflation import for EOD/ROD bonds
+
+If you use inflation-linked bonds, you can enable automatic CPI imports from GUS SDP.
+
+```txt
+# default is off
+INFLATION_IMPORT_ENABLED=false
+
+# optional API key for higher limits (anonymous mode works without this)
+GUS_SDP_API_KEY=
+```
+
+When enabled, you can also trigger a manual historical import from:
+Settings > Self-Hosting > Inflation.
+
 #### Using HTTPS
 
 Assuming you want to access your instance from the internet, you should have secured your URL address with an SSL certificate.  

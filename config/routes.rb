@@ -192,6 +192,7 @@ Rails.application.routes.draw do
     resource :hosting, only: %i[show update] do
       delete :clear_cache, on: :collection
       delete :disconnect_external_assistant, on: :collection
+      post :import_inflation_rates, on: :collection
     end
     resource :payment, only: :show
     resource :security, only: :show
@@ -394,6 +395,8 @@ Rails.application.routes.draw do
   resources :vehicles, only: %i[new create edit update]
   resources :credit_cards, only: %i[new create edit update]
   resources :loans, only: %i[new create edit update]
+  resources :bonds, only: %i[new create edit update]
+  resources :bond_lots, only: %i[new create show edit update destroy]
   resources :cryptos, only: %i[new create edit update]
   resources :other_assets, only: %i[new create edit update]
   resources :other_liabilities, only: %i[new create edit update]

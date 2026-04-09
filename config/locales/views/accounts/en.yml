@@ -116,6 +116,7 @@ en:
       crypto: Crypto
       property: Property
       vehicle: Vehicle
+      bond: Bond
       other_asset: Other Asset
       credit_card: Credit Card
       loan: Loan

@@ -1,0 +1,99 @@
+<%= render DS::Dialog.new(frame: "drawer", responsive: true) do |dialog| %>
+  <% dialog.with_header(custom_header: true) do %>
+    <div class="flex items-start justify-between gap-4">
+      <div>
+        <%= tag.h3(Bond.long_subtype_label_for(@bond_lot.subtype) || t(".unknown"), class: "text-2xl font-medium text-primary") %>
+        <%= tag.p t(".purchased", date: l(@bond_lot.purchased_on)), class: "text-sm text-secondary" %>
+      </div>
+      <%= dialog.close_button %>
+    </div>
+  <% end %>
+
+  <% dialog.with_body do %>
+    <% if @bond_lot.open? %>
+      <div class="pb-4">
+        <%= render "form", account: @account, bond_lot: @bond_lot, url: bond_lot_path(@bond_lot) %>
+      </div>
+    <% else %>
+      <div class="rounded-xl border border-secondary bg-container-inset p-3 text-sm">
+        <div class="grid gap-2 md:grid-cols-2">
+          <p class="text-primary"><strong><%= t(".overview_principal") %>:</strong> <span class="privacy-sensitive"><%= format_money(Money.new(@bond_lot.amount, @account.currency)) %></span></p>
+          <p class="text-primary"><strong><%= t(".overview_settlement") %>:</strong> <span class="privacy-sensitive"><%= format_money(Money.new(@bond_lot.settlement_amount.to_d, @account.currency)) %></span></p>
+          <p class="text-secondary"><strong><%= t(".overview_maturity") %>:</strong> <span class="privacy-sensitive"><%= @bond_lot.maturity_date ? l(@bond_lot.maturity_date) : t(".unknown") %></span></p>
+          <p class="text-secondary"><strong><%= t(".overview_closed_on") %>:</strong> <span class="privacy-sensitive"><%= @bond_lot.closed_on ? l(@bond_lot.closed_on) : t(".unknown") %></span></p>
+        </div>
+      </div>
+    <% end %>
+
+    <% dialog.with_section(title: t(".history"), open: true) do %>
+      <div class="px-3 py-4">
+        <% history = @bond_lot.capitalization_history %>
+
+        <% if history.any? %>
+          <ul class="space-y-3">
+            <% history.each do |event| %>
+              <li class="rounded-xl border border-secondary bg-container p-3 space-y-2">
+                <div class="flex items-start justify-between gap-3">
+                  <p class="text-secondary text-xs uppercase">
+                    <%= t(".history_period", period: event[:period_number], start: l(event[:start_on]), end: l(event[:end_on])) %>
+                  </p>
+                  <span class="text-xs rounded-md bg-container-inset px-2 py-1 text-primary">
+                    <%= number_to_percentage(event[:annual_rate_percent], precision: 3) %>
+                  </span>
+                </div>
+
+                <div class="grid gap-2 text-sm md:grid-cols-3">
+                  <p class="text-primary"><%= t(".history_balance", opening: Money.new(event[:opening_balance], @account.currency).format, closing: Money.new(event[:closing_balance], @account.currency).format) %></p>
+                  <p class="text-secondary"><%= t(".history_interest", interest: Money.new(event[:interest_earned], @account.currency).format, rate: number_to_percentage(event[:annual_rate_percent], precision: 3)) %></p>
+                  <p class="text-secondary">
+                    <% if event[:full_year_capitalization] %>
+                      <%= t(".history_capitalized") %>
+                    <% else %>
+                      <%= t(".history_partial") %>
+                    <% end %>
+                  </p>
+                </div>
+
+                <% if event[:inflation_source].present? %>
+                  <p class="text-xs text-secondary">
+                    <% inflation_text = number_to_percentage(event[:inflation_component_percent].to_d, precision: 3) %>
+                    <% margin_text = number_to_percentage(event[:margin_component_percent].to_d, precision: 3) %>
+                    <% if event[:inflation_source] == "first_period" %>
+                      <%= t(".history_inflation_first_period") %>
+                    <% elsif event[:inflation_source] == "gus" %>
+                      <%= t(".history_inflation_gus", inflation: inflation_text, margin: margin_text, reference: event[:inflation_reference_on]&.strftime("%m-%Y"), indicator: event[:inflation_indicator_id]) %>
+                    <% elsif event[:inflation_source] == "manual" %>
+                      <%= t(".history_inflation_manual", inflation: inflation_text, margin: margin_text) %>
+                    <% else %>
+                      <%= t(".history_inflation_provider", inflation: inflation_text, margin: margin_text, provider: t("bonds.purchase_holding.inflation_providers.#{event[:inflation_source]}", default: event[:inflation_source].to_s.humanize)) %>
+                    <% end %>
+                  </p>
+                <% end %>
+              </li>
+            <% end %>
+          </ul>
+        <% else %>
+          <p class="text-secondary"><%= t(".no_history") %></p>
+        <% end %>
+      </div>
+    <% end %>
+
+    <% if @bond_lot.open? %>
+      <% dialog.with_section(title: t(".settings"), open: true) do %>
+        <div class="pb-4">
+          <div class="flex items-center justify-between gap-2 p-3">
+            <div class="text-sm space-y-1">
+              <h4 class="text-primary"><%= t(".delete_title") %></h4>
+              <p class="text-secondary"><%= t(".delete_subtitle") %></p>
+            </div>
+            <%= button_to t(".delete"),
+                  bond_lot_path(@bond_lot),
+                  method: :delete,
+                  class: "rounded-lg px-3 py-2 text-red-500 text-sm font-medium border border-secondary",
+                  data: { turbo_confirm: t(".delete_confirm") } %>
+          </div>
+        </div>
+      <% end %>
+    <% end %>
+  <% end %>
+<% end %>

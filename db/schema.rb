@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_03_30_050801) do
+ActiveRecord::Schema[7.2].define(version: 2026_04_07_183000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -63,6 +63,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_30_050801) do
     t.string "institution_name"
     t.string "institution_domain"
     t.text "notes"
+    t.jsonb "holdings_snapshot_data"
+    t.datetime "holdings_snapshot_at"
     t.uuid "owner_id"
     t.index ["accountable_id", "accountable_type"], name: "index_accounts_on_accountable_id_and_accountable_type"
     t.index ["accountable_type"], name: "index_accounts_on_accountable_type"
@@ -212,6 +214,75 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_30_050801) do
     t.datetime "updated_at", null: false
     t.index ["family_id"], name: "index_binance_items_on_family_id"
     t.index ["status"], name: "index_binance_items_on_status"
+  end
+
+  create_table "bond_lots", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "bond_id", null: false
+    t.date "purchased_on", null: false
+    t.decimal "amount", precision: 19, scale: 4, null: false
+    t.integer "term_months", null: false
+    t.date "maturity_date", null: false
+    t.decimal "interest_rate", precision: 10, scale: 3
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.string "subtype", default: "other", null: false
+    t.string "rate_type"
+    t.string "coupon_frequency"
+    t.uuid "entry_id"
+    t.date "issue_date"
+    t.decimal "first_period_rate", precision: 10, scale: 3
+    t.decimal "inflation_margin", precision: 10, scale: 3
+    t.decimal "inflation_rate_assumption", precision: 10, scale: 3
+    t.integer "cpi_lag_months"
+    t.decimal "early_redemption_fee", precision: 19, scale: 4
+    t.decimal "units", precision: 12, scale: 2
+    t.decimal "nominal_per_unit", precision: 19, scale: 4
+    t.boolean "auto_fetch_inflation", default: true, null: false
+    t.boolean "auto_close_on_maturity", default: true, null: false
+    t.date "closed_on"
+    t.decimal "settlement_amount", precision: 19, scale: 4
+    t.decimal "tax_withheld", precision: 19, scale: 4
+    t.string "tax_strategy", default: "standard", null: false
+    t.decimal "tax_rate", precision: 6, scale: 3, default: "19.0", null: false
+    t.boolean "requires_rate_review", default: false, null: false
+    t.string "product_code"
+    t.string "inflation_provider"
+    t.index ["auto_close_on_maturity", "maturity_date", "closed_on"], name: "index_bond_lots_on_settlement_eligibility"
+    t.index ["bond_id", "closed_on"], name: "index_bond_lots_on_bond_id_and_closed_on"
+    t.index ["bond_id", "purchased_on"], name: "index_bond_lots_on_bond_id_and_purchased_on"
+    t.index ["bond_id"], name: "index_bond_lots_on_bond_id"
+    t.index ["closed_on"], name: "index_bond_lots_on_closed_on"
+    t.index ["entry_id"], name: "index_bond_lots_on_entry_id", unique: true, where: "(entry_id IS NOT NULL)"
+    t.index ["inflation_provider"], name: "index_bond_lots_on_inflation_provider"
+    t.index ["issue_date"], name: "index_bond_lots_on_issue_date"
+    t.index ["product_code"], name: "index_bond_lots_on_product_code"
+    t.index ["requires_rate_review"], name: "index_bond_lots_on_requires_rate_review"
+    t.index ["subtype"], name: "index_bond_lots_on_subtype"
+    t.check_constraint "amount > 0::numeric", name: "check_bond_lots_positive_amount"
+    t.check_constraint "coupon_frequency IS NULL OR (coupon_frequency::text = ANY (ARRAY['monthly'::character varying, 'quarterly'::character varying, 'semi_annual'::character varying, 'annual'::character varying, 'at_maturity'::character varying]::text[]))", name: "check_bond_lots_coupon_frequency_valid"
+    t.check_constraint "maturity_date >= purchased_on", name: "check_bond_lots_maturity_after_purchase"
+    t.check_constraint "rate_type IS NULL OR (rate_type::text = ANY (ARRAY['fixed'::character varying, 'variable'::character varying]::text[]))", name: "check_bond_lots_rate_type_valid"
+    t.check_constraint "subtype IS NOT NULL", name: "check_bond_lots_subtype_not_null"
+    t.check_constraint "subtype::text = 'inflation_linked'::text OR rate_type IS NOT NULL AND coupon_frequency IS NOT NULL", name: "check_bond_lots_non_inflation_rate_fields_present"
+    t.check_constraint "subtype::text = ANY (ARRAY['zero_coupon'::character varying, 'fixed_coupon'::character varying, 'inflation_linked'::character varying, 'savings'::character varying, 'other'::character varying]::text[])", name: "check_bond_lots_subtype_valid"
+    t.check_constraint "tax_strategy::text = ANY (ARRAY['standard'::character varying, 'reduced'::character varying, 'exempt'::character varying]::text[])", name: "check_bond_lots_tax_strategy_valid"
+    t.check_constraint "term_months > 0", name: "check_bond_lots_positive_term"
+  end
+
+  create_table "bonds", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.decimal "initial_balance", precision: 19, scale: 4
+    t.decimal "interest_rate", precision: 10, scale: 3
+    t.integer "term_months"
+    t.string "rate_type"
+    t.date "maturity_date"
+    t.string "coupon_frequency"
+    t.string "subtype"
+    t.jsonb "locked_attributes", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.string "tax_wrapper", default: "none", null: false
+    t.boolean "auto_buy_new_issues", default: false, null: false
+    t.index ["tax_wrapper"], name: "index_bonds_on_tax_wrapper"
   end
 
   create_table "budget_categories", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -612,6 +683,17 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_30_050801) do
     t.index ["merchant_id"], name: "index_family_merchant_associations_on_merchant_id"
   end
 
+  create_table "gus_inflation_rates", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.integer "year", null: false
+    t.integer "month", null: false
+    t.decimal "rate_yoy", precision: 8, scale: 4, null: false
+    t.string "source", default: "sdp", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["year", "month"], name: "index_gus_inflation_rates_on_year_and_month", unique: true
+    t.check_constraint "month >= 1 AND month <= 12", name: "chk_gus_inflation_rates_month_range"
+  end
+
   create_table "holdings", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "account_id", null: false
     t.uuid "security_id", null: false
@@ -791,6 +873,17 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_30_050801) do
     t.text "api_token"
     t.index ["family_id"], name: "index_indexa_capital_items_on_family_id"
     t.index ["status"], name: "index_indexa_capital_items_on_status"
+  end
+
+  create_table "inflation_rates", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "source", null: false
+    t.integer "year", null: false
+    t.integer "month", null: false
+    t.decimal "rate_yoy", precision: 8, scale: 4, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["source", "year", "month"], name: "index_inflation_rates_on_source_and_year_and_month", unique: true
+    t.check_constraint "month >= 1 AND month <= 12", name: "chk_inflation_rates_month_range"
   end
 
   create_table "investments", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1219,7 +1312,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_30_050801) do
     t.index ["country_code"], name: "index_securities_on_country_code"
     t.index ["exchange_operating_mic"], name: "index_securities_on_exchange_operating_mic"
     t.index ["kind"], name: "index_securities_on_kind"
-    t.check_constraint "kind::text = ANY (ARRAY['standard'::character varying, 'cash'::character varying]::text[])", name: "chk_securities_kind"
+    t.check_constraint "kind::text = ANY (ARRAY['standard'::text, 'cash'::text])", name: "chk_securities_kind"
   end
 
   create_table "security_prices", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1575,6 +1668,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_30_050801) do
   add_foreign_key "balances", "accounts", on_delete: :cascade
   add_foreign_key "binance_accounts", "binance_items"
   add_foreign_key "binance_items", "families"
+  add_foreign_key "bond_lots", "bonds", on_delete: :cascade
+  add_foreign_key "bond_lots", "entries", on_delete: :cascade
   add_foreign_key "budget_categories", "budgets"
   add_foreign_key "budget_categories", "categories"
   add_foreign_key "budgets", "families"

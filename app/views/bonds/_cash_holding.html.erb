@@ -1,0 +1,41 @@
+<%# locals: (account:) %>
+
+<% currency = Money::Currency.new(account.currency) %>
+
+<div class="grid grid-cols-[4fr_2fr_2fr_2fr_2fr_2fr] items-center text-primary text-sm font-medium p-4">
+  <div class="flex items-center gap-4">
+    <%= render DS::FilledIcon.new(
+      variant: :text,
+      text: currency.symbol,
+      rounded: true,
+      size: "lg"
+    ) %>
+
+    <div class="space-y-0.5">
+      <%= tag.p t(".cash_position"), class: "text-primary" %>
+      <%= tag.p account.currency, class: "text-secondary text-xs uppercase" %>
+    </div>
+  </div>
+
+  <div class="flex justify-end items-center gap-2">
+    <% cash_weight = account.balance.zero? ? 0 : account.cash_balance / account.balance * 100 %>
+    <%= render "shared/progress_circle", progress: cash_weight %>
+    <%= tag.p number_to_percentage(cash_weight, precision: 1) %>
+  </div>
+
+  <div class="text-right">
+    <%= tag.p "--", class: "text-secondary" %>
+  </div>
+
+  <div class="text-right">
+    <%= tag.p format_money(account.cash_balance_money), class: "privacy-sensitive" %>
+  </div>
+
+  <div class="text-right">
+    <%= tag.p "--", class: "text-secondary" %>
+  </div>
+
+  <div class="text-right">
+    <%= tag.p "--", class: "text-secondary" %>
+  </div>
+</div>

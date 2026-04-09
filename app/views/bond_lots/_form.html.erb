@@ -1,0 +1,220 @@
+<%# locals: (account:, bond_lot:, url:) %>
+
+<%= styled_form_with model: bond_lot,
+                     url: url,
+                     html: {
+                       data: {
+                         controller: "bond-lot-form bond-lot-inflation",
+                         bond_lot_form_product_subtype_map_value: Bond::PRODUCT_DEFAULTS.transform_values { |defaults| defaults[:subtype] }.to_json,
+                         bond_lot_form_product_term_map_value: Bond::PRODUCT_DEFAULTS.transform_values { |defaults| defaults[:term_months] }.to_json,
+                         bond_lot_form_product_provider_map_value: Bond::PRODUCT_DEFAULTS.transform_values { |defaults| defaults[:inflation_provider] }.to_json,
+                         bond_lot_inflation_inflation_subtypes_value: Bond::INFLATION_LINKED_SUBTYPES.to_json,
+                         bond_lot_inflation_lot_auto_fetch_value: bond_lot.auto_fetch_inflation.nil? ? true : bond_lot.auto_fetch_inflation,
+                         bond_lot_inflation_global_import_enabled_value: Setting.inflation_import_enabled_effective
+                       }
+                     } do |form| %>
+  <div class="space-y-4">
+    <% if bond_lot.errors.any? %>
+      <%= render "shared/form_errors", model: bond_lot %>
+    <% end %>
+
+    <div class="space-y-2">
+      <%= form.date_field :purchased_on,
+              label: t("bond_lots.form.purchased_on"),
+              required: true,
+              data: { action: "change->bond-lot-form#syncIssueDateWithPurchase" } %>
+
+      <div data-bond-lot-inflation-target="inflationFields">
+        <%= form.date_field :issue_date,
+                            label: t("bond_lots.form.issue_date"),
+                            data: { bond_lot_inflation_target: "inflationInput" } %>
+      </div>
+
+      <%= form.money_field :amount,
+                           label: t("bond_lots.form.amount"),
+                           default_currency: account.currency,
+                           required: true %>
+
+      <%= form.select :product_code,
+              Bond.product_options_for_select,
+              {
+                label: t("bond_lots.form.product_code"),
+                include_blank: t("bond_lots.form.product_code_blank")
+              },
+              {
+                data: {
+                  action: "change->bond-lot-form#syncSubtypeWithProduct",
+                  bond_lot_form_target: "productCodeSelect"
+                }
+              } %>
+
+      <div class="flex items-center gap-2" data-bond-lot-inflation-target="inflationFields">
+        <%= form.number_field :units,
+                              label: t("bond_lots.form.units"),
+                              min: 0.01,
+                              step: 0.01,
+                              data: { bond_lot_inflation_target: "inflationInput" } %>
+
+        <%= form.money_field :nominal_per_unit,
+                             label: t("bond_lots.form.nominal_per_unit"),
+                             default_currency: account.currency,
+                             data: { bond_lot_inflation_target: "inflationInput" } %>
+      </div>
+
+      <%= form.number_field :term_months,
+                            label: t("bond_lots.form.term_months"),
+                            min: 1,
+                            required: true %>
+
+      <div data-bond-lot-inflation-target="otherFields">
+        <%= form.number_field :interest_rate,
+                              label: t("bond_lots.form.interest_rate"),
+                              placeholder: t("bond_lots.form.interest_rate_placeholder"),
+                              min: 0,
+                              step: 0.005,
+                              required: true,
+                              data: { bond_lot_inflation_target: "otherRequiredInput" } %>
+      </div>
+
+      <% selected_subtype = Bond::LEGACY_SUBTYPE_ALIASES.fetch(bond_lot.subtype.to_s, bond_lot.subtype.presence || "other") %>
+      <%= form.select :subtype,
+              Bond::SUBTYPES.map { |key, labels| [ Bond.long_subtype_label_for(key) || labels[:long], key ] },
+              {
+                label: t("bond_lots.form.subtype"),
+                required: false,
+                selected: selected_subtype
+              },
+              {
+                data: {
+                  action: "change->bond-lot-inflation#toggleSubtypeFields",
+                  bond_lot_form_target: "subtypeSelect"
+                }
+              } %>
+      <p class="text-xs text-secondary" data-bond-lot-form-target="subtypeDerivedHint">
+        <%= t("bond_lots.form.subtype_derived_hint") %>
+      </p>
+
+      <div data-bond-lot-inflation-target="otherFields">
+        <%= form.select :rate_type,
+          Bond::RATE_TYPES.map { |value| [ t("bond_lots.form.rate_types.#{value}", default: value.titleize), value ] },
+          { label: t("bond_lots.form.rate_type"), required: true },
+          { data: { bond_lot_inflation_target: "otherRequiredInput" } } %>
+
+        <%= form.select :coupon_frequency,
+          Bond::COUPON_FREQUENCIES.map { |value| [ t("bond_lots.form.coupon_frequencies.#{value}", default: value.humanize), value ] },
+          { label: t("bond_lots.form.coupon_frequency"), required: true },
+          { data: { bond_lot_inflation_target: "otherRequiredInput" } } %>
+      </div>
+
+      <div class="flex items-center gap-2" data-bond-lot-inflation-target="inflationFields">
+        <%= form.number_field :first_period_rate,
+                              label: t("bond_lots.form.first_period_rate"),
+                              min: 0,
+                              step: 0.005,
+                              data: { bond_lot_inflation_target: "inflationInput", optional: true, requires_first_period_check: true } %>
+
+        <%= form.number_field :inflation_margin,
+                              label: t("bond_lots.form.inflation_margin"),
+                              min: 0,
+                              step: 0.005,
+                              data: { bond_lot_inflation_target: "inflationInput" } %>
+      </div>
+
+      <% selected_provider = if bond_lot.auto_fetch_inflation.nil? || bond_lot.auto_fetch_inflation
+                               bond_lot.inflation_provider.presence || Bond::InflationProvider.default_provider_for(account:, lot: bond_lot, product_code: bond_lot.product_code)
+                             else
+                               bond_lot.inflation_provider
+                             end %>
+      <div data-bond-lot-inflation-target="inflationFields">
+        <%= form.select :inflation_provider,
+                        Bond::InflationProvider::PROVIDERS.map { |key, _klass| [t("bonds.purchase_holding.inflation_providers.#{key}", default: key.to_s.humanize), key] },
+                        {
+                          label: t("bond_lots.form.inflation_provider"),
+                          include_blank: t("bond_lots.form.inflation_provider_blank"),
+                          selected: selected_provider
+                        },
+                        {
+                          data: {
+                            bond_lot_form_target: "providerSelect",
+                            action: "change->bond-lot-inflation#syncAutoFetchWithProvider"
+                          }
+                        } %>
+      </div>
+
+      <div class="flex items-center gap-2" data-bond-lot-inflation-target="inflationFields">
+        <%= form.number_field :cpi_lag_months,
+                              label: t("bond_lots.form.cpi_lag_months"),
+                              min: 0,
+                              step: 1,
+                              data: { bond_lot_inflation_target: "inflationInput" } %>
+      </div>
+
+      <% if Setting.inflation_import_enabled_effective %>
+
+        <%= form.hidden_field :auto_fetch_inflation,
+                              value: bond_lot.auto_fetch_inflation.nil? ? 1 : (bond_lot.auto_fetch_inflation ? 1 : 0),
+                              data: { bond_lot_inflation_target: "autoFetchInput" } %>
+      <% else %>
+        <%= form.hidden_field :auto_fetch_inflation,
+                              value: 0,
+                              data: { bond_lot_inflation_target: "autoFetchInput" } %>
+
+        <p class="text-xs text-secondary" data-bond-lot-inflation-target="inflationFields">
+          <%= t("bond_lots.form.auto_fetch_disabled_hint") %>
+        </p>
+
+        <div data-bond-lot-inflation-target="inflationFields">
+          <%= form.toggle :auto_fetch_inflation,
+                          checked: false,
+                          disabled: true,
+                          data: {
+                            bond_lot_inflation_target: "autoFetchInput"
+                          } %>
+        </div>
+      <% end %>
+
+      <div data-bond-lot-inflation-target="manualInflationField">
+        <%= form.number_field :inflation_rate_assumption,
+                              label: t("bond_lots.form.inflation_rate_assumption"),
+                              min: 0,
+                              step: 0.005,
+                              data: { bond_lot_inflation_target: "manualInflationInput" } %>
+      </div>
+
+        <%# auto_fetch_inflation is normalized server-side by normalize_auto_fetch_inflation.
+          When global CPI import is enabled we keep it hidden; when global import is disabled
+          we expose a toggle so users can switch to manual CPI entry on the lot. %>
+
+      <div data-bond-lot-inflation-target="inflationFields">
+        <%= form.money_field :early_redemption_fee,
+                             label: t("bond_lots.form.early_redemption_fee"),
+                             default_currency: account.currency,
+                             data: { bond_lot_inflation_target: "inflationInput", optional: true } %>
+      </div>
+
+      <div class="space-y-2">
+        <div class="flex items-center justify-between gap-3">
+          <div>
+            <p class="text-sm text-primary"><%= t("bond_lots.form.auto_close_on_maturity") %></p>
+            <p class="text-xs text-secondary"><%= t("bond_lots.form.auto_close_on_maturity_hint") %></p>
+          </div>
+          <%= form.toggle :auto_close_on_maturity, checked: bond_lot.auto_close_on_maturity? %>
+        </div>
+
+        <% unless account.bond.tax_exempt_wrapper? %>
+          <%= form.select :tax_strategy,
+                          BondLot::TAX_STRATEGIES.map { |value| [ t("bond_lots.form.tax_strategies.#{value}"), value ] },
+                          { label: t("bond_lots.form.tax_strategy") } %>
+
+          <%= form.number_field :tax_rate,
+                                label: t("bond_lots.form.tax_rate"),
+                                min: 0,
+                                max: 100,
+                                step: 0.001 %>
+        <% end %>
+      </div>
+    </div>
+
+    <%= form.submit bond_lot.new_record? ? t("bond_lots.form.submit") : t("bond_lots.form.update") %>
+  </div>
+<% end %>

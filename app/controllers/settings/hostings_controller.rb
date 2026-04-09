@@ -3,35 +3,11 @@ class Settings::HostingsController < ApplicationController
 
   guard_feature unless: -> { self_hosted? }
 
-  before_action :ensure_admin, only: [ :update, :clear_cache, :disconnect_external_assistant ]
+  before_action :ensure_admin, only: [ :update, :clear_cache, :disconnect_external_assistant, :import_inflation_rates ]
   before_action :ensure_super_admin_for_onboarding, only: :update
+  before_action :set_hosting_page_state, only: :show
 
   def show
-    @breadcrumbs = [
-      [ "Home", root_path ],
-      [ "Self-Hosting", nil ]
-    ]
-
-    # Determine which providers are currently selected
-    exchange_rate_provider = ENV["EXCHANGE_RATE_PROVIDER"].presence || Setting.exchange_rate_provider
-    securities_provider = ENV["SECURITIES_PROVIDER"].presence || Setting.securities_provider
-
-    # Show Twelve Data settings if either provider is set to twelve_data
-    @show_twelve_data_settings = exchange_rate_provider == "twelve_data" || securities_provider == "twelve_data"
-
-    # Show Yahoo Finance settings if either provider is set to yahoo_finance
-    @show_yahoo_finance_settings = exchange_rate_provider == "yahoo_finance" || securities_provider == "yahoo_finance"
-
-    # Only fetch provider data if we're showing the section
-    if @show_twelve_data_settings
-      twelve_data_provider = Provider::Registry.get_provider(:twelve_data)
-      @twelve_data_usage = twelve_data_provider&.usage
-      @plan_restricted_securities = Current.family.securities_with_plan_restrictions(provider: "TwelveData")
-    end
-
-    if @show_yahoo_finance_settings
-      @yahoo_finance_provider = Provider::Registry.get_provider(:yahoo_finance)
-    end
   end
 
   def update
@@ -59,6 +35,34 @@ class Settings::HostingsController < ApplicationController
 
     if hosting_params.key?(:twelve_data_api_key)
       Setting.twelve_data_api_key = hosting_params[:twelve_data_api_key]
+    end
+
+    if hosting_params[:clear_gus_sdp_api_key] == "1" && ENV["GUS_SDP_API_KEY"].blank?
+      Setting.gus_sdp_api_key = nil
+    elsif hosting_params.key?(:gus_sdp_api_key) && ENV["GUS_SDP_API_KEY"].blank?
+      key_value = hosting_params[:gus_sdp_api_key].to_s.strip
+      # Ignore blanks and redaction placeholders to prevent accidental overwrite
+      Setting.gus_sdp_api_key = key_value unless key_value.blank? || key_value == "********"
+    end
+
+    if hosting_params.key?(:inflation_import_enabled) && ENV["INFLATION_IMPORT_ENABLED"].blank? && ENV["GUS_INFLATION_IMPORT_ENABLED"].blank?
+      Setting.inflation_import_enabled = hosting_params[:inflation_import_enabled] == "1"
+    end
+
+    if hosting_params.key?(:us_bls_cpi_base_url) && ENV["US_BLS_CPI_BASE_URL"].blank?
+      Setting.us_bls_cpi_base_url = hosting_params[:us_bls_cpi_base_url].to_s.strip.presence
+    end
+
+    if hosting_params.key?(:us_bls_cpi_series_id) && ENV["US_BLS_CPI_SERIES_ID"].blank?
+      Setting.us_bls_cpi_series_id = hosting_params[:us_bls_cpi_series_id].to_s.strip.presence
+    end
+
+    if hosting_params.key?(:es_ine_cpi_base_url) && ENV["ES_INE_CPI_BASE_URL"].blank?
+      Setting.es_ine_cpi_base_url = hosting_params[:es_ine_cpi_base_url].to_s.strip.presence
+    end
+
+    if hosting_params.key?(:es_ine_cpi_series_id) && ENV["ES_INE_CPI_SERIES_ID"].blank?
+      Setting.es_ine_cpi_series_id = hosting_params[:es_ine_cpi_series_id].to_s.strip.presence
     end
 
     if hosting_params.key?(:exchange_rate_provider)
@@ -143,6 +147,7 @@ class Settings::HostingsController < ApplicationController
 
     redirect_to settings_hosting_path, notice: t(".success")
   rescue Setting::ValidationError => error
+    set_hosting_page_state
     flash.now[:alert] = error.message
     render :show, status: :unprocessable_entity
   end
@@ -163,10 +168,65 @@ class Settings::HostingsController < ApplicationController
     redirect_to settings_hosting_path, alert: t("settings.hostings.update.failure")
   end
 
+  def import_inflation_rates
+    if Setting.inflation_import_enabled_effective
+      return redirect_to settings_hosting_path, alert: t(".manual_import_disabled_when_auto_enabled")
+    end
+
+    start_year_param = import_params[:inflation_start_year].presence
+    end_year_param = import_params[:inflation_end_year].presence
+
+    start_year = start_year_param.nil? ? (Date.current.year - 20) : Integer(start_year_param, exception: false)
+    end_year = end_year_param.nil? ? (Date.current.year - 1) : Integer(end_year_param, exception: false)
+    valid_range = 1990..Date.current.year
+
+    unless start_year && end_year && valid_range.cover?(start_year) && valid_range.cover?(end_year) && start_year <= end_year
+      return redirect_to settings_hosting_path, alert: t(".invalid_import_range")
+    end
+
+    ImportInflationRatesJob.perform_later(
+      start_year:,
+      end_year:,
+      force: true,
+      providers: Bond::InflationProvider::PROVIDERS.keys
+    )
+
+    redirect_to settings_hosting_path, notice: t(".import_enqueued")
+  end
+
   private
     def hosting_params
       return ActionController::Parameters.new unless params.key?(:setting)
-      params.require(:setting).permit(:onboarding_state, :require_email_confirmation, :invite_only_default_family_id, :brand_fetch_client_id, :brand_fetch_high_res_logos, :twelve_data_api_key, :openai_access_token, :openai_uri_base, :openai_model, :openai_json_mode, :exchange_rate_provider, :securities_provider, :syncs_include_pending, :auto_sync_enabled, :auto_sync_time, :external_assistant_url, :external_assistant_token, :external_assistant_agent_id)
+      params.require(:setting).permit(:onboarding_state, :require_email_confirmation, :invite_only_default_family_id, :brand_fetch_client_id, :brand_fetch_high_res_logos, :twelve_data_api_key, :gus_sdp_api_key, :clear_gus_sdp_api_key, :inflation_import_enabled, :us_bls_cpi_base_url, :us_bls_cpi_series_id, :es_ine_cpi_base_url, :es_ine_cpi_series_id, :openai_access_token, :openai_uri_base, :openai_model, :openai_json_mode, :exchange_rate_provider, :securities_provider, :syncs_include_pending, :auto_sync_enabled, :auto_sync_time, :external_assistant_url, :external_assistant_token, :external_assistant_agent_id)
+    end
+
+    def import_params
+      params.fetch(:setting, ActionController::Parameters.new).permit(:inflation_start_year, :inflation_end_year)
+    end
+
+    def set_hosting_page_state
+      @breadcrumbs = [
+        [ t("settings.hostings.breadcrumbs.home"), root_path ],
+        [ t("settings.hostings.breadcrumbs.self_hosting"), nil ]
+      ]
+
+      exchange_rate_provider = ENV["EXCHANGE_RATE_PROVIDER"].presence || Setting.exchange_rate_provider
+      securities_provider = ENV["SECURITIES_PROVIDER"].presence || Setting.securities_provider
+
+      @show_twelve_data_settings = exchange_rate_provider == "twelve_data" || securities_provider == "twelve_data"
+      @show_yahoo_finance_settings = exchange_rate_provider == "yahoo_finance" || securities_provider == "yahoo_finance"
+
+      if @show_twelve_data_settings
+        twelve_data_provider = Provider::Registry.get_provider(:twelve_data)
+        @twelve_data_usage = twelve_data_provider&.usage
+        @plan_restricted_securities = Current.family.securities_with_plan_restrictions(provider: "TwelveData")
+      end
+
+      if @show_yahoo_finance_settings
+        @yahoo_finance_provider = Provider::Registry.get_provider(:yahoo_finance)
+      end
+
+      set_inflation_stats
     end
 
     def update_assistant_type
@@ -175,6 +235,17 @@ class Settings::HostingsController < ApplicationController
 
       assistant_type = params[:family][:assistant_type]
       Current.family.update!(assistant_type: assistant_type) if Family::ASSISTANT_TYPES.include?(assistant_type)
+    end
+
+    def set_inflation_stats
+      @inflation_provider_stats = Bond::InflationProvider::PROVIDERS.keys.index_with do |key|
+        Bond::InflationProvider.stats_for(key)
+      end
+
+      raw_details = Setting.inflation_last_import_details.to_s
+      @inflation_last_import_details = raw_details.present? ? JSON.parse(raw_details) : {}
+    rescue JSON::ParserError
+      @inflation_last_import_details = {}
     end
 
     def ensure_admin

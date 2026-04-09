@@ -16,6 +16,47 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "shows bond positions tab without strict locals errors" do
+    bond_account = accounts(:bond)
+
+    get account_url(bond_account, tab: "positions")
+
+    assert_response :success
+    assert_includes @response.body, bond_account.name
+  end
+
+  test "bond activity new action opens bond purchase form" do
+    bond_account = accounts(:bond)
+
+    get account_url(bond_account, tab: "activity")
+
+    assert_response :success
+    assert_includes @response.body, "New activity"
+    assert_includes @response.body, new_bond_lot_path(account_id: bond_account.id)
+  end
+
+  test "opening bond account does not fail when matured lots exist" do
+    bond_account = accounts(:bond)
+    lot = BondLot.create!(
+      bond: bond_account.bond,
+      purchased_on: Date.current - 2.years,
+      amount: 1000,
+      subtype: "other_bond",
+      term_months: 12,
+      interest_rate: 10,
+      rate_type: "fixed",
+      coupon_frequency: "at_maturity",
+      auto_close_on_maturity: true,
+      tax_strategy: "standard",
+      tax_rate: 19
+    )
+
+    get account_url(bond_account, tab: "positions")
+
+    assert_response :success
+    assert_not_nil lot.reload
+  end
+
   test "activity pagination keeps activity tab when loaded from holdings tab" do
     investment = accounts(:investment)
 
