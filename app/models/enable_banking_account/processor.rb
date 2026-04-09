@@ -1,4 +1,5 @@
 class EnableBankingAccount::Processor
+  class ProcessingError < StandardError; end
   include CurrencyNormalizable
 
   attr_reader :enable_banking_account
@@ -73,7 +74,7 @@ class EnableBankingAccount::Processor
         # This enables Balance::ReverseCalculator, which works backward from the
         # bank-reported balance — eliminating spurious cash adjustment spikes.
         result = account.set_current_balance(balance)
-        raise "Failed to set current balance: #{result.error}" unless result.success?
+        raise ProcessingError, "Failed to set current balance: #{result.error}" unless result.success?
       end
 
       # TODO: pass explicit window_start_date to sync_later to avoid full history recalculation on every sync

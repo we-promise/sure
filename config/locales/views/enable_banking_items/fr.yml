@@ -46,6 +46,7 @@ fr:
       credentials_required: Veuillez d'abord configurer vos identifiants Enable Banking.
       description: Sélectionnez la banque que vous souhaitez connecter à vos comptes.
       no_banks: Aucune banque disponible pour ce pays/région.
+      no_search_results: "Aucun établissement ne correspond à votre recherche."
       search_placeholder: Recherchez votre banque...
       search_label: "Rechercher votre banque"
       title: Sélectionnez votre banque

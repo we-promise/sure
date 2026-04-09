@@ -46,9 +46,7 @@ class IncomeStatement::CategoryStats
     end
 
     def pending_providers_sql
-      Transaction::PENDING_PROVIDERS.map do |provider|
-        "AND (t.extra -> '#{provider}' ->> 'pending')::boolean IS DISTINCT FROM true"
-      end.join("\n            ")
+      Transaction.pending_providers_sql("t")
     end
 
     def exclude_tax_advantaged_sql

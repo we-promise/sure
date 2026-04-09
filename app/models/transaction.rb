@@ -70,6 +70,14 @@ class Transaction < ApplicationRecord
     where(conditions.join(" AND "))
   }
 
+  # SQL snippet for raw queries that must exclude pending transactions.
+  # Use in income statements, balance sheets, and raw analytics.
+  def self.pending_providers_sql(table_alias = "t")
+    PENDING_PROVIDERS.map do |provider|
+      "AND (#{table_alias}.extra -> '#{provider}' ->> 'pending')::boolean IS DISTINCT FROM true"
+    end.join("\n")
+  end
+
   # Family-scoped query for Enrichable#clear_ai_cache
   def self.family_scope(family)
     joins(entry: :account).where(accounts: { family_id: family.id })

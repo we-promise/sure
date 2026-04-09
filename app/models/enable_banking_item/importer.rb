@@ -162,16 +162,20 @@ class EnableBankingItem::Importer
         psu_headers: enable_banking_item.build_psu_headers
       )
 
-      # Enable Banking returns an array of balances
+      # Enable Banking returns an array of balances. We prioritize types based on reliability.
+      # closingBooked (CLBD) > interimAvailable (ITAV) > expected (XPCD)
       balances = balance_data[:balances] || []
       return if balances.empty?
 
-      # Find the most relevant balance (prefer "ITAV" or "CLAV" types)
-      balance = balances.find { |b| b[:balance_type] == "ITAV" } ||
-                balances.find { |b| b[:balance_type] == "CLAV" } ||
-                balances.find { |b| b[:balance_type] == "ITBD" } ||
-                balances.find { |b| b[:balance_type] == "CLBD" } ||
-                balances.first
+      priority_types = [ "CLBD", "ITAV", "XPCD", "CLAV", "ITBD" ]
+      balance = nil
+
+      priority_types.each do |type|
+        balance = balances.find { |b| b[:balance_type] == type }
+        break if balance
+      end
+
+      balance ||= balances.first
 
       if balance.present?
         amount = balance.dig(:balance_amount, :amount) || balance[:amount]
@@ -180,6 +184,9 @@ class EnableBankingItem::Importer
         if amount.present?
           indicator = balance[:credit_debit_indicator]
           parsed_amount = amount.to_d
+
+          # Enable Banking uses positive amounts for both credit and debit.
+          # DBIT indicates a negative balance (money owed/withdrawn).
           parsed_amount = -parsed_amount if indicator == "DBIT"
 
           enable_banking_account.update!(
@@ -364,7 +371,6 @@ class EnableBankingItem::Importer
 
         if page_count > MAX_PAGINATION_PAGES
           msg = "EnableBankingItem::Importer - Pagination limit exceeded for account #{enable_banking_account.uid} (status=#{transaction_status}). Stopped after #{MAX_PAGINATION_PAGES} pages."
-          Rails.logger.error(msg)
           raise PaginationTruncatedError, msg
         end
 
@@ -384,13 +390,17 @@ class EnableBankingItem::Importer
 
         if continuation_key.present? && continuation_key == previous_continuation_key
           msg = "EnableBankingItem::Importer - Repeated continuation_key detected for account #{enable_banking_account.uid} (status=#{transaction_status}). Breaking after #{page_count} pages."
-          Rails.logger.error(msg)
           raise PaginationTruncatedError, msg
         end
 
         break if continuation_key.blank?
       end
 
+      all_transactions
+    rescue PaginationTruncatedError => e
+      # Log as warning and return collected partial data instead of failing entirely.
+      # This ensures accounts with huge history don't lose all synced data.
+      Rails.logger.warn(e.message)
       all_transactions
     end
 

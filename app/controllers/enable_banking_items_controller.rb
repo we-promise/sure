@@ -131,7 +131,9 @@ class EnableBankingItemsController < ApplicationController
       return
     end
 
-    # Re-fetch ASPSP list from provider to avoid session cookie overflow
+    # Re-fetch ASPSP list from provider to avoid session cookie overflow.
+    # We do not store full ASPSP metadata in the session to stay within the 4KB limit;
+    # instead, we re-query the provider here for the final authorization parameters.
     aspsp_data = nil
     begin
       provider_for_lookup = @enable_banking_item.enable_banking_provider
