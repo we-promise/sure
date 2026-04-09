@@ -1575,7 +1575,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_04_09_154221) do
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "api_keys", "users"
-  add_foreign_key "balances", "accounts"
+  add_foreign_key "balances", "accounts", on_delete: :cascade
   add_foreign_key "binance_accounts", "binance_items"
   add_foreign_key "binance_items", "families"
   add_foreign_key "budget_categories", "budgets"
