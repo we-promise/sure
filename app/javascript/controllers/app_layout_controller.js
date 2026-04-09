@@ -34,9 +34,11 @@ export default class extends Controller {
     if (isCurrentlyOpen) {
       el.classList.remove(...this.expandedSidebarClasses);
       el.classList.add(...this.collapsedSidebarClasses);
+      el.inert = true;
     } else {
       el.classList.add(...this.expandedSidebarClasses);
       el.classList.remove(...this.collapsedSidebarClasses);
+      el.inert = false;
     }
   }
 

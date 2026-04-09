@@ -104,6 +104,7 @@ end %>
         "hidden lg:block py-4 shrink-0 max-w-[320px] transition-all duration-300 border-secondary border-r",
         Current.user.show_sidebar? ? expanded_sidebar_class : collapsed_sidebar_class,
        ),
+       inert: !Current.user.show_sidebar?,
        data: { app_layout_target: "leftSidebar" } do %>
       <div class="px-4 h-full flex flex-col overflow-y-auto">
         <% if content_for?(:sidebar) %>
@@ -180,6 +181,7 @@ end %>
           "hidden lg:block h-full shrink-0 max-w-[400px] transition-all duration-300 border-secondary border-l",
           Current.user.show_ai_sidebar? ? expanded_sidebar_class : collapsed_sidebar_class,
         ),
+        inert: !Current.user.show_ai_sidebar?,
         data: { app_layout_target: "rightSidebar" } do %>
       <%= tag.div id: "chat-container", class: "relative h-full px-4 overflow-y-auto", data: { controller: "chat hotkey", turbo_permanent: true } do %>
         <div class="flex flex-col h-full justify-between shrink-0">
