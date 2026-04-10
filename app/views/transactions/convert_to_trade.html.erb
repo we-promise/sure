@@ -33,7 +33,7 @@
       <div class="space-y-4">
         <div class="space-y-1">
           <%= f.label :security_id, t(".security_label"), class: "font-medium text-sm text-primary block" %>
-          <% if Security.provider.present? %>
+          <% if Security.providers.any? %>
             <%# Always use searchable combobox when provider available - prevents picking wrong similar tickers %>
             <div class="form-field combobox" style="--hw-handle-width: 0; --hw-handle-image: none;">
               <%= f.combobox :ticker,
@@ -157,7 +157,7 @@
         </div>
 
         <%# Only show exchange field when no provider - combobox selections already include exchange %>
-        <% unless Security.provider.present? %>
+        <% unless Security.providers.any? %>
           <div class="space-y-1">
             <%= f.label :exchange_operating_mic, t(".exchange_label"), class: "font-medium text-sm text-primary block" %>
             <%= f.text_field :exchange_operating_mic,

@@ -9,18 +9,28 @@
       </span>
       <span class="text-xs text-secondary">
         <%= t("securities.combobox.exchange_label", symbol: combobox_security.symbol, exchange: combobox_security.exchange_name) %>
+        <% if combobox_security.price_provider.present? %>
+          <span class="text-xs text-tertiary">&middot; <%= t("securities.providers.#{combobox_security.price_provider}", default: combobox_security.price_provider.humanize) %></span>
+        <% end %>
       </span>
     </div>
-    <% if combobox_security.country_code.present? %>
-      <div class="flex items-center bg-container-inset rounded-sm px-1.5 py-1 gap-1">
-        <%= image_tag("https://hatscripts.github.io/circle-flags/flags/#{combobox_security.country_code.downcase}.svg",
-                      class: "h-4 rounded-sm",
-                      alt: "#{combobox_security.country_code.upcase} flag",
-                      title: combobox_security.country_code.upcase) %>
-        <span class="text-xs text-secondary">
-          <%= combobox_security.country_code.upcase %>
+    <div class="flex items-center gap-1.5">
+      <% if combobox_security.currency.present? %>
+        <span class="text-xs text-secondary bg-container-inset rounded-sm px-1.5 py-1">
+          <%= combobox_security.currency %>
         </span>
-      </div>
-    <% end %>
+      <% end %>
+      <% if combobox_security.country_code.present? %>
+        <div class="flex items-center bg-container-inset rounded-sm px-1.5 py-1 gap-1">
+          <%= image_tag("https://hatscripts.github.io/circle-flags/flags/#{combobox_security.country_code.downcase}.svg",
+                        class: "h-4 rounded-sm",
+                        alt: "#{combobox_security.country_code.upcase} flag",
+                        title: combobox_security.country_code.upcase) %>
+          <span class="text-xs text-secondary">
+            <%= combobox_security.country_code.upcase %>
+          </span>
+        </div>
+      <% end %>
+    </div>
   </div>
 </div>

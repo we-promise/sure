@@ -82,8 +82,36 @@ class Provider::Registry
         Provider::YahooFinance.new
       end
 
+      def tiingo
+        api_key = ENV["TIINGO_API_KEY"].presence || Setting.tiingo_api_key # pipelock:ignore
+
+        return nil unless api_key.present?
+
+        Provider::Tiingo.new(api_key)
+      end
+
+      def eodhd
+        api_key = ENV["EODHD_API_KEY"].presence || Setting.eodhd_api_key # pipelock:ignore
+
+        return nil unless api_key.present?
+
+        Provider::Eodhd.new(api_key)
+      end
+
+      def alpha_vantage
+        api_key = ENV["ALPHA_VANTAGE_API_KEY"].presence || Setting.alpha_vantage_api_key # pipelock:ignore
+
+        return nil unless api_key.present?
+
+        Provider::AlphaVantage.new(api_key)
+      end
+
       def mfapi
         Provider::Mfapi.new
+      end
+
+      def binance_public
+        Provider::BinancePublic.new
       end
   end
 
@@ -94,6 +122,11 @@ class Provider::Registry
 
   def providers
     available_providers.map { |p| self.class.send(p) }.compact
+  end
+
+  # Returns the list of provider key names (symbols) registered for this concept.
+  def provider_keys
+    available_providers
   end
 
   def get_provider(name)
@@ -112,9 +145,7 @@ class Provider::Registry
       when :exchange_rates
         %i[twelve_data yahoo_finance]
       when :securities
-        %i[twelve_data yahoo_finance mfapi]
-      when :indian_mutual_funds
-        %i[mfapi]
+        %i[twelve_data yahoo_finance tiingo eodhd alpha_vantage mfapi binance_public]
       when :llm
         %i[openai]
       else

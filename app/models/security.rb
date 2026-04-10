@@ -1,6 +1,9 @@
 class Security < ApplicationRecord
   include Provided, PlanRestrictionTracker
 
+  # Transient attribute for search results -- not persisted
+  attr_accessor :search_currency
+
   # ISO 10383 MIC codes mapped to user-friendly exchange names
   # Source: https://www.iso20022.org/market-identifier-codes
   # Data stored in config/exchanges.yml
@@ -8,8 +11,16 @@ class Security < ApplicationRecord
 
   KINDS = %w[standard cash].freeze
 
+  # Known securities provider keys — derived from the registry so adding a new
+  # provider to Registry#available_providers automatically allows it here.
+  # Evaluated at runtime (not boot) so runtime-enabled providers are accepted.
+  def self.valid_price_providers
+    Provider::Registry.for_concept(:securities).provider_keys.map(&:to_s)
+  end
+
   before_validation :upcase_symbols
   before_save :generate_logo_url_from_brandfetch, if: :should_generate_logo?
+  before_save :reset_first_provider_price_on_if_provider_changed
 
   has_many :trades, dependent: :nullify, class_name: "Trade"
   has_many :prices, dependent: :destroy
@@ -17,9 +28,16 @@ class Security < ApplicationRecord
   validates :ticker, presence: true
   validates :ticker, uniqueness: { scope: :exchange_operating_mic, case_sensitive: false }
   validates :kind, inclusion: { in: KINDS }
+  validates :price_provider, inclusion: { in: ->(_) { Security.valid_price_providers } }, allow_nil: true
 
   scope :online, -> { where(offline: false) }
   scope :standard, -> { where(kind: "standard") }
+
+  # Parses the combobox ID format "SYMBOL|EXCHANGE|PROVIDER" into a hash.
+  def self.parse_combobox_id(value)
+    parts = value.to_s.split("|", 3)
+    { ticker: parts[0].presence, exchange_operating_mic: parts[1].presence, price_provider: parts[2].presence }
+  end
 
   # Lazily finds or creates a synthetic cash security for an account.
   # Used as fallback when creating an interest Trade without a user-selected security.
@@ -33,6 +51,31 @@ class Security < ApplicationRecord
 
   def cash?
     kind == "cash"
+  end
+
+  # True when this security represents a crypto asset. Today the only signal
+  # is the Binance ISO MIC — when we add a second crypto provider, extend
+  # this check rather than duplicating the test at every call site.
+  def crypto?
+    exchange_operating_mic == Provider::BinancePublic::BINANCE_MIC
+  end
+
+  # Single source of truth for which logo URL the UI should render. The order
+  # differs by asset class:
+  #
+  #   - Crypto: prefer the verified per-asset jsDelivr logo (set during
+  #     import by Provider::BinancePublic#verified_logo_url). On a miss, fall
+  #     back to Brandfetch with a forced `binance.com` identifier so the
+  #     generic Binance brand mark shows instead of a ticker lettermark.
+  #
+  #   - Everything else: Brandfetch first (domain-derived or ticker lettermark),
+  #     then any provider-set logo_url.
+  def display_logo_url
+    if crypto?
+      logo_url.presence || brandfetch_icon_url(identifier: "binance.com")
+    else
+      brandfetch_icon_url.presence || logo_url.presence
+    end
   end
 
   # Returns user-friendly exchange name for a MIC code
@@ -57,17 +100,19 @@ class Security < ApplicationRecord
       name: name,
       logo_url: logo_url,
       exchange_operating_mic: exchange_operating_mic,
-      country_code: country_code
+      country_code: country_code,
+      price_provider: price_provider,
+      currency: search_currency
     )
   end
 
-  def brandfetch_icon_url(width: nil, height: nil)
+  def brandfetch_icon_url(width: nil, height: nil, identifier: nil)
     return nil unless Setting.brand_fetch_client_id.present?
 
     w = width || Setting.brand_fetch_logo_size
     h = height || Setting.brand_fetch_logo_size
 
-    identifier = extract_domain(website_url) if website_url.present?
+    identifier ||= extract_domain(website_url) if website_url.present?
     identifier ||= ticker
 
     return nil unless identifier.present?
@@ -103,5 +148,17 @@ class Security < ApplicationRecord
 
     def generate_logo_url_from_brandfetch
       self.logo_url = brandfetch_icon_url
+    end
+
+    # When a user remaps a security to a different provider (via the holdings
+    # remap combobox or Security::Resolver), the previously-discovered
+    # first_provider_price_on belongs to the OLD provider and may no longer
+    # reflect what the new provider can serve. Reset it so the next sync's
+    # fallback rediscovers the correct earliest date for the new provider.
+    # Skip when the caller explicitly set both columns in the same save.
+    def reset_first_provider_price_on_if_provider_changed
+      return unless price_provider_changed?
+      return if first_provider_price_on_changed?
+      self.first_provider_price_on = nil
     end
 end
