@@ -246,6 +246,53 @@ class Security::Price::ImporterTest < ActiveSupport::TestCase
     assert_equal Date.parse("2020-01-03"), @security.reload.first_provider_price_on
   end
 
+  test "incremental sync on pre-listing holding does NOT re-fetch pre-listing window" do
+    # Regression: when first_provider_price_on was set but a new day was
+    # missing (typical daily sync), effective_start_date iterated from the
+    # original (unclamped) start_date and immediately found the pre-listing
+    # date missing. That caused the provider to be called with the full
+    # pre-listing start_date every sync AND the gap-fill loop to re-upsert
+    # every row from listing..end_date. The clamp must shrink the iteration
+    # window to (first_provider_price_on..end_date).
+    Security::Price.delete_all
+
+    travel_to Date.parse("2024-06-01") do
+      listing    = Date.parse("2024-05-25")
+      start_date = Date.parse("2018-06-15")
+      end_date   = Date.current
+
+      @security.update!(first_provider_price_on: listing)
+      (listing..(end_date - 1.day)).each do |d|
+        Security::Price.create!(security: @security, date: d, price: 6568, currency: "EUR")
+      end
+
+      provider_response = provider_success_response([
+        OpenStruct.new(security: @security, date: end_date, price: 70_000, currency: "EUR")
+      ])
+
+      # After fix: provider is called with start_date = clamped_start_date - 7 days,
+      # NOT with the original pre-listing start_date - 7 days (= 2018-06-08).
+      @provider.expects(:fetch_security_prices)
+               .with(
+                 symbol: @security.ticker,
+                 exchange_operating_mic: @security.exchange_operating_mic,
+                 start_date: end_date - Security::Price::Importer::PROVISIONAL_LOOKBACK_DAYS.days,
+                 end_date: end_date
+               )
+               .returns(provider_response)
+
+      upserted = Security::Price::Importer.new(
+        security: @security,
+        security_provider: @provider,
+        start_date: start_date,
+        end_date: end_date
+      ).import_provider_prices
+
+      # Only today's row is upserted — not the full (listing..end_date) range.
+      assert_equal 1, upserted
+    end
+  end
+
   test "skips re-sync for pre-listing holding once first_provider_price_on is set" do
     # Previous sync already advanced the clamp and wrote all post-listing
     # prices. The next sync should see all_prices_exist? return true (because

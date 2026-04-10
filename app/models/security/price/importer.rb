@@ -251,16 +251,22 @@ class Security::Price::Importer
     end
 
     # Skip over ranges that already exist unless clearing cache
-    # Also includes dates with refetchable provisional prices
+    # Also includes dates with refetchable provisional prices.
+    #
+    # Iterates from clamped_start_date (not start_date) so pre-listing /
+    # pre-IPO gaps don't perpetually trip "first missing date = start_date"
+    # and cause every incremental sync to re-fetch + re-upsert the full
+    # post-listing range. clear_cache bypasses the clamp so a user-triggered
+    # refresh can rediscover earlier provider history.
     def effective_start_date
       return start_date if clear_cache
 
-      refetchable_dates = Security::Price.where(security_id: security.id, date: start_date..end_date)
+      refetchable_dates = Security::Price.where(security_id: security.id, date: clamped_start_date..end_date)
                                          .refetchable_provisional(lookback_days: PROVISIONAL_LOOKBACK_DAYS)
                                          .pluck(:date)
                                          .to_set
 
-      (start_date..end_date).detect do |d|
+      (clamped_start_date..end_date).detect do |d|
         !db_prices.key?(d) || refetchable_dates.include?(d)
       end || end_date
     end

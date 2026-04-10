@@ -4,7 +4,7 @@ This guide covers every step needed to add a new securities price provider (like
 
 ## Architecture Overview
 
-```
+```text
 User searches ticker in combobox
   → SecuritiesController#index
     → Security.search_provider (queries all enabled providers concurrently)
@@ -460,7 +460,7 @@ When prices are needed:
 
 ### Provider Resolution Priority
 
-```
+```text
 security.price_provider present?
   ├── YES → Security.provider_for(price_provider)
   │         ├── Provider enabled & configured → use it
