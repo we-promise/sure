@@ -4,9 +4,6 @@ class Provider::BinancePublicTest < ActiveSupport::TestCase
   setup do
     @provider = Provider::BinancePublic.new
     @provider.stubs(:throttle_request)
-    # Logo cache is keyed per base asset and persists across tests; clear it
-    # so verified_logo_url tests don't see each other's results.
-    Rails.cache.delete_matched("binance_public:logo:*")
   end
 
   # ================================
@@ -399,41 +396,16 @@ class Provider::BinancePublicTest < ActiveSupport::TestCase
   #       Info
   # ================================
 
-  test "fetch_security_info returns crypto kind" do
-    stub_logo_head_success
-
+  test "fetch_security_info returns crypto kind and nil logo_url" do
     response = @provider.fetch_security_info(symbol: "BTCUSD", exchange_operating_mic: "BNCX")
 
     assert response.success?
     assert_equal "BTC", response.data.name
     assert_equal "crypto", response.data.kind
     assert_match(/binance\.com/, response.data.links)
-  end
-
-  test "fetch_security_info returns the CDN logo URL when the HEAD succeeds" do
-    stub_logo_head_success
-
-    response = @provider.fetch_security_info(symbol: "ETHEUR", exchange_operating_mic: "BNCX")
-
-    assert_equal "https://cdn.jsdelivr.net/gh/lindomar-oliveira/binance-data-plus/assets/img/ETH.png", response.data.logo_url
-  end
-
-  test "fetch_security_info returns nil logo_url on a HEAD 403" do
-    stub_logo_head_raising(Faraday::ForbiddenError.new("403"))
-
-    response = @provider.fetch_security_info(symbol: "NOPECOINUSD", exchange_operating_mic: "BNCX")
-
-    # Nil (rather than a baked-in fallback URL) lets Security#display_logo_url
-    # substitute a Brandfetch binance.com URL at render time — a path that
-    # depends on runtime config and can't live on this provider.
-    assert_nil response.data.logo_url
-  end
-
-  test "fetch_security_info returns nil logo_url when the CDN HEAD times out" do
-    stub_logo_head_raising(Faraday::TimeoutError.new("timeout"))
-
-    response = @provider.fetch_security_info(symbol: "BTCUSD", exchange_operating_mic: "BNCX")
-
+    # logo_url is always nil — crypto logos are resolved at render time via
+    # Security#display_logo_url using the Brandfetch probe verdict, so the
+    # provider has nothing sensible to persist here.
     assert_nil response.data.logo_url
   end
 
@@ -492,40 +464,24 @@ class Provider::BinancePublicTest < ActiveSupport::TestCase
   #       Logo URL plumbing
   # ================================
 
-  test "search_securities sets the optimistic CDN logo URL on every result" do
+  test "search_securities populates each result with the Brandfetch crypto URL" do
     @provider.stubs(:exchange_info_symbols).returns(sample_exchange_info)
+    Setting.stubs(:brand_fetch_client_id).returns("test-client-id")
+    Setting.stubs(:brand_fetch_logo_size).returns(120)
 
     response = @provider.search_securities("BTC")
 
-    assert response.data.all? { |s| s.logo_url == "https://cdn.jsdelivr.net/gh/lindomar-oliveira/binance-data-plus/assets/img/BTC.png" }
+    expected = "https://cdn.brandfetch.io/crypto/BTC/icon/fallback/lettermark/w/120/h/120?c=test-client-id"
+    assert response.data.all? { |s| s.logo_url == expected }
   end
 
-  test "verified_logo_url caches the happy-path result per base asset" do
-    with_memory_cache do
-      mock_logo_client = mock
-      mock_logo_client.expects(:head).once.returns(mock)
-      @provider.stubs(:logo_client).returns(mock_logo_client)
+  test "search_securities leaves logo_url nil when Brandfetch is not configured" do
+    @provider.stubs(:exchange_info_symbols).returns(sample_exchange_info)
+    Setting.stubs(:brand_fetch_client_id).returns(nil)
 
-      url1 = @provider.send(:verified_logo_url, "BTC")
-      url2 = @provider.send(:verified_logo_url, "BTC")
+    response = @provider.search_securities("BTC")
 
-      assert_equal "https://cdn.jsdelivr.net/gh/lindomar-oliveira/binance-data-plus/assets/img/BTC.png", url1
-      assert_equal url1, url2
-    end
-  end
-
-  test "verified_logo_url caches the nil fallback per base asset" do
-    with_memory_cache do
-      mock_logo_client = mock
-      mock_logo_client.expects(:head).once.raises(Faraday::ForbiddenError.new("403"))
-      @provider.stubs(:logo_client).returns(mock_logo_client)
-
-      url1 = @provider.send(:verified_logo_url, "NEVERCOIN")
-      url2 = @provider.send(:verified_logo_url, "NEVERCOIN")
-
-      assert_nil url1
-      assert_nil url2
-    end
+    assert response.data.all? { |s| s.logo_url.nil? }
   end
 
   # ================================
@@ -581,18 +537,6 @@ class Provider::BinancePublicTest < ActiveSupport::TestCase
       mock_client = mock
       mock_client.stubs(:get).returns(mock_response)
       @provider.stubs(:client).returns(mock_client)
-    end
-
-    def stub_logo_head_success
-      mock_logo_client = mock
-      mock_logo_client.stubs(:head).returns(mock)
-      @provider.stubs(:logo_client).returns(mock_logo_client)
-    end
-
-    def stub_logo_head_raising(error)
-      mock_logo_client = mock
-      mock_logo_client.stubs(:head).raises(error)
-      @provider.stubs(:logo_client).returns(mock_logo_client)
     end
 
     # Rails.cache in the test env is a NullStore by default, so Rails.cache.fetch

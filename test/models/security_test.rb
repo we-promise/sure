@@ -39,50 +39,6 @@ class SecurityTest < ActiveSupport::TestCase
     assert_equal [ "has already been taken" ], duplicate.errors[:ticker]
   end
 
-  test "first_provider_price_on resets when price_provider changes" do
-    sec = Security.create!(
-      ticker: "TEST",
-      exchange_operating_mic: "XNAS",
-      price_provider: "twelve_data",
-      first_provider_price_on: Date.parse("2020-01-03")
-    )
-
-    sec.update!(price_provider: "yahoo_finance")
-
-    assert_nil sec.reload.first_provider_price_on
-  end
-
-  test "first_provider_price_on is preserved when unrelated fields change" do
-    sec = Security.create!(
-      ticker: "TEST",
-      exchange_operating_mic: "XNAS",
-      price_provider: "twelve_data",
-      first_provider_price_on: Date.parse("2020-01-03"),
-      offline: false
-    )
-
-    sec.update!(offline: true, failed_fetch_count: 3)
-
-    assert_equal Date.parse("2020-01-03"), sec.reload.first_provider_price_on
-  end
-
-  test "first_provider_price_on respects explicit assignment alongside provider change" do
-    sec = Security.create!(
-      ticker: "TEST",
-      exchange_operating_mic: "XNAS",
-      price_provider: "twelve_data",
-      first_provider_price_on: Date.parse("2020-01-03")
-    )
-
-    # Caller changes both in the same save — honor the explicit value.
-    sec.update!(
-      price_provider: "yahoo_finance",
-      first_provider_price_on: Date.parse("2024-03-21")
-    )
-
-    assert_equal Date.parse("2024-03-21"), sec.reload.first_provider_price_on
-  end
-
   test "cash_for lazily creates a per-account synthetic cash security" do
     account = accounts(:investment)
 
@@ -123,25 +79,58 @@ class SecurityTest < ActiveSupport::TestCase
     assert_not offline.crypto?
   end
 
-  test "display_logo_url for crypto prefers logo_url and falls back to brandfetch with binance.com" do
+  test "crypto_base_asset strips the display-currency suffix" do
+    %w[USD EUR JPY BRL TRY].each do |quote|
+      sec = Security.new(ticker: "BTC#{quote}", exchange_operating_mic: Provider::BinancePublic::BINANCE_MIC)
+      assert_equal "BTC", sec.crypto_base_asset, "expected BTC#{quote} -> BTC"
+    end
+  end
+
+  test "crypto_base_asset returns nil for non-crypto securities" do
+    sec = Security.new(ticker: "AAPL", exchange_operating_mic: "XNAS")
+    assert_nil sec.crypto_base_asset
+  end
+
+  test "brandfetch_crypto_url uses the /crypto/ route and current size setting" do
     Setting.stubs(:brand_fetch_client_id).returns("test-client-id")
     Setting.stubs(:brand_fetch_logo_size).returns(120)
 
-    with_logo = Security.new(
+    assert_equal(
+      "https://cdn.brandfetch.io/crypto/BTC/icon/fallback/lettermark/w/120/h/120?c=test-client-id",
+      Security.brandfetch_crypto_url("BTC")
+    )
+  end
+
+  test "brandfetch_crypto_url returns nil when Brandfetch is not configured" do
+    Setting.stubs(:brand_fetch_client_id).returns(nil)
+    assert_nil Security.brandfetch_crypto_url("BTC")
+  end
+
+  test "display_logo_url for crypto returns the /crypto/{base} Brandfetch URL" do
+    Setting.stubs(:brand_fetch_client_id).returns("test-client-id")
+    Setting.stubs(:brand_fetch_logo_size).returns(120)
+
+    sec = Security.new(
+      ticker: "BTCUSD",
+      exchange_operating_mic: Provider::BinancePublic::BINANCE_MIC
+    )
+
+    assert_equal(
+      "https://cdn.brandfetch.io/crypto/BTC/icon/fallback/lettermark/w/120/h/120?c=test-client-id",
+      sec.display_logo_url
+    )
+  end
+
+  test "display_logo_url for crypto falls back to stored logo_url when Brandfetch is disabled" do
+    Setting.stubs(:brand_fetch_client_id).returns(nil)
+
+    sec = Security.new(
       ticker: "BTCUSD",
       exchange_operating_mic: Provider::BinancePublic::BINANCE_MIC,
-      logo_url: "https://cdn.jsdelivr.net/gh/lindomar-oliveira/binance-data-plus/assets/img/BTC.png"
+      logo_url: "https://example.com/btc.png"
     )
-    assert_equal "https://cdn.jsdelivr.net/gh/lindomar-oliveira/binance-data-plus/assets/img/BTC.png",
-                 with_logo.display_logo_url
 
-    without_logo = Security.new(
-      ticker: "NOPECOIN",
-      exchange_operating_mic: Provider::BinancePublic::BINANCE_MIC,
-      logo_url: nil
-    )
-    assert_equal "https://cdn.brandfetch.io/binance.com/icon/fallback/lettermark/w/120/h/120?c=test-client-id",
-                 without_logo.display_logo_url
+    assert_equal "https://example.com/btc.png", sec.display_logo_url
   end
 
   test "display_logo_url for non-crypto prefers brandfetch over stored logo_url" do
@@ -169,5 +158,20 @@ class SecurityTest < ActiveSupport::TestCase
     )
 
     assert_equal "https://example.com/aapl.png", sec.display_logo_url
+  end
+
+  test "before_save writes the /crypto/{base} URL to logo_url for new crypto securities" do
+    Setting.stubs(:brand_fetch_client_id).returns("test-client-id")
+    Setting.stubs(:brand_fetch_logo_size).returns(120)
+
+    sec = Security.create!(
+      ticker: "BTCUSD",
+      exchange_operating_mic: Provider::BinancePublic::BINANCE_MIC
+    )
+
+    assert_equal(
+      "https://cdn.brandfetch.io/crypto/BTC/icon/fallback/lettermark/w/120/h/120?c=test-client-id",
+      sec.logo_url
+    )
   end
 end

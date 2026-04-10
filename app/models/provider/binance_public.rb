@@ -31,16 +31,6 @@ class Provider::BinancePublic < Provider
     "TRY"  => "TRY"
   }.freeze
 
-  # Per-asset logo PNGs served via jsDelivr from a GitHub repo that tracks the
-  # full Binance-listed asset set. We originally used bin.bnbstatic.com directly
-  # — Binance's own CDN — but that host enforces Referer-based hotlink
-  # protection at CloudFront: any request with a non-Binance Referer returns
-  # 403. A server-side HEAD from Faraday (no Referer) succeeds, which masked
-  # the breakage until the URL hit an actual <img> tag in the browser. jsDelivr
-  # is CORS-open and hotlink-friendly, so the URL we persist is the URL the
-  # browser can actually load. File names are uppercase PNGs (BTC.png, ETH.png).
-  LOGO_CDN_BASE = "https://cdn.jsdelivr.net/gh/lindomar-oliveira/binance-data-plus/assets/img".freeze
-
   KLINE_MAX_LIMIT = 1000
   MS_PER_DAY = 24 * 60 * 60 * 1000
   SEARCH_LIMIT = 25
@@ -116,7 +106,12 @@ class Provider::BinancePublic < Provider
         Security.new(
           symbol: "#{base}#{display_currency}",
           name: base,
-          logo_url: "#{LOGO_CDN_BASE}/#{base}.png",
+          # Brandfetch /crypto/{base} URL — unknown coins (rare) will 400 and
+          # render as a broken img in the dropdown; same tradeoff as stocks
+          # with obscure tickers. `::Security` reaches the AR model —
+          # unqualified `Security` here resolves to the Data value-object
+          # from SecurityConcept.
+          logo_url: ::Security.brandfetch_crypto_url(base),
           exchange_operating_mic: BINANCE_MIC,
           country_code: nil,
           currency: display_currency
@@ -130,11 +125,14 @@ class Provider::BinancePublic < Provider
       parsed = parse_ticker(symbol)
       raise Error, "Unsupported Binance ticker: #{symbol}" if parsed.nil?
 
+      # logo_url is intentionally nil — crypto logos are set at save time by
+      # Security#generate_logo_url_from_brandfetch via the /crypto/{base}
+      # route, not returned from this provider.
       SecurityInfo.new(
         symbol: symbol,
         name: parsed[:base],
         links: "https://www.binance.com/en/trade/#{parsed[:binance_pair]}",
-        logo_url: verified_logo_url(parsed[:base]),
+        logo_url: nil,
         description: nil,
         kind: "crypto",
         exchange_operating_mic: exchange_operating_mic
@@ -279,34 +277,6 @@ class Provider::BinancePublic < Provider
 
     def date_to_ms(date)
       Time.utc(date.year, date.month, date.day).to_i * 1000
-    end
-
-    # Returns the asset-specific jsDelivr logo URL if the HEAD succeeds, else
-    # nil. Returning nil (rather than a hard-coded fallback URL) lets
-    # Security#display_logo_url swap in a Brandfetch binance.com URL at render
-    # time — a config-dependent path that can't be baked into a constant here.
-    # Cached per base asset for 30 days so we HEAD at most once per coin and
-    # only when Security#import_provider_details runs (never during search,
-    # which must stay fast).
-    def verified_logo_url(base_asset)
-      Rails.cache.fetch("binance_public:logo:#{base_asset}", expires_in: 30.days) do
-        candidate = "#{LOGO_CDN_BASE}/#{base_asset}.png"
-        logo_client.head(candidate)
-        candidate
-      rescue Faraday::Error
-        nil
-      end
-    end
-
-    # Dedicated Faraday client for the logo CDN host (jsdelivr.net is a
-    # different origin from data-api.binance.vision). HEAD-only with a tight
-    # timeout so CDN hiccups can't stall Security info imports.
-    def logo_client
-      @logo_client ||= Faraday.new(url: LOGO_CDN_BASE, ssl: self.class.faraday_ssl_options) do |faraday|
-        faraday.options.timeout = 3
-        faraday.options.open_timeout = 2
-        faraday.response :raise_error
-      end
     end
 
     # Preserve BinancePublic::Error subclasses (e.g. InvalidSecurityPriceError)
