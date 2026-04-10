@@ -5,6 +5,9 @@ on:
     tags:
       - 'v*'
 
+permissions:
+  contents: read
+
 env:
   EVAL_MODEL: gpt-4.1
   RAILS_ENV: test
@@ -20,7 +23,7 @@ jobs:
 
     services:
       postgres:
-        image: postgres
+        image: postgres:16
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
@@ -29,7 +32,7 @@ jobs:
         options: --health-cmd="pg_isready" --health-interval=10s --health-timeout=5s --health-retries=3
 
       redis:
-        image: redis
+        image: redis:7.2
         ports:
           - 6379:6379
         options: --health-cmd="redis-cli ping" --health-interval=10s --health-timeout=5s --health-retries=3
@@ -51,6 +54,24 @@ jobs:
         run: |
           bin/rails db:create
           bin/rails db:schema:load
+
+      - name: Import eval datasets
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          shopt -s nullglob
+          dataset_files=(db/eval_data/*.yml)
+
+          if [ ${#dataset_files[@]} -eq 0 ]; then
+            echo "::error::No eval dataset files found under db/eval_data/*.yml"
+            exit 1
+          fi
+
+          for dataset_file in "${dataset_files[@]}"; do
+            echo "Importing ${dataset_file}"
+            bundle exec rake "evals:import_dataset[${dataset_file}]"
+          done
 
       - name: Resolve available eval datasets
         id: datasets
@@ -83,7 +104,7 @@ jobs:
 
     services:
       postgres:
-        image: postgres
+        image: postgres:16
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
@@ -92,7 +113,7 @@ jobs:
         options: --health-cmd="pg_isready" --health-interval=10s --health-timeout=5s --health-retries=3
 
       redis:
-        image: redis
+        image: redis:7.2
         ports:
           - 6379:6379
         options: --health-cmd="redis-cli ping" --health-interval=10s --health-timeout=5s --health-retries=3
@@ -112,6 +133,45 @@ jobs:
           bin/rails db:create
           bin/rails db:schema:load
 
+      - name: Import eval datasets
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          shopt -s nullglob
+          dataset_files=(db/eval_data/*.yml)
+
+          if [ ${#dataset_files[@]} -eq 0 ]; then
+            echo "::error::No eval dataset files found under db/eval_data/*.yml"
+            exit 1
+          fi
+
+          for dataset_file in "${dataset_files[@]}"; do
+            echo "Importing ${dataset_file}"
+            bundle exec rake "evals:import_dataset[${dataset_file}]"
+          done
+
+      - name: Prepare dataset artifact names
+        id: dataset_slug
+        env:
+          DATASET: ${{ matrix.dataset }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          slug=$(printf '%s' "$DATASET" \
+            | tr '[:upper:]' '[:lower:]' \
+            | sed -E 's/[^a-z0-9]+/-/g; s/^-+//; s/-+$//; s/-{2,}/-/g')
+
+          if [ -z "$slug" ]; then
+            echo "::error::Could not generate dataset slug from '$DATASET'"
+            exit 1
+          fi
+
+          echo "slug=$slug" >> "$GITHUB_OUTPUT"
+          echo "log_path=tmp/evals/${slug}.log" >> "$GITHUB_OUTPUT"
+          echo "json_path=tmp/evals/${slug}.json" >> "$GITHUB_OUTPUT"
+
       - name: Verify dataset exists
         env:
           DATASET: ${{ matrix.dataset }}
@@ -121,9 +181,11 @@ jobs:
       - name: Run eval
         env:
           DATASET: ${{ matrix.dataset }}
+          OPENAI_ACCESS_TOKEN: ${{ secrets.OPENAI_ACCESS_TOKEN }}
         run: |
+          set -euo pipefail
           mkdir -p tmp/evals
-          bundle exec rake "evals:run[${DATASET},${EVAL_MODEL}]" | tee "tmp/evals/${DATASET}.log"
+          bundle exec rake "evals:run[${DATASET},${EVAL_MODEL}]" | tee "${{ steps.dataset_slug.outputs.log_path }}"
 
       - name: Export run summary
         env:
@@ -134,21 +196,26 @@ jobs:
             run = Eval::Run.where(dataset: dataset, model: ENV.fetch("EVAL_MODEL")).order(created_at: :desc).first
             payload = {
               dataset: dataset.name,
+              dataset_metadata: dataset.metadata,
               model: ENV.fetch("EVAL_MODEL"),
               run_id: run.id,
               status: run.status,
               created_at: run.created_at,
               completed_at: run.completed_at,
-              metrics: run.metrics,
-              metadata: run.metadata
+              total_prompt_tokens: run.total_prompt_tokens,
+              total_completion_tokens: run.total_completion_tokens,
+              total_cost: run.total_cost,
+              metrics: run.metrics
             }
-            File.write("tmp/evals/#{dataset.name}.json", JSON.pretty_generate(payload))
+            File.write("${{ steps.dataset_slug.outputs.json_path }}", JSON.pretty_generate(payload))
           '
 
       - name: Upload eval artifact
         uses: actions/upload-artifact@v4
         with:
-          name: llm-evals-${{ matrix.dataset }}-${{ env.EVAL_MODEL }}
-          path: tmp/evals/${{ matrix.dataset }}.*
+          name: llm-evals-${{ steps.dataset_slug.outputs.slug }}-${{ env.EVAL_MODEL }}
+          path: |
+            ${{ steps.dataset_slug.outputs.log_path }}
+            ${{ steps.dataset_slug.outputs.json_path }}
           if-no-files-found: error
           retention-days: 30
