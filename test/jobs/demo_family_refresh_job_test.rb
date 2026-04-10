@@ -61,4 +61,15 @@ class DemoFamilyRefreshJobTest < ActiveJob::TestCase
       assert_match(/\+deleting-/, @demo_user.email)
     end
   end
+
+  test "reads demo email when config_for returns symbol keys" do
+    Rails.application.stubs(:config_for).with(:demo).returns({ email: @demo_email })
+
+    generator = mock
+    generator.expects(:generate_default_data!).with(skip_clear: true, email: @demo_email)
+    Demo::Generator.expects(:new).returns(generator)
+
+    DemoFamilyRefreshJob.perform_now
+  end
+
 end
