@@ -18,11 +18,16 @@ class EnableBankingAccount::Transactions::Processor
     failed_count = 0
     errors = []
 
+    shared_adapter = if enable_banking_account.current_account.present?
+      Account::ProviderImportAdapter.new(enable_banking_account.current_account)
+    end
+
     enable_banking_account.raw_transactions_payload.each_with_index do |transaction_data, index|
       begin
         result = EnableBankingEntry::Processor.new(
           transaction_data,
-          enable_banking_account: enable_banking_account
+          enable_banking_account: enable_banking_account,
+          import_adapter: shared_adapter
         ).process
 
         if result.nil?

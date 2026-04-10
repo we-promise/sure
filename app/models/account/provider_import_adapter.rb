@@ -83,7 +83,8 @@ class Account::ProviderImportAdapter
         incoming_pending =
           ActiveModel::Type::Boolean.new.cast(pending_extra.dig("simplefin", "pending")) ||
           ActiveModel::Type::Boolean.new.cast(pending_extra.dig("plaid", "pending")) ||
-          ActiveModel::Type::Boolean.new.cast(pending_extra.dig("lunchflow", "pending"))
+          ActiveModel::Type::Boolean.new.cast(pending_extra.dig("lunchflow", "pending")) ||
+          ActiveModel::Type::Boolean.new.cast(pending_extra.dig("enable_banking", "pending"))
       end
 
       if entry.new_record? && !incoming_pending
@@ -160,6 +161,10 @@ class Account::ProviderImportAdapter
       elsif detected_label == "Contribution"
         auto_kind = "investment_contribution"
         auto_category = account.family.investment_contributions_category
+      elsif account.accountable_type == "Loan" && amount.negative?
+        auto_kind = "loan_payment"
+      elsif account.accountable_type == "CreditCard" && amount.negative?
+        auto_kind = "cc_payment"
       end
 
       # Set investment activity label, kind, and category if detected
@@ -691,6 +696,7 @@ class Account::ProviderImportAdapter
         (transactions.extra -> 'simplefin' ->> 'pending')::boolean = true
         OR (transactions.extra -> 'plaid' ->> 'pending')::boolean = true
         OR (transactions.extra -> 'lunchflow' ->> 'pending')::boolean = true
+        OR (transactions.extra -> 'enable_banking' ->> 'pending')::boolean = true
       SQL
       .order(date: :desc) # Prefer most recent pending transaction
 
@@ -737,6 +743,7 @@ class Account::ProviderImportAdapter
         (transactions.extra -> 'simplefin' ->> 'pending')::boolean = true
         OR (transactions.extra -> 'plaid' ->> 'pending')::boolean = true
         OR (transactions.extra -> 'lunchflow' ->> 'pending')::boolean = true
+        OR (transactions.extra -> 'enable_banking' ->> 'pending')::boolean = true
       SQL
 
     # If merchant_id is provided, prioritize matching by merchant
@@ -806,6 +813,7 @@ class Account::ProviderImportAdapter
         (transactions.extra -> 'simplefin' ->> 'pending')::boolean = true
         OR (transactions.extra -> 'plaid' ->> 'pending')::boolean = true
         OR (transactions.extra -> 'lunchflow' ->> 'pending')::boolean = true
+        OR (transactions.extra -> 'enable_banking' ->> 'pending')::boolean = true
       SQL
 
     # For low confidence, require BOTH merchant AND name match (stronger signal needed)
