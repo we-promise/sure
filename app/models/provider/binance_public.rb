@@ -14,16 +14,28 @@ class Provider::BinancePublic < Provider
 
   # Quote assets we expose in search results. Order = preference when multiple
   # quote variants exist for the same base asset. USDT is Binance's dominant
-  # dollar quote and is surfaced to users as USD.
-  SUPPORTED_QUOTES = %w[USDT EUR GBP TRY].freeze
+  # dollar quote and is surfaced to users as USD. GBP is absent because
+  # Binance has zero GBP trading pairs today; GBP-family users fall back to
+  # USDT->USD via the app's FX conversion, same as HUF/CZK/PLN users.
+  SUPPORTED_QUOTES = %w[USDT EUR JPY BRL TRY].freeze
 
   # Binance quote asset -> user-facing currency & ticker suffix.
   QUOTE_TO_CURRENCY = {
     "USDT" => "USD",
     "EUR"  => "EUR",
-    "GBP"  => "GBP",
+    "JPY"  => "JPY",
+    "BRL"  => "BRL",
     "TRY"  => "TRY"
   }.freeze
+
+  # Deterministic static CDN that serves per-asset logo PNGs. Verified against
+  # 23 random assets (all 200 OK, image/png, 1-year cache-control). Unknown
+  # assets return 403 and are handled by FALLBACK_LOGO_URL below.
+  LOGO_CDN_BASE = "https://bin.bnbstatic.com/static/assets/logos".freeze
+
+  # Generic Binance brand PNG used when the asset-specific CDN URL is missing.
+  # 200x200 RGBA, served from the same CDN so it benefits from the same cache.
+  FALLBACK_LOGO_URL = "https://bin.bnbstatic.com/static/images/common/logo.png".freeze
 
   KLINE_MAX_LIMIT = 1000
   MS_PER_DAY = 24 * 60 * 60 * 1000
@@ -84,7 +96,7 @@ class Provider::BinancePublic < Provider
         Security.new(
           symbol: "#{base}#{display_currency}",
           name: base,
-          logo_url: nil,
+          logo_url: "#{LOGO_CDN_BASE}/#{base}.png",
           exchange_operating_mic: BINANCE_MIC,
           country_code: BINANCE_COUNTRY,
           currency: display_currency
@@ -102,7 +114,7 @@ class Provider::BinancePublic < Provider
         symbol: symbol,
         name: parsed[:base],
         links: "https://www.binance.com/en/trade/#{parsed[:binance_pair]}",
-        logo_url: nil,
+        logo_url: verified_logo_url(parsed[:base]),
         description: nil,
         kind: "crypto",
         exchange_operating_mic: exchange_operating_mic
@@ -227,6 +239,31 @@ class Provider::BinancePublic < Provider
 
     def date_to_ms(date)
       Time.utc(date.year, date.month, date.day).to_i * 1000
+    end
+
+    # Returns the asset-specific Binance CDN logo URL if it exists, else the
+    # generic Binance brand fallback. Cached per base asset for 30 days so we
+    # HEAD at most once per coin and only when Security#import_provider_details
+    # runs (never during search, which must stay fast).
+    def verified_logo_url(base_asset)
+      Rails.cache.fetch("binance_public:logo:#{base_asset}", expires_in: 30.days) do
+        candidate = "#{LOGO_CDN_BASE}/#{base_asset}.png"
+        logo_client.head(candidate)
+        candidate
+      rescue Faraday::Error
+        FALLBACK_LOGO_URL
+      end
+    end
+
+    # Dedicated Faraday client for the logo CDN host (bin.bnbstatic.com is a
+    # different origin from data-api.binance.vision). HEAD-only with a tight
+    # timeout so CDN hiccups can't stall Security info imports.
+    def logo_client
+      @logo_client ||= Faraday.new(url: LOGO_CDN_BASE, ssl: self.class.faraday_ssl_options) do |faraday|
+        faraday.options.timeout = 3
+        faraday.options.open_timeout = 2
+        faraday.response :raise_error
+      end
     end
 
     # Preserve BinancePublic::Error subclasses (e.g. InvalidSecurityPriceError)

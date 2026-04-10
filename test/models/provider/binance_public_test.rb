@@ -4,6 +4,9 @@ class Provider::BinancePublicTest < ActiveSupport::TestCase
   setup do
     @provider = Provider::BinancePublic.new
     @provider.stubs(:throttle_request)
+    # Logo cache is keyed per base asset and persists across tests; clear it
+    # so verified_logo_url tests don't see each other's results.
+    Rails.cache.delete_matched("binance_public:logo:*")
   end
 
   # ================================
@@ -19,8 +22,10 @@ class Provider::BinancePublicTest < ActiveSupport::TestCase
     tickers = response.data.map(&:symbol)
     assert_includes tickers, "BTCUSD"
     assert_includes tickers, "BTCEUR"
-    assert_includes tickers, "BTCGBP"
+    assert_includes tickers, "BTCJPY"
+    assert_includes tickers, "BTCBRL"
     assert_includes tickers, "BTCTRY"
+    refute_includes tickers, "BTCGBP", "GBP has zero Binance pairs and should never surface"
   end
 
   test "search_securities maps USDT pair to USD currency" do
@@ -279,12 +284,131 @@ class Provider::BinancePublicTest < ActiveSupport::TestCase
   # ================================
 
   test "fetch_security_info returns crypto kind" do
+    stub_logo_head_success
+
     response = @provider.fetch_security_info(symbol: "BTCUSD", exchange_operating_mic: "BNCX")
 
     assert response.success?
     assert_equal "BTC", response.data.name
     assert_equal "crypto", response.data.kind
     assert_match(/binance\.com/, response.data.links)
+  end
+
+  test "fetch_security_info returns the CDN logo URL when the HEAD succeeds" do
+    stub_logo_head_success
+
+    response = @provider.fetch_security_info(symbol: "ETHEUR", exchange_operating_mic: "BNCX")
+
+    assert_equal "https://bin.bnbstatic.com/static/assets/logos/ETH.png", response.data.logo_url
+  end
+
+  test "fetch_security_info falls back to the generic Binance logo on a 403" do
+    stub_logo_head_raising(Faraday::ForbiddenError.new("403"))
+
+    response = @provider.fetch_security_info(symbol: "NOPECOINUSD", exchange_operating_mic: "BNCX")
+
+    # Irrelevant whether upstream parsing succeeds — we just want the fallback URL
+    # in place whenever the HEAD errors.
+    assert_equal Provider::BinancePublic::FALLBACK_LOGO_URL, response.data.logo_url
+  end
+
+  test "fetch_security_info falls back when the CDN HEAD times out" do
+    stub_logo_head_raising(Faraday::TimeoutError.new("timeout"))
+
+    response = @provider.fetch_security_info(symbol: "BTCUSD", exchange_operating_mic: "BNCX")
+
+    assert_equal Provider::BinancePublic::FALLBACK_LOGO_URL, response.data.logo_url
+  end
+
+  # ================================
+  #       Quote currency coverage
+  # ================================
+
+  test "parse_ticker rejects GBP (unsupported)" do
+    assert_nil @provider.send(:parse_ticker, "BTCGBP")
+  end
+
+  test "parse_ticker maps JPY pair" do
+    parsed = @provider.send(:parse_ticker, "BTCJPY")
+    assert_equal "BTCJPY", parsed[:binance_pair]
+    assert_equal "BTC", parsed[:base]
+    assert_equal "JPY", parsed[:display_currency]
+  end
+
+  test "parse_ticker maps BRL pair" do
+    parsed = @provider.send(:parse_ticker, "ETHBRL")
+    assert_equal "ETHBRL", parsed[:binance_pair]
+    assert_equal "ETH", parsed[:base]
+    assert_equal "BRL", parsed[:display_currency]
+  end
+
+  test "fetch_security_prices returns JPY currency for a BTCJPY range" do
+    rows = [ kline_row("2026-01-15", "10800000") ]
+    mock_client_returning_klines(rows)
+
+    response = @provider.fetch_security_prices(
+      symbol: "BTCJPY",
+      exchange_operating_mic: "BNCX",
+      start_date: Date.parse("2026-01-15"),
+      end_date: Date.parse("2026-01-15")
+    )
+
+    assert_equal "JPY", response.data.first.currency
+    assert_in_delta 10_800_000.0, response.data.first.price
+  end
+
+  test "fetch_security_prices returns BRL currency for a BTCBRL range" do
+    rows = [ kline_row("2026-01-15", "350000") ]
+    mock_client_returning_klines(rows)
+
+    response = @provider.fetch_security_prices(
+      symbol: "BTCBRL",
+      exchange_operating_mic: "BNCX",
+      start_date: Date.parse("2026-01-15"),
+      end_date: Date.parse("2026-01-15")
+    )
+
+    assert_equal "BRL", response.data.first.currency
+  end
+
+  # ================================
+  #       Logo URL plumbing
+  # ================================
+
+  test "search_securities sets the optimistic CDN logo URL on every result" do
+    @provider.stubs(:exchange_info_symbols).returns(sample_exchange_info)
+
+    response = @provider.search_securities("BTC")
+
+    assert response.data.all? { |s| s.logo_url == "https://bin.bnbstatic.com/static/assets/logos/BTC.png" }
+  end
+
+  test "verified_logo_url caches the happy-path result per base asset" do
+    with_memory_cache do
+      mock_logo_client = mock
+      mock_logo_client.expects(:head).once.returns(mock)
+      @provider.stubs(:logo_client).returns(mock_logo_client)
+
+      url1 = @provider.send(:verified_logo_url, "BTC")
+      url2 = @provider.send(:verified_logo_url, "BTC")
+
+      assert_equal "https://bin.bnbstatic.com/static/assets/logos/BTC.png", url1
+      assert_equal url1, url2
+    end
+  end
+
+  test "verified_logo_url caches the fallback result per base asset" do
+    with_memory_cache do
+      mock_logo_client = mock
+      mock_logo_client.expects(:head).once.raises(Faraday::ForbiddenError.new("403"))
+      @provider.stubs(:logo_client).returns(mock_logo_client)
+
+      url1 = @provider.send(:verified_logo_url, "NEVERCOIN")
+      url2 = @provider.send(:verified_logo_url, "NEVERCOIN")
+
+      assert_equal Provider::BinancePublic::FALLBACK_LOGO_URL, url1
+      assert_equal url1, url2
+    end
   end
 
   # ================================
@@ -297,10 +421,12 @@ class Provider::BinancePublicTest < ActiveSupport::TestCase
       [
         info_row("BTC", "USDT"),
         info_row("BTC", "EUR"),
-        info_row("BTC", "GBP"),
+        info_row("BTC", "JPY"),
+        info_row("BTC", "BRL"),
         info_row("BTC", "TRY"),
         info_row("ETH", "USDT"),
         info_row("ETH", "EUR"),
+        info_row("ETH", "JPY"),
         info_row("SOL", "USDT"),
         info_row("BNB", "USDT")
       ]
@@ -338,5 +464,28 @@ class Provider::BinancePublicTest < ActiveSupport::TestCase
       mock_client = mock
       mock_client.stubs(:get).returns(mock_response)
       @provider.stubs(:client).returns(mock_client)
+    end
+
+    def stub_logo_head_success
+      mock_logo_client = mock
+      mock_logo_client.stubs(:head).returns(mock)
+      @provider.stubs(:logo_client).returns(mock_logo_client)
+    end
+
+    def stub_logo_head_raising(error)
+      mock_logo_client = mock
+      mock_logo_client.stubs(:head).raises(error)
+      @provider.stubs(:logo_client).returns(mock_logo_client)
+    end
+
+    # Rails.cache in the test env is a NullStore by default, so Rails.cache.fetch
+    # re-runs the block every time. Swap in a real MemoryStore so cache-hit
+    # assertions are meaningful, then restore the original.
+    def with_memory_cache
+      original = Rails.cache
+      Rails.cache = ActiveSupport::Cache::MemoryStore.new
+      yield
+    ensure
+      Rails.cache = original
     end
 end
