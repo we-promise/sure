@@ -41,12 +41,18 @@ class Security::Price::Importer
     advanced_first_price_on = nil
 
     if prev_price_value.blank?
-      earliest_provider_price = provider_prices.values.min_by(&:date)
+      # Filter for valid rows BEFORE picking the earliest — otherwise a
+      # single listing-day / halt-day row with a nil or zero price would
+      # cause us to fall through to the MissingStartPriceError bail even
+      # when plenty of valid prices exist later in the window.
+      earliest_provider_price = provider_prices.values
+        .select { |p| p.price.present? && p.price.to_f > 0 }
+        .min_by(&:date)
 
-      if earliest_provider_price&.price.present? && earliest_provider_price.price.to_f > 0
+      if earliest_provider_price
         Rails.logger.info(
           "#{security.ticker}: no provider price on or before #{start_date}; " \
-          "advancing gapfill start to earliest available #{earliest_provider_price.date}"
+          "advancing gapfill start to earliest valid provider date #{earliest_provider_price.date}"
         )
         prev_price_value        = earliest_provider_price.price
         prev_currency           = earliest_provider_price.currency || prev_currency
@@ -124,10 +130,18 @@ class Security::Price::Importer
 
     # Persist the advanced start date so subsequent syncs can clamp
     # expected_count and short-circuit via all_prices_exist? instead of
-    # re-iterating the full (start_date..end_date) range every time. Only
-    # set on the first successful advance — clear_cache is the way to
-    # recompute it if the provider later extends its history.
-    if advanced_first_price_on.present? && security.first_provider_price_on.blank?
+    # re-iterating the full (start_date..end_date) range every time.
+    #
+    # Update when the column is currently blank, OR when we've discovered
+    # an EARLIER date than the stored one — the latter covers the
+    # clear_cache-driven case where a provider has extended its backward
+    # coverage (e.g. Binance backfilling older BTCEUR history) and we
+    # want subsequent syncs to reflect the new earlier clamp. We never
+    # move the column forward from a previously-discovered earlier value,
+    # since that would silently hide older rows already in the DB.
+    if advanced_first_price_on.present? &&
+       (security.first_provider_price_on.blank? ||
+        advanced_first_price_on < security.first_provider_price_on)
       security.update_column(:first_provider_price_on, advanced_first_price_on)
     end
 

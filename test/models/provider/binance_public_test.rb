@@ -91,6 +91,44 @@ class Provider::BinancePublicTest < ActiveSupport::TestCase
     assert_equal "BTC", tickers.first
   end
 
+  test "search_securities matches when user types the full display ticker (BTCEUR)" do
+    @provider.stubs(:exchange_info_symbols).returns(sample_exchange_info)
+
+    response = @provider.search_securities("BTCEUR")
+
+    assert response.success?
+    tickers = response.data.map(&:symbol)
+    assert_includes tickers, "BTCEUR"
+    # Should NOT return every BTC pair — narrow query, narrow result set.
+    refute_includes tickers, "BTCJPY"
+    refute_includes tickers, "BTCBRL"
+    refute_includes tickers, "BTCTRY"
+  end
+
+  test "search_securities matches BTCUSD against the raw BTCUSDT pair" do
+    @provider.stubs(:exchange_info_symbols).returns(sample_exchange_info)
+
+    response = @provider.search_securities("BTCUSD")
+
+    assert response.success?
+    tickers = response.data.map(&:symbol)
+    # "BTCUSD" is a prefix of Binance's raw "BTCUSDT" — that single USDT-backed
+    # USD variant is what should come back (we store it as BTCUSD for the user).
+    assert_equal [ "BTCUSD" ], tickers
+  end
+
+  test "search_securities ranks exact symbol match above base prefix match" do
+    info = [
+      info_row("BTC", "USDT"),   # base="BTC", symbol="BTCUSDT"
+      info_row("BTC", "EUR"),    # base="BTC", symbol="BTCEUR"  <- exact symbol match
+      info_row("BTCB", "EUR")    # base="BTCB", symbol="BTCBEUR"
+    ]
+    @provider.stubs(:exchange_info_symbols).returns(info)
+
+    response = @provider.search_securities("BTCEUR")
+    assert_equal [ "BTCEUR" ], response.data.map(&:symbol)
+  end
+
   test "search_securities ignores delisted pairs" do
     info = [
       info_row("BTC", "USDT", status: "TRADING"),

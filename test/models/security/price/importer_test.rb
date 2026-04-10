@@ -131,6 +131,121 @@ class Security::Price::ImporterTest < ActiveSupport::TestCase
     assert_equal listing, @security.reload.first_provider_price_on
   end
 
+  test "pre-listing fallback picks earliest VALID provider row, skipping nil/zero leaders" do
+    # Regression: if the provider returns a row with a nil/zero price as its
+    # earliest entry (e.g. a listing-day or halted-day placeholder), the
+    # fallback used to bail with MissingStartPriceError and drop every later
+    # valid row. It must now skip past invalid leaders and anchor on the
+    # earliest positive-price row instead.
+    Security::Price.delete_all
+
+    start_date = Date.parse("2018-06-15")
+    listing    = Date.parse("2020-01-03")
+    end_date   = listing + 3.days
+
+    provider_response = provider_success_response([
+      OpenStruct.new(security: @security, date: listing,           price: 0,    currency: "EUR"),
+      OpenStruct.new(security: @security, date: listing + 1.day,   price: nil,  currency: "EUR"),
+      OpenStruct.new(security: @security, date: listing + 2.days,  price: 6700, currency: "EUR"),
+      OpenStruct.new(security: @security, date: listing + 3.days,  price: 6800, currency: "EUR")
+    ])
+
+    @provider.expects(:fetch_security_prices)
+             .with(symbol: @security.ticker, exchange_operating_mic: @security.exchange_operating_mic,
+                   start_date: get_provider_fetch_start_date(start_date), end_date: end_date)
+             .returns(provider_response)
+
+    upserted = Security::Price::Importer.new(
+      security: @security,
+      security_provider: @provider,
+      start_date: start_date,
+      end_date: end_date
+    ).import_provider_prices
+
+    # 2 valid provider rows + LOCF for each of the 2 invalid dates before them
+    # would ALSO get skipped entirely since fill_start_date advances past them
+    # (honest gap before earliest VALID date).
+    db_prices = Security::Price.where(security: @security).order(:date)
+    assert_equal 2, db_prices.count
+    assert_equal [ listing + 2.days, listing + 3.days ], db_prices.map(&:date)
+    assert_equal [ 6700, 6800 ], db_prices.map { |p| p.price.to_i }
+
+    assert_equal 2, upserted
+    assert_equal listing + 2.days, @security.reload.first_provider_price_on
+  end
+
+  test "first_provider_price_on is moved earlier when provider extends backward coverage" do
+    # Regression: a previous sync captured first_provider_price_on = 2024-10-01
+    # (e.g. provider only had limited history then). The provider has now
+    # backfilled earlier data. A clear_cache sync should detect the new
+    # earlier date and update the column so subsequent non-clear_cache
+    # syncs use the correct wider clamp.
+    Security::Price.delete_all
+
+    @security.update!(first_provider_price_on: Date.parse("2024-10-01"))
+
+    start_date = Date.parse("2018-06-15")
+    earlier    = Date.parse("2020-01-03")
+    end_date   = earlier + 2.days
+
+    provider_response = provider_success_response([
+      OpenStruct.new(security: @security, date: earlier,          price: 6568, currency: "EUR"),
+      OpenStruct.new(security: @security, date: earlier + 1.day,  price: 6700, currency: "EUR"),
+      OpenStruct.new(security: @security, date: earlier + 2.days, price: 6800, currency: "EUR")
+    ])
+
+    @provider.expects(:fetch_security_prices)
+             .with(symbol: @security.ticker, exchange_operating_mic: @security.exchange_operating_mic,
+                   start_date: get_provider_fetch_start_date(start_date), end_date: end_date)
+             .returns(provider_response)
+
+    Security::Price::Importer.new(
+      security: @security,
+      security_provider: @provider,
+      start_date: start_date,
+      end_date: end_date,
+      clear_cache: true
+    ).import_provider_prices
+
+    assert_equal earlier, @security.reload.first_provider_price_on
+  end
+
+  test "first_provider_price_on is NOT moved forward when provider shrinks coverage" do
+    # Provider previously had data back to 2020-01-03, which we captured.
+    # A later clear_cache sync discovers the provider can now only serve
+    # from 2022-06-01 (e.g. free tier shrunk). We must NOT move the column
+    # forward, since that would silently hide older rows already in the DB.
+    Security::Price.delete_all
+
+    @security.update!(first_provider_price_on: Date.parse("2020-01-03"))
+
+    start_date = Date.parse("2018-06-15")
+    later      = Date.parse("2022-06-01")
+    end_date   = later + 2.days
+
+    provider_response = provider_success_response([
+      OpenStruct.new(security: @security, date: later,          price: 20000, currency: "EUR"),
+      OpenStruct.new(security: @security, date: later + 1.day,  price: 20500, currency: "EUR"),
+      OpenStruct.new(security: @security, date: later + 2.days, price: 21000, currency: "EUR")
+    ])
+
+    @provider.expects(:fetch_security_prices)
+             .with(symbol: @security.ticker, exchange_operating_mic: @security.exchange_operating_mic,
+                   start_date: get_provider_fetch_start_date(start_date), end_date: end_date)
+             .returns(provider_response)
+
+    Security::Price::Importer.new(
+      security: @security,
+      security_provider: @provider,
+      start_date: start_date,
+      end_date: end_date,
+      clear_cache: true
+    ).import_provider_prices
+
+    # Column stays at the earlier stored value — shrink is ignored.
+    assert_equal Date.parse("2020-01-03"), @security.reload.first_provider_price_on
+  end
+
   test "skips re-sync for pre-listing holding once first_provider_price_on is set" do
     # Previous sync already advanced the clamp and wrote all post-listing
     # prices. The next sync should see all_prices_exist? return true (because

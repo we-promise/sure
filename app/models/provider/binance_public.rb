@@ -70,21 +70,37 @@ class Provider::BinancePublic < Provider
       symbols = exchange_info_symbols
 
       matches = symbols.select do |s|
-        base = s["baseAsset"].to_s.upcase
-        quote = s["quoteAsset"].to_s.upcase
-        SUPPORTED_QUOTES.include?(quote) && base.include?(query)
+        base   = s["baseAsset"].to_s.upcase
+        quote  = s["quoteAsset"].to_s.upcase
+        symbol = s["symbol"].to_s.upcase
+
+        next false unless SUPPORTED_QUOTES.include?(quote)
+
+        # Match on either the base asset (so "BTC" surfaces every BTC pair) or
+        # the full Binance pair symbol (so users pasting their own portfolio
+        # ticker like "BTCEUR" or "BTCUSD" — which prefixes Binance's raw
+        # "BTCUSDT" — also hit a result).
+        base.include?(query) || symbol == query || symbol.start_with?(query)
       end
 
       ranked = matches.sort_by do |s|
-        base = s["baseAsset"].to_s.upcase
-        quote_index = SUPPORTED_QUOTES.index(s["quoteAsset"].to_s.upcase) || 99
-        relevance = if base == query
-          0
+        base   = s["baseAsset"].to_s.upcase
+        quote  = s["quoteAsset"].to_s.upcase
+        symbol = s["symbol"].to_s.upcase
+        quote_index = SUPPORTED_QUOTES.index(quote) || 99
+
+        relevance = if symbol == query
+          0 # exact full-ticker match — highest priority
+        elsif symbol.start_with?(query)
+          1 # ticker prefix match (e.g. "BTCUSD" against "BTCUSDT")
+        elsif base == query
+          2 # exact base-asset match (e.g. "BTC")
         elsif base.start_with?(query)
-          1
+          3
         else
-          2
+          4
         end
+
         [ relevance, quote_index, base ]
       end
 
@@ -208,6 +224,13 @@ class Provider::BinancePublic < Provider
 
     def client
       @client ||= Faraday.new(url: base_url, ssl: self.class.faraday_ssl_options) do |faraday|
+        # Explicit timeouts so a hanging Binance endpoint can't stall a Sidekiq
+        # worker or Puma thread indefinitely. Values are deliberately generous
+        # enough for a full 1000-row klines response but capped to bound the
+        # worst-case retry chain (3 attempts * 20s + backoff ~= 65s).
+        faraday.options.open_timeout = 5
+        faraday.options.timeout      = 20
+
         faraday.request(:retry, {
           max: 3,
           interval: 0.5,
