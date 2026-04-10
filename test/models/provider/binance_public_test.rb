@@ -36,7 +36,7 @@ class Provider::BinancePublicTest < ActiveSupport::TestCase
 
     assert_equal "USD", usd_row.currency
     assert_equal "BNCX", usd_row.exchange_operating_mic
-    assert_equal "AE", usd_row.country_code
+    assert_nil usd_row.country_code, "Crypto is jurisdictionless — country must be nil so non-AE families resolve"
     assert_equal "BTC", usd_row.name
   end
 

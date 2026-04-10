@@ -123,6 +123,75 @@ class Security::ResolverTest < ActiveSupport::TestCase
     assert_nil resolved.reload.price_provider, "Unknown providers should be rejected"
   end
 
+  test "resolves Binance crypto match for a non-AE family" do
+    # Regression: BinancePublic search results carry country_code="AE" (the ISO
+    # 10383 MIC country), but the transactions controller passes the family's
+    # country (e.g. "US"). The resolver used to require an exact country match
+    # for both exact and close paths, so non-AE families would fall through to
+    # offline_security for every Binance pick — the user saw their BTCUSD
+    # holding resolve to an offline security that never fetched prices.
+    binance_match = Security.new(
+      ticker: "BTCUSD",
+      exchange_operating_mic: "BNCX",
+      country_code: nil,
+      price_provider: "binance_public"
+    )
+
+    Security.expects(:search_provider)
+            .with("BTCUSD", exchange_operating_mic: "BNCX", country_code: "US")
+            .returns([ binance_match ])
+
+    Setting.stubs(:enabled_securities_providers).returns([ "binance_public" ])
+
+    resolved = Security::Resolver.new(
+      "BTCUSD",
+      exchange_operating_mic: "BNCX",
+      country_code: "US",
+      price_provider: "binance_public"
+    ).resolve
+
+    assert resolved.persisted?
+    refute resolved.offline, "Binance security must not fall through to offline_security"
+    assert_equal "BTCUSD",         resolved.ticker
+    assert_equal "BNCX",           resolved.exchange_operating_mic
+    assert_equal "binance_public", resolved.price_provider
+  end
+
+  test "resolved provider match is persisted with nil name/logo_url" do
+    # Documents that find_or_create_provider_match! intentionally copies only
+    # ticker, MIC, country_code, and price_provider from the match — not name
+    # or logo_url. This means Security#import_provider_details always has
+    # blank metadata on first resolution and does NOT short-circuit at
+    # `return if self.name.present? && ...`, so fetch_security_info runs as
+    # expected on the first sync. Regression guard: if someone adds name/logo
+    # copying to the resolver, the Binance logo-fallback path would become
+    # dead code on first sync.
+    match = Security.new(
+      ticker: "BTCUSD",
+      exchange_operating_mic: "BNCX",
+      country_code: nil,
+      name: "BTC",
+      logo_url: "https://bin.bnbstatic.com/static/assets/logos/BTC.png",
+      price_provider: "binance_public"
+    )
+
+    Security.expects(:search_provider)
+            .with("BTCUSD", exchange_operating_mic: "BNCX", country_code: "US")
+            .returns([ match ])
+
+    Setting.stubs(:enabled_securities_providers).returns([ "binance_public" ])
+
+    resolved = Security::Resolver.new(
+      "BTCUSD",
+      exchange_operating_mic: "BNCX",
+      country_code: "US",
+      price_provider: "binance_public"
+    ).resolve
+
+    assert_nil resolved.reload.name, "Resolver must not copy name from the search match"
+    assert_nil resolved.logo_url,    "Resolver must not copy logo_url from the search match"
+  end
+
   test "rejects disabled price_provider" do
     db_security = Security.create!(ticker: "GOOG2", exchange_operating_mic: "XNAS", country_code: "US")
 

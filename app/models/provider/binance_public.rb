@@ -9,8 +9,11 @@ class Provider::BinancePublic < Provider
   MIN_REQUEST_INTERVAL = 0.1
 
   # Binance's official ISO 10383 operating MIC (assigned Jan 2026, country AE).
+  # Crypto is not tied to a national jurisdiction, so we intentionally do NOT
+  # propagate the ISO-assigned country code to search results — the resolver
+  # treats a nil candidate country as a wildcard, letting any family resolve
+  # a Binance pick regardless of their own country.
   BINANCE_MIC = "BNCX".freeze
-  BINANCE_COUNTRY = "AE".freeze
 
   # Quote assets we expose in search results. Order = preference when multiple
   # quote variants exist for the same base asset. USDT is Binance's dominant
@@ -114,7 +117,7 @@ class Provider::BinancePublic < Provider
           name: base,
           logo_url: "#{LOGO_CDN_BASE}/#{base}.png",
           exchange_operating_mic: BINANCE_MIC,
-          country_code: BINANCE_COUNTRY,
+          country_code: nil,
           currency: display_currency
         )
       end
