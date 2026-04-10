@@ -101,6 +101,77 @@ class Provider::TwelveDataTest < ActiveSupport::TestCase
   end
 
   # ================================
+  #     Crypto Filter Tests
+  # ================================
+
+  test "search_securities excludes Digital Currency rows" do
+    body = {
+      "data" => [
+        {
+          "symbol" => "ETH",
+          "instrument_name" => "Grayscale Ethereum Trust ETF",
+          "mic_code" => "ARCX",
+          "instrument_type" => "ETF",
+          "country" => "United States",
+          "currency" => "USD"
+        },
+        {
+          "symbol" => "ETH/EUR",
+          "instrument_name" => "Ethereum Euro",
+          "mic_code" => "DIGITAL_CURRENCY",
+          "instrument_type" => "Digital Currency",
+          "country" => "",
+          "currency" => ""
+        },
+        {
+          "symbol" => "BTC/USD",
+          "instrument_name" => "Bitcoin US Dollar",
+          "mic_code" => "DIGITAL_CURRENCY",
+          "instrument_type" => "Digital Currency",
+          "country" => "",
+          "currency" => ""
+        }
+      ]
+    }.to_json
+
+    mock_response = mock
+    mock_response.stubs(:body).returns(body)
+    @provider.stubs(:throttle_request)
+    @provider.stubs(:client).returns(mock_client = mock)
+    mock_client.stubs(:get).returns(mock_response)
+
+    result = @provider.search_securities("ETH")
+
+    assert result.success?
+    assert_equal 1, result.data.size
+    assert_equal "ETH", result.data.first.symbol
+    refute result.data.any? { |s| s.symbol.include?("/") }
+  end
+
+  test "search_securities excludes crypto even with mixed-case instrument_type" do
+    body = {
+      "data" => [
+        {
+          "symbol" => "BTC/EUR",
+          "instrument_name" => "Bitcoin Euro",
+          "mic_code" => "",
+          "instrument_type" => "digital currency",
+          "currency" => ""
+        }
+      ]
+    }.to_json
+
+    mock_response = mock
+    mock_response.stubs(:body).returns(body)
+    @provider.stubs(:throttle_request)
+    @provider.stubs(:client).returns(mock_client = mock)
+    mock_client.stubs(:get).returns(mock_response)
+
+    result = @provider.search_securities("BTC")
+    assert_empty result.data
+  end
+
+  # ================================
   #       Throttle Tests
   # ================================
 

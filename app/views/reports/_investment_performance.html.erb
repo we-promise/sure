@@ -75,10 +75,8 @@
                 <tr class="<%= idx < investment_metrics[:top_holdings].size - 1 ? "border-b border-divider" : "" %>">
                   <td class="py-3 px-4 lg:px-6">
                     <div class="flex items-center gap-3">
-                      <% if holding.security.brandfetch_icon_url.present? %>
-                        <img src="<%= holding.security.brandfetch_icon_url %>" alt="<%= holding.ticker %>" class="w-6 h-6 rounded-full">
-                      <% elsif holding.security.logo_url.present? %>
-                        <img src="<%= Setting.transform_brand_fetch_url(holding.security.logo_url) %>" alt="<%= holding.ticker %>" class="w-6 h-6 rounded-full">
+                      <% if (logo = holding.security.display_logo_url).present? %>
+                        <img src="<%= Setting.transform_brand_fetch_url(logo) %>" alt="<%= holding.ticker %>" class="w-6 h-6 rounded-full">
                       <% else %>
                         <div class="w-8 h-8 rounded-full bg-container-inset flex items-center justify-center text-xs font-medium text-secondary">
                           <%= holding.ticker[0..1] %>

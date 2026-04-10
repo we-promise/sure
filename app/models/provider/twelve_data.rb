@@ -149,7 +149,7 @@ class Provider::TwelveData < Provider
         raise Error, "API error (code: #{error_code}): #{error_message}"
       end
 
-      data.map do |security|
+      data.reject { |row| crypto_row?(row) }.map do |security|
         country = ISO3166::Country.find_country_by_any_name(security.dig("country"))
 
         Security.new(
@@ -249,6 +249,16 @@ class Provider::TwelveData < Provider
 
   private
     attr_reader :api_key
+
+    # TwelveData tags crypto symbols with `instrument_type: "Digital Currency"` and
+    # `mic_code: "DIGITAL_CURRENCY"`, and returns an empty `currency` field for them.
+    # We exclude them so crypto is handled exclusively by Provider::BinancePublic —
+    # TD's empty currency would otherwise cascade into Security::Price rows defaulting
+    # to USD, silently mispricing EUR/GBP crypto holdings.
+    def crypto_row?(row)
+      row["instrument_type"].to_s.casecmp?("Digital Currency") ||
+        row["mic_code"].to_s.casecmp?("DIGITAL_CURRENCY")
+    end
 
     def base_url
       ENV["TWELVE_DATA_URL"] || "https://api.twelvedata.com"

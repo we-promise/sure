@@ -43,6 +43,7 @@ en:
         requires_api_key_eodhd: requires API key, 20 calls/day limit
         requires_api_key_alpha_vantage: requires API key, 25 calls/day limit
         mfapi_hint: free, no API key -- Indian mutual funds only
+        binance_public_hint: free, no API key -- crypto only (BTC, ETH, etc.)
         providers:
           twelve_data: Twelve Data
           yahoo_finance: Yahoo Finance
@@ -50,6 +51,7 @@ en:
           eodhd: EODHD
           alpha_vantage: Alpha Vantage
           mfapi: MFAPI.in
+          binance_public: Binance
       assistant_settings:
         title: AI Assistant
         description: Choose how the chat assistant responds. Builtin uses your configured LLM provider directly. External delegates to a remote AI agent that can call back to Sure's financial tools via MCP.
