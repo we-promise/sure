@@ -31,14 +31,15 @@ class Provider::BinancePublic < Provider
     "TRY"  => "TRY"
   }.freeze
 
-  # Deterministic static CDN that serves per-asset logo PNGs. Verified against
-  # 23 random assets (all 200 OK, image/png, 1-year cache-control). Unknown
-  # assets return 403 and are handled by FALLBACK_LOGO_URL below.
-  LOGO_CDN_BASE = "https://bin.bnbstatic.com/static/assets/logos".freeze
-
-  # Generic Binance brand PNG used when the asset-specific CDN URL is missing.
-  # 200x200 RGBA, served from the same CDN so it benefits from the same cache.
-  FALLBACK_LOGO_URL = "https://bin.bnbstatic.com/static/images/common/logo.png".freeze
+  # Per-asset logo PNGs served via jsDelivr from a GitHub repo that tracks the
+  # full Binance-listed asset set. We originally used bin.bnbstatic.com directly
+  # — Binance's own CDN — but that host enforces Referer-based hotlink
+  # protection at CloudFront: any request with a non-Binance Referer returns
+  # 403. A server-side HEAD from Faraday (no Referer) succeeds, which masked
+  # the breakage until the URL hit an actual <img> tag in the browser. jsDelivr
+  # is CORS-open and hotlink-friendly, so the URL we persist is the URL the
+  # browser can actually load. File names are uppercase PNGs (BTC.png, ETH.png).
+  LOGO_CDN_BASE = "https://cdn.jsdelivr.net/gh/lindomar-oliveira/binance-data-plus/assets/img".freeze
 
   KLINE_MAX_LIMIT = 1000
   MS_PER_DAY = 24 * 60 * 60 * 1000
@@ -280,21 +281,24 @@ class Provider::BinancePublic < Provider
       Time.utc(date.year, date.month, date.day).to_i * 1000
     end
 
-    # Returns the asset-specific Binance CDN logo URL if it exists, else the
-    # generic Binance brand fallback. Cached per base asset for 30 days so we
-    # HEAD at most once per coin and only when Security#import_provider_details
-    # runs (never during search, which must stay fast).
+    # Returns the asset-specific jsDelivr logo URL if the HEAD succeeds, else
+    # nil. Returning nil (rather than a hard-coded fallback URL) lets
+    # Security#display_logo_url swap in a Brandfetch binance.com URL at render
+    # time — a config-dependent path that can't be baked into a constant here.
+    # Cached per base asset for 30 days so we HEAD at most once per coin and
+    # only when Security#import_provider_details runs (never during search,
+    # which must stay fast).
     def verified_logo_url(base_asset)
       Rails.cache.fetch("binance_public:logo:#{base_asset}", expires_in: 30.days) do
         candidate = "#{LOGO_CDN_BASE}/#{base_asset}.png"
         logo_client.head(candidate)
         candidate
       rescue Faraday::Error
-        FALLBACK_LOGO_URL
+        nil
       end
     end
 
-    # Dedicated Faraday client for the logo CDN host (bin.bnbstatic.com is a
+    # Dedicated Faraday client for the logo CDN host (jsdelivr.net is a
     # different origin from data-api.binance.vision). HEAD-only with a tight
     # timeout so CDN hiccups can't stall Security info imports.
     def logo_client

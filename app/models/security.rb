@@ -53,6 +53,31 @@ class Security < ApplicationRecord
     kind == "cash"
   end
 
+  # True when this security represents a crypto asset. Today the only signal
+  # is the Binance ISO MIC — when we add a second crypto provider, extend
+  # this check rather than duplicating the test at every call site.
+  def crypto?
+    exchange_operating_mic == Provider::BinancePublic::BINANCE_MIC
+  end
+
+  # Single source of truth for which logo URL the UI should render. The order
+  # differs by asset class:
+  #
+  #   - Crypto: prefer the verified per-asset jsDelivr logo (set during
+  #     import by Provider::BinancePublic#verified_logo_url). On a miss, fall
+  #     back to Brandfetch with a forced `binance.com` identifier so the
+  #     generic Binance brand mark shows instead of a ticker lettermark.
+  #
+  #   - Everything else: Brandfetch first (domain-derived or ticker lettermark),
+  #     then any provider-set logo_url.
+  def display_logo_url
+    if crypto?
+      logo_url.presence || brandfetch_icon_url(identifier: "binance.com")
+    else
+      brandfetch_icon_url.presence || logo_url.presence
+    end
+  end
+
   # Returns user-friendly exchange name for a MIC code
   def self.exchange_name_for(mic)
     return nil if mic.blank?
@@ -81,13 +106,13 @@ class Security < ApplicationRecord
     )
   end
 
-  def brandfetch_icon_url(width: nil, height: nil)
+  def brandfetch_icon_url(width: nil, height: nil, identifier: nil)
     return nil unless Setting.brand_fetch_client_id.present?
 
     w = width || Setting.brand_fetch_logo_size
     h = height || Setting.brand_fetch_logo_size
 
-    identifier = extract_domain(website_url) if website_url.present?
+    identifier ||= extract_domain(website_url) if website_url.present?
     identifier ||= ticker
 
     return nil unless identifier.present?

@@ -6,10 +6,8 @@
         <%= tag.p @holding.ticker, class: "text-sm text-secondary" %>
       </div>
       <div class="flex items-center gap-3">
-        <% if @holding.security.brandfetch_icon_url.present? %>
-          <%= image_tag @holding.security.brandfetch_icon_url, loading: "lazy", class: "w-9 h-9 rounded-full" %>
-        <% elsif @holding.security.logo_url.present? %>
-          <%= image_tag @holding.security.logo_url, loading: "lazy", class: "w-9 h-9 rounded-full" %>
+        <% if (logo = @holding.security.display_logo_url).present? %>
+          <%= image_tag logo, loading: "lazy", class: "w-9 h-9 rounded-full" %>
         <% else %>
           <%= render DS::FilledIcon.new(variant: :text, text: @holding.name, size: "md", rounded: true) %>
         <% end %>

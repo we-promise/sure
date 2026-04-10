@@ -171,7 +171,7 @@ class Security::ResolverTest < ActiveSupport::TestCase
       exchange_operating_mic: "BNCX",
       country_code: nil,
       name: "BTC",
-      logo_url: "https://bin.bnbstatic.com/static/assets/logos/BTC.png",
+      logo_url: "https://cdn.jsdelivr.net/gh/lindomar-oliveira/binance-data-plus/assets/img/BTC.png",
       price_provider: "binance_public"
     )
 

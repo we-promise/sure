@@ -415,25 +415,26 @@ class Provider::BinancePublicTest < ActiveSupport::TestCase
 
     response = @provider.fetch_security_info(symbol: "ETHEUR", exchange_operating_mic: "BNCX")
 
-    assert_equal "https://bin.bnbstatic.com/static/assets/logos/ETH.png", response.data.logo_url
+    assert_equal "https://cdn.jsdelivr.net/gh/lindomar-oliveira/binance-data-plus/assets/img/ETH.png", response.data.logo_url
   end
 
-  test "fetch_security_info falls back to the generic Binance logo on a 403" do
+  test "fetch_security_info returns nil logo_url on a HEAD 403" do
     stub_logo_head_raising(Faraday::ForbiddenError.new("403"))
 
     response = @provider.fetch_security_info(symbol: "NOPECOINUSD", exchange_operating_mic: "BNCX")
 
-    # Irrelevant whether upstream parsing succeeds — we just want the fallback URL
-    # in place whenever the HEAD errors.
-    assert_equal Provider::BinancePublic::FALLBACK_LOGO_URL, response.data.logo_url
+    # Nil (rather than a baked-in fallback URL) lets Security#display_logo_url
+    # substitute a Brandfetch binance.com URL at render time — a path that
+    # depends on runtime config and can't live on this provider.
+    assert_nil response.data.logo_url
   end
 
-  test "fetch_security_info falls back when the CDN HEAD times out" do
+  test "fetch_security_info returns nil logo_url when the CDN HEAD times out" do
     stub_logo_head_raising(Faraday::TimeoutError.new("timeout"))
 
     response = @provider.fetch_security_info(symbol: "BTCUSD", exchange_operating_mic: "BNCX")
 
-    assert_equal Provider::BinancePublic::FALLBACK_LOGO_URL, response.data.logo_url
+    assert_nil response.data.logo_url
   end
 
   # ================================
@@ -496,7 +497,7 @@ class Provider::BinancePublicTest < ActiveSupport::TestCase
 
     response = @provider.search_securities("BTC")
 
-    assert response.data.all? { |s| s.logo_url == "https://bin.bnbstatic.com/static/assets/logos/BTC.png" }
+    assert response.data.all? { |s| s.logo_url == "https://cdn.jsdelivr.net/gh/lindomar-oliveira/binance-data-plus/assets/img/BTC.png" }
   end
 
   test "verified_logo_url caches the happy-path result per base asset" do
@@ -508,12 +509,12 @@ class Provider::BinancePublicTest < ActiveSupport::TestCase
       url1 = @provider.send(:verified_logo_url, "BTC")
       url2 = @provider.send(:verified_logo_url, "BTC")
 
-      assert_equal "https://bin.bnbstatic.com/static/assets/logos/BTC.png", url1
+      assert_equal "https://cdn.jsdelivr.net/gh/lindomar-oliveira/binance-data-plus/assets/img/BTC.png", url1
       assert_equal url1, url2
     end
   end
 
-  test "verified_logo_url caches the fallback result per base asset" do
+  test "verified_logo_url caches the nil fallback per base asset" do
     with_memory_cache do
       mock_logo_client = mock
       mock_logo_client.expects(:head).once.raises(Faraday::ForbiddenError.new("403"))
@@ -522,8 +523,8 @@ class Provider::BinancePublicTest < ActiveSupport::TestCase
       url1 = @provider.send(:verified_logo_url, "NEVERCOIN")
       url2 = @provider.send(:verified_logo_url, "NEVERCOIN")
 
-      assert_equal Provider::BinancePublic::FALLBACK_LOGO_URL, url1
-      assert_equal url1, url2
+      assert_nil url1
+      assert_nil url2
     end
   end
 

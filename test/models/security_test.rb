@@ -112,4 +112,62 @@ class SecurityTest < ActiveSupport::TestCase
 
     assert_not_includes standard_tickers, "CASH-#{account.id.upcase}"
   end
+
+  test "crypto? is true for Binance MIC and false otherwise" do
+    crypto = Security.new(ticker: "BTCUSD", exchange_operating_mic: Provider::BinancePublic::BINANCE_MIC)
+    equity = Security.new(ticker: "AAPL",   exchange_operating_mic: "XNAS")
+    offline = Security.new(ticker: "ACME",  exchange_operating_mic: nil)
+
+    assert crypto.crypto?
+    assert_not equity.crypto?
+    assert_not offline.crypto?
+  end
+
+  test "display_logo_url for crypto prefers logo_url and falls back to brandfetch with binance.com" do
+    Setting.stubs(:brand_fetch_client_id).returns("test-client-id")
+    Setting.stubs(:brand_fetch_logo_size).returns(120)
+
+    with_logo = Security.new(
+      ticker: "BTCUSD",
+      exchange_operating_mic: Provider::BinancePublic::BINANCE_MIC,
+      logo_url: "https://cdn.jsdelivr.net/gh/lindomar-oliveira/binance-data-plus/assets/img/BTC.png"
+    )
+    assert_equal "https://cdn.jsdelivr.net/gh/lindomar-oliveira/binance-data-plus/assets/img/BTC.png",
+                 with_logo.display_logo_url
+
+    without_logo = Security.new(
+      ticker: "NOPECOIN",
+      exchange_operating_mic: Provider::BinancePublic::BINANCE_MIC,
+      logo_url: nil
+    )
+    assert_equal "https://cdn.brandfetch.io/binance.com/icon/fallback/lettermark/w/120/h/120?c=test-client-id",
+                 without_logo.display_logo_url
+  end
+
+  test "display_logo_url for non-crypto prefers brandfetch over stored logo_url" do
+    Setting.stubs(:brand_fetch_client_id).returns("test-client-id")
+    Setting.stubs(:brand_fetch_logo_size).returns(120)
+
+    sec = Security.new(
+      ticker: "AAPL",
+      exchange_operating_mic: "XNAS",
+      logo_url: "https://example.com/aapl.png",
+      website_url: "https://www.apple.com"
+    )
+
+    url = sec.display_logo_url
+    assert_includes url, "cdn.brandfetch.io/apple.com"
+  end
+
+  test "display_logo_url for non-crypto falls back to logo_url when brandfetch is disabled" do
+    Setting.stubs(:brand_fetch_client_id).returns(nil)
+
+    sec = Security.new(
+      ticker: "AAPL",
+      exchange_operating_mic: "XNAS",
+      logo_url: "https://example.com/aapl.png"
+    )
+
+    assert_equal "https://example.com/aapl.png", sec.display_logo_url
+  end
 end
