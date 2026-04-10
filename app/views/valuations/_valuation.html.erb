@@ -11,7 +11,7 @@
       <div class="col-span-8 flex items-center gap-3 lg:gap-4">
         <%= check_box_tag dom_id(entry, "selection"),
                         class: "checkbox checkbox--light hidden lg:block",
-                        data: { id: entry.id, "bulk-select-target": "row", action: "bulk-select#toggleRowSelection", checkbox_toggle_target: "selectionEntry" } %>
+                        data: { id: entry.id, entry_type: entry.entryable_type, "bulk-select-target": "row", action: "bulk-select#toggleRowSelection", checkbox_toggle_target: "selectionEntry" } %>
 
         <div class="flex items-center gap-3">
           <%= render DS::FilledIcon.new(icon: icon, size: "md", hex_color: color, rounded: true) %>

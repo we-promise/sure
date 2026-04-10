@@ -10,6 +10,7 @@
                         class: "checkbox checkbox--light hidden lg:block",
                         data: {
                           id: entry.id,
+                          entry_type: entry.entryable_type,
                           "bulk-select-target": "row",
                           action: "bulk-select#toggleRowSelection",
                           checkbox_toggle_target: "selectionEntry"
