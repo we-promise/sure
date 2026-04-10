@@ -1,0 +1,154 @@
+name: LLM Evals
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+env:
+  EVAL_MODEL: gpt-4.1
+  RAILS_ENV: test
+  DATABASE_URL: postgres://postgres:postgres@localhost:5432
+  REDIS_URL: redis://localhost:6379
+  PLAID_CLIENT_ID: foo
+  PLAID_SECRET: bar
+
+jobs:
+  discover_datasets:
+    name: Discover eval datasets
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: --health-cmd="pg_isready" --health-interval=10s --health-timeout=5s --health-retries=3
+
+      redis:
+        image: redis
+        ports:
+          - 6379:6379
+        options: --health-cmd="redis-cli ping" --health-interval=10s --health-timeout=5s --health-retries=3
+
+    outputs:
+      datasets: ${{ steps.datasets.outputs.datasets }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: .ruby-version
+          bundler-cache: true
+
+      - name: Prepare database
+        run: |
+          bin/rails db:create
+          bin/rails db:schema:load
+
+      - name: Resolve available eval datasets
+        id: datasets
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          DATASETS_JSON=$(bin/rails runner 'puts Eval::Dataset.order(:name).pluck(:name).to_json')
+
+          if [ "$DATASETS_JSON" = "[]" ]; then
+            echo "::error::No eval datasets found. Import one first with: rake evals:import_dataset[path/to/file.yml]"
+            exit 1
+          fi
+
+          {
+            echo "datasets<<EOF"
+            echo "$DATASETS_JSON"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+  run_evals:
+    name: Run eval for ${{ matrix.dataset }}
+    needs: discover_datasets
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        dataset: ${{ fromJson(needs.discover_datasets.outputs.datasets) }}
+
+    services:
+      postgres:
+        image: postgres
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: --health-cmd="pg_isready" --health-interval=10s --health-timeout=5s --health-retries=3
+
+      redis:
+        image: redis
+        ports:
+          - 6379:6379
+        options: --health-cmd="redis-cli ping" --health-interval=10s --health-timeout=5s --health-retries=3
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: .ruby-version
+          bundler-cache: true
+
+      - name: Prepare database
+        run: |
+          bin/rails db:create
+          bin/rails db:schema:load
+
+      - name: Verify dataset exists
+        env:
+          DATASET: ${{ matrix.dataset }}
+        run: |
+          bin/rails runner 'dataset = Eval::Dataset.find_by(name: ENV.fetch("DATASET")); abort("Dataset not found: #{ENV.fetch("DATASET")}") if dataset.nil?'
+
+      - name: Run eval
+        env:
+          DATASET: ${{ matrix.dataset }}
+        run: |
+          mkdir -p tmp/evals
+          bundle exec rake "evals:run[${DATASET},${EVAL_MODEL}]" | tee "tmp/evals/${DATASET}.log"
+
+      - name: Export run summary
+        env:
+          DATASET: ${{ matrix.dataset }}
+        run: |
+          bin/rails runner '
+            dataset = Eval::Dataset.find_by!(name: ENV.fetch("DATASET"))
+            run = Eval::Run.where(dataset: dataset, model: ENV.fetch("EVAL_MODEL")).order(created_at: :desc).first
+            payload = {
+              dataset: dataset.name,
+              model: ENV.fetch("EVAL_MODEL"),
+              run_id: run.id,
+              status: run.status,
+              created_at: run.created_at,
+              completed_at: run.completed_at,
+              metrics: run.metrics,
+              metadata: run.metadata
+            }
+            File.write("tmp/evals/#{dataset.name}.json", JSON.pretty_generate(payload))
+          '
+
+      - name: Upload eval artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: llm-evals-${{ matrix.dataset }}-${{ env.EVAL_MODEL }}
+          path: tmp/evals/${{ matrix.dataset }}.*
+          if-no-files-found: error
+          retention-days: 30
