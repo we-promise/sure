@@ -161,17 +161,16 @@ class Security::ResolverTest < ActiveSupport::TestCase
     # Documents that find_or_create_provider_match! intentionally copies only
     # ticker, MIC, country_code, and price_provider from the match — not name
     # or logo_url. This means Security#import_provider_details always has
-    # blank metadata on first resolution and does NOT short-circuit at
-    # `return if self.name.present? && ...`, so fetch_security_info runs as
-    # expected on the first sync. Regression guard: if someone adds name/logo
-    # copying to the resolver, the Binance logo-fallback path would become
-    # dead code on first sync.
+    # blank metadata on first resolution and runs fetch_security_info +
+    # probe_brandfetch_crypto_coverage! as expected. Regression guard: if
+    # someone adds name/logo copying to the resolver, the Brandfetch
+    # coverage probe would be bypassed on first sync.
     match = Security.new(
       ticker: "BTCUSD",
       exchange_operating_mic: "BNCX",
       country_code: nil,
       name: "BTC",
-      logo_url: "https://cdn.jsdelivr.net/gh/lindomar-oliveira/binance-data-plus/assets/img/BTC.png",
+      logo_url: "https://cdn.brandfetch.io/crypto/BTC/icon/fallback/lettermark/w/120/h/120?c=test",
       price_provider: "binance_public"
     )
 

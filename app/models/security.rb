@@ -18,9 +18,27 @@ class Security < ApplicationRecord
     Provider::Registry.for_concept(:securities).provider_keys.map(&:to_s)
   end
 
+  # Builds the Brandfetch crypto URL for a base asset (e.g. "BTC"). Returns
+  # nil when Brandfetch isn't configured. Used by Provider::BinancePublic's
+  # in-memory search results, by the before_save logo-writer, and by the
+  # render-time display_logo_url path. Lives at class level so the search
+  # code (which has no instance yet) and instance methods can share it.
+  #
+  # NOTE: Brandfetch's /crypto/{base} route returns 400 Bad Request on coins
+  # it doesn't index — there is no lettermark fallback on that route. We
+  # accept the broken-image risk for truly obscure coins (our probe against
+  # 37+ popular + memecoin tickers saw zero misses) rather than maintain a
+  # probe/cache/column to pre-verify. Mirrors the stocks-with-obscure-ticker
+  # tradeoff the app already ships.
+  def self.brandfetch_crypto_url(base_asset)
+    return nil if base_asset.blank?
+    return nil unless Setting.brand_fetch_client_id.present?
+    size = Setting.brand_fetch_logo_size
+    "https://cdn.brandfetch.io/crypto/#{base_asset}/icon/fallback/lettermark/w/#{size}/h/#{size}?c=#{Setting.brand_fetch_client_id}"
+  end
+
   before_validation :upcase_symbols
   before_save :generate_logo_url_from_brandfetch, if: :should_generate_logo?
-  before_save :reset_first_provider_price_on_if_provider_changed
 
   has_many :trades, dependent: :nullify, class_name: "Trade"
   has_many :prices, dependent: :destroy
@@ -60,19 +78,26 @@ class Security < ApplicationRecord
     exchange_operating_mic == Provider::BinancePublic::BINANCE_MIC
   end
 
-  # Single source of truth for which logo URL the UI should render. The order
-  # differs by asset class:
-  #
-  #   - Crypto: prefer the verified per-asset jsDelivr logo (set during
-  #     import by Provider::BinancePublic#verified_logo_url). On a miss, fall
-  #     back to Brandfetch with a forced `binance.com` identifier so the
-  #     generic Binance brand mark shows instead of a ticker lettermark.
-  #
-  #   - Everything else: Brandfetch first (domain-derived or ticker lettermark),
-  #     then any provider-set logo_url.
+  # Strips the display-currency suffix from a crypto ticker (BTCUSD -> BTC,
+  # ETHEUR -> ETH). Returns nil for non-crypto securities or when the ticker
+  # doesn't end in a supported quote.
+  def crypto_base_asset
+    return nil unless crypto?
+    Provider::BinancePublic::QUOTE_TO_CURRENCY.each_value do |suffix|
+      next unless ticker.end_with?(suffix)
+      base = ticker.delete_suffix(suffix)
+      return base unless base.empty?
+    end
+    nil
+  end
+
+  # Single source of truth for which logo URL the UI should render. Crypto
+  # and stocks share the same shape: prefer a freshly computed Brandfetch
+  # URL (honors current client_id + size) and fall back to any stored
+  # logo_url for the provider-returns-its-own-URL case (e.g. Tiingo S3).
   def display_logo_url
     if crypto?
-      logo_url.presence || brandfetch_icon_url(identifier: "binance.com")
+      self.class.brandfetch_crypto_url(crypto_base_asset).presence || logo_url.presence
     else
       brandfetch_icon_url.presence || logo_url.presence
     end
@@ -106,13 +131,13 @@ class Security < ApplicationRecord
     )
   end
 
-  def brandfetch_icon_url(width: nil, height: nil, identifier: nil)
+  def brandfetch_icon_url(width: nil, height: nil)
     return nil unless Setting.brand_fetch_client_id.present?
 
     w = width || Setting.brand_fetch_logo_size
     h = height || Setting.brand_fetch_logo_size
 
-    identifier ||= extract_domain(website_url) if website_url.present?
+    identifier = extract_domain(website_url) if website_url.present?
     identifier ||= ticker
 
     return nil unless identifier.present?
@@ -137,8 +162,7 @@ class Security < ApplicationRecord
 
     def should_generate_logo?
       return false if cash?
-      url = brandfetch_icon_url
-      return false unless url.present?
+      return false unless Setting.brand_fetch_client_id.present?
 
       return true if logo_url.blank?
       return false unless logo_url.include?("cdn.brandfetch.io")
@@ -147,18 +171,10 @@ class Security < ApplicationRecord
     end
 
     def generate_logo_url_from_brandfetch
-      self.logo_url = brandfetch_icon_url
-    end
-
-    # When a user remaps a security to a different provider (via the holdings
-    # remap combobox or Security::Resolver), the previously-discovered
-    # first_provider_price_on belongs to the OLD provider and may no longer
-    # reflect what the new provider can serve. Reset it so the next sync's
-    # fallback rediscovers the correct earliest date for the new provider.
-    # Skip when the caller explicitly set both columns in the same save.
-    def reset_first_provider_price_on_if_provider_changed
-      return unless price_provider_changed?
-      return if first_provider_price_on_changed?
-      self.first_provider_price_on = nil
+      self.logo_url = if crypto?
+        self.class.brandfetch_crypto_url(crypto_base_asset)
+      else
+        brandfetch_icon_url
+      end
     end
 end
