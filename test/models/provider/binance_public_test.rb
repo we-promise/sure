@@ -237,19 +237,97 @@ class Provider::BinancePublicTest < ActiveSupport::TestCase
     assert_equal 1200, response.data.size
   end
 
-  test "fetch_security_prices stops paginating when batch is short" do
-    # Only 3 rows returned for a 1500-day request -> short batch means no more
-    # history available, should terminate the loop.
-    short_batch = (0..2).map { |i| kline_row(Date.parse("2017-08-17") + i.days, "4500") }
-    mock_client_returning_klines(short_batch)
+  test "fetch_security_prices does NOT terminate on a short (straddle) batch" do
+    # Regression: a window that straddles the pair's listing date returns
+    # fewer than KLINE_MAX_LIMIT rows but more valid data exists in subsequent
+    # windows. The old `break if batch.size < KLINE_MAX_LIMIT` dropped that
+    # tail. Mock: first call = 638 rows (straddle), second call = 800 rows
+    # (mid-history), third call = 300 rows (final tail).
+    first_batch  = Array.new(638) { |i| kline_row(Date.parse("2020-01-03") + i.days, "7000") }
+    second_batch = Array.new(800) { |i| kline_row(Date.parse("2021-10-02") + i.days, "40000") }
+    third_batch  = Array.new(300) { |i| kline_row(Date.parse("2024-06-28") + i.days, "62000") }
+
+    mock_response_1 = mock
+    mock_response_1.stubs(:body).returns(first_batch.to_json)
+    mock_response_2 = mock
+    mock_response_2.stubs(:body).returns(second_batch.to_json)
+    mock_response_3 = mock
+    mock_response_3.stubs(:body).returns(third_batch.to_json)
+
+    mock_client = mock
+    mock_client.expects(:get).times(3)
+      .returns(mock_response_1).then
+      .returns(mock_response_2).then
+      .returns(mock_response_3)
+    @provider.stubs(:client).returns(mock_client)
+
+    response = @provider.fetch_security_prices(
+      symbol: "BTCUSD",
+      exchange_operating_mic: "BNCX",
+      start_date: Date.parse("2019-01-05"),
+      end_date: Date.parse("2026-04-10")
+    )
+
+    assert response.success?
+    assert_equal 1738, response.data.size
+  end
+
+  test "fetch_security_prices skips pre-listing empty windows and collects later data" do
+    # Regression for the BTCEUR bug: asking for a range starting before the
+    # pair's listing date used to return zero prices because the first empty
+    # window tripped `break if batch.blank?`.
+    empty_batch = []
+    real_batch  = (0..4).map { |i| kline_row(Date.parse("2020-01-03") + i.days, "6568") }
+
+    mock_response_empty = mock
+    mock_response_empty.stubs(:body).returns(empty_batch.to_json)
+    mock_response_real = mock
+    mock_response_real.stubs(:body).returns(real_batch.to_json)
+
+    mock_client = mock
+    mock_client.expects(:get).twice
+      .returns(mock_response_empty).then
+      .returns(mock_response_real)
+    @provider.stubs(:client).returns(mock_client)
+
+    response = @provider.fetch_security_prices(
+      symbol: "BTCEUR",
+      exchange_operating_mic: "BNCX",
+      start_date: Date.parse("2017-01-01"),
+      end_date: Date.parse("2020-01-07")
+    )
+
+    assert response.success?
+    assert_equal 5, response.data.size
+    assert_equal Date.parse("2020-01-03"), response.data.first.date
+    assert response.data.all? { |p| p.currency == "EUR" }
+  end
+
+  test "fetch_security_prices terminates on empty window once data has been seen" do
+    # Post-delisting / end-of-history scenario: first window returns data,
+    # second window returns empty → stop to avoid wasting calls.
+    first_batch = (0..2).map { |i| kline_row(Date.parse("2017-08-17") + i.days, "4500") }
+    empty_batch = []
+
+    mock_response_1 = mock
+    mock_response_1.stubs(:body).returns(first_batch.to_json)
+    mock_response_2 = mock
+    mock_response_2.stubs(:body).returns(empty_batch.to_json)
+
+    mock_client = mock
+    mock_client.expects(:get).twice
+      .returns(mock_response_1).then
+      .returns(mock_response_2)
+    @provider.stubs(:client).returns(mock_client)
 
     response = @provider.fetch_security_prices(
       symbol: "BTCUSD",
       exchange_operating_mic: "BNCX",
       start_date: Date.parse("2017-08-17"),
-      end_date: Date.parse("2021-09-24")
+      end_date: Date.parse("2024-09-24")
     )
 
+    assert response.success?
     assert_equal 3, response.data.size
   end
 

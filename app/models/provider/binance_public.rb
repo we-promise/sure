@@ -147,6 +147,7 @@ class Provider::BinancePublic < Provider
       display_currency = parsed[:display_currency]
       prices = []
       cursor = start_date
+      seen_data = false
 
       while cursor <= end_date
         window_end = [ cursor + (KLINE_MAX_LIMIT - 1).days, end_date ].min
@@ -161,26 +162,38 @@ class Provider::BinancePublic < Provider
         end
 
         batch = JSON.parse(response.body)
-        break if batch.blank?
 
-        batch.each do |row|
-          open_time_ms = row[0].to_i
-          close_price  = row[4].to_f
-          next if close_price <= 0
+        if batch.empty?
+          # Empty window. Two cases:
+          #   1. cursor is before the pair's listing date — keep advancing
+          #      until we hit the first window containing valid klines.
+          #      Critical for long-range imports (e.g. account sync from a
+          #      trade start date that predates the Binance listing).
+          #   2. We have already collected prices and this window is past
+          #      the end of available history — stop to avoid wasted calls
+          #      on delisted pairs.
+          break if seen_data
+        else
+          seen_data = true
+          batch.each do |row|
+            open_time_ms = row[0].to_i
+            close_price  = row[4].to_f
+            next if close_price <= 0
 
-          prices << Price.new(
-            symbol: symbol,
-            date: Time.at(open_time_ms / 1000).utc.to_date,
-            price: close_price,
-            currency: display_currency,
-            exchange_operating_mic: exchange_operating_mic
-          )
+            prices << Price.new(
+              symbol: symbol,
+              date: Time.at(open_time_ms / 1000).utc.to_date,
+              price: close_price,
+              currency: display_currency,
+              exchange_operating_mic: exchange_operating_mic
+            )
+          end
         end
 
-        # Binance returned fewer rows than asked for → we're at the tail of
-        # available history, no point paginating further.
-        break if batch.size < KLINE_MAX_LIMIT
-
+        # Note: we intentionally do NOT break on a short (non-empty) batch.
+        # A window that straddles the pair's listing date legitimately returns
+        # fewer than KLINE_MAX_LIMIT rows while there is still valid data in
+        # subsequent windows.
         cursor = window_end + 1.day
       end
 

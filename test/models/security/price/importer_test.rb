@@ -81,6 +81,51 @@ class Security::Price::ImporterTest < ActiveSupport::TestCase
     ).import_provider_prices
   end
 
+  test "writes post-listing prices when holding predates provider history" do
+    # Regression: a 2018-06-15 trade for a pair the provider only has from
+    # 2020-01-03 onwards (e.g. BTCEUR on Binance) used to hit the
+    # `return 0` bail in start_price_value and write zero rows for the
+    # entire range. The fallback now advances fill_start_date to the
+    # earliest provider date and writes all post-listing prices.
+    Security::Price.delete_all
+
+    start_date = Date.parse("2018-06-15")
+    listing    = Date.parse("2020-01-03")
+    end_date   = listing + 2.days
+
+    provider_response = provider_success_response([
+      OpenStruct.new(security: @security, date: listing,           price: 6568, currency: "EUR"),
+      OpenStruct.new(security: @security, date: listing + 1.day,   price: 6700, currency: "EUR"),
+      OpenStruct.new(security: @security, date: listing + 2.days,  price: 6800, currency: "EUR")
+    ])
+
+    @provider.expects(:fetch_security_prices)
+             .with(symbol: @security.ticker, exchange_operating_mic: @security.exchange_operating_mic,
+                   start_date: get_provider_fetch_start_date(start_date), end_date: end_date)
+             .returns(provider_response)
+
+    upserted = Security::Price::Importer.new(
+      security: @security,
+      security_provider: @provider,
+      start_date: start_date,
+      end_date: end_date
+    ).import_provider_prices
+
+    db_prices = Security::Price.where(security: @security).order(:date)
+
+    # Post-listing rows are all written
+    assert_equal 3, db_prices.count
+    assert_equal [ listing, listing + 1.day, listing + 2.days ], db_prices.map(&:date)
+    assert_equal [ 6568, 6700, 6800 ], db_prices.map { |p| p.price.to_i }
+    assert db_prices.all? { |p| p.currency == "EUR" }
+
+    # Pre-listing gap is intentionally empty — no rows written before the
+    # earliest available provider price.
+    assert_equal 0, Security::Price.where(security: @security).where("date < ?", listing).count
+
+    assert_equal 3, upserted
+  end
+
   test "full upsert if clear_cache is true" do
     Security::Price.delete_all
 
