@@ -45,7 +45,7 @@ class Provider::YourProvider < Provider
   MIN_REQUEST_INTERVAL = 1.0 # seconds between requests
 
   def initialize(api_key)
-    @api_key = api_key
+    @api_key = api_key # pipelock:ignore
   end
 
   # --- Required Methods ---
@@ -290,7 +290,7 @@ end
 
 ```ruby
 def your_provider
-  api_key = ENV["YOUR_PROVIDER_API_KEY"].presence || Setting.your_provider_api_key
+  api_key = ENV["YOUR_PROVIDER_API_KEY"].presence || Setting.your_provider_api_key # pipelock:ignore
   return nil unless api_key.present?
   Provider::YourProvider.new(api_key)
 end
