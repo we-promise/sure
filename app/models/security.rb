@@ -20,6 +20,7 @@ class Security < ApplicationRecord
 
   before_validation :upcase_symbols
   before_save :generate_logo_url_from_brandfetch, if: :should_generate_logo?
+  before_save :reset_first_provider_price_on_if_provider_changed
 
   has_many :trades, dependent: :nullify, class_name: "Trade"
   has_many :prices, dependent: :destroy
@@ -122,5 +123,17 @@ class Security < ApplicationRecord
 
     def generate_logo_url_from_brandfetch
       self.logo_url = brandfetch_icon_url
+    end
+
+    # When a user remaps a security to a different provider (via the holdings
+    # remap combobox or Security::Resolver), the previously-discovered
+    # first_provider_price_on belongs to the OLD provider and may no longer
+    # reflect what the new provider can serve. Reset it so the next sync's
+    # fallback rediscovers the correct earliest date for the new provider.
+    # Skip when the caller explicitly set both columns in the same save.
+    def reset_first_provider_price_on_if_provider_changed
+      return unless price_provider_changed?
+      return if first_provider_price_on_changed?
+      self.first_provider_price_on = nil
     end
 end

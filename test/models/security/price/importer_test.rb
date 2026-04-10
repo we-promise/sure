@@ -124,6 +124,38 @@ class Security::Price::ImporterTest < ActiveSupport::TestCase
     assert_equal 0, Security::Price.where(security: @security).where("date < ?", listing).count
 
     assert_equal 3, upserted
+
+    # The earliest-available date is persisted on the Security so the next
+    # sync can short-circuit via all_prices_exist? instead of re-iterating
+    # the full (start_date..end_date) range every run.
+    assert_equal listing, @security.reload.first_provider_price_on
+  end
+
+  test "skips re-sync for pre-listing holding once first_provider_price_on is set" do
+    # Previous sync already advanced the clamp and wrote all post-listing
+    # prices. The next sync should see all_prices_exist? return true (because
+    # expected_count is clamped to [first_provider_price_on, end_date]) and
+    # never call the provider.
+    Security::Price.delete_all
+
+    listing = Date.parse("2020-01-03")
+    end_date = listing + 2.days
+
+    @security.update!(first_provider_price_on: listing)
+    (listing..end_date).each do |date|
+      Security::Price.create!(security: @security, date: date, price: 6568, currency: "EUR")
+    end
+
+    @provider.expects(:fetch_security_prices).never
+
+    result = Security::Price::Importer.new(
+      security: @security,
+      security_provider: @provider,
+      start_date: Date.parse("2018-06-15"),
+      end_date: end_date
+    ).import_provider_prices
+
+    assert_equal 0, result
   end
 
   test "full upsert if clear_cache is true" do

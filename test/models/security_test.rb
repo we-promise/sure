@@ -39,6 +39,50 @@ class SecurityTest < ActiveSupport::TestCase
     assert_equal [ "has already been taken" ], duplicate.errors[:ticker]
   end
 
+  test "first_provider_price_on resets when price_provider changes" do
+    sec = Security.create!(
+      ticker: "TEST",
+      exchange_operating_mic: "XNAS",
+      price_provider: "twelve_data",
+      first_provider_price_on: Date.parse("2020-01-03")
+    )
+
+    sec.update!(price_provider: "yahoo_finance")
+
+    assert_nil sec.reload.first_provider_price_on
+  end
+
+  test "first_provider_price_on is preserved when unrelated fields change" do
+    sec = Security.create!(
+      ticker: "TEST",
+      exchange_operating_mic: "XNAS",
+      price_provider: "twelve_data",
+      first_provider_price_on: Date.parse("2020-01-03"),
+      offline: false
+    )
+
+    sec.update!(offline: true, failed_fetch_count: 3)
+
+    assert_equal Date.parse("2020-01-03"), sec.reload.first_provider_price_on
+  end
+
+  test "first_provider_price_on respects explicit assignment alongside provider change" do
+    sec = Security.create!(
+      ticker: "TEST",
+      exchange_operating_mic: "XNAS",
+      price_provider: "twelve_data",
+      first_provider_price_on: Date.parse("2020-01-03")
+    )
+
+    # Caller changes both in the same save — honor the explicit value.
+    sec.update!(
+      price_provider: "yahoo_finance",
+      first_provider_price_on: Date.parse("2024-03-21")
+    )
+
+    assert_equal Date.parse("2024-03-21"), sec.reload.first_provider_price_on
+  end
+
   test "cash_for lazily creates a per-account synthetic cash security" do
     account = accounts(:investment)
 

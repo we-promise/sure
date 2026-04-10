@@ -31,12 +31,15 @@ class Security::Price::Importer
     prev_currency = prev_price_currency || db_price_currency || "USD"
 
     # Fallback for holdings that predate the asset's listing on the provider
-    # (e.g. a 2018 BTCEUR trade vs. Binance's 2020-01-03 listing date). We
-    # can't anchor a price on or before start_date, but provider_prices has
-    # real data later in the range — advance fill_start_date to the earliest
+    # (e.g. a 2018 BTCEUR trade vs. Binance's 2020-01-03 listing date, or a
+    # 2023 RDDT trade vs. the 2024-03-21 IPO on Yahoo/Twelve Data). We can't
+    # anchor a price on or before start_date, but provider_prices has real
+    # data later in the range — advance fill_start_date to the earliest
     # available provider date and use that price as the LOCF anchor. Days
     # before that are intentionally left out of the DB (honest gap) rather
     # than backfilled from a future price.
+    advanced_first_price_on = nil
+
     if prev_price_value.blank?
       earliest_provider_price = provider_prices.values.min_by(&:date)
 
@@ -45,9 +48,10 @@ class Security::Price::Importer
           "#{security.ticker}: no provider price on or before #{start_date}; " \
           "advancing gapfill start to earliest available #{earliest_provider_price.date}"
         )
-        prev_price_value = earliest_provider_price.price
-        prev_currency    = earliest_provider_price.currency || prev_currency
-        @fill_start_date = earliest_provider_price.date
+        prev_price_value        = earliest_provider_price.price
+        prev_currency           = earliest_provider_price.currency || prev_currency
+        @fill_start_date        = earliest_provider_price.date
+        advanced_first_price_on = earliest_provider_price.date
       end
     end
 
@@ -116,7 +120,18 @@ class Security::Price::Importer
       }
     end
 
-    upsert_rows(gapfilled_prices)
+    result = upsert_rows(gapfilled_prices)
+
+    # Persist the advanced start date so subsequent syncs can clamp
+    # expected_count and short-circuit via all_prices_exist? instead of
+    # re-iterating the full (start_date..end_date) range every time. Only
+    # set on the first successful advance — clear_cache is the way to
+    # recompute it if the provider later extends its history.
+    if advanced_first_price_on.present? && security.first_provider_price_on.blank?
+      security.update_column(:first_provider_price_on, advanced_first_price_on)
+    end
+
+    result
   end
 
   private
@@ -187,7 +202,16 @@ class Security::Price::Importer
 
     def all_prices_exist?
       return false if has_refetchable_provisional_prices?
-      db_prices.count == expected_count
+
+      # Count only prices in the clamped range so pre-listing / pre-IPO gaps
+      # don't perpetually trip the "expected_count mismatch" re-sync. Query
+      # directly rather than via db_prices (which stays at the full range to
+      # preserve any user-entered rows pre-listing).
+      persisted_count = Security::Price
+        .where(security_id: security.id, date: clamped_start_date..end_date)
+        .count
+
+      persisted_count == expected_count
     end
 
     def has_refetchable_provisional_prices?
@@ -197,7 +221,19 @@ class Security::Price::Importer
     end
 
     def expected_count
-      (start_date..end_date).count
+      (clamped_start_date..end_date).count
+    end
+
+    # Effective start date after clamping to the security's known first
+    # provider-available price date. Unlike start_date, this shrinks when the
+    # provider's history (e.g. Binance BTCEUR listed 2020-01-03, RDDT IPO
+    # 2024-03-21) begins after the user's original start_date. Falls through
+    # to start_date for any security that has never tripped the fallback.
+    def clamped_start_date
+      @clamped_start_date ||= begin
+        listed = security.first_provider_price_on
+        listed.present? && listed > start_date ? listed : start_date
+      end
     end
 
     # Skip over ranges that already exist unless clearing cache
