@@ -48,6 +48,10 @@ When adding or modifying API endpoints in `app/controllers/api/v1/`, you **MUST*
 ### Post-commit API consistency (LLM checklist)
 After every API endpoint commit, ensure: (1) **Minitest** behavioral coverage in `test/controllers/api/v1/{resource}_controller_test.rb` (no behavioral assertions in rswag); (2) **rswag** remains docs-only (no `expect`/`assert_*` in `spec/requests/api/v1/`); (3) **rswag auth** uses the same API key pattern everywhere (`X-Api-Key`, not OAuth/Bearer). Full checklist: [.cursor/rules/api-endpoint-consistency.mdc](.cursor/rules/api-endpoint-consistency.mdc).
 
+## Securities Providers
+
+If you need to add a new securities price provider (Tiingo, EODHD, Binance-style crypto, etc.), see [adding-a-securities-provider.md](./docs/llm-guides/adding-a-securities-provider.md) for the full walkthrough — provider class, registry wiring, MIC handling, settings UI, locales, and tests.
+
 ## Providers: Pending Transactions and FX Metadata (SimpleFIN/Plaid/Lunchflow)
 
 - Pending detection

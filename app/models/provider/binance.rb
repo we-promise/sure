@@ -91,11 +91,11 @@ class Provider::Binance
 
     def signed_get(path, extra_params: {})
       params = timestamp_params.merge(extra_params)
-      params["signature"] = sign(params)
+      query_string = URI.encode_www_form(params.sort)
 
       response = self.class.get(
         path,
-        query: params,
+        query: "#{query_string}&signature=#{sign(query_string)}",
         headers: auth_headers
       )
 
@@ -106,9 +106,10 @@ class Provider::Binance
       { "timestamp" => (Time.current.to_f * 1000).to_i.to_s, "recvWindow" => "5000" }
     end
 
-    # HMAC-SHA256 of the query string
+    # HMAC-SHA256 of the query string.
+    # Accepts either a Hash of params or a pre-built query string.
     def sign(params)
-      query_string = URI.encode_www_form(params.sort)
+      query_string = params.is_a?(Hash) ? URI.encode_www_form(params.sort) : params
       OpenSSL::HMAC.hexdigest("sha256", api_secret, query_string)
     end
 
