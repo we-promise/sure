@@ -1,0 +1,6 @@
+---
+pl:
+  invite_codes:
+    index:
+      invite_code_description: Wygeneruj nowy kod, aby zobaczyć go tutaj. Wykorzystane kody nie są już wyświetlane.
+      no_invite_codes: Brak kodów do wyświetlenia

@@ -1,6 +1,11 @@
 <%# locals: (import:) %>
 
-<% steps = if import.is_a?(PdfImport)
+<% steps = if import.is_a?(SureImport)
+  [
+    { name: t("imports.steps.upload", default: "Upload"), path: import_upload_path(import), is_complete: import.uploaded?, step_number: 1 },
+    { name: t("imports.steps.confirm", default: "Confirm"), path: import_path(import), is_complete: import.complete?, step_number: 2 }
+  ]
+elsif import.is_a?(PdfImport)
   # PDF imports have a simplified flow: Upload -> Confirm
   # Upload/Configure/Clean are always complete for processed PDF imports
   [
@@ -9,6 +14,15 @@
     { name: t("imports.steps.clean", default: "Clean"), path: import.configured? ? import_clean_path(import) : nil, is_complete: import.cleaned?, step_number: 3 },
     { name: t("imports.steps.confirm", default: "Confirm"), path: import_path(import), is_complete: import.complete?, step_number: 4 }
   ]
+elsif import.is_a?(QifImport)
+  # QIF imports combine date-format configuration with category/tag selection.
+  [
+    { name: t("imports.steps.upload", default: "Upload"), path: import_upload_path(import), is_complete: import.uploaded?, step_number: 1 },
+    { name: t("imports.steps.select", default: "Select"), path: import.uploaded? ? import_qif_category_selection_path(import) : nil, is_complete: import.categories_selected?, step_number: 2 },
+    { name: t("imports.steps.clean", default: "Clean"), path: import.uploaded? ? import_clean_path(import) : nil, is_complete: import.cleaned?, step_number: 3 },
+    { name: t("imports.steps.map", default: "Map"), key: "Map", path: import_confirm_path(import), is_complete: import.publishable?, step_number: 4 },
+    { name: t("imports.steps.confirm", default: "Confirm"), path: import_path(import), is_complete: import.complete?, step_number: 5 }
+  ].reject { |step| step[:key] == "Map" && import.mapping_steps.empty? }
 else
   [
     { name: t("imports.steps.upload", default: "Upload"), path: import_upload_path(import), is_complete: import.uploaded?, step_number: 1 },

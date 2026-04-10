@@ -5,14 +5,18 @@ class TransactionsController < ApplicationController
   before_action :store_params!, only: :index
 
   def new
+    prefill_params_from_duplicate!
     super
+    apply_duplicate_attributes!
     @income_categories = Current.family.categories.incomes.alphabetically
     @expense_categories = Current.family.categories.expenses.alphabetically
+    @categories = Current.family.categories.alphabetically
   end
 
   def index
     @q = search_params
-    @search = Transaction::Search.new(Current.family, filters: @q)
+    accessible_account_ids = Current.user.accessible_accounts.pluck(:id)
+    @search = Transaction::Search.new(Current.family, filters: @q, accessible_account_ids: accessible_account_ids)
 
     base_scope = @search.transactions_scope
                        .reverse_chronological
@@ -24,8 +28,35 @@ class TransactionsController < ApplicationController
 
     @pagy, @transactions = pagy(base_scope, limit: safe_per_page)
 
+    # Preload split parent data
+    entry_ids = @transactions.map { |t| t.entry.id }
+
+    # Load split parent entries for grouped display (only when grouping is enabled)
+    @split_parents = if Current.user.show_split_grouped?
+      split_parent_ids = @transactions.filter_map { |t| t.entry.parent_entry_id }.uniq
+      if split_parent_ids.any?
+        Entry.where(id: split_parent_ids)
+             .includes(:account, entryable: [ :category, :merchant ])
+             .index_by(&:id)
+      else
+        {}
+      end
+    else
+      {}
+    end
+
+    # Preload which entries on this page are split parents (have children) to avoid N+1
+    @split_parent_entry_ids = if entry_ids.any?
+      Entry.where(parent_entry_id: entry_ids).distinct.pluck(:parent_entry_id).to_set
+    else
+      Set.new
+    end
+
+    @uncategorized_count = Current.accessible_entries.uncategorized_transactions.count
+
     # Load projected recurring transactions for next 10 days
     @projected_recurring = Current.family.recurring_transactions
+                                  .accessible_by(Current.user)
                                   .active
                                   .where("next_expected_date <= ? AND next_expected_date >= ?",
                                          10.days.from_now.to_date,
@@ -63,7 +94,10 @@ class TransactionsController < ApplicationController
   end
 
   def create
-    account = Current.family.accounts.find(params.dig(:entry, :account_id))
+    account = Current.user.accessible_accounts.find(params.dig(:entry, :account_id))
+
+    return unless require_account_permission!(account)
+
     @entry = account.entries.new(entry_params)
 
     if @entry.save
@@ -84,7 +118,7 @@ class TransactionsController < ApplicationController
   end
 
   def update
-    if @entry.update(entry_params)
+    if @entry.update(permitted_entry_params)
       transaction = @entry.transaction
 
       if needs_rule_notification?(transaction)
@@ -128,7 +162,9 @@ class TransactionsController < ApplicationController
   end
 
   def merge_duplicate
-    transaction = Current.family.transactions.includes(entry: :account).find(params[:id])
+    transaction = accessible_transactions.includes(entry: :account).find(params[:id])
+
+    return unless require_account_permission!(transaction.entry.account)
 
     if transaction.merge_with_duplicate!
       flash[:notice] = t("transactions.merge_duplicate.success")
@@ -144,7 +180,9 @@ class TransactionsController < ApplicationController
   end
 
   def dismiss_duplicate
-    transaction = Current.family.transactions.includes(entry: :account).find(params[:id])
+    transaction = accessible_transactions.includes(entry: :account).find(params[:id])
+
+    return unless require_account_permission!(transaction.entry.account)
 
     if transaction.dismiss_duplicate_suggestion!
       flash[:notice] = t("transactions.dismiss_duplicate.success")
@@ -160,8 +198,10 @@ class TransactionsController < ApplicationController
   end
 
   def convert_to_trade
-    @transaction = Current.family.transactions.includes(entry: :account).find(params[:id])
+    @transaction = accessible_transactions.includes(entry: :account).find(params[:id])
     @entry = @transaction.entry
+
+    return unless require_account_permission!(@entry.account)
 
     unless @entry.account.investment?
       flash[:alert] = t("transactions.convert_to_trade.errors.not_investment_account")
@@ -173,8 +213,10 @@ class TransactionsController < ApplicationController
   end
 
   def create_trade_from_transaction
-    @transaction = Current.family.transactions.includes(entry: :account).find(params[:id])
+    @transaction = accessible_transactions.includes(entry: :account).find(params[:id])
     @entry = @transaction.entry
+
+    return unless require_account_permission!(@entry.account)
 
     # Pre-transaction validations
     unless @entry.account.investment?
@@ -250,6 +292,8 @@ class TransactionsController < ApplicationController
   end
 
   def unlock
+    return unless require_account_permission!(@entry.account)
+
     @entry.unlock_for_sync!
     flash[:notice] = t("entries.unlock.success")
 
@@ -257,10 +301,13 @@ class TransactionsController < ApplicationController
   end
 
   def mark_as_recurring
-    transaction = Current.family.transactions.includes(entry: :account).find(params[:id])
+    transaction = accessible_transactions.includes(entry: :account).find(params[:id])
+
+    return unless require_account_permission!(transaction.entry.account)
 
     # Check if a recurring transaction already exists for this pattern
     existing = Current.family.recurring_transactions.find_by(
+      account_id: transaction.entry.account_id,
       merchant_id: transaction.merchant_id,
       name: transaction.merchant_id.present? ? nil : transaction.entry.name,
       currency: transaction.entry.currency,
@@ -306,9 +353,68 @@ class TransactionsController < ApplicationController
     head :unprocessable_entity
   end
 
+  def exchange_rate
+    account = Current.family.accounts.find(params[:account_id])
+    currency_from = params[:currency]
+    date = params[:date]&.to_date || Date.current
+
+    if account.currency == currency_from
+      render json: { same_currency: true, rate: 1.0 }
+    else
+      rate_obj = ExchangeRate.find_or_fetch_rate(
+        from: currency_from,
+        to: account.currency,
+        date: date
+      )
+
+      if rate_obj.nil?
+        return render json: { error: "Exchange rate not found" }, status: :not_found
+      end
+
+      rate_value = rate_obj.is_a?(Numeric) ? rate_obj : rate_obj.rate
+
+      render json: { rate: rate_value.to_f, account_currency: account.currency }
+    end
+  end
+
   private
+    def accessible_transactions
+      Current.family.transactions
+        .joins(entry: :account)
+        .merge(Account.accessible_by(Current.user))
+    end
+
+    def duplicate_source
+      return @duplicate_source if defined?(@duplicate_source)
+      @duplicate_source = if params[:duplicate_entry_id].present?
+        source = Current.family.entries.joins(:account).merge(Account.accessible_by(Current.user)).find_by(id: params[:duplicate_entry_id])
+        source if source&.transaction?
+      end
+    end
+
+    def prefill_params_from_duplicate!
+      return unless duplicate_source
+      params[:nature] ||= duplicate_source.amount.negative? ? "inflow" : "outflow"
+      params[:account_id] ||= duplicate_source.account_id.to_s
+    end
+
+    def apply_duplicate_attributes!
+      return unless duplicate_source
+      @entry.assign_attributes(
+        name: duplicate_source.name,
+        amount: duplicate_source.amount.abs,
+        currency: duplicate_source.currency,
+        notes: duplicate_source.notes
+      )
+      @entry.entryable.assign_attributes(
+        category_id: duplicate_source.entryable.category_id,
+        merchant_id: duplicate_source.entryable.merchant_id
+      )
+      @entry.entryable.tag_ids = duplicate_source.entryable.tag_ids
+    end
+
     def set_entry_for_unlock
-      transaction = Current.family.transactions.find(params[:id])
+      transaction = accessible_transactions.find(params[:id])
       @entry = transaction.entry
     end
 
@@ -327,10 +433,12 @@ class TransactionsController < ApplicationController
     def entry_params
       entry_params = params.require(:entry).permit(
         :name, :date, :amount, :currency, :excluded, :notes, :nature, :entryable_type,
-        entryable_attributes: [ :id, :category_id, :merchant_id, :kind, :investment_activity_label, { tag_ids: [] } ]
+        entryable_attributes: [ :id, :category_id, :merchant_id, :kind, :investment_activity_label, :exchange_rate, { tag_ids: [] } ]
       )
 
       nature = entry_params.delete(:nature)
+
+      entry_params.delete(:amount) if entry_params[:amount].blank?
 
       if nature.present? && entry_params[:amount].present?
         signed_amount = nature == "inflow" ? -entry_params[:amount].to_d : entry_params[:amount].to_d
@@ -338,6 +446,25 @@ class TransactionsController < ApplicationController
       end
 
       entry_params
+    end
+
+    # Filters entry_params based on the user's permission on the account.
+    # read_write users can only annotate (category, tags, notes, merchant).
+    # read_only users cannot update anything.
+    def permitted_entry_params
+      case entry_permission
+      when :owner, :full_control
+        entry_params
+      when :read_write
+        # Annotate only: category, tags, merchant, notes
+        ep = entry_params.slice(:notes)
+        if entry_params[:entryable_attributes].present?
+          ep[:entryable_attributes] = entry_params[:entryable_attributes].slice(:id, :category_id, :merchant_id, :tag_ids)
+        end
+        ep
+      else
+        {} # read_only — no edits allowed
+      end
     end
 
     def search_params
@@ -397,12 +524,18 @@ class TransactionsController < ApplicationController
       if params[:security_id] == "__custom__"
         # User selected "Enter custom ticker" - check for combobox selection or manual entry
         if params[:ticker].present?
-          # Combobox selection: format is "SYMBOL|EXCHANGE"
-          ticker_symbol, exchange_operating_mic = params[:ticker].split("|")
+          # Combobox selection: format is "SYMBOL|EXCHANGE|PROVIDER"
+          parsed = Security.parse_combobox_id(params[:ticker])
+          if parsed[:ticker].blank?
+            flash[:alert] = t("transactions.convert_to_trade.errors.enter_ticker")
+            redirect_back_or_to transactions_path
+            return nil
+          end
           Security::Resolver.new(
-            ticker_symbol.strip,
-            exchange_operating_mic: exchange_operating_mic.presence || params[:exchange_operating_mic].presence,
-            country_code: user_country
+            parsed[:ticker].strip,
+            exchange_operating_mic: parsed[:exchange_operating_mic] || params[:exchange_operating_mic].presence,
+            country_code: user_country,
+            price_provider: parsed[:price_provider]
           ).resolve
         elsif params[:custom_ticker].present?
           # Manual entry from combobox's name_when_new or fallback text field
@@ -425,12 +558,18 @@ class TransactionsController < ApplicationController
         end
         found
       elsif params[:ticker].present?
-        # Direct combobox (no existing holdings) - format is "SYMBOL|EXCHANGE"
-        ticker_symbol, exchange_operating_mic = params[:ticker].split("|")
+        # Direct combobox (no existing holdings) - format is "SYMBOL|EXCHANGE|PROVIDER"
+        parsed = Security.parse_combobox_id(params[:ticker])
+        if parsed[:ticker].blank?
+          flash[:alert] = t("transactions.convert_to_trade.errors.enter_ticker")
+          redirect_back_or_to transactions_path
+          return nil
+        end
         Security::Resolver.new(
-          ticker_symbol.strip,
-          exchange_operating_mic: exchange_operating_mic.presence || params[:exchange_operating_mic].presence,
-          country_code: user_country
+          parsed[:ticker].strip,
+          exchange_operating_mic: parsed[:exchange_operating_mic] || params[:exchange_operating_mic].presence,
+          country_code: user_country,
+          price_provider: parsed[:price_provider]
         ).resolve
       elsif params[:custom_ticker].present?
         # Manual entry from combobox's name_when_new (no existing holdings path)

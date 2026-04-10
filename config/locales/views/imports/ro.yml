@@ -80,3 +80,8 @@ ro:
     ready:
       description: Iată un rezumat al elementelor noi care vor fi adăugate contului tău odată ce vei publica acest import.
       title: Confirmă datele importate
+      summary_item_label: Element
+      summary_count_label: Număr
+      empty_summary: Nu s-au găsit înregistrări importabile în acest fișier. Fișierul poate fi gol sau liniile nu respectă formatul de export așteptat (fiecare linie trebuie să fie un obiect JSON cu cheile „type” și „data”, folosind tipuri acceptate de acest import).
+      publish_import: Publică importul
+      back_to_imports: Înapoi la importuri

@@ -5,33 +5,47 @@ en:
       account: Transfer account (optional)
       account_prompt: Search account
       amount: Amount
+      fee: Transaction fee
       holding: Ticker symbol
+      holding_optional: Ticker symbol (optional)
       price: Price per share
       qty: Quantity
       submit: Add transaction
       ticker_placeholder: AAPL
       type: Type
+      type_buy: Buy
+      type_sell: Sell
+      type_deposit: Deposit
+      type_withdrawal: Withdrawal
+      type_dividend: Dividend
+      type_interest: Interest
+      dividend_requires_security: Security is required for dividends
     header:
       buy: Buy
+      sell: Sell
+      dividend: Dividend
+      interest: Interest
       current_market_price_label: Current Market Price
       overview: Overview
       purchase_price_label: Purchase Price
       purchase_qty_label: Purchase Quantity
-      sell: Sell
       symbol_label: Symbol
       total_return_label: Unrealized gain/loss
     new:
       title: New transaction
     show:
       additional: Additional
+      amount_label: Amount
       buy: Buy
       category_label: Category
       cost_per_share_label: Cost per Share
       date_label: Date
       delete: Delete
+      fee_label: Transaction fee
       delete_subtitle: This action cannot be undone
       delete_title: Delete Trade
       details: Details
+      provider_disabled_warning: "Price updates paused — %{provider} provider is disabled. Re-enable it in Settings or remap the holding to another provider."
       exclude_subtitle: This trade will not be included in reports and calculations
       exclude_title: Exclude from analytics
       no_category: No category

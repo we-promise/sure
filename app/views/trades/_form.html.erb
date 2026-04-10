@@ -10,11 +10,12 @@
 
     <div class="space-y-2">
       <%= form.select :type, [
-          ["Buy", "buy"],
-          ["Sell", "sell"],
-          ["Deposit", "deposit"],
-          ["Withdrawal", "withdrawal"],
-          ["Interest", "interest"]
+          [t(".type_buy"), "buy"],
+          [t(".type_sell"), "sell"],
+          [t(".type_deposit"), "deposit"],
+          [t(".type_withdrawal"), "withdrawal"],
+          [t(".type_dividend"), "dividend"],
+          [t(".type_interest"), "interest"]
       ],
       { label: t(".type"), selected: type },
       { data: {
@@ -24,18 +25,27 @@
         }} %>
 
       <% if %w[buy sell].include?(type) %>
-        <% if Security.provider.present? %>
+        <% if Security.providers.any? %>
           <div class="form-field combobox">
             <%= form.combobox :ticker,
                             securities_path(country_code: Current.family.country),
-                            name_when_new: "entry[manual_ticker]",
+                            name_when_new: "model[manual_ticker]",
                             label: t(".holding"),
                             placeholder: t(".ticker_placeholder"),
                             required: true %>
           </div>
         <% else %>
-          <%= form.text_field :manual_ticker, label: "Ticker symbol", placeholder: "AAPL", required: true %>
+          <%= form.text_field :manual_ticker, label: t(".holding"), placeholder: t(".ticker_placeholder"), required: true %>
         <% end %>
+      <% end %>
+
+      <% if %w[dividend interest].include?(type) %>
+        <% account_securities = account ? account.traded_standard_securities : [] %>
+        <% security_options = account_securities.map { |s| [ s.name.presence || s.ticker, s.exchange_operating_mic.present? ? "#{s.ticker}|#{s.exchange_operating_mic}" : s.ticker ] } %>
+        <% select_options = { label: type == "dividend" ? t(".holding") : t(".holding_optional") } %>
+        <% select_options[:include_blank] = true if type == "interest" %>
+        <% select_options[:required] = true if type == "dividend" %>
+        <%= form.select :ticker, security_options, select_options %>
       <% end %>
 
       <%= form.date_field :date, label: true, value: model.date || Date.current, required: true %>
@@ -45,12 +55,13 @@
       <% end %>
 
       <% if %w[deposit withdrawal].include?(type) %>
-        <%= form.collection_select :transfer_account_id, Current.family.accounts.visible.alphabetically, :id, :name, { prompt: t(".account_prompt"), label: t(".account") } %>
+        <%= form.collection_select :transfer_account_id, accessible_accounts.visible.alphabetically, :id, :name, { prompt: t(".account_prompt"), label: t(".account") } %>
       <% end %>
 
       <% if %w[buy sell].include?(type) %>
         <%= form.number_field :qty, label: t(".qty"), placeholder: "10", min: 0.000000000000000001, step: "any", required: true %>
         <%= form.money_field :price, label: t(".price"), step: "any", precision: 10, required: true %>
+        <%= form.money_field :fee, label: t(".fee"), step: "any", min: 0 %>
       <% end %>
     </div>
 

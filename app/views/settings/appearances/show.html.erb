@@ -1,0 +1,71 @@
+<%= content_for :page_title, t(".page_title") %>
+
+<%= settings_section title: t(".theme_title"), subtitle: t(".theme_subtitle") do %>
+  <div data-controller="theme" data-theme-user-preference-value="<%= @user.theme %>">
+    <%= form_with model: @user, class: "flex flex-col md:flex-row justify-between items-center gap-4", id: "theme_form",
+        data: { controller: "auto-submit-form", auto_submit_form_trigger_event_value: "change" } do |form| %>
+      <%= form.hidden_field :redirect_to, value: "appearance" %>
+
+      <% theme_option_class = "text-center transition-all duration-200 p-3 rounded-lg hover:bg-surface-hover cursor-pointer [&:has(input:checked)]:bg-surface-hover [&:has(input:checked)]:border [&:has(input:checked)]:border-primary [&:has(input:checked)]:shadow-xs" %>
+
+      <% [
+        { value: "light", image: "light-mode-preview.png" },
+        { value: "dark", image: "dark-mode-preview.png" },
+        { value: "system", image: "system-mode-preview.png" }
+      ].each do |theme| %>
+        <%= form.label :"theme_#{theme[:value]}", class: "group" do %>
+          <div class="<%= theme_option_class %>">
+            <%= image_tag(theme[:image], alt: "#{theme[:value].titleize} Theme Preview", class: "max-h-44 mb-2") %>
+            <div class="<%= theme[:value] == "system" ? "flex items-center gap-2 justify-center" : "text-sm font-medium text-primary" %>">
+              <%= form.radio_button :theme, theme[:value], checked: @user.theme == theme[:value], class: "sr-only",
+                data: { auto_submit_form_target: "auto", autosubmit_trigger_event: "change", action: "theme#updateTheme" } %>
+              <%= t(".theme_#{theme[:value]}") %>
+            </div>
+          </div>
+        <% end %>
+      <% end %>
+    <% end %>
+  </div>
+<% end %>
+
+<%= settings_section title: t(".dashboard_title"), subtitle: t(".dashboard_subtitle") do %>
+  <div>
+    <%= form_with url: settings_appearance_path, method: :patch,
+          class: "p-3",
+          data: { controller: "auto-submit-form" } do |f| %>
+      <div class="flex cursor-pointer items-center gap-4 justify-between">
+        <div class="text-sm space-y-1">
+          <h4 class="text-primary"><%= t(".dashboard_two_column_title") %></h4>
+          <p class="text-secondary"><%= t(".dashboard_two_column_description") %></p>
+        </div>
+        <%= render DS::Toggle.new(
+              id: "user_dashboard_two_column",
+              name: "user[dashboard_two_column]",
+              checked: @user.dashboard_two_column?,
+              data: { auto_submit_form_target: "auto" }
+        ) %>
+      </div>
+    <% end %>
+  </div>
+<% end %>
+
+<%= settings_section title: t(".transactions_title"), subtitle: t(".transactions_subtitle") do %>
+  <div>
+    <%= form_with url: settings_appearance_path, method: :patch,
+          class: "p-3",
+          data: { controller: "auto-submit-form" } do |f| %>
+      <div class="flex cursor-pointer items-center gap-4 justify-between">
+        <div class="text-sm space-y-1">
+          <h4 class="text-primary"><%= t(".split_grouped_title") %></h4>
+          <p class="text-secondary"><%= t(".split_grouped_description") %></p>
+        </div>
+        <%= render DS::Toggle.new(
+              id: "user_show_split_grouped",
+              name: "user[show_split_grouped]",
+              checked: @user.show_split_grouped?,
+              data: { auto_submit_form_target: "auto" }
+        ) %>
+      </div>
+    <% end %>
+  </div>
+<% end %>

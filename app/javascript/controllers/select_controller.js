@@ -2,9 +2,9 @@ import { Controller } from "@hotwired/stimulus"
 import { autoUpdate } from "@floating-ui/dom"
 
 export default class extends Controller {
-  static targets = ["button", "menu", "input"]
+  static targets = ["button", "menu", "input", "content"]
   static values = {
-    placement: { type: String, default: "bottom-start" },
+    menuPlacement: { type: String, default: "auto" },
     offset: { type: Number, default: 6 }
   }
 
@@ -103,7 +103,25 @@ export default class extends Controller {
 
   scrollToSelected() {
     const selected = this.menuTarget.querySelector(".bg-container-inset")
-    if (selected) selected.scrollIntoView({ block: "center" })
+    if (!selected) return
+
+    const container = this.hasContentTarget ? this.contentTarget : this.menuTarget
+    const containerRect = container.getBoundingClientRect()
+    const selectedRect = selected.getBoundingClientRect()
+    const delta = selectedRect.top - containerRect.top - (container.clientHeight - selectedRect.height) / 2
+
+    const nextScrollTop = container.scrollTop + delta
+    const maxScrollTop = Math.max(0, container.scrollHeight - container.clientHeight)
+    container.scrollTop = this.clamp(nextScrollTop, 0, maxScrollTop)
+  }
+
+  clamp(value, min, max) {
+    return Math.min(max, Math.max(min, value))
+  }
+
+  placementMode() {
+    const mode = (this.menuPlacementValue || "auto").toLowerCase()
+    return ["auto", "down", "up"].includes(mode) ? mode : "auto"
   }
 
   handleOutsideClick(event) {
@@ -163,7 +181,8 @@ export default class extends Controller {
 
     const spaceBelow = containerRect.bottom - buttonRect.bottom
     const spaceAbove = buttonRect.top - containerRect.top
-    const shouldOpenUp = spaceBelow < menuHeight && spaceAbove > spaceBelow
+    const placement = this.placementMode()
+    const shouldOpenUp = placement === "up" || (placement === "auto" && spaceBelow < menuHeight && spaceAbove > spaceBelow)
 
     this.menuTarget.style.left = "0"
     this.menuTarget.style.width = "100%"

@@ -8,7 +8,14 @@ en:
       title: Are you sure?
     money_field:
       label: Amount
+    exchange_rate_tabs:
+      calculate_rate_tab: Calculate FX rate
+      convert_tab: Convert with FX rate
+      destination_amount: Destination amount
+      exchange_rate: Exchange rate
+      exchange_rate_help: Choose how to enter the amount.
     syncing_notice:
       syncing: Syncing accounts data...
+    require_admin: "Only admins can perform this action"
     trend_change:
       no_change: "no change"

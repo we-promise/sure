@@ -8,7 +8,7 @@ class ImportsController < ApplicationController
     account_id = params.dig(:pdf_import, :account_id) || params.dig(:import, :account_id)
 
     if account_id.present?
-      account = Current.family.accounts.find_by(id: account_id)
+      account = accessible_accounts.find_by(id: account_id)
       unless account
         redirect_back_or_to import_path(@import), alert: t("imports.update.invalid_account", default: "Account not found.")
         return
@@ -49,6 +49,11 @@ class ImportsController < ApplicationController
       return
     end
 
+    if file.present? && sure_import_request?
+      create_sure_import(file)
+      return
+    end
+
     # Handle PDF file uploads - process with AI
     if file.present? && Import::ALLOWED_PDF_MIME_TYPES.include?(file.content_type)
       unless valid_pdf_file?(file)
@@ -62,7 +67,7 @@ class ImportsController < ApplicationController
     type = params.dig(:import, :type).to_s
     type = "TransactionImport" unless Import::TYPES.include?(type)
 
-    account = Current.family.accounts.find_by(id: params.dig(:import, :account_id))
+    account = accessible_accounts.find_by(id: params.dig(:import, :account_id))
     import = Current.family.imports.create!(
       type: type,
       account: account,
@@ -85,6 +90,7 @@ class ImportsController < ApplicationController
       # Stream reading is not fully applicable here as we store the raw string in the DB,
       # but we have validated size beforehand to prevent memory exhaustion from massive files.
       import.update!(raw_file_str: file.read)
+
       redirect_to import_configuration_path(import), notice: t("imports.create.csv_uploaded")
     else
       redirect_to import_upload_path(import)
@@ -92,7 +98,10 @@ class ImportsController < ApplicationController
   end
 
   def show
-    return unless @import.requires_csv_workflow?
+    unless @import.requires_csv_workflow?
+      redirect_to import_upload_path(@import), alert: t("imports.show.finalize_upload") unless @import.uploaded?
+      return
+    end
 
     if !@import.uploaded?
       redirect_to import_upload_path(@import), alert: t("imports.show.finalize_upload")
@@ -195,6 +204,40 @@ class ImportsController < ApplicationController
 
     def document_upload_request?
       params.dig(:import, :type) == "DocumentImport"
+    end
+
+    def sure_import_request?
+      params.dig(:import, :type) == "SureImport"
+    end
+
+    def create_sure_import(file)
+      if file.size > SureImport::MAX_NDJSON_SIZE
+        redirect_to new_import_path, alert: t("imports.create.file_too_large", max_size: SureImport::MAX_NDJSON_SIZE / 1.megabyte)
+        return
+      end
+
+      ext = File.extname(file.original_filename.to_s).downcase
+      unless ext.in?(%w[.ndjson .json])
+        redirect_to new_import_path, alert: t("imports.create.invalid_ndjson_file_type")
+        return
+      end
+
+      content = file.read
+      file.rewind
+      unless SureImport.valid_ndjson_first_line?(content)
+        redirect_to new_import_path, alert: t("imports.create.invalid_ndjson_file_type")
+        return
+      end
+
+      import = Current.family.imports.create!(type: "SureImport")
+      import.ndjson_file.attach(
+        io: StringIO.new(content),
+        filename: file.original_filename,
+        content_type: file.content_type
+      )
+      import.sync_ndjson_rows_count!
+
+      redirect_to import_path(import), notice: t("imports.create.ndjson_uploaded")
     end
 
     def valid_pdf_file?(file)

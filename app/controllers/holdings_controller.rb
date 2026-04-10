@@ -1,8 +1,11 @@
 class HoldingsController < ApplicationController
+  include StreamExtensions
+
   before_action :set_holding, only: %i[show update destroy unlock_cost_basis remap_security reset_security sync_prices]
+  before_action :require_holding_write_permission!, only: %i[update destroy unlock_cost_basis remap_security reset_security sync_prices]
 
   def index
-    @account = Current.family.accounts.find(params[:account_id])
+    @account = accessible_accounts.find(params[:account_id])
   end
 
   def show
@@ -49,36 +52,44 @@ class HoldingsController < ApplicationController
   end
 
   def remap_security
-    # Combobox returns "TICKER|EXCHANGE" format
-    ticker, exchange = params[:security_id].to_s.split("|")
+    # Combobox returns "TICKER|EXCHANGE|PROVIDER" format
+    parsed = Security.parse_combobox_id(params[:security_id])
 
     # Validate ticker is present (form has required: true, but can be bypassed)
-    if ticker.blank?
-      flash[:alert] = t(".security_not_found")
-      redirect_to account_path(@holding.account, tab: "holdings")
-      return
-    end
-
-    new_security = Security::Resolver.new(
-      ticker,
-      exchange_operating_mic: exchange,
-      country_code: Current.family.country
-    ).resolve
-
-    if new_security.nil?
+    if parsed[:ticker].blank?
       flash[:alert] = t(".security_not_found")
       redirect_to account_path(@holding.account, tab: "holdings")
       return
     end
 
     # The user explicitly selected this security from provider search results,
-    # so we know the provider can handle it. Bring it back online if it was
-    # previously marked offline (e.g. by a failed QIF import resolution).
-    if new_security.offline?
-      new_security.update!(offline: false, failed_fetch_count: 0, failed_fetch_at: nil)
-    end
+    # so we use the combobox data directly — no need to re-resolve via provider APIs.
+    new_security = Security.find_or_initialize_by(
+      ticker: parsed[:ticker],
+      exchange_operating_mic: parsed[:exchange_operating_mic]
+    )
+
+    # Honor the user's provider choice (validated by model inclusion check on save)
+    new_security.price_provider = parsed[:price_provider] if parsed[:price_provider].present?
+
+    # Bring it online — user explicitly selected it from provider search results,
+    # so we know the provider can handle it.
+    new_security.offline = false
+    new_security.failed_fetch_count = 0
+    new_security.failed_fetch_at = nil
+
+    new_security.save!
 
     @holding.remap_security!(new_security)
+
+    # Re-materialize holdings with the new security's prices.
+    # Reload account to avoid stale associations from remap_security!.
+    # The around_action :switch_timezone already sets the family timezone
+    # for this request, so Date.current is correct here.
+    account = Account.find(@holding.account_id)
+    strategy = account.linked? ? :reverse : :forward
+    Balance::Materializer.new(account, strategy: strategy, security_ids: [ new_security.id ]).materialize_balances
+
     flash[:notice] = t(".success")
 
     respond_to do |format|
@@ -137,7 +148,14 @@ class HoldingsController < ApplicationController
 
   private
     def set_holding
-      @holding = Current.family.holdings.find(params[:id])
+      @holding = Current.family.holdings
+                   .joins(:account)
+                   .merge(Account.accessible_by(Current.user))
+                   .find(params[:id])
+    end
+
+    def require_holding_write_permission!
+      require_account_permission!(@holding.account)
     end
 
     def holding_params
