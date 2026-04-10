@@ -19,17 +19,7 @@ class Security < ApplicationRecord
   end
 
   # Builds the Brandfetch crypto URL for a base asset (e.g. "BTC"). Returns
-  # nil when Brandfetch isn't configured. Used by Provider::BinancePublic's
-  # in-memory search results, by the before_save logo-writer, and by the
-  # render-time display_logo_url path. Lives at class level so the search
-  # code (which has no instance yet) and instance methods can share it.
-  #
-  # NOTE: Brandfetch's /crypto/{base} route returns 400 Bad Request on coins
-  # it doesn't index — there is no lettermark fallback on that route. We
-  # accept the broken-image risk for truly obscure coins (our probe against
-  # 37+ popular + memecoin tickers saw zero misses) rather than maintain a
-  # probe/cache/column to pre-verify. Mirrors the stocks-with-obscure-ticker
-  # tradeoff the app already ships.
+  # nil when Brandfetch isn't configured.
   def self.brandfetch_crypto_url(base_asset)
     return nil if base_asset.blank?
     return nil unless Setting.brand_fetch_client_id.present?
