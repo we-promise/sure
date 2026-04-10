@@ -71,5 +71,4 @@ class DemoFamilyRefreshJobTest < ActiveJob::TestCase
 
     DemoFamilyRefreshJob.perform_now
   end
-
 end
