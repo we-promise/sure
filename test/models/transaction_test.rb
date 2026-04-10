@@ -25,6 +25,18 @@ class TransactionTest < ActiveSupport::TestCase
     assert_not transaction.pending?
   end
 
+  test "pending? returns true for enable_banking pending transactions" do
+    transaction = Transaction.new(extra: { "enable_banking" => { "pending" => true } })
+
+    assert transaction.pending?
+  end
+
+  test "pending? returns false for enable_banking non-pending transactions" do
+    transaction = Transaction.new(extra: { "enable_banking" => { "pending" => false } })
+
+    assert_not transaction.pending?
+  end
+
   test "investment_contribution is a valid kind" do
     transaction = Transaction.new(kind: "investment_contribution")
 
