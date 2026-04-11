@@ -125,6 +125,13 @@ class Transaction < ApplicationRecord
     TRANSFER_KINDS.include?(kind)
   end
 
+  def category_editable?
+    return true unless transfer?
+    return transfer.categorizable? if transfer.present?
+
+    kind.in?(%w[loan_payment investment_contribution])
+  end
+
   def set_category!(category)
     if category.is_a?(String)
       category = entry.account.family.categories.find_or_create_by!(
