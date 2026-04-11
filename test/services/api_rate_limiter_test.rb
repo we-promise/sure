@@ -64,6 +64,7 @@ class ApiRateLimiterTest < ActiveSupport::TestCase
     assert_equal :standard, usage_info[:tier]
     assert usage_info[:reset_time] > 0
     assert usage_info[:reset_time] <= 3600
+    assert usage_info[:redis_available] == true
   end
 
   test "should calculate remaining requests correctly" do
@@ -134,5 +135,22 @@ class ApiRateLimiterTest < ActiveSupport::TestCase
     expected_reset = next_window - current_time
 
     assert_in_delta expected_reset, reset_time, 1
+  end
+
+  test "should fail open when Redis is unavailable" do
+    rate_limiter = ApiRateLimiter.new(@api_key)
+    bad_redis = Object.new
+    def bad_redis.hget(*); raise Redis::CannotConnectError; end
+    def bad_redis.multi; raise Redis::CannotConnectError; end
+    def bad_redis.hgetall(*); raise Redis::CannotConnectError; end
+    def bad_redis.hdel(*); end
+
+    rate_limiter.instance_variable_set(:@redis, bad_redis)
+
+    assert_not rate_limiter.rate_limit_exceeded?, "Should not rate limit when Redis is down"
+    assert_equal 0, rate_limiter.current_count, "Should return 0 (fail open) when Redis raises"
+    assert_equal 0, rate_limiter.usage_info[:current_count]
+    assert rate_limiter.usage_info[:remaining] >= 100
+    assert rate_limiter.usage_info[:redis_available] == false
   end
 end
