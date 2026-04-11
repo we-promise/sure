@@ -4,6 +4,7 @@ en:
     errors:
       api_error: "A communication error occurred with the bank."
       network_unreachable: "The banking service is temporarily unreachable. Please try again later."
+      session_invalid: "Session expired. Please reconnect your bank."
       unexpected: "An unexpected error occurred during synchronization."
     authorize:
       authorization_failed: "Failed to initiate authorization: %{message}"

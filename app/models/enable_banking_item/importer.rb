@@ -21,12 +21,12 @@ class EnableBankingItem::Importer
   def import
     unless enable_banking_item.session_valid?
       enable_banking_item.update!(status: :requires_update)
-      return { success: false, error: "Session expired or invalid", accounts_updated: 0, transactions_imported: 0 }
+      return { success: false, error: I18n.t("enable_banking_items.errors.session_invalid"), accounts_updated: 0, transactions_imported: 0 }
     end
 
     session_data = fetch_session_data
     unless session_data
-      error_msg = @session_error || "Failed to fetch session data"
+      error_msg = @session_error || I18n.t("enable_banking_items.errors.unexpected")
       return { success: false, error: error_msg, accounts_updated: 0, transactions_imported: 0 }
     end
 
@@ -76,6 +76,7 @@ class EnableBankingItem::Importer
           end
         rescue => e
           accounts_failed += 1
+          @sync_error ||= handle_sync_error(e)
           Rails.logger.error "EnableBankingItem::Importer - Failed to update account #{uid}: #{e.message}"
         end
       end
@@ -96,9 +97,11 @@ class EnableBankingItem::Importer
           transactions_imported += result[:transactions_count]
         else
           transactions_failed += 1
+          @sync_error ||= result[:error]
         end
       rescue => e
         transactions_failed += 1
+        @sync_error ||= handle_sync_error(e)
         Rails.logger.error "EnableBankingItem::Importer - Failed to process account #{enable_banking_account.uid}: #{e.message}"
       end
     end
@@ -110,20 +113,25 @@ class EnableBankingItem::Importer
       transactions_imported: transactions_imported,
       transactions_failed: transactions_failed
     }
-    if !result[:success] && (accounts_failed > 0 || transactions_failed > 0)
-      parts = []
-      parts << "#{accounts_failed} #{'account'.pluralize(accounts_failed)} failed" if accounts_failed > 0
-      parts << "#{transactions_failed} #{'transaction'.pluralize(transactions_failed)} failed" if transactions_failed > 0
-      result[:error] = parts.join(", ")
+    if !result[:success]
+      result[:error] = @sync_error || I18n.t("enable_banking_items.errors.unexpected")
     end
     result
   end
 
   private
 
-    def localized_error_message(exception)
+    def handle_sync_error(exception)
       # Check the underlying cause first, then the exception itself
       exceptions = [ exception.cause, exception ].compact
+
+      provider_error = exceptions.find { |ex| ex.is_a?(Provider::EnableBanking::EnableBankingError) }
+
+      # Handle session expiration status update
+      if provider_error && [ :unauthorized, :not_found ].include?(provider_error.error_type)
+        enable_banking_item.update!(status: :requires_update)
+        return I18n.t("enable_banking_items.errors.session_invalid")
+      end
 
       is_network_error = exceptions.any? do |ex|
         NETWORK_ERRORS.any? { |err| ex.is_a?(err) } ||
@@ -131,26 +139,23 @@ class EnableBankingItem::Importer
       end
 
       if is_network_error
-        I18n.t("enable_banking_items.errors.network_unreachable", default: "The banking service is temporarily unreachable. Please try again later.")
-      elsif exceptions.any? { |ex| ex.is_a?(Provider::EnableBanking::EnableBankingError) }
-        I18n.t("enable_banking_items.errors.api_error", default: "A communication error occurred with the bank.")
+        I18n.t("enable_banking_items.errors.network_unreachable")
+      elsif provider_error
+        I18n.t("enable_banking_items.errors.api_error")
       else
-        I18n.t("enable_banking_items.errors.unexpected", default: "An unexpected error occurred during synchronization.")
+        I18n.t("enable_banking_items.errors.unexpected")
       end
     end
 
     def fetch_session_data
       enable_banking_provider.get_session(session_id: enable_banking_item.session_id)
     rescue Provider::EnableBanking::EnableBankingError => e
-      if e.error_type == :unauthorized || e.error_type == :not_found
-        enable_banking_item.update!(status: :requires_update)
-      end
       Rails.logger.error "EnableBankingItem::Importer - Enable Banking API error: #{e.message}"
-      @session_error = localized_error_message(e)
+      @session_error = handle_sync_error(e)
       nil
     rescue => e
       Rails.logger.error "EnableBankingItem::Importer - Unexpected error fetching session: #{e.class} - #{e.message}"
-      @session_error = localized_error_message(e)
+      @session_error = handle_sync_error(e)
       nil
     end
 
@@ -205,6 +210,7 @@ class EnableBankingItem::Importer
         end
       end
     rescue Provider::EnableBanking::EnableBankingError => e
+      @sync_error ||= handle_sync_error(e)
       Rails.logger.error "EnableBankingItem::Importer - Error fetching balance for account #{enable_banking_account.uid}: #{e.message}"
     end
 
@@ -295,10 +301,10 @@ class EnableBankingItem::Importer
       { success: true, transactions_count: transactions_count }
     rescue Provider::EnableBanking::EnableBankingError => e
       Rails.logger.error "EnableBankingItem::Importer - Error fetching transactions for account #{enable_banking_account.uid}: #{e.message}"
-      { success: false, transactions_count: 0, error: localized_error_message(e) }
+      { success: false, transactions_count: 0, error: handle_sync_error(e) }
     rescue => e
       Rails.logger.error "EnableBankingItem::Importer - Unexpected error fetching transactions for account #{enable_banking_account.uid}: #{e.class} - #{e.message}"
-      { success: false, transactions_count: 0, error: localized_error_message(e) }
+      { success: false, transactions_count: 0, error: handle_sync_error(e) }
     end
 
     # Deduplicate transactions from the Enable Banking API response.
