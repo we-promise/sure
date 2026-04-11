@@ -3,7 +3,13 @@ module CoinstatsAccount::SourceClassification
 
   def wallet_source?
     payload = raw_payload.to_h.with_indifferent_access
+    return false if payload[:source] == "defi"
     payload[:source] == "wallet" || (payload[:address].present? && payload[:blockchain].present?)
+  end
+
+  def defi_source?
+    payload = raw_payload.to_h.with_indifferent_access
+    payload[:source] == "defi"
   end
 
   def exchange_source?

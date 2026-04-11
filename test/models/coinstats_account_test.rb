@@ -291,6 +291,20 @@ class CoinstatsAccountTest < ActiveSupport::TestCase
     assert_nil CoinstatsAccount.find_by(id: wallet_a.id)
   end
 
+  test "defi_source? returns true when source is defi" do
+    @coinstats_account.update!(raw_payload: { source: "defi", address: "0x123", blockchain: "ethereum" })
+    assert @coinstats_account.defi_source?
+    refute @coinstats_account.wallet_source?
+  end
+
+  test "wallet_source? returns true for wallet with address and blockchain, false for defi" do
+    @coinstats_account.update!(raw_payload: { address: "0x123", blockchain: "ethereum" })
+    assert @coinstats_account.wallet_source?
+
+    @coinstats_account.update!(raw_payload: { source: "defi", address: "0x123", blockchain: "ethereum" })
+    refute @coinstats_account.wallet_source?
+  end
+
   test "portfolio exchange account derives total and cash balances from embedded coins" do
     @family.update!(currency: "EUR")
 
