@@ -53,8 +53,12 @@ class ExchangeRate::Importer
       }
     end
 
-    upsert_rows(updated_rates)
-    upsert_rows(inverse_rates)
+    if updated_rates.any?
+      upsert_rows(updated_rates)
+      upsert_rows(inverse_rates)
+    else
+      Rails.logger.debug("No valid rates to sync for #{from} to #{to} between #{start_date} and #{end_date} after filtering provider response")
+    end
 
     # Also backfill inverse rows for any forward rates that existed in the DB
     # before effective_start_date (i.e. dates not covered by gapfilled_rates).
