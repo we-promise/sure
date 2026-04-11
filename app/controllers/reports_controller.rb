@@ -501,6 +501,13 @@ class ReportsController < ApplicationController
 
       trades_by_treatment = sell_trades.group_by { |t| t.entry.account.tax_treatment || :taxable }
 
+      # Batch-fetch FX rates for every currency present in this scope so mixed-
+      # currency holdings/trades are summed in family currency, not raw.
+      foreign_currencies = (current_holdings.map(&:currency) + sell_trades.map(&:currency))
+                             .compact.uniq.reject { |c| c == currency }
+      rates = ExchangeRate.rates_for(foreign_currencies, to: currency, date: Date.current)
+      convert = ->(amount, from) { from == currency ? amount : amount * (rates[from] || 1) }
+
       # Build metrics per treatment
       %i[taxable tax_deferred tax_exempt tax_advantaged].each_with_object({}) do |treatment, hash|
         holdings = holdings_by_treatment[treatment] || []
@@ -509,13 +516,13 @@ class ReportsController < ApplicationController
         # Sum unrealized gains from holdings (only those with known cost basis)
         unrealized = holdings.sum do |h|
           trend = h.trend
-          trend ? trend.value : 0
+          trend ? convert.call(trend.value, h.currency) : 0
         end
 
         # Sum realized gains from sell trades
         realized = trades.sum do |t|
           gain = t.realized_gain_loss
-          gain ? gain.value : 0
+          gain ? convert.call(gain.value, t.currency) : 0
         end
 
         # Only include treatment groups that have some activity
