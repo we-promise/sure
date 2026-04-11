@@ -1,6 +1,10 @@
 ---
 en:
   enable_banking_items:
+    errors:
+      api_error: "A communication error occurred with the bank."
+      network_unreachable: "The banking service is temporarily unreachable. Please try again later."
+      unexpected: "An unexpected error occurred during synchronization."
     authorize:
       authorization_failed: "Failed to initiate authorization: %{message}"
       bank_required: Please select a bank.

@@ -113,21 +113,25 @@ class EnableBankingItem::Importer
 
   private
 
-    def extract_friendly_error_message(exception)
-      [ exception, exception.cause ].compact.each do |ex|
-        case ex
-        when SocketError then return "DNS resolution failed: check your network/DNS configuration"
-        when Net::OpenTimeout, Net::ReadTimeout then return "Connection timed out: the Enable Banking API may be unreachable"
-        when Errno::ECONNREFUSED then return "Connection refused: the Enable Banking API is unreachable"
-        end
+    def localized_error_message(exception)
+      # Check the underlying cause first, then the exception itself
+      exceptions = [ exception.cause, exception ].compact
+
+      network_errors = [
+        ::SocketError,
+        ::Errno::ECONNREFUSED,
+        ::Timeout::Error,
+        ::Net::ReadTimeout,
+        ::Net::OpenTimeout
+      ]
+
+      if exceptions.any? { |ex| network_errors.any? { |err| ex.is_a?(err) } }
+        I18n.t("enable_banking_items.errors.network_unreachable", default: "The banking service is temporarily unreachable. Please try again later.")
+      elsif exceptions.any? { |ex| ex.is_a?(Provider::EnableBanking::EnableBankingError) }
+        I18n.t("enable_banking_items.errors.api_error", default: "A communication error occurred with the bank.")
+      else
+        I18n.t("enable_banking_items.errors.unexpected", default: "An unexpected error occurred during synchronization.")
       end
-
-      msg = exception.message.to_s
-      return "DNS resolution failed: check your network/DNS configuration" if msg.include?("getaddrinfo") || msg.match?(/name or service not known/i)
-      return "Connection timed out: the Enable Banking API may be unreachable" if msg.include?("execution expired") || msg.include?("timeout") || msg.match?(/timed out/i)
-      return "Connection refused: the Enable Banking API is unreachable" if msg.include?("ECONNREFUSED") || msg.match?(/connection refused/i)
-
-      msg
     end
 
     def fetch_session_data
@@ -137,11 +141,11 @@ class EnableBankingItem::Importer
         enable_banking_item.update!(status: :requires_update)
       end
       Rails.logger.error "EnableBankingItem::Importer - Enable Banking API error: #{e.message}"
-      @session_error = extract_friendly_error_message(e)
+      @session_error = localized_error_message(e)
       nil
     rescue => e
       Rails.logger.error "EnableBankingItem::Importer - Unexpected error fetching session: #{e.class} - #{e.message}"
-      @session_error = extract_friendly_error_message(e)
+      @session_error = localized_error_message(e)
       nil
     end
 
@@ -286,10 +290,10 @@ class EnableBankingItem::Importer
       { success: true, transactions_count: transactions_count }
     rescue Provider::EnableBanking::EnableBankingError => e
       Rails.logger.error "EnableBankingItem::Importer - Error fetching transactions for account #{enable_banking_account.uid}: #{e.message}"
-      { success: false, transactions_count: 0, error: e.message }
+      { success: false, transactions_count: 0, error: localized_error_message(e) }
     rescue => e
       Rails.logger.error "EnableBankingItem::Importer - Unexpected error fetching transactions for account #{enable_banking_account.uid}: #{e.class} - #{e.message}"
-      { success: false, transactions_count: 0, error: e.message }
+      { success: false, transactions_count: 0, error: localized_error_message(e) }
     end
 
     # Deduplicate transactions from the Enable Banking API response.
