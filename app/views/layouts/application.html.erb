@@ -70,7 +70,7 @@ end %>
     </nav>
 
     <%# DESKTOP - Left navbar %>
-    <div class="hidden lg:block border-r border-secondary">
+    <div class="hidden lg:block border-r border-divider">
       <nav class="h-full flex flex-col shrink-0 w-[84px] py-4">
         <div class="pl-2 mb-3">
           <%= link_to home_path, class: "block" do %>
@@ -101,7 +101,7 @@ end %>
 
     <%# DESKTOP - Left sidebar %>
     <%= tag.div class: class_names(
-        "hidden lg:block py-4 shrink-0 max-w-[320px] transition-all duration-300 border-secondary",
+        "hidden lg:block py-4 shrink-0 max-w-[320px] transition-all duration-300 border-divider",
         Current.user.show_sidebar? ? [expanded_sidebar_class, "border-r"] : [collapsed_sidebar_class, "border-r-0"],
        ),
        inert: !Current.user.show_sidebar?,
@@ -178,7 +178,7 @@ end %>
 
     <%# DESKTOP - Right sidebar %>
     <%= tag.div class: class_names(
-          "hidden lg:block h-full shrink-0 max-w-[400px] transition-all duration-300 border-secondary",
+          "hidden lg:block h-full shrink-0 max-w-[400px] transition-all duration-300 border-divider",
           Current.user.show_ai_sidebar? ? [expanded_sidebar_class, "border-l"] : [collapsed_sidebar_class, "border-l-0"],
         ),
         inert: !Current.user.show_ai_sidebar?,
