@@ -5,6 +5,9 @@ x-db-env: &db_env
 
 x-rails-env: &rails_env
   DB_HOST: db
+  # Bind the dev server to all interfaces inside the container so Docker's
+  # published port reaches it from the host. Rails reads BINDING natively.
+  BINDING: "0.0.0.0"
   POSTGRES_USER: postgres
   POSTGRES_PASSWORD: postgres
   BUNDLE_PATH: /bundle

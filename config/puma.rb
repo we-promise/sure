@@ -38,14 +38,10 @@ if rails_env == "production"
   preload_app!
 end
 
-# Bind address (host + port). Default 0.0.0.0 (IPv4 wildcard) for backwards
-# compatibility. Set BIND_HOST=:: to listen on IPv6; on any kernel with
-# net.ipv6.bindv6only=0 (the default on Linux/macOS) this gives dual-stack
-# automatically — IPv4 clients arrive as v4-mapped addresses.
-bind_host = ENV.fetch("BIND_HOST", "0.0.0.0")
-bind_port = ENV.fetch("PORT", 3000)
-bind_host_segment = bind_host.include?(":") ? "[#{bind_host}]" : bind_host
-bind "tcp://#{bind_host_segment}:#{bind_port}"
+# Specifies the `port` that Puma will listen on to receive requests; default is 3000.
+# The bind host is controlled via the Rails-native `BINDING` env var (set to
+# `0.0.0.0` in containers, or `::` for IPv6 dual-stack). See docs/hosting/docker.md.
+port ENV.fetch("PORT") { 3000 }
 
 # Specifies the `environment` that Puma will run in.
 environment rails_env
