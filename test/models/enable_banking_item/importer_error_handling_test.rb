@@ -1,4 +1,5 @@
 require "test_helper"
+require "ostruct"
 
 class EnableBankingItem::ImporterErrorHandlingTest < ActiveSupport::TestCase
   setup do
@@ -14,7 +15,7 @@ class EnableBankingItem::ImporterErrorHandlingTest < ActiveSupport::TestCase
       status: :good
     )
 
-    @mock_provider = mock()
+    @mock_provider = OpenStruct.new
     @importer = EnableBankingItem::Importer.new(@enable_banking_item, enable_banking_provider: @mock_provider)
   end
 
@@ -43,7 +44,9 @@ class EnableBankingItem::ImporterErrorHandlingTest < ActiveSupport::TestCase
   end
 
   test "fetch_session_data updates status to requires_update on unauthorized error" do
-    @mock_provider.expects(:get_session).raises(Provider::EnableBanking::EnableBankingError.new("Unauthorized", :unauthorized))
+    def @mock_provider.get_session(**args)
+      raise Provider::EnableBanking::EnableBankingError.new("Unauthorized", :unauthorized)
+    end
 
     @importer.send(:fetch_session_data)
 
@@ -62,7 +65,9 @@ class EnableBankingItem::ImporterErrorHandlingTest < ActiveSupport::TestCase
 
   test "fetch_and_update_balance updates status to requires_update on unauthorized error" do
     enable_banking_account = EnableBankingAccount.new(uid: "test_uid")
-    @mock_provider.expects(:get_account_balances).raises(Provider::EnableBanking::EnableBankingError.new("Unauthorized", :unauthorized))
+    def @mock_provider.get_account_balances(**args)
+      raise Provider::EnableBanking::EnableBankingError.new("Unauthorized", :unauthorized)
+    end
 
     @importer.send(:fetch_and_update_balance, enable_banking_account)
 
