@@ -201,10 +201,17 @@ class InvestmentStatement
       end
     end
 
+    # Unwrap Money first because this codebase's Money (lib/money.rb) ignores
+    # the currency arg of `Money.new` when the payload is already a Money, and
+    # `Money * numeric` preserves the source currency — so multiplying a
+    # foreign-currency Money by a rate would FX-scale the amount but keep the
+    # wrong currency label, corrupting downstream sums.
     def convert_to_family_currency(amount, from_currency)
-      return amount if amount.nil? || from_currency == family.currency
+      return amount if amount.nil?
+      numeric = amount.is_a?(Money) ? amount.amount : amount
+      return numeric if from_currency == family.currency
       rate = exchange_rates[from_currency] || 1
-      amount * rate
+      numeric * rate
     end
 
     def all_time_totals

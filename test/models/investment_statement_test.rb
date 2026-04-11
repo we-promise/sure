@@ -115,6 +115,68 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     assert allocation.all? { |a| a.amount.currency.iso_code == "USD" }
   end
 
+  test "unrealized_gains sums in family currency with mixed-currency holdings" do
+    usd_account = create_investment_account(balance: 2100, currency: "USD")
+    eur_account = create_investment_account(balance: 2000, currency: "EUR")
+
+    usd_security = Security.create!(ticker: "AAPL", name: "Apple")
+    eur_security = Security.create!(ticker: "ASML", name: "ASML")
+
+    Holding.create!(
+      account: usd_account, security: usd_security, date: Date.current,
+      qty: 10, price: 210, amount: 2100, currency: "USD",
+      cost_basis: 200, cost_basis_locked: true
+    )
+    Holding.create!(
+      account: eur_account, security: eur_security, date: Date.current,
+      qty: 4, price: 500, amount: 2000, currency: "EUR",
+      cost_basis: 450, cost_basis_locked: true
+    )
+
+    ExchangeRate.create!(
+      from_currency: "EUR", to_currency: "USD",
+      date: Date.current, rate: 1.1
+    )
+
+    # AAPL unrealized = 2100 - (10 * 200) = 100 USD
+    # ASML unrealized = 2000 - (4 * 450) = 200 EUR → 220 USD @ 1.1
+    # Total = 320 USD
+    assert_in_delta 320, @statement.unrealized_gains, 0.001
+    assert_equal "USD", @statement.unrealized_gains_money.currency.iso_code
+  end
+
+  test "unrealized_gains_trend is denominated in family currency" do
+    usd_account = create_investment_account(balance: 2100, currency: "USD")
+    eur_account = create_investment_account(balance: 2000, currency: "EUR")
+
+    usd_security = Security.create!(ticker: "AAPL", name: "Apple")
+    eur_security = Security.create!(ticker: "ASML", name: "ASML")
+
+    Holding.create!(
+      account: usd_account, security: usd_security, date: Date.current,
+      qty: 10, price: 210, amount: 2100, currency: "USD",
+      cost_basis: 200, cost_basis_locked: true
+    )
+    Holding.create!(
+      account: eur_account, security: eur_security, date: Date.current,
+      qty: 4, price: 500, amount: 2000, currency: "EUR",
+      cost_basis: 450, cost_basis_locked: true
+    )
+
+    ExchangeRate.create!(
+      from_currency: "EUR", to_currency: "USD",
+      date: Date.current, rate: 1.1
+    )
+
+    trend = @statement.unrealized_gains_trend
+    assert_equal "USD", trend.current.currency.iso_code
+    assert_equal "USD", trend.previous.currency.iso_code
+    # current = 2100 USD + (2000 EUR * 1.1) = 4300 USD
+    assert_in_delta 4300, trend.current.amount, 0.001
+    # previous (cost basis) = (10 * 200) USD + (4 * 450 * 1.1) EUR→USD = 2000 + 1980 = 3980 USD
+    assert_in_delta 3980, trend.previous.amount, 0.001
+  end
+
   private
     def create_investment_account(balance:, cash_balance: 0, currency: "USD")
       @family.accounts.create!(
