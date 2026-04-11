@@ -388,7 +388,11 @@ class ReportsController < ApplicationController
       # Helper to process an entry (transaction or trade)
       process_entry = ->(category, entry, is_trade) do
         type = entry.amount > 0 ? "expense" : "income"
-        converted_amount = Money.new(entry.amount.abs, entry.currency).exchange_to(family_currency, fallback_rate: 1).amount
+        begin
+          converted_amount = Money.new(entry.amount.abs, entry.currency).exchange_to(family_currency).amount
+        rescue Money::ConversionError
+          converted_amount = entry.amount.abs
+        end
 
         if category.nil?
           # Uncategorized or Other Investments (for trades)
@@ -679,7 +683,11 @@ class ReportsController < ApplicationController
         month_key = entry.date.beginning_of_month
 
         # Convert to family currency
-        converted_amount = Money.new(entry.amount.abs, entry.currency).exchange_to(family_currency, fallback_rate: 1).amount
+        begin
+          converted_amount = Money.new(entry.amount.abs, entry.currency).exchange_to(family_currency).amount
+        rescue Money::ConversionError
+          converted_amount = entry.amount.abs
+        end
 
         key = [ category_name, type ]
         breakdown[key] ||= { category: category_name, type: type, months: {}, total: 0 }

@@ -24,18 +24,12 @@ class Account::MarketDataImporter
            .each do |source_currency, date|
       key = [ source_currency, account.currency ]
       pair_dates[key] = [ pair_dates[key], date ].compact.min
-
-      inverse_key = [ account.currency, source_currency ]
-      pair_dates[inverse_key] = [ pair_dates[inverse_key], date ].compact.min
     end
 
     # 2. ACCOUNT-BASED PAIR – convert the account currency to the family currency (if different)
     if foreign_account?
       key = [ account.currency, account.family.currency ]
       pair_dates[key] = [ pair_dates[key], account.start_date ].compact.min
-
-      inverse_key = [ account.family.currency, account.currency ]
-      pair_dates[inverse_key] = [ pair_dates[inverse_key], account.start_date ].compact.min
     end
 
     pair_dates.each do |(source, target), start_date|
@@ -90,6 +84,7 @@ class Account::MarketDataImporter
     end
 
     def foreign_account?
+      return false if account.family.nil?
       account.currency != account.family.currency
     end
 end

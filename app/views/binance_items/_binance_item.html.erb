@@ -1,0 +1,132 @@
+<%# locals: (binance_item:, unlinked_count: binance_item.unlinked_accounts_count) %>
+
+<%= tag.div id: dom_id(binance_item) do %>
+  <details open class="group bg-container p-4 shadow-border-xs rounded-xl">
+    <summary class="flex items-center gap-2">
+      <%= icon "chevron-right", class: "group-open:transform group-open:rotate-90" %>
+
+      <div class="flex items-center justify-center h-8 w-8 rounded-full" style="background-color: rgba(240, 185, 11, 0.15);">
+        <div class="flex items-center justify-center">
+          <%= icon "coins", size: "sm", class: "text-[#F0B90B]" %>
+        </div>
+      </div>
+
+      <div class="pl-1 text-sm flex-1">
+        <div class="flex items-center gap-2">
+          <%= tag.p binance_item.institution_display_name, class: "font-medium text-primary" %>
+          <% if binance_item.scheduled_for_deletion? %>
+            <p class="text-destructive text-sm animate-pulse"><%= t(".deletion_in_progress") %></p>
+          <% end %>
+        </div>
+        <p class="text-xs text-secondary"><%= t(".provider_name") %></p>
+        <% if binance_item.syncing? %>
+          <div class="text-secondary flex items-center gap-1">
+            <%= icon "loader", size: "sm", class: "animate-spin" %>
+            <%= tag.span t(".syncing") %>
+          </div>
+        <% elsif binance_item.requires_update? %>
+          <div class="text-warning flex items-center gap-1">
+            <%= icon "alert-triangle", size: "sm", color: "warning" %>
+            <%= tag.span t(".reconnect") %>
+          </div>
+        <% else %>
+          <p class="text-secondary">
+            <% if binance_item.last_synced_at %>
+              <% if binance_item.sync_status_summary %>
+                <%= t(".status_with_summary", timestamp: time_ago_in_words(binance_item.last_synced_at), summary: binance_item.sync_status_summary) %>
+              <% else %>
+                <%= t(".status", timestamp: time_ago_in_words(binance_item.last_synced_at)) %>
+              <% end %>
+            <% else %>
+              <%= t(".status_never") %>
+            <% end %>
+          </p>
+        <% end %>
+      </div>
+    </summary>
+
+    <% if Current.user&.admin? %>
+      <div class="flex items-center justify-end gap-2 mt-2">
+        <% if binance_item.requires_update? %>
+          <%= render DS::Link.new(
+            text: t(".update_credentials"),
+            icon: "refresh-cw",
+            variant: "secondary",
+            href: settings_providers_path,
+            frame: "_top"
+          ) %>
+        <% else %>
+          <%= icon(
+            "refresh-cw",
+            as_button: true,
+            href: sync_binance_item_path(binance_item),
+            disabled: binance_item.syncing?
+          ) %>
+        <% end %>
+
+        <%= render DS::Menu.new do |menu| %>
+          <% if unlinked_count.to_i > 0 %>
+            <% menu.with_item(
+              variant: "link",
+              text: t(".import_accounts_menu"),
+              icon: "plus",
+              href: setup_accounts_binance_item_path(binance_item),
+              frame: :modal
+            ) %>
+          <% end %>
+          <% menu.with_item(
+            variant: "button",
+            text: t(".delete"),
+            icon: "trash-2",
+            href: binance_item_path(binance_item),
+            method: :delete,
+            confirm: CustomConfirm.for_resource_deletion(binance_item.institution_display_name, high_severity: true)
+          ) %>
+        <% end %>
+      </div>
+    <% end %>
+
+    <% unless binance_item.scheduled_for_deletion? %>
+      <div class="space-y-4 mt-4">
+        <% if binance_item.accounts.any? %>
+          <%= render "accounts/index/account_groups", accounts: binance_item.accounts %>
+          <% binance_item.stale_rate_accounts.each do |ba| %>
+            <div class="flex items-center gap-2 text-xs text-warning px-1">
+              <span class="font-mono">~</span>
+              <%= icon "triangle-alert", size: "sm" %>
+              <span>
+                <%= t("binance_items.binance_item.stale_rate_warning",
+                      date: ba.extra.dig("binance", "rate_target_date")) %>
+              </span>
+            </div>
+          <% end %>
+        <% end %>
+
+        <% stats = binance_item.syncs.ordered.first&.sync_stats || {} %>
+        <%= render ProviderSyncSummary.new(
+          stats: stats,
+          provider_item: binance_item
+        ) %>
+
+        <% if unlinked_count.to_i > 0 && binance_item.accounts.empty? %>
+          <div class="p-4 flex flex-col gap-3 items-center justify-center">
+            <p class="text-primary font-medium text-sm"><%= t(".setup_needed") %></p>
+            <p class="text-secondary text-sm"><%= t(".setup_description") %></p>
+            <%= render DS::Link.new(
+              text: t(".setup_action"),
+              icon: "plus",
+              variant: "primary",
+              href: setup_accounts_binance_item_path(binance_item),
+              frame: :modal
+            ) %>
+          </div>
+        <% elsif binance_item.accounts.empty? && binance_item.binance_accounts.none? %>
+          <div class="p-4 flex flex-col gap-3 items-center justify-center">
+            <p class="text-primary font-medium text-sm"><%= t(".no_accounts_title") %></p>
+            <p class="text-secondary text-sm"><%= t(".no_accounts_message") %></p>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+  </details>
+<% end %>

@@ -1,0 +1,19 @@
+---
+pt-BR:
+  budgets:
+    name:
+      custom_range: "%{start} - %{end_date}"
+      month_year: "%{month}"
+    show:
+      tabs:
+        actual: Atual
+        budgeted: Orçamento
+    copy_previous_prompt:
+      title: "Defina seu orçamento"
+      description: "Você pode copiar seu orçamento de %{source_name} ou começar do zero."
+      copy_button: "Copiar de %{source_name}"
+      fresh_button: "Comece do zero"
+    copy_previous:
+      success: "Orçamento copiado de %{source_name}"
+      no_source: "Não foi encontrado nenhum orçamento anterior para servir de base."
+      already_initialized: "Este orçamento já foi definido."

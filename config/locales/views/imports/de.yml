@@ -3,8 +3,8 @@ de:
   import:
     qif_category_selections:
       show:
-        title: "Kategorien und Tags auswählen"
-        description: "Wähle aus, welche Kategorien und Tags aus deiner QIF-Datei in Sure übernommen werden sollen. Abgewählte Einträge werden aus den betreffenden Transaktionen entfernt."
+        title: "Konfigurieren und auswählen"
+        description: "Überprüfe das erkannte Datumsformat und wähle dann die Kategorien und Tags aus deiner QIF-Datei aus, die in %{product_name} importiert werden sollen."
         categories_heading: Kategorien
         categories_found:
           one: "1 Kategorie gefunden"
@@ -88,6 +88,12 @@ de:
         instructions_5: Keine Kommas, Währungssymbole oder Klammern in Zahlen verwenden.
         title: Daten importieren
   imports:
+    date_format:
+      heading: Datumsformat
+      description: "Das Datumsformat wurde automatisch aus deiner Datei erkannt. Ändere es, wenn die Datumsangaben falsch aussehen."
+      preview: "Erstes erkanntes Datum"
+      error_title: "Datumsformat konnte nicht erkannt werden"
+      error_description: "Keines der unterstützten Datumsformate konnte die Datumsangaben in dieser Datei lesen. Bitte überprüfe, ob die Datei gültige Datumseinträge enthält."
     steps:
       upload: Hochladen
       configure: Konfigurieren
