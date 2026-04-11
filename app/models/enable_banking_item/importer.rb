@@ -3,6 +3,14 @@ class EnableBankingItem::Importer
   # Enable Banking typically returns ~100 transactions per page, so 100 pages = ~10,000 transactions
   MAX_PAGINATION_PAGES = 100
 
+  NETWORK_ERRORS = [
+    ::SocketError,
+    ::Errno::ECONNREFUSED,
+    ::Timeout::Error,
+    ::Net::ReadTimeout,
+    ::Net::OpenTimeout
+  ].freeze
+
   attr_reader :enable_banking_item, :enable_banking_provider
 
   def initialize(enable_banking_item, enable_banking_provider:)
@@ -117,16 +125,8 @@ class EnableBankingItem::Importer
       # Check the underlying cause first, then the exception itself
       exceptions = [ exception.cause, exception ].compact
 
-      network_errors = [
-        ::SocketError,
-        ::Errno::ECONNREFUSED,
-        ::Timeout::Error,
-        ::Net::ReadTimeout,
-        ::Net::OpenTimeout
-      ]
-
       is_network_error = exceptions.any? do |ex|
-        network_errors.any? { |err| ex.is_a?(err) } ||
+        NETWORK_ERRORS.any? { |err| ex.is_a?(err) } ||
           (ex.is_a?(Provider::EnableBanking::EnableBankingError) && [ :request_failed, :timeout ].include?(ex.error_type))
       end
 
