@@ -1,6 +1,11 @@
 ---
 fr:
   enable_banking_items:
+    errors:
+      api_error: "Erreur de communication avec la banque."
+      network_unreachable: "Le service bancaire est temporairement injoignable. Veuillez réessayer plus tard."
+      session_invalid: "Session expirée. Veuillez reconnecter votre banque."
+      unexpected: "Une erreur inattendue est survenue lors de la synchronisation."
     authorize:
       authorization_failed: Échec de l'initiation de l'autorisation
       bank_required: Veuillez sélectionner une banque.
