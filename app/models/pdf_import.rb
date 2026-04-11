@@ -59,10 +59,16 @@ class PdfImport < Import
     end
 
     result = response.data
-    update!(
+
+    attrs = {
       ai_summary: result.summary,
       document_type: result.document_type
-    )
+    }
+    if result.reconciliation.present?
+      attrs[:extracted_data] = (result.extracted_data || {}).merge("reconciliation" => result.reconciliation)
+    end
+
+    update!(attrs)
 
     result
   end
@@ -83,8 +89,10 @@ class PdfImport < Import
       raise error_message
     end
 
-    update!(extracted_data: response.data)
-    response.data
+    new_data = response.data.deep_stringify_keys
+    merged = (extracted_data || {}).deep_merge(new_data)
+    update!(extracted_data: merged)
+    merged
   end
 
   def bank_statement?
@@ -93,6 +101,28 @@ class PdfImport < Import
 
   def statement_with_transactions?
     document_type.in?(%w[bank_statement credit_card_statement])
+  end
+
+  def reconciliation_data
+    extracted_data&.dig("reconciliation")
+  end
+
+  def reconciliation_reportable?
+    recon = reconciliation_data
+    return false unless recon.present?
+    return false unless recon["performed"] == true
+    return false unless recon["account_id"].present?
+    return false if recon["statement_transaction_count"].to_i == 0
+    true
+  end
+
+  def reconciliation_matched?
+    reconciliation_reportable? && reconciliation_data["balance_match"] == true
+  end
+
+  def reconciliation_account
+    return nil unless reconciliation_data&.dig("account_id").present?
+    family.accounts.find_by(id: reconciliation_data["account_id"])
   end
 
   def has_extracted_transactions?

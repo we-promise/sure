@@ -103,6 +103,37 @@ class PdfImportTest < ActiveSupport::TestCase
     assert_equal [], @import.extracted_transactions
   end
 
+  test "extract_transactions deep-merges into extracted_data and preserves reconciliation" do
+    import = imports(:pdf)
+    import.update!(
+      document_type: "bank_statement",
+      extracted_data: {
+        "reconciliation" => {
+          "performed" => true,
+          "balance_match" => false,
+          "statement_closing_balance" => 100.0
+        },
+        "institution_name" => "Test Bank"
+      }
+    )
+
+    provider = mock("openai_provider")
+    Provider::Registry.expects(:get_provider).with(:openai).returns(provider)
+    provider.expects(:extract_bank_statement).returns(
+      stub(success?: true, data: { transactions: [ { date: "2024-01-01", amount: -5.0, name: "Coffee" } ] })
+    )
+    import.stubs(:pdf_file_content).returns("fake-pdf")
+
+    import.extract_transactions
+
+    import.reload
+    assert_equal false, import.extracted_data["reconciliation"]["balance_match"]
+    assert_equal 100.0, import.extracted_data["reconciliation"]["statement_closing_balance"]
+    assert_equal "Test Bank", import.extracted_data["institution_name"]
+    assert_equal 1, import.extracted_transactions.size
+    assert_equal "Coffee", import.extracted_transactions.first["name"]
+  end
+
   test "has_extracted_transactions? returns true with transactions" do
     assert @import_with_rows.has_extracted_transactions?
   end
