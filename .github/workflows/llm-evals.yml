@@ -17,8 +17,66 @@ env:
   PLAID_SECRET: bar
 
 jobs:
+  check_openai:
+    name: Check OpenAI credentials
+    runs-on: ubuntu-latest
+    outputs:
+      should_run: ${{ steps.gate.outputs.should_run }}
+      reason: ${{ steps.gate.outputs.reason }}
+
+    steps:
+      - name: Validate OpenAI token and quota
+        id: gate
+        env:
+          OPENAI_ACCESS_TOKEN: ${{ secrets.OPENAI_ACCESS_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ -z "${OPENAI_ACCESS_TOKEN:-}" ]; then
+            echo "OpenAI token is not configured; skipping eval workflow."
+            echo "should_run=false" >> "$GITHUB_OUTPUT"
+            echo "reason=OPENAI_ACCESS_TOKEN secret is missing" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          TEST_MODEL=$(printf '%s' "$EVAL_MODELS" | cut -d',' -f1 | xargs)
+          if [ -z "$TEST_MODEL" ]; then
+            TEST_MODEL="gpt-4.1"
+          fi
+
+          echo "Checking API access with model: ${TEST_MODEL}"
+
+          RESPONSE_FILE="$(mktemp)"
+          STATUS_CODE=$(curl -sS -o "$RESPONSE_FILE" -w "%{http_code}" \
+            https://api.openai.com/v1/chat/completions \
+            -H "Authorization: Bearer ${OPENAI_ACCESS_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d "{\"model\":\"${TEST_MODEL}\",\"messages\":[{\"role\":\"user\",\"content\":\"ping\"}],\"max_tokens\":1}")
+
+          if [ "$STATUS_CODE" = "200" ]; then
+            echo "OpenAI token check passed."
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+            echo "reason=ok" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          ERROR_MESSAGE=$(ruby -rjson -e '
+            body = File.read(ARGV[0]) rescue ""
+            data = JSON.parse(body) rescue {}
+            message = data.dig("error", "message") || data["message"] || "unknown error"
+            puts message.gsub(/\s+/, " ").strip
+          ' "$RESPONSE_FILE")
+
+          echo "OpenAI check failed (${STATUS_CODE}): ${ERROR_MESSAGE}"
+          echo "should_run=false" >> "$GITHUB_OUTPUT"
+          echo "reason=OpenAI token invalid or insufficient quota (${STATUS_CODE})" >> "$GITHUB_OUTPUT"
+          exit 0
+
   discover_datasets:
     name: Discover eval datasets
+    needs: check_openai
+    if: needs.check_openai.outputs.should_run == 'true'
     runs-on: ubuntu-latest
 
     services:
@@ -118,7 +176,8 @@ jobs:
 
   run_evals:
     name: Run eval for ${{ matrix.dataset }} on ${{ matrix.model }}
-    needs: discover_datasets
+    needs: [check_openai, discover_datasets]
+    if: needs.check_openai.outputs.should_run == 'true'
     runs-on: ubuntu-latest
 
     strategy:
@@ -258,3 +317,14 @@ jobs:
             ${{ steps.dataset_slug.outputs.json_path }}
           if-no-files-found: error
           retention-days: 30
+
+  skip_evals:
+    name: Skip evals (no valid OpenAI token/quota)
+    needs: check_openai
+    if: needs.check_openai.outputs.should_run != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Report skip reason
+        run: |
+          echo "LLM evals were skipped gracefully."
+          echo "Reason: ${{ needs.check_openai.outputs.reason }}"
