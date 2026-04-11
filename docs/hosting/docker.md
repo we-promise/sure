@@ -111,6 +111,32 @@ and change it to `true`
 RAILS_ASSUME_SSL: "true"
 ```
 
+#### Binding to IPv6 (optional)
+
+By default Sure listens on `0.0.0.0:3000` (IPv4 wildcard) and Docker publishes the port on the host's IPv4 interface only. If you want the app reachable over IPv6 as well, two things need to change:
+
+1. **Tell the app to bind to `[::]`** by setting `BIND_HOST=::` in the container environment. On any kernel with `net.ipv6.bindv6only=0` (the default on Linux and macOS) a single `[::]` bind is **dual-stack**: it accepts both IPv6 and IPv4 clients from the same socket. You do not need two binds and you do not need two ports.
+2. **Tell Docker to publish the host port on IPv6** by adding a bracketed-host `ports:` entry alongside the existing IPv4 one.
+
+In `compose.yml`:
+
+```yaml
+services:
+  web:
+    ports:
+      - ${PORT:-3000}:3000
+      - "[::]:${PORT:-3000}:3000"
+    environment:
+      <<: *rails_env
+      BIND_HOST: "::"
+```
+
+With both changes in place, `http://127.0.0.1:3000/` and `http://[::1]:3000/` both work against the same container.
+
+**Note:** Docker's default userland proxy already bridges host-side IPv6 publishes to the container's internal IPv4 address, so in many setups just adding the `[::]:` port entry is enough. Setting `BIND_HOST=::` inside the container only becomes load-bearing when the Docker daemon has `"ipv6": true` + `"ip6tables": true` configured (uncommon for self-hosters) and forwards raw IPv6 packets into the container via netfilter instead of the proxy. Setting both is harmless and future-proof.
+
+If you are running behind a reverse proxy that terminates TLS, nothing else changes — `proxy_pass http://[::1]:3000` and `proxy_pass http://127.0.0.1:3000` both work because the `[::]` bind is dual-stack.
+
 ### Step 4: Run the app
 
 You are now ready to run the app. Start with the following command to make sure everything is working:

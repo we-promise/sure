@@ -5,7 +5,6 @@ x-db-env: &db_env
 
 x-rails-env: &rails_env
   DB_HOST: db
-  HOST: "0.0.0.0"
   POSTGRES_USER: postgres
   POSTGRES_PASSWORD: postgres
   BUNDLE_PATH: /bundle
