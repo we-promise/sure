@@ -1,7 +1,9 @@
 class ExchangeRate::Importer
   MissingExchangeRateError = Class.new(StandardError)
   MissingStartRateError = Class.new(StandardError)
-
+  def window_day
+    @window_day = 5
+  end
   def initialize(exchange_rate_provider:, from:, to:, start_date:, end_date:, clear_cache: false)
     @exchange_rate_provider = exchange_rate_provider
     @from = from
@@ -28,7 +30,9 @@ class ExchangeRate::Importer
     updated_rates = []
     inverse_rates = []
 
-    provider_rates.each do |date, r|
+    # Because provider_rates contains -5days data
+    filtered_rates = provider_rates.select { |date, _| date >= effective_start_date }
+    filtered_rates.each do |date, r|
       rate = r&.rate
       next unless rate.present? && rate.to_f > 0
 
