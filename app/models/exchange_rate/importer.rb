@@ -11,7 +11,8 @@ class ExchangeRate::Importer
     @clear_cache = clear_cache
   end
 
-  # Constructs a daily series of rates for the given currency pair for date range
+  # Constructs ExchangeRate records for the given date range and currency pair by fetching
+  # We don't need to fill everyday exhange_rate, because when ExhangeRate.find_or_fetch_rate wiill handle it
   def import_provider_rates
     if !clear_cache && all_rates_exist?
       Rails.logger.info("No new rates to sync for #{from} to #{to} between #{start_date} and #{end_date}, skipping")
@@ -24,56 +25,31 @@ class ExchangeRate::Importer
       return
     end
 
-    prev_rate_value = start_rate_value
+    updated_rates = []
+    inverse_rates = []
 
-    unless prev_rate_value.present?
-      error = MissingStartRateError.new("Could not find a start rate for #{from} to #{to} between #{start_date} and #{end_date}")
-      Rails.logger.error(error.message)
-      Sentry.capture_exception(error)
-      return
-    end
+    provider_rates.each do |date, r|
+      rate = r&.rate
+      next unless rate.present? && rate.to_f > 0
 
-    gapfilled_rates = effective_start_date.upto(end_date).map do |date|
-      db_rate_value = db_rates[date]&.rate
-      provider_rate_value = provider_rates[date]&.rate
-
-      chosen_rate = if clear_cache
-        provider_rate_value || db_rate_value   # overwrite when possible
-      else
-        db_rate_value || provider_rate_value   # fill gaps
-      end
-
-      # Gapfill with LOCF strategy (last observation carried forward)
-      # Treat nil or zero rates as invalid and use previous rate
-      if chosen_rate.nil? || chosen_rate.to_f <= 0
-        chosen_rate = prev_rate_value
-      end
-
-      prev_rate_value = chosen_rate
-
-      {
+      updated_rates << {
         from_currency: from,
         to_currency: to,
         date: date,
-        rate: chosen_rate
+        rate: rate
+      }
+
+      # Compute and upsert inverse rates (e.g., EUR→USD from USD→EUR) to avoid
+      # separate API calls for the reverse direction.
+      inverse_rates << {
+        from_currency: to,
+        to_currency: from,
+        date: date,
+        rate: (BigDecimal("1") / BigDecimal(rate.to_s)).round(12)
       }
     end
 
-    upsert_rows(gapfilled_rates)
-
-    # Compute and upsert inverse rates (e.g., EUR→USD from USD→EUR) to avoid
-    # separate API calls for the reverse direction.
-    inverse_rates = gapfilled_rates.filter_map do |row|
-      next if row[:rate].to_f <= 0
-
-      {
-        from_currency: row[:to_currency],
-        to_currency: row[:from_currency],
-        date: row[:date],
-        rate: (BigDecimal("1") / BigDecimal(row[:rate].to_s)).round(12)
-      }
-    end
-
+    upsert_rows(updated_rates)
     upsert_rows(inverse_rates)
 
     # Also backfill inverse rows for any forward rates that existed in the DB
@@ -102,27 +78,14 @@ class ExchangeRate::Importer
       total_upsert_count
     end
 
-    # Since provider may not return values on weekends and holidays, we grab the first rate from the provider that is on or before the start date
-    def start_rate_value
-      provider_rate_value = provider_rates.select { |date, _| date <= start_date }.max_by { |date, _| date }&.last&.rate
-      db_rate_value = db_rates[start_date]&.rate
-      provider_rate_value || db_rate_value
-    end
 
     # No need to fetch/upsert rates for dates that we already have in the DB
     def effective_start_date
-      return start_date if clear_cache
+      @effective_start_date ||= begin
+        return start_date if clear_cache
 
-      first_missing_date = nil
-
-      start_date.upto(end_date) do |date|
-        unless db_rates.key?(date)
-          first_missing_date = date
-          break
-        end
+        (start_date..end_date).find { |date| !db_rates.key?(date) } || end_date
       end
-
-      first_missing_date || end_date
     end
 
     def provider_rates
