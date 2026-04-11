@@ -125,7 +125,12 @@ class EnableBankingItem::Importer
         ::Net::OpenTimeout
       ]
 
-      if exceptions.any? { |ex| network_errors.any? { |err| ex.is_a?(err) } }
+      is_network_error = exceptions.any? do |ex|
+        network_errors.any? { |err| ex.is_a?(err) } ||
+          (ex.is_a?(Provider::EnableBanking::EnableBankingError) && [ :request_failed, :timeout ].include?(ex.error_type))
+      end
+
+      if is_network_error
         I18n.t("enable_banking_items.errors.network_unreachable", default: "The banking service is temporarily unreachable. Please try again later.")
       elsif exceptions.any? { |ex| ex.is_a?(Provider::EnableBanking::EnableBankingError) }
         I18n.t("enable_banking_items.errors.api_error", default: "A communication error occurred with the bank.")
