@@ -87,6 +87,8 @@ class UsersController < ApplicationController
         redirect_to settings_appearance_path, notice: notice
       when "ai_prompts"
         redirect_to settings_ai_prompts_path, notice: notice
+      when "rules"
+        redirect_to rules_path, notice: notice
       else
         redirect_to settings_profile_path, notice: notice
       end

@@ -4,6 +4,7 @@ class RulesController < ApplicationController
   before_action :set_rule, only: [  :edit, :update, :destroy, :apply, :confirm ]
 
   def index
+    @user = Current.user
     @sort_by = params[:sort_by] || "name"
     @direction = params[:direction] || "asc"
 

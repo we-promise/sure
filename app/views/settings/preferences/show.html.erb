@@ -57,30 +57,6 @@
   </div>
 <% end %>
 
-<%= settings_section title: t(".automation_title"), subtitle: t(".automation_subtitle") do %>
-  <div class="flex items-center justify-between">
-    <div class="space-y-1">
-      <p class="text-sm"><%= t(".rule_prompts_label") %></p>
-      <p class="text-secondary text-sm"><%= t(".rule_prompts_hint") %></p>
-    </div>
-
-    <%= styled_form_with model: @user, data: { controller: "auto-submit-form" } do |form| %>
-      <%= form.hidden_field :redirect_to, value: "preferences" %>
-      <%# Toggle is ON when prompts are enabled (rule_prompts_disabled=false).
-          checked_value:"0"/unchecked_value:"1" invert the DB column so the
-          toggle's visual state matches the label "Auto-suggest rules". %>
-      <%= render DS::Toggle.new(
-        id: "user_rule_prompts_disabled",
-        name: "user[rule_prompts_disabled]",
-        checked: !@user.rule_prompts_disabled,
-        checked_value: "0",
-        unchecked_value: "1",
-        data: { auto_submit_form_target: "auto" }
-      ) %>
-    <% end %>
-  </div>
-<% end %>
-
 <% if Current.user.admin? %>
   <%= settings_section title: t(".sharing_title", moniker: family_moniker), subtitle: t(".sharing_subtitle", moniker: family_moniker_downcase) do %>
     <div>

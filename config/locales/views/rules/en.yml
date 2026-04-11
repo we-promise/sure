@@ -3,6 +3,11 @@ en:
   rules:
     no_action: No Action
     no_condition: No condition
+    index:
+      automation_title: Automation
+      automation_subtitle: Control automatic behavior
+      rule_prompts_label: Auto-suggest rules when categorizing
+      rule_prompts_hint: Show a prompt to create a rule when you assign a category to a transaction
     actions:
       value_placeholder: Enter a value
     apply_all:
