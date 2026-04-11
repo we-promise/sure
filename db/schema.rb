@@ -584,6 +584,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_04_11_082125) do
     t.string "moniker", default: "Family", null: false
     t.string "assistant_type", default: "builtin", null: false
     t.string "default_account_sharing", default: "shared", null: false
+    t.string "preferred_ai_model", limit: 128
+    t.string "openai_uri_base", limit: 512
     t.check_constraint "default_account_sharing::text = ANY (ARRAY['shared'::character varying::text, 'private'::character varying::text])", name: "chk_families_default_account_sharing"
     t.check_constraint "month_start_day >= 1 AND month_start_day <= 28", name: "month_start_day_range"
   end

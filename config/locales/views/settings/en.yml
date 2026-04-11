@@ -11,7 +11,20 @@ en:
         page_title: AI Prompts
         openai_label: OpenAI
         disable_ai: Disable AI Assistant
-        prompt_instructions: Prompt Instructions
+        prompt_instructions: Prompt instructions
+        prompt_link: Prompt
+        prompts_managed_in_langfuse: Managed in Langfuse
+        edit_prompt_coming_soon: Edit prompt (coming soon!)
+        endpoint_section_title: Endpoint & model
+        endpoint_section_subtitle: Choose the default AI model and optional custom API endpoint for this household. The prompts section below only appears when using an OpenAI-compatible setup.
+        provider_prompts_hidden: Prompt customization is available when using an OpenAI-compatible model. Set a compatible model (e.g. gpt-4) or custom endpoint above to see prompts.
+        openai_uri_base_label: Custom API endpoint (optional)
+        openai_uri_base_placeholder: e.g. https://api.openai.com/v1
+        openai_uri_base_hint: When set, chat uses this endpoint for this household. Preferred model is required.
+        preferred_ai_model_label: Preferred AI model
+        preferred_ai_model_placeholder: e.g. gpt-4.1 or your provider's model ID
+        preferred_ai_model_hint: Optional. When set, new chats use this model by default. Required if custom endpoint is set.
+        save: Save changes
         main_system_prompt:
           title: Main System Prompt
           subtitle: Core instructions that define how the AI assistant behaves in all chat conversations
@@ -21,6 +34,9 @@ en:
         merchant_detector:
           title: Merchant Detector
           subtitle: AI identifies and enriches transaction data with merchant information
+      update:
+        success: AI prompts and model preferences saved.
+      not_authorized: You are not authorized to change AI prompts for this household.
     payments:
       show:
         page_title: Payments

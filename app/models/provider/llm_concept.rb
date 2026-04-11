@@ -38,6 +38,7 @@ module Provider::LlmConcept
     prompt,
     model:,
     instructions: nil,
+    prompt_metadata: nil,
     functions: [],
     function_results: [],
     streamer: nil,

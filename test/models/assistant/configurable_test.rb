@@ -8,6 +8,10 @@ class AssistantConfigurableTest < ActiveSupport::TestCase
 
     assert_not_empty config[:functions]
     assert_includes config[:instructions], "You help users understand their financial data"
+    prompt = config[:prompt_metadata]
+    assert_not_nil prompt, "prompt_metadata should fall back to the default prompt"
+    assert_equal "default_instructions", prompt[:name]
+    assert_equal config[:instructions], prompt[:content]
   end
 
   test "returns intro configuration without functions" do
@@ -17,5 +21,9 @@ class AssistantConfigurableTest < ActiveSupport::TestCase
 
     assert_equal [], config[:functions]
     assert_includes config[:instructions], "stage of life"
+    prompt = config[:prompt_metadata]
+    assert_not_nil prompt, "prompt_metadata should fall back to the intro prompt"
+    assert_equal "intro_instructions", prompt[:name]
+    assert_equal config[:instructions], prompt[:content]
   end
 end
