@@ -11,7 +11,7 @@ class EnableBankingItem::ImporterErrorHandlingTest < ActiveSupport::TestCase
       client_certificate: "test_cert",
       session_id: "test_session",
       session_expires_at: 1.day.from_now,
-      status: :active
+      status: :good
     )
 
     @mock_provider = mock()

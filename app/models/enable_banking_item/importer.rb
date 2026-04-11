@@ -76,7 +76,7 @@ class EnableBankingItem::Importer
           end
         rescue => e
           accounts_failed += 1
-          @sync_error ||= handle_sync_error(e)
+          @sync_error = promote_session_invalid(@sync_error, handle_sync_error(e))
           Rails.logger.error "EnableBankingItem::Importer - Failed to update account #{uid}: #{e.message}"
         end
       end
@@ -90,18 +90,22 @@ class EnableBankingItem::Importer
 
     linked_accounts_query.each do |enable_banking_account|
       begin
-        fetch_and_update_balance(enable_banking_account)
+        unless fetch_and_update_balance(enable_banking_account)
+          transactions_failed += 1
+          # @sync_error already set in fetch_and_update_balance
+          next
+        end
 
         result = fetch_and_store_transactions(enable_banking_account)
         if result[:success]
           transactions_imported += result[:transactions_count]
         else
           transactions_failed += 1
-          @sync_error ||= result[:error]
+          @sync_error = promote_session_invalid(@sync_error, result[:error])
         end
       rescue => e
         transactions_failed += 1
-        @sync_error ||= handle_sync_error(e)
+        @sync_error = promote_session_invalid(@sync_error, handle_sync_error(e))
         Rails.logger.error "EnableBankingItem::Importer - Failed to process account #{enable_banking_account.uid}: #{e.message}"
       end
     end
@@ -113,9 +117,8 @@ class EnableBankingItem::Importer
       transactions_imported: transactions_imported,
       transactions_failed: transactions_failed
     }
-    if !result[:success]
-      result[:error] = @sync_error || I18n.t("enable_banking_items.errors.unexpected")
-    end
+
+    result[:error] = @sync_error || I18n.t("enable_banking_items.errors.unexpected") if !result[:success]
     result
   end
 
@@ -179,7 +182,7 @@ class EnableBankingItem::Importer
       # Enable Banking returns an array of balances. We prioritize types based on reliability.
       # closingBooked (CLBD) > interimAvailable (ITAV) > expected (XPCD)
       balances = balance_data[:balances] || []
-      return if balances.empty?
+      return true if balances.empty?
 
       priority_types = [ "CLBD", "ITAV", "XPCD", "CLAV", "ITBD" ]
       balance = nil
@@ -209,9 +212,17 @@ class EnableBankingItem::Importer
           )
         end
       end
+      true
     rescue Provider::EnableBanking::EnableBankingError => e
-      @sync_error ||= handle_sync_error(e)
+      @sync_error = promote_session_invalid(@sync_error, handle_sync_error(e))
       Rails.logger.error "EnableBankingItem::Importer - Error fetching balance for account #{enable_banking_account.uid}: #{e.message}"
+      false
+    end
+
+    def promote_session_invalid(existing, new)
+      return new if existing.nil?
+      return new if new == I18n.t("enable_banking_items.errors.session_invalid")
+      existing
     end
 
     def fetch_and_store_transactions(enable_banking_account)
