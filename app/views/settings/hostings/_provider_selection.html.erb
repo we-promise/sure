@@ -1,17 +1,16 @@
-<div class="space-y-4">
-  <div>
-    <h2 class="font-medium mb-1"><%= t(".title") %></h2>
-    <p class="text-secondary text-sm mb-4"><%= t(".description") %></p>
-  </div>
+<div class="space-y-6">
+  <%# Exchange Rate Provider - single dropdown %>
+  <div class="space-y-2">
+    <h3 class="font-medium text-sm"><%= t(".exchange_rate_title") %></h3>
+    <p class="text-secondary text-xs mb-2"><%= t(".exchange_rate_description") %></p>
 
-  <%= styled_form_with model: Setting.new,
-                       url: settings_hosting_path,
-                       method: :patch,
-                       data: {
-                         controller: "auto-submit-form",
-                         "auto-submit-form-trigger-event-value": "change"
-                       } do |form| %>
-    <div class="space-y-4">
+    <%= styled_form_with model: Setting.new,
+                         url: settings_hosting_path,
+                         method: :patch,
+                         data: {
+                           controller: "auto-submit-form",
+                           "auto-submit-form-trigger-event-value": "change"
+                         } do |form| %>
       <%= form.select :exchange_rate_provider,
                       [
                         [t(".providers.twelve_data"), "twelve_data"],
@@ -23,29 +22,62 @@
                         disabled: ENV["EXCHANGE_RATE_PROVIDER"].present?,
                         data: { "auto-submit-form-target": "auto" }
                       } %>
+    <% end %>
+  </div>
 
-      <%= form.select :securities_provider,
-                      [
-                        [t(".providers.twelve_data"), "twelve_data"],
-                        [t(".providers.yahoo_finance"), "yahoo_finance"]
-                      ],
-                      { label: t(".securities_provider_label") },
-                      {
-                        value: ENV.fetch("SECURITIES_PROVIDER", Setting.securities_provider),
-                        disabled: ENV["SECURITIES_PROVIDER"].present?,
-                        data: { "auto-submit-form-target": "auto" }
-                      } %>
-    </div>
+  <%# Securities Providers - multiple checkboxes %>
+  <div class="space-y-2">
+    <h3 class="font-medium text-sm"><%= t(".securities_title") %></h3>
+    <p class="text-secondary text-xs mb-2"><%= t(".securities_description") %></p>
 
-    <% if ENV["EXCHANGE_RATE_PROVIDER"].present? || ENV["SECURITIES_PROVIDER"].present? %>
-      <div class="mt-4 bg-warning-50 border border-warning-200 rounded-lg p-3">
-        <div class="flex items-start gap-2">
-          <%= icon("alert-circle", class: "w-5 h-5 text-warning-600 mt-0.5 shrink-0") %>
-          <p class="text-sm text-warning-800">
-            <%= t(".env_configured_message") %>
-          </p>
-        </div>
+    <%= styled_form_with model: Setting.new,
+                         url: settings_hosting_path,
+                         method: :patch,
+                         data: {
+                           controller: "auto-submit-form"
+                         } do |form| %>
+      <% disabled = ENV["SECURITIES_PROVIDERS"].present? || ENV["SECURITIES_PROVIDER"].present? %>
+      <% enabled_providers = Setting.enabled_securities_providers %>
+
+      <div class="space-y-2">
+        <%# Hidden field to ensure empty array is submitted when all unchecked %>
+        <input type="hidden" name="setting[securities_providers][]" value="">
+
+        <% [
+          ["twelve_data", t(".providers.twelve_data"), t(".twelve_data_hint")],
+          ["yahoo_finance", t(".providers.yahoo_finance"), t(".yahoo_finance_hint")],
+          ["tiingo", t(".providers.tiingo"), t(".requires_api_key")],
+          ["eodhd", t(".providers.eodhd"), t(".requires_api_key_eodhd")],
+          ["alpha_vantage", t(".providers.alpha_vantage"), t(".requires_api_key_alpha_vantage")],
+          ["mfapi", t(".providers.mfapi"), t(".mfapi_hint")],
+          ["binance_public", t(".providers.binance_public"), t(".binance_public_hint")],
+        ].each do |value, label, hint| %>
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox"
+                   name="setting[securities_providers][]"
+                   value="<%= value %>"
+                   class="rounded border-primary text-primary focus:ring-primary"
+                   <%= "checked" if enabled_providers.include?(value) %>
+                   <%= "disabled" if disabled %>
+                   data-auto-submit-form-target="auto">
+            <span class="text-sm"><%= label %></span>
+            <% if hint %>
+              <span class="text-xs text-secondary">(<%= hint %>)</span>
+            <% end %>
+          </label>
+        <% end %>
       </div>
     <% end %>
+  </div>
+
+  <% if ENV["EXCHANGE_RATE_PROVIDER"].present? || ENV["SECURITIES_PROVIDERS"].present? || ENV["SECURITIES_PROVIDER"].present? %>
+    <div class="bg-amber-50 border border-amber-200 rounded-lg p-3">
+      <div class="flex items-start gap-2">
+        <%= icon("alert-triangle", size: "sm", class: "text-amber-600 mt-0.5 shrink-0") %>
+        <p class="text-sm text-amber-700">
+          <%= t(".env_configured_message") %>
+        </p>
+      </div>
+    </div>
   <% end %>
 </div>

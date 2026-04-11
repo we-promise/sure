@@ -109,7 +109,7 @@
                   :id, :name,
                   { include_blank: t(".none"),
                     label: t(".merchant_label"),
-                    class: "text-subdued", variant: :logo, searchable: true, disabled: @entry.split_child? || !can_annotate_entry? },
+                    variant: :logo, searchable: true, menu_placement: :auto, disabled: @entry.split_child? || !can_annotate_entry? },
                   "data-auto-submit-form-target": "auto" %>
             <%= render DS::MultiSelectTags.new(
                   form: ef,

@@ -4,3 +4,11 @@ en:
     combobox:
       display: "%{symbol} - %{name} (%{exchange})"
       exchange_label: "%{symbol} (%{exchange})"
+    providers:
+      twelve_data: Twelve Data
+      yahoo_finance: Yahoo Finance
+      tiingo: Tiingo
+      eodhd: EODHD
+      alpha_vantage: Alpha Vantage
+      mfapi: MFAPI.in
+      binance_public: Binance

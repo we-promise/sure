@@ -221,8 +221,9 @@ class SnaptradeItemsController < ApplicationController
 
       if errors.any?
         # Partial success - some linked, some failed
-        redirect_to accounts_path, notice: t(".partial_success", linked: linked_count, failed: errors.size,
-                                              default: "Linked #{linked_count} account(s). #{errors.size} failed to link.")
+        redirect_to accounts_path,
+                    notice: t(".partial_success", count: linked_count, failed_count: errors.size,
+                              default: "Linked #{linked_count} account(s). #{errors.size} failed to link.")
       else
         redirect_to accounts_path, notice: t(".success", count: linked_count, default: "Successfully linked #{linked_count} account(s).")
       end

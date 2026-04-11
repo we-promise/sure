@@ -8,6 +8,12 @@ zh-TW:
       title: 您確定嗎？
     money_field:
       label: 金額
+    exchange_rate_tabs:
+      calculate_rate_tab: 計算匯率
+      convert_tab: 用匯率轉換
+      destination_amount: 目標金額
+      exchange_rate: 匯率
+      exchange_rate_help: 選擇如何輸入金額。
     syncing_notice:
       syncing: 正在同步帳戶資料...
     trend_change:
