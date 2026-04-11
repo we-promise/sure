@@ -292,6 +292,7 @@ jobs:
           bin/rails runner '
             dataset = Eval::Dataset.find_by!(name: ENV.fetch("DATASET"))
             run = Eval::Run.where(dataset: dataset, model: ENV.fetch("MODEL")).order(created_at: :desc).first
+            abort("No eval run found for dataset #{dataset.name} and model #{ENV.fetch("MODEL")}") if run.nil?
             payload = {
               dataset: dataset.name,
               dataset_metadata: dataset.metadata,
