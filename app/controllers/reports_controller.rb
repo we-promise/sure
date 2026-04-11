@@ -501,6 +501,32 @@ class ReportsController < ApplicationController
 
       trades_by_treatment = sell_trades.group_by { |t| t.entry.account.tax_treatment || :taxable }
 
+      # Unwrap helper: Trend#value / realized_gain_loss#value are Money objects,
+      # and this codebase's Money keeps the source currency through `*` and
+      # through `Money.new(money, _)`. Unwrapping to BigDecimal first keeps sums
+      # and the final Money.new(..., currency) correctly labeled in family currency.
+      to_numeric = ->(value) { value.is_a?(Money) ? value.amount : value }
+
+      # Unrealized gains mark holdings to market, so convert at today's FX.
+      foreign_holding_currencies = current_holdings.map(&:currency).compact.uniq.reject { |c| c == currency }
+      holding_rates = ExchangeRate.rates_for(foreign_holding_currencies, to: currency, date: Date.current)
+      convert_current = ->(amount, from) {
+        numeric = to_numeric.call(amount)
+        from == currency ? numeric : numeric * (holding_rates[from] || 1)
+      }
+
+      # Realized gains are locked at trade time, so convert each at its own
+      # entry-date FX. Mirrors InvestmentStatement::Totals, which also uses
+      # entry-date rates for contributions/withdrawals on this same card.
+      foreign_trade_currencies = sell_trades.map(&:currency).compact.uniq.reject { |c| c == currency }
+      rates_by_trade_date = sell_trades.map { |t| t.entry.date }.uniq.each_with_object({}) do |date, memo|
+        memo[date] = ExchangeRate.rates_for(foreign_trade_currencies, to: currency, date: date)
+      end
+      convert_trade = ->(amount, from, date) {
+        numeric = to_numeric.call(amount)
+        from == currency ? numeric : numeric * (rates_by_trade_date.dig(date, from) || 1)
+      }
+
       # Build metrics per treatment
       %i[taxable tax_deferred tax_exempt tax_advantaged].each_with_object({}) do |treatment, hash|
         holdings = holdings_by_treatment[treatment] || []
@@ -509,13 +535,13 @@ class ReportsController < ApplicationController
         # Sum unrealized gains from holdings (only those with known cost basis)
         unrealized = holdings.sum do |h|
           trend = h.trend
-          trend ? trend.value : 0
+          trend ? convert_current.call(trend.value, h.currency) : 0
         end
 
         # Sum realized gains from sell trades
         realized = trades.sum do |t|
           gain = t.realized_gain_loss
-          gain ? gain.value : 0
+          gain ? convert_trade.call(gain.value, t.currency, t.entry.date) : 0
         end
 
         # Only include treatment groups that have some activity
