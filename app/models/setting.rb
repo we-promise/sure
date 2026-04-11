@@ -18,7 +18,11 @@ class Setting < RailsSettings::Base
 
   BRAND_FETCH_LOGO_SIZE_STANDARD = 40
   BRAND_FETCH_LOGO_SIZE_HIGH_RES = 120
-  BRAND_FETCH_URL_PATTERN = %r{(https://cdn\.brandfetch\.io/[^/]+/icon/fallback/lettermark/)w/\d+/h/\d+(\?c=.+)}
+  # Matches both legacy single-segment URLs (`/apple.com/icon/...`) and
+  # explicit type-routed URLs introduced 2026 (`/crypto/BTC/icon/...`,
+  # `/domain/apple.com/icon/...`). `[^?]+` reaches across the extra slash
+  # so transform_brand_fetch_url can rewrite the size params on both shapes.
+  BRAND_FETCH_URL_PATTERN = %r{(https://cdn\.brandfetch\.io/[^?]+/icon/fallback/lettermark/)w/\d+/h/\d+(\?c=.+)}
 
   def self.brand_fetch_logo_size
     brand_fetch_high_res_logos ? BRAND_FETCH_LOGO_SIZE_HIGH_RES : BRAND_FETCH_LOGO_SIZE_STANDARD

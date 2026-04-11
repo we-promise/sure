@@ -9,7 +9,8 @@
 # migrations use external dependencies or application code.
 #
 # It's strongly recommended that you check this file into your version control system.
-ActiveRecord::Schema[7.2].define(version: 2026_04_09_154221) do
+
+ActiveRecord::Schema[7.2].define(version: 2026_04_11_082125) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -402,8 +403,12 @@ ActiveRecord::Schema[7.2].define(version: 2026_04_09_154221) do
     t.jsonb "raw_transactions_payload"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "product"
+    t.decimal "credit_limit", precision: 19, scale: 4
+    t.jsonb "identification_hashes", default: []
     t.index ["account_id"], name: "index_enable_banking_accounts_on_account_id"
     t.index ["enable_banking_item_id"], name: "index_enable_banking_accounts_on_enable_banking_item_id"
+    t.index ["identification_hashes"], name: "index_enable_banking_accounts_on_identification_hashes", using: :gin
   end
 
   create_table "enable_banking_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -417,7 +422,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_04_09_154221) do
     t.string "status", default: "good"
     t.boolean "scheduled_for_deletion", default: false
     t.boolean "pending_account_setup", default: false
-    t.datetime "sync_start_date"
+    t.date "sync_start_date"
     t.jsonb "raw_payload"
     t.jsonb "raw_institution_payload"
     t.string "country_code"
@@ -430,6 +435,12 @@ ActiveRecord::Schema[7.2].define(version: 2026_04_09_154221) do
     t.string "authorization_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.jsonb "aspsp_required_psu_headers", default: []
+    t.integer "aspsp_maximum_consent_validity"
+    t.string "aspsp_auth_approach"
+    t.jsonb "aspsp_psu_types", default: []
+    t.string "last_psu_ip"
+    t.string "psu_type"
     t.index ["family_id"], name: "index_enable_banking_items_on_family_id"
     t.index ["status"], name: "index_enable_banking_items_on_status"
   end
@@ -1216,6 +1227,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_04_09_154221) do
     t.string "kind", default: "standard", null: false
     t.string "price_provider"
     t.string "offline_reason"
+    t.date "first_provider_price_on"
     t.index "upper((ticker)::text), COALESCE(upper((exchange_operating_mic)::text), ''::text)", name: "index_securities_on_ticker_and_exchange_operating_mic_unique", unique: true
     t.index ["country_code"], name: "index_securities_on_country_code"
     t.index ["exchange_operating_mic"], name: "index_securities_on_exchange_operating_mic"

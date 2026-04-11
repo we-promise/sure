@@ -6,10 +6,10 @@
     <%= render "shared/form_errors", model: entry %>
   <% end %>
 
-  <section>
+  <section data-controller="transaction-type-tabs">
     <%= render "shared/transaction_type_tabs", active_tab: params[:nature] == "inflow" ? "income" : "expense", account_id: params[:account_id] %>
 
-    <%= f.hidden_field :nature, value: params[:nature] || "outflow" %>
+    <%= f.hidden_field :nature, value: params[:nature] || "outflow", data: { "transaction-type-tabs-target": "natureField" } %>
     <%= f.hidden_field :entryable_type, value: "Transaction" %>
   </section>
 

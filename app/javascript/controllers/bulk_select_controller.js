@@ -138,8 +138,13 @@ export default class extends Controller {
       count > 0;
 
     if (this.hasDuplicateLinkTarget) {
-      this.duplicateLinkTarget.classList.toggle("hidden", count !== 1);
-      if (count === 1) {
+      const selectedRow = this._selectedRow();
+      const canDuplicate =
+        count === 1 && selectedRow?.dataset.entryType === "Transaction";
+
+      this.duplicateLinkTarget.classList.toggle("hidden", !canDuplicate);
+
+      if (canDuplicate) {
         const url = new URL(
           this.duplicateLinkTarget.href,
           window.location.origin,
@@ -156,6 +161,14 @@ export default class extends Controller {
     }
 
     return this.pluralLabelValue;
+  }
+
+  _selectedRow() {
+    if (this.selectedIdsValue.length !== 1) return null;
+
+    return this.rowTargets.find(
+      (row) => row.dataset.id === this.selectedIdsValue[0],
+    );
   }
 
   _updateGroups() {
