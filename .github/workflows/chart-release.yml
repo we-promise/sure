@@ -28,20 +28,20 @@ jobs:
         run: |
           set -euo pipefail
 
-          # Read the canonical version from the Rails app (single source of truth)
-          APP_SEMVER=$(grep -oP '"\K[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?' config/initializers/version.rb | head -n 1 || true)
+          # Read the canonical version from .sure-version (single source of truth)
+          APP_SEMVER=$(cat .sure-version | tr -d '[:space:]')
           if [ -z "$APP_SEMVER" ]; then
-            echo "::error::Could not extract version from config/initializers/version.rb"
+            echo "::error::Could not read version from .sure-version"
             exit 1
           fi
-          echo "App version from version.rb: $APP_SEMVER"
+          echo "App version from .sure-version: $APP_SEMVER"
 
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             # Use the app version as the chart version (monorepo: versions stay in sync)
             TAG_NAME="chart-v${APP_SEMVER}"
 
             if git rev-parse "refs/tags/${TAG_NAME}" >/dev/null 2>&1; then
-              echo "::error::Tag ${TAG_NAME} already exists. Bump the version in config/initializers/version.rb and charts/sure/Chart.yaml first."
+              echo "::error::Tag ${TAG_NAME} already exists. Bump the version in .sure-version and charts/sure/Chart.yaml first."
               exit 1
             fi
 
