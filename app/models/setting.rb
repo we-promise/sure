@@ -129,6 +129,9 @@ class Setting < RailsSettings::Base
   field :auto_sync_time, type: :string, default: ENV.fetch("AUTO_SYNC_TIME", "02:22")
   field :auto_sync_timezone, type: :string, default: ENV.fetch("AUTO_SYNC_TIMEZONE", "UTC")
 
+  # Proactive financial insights feed (opt-in via INSIGHTS_ENABLED=1 env var or admin toggle)
+  field :insights_enabled, type: :boolean, default: ENV.fetch("INSIGHTS_ENABLED", "0") == "1"
+
   AUTO_SYNC_TIME_FORMAT = /\A([01]?\d|2[0-3]):([0-5]\d)\z/
 
   def self.valid_auto_sync_time?(time_str)

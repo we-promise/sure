@@ -1,0 +1,75 @@
+spending_anomaly_dining:
+  family: dylan_family
+  insight_type: spending_anomaly
+  priority: medium
+  status: active
+  title: "Dining spending up 34%"
+  body: "Your dining spending is up 34% vs your 3-month average — currently on pace for $634 this month versus the $473 average."
+  metadata:
+    category_name: "Dining"
+    percent_change: 34.1
+    current_amount: 634.50
+    baseline_amount: 472.80
+    direction: "up"
+    delta_amount: 161.70
+  currency: USD
+  period_start: <%= Date.current.beginning_of_month %>
+  period_end: <%= Date.current.end_of_month %>
+  dedup_key: "spending_anomaly:dining-fixture:2026-04"
+  generated_at: <%= 1.hour.ago %>
+
+cash_flow_warning:
+  family: dylan_family
+  insight_type: cash_flow_warning
+  priority: high
+  status: active
+  title: "Low cash projected around April 28"
+  body: "Based on your recurring bills and spending patterns, your cash balance may drop to $142 around April 28."
+  metadata:
+    projected_low_balance: 142.00
+    projected_low_date: "2026-04-28"
+    current_balance: 1800.00
+    upcoming_outflows: 1847.00
+    account_count: 1
+  currency: USD
+  period_start: <%= Date.current %>
+  period_end: <%= 30.days.from_now.to_date %>
+  dedup_key: "cash_flow_warning:2026-04"
+  generated_at: <%= 1.hour.ago %>
+
+net_worth_milestone:
+  family: dylan_family
+  insight_type: net_worth_milestone
+  priority: high
+  status: read
+  title: "Net worth crossed $100,000"
+  body: "Net worth crossed the $100,000 milestone, now at $101,342."
+  metadata:
+    milestone: 100000
+    current_net_worth: 101342.00
+    previous_net_worth: 98800.00
+    all_time_high: true
+  currency: USD
+  period_start: <%= 30.days.ago.to_date %>
+  period_end: <%= Date.current %>
+  dedup_key: "net_worth_milestone:100000:2026-04"
+  generated_at: <%= 2.hours.ago %>
+  read_at: <%= 30.minutes.ago %>
+
+dismissed_insight:
+  family: dylan_family
+  insight_type: idle_cash
+  priority: low
+  status: dismissed
+  title: "Idle cash in Savings"
+  body: "$6,200 has been sitting in Savings for over 60 days without any transactions."
+  metadata:
+    account_name: "Savings"
+    idle_amount: 6200.00
+    idle_days: 60
+  currency: USD
+  period_start: <%= 60.days.ago.to_date %>
+  period_end: <%= Date.current %>
+  dedup_key: "idle_cash:savings-fixture:2026-04"
+  generated_at: <%= 3.hours.ago %>
+  dismissed_at: <%= 1.hour.ago %>
