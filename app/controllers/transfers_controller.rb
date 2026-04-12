@@ -7,6 +7,8 @@ class TransfersController < ApplicationController
   def new
     @transfer = Transfer.new
     @from_account_id = params[:from_account_id]
+    @amount = params[:amount]
+    @date = params[:date]
   end
 
   def show
