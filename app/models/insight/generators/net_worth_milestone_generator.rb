@@ -24,7 +24,7 @@ class Insight::Generators::NetWorthMilestoneGenerator < Insight::Generator
     series_high   = prior_values.max.to_f
     thirty_day_high = current_nw >= series_high && current_nw > prior_nw
 
-    crossed = ROUND_MILESTONES.find { |m| current_nw >= m && prior_nw < m }
+    crossed = ROUND_MILESTONES.reverse_each.find { |m| current_nw >= m && prior_nw < m }
 
     return [] unless crossed || thirty_day_high
 
