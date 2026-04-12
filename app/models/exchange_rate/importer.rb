@@ -37,11 +37,7 @@ class ExchangeRate::Importer
       db_rate_value = db_rates[date]&.rate
       provider_rate_value = provider_rates[date]&.rate
 
-      chosen_rate = if clear_cache
-        provider_rate_value || db_rate_value   # overwrite when possible
-      else
-        db_rate_value || provider_rate_value   # fill gaps
-      end
+      chosen_rate = provider_rate_value || db_rate_value
 
       # Gapfill with LOCF strategy (last observation carried forward)
       # Treat nil or zero rates as invalid and use previous rate
@@ -138,6 +134,7 @@ class ExchangeRate::Importer
         )
 
         if provider_response.success?
+          Rails.logger.debug("Fetched #{provider_response.data.size} rates from #{exchange_rate_provider.class.name} for #{from}/#{to} between #{provider_fetch_start_date} and #{end_date}")
           provider_response.data.index_by(&:date)
         else
           message = "#{exchange_rate_provider.class.name} could not fetch exchange rate pair from: #{from} to: #{to} between: #{effective_start_date} and: #{Date.current}.  Provider error: #{provider_response.error.message}"
