@@ -11,6 +11,7 @@ class SubscriptionsController < ApplicationController
       redirect_to root_path, notice: "You are already contributing. Thank you!"
     else
       @plan = params[:plan] || "annual"
+      @one_time_contribution_url = stripe&.one_time_contribution_url
       render layout: "onboardings"
     end
   end
