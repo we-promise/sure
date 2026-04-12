@@ -1,0 +1,11 @@
+eur_gbp:
+  from_currency: EUR
+  to_currency: GBP
+  first_provider_rate_on: <%= 10.years.ago.to_date %>
+  provider_name: twelve_data
+
+usd_jpy_fresh:
+  from_currency: USD
+  to_currency: JPY
+  first_provider_rate_on:
+  provider_name:

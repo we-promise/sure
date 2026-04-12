@@ -223,9 +223,222 @@ class ExchangeRate::ImporterTest < ActiveSupport::TestCase
     assert_equal 0, ExchangeRate.count, "No rates should be imported on rate limit error"
   end
 
+  # === Clamping tests (Phase 2) ===
+
+  test "advances gapfill start when pair predates provider history" do
+    ExchangeRate.delete_all
+    ExchangeRatePair.delete_all
+
+    # Provider only returns rates starting 5 days ago (simulating limited history).
+    # start_date is 30 days ago — provider can't serve anything before 5 days ago.
+    provider_response = provider_success_response([
+      OpenStruct.new(from: "USD", to: "EUR", date: 5.days.ago.to_date, rate: 1.1),
+      OpenStruct.new(from: "USD", to: "EUR", date: 4.days.ago.to_date, rate: 1.2),
+      OpenStruct.new(from: "USD", to: "EUR", date: 3.days.ago.to_date, rate: 1.3),
+      OpenStruct.new(from: "USD", to: "EUR", date: 2.days.ago.to_date, rate: 1.4),
+      OpenStruct.new(from: "USD", to: "EUR", date: 1.day.ago.to_date,  rate: 1.5),
+      OpenStruct.new(from: "USD", to: "EUR", date: Date.current,        rate: 1.6)
+    ])
+
+    @provider.expects(:fetch_exchange_rates).returns(provider_response)
+
+    ExchangeRate::Importer.new(
+      exchange_rate_provider: @provider,
+      from: "USD",
+      to: "EUR",
+      start_date: 30.days.ago.to_date,
+      end_date: Date.current
+    ).import_provider_rates
+
+    forward_rates = ExchangeRate.where(from_currency: "USD", to_currency: "EUR").order(:date)
+    assert_equal 6, forward_rates.count
+    assert_equal 5.days.ago.to_date, forward_rates.first.date
+
+    pair = ExchangeRatePair.find_by(from_currency: "USD", to_currency: "EUR")
+    assert_equal 5.days.ago.to_date, pair.first_provider_rate_on
+  end
+
+  test "pre-coverage fallback picks earliest valid provider row, skipping zero leaders" do
+    ExchangeRate.delete_all
+    ExchangeRatePair.delete_all
+
+    provider_response = provider_success_response([
+      OpenStruct.new(from: "USD", to: "EUR", date: 4.days.ago.to_date, rate: 0),
+      OpenStruct.new(from: "USD", to: "EUR", date: 3.days.ago.to_date, rate: nil),
+      OpenStruct.new(from: "USD", to: "EUR", date: 2.days.ago.to_date, rate: 1.3),
+      OpenStruct.new(from: "USD", to: "EUR", date: 1.day.ago.to_date,  rate: 1.4),
+      OpenStruct.new(from: "USD", to: "EUR", date: Date.current,        rate: 1.5)
+    ])
+
+    @provider.expects(:fetch_exchange_rates).returns(provider_response)
+
+    ExchangeRate::Importer.new(
+      exchange_rate_provider: @provider,
+      from: "USD",
+      to: "EUR",
+      start_date: 30.days.ago.to_date,
+      end_date: Date.current
+    ).import_provider_rates
+
+    pair = ExchangeRatePair.find_by(from_currency: "USD", to_currency: "EUR")
+    assert_equal 2.days.ago.to_date, pair.first_provider_rate_on
+  end
+
+  test "first_provider_rate_on is moved earlier when provider extends backward coverage" do
+    ExchangeRate.delete_all
+    ExchangeRatePair.delete_all
+
+    ExchangeRatePair.create!(
+      from_currency: "USD", to_currency: "EUR",
+      first_provider_rate_on: 3.days.ago.to_date,
+      provider_name: Setting.exchange_rate_provider.to_s
+    )
+
+    # Provider now returns an earlier date with clear_cache
+    provider_response = provider_success_response([
+      OpenStruct.new(from: "USD", to: "EUR", date: 10.days.ago.to_date, rate: 1.0),
+      OpenStruct.new(from: "USD", to: "EUR", date: 9.days.ago.to_date,  rate: 1.1),
+      OpenStruct.new(from: "USD", to: "EUR", date: Date.current,         rate: 1.5)
+    ])
+
+    @provider.expects(:fetch_exchange_rates).returns(provider_response)
+
+    ExchangeRate::Importer.new(
+      exchange_rate_provider: @provider,
+      from: "USD",
+      to: "EUR",
+      start_date: 30.days.ago.to_date,
+      end_date: Date.current,
+      clear_cache: true
+    ).import_provider_rates
+
+    pair = ExchangeRatePair.find_by!(from_currency: "USD", to_currency: "EUR")
+    assert_equal 10.days.ago.to_date, pair.first_provider_rate_on
+  end
+
+  test "first_provider_rate_on is NOT moved forward when provider shrinks coverage" do
+    ExchangeRate.delete_all
+    ExchangeRatePair.delete_all
+
+    ExchangeRatePair.create!(
+      from_currency: "USD", to_currency: "EUR",
+      first_provider_rate_on: 10.days.ago.to_date,
+      provider_name: Setting.exchange_rate_provider.to_s
+    )
+
+    # Provider now only returns from 3 days ago (shrunk window)
+    provider_response = provider_success_response([
+      OpenStruct.new(from: "USD", to: "EUR", date: 3.days.ago.to_date, rate: 1.3),
+      OpenStruct.new(from: "USD", to: "EUR", date: Date.current,        rate: 1.5)
+    ])
+
+    @provider.expects(:fetch_exchange_rates).returns(provider_response)
+
+    ExchangeRate::Importer.new(
+      exchange_rate_provider: @provider,
+      from: "USD",
+      to: "EUR",
+      start_date: 30.days.ago.to_date,
+      end_date: Date.current,
+      clear_cache: true
+    ).import_provider_rates
+
+    pair = ExchangeRatePair.find_by!(from_currency: "USD", to_currency: "EUR")
+    assert_equal 10.days.ago.to_date, pair.first_provider_rate_on
+  end
+
+  test "incremental sync on pre-coverage pair skips pre-coverage window" do
+    ExchangeRate.delete_all
+    ExchangeRatePair.delete_all
+
+    clamp_date = 5.days.ago.to_date
+    ExchangeRatePair.create!(
+      from_currency: "USD", to_currency: "EUR",
+      first_provider_rate_on: clamp_date,
+      provider_name: Setting.exchange_rate_provider.to_s
+    )
+
+    # Seed DB with rates from clamp to yesterday
+    (clamp_date..1.day.ago.to_date).each_with_index do |date, idx|
+      ExchangeRate.create!(from_currency: "USD", to_currency: "EUR", date: date, rate: 1.0 + idx * 0.01)
+    end
+
+    # Provider returns today's rate
+    provider_response = provider_success_response([
+      OpenStruct.new(from: "USD", to: "EUR", date: Date.current, rate: 1.5)
+    ])
+
+    @provider.expects(:fetch_exchange_rates)
+             .with(from: "USD", to: "EUR",
+                   start_date: get_provider_fetch_start_date(Date.current),
+                   end_date: Date.current)
+             .returns(provider_response)
+
+    ExchangeRate::Importer.new(
+      exchange_rate_provider: @provider,
+      from: "USD",
+      to: "EUR",
+      start_date: 30.days.ago.to_date,
+      end_date: Date.current
+    ).import_provider_rates
+
+    assert_equal 1.5, ExchangeRate.find_by(from_currency: "USD", to_currency: "EUR", date: Date.current).rate
+  end
+
+  test "skips provider call when all rates exist in clamped range" do
+    ExchangeRate.delete_all
+    ExchangeRatePair.delete_all
+
+    clamp_date = 3.days.ago.to_date
+    ExchangeRatePair.create!(
+      from_currency: "USD", to_currency: "EUR",
+      first_provider_rate_on: clamp_date,
+      provider_name: Setting.exchange_rate_provider.to_s
+    )
+
+    (clamp_date..Date.current).each_with_index do |date, idx|
+      ExchangeRate.create!(from_currency: "USD", to_currency: "EUR", date: date, rate: 1.0 + idx * 0.01)
+    end
+
+    @provider.expects(:fetch_exchange_rates).never
+
+    ExchangeRate::Importer.new(
+      exchange_rate_provider: @provider,
+      from: "USD",
+      to: "EUR",
+      start_date: 30.days.ago.to_date,
+      end_date: Date.current
+    ).import_provider_rates
+  end
+
+  test "clamps provider fetch to max_history_days when provider exposes limit" do
+    ExchangeRate.delete_all
+    ExchangeRatePair.delete_all
+
+    @provider.stubs(:max_history_days).returns(10)
+
+    provider_response = provider_success_response([
+      OpenStruct.new(from: "USD", to: "EUR", date: Date.current, rate: 1.5)
+    ])
+
+    expected_start = Date.current - 10.days
+    @provider.expects(:fetch_exchange_rates)
+             .with(from: "USD", to: "EUR",
+                   start_date: expected_start,
+                   end_date: Date.current)
+             .returns(provider_response)
+
+    ExchangeRate::Importer.new(
+      exchange_rate_provider: @provider,
+      from: "USD",
+      to: "EUR",
+      start_date: 60.days.ago.to_date,
+      end_date: Date.current
+    ).import_provider_rates
+  end
+
   private
     def get_provider_fetch_start_date(start_date)
-      # We fetch with a 5 day buffer to account for weekends and holidays
-      start_date - 5.days
+      start_date - ExchangeRate::Importer::PROVISIONAL_LOOKBACK_DAYS.days
     end
 end
