@@ -2,7 +2,8 @@
 
 <%= tag.header class: "mb-4 space-y-1", id: dom_id(entry, :header) do %>
   <span class="text-secondary text-sm">
-    <%= entry.name %>
+    <% valuation = entry.entryable %>
+    <%= valuation.respond_to?(:opening_anchor?) && valuation.opening_anchor? ? t("valuations.show.opening_balance") : entry.name %>
   </span>
 
   <div class="flex items-center gap-4">
