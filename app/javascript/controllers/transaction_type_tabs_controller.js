@@ -134,7 +134,7 @@ export default class extends Controller {
     }
 
     container.querySelectorAll("[role='option']").forEach(opt => {
-      const isSelected = opt.dataset.value == value
+      const isSelected = opt.dataset.value === value
       opt.setAttribute("aria-selected", String(isSelected))
       opt.classList.toggle("bg-container-inset", isSelected)
       opt.querySelector(".check-icon")?.classList.toggle("hidden", !isSelected)
