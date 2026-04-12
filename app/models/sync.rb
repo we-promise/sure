@@ -15,6 +15,9 @@ class Sync < ApplicationRecord
   belongs_to :parent, class_name: "Sync", optional: true
   has_many :children, class_name: "Sync", foreign_key: :parent_id, dependent: :destroy
 
+  attr_accessor :balances_only
+  alias_method :balances_only?, :balances_only
+
   scope :ordered, -> { order(created_at: :desc) }
   scope :incomplete, -> { where("syncs.status IN (?)", %w[pending syncing]) }
   scope :visible, -> { incomplete.where("syncs.created_at > ?", VISIBLE_FOR.ago) }
