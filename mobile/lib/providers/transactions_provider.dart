@@ -149,6 +149,8 @@ class TransactionsProvider with ChangeNotifier {
     required String currency,
     required String nature,
     String? notes,
+    String? categoryId,
+    String? categoryName,
   }) async {
     _lastAccessToken = accessToken; // Store for auto-sync
 
@@ -166,6 +168,8 @@ class TransactionsProvider with ChangeNotifier {
         currency: currency,
         nature: nature,
         notes: notes,
+        categoryId: categoryId,
+        categoryName: categoryName,
         syncStatus: SyncStatus.pending, // Start as pending
       );
 
@@ -188,6 +192,7 @@ class TransactionsProvider with ChangeNotifier {
           currency: currency,
           nature: nature,
           notes: notes,
+          categoryId: categoryId,
         ).then((result) async {
           if (_isDisposed) return;
           
