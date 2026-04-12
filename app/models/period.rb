@@ -165,7 +165,9 @@ class Period
   end
 
   def interval
-    if days > 366
+    if days > 1825 # 5 years
+      "1 month"
+    elsif days > 366
       "1 week"
     else
       "1 day"
