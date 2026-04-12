@@ -58,10 +58,12 @@ class ExchangeRate::Importer
       db_rate_value = db_rates[date]&.rate
       provider_rate_value = provider_rates[date]&.rate
 
-      chosen_rate = provider_rate_value || db_rate_value
-
-      if chosen_rate.nil? || chosen_rate.to_f <= 0
-        chosen_rate = prev_rate_value
+      chosen_rate = if provider_rate_value.present? && provider_rate_value.to_f > 0
+        provider_rate_value
+      elsif db_rate_value.present? && db_rate_value.to_f > 0
+        db_rate_value
+      else
+        prev_rate_value
       end
 
       prev_rate_value = chosen_rate
@@ -132,21 +134,18 @@ class ExchangeRate::Importer
 
     def start_rate_value
       if fill_start_date == start_date
-        provider_rate_value = provider_rates.select { |date, _| date <= start_date }
-                                            .max_by { |date, _| date }&.last&.rate
+        provider_rate_value = latest_valid_provider_rate(before_or_on: start_date)
         db_rate_value = db_rates[start_date]&.rate
 
-        return provider_rate_value if provider_rate_value.present? && provider_rate_value.to_f > 0
+        return provider_rate_value if provider_rate_value.present?
         return db_rate_value if db_rate_value.present? && db_rate_value.to_f > 0
         return nil
       end
 
       cutoff_date = fill_start_date
 
-      provider_rate_value = provider_rates
-        .select { |date, _| date < cutoff_date }
-        .max_by { |date, _| date }&.last&.rate
-      return provider_rate_value if provider_rate_value.present? && provider_rate_value.to_f > 0
+      provider_rate_value = latest_valid_provider_rate(before: cutoff_date)
+      return provider_rate_value if provider_rate_value.present?
 
       ExchangeRate
         .where(from_currency: from, to_currency: to)
@@ -155,6 +154,17 @@ class ExchangeRate::Importer
         .order(date: :desc)
         .limit(1)
         .pick(:rate)
+    end
+
+    # Scans provider_rates for the most recent entry with a positive rate,
+    # rather than just picking the latest row (which could be zero/nil).
+    def latest_valid_provider_rate(before_or_on: nil, before: nil)
+      cutoff = before_or_on || before
+      comparator = before_or_on ? :<= : :<
+
+      provider_rates
+        .select { |date, r| date.send(comparator, cutoff) && r.rate.present? && r.rate.to_f > 0 }
+        .max_by { |date, _| date }&.last&.rate
     end
 
     def clamped_start_date

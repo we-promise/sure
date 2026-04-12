@@ -21,19 +21,24 @@ class ExchangeRatePairTest < ActiveSupport::TestCase
   test "for_pair auto-resets clamp when provider changes" do
     ExchangeRatePair.delete_all
 
-    Setting.exchange_rate_provider = "twelve_data"
-    pair = ExchangeRatePair.create!(
-      from_currency: "USD",
-      to_currency: "EUR",
-      first_provider_rate_on: 1.year.ago.to_date,
-      provider_name: "twelve_data"
-    )
+    original_provider = Setting.exchange_rate_provider
+    begin
+      Setting.exchange_rate_provider = "twelve_data"
+      ExchangeRatePair.create!(
+        from_currency: "USD",
+        to_currency: "EUR",
+        first_provider_rate_on: 1.year.ago.to_date,
+        provider_name: "twelve_data"
+      )
 
-    Setting.exchange_rate_provider = "yahoo_finance"
-    refreshed = ExchangeRatePair.for_pair(from: "USD", to: "EUR")
+      Setting.exchange_rate_provider = "yahoo_finance"
+      refreshed = ExchangeRatePair.for_pair(from: "USD", to: "EUR")
 
-    assert_nil refreshed.first_provider_rate_on
-    assert_equal "yahoo_finance", refreshed.provider_name
+      assert_nil refreshed.first_provider_rate_on
+      assert_equal "yahoo_finance", refreshed.provider_name
+    ensure
+      Setting.exchange_rate_provider = original_provider
+    end
   end
 
   test "record_first_provider_rate_on sets date on NULL" do
@@ -49,20 +54,25 @@ class ExchangeRatePairTest < ActiveSupport::TestCase
   test "record_first_provider_rate_on moves earlier but not forward" do
     ExchangeRatePair.delete_all
 
-    Setting.exchange_rate_provider = "twelve_data"
-    ExchangeRatePair.create!(
-      from_currency: "USD",
-      to_currency: "EUR",
-      first_provider_rate_on: 6.months.ago.to_date,
-      provider_name: "twelve_data"
-    )
+    original_provider = Setting.exchange_rate_provider
+    begin
+      Setting.exchange_rate_provider = "twelve_data"
+      ExchangeRatePair.create!(
+        from_currency: "USD",
+        to_currency: "EUR",
+        first_provider_rate_on: 6.months.ago.to_date,
+        provider_name: "twelve_data"
+      )
 
-    ExchangeRatePair.record_first_provider_rate_on(from: "USD", to: "EUR", date: 1.year.ago.to_date)
-    pair = ExchangeRatePair.find_by!(from_currency: "USD", to_currency: "EUR")
-    assert_equal 1.year.ago.to_date, pair.first_provider_rate_on
+      ExchangeRatePair.record_first_provider_rate_on(from: "USD", to: "EUR", date: 1.year.ago.to_date)
+      pair = ExchangeRatePair.find_by!(from_currency: "USD", to_currency: "EUR")
+      assert_equal 1.year.ago.to_date, pair.first_provider_rate_on
 
-    ExchangeRatePair.record_first_provider_rate_on(from: "USD", to: "EUR", date: 3.months.ago.to_date)
-    pair.reload
-    assert_equal 1.year.ago.to_date, pair.first_provider_rate_on
+      ExchangeRatePair.record_first_provider_rate_on(from: "USD", to: "EUR", date: 3.months.ago.to_date)
+      pair.reload
+      assert_equal 1.year.ago.to_date, pair.first_provider_rate_on
+    ensure
+      Setting.exchange_rate_provider = original_provider
+    end
   end
 end
