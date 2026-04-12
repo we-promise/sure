@@ -1,0 +1,28 @@
+dylan_retirement:
+  family: dylan_family
+  country: DE
+  pension_system: de_grv
+  birth_year: 1990
+  retirement_age: 67
+  target_monthly_income: 3000.0
+  currency: EUR
+  expected_return_pct: 7.0
+  inflation_pct: 2.0
+  tax_rate_pct: 26.38
+  current_monthly_savings: 500.0
+  contribution_start_year: 2015
+  expected_annual_points: 1.0
+  rentenwert: 39.32
+
+custom_retirement:
+  family: empty
+  country: US
+  pension_system: custom
+  birth_year: 1985
+  retirement_age: 65
+  target_monthly_income: 4000.0
+  currency: USD
+  expected_return_pct: 6.0
+  inflation_pct: 2.5
+  tax_rate_pct: 22.0
+  current_monthly_savings: 800.0

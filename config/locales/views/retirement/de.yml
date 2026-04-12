@@ -1,0 +1,85 @@
+---
+de:
+  retirement:
+    show:
+      page_title: Ruhestandsplanung
+      subtitle: Verfolge deinen Weg zur finanziellen Unabhängigkeit und Rentenbereitschaft
+      current_age: Aktuelles Alter
+      years_to_retirement:
+        one: "%{count} Jahr bis zur Rente"
+        other: "%{count} Jahre bis zur Rente"
+      estimated_pension: Geschätzte monatliche Rente
+      estimated_pension_grv: Geschätzte GRV-Rente
+      after_tax: Nach Steuern
+      pension_gap: Monatliche Rentenlücke
+      target: "Ziel"
+      required_savings: Benötigte monatliche Sparrate
+      per_month: pro Monat um die Rentenlücke zu schließen
+      fire_progress: FIRE-Fortschritt
+      current_portfolio: Aktuelles Portfolio
+      fire_number: FIRE-Zahl
+      progress: Fortschritt
+      estimated_fire_date: Geschätztes FIRE-Datum
+      assumptions: Annahmen
+      edit: Bearbeiten
+      birth_year: Geburtsjahr
+      retirement_age: Rentenalter
+      expected_return: Erwartete Rendite
+      inflation: Inflationsrate
+      tax_rate: Steuersatz
+      monthly_savings: Monatliche Sparrate
+      pension_history: Rentenhistorie (Renteninformation)
+      add_entry: Neuen Eintrag hinzufügen
+      date: Datum
+      pension_points: Entgeltpunkte
+      points_gained: Punkte gewonnen
+      current_pension: Aktuelle Rente
+      projected_pension: Hochgerechnete Rente
+      notes: Notizen
+      notes_placeholder: "z.B. Jährliche Renteninformation 2024"
+      save_entry: Eintrag speichern
+      confirm_delete: Soll dieser Eintrag wirklich gelöscht werden?
+      no_entries: Noch keine Renteneinträge vorhanden
+      no_entries_hint: Füge Einträge aus deiner Renteninformation hinzu, um deinen Rentenfortschritt zu verfolgen
+      setup_required: Bitte richte zuerst die Ruhestandsplanung ein
+    form_fields: &retirement_form_fields_de
+      personal_section: Persönliche Angaben
+      birth_year: Geburtsjahr
+      retirement_age: Gewünschtes Rentenalter
+      financial_section: Finanzielle Ziele
+      target_monthly_income: Gewünschtes monatliches Einkommen (Rente)
+      current_monthly_savings: Aktuelle monatliche Sparrate
+      currency: Währung
+      pension_section: Rentensystem
+      pension_system: Rentensystem
+      country: Land
+      expected_annual_points: Erwartete jährliche Entgeltpunkte
+      expected_annual_points_hint: Durchschnittsgehalt = ~1,0 Punkte/Jahr
+      rentenwert: Aktueller Rentenwert
+      rentenwert_hint: Aktueller Wert in EUR (2025 ~ 39,32)
+      contribution_start_year: Beitragsbeginn (Jahr)
+      assumptions_section: Annahmen
+      expected_return: Erwartete jährliche Rendite (%)
+      inflation: Erwartete Inflation (%)
+      tax_rate: Steuersatz im Ruhestand (%)
+    setup:
+      page_title: Ruhestandsplanung einrichten
+      subtitle: Konfiguriere deine Renten- und FIRE-Planungsparameter
+      cancel: Abbrechen
+      save: Speichern & Weiter
+    edit:
+      page_title: Ruhestandseinstellungen bearbeiten
+      subtitle: Aktualisiere deine Ruhestandsplanungsparameter
+      cancel: Abbrechen
+      save: Änderungen speichern
+    create:
+      created: Ruhestandsplanung wurde erfolgreich eingerichtet
+    update:
+      updated: Ruhestandseinstellungen erfolgreich aktualisiert
+    add_pension_entry:
+      pension_entry_added: Renteneintrag erfolgreich hinzugefügt
+    destroy_pension_entry:
+      pension_entry_removed: Renteneintrag entfernt
+    pension_systems:
+      de_grv: Deutsche Gesetzliche Rentenversicherung (GRV)
+      custom: Benutzerdefiniert / Andere
