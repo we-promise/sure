@@ -27,22 +27,22 @@ class ExchangeRate::Importer
 
     prev_rate_value = start_rate_value
 
-    advanced_first_rate_on = nil
+    # Always find the earliest valid provider rate for pair metadata tracking.
+    # record_first_provider_rate_on's atomic guard prevents moving the date forward.
+    earliest_valid_provider_date = provider_rates.values
+      .select { |r| r.rate.present? && r.rate.to_f > 0 }
+      .min_by(&:date)&.date
 
-    if prev_rate_value.blank?
-      earliest_provider_rate = provider_rates.values
-        .select { |r| r.rate.present? && r.rate.to_f > 0 }
-        .min_by(&:date)
-
-      if earliest_provider_rate
-        Rails.logger.info(
-          "#{from}->#{to}: no provider rate on or before #{start_date}; " \
-          "advancing gapfill start to earliest valid provider date #{earliest_provider_rate.date}"
-        )
-        prev_rate_value        = earliest_provider_rate.rate
-        @fill_start_date       = earliest_provider_rate.date
-        advanced_first_rate_on = earliest_provider_rate.date
-      end
+    # When no anchor rate exists, advance the loop start to the earliest provider rate
+    loop_start_date = fill_start_date
+    if prev_rate_value.blank? && earliest_valid_provider_date
+      earliest_rate = provider_rates[earliest_valid_provider_date]
+      Rails.logger.info(
+        "#{from}->#{to}: no provider rate on or before #{start_date}; " \
+        "advancing gapfill start to earliest valid provider date #{earliest_valid_provider_date}"
+      )
+      prev_rate_value = earliest_rate.rate
+      loop_start_date = earliest_valid_provider_date
     end
 
     unless prev_rate_value.present?
@@ -52,7 +52,9 @@ class ExchangeRate::Importer
       return
     end
 
-    gapfilled_rates = fill_start_date.upto(end_date).map do |date|
+    # Gapfill with LOCF strategy (last observation carried forward):
+    # when the provider returns nothing for weekends/holidays, carry the previous rate.
+    gapfilled_rates = loop_start_date.upto(end_date).map do |date|
       db_rate_value = db_rates[date]&.rate
       provider_rate_value = provider_rates[date]&.rate
 
@@ -74,6 +76,8 @@ class ExchangeRate::Importer
 
     upsert_rows(gapfilled_rates)
 
+    # Compute and upsert inverse rates (e.g., EUR→USD from USD→EUR) to avoid
+    # separate API calls for the reverse direction.
     inverse_rates = gapfilled_rates.filter_map do |row|
       next if row[:rate].to_f <= 0
 
@@ -87,15 +91,26 @@ class ExchangeRate::Importer
 
     upsert_rows(inverse_rates)
 
+    # Backfill inverse rows for any forward rates that existed in the DB
+    # before the loop range (i.e. dates not covered by gapfilled_rates).
     backfill_inverse_rates_if_needed
 
-    if advanced_first_rate_on.present?
-      ExchangeRatePair.record_first_provider_rate_on(from: from, to: to, date: advanced_first_rate_on)
+    if earliest_valid_provider_date.present?
+      ExchangeRatePair.record_first_provider_rate_on(
+        from: from, to: to, date: earliest_valid_provider_date,
+        provider_name: current_provider_name
+      )
     end
   end
 
   private
     attr_reader :exchange_rate_provider, :from, :to, :start_date, :end_date, :clear_cache
+
+    # Resolves the provider name the same way as ExchangeRate::Provided.provider:
+    # ENV takes precedence over the DB Setting to stay consistent in env-configured deployments.
+    def current_provider_name
+      @current_provider_name ||= (ENV["EXCHANGE_RATE_PROVIDER"].presence || Setting.exchange_rate_provider).to_s
+    end
 
     def upsert_rows(rows)
       batch_size = 200
@@ -150,7 +165,7 @@ class ExchangeRate::Importer
     end
 
     def exchange_rate_pair
-      @exchange_rate_pair ||= ExchangeRatePair.for_pair(from: from, to: to)
+      @exchange_rate_pair ||= ExchangeRatePair.for_pair(from: from, to: to, provider_name: current_provider_name)
     end
 
     def fill_start_date
@@ -203,7 +218,7 @@ class ExchangeRate::Importer
     end
 
     def backfill_inverse_rates_if_needed
-      existing_inverse_dates = ExchangeRate.where(from_currency: to, to_currency: from, date: start_date..end_date).pluck(:date).to_set
+      existing_inverse_dates = ExchangeRate.where(from_currency: to, to_currency: from, date: clamped_start_date..end_date).pluck(:date).to_set
       return if existing_inverse_dates.size >= expected_count
 
       inverse_rows = db_rates.filter_map do |_date, rate|
@@ -242,6 +257,8 @@ class ExchangeRate::Importer
                   .index_by(&:date)
     end
 
+    # Normalizes an end date so that it never exceeds today's date in the
+    # America/New_York timezone.
     def normalize_end_date(requested_end_date)
       today_est = Date.current.in_time_zone("America/New_York").to_date
       [ requested_end_date, today_est ].min

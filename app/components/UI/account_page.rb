@@ -48,16 +48,20 @@ class UI::AccountPage < ApplicationComponent
   end
 
   def fx_coverage_start_date
-    return nil if account.family.nil?
-    return nil if account.currency == account.family.currency
+    return @fx_coverage_start_date if defined?(@fx_coverage_start_date)
 
-    pair = ExchangeRatePair.find_by(from_currency: account.currency, to_currency: account.family.currency)
-    return nil if pair.nil? || pair.first_provider_rate_on.nil?
+    result = nil
+    if account.family.present? && account.currency != account.family.currency
+      pair = ExchangeRatePair.for_pair(from: account.currency, to: account.family.currency)
+      if pair.first_provider_rate_on.present?
+        oldest_entry = account.entries.minimum(:date)
+        if oldest_entry.present? && oldest_entry < pair.first_provider_rate_on
+          result = pair.first_provider_rate_on
+        end
+      end
+    end
 
-    oldest_entry = account.entries.minimum(:date)
-    return nil if oldest_entry.nil? || oldest_entry >= pair.first_provider_rate_on
-
-    pair.first_provider_rate_on
+    @fx_coverage_start_date = result
   end
 
   def tab_content_for(tab)

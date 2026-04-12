@@ -202,6 +202,57 @@ class ExchangeRate::ImporterTest < ActiveSupport::TestCase
     assert_equal [ 0.86, 0.87, 0.88, 0.89 ], db_rates.map(&:rate)
   end
 
+  test "backfills missing inverse rates when forward rates already exist" do
+    ExchangeRate.delete_all
+
+    # Create forward rates without inverses (simulating pre-inverse-computation data)
+    (2.days.ago.to_date..Date.current).each_with_index do |date, idx|
+      ExchangeRate.create!(from_currency: "USD", to_currency: "EUR", date: date, rate: 0.85 + idx * 0.01)
+    end
+
+    # All forward rates exist, so no provider call — but inverse backfill should fire
+    @provider.expects(:fetch_exchange_rates).never
+
+    ExchangeRate::Importer.new(
+      exchange_rate_provider: @provider,
+      from: "USD",
+      to: "EUR",
+      start_date: 2.days.ago.to_date,
+      end_date: Date.current
+    ).import_provider_rates
+
+    inverse_rates = ExchangeRate.where(from_currency: "EUR", to_currency: "USD").order(:date)
+    assert_equal 3, inverse_rates.count
+
+    inverse_rates.each do |inv|
+      forward = ExchangeRate.find_by(from_currency: "USD", to_currency: "EUR", date: inv.date)
+      assert_in_delta (1.0 / forward.rate.to_f), inv.rate.to_f, 0.0001
+    end
+  end
+
+  test "logs error and imports nothing when provider returns only zero and nil rates" do
+    ExchangeRate.delete_all
+    ExchangeRatePair.delete_all
+
+    provider_response = provider_success_response([
+      OpenStruct.new(from: "USD", to: "EUR", date: 2.days.ago.to_date, rate: 0),
+      OpenStruct.new(from: "USD", to: "EUR", date: 1.day.ago.to_date,  rate: nil),
+      OpenStruct.new(from: "USD", to: "EUR", date: Date.current,        rate: 0)
+    ])
+
+    @provider.expects(:fetch_exchange_rates).returns(provider_response)
+
+    ExchangeRate::Importer.new(
+      exchange_rate_provider: @provider,
+      from: "USD",
+      to: "EUR",
+      start_date: 2.days.ago.to_date,
+      end_date: Date.current
+    ).import_provider_rates
+
+    assert_equal 0, ExchangeRate.where(from_currency: "USD", to_currency: "EUR").count
+  end
+
   test "handles rate limit error gracefully" do
     ExchangeRate.delete_all
 

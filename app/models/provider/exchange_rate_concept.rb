@@ -12,8 +12,9 @@ module Provider::ExchangeRateConcept
   end
 
   # Maximum number of calendar days of historical FX data the provider can
-  # return. Callers should clamp start_date to avoid requesting data beyond
-  # this window. Override in subclasses with provider-specific limits.
+  # return. Returns nil when the provider has no known limit (unbounded).
+  # Callers should clamp start_date when non-nil to avoid requesting data
+  # beyond this window. Override in subclasses with provider-specific limits.
   def max_history_days
     nil
   end
