@@ -1,5 +1,4 @@
-# Surfaces an insight when net worth crosses a round-number milestone or hits an all-time high
-# over the past 30 days.
+# Surfaces an insight when net worth crosses a round-number milestone or hits a 30-day high.
 class Insight::Generators::NetWorthMilestoneGenerator < Insight::Generator
   ROUND_MILESTONES = [
     1_000, 5_000, 10_000, 25_000, 50_000,
@@ -21,32 +20,32 @@ class Insight::Generators::NetWorthMilestoneGenerator < Insight::Generator
     prior_values = extract_prior_values(prior_series)
     return [] if prior_values.empty?
 
-    prior_nw    = prior_values.last.to_f
-    series_high = prior_values.max.to_f
-    all_time_high = current_nw >= series_high && current_nw > prior_nw
+    prior_nw      = prior_values.last.to_f
+    series_high   = prior_values.max.to_f
+    thirty_day_high = current_nw >= series_high && current_nw > prior_nw
 
     crossed = ROUND_MILESTONES.find { |m| current_nw >= m && prior_nw < m }
 
-    return [] unless crossed || all_time_high
+    return [] unless crossed || thirty_day_high
 
     metadata = {
       "milestone"          => crossed,
       "current_net_worth"  => current_nw.round(2),
       "previous_net_worth" => prior_nw.round(2),
-      "all_time_high"      => all_time_high
+      "thirty_day_high"    => thirty_day_high
     }
 
-    title = if all_time_high && crossed
+    title = if thirty_day_high && crossed
       I18n.t("insights.net_worth_milestone.title_both",
              milestone: format_amount(crossed))
-    elsif all_time_high
-      I18n.t("insights.net_worth_milestone.title_ath")
+    elsif thirty_day_high
+      I18n.t("insights.net_worth_milestone.title_30d_high")
     else
       I18n.t("insights.net_worth_milestone.title_milestone",
              milestone: format_amount(crossed))
     end
 
-    body = generate_body(build_prompt(crossed, all_time_high, current_nw, prior_nw))
+    body = generate_body(build_prompt(crossed, thirty_day_high, current_nw, prior_nw))
 
     [
       GeneratedInsight.new(
@@ -58,7 +57,7 @@ class Insight::Generators::NetWorthMilestoneGenerator < Insight::Generator
         currency:     family.currency,
         period_start: prior_period.start_date,
         period_end:   Date.current,
-        dedup_key:    "net_worth_milestone:#{crossed || "ath"}:#{Date.current.strftime("%Y-%m")}"
+        dedup_key:    "net_worth_milestone:#{crossed || "30d_high"}:#{Date.current.strftime("%Y-%m")}"
       )
     ]
   end
@@ -73,15 +72,15 @@ class Insight::Generators::NetWorthMilestoneGenerator < Insight::Generator
       end
     end
 
-    def build_prompt(crossed, all_time_high, current_nw, prior_nw)
+    def build_prompt(crossed, thirty_day_high, current_nw, prior_nw)
       sym = currency_symbol
       current_fmt = "#{sym}#{current_nw.round(0).to_s(:delimited)}"
       prior_fmt   = "#{sym}#{prior_nw.round(0).to_s(:delimited)}"
 
-      if all_time_high && crossed
-        "Net worth crossed #{sym}#{crossed.to_s(:delimited)} and hit an all-time high of #{current_fmt}."
-      elsif all_time_high
-        "Net worth hit an all-time high of #{current_fmt}, up from #{prior_fmt} 30 days ago."
+      if thirty_day_high && crossed
+        "Net worth crossed #{sym}#{crossed.to_s(:delimited)} and hit a 30-day high of #{current_fmt}."
+      elsif thirty_day_high
+        "Net worth hit a 30-day high of #{current_fmt}, up from #{prior_fmt} 30 days ago."
       else
         "Net worth crossed the #{sym}#{crossed.to_s(:delimited)} milestone, now at #{current_fmt}."
       end

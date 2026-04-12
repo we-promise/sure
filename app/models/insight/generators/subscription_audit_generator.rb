@@ -10,6 +10,7 @@ class Insight::Generators::SubscriptionAuditGenerator < Insight::Generator
       .where("last_occurrence_date < ?", OVERDUE_DAYS.days.ago.to_date)
       .where("next_expected_date < ?", Date.current)
       .includes(:merchant)
+      .order(last_occurrence_date: :asc)
       .limit(5)
 
     return [] if stale.empty?

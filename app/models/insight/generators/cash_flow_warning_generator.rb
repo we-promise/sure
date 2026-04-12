@@ -59,7 +59,7 @@ class Insight::Generators::CashFlowWarningGenerator < Insight::Generator
       balance = current_cash
       balance_by_date = {}
 
-      (0..PROJECTION_DAYS).each do |day_offset|
+      (1..PROJECTION_DAYS).each do |day_offset|
         date = Date.current + day_offset
 
         events.each do |event|

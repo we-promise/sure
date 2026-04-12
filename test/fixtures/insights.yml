@@ -48,7 +48,7 @@ net_worth_milestone:
     milestone: 100000
     current_net_worth: 101342.00
     previous_net_worth: 98800.00
-    all_time_high: true
+    thirty_day_high: true
   currency: USD
   period_start: <%= 30.days.ago.to_date %>
   period_end: <%= Date.current %>

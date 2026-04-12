@@ -3,6 +3,7 @@ require "test_helper"
 class GenerateInsightsJobTest < ActiveJob::TestCase
   setup do
     @family = families(:dylan_family)
+    Setting.stubs(:insights_enabled).returns(true)
   end
 
   test "performs without error for a family with no accounts" do
@@ -46,7 +47,7 @@ class GenerateInsightsJobTest < ActiveJob::TestCase
 
   test "updates existing insight body and generated_at on repeated runs" do
     dedup = "net_worth_milestone:update_test:#{Date.current.strftime("%Y-%m")}"
-    @family.insights.create!(
+    old_insight = @family.insights.create!(
       insight_type: "net_worth_milestone",
       priority:     "high",
       status:       "active",
@@ -78,5 +79,6 @@ class GenerateInsightsJobTest < ActiveJob::TestCase
     refreshed = @family.insights.find_by(dedup_key: dedup)
     assert_equal "New title", refreshed.title
     assert_equal "New body", refreshed.body
+    assert refreshed.generated_at > old_insight.generated_at, "generated_at should be updated on upsert"
   end
 end

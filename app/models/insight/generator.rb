@@ -38,7 +38,7 @@ class Insight::Generator
 
       response = llm.chat_response(
         prompt,
-        model: Provider::Openai::DEFAULT_MODEL,
+        model: Provider::Openai.effective_model,
         instructions: system_instructions
       )
 
@@ -49,7 +49,7 @@ class Insight::Generator
     end
 
     def system_instructions
-      sym = Money::Currency.new(family.currency).symbol
+      sym = currency_symbol
       <<~PROMPT
         You are a concise financial insights writer for a personal finance app.
         Write exactly 1-2 sentences in plain, conversational English.
@@ -60,5 +60,7 @@ class Insight::Generator
 
     def currency_symbol
       Money::Currency.new(family.currency).symbol
+    rescue Money::Currency::UnknownCurrency
+      family.currency
     end
 end

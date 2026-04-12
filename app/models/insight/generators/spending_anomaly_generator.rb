@@ -5,11 +5,11 @@ class Insight::Generators::SpendingAnomalyGenerator < Insight::Generator
   MIN_BASELINE_SPEND = 50    # Ignore tiny categories (noise reduction)
 
   def generate
-    baseline_period = Period.custom(
-      start_date: 3.months.ago.to_date.beginning_of_month,
-      end_date:   1.month.ago.to_date.end_of_month
-    )
     current_period = Period.current_month_for(family)
+    baseline_period = Period.custom(
+      start_date: current_period.start_date - 3.months,
+      end_date:   current_period.start_date - 1.day
+    )
 
     income_stmt = family.income_statement
 
@@ -79,7 +79,7 @@ class Insight::Generators::SpendingAnomalyGenerator < Insight::Generator
         currency:     family.currency,
         period_start: current_period.start_date,
         period_end:   current_period.end_date,
-        dedup_key:    "spending_anomaly:#{cat_id}:#{Date.current.strftime("%Y-%m")}"
+        dedup_key:    "spending_anomaly:#{cat_id}:#{current_period.start_date.strftime("%Y-%m-%d")}"
       )
     end
 

@@ -62,7 +62,7 @@ class Insight::Generators::BudgetInsightGenerator < Insight::Generator
         currency:     family.currency,
         period_start: current_period.start_date,
         period_end:   current_period.end_date,
-        dedup_key:    "#{insight_type}:#{current_period.start_date.strftime("%Y-%m")}"
+        dedup_key:    "budget_pacing:#{current_period.start_date.strftime("%Y-%m-%d")}"
       )
     ]
   end

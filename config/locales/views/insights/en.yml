@@ -22,9 +22,9 @@ en:
     cash_flow_warning:
       title: Low cash projected around %{date}
     net_worth_milestone:
-      title_ath: New all-time high net worth
+      title_30d_high: New 30-day high net worth
       title_milestone: Net worth crossed %{milestone}
-      title_both: Net worth crossed %{milestone} — new all-time high
+      title_both: Net worth crossed %{milestone} — new 30-day high
     subscription_audit:
       title: Is %{name} still active?
     savings_rate_change:

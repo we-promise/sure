@@ -7,16 +7,16 @@ class Insight::Generators::IdleCashGenerator < Insight::Generator
   def generate
     depository_accounts = family.accounts.visible.assets.where(accountable_type: "Depository")
 
-    depository_accounts.filter_map do |account|
+    active_account_ids = Entry
+      .where(account_id: depository_accounts.select(:id))
+      .where("date >= ?", IDLE_THRESHOLD_DAYS.days.ago.to_date)
+      .where(entryable_type: "Transaction")
+      .distinct
+      .pluck(:account_id)
+
+    depository_accounts.where.not(id: active_account_ids).filter_map do |account|
       balance = account.balance.to_f
       next unless balance >= IDLE_AMOUNT_THRESHOLD
-
-      recent_activity = account.entries
-        .where("date >= ?", IDLE_THRESHOLD_DAYS.days.ago.to_date)
-        .where(entryable_type: "Transaction")
-        .exists?
-
-      next if recent_activity
 
       metadata = {
         "account_id"   => account.id,
