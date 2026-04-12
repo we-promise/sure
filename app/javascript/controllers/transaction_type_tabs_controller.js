@@ -93,10 +93,6 @@ export default class extends Controller {
       if (el.name) state[el.name] = el.value
     })
 
-    // Preserve the nature hidden field
-    const natureField = form.querySelector("input[name='entry[nature]']")
-    if (natureField) state[natureField.name] = natureField.value
-
     return state
   }
 
