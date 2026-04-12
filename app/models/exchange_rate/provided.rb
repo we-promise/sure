@@ -61,7 +61,7 @@ module ExchangeRate::Provided
         if rate.nil?
           Rails.logger.warn("No exchange rate found for #{currency}/#{to} on #{date}, using 1")
         elsif rate.date != date
-          Rails.logger.warn("Fallback FX rate #{currency}/#{to}: using #{rate.date} for #{date} (gap=#{(date - rate.date).to_i}d)")
+          Rails.logger.debug("FX rate #{currency}/#{to}: using #{rate.date} for #{date} (gap=#{(date - rate.date).to_i}d)")
         end
         map[currency] = rate&.rate || 1
       end
