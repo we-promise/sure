@@ -5,25 +5,17 @@ require "test_helper"
 class Api::V1::MerchantsControllerTest < ActionDispatch::IntegrationTest
   setup do
     @user = users(:family_admin)
+    @family = @user.family
     @other_family_user = users(:empty)
 
     # Verify cross-family isolation setup is correct
     assert_not_equal @user.family_id, @other_family_user.family_id,
       "Test setup error: @other_family_user must belong to a different family"
 
-    @oauth_app = Doorkeeper::Application.create!(
-      name: "Test App",
-      redirect_uri: "https://example.com/callback",
-      scopes: "read"
-    )
+    @api_key = api_keys(:active_key) # pipelock:ignore Credential in URL
+    @read_only_api_key = api_keys(:read_only_key) # pipelock:ignore Credential in URL
 
-    @access_token = Doorkeeper::AccessToken.create!(
-      application: @oauth_app,
-      resource_owner_id: @user.id,
-      scopes: "read"
-    )
-
-    @merchant = @user.family.merchants.first || @user.family.merchants.create!(
+    @merchant = @family.merchants.first || @family.merchants.create!(
       name: "Test Merchant"
     )
   end
@@ -36,7 +28,7 @@ class Api::V1::MerchantsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "index returns user's family merchants successfully" do
-    get api_v1_merchants_url, headers: auth_headers
+    get api_v1_merchants_url, headers: api_headers(@api_key)
 
     assert_response :success
 
@@ -51,11 +43,16 @@ class Api::V1::MerchantsControllerTest < ActionDispatch::IntegrationTest
     assert merchant.key?("updated_at")
   end
 
+  test "index works with read-only API key" do
+    get api_v1_merchants_url, headers: api_headers(@read_only_api_key)
+
+    assert_response :success
+  end
+
   test "index does not return merchants from other families" do
-    # Create a merchant in another family
     other_merchant = @other_family_user.family.merchants.create!(name: "Other Merchant")
 
-    get api_v1_merchants_url, headers: auth_headers
+    get api_v1_merchants_url, headers: api_headers(@api_key)
 
     assert_response :success
     merchants = JSON.parse(response.body)
@@ -73,7 +70,7 @@ class Api::V1::MerchantsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "show returns merchant successfully" do
-    get api_v1_merchant_url(@merchant), headers: auth_headers
+    get api_v1_merchant_url(@merchant), headers: api_headers(@api_key)
 
     assert_response :success
 
@@ -83,7 +80,7 @@ class Api::V1::MerchantsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "show returns 404 for non-existent merchant" do
-    get api_v1_merchant_url(id: SecureRandom.uuid), headers: auth_headers
+    get api_v1_merchant_url(id: SecureRandom.uuid), headers: api_headers(@api_key)
 
     assert_response :not_found
   end
@@ -91,14 +88,93 @@ class Api::V1::MerchantsControllerTest < ActionDispatch::IntegrationTest
   test "show returns 404 for merchant from another family" do
     other_merchant = @other_family_user.family.merchants.create!(name: "Other Merchant")
 
-    get api_v1_merchant_url(other_merchant), headers: auth_headers
+    get api_v1_merchant_url(other_merchant), headers: api_headers(@api_key)
 
     assert_response :not_found
   end
 
+  # Create action tests
+  test "create requires authentication" do
+    post api_v1_merchants_url, params: { merchant: { name: "New Merchant" } }
+
+    assert_response :unauthorized
+  end
+
+  test "create requires read_write scope" do
+    post api_v1_merchants_url,
+         params: { merchant: { name: "New Merchant" } },
+         headers: api_headers(@read_only_api_key)
+
+    assert_response :forbidden
+  end
+
+  test "create merchant successfully" do
+    merchant_name = "New Merchant #{SecureRandom.hex(4)}"
+
+    assert_difference -> { @family.merchants.count }, 1 do
+      post api_v1_merchants_url,
+           params: { merchant: { name: merchant_name, color: "#123456" } },
+           headers: api_headers(@api_key)
+    end
+
+    assert_response :created
+
+    merchant = JSON.parse(response.body)
+    assert_equal merchant_name, merchant["name"]
+    assert_equal "#123456", merchant["color"]
+    assert_equal "FamilyMerchant", merchant["type"]
+  end
+
+  test "create merchant with auto-assigned color" do
+    merchant_name = "Auto Color Merchant #{SecureRandom.hex(4)}"
+
+    post api_v1_merchants_url,
+         params: { merchant: { name: merchant_name } },
+         headers: api_headers(@api_key)
+
+    assert_response :created
+
+    merchant = JSON.parse(response.body)
+    assert_equal merchant_name, merchant["name"]
+    assert merchant["color"].present?
+    assert_includes FamilyMerchant::COLORS, merchant["color"]
+  end
+
+  test "create merchant with website_url" do
+    merchant_name = "Website Merchant #{SecureRandom.hex(4)}"
+
+    post api_v1_merchants_url,
+         params: { merchant: { name: merchant_name, website_url: "https://example.com" } },
+         headers: api_headers(@api_key)
+
+    assert_response :created
+
+    merchant = JSON.parse(response.body)
+    assert_equal merchant_name, merchant["name"]
+    assert_equal "https://example.com", merchant["website_url"]
+  end
+
+  test "create fails with duplicate name in same family" do
+    post api_v1_merchants_url,
+         params: { merchant: { name: @merchant.name } },
+         headers: api_headers(@api_key)
+
+    assert_response :unprocessable_entity
+  end
+
+  test "create fails without name" do
+    assert_no_difference -> { @family.merchants.count } do
+      post api_v1_merchants_url,
+           params: { merchant: { color: "#123456" } },
+           headers: api_headers(@api_key)
+    end
+
+    assert_response :unprocessable_entity
+  end
+
   private
 
-    def auth_headers
-      { "Authorization" => "Bearer #{@access_token.token}" }
+    def api_headers(api_key)
+      { "X-Api-Key" => api_key.display_key }
     end
 end
