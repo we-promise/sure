@@ -227,6 +227,16 @@ Rails.application.routes.draw do
     delete :destroy_all, on: :collection
   end
 
+  resources :insights, only: %i[index] do
+    member do
+      patch :read
+      patch :dismiss
+    end
+    collection do
+      post :refresh
+    end
+  end
+
   resources :reports, only: %i[index] do
     patch :update_preferences, on: :collection
     get :export_transactions, on: :collection

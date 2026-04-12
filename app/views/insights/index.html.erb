@@ -1,0 +1,30 @@
+<% content_for :page_header do %>
+  <header class="flex justify-between items-center text-primary font-medium gap-4 mb-6">
+    <div class="space-y-1">
+      <h1 class="text-xl lg:text-3xl font-medium text-primary">
+        <%= t("insights.index.title") %>
+      </h1>
+      <p class="text-sm lg:text-base text-secondary">
+        <%= t("insights.index.subtitle") %>
+      </p>
+    </div>
+
+    <%= button_to t("insights.index.refresh"), refresh_insights_path,
+          method: :post,
+          class: "font-medium whitespace-nowrap inline-flex items-center gap-1 rounded-lg px-3 py-2 text-sm text-primary border border-secondary bg-transparent hover:bg-surface-hover" %>
+  </header>
+<% end %>
+
+<div class="max-w-2xl space-y-3">
+  <% if @insights.any? %>
+    <% @insights.each do |insight| %>
+      <%= render "insights/insight_card", insight: insight, compact: false %>
+    <% end %>
+  <% else %>
+    <div class="bg-container rounded-xl p-12 text-center space-y-3">
+      <%= render DS::FilledIcon.new(variant: :container, icon: "lightbulb") %>
+      <p class="text-primary font-medium"><%= t("insights.empty.title") %></p>
+      <p class="text-secondary text-sm"><%= t("insights.empty.body") %></p>
+    </div>
+  <% end %>
+</div>

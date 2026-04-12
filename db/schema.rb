@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_04_11_082125) do
+ActiveRecord::Schema[7.2].define(version: 2026_04_12_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -801,6 +801,28 @@ ActiveRecord::Schema[7.2].define(version: 2026_04_11_082125) do
     t.text "api_token"
     t.index ["family_id"], name: "index_indexa_capital_items_on_family_id"
     t.index ["status"], name: "index_indexa_capital_items_on_status"
+  end
+
+  create_table "insights", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "family_id", null: false
+    t.string "insight_type", null: false
+    t.string "priority", null: false, default: "medium"
+    t.string "status", null: false, default: "active"
+    t.string "title", null: false
+    t.text "body", null: false
+    t.jsonb "metadata", null: false, default: {}
+    t.string "currency", null: false, default: "USD"
+    t.date "period_start"
+    t.date "period_end"
+    t.datetime "generated_at", null: false, default: -> { "CURRENT_TIMESTAMP" }
+    t.datetime "read_at"
+    t.datetime "dismissed_at"
+    t.string "dedup_key", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["family_id", "dedup_key"], name: "index_insights_on_family_id_and_dedup_key", unique: true
+    t.index ["family_id", "generated_at"], name: "index_insights_on_family_id_and_generated_at"
+    t.index ["family_id", "status"], name: "index_insights_on_family_id_and_status"
   end
 
   create_table "investments", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1621,6 +1643,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_04_11_082125) do
   add_foreign_key "impersonation_sessions", "users", column: "impersonator_id"
   add_foreign_key "import_rows", "imports"
   add_foreign_key "imports", "families"
+  add_foreign_key "insights", "families"
   add_foreign_key "indexa_capital_accounts", "indexa_capital_items"
   add_foreign_key "indexa_capital_items", "families"
   add_foreign_key "invitations", "families"

@@ -1,0 +1,16 @@
+<%# locals: (insights:, **) %>
+
+<div class="px-4 space-y-3">
+  <% if insights.any? %>
+    <% insights.each do |insight| %>
+      <%= render "insights/insight_card", insight: insight, compact: true %>
+    <% end %>
+
+    <%= link_to t("insights.view_all"), insights_path,
+          class: "text-sm text-accent hover:text-accent font-medium" %>
+  <% else %>
+    <p class="text-secondary text-sm py-4 text-center">
+      <%= t("insights.empty_dashboard") %>
+    </p>
+  <% end %>
+</div>
