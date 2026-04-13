@@ -18,7 +18,7 @@ class PagesController < ApplicationController
     # Use IncomeStatement for all cashflow data (now includes categorized trades)
     selected_account_id = params[:account_id].presence
     if selected_account_id
-      account = Current.user.accessible_accounts.find_by(id: selected_account_id)
+      account = Current.user.finance_accounts.find_by(id: selected_account_id)
       account_ids = account ? [ account.id ] : nil
     else
       account_ids = nil
