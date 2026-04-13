@@ -16,8 +16,13 @@ class PagesController < ApplicationController
     family_currency = Current.family.currency
 
     # Use IncomeStatement for all cashflow data (now includes categorized trades)
-    selected_account_id = params[:account_id]
-    account_ids = selected_account_id.present? ? [ selected_account_id ] : nil
+    selected_account_id = params[:account_id].presence
+    if selected_account_id
+      account = Current.user.accessible_accounts.find_by(id: selected_account_id)
+      account_ids = account ? [account.id] : nil
+    else
+      account_ids = nil
+    end
     income_statement = Current.family.income_statement(user: Current.user, account_ids: account_ids)
     income_totals = income_statement.income_totals(period: @period)
     expense_totals = income_statement.expense_totals(period: @period)

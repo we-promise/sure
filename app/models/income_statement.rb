@@ -7,6 +7,12 @@ class IncomeStatement
 
   attr_reader :family, :user
 
+  def initialize(family, user: nil, account_ids: nil)
+    @family = family
+    @user = user || Current.user
+    @forced_account_ids = account_ids
+  end
+
   def totals(transactions_scope: nil, date_range:)
     # Default to excluding pending transactions from budget/analytics calculations
     # Pending transactions shouldn't affect budget totals until they post
@@ -180,12 +186,6 @@ class IncomeStatement
       @category_stats[interval] ||= Rails.cache.fetch([
         "income_statement", "category_stats", family.id, user&.id, interval, included_account_ids_hash, family.entries_cache_version
       ]) { CategoryStats.new(family, interval:, account_ids: included_account_ids).call }
-    end
-
-    def initialize(family, user: nil, account_ids: nil)
-      @family = family
-      @user = user || Current.user
-      @forced_account_ids = account_ids
     end
 
     def included_account_ids
