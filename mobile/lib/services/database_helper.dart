@@ -63,8 +63,9 @@ class DatabaseHelper {
 
       return await openDatabase(
         path,
-        version: 1,
+        version: 2,
         onCreate: _createDB,
+        onUpgrade: _upgradeDB,
       );
     } catch (e, stackTrace) {
       _log.error('DatabaseHelper', 'Error opening database file "$filePath": $e');
@@ -94,6 +95,8 @@ class DatabaseHelper {
           currency TEXT NOT NULL,
           nature TEXT NOT NULL,
           notes TEXT,
+          category_id TEXT,
+          category_name TEXT,
           sync_status TEXT NOT NULL,
           created_at TEXT NOT NULL,
           updated_at TEXT NOT NULL
@@ -145,6 +148,19 @@ class DatabaseHelper {
         ),
       );
       rethrow;
+    }
+  }
+
+  Future<void> _upgradeDB(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      final columns = await db.rawQuery('PRAGMA table_info(transactions)');
+      final columnNames = columns.map((c) => c['name'] as String).toSet();
+      if (!columnNames.contains('category_id')) {
+        await db.execute('ALTER TABLE transactions ADD COLUMN category_id TEXT');
+      }
+      if (!columnNames.contains('category_name')) {
+        await db.execute('ALTER TABLE transactions ADD COLUMN category_name TEXT');
+      }
     }
   }
 
