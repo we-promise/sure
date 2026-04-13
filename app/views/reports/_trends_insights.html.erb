@@ -21,7 +21,7 @@
             </thead>
             <tbody class="text-secondary text-sm">
               <% trends_data.each_with_index do |trend, idx| %>
-                <tr class="<%= idx < trends_data.size - 1 ? "border-b border-divider" : "" %>">
+                <tr class="<%= idx < trends_data.size - 1 ? "table-divider" : "" %>">
                   <td class="py-3 px-4 lg:px-6">
                     <span class="flex items-center gap-2 <%= trend[:is_current_month] ? "font-medium" : "" %>">
                       <%= trend[:month] %>

@@ -4,7 +4,7 @@
   show_border = local_assigns.fetch(:show_border, false)
 %>
 
-<tr data-category="category-<%= item[:category_id] %>" class="text-secondary text-sm <%= show_border ? "border-b border-divider" : "" %>">
+<tr data-category="category-<%= item[:category_id] %>" class="text-secondary text-sm <%= show_border ? "table-divider" : "" %>">
   <td colspan="2" class="py-3 px-4 lg:px-6 <%= is_sub ? "pl-7 lg:pl-9" : "" %>">
     <div class="flex items-center gap-2">
       <% if is_sub %>
