@@ -8,9 +8,6 @@
           { label: t(".language"), include_blank: t(".language_auto") },
           { data: { auto_submit_form_target: "auto" } } %>
       <%= form.fields_for :family do |family_form| %>
-        <%= family_form.select :currency,
-            Money::Currency.as_options.map { |currency| [ "#{currency.name} (#{currency.iso_code})", currency.iso_code ] },
-            { label: t(".currency") }, disabled: true %>
         <%= family_form.select :timezone,
             timezone_options,
             { label: t(".timezone") },
@@ -46,7 +43,7 @@
   </div>
 <% end %>
 <% if Current.user.admin? %>
-  <%= settings_section title: t(".currencies_title"), subtitle: t(".currencies_subtitle") do %>
+  <%= settings_section title: t(".currencies_title", moniker: family_moniker), subtitle: t(".currencies_subtitle", moniker: family_moniker_downcase) do %>
     <div class="space-y-4"
          data-controller="currency-preferences"
          data-currency-preferences-base-currency-value="<%= @user.family.primary_currency_code %>">
