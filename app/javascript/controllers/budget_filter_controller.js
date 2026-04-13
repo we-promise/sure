@@ -32,7 +32,8 @@ export default class extends Controller {
 
     this.tabTargets.forEach((tab) => {
       const isActive = tab.dataset.budgetFilterFilterParam === filter;
-      tab.classList.toggle("bg-container", isActive);
+      tab.classList.toggle("bg-white", isActive);
+      tab.classList.toggle("theme-dark:bg-gray-700", isActive);
       tab.classList.toggle("text-primary", isActive);
       tab.classList.toggle("shadow-sm", isActive);
       tab.classList.toggle("text-secondary", !isActive);
