@@ -3,8 +3,10 @@
   label = entryable.investment_activity_label
   has_label = label.present?
 
+  is_trade = entryable.is_a?(Trade)
+  is_transaction = entryable.is_a?(Transaction)
   # Build the correct URL based on entryable type
-  update_url = entryable.is_a?(Transaction) ? transaction_path(entry) : trade_path(entry)
+  update_url = is_transaction ? transaction_path(entry) : trade_path(entry)
 
   # Color mapping for different investment activity labels using design system tokens
   color = if has_label
@@ -32,10 +34,10 @@
     "var(--color-gray-400)" # slightly lighter for empty state
   end
 
-  activity_labels = entryable.is_a?(Trade) ? Trade::ACTIVITY_LABELS : Transaction::ACTIVITY_LABELS
-  entryable_type = entryable.is_a?(Trade) ? "Trade" : "Transaction"
-  convert_url = entryable.is_a?(Transaction) ? convert_to_trade_transaction_path(entryable) : nil
-  income_trade = entryable.is_a?(Trade) && %w[Dividend Interest].include?(label)
+  activity_labels = is_trade ? Trade::ACTIVITY_LABELS : Transaction::ACTIVITY_LABELS
+  entryable_type = is_trade ? "Trade" : "Transaction"
+  convert_url = is_transaction ? convert_to_trade_transaction_path(entryable) : nil
+  income_trade = is_trade && %w[Dividend Interest].include?(label)
 %>
 
 <div class="relative"
