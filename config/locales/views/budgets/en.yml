@@ -5,6 +5,20 @@ en:
       custom_range: "%{start} - %{end_date}"
       month_year: "%{month}"
     show:
+      categories:
+        amount: Amount
+        edit: Edit
+        title: Categories
+      on_track_categories:
+        short_title: On Track
+        title: On Track
+      over_budget_categories:
+        short_title: Over Budget
+        title: Over Budget
+      filter:
+        all: All
+        on_track: On Track
+        over_budget: Over Budget
       tabs:
         actual: Actual
         budgeted: Budgeted
