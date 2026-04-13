@@ -1,5 +1,5 @@
 import { Controller } from "@hotwired/stimulus"
-import parseLocaleFloat from "utils/parse_locale_float"
+import parseLocaleFloat from "./utils/parse_locale_float"
 
 // Handles the inline cost basis editor in the holding drawer.
 // Shows/hides the form and handles bidirectional total <-> per-share conversion.

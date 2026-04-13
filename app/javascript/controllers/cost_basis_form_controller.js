@@ -1,5 +1,5 @@
 import { Controller } from "@hotwired/stimulus"
-import parseLocaleFloat from "utils/parse_locale_float"
+import parseLocaleFloat from "./utils/parse_locale_float"
 
 // Handles bidirectional conversion between total cost basis and per-share cost
 // in the manual cost basis entry form.
