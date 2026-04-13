@@ -40,7 +40,7 @@
           </thead>
           <tbody class="font-medium text-sm">
             <% holdings.each_with_index do |holding, idx| %>
-              <tr class="<%= idx < holdings.size - 1 ? "border-b border-divider" : "" %>">
+              <tr class="<%= idx < holdings.size - 1 ? "table-divider" : "" %>">
                 <td class="p-4">
                   <div class="flex items-center gap-3">
                     <% if holding.security.logo_url.present? %>
