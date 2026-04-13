@@ -1,5 +1,8 @@
 <%# locals: (entry:) %>
-<% transaction = entry.entryable %>
+<% 
+  transaction = entry.entryable
+  logo_url = transaction.merchant&.logo_url.presence 
+%>
 
 <div class="group flex lg:grid lg:grid-cols-12 items-center text-sm font-medium p-3 lg:p-4 opacity-50 text-secondary">
   <div class="pr-4 lg:pr-10 flex items-center gap-3 lg:gap-4 col-span-8 min-w-0">
@@ -8,21 +11,11 @@
 
     <div class="max-w-full">
       <div class="flex items-center gap-3 lg:gap-4">
-        <div class="hidden lg:flex">
-          <% if transaction.merchant&.logo_url.present? %>
-            <%= image_tag Setting.transform_brand_fetch_url(transaction.merchant.logo_url),
-                class: "w-9 h-9 rounded-full border border-secondary",
-                loading: "lazy" %>
-          <% else %>
-            <div class="hidden lg:flex">
-              <%= render DS::FilledIcon.new(
-                variant: :text,
-                text: entry.name,
-                size: "lg",
-                rounded: true
-              ) %>
-            </div>
-          <% end %>
+        <div class="hidden md:flex">
+          <%= render "entries/logo", name: entry.name, logo_url: logo_url, size: :lg %>
+        </div>
+        <div class="md:hidden">
+          <%= render "entries/logo", name: entry.name, logo_url: logo_url, size: :md %>
         </div>
 
         <div class="truncate">
