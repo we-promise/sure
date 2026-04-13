@@ -218,6 +218,10 @@
   background-color: var(--color-alpha-black-100);
 }
 
+[data-theme="dark"] .table-divider::after  {
+  background-color: var(--color-alpha-white-200);
+}
+
 .table-divider:last-child::after {
   display: none;
 }
