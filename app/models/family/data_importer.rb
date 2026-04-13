@@ -1,6 +1,15 @@
 class Family::DataImporter
-  SUPPORTED_TYPES = %w[Account Category Tag Merchant Transaction Trade Valuation Budget BudgetCategory Rule].freeze
+  SUPPORTED_TYPES = %w[Account Category Tag Merchant Transaction Trade Valuation Budget BudgetCategory].freeze
   ACCOUNTABLE_TYPES = Accountable::TYPES.freeze
+
+  # Accountable attributes that should be copied from export data (beyond subtype/locked_attributes)
+  ACCOUNTABLE_IMPORT_ATTRS = {
+    "CreditCard" => %w[available_credit minimum_payment apr annual_fee],
+    "Property" => %w[year_built area_value area_unit],
+    "Loan" => %w[rate_type interest_rate term_months initial_balance],
+    "Vehicle" => %w[year mileage_value mileage_unit make model],
+    "Crypto" => %w[tax_treatment]
+  }.freeze
 
   def initialize(family, ndjson_content)
     @family = family
@@ -15,26 +24,41 @@ class Family::DataImporter
     }
     @created_accounts = []
     @created_entries = []
+    @errors = []
   end
 
   def import!
     records = parse_ndjson
 
     Import.transaction do
-      # Import in dependency order
+      # Accounts must all succeed — everything else depends on them
       import_accounts(records["Account"] || [])
-      import_categories(records["Category"] || [])
-      import_tags(records["Tag"] || [])
-      import_merchants(records["Merchant"] || [])
-      import_transactions(records["Transaction"] || [])
-      import_trades(records["Trade"] || [])
-      import_valuations(records["Valuation"] || [])
-      import_budgets(records["Budget"] || [])
-      import_budget_categories(records["BudgetCategory"] || [])
-      import_rules(records["Rule"] || [])
+
+      # Standalone resources: lenient — skip individual failures, keep going
+      import_standalone(:categories, records["Category"] || []) { |r| import_single_category(r) }
+      link_category_parents
+      import_standalone(:tags, records["Tag"] || []) { |r| import_single_tag(r) }
+      import_standalone(:merchants, records["Merchant"] || []) { |r| import_single_merchant(r) }
+
+      # Batch sections: all-or-nothing per section via savepoint
+      import_batch(:transactions, records["Transaction"] || []) { |recs| import_all_transactions(recs) }
+      import_batch(:trades, records["Trade"] || []) { |recs| import_all_trades(recs) }
+      import_batch(:valuations, records["Valuation"] || []) { |recs| import_all_valuations(recs) }
+
+      # Budgets: standalone (no financial impact if one month is missing)
+      import_standalone(:budgets, records["Budget"] || []) { |r| import_single_budget(r) }
+      import_standalone(:budget_categories, records["BudgetCategory"] || []) { |r| import_single_budget_category(r) }
     end
 
-    { accounts: @created_accounts, entries: @created_entries }
+    {
+      accounts: @created_accounts,
+      entries: @created_entries,
+      category_ids: @id_mappings[:categories].values,
+      tag_ids: @id_mappings[:tags].values,
+      merchant_ids: @id_mappings[:merchants].values,
+      budget_ids: @id_mappings[:budgets].values,
+      errors: @errors
+    }
   end
 
   private
@@ -59,6 +83,34 @@ class Family::DataImporter
       records
     end
 
+    # ── Error handling helpers ──────────────────────────────────────────
+
+    # Standalone resources: try each record individually, skip on failure.
+    # Good for categories, tags, merchants — one failure shouldn't block the rest.
+    def import_standalone(section, records, &block)
+      records.each do |record|
+        block.call(record)
+      rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotUnique => e
+        label = record.dig("data", "name") || record.dig("data", "id") || "unknown"
+        @errors << { section: section, record: label, error: e.message }
+      end
+    end
+
+    # Batch sections: all-or-nothing via savepoint.
+    # If ANY record fails, the entire section rolls back and the error is recorded.
+    # Good for transactions/trades/valuations — partial import is worse than none.
+    def import_batch(section, records, &block)
+      return if records.empty?
+
+      Import.transaction(requires_new: true) do
+        block.call(records)
+      end
+    rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotUnique, ActiveRecord::StatementInvalid => e
+      @errors << { section: section, record: "entire section (#{records.size} records)", error: e.message }
+    end
+
+    # ── Accounts (must succeed) ────────────────────────────────────────
+
     def import_accounts(records)
       records.each do |record|
         data = record["data"]
@@ -66,18 +118,19 @@ class Family::DataImporter
         accountable_data = data["accountable"] || {}
         accountable_type = data["accountable_type"]
 
-        # Skip if accountable type is not valid
         next unless ACCOUNTABLE_TYPES.include?(accountable_type)
 
-        # Build accountable
         accountable_class = accountable_type.constantize
         accountable = accountable_class.new
-        accountable.subtype = accountable_data["subtype"] if accountable.respond_to?(:subtype=) && accountable_data["subtype"]
 
-        # Copy any other accountable attributes
-        safe_accountable_attrs = %w[subtype locked_attributes]
-        safe_accountable_attrs.each do |attr|
+        %w[subtype locked_attributes].each do |attr|
           if accountable.respond_to?("#{attr}=") && accountable_data[attr].present?
+            accountable.send("#{attr}=", accountable_data[attr])
+          end
+        end
+
+        (ACCOUNTABLE_IMPORT_ATTRS[accountable_type] || []).each do |attr|
+          if accountable.respond_to?("#{attr}=") && !accountable_data[attr].nil?
             accountable.send("#{attr}=", accountable_data[attr])
           end
         end
@@ -87,6 +140,7 @@ class Family::DataImporter
           balance: data["balance"].to_d,
           cash_balance: data["cash_balance"]&.to_d || data["balance"].to_d,
           currency: data["currency"] || @family.currency,
+          classification: data["classification"],
           accountable: accountable,
           subtype: data["subtype"],
           institution_name: data["institution_name"],
@@ -97,110 +151,82 @@ class Family::DataImporter
 
         account.save!
 
-        # Set opening balance if we have a historical balance
-        if data["balance"].present?
-          manager = Account::OpeningBalanceManager.new(account)
-          manager.set_opening_balance(balance: data["balance"].to_d)
-        end
-
         @id_mappings[:accounts][old_id] = account.id
         @created_accounts << account
       end
     end
 
-    def import_categories(records)
-      # First pass: create all categories without parent relationships
-      parent_mappings = {}
+    # ── Standalone: categories, tags, merchants ────────────────────────
 
-      records.each do |record|
-        data = record["data"]
-        old_id = data["id"]
-        parent_id = data["parent_id"]
+    def import_single_category(record)
+      data = record["data"]
+      old_id = data["id"]
 
-        # Store parent relationship for second pass
-        parent_mappings[old_id] = parent_id if parent_id.present?
+      # Store parent mapping for second pass (set as instance var)
+      @category_parent_mappings ||= {}
+      @category_parent_mappings[old_id] = data["parent_id"] if data["parent_id"].present?
 
-        category = @family.categories.build(
-          name: data["name"],
-          color: data["color"] || Category::UNCATEGORIZED_COLOR,
-          classification_unused: data["classification_unused"] || data["classification"] || "expense",
-          lucide_icon: data["lucide_icon"] || "shapes"
-        )
+      category = @family.categories.find_or_initialize_by(name: data["name"])
+      category.assign_attributes(
+        color: data["color"] || Category::UNCATEGORIZED_COLOR,
+        classification_unused: data["classification_unused"] || data["classification"] || "expense",
+        lucide_icon: data["lucide_icon"] || "shapes"
+      )
+      category.save!
 
-        category.save!
-        @id_mappings[:categories][old_id] = category.id
-      end
+      @id_mappings[:categories][old_id] = category.id
+    end
 
-      # Second pass: establish parent relationships
-      parent_mappings.each do |old_id, old_parent_id|
+    def link_category_parents
+      (@category_parent_mappings || {}).each do |old_id, old_parent_id|
         new_id = @id_mappings[:categories][old_id]
         new_parent_id = @id_mappings[:categories][old_parent_id]
-
         next unless new_id && new_parent_id
 
-        category = @family.categories.find(new_id)
-        category.update!(parent_id: new_parent_id)
+        category = @family.categories.find_by(id: new_id)
+        category&.update(parent_id: new_parent_id)
       end
     end
 
-    def import_tags(records)
-      records.each do |record|
-        data = record["data"]
-        old_id = data["id"]
+    def import_single_tag(record)
+      data = record["data"]
+      old_id = data["id"]
 
-        tag = @family.tags.build(
-          name: data["name"],
-          color: data["color"] || Tag::COLORS.sample
-        )
+      tag = @family.tags.find_or_initialize_by(name: data["name"])
+      tag.color = data["color"] || tag.color || Tag::COLORS.sample
+      tag.save!
 
-        tag.save!
-        @id_mappings[:tags][old_id] = tag.id
-      end
+      @id_mappings[:tags][old_id] = tag.id
     end
 
-    def import_merchants(records)
-      records.each do |record|
-        data = record["data"]
-        old_id = data["id"]
+    def import_single_merchant(record)
+      data = record["data"]
+      old_id = data["id"]
 
-        merchant = @family.merchants.build(
-          name: data["name"],
-          color: data["color"],
-          logo_url: data["logo_url"]
-        )
+      merchant = @family.merchants.find_or_initialize_by(name: data["name"])
+      merchant.assign_attributes(
+        color: data["color"] || merchant.color,
+        logo_url: data["logo_url"] || merchant.logo_url
+      )
+      merchant.save!
 
-        merchant.save!
-        @id_mappings[:merchants][old_id] = merchant.id
-      end
+      @id_mappings[:merchants][old_id] = merchant.id
     end
 
-    def import_transactions(records)
+    # ── Batch: transactions ────────────────────────────────────────────
+
+    def import_all_transactions(records)
       records.each do |record|
         data = record["data"]
 
-        # Map account ID
         new_account_id = @id_mappings[:accounts][data["account_id"]]
         next unless new_account_id
 
         account = @family.accounts.find(new_account_id)
 
-        # Map category ID (optional)
-        new_category_id = nil
-        if data["category_id"].present?
-          new_category_id = @id_mappings[:categories][data["category_id"]]
-        end
-
-        # Map merchant ID (optional)
-        new_merchant_id = nil
-        if data["merchant_id"].present?
-          new_merchant_id = @id_mappings[:merchants][data["merchant_id"]]
-        end
-
-        # Map tag IDs (optional)
-        new_tag_ids = []
-        if data["tag_ids"].present?
-          new_tag_ids = Array(data["tag_ids"]).map { |old_tag_id| @id_mappings[:tags][old_tag_id] }.compact
-        end
+        new_category_id = data["category_id"].present? ? @id_mappings[:categories][data["category_id"]] : nil
+        new_merchant_id = data["merchant_id"].present? ? @id_mappings[:merchants][data["merchant_id"]] : nil
+        new_tag_ids = Array(data["tag_ids"]).filter_map { |old_tag_id| @id_mappings[:tags][old_tag_id] }
 
         transaction = Transaction.new(
           category_id: new_category_id,
@@ -221,7 +247,6 @@ class Family::DataImporter
 
         entry.save!
 
-        # Add tags through the tagging association
         new_tag_ids.each do |tag_id|
           transaction.taggings.create!(tag_id: tag_id)
         end
@@ -230,17 +255,17 @@ class Family::DataImporter
       end
     end
 
-    def import_trades(records)
+    # ── Batch: trades ──────────────────────────────────────────────────
+
+    def import_all_trades(records)
       records.each do |record|
         data = record["data"]
 
-        # Map account ID
         new_account_id = @id_mappings[:accounts][data["account_id"]]
         next unless new_account_id
 
         account = @family.accounts.find(new_account_id)
 
-        # Resolve or create security
         ticker = data["ticker"]
         next unless ticker.present?
 
@@ -267,11 +292,12 @@ class Family::DataImporter
       end
     end
 
-    def import_valuations(records)
+    # ── Batch: valuations ──────────────────────────────────────────────
+
+    def import_all_valuations(records)
       records.each do |record|
         data = record["data"]
 
-        # Map account ID
         new_account_id = @id_mappings[:accounts][data["account_id"]]
         next unless new_account_id
 
@@ -293,172 +319,47 @@ class Family::DataImporter
       end
     end
 
-    def import_budgets(records)
-      records.each do |record|
-        data = record["data"]
-        old_id = data["id"]
+    # ── Standalone: budgets ────────────────────────────────────────────
 
-        budget = @family.budgets.build(
-          start_date: Date.parse(data["start_date"].to_s),
-          end_date: Date.parse(data["end_date"].to_s),
-          budgeted_spending: data["budgeted_spending"]&.to_d,
-          expected_income: data["expected_income"]&.to_d,
-          currency: data["currency"] || @family.currency
-        )
+    def import_single_budget(record)
+      data = record["data"]
+      old_id = data["id"]
 
-        budget.save!
-        @id_mappings[:budgets][old_id] = budget.id
-      end
-    end
-
-    def import_budget_categories(records)
-      records.each do |record|
-        data = record["data"]
-
-        # Map budget ID
-        new_budget_id = @id_mappings[:budgets][data["budget_id"]]
-        next unless new_budget_id
-
-        # Map category ID
-        new_category_id = @id_mappings[:categories][data["category_id"]]
-        next unless new_category_id
-
-        budget = @family.budgets.find(new_budget_id)
-
-        budget_category = budget.budget_categories.build(
-          category_id: new_category_id,
-          budgeted_spending: data["budgeted_spending"].to_d,
-          currency: data["currency"] || budget.currency
-        )
-
-        budget_category.save!
-      end
-    end
-
-    def import_rules(records)
-      records.each do |record|
-        data = record["data"]
-
-        rule = @family.rules.build(
-          name: data["name"],
-          resource_type: data["resource_type"] || "transaction",
-          active: data["active"] || false,
-          effective_date: data["effective_date"].present? ? Date.parse(data["effective_date"].to_s) : nil
-        )
-
-        # Build conditions
-        (data["conditions"] || []).each do |condition_data|
-          build_rule_condition(rule, condition_data)
-        end
-
-        # Build actions
-        (data["actions"] || []).each do |action_data|
-          build_rule_action(rule, action_data)
-        end
-
-        rule.save!
-      end
-    end
-
-    def build_rule_condition(rule, condition_data, parent: nil)
-      value = resolve_rule_condition_value(condition_data)
-
-      condition = if parent
-        parent.sub_conditions.build(
-          condition_type: condition_data["condition_type"],
-          operator: condition_data["operator"],
-          value: value
-        )
-      else
-        rule.conditions.build(
-          condition_type: condition_data["condition_type"],
-          operator: condition_data["operator"],
-          value: value
-        )
-      end
-
-      # Handle nested sub_conditions for compound conditions
-      (condition_data["sub_conditions"] || []).each do |sub_condition_data|
-        build_rule_condition(rule, sub_condition_data, parent: condition)
-      end
-
-      condition
-    end
-
-    def build_rule_action(rule, action_data)
-      value = resolve_rule_action_value(action_data)
-
-      rule.actions.build(
-        action_type: action_data["action_type"],
-        value: value
+      budget = @family.budgets.build(
+        start_date: Date.parse(data["start_date"].to_s),
+        end_date: Date.parse(data["end_date"].to_s),
+        budgeted_spending: data["budgeted_spending"]&.to_d,
+        expected_income: data["expected_income"]&.to_d,
+        currency: data["currency"] || @family.currency
       )
+
+      budget.save!
+      @id_mappings[:budgets][old_id] = budget.id
     end
 
-    def resolve_rule_condition_value(condition_data)
-      condition_type = condition_data["condition_type"]
-      value = condition_data["value"]
+    def import_single_budget_category(record)
+      data = record["data"]
 
-      return value unless value.present?
+      new_budget_id = @id_mappings[:budgets][data["budget_id"]]
+      return unless new_budget_id
 
-      # Map category names to IDs
-      if condition_type == "transaction_category"
-        category = @family.categories.find_by(name: value)
-        category ||= @family.categories.create!(
-          name: value,
-          color: Category::UNCATEGORIZED_COLOR,
-          classification_unused: "expense",
-          lucide_icon: "shapes"
-        )
-        return category.id
-      end
+      new_category_id = @id_mappings[:categories][data["category_id"]]
+      return unless new_category_id
 
-      # Map merchant names to IDs
-      if condition_type == "transaction_merchant"
-        merchant = @family.merchants.find_by(name: value)
-        merchant ||= @family.merchants.create!(name: value)
-        return merchant.id
-      end
+      budget = @family.budgets.find(new_budget_id)
 
-      value
+      budget_category = budget.budget_categories.build(
+        category_id: new_category_id,
+        budgeted_spending: data["budgeted_spending"].to_d,
+        currency: data["currency"] || budget.currency
+      )
+
+      budget_category.save!
     end
 
-    def resolve_rule_action_value(action_data)
-      action_type = action_data["action_type"]
-      value = action_data["value"]
-
-      return value unless value.present?
-
-      # Map category names to IDs
-      if action_type == "set_transaction_category"
-        category = @family.categories.find_by(name: value)
-        category ||= @family.categories.create!(
-          name: value,
-          color: Category::UNCATEGORIZED_COLOR,
-          classification_unused: "expense",
-          lucide_icon: "shapes"
-        )
-        return category.id
-      end
-
-      # Map merchant names to IDs
-      if action_type == "set_transaction_merchant"
-        merchant = @family.merchants.find_by(name: value)
-        merchant ||= @family.merchants.create!(name: value)
-        return merchant.id
-      end
-
-      # Map tag names to IDs
-      if action_type == "set_transaction_tags"
-        tag = @family.tags.find_by(name: value)
-        tag ||= @family.tags.create!(name: value)
-        return tag.id
-      end
-
-      value
-    end
+    # ── Helpers ────────────────────────────────────────────────────────
 
     def find_or_create_security(ticker, currency)
-      # Check cache first
       cache_key = "#{ticker}:#{currency}"
       return @id_mappings[:securities][cache_key] if @id_mappings[:securities][cache_key]
 
