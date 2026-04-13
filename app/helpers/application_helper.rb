@@ -144,6 +144,20 @@ module ApplicationHelper
     markdown.render(text).html_safe
   end
 
+  def stripe_one_time_contribution_text(url)
+    return t("settings.payments.show.payment_via_stripe") if url.blank?
+
+    contribution_link = link_to(
+      t("settings.payments.show.one_time_contribution_link_text"),
+      url,
+      class: "font-medium text-primary hover:underline transition",
+      target: "_blank",
+      rel: "noopener noreferrer"
+    )
+
+    t("settings.payments.show.payment_via_stripe_html", contribution_link: contribution_link)
+  end
+
   # Generate the callback URL for Enable Banking OAuth (used in views and controller).
   # In production, uses the standard Rails route.
   # In development, uses DEV_WEBHOOKS_URL if set (e.g., ngrok URL).

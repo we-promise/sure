@@ -45,6 +45,10 @@
       </div>
 
       <div class="text-center space-y-2">
+        <p class="text-sm text-secondary">
+          <%= stripe_one_time_contribution_text(@one_time_contribution_url) %>
+        </p>
+
         <%= render DS::Button.new(
           text: t("subscriptions.upgrade.contribute_and_support_sure"),
           variant: "primary",

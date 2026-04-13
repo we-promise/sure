@@ -59,7 +59,9 @@
 
     <div class="flex items-center gap-2">
       <%= image_tag "stripe-logo.svg", class: "w-5 h-5 shrink-0" %>
-      <p class="text-secondary text-sm">Payment via Stripe</p>
+      <p class="text-secondary text-sm">
+        <%= stripe_one_time_contribution_text(@one_time_contribution_url) %>
+      </p>
     </div>
   </div>
 <% end %>
