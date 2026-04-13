@@ -8,6 +8,7 @@ json.name trade.entry.name
 json.notes trade.entry.notes
 json.qty trade.qty
 json.price trade.price_money.format
+json.fee trade.fee_money.format
 json.investment_activity_label trade.investment_activity_label
 
 json.account do
