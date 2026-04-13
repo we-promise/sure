@@ -1,5 +1,9 @@
-<%# locals: (category:) %>
+<%# locals: (category:, truncate_width: 0 ) %>
+
 <% category ||= Category.uncategorized %>
+<% should_truncate = truncate_width.to_i > 0 %>
+<% text_classes = should_truncate ? "truncate" : "" %>
+<% max_width_style = should_truncate ? "max-width: #{truncate_width}px;" : "" %>
 
 <div>
   <span class="flex items-center gap-1 text-sm font-medium rounded-full px-1.5 py-1 border truncate focus-visible:outline-none focus-visible:ring-0"
@@ -10,6 +14,11 @@
     <% if category.lucide_icon.present? %>
       <%= icon category.lucide_icon, size: "sm", color: "current" %>
     <% end %>
-    <%= category.name %>
+    <span
+      class="<%= text_classes %>"
+      style="<%= max_width_style %>"
+      <%= "title='#{category.name}'" if should_truncate %>>
+      <%= category.name %>
+    </span>
   </span>
 </div>

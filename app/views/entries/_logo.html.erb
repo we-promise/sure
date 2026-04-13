@@ -1,0 +1,25 @@
+<%# locals: (name:, logo_url: nil, size: :lg, add_cls_attr: nil) %>
+
+<% config = DS::FilledIcon::SIZES.fetch(size, DS::FilledIcon::SIZES[:lg]) %>
+
+<% classes = [
+  config[:container_size],
+  "rounded-full border border-secondary object-cover",
+  add_cls_attr
+].compact.join(" ") %>
+
+<% if logo_url %>
+  <%= image_tag Setting.transform_brand_fetch_url(logo_url),
+      class: classes,
+      loading: "lazy",
+      onerror: "this.style.display='none'" %>
+<% else %>
+  <div class="<%= config[:container_size] %> flex items-center justify-center">
+    <%= render DS::FilledIcon.new(
+      variant: :text,
+      text: name,
+      size: size,
+      rounded: true
+    ) %>
+  </div>
+<% end %>

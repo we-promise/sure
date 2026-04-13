@@ -1,6 +1,8 @@
 <%# locals: (entry:, balance_trend: nil, view_ctx: "global", in_split_group: false) %>
-
-<% transaction = entry.entryable %>
+<% 
+  transaction = entry.entryable
+  logo_url = transaction.merchant&.logo_url.presence 
+%>
 
 <%= turbo_frame_tag dom_id(entry) do %>
   <%= turbo_frame_tag dom_id(transaction) do %>
@@ -20,16 +22,14 @@
 
         <div class="flex md:hidden items-center gap-1 col-span-2 relative shrink-0">
           <%= render "transactions/transaction_category", transaction: transaction, variant: "mobile" %>
-          <% if transaction.merchant&.logo_url.present? %>
-            <%= image_tag Setting.transform_brand_fetch_url(transaction.merchant.logo_url),
-                class: "w-5 h-5 rounded-full absolute -bottom-1 -right-1 border border-secondary pointer-events-none",
-                loading: "lazy" %>
+          <% if logo_url %>
+            <%= render "entries/logo", name: entry.name, logo_url: logo_url, size: :sm ,add_cls_attr: "absolute -bottom-1 -right-1 pointer-events-none"%>
           <% end %>
         </div>
 
         <div class="max-w-full min-w-0 <%= "opacity-50 text-secondary" if entry.excluded %>">
           <%= content_tag :div, class: ["flex items-center gap-3 lg:gap-4"] do %>
-            <div class="hidden lg:flex">
+            <div class="hidden md:flex">
               <% if transaction.transfer? %>
                 <%= render DS::FilledIcon.new(
                   icon: "arrow-right-left",
@@ -37,19 +37,8 @@
                   size: "lg",
                   rounded: true
                 ) %>
-              <% elsif transaction.merchant&.logo_url.present? %>
-                <%= image_tag Setting.transform_brand_fetch_url(transaction.merchant.logo_url),
-                    class: "w-9 h-9 rounded-full border border-secondary",
-                    loading: "lazy" %>
               <% else %>
-                <div class="hidden lg:flex">
-                  <%= render DS::FilledIcon.new(
-                    variant: :text,
-                    text: entry.name,
-                    size: "lg",
-                    rounded: true
-                  ) %>
-                </div>
+                <%= render "entries/logo", name: entry.name, logo_url: logo_url, size: :lg %>
               <% end %>
             </div>
 
