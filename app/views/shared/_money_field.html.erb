@@ -78,7 +78,7 @@
              currency_data["action"] = ["change->money-field#handleCurrencyChange", existing_action].compact.join(" ")
           %>
           <%= form.select currency_method,
-                        Money::Currency.as_options.map(&:iso_code),
+                        currency_picker_options_for_family(extra: currency.iso_code),
                         { inline: true, selected: currency.iso_code },
                         {
                           class: "w-fit pr-5 disabled:text-subdued form-field__input",

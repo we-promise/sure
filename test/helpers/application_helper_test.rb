@@ -24,4 +24,18 @@ class ApplicationHelperTest < ActionView::TestCase
     assert_equal "$0.00", totals_by_currency(collection: [ Account.new(currency: "USD", balance: 0) ], money_method: :balance_money)
     assert_equal "-$3.00 | €7.00", totals_by_currency(collection: [ @account1, @account2, @account3 ], money_method: :balance_money, negate: true)
   end
+
+  test "#currency_picker_options_for_family returns enabled family currencies" do
+    family = families(:dylan_family)
+    family.update!(currency: "SGD", enabled_currencies: [ "USD" ])
+
+    assert_equal [ "SGD", "USD" ], currency_picker_options_for_family(family)
+  end
+
+  test "#currency_picker_options_for_family keeps selected legacy currency visible" do
+    family = families(:dylan_family)
+    family.update!(currency: "SGD", enabled_currencies: [ "USD" ])
+
+    assert_equal [ "SGD", "USD", "EUR" ], currency_picker_options_for_family(family, extra: "EUR")
+  end
 end
