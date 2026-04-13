@@ -30,7 +30,7 @@ class Transaction::Search
       query = family.transactions.merge(Entry.excluding_split_parents)
 
       # Scope to accessible accounts when provided
-      query = query.where(entries: { account_id: accessible_account_ids }) if accessible_account_ids
+      query = query.where(entries: { account_id: accessible_account_ids }) if accessible_account_ids&.any?
 
       query = apply_active_accounts_filter(query, active_accounts_only)
       query = apply_category_filter(query, categories)
