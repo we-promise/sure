@@ -111,15 +111,15 @@
                     label: t(".merchant_label"),
                     variant: :logo, searchable: true, menu_placement: :auto, disabled: @entry.split_child? || !can_annotate_entry? },
                   "data-auto-submit-form-target": "auto" %>
-            <%= ef.select :tag_ids,
-                  Current.family.tags.alphabetically.pluck(:name, :id),
-                  {
-                    include_blank: t(".none"),
-                    multiple: true,
-                    label:    t(".tags_label"),
-                    disabled: @entry.split_child? || !can_annotate_entry?
-                  },
-                  { "data-controller": "multi-select", "data-auto-submit-form-target": "auto" } %>
+            <%= render DS::MultiSelectTags.new(
+                  form: ef,
+                  method: :tag_ids,
+                  tags: Current.family.tags.alphabetically,
+                  selected_ids: @entry.entryable&.tag_ids || [],
+                  label: t(".tags_label"),
+                  disabled: @entry.split_child? || !can_annotate_entry?,
+              input_options: { "data-auto-submit-form-target": "auto" }
+                ) %>
           <% end %>
         <% end %>
         <%= f.text_area :notes,
