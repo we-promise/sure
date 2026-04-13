@@ -66,7 +66,7 @@
                   data-action="click->budget-filter#setFilter"
                   data-budget-filter-filter-param="all"
                   data-budget-filter-target="tab"
-                  class="px-3 py-1.5 rounded-md transition-colors bg-container text-primary shadow-sm">
+                  class="w-full inline-flex justify-center items-center text-sm font-medium px-2 py-1 rounded-md transition-colors duration-200 bg-white theme-dark:bg-gray-700 text-primary shadow-sm">
                   <%= t("budgets.show.filter.all") %>
                 </button>
 
@@ -74,7 +74,7 @@
                   data-action="click->budget-filter#setFilter"
                   data-budget-filter-filter-param="over_budget"
                   data-budget-filter-target="tab"
-                  class="px-3 py-1.5 rounded-md transition-colors text-secondary">
+                  class="w-full inline-flex justify-center items-center text-sm font-medium px-2 py-1 rounded-md transition-colors duration-200 shadow-sm">
                   <%= t("budgets.show.filter.over_budget") %>
                 </button>
 
@@ -82,7 +82,7 @@
                   data-action="click->budget-filter#setFilter"
                   data-budget-filter-filter-param="on_track"
                   data-budget-filter-target="tab"
-                  class="px-3 py-1.5 rounded-md transition-colors text-secondary">
+                  class="w-full inline-flex justify-center items-center text-sm font-medium px-2 py-1 rounded-md transition-colors duration-200 shadow-sm">
                   <%= t("budgets.show.filter.on_track") %>
                 </button>
 
@@ -104,9 +104,7 @@
         </div>
       </div>
 
-      <div class="bg-container-inset rounded-xl p-1">
-        <%= render "budgets/budget_categories", budget: @budget %>
-      </div>
+      <%= render "budgets/budget_categories", budget: @budget %>
     <% end %>
   </div>
 </div>
