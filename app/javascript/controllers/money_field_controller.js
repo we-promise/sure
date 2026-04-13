@@ -1,6 +1,6 @@
 import { Controller } from "@hotwired/stimulus";
 import { CurrenciesService } from "services/currencies_service";
-import parseLocaleFloat from "utils/parse_locale_float";
+import parseLocaleFloat from "./utils/parse_locale_float";
 
 // Connects to data-controller="money-field"
 // when currency select change, update the input value with the correct placeholder and step

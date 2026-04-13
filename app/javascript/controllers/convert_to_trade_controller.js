@@ -1,5 +1,5 @@
 import { Controller } from "@hotwired/stimulus"
-import parseLocaleFloat from "utils/parse_locale_float"
+import parseLocaleFloat from "./utils/parse_locale_float"
 
 export default class extends Controller {
   static targets = ["customWrapper", "customField", "tickerSelect", "qtyField", "priceField", "priceWarning", "priceWarningMessage"]
