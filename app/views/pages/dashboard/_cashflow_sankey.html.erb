@@ -1,13 +1,18 @@
 <%# locals: (sankey_data:, period:) %>
 <div id="cashflow-sankey-chart">
   <div class="flex justify-end items-center gap-4 px-4 mb-4">
-    <%= form_with url: root_path, method: :get, data: { controller: "auto-submit-form", turbo_frame: "_top" } do |form| %>
-      <%= form.select :period,
-                Period.as_options,
-                { selected: period.key },
-                data: { "auto-submit-form-target": "auto" },
-                class: "bg-container border border-secondary font-medium rounded-lg px-3 py-2 text-sm pr-7 cursor-pointer text-primary focus:outline-hidden focus:ring-0" %>
-    <% end %>
+      <%= form_with url: root_path, method: :get, data: { controller: "auto-submit-form", turbo_frame: "_top" } do |form| %>
+  <%= form.select :account_id,
+            [["All accounts", ""]] + Current.user.finance_accounts.map { |a| [a.name, a.id] },
+            { selected: params[:account_id] },
+            data: { "auto-submit-form-target": "auto" },
+            class: "bg-container border border-secondary font-medium rounded-lg px-3 py-2 text-sm pr-7 cursor-pointer text-primary focus:outline-hidden focus:ring-0" %>
+  <%= form.select :period,
+            Period.as_options,
+            { selected: period.key },
+            data: { "auto-submit-form-target": "auto" },
+            class: "bg-container border border-secondary font-medium rounded-lg px-3 py-2 text-sm pr-7 cursor-pointer text-primary focus:outline-hidden focus:ring-0" %>
+<% end %>  
   </div>
   <% if sankey_data[:links].present? %>
     <div class="w-full h-96">

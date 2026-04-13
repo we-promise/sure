@@ -148,8 +148,8 @@ class Family < ApplicationRecord
     BalanceSheet.new(self, user: user)
   end
 
-  def income_statement(user: Current.user)
-    IncomeStatement.new(self, user: user)
+  def income_statement(user: Current.user, account_ids: nil)
+    IncomeStatement.new(self, user: user, account_ids: account_ids)
   end
 
   # Returns the Investment Contributions category for this family, creating it if it doesn't exist.
