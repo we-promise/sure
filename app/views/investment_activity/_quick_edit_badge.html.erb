@@ -52,7 +52,7 @@
      <% end %>>
 
   <button type="button"
-          class="inline-flex items-center gap-1 text-xs font-medium rounded-full px-2.5 py-1 <%= can_convert ? "cursor-pointer hover:opacity-80" : "cursor-default" %> transition-opacity"
+          class="inline-flex items-center gap-1 text-sm font-medium rounded-full px-2.5 py-1 <%= can_convert ? "cursor-pointer hover:opacity-80" : "cursor-default" %> transition-opacity"
           style="<% if has_label %>
             background-color: color-mix(in oklab, <%= color %> 15%, transparent);
             border: 1px solid color-mix(in oklab, <%= color %> 25%, transparent);
