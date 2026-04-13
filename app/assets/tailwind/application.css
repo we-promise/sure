@@ -211,8 +211,8 @@
 .table-divider::after {
   content: "";
   position: absolute;
-  left: 16px;
-  right: 16px;
+  left: 1rem;
+  right: 1rem;
   bottom: 0;
   height: 1px;
   background-color: var(--color-alpha-black-100);
