@@ -1,4 +1,12 @@
 class OidcIdentity < ApplicationRecord
+  include Encryptable
+
+  if encryption_ready?
+    encrypts :uid, deterministic: true
+    # Note: `info` is a jsonb column and cannot be encrypted with AR encryption
+    # (ciphertext is not valid JSON). Requires a column type migration to text first.
+  end
+
   belongs_to :user
 
   validates :provider, presence: true

@@ -5,13 +5,13 @@ class User < ApplicationRecord
   # Custom validation ensures password is present for non-SSO registration.
   has_secure_password validations: false
 
+  serialize :otp_backup_codes, coder: JSON
+
   # Encrypt sensitive fields if ActiveRecord encryption is configured
   if encryption_ready?
-    # MFA secrets
-    encrypts :otp_secret, deterministic: true
-    # Note: otp_backup_codes is a PostgreSQL array column which doesn't support
-    # AR encryption. To encrypt it, a migration would be needed to change the
-    # column type from array to text/jsonb.
+    # MFA secrets (non-deterministic — never queried by value)
+    encrypts :otp_secret
+    encrypts :otp_backup_codes
 
     # PII - emails (deterministic for lookups, downcase for case-insensitive)
     encrypts :email, deterministic: true, downcase: true
