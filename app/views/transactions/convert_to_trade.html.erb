@@ -25,7 +25,7 @@
         </div>
         <div class="text-sm">
           <span class="text-secondary"><%= t(".amount_label") %></span>
-          <span class="font-medium <%= @entry.amount.negative? ? "text-green-600" : "text-primary" %>"><%= format_money(@entry.amount_money.abs) %></span>
+          <span class="font-medium privacy-sensitive <%= @entry.amount.negative? ? "text-green-600" : "text-primary" %>"><%= format_money(@entry.amount_money.abs) %></span>
         </div>
       </div>
 

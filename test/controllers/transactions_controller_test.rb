@@ -96,6 +96,20 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_dom "#total-transactions", count: 1, text: "1"
   end
 
+  test "split parent rows mark amount as privacy-sensitive" do
+    entry = create_transaction(account: accounts(:depository), amount: 100, name: "Split parent")
+
+    entry.split!([
+      { name: "Part 1", amount: 60, category_id: nil },
+      { name: "Part 2", amount: 40, category_id: nil }
+    ])
+
+    get transactions_url
+
+    assert_response :success
+    assert_select ".split-group > div.opacity-50 p.privacy-sensitive", count: 1
+  end
+
   test "can paginate" do
   family = families(:empty)
   sign_in users(:empty)
