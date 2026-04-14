@@ -26,7 +26,7 @@ class _BiometricLockScreenState extends State<BiometricLockScreen> {
   }
 
   Future<void> _authenticate() async {
-    if (_isAuthenticating) return;
+    if (!mounted || _isAuthenticating) return;
     setState(() => _isAuthenticating = true);
 
     final success = await BiometricService.instance.authenticate();
@@ -36,6 +36,10 @@ class _BiometricLockScreenState extends State<BiometricLockScreen> {
 
     if (success) {
       widget.onUnlocked();
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Authentication failed. Tap Unlock to try again.')),
+      );
     }
   }
 

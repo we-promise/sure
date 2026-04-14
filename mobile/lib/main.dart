@@ -298,6 +298,13 @@ class _AppWrapperState extends State<AppWrapper> with WidgetsBindingObserver {
           );
         }
 
+        // Clear stale lock state so it doesn't flash on the next login.
+        if (_isLocked) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) setState(() => _isLocked = false);
+          });
+        }
+
         if (authProvider.ssoOnboardingPending) {
           return const SsoOnboardingScreen();
         }
