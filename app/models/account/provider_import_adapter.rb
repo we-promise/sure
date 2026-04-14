@@ -25,8 +25,9 @@ class Account::ProviderImportAdapter
   # @param pending_transaction_id [String, nil] Plaid's linking ID for pending→posted reconciliation
   # @param extra [Hash, nil] Optional provider-specific metadata to merge into transaction.extra
   # @param investment_activity_label [String, nil] Optional activity type label (e.g., "Buy", "Dividend")
+  # @param transacted_at [Time, nil] Optional best-effort timestamp of when the transaction occurred (UTC)
   # @return [Entry] The created or updated entry
-  def import_transaction(external_id:, amount:, currency:, date:, name:, source:, category_id: nil, merchant: nil, notes: nil, pending_transaction_id: nil, extra: nil, investment_activity_label: nil)
+  def import_transaction(external_id:, amount:, currency:, date:, name:, source:, category_id: nil, merchant: nil, notes: nil, pending_transaction_id: nil, extra: nil, investment_activity_label: nil, transacted_at: nil)
     raise ArgumentError, "external_id is required" if external_id.blank?
     raise ArgumentError, "source is required" if source.blank?
 
@@ -120,7 +121,8 @@ class Account::ProviderImportAdapter
       entry.assign_attributes(
         amount: amount,
         currency: currency,
-        date: date
+        date: date,
+        transacted_at: transacted_at
       )
 
       # Use enrichment pattern to respect user overrides

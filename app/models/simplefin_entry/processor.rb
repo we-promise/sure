@@ -20,6 +20,7 @@ class SimplefinEntry::Processor
       source: "simplefin",
       merchant: merchant,
       notes: notes,
+      transacted_at: transacted_at,
       extra: extra_metadata
     )
   end
@@ -172,6 +173,42 @@ class SimplefinEntry::Processor
     def transacted_date
       val = data[:transacted_at]
       Simplefin::DateUtils.parse_provider_date(val)
+    end
+
+    def transacted_at
+      acct_type = simplefin_account&.account_type.to_s.strip.downcase.tr(" ", "_")
+      if %w[credit_card credit loan mortgage].include?(acct_type)
+        transacted_time || posted_time
+      else
+        posted_time || transacted_time
+      end
+    end
+
+    def posted_time
+      val = data[:posted]
+      return nil if val == 0 || val == "0"
+      parse_provider_time(val)
+    end
+
+    def transacted_time
+      parse_provider_time(data[:transacted_at])
+    end
+
+    def parse_provider_time(val)
+      return nil if val.nil?
+      case val
+      when Integer, Float
+        return nil if val.to_i == 0
+        Time.at(val).utc
+      when String
+        Time.parse(val).utc
+      when Time, DateTime
+        val.utc
+      else
+        nil
+      end
+    rescue ArgumentError, TypeError
+      nil
     end
 
     def merchant
