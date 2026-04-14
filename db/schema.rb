@@ -63,8 +63,6 @@ ActiveRecord::Schema[7.2].define(version: 2026_04_12_120000) do
     t.string "institution_name"
     t.string "institution_domain"
     t.text "notes"
-    t.jsonb "holdings_snapshot_data"
-    t.datetime "holdings_snapshot_at"
     t.uuid "owner_id"
     t.index ["accountable_id", "accountable_type"], name: "index_accounts_on_accountable_id_and_accountable_type"
     t.index ["accountable_type"], name: "index_accounts_on_accountable_type"
@@ -1245,7 +1243,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_04_12_120000) do
     t.index ["country_code"], name: "index_securities_on_country_code"
     t.index ["exchange_operating_mic"], name: "index_securities_on_exchange_operating_mic"
     t.index ["kind"], name: "index_securities_on_kind"
-    t.check_constraint "kind = ANY (ARRAY['standard'::text, 'cash'::text])", name: "chk_securities_kind"
+    t.index ["price_provider", "offline_reason"], name: "index_securities_on_price_provider_and_offline_reason"
+    t.index ["price_provider"], name: "index_securities_on_price_provider"
+    t.check_constraint "kind::text = ANY (ARRAY['standard'::character varying, 'cash'::character varying]::text[])", name: "chk_securities_kind"
   end
 
   create_table "security_prices", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1574,10 +1574,6 @@ ActiveRecord::Schema[7.2].define(version: 2026_04_12_120000) do
     t.jsonb "locked_attributes", default: {}
     t.string "kind", default: "reconciliation", null: false
   end
-
-# Could not dump table "vector_store_chunks" because of following StandardError
-#   Unknown type 'vector(768)' for column 'embedding'
-
 
   create_table "vehicles", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.datetime "created_at", null: false

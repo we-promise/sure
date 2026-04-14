@@ -95,7 +95,11 @@ class Holding::ForwardCalculator
         end
 
         trade_fee = Money.new(trade.fee || 0, trade.currency)
-        converted_fee = trade_fee.exchange_to(account.currency, fallback_rate: 1).amount
+        begin
+          converted_fee = trade_fee.exchange_to(account.currency).amount
+        rescue Money::ConversionError
+          converted_fee = trade.fee || 0
+        end
 
         tracker[:total_cost] += converted_price * trade.qty + converted_fee
         tracker[:total_qty] += trade.qty
