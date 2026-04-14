@@ -93,7 +93,8 @@ class Budget < ApplicationRecord
   end
 
   def sync_budget_categories
-    current_category_ids = family.categories.where.not(classification_unused: "income").pluck(:id).to_set
+    income_category_ids = income_category_totals.map { |ct| ct.category.id }.compact.to_set
+    current_category_ids = family.categories.pluck(:id).to_set - income_category_ids
     existing_budget_category_ids = budget_categories.pluck(:category_id).to_set
     categories_to_add = current_category_ids - existing_budget_category_ids
     categories_to_remove = existing_budget_category_ids - current_category_ids
