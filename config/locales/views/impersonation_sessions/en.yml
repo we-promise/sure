@@ -7,9 +7,9 @@ en:
       pending_message: "Sure support staff has requested access to your account (likely to help you with a support request). If you approve the request, all activity they take will be logged for security and audit purposes."
       approve: "Approve"
       reject: "Reject"
-      in_progress_message: "Someone from the Sure Finances team is currently viewing your data.  You may end the session at any time."
+      in_progress_message: "Someone from the Sure Finances team is currently viewing your data. You may end the session at any time."
       end_session: "End Session"
-      error_message: "Something went wrong.  Please contact us."
+      error_message: "Something went wrong. Please contact us."
     approve:
       success: Request approved
     complete:
