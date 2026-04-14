@@ -103,9 +103,9 @@ class Investment < ApplicationRecord
       # Build region order: user's region first (if known), then Generic, then others
       other_regions = %w[us uk ca au eu] - [ user_region ].compact
       region_order = if user_region
-        [user_region, nil, *other_regions].uniq
+        [ user_region, nil, *other_regions ].uniq
       else
-        [nil, *other_regions].uniq
+        [ nil, *other_regions ].uniq
       end
 
       region_order.filter_map do |region|
