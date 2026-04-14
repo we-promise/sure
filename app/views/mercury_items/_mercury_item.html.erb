@@ -54,26 +54,28 @@
         </div>
       </div>
 
-      <div class="flex items-center gap-2">
-        <% if Rails.env.development? %>
-          <%= icon(
-            "refresh-cw",
-            as_button: true,
-            href: sync_mercury_item_path(mercury_item)
-          ) %>
-        <% end %>
+      <% if Current.user&.admin? %>
+        <div class="flex items-center gap-2">
+          <% if Rails.env.development? %>
+            <%= icon(
+              "refresh-cw",
+              as_button: true,
+              href: sync_mercury_item_path(mercury_item)
+            ) %>
+          <% end %>
 
-        <%= render DS::Menu.new do |menu| %>
-          <% menu.with_item(
-            variant: "button",
-            text: t(".delete"),
-            icon: "trash-2",
-            href: mercury_item_path(mercury_item),
-            method: :delete,
-            confirm: CustomConfirm.for_resource_deletion(mercury_item.name, high_severity: true)
-          ) %>
-        <% end %>
-      </div>
+          <%= render DS::Menu.new do |menu| %>
+            <% menu.with_item(
+              variant: "button",
+              text: t(".delete"),
+              icon: "trash-2",
+              href: mercury_item_path(mercury_item),
+              method: :delete,
+              confirm: CustomConfirm.for_resource_deletion(mercury_item.name, high_severity: true)
+            ) %>
+          <% end %>
+        </div>
+      <% end %>
     </summary>
 
     <% unless mercury_item.scheduled_for_deletion? %>

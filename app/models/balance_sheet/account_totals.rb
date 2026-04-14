@@ -1,6 +1,7 @@
 class BalanceSheet::AccountTotals
-  def initialize(family, sync_status_monitor:)
+  def initialize(family, user: nil, sync_status_monitor:)
     @family = family
+    @user = user
     @sync_status_monitor = sync_status_monitor
   end
 
@@ -13,10 +14,11 @@ class BalanceSheet::AccountTotals
   end
 
   private
-    attr_reader :family, :sync_status_monitor
+    attr_reader :family, :user, :sync_status_monitor
 
-    AccountRow = Data.define(:account, :converted_balance, :is_syncing) do
+    AccountRow = Data.define(:account, :converted_balance, :is_syncing, :included_in_finances) do
       def syncing? = is_syncing
+      def included_in_finances? = included_in_finances
 
       # Allows Rails path helpers to generate URLs from the wrapper
       def to_param = account.to_param
@@ -24,7 +26,19 @@ class BalanceSheet::AccountTotals
     end
 
     def visible_accounts
-      @visible_accounts ||= family.accounts.visible.with_attached_logo
+      @visible_accounts ||= begin
+        scope = family.accounts.visible.with_attached_logo.includes(:account_shares)
+        scope = scope.accessible_by(user) if user
+        scope
+      end
+    end
+
+    def finance_account_ids
+      @finance_account_ids ||= if user
+        family.accounts.included_in_finances_for(user).pluck(:id).to_set
+      else
+        nil
+      end
     end
 
     # Wraps each account in an AccountRow with its converted balance and sync status.
@@ -33,15 +47,17 @@ class BalanceSheet::AccountTotals
         AccountRow.new(
           account: account,
           converted_balance: converted_balance_for(account),
-          is_syncing: sync_status_monitor.account_syncing?(account)
+          is_syncing: sync_status_monitor.account_syncing?(account),
+          included_in_finances: finance_account_ids.nil? || finance_account_ids.include?(account.id)
         )
       end
     end
 
     # Returns the cache key for storing visible account IDs, invalidated on data updates.
     def cache_key
+      shares_version = user ? AccountShare.where(user: user).maximum(:updated_at)&.to_i : nil
       family.build_cache_key(
-        "balance_sheet_account_ids",
+        [ "balance_sheet_account_ids", user&.id, shares_version ].compact.join("_"),
         invalidate_on_data_updates: true
       )
     end

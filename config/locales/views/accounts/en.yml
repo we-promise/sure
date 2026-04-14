@@ -1,6 +1,7 @@
 ---
 en:
   accounts:
+    not_authorized: "You don't have permission to manage this account"
     account:
       edit: Edit
       link_lunchflow: Link with Lunch Flow
@@ -13,6 +14,7 @@ en:
       remove_default: Unset default
       default_label: Default
       delete: Delete account
+      sharing: Sharing
     chart:
       data_not_available: Data not available for the selected period
     create:
@@ -22,6 +24,7 @@ en:
     destroy:
       success: "%{type} account scheduled for deletion"
       cannot_delete_linked: "Cannot delete a linked account. Please unlink it first."
+      failed: "Resource deletion failed. Try again later."
     empty:
       empty_message: Add an account either via connection, importing or entering manually.
       new_account: New account
@@ -57,6 +60,7 @@ en:
         title: How would you like to add it?
       title: What would you like to add?
     show:
+      limited_fx_history_warning: "Exchange rate history is only available from %{date} onwards. Transactions before this date use approximate currency conversions — this can happen when the FX provider only offers a limited historical window."
       activity:
         amount: Amount
         balance: Balance

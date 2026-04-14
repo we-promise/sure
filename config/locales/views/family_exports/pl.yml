@@ -1,0 +1,31 @@
+---
+pl:
+  family_exports:
+    access_denied: Brak dostępu
+    create:
+      success: Eksport został rozpoczęty. Wkrótce będzie można go pobrać.
+    delete_confirmation: Czy na pewno chcesz usunąć ten eksport? Tej akcji nie można cofnąć.
+    delete_failed_confirmation: Czy na pewno chcesz usunąć ten nieudany eksport?
+    destroy:
+      success: Eksport został pomyślnie usunięty
+    export_not_ready: Eksport nie jest jeszcze gotowy do pobrania
+    exporting: Trwa eksportowanie...
+    index:
+      title: Eksporty
+      new: Nowy eksport
+    table:
+      title: Eksporty
+      header:
+        date: Data
+        filename: Nazwa pliku
+        status: Status
+        actions: Akcje
+      row:
+        status:
+          in_progress: W trakcie
+          complete: Zakończony
+          failed: Nieudany
+        actions:
+          delete: Usuń
+          download: Pobierz
+      empty: Brak eksportów.

@@ -1,7 +1,7 @@
 class Family < ApplicationRecord
   include Syncable, AutoTransferMatchable, Subscribeable, VectorSearchable
   include PlaidConnectable, SimplefinConnectable, LunchflowConnectable, EnableBankingConnectable
-  include CoinbaseConnectable, CoinstatsConnectable, SnaptradeConnectable, MercuryConnectable
+  include CoinbaseConnectable, BinanceConnectable, CoinstatsConnectable, SnaptradeConnectable, MercuryConnectable
   include IndexaCapitalConnectable
 
   DATE_FORMATS = [
@@ -20,6 +20,7 @@ class Family < ApplicationRecord
 
   MONIKERS = [ "Family", "Group" ].freeze
   ASSISTANT_TYPES = %w[builtin external].freeze
+  SHARING_DEFAULTS = %w[shared private].freeze
 
   has_many :users, dependent: :destroy
   has_many :accounts, dependent: :destroy
@@ -49,6 +50,35 @@ class Family < ApplicationRecord
   validates :month_start_day, inclusion: { in: 1..28 }
   validates :moniker, inclusion: { in: MONIKERS }
   validates :assistant_type, inclusion: { in: ASSISTANT_TYPES }
+  validates :default_account_sharing, inclusion: { in: SHARING_DEFAULTS }
+
+  before_validation :normalize_enabled_currencies!
+
+  def primary_currency_code
+    normalize_currency_code(currency) || "USD"
+  end
+
+  def custom_enabled_currencies?
+    enabled_currencies.present?
+  end
+
+  def enabled_currency_codes(extra: [])
+    selected_codes = if custom_enabled_currencies?
+      [ primary_currency_code, *Array(enabled_currencies) ]
+    else
+      Money::Currency.as_options.map(&:iso_code)
+    end
+
+    normalize_currency_codes([ *selected_codes, *Array(extra) ])
+  end
+
+  def enabled_currency_objects(extra: [])
+    enabled_currency_codes(extra:).map { |code| Money::Currency.new(code) }
+  end
+
+  def secondary_enabled_currency_objects(extra: [])
+    enabled_currency_objects(extra:).reject { |currency| currency.iso_code == primary_currency_code }
+  end
 
 
   def moniker_label
@@ -57,6 +87,10 @@ class Family < ApplicationRecord
 
   def moniker_label_plural
     moniker_label == "Group" ? "Groups" : "Families"
+  end
+
+  def share_all_by_default?
+    default_account_sharing == "shared"
   end
 
   def uses_custom_month_start?
@@ -99,6 +133,29 @@ class Family < ApplicationRecord
     Merchant.where(id: (assigned_ids + recently_unlinked_ids + family_merchant_ids).uniq)
   end
 
+  def assigned_merchants_for(user)
+    merchant_ids = Transaction.joins(:entry)
+      .where(entries: { account_id: accounts.accessible_by(user).select(:id) })
+      .where.not(merchant_id: nil)
+      .distinct
+      .pluck(:merchant_id)
+    Merchant.where(id: merchant_ids)
+  end
+
+  def available_merchants_for(user)
+    assigned_ids = Transaction.joins(:entry)
+      .where(entries: { account_id: accounts.accessible_by(user).select(:id) })
+      .where.not(merchant_id: nil)
+      .distinct
+      .pluck(:merchant_id)
+    recently_unlinked_ids = FamilyMerchantAssociation
+      .where(family: self)
+      .recently_unlinked
+      .pluck(:merchant_id)
+    family_merchant_ids = merchants.pluck(:id)
+    Merchant.where(id: (assigned_ids + recently_unlinked_ids + family_merchant_ids).uniq)
+  end
+
   def auto_categorize_transactions_later(transactions, rule_run_id: nil)
     AutoCategorizeJob.perform_later(self, transaction_ids: transactions.pluck(:id), rule_run_id: rule_run_id)
   end
@@ -115,12 +172,12 @@ class Family < ApplicationRecord
     AutoMerchantDetector.new(self, transaction_ids: transaction_ids).auto_detect
   end
 
-  def balance_sheet
-    @balance_sheet ||= BalanceSheet.new(self)
+  def balance_sheet(user: Current.user)
+    BalanceSheet.new(self, user: user)
   end
 
-  def income_statement
-    @income_statement ||= IncomeStatement.new(self)
+  def income_statement(user: Current.user)
+    IncomeStatement.new(self, user: user)
   end
 
   # Returns the Investment Contributions category for this family, creating it if it doesn't exist.
@@ -190,8 +247,8 @@ class Family < ApplicationRecord
     end
   end
 
-  def investment_statement
-    @investment_statement ||= InvestmentStatement.new(self)
+  def investment_statement(user: Current.user)
+    InvestmentStatement.new(self, user: user)
   end
 
   def eu?
@@ -270,4 +327,29 @@ class Family < ApplicationRecord
   def self_hoster?
     Rails.application.config.app_mode.self_hosted?
   end
+
+  private
+    def normalize_enabled_currencies!
+      if enabled_currencies.blank?
+        self.enabled_currencies = nil
+        return
+      end
+
+      normalized_codes = normalize_currency_codes([ primary_currency_code, *Array(enabled_currencies) ])
+      all_codes = Money::Currency.as_options.map(&:iso_code)
+      all_selected = normalized_codes.size == all_codes.size && (normalized_codes - all_codes).empty?
+      self.enabled_currencies = all_selected ? nil : normalized_codes
+    end
+
+    def normalize_currency_codes(values)
+      Array(values).filter_map { |value| normalize_currency_code(value) }.uniq
+    end
+
+    def normalize_currency_code(value)
+      return if value.blank?
+
+      Money::Currency.new(value).iso_code
+    rescue Money::Currency::UnknownCurrencyError, ArgumentError
+      nil
+    end
 end

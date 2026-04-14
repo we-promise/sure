@@ -1,14 +1,15 @@
 <%# locals: (entry:, categories:) %>
 
-<%= styled_form_with model: entry, url: transactions_path, class: "space-y-4" do |f| %>
+<% account_currencies = Current.family.accounts.map { |a| [a.id, a.currency] }.to_h.to_json %>
+<%= styled_form_with model: entry, url: transactions_path, class: "space-y-4", data: { controller: "transaction-form", transaction_form_exchange_rate_url_value: exchange_rate_path, transaction_form_account_currencies_value: account_currencies } do |f| %>
   <% if entry.errors.any? %>
     <%= render "shared/form_errors", model: entry %>
   <% end %>
 
-  <section>
+  <section data-controller="transaction-type-tabs">
     <%= render "shared/transaction_type_tabs", active_tab: params[:nature] == "inflow" ? "income" : "expense", account_id: params[:account_id] %>
 
-    <%= f.hidden_field :nature, value: params[:nature] || "outflow" %>
+    <%= f.hidden_field :nature, value: params[:nature] || "outflow", data: { "transaction-type-tabs-target": "natureField" } %>
     <%= f.hidden_field :entryable_type, value: "Transaction" %>
   </section>
 
@@ -16,25 +17,81 @@
     <%= f.text_field :name, label: t(".description"), placeholder: t(".description_placeholder"), required: true %>
 
     <% if @entry.account_id %>
-      <%= f.hidden_field :account_id %>
+      <%= f.hidden_field :account_id, data: { transaction_form_target: "account" } %>
     <% else %>
-      <%= f.collection_select :account_id, Current.family.accounts.manual.active.alphabetically, :id, :name, { prompt: t(".account_prompt"), label: t(".account"), selected: Current.user.default_account_for_transactions&.id, variant: :logo }, required: true, class: "form-field__input text-ellipsis" %>
+      <%= f.collection_select :account_id, accessible_accounts.manual.active.alphabetically, :id, :name, { prompt: t(".account_prompt"), label: t(".account"), selected: Current.user.default_account_for_transactions&.id, variant: :logo }, required: true, class: "form-field__input text-ellipsis", data: { transaction_form_target: "account", action: "change->transaction-form#checkCurrencyDifference" } %>
     <% end %>
 
-    <%= f.money_field :amount, label: t(".amount"), required: true %>
+    <%= f.money_field :amount, 
+      label: t(".amount"), 
+      required: true,
+      container_class: "money-field-wrapper",
+      amount_data: { transaction_form_target: "amount", action: "input->transaction-form#onAmountChange" },
+      currency_data: { transaction_form_target: "currency", action: "change->transaction-form#onCurrencyChange" } %>
+      
     <%= f.fields_for :entryable do |ef| %>
       <%= ef.collection_select :category_id, categories, :id, :name, { prompt: t(".category_prompt"), label: t(".category"), variant: :badge, searchable: true } %>
     <% end %>
-    <%= f.date_field :date, label: t(".date"), required: true, min: Entry.min_supported_date, max: Date.current, value: Date.current %>
+    
+    <%= f.date_field :date, 
+      label: t(".date"), 
+      required: true, 
+      min: Entry.min_supported_date, 
+      max: Date.current, 
+      value: f.object.date || Date.current,
+      data: { transaction_form_target: "date", action: "change->transaction-form#checkCurrencyDifference" } %>
+
+    <% convert_input = capture do %>
+      <%= f.fields_for :entryable do |ef| %>
+        <%= ef.number_field :exchange_rate,
+          label: t("shared.exchange_rate_tabs.exchange_rate"),
+          min: "0.00000000000001",
+          step: "0.00000000000001",
+          placeholder: "1.0",
+          class: "form-field__input",
+          data: {
+            transaction_form_target: "exchangeRateField",
+            action: "input->transaction-form#onConvertExchangeRateChange"
+          } %>
+      <% end %>
+    <% end %>
+
+    <% destination_input = capture do %>
+      <%= number_field_tag :destination_amount,
+        nil,
+        id: "transaction_form_destination_amount",
+        class: "form-field__input",
+        min: "0",
+        step: "0.00000001",
+        placeholder: "92",
+        data: {
+          transaction_form_target: "destinationAmount",
+          action: "input->transaction-form#onCalculateRateDestinationAmountChange"
+        } %>
+    <% end %>
+
+    <%= render "shared/exchange_rate_tabs",
+      controller_id: "transaction-form",
+      controller_key: "transaction_form",
+      help_text: t("shared.exchange_rate_tabs.exchange_rate_help"),
+      convert_tab_label: t("shared.exchange_rate_tabs.convert_tab"),
+      calculate_rate_tab_label: t("shared.exchange_rate_tabs.calculate_rate_tab"),
+      destination_amount_label: t("shared.exchange_rate_tabs.destination_amount"),
+      exchange_rate_label: t("shared.exchange_rate_tabs.exchange_rate"),
+      convert_input: convert_input,
+      destination_input: destination_input %>
   </section>
 
   <%= render DS::Disclosure.new(title: t(".details")) do %>
     <%= f.fields_for :entryable do |ef| %>
       <%= ef.collection_select :merchant_id,
-                Current.family.available_merchants.alphabetically,
+                Current.family.available_merchants_for(Current.user).alphabetically,
                 :id, :name,
                 { include_blank: t(".none"),
-                  label: t(".merchant_label") } %>
+                  label: t(".merchant_label"),
+                  variant: :logo,
+                  searchable: true,
+                  menu_placement: :auto } %>
       <%= ef.select :tag_ids,
                     Current.family.tags.alphabetically.pluck(:name, :id),
                     {

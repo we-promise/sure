@@ -1,14 +1,18 @@
 class IncomeStatement::Totals
-  def initialize(family, transactions_scope:, date_range:, include_trades: true)
+  def initialize(family, transactions_scope:, date_range:, include_trades: true, included_account_ids: nil)
     @family = family
     @transactions_scope = transactions_scope
     @date_range = date_range
     @include_trades = include_trades
+    @included_account_ids = included_account_ids
 
     validate_date_range!
   end
 
   def call
+    # No finance accounts means no transactions to report
+    return [] if @included_account_ids&.empty?
+
     ActiveRecord::Base.connection.select_all(query_sql).map do |row|
       TotalsRow.new(
         parent_category_id: row["parent_category_id"],
@@ -56,8 +60,8 @@ class IncomeStatement::Totals
         SELECT
           c.id as category_id,
           c.parent_id as parent_category_id,
-          CASE WHEN at.kind = 'investment_contribution' THEN 'expense' WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END as classification,
-          ABS(SUM(CASE WHEN at.kind = 'investment_contribution' THEN ABS(ae.amount * COALESCE(er.rate, 1)) ELSE ae.amount * COALESCE(er.rate, 1) END)) as total,
+          CASE WHEN at.kind IN ('investment_contribution', 'loan_payment') THEN 'expense' WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END as classification,
+          ABS(SUM(CASE WHEN at.kind IN ('investment_contribution', 'loan_payment') THEN ABS(ae.amount * COALESCE(er.rate, 1)) ELSE ae.amount * COALESCE(er.rate, 1) END)) as total,
           COUNT(ae.id) as transactions_count,
           false as is_uncategorized_investment
         FROM (#{@transactions_scope.to_sql}) at
@@ -74,7 +78,8 @@ class IncomeStatement::Totals
           AND a.family_id = :family_id
           AND a.status IN ('draft', 'active')
           #{exclude_tax_advantaged_sql}
-        GROUP BY c.id, c.parent_id, CASE WHEN at.kind = 'investment_contribution' THEN 'expense' WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END;
+          #{include_finance_accounts_sql}
+        GROUP BY c.id, c.parent_id, CASE WHEN at.kind IN ('investment_contribution', 'loan_payment') THEN 'expense' WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END;
       SQL
     end
 
@@ -83,8 +88,8 @@ class IncomeStatement::Totals
         SELECT
           c.id as category_id,
           c.parent_id as parent_category_id,
-          CASE WHEN at.kind = 'investment_contribution' THEN 'expense' WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END as classification,
-          ABS(SUM(CASE WHEN at.kind = 'investment_contribution' THEN ABS(ae.amount * COALESCE(er.rate, 1)) ELSE ae.amount * COALESCE(er.rate, 1) END)) as total,
+          CASE WHEN at.kind IN ('investment_contribution', 'loan_payment') THEN 'expense' WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END as classification,
+          ABS(SUM(CASE WHEN at.kind IN ('investment_contribution', 'loan_payment') THEN ABS(ae.amount * COALESCE(er.rate, 1)) ELSE ae.amount * COALESCE(er.rate, 1) END)) as total,
           COUNT(ae.id) as entry_count,
           false as is_uncategorized_investment
         FROM (#{@transactions_scope.to_sql}) at
@@ -105,7 +110,8 @@ class IncomeStatement::Totals
           AND a.family_id = :family_id
           AND a.status IN ('draft', 'active')
           #{exclude_tax_advantaged_sql}
-        GROUP BY c.id, c.parent_id, CASE WHEN at.kind = 'investment_contribution' THEN 'expense' WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END
+          #{include_finance_accounts_sql}
+        GROUP BY c.id, c.parent_id, CASE WHEN at.kind IN ('investment_contribution', 'loan_payment') THEN 'expense' WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END
       SQL
     end
 
@@ -133,6 +139,9 @@ class IncomeStatement::Totals
       ids = @family.tax_advantaged_account_ids
       params[:tax_advantaged_account_ids] = ids if ids.present?
 
+      # Add included account IDs for per-user finance scoping
+      params[:included_account_ids] = @included_account_ids if @included_account_ids
+
       params
     end
 
@@ -142,6 +151,12 @@ class IncomeStatement::Totals
       ids = @family.tax_advantaged_account_ids
       return "" if ids.empty?
       "AND a.id NOT IN (:tax_advantaged_account_ids)"
+    end
+
+    # Returns SQL clause to filter to only accounts included in the user's finances.
+    def include_finance_accounts_sql
+      return "" if @included_account_ids.nil?
+      "AND a.id IN (:included_account_ids)"
     end
 
     def budget_excluded_kinds_sql

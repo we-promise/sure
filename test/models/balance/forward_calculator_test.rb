@@ -693,8 +693,8 @@ class Balance::ForwardCalculatorTest < ActiveSupport::TestCase
   end
 
   test "multi-currency account falls back to full recalc so late exchange rate imports are picked up" do
-    # Step 1: Create account with a EUR entry but NO exchange rate yet.
-    # SyncCache will use fallback_rate: 1, so the €500 entry is treated as $500.
+    # Step 1: Create account with a EUR entry and a stale exchange rate (1:1 EUR→USD).
+    # This simulates an initial sync where an imprecise rate is available.
     account = create_account_with_ledger(
       account: { type: Depository, currency: "USD" },
       entries: [
@@ -703,14 +703,16 @@ class Balance::ForwardCalculatorTest < ActiveSupport::TestCase
         { type: "transaction", date: 2.days.ago.to_date, amount: -500, currency: "EUR" }
       ]
     )
+    ExchangeRate.create!(date: 2.days.ago.to_date, from_currency: "EUR", to_currency: "USD", rate: 1.0)
 
-    # First full sync — balances computed with fallback rate (1:1 EUR→USD).
+    # First full sync — balances computed with stale rate (1:1 EUR→USD).
+    # opening 100 + $100 txn + €500*1.0 = $700
     Balance::Materializer.new(account, strategy: :forward).materialize_balances
     stale_balance = account.balances.find_by(date: 2.days.ago.to_date)
     assert stale_balance, "Balance should exist after full sync"
 
-    # Step 2: Exchange rate arrives later (e.g. daily cron imports it).
-    ExchangeRate.create!(date: 2.days.ago.to_date, from_currency: "EUR", to_currency: "USD", rate: 1.2)
+    # Step 2: Corrected exchange rate arrives later (e.g. daily cron imports it).
+    ExchangeRate.find_by!(date: 2.days.ago.to_date, from_currency: "EUR", to_currency: "USD").update!(rate: 1.2)
 
     # Step 3: Next sync requests incremental from today — but the guard should
     # force a full recalc because the account has multi-currency entries.
@@ -725,7 +727,7 @@ class Balance::ForwardCalculatorTest < ActiveSupport::TestCase
     # The EUR entry on 2.days.ago is now converted at 1.2, so the balance
     # picks up the corrected rate: opening 100 + $100 txn + €500*1.2 = $800
     # (without the guard, incremental mode would have seeded from the stale
-    # $700 balance computed with fallback_rate 1, and never corrected it).
+    # $700 balance computed with rate 1.0, and never corrected it).
     corrected = result.find { |b| b.date == 2.days.ago.to_date }
     assert corrected
     assert_equal 800, corrected.balance,

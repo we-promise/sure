@@ -28,6 +28,43 @@ class Transaction < ApplicationRecord
 
   after_save :clear_merchant_unlinked_association, if: :merchant_id_previously_changed?
 
+  # Accessors for exchange_rate stored in extra jsonb field
+  def exchange_rate
+    extra&.dig("exchange_rate")
+  end
+
+  def exchange_rate=(value)
+    if value.blank?
+      self.extra = (extra || {}).merge("exchange_rate" => nil)
+    else
+      begin
+        normalized_value = Float(value)
+        self.extra = (extra || {}).merge("exchange_rate" => normalized_value)
+      rescue ArgumentError, TypeError
+        # Store the raw value for validation error reporting
+        self.extra = (extra || {}).merge("exchange_rate" => value, "exchange_rate_invalid" => true)
+      end
+    end
+  end
+
+  validate :exchange_rate_must_be_valid
+
+  private
+
+    def exchange_rate_must_be_valid
+      if extra&.dig("exchange_rate_invalid")
+        errors.add(:exchange_rate, "must be a number")
+      elsif exchange_rate.present?
+        # Convert to float for comparison
+        numeric_rate = exchange_rate.to_d rescue nil
+        if numeric_rate.nil? || numeric_rate <= 0
+          errors.add(:exchange_rate, "must be greater than 0")
+        end
+      end
+    end
+
+  public
+
   enum :kind, {
     standard: "standard", # A regular transaction, included in budget analytics
     funds_movement: "funds_movement", # Movement of funds between accounts, excluded from budget analytics
@@ -56,7 +93,7 @@ class Transaction < ApplicationRecord
   INTERNAL_MOVEMENT_LABELS = [ "Transfer", "Sweep In", "Sweep Out", "Exchange" ].freeze
 
   # Providers that support pending transaction flags
-  PENDING_PROVIDERS = %w[simplefin plaid lunchflow].freeze
+  PENDING_PROVIDERS = %w[simplefin plaid lunchflow enable_banking].freeze
 
   # Pending transaction scopes - filter based on provider pending flags in extra JSONB
   # Works with any provider that stores pending status in extra["provider_name"]["pending"]
@@ -69,6 +106,14 @@ class Transaction < ApplicationRecord
     conditions = PENDING_PROVIDERS.map { |provider| "(transactions.extra -> '#{provider}' ->> 'pending')::boolean IS DISTINCT FROM true" }
     where(conditions.join(" AND "))
   }
+
+  # SQL snippet for raw queries that must exclude pending transactions.
+  # Use in income statements, balance sheets, and raw analytics.
+  def self.pending_providers_sql(table_alias = "t")
+    PENDING_PROVIDERS.map do |provider|
+      "AND (#{table_alias}.extra -> '#{provider}' ->> 'pending')::boolean IS DISTINCT FROM true"
+    end.join("\n")
+  end
 
   # Family-scoped query for Enrichable#clear_ai_cache
   def self.family_scope(family)

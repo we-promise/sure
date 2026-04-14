@@ -49,34 +49,36 @@
         </div>
       </div>
 
-      <div class="flex items-center gap-2">
-        <% if enable_banking_item.requires_update? %>
-          <%= button_to reauthorize_enable_banking_item_path(enable_banking_item),
-                        method: :post,
-                        class: "inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium rounded-lg text-white bg-warning hover:opacity-90 transition-colors",
-                        data: { turbo: false } do %>
-            <%= icon "refresh-cw", size: "sm" %>
-            Update
+      <% if Current.user&.admin? %>
+        <div class="flex items-center gap-2">
+          <% if enable_banking_item.requires_update? %>
+            <%= button_to reauthorize_enable_banking_item_path(enable_banking_item),
+                          method: :post,
+                          class: "inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium rounded-lg text-white bg-warning hover:opacity-90 transition-colors",
+                          data: { turbo: false } do %>
+              <%= icon "refresh-cw", size: "sm" %>
+              Update
+            <% end %>
+          <% elsif Rails.env.development? %>
+            <%= icon(
+              "refresh-cw",
+              as_button: true,
+              href: sync_enable_banking_item_path(enable_banking_item)
+            ) %>
           <% end %>
-        <% elsif Rails.env.development? %>
-          <%= icon(
-            "refresh-cw",
-            as_button: true,
-            href: sync_enable_banking_item_path(enable_banking_item)
-          ) %>
-        <% end %>
 
-        <%= render DS::Menu.new do |menu| %>
-          <% menu.with_item(
-            variant: "button",
-            text: "Delete",
-            icon: "trash-2",
-            href: enable_banking_item_path(enable_banking_item),
-            method: :delete,
-            confirm: CustomConfirm.for_resource_deletion(enable_banking_item.institution_display_name, high_severity: true)
-          ) %>
-        <% end %>
-      </div>
+          <%= render DS::Menu.new do |menu| %>
+            <% menu.with_item(
+              variant: "button",
+              text: "Delete",
+              icon: "trash-2",
+              href: enable_banking_item_path(enable_banking_item),
+              method: :delete,
+              confirm: CustomConfirm.for_resource_deletion(enable_banking_item.institution_display_name, high_severity: true)
+            ) %>
+          <% end %>
+        </div>
+      <% end %>
     </summary>
 
     <% unless enable_banking_item.scheduled_for_deletion? %>

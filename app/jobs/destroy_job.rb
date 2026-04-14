@@ -1,5 +1,6 @@
 class DestroyJob < ApplicationJob
   queue_as :low_priority
+  self.enqueue_after_transaction_commit = :never
 
   def perform(model)
     model.destroy

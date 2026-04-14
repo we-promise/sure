@@ -3,6 +3,8 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../providers/auth_provider.dart';
+import '../providers/categories_provider.dart';
+import '../providers/theme_provider.dart';
 import '../services/offline_storage_service.dart';
 import '../services/log_service.dart';
 import '../services/biometric_service.dart';
@@ -82,10 +84,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _loadPreferences() async {
-    final value = await PreferencesService.instance.getGroupByType();
+    final groupByType = await PreferencesService.instance.getGroupByType();
     if (mounted) {
       setState(() {
-        _groupByType = value;
+        _groupByType = groupByType;
       });
     }
   }
@@ -123,6 +125,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
         log.info('Settings', 'Clearing all local data...');
         await offlineStorage.clearAllData();
+        if (context.mounted) {
+          Provider.of<CategoriesProvider>(context, listen: false).clear();
+        }
         log.info('Settings', 'Local data cleared successfully');
 
         if (context.mounted) {
@@ -204,6 +209,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
       if (result['success'] == true) {
         await OfflineStorageService().clearAllData();
+        if (context.mounted) {
+          Provider.of<CategoriesProvider>(context, listen: false).clear();
+        }
 
         if (!context.mounted) return;
 
@@ -437,6 +445,37 @@ class _SettingsScreenState extends State<SettingsScreen> {
               setState(() {
                 _groupByType = value;
               });
+            },
+          ),
+
+          Consumer<ThemeProvider>(
+            builder: (context, themeProvider, _) {
+              return ListTile(
+                leading: const Icon(Icons.brightness_6_outlined),
+                title: const Text('Theme'),
+                trailing: SegmentedButton<ThemeMode>(
+                  segments: const [
+                    ButtonSegment(
+                      value: ThemeMode.light,
+                      icon: Icon(Icons.light_mode, size: 18),
+                      tooltip: 'Light',
+                    ),
+                    ButtonSegment(
+                      value: ThemeMode.system,
+                      icon: Icon(Icons.brightness_auto, size: 18),
+                      tooltip: 'System',
+                    ),
+                    ButtonSegment(
+                      value: ThemeMode.dark,
+                      icon: Icon(Icons.dark_mode, size: 18),
+                      tooltip: 'Dark',
+                    ),
+                  ],
+                  selected: {themeProvider.themeMode},
+                  onSelectionChanged: (modes) => themeProvider.setThemeMode(modes.first),
+                  showSelectedIcon: false,
+                ),
+              );
             },
           ),
 

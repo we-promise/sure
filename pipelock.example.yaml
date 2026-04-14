@@ -1,8 +1,19 @@
 # Pipelock configuration for Docker Compose
 # See https://github.com/luckyPipewrench/pipelock for full options.
+#
+# New in v2.0: trusted_domains, redirect profiles, attack simulation,
+# security scoring, process sandbox, and enhanced tool poisoning detection.
+# Run `pipelock simulate --config <file>` to test your config against 24 attack scenarios.
+# Run `pipelock audit score --config <file>` for a security posture score (0-100).
 
 version: 1
 mode: balanced
+
+# Trusted domains: allow services whose public DNS resolves to private IPs.
+# Prevents SSRF scanner from blocking legitimate internal traffic.
+# trusted_domains:
+#   - "api.internal.example.com"
+#   - "*.corp.example.com"
 
 forward_proxy:
   enabled: true
@@ -41,8 +52,14 @@ mcp_tool_scanning:
   detect_drift: true
 
 mcp_tool_policy:
-  enabled: true
+  enabled: false
   action: warn
+  # Redirect profiles (v2.0): route matched tool calls to audited handler programs
+  # instead of blocking. The handler returns a synthetic MCP response.
+  # redirect_profiles:
+  #   safe-fetch:
+  #     exec: ["/pipelock", "internal-redirect", "fetch-proxy"]
+  #     reason: "Route fetch calls through audited proxy"
 
 mcp_session_binding:
   enabled: true

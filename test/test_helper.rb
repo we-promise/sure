@@ -23,11 +23,26 @@ require "minitest/autorun"
 require "mocha/minitest"
 require "aasm/minitest"
 require "webmock/minitest"
+require "uri"
 
 VCR.configure do |config|
   config.cassette_library_dir = "test/vcr_cassettes"
   config.hook_into :webmock
   config.ignore_localhost = true
+  config.ignore_request do |request|
+    selenium_remote_url = ENV["SELENIUM_REMOTE_URL"]
+    next false if selenium_remote_url.blank?
+
+    request_uri = URI(request.uri)
+    selenium_uri = URI(selenium_remote_url)
+
+    request_uri.host.present? &&
+      selenium_uri.host.present? &&
+      request_uri.host == selenium_uri.host &&
+      request_uri.port == selenium_uri.port
+  rescue URI::InvalidURIError
+    false
+  end
   config.default_cassette_options = { erb: true }
   config.filter_sensitive_data("<OPENAI_ACCESS_TOKEN>") { ENV["OPENAI_ACCESS_TOKEN"] }
   config.filter_sensitive_data("<OPENAI_ORGANIZATION_ID>") { ENV["OPENAI_ORGANIZATION_ID"] }
