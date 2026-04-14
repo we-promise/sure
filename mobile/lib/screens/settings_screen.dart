@@ -54,16 +54,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (_isTogglingBiometric) return;
     setState(() => _isTogglingBiometric = true);
     try {
-      final reason = value
-          ? 'Verify biometric to enable app lock'
-          : 'Verify biometric to disable app lock';
-      final success = await BiometricService.instance.authenticate(reason: reason);
-      if (!mounted) return;
-      if (!success) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Biometric authentication failed.')),
+      if (value) {
+        final success = await BiometricService.instance.authenticate(
+          reason: 'Verify biometric to enable app lock',
         );
-        return;
+        if (!mounted) return;
+        if (!success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Biometric authentication failed.')),
+          );
+          return;
+        }
       }
       await PreferencesService.instance.setBiometricEnabled(value);
       if (mounted) setState(() => _biometricEnabled = value);
