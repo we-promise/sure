@@ -9,8 +9,8 @@
 
 <div class="form-field <%= options[:container_class] %>"
      data-controller="money-field"
-     <% if options[:precision].present? %>data-money-field-precision-value="<%= options[:precision] %>"<% end %>
-     <% if options[:step].present? %>data-money-field-step-value="<%= options[:step] %>"<% end %>>
+     <% if options[:precision].present? %> data-money-field-precision-value="<%= options[:precision] %>"<% end %>
+     <% if options[:step].present? %> data-money-field-step-value="<%= options[:step] %>"<% end %>>
   <% if options[:label_tooltip] %>
     <div class="form-field__header">
       <%= form.label options[:label] || t(".label"), class: "form-field__label" do %>
@@ -60,26 +60,30 @@
           max: options[:max] || 99999999999999,
           step: options[:step] || currency.step,
           disabled: options[:disabled],
-          data: {
+          data: (options[:amount_data] || {}).merge({
             "money-field-target": "amount",
             "auto-submit-form-target": ("auto" if options[:auto_submit])
-          }.compact,
+          }.compact),
           required: options[:required] %>
       </div>
 
       <% unless options[:hide_currency] %>
         <div>
+          <% currency_data = (options[:currency_data] || {}).merge({
+               "money-field-target": "currency",
+               "auto-submit-form-target": ("auto" if options[:auto_submit])
+             }.compact)
+             # Preserve any existing action and append money-field handler
+             existing_action = currency_data.delete("action")
+             currency_data["action"] = ["change->money-field#handleCurrencyChange", existing_action].compact.join(" ")
+          %>
           <%= form.select currency_method,
-                        Money::Currency.as_options.map(&:iso_code),
+                        currency_picker_options_for_family(extra: currency.iso_code),
                         { inline: true, selected: currency.iso_code },
                         {
                           class: "w-fit pr-5 disabled:text-subdued form-field__input",
                           disabled: options[:disable_currency],
-                          data: {
-                            "money-field-target": "currency",
-                            action: "change->money-field#handleCurrencyChange",
-                            "auto-submit-form-target": ("auto" if options[:auto_submit])
-                          }.compact
+                          data: currency_data
                         } %>
         </div>
       <% end %>

@@ -10,9 +10,10 @@ class EnableBankingEntry::Processor
   #   transaction_amount: { amount, currency },
   #   creditor_name, debtor_name, remittance_information, ...
   # }
-  def initialize(enable_banking_transaction, enable_banking_account:)
+  def initialize(enable_banking_transaction, enable_banking_account:, import_adapter: nil)
     @enable_banking_transaction = enable_banking_transaction
     @enable_banking_account = enable_banking_account
+    @import_adapter = import_adapter
   end
 
   def process
@@ -30,7 +31,8 @@ class EnableBankingEntry::Processor
         name: name,
         source: "enable_banking",
         merchant: merchant,
-        notes: notes
+        notes: notes,
+        extra: extra
       )
     rescue ArgumentError => e
       Rails.logger.error "EnableBankingEntry::Processor - Validation error for transaction #{external_id}: #{e.message}"
@@ -123,10 +125,34 @@ class EnableBankingEntry::Processor
     end
 
     def notes
-      remittance = data[:remittance_information]
-      return nil unless remittance.is_a?(Array) && remittance.any?
+      parts = []
 
-      remittance.join("\n")
+      remittance = data[:remittance_information]
+      if remittance.is_a?(Array) && remittance.any?
+        parts << remittance.join("\n")
+      elsif remittance.is_a?(String) && remittance.present?
+        parts << remittance
+      end
+
+      parts << data[:note] if data[:note].present?
+
+      parts.join("\n\n").presence
+    end
+
+    def extra
+      eb = {}
+
+      if data[:exchange_rate].present?
+        eb[:fx_rate]              = data.dig(:exchange_rate, :exchange_rate)
+        eb[:fx_unit_currency]     = data.dig(:exchange_rate, :unit_currency)
+        eb[:fx_instructed_amount] = data.dig(:exchange_rate, :instructed_amount, :amount)
+      end
+
+      eb[:merchant_category_code] = data[:merchant_category_code] if data[:merchant_category_code].present?
+      eb[:pending] = true if data[:_pending] == true
+
+      eb.compact!
+      eb.empty? ? nil : { enable_banking: eb }
     end
 
     def amount_value
@@ -143,8 +169,9 @@ class EnableBankingEntry::Processor
           BigDecimal("0")
         end
 
-        # CRDT (credit) = money coming in = positive
-        # DBIT (debit) = money going out = negative
+        # Sure convention: positive = outflow (expense/debit from account), negative = inflow (income/credit)
+        # Enable Banking: DBIT = debit from account (outflow), CRDT = credit to account (inflow)
+        # Therefore: DBIT → +absolute_amount, CRDT → -absolute_amount
         credit_debit_indicator == "CRDT" ? -absolute_amount : absolute_amount
       rescue ArgumentError => e
         Rails.logger.error "Failed to parse Enable Banking transaction amount: #{raw_amount.inspect} - #{e.message}"
@@ -157,9 +184,8 @@ class EnableBankingEntry::Processor
     end
 
     def amount
-      # Enable Banking uses PSD2 Berlin Group convention: negative = debit (outflow), positive = credit (inflow)
-      # Sure uses the same convention: negative = expense, positive = income
-      # Therefore, use the amount as-is from the API without inversion
+      # Sure convention: positive = outflow (debit/expense), negative = inflow (credit/income)
+      # amount_value already applies this: DBIT → +absolute, CRDT → -absolute
       amount_value
     end
 

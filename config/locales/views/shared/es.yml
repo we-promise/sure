@@ -8,6 +8,12 @@ es:
       title: ¿Estás seguro?
     money_field:
       label: Importe
+    exchange_rate_tabs:
+      calculate_rate_tab: Calcular tasa
+      convert_tab: Convertir con tasa
+      destination_amount: Importe de destino
+      exchange_rate: Tasa de cambio
+      exchange_rate_help: Elige cómo introducir el importe.
     syncing_notice:
       syncing: Sincronizando datos de cuentas...
     trend_change:

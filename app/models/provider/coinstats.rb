@@ -315,6 +315,25 @@ class Provider::Coinstats < Provider
     raise Error, "CoinStats API request failed: #{e.message}"
   end
 
+  # Get DeFi positions (staking, LP, yield farming) for a wallet address.
+  # https://coinstats.app/api-docs/openapi/get-wallet-defi
+  # @param address [String] Wallet address
+  # @param connection_id [String] Blockchain/connectionId identifier
+  # @return [Provider::Response] Response with DeFi position data
+  def get_wallet_defi(address:, connection_id:)
+    with_provider_response do
+      res = self.class.get(
+        "#{BASE_URL}/wallet/defi",
+        headers: auth_headers,
+        query: { address: address, connectionId: connection_id }
+      )
+      handle_response(res)
+    end
+  rescue SocketError, Net::OpenTimeout, Net::ReadTimeout => e
+    Rails.logger.error "CoinStats API: GET /wallet/defi failed: #{e.class}: #{e.message}"
+    raise Error, "CoinStats API request failed: #{e.message}"
+  end
+
   # Get cryptocurrency balances for multiple wallets in a single request
   # https://coinstats.app/api-docs/openapi/get-wallet-balances
   # @param wallets [String] Comma-separated list of wallet addresses in format "blockchain:address"

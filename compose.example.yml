@@ -22,7 +22,7 @@
 # Troubleshooting:
 # ----------------
 #
-# If you run into problems, you should open a Discussion here:
+# Problems? Swing by our Discord or open a Discussion here:
 #
 # https://github.com/we-promise/sure/discussions/categories/general
 #
@@ -66,9 +66,14 @@ services:
       - app-storage:/rails/storage
     ports:
       - ${PORT:-3000}:3000
+      # To also publish on IPv6 (dual-stack), uncomment the line below AND
+      # set BINDING=:: in the environment block. See docs/hosting/docker.md
+      # "Binding to IPv6" for details.
+      # - "[::]:${PORT:-3000}:3000"
     restart: unless-stopped
     environment:
       <<: *rails_env
+      # BINDING: "::"  # Uncomment for IPv6 dual-stack inside the container
     depends_on:
       db:
         condition: service_healthy

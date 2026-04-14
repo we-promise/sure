@@ -12,6 +12,7 @@
             class: "checkbox checkbox--light hidden lg:block",
             data: {
               id: entry.id,
+              entry_type: entry.entryable_type,
               "bulk-select-target": "row",
               action: "bulk-select#toggleRowSelection",
               checkbox_toggle_target: "selectionEntry"
@@ -26,10 +27,17 @@
           <% end %>
         </div>
 
-        <div class="max-w-full <%= 'opacity-50 text-secondary' if entry.excluded %>">
+        <div class="max-w-full min-w-0 <%= "opacity-50 text-secondary" if entry.excluded %>">
           <%= content_tag :div, class: ["flex items-center gap-3 lg:gap-4"] do %>
             <div class="hidden lg:flex">
-              <% if transaction.merchant&.logo_url.present? %>
+              <% if transaction.transfer? %>
+                <%= render DS::FilledIcon.new(
+                  icon: "arrow-right-left",
+                  hex_color: Category::TRANSFER_COLOR,
+                  size: "lg",
+                  rounded: true
+                ) %>
+              <% elsif transaction.merchant&.logo_url.present? %>
                 <%= image_tag Setting.transform_brand_fetch_url(transaction.merchant.logo_url),
                     class: "w-9 h-9 rounded-full border border-secondary",
                     loading: "lazy" %>
@@ -159,7 +167,7 @@
         <% end %>
       </div>
 
-      <div class="shrink-0 col-span-4 lg:col-span-2 ml-auto flex items-center justify-end gap-2 <%= 'opacity-50' if entry.excluded %>">
+      <div class="shrink-0 col-span-4 lg:col-span-2 ml-auto flex items-center justify-end gap-2 <%= "opacity-50" if entry.excluded %>">
         <%# Protection indicator - shows on hover when entry is protected from sync %>
         <% if entry.protected_from_sync? && !entry.excluded? %>
           <%= link_to entry_path(entry),

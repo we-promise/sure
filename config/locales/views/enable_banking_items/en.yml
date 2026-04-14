@@ -1,9 +1,15 @@
 ---
 en:
   enable_banking_items:
+    errors:
+      api_error: "A communication error occurred with the bank."
+      network_unreachable: "The banking service is temporarily unreachable. Please try again later."
+      session_invalid: "Session expired. Please reconnect your bank."
+      unexpected: "An unexpected error occurred during synchronization."
     authorize:
-      authorization_failed: Failed to initiate authorization
+      authorization_failed: "Failed to initiate authorization: %{message}"
       bank_required: Please select a bank.
+      decoupled_not_supported: This bank uses a separate device authentication method which is not yet supported. Please add this account manually.
       invalid_redirect: The authorization URL received is invalid. Please try again.
       redirect_uri_not_allowed: Redirect not allowed. Please configure `%{callback_url}` in your Enable Banking app settings.
       unexpected_error: An unexpected error occurred. Please try again.
@@ -39,11 +45,17 @@ en:
       invalid_redirect: The authorization URL received is invalid. Please try again.
       reauthorization_failed: Reauthorization failed
     select_bank:
+      beta_label: Beta
       cancel: Cancel
       check_country: Please check your country code settings.
       credentials_required: Please configure your Enable Banking credentials first.
       description: Select the bank you want to connect to your accounts.
       no_banks: No banks available for this country/region.
+      no_search_results: No banks match your search.
+      search_label: Search for your bank
+      search_placeholder: Search for your bank...
       title: Select Your Bank
+    setup_accounts:
+      psd2_savings_notice: "Note: Some regulated French savings accounts (Livret A, PEL, LEP, LDDS) may have limited or no access via Open Banking (PSD2). If a savings account is missing, you can add it manually."
     update:
       success: Enable Banking configuration updated.

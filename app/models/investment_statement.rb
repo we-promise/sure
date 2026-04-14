@@ -38,7 +38,7 @@ class InvestmentStatement
 
   # Total portfolio value across all investment accounts
   def portfolio_value
-    investment_accounts.sum(&:balance)
+    investment_accounts.sum { |a| convert_to_family_currency(a.balance, a.currency) }
   end
 
   def portfolio_value_money
@@ -47,7 +47,7 @@ class InvestmentStatement
 
   # Total cash in investment accounts
   def cash_balance
-    investment_accounts.sum(&:cash_balance)
+    investment_accounts.sum { |a| convert_to_family_currency(a.cash_balance, a.currency) }
   end
 
   def cash_balance_money
@@ -63,55 +63,60 @@ class InvestmentStatement
     Money.new(holdings_value, family.currency)
   end
 
-  # All current holdings across investment accounts
+  # All current holdings across investment accounts. Holdings are returned in
+  # their native currency; callers that aggregate across accounts must convert
+  # to family currency via convert_to_family_currency.
   def current_holdings
     return Holding.none unless investment_accounts.any?
 
-    account_ids = investment_accounts.pluck(:id)
-
     # Get the latest holding for each security per account
     Holding
-      .where(account_id: account_ids)
-      .where(currency: family.currency)
+      .where(account_id: investment_account_ids)
       .where.not(qty: 0)
       .where(
         id: Holding
-          .where(account_id: account_ids)
-          .where(currency: family.currency)
+          .where(account_id: investment_account_ids)
           .select("DISTINCT ON (holdings.account_id, holdings.security_id) holdings.id")
           .order(Arel.sql("holdings.account_id, holdings.security_id, holdings.date DESC"))
       )
       .includes(:security, :account)
-      .order(amount: :desc)
   end
 
-  # Top holdings by value
+  # Top holdings by family-currency value
   def top_holdings(limit: 5)
-    current_holdings.limit(limit)
+    current_holdings
+      .to_a
+      .sort_by { |h| -convert_to_family_currency(h.amount, h.currency) }
+      .first(limit)
   end
 
-  # Portfolio allocation by security type/sector (simplified for now)
+  # Portfolio allocation by security. Weights and amounts are computed in the
+  # family's currency so cross-currency holdings compare correctly.
   def allocation
-    holdings = current_holdings.to_a
-    total = holdings.sum(&:amount)
+    converted = current_holdings.to_a.map do |holding|
+      [ holding, convert_to_family_currency(holding.amount, holding.currency) ]
+    end
 
+    total = converted.sum { |_, value| value }
     return [] if total.zero?
 
-    holdings.map do |holding|
-      HoldingAllocation.new(
-        security: holding.security,
-        amount: holding.amount_money,
-        weight: (holding.amount / total * 100).round(2),
-        trend: holding.trend
-      )
-    end
+    converted
+      .sort_by { |_, value| -value }
+      .map do |holding, value|
+        HoldingAllocation.new(
+          security: holding.security,
+          amount: Money.new(value, family.currency),
+          weight: (value / total * 100).round(2),
+          trend: holding.trend
+        )
+      end
   end
 
-  # Unrealized gains across all holdings
+  # Unrealized gains across all holdings, summed in family currency
   def unrealized_gains
     current_holdings.sum do |holding|
       trend = holding.trend
-      trend ? trend.value : 0
+      trend ? convert_to_family_currency(trend.value, holding.currency) : 0
     end
   end
 
@@ -138,25 +143,37 @@ class InvestmentStatement
     holdings_with_cost_basis = holdings.select(&:avg_cost)
     return nil if holdings_with_cost_basis.empty?
 
-    current = holdings_with_cost_basis.sum(&:amount)
-    previous = holdings_with_cost_basis.sum { |h| h.qty * h.avg_cost.amount }
-
-    Trend.new(current: current, previous: previous)
-  end
-
-  # Day change across portfolio
-  def day_change
-    holdings = current_holdings.to_a
-    changes = holdings.map(&:day_change).compact
-
-    return nil if changes.empty?
-
-    current = changes.sum { |t| t.current.is_a?(Money) ? t.current.amount : t.current }
-    previous = changes.sum { |t| t.previous.is_a?(Money) ? t.previous.amount : t.previous }
+    current = holdings_with_cost_basis.sum do |h|
+      convert_to_family_currency(h.amount, h.currency)
+    end
+    previous = holdings_with_cost_basis.sum do |h|
+      convert_to_family_currency(h.qty * h.avg_cost.amount, h.currency)
+    end
 
     Trend.new(
       current: Money.new(current, family.currency),
       previous: Money.new(previous, family.currency)
+    )
+  end
+
+  # Day change across portfolio, summed in family currency
+  def day_change
+    changes = current_holdings.to_a.filter_map do |h|
+      t = h.day_change
+      next nil unless t
+      curr = t.current.is_a?(Money) ? t.current.amount : t.current
+      prev = t.previous.is_a?(Money) ? t.previous.amount : t.previous
+      [
+        convert_to_family_currency(curr, h.currency),
+        convert_to_family_currency(prev, h.currency)
+      ]
+    end
+
+    return nil if changes.empty?
+
+    Trend.new(
+      current: Money.new(changes.sum { |c, _| c }, family.currency),
+      previous: Money.new(changes.sum { |_, p| p }, family.currency)
     )
   end
 
@@ -170,6 +187,33 @@ class InvestmentStatement
   end
 
   private
+    # Today's rates for every currency present on the family's investment
+    # accounts and their holdings. Mirrors BalanceSheet::AccountTotals#exchange_rates.
+    def exchange_rates
+      @exchange_rates ||= begin
+        account_currencies = investment_accounts.map(&:currency)
+        holding_currencies = Holding.where(account_id: investment_account_ids).distinct.pluck(:currency)
+        foreign = (account_currencies + holding_currencies)
+                    .compact
+                    .uniq
+                    .reject { |c| c == family.currency }
+        ExchangeRate.rates_for(foreign, to: family.currency, date: Date.current)
+      end
+    end
+
+    # Unwrap Money first because this codebase's Money (lib/money.rb) ignores
+    # the currency arg of `Money.new` when the payload is already a Money, and
+    # `Money * numeric` preserves the source currency — so multiplying a
+    # foreign-currency Money by a rate would FX-scale the amount but keep the
+    # wrong currency label, corrupting downstream sums.
+    def convert_to_family_currency(amount, from_currency)
+      return amount if amount.nil?
+      numeric = amount.is_a?(Money) ? amount.amount : amount
+      return numeric if from_currency == family.currency
+      rate = exchange_rates[from_currency] || 1
+      numeric * rate
+    end
+
     def all_time_totals
       @all_time_totals ||= totals(period: Period.all_time)
     end

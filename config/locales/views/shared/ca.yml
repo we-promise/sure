@@ -8,6 +8,12 @@ ca:
       title: Segur que vols continuar?
     money_field:
       label: Import
+    exchange_rate_tabs:
+      calculate_rate_tab: Calcular la taxa FX
+      convert_tab: Convertir amb la taxa FX
+      destination_amount: Quantitat de destinació
+      exchange_rate: Taxa de canvi
+      exchange_rate_help: Trieu com introduir la quantitat.
     syncing_notice:
       syncing: S'estan sincronitzant les dades dels comptes...
     transaction_tabs:

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_03_30_050801) do
+ActiveRecord::Schema[7.2].define(version: 2026_04_12_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -403,8 +403,12 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_30_050801) do
     t.jsonb "raw_transactions_payload"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "product"
+    t.decimal "credit_limit", precision: 19, scale: 4
+    t.jsonb "identification_hashes", default: []
     t.index ["account_id"], name: "index_enable_banking_accounts_on_account_id"
     t.index ["enable_banking_item_id"], name: "index_enable_banking_accounts_on_enable_banking_item_id"
+    t.index ["identification_hashes"], name: "index_enable_banking_accounts_on_identification_hashes", using: :gin
   end
 
   create_table "enable_banking_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -418,7 +422,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_30_050801) do
     t.string "status", default: "good"
     t.boolean "scheduled_for_deletion", default: false
     t.boolean "pending_account_setup", default: false
-    t.datetime "sync_start_date"
+    t.date "sync_start_date"
     t.jsonb "raw_payload"
     t.jsonb "raw_institution_payload"
     t.string "country_code"
@@ -431,6 +435,12 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_30_050801) do
     t.string "authorization_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.jsonb "aspsp_required_psu_headers", default: []
+    t.integer "aspsp_maximum_consent_validity"
+    t.string "aspsp_auth_approach"
+    t.jsonb "aspsp_psu_types", default: []
+    t.string "last_psu_ip"
+    t.string "psu_type"
     t.index ["family_id"], name: "index_enable_banking_items_on_family_id"
     t.index ["status"], name: "index_enable_banking_items_on_status"
   end
@@ -541,6 +551,16 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_30_050801) do
     t.index ["tags"], name: "index_eval_samples_on_tags", using: :gin
   end
 
+  create_table "exchange_rate_pairs", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "from_currency", null: false
+    t.string "to_currency", null: false
+    t.date "first_provider_rate_on"
+    t.string "provider_name"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["from_currency", "to_currency"], name: "index_exchange_rate_pairs_on_pair_unique", unique: true
+  end
+
   create_table "exchange_rates", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.string "from_currency", null: false
     t.string "to_currency", null: false
@@ -576,6 +596,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_30_050801) do
     t.string "default_account_sharing", default: "shared", null: false
     t.string "preferred_ai_model", limit: 128
     t.string "openai_uri_base", limit: 512
+    t.string "enabled_currencies", array: true
     t.check_constraint "default_account_sharing::text = ANY (ARRAY['shared'::character varying::text, 'private'::character varying::text])", name: "chk_families_default_account_sharing"
     t.check_constraint "month_start_day >= 1 AND month_start_day <= 28", name: "month_start_day_range"
   end
@@ -1217,10 +1238,15 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_30_050801) do
     t.datetime "last_health_check_at"
     t.string "website_url"
     t.string "kind", default: "standard", null: false
+    t.string "price_provider"
+    t.string "offline_reason"
+    t.date "first_provider_price_on"
     t.index "upper((ticker)::text), COALESCE(upper((exchange_operating_mic)::text), ''::text)", name: "index_securities_on_ticker_and_exchange_operating_mic_unique", unique: true
     t.index ["country_code"], name: "index_securities_on_country_code"
     t.index ["exchange_operating_mic"], name: "index_securities_on_exchange_operating_mic"
     t.index ["kind"], name: "index_securities_on_kind"
+    t.index ["price_provider", "offline_reason"], name: "index_securities_on_price_provider_and_offline_reason"
+    t.index ["price_provider"], name: "index_securities_on_price_provider"
     t.check_constraint "kind::text = ANY (ARRAY['standard'::character varying, 'cash'::character varying]::text[])", name: "chk_securities_kind"
   end
 
