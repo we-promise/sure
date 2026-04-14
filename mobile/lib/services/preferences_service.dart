@@ -39,6 +39,8 @@ class PreferencesService {
   Future<void> setBiometricEnabled(bool value) async {
     final prefs = await _preferences;
     await prefs.setBool(_biometricEnabledKey, value);
+  }
+
   Future<bool> getShowCategoryFilter() async {
     final prefs = await _preferences;
     return prefs.getBool(_showCategoryFilterKey) ?? false;
