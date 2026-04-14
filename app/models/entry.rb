@@ -33,7 +33,7 @@ class Entry < ApplicationRecord
     order(
       date: :asc,
       Arel.sql("CASE WHEN entries.entryable_type = 'Valuation' THEN 1 ELSE 0 END") => :asc,
-      created_at: :asc
+      Arel.sql("COALESCE(entries.transacted_at, entries.created_at)") => :asc
     )
   }
 
@@ -41,7 +41,7 @@ class Entry < ApplicationRecord
     order(
       date: :desc,
       Arel.sql("CASE WHEN entries.entryable_type = 'Valuation' THEN 1 ELSE 0 END") => :desc,
-      created_at: :desc
+      Arel.sql("COALESCE(entries.transacted_at, entries.created_at)") => :desc
     )
   }
 
@@ -389,6 +389,7 @@ class Entry < ApplicationRecord
         child_entries.create!(
           account: account,
           date: date,
+          transacted_at: transacted_at,
           name: split_attrs[:name],
           amount: split_attrs[:amount],
           currency: currency,
