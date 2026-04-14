@@ -1,6 +1,8 @@
 ---
 en:
   users:
+    menu:
+      github: GitHub
     destroy:
       success: Your account has been deleted.
     update:
