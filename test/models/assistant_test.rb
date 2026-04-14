@@ -425,6 +425,95 @@ class AssistantTest < ActiveSupport::TestCase
     assert_raises(Assistant::Error) { Assistant.for_chat(nil) }
   end
 
+  test "builtin demotes a partially-streamed assistant message to failed on error" do
+    @assistant.expects(:get_model_provider).with("gpt-4.1").returns(@provider)
+
+    boom = StandardError.new("boom mid-stream")
+
+    @provider.expects(:chat_response).with do |_prompt, **options|
+      # Simulate a partial text chunk landing before the error propagates.
+      options[:streamer].call(provider_text_chunk("partial tokens "))
+      true
+    end.returns(provider_error_response(boom))
+
+    @assistant.respond_to(@message)
+
+    partial = @chat.messages.where(type: "AssistantMessage").order(:created_at).last
+    assert partial.present?, "partial assistant message should be persisted"
+    assert_equal "failed", partial.status
+    assert_equal "partial tokens ", partial.content
+  end
+
+  test "conversation_history excludes failed and pending messages" do
+    # Add a failed assistant turn; it must NOT leak into history.
+    AssistantMessage.create!(
+      chat: @chat,
+      content: "partial error response",
+      ai_model: "gpt-4.1",
+      status: "failed"
+    )
+
+    @assistant.expects(:get_model_provider).with("gpt-4.1").returns(@provider)
+
+    captured_history = nil
+    @provider.expects(:chat_response).with do |_prompt, **options|
+      captured_history = options[:messages]
+      options[:streamer].call(
+        provider_response_chunk(id: "1", model: "gpt-4.1", messages: [ provider_message(id: "1", text: "ok") ], function_requests: [])
+      )
+      true
+    end.returns(provider_success_response(
+      provider_response_chunk(id: "1", model: "gpt-4.1", messages: [ provider_message(id: "1", text: "ok") ], function_requests: []).data
+    ))
+
+    @assistant.respond_to(@message)
+
+    contents = captured_history.map { |m| m[:content] }
+    assert_not_includes contents, "partial error response"
+  end
+
+  test "conversation_history serializes assistant tool_calls with paired tool result" do
+    assistant_msg = AssistantMessage.create!(
+      chat: @chat,
+      content: "Looking that up",
+      ai_model: "gpt-4.1",
+      status: "complete"
+    )
+
+    ToolCall::Function.create!(
+      message: assistant_msg,
+      provider_id: "call_abc",
+      provider_call_id: "call_abc",
+      function_name: "get_net_worth",
+      function_arguments: { foo: "bar" },
+      function_result: { amount: 1000, currency: "USD" }
+    )
+
+    @assistant.expects(:get_model_provider).with("gpt-4.1").returns(@provider)
+
+    captured_history = nil
+    @provider.expects(:chat_response).with do |_prompt, **options|
+      captured_history = options[:messages]
+      options[:streamer].call(
+        provider_response_chunk(id: "1", model: "gpt-4.1", messages: [ provider_message(id: "1", text: "ok") ], function_requests: [])
+      )
+      true
+    end.returns(provider_success_response(
+      provider_response_chunk(id: "1", model: "gpt-4.1", messages: [ provider_message(id: "1", text: "ok") ], function_requests: []).data
+    ))
+
+    @assistant.respond_to(@message)
+
+    tool_call_entry = captured_history.find { |m| m[:role] == "assistant" && m[:tool_calls].present? }
+    tool_result_entry = captured_history.find { |m| m[:role] == "tool" }
+
+    assert_not_nil tool_call_entry, "tool_call message missing from history"
+    assert_not_nil tool_result_entry, "tool_result message missing from history"
+    assert_equal "call_abc", tool_call_entry[:tool_calls].first[:id]
+    assert_equal "call_abc", tool_result_entry[:tool_call_id]
+    assert_equal "get_net_worth", tool_result_entry[:name]
+  end
+
   private
 
     def mock_external_sse_response(sse_body)

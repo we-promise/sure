@@ -16,14 +16,8 @@ class Provider::Openai::ChatConfig
     end
   end
 
-  def build_input(prompt: nil, messages: nil)
-    input_messages = []
-
-    if messages.present?
-      input_messages.concat(messages)
-    elsif prompt.present?
-      input_messages << { role: "user", content: prompt }
-    end
+  def build_input(prompt: nil)
+    input_messages = prompt.present? ? [ { role: "user", content: prompt } ] : []
 
     results = function_results.map do |fn_result|
       # Handle nil explicitly to avoid serializing to "null"

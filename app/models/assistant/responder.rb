@@ -120,7 +120,11 @@ class Assistant::Responder
       messages = []
       return messages unless chat&.messages
 
-      chat.messages.eager_load(:tool_calls).where(type: [ "UserMessage", "AssistantMessage" ]).ordered.each do |chat_message|
+      chat.messages
+          .where(type: [ "UserMessage", "AssistantMessage" ], status: "complete")
+          .includes(:tool_calls)
+          .ordered
+          .each do |chat_message|
         if chat_message.tool_calls.any?
           messages << {
             role: chat_message.role,

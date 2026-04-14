@@ -4,44 +4,20 @@ class Provider::Openai < Provider
   # Subclass so errors caught in this provider are raised as Provider::Openai::Error
   Error = Class.new(Provider::Error)
 
-  LLM_FILE_PATH = Rails.root.join("config", "llm.yml")
+  DEFAULT_MODEL = "gpt-4.1".freeze
+  SUPPORTED_MODELS = %w[gpt-4 gpt-5 o1 o3].freeze
+  VISION_CAPABLE_MODEL_PREFIXES = %w[gpt-4o gpt-4-turbo gpt-4.1 gpt-5 o1 o3].freeze
 
-  def self.llm_config
-    @llm_config ||= (YAML.safe_load(
-      ERB.new(File.read(LLM_FILE_PATH)).result,
-      permitted_classes: [],
-      permitted_symbols: [],
-      aliases: true
-    ) || {}).with_indifferent_access.freeze
-  end
-
-  def self.active_provider
-    provider = llm_config.fetch(:active_provider, "openai")
-    @active_provider ||= (llm_config.dig("providers", provider) || {}).with_indifferent_access.freeze
-  end
-
-  # Models that support PDF/vision input (not all OpenAI models have vision capabilities)
-
-  # Returns the effective model that would be used by the provider
-  # Uses the same logic as Provider::Registry and the initializer
+  # Returns the effective model that would be used by the provider.
+  # Priority: explicit ENV > Setting > DEFAULT_MODEL.
   def self.effective_model
-    configured_model = ENV.fetch("OPENAI_MODEL") do
-      active_provider.fetch(:model, Setting.openai_model)
-    end
-    configured_model.presence || active_provider[:default_model]
-  end
-
-  DEFAULT_MODEL = self.active_provider[:default_model]
-  VISION_CAPABLE_MODEL_PREFIXES = self.active_provider[:supported_vision_models].to_s.split(/\s+/).freeze
-
-  def active_provider
-    self.class.active_provider
+    ENV.fetch("OPENAI_MODEL") { Setting.openai_model }.presence || DEFAULT_MODEL
   end
 
   def initialize(access_token, uri_base: nil, model: nil)
-    client_options = { access_token: access_token || active_provider[:access_token] }
-    llm_uri_base = uri_base.presence || active_provider[:uri_base]
-    llm_model = model.presence || active_provider[:model]
+    client_options = { access_token: access_token }
+    llm_uri_base = uri_base.presence
+    llm_model = model.presence
     client_options[:uri_base] = llm_uri_base if llm_uri_base.present?
     client_options[:request_timeout] = ENV.fetch("OPENAI_REQUEST_TIMEOUT", 60).to_i
 
@@ -58,15 +34,15 @@ class Provider::Openai < Provider
     return true if custom_provider?
 
     # Otherwise, check if model starts with any supported OpenAI prefix
-    active_provider[:supported_models].split(/\s+/).any? { |prefix| model.start_with?(prefix) }
+    SUPPORTED_MODELS.any? { |prefix| model.start_with?(prefix) }
   end
 
   def supports_responses_endpoint?
     return @supports_responses_endpoint if defined?(@supports_responses_endpoint)
 
-    supports_responses = active_provider[:supports_responses_endpoint]
-    if supports_responses.to_s.present?
-      return @supports_responses_endpoint = ActiveModel::Type::Boolean.new.cast(supports_responses)
+    env_override = ENV["OPENAI_SUPPORTS_RESPONSES_ENDPOINT"]
+    if env_override.to_s.present?
+      return @supports_responses_endpoint = ActiveModel::Type::Boolean.new.cast(env_override)
     end
 
     @supports_responses_endpoint = !custom_provider?
@@ -80,20 +56,51 @@ class Provider::Openai < Provider
     if custom_provider?
       @default_model.present? ? "configured model: #{@default_model}" : "any model"
     else
-      prefixes = self.active_provider[:supported_models].to_s.split(/\s+/).join(", ")
-      "models starting with: #{prefixes}"
+      "models starting with: #{SUPPORTED_MODELS.join(", ")}"
     end
   end
 
   def custom_provider?
-    value = active_provider[:custom_provider]
-    return ActiveModel::Type::Boolean.new.cast(value)  unless value.to_s.blank?
     @uri_base.present?
+  end
+
+  # Token-budget knobs. Precedence: ENV > Setting > default. Defaults match
+  # Ollama's historical 2048-token baseline so local small-context models work
+  # out of the box. Users on larger-context cloud models can raise via ENV or
+  # via the Self-Hosting settings page.
+  def context_window
+    positive_budget(ENV["LLM_CONTEXT_WINDOW"], Setting.llm_context_window, 2048)
+  end
+
+  def max_response_tokens
+    positive_budget(ENV["LLM_MAX_RESPONSE_TOKENS"], Setting.llm_max_response_tokens, 512)
+  end
+
+  def system_prompt_reserve
+    positive_budget(ENV["LLM_SYSTEM_PROMPT_RESERVE"], nil, 256)
+  end
+
+  def max_history_tokens
+    explicit = ENV["LLM_MAX_HISTORY_TOKENS"].presence&.to_i
+    return explicit if explicit&.positive?
+    [ context_window - max_response_tokens - system_prompt_reserve, 256 ].max
+  end
+
+  # Budget available for a one-shot (non-chat) request's full input,
+  # excluding reserved response tokens AND the system/instructions prompt.
+  # Drives the batch slicer for the auto_categorize / auto_detect_merchants /
+  # enhance_provider_merchants calls — each ships ~200–400 tokens of
+  # instructions + JSON schema that aren't counted in `fixed_tokens`.
+  def max_input_tokens
+    [ context_window - max_response_tokens - system_prompt_reserve, 256 ].max
+  end
+
+  def max_items_per_call
+    positive_budget(ENV["LLM_MAX_ITEMS_PER_CALL"], Setting.llm_max_items_per_call, 25)
   end
 
   def auto_categorize(transactions: [], user_categories: [], model: "", family: nil, json_mode: nil)
     with_provider_response do
-      raise Error, "Too many transactions to auto-categorize. Max is 25 per request." if transactions.size > 25
       if user_categories.blank?
         family_id = family&.id || "unknown"
         Rails.logger.error("Cannot auto-categorize transactions for family #{family_id}: no categories available")
@@ -107,16 +114,20 @@ class Provider::Openai < Provider
         input: { transactions: transactions, user_categories: user_categories }
       )
 
-      result = AutoCategorizer.new(
-        client,
-        model: effective_model,
-        transactions: transactions,
-        user_categories: user_categories,
-        custom_provider: custom_provider?,
-        langfuse_trace: trace,
-        family: family,
-        json_mode: json_mode
-      ).auto_categorize
+      batches = slice_for_context(transactions, fixed: user_categories)
+
+      result = batches.flat_map do |batch|
+        AutoCategorizer.new(
+          client,
+          model: effective_model,
+          transactions: batch,
+          user_categories: user_categories,
+          custom_provider: custom_provider?,
+          langfuse_trace: trace,
+          family: family,
+          json_mode: json_mode
+        ).auto_categorize
+      end
 
       upsert_langfuse_trace(trace: trace, output: result.map(&:to_h))
 
@@ -126,8 +137,6 @@ class Provider::Openai < Provider
 
   def auto_detect_merchants(transactions: [], user_merchants: [], model: "", family: nil, json_mode: nil)
     with_provider_response do
-      raise Error, "Too many transactions to auto-detect merchants. Max is 25 per request." if transactions.size > 25
-
       effective_model = model.presence || @default_model
 
       trace = create_langfuse_trace(
@@ -135,16 +144,20 @@ class Provider::Openai < Provider
         input: { transactions: transactions, user_merchants: user_merchants }
       )
 
-      result = AutoMerchantDetector.new(
-        client,
-        model: effective_model,
-        transactions: transactions,
-        user_merchants: user_merchants,
-        custom_provider: custom_provider?,
-        langfuse_trace: trace,
-        family: family,
-        json_mode: json_mode
-      ).auto_detect_merchants
+      batches = slice_for_context(transactions, fixed: user_merchants)
+
+      result = batches.flat_map do |batch|
+        AutoMerchantDetector.new(
+          client,
+          model: effective_model,
+          transactions: batch,
+          user_merchants: user_merchants,
+          custom_provider: custom_provider?,
+          langfuse_trace: trace,
+          family: family,
+          json_mode: json_mode
+        ).auto_detect_merchants
+      end
 
       upsert_langfuse_trace(trace: trace, output: result.map(&:to_h))
 
@@ -154,8 +167,6 @@ class Provider::Openai < Provider
 
   def enhance_provider_merchants(merchants: [], model: "", family: nil, json_mode: nil)
     with_provider_response do
-      raise Error, "Too many merchants to enhance. Max is 25 per request." if merchants.size > 25
-
       effective_model = model.presence || @default_model
 
       trace = create_langfuse_trace(
@@ -163,15 +174,19 @@ class Provider::Openai < Provider
         input: { merchants: merchants }
       )
 
-      result = ProviderMerchantEnhancer.new(
-        client,
-        model: effective_model,
-        merchants: merchants,
-        custom_provider: custom_provider?,
-        langfuse_trace: trace,
-        family: family,
-        json_mode: json_mode
-      ).enhance_merchants
+      batches = slice_for_context(merchants)
+
+      result = batches.flat_map do |batch|
+        ProviderMerchantEnhancer.new(
+          client,
+          model: effective_model,
+          merchants: batch,
+          custom_provider: custom_provider?,
+          langfuse_trace: trace,
+          family: family,
+          json_mode: json_mode
+        ).enhance_merchants
+      end
 
       upsert_langfuse_trace(trace: trace, output: result.map(&:to_h))
 
@@ -207,7 +222,8 @@ class Provider::Openai < Provider
         pdf_content: pdf_content,
         custom_provider: custom_provider?,
         langfuse_trace: trace,
-        family: family
+        family: family,
+        max_response_tokens: max_response_tokens
       ).process
 
       upsert_langfuse_trace(trace: trace, output: result.to_h)
@@ -251,13 +267,15 @@ class Provider::Openai < Provider
     family: nil
   )
     if supports_responses_endpoint?
+      # Native path uses the Responses API which chains history via
+      # `previous_response_id`; it does NOT need (and must not receive)
+      # inline message history in the input payload.
       native_chat_response(
         prompt: prompt,
         model: model,
         instructions: instructions,
         functions: functions,
         function_results: function_results,
-        messages: messages,
         streamer: streamer,
         previous_response_id: previous_response_id,
         session_id: session_id,
@@ -283,13 +301,35 @@ class Provider::Openai < Provider
   private
     attr_reader :client
 
+    # Returns the first positive integer among env, setting, default. Treats
+    # zero or negative values as "unset" and falls through — a 0-token budget
+    # is never what the user meant.
+    def positive_budget(env_value, setting_value, default)
+      from_env = env_value.to_s.strip.to_i
+      return from_env if from_env.positive?
+      return setting_value.to_i if setting_value.to_i.positive?
+      default
+    end
+
+    # Routes one-shot (non-chat) inputs through the BatchSlicer so large
+    # caller batches are split to fit the model's context window. `fixed` is
+    # the portion of the prompt that stays constant across every sub-batch
+    # (e.g. user_categories, user_merchants), used for fixed-tokens accounting.
+    def slice_for_context(items, fixed: nil)
+      BatchSlicer.call(
+        Array(items),
+        max_items: max_items_per_call,
+        max_tokens: max_input_tokens,
+        fixed_tokens: fixed ? Assistant::TokenEstimator.estimate(fixed) : 0
+      )
+    end
+
     def native_chat_response(
       prompt:,
       model:,
       instructions: nil,
       functions: [],
       function_results: [],
-      messages: nil,
       streamer: nil,
       previous_response_id: nil,
       session_id: nil,
@@ -318,10 +358,7 @@ class Provider::Openai < Provider
           nil
         end
 
-        input_payload = chat_config.build_input(
-          prompt: prompt,
-          messages: messages
-        )
+        input_payload = chat_config.build_input(prompt: prompt)
 
         begin
           raw_response = client.responses.create(parameters: {
@@ -465,9 +502,13 @@ class Provider::Openai < Provider
         payload << { role: "system", content: instructions }
       end
 
-      # Add conversation history or user prompt
+      # Add conversation history or user prompt. History is trimmed to fit the
+      # configured token budget so small-context local models (Ollama, LM Studio,
+      # LocalAI) don't silently truncate. tool_call/tool_result pairs are
+      # preserved atomically by HistoryTrimmer.
       if messages.present?
-        payload.concat(messages)
+        trimmed = Assistant::HistoryTrimmer.new(messages, max_tokens: max_history_tokens).call
+        payload.concat(trimmed)
       elsif prompt.present?
         payload << { role: "user", content: prompt }
       end
