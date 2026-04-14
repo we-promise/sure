@@ -6,6 +6,10 @@ en:
         renewal: "Your contribution continues on %{date}."
         cancellation: "Your contribution ends on %{date}."
   settings:
+    bank_sync:
+      show:
+        no_providers: "No providers configured"
+        configure_providers: "Configure providers to link your bank accounts."
     ai_prompts:
       show:
         page_title: AI Prompts
