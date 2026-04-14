@@ -17,7 +17,6 @@ class PlaidEntry::Processor
       category_id: matched_category&.id,
       merchant: merchant,
       pending_transaction_id: pending_transaction_id, # Plaid's linking ID for pending→posted
-      transacted_at: transacted_at,
       extra: {
         plaid: {
           pending: plaid_transaction["pending"],
@@ -56,14 +55,6 @@ class PlaidEntry::Processor
 
     def date
       plaid_transaction["date"]
-    end
-
-    def transacted_at
-      raw = plaid_transaction["datetime"] || plaid_transaction["authorized_datetime"]
-      return nil unless raw.present?
-      Time.parse(raw).utc
-    rescue ArgumentError, TypeError
-      nil
     end
 
     # Plaid provides this linking ID when a posted transaction matches a pending one
