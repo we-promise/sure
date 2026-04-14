@@ -39,7 +39,8 @@ class LunchflowEntry::Processor
         source: "lunchflow",
         merchant: merchant,
         notes: notes,
-        extra: extra_metadata
+        extra: extra_metadata,
+        transacted_at: transacted_at
       )
     rescue ArgumentError => e
       # Re-raise validation errors (missing required fields, invalid data)
@@ -203,6 +204,27 @@ class LunchflowEntry::Processor
     rescue ArgumentError, TypeError => e
       Rails.logger.error("Failed to parse Lunchflow transaction date '#{data[:date]}': #{e.message}")
       raise ArgumentError, "Unable to parse transaction date: #{data[:date].inspect}"
+    end
+
+    def transacted_at
+      raw = data[:date]
+      case raw
+      when String
+        parsed = Time.zone.parse(raw)
+        if parsed && parsed.to_date == date && parsed == parsed.beginning_of_day
+          nil
+        else
+          parsed
+        end
+      when Integer, Float
+        Time.at(raw).in_time_zone
+      when Time, ActiveSupport::TimeWithZone, DateTime
+        raw.in_time_zone
+      else
+        nil
+      end
+    rescue ArgumentError, TypeError
+      nil
     end
 
     # Build extra metadata hash with pending status

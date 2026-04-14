@@ -32,7 +32,8 @@ class EnableBankingEntry::Processor
         source: "enable_banking",
         merchant: merchant,
         notes: notes,
-        extra: extra
+        extra: extra,
+        transacted_at: transacted_at
       )
     rescue ArgumentError => e
       Rails.logger.error "EnableBankingEntry::Processor - Validation error for transaction #{external_id}: #{e.message}"
@@ -218,5 +219,19 @@ class EnableBankingEntry::Processor
     rescue ArgumentError, TypeError => e
       Rails.logger.error("Failed to parse Enable Banking transaction date '#{date_value}': #{e.message}")
       raise ArgumentError, "Unable to parse transaction date: #{date_value.inspect}"
+    end
+
+    # Best-effort: prefer a field that may include a time component (ISO8601 with clock time).
+    def transacted_at
+      raw = data[:transaction_date].presence || data[:booking_date].presence || data[:value_date].presence
+      return nil unless raw.is_a?(String)
+
+      parsed = Time.zone.parse(raw)
+      return nil if parsed.nil?
+
+      # Date-only strings parse to midnight; Entry will default to midday when blank — skip storing midnight.
+      parsed.to_date == date && parsed == parsed.beginning_of_day ? nil : parsed
+    rescue ArgumentError, TypeError
+      nil
     end
 end

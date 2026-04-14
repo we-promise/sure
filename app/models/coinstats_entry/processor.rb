@@ -49,7 +49,8 @@ class CoinstatsEntry::Processor
           date: date,
           name: name,
           source: "coinstats",
-          activity_label: trade_activity_label
+          activity_label: trade_activity_label,
+          transacted_at: transacted_at
         )
       end
     else
@@ -63,7 +64,8 @@ class CoinstatsEntry::Processor
         merchant: merchant,
         notes: notes,
         extra: extra_metadata,
-        investment_activity_label: transaction_activity_label
+        investment_activity_label: transaction_activity_label,
+        transacted_at: transacted_at
       )
     end
   rescue ArgumentError => e
@@ -269,6 +271,26 @@ class CoinstatsEntry::Processor
     rescue ArgumentError, TypeError => e
       Rails.logger.error("CoinStats transaction date parsing failed: #{e.message}")
       raise ArgumentError, "Invalid date format: #{timestamp.inspect}"
+    end
+
+    def transacted_at
+      timestamp = data[:date]
+      return nil unless timestamp.present?
+
+      case timestamp
+      when Integer, Float
+        Time.at(timestamp).in_time_zone
+      when String
+        Time.zone.parse(timestamp)
+      when Time, ActiveSupport::TimeWithZone, DateTime
+        timestamp.in_time_zone
+      when Date
+        nil
+      else
+        nil
+      end
+    rescue ArgumentError, TypeError
+      nil
     end
 
     def merchant

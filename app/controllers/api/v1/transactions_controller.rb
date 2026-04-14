@@ -283,7 +283,7 @@ end
     def transaction_params
       params.require(:transaction).permit(
         :account_id, :date, :amount, :name, :description, :notes, :currency,
-        :category_id, :merchant_id, :nature, tag_ids: []
+        :category_id, :merchant_id, :nature, :transacted_at, tag_ids: []
       )
     end
 
@@ -294,6 +294,7 @@ end
         amount: calculate_signed_amount,
         currency: transaction_params[:currency] || current_resource_owner.family.currency,
         notes: transaction_params[:notes],
+        transacted_at: parse_transacted_at_param,
         entryable_type: "Transaction",
         entryable_attributes: {
           category_id: transaction_params[:category_id],
@@ -324,7 +325,20 @@ end
         entry_params[:amount] = calculate_signed_amount
       end
 
+      if transaction_params.key?(:transacted_at)
+        entry_params[:transacted_at] = parse_transacted_at_param
+      end
+
       entry_params.compact
+    end
+
+    def parse_transacted_at_param
+      raw = transaction_params[:transacted_at]
+      return nil if raw.blank?
+
+      Time.zone.parse(raw.to_s)
+    rescue ArgumentError, TypeError
+      nil
     end
 
     # Check if tag_ids was explicitly provided in the request.

@@ -36,7 +36,8 @@ class MercuryEntry::Processor
         name: name,
         source: "mercury",
         merchant: merchant,
-        notes: notes
+        notes: notes,
+        transacted_at: transacted_at
       )
     rescue ArgumentError => e
       # Re-raise validation errors (missing required fields, invalid data)
@@ -162,5 +163,22 @@ class MercuryEntry::Processor
     rescue ArgumentError, TypeError => e
       Rails.logger.error("Failed to parse Mercury transaction date '#{date_value}': #{e.message}")
       raise ArgumentError, "Unable to parse transaction date: #{date_value.inspect}"
+    end
+
+    def transacted_at
+      raw = data[:postedAt].presence || data[:createdAt].presence
+
+      case raw
+      when String
+        Time.zone.parse(raw)
+      when Integer, Float
+        Time.at(raw).in_time_zone
+      when Time, ActiveSupport::TimeWithZone, DateTime
+        raw.in_time_zone
+      else
+        nil
+      end
+    rescue ArgumentError, TypeError
+      nil
     end
 end

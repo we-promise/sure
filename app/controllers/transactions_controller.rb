@@ -404,7 +404,8 @@ class TransactionsController < ApplicationController
         name: duplicate_source.name,
         amount: duplicate_source.amount.abs,
         currency: duplicate_source.currency,
-        notes: duplicate_source.notes
+        notes: duplicate_source.notes,
+        transacted_at: duplicate_source.transacted_at
       )
       @entry.entryable.assign_attributes(
         category_id: duplicate_source.entryable.category_id,

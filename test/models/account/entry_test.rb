@@ -49,6 +49,43 @@ class EntryTest < ActiveSupport::TestCase
     @entry.sync_account_later
   end
 
+  test "assigns transacted_at to middle of day when blank on create" do
+    family = families(:empty)
+    account = family.accounts.create!(name: "Test", balance: 0, currency: "USD", accountable: Depository.new)
+    d = Date.new(2024, 6, 15)
+
+    entry = account.entries.create!(
+      name: "Coffee",
+      date: d,
+      amount: -5,
+      currency: "USD",
+      entryable: Transaction.new
+    )
+
+    assert_equal d.in_time_zone(Time.zone).middle_of_day, entry.transacted_at
+  end
+
+  test "realigns transacted_at calendar day when date changes without changing time field" do
+    family = families(:empty)
+    account = family.accounts.create!(name: "Test", balance: 0, currency: "USD", accountable: Depository.new)
+    d1 = Date.new(2024, 6, 15)
+    d2 = Date.new(2024, 6, 20)
+    t = Time.zone.local(2024, 6, 15, 8, 30, 0)
+
+    entry = account.entries.create!(
+      name: "Coffee",
+      date: d1,
+      amount: -5,
+      currency: "USD",
+      transacted_at: t,
+      entryable: Transaction.new
+    )
+
+    entry.update!(date: d2)
+
+    assert_equal Time.zone.local(2024, 6, 20, 8, 30, 0), entry.transacted_at
+  end
+
   test "can search entries" do
     family = families(:empty)
     account = family.accounts.create! name: "Test", balance: 0, currency: "USD", accountable: Depository.new

@@ -553,8 +553,9 @@ class Account::ProviderImportAdapter
   # @param external_id [String, nil] Provider's unique ID (optional, for deduplication)
   # @param source [String] Provider name
   # @param activity_label [String, nil] Investment activity label (e.g., "Buy", "Sell", "Reinvestment")
+  # @param transacted_at [Time, nil] Optional best-effort timestamp (UTC) for intra-day ordering
   # @return [Entry] The created entry with trade
-  def import_trade(security:, quantity:, price:, amount:, currency:, date:, name: nil, external_id: nil, source:, activity_label: nil)
+  def import_trade(security:, quantity:, price:, amount:, currency:, date:, name: nil, external_id: nil, source:, activity_label: nil, transacted_at: nil)
     raise ArgumentError, "security is required" if security.nil?
     raise ArgumentError, "source is required" if source.blank?
 
@@ -599,7 +600,8 @@ class Account::ProviderImportAdapter
         date: date,
         amount: amount,
         currency: currency,
-        name: trade_name
+        name: trade_name,
+        transacted_at: transacted_at
       )
 
       entry.save!

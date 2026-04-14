@@ -173,6 +173,7 @@ RSpec.describe 'API V1 Transactions', type: :request do
               category_id: { type: :string, format: :uuid, description: 'Category ID' },
               merchant_id: { type: :string, format: :uuid, description: 'Merchant ID' },
               nature: { type: :string, enum: %w[income expense inflow outflow], description: 'Transaction nature (determines sign)' },
+              transacted_at: { type: :string, format: :'date-time', description: 'Optional ISO8601 time for intra-day ordering' },
               tag_ids: { type: :array, items: { type: :string, format: :uuid }, description: 'Array of tag IDs' }
             },
             required: %w[account_id date amount name]
@@ -281,6 +282,7 @@ RSpec.describe 'API V1 Transactions', type: :request do
               category_id: { type: :string, format: :uuid },
               merchant_id: { type: :string, format: :uuid },
               nature: { type: :string, enum: %w[income expense inflow outflow] },
+              transacted_at: { type: :string, format: :'date-time', description: 'Optional ISO8601 time for intra-day ordering' },
               tag_ids: {
                 type: :array,
                 items: { type: :string, format: :uuid },

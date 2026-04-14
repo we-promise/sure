@@ -179,6 +179,29 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal @account.id, response_data["account"]["id"]
   end
 
+  test "should create transaction with optional transacted_at" do
+    ts = Time.zone.parse("2024-06-15T14:22:00Z")
+    transaction_params = {
+      transaction: {
+        account_id: @account.id,
+        name: "Timed Transaction",
+        amount: 10.00,
+        date: Date.new(2024, 6, 15),
+        currency: "USD",
+        nature: "expense",
+        transacted_at: ts.iso8601
+      }
+    }
+
+    post api_v1_transactions_url,
+         params: transaction_params,
+         headers: api_headers(@api_key)
+
+    assert_response :created
+    response_data = JSON.parse(response.body)
+    assert_equal ts.to_i, Time.iso8601(response_data["transacted_at"]).to_i
+  end
+
   test "should reject create with read-only API key" do
     transaction_params = {
       transaction: {

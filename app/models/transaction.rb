@@ -233,7 +233,7 @@ class Transaction < ApplicationRecord
       .where.not(id: entry.id)
       .where(currency: currency)
       .where(conditions.join(" AND "))
-      .order(date: :desc, created_at: :desc)
+      .merge(Entry.reverse_chronological)
       .limit(limit)
       .offset(offset)
   end

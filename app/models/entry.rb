@@ -23,6 +23,11 @@ class Entry < ApplicationRecord
   validate :cannot_unexclude_split_parent
   validate :split_child_date_matches_parent
 
+  # Best-effort wall time for ordering within a calendar day. Providers set when available;
+  # otherwise we default to local noon on `date`. When `date` changes without an explicit
+  # `transacted_at` update, we keep the clock time and move it to the new day.
+  before_validation :assign_transacted_at_best_effort
+
   before_destroy :prevent_individual_child_deletion, if: :split_child?
 
   scope :visible, -> {
@@ -117,7 +122,7 @@ class Entry < ApplicationRecord
     else scope
     end
 
-    scope.includes(entryable: :merchant).order(entries: { date: :desc }).to_a
+    scope.includes(entryable: :merchant).merge(Entry.reverse_chronological).to_a
   end
 
   # Auto-exclude stale pending transactions for an account
@@ -489,6 +494,23 @@ class Entry < ApplicationRecord
   end
 
   private
+
+    def assign_transacted_at_best_effort
+      return unless date.present?
+
+      if transacted_at.blank?
+        self.transacted_at = date.in_time_zone(Time.zone).middle_of_day
+        return
+      end
+
+      if date_changed? && !transacted_at_changed?
+        self.transacted_at = transacted_at.in_time_zone(Time.zone).change(
+          year: date.year,
+          month: date.month,
+          day: date.day
+        )
+      end
+    end
 
     def cannot_unexclude_split_parent
       return unless excluded_changed?(from: true, to: false) && split_parent?

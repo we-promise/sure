@@ -303,6 +303,8 @@ RSpec.configure do |config|
             properties: {
               id: { type: :string, format: :uuid },
               date: { type: :string, format: :date },
+              transacted_at: { type: :string, format: :'date-time', nullable: true,
+                               description: 'Best-effort time-of-day for ordering within the calendar date' },
               amount: { type: :string },
               currency: { type: :string },
               name: { type: :string },
