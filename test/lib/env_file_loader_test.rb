@@ -83,6 +83,19 @@ class EnvFileLoaderTest < ActiveSupport::TestCase
     file.close!
   end
 
+  test "warns and leaves base env var unset when path contains null bytes" do
+    env = {
+      "OPENAI_ACCESS_TOKEN_FILE" => "bad\0path"
+    }
+    warning_output = StringIO.new
+
+    Sure::EnvFileLoader.load!(env: env, warn_io: warning_output)
+
+    assert_nil env["OPENAI_ACCESS_TOKEN"]
+    assert_includes warning_output.string, "OPENAI_ACCESS_TOKEN_FILE"
+    assert_includes warning_output.string, "null byte"
+  end
+
   test "denylisted runtime _FILE variables are ignored without warnings" do
     env = {
       "SSL_CA_FILE" => "/path/that/does/not/exist"
