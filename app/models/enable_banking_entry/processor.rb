@@ -73,41 +73,32 @@ class EnableBankingEntry::Processor
       # Build name from available Enable Banking transaction fields
       # Priority: counterparty name > bank_transaction_code description > remittance_information
 
-      # Determine counterparty based on transaction direction
-      # For outgoing payments (DBIT), counterparty is the creditor (who we paid)
-      # For incoming payments (CRDT), counterparty is the debtor (who paid us)
-      counterparty = if credit_debit_indicator == "CRDT"
-        data.dig(:debtor, :name) || data[:debtor_name]
-      else
-        data.dig(:creditor, :name) || data[:creditor_name]
-      end
+      counterparty = counterparty_name
+      return counterparty if counterparty.present? && !technical_card_counterparty?(counterparty)
 
-      return counterparty if counterparty.present? && !counterparty.match?(/\ACARD-\d+\z/i)
+      # Some institutions (e.g. Wise) use technical CARD-* identifiers as counterparties
+      # Prefer remittance_information first in that case since it contains the real merchant label for Wise
+      if technical_card_counterparty?(counterparty)
+        remittance = primary_remittance_information
+        return remittance.truncate(100) if remittance.present?
+      end
 
       # Fall back to bank_transaction_code description
       bank_tx_description = data.dig(:bank_transaction_code, :description)
       return bank_tx_description if bank_tx_description.present?
 
       # Fall back to remittance_information
-      remittance = data[:remittance_information]
-      return remittance.first.truncate(100) if remittance.is_a?(Array) && remittance.first.present?
+      remittance = primary_remittance_information
+      return remittance.truncate(100) if remittance.present?
 
       # Final fallback: use transaction type indicator
       credit_debit_indicator == "CRDT" ? "Incoming Transfer" : "Outgoing Transfer"
     end
 
     def merchant
-      # For outgoing payments (DBIT), merchant is the creditor (who we paid)
-      # For incoming payments (CRDT), merchant is the debtor (who paid us)
-      merchant_name = if credit_debit_indicator == "CRDT"
-        data.dig(:debtor, :name) || data[:debtor_name]
-      else
-        data.dig(:creditor, :name) || data[:creditor_name]
-      end
-
-      return nil unless merchant_name.present?
-
-      merchant_name = merchant_name.to_s.strip
+      # Use the counterparty when it is human readable; otherwise fall back to remittance
+      # for CARD-* transactions where the remittance often contains the actual merchant
+      merchant_name = merchant_name_candidate
       return nil if merchant_name.blank?
 
       merchant_id = Digest::MD5.hexdigest(merchant_name.downcase)
@@ -181,6 +172,37 @@ class EnableBankingEntry::Processor
 
     def credit_debit_indicator
       data[:credit_debit_indicator]
+    end
+
+    def counterparty_name
+      # Determine counterparty based on transaction direction
+      # For outgoing payments (DBIT), counterparty is the creditor (who we paid)
+      # For incoming payments (CRDT), counterparty is the debtor (who paid us)
+      if credit_debit_indicator == "CRDT"
+        data.dig(:debtor, :name) || data[:debtor_name]
+      else
+        data.dig(:creditor, :name) || data[:creditor_name]
+      end
+    end
+
+    def technical_card_counterparty?(value)
+      # Some providers expose card transactions with CARD-<digits> placeholders instead of a real counterparty name
+      value.to_s.strip.match?(/\ACARD-\d+\z/i)
+    end
+
+    def primary_remittance_information
+      remittance = data[:remittance_information]
+      return nil unless remittance.is_a?(Array) && remittance.first.present?
+
+      remittance.first.to_s.strip.presence
+    end
+
+    def merchant_name_candidate
+      counterparty = counterparty_name.to_s.strip
+      return counterparty if counterparty.present? && !technical_card_counterparty?(counterparty)
+
+      # For technical CARD-* counterparties, reuse remittance as the best merchant candidate
+      primary_remittance_information
     end
 
     def amount
