@@ -330,4 +330,130 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
 
     @subject.send(:create_langfuse_trace, name: "openai.test", input: { foo: "bar" })
   end
+
+  test "SUPPORTED_MODELS and VISION_CAPABLE_MODEL_PREFIXES are Ruby constants, not YAML-derived" do
+    assert_kind_of Array, Provider::Openai::SUPPORTED_MODELS
+    assert Provider::Openai::SUPPORTED_MODELS.all? { |s| s.is_a?(String) }
+    assert Provider::Openai::SUPPORTED_MODELS.frozen?
+
+    assert_kind_of Array, Provider::Openai::VISION_CAPABLE_MODEL_PREFIXES
+    assert Provider::Openai::VISION_CAPABLE_MODEL_PREFIXES.frozen?
+    assert_equal "gpt-4.1", Provider::Openai::DEFAULT_MODEL
+  end
+
+  test "budget readers default to conservative values" do
+    with_env_overrides(
+      "LLM_CONTEXT_WINDOW" => nil,
+      "LLM_MAX_RESPONSE_TOKENS" => nil,
+      "LLM_SYSTEM_PROMPT_RESERVE" => nil,
+      "LLM_MAX_HISTORY_TOKENS" => nil,
+      "LLM_MAX_ITEMS_PER_CALL" => nil
+    ) do
+      subject = Provider::Openai.new("test-token")
+      assert_equal 2048, subject.context_window
+      assert_equal 512, subject.max_response_tokens
+      assert_equal 256, subject.system_prompt_reserve
+      assert_equal 2048 - 512 - 256, subject.max_history_tokens
+      assert_equal 2048 - 512 - 256, subject.max_input_tokens
+      assert_equal 25, subject.max_items_per_call
+    end
+  end
+
+  test "budget readers respect explicit env overrides" do
+    with_env_overrides(
+      "LLM_CONTEXT_WINDOW" => "8192",
+      "LLM_MAX_RESPONSE_TOKENS" => "1024",
+      "LLM_SYSTEM_PROMPT_RESERVE" => "512",
+      "LLM_MAX_HISTORY_TOKENS" => "4096",
+      "LLM_MAX_ITEMS_PER_CALL" => "50"
+    ) do
+      subject = Provider::Openai.new("test-token")
+      assert_equal 8192, subject.context_window
+      assert_equal 1024, subject.max_response_tokens
+      assert_equal 512, subject.system_prompt_reserve
+      assert_equal 4096, subject.max_history_tokens  # explicit overrides derived
+      assert_equal 8192 - 1024 - 512, subject.max_input_tokens
+      assert_equal 50, subject.max_items_per_call
+    end
+  end
+
+  test "budget readers fall back to Setting when ENV unset" do
+    with_env_overrides(
+      "LLM_CONTEXT_WINDOW" => nil,
+      "LLM_MAX_RESPONSE_TOKENS" => nil,
+      "LLM_MAX_ITEMS_PER_CALL" => nil
+    ) do
+      Setting.llm_context_window = 8192
+      Setting.llm_max_response_tokens = 1024
+      Setting.llm_max_items_per_call = 40
+
+      subject = Provider::Openai.new("test-token")
+      assert_equal 8192, subject.context_window
+      assert_equal 1024, subject.max_response_tokens
+      assert_equal 40, subject.max_items_per_call
+    end
+  ensure
+    Setting.llm_context_window = nil
+    Setting.llm_max_response_tokens = nil
+    Setting.llm_max_items_per_call = nil
+  end
+
+  test "budget readers: ENV beats Setting when both present" do
+    with_env_overrides("LLM_CONTEXT_WINDOW" => "16384") do
+      Setting.llm_context_window = 4096
+      subject = Provider::Openai.new("test-token")
+      assert_equal 16384, subject.context_window
+    end
+  ensure
+    Setting.llm_context_window = nil
+  end
+
+  test "budget readers: zero or negative values fall through to default" do
+    with_env_overrides(
+      "LLM_CONTEXT_WINDOW" => "0",
+      "LLM_MAX_RESPONSE_TOKENS" => nil,
+      "LLM_MAX_ITEMS_PER_CALL" => nil
+    ) do
+      Setting.llm_context_window = 0
+      subject = Provider::Openai.new("test-token")
+      assert_equal 2048, subject.context_window
+    end
+  ensure
+    Setting.llm_context_window = nil
+  end
+
+  test "auto_categorize fans out oversized batches into sequential sub-calls" do
+    with_env_overrides("LLM_MAX_ITEMS_PER_CALL" => "10") do
+      subject = Provider::Openai.new("test-token")
+      transactions = Array.new(25) { |i| { id: i.to_s, name: "txn#{i}", amount: 10, classification: "expense" } }
+      user_categories = [ { id: "cat1", name: "Groceries", is_subcategory: false, parent_id: nil, classification: "expense" } ]
+
+      # Capture the batch size passed to each AutoCategorizer. `.new` is called
+      # once per sub-batch; we record each invocation's transactions count.
+      seen_sizes = []
+      fake_instance = mock
+      fake_instance.stubs(:auto_categorize).returns([])
+      Provider::Openai::AutoCategorizer.stubs(:new).with do |*_args, **kwargs|
+        seen_sizes << kwargs[:transactions].size
+        true
+      end.returns(fake_instance)
+
+      response = subject.auto_categorize(transactions: transactions, user_categories: user_categories)
+
+      assert response.success?
+      assert_equal [ 10, 10, 5 ], seen_sizes
+    end
+  end
+
+  test "build_input no longer accepts inline messages history" do
+    config = Provider::Openai::ChatConfig.new(functions: [], function_results: [])
+    # Positive control: prompt works
+    result = config.build_input(prompt: "hi")
+    assert_equal [ { role: "user", content: "hi" } ], result
+
+    # `messages:` kwarg is no longer part of the signature — calling with it must raise
+    assert_raises(ArgumentError) do
+      config.build_input(prompt: "hi", messages: [ { role: "user", content: "old" } ])
+    end
+  end
 end

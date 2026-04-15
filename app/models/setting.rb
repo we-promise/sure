@@ -10,6 +10,14 @@ class Setting < RailsSettings::Base
   field :openai_uri_base, type: :string, default: ENV["OPENAI_URI_BASE"]
   field :openai_model, type: :string, default: ENV["OPENAI_MODEL"]
   field :openai_json_mode, type: :string, default: ENV["LLM_JSON_MODE"]
+
+  # LLM token budget (applies to every outbound LLM call: chat, auto-categorize,
+  # merchant detection, enhance-merchants, PDF processing). Defaults track
+  # Ollama's historical 2048-token baseline so local small-context models work
+  # out of the box. ENV overrides Setting at read time in Provider::Openai.
+  field :llm_context_window, type: :integer, default: ENV["LLM_CONTEXT_WINDOW"]&.to_i
+  field :llm_max_response_tokens, type: :integer, default: ENV["LLM_MAX_RESPONSE_TOKENS"]&.to_i
+  field :llm_max_items_per_call, type: :integer, default: ENV["LLM_MAX_ITEMS_PER_CALL"]&.to_i
   field :external_assistant_url, type: :string
   field :external_assistant_token, type: :string
   field :external_assistant_agent_id, type: :string

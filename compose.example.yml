@@ -130,7 +130,7 @@ services:
       - POSTGRES_HOST=db
       - POSTGRES_DB=${POSTGRES_DB:-sure_production}
       - POSTGRES_USER=${POSTGRES_USER:-sure_user}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-sure_password}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-sure_password} # pipelock:ignore
       - SCHEDULE=@daily # Runs once a day at midnight
       - BACKUP_KEEP_DAYS=7 # Keeps the last 7 days of backups
       - BACKUP_KEEP_WEEKS=4 # Keeps 4 weekly backups
