@@ -260,6 +260,28 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
     assert_equal merchant, processor.send(:merchant)
   end
 
+  test "uses string remittance fallback for technical card counterparty" do
+    processor = build_processor(
+      credit_debit_indicator: "CRDT",
+      debtor_name: "CARD-1234",
+      remittance_information: "ACME SHOP"
+    )
+
+    assert_equal "ACME SHOP", processor.send(:name)
+
+    merchant = stub(id: 456)
+    import_adapter = mock("import_adapter")
+    import_adapter.expects(:find_or_create_merchant).with(
+      provider_merchant_id: "enable_banking_merchant_c0b09f27a4375bb8d8d477ed552a9aa1",
+      name: "ACME SHOP",
+      source: "enable_banking"
+    ).returns(merchant)
+
+    processor.stubs(:import_adapter).returns(import_adapter)
+
+    assert_equal merchant, processor.send(:merchant)
+  end
+
   test "does not build merchant from remittance when counterparty is blank" do
     processor = build_processor(
       credit_debit_indicator: "CRDT",

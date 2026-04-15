@@ -192,9 +192,10 @@ class EnableBankingEntry::Processor
 
     def primary_remittance_information
       remittance = data[:remittance_information]
-      return nil unless remittance.is_a?(Array) && remittance.first.present?
-
-      remittance.first.to_s.strip.presence
+      Array.wrap(remittance)
+        .map { |value| value.to_s.strip.presence }
+        .compact
+        .first
     end
 
     def merchant_name_candidate
