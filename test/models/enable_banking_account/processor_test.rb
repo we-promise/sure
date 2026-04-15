@@ -59,9 +59,26 @@ class EnableBankingAccount::ProcessorTest < ActiveSupport::TestCase
     end
   end
 
+  test "falls back to stored available_credit when credit_limit is absent" do
+    cc_account = accounts(:credit_card)
+    cc_account.accountable.update!(available_credit: 1000.0)
+
+    @enable_banking_account.update!(current_balance: 300.00, credit_limit: nil)
+
+    AccountProvider.find_by(provider: @enable_banking_account)&.destroy
+    AccountProvider.create!(account: cc_account, provider: @enable_banking_account)
+
+    EnableBankingAccount::Processor.new(@enable_banking_account).process
+
+    assert_equal 700.0, cc_account.reload.cash_balance
+  end
+
   test "sets CC balance to raw outstanding when credit_limit is absent" do
     cc_account = accounts(:credit_card)
+    cc_account.accountable.update!(available_credit: nil)
+
     @enable_banking_account.update!(current_balance: 300.00, credit_limit: nil)
+
     AccountProvider.find_by(provider: @enable_banking_account)&.destroy
     AccountProvider.create!(account: cc_account, provider: @enable_banking_account)
 
