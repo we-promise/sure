@@ -79,7 +79,7 @@ GEM
       minitest (>= 5.1, < 6)
       securerandom (>= 0.3)
       tzinfo (~> 2.0, >= 2.0.5)
-    addressable (2.9.0)
+    addressable (2.8.7)
       public_suffix (>= 2.0.2, < 7.0)
     aes_key_wrap (1.1.0)
     afm (1.0.0)
@@ -294,7 +294,7 @@ GEM
       faraday (~> 2.0)
       faraday-follow_redirects
     json-schema (5.2.2)
-      addressable (~> 2.9.0)
+      addressable (~> 2.8)
       bigdecimal (~> 3.1)
     jwt (2.10.2)
       base64
@@ -305,7 +305,7 @@ GEM
       json (~> 2.0)
     language_server-protocol (3.17.0.5)
     launchy (3.1.1)
-      addressable (~> 2.9.0)
+      addressable (~> 2.8)
       childprocess (~> 5.0)
       logger (~> 1.6)
     letter_opener (1.10.0)
@@ -756,7 +756,7 @@ GEM
       faraday (~> 2.0)
       faraday-follow_redirects
     webmock (3.25.1)
-      addressable (>= 2.9.0)
+      addressable (>= 2.8.0)
       crack (>= 0.3.2)
       hashdiff (>= 0.4.0, < 2.0.0)
     websocket (1.2.11)

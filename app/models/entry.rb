@@ -122,7 +122,10 @@ class Entry < ApplicationRecord
     else scope
     end
 
-    scope.includes(entryable: :merchant).merge(Entry.reverse_chronological).to_a
+    # Use simple date ordering here (not Entry.reverse_chronological): merging the full
+    # chronological scope with includes() produces SELECT DISTINCT ... ORDER BY in PostgreSQL,
+    # which requires ORDER BY expressions in the select list (PG::InvalidColumnReference).
+    scope.includes(entryable: :merchant).order(date: :desc, id: :desc).to_a
   end
 
   # Auto-exclude stale pending transactions for an account
