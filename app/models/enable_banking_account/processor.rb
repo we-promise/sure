@@ -59,7 +59,8 @@ class EnableBankingAccount::Processor
           # Fallback: no credit_limit from API — compute it using available_credit defined at account level
           Rails.logger.info "Using stored available_credit fallback for account #{account.id}"
           available_credit = account.accountable.available_credit
-          balance = available_credit - balance
+          outstanding = balance.abs
+          balance = [ available_credit - outstanding, 0 ].max
         else
           # Fallback: no credit_limit from API — display raw outstanding balance
           # We cannot derive available credit without knowing the limit; leave balance unchanged.
