@@ -7,6 +7,7 @@ import '../providers/categories_provider.dart';
 import '../providers/theme_provider.dart';
 import '../services/offline_storage_service.dart';
 import '../services/log_service.dart';
+import '../services/biometric_service.dart';
 import '../services/preferences_service.dart';
 import '../services/user_service.dart';
 import 'log_viewer_screen.dart';
@@ -23,12 +24,53 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String? _appVersion;
   bool _isResettingAccount = false;
   bool _isDeletingAccount = false;
+  bool _biometricSupported = false;
+  bool _biometricEnabled = false;
+  bool _isTogglingBiometric = false;
 
   @override
   void initState() {
     super.initState();
     _loadPreferences();
     _loadAppVersion();
+    _loadBiometricState();
+  }
+
+  Future<void> _loadBiometricState() async {
+    final supported = await BiometricService.instance.isDeviceSupported();
+    final enabled = await PreferencesService.instance.getBiometricEnabled();
+    if (!supported && enabled) {
+      await PreferencesService.instance.setBiometricEnabled(false);
+    }
+    if (mounted) {
+      setState(() {
+        _biometricSupported = supported;
+        _biometricEnabled = supported && enabled;
+      });
+    }
+  }
+
+  Future<void> _toggleBiometric(bool value) async {
+    if (_isTogglingBiometric) return;
+    setState(() => _isTogglingBiometric = true);
+    try {
+      if (value) {
+        final success = await BiometricService.instance.authenticate(
+          reason: 'Verify biometric to enable app lock',
+        );
+        if (!mounted) return;
+        if (!success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Biometric authentication failed.')),
+          );
+          return;
+        }
+      }
+      await PreferencesService.instance.setBiometricEnabled(value);
+      if (mounted) setState(() => _biometricEnabled = value);
+    } finally {
+      if (mounted) setState(() => _isTogglingBiometric = false);
+    }
   }
 
   Future<void> _loadAppVersion() async {
@@ -460,6 +502,30 @@ class _SettingsScreenState extends State<SettingsScreen> {
             subtitle: const Text('Remove all cached transactions and accounts'),
             onTap: () => _handleClearLocalData(context),
           ),
+
+          if (_biometricSupported) ...[
+            const Divider(),
+
+            const Padding(
+              padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
+              child: Text(
+                'Security',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey,
+                ),
+              ),
+            ),
+
+            SwitchListTile(
+              secondary: const Icon(Icons.fingerprint),
+              title: const Text('Biometric Lock'),
+              subtitle: const Text('Require biometric authentication when resuming the app'),
+              value: _biometricEnabled,
+              onChanged: _isTogglingBiometric ? null : _toggleBiometric,
+            ),
+          ],
 
           const Divider(),
 
