@@ -1,5 +1,5 @@
 class Balance::ChartSeriesBuilder
-  def initialize(account_ids:, currency:, period: Period.last_30_days, interval: "1 day", favorable_direction: "up")
+  def initialize(account_ids:, currency:, period: Period.last_30_days, interval: nil, favorable_direction: "up")
     @account_ids = account_ids
     @currency = currency
     @period = period

@@ -20,16 +20,12 @@
           <%= t(".status_inactive") %>
         </p>
       </div>
-      <div class="bg-destructive-50 border border-destructive-200 rounded-lg p-3">
+      <div class="bg-amber-50 border border-amber-200 rounded-lg p-3">
         <div class="flex items-start gap-2">
-          <%= icon("alert-circle", class: "w-5 h-5 text-destructive-600 mt-0.5 shrink-0") %>
+          <%= icon("alert-triangle", size: "sm", class: "text-amber-600 mt-0.5 shrink-0") %>
           <div>
-            <h3 class="text-sm font-medium text-destructive-800">
-              <%= t(".connection_failed") %>
-            </h3>
-            <div class="mt-2 text-sm text-destructive-700">
-              <p><%= t(".troubleshooting") %></p>
-            </div>
+            <h3 class="text-sm font-medium text-amber-700"><%= t(".connection_failed") %></h3>
+            <p class="text-sm text-amber-700 mt-1"><%= t(".troubleshooting") %></p>
           </div>
         </div>
       </div>

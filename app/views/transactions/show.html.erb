@@ -22,7 +22,7 @@
                     <p class="text-sm font-medium text-primary"><%= potential_match.name %></p>
                     <p class="text-xs text-secondary"><%= potential_match.date.strftime("%b %d, %Y") %> • <%= potential_match.account.name %></p>
                   </div>
-                  <p class="text-sm font-medium <%= potential_match.amount.negative? ? "text-green-600" : "text-primary" %>">
+                  <p class="text-sm font-medium privacy-sensitive <%= potential_match.amount.negative? ? "text-green-600" : "text-primary" %>">
                     <%= format_money(-potential_match.amount_money) %>
                   </p>
                 </div>
@@ -109,7 +109,7 @@
                   :id, :name,
                   { include_blank: t(".none"),
                     label: t(".merchant_label"),
-                    class: "text-subdued", variant: :logo, searchable: true, disabled: @entry.split_child? || !can_annotate_entry? },
+                    variant: :logo, searchable: true, menu_placement: :auto, disabled: @entry.split_child? || !can_annotate_entry? },
                   "data-auto-submit-form-target": "auto" %>
             <%= ef.select :tag_ids,
                   Current.family.tags.alphabetically.pluck(:name, :id),

@@ -55,7 +55,11 @@ class UI::Account::Chart < ApplicationComponent
   def converted_balance_money
     return nil unless foreign_currency?
 
-    account.balance_money.exchange_to(account.family.currency, fallback_rate: 1)
+    begin
+      account.balance_money.exchange_to(account.family.currency)
+    rescue Money::ConversionError
+      nil
+    end
   end
 
   def view
@@ -68,5 +72,16 @@ class UI::Account::Chart < ApplicationComponent
 
   def trend
     series.trend
+  end
+
+  def comparison_label
+    start_date = series.start_date
+    return period.comparison_label if start_date.blank?
+
+    if start_date > period.start_date
+      "vs. available history"
+    else
+      period.comparison_label
+    end
   end
 end

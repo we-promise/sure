@@ -53,6 +53,17 @@ class BudgetCategory < ApplicationRecord
     budget.budget_category_actual_spending(self)
   end
 
+  def update_budgeted_spending!(new_budgeted_spending)
+    self.class.transaction do
+      lock!
+
+      previous_budgeted_spending = budgeted_spending || 0
+      update!(budgeted_spending: new_budgeted_spending)
+
+      sync_parent_budgeted_spending!(previous_budgeted_spending:) if subcategory?
+    end
+  end
+
   def avg_monthly_expense
     budget.category_avg_monthly_expense(category)
   end
@@ -151,6 +162,35 @@ class BudgetCategory < ApplicationRecord
     available_to_spend.negative?
   end
 
+  def budgeted?
+    display_budgeted_spending.to_d.positive?
+  end
+
+  def unbudgeted_with_spending?
+    !budgeted? && actual_spending.to_d.positive?
+  end
+
+  def over_budget_with_budget?
+    budgeted? && over_budget?
+  end
+
+  def on_track?
+    budgeted? && !over_budget?
+  end
+
+  def any_over_budget?
+    unbudgeted_with_spending? || over_budget_with_budget?
+  end
+
+  def visible_on_track?
+    return false unless on_track?
+
+    # Subcategories inheriting parent budget are hidden until they have spending.
+    return true unless subcategory? && inherits_parent_budget?
+
+    actual_spending.to_d.positive?
+  end
+
   def near_limit?
     !over_budget? && percent_of_budget_spent >= 90
   end
@@ -192,21 +232,6 @@ class BudgetCategory < ApplicationRecord
     budget.budget_categories.select { |bc| bc.category.parent_id == category.parent_id && bc.id != id }
   end
 
-  def max_allocation
-    return nil unless subcategory?
-
-    parent_budget_cat = budget.budget_categories.find { |bc| bc.category.id == category.parent_id }
-    return nil unless parent_budget_cat
-
-    parent_budget = parent_budget_cat[:budgeted_spending] || 0
-
-    # Sum budgets of siblings that have individual limits (excluding those that inherit)
-    siblings_with_limits = siblings.reject(&:inherits_parent_budget?)
-    siblings_budget = siblings_with_limits.sum { |s| s[:budgeted_spending] || 0 }
-
-    [ parent_budget - siblings_budget, 0 ].max
-  end
-
   def subcategories
     return BudgetCategory.none unless category.parent_id.nil?
     return BudgetCategory.none if category.id.nil?
@@ -215,4 +240,28 @@ class BudgetCategory < ApplicationRecord
       .joins(:category)
       .where(categories: { parent_id: category.id })
   end
+
+  private
+    def sync_parent_budgeted_spending!(previous_budgeted_spending:)
+      parent_budget_category = budget.budget_categories.where(category_id: category.parent_id).lock.first
+      return unless parent_budget_category
+
+      sibling_budgeted_spending = budget.budget_categories
+        .joins(:category)
+        .where(categories: { parent_id: category.parent_id })
+        .where.not(id: id)
+        .sum(:budgeted_spending)
+
+      # Preserve positive parent reserve—the extra budget assigned directly to the parent
+      # beyond the sum of its subcategories—but do not carry forward a negative reserve
+      # that would leave the parent below its subcategory total.
+      parent_budget_reserve = [
+        (parent_budget_category.budgeted_spending || 0) - sibling_budgeted_spending - previous_budgeted_spending,
+        0
+      ].max
+
+      parent_budget_category.update!(
+        budgeted_spending: sibling_budgeted_spending + (budgeted_spending || 0) + parent_budget_reserve
+      )
+    end
 end

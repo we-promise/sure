@@ -1,14 +1,15 @@
 # ===========================================================================
-# Example Docker Compose file with Ollama (local LLM) and Pipelock (agent
-# security proxy)
+# Example Docker Compose file with Ollama (local LLM), OpenClaw (external AI
+# assistant), and Pipelock (agent security proxy)
 # ===========================================================================
 #
 # Purpose:
 # --------
 #
-# This file extends the standard Sure setup with two optional capabilities:
+# This file extends the standard Sure setup with optional AI capabilities:
 #
-#   Pipelock — agent security proxy (always runs)
+#   Pipelock — agent security proxy
+#   (always runs)
 #     - Forward proxy (port 8888): scans outbound HTTPS from Faraday-based
 #       clients (e.g. ruby-openai). NOT covered: SimpleFin, Coinbase, or
 #       anything using Net::HTTP/HTTParty directly. HTTPS_PROXY is
@@ -20,8 +21,16 @@
 #       on web port 3000 (auth token required); Pipelock adds scanning
 #       but Docker Compose cannot enforce network-level routing.
 #
-#   Ollama + Open WebUI — local LLM inference (optional, --profile ai)
-#     - Only starts when you run: docker compose --profile ai up
+#   Ollama + Open WebUI — local LLM inference
+#   (optional, --profile local-ai)
+#     - Only starts when you run: docker compose --profile local-ai up
+#
+#   Ollama + Open WebUI + OpenClaw — external AI assistant
+#   (optional, --profile external-assistant)
+#     - Local LLM inference available via Ollama + Open WebUI
+#     - Starts an OpenClaw locally for Sure's external assistant mode.
+#     - Set EXTERNAL_ASSISTANT_URL to http://openclaw:18789/v1/chat/completions
+#       for internal routing.
 #
 # Setup:
 # ------
@@ -34,9 +43,24 @@
 # Troubleshooting:
 # ----------------
 #
-# If you run into problems, you should open a Discussion here:
+# Problems? Swing by our Discord or open a Discussion here:
 #
 # https://github.com/we-promise/sure/discussions/categories/general
+#
+# IPv6 Note (Yahoo Finance Sync, others?):
+# ----------------------------------------
+# If you encounter "Failed to open TCP connection" errors to hosts like
+# fc.yahoo.com in your environment, the issue may be that DNS resolves
+# to an IPv6 address first. Since IPv6 may not be configured in the container,
+# the connection hangs. To work around this, you can hardcode the IPv4
+# addresses in your container's /etc/hosts or set custom DNS:
+#
+#   extra_hosts:
+#     - "fc.yahoo.com:173.223.12.81"
+#     - "query1.finance.yahoo.com:98.136.48.169"
+#     - "query2.finance.yahoo.com:98.136.48.169"
+#
+# Or use explicit DNS servers that prefer IPv4 (already configured below).
 #
 
 x-db-env: &db_env
@@ -63,7 +87,7 @@ x-rails-env: &rails_env
   HTTPS_PROXY: "http://pipelock:8888"
   HTTP_PROXY: "http://pipelock:8888"
   # Skip proxy for internal Docker network services (including ollama for local LLM calls)
-  NO_PROXY: "db,redis,pipelock,ollama,localhost,127.0.0.1"
+  NO_PROXY: "db,redis,pipelock,ollama,openclaw,localhost,127.0.0.1"
   AI_DEBUG_MODE: "true" # Useful for debugging, set to "false" in production
   # Ollama using OpenAI API compatible endpoints
   OPENAI_ACCESS_TOKEN: token-can-be-any-value-for-ollama
@@ -80,7 +104,7 @@ x-rails-env: &rails_env
   # Set EXTERNAL_ASSISTANT_URL + TOKEN to activate, then either set ASSISTANT_TYPE=external
   # here (forces all families) or choose "External" in Settings > Self-Hosting > AI Assistant.
   ASSISTANT_TYPE: ${ASSISTANT_TYPE:-}
-  EXTERNAL_ASSISTANT_URL: ${EXTERNAL_ASSISTANT_URL:-}
+  EXTERNAL_ASSISTANT_URL: ${EXTERNAL_ASSISTANT_URL:-http://openclaw:18789/v1/chat/completions}
   EXTERNAL_ASSISTANT_TOKEN: ${EXTERNAL_ASSISTANT_TOKEN:-}
   EXTERNAL_ASSISTANT_AGENT_ID: ${EXTERNAL_ASSISTANT_AGENT_ID:-main}
   EXTERNAL_ASSISTANT_SESSION_KEY: ${EXTERNAL_ASSISTANT_SESSION_KEY:-agent:main:main}
@@ -121,7 +145,8 @@ services:
   # Note: You still have to download models manually using the ollama CLI or via Open WebUI
   ollama:
     profiles:
-      - ai
+      - local-ai
+      - external-assistant
     volumes:
       - ollama:/root/.ollama
     container_name: ollama
@@ -146,7 +171,8 @@ services:
 
   ollama-webui:
     profiles:
-      - ai
+      - local-ai
+      - external-assistant
     image: ghcr.io/open-webui/open-webui
     container_name: ollama-webui
     volumes:
@@ -169,6 +195,57 @@ services:
     networks:
       - sure_net
 
+  # OpenClaw gateway for Sure's "external assistant" mode.
+  # Based on OpenClaw Docker install docs:
+  # https://docs.openclaw.ai/install/docker
+  openclaw:
+    profiles:
+      - external-assistant
+    image: ${OPENCLAW_IMAGE:-ghcr.io/openclaw/openclaw:latest}
+    hostname: openclaw
+    restart: unless-stopped
+    init: true
+    environment:
+      HOME: /home/node
+      TERM: xterm-256color
+      TZ: ${OPENCLAW_TZ:-UTC}
+      OPENCLAW_GATEWAY_TOKEN: ${EXTERNAL_ASSISTANT_TOKEN:-changeme}
+      OPENCLAW_ALLOW_INSECURE_PRIVATE_WS: ${OPENCLAW_ALLOW_INSECURE_PRIVATE_WS:-}
+    command:
+      [
+        "node",
+        "dist/index.js",
+        "gateway",
+        # OpenClaw may exit with "Missing config" on first boot in example setups.
+        # `--allow-unconfigured` keeps the gateway running until you complete `openclaw setup`.
+        "pass",
+        "--allow-unconfigured",
+        "--bind",
+        "${OPENCLAW_GATEWAY_BIND:-lan}",
+        "--port",
+        "18789",
+      ]
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:18789/healthz').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    ports:
+      # Expose for local onboarding/debugging. Sure uses the internal service name.
+      - "${OPENCLAW_GATEWAY_PORT:-18789}:18789"
+    volumes:
+      - openclaw-config:/home/node/.openclaw
+      - openclaw-workspace:/home/node/.openclaw/workspace
+    networks:
+      - sure_net
+
   web:
     image: ghcr.io/we-promise/sure:stable
     volumes:
@@ -178,10 +255,16 @@ services:
       # bypassing Pipelock's MCP scanning (auth token is still required).
       # For hardened deployments, use `expose: [3000]` instead and front
       # the web UI with a separate reverse proxy.
+      #
+      # To also publish on IPv6 (dual-stack), uncomment the line below AND
+      # set BINDING=:: in the environment block. See docs/hosting/docker.md
+      # "Binding to IPv6" for details.
+      # - "[::]:${PORT:-3000}:3000"
       - ${PORT:-3000}:3000
     restart: unless-stopped
     environment:
       <<: *rails_env
+      # BINDING: "::"  # Uncomment for IPv6 dual-stack inside the container
     depends_on:
       db:
         condition: service_healthy
@@ -271,7 +354,10 @@ volumes:
   redis-data:
   ollama:
   ollama-webui:
+  openclaw-config:
+  openclaw-workspace:
 
 networks:
   sure_net:
     driver: bridge
+    name: sure_net

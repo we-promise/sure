@@ -247,6 +247,25 @@ class Account < ApplicationRecord
       create_and_sync(attributes, skip_initial_sync: true)
     end
 
+    def create_from_binance_account(binance_account)
+      family = binance_account.binance_item.family
+
+      attributes = {
+        family: family,
+        name: binance_account.name,
+        balance: (binance_account.current_balance || 0).to_d,
+        cash_balance: 0,
+        currency: binance_account.currency.presence || family.currency,
+        accountable_type: "Crypto",
+        accountable_attributes: {
+          subtype: "exchange",
+          tax_treatment: "taxable"
+        }
+      }
+
+      create_and_sync(attributes, skip_initial_sync: true)
+    end
+
 
     private
 
@@ -292,8 +311,10 @@ class Account < ApplicationRecord
   end
 
   def destroy_later
-    mark_for_deletion!
-    DestroyJob.perform_later(self)
+    transaction do
+      mark_for_deletion!
+      DestroyJob.perform_later(self)
+    end
   end
 
   # Override destroy to handle error recovery for accounts
@@ -316,6 +337,10 @@ class Account < ApplicationRecord
                     .order(:security_id, date: :desc)
       )
       .order(amount: :desc)
+  end
+
+  def latest_provider_holdings_snapshot_date
+    holdings.where.not(account_provider_id: nil).maximum(:date)
   end
 
   def start_date
@@ -360,6 +385,13 @@ class Account < ApplicationRecord
     return true if investment?
     return accountable.supports_trades? if crypto? && accountable.respond_to?(:supports_trades?)
     false
+  end
+
+  def traded_standard_securities
+    Security.where(id: holdings.select(:security_id))
+            .standard
+            .distinct
+            .order(:ticker)
   end
 
   # The balance type determines which "component" of balance is being tracked.

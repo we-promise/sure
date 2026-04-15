@@ -10,6 +10,8 @@ class CoinstatsItem::ImporterTest < ActiveSupport::TestCase
     )
 
     @mock_provider = mock("Provider::Coinstats")
+    # Stub DeFi endpoint globally — individual tests override if needed
+    @mock_provider.stubs(:get_wallet_defi).returns(success_response({ protocols: [] }))
   end
 
   # Helper to wrap data in Provider::Response
@@ -218,6 +220,121 @@ class CoinstatsItem::ImporterTest < ActiveSupport::TestCase
     assert result[:success]
     assert_equal 1, result[:accounts_updated]
     assert_equal 0, result[:transactions_imported]
+  end
+
+  test "preserves exchange portfolio snapshot when portfolio coin fetch is missing" do
+    crypto = Crypto.create!
+    account = @family.accounts.create!(
+      accountable: crypto,
+      name: "Bitvavo",
+      balance: 250,
+      cash_balance: 10,
+      currency: "EUR"
+    )
+
+    coinstats_account = @coinstats_item.coinstats_accounts.create!(
+      name: "Bitvavo",
+      currency: "EUR",
+      account_id: "exchange_portfolio:portfolio_123",
+      wallet_address: "portfolio_123",
+      current_balance: 250,
+      raw_payload: {
+        source: "exchange",
+        portfolio_account: true,
+        portfolio_id: "portfolio_123",
+        connection_id: "bitvavo",
+        exchange_name: "Bitvavo",
+        coins: [
+          {
+            coin: { identifier: "bitcoin", symbol: "BTC", name: "Bitcoin" },
+            count: "0.003",
+            price: { EUR: "80000" }
+          },
+          {
+            coin: { identifier: "FiatCoin:eur", symbol: "EUR", name: "Euro", isFiat: true },
+            count: "10",
+            price: { EUR: "1" }
+          }
+        ]
+      },
+      raw_transactions_payload: []
+    )
+    AccountProvider.create!(account: account, provider: coinstats_account)
+
+    @mock_provider.expects(:sync_exchange).with(portfolio_id: "portfolio_123").returns(success_response({}))
+    @mock_provider.expects(:list_exchange_transactions)
+      .with(portfolio_id: "portfolio_123", currency: "USD", from: nil)
+      .returns([])
+    @mock_provider.expects(:list_portfolio_coins)
+      .with(portfolio_id: "portfolio_123")
+      .returns(nil)
+
+    importer = CoinstatsItem::Importer.new(@coinstats_item, coinstats_provider: @mock_provider)
+
+    assert_no_changes -> { coinstats_account.reload.current_balance.to_f } do
+      result = importer.import
+      assert result[:success]
+      assert_equal 1, result[:accounts_updated]
+      assert_equal 0, result[:transactions_imported]
+    end
+
+    reloaded = coinstats_account.reload
+    assert_equal "portfolio_123", reloaded.raw_payload["portfolio_id"]
+    assert_equal 2, reloaded.raw_payload["coins"].size
+    assert_equal 250.0, reloaded.current_balance.to_f
+  end
+
+  test "writes an empty exchange portfolio snapshot when CoinStats returns an empty portfolio" do
+    crypto = Crypto.create!
+    account = @family.accounts.create!(
+      accountable: crypto,
+      name: "Bitvavo",
+      balance: 250,
+      cash_balance: 10,
+      currency: "EUR"
+    )
+
+    coinstats_account = @coinstats_item.coinstats_accounts.create!(
+      name: "Bitvavo",
+      currency: "EUR",
+      account_id: "exchange_portfolio:portfolio_123",
+      wallet_address: "portfolio_123",
+      current_balance: 250,
+      raw_payload: {
+        source: "exchange",
+        portfolio_account: true,
+        portfolio_id: "portfolio_123",
+        connection_id: "bitvavo",
+        exchange_name: "Bitvavo",
+        coins: [
+          {
+            coin: { identifier: "bitcoin", symbol: "BTC", name: "Bitcoin" },
+            count: "0.003",
+            price: { EUR: "80000" }
+          }
+        ]
+      },
+      raw_transactions_payload: []
+    )
+    AccountProvider.create!(account: account, provider: coinstats_account)
+
+    @mock_provider.expects(:sync_exchange).with(portfolio_id: "portfolio_123").returns(success_response({}))
+    @mock_provider.expects(:list_exchange_transactions)
+      .with(portfolio_id: "portfolio_123", currency: "USD", from: nil)
+      .returns([])
+    @mock_provider.expects(:list_portfolio_coins)
+      .with(portfolio_id: "portfolio_123")
+      .returns([])
+
+    importer = CoinstatsItem::Importer.new(@coinstats_item, coinstats_provider: @mock_provider)
+    result = importer.import
+
+    assert result[:success]
+    assert_equal 1, result[:accounts_updated]
+
+    reloaded = coinstats_account.reload
+    assert_equal 0.0, reloaded.current_balance.to_f
+    assert_equal [], reloaded.raw_payload["coins"]
   end
 
   test "calculates balance from matching token only, not all tokens" do
@@ -476,5 +593,219 @@ class CoinstatsItem::ImporterTest < ActiveSupport::TestCase
     coinstats_account2.reload
     assert_equal 5000.0, coinstats_account1.current_balance.to_f  # 2.0 * 2500
     assert_equal 4500.0, coinstats_account2.current_balance.to_f  # 0.1 * 45000
+  end
+
+  # DeFi / staking tests
+
+  test "creates DeFi account with balance equal to total position value, not quantity * price" do
+    crypto = Crypto.create!
+    account = @family.accounts.create!(
+      accountable: crypto,
+      name: "Ethereum Wallet",
+      balance: 1000,
+      currency: "USD"
+    )
+    coinstats_account = @coinstats_item.coinstats_accounts.create!(
+      name: "Ethereum (0x12...abc)",
+      currency: "USD",
+      account_id: "ethereum",
+      raw_payload: { address: "0x123abc", blockchain: "ethereum" }
+    )
+    AccountProvider.create!(account: account, provider: coinstats_account)
+
+    # DeFi response: 32 ETH staked, total position value = $70,272 (= 32 * $2196)
+    # The `price` field is TotalValueDto (total position value), NOT price per token.
+    defi_response = {
+      protocols: [
+        {
+          id: "lido",
+          name: "Lido",
+          logo: "https://example.com/lido.png",
+          investments: [
+            {
+              name: "Staking",
+              assets: [
+                {
+                  title: "Deposit",
+                  coinId: "ethereum",
+                  symbol: "ETH",
+                  amount: 32.0,
+                  price: { USD: 70272.0 }  # total value, not per-token
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+
+    @mock_provider.expects(:get_wallet_defi)
+      .with(address: "0x123abc", connection_id: "ethereum")
+      .returns(success_response(defi_response))
+
+    @mock_provider.stubs(:get_wallet_balances).returns(success_response([]))
+    @mock_provider.stubs(:extract_wallet_balance).returns([])
+    @mock_provider.stubs(:get_wallet_transactions).returns(success_response([]))
+    @mock_provider.stubs(:extract_wallet_transactions).returns([])
+
+    assert_difference "CoinstatsAccount.count", 1 do
+      assert_difference "Account.count", 1 do
+        CoinstatsItem::Importer.new(@coinstats_item, coinstats_provider: @mock_provider).import
+      end
+    end
+
+    defi_account = @coinstats_item.coinstats_accounts.find_by(account_id: "defi:ethereum:lido:staking:ethereum:deposit")
+    assert_not_nil defi_account
+    assert_equal "defi", defi_account.raw_payload["source"]
+    # Balance must be the total position value ($70,272), NOT 32 * $70,272
+    assert_equal 70272.0, defi_account.current_balance.to_f
+    assert_equal "ETH (Lido Staking)", defi_account.name
+  end
+
+  test "zeros out DeFi account when staking position is no longer active" do
+    crypto = Crypto.create!
+    account = @family.accounts.create!(
+      accountable: crypto,
+      name: "Ethereum Wallet",
+      balance: 1000,
+      currency: "USD"
+    )
+    wallet_account = @coinstats_item.coinstats_accounts.create!(
+      name: "Ethereum (0x12...abc)",
+      currency: "USD",
+      account_id: "ethereum",
+      raw_payload: { address: "0x123abc", blockchain: "ethereum" }
+    )
+    AccountProvider.create!(account: account, provider: wallet_account)
+
+    # Existing DeFi account from a previous sync
+    defi_crypto = Crypto.create!
+    defi_linked_account = @family.accounts.create!(
+      accountable: defi_crypto,
+      name: "ETH (Lido Staking)",
+      balance: 70272,
+      currency: "USD"
+    )
+    defi_account = @coinstats_item.coinstats_accounts.create!(
+      name: "ETH (Lido Staking)",
+      currency: "USD",
+      account_id: "defi:ethereum:lido:staking:ethereum:deposit",
+      wallet_address: "0x123abc",
+      current_balance: 70272,
+      raw_payload: {
+        source: "defi",
+        address: "0x123abc",
+        blockchain: "ethereum",
+        protocol_id: "lido",
+        amount: 32.0,
+        balance: 70272.0
+      }
+    )
+    AccountProvider.create!(account: defi_linked_account, provider: defi_account)
+
+    # DeFi response returns empty — position has been fully unstaked
+    @mock_provider.expects(:get_wallet_defi)
+      .with(address: "0x123abc", connection_id: "ethereum")
+      .returns(success_response({ protocols: [] }))
+
+    @mock_provider.stubs(:get_wallet_balances).returns(success_response([]))
+    @mock_provider.stubs(:extract_wallet_balance).returns([])
+    @mock_provider.stubs(:get_wallet_transactions).returns(success_response([]))
+    @mock_provider.stubs(:extract_wallet_transactions).returns([])
+
+    CoinstatsItem::Importer.new(@coinstats_item, coinstats_provider: @mock_provider).import
+
+    defi_account.reload
+    assert_equal 0.0, defi_account.current_balance.to_f
+  end
+
+  test "defi accounts are skipped in wallet update loop" do
+    crypto = Crypto.create!
+    account = @family.accounts.create!(
+      accountable: crypto,
+      name: "Ethereum Wallet",
+      balance: 1000,
+      currency: "USD"
+    )
+    wallet_account = @coinstats_item.coinstats_accounts.create!(
+      name: "Ethereum",
+      currency: "USD",
+      account_id: "ethereum",
+      raw_payload: { address: "0x123abc", blockchain: "ethereum" }
+    )
+    AccountProvider.create!(account: account, provider: wallet_account)
+
+    defi_crypto = Crypto.create!
+    defi_linked_account = @family.accounts.create!(
+      accountable: defi_crypto,
+      name: "ETH (Lido Staking)",
+      balance: 1000,
+      currency: "USD"
+    )
+    defi_account = @coinstats_item.coinstats_accounts.create!(
+      name: "ETH (Lido Staking)",
+      currency: "USD",
+      account_id: "defi:ethereum:lido:staking:ethereum:deposit",
+      wallet_address: "0x123abc",
+      current_balance: 1000,
+      raw_payload: {
+        source: "defi",
+        address: "0x123abc",
+        blockchain: "ethereum",
+        amount: 0.5,
+        balance: 1000.0
+      }
+    )
+    AccountProvider.create!(account: defi_linked_account, provider: defi_account)
+
+    # get_wallet_defi called once (for the one wallet), get_wallet_balances/transactions only
+    # called once despite two linked accounts (DeFi account excluded from wallet fetch)
+    @mock_provider.expects(:get_wallet_defi)
+      .with(address: "0x123abc", connection_id: "ethereum")
+      .once
+      .returns(success_response({ protocols: [] }))
+
+    @mock_provider.expects(:get_wallet_balances).with("ethereum:0x123abc").once
+      .returns(success_response([]))
+    @mock_provider.stubs(:extract_wallet_balance).returns([])
+    @mock_provider.expects(:get_wallet_transactions).with("ethereum:0x123abc").once
+      .returns(success_response([]))
+    @mock_provider.stubs(:extract_wallet_transactions).returns([])
+
+    result = CoinstatsItem::Importer.new(@coinstats_item, coinstats_provider: @mock_provider).import
+
+    assert result[:success]
+  end
+
+  test "propagates DeFi sync failure into accounts_failed count" do
+    crypto = Crypto.create!
+    account = @family.accounts.create!(
+      accountable: crypto,
+      name: "Ethereum Wallet",
+      balance: 1000,
+      currency: "USD"
+    )
+    coinstats_account = @coinstats_item.coinstats_accounts.create!(
+      name: "Ethereum",
+      currency: "USD",
+      account_id: "ethereum",
+      raw_payload: { address: "0x123abc", blockchain: "ethereum" }
+    )
+    AccountProvider.create!(account: account, provider: coinstats_account)
+
+    @mock_provider.expects(:get_wallet_defi)
+      .with(address: "0x123abc", connection_id: "ethereum")
+      .raises(Provider::Coinstats::Error.new("DeFi endpoint unavailable"))
+
+    @mock_provider.stubs(:get_wallet_balances).returns(success_response([]))
+    @mock_provider.stubs(:extract_wallet_balance).returns([])
+    @mock_provider.stubs(:get_wallet_transactions).returns(success_response([]))
+    @mock_provider.stubs(:extract_wallet_transactions).returns([])
+
+    result = CoinstatsItem::Importer.new(@coinstats_item, coinstats_provider: @mock_provider).import
+
+    # Wallet account still updated, but DeFi failure is counted
+    assert_equal 1, result[:accounts_failed]
+    refute result[:success]
   end
 end

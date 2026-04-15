@@ -5,6 +5,20 @@ de:
       custom_range: "%{start} - %{end_date}"
       month_year: "%{month}"
     show:
+      categories:
+        amount: Betrag
+        edit: Bearbeiten
+        title: Kategorien
+      on_track_categories:
+        short_title: Im Plan
+        title: Im Plan
+      over_budget_categories:
+        short_title: Uber Budget
+        title: Uber Budget
+      filter:
+        all: Alle
+        on_track: Im Plan
+        over_budget: Uber Budget
       tabs:
         actual: Ist
         budgeted: Budgetiert

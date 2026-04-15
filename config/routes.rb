@@ -49,6 +49,21 @@ Rails.application.routes.draw do
     end
   end
 
+  resources :binance_items, only: [ :index, :new, :create, :show, :edit, :update, :destroy ] do
+    collection do
+      get :select_accounts
+      post :link_accounts
+      get :select_existing_account
+      post :link_existing_account
+    end
+
+    member do
+      post :sync
+      get :setup_accounts
+      post :complete_account_setup
+    end
+  end
+
   resources :snaptrade_items, only: [ :index, :new, :create, :show, :edit, :update, :destroy ] do
     collection do
       get :preload_accounts
@@ -74,6 +89,7 @@ Rails.application.routes.draw do
   resources :coinstats_items, only: [ :index, :new, :create, :update, :destroy ] do
     collection do
       post :link_wallet
+      post :link_exchange
     end
     member do
       post :sync
@@ -233,6 +249,8 @@ Rails.application.routes.draw do
     end
   end
 
+  get :exchange_rate, to: "exchange_rates#show"
+
   resources :transfers, only: %i[new create destroy show update]
 
   resources :imports, only: %i[index new show create update destroy] do
@@ -273,6 +291,10 @@ Rails.application.routes.draw do
   namespace :transactions do
     resource :bulk_deletion, only: :create
     resource :bulk_update, only: %i[new create]
+    resource :categorize, only: %i[show create] do
+      patch :assign_entry, on: :collection
+      get :preview_rule, on: :collection
+    end
   end
 
   resources :transactions, only: %i[index new create show update destroy] do
