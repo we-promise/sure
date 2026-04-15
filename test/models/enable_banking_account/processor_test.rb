@@ -59,14 +59,17 @@ class EnableBankingAccount::ProcessorTest < ActiveSupport::TestCase
     end
   end
 
-  test "sets CC balance to raw outstanding when credit_limit is absent" do
+  test "falls back to stored available_credit when credit_limit is absent" do
     cc_account = accounts(:credit_card)
+
     @enable_banking_account.update!(current_balance: 300.00, credit_limit: nil)
+
     AccountProvider.find_by(provider: @enable_banking_account)&.destroy
     AccountProvider.create!(account: cc_account, provider: @enable_banking_account)
 
     EnableBankingAccount::Processor.new(@enable_banking_account).process
 
-    assert_equal 300.0, cc_account.reload.cash_balance
+    expected_balance = cc_account.accountable.available_credit - 300.0
+    assert_equal expected_balance, cc_account.reload.cash_balance
   end
 end
