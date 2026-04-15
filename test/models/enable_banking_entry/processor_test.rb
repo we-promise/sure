@@ -239,6 +239,28 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
     assert_equal "ACME SHOP", name
   end
 
+  test "falls back to top-level counterparty name when nested name is blank" do
+    processor = build_processor(
+      credit_debit_indicator: "CRDT",
+      debtor: { name: "" },
+      debtor_name: "ACME SHOP"
+    )
+
+    assert_equal "ACME SHOP", processor.send(:name)
+
+    merchant = stub(id: 789)
+    import_adapter = mock("import_adapter")
+    import_adapter.expects(:find_or_create_merchant).with(
+      provider_merchant_id: "enable_banking_merchant_c0b09f27a4375bb8d8d477ed552a9aa1",
+      name: "ACME SHOP",
+      source: "enable_banking"
+    ).returns(merchant)
+
+    processor.stubs(:import_adapter).returns(import_adapter)
+
+    assert_equal merchant, processor.send(:merchant)
+  end
+
   test "builds merchant from remittance when counterparty is technical card id" do
     processor = build_processor(
       credit_debit_indicator: "CRDT",

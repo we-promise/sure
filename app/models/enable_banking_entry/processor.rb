@@ -179,9 +179,9 @@ class EnableBankingEntry::Processor
       # For outgoing payments (DBIT), counterparty is the creditor (who we paid)
       # For incoming payments (CRDT), counterparty is the debtor (who paid us)
       if credit_debit_indicator == "CRDT"
-        data.dig(:debtor, :name) || data[:debtor_name]
+        data.dig(:debtor, :name).presence || data[:debtor_name].presence
       else
-        data.dig(:creditor, :name) || data[:creditor_name]
+        data.dig(:creditor, :name).presence || data[:creditor_name].presence
       end
     end
 
