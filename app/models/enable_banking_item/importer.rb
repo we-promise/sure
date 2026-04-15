@@ -231,6 +231,7 @@ class EnableBankingItem::Importer
 
     def fetch_and_store_transactions(enable_banking_account)
       start_date = determine_sync_start_date(enable_banking_account)
+      include_pending = include_pending?
 
       all_transactions = fetch_paginated_transactions(
         enable_banking_account,
@@ -240,7 +241,7 @@ class EnableBankingItem::Importer
       )
 
       # Also fetch pending transactions (visible for 1-3 days before they become BOOK) if setting is enabled
-      pending_transactions = if include_pending?
+      pending_transactions = if include_pending
         fetch_paginated_transactions(
           enable_banking_account,
           start_date: start_date,
@@ -277,8 +278,19 @@ class EnableBankingItem::Importer
 
       transactions_count = all_transactions.count
 
+      existing_transactions = enable_banking_account.raw_transactions_payload.to_a
+      include_pending = include_pending?
+
+      removed_pending = false
+
+      unless include_pending
+        removed_pending = existing_transactions.reject! do |tx|
+          tx = tx.with_indifferent_access
+          tx.dig(:extra, :enable_banking, :pending) || tx[:_pending]
+        end
+      end
+
       if all_transactions.any?
-        existing_transactions = enable_banking_account.raw_transactions_payload.to_a
 
         # C4: Remove stored PDNG entries that have now settled as BOOK.
         # When a BOOK transaction arrives with the same transaction_id as a stored
@@ -296,17 +308,15 @@ class EnableBankingItem::Importer
 
         include_pending = include_pending?
 
-        if !include_pending
-          removed_pending = existing_transactions.reject! do |tx|
-            tx = tx.with_indifferent_access
-            tx.dig(:extra, :enable_banking, :pending) || tx[:_pending]
-          end
-        else
-          removed_pending = existing_transactions.reject! do |tx|
+        if include_pending
+          removed_pending ||= existing_transactions.reject! do |tx|
             tx = tx.with_indifferent_access
             pending_flag = tx.dig(:extra, :enable_banking, :pending) || tx[:_pending]
             next false unless pending_flag
-            tx[:transaction_id].present? ? book_ids.include?(tx[:transaction_id]) : book_entry_refs.include?(tx[:entry_reference].presence)
+
+            tx[:transaction_id].present? ?
+              book_ids.include?(tx[:transaction_id]) :
+              book_entry_refs.include?(tx[:entry_reference].presence)
           end
         end
 
@@ -324,6 +334,10 @@ class EnableBankingItem::Importer
         if new_transactions.any? || removed_pending
           enable_banking_account.upsert_enable_banking_transactions_snapshot!(existing_transactions + new_transactions)
         end
+      elsif removed_pending
+        enable_banking_account.upsert_enable_banking_transactions_snapshot!(
+          existing_transactions
+        )
       end
 
       { success: true, transactions_count: transactions_count }
