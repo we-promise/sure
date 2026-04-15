@@ -259,4 +259,14 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
 
     assert_equal merchant, processor.send(:merchant)
   end
+
+  test "does not build merchant from remittance when counterparty is blank" do
+    processor = build_processor(
+      credit_debit_indicator: "CRDT",
+      debtor_name: nil,
+      remittance_information: [ "Invoice 12345" ]
+    )
+
+    assert_nil processor.send(:merchant)
+  end
 end

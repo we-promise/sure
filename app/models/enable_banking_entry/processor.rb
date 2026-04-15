@@ -200,9 +200,10 @@ class EnableBankingEntry::Processor
     def merchant_name_candidate
       counterparty = counterparty_name.to_s.strip
       return counterparty if counterparty.present? && !technical_card_counterparty?(counterparty)
-
       # For technical CARD-* counterparties, reuse remittance as the best merchant candidate
-      primary_remittance_information
+      return primary_remittance_information if technical_card_counterparty?(counterparty)
+
+      nil
     end
 
     def amount
