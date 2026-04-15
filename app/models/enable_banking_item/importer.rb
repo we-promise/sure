@@ -240,16 +240,15 @@ class EnableBankingItem::Importer
         psu_headers: enable_banking_item.build_psu_headers
       )
 
-      # Also fetch pending transactions (visible for 1-3 days before they become BOOK) if setting is enabled
-      pending_transactions = if include_pending
-        fetch_paginated_transactions(
+      pending_transactions = []
+      if include_pending
+        # Also fetch pending transactions (visible for 1-3 days before they become BOOK) if setting is enabled
+        pending_transactions = fetch_paginated_transactions(
           enable_banking_account,
           start_date: start_date,
           transaction_status: "PDNG",
           psu_headers: enable_banking_item.build_psu_headers
         )
-      else
-        []
       end
 
       book_ids = all_transactions
@@ -279,7 +278,6 @@ class EnableBankingItem::Importer
       transactions_count = all_transactions.count
 
       existing_transactions = enable_banking_account.raw_transactions_payload.to_a
-      include_pending = include_pending?
 
       removed_pending = false
 
@@ -305,8 +303,6 @@ class EnableBankingItem::Importer
           .reject { |tx| tx.with_indifferent_access[:_pending] }
           .map { |tx| tx.with_indifferent_access[:entry_reference].presence }
           .compact.to_set
-
-        include_pending = include_pending?
 
         if include_pending
           removed_pending ||= existing_transactions.reject! do |tx|
