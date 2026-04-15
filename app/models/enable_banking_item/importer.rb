@@ -225,6 +225,10 @@ class EnableBankingItem::Importer
       existing
     end
 
+    def include_pending?
+      Setting.syncs_include_pending
+    end
+
     def fetch_and_store_transactions(enable_banking_account)
       start_date = determine_sync_start_date(enable_banking_account)
 
@@ -235,13 +239,17 @@ class EnableBankingItem::Importer
         psu_headers: enable_banking_item.build_psu_headers
       )
 
-      # Also fetch pending transactions (visible for 1-3 days before they become BOOK)
-      pending_transactions = fetch_paginated_transactions(
-        enable_banking_account,
-        start_date: start_date,
-        transaction_status: "PDNG",
-        psu_headers: enable_banking_item.build_psu_headers
-      )
+      # Also fetch pending transactions (visible for 1-3 days before they become BOOK) if setting is enabled
+      pending_transactions = if include_pending?
+        fetch_paginated_transactions(
+          enable_banking_account,
+          start_date: start_date,
+          transaction_status: "PDNG",
+          psu_headers: enable_banking_item.build_psu_headers
+        )
+      else
+        []
+      end
 
       book_ids = all_transactions
         .map { |tx| tx.with_indifferent_access[:transaction_id].presence }
@@ -286,11 +294,20 @@ class EnableBankingItem::Importer
           .map { |tx| tx.with_indifferent_access[:entry_reference].presence }
           .compact.to_set
 
-        removed_pending = existing_transactions.reject! do |tx|
-          tx = tx.with_indifferent_access
-          pending_flag = tx.dig(:extra, :enable_banking, :pending) || tx[:_pending]
-          next false unless pending_flag
-          tx[:transaction_id].present? ? book_ids.include?(tx[:transaction_id]) : book_entry_refs.include?(tx[:entry_reference].presence)
+        include_pending = include_pending?
+
+        if !include_pending
+          removed_pending = existing_transactions.reject! do |tx|
+            tx = tx.with_indifferent_access
+            tx.dig(:extra, :enable_banking, :pending) || tx[:_pending]
+          end
+        else
+          removed_pending = existing_transactions.reject! do |tx|
+            tx = tx.with_indifferent_access
+            pending_flag = tx.dig(:extra, :enable_banking, :pending) || tx[:_pending]
+            next false unless pending_flag
+            tx[:transaction_id].present? ? book_ids.include?(tx[:transaction_id]) : book_entry_refs.include?(tx[:entry_reference].presence)
+          end
         end
 
         existing_ids = existing_transactions.map { |tx|
