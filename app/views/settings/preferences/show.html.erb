@@ -124,7 +124,11 @@
                   data: { action: "currency-preferences#selectBaseOnly" }
                 ) %>
               </div>
-              <p class="text-sm font-medium text-secondary" data-currency-preferences-target="selectedCount"></p>
+              <p class="text-sm font-medium text-secondary"
+                 data-currency-preferences-target="selectedCount"
+                 role="status"
+                 aria-live="polite"
+                 aria-atomic="true"></p>
             </div>
             <div data-controller="list-filter" class="space-y-3">
               <div class="relative">
