@@ -46,37 +46,49 @@
   <%= settings_section title: t(".currencies_title", moniker: family_moniker), subtitle: t(".currencies_subtitle", moniker: family_moniker_downcase) do %>
     <div class="space-y-4"
          data-controller="currency-preferences"
-         data-currency-preferences-base-currency-value="<%= @user.family.primary_currency_code %>">
-      <% preview_currencies = @user.family.enabled_currency_objects.first(6) %>
-      <div class="rounded-xl border border-secondary p-4 bg-surface-inset/40 space-y-3">
-        <div class="flex items-center justify-between gap-3">
+         data-currency-preferences-base-currency-value="<%= @user.family.primary_currency_code %>"
+         data-currency-preferences-selected-count-singular-value="<%= t(".selected_currencies_count.one", count: "%{count}") %>"
+         data-currency-preferences-selected-count-plural-value="<%= t(".selected_currencies_count.other", count: "%{count}") %>">
+      <% additional_preview_currencies = @user.family.secondary_enabled_currency_objects.first(6) %>
+      <% additional_currency_count = @user.family.secondary_enabled_currency_objects.count %>
+      <div class="rounded-xl border border-secondary p-4 bg-surface-inset/40">
+        <div class="grid gap-4 md:grid-cols-2">
           <div>
-            <p class="text-sm font-medium text-primary"><%= @user.family.primary_currency_code %></p>
-            <p class="text-sm text-secondary"><%= currency_label(@user.family.primary_currency_code) %></p>
+            <p class="text-xs font-medium uppercase tracking-wide text-secondary"><%= t(".base_currency_label") %></p>
+            <div class="mt-2">
+              <p class="text-sm font-medium text-primary"><%= @user.family.primary_currency_code %></p>
+              <p class="text-sm text-secondary"><%= currency_label(@user.family.primary_currency_code) %></p>
+            </div>
           </div>
-          <span class="inline-flex items-center rounded-full bg-surface-inset px-2.5 py-1 text-xs font-medium text-secondary">
-            <%= t(".base_currency_badge") %>
-          </span>
-        </div>
-        <div class="flex flex-wrap gap-2">
-          <% preview_currencies.each do |currency| %>
-            <span class="inline-flex items-center rounded-full bg-surface-inset px-2.5 py-1 text-xs font-medium text-primary">
-              <%= currency.iso_code %>
-            </span>
-          <% end %>
-          <% if @user.family.enabled_currency_codes.count > preview_currencies.count %>
-            <span class="inline-flex items-center rounded-full bg-surface-inset px-2.5 py-1 text-xs font-medium text-secondary">
-              <%= t(".currencies_more", count: @user.family.enabled_currency_codes.count - preview_currencies.count) %>
-            </span>
-          <% end %>
+          <div class="md:border-l md:border-secondary md:pl-4">
+            <p class="text-xs font-medium uppercase tracking-wide text-secondary"><%= t(".additional_currencies_label") %></p>
+            <% if additional_preview_currencies.any? %>
+              <div class="mt-2 flex flex-wrap gap-2">
+                <% additional_preview_currencies.each do |currency| %>
+                  <span class="inline-flex items-center rounded-full bg-surface-inset px-2.5 py-1 text-xs font-medium text-primary">
+                    <%= currency.iso_code %>
+                  </span>
+                <% end %>
+                <% if additional_currency_count > additional_preview_currencies.count %>
+                  <span class="inline-flex items-center rounded-full bg-surface-inset px-2.5 py-1 text-xs font-medium text-secondary">
+                    <%= t(".currencies_more", count: additional_currency_count - additional_preview_currencies.count) %>
+                  </span>
+                <% end %>
+              </div>
+            <% else %>
+              <p class="mt-2 text-sm text-secondary"><%= t(".no_additional_currencies") %></p>
+            <% end %>
+          </div>
         </div>
       </div>
-      <%= render DS::Button.new(
-        text: t(".manage_currencies"),
-        type: :button,
-        class: "md:w-auto w-full justify-center",
-        data: { action: "currency-preferences#open" }
-      ) %>
+      <div class="flex justify-end">
+        <%= render DS::Button.new(
+          text: t(".manage_currencies"),
+          type: :button,
+          class: "md:w-auto w-full justify-center",
+          data: { action: "currency-preferences#open" }
+        ) %>
+      </div>
       <%= render DS::Dialog.new(
         id: "currency-preferences-dialog",
         auto_open: false,
@@ -86,23 +98,32 @@
       ) do |dialog| %>
         <% dialog.with_header(title: t(".manage_currencies"), subtitle: t(".manage_currencies_subtitle")) %>
         <% dialog.with_body do %>
+          <% primary_currency_code = @user.family.primary_currency_code %>
+          <% selected_currency_codes = @user.family.enabled_currency_codes %>
+          <% base_currency_rows, other_currency_rows = Money::Currency.as_options.partition { |currency| currency.iso_code == primary_currency_code } %>
+          <% currency_rows = base_currency_rows + other_currency_rows %>
           <%= styled_form_with model: @user, url: user_path(@user), class: "space-y-4", data: { action: "turbo:submit-end->currency-preferences#handleSubmitEnd" } do |form| %>
             <%= form.hidden_field :redirect_to, value: "preferences" %>
             <%= hidden_field_tag "user[family_attributes][id]", @user.family.id %>
-            <%= hidden_field_tag "user[family_attributes][enabled_currencies][]", @user.family.primary_currency_code, id: nil %>
-            <div class="flex flex-wrap gap-2">
-              <%= render DS::Button.new(
-                text: t(".select_all_currencies"),
-                type: :button,
-                variant: :ghost,
-                data: { action: "currency-preferences#selectAll" }
-              ) %>
-              <%= render DS::Button.new(
-                text: t(".select_base_only"),
-                type: :button,
-                variant: :ghost,
-                data: { action: "currency-preferences#selectBaseOnly" }
-              ) %>
+            <%= hidden_field_tag "user[family_attributes][enabled_currencies][]", primary_currency_code, id: nil %>
+            <div class="flex flex-wrap items-center justify-between gap-3">
+              <div class="flex flex-wrap gap-2">
+                <%= render DS::Button.new(
+                  text: t(".select_all_currencies"),
+                  type: :button,
+                  variant: :ghost,
+                  size: :sm,
+                  data: { action: "currency-preferences#selectAll" }
+                ) %>
+                <%= render DS::Button.new(
+                  text: t(".select_base_only"),
+                  type: :button,
+                  variant: :ghost,
+                  size: :sm,
+                  data: { action: "currency-preferences#selectBaseOnly" }
+                ) %>
+              </div>
+              <p class="text-sm font-medium text-secondary" data-currency-preferences-target="selectedCount"></p>
             </div>
             <div data-controller="list-filter" class="space-y-3">
               <div class="relative">
@@ -111,34 +132,48 @@
                placeholder="<%= t(".currency_search_placeholder") %>"
                aria-label="<%= t(".currency_search_placeholder") %>"
                data-list-filter-target="input"
-               data-action="input->list-filter#filter"
-                class="block w-full border border-secondary rounded-md py-2 pl-10 pr-3 bg-container focus:ring-gray-500 sm:text-sm">
+               data-action="input->list-filter#filter keydown->list-filter#handleKeydown"
+                class="block w-full border border-secondary rounded-md py-2.5 pl-10 pr-3 bg-container focus:ring-gray-500 sm:text-sm">
                 <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
                   <%= icon("search", class: "text-secondary") %>
                 </div>
               </div>
-              <div data-list-filter-target="list" class="max-h-80 overflow-auto rounded-xl border border-secondary divide-y divide-secondary">
-                <% Money::Currency.as_options.each do |currency| %>
-                  <% checked = @user.family.enabled_currency_codes.include?(currency.iso_code) %>
-                  <% base_currency = currency.iso_code == @user.family.primary_currency_code %>
-                  <label class="filterable-item flex items-start gap-3 p-3 cursor-pointer"
+              <div data-list-filter-target="list" class="max-h-80 overflow-auto rounded-xl border border-secondary divide-y divide-secondary/60">
+                <p class="hidden px-4 py-3 text-sm text-secondary" data-list-filter-target="emptyMessage">
+                  <%= t(".no_matching_currencies") %>
+                </p>
+                <% currency_rows.each do |currency| %>
+                  <% checked = selected_currency_codes.include?(currency.iso_code) %>
+                  <% base_currency = currency.iso_code == primary_currency_code %>
+                  <label class="<%= class_names(
+                    "filterable-item flex items-start gap-3 px-4 py-3 cursor-pointer transition-colors hover:bg-surface-inset/30",
+                    "bg-surface-inset/30": base_currency,
+                    "cursor-default": base_currency
+                  ) %>"
                          data-filter-name="<%= "#{currency.iso_code} #{currency.name}" %>">
                     <%= check_box_tag "user[family_attributes][enabled_currencies][]",
                                       currency.iso_code,
                                       checked,
                                       disabled: base_currency,
                                       class: "checkbox checkbox--light mt-0.5",
-                                      data: { currency_preferences_target: "checkbox" } %>
-                    <div class="min-w-0">
-                      <div class="flex items-center gap-2">
-                        <span class="text-sm font-medium text-primary"><%= currency.iso_code %></span>
-                        <% if base_currency %>
-                          <span class="inline-flex items-center rounded-full bg-surface-inset px-2 py-0.5 text-[11px] font-medium text-secondary">
-                            <%= t(".base_currency_badge") %>
-                          </span>
-                        <% end %>
+                                      data: {
+                                        currency_preferences_target: "checkbox",
+                                        action: "change->currency-preferences#updateSelectedCount"
+                                      } %>
+                    <div class="min-w-0 flex-1">
+                      <div class="flex items-start justify-between gap-3">
+                        <div class="min-w-0">
+                          <div class="flex items-center gap-2">
+                            <span class="text-sm font-medium text-primary"><%= currency.iso_code %></span>
+                            <% if base_currency %>
+                              <span class="inline-flex items-center rounded-full bg-surface px-2 py-0.5 text-[11px] font-medium text-secondary">
+                                <%= t(".base_currency_badge") %>
+                              </span>
+                            <% end %>
+                          </div>
+                          <p class="mt-0.5 text-sm text-secondary"><%= currency.name %></p>
+                        </div>
                       </div>
-                      <p class="text-sm text-secondary"><%= currency.name %></p>
                     </div>
                   </label>
                 <% end %>

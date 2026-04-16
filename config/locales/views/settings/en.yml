@@ -60,13 +60,20 @@ en:
         month_start_day_warning: Your budgets and MTD calculations will use this custom start day instead of the 1st of each month.
         currencies_title: "%{moniker} Currencies"
         currencies_subtitle: Choose which currencies appear in money fields for your %{moniker}
+        base_currency_label: Base currency
         base_currency_badge: Base currency
+        additional_currencies_label: Additional currencies
+        no_additional_currencies: None selected
         currencies_more: "+%{count} more"
         manage_currencies: Manage currencies
         manage_currencies_subtitle: Deselect the currencies you never use, or reduce the list down to just a few.
         select_all_currencies: Select all
-        select_base_only: Only base currency
+        select_base_only: Base currency only
         currency_search_placeholder: Search currencies
+        no_matching_currencies: No currencies found
+        selected_currencies_count:
+          one: "%{count} selected"
+          other: "%{count} selected"
         save_currencies: Save currencies
         sharing_title: "%{moniker} Sharing"
         sharing_subtitle: "Control how accounts are shared in your %{moniker}"
