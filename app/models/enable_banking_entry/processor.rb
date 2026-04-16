@@ -203,7 +203,7 @@ class EnableBankingEntry::Processor
       return counterparty if counterparty.present? && !technical_card_counterparty?(counterparty)
       # For technical CARD-* counterparties, reuse remittance as the best merchant candidate
       remittance = primary_remittance_information
-      return remittance.truncate(100) if remittance.present? && technical_card_counterparty?(counterparty)
+      return remittance.truncate(100, omission: "") if remittance.present? && technical_card_counterparty?(counterparty)
 
       nil
     end
