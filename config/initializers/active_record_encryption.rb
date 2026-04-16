@@ -31,15 +31,3 @@ elsif Rails.application.config.app_mode.self_hosted? && !Rails.application.crede
   Rails.application.config.active_record.encryption.key_derivation_salt = key_derivation_salt
 end
 # If none of the above conditions are met, credentials from application.rb will be used
-
-# Support querying both encrypted and plaintext data during the migration period.
-# This is required because deterministic encryption (e.g., OidcIdentity.uid, User.email)
-# needs to match existing plaintext rows until the backfill task has re-encrypted them.
-# These settings can be removed once all data has been fully backfilled.
-encryption_configured = Rails.application.credentials.active_record_encryption.present? ||
-  (primary_key.present? && deterministic_key.present? && key_derivation_salt.present?)
-
-if encryption_configured
-  Rails.application.config.active_record.encryption.support_unencrypted_data = true
-  Rails.application.config.active_record.encryption.extend_queries = true
-end

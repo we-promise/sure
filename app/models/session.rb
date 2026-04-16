@@ -1,10 +1,9 @@
 class Session < ApplicationRecord
   include Encryptable
 
-  # Encrypt sensitive fields if ActiveRecord encryption is configured
+  # Encrypt user_agent if ActiveRecord encryption is configured
   if encryption_ready?
     encrypts :user_agent
-    encrypts :ip_address
   end
 
   belongs_to :user

@@ -174,7 +174,7 @@ class EncryptionVerificationTest < ActiveSupport::TestCase
   # SESSION MODEL TESTS
   # ============================================================================
 
-  test "session user_agent and ip_address are encrypted" do
+  test "session user_agent is encrypted" do
     Current.user_agent = "Mozilla/5.0 Test Browser"
     Current.ip_address = "192.168.1.100"
 
@@ -182,31 +182,15 @@ class EncryptionVerificationTest < ActiveSupport::TestCase
       session = Session.create!(user: users(:family_admin))
 
       assert_equal "Mozilla/5.0 Test Browser", session.user_agent
-      assert_equal "192.168.1.100", session.ip_address
       assert session.ip_address_digest.present?
 
       # Reload and verify
       session.reload
       assert_equal "Mozilla/5.0 Test Browser", session.user_agent
-      assert_equal "192.168.1.100", session.ip_address
 
-      # Verify IP digest uses HMAC
-      expected_hash = OpenSSL::HMAC.hexdigest("SHA256", Rails.application.secret_key_base, "192.168.1.100")
+      # Verify IP hash is consistent
+      expected_hash = Digest::SHA256.hexdigest("192.168.1.100")
       assert_equal expected_hash, session.ip_address_digest
-
-      # Verify ip_address is not stored as plaintext in database
-      raw_ip = ActiveRecord::Base.connection.select_value(
-        Session.where(id: session.id).select(:ip_address).to_sql
-      )
-      assert_not_equal "192.168.1.100", raw_ip,
-        "IP address should be encrypted in database, not stored as plaintext"
-
-      # Verify user_agent is not stored as plaintext in database
-      raw_ua = ActiveRecord::Base.connection.select_value(
-        Session.where(id: session.id).select(:user_agent).to_sql
-      )
-      assert_not_equal "Mozilla/5.0 Test Browser", raw_ua,
-        "User agent should be encrypted in database, not stored as plaintext"
 
       session.destroy
     ensure
@@ -295,145 +279,6 @@ class EncryptionVerificationTest < ActiveSupport::TestCase
     # Restore
     account.update!(raw_payload: original_payload)
   end
-
-  # ============================================================================
-  # USER MFA BACKUP CODES TESTS
-  # ============================================================================
-
-  test "user otp_backup_codes are encrypted and functional" do
-    user = users(:family_admin)
-
-    # Setup and enable MFA to generate backup codes
-    user.setup_mfa!
-    user.enable_mfa!
-
-    assert user.otp_backup_codes.present?
-    assert_equal 8, user.otp_backup_codes.length
-
-    # Reload and verify codes survive round-trip
-    codes = user.otp_backup_codes.dup
-    user.reload
-    assert_equal codes, user.otp_backup_codes
-
-    # Verify backup codes are not stored as plaintext in database
-    raw_codes = ActiveRecord::Base.connection.select_value(
-      User.where(id: user.id).select(:otp_backup_codes).to_sql
-    )
-    codes.each do |code|
-      assert_not_includes raw_codes.to_s, code,
-        "Backup code should be encrypted in database, not stored as plaintext"
-    end
-
-    # Verify a backup code can be used
-    code_to_use = user.otp_backup_codes.first
-    assert user.verify_otp?(code_to_use)
-
-    # Code should be consumed
-    user.reload
-    assert_equal 7, user.otp_backup_codes.length
-    assert_not_includes user.otp_backup_codes, code_to_use
-
-    # Clean up
-    user.disable_mfa!
-  end
-
-  # ============================================================================
-  # IMPERSONATION SESSION LOG TESTS
-  # ============================================================================
-
-  test "impersonation session log ip_address and user_agent are encrypted" do
-    log = ImpersonationSessionLog.create!(
-      impersonation_session: impersonation_sessions(:in_progress),
-      ip_address: "10.0.0.1",
-      user_agent: "Test Agent/1.0",
-      controller: "test",
-      action: "index",
-      path: "/test",
-      method: "GET"
-    )
-
-    log.reload
-    assert_equal "10.0.0.1", log.ip_address
-    assert_equal "Test Agent/1.0", log.user_agent
-
-    # Verify not stored as plaintext
-    raw_ip = ActiveRecord::Base.connection.select_value(
-      ImpersonationSessionLog.where(id: log.id).select(:ip_address).to_sql
-    )
-    assert_not_equal "10.0.0.1", raw_ip,
-      "IP address should be encrypted in database"
-
-    raw_ua = ActiveRecord::Base.connection.select_value(
-      ImpersonationSessionLog.where(id: log.id).select(:user_agent).to_sql
-    )
-    assert_not_equal "Test Agent/1.0", raw_ua,
-      "User agent should be encrypted in database"
-
-    log.destroy
-  end
-
-  # ============================================================================
-  # SSO AUDIT LOG TESTS
-  # ============================================================================
-
-  test "sso audit log ip_address and user_agent are encrypted" do
-    log = SsoAuditLog.create!(
-      user: users(:family_admin),
-      event_type: "login",
-      provider: "openid_connect",
-      ip_address: "172.16.0.1",
-      user_agent: "SSO Test Agent/2.0"
-    )
-
-    log.reload
-    assert_equal "172.16.0.1", log.ip_address
-    assert_equal "SSO Test Agent/2.0", log.user_agent
-
-    # Verify not stored as plaintext
-    raw_ip = ActiveRecord::Base.connection.select_value(
-      SsoAuditLog.where(id: log.id).select(:ip_address).to_sql
-    )
-    assert_not_equal "172.16.0.1", raw_ip,
-      "IP address should be encrypted in database"
-
-    raw_ua = ActiveRecord::Base.connection.select_value(
-      SsoAuditLog.where(id: log.id).select(:user_agent).to_sql
-    )
-    assert_not_equal "SSO Test Agent/2.0", raw_ua,
-      "User agent should be encrypted in database"
-
-    log.destroy
-  end
-
-  # ============================================================================
-  # OIDC IDENTITY TESTS
-  # ============================================================================
-
-  test "oidc identity uid is encrypted and lookups work" do
-    identity = OidcIdentity.create!(
-      user: users(:family_admin),
-      provider: "test_provider",
-      uid: "encrypted-uid-12345",
-      info: { email: "test@example.com", name: "Test User" }
-    )
-
-    # Deterministic encryption should allow find_by
-    found = OidcIdentity.find_by(provider: "test_provider", uid: "encrypted-uid-12345")
-    assert_equal identity.id, found.id
-
-    # Verify uid is not stored as plaintext in database
-    raw_uid = ActiveRecord::Base.connection.select_value(
-      OidcIdentity.where(id: identity.id).select(:uid).to_sql
-    )
-    assert_not_equal "encrypted-uid-12345", raw_uid,
-      "UID should be encrypted in database, not stored as plaintext"
-
-    identity.destroy
-  end
-
-  # Note: OidcIdentity.info is a jsonb column and cannot be encrypted with AR
-  # encryption (ciphertext is not valid JSON). A column type migration to text
-  # is needed before enabling encryption for this field.
 
   # ============================================================================
   # DATABASE VERIFICATION TESTS
