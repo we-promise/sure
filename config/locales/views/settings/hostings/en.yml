@@ -100,6 +100,14 @@ en:
         json_mode_none: None (best for standard models)
         json_mode_json_object: JSON Object
         json_mode_help: "Strict mode works best with thinking models (qwen-thinking, deepseek-reasoner). None mode works best with standard models (llama, mistral, gpt-oss)."
+        budget_heading: Token Budget
+        budget_description: Applies to every LLM call — chat history, auto-categorization, merchant detection, and PDF processing. Defaults are conservative for small-context local models. Raise for cloud models with larger context windows.
+        context_window_label: Context Window (Optional)
+        context_window_help: "Total tokens the model will accept. Default: 2048 — raise to 8192+ for cloud OpenAI or large-context local models."
+        max_response_tokens_label: Max Response Tokens (Optional)
+        max_response_tokens_help: "Tokens reserved for the model's reply. Default: 512. Lower to free up room for longer history."
+        max_items_per_call_label: Max Items Per Batch (Optional)
+        max_items_per_call_help: "Upper bound for auto-categorize / merchant detection batches. Default: 25. Larger batches are auto-sliced to fit the context window."
         title: OpenAI
       yahoo_finance_settings:
         title: Yahoo Finance
@@ -161,6 +169,7 @@ en:
         success: Settings updated
         invalid_onboarding_state: Invalid onboarding state
         invalid_sync_time: Invalid sync time format. Please use HH:MM format (e.g., 02:30).
+        invalid_llm_budget: "%{field} must be a whole number ≥ %{minimum}."
         scheduler_sync_failed: Settings saved, but failed to update the sync schedule. Please try again or check the server logs.
       disconnect_external_assistant:
         external_assistant_disconnected: External assistant disconnected

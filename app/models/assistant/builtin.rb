@@ -70,6 +70,13 @@ class Assistant::Builtin < Assistant::Base
     responder.respond(previous_response_id: latest_response_id)
   rescue => e
     stop_thinking
+    # If we streamed any partial content before the error, the message was
+    # persisted with the default `complete` status. Demote it to `failed` so
+    # `Assistant::Responder#conversation_history` won't feed a broken turn
+    # back into future prompts.
+    if assistant_message&.persisted?
+      assistant_message.update_columns(status: "failed")
+    end
     chat.add_error(e)
   end
 

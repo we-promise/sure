@@ -235,6 +235,61 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "accepts valid llm budget overrides and blanks clear them" do
+    with_self_hosting do
+      patch settings_hosting_url, params: { setting: {
+        llm_context_window: "4096",
+        llm_max_response_tokens: "1024",
+        llm_max_items_per_call: "40"
+      } }
+
+      assert_redirected_to settings_hosting_url
+      assert_equal 4096, Setting.llm_context_window
+      assert_equal 1024, Setting.llm_max_response_tokens
+      assert_equal 40, Setting.llm_max_items_per_call
+
+      patch settings_hosting_url, params: { setting: {
+        llm_context_window: "",
+        llm_max_response_tokens: "",
+        llm_max_items_per_call: ""
+      } }
+
+      assert_nil Setting.llm_context_window
+      assert_nil Setting.llm_max_response_tokens
+      assert_nil Setting.llm_max_items_per_call
+    end
+  ensure
+    Setting.llm_context_window = nil
+    Setting.llm_max_response_tokens = nil
+    Setting.llm_max_items_per_call = nil
+  end
+
+  test "rejects llm budget below field minimum" do
+    with_self_hosting do
+      patch settings_hosting_url, params: { setting: { llm_context_window: "0" } }
+
+      assert_response :unprocessable_entity
+      assert_match(/must be a whole number/, flash[:alert])
+      assert_nil Setting.llm_context_window
+
+      patch settings_hosting_url, params: { setting: { llm_max_response_tokens: "-5" } }
+
+      assert_response :unprocessable_entity
+      assert_match(/must be a whole number/, flash[:alert])
+      assert_nil Setting.llm_max_response_tokens
+
+      patch settings_hosting_url, params: { setting: { llm_max_items_per_call: "not-a-number" } }
+
+      assert_response :unprocessable_entity
+      assert_match(/must be a whole number/, flash[:alert])
+      assert_nil Setting.llm_max_items_per_call
+    end
+  ensure
+    Setting.llm_context_window = nil
+    Setting.llm_max_response_tokens = nil
+    Setting.llm_max_items_per_call = nil
+  end
+
   test "can clear data only when admin" do
     with_self_hosting do
       sign_in users(:family_member)

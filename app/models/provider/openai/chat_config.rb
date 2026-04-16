@@ -16,7 +16,9 @@ class Provider::Openai::ChatConfig
     end
   end
 
-  def build_input(prompt)
+  def build_input(prompt: nil)
+    input_messages = prompt.present? ? [ { role: "user", content: prompt } ] : []
+
     results = function_results.map do |fn_result|
       # Handle nil explicitly to avoid serializing to "null"
       output = fn_result[:output]
@@ -36,7 +38,7 @@ class Provider::Openai::ChatConfig
     end
 
     [
-      { role: "user", content: prompt },
+      *input_messages,
       *results
     ]
   end

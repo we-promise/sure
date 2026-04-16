@@ -41,6 +41,7 @@ module Provider::LlmConcept
     prompt_metadata: nil,
     functions: [],
     function_results: [],
+    messages: nil,
     streamer: nil,
     previous_response_id: nil,
     session_id: nil,
