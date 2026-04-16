@@ -4,8 +4,8 @@ export default class extends Controller {
   static targets = ["dialog", "checkbox", "selectedCount"];
   static values = {
     baseCurrency: String,
-    selectedCountSingular: String,
-    selectedCountPlural: String,
+    locale: String,
+    selectedCountTranslations: Object,
   };
 
   connect() {
@@ -37,10 +37,13 @@ export default class extends Controller {
     if (!this.hasSelectedCountTarget) return;
 
     const selectedCount = this.checkboxTargets.filter((checkbox) => checkbox.checked).length;
-    const label =
-      selectedCount === 1
-        ? this.selectedCountSingularValue.replace("%{count}", selectedCount)
-        : this.selectedCountPluralValue.replace("%{count}", selectedCount);
+    const pluralRules = new Intl.PluralRules(this.localeValue || undefined);
+    const pluralCategory = pluralRules.select(selectedCount);
+    const labelTemplate =
+      this.selectedCountTranslationsValue[pluralCategory] ||
+      this.selectedCountTranslationsValue.other ||
+      "%{count}";
+    const label = labelTemplate.replace("%{count}", selectedCount);
 
     this.selectedCountTarget.textContent = label;
   }

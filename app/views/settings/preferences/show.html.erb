@@ -44,11 +44,12 @@
 <% end %>
 <% if Current.user.admin? %>
   <%= settings_section title: t(".currencies_title", moniker: family_moniker), subtitle: t(".currencies_subtitle", moniker: family_moniker_downcase) do %>
+    <% selected_count_translations = t(".selected_currencies_count") %>
     <div class="space-y-4"
          data-controller="currency-preferences"
          data-currency-preferences-base-currency-value="<%= @user.family.primary_currency_code %>"
-         data-currency-preferences-selected-count-singular-value="<%= t(".selected_currencies_count.one", count: "%{count}") %>"
-         data-currency-preferences-selected-count-plural-value="<%= t(".selected_currencies_count.other", count: "%{count}") %>">
+         data-currency-preferences-locale-value="<%= I18n.locale %>"
+         data-currency-preferences-selected-count-translations-value="<%= selected_count_translations.to_json %>">
       <% additional_preview_currencies = @user.family.secondary_enabled_currency_objects.first(6) %>
       <% additional_currency_count = @user.family.secondary_enabled_currency_objects.count %>
       <div class="rounded-xl border border-secondary p-4 bg-surface-inset/40">
