@@ -1,10 +1,11 @@
 class IncomeStatement::Totals
-  def initialize(family, transactions_scope:, date_range:, include_trades: true, included_account_ids: nil)
+  def initialize(family, transactions_scope:, date_range:, include_trades: true, included_account_ids: nil, include_kinds: [])
     @family = family
     @transactions_scope = transactions_scope
     @date_range = date_range
     @include_trades = include_trades
     @included_account_ids = included_account_ids
+    @include_kinds = Array(include_kinds).map(&:to_s)
 
     validate_date_range!
   end
@@ -60,8 +61,8 @@ class IncomeStatement::Totals
         SELECT
           c.id as category_id,
           c.parent_id as parent_category_id,
-          CASE WHEN at.kind IN ('investment_contribution', 'loan_payment') THEN 'expense' WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END as classification,
-          ABS(SUM(CASE WHEN at.kind IN ('investment_contribution', 'loan_payment') THEN ABS(ae.amount * COALESCE(er.rate, 1)) ELSE ae.amount * COALESCE(er.rate, 1) END)) as total,
+          #{classification_case_sql} as classification,
+          ABS(SUM(#{amount_case_sql})) as total,
           COUNT(ae.id) as transactions_count,
           false as is_uncategorized_investment
         FROM (#{@transactions_scope.to_sql}) at
@@ -79,7 +80,7 @@ class IncomeStatement::Totals
           AND a.status IN ('draft', 'active')
           #{exclude_tax_advantaged_sql}
           #{include_finance_accounts_sql}
-        GROUP BY c.id, c.parent_id, CASE WHEN at.kind IN ('investment_contribution', 'loan_payment') THEN 'expense' WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END;
+        GROUP BY c.id, c.parent_id, #{classification_case_sql};
       SQL
     end
 
@@ -88,8 +89,8 @@ class IncomeStatement::Totals
         SELECT
           c.id as category_id,
           c.parent_id as parent_category_id,
-          CASE WHEN at.kind IN ('investment_contribution', 'loan_payment') THEN 'expense' WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END as classification,
-          ABS(SUM(CASE WHEN at.kind IN ('investment_contribution', 'loan_payment') THEN ABS(ae.amount * COALESCE(er.rate, 1)) ELSE ae.amount * COALESCE(er.rate, 1) END)) as total,
+          #{classification_case_sql} as classification,
+          ABS(SUM(#{amount_case_sql})) as total,
           COUNT(ae.id) as entry_count,
           false as is_uncategorized_investment
         FROM (#{@transactions_scope.to_sql}) at
@@ -111,8 +112,31 @@ class IncomeStatement::Totals
           AND a.status IN ('draft', 'active')
           #{exclude_tax_advantaged_sql}
           #{include_finance_accounts_sql}
-        GROUP BY c.id, c.parent_id, CASE WHEN at.kind IN ('investment_contribution', 'loan_payment') THEN 'expense' WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END
+        GROUP BY c.id, c.parent_id, #{classification_case_sql}
       SQL
+    end
+
+    # Kinds that are normally treated as transfers (sign-driven income/expense)
+    # but should be force-classified as expense. loan_payment is always such a
+    # kind. investment_contribution joins the list when callers explicitly
+    # opt it back in via `include_kinds:` (e.g., dashboard outflows) so the
+    # outflow side and any provider-imported inflow side both render as outflow.
+    def force_expense_kinds
+      kinds = [ "loan_payment" ]
+      kinds << "investment_contribution" if @include_kinds.include?("investment_contribution")
+      kinds
+    end
+
+    def force_expense_kinds_sql
+      force_expense_kinds.map { |k| "'#{k}'" }.join(", ")
+    end
+
+    def classification_case_sql
+      "CASE WHEN at.kind IN (#{force_expense_kinds_sql}) THEN 'expense' WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END"
+    end
+
+    def amount_case_sql
+      "CASE WHEN at.kind IN (#{force_expense_kinds_sql}) THEN ABS(ae.amount * COALESCE(er.rate, 1)) ELSE ae.amount * COALESCE(er.rate, 1) END"
     end
 
     def trades_subquery_sql
@@ -160,7 +184,10 @@ class IncomeStatement::Totals
     end
 
     def budget_excluded_kinds_sql
-      @budget_excluded_kinds_sql ||= Transaction::BUDGET_EXCLUDED_KINDS.map { |k| "'#{k}'" }.join(", ")
+      @budget_excluded_kinds_sql ||= begin
+        kinds = Transaction::BUDGET_EXCLUDED_KINDS - @include_kinds
+        kinds.map { |k| "'#{k}'" }.join(", ")
+      end
     end
 
     def validate_date_range!

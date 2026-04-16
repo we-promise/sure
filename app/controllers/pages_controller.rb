@@ -15,11 +15,15 @@ class PagesController < ApplicationController
 
     family_currency = Current.family.currency
 
-    # Use IncomeStatement for all cashflow data (now includes categorized trades)
+    # Use IncomeStatement for all cashflow data (now includes categorized trades).
+    # On the dashboard we opt investment_contribution back in via include_kinds
+    # so contributions to investment/crypto accounts still appear as outflows in
+    # the cashflow Sankey and outflows donut. Reports/Budget keep them excluded.
     income_statement = Current.family.income_statement
-    income_totals = income_statement.income_totals(period: @period)
-    expense_totals = income_statement.expense_totals(period: @period)
-    net_totals = income_statement.net_category_totals(period: @period)
+    cashflow_kinds = [ "investment_contribution" ]
+    income_totals = income_statement.income_totals(period: @period, include_kinds: cashflow_kinds)
+    expense_totals = income_statement.expense_totals(period: @period, include_kinds: cashflow_kinds)
+    net_totals = income_statement.net_category_totals(period: @period, include_kinds: cashflow_kinds)
 
     @cashflow_sankey_data = build_cashflow_sankey_data(net_totals, income_totals, expense_totals, family_currency)
     @outflows_data = build_outflows_donut_data(net_totals)

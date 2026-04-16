@@ -12,12 +12,12 @@ class IncomeStatement
     @user = user || Current.user
   end
 
-  def totals(transactions_scope: nil, date_range:)
+  def totals(transactions_scope: nil, date_range:, include_kinds: [])
     # Default to excluding pending transactions from budget/analytics calculations
     # Pending transactions shouldn't affect budget totals until they post
     transactions_scope ||= family.transactions.visible.excluding_pending
 
-    result = totals_query(transactions_scope: transactions_scope, date_range: date_range)
+    result = totals_query(transactions_scope: transactions_scope, date_range: date_range, include_kinds: include_kinds)
 
     total_income = result.select { |t| t.classification == "income" }.sum(&:total)
     total_expense = result.select { |t| t.classification == "expense" }.sum(&:total)
@@ -29,17 +29,17 @@ class IncomeStatement
     )
   end
 
-  def expense_totals(period: Period.current_month)
-    build_period_total(classification: "expense", period: period)
+  def expense_totals(period: Period.current_month, include_kinds: [])
+    build_period_total(classification: "expense", period: period, include_kinds: include_kinds)
   end
 
-  def income_totals(period: Period.current_month)
-    build_period_total(classification: "income", period: period)
+  def income_totals(period: Period.current_month, include_kinds: [])
+    build_period_total(classification: "income", period: period, include_kinds: include_kinds)
   end
 
-  def net_category_totals(period: Period.current_month)
-    expense = expense_totals(period: period)
-    income = income_totals(period: period)
+  def net_category_totals(period: Period.current_month, include_kinds: [])
+    expense = expense_totals(period: period, include_kinds: include_kinds)
+    income = income_totals(period: period, include_kinds: include_kinds)
 
     # Use a stable key for each category: id for persisted, invariant token for synthetic
     cat_key = ->(ct) {
@@ -126,9 +126,9 @@ class IncomeStatement
       @categories ||= family.categories.all.to_a
     end
 
-    def build_period_total(classification:, period:)
+    def build_period_total(classification:, period:, include_kinds: [])
       # Exclude pending transactions from budget calculations
-      totals = totals_query(transactions_scope: family.transactions.visible.excluding_pending.in_period(period), date_range: period.date_range).select { |t| t.classification == classification }
+      totals = totals_query(transactions_scope: family.transactions.visible.excluding_pending.in_period(period), date_range: period.date_range, include_kinds: include_kinds).select { |t| t.classification == classification }
       classification_total = totals.sum(&:total)
 
       uncategorized_category = family.categories.uncategorized
@@ -195,12 +195,13 @@ class IncomeStatement
       @included_account_ids_hash ||= included_account_ids ? Digest::MD5.hexdigest(included_account_ids.sort.join(",")) : nil
     end
 
-    def totals_query(transactions_scope:, date_range:)
+    def totals_query(transactions_scope:, date_range:, include_kinds: [])
       sql_hash = Digest::MD5.hexdigest(transactions_scope.to_sql)
+      kinds_key = Array(include_kinds).map(&:to_s).sort.join(",")
 
       Rails.cache.fetch([
-        "income_statement", "totals_query", "v2", family.id, user&.id, included_account_ids_hash, sql_hash, date_range.begin, date_range.end, family.entries_cache_version
-      ]) { Totals.new(family, transactions_scope: transactions_scope, date_range: date_range, included_account_ids: included_account_ids).call }
+        "income_statement", "totals_query", "v3", family.id, user&.id, included_account_ids_hash, sql_hash, date_range.begin, date_range.end, kinds_key, family.entries_cache_version
+      ]) { Totals.new(family, transactions_scope: transactions_scope, date_range: date_range, included_account_ids: included_account_ids, include_kinds: include_kinds).call }
     end
 
     def monetizable_currency

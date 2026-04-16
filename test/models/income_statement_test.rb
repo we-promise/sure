@@ -286,8 +286,9 @@ class IncomeStatementTest < ActiveSupport::TestCase
     assert_equal Money.new(1050, @family.currency), totals.expense_money # 900 + 150
   end
 
-  test "includes investment_contribution transactions as expenses in income statement" do
-    # Create a transfer to investment account (marked as investment_contribution)
+  test "excludes investment_contribution transactions from income statement by default" do
+    # Investment contributions are transfers to investment/crypto accounts and
+    # should NOT show up as expenses in Reports/Budget — see issue #1313.
     investment_contribution = create_transaction(
       account: @checking_account,
       amount: 1000,
@@ -298,16 +299,17 @@ class IncomeStatementTest < ActiveSupport::TestCase
     income_statement = IncomeStatement.new(@family)
     totals = income_statement.totals(date_range: Period.last_30_days.date_range)
 
-    # investment_contribution should be included as an expense (visible in cashflow)
-    assert_equal 5, totals.transactions_count # Original 4 + investment_contribution
+    # investment_contribution should be excluded from expense totals
+    assert_equal 4, totals.transactions_count # Only the original 4 transactions
     assert_equal Money.new(1000, @family.currency), totals.income_money
-    assert_equal Money.new(1900, @family.currency), totals.expense_money # 900 + 1000 investment
+    assert_equal Money.new(900, @family.currency), totals.expense_money
   end
 
-  test "includes provider-imported investment_contribution inflows as expenses" do
-    # Simulates a 401k contribution that was auto-deducted from payroll
-    # Provider imports this as an inflow to the investment account (negative amount)
-    # but it should still appear as an expense in cashflow
+  test "excludes provider-imported investment_contribution inflows from income statement by default" do
+    # Simulates a 401k contribution that was auto-deducted from payroll.
+    # Provider imports this as an inflow to the investment account (negative amount).
+    # It must NOT appear as income — investment_contribution kinds are excluded
+    # from the income statement entirely (issue #1313).
 
     investment_account = @family.accounts.create!(
       name: "401k",
@@ -316,8 +318,6 @@ class IncomeStatementTest < ActiveSupport::TestCase
       accountable: Investment.new
     )
 
-    # Provider-imported contribution shows as inflow (negative amount) to the investment account
-    # kind is investment_contribution, which should be treated as expense regardless of sign
     provider_contribution = create_transaction(
       account: investment_account,
       amount: -500, # Negative = inflow to account
@@ -328,10 +328,59 @@ class IncomeStatementTest < ActiveSupport::TestCase
     income_statement = IncomeStatement.new(@family)
     totals = income_statement.totals(date_range: Period.last_30_days.date_range)
 
-    # The provider-imported contribution should appear as an expense
-    assert_equal 5, totals.transactions_count # Original 4 + provider contribution
+    # Excluded from both income and expense totals
+    assert_equal 4, totals.transactions_count # Only original 4 transactions
     assert_equal Money.new(1000, @family.currency), totals.income_money
-    assert_equal Money.new(1400, @family.currency), totals.expense_money # 900 + 500 (abs of -500)
+    assert_equal Money.new(900, @family.currency), totals.expense_money
+  end
+
+  test "includes investment_contribution as expense when include_kinds is set" do
+    # Dashboard outflows opt investment_contribution back in so users can still
+    # see where their cash went (issue #1313).
+    create_transaction(
+      account: @checking_account,
+      amount: 1000,
+      category: nil,
+      kind: "investment_contribution"
+    )
+
+    income_statement = IncomeStatement.new(@family)
+    totals = income_statement.totals(
+      date_range: Period.last_30_days.date_range,
+      include_kinds: [ "investment_contribution" ]
+    )
+
+    assert_equal 5, totals.transactions_count
+    assert_equal Money.new(1000, @family.currency), totals.income_money
+    assert_equal Money.new(1900, @family.currency), totals.expense_money
+  end
+
+  test "includes provider-imported investment_contribution inflows as expense when include_kinds is set" do
+    investment_account = @family.accounts.create!(
+      name: "401k",
+      currency: @family.currency,
+      balance: 10000,
+      accountable: Investment.new
+    )
+
+    create_transaction(
+      account: investment_account,
+      amount: -500, # Negative = inflow to account
+      category: nil,
+      kind: "investment_contribution"
+    )
+
+    income_statement = IncomeStatement.new(@family)
+    totals = income_statement.totals(
+      date_range: Period.last_30_days.date_range,
+      include_kinds: [ "investment_contribution" ]
+    )
+
+    # The CASE force-classifies investment_contribution rows as expense even
+    # when amount < 0 (the inflow side of a contribution).
+    assert_equal 5, totals.transactions_count
+    assert_equal Money.new(1000, @family.currency), totals.income_money
+    assert_equal Money.new(1400, @family.currency), totals.expense_money # 900 + abs(-500)
   end
 
   # Tax-Advantaged Account Exclusion Tests

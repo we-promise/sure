@@ -71,7 +71,7 @@ class Transaction < ApplicationRecord
     cc_payment: "cc_payment", # A CC payment, excluded from budget analytics (CC payments offset the sum of expense transactions)
     loan_payment: "loan_payment", # A payment to a Loan account, treated as an expense in budgets
     one_time: "one_time", # A one-time expense/income, excluded from budget analytics
-    investment_contribution: "investment_contribution" # Transfer to investment/crypto account, treated as an expense in budgets
+    investment_contribution: "investment_contribution" # Transfer to investment/crypto account, excluded from budget analytics (treated as a transfer)
   }
 
   # All kinds where money moves between accounts (transfer? returns true).
@@ -79,9 +79,12 @@ class Transaction < ApplicationRecord
   TRANSFER_KINDS = %w[funds_movement cc_payment loan_payment investment_contribution].freeze
 
   # Kinds excluded from budget/income-statement analytics.
-  # loan_payment and investment_contribution are intentionally NOT here —
-  # they represent real cash outflow from a budgeting perspective.
-  BUDGET_EXCLUDED_KINDS = %w[funds_movement one_time cc_payment].freeze
+  # investment_contribution is excluded so contributions to investment/crypto
+  # accounts don't show up as expenses in Reports/Budget — they're transfers,
+  # not spending. Dashboard outflows can opt them back in via `include_kinds:`.
+  # loan_payment is intentionally NOT here — it represents real cash outflow
+  # from a budgeting perspective.
+  BUDGET_EXCLUDED_KINDS = %w[funds_movement one_time cc_payment investment_contribution].freeze
 
   # All valid investment activity labels (for UI dropdown)
   ACTIVITY_LABELS = [
