@@ -462,9 +462,23 @@ class PagesController < ApplicationController
       end
 
       account_node_indices = {}
+
+      # First, identify which accounts need nodes (those with flows or transfers)
+      accounts_with_flows = Set.new
+      income_totals_by_account.each do |account_id, total|
+        accounts_with_flows << account_id if total.positive?
+      end
+      expense_totals_by_account.each do |account_id, total|
+        accounts_with_flows << account_id if total.positive?
+      end
+      transfer_overlay_data[:links].each do |flow|
+        accounts_with_flows << flow[:source_account_id]
+        accounts_with_flows << flow[:target_account_id]
+      end
+
+      # Now add nodes for all accounts with flows/transfers
       accounts.each do |account|
-        has_category_flows = income_totals_by_account[account.id].positive? || expense_totals_by_account[account.id].positive?
-        next unless has_category_flows
+        next unless accounts_with_flows.include?(account.id)
 
         node_value = [
           income_totals_by_account[account.id].to_f,
@@ -513,26 +527,23 @@ class PagesController < ApplicationController
         }
       end
 
-      transfer_overlays = transfer_overlay_data[:links].filter_map do |flow|
+      transfer_overlay_data[:links].each do |flow|
         source_idx = account_node_indices[flow[:source_account_id]]
         target_idx = account_node_indices[flow[:target_account_id]]
         next unless source_idx && target_idx
 
-        {
+        links << {
           source: source_idx,
           target: target_idx,
           value: flow[:value].to_f.round(2),
           color: Category::TRANSFER_COLOR,
-          flow_type: "transfer_overlay",
-          source_name: flow[:source_name],
-          target_name: flow[:target_name]
+          percentage: 0
         }
       end
 
       {
         nodes: nodes,
         links: links,
-        transfer_overlays: transfer_overlays,
         currency_symbol: Money::Currency.new(currency).symbol
       }
     end

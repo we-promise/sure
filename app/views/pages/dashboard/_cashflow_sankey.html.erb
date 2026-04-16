@@ -42,12 +42,12 @@
     <%= render DS::Dialog.new(id: "cashflow-expanded-dialog", auto_open: false, width: "custom", disable_frame: true, content_class: "!w-[96vw] max-w-[1650px]", data: { action: "close->cashflow-expand#restore" }) do |dialog| %>
       <% dialog.with_header(title: t("pages.dashboard.cashflow_sankey.title")) %>
       <% dialog.with_body do %>
-        <div class="w-full h-[92dvh] max-h-[96dvh] overflow-y-auto overscroll-contain">
+        <div class="w-full">
           <div
             data-controller="sankey-chart"
             data-sankey-chart-data-value="<%= sankey_data.to_json %>"
             data-sankey-chart-currency-symbol-value="<%= sankey_data[:currency_symbol] %>"
-            class="w-full min-h-[900px] h-full privacy-sensitive"></div>
+            class="w-full privacy-sensitive"></div>
         </div>
       <% end %>
     <% end %>

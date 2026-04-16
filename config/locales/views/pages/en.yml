@@ -37,7 +37,7 @@ en:
         other_categories: "Other"
         from_label: "Transfer from"
         to_label: "Transfer to"
-        split_mode_transfer_hint: "Split view shows net account-to-account transfers as curved links. Income flows in from the left and expenses flow out to the right."
+        split_mode_transfer_hint: "Split view shows each account as its own cash flow lane. Income flows into account nodes, expenses flow out, and net transfers are shown as direct account-to-account links."
         view_modes:
           aggregate: "All accounts (combined)"
           split_by_account: "All accounts (split by account)"

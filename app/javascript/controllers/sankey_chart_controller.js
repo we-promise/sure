@@ -48,18 +48,11 @@ export default class extends Controller {
     other: 5
   };
   static MIN_LABEL_SPACING = 28; // Minimum vertical space needed for labels (2 lines)
-  static DIALOG_MIN_HEIGHT = 900;
-  static DIALOG_MAX_HEIGHT = 2600;
-  static DIALOG_NODE_HEIGHT = 42;
-  static TRANSFER_OVERLAY_OPACITY = 0.82;
-  static TRANSFER_OVERLAY_COLOR_START = "#444CE7";
-  static TRANSFER_OVERLAY_COLOR_END = "#9EA4FF";
 
   connect() {
     this.resizeObserver = new ResizeObserver(() => this.#draw());
     this.resizeObserver.observe(this.element);
     this.tooltip = null;
-    this.chartUid = Math.random().toString(36).slice(2, 10);
     this.#createTooltip();
     this.#draw();
   }
@@ -73,8 +66,6 @@ export default class extends Controller {
   #draw() {
     const { nodes = [], links = [] } = this.dataValue || {};
     if (!nodes.length || !links.length) return;
-
-    this.#ensureDialogChartHeight(nodes.length);
 
     // Hide tooltip and reset any hover states before redrawing
     this.#hideTooltip();
@@ -95,10 +86,9 @@ export default class extends Controller {
     this.#createGradients(svg, sankeyData.links);
 
     const linkPaths = this.#drawLinks(svg, sankeyData.links);
-    const transferOverlayPaths = this.#drawTransferOverlays(svg, sankeyData.nodes);
     const { nodeGroups, hiddenLabels } = this.#drawNodes(svg, sankeyData.nodes, width);
 
-    this.#attachHoverEvents(linkPaths, nodeGroups, sankeyData, hiddenLabels, transferOverlayPaths);
+    this.#attachHoverEvents(linkPaths, nodeGroups, sankeyData, hiddenLabels);
   }
 
   // Dynamic padding prevents padding from dominating when there are many nodes
@@ -112,7 +102,12 @@ export default class extends Controller {
   }
 
   #generateSankeyData(nodes, links, width, height, nodePadding) {
+    if (!nodes.length || !links.length) return { nodes: [], links: [] };
+
     const margin = this.constructor.EXTENT_MARGIN;
+    const mappedNodes = nodes.map(d => ({ ...d }));
+    const mappedLinks = links.map(d => ({ ...d }));
+
     const sankeyGenerator = sankey()
       .nodeWidth(this.nodeWidthValue)
       .nodePadding(nodePadding)
@@ -120,16 +115,13 @@ export default class extends Controller {
 
     const splitNodeComparator = this.#buildSplitNodeComparator(nodes);
     if (splitNodeComparator) {
-      this.splitLayerConfig = this.#buildSplitLayerConfig(nodes);
+      // Keep split links stably ordered without forcing custom node alignment.
       sankeyGenerator.linkSort(this.#buildSplitLinkComparator(nodes));
-      sankeyGenerator.nodeAlign((node, n) => this.#splitNodeLayer(node, n));
-    } else {
-      this.splitLayerConfig = null;
     }
 
     return sankeyGenerator({
-      nodes: nodes.map(d => ({ ...d })),
-      links: links.map(d => ({ ...d })),
+      nodes: mappedNodes,
+      links: mappedLinks,
     });
   }
 
@@ -166,51 +158,6 @@ export default class extends Controller {
 
       return d3.descending(a?.value ?? 0, b?.value ?? 0);
     };
-  }
-
-  #splitNodeLayer(node, columns) {
-    const layerConfig = this.splitLayerConfig || { left: 0, middle: 0, right: 0 };
-    const maxColumn = Math.max(0, (Number.isFinite(columns) && columns > 0 ? columns : 1) - 1);
-    const role = node?.node_role;
-
-    if (role === "cash_flow") return Math.min(maxColumn, layerConfig.middle);
-
-    if (this.#isSplitLeftRole(role)) {
-      return Math.min(maxColumn, layerConfig.left);
-    }
-
-    if (this.#isSplitRightRole(role)) {
-      return Math.min(maxColumn, layerConfig.right);
-    }
-
-    return Math.min(maxColumn, layerConfig.middle);
-  }
-
-  #buildSplitLayerConfig(nodes) {
-    const hasLeftColumn = nodes.some(node => this.#isSplitLeftRole(node?.node_role));
-    const hasRightColumn = nodes.some(node => this.#isSplitRightRole(node?.node_role));
-
-    if (hasLeftColumn && hasRightColumn) {
-      return { left: 0, middle: 1, right: 2 };
-    }
-
-    if (hasLeftColumn) {
-      return { left: 0, middle: 1, right: 1 };
-    }
-
-    if (hasRightColumn) {
-      return { left: 0, middle: 0, right: 1 };
-    }
-
-    return { left: 0, middle: 0, right: 0 };
-  }
-
-  #isSplitLeftRole(role) {
-    return role === "income" || role === "income_sub" || role === "transfer_in";
-  }
-
-  #isSplitRightRole(role) {
-    return role === "expense" || role === "expense_sub" || role === "transfer_out" || role === "surplus";
   }
 
   #splitLaneOrderForEndpoint(endpoint, nodes) {
@@ -281,108 +228,6 @@ export default class extends Controller {
       .attr("stroke", (d, i) => `url(#${this.#gradientId(d, i)})`)
       .attr("stroke-width", d => Math.max(1, d.width))
       .style("transition", "opacity 0.3s ease");
-  }
-
-  #drawTransferOverlays(svg, nodes) {
-    const overlays = Array.isArray(this.dataValue?.transfer_overlays) ? this.dataValue.transfer_overlays : [];
-    const validOverlays = overlays.filter((overlay) => (
-      Number.isFinite(overlay?.source)
-      && Number.isFinite(overlay?.target)
-      && overlay.source !== overlay.target
-      && nodes[overlay.source]
-      && nodes[overlay.target]
-      && Number(overlay.value) > 0
-    ));
-
-    if (!validOverlays.length) return null;
-
-    const defs = this.#ensureTransferOverlayDefs(svg);
-    const gradientId = this.#transferOverlayGradientId();
-    const markerId = this.#transferOverlayMarkerId();
-    const maxValue = d3.max(validOverlays, d => Number(d.value)) || 1;
-    const widthScale = d3.scaleLinear().domain([0, maxValue]).range([1.5, 8]);
-
-    const overlayGroup = svg.append("g").attr("class", "sankey-transfer-overlays");
-
-    return overlayGroup.selectAll("path")
-      .data(validOverlays)
-      .join("path")
-      .attr("class", "sankey-transfer-overlay")
-      .attr("d", d => this.#transferOverlayPath(d, nodes))
-      .attr("fill", "none")
-      .attr("stroke", `url(#${gradientId})`)
-      .attr("stroke-width", d => widthScale(Number(d.value)))
-      .attr("stroke-linecap", "round")
-      .attr("stroke-opacity", this.constructor.TRANSFER_OVERLAY_OPACITY)
-      .attr("marker-end", `url(#${markerId})`)
-      .style("pointer-events", "stroke")
-      .style("transition", "opacity 0.3s ease");
-  }
-
-  #transferOverlayPath(overlay, nodes) {
-    const sourceNode = nodes[overlay.source];
-    const targetNode = nodes[overlay.target];
-    if (!sourceNode || !targetNode) return "";
-
-    const sourceX = sourceNode.x1;
-    const targetX = targetNode.x0;
-    const sourceY = (sourceNode.y0 + sourceNode.y1) / 2;
-    const targetY = (targetNode.y0 + targetNode.y1) / 2;
-    const turnOffset = Math.max(90, Math.abs(sourceY - targetY) * 0.55);
-    const turnX = Math.max(sourceX, targetX) + turnOffset;
-
-    return `M ${sourceX},${sourceY} C ${turnX},${sourceY} ${turnX},${targetY} ${targetX},${targetY}`;
-  }
-
-  #ensureTransferOverlayDefs(svg) {
-    const defs = svg.select("defs").empty() ? svg.append("defs") : svg.select("defs");
-    const gradientId = this.#transferOverlayGradientId();
-    const markerId = this.#transferOverlayMarkerId();
-
-    if (defs.select(`#${gradientId}`).empty()) {
-      const gradient = defs.append("linearGradient")
-        .attr("id", gradientId)
-        .attr("gradientUnits", "objectBoundingBox")
-        .attr("x1", "0%")
-        .attr("x2", "100%")
-        .attr("y1", "0%")
-        .attr("y2", "0%");
-
-      gradient.append("stop")
-        .attr("offset", "0%")
-        .attr("stop-color", this.constructor.TRANSFER_OVERLAY_COLOR_START)
-        .attr("stop-opacity", 0.95);
-
-      gradient.append("stop")
-        .attr("offset", "100%")
-        .attr("stop-color", this.constructor.TRANSFER_OVERLAY_COLOR_END)
-        .attr("stop-opacity", 0.8);
-    }
-
-    if (defs.select(`#${markerId}`).empty()) {
-      defs.append("marker")
-        .attr("id", markerId)
-        .attr("viewBox", "0 -5 10 10")
-        .attr("refX", 9)
-        .attr("refY", 0)
-        .attr("markerWidth", 7)
-        .attr("markerHeight", 7)
-        .attr("orient", "auto")
-        .append("path")
-        .attr("d", "M0,-5L10,0L0,5")
-        .attr("fill", this.constructor.TRANSFER_OVERLAY_COLOR_START)
-        .attr("fill-opacity", 0.9);
-    }
-
-    return defs;
-  }
-
-  #transferOverlayGradientId() {
-    return `transfer-overlay-gradient-${this.chartUid}`;
-  }
-
-  #transferOverlayMarkerId() {
-    return `transfer-overlay-arrow-${this.chartUid}`;
   }
 
   #drawNodes(svg, nodes, width) {
@@ -479,20 +324,6 @@ export default class extends Controller {
     return hiddenLabels;
   }
 
-  #ensureDialogChartHeight(nodeCount) {
-    if (!this.#isInDialog()) return;
-
-    const preferredHeight = Math.max(
-      this.constructor.DIALOG_MIN_HEIGHT,
-      Math.min(this.constructor.DIALOG_MAX_HEIGHT, nodeCount * this.constructor.DIALOG_NODE_HEIGHT)
-    );
-
-    const currentHeight = Number.parseInt(this.element.style.height, 10);
-    if (currentHeight !== preferredHeight) {
-      this.element.style.height = `${preferredHeight}px`;
-    }
-  }
-
   #isInDialog() {
     return Boolean(this.element.closest("dialog"));
   }
@@ -559,7 +390,7 @@ export default class extends Controller {
     return this.constructor.SPLIT_LABEL_PRIORITY[node?.node_role] ?? this.constructor.SPLIT_LABEL_PRIORITY.other;
   }
 
-  #attachHoverEvents(linkPaths, nodeGroups, sankeyData, hiddenLabels, transferOverlayPaths = null) {
+  #attachHoverEvents(linkPaths, nodeGroups, sankeyData, hiddenLabels) {
     const applyHover = (targetLinks) => {
       const targetSet = new Set(targetLinks);
       const connectedNodes = new Set(targetLinks.flatMap(l => [l.source, l.target]));
@@ -570,10 +401,6 @@ export default class extends Controller {
 
       nodeGroups.style("opacity", d => connectedNodes.has(d) ? 1 : this.constructor.HOVER_OPACITY);
 
-      transferOverlayPaths
-        ?.style("opacity", this.constructor.HOVER_OPACITY)
-        .style("filter", "none");
-
       // Show labels for connected nodes (even if normally hidden)
       nodeGroups.selectAll("text")
         .style("opacity", d => connectedNodes.has(d) ? 1 : (hiddenLabels.has(d.index) ? 0 : this.constructor.HOVER_OPACITY));
@@ -582,9 +409,6 @@ export default class extends Controller {
     const resetHover = () => {
       linkPaths.style("opacity", 1).style("filter", "none");
       nodeGroups.style("opacity", 1);
-      transferOverlayPaths
-        ?.style("opacity", this.constructor.TRANSFER_OVERLAY_OPACITY)
-        .style("filter", "none");
 
       // Restore hidden labels to hidden state
       nodeGroups.selectAll("text")
@@ -621,28 +445,6 @@ export default class extends Controller {
         const connectedLinks = sankeyData.links.filter(l => l.source === d || l.target === d);
         applyHover(connectedLinks);
         this.#showTooltip(event, d.value, d.percentage, d.name);
-      })
-      .on("mousemove", event => this.#updateTooltipPosition(event))
-      .on("mouseleave", () => {
-        resetHover();
-        this.#hideTooltip();
-      });
-
-    transferOverlayPaths
-      ?.on("mouseenter", (event, d) => {
-        const sourceNode = sankeyData.nodes[d.source];
-        const targetNode = sankeyData.nodes[d.target];
-        const sourceName = d.source_name || sourceNode?.name || "Source account";
-        const targetName = d.target_name || targetNode?.name || "Destination account";
-        const connectedNodeIndices = new Set([ d.source, d.target ]);
-
-        linkPaths.style("opacity", this.constructor.HOVER_OPACITY).style("filter", "none");
-        transferOverlayPaths.style("opacity", overlay => (overlay === d ? 1 : this.constructor.HOVER_OPACITY));
-        nodeGroups.style("opacity", node => connectedNodeIndices.has(node.index) ? 1 : this.constructor.HOVER_OPACITY);
-        nodeGroups.selectAll("text")
-          .style("opacity", node => connectedNodeIndices.has(node.index) ? 1 : (hiddenLabels.has(node.index) ? 0 : this.constructor.HOVER_OPACITY));
-
-        this.#showTooltip(event, d.value, null, `${sourceName} -> ${targetName}`);
       })
       .on("mousemove", event => this.#updateTooltipPosition(event))
       .on("mouseleave", () => {

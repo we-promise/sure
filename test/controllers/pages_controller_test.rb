@@ -166,12 +166,13 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
 
     assert_empty transfer_nodes, "Expected split mode to hide transfer helper nodes"
 
-    transfer_overlays = sankey_data["transfer_overlays"] || []
     assert(
-      transfer_overlays.any? do |overlay|
-        overlay["source_name"] == source_account.name && overlay["target_name"] == destination_account.name
+      sankey_data["links"].any? do |link|
+        source = sankey_data["nodes"][link["source"]]
+        target = sankey_data["nodes"][link["target"]]
+        source && target && source["name"] == source_account.name && target["name"] == destination_account.name
       end,
-      "Expected split mode to include net account-to-account transfer overlays"
+      "Expected split mode to include net account-to-account transfer links"
     )
   end
 
