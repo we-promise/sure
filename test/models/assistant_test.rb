@@ -426,7 +426,7 @@ class AssistantTest < ActiveSupport::TestCase
   end
 
   test "builtin demotes a partially-streamed assistant message to failed on error" do
-    @assistant.expects(:get_model_provider).with("gpt-4.1").returns(@provider)
+    @assistant.expects(:get_model_provider).with("gpt-4.1", family: @chat.user.family).returns(@provider)
 
     boom = StandardError.new("boom mid-stream")
 
@@ -453,7 +453,7 @@ class AssistantTest < ActiveSupport::TestCase
       status: "failed"
     )
 
-    @assistant.expects(:get_model_provider).with("gpt-4.1").returns(@provider)
+    @assistant.expects(:get_model_provider).with("gpt-4.1", family: @chat.user.family).returns(@provider)
 
     captured_history = nil
     @provider.expects(:chat_response).with do |_prompt, **options|
@@ -489,7 +489,7 @@ class AssistantTest < ActiveSupport::TestCase
       function_result: { amount: 1000, currency: "USD" }
     )
 
-    @assistant.expects(:get_model_provider).with("gpt-4.1").returns(@provider)
+    @assistant.expects(:get_model_provider).with("gpt-4.1", family: @chat.user.family).returns(@provider)
 
     captured_history = nil
     @provider.expects(:chat_response).with do |_prompt, **options|
