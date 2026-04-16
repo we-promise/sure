@@ -33,6 +33,14 @@ en:
         no_data_title: "No cash flow data for this time period"
         no_data_description: "Add transactions to display cash flow data or expand the time period"
         add_transaction: "Add transaction"
+        all_accounts: "All accounts"
+        other_categories: "Other"
+        from_label: "Transfer from"
+        to_label: "Transfer to"
+        split_mode_transfer_hint: "Split view shows net account-to-account transfers as curved links. Income flows in from the left and expenses flow out to the right."
+        view_modes:
+          aggregate: "All accounts (combined)"
+          split_by_account: "All accounts (split by account)"
       no_accounts:
         title: "No accounts yet"
         description: "Add accounts to display net worth data"

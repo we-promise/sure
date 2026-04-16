@@ -935,21 +935,47 @@ class Demo::Generator
     end
 
     def create_transfer!(from_account, to_account, amount, name, date)
+      outflow_kind = transfer_outflow_kind(from_account: from_account, to_account: to_account)
+
       outflow = from_account.entries.create!(
-        entryable: Transaction.new,
+        entryable: Transaction.new(
+          kind: outflow_kind,
+          category: transfer_outflow_category(kind: outflow_kind, from_account: from_account)
+        ),
         amount: amount,
         name: name,
         currency: from_account.currency,
         date: date
       )
       inflow = to_account.entries.create!(
-        entryable: Transaction.new,
+        entryable: Transaction.new(kind: "funds_movement"),
         amount: -amount,
         name: name,
         currency: to_account.currency,
         date: date
       )
-      Transfer.create!(inflow_transaction: inflow.entryable, outflow_transaction: outflow.entryable)
+      Transfer.create!(
+        inflow_transaction: inflow.entryable,
+        outflow_transaction: outflow.entryable,
+        status: "confirmed"
+      )
+    end
+
+    def transfer_outflow_kind(from_account:, to_account:)
+      destination_is_investment = to_account.investment? || to_account.crypto?
+      source_is_investment = from_account.investment? || from_account.crypto?
+
+      if destination_is_investment && source_is_investment
+        "funds_movement"
+      else
+        Transfer.kind_for_account(to_account)
+      end
+    end
+
+    def transfer_outflow_category(kind:, from_account:)
+      return nil unless kind == "investment_contribution"
+
+      from_account.family.investment_contributions_category
     end
 
     def load_securities!

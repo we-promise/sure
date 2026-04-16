@@ -1,7 +1,26 @@
-<%# locals: (sankey_data:, period:) %>
+<%# locals: (sankey_data:, period:, finance_accounts:, selected_account_id:, sankey_mode:) %>
 <div id="cashflow-sankey-chart">
   <div class="flex justify-end items-center gap-4 px-4 mb-4">
     <%= form_with url: root_path, method: :get, data: { controller: "auto-submit-form", turbo_frame: "_top" } do |form| %>
+      <%= form.select :sankey_mode,
+                [
+                  [t("pages.dashboard.cashflow_sankey.view_modes.aggregate"), "aggregate"],
+                  [t("pages.dashboard.cashflow_sankey.view_modes.split_by_account"), "split"]
+                ],
+                { selected: sankey_mode },
+                data: { "auto-submit-form-target": "auto" },
+                class: "bg-container border border-secondary font-medium rounded-lg px-3 py-2 text-sm pr-7 cursor-pointer text-primary focus:outline-hidden focus:ring-0" %>
+
+      <% if sankey_mode == "split" %>
+        <%= form.hidden_field :account_id, value: "" %>
+      <% else %>
+        <%= form.select :account_id,
+                  [[t("pages.dashboard.cashflow_sankey.all_accounts"), ""]] + finance_accounts.map { |account| [account.name, account.id] },
+                  { selected: selected_account_id },
+                  data: { "auto-submit-form-target": "auto" },
+                  class: "bg-container border border-secondary font-medium rounded-lg px-3 py-2 text-sm pr-7 cursor-pointer text-primary focus:outline-hidden focus:ring-0" %>
+      <% end %>
+
       <%= form.select :period,
                 Period.as_options,
                 { selected: period.key },
@@ -9,6 +28,9 @@
                 class: "bg-container border border-secondary font-medium rounded-lg px-3 py-2 text-sm pr-7 cursor-pointer text-primary focus:outline-hidden focus:ring-0" %>
     <% end %>
   </div>
+  <% if sankey_mode == "split" %>
+    <p class="px-4 mb-3 text-xs text-secondary"><%= t("pages.dashboard.cashflow_sankey.split_mode_transfer_hint") %></p>
+  <% end %>
   <% if sankey_data[:links].present? %>
     <div class="w-full h-96">
       <div
@@ -20,12 +42,12 @@
     <%= render DS::Dialog.new(id: "cashflow-expanded-dialog", auto_open: false, width: "custom", disable_frame: true, content_class: "!w-[96vw] max-w-[1650px]", data: { action: "close->cashflow-expand#restore" }) do |dialog| %>
       <% dialog.with_header(title: t("pages.dashboard.cashflow_sankey.title")) %>
       <% dialog.with_body do %>
-        <div class="w-full h-[85dvh] max-h-[90dvh] overflow-y-auto overscroll-contain">
+        <div class="w-full h-[92dvh] max-h-[96dvh] overflow-y-auto overscroll-contain">
           <div
             data-controller="sankey-chart"
             data-sankey-chart-data-value="<%= sankey_data.to_json %>"
             data-sankey-chart-currency-symbol-value="<%= sankey_data[:currency_symbol] %>"
-            class="w-full h-full privacy-sensitive"></div>
+            class="w-full min-h-[900px] h-full privacy-sensitive"></div>
         </div>
       <% end %>
     <% end %>

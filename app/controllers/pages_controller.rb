@@ -12,16 +12,34 @@ class PagesController < ApplicationController
     @balance_sheet = Current.family.balance_sheet
     @investment_statement = Current.family.investment_statement
     @accounts = Current.user.accessible_accounts.visible.with_attached_logo
+    @finance_accounts = Current.user.finance_accounts.visible.alphabetically
+    @sankey_mode = resolved_sankey_mode
+    @selected_account = @sankey_mode == "aggregate" ? @finance_accounts.find_by(id: params[:account_id].presence) : nil
 
     family_currency = Current.family.currency
+    selected_account_ids = @selected_account ? [ @selected_account.id ] : nil
 
-    # Use IncomeStatement for all cashflow data (now includes categorized trades)
-    income_statement = Current.family.income_statement
-    income_totals = income_statement.income_totals(period: @period)
-    expense_totals = income_statement.expense_totals(period: @period)
-    net_totals = income_statement.net_category_totals(period: @period)
+    if @sankey_mode == "split"
+      income_statement = Current.family.income_statement(user: Current.user)
+      net_totals = income_statement.net_category_totals(period: @period)
+      @cashflow_sankey_data = build_split_cashflow_sankey_data(accounts: @finance_accounts, period: @period, currency: family_currency)
+    else
+      # Use IncomeStatement for all cashflow data (now includes categorized trades)
+      income_statement = Current.family.income_statement(user: Current.user, account_ids: selected_account_ids)
+      income_totals = income_statement.income_totals(period: @period)
+      expense_totals = income_statement.expense_totals(period: @period)
+      net_totals = income_statement.net_category_totals(period: @period)
+      transfer_flows = @selected_account ?
+        build_transfer_flows_for_account(
+          account: @selected_account,
+          period: @period,
+          currency: family_currency,
+          accessible_account_ids: @accounts.map(&:id).to_set
+        ) : nil
 
-    @cashflow_sankey_data = build_cashflow_sankey_data(net_totals, income_totals, expense_totals, family_currency)
+      @cashflow_sankey_data = build_cashflow_sankey_data(net_totals, income_totals, expense_totals, family_currency, transfer_flows: transfer_flows)
+    end
+
     @outflows_data = build_outflows_donut_data(net_totals)
 
     @dashboard_sections = build_dashboard_sections
@@ -89,7 +107,13 @@ class PagesController < ApplicationController
           key: "cashflow_sankey",
           title: "pages.dashboard.cashflow_sankey.title",
           partial: "pages/dashboard/cashflow_sankey",
-          locals: { sankey_data: @cashflow_sankey_data, period: @period },
+          locals: {
+            sankey_data: @cashflow_sankey_data,
+            period: @period,
+            finance_accounts: @finance_accounts,
+            selected_account_id: @selected_account&.id,
+            sankey_mode: @sankey_mode
+          },
           visible: @accounts.any?,
           collapsible: true
         },
@@ -145,7 +169,7 @@ class PagesController < ApplicationController
       Provider::Registry.get_provider(:github)
     end
 
-    def build_cashflow_sankey_data(net_totals, income_totals, expense_totals, currency)
+    def build_cashflow_sankey_data(net_totals, income_totals, expense_totals, currency, transfer_flows: nil)
       nodes = []
       links = []
       node_indices = {}
@@ -190,6 +214,13 @@ class PagesController < ApplicationController
         flow_direction: :outbound
       )
 
+      append_transfer_flows(
+        transfer_flows: transfer_flows,
+        add_node: add_node,
+        links: links,
+        cash_flow_idx: cash_flow_idx
+      )
+
       # Surplus/Deficit
       net = (total_income - total_expense).round(2)
       if net.positive?
@@ -199,6 +230,35 @@ class PagesController < ApplicationController
       end
 
       { nodes: nodes, links: links, currency_symbol: Money::Currency.new(currency).symbol }
+    end
+
+    def append_transfer_flows(transfer_flows:, add_node:, links:, cash_flow_idx:, key_namespace: nil, inbound_label_prefix: nil, outbound_label_prefix: nil)
+      return if transfer_flows.blank?
+
+      transfer_color = Category::TRANSFER_COLOR
+      inbound_base = transfer_flows[:total_inbound].to_f
+      outbound_base = transfer_flows[:total_outbound].to_f
+      key_prefix = key_namespace.present? ? "#{key_namespace}_" : ""
+      inbound_prefix = inbound_label_prefix.presence || "#{I18n.t("pages.dashboard.cashflow_sankey.from_label")} "
+      outbound_prefix = outbound_label_prefix.presence || "#{I18n.t("pages.dashboard.cashflow_sankey.to_label")} "
+
+      transfer_flows[:inbound].each do |flow|
+        value = flow[:value].to_f.round(2)
+        next if value.zero?
+
+        percentage = inbound_base.zero? ? 0 : (value / inbound_base * 100).round(1)
+        idx = add_node.call("#{key_prefix}transfer_in_#{flow[:key]}", "#{inbound_prefix}#{flow[:name]}", value, percentage, transfer_color)
+        links << { source: idx, target: cash_flow_idx, value: value, color: transfer_color, percentage: percentage, flow_type: "transfer_in" }
+      end
+
+      transfer_flows[:outbound].each do |flow|
+        value = flow[:value].to_f.round(2)
+        next if value.zero?
+
+        percentage = outbound_base.zero? ? 0 : (value / outbound_base * 100).round(1)
+        idx = add_node.call("#{key_prefix}transfer_out_#{flow[:key]}", "#{outbound_prefix}#{flow[:name]}", value, percentage, transfer_color)
+        links << { source: cash_flow_idx, target: idx, value: value, color: transfer_color, percentage: percentage, flow_type: "transfer_out" }
+      end
     end
 
     # Nets subcategory expense and income totals, grouped by parent_id.
@@ -241,8 +301,9 @@ class PagesController < ApplicationController
     #
     # flow_direction: :inbound  (subcategory -> parent -> cash_flow) for income
     #                 :outbound (cash_flow -> parent -> subcategory) for expenses
-    def process_net_category_nodes(categories:, total:, prefix:, net_subcategories_by_parent:, add_node:, links:, cash_flow_idx:, flow_direction:)
+    def process_net_category_nodes(categories:, total:, prefix:, net_subcategories_by_parent:, add_node:, links:, cash_flow_idx:, flow_direction:, key_namespace: nil)
       matching_direction = flow_direction == :inbound ? :income : :expense
+      key_prefix = key_namespace.present? ? "#{key_namespace}_" : ""
 
       categories.each do |ct|
         val = ct.total.to_f.round(2)
@@ -250,7 +311,7 @@ class PagesController < ApplicationController
 
         percentage = total.zero? ? 0 : (val / total * 100).round(1)
         color = ct.category.color.presence || Category::UNCATEGORIZED_COLOR
-        node_key = "#{prefix}_#{ct.category.id || ct.category.name}"
+        node_key = "#{key_prefix}#{prefix}_#{ct.category.id || ct.category.name}"
 
         all_subs = ct.category.id ? (net_subcategories_by_parent[ct.category.id] || []) : []
         same_side_subs = all_subs.select { |s| s[:net_direction] == matching_direction }
@@ -273,7 +334,7 @@ class PagesController < ApplicationController
             sub_val = sub[:total].to_f.round(2)
             sub_pct = val.zero? ? 0 : (sub_val / val * 100).round(1)
             sub_color = sub[:category].color.presence || color
-            sub_key = "#{prefix}_sub_#{sub[:category].id}"
+            sub_key = "#{key_prefix}#{prefix}_sub_#{sub[:category].id}"
             sub_idx = add_node.call(sub_key, sub[:category].name, sub_val, sub_pct, sub_color)
 
             if flow_direction == :inbound
@@ -300,7 +361,7 @@ class PagesController < ApplicationController
           sub_val = sub[:total].to_f.round(2)
           sub_pct = total.zero? ? 0 : (sub_val / total * 100).round(1)
           sub_color = sub[:category].color.presence || color
-          sub_key = "#{opposite_prefix}_sub_#{sub[:category].id}"
+          sub_key = "#{key_prefix}#{opposite_prefix}_sub_#{sub[:category].id}"
           sub_idx = add_node.call(sub_key, sub[:category].name, sub_val, sub_pct, sub_color)
 
           # Opposite direction: if parent is outbound (expense), this sub is inbound (income)
@@ -311,6 +372,374 @@ class PagesController < ApplicationController
           end
         end
       end
+    end
+
+    def build_split_cashflow_sankey_data(accounts:, period:, currency:)
+      nodes = []
+      links = []
+      node_indices = {}
+      account_lane_order = accounts.each_with_index.to_h { |account, idx| [ account.id, idx ] }
+
+      add_node = ->(unique_key, display_name, value, percentage, color) {
+        node_indices[unique_key] ||= begin
+          metadata = split_sankey_node_metadata(unique_key, account_lane_order)
+          nodes << {
+            name: display_name,
+            value: value.to_f.round(2),
+            percentage: percentage.to_f.round(1),
+            color: color
+          }.merge(metadata)
+          nodes.size - 1
+        end
+      }
+
+      income_flows_by_account_category = Hash.new(0.to_d)
+      expense_flows_by_account_category = Hash.new(0.to_d)
+      income_totals_by_category = Hash.new(0.to_d)
+      expense_totals_by_category = Hash.new(0.to_d)
+      income_totals_by_account = Hash.new(0.to_d)
+      expense_totals_by_account = Hash.new(0.to_d)
+      income_categories_by_key = {}
+      expense_categories_by_key = {}
+
+      accounts.each do |account|
+        income_statement = Current.family.income_statement(user: Current.user, account_ids: [ account.id ])
+        net_totals = income_statement.net_category_totals(period: period)
+
+        net_totals.net_income_categories.each do |category_total|
+          value = category_total.total.to_d
+          next if value.zero?
+
+          category_key = split_category_key(category_total)
+          income_flows_by_account_category[[ account.id, category_key ]] += value
+          income_totals_by_category[category_key] += value
+          income_totals_by_account[account.id] += value
+          income_categories_by_key[category_key] ||= category_total.category
+        end
+
+        net_totals.net_expense_categories.each do |category_total|
+          value = category_total.total.to_d
+          next if value.zero?
+
+          category_key = split_category_key(category_total)
+          expense_flows_by_account_category[[ account.id, category_key ]] += value
+          expense_totals_by_category[category_key] += value
+          expense_totals_by_account[account.id] += value
+          expense_categories_by_key[category_key] ||= category_total.category
+        end
+      end
+
+      transfer_overlay_data = build_split_transfer_overlays(accounts: accounts, period: period, currency: currency)
+      transfer_totals_by_account = transfer_overlay_data[:totals_by_account]
+
+      total_income = income_totals_by_category.values.sum.to_f.round(2)
+      total_expense = expense_totals_by_category.values.sum.to_f.round(2)
+
+      income_node_indices = {}
+      income_totals_by_category.sort_by { |_, value| -value.to_f }.each do |category_key, value|
+        category = split_category_for_key(category_key, category_lookup: income_categories_by_key)
+        percentage = total_income.zero? ? 0 : (value.to_f / total_income * 100).round(1)
+        income_node_indices[category_key] = add_node.call(
+          "split_income_#{category_key}",
+          category.name,
+          value.to_f.round(2),
+          percentage,
+          category.color.presence || Category::UNCATEGORIZED_COLOR
+        )
+      end
+
+      expense_node_indices = {}
+      expense_totals_by_category.sort_by { |_, value| -value.to_f }.each do |category_key, value|
+        category = split_category_for_key(category_key, category_lookup: expense_categories_by_key)
+        percentage = total_expense.zero? ? 0 : (value.to_f / total_expense * 100).round(1)
+        expense_node_indices[category_key] = add_node.call(
+          "split_expense_#{category_key}",
+          category.name,
+          value.to_f.round(2),
+          percentage,
+          category.color.presence || Category::UNCATEGORIZED_COLOR
+        )
+      end
+
+      account_node_indices = {}
+      accounts.each do |account|
+        has_category_flows = income_totals_by_account[account.id].positive? || expense_totals_by_account[account.id].positive?
+        next unless has_category_flows
+
+        node_value = [
+          income_totals_by_account[account.id].to_f,
+          expense_totals_by_account[account.id].to_f,
+          transfer_totals_by_account[account.id].to_f
+        ].max.round(2)
+
+        account_node_indices[account.id] = add_node.call(
+          "account_#{account.id}_cash_flow_node",
+          account.name,
+          node_value,
+          100.0,
+          "var(--color-success)"
+        )
+      end
+
+      income_flows_by_account_category.each do |(account_id, category_key), value|
+        account_idx = account_node_indices[account_id]
+        income_idx = income_node_indices[category_key]
+        next unless account_idx && income_idx
+
+        category = split_category_for_key(category_key, category_lookup: income_categories_by_key)
+        percentage = total_income.zero? ? 0 : (value.to_f / total_income * 100).round(1)
+        links << {
+          source: income_idx,
+          target: account_idx,
+          value: value.to_f.round(2),
+          color: category.color.presence || Category::UNCATEGORIZED_COLOR,
+          percentage: percentage
+        }
+      end
+
+      expense_flows_by_account_category.each do |(account_id, category_key), value|
+        account_idx = account_node_indices[account_id]
+        expense_idx = expense_node_indices[category_key]
+        next unless account_idx && expense_idx
+
+        category = split_category_for_key(category_key, category_lookup: expense_categories_by_key)
+        percentage = total_expense.zero? ? 0 : (value.to_f / total_expense * 100).round(1)
+        links << {
+          source: account_idx,
+          target: expense_idx,
+          value: value.to_f.round(2),
+          color: category.color.presence || Category::UNCATEGORIZED_COLOR,
+          percentage: percentage
+        }
+      end
+
+      transfer_overlays = transfer_overlay_data[:links].filter_map do |flow|
+        source_idx = account_node_indices[flow[:source_account_id]]
+        target_idx = account_node_indices[flow[:target_account_id]]
+        next unless source_idx && target_idx
+
+        {
+          source: source_idx,
+          target: target_idx,
+          value: flow[:value].to_f.round(2),
+          color: Category::TRANSFER_COLOR,
+          flow_type: "transfer_overlay",
+          source_name: flow[:source_name],
+          target_name: flow[:target_name]
+        }
+      end
+
+      {
+        nodes: nodes,
+        links: links,
+        transfer_overlays: transfer_overlays,
+        currency_symbol: Money::Currency.new(currency).symbol
+      }
+    end
+
+    def split_sankey_node_metadata(unique_key, account_lane_order)
+      account_id = unique_key[/\Aaccount_([^_]+)_/, 1]
+      return {} unless account_id
+
+      {
+        lane_order: account_lane_order.fetch(account_id, 0),
+        node_role: split_sankey_node_role(unique_key)
+      }
+    end
+
+    def split_category_key(category_total)
+      category = category_total.category
+      category.id.presence || category.name
+    end
+
+    def split_category_for_key(category_key, category_lookup:)
+      category_lookup.fetch(category_key)
+    end
+
+    def split_sankey_node_role(unique_key)
+      return "cash_flow" if unique_key.end_with?("_cash_flow_node")
+      return "surplus" if unique_key.end_with?("_surplus_node")
+      return "transfer_in" if unique_key.include?("_transfer_in_")
+      return "transfer_out" if unique_key.include?("_transfer_out_")
+      return "income_sub" if unique_key.include?("_income_sub_")
+      return "income" if unique_key.include?("_income_")
+      return "expense_sub" if unique_key.include?("_expense_sub_")
+      return "expense" if unique_key.include?("_expense_")
+
+      "other"
+    end
+
+    def build_split_transfer_overlays(accounts:, period:, currency:)
+      accounts_by_id = accounts.index_by(&:id)
+      account_ids = accounts_by_id.keys.to_set
+
+      transfer_transactions = Current.family.transactions
+        .visible
+        .excluding_pending
+        .in_period(period)
+        .where(kind: Transaction::TRANSFER_KINDS)
+        .where(entries: { excluded: false })
+        .includes(
+          :entry,
+          transfer_as_outflow: { inflow_transaction: { entry: :account } }
+        )
+
+      outflow_transactions = transfer_transactions.select(&:transfer_as_outflow)
+      return { links: [], totals_by_account: Hash.new(0.to_d) } if outflow_transactions.empty?
+
+      exchange_rates = exchange_rate_map_for_entries(outflow_transactions.map(&:entry), target_currency: currency)
+      directed_buckets = Hash.new(0.to_d)
+
+      outflow_transactions.each do |transaction|
+        source_entry = transaction.entry
+        destination_entry = transaction.transfer_as_outflow&.inflow_transaction&.entry
+        next unless source_entry && destination_entry
+
+        source_account = source_entry.account
+        destination_account = destination_entry.account
+        next unless source_account && destination_account
+        next unless account_ids.include?(source_account.id) && account_ids.include?(destination_account.id)
+
+        converted_amount = converted_entry_abs_amount(source_entry, target_currency: currency, exchange_rates: exchange_rates)
+        next if converted_amount.zero?
+
+        directed_buckets[[ source_account.id, destination_account.id ]] += converted_amount
+      end
+
+      links = []
+      totals_by_account = Hash.new(0.to_d)
+      pair_keys = directed_buckets.keys.map { |source_id, target_id| [ source_id, target_id ].sort }.uniq
+
+      pair_keys.each do |account_a_id, account_b_id|
+        forward = directed_buckets[[ account_a_id, account_b_id ]]
+        reverse = directed_buckets[[ account_b_id, account_a_id ]]
+        net_amount = forward - reverse
+        next if net_amount.zero?
+
+        source_id, target_id = net_amount.positive? ? [ account_a_id, account_b_id ] : [ account_b_id, account_a_id ]
+        source_account = accounts_by_id[source_id]
+        target_account = accounts_by_id[target_id]
+        next unless source_account && target_account
+
+        value = net_amount.abs.round(2)
+
+        links << {
+          source_account_id: source_id,
+          target_account_id: target_id,
+          source_name: source_account.name,
+          target_name: target_account.name,
+          value: value
+        }
+
+        totals_by_account[source_id] += value
+        totals_by_account[target_id] += value
+      end
+
+      {
+        links: links.sort_by { |flow| -flow[:value].to_f },
+        totals_by_account: totals_by_account
+      }
+    end
+
+    def build_transfer_flows_for_account(account:, period:, currency:, accessible_account_ids:)
+      transfer_transactions = Current.family.transactions
+        .visible
+        .excluding_pending
+        .in_period(period)
+        .where(kind: Transaction::TRANSFER_KINDS)
+        .where(entries: { account_id: account.id, excluded: false })
+        .includes(
+          :entry,
+          transfer_as_outflow: { inflow_transaction: { entry: :account } },
+          transfer_as_inflow: { outflow_transaction: { entry: :account } }
+        )
+
+      return { inbound: [], outbound: [], total_inbound: 0.0, total_outbound: 0.0 } if transfer_transactions.empty?
+
+      exchange_rates = exchange_rate_map_for_entries(transfer_transactions.map(&:entry), target_currency: currency)
+      buckets = {
+        inbound: Hash.new(0.to_d),
+        outbound: Hash.new(0.to_d)
+      }
+
+      transfer_transactions.each do |transaction|
+        entry = transaction.entry
+        next unless entry
+
+        counterparty = transfer_counterparty_account(transaction)
+        next unless counterparty
+        next unless accessible_account_ids.include?(counterparty.id)
+
+        converted_amount = converted_entry_abs_amount(entry, target_currency: currency, exchange_rates: exchange_rates)
+        next if converted_amount.zero?
+
+        direction = entry.amount.positive? ? :outbound : :inbound
+        buckets[direction][counterparty] += converted_amount
+      end
+
+      inbound = buckets[:inbound].map do |counterparty, amount|
+        {
+          key: counterparty.id,
+          name: counterparty.name,
+          value: amount.to_f.round(2)
+        }
+      end.sort_by { |flow| -flow[:value] }
+
+      outbound = buckets[:outbound].map do |counterparty, amount|
+        {
+          key: counterparty.id,
+          name: counterparty.name,
+          value: amount.to_f.round(2)
+        }
+      end.sort_by { |flow| -flow[:value] }
+
+      {
+        inbound: inbound,
+        outbound: outbound,
+        total_inbound: inbound.sum { |flow| flow[:value] }.round(2),
+        total_outbound: outbound.sum { |flow| flow[:value] }.round(2)
+      }
+    end
+
+    def transfer_counterparty_account(transaction)
+      if (outflow_transfer = transaction.transfer_as_outflow)
+        outflow_transfer.inflow_transaction&.entry&.account
+      elsif (inflow_transfer = transaction.transfer_as_inflow)
+        inflow_transfer.outflow_transaction&.entry&.account
+      end
+    end
+
+    def exchange_rate_map_for_entries(entries, target_currency:)
+      rate_keys = entries.filter_map do |entry|
+        next if entry.currency == target_currency
+
+        [ entry.date, entry.currency ]
+      end.uniq
+
+      return {} if rate_keys.empty?
+
+      dates = rate_keys.map(&:first).uniq
+      currencies = rate_keys.map(&:last).uniq
+
+      ExchangeRate
+        .where(date: dates, from_currency: currencies, to_currency: target_currency)
+        .pluck(:date, :from_currency, :rate)
+        .to_h { |date, from_currency, rate| [ [ date, from_currency ], rate.to_d ] }
+    end
+
+    def converted_entry_abs_amount(entry, target_currency:, exchange_rates:)
+      rate = if entry.currency == target_currency
+        1.to_d
+      else
+        exchange_rates.fetch([ entry.date, entry.currency ], 1.to_d)
+      end
+
+      (entry.amount.to_d.abs * rate).round(2)
+    end
+
+    def resolved_sankey_mode
+      mode = params[:sankey_mode].presence
+      mode.in?(%w[aggregate split]) ? mode : "aggregate"
     end
 
     def build_outflows_donut_data(net_totals)

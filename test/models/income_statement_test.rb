@@ -28,6 +28,15 @@ class IncomeStatementTest < ActiveSupport::TestCase
     assert_equal 4, totals.transactions_count
   end
 
+  test "filters totals by provided account ids" do
+    income_statement = IncomeStatement.new(@family, account_ids: [ @checking_account.id ])
+    totals = income_statement.totals(date_range: Period.last_30_days.date_range)
+
+    assert_equal Money.new(1000, @family.currency), totals.income_money
+    assert_equal Money.new(200, @family.currency), totals.expense_money
+    assert_equal 2, totals.transactions_count
+  end
+
   test "calculates expenses for a period" do
     income_statement = IncomeStatement.new(@family)
     expense_totals = income_statement.expense_totals(period: Period.last_30_days)
