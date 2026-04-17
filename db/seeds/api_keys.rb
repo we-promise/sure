@@ -5,7 +5,7 @@ return unless ENV["SETUP_ADMIN_EMAIL"].present?
 
 # Extract and validate environment variables
 email = ENV["SETUP_ADMIN_EMAIL"].to_s.strip.downcase
-password = ENV["SETUP_ADMIN_PASSWORD"].to_s
+password = ENV["SETUP_ADMIN_PASSWORD"].to_s.strip
 setup_key = ENV["SETUP_API_KEY"].to_s.strip
 
 # Default to auto-generate if not provided or set to "auto"
@@ -28,6 +28,7 @@ if setup_key == "auto"
   api_key_value = ApiKey.generate_secure_key
 else
   # Validate provided key format (64-character hex string)
+  setup_key = setup_key.downcase
   unless setup_key.match?(/\A[0-9a-f]{64}\z/)
     puts "ERROR: SETUP_API_KEY must be a 64-character hex string or 'auto'"
     return
@@ -61,7 +62,7 @@ begin
 
   # Find or create API key for this user
   # Note: one_active_key_per_user_per_source validation ensures only one "web" key exists
-  api_key = user.api_keys.find_by(source: "web")
+  api_key = user.api_keys.active.find_by(source: "web")
 
   if api_key
     puts "Found existing API key for user (reusing)"
