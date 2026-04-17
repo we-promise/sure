@@ -1,20 +1,35 @@
 <%# locals: (sankey_data:, period:, finance_accounts:, selected_account_id:, sankey_mode:) %>
 <% account_options = [[t("pages.dashboard.cashflow_sankey.all_accounts"), ""]] + finance_accounts.map { |account| [account.name, account.id] } %>
+<%
+  dashboard_params = { period: period.key }
+  dashboard_params[:account_id] = selected_account_id if selected_account_id.present?
+  aggregate_active = sankey_mode == "aggregate"
+  split_active = sankey_mode == "split"
+%>
 <div id="cashflow-sankey-chart">
-  <div class="flex justify-end items-center gap-4 px-4 mb-4">
-      <%= form_with url: root_path, method: :get, data: { controller: "auto-submit-form", turbo_frame: "_top" } do |form| %>
-  <%= form.hidden_field :sankey_mode, value: sankey_mode %>
-  <%= form.select :account_id,
+  <div class="flex flex-wrap items-center justify-between gap-3 px-4 mb-4">
+    <div class="inline-flex items-center gap-0.5 rounded-lg bg-container-inset p-1">
+      <%= link_to t("pages.dashboard.cashflow_sankey.aggregate_mode"),
+        root_path(dashboard_params.merge(sankey_mode: "aggregate")),
+        class: "inline-flex items-center rounded-md px-3 py-1.5 text-sm font-medium transition-colors #{aggregate_active ? "bg-container text-primary shadow-sm" : "text-secondary hover:text-primary"}" %>
+      <%= link_to t("transactions.split_parent_row.split_label"),
+        root_path(dashboard_params.merge(sankey_mode: "split")),
+        class: "inline-flex items-center rounded-md px-3 py-1.5 text-sm font-medium transition-colors #{split_active ? "bg-container text-primary shadow-sm" : "text-secondary hover:text-primary"}" %>
+    </div>
+
+    <%= form_with url: root_path, method: :get, data: { controller: "auto-submit-form", turbo_frame: "_top" }, class: "flex items-center gap-4" do |form| %>
+      <%= form.hidden_field :sankey_mode, value: sankey_mode %>
+      <%= form.select :account_id,
             account_options,
             { selected: selected_account_id || "" },
             data: { "auto-submit-form-target": "auto" },
             class: "bg-container border border-secondary font-medium rounded-lg px-3 py-2 text-sm pr-7 cursor-pointer text-primary focus:outline-hidden focus:ring-0" %>
-  <%= form.select :period,
+      <%= form.select :period,
             Period.as_options,
             { selected: period.key },
             data: { "auto-submit-form-target": "auto" },
             class: "bg-container border border-secondary font-medium rounded-lg px-3 py-2 text-sm pr-7 cursor-pointer text-primary focus:outline-hidden focus:ring-0" %>
-<% end %>  
+    <% end %>
   </div>
   <% if sankey_mode == "split" %>
     <p class="px-4 mb-3 text-xs text-secondary"><%= t("pages.dashboard.cashflow_sankey.split_mode_transfer_hint") %></p>

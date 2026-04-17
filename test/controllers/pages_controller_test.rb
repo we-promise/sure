@@ -15,6 +15,14 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     assert_response :ok
   end
 
+  test "dashboard renders sankey mode toggle links" do
+    get root_path
+
+    assert_response :ok
+    assert_select "#cashflow-sankey-chart a[href*='sankey_mode=aggregate']", count: 1
+    assert_select "#cashflow-sankey-chart a[href*='sankey_mode=split']", count: 1
+  end
+
   test "intro page requires guest role" do
     get intro_path
 
