@@ -19,26 +19,18 @@ class PagesController < ApplicationController
     family_currency = Current.family.currency
     selected_account_ids = @selected_account ? [ @selected_account.id ] : nil
 
-    if @sankey_mode == "split"
-      income_statement = Current.family.income_statement(user: Current.user)
-      net_totals = income_statement.net_category_totals(period: @period)
-      @cashflow_sankey_data = build_split_cashflow_sankey_data(accounts: @finance_accounts, period: @period, currency: family_currency)
+    # Use IncomeStatement for all cashflow data (now includes categorized trades)
+    selected_account_id = params[:account_id].presence
+    if selected_account_id
+      account = Current.user.finance_accounts.find_by(id: selected_account_id)
+      account_ids = account ? [ account.id ] : nil
     else
-      # Use IncomeStatement for all cashflow data (now includes categorized trades)
-      income_statement = Current.family.income_statement(user: Current.user, account_ids: selected_account_ids)
-      income_totals = income_statement.income_totals(period: @period)
-      expense_totals = income_statement.expense_totals(period: @period)
-      net_totals = income_statement.net_category_totals(period: @period)
-      transfer_flows = @selected_account ?
-        build_transfer_flows_for_account(
-          account: @selected_account,
-          period: @period,
-          currency: family_currency,
-          accessible_account_ids: @accounts.map(&:id).to_set
-        ) : nil
-
-      @cashflow_sankey_data = build_cashflow_sankey_data(net_totals, income_totals, expense_totals, family_currency, transfer_flows: transfer_flows)
+      account_ids = nil
     end
+    income_statement = Current.family.income_statement(user: Current.user, account_ids: account_ids)
+    income_totals = income_statement.income_totals(period: @period)
+    expense_totals = income_statement.expense_totals(period: @period)
+    net_totals = income_statement.net_category_totals(period: @period)
 
     @outflows_data = build_outflows_donut_data(net_totals)
 
