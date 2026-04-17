@@ -149,6 +149,7 @@ class User < ApplicationRecord
 
   def ai_available?
     return true unless Rails.application.config.app_mode.self_hosted?
+    return false unless Setting.ai_chat_enabled
 
     effective_type = ENV["ASSISTANT_TYPE"].presence || family&.assistant_type.presence || "builtin"
 

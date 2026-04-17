@@ -41,18 +41,38 @@ class Import::UploadsController < ApplicationController
         return
       end
 
-      if uploaded.size > SureImport::MAX_NDJSON_SIZE
+      ext = File.extname(uploaded.original_filename.to_s).downcase
+      unless ext.in?(%w[.ndjson .json .zip])
+        flash.now[:alert] = t("import.uploads.sure_import.ndjson_invalid", default: "Must be valid NDJSON with at least one record")
+        render :show, status: :unprocessable_entity
+        return
+      end
+
+      if !SureImport.zip_upload?(uploaded) && uploaded.size > SureImport::MAX_NDJSON_SIZE
         flash.now[:alert] = t("imports.create.file_too_large", max_size: SureImport::MAX_NDJSON_SIZE / 1.megabyte)
         render :show, status: :unprocessable_entity
         return
       end
 
-      content = uploaded.read
-      uploaded.rewind
+      content = SureImport.extract_ndjson_content(uploaded)
+      if content.blank?
+        flash.now[:alert] = t("import.uploads.sure_import.ndjson_invalid", default: "Must be valid NDJSON with at least one record")
+        render :show, status: :unprocessable_entity
+        return
+      end
+
+      if content.bytesize > SureImport::MAX_NDJSON_SIZE
+        flash.now[:alert] = t("imports.create.file_too_large", max_size: SureImport::MAX_NDJSON_SIZE / 1.megabyte)
+        render :show, status: :unprocessable_entity
+        return
+      end
 
       if ndjson_valid?(content)
-        uploaded.rewind
-        @import.ndjson_file.attach(uploaded)
+        @import.ndjson_file.attach(
+          io: StringIO.new(content),
+          filename: "all.ndjson",
+          content_type: "application/x-ndjson"
+        )
         @import.sync_ndjson_rows_count!
         redirect_to import_path(@import), notice: t("imports.create.ndjson_uploaded")
       else

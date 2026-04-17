@@ -1,6 +1,9 @@
 <%# locals: (chat: nil, message_hint: nil) %>
 
 <div id="chat-form" class="space-y-2">
+  <% if flash[:alert].present? %>
+    <p class="text-xs text-red-500 px-1"><%= flash[:alert] %></p>
+  <% end %>
   <% model = chat && chat.persisted? ? [chat, Message.new] : Chat.new %>
 
   <%= form_with model: model,

@@ -2,6 +2,13 @@
 <% dry_run = import.dry_run %>
 <% resources_with_counts = dry_run.select { |_, count| count > 0 }.filter_map { |key, count| [dry_run_resource(key), count] if dry_run_resource(key) } %>
 <% import_summary_empty = resources_with_counts.empty? %>
+<% sure_confirm = if import.is_a?(SureImport)
+  CustomConfirm.new(
+    title: t(".sure_confirm_title"),
+    body: t(".sure_confirm_body"),
+    btn_text: t(".sure_confirm_button")
+  )
+end %>
 
 <div class="text-center space-y-2 mb-4 mx-auto max-w-md">
   <h1 class="text-3xl text-primary font-medium"><%= t(".title") %></h1>
@@ -9,6 +16,14 @@
 </div>
 
 <div class="mx-auto max-w-2xl space-y-4">
+  <% if import.is_a?(SureImport) %>
+    <div class="rounded-xl border border-red-500/20 bg-red-500/5 px-4 py-3">
+      <p class="text-sm text-primary">
+        <%= t(".sure_replace_warning") %>
+      </p>
+    </div>
+  <% end %>
+
   <div class="bg-container-inset rounded-xl p-1 space-y-1">
     <div class="flex justify-between items-center text-xs font-medium text-secondary uppercase px-5 py-3">
       <p><%= t(".summary_item_label") %></p>
@@ -45,6 +60,12 @@
   <% if import_summary_empty %>
     <%= render DS::Button.new(text: t(".back_to_imports"), href: imports_path, variant: :secondary, full_width: true) %>
   <% else %>
-    <%= render DS::Button.new(text: t(".publish_import"), href: publish_import_path(import), method: :post, full_width: true) %>
+    <%= render DS::Button.new(
+      text: t(".publish_import"),
+      href: publish_import_path(import),
+      method: :post,
+      confirm: sure_confirm,
+      full_width: true
+    ) %>
   <% end %>
 </div>

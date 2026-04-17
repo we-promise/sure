@@ -8,6 +8,38 @@
     <% end %>
   </div>
 
+  <div class="flex items-center justify-between">
+    <div class="space-y-1">
+      <p class="text-sm"><%= t(".ai_chat_enabled_label") %></p>
+      <p class="text-secondary text-sm"><%= t(".ai_chat_enabled_description") %></p>
+    </div>
+
+    <%= styled_form_with model: Setting.new,
+                         url: settings_hosting_path,
+                         method: :patch,
+                         data: { controller: "auto-submit-form", auto_submit_form_trigger_event_value: "change" } do |form| %>
+      <%= form.toggle :ai_chat_enabled,
+                      checked: Setting.ai_chat_enabled,
+                      data: { auto_submit_form_target: "auto" } %>
+    <% end %>
+  </div>
+
+  <div class="flex items-center justify-between">
+    <div class="space-y-1">
+      <p class="text-sm"><%= t(".ai_chat_streaming_enabled_label") %></p>
+      <p class="text-secondary text-sm"><%= t(".ai_chat_streaming_enabled_description") %></p>
+    </div>
+
+    <%= styled_form_with model: Setting.new,
+                         url: settings_hosting_path,
+                         method: :patch,
+                         data: { controller: "auto-submit-form", auto_submit_form_trigger_event_value: "change" } do |form| %>
+      <%= form.toggle :ai_chat_streaming_enabled,
+                      checked: Setting.ai_chat_streaming_enabled,
+                      data: { auto_submit_form_target: "auto" } %>
+    <% end %>
+  </div>
+
   <% effective_type = ENV["ASSISTANT_TYPE"].presence || Current.family.assistant_type %>
 
   <%= styled_form_with model: Current.family,

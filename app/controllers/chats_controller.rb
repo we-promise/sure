@@ -1,6 +1,8 @@
 class ChatsController < ApplicationController
   include ActionView::RecordIdentifier
 
+  guard_feature unless: -> { Current.user.ai_available? }
+
   before_action :set_chat, only: [ :show, :edit, :update, :destroy ]
 
   def index
@@ -17,7 +19,16 @@ class ChatsController < ApplicationController
   end
 
   def create
-    @chat = Current.user.chats.start!(chat_params[:content], model: chat_params[:ai_model])
+    model = Chat.default_model
+
+    if model.blank?
+      @chat = Current.user.chats.new(title: "New chat")
+      flash.now[:alert] = t("chats.no_model_configured")
+      render :new, status: :unprocessable_entity
+      return
+    end
+
+    @chat = Current.user.chats.start!(chat_params[:content], model: model)
     set_last_viewed_chat(@chat)
     redirect_to chat_path(@chat, thinking: true)
   end

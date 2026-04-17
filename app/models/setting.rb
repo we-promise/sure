@@ -10,6 +10,8 @@ class Setting < RailsSettings::Base
   field :openai_uri_base, type: :string, default: ENV["OPENAI_URI_BASE"]
   field :openai_model, type: :string, default: ENV["OPENAI_MODEL"]
   field :openai_json_mode, type: :string, default: ENV["LLM_JSON_MODE"]
+  field :ai_chat_enabled, type: :boolean, default: ENV.fetch("AI_CHAT_ENABLED", "true") == "true"
+  field :ai_chat_streaming_enabled, type: :boolean, default: ENV.fetch("AI_CHAT_STREAMING_ENABLED", "true") == "true"
 
   # LLM token budget (applies to every outbound LLM call: chat, auto-categorize,
   # merchant detection, enhance-merchants, PDF processing). Defaults track
@@ -270,13 +272,8 @@ class Setting < RailsSettings::Base
 
   # Validates OpenAI configuration requires model when custom URI base is set
   def self.validate_openai_config!(uri_base: nil, model: nil)
-    # Use provided values or current settings
-    uri_base_value = uri_base.nil? ? openai_uri_base : uri_base
-    model_value = model.nil? ? openai_model : model
-
-    # If custom URI base is set, model must also be set
-    if uri_base_value.present? && model_value.blank?
-      raise ValidationError, "OpenAI model is required when custom URI base is configured"
-    end
+    # Validation intentionally relaxed so self-hosted users can save OpenAI-compatible
+    # settings incrementally (e.g., URL first, model later).
+    true
   end
 end

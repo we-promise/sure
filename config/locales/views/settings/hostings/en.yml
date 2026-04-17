@@ -55,6 +55,11 @@ en:
       assistant_settings:
         title: AI Assistant
         description: Choose how the chat assistant responds. Builtin uses your configured LLM provider directly. External delegates to a remote AI agent that can call back to Sure's financial tools via MCP.
+        ai_chat_enabled_label: Enable AI chat
+        ai_chat_enabled_description: Toggle all AI chat features on or off for this self-hosted instance.
+        ai_chat_enabled_env_notice: AI chat toggle is locked by the AI_CHAT_ENABLED environment variable. Remove it to control this setting here.
+        ai_chat_streaming_enabled_label: Stream AI responses in chat
+        ai_chat_streaming_enabled_description: When enabled, assistant responses are rendered token-by-token as they are generated.
         type_label: Assistant type
         type_builtin: Builtin (direct LLM)
         type_external: External (remote agent)
@@ -86,14 +91,19 @@ en:
         high_res_label: Enable high-resolution logos
         high_res_description: When enabled, logos will be retrieved at 120x120 resolution instead of 40x40. This provides sharper images on high-DPI displays.
       openai_settings:
-        description: Enter the access token and optionally configure a custom OpenAI-compatible provider
+        description: Configure any OpenAI-compatible API by setting an API key, base URL, and model.
         env_configured_message: Successfully configured through environment variables.
-        access_token_label: Access Token
-        access_token_placeholder: Enter your access token here
-        uri_base_label: API Base URL (Optional)
-        uri_base_placeholder: "https://api.openai.com/v1 (default)"
-        model_label: Model (Optional)
-        model_placeholder: "gpt-4.1 (default)"
+        test_connection_button: Test Connection
+        save_button: Save
+        test_connection_confirm: Test the current AI provider settings now?
+        fetch_models_button: Fetch Models
+        access_token_label: API Key / Access Token
+        access_token_placeholder: Enter your provider API key or token
+        uri_base_label: Base URL (Optional)
+        uri_base_placeholder: "https://api.openai.com/v1"
+        model_label: Model
+        model_placeholder: "gpt-4.1"
+        models_loaded: Models loaded. Select one from the dropdown.
         json_mode_label: JSON Mode
         json_mode_auto: Auto (recommended)
         json_mode_strict: Strict (best for thinking models)
@@ -108,7 +118,7 @@ en:
         max_response_tokens_help: "Tokens reserved for the model's reply. Default: 512. Lower to free up room for longer history."
         max_items_per_call_label: Max Items Per Batch (Optional)
         max_items_per_call_help: "Upper bound for auto-categorize / merchant detection batches. Default: 25. Larger batches are auto-sliced to fit the context window."
-        title: OpenAI
+        title: OpenAI-Compatible API
       yahoo_finance_settings:
         title: Yahoo Finance
         description: Yahoo Finance provides free access to stock prices, exchange rates, and financial data without requiring an API key.
@@ -173,6 +183,15 @@ en:
         scheduler_sync_failed: Settings saved, but failed to update the sync schedule. Please try again or check the server logs.
       disconnect_external_assistant:
         external_assistant_disconnected: External assistant disconnected
+      test_openai_connection:
+        success: AI connection successful using %{model}.
+        failure: "AI connection failed: %{error}"
+        missing_credentials: Configure an API key or access token before testing the AI connection.
+      fetch_openai_models:
+        success: "Fetched %{count} model(s)."
+        failure: "Could not fetch models: %{error}"
+        missing_credentials: Configure an API key or access token before fetching models.
+        no_models_found: No models were returned by this endpoint.
       clear_cache:
         cache_cleared: Data cache has been cleared. This may take a few moments to complete.
       not_authorized: You are not authorized to perform this action

@@ -3,3 +3,4 @@ en:
   chats:
     demo_banner_title: "Demo Mode Active"
     demo_banner_message: "You are using a LLM with credits provided by Cloudflare Workers AI.  Result may vary since the codebase was mostly tested on `gpt-4.1` but your tokens don't go anywhere else to be trained with! 🤖"
+    no_model_configured: "No AI model configured. Please set a model in Settings → Self-Hosting → AI Settings."

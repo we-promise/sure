@@ -110,13 +110,13 @@ en:
         title: Import your data
       sure_import:
         title: Import from export
-        description: Upload the all.ndjson file from your data export to restore your accounts, transactions, categories, and more.
+        description: Upload your data export ZIP (or the all.ndjson file inside it) to restore your accounts, transactions, categories, and more.
         drop_title: Drop NDJSON to upload
         drop_subtitle: Your file will be uploaded automatically
         browse: Browse
-        browse_hint: to add your all.ndjson file here
+        browse_hint: to add your export ZIP or all.ndjson file here
         upload_button: Upload NDJSON
-        hint_html: Upload the <strong>all.ndjson</strong> file from your data export ZIP
+        hint_html: Upload your <strong>data export ZIP</strong> or the <strong>all.ndjson</strong> file inside it
         ndjson_invalid: Must be valid NDJSON with at least one record
   imports:
     date_format:
@@ -192,7 +192,7 @@ en:
       import_transactions: Import transactions
       import_qif: Import from Quicken (QIF)
       import_sure: Import from Sure
-      import_sure_description: Full-export .ndjson file
+      import_sure_description: Full-export .zip or .ndjson file
       import_file: Import document
       import_file_description: AI-powered analysis for PDFs and searchable file upload
       requires_account: Import accounts first to unlock this option.
@@ -211,7 +211,7 @@ en:
       invalid_document_file_type: Invalid document file type for the active vector store.
       document_uploaded: Document uploaded successfully.
       document_upload_failed: We couldn't upload the document to the vector store. Please try again.
-      invalid_ndjson_file_type: Invalid file type or format. Please upload a valid .ndjson or .json export file.
+      invalid_ndjson_file_type: Invalid file type or format. Please upload a valid .zip, .ndjson, or .json export file.
       ndjson_uploaded: NDJSON file uploaded successfully.
       document_provider_not_configured: No vector store is configured for document uploads.
     show:
@@ -221,6 +221,10 @@ en:
       description: Here's a summary of the new items that will be added to your account
         once you publish this import.
       title: Confirm your import data
+      sure_replace_warning: "Warning: This Sure import will replace your existing accounts, transactions, categories, and related data."
+      sure_confirm_title: "Are you sure?"
+      sure_confirm_body: "This will replace your existing data with the contents of this export."
+      sure_confirm_button: "Yes, replace data"
       summary_item_label: Item
       summary_count_label: Count
       empty_summary: We could not find any importable records in this file. It may be empty, or the lines may not match the expected export format (each line should be a JSON object with "type" and "data" keys, using types this import supports).

@@ -102,13 +102,13 @@ pl:
         title: Zaimportuj dane
       sure_import:
         title: Importuj z eksportu
-        description: Prześlij plik all.ndjson z eksportu danych, aby przywrócić konta, transakcje, kategorie i inne dane.
+        description: Prześlij plik ZIP eksportu danych (lub znajdujący się w nim plik all.ndjson), aby przywrócić konta, transakcje, kategorie i inne dane.
         drop_title: Upuść plik NDJSON, aby go przesłać
         drop_subtitle: Plik zostanie przesłany automatycznie
         browse: Przeglądaj
-        browse_hint: aby dodać tutaj plik all.ndjson
+        browse_hint: aby dodać tutaj plik ZIP eksportu lub all.ndjson
         upload_button: Prześlij NDJSON
-        hint_html: Prześlij plik <strong>all.ndjson</strong> z archiwum ZIP eksportu danych
+        hint_html: Prześlij <strong>plik ZIP eksportu danych</strong> lub znajdujący się w nim plik <strong>all.ndjson</strong>
         ndjson_invalid: Plik musi być poprawnym NDJSON i zawierać co najmniej jeden rekord
   imports:
     type_labels:
@@ -178,7 +178,7 @@ pl:
       import_transactions: Importuj transakcje
       import_qif: Importuj z Quicken (QIF)
       import_sure: Importuj z Sure
-      import_sure_description: Pełny plik eksportu .ndjson
+      import_sure_description: Pełny plik eksportu .zip lub .ndjson
       import_file: Importuj dokument
       import_file_description: Analiza PDF wspierana przez AI oraz przesyłanie przeszukiwalnych plików
       requires_account: Najpierw zaimportuj konta, aby odblokować tę opcję.
@@ -197,7 +197,7 @@ pl:
       invalid_document_file_type: Nieprawidłowy typ pliku dokumentu dla aktywnego magazynu wektorowego.
       document_uploaded: Dokument został pomyślnie przesłany.
       document_upload_failed: Nie udało się przesłać dokumentu do magazynu wektorowego. Spróbuj ponownie.
-      invalid_ndjson_file_type: Nieprawidłowy typ lub format pliku. Prześlij poprawny plik eksportu .ndjson lub .json.
+      invalid_ndjson_file_type: Nieprawidłowy typ lub format pliku. Prześlij poprawny plik eksportu .zip, .ndjson lub .json.
       document_provider_not_configured: Nie skonfigurowano magazynu wektorowego dla przesyłania dokumentów.
     show:
       finalize_upload: Dokończ przesyłanie pliku.
@@ -205,6 +205,10 @@ pl:
     ready:
       description: Oto podsumowanie nowych elementów, które zostaną dodane do konta po opublikowaniu tego importu.
       title: Potwierdź dane importu
+      sure_replace_warning: "Uwaga: ten import Sure zastąpi istniejące konta, transakcje, kategorie i powiązane dane."
+      sure_confirm_title: "Czy na pewno?"
+      sure_confirm_body: "Ta operacja zastąpi Twoje istniejące dane zawartością tego eksportu."
+      sure_confirm_button: "Tak, zastąp dane"
       summary_item_label: Element
       summary_count_label: Liczba
       empty_summary: Nie udało się znaleźć w tym pliku żadnych rekordów nadających się do importu. Plik może być pusty albo jego wiersze nie pasują do oczekiwanego formatu eksportu. Każdy wiersz powinien być obiektem JSON z kluczami "type" i "data" oraz typami obsługiwanymi przez ten import.

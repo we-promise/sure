@@ -1,6 +1,7 @@
 class Import < ApplicationRecord
   MaxRowCountExceededError = Class.new(StandardError)
   MappingError = Class.new(StandardError)
+  STALE_REVERT_AFTER = 10.minutes
 
   MAX_CSV_SIZE = 10.megabytes
   MAX_PDF_SIZE = 25.megabytes
@@ -137,7 +138,7 @@ class Import < ApplicationRecord
   end
 
   def revert_later
-    raise "Import is not revertable" unless revertable?
+    raise "Import is not revertable" unless revertable? || stale_reverting?
 
     update! status: :reverting
 
@@ -268,6 +269,10 @@ class Import < ApplicationRecord
 
   def revertable?
     complete? || revert_failed?
+  end
+
+  def stale_reverting?
+    reverting? && updated_at < STALE_REVERT_AFTER.ago
   end
 
   def has_unassigned_account?

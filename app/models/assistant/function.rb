@@ -47,12 +47,14 @@ class Assistant::Function
     attr_reader :user
 
     def build_schema(properties: {}, required: [])
-      {
+      schema = {
         type: "object",
         properties: properties,
-        required: required,
         additionalProperties: false
       }
+
+      schema[:required] = required if required.present?
+      schema
     end
 
     def family_account_names

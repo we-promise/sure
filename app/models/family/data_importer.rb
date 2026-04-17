@@ -120,14 +120,19 @@ class Family::DataImporter
         # Store parent relationship for second pass
         parent_mappings[old_id] = parent_id if parent_id.present?
 
-        category = @family.categories.build(
-          name: data["name"],
-          color: data["color"] || Category::UNCATEGORIZED_COLOR,
-          classification_unused: data["classification_unused"] || data["classification"] || "expense",
-          lucide_icon: data["lucide_icon"] || "shapes"
-        )
+        category = find_by_name_ci(@family.categories, data["name"])
 
-        category.save!
+        unless category
+          category = @family.categories.build(
+            name: data["name"],
+            color: data["color"] || Category::UNCATEGORIZED_COLOR,
+            classification_unused: data["classification_unused"] || data["classification"] || "expense",
+            lucide_icon: data["lucide_icon"] || "shapes"
+          )
+
+          category.save!
+        end
+
         @id_mappings[:categories][old_id] = category.id
       end
 
@@ -148,12 +153,17 @@ class Family::DataImporter
         data = record["data"]
         old_id = data["id"]
 
-        tag = @family.tags.build(
-          name: data["name"],
-          color: data["color"] || Tag::COLORS.sample
-        )
+        tag = find_by_name_ci(@family.tags, data["name"])
 
-        tag.save!
+        unless tag
+          tag = @family.tags.build(
+            name: data["name"],
+            color: data["color"] || Tag::COLORS.sample
+          )
+
+          tag.save!
+        end
+
         @id_mappings[:tags][old_id] = tag.id
       end
     end
@@ -163,13 +173,18 @@ class Family::DataImporter
         data = record["data"]
         old_id = data["id"]
 
-        merchant = @family.merchants.build(
-          name: data["name"],
-          color: data["color"],
-          logo_url: data["logo_url"]
-        )
+        merchant = find_by_name_ci(@family.merchants, data["name"])
 
-        merchant.save!
+        unless merchant
+          merchant = @family.merchants.build(
+            name: data["name"],
+            color: data["color"],
+            logo_url: data["logo_url"]
+          )
+
+          merchant.save!
+        end
+
         @id_mappings[:merchants][old_id] = merchant.id
       end
     end
@@ -276,12 +291,16 @@ class Family::DataImporter
         next unless new_account_id
 
         account = @family.accounts.find(new_account_id)
+        date = Date.parse(data["date"].to_s)
+
+        # Opening balance import creates an opening-anchor valuation; skip duplicates.
+        next if account.entries.where(entryable_type: "Valuation", date: date).exists?
 
         valuation = Valuation.new
 
         entry = Entry.new(
           account: account,
-          date: Date.parse(data["date"].to_s),
+          date: date,
           amount: data["amount"].to_d,
           name: data["name"] || "Valuation",
           currency: data["currency"] || account.currency,
@@ -297,16 +316,23 @@ class Family::DataImporter
       records.each do |record|
         data = record["data"]
         old_id = data["id"]
+        start_date = Date.parse(data["start_date"].to_s)
+        end_date = Date.parse(data["end_date"].to_s)
 
-        budget = @family.budgets.build(
-          start_date: Date.parse(data["start_date"].to_s),
-          end_date: Date.parse(data["end_date"].to_s),
-          budgeted_spending: data["budgeted_spending"]&.to_d,
-          expected_income: data["expected_income"]&.to_d,
-          currency: data["currency"] || @family.currency
-        )
+        budget = @family.budgets.find_by(start_date: start_date, end_date: end_date)
 
-        budget.save!
+        unless budget
+          budget = @family.budgets.build(
+            start_date: start_date,
+            end_date: end_date,
+            budgeted_spending: data["budgeted_spending"]&.to_d,
+            expected_income: data["expected_income"]&.to_d,
+            currency: data["currency"] || @family.currency
+          )
+
+          budget.save!
+        end
+
         @id_mappings[:budgets][old_id] = budget.id
       end
     end
@@ -402,7 +428,7 @@ class Family::DataImporter
 
       # Map category names to IDs
       if condition_type == "transaction_category"
-        category = @family.categories.find_by(name: value)
+        category = find_by_name_ci(@family.categories, value)
         category ||= @family.categories.create!(
           name: value,
           color: Category::UNCATEGORIZED_COLOR,
@@ -414,7 +440,7 @@ class Family::DataImporter
 
       # Map merchant names to IDs
       if condition_type == "transaction_merchant"
-        merchant = @family.merchants.find_by(name: value)
+        merchant = find_by_name_ci(@family.merchants, value)
         merchant ||= @family.merchants.create!(name: value)
         return merchant.id
       end
@@ -430,7 +456,7 @@ class Family::DataImporter
 
       # Map category names to IDs
       if action_type == "set_transaction_category"
-        category = @family.categories.find_by(name: value)
+        category = find_by_name_ci(@family.categories, value)
         category ||= @family.categories.create!(
           name: value,
           color: Category::UNCATEGORIZED_COLOR,
@@ -442,19 +468,25 @@ class Family::DataImporter
 
       # Map merchant names to IDs
       if action_type == "set_transaction_merchant"
-        merchant = @family.merchants.find_by(name: value)
+        merchant = find_by_name_ci(@family.merchants, value)
         merchant ||= @family.merchants.create!(name: value)
         return merchant.id
       end
 
       # Map tag names to IDs
       if action_type == "set_transaction_tags"
-        tag = @family.tags.find_by(name: value)
+        tag = find_by_name_ci(@family.tags, value)
         tag ||= @family.tags.create!(name: value)
         return tag.id
       end
 
       value
+    end
+
+    def find_by_name_ci(scope, name)
+      return nil if name.blank?
+
+      scope.where("LOWER(name) = ?", name.to_s.downcase).first
     end
 
     def find_or_create_security(ticker, currency)

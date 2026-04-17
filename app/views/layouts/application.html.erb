@@ -1,5 +1,6 @@
 <% intro_mode = Current.user&.ui_layout_intro? %>
 <% home_path = intro_mode ? chats_path : root_path %>
+<% show_assistant_nav_item = Current.user.ai_available? %>
 <% mobile_nav_items = if intro_mode
   [
     { name: t(".nav.home"), path: chats_path, icon: "home", icon_custom: false, active: page_active?(chats_path) },
@@ -11,13 +12,17 @@ else
     { name: t(".nav.transactions"), path: transactions_path, icon: "credit-card", icon_custom: false, active: page_active?(transactions_path) },
     { name: t(".nav.reports"), path: reports_path, icon: "chart-bar", icon_custom: false, active: page_active?(reports_path) },
     { name: t(".nav.budgets"), path: budgets_path, icon: "map", icon_custom: false, active: page_active?(budgets_path) },
-    { name: t(".nav.assistant"), path: chats_path, icon: "icon-assistant", icon_custom: true, active: page_active?(chats_path), mobile_only: true }
+    (show_assistant_nav_item ? { name: t(".nav.assistant"), path: chats_path, icon: "icon-assistant", icon_custom: true, active: page_active?(chats_path), mobile_only: true } : nil)
   ]
 end %>
+<% mobile_nav_items = mobile_nav_items.compact %>
 
 <% desktop_nav_items = mobile_nav_items.reject { |item| item[:mobile_only] } %>
 <% expanded_sidebar_class = "w-full" %>
 <% collapsed_sidebar_class = "w-0 overflow-hidden" %>
+<% has_custom_sidebar = content_for?(:sidebar) %>
+<% show_default_account_sidebar = Current.family.balance_sheet.account_groups.any? %>
+<% show_left_sidebar = has_custom_sidebar || show_default_account_sidebar %>
 
 <%= render "layouts/shared/htmldoc" do %>
   <div
@@ -26,27 +31,29 @@ end %>
     data-app-layout-expanded-sidebar-class="<%= expanded_sidebar_class %>"
     data-app-layout-collapsed-sidebar-class="<%= collapsed_sidebar_class %>"
     data-app-layout-user-id-value="<%= Current.user.id %>">
-    <div
-      class="hidden fixed inset-0 bg-surface z-20 h-full w-full pt-[calc(env(safe-area-inset-top)+0.75rem)] pr-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] pl-3 overflow-y-auto transition-all duration-300"
-      data-app-layout-target="mobileSidebar">
-      <% unless intro_mode %>
-        <div class="mb-2">
-          <%= icon("x", as_button: true, data: { action: "app-layout#closeMobileSidebar" }) %>
-        </div>
-      <% end %>
+    <% if show_default_account_sidebar %>
+      <div
+        class="hidden fixed inset-0 bg-surface z-20 h-full w-full pt-[calc(env(safe-area-inset-top)+0.75rem)] pr-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] pl-3 overflow-y-auto transition-all duration-300"
+        data-app-layout-target="mobileSidebar">
+        <% unless intro_mode %>
+          <div class="mb-2">
+            <%= icon("x", as_button: true, data: { action: "app-layout#closeMobileSidebar" }) %>
+          </div>
+        <% end %>
 
-      <%= render(
-        "accounts/account_sidebar_tabs",
-        family: Current.family,
-        active_tab: @account_group_tab,
-        mobile: true
-      ) %>
-    </div>
+        <%= render(
+          "accounts/account_sidebar_tabs",
+          family: Current.family,
+          active_tab: @account_group_tab,
+          mobile: true
+        ) %>
+      </div>
+    <% end %>
 
     <%# MOBILE - Top nav %>
     <nav class="lg:hidden flex justify-between items-center p-3 pt-[calc(env(safe-area-inset-top)+0.75rem)]">
       <% if intro_mode %>
-      <% else %>
+      <% elsif show_default_account_sidebar %>
         <%= icon("panel-left", as_button: true, data: { action: "app-layout#openMobileSidebar"}) %>
       <% end %>
 
@@ -100,42 +107,44 @@ end %>
     </div>
 
     <%# DESKTOP - Left sidebar %>
-    <%= tag.div class: class_names(
-        "hidden lg:block py-4 shrink-0 max-w-[320px] transition-all duration-300 border-divider",
-        Current.user.show_sidebar? ? [expanded_sidebar_class, "border-r"] : [collapsed_sidebar_class, "border-r-0"],
-       ),
-       inert: !Current.user.show_sidebar?,
-       data: { app_layout_target: "leftSidebar" } do %>
-      <div class="px-4 h-full flex flex-col overflow-y-auto">
-        <% if content_for?(:sidebar) %>
-          <%= yield :sidebar %>
-        <% else %>
-          <div class="grow">
-            <%= render "accounts/account_sidebar_tabs", family: Current.family, active_tab: @account_group_tab %>
-          </div>
+    <% if show_left_sidebar %>
+      <%= tag.div class: class_names(
+          "hidden lg:block py-4 shrink-0 max-w-[320px] transition-all duration-300 border-divider",
+          Current.user.show_sidebar? ? [expanded_sidebar_class, "border-r"] : [collapsed_sidebar_class, "border-r-0"],
+         ),
+         inert: !Current.user.show_sidebar?,
+         data: { app_layout_target: "leftSidebar" } do %>
+        <div class="px-4 h-full flex flex-col overflow-y-auto">
+          <% if has_custom_sidebar %>
+            <%= yield :sidebar %>
+          <% else %>
+            <div class="grow">
+              <%= render "accounts/account_sidebar_tabs", family: Current.family, active_tab: @account_group_tab %>
+            </div>
 
-          <% if Current.family.trialing? && !self_hosted? %>
-            <div class="px-4 py-3 space-y-4 bg-container shadow-border-xs rounded-xl">
-              <div class="flex items-start justify-between">
-                <div>
-                  <p class="text-sm font-medium text-primary"><%= t("layouts.trial.open_demo") %></p>
-                  <p class="text-sm text-secondary"><%= t("layouts.trial.data_deleted_in_days", days: Current.family.days_left_in_trial) %></p>
+            <% if Current.family.trialing? && !self_hosted? %>
+              <div class="px-4 py-3 space-y-4 bg-container shadow-border-xs rounded-xl">
+                <div class="flex items-start justify-between">
+                  <div>
+                    <p class="text-sm font-medium text-primary"><%= t("layouts.trial.open_demo") %></p>
+                    <p class="text-sm text-secondary"><%= t("layouts.trial.data_deleted_in_days", days: Current.family.days_left_in_trial) %></p>
+                  </div>
+
+                  <%= render DS::Link.new(
+                    text: t("layouts.trial.contribute"),
+                    href: upgrade_subscription_path,
+                  ) %>
                 </div>
 
-                <%= render DS::Link.new(
-                  text: t("layouts.trial.contribute"),
-                  href: upgrade_subscription_path,
-                ) %>
+                <div class="flex items-center gap-0.5 h-1.5">
+                  <div class="h-full bg-warning rounded-full" style="width: <%= Current.family.percentage_of_trial_completed %>%"></div>
+                  <div class="h-full bg-surface-inset rounded-full" style="width: <%= Current.family.percentage_of_trial_remaining %>%"></div>
+                </div>
               </div>
-
-              <div class="flex items-center gap-0.5 h-1.5">
-                <div class="h-full bg-warning rounded-full" style="width: <%= Current.family.percentage_of_trial_completed %>%"></div>
-                <div class="h-full bg-surface-inset rounded-full" style="width: <%= Current.family.percentage_of_trial_remaining %>%"></div>
-              </div>
-            </div>
+            <% end %>
           <% end %>
-        <% end %>
-      </div>
+        </div>
+      <% end %>
     <% end %>
 
     <%# SHARED - Main content %>
@@ -143,7 +152,9 @@ end %>
       <% unless intro_mode %>
         <div class="hidden lg:flex gap-2 items-center justify-between mb-6 sticky top-0 z-10 -mx-3 lg:-mx-10 px-3 lg:px-10 py-4 bg-surface border-b border-tertiary">
           <div class="flex items-center gap-2">
-            <%= icon("panel-left", as_button: true, data: { action: "app-layout#toggleLeftSidebar" }) %>
+            <% if show_left_sidebar %>
+              <%= icon("panel-left", as_button: true, data: { action: "app-layout#toggleLeftSidebar" }) %>
+            <% end %>
 
             <% if content_for?(:breadcrumbs) %>
               <%= yield :breadcrumbs %>
@@ -184,6 +195,15 @@ end %>
         inert: !Current.user.show_ai_sidebar?,
         data: { app_layout_target: "rightSidebar" } do %>
       <%= tag.div id: "chat-container", class: "relative h-full px-4 overflow-y-auto", data: { controller: "chat hotkey", turbo_permanent: true } do %>
+        <div class="sticky top-0 z-10 flex justify-end pt-3">
+          <%= icon(
+            "x",
+            as_button: true,
+            title: t("shared.cancel"),
+            data: { action: "app-layout#toggleRightSidebar" }
+          ) %>
+        </div>
+
         <div class="flex flex-col h-full justify-between shrink-0">
           <%= turbo_frame_tag chat_frame, src: chat_view_path(@chat), loading: "lazy", class: "h-full" do %>
             <div class="flex justify-center items-center h-full">

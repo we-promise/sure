@@ -12,12 +12,11 @@ class Chat < ApplicationRecord
 
   class << self
     def start!(prompt, model:)
-      # Ensure we have a valid model by using the default if none provided
-      effective_model = model.presence || default_model
+      raise ArgumentError, "No AI model configured. Please set a model in Settings → Self-Hosted → AI Settings." if model.blank?
 
       create!(
         title: generate_title(prompt),
-        messages: [ UserMessage.new(content: prompt, ai_model: effective_model) ]
+        messages: [ UserMessage.new(content: prompt, ai_model: model) ]
       )
     end
 
@@ -25,10 +24,10 @@ class Chat < ApplicationRecord
       prompt.first(80)
     end
 
-    # Returns the default AI model to use for chats
-    # Priority: AI Config > Setting
+    # Returns the model explicitly configured in settings (ENV overrides setting).
+    # Returns nil if nothing is configured — callers must handle that case.
     def default_model
-      Provider::Openai.effective_model.presence || Setting.openai_model
+      Provider::Openai.effective_model
     end
   end
 
@@ -42,6 +41,7 @@ class Chat < ApplicationRecord
     last_message = conversation_messages.ordered.last
 
     if last_message.present? && last_message.role == "user"
+      last_message.update!(ai_model: self.class.default_model)
 
       ask_assistant_later(last_message)
     end
@@ -54,6 +54,16 @@ class Chat < ApplicationRecord
   def add_error(e)
     update! error: e.to_json
     broadcast_append target: "messages", partial: "chats/error", locals: { chat: self }
+  end
+
+  def display_error_message
+    payload = parsed_error_payload
+    return error.to_s if payload.blank?
+
+    payload.dig("details", "error", "message").presence ||
+      payload["message"].presence ||
+      payload.dig("error", "message").presence ||
+      error.to_s
   end
 
   def clear_error
@@ -77,4 +87,26 @@ class Chat < ApplicationRecord
   def conversation_messages
     messages.where(type: [ "UserMessage", "AssistantMessage" ])
   end
+
+  private
+    # Errors can be persisted either as a JSON object string or as a quoted JSON
+    # string. Parse progressively to normalize both shapes for UI rendering.
+    def parsed_error_payload
+      return if error.blank?
+
+      parsed = error
+
+      2.times do
+        break unless parsed.is_a?(String)
+        candidate = parsed.strip
+        break unless candidate.start_with?("{", "\"")
+
+        decoded = JSON.parse(candidate) rescue nil
+        break if decoded.nil?
+
+        parsed = decoded
+      end
+
+      parsed if parsed.is_a?(Hash)
+    end
 end

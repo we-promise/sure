@@ -1,9 +1,10 @@
 class Assistant::Responder
-  def initialize(message:, instructions:, function_tool_caller:, llm:)
+  def initialize(message:, instructions:, function_tool_caller:, llm:, stream_output: true)
     @message = message
     @instructions = instructions
     @function_tool_caller = function_tool_caller
     @llm = llm
+    @stream_output = stream_output
   end
 
   def on(event_name, &block)
@@ -15,7 +16,7 @@ class Assistant::Responder
     response_handled = false
 
     # For the first response
-    streamer = proc do |chunk|
+    streamer = stream_output? ? proc do |chunk|
       case chunk.type
       when "output_text"
         emit(:output_text, chunk.data)
@@ -29,7 +30,7 @@ class Assistant::Responder
           emit(:response, { id: response.id })
         end
       end
-    end
+    end : nil
 
     response = get_llm_response(streamer: streamer, previous_response_id: previous_response_id)
 
@@ -38,6 +39,8 @@ class Assistant::Responder
       if response && response.function_requests.any?
         handle_follow_up_response(response)
       elsif response
+        text = response.messages.map(&:output_text).join
+        emit(:output_text, text) if text.present?
         emit(:response, { id: response.id })
       end
     end
@@ -46,8 +49,12 @@ class Assistant::Responder
   private
     attr_reader :message, :instructions, :function_tool_caller, :llm
 
+    def stream_output?
+      @stream_output
+    end
+
     def handle_follow_up_response(response)
-      streamer = proc do |chunk|
+      streamer = stream_output? ? proc do |chunk|
         case chunk.type
         when "output_text"
           emit(:output_text, chunk.data)
@@ -55,7 +62,7 @@ class Assistant::Responder
           # We do not currently support function executions for a follow-up response (avoid recursive LLM calls that could lead to high spend)
           emit(:response, { id: chunk.data.id })
         end
-      end
+      end : nil
 
       function_tool_calls = function_tool_caller.fulfill_requests(response.function_requests)
 
@@ -65,11 +72,17 @@ class Assistant::Responder
       })
 
       # Get follow-up response with tool call results
-      get_llm_response(
+      follow_up_response = get_llm_response(
         streamer: streamer,
         function_results: function_tool_calls.map(&:to_result),
         previous_response_id: response.id
       )
+
+      return if stream_output? || follow_up_response.blank?
+
+      text = follow_up_response.messages.map(&:output_text).join
+      emit(:output_text, text) if text.present?
+      emit(:response, { id: follow_up_response.id })
     end
 
     def get_llm_response(streamer:, function_results: [], previous_response_id: nil)

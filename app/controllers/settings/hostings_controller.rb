@@ -12,7 +12,7 @@ class Settings::HostingsController < ApplicationController
 
   guard_feature unless: -> { self_hosted? }
 
-  before_action :ensure_admin, only: [ :update, :clear_cache, :disconnect_external_assistant ]
+  before_action :ensure_admin, only: [ :update, :clear_cache, :disconnect_external_assistant, :test_openai_connection, :fetch_openai_models ]
   before_action :ensure_super_admin_for_onboarding, only: :update
 
   def show
@@ -65,6 +65,14 @@ class Settings::HostingsController < ApplicationController
 
     if hosting_params.key?(:brand_fetch_high_res_logos)
       Setting.brand_fetch_high_res_logos = hosting_params[:brand_fetch_high_res_logos] == "1"
+    end
+
+    if hosting_params.key?(:ai_chat_enabled)
+      Setting.ai_chat_enabled = hosting_params[:ai_chat_enabled] == "1"
+    end
+
+    if hosting_params.key?(:ai_chat_streaming_enabled)
+      Setting.ai_chat_streaming_enabled = hosting_params[:ai_chat_streaming_enabled] == "1"
     end
 
     update_encrypted_setting(:twelve_data_api_key)
@@ -158,7 +166,7 @@ class Settings::HostingsController < ApplicationController
       Setting.openai_uri_base = hosting_params[:openai_uri_base]
     end
 
-    if hosting_params.key?(:openai_model)
+    if hosting_params.key?(:openai_model) && hosting_params[:openai_model].present?
       Setting.openai_model = hosting_params[:openai_model]
     end
 
@@ -220,10 +228,46 @@ class Settings::HostingsController < ApplicationController
     redirect_to settings_hosting_path, alert: t("settings.hostings.update.failure")
   end
 
+  def test_openai_connection
+    provider = Provider::Registry.get_provider(:openai)
+    return redirect_to settings_hosting_path, alert: t(".missing_credentials") if provider.nil?
+
+    model = ENV["OPENAI_MODEL"].presence || Setting.openai_model.presence
+    response = provider.chat_response("Respond with the single word: ok", model: model)
+
+    if response.success?
+      redirect_to settings_hosting_path, notice: t(".success", model: model)
+    else
+      redirect_to settings_hosting_path, alert: t(".failure", error: response.error.message)
+    end
+  rescue => e
+    redirect_to settings_hosting_path, alert: t(".failure", error: e.message)
+  end
+
+  def fetch_openai_models
+    token = effective_openai_token_from_params
+    uri_base = effective_openai_uri_base_from_params
+
+    if token.blank?
+      return redirect_to settings_hosting_path, alert: t(".missing_credentials")
+    end
+
+    models = Provider::Openai.fetch_available_models(uri_base: uri_base, access_token: token)
+    if models.blank?
+      return redirect_to settings_hosting_path, alert: t(".no_models_found")
+    end
+
+    redirect_to settings_hosting_path,
+      notice: t(".success", count: models.size),
+      flash: { openai_models: models.take(20) }
+  rescue => e
+    redirect_to settings_hosting_path, alert: t(".failure", error: e.message)
+  end
+
   private
     def hosting_params
       return ActionController::Parameters.new unless params.key?(:setting)
-      params.require(:setting).permit(:onboarding_state, :require_email_confirmation, :invite_only_default_family_id, :brand_fetch_client_id, :brand_fetch_high_res_logos, :twelve_data_api_key, :tiingo_api_key, :eodhd_api_key, :alpha_vantage_api_key, :openai_access_token, :openai_uri_base, :openai_model, :openai_json_mode, :llm_context_window, :llm_max_response_tokens, :llm_max_items_per_call, :exchange_rate_provider, :securities_provider, :syncs_include_pending, :auto_sync_enabled, :auto_sync_time, :external_assistant_url, :external_assistant_token, :external_assistant_agent_id, securities_providers: [])
+      params.require(:setting).permit(:onboarding_state, :require_email_confirmation, :invite_only_default_family_id, :brand_fetch_client_id, :brand_fetch_high_res_logos, :ai_chat_enabled, :ai_chat_streaming_enabled, :twelve_data_api_key, :tiingo_api_key, :eodhd_api_key, :alpha_vantage_api_key, :openai_access_token, :openai_uri_base, :openai_model, :openai_json_mode, :llm_context_window, :llm_max_response_tokens, :llm_max_items_per_call, :exchange_rate_provider, :securities_provider, :syncs_include_pending, :auto_sync_enabled, :auto_sync_time, :external_assistant_url, :external_assistant_token, :external_assistant_agent_id, securities_providers: [])
     end
 
     def update_assistant_type
@@ -256,6 +300,18 @@ class Settings::HostingsController < ApplicationController
       return unless hosting_params.key?(param_key)
       value = hosting_params[param_key].to_s.strip
       Setting.public_send(:"#{param_key}=", value) unless value.blank? || value == "********"
+    end
+
+    def effective_openai_token_from_params
+      input_token = hosting_params[:openai_access_token].to_s.strip
+      return input_token if input_token.present? && input_token != "********"
+      ENV["OPENAI_ACCESS_TOKEN"].presence || Setting.openai_access_token
+    end
+
+    def effective_openai_uri_base_from_params
+      input_uri_base = hosting_params[:openai_uri_base].to_s.strip
+      return input_uri_base if input_uri_base.present?
+      ENV["OPENAI_URI_BASE"].presence || Setting.openai_uri_base
     end
 
     def current_user_timezone

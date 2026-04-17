@@ -11,11 +11,7 @@
   <%= styled_form_with model: Setting.new,
                        url: settings_hosting_path,
                        method: :patch,
-                       class: "space-y-4",
-                       data: {
-                         controller: "auto-submit-form",
-                         "auto-submit-form-trigger-event-value": "blur"
-                       } do |form| %>
+                       class: "space-y-4" do |form| %>
   <%= form.password_field :openai_access_token,
                           label: t(".access_token_label"),
                           placeholder: t(".access_token_placeholder"),
@@ -24,30 +20,54 @@
                           autocapitalize: "none",
                           spellcheck: "false",
                           inputmode: "text",
-                          disabled: ENV["OPENAI_ACCESS_TOKEN"].present?,
-                          data: { "auto-submit-form-target": "auto" } %>
+                          disabled: ENV["OPENAI_ACCESS_TOKEN"].present? %>
 
   <%= form.text_field :openai_uri_base,
                       label: t(".uri_base_label"),
                       placeholder: t(".uri_base_placeholder"),
                       value: Setting.openai_uri_base,
+                      id: "setting_openai_uri_base",
                       autocomplete: "off",
                       autocapitalize: "none",
                       spellcheck: "false",
                       inputmode: "url",
                       disabled: ENV["OPENAI_URI_BASE"].present?,
-                      data: { "auto-submit-form-target": "auto" } %>
+                      data: {
+                        "openai-model-cache-target": "uriBase",
+                        action: "change->openai-model-cache#uriBaseChanged blur->openai-model-cache#uriBaseChanged"
+                      } %>
 
-  <%= form.text_field :openai_model,
-                      label: t(".model_label"),
-                      placeholder: t(".model_placeholder"),
-                      value: Setting.openai_model,
-                      autocomplete: "off",
-                      autocapitalize: "none",
-                      spellcheck: "false",
-                      inputmode: "text",
-                      disabled: ENV["OPENAI_MODEL"].present?,
-                      data: { "auto-submit-form-target": "auto" } %>
+  <% fetched_models = Array(flash[:openai_models]).compact %>
+  <div data-controller="openai-model-cache"
+       data-openai-model-cache-fetched-models-value="<%= fetched_models.to_json %>">
+    <label for="setting_openai_model" class="block text-sm font-medium mb-1"><%= t(".model_label") %></label>
+    <div class="flex items-center gap-2">
+      <%= text_field_tag "setting[openai_model]",
+                         Setting.openai_model,
+                         id: "setting_openai_model",
+                         placeholder: t(".model_placeholder"),
+                         autocomplete: "off",
+                         autocapitalize: "none",
+                         spellcheck: "false",
+                         inputmode: "text",
+                         disabled: ENV["OPENAI_MODEL"].present?,
+                         class: "w-full rounded-lg border border-primary bg-container px-3 py-2 text-sm #{'hidden' if fetched_models.any?}",
+                         data: { "openai-model-cache-target": "modelInput" } %>
+      <%= select_tag "setting[openai_model]",
+                     options_for_select([["", ""]] + fetched_models.map { |model| [model, model] }, Setting.openai_model),
+                     id: "setting_openai_model_select",
+                     disabled: ENV["OPENAI_MODEL"].present? || fetched_models.empty?,
+                     class: "#{'hidden' if fetched_models.empty?} w-full rounded-lg border border-primary bg-container px-3 py-2 text-sm",
+                     data: { "openai-model-cache-target": "modelSelect" } %>
+      <%= button_tag t(".fetch_models_button"),
+                     type: "submit",
+                     formmethod: "post",
+                     formaction: fetch_openai_models_settings_hosting_path,
+                     class: "text-xs font-medium rounded-lg px-2.5 py-1.5 border border-primary whitespace-nowrap",
+                     disabled: ENV["OPENAI_MODEL"].present? %>
+    </div>
+    <p class="text-xs text-secondary mt-1 <%= 'hidden' if fetched_models.empty? %>" data-openai-model-cache-target="hint"><%= t(".models_loaded") %></p>
+  </div>
 
   <%= form.select :openai_json_mode,
                   options_for_select(
@@ -60,9 +80,19 @@
                     Setting.openai_json_mode
                   ),
                   { label: t(".json_mode_label") },
-                  { disabled: ENV["LLM_JSON_MODE"].present?,
-                    data: { "auto-submit-form-target": "auto" } } %>
+                  { disabled: ENV["LLM_JSON_MODE"].present? } %>
   <p class="text-xs text-secondary mt-1"><%= t(".json_mode_help") %></p>
+
+  <div class="pt-2 flex items-center gap-2">
+    <%= button_tag t(".save_button"),
+                   type: "submit",
+                   class: "text-xs font-medium rounded-lg px-4 py-1.5 border border-primary bg-white text-black" %>
+    <%= button_tag t(".test_connection_button"),
+                   type: "submit",
+                   formmethod: "post",
+                   formaction: test_openai_connection_settings_hosting_path,
+                   class: "text-xs font-medium rounded-lg px-3 py-1.5 border border-primary" %>
+  </div>
 
   <div class="pt-4 border-t border-secondary">
     <h3 class="font-medium mb-1"><%= t(".budget_heading") %></h3>
@@ -73,8 +103,7 @@
                           placeholder: "2048",
                           value: Setting.llm_context_window,
                           min: 256,
-                          disabled: ENV["LLM_CONTEXT_WINDOW"].present?,
-                          data: { "auto-submit-form-target": "auto" } %>
+                          disabled: ENV["LLM_CONTEXT_WINDOW"].present? %>
     <p class="text-xs text-secondary mt-1 mb-3"><%= t(".context_window_help") %></p>
 
     <%= form.number_field :llm_max_response_tokens,
@@ -82,8 +111,7 @@
                           placeholder: "512",
                           value: Setting.llm_max_response_tokens,
                           min: 64,
-                          disabled: ENV["LLM_MAX_RESPONSE_TOKENS"].present?,
-                          data: { "auto-submit-form-target": "auto" } %>
+                          disabled: ENV["LLM_MAX_RESPONSE_TOKENS"].present? %>
     <p class="text-xs text-secondary mt-1 mb-3"><%= t(".max_response_tokens_help") %></p>
 
     <%= form.number_field :llm_max_items_per_call,
@@ -91,8 +119,7 @@
                           placeholder: "25",
                           value: Setting.llm_max_items_per_call,
                           min: 1,
-                          disabled: ENV["LLM_MAX_ITEMS_PER_CALL"].present?,
-                          data: { "auto-submit-form-target": "auto" } %>
+                          disabled: ENV["LLM_MAX_ITEMS_PER_CALL"].present? %>
     <p class="text-xs text-secondary mt-1"><%= t(".max_items_per_call_help") %></p>
   </div>
   <% end %>

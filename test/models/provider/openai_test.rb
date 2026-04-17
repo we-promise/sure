@@ -287,6 +287,47 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
     assert_equal "configured model: custom-model", custom_provider.supported_models_description
   end
 
+  test "effective_model_for returns nil when no model is configured" do
+    with_env_overrides("OPENAI_MODEL" => nil) do
+      Setting.openai_model = nil
+
+      assert_nil Provider::Openai.effective_model_for(uri_base: "https://api.cerebras.ai/v1", access_token: "test-token")
+    end
+  end
+
+  test "effective_model_for returns configured setting model without auto-discovery" do
+    with_env_overrides("OPENAI_MODEL" => nil) do
+      Setting.openai_model = "gpt-oss-120b"
+
+      assert_equal "gpt-oss-120b", Provider::Openai.effective_model_for(uri_base: "https://api.cerebras.ai/v1", access_token: "test-token")
+    end
+  end
+
+  # Regression: `.env.local` templates ship with `OPENAI_MODEL=` (blank), which
+  # Dotenv loads as an empty string. The setting saved via the UI must win over
+  # that blank-but-present ENV var — otherwise the chat keeps reporting
+  # "No AI model configured" even after the user selects a model.
+  test "effective_model_for falls back to Setting when ENV['OPENAI_MODEL'] is blank" do
+    with_env_overrides("OPENAI_MODEL" => "") do
+      Setting.openai_model = "gpt-oss-120b"
+
+      assert_equal "gpt-oss-120b", Provider::Openai.effective_model_for(uri_base: "https://api.cerebras.ai/v1", access_token: "test-token")
+    end
+  end
+
+  test "custom endpoint with no model configured shows any model in description" do
+    with_env_overrides("OPENAI_MODEL" => nil) do
+      Setting.openai_model = nil
+
+      provider = Provider::Openai.new(
+        "test-token",
+        uri_base: "https://api.example.com/v1"
+      )
+
+      assert_equal "any model", provider.supported_models_description
+    end
+  end
+
   test "upsert_langfuse_trace uses client trace upsert" do
     trace = Struct.new(:id).new("trace_123")
     fake_client = mock
@@ -455,5 +496,78 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
     assert_raises(ArgumentError) do
       config.build_input(prompt: "hi", messages: [ { role: "user", content: "old" } ])
     end
+  end
+
+  test "generic tools omit empty required arrays in parameters" do
+    tools = @subject.send(:build_generic_tools, [
+      {
+        name: "get_accounts",
+        description: "Get accounts",
+        params_schema: { type: "object", properties: {}, required: [], additionalProperties: false },
+        strict: true
+      }
+    ])
+
+    parameters = tools.first.dig(:function, :parameters)
+    assert_equal "object", parameters[:type]
+    assert_equal({}, parameters[:properties])
+    assert_equal false, parameters[:additionalProperties]
+    assert_not parameters.key?(:required)
+  end
+
+  test "generic chat retries without tools on tool_use_failed" do
+    provider = Provider::Openai.new("test-token", uri_base: "https://api.groq.com/openai/v1")
+
+    functions = [
+      {
+        name: "get_accounts",
+        description: "Get user accounts",
+        params_schema: { type: "object", properties: {}, required: [], additionalProperties: false },
+        strict: true
+      }
+    ]
+
+    tool_error = StandardError.new("Failed to call a function. code=tool_use_failed")
+
+    first_call_params = nil
+    second_call_params = nil
+
+    provider.send(:client).stubs(:chat).with do |parameters:|
+      first_call_params = parameters
+      parameters[:tools].present?
+    end.raises(tool_error)
+
+    provider.send(:client).stubs(:chat).with do |parameters:|
+      second_call_params = parameters
+      parameters[:tools].blank?
+    end.returns({
+      "id" => "chatcmpl-fallback",
+      "model" => "meta-llama/llama-4-scout-17b-16e-instruct",
+      "choices" => [
+        {
+          "message" => {
+            "content" => "I can help review your finances."
+          }
+        }
+      ],
+      "usage" => {
+        "prompt_tokens" => 10,
+        "completion_tokens" => 5,
+        "total_tokens" => 15
+      }
+    })
+
+    response = provider.chat_response(
+      "am i financially good?",
+      model: "meta-llama/llama-4-scout-17b-16e-instruct",
+      instructions: "Use tools if needed.",
+      functions: functions,
+      messages: [ { role: "user", content: "am i financially good?" } ]
+    )
+
+    assert response.success?
+    assert_equal "I can help review your finances.", response.data.messages.first.output_text
+    assert first_call_params[:tools].present?
+    assert second_call_params[:tools].blank?
   end
 end

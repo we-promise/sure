@@ -4,11 +4,12 @@
   <%= csrf_meta_tags %>
   <%= csp_meta_tag %>
 
-  <%= stylesheet_link_tag "tailwind", "data-turbo-track": "reload" %>
+  <%= app_stylesheet_link_tag "data-turbo-track": "reload" %>
 
   <%= combobox_style_tag %>
 
   <%= javascript_importmap_tags %>
+  <%= hotwire_livereload_tags if Rails.env.development? && respond_to?(:hotwire_livereload_tags) %>
   <%= render "layouts/dark_mode_check" %>
   <%= render "layouts/privacy_mode_check" %>
   <%= turbo_refreshes_with method: :morph, scroll: :preserve %>

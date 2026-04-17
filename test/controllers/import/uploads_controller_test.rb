@@ -1,4 +1,5 @@
 require "test_helper"
+require "zip"
 
 class Import::UploadsControllerTest < ActionDispatch::IntegrationTest
   setup do
@@ -46,4 +47,36 @@ class Import::UploadsControllerTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
     assert_equal "Must be valid CSV with headers and at least one row of data", flash[:alert]
   end
+
+  test "uploads sure export zip and stores ndjson" do
+    sure_import = @user.family.imports.create!(type: "SureImport")
+
+    patch import_upload_url(sure_import), params: {
+      import: {
+        ndjson_file: build_sure_export_zip_upload
+      }
+    }
+
+    assert_redirected_to import_url(sure_import)
+    assert_equal I18n.t("imports.create.ndjson_uploaded"), flash[:notice]
+    assert sure_import.reload.ndjson_file.attached?
+    assert_equal "all.ndjson", sure_import.ndjson_file.filename.to_s
+  end
+
+  private
+    def build_sure_export_zip_upload
+      ndjson = { type: "Account", data: { id: "uuid-zip", name: "Zip Upload Account", balance: "10", currency: "USD", accountable_type: "Depository" } }.to_json
+
+      buffer = Zip::OutputStream.write_buffer do |zip|
+        zip.put_next_entry("all.ndjson")
+        zip.write(ndjson)
+      end
+      buffer.rewind
+
+      Rack::Test::UploadedFile.new(
+        StringIO.new(buffer.read),
+        "application/zip",
+        original_filename: "data-export.zip"
+      )
+    end
 end

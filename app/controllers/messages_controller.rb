@@ -4,10 +4,18 @@ class MessagesController < ApplicationController
   before_action :set_chat
 
   def create
+    model = Chat.default_model
+
+    if model.blank?
+      flash.now[:alert] = t("chats.no_model_configured")
+      render "chats/show", status: :unprocessable_entity
+      return
+    end
+
     @message = UserMessage.create!(
       chat: @chat,
       content: message_params[:content],
-      ai_model: message_params[:ai_model].presence || Chat.default_model
+      ai_model: model
     )
 
     redirect_to chat_path(@chat, thinking: true)

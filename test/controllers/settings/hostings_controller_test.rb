@@ -74,6 +74,30 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "can toggle ai chat enabled on and off" do
+    with_self_hosting do
+      patch settings_hosting_url, params: { setting: { ai_chat_enabled: "0" } }
+      assert_redirected_to settings_hosting_url
+      assert_equal false, Setting.ai_chat_enabled
+
+      patch settings_hosting_url, params: { setting: { ai_chat_enabled: "1" } }
+      assert_redirected_to settings_hosting_url
+      assert_equal true, Setting.ai_chat_enabled
+    end
+  end
+
+  test "can toggle ai chat streaming on and off" do
+    with_self_hosting do
+      patch settings_hosting_url, params: { setting: { ai_chat_streaming_enabled: "0" } }
+      assert_redirected_to settings_hosting_url
+      assert_equal false, Setting.ai_chat_streaming_enabled
+
+      patch settings_hosting_url, params: { setting: { ai_chat_streaming_enabled: "1" } }
+      assert_redirected_to settings_hosting_url
+      assert_equal true, Setting.ai_chat_streaming_enabled
+    end
+  end
+
   test "can update openai uri base and model together when self hosting is enabled" do
     with_self_hosting do
       patch settings_hosting_url, params: { setting: { openai_uri_base: "https://api.example.com/v1", openai_model: "gpt-4" } }
@@ -83,16 +107,18 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "cannot update openai uri base without model when self hosting is enabled" do
+  test "can update openai uri base without model when self hosting is enabled" do
     with_self_hosting do
       Setting.openai_model = ""
 
       patch settings_hosting_url, params: { setting: { openai_uri_base: "https://api.example.com/v1" } }
 
-      assert_response :unprocessable_entity
-      assert_match(/OpenAI model is required/, flash[:alert])
-      assert Setting.openai_uri_base.blank?, "Expected openai_uri_base to remain blank after failed validation"
+      assert_redirected_to settings_hosting_url
+      assert_equal "https://api.example.com/v1", Setting.openai_uri_base
     end
+  ensure
+    Setting.openai_uri_base = nil
+    Setting.openai_model = nil
   end
 
   test "can update openai model alone when self hosting is enabled" do
@@ -103,16 +129,85 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "cannot clear openai model when custom uri base is set" do
+  test "can clear openai model when custom uri base is set" do
     with_self_hosting do
       Setting.openai_uri_base = "https://api.example.com/v1"
       Setting.openai_model = "gpt-4"
 
       patch settings_hosting_url, params: { setting: { openai_model: "" } }
 
-      assert_response :unprocessable_entity
-      assert_match(/OpenAI model is required/, flash[:alert])
-      assert_equal "gpt-4", Setting.openai_model
+      assert_redirected_to settings_hosting_url
+      assert_equal "", Setting.openai_model
+    end
+  ensure
+    Setting.openai_uri_base = nil
+    Setting.openai_model = nil
+  end
+
+  test "test openai connection succeeds" do
+    with_self_hosting do
+      provider = mock
+      Provider::Registry.stubs(:get_provider).with(:openai).returns(provider)
+      provider.stubs(:chat_response).with("Respond with the single word: ok", model: "gpt-4.1")
+              .returns(provider_success_response(OpenStruct.new(id: "resp_1")))
+
+      post test_openai_connection_settings_hosting_url
+
+      assert_redirected_to settings_hosting_url
+      assert_equal I18n.t("settings.hostings.test_openai_connection.success", model: "gpt-4.1"), flash[:notice]
+    end
+  end
+
+  test "test openai connection failure shows alert" do
+    with_self_hosting do
+      provider = mock
+      Provider::Registry.stubs(:get_provider).with(:openai).returns(provider)
+      provider.stubs(:chat_response).returns(provider_error_response("boom"))
+
+      post test_openai_connection_settings_hosting_url
+
+      assert_redirected_to settings_hosting_url
+      assert_equal I18n.t("settings.hostings.test_openai_connection.failure", error: "boom"), flash[:alert]
+    end
+  end
+
+  test "test openai connection requires admin" do
+    with_self_hosting do
+      sign_in users(:family_member)
+      post test_openai_connection_settings_hosting_url
+
+      assert_redirected_to settings_hosting_url
+      assert_equal I18n.t("settings.hostings.not_authorized"), flash[:alert]
+    end
+  end
+
+  test "fetch openai models updates model and shows discovered list" do
+    with_self_hosting do
+      Provider::Openai.stubs(:fetch_available_models).returns([ "gpt-oss-120b", "qwen-3-235b-a22b-instruct-2507" ])
+
+      post fetch_openai_models_settings_hosting_url, params: { setting: {
+        openai_access_token: "token",
+        openai_uri_base: "https://api.cerebras.ai/v1",
+        openai_model: ""
+      } }
+
+      assert_redirected_to settings_hosting_url
+      assert_nil Setting.openai_model
+      assert_equal I18n.t("settings.hostings.fetch_openai_models.success", count: 2), flash[:notice]
+      assert_equal [ "gpt-oss-120b", "qwen-3-235b-a22b-instruct-2507" ], flash[:openai_models]
+    end
+  ensure
+    Setting.openai_model = nil
+  end
+
+  test "fetch openai models requires admin" do
+    with_self_hosting do
+      sign_in users(:family_member)
+
+      post fetch_openai_models_settings_hosting_url
+
+      assert_redirected_to settings_hosting_url
+      assert_equal I18n.t("settings.hostings.not_authorized"), flash[:alert]
     end
   end
 

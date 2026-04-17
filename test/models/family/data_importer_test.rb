@@ -65,6 +65,34 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal parent.id, child.parent_id
   end
 
+  test "reuses existing category with case-insensitive name match" do
+    existing = @family.categories.create!(
+      name: "Insurance",
+      color: Category::UNCATEGORIZED_COLOR,
+      classification_unused: "expense",
+      lucide_icon: "shapes"
+    )
+
+    ndjson = build_ndjson([
+      {
+        type: "Category",
+        data: {
+          id: "cat-1",
+          name: "insurance",
+          color: "#000000",
+          classification: "expense"
+        }
+      }
+    ])
+
+    importer = Family::DataImporter.new(@family, ndjson)
+    result = importer.import!
+
+    assert_empty result[:categories]
+    assert_equal 1, @family.categories.where("LOWER(name) = ?", "insurance").count
+    assert_equal existing.id, @family.categories.find_by(name: "Insurance").id
+  end
+
   test "imports tags" do
     ndjson = build_ndjson([
       {
@@ -238,6 +266,38 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal 520000.0, valuation.entry.amount.to_f
   end
 
+  test "skips duplicate valuation dates on imported accounts" do
+    ndjson = build_ndjson([
+      {
+        type: "Account",
+        data: {
+          id: "dep-acct-1",
+          name: "Cash Account",
+          balance: "500.00",
+          currency: "USD",
+          accountable_type: "Depository"
+        }
+      },
+      {
+        type: "Valuation",
+        data: {
+          id: "val-dup",
+          account_id: "dep-acct-1",
+          date: 2.years.ago.to_date.iso8601,
+          amount: "500.00",
+          name: "Opening valuation duplicate",
+          currency: "USD"
+        }
+      }
+    ])
+
+    importer = Family::DataImporter.new(@family, ndjson)
+
+    assert_nothing_raised do
+      importer.import!
+    end
+  end
+
   test "imports budgets" do
     ndjson = build_ndjson([
       {
@@ -262,6 +322,39 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal Date.parse("2024-01-31"), budget.end_date
     assert_equal 3000.0, budget.budgeted_spending.to_f
     assert_equal 5000.0, budget.expected_income.to_f
+  end
+
+  test "reuses existing budget period on import" do
+    existing = @family.budgets.create!(
+      start_date: Date.parse("2024-01-01"),
+      end_date: Date.parse("2024-01-31"),
+      budgeted_spending: 1000,
+      expected_income: 2000,
+      currency: "USD"
+    )
+
+    ndjson = build_ndjson([
+      {
+        type: "Budget",
+        data: {
+          id: "budget-duplicate-period",
+          start_date: "2024-01-01",
+          end_date: "2024-01-31",
+          budgeted_spending: "3000.00",
+          expected_income: "5000.00",
+          currency: "USD"
+        }
+      }
+    ])
+
+    importer = Family::DataImporter.new(@family, ndjson)
+
+    assert_nothing_raised do
+      importer.import!
+    end
+
+    assert_equal 1, @family.budgets.where(start_date: Date.parse("2024-01-01"), end_date: Date.parse("2024-01-31")).count
+    assert_equal existing.id, @family.budgets.find_by(start_date: Date.parse("2024-01-01"), end_date: Date.parse("2024-01-31")).id
   end
 
   test "imports budget_categories" do

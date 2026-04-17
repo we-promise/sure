@@ -33,7 +33,8 @@ class Assistant::Builtin < Assistant::Base
       message: message,
       instructions: instructions,
       function_tool_caller: function_tool_caller,
-      llm: llm_provider
+      llm: llm_provider,
+      stream_output: Setting.ai_chat_streaming_enabled
     )
 
     latest_response_id = chat.latest_assistant_response_id

@@ -211,19 +211,28 @@ class ImportsController < ApplicationController
     end
 
     def create_sure_import(file)
-      if file.size > SureImport::MAX_NDJSON_SIZE
-        redirect_to new_import_path, alert: t("imports.create.file_too_large", max_size: SureImport::MAX_NDJSON_SIZE / 1.megabyte)
-        return
-      end
-
       ext = File.extname(file.original_filename.to_s).downcase
-      unless ext.in?(%w[.ndjson .json])
+      unless ext.in?(%w[.ndjson .json .zip])
         redirect_to new_import_path, alert: t("imports.create.invalid_ndjson_file_type")
         return
       end
 
-      content = file.read
-      file.rewind
+      if !SureImport.zip_upload?(file) && file.size > SureImport::MAX_NDJSON_SIZE
+        redirect_to new_import_path, alert: t("imports.create.file_too_large", max_size: SureImport::MAX_NDJSON_SIZE / 1.megabyte)
+        return
+      end
+
+      content = SureImport.extract_ndjson_content(file)
+      if content.blank?
+        redirect_to new_import_path, alert: t("imports.create.invalid_ndjson_file_type")
+        return
+      end
+
+      if content.bytesize > SureImport::MAX_NDJSON_SIZE
+        redirect_to new_import_path, alert: t("imports.create.file_too_large", max_size: SureImport::MAX_NDJSON_SIZE / 1.megabyte)
+        return
+      end
+
       unless SureImport.valid_ndjson_first_line?(content)
         redirect_to new_import_path, alert: t("imports.create.invalid_ndjson_file_type")
         return
@@ -232,8 +241,8 @@ class ImportsController < ApplicationController
       import = Current.family.imports.create!(type: "SureImport")
       import.ndjson_file.attach(
         io: StringIO.new(content),
-        filename: file.original_filename,
-        content_type: file.content_type
+        filename: "all.ndjson",
+        content_type: "application/x-ndjson"
       )
       import.sync_ndjson_rows_count!
 

@@ -1,4 +1,5 @@
 require "test_helper"
+require "zip"
 
 class SureImportTest < ActiveSupport::TestCase
   include ActiveJob::TestHelper
@@ -62,6 +63,16 @@ class SureImportTest < ActiveSupport::TestCase
     assert_not @import.uploaded?
   end
 
+  test "extract_ndjson_content reads all.ndjson from zip upload" do
+    upload = build_zip_upload_with_ndjson(
+      { type: "Account", data: { id: "zip-1", name: "Zip", balance: "100", currency: "USD", accountable_type: "Depository" } }.to_json
+    )
+
+    content = SureImport.extract_ndjson_content(upload)
+
+    assert_includes content, "\"type\":\"Account\""
+  end
+
   test "configured? and cleaned? follow uploaded?" do
     attach_ndjson(build_ndjson([
       { type: "Account", data: { id: "uuid-1", name: "Test", balance: "1000", currency: "USD", accountable_type: "Depository" } }
@@ -121,18 +132,29 @@ class SureImportTest < ActiveSupport::TestCase
       } }
     ]))
 
-    initial_account_count = @family.accounts.count
-
     @import.publish
 
     assert_equal "complete", @import.status
-    assert_equal initial_account_count + 1, @family.accounts.count
+    assert_equal 1, @family.accounts.count
 
     account = @family.accounts.find_by(name: "Import Test Account")
     assert_not_nil account
     assert_equal 1000.0, account.balance.to_f
     assert_equal "USD", account.currency
     assert_equal "Depository", account.accountable_type
+  end
+
+  test "publish replaces existing family categories with imported categories" do
+    @family.categories.create!(name: "Existing category", color: "#111111")
+
+    attach_ndjson(build_ndjson([
+      { type: "Category", data: { id: "cat-1", name: "Imported category", color: "#22AA22", classification: "expense" } }
+    ]))
+
+    @import.publish
+
+    assert_equal "complete", @import.status
+    assert_equal [ "Imported category" ], @family.categories.pluck(:name)
   end
 
   test "import tracks created accounts for revert" do
@@ -183,5 +205,19 @@ class SureImportTest < ActiveSupport::TestCase
 
     def build_ndjson(records)
       records.map(&:to_json).join("\n")
+    end
+
+    def build_zip_upload_with_ndjson(ndjson_content)
+      buffer = Zip::OutputStream.write_buffer do |zip|
+        zip.put_next_entry("all.ndjson")
+        zip.write(ndjson_content)
+      end
+      buffer.rewind
+
+      Rack::Test::UploadedFile.new(
+        StringIO.new(buffer.read),
+        "application/zip",
+        original_filename: "data-export.zip"
+      )
     end
 end

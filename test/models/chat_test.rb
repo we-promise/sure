@@ -60,4 +60,33 @@ class ChatTest < ActiveSupport::TestCase
       assert_equal "custom-model", chat.messages.first.ai_model
     end
   end
+
+  test "display_error_message returns nested provider error details when available" do
+    chat = @user.chats.create!(title: "Error Chat")
+    chat.update!(error: {
+      message: "the server responded with status 400",
+      details: {
+        error: {
+          message: "`tool calling` is not supported with this model"
+        }
+      }
+    }.to_json)
+
+    assert_equal "`tool calling` is not supported with this model", chat.display_error_message
+  end
+
+  test "display_error_message handles quoted json payloads" do
+    chat = @user.chats.create!(title: "Quoted Error Chat")
+    payload = {
+      message: "the server responded with status 400",
+      details: {
+        error: {
+          message: "The model `whisper-large-v3-turbo` does not support chat completions"
+        }
+      }
+    }.to_json
+    chat.update!(error: payload.to_json)
+
+    assert_equal "The model `whisper-large-v3-turbo` does not support chat completions", chat.display_error_message
+  end
 end

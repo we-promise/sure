@@ -8,10 +8,53 @@ class Provider::Openai < Provider
   SUPPORTED_MODELS = %w[gpt-4 gpt-5 o1 o3].freeze
   VISION_CAPABLE_MODEL_PREFIXES = %w[gpt-4o gpt-4-turbo gpt-4.1 gpt-5 o1 o3].freeze
 
-  # Returns the effective model that would be used by the provider.
-  # Priority: explicit ENV > Setting > DEFAULT_MODEL.
+  # Returns the model explicitly configured via ENV["OPENAI_MODEL"] or the settings page.
+  # Returns nil if nothing is configured — no fallback, no auto-discovery.
   def self.effective_model
-    ENV.fetch("OPENAI_MODEL") { Setting.openai_model }.presence || DEFAULT_MODEL
+    effective_model_for(uri_base: ENV["OPENAI_URI_BASE"].presence || Setting.openai_uri_base)
+  end
+
+  # NOTE: do NOT use `ENV.fetch("OPENAI_MODEL") { Setting.openai_model }` here —
+  # `.env.local` templates ship with `OPENAI_MODEL=` (blank), which Dotenv loads
+  # as an empty string. `ENV.fetch` treats that as "present", so the setting
+  # value saved from Settings → Self-Hosting → AI Settings would be ignored and
+  # the UI would keep reporting "No AI model configured" even after saving.
+  def self.effective_model_for(uri_base:, access_token: nil)
+    ENV["OPENAI_MODEL"].presence || Setting.openai_model.presence
+  end
+
+  def self.discover_model_from_provider(uri_base:, access_token: nil)
+    return nil if uri_base.blank?
+    token = access_token.presence || ENV["OPENAI_ACCESS_TOKEN"].presence || Setting.openai_access_token
+    return nil if token.blank?
+
+    client = ::OpenAI::Client.new(
+      access_token: token,
+      uri_base: uri_base,
+      request_timeout: ENV.fetch("OPENAI_REQUEST_TIMEOUT", 60).to_i
+    )
+    response = client.models.list
+    model_ids = Array(response["data"]).filter_map { |item| item["id"].presence }
+
+    model_ids.first
+  rescue => e
+    Rails.logger.info("Custom provider model discovery failed for #{uri_base}: #{e.message}")
+    nil
+  end
+
+  def self.fetch_available_models(uri_base:, access_token:)
+    return [] if uri_base.blank? || access_token.blank?
+
+    client = ::OpenAI::Client.new(
+      access_token: access_token,
+      uri_base: uri_base,
+      request_timeout: ENV.fetch("OPENAI_REQUEST_TIMEOUT", 60).to_i
+    )
+    response = client.models.list
+    Array(response["data"]).filter_map { |item| item["id"].presence }.uniq
+  rescue => e
+    Rails.logger.info("Custom provider model list fetch failed for #{uri_base}: #{e.message}")
+    []
   end
 
   def initialize(access_token, uri_base: nil, model: nil)
@@ -23,10 +66,7 @@ class Provider::Openai < Provider
 
     @client = ::OpenAI::Client.new(**client_options)
     @uri_base = llm_uri_base
-    if custom_provider? && llm_model.blank?
-      raise Error, "Model is required when using a custom OpenAI‑compatible provider"
-    end
-    @default_model = llm_model.presence || self.class.effective_model
+    @default_model = llm_model.presence
   end
 
   def supports_model?(model)
@@ -266,6 +306,8 @@ class Provider::Openai < Provider
     user_identifier: nil,
     family: nil
   )
+    raise Error, "No AI model configured. Set a model in Settings → Self-Hosted → AI Settings." if model.blank? && @default_model.blank?
+
     if supports_responses_endpoint?
       # Native path uses the Responses API which chains history via
       # `previous_response_id`; it does NOT need (and must not receive)
@@ -480,6 +522,44 @@ class Provider::Openai < Provider
 
           parsed
         rescue => e
+          # Some OpenAI-compatible providers (e.g. Groq with certain models) can
+          # return HTTP 400 `tool_use_failed` when the model emits malformed tool
+          # syntax. Retry once without tools so the chat does not hard-fail.
+          if tools.present? && tool_use_failed_error?(e)
+            Rails.logger.warn("Generic chat tool call failed for model #{model}; retrying without tools")
+
+            fallback_raw_response = client.chat(parameters: {
+              model: model,
+              messages: messages
+            })
+
+            fallback_parsed = GenericChatParser.new(fallback_raw_response).parsed
+
+            log_langfuse_generation(
+              name: "chat_response",
+              model: model,
+              input: messages,
+              output: fallback_parsed.messages.map(&:output_text).join("\n"),
+              usage: fallback_raw_response["usage"],
+              session_id: session_id,
+              user_identifier: user_identifier
+            )
+
+            record_llm_usage(family: family, model: model, operation: "chat", usage: fallback_raw_response["usage"])
+
+            if streamer.present?
+              fallback_parsed.messages.each do |message|
+                if message.output_text.present?
+                  streamer.call(Provider::LlmConcept::ChatStreamChunk.new(type: "output_text", data: message.output_text, usage: nil))
+                end
+              end
+
+              streamer.call(Provider::LlmConcept::ChatStreamChunk.new(type: "response", data: fallback_parsed, usage: fallback_raw_response["usage"]))
+            end
+
+            return fallback_parsed
+          end
+
           log_langfuse_generation(
             name: "chat_response",
             model: model,
@@ -492,6 +572,11 @@ class Provider::Openai < Provider
           raise
         end
       end
+    end
+
+    def tool_use_failed_error?(error)
+      message = safe_error_message(error).to_s
+      message.include?("tool_use_failed") || message.include?("Failed to call a function")
     end
 
     def build_generic_messages(prompt:, instructions: nil, function_results: [], messages: nil)
@@ -568,16 +653,27 @@ class Provider::Openai < Provider
       return [] if functions.blank?
 
       functions.map do |fn|
+        parameters = normalize_tool_parameters(fn[:params_schema])
+
         {
           type: "function",
           function: {
             name: fn[:name],
             description: fn[:description],
-            parameters: fn[:params_schema],
+            parameters: parameters,
             strict: fn[:strict]
           }
         }
       end
+    end
+
+    # Some OpenAI-compatible providers reject `required: []` when parameter
+    # schemas have no properties. Normalize empty required arrays away.
+    def normalize_tool_parameters(schema)
+      normalized = (schema || {}).deep_dup
+      normalized.delete(:required) if normalized[:required].blank?
+      normalized.delete("required") if normalized["required"].blank?
+      normalized
     end
 
     def langfuse_client

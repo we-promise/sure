@@ -1,4 +1,5 @@
 require "test_helper"
+require "zip"
 
 class ImportsControllerTest < ActionDispatch::IntegrationTest
   setup do
@@ -135,4 +136,40 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to imports_path
   end
+
+  test "creates sure import from export zip" do
+    zip_upload = build_sure_export_zip_upload
+
+    assert_difference "Import.count", 1 do
+      post imports_url, params: {
+        import: {
+          type: "SureImport",
+          import_file: zip_upload
+        }
+      }
+    end
+
+    created_import = Import.order(:created_at).last
+    assert_equal "SureImport", created_import.type
+    assert created_import.ndjson_file.attached?
+    assert_redirected_to import_url(created_import)
+    assert_equal I18n.t("imports.create.ndjson_uploaded"), flash[:notice]
+  end
+
+  private
+    def build_sure_export_zip_upload
+      ndjson = { type: "Account", data: { id: "uuid-1", name: "Zip Account", balance: "100", currency: "USD", accountable_type: "Depository" } }.to_json
+
+      buffer = Zip::OutputStream.write_buffer do |zip|
+        zip.put_next_entry("all.ndjson")
+        zip.write(ndjson)
+      end
+      buffer.rewind
+
+      Rack::Test::UploadedFile.new(
+        StringIO.new(buffer.read),
+        "application/zip",
+        original_filename: "export.zip"
+      )
+    end
 end

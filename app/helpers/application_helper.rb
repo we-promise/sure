@@ -164,6 +164,17 @@ module ApplicationHelper
     ENV.fetch("DEV_WEBHOOKS_URL", root_url).chomp("/") + "/enable_banking_items/callback"
   end
 
+  def app_stylesheet_link_tag(**options)
+    stylesheet_link_tag("tailwind", **options)
+  rescue Propshaft::MissingAssetError
+    begin
+      stylesheet_link_tag("tailwind/application", **options)
+    rescue Propshaft::MissingAssetError => error
+      Rails.logger.warn("Missing stylesheet asset for tailwind: #{error.message}")
+      "".html_safe
+    end
+  end
+
   # Formats quantity with adaptive precision based on the value size.
   # Shows more decimal places for small quantities (common with crypto).
   #
