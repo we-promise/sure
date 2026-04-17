@@ -8,6 +8,8 @@ class Loan < ApplicationRecord
     "other" => { short: "Other Loan", long: "Other Loan" }
   }.freeze
 
+  validates :subtype, inclusion: { in: SUBTYPES.keys }, allow_blank: true
+
   def monthly_payment
     return nil if term_months.nil? || interest_rate.nil? || rate_type.nil? || rate_type != "fixed"
     return Money.new(0, account.currency) if account.loan.original_balance.amount.zero? || term_months.zero?
