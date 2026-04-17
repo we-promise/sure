@@ -28,8 +28,8 @@ class CompactSampleDataLoader
   attr_reader :family, :user, :today
 
   def initialize(email:)
-    @user = User.find_by(email: email) || User.order(:created_at).first
-    raise ActiveRecord::RecordNotFound, "No users found in this environment" unless @user
+    @user = User.find_by(email: email)
+    raise ActiveRecord::RecordNotFound, "User with email #{email} not found" unless @user
 
     @family = @user.family
     @today = Date.current
@@ -39,6 +39,8 @@ class CompactSampleDataLoader
   end
 
   def run!
+    ensure_safe_environment!
+
     puts "Loading compact sample data for family: #{family.name}"
     puts "Preserving user credentials for: #{user.email}"
 
@@ -59,6 +61,12 @@ class CompactSampleDataLoader
   end
 
   private
+
+    def ensure_safe_environment!
+      return if Rails.env.development? || Rails.env.test? || ENV["ALLOW_COMPACT_SAMPLE_DATA_RESET"] == "1"
+
+      raise "Refusing to reset family data outside development/test. Set ALLOW_COMPACT_SAMPLE_DATA_RESET=1 to override intentionally."
+    end
 
     def reset_family_financial_data!
       family.users.update_all(default_account_id: nil)

@@ -34,6 +34,7 @@ en:
         no_data_description: "Add transactions to display cash flow data or expand the time period"
         add_transaction: "Add transaction"
         all_accounts: "All accounts"
+        split_mode_transfer_hint: "Split view groups flows by account lane and shows direct account-to-account transfer links."
       no_accounts:
         title: "No accounts yet"
         description: "Add accounts to display net worth data"

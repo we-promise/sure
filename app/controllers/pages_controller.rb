@@ -17,20 +17,29 @@ class PagesController < ApplicationController
     @selected_account = @sankey_mode == "aggregate" ? @finance_accounts.find_by(id: params[:account_id].presence) : nil
 
     family_currency = Current.family.currency
-    selected_account_ids = @selected_account ? [ @selected_account.id ] : nil
+    visible_account_ids = @finance_accounts.reorder(nil).pluck(:id)
+    selected_account_ids = @selected_account ? [ @selected_account.id ] : visible_account_ids
 
-    # Use IncomeStatement for all cashflow data (now includes categorized trades)
-    selected_account_id = params[:account_id].presence
-    if selected_account_id
-      account = Current.user.finance_accounts.find_by(id: selected_account_id)
-      account_ids = account ? [ account.id ] : nil
+    if @sankey_mode == "split"
+      income_statement = Current.family.income_statement(user: Current.user, account_ids: visible_account_ids)
+      net_totals = income_statement.net_category_totals(period: @period)
+      @cashflow_sankey_data = build_split_cashflow_sankey_data(accounts: @finance_accounts, period: @period, currency: family_currency)
     else
-      account_ids = nil
+      # Use IncomeStatement for all cashflow data (now includes categorized trades)
+      income_statement = Current.family.income_statement(user: Current.user, account_ids: selected_account_ids)
+      income_totals = income_statement.income_totals(period: @period)
+      expense_totals = income_statement.expense_totals(period: @period)
+      net_totals = income_statement.net_category_totals(period: @period)
+      transfer_flows = @selected_account ?
+        build_transfer_flows_for_account(
+          account: @selected_account,
+          period: @period,
+          currency: family_currency,
+          accessible_account_ids: @accounts.map(&:id).to_set
+        ) : nil
+
+      @cashflow_sankey_data = build_cashflow_sankey_data(net_totals, income_totals, expense_totals, family_currency, transfer_flows: transfer_flows)
     end
-    income_statement = Current.family.income_statement(user: Current.user, account_ids: account_ids)
-    income_totals = income_statement.income_totals(period: @period)
-    expense_totals = income_statement.expense_totals(period: @period)
-    net_totals = income_statement.net_category_totals(period: @period)
 
     @outflows_data = build_outflows_donut_data(net_totals)
 
@@ -385,41 +394,15 @@ class PagesController < ApplicationController
         end
       }
 
-      income_flows_by_account_category = Hash.new(0.to_d)
-      expense_flows_by_account_category = Hash.new(0.to_d)
-      income_totals_by_category = Hash.new(0.to_d)
-      expense_totals_by_category = Hash.new(0.to_d)
-      income_totals_by_account = Hash.new(0.to_d)
-      expense_totals_by_account = Hash.new(0.to_d)
-      income_categories_by_key = {}
-      expense_categories_by_key = {}
-
-      accounts.each do |account|
-        income_statement = Current.family.income_statement(user: Current.user, account_ids: [ account.id ])
-        net_totals = income_statement.net_category_totals(period: period)
-
-        net_totals.net_income_categories.each do |category_total|
-          value = category_total.total.to_d
-          next if value.zero?
-
-          category_key = split_category_key(category_total)
-          income_flows_by_account_category[[ account.id, category_key ]] += value
-          income_totals_by_category[category_key] += value
-          income_totals_by_account[account.id] += value
-          income_categories_by_key[category_key] ||= category_total.category
-        end
-
-        net_totals.net_expense_categories.each do |category_total|
-          value = category_total.total.to_d
-          next if value.zero?
-
-          category_key = split_category_key(category_total)
-          expense_flows_by_account_category[[ account.id, category_key ]] += value
-          expense_totals_by_category[category_key] += value
-          expense_totals_by_account[account.id] += value
-          expense_categories_by_key[category_key] ||= category_total.category
-        end
-      end
+      split_net_totals = build_split_net_totals_by_account(accounts: accounts, period: period)
+      income_flows_by_account_category = split_net_totals[:income_flows_by_account_category]
+      expense_flows_by_account_category = split_net_totals[:expense_flows_by_account_category]
+      income_totals_by_category = split_net_totals[:income_totals_by_category]
+      expense_totals_by_category = split_net_totals[:expense_totals_by_category]
+      income_totals_by_account = split_net_totals[:income_totals_by_account]
+      expense_totals_by_account = split_net_totals[:expense_totals_by_account]
+      income_categories_by_key = split_net_totals[:income_categories_by_key]
+      expense_categories_by_key = split_net_totals[:expense_categories_by_key]
 
       transfer_overlay_data = build_split_transfer_overlays(accounts: accounts, period: period, currency: currency)
       transfer_totals_by_account = transfer_overlay_data[:totals_by_account]
@@ -570,6 +553,121 @@ class PagesController < ApplicationController
       return "expense" if unique_key.include?("_expense_")
 
       "other"
+    end
+
+    def build_split_net_totals_by_account(accounts:, period:)
+      empty_result = {
+        income_flows_by_account_category: Hash.new(0.to_d),
+        expense_flows_by_account_category: Hash.new(0.to_d),
+        income_totals_by_category: Hash.new(0.to_d),
+        expense_totals_by_category: Hash.new(0.to_d),
+        income_totals_by_account: Hash.new(0.to_d),
+        expense_totals_by_account: Hash.new(0.to_d),
+        income_categories_by_key: {},
+        expense_categories_by_key: {}
+      }
+
+      account_ids = accounts.map(&:id)
+      return empty_result if account_ids.empty?
+
+      scoped_account_ids = account_ids - Current.family.tax_advantaged_account_ids
+      return empty_result if scoped_account_ids.empty?
+
+      classification_sql = <<~SQL.squish
+        CASE
+          WHEN transactions.kind IN ('investment_contribution', 'loan_payment') THEN 'expense'
+          WHEN entries.amount < 0 THEN 'income'
+          ELSE 'expense'
+        END
+      SQL
+
+      total_sql = <<~SQL.squish
+        ABS(
+          SUM(
+            CASE
+              WHEN transactions.kind IN ('investment_contribution', 'loan_payment') THEN ABS(entries.amount * COALESCE(er.rate, 1))
+              ELSE entries.amount * COALESCE(er.rate, 1)
+            END
+          )
+        )
+      SQL
+
+      exchange_join_sql = ActiveRecord::Base.sanitize_sql_array([
+        "LEFT JOIN exchange_rates er ON er.date = entries.date AND er.from_currency = entries.currency AND er.to_currency = ?",
+        Current.family.currency
+      ])
+
+      rows = Current.family.transactions
+        .visible
+        .excluding_pending
+        .in_period(period)
+        .where(entries: { account_id: scoped_account_ids, excluded: false })
+        .where.not(kind: Transaction::BUDGET_EXCLUDED_KINDS)
+        .where("transactions.investment_activity_label IS NULL OR transactions.investment_activity_label NOT IN (?)", Transaction::INTERNAL_MOVEMENT_LABELS)
+        .left_outer_joins(:category)
+        .joins(exchange_join_sql)
+        .group(
+          "entries.account_id",
+          "transactions.category_id",
+          "categories.parent_id",
+          classification_sql
+        )
+        .pluck(
+          Arel.sql("entries.account_id"),
+          Arel.sql("transactions.category_id"),
+          Arel.sql("categories.parent_id"),
+          Arel.sql(classification_sql),
+          Arel.sql(total_sql)
+        )
+
+      root_category_ids = rows.filter_map do |_account_id, category_id, parent_category_id, _classification, _total|
+        split_root_category_key(category_id, parent_category_id)
+      end.uniq
+
+      categories_by_id = Current.family.categories.where(id: root_category_ids).index_by(&:id)
+      uncategorized_category = Current.family.categories.uncategorized
+
+      raw_totals_by_account_category = Hash.new do |hash, key|
+        hash[key] = { income: 0.to_d, expense: 0.to_d }
+      end
+      categories_by_key = {}
+
+      rows.each do |account_id, category_id, parent_category_id, classification, total|
+        category_key = split_root_category_key(category_id, parent_category_id) || :uncategorized
+        category = category_key == :uncategorized ? uncategorized_category : categories_by_id[category_key]
+        next unless category
+
+        raw_totals_by_account_category[[ account_id, category_key ]][classification.to_sym] += total.to_d
+        categories_by_key[category_key] ||= category
+      end
+
+      result = empty_result
+
+      raw_totals_by_account_category.each do |(account_id, category_key), totals|
+        net_value = totals[:expense] - totals[:income]
+        next if net_value.zero?
+
+        category = categories_by_key.fetch(category_key)
+
+        if net_value.positive?
+          result[:expense_flows_by_account_category][[ account_id, category_key ]] += net_value
+          result[:expense_totals_by_category][category_key] += net_value
+          result[:expense_totals_by_account][account_id] += net_value
+          result[:expense_categories_by_key][category_key] ||= category
+        else
+          income_value = net_value.abs
+          result[:income_flows_by_account_category][[ account_id, category_key ]] += income_value
+          result[:income_totals_by_category][category_key] += income_value
+          result[:income_totals_by_account][account_id] += income_value
+          result[:income_categories_by_key][category_key] ||= category
+        end
+      end
+
+      result
+    end
+
+    def split_root_category_key(category_id, parent_category_id)
+      parent_category_id.presence || category_id.presence
     end
 
     def build_split_transfer_overlays(accounts:, period:, currency:)

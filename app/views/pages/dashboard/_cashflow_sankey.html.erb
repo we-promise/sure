@@ -1,10 +1,12 @@
 <%# locals: (sankey_data:, period:, finance_accounts:, selected_account_id:, sankey_mode:) %>
+<% account_options = [[t("pages.dashboard.cashflow_sankey.all_accounts"), ""]] + finance_accounts.map { |account| [account.name, account.id] } %>
 <div id="cashflow-sankey-chart">
   <div class="flex justify-end items-center gap-4 px-4 mb-4">
       <%= form_with url: root_path, method: :get, data: { controller: "auto-submit-form", turbo_frame: "_top" } do |form| %>
+  <%= form.hidden_field :sankey_mode, value: sankey_mode %>
   <%= form.select :account_id,
-            [[t("pages.dashboard.cashflow_sankey.all_accounts"), ""]] + Current.user.finance_accounts.map { |a| [a.name, a.id] },
-            { selected: params[:account_id] },
+            account_options,
+            { selected: selected_account_id || "" },
             data: { "auto-submit-form-target": "auto" },
             class: "bg-container border border-secondary font-medium rounded-lg px-3 py-2 text-sm pr-7 cursor-pointer text-primary focus:outline-hidden focus:ring-0" %>
   <%= form.select :period,

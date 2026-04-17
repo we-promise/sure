@@ -2,7 +2,7 @@ require "test_helper"
 
 class Demo::GeneratorTest < ActiveSupport::TestCase
   setup do
-    @generator = Demo::Generator.new(seed: 123)
+    @generator = Demo::Generator.new(seed: 123, seed_global_rng: false)
   end
 
   test "create_transfer! marks credit card payments as transfer kinds" do

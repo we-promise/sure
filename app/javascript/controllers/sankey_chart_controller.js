@@ -467,9 +467,10 @@ export default class extends Controller {
   #showTooltip(event, value, percentage, title = null) {
     if (!this.tooltip) this.#createTooltip();
 
-    const hasPercentage = Number.isFinite(Number(percentage));
+    const hasPercentage = percentage !== null && percentage !== undefined && percentage !== "" && Number.isFinite(Number(percentage));
+    const percentageValue = hasPercentage ? Number(percentage) : null;
     const valueText = hasPercentage
-      ? `${this.#formatCurrency(value)} (${percentage || 0}%)`
+      ? `${this.#formatCurrency(value)} (${percentageValue}%)`
       : `${this.#formatCurrency(value)}`;
 
     const content = title

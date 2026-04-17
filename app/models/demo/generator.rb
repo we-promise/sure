@@ -3,6 +3,7 @@ require "securerandom"
 class Demo::Generator
   # @param seed [Integer, String, nil] Seed value used to initialise the internal PRNG. If nil, the ENV variable DEMO_DATA_SEED will
   #   be honoured and default to a random seed when not present.
+  # @param seed_global_rng [Boolean] When true, also seed Ruby's global RNG. Set to false in tests that should not mutate global RNG state.
   #
   # Initialising an explicit PRNG gives us repeatable demo datasets while still
   #   allowing truly random data when the caller does not care about
@@ -10,7 +11,7 @@ class Demo::Generator
   #   will also be seeded so that *all* random behaviour inside this object –
   #   including library helpers that rely on Ruby's global RNG – follow the
   #   same deterministic sequence.
-  def initialize(seed: ENV.fetch("DEMO_DATA_SEED", nil))
+  def initialize(seed: ENV.fetch("DEMO_DATA_SEED", nil), seed_global_rng: true)
     # Convert the seed to an Integer if one was provided, otherwise fall back
     # to a random, but memoised, seed so the generator instance can report it
     # back to callers when needed (e.g. for debugging a specific run).
@@ -25,7 +26,7 @@ class Demo::Generator
     # Also seed Ruby's global RNG so helpers that rely on it (e.g.
     # Array#sample, Kernel.rand in invoked libraries, etc.) remain
     # deterministic for the lifetime of this generator instance.
-    srand(@seed)
+    srand(@seed) if seed_global_rng
   end
 
   # Expose the seed so callers can reproduce a run if necessary.

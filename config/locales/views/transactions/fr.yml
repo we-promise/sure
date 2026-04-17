@@ -75,10 +75,10 @@ fr:
       other: Autre
     mark_recurring: Marquer comme récurrent
     mark_recurring_subtitle: Enregistrez cette transaction comme récurrente. L'écart de montant est calculé automatiquement à partir des transactions similaires des 6 derniers mois.
-    mark_recurring_title: Transaction réccurente
+    mark_recurring_title: Transaction récurrente
     potential_duplicate_title: Doublon potentiel détecté
     potential_duplicate_description: Cette transaction en attente est peut-être identique à la transaction enregistrée ci-dessous. Si c'est le cas, fusionnez-les pour éviter les doublons.
-    merge_duplicate: Oui, les fusionner
+    merge_duplicate_confirm: Oui, les fusionner
     keep_both: Non, garder les deux
     split_parent_row:
       split_label: "Diviser"
@@ -116,7 +116,7 @@ fr:
     header:
       edit_categories: Modifier les catégories
       edit_imports: Modifier les importations
-      edit_merchants: Modifier les marchants
+      edit_merchants: Modifier les marchands
       edit_tags: Modifier les étiquettes
       import: Importer
     index:
@@ -213,7 +213,7 @@ fr:
         date_filter: Date
         merchant_filter: Marchant
         status_filter: Statut
-        tag_filter: Étiqsette
+        tag_filter: Étiquette
         type_filter: Type
       search:
         equal_to: Égal à
@@ -223,7 +223,7 @@ fr:
         toggle_selection_checkboxes: Cocher ou décocher toutes les cases
     attachments:
       cannot_exceed: "Le nombre de pièces jointes ne doit pas dépasser %{count} par transaction"
-      uploaded_one: "Pièce jointe importé avec succès"
+      uploaded_one: "Pièce jointe importée avec succès"
       uploaded_many: "%{count} pièces jointes importées avec succès"
       failed_upload: "Échec de l'import : %{error}"
       no_files_selected: "Aucun fichier sélectionné"
