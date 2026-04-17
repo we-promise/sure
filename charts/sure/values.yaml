@@ -110,6 +110,15 @@ cnpg:
     #   are passed through for CNPG to validate.
     backup: {}
 
+    # NOTE: These are example values for resource limits and requests, adapt them to your cluster and workload needs. CNPG can run on very small resource requests, but you may want to increase limits for production workloads.
+    # resources:
+    #   requests:
+    #     cpu: 100m
+    #     memory: 256Mi
+    #   limits:
+    #     cpu: 200m
+    #     memory: 512Mi
+    #     
     # Optional CNPG plugin configuration (rendered as `.spec.plugins` on the Cluster CR)
     # Example (barman-cloud plugin as WAL archiver):
     # plugins:
