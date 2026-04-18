@@ -71,7 +71,7 @@ class Loan < ApplicationRecord
     return 0 if as_of < start
 
     months = (as_of.year * 12 + as_of.month) - (start.year * 12 + start.month)
-    months -= 1 if as_of.day < start.day
+    months -= 1 if start + months.months > as_of
 
     months.clamp(0, term)
   end
@@ -90,7 +90,7 @@ class Loan < ApplicationRecord
   end
 
   def amortization_schedule
-    return [] unless term_months && interest_rate && rate_type == "fixed"
+    return [] unless term_months && interest_rate && start_date && rate_type == "fixed"
     Rails.cache.fetch([ "loan_amortization", cache_key_with_version ]) do
       generate_amortization_schedule
     end
@@ -104,7 +104,7 @@ class Loan < ApplicationRecord
 
 
   def generate_amortization_schedule
-    return [] if interest_rate.nil? || term_months.nil?
+    return [] if interest_rate.nil? || term_months.nil? || start_date.nil?
 
     balance          = BigDecimal(original_balance.amount.to_s)
     initial_balance  = balance
@@ -112,7 +112,8 @@ class Loan < ApplicationRecord
     rate             = BigDecimal(interest_rate.to_s) / 1200
     insurance_rate_m = BigDecimal((insurance_rate || 0).to_s) / 1200
 
-    payment = BigDecimal(monthly_payment.amount.to_s)
+    return [] unless (monthly = monthly_payment)
+    payment = BigDecimal(monthly.amount.to_s)
 
     schedule = []
     months   = term_months
@@ -167,6 +168,7 @@ class Loan < ApplicationRecord
   end
 
   def remaining_balance_at(month_number)
+    return unless month_number&.positive?
     row = amortization_schedule[month_number - 1]
     return unless row
 

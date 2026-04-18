@@ -1,28 +1,23 @@
 <% loan = account.loan %>
 <% breakdown = loan.payment_breakdown %>
 
-
 <div class="space-y-4">
 
   <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-    <%= summary_card title: t(".original_principal") do %>
+    <%= summary_card title: t("loans.overview.original_principal") do %>
       <%= format_money loan.original_balance %>
     <% end %>
 
-    <%= summary_card title: "Remaining loan" do %>
+    <%= summary_card title: t("loans.overview.remaining_loan") do %>
       <% if loan.total_interest.present? %>
         <% if loan.elapsed_ratio.present? %>
           <% percentage = (loan.elapsed_ratio * 100).round(1) %>
           <div class="flex items-center justify-between gap-4">
-            <!-- Texte -->
-            <div class="text-sm text-zinc-500">
-              You have already paid
-              <span class="font-medium text-amber-500">
-                <%= number_to_percentage(percentage, precision: 1) %>
-              </span>
-              of your loan
+            <div class="text-sm text-secondary">
+              <%= t("loans.overview.already_paid_html",
+                    percentage: number_to_percentage(percentage, precision: 1)) %>
             </div>
-            
+
             <!-- Cercle -->
             <div class="relative w-16 h-16">
               <svg class="w-full h-full -rotate-90">
@@ -50,138 +45,125 @@
           </div>
         <% end %>
       <% else %>
-        <%= t(".unknown") %>
+        <%= t("loans.overview.unknown") %>
       <% end %>
-    <% end %>   
+    <% end %>
   </div>
-  <!-- ⚙️ Technical details -->
+
   <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-    <%= summary_card title: t(".interest_rate") do %>
-      <%= loan.interest_rate.present? ? number_to_percentage(loan.interest_rate, precision: 3) : t(".unknown") %>
-    <% end %>
-    <%= summary_card title: t(".term") do %>
-      <% if loan.term_months.present? %>
-        <%= pluralize(loan.term_months / 12, "year") %>
-      <% else %>
-        <%= t(".unknown") %>
-      <% end %>
-    <% end %>
-    <%= summary_card title: t(".type") do %>
-      <%= loan.rate_type&.titleize || t(".unknown") %>
+    <%= summary_card title: t("loans.overview.interest_rate") do %>
+      <%= loan.interest_rate.present? ? number_to_percentage(loan.interest_rate, precision: 3) : t("loans.overview.unknown") %>
     <% end %>
 
-    <%= summary_card title: "Initial Leverage" do %>
+    <%= summary_card title: t("loans.overview.term") do %>
+      <% if loan.term_months.present? %>
+        <% years, months = loan.term_months.divmod(12) %>
+        <%= [
+              (t("loans.overview.years", count: years) if years.positive?),
+              (t("loans.overview.months", count: months) if months.positive?)
+            ].compact.join(" ") %>
+      <% else %>
+        <%= t("loans.overview.unknown") %>
+      <% end %>
+    <% end %>
+
+    <%= summary_card title: t("loans.overview.type") do %>
+      <%= loan.rate_type&.titleize || t("loans.overview.unknown") %>
+    <% end %>
+
+    <%= summary_card title: t("loans.overview.initial_leverage") do %>
       <% if (ratio = loan.initial_leverage_ratio).present? %>
         <% color =
           if ratio < 4
-            "text-emerald-500"
+            "text-success"
           elsif ratio < 8
-            "text-amber-500"
+            "text-accent"
           else
-            "text-red-500"
+            "text-destructive"
           end
         %>
         <div class="text-2xl font-semibold <%= color %>">
           <%= number_with_precision(ratio, precision: 1) %>x
         </div>
-        <div class="text-xs text-zinc-500">
-          Debt / down payment
+        <div class="text-xs text-secondary">
+          <%= t("loans.overview.debt_over_down_payment") %>
         </div>
       <% else %>
-        <%= t(".unknown") %>
+        <%= t("loans.overview.unknown") %>
       <% end %>
     <% end %>
-
-    
-
   </div>
-
 
   <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 
-  <%= summary_card title: "Total Cost" do %>
-    <% if loan.original_balance.present? && loan.total_interest.present? && loan.total_insurance.present? %>
-      <% total_cost = loan.original_balance + loan.total_interest + loan.total_insurance %>
+    <%= summary_card title: t("loans.overview.total_cost") do %>
+      <% if loan.original_balance.present? && loan.total_interest.present? && loan.total_insurance.present? %>
+        <% total_cost = loan.original_balance + loan.total_interest + loan.total_insurance %>
 
-      <!-- Total -->
-      <div class="font-semibold">
-        <%= format_money(total_cost) %>
-      </div>
-
-      <!-- Divider -->
-      <div class="my-3 h-px bg-zinc-800"></div>
-
-      <!-- Breakdown -->
-      <div class="space-y-2">
-
-        <div class="flex justify-between">
-          <span class="text-sm text-zinc-500">Principal</span>
-          <span><%= format_money(loan.original_balance) %></span>
-        </div>
-        <div class="flex justify-between">
-          <span class="text-sm text-zinc-500">Interest</span>
-          <span><%= format_money(loan.total_interest) %></span>
-        </div>
-        <div class="flex justify-between">
-          <span class="text-sm text-zinc-500">Insurance</span>
-          <span><%= format_money(loan.total_insurance) %></span>
+        <div class="font-semibold">
+          <%= format_money(total_cost) %>
         </div>
 
-      </div>
+        <div class="my-3 h-px bg-surface-subtle"></div>
 
-    <% else %>
-      <%= t(".unknown") %>
+        <div class="space-y-2">
+          <div class="flex justify-between">
+            <span class="text-sm text-secondary"><%= t("loans.overview.principal") %></span>
+            <span><%= format_money(loan.original_balance) %></span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-sm text-secondary"><%= t("loans.overview.interest") %></span>
+            <span><%= format_money(loan.total_interest) %></span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-sm text-secondary"><%= t("loans.overview.insurance") %></span>
+            <span><%= format_money(loan.total_insurance) %></span>
+          </div>
+        </div>
+
+      <% else %>
+        <%= t("loans.overview.unknown") %>
+      <% end %>
     <% end %>
-  <% end %>
 
+    <%= summary_card title: t("loans.overview.monthly_payment") do %>
+      <% if loan.monthly_payment.present? && breakdown.present? %>
+        <% monthly_payment = breakdown[:principal] + breakdown[:interest] + breakdown[:insurance] %>
 
-  <%= summary_card title: "Monthly Payment" do %>
-    <% if loan.monthly_payment.present? && breakdown.present? %>
-      <% monthly_payment = breakdown[:principal] + breakdown[:interest] + breakdown[:insurance] %>
-
-      <!-- Total -->
-      <div class="font-semibold">
-        <%= format_money(monthly_payment) %>
-      </div>
-      <!-- Divider -->
-      <div class="my-3 h-px bg-zinc-800"></div>
-
-      <!-- Breakdown -->
-      <div class="space-y-2">
-        <div class="flex justify-between">
-          <span class="text-sm text-zinc-500">Principal</span>
-          <span><%= format_money(breakdown[:principal]) %></span>
-        </div>
-        <div class="flex justify-between">
-          <span class="text-sm text-zinc-500">Interest</span>
-          <span><%= format_money(breakdown[:interest]) %></span>
-        </div>
-        <div class="flex justify-between">
-          <span class="text-sm text-zinc-500">Insurance</span>
-          <span><%= format_money(breakdown[:insurance]) %></span>
-        </div>
-        <div class="flex justify-between">
-          <span class="text-sm text-zinc-500">Payments made</span>
-          <span><%= loan.months_elapsed %></span>
-        </div>
-        <div class="flex justify-between">
-          <span class="text-sm text-zinc-500">Remaining payments</span>
-          <span><%= loan.remaining_months %></span>
+        <div class="font-semibold">
+          <%= format_money(monthly_payment) %>
         </div>
 
-      </div>
+        <div class="my-3 h-px bg-surface-subtle"></div>
 
-    <% else %>
-      <%= t(".unknown") %>
+        <div class="space-y-2">
+          <div class="flex justify-between">
+            <span class="text-sm text-secondary"><%= t("loans.overview.principal") %></span>
+            <span><%= format_money(breakdown[:principal]) %></span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-sm text-secondary"><%= t("loans.overview.interest") %></span>
+            <span><%= format_money(breakdown[:interest]) %></span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-sm text-secondary"><%= t("loans.overview.insurance") %></span>
+            <span><%= format_money(breakdown[:insurance]) %></span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-sm text-secondary"><%= t("loans.overview.payments_made") %></span>
+            <span><%= loan.months_elapsed %></span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-sm text-secondary"><%= t("loans.overview.remaining_payments") %></span>
+            <span><%= loan.remaining_months %></span>
+          </div>
+        </div>
+
+      <% else %>
+        <%= t("loans.overview.unknown") %>
+      <% end %>
     <% end %>
-  <% end %>
 
-</div>
-
-  
-
-
-
-  
+  </div>
 
 </div>

@@ -214,7 +214,7 @@ class LoanTest < ActiveSupport::TestCase
     loan = Loan.new(
       interest_rate: 3.6,
       insurance_rate: 0.3,
-      insurance_rate_type: "declining",
+      insurance_rate_type: "decreasing_life",
       term_months: 2,
       start_date: Date.new(2024, 1, 1)
     )

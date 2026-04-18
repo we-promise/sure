@@ -4,6 +4,7 @@ en:
     edit:
       edit: Edit %{account}
     form:
+      down_payment: Down payment
       interest_rate: Interest rate
       interest_rate_placeholder: '5.25'
       insurance_rate: Insurance rate
@@ -11,6 +12,9 @@ en:
       initial_balance: Original loan balance
       rate_type: Rate type
       insurance_rate_type: Insurance rate type
+      insurance_rate_type_options:
+        level_term: Level term
+        decreasing_life: Decreasing life
       term_months: Term (months)
       term_months_placeholder: '360'
       subtype_prompt: Select loan type
@@ -26,3 +30,18 @@ en:
       term: Term
       type: Type
       unknown: Unknown
+      already_paid_html: "You have already paid <span class=\"font-medium text-amber-500\">%{percentage}</span> of your loan"
+      initial_leverage: Initial Leverage
+      debt_over_down_payment: Debt / down payment
+      total_cost: Total Cost
+      principal: Principal
+      interest: Interest
+      insurance: Insurance
+      payments_made: Payments made
+      remaining_payments: Remaining payments
+      years:
+          one: "%{count} year"
+          other: "%{count} years"
+      months:
+        one: "%{count} month"
+        other: "%{count} months"
