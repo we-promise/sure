@@ -28,5 +28,6 @@ fr:
       exchange_rate_help: Choisissez comment entrer le montant.
     syncing_notice:
       syncing: Synchronisation des données de compte...
+    require_admin: "Seuls les administrateurs peuvent effectuer cette action"
     trend_change:
       no_change: "pas de changement"
