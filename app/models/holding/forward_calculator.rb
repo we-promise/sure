@@ -22,7 +22,32 @@ class Holding::ForwardCalculator
         current_portfolio = next_portfolio
       end
 
-      Holding.gapfill(holdings)
+      # Also include the first date where qty = 0 for each security (position closed)
+      valid_holdings = []
+      holdings.group_by(&:security_id).each do |security_id, sec_holdings|
+        sorted = sec_holdings.sort_by(&:date)
+        prev_qty = nil
+        sorted.each do |h|
+          # Note: this condition (h.qty.to_f > 0 && h.amount.to_f > 0)
+        # intentionally filters out holdings where quantity > 0 but amount == 0
+        # (for example when price is missing or zero). If zero-amount records
+        # should be treated as valid, consider falling back to a price lookup
+        # or include qty>0 entries and compute amount from a known price.
+        if h.qty.to_f > 0 && h.amount.to_f > 0
+          valid_holdings << h
+          elsif h.qty.to_f == 0
+            if prev_qty.nil?
+              # Allow initial zero holding (initial portfolio state)
+              valid_holdings << h
+            elsif prev_qty > 0
+              # Add the first date where qty = 0 after a sequence of qty > 0 (position closure)
+              valid_holdings << h
+            end
+          end
+          prev_qty = h.qty.to_f
+        end
+      end
+      Holding.gapfill(valid_holdings)   
     end
   end
 

@@ -1,0 +1,15 @@
+<% if flash.any? %>
+  <div id="flash-messages" class="space-y-2">
+    <% flash.each do |type, message| %>
+      <%# Map Rails flash types to Tailwind/Design System classes %>
+      <% css_class = case type.to_sym
+        when :notice then 'bg-success text-on-success'
+        when :alert then 'bg-error text-on-error'
+        else 'bg-secondary text-on-secondary'
+      end %>
+      <div class="rounded px-4 py-2 text-sm font-medium <%= css_class %>">
+        <%= message %>
+      </div>
+    <% end %>
+  </div>
+<% end %>
