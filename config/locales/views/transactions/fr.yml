@@ -39,7 +39,7 @@ fr:
       exclude_description: Les transactions exclues seront retirées des calculs budgétaires et des rapports.
       activity_type: Type d'activité
       activity_type_description: Type d'activité d'investissement (Achat, Vente, Dividende, etc.). Détecté automatiquement ou défini manuellement.
-      one_time_title: "%{type} ponctuel"
+      one_time_title: "Transaction ponctuelle (%{type})"
       one_time_description: Les transactions ponctuelles seront exclues de certains calculs budgétaires et rapports afin de vous aider à voir ce qui compte vraiment.
       convert_to_trade_title: Convertir en transaction boursière
       convert_to_trade_description: Convertissez cette transaction en une transaction boursière d'achat ou de vente avec les détails du titre pour le suivi du portefeuille.
@@ -147,7 +147,7 @@ fr:
         type_income: "Revenu"
         type_expense: "Dépense"
         create_rule_label: "Créer une règle de catégorisation"
-        rule_description_prefix: "Les futures transactions %{type} dont le nom contient"
+        rule_description_prefix: "Les futures transactions de type %{type} dont le nom contient"
         rule_description_suffix: "devraient également recevoir cette catégorie."
         no_categories: "Aucune catégorie correspondante"
         all_done: "Toutes les transactions sont catégorisées"

@@ -4,7 +4,7 @@ fr:
     hostings:
       invite_code_settings:
         description: "Contrôlez comment les nouvelles personnes s'inscrivent à votre instance de %{product}."
-        email_confirmation_description: "Lorsque cette option est activée, les utilisateurs doivent confirmer leur adresse e-mail lors du changement."
+        email_confirmation_description: "Lorsque cette option est activée, les utilisateurs doivent confirmer leur nouvelle adresse e-mail lorsqu'ils la modifient."
         email_confirmation_title: "Exiger la confirmation de l'e-mail"
         default_family_title: "Famille par défaut pour les nouveaux utilisateurs"
         default_family_description: "Placer les nouveaux utilisateurs dans cette famille/groupe uniquement s'ils n'ont pas d'invitation."
@@ -135,7 +135,7 @@ fr:
         step_1_html: 'Visitez <a href="https://eodhd.com/register" target="_blank" rel="noopener noreferrer" class="underline">eodhd.com</a> et créez un compte gratuit.'
         step_2_html: 'Accédez à votre <a href="https://eodhd.com/cp/dashboard" target="_blank" rel="noopener noreferrer" class="underline">Tableau de bord</a> pour trouver votre token API.'
         step_3: "Copiez votre token API et collez-le ci-dessous."
-        rate_limit_warning: "Le forfait gratuit EODHD est limité à 20 appels API par jour. Utilisé de préférence comme fournisseur complémentaire pour les ETF européens non disponibles chez d'autres fournisseurs."
+        rate_limit_warning: "Le forfait gratuit EODHD est limité à 20 appels API par jour. À utiliser de préférence comme fournisseur complémentaire pour les ETF européens non disponibles chez d'autres fournisseurs."
       alpha_vantage_settings:
         title: "Alpha Vantage"
         description: "Saisissez la clé API d'Alpha Vantage. Supporte les ETF européens sur la Bourse de Londres, XETRA et d'autres places boursières."
@@ -145,7 +145,7 @@ fr:
         show_details: "(afficher les détails)"
         step_1_html: 'Visitez <a href="https://www.alphavantage.co/support/#api-key" target="_blank" rel="noopener noreferrer" class="underline">alphavantage.co</a> et réclamez votre clé API gratuite.'
         step_2: "Copiez la clé API et collez-la ci-dessous."
-        rate_limit_warning: "Le forfait gratuit Alpha Vantage est limité à 25 appels API par jour. Utilisé de préférence comme fournisseur complémentaire pour les ETF européens non disponibles chez d'autres fournisseurs."
+        rate_limit_warning: "Le forfait gratuit Alpha Vantage est limité à 25 appels API par jour. À utiliser de préférence comme fournisseur complémentaire pour les ETF européens non disponibles chez d'autres fournisseurs."
         no_health_check_note: "La vérification de l'état de la connexion n'est pas disponible pour ce fournisseur en raison de la limite de débit stricte."
       twelve_data_settings:
         title: "Twelve Data"
