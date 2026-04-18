@@ -379,6 +379,10 @@ class User < ApplicationRecord
         self.show_sidebar = true unless show_sidebar
         self.show_ai_sidebar = true unless show_ai_sidebar
       end
+
+      if new_record? && member? && !ai_available?
+        self.show_ai_sidebar = false
+      end
     end
 
     def leaving_guest_role?
