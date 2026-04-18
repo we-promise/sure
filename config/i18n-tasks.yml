@@ -11,6 +11,7 @@ search:
   paths:
     - app/
   relative_roots:
+    - app/components
     - app/controllers
     - app/controllers/concerns
     - app/helpers

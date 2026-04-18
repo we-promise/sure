@@ -18,6 +18,7 @@ fr:
       info_email: "E-mail :"
       info_name: "Nom :"
       submit_create: Créer un compte
+      submit_accept_invitation: Accepter l'invitation
       account_creation_disabled: La création de compte via l'authentification unique est désactivée. Veuillez contacter un administrateur.
       cancel: Annuler
     new_user:

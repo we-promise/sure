@@ -152,9 +152,13 @@ fr:
       header:
         one: 'Impossible d''enregistrer ce(tte) %{model} : %{count} erreur'
         other: 'Impossible d''enregistrer ce(tte) %{model} : %{count} erreurs'
+  global:
+    expand: Développer
   helpers:
     select:
       prompt: Veuillez sélectionner
+      default_label: Sélectionner…
+      search_placeholder: Rechercher
     submit:
       create: Créer un(e) %{model}
       submit: Enregistrer ce(tte) %{model}
