@@ -1,8 +1,10 @@
 # Pipelock configuration for Docker Compose
 # See https://github.com/luckyPipewrench/pipelock for full options.
 #
-# New in v2.0: trusted_domains, redirect profiles, attack simulation,
-# security scoring, process sandbox, and enhanced tool poisoning detection.
+# Recent additions: trusted_domains, redirect profiles, attack simulation,
+# security scoring, process sandbox, enhanced tool poisoning detection, signed
+# action receipts, per-pattern DLP warn mode, and the `pipelock posture verify`
+# / `pipelock session` CLIs.
 # Run `pipelock simulate --config <file>` to test your config against 24 attack scenarios.
 # Run `pipelock audit score --config <file>` for a security posture score (0-100).
 
@@ -54,7 +56,7 @@ mcp_tool_scanning:
 mcp_tool_policy:
   enabled: false
   action: warn
-  # Redirect profiles (v2.0): route matched tool calls to audited handler programs
+  # Redirect profiles: route matched tool calls to audited handler programs
   # instead of blocking. The handler returns a synthetic MCP response.
   # redirect_profiles:
   #   safe-fetch:

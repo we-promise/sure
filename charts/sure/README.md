@@ -645,7 +645,7 @@ hpa:
 - **Forward proxy** (port 8888): Scans outbound HTTPS from Faraday-based AI clients. Auto-injected via `HTTPS_PROXY` env vars when enabled.
 - **MCP reverse proxy** (port 8889): Scans inbound MCP traffic from external AI assistants.
 
-v2.0 adds enhanced tool poisoning detection (full JSON schema scanning), per-read kill switch preemption on long-lived connections, trusted domain allowlisting, and MCP tool redirect profiles. Process sandboxing and attack simulation are also available via `extraConfig` and CLI.
+Recent pipelock releases add enhanced tool poisoning detection (full JSON schema scanning), per-read kill switch preemption, trusted domain allowlisting, MCP tool redirect profiles, signed action receipts, per-pattern DLP warn mode, and the `pipelock posture verify` / `pipelock session` CLIs. Process sandboxing and attack simulation are also available via `extraConfig` and CLI. See the [pipelock changelog](https://github.com/luckyPipewrench/pipelock/releases) for details.
 
 ### Enabling Pipelock
 
@@ -653,7 +653,7 @@ v2.0 adds enhanced tool poisoning detection (full JSON schema scanning), per-rea
 pipelock:
   enabled: true
   image:
-    tag: "2.0.0"
+    tag: "2.2.0"
   mode: balanced   # strict, balanced, or audit
 ```
 
@@ -685,7 +685,7 @@ pipelock:
 
 ### Validating your config
 
-Pipelock v2.0 includes two CLI tools for config validation:
+Pipelock includes CLI tools for config validation:
 
 ```bash
 # Run 24 synthetic attack scenarios against your config
