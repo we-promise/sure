@@ -27,6 +27,14 @@ revoked_key:
   expires_at: null
   revoked_at: <%= 1.hour.ago %>
 
+read_only_key:
+  display_key: "test_read_only_key_123"
+  name: "Read Only API Key"
+  user: family_admin
+  scopes: [ "read" ]
+  expires_at: <%= 1.year.from_now %>
+  source: "mobile"
+
 one:
   id: <%= SecureRandom.uuid %>
   user: family_admin

@@ -1,0 +1,460 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# YNAB → Sure Sync Script
+#
+# Reads data from the YNAB API and imports it into Sure via the Sure API.
+#
+# Usage:
+#   ruby bin/ynab_sync
+#
+# Environment variables:
+#   YNAB_TOKEN        - YNAB Personal Access Token (required)
+#                       Get one at: https://app.ynab.com/settings/developer
+#   SURE_API_KEY      - Sure API key with read_write scope (required)
+#   SURE_BASE_URL     - Sure API base URL (default: http://localhost:3000)
+#   YNAB_PLAN_ID      - YNAB budget/plan ID (default: "last-used")
+#   YNAB_SINCE_DATE   - Only import transactions on or after this date (YYYY-MM-DD)
+#   DRY_RUN           - Set to "true" to preview without creating anything
+#
+# The script will:
+#   1. Fetch accounts, categories, and transactions from YNAB
+#   2. Fetch existing accounts and categories from Sure
+#   3. Display mappings and ask for confirmation
+#   4. Create transactions in Sure via the API
+
+require "net/http"
+require "json"
+require "uri"
+require "bigdecimal"
+
+# --- Configuration ---
+
+YNAB_TOKEN      = ENV.fetch("YNAB_TOKEN")      { abort "Error: YNAB_TOKEN environment variable is required" }
+SURE_API_KEY    = ENV.fetch("SURE_API_KEY")     { abort "Error: SURE_API_KEY environment variable is required" }
+SURE_BASE_URL   = ENV.fetch("SURE_BASE_URL", "http://localhost:3000")
+YNAB_PLAN_ID    = ENV.fetch("YNAB_PLAN_ID", "last-used")
+YNAB_SINCE_DATE = ENV["YNAB_SINCE_DATE"]
+DRY_RUN         = ENV["DRY_RUN"] == "true"
+
+YNAB_BASE_URL = "https://api.ynab.com/v1"
+
+# --- API Clients ---
+
+module YnabClient
+  module_function
+
+  def get(path)
+    uri = URI("#{YNAB_BASE_URL}#{path}")
+    req = Net::HTTP::Get.new(uri)
+    req["Authorization"] = "Bearer #{YNAB_TOKEN}"
+    req["Accept"] = "application/json"
+
+    response = Net::HTTP.start(uri.hostname, uri.port, use_ssl: true, open_timeout: 10, read_timeout: 30) { |http| http.request(req) }
+
+    unless response.is_a?(Net::HTTPSuccess)
+      abort "YNAB API error (#{response.code}): #{response.body}"
+    end
+
+    JSON.parse(response.body, symbolize_names: true)
+  end
+
+  def fetch_accounts
+    data = get("/plans/#{YNAB_PLAN_ID}/accounts")
+    data.dig(:data, :accounts)&.reject { |a| a[:deleted] } || []
+  end
+
+  def fetch_categories
+    data = get("/plans/#{YNAB_PLAN_ID}/categories")
+    groups = data.dig(:data, :category_groups) || []
+    groups.reject { |g| g[:deleted] }
+  end
+
+  def fetch_transactions
+    path = "/plans/#{YNAB_PLAN_ID}/transactions"
+    path += "?since_date=#{YNAB_SINCE_DATE}" if YNAB_SINCE_DATE
+    data = get(path)
+    data.dig(:data, :transactions)&.reject { |t| t[:deleted] } || []
+  end
+end
+
+module SureClient
+  module_function
+
+  def get(path)
+    uri = URI("#{SURE_BASE_URL}/api/v1#{path}")
+    req = Net::HTTP::Get.new(uri)
+    req["X-Api-Key"] = SURE_API_KEY
+    req["Accept"] = "application/json"
+
+    response = Net::HTTP.start(uri.hostname, uri.port, use_ssl: uri.scheme == "https", open_timeout: 10, read_timeout: 30) { |http| http.request(req) }
+
+    unless response.is_a?(Net::HTTPSuccess)
+      abort "Sure API error on GET #{path} (#{response.code}): #{response.body}"
+    end
+
+    JSON.parse(response.body, symbolize_names: true)
+  end
+
+  def post(path, body)
+    uri = URI("#{SURE_BASE_URL}/api/v1#{path}")
+    req = Net::HTTP::Post.new(uri)
+    req["X-Api-Key"] = SURE_API_KEY
+    req["Content-Type"] = "application/json"
+    req["Accept"] = "application/json"
+    req.body = body.to_json
+
+    response = Net::HTTP.start(uri.hostname, uri.port, use_ssl: uri.scheme == "https", open_timeout: 10, read_timeout: 30) { |http| http.request(req) }
+
+    case response.code.to_i
+    when 200, 201, 202
+      JSON.parse(response.body, symbolize_names: true)
+    when 422
+      parsed = JSON.parse(response.body, symbolize_names: true) rescue {}
+      { error: true, status: 422, message: parsed[:message] || response.body }
+    when 429
+      { error: true, status: 429, message: "Rate limited" }
+    else
+      { error: true, status: response.code.to_i, message: response.body }
+    end
+  end
+
+  def fetch_accounts
+    all = []
+    page = 1
+    loop do
+      data = get("/accounts?page=#{page}&per_page=100")
+      accounts = data[:accounts] || []
+      all.concat(accounts)
+      break if accounts.size < 100
+      page += 1
+    end
+    all
+  end
+
+  def fetch_categories
+    all = []
+    page = 1
+    loop do
+      data = get("/categories?page=#{page}&per_page=100")
+      categories = data[:categories] || []
+      all.concat(categories)
+      break if categories.size < 100
+      page += 1
+    end
+    all
+  end
+end
+
+# --- Data Mapping ---
+
+# YNAB amounts are in milliunits (1000 = $1.00)
+# YNAB: negative = outflow (expense), positive = inflow (income)
+# Sure API: uses `nature` param — "expense" or "income" with positive amount
+def milliunit_to_decimal(milliunits)
+  # Preserve full precision — some currencies use 3 decimal places (JOD, KWD)
+  BigDecimal(milliunits.to_s) / 1000
+end
+
+# Map YNAB account types to Sure account types
+ACCOUNT_TYPE_MAP = {
+  "checking"       => "Depository",
+  "savings"        => "Depository",
+  "cash"           => "Depository",
+  "creditCard"     => "CreditCard",
+  "lineOfCredit"   => "CreditCard",
+  "otherAsset"     => "OtherAsset",
+  "otherLiability" => "Loan",
+  "mortgage"       => "Loan",
+  "autoLoan"       => "Loan",
+  "studentLoan"    => "Loan",
+  "personalLoan"   => "Loan",
+  "medicalDebt"    => "Loan",
+  "otherDebt"      => "Loan"
+}.freeze
+
+def build_account_mapping(ynab_accounts, sure_accounts)
+  mapping = {}
+
+  ynab_accounts.each do |ya|
+    # Try exact name match first, then case-insensitive
+    match = sure_accounts.find { |sa| sa[:name] == ya[:name] } ||
+            sure_accounts.find { |sa| sa[:name]&.downcase == ya[:name]&.downcase }
+
+    mapping[ya[:id]] = {
+      ynab_name: ya[:name],
+      ynab_type: ya[:type],
+      sure_account: match,
+      sure_id: match&.dig(:id),
+      matched: !match.nil?
+    }
+  end
+
+  mapping
+end
+
+def build_category_mapping(ynab_category_groups, sure_categories)
+  mapping = {}
+
+  ynab_category_groups.each do |group|
+    next if group[:name] == "Internal Master Category" # YNAB internal
+
+    categories = group[:categories]&.reject { |c| c[:deleted] } || []
+
+    categories.each do |cat|
+      # Try matching by category name (ignore group)
+      match = sure_categories.find { |sc| sc[:name]&.downcase == cat[:name]&.downcase } ||
+              sure_categories.find { |sc| sc[:name]&.downcase == "#{group[:name]}: #{cat[:name]}"&.downcase }
+
+      mapping[cat[:id]] = {
+        ynab_group: group[:name],
+        ynab_name: cat[:name],
+        sure_category: match,
+        sure_id: match&.dig(:id),
+        matched: !match.nil?
+      }
+    end
+  end
+
+  mapping
+end
+
+# --- Display ---
+
+def print_header(title)
+  puts "\n#{"=" * 60}"
+  puts "  #{title}"
+  puts "=" * 60
+end
+
+def print_account_mapping(mapping)
+  print_header("Account Mapping")
+
+  matched = mapping.values.select { |m| m[:matched] }
+  unmatched = mapping.values.reject { |m| m[:matched] }
+
+  if matched.any?
+    puts "\n  Matched (#{matched.size}):"
+    matched.each do |m|
+      puts "    #{m[:ynab_name]} (#{m[:ynab_type]}) → #{m[:sure_account][:name]}"
+    end
+  end
+
+  if unmatched.any?
+    puts "\n  Unmatched (#{unmatched.size}) — transactions for these will be skipped:"
+    unmatched.each do |m|
+      puts "    #{m[:ynab_name]} (#{m[:ynab_type]}) → [no match in Sure]"
+    end
+  end
+end
+
+def print_category_mapping(mapping)
+  print_header("Category Mapping")
+
+  matched = mapping.values.select { |m| m[:matched] }
+  unmatched = mapping.values.reject { |m| m[:matched] }
+
+  if matched.any?
+    puts "\n  Matched (#{matched.size}):"
+    matched.each do |m|
+      puts "    #{m[:ynab_group]}: #{m[:ynab_name]} → #{m[:sure_category][:name]}"
+    end
+  end
+
+  if unmatched.any?
+    puts "\n  Unmatched (#{unmatched.size}) — transactions will be imported without category:"
+    unmatched.each do |m|
+      puts "    #{m[:ynab_group]}: #{m[:ynab_name]}"
+    end
+  end
+end
+
+# --- Import ---
+
+def fetch_existing_transactions(account_mapping)
+  existing = {}
+
+  account_mapping.each do |_ynab_id, mapping|
+    next unless mapping[:sure_id]
+
+    sure_id = mapping[:sure_id]
+    page = 1
+    loop do
+      params = "account_id=#{sure_id}&page=#{page}&per_page=100"
+      params += "&start_date=#{YNAB_SINCE_DATE}" if YNAB_SINCE_DATE
+      data = SureClient.get("/transactions?#{params}")
+      txns = data[:transactions] || []
+      txns.each do |t|
+        # Key: account_id + date + signed_amount_cents + name for dedup
+        key = "#{t.dig(:account, :id)}|#{t[:date]}|#{t[:signed_amount_cents]}|#{t[:name]}"
+        existing[key] ||= 0
+        existing[key] += 1
+      end
+      break if txns.size < 100
+      page += 1
+    end
+  end
+
+  existing
+end
+
+def transaction_dedup_key(sure_account_id, date, amount_cents, name = nil)
+  "#{sure_account_id}|#{date}|#{amount_cents}|#{name}"
+end
+
+def import_transactions(transactions, account_mapping, category_mapping)
+  # Filter to only transactions with mapped accounts, excluding transfers
+  importable = transactions.select { |t|
+    account_mapping.dig(t[:account_id], :sure_id) && t[:transfer_account_id].nil?
+  }
+  transfers = transactions.count { |t| t[:transfer_account_id] }
+  skipped_no_account = transactions.size - importable.size - transfers
+
+  print_header("Import Summary")
+  puts "\n  Total YNAB transactions: #{transactions.size}"
+  puts "  Transfers (skipped):     #{transfers}"
+  puts "  No account match:        #{skipped_no_account}"
+  puts "  Ready to import:         #{importable.size}"
+
+  if importable.empty?
+    puts "\n  Nothing to import."
+    return
+  end
+
+  # Fetch existing transactions for deduplication
+  puts "\n  Checking for duplicates..."
+  existing = fetch_existing_transactions(account_mapping)
+
+  duplicates = 0
+  to_import = []
+
+  importable.each do |txn|
+    sure_account_id = account_mapping.dig(txn[:account_id], :sure_id)
+    amount = milliunit_to_decimal(txn[:amount])
+    # Sure stores: positive = outflow, negative = inflow. YNAB: negative = outflow.
+    # So we negate: YNAB -500 (outflow) → Sure +500, YNAB +500 (inflow) → Sure -500
+    signed_cents = (amount * -100).round.to_i
+    name = txn[:payee_name] || txn[:import_payee_name] || "YNAB Import"
+    key = transaction_dedup_key(sure_account_id, txn[:date], signed_cents, name)
+
+    if existing[key] && existing[key] > 0
+      existing[key] -= 1
+      duplicates += 1
+    else
+      to_import << txn
+    end
+  end
+
+  puts "  Duplicates found:        #{duplicates}"
+  puts "  New to import:           #{to_import.size}"
+
+  if DRY_RUN
+    puts "\n  DRY RUN — no transactions will be created."
+    return
+  end
+
+  if to_import.empty?
+    puts "\n  All transactions already exist. Nothing to import."
+    return
+  end
+
+  print "\n  Proceed? (y/N): "
+  answer = $stdin.gets&.strip&.downcase
+  unless answer == "y"
+    puts "  Aborted."
+    return
+  end
+
+  created = 0
+  errors = 0
+
+  to_import.each_with_index do |txn, idx|
+    sure_account_id = account_mapping.dig(txn[:account_id], :sure_id)
+    sure_category_id = category_mapping.dig(txn[:category_id], :sure_id)
+
+    amount = milliunit_to_decimal(txn[:amount])
+    # YNAB: negative = outflow, positive = inflow
+    nature = amount < 0 ? "expense" : "income"
+
+    params = {
+      transaction: {
+        account_id: sure_account_id,
+        name: txn[:payee_name] || txn[:import_payee_name] || "YNAB Import",
+        amount: amount.abs.to_f,
+        date: txn[:date],
+        nature: nature,
+        notes: txn[:memo]
+      }.compact
+    }
+
+    params[:transaction][:category_id] = sure_category_id if sure_category_id
+
+    result = SureClient.post("/transactions", params)
+
+    if result[:error] && result[:status] == 429
+      puts "\n  Rate limited — waiting 5 seconds..."
+      sleep 5
+      result = SureClient.post("/transactions", params)
+    end
+
+    if result[:error]
+      errors += 1
+      $stderr.puts "  Error importing '#{params[:transaction][:name]}' (#{txn[:date]}): #{result[:message]}"
+    else
+      created += 1
+    end
+
+    # Progress
+    if (idx + 1) % 50 == 0
+      puts "  Progress: #{idx + 1}/#{to_import.size} (#{created} created, #{errors} errors)"
+    end
+  end
+
+  print_header("Results")
+  puts "\n  Created:  #{created}"
+  puts "  Errors:   #{errors}"
+  puts "  Skipped:  #{duplicates} (duplicates)"
+end
+
+# --- Main ---
+
+def main
+  puts "YNAB → Sure Sync"
+  puts "-" * 40
+  puts "YNAB Plan:     #{YNAB_PLAN_ID}"
+  puts "Sure URL:      #{SURE_BASE_URL}"
+  puts "Since date:    #{YNAB_SINCE_DATE || '(all)'}"
+  puts "Dry run:       #{DRY_RUN}"
+
+  # 1. Fetch data from both APIs
+  puts "\nFetching YNAB data..."
+  ynab_accounts = YnabClient.fetch_accounts
+  puts "  #{ynab_accounts.size} accounts"
+
+  ynab_categories = YnabClient.fetch_categories
+  cat_count = ynab_categories.sum { |g| g[:categories]&.reject { |c| c[:deleted] }&.size || 0 }
+  puts "  #{cat_count} categories in #{ynab_categories.size} groups"
+
+  ynab_transactions = YnabClient.fetch_transactions
+  puts "  #{ynab_transactions.size} transactions"
+
+  puts "\nFetching Sure data..."
+  sure_accounts = SureClient.fetch_accounts
+  puts "  #{sure_accounts.size} accounts"
+
+  sure_categories = SureClient.fetch_categories
+  puts "  #{sure_categories.size} categories"
+
+  # 2. Build mappings
+  account_mapping = build_account_mapping(ynab_accounts, sure_accounts)
+  category_mapping = build_category_mapping(ynab_categories, sure_categories)
+
+  # 3. Display mappings
+  print_account_mapping(account_mapping)
+  print_category_mapping(category_mapping)
+
+  # 4. Import transactions
+  import_transactions(ynab_transactions, account_mapping, category_mapping)
+end
+
+main

@@ -43,6 +43,9 @@ en:
         instructions: Select continue to parse your CSV and move on to the clean step.
       mint_import:
         date_format_label: Date format
+      ynab_import:
+        pre_configured: We have pre-configured your YNAB import for you. Outflow and Inflow columns will be merged automatically. Please proceed to the next step.
+        date_format_label: Date format
       rule_import:
         description: Configure your rule import. Rules will be created or updated based
           on the CSV data.
