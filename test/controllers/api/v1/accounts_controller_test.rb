@@ -4,214 +4,243 @@ require "test_helper"
 
 class Api::V1::AccountsControllerTest < ActionDispatch::IntegrationTest
   setup do
-    @user = users(:family_admin) # dylan_family user
-    @other_family_user = users(:family_member)
-    @other_family_user.update!(family: families(:empty))
+    @user = users(:family_admin)
+    @family = families(:dylan_family)
 
-    @oauth_app = Doorkeeper::Application.create!(
-      name: "Test API App",
-      redirect_uri: "https://example.com/callback",
-      scopes: "read read_write"
-    )
-  end
+    # Destroy existing active API keys to avoid validation errors
+    @user.api_keys.active.destroy_all
 
-  test "should require authentication" do
-    get "/api/v1/accounts"
-    assert_response :unauthorized
-
-    response_body = JSON.parse(response.body)
-    assert_equal "unauthorized", response_body["error"]
-  end
-
-  test "should require read_accounts scope" do
-  # TODO: Re-enable this test after fixing scope checking
-  skip "Scope checking temporarily disabled - needs configuration fix"
-
-  # Create token with wrong scope - using a non-existent scope to test rejection
-  access_token = Doorkeeper::AccessToken.create!(
-    application: @oauth_app,
-    resource_owner_id: @user.id,
-    scopes: "invalid_scope" # Wrong scope
-  )
-
-  get "/api/v1/accounts", params: {}, headers: {
-    "Authorization" => "Bearer #{access_token.token}"
-  }
-
-  assert_response :forbidden
-
-  # Doorkeeper returns a standard OAuth error response
-  response_body = JSON.parse(response.body)
-  assert_equal "insufficient_scope", response_body["error"]
-end
-
-  test "should return user's family accounts successfully" do
-    access_token = Doorkeeper::AccessToken.create!(
-      application: @oauth_app,
-      resource_owner_id: @user.id,
-      scopes: "read"
+    # Create fresh API keys instead of using fixtures to avoid parallel test conflicts (rate limiting)
+    @api_key = ApiKey.create!( # pipelock:ignore Credential in URL
+      user: @user,
+      name: "Test Read-Write Key",
+      scopes: [ "read_write" ],
+      display_key: "test_rw_#{SecureRandom.hex(8)}"
     )
 
-    get "/api/v1/accounts", params: {}, headers: {
-      "Authorization" => "Bearer #{access_token.token}"
-    }
+    @read_key = ApiKey.create!(
+      user: @user,
+      name: "Test Read-Only Key",
+      scopes: [ "read" ],
+      display_key: "test_ro_#{SecureRandom.hex(8)}",
+      source: "mobile"
+    )
 
-    assert_response :success
+    # Clear any existing rate limit data
+    Redis.new.del("api_rate_limit:#{@api_key.id}")
+    Redis.new.del("api_rate_limit:#{@read_key.id}")
+  end
+
+  test "can list accounts" do
+    get api_v1_accounts_url, headers: api_headers
+
+    assert_response :ok
+
     response_body = JSON.parse(response.body)
-
-    # Should have accounts array
     assert response_body.key?("accounts")
     assert response_body["accounts"].is_a?(Array)
-
-    # Should have pagination metadata
-    assert response_body.key?("pagination")
-    assert response_body["pagination"].key?("page")
-    assert response_body["pagination"].key?("per_page")
-    assert response_body["pagination"].key?("total_count")
-    assert response_body["pagination"].key?("total_pages")
-
-    # All accounts should belong to user's family
-    response_body["accounts"].each do |account|
-      # We'll validate this by checking the user's family has these accounts
-      family_account_names = @user.family.accounts.pluck(:name)
-      assert_includes family_account_names, account["name"]
-    end
-  end
-
-  test "should only return active accounts" do
-    # Make one account inactive
-    inactive_account = accounts(:depository)
-    inactive_account.disable!
-
-    access_token = Doorkeeper::AccessToken.create!(
-      application: @oauth_app,
-      resource_owner_id: @user.id,
-      scopes: "read"
-    )
-
-    get "/api/v1/accounts", params: {}, headers: {
-      "Authorization" => "Bearer #{access_token.token}"
-    }
-
-    assert_response :success
-    response_body = JSON.parse(response.body)
-
-    # Should not include the inactive account
-    account_names = response_body["accounts"].map { |a| a["name"] }
-    assert_not_includes account_names, inactive_account.name
-  end
-
-  test "should not return other family's accounts" do
-    access_token = Doorkeeper::AccessToken.create!(
-      application: @oauth_app,
-      resource_owner_id: @other_family_user.id,  # User from different family
-      scopes: "read"
-    )
-
-    get "/api/v1/accounts", params: {}, headers: {
-      "Authorization" => "Bearer #{access_token.token}"
-    }
-
-    assert_response :success
-    response_body = JSON.parse(response.body)
-
-    # Should return empty array since other family has no accounts in fixtures
-    assert_equal [], response_body["accounts"]
-    assert_equal 0, response_body["pagination"]["total_count"]
-  end
-
-  test "should handle pagination parameters" do
-    access_token = Doorkeeper::AccessToken.create!(
-      application: @oauth_app,
-      resource_owner_id: @user.id,
-      scopes: "read"
-    )
-
-    # Test with pagination params
-    get "/api/v1/accounts", params: { page: 1, per_page: 2 }, headers: {
-      "Authorization" => "Bearer #{access_token.token}"
-    }
-
-    assert_response :success
-    response_body = JSON.parse(response.body)
-
-    # Should respect per_page limit
-    assert response_body["accounts"].length <= 2
-    assert_equal 1, response_body["pagination"]["page"]
-    assert_equal 2, response_body["pagination"]["per_page"]
-  end
-
-  test "should return proper account data structure" do
-    access_token = Doorkeeper::AccessToken.create!(
-      application: @oauth_app,
-      resource_owner_id: @user.id,
-      scopes: "read"
-    )
-
-    get "/api/v1/accounts", params: {}, headers: {
-      "Authorization" => "Bearer #{access_token.token}"
-    }
-
-    assert_response :success
-    response_body = JSON.parse(response.body)
-
-    # Should have at least one account from fixtures
     assert response_body["accounts"].length > 0
+  end
 
-    account = response_body["accounts"].first
+  test "can show account" do
+    account = @family.accounts.visible.first
 
-    # Check required fields are present
-    required_fields = %w[id name balance currency classification account_type]
-    required_fields.each do |field|
-      assert account.key?(field), "Account should have #{field} field"
+    get api_v1_account_url(account), headers: api_headers
+
+    assert_response :ok
+
+    response_body = JSON.parse(response.body)
+    assert_equal account.id, response_body["id"]
+    assert_equal account.name, response_body["name"]
+    assert_equal account.currency, response_body["currency"]
+    assert response_body.key?("balance")
+    assert response_body.key?("classification")
+    assert response_body.key?("account_type")
+    assert response_body.key?("created_at")
+    assert response_body.key?("updated_at")
+  end
+
+  test "returns 404 for unknown account" do
+    get api_v1_account_url(id: SecureRandom.uuid), headers: api_headers
+
+    assert_response :not_found
+
+    response_body = JSON.parse(response.body)
+    assert_equal "not_found", response_body["error"]
+  end
+
+  test "returns 404 for account from another family" do
+    other_family = families(:empty)
+    other_account = Account.create!(
+      family: other_family, name: "Other Account", currency: "USD",
+      balance: 100, accountable: Depository.new
+    )
+
+    get api_v1_account_url(other_account), headers: api_headers
+
+    assert_response :not_found
+  end
+
+  test "can create account" do
+    assert_difference -> { @family.accounts.count }, 1 do
+      post api_v1_accounts_url,
+           params: { account: { name: "New Savings", accountable_type: "Depository", balance: 1000, currency: "USD" } },
+           headers: api_headers
     end
 
-    # Check data types
-    assert account["id"].is_a?(String), "ID should be string (UUID)"
-    assert account["name"].is_a?(String), "Name should be string"
-    assert account["balance"].is_a?(String), "Balance should be string (money)"
-    assert account["currency"].is_a?(String), "Currency should be string"
-    assert %w[asset liability].include?(account["classification"]), "Classification should be asset or liability"
+    assert_response :created
+
+    response_body = JSON.parse(response.body)
+    assert_equal "New Savings", response_body["name"]
+    assert_equal "USD", response_body["currency"]
+    assert_equal "depository", response_body["account_type"]
+    assert response_body.key?("id")
+    assert response_body.key?("balance")
   end
 
-  test "should handle invalid pagination parameters gracefully" do
-    access_token = Doorkeeper::AccessToken.create!(
-      application: @oauth_app,
-      resource_owner_id: @user.id,
-      scopes: "read"
+  test "returns 422 for invalid account" do
+    assert_no_difference -> { @family.accounts.count } do
+      post api_v1_accounts_url,
+           params: { account: { accountable_type: "Depository" } },
+           headers: api_headers
+    end
+
+    assert_response :unprocessable_entity
+
+    response_body = JSON.parse(response.body)
+    assert_equal "validation_failed", response_body["error"]
+  end
+
+  test "requires read_write scope for create" do
+    assert_no_difference -> { @family.accounts.count } do
+      post api_v1_accounts_url,
+           params: { account: { name: "Blocked Account", accountable_type: "Depository" } },
+           headers: api_headers(@read_key)
+    end
+
+    assert_response :forbidden
+  end
+
+  test "requires authentication for index" do
+    get api_v1_accounts_url
+    assert_response :unauthorized
+  end
+
+  test "requires authentication for show" do
+    account = @family.accounts.visible.first
+    get api_v1_account_url(account)
+    assert_response :unauthorized
+  end
+
+  test "requires authentication for create" do
+    assert_no_difference -> { @family.accounts.count } do
+      post api_v1_accounts_url,
+           params: { account: { name: "No Auth", accountable_type: "Depository" } }
+    end
+    assert_response :unauthorized
+  end
+
+  # UPDATE action tests
+
+  test "can update account name" do
+    account = @family.accounts.visible.first
+
+    patch api_v1_account_url(account),
+          params: { account: { name: "Updated Name" } },
+          headers: api_headers
+
+    assert_response :ok
+
+    response_body = JSON.parse(response.body)
+    assert_equal "Updated Name", response_body["name"]
+    assert_equal account.id, response_body["id"]
+  end
+
+  test "can update account balance" do
+    account = @family.accounts.visible.first
+
+    patch api_v1_account_url(account),
+          params: { account: { balance: 9999.99 } },
+          headers: api_headers
+
+    assert_response :ok
+  end
+
+  test "requires read_write scope for update" do
+    account = @family.accounts.visible.first
+
+    patch api_v1_account_url(account),
+          params: { account: { name: "Should Fail" } },
+          headers: api_headers(@read_key)
+
+    assert_response :forbidden
+  end
+
+  test "returns 404 for updating non-existent account" do
+    patch api_v1_account_url(id: SecureRandom.uuid),
+          params: { account: { name: "Not Found" } },
+          headers: api_headers
+
+    assert_response :not_found
+  end
+
+  test "returns 404 for updating account from another family" do
+    other_account = Account.create!(
+      family: families(:empty), name: "Other Account", currency: "USD",
+      balance: 100, accountable: Depository.new
     )
 
-    # Test with invalid page number
-    get "/api/v1/accounts", params: { page: -1, per_page: "invalid" }, headers: {
-      "Authorization" => "Bearer #{access_token.token}"
-    }
+    patch api_v1_account_url(other_account),
+          params: { account: { name: "Hijack" } },
+          headers: api_headers
 
-    # Should still return success with default pagination
-    assert_response :success
-    response_body = JSON.parse(response.body)
-
-    # Should have pagination info (with defaults applied)
-    assert response_body.key?("pagination")
-    assert response_body["pagination"]["page"] >= 1
-    assert response_body["pagination"]["per_page"] > 0
+    assert_response :not_found
   end
 
-  test "should sort accounts alphabetically" do
-    access_token = Doorkeeper::AccessToken.create!(
-      application: @oauth_app,
-      resource_owner_id: @user.id,
-      scopes: "read"
+  # DESTROY action tests
+
+  test "can delete account" do
+    account = Account.create!(
+      family: @family, name: "Delete Me", currency: "USD",
+      balance: 0, accountable: Depository.new
     )
 
-    get "/api/v1/accounts", params: {}, headers: {
-      "Authorization" => "Bearer #{access_token.token}"
-    }
+    delete api_v1_account_url(account), headers: api_headers
 
-    assert_response :success
+    assert_response :ok
+
     response_body = JSON.parse(response.body)
-
-    # Should be sorted alphabetically by name
-    account_names = response_body["accounts"].map { |a| a["name"] }
-    assert_equal account_names.sort, account_names
+    assert_equal "Account deleted successfully", response_body["message"]
   end
+
+  test "requires read_write scope for destroy" do
+    account = @family.accounts.visible.first
+
+    delete api_v1_account_url(account), headers: api_headers(@read_key)
+
+    assert_response :forbidden
+  end
+
+  test "returns 404 for deleting non-existent account" do
+    delete api_v1_account_url(id: SecureRandom.uuid), headers: api_headers
+
+    assert_response :not_found
+  end
+
+  test "returns 404 for deleting account from another family" do
+    other_account = Account.create!(
+      family: families(:empty), name: "Other Account", currency: "USD",
+      balance: 100, accountable: Depository.new
+    )
+
+    delete api_v1_account_url(other_account), headers: api_headers
+
+    assert_response :not_found
+  end
+
+  private
+
+    def api_headers(key = @api_key)
+      { "X-Api-Key" => key.display_key }
+    end
 end

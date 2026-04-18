@@ -2,29 +2,16 @@
 
 module Api
   module V1
-    # API v1 endpoint for merchants
-    # Provides read-only access to family and provider merchants
-    #
-    # @example List all merchants
-    #   GET /api/v1/merchants
-    #
-    # @example Get a specific merchant
-    #   GET /api/v1/merchants/:id
-    #
     class MerchantsController < BaseController
-      before_action -> { authorize_scope!(:read) }
+      before_action -> { authorize_scope!(:read) }, only: %i[index show]
+      before_action -> { authorize_scope!(:read_write) }, only: %i[create update destroy]
+      before_action :set_merchant, only: %i[show update destroy]
+      before_action :ensure_family_merchant, only: %i[update destroy]
 
-      # List all merchants available to the family
-      #
-      # Returns both family-owned merchants and provider merchants
-      # that are assigned to the family's transactions.
-      #
-      # @return [Array<Hash>] JSON array of merchant objects
       def index
         family = current_resource_owner.family
         user = current_resource_owner
 
-        # Single query with OR conditions - more efficient than Ruby deduplication
         family_merchant_ids = family.merchants.select(:id)
         accessible_account_ids = family.accounts.accessible_by(user).select(:id)
         provider_merchant_ids = Transaction.joins(:entry)
@@ -44,44 +31,80 @@ module Api
         render json: { error: "Failed to fetch merchants" }, status: :internal_server_error
       end
 
-      # Get a specific merchant by ID
-      #
-      # Returns a merchant if it belongs to the family or is assigned
-      # to any of the family's transactions.
-      #
-      # @param id [String] The merchant ID
-      # @return [Hash] JSON merchant object or error
       def show
+        render json: merchant_json(@merchant)
+      end
+
+      def create
         family = current_resource_owner.family
-        user = current_resource_owner
+        @merchant = family.merchants.new(merchant_params)
 
-        @merchant = family.merchants.find_by(id: params[:id]) ||
-                    Merchant.joins(transactions: :entry)
-                            .where(entries: { account_id: family.accounts.accessible_by(user).select(:id) })
-                            .distinct
-                            .find_by(id: params[:id])
-
-        if @merchant
-          render json: merchant_json(@merchant)
+        if @merchant.save
+          render json: merchant_json(@merchant), status: :created
         else
-          render json: { error: "Merchant not found" }, status: :not_found
+          render json: { error: @merchant.errors.full_messages.join(", ") }, status: :unprocessable_entity
         end
       rescue StandardError => e
-        Rails.logger.error("API Merchant Show Error: #{e.message}")
-        render json: { error: "Failed to fetch merchant" }, status: :internal_server_error
+        Rails.logger.error("API Merchant Create Error: #{e.message}")
+        render json: { error: "Failed to create merchant" }, status: :internal_server_error
+      end
+
+      def update
+        if @merchant.update(merchant_params)
+          render json: merchant_json(@merchant)
+        else
+          render json: { error: @merchant.errors.full_messages.join(", ") }, status: :unprocessable_entity
+        end
+      rescue StandardError => e
+        Rails.logger.error("API Merchant Update Error: #{e.message}")
+        render json: { error: "Failed to update merchant" }, status: :internal_server_error
+      end
+
+      def destroy
+        @merchant.destroy!
+        head :no_content
+      rescue StandardError => e
+        Rails.logger.error("API Merchant Destroy Error: #{e.message}")
+        render json: { error: "Failed to delete merchant" }, status: :internal_server_error
       end
 
       private
 
-        # Serialize a merchant to JSON format
-        #
-        # @param merchant [Merchant] The merchant to serialize
-        # @return [Hash] JSON-serializable hash
+        def set_merchant
+          family = current_resource_owner.family
+          user = current_resource_owner
+
+          @merchant = family.merchants.find_by(id: params[:id]) ||
+                      Merchant.joins(transactions: :entry)
+                              .where(entries: { account_id: family.accounts.accessible_by(user).select(:id) })
+                              .where(type: "ProviderMerchant")
+                              .distinct
+                              .find_by(id: params[:id])
+
+          unless @merchant
+            render json: { error: "Merchant not found" }, status: :not_found
+          end
+        end
+
+        def ensure_family_merchant
+          return unless @merchant
+
+          unless @merchant.is_a?(FamilyMerchant)
+            render json: { error: "Provider merchants cannot be modified" }, status: :unprocessable_entity
+          end
+        end
+
+        def merchant_params
+          params.require(:merchant).permit(:name, :color, :website_url)
+        end
+
         def merchant_json(merchant)
           {
             id: merchant.id,
             name: merchant.name,
             type: merchant.type,
+            color: merchant.color,
+            website_url: merchant.try(:website_url),
             created_at: merchant.created_at,
             updated_at: merchant.updated_at
           }
