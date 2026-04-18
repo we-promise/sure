@@ -58,23 +58,43 @@
 
         <% @simplefin_accounts.each do |simplefin_account| %>
           <% inferred = @inferred_map[simplefin_account.id] || {} %>
-          <% selected_type = inferred[:confidence] == :high ? inferred[:type] : "skip" %>
+          <% activity = simplefin_account.activity_summary %>
+          <% near_zero_balance = (simplefin_account.current_balance || 0).to_d.abs <= 1 %>
+          <%# "Likely closed" requires evidence of prior activity that has since stopped.
+             An empty payload carries no signal (could be a brand-new card) so it renders
+             the neutral "no transactions imported yet" badge instead. %>
+          <% likely_closed = activity.last_transacted_at.present? && activity.dormant? && near_zero_balance %>
+          <%# Default likely-closed accounts (dormant AND near-zero balance) to "skip" so
+             users don't accidentally create empty Sure accounts for closed/replaced cards. %>
+          <% selected_type = if likely_closed
+            "skip"
+          else
+            inferred[:confidence] == :high ? inferred[:type] : "skip"
+          end %>
           <%# Check if this account needs user attention (type selected but subtype missing) %>
           <% types_with_subtypes = %w[Depository Investment Loan] %>
           <% needs_subtype_attention = selected_type != "skip" && types_with_subtypes.include?(selected_type) && inferred[:subtype].blank? %>
 
-          <div class="rounded-lg p-4 <%= needs_subtype_attention ? "border-2 border-warning bg-warning/5" : "border border-primary" %>">
+          <% card_class = if needs_subtype_attention
+            "border-2 border-warning bg-warning/5"
+          elsif likely_closed
+            "border border-secondary/40 bg-surface-inset/30"
+          else
+            "border border-primary"
+          end %>
+          <div class="rounded-lg p-4 <%= card_class %>">
             <div class="flex items-center justify-between mb-3">
-              <div>
-                <h3 class="font-medium text-primary">
+              <div class="flex-1">
+                <h3 class="font-medium <%= likely_closed ? "text-secondary" : "text-primary" %>">
                   <%= simplefin_account.name %>
                   <% if simplefin_account.org_data.present? && simplefin_account.org_data['name'].present? %>
                     <span class="text-secondary">• <%= simplefin_account.org_data["name"] %></span>
                   <% end %>
                 </h3>
                 <p class="text-sm text-secondary">
-                  Balance: <%= number_to_currency(simplefin_account.current_balance || 0, unit: simplefin_account.currency) %>
+                  <%= t(".account_card.balance") %>: <%= number_to_currency(simplefin_account.current_balance || 0, unit: simplefin_account.currency) %>
                 </p>
+                <%= render "activity_badge", activity: activity, likely_closed: likely_closed %>
               </div>
             </div>
 

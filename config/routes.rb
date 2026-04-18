@@ -490,6 +490,7 @@ Rails.application.routes.draw do
       post :balances
       get :setup_accounts
       post :complete_account_setup
+      post :dismiss_replacement_suggestion
     end
   end
 

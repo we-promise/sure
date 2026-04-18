@@ -1,7 +1,7 @@
 class SimplefinItemsController < ApplicationController
   include SimplefinItems::MapsHelper
-  before_action :set_simplefin_item, only: [ :show, :edit, :update, :destroy, :sync, :balances, :setup_accounts, :complete_account_setup ]
-  before_action :require_admin!, only: [ :new, :create, :select_existing_account, :link_existing_account, :edit, :update, :destroy, :sync, :balances, :setup_accounts, :complete_account_setup ]
+  before_action :set_simplefin_item, only: [ :show, :edit, :update, :destroy, :sync, :balances, :setup_accounts, :complete_account_setup, :dismiss_replacement_suggestion ]
+  before_action :require_admin!, only: [ :new, :create, :select_existing_account, :link_existing_account, :edit, :update, :destroy, :sync, :balances, :setup_accounts, :complete_account_setup, :dismiss_replacement_suggestion ]
 
   def index
     @simplefin_items = Current.family.simplefin_items.active.ordered
@@ -121,6 +121,28 @@ class SimplefinItemsController < ApplicationController
       format.html { redirect_back_or_to accounts_path }
       format.json { head :ok }
     end
+  end
+
+  # Marks one replacement-suggestion as dismissed so the banner stops showing
+  # for that specific (dormant, active) pair. Composite key lets us suppress
+  # just one option if a dormant card has multiple candidates, without hiding
+  # the others. Dismissals are persisted on the latest sync's sync_stats; a
+  # fresh sync emits new suggestions with fresh dismissal state.
+  def dismiss_replacement_suggestion
+    dormant_sfa_id = params.require(:dormant_sfa_id)
+    active_sfa_id = params.require(:active_sfa_id)
+    dismissal_key = "#{dormant_sfa_id}:#{active_sfa_id}"
+    sync = @simplefin_item.syncs.order(created_at: :desc).first
+
+    if sync
+      stats = sync.sync_stats.is_a?(Hash) ? sync.sync_stats.dup : {}
+      dismissed = Array(stats["dismissed_replacement_suggestions"])
+      stats["dismissed_replacement_suggestions"] = (dismissed + [ dismissal_key ]).uniq
+      sync.update!(sync_stats: stats)
+    end
+
+    redirect_back_or_to accounts_path,
+      notice: t(".dismissed")
   end
 
   # Starts a balances-only sync for this SimpleFin item
@@ -365,9 +387,16 @@ class SimplefinItemsController < ApplicationController
     @account = Current.family.accounts.find(params[:account_id])
     simplefin_account = SimplefinAccount.find(params[:simplefin_account_id])
 
-    # Guard: only manual accounts can be linked (no existing provider links or legacy IDs)
-    if @account.account_providers.any? || @account.plaid_account_id.present? || @account.simplefin_account_id.present?
-      flash[:alert] = t("simplefin_items.link_existing_account.errors.only_manual")
+    # Cross-provider guard: we only support swapping SimpleFIN-to-SimpleFIN links
+    # here. If @account is linked to a different provider type (Plaid, Binance,
+    # etc.), require explicit unlink first so users don't silently lose
+    # cross-provider data. Same-provider relinks (e.g., Citi fraud replacement
+    # swapping to a new card sfa) are now allowed below.
+    has_foreign_provider = @account.account_providers
+      .where.not(provider_type: "SimplefinAccount").exists? ||
+      @account.plaid_account_id.present?
+    if has_foreign_provider
+      flash[:alert] = t("simplefin_items.link_existing_account.errors.different_provider")
       if turbo_frame_request?
         return render turbo_stream: Array(flash_notification_stream_items)
       else
@@ -389,6 +418,18 @@ class SimplefinItemsController < ApplicationController
     # Relink behavior: detach any legacy link and point provider link at the chosen account
     Account.transaction do
       simplefin_account.lock!
+
+      # Detach @account's EXISTING SimpleFIN link (if any) before attaching the
+      # new one. This is the fraud-replacement path: user is swapping from
+      # sfa_old (dead card) to sfa_new (replacement). Without this, @account
+      # would end up with two AccountProviders and the old sfa's data would
+      # still flow in on every sync.
+      @account.account_providers.where(provider_type: "SimplefinAccount").find_each do |existing_ap|
+        # Skip the one we're about to (re)assign — avoid deleting what we then recreate.
+        next if existing_ap.provider_id == simplefin_account.id
+        existing_ap.destroy
+      end
+      @account.update!(simplefin_account_id: nil) if @account.simplefin_account_id.present?
 
       # Clear legacy association if present (Account.simplefin_account_id)
       if (legacy_account = simplefin_account.account)
