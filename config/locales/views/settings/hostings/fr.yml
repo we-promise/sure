@@ -11,7 +11,7 @@ fr:
         default_family_none: "Aucune (créer une nouvelle famille)"
         generate_tokens: "Générer un nouveau code"
         generated_tokens: "Codes générés"
-        title: "Intégration"
+        title: "Inscription des utilisateurs"
         states:
           open: "Ouvert"
           closed: "Fermé"
