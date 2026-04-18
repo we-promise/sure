@@ -171,6 +171,7 @@ class TraderepublicItem::Importer
       Rails.logger.error e.backtrace.join("\n") if e.respond_to?(:backtrace)
       raise
     end
+  end
 
   def find_or_create_main_account(portfolio_data)
     # TradeRepublic typically has one main account
