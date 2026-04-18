@@ -1,6 +1,8 @@
 require "test_helper"
 
 class AccountsControllerTest < ActionDispatch::IntegrationTest
+  include ActionView::RecordIdentifier
+
   setup do
     sign_in @user = users(:family_admin)
     @account = accounts(:depository)
@@ -9,11 +11,19 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
   test "should get index" do
     get accounts_url
     assert_response :success
+    assert_select "p.ml-auto.privacy-sensitive"
   end
 
   test "should get show" do
     get account_url(@account)
     assert_response :success
+  end
+
+  test "account activity marks trade amounts as privacy-sensitive" do
+    get account_url(accounts(:investment))
+
+    assert_response :success
+    assert_select "turbo-frame##{dom_id(entries(:trade))} p.privacy-sensitive", count: 1
   end
 
   test "activity pagination keeps activity tab when loaded from holdings tab" do

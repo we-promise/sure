@@ -50,6 +50,16 @@ class BudgetCategoriesControllerTest < ActionDispatch::IntegrationTest
     )
   end
 
+  test "index marks budget form values as privacy-sensitive" do
+    get budget_budget_categories_path(@budget)
+
+    assert_response :success
+    assert_select "input##{dom_id(@parent_budget_category, :budgeted_spending)}"
+    assert_select "##{dom_id(@parent_budget_category, :form)} .privacy-sensitive input##{dom_id(@parent_budget_category, :budgeted_spending)}"
+    assert_select "##{dom_id(@budget, :uncategorized_budget_category_form)} .privacy-sensitive input[name='uncategorized']"
+    assert_select "p.text-secondary.privacy-sensitive", text: /\/m avg/
+  end
+
   test "updating a subcategory adjusts the parent budget by the same delta" do
     assert_changes -> { @parent_budget_category.reload.budgeted_spending.to_f }, from: 500.0, to: 550.0 do
       patch budget_budget_category_path(@budget, @electric_budget_category),
