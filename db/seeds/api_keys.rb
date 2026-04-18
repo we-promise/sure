@@ -11,12 +11,6 @@ setup_key = ENV["SETUP_API_KEY"].to_s.strip
 # Default to auto-generate if not provided or set to "auto"
 setup_key = "auto" if setup_key.blank? || setup_key == "auto"
 
-# Validate password
-unless password.present? && password.length >= 8
-  puts "ERROR: SETUP_ADMIN_PASSWORD must be at least 8 characters"
-  return
-end
-
 # Validate email format
 unless email.match?(URI::MailTo::EMAIL_REGEXP)
   puts "ERROR: SETUP_ADMIN_EMAIL must be a valid email address"
@@ -43,6 +37,12 @@ begin
   if user
     puts "Found existing user: #{email}"
   else
+    # Validate password only when creating a new user
+    unless password.present? && password.length >= 8
+      puts "ERROR: SETUP_ADMIN_PASSWORD must be at least 8 characters"
+      return
+    end
+
     # Create family first since user belongs_to :family is required
     family = Family.create!(name: "#{email.split('@').first.capitalize} Family")
 
@@ -53,7 +53,7 @@ begin
       family: family,
       first_name: "Admin",
       last_name: "User",
-      role: :admin,
+      role: User.role_for_new_family_creator,
       onboarded_at: Time.current
     )
 
@@ -66,9 +66,6 @@ begin
 
   if api_key
     puts "Found existing API key for user (reusing)"
-    puts "Email: #{user.email}"
-    puts "API Key: #{api_key.plain_key}"
-    puts "Scope: read_write"
   else
     # Create new API key
     api_key = user.api_keys.create!(
@@ -79,9 +76,8 @@ begin
     )
 
     puts "Setup API Key created successfully"
-    puts "Email: #{user.email}"
-    puts "API Key: #{api_key.plain_key}"
-    puts "Scope: read_write"
+    # Only print auto-generated keys — user-provided keys don't need echoing
+    puts "API Key: #{api_key.plain_key}" if setup_key == "auto"
   end
 
 rescue ActiveRecord::RecordInvalid => e
