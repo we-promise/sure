@@ -1,0 +1,67 @@
+<%# locals: (simplefin_item:, suggestions:)
+  Banner rendered at the top of the SimpleFIN item card when the importer
+  detects a likely card-replacement pair (old card + new card, same
+  institution, same type). "Relink" reuses the existing link_existing_account
+  controller action to atomically swap the AccountProvider on the linked
+  Sure account. "Dismiss" persists a per-(dormant_sfa_id) dismissal on the
+  latest sync's sync_stats so the banner stops showing for that pair.
+  Suggestions are also auto-suppressed once the relink has already landed. %>
+<% latest_sync = simplefin_item.syncs.order(created_at: :desc).first %>
+<% dismissed_ids = Array(latest_sync&.sync_stats&.dig("dismissed_replacement_suggestions")) %>
+<div class="space-y-2">
+  <% suggestions.each do |suggestion| %>
+    <% old_sfa = simplefin_item.simplefin_accounts.find_by(id: suggestion["dormant_sfa_id"]) %>
+    <% new_sfa = simplefin_item.simplefin_accounts.find_by(id: suggestion["active_sfa_id"]) %>
+    <% sure_account = Current.family.accounts.find_by(id: suggestion["sure_account_id"]) %>
+    <% next unless old_sfa && new_sfa && sure_account %>
+    <%# Hide once the relink has landed: new sfa already linked to the target account. %>
+    <% next if new_sfa.current_account&.id == sure_account.id %>
+    <%# Hide if the user has dismissed this specific pair. %>
+    <% next if dismissed_ids.include?(old_sfa.id) %>
+
+    <div class="bg-yellow-50 theme-dark:bg-yellow-900/20 border border-yellow-200 theme-dark:border-yellow-800 rounded-lg p-4">
+      <div class="flex items-start gap-3">
+        <%= icon "credit-card", size: "sm", color: "warning", class: "shrink-0 mt-0.5" %>
+        <div class="flex-1 space-y-2">
+          <div class="flex items-start justify-between gap-2">
+            <p class="text-sm font-medium text-primary">
+              <%= t("simplefin_items.replacement_prompt.title",
+                    institution: suggestion["institution_name"].presence || simplefin_item.name) %>
+            </p>
+            <%= button_to dismiss_replacement_suggestion_simplefin_item_path(simplefin_item),
+                         params: { dormant_sfa_id: old_sfa.id },
+                         method: :post,
+                         form: { class: "inline shrink-0" },
+                         class: "-mt-1 -mr-1 p-1 rounded hover:bg-yellow-100 theme-dark:hover:bg-yellow-900/40 text-secondary",
+                         aria: { label: t("simplefin_items.replacement_prompt.dismiss_aria") } do %>
+              <%= icon "x", size: "sm" %>
+            <% end %>
+          </div>
+          <p class="text-xs text-secondary">
+            <%= t("simplefin_items.replacement_prompt.description",
+                  account_name: sure_account.name,
+                  old_name: old_sfa.name,
+                  new_name: new_sfa.name) %>
+          </p>
+          <div class="pt-1">
+            <% confirm = CustomConfirm.new(
+                 title: t("simplefin_items.replacement_prompt.confirm_title"),
+                 body: t("simplefin_items.replacement_prompt.confirm_body",
+                         account_name: sure_account.name,
+                         new_name: new_sfa.name),
+                 btn_text: t("simplefin_items.replacement_prompt.relink")
+               ) %>
+            <%= button_to t("simplefin_items.replacement_prompt.relink"),
+                         link_existing_account_simplefin_items_path(
+                           account_id: sure_account.id,
+                           simplefin_account_id: new_sfa.id
+                         ),
+                         method: :post,
+                         data: { turbo_confirm: confirm.to_data_attribute },
+                         class: "inline-flex items-center gap-1.5 text-sm font-medium px-3 py-2 rounded-lg text-inverse bg-inverse hover:bg-inverse-hover" %>
+          </div>
+        </div>
+      </div>
+    </div>
+  <% end %>
+</div>
