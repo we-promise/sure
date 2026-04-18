@@ -19,8 +19,8 @@ fr:
           title: Catégorisation des transactions
           subtitle: L'IA catégorise automatiquement vos transactions en fonction de vos catégories définies
         merchant_detector:
-          title: Détection du commerçant
-          subtitle: L'IA identifie et enrichit les données de transaction avec des informations sur le commerçant
+          title: Détection du marchand
+          subtitle: L'IA identifie et enrichit les données de transaction avec des informations sur le marchand
     payments:
       show:
         page_title: Paiements
@@ -91,7 +91,7 @@ fr:
           body: Êtes-vous sûr(e) de vouloir supprimer définitivement votre compte ? Cette action est irréversible.
           title: Supprimer le compte?
         confirm_reset:
-          body: Êtes-vous sûr(e) de vouloir réinitialiser votre compte ? Cela supprimera tous vos comptes, catégories, commerçants, étiquettes et autres données. Cette action ne peut pas être annulée.
+          body: Êtes-vous sûr(e) de vouloir réinitialiser votre compte ? Cela supprimera tous vos comptes, catégories, marchands, étiquettes et autres données. Cette action ne peut pas être annulée.
           title: Réinitialiser le compte?
         confirm_reset_with_sample_data:
           body: Êtes-vous sûr(e) de vouloir réinitialiser votre compte et charger des données d'exemple ? Cela supprimera vos données existantes et les remplacera par des données de démonstration afin que vous puissiez explorer Sure en toute sécurité.
@@ -106,7 +106,7 @@ fr:
         delete_account: Supprimer le compte
         delete_account_warning: La suppression de votre compte entraînera la suppression permanente de toutes vos données et ne pourra pas être annulée.
         reset_account: Réinitialiser le compte
-        reset_account_warning: La réinitialisation de votre compte supprimera tous vos comptes, catégories, commerçants, étiquettes et autres données, mais gardera votre compte utilisateur intact.
+        reset_account_warning: La réinitialisation de votre compte supprimera tous vos comptes, catégories, marchands, étiquettes et autres données, mais gardera votre compte utilisateur intact.
         reset_account_with_sample_data: Réinitialiser et précharger
         reset_account_with_sample_data_warning: Supprime toutes vos données existantes puis charge des données d'exemple afin que vous puissiez explorer avec un environnement pré-rempli.
         email: E-mail
@@ -160,7 +160,7 @@ fr:
       imports_label: Importations
       exports_label: Exportations
       logout: Se déconnecter
-      merchants_label: Commerçants
+      merchants_label: Marchands
       guides_label: Guides
       other_section_title: Plus
       preferences_label: Préférences

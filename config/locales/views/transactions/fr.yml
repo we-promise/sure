@@ -16,7 +16,7 @@ fr:
       description_placeholder: Libellé de la transaction
       expense: Dépense
       income: Revenu
-      merchant_label: Commerçant
+      merchant_label: Marchand
       none: (aucun)
       note_label: Notes
       note_placeholder: Entrez une note
@@ -47,7 +47,7 @@ fr:
       pending_duplicate_merger_title: Doublon d'une transaction validée ?
       pending_duplicate_merger_description: Fusionnez manuellement cette transaction en attente avec sa version validée.
       pending_duplicate_merger_button: Ouvrir la fusion
-      merchant_label: Commerçant
+      merchant_label: Marchand
       name_label: Nom
       nature: Type
       none: "(aucun)"
@@ -116,7 +116,7 @@ fr:
     header:
       edit_categories: Modifier les catégories
       edit_imports: Modifier les importations
-      edit_merchants: Modifier les commerçants
+      edit_merchants: Modifier les marchands
       edit_tags: Modifier les étiquettes
       import: Importer
     index:
@@ -174,7 +174,7 @@ fr:
         amount: Montant
         category: Catégorie
         tag: Étiquette
-        merchant: Commerçant
+        merchant: Marchand
     convert_to_trade:
       title: Convertir en transaction boursière
       description: Convertir cette transaction en une transaction boursière avec les détails du titre
@@ -247,7 +247,7 @@ fr:
         category_filter: Catégorie
         clear_filters: Effacer les filtres
         date_filter: Date
-        merchant_filter: Commerçant
+        merchant_filter: Marchand
         status_filter: Statut
         tag_filter: Étiquette
         type_filter: Type
