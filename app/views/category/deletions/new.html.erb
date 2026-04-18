@@ -1,4 +1,4 @@
-<%= render DS::Dialog.new do |dialog| %>
+<%= render DS::Dialog.new(scrollable: false) do |dialog| %>
   <% dialog.with_header(title: t(".delete_category"), subtitle: t(".explanation", category_name: @category.name)) %>
 
   <% dialog.with_body do %>
