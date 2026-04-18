@@ -112,7 +112,7 @@ x-rails-env: &rails_env
 
 services:
   pipelock:
-    image: ghcr.io/luckypipewrench/pipelock:latest  # pin to a specific version (e.g., :2.0.0) for production
+    image: ghcr.io/luckypipewrench/pipelock:latest  # pin to a specific version (e.g., :2.2.0) for production
     container_name: pipelock
     hostname: pipelock
     restart: unless-stopped
