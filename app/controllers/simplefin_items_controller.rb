@@ -124,17 +124,20 @@ class SimplefinItemsController < ApplicationController
   end
 
   # Marks one replacement-suggestion as dismissed so the banner stops showing
-  # for it. Dismissals are scoped to the (dormant_sfa_id) pair and persisted on
-  # the latest sync's sync_stats. A fresh sync that re-emits a matching
-  # suggestion will clear the dismissal for that pair.
+  # for that specific (dormant, active) pair. Composite key lets us suppress
+  # just one option if a dormant card has multiple candidates, without hiding
+  # the others. Dismissals are persisted on the latest sync's sync_stats; a
+  # fresh sync emits new suggestions with fresh dismissal state.
   def dismiss_replacement_suggestion
     dormant_sfa_id = params.require(:dormant_sfa_id)
+    active_sfa_id = params.require(:active_sfa_id)
+    dismissal_key = "#{dormant_sfa_id}:#{active_sfa_id}"
     sync = @simplefin_item.syncs.order(created_at: :desc).first
 
     if sync
       stats = sync.sync_stats.is_a?(Hash) ? sync.sync_stats.dup : {}
       dismissed = Array(stats["dismissed_replacement_suggestions"])
-      stats["dismissed_replacement_suggestions"] = (dismissed + [ dormant_sfa_id ]).uniq
+      stats["dismissed_replacement_suggestions"] = (dismissed + [ dismissal_key ]).uniq
       sync.update!(sync_stats: stats)
     end
 

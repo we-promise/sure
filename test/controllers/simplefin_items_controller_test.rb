@@ -616,17 +616,19 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
     get accounts_url
     assert_match(/Citibank card may have been replaced/, response.body)
 
-    # Dismiss
+    # Dismiss — pair key (dormant + active)
     post dismiss_replacement_suggestion_simplefin_item_path(@simplefin_item), params: {
-      dormant_sfa_id: old_sfa.id
+      dormant_sfa_id: old_sfa.id,
+      active_sfa_id: new_sfa.id
     }
     sync.reload
-    assert_includes Array(sync.sync_stats["dismissed_replacement_suggestions"]), old_sfa.id
+    assert_includes Array(sync.sync_stats["dismissed_replacement_suggestions"]),
+                    "#{old_sfa.id}:#{new_sfa.id}"
 
     # Banner is gone after dismissal
     get accounts_url
     refute_match(/Citibank card may have been replaced/, response.body,
-      "banner should not render for a dismissed dormant_sfa_id")
+      "banner should not render for a dismissed pair")
   end
 
   test "replacement prompt relink button successfully swaps AccountProvider" do

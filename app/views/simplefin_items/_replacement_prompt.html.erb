@@ -17,7 +17,8 @@
     <%# Hide once the relink has landed: new sfa already linked to the target account. %>
     <% next if new_sfa.current_account&.id == sure_account.id %>
     <%# Hide if the user has dismissed this specific pair. %>
-    <% next if dismissed_ids.include?(old_sfa.id) %>
+    <% dismissal_key = "#{old_sfa.id}:#{new_sfa.id}" %>
+    <% next if dismissed_ids.include?(dismissal_key) %>
 
     <div class="bg-yellow-50 theme-dark:bg-yellow-900/20 border border-yellow-200 theme-dark:border-yellow-800 rounded-lg p-4">
       <div class="flex items-start gap-3">
@@ -29,7 +30,7 @@
                     institution: suggestion["institution_name"].presence || simplefin_item.name) %>
             </p>
             <%= button_to dismiss_replacement_suggestion_simplefin_item_path(simplefin_item),
-                         params: { dormant_sfa_id: old_sfa.id },
+                         params: { dormant_sfa_id: old_sfa.id, active_sfa_id: new_sfa.id },
                          method: :post,
                          form: { class: "inline shrink-0" },
                          class: "-mt-1 -mr-1 p-1 rounded hover:bg-yellow-100 theme-dark:hover:bg-yellow-900/40 text-secondary",

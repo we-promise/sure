@@ -62,6 +62,17 @@ class SimplefinAccount::ActivitySummaryTest < ActiveSupport::TestCase
     assert_equal 3, summary.recent_transaction_count(days: 90)
   end
 
+  test "falls back to posted when transacted_at is zero (unknown)" do
+    # SimpleFIN uses 0 to signal "unknown" for transacted_at. Because 0 is
+    # truthy in Ruby, a naive `transacted_at || posted` short-circuits to 0
+    # and never falls back. Verify the fallback still produces the posted time.
+    posted_ts = 5.days.ago.to_i
+    summary = SimplefinAccount::ActivitySummary.new([
+      { "transacted_at" => 0, "posted" => posted_ts, "amount" => "-5" }
+    ])
+    assert_equal Time.at(posted_ts), summary.last_transacted_at
+  end
+
   test "dormant? returns true when no activity within window" do
     summary = build([ tx(date: 120.days.ago) ])
     assert summary.dormant?

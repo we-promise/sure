@@ -41,15 +41,23 @@ class SimplefinAccount
       # Extract a Time for sorting/windowing. Prefer transacted_at (SimpleFIN
       # authored timestamp), fall back to posted. Zero values mean "unknown"
       # in SimpleFIN (e.g., pending transactions have posted=0) and are ignored.
+      # Note: integer 0 is truthy in Ruby, so a plain `|| fallback` short-circuits
+      # and never falls back. Use explicit helper so transacted_at=0 properly
+      # yields to posted.
       def transacted_at(tx)
         return nil unless tx.is_a?(Hash) || tx.respond_to?(:[])
-        raw = fetch(tx, "transacted_at") || fetch(tx, "posted")
-        return nil if raw.blank?
-        value = raw.to_i
-        return nil if value.zero?
+        value = timestamp_value(fetch(tx, "transacted_at")) ||
+                timestamp_value(fetch(tx, "posted"))
+        return nil unless value
         Time.at(value)
       rescue StandardError
         nil
+      end
+
+      def timestamp_value(raw)
+        return nil if raw.blank?
+        value = raw.to_i
+        value.zero? ? nil : value
       end
 
       def fetch(tx, key)

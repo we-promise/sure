@@ -179,6 +179,44 @@ class SimplefinItem::ReplacementDetectorTest < ActiveSupport::TestCase
     assert_empty SimplefinItem::ReplacementDetector.new(@item).call
   end
 
+  test "does not emit multiple suggestions pointing at the same active sfa" do
+    # Two dormant credit cards at the same institution, one new active card.
+    # Relinking both would move the provider away from the first account.
+    # Detector must skip both to avoid silent breakage.
+    dormant1 = make_sfa(name: "Citi-OLD-1", account_id: "sf_old1", balance: 0,
+                        transactions: [ tx(when_ago: 60.days) ])
+    link(dormant1, name: "Citi Card 1")
+    dormant2 = make_sfa(name: "Citi-OLD-2", account_id: "sf_old2", balance: 0,
+                        transactions: [ tx(when_ago: 60.days) ])
+    link(dormant2, name: "Citi Card 2")
+    make_sfa(name: "Citi-NEW", account_id: "sf_new", balance: -100,
+             transactions: [ tx(when_ago: 2.days) ])
+
+    suggestions = SimplefinItem::ReplacementDetector.new(@item).call
+    assert_empty suggestions, "must not emit ambiguous pairs that reuse the same active sfa"
+  end
+
+  test "treats blank institution names as non-matching (not co-institutional)" do
+    # SimpleFIN sometimes omits org_data.name. Two credit-card sfas with blank
+    # org names must NOT be treated as at the same institution — otherwise any
+    # dormant+active credit pair would auto-match regardless of provider.
+    dormant = @item.simplefin_accounts.create!(
+      name: "Mystery-OLD", account_id: "sf_mystery_old",
+      currency: "USD", account_type: "credit", current_balance: 0,
+      org_data: {},
+      raw_transactions_payload: [ tx(when_ago: 60.days) ]
+    )
+    link(dormant, name: "Mystery")
+    @item.simplefin_accounts.create!(
+      name: "Mystery-NEW", account_id: "sf_mystery_new",
+      currency: "USD", account_type: "credit", current_balance: -200,
+      org_data: {},
+      raw_transactions_payload: [ tx(when_ago: 2.days) ]
+    )
+
+    assert_empty SimplefinItem::ReplacementDetector.new(@item).call
+  end
+
   test "ignores linked sfa with no transaction history (brand-new card, not dormant)" do
     # A newly linked card with zero balance and no transactions yet must NOT be
     # flagged as a replacement target. "Dormant" requires prior activity that

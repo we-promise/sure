@@ -42,14 +42,22 @@ class SimplefinItem
       active_unlinked = sfas.select { |sfa| unlinked?(sfa) && active?(sfa) }
       return [] if active_unlinked.empty?
 
-      sfas.filter_map do |candidate|
-        next unless linked?(candidate) && dormant_with_zero_balance?(candidate)
+      # First pass: for each dormant candidate, find unambiguous matching actives
+      # (exactly one). Rejects "one dormant → many actives" collisions.
+      candidates = sfas.filter_map do |dormant|
+        next unless linked?(dormant) && dormant_with_zero_balance?(dormant)
+        matches = active_unlinked.select { |sfa| same_institution_and_type?(dormant, sfa) }
+        next if matches.size != 1
+        [ dormant, matches.first ]
+      end
 
-        matches = active_unlinked.select { |sfa| same_institution_and_type?(candidate, sfa) }
-        next if matches.empty? || matches.size > 1  # skip no-match AND ambiguous
-
-        replacement = matches.first
-        build_suggestion(dormant: candidate, active: replacement)
+      # Second pass: reject "many dormants → one active" collisions. If two
+      # dormant accounts both claim the same active, we can't safely auto-suggest
+      # either — relinking both would move the provider away from the first.
+      active_counts = candidates.each_with_object(Hash.new(0)) { |(_d, a), h| h[a.id] += 1 }
+      candidates.filter_map do |dormant, active|
+        next if active_counts[active.id] > 1
+        build_suggestion(dormant: dormant, active: active)
       end
     end
 
@@ -88,8 +96,14 @@ class SimplefinItem
         a.account_type.to_s.casecmp?(b.account_type.to_s)
       end
 
+      # Require BOTH sides to have a non-blank org name. SimpleFIN sometimes omits
+      # org_data.name; "" casecmp? "" would otherwise treat unrelated accounts as
+      # co-institutional, producing false replacement suggestions.
       def org_matches?(a, b)
-        org_name(a).casecmp?(org_name(b))
+        name_a = org_name(a)
+        name_b = org_name(b)
+        return false if name_a.blank? || name_b.blank?
+        name_a.casecmp?(name_b)
       end
 
       def org_name(sfa)

@@ -11,7 +11,11 @@ class SimplefinItemsHelperTest < ActionView::TestCase
   end
 
   test "#activity_when returns 'today' for earlier today" do
-    assert_equal "today", activity_when(6.hours.ago)
+    # Freeze at mid-day so 6.hours.ago is guaranteed to fall on the same
+    # calendar day regardless of when the suite runs.
+    travel_to(Time.zone.parse("2026-04-17 15:00:00")) do
+      assert_equal "today", activity_when(6.hours.ago)
+    end
   end
 
   test "#activity_when returns 'yesterday' one day back" do
@@ -19,10 +23,14 @@ class SimplefinItemsHelperTest < ActionView::TestCase
   end
 
   test "#activity_when returns 'N days ago' for older dates" do
-    assert_equal "5 days ago", activity_when(5.days.ago)
-    # 2 days ago is the first value that hits the plural "N days ago" branch
-    # (0 -> today, 1 -> yesterday, >=2 -> N days ago).
-    assert_equal "2 days ago", activity_when(2.days.ago)
+    # Freeze time so relative "N days ago" stays stable regardless of the
+    # hour-of-day the suite runs.
+    travel_to(Time.zone.parse("2026-04-17 15:00:00")) do
+      assert_equal "5 days ago", activity_when(5.days.ago)
+      # 2 days ago is the first value that hits the plural "N days ago" branch
+      # (0 -> today, 1 -> yesterday, >=2 -> N days ago).
+      assert_equal "2 days ago", activity_when(2.days.ago)
+    end
   end
 
   test "#activity_when respects injected now: for deterministic formatting" do
