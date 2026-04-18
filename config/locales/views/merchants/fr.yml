@@ -52,7 +52,9 @@ fr:
     new:
       title: Nouveau marchand
     perform_merge:
-      success: "%{count} marchands fusionnés avec succès"
+      success:
+        one: "%{count} marchand fusionné avec succès"
+        other: "%{count} marchands fusionnés avec succès"
       no_merchants_selected: Aucun marchand sélectionné à fusionner
       target_not_found: Marchand cible introuvable
       invalid_merchants: Marchands sélectionnés invalides

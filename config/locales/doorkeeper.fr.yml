@@ -32,9 +32,9 @@ fr:
       form:
         error: 'Oups ! Vérifiez votre formulaire pour d''éventuelles erreurs'
       help:
-        confidential: 'L''application sera utilisée dans un contexte où le client secret peut être gardé confidentiel. Les applications mobiles natives et les Single Page Apps sont considérées comme non confidentielles.'
+        confidential: 'L''application sera utilisée dans un contexte où le client secret peut être gardé confidentiel. Les applications mobiles natives et les applications monopage (SPA) sont considérées comme non confidentielles.'
         redirect_uri: 'Utilisez une ligne par URI'
-        blank_redirect_uri: "Laissez vide si vous avez configuré votre fournisseur pour utiliser Client Credentials, Resource Owner Password Credentials ou tout autre type d'octroi qui ne nécessite pas d'URI de redirection."
+        blank_redirect_uri: "Laissez vide si vous avez configuré votre fournisseur pour utiliser les identifiants client (Client Credentials), le mot de passe du propriétaire de la ressource (Resource Owner Password Credentials) ou tout autre type d'octroi qui ne nécessite pas d'URI de redirection."
         scopes: 'Séparez les scopes par des espaces. Laissez vide pour utiliser les scopes par défaut.'
       edit:
         title: 'Modifier l''application'

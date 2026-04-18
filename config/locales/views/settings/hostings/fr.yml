@@ -53,7 +53,7 @@ fr:
           binance_public: "Binance"
       assistant_settings:
         title: "Assistant IA"
-        description: "Choisissez comment l'assistant de discussion répond. Intégré utilise directement votre fournisseur LLM configuré. Externe délègue à un agent IA distant qui peut rappeler les outils financiers de Sure via MCP."
+        description: "Choisissez comment l'assistant de discussion répond. Intégré utilise directement votre fournisseur LLM configuré. Externe délègue à un agent IA distant qui peut invoquer les outils financiers de Sure via MCP."
         type_label: "Type d'assistant"
         type_builtin: "Intégré (LLM direct)"
         type_external: "Externe (agent distant)"
@@ -148,6 +148,7 @@ fr:
         rate_limit_warning: "Le forfait gratuit Alpha Vantage est limité à 25 appels API par jour. Utilisé de préférence comme fournisseur complémentaire pour les ETF européens non disponibles chez d'autres fournisseurs."
         no_health_check_note: "La vérification de l'état de la connexion n'est pas disponible pour ce fournisseur en raison de la limite de débit stricte."
       twelve_data_settings:
+        title: "Twelve Data"
         api_calls_used: "%{used} / %{limit} appels API quotidiens utilisés (%{percentage})"
         description: "Saisissez la clé API fournie par Twelve Data"
         env_configured_message: "Configurée avec succès via la variable d'environnement TWELVE_DATA_API_KEY."
@@ -162,7 +163,6 @@ fr:
         plan_upgrade_warning_description: "Les tickers suivants de votre portefeuille ne peuvent pas synchroniser leurs cours avec votre forfait Twelve Data actuel."
         requires_plan: "nécessite le forfait %{plan}"
         view_pricing: "Voir les tarifs Twelve Data"
-        title: "Twelve Data"
       update:
         failure: "Valeur de paramètre invalide"
         success: "Paramètres mis à jour"

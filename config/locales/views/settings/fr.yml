@@ -191,7 +191,7 @@ fr:
         message: Les clés de chiffrement Active Record ne sont pas configurées. Veuillez vous assurer que les identifiants de chiffrement (active_record_encryption.primary_key, active_record_encryption.deterministic_key et active_record_encryption.key_derivation_salt) sont correctement définis dans vos identifiants Rails ou variables d'environnement avant d'utiliser les fournisseurs de synchronisation.
       coinbase_panel:
         setup_instructions: "Pour connecter Coinbase :"
-        step1_html: Allez dans les <a href="https://portal.cdp.coinbase.com/projects/api-keys" target="_blank" class="text-primary underline">Paramètres API de Coinbase</a>
+        step1_html: Allez dans les <a href="https://portal.cdp.coinbase.com/projects/api-keys" target="_blank" rel="noopener noreferrer" class="text-primary underline">Paramètres API de Coinbase</a>
         step2: Créez une nouvelle clé API avec des permissions en lecture seule (voir les comptes, voir les transactions)
         step3: Copiez votre clé API et votre secret API et collez-les ci-dessous
         api_key_label: Clé API
@@ -206,7 +206,7 @@ fr:
         status_not_connected: Non connecté. Saisissez vos identifiants API ci-dessus pour commencer.
       binance_panel:
         setup_instructions: "Pour connecter Binance, créez une clé API en lecture seule :"
-        step1_html: 'Allez dans la <a href="https://www.binance.com/en/my/settings/api-management" target="_blank" class="underline">Gestion des API Binance</a>'
+        step1_html: 'Allez dans la <a href="https://www.binance.com/en/my/settings/api-management" target="_blank" rel="noopener noreferrer" class="underline">Gestion des API Binance</a>'
         step2: "Créez une nouvelle clé API avec la permission Enable Reading uniquement"
         step3: "Collez votre clé API et votre secret ci-dessous"
         no_withdraw_warning: "Attention : n'activez PAS les permissions de retrait"

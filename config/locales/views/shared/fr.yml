@@ -1,17 +1,5 @@
 ---
 fr:
-  breadcrumbs:
-    home: Accueil
-    dashboard: Tableau de bord
-    accounts: Comptes
-    merchants: Marchands
-    categories: Catégories
-    tags: Étiquettes
-    rules: Règles
-    transactions: Transactions
-    budgets: Budgets
-    imports: Importations
-    chats: Assistant
   shared:
     confirm_modal:
       accept: Confirmer
