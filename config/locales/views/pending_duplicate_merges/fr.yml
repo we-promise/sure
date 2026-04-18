@@ -1,0 +1,14 @@
+---
+fr:
+  pending_duplicate_merges:
+    new:
+      title: Fusionner avec une transaction validée
+      warning_title: Fusion manuelle de doublons
+      warning_description: Utilisez cette option pour fusionner manuellement une transaction en attente avec sa version validée. Cela supprimera la transaction en attente et ne conservera que la version validée.
+      pending_transaction: Transaction en attente
+      select_posted: Sélectionner la transaction validée à fusionner
+      showing_range: "Affichage de %{start} - %{end}"
+      previous: "← 10 précédentes"
+      next: "10 suivantes →"
+      no_candidates: Aucune transaction validée trouvée sur ce compte.
+      submit_button: Fusionner les transactions

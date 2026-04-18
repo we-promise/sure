@@ -1,0 +1,254 @@
+---
+fr:
+  indexa_capital_items:
+    # Model method strings (i18n for item_model.rb)
+    sync_status:
+      no_accounts: "Aucun compte trouvé"
+      synced:
+        one: "%{count} compte synchronisé"
+        other: "%{count} comptes synchronisés"
+      synced_with_setup: "%{linked} synchronisé(s), %{unlinked} à configurer"
+    institution_summary:
+      none: "Aucune institution connectée"
+      count:
+        one: "%{count} institution"
+        other: "%{count} institutions"
+    errors:
+      provider_not_configured: "Le fournisseur IndexaCapital n'est pas configuré"
+
+    # Syncer status messages
+    sync:
+      status:
+        importing: "Importation des comptes depuis IndexaCapital…"
+        processing: "Traitement des avoirs et des activités…"
+        calculating: "Calcul des soldes…"
+        importing_data: "Importation des données du compte…"
+        checking_setup: "Vérification de la configuration du compte…"
+        needs_setup: "%{count} comptes à configurer…"
+      success: "Synchronisation démarrée"
+
+    # Panel (settings view)
+    panel:
+      setup_instructions: "Instructions de configuration :"
+      step_1: "Rendez-vous sur votre tableau de bord Indexa Capital pour générer un jeton API en lecture seule"
+      step_2: "Collez votre jeton API ci-dessous et cliquez sur Enregistrer"
+      step_3: "Après une connexion réussie, rendez-vous sur l'onglet Comptes pour configurer les nouveaux comptes"
+      field_descriptions: "Description des champs :"
+      optional: "(Facultatif)"
+      required: "(obligatoire)"
+      optional_with_default: "(facultatif, valeur par défaut : %{default_value})"
+      alternative_auth: "Ou utilisez plutôt l'authentification par nom d'utilisateur / mot de passe…"
+      save_button: "Enregistrer la configuration"
+      update_button: "Mettre à jour la configuration"
+      status_configured_html: "Configuré et prêt à l'emploi. Rendez-vous sur l'onglet <a href=\"%{accounts_path}\" class=\"link\">Comptes</a> pour gérer et configurer les comptes."
+      status_not_configured: "Non configuré"
+      fields:
+        api_token:
+          label: "Jeton API"
+          description: "Votre jeton API en lecture seule depuis le tableau de bord Indexa Capital"
+          placeholder_new: "Collez votre jeton API ici"
+          placeholder_update: "Saisissez un nouveau jeton API pour mettre à jour"
+        username:
+          label: "Nom d'utilisateur"
+          description: "Votre nom d'utilisateur / e-mail Indexa Capital"
+          placeholder_new: "Collez le nom d'utilisateur ici"
+          placeholder_update: "Saisissez un nouveau nom d'utilisateur pour mettre à jour"
+        document:
+          label: "Identifiant du document"
+          description: "Votre document / identifiant Indexa Capital"
+          placeholder_new: "Collez l'identifiant du document ici"
+          placeholder_update: "Saisissez un nouvel identifiant de document pour mettre à jour"
+        password:
+          label: "Mot de passe"
+          description: "Votre mot de passe Indexa Capital"
+          placeholder_new: "Collez le mot de passe ici"
+          placeholder_update: "Saisissez un nouveau mot de passe pour mettre à jour"
+
+    # CRUD success messages
+    create:
+      success: "Connexion IndexaCapital créée avec succès"
+    update:
+      success: "Connexion IndexaCapital mise à jour"
+    destroy:
+      success: "Connexion IndexaCapital supprimée"
+    index:
+      title: "Connexions IndexaCapital"
+
+    # Loading states
+    loading:
+      loading_message: "Chargement des comptes IndexaCapital…"
+      loading_title: "Chargement"
+
+    # Account linking
+    link_accounts:
+      all_already_linked:
+        one: "Le compte sélectionné (%{names}) est déjà lié"
+        other: "Les %{count} comptes sélectionnés sont déjà liés : %{names}"
+      api_error: "Erreur API : %{message}"
+      invalid_account_names:
+        one: "Impossible de lier un compte sans nom"
+        other: "Impossible de lier %{count} comptes sans nom"
+      link_failed: "Échec de la liaison des comptes"
+      no_accounts_selected: "Veuillez sélectionner au moins un compte"
+      no_api_key: "Identifiants IndexaCapital introuvables. Veuillez les configurer dans les paramètres du fournisseur."
+      partial_invalid: "%{created_count} compte(s) lié(s) avec succès, %{already_linked_count} étaient déjà liés, %{invalid_count} compte(s) avaient des noms invalides"
+      partial_success: "%{created_count} compte(s) lié(s) avec succès. %{already_linked_count} compte(s) étaient déjà liés : %{already_linked_names}"
+      success:
+        one: "%{count} compte lié avec succès"
+        other: "%{count} comptes liés avec succès"
+
+    # Provider item display (used in _item partial)
+    indexa_capital_item:
+      accounts_need_setup: "Des comptes doivent être configurés"
+      delete: "Supprimer la connexion"
+      deletion_in_progress: "suppression en cours…"
+      error: "Erreur"
+      more_accounts_available:
+        one: "%{count} compte supplémentaire disponible"
+        other: "%{count} comptes supplémentaires disponibles"
+      no_accounts_description: "Cette connexion n'a pas encore de comptes liés."
+      no_accounts_title: "Aucun compte"
+      provider_name: "IndexaCapital"
+      requires_update: "Connexion à mettre à jour"
+      setup_action: "Configurer les nouveaux comptes"
+      setup_description: "%{linked} sur %{total} comptes liés. Choisissez les types de compte pour vos comptes IndexaCapital nouvellement importés."
+      setup_needed: "Nouveaux comptes prêts à être configurés"
+      status: "Synchronisé il y a %{timestamp} — %{summary}"
+      status_never: "Jamais synchronisé"
+      syncing: "Synchronisation…"
+      total: "Total"
+      unlinked: "Non lié"
+      update_credentials: "Mettre à jour les identifiants"
+
+    # Select accounts view
+    select_accounts:
+      accounts_selected: "comptes sélectionnés"
+      api_error: "Erreur API : %{message}"
+      cancel: "Annuler"
+      configure_name_in_provider: "Impossible d'importer - veuillez configurer le nom du compte dans IndexaCapital"
+      description: "Sélectionnez les comptes que vous souhaitez lier à votre compte %{product_name}."
+      link_accounts: "Lier les comptes sélectionnés"
+      no_accounts_found: "Aucun compte trouvé. Veuillez vérifier vos identifiants IndexaCapital."
+      no_api_key: "Les identifiants IndexaCapital ne sont pas configurés. Veuillez les configurer dans les Paramètres."
+      no_credentials_configured: "Veuillez d'abord configurer vos identifiants IndexaCapital dans les paramètres du fournisseur."
+      no_name_placeholder: "(Sans nom)"
+      title: "Sélectionner les comptes IndexaCapital"
+
+    # Select existing account view
+    select_existing_account:
+      account_already_linked: "Ce compte est déjà lié à un fournisseur"
+      all_accounts_already_linked: "Tous les comptes IndexaCapital sont déjà liés"
+      api_error: "Erreur API : %{message}"
+      balance_label: "Solde :"
+      cancel: "Annuler"
+      cancel_button: "Annuler"
+      configure_name_in_provider: "Impossible d'importer - veuillez configurer le nom du compte dans IndexaCapital"
+      connect_hint: "Connectez un compte IndexaCapital pour activer la synchronisation automatique."
+      description: "Sélectionnez un compte IndexaCapital à lier avec ce compte. Les transactions seront synchronisées et dédupliquées automatiquement."
+      header: "Lier avec IndexaCapital"
+      link_account: "Lier le compte"
+      link_button: "Lier ce compte"
+      linking_to: "Liaison à :"
+      no_account_specified: "Aucun compte spécifié"
+      no_accounts: "Aucun compte IndexaCapital non lié trouvé."
+      no_accounts_found: "Aucun compte IndexaCapital trouvé. Veuillez vérifier vos identifiants."
+      no_api_key: "Les identifiants IndexaCapital ne sont pas configurés. Veuillez les configurer dans les Paramètres."
+      no_credentials_configured: "Veuillez d'abord configurer vos identifiants IndexaCapital dans les paramètres du fournisseur."
+      no_name_placeholder: "(Sans nom)"
+      settings_link: "Aller aux paramètres du fournisseur"
+      subtitle: "Choisissez un compte IndexaCapital"
+      title: "Lier %{account_name} avec IndexaCapital"
+
+    # Link existing account
+    link_existing_account:
+      account_already_linked: "Ce compte est déjà lié à un fournisseur"
+      api_error: "Erreur API : %{message}"
+      invalid_account_name: "Impossible de lier un compte sans nom"
+      provider_account_already_linked: "Ce compte IndexaCapital est déjà lié à un autre compte"
+      provider_account_not_found: "Compte IndexaCapital introuvable"
+      missing_parameters: "Paramètres requis manquants"
+      no_api_key: "Identifiants IndexaCapital introuvables. Veuillez les configurer dans les paramètres du fournisseur."
+      success: "%{account_name} lié avec succès à IndexaCapital"
+
+    # Setup accounts wizard
+    setup_accounts:
+      account_type_label: "Type de compte :"
+      accounts_count:
+        one: "%{count} compte disponible"
+        other: "%{count} comptes disponibles"
+      all_accounts_linked: "Tous vos comptes IndexaCapital ont déjà été configurés."
+      api_error: "Erreur API : %{message}"
+      creating: "Création des comptes…"
+      fetch_failed: "Échec de la récupération des comptes"
+      import_selected: "Importer les comptes sélectionnés"
+      instructions: "Sélectionnez les comptes que vous souhaitez importer depuis IndexaCapital. Vous pouvez choisir plusieurs comptes."
+      no_accounts: "Aucun compte non lié trouvé pour cette connexion IndexaCapital."
+      no_accounts_to_setup: "Aucun compte à configurer"
+      no_api_key: "Les identifiants IndexaCapital ne sont pas configurés. Veuillez vérifier les paramètres de connexion."
+      select_all: "Tout sélectionner"
+      account_types:
+        skip: "Ignorer ce compte"
+        depository: "Compte courant ou épargne"
+        credit_card: "Carte de crédit"
+        investment: "Compte d'investissement"
+        crypto: "Compte de cryptomonnaie"
+        loan: "Prêt ou hypothèque"
+        other_asset: "Autre actif"
+      subtype_labels:
+        depository: "Sous-type de compte :"
+        credit_card: ""
+        investment: "Type d'investissement :"
+        crypto: ""
+        loan: "Type de prêt :"
+        other_asset: ""
+      subtype_messages:
+        credit_card: "Les cartes de crédit seront automatiquement configurées comme comptes de carte de crédit."
+        other_asset: "Aucune option supplémentaire nécessaire pour les autres actifs."
+        crypto: "Les comptes de cryptomonnaie seront configurés pour suivre les avoirs et les transactions."
+      subtypes:
+        depository:
+          checking: "Compte courant"
+          savings: "Compte épargne"
+          hsa: "Compte épargne santé"
+          cd: "Certificat de dépôt"
+          money_market: "Compte du marché monétaire"
+        investment:
+          brokerage: "Courtage"
+          pension: "Pension"
+          retirement: "Retraite"
+          "401k": "401(k)"
+          roth_401k: "Roth 401(k)"
+          "403b": "403(b)"
+          tsp: "Plan d'épargne Thrift"
+          "529_plan": "Plan 529"
+          hsa: "Compte épargne santé"
+          mutual_fund: "Fonds commun de placement"
+          ira: "IRA traditionnel"
+          roth_ira: "Roth IRA"
+          angel: "Investissement providentiel"
+        loan:
+          mortgage: "Hypothèque"
+          student: "Prêt étudiant"
+          auto: "Prêt auto"
+          other: "Autre prêt"
+      balance: "Solde"
+      cancel: "Annuler"
+      choose_account_type: "Choisissez le type de compte correct pour chaque compte IndexaCapital :"
+      create_accounts: "Créer les comptes"
+      creating_accounts: "Création des comptes…"
+      historical_data_range: "Plage de données historiques :"
+      subtitle: "Choisissez les types de compte corrects pour vos comptes importés"
+      sync_start_date_help: "Sélectionnez jusqu'où vous souhaitez synchroniser l'historique des transactions."
+      sync_start_date_label: "Commencer la synchronisation des transactions à partir de :"
+      title: "Configurer vos comptes IndexaCapital"
+
+    # Complete account setup
+    complete_account_setup:
+      all_skipped: "Tous les comptes ont été ignorés. Aucun compte n'a été créé."
+      creation_failed: "Échec de la création des comptes : %{error}"
+      no_accounts: "Aucun compte à configurer."
+      success: "%{count} compte(s) créé(s) avec succès."
+
+    # Preload accounts
+    preload_accounts:
+      no_credentials_configured: "Veuillez d'abord configurer vos identifiants IndexaCapital dans les paramètres du fournisseur."
