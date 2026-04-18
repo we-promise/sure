@@ -1708,12 +1708,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_04_12_120000) do
   add_foreign_key "taggings", "tags"
   add_foreign_key "tags", "families"
   add_foreign_key "tool_calls", "messages"
-<<<<<<< HEAD
-=======
   add_foreign_key "traderepublic_accounts", "traderepublic_items"
   add_foreign_key "traderepublic_items", "families"
-  add_foreign_key "trades", "categories"
->>>>>>> Add TradeRepublic provider
   add_foreign_key "trades", "securities"
   add_foreign_key "transactions", "categories", on_delete: :nullify
   add_foreign_key "transactions", "merchants"

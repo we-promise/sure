@@ -89,14 +89,14 @@ class TraderepublicItemsController < ApplicationController
   end
 
   def complete_login
-      @traderepublic_item = Current.family.traderepublic_items.find(params[:id])
-      device_pin = params[:device_pin]
-      manual_sync = params[:manual_sync].to_s == 'true' || params[:manual_sync] == '1'
+    @traderepublic_item = Current.family.traderepublic_items.find(params[:id])
+    device_pin = params[:device_pin]
+    manual_sync = params[:manual_sync].to_s == "true" || params[:manual_sync] == "1"
 
-      if device_pin.blank?
-        render json: { success: false, error: t(".pin_required", default: "PIN is required") }, status: :unprocessable_entity
-        return
-      end
+    if device_pin.blank?
+      render json: { success: false, error: t(".pin_required", default: "PIN is required") }, status: :unprocessable_entity
+      return
+    end
 
     begin
       success = @traderepublic_item.complete_login!(device_pin)
@@ -143,9 +143,9 @@ class TraderepublicItemsController < ApplicationController
               }
             end
           else
-            render json: { 
-              success: false, 
-              error: t(".sync_failed", default: "Connection successful but failed to fetch accounts. Please try syncing manually.") 
+            render json: {
+              success: false,
+              error: t(".sync_failed", default: "Connection successful but failed to fetch accounts. Please try syncing manually.")
             }, status: :unprocessable_entity
           end
         end
@@ -252,12 +252,12 @@ class TraderepublicItemsController < ApplicationController
         accountable_type: accountable_type,
         accountable_attributes: {}
       )
-      
+
       Account.transaction do
         account.save!
         # Skip opening balance creation entirely for TradeRepublic accounts
       end
-      
+
       account.sync_later
 
       # Link account via account_providers
@@ -272,21 +272,21 @@ class TraderepublicItemsController < ApplicationController
     if created_accounts.any?
       # Reload to pick up the newly created account_provider associations
       traderepublic_item.reload
-      
+
       # Process transactions immediately for the newly linked accounts
       # This creates Entry records from the raw transaction data
       traderepublic_item.process_accounts
-      
+
       # Trigger full sync in background to update balances and get latest data
       traderepublic_item.sync_later
 
       # Redirect to the newly created account if single account, or accounts list if multiple
       # Avoid redirecting back to /accounts/new
       redirect_path = if return_to == new_account_path || return_to.blank?
-                        created_accounts.size == 1 ? account_path(created_accounts.first) : accounts_path
-                      else
-                        return_to
-                      end
+        created_accounts.size == 1 ? account_path(created_accounts.first) : accounts_path
+      else
+        return_to
+      end
 
       redirect_to redirect_path, notice: t(".accounts_linked",
                                       count: created_accounts.count,
@@ -313,7 +313,7 @@ class TraderepublicItemsController < ApplicationController
 
   def destroy
     @traderepublic_item.destroy_later
-    
+
     respond_to do |format|
       format.turbo_stream do
         flash.now[:notice] = t(".scheduled_for_deletion", default: "Trade Republic connection scheduled for deletion")
@@ -330,7 +330,7 @@ class TraderepublicItemsController < ApplicationController
 
   def sync
     @traderepublic_item.sync_later
-    
+
     respond_to do |format|
       format.turbo_stream do
         flash.now[:notice] = t(".sync_started", default: "Sync started")
@@ -349,7 +349,7 @@ class TraderepublicItemsController < ApplicationController
     Rails.logger.info "TradeRepublic reauthenticate action called"
     Rails.logger.info "Request format: #{request.format}"
     Rails.logger.info "Turbo frame: #{request.headers['Turbo-Frame']}"
-    
+
     begin
       result = @traderepublic_item.initiate_login!
       Rails.logger.info "Login initiated successfully"
@@ -370,7 +370,7 @@ class TraderepublicItemsController < ApplicationController
       end
     rescue TraderepublicError => e
       Rails.logger.error "TradeRepublic re-authentication initiation failed: #{e.message}"
-      
+
       respond_to do |format|
         format.turbo_stream do
           flash.now[:alert] = t(".login_failed", default: "Re-authentication failed: #{e.message}")
@@ -457,35 +457,35 @@ class TraderepublicItemsController < ApplicationController
 
   private
 
-  def set_traderepublic_item
-    @traderepublic_item = Current.family.traderepublic_items.find(params[:id])
-  end
-
-  def traderepublic_item_params
-    params.fetch(:traderepublic_item, {}).permit(:name, :phone_number, :pin)
-  end
-
-  def safe_return_to_path
-    return_to_raw = params[:return_to].to_s
-    return new_account_path if return_to_raw.blank?
-
-    decoded = CGI.unescape(return_to_raw)
-    begin
-      uri = URI.parse(decoded)
-    rescue URI::InvalidURIError
-      return new_account_path
+    def set_traderepublic_item
+      @traderepublic_item = Current.family.traderepublic_items.find(params[:id])
     end
 
-    # Only allow local paths: no scheme, no host, starts with a single leading slash (not protocol-relative //)
-    path = uri.path || decoded
-    if uri.scheme.nil? && uri.host.nil? && path.start_with?("/") && !path.start_with?("//")
-      # Rebuild path with query and fragment if present
-      built = path
-      built += "?#{uri.query}" if uri.query.present?
-      built += "##{uri.fragment}" if uri.fragment.present?
-      return built
+    def traderepublic_item_params
+      params.fetch(:traderepublic_item, {}).permit(:name, :phone_number, :pin)
     end
 
-    new_account_path
-  end
+    def safe_return_to_path
+      return_to_raw = params[:return_to].to_s
+      return new_account_path if return_to_raw.blank?
+
+      decoded = CGI.unescape(return_to_raw)
+      begin
+        uri = URI.parse(decoded)
+      rescue URI::InvalidURIError
+        return new_account_path
+      end
+
+      # Only allow local paths: no scheme, no host, starts with a single leading slash (not protocol-relative //)
+      path = uri.path || decoded
+      if uri.scheme.nil? && uri.host.nil? && path.start_with?("/") && !path.start_with?("//")
+        # Rebuild path with query and fragment if present
+        built = path
+        built += "?#{uri.query}" if uri.query.present?
+        built += "##{uri.fragment}" if uri.fragment.present?
+        return built
+      end
+
+      new_account_path
+    end
 end

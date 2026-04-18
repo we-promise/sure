@@ -16,12 +16,12 @@ class TraderepublicItem::Syncer
 
     # Phase 2: Import data from TradeRepublic API
     sync.update!(status_text: "Importing portfolio from Trade Republic...") if sync.respond_to?(:status_text)
-    
+
     begin
       traderepublic_item.import_latest_traderepublic_data(sync: sync)
     rescue TraderepublicError => e
       Rails.logger.error "TraderepublicItem::Syncer - Import failed: #{e.message}"
-      
+
       # Mark as requires_update if authentication error
       if [ :unauthorized, :auth_failed ].include?(e.error_code)
         traderepublic_item.update!(status: :requires_update)

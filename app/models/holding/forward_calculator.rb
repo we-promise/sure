@@ -29,12 +29,12 @@ class Holding::ForwardCalculator
         prev_qty = nil
         sorted.each do |h|
           # Note: this condition (h.qty.to_f > 0 && h.amount.to_f > 0)
-        # intentionally filters out holdings where quantity > 0 but amount == 0
-        # (for example when price is missing or zero). If zero-amount records
-        # should be treated as valid, consider falling back to a price lookup
-        # or include qty>0 entries and compute amount from a known price.
-        if h.qty.to_f > 0 && h.amount.to_f > 0
-          valid_holdings << h
+          # intentionally filters out holdings where quantity > 0 but amount == 0
+          # (for example when price is missing or zero). If zero-amount records
+          # should be treated as valid, consider falling back to a price lookup
+          # or include qty>0 entries and compute amount from a known price.
+          if h.qty.to_f > 0 && h.amount.to_f > 0
+            valid_holdings << h
           elsif h.qty.to_f == 0
             if prev_qty.nil?
               # Allow initial zero holding (initial portfolio state)
@@ -47,7 +47,7 @@ class Holding::ForwardCalculator
           prev_qty = h.qty.to_f
         end
       end
-      Holding.gapfill(valid_holdings)   
+      Holding.gapfill(valid_holdings)
     end
   end
 

@@ -83,7 +83,7 @@ class Provider::TraderepublicAdapter < Provider::Base
 
   private
 
-  def provider_account
-    @provider_account ||= TraderepublicAccount.find(@account_provider.provider_id)
-  end
+    def provider_account
+      @provider_account ||= TraderepublicAccount.find(@account_provider.provider_id)
+    end
 end

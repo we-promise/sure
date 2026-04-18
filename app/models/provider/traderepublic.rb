@@ -2,67 +2,67 @@ require "websocket-client-simple"
 require "json"
 
 class Provider::Traderepublic
-        # Batch fetch instrument details for a list of ISINs
-        # Returns a hash { isin => instrument_details }
-        def batch_fetch_instrument_details(isins)
-          results = {}
-          batch_websocket_calls do |batch|
-            isins.uniq.each do |isin|
-              results[isin] = batch.get_instrument_details(isin)
-            end
-          end
-          results
-        end
-      # Helper: Get portfolio, cash et available_cash en un seul batch WebSocket
-      def get_portfolio_and_cash_batch
-        results = {}
-        batch_websocket_calls do |batch|
-          results[:portfolio] = batch.get_portfolio
-          results[:cash] = batch.get_cash
-          results[:available_cash] = batch.get_available_cash
-        end
-        results
+  # Batch fetch instrument details for a list of ISINs
+  # Returns a hash { isin => instrument_details }
+  def batch_fetch_instrument_details(isins)
+    results = {}
+    batch_websocket_calls do |batch|
+      isins.uniq.each do |isin|
+        results[isin] = batch.get_instrument_details(isin)
       end
-    # Execute several subscribe_once calls in a single WebSocket session
-    # Usage: batch_websocket_calls { |batch| batch.get_portfolio; batch.get_cash }
-    def batch_websocket_calls
-      connect_websocket
-      batch_proxy = BatchWebSocketProxy.new(self)
-      yield batch_proxy
-      # Optionally, small sleep to allow last messages to arrive
-      sleep 0.5
-    ensure
-      disconnect_websocket
+    end
+    results
+  end
+  # Helper: Get portfolio, cash et available_cash en un seul batch WebSocket
+  def get_portfolio_and_cash_batch
+    results = {}
+    batch_websocket_calls do |batch|
+      results[:portfolio] = batch.get_portfolio
+      results[:cash] = batch.get_cash
+      results[:available_cash] = batch.get_available_cash
+    end
+    results
+  end
+  # Execute several subscribe_once calls in a single WebSocket session
+  # Usage: batch_websocket_calls { |batch| batch.get_portfolio; batch.get_cash }
+  def batch_websocket_calls
+    connect_websocket
+    batch_proxy = BatchWebSocketProxy.new(self)
+    yield batch_proxy
+    # Optionally, small sleep to allow last messages to arrive
+    sleep 0.5
+  ensure
+    disconnect_websocket
+  end
+
+  # Proxy to expose only subscribe_once helpers on an open connection
+  class BatchWebSocketProxy
+    def initialize(provider)
+      @provider = provider
     end
 
-    # Proxy to expose only subscribe_once helpers on an open connection
-    class BatchWebSocketProxy
-      def initialize(provider)
-        @provider = provider
-      end
-
-      def get_portfolio
-        @provider.subscribe_once("compactPortfolioByType")
-      end
-
-      def get_cash
-        @provider.subscribe_once("cash")
-      end
-
-      def get_available_cash
-        @provider.subscribe_once("availableCash")
-      end
-
-      def get_timeline_detail(id)
-        @provider.subscribe_once("timelineDetailV2", { id: id })
-      end
-
-      def get_instrument_details(isin)
-        @provider.subscribe_once("instrument", { id: isin })
-      end
-
-      # Ajoutez ici d'autres helpers si besoin
+    def get_portfolio
+      @provider.subscribe_once("compactPortfolioByType")
     end
+
+    def get_cash
+      @provider.subscribe_once("cash")
+    end
+
+    def get_available_cash
+      @provider.subscribe_once("availableCash")
+    end
+
+    def get_timeline_detail(id)
+      @provider.subscribe_once("timelineDetailV2", { id: id })
+    end
+
+    def get_instrument_details(isin)
+      @provider.subscribe_once("instrument", { id: isin })
+    end
+
+    # Ajoutez ici d'autres helpers si besoin
+  end
   include HTTParty
 
   headers "User-Agent" => "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"
@@ -102,15 +102,15 @@ class Provider::Traderepublic
       phoneNumber: @phone_number,
       pin: @pin
     }
-    
+
     Rails.logger.info "TradeRepublic: Initiating login for phone: #{@phone_number.to_s.gsub(/\d(?=\d{4})/, '*')}"
     sanitized_payload = payload.dup
     if sanitized_payload[:phoneNumber]
-      sanitized_payload[:phoneNumber] = sanitized_payload[:phoneNumber].to_s.gsub(/\d(?=\d{4})/, '*')
+      sanitized_payload[:phoneNumber] = sanitized_payload[:phoneNumber].to_s.gsub(/\d(?=\d{4})/, "*")
     end
-    sanitized_payload[:pin] = '[FILTERED]' if sanitized_payload.key?(:pin)
+    sanitized_payload[:pin] = "[FILTERED]" if sanitized_payload.key?(:pin)
     Rails.logger.debug "TradeRepublic: Request payload: #{sanitized_payload.to_json}"
-    
+
     response = self.class.post(
       "#{HOST}/api/v1/auth/web/login",
       headers: default_headers,
@@ -124,7 +124,7 @@ class Provider::Traderepublic
     # Extract and store JSESSIONID cookie for subsequent requests
     if response.headers["set-cookie"]
       set_cookies = response.headers["set-cookie"]
-      set_cookies = [set_cookies] unless set_cookies.is_a?(Array)
+      set_cookies = [ set_cookies ] unless set_cookies.is_a?(Array)
       set_cookies.each do |cookie|
         if cookie.start_with?("JSESSIONID=")
           @jsessionid = cookie.split(";").first
@@ -147,17 +147,17 @@ class Provider::Traderepublic
 
     url = "#{HOST}/api/v1/auth/web/login/#{@process_id}/#{device_pin}"
     headers = default_headers
-    
+
     # Include JSESSIONID cookie if available
     if @jsessionid
       headers["Cookie"] = @jsessionid
       Rails.logger.info "TradeRepublic: Including JSESSIONID in verification request"
     end
-    
+
     Rails.logger.info "TradeRepublic: Verifying device PIN for processId: #{@process_id}"
     Rails.logger.debug "TradeRepublic: Verification URL: #{url}"
     Rails.logger.debug "TradeRepublic: Verification headers: #{headers.inspect}"
-    
+
     # IMPORTANT: Use POST, not GET!
     response = self.class.post(
       url,
@@ -221,7 +221,7 @@ class Provider::Traderepublic
     end
 
     Rails.logger.info "TradeRepublic: Refreshing session token"
-    
+
     # Try the refresh endpoint first
     response = self.class.post(
       "#{HOST}/api/v1/auth/refresh",
@@ -277,14 +277,14 @@ class Provider::Traderepublic
 
       ws.on :message do |msg|
         Rails.logger.debug "TradeRepublic: WebSocket received message: #{msg.data.to_s.inspect[0..200]}"
-        
+
         # Mark as connected when we receive the "connected" response
         if msg.data.start_with?("connected")
           Rails.logger.info "TradeRepublic: WebSocket confirmed connected"
           provider.instance_variable_set(:@connected, true)
           provider.send(:start_echo_thread)
         end
-        
+
         provider.send(:handle_websocket_message, msg.data)
       end
 
@@ -368,7 +368,7 @@ class Provider::Traderepublic
     timeout = Time.now + SESSION_VALIDATION_TIMEOUT
     while result.nil? && Time.now < timeout
       sleep 0.1
-      
+
       # Check if an error was stored in the subscription
       subscription = nil
       @mutex.synchronize do
@@ -387,7 +387,7 @@ class Provider::Traderepublic
 
     if result
       parsed = JSON.parse(result)
-      
+
       # Handle double-encoded JSON (some TR responses are JSON strings containing JSON)
       if parsed.is_a?(String) && (parsed.start_with?("{") || parsed.start_with?("["))
         begin
@@ -537,176 +537,176 @@ class Provider::Traderepublic
 
   private
 
-  def default_headers
-    {
-      "Content-Type" => "application/json",
-      "Accept" => "application/json",
-      "User-Agent" => "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36",
-      "Origin" => "https://app.traderepublic.com",
-      "Referer" => "https://app.traderepublic.com/",
-      "Accept-Language" => "en",
-      "x-tr-platform" => "web",
-      "x-tr-app-version" => "12.12.0"
-    }
-  end
-
-  def cookie_header
-    return {} if @raw_cookies.nil? || @raw_cookies.empty?
-    
-    # Join all cookies into a single Cookie header
-    cookie_string = @raw_cookies.map do |cookie|
-      # Extract just the name=value part before the first semicolon
-      cookie.split(";").first
-    end.join("; ")
-    
-    { "Cookie" => cookie_string }
-  end
-
-  def extract_cookies_from_response(response)
-    # Extract Set-Cookie headers
-    set_cookie_headers = response.headers["set-cookie"]
-
-    if set_cookie_headers
-      @raw_cookies = set_cookie_headers.is_a?(Array) ? set_cookie_headers : [ set_cookie_headers ]
-
-      # Extract session and refresh tokens
-      @session_token = extract_cookie_value("tr_session")
-      @refresh_token = extract_cookie_value("tr_refresh")
-    end
-  end
-
-  def extract_cookie_value(name)
-    @raw_cookies.each do |cookie|
-      match = cookie.match(/#{name}=([^;]+)/)
-      return match[1] if match
-    end
-    nil
-  end
-
-  def wait_for_connection
-    timeout = Time.now + WS_CONNECTION_TIMEOUT
-    until @connected || Time.now > timeout
-      sleep 0.1
+    def default_headers
+      {
+        "Content-Type" => "application/json",
+        "Accept" => "application/json",
+        "User-Agent" => "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36",
+        "Origin" => "https://app.traderepublic.com",
+        "Referer" => "https://app.traderepublic.com/",
+        "Accept-Language" => "en",
+        "x-tr-platform" => "web",
+        "x-tr-app-version" => "12.12.0"
+      }
     end
 
-    raise TraderepublicError.new("WebSocket connection timeout", :connection_timeout) unless @connected
-  end
+    def cookie_header
+      return {} if @raw_cookies.nil? || @raw_cookies.empty?
 
-  def start_echo_thread
-    @echo_thread = Thread.new do
-      loop do
-        sleep ECHO_INTERVAL
-        break unless @connected
-        send_echo
+      # Join all cookies into a single Cookie header
+      cookie_string = @raw_cookies.map do |cookie|
+        # Extract just the name=value part before the first semicolon
+        cookie.split(";").first
+      end.join("; ")
+
+      { "Cookie" => cookie_string }
+    end
+
+    def extract_cookies_from_response(response)
+      # Extract Set-Cookie headers
+      set_cookie_headers = response.headers["set-cookie"]
+
+      if set_cookie_headers
+        @raw_cookies = set_cookie_headers.is_a?(Array) ? set_cookie_headers : [ set_cookie_headers ]
+
+        # Extract session and refresh tokens
+        @session_token = extract_cookie_value("tr_session")
+        @refresh_token = extract_cookie_value("tr_refresh")
       end
     end
-  end
 
-  def send_echo
-    @ws&.send("echo #{Time.now.to_i * 1000}")
-  rescue => e
-    Rails.logger.warn "TradeRepublic: Failed to send echo - #{e.message}"
-  end
-
-  def handle_websocket_message(raw_message)
-    return if raw_message.start_with?("echo") || raw_message.start_with?("connected")
-
-    parsed = parse_websocket_payload(raw_message)
-    return unless parsed
-
-    sub_id = parsed[:subscription_id]
-    json_string = parsed[:json_data]
-
-    begin
-      data = JSON.parse(json_string)
-    rescue JSON::ParserError
-      Rails.logger.error "TradeRepublic: Failed to parse WebSocket message JSON"
-      return
+    def extract_cookie_value(name)
+      @raw_cookies.each do |cookie|
+        match = cookie.match(/#{name}=([^;]+)/)
+        return match[1] if match
+      end
+      nil
     end
 
-    # Check for authentication errors
-    if data.is_a?(Hash) && data["errors"]
-      auth_error = data["errors"].find { |err| err["errorCode"] == "AUTHENTICATION_ERROR" }
-      if auth_error
-        Rails.logger.error "TradeRepublic: Authentication error received - #{auth_error['errorMessage']}"
-        # Store error for the subscription callback
-        if sub_id && @subscriptions[sub_id]
-          @subscriptions[sub_id][:error] = TraderepublicError.new(auth_error["errorMessage"] || "Unauthorized", :auth_failed)
+    def wait_for_connection
+      timeout = Time.now + WS_CONNECTION_TIMEOUT
+      until @connected || Time.now > timeout
+        sleep 0.1
+      end
+
+      raise TraderepublicError.new("WebSocket connection timeout", :connection_timeout) unless @connected
+    end
+
+    def start_echo_thread
+      @echo_thread = Thread.new do
+        loop do
+          sleep ECHO_INTERVAL
+          break unless @connected
+          send_echo
         end
       end
     end
 
-    return unless sub_id
+    def send_echo
+      @ws&.send("echo #{Time.now.to_i * 1000}")
+    rescue => e
+      Rails.logger.warn "TradeRepublic: Failed to send echo - #{e.message}"
+    end
 
-    subscription = @subscriptions[sub_id]
-    if subscription
+    def handle_websocket_message(raw_message)
+      return if raw_message.start_with?("echo") || raw_message.start_with?("connected")
+
+      parsed = parse_websocket_payload(raw_message)
+      return unless parsed
+
+      sub_id = parsed[:subscription_id]
+      json_string = parsed[:json_data]
+
       begin
-        # If there's an error stored, raise it
-        raise subscription[:error] if subscription[:error]
-        
-        subscription[:callback].call(json_string)
-      rescue => e
-        Rails.logger.error "TradeRepublic: Subscription callback error - #{e.message}"
-        raise if e.is_a?(TraderepublicError) # Re-raise TraderepublicError to propagate auth failures
+        data = JSON.parse(json_string)
+      rescue JSON::ParserError
+        Rails.logger.error "TradeRepublic: Failed to parse WebSocket message JSON"
+        return
+      end
+
+      # Check for authentication errors
+      if data.is_a?(Hash) && data["errors"]
+        auth_error = data["errors"].find { |err| err["errorCode"] == "AUTHENTICATION_ERROR" }
+        if auth_error
+          Rails.logger.error "TradeRepublic: Authentication error received - #{auth_error['errorMessage']}"
+          # Store error for the subscription callback
+          if sub_id && @subscriptions[sub_id]
+            @subscriptions[sub_id][:error] = TraderepublicError.new(auth_error["errorMessage"] || "Unauthorized", :auth_failed)
+          end
+        end
+      end
+
+      return unless sub_id
+
+      subscription = @subscriptions[sub_id]
+      if subscription
+        begin
+          # If there's an error stored, raise it
+          raise subscription[:error] if subscription[:error]
+
+          subscription[:callback].call(json_string)
+        rescue => e
+          Rails.logger.error "TradeRepublic: Subscription callback error - #{e.message}"
+          raise if e.is_a?(TraderepublicError) # Re-raise TraderepublicError to propagate auth failures
+        end
       end
     end
-  end
 
-  def parse_websocket_payload(raw_message)
-    # Find the first occurrence of { or [
-    start_index_obj = raw_message.index("{")
-    start_index_arr = raw_message.index("[")
-    
-    start_index = if start_index_obj && start_index_arr
-                    [start_index_obj, start_index_arr].min
-                  elsif start_index_obj
-                    start_index_obj
-                  elsif start_index_arr
-                    start_index_arr
-                  else
-                    nil
-                  end
+    def parse_websocket_payload(raw_message)
+      # Find the first occurrence of { or [
+      start_index_obj = raw_message.index("{")
+      start_index_arr = raw_message.index("[")
 
-    return nil unless start_index
+      start_index = if start_index_obj && start_index_arr
+        [ start_index_obj, start_index_arr ].min
+      elsif start_index_obj
+        start_index_obj
+      elsif start_index_arr
+        start_index_arr
+      else
+        nil
+      end
 
-    id_part = raw_message[0...start_index].strip
-    id_match = id_part.match(/\d+/)
-    subscription_id = id_match ? id_match[0].to_i : nil
+      return nil unless start_index
 
-    json_data = raw_message[start_index..-1].strip
+      id_part = raw_message[0...start_index].strip
+      id_match = id_part.match(/\d+/)
+      subscription_id = id_match ? id_match[0].to_i : nil
 
-    { subscription_id: subscription_id, json_data: json_data }
-  end
+      json_data = raw_message[start_index..-1].strip
 
-  def build_message(type, params = {})
-    { type: type, token: @session_token }.merge(params)
-  end
-
-  def send_subscription(sub_id, message)
-    payload = "sub #{sub_id} #{message.to_json}"
-    @ws.send(payload)
-  end
-
-  def handle_http_response(response)
-    Rails.logger.error "TradeRepublic: HTTP response code=#{response.code}, body=#{response.body}"
-
-    case response.code
-    when 200
-      JSON.parse(response.body)
-    when 400
-      raise TraderepublicError.new("Bad request: #{response.body}", :bad_request)
-    when 401
-      raise TraderepublicError.new("Invalid credentials", :unauthorized)
-    when 403
-      raise TraderepublicError.new("Access forbidden", :forbidden)
-    when 404
-      raise TraderepublicError.new("Resource not found", :not_found)
-    when 429
-      raise TraderepublicError.new("Rate limit exceeded", :rate_limit_exceeded)
-    when 500..599
-      raise TraderepublicError.new("Server error: #{response.code}", :server_error)
-    else
-      raise TraderepublicError.new("Unexpected response: #{response.code}", :unexpected_response)
+      { subscription_id: subscription_id, json_data: json_data }
     end
-  end
+
+    def build_message(type, params = {})
+      { type: type, token: @session_token }.merge(params)
+    end
+
+    def send_subscription(sub_id, message)
+      payload = "sub #{sub_id} #{message.to_json}"
+      @ws.send(payload)
+    end
+
+    def handle_http_response(response)
+      Rails.logger.error "TradeRepublic: HTTP response code=#{response.code}, body=#{response.body}"
+
+      case response.code
+      when 200
+        JSON.parse(response.body)
+      when 400
+        raise TraderepublicError.new("Bad request: #{response.body}", :bad_request)
+      when 401
+        raise TraderepublicError.new("Invalid credentials", :unauthorized)
+      when 403
+        raise TraderepublicError.new("Access forbidden", :forbidden)
+      when 404
+        raise TraderepublicError.new("Resource not found", :not_found)
+      when 429
+        raise TraderepublicError.new("Rate limit exceeded", :rate_limit_exceeded)
+      when 500..599
+        raise TraderepublicError.new("Server error: #{response.code}", :server_error)
+      else
+        raise TraderepublicError.new("Unexpected response: #{response.code}", :unexpected_response)
+      end
+    end
 end

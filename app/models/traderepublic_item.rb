@@ -52,13 +52,13 @@ class TraderepublicItem < ApplicationRecord
     TraderepublicItem::Importer.new(self, traderepublic_provider: provider).import
   rescue TraderepublicError => e
     # If authentication failed and we have credentials, try re-authenticating automatically
-    if [:unauthorized, :auth_failed].include?(e.error_code) && !skip_token_refresh && credentials_configured?
+    if [ :unauthorized, :auth_failed ].include?(e.error_code) && !skip_token_refresh && credentials_configured?
       Rails.logger.warn "TraderepublicItem #{id} - Authentication failed, attempting automatic re-authentication"
-      
+
       if auto_reauthenticate
         Rails.logger.info "TraderepublicItem #{id} - Re-authentication successful, retrying import"
         # Retry import with fresh tokens (skip_token_refresh to avoid infinite loop)
-        return import_latest_traderepublic_data(skip_token_refresh: true)
+        import_latest_traderepublic_data(skip_token_refresh: true)
       else
         Rails.logger.error "TraderepublicItem #{id} - Automatic re-authentication failed"
         update!(status: :requires_update)
@@ -146,7 +146,7 @@ class TraderepublicItem < ApplicationRecord
   # Trade Republic doesn't support token refresh, so we need to re-authenticate from scratch
   def auto_reauthenticate
     Rails.logger.info "TraderepublicItem #{id}: Starting automatic re-authentication"
-    
+
     unless credentials_configured?
       Rails.logger.error "TraderepublicItem #{id}: Cannot auto re-authenticate - credentials not configured"
       return false
@@ -155,14 +155,14 @@ class TraderepublicItem < ApplicationRecord
     begin
       # Step 1: Initiate login to get processId
       result = initiate_login!
-      
+
       Rails.logger.info "TraderepublicItem #{id}: Login initiated, processId: #{process_id}"
-      
+
       # Trade Republic requires SMS verification - we can't auto-complete this step
       # Mark as requires_update so user knows they need to re-authenticate
       Rails.logger.warn "TraderepublicItem #{id}: SMS verification required - automatic re-authentication cannot proceed"
       update!(status: :requires_update)
-      
+
       false
     rescue => e
       Rails.logger.error "TraderepublicItem #{id}: Automatic re-authentication failed - #{e.message}"
@@ -220,18 +220,18 @@ class TraderepublicItem < ApplicationRecord
       success = importer.import
       if success
         sync.complete!
-        return true
+        true
       else
         sync.fail!
         sync.update(error: "Import failed")
-        return false
+        false
       end
     rescue => e
       sync.fail!
       sync.update(error: e.message)
       Rails.logger.error "TraderepublicItem #{id} - perform_sync failed: #{e.class}: #{e.message}"
       Rails.logger.error e.backtrace.join("\n")
-      return false
+      false
     end
   end
 end
