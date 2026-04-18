@@ -341,8 +341,8 @@ class TraderepublicAccount::Processor
       # quantity_str format: "3 Shares" or "0.01 BTC"
       return nil unless quantity_str
 
-      token = quantity_str.to_s.split.first
-      cleaned = token.to_s.gsub(/[^0-9.,\-+]/, "")
+      quantity_token = quantity_str.to_s.split.first
+      cleaned = quantity_token.to_s.gsub(/[^0-9.,\-+]/, "")
       return nil if cleaned.blank?
 
       begin
