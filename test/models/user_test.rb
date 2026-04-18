@@ -289,6 +289,38 @@ class UserTest < ActiveSupport::TestCase
     assert user.show_ai_sidebar?
   end
 
+  test "new guest defaults show_ai_sidebar to false when AI is not available" do
+    Rails.application.config.app_mode.stubs(:self_hosted?).returns(true)
+    previous = Setting.openai_access_token
+    with_env_overrides OPENAI_ACCESS_TOKEN: nil, EXTERNAL_ASSISTANT_URL: nil, EXTERNAL_ASSISTANT_TOKEN: nil do
+      Setting.openai_access_token = nil
+      user = User.new(
+        family: families(:empty),
+        email: "guest-no-ai@example.com",
+        password: "Password1!",
+        password_confirmation: "Password1!",
+        role: :guest
+      )
+      assert user.save, user.errors.full_messages.to_sentence
+      assert_not user.show_ai_sidebar?
+    end
+  ensure
+    Setting.openai_access_token = previous
+  end
+
+  test "new guest defaults show_ai_sidebar to false when AI is available" do
+    Rails.application.config.app_mode.stubs(:self_hosted?).returns(false)
+    user = User.new(
+      family: families(:empty),
+      email: "guest-with-ai@example.com",
+      password: "Password1!",
+      password_confirmation: "Password1!",
+      role: :guest
+    )
+    assert user.save, user.errors.full_messages.to_sentence
+    assert_not user.show_ai_sidebar?
+  end
+
   test "update_dashboard_preferences handles concurrent updates atomically" do
     @user.update!(preferences: {})
 
