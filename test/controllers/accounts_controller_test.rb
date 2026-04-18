@@ -20,10 +20,13 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "account activity marks trade amounts as privacy-sensitive" do
+    trade_entry = entries(:trade)
+    expected_amount = ApplicationController.helpers.format_money(-trade_entry.amount_money)
+
     get account_url(accounts(:investment))
 
     assert_response :success
-    assert_select "turbo-frame##{dom_id(entries(:trade))} p.privacy-sensitive", count: 1
+    assert_select "turbo-frame##{dom_id(trade_entry)} p.privacy-sensitive", text: expected_amount, count: 1
   end
 
   test "activity pagination keeps activity tab when loaded from holdings tab" do
