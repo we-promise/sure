@@ -89,6 +89,19 @@ class PdfImportTest < ActiveSupport::TestCase
     assert_equal "1500.0", salary_row.amount
   end
 
+  test "investment statement rows use signed_amount for trade cash flow" do
+    import = imports(:pdf_investment)
+    import.rows.destroy_all
+    import.update_column(:rows_count, 0)
+
+    import.generate_rows_from_extracted_data
+
+    buy = import.rows.find_by(ticker: "AAPL")
+    sell = import.rows.find_by(ticker: "MSFT")
+    assert buy.signed_amount.positive?
+    assert sell.signed_amount.negative?
+  end
+
   test "generate_rows_from_extracted_data does nothing without extracted transactions" do
     @import.generate_rows_from_extracted_data
     assert_equal 0, @import.rows.count
@@ -128,9 +141,118 @@ class PdfImportTest < ActiveSupport::TestCase
   end
 
   test "mapping_steps does not include AccountMapping even when account is nil" do
-    # PDF imports handle account selection via direct UI, not mapping system
     assert_nil @import.account
     assert_not_includes @import.mapping_steps, Import::AccountMapping
+  end
+
+  test "investment_statement? returns true for investment_statement type" do
+    @import_investment = imports(:pdf_investment)
+    assert @import_investment.investment_statement?
+  end
+
+  test "investment_statement? returns false for bank_statement type" do
+    assert_not @import_with_rows.investment_statement?
+  end
+
+  test "column_keys returns trade columns for investment statements" do
+    @import_investment = imports(:pdf_investment)
+    assert_equal %i[date ticker qty price fee name], @import_investment.column_keys
+  end
+
+  test "required_column_keys returns trade required columns for investment statements" do
+    @import_investment = imports(:pdf_investment)
+    assert_equal %i[date ticker qty price], @import_investment.required_column_keys
+  end
+
+  test "has_extracted_trades? returns true with trades" do
+    @import_investment = imports(:pdf_investment)
+    assert @import_investment.has_extracted_trades?
+  end
+
+  test "has_extracted_trades? returns false without trades" do
+    assert_not @import.has_extracted_trades?
+  end
+
+  test "extracted_trades returns trades from extracted_data" do
+    @import_investment = imports(:pdf_investment)
+    assert_equal 2, @import_investment.extracted_trades.size
+    assert_equal "AAPL", @import_investment.extracted_trades.first["ticker"]
+  end
+
+  test "generate_rows_from_extracted_data creates trade rows for investment statements" do
+    @import_investment = imports(:pdf_investment)
+    @import_investment.rows.destroy_all
+    @import_investment.update_column(:rows_count, 0)
+
+    @import_investment.generate_rows_from_extracted_data
+
+    assert_equal 2, @import_investment.rows.count
+    assert_equal 2, @import_investment.rows_count
+
+    aapl_row = @import_investment.rows.find_by(ticker: "AAPL")
+    assert_not_nil aapl_row
+    assert_equal "10", aapl_row.qty
+    assert_equal "175.50", aapl_row.price
+    assert_equal "Apple Inc.", aapl_row.name
+
+    msft_row = @import_investment.rows.find_by(ticker: "MSFT")
+    assert_not_nil msft_row
+    assert_equal "-5", msft_row.qty
+    assert_equal "380.00", msft_row.price
+  end
+
+  test "publishable? returns true for investment statement with valid setup" do
+    @import_investment = imports(:pdf_investment)
+    @import_investment.rows.destroy_all
+    @import_investment.generate_rows_from_extracted_data
+
+    assert @import_investment.publishable?
+  end
+
+  test "mapping_steps is empty for investment statements" do
+    @import_investment = imports(:pdf_investment)
+    assert_equal [], @import_investment.mapping_steps
+  end
+
+  test "trade_entry_name_for uses neutral label for zero quantity" do
+    import = imports(:pdf_investment)
+    row = Import::Row.new(qty: "0", ticker: "AAPL", name: "")
+    assert_equal "Trade AAPL", import.send(:trade_entry_name_for, row)
+  end
+
+  test "trade_entry_name_for uses Imported trade when zero qty and no ticker" do
+    import = imports(:pdf_investment)
+    row = Import::Row.new(qty: "0", ticker: "", name: "")
+    assert_equal "Imported trade", import.send(:trade_entry_name_for, row)
+  end
+
+  test "trade_entry_name_for uses Trade.build_name when quantity is nonzero" do
+    import = imports(:pdf_investment)
+    row = Import::Row.new(qty: "10", ticker: "AAPL", name: "")
+    assert_equal Trade.build_name("buy", "10", "AAPL"), import.send(:trade_entry_name_for, row)
+  end
+
+  test "investment statement rejects accounts that cannot hold trades" do
+    import = imports(:pdf_investment)
+    import.account = accounts(:depository)
+    assert_not import.valid?
+    assert import.errors[:account].present?
+  end
+
+  test "investment statement allows investment and crypto accounts" do
+    import = imports(:pdf_investment)
+    assert import.valid?
+
+    import.account = accounts(:crypto)
+    assert import.valid?
+  end
+
+  test "publishable? is false for investment statement with incompatible account" do
+    import = imports(:pdf_investment)
+    import.update_column(:account_id, accounts(:depository).id)
+    import.reload
+
+    assert_not import.publishable?
   end
 
   test "destroying import purges attached pdf_file" do

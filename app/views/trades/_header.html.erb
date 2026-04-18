@@ -59,6 +59,13 @@
             </div>
           <% end %>
 
+          <% if trade.fee.present? && trade.fee > 0 %>
+            <div class="flex items-center justify-between text-sm">
+              <dt class="text-secondary"><%= t(".fee_label") %></dt>
+              <dd class="text-primary privacy-sensitive"><%= format_money trade.fee_money %></dd>
+            </div>
+          <% end %>
+
           <% if trade.qty.positive? && trade.security.current_price.present? %>
             <div class="flex items-center justify-between text-sm">
               <dt class="text-secondary"><%= t(".current_market_price_label") %></dt>

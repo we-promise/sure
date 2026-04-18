@@ -87,7 +87,6 @@ class Holding::ForwardCalculator
         security_id = trade.security_id
         tracker = @cost_basis_tracker[security_id]
 
-        # Convert trade price to account currency if needed
         trade_price = Money.new(trade.price, trade.currency)
         begin
           converted_price = trade_price.exchange_to(account.currency).amount
@@ -95,7 +94,14 @@ class Holding::ForwardCalculator
           converted_price = trade.price
         end
 
-        tracker[:total_cost] += converted_price * trade.qty
+        trade_fee = Money.new(trade.fee || 0, trade.currency)
+        begin
+          converted_fee = trade_fee.exchange_to(account.currency).amount
+        rescue Money::ConversionError
+          converted_fee = trade.fee || 0
+        end
+
+        tracker[:total_cost] += converted_price * trade.qty + converted_fee
         tracker[:total_qty] += trade.qty
       end
     end

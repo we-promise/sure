@@ -215,6 +215,7 @@ class Family::DataExporter
             date: trade.entry.date,
             qty: trade.qty,
             price: trade.price,
+            fee: trade.fee,
             amount: trade.entry.amount,
             currency: trade.currency,
             created_at: trade.created_at,
