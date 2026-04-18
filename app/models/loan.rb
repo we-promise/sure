@@ -33,7 +33,8 @@ class Loan < ApplicationRecord
             numericality: { greater_than_or_equal_to: 0 },
             allow_nil: true
 
-  validates :start_date, presence: true
+  validates :start_date, presence: true, on: :create
+
 
   def original_balance
     Money.new(account.first_valuation_amount, account.currency)
@@ -103,13 +104,13 @@ class Loan < ApplicationRecord
 
 
   def generate_amortization_schedule
-    return [] if interest_rate.nil? || insurance_rate.nil? || term_months.nil?
+    return [] if interest_rate.nil? || term_months.nil?
 
     balance          = BigDecimal(original_balance.amount.to_s)
     initial_balance  = balance
 
     rate             = BigDecimal(interest_rate.to_s) / 1200
-    insurance_rate_m = BigDecimal(insurance_rate.to_s) / 1200
+    insurance_rate_m = BigDecimal((insurance_rate || 0).to_s) / 1200
 
     payment = BigDecimal(monthly_payment.amount.to_s)
 
