@@ -217,6 +217,34 @@ class SimplefinItem::ReplacementDetectorTest < ActiveSupport::TestCase
     assert_empty SimplefinItem::ReplacementDetector.new(@item).call
   end
 
+  test "ignores dormant candidate when current_balance is unknown (nil)" do
+    # nil balance is 'unknown,' not 'zero.' Treat as evidence against a match.
+    # Model-level validation normally prevents nil current_balance but upstream
+    # data has occasionally landed this way; simulate via `update_columns` to
+    # bypass validation and assert the detector's robustness.
+    dormant = make_sfa(name: "Citi-UNKNOWN-BAL", account_id: "sf_nil_bal",
+                       balance: 0, transactions: [ tx(when_ago: 60.days) ])
+    link(dormant, name: "Unknown Citi")
+    dormant.update_columns(current_balance: nil, available_balance: nil)
+    make_sfa(name: "New Citi", account_id: "sf_nil_new", balance: -100,
+             transactions: [ tx(when_ago: 2.days) ])
+
+    assert_empty SimplefinItem::ReplacementDetector.new(@item).call
+  end
+
+  test "matches sfa pairs when account_type uses 'credit card' / 'credit_card' variants" do
+    dormant = make_sfa(name: "Citi-OLD-var", account_id: "sf_var_old",
+                       account_type: "credit card", balance: 0,
+                       transactions: [ tx(when_ago: 60.days) ])
+    link(dormant, name: "Variant Citi")
+    make_sfa(name: "Citi-NEW-var", account_id: "sf_var_new",
+             account_type: "credit_card", balance: -100,
+             transactions: [ tx(when_ago: 2.days) ])
+
+    suggestions = SimplefinItem::ReplacementDetector.new(@item).call
+    assert_equal 1, suggestions.size, "canonicalized account_type should match across spacing variants"
+  end
+
   test "ignores linked sfa with no transaction history (brand-new card, not dormant)" do
     # A newly linked card with zero balance and no transactions yet must NOT be
     # flagged as a replacement target. "Dormant" requires prior activity that

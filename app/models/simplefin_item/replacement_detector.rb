@@ -63,7 +63,14 @@ class SimplefinItem
 
     private
       def supported_type?(sfa)
-        SUPPORTED_ACCOUNT_TYPES.include?(sfa.account_type.to_s.downcase.gsub(/\s+/, "_"))
+        SUPPORTED_ACCOUNT_TYPES.include?(canonical_account_type(sfa))
+      end
+
+      # Canonicalize for both gating (supported_type?) and matching
+      # (type_matches?) so variants like "credit card" and "credit_card"
+      # round-trip to the same key.
+      def canonical_account_type(sfa)
+        sfa.account_type.to_s.downcase.gsub(/\s+/, "_")
       end
 
       def linked?(sfa)
@@ -80,8 +87,10 @@ class SimplefinItem
         # suggestion. Matches the likely-closed gate used by the setup UI.
         return false if sfa.activity_summary.last_transacted_at.blank?
         return false unless sfa.activity_summary.dormant?(days: DORMANCY_DAYS)
-        balance = sfa.current_balance || BigDecimal("0")
-        balance.to_d.abs <= NEAR_ZERO_BALANCE
+        # Missing current_balance is "unknown," not "zero." Treat it as evidence
+        # against replacement rather than for it.
+        return false if sfa.current_balance.nil?
+        sfa.current_balance.to_d.abs <= NEAR_ZERO_BALANCE
       end
 
       def active?(sfa)
@@ -93,7 +102,7 @@ class SimplefinItem
       end
 
       def type_matches?(a, b)
-        a.account_type.to_s.casecmp?(b.account_type.to_s)
+        canonical_account_type(a) == canonical_account_type(b)
       end
 
       # Require BOTH sides to have a non-blank org name. SimpleFIN sometimes omits
