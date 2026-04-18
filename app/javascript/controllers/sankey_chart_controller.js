@@ -472,10 +472,12 @@ export default class extends Controller {
     const valueText = hasPercentage
       ? `${this.#formatCurrency(value)} (${percentageValue}%)`
       : `${this.#formatCurrency(value)}`;
+    const safeValueText = this.#escapeHtml(valueText);
+    const safeTitle = title ? this.#escapeHtml(title) : null;
 
-    const content = title
-      ? `${title}<br/>${valueText}`
-      : valueText;
+    const content = safeTitle
+      ? `${safeTitle}<br/>${safeValueText}`
+      : safeValueText;
 
     const isInDialog = this.#isInDialog();
     const x = isInDialog ? event.clientX : event.pageX;
@@ -525,5 +527,14 @@ export default class extends Controller {
     const sourceName = link?.source?.name || "Source";
     const targetName = link?.target?.name || "Destination";
     return `${sourceName} -> ${targetName}`;
+  }
+
+  #escapeHtml(value) {
+    return String(value)
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#39;");
   }
 }

@@ -317,7 +317,7 @@ class CompactSampleDataLoader
       if account.loan? || account.other_liability?
         0
       elsif account.investment? || account.crypto?
-        account.cash_balance
+        final_balance
       else
         final_balance
       end

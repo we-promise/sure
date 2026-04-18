@@ -48,7 +48,7 @@ fr:
       pending_duplicate_merger_description: Fusionner manuellement cette transaction en attente avec sa version enregistrée.
       pending_duplicate_merger_button: Lancer la fusion
       merchant_label: Marchand
-      name_label: Name
+      name_label: Nom
       nature: Type
       none: "(Aucun)"
       note_label: Notes
@@ -134,7 +134,7 @@ fr:
         account: Compte
         date: Date
         type: Type
-        status: Status
+        status: Statut
         amount: Montant
         category: Catégorie
         tag: Étiquette
@@ -191,11 +191,11 @@ fr:
         badge:
           expense: Dépense
           income: Revenu
-          on_or_after: on or after %{date}
-          on_or_before: on or before %{date}
-          transfer: Transfer
-          confirmed: Confirmed
-          pending: Pending
+          on_or_after: à partir du %{date}
+          on_or_before: au plus tard le %{date}
+          transfer: Transfert
+          confirmed: Confirmé
+          pending: En attente
         type_filter:
           expense: Dépense
           income: Revenu
@@ -211,7 +211,7 @@ fr:
         category_filter: Catégorie
         clear_filters: Effacer les filtres
         date_filter: Date
-        merchant_filter: Marchant
+        merchant_filter: Marchand
         status_filter: Statut
         tag_filter: Étiquette
         type_filter: Type

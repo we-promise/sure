@@ -512,7 +512,7 @@ class PagesController < ApplicationController
           target: target_idx,
           value: flow[:value].to_f.round(2),
           color: Category::TRANSFER_COLOR,
-          percentage: 0
+          percentage: nil
         }
       end
 
@@ -524,13 +524,16 @@ class PagesController < ApplicationController
     end
 
     def split_sankey_node_metadata(unique_key, account_lane_order)
-      account_id = unique_key[/\Aaccount_([^_]+)_/, 1]
-      return {} unless account_id
-
-      {
-        lane_order: account_lane_order.fetch(account_id, 0),
+      metadata = {
         node_role: split_sankey_node_role(unique_key)
       }
+
+      account_id = unique_key[/\Aaccount_([^_]+)_/, 1]
+      return metadata unless account_id
+
+      metadata.merge(
+        lane_order: account_lane_order.fetch(account_id, 0)
+      )
     end
 
     def split_category_key(category_total)
