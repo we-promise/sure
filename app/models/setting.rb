@@ -9,6 +9,8 @@ class Setting < RailsSettings::Base
   field :openai_access_token, type: :string, default: ENV["OPENAI_ACCESS_TOKEN"]
   field :openai_uri_base, type: :string, default: ENV["OPENAI_URI_BASE"]
   field :openai_model, type: :string, default: ENV["OPENAI_MODEL"]
+  field :openai_chat_model, type: :string, default: ENV["OPENAI_CHAT_MODEL"]
+  field :openai_background_model, type: :string, default: ENV["OPENAI_BACKGROUND_MODEL"]
   field :openai_json_mode, type: :string, default: ENV["LLM_JSON_MODE"]
 
   # LLM token budget (applies to every outbound LLM call: chat, auto-categorize,
@@ -175,6 +177,10 @@ class Setting < RailsSettings::Base
     alias_method :raw_onboarding_state=, :onboarding_state=
     alias_method :raw_openai_model, :openai_model
     alias_method :raw_openai_model=, :openai_model=
+    alias_method :raw_openai_chat_model, :openai_chat_model
+    alias_method :raw_openai_chat_model=, :openai_chat_model=
+    alias_method :raw_openai_background_model, :openai_background_model
+    alias_method :raw_openai_background_model=, :openai_background_model=
 
     def onboarding_state
       value = raw_onboarding_state
@@ -199,6 +205,20 @@ class Setting < RailsSettings::Base
           ClearAiCacheJob.perform_later(family)
         end
       end
+    end
+
+    def openai_chat_model=(value)
+      old_value = raw_openai_chat_model
+      self.raw_openai_chat_model = value
+
+      if old_value != value && old_value.present?
+        Rails.logger.info("OpenAI chat model changed from #{old_value} to #{value}, clearing AI cache for all families")
+        Family.find_each { |family| ClearAiCacheJob.perform_later(family) }
+      end
+    end
+
+    def openai_background_model=(value)
+      self.raw_openai_background_model = value
     end
 
     # Support dynamic field access via bracket notation

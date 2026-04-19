@@ -17,7 +17,8 @@ class ProviderMerchant::Enhancer
     unenhanced_merchants.each_slice(BATCH_SIZE) do |batch|
       result = llm_provider.enhance_provider_merchants(
         merchants: batch.map { |m| { id: m.id, name: m.name } },
-        family: @family
+        family: @family,
+        model: Provider::Openai.effective_background_model
       )
 
       next unless result.success?

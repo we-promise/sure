@@ -162,6 +162,14 @@ class Settings::HostingsController < ApplicationController
       Setting.openai_model = hosting_params[:openai_model]
     end
 
+    if hosting_params.key?(:openai_chat_model)
+      Setting.openai_chat_model = hosting_params[:openai_chat_model].presence
+    end
+
+    if hosting_params.key?(:openai_background_model)
+      Setting.openai_background_model = hosting_params[:openai_background_model].presence
+    end
+
     if hosting_params.key?(:openai_json_mode)
       Setting.openai_json_mode = hosting_params[:openai_json_mode].presence
     end
@@ -223,7 +231,7 @@ class Settings::HostingsController < ApplicationController
   private
     def hosting_params
       return ActionController::Parameters.new unless params.key?(:setting)
-      params.require(:setting).permit(:onboarding_state, :require_email_confirmation, :invite_only_default_family_id, :brand_fetch_client_id, :brand_fetch_high_res_logos, :twelve_data_api_key, :tiingo_api_key, :eodhd_api_key, :alpha_vantage_api_key, :openai_access_token, :openai_uri_base, :openai_model, :openai_json_mode, :llm_context_window, :llm_max_response_tokens, :llm_max_items_per_call, :exchange_rate_provider, :securities_provider, :syncs_include_pending, :auto_sync_enabled, :auto_sync_time, :external_assistant_url, :external_assistant_token, :external_assistant_agent_id, securities_providers: [])
+      params.require(:setting).permit(:onboarding_state, :require_email_confirmation, :invite_only_default_family_id, :brand_fetch_client_id, :brand_fetch_high_res_logos, :twelve_data_api_key, :tiingo_api_key, :eodhd_api_key, :alpha_vantage_api_key, :openai_access_token, :openai_uri_base, :openai_model, :openai_chat_model, :openai_background_model, :openai_json_mode, :llm_context_window, :llm_max_response_tokens, :llm_max_items_per_call, :exchange_rate_provider, :securities_provider, :syncs_include_pending, :auto_sync_enabled, :auto_sync_time, :external_assistant_url, :external_assistant_token, :external_assistant_agent_id, securities_providers: [])
     end
 
     def update_assistant_type

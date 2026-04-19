@@ -25,10 +25,8 @@ class Chat < ApplicationRecord
       prompt.first(80)
     end
 
-    # Returns the default AI model to use for chats
-    # Priority: AI Config > Setting
     def default_model
-      Provider::Openai.effective_model.presence || Setting.openai_model
+      Provider::Openai.effective_chat_model
     end
   end
 
