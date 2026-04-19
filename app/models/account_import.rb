@@ -1,21 +1,17 @@
 class AccountImport < Import
   OpeningBalanceError = Class.new(StandardError)
 
-  ALLOWED_ACCOUNTABLE_TYPES = %w[
-    Depository Investment Crypto
-    Property Vehicle OtherAsset
-    CreditCard Loan OtherLiability
-  ].freeze
+  # Delegate the allow-list to `Accountable::TYPES` so AccountImport and the
+  # Accountable concern cannot drift. Kept as a public constant because tests
+  # and other code may reference it.
+  ALLOWED_ACCOUNTABLE_TYPES = Accountable::TYPES
 
   def import!
     transaction do
       rows.each do |row|
         mapping = mappings.account_types.find_by(key: row.entity_type)
-        type = mapping&.value
-        unless type.present? && ALLOWED_ACCOUNTABLE_TYPES.include?(type)
-          raise ArgumentError, "Invalid accountable type: #{type.inspect}"
-        end
-        accountable_class = type.constantize
+        accountable_class = Accountable.from_type(mapping&.value)
+        raise ArgumentError, "Invalid accountable type: #{mapping&.value.inspect}" unless accountable_class
 
         account = family.accounts.build(
           name: row.name,

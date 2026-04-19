@@ -361,4 +361,35 @@ class Family::DataExporterTest < ActiveSupport::TestCase
     assert_nil @exporter.send(:sanitize_csv, nil)
     assert_equal 42, @exporter.send(:sanitize_csv, 42)
   end
+
+  test "NDJSON preserves formula-prefixed names/notes verbatim (no sanitize_csv leak)" do
+    # Transaction with name/notes starting with CSV formula chars — NDJSON must
+    # round-trip them unchanged, otherwise export→import silently mutates data.
+    dangerous_name  = "=SUM(A1)"
+    dangerous_notes = "-1.5x leverage"
+    entry = @account.entries.create!(
+      date: Date.current,
+      name: dangerous_name,
+      amount: 10,
+      currency: "USD",
+      notes: dangerous_notes,
+      entryable: Transaction.new
+    )
+
+    zip_data = @exporter.generate_export
+
+    Zip::File.open_buffer(zip_data) do |zip|
+      ndjson = zip.read("all.ndjson")
+
+      transaction_line = ndjson.each_line.find do |line|
+        parsed = JSON.parse(line)
+        parsed["type"] == "Transaction" && parsed.dig("data", "entry_id") == entry.id
+      end
+
+      assert transaction_line, "Should find the exported transaction in all.ndjson"
+      data = JSON.parse(transaction_line)["data"]
+      assert_equal dangerous_name,  data["name"]
+      assert_equal dangerous_notes, data["notes"]
+    end
+  end
 end

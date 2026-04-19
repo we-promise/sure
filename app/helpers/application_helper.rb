@@ -155,8 +155,8 @@ module ApplicationHelper
 
     sanitize(
       markdown.render(text),
-      tags: %w[p br strong em a ul ol li h1 h2 h3 h4 h5 h6 pre code blockquote table thead tbody tr th td span div sup del mark ins hr dt dd dl],
-      attributes: %w[href target rel class id]
+      tags: %w[p br strong em a img ul ol li h1 h2 h3 h4 h5 h6 pre code blockquote table thead tbody tr th td span div sup del mark ins hr dt dd dl],
+      attributes: %w[href target rel class id src alt title]
     )
   end
 

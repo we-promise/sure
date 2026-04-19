@@ -189,8 +189,8 @@ class Family::DataExporter
             date: transaction.entry.date,
             amount: transaction.entry.amount,
             currency: transaction.entry.currency,
-            name: sanitize_csv(transaction.entry.name),
-            notes: sanitize_csv(transaction.entry.notes),
+            name: transaction.entry.name,
+            notes: transaction.entry.notes,
             excluded: transaction.entry.excluded,
             category_id: transaction.category_id,
             merchant_id: transaction.merchant_id,
@@ -234,7 +234,7 @@ class Family::DataExporter
             date: entry.date,
             amount: entry.amount,
             currency: entry.currency,
-            name: sanitize_csv(entry.name),
+            name: entry.name,
             created_at: entry.created_at,
             updated_at: entry.updated_at
           }
@@ -271,7 +271,7 @@ class Family::DataExporter
 
     def serialize_rule_for_export(rule)
       {
-        name: sanitize_csv(rule.name),
+        name: rule.name,
         resource_type: rule.resource_type,
         active: rule.active,
         effective_date: rule.effective_date&.iso8601,
@@ -351,8 +351,14 @@ class Family::DataExporter
       actions.map { |a| serialize_action(a) }.to_json
     end
 
-    # Prevent CSV formula injection (CWE-1236)
-    # Values starting with =, +, -, @ can execute as formulas in Excel/Sheets
+    # Prevent CSV formula injection (CWE-1236).
+    # Values starting with =, +, -, @ can execute as formulas in Excel / Sheets.
+    # \t, \r, \n are included because some spreadsheet parsers trim leading
+    # whitespace-like characters before evaluating the cell, so "=1+1" prefixed
+    # with a tab/newline would still trigger a formula. Leading literal spaces
+    # are NOT treated as bypasses by mainstream parsers today; if that changes,
+    # extend the character class to cover them.
+    # CSV-only — do not apply to JSON/NDJSON output (it would mutate user data).
     def sanitize_csv(value)
       return value unless value.is_a?(String)
       value.match?(/\A[=+\-@\t\r\n]/) ? "'" + value : value
