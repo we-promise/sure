@@ -31,6 +31,17 @@ class MercuryItemTest < ActiveSupport::TestCase
     assert_equal "https://api.mercury.com/api/v1", @mercury_item.effective_base_url
   end
 
+  test "effective_base_url rejects unknown base_url and falls back to default (F-08 SSRF)" do
+    @mercury_item.base_url = "http://169.254.169.254/latest/meta-data"
+    Rails.logger.expects(:warn).with(regexp_matches(/\[SECURITY\] Rejected Mercury base_url/))
+    assert_equal MercuryItem::ALLOWED_BASE_URLS.first, @mercury_item.effective_base_url
+  end
+
+  test "effective_base_url allows sandbox URL (F-08 SSRF allowlist)" do
+    @mercury_item.base_url = "https://api-sandbox.mercury.com/api/v1"
+    assert_equal "https://api-sandbox.mercury.com/api/v1", @mercury_item.effective_base_url
+  end
+
   test "mercury_provider returns Provider::Mercury instance" do
     provider = @mercury_item.mercury_provider
     assert_instance_of Provider::Mercury, provider
