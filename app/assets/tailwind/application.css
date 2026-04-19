@@ -208,14 +208,17 @@
   position: relative;
 }
 
-.table-divider::after {
-  content: "";
-  position: absolute;
-  left: 1rem;
-  right: 1rem;
-  bottom: 0;
-  height: 1px;
-  background-color: var(--color-alpha-black-100);
+.table-divider {
+  background-image: linear-gradient(
+    to right,
+    transparent 1rem,
+    var(--color-alpha-black-100) 1rem,
+    var(--color-alpha-black-100) calc(100% - 1rem),
+    transparent calc(100% - 1rem)
+  );
+  background-repeat: no-repeat;
+  background-size: 100% 1px;
+  background-position: bottom;
 }
 
 [data-theme="dark"] .table-divider::after  {
