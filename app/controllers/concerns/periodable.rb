@@ -9,7 +9,7 @@ module Periodable
     def set_period
       if params[:period].present?
         period_key = params[:period]
-        Current.session&.set_preferred_period(period_key)
+        Current.session&.set_preferred_period(period_key) if Period.valid_key?(period_key)
       else
         period_key = Current.session&.preferred_period
       end
