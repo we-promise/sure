@@ -4,6 +4,7 @@ fr:
     settings:
       payments:
         renewal: "Votre contribution se poursuit le %{date}."
+        cancellation: "Votre contribution se termine le %{date}."
   settings:
     ai_prompts:
       show:
@@ -18,13 +19,29 @@ fr:
           title: Catégorisation des transactions
           subtitle: L'IA catégorise automatiquement vos transactions en fonction de vos catégories définies
         merchant_detector:
-          title: Détection du vendeur
-          subtitle: L'IA identifie et enrichit les données de transaction avec des informations sur le vendeur
+          title: Détection du marchand
+          subtitle: L'IA identifie et enrichit les données de transaction avec des informations sur le marchand
     payments:
       show:
-        page_title: Paiement
-        subscription_subtitle: Mettez à jour votre abonnement et vos détails de paiement
-        subscription_title: Gérer l'abonnement
+        page_title: Paiements
+        subscription_subtitle: Mettez à jour les détails de votre carte de crédit
+        subscription_title: Gérer les contributions
+    appearances:
+      show:
+        page_title: Apparence
+        theme_title: Thème
+        theme_subtitle: Choisissez un thème préféré pour l'application
+        theme_dark: Sombre
+        theme_light: Clair
+        theme_system: Système
+        transactions_title: Transactions
+        transactions_subtitle: Personnalisez l'affichage des transactions
+        dashboard_title: Tableau de bord
+        dashboard_subtitle: Personnalisez l'affichage du tableau de bord
+        dashboard_two_column_title: Mise en page à deux colonnes
+        dashboard_two_column_description: Affiche les widgets du tableau de bord sur deux colonnes sur les grands écrans. Lorsque cette option est désactivée, les widgets sont empilés dans une seule colonne.
+        split_grouped_title: Grouper les transactions fractionnées
+        split_grouped_description: Affiche les transactions fractionnées groupées sous leur parent dans la liste des transactions. Lorsque cette option est désactivée, les enfants fractionnés apparaissent comme des lignes individuelles.
     preferences:
       show:
         country: Pays
@@ -37,12 +54,32 @@ fr:
         language: Langue
         language_auto: Langue du navigateur
         page_title: Préférences
-        theme_dark: Sombre
-        theme_light: Clair
-        theme_subtitle: Choisissez un thème préféré pour l'application
-        theme_system: Système
-        theme_title: Thème
         timezone: Fuseau horaire
+        month_start_day: Le mois budgétaire commence le
+        month_start_day_hint: Définissez le jour de début de votre mois budgétaire (ex. jour de paie)
+        month_start_day_warning: Vos budgets et vos calculs MTD utiliseront ce jour de début personnalisé au lieu du 1er de chaque mois.
+        currencies_title: "Devises de %{moniker}"
+        currencies_subtitle: Choisissez les devises qui apparaissent dans les champs monétaires de votre %{moniker}
+        base_currency_label: Devise de base
+        base_currency_badge: Devise de base
+        additional_currencies_label: Devises supplémentaires
+        no_additional_currencies: Aucune sélectionnée
+        currencies_more: "+%{count} de plus"
+        manage_currencies: Gérer les devises
+        manage_currencies_subtitle: Désélectionnez les devises que vous n'utilisez jamais, ou réduisez la liste à quelques-unes seulement.
+        select_all_currencies: Tout sélectionner
+        select_base_only: Devise de base uniquement
+        currency_search_placeholder: Rechercher des devises
+        no_matching_currencies: Aucune devise trouvée
+        selected_currencies_count:
+          one: "%{count} sélectionnée"
+          other: "%{count} sélectionnées"
+        save_currencies: Enregistrer les devises
+        sharing_title: "Partage de %{moniker}"
+        sharing_subtitle: "Contrôlez comment les comptes sont partagés dans votre %{moniker}"
+        sharing_default_label: Partage par défaut pour les nouveaux comptes
+        sharing_shared: Partager avec tous les membres
+        sharing_private: Garder privé par défaut
     profiles:
       destroy:
         cannot_remove_self: Vous ne pouvez pas vous enlever de votre compte.
@@ -54,7 +91,7 @@ fr:
           body: Êtes-vous sûr(e) de vouloir supprimer définitivement votre compte ? Cette action est irréversible.
           title: Supprimer le compte?
         confirm_reset:
-          body: Êtes-vous sûr(e) de vouloir réinitialiser votre compte ? Cela supprimera tous vos comptes, catégories, vendeurs, étiquettes et autres données. Cette action ne peut pas être annulée.
+          body: Êtes-vous sûr(e) de vouloir réinitialiser votre compte ? Cela supprimera tous vos comptes, catégories, marchands, étiquettes et autres données. Cette action ne peut pas être annulée.
           title: Réinitialiser le compte?
         confirm_reset_with_sample_data:
           body: Êtes-vous sûr(e) de vouloir réinitialiser votre compte et charger des données d'exemple ? Cela supprimera vos données existantes et les remplacera par des données de démonstration afin que vous puissiez explorer Sure en toute sécurité.
@@ -69,21 +106,24 @@ fr:
         delete_account: Supprimer le compte
         delete_account_warning: La suppression de votre compte entraînera la suppression permanente de toutes vos données et ne pourra pas être annulée.
         reset_account: Réinitialiser le compte
-        reset_account_warning: La réinitialisation de votre compte supprimera tous vos comptes, catégories, vendeurs, étiquettes et autres données, mais gardera votre compte utilisateur intact.
+        reset_account_warning: La réinitialisation de votre compte supprimera tous vos comptes, catégories, marchands, étiquettes et autres données, mais gardera votre compte utilisateur intact.
         reset_account_with_sample_data: Réinitialiser et précharger
         reset_account_with_sample_data_warning: Supprime toutes vos données existantes puis charge des données d'exemple afin que vous puissiez explorer avec un environnement pré-rempli.
         email: E-mail
         first_name: Prénom
+        group_form_input_placeholder: Entrez le nom du groupe
+        group_form_label: Nom du groupe
+        group_title: Membres du groupe
         household_form_input_placeholder: Entrez le nom du foyer
         household_form_label: Nom du foyer
-        household_subtitle: Invitez des membres de la famille, des partenaires et d'autres personnes. Les personnes invitées peuvent se connecter à votre foyer et accéder aux comptes partagés.
+        household_subtitle: Les personnes invitées peuvent se connecter à votre compte %{moniker} et accéder aux ressources partagées.
         household_title: Foyer
         invitation_link: Lien d'invitation
         invite_member: Ajouter un membre
         last_name: Nom de famille
         page_title: Informations du profil
         pending: En attente
-        profile_subtitle: Personnalisez l'apparence de votre profil sur %{product_name}
+        profile_subtitle: Personnalisez votre apparence sur %{product_name}
         profile_title: Personnel
         remove_invitation: Supprimer l'invitation
         remove_member: Supprimer le membre
@@ -117,9 +157,10 @@ fr:
       categories_label: Catégories
       feedback_label: Retour d'information
       general_section_title: Général
-      imports_label: Importer/Exporter
+      imports_label: Importations
+      exports_label: Exportations
       logout: Se déconnecter
-      merchants_label: Vendeurs
+      merchants_label: Marchands
       guides_label: Guides
       other_section_title: Plus
       preferences_label: Préférences
@@ -132,7 +173,8 @@ fr:
       transactions_section_title: Transactions
       whats_new_label: Dernières nouvelles
       api_keys_label: Clés API
-      bank_sync_label: Synchronisation de la banque
+      appearance_label: Apparence
+      bank_sync_label: Synchronisation bancaire
     settings_nav_link_large:
       next: Suivant
       previous: Précédent
@@ -141,3 +183,46 @@ fr:
       choose: Charger une photo
       choose_label: (facultatif)
       change: Changer de photo
+    providers:
+      show:
+        coinbase_title: Coinbase
+      encryption_error:
+        title: Configuration de chiffrement requise
+        message: Les clés de chiffrement Active Record ne sont pas configurées. Veuillez vous assurer que les identifiants de chiffrement (active_record_encryption.primary_key, active_record_encryption.deterministic_key et active_record_encryption.key_derivation_salt) sont correctement définis dans vos identifiants Rails ou variables d'environnement avant d'utiliser les fournisseurs de synchronisation.
+      coinbase_panel:
+        setup_instructions: "Pour connecter Coinbase :"
+        step1_html: Allez dans les <a href="https://portal.cdp.coinbase.com/projects/api-keys" target="_blank" rel="noopener noreferrer" class="text-primary underline">Paramètres API de Coinbase</a>
+        step2: Créez une nouvelle clé API avec des permissions en lecture seule (voir les comptes, voir les transactions)
+        step3: Copiez votre clé API et votre secret API et collez-les ci-dessous
+        api_key_label: Clé API
+        api_key_placeholder: Entrez votre clé API Coinbase
+        api_secret_label: Secret API
+        api_secret_placeholder: Entrez votre secret API Coinbase
+        connect_button: Connecter Coinbase
+        syncing: Synchronisation…
+        sync: Synchroniser
+        disconnect_confirm: Êtes-vous sûr(e) de vouloir déconnecter cette connexion Coinbase ? Vos comptes synchronisés deviendront des comptes manuels.
+        status_connected: Coinbase est connecté et synchronise vos avoirs en crypto.
+        status_not_connected: Non connecté. Saisissez vos identifiants API ci-dessus pour commencer.
+      binance_panel:
+        setup_instructions: "Pour connecter Binance, créez une clé API en lecture seule :"
+        step1_html: 'Allez dans la <a href="https://www.binance.com/en/my/settings/api-management" target="_blank" rel="noopener noreferrer" class="underline">Gestion des API Binance</a>'
+        step2: "Créez une nouvelle clé API avec la permission Enable Reading uniquement"
+        step3: "Collez votre clé API et votre secret ci-dessous"
+        no_withdraw_warning: "Attention : n'activez PAS les permissions de retrait"
+        ip_hint_title: "Liste blanche d'IP requise"
+        ip_hint_body: "Ajoutez l'IP de sortie du serveur de l'application à la liste blanche de la clé API Binance :"
+        ip_hint_contact_admin: "Contactez votre administrateur pour obtenir l'adresse IP de sortie du serveur de l'application."
+        api_key_label: Clé API
+        api_key_placeholder: Collez votre clé API Binance
+        api_secret_label: Secret API
+        api_secret_placeholder: Collez votre secret API Binance
+        connect_button: Connecter Binance
+        syncing: Synchronisation…
+        sync: Synchroniser
+        disconnect_confirm: "Êtes-vous sûr(e) de vouloir déconnecter Binance ?"
+        status_connected: Binance connecté
+        status_not_connected: Binance non connecté
+      enable_banking_panel:
+        callback_url_instruction: "Pour l'URL de rappel, utilisez %{callback_url}."
+        connection_error: Erreur de connexion

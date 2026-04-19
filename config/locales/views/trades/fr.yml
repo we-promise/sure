@@ -5,6 +5,7 @@ fr:
       account: Compte de transfert (facultatif)
       account_prompt: Rechercher un compte
       amount: Montant
+      fee: Frais de transaction
       holding: Symbole boursier
       holding_optional: Symbole boursier (facultatif)
       price: Prix par action
@@ -35,15 +36,22 @@ fr:
     show:
       additional: Détails supplémentaires
       amount_label: Montant
+      buy: Acheter
+      category_label: Catégorie
       cost_per_share_label: Coût par action
       date_label: Date
       delete: Supprimer
+      fee_label: Frais de transaction
       delete_subtitle: Cette action ne peut pas être annulée
-      delete_title: Supprimer la transaction
+      delete_title: Supprimer la transaction boursière
       details: Détails
+      provider_disabled_warning: "Mises à jour des prix en pause — le fournisseur %{provider} est désactivé. Réactivez-le dans les paramètres ou réassociez l'avoir à un autre fournisseur."
       exclude_subtitle: Cette transaction ne sera pas incluse dans les rapports et les calculs
       exclude_title: Exclure des analyses
+      no_category: Aucune catégorie
       note_label: Note
       note_placeholder: Ajoutez tout commentaire supplémentaire ici...
       quantity_label: Quantité
+      sell: Vendre
       settings: Paramètres
+      type_label: Type

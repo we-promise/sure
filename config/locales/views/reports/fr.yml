@@ -34,6 +34,7 @@ fr:
       budgeted: Budgété
       remaining: Restant
       over_by: Dépassé de
+      shared: partagé
       suggested_daily: "%{amount} suggéré par jour pour les %{days} jours restants"
       no_budgets: Aucune catégorie de budget définie pour ce mois
       status:
@@ -104,8 +105,8 @@ fr:
         income: Revenus
         uncategorized: Non catégorisé
         entries:
-          one: entrée
-          other: entrées
+          one: "%{count} entrée"
+          other: "%{count} entrées"
         percentage: "% du total"
       pagination:
         showing:
@@ -114,8 +115,8 @@ fr:
         previous: Précédent
         next: Suivant
     net_worth:
-      title: Valeur nette
-      current_net_worth: Valeur nette actuelle
+      title: Patrimoine net
+      current_net_worth: Patrimoine net actuel
       period_change: Variation sur la période
       assets_vs_liabilities: Actifs vs Passifs
       total_assets: Actifs
@@ -134,6 +135,28 @@ fr:
       value: Valeur
       return: Rendement
       accounts: Comptes d'investissement
+      gains_by_tax_treatment: Gains par traitement fiscal
+      unrealized_gains: Plus-values latentes
+      realized_gains: Plus-values réalisées
+      total_gains: Gains totaux
+      taxable_realized_note: Ces gains peuvent être soumis à l'impôt
+      no_data: "-"
+      view_details: Voir les détails
+      holdings_count:
+        one: "%{count} avoir"
+        other: "%{count} avoirs"
+      sells_count:
+        one: "%{count} vente"
+        other: "%{count} ventes"
+      holdings: Avoirs
+      sell_trades: Transactions boursières de vente
+      and_more: "+%{count} de plus"
+    investment_flows:
+      title: Flux d'investissement
+      description: Suivez les flux d'argent entrants et sortants de vos comptes d'investissement
+      contributions: Contributions
+      withdrawals: Retraits
+      net_flow: Flux net
     google_sheets_instructions:
       title_with_key: "✅ Copier l'URL pour Google Sheets"
       title_no_key: "⚠️ Clé API requise"
@@ -164,7 +187,7 @@ fr:
         of_income: "%{percent}% des revenus"
         used: utilisé
       net_worth:
-        title: Valeur nette
+        title: Patrimoine net
         current_balance: Solde actuel
         this_period: cette période
         assets: Actifs
