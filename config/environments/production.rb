@@ -108,12 +108,19 @@ Rails.application.configure do
   # at boot (see cors.rb for the matching allow-list warning) to nudge operators.
   if ENV["APP_DOMAIN"].present?
     config.hosts = [ ENV["APP_DOMAIN"] ]
-  elsif ENV["ALLOWED_HOSTS"].present?
-    config.hosts = ENV["ALLOWED_HOSTS"].split(",").map(&:strip).reject(&:empty?)
   else
-    # Use `config.logger` rather than `Rails.logger`: this block runs during
-    # environment configuration, before `Rails.logger` is finalized.
-    config.logger&.warn("[SECURITY] APP_DOMAIN and ALLOWED_HOSTS not set — DNS rebinding protection disabled")
+    # Parse before deciding to assign — `ENV["ALLOWED_HOSTS"].present?` is
+    # true for junk like "," or "   " which split+strip+reject down to [].
+    # Assigning config.hosts = [] means "deny every host", which is worse
+    # than falling through to the warn-and-leave-unset branch.
+    parsed_hosts = ENV["ALLOWED_HOSTS"].to_s.split(",").map(&:strip).reject(&:empty?)
+    if parsed_hosts.any?
+      config.hosts = parsed_hosts
+    else
+      # Use `config.logger` rather than `Rails.logger`: this block runs during
+      # environment configuration, before `Rails.logger` is finalized.
+      config.logger&.warn("[SECURITY] APP_DOMAIN and ALLOWED_HOSTS not set — DNS rebinding protection disabled")
+    end
   end
   # config.hosts = [
   #   "example.com",     # Allow requests from example.com
