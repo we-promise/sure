@@ -7,7 +7,12 @@ module Periodable
 
   private
     def set_period
-      period_key = params[:period] || Current.user&.default_period
+      if params[:period].present?
+        period_key = params[:period]
+        Current.session&.set_preferred_period(period_key)
+      else
+        period_key = Current.session&.preferred_period
+      end
 
       @period = if period_key == "current_month"
         Period.current_month_for(Current.family)

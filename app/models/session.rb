@@ -24,6 +24,15 @@ class Session < ApplicationRecord
     save!
   end
 
+  def preferred_period
+    data["preferred_period"]
+  end
+
+  def set_preferred_period(period_key)
+    data["preferred_period"] = period_key
+    save!
+  end
+
   private
 
     def capture_session_info
