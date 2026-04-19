@@ -33,7 +33,7 @@ class MfaControllerTest < ActionDispatch::IntegrationTest
     @user.setup_mfa!
     totp = ROTP::TOTP.new(@user.otp_secret, issuer: "Sure Finances")
 
-    post mfa_path, params: { code: totp.now }
+    post mfa_path, params: { code: totp.now, password: user_password_test }
 
     assert_response :success
     assert @user.reload.otp_required?
@@ -44,11 +44,21 @@ class MfaControllerTest < ActionDispatch::IntegrationTest
   test "does not enable MFA with invalid code" do
     @user.setup_mfa!
 
-    post mfa_path, params: { code: "invalid" }
+    post mfa_path, params: { code: "invalid", password: user_password_test }
 
     assert_redirected_to new_mfa_path
     assert_not @user.reload.otp_required?
     assert_empty @user.otp_backup_codes
+  end
+
+  test "enables MFA only with correct password" do
+    @user.setup_mfa!
+    totp = ROTP::TOTP.new(@user.otp_secret, issuer: "Sure Finances")
+
+    post mfa_path, params: { code: totp.now, password: "wrongpassword" }
+
+    assert_not @user.reload.otp_required?
+    assert_redirected_to new_mfa_path
   end
 
   test "verify shows MFA verification page" do
@@ -109,11 +119,21 @@ class MfaControllerTest < ActionDispatch::IntegrationTest
     @user.setup_mfa!
     @user.enable_mfa!
 
-    delete disable_mfa_path
+    delete disable_mfa_path, params: { password: user_password_test }
 
     assert_redirected_to settings_security_path
     assert_not @user.reload.otp_required?
     assert_nil @user.otp_secret
     assert_empty @user.otp_backup_codes
+  end
+
+  test "disabling MFA requires correct password" do
+    @user.setup_mfa!
+    @user.enable_mfa!
+
+    delete disable_mfa_path, params: { password: "wrongpassword" }
+
+    assert @user.reload.otp_required?
+    assert_redirected_to settings_security_path
   end
 end

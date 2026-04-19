@@ -12,13 +12,17 @@ en:
       title: Save Your Backup Codes
     create:
       invalid_code: Invalid verification code. Please try again.
+      invalid_password: Incorrect password. Please try again.
     disable:
+      invalid_password: Incorrect password. Please try again.
       success: Two-factor authentication has been disabled
     new:
       code_label: Verification Code
       code_placeholder: Enter 6-digit code
       description: Enhance your account security by setting up two-factor authentication
       page_title: Two-Factor Authentication Setup
+      password_label: Password
+      password_placeholder: Enter your password
       scan_description: Use an authenticator app like Google Authenticator or 1Password
         to scan this QR code
       scan_title: 1. Scan QR Code
