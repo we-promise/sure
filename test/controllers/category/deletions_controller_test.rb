@@ -4,9 +4,7 @@ class Category::DeletionsControllerTest < ActionDispatch::IntegrationTest
   setup do
     sign_in users(:family_admin)
     @category = categories(:food_and_drink)
-    tailwind_build = Rails.root.join("app/assets/builds/tailwind.css")
-    FileUtils.mkdir_p(tailwind_build.dirname)
-    File.write(tailwind_build, "/* test */") unless tailwind_build.exist?
+    ensure_tailwind_build
   end
 
   test "new" do
