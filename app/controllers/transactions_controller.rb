@@ -8,9 +8,7 @@ class TransactionsController < ApplicationController
     prefill_params_from_duplicate!
     super
     apply_duplicate_attributes!
-    @income_categories = Current.family.categories.incomes.alphabetically
-    @expense_categories = Current.family.categories.expenses.alphabetically
-    @categories = Current.family.categories.alphabetically
+    load_new_form_options
   end
 
   def index
@@ -64,6 +62,10 @@ class TransactionsController < ApplicationController
                                   .includes(:merchant)
   end
 
+  def name_suggestions
+    render json: { suggestions: transaction_name_suggestions(query: params[:query]) }
+  end
+
   def clear_filter
     updated_params = {
       "q" => search_params,
@@ -113,6 +115,7 @@ class TransactionsController < ApplicationController
         format.turbo_stream { stream_redirect_back_or_to(account_path(@entry.account)) }
       end
     else
+      load_new_form_options
       render :new, status: :unprocessable_entity
     end
   end
@@ -514,6 +517,86 @@ class TransactionsController < ApplicationController
 
     def preferences_params
       params.require(:preferences).permit(collapsed_sections: {})
+    end
+
+    def load_new_form_options
+      @categories = Current.family.categories.alphabetically
+    end
+
+    def transaction_name_suggestions(query:, limit: 8)
+      query_text = query.to_s.squish
+      return [] if query_text.length < 2
+
+      normalized_query = normalize_transaction_name(query_text)
+      escaped_query = ActiveRecord::Base.sanitize_sql_like(normalized_query)
+      normalized_name_sql = "lower(regexp_replace(trim(entries.name), '\\s+', ' ', 'g'))"
+      match_rank_sql = <<~SQL.squish
+        CASE
+          WHEN #{normalized_name_sql} = #{ActiveRecord::Base.connection.quote(normalized_query)} THEN 0
+          WHEN #{normalized_name_sql} LIKE #{ActiveRecord::Base.connection.quote("#{escaped_query}%")} THEN 1
+          WHEN #{normalized_name_sql} LIKE #{ActiveRecord::Base.connection.quote("% #{escaped_query}%")} THEN 2
+          ELSE 3
+        END
+      SQL
+
+      rows = Current.accessible_entries
+        .where(entryable_type: "Transaction", parent_entry_id: nil)
+        .where.not(name: [ nil, "" ])
+        .where("#{normalized_name_sql} LIKE ?", "%#{escaped_query}%")
+        .select("entries.name, entries.created_at, #{match_rank_sql} AS transaction_name_match_rank")
+        .order(Arel.sql("#{match_rank_sql} ASC, entries.created_at DESC"))
+        .limit(500)
+        .map { |entry| [ entry.name, entry.created_at ] }
+
+      deduplicate_transaction_name_rows(rows, query: query_text, limit: limit)
+    end
+
+    def deduplicate_transaction_name_rows(rows, query:, limit:)
+      normalized_query = normalize_transaction_name(query)
+
+      grouped_names = rows.each_with_object({}) do |(name, created_at), grouped|
+        normalized_name = normalize_transaction_name(name)
+        next if normalized_name.blank?
+
+        bucket = grouped[normalized_name] ||= { latest_seen_at: created_at, variants: {} }
+        bucket[:latest_seen_at] = [ bucket[:latest_seen_at], created_at ].max
+
+        variant = bucket[:variants][name] ||= { count: 0, latest_seen_at: created_at }
+        variant[:count] += 1
+        variant[:latest_seen_at] = [ variant[:latest_seen_at], created_at ].max
+      end
+
+      grouped_names
+        .map do |normalized_name, data|
+          canonical_name = best_casing_variant_name(data[:variants])
+          next if canonical_name.blank?
+
+          {
+            canonical_name: canonical_name,
+            latest_seen_at: data[:latest_seen_at],
+            match_rank: transaction_name_match_rank(normalized_name, normalized_query)
+          }
+        end
+        .compact
+        .sort_by { |item| [ item[:match_rank], -item[:latest_seen_at].to_i ] }
+        .map { |item| item[:canonical_name] }
+        .first(limit)
+    end
+
+    def best_casing_variant_name(variants)
+      variants.max_by { |_, stats| [ stats[:count], stats[:latest_seen_at].to_i ] }&.first
+    end
+
+    def transaction_name_match_rank(normalized_name, normalized_query)
+      return 0 if normalized_name == normalized_query
+      return 1 if normalized_name.start_with?(normalized_query)
+      return 2 if normalized_name.split.any? { |word| word.start_with?(normalized_query) }
+
+      3
+    end
+
+    def normalize_transaction_name(name)
+      name.to_s.squish.downcase
     end
 
     # Helper methods for convert_to_trade
