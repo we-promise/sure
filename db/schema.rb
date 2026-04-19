@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_04_12_120000) do
+ActiveRecord::Schema[7.2].define(version: 2026_04_19_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -1245,7 +1245,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_04_12_120000) do
     t.index ["kind"], name: "index_securities_on_kind"
     t.index ["price_provider", "offline_reason"], name: "index_securities_on_price_provider_and_offline_reason"
     t.index ["price_provider"], name: "index_securities_on_price_provider"
-    t.check_constraint "kind::text = ANY (ARRAY['standard'::character varying, 'cash'::character varying]::text[])", name: "chk_securities_kind"
+    t.check_constraint "kind::text = ANY (ARRAY['standard'::character varying::text, 'cash'::character varying::text])", name: "chk_securities_kind"
   end
 
   create_table "security_prices", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1403,7 +1403,6 @@ ActiveRecord::Schema[7.2].define(version: 2026_04_12_120000) do
     t.datetime "updated_at", null: false
     t.index ["account_id"], name: "index_sophtron_accounts_on_account_id"
     t.index ["sophtron_item_id"], name: "index_sophtron_accounts_on_sophtron_item_id"
-    t.index ["sophtron_item_id", "account_id"], name: "idx_unique_sophtron_accounts_per_item", unique: true
   end
 
   create_table "sophtron_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1420,8 +1419,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_04_12_120000) do
     t.datetime "sync_start_date"
     t.jsonb "raw_payload"
     t.jsonb "raw_institution_payload"
-    t.string "user_id", null: false
-    t.string "access_key", null: false
+    t.string "user_id"
+    t.string "access_key"
     t.string "base_url"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
@@ -1590,7 +1589,6 @@ ActiveRecord::Schema[7.2].define(version: 2026_04_12_120000) do
     t.boolean "otp_required", default: false, null: false
     t.string "otp_backup_codes", default: [], array: true
     t.boolean "show_sidebar", default: true
-    t.string "default_period", default: "last_30_days", null: false
     t.uuid "last_viewed_chat_id"
     t.boolean "show_ai_sidebar", default: true
     t.boolean "ai_enabled", default: false, null: false
