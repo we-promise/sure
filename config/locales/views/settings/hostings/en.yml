@@ -92,14 +92,14 @@ en:
         access_token_placeholder: Enter your access token here
         uri_base_label: API Base URL (Optional)
         uri_base_placeholder: "https://api.openai.com/v1 (default)"
-        model_label: Model (Optional)
+        model_label: Default Model (Optional)
         model_placeholder: "gpt-4.1 (default)"
         chat_model_label: Chat Model (Optional)
-        chat_model_placeholder: "Uses global model if blank"
+        chat_model_placeholder: "Uses default model if blank"
         chat_model_help: "Model used for interactive AI chat conversations. Leave blank to use the global model above."
-        background_model_label: Background Model (Optional)
-        background_model_placeholder: "Uses global model if blank"
-        background_model_help: "Model used for background tasks: auto-categorization and merchant detection. Leave blank to use the global model above."
+        background_model_label: Automated Tasks Model (Optional)
+        background_model_placeholder: "Auto-categorization, merchant detection… (uses default model if blank)"
+        background_model_help: "Model used for automated background tasks: auto-categorization and merchant detection. Leave blank to use the global model above."
         json_mode_label: JSON Mode
         json_mode_auto: Auto (recommended)
         json_mode_strict: Strict (best for thinking models)
