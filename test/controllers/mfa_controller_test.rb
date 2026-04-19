@@ -116,4 +116,37 @@ class MfaControllerTest < ActionDispatch::IntegrationTest
     assert_nil @user.otp_secret
     assert_empty @user.otp_backup_codes
   end
+
+  # ── Security tests added with pentest fixes (PT-003) ─────────────────────────
+
+  test "MFA verify_code rate-limits after 5 attempts" do
+    other_user = users(:family_admin)
+    other_user.setup_mfa!
+    other_user.enable_mfa!
+
+    sign_out
+    # Simulate partial login with MFA pending
+    post sessions_path, params: { email: other_user.email, password: user_password_test }
+
+    6.times do
+      post verify_mfa_path, params: { code: "000000" }
+    end
+
+    assert_redirected_to new_session_path
+  end
+
+  test "MFA session expires after TTL" do
+    other_user = users(:family_admin)
+    other_user.setup_mfa!
+    other_user.enable_mfa!
+
+    sign_out
+    post sessions_path, params: { email: other_user.email, password: user_password_test }
+
+    # Travel past the 5 minute TTL window
+    travel_to(6.minutes.from_now) do
+      post verify_mfa_path, params: { code: ROTP::TOTP.new(other_user.otp_secret).now }
+      assert_redirected_to new_session_path
+    end
+  end
 end
