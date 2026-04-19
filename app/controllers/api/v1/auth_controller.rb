@@ -12,6 +12,12 @@ module Api
       before_action :log_api_access, only: :enable_ai
 
       def signup
+        # Block signups when registration is closed (self-hosted)
+        if Rails.application.config.app_mode.self_hosted? && Setting.onboarding_state == "closed"
+          render json: { error: "Registration is currently closed" }, status: :forbidden
+          return
+        end
+
         # Check if invite code is required
         if invite_code_required? && params[:invite_code].blank?
           render json: { error: "Invite code is required" }, status: :forbidden
