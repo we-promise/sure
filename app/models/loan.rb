@@ -8,7 +8,10 @@ class Loan < ApplicationRecord
     "other" => { short: "Other Loan", long: "Other Loan" }
   }.freeze
 
+  before_validation :set_default_start_date, on: :create
+
   validates :subtype, inclusion: { in: SUBTYPES.keys }, allow_blank: true
+
   validates :interest_rate,
             numericality: { greater_than_or_equal_to: 0 },
             allow_nil: true
@@ -35,6 +38,9 @@ class Loan < ApplicationRecord
 
   validates :start_date, presence: true, on: :create
 
+  def set_default_start_date
+    self.start_date ||= Date.current
+  end
 
   def original_balance
     Money.new(account.first_valuation_amount, account.currency)
