@@ -34,6 +34,10 @@ class ImpersonationSessionsController < ApplicationController
 
   def complete
     # PT-005: Only the impersonator or the impersonated user may end the session.
+    # set_impersonation_session already scopes by Current.true_user, so a missing
+    # record means the caller is not a participant; this check also defends
+    # against future changes to the scope.
+    raise_unauthorized! if @impersonation_session.nil?
     raise_unauthorized! unless [ @impersonation_session.impersonator, @impersonation_session.impersonated ].include?(Current.true_user)
     @impersonation_session.complete!
     redirect_to root_path, notice: t(".success")
