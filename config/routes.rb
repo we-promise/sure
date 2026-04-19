@@ -121,7 +121,7 @@ Rails.application.routes.draw do
     delete :disable
   end
 
-  mount Lookbook::Engine, at: "/design-system"
+  mount Lookbook::Engine, at: "/design-system" if Rails.env.development?
 
   if Rails.env.development?
     mount Rswag::Api::Engine => "/api-docs"
