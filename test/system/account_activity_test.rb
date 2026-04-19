@@ -102,5 +102,4 @@ class AccountActivityTest < ApplicationSystemTestCase
       system({ "RAILS_ENV" => "test" }, "bin/rails", "tailwindcss:build", exception: true)
       self.class.instance_variable_set(:@tailwind_css_built, true)
     end
-
 end
