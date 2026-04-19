@@ -71,6 +71,12 @@ module Api
       end
 
       def login
+        # Enforce AuthConfig — respect SSO-only mode for API clients too
+        unless AuthConfig.local_login_enabled?
+          render json: { error: "Local login is disabled. Please use SSO." }, status: :forbidden
+          return
+        end
+
         user = User.find_by(email: params[:email])
 
         if user&.authenticate(params[:password])

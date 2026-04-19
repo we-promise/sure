@@ -834,6 +834,19 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Registration is currently closed", JSON.parse(response.body)["error"]
   end
 
+  test "login is blocked when local login disabled via AuthConfig" do
+    AuthConfig.stubs(:local_login_enabled?).returns(false)
+
+    post "/api/v1/auth/login", params: {
+      email: users(:family_admin).email,
+      password: user_password_test,
+      device: @device_info
+    }
+
+    assert_response :forbidden
+    assert_equal "Local login is disabled. Please use SSO.", JSON.parse(response.body)["error"]
+  end
+
   test "refresh token is rejected for deactivated user and new token is revoked" do
     user = users(:family_member)
     device = user.mobile_devices.create!(@device_info)
