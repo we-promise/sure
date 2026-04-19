@@ -689,4 +689,29 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
 
     assert_not_equal old_session_id, session.id, "Session ID should change on login to prevent fixation"
   end
+
+  # F-04: Session TTL — absolute (30d) and idle (24h) expiry enforced server-side.
+  test "session is expired after 30d absolute TTL" do
+    sign_in @user
+    db_session = Session.order(created_at: :desc).find_by!(user_id: @user.id)
+
+    # Backdate the session past the absolute TTL.
+    db_session.update_columns(created_at: 31.days.ago, updated_at: 1.hour.ago)
+
+    get root_url
+    assert_redirected_to new_session_url
+    assert_not Session.exists?(db_session.id), "Expired session should be destroyed"
+  end
+
+  test "session is expired after 24h idle TTL" do
+    sign_in @user
+    db_session = Session.order(created_at: :desc).find_by!(user_id: @user.id)
+
+    # Session is young in absolute terms but idle beyond the idle TTL.
+    db_session.update_columns(created_at: 2.days.ago, updated_at: 25.hours.ago)
+
+    get root_url
+    assert_redirected_to new_session_url
+    assert_not Session.exists?(db_session.id), "Idle-expired session should be destroyed"
+  end
 end
