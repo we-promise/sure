@@ -33,6 +33,8 @@ class ImpersonationSessionsController < ApplicationController
   end
 
   def complete
+    # PT-005: Only the impersonator or the impersonated user may end the session.
+    raise_unauthorized! unless [ @impersonation_session.impersonator, @impersonation_session.impersonated ].include?(Current.true_user)
     @impersonation_session.complete!
     redirect_to root_path, notice: t(".success")
   end
