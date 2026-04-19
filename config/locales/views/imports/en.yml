@@ -251,6 +251,18 @@ en:
       summary_label: Summary
       email_sent_notice: An email has been sent to you with next steps.
       back_to_imports: Back to imports
+      reconciliation_title: Reconciliation report
+      reconciliation_description: We've compared your statement against synced data and everything matches.
+      reconciliation_mismatch_description: We've compared your statement against synced data and found discrepancies. Review the information below and adjust as needed.
+      reconciliation_details_label: Reconciliation Details
+      reconciliation_statement_balance: "Statement closing balance"
+      reconciliation_synced_balance: "Synced closing balance"
+      reconciliation_balance_match: Balance match
+      reconciliation_balance_yes: Yes
+      reconciliation_balance_no: No
+      reconciliation_statement_txns: Statement transactions
+      reconciliation_synced_txns: Synced transactions
+      reconciliation_matched_txns: Matched transactions
       unknown_state_title: Unknown state
       unknown_state_description: This import is in an unexpected state. Please return to imports.
       processing_failed_with_message: "%{message}"
