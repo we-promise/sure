@@ -11,10 +11,11 @@
 #   end
 #
 # Provides:
-#   - ALLOWED_BASE_URLS class-level constant (array of strings)
+#   - ALLOWED_BASE_URLS class-level constant (frozen array of frozen strings)
 #   - AR `inclusion` validation on `base_url` rejecting invalid values at save time
 #   - `effective_base_url` instance helper that falls back to the canonical URL
-#     with a single boot-time [SECURITY] log when an invalid value sneaks through
+#     and logs a per-call [SECURITY] warning whenever an invalid value is read
+#     (e.g. a row written through rake/console before this concern was in place)
 #
 # Both the DB-level validation and the runtime helper are kept as
 # defense-in-depth: validation catches bad input at the UI boundary, the
@@ -30,7 +31,13 @@ module BaseUrlAllowlistable
           "#{name}.allowed_base_urls already configured — call it exactly once per class"
       end
 
-      const_set(:ALLOWED_BASE_URLS, urls.flatten.freeze)
+      allowed = urls.flatten
+      unless allowed.any? && allowed.all? { |url| url.is_a?(String) && url.present? }
+        raise ArgumentError,
+          "#{name}.allowed_base_urls requires at least one non-blank URL string (got #{allowed.inspect})"
+      end
+
+      const_set(:ALLOWED_BASE_URLS, allowed.map { |url| url.dup.freeze }.freeze)
       # The validator resolves the allow-list via `const_get` on each call so
       # the inclusion check and `effective_base_url` can never drift. (A
       # literal `in: allowed` would freeze a snapshot at registration time.)
