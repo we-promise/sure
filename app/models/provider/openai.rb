@@ -257,6 +257,7 @@ class Provider::Openai < Provider
     prompt,
     model:,
     instructions: nil,
+    prompt_metadata: nil,
     functions: [],
     function_results: [],
     messages: nil,
@@ -274,6 +275,7 @@ class Provider::Openai < Provider
         prompt: prompt,
         model: model,
         instructions: instructions,
+        prompt_metadata: prompt_metadata,
         functions: functions,
         function_results: function_results,
         streamer: streamer,
@@ -287,6 +289,7 @@ class Provider::Openai < Provider
         prompt: prompt,
         model: model,
         instructions: instructions,
+        prompt_metadata: prompt_metadata,
         functions: functions,
         function_results: function_results,
         messages: messages,
@@ -328,6 +331,7 @@ class Provider::Openai < Provider
       prompt:,
       model:,
       instructions: nil,
+      prompt_metadata: nil,
       functions: [],
       function_results: [],
       streamer: nil,
@@ -384,7 +388,8 @@ class Provider::Openai < Provider
               output: response.messages.map(&:output_text).join("\n"),
               usage: usage,
               session_id: session_id,
-              user_identifier: user_identifier
+              user_identifier: user_identifier,
+              prompt: prompt_metadata
             )
             record_llm_usage(family: family, model: model, operation: "chat", usage: usage)
             response
@@ -398,7 +403,8 @@ class Provider::Openai < Provider
               output: parsed.messages.map(&:output_text).join("\n"),
               usage: raw_response["usage"],
               session_id: session_id,
-              user_identifier: user_identifier
+              user_identifier: user_identifier,
+              prompt: prompt_metadata
             )
             record_llm_usage(family: family, model: model, operation: "chat", usage: raw_response["usage"])
             parsed
@@ -410,7 +416,8 @@ class Provider::Openai < Provider
             input: input_payload,
             error: e,
             session_id: session_id,
-            user_identifier: user_identifier
+            user_identifier: user_identifier,
+            prompt: prompt_metadata
           )
           record_llm_usage(family: family, model: model, operation: "chat", error: e)
           raise
@@ -422,6 +429,7 @@ class Provider::Openai < Provider
       prompt:,
       model:,
       instructions: nil,
+      prompt_metadata: nil,
       functions: [],
       function_results: [],
       messages: nil,
@@ -459,7 +467,8 @@ class Provider::Openai < Provider
             output: parsed.messages.map(&:output_text).join("\n"),
             usage: raw_response["usage"],
             session_id: session_id,
-            user_identifier: user_identifier
+            user_identifier: user_identifier,
+            prompt: prompt_metadata
           )
 
           record_llm_usage(family: family, model: model, operation: "chat", usage: raw_response["usage"])
@@ -486,7 +495,8 @@ class Provider::Openai < Provider
             input: messages,
             error: e,
             session_id: session_id,
-            user_identifier: user_identifier
+            user_identifier: user_identifier,
+            prompt: prompt_metadata
           )
           record_llm_usage(family: family, model: model, operation: "chat", error: e)
           raise
@@ -601,7 +611,7 @@ class Provider::Openai < Provider
       nil
     end
 
-    def log_langfuse_generation(name:, model:, input:, output: nil, usage: nil, error: nil, session_id: nil, user_identifier: nil)
+    def log_langfuse_generation(name:, model:, input:, output: nil, usage: nil, error: nil, session_id: nil, user_identifier: nil, prompt: nil)
       return unless langfuse_client
 
       trace = create_langfuse_trace(
@@ -611,11 +621,24 @@ class Provider::Openai < Provider
         user_identifier: user_identifier
       )
 
-      generation = trace&.generation(
+      generation_options = {
         name: name,
         model: model,
         input: input
-      )
+      }
+      if prompt.present?
+        generation_options[:version] = prompt[:version] if prompt[:version]
+        generation_options[:metadata] = {
+          prompt: {
+            name: prompt[:name],
+            version: prompt[:version],
+            content: prompt[:content],
+            template: prompt[:template]
+          }.compact
+        }
+      end
+
+      generation = trace&.generation(**generation_options)
 
       if error
         generation&.end(

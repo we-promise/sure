@@ -25,10 +25,13 @@ class Chat < ApplicationRecord
       prompt.first(80)
     end
 
-    # Returns the default AI model to use for chats
-    # Priority: AI Config > Setting
-    def default_model
-      Provider::Openai.effective_model.presence || Setting.openai_model
+    # Returns the default AI model to use for chats.
+    # Priority: family preferred > Provider::Openai.effective_model (ENV > Setting > default).
+    # @param family [Family, nil] optional family for per-family preferred model
+    # @return [String]
+    def default_model(family = nil)
+      family&.preferred_ai_model.presence ||
+        Provider::Openai.effective_model
     end
   end
 

@@ -1,9 +1,10 @@
 class Assistant::Responder
-  def initialize(message:, instructions:, function_tool_caller:, llm:)
+  def initialize(message:, instructions:, function_tool_caller:, llm:, prompt_metadata: nil)
     @message = message
     @instructions = instructions
     @function_tool_caller = function_tool_caller
     @llm = llm
+    @prompt_metadata = prompt_metadata
   end
 
   def on(event_name, &block)
@@ -44,7 +45,7 @@ class Assistant::Responder
   end
 
   private
-    attr_reader :message, :instructions, :function_tool_caller, :llm
+    attr_reader :message, :instructions, :function_tool_caller, :llm, :prompt_metadata
 
     def handle_follow_up_response(response)
       streamer = proc do |chunk|
@@ -77,6 +78,7 @@ class Assistant::Responder
         message.content,
         model: message.ai_model,
         instructions: instructions,
+        prompt_metadata: prompt_metadata,
         functions: function_tool_caller.function_definitions,
         function_results: function_results,
         messages: conversation_history,

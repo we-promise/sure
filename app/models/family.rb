@@ -45,14 +45,24 @@ class Family < ApplicationRecord
   has_many :llm_usages, dependent: :destroy
   has_many :recurring_transactions, dependent: :destroy
 
+  PREFERRED_AI_MODEL_MAX_LENGTH = 128
+  OPENAI_URI_BASE_MAX_LENGTH = 512
+
   validates :locale, inclusion: { in: I18n.available_locales.map(&:to_s) }
   validates :date_format, inclusion: { in: DATE_FORMATS.map(&:last) }
   validates :month_start_day, inclusion: { in: 1..28 }
   validates :moniker, inclusion: { in: MONIKERS }
   validates :assistant_type, inclusion: { in: ASSISTANT_TYPES }
   validates :default_account_sharing, inclusion: { in: SHARING_DEFAULTS }
+  validates :preferred_ai_model, length: { maximum: PREFERRED_AI_MODEL_MAX_LENGTH }, allow_blank: true
+  validates :openai_uri_base, length: { maximum: OPENAI_URI_BASE_MAX_LENGTH }, allow_blank: true
+  validate :preferred_ai_model_required_when_custom_endpoint
 
   before_validation :normalize_enabled_currencies!
+
+  def custom_openai_endpoint?
+    openai_uri_base.present?
+  end
 
   def primary_currency_code
     normalize_currency_code(currency) || "USD"
@@ -79,7 +89,6 @@ class Family < ApplicationRecord
   def secondary_enabled_currency_objects(extra: [])
     enabled_currency_objects(extra:).reject { |currency| currency.iso_code == primary_currency_code }
   end
-
 
   def moniker_label
     moniker.presence || "Family"
@@ -329,6 +338,13 @@ class Family < ApplicationRecord
   end
 
   private
+
+    def preferred_ai_model_required_when_custom_endpoint
+      return unless openai_uri_base.present? && preferred_ai_model.blank?
+
+      errors.add(:preferred_ai_model, :blank)
+    end
+
     def normalize_enabled_currencies!
       if enabled_currencies.blank?
         self.enabled_currencies = nil

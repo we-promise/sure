@@ -2,18 +2,24 @@ class Assistant::Builtin < Assistant::Base
   include Assistant::Provided
   include Assistant::Configurable
 
-  attr_reader :instructions
+  attr_reader :instructions, :prompt_metadata
 
   class << self
     def for_chat(chat)
       config = config_for(chat)
-      new(chat, instructions: config[:instructions], functions: config[:functions])
+      new(
+        chat,
+        instructions: config[:instructions],
+        prompt_metadata: config[:prompt_metadata],
+        functions: config[:functions]
+      )
     end
   end
 
-  def initialize(chat, instructions: nil, functions: [])
+  def initialize(chat, instructions: nil, prompt_metadata: nil, functions: [])
     super(chat)
     @instructions = instructions
+    @prompt_metadata = prompt_metadata
     @functions = functions
   end
 
@@ -24,7 +30,7 @@ class Assistant::Builtin < Assistant::Base
       ai_model: message.ai_model
     )
 
-    llm_provider = get_model_provider(message.ai_model)
+    llm_provider = get_model_provider(message.ai_model, family: chat.user&.family)
     unless llm_provider
       raise StandardError, build_no_provider_error_message(message.ai_model)
     end
@@ -32,6 +38,7 @@ class Assistant::Builtin < Assistant::Base
     responder = Assistant::Responder.new(
       message: message,
       instructions: instructions,
+      prompt_metadata: prompt_metadata,
       function_tool_caller: function_tool_caller,
       llm: llm_provider
     )
