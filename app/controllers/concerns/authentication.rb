@@ -39,7 +39,12 @@ module Authentication
 
     def create_session_for(user)
       session = user.sessions.create!
-      cookies.signed.permanent[:session_token] = { value: session.id, httponly: true }
+      cookies.signed.permanent[:session_token] = {
+        value: session.id,
+        httponly: true,
+        secure: Rails.env.production?,
+        same_site: :lax
+      }
       session
     end
 
