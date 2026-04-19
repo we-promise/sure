@@ -136,6 +136,7 @@ module ApplicationHelper
 
     renderer = Redcarpet::Render::HTML.new(
       hard_wrap: true,
+      filter_html: true,
       link_attributes: { target: "_blank", rel: "noopener noreferrer" }
     )
 
@@ -152,7 +153,11 @@ module ApplicationHelper
       footnotes: true
     )
 
-    markdown.render(text).html_safe
+    sanitize(
+      markdown.render(text),
+      tags: %w[p br strong em a ul ol li h1 h2 h3 h4 h5 h6 pre code blockquote table thead tbody tr th td span div sup del mark ins hr dt dd dl],
+      attributes: %w[href target rel class id]
+    )
   end
 
   # Generate the callback URL for Enable Banking OAuth (used in views and controller).
