@@ -13,7 +13,7 @@
 
 def allowed_origins
   if ENV["ALLOWED_ORIGINS"].present?
-    ENV["ALLOWED_ORIGINS"].split(",").map(&:strip)
+    ENV["ALLOWED_ORIGINS"].split(",").map(&:strip).reject(&:empty?)
   elsif ENV["APP_DOMAIN"].present?
     [ "https://#{ENV['APP_DOMAIN']}" ]
   else

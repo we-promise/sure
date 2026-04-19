@@ -111,7 +111,9 @@ Rails.application.configure do
   elsif ENV["ALLOWED_HOSTS"].present?
     config.hosts = ENV["ALLOWED_HOSTS"].split(",").map(&:strip).reject(&:empty?)
   else
-    Rails.logger.warn("[SECURITY] APP_DOMAIN and ALLOWED_HOSTS not set — DNS rebinding protection disabled")
+    # Use `config.logger` rather than `Rails.logger`: this block runs during
+    # environment configuration, before `Rails.logger` is finalized.
+    config.logger&.warn("[SECURITY] APP_DOMAIN and ALLOWED_HOSTS not set — DNS rebinding protection disabled")
   end
   # config.hosts = [
   #   "example.com",     # Allow requests from example.com
