@@ -19,9 +19,15 @@ Rails.application.configure do
     policy.img_src     :self, :https, :data, :blob
     policy.object_src  :none
 
+    # Baseline hardening directives — all browsers respect these and they cost
+    # nothing: no arbitrary <base>, forms only to self, no framing.
+    policy.base_uri        :self
+    policy.form_action     :self
+    policy.frame_ancestors :none
+
     managed_mode = Rails.application.config.app_mode.managed?
 
-    # Scripts: self + (optional) PostHog + Plaid + Stripe + importmap inline (nonce-controlled)
+    # Scripts: self + Plaid + Stripe (+ PostHog in managed mode) + importmap inline (nonce-controlled)
     script_src = [
       :self,
       "https://cdn.plaid.com",
@@ -35,14 +41,17 @@ Rails.application.configure do
     ]
 
     if managed_mode
-      script_src += [
-        "https://us.i.posthog.com",
-        "https://us-assets.i.posthog.com"
-      ]
+      # Derive PostHog hosts from the same env var config/initializers/posthog.rb
+      # uses, so a managed deploy pointed at a different PostHog region doesn't
+      # have CSP silently blocking the very traffic that initializer enables.
+      posthog_host = ENV.fetch("POSTHOG_HOST", "https://us.i.posthog.com")
+      posthog_assets_host = posthog_host.sub("://us.i.", "://us-assets.i.")
+
+      script_src += [ posthog_host, posthog_assets_host ]
 
       connect_src += [
-        "https://us.i.posthog.com",
-        "https://us-assets.i.posthog.com",
+        posthog_host,
+        posthog_assets_host,
         "wss://*.pusher.com"
       ]
     end

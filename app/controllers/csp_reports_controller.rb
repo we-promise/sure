@@ -23,7 +23,13 @@ class CspReportsController < ActionController::Base
     def parse_report(body)
       return {} if body.blank?
       JSON.parse(body)
-    rescue JSON::ParserError
-      { raw: body.to_s.truncate(512) }
+    rescue StandardError => e
+      # Catch broadly (JSON::ParserError, Encoding::CompatibilityError, etc.).
+      # Scrub to valid UTF-8 so String#truncate can't raise on malformed bytes,
+      # and fold the exception class into the log so a poorly-behaving client
+      # is still diagnosable without us 500-ing.
+      safe = body.to_s.dup.force_encoding(Encoding::UTF_8).scrub("")
+      Rails.logger.warn("[CSP] parse failed: #{e.class}") if defined?(Rails.logger)
+      { raw: safe.truncate(512), parse_error: e.class.name }
     end
 end
