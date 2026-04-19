@@ -13,8 +13,7 @@ class Category::DeletionsControllerTest < ActionDispatch::IntegrationTest
     get new_category_deletion_url(@category)
     assert_response :success
     assert_select "turbo-frame#modal"
-    assert_select "turbo-frame#modal dialog > div > div > div.grow.py-4.space-y-4.flex.flex-col", count: 1
-    assert_select "turbo-frame#modal dialog > div > div > div.overflow-auto", count: 0
+    assert_select "turbo-frame#modal button span.min-w-0.truncate", text: /Delete "Food & Drink" and leave uncategorized/
   end
 
   test "create with replacement" do
