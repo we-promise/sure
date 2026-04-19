@@ -26,4 +26,10 @@ class RackAttackTest < ActionDispatch::IntegrationTest
     throttles = Rack::Attack.throttles.keys
     assert_includes throttles, "sessions/create", "Web session login should have rate limiting"
   end
+
+  test "API OTP login has per-user rate limiting configured" do
+    # F-06: mirror web MFA (5 attempts / 5 min) for API login OTP submissions
+    throttles = Rack::Attack.throttles.keys
+    assert_includes throttles, "api/otp_attempts/email", "API OTP login should have per-user rate limiting"
+  end
 end

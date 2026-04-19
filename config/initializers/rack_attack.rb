@@ -50,6 +50,21 @@ class Rack::Attack
     request.ip if request.path.start_with?("/api/")
   end
 
+  # F-06: Per-user OTP rate limiting on API login (mirrors web MFA: 5 attempts / 5 min).
+  # Without this, the mobile/API login endpoint accepted unlimited OTP attempts
+  # while the web flow enforced a 5-attempt / 5-minute lockout. Throttling by
+  # normalized email means attackers can't trivially rotate IPs to bypass it.
+  # Configurable via ENV: RACK_ATTACK_OTP_LIMIT (default: 5),
+  # RACK_ATTACK_OTP_PERIOD_SECONDS (default: 300).
+  throttle("api/otp_attempts/email",
+    limit:  ENV.fetch("RACK_ATTACK_OTP_LIMIT", 5).to_i,
+    period: ENV.fetch("RACK_ATTACK_OTP_PERIOD_SECONDS", 300).to_i.seconds
+  ) do |request|
+    if request.path == "/api/v1/auth/login" && request.post? && request.params["otp_code"].present?
+      request.params["email"]&.downcase&.strip
+    end
+  end
+
   # Block requests that appear to be malicious
   blocklist("block malicious requests") do |request|
     # Block requests with suspicious user agents
