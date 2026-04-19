@@ -1,8 +1,8 @@
 <%# locals: (transaction:) %>
 
 <%= render DS::Menu.new(variant: "button") do |menu| %>
-  <% menu.with_button do %>
-    <div class="hidden lg:flex">
+  <% menu.with_button(class: "block w-full overflow-hidden") do %>
+    <div class="hidden min-w-0 w-full lg:flex">
       <%= render partial: "categories/badge", locals: { category: transaction.category } %>
     </div>
     <div class="flex lg:hidden">
