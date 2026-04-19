@@ -510,6 +510,23 @@ Rails.application.routes.draw do
     end
   end
 
+  resources :traderepublic_items, only: %i[index new create show edit update destroy] do
+    collection do
+      get :select_accounts
+      post :link_accounts
+      get :select_existing_account
+      post :link_existing_account
+    end
+
+    member do
+      post :sync
+      post :reauthenticate
+      post :manual_sync
+      get :verify_pin
+      post :complete_login
+    end
+  end
+
   resources :sophtron_items, only: %i[index new create show edit update destroy] do
     collection do
       get :preload_accounts
