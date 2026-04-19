@@ -63,9 +63,12 @@ class SessionsController < ApplicationController
       if user.otp_required?
         log_super_admin_override_login(user)
         session[:mfa_user_id] = user.id
+        session[:mfa_started_at] = Time.current.iso8601
+        session[:mfa_attempts] = 0
         redirect_to verify_mfa_path
       else
         log_super_admin_override_login(user)
+        reset_session_preserving_pending_invitation # FIX-01 + preserve invitation token
         @session = create_session_for(user)
         flash[:notice] = t("invitations.accept_choice.joined_household") if accept_pending_invitation_for(user)
         redirect_to root_path
@@ -183,6 +186,7 @@ class SessionsController < ApplicationController
         session[:mfa_user_id] = user.id
         redirect_to verify_mfa_path
       else
+        reset_session_preserving_pending_invitation # FIX-01 + preserve invitation token
         @session = create_session_for(user)
         flash[:notice] = t("invitations.accept_choice.joined_household") if accept_pending_invitation_for(user)
         redirect_to root_path
