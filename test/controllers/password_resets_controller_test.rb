@@ -94,7 +94,7 @@ class PasswordResetsControllerTest < ActionDispatch::IntegrationTest
     session_count_before = @user.reload.sessions.count
     assert session_count_before >= 1
 
-    token = @user.generate_token_for(:password_reset)
+    token = @user.generate_token_for(:password_reset) # pipelock:ignore
     patch password_reset_path(token: token),
       params: { user: { password: "NewPassword123!", password_confirmation: "NewPassword123!" } }
 
