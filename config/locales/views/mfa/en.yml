@@ -24,6 +24,7 @@ en:
       password_label: Password
       password_placeholder: Enter your password
       scan_description: Use an authenticator app like Google Authenticator or 1Password
+      sso_only_not_supported: Two-factor authentication requires a local password — it is managed through your identity provider.
         to scan this QR code
       scan_title: 1. Scan QR Code
       secret_description: If you can't scan the QR code, enter this secret key manually

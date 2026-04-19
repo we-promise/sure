@@ -1,6 +1,7 @@
 class MfaController < ApplicationController
   layout :determine_layout
   skip_authentication only: [ :verify, :verify_code ]
+  before_action :block_sso_only_users, only: [ :new, :create, :disable ]
 
   def new
     redirect_to root_path if Current.user.otp_required?
@@ -60,11 +61,20 @@ class MfaController < ApplicationController
 
   private
 
-    # Password re-auth for sensitive MFA operations. SSO-only users (no local
-    # password) cannot satisfy a password prompt, so we treat their request as
-    # a failed re-auth here and rely on the view to hide the UI / SSO re-auth
-    # flow to surface a meaningful next step (app/views/settings/securities
-    # already gates the MFA block on `password_digest.present?`).
+    # SSO-only users can't satisfy the password prompt MFA enable/disable
+    # requires (F-11). Block every MFA management action for them — including
+    # GET /mfa/new, which would otherwise call setup_mfa! and leave an
+    # incomplete otp_secret the user can never finish wiring up. The view
+    # already hides the enable/disable UI for these users; this is the
+    # server-side backstop for a direct-URL visit.
+    def block_sso_only_users
+      return if Current.user.password_digest.present?
+      redirect_to settings_security_path, alert: t("mfa.new.sso_only_not_supported", default: "Two-factor authentication requires a local password — it is managed through your identity provider.")
+    end
+
+    # Password re-auth for sensitive MFA operations. SSO-only users are
+    # already rejected by block_sso_only_users, but the guard here is kept
+    # for defense-in-depth.
     def password_reauth_ok?
       return false if Current.user.password_digest.blank?
       Current.user.authenticate(params[:password]).present?

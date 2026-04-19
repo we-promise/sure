@@ -74,7 +74,22 @@ class MfaControllerTest < ActionDispatch::IntegrationTest
     post mfa_path, params: { code: totp.now, password: "anything" }
 
     assert_not @user.reload.otp_required?
-    assert_redirected_to new_mfa_path
+    assert_redirected_to settings_security_path
+  end
+
+  test "SSO-only users cannot reach the MFA new page" do
+    # Direct GET to /mfa/new would previously call setup_mfa!, leaving the
+    # user with an otp_secret they could never submit a password for. The
+    # controller now redirects them to settings before touching state.
+    @user.update_column(:password_digest, nil) # simulate SSO-only user
+
+    secret_before = @user.otp_secret
+
+    get new_mfa_path
+
+    assert_redirected_to settings_security_path
+    assert_equal secret_before, @user.reload.otp_secret,
+      "setup_mfa! should not run for SSO-only users on the new page"
   end
 
   test "SSO-only users cannot disable MFA via password" do
