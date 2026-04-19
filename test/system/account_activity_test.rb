@@ -1,9 +1,13 @@
 require "application_system_test_case"
 
 class AccountActivityTest < ApplicationSystemTestCase
+  DEFAULT_VIEWPORT_WIDTH = 1400
+  DEFAULT_VIEWPORT_HEIGHT = 1400
+
   setup do
     ensure_tailwind_build
     sign_in users(:family_admin)
+    reset_viewport
 
     @account = accounts(:depository)
     @transaction_entry = @account.entries.create!(
@@ -101,5 +105,14 @@ class AccountActivityTest < ApplicationSystemTestCase
 
       system({ "RAILS_ENV" => "test" }, "bin/rails", "tailwindcss:build", exception: true)
       self.class.instance_variable_set(:@tailwind_css_built, true)
+    end
+
+    def teardown
+      reset_viewport
+      super
+    end
+
+    def reset_viewport
+      page.current_window.resize_to(DEFAULT_VIEWPORT_WIDTH, DEFAULT_VIEWPORT_HEIGHT) if page&.current_window
     end
 end
