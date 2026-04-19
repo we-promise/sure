@@ -32,7 +32,7 @@ class Settings::BankSyncController < ApplicationController
         rel: "noopener noreferrer"
       },
       {
-        name: "Sophtron (beta)",
+        name: "Sophtron (alpha)",
         description: "US & Canada bank, credit card, investment, loan, insurance, utility, and other connections.",
         path: "https://www.sophtron.com/",
         target: "_blank",
