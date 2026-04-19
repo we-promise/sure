@@ -147,11 +147,23 @@ class Settings::HostingsController < ApplicationController
     end
 
     # Validate OpenAI configuration before updating
+    effective_uri_base = hosting_params.key?(:openai_uri_base) ? hosting_params[:openai_uri_base] : Setting.openai_uri_base
+
     if hosting_params.key?(:openai_uri_base) || hosting_params.key?(:openai_model)
       Setting.validate_openai_config!(
         uri_base: hosting_params[:openai_uri_base],
         model: hosting_params[:openai_model]
       )
+    end
+
+    chat_model = hosting_params[:openai_chat_model].presence if hosting_params.key?(:openai_chat_model)
+    if chat_model.present? && effective_uri_base.present?
+      Setting.validate_openai_config!(uri_base: effective_uri_base, model: chat_model)
+    end
+
+    background_model = hosting_params[:openai_background_model].presence if hosting_params.key?(:openai_background_model)
+    if background_model.present? && effective_uri_base.present?
+      Setting.validate_openai_config!(uri_base: effective_uri_base, model: background_model)
     end
 
     if hosting_params.key?(:openai_uri_base)

@@ -218,7 +218,13 @@ class Setting < RailsSettings::Base
     end
 
     def openai_background_model=(value)
+      old_value = raw_openai_background_model
       self.raw_openai_background_model = value
+
+      if old_value != value && old_value.present?
+        Rails.logger.info("OpenAI background model changed from #{old_value} to #{value}, clearing AI cache for all families")
+        Family.find_each { |family| ClearAiCacheJob.perform_later(family) }
+      end
     end
 
     # Support dynamic field access via bracket notation
