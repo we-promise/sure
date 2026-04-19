@@ -20,4 +20,10 @@ class RackAttackTest < ActionDispatch::IntegrationTest
     throttles = Rack::Attack.throttles.keys
     assert_includes throttles, "api/requests", "API requests should have rate limiting"
   end
+
+  test "POST /sessions has rate limiting configured" do
+    # F-04/login-throttle: brute-force/password-spraying mitigation
+    throttles = Rack::Attack.throttles.keys
+    assert_includes throttles, "sessions/create", "Web session login should have rate limiting"
+  end
 end

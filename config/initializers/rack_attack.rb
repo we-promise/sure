@@ -16,6 +16,17 @@ class Rack::Attack
     request.ip if request.path.start_with?("/admin/")
   end
 
+  # Throttle web session creation (login) to slow down brute-force/password-spraying.
+  # NOTE: this is the Rails web session endpoint, not the OAuth token endpoint.
+  # Configurable via ENV: RACK_ATTACK_SESSION_LIMIT (default: 10),
+  # RACK_ATTACK_SESSION_PERIOD_SECONDS (default: 60).
+  throttle("sessions/create",
+    limit:  ENV.fetch("RACK_ATTACK_SESSION_LIMIT", 10).to_i,
+    period: ENV.fetch("RACK_ATTACK_SESSION_PERIOD_SECONDS", 60).to_i.seconds
+  ) do |request|
+    request.ip if request.post? && request.path == "/sessions"
+  end
+
   # Determine limits based on self-hosted mode
   self_hosted = Rails.application.config.app_mode.self_hosted?
 
