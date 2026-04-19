@@ -49,4 +49,56 @@ class BaseUrlAllowlistableTest < ActiveSupport::TestCase
       klass.class_eval { allowed_base_urls "https://ok.example.com", nil }
     end
   end
+
+  # URL-shape validation at declaration time — fail-closed against SSRF
+  # footguns in the fallback `effective_base_url` path.
+
+  test "rejects http:// (non-HTTPS)" do
+    klass = anonymous_class(name: "HttpAllowlistItem")
+    assert_raises(ArgumentError) do
+      klass.class_eval { allowed_base_urls "http://insecure.example.com/api" }
+    end
+  end
+
+  test "rejects relative paths" do
+    klass = anonymous_class(name: "RelativeAllowlistItem")
+    assert_raises(ArgumentError) do
+      klass.class_eval { allowed_base_urls "/api/v1" }
+    end
+  end
+
+  test "rejects URLs with embedded userinfo" do
+    klass = anonymous_class(name: "UserinfoAllowlistItem")
+    assert_raises(ArgumentError) do
+      klass.class_eval { allowed_base_urls "https://admin:secret@internal.example.com/api" }
+    end
+  end
+
+  test "rejects URLs with a query string" do
+    klass = anonymous_class(name: "QueryAllowlistItem")
+    assert_raises(ArgumentError) do
+      klass.class_eval { allowed_base_urls "https://api.example.com/v1?secret=1" }
+    end
+  end
+
+  test "rejects URLs with a fragment" do
+    klass = anonymous_class(name: "FragmentAllowlistItem")
+    assert_raises(ArgumentError) do
+      klass.class_eval { allowed_base_urls "https://api.example.com/v1#frag" }
+    end
+  end
+
+  test "rejects syntactically invalid URIs" do
+    klass = anonymous_class(name: "InvalidAllowlistItem")
+    assert_raises(ArgumentError) do
+      klass.class_eval { allowed_base_urls "https://exa mple.com/api" }
+    end
+  end
+
+  test "accepts a plain absolute HTTPS URL with path" do
+    klass = anonymous_class(name: "ValidAllowlistItem")
+    assert_nothing_raised do
+      klass.class_eval { allowed_base_urls "https://api.example.com/v1" }
+    end
+  end
 end
