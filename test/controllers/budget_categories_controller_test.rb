@@ -57,7 +57,7 @@ class BudgetCategoriesControllerTest < ActionDispatch::IntegrationTest
     get budget_budget_categories_path(@budget)
 
     assert_response :success
-    assert_select "#{parent_form_selector} .privacy-sensitive input##{dom_id(@parent_budget_category, :budgeted_spending)}"
+    assert_select "#{parent_form_selector} .privacy-sensitive.privacy-sensitive-interactive input##{dom_id(@parent_budget_category, :budgeted_spending)}"
     assert_select "#{parent_form_selector} p.text-secondary.privacy-sensitive", text: /\/m avg/
     assert_select "#{uncategorized_form_selector} .privacy-sensitive input[name='uncategorized']"
     assert_select "#{uncategorized_form_selector} p.text-secondary.privacy-sensitive", text: /\/m avg/
