@@ -158,7 +158,7 @@
         </div>
       </div>
 
-      <div class="hidden md:flex items-center gap-1 col-span-2">
+      <div class="hidden md:flex min-w-0 items-center gap-1 col-span-2">
         <% if entry.account.investment? && !transaction.transfer? %>
           <%# For investment accounts, show activity label instead of category %>
           <%= render "investment_activity/quick_edit_badge", entry: entry, entryable: transaction %>

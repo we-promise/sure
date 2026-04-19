@@ -37,6 +37,31 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_select "a[href*='page=2'][href*='tab=holdings']", count: 0
   end
 
+  test "account activity constrains long category labels before the amount on wide screens" do
+    category = categories(:food_and_drink)
+    category.update!(name: "Super Long Category Name That Should Stop Before The Amount On Wide Screens Too")
+
+    entry = @account.entries.create!(
+      name: "Wide category verification",
+      date: Date.current,
+      amount: 187.65,
+      currency: @account.currency,
+      entryable: Transaction.new(category: category)
+    )
+
+    get account_url(@account, tab: "activity")
+
+    assert_response :success
+    assert_select "##{dom_id(entry.entryable, "category_menu_desktop")}"
+    assert_select "##{dom_id(entry.entryable, "category_menu_desktop")}.min-w-0"
+    assert_select "##{dom_id(entry.entryable, "category_menu_desktop")}.overflow-hidden"
+    assert_select "##{dom_id(entry.entryable, "category_menu_desktop")} button.block"
+    assert_select "##{dom_id(entry.entryable, "category_menu_desktop")} button.w-full"
+    assert_select "##{dom_id(entry.entryable, "category_menu_desktop")} button.overflow-hidden"
+    assert_select "##{dom_id(entry.entryable, "category_menu_desktop")} [data-testid='category-name']"
+    assert_select "div.hidden.md\\:flex.min-w-0"
+  end
+
   test "should sync account" do
     post sync_account_url(@account)
     assert_redirected_to account_url(@account)
