@@ -94,6 +94,25 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Device information is required", response_data["error"]
   end
 
+  test "should reject signup with invalid device_type before committing any state" do
+    # Pre-validation catches bad device_type and returns 400 without creating
+    # user/family/device/token. Guards against a partial-commit state where the
+    # account exists but the mobile session handoff fails.
+    assert_no_difference([ "User.count", "MobileDevice.count", "Doorkeeper::AccessToken.count" ]) do
+      post "/api/v1/auth/signup", params: {
+        user: {
+          email: "newuser@example.com",
+          password: "SecurePass123!",
+          first_name: "New",
+          last_name: "User"
+        },
+        device: @device_info.merge(device_type: "windows") # not in allowlist
+      }
+    end
+
+    assert_response :bad_request
+  end
+
   test "should not signup with invalid password" do
     assert_no_difference("User.count") do
       post "/api/v1/auth/signup", params: {

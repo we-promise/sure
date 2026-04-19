@@ -270,8 +270,9 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
       # We'll force an error by making the []= method raise
       Setting.expects(:[]=).with("plaid_client_id", "test").raises(StandardError.new("Database error")).once
 
-      # Mock logger to verify error is logged (includes class and message for debugging)
-      Rails.logger.expects(:error).with(regexp_matches(/Failed to update provider settings.*Database error/)).once
+      # Mock logger to verify error is logged (pin both the exception class
+      # name and the message so a regression that drops one still fails).
+      Rails.logger.expects(:error).with(regexp_matches(/Failed to update provider settings: StandardError - Database error/)).once
 
       patch settings_providers_url, params: {
         setting: { plaid_client_id: "test" }
