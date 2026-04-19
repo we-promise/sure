@@ -754,9 +754,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_04_12_120000) do
     t.string "exchange_operating_mic_col_label"
     t.string "amount_type_strategy", default: "signed_amount"
     t.string "amount_type_inflow_value"
+    t.integer "rows_to_skip", default: 0, null: false
     t.integer "rows_count", default: 0, null: false
     t.string "amount_type_identifier_value"
-    t.integer "rows_to_skip", default: 0, null: false
     t.text "ai_summary"
     t.string "document_type"
     t.jsonb "extracted_data"
@@ -1350,9 +1350,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_04_12_120000) do
     t.jsonb "raw_activities_payload", default: []
     t.datetime "last_holdings_sync"
     t.datetime "last_activities_sync"
-    t.boolean "activities_fetch_pending", default: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.boolean "activities_fetch_pending", default: false
     t.date "sync_start_date"
     t.index ["snaptrade_item_id", "snaptrade_account_id"], name: "index_snaptrade_accounts_on_item_and_snaptrade_account_id", unique: true, where: "(snaptrade_account_id IS NOT NULL)"
     t.index ["snaptrade_item_id"], name: "index_snaptrade_accounts_on_snaptrade_item_id"
@@ -1403,6 +1403,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_04_12_120000) do
     t.datetime "updated_at", null: false
     t.index ["account_id"], name: "index_sophtron_accounts_on_account_id"
     t.index ["sophtron_item_id"], name: "index_sophtron_accounts_on_sophtron_item_id"
+    t.index ["sophtron_item_id", "account_id"], name: "idx_unique_sophtron_accounts_per_item", unique: true
   end
 
   create_table "sophtron_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1419,8 +1420,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_04_12_120000) do
     t.datetime "sync_start_date"
     t.jsonb "raw_payload"
     t.jsonb "raw_institution_payload"
-    t.string "user_id"
-    t.string "access_key"
+    t.string "user_id", null: false
+    t.string "access_key", null: false
     t.string "base_url"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
