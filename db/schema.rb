@@ -1081,6 +1081,18 @@ ActiveRecord::Schema[7.2].define(version: 2026_04_12_120000) do
     t.string "subtype"
   end
 
+  create_table "pension_entries", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "retirement_config_id", null: false
+    t.date "recorded_at", null: false
+    t.decimal "current_points", precision: 8, scale: 4, null: false
+    t.decimal "current_monthly_pension", precision: 19, scale: 4
+    t.decimal "projected_monthly_pension", precision: 19, scale: 4
+    t.text "notes"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["retirement_config_id", "recorded_at"], name: "index_pension_entries_on_retirement_config_id_and_recorded_at", unique: true
+  end
+
   create_table "plaid_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "plaid_item_id", null: false
     t.string "plaid_id", null: false
@@ -1168,6 +1180,26 @@ ActiveRecord::Schema[7.2].define(version: 2026_04_12_120000) do
     t.index ["inflow_transaction_id", "outflow_transaction_id"], name: "idx_on_inflow_transaction_id_outflow_transaction_id_412f8e7e26", unique: true
     t.index ["inflow_transaction_id"], name: "index_rejected_transfers_on_inflow_transaction_id"
     t.index ["outflow_transaction_id"], name: "index_rejected_transfers_on_outflow_transaction_id"
+  end
+
+  create_table "retirement_configs", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "family_id", null: false
+    t.string "country", null: false, default: "DE"
+    t.string "pension_system", null: false, default: "de_grv"
+    t.integer "birth_year", null: false
+    t.integer "retirement_age", null: false, default: 67
+    t.decimal "target_monthly_income", precision: 19, scale: 4, null: false, default: "3000.0"
+    t.string "currency", null: false, default: "EUR"
+    t.decimal "expected_return_pct", precision: 5, scale: 2, null: false, default: "7.0"
+    t.decimal "inflation_pct", precision: 5, scale: 2, null: false, default: "2.0"
+    t.decimal "tax_rate_pct", precision: 5, scale: 2, null: false, default: "26.38"
+    t.decimal "current_monthly_savings", precision: 19, scale: 4, null: false, default: "0.0"
+    t.integer "contribution_start_year"
+    t.decimal "expected_annual_points", precision: 5, scale: 2
+    t.decimal "rentenwert", precision: 8, scale: 2
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["family_id"], name: "index_retirement_configs_on_family_id", unique: true
   end
 
   create_table "rule_actions", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1693,6 +1725,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_04_12_120000) do
   add_foreign_key "oauth_access_grants", "oauth_applications", column: "application_id"
   add_foreign_key "oauth_access_tokens", "oauth_applications", column: "application_id"
   add_foreign_key "oidc_identities", "users"
+  add_foreign_key "pension_entries", "retirement_configs"
   add_foreign_key "plaid_accounts", "plaid_items"
   add_foreign_key "plaid_items", "families"
   add_foreign_key "recurring_transactions", "accounts"
@@ -1700,6 +1733,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_04_12_120000) do
   add_foreign_key "recurring_transactions", "merchants"
   add_foreign_key "rejected_transfers", "transactions", column: "inflow_transaction_id"
   add_foreign_key "rejected_transfers", "transactions", column: "outflow_transaction_id"
+  add_foreign_key "retirement_configs", "families"
   add_foreign_key "rule_actions", "rules"
   add_foreign_key "rule_conditions", "rule_conditions", column: "parent_id"
   add_foreign_key "rule_conditions", "rules"
