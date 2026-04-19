@@ -25,9 +25,18 @@ module BaseUrlAllowlistable
 
   class_methods do
     def allowed_base_urls(*urls)
-      allowed = urls.flatten.freeze
-      const_set(:ALLOWED_BASE_URLS, allowed) unless const_defined?(:ALLOWED_BASE_URLS, false)
-      validates :base_url, inclusion: { in: allowed }, allow_blank: true
+      if const_defined?(:ALLOWED_BASE_URLS, false)
+        raise ArgumentError,
+          "#{name}.allowed_base_urls already configured — call it exactly once per class"
+      end
+
+      const_set(:ALLOWED_BASE_URLS, urls.flatten.freeze)
+      # The validator resolves the allow-list via `const_get` on each call so
+      # the inclusion check and `effective_base_url` can never drift. (A
+      # literal `in: allowed` would freeze a snapshot at registration time.)
+      validates :base_url,
+        inclusion: { in: ->(record) { record.class.const_get(:ALLOWED_BASE_URLS) } },
+        allow_blank: true
     end
   end
 
