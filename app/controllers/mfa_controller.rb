@@ -10,6 +10,12 @@ class MfaController < ApplicationController
   end
 
   def create
+    unless Current.user.authenticate(params[:password])
+      Current.user.disable_mfa!
+      redirect_to new_mfa_path, alert: t(".invalid_password")
+      return
+    end
+
     if Current.user.verify_otp?(params[:code])
       @backup_codes = Current.user.enable_mfa!
       render :backup_codes
@@ -94,6 +100,11 @@ class MfaController < ApplicationController
   end
 
   def disable
+    unless Current.user.authenticate(params[:password])
+      redirect_to settings_security_path, alert: t(".invalid_password")
+      return
+    end
+
     Current.user.disable_mfa!
     redirect_to settings_security_path, notice: t(".success")
   end

@@ -21,18 +21,19 @@
 
       <div class="mt-4 md:mt-0">
         <% if Current.user.otp_required? %>
-          <%= render DS::Button.new(
-            text: t(".disable_mfa"),
-            variant: "secondary",
-            href: disable_mfa_path,
-            method: :delete,
-            confirm: CustomConfirm.new(
-              title: t(".disable_mfa_confirm"),
-              body: t(".disable_mfa_confirm"),
-              btn_text: t(".disable_mfa"),
-              destructive: true
-            )
-          ) %>
+          <details class="group">
+            <summary class="cursor-pointer text-sm font-medium text-destructive">
+              <%= t(".disable_mfa") %>
+            </summary>
+            <%= styled_form_with url: disable_mfa_path, method: :delete, class: "mt-3 space-y-3", data: { turbo: false } do |f| %>
+              <%= f.password_field :password,
+                required: true,
+                autocomplete: "current-password",
+                label: t(".disable_mfa_password_label"),
+                placeholder: t(".disable_mfa_password_placeholder") %>
+              <%= f.submit t(".disable_mfa") %>
+            <% end %>
+          </details>
         <% else %>
           <%= render DS::Link.new(
             text: t(".enable_mfa"),
