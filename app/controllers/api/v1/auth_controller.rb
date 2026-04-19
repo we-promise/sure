@@ -68,6 +68,12 @@ module Api
         user = User.find_by(email: params[:email])
 
         if user&.authenticate(params[:password])
+          # Reject deactivated users
+          unless user.active?
+            render json: { error: "Account has been deactivated" }, status: :unauthorized
+            return
+          end
+
           # Check MFA if enabled
           if user.otp_required?
             unless params[:otp_code].present? && user.verify_otp?(params[:otp_code])

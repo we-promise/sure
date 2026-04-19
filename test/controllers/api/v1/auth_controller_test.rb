@@ -818,4 +818,20 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
     assert_equal "AI is not available for your account", response_data["error"]
     assert_not user.reload.ai_enabled
   end
+
+  # Security tests — ported from origin/security/pentest-2026-03-02
+
+  test "login is rejected for deactivated user" do
+    user = users(:family_member)
+    user.update!(active: false)
+
+    post "/api/v1/auth/login", params: {
+      email: user.email,
+      password: user_password_test,
+      device: @device_info
+    }
+
+    assert_response :unauthorized
+    assert_equal "Account has been deactivated", JSON.parse(response.body)["error"]
+  end
 end
