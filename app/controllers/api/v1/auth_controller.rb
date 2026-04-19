@@ -283,8 +283,16 @@ module Api
         # Revoke old access token
         access_token.revoke
 
-        # Update device last seen
+        # Reject deactivated users on token refresh
         user = User.find(access_token.resource_owner_id)
+        unless user.active?
+          # Revoke the newly issued token as well — no access for deactivated users
+          new_token.revoke
+          render json: { error: "Account has been deactivated" }, status: :unauthorized
+          return
+        end
+
+        # Update device last seen
         device = user.mobile_devices.find_by(device_id: params[:device][:device_id])
         device&.update_last_seen!
 
