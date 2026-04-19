@@ -44,8 +44,17 @@ Rails.application.configure do
       # Derive PostHog hosts from the same env var config/initializers/posthog.rb
       # uses, so a managed deploy pointed at a different PostHog region doesn't
       # have CSP silently blocking the very traffic that initializer enables.
+      #
+      # Region handling: the assets host mirrors the API host with the first
+      # subdomain labelled "-assets" (us.i.posthog.com → us-assets.i.posthog.com,
+      # eu.i.posthog.com → eu-assets.i.posthog.com). Operators on self-hosted
+      # PostHog with a different layout can override via POSTHOG_ASSETS_HOST.
       posthog_host = ENV.fetch("POSTHOG_HOST", "https://us.i.posthog.com")
-      posthog_assets_host = posthog_host.sub("://us.i.", "://us-assets.i.")
+      posthog_assets_host = ENV.fetch("POSTHOG_ASSETS_HOST") do
+        uri = URI.parse(posthog_host)
+        assets_host = uri.host.to_s.sub(/\A([^.]+)/, '\1-assets')
+        "#{uri.scheme}://#{assets_host}"
+      end
 
       script_src += [ posthog_host, posthog_assets_host ]
 
