@@ -40,7 +40,14 @@ class MfaController < ApplicationController
     end
 
     # TTL: MFA flow expires after 5 minutes (PT-003)
-    if session[:mfa_started_at].present? && Time.current - Time.parse(session[:mfa_started_at].to_s) > 5.minutes
+    # Use a non-raising parse so a tampered/legacy value redirects the user
+    # cleanly instead of producing a 500.
+    started_at = begin
+      Time.zone.parse(session[:mfa_started_at].to_s)
+    rescue ArgumentError, TypeError
+      nil
+    end
+    if session[:mfa_started_at].present? && (started_at.nil? || Time.current - started_at > 5.minutes)
       session.delete(:mfa_user_id)
       session.delete(:mfa_attempts)
       session.delete(:mfa_started_at)
@@ -49,10 +56,9 @@ class MfaController < ApplicationController
     end
 
     if @user&.verify_otp?(params[:code])
-      session.delete(:mfa_user_id)
-      session.delete(:mfa_attempts)
-      session.delete(:mfa_started_at)
-      reset_session # Prevent session fixation (PT-003)
+      # reset_session clears the mfa_* keys (and everything else) — keep the
+      # pending invitation token so post-MFA login can still honour the invite.
+      reset_session_preserving_pending_invitation # FIX-01 / PT-003
       @session = create_session_for(@user)
       flash[:notice] = t("invitations.accept_choice.joined_household") if accept_pending_invitation_for(@user)
       redirect_to root_path

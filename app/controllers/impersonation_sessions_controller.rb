@@ -40,6 +40,13 @@ class ImpersonationSessionsController < ApplicationController
     raise_unauthorized! if @impersonation_session.nil?
     raise_unauthorized! unless [ @impersonation_session.impersonator, @impersonation_session.impersonated ].include?(Current.true_user)
     @impersonation_session.complete!
+    # Clear the active_impersonator_session reference on the caller's browser
+    # session when it still points at this (now completed) record. Without
+    # this, Current.session keeps a dangling pointer and impersonation-aware UI
+    # (banner, Current.user resolution) continues as if the session were active.
+    if Current.session&.active_impersonator_session_id == @impersonation_session.id
+      Current.session.update!(active_impersonator_session: nil)
+    end
     redirect_to root_path, notice: t(".success")
   end
 

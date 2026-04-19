@@ -30,13 +30,22 @@ module Authentication
     # Session TTL constants (F-04, CWE-613)
     SESSION_ABSOLUTE_TTL = 30.days
     SESSION_IDLE_TTL = 24.hours
+    # Throttle the per-request `updated_at` touch so every authenticated request
+    # doesn't issue a write against `sessions`. 1 minute is granular enough for
+    # the 24h idle TTL while keeping write amplification bounded.
+    SESSION_TOUCH_THROTTLE = 1.minute
 
     def find_session_by_cookie
       cookie_value = cookies.signed[:session_token]
       return nil unless cookie_value.present?
 
       session = Session.find_by(id: cookie_value)
-      return nil unless session
+      unless session
+        # Stale cookie (session row was deleted or recycled) — remove it so the
+        # browser doesn't keep resending a dead token.
+        cookies.delete(:session_token)
+        return nil
+      end
 
       now = Time.current
 
@@ -54,9 +63,20 @@ module Authentication
         return nil
       end
 
-      # Touch to refresh idle timer on each request
-      session.touch
+      # Refresh idle timer, throttled to avoid a write per request.
+      session.touch if session.updated_at < now - SESSION_TOUCH_THROTTLE
       session
+    end
+
+    # Resets the Rails session to prevent session fixation on privilege change
+    # (login, MFA verify) while preserving the pending invitation token stored
+    # pre-login. `reset_session` clears everything by default, which would drop
+    # a legitimate pending invitation before `accept_pending_invitation_for`
+    # could use it.
+    def reset_session_preserving_pending_invitation
+      pending_invitation = session[:pending_invitation_token]
+      reset_session
+      session[:pending_invitation_token] = pending_invitation if pending_invitation
     end
 
     def create_session_for(user)

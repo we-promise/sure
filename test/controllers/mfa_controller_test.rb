@@ -145,8 +145,20 @@ class MfaControllerTest < ActionDispatch::IntegrationTest
 
     # Travel past the 5 minute TTL window
     travel_to(6.minutes.from_now) do
+      # Capture how many sessions the user had before the MFA attempt so we
+      # can assert no new one was created. Any existing session from sign-in
+      # below is from the sign_out/post cycle above (which creates an MFA
+      # handoff but no auth session yet).
+      before = Session.where(user_id: other_user.id).count
+
       post verify_mfa_path, params: { code: ROTP::TOTP.new(other_user.otp_secret).now }
+
       assert_redirected_to new_session_path
+      # Negative assertion: the TTL branch cleared the MFA handoff and the OTP
+      # was NOT accepted as a legitimate login.
+      assert_nil session[:mfa_user_id], "MFA handoff should be cleared on TTL expiry"
+      assert_equal before, Session.where(user_id: other_user.id).count,
+        "No auth session should be created when MFA expires"
     end
   end
 end

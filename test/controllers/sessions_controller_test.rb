@@ -684,10 +684,31 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
   test "session fixation: new session created on login (reset_session)" do
     get new_session_url # establish session
     old_session_id = session.id
+    # Seed a sentinel to prove the old session was actually cleared, not just
+    # that session.id happened to differ.
+    session[:pre_auth_sentinel] = "seed"
 
     sign_in @user
 
+    assert_nil session[:pre_auth_sentinel], "Pre-auth session data should be cleared by reset_session"
     assert_not_equal old_session_id, session.id, "Session ID should change on login to prevent fixation"
+  end
+
+  test "session fixation: pending invitation token survives reset_session" do
+    invitation = invitations(:one)
+
+    # GET /sessions/new?invitation=<token> triggers store_pending_invitation_if_valid,
+    # which puts the token into the session BEFORE the POST that calls reset_session.
+    get new_session_url(invitation: invitation.token)
+
+    # Signing in as a user whose email doesn't match the invitation means
+    # accept_pending_invitation_for short-circuits without consuming the token,
+    # so the post-reset session should still carry it — which can only happen
+    # if reset_session_preserving_pending_invitation restored it.
+    sign_in @user
+
+    assert_equal invitation.token, session[:pending_invitation_token],
+      "Token must be preserved across reset_session so accept_pending_invitation_for can honor it"
   end
 
   # F-04: Session TTL — absolute (30d) and idle (24h) expiry enforced server-side.
