@@ -121,6 +121,9 @@ pt-BR:
         enable_mfa: Ativar 2FA
         disable_mfa: Desativar 2FA
         disable_mfa_confirm: Tem certeza de que deseja desativar a autenticação de dois fatores?
+        disable_mfa_password_label: Confirme com sua senha
+        disable_mfa_password_placeholder: Digite sua senha
+        mfa_sso_only: A autenticação de dois fatores é gerenciada pelo seu provedor de identidade.
         sso_title: Contas Conectadas
         sso_subtitle: Gerencie suas conexões de contas de login único (SSO)
         sso_disconnect: Desconectar
