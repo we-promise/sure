@@ -8,7 +8,7 @@ test:
 
 amazon:
   service: S3
-  access_key_id: <%= ENV["S3_ACCESS_KEY_ID"] %> 
+  access_key_id: <%= ENV["S3_ACCESS_KEY_ID"] %>
   secret_access_key: <%= ENV["S3_SECRET_ACCESS_KEY"] %>
   region: <%= ENV["S3_REGION"] || "us-east-1" %>
   bucket: <%= ENV["S3_BUCKET"] %>
@@ -25,9 +25,15 @@ cloudflare:
 
 generic_s3:
   service: S3
-  access_key_id: <%= ENV["GENERIC_S3_ACCESS_KEY_ID"] %> 
+  access_key_id: <%= ENV["GENERIC_S3_ACCESS_KEY_ID"] %>
   secret_access_key: <%= ENV["GENERIC_S3_SECRET_ACCESS_KEY"] %>
   region: <%= ENV["GENERIC_S3_REGION"] %>
   bucket: <%= ENV["GENERIC_S3_BUCKET"] %>
   endpoint: <%= ENV["GENERIC_S3_ENDPOINT"] %>
   force_path_style: <%= ActiveModel::Type::Boolean.new.cast(ENV.fetch("GENERIC_S3_FORCE_PATH_STYLE", "false")) %>
+
+google:
+  service: GCS
+  project: <%= ENV["GCS_PROJECT"] %>
+  credentials: <%= ENV.fetch("GCS_KEYFILE_JSON") { ENV["GCS_KEYFILE"] } %>
+  bucket: <%= ENV["GCS_BUCKET"] %>
