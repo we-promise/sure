@@ -56,12 +56,37 @@ class Rack::Attack
   # normalized email means attackers can't trivially rotate IPs to bypass it.
   # Configurable via ENV: RACK_ATTACK_OTP_LIMIT (default: 5),
   # RACK_ATTACK_OTP_PERIOD_SECONDS (default: 300).
+  # Helper for extracting a field from either form params or a JSON body
+  # without consuming the body for downstream middleware. Mobile clients POST
+  # JSON to /api/v1/auth/login, and Rack::Attack runs before Rails parses the
+  # JSON body into request.params — so we parse it ourselves and rewind.
+  module LoginRequestFields
+    def self.read(request, field)
+      value = request.params[field]
+      return value if value.is_a?(String) && value.present?
+
+      content_type = request.get_header("CONTENT_TYPE").to_s
+      return nil unless content_type.include?("json")
+
+      body = request.body.read
+      request.body.rewind
+      return nil if body.blank?
+
+      parsed = JSON.parse(body)
+      parsed.is_a?(Hash) ? parsed[field] : nil
+    rescue JSON::ParserError
+      nil
+    end
+  end
+
   throttle("api/otp_attempts/email",
     limit:  ENV.fetch("RACK_ATTACK_OTP_LIMIT", 5).to_i,
     period: ENV.fetch("RACK_ATTACK_OTP_PERIOD_SECONDS", 300).to_i.seconds
   ) do |request|
-    if request.path == "/api/v1/auth/login" && request.post? && request.params["otp_code"].present?
-      request.params["email"]&.downcase&.strip
+    if request.path == "/api/v1/auth/login" && request.post?
+      email    = LoginRequestFields.read(request, "email")
+      otp_code = LoginRequestFields.read(request, "otp_code")
+      email.to_s.downcase.strip if email.is_a?(String) && otp_code.is_a?(String) && otp_code.present?
     end
   end
 

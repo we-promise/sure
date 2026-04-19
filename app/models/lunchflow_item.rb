@@ -153,20 +153,7 @@ class LunchflowItem < ApplicationRecord
     api_key.present?
   end
 
-  # F-08: SSRF hardening. The `base_url` column is user-writable via the
-  # Lunchflow settings panel; without validation a malicious user could point
-  # outbound requests at internal services (169.254.169.254, localhost,
-  # internal DNS, etc.). Restrict to a known-good Lunchflow endpoint.
-  ALLOWED_BASE_URLS = [
-    "https://lunchflow.app/api/v1"
-  ].freeze
-
-  def effective_base_url
-    url = base_url.presence || ALLOWED_BASE_URLS.first
-    unless ALLOWED_BASE_URLS.include?(url)
-      Rails.logger.warn("[SECURITY] Rejected Lunchflow base_url: #{url.inspect}")
-      return ALLOWED_BASE_URLS.first
-    end
-    url
-  end
+  # F-08: SSRF hardening — see BaseUrlAllowlistable.
+  include BaseUrlAllowlistable
+  allowed_base_urls "https://lunchflow.app/api/v1"
 end
