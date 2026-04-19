@@ -821,6 +821,19 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
 
   # Security tests — ported from origin/security/pentest-2026-03-02
 
+  test "signup is blocked when registration is closed on self-hosted" do
+    Rails.application.config.app_mode.stubs(:self_hosted?).returns(true)
+    Setting.stubs(:onboarding_state).returns("closed")
+
+    post "/api/v1/auth/signup", params: {
+      user: { email: "new@example.com", password: "SecurePass123!", first_name: "New", last_name: "User" },
+      device: @device_info
+    }
+
+    assert_response :forbidden
+    assert_equal "Registration is currently closed", JSON.parse(response.body)["error"]
+  end
+
   test "login is rejected for deactivated user" do
     user = users(:family_member)
     user.update!(active: false)
