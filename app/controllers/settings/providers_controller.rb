@@ -71,8 +71,8 @@ class Settings::ProvidersController < ApplicationController
       redirect_to settings_providers_path, notice: "No changes were made"
     end
   rescue => error
-    Rails.logger.error("Failed to update provider settings: #{error.message}")
-    flash.now[:alert] = "Failed to update provider settings: #{error.message}"
+    Rails.logger.error("Failed to update provider settings: #{error.class} - #{error.message}")
+    flash.now[:alert] = "Failed to update provider settings. Please try again."
     prepare_show_context
     render :show, status: :unprocessable_entity
   end
