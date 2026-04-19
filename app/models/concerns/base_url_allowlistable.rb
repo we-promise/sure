@@ -17,10 +17,12 @@
 #     and logs a per-call [SECURITY] warning whenever an invalid value is read
 #     (e.g. a row written through rake/console before this concern was in place)
 #
-# Both the DB-level validation and the runtime helper are kept as
-# defense-in-depth: validation catches bad input at the UI boundary, the
-# helper guards against values written through rake tasks, console sessions,
-# or direct DB updates.
+# The ActiveRecord `inclusion` validation and the runtime `effective_base_url`
+# helper are both kept as defense-in-depth: the validation catches bad input
+# at the UI / AR-write boundary, while the helper guards against values
+# written by paths that bypass AR — direct SQL (`UPDATE provider_items ...`),
+# rake tasks using `update_columns`, or console sessions skipping validation.
+# Neither is a full substitute for the other.
 module BaseUrlAllowlistable
   extend ActiveSupport::Concern
 
