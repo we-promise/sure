@@ -20,8 +20,12 @@
       </div>
 
       <div class="mt-4 md:mt-0">
-        <% if Current.user.otp_required? %>
-          <details class="group">
+        <% if Current.user.password_digest.blank? %>
+          <%# SSO-only user — password re-auth is impossible. Surface a hint
+              instead of the enable/disable form they could never submit. %>
+          <p class="text-sm text-subdued"><%= t(".mfa_sso_only") %></p>
+        <% elsif Current.user.otp_required? %>
+          <details class="group" <%= "open" if flash[:alert].present? %>>
             <summary class="cursor-pointer text-sm font-medium text-destructive">
               <%= t(".disable_mfa") %>
             </summary>

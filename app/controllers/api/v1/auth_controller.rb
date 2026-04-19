@@ -276,7 +276,23 @@ module Api
           return
         end
 
-        # Create new access token
+        # Reject deactivated or deleted users BEFORE issuing a fresh token.
+        # If we checked after creation, a concurrent request could briefly pass
+        # the OAuth gate in base_controller against `new_token` — and we'd also
+        # do pointless writes. Also matches the 401-for-missing-user shape used
+        # by api/v1/base_controller#authenticate_oauth (use find_by, not find).
+        user = User.find_by(id: access_token.resource_owner_id)
+        unless user&.active?
+          # Revoke every outstanding access token for this resource owner so
+          # other devices lose access immediately.
+          Doorkeeper::AccessToken
+            .where(resource_owner_id: access_token.resource_owner_id, revoked_at: nil)
+            .find_each(&:revoke)
+          render json: { error: "Account has been deactivated" }, status: :unauthorized
+          return
+        end
+
+        # Create new access token (only after the active check passes).
         new_token = Doorkeeper::AccessToken.create!(
           application: access_token.application,
           resource_owner_id: access_token.resource_owner_id,
@@ -288,15 +304,6 @@ module Api
 
         # Revoke old access token
         access_token.revoke
-
-        # Reject deactivated users on token refresh
-        user = User.find(access_token.resource_owner_id)
-        unless user.active?
-          # Revoke the newly issued token as well — no access for deactivated users
-          new_token.revoke
-          render json: { error: "Account has been deactivated" }, status: :unauthorized
-          return
-        end
 
         # Update device last seen
         device = user.mobile_devices.find_by(device_id: params[:device][:device_id])

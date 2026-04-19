@@ -140,6 +140,7 @@ en:
         disable_mfa_confirm: Are you sure you want to disable two-factor authentication?
         disable_mfa_password_label: Confirm with your password
         disable_mfa_password_placeholder: Enter your password
+        mfa_sso_only: Two-factor authentication is managed through your identity provider.
         sso_title: Connected Accounts
         sso_subtitle: Manage your single sign-on account connections
         sso_disconnect: Disconnect

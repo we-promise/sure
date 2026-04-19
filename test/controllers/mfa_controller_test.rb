@@ -57,8 +57,35 @@ class MfaControllerTest < ActionDispatch::IntegrationTest
 
     post mfa_path, params: { code: totp.now, password: "wrongpassword" }
 
+    @user.reload
+    assert_not @user.otp_required?
+    assert_redirected_to new_mfa_path
+    # A wrong password during enable must NOT wipe the in-progress setup;
+    # only an actual code mismatch / session expiry should do that. Prevents
+    # a single typo from forcing a QR re-scan.
+    assert @user.otp_secret.present?, "otp_secret should survive a wrong-password attempt"
+  end
+
+  test "SSO-only users (no password_digest) cannot enable MFA" do
+    @user.setup_mfa!
+    totp = ROTP::TOTP.new(@user.otp_secret, issuer: "Sure Finances")
+    @user.update_column(:password_digest, nil) # simulate SSO-only user
+
+    post mfa_path, params: { code: totp.now, password: "anything" }
+
     assert_not @user.reload.otp_required?
     assert_redirected_to new_mfa_path
+  end
+
+  test "SSO-only users cannot disable MFA via password" do
+    @user.setup_mfa!
+    @user.enable_mfa!
+    @user.update_column(:password_digest, nil) # simulate SSO-only user
+
+    delete disable_mfa_path, params: { password: "anything" }
+
+    assert @user.reload.otp_required?
+    assert_redirected_to settings_security_path
   end
 
   test "verify shows MFA verification page" do

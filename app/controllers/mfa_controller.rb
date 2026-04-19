@@ -8,8 +8,10 @@ class MfaController < ApplicationController
   end
 
   def create
-    unless Current.user.authenticate(params[:password])
-      Current.user.disable_mfa!
+    unless password_reauth_ok?
+      # Do NOT call disable_mfa! here — a wrong password during enable should
+      # not wipe the in-progress otp_secret / backup codes. Only an actual
+      # code mismatch below invalidates the setup.
       redirect_to new_mfa_path, alert: t(".invalid_password")
       return
     end
@@ -47,7 +49,7 @@ class MfaController < ApplicationController
   end
 
   def disable
-    unless Current.user.authenticate(params[:password])
+    unless password_reauth_ok?
       redirect_to settings_security_path, alert: t(".invalid_password")
       return
     end
@@ -57,6 +59,16 @@ class MfaController < ApplicationController
   end
 
   private
+
+    # Password re-auth for sensitive MFA operations. SSO-only users (no local
+    # password) cannot satisfy a password prompt, so we treat their request as
+    # a failed re-auth here and rely on the view to hide the UI / SSO re-auth
+    # flow to surface a meaningful next step (app/views/settings/securities
+    # already gates the MFA block on `password_digest.present?`).
+    def password_reauth_ok?
+      return false if Current.user.password_digest.blank?
+      Current.user.authenticate(params[:password]).present?
+    end
 
     def determine_layout
       if action_name.in?(%w[verify verify_code])
