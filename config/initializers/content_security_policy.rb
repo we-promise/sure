@@ -61,8 +61,10 @@ Rails.application.configure do
     policy.report_uri "/csp-violation-report"
   end
 
-  # Nonces for inline scripts/styles managed by importmap and Hotwire
-  config.content_security_policy_nonce_generator = ->(request) { request.session.id.to_s }
+  # Nonces for inline scripts/styles managed by importmap and Hotwire.
+  # Per-response random nonce — a session-id nonce is constant for the lifetime of
+  # the session and provides no CSP guarantee once an attacker observes one script tag.
+  config.content_security_policy_nonce_generator = ->(_request) { SecureRandom.base64(16) }
   config.content_security_policy_nonce_directives = %w[script-src]
 
   # REPORT-ONLY: violations are logged, nothing is blocked.

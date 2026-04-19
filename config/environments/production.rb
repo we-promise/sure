@@ -102,7 +102,17 @@ Rails.application.configure do
   config.active_record.dump_schema_after_migration = false
 
   # Enable DNS rebinding protection and other `Host` header attacks.
-  config.hosts = [ ENV["APP_DOMAIN"] ].compact if ENV["APP_DOMAIN"].present?
+  # Accept either APP_DOMAIN (single host) or ALLOWED_HOSTS (comma-separated list).
+  # If neither is set, `config.hosts` stays empty (allow all) to preserve backward
+  # compatibility with existing self-hosted deploys — a [SECURITY] warning is logged
+  # at boot (see cors.rb for the matching allow-list warning) to nudge operators.
+  if ENV["APP_DOMAIN"].present?
+    config.hosts = [ ENV["APP_DOMAIN"] ]
+  elsif ENV["ALLOWED_HOSTS"].present?
+    config.hosts = ENV["ALLOWED_HOSTS"].split(",").map(&:strip).reject(&:empty?)
+  else
+    Rails.logger.warn("[SECURITY] APP_DOMAIN and ALLOWED_HOSTS not set — DNS rebinding protection disabled")
+  end
   # config.hosts = [
   #   "example.com",     # Allow requests from example.com
   #   /.*\.example\.com/ # Allow requests from subdomains like `www.example.com`

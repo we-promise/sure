@@ -95,6 +95,20 @@ SECRET_KEY_BASE="replacemewiththegeneratedstringfromthepriorstep"
 POSTGRES_PASSWORD="replacemewithyourdesireddatabasepassword"
 ```
 
+#### Production hardening (recommended)
+
+The following variables tighten security when running outside a local network. Set them if your instance is reachable from the public internet.
+
+| Variable | Purpose |
+|---|---|
+| `RAILS_MASTER_KEY` | Decrypts Rails encrypted credentials. Required — the app refuses to boot in production without it (or a `config/master.key` file). |
+| `SIDEKIQ_WEB_USERNAME` + `SIDEKIQ_WEB_PASSWORD` | Basic-auth credentials guarding `/sidekiq`. The Web UI is mounted only when both are set. |
+| `ALLOWED_ORIGINS` | Comma-separated CORS allow-list for browser/mobile clients (e.g. `https://app.example.com,https://staging.example.com`). |
+| `APP_DOMAIN` | Single-host fallback for CORS when `ALLOWED_ORIGINS` is unset, and DNS-rebinding `config.hosts` allow-list. |
+| `ALLOWED_HOSTS` | Comma-separated alternative to `APP_DOMAIN` for DNS-rebinding protection when you serve multiple hostnames. |
+
+If none of `ALLOWED_ORIGINS` / `APP_DOMAIN` is set, cross-origin requests are rejected and a `[SECURITY]` warning is emitted at boot. Likewise if `APP_DOMAIN` / `ALLOWED_HOSTS` is missing, DNS-rebinding protection is disabled with a boot warning.
+
 #### Using HTTPS
 
 Assuming you want to access your instance from the internet, you should have secured your URL address with an SSL certificate.  
