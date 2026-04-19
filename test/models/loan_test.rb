@@ -133,7 +133,8 @@ class LoanTest < ActiveSupport::TestCase
     loan = Loan.new(
       interest_rate: 3.5,
       term_months: 12,
-      rate_type: "fixed"
+      rate_type: "fixed",
+      start_date: Date.today
     )
 
     expected_schedule = [ { month: 1 } ]
