@@ -663,13 +663,14 @@ class ReportsController < ApplicationController
       # Whitelist sort_direction to prevent SQL injection
       sort_direction = %w[asc desc].include?(params[:sort_direction]&.downcase) ? params[:sort_direction].upcase : "DESC"
 
+      direction = sort_direction.downcase.to_sym
       case sort_by
       when "date"
-        transactions.order("entries.date #{sort_direction}")
+        transactions.order("entries.date" => direction)
       when "amount"
-        transactions.order("entries.amount #{sort_direction}")
+        transactions.order("entries.amount" => direction)
       else
-        transactions.order("entries.date DESC")
+        transactions.order("entries.date" => :desc)
       end
     end
 
