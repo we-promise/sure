@@ -48,7 +48,7 @@ module AccountableResource
       @account.lock_saved_attributes!
     end
 
-    redirect_to account_params[:return_to].presence || @account, notice: t("accounts.create.success", type: accountable_type.name.underscore.humanize)
+    redirect_to safe_return_to_path || @account, notice: t("accounts.create.success", type: accountable_type.name.underscore.humanize)
   end
 
   def update
@@ -96,6 +96,23 @@ module AccountableResource
     def set_manageable_account
       @account = Current.user.accessible_accounts.find(params[:id])
       require_account_permission!(@account)
+    end
+
+    # Sanitize return_to parameter to prevent XSS/open-redirect attacks.
+    # Only allow internal relative paths (starting with "/"), and reject any scheme/host.
+    def safe_return_to_path
+      return nil if params[:return_to].blank?
+
+      return_to = params[:return_to].to_s
+
+      begin
+        uri = URI.parse(return_to)
+        return nil if uri.scheme.present?
+        return nil unless return_to.start_with?("/")
+        return_to
+      rescue URI::InvalidURIError
+        nil
+      end
     end
 
     def account_params
