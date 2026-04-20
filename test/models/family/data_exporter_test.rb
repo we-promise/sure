@@ -341,4 +341,55 @@ class Family::DataExporterTest < ActiveSupport::TestCase
       refute ndjson_content.include?(other_rule.name)
     end
   end
+
+  # CSV injection prevention (CWE-1236) ----------------------------------------
+
+  test "sanitize_csv prefixes formula-starting values with single quote" do
+    dangerous = { "=SUM(A1)" => "'=SUM(A1)", "+cmd" => "'+cmd", "-1+1" => "'-1+1", "@user" => "'@user" }
+    dangerous.each do |input, expected|
+      assert_equal expected, @exporter.send(:sanitize_csv, input), "Failed for: #{input}"
+    end
+  end
+
+  test "sanitize_csv leaves safe strings unchanged" do
+    %w[hello Normal 123 category].each do |safe|
+      assert_equal safe, @exporter.send(:sanitize_csv, safe)
+    end
+  end
+
+  test "sanitize_csv passes through non-string values unchanged" do
+    assert_nil @exporter.send(:sanitize_csv, nil)
+    assert_equal 42, @exporter.send(:sanitize_csv, 42)
+  end
+
+  test "NDJSON preserves formula-prefixed names/notes verbatim (no sanitize_csv leak)" do
+    # Transaction with name/notes starting with CSV formula chars — NDJSON must
+    # round-trip them unchanged, otherwise export→import silently mutates data.
+    dangerous_name  = "=SUM(A1)"
+    dangerous_notes = "-1.5x leverage"
+    entry = @account.entries.create!(
+      date: Date.current,
+      name: dangerous_name,
+      amount: 10,
+      currency: "USD",
+      notes: dangerous_notes,
+      entryable: Transaction.new
+    )
+
+    zip_data = @exporter.generate_export
+
+    Zip::File.open_buffer(zip_data) do |zip|
+      ndjson = zip.read("all.ndjson")
+
+      transaction_line = ndjson.each_line.find do |line|
+        parsed = JSON.parse(line)
+        parsed["type"] == "Transaction" && parsed.dig("data", "entry_id") == entry.id
+      end
+
+      assert transaction_line, "Should find the exported transaction in all.ndjson"
+      data = JSON.parse(transaction_line)["data"]
+      assert_equal dangerous_name,  data["name"]
+      assert_equal dangerous_notes, data["notes"]
+    end
+  end
 end

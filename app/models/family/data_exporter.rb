@@ -49,7 +49,7 @@ class Family::DataExporter
         @family.accounts.includes(:accountable).find_each do |account|
           csv << [
             account.id,
-            account.name,
+            sanitize_csv(account.name),
             account.accountable_type,
             account.subtype,
             account.balance.to_s,
@@ -72,12 +72,12 @@ class Family::DataExporter
           .find_each do |transaction|
             csv << [
               transaction.entry.date.iso8601,
-              transaction.entry.account.name,
+              sanitize_csv(transaction.entry.account.name),
               transaction.entry.amount.to_s,
-              transaction.entry.name,
-              transaction.category&.name,
-              transaction.tags.pluck(:name).join(","),
-              transaction.entry.notes,
+              sanitize_csv(transaction.entry.name),
+              sanitize_csv(transaction.category&.name),
+              transaction.tags.pluck(:name).map { |t| sanitize_csv(t) }.join(","),
+              sanitize_csv(transaction.entry.notes),
               transaction.entry.currency
             ]
           end
@@ -94,7 +94,7 @@ class Family::DataExporter
           .find_each do |trade|
             csv << [
               trade.entry.date.iso8601,
-              trade.entry.account.name,
+              sanitize_csv(trade.entry.account.name),
               trade.security.ticker,
               trade.qty.to_s,
               trade.price.to_s,
@@ -112,9 +112,9 @@ class Family::DataExporter
         # Only export categories belonging to this family
         @family.categories.includes(:parent).find_each do |category|
           csv << [
-            category.name,
+            sanitize_csv(category.name),
             category.color,
-            category.parent&.name,
+            sanitize_csv(category.parent&.name),
             category.lucide_icon
           ]
         end
@@ -128,7 +128,7 @@ class Family::DataExporter
         # Only export rules belonging to this family
         @family.rules.includes(conditions: :sub_conditions, actions: []).find_each do |rule|
           csv << [
-            rule.name,
+            sanitize_csv(rule.name),
             rule.resource_type,
             rule.active,
             rule.effective_date&.iso8601,
@@ -349,5 +349,18 @@ class Family::DataExporter
 
     def serialize_actions_for_csv(actions)
       actions.map { |a| serialize_action(a) }.to_json
+    end
+
+    # Prevent CSV formula injection (CWE-1236).
+    # Values starting with =, +, -, @ can execute as formulas in Excel / Sheets.
+    # \t, \r, \n are included because some spreadsheet parsers trim leading
+    # whitespace-like characters before evaluating the cell, so "=1+1" prefixed
+    # with a tab/newline would still trigger a formula. Leading literal spaces
+    # are NOT treated as bypasses by mainstream parsers today; if that changes,
+    # extend the character class to cover them.
+    # CSV-only — do not apply to JSON/NDJSON output (it would mutate user data).
+    def sanitize_csv(value)
+      return value unless value.is_a?(String)
+      value.match?(/\A[=+\-@\t\r\n]/) ? "'" + value : value
     end
 end
