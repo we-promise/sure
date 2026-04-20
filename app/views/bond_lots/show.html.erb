@@ -56,11 +56,11 @@
 
                 <% if event[:inflation_source].present? %>
                   <p class="text-xs text-secondary">
-                    <% inflation_text = number_to_percentage(event[:inflation_component_percent].to_d, precision: 3) %>
-                    <% margin_text = number_to_percentage(event[:margin_component_percent].to_d, precision: 3) %>
                     <% if event[:inflation_source] == "first_period" %>
                       <%= t(".history_inflation_first_period") %>
                     <% else %>
+                      <% inflation_text = number_to_percentage(event[:inflation_component_percent].to_d, precision: 3) %>
+                      <% margin_text = number_to_percentage(event[:margin_component_percent].to_d, precision: 3) %>
                       <%= t(".history_inflation_manual", inflation: inflation_text, margin: margin_text) %>
                     <% end %>
                   </p>
@@ -85,7 +85,7 @@
             <%= button_to t(".delete"),
                   bond_lot_path(@bond_lot),
                   method: :delete,
-                  class: "rounded-lg px-3 py-2 text-red-500 text-sm font-medium border border-secondary",
+              class: "rounded-lg px-3 py-2 text-destructive text-sm font-medium border border-secondary",
                   data: { turbo_confirm: t(".delete_confirm") } %>
           </div>
         </div>

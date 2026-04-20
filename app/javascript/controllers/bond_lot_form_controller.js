@@ -1,7 +1,14 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
-  static targets = ["productCodeSelect", "subtypeSelect", "subtypeDerivedHint"]
+  static targets = [
+    "productCodeSelect",
+    "subtypeSelect",
+    "subtypeDerivedHint",
+    "purchasedOnInput",
+    "issueDateInput",
+    "termInput"
+  ]
   static values = {
     productSubtypeMap: Object,
     productTermMap: Object
@@ -33,27 +40,24 @@ export default class extends Controller {
   }
 
   syncIssueDateWithPurchase() {
-    const purchasedOnInput = this.element.querySelector('input[name="bond_lot[purchased_on]"]')
-    const issueDateInput = this.element.querySelector('input[name="bond_lot[issue_date]"]')
-    if (!purchasedOnInput || !issueDateInput) return
+    if (!this.hasPurchasedOnInputTarget || !this.hasIssueDateInputTarget) return
 
-    if (!issueDateInput.value && purchasedOnInput.value) {
-      issueDateInput.value = purchasedOnInput.value
+    if (!this.issueDateInputTarget.value && this.purchasedOnInputTarget.value) {
+      this.issueDateInputTarget.value = this.purchasedOnInputTarget.value
     }
   }
 
   #syncTermWithProduct(productCode) {
-    const termInput = this.element.querySelector('input[name="bond_lot[term_months]"]')
-    if (!termInput) return
+    if (!this.hasTermInputTarget) return
 
     const mappedTerm = this.productTermMapValue?.[productCode]
     const termDerived = mappedTerm !== undefined && mappedTerm !== null && `${mappedTerm}` !== ""
 
     if (termDerived) {
-      termInput.value = mappedTerm
+      this.termInputTarget.value = mappedTerm
     }
 
-    termInput.readOnly = termDerived
+    this.termInputTarget.readOnly = termDerived
   }
 
   #inflationController() {

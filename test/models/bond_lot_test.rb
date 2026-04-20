@@ -811,4 +811,57 @@ class BondLotTest < ActiveSupport::TestCase
     assert_nil replacement_lot.inflation_margin
     assert replacement_lot.entry.present?
   end
+
+  test "requires rate_type and coupon_frequency for inflation-linked lots" do
+    bond = bonds(:one)
+    bond.rate_type = nil
+    bond.coupon_frequency = nil
+
+    lot = BondLot.new(
+      bond: bond,
+      purchased_on: Date.current,
+      amount: 1000,
+      subtype: "inflation_linked",
+      term_months: 24,
+      first_period_rate: 4.0,
+      inflation_margin: 1.0,
+      inflation_rate_assumption: 3.0,
+      cpi_lag_months: 2,
+      units: 10,
+      nominal_per_unit: 100,
+      issue_date: Date.current,
+      rate_type: nil,
+      coupon_frequency: nil
+    )
+
+    assert_not lot.valid?
+    assert_includes lot.errors[:rate_type], "can't be blank"
+    assert_includes lot.errors[:coupon_frequency], "can't be blank"
+  end
+
+  test "destroying purchase entry does not remove settled bond lots" do
+    account = accounts(:bond)
+    lot = BondLot.create!(
+      bond: account.bond,
+      purchased_on: Date.new(2024, 1, 1),
+      amount: 1000,
+      subtype: "other_bond",
+      term_months: 12,
+      interest_rate: 10,
+      rate_type: "fixed",
+      coupon_frequency: "at_maturity",
+      auto_close_on_maturity: true,
+      tax_strategy: "standard",
+      tax_rate: 19
+    )
+    lot.create_purchase_entry!
+    lot.settle_if_matured!(on: Date.new(2025, 2, 1))
+
+    assert_raises(ActiveRecord::RecordNotDestroyed) do
+      lot.entry.destroy!
+    end
+
+    assert BondLot.exists?(lot.id)
+    assert Entry.exists?(lot.entry.id)
+  end
 end

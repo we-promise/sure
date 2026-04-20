@@ -7,7 +7,10 @@ export default class extends Controller {
     "inflationInput",
     "otherRequiredInput",
     "manualInflationField",
-    "manualInflationInput"
+    "manualInflationInput",
+    "subtypeInput",
+    "purchasedOnInput",
+    "issueDateInput"
   ]
 
   static values = {
@@ -48,6 +51,10 @@ export default class extends Controller {
     this.toggleManualInflationField()
   }
 
+  recalculate() {
+    this.toggleSubtypeFields()
+  }
+
   toggleManualInflationField() {
     if (!this.hasManualInflationFieldTarget || !this.hasManualInflationInputTarget) return
 
@@ -59,15 +66,12 @@ export default class extends Controller {
   }
 
   #subtypeValue() {
-    const input = this.element.querySelector('select[name="bond_lot[subtype]"]')
-    return `${input?.value || ""}`
+    return this.hasSubtypeInputTarget ? `${this.subtypeInputTarget.value || ""}` : ""
   }
 
   #firstPeriodRateRequired() {
-    const purchasedOnInput = this.element.querySelector('input[name="bond_lot[purchased_on]"]')
-    const issueDateInput = this.element.querySelector('input[name="bond_lot[issue_date]"]')
-    const purchasedOn = this.#parseDate(purchasedOnInput?.value)
-    const issueDate = this.#parseDate(issueDateInput?.value)
+    const purchasedOn = this.#parseDate(this.hasPurchasedOnInputTarget ? this.purchasedOnInputTarget.value : null)
+    const issueDate = this.#parseDate(this.hasIssueDateInputTarget ? this.issueDateInputTarget.value : null)
 
     if (!purchasedOn) return false
 

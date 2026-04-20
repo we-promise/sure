@@ -21,12 +21,20 @@
       <%= form.date_field :purchased_on,
               label: t("bond_lots.form.purchased_on"),
               required: true,
-              data: { action: "change->bond-lot-form#syncIssueDateWithPurchase" } %>
+              data: {
+                action: "change->bond-lot-form#syncIssueDateWithPurchase change->bond-lot-inflation#recalculate",
+                bond_lot_form_target: "purchasedOnInput",
+                bond_lot_inflation_target: "purchasedOnInput"
+              } %>
 
       <div data-bond-lot-inflation-target="inflationFields">
         <%= form.date_field :issue_date,
                             label: t("bond_lots.form.issue_date"),
-                            data: { bond_lot_inflation_target: "inflationInput" } %>
+                            data: {
+                              action: "change->bond-lot-inflation#recalculate",
+                              bond_lot_form_target: "issueDateInput",
+                              bond_lot_inflation_target: "inflationInput issueDateInput"
+                            } %>
       </div>
 
       <%= form.money_field :amount,
@@ -63,7 +71,8 @@
       <%= form.number_field :term_months,
                             label: t("bond_lots.form.term_months"),
                             min: 1,
-                            required: true %>
+                            required: true,
+                            data: { bond_lot_form_target: "termInput" } %>
 
       <div data-bond-lot-inflation-target="otherFields">
         <%= form.number_field :interest_rate,
@@ -86,7 +95,8 @@
               {
                 data: {
                   action: "change->bond-lot-inflation#toggleSubtypeFields",
-                  bond_lot_form_target: "subtypeSelect"
+                  bond_lot_form_target: "subtypeSelect",
+                  bond_lot_inflation_target: "subtypeInput"
                 }
               } %>
       <p class="text-xs text-secondary" data-bond-lot-form-target="subtypeDerivedHint">

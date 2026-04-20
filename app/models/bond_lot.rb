@@ -58,6 +58,7 @@ class BondLot < ApplicationRecord
   validates :cpi_lag_months, numericality: { only_integer: true, greater_than_or_equal_to: 0 }, allow_nil: true
   validates :subtype, inclusion: { in: Bond::SUBTYPES.keys }
   validates :product_code, inclusion: { in: Bond::PRODUCT_DEFAULTS.keys }, allow_blank: true
+  validates :rate_type, :coupon_frequency, presence: true
   validates :rate_type, inclusion: { in: Bond::RATE_TYPES }, allow_nil: true
   validates :coupon_frequency, inclusion: { in: Bond::COUPON_FREQUENCIES }, allow_nil: true
   validates :tax_strategy, inclusion: { in: TAX_STRATEGIES }
@@ -78,8 +79,6 @@ class BondLot < ApplicationRecord
 
   with_options unless: :inflation_linked? do
     validates :interest_rate, presence: true, unless: -> { requires_rate_review? || inflation_linked_selection? }
-    validates :rate_type, presence: true
-    validates :coupon_frequency, presence: true
   end
 
   delegate :account, to: :bond

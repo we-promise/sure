@@ -23,7 +23,6 @@ class BondLotsController < ApplicationController
 
   def show
     @account = @bond_lot.account
-    return unless require_account_permission!(@account) # rubocop:disable Style/RedundantReturn
   end
 
   def create

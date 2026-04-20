@@ -104,7 +104,7 @@ class EnableBankingItem < ApplicationRecord
       authorization_id: result[:authorization_id],
       aspsp_name: aspsp_name
     }
-    attributes[:psu_type] = validated_psu_type if validated_psu_type.present?
+    attributes[:psu_type] = validated_psu_type if validated_psu_type.present? && has_attribute?(:psu_type)
 
     update!(attributes)
 

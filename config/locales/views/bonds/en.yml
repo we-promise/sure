@@ -2,7 +2,7 @@
 en:
   bonds:
     edit:
-      edit: Edit %{account}
+      title: Edit %{account}
     form:
       initial_balance: Original bond balance
       tax_wrapper: Tax wrapper

@@ -2,7 +2,7 @@
 pl:
   bonds:
     edit:
-      edit: Edytuj %{account}
+      title: Edytuj %{account}
     form:
       initial_balance: Początkowe saldo obligacji
       tax_wrapper: Otoczka podatkowa

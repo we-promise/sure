@@ -25,6 +25,7 @@ class Entry < ApplicationRecord
   validate :split_child_date_matches_parent
 
   before_destroy :prevent_individual_child_deletion, if: :split_child?
+  before_destroy :prevent_deletion_when_linked_bond_lot_settled
 
   scope :visible, -> {
     joins(:account).where(accounts: { status: [ "draft", "active" ] })
@@ -507,6 +508,13 @@ class Entry < ApplicationRecord
     def prevent_individual_child_deletion
       return if destroyed_by_association || unsplitting
 
+      throw :abort
+    end
+
+    def prevent_deletion_when_linked_bond_lot_settled
+      return unless bond_lot&.closed_on.present?
+
+      errors.add(:base, "Cannot delete entry linked to a settled bond lot")
       throw :abort
     end
 end
