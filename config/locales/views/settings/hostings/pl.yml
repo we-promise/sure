@@ -110,54 +110,6 @@ pl:
         requires_plan: wymaga planu %{plan}
         view_pricing: Zobacz cennik Twelve Data
         title: Twelve Data
-      gus_sdp_settings:
-        title: GUS SDP (Inflacja)
-        description: Opcjonalny klucz API do danych inflacyjnych GUS SDP. Pozostaw puste, aby korzystać z bezpłatnego poziomu anonimowego.
-        env_configured_message: Pomyślnie skonfigurowano przez zmienną środowiskową GUS_SDP_API_KEY.
-        configured_in_settings_message: Klucz API skonfigurowany w ustawieniach.
-        configured_via_env: Klucz API jest skonfigurowany przez zmienną środowiskową GUS_SDP_API_KEY.
-        free_default_message: Brak skonfigurowanego klucza API. Domyślnie używany jest bezpłatny dostęp anonimowy.
-        clear_api_key: Wyczyść zapisany klucz API
-        clear_api_key_confirm: Usunąć zapisany klucz API GUS?
-        label: Klucz API
-        placeholder: Wprowadź klucz API GUS SDP
-        stored_records: Zapisane rekordy
-        stored_range: Zapisany zakres
-      inflation_settings:
-        title: Inflacja
-        global_import_title: Import globalny
-        global_import_hint: Sterowanie harmonogramem i ręcznym backfillem CPI dla wszystkich skonfigurowanych źródeł.
-        providers_title: Dostawcy inflacji
-        providers_hint: Skonfiguruj dane dostępowe i endpointy dla wszystkich źródeł CPI używanych w obliczeniach obligacji indeksowanych inflacją.
-        import_description: Poniższe sterowanie importem dotyczy wszystkich skonfigurowanych źródeł CPI (PL GUS, US BLS, ES INE).
-        import_enabled_label: Włącz automatyczny import CPI
-        import_enabled_help: Domyślnie wyłączone. Włącz, jeśli chcesz automatycznie importować stawki CPI do obliczeń obligacji indeksowanych inflacją.
-        import_enabled_env_locked: To ustawienie jest zablokowane przez zmienną środowiskową INFLATION_IMPORT_ENABLED. Starsze GUS_INFLATION_IMPORT_ENABLED jest nadal wspierane.
-        start_year: Rok początkowy
-        end_year: Rok końcowy
-        import_now: Importuj historię CPI teraz
-        last_import: Ostatni import
-        last_range: Ostatni zakres
-        last_count: Zaimportowane rekordy
-        last_error: Ostatni błąd
-        stored_records: Zapisane rekordy
-        stored_range: Zapisany zakres
-        never: Nigdy
-      inflation_providers_settings:
-        title: Dostawcy inflacji
-        description: Skonfiguruj źródła CPI dla obligacji indeksowanych inflacją poza Polską. Pozostaw puste, aby używać domyślnych ustawień dostawcy, gdy są dostępne.
-        us_bls_title: US BLS CPI
-        us_bls_hint: Używane do obliczeń amerykańskich obligacji indeksowanych inflacją (np. TIPS i I Bonds).
-        es_ine_title: ES INE CPI
-        es_ine_hint: Używane do obliczeń hiszpańskich obligacji indeksowanych inflacją. ID serii INE jest wymagane do pobierania danych.
-        base_url: Bazowy URL API
-        series_id: ID serii
-        es_ine_series_placeholder: Wprowadź ID serii ES INE
-        locked_by_env: To pole jest zablokowane przez zmienną środowiskową %{var}.
-      import_inflation_rates:
-        import_enqueued: Import CPI został dodany do kolejki.
-        manual_import_disabled_when_auto_enabled: Ręczny import CPI jest dostępny tylko wtedy, gdy automatyczny import jest wyłączony.
-        invalid_import_range: Nieprawidłowy zakres lat dla importu CPI.
       update:
         failure: Nieprawidłowa wartość ustawienia
         success: Ustawienia zostały zaktualizowane

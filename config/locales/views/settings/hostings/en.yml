@@ -168,54 +168,6 @@ en:
         requires_plan: requires %{plan} plan
         view_pricing: View Twelve Data pricing
         title: Twelve Data
-      gus_sdp_settings:
-        title: GUS SDP (Inflation)
-        description: Optional API key for GUS SDP inflation data. Leave empty to use the free anonymous tier.
-        env_configured_message: Successfully configured through the GUS_SDP_API_KEY environment variable.
-        configured_in_settings_message: API key configured in settings.
-        configured_via_env: API key is configured via the GUS_SDP_API_KEY environment variable.
-        free_default_message: No API key configured. Using free anonymous access by default.
-        clear_api_key: Clear stored API key
-        clear_api_key_confirm: Remove the stored GUS API key?
-        label: API Key
-        placeholder: Enter your GUS SDP API key
-        stored_records: Stored records
-        stored_range: Stored range
-      inflation_settings:
-        title: Inflation
-        global_import_title: Global Import
-        global_import_hint: Controls for scheduling and manual CPI backfill across all configured providers.
-        providers_title: Inflation Providers
-        providers_hint: Configure credentials and endpoints for all CPI providers used in inflation-linked bond calculations.
-        import_description: Import controls below apply to all configured CPI providers (PL GUS, US BLS, ES INE).
-        import_enabled_label: Enable automatic CPI imports
-        import_enabled_help: Disabled by default. Enable this if you want CPI rates auto-imported for inflation-linked bond calculations.
-        import_enabled_env_locked: This setting is locked by the INFLATION_IMPORT_ENABLED environment variable. Legacy GUS_INFLATION_IMPORT_ENABLED is also supported.
-        start_year: Start year
-        end_year: End year
-        import_now: Import CPI history now
-        last_import: Last import
-        last_range: Last range
-        last_count: Imported records
-        last_error: Last error
-        stored_records: Stored records
-        stored_range: Stored range
-        never: Never
-      inflation_providers_settings:
-        title: Inflation Providers
-        description: Configure CPI sources for non-Polish inflation-linked bonds. Leave fields empty to use provider defaults where available.
-        us_bls_title: US BLS CPI
-        us_bls_hint: Used for US inflation-linked bond calculations (for example TIPS and I Bonds).
-        es_ine_title: ES INE CPI
-        es_ine_hint: Used for Spanish inflation-linked bond calculations. INE series ID is required to fetch data.
-        base_url: API Base URL
-        series_id: Series ID
-        es_ine_series_placeholder: Enter ES INE series ID
-        locked_by_env: This field is locked by the %{var} environment variable.
-      import_inflation_rates:
-        import_enqueued: CPI import has been queued.
-        manual_import_disabled_when_auto_enabled: Manual CPI import is available only when automatic imports are disabled.
-        invalid_import_range: Invalid year range for CPI import.
       update:
         failure: Invalid setting value
         success: Settings updated

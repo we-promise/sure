@@ -43,12 +43,6 @@ refresh_demo_family:
   queue: "scheduled"
   description: "Refreshes demo family data and emails super admins with daily usage summary"
 
-import_inflation_rates:
-  cron: "30 6 15 * *" # monthly around CPI publication window
-  class: "ImportInflationRatesJob"
-  queue: "scheduled"
-  description: "Imports CPI YoY rates (GUS, US BLS, ES INE) for current and previous year"
-
 settle_matured_bond_lots:
   cron: "15 2 * * *" # daily at 2:15 AM
   class: "SettleMaturedBondLotsJob"

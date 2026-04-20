@@ -7,10 +7,9 @@
                          controller: "bond-lot-form bond-lot-inflation",
                          bond_lot_form_product_subtype_map_value: Bond::PRODUCT_DEFAULTS.transform_values { |defaults| defaults[:subtype] }.to_json,
                          bond_lot_form_product_term_map_value: Bond::PRODUCT_DEFAULTS.transform_values { |defaults| defaults[:term_months] }.to_json,
-                         bond_lot_form_product_provider_map_value: Bond::PRODUCT_DEFAULTS.transform_values { |defaults| defaults[:inflation_provider] }.to_json,
                          bond_lot_inflation_inflation_subtypes_value: Bond::INFLATION_LINKED_SUBTYPES.to_json,
-                         bond_lot_inflation_lot_auto_fetch_value: bond_lot.auto_fetch_inflation.nil? ? true : bond_lot.auto_fetch_inflation,
-                         bond_lot_inflation_global_import_enabled_value: Setting.inflation_import_enabled_effective
+                         bond_lot_inflation_lot_auto_fetch_value: false,
+                         bond_lot_inflation_global_import_enabled_value: false
                        }
                      } do |form| %>
   <div class="space-y-4">
@@ -120,27 +119,6 @@
                               data: { bond_lot_inflation_target: "inflationInput" } %>
       </div>
 
-      <% selected_provider = if bond_lot.auto_fetch_inflation.nil? || bond_lot.auto_fetch_inflation
-                               bond_lot.inflation_provider.presence || Bond::InflationProvider.default_provider_for(account:, lot: bond_lot, product_code: bond_lot.product_code)
-                             else
-                               bond_lot.inflation_provider
-                             end %>
-      <div data-bond-lot-inflation-target="inflationFields">
-        <%= form.select :inflation_provider,
-                        Bond::InflationProvider::PROVIDERS.map { |key, _klass| [t("bonds.purchase_holding.inflation_providers.#{key}", default: key.to_s.humanize), key] },
-                        {
-                          label: t("bond_lots.form.inflation_provider"),
-                          include_blank: t("bond_lots.form.inflation_provider_blank"),
-                          selected: selected_provider
-                        },
-                        {
-                          data: {
-                            bond_lot_form_target: "providerSelect",
-                            action: "change->bond-lot-inflation#syncAutoFetchWithProvider"
-                          }
-                        } %>
-      </div>
-
       <div class="flex items-center gap-2" data-bond-lot-inflation-target="inflationFields">
         <%= form.number_field :cpi_lag_months,
                               label: t("bond_lots.form.cpi_lag_months"),
@@ -149,29 +127,8 @@
                               data: { bond_lot_inflation_target: "inflationInput" } %>
       </div>
 
-      <% if Setting.inflation_import_enabled_effective %>
-
-        <%= form.hidden_field :auto_fetch_inflation,
-                              value: bond_lot.auto_fetch_inflation.nil? ? 1 : (bond_lot.auto_fetch_inflation ? 1 : 0),
-                              data: { bond_lot_inflation_target: "autoFetchInput" } %>
-      <% else %>
-        <%= form.hidden_field :auto_fetch_inflation,
-                              value: 0,
-                              data: { bond_lot_inflation_target: "autoFetchInput" } %>
-
-        <p class="text-xs text-secondary" data-bond-lot-inflation-target="inflationFields">
-          <%= t("bond_lots.form.auto_fetch_disabled_hint") %>
-        </p>
-
-        <div data-bond-lot-inflation-target="inflationFields">
-          <%= form.toggle :auto_fetch_inflation,
-                          checked: false,
-                          disabled: true,
-                          data: {
-                            bond_lot_inflation_target: "autoFetchInput"
-                          } %>
-        </div>
-      <% end %>
+      <%= form.hidden_field :inflation_provider, value: "" %>
+      <%= form.hidden_field :auto_fetch_inflation, value: 0 %>
 
       <div data-bond-lot-inflation-target="manualInflationField">
         <%= form.number_field :inflation_rate_assumption,
@@ -180,10 +137,6 @@
                               step: 0.005,
                               data: { bond_lot_inflation_target: "manualInflationInput" } %>
       </div>
-
-        <%# auto_fetch_inflation is normalized server-side by normalize_auto_fetch_inflation.
-          When global CPI import is enabled we keep it hidden; when global import is disabled
-          we expose a toggle so users can switch to manual CPI entry on the lot. %>
 
       <div data-bond-lot-inflation-target="inflationFields">
         <%= form.money_field :early_redemption_fee,

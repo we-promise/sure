@@ -1,11 +1,10 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
-  static targets = ["productCodeSelect", "subtypeSelect", "subtypeDerivedHint", "providerSelect"]
+  static targets = ["productCodeSelect", "subtypeSelect", "subtypeDerivedHint"]
   static values = {
     productSubtypeMap: Object,
-    productTermMap: Object,
-    productProviderMap: Object
+    productTermMap: Object
   }
 
   connect() {
@@ -30,7 +29,6 @@ export default class extends Controller {
     }
 
     this.#syncTermWithProduct(productCode)
-    this.#syncProviderWithProduct(productCode)
     this.#inflationController()?.toggleSubtypeFields()
   }
 
@@ -56,24 +54,6 @@ export default class extends Controller {
     }
 
     termInput.readOnly = termDerived
-  }
-
-  #syncProviderWithProduct(productCode) {
-    if (!this.hasProviderSelectTarget) return
-
-    const providerSelect = this.providerSelectTarget
-
-    const mappedProvider = this.productProviderMapValue?.[productCode]
-    const providerDerived = mappedProvider !== undefined && mappedProvider !== null && `${mappedProvider}` !== ""
-
-    if (providerDerived) {
-      providerSelect.value = mappedProvider
-    } else if (productCode) {
-      providerSelect.value = ""
-    }
-
-    providerSelect.disabled = providerDerived
-    this.#inflationController()?.syncAutoFetchWithProvider({ preserveExisting: true })
   }
 
   #inflationController() {

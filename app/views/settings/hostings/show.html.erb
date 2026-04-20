@@ -28,53 +28,6 @@
     <% end %>
   </div>
 <% end %>
-<%= settings_section title: t(".inflation") do %>
-  <div class="space-y-6">
-    <section class="space-y-4">
-      <div>
-        <h2 class="font-medium mb-1"><%= t("settings.hostings.inflation_settings.global_import_title") %></h2>
-        <p class="text-secondary text-sm"><%= t("settings.hostings.inflation_settings.global_import_hint") %></p>
-      </div>
-
-      <%= render Settings::Hostings::InflationImportSettingsComponent.new(
-        inflation_import_enabled_effective: Setting.inflation_import_enabled_effective,
-        env_inflation_import_enabled: ENV["INFLATION_IMPORT_ENABLED"].presence || ENV["GUS_INFLATION_IMPORT_ENABLED"].presence,
-        last_import_at: Setting.inflation_last_import_at,
-        last_import_range: Setting.inflation_last_import_range,
-        last_import_count: Setting.inflation_last_import_count,
-        last_import_error: Setting.inflation_last_import_error,
-        provider_stats: @inflation_provider_stats,
-        last_import_details: @inflation_last_import_details,
-        current_year: Date.current.year
-      ) %>
-    </section>
-
-    <section class="space-y-4">
-      <div>
-        <h2 class="font-medium mb-1"><%= t("settings.hostings.inflation_settings.providers_title") %></h2>
-        <p class="text-secondary text-sm"><%= t("settings.hostings.inflation_settings.providers_hint") %></p>
-      </div>
-
-      <%= render Settings::Hostings::GusSdpSettingsComponent.new(
-        gus_sdp_api_key: Setting.gus_sdp_api_key,
-        env_gus_sdp_api_key: ENV["GUS_SDP_API_KEY"]
-      ) %>
-
-      <div class="pt-2">
-        <%= render Settings::Hostings::InflationProvidersSettingsComponent.new(
-          us_bls_cpi_base_url: Setting.us_bls_cpi_base_url,
-          us_bls_cpi_series_id: Setting.us_bls_cpi_series_id,
-          es_ine_cpi_base_url: Setting.es_ine_cpi_base_url,
-          es_ine_cpi_series_id: Setting.es_ine_cpi_series_id,
-          env_us_bls_cpi_base_url: ENV["US_BLS_CPI_BASE_URL"],
-          env_us_bls_cpi_series_id: ENV["US_BLS_CPI_SERIES_ID"],
-          env_es_ine_cpi_base_url: ENV["ES_INE_CPI_BASE_URL"],
-          env_es_ine_cpi_series_id: ENV["ES_INE_CPI_SERIES_ID"]
-        ) %>
-      </div>
-    </section>
-  </div>
-<% end %>
 <%= settings_section title: t(".sync_settings") do %>
   <%= render "settings/hostings/sync_settings" %>
 <% end %>

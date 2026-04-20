@@ -83,7 +83,6 @@ class BondLot < ApplicationRecord
   before_validation :normalize_tax_settings
   before_validation :clear_rate_review_flag
 
-  after_commit :enqueue_inflation_backfill, on: %i[create update], if: :should_enqueue_inflation_backfill?
   after_commit :settle_if_already_matured!, on: %i[create update], if: :should_settle_if_already_matured?
 
   validates :purchased_on, :amount, :subtype, presence: true
@@ -101,7 +100,7 @@ class BondLot < ApplicationRecord
   validates :cpi_lag_months, numericality: { only_integer: true, greater_than_or_equal_to: 0 }, allow_nil: true
   validates :subtype, inclusion: { in: Bond::SUBTYPES.keys }
   validates :product_code, inclusion: { in: Bond::PRODUCT_DEFAULTS.keys }, allow_blank: true
-  validates :inflation_provider, inclusion: { in: Bond::InflationProvider::PROVIDERS.keys }, allow_blank: true
+  validates :inflation_provider, inclusion: { in: %w[gus_sdp us_bls es_ine] }, allow_blank: true
   validates :rate_type, inclusion: { in: Bond::RATE_TYPES }, allow_nil: true
   validates :coupon_frequency, inclusion: { in: Bond::COUPON_FREQUENCIES }, allow_nil: true
   validates :tax_strategy, inclusion: { in: TAX_STRATEGIES }
@@ -353,11 +352,7 @@ class BondLot < ApplicationRecord
   end
 
   def current_inflation_indicator_id
-    return nil unless inflation_linked? && auto_fetch_inflation?
-
-    return nil unless inflation_provider_key == "gus_sdp"
-
-    ENV["GUS_SDP_CPI_INDICATOR_ID"].presence || Provider::GusSdp::DEFAULT_CPI_INDICATOR_ID
+    nil
   end
 
   def settlement_tax_rate_percent
@@ -584,20 +579,6 @@ class BondLot < ApplicationRecord
     end
 
     def inflation_snapshot_for(on:, allow_import: true)
-      reference_on = current_cpi_reference_on(on:)
-
-      if auto_fetch_inflation?
-        source_record = inflation_rate_record_for(on:, allow_import:)
-        if source_record.present?
-          return {
-            inflation_component_percent: source_record.rate_yoy.to_d - 100,
-            source: inflation_source_label,
-            reference_on: reference_on || Date.new(source_record.year, source_record.month, 1),
-            indicator_id: current_inflation_indicator_id
-          }
-        end
-      end
-
       {
         inflation_component_percent: inflation_rate_assumption&.to_d,
         source: inflation_rate_assumption.present? ? "manual" : nil,
@@ -649,20 +630,13 @@ class BondLot < ApplicationRecord
       self.rate_type = defaults[:rate_type] if defaults[:rate_type].present? && (rate_type.blank? || is_product_new)
       self.coupon_frequency = defaults[:coupon_frequency] if defaults[:coupon_frequency].present? && (coupon_frequency.blank? || (is_product_new && !preserve_existing))
       self.cpi_lag_months = defaults[:cpi_lag_months] if defaults[:cpi_lag_months].present? && (cpi_lag_months.blank? || is_product_new)
-      resolved_provider = Bond::InflationProvider.default_provider_for(
-        account: account,
-        bond: bond,
-        lot: self,
-        product_code: product_code
-      )
-      self.inflation_provider = resolved_provider if is_product_new
       self.nominal_per_unit ||= 100
       self.issue_date ||= purchased_on
-      self.auto_fetch_inflation = true if auto_fetch_inflation.nil?
+      self.auto_fetch_inflation = false if auto_fetch_inflation.nil?
     end
 
     def normalize_auto_fetch_inflation
-      self.auto_fetch_inflation = true if auto_fetch_inflation.nil?
+      self.auto_fetch_inflation = false if auto_fetch_inflation.nil?
       return if inflation_linked?
 
       self.auto_fetch_inflation = false
@@ -678,33 +652,6 @@ class BondLot < ApplicationRecord
       product_code&.start_with?("pl_")
     end
 
-    def inflation_provider_key
-      inflation_provider.presence || Bond::InflationProvider.default_provider_for(
-        account: account,
-        bond: bond,
-        lot: self,
-        product_code: product_code
-      )
-    end
-
-    def inflation_rate_record_for(on:, allow_import: true)
-      cache_key = [ inflation_provider_key, on.to_date, cpi_lag_months.to_i, allow_import ]
-      cache = Thread.current[:bond_inflation_record_cache]
-      return cache[cache_key] if cache&.key?(cache_key)
-
-      Bond::InflationProvider.record_for_date(
-        provider: inflation_provider_key,
-        date: on,
-        lag_months: cpi_lag_months.to_i,
-        allow_import:
-      ).tap do |result|
-        cache[cache_key] = result if cache
-      end
-    end
-
-    def inflation_source_label
-      inflation_provider_key
-    end
 
     def create_settlement_entry!(settlement_date:, net_value:, tax_withheld_amount:, gross_value:)
       subtype_label = Bond.long_subtype_label_for(subtype) || Bond.display_name.singularize
@@ -884,20 +831,6 @@ class BondLot < ApplicationRecord
       self.maturity_date = base_date + term_months.months
     end
 
-    def needs_inflation_backfill?
-      inflation_linked? && auto_fetch_inflation? && purchased_on.present? && Bond::InflationProvider.automatic_import_enabled?(inflation_provider_key)
-    end
-
-    def should_enqueue_inflation_backfill?
-      return false unless needs_inflation_backfill?
-      saved_change_to_purchased_on? ||
-        saved_change_to_issue_date? ||
-        saved_change_to_cpi_lag_months? ||
-        saved_change_to_inflation_provider? ||
-        saved_change_to_auto_fetch_inflation? ||
-        saved_change_to_subtype?
-    end
-
     def should_settle_if_already_matured?
       open? && auto_close_on_maturity? && maturity_date.present? && maturity_date <= Date.current && entry_id.present?
     end
@@ -913,33 +846,6 @@ class BondLot < ApplicationRecord
 
       nominal = nominal_per_unit.presence || 100
       (net_value.to_d / nominal.to_d).floor.positive?
-    end
-
-    def enqueue_inflation_backfill
-      max_lag_months = cpi_lag_months.to_i
-      earliest_needed_date = purchased_on.beginning_of_month - max_lag_months.months
-      start_year = [ earliest_needed_date.year, Date.current.year - 20 ].max
-      end_year = Date.current.year
-
-      # Current year won't have all 12 months yet — only expect up to the current month.
-      today = Date.current
-      required_months = (start_year..end_year).sum { |y| y == today.year ? today.month : 12 }
-
-      return if required_months <= 0
-
-      provider = inflation_provider_key
-      return unless Bond::InflationProvider.automatic_import_enabled?(provider)
-
-      existing_count =
-        if provider == "gus_sdp"
-          GusInflationRate.where(year: start_year..end_year).count
-        else
-          InflationRate.where(source: provider, year: start_year..end_year).count
-        end
-
-      return if existing_count >= required_months
-
-      ImportInflationRatesJob.perform_later(start_year:, end_year:, providers: [ provider ])
     end
 
     # Returns false if any annual rate period between purchased_on and date cannot be resolved.

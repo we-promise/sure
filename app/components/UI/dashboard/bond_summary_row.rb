@@ -80,53 +80,17 @@ class UI::Dashboard::BondSummaryRow < ApplicationComponent
 
       inflation_component = lot.current_inflation_component_percent(allow_import: false)
       margin_component = lot.current_margin_percent(allow_import: false)
-      if inflation_component.nil? || margin_component.nil?
-        if lot.in_first_rate_period?
-          return t("bonds.purchase_holding.first_period_fixed_rate")
-        else
-          reference_str = lot.current_cpi_reference_on&.strftime("%m-%Y") || t("bonds.purchase_holding.unknown")
-          return t("bonds.purchase_holding.inflation_data_unavailable", reference: reference_str)
-        end
-      end
+      return t("bonds.purchase_holding.first_period_fixed_rate") if lot.in_first_rate_period?
+      return t("bonds.purchase_holding.unknown") if inflation_component.nil? || margin_component.nil?
 
       inflation = helpers.number_to_percentage(inflation_component.to_d, precision: 3)
       margin = helpers.number_to_percentage(margin_component.to_d, precision: 3)
-      source = current_inflation_source_key
 
-      if source == "gus_sdp"
-        t(
-          "bonds.purchase_holding.inflation_meta_gus",
-          inflation: inflation,
-          margin: margin,
-          indicator: lot.current_inflation_indicator_id
-        )
-      elsif source.blank? || source == "manual"
-        t(
-          "bonds.purchase_holding.inflation_meta_manual",
-          inflation: inflation,
-          margin: margin
-        )
-      else
-        t(
-          "bonds.purchase_holding.inflation_meta_provider",
-          inflation: inflation,
-          margin: margin,
-          provider: localized_inflation_provider
-        )
-      end
-    end
-
-    def current_inflation_source_key
-      return @current_inflation_source_key if defined?(@current_inflation_source_key)
-
-      @current_inflation_source_key = lot.current_inflation_source(allow_import: false).to_s.presence
-    end
-
-    def localized_inflation_provider
-      provider = current_inflation_source_key
-      return t("bonds.purchase_holding.unknown") if provider.blank?
-
-      t("bonds.purchase_holding.inflation_providers.#{provider}", default: provider.to_s.humanize)
+      t(
+        "bonds.purchase_holding.inflation_meta_manual",
+        inflation: inflation,
+        margin: margin
+      )
     end
 
     def localized_rate_type
