@@ -45,6 +45,7 @@ en:
       convert_to_trade_title: Convert to Security Trade
       convert_to_trade_description: Convert this transaction into a Buy or Sell trade with security details for portfolio tracking.
       convert_to_trade_button: Convert to Trade
+      transfer_matcher_description: Connect this transaction to its counterpart in another account.
       pending_duplicate_merger_title: Duplicate of Posted Transaction?
       pending_duplicate_merger_description: Manually merge this pending transaction with its posted version.
       pending_duplicate_merger_button: Open merger

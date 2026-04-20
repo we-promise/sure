@@ -1,0 +1,7 @@
+---
+en:
+  transfer_matches:
+    new:
+      header:
+        title: Match transfer or payment
+        subtitle: Match the corresponding transaction in another account or create one if it doesn't exist.
