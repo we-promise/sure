@@ -35,5 +35,5 @@ generic_s3:
 google:
   service: GCS
   project: <%= ENV["GCS_PROJECT"] %>
-  credentials: <%= ENV.fetch("GCS_KEYFILE_JSON") { ENV["GCS_KEYFILE"] } %>
+  credentials: <%= ENV["GCS_KEYFILE_JSON"].presence || ENV["GCS_KEYFILE"] %>
   bucket: <%= ENV["GCS_BUCKET"] %>
