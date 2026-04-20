@@ -4,8 +4,8 @@
   <div class="bg-container px-3 py-4 lg:p-4 shadow-border-xs rounded-xl">
     <div class="flex items-center justify-between mb-4" data-testid="activity-menu">
       <%= tag.h2 t(".title"), class: "font-medium text-lg" %>
-      <% unless @account.linked? %>
-        <% if @account.permission_for(Current.user).in?([ :owner, :full_control ]) %>
+      <% unless account.linked? %>
+        <% if account.permission_for(Current.user).in?([ :owner, :full_control ]) %>
           <%= render DS::Menu.new(variant: "button") do |menu| %>
             <% menu.with_button(text: "New", variant: "secondary", icon: "plus") %>
 
@@ -13,22 +13,29 @@
                 variant: "link",
                 text: "New balance",
                 icon: "circle-dollar-sign",
-                href: new_valuation_path(account_id: @account.id),
+                href: new_valuation_path(account_id: account.id),
                 data: { turbo_frame: :modal }) %>
 
-            <% if @account.supports_trades? %>
+            <% if account.investment? %>
               <% menu.with_item(
                   variant: "link",
-                  text: t(".new_trade"),
-                  icon: "credit-card",
-                  href: new_trade_path(account_id: @account.id),
+                  text: t(".new_activity", default: "New activity"),
+                  icon: "arrow-left-right",
+                  href: new_trade_path(account_id: account.id),
                   data: { turbo_frame: :modal }) %>
-            <% elsif !@account.crypto? %>
+            <% elsif account.bond? %>
+              <% menu.with_item(
+                  variant: "link",
+                  text: t(".new_activity", default: "New activity"),
+                  icon: "arrow-left-right",
+                  href: new_bond_lot_path(account_id: account.id),
+                  data: { turbo_frame: :modal }) %>
+            <% elsif !account.crypto? %>
               <% menu.with_item(
                   variant: "link",
                   text: t(".new_transaction"),
                   icon: "credit-card",
-                  href: new_transaction_path(account_id: @account.id),
+                  href: new_transaction_path(account_id: account.id),
                   data: { turbo_frame: :modal }) %>
             <% end %>
           <% end %>
@@ -46,7 +53,7 @@
           <div class="grow">
             <div class="flex items-center px-3 py-2 gap-2 border border-secondary rounded-lg focus-within:ring-gray-100 focus-within:border-gray-900">
               <%= icon("search") %>
-              <%= hidden_field_tag :account_id, @account.id %>
+              <%= hidden_field_tag :account_id, account.id %>
               <%= form.search_field :search,
                             placeholder: "Search entries by name",
                             value: @q[:search],
@@ -61,7 +68,7 @@
     <% if @entries.empty? %>
       <p class="text-secondary text-sm p-4"><%= t(".no_entries") %></p>
     <% else %>
-      <%= tag.div id: dom_id(@account, "entries_bulk_select"),
+      <%= tag.div id: dom_id(account, "entries_bulk_select"),
                 data: {
                   controller: "bulk-select checkbox-toggle",
                   bulk_select_singular_label_value: t(".entry"),

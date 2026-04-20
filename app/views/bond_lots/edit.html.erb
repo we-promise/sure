@@ -1,0 +1,6 @@
+<%= render DS::Dialog.new do |dialog| %>
+  <% dialog.with_header(title: t(".title", account: @account.name)) %>
+  <% dialog.with_body do %>
+    <%= render "form", account: @account, bond_lot: @bond_lot, url: bond_lot_path(@bond_lot) %>
+  <% end %>
+<% end %>
