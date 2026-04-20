@@ -38,7 +38,7 @@ gem "sidekiq-unique-jobs"
 
 # Monitoring
 gem "vernier"
-gem "rack-mini-profiler"
+gem "rack-mini-profiler", group: :development
 gem "sentry-ruby"
 gem "sentry-rails"
 gem "sentry-sidekiq"
