@@ -15,9 +15,6 @@ en:
       welcome: "Welcome back, %{name}"
       subtitle: "Here's what's happening with your finances"
       new: "New"
-      bond_rate_review_notice:
-        one: "1 bond lot needs updated issue rate (%{accounts})."
-        other: "%{count} bond lots need updated issue rates (%{accounts})."
       drag_to_reorder: "Drag to reorder section"
       toggle_section: "Toggle section visibility"
       net_worth_chart:
@@ -59,17 +56,3 @@ en:
         trades: "Trades"
         no_investments: "No investment accounts"
         add_investment: "Add an investment account to track your portfolio"
-      bond_summary:
-        title: "Bonds"
-        total_return: "Total Return"
-        bond: "Bond"
-        rate: "Rate"
-        principal: "Principal"
-        maturity: "Maturity"
-        maturity_label: "Maturity date"
-        principal_term: "Principal, %{term}"
-        term_months:
-          one: "1 month"
-          other: "%{count} months"
-        no_bonds: "No bond accounts"
-        account_wrapper: "%{account} • %{wrapper}"

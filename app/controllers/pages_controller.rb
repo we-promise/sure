@@ -9,18 +9,11 @@ class PagesController < ApplicationController
       redirect_to chats_path and return
     end
 
-    show_bond_rate_review_notice!
-
     @balance_sheet = Current.family.balance_sheet
     @investment_statement = Current.family.investment_statement
-    @accounts = Current.user.accessible_accounts.visible.with_attached_logo.includes(:accountable)
-    @bond_accounts = Current.user.accessible_accounts.visible.where(accountable_type: "Bond").includes(accountable: :bond_lots)
+    @accounts = Current.user.accessible_accounts.visible.with_attached_logo
 
     family_currency = Current.family.currency
-    bond_summary = BondLot.dashboard_summary(@bond_accounts, family_currency)
-    @bond_total_value = bond_summary.total_value
-    @bond_total_return = bond_summary.total_return
-    @bond_top_lots = bond_summary.top_lots
 
     # Use IncomeStatement for all cashflow data (now includes categorized trades)
     income_statement = Current.family.income_statement
@@ -114,14 +107,6 @@ class PagesController < ApplicationController
           partial: "pages/dashboard/investment_summary",
           locals: { investment_statement: @investment_statement, period: @period },
           visible: @accounts.any? && @investment_statement.investment_accounts.any?,
-          collapsible: true
-        },
-        {
-          key: "bond_summary",
-          title: "pages.dashboard.bond_summary.title",
-          partial: "pages/dashboard/bond_summary",
-          locals: { bond_accounts: @bond_accounts, total_value: @bond_total_value, total_return: @bond_total_return, top_lots: @bond_top_lots },
-          visible: @accounts.any? && @bond_accounts.any?,
           collapsible: true
         },
         {
@@ -355,23 +340,5 @@ class PagesController < ApplicationController
       return if Current.user&.guest?
 
       redirect_to root_path, alert: t("pages.intro.not_authorized", default: "Intro is only available to guest users.")
-    end
-
-    def show_bond_rate_review_notice!
-      session_key = "bond_rate_review_prompted_#{Current.family&.id}"
-      return if session[session_key]
-
-      scoped_lots = BondLot
-        .joins(bond: :account)
-        .where(accounts: { family_id: Current.family.id })
-        .includes(bond: :account)
-        .merge(Account.visible.accessible_by(Current.user))
-
-      pending_lots = BondLot.needs_rate_review(scoped_lots).load
-      return if pending_lots.empty?
-
-      account_names = pending_lots.map { |lot| lot.account&.name }.compact.uniq.first(3).join(", ")
-      flash.now[:notice] = t("pages.dashboard.bond_rate_review_notice", count: pending_lots.size, accounts: account_names)
-      session[session_key] = true
     end
 end

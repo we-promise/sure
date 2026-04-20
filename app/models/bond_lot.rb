@@ -6,7 +6,6 @@ class BondLot < ApplicationRecord
 
   TAX_STRATEGIES = %w[standard reduced exempt].freeze
   DEFAULT_TAX_RATE_PERCENT = 19
-  TOP_LOTS_LIMIT = 5
 
   scope :open, -> { where(closed_on: nil) }
 
@@ -26,44 +25,6 @@ class BondLot < ApplicationRecord
     end
   end
 
-  # Returns an OpenStruct with :total_value, :total_return, :top_lots
-  # for the dashboard summary card.
-  def self.dashboard_summary(bond_accounts, family_currency)
-    with_inflation_lookup_cache do
-      lots_relation = open
-        .joins(bond: :account)
-        .includes(bond: :account)
-        .where(accounts: { id: bond_accounts.select(:id) })
-
-      total_value = 0.to_d
-      total_return = 0.to_d
-      top_enriched = []
-
-      lots_relation.find_each(batch_size: 200) do |lot|
-        account = lot.account
-        lot_value = lot.estimated_current_value(allow_import: false).to_d
-        lot_return = lot_value - lot.amount.to_d
-        converted_value = Money.new(lot_value, account.currency).exchange_to(family_currency).amount
-        converted_return = Money.new(lot_return, account.currency).exchange_to(family_currency).amount
-
-        total_value += converted_value
-        total_return += converted_return
-
-        top_enriched << [ account, lot, converted_value ]
-        if top_enriched.size > TOP_LOTS_LIMIT
-          top_enriched.sort_by! { |_, _, cv| cv }
-          top_enriched.shift
-        end
-      end
-
-      top_lots = top_enriched
-        .sort_by { |_, _, cv| -cv }
-        .map { |account, lot, _| [ account, lot ] }
-
-      OpenStruct.new(total_value: total_value, total_return: total_return, top_lots: top_lots)
-    end
-  end
-
   def self.with_inflation_lookup_cache
     previous_cache = Thread.current[:bond_inflation_record_cache]
     Thread.current[:bond_inflation_record_cache] = {}
@@ -78,15 +39,12 @@ class BondLot < ApplicationRecord
   before_validation :apply_product_defaults
   before_validation :assign_maturity_date_from_term
   before_validation :derive_amount_from_units
-  before_validation :normalize_auto_fetch_inflation
-  before_validation :normalize_inflation_provider
   before_validation :normalize_tax_settings
   before_validation :clear_rate_review_flag
 
   after_commit :settle_if_already_matured!, on: %i[create update], if: :should_settle_if_already_matured?
 
   validates :purchased_on, :amount, :subtype, presence: true
-  validates :auto_fetch_inflation, inclusion: { in: [ true, false ] }
   validates :amount, numericality: { greater_than: 0 }
   validates :term_months, presence: true
   validates :term_months, numericality: { only_integer: true, greater_than: 0 }, allow_nil: true
@@ -100,7 +58,6 @@ class BondLot < ApplicationRecord
   validates :cpi_lag_months, numericality: { only_integer: true, greater_than_or_equal_to: 0 }, allow_nil: true
   validates :subtype, inclusion: { in: Bond::SUBTYPES.keys }
   validates :product_code, inclusion: { in: Bond::PRODUCT_DEFAULTS.keys }, allow_blank: true
-  validates :inflation_provider, inclusion: { in: %w[gus_sdp us_bls es_ine] }, allow_blank: true
   validates :rate_type, inclusion: { in: Bond::RATE_TYPES }, allow_nil: true
   validates :coupon_frequency, inclusion: { in: Bond::COUPON_FREQUENCIES }, allow_nil: true
   validates :tax_strategy, inclusion: { in: TAX_STRATEGIES }
@@ -116,7 +73,7 @@ class BondLot < ApplicationRecord
     validates :first_period_rate, presence: true, if: -> { needs_first_period_rate? && !requires_rate_review? }
     validates :inflation_margin, presence: true, unless: :requires_rate_review?
     validates :cpi_lag_months, presence: true
-    validates :inflation_rate_assumption, presence: true, unless: -> { auto_fetch_inflation? || requires_rate_review? }
+    validates :inflation_rate_assumption, presence: true, unless: :requires_rate_review?
   end
 
   with_options unless: :inflation_linked? do
@@ -144,10 +101,6 @@ class BondLot < ApplicationRecord
 
     preset_subtype = Bond::PRODUCT_DEFAULTS.dig(product_code, :subtype)
     preset_subtype == "inflation_linked"
-  end
-
-  def auto_fetch_inflation?
-    inflation_linked? && auto_fetch_inflation
   end
 
   def in_first_rate_period?(on: Date.current)
@@ -632,20 +585,6 @@ class BondLot < ApplicationRecord
       self.cpi_lag_months = defaults[:cpi_lag_months] if defaults[:cpi_lag_months].present? && (cpi_lag_months.blank? || is_product_new)
       self.nominal_per_unit ||= 100
       self.issue_date ||= purchased_on
-      self.auto_fetch_inflation = false if auto_fetch_inflation.nil?
-    end
-
-    def normalize_auto_fetch_inflation
-      self.auto_fetch_inflation = false if auto_fetch_inflation.nil?
-      return if inflation_linked?
-
-      self.auto_fetch_inflation = false
-      self.inflation_provider = nil
-    end
-
-    def normalize_inflation_provider
-      inflation_like = canonical_subtype.in?(Bond::INFLATION_LINKED_SUBTYPES)
-      self.inflation_provider = nil unless inflation_like
     end
 
     def deflation_floor_applies?
@@ -712,9 +651,7 @@ class BondLot < ApplicationRecord
         first_period_rate: nil,
         inflation_margin: nil,
         inflation_rate_assumption: inflation_rate_assumption,
-        inflation_provider: inflation_provider,
         cpi_lag_months: cpi_lag_months,
-        auto_fetch_inflation: auto_fetch_inflation,
         auto_close_on_maturity: auto_close_on_maturity,
         early_redemption_fee: early_redemption_fee,
         tax_strategy: tax_strategy,
@@ -849,8 +786,7 @@ class BondLot < ApplicationRecord
     end
 
     # Returns false if any annual rate period between purchased_on and date cannot be resolved.
-    # Used by settle_if_matured! to abort settlement when GUS data or rates are missing.
-    # Also used by needs_rate_review class method to identify lots with unresolvable rates.
+    # Used by settlement and rate-review logic to identify lots with unresolvable rates.
     def rates_resolvable_through?(date:, allow_import: true)
       return true unless purchased_on.present?
 

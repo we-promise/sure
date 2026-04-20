@@ -311,7 +311,6 @@ class BondLotTest < ActiveSupport::TestCase
       first_period_rate: 7.0,
       inflation_margin: 1.5,
       inflation_rate_assumption: 5.0,
-      auto_fetch_inflation: false,
       cpi_lag_months: 2,
       units: 10,
       nominal_per_unit: 100,
@@ -325,32 +324,6 @@ class BondLotTest < ActiveSupport::TestCase
     assert_in_delta 1139.55, value.to_f, 1.0
   end
 
-  test "keeps auto fetch enabled when inflation provider is blank" do
-    Setting.stubs(:inflation_import_enabled_effective).returns(true)
-
-    lot = BondLot.new(
-      bond: bonds(:one),
-      purchased_on: Date.current,
-      amount: 1000,
-      subtype: "inflation_linked",
-      auto_fetch_inflation: true,
-      first_period_rate: 6.0,
-      inflation_margin: 1.0,
-      inflation_rate_assumption: 2.0,
-      cpi_lag_months: 2,
-      units: 10,
-      nominal_per_unit: 100,
-      issue_date: Date.current,
-      rate_type: "variable",
-      coupon_frequency: "at_maturity"
-    )
-
-    lot.valid?
-
-    assert lot.auto_fetch_inflation
-    assert_nil lot.inflation_provider
-  end
-
   test "does not require first period rate for late-purchase inflation linked lot" do
     lot = BondLot.new(
       bond: bonds(:one),
@@ -361,7 +334,6 @@ class BondLotTest < ActiveSupport::TestCase
       first_period_rate: nil,
       inflation_margin: 1.0,
       inflation_rate_assumption: 3.0,
-      auto_fetch_inflation: false,
       cpi_lag_months: 2,
       units: 10,
       nominal_per_unit: 100,
@@ -372,26 +344,6 @@ class BondLotTest < ActiveSupport::TestCase
 
     assert lot.valid?
     assert_not lot.needs_first_period_rate?
-  end
-
-  test "clears inflation_provider for non-inflation-linked lot" do
-    lot = BondLot.new(
-      bond: bonds(:one),
-      purchased_on: Date.current,
-      amount: 1000,
-      subtype: "other",
-      auto_fetch_inflation: true,
-      inflation_provider: "gus_sdp",
-      term_months: 12,
-      interest_rate: 4.0,
-      rate_type: "fixed",
-      coupon_frequency: "at_maturity"
-    )
-
-    lot.valid?
-
-    assert_nil lot.inflation_provider
-    assert_not lot.auto_fetch_inflation?
   end
 
 
@@ -450,7 +402,6 @@ class BondLotTest < ActiveSupport::TestCase
       first_period_rate: 4.0,
       inflation_margin: 2.0,
       inflation_rate_assumption: 3.0,
-      auto_fetch_inflation: false,
       cpi_lag_months: 2,
       units: 12,
       nominal_per_unit: 100,
@@ -546,54 +497,6 @@ class BondLotTest < ActiveSupport::TestCase
   end
 
 
-  test "falls back to manual inflation assumption when GUS value missing" do
-    Setting.stubs(:inflation_import_enabled_effective).returns(true)
-    lot = BondLot.new(
-      bond: bonds(:one),
-      purchased_on: Date.new(2024, 1, 1),
-      amount: 1000,
-      subtype: "eod",
-      first_period_rate: 7.0,
-      inflation_margin: 1.5,
-      inflation_rate_assumption: 4.0,
-      auto_fetch_inflation: true,
-      inflation_provider: "gus_sdp",
-      cpi_lag_months: 2,
-      units: 10,
-      nominal_per_unit: 100,
-      issue_date: Date.new(2024, 1, 1),
-      rate_type: "variable",
-      coupon_frequency: "at_maturity"
-    )
-
-    # No CPI row => should use manual assumption 4.0 + 1.5 = 5.5% for year-2+
-    value = lot.estimated_current_value(on: Date.new(2026, 1, 1))
-
-    assert_in_delta 1128.85, value.to_f, 1.0
-  end
-
-  test "does not require manual inflation assumption when global auto-import is disabled" do
-    Setting.stubs(:inflation_import_enabled_effective).returns(false)
-
-    lot = BondLot.new(
-      bond: bonds(:one),
-      purchased_on: Date.current,
-      amount: 1000,
-      subtype: "eod",
-      first_period_rate: 7.0,
-      inflation_margin: 1.5,
-      auto_fetch_inflation: true,
-      cpi_lag_months: 2,
-      units: 10,
-      nominal_per_unit: 100,
-      issue_date: Date.current,
-      rate_type: "variable",
-      coupon_frequency: "at_maturity"
-    )
-
-    assert lot.valid?
-  end
-
   test "current_rate_percent uses the manual inflation-linked rate after the first year" do
     lot = BondLot.new(
       bond: bonds(:one),
@@ -603,7 +506,6 @@ class BondLotTest < ActiveSupport::TestCase
       first_period_rate: 4.0,
       inflation_margin: 0.9,
       inflation_rate_assumption: 1.0,
-      auto_fetch_inflation: false,
       cpi_lag_months: 2,
       units: 10,
       nominal_per_unit: 100,
@@ -626,7 +528,6 @@ class BondLotTest < ActiveSupport::TestCase
       first_period_rate: 4.0,
       inflation_margin: 2.0,
       inflation_rate_assumption: 3.0,
-      auto_fetch_inflation: false,
       cpi_lag_months: 2,
       units: 10,
       nominal_per_unit: 100,
@@ -648,7 +549,6 @@ class BondLotTest < ActiveSupport::TestCase
       first_period_rate: 4.0,
       inflation_margin: 1.0,
       inflation_rate_assumption: 5.0,
-      auto_fetch_inflation: false,
       cpi_lag_months: 2,
       units: 10,
       nominal_per_unit: 100,
@@ -662,9 +562,6 @@ class BondLotTest < ActiveSupport::TestCase
   end
 
   test "hides inflation breakdown during first period" do
-    Setting.stubs(:inflation_import_enabled_effective).returns(true)
-    GusInflationRate.create!(year: 2024, month: 3, rate_yoy: 106.0, source: "sdp")
-
     lot = BondLot.new(
       bond: bonds(:one),
       purchased_on: Date.new(2024, 5, 31),
@@ -673,8 +570,6 @@ class BondLotTest < ActiveSupport::TestCase
       first_period_rate: 4.0,
       inflation_margin: 0.9,
       inflation_rate_assumption: 1.0,
-      auto_fetch_inflation: true,
-      inflation_provider: "gus_sdp",
       cpi_lag_months: 2,
       units: 10,
       nominal_per_unit: 100,
@@ -688,9 +583,7 @@ class BondLotTest < ActiveSupport::TestCase
     assert_nil lot.current_margin_percent(on: Date.new(2024, 10, 1))
   end
 
-  test "does not clear requires_rate_review while CPI periods are unresolved" do
-    Setting.stubs(:inflation_import_enabled_effective).returns(true)
-
+  test "does not clear requires_rate_review while manual rate periods are unresolved" do
     lot = BondLot.new(
       bond: bonds(:one),
       purchased_on: Date.new(2024, 1, 1),
@@ -699,8 +592,6 @@ class BondLotTest < ActiveSupport::TestCase
       term_months: 24,
       first_period_rate: 4.0,
       inflation_margin: 0.9,
-      auto_fetch_inflation: true,
-      inflation_provider: "gus_sdp",
       cpi_lag_months: 2,
       units: 10,
       nominal_per_unit: 100,
@@ -725,7 +616,6 @@ class BondLotTest < ActiveSupport::TestCase
       first_period_rate: 4.0,
       inflation_margin: 0.9,
       inflation_rate_assumption: 3.0,
-      auto_fetch_inflation: false,
       cpi_lag_months: 2,
       units: 10,
       nominal_per_unit: 100,
@@ -749,7 +639,6 @@ class BondLotTest < ActiveSupport::TestCase
       first_period_rate: 4.0,
       inflation_margin: 0.9,
       inflation_rate_assumption: 3.0,
-      auto_fetch_inflation: false,
       cpi_lag_months: 2,
       units: 10,
       nominal_per_unit: 100,
@@ -772,7 +661,6 @@ class BondLotTest < ActiveSupport::TestCase
       first_period_rate: nil,
       inflation_margin: 1.0,
       inflation_rate_assumption: 3.0,
-      auto_fetch_inflation: false,
       cpi_lag_months: 2,
       units: 10,
       nominal_per_unit: 100,
@@ -901,7 +789,6 @@ class BondLotTest < ActiveSupport::TestCase
       first_period_rate: 4.0,
       inflation_margin: 0.9,
       inflation_rate_assumption: 4.0,
-      auto_fetch_inflation: false,
       cpi_lag_months: 2,
       units: 10,
       nominal_per_unit: 100,

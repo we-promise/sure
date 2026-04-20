@@ -127,9 +127,6 @@
                               data: { bond_lot_inflation_target: "inflationInput" } %>
       </div>
 
-      <%= form.hidden_field :inflation_provider, value: "" %>
-      <%= form.hidden_field :auto_fetch_inflation, value: 0 %>
-
       <div data-bond-lot-inflation-target="manualInflationField">
         <%= form.number_field :inflation_rate_assumption,
                               label: t("bond_lots.form.inflation_rate_assumption"),

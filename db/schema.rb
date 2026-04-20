@@ -237,7 +237,6 @@ ActiveRecord::Schema[7.2].define(version: 2026_04_12_120000) do
     t.decimal "early_redemption_fee", precision: 19, scale: 4
     t.decimal "units", precision: 12, scale: 2
     t.decimal "nominal_per_unit", precision: 19, scale: 4
-    t.boolean "auto_fetch_inflation", default: true, null: false
     t.boolean "auto_close_on_maturity", default: true, null: false
     t.date "closed_on"
     t.decimal "settlement_amount", precision: 19, scale: 4
@@ -246,14 +245,12 @@ ActiveRecord::Schema[7.2].define(version: 2026_04_12_120000) do
     t.decimal "tax_rate", precision: 6, scale: 3, default: "19.0", null: false
     t.boolean "requires_rate_review", default: false, null: false
     t.string "product_code"
-    t.string "inflation_provider"
     t.index ["auto_close_on_maturity", "maturity_date", "closed_on"], name: "index_bond_lots_on_settlement_eligibility"
     t.index ["bond_id", "closed_on"], name: "index_bond_lots_on_bond_id_and_closed_on"
     t.index ["bond_id", "purchased_on"], name: "index_bond_lots_on_bond_id_and_purchased_on"
     t.index ["bond_id"], name: "index_bond_lots_on_bond_id"
     t.index ["closed_on"], name: "index_bond_lots_on_closed_on"
     t.index ["entry_id"], name: "index_bond_lots_on_entry_id", unique: true, where: "(entry_id IS NOT NULL)"
-    t.index ["inflation_provider"], name: "index_bond_lots_on_inflation_provider"
     t.index ["issue_date"], name: "index_bond_lots_on_issue_date"
     t.index ["product_code"], name: "index_bond_lots_on_product_code"
     t.index ["requires_rate_review"], name: "index_bond_lots_on_requires_rate_review"
@@ -509,7 +506,6 @@ ActiveRecord::Schema[7.2].define(version: 2026_04_12_120000) do
     t.jsonb "aspsp_required_psu_headers", default: []
     t.integer "aspsp_maximum_consent_validity"
     t.string "aspsp_auth_approach"
-    t.string "psu_type"
     t.jsonb "aspsp_psu_types", default: []
     t.string "last_psu_ip"
     t.index ["family_id"], name: "index_enable_banking_items_on_family_id"

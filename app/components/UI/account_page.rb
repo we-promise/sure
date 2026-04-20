@@ -33,8 +33,6 @@ class UI::AccountPage < ApplicationComponent
   end
 
   def active_tab
-    return :positions if account.bond? && @active_tab&.to_sym == :holdings
-
     tabs.find { |tab| tab == @active_tab&.to_sym } || tabs.first
   end
 
@@ -42,8 +40,6 @@ class UI::AccountPage < ApplicationComponent
     case account.accountable_type
     when "Investment", "Crypto"
       [ :activity, :holdings ]
-    when "Bond"
-      [ :activity, :positions, :closed ]
     when "Property", "Vehicle", "Loan"
       [ :activity, :overview ]
     else
@@ -72,7 +68,7 @@ class UI::AccountPage < ApplicationComponent
     case tab
     when :activity
       activity_feed
-    when :holdings, :overview, :positions, :closed
+    when :holdings, :overview
       # Accountable is responsible for implementing the partial in the correct folder
       render "#{account.accountable_type.downcase.pluralize}/tabs/#{tab}", account: account
     end

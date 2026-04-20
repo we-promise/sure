@@ -20,7 +20,6 @@ class CreateBondLots < ActiveRecord::Migration[7.2]
       t.decimal :early_redemption_fee, precision: 19, scale: 4
       t.decimal :units, precision: 12, scale: 2
       t.decimal :nominal_per_unit, precision: 19, scale: 4
-      t.boolean :auto_fetch_inflation, null: false, default: true
 
       t.boolean :auto_close_on_maturity, null: false, default: true
       t.date :closed_on
@@ -31,7 +30,6 @@ class CreateBondLots < ActiveRecord::Migration[7.2]
       t.boolean :requires_rate_review, null: false, default: false
 
       t.string :product_code
-      t.string :inflation_provider
 
       t.timestamps
     end
@@ -43,7 +41,6 @@ class CreateBondLots < ActiveRecord::Migration[7.2]
     add_index :bond_lots, [ :bond_id, :closed_on ]
     add_index :bond_lots, :requires_rate_review
     add_index :bond_lots, :product_code
-    add_index :bond_lots, :inflation_provider
     add_index :bond_lots,
               %i[auto_close_on_maturity maturity_date closed_on],
               name: "index_bond_lots_on_settlement_eligibility"

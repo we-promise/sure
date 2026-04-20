@@ -59,16 +59,14 @@ class Bond < ApplicationRecord
       term_months: 120,
       rate_type: "variable",
       coupon_frequency: "semi_annual",
-      cpi_lag_months: 3,
-      inflation_provider: "us_bls"
+      cpi_lag_months: 3
     },
     "us_i_bond" => {
       subtype: "inflation_linked",
       term_months: 120,
       rate_type: "variable",
       coupon_frequency: "at_maturity",
-      cpi_lag_months: 6,
-      inflation_provider: "us_bls"
+      cpi_lag_months: 6
     },
     "es_letra_3m" => {
       subtype: "zero_coupon",
