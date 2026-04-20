@@ -1,0 +1,90 @@
+<%# locals: (form:, method:, tags:, selected_ids:, label:, disabled:, input_options:, dropdown_label:) %>
+
+<div class="form-field">
+  <div class="form-field__body">
+    <% if label %>
+      <%= form.label method, label, class: "form-field__label" %>
+    <% end %>
+
+    <div class="pt-2" data-controller="tag-picker">
+      <%# Ensure the key is always submitted even when all checkboxes are unchecked %>
+      <%= form.hidden_field method, multiple: true, value: "", disabled: disabled %>
+      <%# Hidden checkboxes — one per tag, drive form submission and trigger refresh %>
+      <% tags.each do |tag| %>
+        <%= form.check_box method,
+                           {
+                             multiple: true,
+                             hidden: true,
+                             id: checkbox_id(tag),
+                             checked: selected?(tag),
+                             disabled: disabled,
+                             "data-tag-picker-target": "input",
+                             "data-tag-id": tag.id,
+                             "data-action": "change->tag-picker#refresh",
+                             **input_options
+                           },
+                           tag.id,
+                           nil %>
+      <% end %>
+
+      <%# Selected chips — click to deselect %>
+      <div class="flex flex-wrap gap-2 mb-2">
+        <% tags.each do |tag| %>
+          <% color = tag_color(tag) %>
+          <button type="button"
+                  class="border text-sm font-medium px-3 py-1 rounded-full items-center gap-2 transition-opacity duration-150 hover:opacity-70 <%= selected?(tag) ? "inline-flex" : "hidden" %> <%= "opacity-50 pointer-events-none" if disabled %>"
+                  data-tag-picker-target="chip"
+                  data-tag-id="<%= tag.id %>"
+                  data-action="click->tag-picker#deselect"
+                  <%= "disabled" if disabled %>
+                  style="<%= selected_chip_style(color) %>">
+            <span class="size-1.5 rounded-full" style="background-color: <%= color %>"></span>
+            <%= tag.name %>
+          </button>
+        <% end %>
+      </div>
+
+      <%# Candidate dropdown with inline search filter %>
+      <details class="group" data-tag-picker-target="dropdown" data-action="toggle->tag-picker#handleDropdownToggle">
+        <summary class="list-none form-field__input w-full cursor-pointer flex items-center justify-between">
+          <span class="text-secondary"><%= dropdown_label %></span>
+          <%= helpers.icon("chevron-down", class: "transition-transform duration-150 group-open:rotate-180") %>
+        </summary>
+        <div class="mt-2 border border-secondary rounded-lg bg-container-inset p-2">
+          <div class="relative mb-2">
+            <%= helpers.icon("search", class: "absolute left-2 top-1/2 -translate-y-1/2 text-secondary pointer-events-none") %>
+            <input type="search"
+                   autocomplete="off"
+                   placeholder="<%= t("helpers.select.search_placeholder", default: "Search...") %>"
+                   class="form-field__input w-full pl-8 py-1 text-sm"
+                   data-tag-picker-target="search"
+                   data-action="input->tag-picker#filterOptions">
+          </div>
+          <div class="max-h-44 overflow-auto flex flex-wrap gap-2">
+            <% tags.each do |tag| %>
+              <% color = tag_color(tag) %>
+              <% is_disabled = disabled || selected?(tag) %>
+              <button type="button"
+                      class="inline-flex rounded-md transition-opacity duration-150 hover:opacity-80 <%= "cursor-not-allowed" if is_disabled %>"
+                      style="<%= "opacity: 0.3" if is_disabled %>"
+                      data-tag-picker-target="option"
+                      data-tag-id="<%= tag.id %>"
+                      data-tag-name="<%= tag.name %>"
+                      data-action="click->tag-picker#select"
+                      <%= "disabled" if is_disabled %>>
+                <span class="border text-sm font-medium px-3 py-1 rounded-full inline-flex items-center gap-2"
+                      style="<%= option_chip_style(color) %>">
+                  <span class="size-1.5 rounded-full" style="background-color: <%= color %>"></span>
+                  <%= tag.name %>
+                </span>
+              </button>
+            <% end %>
+            <p class="hidden text-sm text-secondary px-2 py-1" data-tag-picker-target="emptyMessage">
+              <%= t("helpers.select.no_results") %>
+            </p>
+          </div>
+        </div>
+      </details>
+    </div>
+  </div>
+</div>
