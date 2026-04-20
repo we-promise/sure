@@ -1,6 +1,8 @@
 require "test_helper"
 
 class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
+  include ActiveJob::TestHelper
+
   setup do
     @user = users(:family_admin)
     @family = @user.family
@@ -229,6 +231,30 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
   ensure
     Import.send(:remove_const, :MAX_CSV_SIZE)
     Import.const_set(:MAX_CSV_SIZE, original_value)
+  end
+
+  test "should create import with external_id_col_label and generate rows with external_id" do
+    csv_content = "date,amount,name,ext_id\n01/01/2024,10.00,Test Transaction,txn-uuid-123"
+
+    assert_difference([ "Import.count", "Import::Row.count" ], 1) do
+      post api_v1_imports_url,
+           params: {
+             raw_file_content: csv_content,
+             date_col_label: "date",
+             amount_col_label: "amount",
+             name_col_label: "name",
+             external_id_col_label: "ext_id",
+             account_id: @account.id
+           },
+           headers: api_headers(@api_key)
+    end
+
+    assert_response :created
+    json_response = JSON.parse(response.body)
+
+    import = Import.find(json_response["data"]["id"])
+    assert_equal "ext_id", import.external_id_col_label
+    assert_equal "txn-uuid-123", import.rows.first.external_id
   end
 
   test "should accept file upload with valid csv mime type" do
