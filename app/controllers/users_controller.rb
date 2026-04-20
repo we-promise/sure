@@ -30,6 +30,12 @@ class UsersController < ApplicationController
       @user.update!(user_params.except(:redirect_to, :delete_profile_image))
       @user.profile_image.purge if should_purge_profile_image?
 
+      # When re-enabling rule prompts, clear the dismissed_at timestamp so the
+      # 24-hour cooldown doesn't prevent the prompt from appearing immediately.
+      if @user.saved_change_to_rule_prompts_disabled?(from: true, to: false)
+        @user.update_column(:rule_prompt_dismissed_at, nil)
+      end
+
       # Add a special notice if AI was just enabled or disabled
       notice = if !was_ai_enabled && @user.ai_enabled
         "AI Assistant has been enabled successfully."
@@ -87,6 +93,8 @@ class UsersController < ApplicationController
         redirect_to settings_appearance_path, notice: notice
       when "ai_prompts"
         redirect_to settings_ai_prompts_path, notice: notice
+      when "rules"
+        redirect_to rules_path, notice: notice
       else
         redirect_to settings_profile_path, notice: notice
       end
@@ -114,7 +122,7 @@ class UsersController < ApplicationController
 
       params.require(:user).permit(
         :first_name, :last_name, :email, :profile_image, :redirect_to, :delete_profile_image, :onboarded_at,
-        :show_sidebar, :default_period, :default_account_order, :show_ai_sidebar, :ai_enabled, :theme, :set_onboarding_preferences_at, :set_onboarding_goals_at, :locale,
+        :show_sidebar, :default_period, :default_account_order, :show_ai_sidebar, :ai_enabled, :theme, :set_onboarding_preferences_at, :set_onboarding_goals_at, :locale, :rule_prompts_disabled,
         family_attributes: family_attrs,
         goals: []
       )
