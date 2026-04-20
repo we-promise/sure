@@ -99,6 +99,9 @@ nl:
         enable_mfa: 2FA inschakelen
         disable_mfa: 2FA uitschakelen
         disable_mfa_confirm: Weet u zeker dat u twee-factor authenticatie wilt uitschakelen?
+        disable_mfa_password_label: Bevestig met uw wachtwoord
+        disable_mfa_password_placeholder: Voer uw wachtwoord in
+        mfa_sso_only: Twee-factor authenticatie wordt beheerd via uw identiteitsprovider.
         sso_title: Gekoppelde Accounts
         sso_subtitle: Beheer uw single sign-on accountverbindingen
         sso_disconnect: Loskoppelen

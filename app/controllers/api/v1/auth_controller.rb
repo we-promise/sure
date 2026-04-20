@@ -12,6 +12,12 @@ module Api
       before_action :log_api_access, only: :enable_ai
 
       def signup
+        # Block signups when registration is closed (self-hosted)
+        if Rails.application.config.app_mode.self_hosted? && Setting.onboarding_state == "closed"
+          render json: { error: "Registration is currently closed" }, status: :forbidden
+          return
+        end
+
         # Check if invite code is required
         if invite_code_required? && params[:invite_code].blank?
           render json: { error: "Invite code is required" }, status: :forbidden
@@ -70,9 +76,21 @@ module Api
       end
 
       def login
+        # Enforce AuthConfig — respect SSO-only mode for API clients too
+        unless AuthConfig.local_login_enabled?
+          render json: { error: "Local login is disabled. Please use SSO." }, status: :forbidden
+          return
+        end
+
         user = User.find_by(email: params[:email])
 
         if user&.authenticate(params[:password])
+          # Reject deactivated users
+          unless user.active?
+            render json: { error: "Account has been deactivated" }, status: :unauthorized
+            return
+          end
+
           # Check MFA if enabled
           if user.otp_required?
             unless params[:otp_code].present? && user.verify_otp?(params[:otp_code])
@@ -264,7 +282,23 @@ module Api
           return
         end
 
-        # Create new access token
+        # Reject deactivated or deleted users BEFORE issuing a fresh token.
+        # If we checked after creation, a concurrent request could briefly pass
+        # the OAuth gate in base_controller against `new_token` — and we'd also
+        # do pointless writes. Also matches the 401-for-missing-user shape used
+        # by api/v1/base_controller#authenticate_oauth (use find_by, not find).
+        user = User.find_by(id: access_token.resource_owner_id)
+        unless user&.active?
+          # Revoke every outstanding access token for this resource owner so
+          # other devices lose access immediately.
+          Doorkeeper::AccessToken
+            .where(resource_owner_id: access_token.resource_owner_id, revoked_at: nil)
+            .find_each(&:revoke)
+          render json: { error: "Account has been deactivated" }, status: :unauthorized
+          return
+        end
+
+        # Create new access token (only after the active check passes).
         new_token = Doorkeeper::AccessToken.create!(
           application: access_token.application,
           resource_owner_id: access_token.resource_owner_id,
@@ -278,7 +312,6 @@ module Api
         access_token.revoke
 
         # Update device last seen
-        user = User.find(access_token.resource_owner_id)
         device = user.mobile_devices.find_by(device_id: params[:device][:device_id])
         device&.update_last_seen!
 
