@@ -10,6 +10,8 @@ fr:
       rate_type: Type de taux
       term_months: Durée (mois)
       term_months_placeholder: '360'
+      subtype_prompt: Sélectionner le type de prêt
+      subtype_none: Aucun
     new:
       title: Saisir les détails du prêt
     overview:

@@ -112,7 +112,7 @@ x-rails-env: &rails_env
 
 services:
   pipelock:
-    image: ghcr.io/luckypipewrench/pipelock:latest  # pin to a specific version (e.g., :2.0.0) for production
+    image: ghcr.io/luckypipewrench/pipelock:latest  # pin to a specific version (e.g., :2.2.0) for production
     container_name: pipelock
     hostname: pipelock
     restart: unless-stopped
@@ -187,7 +187,7 @@ services:
       - WEBUI_AUTH=False
       - WEBUI_NAME=AI
       - WEBUI_URL=http://localhost:8080
-      - WEBUI_SECRET_KEY=t0p-s3cr3t
+      - WEBUI_SECRET_KEY=t0p-s3cr3t # pipelock:ignore
       - NO_PROXY=host.docker.internal
     extra_hosts:
       - host.docker.internal:host-gateway
@@ -325,7 +325,7 @@ services:
       - POSTGRES_HOST=db
       - POSTGRES_DB=${POSTGRES_DB:-sure_production}
       - POSTGRES_USER=${POSTGRES_USER:-sure_user}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-sure_password}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-sure_password} # pipelock:ignore
       - SCHEDULE=@daily # Runs once a day at midnight
       - BACKUP_KEEP_DAYS=7 # Keeps the last 7 days of backups
       - BACKUP_KEEP_WEEKS=4 # Keeps 4 weekly backups

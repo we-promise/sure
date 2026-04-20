@@ -7,6 +7,8 @@ class Transaction {
   final String currency;
   final String nature; // "expense" or "income"
   final String? notes;
+  final String? categoryId;
+  final String? categoryName;
 
   Transaction({
     this.id,
@@ -17,6 +19,8 @@ class Transaction {
     required this.currency,
     required this.nature,
     this.notes,
+    this.categoryId,
+    this.categoryName,
   });
 
   factory Transaction.fromJson(Map<String, dynamic> json) {
@@ -39,6 +43,17 @@ class Transaction {
       nature = json['nature']?.toString() ?? 'expense';
     }
 
+    // Parse category from API response
+    String? categoryId;
+    String? categoryName;
+    if (json['category'] != null && json['category'] is Map) {
+      categoryId = json['category']['id']?.toString();
+      categoryName = json['category']['name']?.toString();
+    } else if (json['category_id'] != null) {
+      categoryId = json['category_id']?.toString();
+      categoryName = json['category_name']?.toString();
+    }
+
     return Transaction(
       id: json['id']?.toString(),
       accountId: accountId,
@@ -48,6 +63,8 @@ class Transaction {
       currency: json['currency']?.toString() ?? '',
       nature: nature,
       notes: json['notes']?.toString(),
+      categoryId: categoryId,
+      categoryName: categoryName,
     );
   }
 
@@ -61,6 +78,8 @@ class Transaction {
       'currency': currency,
       'nature': nature,
       if (notes != null) 'notes': notes,
+      if (categoryId != null) 'category_id': categoryId,
+      if (categoryName != null) 'category_name': categoryName,
     };
   }
 

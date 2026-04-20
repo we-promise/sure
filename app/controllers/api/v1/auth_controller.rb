@@ -45,23 +45,28 @@ module Api
         user.family = family
         user.role = User.role_for_new_family_creator
 
-        if user.save
-          # Claim invite code if provided
-          InviteCode.claim!(params[:invite_code]) if params[:invite_code].present?
-
-          # Create device and OAuth token
-          begin
+        # Atomic: user creation, invite-code claim, and device/token issuance
+        # either all commit or none do. Without this, a post-commit device
+        # failure (e.g., racing uniqueness) would leave the user/invite/family
+        # committed while the client got a 422 "Failed to register device".
+        token_response = nil
+        begin
+          ActiveRecord::Base.transaction do
+            unless user.save
+              render json: { errors: user.errors.full_messages }, status: :unprocessable_entity
+              raise ActiveRecord::Rollback
+            end
+            InviteCode.claim!(params[:invite_code]) if params[:invite_code].present?
             device = MobileDevice.upsert_device!(user, device_params)
             token_response = device.issue_token!
-          rescue ActiveRecord::RecordInvalid => e
-            render json: { error: "Failed to register device: #{e.message}" }, status: :unprocessable_entity
-            return
           end
-
-          render json: token_response.merge(user: mobile_user_payload(user)), status: :created
-        else
-          render json: { errors: user.errors.full_messages }, status: :unprocessable_entity
+        rescue ActiveRecord::RecordInvalid => e
+          Rails.logger.error("[Auth] Device registration failed: #{e.class} - #{e.message}")
+          render json: { error: "Failed to register device" }, status: :unprocessable_entity
+          return
         end
+
+        render json: token_response.merge(user: mobile_user_payload(user)), status: :created if token_response
       end
 
       def login
@@ -90,7 +95,8 @@ module Api
             device = MobileDevice.upsert_device!(user, device_params)
             token_response = device.issue_token!
           rescue ActiveRecord::RecordInvalid => e
-            render json: { error: "Failed to register device: #{e.message}" }, status: :unprocessable_entity
+            Rails.logger.error("[Auth] Device registration failed: #{e.message}")
+            render json: { error: "Failed to register device" }, status: :unprocessable_entity
             return
           end
 
@@ -312,7 +318,20 @@ module Api
           return false if device.nil?
 
           required_fields = %w[device_id device_name device_type os_version app_version]
-          required_fields.all? { |field| device[field].present? }
+          return false unless required_fields.all? { |field| device[field].present? }
+
+          # Run MobileDevice's attribute-level validations up front (e.g.,
+          # device_type must be ios/android/web) so a misconfigured client
+          # is rejected BEFORE signup commits user/family/invite. Skip
+          # errors we can't evaluate without a user: the :user belongs_to
+          # presence check, and device_id uniqueness scoped to user_id
+          # (upsert_device! treats collisions as updates anyway).
+          preview = MobileDevice.new(device_params)
+          preview.valid?
+          relevant_errors = preview.errors.errors.reject do |err|
+            err.type == :taken || err.attribute == :user
+          end
+          relevant_errors.empty?
         end
 
         def device_params
@@ -373,7 +392,8 @@ module Api
 
           render json: token_response.merge(user: mobile_user_payload(user))
         rescue ActiveRecord::RecordInvalid => e
-          render json: { error: "Failed to register device: #{e.message}" }, status: :unprocessable_entity
+          Rails.logger.error("[Auth] Device registration failed: #{e.message}")
+          render json: { error: "Failed to register device" }, status: :unprocessable_entity
         end
 
         def ensure_write_scope

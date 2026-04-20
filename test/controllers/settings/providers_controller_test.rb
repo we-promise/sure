@@ -270,16 +270,17 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
       # We'll force an error by making the []= method raise
       Setting.expects(:[]=).with("plaid_client_id", "test").raises(StandardError.new("Database error")).once
 
-      # Mock logger to verify error is logged
-      Rails.logger.expects(:error).with(regexp_matches(/Failed to update provider settings.*Database error/)).once
+      # Mock logger to verify error is logged (pin both the exception class
+      # name and the message so a regression that drops one still fails).
+      Rails.logger.expects(:error).with(regexp_matches(/Failed to update provider settings: StandardError - Database error/)).once
 
       patch settings_providers_url, params: {
         setting: { plaid_client_id: "test" }
       }
 
-      # Controller should handle the error gracefully
+      # Controller should handle the error gracefully with generic message (no internal details)
       assert_response :unprocessable_entity
-      assert_equal "Failed to update provider settings: Database error", flash[:alert]
+      assert_equal "Failed to update provider settings. Please try again.", flash[:alert]
     end
   end
 

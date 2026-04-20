@@ -1,0 +1,33 @@
+---
+fr:
+  budgets:
+    name:
+      custom_range: "%{start} - %{end_date}"
+      month_year: "%{month}"
+    show:
+      categories:
+        amount: Montant
+        edit: Modifier
+        title: Catégories
+      on_track_categories:
+        short_title: Dans les clous
+        title: Dans les clous
+      over_budget_categories:
+        short_title: Dépassement
+        title: Budget dépassé
+      filter:
+        all: Tous
+        on_track: Dans les clous
+        over_budget: Budget dépassé
+      tabs:
+        actual: Réel
+        budgeted: Budgété
+    copy_previous_prompt:
+      title: "Configurez votre budget"
+      description: "Vous pouvez copier votre budget depuis %{source_name} ou repartir de zéro."
+      copy_button: "Copier depuis %{source_name}"
+      fresh_button: "Repartir de zéro"
+    copy_previous:
+      success: "Budget copié depuis %{source_name}"
+      no_source: "Aucun budget précédent trouvé à copier"
+      already_initialized: "Ce budget a déjà été configuré"

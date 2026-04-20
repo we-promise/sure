@@ -2,6 +2,9 @@ require "test_helper"
 require "socket"
 
 class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
+  DEFAULT_VIEWPORT_WIDTH = 1400
+  DEFAULT_VIEWPORT_HEIGHT = 1400
+
   setup do
     Capybara.default_max_wait_time = 5
 
@@ -14,6 +17,8 @@ class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
       Capybara.always_include_port = true
       Capybara.app_host = "http://#{app_host}:#{server_port}"
     end
+
+    reset_viewport
   end
 
   if ENV["SELENIUM_REMOTE_URL"].present?
@@ -34,7 +39,16 @@ class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
     driven_by :selenium, using: ENV["CI"].present? ? :headless_chrome : ENV.fetch("E2E_BROWSER", :chrome).to_sym, screen_size: [ 1400, 1400 ]
   end
 
+  def teardown
+    reset_viewport
+    super
+  end
+
   private
+
+    def reset_viewport
+      page.current_window.resize_to(DEFAULT_VIEWPORT_WIDTH, DEFAULT_VIEWPORT_HEIGHT) if page&.current_window
+    end
 
     def sign_in(user)
       visit new_session_path

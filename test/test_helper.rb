@@ -81,6 +81,12 @@ module ActiveSupport
       post sessions_path, params: { email: user.email, password: user_password_test }
     end
 
+    def ensure_tailwind_build
+      tailwind_build = Rails.root.join("app/assets/builds/tailwind.css")
+      FileUtils.mkdir_p(tailwind_build.dirname)
+      File.write(tailwind_build, "/* test */") unless tailwind_build.exist?
+    end
+
     def with_env_overrides(overrides = {}, &block)
       ClimateControl.modify(**overrides, &block)
     end
