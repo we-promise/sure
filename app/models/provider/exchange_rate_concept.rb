@@ -10,4 +10,12 @@ module Provider::ExchangeRateConcept
   def fetch_exchange_rates(from:, to:, start_date:, end_date:)
     raise NotImplementedError, "Subclasses must implement #fetch_exchange_rates"
   end
+
+  # Maximum number of calendar days of historical FX data the provider can
+  # return. Returns nil when the provider has no known limit (unbounded).
+  # Callers should clamp start_date when non-nil to avoid requesting data
+  # beyond this window. Override in subclasses with provider-specific limits.
+  def max_history_days
+    nil
+  end
 end

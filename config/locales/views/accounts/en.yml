@@ -7,6 +7,7 @@ en:
       link_lunchflow: Link with Lunch Flow
       link_provider: Link with provider
       unlink_provider: Unlink from provider
+      change_simplefin_account: Change SimpleFIN account
       troubleshoot: Troubleshoot
       enable: Enable account
       disable: Disable account
@@ -60,6 +61,7 @@ en:
         title: How would you like to add it?
       title: What would you like to add?
     show:
+      limited_fx_history_warning: "Exchange rate history is only available from %{date} onwards. Transactions before this date use approximate currency conversions — this can happen when the FX provider only offers a limited historical window."
       activity:
         amount: Amount
         balance: Balance

@@ -1,15 +1,16 @@
 class Provider::Openai::PdfProcessor
   include Provider::Openai::Concerns::UsageRecorder
 
-  attr_reader :client, :model, :pdf_content, :custom_provider, :langfuse_trace, :family
+  attr_reader :client, :model, :pdf_content, :custom_provider, :langfuse_trace, :family, :max_response_tokens
 
-  def initialize(client, model: "", pdf_content: nil, custom_provider: false, langfuse_trace: nil, family: nil)
+  def initialize(client, model: "", pdf_content: nil, custom_provider: false, langfuse_trace: nil, family: nil, max_response_tokens:)
     @client = client
     @model = model
     @pdf_content = pdf_content
     @custom_provider = custom_provider
     @langfuse_trace = langfuse_trace
     @family = family
+    @max_response_tokens = max_response_tokens
   end
 
   def process
@@ -175,7 +176,7 @@ class Provider::Openai::PdfProcessor
           { role: "system", content: instructions + "\n\nIMPORTANT: Respond with valid JSON only, no markdown or other formatting." },
           { role: "user", content: content }
         ],
-        max_tokens: 4096
+        max_tokens: max_response_tokens
       }
 
       response = client.chat(parameters: params)

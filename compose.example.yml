@@ -22,7 +22,7 @@
 # Troubleshooting:
 # ----------------
 #
-# If you run into problems, you should open a Discussion here:
+# Problems? Swing by our Discord or open a Discussion here:
 #
 # https://github.com/we-promise/sure/discussions/categories/general
 #
@@ -70,9 +70,14 @@ services:
       - app-storage:/rails/storage
     ports:
       - ${PORT:-3000}:3000
+      # To also publish on IPv6 (dual-stack), uncomment the line below AND
+      # set BINDING=:: in the environment block. See docs/hosting/docker.md
+      # "Binding to IPv6" for details.
+      # - "[::]:${PORT:-3000}:3000"
     restart: unless-stopped
     environment:
       <<: *rails_env
+      # BINDING: "::"  # Uncomment for IPv6 dual-stack inside the container
     depends_on:
       db:
         condition: service_healthy
@@ -129,7 +134,7 @@ services:
       - POSTGRES_HOST=db
       - POSTGRES_DB=${POSTGRES_DB:-sure_production}
       - POSTGRES_USER=${POSTGRES_USER:-sure_user}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-sure_password}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-sure_password} # pipelock:ignore
       - SCHEDULE=@daily # Runs once a day at midnight
       - BACKUP_KEEP_DAYS=7 # Keeps the last 7 days of backups
       - BACKUP_KEEP_WEEKS=4 # Keeps 4 weekly backups

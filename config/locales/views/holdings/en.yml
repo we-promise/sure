@@ -71,6 +71,11 @@ en:
       search_security_placeholder: Search by ticker or name
       cancel: Cancel
       remap_security: Save
+      provider_disabled_warning: "Price updates paused — %{provider} provider is disabled. Switch to another provider below or re-enable it in Settings."
+      truncated_history_warning: "Price history is only available from %{date} onwards. Earlier dates have no data from the selected provider — this can happen when the asset was listed after your trade date, or when the provider only offers a limited historical window on its current plan."
+      switch_provider_label: Switch provider
+      switch_provider_description: "%{provider} is disabled. Search for this security from another enabled provider."
+      switch_provider_button: Switch
       no_security_provider: Security provider not configured. Cannot search for securities.
       security_remapped_label: Security remapped
       provider_sent: "Provider sent: %{ticker}"

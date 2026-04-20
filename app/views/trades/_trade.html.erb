@@ -10,6 +10,7 @@
                         class: "checkbox checkbox--light hidden lg:block",
                         data: {
                           id: entry.id,
+                          entry_type: entry.entryable_type,
                           "bulk-select-target": "row",
                           action: "bulk-select#toggleRowSelection",
                           checkbox_toggle_target: "selectionEntry"
@@ -56,7 +57,7 @@
         <% end %>
         <%= content_tag :p,
                     format_money(-entry.amount_money),
-                    class: ["text-green-600": entry.amount.negative?] %>
+                    class: ["privacy-sensitive", "text-green-600": entry.amount.negative?] %>
       </div>
     </div>
   <% end %>

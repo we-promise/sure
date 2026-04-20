@@ -63,5 +63,37 @@
                   { disabled: ENV["LLM_JSON_MODE"].present?,
                     data: { "auto-submit-form-target": "auto" } } %>
   <p class="text-xs text-secondary mt-1"><%= t(".json_mode_help") %></p>
+
+  <div class="pt-4 border-t border-secondary">
+    <h3 class="font-medium mb-1"><%= t(".budget_heading") %></h3>
+    <p class="text-xs text-secondary mb-3"><%= t(".budget_description") %></p>
+
+    <%= form.number_field :llm_context_window,
+                          label: t(".context_window_label"),
+                          placeholder: "2048",
+                          value: Setting.llm_context_window,
+                          min: 256,
+                          disabled: ENV["LLM_CONTEXT_WINDOW"].present?,
+                          data: { "auto-submit-form-target": "auto" } %>
+    <p class="text-xs text-secondary mt-1 mb-3"><%= t(".context_window_help") %></p>
+
+    <%= form.number_field :llm_max_response_tokens,
+                          label: t(".max_response_tokens_label"),
+                          placeholder: "512",
+                          value: Setting.llm_max_response_tokens,
+                          min: 64,
+                          disabled: ENV["LLM_MAX_RESPONSE_TOKENS"].present?,
+                          data: { "auto-submit-form-target": "auto" } %>
+    <p class="text-xs text-secondary mt-1 mb-3"><%= t(".max_response_tokens_help") %></p>
+
+    <%= form.number_field :llm_max_items_per_call,
+                          label: t(".max_items_per_call_label"),
+                          placeholder: "25",
+                          value: Setting.llm_max_items_per_call,
+                          min: 1,
+                          disabled: ENV["LLM_MAX_ITEMS_PER_CALL"].present?,
+                          data: { "auto-submit-form-target": "auto" } %>
+    <p class="text-xs text-secondary mt-1"><%= t(".max_items_per_call_help") %></p>
+  </div>
   <% end %>
 </div>

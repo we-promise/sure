@@ -1,6 +1,8 @@
 require "test_helper"
 
 class AccountsControllerTest < ActionDispatch::IntegrationTest
+  include ActionView::RecordIdentifier
+
   setup do
     sign_in @user = users(:family_admin)
     @account = accounts(:depository)
@@ -9,6 +11,7 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
   test "should get index" do
     get accounts_url
     assert_response :success
+    assert_select "p.ml-auto.privacy-sensitive"
   end
 
   test "should get show" do
@@ -57,6 +60,16 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_not_nil lot.reload
   end
 
+  test "account activity marks trade amounts as privacy-sensitive" do
+    trade_entry = entries(:trade)
+    expected_amount = ApplicationController.helpers.format_money(-trade_entry.amount_money)
+
+    get account_url(accounts(:investment))
+
+    assert_response :success
+    assert_select "turbo-frame##{dom_id(trade_entry)} p.privacy-sensitive", text: expected_amount, count: 1
+  end
+
   test "activity pagination keeps activity tab when loaded from holdings tab" do
     investment = accounts(:investment)
 
@@ -76,6 +89,31 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select "a[href*='page=2'][href*='tab=activity']"
     assert_select "a[href*='page=2'][href*='tab=holdings']", count: 0
+  end
+
+  test "account activity constrains long category labels before the amount on wide screens" do
+    category = categories(:food_and_drink)
+    category.update!(name: "Super Long Category Name That Should Stop Before The Amount On Wide Screens Too")
+
+    entry = @account.entries.create!(
+      name: "Wide category verification",
+      date: Date.current,
+      amount: 187.65,
+      currency: @account.currency,
+      entryable: Transaction.new(category: category)
+    )
+
+    get account_url(@account, tab: "activity")
+
+    assert_response :success
+    assert_select "##{dom_id(entry.entryable, "category_menu_desktop")}"
+    assert_select "##{dom_id(entry.entryable, "category_menu_desktop")}.min-w-0"
+    assert_select "##{dom_id(entry.entryable, "category_menu_desktop")}.overflow-hidden"
+    assert_select "##{dom_id(entry.entryable, "category_menu_desktop")} button.block"
+    assert_select "##{dom_id(entry.entryable, "category_menu_desktop")} button.w-full"
+    assert_select "##{dom_id(entry.entryable, "category_menu_desktop")} button.overflow-hidden"
+    assert_select "##{dom_id(entry.entryable, "category_menu_desktop")} [data-testid='category-name']"
+    assert_select "div.hidden.md\\:flex.min-w-0"
   end
 
   test "should sync account" do

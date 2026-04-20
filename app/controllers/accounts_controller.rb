@@ -20,6 +20,7 @@ class AccountsController < ApplicationController
     @coinbase_items = visible_provider_items(family.coinbase_items.ordered.includes(:coinbase_accounts, :accounts, :syncs))
     @snaptrade_items = visible_provider_items(family.snaptrade_items.ordered.includes(:syncs, :snaptrade_accounts))
     @indexa_capital_items = visible_provider_items(family.indexa_capital_items.ordered.includes(:syncs, :indexa_capital_accounts))
+    @sophtron_items = visible_provider_items(family.sophtron_items.ordered.includes(:syncs, :sophtron_accounts))
 
     # Build sync stats maps for all providers
     build_sync_stats_maps
@@ -297,6 +298,13 @@ class AccountsController < ApplicationController
       @coinstats_items.each do |item|
         latest_sync = item.syncs.ordered.first
         @coinstats_sync_stats_map[item.id] = latest_sync&.sync_stats || {}
+      end
+
+      # Sophtron sync stats
+      @sophtron_sync_stats_map = {}
+      @sophtron_items.each do |item|
+        latest_sync = item.syncs.ordered.first
+        @sophtron_sync_stats_map[item.id] = latest_sync&.sync_stats || {}
       end
 
       # Mercury sync stats

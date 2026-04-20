@@ -47,23 +47,64 @@
     </div>
 
     <%# Bottom Section: Categories full width %>
-    <div class="w-full bg-container rounded-xl shadow-border-xs p-4">
-      <div class="flex items-center justify-between mb-4">
-        <h2 class="text-lg font-medium">Categories</h2>
+    <% has_over_budget = budget_has_over_budget?(@budget) %>
+    <%= content_tag :div,
+      class: "w-full bg-container rounded-xl shadow-border-xs p-4",
+      data: (has_over_budget ? { controller: "budget-filter" } : {}) do %>
+      <div class="flex items-center mb-4 flex-nowrap">
+        <h2 class="text-lg font-medium shrink-0">
+          <%= t("budgets.show.categories.title") %>
+        </h2>
 
-        <% if @budget.initialized? %>
-          <%= render DS::Link.new(
-            text: "Edit",
-            variant: "secondary",
-            icon: "settings-2",
-            href: budget_budget_categories_path(@budget)
-          ) %>
+        <% if has_over_budget %>
+        <div class="flex-1 min-w-0 px-1">
+          <div class="w-full flex justify-center">
+            <div class="max-w-full overflow-x-auto no-scrollbar">
+              <div class="inline-flex whitespace-nowrap bg-container-inset rounded-lg p-1 text-sm font-medium gap-0.5">
+
+                <button
+                  data-action="click->budget-filter#setFilter"
+                  data-budget-filter-filter-param="all"
+                  data-budget-filter-target="tab"
+                  class="w-full inline-flex justify-center items-center text-sm font-medium px-2 py-1 rounded-md transition-colors duration-200 bg-white theme-dark:bg-gray-700 text-primary shadow-sm">
+                  <%= t("budgets.show.filter.all") %>
+                </button>
+
+                <button
+                  data-action="click->budget-filter#setFilter"
+                  data-budget-filter-filter-param="over_budget"
+                  data-budget-filter-target="tab"
+                  class="w-full inline-flex justify-center items-center text-sm font-medium px-2 py-1 rounded-md transition-colors duration-200 shadow-sm">
+                  <%= t("budgets.show.filter.over_budget") %>
+                </button>
+
+                <button
+                  data-action="click->budget-filter#setFilter"
+                  data-budget-filter-filter-param="on_track"
+                  data-budget-filter-target="tab"
+                  class="w-full inline-flex justify-center items-center text-sm font-medium px-2 py-1 rounded-md transition-colors duration-200 shadow-sm">
+                  <%= t("budgets.show.filter.on_track") %>
+                </button>
+
+              </div>
+            </div>
+          </div>
+        </div>
         <% end %>
+
+        <div class="<%= has_over_budget ? "shrink-0 flex justify-end whitespace-nowrap" : "ml-auto" %>">
+          <% if @budget.initialized? %>
+            <%= render DS::Link.new(
+              text: t("budgets.show.categories.edit"),
+              variant: "secondary",
+              icon: "settings-2",
+              href: budget_budget_categories_path(@budget)
+            ) %>
+          <% end %>
+        </div>
       </div>
 
-      <div class="bg-container-inset rounded-xl p-1">
-        <%= render "budgets/budget_categories", budget: @budget %>
-      </div>
-    </div>
+      <%= render "budgets/budget_categories", budget: @budget %>
+    <% end %>
   </div>
 </div>

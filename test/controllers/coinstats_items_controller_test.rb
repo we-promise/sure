@@ -9,9 +9,7 @@ class CoinstatsItemsControllerTest < ActionDispatch::IntegrationTest
       name: "Test CoinStats Connection",
       api_key: "test_api_key_123"
     )
-    tailwind_build = Rails.root.join("app/assets/builds/tailwind.css")
-    FileUtils.mkdir_p(tailwind_build.dirname)
-    File.write(tailwind_build, "/* test */") unless tailwind_build.exist?
+    ensure_tailwind_build
   end
 
   # Helper to wrap data in Provider::Response

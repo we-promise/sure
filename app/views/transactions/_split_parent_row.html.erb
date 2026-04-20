@@ -64,6 +64,6 @@
   </div>
 
   <div class="shrink-0 col-span-4 lg:col-span-2 ml-auto flex items-center justify-end gap-2">
-    <%= content_tag :p, format_money(-entry.amount_money) %>
+    <%= content_tag :p, format_money(-entry.amount_money), class: "privacy-sensitive" %>
   </div>
 </div>

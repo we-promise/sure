@@ -38,4 +38,16 @@ module SimplefinItemsHelper
     parts << " — #{sample}" if sample.present?
     parts.join
   end
+
+  # Human-friendly relative-time phrase for an activity badge. Returns nil for
+  # a nil input so callers can fall through to "no activity" copy.
+  def activity_when(time, now: Time.current)
+    return nil if time.blank?
+    days = ((now.to_i - time.to_i) / 86_400).floor
+    case days
+    when ..0 then t("simplefin_items.setup_accounts.activity.today")
+    when 1 then t("simplefin_items.setup_accounts.activity.yesterday")
+    else t("simplefin_items.setup_accounts.activity.days_ago", count: days)
+    end
+  end
 end
