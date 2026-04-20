@@ -509,6 +509,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_04_12_120000) do
     t.jsonb "aspsp_required_psu_headers", default: []
     t.integer "aspsp_maximum_consent_validity"
     t.string "aspsp_auth_approach"
+    t.string "psu_type"
     t.jsonb "aspsp_psu_types", default: []
     t.string "last_psu_ip"
     t.index ["family_id"], name: "index_enable_banking_items_on_family_id"
