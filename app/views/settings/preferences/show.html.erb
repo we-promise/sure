@@ -16,10 +16,6 @@
             Family::DATE_FORMATS,
             { label: t(".date_format") },
             { data: { auto_submit_form_target: "auto" } } %>
-        <%= form.select :default_period,
-            Period.all.map { |period| [ period.label, period.key ] },
-            { label: t(".default_period") },
-            { data: { auto_submit_form_target: "auto" } } %>
         <%= form.select :default_account_order,
             AccountOrder.all.map { |order| [ order.label, order.key ] },
             { label: t(".default_account_order") },
