@@ -111,8 +111,10 @@ class Period
     # given family. "fiscal_year_to_date" is unavailable for families whose
     # fiscal year starts on Jan 1 (the default) because it would produce a range
     # identical to current_year.
-    def available_key?(key, family = Current.family)
-      PERIODS.key?(key) && (key != "fiscal_year_to_date" || family&.uses_fiscal_year?)
+    def available_key?(key, family = nil)
+      return false unless PERIODS.key?(key)
+      return true unless key == "fiscal_year_to_date"
+      (family || Current.family)&.uses_fiscal_year?
     end
 
     def from_key(key)
