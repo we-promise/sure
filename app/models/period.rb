@@ -59,9 +59,14 @@ class Period
       comparison_label: "vs. start of year"
     },
     "fiscal_year_to_date" => {
-      # Availability is gated by Period.available_key?, so Current.family is guaranteed
-      # to be present and uses_fiscal_year? when this lambda is evaluated via from_key.
-      date_range: -> { [ Current.family.current_fiscal_year_start, Date.current ] },
+      date_range: -> {
+        family = Current.family
+        # When family is nil the fallback silently produces a YTD-equivalent range
+        # (beginning_of_year..today) identical to current_year; callers such as
+        # Periodable should guard against this with uses_fiscal_year?.
+        start_date = family ? family.current_fiscal_year_start : Date.current.beginning_of_year
+        [ start_date, Date.current ]
+      },
       label_short: "FYTD",
       label: "Financial Year",
       comparison_label: "vs. start of financial year"
@@ -107,18 +112,8 @@ class Period
       PERIODS.key?(key)
     end
 
-    # Returns true only when the key exists in PERIODS and is available for the
-    # given family. "fiscal_year_to_date" is unavailable for families whose
-    # fiscal year starts on Jan 1 (the default) because it would produce a range
-    # identical to current_year.
-    def available_key?(key, family = nil)
-      return false unless PERIODS.key?(key)
-      return true unless key == "fiscal_year_to_date"
-      (family || Current.family)&.uses_fiscal_year?
-    end
-
     def from_key(key)
-      unless available_key?(key)
+      unless PERIODS.key?(key)
         raise InvalidKeyError, "Invalid period key: #{key}"
       end
 
@@ -132,7 +127,10 @@ class Period
     end
 
     def all
-      PERIODS.keys.select { |key| available_key?(key) }.map { |key| from_key(key) }
+      PERIODS.filter_map do |key, _period|
+        next if key == "fiscal_year_to_date" && !Current.family&.uses_fiscal_year?
+        from_key(key)
+      end
     end
 
     def as_options

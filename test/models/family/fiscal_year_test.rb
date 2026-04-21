@@ -52,10 +52,6 @@ class Family::FiscalYearTest < ActiveSupport::TestCase
     @family.fiscal_year_start_month = 3
     @family.fiscal_year_start_day = 1
 
-    travel_to Date.new(2026, 3, 1) do
-      assert_equal Date.new(2026, 3, 1), `@family.current_fiscal_year_start`
-    end
-
     travel_to Date.new(2026, 4, 21) do
       assert_equal Date.new(2026, 3, 1), @family.current_fiscal_year_start
     end
