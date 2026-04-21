@@ -130,9 +130,7 @@ class Period
     end
 
     def all
-      PERIODS.filter_map do |key, _period|
-        from_key(key) if available_key?(key)
-      end
+      PERIODS.keys.select { |key| available_key?(key) }.map { |key| from_key(key) }
     end
 
     def as_options
