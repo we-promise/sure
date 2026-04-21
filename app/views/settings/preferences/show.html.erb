@@ -33,6 +33,14 @@
             <%= t(".month_start_day_warning") %>
           </div>
         <% end %>
+        <%= family_form.select :fiscal_year_start_month,
+            Date::MONTHNAMES.compact.each_with_index.map { |name, i| [name, i + 1] },
+            { label: t(".fiscal_year_start_month"), hint: t(".fiscal_year_start_hint") },
+            { data: { auto_submit_form_target: "auto" } } %>
+        <%= family_form.select :fiscal_year_start_day,
+            (1..28).map { |day| [day.ordinalize, day] },
+            { label: t(".fiscal_year_start_day") },
+            { data: { auto_submit_form_target: "auto" } } %>
         <p class="text-xs italic pl-2 text-secondary">Please note, we are still working on translations for various languages.</p>
       <% end %>
     <% end %>

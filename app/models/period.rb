@@ -58,6 +58,16 @@ class Period
       label: "Current Year",
       comparison_label: "vs. start of year"
     },
+    "fiscal_year_to_date" => {
+      date_range: -> {
+        family = Current.family
+        start_date = family ? family.current_fiscal_year_start : Date.current.beginning_of_year
+        [ start_date, Date.current ]
+      },
+      label_short: "FYTD",
+      label: "Financial Year",
+      comparison_label: "vs. start of financial year"
+    },
     "last_365_days" => {
       date_range: -> { [ 365.days.ago.to_date, Date.current ] },
       label_short: "365D",
