@@ -59,14 +59,9 @@ class Period
       comparison_label: "vs. start of year"
     },
     "fiscal_year_to_date" => {
-      date_range: -> {
-        family = Current.family
-        # When family is nil the fallback silently produces a YTD-equivalent range
-        # (beginning_of_year..today) identical to current_year; callers such as
-        # Periodable should guard against this with uses_fiscal_year?.
-        start_date = family ? family.current_fiscal_year_start : Date.current.beginning_of_year
-        [ start_date, Date.current ]
-      },
+      # Availability is gated by Period.available_key?, so Current.family is guaranteed
+      # to be present and uses_fiscal_year? when this lambda is evaluated via from_key.
+      date_range: -> { [ Current.family.current_fiscal_year_start, Date.current ] },
       label_short: "FYTD",
       label: "Financial Year",
       comparison_label: "vs. start of financial year"
