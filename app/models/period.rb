@@ -112,8 +112,16 @@ class Period
       PERIODS.key?(key)
     end
 
+    # Returns true only when the key exists in PERIODS and is available for the
+    # given family. "fiscal_year_to_date" is unavailable for families whose
+    # fiscal year starts on Jan 1 (the default) because it would produce a range
+    # identical to current_year.
+    def available_key?(key, family = Current.family)
+      PERIODS.key?(key) && (key != "fiscal_year_to_date" || family&.uses_fiscal_year?)
+    end
+
     def from_key(key)
-      unless PERIODS.key?(key)
+      unless available_key?(key)
         raise InvalidKeyError, "Invalid period key: #{key}"
       end
 
@@ -128,8 +136,7 @@ class Period
 
     def all
       PERIODS.filter_map do |key, _period|
-        next if key == "fiscal_year_to_date" && !Current.family&.uses_fiscal_year?
-        from_key(key)
+        from_key(key) if available_key?(key)
       end
     end
 
