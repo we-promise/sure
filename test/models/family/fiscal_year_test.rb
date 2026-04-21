@@ -57,6 +57,15 @@ class Family::FiscalYearTest < ActiveSupport::TestCase
     end
   end
 
+  test "current_fiscal_year_start returns this year's start on the exact boundary date" do
+    @family.fiscal_year_start_month = 3
+    @family.fiscal_year_start_day = 1
+
+    travel_to Date.new(2026, 3, 1) do
+      assert_equal Date.new(2026, 3, 1), @family.current_fiscal_year_start
+    end
+  end
+
   test "current_fiscal_year_start rolls back one year when today is before the start" do
     @family.fiscal_year_start_month = 7
     @family.fiscal_year_start_day = 1
