@@ -81,4 +81,36 @@ class PeriodTest < ActiveSupport::TestCase
     assert_equal 5.years.ago.to_date, period.start_date
     assert_equal Date.current, period.end_date
   end
+
+  test "fiscal_year_to_date has correct labels" do
+    mock_family = mock("family")
+    mock_family.expects(:current_fiscal_year_start).returns(Date.current.beginning_of_year)
+    Current.expects(:family).at_least_once.returns(mock_family)
+
+    period = Period.from_key("fiscal_year_to_date")
+    assert_equal "Financial Year", period.label
+    assert_equal "FYTD", period.label_short
+  end
+
+  test "fiscal_year_to_date uses family's fiscal year start" do
+    mock_family = mock("family")
+    mock_family.expects(:current_fiscal_year_start).returns(Date.new(2026, 3, 1))
+    Current.expects(:family).at_least_once.returns(mock_family)
+
+    travel_to Date.new(2026, 4, 21) do
+      period = Period.from_key("fiscal_year_to_date")
+      assert_equal Date.new(2026, 3, 1), period.start_date
+      assert_equal Date.current, period.end_date
+    end
+  end
+
+  test "fiscal_year_to_date falls back to beginning of year when no family" do
+    Current.expects(:family).returns(nil)
+
+    travel_to Date.new(2026, 4, 21) do
+      period = Period.from_key("fiscal_year_to_date")
+      assert_equal Date.new(2026, 1, 1), period.start_date
+      assert_equal Date.current, period.end_date
+    end
+  end
 end
