@@ -348,6 +348,8 @@ class ChatProvider with ChangeNotifier {
           final newLen = lastMessage.content.length;
           if (newLen > (_lastAssistantContentLength ?? 0)) {
             _lastAssistantContentLength = newLen;
+            // Content is growing — reset the inactivity clock.
+            _pollingStartTime = DateTime.now();
           } else {
             // Content stable: no growth since last poll — done.
             _stopPolling();
