@@ -14,6 +14,9 @@ class ChatProvider with ChangeNotifier {
   bool _isWaitingForResponse = false;
   String? _errorMessage;
   Timer? _pollingTimer;
+  DateTime? _pollingStartTime;
+
+  static const _pollingTimeout = Duration(seconds: 20);
 
   /// Content length of the last assistant message from the previous poll.
   /// Used to detect when the LLM has finished writing (no growth between polls).
@@ -262,6 +265,7 @@ class ChatProvider with ChangeNotifier {
     _pollingTimer?.cancel();
     _lastAssistantContentLength = null;
     _isWaitingForResponse = true;
+    _pollingStartTime = DateTime.now();
     notifyListeners();
 
     _pollingTimer = Timer.periodic(const Duration(seconds: 2), (timer) async {
@@ -273,11 +277,20 @@ class ChatProvider with ChangeNotifier {
   void _stopPolling() {
     _pollingTimer?.cancel();
     _pollingTimer = null;
+    _pollingStartTime = null;
     _isWaitingForResponse = false;
   }
 
   /// Poll for updates
   Future<void> _pollForUpdates(String accessToken, String chatId) async {
+    if (_pollingStartTime != null &&
+        DateTime.now().difference(_pollingStartTime!) >= _pollingTimeout) {
+      _stopPolling();
+      _errorMessage = 'The assistant took too long to respond. Please try again.';
+      notifyListeners();
+      return;
+    }
+
     try {
       final result = await _chatService.getChat(
         accessToken: accessToken,

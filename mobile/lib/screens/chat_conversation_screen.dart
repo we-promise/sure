@@ -359,7 +359,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
                     actions: <Type, Action<Intent>>{
                       _SendMessageIntent: CallbackAction<_SendMessageIntent>(
                         onInvoke: (_) {
-                          if (!chatProvider.isSendingMessage) _sendMessage();
+                          if (!chatProvider.isSendingMessage && !chatProvider.isWaitingForResponse) _sendMessage();
                           return null;
                         },
                       ),
@@ -387,7 +387,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
                         const SizedBox(width: 8),
                         IconButton(
                           icon: const Icon(Icons.send),
-                          onPressed: chatProvider.isSendingMessage
+                          onPressed: (chatProvider.isSendingMessage || chatProvider.isWaitingForResponse)
                               ? null
                               : _sendMessage,
                           color: colorScheme.primary,
