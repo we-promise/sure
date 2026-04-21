@@ -126,6 +126,7 @@ class Settings::ProvidersController < ApplicationController
       @provider_configurations = Provider::ConfigurationRegistry.all.reject do |config|
         config.provider_key.to_s.casecmp("simplefin").zero? || config.provider_key.to_s.casecmp("lunchflow").zero? || \
         config.provider_key.to_s.casecmp("enable_banking").zero?  || \
+        config.provider_key.to_s.casecmp("gocardless").zero? || \
         config.provider_key.to_s.casecmp("sophtron").zero? || \
         config.provider_key.to_s.casecmp("coinstats").zero? || \
         config.provider_key.to_s.casecmp("mercury").zero? || \
@@ -139,6 +140,7 @@ class Settings::ProvidersController < ApplicationController
       @lunchflow_items = Current.family.lunchflow_items.where.not(api_key: [ nil, "" ]).ordered.select(:id)
       @enable_banking_items = Current.family.enable_banking_items.ordered # Enable Banking panel needs session info for status display
       # Providers page only needs to know whether any Sophtron connections exist with valid credentials
+      @gocardless_items = Current.family.gocardless_items.active.ordered
       @sophtron_items = Current.family.sophtron_items.where.not(user_id: [ nil, "" ], access_key: [ nil, "" ]).ordered.select(:id)
       @coinstats_items = Current.family.coinstats_items.ordered # CoinStats panel needs account info for status display
       @mercury_items = Current.family.mercury_items.ordered.select(:id)

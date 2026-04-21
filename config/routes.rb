@@ -202,6 +202,14 @@ Rails.application.routes.draw do
     resource :guides, only: :show
     resource :bank_sync, only: :show, controller: "bank_sync"
     resource :providers, only: %i[show update]
+    resources :gocardless_items, only: [ :index, :create, :destroy ] do
+      collection do
+        get  :callback
+        get  :search_banks
+        get  :select_existing_account
+        get  :new_item
+      end
+    end
   end
 
   resource :subscription, only: %i[new show create] do

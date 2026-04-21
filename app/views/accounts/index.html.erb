@@ -37,6 +37,10 @@
       <%= render @enable_banking_items.sort_by(&:created_at) %>
     <% end %>
 
+    <% if @gocardless_items.any? %>
+      <%= render @gocardless_items.sort_by(&:created_at) %>
+    <% end %>
+
     <% if @coinstats_items.any? %>
       <%= render @coinstats_items.sort_by(&:created_at) %>
     <% end %>

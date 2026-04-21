@@ -1,0 +1,156 @@
+class Provider::GocardlessAdapter < Provider::Base
+  include Provider::Syncable
+  include Provider::InstitutionMetadata
+  include Provider::Configurable
+
+  Provider::Factory.register("GocardlessAccount", self)
+
+  configure do
+    description <<~DESC
+      Connect your UK bank accounts using GoCardless open banking.
+      Supports 99% of UK banks including Barclays, HSBC, Lloyds, NatWest,
+      Monzo, Starling, and hundreds more.
+
+      You will need a free GoCardless Bank Account Data account.
+      Get your credentials at: https://bankaccountdata.gocardless.com
+    DESC
+
+    field :secret_id,
+          label:       "Secret ID",
+          required:    true,
+          secret:      true,
+          env_key:     "GOCARDLESS_SECRET_ID",
+          description: "Your GoCardless Bank Account Data secret ID"
+
+    field :secret_key,
+          label:       "Secret Key",
+          required:    true,
+          secret:      true,
+          env_key:     "GOCARDLESS_SECRET_KEY",
+          description: "Your GoCardless Bank Account Data secret key"
+  end
+
+  def provider_name
+    "gocardless"
+  end
+
+  def self.supported_account_types
+    %w[Depository CreditCard]
+  end
+  def self.connection_configs(family:)
+    return [] unless family.can_connect_gocardless?
+
+    [
+      {
+        key: "gocardless",
+        name: "GoCardless",
+        description: "Connect your UK bank account via GoCardless open banking",
+        can_connect: true,
+        new_account_path: ->(accountable_type, return_to) {
+          Rails.application.routes.url_helpers.new_item_settings_gocardless_items_path(
+            accountable_type: accountable_type
+          )
+        },
+        existing_account_path: ->(account_id) {
+          Rails.application.routes.url_helpers.select_existing_account_settings_gocardless_items_path(
+            account_id: account_id
+          )
+        }
+      }
+    ]
+  end
+
+  def self.build_provider(family: nil)
+    secret_id  = config_value(:secret_id)
+    secret_key = config_value(:secret_key)
+    return nil unless secret_id.present? && secret_key.present?
+
+    Provider::Gocardless.new(secret_id, secret_key)
+  end
+
+  def self.sdk
+    build_provider
+  end
+
+  def sync_data
+    item       = provider_account.gocardless_item
+    account_id = provider_account.account_id
+    client     = item.gocardless_client
+    return unless client
+
+    # Fetch balance
+    balances_data = client.balances(account_id)
+    bal = balances_data["balances"]&.find { |b| b["balanceType"] == "interimAvailable" } ||
+          balances_data["balances"]&.first
+    current_balance = bal&.dig("balanceAmount", "amount")&.to_d
+
+    # Fetch transactions
+    raw    = client.transactions(account_id)
+    booked = raw.dig("transactions", "booked") || []
+
+    booked.each do |txn|
+      upsert_transaction(txn)
+    end
+
+    provider_account.update!(current_balance: current_balance)
+  rescue Provider::Gocardless::AuthError
+    item.update!(status: :requires_update)
+    Rails.logger.error "GoCardless auth error syncing account #{provider_account.id}"
+  rescue Provider::Gocardless::ApiError => e
+    Rails.logger.error "GoCardless API error: #{e.message}"
+  end
+
+  def institution_domain
+    provider_account.institution_metadata&.dig("domain")
+  end
+
+  def institution_name
+    provider_account.institution_metadata&.dig("name") ||
+      provider_account.gocardless_item&.institution_name
+  end
+
+  def institution_url
+    provider_account.institution_metadata&.dig("url") ||
+      provider_account.gocardless_item&.institution_url
+  end
+
+  def institution_color
+    provider_account.gocardless_item&.institution_color
+  end
+
+  def can_delete_holdings?
+    false
+  end
+
+  def sync_path
+    Rails.application.routes.url_helpers.sync_gocardless_item_path(item)
+  end
+
+  def item
+    provider_account.gocardless_item
+  end
+
+  private
+
+    def upsert_transaction(txn)
+      amount   = txn.dig("transactionAmount", "amount").to_d
+      currency = txn.dig("transactionAmount", "currency")
+      date     = Date.parse(txn["bookingDate"])
+      name     = txn["remittanceInformationUnstructured"] ||
+                 txn["creditorName"] ||
+                 txn["debtorName"] ||
+                 "Unknown"
+      ext_id   = txn["transactionId"] || txn["internalTransactionId"]
+
+      account = provider_account.account
+      account.transactions.find_or_initialize_by(import_id: ext_id).tap do |t|
+        t.assign_attributes(
+          name:     name,
+          date:     date,
+          amount:   amount,
+          currency: currency
+        )
+        t.save!
+      end
+    end
+end

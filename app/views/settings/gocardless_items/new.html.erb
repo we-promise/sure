@@ -1,0 +1,18 @@
+<%= render layout: "accounts/new/container",
+           locals: { title: "Link with GoCardless", back_path: new_account_path } do %>
+  <div class="space-y-3" data-controller="gocardless-bank-search">
+    <p class="text-sm text-secondary">
+      Search for your UK bank below. You will be redirected to your bank
+      to authorise read-only access, then brought back here.
+    </p>
+
+    <input type="text"
+           placeholder="Search for your bank (e.g. Barclays, Monzo, NatWest)..."
+           class="w-full px-3 py-2 text-sm border border-primary rounded-lg bg-transparent text-primary placeholder:text-secondary focus:outline-none focus:ring-1 focus:ring-primary"
+           autocomplete="off"
+           data-action="input->gocardless-bank-search#search"
+           data-gocardless-bank-search-accountable-type-value="<%= @accountable_type %>" />
+
+    <div data-gocardless-bank-search-target="results" class="space-y-1"></div>
+  </div>
+<% end %>

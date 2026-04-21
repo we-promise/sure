@@ -1,0 +1,97 @@
+<div class="space-y-4" data-controller="gocardless-bank-search">
+
+  <%# ── Step 1: Credential form (Secret ID + Secret Key) ─────────────────── %>
+  <% config = Provider::GocardlessAdapter.configuration %>
+  <% if config.present? %>
+    <div class="prose prose-sm text-secondary mb-2">
+      <p class="text-primary font-medium">Setup instructions:</p>
+      <ol>
+        <li>Get your free API credentials at <a href="https://bankaccountdata.gocardless.com" target="_blank" rel="noopener noreferrer" class="link">GoCardless Bank Account Data</a></li>
+        <li>Enter your Secret ID and Secret Key below and click Save Configuration</li>
+        <li>Once saved, search for your UK bank below and click to connect</li>
+        <li>You will be redirected to your bank to authorise read-only access — then brought back here</li>
+        <li>Bank connections expire after 90 days and will need re-authorising</li>
+      </ol>
+      <p class="text-primary font-medium">Coverage:</p>
+      <ul>
+        <li>Supports 100+ UK banks including Barclays, HSBC, Lloyds, NatWest, Monzo, Starling, Halifax, Santander and more</li>
+        <li>Read-only access — GoCardless cannot move money</li>
+        <li>Up to 24 months of transaction history on first sync</li>
+      </ul>
+    </div>
+    <%= render "settings/providers/provider_form", configuration: config %>
+  <% end %>
+
+  <%# ── Step 2: Gate everything below on credentials being saved ──────────── %>
+  <% credentials_configured = Provider::GocardlessAdapter.configured? %>
+
+  <% unless credentials_configured %>
+    <div class="p-3 rounded-lg bg-container border border-primary">
+      <div class="flex items-center gap-3">
+        <div class="w-2 h-2 bg-gray-400 rounded-full"></div>
+        <div>
+          <p class="text-sm font-medium text-primary">Credentials required</p>
+          <p class="text-xs text-secondary mt-0.5">
+            Enter your Secret ID and Secret Key above and click
+            <strong>Save Configuration</strong> to enable bank connections.
+          </p>
+        </div>
+      </div>
+    </div>
+  <% else %>
+
+    <%# ── Connected banks list ──────────────────────────────────────────────── %>
+    <% if @gocardless_items&.any? %>
+      <div class="border-t border-primary pt-4 space-y-2">
+        <p class="text-sm font-medium text-primary">Connected banks</p>
+        <% @gocardless_items.each do |item| %>
+          <div class="flex items-center justify-between p-3 rounded-lg bg-container border border-primary">
+            <div class="flex items-center gap-3">
+              <% if item.status == "requires_update" %>
+                <div class="w-2 h-2 bg-warning rounded-full"></div>
+                <div>
+                  <p class="text-sm font-medium text-primary"><%= item.institution_name %></p>
+                  <p class="text-xs text-destructive">Re-authorisation required</p>
+                </div>
+              <% else %>
+                <div class="w-2 h-2 bg-success rounded-full"></div>
+                <div>
+                  <p class="text-sm font-medium text-primary"><%= item.institution_name %></p>
+                  <p class="text-xs text-secondary">
+                    <%= pluralize(item.gocardless_accounts.count, "account") %> connected
+                  </p>
+                </div>
+              <% end %>
+            </div>
+            <div class="flex items-center gap-2">
+              <%= button_to settings_gocardless_item_path(item),
+                            method: :delete,
+                            class: "inline-flex items-center justify-center rounded-lg px-3 py-1.5 text-xs font-medium text-destructive hover:bg-destructive/10 transition-colors",
+                            data: { turbo_confirm: "Disconnect #{item.institution_name}? This will remove all synced accounts." } do %>
+                Disconnect
+              <% end %>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+
+    <%# ── Bank search (only shown when credentials are configured) ──────────── %>
+    <div class="border-t border-primary pt-4 space-y-3">
+      <p class="text-sm font-medium text-primary">Add a UK bank</p>
+      <p class="text-xs text-secondary">
+        Search for your bank and click to connect. You will be redirected to your
+        bank to authorise read-only access, then brought back here automatically.
+      </p>
+
+      <input type="text"
+             placeholder="Search for your bank (e.g. Barclays, Monzo, NatWest)..."
+             class="w-full px-3 py-2 text-sm border border-primary rounded-lg bg-transparent text-primary placeholder:text-secondary focus:outline-none focus:ring-1 focus:ring-primary"
+             autocomplete="off"
+             data-action="input->gocardless-bank-search#search" />
+
+      <div data-gocardless-bank-search-target="results" class="space-y-1"></div>
+    </div>
+
+  <% end %>
+</div>
