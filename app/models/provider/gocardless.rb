@@ -1,12 +1,15 @@
 class Provider::Gocardless
-  BASE_URL = "https://bankaccountdata.gocardless.com/api/v2"
+  BASE_URL      = "https://bankaccountdata.gocardless.com/api/v2"
+  MAX_RETRIES   = 3
+  RETRY_BACKOFF = 2 # seconds; doubles each attempt (2, 4, 8)
 
-  class Autherror < StandardError; end
-  class Apierror < StandardError; end
+  class AuthError      < StandardError; end
+  class ApiError       < StandardError; end
+  class RateLimitError < StandardError; end
 
   def initialize(secret_id, secret_key)
-    @secret_id  = secret_id
-    @secret_key = secret_key
+    @secret_id    = secret_id
+    @secret_key   = secret_key
     @access_token = nil
   end
 
@@ -75,18 +78,34 @@ class Provider::Gocardless
   private
 
     def get(path)
-      response = connection.get("#{BASE_URL}#{path}") do |req|
-        req.headers["Authorization"] = "Bearer #{@access_token}" if @access_token
+      with_retry do
+        response = connection.get("#{BASE_URL}#{path}") do |req|
+          req.headers["Authorization"] = "Bearer #{@access_token}" if @access_token
+        end
+        handle_response(response)
       end
-      handle_response(response)
     end
 
     def post(path, body, authenticated: true)
-      response = connection.post("#{BASE_URL}#{path}") do |req|
-        req.headers["Authorization"] = "Bearer #{@access_token}" if authenticated && @access_token
-        req.body = body.to_json
+      with_retry do
+        response = connection.post("#{BASE_URL}#{path}") do |req|
+          req.headers["Authorization"] = "Bearer #{@access_token}" if authenticated && @access_token
+          req.body = body.to_json
+        end
+        handle_response(response)
       end
-      handle_response(response)
+    end
+
+    def with_retry
+      attempts = 0
+      begin
+        yield
+      rescue RateLimitError
+        attempts += 1
+        raise if attempts >= MAX_RETRIES
+        sleep(RETRY_BACKOFF ** attempts)
+        retry
+      end
     end
 
     def connection
@@ -101,9 +120,11 @@ class Provider::Gocardless
       when 200..299
         JSON.parse(response.body)
       when 401
-        raise Autherror, "GoCardless authentication failed — check your secret_id and secret_key"
+        raise AuthError, "GoCardless authentication failed — check your secret_id and secret_key"
+      when 429
+        raise RateLimitError, "GoCardless rate limit exceeded — retrying shortly"
       else
-        raise Apierror, "GoCardless API error #{response.status}: #{response.body}"
+        raise ApiError, "GoCardless API error #{response.status}: #{response.body}"
       end
     end
 end

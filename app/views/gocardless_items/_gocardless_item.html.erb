@@ -44,7 +44,7 @@
               variant: "button",
               text: "Disconnect",
               icon: "trash-2",
-              href: settings_gocardless_item_path(gocardless_item),
+              href: gocardless_item_path(gocardless_item),
               method: :delete,
               confirm: CustomConfirm.for_resource_deletion(gocardless_item.institution_name, high_severity: true)
             ) %>

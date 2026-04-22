@@ -47,12 +47,12 @@ class Provider::GocardlessAdapter < Provider::Base
         description: "Connect your UK bank account via GoCardless open banking",
         can_connect: true,
         new_account_path: ->(accountable_type, return_to) {
-          Rails.application.routes.url_helpers.new_item_settings_gocardless_items_path(
+          Rails.application.routes.url_helpers.new_item_gocardless_items_path(
             accountable_type: accountable_type
           )
         },
         existing_account_path: ->(account_id) {
-          Rails.application.routes.url_helpers.select_existing_account_settings_gocardless_items_path(
+          Rails.application.routes.url_helpers.select_existing_account_gocardless_items_path(
             account_id: account_id
           )
         }
@@ -70,34 +70,6 @@ class Provider::GocardlessAdapter < Provider::Base
 
   def self.sdk
     build_provider
-  end
-
-  def sync_data
-    item       = provider_account.gocardless_item
-    account_id = provider_account.account_id
-    client     = item.gocardless_client
-    return unless client
-
-    # Fetch balance
-    balances_data = client.balances(account_id)
-    bal = balances_data["balances"]&.find { |b| b["balanceType"] == "interimAvailable" } ||
-          balances_data["balances"]&.first
-    current_balance = bal&.dig("balanceAmount", "amount")&.to_d
-
-    # Fetch transactions
-    raw    = client.transactions(account_id)
-    booked = raw.dig("transactions", "booked") || []
-
-    booked.each do |txn|
-      upsert_transaction(txn)
-    end
-
-    provider_account.update!(current_balance: current_balance)
-  rescue Provider::Gocardless::AuthError
-    item.update!(status: :requires_update)
-    Rails.logger.error "GoCardless auth error syncing account #{provider_account.id}"
-  rescue Provider::Gocardless::ApiError => e
-    Rails.logger.error "GoCardless API error: #{e.message}"
   end
 
   def institution_domain
@@ -130,27 +102,4 @@ class Provider::GocardlessAdapter < Provider::Base
     provider_account.gocardless_item
   end
 
-  private
-
-    def upsert_transaction(txn)
-      amount   = txn.dig("transactionAmount", "amount").to_d
-      currency = txn.dig("transactionAmount", "currency")
-      date     = Date.parse(txn["bookingDate"])
-      name     = txn["remittanceInformationUnstructured"] ||
-                 txn["creditorName"] ||
-                 txn["debtorName"] ||
-                 "Unknown"
-      ext_id   = txn["transactionId"] || txn["internalTransactionId"]
-
-      account = provider_account.account
-      account.transactions.find_or_initialize_by(import_id: ext_id).tap do |t|
-        t.assign_attributes(
-          name:     name,
-          date:     date,
-          amount:   amount,
-          currency: currency
-        )
-        t.save!
-      end
-    end
 end

@@ -1,0 +1,90 @@
+<%= turbo_frame_tag "modal" do %>
+  <%= render DS::Dialog.new do |dialog| %>
+    <% dialog.with_header(title: "Link with GoCardless") %>
+
+    <% dialog.with_body do %>
+      <% if Provider::GocardlessAdapter.configured? %>
+        <% items = Current.family.gocardless_items.active.ordered %>
+        <% if items.any? %>
+          <div class="space-y-3">
+            <% items.each do |item| %>
+              <div class="flex items-center justify-between p-3 rounded-lg bg-container border border-primary">
+                <div class="flex items-center gap-3">
+                  <% if item.status == "requires_update" %>
+                    <div class="w-2 h-2 bg-warning rounded-full"></div>
+                    <div>
+                      <p class="text-sm font-medium text-primary"><%= item.institution_name %></p>
+                      <p class="text-xs text-destructive">Re-authorisation required</p>
+                    </div>
+                  <% else %>
+                    <div class="w-2 h-2 bg-success rounded-full"></div>
+                    <div>
+                      <p class="text-sm font-medium text-primary"><%= item.institution_name %></p>
+                      <p class="text-xs text-secondary">
+                        <%= pluralize(item.gocardless_accounts.count, "account") %> connected
+                      </p>
+                    </div>
+                  <% end %>
+                </div>
+              </div>
+            <% end %>
+
+            <div class="border-t border-primary pt-3">
+              <p class="text-sm font-medium text-primary mb-2">Add another bank</p>
+              <div data-controller="gocardless-bank-search">
+                <input type="text"
+                       placeholder="Search for your bank..."
+                       class="w-full px-3 py-2 text-sm border border-primary rounded-lg bg-transparent text-primary placeholder:text-secondary focus:outline-none focus:ring-1 focus:ring-primary"
+                       autocomplete="off"
+                       data-action="input->gocardless-bank-search#search" />
+                <div data-gocardless-bank-search-target="results" class="space-y-1 mt-2"></div>
+              </div>
+            </div>
+          </div>
+        <% else %>
+          <%# No banks connected yet — show search directly %>
+          <div data-controller="gocardless-bank-search" class="space-y-3">
+            <p class="text-sm text-secondary">
+              Search for your UK bank below. You will be redirected to your bank
+              to authorise read-only access, then brought back here.
+            </p>
+            <input type="text"
+                   placeholder="Search for your bank (e.g. Barclays, Monzo, NatWest)..."
+                   class="w-full px-3 py-2 text-sm border border-primary rounded-lg bg-transparent text-primary placeholder:text-secondary focus:outline-none focus:ring-1 focus:ring-primary"
+                   autocomplete="off"
+                   data-action="input->gocardless-bank-search#search" />
+            <div data-gocardless-bank-search-target="results" class="space-y-1"></div>
+          </div>
+        <% end %>
+      <% else %>
+        <%# Not configured %>
+        <div class="space-y-4">
+          <div class="flex items-start gap-3">
+            <%= icon("alert-circle", class: "text-warning w-5 h-5 shrink-0 mt-0.5") %>
+            <div class="text-sm text-secondary">
+              <p class="font-medium text-primary mb-2">GoCardless not configured</p>
+              <p>Before you can link UK bank accounts, you need to configure your GoCardless credentials.</p>
+            </div>
+          </div>
+
+          <div class="bg-surface rounded-lg p-4 space-y-2 text-sm">
+            <p class="font-medium text-primary">Setup steps:</p>
+            <ol class="list-decimal list-inside space-y-1 text-secondary">
+              <li>Go to <strong>Settings → Providers</strong></li>
+              <li>Find the <strong>GoCardless — UK Banks</strong> section</li>
+              <li>Enter your Secret ID and Secret Key</li>
+              <li>Click Save Configuration</li>
+              <li>Return here to connect your bank</li>
+            </ol>
+          </div>
+
+          <%= link_to settings_providers_path,
+                      class: "w-full inline-flex items-center justify-center rounded-lg font-medium px-3 py-2 text-sm text-inverse bg-inverse hover:bg-inverse-hover",
+                      data: { turbo: false } do %>
+            Go to Provider Settings
+          <% end %>
+        </div>
+      <% end %>
+    <% end %>
+  <% end %>
+<% end %>

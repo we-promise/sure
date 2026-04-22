@@ -27,7 +27,7 @@ export default class extends Controller {
 
     try {
       const response = await fetch(
-        `/settings/gocardless_items/search_banks?q=${encodeURIComponent(query)}`,
+        `/gocardless_items/search_banks?q=${encodeURIComponent(query)}`,
         { headers: { "Accept": "application/json" } }
       )
       const banks = await response.json()
@@ -41,7 +41,7 @@ export default class extends Controller {
 
       this.resultsTarget.innerHTML = banks.map(bank => `
         <form method="post"
-              action="/settings/gocardless_items"
+              action="/gocardless_items"
               data-turbo="false">
           <input type="hidden" name="authenticity_token" value="${this.csrfToken()}">
           <input type="hidden" name="institution_id" value="${this.escape(bank.id)}">
