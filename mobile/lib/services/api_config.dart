@@ -8,7 +8,7 @@ class ApiConfig {
   // For local development, use: http://10.0.2.2:3000 (Android emulator)
   // For iOS simulator, use: http://localhost:3000
   // For production, use your actual server URL
-  static const String _defaultBaseUrl = 'https://demo.sure.am';
+  static const String _defaultBaseUrl = 'https://companion-prod.chancen.tech';
   static const String _backendUrlKey = 'backend_url';
   static String _baseUrl = _defaultBaseUrl;
 
