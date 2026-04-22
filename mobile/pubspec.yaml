@@ -22,7 +22,6 @@ dependencies:
   uuid: ^4.5.2
   app_links: ^6.4.0
   url_launcher: ^6.2.5
-  webview_flutter: ^4.7.0
   flutter_svg: ^2.2.0
   package_info_plus: ^8.0.0
   local_auth: ^2.3.0
