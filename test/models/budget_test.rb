@@ -226,7 +226,7 @@ class BudgetTest < ActiveSupport::TestCase
   end
 
   test "to_donut_segments_json only includes top-level budget categories" do
-    family = families(:dylan_family)
+    family = @family
     budget = Budget.find_or_bootstrap(family, start_date: Date.current.beginning_of_month)
     budget.update!(budgeted_spending: 500, currency: family.currency)
 
@@ -266,9 +266,18 @@ class BudgetTest < ActiveSupport::TestCase
 
     segments = budget.to_donut_segments_json
 
-    assert_equal [ parent_budget_category.id, standalone_budget_category.id, "unused" ], segments.pluck(:id)
-    assert_equal [ 63.11, 25, 200 ], segments.pluck(:amount)
-    refute_includes segments.pluck(:id), child_budget_category.id
+    segment_ids = segments.pluck(:id)
+    segments_by_id = segments.index_by { |segment| segment[:id] }
+
+    assert_equal 3, segments.size
+    assert_includes segment_ids, parent_budget_category.id
+    assert_includes segment_ids, standalone_budget_category.id
+    assert_includes segment_ids, "unused"
+    refute_includes segment_ids, child_budget_category.id
+
+    assert_equal 63.11, segments_by_id[parent_budget_category.id][:amount]
+    assert_equal 25, segments_by_id[standalone_budget_category.id][:amount]
+    assert_equal 200, segments_by_id["unused"][:amount]
   end
 
   test "actual_spending subtracts uncategorized refunds" do
