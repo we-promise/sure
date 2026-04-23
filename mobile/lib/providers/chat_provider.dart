@@ -288,6 +288,7 @@ class ChatProvider with ChangeNotifier {
     _pollingStartTime = null;
     _isPollingRequestInFlight = false;
     _isWaitingForResponse = false;
+    _lastAssistantContentLength = null;
   }
 
   /// Poll for updates
