@@ -27,6 +27,7 @@ class ChatProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
   bool get isSendingMessage => _isSendingMessage;
   bool get isWaitingForResponse => _isWaitingForResponse;
+  bool get isPolling => _pollingTimer != null;
   String? get errorMessage => _errorMessage;
 
   /// Fetch list of chats

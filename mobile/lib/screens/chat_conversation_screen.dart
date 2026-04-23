@@ -68,7 +68,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
   void _onChatChanged() {
     if (!mounted) return;
     final chatProvider = Provider.of<ChatProvider>(context, listen: false);
-    if (chatProvider.isWaitingForResponse || chatProvider.isSendingMessage) {
+    if (chatProvider.isWaitingForResponse || chatProvider.isSendingMessage || chatProvider.isPolling) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _scrollToBottom();
       });
@@ -359,7 +359,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
                     actions: <Type, Action<Intent>>{
                       _SendMessageIntent: CallbackAction<_SendMessageIntent>(
                         onInvoke: (_) {
-                          if (!chatProvider.isSendingMessage && !chatProvider.isWaitingForResponse) _sendMessage();
+                          if (!chatProvider.isSendingMessage && !chatProvider.isWaitingForResponse && !chatProvider.isPolling) _sendMessage();
                           return null;
                         },
                       ),
@@ -387,7 +387,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
                         const SizedBox(width: 8),
                         IconButton(
                           icon: const Icon(Icons.send),
-                          onPressed: (chatProvider.isSendingMessage || chatProvider.isWaitingForResponse)
+                          onPressed: (chatProvider.isSendingMessage || chatProvider.isWaitingForResponse || chatProvider.isPolling)
                               ? null
                               : _sendMessage,
                           color: colorScheme.primary,
