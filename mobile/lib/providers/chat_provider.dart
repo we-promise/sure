@@ -15,6 +15,7 @@ class ChatProvider with ChangeNotifier {
   String? _errorMessage;
   Timer? _pollingTimer;
   DateTime? _pollingStartTime;
+  bool _isPollingRequestInFlight = false;
 
   static const _pollingTimeout = Duration(seconds: 20);
 
@@ -270,7 +271,13 @@ class ChatProvider with ChangeNotifier {
     notifyListeners();
 
     _pollingTimer = Timer.periodic(const Duration(seconds: 2), (timer) async {
-      await _pollForUpdates(accessToken, chatId);
+      if (_isPollingRequestInFlight) return;
+      _isPollingRequestInFlight = true;
+      try {
+        await _pollForUpdates(accessToken, chatId);
+      } finally {
+        _isPollingRequestInFlight = false;
+      }
     });
   }
 
@@ -279,6 +286,7 @@ class ChatProvider with ChangeNotifier {
     _pollingTimer?.cancel();
     _pollingTimer = null;
     _pollingStartTime = null;
+    _isPollingRequestInFlight = false;
     _isWaitingForResponse = false;
   }
 
@@ -339,18 +347,24 @@ class ChatProvider with ChangeNotifier {
         final lastMessage = updatedChat.messages.lastOrNull;
         if (lastMessage != null && lastMessage.isAssistant) {
           final newLen = lastMessage.content.length;
-          if (newLen > (_lastAssistantContentLength ?? 0)) {
+          final previousLen = _lastAssistantContentLength;
+
+          if (newLen > (previousLen ?? -1)) {
             _lastAssistantContentLength = newLen;
-            // Content is growing — reset the inactivity clock.
-            _pollingStartTime = DateTime.now();
-            return; // progress made, don't evaluate timeout this tick
-          } else {
-            // Content stable: no growth since last poll — done.
+            if (newLen > 0) {
+              // Content is growing — reset the inactivity clock.
+              _pollingStartTime = DateTime.now();
+              return; // progress made, don't evaluate timeout this tick
+            }
+            // newLen == 0: empty placeholder, keep polling
+          } else if (newLen > 0) {
+            // Content stable and non-empty: no growth since last poll — done.
             _stopPolling();
             _lastAssistantContentLength = null;
             notifyListeners();
             return;
           }
+          // newLen == 0 with previousLen already 0: still empty, keep polling
         }
       }
     } catch (e) {
