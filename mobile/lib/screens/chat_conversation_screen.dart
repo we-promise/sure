@@ -34,6 +34,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
 
   ChatProvider? _chatProvider;
   bool _listenerAdded = false;
+  bool _isSendInFlight = false;
 
   @override
   void initState() {
@@ -120,9 +121,12 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
   }
 
   Future<void> _sendMessage() async {
+    if (_isSendInFlight) return;
     final content = _messageController.text.trim();
     if (content.isEmpty) return;
+    setState(() => _isSendInFlight = true);
 
+    try {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final chatProvider = Provider.of<ChatProvider>(context, listen: false);
 
@@ -182,6 +186,9 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
         );
       }
     });
+    } finally {
+      if (mounted) setState(() => _isSendInFlight = false);
+    }
   }
 
   Future<void> _editTitle() async {
@@ -359,7 +366,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
                     actions: <Type, Action<Intent>>{
                       _SendMessageIntent: CallbackAction<_SendMessageIntent>(
                         onInvoke: (_) {
-                          if (!chatProvider.isSendingMessage && !chatProvider.isWaitingForResponse && !chatProvider.isPolling) _sendMessage();
+                          if (!_isSendInFlight && !chatProvider.isSendingMessage && !chatProvider.isWaitingForResponse && !chatProvider.isPolling) _sendMessage();
                           return null;
                         },
                       ),
@@ -387,7 +394,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
                         const SizedBox(width: 8),
                         IconButton(
                           icon: const Icon(Icons.send),
-                          onPressed: (chatProvider.isSendingMessage || chatProvider.isWaitingForResponse || chatProvider.isPolling)
+                          onPressed: (_isSendInFlight || chatProvider.isSendingMessage || chatProvider.isWaitingForResponse || chatProvider.isPolling)
                               ? null
                               : _sendMessage,
                           color: colorScheme.primary,

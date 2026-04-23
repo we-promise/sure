@@ -284,14 +284,6 @@ class ChatProvider with ChangeNotifier {
 
   /// Poll for updates
   Future<void> _pollForUpdates(String accessToken, String chatId) async {
-    if (_pollingStartTime != null &&
-        DateTime.now().difference(_pollingStartTime!) >= _pollingTimeout) {
-      _stopPolling();
-      _errorMessage = 'The assistant took too long to respond. Please try again.';
-      notifyListeners();
-      return;
-    }
-
     try {
       final result = await _chatService.getChat(
         accessToken: accessToken,
@@ -351,16 +343,28 @@ class ChatProvider with ChangeNotifier {
             _lastAssistantContentLength = newLen;
             // Content is growing — reset the inactivity clock.
             _pollingStartTime = DateTime.now();
+            return; // progress made, don't evaluate timeout this tick
           } else {
             // Content stable: no growth since last poll — done.
             _stopPolling();
             _lastAssistantContentLength = null;
             notifyListeners();
+            return;
           }
         }
       }
     } catch (e) {
+      // Network error — allow polling to continue; timeout check below will
+      // stop it if the deadline has passed.
       debugPrint('Polling error: ${e.toString()}');
+    }
+
+    // Evaluate timeout only after the attempt, and only when no progress was made.
+    if (_pollingStartTime != null &&
+        DateTime.now().difference(_pollingStartTime!) >= _pollingTimeout) {
+      _stopPolling();
+      _errorMessage = 'The assistant took too long to respond. Please try again.';
+      notifyListeners();
     }
   }
 
