@@ -1,0 +1,117 @@
+name: Google Play Upload
+
+on:
+  workflow_dispatch:
+    inputs:
+      notes:
+        description: "Google Play release notes"
+        required: false
+        type: string
+      track:
+        description: "Google Play track (internal, alpha, beta, production)"
+        required: false
+        default: "internal"
+        type: string
+  workflow_call:
+    inputs:
+      notes:
+        description: "Google Play release notes"
+        required: false
+        type: string
+      track:
+        description: "Google Play track (internal, alpha, beta, production)"
+        required: false
+        default: "internal"
+        type: string
+  push:
+    tags:
+      - 'android-v*'
+
+permissions:
+  contents: read
+
+jobs:
+  upload:
+    name: Upload Android AAB to Google Play
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Check Google Play credentials
+        id: check_prereqs
+        env:
+          GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_BASE64: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_BASE64 }}
+        run: |
+          set -eu
+
+          missing=()
+          if [ -z "${GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_BASE64-}" ]; then
+            missing+=("GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_BASE64")
+          fi
+
+          if [ "${#missing[@]}" -eq 0 ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "enabled=false" >> "$GITHUB_OUTPUT"
+          {
+            echo "Missing required Google Play secrets:"
+            printf " - %s\n" "${missing[@]}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Skip Google Play upload
+        if: ${{ steps.check_prereqs.outputs.enabled != 'true' }}
+        run: |
+          echo "Skipping Google Play upload because required credentials are not configured."
+
+      - name: Download Android AAB artifact
+        if: ${{ steps.check_prereqs.outputs.enabled == 'true' }}
+        uses: actions/download-artifact@v4.3.0
+        with:
+          name: app-release-aab
+          path: ${{ runner.temp }}/android-aab
+
+      - name: Prepare Google Play credentials
+        id: play_creds
+        if: ${{ steps.check_prereqs.outputs.enabled == 'true' }}
+        env:
+          GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_BASE64: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_BASE64 }}
+        run: |
+          set -euo pipefail
+          CREDENTIALS_PATH="$RUNNER_TEMP/google-play-service-account.json"
+          echo "$GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_BASE64" | base64 --decode > "$CREDENTIALS_PATH"
+          echo "credentials-path=$CREDENTIALS_PATH" >> "$GITHUB_OUTPUT"
+
+      - name: Resolve AAB path
+        id: aab
+        if: ${{ steps.check_prereqs.outputs.enabled == 'true' }}
+        run: |
+          set -euo pipefail
+          AAB_PATH="$(find "${{ runner.temp }}/android-aab" -name '*.aab' | head -n 1)"
+          if [ -z "$AAB_PATH" ]; then
+            echo "::error::No Android App Bundle (.aab) found in downloaded artifacts"
+            exit 1
+          fi
+          echo "aab-path=$AAB_PATH" >> "$GITHUB_OUTPUT"
+
+      - name: Create release notes file
+        id: notes
+        if: ${{ steps.check_prereqs.outputs.enabled == 'true' && inputs.notes != '' }}
+        run: |
+          set -euo pipefail
+          NOTES_DIR="$RUNNER_TEMP/google-play-whatsnew"
+          mkdir -p "$NOTES_DIR"
+          printf '%s\n' "${{ inputs.notes }}" > "$NOTES_DIR/whatsnew-en-US"
+          echo "notes-dir=$NOTES_DIR" >> "$GITHUB_OUTPUT"
+
+      - name: Upload to Google Play
+        if: ${{ steps.check_prereqs.outputs.enabled == 'true' }}
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJson: ${{ steps.play_creds.outputs.credentials-path }}
+          packageName: am.sure.mobile
+          releaseFiles: ${{ steps.aab.outputs.aab-path }}
+          track: ${{ inputs.track || 'internal' }}
+          status: completed
+          whatsNewDirectory: ${{ steps.notes.outputs.notes-dir }}
