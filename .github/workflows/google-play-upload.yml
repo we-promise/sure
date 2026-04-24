@@ -1,17 +1,6 @@
 name: Google Play Upload
 
 on:
-  workflow_dispatch:
-    inputs:
-      notes:
-        description: "Google Play release notes"
-        required: false
-        type: string
-      track:
-        description: "Google Play track (internal, alpha, beta, production)"
-        required: false
-        default: "internal"
-        type: string
   workflow_call:
     inputs:
       notes:
@@ -23,9 +12,9 @@ on:
         required: false
         default: "internal"
         type: string
-  push:
-    tags:
-      - 'android-v*'
+    secrets:
+      GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_BASE64:
+        required: false
 
 permissions:
   contents: read
@@ -112,6 +101,6 @@ jobs:
           serviceAccountJson: ${{ steps.play_creds.outputs.credentials-path }}
           packageName: am.sure.mobile
           releaseFiles: ${{ steps.aab.outputs.aab-path }}
-          track: ${{ inputs.track || 'internal' }}
+          tracks: ${{ inputs.track }}
           status: completed
           whatsNewDirectory: ${{ steps.notes.outputs.notes-dir }}
