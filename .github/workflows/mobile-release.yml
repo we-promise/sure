@@ -73,6 +73,7 @@ jobs:
 
   play-store:
     name: Upload Android to Google Play
+    if: ${{ needs.build.outputs.has_app_release_aab == 'true' }}
     needs: [build, prepare_release]
     uses: ./.github/workflows/google-play-upload.yml
     with:
