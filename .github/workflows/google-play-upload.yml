@@ -87,11 +87,13 @@ jobs:
       - name: Create release notes file
         id: notes
         if: ${{ steps.check_prereqs.outputs.enabled == 'true' && inputs.notes != '' }}
+        env:
+          NOTES: ${{ inputs.notes }}
         run: |
           set -euo pipefail
           NOTES_DIR="$RUNNER_TEMP/google-play-whatsnew"
           mkdir -p "$NOTES_DIR"
-          printf '%s\n' "${{ inputs.notes }}" > "$NOTES_DIR/whatsnew-en-US"
+          printf '%s\n' "$NOTES" > "$NOTES_DIR/whatsnew-en-US"
           echo "notes-dir=$NOTES_DIR" >> "$GITHUB_OUTPUT"
 
       - name: Upload to Google Play
