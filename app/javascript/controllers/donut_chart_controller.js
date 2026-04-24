@@ -26,12 +26,14 @@ export default class extends Controller {
     this.#draw();
     document.addEventListener("turbo:load", this.#redraw);
     this.element.addEventListener("mouseleave", this.#clearSegmentHover);
+    this.contentContainerTarget.addEventListener("mouseenter", this.#clearSegmentHover);
   }
 
   disconnect() {
     this.#teardown();
     document.removeEventListener("turbo:load", this.#redraw);
     this.element.removeEventListener("mouseleave", this.#clearSegmentHover);
+    this.contentContainerTarget.removeEventListener("mouseenter", this.#clearSegmentHover);
   }
 
   get #data() {
