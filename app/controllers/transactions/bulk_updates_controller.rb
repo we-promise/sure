@@ -1,7 +1,12 @@
+# frozen_string_literal: true
+
+# Controller for bulk updating multiple transactions at once
 class Transactions::BulkUpdatesController < ApplicationController
+  # Renders the bulk update form
   def new
   end
 
+  # Performs the bulk update on selected transactions
   def create
     # Skip split parents from bulk update - update children instead
     updated = Current.family
@@ -14,6 +19,8 @@ class Transactions::BulkUpdatesController < ApplicationController
   end
 
   private
+
+    # Returns the permitted params for bulk updating transactions
     def bulk_update_params
       params.require(:bulk_update)
             .permit(:date, :notes, :name, :category_id, :merchant_id, entry_ids: [], tag_ids: [])
