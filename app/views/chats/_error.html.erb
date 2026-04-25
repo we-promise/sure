@@ -3,12 +3,12 @@
 <div id="chat-error" class="px-3 py-2 bg-red-100 border border-red-500 rounded-lg">
   <% if chat.debug_mode? %>
     <div class="overflow-x-auto text-xs p-4 bg-red-200 rounded-md mb-2">
-      <code><%= chat.error %></code>
+      <code><%= chat.technical_error_message %></code>
     </div>
   <% end %>
 
   <div class="flex items-center justify-between gap-2">
-    <p class="text-xs text-red-500">Failed to generate response.  Please try again.</p>
+    <p class="text-xs text-red-500"><%= chat.presentable_error_message %></p>
 
     <%= render DS::Button.new(
       text: "Retry",

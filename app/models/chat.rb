@@ -1,6 +1,32 @@
 class Chat < ApplicationRecord
   include Debuggable
 
+  RATE_LIMIT_PATTERNS = [
+    /\b429\b/i,
+    /rate limit/i,
+    /too many requests/i,
+    /quota exceeded/i
+  ].freeze
+
+  TEMPORARY_PROVIDER_PATTERNS = [
+    /\b5\d\d\b/i,
+    /service unavailable/i,
+    /temporarily unavailable/i,
+    /gateway timeout/i,
+    /bad gateway/i,
+    /overloaded/i,
+    /timed? out/i,
+    /connection reset/i
+  ].freeze
+
+  AUTH_CONFIGURATION_PATTERNS = [
+    /unauthorized/i,
+    /authentication/i,
+    /invalid api key/i,
+    /incorrect api key/i,
+    /access token/i
+  ].freeze
+
   belongs_to :user
 
   has_one :viewer, class_name: "User", foreign_key: :last_viewed_chat_id, dependent: :nullify # "Last chat user has viewed"
@@ -52,14 +78,67 @@ class Chat < ApplicationRecord
   end
 
   def add_error(e)
-    update! error: e.to_json
+    update!(error: build_error_payload(e).to_json)
     broadcast_append target: "messages", partial: "chats/error", locals: { chat: self }
+  end
+
+  def presentable_error_message
+    parsed_error_payload["message"].presence || error
+  end
+
+  def technical_error_message
+    parsed_error_payload["technical_message"].presence || error
   end
 
   def clear_error
     update! error: nil
     broadcast_remove target: "chat-error"
   end
+
+  def build_error_payload(error)
+    technical_message = error_message_for(error)
+
+    {
+      message: classify_error_message(technical_message),
+      technical_message: technical_message,
+      type: error.class.name
+    }
+  end
+
+  def classify_error_message(message)
+    normalized_message = message.to_s.strip
+    return "Failed to generate a response. Please try again." if normalized_message.blank?
+
+    if RATE_LIMIT_PATTERNS.any? { |pattern| normalized_message.match?(pattern) }
+      "The AI provider is rate limited right now. Please try again in a few minutes."
+    elsif TEMPORARY_PROVIDER_PATTERNS.any? { |pattern| normalized_message.match?(pattern) }
+      "The AI provider is temporarily unavailable right now. Please try again in a few minutes."
+    elsif AUTH_CONFIGURATION_PATTERNS.any? { |pattern| normalized_message.match?(pattern) }
+      "The AI provider is not configured correctly. Please contact your administrator."
+    else
+      "Failed to generate a response. Please try again."
+    end
+  end
+
+  def parsed_error_payload
+    return {} if error.blank?
+
+    JSON.parse(error)
+  rescue JSON::ParserError
+    {}
+  end
+
+  def error_message_for(error)
+    error.respond_to?(:message) ? error.message.to_s : error.to_s
+  rescue
+    ""
+  end
+
+  def conversation_messages
+    messages.where(type: [ "UserMessage", "AssistantMessage" ])
+  end
+
+  private
 
   def assistant
     @assistant ||= Assistant.for_chat(self)
@@ -72,9 +151,5 @@ class Chat < ApplicationRecord
 
   def ask_assistant(message)
     assistant.respond_to(message)
-  end
-
-  def conversation_messages
-    messages.where(type: [ "UserMessage", "AssistantMessage" ])
   end
 end

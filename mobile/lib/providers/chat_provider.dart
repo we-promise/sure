@@ -345,6 +345,14 @@ class ChatProvider with ChangeNotifier {
           notifyListeners();
         }
 
+        if (updatedChat.error != null && updatedChat.error!.isNotEmpty) {
+          _currentChat = updatedChat;
+          _stopPolling();
+          _errorMessage = updatedChat.error;
+          notifyListeners();
+          return;
+        }
+
         final lastMessage = updatedChat.messages.lastOrNull;
         if (lastMessage != null && lastMessage.isAssistant) {
           final newLen = lastMessage.content.length;
