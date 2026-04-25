@@ -138,12 +138,6 @@ class Chat < ApplicationRecord
     messages.where(type: [ "UserMessage", "AssistantMessage" ])
   end
 
-  private
-
-  def assistant
-    @assistant ||= Assistant.for_chat(self)
-  end
-
   def ask_assistant_later(message)
     clear_error
     AssistantResponseJob.perform_later(message)
@@ -152,4 +146,10 @@ class Chat < ApplicationRecord
   def ask_assistant(message)
     assistant.respond_to(message)
   end
+
+  private
+
+    def assistant
+      @assistant ||= Assistant.for_chat(self)
+    end
 end
