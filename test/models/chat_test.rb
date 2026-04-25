@@ -76,5 +76,24 @@ class ChatTest < ActiveSupport::TestCase
     chat.add_error(StandardError.new("OpenAI API error 503: service unavailable"))
 
     assert_equal "The AI provider is temporarily unavailable right now. Please try again in a few minutes.", chat.presentable_error_message
+    assert_match "503", chat.technical_error_message
+  end
+
+  test "surfaces a friendly auth configuration error" do
+    chat = chats(:one)
+
+    chat.add_error(StandardError.new("OpenAI API error: invalid api key"))
+
+    assert_equal "The AI provider is not configured correctly. Please contact your administrator.", chat.presentable_error_message
+    assert_match "invalid api key", chat.technical_error_message
+  end
+
+  test "falls back to a friendly message for legacy serialized errors" do
+    chat = chats(:one)
+
+    chat.update!(error: "OpenAI API error 429: rate limit exceeded".to_json)
+
+    assert_equal "The AI provider is rate limited right now. Please try again in a few minutes.", chat.presentable_error_message
+    assert_equal "OpenAI API error 429: rate limit exceeded", chat.technical_error_message
   end
 end

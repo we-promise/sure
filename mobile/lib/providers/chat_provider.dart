@@ -346,7 +346,9 @@ class ChatProvider with ChangeNotifier {
         }
 
         if (updatedChat.error != null && updatedChat.error!.isNotEmpty) {
-          _currentChat = updatedChat;
+          if (!shouldUpdate) {
+            _currentChat = updatedChat;
+          }
           _stopPolling();
           _errorMessage = updatedChat.error;
           notifyListeners();

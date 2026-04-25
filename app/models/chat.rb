@@ -15,7 +15,7 @@ class Chat < ApplicationRecord
     /gateway timeout/i,
     /bad gateway/i,
     /overloaded/i,
-    /timed? out/i,
+    /time(?:out|d?\s*out)/i,
     /connection reset/i
   ].freeze
 
@@ -83,17 +83,32 @@ class Chat < ApplicationRecord
   end
 
   def presentable_error_message
-    parsed_error_payload["message"].presence || error
+    parsed_error_payload["message"].presence || classify_error_message(error)
   end
 
   def technical_error_message
-    parsed_error_payload["technical_message"].presence || error
+    parsed_error_payload["technical_message"].presence || parsed_legacy_error_message || error
   end
 
   def clear_error
     update! error: nil
     broadcast_remove target: "chat-error"
   end
+
+  def conversation_messages
+    messages.where(type: [ "UserMessage", "AssistantMessage" ])
+  end
+
+  def ask_assistant_later(message)
+    clear_error
+    AssistantResponseJob.perform_later(message)
+  end
+
+  def ask_assistant(message)
+    assistant.respond_to(message)
+  end
+
+  private
 
   def build_error_payload(error)
     technical_message = error_message_for(error)
@@ -122,9 +137,11 @@ class Chat < ApplicationRecord
 
   def parsed_error_payload
     return {} if error.blank?
+    return error if error.is_a?(Hash)
 
-    JSON.parse(error)
-  rescue JSON::ParserError
+    parsed = JSON.parse(error)
+    parsed.is_a?(Hash) ? parsed : {}
+  rescue JSON::ParserError, TypeError
     {}
   end
 
@@ -134,22 +151,14 @@ class Chat < ApplicationRecord
     ""
   end
 
-  def conversation_messages
-    messages.where(type: [ "UserMessage", "AssistantMessage" ])
+  def parsed_legacy_error_message
+    parsed = JSON.parse(error)
+    parsed.is_a?(String) ? parsed : nil
+  rescue JSON::ParserError, TypeError
+    nil
   end
 
-  def ask_assistant_later(message)
-    clear_error
-    AssistantResponseJob.perform_later(message)
+  def assistant
+    @assistant ||= Assistant.for_chat(self)
   end
-
-  def ask_assistant(message)
-    assistant.respond_to(message)
-  end
-
-  private
-
-    def assistant
-      @assistant ||= Assistant.for_chat(self)
-    end
 end
