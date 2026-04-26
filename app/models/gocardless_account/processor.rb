@@ -49,8 +49,11 @@ class GocardlessAccount::Processor
         return
       end
 
-      # For liability accounts, balance is stored as a positive debt amount.
-      balance = balance.abs if account.accountable_type == "Loan"
+      # For liability accounts, GoCardless returns outstanding debt as a negative value.
+      # Store as positive so the app displays the correct outstanding balance.
+      # (Unlike EnableBanking we have no credit_limit from GoCardless, so CreditCard
+      # shows raw debt rather than available credit — consistent with Loan handling.)
+      balance = balance.abs if account.accountable_type.in?(%w[Loan CreditCard])
 
       ActiveRecord::Base.transaction do
         account.update!(currency: currency)
