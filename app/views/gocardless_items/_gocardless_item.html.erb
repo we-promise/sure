@@ -20,25 +20,51 @@
             <% end %>
           </div>
           <p class="text-xs text-secondary">GoCardless</p>
-          <% if gocardless_item.status == "requires_update" %>
+          <% if gocardless_item.requires_update? || gocardless_item.agreement_expired? %>
             <div class="text-warning flex items-center gap-1">
               <%= icon "alert-triangle", size: "sm", color: "warning" %>
               <%= tag.span "Reconnect required" %>
             </div>
+          <% elsif gocardless_item.agreement_expiring_soon? %>
+            <div class="text-warning flex items-center gap-1">
+              <%= icon "alert-triangle", size: "sm", color: "warning" %>
+              <%= tag.span "Bank authorisation expires #{time_ago_in_words(gocardless_item.agreement_expires_at)}" %>
+            </div>
           <% else %>
-            <p class="text-secondary text-xs">
-              <% if gocardless_item.updated_at %>
-                Last synced <%= time_ago_in_words(gocardless_item.updated_at) %> ago
-              <% else %>
-                Never synced
-              <% end %>
-            </p>
+            <% if gocardless_item.last_synced_at %>
+              <p class="text-secondary text-xs">
+                Last synced <%= time_ago_in_words(gocardless_item.last_synced_at) %> ago
+                &middot;
+                <% freq_label = GocardlessItem::SYNC_FREQUENCY_OPTIONS.find { |_, v| v == gocardless_item.sync_frequency }&.first %>
+                <%= freq_label %>
+              </p>
+            <% elsif gocardless_item.accounts.any? %>
+              <div class="flex items-center gap-1 text-warning">
+                <%= icon "clock", size: "sm", class: "text-warning" %>
+                <span class="text-xs">First sync pending &mdash; GoCardless rate limits may delay this up to 24 hours</span>
+              </div>
+            <% else %>
+              <p class="text-secondary text-xs">Never synced</p>
+            <% end %>
           <% end %>
         </div>
       </div>
 
       <% if Current.user&.admin? %>
         <div class="flex items-center gap-2">
+          <% if !gocardless_item.scheduled_for_deletion? && (gocardless_item.requires_update? || gocardless_item.agreement_expired?) %>
+            <%= link_to new_item_gocardless_items_path,
+                        class: "inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-warning border border-warning hover:bg-warning/10 transition-colors" do %>
+              <%= icon "refresh-cw", size: "xs" %>
+              Reconnect
+            <% end %>
+          <% elsif !gocardless_item.scheduled_for_deletion? %>
+            <%= icon(
+              "refresh-cw",
+              as_button: true,
+              href: sync_gocardless_item_path(gocardless_item)
+            ) %>
+          <% end %>
           <%= render DS::Menu.new do |menu| %>
             <% menu.with_item(
               variant: "button",
@@ -59,7 +85,30 @@
           <%= render "accounts/index/account_groups", accounts: gocardless_item.accounts %>
         <% end %>
 
-        <% if gocardless_item.accounts.empty? %>
+        <%# Sync summary — mirrors the pattern used by LunchFlow, Plaid, SimpleFIN etc. %>
+        <% stats = gocardless_item.syncs.ordered.first&.sync_stats || {} %>
+        <%= render ProviderSyncSummary.new(
+          stats: stats,
+          provider_item: gocardless_item,
+          institutions_count: 1
+        ) %>
+
+        <% unlinked_count = gocardless_item.unlinked_accounts_count %>
+        <% linked_count   = gocardless_item.linked_accounts_count %>
+        <% total_count    = gocardless_item.total_accounts_count %>
+
+        <% if unlinked_count > 0 %>
+          <div class="p-4 flex flex-col gap-3 items-center justify-center">
+            <p class="text-primary font-medium text-sm">Accounts need setup</p>
+            <p class="text-secondary text-sm"><%= linked_count %> of <%= total_count %> accounts configured — <%= unlinked_count %> still need account types assigned.</p>
+            <%= render DS::Link.new(
+              text: "Set up accounts",
+              icon: "settings",
+              variant: "primary",
+              href: setup_accounts_gocardless_item_path(gocardless_item)
+            ) %>
+          </div>
+        <% elsif gocardless_item.accounts.empty? && total_count == 0 %>
           <div class="p-4 flex flex-col gap-3 items-center justify-center">
             <p class="text-primary font-medium text-sm">No accounts found</p>
             <p class="text-secondary text-sm">No accounts were imported yet. Try syncing.</p>

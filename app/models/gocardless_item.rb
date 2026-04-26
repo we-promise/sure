@@ -2,10 +2,17 @@ class GocardlessItem < ApplicationRecord
   include Syncable, Provided, Unlinking, Encryptable
 
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
+  enum :sync_frequency, { manual: "manual", twice_weekly: "twice_weekly", thrice_weekly: "thrice_weekly" }, default: :manual, prefix: :sync
+
+  SYNC_FREQUENCY_OPTIONS = [
+    [ "Manual only",        "manual"        ],
+    [ "Twice a week",       "twice_weekly"  ],
+    [ "Three times a week", "thrice_weekly" ]
+  ].freeze
 
   if Rails.application.credentials.active_record_encryption.present?
-    encrypts :access_token, deterministic: true
-    encrypts :refresh_token, deterministic: true
+    encrypts :access_token
+    encrypts :refresh_token
   end
 
   validates :name, presence: true
@@ -27,7 +34,17 @@ class GocardlessItem < ApplicationRecord
   end
 
   def bank_connected?
-    requisition_id.present? && status == "good"
+    requisition_id.present? && status == "good" && !agreement_expired?
+  end
+
+  def agreement_expired?
+    agreement_expires_at.present? && agreement_expires_at < Time.current
+  end
+
+  def agreement_expiring_soon?
+    agreement_expires_at.present? &&
+      agreement_expires_at > Time.current &&
+      agreement_expires_at < 14.days.from_now
   end
 
   def access_token_expired?
@@ -60,23 +77,7 @@ class GocardlessItem < ApplicationRecord
     results = []
     gocardless_accounts.joins(:account).merge(Account.visible).each do |gc_account|
       begin
-        # Update balance for each linked account
-        client = gocardless_client
-        next unless client
-
-        data     = client.balances(gc_account.account_id)
-        balances = data["balances"] || []
-
-        bal = balances.find { |b| b["balanceType"] == "interimAvailable" } ||
-              balances.find { |b| b["balanceType"] == "closingBooked" } ||
-              balances.first
-
-        if bal
-          amount   = bal.dig("balanceAmount", "amount").to_d
-          currency = bal.dig("balanceAmount", "currency") || gc_account.currency
-          gc_account.update!(current_balance: amount, currency: currency)
-        end
-
+        GocardlessAccount::Processor.new(gc_account).process
         results << { gocardless_account_id: gc_account.id, success: true }
       rescue => e
         Rails.logger.error "GocardlessItem #{id} - Failed to process account #{gc_account.id}: #{e.message}"
@@ -109,15 +110,19 @@ class GocardlessItem < ApplicationRecord
   end
 
   def linked_accounts_count
-    gocardless_accounts.joins(:account_provider).count
+    gocardless_accounts.linked.count
   end
 
   def unlinked_accounts_count
-    gocardless_accounts.left_joins(:account_provider).where(account_providers: { id: nil }).count
+    gocardless_accounts.unlinked.count
+  end
+
+  def skipped_accounts_count
+    gocardless_accounts.skipped.count
   end
 
   def total_accounts_count
-    gocardless_accounts.count
+    gocardless_accounts.active.count
   end
 
   def institution_display_name
@@ -142,9 +147,12 @@ class GocardlessItem < ApplicationRecord
       sdk        = Provider::Gocardless.new(secret_id, secret_key)
       result     = sdk.refresh_access_token(refresh_token)
 
+      # GoCardless returns a new refresh token on every refresh call — must save it
+      # or the 31-day refresh token will expire and force full re-authorisation.
       update!(
         access_token:            result["access"],
-        access_token_expires_at: result["access_expires"].seconds.from_now
+        access_token_expires_at: result["access_expires"].seconds.from_now,
+        refresh_token:           result["refresh"]
       )
     rescue Provider::Gocardless::AuthError
       update!(status: :requires_update)

@@ -6,6 +6,9 @@ class GocardlessItem::Importer
     @client          = client
   end
 
+  # Fetches raw data from the GoCardless API and stores it on each GocardlessAccount.
+  # Does NOT create Account entries — that is handled by GocardlessAccount::Processor
+  # during the process phase (called separately from GocardlessItem::Syncer).
   def import
     unless gocardless_item.bank_connected?
       gocardless_item.update!(status: :requires_update)
@@ -15,49 +18,60 @@ class GocardlessItem::Importer
     accounts_updated      = 0
     accounts_failed       = 0
     transactions_imported = 0
-    transactions_failed   = 0
 
-    gocardless_item.gocardless_accounts.each do |gc_account|
+    gocardless_item.gocardless_accounts.active.each do |gc_account|
       begin
-        update_balance(gc_account)
-        count = import_transactions(gc_account)
+        # Balance fetch is best-effort — some banks (e.g. Monzo) return errors on
+        # this endpoint intermittently. A stale balance is preferable to a failed sync.
+        begin
+          fetch_and_store_balance(gc_account)
+        rescue Provider::Gocardless::AuthError
+          raise  # Re-raise auth errors so the outer rescue can mark status
+        rescue Provider::Gocardless::RateLimitError
+          raise  # Re-raise so the outer rescue aborts the whole sync cleanly
+        rescue => e
+          Rails.logger.warn "GocardlessItem::Importer - Balance fetch failed for gocardless_account #{gc_account.id} (#{e.class}: #{e.message}); continuing with stale balance"
+        end
+
+        count = fetch_and_store_transactions(gc_account)
         transactions_imported += count
-        accounts_updated += 1
+        accounts_updated      += 1
+      rescue Provider::Gocardless::RateLimitError => e
+        # Rate limit hit — abort the entire import so the job fails cleanly and
+        # Sidekiq's exponential backoff retries after a meaningful delay.
+        Rails.logger.warn "GocardlessItem::Importer - Rate limited by GoCardless; aborting sync to avoid retry spiral"
+        raise
       rescue Provider::Gocardless::AuthError
         gocardless_item.update!(status: :requires_update)
         accounts_failed += 1
-        Rails.logger.error "GocardlessItem::Importer - Auth error for account #{gc_account.id}"
+        Rails.logger.error "GocardlessItem::Importer - Auth error for gocardless_account #{gc_account.id}; marked item for reconnect"
       rescue Provider::Gocardless::ApiError => e
         accounts_failed += 1
-        Rails.logger.error "GocardlessItem::Importer - API error for account #{gc_account.id}: #{e.message}"
+        Rails.logger.error "GocardlessItem::Importer - API error for gocardless_account #{gc_account.id}: #{e.message}"
       rescue => e
         accounts_failed += 1
-        Rails.logger.error "GocardlessItem::Importer - Unexpected error for account #{gc_account.id}: #{e.class} - #{e.message}"
+        Rails.logger.error "GocardlessItem::Importer - Unexpected error for gocardless_account #{gc_account.id}: #{e.class} - #{e.message}"
       end
     end
 
-    success = accounts_failed == 0 && transactions_failed == 0
-
-    result = {
-      success:              success,
-      accounts_updated:     accounts_updated,
-      accounts_failed:      accounts_failed,
-      transactions_imported: transactions_imported,
-      transactions_failed:  transactions_failed
+    success = accounts_failed == 0
+    result  = {
+      success:               success,
+      accounts_updated:      accounts_updated,
+      accounts_failed:       accounts_failed,
+      transactions_imported: transactions_imported
     }
-
     result[:error] = "Some accounts failed to sync" unless success
     result
   end
 
   private
 
-    def update_balance(gc_account)
+    def fetch_and_store_balance(gc_account)
       data     = client.balances(gc_account.account_id)
       balances = data["balances"] || []
       return if balances.empty?
 
-      # Prefer interimAvailable, fall back to closingBooked, then first available
       bal = balances.find { |b| b["balanceType"] == "interimAvailable" } ||
             balances.find { |b| b["balanceType"] == "closingBooked" } ||
             balances.first
@@ -65,90 +79,125 @@ class GocardlessItem::Importer
       return unless bal
 
       amount   = bal.dig("balanceAmount", "amount").to_d
-      currency = bal.dig("balanceAmount", "currency") || gc_account.currency
+      currency = bal.dig("balanceAmount", "currency").presence || gc_account.currency
 
       gc_account.update!(current_balance: amount, currency: currency)
     end
 
-    def import_transactions(gc_account)
+    def fetch_and_store_transactions(gc_account)
       start_date = determine_start_date(gc_account)
       data       = client.transactions(gc_account.account_id, date_from: start_date)
-      booked     = data.dig("transactions", "booked") || []
 
-      return 0 if booked.empty?
+      booked  = data.dig("transactions", "booked")  || []
+      pending = data.dig("transactions", "pending") || []
 
-      existing_ids = existing_transaction_ids(gc_account)
-      new_count    = 0
+      booked  = filter_by_date(booked, start_date)
+      pending = filter_by_date(pending, start_date)
 
-      booked.each do |txn|
-        ext_id = txn["transactionId"] || txn["internalTransactionId"]
-        next if ext_id.blank?
-        next if existing_ids.include?(ext_id)
+      booked  = deduplicate_api_response(booked)
+      pending = deduplicate_api_response(pending)
 
-        create_transaction(gc_account, txn)
-        new_count += 1
-      rescue => e
-        Rails.logger.error "GocardlessItem::Importer - Failed to import transaction #{ext_id}: #{e.message}"
+      # Tag pending transactions so the Entry processor and ProviderImportAdapter
+      # can identify them for reconciliation when the posted version arrives.
+      pending = pending.map { |t| t.merge("_pending" => true) }
+
+      # Remove any stored pending entries that have now settled as a booked transaction
+      # (matched by transactionId or by internalTransactionId).
+      # internalTransactionId is always unique; transactionId can collide across accounts
+      booked_ids = booked.map { |t|
+        t["internalTransactionId"].presence || t["transactionId"].presence
+      }.compact.to_set
+
+      existing_payload = gc_account.raw_transactions_payload.to_a
+
+      # Drop stale pending entries that are now booked
+      existing_payload.reject! do |t|
+        t["_pending"] && (booked_ids.include?(t["internalTransactionId"].to_s.presence) ||
+                          booked_ids.include?(t["transactionId"].to_s.presence))
       end
 
-      # Store raw payload for reference
-      gc_account.update!(raw_transactions_payload: booked)
+      existing_ids = existing_payload.map { |t|
+        (t["internalTransactionId"] || t[:internalTransactionId]).presence ||
+          (t["transactionId"] || t[:transactionId]).presence
+      }.compact.to_set
 
-      new_count
+      new_booked = booked.reject do |txn|
+        id = txn["internalTransactionId"].presence || txn["transactionId"].presence
+        id.present? && existing_ids.include?(id)
+      end
+
+      # For pending, always replace with the freshest set (pending statuses change rapidly)
+      existing_payload.reject! { |t| t["_pending"] }
+      new_transactions = new_booked + pending
+
+      combined = filter_by_date(existing_payload + new_transactions, start_date)
+
+      if combined.length != existing_payload.length || new_transactions.any?
+        gc_account.update!(raw_transactions_payload: combined)
+      end
+
+      new_booked.count
     end
 
-    def create_transaction(gc_account, txn)
-      account  = gc_account.account
-      return unless account
+    def filter_by_date(transactions, start_date)
+      return transactions unless start_date
 
-      amount   = txn.dig("transactionAmount", "amount").to_d
-      currency = txn.dig("transactionAmount", "currency") || gc_account.currency
-      date     = parse_date(txn["bookingDate"] || txn["valueDate"])
-      name     = extract_name(txn)
-      ext_id   = txn["transactionId"] || txn["internalTransactionId"]
+      transactions.reject do |txn|
+        date_str = txn["bookingDate"] || txn["valueDate"]
+        next false if date_str.blank?
 
-      account.entries.create!(
-        name:        name,
-        date:        date,
-        amount:      amount,
-        currency:    currency,
-        entryable:   Transaction.new,
-        import_id:   ext_id
-      )
+        begin
+          Date.parse(date_str.to_s) < start_date
+        rescue ArgumentError
+          false
+        end
+      end
     end
 
-    def extract_name(txn)
-      txn["remittanceInformationUnstructured"] ||
-        txn["remittanceInformationStructured"] ||
-        txn["creditorName"] ||
-        txn["debtorName"] ||
-        "GoCardless transaction"
+    def deduplicate_api_response(transactions)
+      seen       = {}
+      duplicates = 0
+
+      result = transactions.select do |txn|
+        key = build_content_key(txn)
+        if seen[key]
+          duplicates += 1
+          false
+        else
+          seen[key] = true
+          true
+        end
+      end
+
+      if duplicates > 0
+        Rails.logger.info "GocardlessItem::Importer - Removed #{duplicates} content-level duplicate(s) from API response"
+      end
+
+      result
+    end
+
+    def build_content_key(txn)
+      [
+        txn["transactionId"],
+        txn["internalTransactionId"],
+        txn["bookingDate"] || txn["valueDate"],
+        txn.dig("transactionAmount", "amount"),
+        txn.dig("transactionAmount", "currency"),
+        txn["creditorName"] || txn["debtorName"],
+        txn["remittanceInformationUnstructured"]
+      ].map(&:to_s).join("\x1F")
     end
 
     def determine_start_date(gc_account)
-      has_transactions = gc_account.raw_transactions_payload.to_a.any?
+      # Use persisted entries (not raw_transactions_payload) to distinguish initial
+      # vs incremental — raw payload is written even on failed sync attempts.
+      account = gc_account.current_account
+      has_synced_entries = account&.entries&.where(source: "gocardless")&.exists? || false
 
-      if has_transactions
-        # Incremental — go back 7 days to catch late-settling transactions
+      if has_synced_entries
         7.days.ago.to_date
       else
-        # Initial sync — go back as far as GoCardless allows (730 days)
-        gocardless_item.sync_start_date || 90.days.ago.to_date
+        gocardless_item.sync_start_date&.to_date || 90.days.ago.to_date
       end
-    end
-
-    def existing_transaction_ids(gc_account)
-      gc_account.account
-                &.entries
-                &.where.not(import_id: nil)
-                &.pluck(:import_id)
-                &.to_set || Set.new
-    end
-
-    def parse_date(date_str)
-      return Date.current if date_str.blank?
-      Date.parse(date_str.to_s)
-    rescue ArgumentError
-      Date.current
     end
 end

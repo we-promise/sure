@@ -19,15 +19,32 @@
                   class: "space-y-6" do |form| %>
 
       <div class="space-y-4">
+        <% if @rate_limited %>
+          <div class="bg-warning/10 border border-warning rounded-lg p-4">
+            <div class="flex items-start gap-3">
+              <%= icon "alert-triangle", size: "sm", class: "text-warning mt-0.5 flex-shrink-0" %>
+              <div>
+                <p class="text-sm font-medium text-warning mb-1">GoCardless rate limit reached</p>
+                <p class="text-xs text-warning/80">
+                  Balance and account name data could not be fetched right now — GoCardless limits
+                  API calls per account per day. Your accounts will be created with placeholder names
+                  and balances will update automatically on the next sync (usually within 24 hours).
+                  You can rename accounts any time after creation.
+                </p>
+              </div>
+            </div>
+          </div>
+        <% end %>
+
         <div class="bg-surface border border-primary p-4 rounded-lg">
           <div class="flex items-start gap-3">
             <%= icon "info", size: "sm", class: "text-primary mt-0.5 flex-shrink-0" %>
             <div>
               <p class="text-sm text-primary mb-1">
-                <strong>Choose the correct account type for each bank account:</strong>
+                <strong>Select the accounts you want to import:</strong>
               </p>
               <p class="text-xs text-secondary">
-                Balances are fetched from GoCardless. Select "Skip" to ignore an account.
+                Check the accounts to include. Choose the correct type for each. Unchecked accounts will be skipped.
               </p>
             </div>
           </div>
@@ -36,53 +53,87 @@
         <div class="bg-surface border border-primary p-4 rounded-lg">
           <div class="flex items-start gap-3">
             <%= icon "calendar", size: "sm", class: "text-primary mt-0.5 flex-shrink-0" %>
-            <div class="flex-1">
-              <p class="text-sm text-primary mb-3">
-                <strong>Historical data range:</strong>
-              </p>
-              <%= form.date_field :sync_start_date,
-                    label: "Start syncing transactions from:",
-                    value: @gocardless_item.sync_start_date || 3.months.ago.to_date,
-                    min: 2.years.ago.to_date,
-                    max: Date.current,
-                    class: "w-full max-w-xs rounded-md border border-primary px-3 py-2 text-sm bg-container-inset text-primary" %>
+            <div class="flex-1 space-y-4">
+              <div>
+                <p class="text-sm text-primary mb-1"><strong>Historical data range:</strong></p>
+                <p class="text-xs text-secondary mb-2">Fetch transactions from this date onwards on first sync.</p>
+                <%= form.date_field :sync_start_date,
+                      value: @gocardless_item.sync_start_date&.to_date || 3.months.ago.to_date,
+                      min: 2.years.ago.to_date,
+                      max: Date.current,
+                      class: "w-full max-w-xs rounded-md border border-primary px-3 py-2 text-sm bg-container-inset text-primary" %>
+              </div>
+
+              <div>
+                <p class="text-sm text-primary mb-1"><strong>Sync frequency:</strong></p>
+                <p class="text-xs text-secondary mb-2">
+                  GoCardless limits API calls. Choose how often to allow background syncing.
+                  You can always trigger a manual sync at any time.
+                </p>
+                <div class="flex flex-col gap-2">
+                  <% GocardlessItem::SYNC_FREQUENCY_OPTIONS.each do |label, value| %>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                      <%= radio_button_tag :sync_frequency, value,
+                            @gocardless_item.sync_frequency == value,
+                            class: "accent-primary" %>
+                      <span class="text-sm text-primary"><%= label %></span>
+                      <% if value == "manual" %>
+                        <span class="text-xs text-secondary">(recommended — you control when)</span>
+                      <% end %>
+                    </label>
+                  <% end %>
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
         <% @gocardless_accounts.each do |gc_account| %>
-          <div class="border border-primary rounded-lg p-4">
-            <div class="flex items-center justify-between mb-3">
-              <div>
-                <h3 class="font-medium text-primary"><%= gc_account.name %></h3>
-                <div class="text-sm text-secondary space-y-0.5">
-                  <% if gc_account.current_balance.present? %>
-                    <p>Balance: <%= number_to_currency(gc_account.current_balance, unit: gc_account.currency) %></p>
-                  <% end %>
-                  <p><%= gc_account.currency %></p>
+          <div class="border border-primary rounded-lg p-4"
+               data-controller="account-type-selector"
+               data-account-type-selector-account-id-value="<%= gc_account.id %>">
+            <div class="flex items-start gap-3 mb-3">
+              <label class="flex items-center gap-3 cursor-pointer flex-1">
+                <%= check_box_tag "include_accounts[#{gc_account.id}]", "1", !gc_account.skipped?,
+                      class: "accent-primary mt-0.5",
+                      data: { action: "change->account-type-selector#toggleInclude" } %>
+                <div>
+                  <div class="flex items-center gap-2">
+                    <h3 class="font-medium text-primary"><%= gc_account.name %></h3>
+                    <% if gc_account.skipped? %>
+                      <span class="text-xs text-secondary bg-container-inset px-1.5 py-0.5 rounded">Previously skipped</span>
+                    <% end %>
+                  </div>
+                  <div class="text-sm text-secondary space-y-0.5">
+                    <% if gc_account.current_balance.present? %>
+                      <p class="text-primary font-medium"><%= gc_account.currency %> <%= number_with_precision(gc_account.current_balance, precision: 2) %></p>
+                    <% else %>
+                      <p class="text-secondary"><%= gc_account.currency %> &mdash; balance not available</p>
+                    <% end %>
+                  </div>
                 </div>
-              </div>
+              </label>
             </div>
 
-            <div class="space-y-3"
-                 data-controller="account-type-selector"
-                 data-account-type-selector-account-id-value="<%= gc_account.id %>">
-              <div>
-                <%= label_tag "account_types[#{gc_account.id}]", "Account type:",
-                              class: "block text-sm font-medium text-primary mb-2" %>
-                <%= select_tag "account_types[#{gc_account.id}]",
-                               options_for_select(@account_type_options, "Depository"),
-                               class: "appearance-none bg-container border border-primary rounded-md px-3 py-2 text-sm leading-6 text-primary focus:outline-none w-full",
-                               data: { action: "change->account-type-selector#updateSubtype" } %>
-              </div>
+            <div data-account-type-selector-target="typeFields">
+              <div class="space-y-3">
+                <div>
+                  <%= label_tag "account_types[#{gc_account.id}]", "Account type:",
+                                class: "block text-sm font-medium text-primary mb-2" %>
+                  <%= select_tag "account_types[#{gc_account.id}]",
+                                 options_for_select(@account_type_options, "Depository"),
+                                 class: "appearance-none bg-container border border-primary rounded-md px-3 py-2 text-sm leading-6 text-primary focus:outline-none w-full",
+                                 data: { action: "change->account-type-selector#updateSubtype" } %>
+                </div>
 
-              <div data-account-type-selector-target="subtypeContainer">
-                <% @subtype_options.each do |account_type, subtype_config| %>
-                  <%= render "gocardless_items/subtype_select",
-                             account_type: account_type,
-                             subtype_config: subtype_config,
-                             gc_account: gc_account %>
-                <% end %>
+                <div data-account-type-selector-target="subtypeContainer">
+                  <% @subtype_options.each do |account_type, subtype_config| %>
+                    <%= render "gocardless_items/subtype_select",
+                               account_type: account_type,
+                               subtype_config: subtype_config,
+                               gc_account: gc_account %>
+                  <% end %>
+                </div>
               </div>
             </div>
           </div>

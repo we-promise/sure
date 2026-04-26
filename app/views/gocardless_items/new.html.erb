@@ -4,13 +4,13 @@
 
     <% dialog.with_body do %>
       <% if Provider::GocardlessAdapter.configured? %>
-        <% items = Current.family.gocardless_items.active.ordered %>
+        <% items = @gocardless_items || Current.family.gocardless_items.active.ordered.includes(:gocardless_accounts) %>
         <% if items.any? %>
           <div class="space-y-3">
             <% items.each do |item| %>
               <div class="flex items-center justify-between p-3 rounded-lg bg-container border border-primary">
                 <div class="flex items-center gap-3">
-                  <% if item.status == "requires_update" %>
+                  <% if item.requires_update? %>
                     <div class="w-2 h-2 bg-warning rounded-full"></div>
                     <div>
                       <p class="text-sm font-medium text-primary"><%= item.institution_name %></p>
@@ -21,7 +21,7 @@
                     <div>
                       <p class="text-sm font-medium text-primary"><%= item.institution_name %></p>
                       <p class="text-xs text-secondary">
-                        <%= pluralize(item.gocardless_accounts.count, "account") %> connected
+                        <%= pluralize(item.gocardless_accounts.size, "account") %> connected
                       </p>
                     </div>
                   <% end %>
@@ -31,13 +31,17 @@
 
             <div class="border-t border-primary pt-3">
               <p class="text-sm font-medium text-primary mb-2">Add another bank</p>
-              <div data-controller="gocardless-bank-search">
+              <div data-controller="gocardless-bank-search" class="space-y-2">
+                <%= select_tag :country,
+                      options_for_select(@countries.map { |code, name| [name, code] }, "gb"),
+                      class: "w-full appearance-none bg-container border border-primary rounded-lg px-3 py-2 text-sm text-primary focus:outline-none focus:ring-1 focus:ring-primary",
+                      data: { action: "change->gocardless-bank-search#updateCountry" } %>
                 <input type="text"
                        placeholder="Search for your bank..."
                        class="w-full px-3 py-2 text-sm border border-primary rounded-lg bg-transparent text-primary placeholder:text-secondary focus:outline-none focus:ring-1 focus:ring-primary"
                        autocomplete="off"
                        data-action="input->gocardless-bank-search#search" />
-                <div data-gocardless-bank-search-target="results" class="space-y-1 mt-2"></div>
+                <div data-gocardless-bank-search-target="results" class="space-y-1"></div>
               </div>
             </div>
           </div>
@@ -45,11 +49,15 @@
           <%# No banks connected yet — show search directly %>
           <div data-controller="gocardless-bank-search" class="space-y-3">
             <p class="text-sm text-secondary">
-              Search for your UK bank below. You will be redirected to your bank
+              Select your country and search for your bank below. You will be redirected
               to authorise read-only access, then brought back here.
             </p>
+            <%= select_tag :country,
+                  options_for_select(@countries.map { |code, name| [name, code] }, "gb"),
+                  class: "w-full appearance-none bg-container border border-primary rounded-lg px-3 py-2 text-sm text-primary focus:outline-none focus:ring-1 focus:ring-primary",
+                  data: { action: "change->gocardless-bank-search#updateCountry" } %>
             <input type="text"
-                   placeholder="Search for your bank (e.g. Barclays, Monzo, NatWest)..."
+                   placeholder="Search for your bank..."
                    class="w-full px-3 py-2 text-sm border border-primary rounded-lg bg-transparent text-primary placeholder:text-secondary focus:outline-none focus:ring-1 focus:ring-primary"
                    autocomplete="off"
                    data-action="input->gocardless-bank-search#search" />

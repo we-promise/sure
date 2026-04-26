@@ -5,7 +5,7 @@ module GocardlessItem::Unlinking
     results = []
 
     gocardless_accounts.find_each do |gc_account|
-      links    = AccountProvider.where(provider_type: "GocardlessAccount", provider_id: gc_account.id).to_a
+      links    = AccountProvider.where(provider_type: GocardlessAccount.polymorphic_name, provider_id: gc_account.id).to_a
       link_ids = links.map(&:id)
 
       result = {

@@ -10,6 +10,11 @@ class GocardlessAccount < ApplicationRecord
 
   validates :name, :currency, presence: true
 
+  scope :active,   -> { where(skipped: false) }
+  scope :skipped,  -> { where(skipped: true) }
+  scope :linked,   -> { joins(:account_provider) }
+  scope :unlinked, -> { active.left_joins(:account_provider).where(account_providers: { id: nil }) }
+
   # Helper to get account using account_providers system
   def current_account
     account
@@ -23,7 +28,7 @@ class GocardlessAccount < ApplicationRecord
     # TODO: Customize this mapping based on your provider's API response
     update!(
       current_balance: snapshot[:balance] || snapshot[:current_balance],
-      currency: parse_currency(snapshot[:currency]) || "USD",
+      currency: parse_currency(snapshot[:currency]) || currency || "GBP",
       name: snapshot[:name],
       account_id: snapshot[:id]&.to_s,
       account_status: snapshot[:status],
@@ -47,6 +52,6 @@ class GocardlessAccount < ApplicationRecord
   private
 
     def log_invalid_currency(currency_value)
-      Rails.logger.warn("Invalid currency code '#{currency_value}' for Gocardless account #{id}, defaulting to USD")
+      Rails.logger.warn("Invalid currency code '#{currency_value}' for Gocardless account #{id} — GoCardless API should always return a valid ISO code; falling back to existing account currency")
     end
 end

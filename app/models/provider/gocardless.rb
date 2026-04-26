@@ -7,6 +7,8 @@ class Provider::Gocardless
   class ApiError       < StandardError; end
   class RateLimitError < StandardError; end
 
+  attr_reader :last_rate_limit_remaining
+
   def initialize(secret_id, secret_key)
     @secret_id    = secret_id
     @secret_key   = secret_key
@@ -116,6 +118,8 @@ class Provider::Gocardless
     end
 
     def handle_response(response)
+      @last_rate_limit_remaining = response.headers["x-ratelimit-remaining"]&.to_i
+
       case response.status
       when 200..299
         JSON.parse(response.body)

@@ -15,7 +15,8 @@ class AccountsController < ApplicationController
     @simplefin_items = visible_provider_items(family.simplefin_items.ordered.includes(:syncs))
     @lunchflow_items = visible_provider_items(family.lunchflow_items.ordered.includes(:syncs, :lunchflow_accounts))
     @enable_banking_items = visible_provider_items(family.enable_banking_items.ordered.includes(:syncs))
-    @gocardless_items = visible_provider_items(family.gocardless_items.active.ordered.includes(:syncs, :gocardless_accounts))
+    @gocardless_items = visible_provider_items(family.gocardless_items.active.ordered.includes(:syncs, :gocardless_accounts, :accounts))
+    @gocardless_configured = Provider::GocardlessAdapter.configured?
     @coinstats_items = visible_provider_items(family.coinstats_items.ordered.includes(:coinstats_accounts, :accounts, :syncs))
     @mercury_items = visible_provider_items(family.mercury_items.ordered.includes(:syncs, :mercury_accounts))
     @coinbase_items = visible_provider_items(family.coinbase_items.ordered.includes(:coinbase_accounts, :accounts, :syncs))

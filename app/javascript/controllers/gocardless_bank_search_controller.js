@@ -2,9 +2,19 @@ import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
   static targets = ["results"]
+  static values  = { country: { type: String, default: "gb" } }
 
   connect() {
     this.searchTimeout = null
+  }
+
+  disconnect() {
+    clearTimeout(this.searchTimeout)
+  }
+
+  updateCountry(event) {
+    this.countryValue = event.target.value
+    this.resultsTarget.innerHTML = ""
   }
 
   search(event) {
@@ -20,6 +30,7 @@ export default class extends Controller {
       this.fetchBanks(query)
     }, 300)
   }
+
   async fetchBanks(query) {
     this.resultsTarget.innerHTML = `
       <p class="text-xs text-secondary px-1">Searching...</p>
@@ -27,12 +38,17 @@ export default class extends Controller {
 
     try {
       const response = await fetch(
-        `/gocardless_items/search_banks?q=${encodeURIComponent(query)}`,
+        `/gocardless_items/search_banks?q=${encodeURIComponent(query)}&country=${encodeURIComponent(this.countryValue)}`,
         { headers: { "Accept": "application/json" } }
       )
+
+      if (!response.ok) {
+        throw new Error(`Server error: ${response.status}`)
+      }
+
       const banks = await response.json()
 
-      if (banks.length === 0) {
+      if (!Array.isArray(banks) || banks.length === 0) {
         this.resultsTarget.innerHTML = `
           <p class="text-xs text-secondary px-1">No banks found — try a different search term.</p>
         `

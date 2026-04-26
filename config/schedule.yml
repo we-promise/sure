@@ -25,6 +25,12 @@ sync_hourly:
   queue: "scheduled"
   description: "Syncs provider items that opt-in to hourly syncing"
 
+sync_gocardless:
+  cron: "0 6 * * *" # daily at 6:00 AM UTC
+  class: "SyncGocardlessScheduledJob"
+  queue: "scheduled"
+  description: "Syncs GoCardless items based on their configured frequency (twice/thrice weekly)"
+
 clean_data:
   cron: "0 3 * * *" # daily at 3:00 AM
   class: "DataCleanerJob"

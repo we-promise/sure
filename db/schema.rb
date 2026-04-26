@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_04_21_112356) do
+ActiveRecord::Schema[7.2].define(version: 2026_04_25_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -647,8 +647,10 @@ ActiveRecord::Schema[7.2].define(version: 2026_04_21_112356) do
     t.jsonb "raw_transactions_payload"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.boolean "skipped", default: false, null: false
     t.index ["account_id"], name: "index_gocardless_accounts_on_account_id"
     t.index ["gocardless_item_id"], name: "index_gocardless_accounts_on_gocardless_item_id"
+    t.index ["skipped"], name: "index_gocardless_accounts_on_skipped"
   end
 
   create_table "gocardless_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -667,7 +669,15 @@ ActiveRecord::Schema[7.2].define(version: 2026_04_21_112356) do
     t.jsonb "raw_institution_payload"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "requisition_id"
+    t.string "agreement_id"
+    t.text "access_token"
+    t.text "refresh_token"
+    t.datetime "access_token_expires_at"
+    t.datetime "agreement_expires_at"
+    t.string "sync_frequency", default: "manual", null: false
     t.index ["family_id"], name: "index_gocardless_items_on_family_id"
+    t.index ["requisition_id"], name: "index_gocardless_items_on_requisition_id"
     t.index ["status"], name: "index_gocardless_items_on_status"
   end
 

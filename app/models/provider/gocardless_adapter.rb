@@ -5,6 +5,40 @@ class Provider::GocardlessAdapter < Provider::Base
 
   Provider::Factory.register("GocardlessAccount", self)
 
+  SUPPORTED_COUNTRIES = {
+    "at" => "Austria",
+    "be" => "Belgium",
+    "bg" => "Bulgaria",
+    "cy" => "Cyprus",
+    "cz" => "Czech Republic",
+    "de" => "Germany",
+    "dk" => "Denmark",
+    "ee" => "Estonia",
+    "es" => "Spain",
+    "fi" => "Finland",
+    "fr" => "France",
+    "gb" => "United Kingdom",
+    "gr" => "Greece",
+    "hr" => "Croatia",
+    "hu" => "Hungary",
+    "ie" => "Ireland",
+    "is" => "Iceland",
+    "it" => "Italy",
+    "li" => "Liechtenstein",
+    "lt" => "Lithuania",
+    "lu" => "Luxembourg",
+    "lv" => "Latvia",
+    "mt" => "Malta",
+    "nl" => "Netherlands",
+    "no" => "Norway",
+    "pl" => "Poland",
+    "pt" => "Portugal",
+    "ro" => "Romania",
+    "se" => "Sweden",
+    "si" => "Slovenia",
+    "sk" => "Slovakia"
+  }.freeze
+
   configure do
     description <<~DESC
       Connect your UK bank accounts using GoCardless open banking.
@@ -48,7 +82,8 @@ class Provider::GocardlessAdapter < Provider::Base
         can_connect: true,
         new_account_path: ->(accountable_type, return_to) {
           Rails.application.routes.url_helpers.new_item_gocardless_items_path(
-            accountable_type: accountable_type
+            accountable_type: accountable_type,
+            return_to:        return_to
           )
         },
         existing_account_path: ->(account_id) {
