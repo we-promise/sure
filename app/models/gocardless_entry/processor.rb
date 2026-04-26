@@ -18,7 +18,8 @@ class GocardlessEntry::Processor
 
   def process
     unless account.present?
-      Rails.logger.warn "GocardlessEntry::Processor - No linked account for gocardless_account #{gocardless_account.id}, skipping transaction #{external_id}"
+      txn_id = data[:internalTransactionId].presence || data[:transactionId].presence || "(unknown)"
+      Rails.logger.warn "GocardlessEntry::Processor - No linked account for gocardless_account #{gocardless_account.id}, skipping transaction #{txn_id}"
       return nil
     end
 
