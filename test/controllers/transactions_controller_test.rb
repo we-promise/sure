@@ -96,6 +96,31 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_dom "#total-transactions", count: 1, text: "1"
   end
 
+  test "can update notes on split child transaction" do
+    parent = create_transaction(account: accounts(:depository), amount: 100)
+    parent.split!([ { name: "Part 1", amount: 60, category_id: nil }, { name: "Part 2", amount: 40, category_id: nil } ])
+    child = parent.child_entries.first
+
+    patch transaction_url(child), params: {
+      entry: { notes: "split child note", entryable_attributes: { id: child.entryable_id } }
+    }
+
+    assert_equal "split child note", child.reload.notes
+  end
+
+  test "can update tags on split child transaction" do
+    parent = create_transaction(account: accounts(:depository), amount: 100)
+    parent.split!([ { name: "Part 1", amount: 60, category_id: nil }, { name: "Part 2", amount: 40, category_id: nil } ])
+    child = parent.child_entries.first
+    tag = Tag.first
+
+    patch transaction_url(child), params: {
+      entry: { entryable_attributes: { id: child.entryable_id, tag_ids: [ tag.id ] } }
+    }
+
+    assert_equal [ tag.id ], child.reload.entryable.tag_ids
+  end
+
   test "split parent rows mark amount as privacy-sensitive" do
     entry = create_transaction(account: accounts(:depository), amount: 100, name: "Split parent")
 

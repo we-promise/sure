@@ -117,7 +117,7 @@
                     include_blank: t(".none"),
                     multiple: true,
                     label:    t(".tags_label"),
-                    disabled: @entry.split_child? || !can_annotate_entry?
+                    disabled: !can_annotate_entry?
                   },
                   { "data-controller": "multi-select", "data-auto-submit-form-target": "auto" } %>
           <% end %>
