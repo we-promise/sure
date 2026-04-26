@@ -286,6 +286,31 @@ Treat those as follow-up cleanup items, not environment bootstrap failures.
 
 After this milestone, the next useful validation step is usually the controller or integration layer.
 
+## Validation milestone, integration suite
+
+On the reference host, after models and controllers were already green, this also passed successfully:
+
+```bash
+export RBENV_ROOT=/root/.rbenv
+export PATH="$RBENV_ROOT/bin:$RBENV_ROOT/shims:$PATH"
+eval "$(rbenv init -)"
+POSTGRES_USER=root bundle exec rails test test/integration
+```
+
+Observed result on the reference host:
+
+- `21 runs`
+- `49 assertions`
+- `0 failures`
+- `0 errors`
+- `0 skips`
+
+Non-blocking observations:
+
+- Ruby 3.4 emitted future frozen-string warnings from the `marcel` gem
+
+At this point, the next most useful surface is the JavaScript and lint layer.
+
 ## Resources
 
 - `scripts/audit_sure_build_env.py` for a repeatable baseline audit, disk-space gate, and strategy recommendation.

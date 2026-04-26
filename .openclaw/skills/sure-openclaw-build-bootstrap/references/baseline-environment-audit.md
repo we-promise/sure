@@ -183,6 +183,23 @@ Interpretation:
 - it is strong enough to execute the full Rails model layer successfully
 - the next likely breakpoints, if any, should be above the model layer
 
+## Validation milestone, integration suite
+
+After models and controllers were already passing on the reference host, the integration layer also passed:
+
+- command: `POSTGRES_USER=root bundle exec rails test test/integration`
+- result: `21 runs, 49 assertions, 0 failures, 0 errors, 0 skips`
+
+Non-blocking follow-up notes:
+
+- Ruby 3.4 emitted future frozen-string warnings from `marcel`
+
+Interpretation:
+
+- the local bootstrap now covers Rails boot, DB prep, models, controllers, and integration tests
+- the next likely breakpoints, if any, are now outside the core Rails request/data path
+- the JavaScript and lint surface is the next logical validation target
+
 ## Suggested follow-up audit checks after installs
 
 Preferred:
