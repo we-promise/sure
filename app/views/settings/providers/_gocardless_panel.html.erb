@@ -4,19 +4,19 @@
   <% config = Provider::GocardlessAdapter.configuration %>
   <% if config.present? %>
     <div class="prose prose-sm text-secondary mb-2">
-      <p class="text-primary font-medium">Setup instructions:</p>
+      <p class="text-primary font-medium"><%= t(".setup_instructions") %></p>
       <ol>
-        <li>Get your free API credentials at <a href="https://bankaccountdata.gocardless.com" target="_blank" rel="noopener noreferrer" class="link">GoCardless Bank Account Data</a></li>
-        <li>Enter your Secret ID and Secret Key below and click Save Configuration</li>
-        <li>Once saved, search for your UK bank below and click to connect</li>
-        <li>You will be redirected to your bank to authorise read-only access — then brought back here</li>
-        <li>Bank connections expire after 90 days and will need re-authorising</li>
+        <li><%= t(".step1_html").html_safe %></li>
+        <li><%= t(".step2") %></li>
+        <li><%= t(".step3") %></li>
+        <li><%= t(".step4") %></li>
+        <li><%= t(".step5") %></li>
       </ol>
-      <p class="text-primary font-medium">Coverage:</p>
+      <p class="text-primary font-medium"><%= t(".coverage") %></p>
       <ul>
-        <li>Supports 100+ UK banks including Barclays, HSBC, Lloyds, NatWest, Monzo, Starling, Halifax, Santander and more</li>
-        <li>Read-only access — GoCardless cannot move money</li>
-        <li>Up to 24 months of transaction history on first sync</li>
+        <li><%= t(".coverage_banks") %></li>
+        <li><%= t(".coverage_readonly") %></li>
+        <li><%= t(".coverage_history") %></li>
       </ul>
     </div>
     <%= render "settings/providers/provider_form", configuration: config %>
@@ -31,11 +31,8 @@
       <div class="flex items-center gap-3">
         <div class="w-2 h-2 bg-secondary rounded-full"></div>
         <div>
-          <p class="text-sm font-medium text-primary">Credentials required</p>
-          <p class="text-xs text-secondary mt-0.5">
-            Enter your Secret ID and Secret Key above and click
-            <strong>Save Configuration</strong> to enable bank connections.
-          </p>
+          <p class="text-sm font-medium text-primary"><%= t(".credentials_required") %></p>
+          <p class="text-xs text-secondary mt-0.5"><%= t(".credentials_required_hint_html").html_safe %></p>
         </div>
       </div>
     </div>
@@ -44,7 +41,7 @@
     <%# ── Connected banks list ──────────────────────────────────────────────── %>
     <% if gocardless_items&.any? %>
       <div class="border-t border-primary pt-4 space-y-2">
-        <p class="text-sm font-medium text-primary">Connected banks</p>
+        <p class="text-sm font-medium text-primary"><%= t(".connected_banks") %></p>
         <% gocardless_items.each do |item| %>
           <div class="flex items-center justify-between p-3 rounded-lg bg-container border border-primary">
             <div class="flex items-center gap-3">
@@ -52,14 +49,14 @@
                 <div class="w-2 h-2 bg-warning rounded-full"></div>
                 <div>
                   <p class="text-sm font-medium text-primary"><%= item.institution_name %></p>
-                  <p class="text-xs text-destructive">Re-authorisation required</p>
+                  <p class="text-xs text-destructive"><%= t(".reauthorisation_required") %></p>
                 </div>
               <% else %>
                 <div class="w-2 h-2 bg-success rounded-full"></div>
                 <div>
                   <p class="text-sm font-medium text-primary"><%= item.institution_name %></p>
                   <p class="text-xs text-secondary">
-                    <%= pluralize(item.gocardless_accounts.size, "account") %> connected
+                    <%= t(".accounts_connected", count: item.gocardless_accounts.size) %>
                   </p>
                 </div>
               <% end %>
@@ -68,8 +65,8 @@
               <%= button_to gocardless_item_path(item),
                             method: :delete,
                             class: "inline-flex items-center justify-center rounded-lg px-3 py-1.5 text-xs font-medium text-destructive hover:bg-destructive/10 transition-colors",
-                            data: { turbo_confirm: "Disconnect #{item.institution_name}? This will remove all synced accounts." } do %>
-                Disconnect
+                            data: { turbo_confirm: t(".disconnect_confirm", institution: item.institution_name) } do %>
+                <%= t(".disconnect") %>
               <% end %>
             </div>
           </div>
