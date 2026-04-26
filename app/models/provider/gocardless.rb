@@ -1,7 +1,5 @@
 class Provider::Gocardless
-  BASE_URL      = "https://bankaccountdata.gocardless.com/api/v2"
-  MAX_RETRIES   = 3
-  RETRY_BACKOFF = 2 # seconds; doubles each attempt (2, 4, 8)
+  BASE_URL = "https://bankaccountdata.gocardless.com/api/v2"
 
   class AuthError      < StandardError; end
   class ApiError       < StandardError; end
@@ -80,34 +78,18 @@ class Provider::Gocardless
   private
 
     def get(path)
-      with_retry do
-        response = connection.get("#{BASE_URL}#{path}") do |req|
-          req.headers["Authorization"] = "Bearer #{@access_token}" if @access_token
-        end
-        handle_response(response)
+      response = connection.get("#{BASE_URL}#{path}") do |req|
+        req.headers["Authorization"] = "Bearer #{@access_token}" if @access_token
       end
+      handle_response(response)
     end
 
     def post(path, body, authenticated: true)
-      with_retry do
-        response = connection.post("#{BASE_URL}#{path}") do |req|
-          req.headers["Authorization"] = "Bearer #{@access_token}" if authenticated && @access_token
-          req.body = body.to_json
-        end
-        handle_response(response)
+      response = connection.post("#{BASE_URL}#{path}") do |req|
+        req.headers["Authorization"] = "Bearer #{@access_token}" if authenticated && @access_token
+        req.body = body.to_json
       end
-    end
-
-    def with_retry
-      attempts = 0
-      begin
-        yield
-      rescue RateLimitError
-        attempts += 1
-        raise if attempts >= MAX_RETRIES
-        sleep(RETRY_BACKOFF ** attempts)
-        retry
-      end
+      handle_response(response)
     end
 
     def connection
