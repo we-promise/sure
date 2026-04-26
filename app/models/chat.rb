@@ -110,55 +110,55 @@ class Chat < ApplicationRecord
 
   private
 
-  def build_error_payload(error)
-    technical_message = error_message_for(error)
+    def build_error_payload(error)
+      technical_message = error_message_for(error)
 
-    {
-      message: classify_error_message(technical_message),
-      technical_message: technical_message,
-      type: error.class.name
-    }
-  end
-
-  def classify_error_message(message)
-    normalized_message = message.to_s.strip
-    return "Failed to generate a response. Please try again." if normalized_message.blank?
-
-    if RATE_LIMIT_PATTERNS.any? { |pattern| normalized_message.match?(pattern) }
-      "The AI provider is rate limited right now. Please try again in a few minutes."
-    elsif TEMPORARY_PROVIDER_PATTERNS.any? { |pattern| normalized_message.match?(pattern) }
-      "The AI provider is temporarily unavailable right now. Please try again in a few minutes."
-    elsif AUTH_CONFIGURATION_PATTERNS.any? { |pattern| normalized_message.match?(pattern) }
-      "The AI provider is not configured correctly. Please contact your administrator."
-    else
-      "Failed to generate a response. Please try again."
+      {
+        message: classify_error_message(technical_message),
+        technical_message: technical_message,
+        type: error.class.name
+      }
     end
-  end
 
-  def parsed_error_payload
-    return {} if error.blank?
-    return error if error.is_a?(Hash)
+    def classify_error_message(message)
+      normalized_message = message.to_s.strip
+      return "Failed to generate a response. Please try again." if normalized_message.blank?
 
-    parsed = JSON.parse(error)
-    parsed.is_a?(Hash) ? parsed : {}
-  rescue JSON::ParserError, TypeError
-    {}
-  end
+      if RATE_LIMIT_PATTERNS.any? { |pattern| normalized_message.match?(pattern) }
+        "The AI provider is rate limited right now. Please try again in a few minutes."
+      elsif TEMPORARY_PROVIDER_PATTERNS.any? { |pattern| normalized_message.match?(pattern) }
+        "The AI provider is temporarily unavailable right now. Please try again in a few minutes."
+      elsif AUTH_CONFIGURATION_PATTERNS.any? { |pattern| normalized_message.match?(pattern) }
+        "The AI provider is not configured correctly. Please contact your administrator."
+      else
+        "Failed to generate a response. Please try again."
+      end
+    end
 
-  def error_message_for(error)
-    error.respond_to?(:message) ? error.message.to_s : error.to_s
-  rescue
-    ""
-  end
+    def parsed_error_payload
+      return {} if error.blank?
+      return error if error.is_a?(Hash)
 
-  def parsed_legacy_error_message
-    parsed = JSON.parse(error)
-    parsed.is_a?(String) ? parsed : nil
-  rescue JSON::ParserError, TypeError
-    nil
-  end
+      parsed = JSON.parse(error)
+      parsed.is_a?(Hash) ? parsed : {}
+    rescue JSON::ParserError, TypeError
+      {}
+    end
 
-  def assistant
-    @assistant ||= Assistant.for_chat(self)
-  end
+    def error_message_for(error)
+      error.respond_to?(:message) ? error.message.to_s : error.to_s
+    rescue
+      ""
+    end
+
+    def parsed_legacy_error_message
+      parsed = JSON.parse(error)
+      parsed.is_a?(String) ? parsed : nil
+    rescue JSON::ParserError, TypeError
+      nil
+    end
+
+    def assistant
+      @assistant ||= Assistant.for_chat(self)
+    end
 end
