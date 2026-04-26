@@ -51,10 +51,12 @@ If the audit reports `stop-and-free-disk-space`, do that before the next bootstr
 
 Preferred path on the reference host:
 
+- read `.ruby-version` from the repo and use that exact Ruby version
+- read `Gemfile.lock` and use the exact `BUNDLED WITH` version
 - install `rbenv` and `ruby-build` from apt
-- update the `ruby-build` plugin inside `/root/.rbenv/plugins/ruby-build` because Debian Bookworm's packaged definitions are too old for Ruby `3.4.7`
-- install Ruby `3.4.7` with `rbenv`
-- install Bundler `2.6.7` with `gem`
+- update the `ruby-build` plugin inside `/root/.rbenv/plugins/ruby-build` because Debian Bookworm's packaged definitions may be too old for the repo-required Ruby
+- install the repo-required Ruby with `rbenv`
+- install the lockfile-compatible Bundler with `gem`
 
 Install missing Ruby build helpers:
 
@@ -63,9 +65,12 @@ apt-get install -y --no-install-recommends \
   rbenv ruby-build libreadline-dev libgdbm-dev libgdbm-compat-dev bison
 ```
 
-Refresh `ruby-build` definitions and install Ruby:
+Refresh `ruby-build` definitions and install Ruby from repo metadata:
 
 ```bash
+RUBY_VERSION="$(tr -d '[:space:]' < .ruby-version)"
+BUNDLER_VERSION="$(awk '/^BUNDLED WITH$/{getline; gsub(/^[[:space:]]+/, ""); print; exit}' Gemfile.lock)"
+
 mkdir -p /root/.rbenv/plugins
 rm -rf /root/.rbenv/plugins/ruby-build
 git clone --depth=1 https://github.com/rbenv/ruby-build.git /root/.rbenv/plugins/ruby-build
@@ -75,20 +80,24 @@ export PATH="$RBENV_ROOT/bin:$RBENV_ROOT/shims:$PATH"
 eval "$(rbenv init -)"
 export RUBY_BUILD_CACHE_PATH=/root/.cache/ruby-build
 
-rbenv install -s 3.4.7
-rbenv global 3.4.7
+rbenv install -s "$RUBY_VERSION"
+rbenv global "$RUBY_VERSION"
 rbenv rehash
 ```
 
 Install the lockfile-compatible Bundler:
 
 ```bash
-gem install bundler -v 2.6.7 --no-document
+gem install bundler -v "$BUNDLER_VERSION" --no-document
 rbenv rehash
 bundle -v
 ```
 
-Important note: the host may still also have Debian's system Ruby on PATH. The audit helper is expected to prefer the `rbenv` Ruby and Bundler when they match repo requirements.
+Important notes:
+
+- never hardcode the Ruby version in the bootstrap flow, always read `.ruby-version`
+- never hardcode the Bundler version in the bootstrap flow, always read `Gemfile.lock`
+- the host may still also have Debian's system Ruby on PATH, so the audit helper is expected to prefer the `rbenv` Ruby and Bundler when they match repo requirements
 
 ## Step 2, install only missing OS packages
 

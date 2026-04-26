@@ -78,8 +78,8 @@ At baseline, the environment is incomplete for Rails work:
    - If already virtualized or containerized, prefer a lean in-place bootstrap.
    - If not virtualized, consider the repo devcontainer the default path.
 2. Install only what is missing.
-3. Pin Ruby to `3.4.7`.
-4. Use Bundler `2.6.7` to match the lockfile.
+3. Read Ruby version from `.ruby-version` and install exactly that version.
+4. Read Bundler version from `Gemfile.lock` and install exactly that version.
 5. Prefer PostgreSQL client tooling instead of local PostgreSQL server.
 6. Install Redis locally.
 7. Keep caches and dependency storage under `/root`.
@@ -130,9 +130,11 @@ Installed on the reference host:
 
 Then:
 
-- updated `/root/.rbenv/plugins/ruby-build` to a current upstream release so Ruby `3.4.7` was available
-- installed Ruby `3.4.7` via `rbenv`
-- installed Bundler `2.6.7`
+- read Ruby version from `.ruby-version`
+- read Bundler version from `Gemfile.lock`
+- updated `/root/.rbenv/plugins/ruby-build` to a current upstream release so the repo-required Ruby was available
+- installed the repo-required Ruby via `rbenv`
+- installed the lockfile-compatible Bundler
 
 Re-audit result after install:
 
@@ -140,10 +142,12 @@ Re-audit result after install:
 - Bundler: present, `2.6.7`, detected via `/root/.rbenv/shims/bundle`
 - disk-space gate: still `pass`
 
-Important finding:
+Important findings:
 
 - Debian's system Ruby may still exist on the host and can appear earlier on PATH in bare shells
 - the audit helper must therefore prefer the `rbenv` toolchain when it matches repo requirements
+- the Ruby bootstrap script should never hardcode a version, it should always read `.ruby-version`
+- the Bundler bootstrap script should never hardcode a version, it should always read `Gemfile.lock`
 
 ## Suggested follow-up audit checks after installs
 
