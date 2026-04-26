@@ -24,23 +24,15 @@ class GocardlessItemsController < ApplicationController
     access_tok  = token_data["access"]
     refresh_tok = token_data["refresh"]
 
-    agreement   = sdk.with_token(access_tok).create_agreement(institution_id)
+    agreement = sdk.with_token(access_tok).create_agreement(institution_id)
 
-    requisition = sdk.create_requisition(
-      institution_id: institution_id,
-      agreement_id:   agreement["id"],
-      redirect_url:   callback_gocardless_items_url(
-        host:     request.host_with_port,
-        protocol: request.protocol
-      ),
-      reference: "sure-#{Current.family.id}-#{Time.now.to_i}"
-    )
-
-    Current.family.gocardless_items.create!(
+    # Create the item first so we can embed its ID in the callback URL,
+    # allowing the callback to locate the exact item rather than guessing
+    # by creation order (which breaks when multiple connect flows are in flight).
+    item = Current.family.gocardless_items.create!(
       name:                    institution_name,
       institution_id:          institution_id,
       institution_name:        institution_name,
-      requisition_id:          requisition["id"],
       agreement_id:            agreement["id"],
       agreement_expires_at:    90.days.from_now,
       access_token:            access_tok,
@@ -50,18 +42,29 @@ class GocardlessItemsController < ApplicationController
       pending_account_setup:   true
     )
 
+    requisition = sdk.create_requisition(
+      institution_id: institution_id,
+      agreement_id:   agreement["id"],
+      redirect_url:   callback_gocardless_items_url(
+        host:     request.host_with_port,
+        protocol: request.protocol,
+        item_id:  item.id
+      ),
+      reference: "sure-#{Current.family.id}-#{item.id}"
+    )
+
+    item.update!(requisition_id: requisition["id"])
+
     redirect_to requisition["link"], allow_other_host: true
 
   rescue => e
+    item&.destroy rescue nil
     Rails.logger.error "GoCardless connect error: #{e.full_message}"
     redirect_to settings_providers_path, alert: "Could not connect to bank. Please try again."
   end
 
   def callback
-    item = Current.family.gocardless_items
-                  .where(pending_account_setup: true)
-                  .order(created_at: :desc)
-                  .first
+    item = Current.family.gocardless_items.find_by(id: params[:item_id], pending_account_setup: true)
 
     return redirect_to accounts_path, alert: "Connection not found" unless item
 
