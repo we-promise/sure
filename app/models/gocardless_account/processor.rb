@@ -53,7 +53,7 @@ class GocardlessAccount::Processor
       balance = balance.abs if account.accountable_type == "Loan"
 
       ActiveRecord::Base.transaction do
-        account.update!(currency: currency, cash_balance: balance)
+        account.update!(currency: currency)
 
         # set_current_balance creates a current_anchor valuation entry, enabling
         # Balance::ReverseCalculator to derive historical balances correctly.
