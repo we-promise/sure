@@ -257,6 +257,35 @@ POSTGRES_USER=root POSTGRES_DB=sure_development bundle exec rails db:prepare
 
 If this succeeds, the environment has crossed from package bootstrap into a working local Rails dev runtime.
 
+## Validation milestone, full model suite
+
+On the reference host, after the runtime bootstrap was complete, this passed successfully:
+
+```bash
+export RBENV_ROOT=/root/.rbenv
+export PATH="$RBENV_ROOT/bin:$RBENV_ROOT/shims:$PATH"
+eval "$(rbenv init -)"
+POSTGRES_USER=root bundle exec rails test test/models
+```
+
+Observed result on the reference host:
+
+- `2183 runs`
+- `8778 assertions`
+- `0 failures`
+- `0 errors`
+- `1 skip`
+
+Non-blocking observations:
+
+- one skipped test was reported
+- one test was reported as missing assertions
+- Ruby 3.4 emitted future frozen-string warnings from the `marcel` gem
+
+Treat those as follow-up cleanup items, not environment bootstrap failures.
+
+After this milestone, the next useful validation step is usually the controller or integration layer.
+
 ## Resources
 
 - `scripts/audit_sure_build_env.py` for a repeatable baseline audit, disk-space gate, and strategy recommendation.

@@ -164,6 +164,25 @@ Important implication:
 - client-only PostgreSQL is the right default preference during early bootstrap
 - but once `db:prepare` is the active blocker, a minimal local PostgreSQL server becomes justified for a self-contained development runtime on this host
 
+## Validation milestone, full model suite
+
+After the runtime bootstrap was complete on the reference host, the full model suite passed:
+
+- command: `POSTGRES_USER=root bundle exec rails test test/models`
+- result: `2183 runs, 8778 assertions, 0 failures, 0 errors, 1 skip`
+
+Non-blocking follow-up notes:
+
+- one skipped test remained
+- one test reported missing assertions
+- Ruby 3.4 emitted future frozen-string warnings from `marcel`
+
+Interpretation:
+
+- the environment is no longer merely bootable
+- it is strong enough to execute the full Rails model layer successfully
+- the next likely breakpoints, if any, should be above the model layer
+
 ## Suggested follow-up audit checks after installs
 
 Preferred:
