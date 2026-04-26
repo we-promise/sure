@@ -200,6 +200,29 @@ Interpretation:
 - the next likely breakpoints, if any, are now outside the core Rails request/data path
 - the JavaScript and lint surface is the next logical validation target
 
+## Validation milestone, JS and CI-match lint
+
+After the Rails-side validation passed on the reference host:
+
+- `node test/javascript/parse_locale_float_test.mjs` passed with `38/38` tests green
+- `npm run lint` passed, which matches the current GitHub Actions `lint_js` job
+- `npm run style:check` failed with Biome formatter/check findings, which explains the earlier mismatch with local stricter validation
+
+Interpretation:
+
+- JavaScript runtime sanity is good
+- current GitHub CI and local CI-matched lint agree
+- stricter style-check findings are real repo formatting debt, not bootstrap failure
+
+## Parking lot, out of scope for bootstrap proof
+
+Keep these as follow-up ideas, not current blockers:
+
+- consider aligning local default Node with CI/devcontainer Node 20.x, or explicitly documenting why Node 24 is acceptable for bootstrap validation
+- consider adding `npm run style:check` to GitHub CI if the repo wants formatter cleanliness enforced there too
+- consider cleaning the current Biome formatting findings in a separate workstream rather than mixing them into bootstrap proof work
+- consider reviewing Ruby 3.4 frozen-string future warnings from dependencies like `marcel`, `rack`, and `rack-test`
+
 ## Suggested follow-up audit checks after installs
 
 Preferred:
