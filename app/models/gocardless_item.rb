@@ -11,7 +11,7 @@ class GocardlessItem < ApplicationRecord
     [ "Three times a week", "thrice_weekly" ]
   ].freeze
 
-  if Rails.application.credentials.active_record_encryption.present?
+  if encryption_ready?
     encrypts :access_token
     encrypts :refresh_token
   end
