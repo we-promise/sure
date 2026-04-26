@@ -513,6 +513,7 @@ Rails.application.routes.draw do
   resources :gocardless_items, only: [ :index, :create, :destroy ] do
     collection do
       get  :callback
+      get  :reauth_callback
       get  :search_banks
       get  :select_existing_account
       get  :new_item
@@ -521,6 +522,7 @@ Rails.application.routes.draw do
 
     member do
       post :sync
+      post :reauthorize
       get  :setup_accounts
       post :complete_account_setup
     end

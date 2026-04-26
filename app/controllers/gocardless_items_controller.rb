@@ -1,6 +1,6 @@
 class GocardlessItemsController < ApplicationController
   before_action :authenticate_user!
-  before_action :set_gocardless_item, only: [ :sync, :setup_accounts, :complete_account_setup, :destroy ]
+  before_action :set_gocardless_item, only: [ :sync, :reauthorize, :setup_accounts, :complete_account_setup, :destroy ]
 
   def index
     @gocardless_items = Current.family.gocardless_items.active.ordered
@@ -288,6 +288,79 @@ class GocardlessItemsController < ApplicationController
   rescue => e
     Rails.logger.error "GoCardless complete_account_setup failed: #{e.full_message}"
     redirect_to accounts_path, alert: "Failed to create accounts. Please try again."
+  end
+
+  def reauthorize
+    sdk = Provider::GocardlessAdapter.sdk
+    return redirect_to accounts_path, alert: "GoCardless not configured" unless sdk
+
+    token_data  = sdk.new_token
+    access_tok  = token_data["access"]
+    refresh_tok = token_data["refresh"]
+
+    agreement = sdk.with_token(access_tok).create_agreement(@gocardless_item.institution_id)
+
+    requisition = sdk.create_requisition(
+      institution_id: @gocardless_item.institution_id,
+      agreement_id:   agreement["id"],
+      redirect_url:   reauth_callback_gocardless_items_url(
+        host:     request.host_with_port,
+        protocol: request.protocol,
+        item_id:  @gocardless_item.id
+      ),
+      reference: "sure-#{Current.family.id}-#{Time.now.to_i}-reauth"
+    )
+
+    @gocardless_item.update!(
+      requisition_id:          requisition["id"],
+      agreement_id:            agreement["id"],
+      agreement_expires_at:    90.days.from_now,
+      access_token:            access_tok,
+      refresh_token:           refresh_tok,
+      access_token_expires_at: token_data["access_expires"].seconds.from_now,
+      status:                  :requires_update
+    )
+
+    redirect_to requisition["link"], allow_other_host: true
+
+  rescue => e
+    Rails.logger.error "GoCardless reauthorize error: #{e.full_message}"
+    redirect_to accounts_path, alert: "Could not initiate reauthorisation. Please try again."
+  end
+
+  def reauth_callback
+    item = Current.family.gocardless_items.find_by(id: params[:item_id])
+    return redirect_to accounts_path, alert: "Connection not found" unless item
+
+    client = item.gocardless_client
+    unless client
+      item.update!(status: :requires_update)
+      return redirect_to accounts_path, alert: "GoCardless session expired — please reauthorise again."
+    end
+
+    requisition  = client.get_requisition(item.requisition_id)
+    gc_account_ids = requisition["accounts"] || []
+
+    return redirect_to accounts_path, alert: "No accounts found — did you complete the bank login?" if gc_account_ids.empty?
+
+    gc_account_ids.each do |gc_account_id|
+      next if item.gocardless_accounts.exists?(account_id: gc_account_id)
+
+      item.gocardless_accounts.create!(
+        account_id: gc_account_id,
+        name:       item.institution_name,
+        currency:   "GBP"
+      )
+    end
+
+    item.update!(status: :good)
+    item.sync_later
+
+    redirect_to accounts_path, notice: "#{item.institution_name} reauthorised — syncing now!"
+
+  rescue => e
+    Rails.logger.error "GoCardless reauth_callback error: #{e.full_message}"
+    redirect_to accounts_path, alert: "Reauthorisation could not be completed. Please try again."
   end
 
   def destroy

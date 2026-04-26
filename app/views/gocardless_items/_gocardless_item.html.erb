@@ -21,14 +21,14 @@
           </div>
           <p class="text-xs text-secondary">GoCardless</p>
           <% if gocardless_item.requires_update? || gocardless_item.agreement_expired? %>
-            <div class="text-warning flex items-center gap-1">
-              <%= icon "alert-triangle", size: "sm", color: "warning" %>
-              <%= tag.span "Reconnect required" %>
+            <div class="text-destructive flex items-center gap-1">
+              <%= icon "alert-triangle", size: "sm", color: "destructive" %>
+              <%= tag.span "Bank authorisation expired — reauthorisation required" %>
             </div>
           <% elsif gocardless_item.agreement_expiring_soon? %>
             <div class="text-warning flex items-center gap-1">
               <%= icon "alert-triangle", size: "sm", color: "warning" %>
-              <%= tag.span "Bank authorisation expires #{time_ago_in_words(gocardless_item.agreement_expires_at)}" %>
+              <%= tag.span "Bank authorisation expires #{gocardless_item.agreement_expires_at.strftime('%d %b %Y')} (#{pluralize((gocardless_item.agreement_expires_at.to_date - Date.current).to_i, 'day')} remaining)" %>
             </div>
           <% else %>
             <% if gocardless_item.last_synced_at %>
@@ -37,6 +37,9 @@
                 &middot;
                 <% freq_label = GocardlessItem::SYNC_FREQUENCY_OPTIONS.find { |_, v| v == gocardless_item.sync_frequency }&.first %>
                 <%= freq_label %>
+                <% if gocardless_item.agreement_expires_at %>
+                  &middot; Auth expires <%= gocardless_item.agreement_expires_at.strftime('%d %b %Y') %>
+                <% end %>
               </p>
             <% elsif gocardless_item.accounts.any? %>
               <div class="flex items-center gap-1 text-warning">
@@ -53,11 +56,24 @@
       <% if Current.user&.admin? %>
         <div class="flex items-center gap-2">
           <% if !gocardless_item.scheduled_for_deletion? && (gocardless_item.requires_update? || gocardless_item.agreement_expired?) %>
-            <%= link_to new_item_gocardless_items_path,
-                        class: "inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-warning border border-warning hover:bg-warning/10 transition-colors" do %>
+            <%= button_to reauthorize_gocardless_item_path(gocardless_item),
+                          method: :post,
+                          class: "inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-destructive border border-destructive hover:bg-destructive/10 transition-colors" do %>
               <%= icon "refresh-cw", size: "xs" %>
-              Reconnect
+              Reauthorize
             <% end %>
+          <% elsif !gocardless_item.scheduled_for_deletion? && gocardless_item.agreement_expiring_soon? %>
+            <%= button_to reauthorize_gocardless_item_path(gocardless_item),
+                          method: :post,
+                          class: "inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-warning border border-warning hover:bg-warning/10 transition-colors" do %>
+              <%= icon "refresh-cw", size: "xs" %>
+              Renew
+            <% end %>
+            <%= icon(
+              "refresh-cw",
+              as_button: true,
+              href: sync_gocardless_item_path(gocardless_item)
+            ) %>
           <% elsif !gocardless_item.scheduled_for_deletion? %>
             <%= icon(
               "refresh-cw",

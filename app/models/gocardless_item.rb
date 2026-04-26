@@ -2,10 +2,11 @@ class GocardlessItem < ApplicationRecord
   include Syncable, Provided, Unlinking, Encryptable
 
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
-  enum :sync_frequency, { manual: "manual", twice_weekly: "twice_weekly", thrice_weekly: "thrice_weekly" }, default: :manual, prefix: :sync
+  enum :sync_frequency, { manual: "manual", daily: "daily", twice_weekly: "twice_weekly", thrice_weekly: "thrice_weekly" }, default: :manual, prefix: :sync
 
   SYNC_FREQUENCY_OPTIONS = [
     [ "Manual only",        "manual"        ],
+    [ "Daily (every 24 h)", "daily"         ],
     [ "Twice a week",       "twice_weekly"  ],
     [ "Three times a week", "thrice_weekly" ]
   ].freeze
