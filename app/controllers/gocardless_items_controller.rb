@@ -1,5 +1,6 @@
 class GocardlessItemsController < ApplicationController
   before_action :authenticate_user!
+  before_action :require_admin!, only: [ :new_item, :create, :callback, :reauth_callback, :select_existing_account, :link_existing_account, :sync, :reauthorize, :setup_accounts, :complete_account_setup, :destroy ]
   before_action :set_gocardless_item, only: [ :sync, :reauthorize, :setup_accounts, :complete_account_setup, :destroy ]
 
   def index
