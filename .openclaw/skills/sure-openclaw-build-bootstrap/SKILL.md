@@ -209,7 +209,56 @@ This tells you the environment cannot run Rails tests yet, but it has enough fre
 - If Redis is absent, install and run it locally.
 - Do not assume devcontainer contents should be mirrored exactly. Use it as reference, not runtime.
 
+## Step 4, runtime services and database bootstrap
+
+After Ruby, Bundler, and gems are in place, validate the runtime services.
+
+Redis on this host does not auto-start through system services, so a lightweight local start is acceptable:
+
+```bash
+redis-server --daemonize yes
+redis-cli ping
+```
+
+For PostgreSQL, prefer client-only by default, but once `rails db:prepare` is the next blocker, install the minimal local server path:
+
+```bash
+apt-get update && apt-get install -y --no-install-recommends postgresql
+pg_ctlcluster --skip-systemctl-redirect 15 main start
+pg_isready -h 127.0.0.1 -p 5432
+```
+
+For this bootstrap host, local development auth was relaxed to `trust` on loopback so Rails could prepare the database without extra secret wiring:
+
+```bash
+PG_HBA_CONF=/etc/postgresql/15/main/pg_hba.conf
+sed -i 's/^local\s\+all\s\+all\s\+peer$/local   all             all                                     trust/' "$PG_HBA_CONF"
+sed -i 's/^host\s\+all\s\+all\s\+127.0.0.1\/32\s\+scram-sha-256$/host    all             all             127.0.0.1\/32            trust/' "$PG_HBA_CONF"
+sed -i 's/^host\s\+all\s\+all\s\+::1\/128\s\+scram-sha-256$/host    all             all             ::1\/128                 trust/' "$PG_HBA_CONF"
+pg_ctlcluster --skip-systemctl-redirect 15 main reload
+```
+
+Then create the expected local role and databases:
+
+```bash
+runuser -l postgres -c "createuser -s root" 2>/dev/null || true
+runuser -l postgres -c "psql -tc \"SELECT 1 FROM pg_database WHERE datname='sure_development'\" | grep -q 1 || createdb sure_development"
+runuser -l postgres -c "psql -tc \"SELECT 1 FROM pg_database WHERE datname='sure_test'\" | grep -q 1 || createdb sure_test"
+```
+
+Finally run the Rails bootstrap check:
+
+```bash
+export RBENV_ROOT=/root/.rbenv
+export PATH="$RBENV_ROOT/bin:$RBENV_ROOT/shims:$PATH"
+eval "$(rbenv init -)"
+POSTGRES_USER=root POSTGRES_DB=sure_development bundle exec rails db:prepare
+```
+
+If this succeeds, the environment has crossed from package bootstrap into a working local Rails dev runtime.
+
 ## Resources
 
 - `scripts/audit_sure_build_env.py` for a repeatable baseline audit, disk-space gate, and strategy recommendation.
+- `scripts/install_repo_ruby_and_bundler.sh` for repo-driven Ruby and Bundler setup.
 - `references/baseline-environment-audit.md` for the captured step-by-step findings and rationale.

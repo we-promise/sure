@@ -149,6 +149,21 @@ Important findings:
 - the Ruby bootstrap script should never hardcode a version, it should always read `.ruby-version`
 - the Bundler bootstrap script should never hardcode a version, it should always read `Gemfile.lock`
 
+## Step 4 result, runtime services and db bootstrap validated
+
+Observed on the reference host:
+
+- Redis package was installed but not running by default
+- `redis-server --daemonize yes` worked
+- `bundle exec rails runner 'puts Redis.new.ping'` returned `PONG`
+- local PostgreSQL server was not present initially, so `rails db:prepare` failed with `PG::ConnectionBad` against `127.0.0.1:5432`
+- after installing local PostgreSQL 15, starting the cluster manually, relaxing loopback auth to `trust`, and creating `sure_development` plus `sure_test`, `rails db:prepare` succeeded
+
+Important implication:
+
+- client-only PostgreSQL is the right default preference during early bootstrap
+- but once `db:prepare` is the active blocker, a minimal local PostgreSQL server becomes justified for a self-contained development runtime on this host
+
 ## Suggested follow-up audit checks after installs
 
 Preferred:
@@ -168,6 +183,8 @@ ruby -v
 bundle -v
 bundle config list
 npm config get cache
+redis-cli ping
+POSTGRES_USER=root POSTGRES_DB=sure_development bundle exec rails db:prepare
 ```
 
 This confirms both the toolchain and the persistence strategy.
