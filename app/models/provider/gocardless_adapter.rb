@@ -41,9 +41,9 @@ class Provider::GocardlessAdapter < Provider::Base
 
   configure do
     description <<~DESC
-      Connect your UK bank accounts using GoCardless open banking.
-      Supports 99% of UK banks including Barclays, HSBC, Lloyds, NatWest,
-      Monzo, Starling, and hundreds more.
+      Connect your bank accounts using GoCardless open banking.
+      Supports 2,500+ banks across 30+ countries including the UK, Germany,
+      France, Spain, Netherlands, and more.
 
       You will need a free GoCardless Bank Account Data account.
       Get your credentials at: https://bankaccountdata.gocardless.com
