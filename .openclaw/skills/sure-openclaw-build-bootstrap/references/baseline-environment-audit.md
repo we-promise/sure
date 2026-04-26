@@ -68,6 +68,35 @@ At baseline, the environment is incomplete for Rails work:
 7. Keep caches and dependency storage under `/root`.
 8. Record version drift when the host has a newer Node than the repo reference, but do not change it unless the repo proves sensitive to that drift.
 
+## Step 2 result, missing OS packages installed
+
+Installed on the reference host:
+
+- `build-essential`
+- `pkg-config`
+- `libpq-dev`
+- `postgresql-client`
+- `redis-server`
+- `libyaml-dev`
+- `libvips`
+- `libvips-dev`
+- `libxml2-dev`
+- `libxslt1-dev`
+- `zlib1g-dev`
+
+Re-audit result after install:
+
+- `psql`: present, `15.16`
+- `redis-server`: present, `7.0.15`
+- `gcc`, `make`, and `pkg-config`: present
+- Ruby: still missing
+- Bundler: still missing
+
+Disk effect observed on the reference host:
+
+- `/` free dropped from about `6.8G` to about `6.3G`
+- the heaviest dependency expansion came from `libvips-dev`
+
 ## Suggested follow-up audit checks after installs
 
 Preferred:

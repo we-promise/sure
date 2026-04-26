@@ -27,6 +27,45 @@ Create a repeatable bootstrap flow that keeps the environment lean:
 6. Treat local Redis as acceptable, but avoid local Postgres data unless there is a strong reason.
 7. Re-run the audit after each material setup step.
 
+## Step 2, install only missing OS packages
+
+On the first reference host, the missing OS-level pieces were:
+
+- `build-essential`
+- `pkg-config`
+- `libpq-dev`
+- `postgresql-client`
+- `redis-server`
+- `libyaml-dev`
+- `libvips`
+- `libvips-dev`
+- `libxml2-dev`
+- `libxslt1-dev`
+- `zlib1g-dev`
+
+Install them with:
+
+```bash
+apt-get update && apt-get install -y --no-install-recommends \
+  build-essential pkg-config libpq-dev postgresql-client redis-server \
+  libyaml-dev libvips libvips-dev libxml2-dev libxslt1-dev zlib1g-dev
+```
+
+Then clean package metadata if image size matters:
+
+```bash
+apt-get clean && rm -rf /var/lib/apt/lists/*
+```
+
+After this step on the reference host:
+
+- `psql` became available
+- `redis-server` became available
+- native build tooling became available
+- Ruby and Bundler were still missing, so Rails work was still blocked on the next step
+
+Important note: `libvips-dev` pulls a large transitive dependency set on Debian Bookworm. Keep it because Sure's devcontainer references it, but treat it as the heaviest part of this OS-package step.
+
 ## Step 1, baseline audit
 
 Use the helper script first:
