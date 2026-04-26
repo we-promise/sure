@@ -22,10 +22,30 @@ Create a repeatable bootstrap flow that keeps the environment lean:
 1. Run a baseline environment audit before installing anything.
 2. Let the audit decide whether to prefer an in-place bootstrap or the repo devcontainer.
 3. Compare the host state with the repo's declared expectations.
-4. Install only missing pieces.
-5. Keep persistent caches under `/root` or another durable host path.
-6. Treat local Redis as acceptable, but avoid local Postgres data unless there is a strong reason.
-7. Re-run the audit after each material setup step.
+4. Gate every material bootstrap step on disk space. Do not continue if the audit fails the disk check.
+5. Install only missing pieces.
+6. Keep persistent caches under `/root` or another durable host path.
+7. Treat local Redis as acceptable, but avoid local Postgres data unless there is a strong reason.
+8. Re-run the audit after each material setup step.
+
+## Disk-space gating rules
+
+Treat disk headroom as a hard safety check, not just a nice-to-have.
+
+Current audit gates:
+
+- `/` must have at least `2 GiB` free
+- `/root` must have at least `4 GiB` free
+- `/tmp` must have at least `1 GiB` free
+- `/root` should also keep a preferred buffer of at least `2x` current repo size, with a `2 GiB` floor
+
+Interpretation:
+
+- `pass`: safe to continue
+- `warn`: above hard minimums but below preferred buffer, continue carefully
+- `fail`: stop and free disk before installing more dependencies or caches
+
+If the audit reports `stop-and-free-disk-space`, do that before the next bootstrap step.
 
 ## Step 2, install only missing OS packages
 
@@ -63,6 +83,7 @@ After this step on the reference host:
 - `redis-server` became available
 - native build tooling became available
 - Ruby and Bundler were still missing, so Rails work was still blocked on the next step
+- disk-space gate still passed after installation, which is required before moving on
 
 Important note: `libvips-dev` pulls a large transitive dependency set on Debian Bookworm. Keep it because Sure's devcontainer references it, but treat it as the heaviest part of this OS-package step.
 
@@ -87,6 +108,7 @@ The script checks:
 - which Ruby and Bundler versions the repo expects
 - whether the current Node version drifts from the devcontainer reference
 - available disk space and current repo size
+- whether hard disk-space gates pass before continuing
 - whether the environment should prefer a lean in-place bootstrap or a devcontainer-first approach
 
 If you need to debug or extend it manually, these are the underlying checks:

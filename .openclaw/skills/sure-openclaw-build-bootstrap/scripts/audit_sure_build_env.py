@@ -96,8 +96,69 @@ def disk_usage(paths):
     results = {}
     for p in paths:
         res = run(['df', '-h', p])
-        results[p] = res['output']
+        total, used, free = shutil.disk_usage(p)
+        results[p] = {
+            'df_h': res['output'],
+            'bytes': {
+                'total': total,
+                'used': used,
+                'free': free,
+            },
+        }
     return results
+
+
+def gib(bytes_value):
+    return round(bytes_value / (1024 ** 3), 2)
+
+
+def assess_disk(repo_size_text, disk):
+    repo_size_bytes = None
+    m = re.match(r'^(\d+(?:\.\d+)?)([KMGTP])\s', repo_size_text or '')
+    if m:
+        scale = {'K': 1024, 'M': 1024 ** 2, 'G': 1024 ** 3, 'T': 1024 ** 4, 'P': 1024 ** 5}
+        repo_size_bytes = int(float(m.group(1)) * scale[m.group(2)])
+
+    checks = []
+    overall = 'pass'
+
+    thresholds = {
+        '/': 2 * 1024 ** 3,
+        '/root': 4 * 1024 ** 3,
+        '/tmp': 1 * 1024 ** 3,
+    }
+
+    for path, minimum in thresholds.items():
+        free = disk[path]['bytes']['free']
+        status = 'pass' if free >= minimum else 'fail'
+        if status == 'fail':
+            overall = 'fail'
+        checks.append({
+            'path': path,
+            'status': status,
+            'free_gib': gib(free),
+            'minimum_gib': gib(minimum),
+            'reason': f"Need at least {gib(minimum)} GiB free on {path} before continuing.",
+        })
+
+    if repo_size_bytes is not None:
+        root_free = disk['/root']['bytes']['free']
+        buffer_target = max(2 * repo_size_bytes, 2 * 1024 ** 3)
+        status = 'pass' if root_free >= buffer_target else 'warn'
+        if status == 'warn' and overall != 'fail':
+            overall = 'warn'
+        checks.append({
+            'path': '/root',
+            'status': status,
+            'free_gib': gib(root_free),
+            'minimum_gib': gib(buffer_target),
+            'reason': 'Recommended free space on /root is at least 2x current repo size, with a 2 GiB floor, to leave room for gems, node modules, and caches.',
+        })
+
+    return {
+        'status': overall,
+        'checks': checks,
+    }
 
 
 def du(path):
@@ -113,7 +174,7 @@ def version_for(cmd, args):
     return {'present': True, 'version': out}
 
 
-def recommend(virt, ruby, bundler, node, psql, redis, ruby_req, bundler_req, node_hint):
+def recommend(virt, ruby, bundler, node, psql, redis, ruby_req, bundler_req, node_hint, disk_health):
     missing = []
     if not ruby['present']:
         missing.append('Ruby')
@@ -136,6 +197,12 @@ def recommend(virt, ruby, bundler, node, psql, redis, ruby_req, bundler_req, nod
         rationale.append('Missing components: ' + ', '.join(missing) + '.')
     else:
         rationale.append('Core toolchain looks present already.')
+
+    if disk_health['status'] == 'fail':
+        strategy = 'stop-and-free-disk-space'
+        rationale.append('Disk-space gate failed. Free space before installing more dependencies or caches.')
+    elif disk_health['status'] == 'warn':
+        rationale.append('Disk space is above the hard minimum, but below the preferred safety buffer. Continue carefully and monitor growth.')
 
     if ruby_req and (not ruby['present'] or ruby_req not in (ruby['version'] or '')):
         rationale.append(f'Repo expects Ruby {ruby_req}.')
@@ -188,9 +255,17 @@ def markdown_report(data):
     lines.append('')
     lines.append(f"- Sure repo size: `{data['repo']['size']}`")
     lines.append('- Disk snapshots:')
-    for path, out in data['disk'].items():
+    for path, details in data['disk'].items():
+        out = details['df_h']
         first = out.splitlines()[1] if len(out.splitlines()) > 1 else out
         lines.append(f'  - `{path}`: `{first}`')
+    lines.append('')
+    lines.append('## Disk-space gate')
+    lines.append('')
+    lines.append(f"- Overall status: **{data['disk_health']['status']}**")
+    for check in data['disk_health']['checks']:
+        lines.append(f"- `{check['path']}`: **{check['status']}**, free `{check['free_gib']}` GiB, threshold `{check['minimum_gib']}` GiB")
+        lines.append(f"  - {check['reason']}")
     lines.append('')
     if data['recommendation']['missing']:
         lines.append('## Missing pieces to install next')
@@ -231,6 +306,7 @@ def main():
         },
         'disk': disk_usage(['/','/root','/tmp']),
     }
+    data['disk_health'] = assess_disk(data['repo']['size'], data['disk'])
 
     strategy, rationale, missing = recommend(
         data['virtualization'],
@@ -242,6 +318,7 @@ def main():
         data['repo']['ruby_required'],
         data['repo']['bundler_required'],
         data['repo']['node_hint'],
+        data['disk_health'],
     )
     data['recommendation'] = {
         'strategy': strategy,

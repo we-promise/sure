@@ -25,7 +25,24 @@ Audit timestamp context: 2026-04-26, Discord build thread for SureBot environmen
 
 - `/` free: about `6.8G`
 - `/root` free: about `6.0G`
+- `/tmp` free: about `6.8G`
 - Sure repo size: `138M`
+
+### Disk-space gate
+
+Use disk space as a bootstrap gate, not just an observation.
+
+Hard minimums:
+
+- `/`: `2 GiB`
+- `/root`: `4 GiB`
+- `/tmp`: `1 GiB`
+
+Preferred safety buffer:
+
+- `/root`: at least `2x` current repo size, with a `2 GiB` floor
+
+If any hard minimum fails, stop and free space before continuing.
 
 ### Repo-declared expectations
 
@@ -91,11 +108,14 @@ Re-audit result after install:
 - `gcc`, `make`, and `pkg-config`: present
 - Ruby: still missing
 - Bundler: still missing
+- disk-space gate: still `pass`
 
 Disk effect observed on the reference host:
 
 - `/` free dropped from about `6.8G` to about `6.3G`
+- `/root` stayed around `6.0G` free
 - the heaviest dependency expansion came from `libvips-dev`
+- the post-install state still cleared the hard disk gate, so it was safe to continue
 
 ## Suggested follow-up audit checks after installs
 
