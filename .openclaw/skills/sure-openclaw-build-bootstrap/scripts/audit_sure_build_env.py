@@ -168,17 +168,52 @@ def du(path):
 
 def version_for(cmd, args):
     if not shutil.which(cmd):
-        return {'present': False, 'version': None}
+        return {'present': False, 'version': None, 'source': None}
     res = run([cmd] + args)
     out = res['output'].splitlines()[0] if res['output'] else ''
-    return {'present': True, 'version': out}
+    return {'present': True, 'version': out, 'source': shutil.which(cmd)}
+
+
+def version_for_path(path, args):
+    if not Path(path).exists():
+        return {'present': False, 'version': None, 'source': None}
+    res = run([path] + args)
+    out = res['output'].splitlines()[0] if res['output'] else ''
+    return {'present': res['ok'], 'version': out if res['ok'] else None, 'source': path}
+
+
+def detect_ruby_toolchain(ruby_req, bundler_req):
+    system_ruby = version_for('ruby', ['-v'])
+    system_bundle = version_for('bundle', ['-v'])
+    rbenv_ruby = version_for_path('/root/.rbenv/shims/ruby', ['-v'])
+    rbenv_bundle = version_for_path('/root/.rbenv/shims/bundle', ['-v'])
+
+    chosen_ruby = system_ruby
+    chosen_bundle = system_bundle
+
+    if rbenv_ruby['present'] and ruby_req and ruby_req in (rbenv_ruby['version'] or ''):
+        chosen_ruby = rbenv_ruby
+    elif not system_ruby['present'] and rbenv_ruby['present']:
+        chosen_ruby = rbenv_ruby
+
+    if rbenv_bundle['present'] and bundler_req and bundler_req in (rbenv_bundle['version'] or ''):
+        chosen_bundle = rbenv_bundle
+    elif not system_bundle['present'] and rbenv_bundle['present']:
+        chosen_bundle = rbenv_bundle
+
+    return chosen_ruby, chosen_bundle, {
+        'system_ruby': system_ruby,
+        'system_bundle': system_bundle,
+        'rbenv_ruby': rbenv_ruby,
+        'rbenv_bundle': rbenv_bundle,
+    }
 
 
 def recommend(virt, ruby, bundler, node, psql, redis, ruby_req, bundler_req, node_hint, disk_health):
     missing = []
-    if not ruby['present']:
+    if not ruby['present'] or (ruby_req and ruby_req not in (ruby['version'] or '')):
         missing.append('Ruby')
-    if not bundler['present']:
+    if not bundler['present'] or (bundler_req and bundler_req not in (bundler['version'] or '')):
         missing.append('Bundler')
     if not psql['present']:
         missing.append('PostgreSQL client')
@@ -241,7 +276,8 @@ def markdown_report(data):
         item = data['tools'][key]
         name = key.replace('_', '-')
         if item['present']:
-            lines.append(f"- {name}: `{item['version']}`")
+            suffix = f" via `{item['source']}`" if item.get('source') else ''
+            lines.append(f"- {name}: `{item['version']}`{suffix}")
         else:
             lines.append(f"- {name}: **missing**")
     lines.append('')
@@ -281,6 +317,10 @@ def main():
     repo = Path(args[0]).resolve() if args else Path.cwd()
     output_json = '--json' in sys.argv[1:]
 
+    ruby_required = parse_ruby_version(repo)
+    bundler_required = parse_bundler_version(repo)
+    ruby_tool, bundler_tool, ruby_detection = detect_ruby_toolchain(ruby_required, bundler_required)
+
     data = {
         'host': {
             'platform': platform.platform(),
@@ -289,8 +329,8 @@ def main():
         },
         'virtualization': detect_virtualization(),
         'tools': {
-            'ruby': version_for('ruby', ['-v']),
-            'bundler': version_for('bundle', ['-v']),
+            'ruby': ruby_tool,
+            'bundler': bundler_tool,
             'node': version_for('node', ['-v']),
             'npm': version_for('npm', ['-v']),
             'psql': version_for('psql', ['--version']),
@@ -298,9 +338,10 @@ def main():
             'git': version_for('git', ['--version']),
             'curl': version_for('curl', ['--version']),
         },
+        'tool_detection': ruby_detection,
         'repo': {
-            'ruby_required': parse_ruby_version(repo),
-            'bundler_required': parse_bundler_version(repo),
+            'ruby_required': ruby_required,
+            'bundler_required': bundler_required,
             'node_hint': parse_node_hint(repo),
             'size': du(repo),
         },

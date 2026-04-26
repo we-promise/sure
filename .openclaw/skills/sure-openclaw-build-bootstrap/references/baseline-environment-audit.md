@@ -117,6 +117,34 @@ Disk effect observed on the reference host:
 - the heaviest dependency expansion came from `libvips-dev`
 - the post-install state still cleared the hard disk gate, so it was safe to continue
 
+## Step 3 result, Ruby and Bundler installed
+
+Installed on the reference host:
+
+- `rbenv`
+- `ruby-build`
+- `libreadline-dev`
+- `libgdbm-dev`
+- `libgdbm-compat-dev`
+- `bison`
+
+Then:
+
+- updated `/root/.rbenv/plugins/ruby-build` to a current upstream release so Ruby `3.4.7` was available
+- installed Ruby `3.4.7` via `rbenv`
+- installed Bundler `2.6.7`
+
+Re-audit result after install:
+
+- Ruby: present, `3.4.7`, detected via `/root/.rbenv/shims/ruby`
+- Bundler: present, `2.6.7`, detected via `/root/.rbenv/shims/bundle`
+- disk-space gate: still `pass`
+
+Important finding:
+
+- Debian's system Ruby may still exist on the host and can appear earlier on PATH in bare shells
+- the audit helper must therefore prefer the `rbenv` toolchain when it matches repo requirements
+
 ## Suggested follow-up audit checks after installs
 
 Preferred:
@@ -128,6 +156,12 @@ python3 .openclaw/skills/sure-openclaw-build-bootstrap/scripts/audit_sure_build_
 Then add:
 
 ```bash
+export RBENV_ROOT=/root/.rbenv
+export PATH="$RBENV_ROOT/bin:$RBENV_ROOT/shims:$PATH"
+eval "$(rbenv init -)"
+
+ruby -v
+bundle -v
 bundle config list
 npm config get cache
 ```

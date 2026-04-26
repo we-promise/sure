@@ -47,6 +47,49 @@ Interpretation:
 
 If the audit reports `stop-and-free-disk-space`, do that before the next bootstrap step.
 
+## Step 3, install Ruby and Bundler
+
+Preferred path on the reference host:
+
+- install `rbenv` and `ruby-build` from apt
+- update the `ruby-build` plugin inside `/root/.rbenv/plugins/ruby-build` because Debian Bookworm's packaged definitions are too old for Ruby `3.4.7`
+- install Ruby `3.4.7` with `rbenv`
+- install Bundler `2.6.7` with `gem`
+
+Install missing Ruby build helpers:
+
+```bash
+apt-get install -y --no-install-recommends \
+  rbenv ruby-build libreadline-dev libgdbm-dev libgdbm-compat-dev bison
+```
+
+Refresh `ruby-build` definitions and install Ruby:
+
+```bash
+mkdir -p /root/.rbenv/plugins
+rm -rf /root/.rbenv/plugins/ruby-build
+git clone --depth=1 https://github.com/rbenv/ruby-build.git /root/.rbenv/plugins/ruby-build
+
+export RBENV_ROOT=/root/.rbenv
+export PATH="$RBENV_ROOT/bin:$RBENV_ROOT/shims:$PATH"
+eval "$(rbenv init -)"
+export RUBY_BUILD_CACHE_PATH=/root/.cache/ruby-build
+
+rbenv install -s 3.4.7
+rbenv global 3.4.7
+rbenv rehash
+```
+
+Install the lockfile-compatible Bundler:
+
+```bash
+gem install bundler -v 2.6.7 --no-document
+rbenv rehash
+bundle -v
+```
+
+Important note: the host may still also have Debian's system Ruby on PATH. The audit helper is expected to prefer the `rbenv` Ruby and Bundler when they match repo requirements.
+
 ## Step 2, install only missing OS packages
 
 On the first reference host, the missing OS-level pieces were:
@@ -159,5 +202,5 @@ This tells you the environment cannot run Rails tests yet, but it has enough fre
 
 ## Resources
 
-- `scripts/audit_sure_build_env.py` for a repeatable baseline audit and strategy recommendation.
-- `references/baseline-environment-audit.md` for the captured step 1 findings and rationale.
+- `scripts/audit_sure_build_env.py` for a repeatable baseline audit, disk-space gate, and strategy recommendation.
+- `references/baseline-environment-audit.md` for the captured step-by-step findings and rationale.
