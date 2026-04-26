@@ -170,11 +170,21 @@ class Family::DataExporter
         }.to_json
       end
 
-      # Export merchants (only family merchants)
-      @family.merchants.find_each do |merchant|
+      # Export all merchants referenced by the family's transactions (includes ProviderMerchants)
+      exported_merchant_ids = Set.new
+      all_referenced_merchants.each do |merchant|
+        next if exported_merchant_ids.include?(merchant.id)
+        exported_merchant_ids << merchant.id
+
         lines << {
           type: "Merchant",
-          data: merchant.as_json
+          data: {
+            id: merchant.id,
+            name: merchant.name,
+            color: merchant.respond_to?(:color) ? merchant.color : nil,
+            logo_url: merchant.logo_url,
+            website_url: merchant.respond_to?(:website_url) ? merchant.website_url : nil
+          }
         }.to_json
       end
 
@@ -341,6 +351,15 @@ class Family::DataExporter
       end
 
       action.value
+    end
+
+    def all_referenced_merchants
+      merchant_ids = @family.transactions
+        .where.not(merchant_id: nil)
+        .distinct
+        .pluck(:merchant_id)
+
+      Merchant.where(id: merchant_ids)
     end
 
     def serialize_conditions_for_csv(conditions)
