@@ -145,7 +145,7 @@ class Api::V1::TradesController < Api::V1::BaseController
 
     def trade_params
       params.require(:trade).permit(
-        :account_id, :date, :qty, :price, :currency,
+        :account_id, :date, :qty, :price, :fee, :currency,
         :security_id, :ticker, :manual_ticker, :investment_activity_label, :category_id
       )
     end
@@ -153,7 +153,7 @@ class Api::V1::TradesController < Api::V1::BaseController
     def trade_update_params
       params.require(:trade).permit(
         :name, :date, :amount, :currency, :notes, :nature, :type,
-        :qty, :price, :investment_activity_label, :category_id
+        :qty, :price, :fee, :investment_activity_label, :category_id
       )
     end
 
@@ -173,6 +173,8 @@ class Api::V1::TradesController < Api::V1::BaseController
         }.compact_blank
       }.compact
 
+      entry_params[:entryable_attributes][:fee] = flat[:fee].to_d if flat[:fee].present?
+
       original_qty = flat[:qty]
       original_price = flat[:price]
       type_or_nature = flat[:type].presence || flat[:nature]
@@ -180,10 +182,11 @@ class Api::V1::TradesController < Api::V1::BaseController
       if original_qty.present? || original_price.present?
         qty = original_qty.present? ? original_qty : @trade.qty.abs
         price = original_price.present? ? original_price : @trade.price
+        fee_val = flat[:fee].present? ? flat[:fee].to_d : (@trade.fee || 0)
         is_sell = type_or_nature.present? ? trade_sell_from_type_or_nature?(type_or_nature) : @trade.qty.negative?
         signed_qty = is_sell ? -qty.to_d.abs : qty.to_d.abs
         entry_params[:entryable_attributes][:qty] = signed_qty
-        entry_params[:amount] = signed_qty * price.to_d
+        entry_params[:amount] = signed_qty * price.to_d + fee_val
         ticker = @trade.security&.ticker
         entry_params[:name] = Trade.build_name(is_sell ? "sell" : "buy", signed_qty.abs, ticker) if ticker.present?
         entry_params[:entryable_attributes][:investment_activity_label] = flat[:investment_activity_label].presence || @trade.investment_activity_label.presence || (is_sell ? "Sell" : "Buy")
@@ -245,6 +248,7 @@ class Api::V1::TradesController < Api::V1::BaseController
         date: trade_params[:date],
         qty: qty,
         price: price,
+        fee: trade_params[:fee],
         currency: trade_params[:currency].presence || account.currency,
         type: type,
         ticker: ticker_value,

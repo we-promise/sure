@@ -36,7 +36,7 @@ class Trade < ApplicationRecord
     return nil if current_price.nil?
 
     current_value = current_price * qty.abs
-    cost_basis = price_money * qty.abs
+    cost_basis = price_money * qty.abs + fee_money
 
     Trend.new(current: current_value, previous: cost_basis)
   end
@@ -79,7 +79,7 @@ class Trade < ApplicationRecord
       return nil unless holding&.avg_cost
 
       cost_basis = holding.avg_cost * qty.abs
-      sale_proceeds = price_money * qty.abs
+      sale_proceeds = price_money * qty.abs - fee_money
 
       Trend.new(current: sale_proceeds, previous: cost_basis)
     end

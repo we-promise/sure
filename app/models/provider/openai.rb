@@ -253,6 +253,27 @@ class Provider::Openai < Provider
     end
   end
 
+  def extract_brokerage_statement(pdf_content:, model: "", family: nil)
+    with_provider_response do
+      effective_model = model.presence || @default_model
+
+      trace = create_langfuse_trace(
+        name: "openai.extract_brokerage_statement",
+        input: { pdf_size: pdf_content&.bytesize }
+      )
+
+      result = BrokerageStatementExtractor.new(
+        client: client,
+        pdf_content: pdf_content,
+        model: effective_model
+      ).extract
+
+      upsert_langfuse_trace(trace: trace, output: { trade_count: result[:trades].size })
+
+      result
+    end
+  end
+
   def chat_response(
     prompt,
     model:,

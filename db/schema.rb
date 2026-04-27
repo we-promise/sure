@@ -721,6 +721,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_04_12_120000) do
     t.string "effective_date"
     t.text "conditions"
     t.text "actions"
+    t.string "fee"
     t.index ["import_id"], name: "index_import_rows_on_import_id"
   end
 
