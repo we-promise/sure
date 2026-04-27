@@ -245,25 +245,19 @@ class IndexaCapitalItemsController < ApplicationController
       raw_sync_start_date = sync_start_dates[indexa_capital_account_id]
       sync_start_date = (Date.parse(raw_sync_start_date.to_s) rescue nil) if raw_sync_start_date.present?
 
-      account = create_account_from_indexa_capital(indexa_capital_account, "Investment", {})
-
-      unless account&.persisted?
-        skipped_count += 1
-        next
-      end
-
-      # Account row exists from this point on — count it as created even if
-      # the provider link or sync_start_date persistence below raises.
-      created_count += 1
-
-      begin
+      # Wrap creation, provider link, and sync_start_date persistence in a
+      # single transaction so a failure in ensure_account_provider! (or the
+      # sync_start_date update) rolls back the Account row instead of leaving
+      # an orphan that is also wrongly counted as "created".
+      ActiveRecord::Base.transaction do
+        account = create_account_from_indexa_capital(indexa_capital_account, "Investment", {})
         indexa_capital_account.ensure_account_provider!(account)
         indexa_capital_account.update!(sync_start_date: sync_start_date) if sync_start_date
-      rescue => e
-        Rails.logger.error "IndexaCapitalItemsController#complete_account_setup - post-create error for #{indexa_capital_account.id}: #{e.message}"
       end
+
+      created_count += 1
     rescue => e
-      Rails.logger.error "IndexaCapitalItemsController#complete_account_setup - Error: #{e.message}"
+      Rails.logger.error "IndexaCapitalItemsController#complete_account_setup - Error linking #{indexa_capital_account_id}: #{e.message}"
       skipped_count += 1
     end
 
