@@ -5,11 +5,12 @@ class SavingsGoal < ApplicationRecord
   belongs_to :account
   has_many :savings_contributions, dependent: :destroy
 
-  validates :name, presence: true
+  validates :name, presence: true, length: { maximum: 255 }
   validates :target_amount, presence: true, numericality: { greater_than: 0 }
   validates :currency, presence: true
   validate :account_belongs_to_family
   validate :account_is_asset
+  validate :currency_locked_once_contributions_exist
 
   before_validation :sync_currency_from_account
 
@@ -94,5 +95,18 @@ private
   def account_is_asset
     return if account.nil?
     errors.add(:account, "must be an asset account") unless account.classification == "asset"
+  end
+
+  # Once a goal has contributions, swapping its account to one in a
+  # different currency would orphan those contributions in the old
+  # currency while the goal flips to the new one — current_balance
+  # would silently sum across currencies. Block the change.
+  def currency_locked_once_contributions_exist
+    return unless persisted? && account.present?
+    return if savings_contributions.none?
+
+    existing_currency = savings_contributions.first.currency
+    return if existing_currency.blank? || existing_currency == account.currency
+    errors.add(:account, "cannot be changed to a different currency once the goal has contributions")
   end
 end

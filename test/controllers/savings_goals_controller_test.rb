@@ -55,6 +55,22 @@ class SavingsGoalsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "create with initial contribution at or above target keeps state active and progress 100%" do
+    post savings_goals_path, params: {
+      savings_goal: {
+        account_id: @account.id,
+        name: "Already done",
+        target_amount: 100,
+        target_date: 6.months.from_now.to_date,
+        initial_contribution: "150"
+      }
+    }
+    goal = users(:family_admin).family.savings_goals.find_by(name: "Already done")
+    assert_equal "active", goal.state
+    assert_equal 100, goal.progress_percent
+    assert_equal 0, goal.remaining_amount
+  end
+
   test "create rejects an account that does not belong to the family" do
     other_family = Family.create!(name: "Other", locale: "en", date_format: "%Y-%m-%d", currency: "USD")
     other_account = other_family.accounts.create!(

@@ -80,9 +80,74 @@ class SavingsGoalTest < ActiveSupport::TestCase
     assert_equal expected, @goal.monthly_target_amount
   end
 
+  test "name length capped at 255" do
+    @goal.name = "x" * 256
+    assert_not @goal.valid?
+    assert_includes @goal.errors.attribute_names, :name
+
+    @goal.name = "x" * 255
+    assert @goal.valid?
+  end
+
+  test "progress_percent caps at 100 when over-funded" do
+    @goal.savings_contributions.create!(
+      amount: @goal.target_amount * 2,
+      currency: @goal.currency,
+      source: "manual",
+      contributed_at: Date.current
+    )
+    assert_equal 100, @goal.progress_percent
+  end
+
+  test "remaining_amount clamps at zero when over-funded" do
+    @goal.savings_contributions.create!(
+      amount: @goal.target_amount * 2,
+      currency: @goal.currency,
+      source: "manual",
+      contributed_at: Date.current
+    )
+    assert_equal 0, @goal.remaining_amount
+  end
+
+  test "monthly_target_amount returns full remaining when target_date is in the past" do
+    @goal.target_date = 1.month.ago.to_date
+    assert_equal 0, @goal.months_remaining
+    assert_equal @goal.remaining_amount, @goal.monthly_target_amount
+  end
+
+  test "currency cannot be changed via account swap once contributions exist" do
+    eur_account = @goal.family.accounts.create!(
+      name: "Euro Pot", balance: 0, currency: "EUR",
+      accountable: Depository.new
+    )
+    # @goal already has fixture contributions in USD
+    @goal.account = eur_account
+    assert_not @goal.valid?
+    assert_includes @goal.errors.attribute_names, :account
+  end
+
+  test "currency may be changed via account swap when there are no contributions yet" do
+    eur_account = @goal.family.accounts.create!(
+      name: "Euro Pot", balance: 0, currency: "EUR",
+      accountable: Depository.new
+    )
+    @goal.savings_contributions.delete_all
+    @goal.account = eur_account
+    assert @goal.valid?, @goal.errors.full_messages.to_sentence
+  end
+
   test "destroy cascades contributions" do
     contribution_ids = @goal.savings_contributions.pluck(:id)
     @goal.destroy
+    assert_equal 0, SavingsContribution.where(id: contribution_ids).count
+  end
+
+  test "is destroyed when its backing account is destroyed" do
+    account = @goal.account
+    goal_id = @goal.id
+    contribution_ids = @goal.savings_contributions.pluck(:id)
+    account.destroy
+    assert_nil SavingsGoal.find_by(id: goal_id)
     assert_equal 0, SavingsContribution.where(id: contribution_ids).count
   end
 end

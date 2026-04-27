@@ -67,6 +67,23 @@ class FamilySavingsSummaryTest < ActiveSupport::TestCase
     assert_same summary_a, summary_a_again
   end
 
+  test "summary excludes goals in other currencies" do
+    eur_account = @family.accounts.create!(
+      name: "Euro Pot", balance: 0, currency: "EUR",
+      accountable: Depository.new
+    )
+    eur_goal = @family.savings_goals.create!(
+      account: eur_account,
+      name: "Tour de France",
+      target_amount: 3_000,
+      target_date: 6.months.from_now.to_date,
+      state: "active"
+    )
+    summary = @family.savings_summary_for(@budget) # USD budget
+    assert_not_includes summary.active_goals, eur_goal
+    assert summary.active_goals.all? { |g| g.currency == @budget.currency }
+  end
+
   test "money helpers wrap with budget currency" do
     summary = @family.savings_summary_for(@budget)
     assert_kind_of Money, summary.surplus_money

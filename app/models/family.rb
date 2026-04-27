@@ -334,7 +334,15 @@ class Family < ApplicationRecord
   def savings_summary_for(budget)
     @savings_summary_cache ||= {}
     @savings_summary_cache[budget.id] ||= begin
-      active = savings_goals.where(state: "active").alphabetically.to_a
+      # Only include goals denominated in the budget's currency. Mixing
+      # currencies in a raw `sum(monthly_target_amount)` would produce a
+      # nonsense allocated number and have AutoFundJob debit a USD
+      # surplus to fund a EUR goal. Goals in other currencies still
+      # exist; they just don't enter this budget's surplus math.
+      active = savings_goals
+                 .where(state: "active", currency: budget.currency)
+                 .alphabetically
+                 .to_a
       allocated = active.sum { |g| g.monthly_target_amount || 0 }
       surplus = budget.monthly_surplus
       available = [ surplus - allocated, 0 ].max
