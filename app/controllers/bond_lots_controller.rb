@@ -68,6 +68,11 @@ class BondLotsController < ApplicationController
   def destroy
     return unless require_account_permission!(@bond_lot.account)
 
+    if @bond_lot.closed_on.present?
+      redirect_back_or_to account_path(@bond_lot.account), alert: t("bond_lots.destroy.settled_error")
+      return
+    end
+
     account = @bond_lot.account
     sync_start_date = @bond_lot.purchased_on
 

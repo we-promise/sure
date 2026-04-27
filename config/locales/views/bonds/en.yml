@@ -116,6 +116,7 @@ en:
       success: Bond purchase updated
     destroy:
       success: Bond purchase removed
+      settled_error: Cannot delete a settled bond lot
     form:
       purchased_on: Purchase date
       issue_date: Issue date

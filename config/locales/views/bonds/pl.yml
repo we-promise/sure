@@ -128,6 +128,7 @@ pl:
       success: Zaktualizowano zakup obligacji
     destroy:
       success: Usunięto zakup obligacji
+      settled_error: Nie można usunąć rozliczonego zakupu obligacji
     form:
       purchased_on: Data zakupu
       issue_date: Data emisji
