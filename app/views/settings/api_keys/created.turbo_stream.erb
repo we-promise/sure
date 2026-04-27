@@ -87,12 +87,15 @@
             <h4 class="font-medium text-primary mb-3">How to use your API key</h4>
             <p class="text-secondary text-sm mb-3">Include your API key in the X-Api-Key header when making requests:</p>
             <div class="bg-container rounded-lg p-3 font-mono text-sm text-primary border border-primary max-w-full overflow-hidden" data-controller="clipboard">
-              <div class="flex items-start gap-2 min-w-0">
-                <code class="block flex-1 min-w-0 overflow-x-auto break-all whitespace-pre-wrap" data-clipboard-target="source">curl -H "X-Api-Key: <%= @api_key.plain_key %>" <%= request.base_url %>/api/v1/accounts</code>
-                <button type="button" data-action="clipboard#copy" class="p-1.5 text-secondary hover:text-primary shrink-0" title="Copy curl command" aria-label="Copy curl command">
-                  <span data-clipboard-target="iconDefault"><%= icon("copy", class: "w-4 h-4") %></span>
-                  <span class="hidden" data-clipboard-target="iconSuccess"><%= icon("check", class: "w-4 h-4") %></span>
-                </button>
+              <code class="block w-full min-w-0 overflow-x-auto break-all whitespace-pre-wrap" data-clipboard-target="source">curl -H "X-Api-Key: <%= @api_key.plain_key %>" <%= request.base_url %>/api/v1/accounts</code>
+              <div class="mt-2 flex justify-end">
+                <%= render DS::Button.new(
+                  text: "Copy",
+                  variant: "ghost",
+                  icon: "copy",
+                  class: "shrink-0",
+                  data: { action: "clipboard#copy" }
+                ) %>
               </div>
             </div>
           </div>
