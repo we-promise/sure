@@ -2,7 +2,7 @@
 
 <%= styled_form_with model: savings_goal, class: "space-y-4" do |f| %>
   <% if savings_goal.errors.any? %>
-    <div class="bg-red-50 text-red-700 border border-red-200 rounded-lg p-3">
+    <div class="p-3 rounded-lg border border-destructive bg-red-tint-10 text-destructive">
       <ul class="list-disc list-inside text-sm">
         <% savings_goal.errors.full_messages.each do |msg| %>
           <li><%= msg %></li>
@@ -38,7 +38,7 @@
   <%= f.text_area :notes, label: "Notes (optional)", rows: 3, placeholder: "What is this goal for?" %>
 
   <% if show_initial %>
-    <hr class="border-tertiary">
+    <hr class="my-2 border-secondary">
     <p class="text-sm text-secondary">Optionally, seed this goal with a starting balance.</p>
     <div class="flex items-center gap-2">
       <label class="text-sm text-secondary w-40">Initial contribution</label>

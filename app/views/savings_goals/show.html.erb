@@ -105,7 +105,7 @@
 
     <% contributions = @savings_goal.savings_contributions.recent_first %>
     <% if contributions.any? %>
-      <ul class="divide-y divide-tertiary">
+      <ul class="divide-y divide-alpha-black-200 theme-dark:divide-alpha-white-200">
         <% contributions.each do |c| %>
           <li class="flex items-center justify-between py-3">
             <div>
