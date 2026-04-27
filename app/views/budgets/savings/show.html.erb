@@ -1,6 +1,54 @@
-<div class="p-6">
-  <h1 class="text-2xl font-medium">Savings — <%= @budget.start_date.strftime("%b %Y") %></h1>
-  <p class="text-secondary">Surplus: <%= @savings_summary.surplus %> / Allocated: <%= @savings_summary.allocated %> / Available: <%= @savings_summary.available %></p>
-  <p class="text-secondary">Active goals: <%= @savings_summary.active_goals.size %></p>
-  <p>Placeholder; real UI in step 6.</p>
+<div class="pb-12">
+  <%= render "budgets/budget_header",
+            budget: @budget,
+            previous_budget: nil,
+            next_budget: nil,
+            latest_budget: nil %>
+
+  <div class="space-y-6 max-w-3xl mx-auto">
+    <div class="bg-container rounded-xl shadow-border-xs p-6 grid grid-cols-3 gap-6">
+      <div>
+        <p class="text-secondary text-xs uppercase tracking-wide">Monthly surplus</p>
+        <p class="text-primary text-xl font-medium mt-1"><%= format_money @savings_summary.surplus_money %></p>
+      </div>
+      <div>
+        <p class="text-secondary text-xs uppercase tracking-wide">Allocated to goals</p>
+        <p class="text-primary text-xl font-medium mt-1"><%= format_money @savings_summary.allocated_money %></p>
+      </div>
+      <div>
+        <p class="text-secondary text-xs uppercase tracking-wide">Available</p>
+        <p class="text-primary text-xl font-medium mt-1"><%= format_money @savings_summary.available_money %></p>
+      </div>
+    </div>
+
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <h2 class="text-primary text-lg font-medium">Active goals</h2>
+        <%= render DS::Link.new(text: "View all", variant: "secondary", icon: "external-link", href: savings_goals_path, size: "sm") %>
+      </div>
+      <%= button_to budget_savings_auto_fund_path(budget_month_year: Budget.date_to_param(@budget.start_date)),
+            method: :post,
+            form: { data: { turbo_confirm: "Auto-fund all active goals from this month's surplus?" } },
+            class: "inline-flex items-center gap-1 px-3 py-2 rounded-md bg-primary text-inverse text-sm font-medium" do %>
+        <%= icon "zap", color: "white", size: "sm" %>
+        Auto-fund this month
+      <% end %>
+    </div>
+
+    <% if @savings_summary.active_goals.any? %>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <% @savings_summary.active_goals.each do |goal| %>
+          <%= render Savings::GoalCardComponent.new(goal: goal) %>
+        <% end %>
+      </div>
+    <% else %>
+      <div class="bg-container rounded-xl shadow-border-xs p-8 text-center">
+        <p class="text-primary font-medium">No active savings goals.</p>
+        <p class="text-secondary text-sm mt-1">Create one to start earmarking money.</p>
+        <div class="mt-3">
+          <%= render DS::Link.new(text: "New goal", icon: "plus", variant: "primary", href: new_savings_goal_path) %>
+        </div>
+      </div>
+    <% end %>
+  </div>
 </div>

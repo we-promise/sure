@@ -3,6 +3,7 @@
 <% steps = [
   { name: "Setup", path: edit_budget_path(budget), is_complete: budget.initialized?, step_number: 1 },
   { name: "Categories", path: budget_budget_categories_path(budget), is_complete: budget.allocations_valid?, step_number: 2 },
+  { name: "Savings", path: budget_savings_path(budget_month_year: Budget.date_to_param(budget.start_date)), is_complete: false, step_number: 3 },
 ] %>
 
 <ul class="flex items-center gap-2">

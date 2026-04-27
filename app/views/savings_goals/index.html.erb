@@ -1,12 +1,40 @@
-<div class="p-6">
-  <h1 class="text-2xl font-medium"><%= controller_name.titleize %> / <%= action_name %></h1>
-  <p class="text-secondary">Savings goals — placeholder view; real UI in step 6.</p>
-  <% if @savings_goal %><pre><%= @savings_goal.attributes.except("notes").inspect %></pre><% end %>
-  <% if @savings_goals %>
-    <ul>
-      <% @savings_goals.each do |g| %>
-        <li><%= link_to g.name, savings_goal_path(g) %> — <%= number_to_currency(g.current_balance, unit: "") %> / <%= number_to_currency(g.target_amount, unit: "") %> (<%= g.state %>)</li>
-      <% end %>
-    </ul>
-  <% end %>
+<div class="flex items-center justify-between gap-4 mb-6">
+  <div>
+    <h1 class="text-primary text-2xl font-medium">Savings goals</h1>
+    <p class="text-secondary text-sm">Track money set aside for specific purposes, backed by your asset accounts.</p>
+  </div>
+  <%= render DS::Link.new(
+    text: "New goal",
+    icon: "plus",
+    variant: "primary",
+    href: new_savings_goal_path
+  ) %>
 </div>
+
+<nav class="flex bg-surface-inset p-1 rounded-lg mb-4 gap-1">
+  <% %w[active paused completed archived all].each do |state| %>
+    <% active = (@state == state) %>
+    <%= link_to state.titleize,
+                savings_goals_path(state: state),
+                class: class_names(
+                  "flex-1 inline-flex justify-center items-center text-sm font-medium px-2 py-1 rounded-md transition-colors duration-200",
+                  active ? "bg-white text-primary shadow-sm" : "text-secondary hover:bg-surface-inset-hover"
+                ) %>
+  <% end %>
+</nav>
+
+<% if @savings_goals.any? %>
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    <% @savings_goals.each do |goal| %>
+      <%= render Savings::GoalCardComponent.new(goal: goal) %>
+    <% end %>
+  </div>
+<% else %>
+  <div class="bg-container rounded-xl shadow-border-xs p-12 text-center">
+    <p class="text-primary font-medium">No <%= @state %> savings goals.</p>
+    <p class="text-secondary text-sm mt-1">Set one up to start earmarking money in your asset accounts.</p>
+    <div class="mt-4">
+      <%= render DS::Link.new(text: "New goal", icon: "plus", variant: "primary", href: new_savings_goal_path) %>
+    </div>
+  </div>
+<% end %>

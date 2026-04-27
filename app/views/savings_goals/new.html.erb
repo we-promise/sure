@@ -1,12 +1,16 @@
-<div class="p-6">
-  <h1 class="text-2xl font-medium"><%= controller_name.titleize %> / <%= action_name %></h1>
-  <p class="text-secondary">Savings goals — placeholder view; real UI in step 6.</p>
-  <% if @savings_goal %><pre><%= @savings_goal.attributes.except("notes").inspect %></pre><% end %>
-  <% if @savings_goals %>
-    <ul>
-      <% @savings_goals.each do |g| %>
-        <li><%= link_to g.name, savings_goal_path(g) %> — <%= number_to_currency(g.current_balance, unit: "") %> / <%= number_to_currency(g.target_amount, unit: "") %> (<%= g.state %>)</li>
-      <% end %>
-    </ul>
-  <% end %>
+<%= content_for :previous_path, savings_goals_path %>
+<%= content_for :cancel_path, savings_goals_path %>
+
+<div class="space-y-6">
+  <div class="text-center space-y-2">
+    <h1 class="text-3xl text-primary font-medium">Set up a savings goal</h1>
+    <p class="text-secondary text-sm max-w-md mx-auto">
+      Pick an asset account to back the goal, set a target, and optionally seed it with money you've already saved.
+    </p>
+  </div>
+
+  <div class="mx-auto max-w-lg">
+    <%= render "form", savings_goal: @savings_goal, show_initial: true %>
+  </div>
 </div>
+<% content_for(:layout) { "wizard" } %>

@@ -13,6 +13,7 @@ class SavingsGoalsController < ApplicationController
 
   def new
     @savings_goal = Current.family.savings_goals.new(state: "active")
+    render layout: "wizard"
   end
 
   def create
@@ -21,7 +22,7 @@ class SavingsGoalsController < ApplicationController
 
     if @savings_goal.save
       handle_initial_contribution(@savings_goal)
-      redirect_to savings_goal_path(@savings_goal), notice: t(".created")
+      redirect_to savings_goal_path(@savings_goal), notice: "Savings goal created."
     else
       render :new, status: :unprocessable_entity
     end
@@ -36,7 +37,7 @@ class SavingsGoalsController < ApplicationController
     end
 
     if @savings_goal.update(savings_goal_params)
-      redirect_to savings_goal_path(@savings_goal), notice: t(".updated")
+      redirect_to savings_goal_path(@savings_goal), notice: "Savings goal updated."
     else
       render :edit, status: :unprocessable_entity
     end
@@ -44,27 +45,27 @@ class SavingsGoalsController < ApplicationController
 
   def destroy
     @savings_goal.destroy
-    redirect_to savings_goals_path, notice: t(".destroyed")
+    redirect_to savings_goals_path, notice: "Savings goal deleted."
   end
 
   def pause
-    transition!(:pause!, t(".paused"))
+    transition!(:pause!, "Goal paused.")
   end
 
   def resume
-    transition!(:resume!, t(".resumed"))
+    transition!(:resume!, "Goal resumed.")
   end
 
   def complete
-    transition!(:complete!, t(".completed"))
+    transition!(:complete!, "Goal marked as completed.")
   end
 
   def archive
-    transition!(:archive!, t(".archived"))
+    transition!(:archive!, "Goal archived.")
   end
 
   def unarchive
-    transition!(:unarchive!, t(".unarchived"))
+    transition!(:unarchive!, "Goal restored to active.")
   end
 
   private

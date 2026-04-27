@@ -1,0 +1,17 @@
+<%= tag.svg width: size, height: size, viewBox: "0 0 #{size} #{size}", role: "img",
+            "aria-label": "#{percent}% complete", class: "shrink-0" do %>
+  <%= tag.circle cx: size / 2.0, cy: size / 2.0, r: radius,
+                 fill: "none", "stroke": "var(--color-tertiary)",
+                 "stroke-width": stroke, "stroke-opacity": "0.25" %>
+  <%= tag.circle cx: size / 2.0, cy: size / 2.0, r: radius,
+                 fill: "none", stroke: stroke_color,
+                 "stroke-width": stroke, "stroke-linecap": "round",
+                 "stroke-dasharray": circumference,
+                 "stroke-dashoffset": offset,
+                 transform: "rotate(-90 #{size / 2.0} #{size / 2.0})" %>
+  <%= tag.text x: size / 2.0, y: size / 2.0,
+               "text-anchor": "middle", "dominant-baseline": "central",
+               class: "fill-primary text-xs font-medium" do %>
+    <%= percent %>%
+  <% end %>
+<% end %>

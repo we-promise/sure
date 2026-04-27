@@ -1,12 +1,111 @@
-<div class="p-6">
-  <h1 class="text-2xl font-medium"><%= controller_name.titleize %> / <%= action_name %></h1>
-  <p class="text-secondary">Savings goals — placeholder view; real UI in step 6.</p>
-  <% if @savings_goal %><pre><%= @savings_goal.attributes.except("notes").inspect %></pre><% end %>
-  <% if @savings_goals %>
-    <ul>
-      <% @savings_goals.each do |g| %>
-        <li><%= link_to g.name, savings_goal_path(g) %> — <%= number_to_currency(g.current_balance, unit: "") %> / <%= number_to_currency(g.target_amount, unit: "") %> (<%= g.state %>)</li>
+<div class="max-w-3xl mx-auto py-6 space-y-6">
+  <div class="flex items-start justify-between gap-4">
+    <div class="flex items-center gap-4">
+      <%= render Savings::ProgressRingComponent.new(percent: @savings_goal.progress_percent, size: 96, stroke: 8, color: @savings_goal.color) %>
+      <div>
+        <h1 class="text-2xl text-primary font-medium"><%= @savings_goal.name %></h1>
+        <p class="text-secondary text-sm">
+          <%= @savings_goal.state.titleize %>
+          · <%= @savings_goal.account.name %>
+          <% if @savings_goal.target_date %>
+            · target <%= @savings_goal.target_date.strftime("%b %Y") %>
+          <% end %>
+        </p>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-1">
+      <%= render DS::Link.new(variant: "icon", icon: "pencil", href: edit_savings_goal_path(@savings_goal)) %>
+      <% if @savings_goal.may_pause? %>
+        <%= button_to pause_savings_goal_path(@savings_goal), method: :patch, form_class: "inline" do %>
+          <%= icon "pause", as_button: false %>
+        <% end %>
       <% end %>
-    </ul>
+      <% if @savings_goal.may_resume? %>
+        <%= button_to resume_savings_goal_path(@savings_goal), method: :patch, form_class: "inline" do %>
+          <%= icon "play", as_button: false %>
+        <% end %>
+      <% end %>
+      <% if @savings_goal.may_complete? %>
+        <%= button_to complete_savings_goal_path(@savings_goal), method: :patch, form_class: "inline" do %>
+          <%= icon "check", as_button: false %>
+        <% end %>
+      <% end %>
+      <% if @savings_goal.may_archive? %>
+        <%= button_to archive_savings_goal_path(@savings_goal), method: :patch, form_class: "inline" do %>
+          <%= icon "archive", as_button: false %>
+        <% end %>
+      <% end %>
+      <% if @savings_goal.may_unarchive? %>
+        <%= button_to unarchive_savings_goal_path(@savings_goal), method: :patch, form_class: "inline" do %>
+          <%= icon "rotate-ccw", as_button: false %>
+        <% end %>
+      <% end %>
+      <%= button_to savings_goal_path(@savings_goal), method: :delete,
+            form: { data: { turbo_confirm: "Delete this goal? Contributions will also be deleted." } },
+            form_class: "inline" do %>
+        <%= icon "trash-2", color: "destructive" %>
+      <% end %>
+    </div>
+  </div>
+
+  <div class="bg-container rounded-xl shadow-border-xs p-6 grid grid-cols-3 gap-6">
+    <div>
+      <p class="text-secondary text-xs uppercase tracking-wide">Current balance</p>
+      <p class="text-primary text-xl font-medium mt-1"><%= format_money @savings_goal.current_balance_money %></p>
+    </div>
+    <div>
+      <p class="text-secondary text-xs uppercase tracking-wide">Target</p>
+      <p class="text-primary text-xl font-medium mt-1"><%= format_money Money.new(@savings_goal.target_amount, @savings_goal.currency) %></p>
+    </div>
+    <div>
+      <p class="text-secondary text-xs uppercase tracking-wide">Monthly target</p>
+      <p class="text-primary text-xl font-medium mt-1">
+        <% if @savings_goal.monthly_target_amount %>
+          <%= format_money Money.new(@savings_goal.monthly_target_amount, @savings_goal.currency) %>
+        <% else %>
+          <span class="text-secondary">—</span>
+        <% end %>
+      </p>
+    </div>
+  </div>
+
+  <% if @savings_goal.notes.present? %>
+    <div class="bg-container rounded-xl shadow-border-xs p-6">
+      <p class="text-secondary text-xs uppercase tracking-wide mb-2">Notes</p>
+      <p class="text-primary whitespace-pre-line"><%= @savings_goal.notes %></p>
+    </div>
   <% end %>
+
+  <div class="bg-container rounded-xl shadow-border-xs p-6">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-primary font-medium">Contributions</h2>
+      <%= render DS::Link.new(text: "Add contribution", icon: "plus", variant: "primary",
+            href: new_savings_goal_contribution_path(@savings_goal)) %>
+    </div>
+
+    <% contributions = @savings_goal.savings_contributions.recent_first %>
+    <% if contributions.any? %>
+      <ul class="divide-y divide-tertiary">
+        <% contributions.each do |c| %>
+          <li class="flex items-center justify-between py-3">
+            <div>
+              <p class="text-primary text-sm">
+                <%= format_money Money.new(c.amount, c.currency) %>
+                <span class="text-secondary text-xs ml-2 px-2 py-0.5 rounded-full bg-container-inset"><%= c.source.titleize %></span>
+              </p>
+              <p class="text-secondary text-xs"><%= c.contributed_at.strftime("%b %-d, %Y") %><% if c.notes.present? %> · <%= c.notes %><% end %></p>
+            </div>
+            <%= button_to savings_goal_contribution_path(@savings_goal, c), method: :delete,
+                  form: { data: { turbo_confirm: "Remove this contribution?" } },
+                  form_class: "inline" do %>
+              <%= icon "trash-2", color: "destructive", size: "sm" %>
+            <% end %>
+          </li>
+        <% end %>
+      </ul>
+    <% else %>
+      <p class="text-secondary text-sm">No contributions yet. Add one to start tracking progress.</p>
+    <% end %>
+  </div>
 </div>

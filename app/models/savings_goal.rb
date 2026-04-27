@@ -8,10 +8,10 @@ class SavingsGoal < ApplicationRecord
   validates :name, presence: true
   validates :target_amount, presence: true, numericality: { greater_than: 0 }
   validates :currency, presence: true
-validate :account_belongs_to_family
-validate :account_is_asset
+  validate :account_belongs_to_family
+  validate :account_is_asset
 
-before_validation :sync_currency_from_account
+  before_validation :sync_currency_from_account
 
   monetize :target_amount
 
@@ -95,5 +95,4 @@ private
     return if account.nil?
     errors.add(:account, "must be an asset account") unless account.classification == "asset"
   end
-
 end

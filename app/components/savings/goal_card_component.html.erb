@@ -1,0 +1,19 @@
+<%= link_to savings_goal_path(goal),
+            class: "block bg-container rounded-xl shadow-border-xs p-5 hover:shadow-border-sm transition" do %>
+  <div class="flex items-start gap-4">
+    <%= render Savings::ProgressRingComponent.new(percent: goal.progress_percent, size: 72, stroke: 6, color: goal.color) %>
+    <div class="grow min-w-0">
+      <div class="flex items-center justify-between gap-2">
+        <h3 class="text-primary font-medium truncate"><%= goal.name %></h3>
+        <span class="text-xs px-2 py-0.5 rounded-full font-medium <%= state_badge_classes %>">
+          <%= goal.state.titleize %>
+        </span>
+      </div>
+      <p class="text-secondary text-sm mt-1 truncate"><%= target_summary %></p>
+      <p class="text-primary text-sm mt-2 font-medium">
+        <%= helpers.format_money goal.current_balance_money %>
+        <span class="text-secondary font-normal">/ <%= helpers.format_money Money.new(goal.target_amount, goal.currency) %></span>
+      </p>
+    </div>
+  </div>
+<% end %>

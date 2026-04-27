@@ -1,0 +1,54 @@
+<%# locals: (savings_goal:, show_initial: false) %>
+
+<%= styled_form_with model: savings_goal, class: "space-y-4" do |f| %>
+  <% if savings_goal.errors.any? %>
+    <div class="bg-red-50 text-red-700 border border-red-200 rounded-lg p-3">
+      <ul class="list-disc list-inside text-sm">
+        <% savings_goal.errors.full_messages.each do |msg| %>
+          <li><%= msg %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <%= f.text_field :name, label: "Name", required: true, placeholder: "e.g. Trip to Japan" %>
+
+  <%= f.collection_select :account_id,
+        Current.family.accounts.where(classification: "asset").alphabetically,
+        :id, :name,
+        { label: "Backing account", required: true, prompt: "Choose an asset account" } %>
+
+  <%= f.money_field :target_amount, label: "Target amount", required: true %>
+
+  <%= f.date_field :target_date, label: "Target date (optional)" %>
+
+  <div>
+    <label class="block text-sm font-medium text-secondary mb-2">Color (optional)</label>
+    <div class="flex flex-wrap gap-2 justify-center">
+      <% %w[#F87171 #FB923C #FBBF24 #34D399 #60A5FA #818CF8 #A78BFA #F472B6 #94A3B8].each do |hex| %>
+        <label class="cursor-pointer">
+          <%= f.radio_button :color, hex, class: "sr-only peer" %>
+          <span class="block w-8 h-8 rounded-full ring-2 ring-transparent peer-checked:ring-primary"
+                style="background-color: <%= hex %>"></span>
+        </label>
+      <% end %>
+    </div>
+  </div>
+
+  <%= f.text_area :notes, label: "Notes (optional)", rows: 3, placeholder: "What is this goal for?" %>
+
+  <% if show_initial %>
+    <hr class="border-tertiary">
+    <p class="text-sm text-secondary">Optionally, seed this goal with a starting balance.</p>
+    <div class="flex items-center gap-2">
+      <label class="text-sm text-secondary w-40">Initial contribution</label>
+      <%= number_field_tag "savings_goal[initial_contribution]", nil, step: "0.01", min: "0",
+                            class: "form-field flex-1", placeholder: "0.00" %>
+    </div>
+  <% end %>
+
+  <div class="flex items-center justify-end gap-2 pt-4">
+    <%= render DS::Link.new(text: "Cancel", variant: "secondary", href: savings_goals_path) %>
+    <%= f.submit savings_goal.persisted? ? "Save changes" : "Create goal" %>
+  </div>
+<% end %>

@@ -13,7 +13,7 @@ class SavingsContributionsController < ApplicationController
     @contribution.contributed_at ||= Date.current
 
     if save_with_advisory_lock(@contribution)
-      redirect_to savings_goal_path(@savings_goal), notice: t(".created")
+      redirect_to savings_goal_path(@savings_goal), notice: "Contribution added."
     else
       render :new, status: :unprocessable_entity
     end
@@ -21,7 +21,7 @@ class SavingsContributionsController < ApplicationController
 
   def destroy
     @contribution.destroy
-    redirect_to savings_goal_path(@savings_goal), notice: t(".destroyed")
+    redirect_to savings_goal_path(@savings_goal), notice: "Contribution removed."
   end
 
   private
