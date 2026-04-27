@@ -43,10 +43,12 @@ class TransfersController < ApplicationController
   rescue Money::ConversionError
     @transfer ||= Transfer.new
     @transfer.errors.add(:base, "Exchange rate unavailable for selected currencies and date")
+    set_accounts
     render :new, status: :unprocessable_entity
   rescue ArgumentError
     @transfer ||= Transfer.new
     @transfer.errors.add(:date, "is invalid")
+    set_accounts
     render :new, status: :unprocessable_entity
   end
 
