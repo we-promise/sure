@@ -26,12 +26,14 @@ export default class extends Controller {
     this.#draw();
     document.addEventListener("turbo:load", this.#redraw);
     this.element.addEventListener("mouseleave", this.#clearSegmentHover);
+    this.contentContainerTarget.addEventListener("mouseleave", this.#clearSegmentHover);
   }
 
   disconnect() {
     this.#teardown();
     document.removeEventListener("turbo:load", this.#redraw);
     this.element.removeEventListener("mouseleave", this.#clearSegmentHover);
+    this.contentContainerTarget.removeEventListener("mouseleave", this.#clearSegmentHover);
   }
 
   get #data() {
@@ -151,8 +153,12 @@ export default class extends Controller {
           this.#handleSegmentHover(event);
         }, 10);
       })
-      .on("mouseleave", () => {
+      .on("mouseleave", (event, d) => {
         clearTimeout(hoverTimeout);
+        const leavingUnused = d.data.id === this.unusedSegmentIdValue;
+        if (leavingUnused || !this.contentContainerTarget.contains(event.relatedTarget)) {
+          this.#clearSegmentHover();
+        }
       })
       .on("click", (event, d) => {
         if (this.enableClickValue) {

@@ -37,7 +37,7 @@ fr:
           never_expires: "N'expire jamais"
           permissions: "Autorisations"
           usage_instructions_title: "Comment utiliser votre clé API"
-          usage_instructions: "Incluez votre clé API dans l'en-tête X-Api-Key lors des requêtes à l'API Maybe :"
+          usage_instructions: "Incluez votre clé API dans l'en-tête X-Api-Key lors des requêtes à l'API %{product_name} :"
           regenerate_key: "Créer une nouvelle clé"
           revoke_key: "Révoquer la clé"
           revoke_confirmation: "Êtes-vous sûr(e) de vouloir révoquer cette clé API ? Cette action ne peut pas être annulée et désactivera immédiatement toutes les applications utilisant cette clé."

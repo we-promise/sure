@@ -77,7 +77,7 @@
 
     <div class="bg-surface-inset rounded-xl p-4">
       <h4 class="font-medium text-primary mb-3">How to use your API key</h4>
-      <p class="text-secondary text-sm mb-3">Include your API key in the X-Api-Key header when making requests:</p>
+      <p class="text-secondary text-sm mb-3"><%= t("settings.api_keys.show.current_api_key.usage_instructions", product_name: product_name) %></p>
       <div class="bg-container rounded-lg p-3 font-mono text-sm text-primary border border-primary">
         curl -H "X-Api-Key: <%= @api_key.plain_key %>" <%= request.base_url %>/api/v1/accounts
       </div>

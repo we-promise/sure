@@ -1,0 +1,31 @@
+<div class="w-full flex justify-center">
+    <div class="max-w-full w-full lg:w-auto overflow-x-auto no-scrollbar">
+        <div class="w-full inline-flex whitespace-nowrap bg-container-inset rounded-lg p-1 text-sm font-medium gap-0.5">
+
+        <button
+            data-action="click->budget-filter#setFilter"
+            data-budget-filter-filter-param="all"
+            data-budget-filter-target="tab"
+            class="w-full inline-flex justify-center items-center text-sm font-medium px-2 py-1 rounded-md transition-colors duration-200 bg-white theme-dark:bg-gray-700 text-primary shadow-sm">
+            <%= t("budgets.show.filter.all") %>
+        </button>
+
+        <button
+            data-action="click->budget-filter#setFilter"
+            data-budget-filter-filter-param="over_budget"
+            data-budget-filter-target="tab"
+            class="w-full inline-flex justify-center items-center text-sm font-medium px-2 py-1 rounded-md transition-colors duration-200 shadow-sm">
+            <%= t("budgets.show.filter.over_budget") %>
+        </button>
+
+        <button
+            data-action="click->budget-filter#setFilter"
+            data-budget-filter-filter-param="on_track"
+            data-budget-filter-target="tab"
+            class="w-full inline-flex justify-center items-center text-sm font-medium px-2 py-1 rounded-md transition-colors duration-200 shadow-sm">
+            <%= t("budgets.show.filter.on_track") %>
+        </button>
+
+        </div>
+    </div>
+</div>

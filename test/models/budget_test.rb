@@ -225,6 +225,61 @@ class BudgetTest < ActiveSupport::TestCase
     )
   end
 
+  test "to_donut_segments_json only includes top-level budget categories" do
+    family = @family
+    budget = Budget.find_or_bootstrap(family, start_date: Date.current.beginning_of_month)
+    budget.update!(budgeted_spending: 500, currency: family.currency)
+
+    parent_category = Category.create!(
+      name: "Transport #{Time.now.to_f}",
+      family: family,
+      color: "#6471eb"
+    )
+
+    child_category = Category.create!(
+      name: "Petrol #{Time.now.to_f}",
+      family: family,
+      parent: parent_category,
+      color: "#61c9ea"
+    )
+
+    standalone_category = Category.create!(
+      name: "Shopping #{Time.now.to_f}",
+      family: family,
+      color: "#df4e92"
+    )
+
+    budget.sync_budget_categories
+
+    parent_budget_category = budget.budget_categories.find_by!(category: parent_category)
+    child_budget_category = budget.budget_categories.find_by!(category: child_category)
+    standalone_budget_category = budget.budget_categories.find_by!(category: standalone_category)
+
+    parent_budget_category.update!(budgeted_spending: 150, currency: family.currency)
+    child_budget_category.update!(budgeted_spending: 50, currency: family.currency)
+    standalone_budget_category.update!(budgeted_spending: 100, currency: family.currency)
+
+    budget.stubs(:allocations_valid?).returns(true)
+    budget.stubs(:available_to_spend).returns(200)
+    budget.stubs(:budget_category_actual_spending).with(parent_budget_category).returns(63.11)
+    budget.stubs(:budget_category_actual_spending).with(standalone_budget_category).returns(25)
+
+    segments = budget.to_donut_segments_json
+
+    segment_ids = segments.pluck(:id)
+    segments_by_id = segments.index_by { |segment| segment[:id] }
+
+    assert_equal 3, segments.size
+    assert_includes segment_ids, parent_budget_category.id
+    assert_includes segment_ids, standalone_budget_category.id
+    assert_includes segment_ids, "unused"
+    refute_includes segment_ids, child_budget_category.id
+
+    assert_equal 63.11, segments_by_id[parent_budget_category.id][:amount]
+    assert_equal 25, segments_by_id[standalone_budget_category.id][:amount]
+    assert_equal 200, segments_by_id["unused"][:amount]
+  end
+
   test "actual_spending subtracts uncategorized refunds" do
     family = families(:dylan_family)
     budget = Budget.find_or_bootstrap(family, start_date: Date.current.beginning_of_month)
