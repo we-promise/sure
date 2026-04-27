@@ -46,6 +46,9 @@
       <% end %>
     </div>
 
+    <%# Savings goals summary — surfaces the feature on the main budget page %>
+    <%= render "budgets/savings_summary_card", budget: @budget, summary: @savings_summary %>
+
     <%# Bottom Section: Categories full width %>
     <% has_over_budget = budget_has_over_budget?(@budget) %>
     <%= content_tag :div,

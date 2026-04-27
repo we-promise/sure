@@ -7,6 +7,7 @@ class BudgetsController < ApplicationController
 
   def show
     @source_budget = @budget.most_recent_initialized_budget unless @budget.initialized?
+    @savings_summary = Current.family.savings_summary_for(@budget)
   end
 
   def edit
