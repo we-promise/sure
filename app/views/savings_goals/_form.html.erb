@@ -14,7 +14,7 @@
   <%= f.text_field :name, label: "Name", required: true, placeholder: "e.g. Trip to Japan" %>
 
   <%= f.collection_select :account_id,
-        Current.family.accounts.where(classification: "asset").alphabetically,
+        Current.family.accounts.where(classification: "asset", accountable_type: %w[Depository Investment OtherAsset]).alphabetically,
         :id, :name,
         { label: "Backing account", required: true, prompt: "Choose an asset account" } %>
 
@@ -43,7 +43,7 @@
     <div class="flex items-center gap-2">
       <label class="text-sm text-secondary w-40">Initial contribution</label>
       <%= number_field_tag "savings_goal[initial_contribution]", nil, step: "0.01", min: "0",
-                            class: "form-field flex-1", placeholder: "0.00" %>
+                            class: "form-field flex-1", placeholder: "0.00", autocomplete: "off" %>
     </div>
   <% end %>
 

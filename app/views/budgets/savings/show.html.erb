@@ -21,18 +21,26 @@
       </div>
     </div>
 
-    <div class="flex items-center justify-between">
+    <div class="flex items-center justify-between gap-3 flex-wrap">
+      <h2 class="text-primary text-lg font-medium">Active goals</h2>
       <div class="flex items-center gap-2">
-        <h2 class="text-primary text-lg font-medium">Active goals</h2>
-        <%= render DS::Link.new(text: "View all", variant: "secondary", icon: "external-link", href: savings_goals_path, size: "sm") %>
+        <%= render DS::Button.new(text: "View all", variant: "secondary", icon: "external-link", size: "sm",
+              href: savings_goals_path) %>
+        <%= render DS::Button.new(text: "New goal", variant: "secondary", icon: "plus", size: "sm",
+              href: new_savings_goal_path) %>
+        <%= render DS::Button.new(
+              text: "Auto-fund this month",
+              variant: "primary",
+              icon: "zap",
+              size: "sm",
+              href: budget_savings_auto_fund_path(budget_month_year: Budget.date_to_param(@budget.start_date)),
+              method: :post,
+              confirm: CustomConfirm.new(
+                title: "Auto-fund all active goals?",
+                body: "We will create auto contributions from this month's surplus, capped per goal."
+              )
+            ) %>
       </div>
-      <%= button_to budget_savings_auto_fund_path(budget_month_year: Budget.date_to_param(@budget.start_date)),
-            method: :post,
-            form: { data: { turbo_confirm: "Auto-fund all active goals from this month's surplus?" } },
-            class: "inline-flex items-center gap-1 px-3 py-2 rounded-md bg-primary text-inverse text-sm font-medium" do %>
-        <%= icon "zap", color: "white", size: "sm" %>
-        Auto-fund this month
-      <% end %>
     </div>
 
     <% if @savings_summary.active_goals.any? %>
@@ -45,9 +53,6 @@
       <div class="bg-container rounded-xl shadow-border-xs p-8 text-center">
         <p class="text-primary font-medium">No active savings goals.</p>
         <p class="text-secondary text-sm mt-1">Create one to start earmarking money.</p>
-        <div class="mt-3">
-          <%= render DS::Link.new(text: "New goal", icon: "plus", variant: "primary", href: new_savings_goal_path) %>
-        </div>
       </div>
     <% end %>
   </div>

@@ -20,12 +20,14 @@ class Savings::ProgressRingComponent < ApplicationComponent
     circumference - (circumference * percent / 100.0)
   end
 
-  def stroke_color
+  # Hex strokes (CSS vars don't always resolve in raw SVG `stroke=` attrs;
+  # Sure's other progress circle works around this with inline `style=`).
+  def fill_stroke_color
     return color if color.present?
     case percent
-    when 0..24   then "var(--color-tertiary)"
-    when 25..74  then "var(--color-success)"
-    else "var(--color-success)"
+    when 0..24   then "#9CA3AF"  # gray-400 — barely started
+    when 25..74  then "#3B82F6"  # blue-500 — in progress
+    else              "#10B981"  # emerald-500 — near / at target
     end
   end
 end

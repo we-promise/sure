@@ -1,51 +1,62 @@
+<% state_pill_classes = case @savings_goal.state
+   when "active"    then "bg-success/10 text-success"
+   when "paused"    then "bg-warning/10 text-warning"
+   when "completed" then "bg-success/20 text-success"
+   when "archived"  then "bg-container-inset text-secondary"
+   else                  "bg-container-inset text-secondary"
+   end %>
+
 <div class="max-w-3xl mx-auto py-6 space-y-6">
   <div class="flex items-start justify-between gap-4">
     <div class="flex items-center gap-4">
       <%= render Savings::ProgressRingComponent.new(percent: @savings_goal.progress_percent, size: 96, stroke: 8, color: @savings_goal.color) %>
-      <div>
+      <div class="space-y-1">
         <h1 class="text-2xl text-primary font-medium"><%= @savings_goal.name %></h1>
-        <p class="text-secondary text-sm">
-          <%= @savings_goal.state.titleize %>
-          · <%= @savings_goal.account.name %>
+        <div class="flex items-center gap-2 flex-wrap">
+          <span class="text-xs px-2 py-0.5 rounded-full font-medium <%= state_pill_classes %>">
+            <%= @savings_goal.state.titleize %>
+          </span>
+          <span class="text-secondary text-sm"><%= @savings_goal.account.name %></span>
           <% if @savings_goal.target_date %>
-            · target <%= @savings_goal.target_date.strftime("%b %Y") %>
+            <span class="text-secondary text-sm">· target <%= @savings_goal.target_date.strftime("%b %Y") %></span>
           <% end %>
-        </p>
+        </div>
       </div>
     </div>
 
-    <div class="flex items-center gap-1">
-      <%= render DS::Link.new(variant: "icon", icon: "pencil", href: edit_savings_goal_path(@savings_goal)) %>
+    <div class="flex items-center gap-1 shrink-0">
+      <%= render DS::Button.new(variant: "icon", icon: "pencil",
+            href: edit_savings_goal_path(@savings_goal), method: :get) %>
+
       <% if @savings_goal.may_pause? %>
-        <%= button_to pause_savings_goal_path(@savings_goal), method: :patch, form_class: "inline" do %>
-          <%= icon "pause", as_button: false %>
-        <% end %>
+        <%= render DS::Button.new(variant: "icon", icon: "pause",
+              href: pause_savings_goal_path(@savings_goal), method: :patch) %>
       <% end %>
       <% if @savings_goal.may_resume? %>
-        <%= button_to resume_savings_goal_path(@savings_goal), method: :patch, form_class: "inline" do %>
-          <%= icon "play", as_button: false %>
-        <% end %>
+        <%= render DS::Button.new(variant: "icon", icon: "play",
+              href: resume_savings_goal_path(@savings_goal), method: :patch) %>
       <% end %>
       <% if @savings_goal.may_complete? %>
-        <%= button_to complete_savings_goal_path(@savings_goal), method: :patch, form_class: "inline" do %>
-          <%= icon "check", as_button: false %>
-        <% end %>
+        <%= render DS::Button.new(variant: "icon", icon: "check",
+              href: complete_savings_goal_path(@savings_goal), method: :patch) %>
       <% end %>
       <% if @savings_goal.may_archive? %>
-        <%= button_to archive_savings_goal_path(@savings_goal), method: :patch, form_class: "inline" do %>
-          <%= icon "archive", as_button: false %>
-        <% end %>
+        <%= render DS::Button.new(variant: "icon", icon: "archive",
+              href: archive_savings_goal_path(@savings_goal), method: :patch) %>
       <% end %>
       <% if @savings_goal.may_unarchive? %>
-        <%= button_to unarchive_savings_goal_path(@savings_goal), method: :patch, form_class: "inline" do %>
-          <%= icon "rotate-ccw", as_button: false %>
-        <% end %>
+        <%= render DS::Button.new(variant: "icon", icon: "rotate-ccw",
+              href: unarchive_savings_goal_path(@savings_goal), method: :patch) %>
       <% end %>
-      <%= button_to savings_goal_path(@savings_goal), method: :delete,
-            form: { data: { turbo_confirm: "Delete this goal? Contributions will also be deleted." } },
-            form_class: "inline" do %>
-        <%= icon "trash-2", color: "destructive" %>
-      <% end %>
+
+      <%= render DS::Button.new(
+            variant: "icon",
+            icon: "trash-2",
+            href: savings_goal_path(@savings_goal),
+            method: :delete,
+            confirm: CustomConfirm.for_resource_deletion(@savings_goal.name),
+            class: "[&_svg]:!text-destructive"
+          ) %>
     </div>
   </div>
 
@@ -80,7 +91,7 @@
   <div class="bg-container rounded-xl shadow-border-xs p-6">
     <div class="flex items-center justify-between mb-4">
       <h2 class="text-primary font-medium">Contributions</h2>
-      <%= render DS::Link.new(text: "Add contribution", icon: "plus", variant: "primary",
+      <%= render DS::Button.new(text: "Add contribution", icon: "plus", variant: "primary",
             href: new_savings_goal_contribution_path(@savings_goal)) %>
     </div>
 
@@ -96,11 +107,15 @@
               </p>
               <p class="text-secondary text-xs"><%= c.contributed_at.strftime("%b %-d, %Y") %><% if c.notes.present? %> · <%= c.notes %><% end %></p>
             </div>
-            <%= button_to savings_goal_contribution_path(@savings_goal, c), method: :delete,
-                  form: { data: { turbo_confirm: "Remove this contribution?" } },
-                  form_class: "inline" do %>
-              <%= icon "trash-2", color: "destructive", size: "sm" %>
-            <% end %>
+            <%= render DS::Button.new(
+                  variant: "icon",
+                  icon: "trash-2",
+                  size: "sm",
+                  href: savings_goal_contribution_path(@savings_goal, c),
+                  method: :delete,
+                  confirm: CustomConfirm.for_resource_deletion("this contribution"),
+                  class: "[&_svg]:!text-destructive"
+                ) %>
           </li>
         <% end %>
       </ul>

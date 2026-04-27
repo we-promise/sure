@@ -72,6 +72,9 @@ class Demo::Generator
         create_realistic_accounts!(family)
         create_realistic_transactions!(family)
         generate_budget_auto_fill!(family)
+
+        puts "\u{1f4b0} Creating savings goals..."
+        generate_savings_goals!(family)
       end
 
       family.sync_later
@@ -102,6 +105,9 @@ class Demo::Generator
       create_realistic_transactions!(family)
       # Auto-fill current-month budget based on recent spending averages
       generate_budget_auto_fill!(family)
+
+      puts "💰 Creating savings goals..."
+      generate_savings_goals!(family)
 
       puts "✅ Realistic demo data loaded successfully!"
     end
@@ -1273,5 +1279,63 @@ class Demo::Generator
       )
 
       puts "   ✅ Set property and vehicle valuations"
+    end
+
+    def generate_savings_goals!(family)
+      asset_account = family.accounts.where(classification: "asset", accountable_type: "Depository").alphabetically.first
+      return unless asset_account
+
+      checking = family.accounts.where(classification: "asset", accountable_type: "Depository").alphabetically.second || asset_account
+
+      vacation = family.savings_goals.create!(
+        account: asset_account,
+        name: "Awesome vacations",
+        target_amount: 6_000,
+        target_date: 8.months.from_now.to_date,
+        color: "#F87171",
+        notes: "Two weeks somewhere warm.",
+        state: "active"
+      )
+      vacation.savings_contributions.create!(
+        amount: 1_500, source: "initial", contributed_at: 3.months.ago.to_date
+      )
+      vacation.savings_contributions.create!(
+        amount: 250, source: "manual", contributed_at: 1.month.ago.to_date,
+        notes: "End-of-month transfer"
+      )
+
+      family.savings_goals.create!(
+        account: asset_account,
+        name: "Emergency fund",
+        target_amount: 10_000,
+        target_date: 12.months.from_now.to_date,
+        color: "#34D399",
+        notes: "Three months of essentials.",
+        state: "active"
+      ).savings_contributions.create!(
+        amount: 2_000, source: "initial", contributed_at: 2.months.ago.to_date
+      )
+
+      family.savings_goals.create!(
+        account: checking,
+        name: "Trip to Japan",
+        target_amount: 4_500,
+        target_date: 14.months.from_now.to_date,
+        color: "#60A5FA",
+        notes: "Cherry blossom season.",
+        state: "active"
+      )
+
+      paid_off_car = family.savings_goals.create!(
+        account: asset_account,
+        name: "Paid-off car",
+        target_amount: 25_000,
+        color: "#A78BFA",
+        notes: "Mission accomplished.",
+        state: "completed"
+      )
+      paid_off_car.savings_contributions.create!(
+        amount: 25_000, source: "initial", contributed_at: 18.months.ago.to_date
+      )
     end
 end

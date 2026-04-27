@@ -1,11 +1,16 @@
-<%= tag.svg width: size, height: size, viewBox: "0 0 #{size} #{size}", role: "img",
-            "aria-label": "#{percent}% complete", class: "shrink-0" do %>
+<%= tag.svg width: size, height: size, viewBox: "0 0 #{size} #{size}",
+            role: "img", "aria-label": "#{percent}% complete", class: "shrink-0" do %>
+  <%# Background circle: monochrome via Tailwind class %>
   <%= tag.circle cx: size / 2.0, cy: size / 2.0, r: radius,
-                 fill: "none", "stroke": "var(--color-tertiary)",
-                 "stroke-width": stroke, "stroke-opacity": "0.25" %>
+                 fill: "transparent",
+                 class: "stroke-current text-gray-200",
+                 "stroke-width": stroke %>
+  <%# Foreground arc: inline style so var() / hex resolves reliably %>
   <%= tag.circle cx: size / 2.0, cy: size / 2.0, r: radius,
-                 fill: "none", stroke: stroke_color,
-                 "stroke-width": stroke, "stroke-linecap": "round",
+                 fill: "transparent",
+                 style: "stroke: #{fill_stroke_color}",
+                 "stroke-width": stroke,
+                 "stroke-linecap": "round",
                  "stroke-dasharray": circumference,
                  "stroke-dashoffset": offset,
                  transform: "rotate(-90 #{size / 2.0} #{size / 2.0})" %>
