@@ -90,15 +90,17 @@ class IndexaCapitalAccount::Processor
       holdings_data = indexa_capital_account.raw_holdings_payload || []
       return 0 if holdings_data.empty?
 
-      # Indexa returns a time series: dedupe by instrument/identifier and keep
-      # the latest-dated row's amount per security so we don't double-count.
-      latest_per_security = {}
+      # The importer normalises to total_fiscal_results (one aggregated row
+      # per security) so a plain sum is correct. We still defensively dedupe
+      # by instrument key in case a future provider variant feeds the
+      # per-tax-lot fiscal_results array through here — the last value wins,
+      # consistent with how HoldingsProcessor upserts holdings.
+      per_security = {}
       holdings_data.each do |holding|
-        data = holding.is_a?(Hash) ? holding.with_indifferent_access : {}
-        instrument = data.dig(:instrument, :identifier) || data.dig(:instrument, :isin_code) || data[:identifier] || data[:isin_code]
+        instrument = extract_instrument_key(holding)
         next if instrument.blank?
 
-        date = data[:date].to_s
+        data = holding.respond_to?(:with_indifferent_access) ? holding.with_indifferent_access : holding
         amount = parse_decimal(data[:amount])
         unless amount
           titles = parse_decimal(data[:titles] || data[:quantity] || data[:units]) || 0
@@ -106,13 +108,10 @@ class IndexaCapitalAccount::Processor
           amount = titles * price
         end
 
-        existing = latest_per_security[instrument]
-        if existing.nil? || date > existing[:date]
-          latest_per_security[instrument] = { date: date, amount: amount }
-        end
+        per_security[instrument] = amount || 0
       end
 
-      latest_per_security.values.sum { |row| row[:amount] || 0 }
+      per_security.values.sum
     end
 
     def calculate_cash_balance

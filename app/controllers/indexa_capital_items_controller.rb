@@ -238,15 +238,29 @@ class IndexaCapitalItemsController < ApplicationController
       next unless indexa_capital_account
       next if indexa_capital_account.account_provider.present?
 
-      sync_start_date = sync_start_dates[indexa_capital_account_id].presence
-      account = create_account_from_indexa_capital(indexa_capital_account, "Investment", { sync_start_date: sync_start_date })
+      # Parse the form-supplied date up front so a malformed value is silently
+      # dropped rather than aborting the loop body after the account is
+      # already persisted (which would mark a successfully-created account
+      # as "skipped").
+      raw_sync_start_date = sync_start_dates[indexa_capital_account_id]
+      sync_start_date = (Date.parse(raw_sync_start_date.to_s) rescue nil) if raw_sync_start_date.present?
 
-      if account&.persisted?
+      account = create_account_from_indexa_capital(indexa_capital_account, "Investment", {})
+
+      unless account&.persisted?
+        skipped_count += 1
+        next
+      end
+
+      # Account row exists from this point on — count it as created even if
+      # the provider link or sync_start_date persistence below raises.
+      created_count += 1
+
+      begin
         indexa_capital_account.ensure_account_provider!(account)
         indexa_capital_account.update!(sync_start_date: sync_start_date) if sync_start_date
-        created_count += 1
-      else
-        skipped_count += 1
+      rescue => e
+        Rails.logger.error "IndexaCapitalItemsController#complete_account_setup - post-create error for #{indexa_capital_account.id}: #{e.message}"
       end
     rescue => e
       Rails.logger.error "IndexaCapitalItemsController#complete_account_setup - Error: #{e.message}"
