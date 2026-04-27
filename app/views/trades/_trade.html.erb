@@ -57,7 +57,7 @@
         <% end %>
         <%= content_tag :p,
                     format_money(-entry.amount_money),
-                    class: ["text-green-600": entry.amount.negative?] %>
+                    class: ["privacy-sensitive", "text-green-600": entry.amount.negative?] %>
       </div>
     </div>
   <% end %>

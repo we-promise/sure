@@ -13,11 +13,26 @@ class IndexaCapitalAccount::HoldingsProcessor
     holdings_data = @indexa_capital_account.raw_holdings_payload
     return if holdings_data.blank?
 
-    Rails.logger.info "IndexaCapitalAccount::HoldingsProcessor - Processing #{holdings_data.size} holdings"
+    # The importer normalises to total_fiscal_results (one aggregated row
+    # per security). Defensively dedupe in case a future variant feeds the
+    # per-tax-lot fiscal_results array through here — same key extraction
+    # as Processor#calculate_holdings_value via the shared DataHelpers
+    # method, so the two can't disagree on which rows refer to the same
+    # security.
+    per_security = {}
+    holdings_data.each do |holding_data|
+      data = holding_data.respond_to?(:with_indifferent_access) ? holding_data.with_indifferent_access : holding_data
+      key = extract_instrument_key(data)
+      next if key.blank?
 
-    holdings_data.each_with_index do |holding_data, idx|
-      Rails.logger.info "IndexaCapitalAccount::HoldingsProcessor - Processing holding #{idx + 1}/#{holdings_data.size}"
-      process_holding(holding_data.with_indifferent_access)
+      per_security[key] = data
+    end
+
+    Rails.logger.info "IndexaCapitalAccount::HoldingsProcessor - Processing #{per_security.size} holdings (from #{holdings_data.size} input rows)"
+
+    per_security.each_value.with_index do |data, idx|
+      Rails.logger.info "IndexaCapitalAccount::HoldingsProcessor - Processing holding #{idx + 1}/#{per_security.size}"
+      process_holding(data)
     rescue => e
       Rails.logger.error "IndexaCapitalAccount::HoldingsProcessor - Failed to process holding #{idx + 1}: #{e.class} - #{e.message}"
       Rails.logger.error e.backtrace.first(5).join("\n") if e.backtrace
@@ -45,7 +60,7 @@ class IndexaCapitalAccount::HoldingsProcessor
     #   profit_loss → unrealized P&L
     #   subscription_date → purchase date
     def process_holding(data)
-      ticker = extract_ticker(data)
+      ticker = extract_instrument_key(data)
       return if ticker.blank?
 
       Rails.logger.info "IndexaCapitalAccount::HoldingsProcessor - Processing holding for ticker: #{ticker}"
@@ -78,19 +93,6 @@ class IndexaCapitalAccount::HoldingsProcessor
       # Store cost basis from cost_price (average purchase price per unit)
       cost_price = parse_decimal(data[:cost_price])
       update_holding_cost_basis(security, cost_price) if cost_price.present?
-    end
-
-    # Extract ISIN from instrument data as ticker
-    def extract_ticker(data)
-      # Indexa Capital uses ISIN codes nested under instrument
-      instrument = data[:instrument]
-      if instrument.is_a?(Hash)
-        instrument = instrument.with_indifferent_access
-        return instrument[:identifier] || instrument[:isin]
-      end
-
-      # Fallback to flat fields
-      data[:isin] || data[:identifier] || data[:symbol] || data[:ticker]
     end
 
     # Override security name extraction for Indexa Capital

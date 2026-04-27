@@ -95,6 +95,10 @@ class Period
   }
 
   class << self
+    def valid_key?(key)
+      PERIODS.key?(key)
+    end
+
     def from_key(key)
       unless PERIODS.key?(key)
         raise InvalidKeyError, "Invalid period key: #{key}"

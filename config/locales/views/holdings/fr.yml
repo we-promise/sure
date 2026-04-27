@@ -4,36 +4,97 @@ fr:
     cash:
       brokerage_cash: Liquidités de courtage
     destroy:
-      success: Position supprimée
+      success: Avoir supprimé
+    update:
+      success: Coût de revient enregistré.
+      error: Valeur de coût de revient invalide.
+    unlock_cost_basis:
+      success: Coût de revient déverrouillé. Il pourra être mis à jour lors de la prochaine synchronisation.
+    remap_security:
+      success: Titre mis à jour avec succès.
+      security_not_found: Impossible de trouver le titre sélectionné.
+    reset_security:
+      success: Titre réinitialisé à la valeur du fournisseur.
+    sync_prices:
+      success: Données de marché synchronisées avec succès.
+      unavailable: La synchronisation des données de marché n'est pas disponible pour les titres hors ligne.
+      provider_error: Impossible de récupérer les derniers cours. Veuillez réessayer dans quelques minutes.
+    errors:
+      security_collision: "Réaffectation impossible : vous avez déjà un avoir pour %{ticker} au %{date}."
+    cost_basis_sources:
+      manual: Défini par l'utilisateur
+      calculated: À partir des transactions boursières
+      provider: Depuis le fournisseur
+    cost_basis_cell:
+      unknown: "--"
+      set_cost_basis_header: "Définir le coût de revient pour %{ticker} (%{qty} actions)"
+      total_cost_basis_label: Coût de revient total
+      or_per_share_label: "Ou saisir par action :"
+      per_share: par action
+      cancel: Annuler
+      save: Enregistrer
+      overwrite_confirm_title: Écraser le coût de revient ?
+      overwrite_confirm_body: "Cela remplacera le coût de revient actuel de %{current}."
     holding:
       per_share: par action
       shares: "%{qty} actions"
+      unknown: "--"
+      no_cost_basis: Aucun coût de revient
     index:
       average_cost: Coût moyen
-      holdings: Positions
+      holdings: Avoirs
       name: Nom
-      new_holding: Nouvelle position
-      no_holdings: Aucune position à afficher.
+      new_holding: Nouvelle activité
+      no_holdings: Aucun avoir à afficher.
       return: Rendement total
       weight: Poids
     missing_price_tooltip:
       description: Cet investissement a des valeurs manquantes et nous ne pouvons pas calculer
-        son retour ou sa valeur.
+        son rendement ou sa valeur.
       missing_data: Données manquantes
     show:
       avg_cost_label: Coût moyen
       current_market_price_label: Prix de marché actuel
       delete: Supprimer
-      delete_subtitle: Cela supprimera la position et toutes vos opérations associées sur ce compte. Cette action ne peut pas être annulée.
-      delete_title: Supprimer la position
+      delete_subtitle: Cela supprimera l'avoir et toutes vos transactions boursières associées sur ce compte. Cette action ne peut pas être annulée.
+      delete_title: Supprimer l'avoir
+      edit_security: Modifier le titre
       history: Historique
+      no_trade_history: Aucun historique de transactions boursières disponible pour cet avoir.
       overview: Aperçu
       portfolio_weight_label: Poids du portefeuille
       settings: Paramètres
+      security_label: Titre
+      originally: "était %{ticker}"
+      search_security: Rechercher un titre
+      search_security_placeholder: Rechercher par ticker ou par nom
+      cancel: Annuler
+      remap_security: Enregistrer
+      provider_disabled_warning: "Mises à jour des cours en pause — le fournisseur %{provider} est désactivé. Passez à un autre fournisseur ci-dessous ou réactivez-le dans les Paramètres."
+      truncated_history_warning: "L'historique des cours n'est disponible qu'à partir du %{date}. Les dates antérieures ne disposent d'aucune donnée du fournisseur sélectionné — cela peut se produire lorsque l'actif a été coté après la date de votre transaction boursière, ou lorsque le fournisseur n'offre qu'une fenêtre historique limitée avec son forfait actuel."
+      switch_provider_label: Changer de fournisseur
+      switch_provider_description: "%{provider} est désactivé. Recherchez ce titre auprès d'un autre fournisseur activé."
+      switch_provider_button: Changer
+      no_security_provider: Aucun fournisseur de titres configuré. Impossible de rechercher des titres.
+      security_remapped_label: Titre réaffecté
+      provider_sent: "Envoyé par le fournisseur : %{ticker}"
+      reset_to_provider: Réinitialiser au fournisseur
+      reset_confirm_title: Réinitialiser le titre au fournisseur ?
+      reset_confirm_body: "Cela changera le titre de %{current} à %{original} et déplacera toutes les transactions boursières associées."
       ticker_label: Ticker
       trade_history_entry: "%{qty} actions de %{security} à %{price}"
       total_return_label: Rendement total
+      unknown: Inconnu
+      cost_basis_locked_label: Le coût de revient est verrouillé
+      cost_basis_locked_description: Votre coût de revient défini manuellement ne sera pas modifié par les synchronisations.
+      unlock_cost_basis: Déverrouiller
+      unlock_confirm_title: Déverrouiller le coût de revient ?
+      unlock_confirm_body: Cela permettra au coût de revient d'être mis à jour par les synchronisations du fournisseur ou les calculs de transactions boursières.
       shares_label: Actions
       book_value_label: Valeur comptable
       market_value_label: Valeur marchande
-      unknown: Inconnu
+      market_data_label: Données de marché
+      market_data_sync_button: Actualiser
+      last_price_update: Dernière mise à jour du cours
+      syncing: Synchronisation…
+      never: Jamais

@@ -193,7 +193,7 @@ en:
         message: Active Record encryption keys are not configured. Please ensure the encryption credentials (active_record_encryption.primary_key, active_record_encryption.deterministic_key, and active_record_encryption.key_derivation_salt) are properly set up in your Rails credentials or environment variables before using sync providers.
       coinbase_panel:
         setup_instructions: "To connect Coinbase:"
-        step1_html: Go to <a href="https://portal.cdp.coinbase.com/projects/api-keys" target="_blank" class="text-primary underline">Coinbase API Settings</a>
+        step1_html: Go to <a href="https://portal.cdp.coinbase.com/projects/api-keys" target="_blank" rel="noopener noreferrer" class="text-primary underline">Coinbase API Settings</a>
         step2: Create a new API key with read-only permissions (view accounts, view transactions)
         step3: Copy your API key and API secret and paste them below
         api_key_label: API Key
@@ -208,7 +208,7 @@ en:
         status_not_connected: Not connected. Enter your API credentials above to get started.
       binance_panel:
         setup_instructions: "To connect Binance, create a read-only API key:"
-        step1_html: 'Go to <a href="https://www.binance.com/en/my/settings/api-management" target="_blank" class="underline">Binance API Management</a>'
+        step1_html: 'Go to <a href="https://www.binance.com/en/my/settings/api-management" target="_blank" rel="noopener noreferrer" class="underline">Binance API Management</a>'
         step2: "Create a new API key with Enable Reading permission only"
         step3: "Paste your API Key and Secret below"
         no_withdraw_warning: "Warning: do NOT enable withdrawal permissions"

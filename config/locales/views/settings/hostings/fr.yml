@@ -3,87 +3,183 @@ fr:
   settings:
     hostings:
       invite_code_settings:
-        description: Contrôlez comment les nouvelles personnes s'inscrivent à votre instance de %{product}.
-        email_confirmation_description: Lorsque cette option est activée, les utilisateurs doivent confirmer leur adresse e-mail lors du changement.
-        email_confirmation_title: Exiger la confirmation de l'e-mail
-        generate_tokens: Générer un nouveau code
-        generated_tokens: Codes générés
-        title: Inscription
+        description: "Contrôlez comment les nouvelles personnes s'inscrivent à votre instance de %{product}."
+        email_confirmation_description: "Lorsque cette option est activée, les utilisateurs doivent confirmer leur nouvelle adresse e-mail lorsqu'ils la modifient."
+        email_confirmation_title: "Exiger la confirmation de l'e-mail"
+        default_family_title: "Famille par défaut pour les nouveaux utilisateurs"
+        default_family_description: "Placer les nouveaux utilisateurs dans cette famille/groupe uniquement s'ils n'ont pas d'invitation."
+        default_family_none: "Aucune (créer une nouvelle famille)"
+        generate_tokens: "Générer un nouveau code"
+        generated_tokens: "Codes générés"
+        title: "Inscription des utilisateurs"
         states:
-          open: Ouvert
-          closed: Fermé
-          invite_only: Sur invitation uniquement
+          open: "Ouvert"
+          closed: "Fermé"
+          invite_only: "Sur invitation uniquement"
       show:
-        general: Paramètres généraux
-        financial_data_providers: Fournisseurs de données financières
-        sync_settings: Paramètres de synchronisation
-        invites: Codes d'invitation
-        title: Auto-hébergement
-        danger_zone: Zone dangereuse
-        clear_cache: Effacer le cache de données
-        clear_cache_warning: L'effacement du cache de données supprimera tous les taux de change, les cours des titres, les soldes des comptes et d'autres données. Cela ne supprimera pas les comptes, les transactions, les catégories ou d'autres données possédées par les utilisateurs.
+        general: "Paramètres généraux"
+        ai_assistant: "Assistant IA"
+        financial_data_providers: "Fournisseurs de données financières"
+        sync_settings: "Paramètres de synchronisation"
+        invites: "Codes d'invitation"
+        title: "Auto-hébergement"
+        danger_zone: "Zone dangereuse"
+        clear_cache: "Effacer le cache de données"
+        clear_cache_warning: "L'effacement du cache de données supprimera tous les taux de change, les cours des titres, les soldes des comptes et d'autres données. Cela ne supprimera pas les comptes, les transactions, les catégories ou d'autres données possédées par les utilisateurs."
         confirm_clear_cache:
-          title: Effacer le cache de données ?
-          body: Êtes-vous sûr(e) de vouloir effacer le cache de données ? Cela supprimera tous les taux de change, les cours des titres, les soldes des comptes et d'autres données. Cette action ne peut pas être annulée.
+          title: "Effacer le cache de données ?"
+          body: "Êtes-vous sûr(e) de vouloir effacer le cache de données ? Cela supprimera tous les taux de change, les cours des titres, les soldes des comptes et d'autres données. Cette action ne peut pas être annulée."
       provider_selection:
-        title: Sélection du fournisseur
-        description: Choisissez le service à utiliser pour récupérer les taux de change et les cours des titres. Yahoo Finance est gratuit et ne nécessite pas de clé API. Twelve Data nécessite une clé API gratuite mais peut offrir une meilleure couverture des données.
-        exchange_rate_provider_label: Fournisseur de taux de change
-        securities_provider_label: Fournisseur de titres (cours boursiers)
-        env_configured_message: La sélection du fournisseur est désactivée car des variables d'environnement (EXCHANGE_RATE_PROVIDER ou SECURITIES_PROVIDER) sont définies. Pour activer la sélection ici, supprimez ces variables d'environnement de votre configuration.
+        exchange_rate_title: "Fournisseur de taux de change"
+        exchange_rate_description: "Sélectionnez un seul fournisseur pour récupérer les taux de change des devises."
+        exchange_rate_provider_label: "Fournisseur de taux de change"
+        securities_title: "Fournisseurs de titres"
+        securities_description: "Activez un ou plusieurs fournisseurs pour récupérer les cours des actions, ETF et fonds communs. Lors d'une recherche, tous les fournisseurs activés sont interrogés et les résultats sont fusionnés."
+        env_configured_message: "La sélection du fournisseur est désactivée car des variables d'environnement sont définies. Pour activer la sélection ici, supprimez ces variables d'environnement de votre configuration."
+        twelve_data_hint: "nécessite une clé API, 800 crédits/jour"
+        yahoo_finance_hint: "gratuit, aucune clé API requise"
+        requires_api_key: "nécessite une clé API"
+        requires_api_key_eodhd: "nécessite une clé API, limite de 20 appels/jour"
+        requires_api_key_alpha_vantage: "nécessite une clé API, limite de 25 appels/jour"
+        mfapi_hint: "gratuit, aucune clé API -- fonds communs indiens uniquement"
+        binance_public_hint: "gratuit, aucune clé API -- crypto uniquement (BTC, ETH, etc.)"
         providers:
-          twelve_data: Twelve Data
-          yahoo_finance: Yahoo Finance
+          twelve_data: "Twelve Data"
+          yahoo_finance: "Yahoo Finance"
+          tiingo: "Tiingo"
+          eodhd: "EODHD"
+          alpha_vantage: "Alpha Vantage"
+          mfapi: "MFAPI.in"
+          binance_public: "Binance"
+      assistant_settings:
+        title: "Assistant IA"
+        description: "Choisissez comment l'assistant de discussion répond. Intégré utilise directement votre fournisseur LLM configuré. Externe délègue à un agent IA distant qui peut invoquer les outils financiers de Sure via MCP."
+        type_label: "Type d'assistant"
+        type_builtin: "Intégré (LLM direct)"
+        type_external: "Externe (agent distant)"
+        external_status: "Endpoint de l'assistant externe"
+        external_configured: "Configuré"
+        external_not_configured: "Non configuré. Saisissez l'URL et le token ci-dessous, ou définissez les variables d'environnement EXTERNAL_ASSISTANT_URL et EXTERNAL_ASSISTANT_TOKEN."
+        env_notice: "Le type d'assistant est verrouillé sur '%{type}' via la variable d'environnement ASSISTANT_TYPE."
+        env_configured_external: "Configuré avec succès via les variables d'environnement."
+        url_label: "URL du endpoint"
+        url_placeholder: "https://your-agent-host/v1/chat"
+        url_help: "L'URL complète du endpoint de l'API de votre agent. Votre fournisseur d'agent vous la fournira."
+        token_label: "Token API"
+        token_placeholder: "Saisissez le token de votre fournisseur d'agent"
+        token_help: "Le token d'authentification fourni par votre agent externe. Il est envoyé en tant que Bearer token avec chaque requête."
+        agent_id_label: "ID de l'agent (Optionnel)"
+        agent_id_placeholder: "main (par défaut)"
+        agent_id_help: "Route vers un agent spécifique lorsque le fournisseur en héberge plusieurs. Laisser vide pour la valeur par défaut."
+        disconnect_title: "Connexion externe"
+        disconnect_description: "Supprimer la connexion à l'assistant externe et revenir à l'assistant intégré."
+        disconnect_button: "Déconnecter"
+        confirm_disconnect:
+          title: "Déconnecter l'assistant externe ?"
+          body: "Cela supprimera l'URL, le token et l'ID de l'agent enregistrés, et basculera vers l'assistant intégré. Vous pourrez vous reconnecter ultérieurement en saisissant de nouvelles informations d'identification."
       brand_fetch_settings:
-        description: Saisissez l'ID client fourni par Brand Fetch
-        label: ID client
-        placeholder: Entrez votre ID client ici
-        title: Brand Fetch
+        description: "Saisissez l'ID client fourni par Brand Fetch"
+        label: "ID client"
+        placeholder: "Entrez votre ID client ici"
+        title: "Paramètres Brand Fetch"
+        high_res_label: "Activer les logos haute résolution"
+        high_res_description: "Lorsque cette option est activée, les logos seront récupérés en résolution 120x120 au lieu de 40x40. Cela offre des images plus nettes sur les écrans à haute densité de pixels."
       openai_settings:
-        description: Saisissez le jeton d'accès et configurez éventuellement un fournisseur compatible OpenAI personnalisé
-        env_configured_message: Configuré avec succès via les variables d'environnement.
-        access_token_label: Jeton d'accès
-        access_token_placeholder: Entrez votre jeton d'accès ici
-        uri_base_label: URL de base de l'API (Optionnel)
+        description: "Saisissez le jeton d'accès et configurez éventuellement un fournisseur compatible OpenAI personnalisé"
+        env_configured_message: "Configuré avec succès via les variables d'environnement."
+        access_token_label: "Jeton d'accès"
+        access_token_placeholder: "Entrez votre jeton d'accès ici"
+        uri_base_label: "URL de base de l'API (Optionnel)"
         uri_base_placeholder: "https://api.openai.com/v1 (par défaut)"
-        model_label: Modèle (Optionnel)
+        model_label: "Modèle (Optionnel)"
         model_placeholder: "gpt-4.1 (par défaut)"
-        json_mode_label: Mode JSON
-        json_mode_auto: Auto (recommandé)
-        json_mode_strict: Strict (meilleur pour les modèles de raisonnement)
-        json_mode_none: Aucun (meilleur pour les modèles standard)
-        json_mode_json_object: Objet JSON
+        json_mode_label: "Mode JSON"
+        json_mode_auto: "Auto (recommandé)"
+        json_mode_strict: "Strict (meilleur pour les modèles de raisonnement)"
+        json_mode_none: "Aucun (meilleur pour les modèles standard)"
+        json_mode_json_object: "Objet JSON"
         json_mode_help: "Le mode strict fonctionne mieux avec les modèles de raisonnement (qwen-thinking, deepseek-reasoner). Le mode aucun fonctionne mieux avec les modèles standard (llama, mistral, gpt-oss)."
-        title: OpenAI
+        budget_heading: "Budget de tokens"
+        budget_description: "S'applique à chaque appel LLM — historique de discussion, auto-catégorisation, détection de marchand et traitement PDF. Les valeurs par défaut sont conservatrices pour les modèles locaux à petit contexte. Augmentez-les pour les modèles cloud avec des fenêtres de contexte plus grandes."
+        context_window_label: "Fenêtre de contexte (Optionnel)"
+        context_window_help: "Nombre total de tokens que le modèle acceptera. Par défaut : 2048 — augmenter à 8192+ pour OpenAI cloud ou les modèles locaux à grand contexte."
+        max_response_tokens_label: "Tokens de réponse max (Optionnel)"
+        max_response_tokens_help: "Tokens réservés à la réponse du modèle. Par défaut : 512. Abaisser pour libérer de l'espace pour un historique plus long."
+        max_items_per_call_label: "Nombre maximum d'éléments par lot (Optionnel)"
+        max_items_per_call_help: "Limite supérieure pour les lots d'auto-catégorisation / détection de marchand. Par défaut : 25. Les lots plus grands sont automatiquement découpés pour tenir dans la fenêtre de contexte."
+        title: "OpenAI"
       yahoo_finance_settings:
-        title: Yahoo Finance
-        description: Yahoo Finance fournit un accès gratuit aux cours boursiers, taux de change et données financières sans nécessiter de clé API.
-        status_active: Yahoo Finance est actif et fonctionne
-        status_inactive: La connexion à Yahoo Finance a échoué
-        connection_failed: Impossible de se connecter à Yahoo Finance
-        troubleshooting: Vérifiez votre connexion Internet et les paramètres de votre pare-feu. Yahoo Finance peut être temporairement indisponible.
+        title: "Yahoo Finance"
+        description: "Yahoo Finance fournit un accès gratuit aux cours boursiers, taux de change et données financières sans nécessiter de clé API."
+        status_active: "Yahoo Finance est actif et fonctionne"
+        status_inactive: "La connexion à Yahoo Finance a échoué"
+        connection_failed: "Impossible de se connecter à Yahoo Finance"
+        troubleshooting: "Vérifiez votre connexion Internet et les paramètres de votre pare-feu. Yahoo Finance peut être temporairement indisponible."
+      tiingo_settings:
+        title: "Tiingo"
+        description: "Saisissez le token API fourni par Tiingo. Le forfait gratuit supporte 50 symboles uniques par heure avec plus de 30 ans de données historiques."
+        env_configured_message: "Configuré avec succès via la variable d'environnement TIINGO_API_KEY."
+        label: "Token API"
+        placeholder: "Entrez votre token API Tiingo ici"
+        show_details: "(afficher les détails)"
+        step_1_html: 'Visitez <a href="https://www.tiingo.com" target="_blank" rel="noopener noreferrer" class="underline">tiingo.com</a> et créez un compte gratuit.'
+        step_2_html: 'Accédez à la page <a href="https://www.tiingo.com/account/api/token" target="_blank" rel="noopener noreferrer" class="underline">Token API</a>.'
+        step_3: "Copiez votre token API et collez-le ci-dessous."
+      eodhd_settings:
+        title: "EODHD"
+        description: "Saisissez le token API fourni par EODHD. Supporte les ETF européens sur LSE, XETRA et d'autres places boursières internationales."
+        env_configured_message: "Configuré avec succès via la variable d'environnement EODHD_API_KEY."
+        label: "Token API"
+        placeholder: "Entrez votre token API EODHD ici"
+        show_details: "(afficher les détails)"
+        step_1_html: 'Visitez <a href="https://eodhd.com/register" target="_blank" rel="noopener noreferrer" class="underline">eodhd.com</a> et créez un compte gratuit.'
+        step_2_html: 'Accédez à votre <a href="https://eodhd.com/cp/dashboard" target="_blank" rel="noopener noreferrer" class="underline">Tableau de bord</a> pour trouver votre token API.'
+        step_3: "Copiez votre token API et collez-le ci-dessous."
+        rate_limit_warning: "Le forfait gratuit EODHD est limité à 20 appels API par jour. À utiliser de préférence comme fournisseur complémentaire pour les ETF européens non disponibles chez d'autres fournisseurs."
+      alpha_vantage_settings:
+        title: "Alpha Vantage"
+        description: "Saisissez la clé API d'Alpha Vantage. Supporte les ETF européens sur la Bourse de Londres, XETRA et d'autres places boursières."
+        env_configured_message: "Configuré avec succès via la variable d'environnement ALPHA_VANTAGE_API_KEY."
+        label: "Clé API"
+        placeholder: "Entrez votre clé API Alpha Vantage ici"
+        show_details: "(afficher les détails)"
+        step_1_html: 'Visitez <a href="https://www.alphavantage.co/support/#api-key" target="_blank" rel="noopener noreferrer" class="underline">alphavantage.co</a> et réclamez votre clé API gratuite.'
+        step_2: "Copiez la clé API et collez-la ci-dessous."
+        rate_limit_warning: "Le forfait gratuit Alpha Vantage est limité à 25 appels API par jour. À utiliser de préférence comme fournisseur complémentaire pour les ETF européens non disponibles chez d'autres fournisseurs."
+        no_health_check_note: "La vérification de l'état de la connexion n'est pas disponible pour ce fournisseur en raison de la limite de débit stricte."
       twelve_data_settings:
+        title: "Twelve Data"
         api_calls_used: "%{used} / %{limit} appels API quotidiens utilisés (%{percentage})"
-        description: Saisissez la clé API fournie par Twelve Data
-        env_configured_message: Configurée avec succès via la variable d'environnement TWELVE_DATA_API_KEY.
-        label: Clé API
-        placeholder: Entrez votre clé API ici
-        plan: "Plan %{plan}"
-        title: Twelve Data
+        description: "Saisissez la clé API fournie par Twelve Data"
+        env_configured_message: "Configurée avec succès via la variable d'environnement TWELVE_DATA_API_KEY."
+        label: "Clé API"
+        placeholder: "Entrez votre clé API ici"
+        show_details: "(afficher les détails)"
+        step_1_html: 'Visitez <a href="https://twelvedata.com/register" target="_blank" rel="noopener noreferrer" class="underline">twelvedata.com</a> et créez un compte Twelve Data Developer gratuit.'
+        step_2_html: 'Accédez à la page <a href="https://twelvedata.com/account/api-keys" target="_blank" rel="noopener noreferrer" class="underline">Clés API</a>.'
+        step_3: "Révélez votre clé secrète et collez-la ci-dessous."
+        plan: "Forfait %{plan}"
+        plan_upgrade_warning_title: "Certains tickers nécessitent un forfait payant"
+        plan_upgrade_warning_description: "Les tickers suivants de votre portefeuille ne peuvent pas synchroniser leurs cours avec votre forfait Twelve Data actuel."
+        requires_plan: "nécessite le forfait %{plan}"
+        view_pricing: "Voir les tarifs Twelve Data"
       update:
-        failure: Valeur de paramètre invalide
-        success: Paramètres mis à jour
-        invalid_onboarding_state: État d'inscription invalide
-        invalid_sync_time: Format d'heure de synchronisation invalide. Veuillez utiliser le format HH:MM (ex. 02:30).
-        scheduler_sync_failed: Paramètres enregistrés, mais la mise à jour du planning de synchronisation a échoué. Veuillez réessayer ou vérifier les journaux du serveur.
+        failure: "Valeur de paramètre invalide"
+        success: "Paramètres mis à jour"
+        invalid_onboarding_state: "État d'intégration invalide"
+        invalid_sync_time: "Format d'heure de synchronisation invalide. Veuillez utiliser le format HH:MM (ex. 02:30)."
+        invalid_llm_budget: "%{field} doit être un nombre entier ≥ %{minimum}."
+        scheduler_sync_failed: "Paramètres enregistrés, mais la mise à jour du planning de synchronisation a échoué. Veuillez réessayer ou vérifier les journaux du serveur."
+      disconnect_external_assistant:
+        external_assistant_disconnected: "Assistant externe déconnecté"
       clear_cache:
-        cache_cleared: Le cache de données a été effacé. Cela peut prendre quelques instants.
-      not_authorized: Vous n'êtes pas autorisé(e) à effectuer cette action
+        cache_cleared: "Le cache de données a été effacé. Cela peut prendre quelques instants."
+      not_authorized: "Vous n'êtes pas autorisé(e) à effectuer cette action"
       sync_settings:
-        auto_sync_label: Activer la synchronisation automatique
-        auto_sync_description: Lorsque cette option est activée, tous les comptes seront automatiquement synchronisés quotidiennement à l'heure spécifiée.
-        auto_sync_time_label: Heure de synchronisation (HH:MM)
-        auto_sync_time_description: Spécifiez l'heure à laquelle la synchronisation automatique doit se produire.
-        include_pending_label: Inclure les transactions en attente
-        include_pending_description: Lorsque cette option est activée, les transactions en attente (non confirmées) seront importées et automatiquement réconciliées lors de leur validation. Désactivez si votre banque fournit des données de transactions en attente peu fiables.
-        env_configured_message: Ce paramètre est désactivé car une variable d'environnement du fournisseur (SIMPLEFIN_INCLUDE_PENDING ou PLAID_INCLUDE_PENDING) est définie. Supprimez-la pour activer ce paramètre.
+        auto_sync_label: "Activer la synchronisation automatique"
+        auto_sync_description: "Lorsque cette option est activée, tous les comptes seront automatiquement synchronisés quotidiennement à l'heure spécifiée."
+        auto_sync_time_label: "Heure de synchronisation (HH:MM)"
+        auto_sync_time_description: "Spécifiez l'heure à laquelle la synchronisation automatique doit se produire."
+        include_pending_label: "Inclure les transactions en attente"
+        include_pending_description: "Lorsque cette option est activée, les transactions en attente (non confirmées) seront importées et automatiquement réconciliées lors de leur validation. Désactivez si votre banque fournit des données de transactions en attente peu fiables."
+        env_configured_message: "Ce paramètre est désactivé car une variable d'environnement du fournisseur (SIMPLEFIN_INCLUDE_PENDING ou PLAID_INCLUDE_PENDING) est définie. Supprimez-la pour activer ce paramètre."

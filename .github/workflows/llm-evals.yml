@@ -285,10 +285,15 @@ jobs:
           bundle exec rake "evals:run[${DATASET},${MODEL}]" | tee "${{ steps.dataset_slug.outputs.log_path }}"
 
       - name: Export run summary
+        id: export_summary
         env:
           DATASET: ${{ matrix.dataset }}
           MODEL: ${{ matrix.model }}
+          JSON_PATH: ${{ steps.dataset_slug.outputs.json_path }}
         run: |
+          set -euo pipefail
+          mkdir -p "$(dirname "$JSON_PATH")"
+
           bin/rails runner '
             dataset = Eval::Dataset.find_by!(name: ENV.fetch("DATASET"))
             run = Eval::Run.where(dataset: dataset, model: ENV.fetch("MODEL")).order(created_at: :desc).first
@@ -304,10 +309,15 @@ jobs:
               total_prompt_tokens: run.total_prompt_tokens,
               total_completion_tokens: run.total_completion_tokens,
               total_cost: run.total_cost,
-              metrics: run.metrics
+              metrics: run.metrics,
+              accuracy: run.accuracy || 0.0,
+              duration_seconds: run.duration_seconds
             }
-            File.write("${{ steps.dataset_slug.outputs.json_path }}", JSON.pretty_generate(payload))
+            File.write(ENV.fetch("JSON_PATH"), JSON.pretty_generate(payload))
           '
+
+          echo "accuracy=$(jq -r '.accuracy // 0' "$JSON_PATH")" >> "$GITHUB_OUTPUT"
+          echo "status=$(jq -r '.status' "$JSON_PATH")" >> "$GITHUB_OUTPUT"
 
       - name: Upload eval artifact
         uses: actions/upload-artifact@v4
@@ -318,6 +328,122 @@ jobs:
             ${{ steps.dataset_slug.outputs.json_path }}
           if-no-files-found: error
           retention-days: 30
+
+      - name: Output eval result
+        shell: bash
+        run: |
+          echo "### Eval Result: ${{ matrix.dataset }} / ${{ matrix.model }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Status**: ${{ steps.export_summary.outputs.status }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Accuracy**: ${{ steps.export_summary.outputs.accuracy }}%" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+
+  summarize_evals:
+    name: Summarize LLM Evals
+    needs: [check_openai, run_evals]
+    if: always() && needs.check_openai.outputs.should_run == 'true'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: eval-artifacts
+          pattern: llm-evals-*
+
+      - name: Generate summary
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          echo "# 🧪 LLM Evals Results" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          printf "Triggered by: \`%s\`\n" "$GITHUB_REF" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "---" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+
+          # Find all JSON result files
+          shopt -s globstar nullglob
+          json_files=(eval-artifacts/**/*.json)
+
+          if [ ${#json_files[@]} -eq 0 ]; then
+            echo "⚠️ No eval results found." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          # Table header
+          echo "| Dataset | Model | Status | Accuracy | Cost | Duration |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|---------|-------|--------|----------|------|----------|" >> "$GITHUB_STEP_SUMMARY"
+
+          all_passed=true
+          accuracy_threshold=70
+          for json_file in "${json_files[@]}"; do
+            dataset=$(jq -r '.dataset' "$json_file")
+            model=$(jq -r '.model' "$json_file")
+            status=$(jq -r '.status' "$json_file")
+            accuracy=$(jq -r '.accuracy // 0' "$json_file")
+            cost=$(jq -r '.total_cost // 0' "$json_file")
+            duration=$(jq -r '.duration_seconds // 0' "$json_file")
+
+            if [ "$status" = "completed" ] && awk -v accuracy="$accuracy" -v threshold="$accuracy_threshold" 'BEGIN { exit !((accuracy + 0) >= threshold) }'; then
+              icon="✅"
+            else
+              icon="❌"
+              all_passed=false
+            fi
+
+            printf '| %s | %s | %s %s | %s%% | \\$%s | %ss |\n' \
+              "$dataset" "$model" "$icon" "$status" "$accuracy" "$cost" "$duration" >> "$GITHUB_STEP_SUMMARY"
+          done
+
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "---" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$all_passed" = "true" ]; then
+            echo "✅ **All evals passed!**" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "❌ **Some evals failed. Check the details above.**" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "📦 Artifacts with full logs are available for download." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Check eval thresholds
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          shopt -s globstar nullglob
+          json_files=(eval-artifacts/**/*.json)
+
+          failed=0
+          accuracy_threshold=70
+          for json_file in "${json_files[@]}"; do
+            status=$(jq -r '.status' "$json_file")
+            accuracy=$(jq -r '.accuracy // 0' "$json_file")
+            dataset=$(jq -r '.dataset' "$json_file")
+            model=$(jq -r '.model' "$json_file")
+
+            if [ "$status" != "completed" ]; then
+              echo "::error::Eval for $dataset / $model did not complete successfully"
+              failed=$((failed + 1))
+            fi
+
+            # Fail if accuracy is below 70%
+            if awk -v accuracy="$accuracy" -v threshold="$accuracy_threshold" 'BEGIN { exit !((accuracy + 0) < threshold) }'; then
+              echo "::error::Accuracy for $dataset / $model is below threshold: ${accuracy}%"
+              failed=$((failed + 1))
+            fi
+          done
+
+          if [ $failed -gt 0 ]; then
+            echo "::error::$failed eval(s) failed or below threshold"
+            exit 1
+          fi
+
+          echo "All evals passed with acceptable accuracy."
 
   skip_evals:
     name: Skip evals (no valid OpenAI token/quota)
