@@ -88,6 +88,7 @@ class AccountsTest < ApplicationSystemTestCase
       fill_in "Interest rate", with: 5.25
       select "Fixed", from: "Rate type"
       fill_in "Term (months)", with: 360
+      fill_in "Start Date", with: Date.today
     end
   end
 
