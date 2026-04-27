@@ -14,9 +14,17 @@
                  "stroke-dasharray": circumference,
                  "stroke-dashoffset": offset,
                  transform: "rotate(-90 #{size / 2.0} #{size / 2.0})" %>
+  <%# Multi-line text rendered via tspans. dominant-baseline centres the
+      block; the first tspan is shifted up by (lines-1)*0.6em so the whole
+      group ends up vertically centred. %>
   <%= tag.text x: size / 2.0, y: size / 2.0,
-               "text-anchor": "middle", "dominant-baseline": "central",
-               class: "fill-primary text-xs font-medium" do %>
-    <%= percent %>%
+               "text-anchor": "middle",
+               class: "fill-primary font-medium" do %>
+    <% label_lines.each_with_index do |line, idx| %>
+      <%= tag.tspan line,
+            x: size / 2.0,
+            dy: idx.zero? ? "#{-(label_lines.size - 1) * 0.6}em" : "1.25em",
+            class: idx.zero? ? "text-base" : "text-xs fill-secondary" %>
+    <% end %>
   <% end %>
 <% end %>

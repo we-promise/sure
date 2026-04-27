@@ -1292,7 +1292,7 @@ class Demo::Generator
         name: "Awesome vacations",
         target_amount: 6_000,
         target_date: 8.months.from_now.to_date,
-        color: "#F87171",
+        color: "#e99537",
         notes: "Two weeks somewhere warm.",
         state: "active"
       )
@@ -1309,7 +1309,7 @@ class Demo::Generator
         name: "Emergency fund",
         target_amount: 10_000,
         target_date: 12.months.from_now.to_date,
-        color: "#34D399",
+        color: "#4da568",
         notes: "Three months of essentials.",
         state: "active"
       ).savings_contributions.create!(
@@ -1321,7 +1321,7 @@ class Demo::Generator
         name: "Trip to Japan",
         target_amount: 4_500,
         target_date: 14.months.from_now.to_date,
-        color: "#60A5FA",
+        color: "#6471eb",
         notes: "Cherry blossom season.",
         state: "active"
       )
@@ -1330,7 +1330,7 @@ class Demo::Generator
         account: asset_account,
         name: "Paid-off car",
         target_amount: 25_000,
-        color: "#A78BFA",
+        color: "#805dee",
         notes: "Mission accomplished.",
         state: "completed"
       )

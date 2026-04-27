@@ -1,11 +1,16 @@
 class Savings::ProgressRingComponent < ApplicationComponent
-  attr_reader :percent, :size, :stroke, :color
+  attr_reader :percent, :size, :stroke, :color, :label_lines
 
-  def initialize(percent:, size: 80, stroke: 6, color: nil)
+  # `label_lines` is an array of strings rendered as <tspan> rows inside the
+  # ring. Defaults to `["#{percent}%"]` so existing call sites (goal cards,
+  # budget summary card) keep their compact percent display. The goal show
+  # page passes a richer ["$1,250", "of $6,000", "21%"] for the larger ring.
+  def initialize(percent:, size: 80, stroke: 6, color: nil, label_lines: nil)
     @percent = percent.to_i.clamp(0, 100)
     @size = size
     @stroke = stroke
     @color = color
+    @label_lines = Array(label_lines || [ "#{@percent}%" ])
   end
 
   def radius

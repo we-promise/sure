@@ -5,7 +5,7 @@ vacation:
   target_amount: 6000.00
   currency: USD
   target_date: <%= 6.months.from_now.to_date %>
-  color: "#F87171"
+  color: "#e99537"
   state: active
 
 emergency_fund:
@@ -15,7 +15,7 @@ emergency_fund:
   target_amount: 10000.00
   currency: USD
   target_date: <%= 12.months.from_now.to_date %>
-  color: "#34D399"
+  color: "#4da568"
   state: active
 
 paid_off_car:

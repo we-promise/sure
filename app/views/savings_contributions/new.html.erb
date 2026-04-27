@@ -17,7 +17,6 @@
       <%= f.text_area :notes, label: "Notes (optional)", rows: 2 %>
 
       <div class="flex items-center justify-end gap-2">
-        <%= render DS::Link.new(text: "Cancel", variant: "secondary", href: savings_goal_path(@savings_goal)) %>
         <%= f.submit "Add contribution" %>
       </div>
     <% end %>

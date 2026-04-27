@@ -6,13 +6,28 @@
    else                  "bg-container-inset text-secondary"
    end %>
 
+<% balance_money = @savings_goal.current_balance_money %>
+<% target_money = Money.new(@savings_goal.target_amount, @savings_goal.currency) %>
+
 <div class="max-w-3xl mx-auto py-6 space-y-6">
-  <div class="flex items-start justify-between gap-4">
-    <div class="flex items-center gap-4">
-      <%= render Savings::ProgressRingComponent.new(percent: @savings_goal.progress_percent, size: 96, stroke: 8, color: @savings_goal.color) %>
-      <div class="space-y-1">
+  <%# Header card: ring + identity + actions %>
+  <div class="bg-container rounded-xl shadow-border-xs p-6 lg:p-8">
+    <div class="flex flex-col md:flex-row items-center md:items-start gap-6">
+      <%= render Savings::ProgressRingComponent.new(
+        percent: @savings_goal.progress_percent,
+        size: 180,
+        stroke: 12,
+        color: @savings_goal.color,
+        label_lines: [
+          format_money(balance_money),
+          "of #{format_money(target_money)}",
+          "#{@savings_goal.progress_percent}%"
+        ]
+      ) %>
+
+      <div class="grow text-center md:text-left space-y-2">
         <h1 class="text-2xl text-primary font-medium"><%= @savings_goal.name %></h1>
-        <div class="flex items-center gap-2 flex-wrap">
+        <div class="flex items-center gap-2 flex-wrap justify-center md:justify-start">
           <span class="text-xs px-2 py-0.5 rounded-full font-medium <%= state_pill_classes %>">
             <%= @savings_goal.state.titleize %>
           </span>
@@ -21,72 +36,59 @@
             <span class="text-secondary text-sm">· target <%= @savings_goal.target_date.strftime("%b %Y") %></span>
           <% end %>
         </div>
-      </div>
-    </div>
-
-    <div class="flex items-center gap-1 shrink-0">
-      <%= render DS::Link.new(variant: "icon", icon: "pencil",
-            href: edit_savings_goal_path(@savings_goal),
-            frame: :modal,
-            title: "Edit", "aria-label": "Edit goal") %>
-
-      <% if @savings_goal.may_pause? %>
-        <%= render DS::Button.new(variant: "icon", icon: "pause",
-              href: pause_savings_goal_path(@savings_goal), method: :patch,
-              title: "Pause", "aria-label": "Pause goal") %>
-      <% end %>
-      <% if @savings_goal.may_resume? %>
-        <%= render DS::Button.new(variant: "icon", icon: "play",
-              href: resume_savings_goal_path(@savings_goal), method: :patch,
-              title: "Resume", "aria-label": "Resume goal") %>
-      <% end %>
-      <% if @savings_goal.may_complete? %>
-        <%= render DS::Button.new(variant: "icon", icon: "check",
-              href: complete_savings_goal_path(@savings_goal), method: :patch,
-              title: "Mark complete", "aria-label": "Mark goal as complete") %>
-      <% end %>
-      <% if @savings_goal.may_archive? %>
-        <%= render DS::Button.new(variant: "icon", icon: "archive",
-              href: archive_savings_goal_path(@savings_goal), method: :patch,
-              title: "Archive", "aria-label": "Archive goal") %>
-      <% end %>
-      <% if @savings_goal.may_unarchive? %>
-        <%= render DS::Button.new(variant: "icon", icon: "rotate-ccw",
-              href: unarchive_savings_goal_path(@savings_goal), method: :patch,
-              title: "Restore", "aria-label": "Restore goal to active") %>
-      <% end %>
-
-      <%= render DS::Button.new(
-            variant: "icon",
-            icon: "trash-2",
-            href: savings_goal_path(@savings_goal),
-            method: :delete,
-            confirm: CustomConfirm.for_resource_deletion(@savings_goal.name),
-            class: "[&_svg]:!text-destructive",
-            title: "Delete",
-            "aria-label": "Delete goal"
-          ) %>
-    </div>
-  </div>
-
-  <div class="bg-container rounded-xl shadow-border-xs p-6 grid grid-cols-3 gap-6">
-    <div>
-      <p class="text-secondary text-xs uppercase tracking-wide">Current balance</p>
-      <p class="text-primary text-xl font-medium mt-1"><%= format_money @savings_goal.current_balance_money %></p>
-    </div>
-    <div>
-      <p class="text-secondary text-xs uppercase tracking-wide">Target</p>
-      <p class="text-primary text-xl font-medium mt-1"><%= format_money Money.new(@savings_goal.target_amount, @savings_goal.currency) %></p>
-    </div>
-    <div>
-      <p class="text-secondary text-xs uppercase tracking-wide">Monthly target</p>
-      <p class="text-primary text-xl font-medium mt-1">
         <% if @savings_goal.monthly_target_amount %>
-          <%= format_money Money.new(@savings_goal.monthly_target_amount, @savings_goal.currency) %>
-        <% else %>
-          <span class="text-secondary">—</span>
+          <p class="text-secondary text-sm">
+            Monthly target: <span class="text-primary font-medium"><%= format_money Money.new(@savings_goal.monthly_target_amount, @savings_goal.currency) %></span>
+          </p>
         <% end %>
-      </p>
+      </div>
+
+      <div class="flex items-center gap-1 shrink-0">
+        <%= render DS::Link.new(variant: "icon", icon: "pencil",
+              href: edit_savings_goal_path(@savings_goal),
+              frame: :modal,
+              title: "Edit", "aria-label": "Edit goal") %>
+
+        <%= render DS::Menu.new do |menu| %>
+          <% if @savings_goal.may_pause? %>
+            <% menu.with_item(variant: "button", text: "Pause",
+                  icon: "pause",
+                  href: pause_savings_goal_path(@savings_goal),
+                  method: :patch) %>
+          <% end %>
+          <% if @savings_goal.may_resume? %>
+            <% menu.with_item(variant: "button", text: "Resume",
+                  icon: "play",
+                  href: resume_savings_goal_path(@savings_goal),
+                  method: :patch) %>
+          <% end %>
+          <% if @savings_goal.may_complete? %>
+            <% menu.with_item(variant: "button", text: "Mark complete",
+                  icon: "check",
+                  href: complete_savings_goal_path(@savings_goal),
+                  method: :patch) %>
+          <% end %>
+          <% if @savings_goal.may_archive? %>
+            <% menu.with_item(variant: "button", text: "Archive",
+                  icon: "archive",
+                  href: archive_savings_goal_path(@savings_goal),
+                  method: :patch) %>
+          <% end %>
+          <% if @savings_goal.may_unarchive? %>
+            <% menu.with_item(variant: "button", text: "Restore to active",
+                  icon: "rotate-ccw",
+                  href: unarchive_savings_goal_path(@savings_goal),
+                  method: :patch) %>
+          <% end %>
+
+          <% menu.with_item(variant: "button", text: "Delete",
+                icon: "trash-2",
+                href: savings_goal_path(@savings_goal),
+                method: :delete,
+                destructive: true,
+                confirm: CustomConfirm.for_resource_deletion(@savings_goal.name)) %>
+        <% end %>
+      </div>
     </div>
   </div>
 
