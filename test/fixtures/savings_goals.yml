@@ -1,0 +1,24 @@
+vacation:
+  family: dylan_family
+  name: Awesome vacations
+  target_amount: 6000.00
+  currency: USD
+  target_date: <%= 6.months.from_now.to_date %>
+  color: "#F87171"
+  state: active
+
+emergency_fund:
+  family: dylan_family
+  name: Emergency fund
+  target_amount: 10000.00
+  currency: USD
+  target_date: <%= 12.months.from_now.to_date %>
+  color: "#34D399"
+  state: active
+
+paid_off_car:
+  family: dylan_family
+  name: Paid-off car
+  target_amount: 25000.00
+  currency: USD
+  state: completed

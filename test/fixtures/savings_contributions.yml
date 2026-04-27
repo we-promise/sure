@@ -1,0 +1,20 @@
+vacation_initial:
+  savings_goal: vacation
+  amount: 1000.00
+  currency: USD
+  source: initial
+  contributed_at: <%= 2.months.ago.to_date %>
+
+vacation_manual_top_up:
+  savings_goal: vacation
+  amount: 250.00
+  currency: USD
+  source: manual
+  contributed_at: <%= 1.week.ago.to_date %>
+
+emergency_initial:
+  savings_goal: emergency_fund
+  amount: 500.00
+  currency: USD
+  source: initial
+  contributed_at: <%= 3.months.ago.to_date %>
