@@ -121,5 +121,4 @@ class IndexaCapitalAccount::Processor
       Rails.logger.info "IndexaCapitalAccount::Processor - Cash balance from API: #{cash.inspect}"
       cash || BigDecimal("0")
     end
-
 end
