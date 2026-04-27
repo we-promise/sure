@@ -92,11 +92,22 @@ class SavingsGoalsController < ApplicationController
 private
   def set_breadcrumbs
     crumbs = [ [ t("breadcrumbs.home"), root_path ], [ t("savings_goals.index.title"), savings_goals_path ] ]
+
+    # The before_action fires for create/update too. When validation
+    # fails and we `render :new` / `render :edit`, action_name is still
+    # "create"/"update" and the crumbs would land on the wrong branch.
+    # Map them back to the visible template.
+    current_view = case action_name
+    when "create" then "new"
+    when "update" then "edit"
+    else action_name
+    end
+
     if @savings_goal&.persisted?
-      crumbs << [ @savings_goal.name, savings_goal_path(@savings_goal) ] if action_name != "show"
-      crumbs << [ @savings_goal.name, nil ] if action_name == "show"
-      crumbs << [ t("savings_goals.show.actions.edit"), nil ] if action_name == "edit"
-    elsif action_name == "new"
+      crumbs << [ @savings_goal.name, savings_goal_path(@savings_goal) ] if current_view != "show"
+      crumbs << [ @savings_goal.name, nil ] if current_view == "show"
+      crumbs << [ t("savings_goals.show.actions.edit"), nil ] if current_view == "edit"
+    elsif current_view == "new"
       crumbs << [ t("savings_goals.index.new_goal"), nil ]
     else
       crumbs.last[1] = nil

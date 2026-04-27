@@ -119,6 +119,22 @@ class SavingsGoalsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Awesome vacations", @goal.reload.name
   end
 
+  test "breadcrumbs on render :new (after failed create) include the New-goal tail" do
+    post savings_goals_path, params: { savings_goal: { name: "" } }
+    assert_response :unprocessable_entity
+    crumbs = @controller.instance_variable_get(:@breadcrumbs)
+    assert_equal "New goal", crumbs.last.first
+    assert_nil crumbs.last.last, "last crumb should be unlinked"
+  end
+
+  test "breadcrumbs on render :edit (after failed update) include the Edit tail" do
+    patch savings_goal_path(@goal), params: { savings_goal: { name: "" } }
+    assert_response :unprocessable_entity
+    crumbs = @controller.instance_variable_get(:@breadcrumbs)
+    assert_equal "Edit", crumbs.last.first
+    assert_nil crumbs.last.last
+  end
+
   test "lifecycle action with invalid transition flashes alert and redirects" do
     @goal.complete! # active -> completed
     @goal.archive!  # completed -> archived
