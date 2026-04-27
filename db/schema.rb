@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_04_27_141453) do
+ActiveRecord::Schema[7.2].define(version: 2026_04_27_144444) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -1247,6 +1247,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_04_27_141453) do
     t.string "state", default: "active", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.uuid "account_id", null: false
+    t.index ["account_id"], name: "index_savings_goals_on_account_id"
     t.index ["family_id", "state"], name: "index_savings_goals_on_family_id_and_state"
     t.index ["family_id"], name: "index_savings_goals_on_family_id"
   end
@@ -1738,6 +1740,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_04_27_141453) do
   add_foreign_key "rules", "families"
   add_foreign_key "savings_contributions", "budgets"
   add_foreign_key "savings_contributions", "savings_goals"
+  add_foreign_key "savings_goals", "accounts"
   add_foreign_key "savings_goals", "families"
   add_foreign_key "security_prices", "securities"
   add_foreign_key "sessions", "impersonation_sessions", column: "active_impersonator_session_id"

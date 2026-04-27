@@ -1,5 +1,6 @@
 vacation:
   family: dylan_family
+  account: depository
   name: Awesome vacations
   target_amount: 6000.00
   currency: USD
@@ -9,6 +10,7 @@ vacation:
 
 emergency_fund:
   family: dylan_family
+  account: depository
   name: Emergency fund
   target_amount: 10000.00
   currency: USD
@@ -18,6 +20,7 @@ emergency_fund:
 
 paid_off_car:
   family: dylan_family
+  account: depository
   name: Paid-off car
   target_amount: 25000.00
   currency: USD

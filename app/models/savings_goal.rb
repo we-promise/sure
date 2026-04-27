@@ -2,11 +2,16 @@ class SavingsGoal < ApplicationRecord
   include AASM, Monetizable
 
   belongs_to :family
+  belongs_to :account
   has_many :savings_contributions, dependent: :destroy
 
   validates :name, presence: true
   validates :target_amount, presence: true, numericality: { greater_than: 0 }
   validates :currency, presence: true
+validate :account_belongs_to_family
+validate :account_is_asset
+
+before_validation :sync_currency_from_account
 
   monetize :target_amount
 
@@ -75,4 +80,20 @@ class SavingsGoal < ApplicationRecord
     return remaining_amount if months.zero?
     (remaining_amount.to_d / months).ceil(2)
   end
+
+private
+  def sync_currency_from_account
+    self.currency = account.currency if account
+  end
+
+  def account_belongs_to_family
+    return if account.nil? || family.nil?
+    errors.add(:account, "must belong to the same family") unless account.family_id == family_id
+  end
+
+  def account_is_asset
+    return if account.nil?
+    errors.add(:account, "must be an asset account") unless account.classification == "asset"
+  end
+
 end

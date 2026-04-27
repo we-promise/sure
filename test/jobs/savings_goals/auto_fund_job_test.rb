@@ -68,7 +68,8 @@ class SavingsGoals::AutoFundJobTest < ActiveJob::TestCase
 
   test "skips paused / completed / archived goals" do
     paused = @family.savings_goals.create!(
-      name: "Paused", target_amount: 1000, currency: "USD",
+      account: accounts(:depository),
+      name: "Paused", target_amount: 1000,
       state: "paused", target_date: 3.months.from_now.to_date
     )
     Budget.any_instance.stubs(:monthly_surplus).returns(5_000)
@@ -88,7 +89,8 @@ class SavingsGoals::AutoFundJobTest < ActiveJob::TestCase
 
   test "competes goals fairly when surplus is limited and stops once exhausted" do
     @family.savings_goals.create!(
-      name: "Smaller", target_amount: 600, currency: "USD",
+      account: accounts(:depository),
+      name: "Smaller", target_amount: 600,
       target_date: 6.months.from_now.to_date, state: "active"
     )
     Budget.any_instance.stubs(:monthly_surplus).returns(150)

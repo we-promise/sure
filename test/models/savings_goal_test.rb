@@ -9,12 +9,11 @@ class SavingsGoalTest < ActiveSupport::TestCase
     assert @goal.valid?
   end
 
-  test "requires name, target_amount, currency" do
-    goal = SavingsGoal.new(family: families(:dylan_family))
+  test "requires name and target_amount (currency is derived from account)" do
+    goal = SavingsGoal.new(family: families(:dylan_family), account: accounts(:depository))
     assert_not goal.valid?
     assert_includes goal.errors.attribute_names, :name
     assert_includes goal.errors.attribute_names, :target_amount
-    assert_includes goal.errors.attribute_names, :currency
   end
 
   test "rejects non-positive target_amount" do
@@ -27,9 +26,9 @@ class SavingsGoalTest < ActiveSupport::TestCase
   test "starts in active state" do
     goal = SavingsGoal.create!(
       family: families(:dylan_family),
+      account: accounts(:depository),
       name: "New goal",
-      target_amount: 100,
-      currency: "USD"
+      target_amount: 100
     )
     assert goal.active?
   end
@@ -85,5 +84,37 @@ class SavingsGoalTest < ActiveSupport::TestCase
     contribution_ids = @goal.savings_contributions.pluck(:id)
     @goal.destroy
     assert_equal 0, SavingsContribution.where(id: contribution_ids).count
+  end
+end
+
+class SavingsGoalAccountLinkTest < ActiveSupport::TestCase
+  setup do
+    @family = families(:dylan_family)
+    @account = accounts(:depository)
+  end
+
+  test "requires an account" do
+    goal = SavingsGoal.new(family: @family, name: "x", target_amount: 100)
+    assert_not goal.valid?
+    assert_includes goal.errors.attribute_names, :account
+  end
+
+  test "rejects accounts from other families" do
+    other_family = families(:empty_family) rescue Family.create!(name: "Other", locale: "en", date_format: "%Y-%m-%d", currency: "USD")
+    goal = SavingsGoal.new(family: other_family, account: @account, name: "x", target_amount: 100)
+    assert_not goal.valid?
+    assert_includes goal.errors.attribute_names, :account
+  end
+
+  test "rejects liability accounts" do
+    liability = accounts(:other_liability)
+    goal = SavingsGoal.new(family: @family, account: liability, name: "x", target_amount: 100)
+    assert_not goal.valid?
+    assert_includes goal.errors.attribute_names, :account
+  end
+
+  test "syncs currency from account on save" do
+    goal = SavingsGoal.create!(family: @family, account: @account, name: "x", target_amount: 100)
+    assert_equal @account.currency, goal.currency
   end
 end

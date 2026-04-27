@@ -14,6 +14,8 @@ class SavingsContribution < ApplicationRecord
   validates :contributed_at, presence: true
   validate :budget_required_for_auto_source
 
+  before_validation :sync_currency_from_goal
+
   monetize :amount
 
   scope :auto, -> { where(source: "auto") }
@@ -23,6 +25,10 @@ class SavingsContribution < ApplicationRecord
   scope :recent_first, -> { order(contributed_at: :desc, created_at: :desc) }
 
   private
+    def sync_currency_from_goal
+      self.currency = savings_goal.account.currency if savings_goal&.account
+    end
+
     def budget_required_for_auto_source
       return unless source == "auto"
       errors.add(:budget, "must be set when source is auto") if budget_id.blank?
