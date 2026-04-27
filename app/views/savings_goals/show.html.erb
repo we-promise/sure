@@ -25,8 +25,8 @@
     </div>
 
     <div class="flex items-center gap-1 shrink-0">
-      <%= render DS::Button.new(variant: "icon", icon: "pencil",
-            href: edit_savings_goal_path(@savings_goal), method: :get) %>
+      <%= render DS::Link.new(variant: "icon", icon: "pencil",
+            href: edit_savings_goal_path(@savings_goal)) %>
 
       <% if @savings_goal.may_pause? %>
         <%= render DS::Button.new(variant: "icon", icon: "pause",
@@ -91,7 +91,7 @@
   <div class="bg-container rounded-xl shadow-border-xs p-6">
     <div class="flex items-center justify-between mb-4">
       <h2 class="text-primary font-medium">Contributions</h2>
-      <%= render DS::Button.new(text: "Add contribution", icon: "plus", variant: "primary",
+      <%= render DS::Link.new(text: "Add contribution", icon: "plus", variant: "primary",
             href: new_savings_goal_contribution_path(@savings_goal)) %>
     </div>
 

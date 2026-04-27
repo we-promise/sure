@@ -237,7 +237,6 @@ Rails.application.routes.draw do
   resources :budgets, only: %i[index show edit update], param: :month_year do
     post :copy_previous, on: :member
     scope module: "budgets" do
-      get "savings", to: "savings#show", as: "savings"
       post "savings/auto_fund", to: "savings#auto_fund", as: "savings_auto_fund"
     end
     get :picker, on: :collection

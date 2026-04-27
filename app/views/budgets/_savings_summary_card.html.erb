@@ -4,15 +4,13 @@
   <div class="flex items-center justify-between gap-3 flex-wrap mb-4">
     <h2 class="text-lg font-medium shrink-0">Savings goals</h2>
     <div class="flex items-center gap-2">
-      <% if summary.active_goals.any? %>
-        <%= render DS::Link.new(
-          text: "Manage",
-          variant: "secondary",
-          icon: "settings-2",
-          size: "sm",
-          href: budget_savings_path(budget_month_year: Budget.date_to_param(budget.start_date))
-        ) %>
-      <% end %>
+      <%= render DS::Link.new(
+        text: "Manage",
+        variant: "secondary",
+        icon: "settings-2",
+        size: "sm",
+        href: savings_goals_path
+      ) %>
       <%= render DS::Link.new(
         text: "New goal",
         variant: "primary",
@@ -20,6 +18,20 @@
         size: "sm",
         href: new_savings_goal_path
       ) %>
+      <% if summary.active_goals.any? && summary.surplus.to_d.positive? %>
+        <%= render DS::Button.new(
+          text: "Auto-fund this month",
+          variant: "outline",
+          icon: "zap",
+          size: "sm",
+          href: budget_savings_auto_fund_path(budget_month_year: Budget.date_to_param(budget.start_date)),
+          method: :post,
+          confirm: CustomConfirm.new(
+            title: "Auto-fund all active goals?",
+            body: "Creates an auto-source contribution per goal, capped by each goal's monthly target and the remaining surplus."
+          )
+        ) %>
+      <% end %>
     </div>
   </div>
 

@@ -7,15 +7,10 @@ class Budgets::SavingsControllerTest < ActionDispatch::IntegrationTest
     @month_year = Budget.date_to_param(@budget.start_date)
   end
 
-  test "show renders summary" do
-    get budget_savings_path(budget_month_year: @month_year)
-    assert_response :success
-  end
-
-  test "auto_fund enqueues AutoFundJob" do
+  test "auto_fund enqueues AutoFundJob and redirects to the budget" do
     assert_enqueued_with(job: SavingsGoals::AutoFundJob, args: [ users(:family_admin).family.id, @budget.id ]) do
       post budget_savings_auto_fund_path(budget_month_year: @month_year)
     end
-    assert_redirected_to budget_savings_path(budget_month_year: @month_year)
+    assert_redirected_to budget_path(@month_year)
   end
 end

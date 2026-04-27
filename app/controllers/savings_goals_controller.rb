@@ -1,5 +1,7 @@
 class SavingsGoalsController < ApplicationController
   before_action :set_savings_goal, only: %i[show edit update destroy pause resume complete archive unarchive]
+  before_action :set_breadcrumbs
+
 
   def index
     state = params[:state].presence_in(%w[active paused completed archived all]) || "active"
@@ -68,37 +70,51 @@ class SavingsGoalsController < ApplicationController
     transition!(:unarchive!, "Goal restored to active.")
   end
 
-  private
-    def set_savings_goal
-      @savings_goal = Current.family.savings_goals.find(params[:id])
+private
+  def set_breadcrumbs
+    crumbs = [ [ "Home", root_path ], [ "Savings goals", savings_goals_path ] ]
+    if @savings_goal&.persisted?
+      crumbs << [ @savings_goal.name, savings_goal_path(@savings_goal) ] if action_name != "show"
+      crumbs << [ @savings_goal.name, nil ] if action_name == "show"
+      crumbs << [ "Edit", nil ] if action_name == "edit"
+    elsif action_name == "new"
+      crumbs << [ "New goal", nil ]
+    else
+      crumbs.last[1] = nil
+    end
+    @breadcrumbs = crumbs
+  end
+
+  def set_savings_goal
+    @savings_goal = Current.family.savings_goals.find(params[:id])
     end
 
-    def savings_goal_params
-      params.require(:savings_goal).permit(
-        :account_id, :name, :target_amount, :target_date, :color, :icon, :notes
-      )
-    end
+  def savings_goal_params
+    params.require(:savings_goal).permit(
+      :account_id, :name, :target_amount, :target_date, :color, :icon, :notes
+    )
+  end
 
-    # Scopes the lookup so a foreign account_id never silently associates.
-    def lookup_account(account_id)
-      return nil if account_id.blank?
-      Current.family.accounts.find_by(id: account_id)
-    end
+  # Scopes the lookup so a foreign account_id never silently associates.
+  def lookup_account(account_id)
+    return nil if account_id.blank?
+    Current.family.accounts.find_by(id: account_id)
+  end
 
-    def handle_initial_contribution(goal)
-      amount = params.dig(:savings_goal, :initial_contribution).to_d
-      return unless amount.positive?
-      goal.savings_contributions.create!(
-        amount: amount,
-        source: "initial",
-        contributed_at: Date.current
-      )
-    end
+  def handle_initial_contribution(goal)
+    amount = params.dig(:savings_goal, :initial_contribution).to_d
+    return unless amount.positive?
+    goal.savings_contributions.create!(
+      amount: amount,
+      source: "initial",
+      contributed_at: Date.current
+    )
+  end
 
-    def transition!(event, message)
-      @savings_goal.public_send(event)
-      redirect_to savings_goal_path(@savings_goal), notice: message
-    rescue AASM::InvalidTransition => e
-      redirect_to savings_goal_path(@savings_goal), alert: e.message
-    end
+  def transition!(event, message)
+    @savings_goal.public_send(event)
+    redirect_to savings_goal_path(@savings_goal), notice: message
+  rescue AASM::InvalidTransition => e
+    redirect_to savings_goal_path(@savings_goal), alert: e.message
+  end
 end
