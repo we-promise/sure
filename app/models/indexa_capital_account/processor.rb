@@ -70,22 +70,48 @@ class IndexaCapitalAccount::Processor
     end
 
     def calculate_total_balance
-      # Calculate total from holdings + cash for accuracy
+      # Trust the API's reported balance when available — Indexa's holdings payload
+      # contains time-series snapshots (one row per security per date), so summing
+      # the raw entries double-counts. Fall back to a per-security latest-snapshot
+      # sum + cash only when the API total is missing.
+      if indexa_capital_account.current_balance.present?
+        Rails.logger.info "IndexaCapitalAccount::Processor - Using API total: #{indexa_capital_account.current_balance}"
+        return indexa_capital_account.current_balance
+      end
+
       holdings_value = calculate_holdings_value
       cash_value = indexa_capital_account.cash_balance || 0
-
       calculated_total = holdings_value + cash_value
+      Rails.logger.info "IndexaCapitalAccount::Processor - Using calculated total (API balance missing): holdings=#{holdings_value} + cash=#{cash_value} = #{calculated_total}"
+      calculated_total
+    end
 
-      # Use calculated total if we have holdings, otherwise trust API value
-      if holdings_value > 0
-        Rails.logger.info "IndexaCapitalAccount::Processor - Using calculated total: holdings=#{holdings_value} + cash=#{cash_value} = #{calculated_total}"
-        calculated_total
-      elsif indexa_capital_account.current_balance.present?
-        Rails.logger.info "IndexaCapitalAccount::Processor - Using API total: #{indexa_capital_account.current_balance}"
-        indexa_capital_account.current_balance
-      else
-        calculated_total
+    def calculate_holdings_value
+      holdings_data = indexa_capital_account.raw_holdings_payload || []
+      return 0 if holdings_data.empty?
+
+      # The importer normalises to total_fiscal_results (one aggregated row
+      # per security) so a plain sum is correct. We still defensively dedupe
+      # by instrument key in case a future provider variant feeds the
+      # per-tax-lot fiscal_results array through here — the last value wins,
+      # consistent with how HoldingsProcessor upserts holdings.
+      per_security = {}
+      holdings_data.each do |holding|
+        instrument = extract_instrument_key(holding)
+        next if instrument.blank?
+
+        data = holding.respond_to?(:with_indifferent_access) ? holding.with_indifferent_access : holding
+        amount = parse_decimal(data[:amount])
+        unless amount
+          titles = parse_decimal(data[:titles] || data[:quantity] || data[:units]) || 0
+          price = parse_decimal(data[:price]) || 0
+          amount = titles * price
+        end
+
+        per_security[instrument] = amount || 0
       end
+
+      per_security.values.sum
     end
 
     def calculate_cash_balance
@@ -94,23 +120,5 @@ class IndexaCapitalAccount::Processor
       cash = indexa_capital_account.cash_balance
       Rails.logger.info "IndexaCapitalAccount::Processor - Cash balance from API: #{cash.inspect}"
       cash || BigDecimal("0")
-    end
-
-    def calculate_holdings_value
-      holdings_data = indexa_capital_account.raw_holdings_payload || []
-      return 0 if holdings_data.empty?
-
-      holdings_data.sum do |holding|
-        data = holding.is_a?(Hash) ? holding.with_indifferent_access : {}
-        # Indexa Capital: amount = total market value, or titles * price
-        amount = parse_decimal(data[:amount])
-        if amount
-          amount
-        else
-          titles = parse_decimal(data[:titles] || data[:quantity] || data[:units]) || 0
-          price = parse_decimal(data[:price]) || 0
-          titles * price
-        end
-      end
     end
 end

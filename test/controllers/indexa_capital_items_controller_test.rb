@@ -56,9 +56,7 @@ class IndexaCapitalItemsControllerTest < ActionDispatch::IntegrationTest
 
     assert_difference "Account.count", 1 do
       post complete_account_setup_indexa_capital_item_url(@item), params: {
-        accounts: {
-          ica.id => { account_type: "investment", subtype: "brokerage" }
-        }
+        account_ids: [ ica.id ]
       }
     end
 
@@ -80,21 +78,15 @@ class IndexaCapitalItemsControllerTest < ActionDispatch::IntegrationTest
 
     assert_no_difference "Account.count" do
       post complete_account_setup_indexa_capital_item_url(@item), params: {
-        accounts: {
-          ica.id => { account_type: "investment" }
-        }
+        account_ids: [ ica.id ]
       }
     end
   end
 
-  test "complete_account_setup with all skipped redirects to setup" do
-    ica = indexa_capital_accounts(:mutual_fund)
-
+  test "complete_account_setup with no selected accounts redirects to setup" do
     assert_no_difference "Account.count" do
       post complete_account_setup_indexa_capital_item_url(@item), params: {
-        accounts: {
-          ica.id => { account_type: "skip" }
-        }
+        account_ids: []
       }
     end
 

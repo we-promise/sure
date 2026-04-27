@@ -108,11 +108,19 @@ class IndexaCapitalItem::Importer
 
       begin
         holdings_data = indexa_capital_provider.get_holdings(account_number: account_number)
-
         stats["api_requests"] = stats.fetch("api_requests", 0) + 1
 
-        # The API returns fiscal-results which may be a hash with an array inside
         holdings_array = normalize_holdings_response(holdings_data)
+
+        # Pension plans return empty fiscal-results. Fall back to the portfolio
+        # endpoint, which exposes positions for both mutual fund and pension
+        # accounts in a uniform shape we can adapt to the same structure.
+        if holdings_array.empty?
+          Rails.logger.info "IndexaCapitalItem::Importer - fiscal-results empty for #{account_number}, falling back to /portfolio"
+          portfolio_data = indexa_capital_provider.get_portfolio(account_number: account_number)
+          stats["api_requests"] = stats.fetch("api_requests", 0) + 1
+          holdings_array = positions_from_portfolio(portfolio_data)
+        end
 
         if holdings_array.any?
           holdings_hashes = holdings_array.map { |h| sdk_object_to_hash(h) }
@@ -125,13 +133,40 @@ class IndexaCapitalItem::Importer
       end
     end
 
-    # fiscal-results response may be an array or a hash containing an array
+    # Adapt /accounts/{id}/portfolio positions into the shape that
+    # HoldingsProcessor expects (i.e. the same field set as a
+    # total_fiscal_results row). Adds a derived cost_price (per-share cost)
+    # since portfolio rows only carry cost_amount.
+    def positions_from_portfolio(portfolio_data)
+      data = portfolio_data.is_a?(Hash) ? portfolio_data.with_indifferent_access : {}
+      Array(data[:instrument_accounts]).flat_map do |account|
+        Array(account.is_a?(Hash) ? account.with_indifferent_access[:positions] : nil).map do |pos|
+          row = (pos.is_a?(Hash) ? pos.with_indifferent_access : {}).dup
+          titles = row[:titles].to_d if row[:titles]
+          cost_amount = row[:cost_amount].to_d if row[:cost_amount]
+          if row[:cost_price].blank? && titles && titles.nonzero? && cost_amount
+            row[:cost_price] = (cost_amount / titles).to_s
+          end
+          row
+        end
+      end
+    end
+
+    # fiscal-results response may be an array or a hash containing an array.
+    # Prefer total_fiscal_results: it contains one aggregated row per security
+    # with current titles/amount/cost. fiscal_results is per tax lot and also
+    # includes historical rebalance events (e.g. virtual sells/buys that
+    # generated tax events), so summing/iterating it over-counts the position.
     def normalize_holdings_response(data)
       return data if data.is_a?(Array)
       return [] if data.nil?
 
-      # Try common response shapes
-      data[:fiscal_results] || data[:results] || data[:positions] || data[:data] || []
+      data[:total_fiscal_results].presence ||
+        data[:fiscal_results] ||
+        data[:results] ||
+        data[:positions] ||
+        data[:data] ||
+        []
     end
 
     def prune_removed_accounts(upstream_account_ids)
