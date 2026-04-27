@@ -240,3 +240,15 @@ pl:
         other: Plików (%{count})
       browse_to_add: Przeglądaj, aby dodać pliki
       max_reached: Osiągnięto maksymalny limit plików (%{count}/%{max}). Usuń istniejący plik, aby przesłać kolejny.
+    bulk_deletions:
+      destroy:
+        deleted:
+          one: "Usunięto %{count} transakcję"
+          few: "Usunięto %{count} transakcje"
+          many: "Usunięto %{count} transakcji"
+          other: "Usunięto %{count} transakcji"
+        skipped:
+          one: "%{count} transakcja nie mogła zostać usunięta"
+          few: "%{count} transakcje nie mogły zostać usunięte"
+          many: "%{count} transakcji nie mogło zostać usuniętych"
+          other: "%{count} transakcji nie mogło zostać usuniętych"

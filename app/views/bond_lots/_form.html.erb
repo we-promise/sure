@@ -24,7 +24,7 @@
               data: {
                 action: "change->bond-lot-form#syncIssueDateWithPurchase change->bond-lot-inflation#recalculate",
                 bond_lot_form_target: "purchasedOnInput",
-                bond_lot_inflation_target: "purchasedOnInput"
+                "purchased-on-field": true
               } %>
 
       <div data-bond-lot-inflation-target="inflationFields">
@@ -33,7 +33,8 @@
                             data: {
                               action: "change->bond-lot-inflation#recalculate",
                               bond_lot_form_target: "issueDateInput",
-                              bond_lot_inflation_target: "inflationInput issueDateInput"
+                              bond_lot_inflation_target: "inflationInput",
+                              "issue-date-field": true
                             } %>
       </div>
 
@@ -96,7 +97,7 @@
                 data: {
                   action: "change->bond-lot-inflation#toggleSubtypeFields",
                   bond_lot_form_target: "subtypeSelect",
-                  bond_lot_inflation_target: "subtypeInput"
+                  "subtype-field": true
                 }
               } %>
       <p class="text-xs text-secondary" data-bond-lot-form-target="subtypeDerivedHint">

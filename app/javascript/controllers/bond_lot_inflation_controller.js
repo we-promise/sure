@@ -7,10 +7,7 @@ export default class extends Controller {
     "inflationInput",
     "otherRequiredInput",
     "manualInflationField",
-    "manualInflationInput",
-    "subtypeInput",
-    "purchasedOnInput",
-    "issueDateInput"
+    "manualInflationInput"
   ]
 
   static values = {
@@ -66,12 +63,15 @@ export default class extends Controller {
   }
 
   #subtypeValue() {
-    return this.hasSubtypeInputTarget ? `${this.subtypeInputTarget.value || ""}` : ""
+    const el = this.element.querySelector("[data-subtype-field]")
+    return el ? `${el.value || ""}` : ""
   }
 
   #firstPeriodRateRequired() {
-    const purchasedOn = this.#parseDate(this.hasPurchasedOnInputTarget ? this.purchasedOnInputTarget.value : null)
-    const issueDate = this.#parseDate(this.hasIssueDateInputTarget ? this.issueDateInputTarget.value : null)
+    const poEl = this.element.querySelector("[data-purchased-on-field]")
+    const idEl = this.element.querySelector("[data-issue-date-field]")
+    const purchasedOn = this.#parseDate(poEl ? poEl.value : null)
+    const issueDate = this.#parseDate(idEl ? idEl.value : null)
 
     if (!purchasedOn) return false
 
@@ -84,7 +84,9 @@ export default class extends Controller {
 
   #parseDate(value) {
     if (!value) return null
-    const parsed = new Date(value)
+    const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+    if (!match) return null
+    const parsed = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]))
     return Number.isNaN(parsed.getTime()) ? null : parsed
   }
 
