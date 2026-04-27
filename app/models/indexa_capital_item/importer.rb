@@ -125,13 +125,21 @@ class IndexaCapitalItem::Importer
       end
     end
 
-    # fiscal-results response may be an array or a hash containing an array
+    # fiscal-results response may be an array or a hash containing an array.
+    # Prefer total_fiscal_results: it contains one aggregated row per security
+    # with current titles/amount/cost. fiscal_results is per tax lot and also
+    # includes historical rebalance events (e.g. virtual sells/buys that
+    # generated tax events), so summing/iterating it over-counts the position.
     def normalize_holdings_response(data)
       return data if data.is_a?(Array)
       return [] if data.nil?
 
-      # Try common response shapes
-      data[:fiscal_results] || data[:results] || data[:positions] || data[:data] || []
+      data[:total_fiscal_results].presence ||
+        data[:fiscal_results] ||
+        data[:results] ||
+        data[:positions] ||
+        data[:data] ||
+        []
     end
 
     def prune_removed_accounts(upstream_account_ids)
