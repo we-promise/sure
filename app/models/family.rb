@@ -123,6 +123,12 @@ class Family < ApplicationRecord
     Merchant.where(id: merchant_ids)
   end
 
+  # Categories ordered for display in form selects: parents first, children
+  # immediately after, with `name_with_indent` providing visual indentation.
+  def categories_with_hierarchy
+    categories.alphabetically_by_hierarchy
+  end
+
   def available_merchants
     assigned_ids = transactions.where.not(merchant_id: nil).pluck(:merchant_id).uniq
     recently_unlinked_ids = FamilyMerchantAssociation
