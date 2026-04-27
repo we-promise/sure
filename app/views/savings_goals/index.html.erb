@@ -7,7 +7,8 @@
     text: "New goal",
     icon: "plus",
     variant: "primary",
-    href: new_savings_goal_path
+    href: new_savings_goal_path,
+    frame: :modal
   ) %>
 </div>
 
@@ -40,7 +41,7 @@
     </p>
     <p class="text-secondary text-sm mt-1">Set one up to start earmarking money in your asset accounts.</p>
     <div class="mt-4">
-      <%= render DS::Link.new(text: "New goal", icon: "plus", variant: "primary", href: new_savings_goal_path) %>
+      <%= render DS::Link.new(text: "New goal", icon: "plus", variant: "primary", href: new_savings_goal_path, frame: :modal) %>
     </div>
   </div>
 <% end %>

@@ -27,6 +27,7 @@
     <div class="flex items-center gap-1 shrink-0">
       <%= render DS::Link.new(variant: "icon", icon: "pencil",
             href: edit_savings_goal_path(@savings_goal),
+            frame: :modal,
             title: "Edit", "aria-label": "Edit goal") %>
 
       <% if @savings_goal.may_pause? %>
@@ -100,7 +101,8 @@
     <div class="flex items-center justify-between mb-4">
       <h2 class="text-primary font-medium">Contributions</h2>
       <%= render DS::Link.new(text: "Add contribution", icon: "plus", variant: "primary",
-            href: new_savings_goal_contribution_path(@savings_goal)) %>
+            href: new_savings_goal_contribution_path(@savings_goal),
+            frame: :modal) %>
     </div>
 
     <% contributions = @savings_goal.savings_contributions.recent_first %>

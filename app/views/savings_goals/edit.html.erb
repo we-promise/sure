@@ -1,7 +1,6 @@
-<div class="space-y-6 max-w-2xl mx-auto py-6">
-  <div>
-    <h1 class="text-2xl text-primary font-medium">Edit savings goal</h1>
-    <p class="text-secondary text-sm">Update target, name, color, or notes.</p>
-  </div>
-  <%= render "form", savings_goal: @savings_goal, show_initial: false %>
-</div>
+<%= render DS::Dialog.new do |dialog| %>
+  <% dialog.with_header(title: "Edit savings goal") %>
+  <% dialog.with_body do %>
+    <%= render "form", savings_goal: @savings_goal, show_initial: false %>
+  <% end %>
+<% end %>

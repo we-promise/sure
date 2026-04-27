@@ -16,7 +16,8 @@
         variant: "primary",
         icon: "plus",
         size: "sm",
-        href: new_savings_goal_path
+        href: new_savings_goal_path,
+        frame: :modal
       ) %>
       <% if summary.active_goals.any? && summary.surplus.to_d.positive? %>
         <%= render DS::Button.new(

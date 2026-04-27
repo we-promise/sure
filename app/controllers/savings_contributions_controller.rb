@@ -14,7 +14,11 @@ class SavingsContributionsController < ApplicationController
     @contribution.contributed_at ||= Date.current
 
     if save_with_advisory_lock(@contribution)
-      redirect_to savings_goal_path(@savings_goal), notice: "Contribution added."
+      flash[:notice] = "Contribution added."
+      respond_to do |format|
+        format.html { redirect_to savings_goal_path(@savings_goal) }
+        format.turbo_stream { render turbo_stream: turbo_stream.action(:redirect, savings_goal_path(@savings_goal)) }
+      end
     else
       render :new, status: :unprocessable_entity
     end

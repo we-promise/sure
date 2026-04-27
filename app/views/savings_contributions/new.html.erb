@@ -1,24 +1,25 @@
-<div class="max-w-lg mx-auto py-6 space-y-4">
-  <h1 class="text-2xl text-primary font-medium">Add contribution to <%= @savings_goal.name %></h1>
-  <%= styled_form_with model: @contribution, url: savings_goal_contributions_path(@savings_goal), class: "space-y-4" do |f| %>
-    <% if @contribution.errors.any? %>
-      <div class="p-3 rounded-lg border border-destructive bg-red-tint-10 text-destructive">
-        <ul class="list-disc list-inside text-sm">
-          <% @contribution.errors.full_messages.each do |msg| %>
-            <li><%= msg %></li>
-          <% end %>
-        </ul>
+<%= render DS::Dialog.new do |dialog| %>
+  <% dialog.with_header(title: "Add contribution to #{@savings_goal.name}") %>
+  <% dialog.with_body do %>
+    <%= styled_form_with model: @contribution, url: savings_goal_contributions_path(@savings_goal), class: "space-y-4" do |f| %>
+      <% if @contribution.errors.any? %>
+        <div class="p-3 rounded-lg border border-destructive bg-red-tint-10 text-destructive">
+          <ul class="list-disc list-inside text-sm">
+            <% @contribution.errors.full_messages.each do |msg| %>
+              <li><%= msg %></li>
+            <% end %>
+          </ul>
+        </div>
+      <% end %>
+
+      <%= f.money_field :amount, label: "Amount", required: true %>
+      <%= f.date_field :contributed_at, label: "Date", required: true %>
+      <%= f.text_area :notes, label: "Notes (optional)", rows: 2 %>
+
+      <div class="flex items-center justify-end gap-2">
+        <%= render DS::Link.new(text: "Cancel", variant: "secondary", href: savings_goal_path(@savings_goal)) %>
+        <%= f.submit "Add contribution" %>
       </div>
     <% end %>
-
-    <%= f.money_field :amount, label: "Amount", required: true %>
-    <%= f.date_field :contributed_at, label: "Date", required: true %>
-
-    <%= f.text_area :notes, label: "Notes (optional)", rows: 2 %>
-
-    <div class="flex items-center justify-end gap-2">
-      <%= render DS::Link.new(text: "Cancel", variant: "secondary", href: savings_goal_path(@savings_goal)) %>
-      <%= f.submit "Add contribution" %>
-    </div>
   <% end %>
-</div>
+<% end %>

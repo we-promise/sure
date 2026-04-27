@@ -1,16 +1,6 @@
-<%= content_for :previous_path, savings_goals_path %>
-<%= content_for :cancel_path, savings_goals_path %>
-
-<div class="space-y-6">
-  <div class="text-center space-y-2">
-    <h1 class="text-3xl text-primary font-medium">Set up a savings goal</h1>
-    <p class="text-secondary text-sm max-w-md mx-auto">
-      Pick an asset account to back the goal, set a target, and optionally seed it with money you've already saved.
-    </p>
-  </div>
-
-  <div class="mx-auto max-w-lg">
+<%= render DS::Dialog.new do |dialog| %>
+  <% dialog.with_header(title: "New savings goal") %>
+  <% dialog.with_body do %>
     <%= render "form", savings_goal: @savings_goal, show_initial: true %>
-  </div>
-</div>
-<% content_for(:layout) { "wizard" } %>
+  <% end %>
+<% end %>
