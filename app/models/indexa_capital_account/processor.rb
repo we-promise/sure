@@ -70,22 +70,49 @@ class IndexaCapitalAccount::Processor
     end
 
     def calculate_total_balance
-      # Calculate total from holdings + cash for accuracy
+      # Trust the API's reported balance when available — Indexa's holdings payload
+      # contains time-series snapshots (one row per security per date), so summing
+      # the raw entries double-counts. Fall back to a per-security latest-snapshot
+      # sum + cash only when the API total is missing.
+      if indexa_capital_account.current_balance.present?
+        Rails.logger.info "IndexaCapitalAccount::Processor - Using API total: #{indexa_capital_account.current_balance}"
+        return indexa_capital_account.current_balance
+      end
+
       holdings_value = calculate_holdings_value
       cash_value = indexa_capital_account.cash_balance || 0
-
       calculated_total = holdings_value + cash_value
+      Rails.logger.info "IndexaCapitalAccount::Processor - Using calculated total (API balance missing): holdings=#{holdings_value} + cash=#{cash_value} = #{calculated_total}"
+      calculated_total
+    end
 
-      # Use calculated total if we have holdings, otherwise trust API value
-      if holdings_value > 0
-        Rails.logger.info "IndexaCapitalAccount::Processor - Using calculated total: holdings=#{holdings_value} + cash=#{cash_value} = #{calculated_total}"
-        calculated_total
-      elsif indexa_capital_account.current_balance.present?
-        Rails.logger.info "IndexaCapitalAccount::Processor - Using API total: #{indexa_capital_account.current_balance}"
-        indexa_capital_account.current_balance
-      else
-        calculated_total
+    def calculate_holdings_value
+      holdings_data = indexa_capital_account.raw_holdings_payload || []
+      return 0 if holdings_data.empty?
+
+      # Indexa returns a time series: dedupe by instrument/identifier and keep
+      # the latest-dated row's amount per security so we don't double-count.
+      latest_per_security = {}
+      holdings_data.each do |holding|
+        data = holding.is_a?(Hash) ? holding.with_indifferent_access : {}
+        instrument = data.dig(:instrument, :identifier) || data.dig(:instrument, :isin_code) || data[:identifier] || data[:isin_code]
+        next if instrument.blank?
+
+        date = data[:date].to_s
+        amount = parse_decimal(data[:amount])
+        unless amount
+          titles = parse_decimal(data[:titles] || data[:quantity] || data[:units]) || 0
+          price = parse_decimal(data[:price]) || 0
+          amount = titles * price
+        end
+
+        existing = latest_per_security[instrument]
+        if existing.nil? || date > existing[:date]
+          latest_per_security[instrument] = { date: date, amount: amount }
+        end
       end
+
+      latest_per_security.values.sum { |row| row[:amount] || 0 }
     end
 
     def calculate_cash_balance
@@ -96,21 +123,4 @@ class IndexaCapitalAccount::Processor
       cash || BigDecimal("0")
     end
 
-    def calculate_holdings_value
-      holdings_data = indexa_capital_account.raw_holdings_payload || []
-      return 0 if holdings_data.empty?
-
-      holdings_data.sum do |holding|
-        data = holding.is_a?(Hash) ? holding.with_indifferent_access : {}
-        # Indexa Capital: amount = total market value, or titles * price
-        amount = parse_decimal(data[:amount])
-        if amount
-          amount
-        else
-          titles = parse_decimal(data[:titles] || data[:quantity] || data[:units]) || 0
-          price = parse_decimal(data[:price]) || 0
-          titles * price
-        end
-      end
-    end
 end

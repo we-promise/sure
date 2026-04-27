@@ -239,8 +239,7 @@ class IndexaCapitalItemsController < ApplicationController
       next if indexa_capital_account.account_provider.present?
 
       sync_start_date = sync_start_dates[indexa_capital_account_id].presence
-      accountable_type = infer_accountable_type(indexa_capital_account.account_type)
-      account = create_account_from_indexa_capital(indexa_capital_account, accountable_type, { sync_start_date: sync_start_date })
+      account = create_account_from_indexa_capital(indexa_capital_account, "Investment", { sync_start_date: sync_start_date })
 
       if account&.persisted?
         indexa_capital_account.ensure_account_provider!(account)
