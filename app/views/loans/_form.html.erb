@@ -3,6 +3,11 @@
   <%= render "shared/ruler", classes: "my-4" %>
   <div class="space-y-2">
     <%= form.fields_for :accountable do |loan_form| %>
+      <div>
+        <%= loan_form.select :subtype,
+                      Loan::SUBTYPES.map { |k, v| [I18n.t("loans.subtypes.#{k}.long", default: v[:long]), k] },
+                                         { label: t("loans.form.subtype"), prompt: t("loans.form.subtype_prompt"), include_blank: t("loans.form.none") } %>
+      </div>
       <div class="flex items-center gap-2">
         <%= loan_form.money_field :initial_balance,
                                  label: t("loans.form.initial_balance"),
@@ -50,11 +55,7 @@
                                   required: true %>
       </div>
 
-      <div>
-        <%= loan_form.select :subtype,
-                  Loan::SUBTYPES.map { |k, v| [v[:long], k] },
-                  { label: true, prompt: t("loans.form.subtype_prompt"), include_blank: t("loans.form.none") } %>
-      </div>
+      
     <% end %>
   </div>
 <% end %>

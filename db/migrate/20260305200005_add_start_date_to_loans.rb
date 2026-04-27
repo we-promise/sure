@@ -1,8 +1,6 @@
 class AddStartDateToLoans < ActiveRecord::Migration[7.2]
-  def change
+  def up
     add_column :loans, :start_date, :date
-    # Backfill required before enforcing NOT NULL at DB level.
-    # Model validates presence only on: :create, but direct writes bypass Rails.
     execute <<~SQL.squish
       UPDATE loans
       SET start_date = COALESCE(created_at::date, CURRENT_DATE)

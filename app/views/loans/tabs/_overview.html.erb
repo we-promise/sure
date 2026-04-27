@@ -8,7 +8,7 @@
       <%= format_money loan.original_balance %>
     <% end %>
 
-    <%= summary_card title: t("loans.overview.remaining_loan") do %>
+    <%= summary_card title: t("loans.overview.repayment_progress") do %>
       <% if loan.total_interest.present? %>
         <% if loan.elapsed_ratio.present? %>
           <% percentage = (loan.elapsed_ratio * 100).round(1) %>
@@ -68,7 +68,7 @@
     <% end %>
 
     <%= summary_card title: t("loans.overview.type") do %>
-      <%= loan.rate_type&.titleize || t("loans.overview.unknown") %>
+      <%= loan.rate_type.present? ? t("loans.overview.rate_types.#{loan.rate_type}") : t("loans.overview.unknown") %>
     <% end %>
 
     <%= summary_card title: t("loans.overview.initial_leverage") do %>
@@ -97,11 +97,10 @@
   <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 
     <%= summary_card title: t("loans.overview.total_cost") do %>
-      <% if loan.original_balance.present? && loan.total_interest.present? && loan.total_insurance.present? %>
-        <% total_cost = loan.original_balance + loan.total_interest + loan.total_insurance %>
+      <% if loan.total_cost.present? %>
 
         <div class="font-semibold">
-          <%= format_money(total_cost) %>
+          <%= format_money(loan.total_cost) %>
         </div>
 
         <div class="my-3 h-px bg-surface-subtle"></div>

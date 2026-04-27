@@ -3,12 +3,25 @@ fr:
   loans:
     edit:
       edit: Modifier %{account}
+    subtypes:
+      mortgage:
+        short: Immobilier
+        long: Prêt immobilier
+      student:
+        short: Étudiant
+        long: Prêt étudiant
+      auto:
+        short: Auto
+        long: Prêt automobile
+      other:
+        short: Autre
+        long: Autre prêt
     form:
       down_payment: Apport
       interest_rate: Taux d'intérêt
       interest_rate_placeholder: '5,25'
       insurance_rate: Taux d'assurance
-      insurance_rate_placeholder: '0.5'
+      insurance_rate_placeholder: '0,5'
       initial_balance: Solde initial du prêt
       rate_type: Type de taux
       insurance_rate_type: Type de taux d'assurance
@@ -17,20 +30,27 @@ fr:
         decreasing_life: Décroissante
       term_months: Durée (mois)
       term_months_placeholder: '360'
+      subtype: Catégorie
       subtype_prompt: Sélectionner le type de prêt
-      subtype_none: Aucun
+      none: Aucun
+      start_date: Date de début
     new:
       title: Saisir les détails du prêt
     overview:
       interest_rate: Taux d'intérêt
       monthly_payment: Mensualité
       not_applicable: N/A
-      original_principal: Principal initial
+      original_principal: Capital initial emprunté
       remaining_principal: Principal restant
+      repayment_progress: État d'avancement du remboursement
       term: Durée
       type: Type
+      rate_types:
+        fixed: Fixe
+        variable: Variable
+        adjustable: Adjustable
       unknown: Inconnu
-      already_paid_html: "Vous avez déjà payé <span class=\"font-medium text-amber-500\">%{percentage}</span> de votre prêt"
+      already_paid_html: "Vous avez déjà remboursé <span class=\"font-medium text-amber-500\">%{percentage}</span> de votre prêt"
       initial_leverage: Effet de levier initial
       debt_over_down_payment: Dette / apport
       total_cost: Coût total

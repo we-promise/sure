@@ -138,15 +138,13 @@ class Loan < ApplicationRecord
 
       schedule << {
         month: i + 1,
-        date: date,
+        date: start_date >> i,
         payment: payment.to_i,
         interest: interest.to_i,
         principal: principal.to_i,
         insurance: insurance_amount.to_i,
         remaining_balance: balance.round(0).to_i
       }
-
-      date = date.next_month
     end
 
     schedule
@@ -167,10 +165,13 @@ class Loan < ApplicationRecord
   end
 
   def total_cost
-    ti = total_interest
-    return nil unless ti
+    tint = total_interest
+    ob = original_balance
+    tins = total_insurance
 
-    ti + total_insurance
+    return nil unless tint && ob && tins
+
+    ob + tint + tins
   end
 
   def remaining_balance_at(month_number)

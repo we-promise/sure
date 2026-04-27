@@ -3,6 +3,19 @@ en:
   loans:
     edit:
       edit: Edit %{account}
+    subtypes:
+      mortgage:
+        short: Mortgage
+        long: Mortgage
+      student:
+        short: Student Loan
+        long: Student Loan
+      auto:
+        short: Auto Loan
+        long: Auto Loan
+      other:
+        short: Other Loan
+        long: Other Loan
     form:
       down_payment: Down payment
       interest_rate: Interest rate
@@ -17,8 +30,10 @@ en:
         decreasing_life: Decreasing life
       term_months: Term (months)
       term_months_placeholder: '360'
+      subtype: Subtype
       subtype_prompt: Select loan type
-      subtype_none: None
+      none: None
+      start_date: Start date
     new:
       title: Enter loan details
     overview:
@@ -27,10 +42,15 @@ en:
       not_applicable: N/A
       original_principal: Original Principal
       remaining_principal: Remaining Principal
+      repayment_progress: Repayment progress
       term: Term
       type: Type
+      rate_types:
+        fixed: Fixed
+        variable: Variable
+        adjustable: Adjustable
       unknown: Unknown
-      already_paid_html: "You have already paid <span class=\"font-medium text-amber-500\">%{percentage}</span> of your loan"
+      already_paid_html: "You have already refunded <span class=\"font-medium text-amber-500\">%{percentage}</span> of your loan"
       initial_leverage: Initial Leverage
       debt_over_down_payment: Debt / down payment
       total_cost: Total Cost
