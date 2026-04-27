@@ -1,0 +1,78 @@
+<div class="space-y-4">
+
+  <%# ── Step 1: Credential form (Secret ID + Secret Key) ─────────────────── %>
+  <% config = Provider::GocardlessAdapter.configuration %>
+  <% if config.present? %>
+    <div class="prose prose-sm text-secondary mb-2">
+      <p class="text-primary font-medium"><%= t(".setup_instructions") %></p>
+      <ol>
+        <li><%= t(".step1_html").html_safe %></li>
+        <li><%= t(".step2") %></li>
+        <li><%= t(".step3") %></li>
+        <li><%= t(".step4") %></li>
+        <li><%= t(".step5") %></li>
+      </ol>
+      <p class="text-primary font-medium"><%= t(".coverage") %></p>
+      <ul>
+        <li><%= t(".coverage_banks") %></li>
+        <li><%= t(".coverage_readonly") %></li>
+        <li><%= t(".coverage_history") %></li>
+      </ul>
+    </div>
+    <%= render "settings/providers/provider_form", configuration: config %>
+  <% end %>
+
+  <%# ── Step 2: Gate everything below on credentials being saved ──────────── %>
+  <% credentials_configured = Provider::GocardlessAdapter.configured? %>
+  <% gocardless_items = local_assigns.fetch(:gocardless_items, @gocardless_items) %>
+
+  <% unless credentials_configured %>
+    <div class="p-3 rounded-lg bg-container border border-primary">
+      <div class="flex items-center gap-3">
+        <div class="w-2 h-2 bg-secondary rounded-full"></div>
+        <div>
+          <p class="text-sm font-medium text-primary"><%= t(".credentials_required") %></p>
+          <p class="text-xs text-secondary mt-0.5"><%= t(".credentials_required_hint_html").html_safe %></p>
+        </div>
+      </div>
+    </div>
+  <% else %>
+
+    <%# ── Connected banks list ──────────────────────────────────────────────── %>
+    <% if gocardless_items&.any? %>
+      <div class="border-t border-primary pt-4 space-y-2">
+        <p class="text-sm font-medium text-primary"><%= t(".connected_banks") %></p>
+        <% gocardless_items.each do |item| %>
+          <div class="flex items-center justify-between p-3 rounded-lg bg-container border border-primary">
+            <div class="flex items-center gap-3">
+              <% if item.requires_update? %>
+                <div class="w-2 h-2 bg-warning rounded-full"></div>
+                <div>
+                  <p class="text-sm font-medium text-primary"><%= item.institution_name %></p>
+                  <p class="text-xs text-destructive"><%= t(".reauthorisation_required") %></p>
+                </div>
+              <% else %>
+                <div class="w-2 h-2 bg-success rounded-full"></div>
+                <div>
+                  <p class="text-sm font-medium text-primary"><%= item.institution_name %></p>
+                  <p class="text-xs text-secondary">
+                    <%= t(".accounts_connected", count: item.gocardless_accounts.size) %>
+                  </p>
+                </div>
+              <% end %>
+            </div>
+            <div class="flex items-center gap-2">
+              <%= button_to gocardless_item_path(item),
+                            method: :delete,
+                            class: "inline-flex items-center justify-center rounded-lg px-3 py-1.5 text-xs font-medium text-destructive hover:bg-destructive/10 transition-colors",
+                            data: { turbo_confirm: t(".disconnect_confirm", institution: item.institution_name) } do %>
+                <%= t(".disconnect") %>
+              <% end %>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+
+  <% end %>
+</div>
