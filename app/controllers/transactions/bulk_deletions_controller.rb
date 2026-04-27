@@ -6,9 +6,16 @@ class Transactions::BulkDeletionsController < ApplicationController
     entries_scope = Current.family.entries
                       .where(account_id: writable_account_ids)
                       .where(parent_entry_id: nil)
-    destroyed = entries_scope.destroy_by(id: bulk_delete_params[:entry_ids])
+    requested_ids = Array(bulk_delete_params[:entry_ids])
+    destroyed = entries_scope.destroy_by(id: requested_ids)
+    skipped_count = requested_ids.size - destroyed.count
+
     destroyed.map(&:account).uniq.each(&:sync_later)
-    redirect_back_or_to transactions_url, notice: "#{destroyed.count} transaction#{destroyed.count == 1 ? "" : "s"} deleted"
+
+    notice = t("transactions.bulk_deletions.destroy.deleted", count: destroyed.count)
+    notice += " #{t("transactions.bulk_deletions.destroy.skipped", count: skipped_count)}" if skipped_count > 0
+
+    redirect_back_or_to transactions_url, notice: notice
   end
 
   private

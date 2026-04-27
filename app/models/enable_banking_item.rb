@@ -53,8 +53,10 @@ class EnableBankingItem < ApplicationRecord
   validate :psu_type_in_aspsp_types
 
   def psu_type_in_aspsp_types
-    return if psu_type.blank? || aspsp_psu_types.blank?
-    unless aspsp_psu_types.include?(psu_type)
+    current_psu_type = has_attribute?(:psu_type) ? self[:psu_type] : nil
+    return if current_psu_type.blank? || aspsp_psu_types.blank?
+
+    unless aspsp_psu_types.include?(current_psu_type)
       errors.add(:psu_type, "must be one of the ASPSP supported types")
     end
   end
@@ -102,7 +104,7 @@ class EnableBankingItem < ApplicationRecord
       authorization_id: result[:authorization_id],
       aspsp_name: aspsp_name
     }
-    attributes[:psu_type] = validated_psu_type if validated_psu_type.present?
+    attributes[:psu_type] = validated_psu_type if validated_psu_type.present? && has_attribute?(:psu_type)
 
     update!(attributes)
 

@@ -277,3 +277,11 @@ en:
         other: "Files (%{count})"
       browse_to_add: "Browse to add files"
       max_reached: "Maximum file limit reached (%{count}/%{max}). Delete an existing file to upload another."
+    bulk_deletions:
+      destroy:
+        deleted:
+          one: "%{count} transaction deleted"
+          other: "%{count} transactions deleted"
+        skipped:
+          one: "%{count} transaction could not be deleted"
+          other: "%{count} transactions could not be deleted"
