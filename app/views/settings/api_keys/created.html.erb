@@ -22,14 +22,17 @@
       <p class="text-secondary text-sm mb-3">Copy and store this key securely. You'll need it to authenticate your API requests.</p>
 
       <div class="bg-container rounded-lg p-3 border border-primary" data-controller="clipboard">
-        <div class="flex items-center justify-between gap-3">
-          <code id="api-key-display" class="font-mono text-sm text-primary break-all" data-clipboard-target="source"><%= @api_key.plain_key %></code>
-          <%= render DS::Button.new(
-            text: "Copy API Key",
-            variant: "ghost",
-            icon: "copy",
-            data: { action: "clipboard#copy" }
-          ) %>
+        <div class="w-full overflow-hidden">
+          <code id="api-key-display" class="block w-full min-w-0 overflow-x-auto font-mono text-sm text-primary break-all whitespace-pre-wrap" data-clipboard-target="source"><%= @api_key.plain_key %></code>
+          <div class="mt-2 flex justify-end">
+            <%= render DS::Button.new(
+              text: "Copy API Key",
+              variant: "ghost",
+              icon: "copy",
+              class: "shrink-0",
+              data: { action: "clipboard#copy" }
+            ) %>
+          </div>
         </div>
       </div>
     </div>
@@ -78,8 +81,8 @@
     <div class="bg-surface-inset rounded-xl p-4">
       <h4 class="font-medium text-primary mb-3">How to use your API key</h4>
       <p class="text-secondary text-sm mb-3"><%= t("settings.api_keys.show.current_api_key.usage_instructions", product_name: product_name) %></p>
-      <div class="bg-container rounded-lg p-3 font-mono text-sm text-primary border border-primary">
-        curl -H "X-Api-Key: <%= @api_key.plain_key %>" <%= request.base_url %>/api/v1/accounts
+      <div class="bg-container rounded-lg p-3 font-mono text-sm text-primary border border-primary max-w-full overflow-x-auto break-all">
+        curl -H "X-Api-Key: &lt;YOUR_API_KEY&gt;" <%= request.base_url %>/api/v1/accounts
       </div>
     </div>
 
