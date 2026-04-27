@@ -19,7 +19,7 @@ class SavingsGoalsController < ApplicationController
 
   def create
     @savings_goal = Current.family.savings_goals.new(savings_goal_params)
-    @savings_goal.account = lookup_account(savings_goal_params[:account_id])
+    @savings_goal.account = lookup_account(params.dig(:savings_goal, :account_id))
 
     if @savings_goal.save
       handle_initial_contribution(@savings_goal)
@@ -37,8 +37,9 @@ class SavingsGoalsController < ApplicationController
   end
 
   def update
-    if savings_goal_params[:account_id].present?
-      @savings_goal.account = lookup_account(savings_goal_params[:account_id])
+    submitted_account_id = params.dig(:savings_goal, :account_id)
+    if submitted_account_id.present?
+      @savings_goal.account = lookup_account(submitted_account_id)
     end
 
     if @savings_goal.update(savings_goal_params)
@@ -97,8 +98,12 @@ private
     end
 
   def savings_goal_params
+    # `account_id` is intentionally omitted from the permit list. We
+    # assign `@savings_goal.account` manually via `lookup_account`, which
+    # scopes the lookup to `Current.family.accounts`. Permitting account_id
+    # here would let mass-assignment bypass that check.
     params.require(:savings_goal).permit(
-      :account_id, :name, :target_amount, :target_date, :color, :icon, :notes
+      :name, :target_amount, :target_date, :color, :icon, :notes
     )
   end
 

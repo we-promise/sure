@@ -60,7 +60,9 @@ private
     key = Digest::SHA1.hexdigest("savings_contribution:#{Current.family.id}").to_i(16) % (2**63)
     saved = false
     Family.transaction do
-      ActiveRecord::Base.connection.execute("SELECT pg_advisory_xact_lock(#{key})")
+      ActiveRecord::Base.connection.execute(
+        ActiveRecord::Base.sanitize_sql_array([ "SELECT pg_advisory_xact_lock(?)", key ])
+      )
       saved = contribution.save
     end
     saved

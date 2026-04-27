@@ -45,6 +45,28 @@ class FamilySavingsSummaryTest < ActiveSupport::TestCase
     assert_same first, second
   end
 
+  test "summary handles a family with no active goals" do
+    @family.savings_goals.update_all(state: "archived")
+    fresh = Family.find(@family.id) # fresh instance to clear @savings_summary_cache memo
+    summary = fresh.savings_summary_for(@budget)
+    assert_empty summary.active_goals
+    assert_equal 0, summary.allocated
+    assert_equal summary.surplus, summary.available
+  end
+
+  test "memoization is keyed by budget id, not shared across budgets" do
+    other_budget = @family.budgets.create!(
+      start_date: @budget.start_date.next_month.beginning_of_month,
+      end_date: @budget.start_date.next_month.end_of_month,
+      currency: @budget.currency
+    )
+    summary_a = @family.savings_summary_for(@budget)
+    summary_b = @family.savings_summary_for(other_budget)
+    assert_not_same summary_a, summary_b, "different budgets must yield distinct memo entries"
+    summary_a_again = @family.savings_summary_for(@budget)
+    assert_same summary_a, summary_a_again
+  end
+
   test "money helpers wrap with budget currency" do
     summary = @family.savings_summary_for(@budget)
     assert_kind_of Money, summary.surplus_money

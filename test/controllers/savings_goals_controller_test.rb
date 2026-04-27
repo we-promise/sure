@@ -83,6 +83,34 @@ class SavingsGoalsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Renamed", @goal.reload.name
   end
 
+  test "update silently drops a foreign account_id" do
+    other_family = Family.create!(name: "Other", locale: "en", date_format: "%Y-%m-%d", currency: "USD")
+    other_account = other_family.accounts.create!(
+      name: "Other depository", balance: 1000, currency: "USD",
+      accountable: Depository.new
+    )
+    original_account_id = @goal.account_id
+    patch savings_goal_path(@goal), params: { savings_goal: { account_id: other_account.id, name: "renamed" } }
+    @goal.reload
+    assert_not_equal other_account.id, @goal.account_id
+    assert_equal original_account_id, @goal.account_id
+  end
+
+  test "update with invalid params re-renders edit" do
+    patch savings_goal_path(@goal), params: { savings_goal: { name: "" } }
+    assert_response :unprocessable_entity
+    assert_equal "Awesome vacations", @goal.reload.name
+  end
+
+  test "lifecycle action with invalid transition flashes alert and redirects" do
+    @goal.complete! # active -> completed
+    @goal.archive!  # completed -> archived
+    patch pause_savings_goal_path(@goal) # archived -> pause is invalid
+    assert_redirected_to savings_goal_path(@goal)
+    assert_not_nil flash[:alert]
+    assert_equal "archived", @goal.reload.state
+  end
+
   test "destroy removes the goal" do
     assert_difference -> { SavingsGoal.count }, -1 do
       delete savings_goal_path(@goal)

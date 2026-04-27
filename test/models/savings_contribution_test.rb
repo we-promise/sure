@@ -47,6 +47,21 @@ class SavingsContributionTest < ActiveSupport::TestCase
     end
   end
 
+  test "syncs currency from goal.account on save" do
+    contribution = SavingsContribution.create!(
+      savings_goal: @goal, amount: 50,
+      source: "manual", contributed_at: Date.current
+    )
+    assert_equal @goal.account.currency, contribution.currency
+  end
+
+  test "syncs currency on subsequent updates" do
+    contribution = savings_contributions(:vacation_initial)
+    contribution.update!(currency: "EUR")
+    contribution.save!
+    assert_equal contribution.savings_goal.account.currency, contribution.reload.currency
+  end
+
   test "scopes filter by source" do
     assert_equal 2, @goal.savings_contributions.count
     assert_equal 1, @goal.savings_contributions.initial.count

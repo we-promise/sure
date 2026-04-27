@@ -30,10 +30,14 @@ module SavingsGoals
       end
 
       # Postgres advisory xact lock — auto-released on commit/rollback.
-      # Hashed key is a stable 63-bit positive int derived from family id.
+      # Hashed key is a stable 63-bit positive int derived from family id;
+      # we still bind through sanitize_sql so Brakeman's static analysis
+      # doesn't flag the call site as raw SQL interpolation.
       def acquire_lock!(family_id)
         key = Digest::SHA1.hexdigest("savings_auto_fund:#{family_id}").to_i(16) % (2**63)
-        ActiveRecord::Base.connection.execute("SELECT pg_advisory_xact_lock(#{key})")
+        ActiveRecord::Base.connection.execute(
+          ActiveRecord::Base.sanitize_sql_array([ "SELECT pg_advisory_xact_lock(?)", key ])
+        )
       end
 
       def run(family, budget)
