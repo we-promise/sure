@@ -148,7 +148,7 @@ pl:
       auto_fetch_inflation: Pobieraj inflację automatycznie od dostawcy
       inflation_provider: Dostawca danych o inflacji
       inflation_provider_blank: Ręczne CPI (bez dostawcy)
-      auto_fetch_disabled_hint: Automatyczny import CPI jest globalnie wyłączony w ustawieniach self-hosting. Auto-fetch dla tej obligacji wymaga włączenia tej opcji, więc wprowadź inflację ręcznie.
+      auto_fetch_disabled_hint: Automatyczny import CPI jest globalnie wyłączony w ustawieniach self-hosting. Pobieranie inflacji automatycznie dla tej obligacji wymaga włączenia tej opcji, więc wprowadź inflację ręcznie.
       inflation_rate_assumption: Założenie CPI (%)
       cpi_lag_months: Opóźnienie CPI (miesiące)
       early_redemption_fee: Opłata za wcześniejszy wykup

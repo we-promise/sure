@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_04_20_100000) do
+ActiveRecord::Schema[7.2].define(version: 2026_04_27_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -1728,7 +1728,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_04_20_100000) do
   add_foreign_key "binance_accounts", "binance_items"
   add_foreign_key "binance_items", "families"
   add_foreign_key "bond_lots", "bonds", on_delete: :cascade
-  add_foreign_key "bond_lots", "entries", on_delete: :cascade
+  add_foreign_key "bond_lots", "entries", on_delete: :restrict
   add_foreign_key "budget_categories", "budgets"
   add_foreign_key "budget_categories", "categories"
   add_foreign_key "budgets", "families"

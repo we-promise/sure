@@ -25,7 +25,7 @@ class Entry < ApplicationRecord
   validate :split_child_date_matches_parent
 
   before_destroy :prevent_individual_child_deletion, if: :split_child?
-  before_destroy :prevent_deletion_when_linked_bond_lot_settled
+  before_destroy :prevent_deletion_when_linked_bond_lot_settled, prepend: true
 
   scope :visible, -> {
     joins(:account).where(accounts: { status: [ "draft", "active" ] })

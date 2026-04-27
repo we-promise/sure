@@ -36,10 +36,10 @@ export default class extends Controller {
 
     this.inflationInputTargets.forEach((input) => {
       input.disabled = !inflationLinked
-      if (input.dataset.requiresFirstPeriodCheck) {
+      if (input.dataset.requiresFirstPeriodCheck === "true") {
         input.required = inflationLinked && firstPeriodRateRequired
       } else {
-        input.required = inflationLinked && !input.dataset.optional
+        input.required = inflationLinked && !(input.dataset.optional === "true")
       }
     })
 
@@ -48,14 +48,14 @@ export default class extends Controller {
       input.required = !inflationLinked
     })
 
-    this.toggleManualInflationField()
+    this.#toggleManualInflationField()
   }
 
   recalculate() {
     this.toggleSubtypeFields()
   }
 
-  toggleManualInflationField() {
+  #toggleManualInflationField() {
     if (!this.hasManualInflationFieldTarget || !this.hasManualInflationInputTarget) return
 
     const inflationLinked = this.inflationSubtypesValue.includes(this.#subtypeValue())
