@@ -279,6 +279,11 @@ class Budget < ApplicationRecord
     (budgeted_spending || 0) - allocated_spending
   end
 
+  def monthly_surplus
+    diff = (actual_income || 0) - (actual_spending || 0)
+    [ diff, 0 ].max
+  end
+
   def allocations_valid?
     initialized? && available_to_allocate >= 0 && allocated_spending > 0
   end

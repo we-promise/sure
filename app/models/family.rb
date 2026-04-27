@@ -331,6 +331,23 @@ class Family < ApplicationRecord
     Rails.application.config.app_mode.self_hosted?
   end
 
+  def savings_summary_for(budget)
+    @savings_summary_cache ||= {}
+    @savings_summary_cache[budget.id] ||= begin
+      active = savings_goals.where(state: "active").alphabetically.to_a
+      allocated = active.sum { |g| g.monthly_target_amount || 0 }
+      surplus = budget.monthly_surplus
+      available = [ surplus - allocated, 0 ].max
+      SavingsSummary.new(
+        surplus: surplus,
+        allocated: allocated,
+        available: available,
+        active_goals: active,
+        currency: budget.currency
+      )
+    end
+  end
+
   private
     def normalize_enabled_currencies!
       if enabled_currencies.blank?
