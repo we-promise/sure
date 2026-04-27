@@ -9,41 +9,40 @@
     <% end %>
 
     <%= summary_card title: t("loans.overview.repayment_progress") do %>
-      <% if loan.total_interest.present? %>
-        <% if loan.elapsed_ratio.present? %>
-          <% percentage = (loan.elapsed_ratio * 100).round(1) %>
-          <div class="flex items-center justify-between gap-4">
-            <div class="text-sm text-secondary">
-              <%= t("loans.overview.already_paid_html",
-                    percentage: number_to_percentage(percentage, precision: 1)) %>
-            </div>
-
-            <!-- Cercle -->
-            <div class="relative w-16 h-16">
-              <svg class="w-full h-full -rotate-90">
-                <!-- Cercle background -->
-                <circle
-                  cx="32"
-                  cy="32"
-                  r="28"
-                  stroke-width="6"
-                  class="stroke-zinc-700 fill-none"
-                />
-                <!-- Cercle progression -->
-                <circle
-                  cx="32"
-                  cy="32"
-                  r="28"
-                  stroke-width="6"
-                  stroke-linecap="round"
-                  class="stroke-amber-500 fill-none transition-all duration-500"
-                  stroke-dasharray="<%= 2 * Math::PI * 28 %>"
-                  stroke-dashoffset="<%= 2 * Math::PI * 28 * (1 - loan.elapsed_ratio) %>"
-                />
-              </svg>
-            </div>
+      <% if loan.elapsed_ratio.present? %>
+        <% percentage = (loan.elapsed_ratio * 100).round(1) %>
+        <div class="flex items-center justify-between gap-4">
+          <div class="text-sm text-secondary">
+            <%= t("loans.overview.already_paid_html",
+                  percentage: number_to_percentage(percentage, precision: 1)) %>
           </div>
-        <% end %>
+
+          <!-- Cercle -->
+          <div class="relative w-16 h-16">
+            <svg class="w-full h-full -rotate-90">
+              <!-- Cercle background -->
+              <circle
+                cx="32"
+                cy="32"
+                r="28"
+                stroke-width="6"
+                class="stroke-zinc-700 fill-none"
+              />
+              <!-- Cercle progression -->
+              <circle
+                cx="32"
+                cy="32"
+                r="28"
+                stroke-width="6"
+                stroke-linecap="round"
+                class="stroke-amber-500 fill-none transition-all duration-500"
+                stroke-dasharray="<%= 2 * Math::PI * 28 %>"
+                stroke-dashoffset="<%= 2 * Math::PI * 28 * (1 - loan.elapsed_ratio) %>"
+              />
+            </svg>
+          </div>
+        </div>
+
       <% else %>
         <%= t("loans.overview.unknown") %>
       <% end %>
