@@ -11,7 +11,6 @@ class SavingsContributionsController < ApplicationController
   def create
     @contribution = @savings_goal.savings_contributions.new(contribution_params)
     @contribution.source = "manual"
-    @contribution.budget = lookup_budget(contribution_params[:budget_id])
     @contribution.contributed_at ||= Date.current
 
     if save_with_advisory_lock(@contribution)
@@ -45,14 +44,7 @@ private
   end
 
   def contribution_params
-    params.require(:savings_contribution).permit(:amount, :budget_id, :notes, :contributed_at)
-  end
-
-  # Scope the budget lookup to Current.family so a foreign budget_id never
-  # silently associates (one of @sokie's review points on PR #833).
-  def lookup_budget(budget_id)
-    return nil if budget_id.blank?
-    Current.family.budgets.find_by(id: budget_id)
+    params.require(:savings_contribution).permit(:amount, :notes, :contributed_at)
   end
 
   # Wraps the create in a Postgres advisory xact lock so concurrent

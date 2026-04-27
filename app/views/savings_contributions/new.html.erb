@@ -14,11 +14,6 @@
     <%= f.money_field :amount, label: "Amount", required: true %>
     <%= f.date_field :contributed_at, label: "Date", required: true %>
 
-    <%= f.collection_select :budget_id,
-          Current.family.budgets.order(start_date: :desc).limit(12),
-          :id, :name,
-          { label: "Apply to budget month (optional)", prompt: "None" } %>
-
     <%= f.text_area :notes, label: "Notes (optional)", rows: 2 %>
 
     <div class="flex items-center justify-end gap-2">
