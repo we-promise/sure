@@ -121,7 +121,7 @@ Rails.application.routes.draw do
     delete :disable
   end
 
-  mount Lookbook::Engine, at: "/design-system"
+  mount Lookbook::Engine, at: "/design-system" if Rails.env.development?
 
   if Rails.env.development?
     mount Rswag::Api::Engine => "/api-docs"
@@ -537,6 +537,10 @@ Rails.application.routes.draw do
 
   # MCP server endpoint for external AI assistants (JSON-RPC 2.0)
   post "mcp", to: "mcp#handle"
+
+  # Receive CSP violation reports from browsers (report_uri set in
+  # config/initializers/content_security_policy.rb).
+  post "csp-violation-report" => "csp_reports#create"
 
   # Reveal health status on /up that returns 200 if the app boots with no exceptions, otherwise 500.
   # Can be used by load balancers and uptime monitors to verify that the app is live.

@@ -18,7 +18,7 @@ Rails.application.configure do
 
   # Ensures that a master key has been made available in ENV["RAILS_MASTER_KEY"], config/master.key, or an environment
   # key such as config/credentials/production.key. This key is used to decrypt credentials (and other encrypted files).
-  # config.require_master_key = true
+  config.require_master_key = true
 
   # Disable serving static files from `public/`, relying on NGINX/Apache to do so instead.
   # config.public_file_server.enabled = false
@@ -102,6 +102,26 @@ Rails.application.configure do
   config.active_record.dump_schema_after_migration = false
 
   # Enable DNS rebinding protection and other `Host` header attacks.
+  # Accept either APP_DOMAIN (single host) or ALLOWED_HOSTS (comma-separated list).
+  # If neither is set, `config.hosts` stays empty (allow all) to preserve backward
+  # compatibility with existing self-hosted deploys — a [SECURITY] warning is logged
+  # at boot (see cors.rb for the matching allow-list warning) to nudge operators.
+  if ENV["APP_DOMAIN"].present?
+    config.hosts = [ ENV["APP_DOMAIN"] ]
+  else
+    # Parse before deciding to assign — `ENV["ALLOWED_HOSTS"].present?` is
+    # true for junk like "," or "   " which split+strip+reject down to [].
+    # Assigning config.hosts = [] means "deny every host", which is worse
+    # than falling through to the warn-and-leave-unset branch.
+    parsed_hosts = ENV["ALLOWED_HOSTS"].to_s.split(",").map(&:strip).reject(&:empty?)
+    if parsed_hosts.any?
+      config.hosts = parsed_hosts
+    else
+      # Use `config.logger` rather than `Rails.logger`: this block runs during
+      # environment configuration, before `Rails.logger` is finalized.
+      config.logger&.warn("[SECURITY] APP_DOMAIN and ALLOWED_HOSTS not set — DNS rebinding protection disabled")
+    end
+  end
   # config.hosts = [
   #   "example.com",     # Allow requests from example.com
   #   /.*\.example\.com/ # Allow requests from subdomains like `www.example.com`
