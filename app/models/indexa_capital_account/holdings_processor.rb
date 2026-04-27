@@ -13,11 +13,26 @@ class IndexaCapitalAccount::HoldingsProcessor
     holdings_data = @indexa_capital_account.raw_holdings_payload
     return if holdings_data.blank?
 
-    Rails.logger.info "IndexaCapitalAccount::HoldingsProcessor - Processing #{holdings_data.size} holdings"
+    # Indexa returns a time series — many rows per security across dates.
+    # Reduce to the latest-dated row per security so each holding reflects
+    # the current position, not whichever snapshot happens to be processed
+    # last in payload order.
+    latest_per_security = {}
+    holdings_data.each do |holding_data|
+      data = holding_data.with_indifferent_access
+      ticker = extract_ticker(data)
+      next if ticker.blank?
 
-    holdings_data.each_with_index do |holding_data, idx|
-      Rails.logger.info "IndexaCapitalAccount::HoldingsProcessor - Processing holding #{idx + 1}/#{holdings_data.size}"
-      process_holding(holding_data.with_indifferent_access)
+      date = data[:date].to_s
+      existing = latest_per_security[ticker]
+      latest_per_security[ticker] = data if existing.nil? || date > existing[:date].to_s
+    end
+
+    Rails.logger.info "IndexaCapitalAccount::HoldingsProcessor - Processing #{latest_per_security.size} holdings (deduped from #{holdings_data.size} time-series rows)"
+
+    latest_per_security.each_value.with_index do |holding_data, idx|
+      Rails.logger.info "IndexaCapitalAccount::HoldingsProcessor - Processing holding #{idx + 1}/#{latest_per_security.size}"
+      process_holding(holding_data)
     rescue => e
       Rails.logger.error "IndexaCapitalAccount::HoldingsProcessor - Failed to process holding #{idx + 1}: #{e.class} - #{e.message}"
       Rails.logger.error e.backtrace.first(5).join("\n") if e.backtrace
