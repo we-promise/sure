@@ -10,7 +10,7 @@ class PropertiesController < ApplicationController
 
   def create
     @account = Current.family.accounts.create!(
-      property_params.merge(currency: Current.family.currency, balance: 0, status: "draft", owner: Current.user)
+      property_params.merge(currency: property_params[:currency] || Current.family.currency, balance: 0, status: "draft", owner: Current.user)
     )
     @account.auto_share_with_family! if Current.family.share_all_by_default?
 
@@ -42,6 +42,7 @@ class PropertiesController < ApplicationController
     result = @account.set_current_balance(balance_params[:balance].to_d)
 
     if result.success?
+      @account.update!(currency: balance_params[:currency]) if balance_params[:currency].present?
       @success_message = "Balance updated successfully."
 
       if @account.active?
@@ -93,6 +94,7 @@ class PropertiesController < ApplicationController
       params.require(:account)
             .permit(
               :name,
+              :currency,
               :accountable_type,
               :institution_name,
               :institution_domain,
