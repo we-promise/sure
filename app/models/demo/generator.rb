@@ -1282,10 +1282,13 @@ class Demo::Generator
     end
 
     def generate_savings_goals!(family)
-      asset_account = family.accounts.where(classification: "asset", accountable_type: "Depository").alphabetically.first
+      depository_accounts = family.accounts
+                                  .where(classification: "asset", accountable_type: "Depository")
+                                  .alphabetically
+      asset_account = depository_accounts.first
       return unless asset_account
 
-      checking = family.accounts.where(classification: "asset", accountable_type: "Depository").alphabetically.second || asset_account
+      checking = depository_accounts.second || asset_account
 
       vacation = family.savings_goals.create!(
         account: asset_account,

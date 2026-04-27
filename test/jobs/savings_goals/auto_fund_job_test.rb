@@ -66,15 +66,25 @@ class SavingsGoals::AutoFundJobTest < ActiveJob::TestCase
     assert_operator contribution.amount, :<=, 50
   end
 
-  test "skips paused / completed / archived goals" do
-    paused = @family.savings_goals.create!(
-      account: accounts(:depository),
-      name: "Paused", target_amount: 1000,
-      state: "paused", target_date: 3.months.from_now.to_date
-    )
+  test "skips goals in non-active states (paused / completed / archived)" do
+    inactive_states = %w[paused completed archived]
+    inactive_goals = inactive_states.map do |state|
+      @family.savings_goals.create!(
+        account: accounts(:depository),
+        name: "Inactive #{state}",
+        target_amount: 1_000,
+        target_date: 3.months.from_now.to_date,
+        state: state
+      )
+    end
+
     Budget.any_instance.stubs(:monthly_surplus).returns(5_000)
     SavingsGoals::AutoFundJob.new.perform(@family.id, @budget.id)
-    assert_equal 0, paused.savings_contributions.auto.count
+
+    inactive_goals.each do |goal|
+      assert_equal 0, goal.savings_contributions.auto.count,
+                   "expected no auto contributions for #{goal.state} goal"
+    end
   end
 
   test "does not block manual contributions in same period" do
@@ -87,7 +97,10 @@ class SavingsGoals::AutoFundJobTest < ActiveJob::TestCase
     end
   end
 
-  test "competes goals fairly when surplus is limited and stops once exhausted" do
+  test "total auto-funded amount never exceeds the monthly surplus" do
+    # Pool exhaustion: with multiple goals and a surplus smaller than the
+    # combined monthly targets, the per-goal cap min(target, pool, remaining)
+    # plus the `break if pool <= 0` guard keep the total spend bounded.
     @family.savings_goals.create!(
       account: accounts(:depository),
       name: "Smaller", target_amount: 600,

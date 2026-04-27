@@ -1,4 +1,4 @@
-<%# locals: (savings_goal:, show_initial: false) %>
+<%# locals: (savings_goal:, backing_accounts:, show_initial: false) %>
 
 <%= styled_form_with model: savings_goal, class: "space-y-4" do |f| %>
   <% if savings_goal.errors.any? %>
@@ -13,9 +13,7 @@
 
   <%= f.text_field :name, label: "Name", required: true, placeholder: "e.g. Trip to Japan" %>
 
-  <%= f.collection_select :account_id,
-        Current.family.accounts.where(classification: "asset", accountable_type: %w[Depository Investment OtherAsset]).alphabetically,
-        :id, :name,
+  <%= f.collection_select :account_id, backing_accounts, :id, :name,
         { label: "Backing account", required: true, prompt: "Choose an asset account" } %>
 
   <%= f.money_field :target_amount, label: "Target amount", required: true %>
@@ -37,7 +35,13 @@
       <div class="mt-3 flex flex-wrap gap-2 justify-center">
         <% Category::COLORS.each do |hex| %>
           <label class="cursor-pointer">
-            <%= f.radio_button :color, hex, class: "sr-only peer", data: { savings_goal_color_target: "color" } %>
+            <%= f.radio_button :color, hex,
+                  class: "sr-only peer",
+                  aria: { label: "Goal color #{hex}" },
+                  data: {
+                    savings_goal_color_target: "color",
+                    action: "change->savings-goal-color#updateAvatar"
+                  } %>
             <span class="block w-8 h-8 rounded-full ring-2 ring-transparent ring-offset-2 ring-offset-container peer-checked:ring-gray-500"
                   style="background-color: <%= hex %>"></span>
           </label>

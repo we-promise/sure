@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_04_27_144444) do
+ActiveRecord::Schema[7.2].define(version: 2026_04_27_194701) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -1233,6 +1233,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_04_27_144444) do
     t.index ["budget_id"], name: "index_savings_contributions_on_budget_id"
     t.index ["savings_goal_id", "budget_id"], name: "index_auto_contributions_unique_per_goal_per_budget", unique: true, where: "((source)::text = 'auto'::text)"
     t.index ["savings_goal_id"], name: "index_savings_contributions_on_savings_goal_id"
+    t.check_constraint "source::text <> 'auto'::text OR budget_id IS NOT NULL", name: "chk_savings_contributions_auto_requires_budget"
   end
 
   create_table "savings_goals", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1278,7 +1279,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_04_27_144444) do
     t.index ["kind"], name: "index_securities_on_kind"
     t.index ["price_provider", "offline_reason"], name: "index_securities_on_price_provider_and_offline_reason"
     t.index ["price_provider"], name: "index_securities_on_price_provider"
-    t.check_constraint "kind::text = ANY (ARRAY['standard'::character varying, 'cash'::character varying]::text[])", name: "chk_securities_kind"
+    t.check_constraint "kind::text = ANY (ARRAY['standard'::character varying::text, 'cash'::character varying::text])", name: "chk_securities_kind"
   end
 
   create_table "security_prices", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1435,8 +1436,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_04_27_144444) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["account_id"], name: "index_sophtron_accounts_on_account_id"
-    t.index ["sophtron_item_id"], name: "index_sophtron_accounts_on_sophtron_item_id"
     t.index ["sophtron_item_id", "account_id"], name: "idx_unique_sophtron_accounts_per_item", unique: true
+    t.index ["sophtron_item_id"], name: "index_sophtron_accounts_on_sophtron_item_id"
   end
 
   create_table "sophtron_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|

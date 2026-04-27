@@ -103,10 +103,12 @@ private
   # would silently sum across currencies. Block the change.
   def currency_locked_once_contributions_exist
     return unless persisted? && account.present?
-    return if savings_contributions.none?
 
-    existing_currency = savings_contributions.first.currency
-    return if existing_currency.blank? || existing_currency == account.currency
+    mismatched_existing_currencies = savings_contributions
+                                       .where.not(currency: [ nil, "", account.currency ])
+                                       .exists?
+    return unless mismatched_existing_currencies
+
     errors.add(:account, "cannot be changed to a different currency once the goal has contributions")
   end
 end

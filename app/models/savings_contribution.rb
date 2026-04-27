@@ -8,7 +8,7 @@ class SavingsContribution < ApplicationRecord
 
   has_one :family, through: :savings_goal
 
-  validates :amount, presence: true, numericality: true
+  validates :amount, presence: true, numericality: { greater_than: 0 }
   validates :currency, presence: true
   validates :source, presence: true, inclusion: { in: SOURCES }
   validates :contributed_at, presence: true

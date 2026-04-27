@@ -1,5 +1,6 @@
 class SavingsGoalsController < ApplicationController
   before_action :set_savings_goal, only: %i[show edit update destroy pause resume complete archive unarchive]
+  before_action :set_backing_accounts, only: %i[new create edit update]
   before_action :set_breadcrumbs
 
 
@@ -21,15 +22,19 @@ class SavingsGoalsController < ApplicationController
     @savings_goal = Current.family.savings_goals.new(savings_goal_params)
     @savings_goal.account = lookup_account(params.dig(:savings_goal, :account_id))
 
-    if @savings_goal.save
-      handle_initial_contribution(@savings_goal)
-      flash[:notice] = "Savings goal created."
-      respond_to do |format|
-        format.html { redirect_to savings_goal_path(@savings_goal) }
-        format.turbo_stream { render turbo_stream: turbo_stream.action(:redirect, savings_goal_path(@savings_goal)) }
+    begin
+      ActiveRecord::Base.transaction do
+        @savings_goal.save!
+        handle_initial_contribution(@savings_goal)
       end
-    else
-      render :new, status: :unprocessable_entity
+    rescue ActiveRecord::RecordInvalid
+      return render :new, status: :unprocessable_entity
+    end
+
+    flash[:notice] = "Savings goal created."
+    respond_to do |format|
+      format.html { redirect_to savings_goal_path(@savings_goal) }
+      format.turbo_stream { render turbo_stream: turbo_stream.action(:redirect, savings_goal_path(@savings_goal)) }
     end
   end
 
@@ -39,7 +44,13 @@ class SavingsGoalsController < ApplicationController
   def update
     submitted_account_id = params.dig(:savings_goal, :account_id)
     if submitted_account_id.present?
-      @savings_goal.account = lookup_account(submitted_account_id)
+      candidate = lookup_account(submitted_account_id)
+      # Only swap to a non-nil family-scoped account. A foreign account_id
+      # returns nil from `lookup_account`; assigning nil would null the
+      # `belongs_to :account` association and block unrelated attribute
+      # changes (e.g. a name edit) in the same request. Silently ignoring
+      # the foreign id keeps the rest of the update flowing through.
+      @savings_goal.account = candidate if candidate
     end
 
     if @savings_goal.update(savings_goal_params)
@@ -95,7 +106,14 @@ private
 
   def set_savings_goal
     @savings_goal = Current.family.savings_goals.find(params[:id])
-    end
+  end
+
+  def set_backing_accounts
+    @backing_accounts = Current.family.accounts
+                               .where(classification: "asset",
+                                      accountable_type: %w[Depository Investment OtherAsset])
+                               .alphabetically
+  end
 
   def savings_goal_params
     # `account_id` is intentionally omitted from the permit list. We

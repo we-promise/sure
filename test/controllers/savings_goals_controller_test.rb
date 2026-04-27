@@ -99,7 +99,7 @@ class SavingsGoalsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Renamed", @goal.reload.name
   end
 
-  test "update silently drops a foreign account_id" do
+  test "update silently drops a foreign account_id and lets the rest of the update through" do
     other_family = Family.create!(name: "Other", locale: "en", date_format: "%Y-%m-%d", currency: "USD")
     other_account = other_family.accounts.create!(
       name: "Other depository", balance: 1000, currency: "USD",
@@ -110,6 +110,7 @@ class SavingsGoalsControllerTest < ActionDispatch::IntegrationTest
     @goal.reload
     assert_not_equal other_account.id, @goal.account_id
     assert_equal original_account_id, @goal.account_id
+    assert_equal "renamed", @goal.name, "the name change should still be applied"
   end
 
   test "update with invalid params re-renders edit" do

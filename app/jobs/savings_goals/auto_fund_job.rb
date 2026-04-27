@@ -45,9 +45,18 @@ module SavingsGoals
         pool = summary.surplus.to_d
         return if pool <= 0
 
+        # Prefetch the set of goals that already have an auto contribution
+        # for this budget. Avoids an N+1 lookup per goal in the loop.
+        funded_goal_ids = SavingsContribution
+                            .where(savings_goal_id: summary.active_goals.map(&:id),
+                                   budget_id: budget.id,
+                                   source: "auto")
+                            .pluck(:savings_goal_id)
+                            .to_set
+
         summary.active_goals.each do |goal|
           break if pool <= 0
-          next if already_auto_funded?(goal, budget)
+          next if funded_goal_ids.include?(goal.id)
 
           target = goal.monthly_target_amount
           next if target.nil? || target.to_d <= 0
@@ -71,14 +80,8 @@ module SavingsGoals
         end
       rescue ActiveRecord::RecordNotUnique
         # Another worker won a race for the same (goal, budget, source=auto)
-        # row — partial unique index rejects the duplicate. Treat as no-op.
+        # row. Partial unique index rejects the duplicate. Treat as no-op.
         Rails.logger.info("AutoFundJob: skipped duplicate for family=#{family.id}, budget=#{budget.id}")
-      end
-
-      def already_auto_funded?(goal, budget)
-        goal.savings_contributions
-            .where(budget_id: budget.id, source: "auto")
-            .exists?
       end
   end
 end

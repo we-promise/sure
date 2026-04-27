@@ -165,7 +165,7 @@ class SavingsGoalAccountLinkTest < ActiveSupport::TestCase
   end
 
   test "rejects accounts from other families" do
-    other_family = families(:empty_family) rescue Family.create!(name: "Other", locale: "en", date_format: "%Y-%m-%d", currency: "USD")
+    other_family = Family.create!(name: "Other", locale: "en", date_format: "%Y-%m-%d", currency: "USD")
     goal = SavingsGoal.new(family: other_family, account: @account, name: "x", target_amount: 100)
     assert_not goal.valid?
     assert_includes goal.errors.attribute_names, :account

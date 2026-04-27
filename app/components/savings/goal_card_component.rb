@@ -19,4 +19,12 @@ class Savings::GoalCardComponent < ApplicationComponent
     return goal.account.name if goal.target_date.nil?
     "#{goal.target_date.strftime('%b %Y')} · #{goal.account.name}"
   end
+
+  def state_label
+    goal.state.titleize
+  end
+
+  def target_amount_money
+    Money.new(goal.target_amount, goal.currency)
+  end
 end

@@ -25,11 +25,12 @@ class SavingsContributionsControllerTest < ActionDispatch::IntegrationTest
     assert_nil contribution.budget_id, "manual contributions are no longer tagged to a budget"
   end
 
-  test "destroy removes the contribution" do
+  test "destroy removes the contribution and redirects to the goal" do
     contribution = savings_contributions(:vacation_manual_top_up)
     assert_difference -> { @goal.savings_contributions.count }, -1 do
       delete savings_goal_contribution_path(@goal, contribution)
     end
+    assert_redirected_to savings_goal_path(@goal)
   end
 
   test "cannot create for another family's goal" do

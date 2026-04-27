@@ -6,13 +6,13 @@
       <div class="flex items-center justify-between gap-2">
         <h3 class="text-primary font-medium truncate"><%= goal.name %></h3>
         <span class="text-xs px-2 py-0.5 rounded-full font-medium <%= state_badge_classes %>">
-          <%= goal.state.titleize %>
+          <%= state_label %>
         </span>
       </div>
       <p class="text-secondary text-sm mt-1 truncate"><%= target_summary %></p>
       <p class="text-primary text-sm mt-2 font-medium">
         <%= helpers.format_money goal.current_balance_money %>
-        <span class="text-secondary font-normal">/ <%= helpers.format_money Money.new(goal.target_amount, goal.currency) %></span>
+        <span class="text-secondary font-normal">/ <%= helpers.format_money target_amount_money %></span>
       </p>
     </div>
   </div>
