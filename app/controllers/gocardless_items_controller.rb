@@ -333,8 +333,9 @@ class GocardlessItemsController < ApplicationController
   end
 
   def reauth_callback
-    item = Current.family.gocardless_items.find_by(id: params[:item_id])
+    item = Current.family.gocardless_items.find_by(id: params[:item_id], status: :requires_update)
     return redirect_to accounts_path, alert: "Connection not found" unless item
+    return redirect_to accounts_path, alert: "Connection not found" unless item.requisition_id.present?
 
     client = item.gocardless_client
     unless client
