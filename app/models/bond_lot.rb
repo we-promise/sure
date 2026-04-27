@@ -37,6 +37,7 @@ class BondLot < ApplicationRecord
   before_validation :normalize_legacy_subtype
   before_validation :normalize_subtype_from_product
   before_validation :apply_product_defaults
+  before_validation :apply_inflation_linked_defaults
   before_validation :assign_maturity_date_from_term
   before_validation :derive_amount_from_units
   before_validation :normalize_tax_settings
@@ -584,6 +585,13 @@ class BondLot < ApplicationRecord
       self.cpi_lag_months = defaults[:cpi_lag_months] if defaults[:cpi_lag_months].present? && (cpi_lag_months.blank? || is_product_new)
       self.nominal_per_unit ||= 100
       self.issue_date ||= purchased_on
+    end
+
+    def apply_inflation_linked_defaults
+      return unless product_code.blank? && inflation_linked_selection?
+
+      self.rate_type ||= "variable"
+      self.coupon_frequency ||= "annual"
     end
 
     def deflation_floor_applies?

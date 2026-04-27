@@ -2,7 +2,8 @@
   <% dialog.with_header(custom_header: true) do %>
     <div class="flex items-start justify-between gap-4">
       <div>
-        <%= tag.h3(Bond.long_subtype_label_for(@bond_lot.subtype) || t(".unknown"), class: "text-2xl font-medium text-primary") %>
+        <% canonical_subtype = Bond::LEGACY_SUBTYPE_ALIASES[@bond_lot.subtype] || @bond_lot.subtype %>
+        <%= tag.h3(Bond.long_subtype_label_for(canonical_subtype) || t(".unknown"), class: "text-2xl font-medium text-primary") %>
         <%= tag.p t(".purchased", date: l(@bond_lot.purchased_on)), class: "text-sm text-secondary" %>
       </div>
       <%= dialog.close_button %>
