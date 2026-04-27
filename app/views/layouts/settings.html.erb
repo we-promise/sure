@@ -6,9 +6,9 @@
       </div>
     </div>
 
-    <main class="grow flex h-full">
-      <div class="relative max-w-4xl mx-auto flex flex-col w-full h-full">
-        <div class="grow flex flex-col overflow-y-auto overflow-x-hidden overscroll-contain [-webkit-overflow-scrolling:touch]">
+    <main class="grow flex h-full min-w-0">
+      <div class="relative max-w-4xl mx-auto flex flex-col w-full h-full min-w-0">
+        <div class="grow flex flex-col overflow-y-auto overflow-x-hidden overscroll-contain [-webkit-overflow-scrolling:touch] min-w-0">
           <div class="sticky top-0 z-10 px-3 md:px-10 pt-1.5 md:pt-3 pb-3 bg-surface border-b border-tertiary shrink-0">
             <% if content_for?(:breadcrumbs) %>
               <%= yield :breadcrumbs %>
@@ -16,7 +16,7 @@
               <%= render "layouts/shared/breadcrumbs", breadcrumbs: @breadcrumbs %>
             <% end %>
 
-            <div class="flex items-center justify-between gap-4 mt-1.5 min-h-9">
+            <div class="flex flex-wrap items-center justify-between gap-3 mt-1.5 min-h-9">
               <% if content_for?(:page_title) %>
                 <h1 class="text-primary text-xl font-medium">
                   <%= content_for :page_title %>
@@ -25,7 +25,7 @@
                 <div></div>
               <% end %>
               <% if content_for?(:page_actions) %>
-                <div class="flex items-center gap-2 shrink-0">
+                <div class="flex items-center gap-2 max-w-full">
                   <%= yield :page_actions %>
                 </div>
               <% end %>
