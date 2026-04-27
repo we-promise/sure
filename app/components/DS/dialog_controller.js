@@ -26,7 +26,6 @@ export default class extends Controller {
   }
 
   close() {
-    this.element.querySelectorAll("form").forEach(f => f.reset());
     this.element.close();
 
     if (this.reloadOnCloseValue) {
