@@ -84,5 +84,5 @@ Rails.application.configure do
   config.generators.apply_rubocop_autocorrect_after_generate!
 
   # Allow connection from any host in development
-  config.hosts << "suredev.binarytech.uk"
+  config.hosts = nil
 end
