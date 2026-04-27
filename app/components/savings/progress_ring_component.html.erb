@@ -1,30 +1,33 @@
-<%= tag.svg width: size, height: size, viewBox: "0 0 #{size} #{size}",
-            role: "img", "aria-label": "#{percent}% complete", class: "shrink-0" do %>
-  <%# Background circle: monochrome via Tailwind class %>
-  <%= tag.circle cx: size / 2.0, cy: size / 2.0, r: radius,
-                 fill: "transparent",
-                 class: "stroke-current text-gray-300",
-                 "stroke-width": stroke %>
-  <%# Foreground arc: inline style so var() / hex resolves reliably %>
-  <%= tag.circle cx: size / 2.0, cy: size / 2.0, r: radius,
-                 fill: "transparent",
-                 style: "stroke: #{fill_stroke_color}",
-                 "stroke-width": stroke,
-                 "stroke-linecap": "round",
-                 "stroke-dasharray": circumference,
-                 "stroke-dashoffset": offset,
-                 transform: "rotate(-90 #{size / 2.0} #{size / 2.0})" %>
-  <%# Multi-line text rendered via tspans. dominant-baseline centres the
-      block; the first tspan is shifted up by (lines-1)*0.6em so the whole
-      group ends up vertically centred. %>
-  <%= tag.text x: size / 2.0, y: size / 2.0,
-               "text-anchor": "middle",
-               class: "fill-primary font-medium" do %>
-    <% label_lines.each_with_index do |line, idx| %>
-      <%= tag.tspan line,
-            x: size / 2.0,
-            dy: idx.zero? ? "#{-(label_lines.size - 1) * 0.6}em" : "1.25em",
-            class: idx.zero? ? "text-base" : "text-xs fill-secondary" %>
-    <% end %>
+<%# Wrapper sets ring footprint; SVG is absolutely positioned so text overlay
+    can flex-centre regardless of ring size. Same overlay pattern Sure uses
+    for the budget donut (`app/views/budgets/_budget_donut.html.erb`). %>
+<%= tag.div class: "relative shrink-0 inline-flex items-center justify-center",
+            style: "width: #{size}px; height: #{size}px;" do %>
+  <%= tag.svg width: size, height: size, viewBox: "0 0 #{size} #{size}",
+              role: "img", "aria-label": "#{percent}% complete",
+              class: "absolute inset-0" do %>
+    <%= tag.circle cx: size / 2.0, cy: size / 2.0, r: radius,
+                   fill: "transparent",
+                   class: "stroke-current text-gray-300",
+                   "stroke-width": stroke %>
+    <%= tag.circle cx: size / 2.0, cy: size / 2.0, r: radius,
+                   fill: "transparent",
+                   style: "stroke: #{fill_stroke_color}",
+                   "stroke-width": stroke,
+                   "stroke-linecap": "round",
+                   "stroke-dasharray": circumference,
+                   "stroke-dashoffset": offset,
+                   transform: "rotate(-90 #{size / 2.0} #{size / 2.0})" %>
   <% end %>
+
+  <%# HTML text overlay — Tailwind typography, easy to control across
+      ring sizes. First line is the primary value; subsequent lines are
+      small secondary captions. %>
+  <div class="relative flex flex-col items-center justify-center text-center leading-tight px-2">
+    <% label_lines.each_with_index do |line, idx| %>
+      <span class="<%= idx.zero? ? "text-primary font-medium #{primary_size_class}" : "text-secondary text-xs" %>">
+        <%= line %>
+      </span>
+    <% end %>
+  </div>
 <% end %>

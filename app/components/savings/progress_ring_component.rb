@@ -36,4 +36,16 @@ class Savings::ProgressRingComponent < ApplicationComponent
     else              "var(--color-success)"    # near or at target
     end
   end
+
+  # Scales the primary line's font size with the ring size so a 72px goal
+  # card shows a compact "21%" while the 180px show-page ring shows a
+  # full "$1,250" without spilling out of the inner area.
+  def primary_size_class
+    case size
+    when 0..80    then "text-xs"
+    when 81..120  then "text-sm"
+    when 121..160 then "text-base"
+    else               "text-lg"
+    end
+  end
 end
