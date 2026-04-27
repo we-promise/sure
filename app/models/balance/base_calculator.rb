@@ -16,7 +16,54 @@ class Balance::BaseCalculator
 
     def holdings_value_for_date(date)
       @holdings_value_for_date ||= {}
-      @holdings_value_for_date[date] ||= sync_cache.get_holdings(date).sum(&:amount)
+      return @holdings_value_for_date[date] if @holdings_value_for_date.key?(date)
+
+      @holdings_value_for_date[date] = if account.bond?
+        bond_holdings_value_for_date(date)
+      else
+        sync_cache.get_holdings(date).sum(&:amount)
+      end
+    end
+
+    def bond_holdings_value_for_date(date)
+      return 0.to_d if bond_lot_change_dates.empty?
+
+      next_change_index = bond_lot_change_dates.bsearch_index { |change_date| change_date > date }
+
+      if next_change_index.nil?
+        bond_lot_running_totals.last || 0.to_d
+      elsif next_change_index.zero?
+        0.to_d
+      else
+        bond_lot_running_totals[next_change_index - 1]
+      end
+    end
+
+    def bond_lot_change_dates
+      @bond_lot_change_dates ||= bond_lot_changes_by_date.keys.sort
+    end
+
+    def bond_lot_running_totals
+      @bond_lot_running_totals ||= begin
+        running_total = 0.to_d
+
+        bond_lot_change_dates.map do |change_date|
+          running_total += bond_lot_changes_by_date[change_date]
+        end
+      end
+    end
+
+    def bond_lot_changes_by_date
+      @bond_lot_changes_by_date ||= bond_lots_for_holdings.each_with_object(Hash.new(0.to_d)) do |lot, changes|
+        amount = lot.amount.to_d
+
+        changes[lot.purchased_on] += amount
+        changes[lot.closed_on] -= amount if lot.closed_on.present?
+      end
+    end
+
+    def bond_lots_for_holdings
+      @bond_lots_for_holdings ||= account.bond.bond_lots.select(:purchased_on, :closed_on, :amount).to_a
     end
 
     def derive_cash_balance_on_date_from_total(total_balance:, date:)
@@ -74,12 +121,21 @@ class Balance::BaseCalculator
         non_cash_inflows = txn_inflow_sum.abs
         non_cash_outflows = txn_outflow_sum
       elsif account.balance_type != :non_cash
+        bond_lot_cash_inflow_sum = 0
+        bond_lot_cash_outflow_sum = 0
+        if account.bond?
+          bond_lot_transaction_entries = entries.select { |e| bond_lot_transaction_entry?(e) }
+          bond_lot_cash_inflow_sum = bond_lot_transaction_entries.select { |e| e.amount < 0 }.sum(&:amount)
+          bond_lot_cash_outflow_sum = bond_lot_transaction_entries.select { |e| e.amount >= 0 }.sum(&:amount)
+        end
+
         cash_inflows = txn_inflow_sum.abs + trade_cash_inflow_sum.abs
         cash_outflows = txn_outflow_sum + trade_cash_outflow_sum
 
-        # Trades are inverse (a "buy" is outflow of cash, but "inflow" of non-cash, aka "holdings")
-        non_cash_outflows = trade_cash_inflow_sum.abs
-        non_cash_inflows = trade_cash_outflow_sum
+        # Trades and bond lot-linked transactions are inverse (a "buy" is outflow of cash,
+        # but "inflow" of non-cash, aka holdings).
+        non_cash_outflows = trade_cash_inflow_sum.abs + bond_lot_cash_inflow_sum.abs
+        non_cash_inflows = trade_cash_outflow_sum + bond_lot_cash_outflow_sum
       end
 
       {
@@ -136,5 +192,12 @@ class Balance::BaseCalculator
         net_market_flows: args[:net_market_flows] || 0,
         flows_factor: account.classification == "asset" ? 1 : -1
       )
+    end
+
+    def bond_lot_transaction_entry?(entry)
+      return false unless entry.transaction?
+
+      extra = entry.entryable&.extra
+      extra.is_a?(Hash) && extra["bond_lot_id"].present?
     end
 end

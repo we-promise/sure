@@ -14,34 +14,9 @@ class Settings::HostingsController < ApplicationController
 
   before_action :ensure_admin, only: [ :update, :clear_cache, :disconnect_external_assistant ]
   before_action :ensure_super_admin_for_onboarding, only: :update
+  before_action :set_hosting_page_state, only: :show
 
   def show
-    @breadcrumbs = [
-      [ "Home", root_path ],
-      [ "Self-Hosting", nil ]
-    ]
-
-    # Determine which providers are currently selected
-    exchange_rate_provider = ENV["EXCHANGE_RATE_PROVIDER"].presence || Setting.exchange_rate_provider
-    enabled_securities = Setting.enabled_securities_providers
-
-    # Show provider settings if used for FX or enabled for securities
-    @show_twelve_data_settings = exchange_rate_provider == "twelve_data" || enabled_securities.include?("twelve_data")
-    @show_yahoo_finance_settings = exchange_rate_provider == "yahoo_finance" || enabled_securities.include?("yahoo_finance")
-    @show_tiingo_settings = enabled_securities.include?("tiingo")
-    @show_eodhd_settings = enabled_securities.include?("eodhd")
-    @show_alpha_vantage_settings = enabled_securities.include?("alpha_vantage")
-
-    # Only fetch provider data if we're showing the section
-    if @show_twelve_data_settings
-      twelve_data_provider = Provider::Registry.get_provider(:twelve_data)
-      @twelve_data_usage = twelve_data_provider&.usage
-      @plan_restricted_securities = Current.family.securities_with_plan_restrictions(provider: "TwelveData")
-    end
-
-    if @show_yahoo_finance_settings
-      @yahoo_finance_provider = Provider::Registry.get_provider(:yahoo_finance)
-    end
   end
 
   def update
@@ -200,6 +175,7 @@ class Settings::HostingsController < ApplicationController
 
     redirect_to settings_hosting_path, notice: t(".success")
   rescue Setting::ValidationError => error
+    set_hosting_page_state
     flash.now[:alert] = error.message
     render :show, status: :unprocessable_entity
   end
@@ -223,7 +199,60 @@ class Settings::HostingsController < ApplicationController
   private
     def hosting_params
       return ActionController::Parameters.new unless params.key?(:setting)
-      params.require(:setting).permit(:onboarding_state, :require_email_confirmation, :invite_only_default_family_id, :brand_fetch_client_id, :brand_fetch_high_res_logos, :twelve_data_api_key, :tiingo_api_key, :eodhd_api_key, :alpha_vantage_api_key, :openai_access_token, :openai_uri_base, :openai_model, :openai_json_mode, :llm_context_window, :llm_max_response_tokens, :llm_max_items_per_call, :exchange_rate_provider, :securities_provider, :syncs_include_pending, :auto_sync_enabled, :auto_sync_time, :external_assistant_url, :external_assistant_token, :external_assistant_agent_id, securities_providers: [])
+
+      params.require(:setting).permit(
+        :onboarding_state,
+        :require_email_confirmation,
+        :invite_only_default_family_id,
+        :brand_fetch_client_id,
+        :brand_fetch_high_res_logos,
+        :twelve_data_api_key,
+        :tiingo_api_key,
+        :eodhd_api_key,
+        :alpha_vantage_api_key,
+        :openai_access_token,
+        :openai_uri_base,
+        :openai_model,
+        :openai_json_mode,
+        :llm_context_window,
+        :llm_max_response_tokens,
+        :llm_max_items_per_call,
+        :exchange_rate_provider,
+        :securities_provider,
+        :syncs_include_pending,
+        :auto_sync_enabled,
+        :auto_sync_time,
+        :external_assistant_url,
+        :external_assistant_token,
+        :external_assistant_agent_id,
+        securities_providers: []
+      )
+    end
+
+    def set_hosting_page_state
+      @breadcrumbs = [
+        [ t("settings.hostings.breadcrumbs.home"), root_path ],
+        [ t("settings.hostings.breadcrumbs.self_hosting"), nil ]
+      ]
+
+      exchange_rate_provider = ENV["EXCHANGE_RATE_PROVIDER"].presence || Setting.exchange_rate_provider
+      enabled_securities = Setting.enabled_securities_providers
+
+      @show_twelve_data_settings = exchange_rate_provider == "twelve_data" || enabled_securities.include?("twelve_data")
+      @show_yahoo_finance_settings = exchange_rate_provider == "yahoo_finance" || enabled_securities.include?("yahoo_finance")
+      @show_tiingo_settings = enabled_securities.include?("tiingo")
+      @show_eodhd_settings = enabled_securities.include?("eodhd")
+      @show_alpha_vantage_settings = enabled_securities.include?("alpha_vantage")
+
+      if @show_twelve_data_settings
+        twelve_data_provider = Provider::Registry.get_provider(:twelve_data)
+        @twelve_data_usage = twelve_data_provider&.usage
+        @plan_restricted_securities = Current.family.securities_with_plan_restrictions(provider: "TwelveData")
+      end
+
+      if @show_yahoo_finance_settings
+        @yahoo_finance_provider = Provider::Registry.get_provider(:yahoo_finance)
+      end
     end
 
     def update_assistant_type

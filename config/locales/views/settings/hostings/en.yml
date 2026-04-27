@@ -2,6 +2,9 @@
 en:
   settings:
     hostings:
+      breadcrumbs:
+        home: Home
+        self_hosting: Self-Hosting
       invite_code_settings:
         description: Control how new people sign up for your instance of %{product}.
         email_confirmation_description: When enabled, users must confirm their email
@@ -21,6 +24,7 @@ en:
         general: General Settings
         ai_assistant: AI Assistant
         financial_data_providers: Financial Data Providers
+        inflation: Inflation
         sync_settings: Sync Settings
         invites: Invite Codes
         title: Self-Hosting
