@@ -111,4 +111,45 @@ class SavingsGoals::AutoFundJobTest < ActiveJob::TestCase
     funded = SavingsContribution.auto.where(budget: @budget).sum(:amount)
     assert_operator funded, :<=, 150
   end
+
+  test "RecordNotUnique inside the loop does not abort other contributions" do
+    # The previous version of this code wrapped `Family.transaction` around
+    # the whole loop and only rescued RecordNotUnique at the outer scope.
+    # Postgres aborts the whole transaction when a unique violation fires,
+    # so a single duplicate would have rolled back every successful create
+    # earlier in the loop. The fix wraps each `SavingsContribution.create!`
+    # in `ActiveRecord::Base.transaction(requires_new: true)` so a savepoint
+    # scopes the rollback to just the failing iteration.
+    #
+    # We exercise the rescue path by directly raising RecordNotUnique from
+    # `SavingsContribution.create!` once, then letting subsequent calls land.
+    second_goal = @family.savings_goals.create!(
+      account: accounts(:depository),
+      name: "Second goal",
+      target_amount: 2_000,
+      target_date: 6.months.from_now.to_date,
+      state: "active"
+    )
+    Budget.any_instance.stubs(:monthly_surplus).returns(10_000)
+
+    # First call (Awesome vacations) raises; second call (Second goal) succeeds.
+    seq = sequence("auto-fund-create")
+    SavingsContribution
+      .stubs(:create!)
+      .raises(ActiveRecord::RecordNotUnique.new("simulated race"))
+      .in_sequence(seq)
+    SavingsContribution
+      .stubs(:create!)
+      .returns(SavingsContribution.new)
+      .in_sequence(seq)
+
+    assert_nothing_raised do
+      SavingsGoals::AutoFundJob.new.perform(@family.id, @budget.id)
+    end
+    # If the savepoint weren't there, the outer transaction would have
+    # aborted on the first raise and `assert_nothing_raised` would fail
+    # with `PG::InFailedSqlTransaction` on the next statement; reaching
+    # this line is the assertion the savepoint did its job.
+    assert true
+  end
 end

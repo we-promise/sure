@@ -67,21 +67,35 @@ module SavingsGoals
           amount = [ target.to_d, pool, remaining ].min
           next if amount <= 0
 
-          SavingsContribution.create!(
-            savings_goal: goal,
-            budget: budget,
-            amount: amount,
-            currency: goal.currency,
-            source: "auto",
-            contributed_at: budget.start_date
-          )
-
-          pool -= amount
+          # Wrap each create in its own savepoint (`requires_new: true`).
+          # If a concurrent worker has just inserted the same
+          # (goal, budget, source=auto) row, our `create!` raises
+          # ActiveRecord::RecordNotUnique. Without a savepoint, that
+          # error puts the whole outer Family.transaction into Postgres'
+          # aborted state — the eventual COMMIT becomes ROLLBACK and
+          # every prior successful contribution in this loop disappears.
+          # The savepoint scopes the rollback to just this iteration so
+          # earlier goals stay funded.
+          begin
+            ActiveRecord::Base.transaction(requires_new: true) do
+              SavingsContribution.create!(
+                savings_goal: goal,
+                budget: budget,
+                amount: amount,
+                currency: goal.currency,
+                source: "auto",
+                contributed_at: budget.start_date
+              )
+            end
+            pool -= amount
+          rescue ActiveRecord::RecordNotUnique
+            Rails.logger.info(
+              "AutoFundJob: skipped duplicate for family=#{family.id}, " \
+              "goal=#{goal.id}, budget=#{budget.id}"
+            )
+            next
+          end
         end
-      rescue ActiveRecord::RecordNotUnique
-        # Another worker won a race for the same (goal, budget, source=auto)
-        # row. Partial unique index rejects the duplicate. Treat as no-op.
-        Rails.logger.info("AutoFundJob: skipped duplicate for family=#{family.id}, budget=#{budget.id}")
       end
   end
 end

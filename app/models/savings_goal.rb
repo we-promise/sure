@@ -48,7 +48,9 @@ class SavingsGoal < ApplicationRecord
   end
 
   def current_balance
-    savings_contributions.sum(:amount) || 0
+    # `ActiveRecord::Calculations#sum` returns 0 for empty relations,
+    # so no `|| 0` fallback is needed.
+    savings_contributions.sum(:amount)
   end
 
   def current_balance_money
