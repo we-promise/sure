@@ -812,7 +812,7 @@ class BondLotTest < ActiveSupport::TestCase
     assert replacement_lot.entry.present?
   end
 
-  test "requires rate_type and coupon_frequency for inflation-linked lots" do
+  test "applies safe defaults for rate_type and coupon_frequency for inflation-linked lots without preset" do
     bond = bonds(:one)
     bond.rate_type = nil
     bond.coupon_frequency = nil
@@ -834,9 +834,9 @@ class BondLotTest < ActiveSupport::TestCase
       coupon_frequency: nil
     )
 
-    assert_not lot.valid?
-    assert_includes lot.errors[:rate_type], "can't be blank"
-    assert_includes lot.errors[:coupon_frequency], "can't be blank"
+    lot.valid?
+    assert_equal "variable", lot.rate_type
+    assert_equal "annual", lot.coupon_frequency
   end
 
   test "destroying purchase entry does not remove settled bond lots" do
