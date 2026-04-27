@@ -42,3 +42,9 @@ refresh_demo_family:
   class: "DemoFamilyRefreshJob"
   queue: "scheduled"
   description: "Refreshes demo family data and emails super admins with daily usage summary"
+
+schedule_savings_auto_funds:
+  cron: "10 0 1 * *" # 00:10 UTC on the 1st of every month
+  class: "SavingsGoals::ScheduleAutoFundsJob"
+  queue: "scheduled"
+  description: "Enqueues per-family savings goal auto-funding for the closed month"
