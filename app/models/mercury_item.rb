@@ -171,7 +171,8 @@ class MercuryItem < ApplicationRecord
     token.present?
   end
 
-  def effective_base_url
-    base_url.presence || "https://api.mercury.com/api/v1"
-  end
+  # F-08: SSRF hardening — see BaseUrlAllowlistable.
+  include BaseUrlAllowlistable
+  allowed_base_urls "https://api.mercury.com/api/v1",
+                    "https://api-sandbox.mercury.com/api/v1"
 end
