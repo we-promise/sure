@@ -20,7 +20,7 @@
         color: @savings_goal.color,
         label_lines: [
           format_money(balance_money),
-          "of #{format_money(target_money)}",
+          t("savings_goals.show.target", month: format_money(target_money)),
           "#{@savings_goal.progress_percent}%"
         ]
       ) %>
@@ -29,16 +29,17 @@
         <h1 class="text-2xl text-primary font-medium"><%= @savings_goal.name %></h1>
         <div class="flex items-center gap-2 flex-wrap justify-center md:justify-start">
           <span class="text-xs px-2 py-0.5 rounded-full font-medium <%= state_pill_classes %>">
-            <%= @savings_goal.state.titleize %>
+            <%= t("savings_goals.states.#{@savings_goal.state}") %>
           </span>
           <span class="text-secondary text-sm"><%= @savings_goal.account.name %></span>
           <% if @savings_goal.target_date %>
-            <span class="text-secondary text-sm">· target <%= @savings_goal.target_date.strftime("%b %Y") %></span>
+            <span class="text-secondary text-sm">· <%= t("savings_goals.show.target", month: l(@savings_goal.target_date, format: "%b %Y")) %></span>
           <% end %>
         </div>
         <% if @savings_goal.monthly_target_amount %>
           <p class="text-secondary text-sm">
-            Monthly target: <span class="text-primary font-medium"><%= format_money Money.new(@savings_goal.monthly_target_amount, @savings_goal.currency) %></span>
+            <%= t("savings_goals.show.monthly_target") %>
+            <span class="text-primary font-medium"><%= format_money Money.new(@savings_goal.monthly_target_amount, @savings_goal.currency) %></span>
           </p>
         <% end %>
       </div>
@@ -47,41 +48,48 @@
         <%= render DS::Link.new(variant: "icon", icon: "pencil",
               href: edit_savings_goal_path(@savings_goal),
               frame: :modal,
-              title: "Edit", "aria-label": "Edit goal") %>
+              title: t("savings_goals.show.actions.edit"),
+              "aria-label": t("savings_goals.show.actions.edit_aria")) %>
 
         <%= render DS::Menu.new do |menu| %>
           <% if @savings_goal.may_pause? %>
-            <% menu.with_item(variant: "button", text: "Pause",
+            <% menu.with_item(variant: "button",
+                  text: t("savings_goals.show.actions.pause"),
                   icon: "pause",
                   href: pause_savings_goal_path(@savings_goal),
                   method: :patch) %>
           <% end %>
           <% if @savings_goal.may_resume? %>
-            <% menu.with_item(variant: "button", text: "Resume",
+            <% menu.with_item(variant: "button",
+                  text: t("savings_goals.show.actions.resume"),
                   icon: "play",
                   href: resume_savings_goal_path(@savings_goal),
                   method: :patch) %>
           <% end %>
           <% if @savings_goal.may_complete? %>
-            <% menu.with_item(variant: "button", text: "Mark complete",
+            <% menu.with_item(variant: "button",
+                  text: t("savings_goals.show.actions.complete"),
                   icon: "check",
                   href: complete_savings_goal_path(@savings_goal),
                   method: :patch) %>
           <% end %>
           <% if @savings_goal.may_archive? %>
-            <% menu.with_item(variant: "button", text: "Archive",
+            <% menu.with_item(variant: "button",
+                  text: t("savings_goals.show.actions.archive"),
                   icon: "archive",
                   href: archive_savings_goal_path(@savings_goal),
                   method: :patch) %>
           <% end %>
           <% if @savings_goal.may_unarchive? %>
-            <% menu.with_item(variant: "button", text: "Restore to active",
+            <% menu.with_item(variant: "button",
+                  text: t("savings_goals.show.actions.unarchive"),
                   icon: "rotate-ccw",
                   href: unarchive_savings_goal_path(@savings_goal),
                   method: :patch) %>
           <% end %>
 
-          <% menu.with_item(variant: "button", text: "Delete",
+          <% menu.with_item(variant: "button",
+                text: t("savings_goals.show.actions.delete"),
                 icon: "trash-2",
                 href: savings_goal_path(@savings_goal),
                 method: :delete,
@@ -94,15 +102,15 @@
 
   <% if @savings_goal.notes.present? %>
     <div class="bg-container rounded-xl shadow-border-xs p-6">
-      <p class="text-secondary text-xs uppercase tracking-wide mb-2">Notes</p>
+      <p class="text-secondary text-xs uppercase tracking-wide mb-2"><%= t("savings_goals.show.notes") %></p>
       <p class="text-primary whitespace-pre-line"><%= @savings_goal.notes %></p>
     </div>
   <% end %>
 
   <div class="bg-container rounded-xl shadow-border-xs p-6">
     <div class="flex items-center justify-between mb-4">
-      <h2 class="text-primary font-medium">Contributions</h2>
-      <%= render DS::Link.new(text: "Add contribution", icon: "plus", variant: "primary",
+      <h2 class="text-primary font-medium"><%= t("savings_goals.show.contributions.title") %></h2>
+      <%= render DS::Link.new(text: t("savings_goals.show.contributions.add"), icon: "plus", variant: "primary",
             href: new_savings_goal_contribution_path(@savings_goal),
             frame: :modal) %>
     </div>
@@ -115,9 +123,9 @@
             <div>
               <p class="text-primary text-sm">
                 <%= format_money Money.new(c.amount, c.currency) %>
-                <span class="text-secondary text-xs ml-2 px-2 py-0.5 rounded-full bg-container-inset"><%= c.source.titleize %></span>
+                <span class="text-secondary text-xs ml-2 px-2 py-0.5 rounded-full bg-container-inset"><%= t("savings_goals.show.contributions.sources.#{c.source}") %></span>
               </p>
-              <p class="text-secondary text-xs"><%= c.contributed_at.strftime("%b %-d, %Y") %><% if c.notes.present? %> · <%= c.notes %><% end %></p>
+              <p class="text-secondary text-xs"><%= l(c.contributed_at, format: :long) %><% if c.notes.present? %> · <%= c.notes %><% end %></p>
             </div>
             <%= render DS::Button.new(
                   variant: "icon",
@@ -127,14 +135,14 @@
                   method: :delete,
                   confirm: CustomConfirm.for_resource_deletion("this contribution"),
                   class: "[&_svg]:!text-destructive",
-                  title: "Remove contribution",
-                  "aria-label": "Remove contribution"
+                  title: t("savings_goals.show.contributions.remove"),
+                  "aria-label": t("savings_goals.show.contributions.remove")
                 ) %>
           </li>
         <% end %>
       </ul>
     <% else %>
-      <p class="text-secondary text-sm">No contributions yet. Add one to start tracking progress.</p>
+      <p class="text-secondary text-sm"><%= t("savings_goals.show.contributions.empty") %></p>
     <% end %>
   </div>
 </div>

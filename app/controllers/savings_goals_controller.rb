@@ -31,7 +31,7 @@ class SavingsGoalsController < ApplicationController
       return render :new, status: :unprocessable_entity
     end
 
-    flash[:notice] = "Savings goal created."
+    flash[:notice] = t("savings_goals.create.success")
     respond_to do |format|
       format.html { redirect_to savings_goal_path(@savings_goal) }
       format.turbo_stream { render turbo_stream: turbo_stream.action(:redirect, savings_goal_path(@savings_goal)) }
@@ -54,7 +54,7 @@ class SavingsGoalsController < ApplicationController
     end
 
     if @savings_goal.update(savings_goal_params)
-      flash[:notice] = "Savings goal updated."
+      flash[:notice] = t("savings_goals.update.success")
       respond_to do |format|
         format.html { redirect_to savings_goal_path(@savings_goal) }
         format.turbo_stream { render turbo_stream: turbo_stream.action(:redirect, savings_goal_path(@savings_goal)) }
@@ -66,38 +66,38 @@ class SavingsGoalsController < ApplicationController
 
   def destroy
     @savings_goal.destroy
-    redirect_to savings_goals_path, notice: "Savings goal deleted."
+    redirect_to savings_goals_path, notice: t("savings_goals.destroy.success")
   end
 
   def pause
-    transition!(:pause!, "Goal paused.")
+    transition!(:pause!, t("savings_goals.pause.success"))
   end
 
   def resume
-    transition!(:resume!, "Goal resumed.")
+    transition!(:resume!, t("savings_goals.resume.success"))
   end
 
   def complete
-    transition!(:complete!, "Goal marked as completed.")
+    transition!(:complete!, t("savings_goals.complete.success"))
   end
 
   def archive
-    transition!(:archive!, "Goal archived.")
+    transition!(:archive!, t("savings_goals.archive.success"))
   end
 
   def unarchive
-    transition!(:unarchive!, "Goal restored to active.")
+    transition!(:unarchive!, t("savings_goals.unarchive.success"))
   end
 
 private
   def set_breadcrumbs
-    crumbs = [ [ "Home", root_path ], [ "Savings goals", savings_goals_path ] ]
+    crumbs = [ [ t("breadcrumbs.home"), root_path ], [ t("savings_goals.index.title"), savings_goals_path ] ]
     if @savings_goal&.persisted?
       crumbs << [ @savings_goal.name, savings_goal_path(@savings_goal) ] if action_name != "show"
       crumbs << [ @savings_goal.name, nil ] if action_name == "show"
-      crumbs << [ "Edit", nil ] if action_name == "edit"
+      crumbs << [ t("savings_goals.show.actions.edit"), nil ] if action_name == "edit"
     elsif action_name == "new"
-      crumbs << [ "New goal", nil ]
+      crumbs << [ t("savings_goals.index.new_goal"), nil ]
     else
       crumbs.last[1] = nil
     end

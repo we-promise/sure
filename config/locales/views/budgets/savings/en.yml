@@ -1,0 +1,22 @@
+---
+en:
+  budgets:
+    savings:
+      auto_fund:
+        button: Auto-fund this month
+        confirm:
+          title: Auto-fund all active goals?
+          body: Creates an auto-source contribution per goal, capped by each goal's monthly target and the remaining surplus.
+        success: Auto-funding has been queued.
+      summary_card:
+        title: Savings goals
+        manage: Manage
+        new_goal: New goal
+        view_all: "View all %{count} goals"
+        labels:
+          surplus: Monthly surplus
+          allocated: Allocated to goals
+          available: Available
+        empty:
+          title: No active savings goals.
+          body: Earmark money in your asset accounts toward specific purposes — vacations, an emergency fund, a new laptop.

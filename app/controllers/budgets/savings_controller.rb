@@ -5,7 +5,7 @@ module Budgets
     def auto_fund
       SavingsGoals::AutoFundJob.perform_later(Current.family.id, @budget.id)
       redirect_to budget_path(Budget.date_to_param(@budget.start_date)),
-                  notice: "Auto-funding has been queued."
+                  notice: t("budgets.savings.auto_fund.success")
     end
 
     private

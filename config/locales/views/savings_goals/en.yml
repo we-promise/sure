@@ -1,0 +1,94 @@
+---
+en:
+  savings_goals:
+    states:
+      active: Active
+      paused: Paused
+      completed: Completed
+      archived: Archived
+    index:
+      title: Savings goals
+      description: Track money set aside for specific purposes, backed by your asset accounts.
+      new_goal: New goal
+      tabs:
+        all: All
+        active: Active
+        paused: Paused
+        completed: Completed
+        archived: Archived
+      empty:
+        all: No savings goals yet.
+        filtered: "No %{state} savings goals."
+        cta: Set one up to start earmarking money in your asset accounts.
+    new:
+      title: New savings goal
+    edit:
+      title: Edit savings goal
+    show:
+      target: "target %{month}"
+      monthly_target: "Monthly target:"
+      notes: Notes
+      contributions:
+        title: Contributions
+        add: Add contribution
+        empty: No contributions yet. Add one to start tracking progress.
+        date: "%{date}"
+        sources:
+          initial: Initial
+          manual: Manual
+          auto: Auto
+        remove: Remove contribution
+      actions:
+        edit: Edit
+        edit_aria: Edit goal
+        pause: Pause
+        pause_aria: Pause goal
+        resume: Resume
+        resume_aria: Resume goal
+        complete: Mark complete
+        complete_aria: Mark goal as complete
+        archive: Archive
+        archive_aria: Archive goal
+        unarchive: Restore to active
+        unarchive_aria: Restore goal to active
+        delete: Delete
+        delete_aria: Delete goal
+    form:
+      name:
+        label: Name
+        placeholder: e.g. Trip to Japan
+      account:
+        label: Backing account
+        prompt: Choose an asset account
+      target_amount:
+        label: Target amount
+      target_date:
+        label: Target date (optional)
+      color:
+        label: Color
+        radio_aria: "Goal color %{hex}"
+      notes:
+        label: Notes (optional)
+        placeholder: What is this goal for?
+      initial_contribution:
+        hint: Optionally, seed this goal with a starting balance.
+        label: Initial contribution
+      submit:
+        create: Create goal
+        update: Save changes
+    create:
+      success: Savings goal created.
+    update:
+      success: Savings goal updated.
+    destroy:
+      success: Savings goal deleted.
+    pause:
+      success: Goal paused.
+    resume:
+      success: Goal resumed.
+    complete:
+      success: Goal marked as completed.
+    archive:
+      success: Goal archived.
+    unarchive:
+      success: Goal restored to active.

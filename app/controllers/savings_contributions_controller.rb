@@ -14,7 +14,7 @@ class SavingsContributionsController < ApplicationController
     @contribution.contributed_at ||= Date.current
 
     if save_with_advisory_lock(@contribution)
-      flash[:notice] = "Contribution added."
+      flash[:notice] = t("savings_contributions.create.success")
       respond_to do |format|
         format.html { redirect_to savings_goal_path(@savings_goal) }
         format.turbo_stream { render turbo_stream: turbo_stream.action(:redirect, savings_goal_path(@savings_goal)) }
@@ -26,16 +26,16 @@ class SavingsContributionsController < ApplicationController
 
   def destroy
     @contribution.destroy
-    redirect_to savings_goal_path(@savings_goal), notice: "Contribution removed."
+    redirect_to savings_goal_path(@savings_goal), notice: t("savings_contributions.destroy.success")
   end
 
 private
   def set_breadcrumbs
     @breadcrumbs = [
-      [ "Home", root_path ],
-      [ "Savings goals", savings_goals_path ],
+      [ t("breadcrumbs.home"), root_path ],
+      [ t("savings_goals.index.title"), savings_goals_path ],
       [ @savings_goal.name, savings_goal_path(@savings_goal) ],
-      [ "Add contribution", nil ]
+      [ t("savings_goals.show.contributions.add"), nil ]
     ]
   end
 

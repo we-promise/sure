@@ -1,5 +1,5 @@
 <%= render DS::Dialog.new do |dialog| %>
-  <% dialog.with_header(title: "Edit savings goal") %>
+  <% dialog.with_header(title: t("savings_goals.edit.title")) %>
   <% dialog.with_body do %>
     <%= render "form", savings_goal: @savings_goal, backing_accounts: @backing_accounts, show_initial: false %>
   <% end %>

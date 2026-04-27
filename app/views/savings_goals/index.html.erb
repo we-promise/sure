@@ -1,10 +1,10 @@
 <div class="flex items-center justify-between gap-4 mb-6">
   <div>
-    <h1 class="text-primary text-2xl font-medium">Savings goals</h1>
-    <p class="text-secondary text-sm">Track money set aside for specific purposes, backed by your asset accounts.</p>
+    <h1 class="text-primary text-2xl font-medium"><%= t(".title") %></h1>
+    <p class="text-secondary text-sm"><%= t(".description") %></p>
   </div>
   <%= render DS::Link.new(
-    text: "New goal",
+    text: t(".new_goal"),
     icon: "plus",
     variant: "primary",
     href: new_savings_goal_path,
@@ -15,7 +15,7 @@
 <nav class="flex bg-surface-inset p-1 rounded-lg mb-4 gap-1">
   <% %w[all active paused completed archived].each do |state| %>
     <% active = (@state == state) %>
-    <%= link_to state.titleize,
+    <%= link_to t(".tabs.#{state}"),
                 savings_goals_path(state: state),
                 class: class_names(
                   "flex-1 inline-flex justify-center items-center text-sm font-medium px-2 py-1 rounded-md transition-colors duration-200",
@@ -34,14 +34,14 @@
   <div class="bg-container rounded-xl shadow-border-xs p-12 text-center">
     <p class="text-primary font-medium">
       <% if @state == "all" %>
-        No savings goals yet.
+        <%= t(".empty.all") %>
       <% else %>
-        No <%= @state %> savings goals.
+        <%= t(".empty.filtered", state: t(".tabs.#{@state}").downcase) %>
       <% end %>
     </p>
-    <p class="text-secondary text-sm mt-1">Set one up to start earmarking money in your asset accounts.</p>
+    <p class="text-secondary text-sm mt-1"><%= t(".empty.cta") %></p>
     <div class="mt-4">
-      <%= render DS::Link.new(text: "New goal", icon: "plus", variant: "primary", href: new_savings_goal_path, frame: :modal) %>
+      <%= render DS::Link.new(text: t(".new_goal"), icon: "plus", variant: "primary", href: new_savings_goal_path, frame: :modal) %>
     </div>
   </div>
 <% end %>

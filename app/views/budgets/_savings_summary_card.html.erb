@@ -2,17 +2,17 @@
 
 <%= content_tag :div, class: "w-full bg-container rounded-xl shadow-border-xs p-4" do %>
   <div class="flex items-center justify-between gap-3 flex-wrap mb-4">
-    <h2 class="text-lg font-medium shrink-0">Savings goals</h2>
+    <h2 class="text-lg font-medium shrink-0"><%= t("budgets.savings.summary_card.title") %></h2>
     <div class="flex items-center gap-2">
       <%= render DS::Link.new(
-        text: "Manage",
+        text: t("budgets.savings.summary_card.manage"),
         variant: "secondary",
         icon: "settings-2",
         size: "sm",
         href: savings_goals_path
       ) %>
       <%= render DS::Link.new(
-        text: "New goal",
+        text: t("budgets.savings.summary_card.new_goal"),
         variant: "primary",
         icon: "plus",
         size: "sm",
@@ -21,15 +21,15 @@
       ) %>
       <% if summary.active_goals.any? && summary.surplus.to_d.positive? %>
         <%= render DS::Button.new(
-          text: "Auto-fund this month",
+          text: t("budgets.savings.auto_fund.button"),
           variant: "outline",
           icon: "zap",
           size: "sm",
           href: budget_savings_auto_fund_path(budget_month_year: Budget.date_to_param(budget.start_date)),
           method: :post,
           confirm: CustomConfirm.new(
-            title: "Auto-fund all active goals?",
-            body: "Creates an auto-source contribution per goal, capped by each goal's monthly target and the remaining surplus."
+            title: t("budgets.savings.auto_fund.confirm.title"),
+            body: t("budgets.savings.auto_fund.confirm.body")
           )
         ) %>
       <% end %>
@@ -39,15 +39,15 @@
   <% if summary.active_goals.any? %>
     <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4 text-sm">
       <div class="bg-container-inset rounded-lg p-3">
-        <p class="text-secondary text-xs uppercase tracking-wide">Monthly surplus</p>
+        <p class="text-secondary text-xs uppercase tracking-wide"><%= t("budgets.savings.summary_card.labels.surplus") %></p>
         <p class="text-primary text-base font-medium mt-1"><%= format_money summary.surplus_money %></p>
       </div>
       <div class="bg-container-inset rounded-lg p-3">
-        <p class="text-secondary text-xs uppercase tracking-wide">Allocated to goals</p>
+        <p class="text-secondary text-xs uppercase tracking-wide"><%= t("budgets.savings.summary_card.labels.allocated") %></p>
         <p class="text-primary text-base font-medium mt-1"><%= format_money summary.allocated_money %></p>
       </div>
       <div class="bg-container-inset rounded-lg p-3">
-        <p class="text-secondary text-xs uppercase tracking-wide">Available</p>
+        <p class="text-secondary text-xs uppercase tracking-wide"><%= t("budgets.savings.summary_card.labels.available") %></p>
         <p class="text-primary text-base font-medium mt-1"><%= format_money summary.available_money %></p>
       </div>
     </div>
@@ -61,7 +61,7 @@
     <% if summary.active_goals.size > 3 %>
       <div class="text-center mt-3">
         <%= render DS::Link.new(
-          text: "View all #{summary.active_goals.size} goals",
+          text: t("budgets.savings.summary_card.view_all", count: summary.active_goals.size),
           variant: "secondary",
           size: "sm",
           icon: "arrow-right",
@@ -72,9 +72,9 @@
     <% end %>
   <% else %>
     <div class="bg-container-inset rounded-lg p-6 text-center">
-      <p class="text-primary font-medium text-sm">No active savings goals.</p>
+      <p class="text-primary font-medium text-sm"><%= t("budgets.savings.summary_card.empty.title") %></p>
       <p class="text-secondary text-sm mt-1 max-w-md mx-auto">
-        Earmark money in your asset accounts toward specific purposes — vacations, an emergency fund, a new laptop.
+        <%= t("budgets.savings.summary_card.empty.body") %>
       </p>
     </div>
   <% end %>

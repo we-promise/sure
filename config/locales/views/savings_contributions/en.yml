@@ -1,0 +1,13 @@
+---
+en:
+  savings_contributions:
+    new:
+      title: "Add contribution to %{goal_name}"
+      amount: Amount
+      date: Date
+      notes: Notes (optional)
+      submit: Add contribution
+    create:
+      success: Contribution added.
+    destroy:
+      success: Contribution removed.

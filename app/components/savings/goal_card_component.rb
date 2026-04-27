@@ -17,11 +17,11 @@ class Savings::GoalCardComponent < ApplicationComponent
 
   def target_summary
     return goal.account.name if goal.target_date.nil?
-    "#{goal.target_date.strftime('%b %Y')} · #{goal.account.name}"
+    "#{I18n.l(goal.target_date, format: '%b %Y')} · #{goal.account.name}"
   end
 
   def state_label
-    goal.state.titleize
+    I18n.t("savings_goals.states.#{goal.state}", default: goal.state.titleize)
   end
 
   def target_amount_money
