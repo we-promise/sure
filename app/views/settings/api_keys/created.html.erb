@@ -24,12 +24,12 @@
       <div class="bg-container rounded-lg p-3 border border-primary" data-controller="clipboard">
         <div class="flex items-center justify-between gap-3">
           <code id="api-key-display" class="font-mono text-sm text-primary break-all" data-clipboard-target="source"><%= @api_key.plain_key %></code>
-          <%= render DS::Button.new(
-            text: "Copy API Key",
-            variant: "ghost",
-            icon: "copy",
-            data: { action: "clipboard#copy" }
-          ) %>
+          <button type="button" data-action="clipboard#copy" class="font-medium whitespace-nowrap inline-flex items-center gap-1 rounded-lg px-3 py-2 text-sm text-primary bg-transparent hover:bg-gray-100 theme-dark:hover:bg-gray-700">
+            <span data-clipboard-target="iconDefault"><%= icon("copy", size: "md") %></span>
+            <span class="hidden" data-clipboard-target="iconSuccess"><%= icon("check", size: "md") %></span>
+            <span data-clipboard-target="textDefault">Copy API Key</span>
+            <span class="hidden" data-clipboard-target="textSuccess">Copied!</span>
+          </button>
         </div>
       </div>
     </div>
