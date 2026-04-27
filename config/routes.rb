@@ -509,6 +509,24 @@ Rails.application.routes.draw do
       post :complete_account_setup
     end
   end
+  
+  resources :gocardless_items, only: [ :index, :create, :destroy ] do
+    collection do
+      get  :callback
+      get  :reauth_callback
+      get  :search_banks
+      get  :select_existing_account
+      get  :new_item
+      post :link_existing_account
+    end
+
+    member do
+      post :sync
+      post :reauthorize
+      get  :setup_accounts
+      post :complete_account_setup
+    end
+  end
 
   resources :sophtron_items, only: %i[index new create show edit update destroy] do
     collection do

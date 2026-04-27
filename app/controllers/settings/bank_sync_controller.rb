@@ -32,6 +32,13 @@ class Settings::BankSyncController < ApplicationController
         rel: "noopener noreferrer"
       },
       {
+        name: "GoCardless (beta)",
+        description: "UK bank connections via open banking. Supports 100+ UK banks including Barclays, HSBC, Lloyds, NatWest, Monzo and Starling.",
+        path: "https://bankaccountdata.gocardless.com",
+        target: "_blank",
+        rel: "noopener noreferrer"
+      },
+      {
         name: "Sophtron (alpha)",
         description: "US & Canada bank, credit card, investment, loan, insurance, utility, and other connections.",
         path: "https://www.sophtron.com/",

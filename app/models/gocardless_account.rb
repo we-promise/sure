@@ -1,0 +1,57 @@
+class GocardlessAccount < ApplicationRecord
+  include CurrencyNormalizable
+
+  belongs_to :gocardless_item
+
+  # Association through account_providers for linking to internal accounts
+  has_one :account_provider, as: :provider, dependent: :destroy
+  has_one :account, through: :account_provider, source: :account
+  has_one :linked_account, through: :account_provider, source: :account
+
+  validates :name, :currency, presence: true
+
+  scope :active,   -> { where(skipped: false) }
+  scope :skipped,  -> { where(skipped: true) }
+  scope :linked,   -> { joins(:account_provider) }
+  scope :unlinked, -> { active.left_joins(:account_provider).where(account_providers: { id: nil }) }
+
+  # Helper to get account using account_providers system
+  def current_account
+    account
+  end
+
+  def upsert_gocardless_snapshot!(account_snapshot)
+    # Convert to symbol keys or handle both string and symbol keys
+    snapshot = account_snapshot.with_indifferent_access
+
+    # Map Gocardless field names to our field names
+    # TODO: Customize this mapping based on your provider's API response
+    update!(
+      current_balance: snapshot[:balance] || snapshot[:current_balance],
+      currency: parse_currency(snapshot[:currency]) || currency || "GBP",
+      name: snapshot[:name],
+      account_id: snapshot[:id]&.to_s,
+      account_status: snapshot[:status],
+      provider: snapshot[:provider],
+      institution_metadata: {
+        name: snapshot[:institution_name],
+        logo: snapshot[:institution_logo]
+      }.compact,
+      raw_payload: account_snapshot
+    )
+  end
+
+  def upsert_gocardless_transactions_snapshot!(transactions_snapshot)
+    assign_attributes(
+      raw_transactions_payload: transactions_snapshot
+    )
+
+    save!
+  end
+
+  private
+
+    def log_invalid_currency(currency_value)
+      Rails.logger.warn("Invalid currency code '#{currency_value}' for Gocardless account #{id} — GoCardless API should always return a valid ISO code; falling back to existing account currency")
+    end
+end

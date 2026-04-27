@@ -84,7 +84,8 @@ class Account::ProviderImportAdapter
           ActiveModel::Type::Boolean.new.cast(pending_extra.dig("simplefin", "pending")) ||
           ActiveModel::Type::Boolean.new.cast(pending_extra.dig("plaid", "pending")) ||
           ActiveModel::Type::Boolean.new.cast(pending_extra.dig("lunchflow", "pending")) ||
-          ActiveModel::Type::Boolean.new.cast(pending_extra.dig("enable_banking", "pending"))
+          ActiveModel::Type::Boolean.new.cast(pending_extra.dig("enable_banking", "pending")) ||
+          ActiveModel::Type::Boolean.new.cast(pending_extra.dig("gocardless", "pending"))
       end
 
       if entry.new_record? && !incoming_pending
@@ -697,6 +698,7 @@ class Account::ProviderImportAdapter
         OR (transactions.extra -> 'plaid' ->> 'pending')::boolean = true
         OR (transactions.extra -> 'lunchflow' ->> 'pending')::boolean = true
         OR (transactions.extra -> 'enable_banking' ->> 'pending')::boolean = true
+        OR (transactions.extra -> 'gocardless' ->> 'pending')::boolean = true
       SQL
       .order(date: :desc) # Prefer most recent pending transaction
 
@@ -744,6 +746,7 @@ class Account::ProviderImportAdapter
         OR (transactions.extra -> 'plaid' ->> 'pending')::boolean = true
         OR (transactions.extra -> 'lunchflow' ->> 'pending')::boolean = true
         OR (transactions.extra -> 'enable_banking' ->> 'pending')::boolean = true
+        OR (transactions.extra -> 'gocardless' ->> 'pending')::boolean = true
       SQL
 
     # If merchant_id is provided, prioritize matching by merchant
@@ -814,6 +817,7 @@ class Account::ProviderImportAdapter
         OR (transactions.extra -> 'plaid' ->> 'pending')::boolean = true
         OR (transactions.extra -> 'lunchflow' ->> 'pending')::boolean = true
         OR (transactions.extra -> 'enable_banking' ->> 'pending')::boolean = true
+        OR (transactions.extra -> 'gocardless' ->> 'pending')::boolean = true
       SQL
 
     # For low confidence, require BOTH merchant AND name match (stronger signal needed)

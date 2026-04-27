@@ -225,6 +225,26 @@ en:
         disconnect_confirm: "Are you sure you want to disconnect Binance?"
         status_connected: Binance connected
         status_not_connected: Binance not connected
+      gocardless_panel:
+        setup_instructions: "Setup instructions:"
+        step1_html: 'Get your free API credentials at <a href="https://bankaccountdata.gocardless.com" target="_blank" rel="noopener noreferrer" class="link">GoCardless Bank Account Data</a>'
+        step2: Enter your Secret ID and Secret Key below and click Save Configuration
+        step3: Once saved, search for your bank below and click to connect
+        step4: You will be redirected to your bank to authorise read-only access — then brought back here
+        step5: Bank connections expire after 90 days and will need re-authorising
+        coverage: "Coverage:"
+        coverage_banks: Supports 100+ banks across the UK and Europe including Barclays, HSBC, Lloyds, NatWest, Monzo, Starling and more
+        coverage_readonly: "Read-only access — GoCardless cannot move money"
+        coverage_history: Up to 24 months of transaction history on first sync
+        credentials_required: Credentials required
+        credentials_required_hint_html: Enter your Secret ID and Secret Key above and click <strong>Save Configuration</strong> to enable bank connections.
+        connected_banks: Connected banks
+        reauthorisation_required: Re-authorisation required
+        accounts_connected:
+          one: "%{count} account connected"
+          other: "%{count} accounts connected"
+        disconnect: Disconnect
+        disconnect_confirm: "Disconnect %{institution}? This will remove all synced accounts."
       enable_banking_panel:
         callback_url_instruction: "For the callback URL, use %{callback_url}."
         connection_error: Connection Error

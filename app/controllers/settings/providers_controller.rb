@@ -139,6 +139,7 @@ class Settings::ProvidersController < ApplicationController
       @lunchflow_items = Current.family.lunchflow_items.where.not(api_key: [ nil, "" ]).ordered.select(:id)
       @enable_banking_items = Current.family.enable_banking_items.ordered # Enable Banking panel needs session info for status display
       # Providers page only needs to know whether any Sophtron connections exist with valid credentials
+      @gocardless_items = Current.family.gocardless_items.active.ordered.includes(:gocardless_accounts)
       @sophtron_items = Current.family.sophtron_items.where.not(user_id: [ nil, "" ], access_key: [ nil, "" ]).ordered.select(:id)
       @coinstats_items = Current.family.coinstats_items.ordered # CoinStats panel needs account info for status display
       @mercury_items = Current.family.mercury_items.ordered.select(:id)
