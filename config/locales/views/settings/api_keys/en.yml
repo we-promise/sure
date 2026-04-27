@@ -11,6 +11,9 @@ en:
         read_balances: "View Balances"
         write_transactions: "Create Transactions"
     api_keys:
+      shared:
+        copy_key: "Copy API Key"
+        copied: "Copied!"
       show:
         title: "API Key Management"
         no_api_key:

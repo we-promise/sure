@@ -96,8 +96,10 @@ class Settings::ApiKeysTest < ApplicationSystemTestCase
 
     click_button "Copy API Key"
 
-    assert_selector 'span[data-clipboard-target="textSuccess"]', text: "Copied!", visible: true
-    assert_selector 'span[data-clipboard-target="iconSuccess"]', visible: true
+    using_wait_time 5 do
+      assert_selector 'span[data-clipboard-target="textSuccess"]', text: "Copied!", visible: true
+      assert_selector 'span[data-clipboard-target="iconSuccess"]', visible: true
+    end
   end
 
   test "should allow regenerating API key" do

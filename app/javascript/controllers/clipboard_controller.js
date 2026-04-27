@@ -2,6 +2,7 @@ import { Controller } from "@hotwired/stimulus";
 
 export default class extends Controller {
   static targets = ["source", "iconDefault", "iconSuccess", "textDefault", "textSuccess"];
+  static values = { successDuration: { type: Number, default: 2500 } };
 
   copy(event) {
     event.preventDefault();
@@ -29,7 +30,7 @@ export default class extends Controller {
       this.toggleTarget("iconSuccess", true);
       this.toggleTarget("textDefault", false);
       this.toggleTarget("textSuccess", true);
-    }, 2000);
+    }, this.successDurationValue);
   }
 
   disconnect() {
