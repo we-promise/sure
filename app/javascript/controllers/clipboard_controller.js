@@ -19,25 +19,31 @@ export default class extends Controller {
   }
 
   showSuccess() {
-    this.toggleTarget("iconDefault", true);
-    this.toggleTarget("iconSuccess", false);
-    this.toggleTarget("textDefault", true);
-    this.toggleTarget("textSuccess", false);
+    this._toggleTarget("iconDefault", true);
+    this._toggleTarget("iconSuccess", false);
+    this._toggleTarget("textDefault", true);
+    this._toggleTarget("textSuccess", false);
 
-    clearTimeout(this.resetTimeout);
+    this._clearResetTimeout();
     this.resetTimeout = setTimeout(() => {
-      this.toggleTarget("iconDefault", false);
-      this.toggleTarget("iconSuccess", true);
-      this.toggleTarget("textDefault", false);
-      this.toggleTarget("textSuccess", true);
+      this._toggleTarget("iconDefault", false);
+      this._toggleTarget("iconSuccess", true);
+      this._toggleTarget("textDefault", false);
+      this._toggleTarget("textSuccess", true);
+      this.resetTimeout = null;
     }, this.successDurationValue);
   }
 
   disconnect() {
-    clearTimeout(this.resetTimeout);
+    this._clearResetTimeout();
   }
 
-  toggleTarget(targetName, hide) {
+  _clearResetTimeout() {
+    clearTimeout(this.resetTimeout);
+    this.resetTimeout = null;
+  }
+
+  _toggleTarget(targetName, hide) {
     const hasTarget = this[`has${targetName[0].toUpperCase()}${targetName.slice(1)}Target`];
     if (!hasTarget) return;
 
