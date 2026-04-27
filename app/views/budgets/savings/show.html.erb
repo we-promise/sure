@@ -1,0 +1,6 @@
+<div class="p-6">
+  <h1 class="text-2xl font-medium">Savings — <%= @budget.start_date.strftime("%b %Y") %></h1>
+  <p class="text-secondary">Surplus: <%= @savings_summary.surplus %> / Allocated: <%= @savings_summary.allocated %> / Available: <%= @savings_summary.available %></p>
+  <p class="text-secondary">Active goals: <%= @savings_summary.active_goals.size %></p>
+  <p>Placeholder; real UI in step 6.</p>
+</div>

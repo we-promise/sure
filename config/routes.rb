@@ -236,6 +236,10 @@ Rails.application.routes.draw do
 
   resources :budgets, only: %i[index show edit update], param: :month_year do
     post :copy_previous, on: :member
+    scope module: "budgets" do
+      get "savings", to: "savings#show", as: "savings"
+      post "savings/auto_fund", to: "savings#auto_fund", as: "savings_auto_fund"
+    end
     get :picker, on: :collection
 
     resources :budget_categories, only: %i[index show update]
@@ -250,6 +254,17 @@ Rails.application.routes.draw do
   end
 
   get :exchange_rate, to: "exchange_rates#show"
+
+  resources :savings_goals do
+    member do
+      patch :pause
+      patch :resume
+      patch :complete
+      patch :archive
+      patch :unarchive
+    end
+    resources :contributions, only: %i[new create destroy], controller: "savings_contributions"
+  end
 
   resources :transfers, only: %i[new create destroy show update]
 
