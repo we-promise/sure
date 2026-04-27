@@ -26,7 +26,8 @@ class Family::AutoCategorizer
     result = llm_provider.auto_categorize(
       transactions: transactions_input,
       user_categories: categories_input,
-      family: family
+      family: family,
+      model: Provider::Openai.effective_background_model
     )
 
     unless result.success?
