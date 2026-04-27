@@ -26,27 +26,33 @@
 
     <div class="flex items-center gap-1 shrink-0">
       <%= render DS::Link.new(variant: "icon", icon: "pencil",
-            href: edit_savings_goal_path(@savings_goal)) %>
+            href: edit_savings_goal_path(@savings_goal),
+            title: "Edit", "aria-label": "Edit goal") %>
 
       <% if @savings_goal.may_pause? %>
         <%= render DS::Button.new(variant: "icon", icon: "pause",
-              href: pause_savings_goal_path(@savings_goal), method: :patch) %>
+              href: pause_savings_goal_path(@savings_goal), method: :patch,
+              title: "Pause", "aria-label": "Pause goal") %>
       <% end %>
       <% if @savings_goal.may_resume? %>
         <%= render DS::Button.new(variant: "icon", icon: "play",
-              href: resume_savings_goal_path(@savings_goal), method: :patch) %>
+              href: resume_savings_goal_path(@savings_goal), method: :patch,
+              title: "Resume", "aria-label": "Resume goal") %>
       <% end %>
       <% if @savings_goal.may_complete? %>
         <%= render DS::Button.new(variant: "icon", icon: "check",
-              href: complete_savings_goal_path(@savings_goal), method: :patch) %>
+              href: complete_savings_goal_path(@savings_goal), method: :patch,
+              title: "Mark complete", "aria-label": "Mark goal as complete") %>
       <% end %>
       <% if @savings_goal.may_archive? %>
         <%= render DS::Button.new(variant: "icon", icon: "archive",
-              href: archive_savings_goal_path(@savings_goal), method: :patch) %>
+              href: archive_savings_goal_path(@savings_goal), method: :patch,
+              title: "Archive", "aria-label": "Archive goal") %>
       <% end %>
       <% if @savings_goal.may_unarchive? %>
         <%= render DS::Button.new(variant: "icon", icon: "rotate-ccw",
-              href: unarchive_savings_goal_path(@savings_goal), method: :patch) %>
+              href: unarchive_savings_goal_path(@savings_goal), method: :patch,
+              title: "Restore", "aria-label": "Restore goal to active") %>
       <% end %>
 
       <%= render DS::Button.new(
@@ -55,7 +61,9 @@
             href: savings_goal_path(@savings_goal),
             method: :delete,
             confirm: CustomConfirm.for_resource_deletion(@savings_goal.name),
-            class: "[&_svg]:!text-destructive"
+            class: "[&_svg]:!text-destructive",
+            title: "Delete",
+            "aria-label": "Delete goal"
           ) %>
     </div>
   </div>
@@ -114,7 +122,9 @@
                   href: savings_goal_contribution_path(@savings_goal, c),
                   method: :delete,
                   confirm: CustomConfirm.for_resource_deletion("this contribution"),
-                  class: "[&_svg]:!text-destructive"
+                  class: "[&_svg]:!text-destructive",
+                  title: "Remove contribution",
+                  "aria-label": "Remove contribution"
                 ) %>
           </li>
         <% end %>

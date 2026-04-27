@@ -12,7 +12,7 @@
 </div>
 
 <nav class="flex bg-surface-inset p-1 rounded-lg mb-4 gap-1">
-  <% %w[active paused completed archived all].each do |state| %>
+  <% %w[all active paused completed archived].each do |state| %>
     <% active = (@state == state) %>
     <%= link_to state.titleize,
                 savings_goals_path(state: state),
@@ -31,7 +31,13 @@
   </div>
 <% else %>
   <div class="bg-container rounded-xl shadow-border-xs p-12 text-center">
-    <p class="text-primary font-medium">No <%= @state %> savings goals.</p>
+    <p class="text-primary font-medium">
+      <% if @state == "all" %>
+        No savings goals yet.
+      <% else %>
+        No <%= @state %> savings goals.
+      <% end %>
+    </p>
     <p class="text-secondary text-sm mt-1">Set one up to start earmarking money in your asset accounts.</p>
     <div class="mt-4">
       <%= render DS::Link.new(text: "New goal", icon: "plus", variant: "primary", href: new_savings_goal_path) %>

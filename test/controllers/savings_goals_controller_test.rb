@@ -7,10 +7,12 @@ class SavingsGoalsControllerTest < ActionDispatch::IntegrationTest
     @account = accounts(:depository)
   end
 
-  test "index lists active goals by default" do
+  test "index lists all goals by default" do
     get savings_goals_path
     assert_response :success
     assert_select "body", text: /#{@goal.name}/
+    # Completed goals should also appear under the default "all" filter
+    assert_select "body", text: /#{savings_goals(:paid_off_car).name}/
   end
 
   test "index supports state filter" do
