@@ -79,7 +79,7 @@ class Settings::ApiKeysTest < ApplicationSystemTestCase
     visit settings_api_key_path
 
     assert_text "How to use your API key"
-    assert_text "curl -H \"X-Api-Key: <YOUR_API_KEY>\""
+    assert_text "curl -H \"X-Api-Key: test_key_123\""
     assert_text "/api/v1/accounts"
   end
 
