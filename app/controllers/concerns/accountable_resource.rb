@@ -48,7 +48,7 @@ module AccountableResource
       @account.lock_saved_attributes!
     end
 
-    redirect_to account_params[:return_to].presence || @account, notice: t("accounts.create.success", type: accountable_type.name.underscore.humanize)
+    redirect_to safe_return_to_path || @account, notice: t("accounts.create.success", type: accountable_type.name.underscore.humanize)
   end
 
   def update
@@ -96,6 +96,31 @@ module AccountableResource
     def set_manageable_account
       @account = Current.user.accessible_accounts.find(params[:id])
       require_account_permission!(@account)
+    end
+
+    # Sanitize return_to parameter to prevent XSS/open-redirect attacks.
+    # Only allow internal relative paths (single leading "/"), and reject any scheme/host.
+    # Accepts return_to from either the top-level params or nested account_params.
+    def safe_return_to_path
+      raw = params[:return_to].presence || params.dig(:account, :return_to).presence
+      return nil if raw.blank?
+
+      return_to = raw.to_s
+
+      # Reject protocol-relative URLs like "//evil.example.com/path" that browsers
+      # treat as cross-origin even though they pass a naive start_with?("/") check.
+      return nil if return_to.start_with?("//")
+      return nil unless return_to.start_with?("/")
+
+      begin
+        uri = URI.parse(return_to)
+      rescue URI::InvalidURIError
+        return nil
+      end
+
+      return nil if uri.scheme.present? || uri.host.present?
+
+      return_to
     end
 
     def account_params

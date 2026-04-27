@@ -33,11 +33,21 @@ class Import::MappingsController < ApplicationController
       mapping_params[:mappable_id] == mapping_class::CREATE_NEW_KEY
     end
 
+    ALLOWED_MAPPABLE_TYPES = %w[Category Tag Account].freeze
+    ALLOWED_MAPPING_TYPES = %w[
+      Import::CategoryMapping Import::TagMapping
+      Import::AccountMapping Import::AccountTypeMapping
+    ].freeze
+
     def mappable_class
-      mapping_params[:mappable_type]&.constantize
+      type = mapping_params[:mappable_type]
+      return nil unless type.present? && ALLOWED_MAPPABLE_TYPES.include?(type)
+      type.constantize
     end
 
     def mapping_class
-      mapping_params[:type]&.constantize
+      type = mapping_params[:type]
+      return nil unless type.present? && ALLOWED_MAPPING_TYPES.include?(type)
+      type.constantize
     end
 end
