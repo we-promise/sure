@@ -19,17 +19,11 @@ export default class extends Controller {
   }
 
   showSuccess() {
-    this._toggleTarget("iconDefault", true);
-    this._toggleTarget("iconSuccess", false);
-    this._toggleTarget("textDefault", true);
-    this._toggleTarget("textSuccess", false);
+    this._setSuccessState(true);
 
     this._clearResetTimeout();
     this.resetTimeout = setTimeout(() => {
-      this._toggleTarget("iconDefault", false);
-      this._toggleTarget("iconSuccess", true);
-      this._toggleTarget("textDefault", false);
-      this._toggleTarget("textSuccess", true);
+      this._setSuccessState(false);
       this.resetTimeout = null;
     }, this.successDurationValue);
   }
@@ -43,10 +37,15 @@ export default class extends Controller {
     this.resetTimeout = null;
   }
 
-  _toggleTarget(targetName, hide) {
-    const hasTarget = this[`has${targetName[0].toUpperCase()}${targetName.slice(1)}Target`];
-    if (!hasTarget) return;
+  _setSuccessState(successVisible) {
+    this._toggleIfTargetExists(this.hasIconDefaultTarget, this.iconDefaultTarget, successVisible);
+    this._toggleIfTargetExists(this.hasIconSuccessTarget, this.iconSuccessTarget, !successVisible);
+    this._toggleIfTargetExists(this.hasTextDefaultTarget, this.textDefaultTarget, successVisible);
+    this._toggleIfTargetExists(this.hasTextSuccessTarget, this.textSuccessTarget, !successVisible);
+  }
 
-    this[`${targetName}Target`].classList.toggle("hidden", hide);
+  _toggleIfTargetExists(hasTarget, target, hide) {
+    if (!hasTarget) return;
+    target.classList.toggle("hidden", hide);
   }
 }
