@@ -98,7 +98,12 @@
                 data-action="clipboard#copy"
                 class="p-2 text-secondary hover:text-primary shrink-0"
                 title="Copy to clipboard">
-          <%= icon "copy", class: "w-4 h-4" %>
+          <span data-clipboard-target="iconDefault">
+            <%= icon "copy", class: "w-4 h-4" %>
+          </span>
+          <span class="hidden" data-clipboard-target="iconSuccess">
+            <%= icon "check", class: "w-4 h-4" %>
+          </span>
         </button>
       </div>
       <p class="text-xs text-secondary mt-1">Configure this URL in your identity provider</p>
@@ -182,7 +187,12 @@
                 data-action="clipboard#copy"
                 class="p-2 text-secondary hover:text-primary shrink-0"
                 title="Copy to clipboard">
-          <%= icon "copy", class: "w-4 h-4" %>
+          <span data-clipboard-target="iconDefault">
+            <%= icon "copy", class: "w-4 h-4" %>
+          </span>
+          <span class="hidden" data-clipboard-target="iconSuccess">
+            <%= icon "check", class: "w-4 h-4" %>
+          </span>
         </button>
       </div>
       <p class="text-xs text-secondary mt-1">Configure this URL as the Assertion Consumer Service URL in your IdP</p>
