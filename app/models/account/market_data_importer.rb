@@ -53,21 +53,38 @@ class Account::MarketDataImporter
 
     securities = Security.online.where(id: all_security_ids).index_by(&:id)
 
-    start_dates       = batch_first_required_price_dates(all_security_ids)
+    start_dates    = batch_first_required_price_dates(all_security_ids)
+    historical_ids = traded_security_ids - current_security_ids.to_a
 
     # For securities no longer held, cap end_date at the last holding date so
     # all_prices_exist? stays stable and we don't call the provider every sync.
-    historical_ids    = traded_security_ids - current_security_ids.to_a
     last_holding_date = account.holdings
                                .where(security_id: historical_ids)
                                .group(:security_id)
                                .maximum(:date)
 
+    # import_market_data runs before materialize_balances in Account::Syncer, so
+    # current_holdings can reflect a stale pre-trade snapshot. If a historical
+    # security has a trade newer than its last holding date the position was
+    # reopened this sync; fetch prices through today so the forthcoming
+    # materialization has a price available.
+    latest_trade_date = account.trades
+                               .where(security_id: historical_ids)
+                               .group(:security_id)
+                               .maximum("entries.date")
+
     all_security_ids.each do |security_id|
       security = securities[security_id]
       next unless security
 
-      end_date = current_security_ids.include?(security_id) ? Date.current : (last_holding_date[security_id] || Date.current)
+      end_date = if current_security_ids.include?(security_id)
+        Date.current
+      else
+        holding_date = last_holding_date[security_id]
+        trade_date   = latest_trade_date[security_id]
+        reopened     = trade_date && holding_date && trade_date > holding_date
+        reopened ? Date.current : (holding_date || Date.current)
+      end
 
       security.import_provider_prices(start_date: start_dates[security_id], end_date: end_date)
       security.import_provider_details
