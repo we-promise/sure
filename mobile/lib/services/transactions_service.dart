@@ -123,12 +123,12 @@ class TransactionsService {
           final responseData = jsonDecode(response.body);
           return {
             'success': false,
-            'error': responseData['error'] ?? 'Failed to update transaction',
+            'error': responseData['error'] ?? AppErrors.transactionUpdateFailed,
           };
         } catch (e) {
           return {
             'success': false,
-            'error': 'Failed to update transaction: ${response.body}',
+            'error': AppErrors.transactionUpdateFailed,
           };
         }
       }

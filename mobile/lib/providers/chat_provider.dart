@@ -137,13 +137,13 @@ class ChatProvider with ChangeNotifier {
         notifyListeners();
         return _currentChat!;
       } else {
-        _errorMessage = result['error'] ?? AppErrors.chatLoadFailed;
+        _errorMessage = result['error'] ?? AppErrors.chatCreateFailed;
         _isLoading = false;
         notifyListeners();
         return null;
       }
     } catch (e) {
-      _errorMessage = 'Error: ${e.toString()}';
+      _errorMessage = AppErrors.chatCreateFailed;
       _isLoading = false;
       notifyListeners();
       return null;

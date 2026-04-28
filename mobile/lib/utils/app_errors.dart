@@ -27,6 +27,7 @@ class AppErrors {
   static const String messageSendFailed = ErrorStrings.messageSendFailed;
   static const String aiResponseTimeout = ErrorStrings.aiResponseTimeout;
   static const String aiFeatureDisabled = ErrorStrings.aiFeatureDisabled;
+  static const String chatCreateFailed = ErrorStrings.chatCreateFailed;
   static const String chatDeleteFailed = ErrorStrings.chatDeleteFailed;
   static const String chatUpdateFailed = ErrorStrings.chatUpdateFailed;
 

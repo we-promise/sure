@@ -22,6 +22,7 @@ class ErrorStrings {
   static const String messageSendFailed = 'Your message couldn\'t be sent. Please try again.';
   static const String aiResponseTimeout = 'The AI didn\'t respond in time. You can retry or start a new chat.';
   static const String aiFeatureDisabled = 'AI chat isn\'t enabled on your account yet. Contact support to get access.';
+  static const String chatCreateFailed = 'We couldn\'t start a new conversation. Please try again.';
   static const String chatDeleteFailed = 'We couldn\'t delete this conversation. Please try again.';
   static const String chatUpdateFailed = 'We couldn\'t update this conversation. Please try again.';
 
