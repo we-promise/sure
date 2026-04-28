@@ -157,14 +157,12 @@ jobs:
           ARCHIVE_PATH="$RUNNER_TEMP/Runner.xcarchive"
           EXPORT_PATH="$PWD/build/ios/ipa"
           EXPORT_PLIST="$RUNNER_TEMP/ExportOptions.plist"
-          PBXPROJ="ios/Runner.xcodeproj/project.pbxproj"
-
           python3 <<'PY'
           import os
           import re
           from pathlib import Path
 
-          path = Path(os.environ["PBXPROJ"])
+          path = Path("ios/Runner.xcodeproj/project.pbxproj")
           text = path.read_text()
 
           team = os.environ["IOS_TEAM_ID"]
