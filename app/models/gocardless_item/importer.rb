@@ -78,7 +78,10 @@ class GocardlessItem::Importer
 
       return unless bal
 
-      amount   = bal.dig("balanceAmount", "amount").to_d
+      raw_amount = bal.dig("balanceAmount", "amount")
+      return if raw_amount.blank?
+
+      amount   = raw_amount.to_d
       currency = bal.dig("balanceAmount", "currency").presence || gc_account.currency
 
       gc_account.update!(current_balance: amount, currency: currency)
@@ -126,13 +129,17 @@ class GocardlessItem::Importer
         id.present? && existing_ids.include?(id)
       end
 
-      # For pending, always replace with the freshest set (pending statuses change rapidly)
+      # For pending, always replace with the freshest set (pending statuses change rapidly).
+      # Track whether any pending entries existed before removal so we can detect
+      # cancellations — where pending disappears without a matching booked transaction.
+      had_pending = existing_payload.any? { |t| t["_pending"] }
       existing_payload.reject! { |t| t["_pending"] }
       new_transactions = new_booked + pending
 
       combined = filter_by_date(existing_payload + new_transactions, start_date)
 
-      if combined.length != existing_payload.length || new_transactions.any?
+      pending_changed = had_pending || pending.any?
+      if pending_changed || new_transactions.any? || combined.length != existing_payload.length
         gc_account.update!(raw_transactions_payload: combined)
       end
 

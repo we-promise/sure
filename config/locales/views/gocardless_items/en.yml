@@ -20,6 +20,8 @@ en:
       setup_step4: Click Save Configuration
       setup_step5: Return here to connect your bank
       go_to_settings: Go to Provider Settings
+      country_label: Select country
+      search_label: Search for your bank
     no_banks_connected:
       title: GoCardless
       no_banks_connected: No banks connected

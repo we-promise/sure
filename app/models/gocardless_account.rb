@@ -8,7 +8,7 @@ class GocardlessAccount < ApplicationRecord
   has_one :account, through: :account_provider, source: :account
   has_one :linked_account, through: :account_provider, source: :account
 
-  validates :name, :currency, presence: true
+  validates :name, presence: true
 
   scope :active,   -> { where(skipped: false) }
   scope :skipped,  -> { where(skipped: true) }
@@ -28,7 +28,7 @@ class GocardlessAccount < ApplicationRecord
     # TODO: Customize this mapping based on your provider's API response
     update!(
       current_balance: snapshot[:balance] || snapshot[:current_balance],
-      currency: parse_currency(snapshot[:currency]) || currency || "GBP",
+      currency: parse_currency(snapshot[:currency]) || currency,
       name: snapshot[:name],
       account_id: snapshot[:id]&.to_s,
       account_status: snapshot[:status],

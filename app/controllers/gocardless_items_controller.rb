@@ -250,8 +250,12 @@ class GocardlessItemsController < ApplicationController
           next
         end
 
+        if selected_type.blank? || selected_type == "skip"
+          gc_account.update!(skipped: true)
+          next
+        end
+
         gc_account.update!(skipped: false) if gc_account.skipped?
-        next if selected_type.blank? || selected_type == "skip"
         next if gc_account.account_provider.present?
 
         selected_subtype = account_subtypes[gc_account_id]

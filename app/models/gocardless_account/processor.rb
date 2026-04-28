@@ -23,11 +23,13 @@ class GocardlessAccount::Processor
     end
 
     account = gocardless_account.current_account
-    is_first_sync = !account.entries.where(source: "gocardless").exists?
+    is_first_sync   = !account.entries.where(source: "gocardless").exists?
+    has_other_data  = account.entries.where.not(source: "gocardless").exists?
 
-    process_transactions
+    tx_result = process_transactions
 
-    if is_first_sync && gocardless_account.current_balance.present? && account.asset?
+    if is_first_sync && tx_result[:success] && !has_other_data &&
+       gocardless_account.current_balance.present? && account.asset?
       recalculate_opening_anchor(account)
     end
   end

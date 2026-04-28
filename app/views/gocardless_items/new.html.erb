@@ -32,11 +32,15 @@
             <div class="border-t border-primary pt-3">
               <p class="text-sm font-medium text-primary mb-2"><%= t(".add_another_bank") %></p>
               <div data-controller="gocardless-bank-search" class="space-y-2">
+                <label class="sr-only" for="country_add"><%= t(".country_label") %></label>
                 <%= select_tag :country,
                       options_for_select(@countries.map { |code, name| [name, code] }, "gb"),
+                      id: "country_add",
                       class: "w-full appearance-none bg-container border border-primary rounded-lg px-3 py-2 text-sm text-primary focus:outline-none focus:ring-1 focus:ring-primary",
                       data: { action: "change->gocardless-bank-search#updateCountry" } %>
+                <label class="sr-only" for="bank_search_add"><%= t(".search_label") %></label>
                 <input type="text"
+                       id="bank_search_add"
                        placeholder="<%= t(".search_placeholder") %>"
                        class="w-full px-3 py-2 text-sm border border-primary rounded-lg bg-transparent text-primary placeholder:text-secondary focus:outline-none focus:ring-1 focus:ring-primary"
                        autocomplete="off"
@@ -51,11 +55,15 @@
             <p class="text-sm text-secondary">
               <%= t(".search_hint") %>
             </p>
+            <label class="sr-only" for="country_new"><%= t(".country_label") %></label>
             <%= select_tag :country,
                   options_for_select(@countries.map { |code, name| [name, code] }, "gb"),
+                  id: "country_new",
                   class: "w-full appearance-none bg-container border border-primary rounded-lg px-3 py-2 text-sm text-primary focus:outline-none focus:ring-1 focus:ring-primary",
                   data: { action: "change->gocardless-bank-search#updateCountry" } %>
+            <label class="sr-only" for="bank_search_new"><%= t(".search_label") %></label>
             <input type="text"
+                   id="bank_search_new"
                    placeholder="<%= t(".search_placeholder") %>"
                    class="w-full px-3 py-2 text-sm border border-primary rounded-lg bg-transparent text-primary placeholder:text-secondary focus:outline-none focus:ring-1 focus:ring-primary"
                    autocomplete="off"
