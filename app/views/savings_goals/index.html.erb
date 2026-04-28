@@ -15,12 +15,13 @@
 <nav class="flex bg-surface-inset p-1 rounded-lg mb-4 gap-1">
   <% %w[all active paused completed archived].each do |state| %>
     <% active = (@state == state) %>
-    <%= link_to t(".tabs.#{state}"),
-                savings_goals_path(state: state),
+    <%= link_to savings_goals_path(state: state),
                 class: class_names(
-                  "flex-1 inline-flex justify-center items-center text-sm font-medium px-2 py-1 rounded-md transition-colors duration-200",
+                  "flex-1 min-w-0 inline-flex justify-center items-center text-sm font-medium px-2 py-1 rounded-md transition-colors duration-200",
                   active ? "bg-white theme-dark:bg-gray-700 text-primary shadow-sm" : "text-secondary hover:bg-surface-inset-hover"
-                ) %>
+                ) do %>
+      <span class="truncate"><%= t(".tabs.#{state}") %></span>
+    <% end %>
   <% end %>
 </nav>
 

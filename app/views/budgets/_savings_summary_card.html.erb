@@ -3,7 +3,7 @@
 <%= content_tag :div, class: "w-full bg-container rounded-xl shadow-border-xs p-4" do %>
   <div class="flex items-center justify-between gap-3 flex-wrap mb-4">
     <h2 class="text-lg font-medium shrink-0"><%= t("budgets.savings.summary_card.title") %></h2>
-    <div class="flex items-center gap-2">
+    <div class="flex items-center gap-2 flex-wrap">
       <%= render DS::Link.new(
         text: t("budgets.savings.summary_card.manage"),
         variant: "secondary",
