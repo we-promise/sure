@@ -14,16 +14,20 @@
   <%= f.text_field :name,
         label: t("savings_goals.form.name.label"),
         required: true,
+        autofocus: true,
         placeholder: t("savings_goals.form.name.placeholder") %>
 
   <%= f.collection_select :account_id, backing_accounts, :id, :name,
         { label: t("savings_goals.form.account.label"),
           required: true,
-          prompt: t("savings_goals.form.account.prompt") } %>
+          prompt: t("savings_goals.form.account.prompt"),
+          variant: :logo },
+        class: "form-field__input text-ellipsis" %>
 
   <%= f.money_field :target_amount,
         label: t("savings_goals.form.target_amount.label"),
-        required: true %>
+        required: true,
+        disable_currency: true %>
 
   <%= f.date_field :target_date,
         label: t("savings_goals.form.target_date.label") %>

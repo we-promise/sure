@@ -84,6 +84,7 @@ The application is built around financial data management with these key relatio
 - **Account** types: checking, savings, credit cards, investments, crypto, loans, properties
 - **Transaction** → belongs to **Category**, can have **Tags** and **Rules**
 - **Investment accounts** → have **Holdings** → track **Securities** via **Trades**
+- **Family** → has many **Budgets** (per month) and **Savings Goals** → which receive **Savings Contributions** (sources: initial / manual / auto)
 
 ### API Architecture
 The application provides both internal and external APIs:

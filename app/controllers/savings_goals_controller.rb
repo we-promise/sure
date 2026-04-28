@@ -15,7 +15,7 @@ class SavingsGoalsController < ApplicationController
   end
 
   def new
-    @savings_goal = Current.family.savings_goals.new(state: "active")
+    @savings_goal = Current.family.savings_goals.new(state: "active", currency: Current.family.currency)
   end
 
   def create

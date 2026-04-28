@@ -12,8 +12,15 @@
         </div>
       <% end %>
 
-      <%= f.money_field :amount, label: t("savings_contributions.new.amount"), required: true %>
-      <%= f.date_field :contributed_at, label: t("savings_contributions.new.date"), required: true %>
+      <%= f.money_field :amount,
+            label: t("savings_contributions.new.amount"),
+            required: true,
+            disable_currency: true,
+            currency_value_override: @savings_goal.currency %>
+      <%= f.date_field :contributed_at,
+            label: t("savings_contributions.new.date"),
+            required: true,
+            max: Date.current %>
       <%= f.text_area :notes, label: t("savings_contributions.new.notes"), rows: 2 %>
 
       <div class="flex items-center justify-end gap-2">
