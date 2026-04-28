@@ -19,7 +19,7 @@
         href: new_savings_goal_path,
         frame: :modal
       ) %>
-      <% if summary.active_goals.any? && summary.surplus.to_d.positive? %>
+      <% if summary.fundable_goals.any? && summary.surplus.to_d.positive? %>
         <%= render DS::Button.new(
           text: t("budgets.savings.auto_fund.button"),
           variant: "outline",

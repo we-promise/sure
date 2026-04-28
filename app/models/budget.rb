@@ -8,6 +8,7 @@ class Budget < ApplicationRecord
   belongs_to :family
 
   has_many :budget_categories, -> { includes(:category) }, dependent: :destroy
+  has_many :savings_contributions
 
   validates :start_date, :end_date, presence: true
   validates :start_date, :end_date, uniqueness: { scope: :family_id }

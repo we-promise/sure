@@ -68,4 +68,38 @@ class SavingsContributionTest < ActiveSupport::TestCase
     assert_equal 1, @goal.savings_contributions.manual.count
     assert_equal 0, @goal.savings_contributions.auto.count
   end
+
+  test "destroying a budget cascades to its auto contributions" do
+    budget = budgets(:one)
+    contribution = SavingsContribution.create!(
+      savings_goal: @goal, budget: budget, amount: 50,
+      currency: "USD", source: "auto", contributed_at: Date.current
+    )
+    budget.destroy
+    assert_raises(ActiveRecord::RecordNotFound) { contribution.reload }
+  end
+
+  test "destroying a family with auto contributions does not raise FK errors" do
+    # Build an isolated family so we sidestep the dylan_family fixture's
+    # Plaid items (whose teardown hits external APIs in some envs). What
+    # we care about is the FK between savings_contributions and budgets.
+    family = Family.create!(name: "Throwaway", locale: "en", date_format: "%Y-%m-%d", currency: "USD")
+    account = family.accounts.create!(
+      name: "Pot", balance: 100, currency: "USD", accountable: Depository.new
+    )
+    goal = family.savings_goals.create!(
+      account: account, name: "G", target_amount: 100,
+      target_date: 6.months.from_now.to_date, state: "active"
+    )
+    budget = family.budgets.create!(
+      start_date: Date.current.beginning_of_month,
+      end_date: Date.current.end_of_month,
+      currency: "USD"
+    )
+    SavingsContribution.create!(
+      savings_goal: goal, budget: budget, amount: 10,
+      currency: "USD", source: "auto", contributed_at: Date.current
+    )
+    assert_nothing_raised { family.destroy }
+  end
 end

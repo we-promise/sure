@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_04_27_194701) do
+ActiveRecord::Schema[7.2].define(version: 2026_04_28_100000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -1739,7 +1739,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_04_27_194701) do
   add_foreign_key "rule_conditions", "rules"
   add_foreign_key "rule_runs", "rules"
   add_foreign_key "rules", "families"
-  add_foreign_key "savings_contributions", "budgets"
+  add_foreign_key "savings_contributions", "budgets", on_delete: :cascade
   add_foreign_key "savings_contributions", "savings_goals"
   add_foreign_key "savings_goals", "accounts"
   add_foreign_key "savings_goals", "families"

@@ -90,4 +90,27 @@ class FamilySavingsSummaryTest < ActiveSupport::TestCase
     assert_kind_of Money, summary.allocated_money
     assert_kind_of Money, summary.available_money
   end
+
+  test "fundable_goals excludes active goals without a target_date" do
+    undated = @family.savings_goals.create!(
+      account: accounts(:depository),
+      name: "Some-day fund",
+      target_amount: 1_000,
+      target_date: nil,
+      state: "active"
+    )
+    fresh = Family.find(@family.id)
+    summary = fresh.savings_summary_for(@budget)
+    assert_includes summary.active_goals, undated, "active_goals still includes undated goals"
+    assert_not_includes summary.fundable_goals, undated, "fundable_goals must skip undated goals"
+    assert summary.fundable_goals.all? { |g| g.monthly_target_amount.to_d.positive? }
+  end
+
+  test "fundable_goals is empty when every active goal is undated" do
+    @family.savings_goals.where(state: "active").update_all(target_date: nil)
+    fresh = Family.find(@family.id)
+    summary = fresh.savings_summary_for(@budget)
+    assert summary.active_goals.any?
+    assert_empty summary.fundable_goals
+  end
 end
