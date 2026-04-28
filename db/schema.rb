@@ -648,7 +648,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_04_25_120000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.boolean "skipped", default: false, null: false
-    t.index ["account_id"], name: "index_gocardless_accounts_on_account_id"
+    t.index ["gocardless_item_id", "account_id"], name: "index_gocardless_accounts_on_item_and_account_id", unique: true, where: "(account_id IS NOT NULL)"
     t.index ["gocardless_item_id"], name: "index_gocardless_accounts_on_gocardless_item_id"
     t.index ["skipped"], name: "index_gocardless_accounts_on_skipped"
   end

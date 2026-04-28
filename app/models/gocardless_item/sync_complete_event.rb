@@ -25,7 +25,7 @@ class GocardlessItem::SyncCompleteEvent
     )
 
     # Update the Settings > Providers panel
-    gocardless_items = family.gocardless_items.active.ordered
+    gocardless_items = family.gocardless_items.active.ordered.includes(:gocardless_accounts)
     gocardless_item.broadcast_replace_to(
       family,
       target: "gocardless-providers-panel",

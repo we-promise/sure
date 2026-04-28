@@ -188,6 +188,7 @@ en:
     providers:
       show:
         coinbase_title: Coinbase
+        gocardless_title: "GoCardless — Open Banking (beta)"
       encryption_error:
         title: Encryption Configuration Required
         message: Active Record encryption keys are not configured. Please ensure the encryption credentials (active_record_encryption.primary_key, active_record_encryption.deterministic_key, and active_record_encryption.key_derivation_salt) are properly set up in your Rails credentials or environment variables before using sync providers.

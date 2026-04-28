@@ -96,6 +96,8 @@ class Provider::Gocardless
       @connection ||= Faraday.new do |f|
         f.headers["Content-Type"] = "application/json"
         f.headers["Accept"]       = "application/json"
+        f.options.open_timeout = 5
+        f.options.timeout      = 20
       end
     end
 

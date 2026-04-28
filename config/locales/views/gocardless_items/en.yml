@@ -1,0 +1,36 @@
+---
+en:
+  gocardless_items:
+    new:
+      title: Link with GoCardless
+      reauthorisation_required: Re-authorisation required
+      add_another_bank: Add another bank
+      search_placeholder: Search for your bank...
+      search_hint: >
+        Select your country and search for your bank below. You will be
+        redirected to authorise read-only access, then brought back here.
+      not_configured_title: GoCardless not configured
+      not_configured_hint: >
+        Before you can link your bank account, you need to configure your
+        GoCardless credentials in Settings.
+      setup_steps_title: "Setup steps:"
+      setup_step1_html: 'Go to <strong>Settings → Providers</strong>'
+      setup_step2_html: 'Find the <strong>GoCardless — Open Banking</strong> section'
+      setup_step3: Enter your Secret ID and Secret Key
+      setup_step4: Click Save Configuration
+      setup_step5: Return here to connect your bank
+      go_to_settings: Go to Provider Settings
+    no_banks_connected:
+      title: GoCardless
+      no_banks_connected: No banks connected
+      hint: Connect your bank account to start syncing transactions automatically.
+      connect_bank: Connect a bank
+    subtype_select:
+      select_subtype: Select subtype
+      select_type: Select type
+    select_existing_account:
+      title: Link GoCardless account
+      no_accounts: No GoCardless accounts available to link.
+      no_accounts_hint1_html: 'Connect a bank first via <strong>Settings → Providers → GoCardless</strong>'
+      no_accounts_hint2: If you just connected, wait for the sync to complete then try again
+      balance_label: Balance

@@ -1,14 +1,14 @@
 <%= turbo_frame_tag "modal" do %>
   <%= render DS::Dialog.new do |dialog| %>
-    <% dialog.with_header(title: "Link GoCardless account") %>
+    <% dialog.with_header(title: t(".title")) %>
 
     <% dialog.with_body do %>
       <% if @gocardless_accounts.blank? %>
         <div class="p-4 text-sm text-secondary">
-          <p class="mb-2">No GoCardless accounts available to link.</p>
+          <p class="mb-2"><%= t(".no_accounts") %></p>
           <ul class="list-disc list-inside space-y-1">
-            <li>Connect a bank first via Settings → Providers → GoCardless</li>
-            <li>If you just connected, wait for the sync to complete then try again</li>
+            <li><%= t(".no_accounts_hint1_html").html_safe %></li>
+            <li><%= t(".no_accounts_hint2") %></li>
           </ul>
         </div>
       <% else %>
@@ -19,14 +19,14 @@
           <div class="space-y-2 max-h-64 overflow-auto">
             <% @gocardless_accounts.each do |gc_account| %>
               <label class="flex items-center gap-3 p-2 rounded border border-surface-inset/50 hover:border-primary cursor-pointer">
-                <%= radio_button_tag :gocardless_account_id, gc_account.id, false %>
+                <%= radio_button_tag :gocardless_account_id, gc_account.id, false, required: true %>
                 <div class="flex flex-col">
                   <span class="text-sm text-primary font-medium">
                     <%= gc_account.name.presence || gc_account.account_id %>
                   </span>
                   <span class="text-xs text-secondary">
                     <%= gc_account.currency %> ·
-                    Balance: <%= number_to_currency((gc_account.current_balance || 0), unit: gc_account.currency) %>
+                    <%= t(".balance_label") %>: <%= number_to_currency((gc_account.current_balance || 0), unit: gc_account.currency) %>
                   </span>
                 </div>
               </label>

@@ -61,7 +61,10 @@ class CreateGocardlessTables < ActiveRecord::Migration[7.2]
       t.timestamps
     end
 
-    add_index :gocardless_accounts, :account_id
+    add_index :gocardless_accounts, [ :gocardless_item_id, :account_id ],
+              unique: true,
+              where: "account_id IS NOT NULL",
+              name: "index_gocardless_accounts_on_item_and_account_id"
     add_index :gocardless_accounts, :skipped
   end
 end

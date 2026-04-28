@@ -11,7 +11,9 @@ class GocardlessItemsController < ApplicationController
   def create
     Current.family.gocardless_items
            .where(pending_account_setup: true)
-           .where("created_at < ?", 1.hour.ago)
+           .where("created_at < ?", 24.hours.ago)
+           .left_outer_joins(:gocardless_accounts)
+           .where(gocardless_accounts: { id: nil })
            .destroy_all
 
     sdk = Provider::GocardlessAdapter.sdk
@@ -92,7 +94,7 @@ class GocardlessItemsController < ApplicationController
       # pot_ prefix = Monzo savings pot; use a descriptive fallback when details unavailable.
       is_pot   = gc_account_id.to_s.start_with?("pot_")
       name     = is_pot ? "Savings Pot" : item.institution_name
-      currency = "GBP"
+      currency = nil   # filled in from API; stays nil if unavailable — never default to GBP
       balance  = nil  # nil = not yet fetched; Processor skips set_current_balance when nil
 
       begin
@@ -249,7 +251,7 @@ class GocardlessItemsController < ApplicationController
         end
 
         gc_account.update!(skipped: false) if gc_account.skipped?
-        next if selected_type.blank?
+        next if selected_type.blank? || selected_type == "skip"
         next if gc_account.account_provider.present?
 
         selected_subtype = account_subtypes[gc_account_id]
@@ -266,7 +268,7 @@ class GocardlessItemsController < ApplicationController
             family:                 Current.family,
             name:                   gc_account.name,
             balance:                gc_account.current_balance || 0,
-            currency:               gc_account.currency || "GBP",
+            currency:               gc_account.currency || Current.family.currency,
             accountable_type:       selected_type,
             accountable_attributes: selected_subtype.present? ? { subtype: selected_subtype } : {}
           },
@@ -354,7 +356,7 @@ class GocardlessItemsController < ApplicationController
       item.gocardless_accounts.create!(
         account_id: gc_account_id,
         name:       item.institution_name,
-        currency:   "GBP"
+        currency:   nil
       )
     end
 

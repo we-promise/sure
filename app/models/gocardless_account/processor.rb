@@ -79,7 +79,8 @@ class GocardlessAccount::Processor
       result = Account::OpeningBalanceManager.new(account).set_opening_balance(balance: opening_balance)
 
       if result.success?
-        Rails.logger.info "GocardlessAccount::Processor - Opening anchor set to #{opening_balance} (current_balance=#{gocardless_account.current_balance}, tx_sum=#{tx_sum})"
+        Rails.logger.info "GocardlessAccount::Processor - Opening anchor set for gocardless_account #{gocardless_account.id}"
+        Rails.logger.debug "GocardlessAccount::Processor - anchor detail: opening_balance=#{opening_balance}, current_balance=#{gocardless_account.current_balance}, tx_sum=#{tx_sum}"
       else
         Rails.logger.warn "GocardlessAccount::Processor - Could not set opening anchor: #{result.error}"
       end

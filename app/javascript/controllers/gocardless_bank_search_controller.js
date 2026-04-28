@@ -6,10 +6,13 @@ export default class extends Controller {
 
   connect() {
     this.searchTimeout = null
+    this.abortController = null
+    this.requestToken = 0
   }
 
   disconnect() {
     clearTimeout(this.searchTimeout)
+    this.abortController?.abort()
   }
 
   updateCountry(event) {
@@ -32,6 +35,10 @@ export default class extends Controller {
   }
 
   async fetchBanks(query) {
+    this.abortController?.abort()
+    const token = ++this.requestToken
+    this.abortController = new AbortController()
+
     this.resultsTarget.innerHTML = `
       <p class="text-xs text-secondary px-1">Searching...</p>
     `
@@ -39,8 +46,10 @@ export default class extends Controller {
     try {
       const response = await fetch(
         `/gocardless_items/search_banks?q=${encodeURIComponent(query)}&country=${encodeURIComponent(this.countryValue)}`,
-        { headers: { "Accept": "application/json" } }
+        { headers: { "Accept": "application/json" }, signal: this.abortController.signal }
       )
+
+      if (token !== this.requestToken) return
 
       if (!response.ok) {
         throw new Error(`Server error: ${response.status}`)
@@ -74,6 +83,7 @@ export default class extends Controller {
       `).join("")
 
     } catch (e) {
+      if (e.name === "AbortError") return
       this.resultsTarget.innerHTML = `
         <p class="text-xs text-destructive px-1">Error loading banks — are your GoCardless credentials configured?</p>
       `

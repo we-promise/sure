@@ -54,7 +54,7 @@ class GocardlessItem < ApplicationRecord
 
   # Returns a ready-to-use SDK instance with a valid access token
   def gocardless_client
-    ensure_valid_access_token!
+    return nil unless ensure_valid_access_token?
     return nil unless access_token.present?
     Provider::Gocardless.new(nil, nil).with_token(access_token)
   end
@@ -132,13 +132,14 @@ class GocardlessItem < ApplicationRecord
 
   private
 
-    def ensure_valid_access_token!
-      return unless access_token_expired?
+    def ensure_valid_access_token?
+      return true unless access_token_expired?
 
       if refresh_token.present?
         refresh_access_token!
       else
-        update!(status: :requires_update)
+        update!(status: :requires_update, access_token: nil, access_token_expires_at: nil)
+        false
       end
     end
 
@@ -155,8 +156,10 @@ class GocardlessItem < ApplicationRecord
         access_token_expires_at: result["access_expires"].seconds.from_now,
         refresh_token:           result["refresh"]
       )
+      true
     rescue Provider::Gocardless::AuthError
-      update!(status: :requires_update)
+      update!(status: :requires_update, access_token: nil, access_token_expires_at: nil)
       Rails.logger.error "GocardlessItem #{id} - Token refresh failed"
+      false
     end
 end

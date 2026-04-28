@@ -126,6 +126,7 @@ class Settings::ProvidersController < ApplicationController
       @provider_configurations = Provider::ConfigurationRegistry.all.reject do |config|
         config.provider_key.to_s.casecmp("simplefin").zero? || config.provider_key.to_s.casecmp("lunchflow").zero? || \
         config.provider_key.to_s.casecmp("enable_banking").zero?  || \
+        config.provider_key.to_s.casecmp("gocardless").zero? || \
         config.provider_key.to_s.casecmp("sophtron").zero? || \
         config.provider_key.to_s.casecmp("coinstats").zero? || \
         config.provider_key.to_s.casecmp("mercury").zero? || \

@@ -192,10 +192,11 @@ class GocardlessItem::Importer
       # Use persisted entries (not raw_transactions_payload) to distinguish initial
       # vs incremental — raw payload is written even on failed sync attempts.
       account = gc_account.current_account
-      has_synced_entries = account&.entries&.where(source: "gocardless")&.exists? || false
+      last_entry_date = account&.entries&.where(source: "gocardless")&.maximum(:date)
 
-      if has_synced_entries
-        7.days.ago.to_date
+      if last_entry_date
+        # Overlap by 1 day to avoid gaps when syncs are infrequent or delayed.
+        (last_entry_date - 1.day).to_date
       else
         gocardless_item.sync_start_date&.to_date || 90.days.ago.to_date
       end
