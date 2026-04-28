@@ -31,7 +31,7 @@
                 <code id="api-key-display" class="block w-full min-w-0 overflow-x-auto font-mono text-sm text-primary break-all whitespace-pre-wrap" data-clipboard-target="source"><%= @api_key.plain_key %></code>
                 <div class="mt-2 flex justify-end">
                   <%= render DS::Button.new(
-                    text: "Copy API Key",
+                    title: t("settings.api_keys.created.copy_key"),
                     variant: "ghost",
                     icon: "copy",
                     class: "shrink-0",
@@ -84,7 +84,7 @@
           </div>
 
           <div class="bg-surface-inset rounded-xl p-4">
-            <h4 class="font-medium text-primary mb-3">How to use your API key</h4>
+            <h4 class="font-medium text-primary mb-3"><%= t("settings.api_keys.created.usage_instructions_title") %></h4>
             <p class="text-secondary text-sm mb-3">Include your API key in the X-Api-Key header when making requests:</p>
             <div class="bg-container rounded-lg p-3 font-mono text-sm text-primary border border-primary max-w-full overflow-hidden" data-controller="clipboard">
               <code class="block w-full min-w-0 overflow-x-auto break-all whitespace-pre-wrap" data-clipboard-target="source">curl -H "X-Api-Key: <%= @api_key.plain_key %>" <%= request.base_url %>/api/v1/accounts</code>

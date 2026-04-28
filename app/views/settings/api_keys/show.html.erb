@@ -27,7 +27,6 @@
             <code id="api-key-display" class="block w-full min-w-0 overflow-x-auto font-mono text-sm text-primary break-all whitespace-pre-wrap" data-clipboard-target="source"><%= @current_api_key.plain_key %></code>
             <div class="mt-2 flex justify-end">
               <%= render DS::Button.new(
-                text: "Copy API Key",
                 variant: "ghost",
                 icon: "copy",
                 class: "shrink-0",
@@ -127,7 +126,7 @@
             <code id="api-key-display" class="block w-full min-w-0 overflow-x-auto font-mono text-sm text-primary break-all whitespace-pre-wrap" data-clipboard-target="source"><%= @current_api_key.plain_key %></code>
             <div class="mt-2 flex justify-end">
               <%= render DS::Button.new(
-                text: "Copy API Key",
+                title: t("settings.api_keys.current_api_key.copy_key"),
                 variant: "ghost",
                 icon: "copy",
                 class: "shrink-0",
@@ -139,13 +138,13 @@
       </div>
 
       <div class="bg-surface-inset rounded-xl p-4">
-        <h4 class="font-medium text-primary mb-3">How to use your API key</h4>
+        <h4 class="font-medium text-primary mb-3"><%= t("settings.api_keys.current_api_key.usage_instructions_title") %></h4>
         <p class="text-secondary text-sm mb-3"><%= t(".current_api_key.usage_instructions", product_name: product_name) %></p>
         <div class="bg-container rounded-lg p-3 font-mono text-sm text-primary border border-primary max-w-full overflow-hidden" data-controller="clipboard">
           <code class="block w-full min-w-0 overflow-x-auto break-all whitespace-pre-wrap" data-clipboard-target="source">curl -H "X-Api-Key: <%= @current_api_key.plain_key %>" <%= request.base_url %>/api/v1/accounts</code>
           <div class="mt-2 flex justify-end">
             <%= render DS::Button.new(
-              text: "Copy",
+              title: t("settings.api_keys.current_api_key.copy_key"),
               variant: "ghost",
               icon: "copy",
               class: "shrink-0",
@@ -157,7 +156,7 @@
 
       <div class="flex justify-end pt-4 border-t border-primary">
         <%= render DS::Button.new(
-          text: "Revoke Key",
+          title: t("settings.api_keys.current_api_key.revoke_key"),
           href: settings_api_key_path,
           method: :delete,
           variant: "destructive",
@@ -172,7 +171,7 @@
   <%= content_for :page_title, t(".no_api_key.title") %>
   <%= content_for :page_actions do %>
     <%= render DS::Link.new(
-      text: t(".no_api_key.create_api_key"),
+      title: t("settings.api_keys.no_api_key.create_api_key"),
       href: new_settings_api_key_path,
       variant: "primary"
     ) %>
