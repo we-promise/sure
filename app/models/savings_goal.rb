@@ -47,28 +47,38 @@ class SavingsGoal < ApplicationRecord
     end
   end
 
+  # Memoized accessors. These are read repeatedly in a single render
+  # (the index page's GoalCardComponent calls current_balance, remaining_amount
+  # and progress_percent per card; AutoFundJob calls monthly_target_amount and
+  # remaining_amount per goal). Each call to current_balance was firing a
+  # `SUM(amount)` query without memoization. The instance is short-lived
+  # (request-scoped or a fresh row per AutoFundJob iteration), so cache
+  # invalidation is not a concern here.
   def current_balance
-    # `ActiveRecord::Calculations#sum` returns 0 for empty relations,
-    # so no `|| 0` fallback is needed.
-    savings_contributions.sum(:amount)
+    @current_balance ||= savings_contributions.sum(:amount)
   end
 
   def current_balance_money
-    Money.new(current_balance, currency)
+    @current_balance_money ||= Money.new(current_balance, currency)
   end
 
   def remaining_amount
-    [ target_amount - current_balance, 0 ].max
+    @remaining_amount ||= [ target_amount - current_balance, 0 ].max
   end
 
   def remaining_amount_money
-    Money.new(remaining_amount, currency)
+    @remaining_amount_money ||= Money.new(remaining_amount, currency)
   end
 
   def progress_percent
-    return 100 if completed?
-    return 0 if target_amount.to_d.zero?
-    [ ((current_balance.to_d / target_amount.to_d) * 100).round, 100 ].min
+    return @progress_percent if defined?(@progress_percent)
+    @progress_percent = if completed?
+      100
+    elsif target_amount.to_d.zero?
+      0
+    else
+      [ ((current_balance.to_d / target_amount.to_d) * 100).round, 100 ].min
+    end
   end
 
   def months_remaining
@@ -78,10 +88,14 @@ class SavingsGoal < ApplicationRecord
   end
 
   def monthly_target_amount
-    return nil unless target_date
-    months = months_remaining
-    return remaining_amount if months.zero?
-    (remaining_amount.to_d / months).ceil(2)
+    return @monthly_target_amount if defined?(@monthly_target_amount)
+    @monthly_target_amount = if target_date.nil?
+      nil
+    elsif months_remaining.zero?
+      remaining_amount
+    else
+      (remaining_amount.to_d / months_remaining).ceil(2)
+    end
   end
 
 private

@@ -6,7 +6,7 @@ class SavingsGoalsController < ApplicationController
 
   def index
     state = params[:state].presence_in(%w[all active paused completed archived]) || "all"
-    scope = Current.family.savings_goals.alphabetically
+    scope = Current.family.savings_goals.includes(:account).alphabetically
     @savings_goals = state == "all" ? scope : scope.where(state: state)
     @state = state
   end

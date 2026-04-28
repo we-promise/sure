@@ -340,6 +340,7 @@ class Family < ApplicationRecord
       # surplus to fund a EUR goal. Goals in other currencies still
       # exist; they just don't enter this budget's surplus math.
       active = savings_goals
+                 .includes(:account)
                  .where(state: "active", currency: budget.currency)
                  .alphabetically
                  .to_a
