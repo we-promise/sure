@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import '../models/chat.dart';
 import '../models/message.dart';
 import '../services/chat_service.dart';
+import '../utils/app_errors.dart';
 
 class ChatProvider with ChangeNotifier {
   final ChatService _chatService = ChatService();
