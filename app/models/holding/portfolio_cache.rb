@@ -27,7 +27,7 @@ class Holding::PortfolioCache
     raise SecurityNotFound.new(security_id, account.id) unless security
 
     price_with_priority = if source.present?
-      security[:prices_by_date_and_source][ [ date, source ] ]
+      security[:prices_by_date_and_source][[date, source]]
     else
       security[:prices_by_date][date]
     end
