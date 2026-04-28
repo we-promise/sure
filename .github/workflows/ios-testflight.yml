@@ -196,7 +196,6 @@ jobs:
             CODE_SIGN_STYLE=Manual \
             DEVELOPMENT_TEAM="${IOS_TEAM_ID}" \
             PRODUCT_BUNDLE_IDENTIFIER="${APP_BUNDLE_ID}" \
-            PROVISIONING_PROFILE_SPECIFIER="${PROFILE_NAME}" \
             CODE_SIGN_IDENTITY="${IOS_DISTRIBUTION_CERT_NAME}"
 
           mkdir -p "$EXPORT_PATH"
