@@ -157,6 +157,40 @@ jobs:
           ARCHIVE_PATH="$RUNNER_TEMP/Runner.xcarchive"
           EXPORT_PATH="$PWD/build/ios/ipa"
           EXPORT_PLIST="$RUNNER_TEMP/ExportOptions.plist"
+          PBXPROJ="ios/Runner.xcodeproj/project.pbxproj"
+
+          python3 <<'PY'
+          import os
+          import re
+          from pathlib import Path
+
+          path = Path(os.environ["PBXPROJ"])
+          text = path.read_text()
+
+          team = os.environ["IOS_TEAM_ID"]
+          profile = os.environ["PROFILE_NAME"]
+          identity = os.environ["IOS_DISTRIBUTION_CERT_NAME"]
+
+          def patch_block(match):
+              block = match.group(0)
+              if "PRODUCT_BUNDLE_IDENTIFIER = am.sure.mobile;" not in block:
+                  return block
+              if "CODE_SIGN_STYLE = Manual;" not in block:
+                  block = block.replace("CURRENT_PROJECT_VERSION = \"$(FLUTTER_BUILD_NUMBER)\";", "CURRENT_PROJECT_VERSION = \"$(FLUTTER_BUILD_NUMBER)\";\n\t\t\t\tCODE_SIGN_STYLE = Manual;")
+              if '"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "Apple Distribution";' not in block:
+                  block = block.replace("DEVELOPMENT_TEAM = C8WT3YC922;", f'"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "{identity}";\n\t\t\t\tDEVELOPMENT_TEAM = {team};')
+              else:
+                  block = re.sub(r'"CODE_SIGN_IDENTITY\[sdk=iphoneos\*\]" = ".*?";', f'"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "{identity}";', block)
+                  block = re.sub(r'DEVELOPMENT_TEAM = .*?;', f'DEVELOPMENT_TEAM = {team};', block)
+              if "PROVISIONING_PROFILE_SPECIFIER = " in block:
+                  block = re.sub(r'PROVISIONING_PROFILE_SPECIFIER = .*?;', f'PROVISIONING_PROFILE_SPECIFIER = "{profile}";', block)
+              else:
+                  block = block.replace(f'DEVELOPMENT_TEAM = {team};', f'DEVELOPMENT_TEAM = {team};\n\t\t\t\tPROVISIONING_PROFILE_SPECIFIER = "{profile}";')
+              return block
+
+          text = re.sub(r'isa = XCBuildConfiguration;\n\s+baseConfigurationReference = .*?;\n\s+buildSettings = \{.*?\n\s+name = (?:Debug|Release|Profile);\n\s+\};', patch_block, text, flags=re.S)
+          path.write_text(text)
+          PY
 
           cat > "$EXPORT_PLIST" <<EOF
           <?xml version="1.0" encoding="UTF-8"?>
@@ -192,11 +226,7 @@ jobs:
             -configuration Release \
             -archivePath "$ARCHIVE_PATH" \
             -destination 'generic/platform=iOS' \
-            archive \
-            CODE_SIGN_STYLE=Manual \
-            DEVELOPMENT_TEAM="${IOS_TEAM_ID}" \
-            PRODUCT_BUNDLE_IDENTIFIER="${APP_BUNDLE_ID}" \
-            CODE_SIGN_IDENTITY="${IOS_DISTRIBUTION_CERT_NAME}"
+            archive
 
           mkdir -p "$EXPORT_PATH"
 
