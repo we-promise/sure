@@ -103,10 +103,12 @@ class Account::MarketDataImporter
                                              .pluck(:security_id)
                                              .to_set
 
+      account_start_date = account.start_date
+
       security_ids.each_with_object({}) do |security_id, hash|
         trade_date   = trade_start_dates[security_id]
-        holding_date = provider_holding_security_ids.include?(security_id) ? account.start_date : nil
-        hash[security_id] = [ trade_date, holding_date ].compact.min || account.start_date
+        holding_date = provider_holding_security_ids.include?(security_id) ? account_start_date : nil
+        hash[security_id] = [ trade_date, holding_date ].compact.min || account_start_date
       end
     end
 
