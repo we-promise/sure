@@ -14,4 +14,16 @@ module AccountableResourceInterfaceTest
     get edit_account_url(@account)
     assert_response :success
   end
+
+  test "update saves currency change" do
+    patch send("#{@account.accountable_type.underscore}_path", @account), params: {
+      account: {
+        name: @account.name,
+        currency: "EUR"
+      }
+    }
+
+    @account.reload
+    assert_equal "EUR", @account.currency
+  end
 end

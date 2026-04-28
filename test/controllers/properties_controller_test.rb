@@ -9,7 +9,6 @@ class PropertiesControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "creates property in draft status and redirects to balances step" do
-    family = @user.family
     assert_difference -> { Account.count } => 1 do
       post properties_path, params: {
         account: {
