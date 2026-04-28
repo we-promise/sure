@@ -242,8 +242,11 @@ jobs:
           APP_STORE_CONNECT_API_KEY_BASE64: ${{ secrets.APP_STORE_CONNECT_API_KEY_BASE64 }}
         run: |
           set -euo pipefail
-          KEY_FILE="$RUNNER_TEMP/AuthKey_${APP_STORE_CONNECT_API_KEY_ID}.p8"
+          KEY_DIR="$HOME/.appstoreconnect/private_keys"
+          mkdir -p "$KEY_DIR"
+          KEY_FILE="$KEY_DIR/AuthKey_${APP_STORE_CONNECT_API_KEY_ID}.p8"
           echo "$APP_STORE_CONNECT_API_KEY_BASE64" | base64 --decode > "$KEY_FILE"
+          chmod 600 "$KEY_FILE"
           echo "key-file=$KEY_FILE" >> "$GITHUB_OUTPUT"
 
       - name: Upload IPA to TestFlight
@@ -266,8 +269,7 @@ jobs:
             --file "$IPA_PATH" \
             --type ios \
             --apiKey "$APP_STORE_CONNECT_API_KEY_ID" \
-            --apiIssuer "$APP_STORE_CONNECT_API_ISSUER_ID" \
-            --apiPrivateKey "$APP_STORE_CONNECT_API_KEY_FILE"
+            --apiIssuer "$APP_STORE_CONNECT_API_ISSUER_ID"
 
       - name: Upload build artifact
         if: ${{ steps.check_prereqs.outputs.enabled == 'true' }}
@@ -279,9 +281,14 @@ jobs:
 
       - name: Cleanup signing keychain
         if: ${{ always() && steps.check_prereqs.outputs.enabled == 'true' }}
+        env:
+          APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
         run: |
           set -euo pipefail
           KEYCHAIN_PATH="${{ steps.signing.outputs.keychain-path }}"
           if [ -n "$KEYCHAIN_PATH" ] && [ -f "$KEYCHAIN_PATH" ]; then
             security delete-keychain "$KEYCHAIN_PATH"
           fi
+
+          KEY_FILE="$HOME/.appstoreconnect/private_keys/AuthKey_${APP_STORE_CONNECT_API_KEY_ID}.p8"
+          rm -f "$KEY_FILE"
