@@ -29,12 +29,14 @@ module SavingsGoals
         family.budgets.where(start_date: Date.current.beginning_of_month).first
       end
 
-      # Postgres advisory xact lock — auto-released on commit/rollback.
-      # Hashed key is a stable 63-bit positive int derived from family id;
-      # we still bind through sanitize_sql so Brakeman's static analysis
+      # Postgres advisory xact lock -- auto-released on commit/rollback.
+      # Key comes from SavingsGoal.advisory_lock_key_for so this lock
+      # mutually excludes with manual contribution creates on the same
+      # family (SavingsContributionsController#save_with_advisory_lock).
+      # We still bind through sanitize_sql so Brakeman's static analysis
       # doesn't flag the call site as raw SQL interpolation.
       def acquire_lock!(family_id)
-        key = Digest::SHA1.hexdigest("savings_auto_fund:#{family_id}").to_i(16) % (2**63)
+        key = SavingsGoal.advisory_lock_key_for(family_id)
         ActiveRecord::Base.connection.execute(
           ActiveRecord::Base.sanitize_sql_array([ "SELECT pg_advisory_xact_lock(?)", key ])
         )

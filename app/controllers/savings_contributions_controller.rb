@@ -52,12 +52,13 @@ private
   end
 
   # Wraps the create in a Postgres advisory xact lock so concurrent
-  # contribution attempts on the same family serialize cleanly. The
-  # partial unique index on (savings_goal_id, budget_id) for source=auto
-  # handles auto-vs-auto races at the DB level; this lock keeps manual
-  # contributions tidy too.
+  # contribution attempts on the same family serialize cleanly. The key
+  # comes from SavingsGoal.advisory_lock_key_for so manual contributions
+  # and AutoFundJob mutually exclude on the same family -- a separate
+  # key here would let an auto-fund insert race a manual contribution
+  # off a stale `remaining_amount` snapshot and overfund the goal.
   def save_with_advisory_lock(contribution)
-    key = Digest::SHA1.hexdigest("savings_contribution:#{Current.family.id}").to_i(16) % (2**63)
+    key = SavingsGoal.advisory_lock_key_for(Current.family.id)
     saved = false
     Family.transaction do
       ActiveRecord::Base.connection.execute(

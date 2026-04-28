@@ -30,6 +30,15 @@ class SavingsGoal < ApplicationRecord
       .select(Arel.sql("savings_goals.*, COALESCE(SUM(savings_contributions.amount), 0) AS current_balance_total"))
   }
 
+  # Stable 63-bit Postgres advisory-lock key per family. Manual-contribution
+  # creates and AutoFundJob both call this so they serialize against each
+  # other. With separate keys, a manual contribution and an auto-fund could
+  # race: each computes `remaining_amount` from a stale snapshot, both
+  # insert, and the goal ends up overfunded.
+  def self.advisory_lock_key_for(family_id)
+    Digest::SHA1.hexdigest("savings_goals:family:#{family_id}").to_i(16) % (2**63)
+  end
+
   aasm column: :state do
     state :active, initial: true
     state :paused

@@ -74,6 +74,15 @@ class SavingsGoalTest < ActiveSupport::TestCase
     assert_nil savings_goals(:paid_off_car).monthly_target_amount
   end
 
+  test "advisory_lock_key_for is stable per family and distinct across families" do
+    assert_equal SavingsGoal.advisory_lock_key_for(42), SavingsGoal.advisory_lock_key_for(42)
+    assert_not_equal SavingsGoal.advisory_lock_key_for(42), SavingsGoal.advisory_lock_key_for(43)
+    key = SavingsGoal.advisory_lock_key_for(42)
+    assert_kind_of Integer, key
+    assert_operator key, :>=, 0
+    assert_operator key, :<, 2**63
+  end
+
   test "monthly_target_amount divides remaining by months" do
     @goal.target_date = 5.months.from_now.to_date
     expected = (@goal.remaining_amount.to_d / @goal.months_remaining).ceil(2)
