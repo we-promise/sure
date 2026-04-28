@@ -341,6 +341,7 @@ class Family < ApplicationRecord
       # exist; they just don't enter this budget's surplus math.
       active = savings_goals
                  .includes(:account)
+                 .with_current_balance
                  .where(state: "active", currency: budget.currency)
                  .alphabetically
                  .to_a

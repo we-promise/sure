@@ -20,6 +20,16 @@ class SavingsGoal < ApplicationRecord
   scope :active_first,
         -> { order(Arel.sql("CASE state WHEN 'active' THEN 0 WHEN 'paused' THEN 1 WHEN 'completed' THEN 2 ELSE 3 END")) }
 
+  # Pre-aggregates each goal's contribution sum into a virtual
+  # `current_balance_total` column. Lets callers iterate goals without
+  # firing one `SUM(amount)` per goal in #current_balance. Used by
+  # Family#savings_summary_for and SavingsGoalsController#index.
+  scope :with_current_balance, -> {
+    left_outer_joins(:savings_contributions)
+      .group(Arel.sql("savings_goals.id"))
+      .select(Arel.sql("savings_goals.*, COALESCE(SUM(savings_contributions.amount), 0) AS current_balance_total"))
+  }
+
   aasm column: :state do
     state :active, initial: true
     state :paused
@@ -55,7 +65,11 @@ class SavingsGoal < ApplicationRecord
   # (request-scoped or a fresh row per AutoFundJob iteration), so cache
   # invalidation is not a concern here.
   def current_balance
-    @current_balance ||= savings_contributions.sum(:amount)
+    @current_balance ||= if attributes.key?("current_balance_total")
+      attributes["current_balance_total"] || 0
+    else
+      savings_contributions.sum(:amount)
+    end
   end
 
   def current_balance_money
