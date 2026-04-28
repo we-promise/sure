@@ -90,11 +90,12 @@
 
     <div data-oidc-field class="<%= "hidden" unless sso_provider.strategy == "openid_connect" %>">
       <label class="block text-sm font-medium text-primary mb-1">Callback URL</label>
-      <div class="flex items-center gap-2">
-        <code class="flex-1 bg-surface px-3 py-2 rounded text-sm text-secondary overflow-x-auto"
-              data-admin-sso-form-target="callbackUrl"><%= "#{request.base_url}/auth/#{sso_provider.name.presence || 'PROVIDER_NAME'}/callback" %></code>
+      <div class="flex items-center gap-2 min-w-0" data-controller="clipboard">
+        <code class="flex-1 min-w-0 bg-surface px-3 py-2 rounded text-sm text-secondary overflow-x-auto break-all whitespace-pre-wrap"
+              data-admin-sso-form-target="callbackUrl"
+              data-clipboard-target="source"><%= "#{request.base_url}/auth/#{sso_provider.name.presence || 'PROVIDER_NAME'}/callback" %></code>
         <button type="button"
-                data-action="click->admin-sso-form#copyCallback"
+                data-action="clipboard#copy"
                 class="p-2 text-secondary hover:text-primary shrink-0"
                 title="Copy to clipboard">
           <%= icon "copy", class: "w-4 h-4" %>
@@ -173,11 +174,12 @@
 
     <div>
       <label class="block text-sm font-medium text-primary mb-1">SP Callback URL (ACS URL)</label>
-      <div class="flex items-center gap-2">
-        <code class="flex-1 bg-surface px-3 py-2 rounded text-sm text-secondary overflow-x-auto"
-              data-admin-sso-form-target="samlCallbackUrl"><%= "#{request.base_url}/auth/#{sso_provider.name.presence || 'PROVIDER_NAME'}/callback" %></code>
+      <div class="flex items-center gap-2 min-w-0" data-controller="clipboard">
+        <code class="flex-1 min-w-0 bg-surface px-3 py-2 rounded text-sm text-secondary overflow-x-auto break-all whitespace-pre-wrap"
+              data-admin-sso-form-target="samlCallbackUrl"
+              data-clipboard-target="source"><%= "#{request.base_url}/auth/#{sso_provider.name.presence || 'PROVIDER_NAME'}/callback" %></code>
         <button type="button"
-                data-action="click->admin-sso-form#copySamlCallback"
+                data-action="clipboard#copy"
                 class="p-2 text-secondary hover:text-primary shrink-0"
                 title="Copy to clipboard">
           <%= icon "copy", class: "w-4 h-4" %>
@@ -268,7 +270,7 @@
     <p class="text-xs text-secondary -mt-2"><%= t("admin.sso_providers.form.prompt_help") %></p>
   </div>
 
-  <div class="flex justify-between items-center gap-3 pt-4 border-t border-primary">
+  <div class="flex flex-wrap justify-between items-center gap-3 pt-4 border-t border-primary">
     <div>
       <% if sso_provider.persisted? %>
         <button type="button"
@@ -281,7 +283,7 @@
       <% end %>
     </div>
 
-    <div class="flex gap-3">
+    <div class="flex flex-wrap gap-3">
       <%= link_to "Cancel", admin_sso_providers_path, class: "px-4 py-2 text-sm font-medium text-secondary hover:text-primary" %>
       <%= form.submit sso_provider.persisted? ? "Update Provider" : "Create Provider",
           class: "px-4 py-2 bg-primary text-inverse rounded-lg text-sm font-medium hover:bg-primary/90" %>
