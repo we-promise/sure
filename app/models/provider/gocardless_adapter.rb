@@ -71,6 +71,7 @@ class Provider::GocardlessAdapter < Provider::Base
   def self.supported_account_types
     %w[Depository CreditCard Investment Loan OtherAsset]
   end
+
   def self.connection_configs(family:)
     return [] unless family.can_connect_gocardless?
 

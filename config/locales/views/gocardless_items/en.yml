@@ -36,3 +36,48 @@ en:
       no_accounts_hint1_html: 'Connect a bank first via <strong>Settings → Providers → GoCardless</strong>'
       no_accounts_hint2: If you just connected, wait for the sync to complete then try again
       balance_label: Balance
+      link_button: Link
+      cancel: Cancel
+    gocardless_item:
+      provider_label: GoCardless
+      deletion_in_progress: Deletion in progress
+      auth_expired: Bank authorisation expired — reauthorisation required
+      auth_expiring: "Bank authorisation expires %{date} (%{days} remaining)"
+      auth_expires_on: "Auth expires %{date}"
+      last_synced: "Last synced %{time} ago"
+      first_sync_pending: First sync pending — GoCardless rate limits may delay this up to 24 hours
+      never_synced: Never synced
+      reauthorize: Reauthorize
+      renew: Renew
+      disconnect: Disconnect
+      accounts_need_setup: Accounts need setup
+      accounts_setup_progress:
+        one: "%{linked} of %{total} accounts configured — 1 still needs an account type assigned."
+        other: "%{linked} of %{total} accounts configured — %{count} still need account types assigned."
+      set_up_accounts: Set up accounts
+      no_accounts_found: No accounts found
+      no_accounts_imported: No accounts were imported yet. Try syncing.
+    setup_accounts:
+      title: Set up your GoCardless accounts
+      subtitle: Choose account types for your imported accounts
+      rate_limited_title: GoCardless rate limit reached
+      rate_limited_body: >
+        Balance and account name data could not be fetched right now — GoCardless limits
+        API calls per account per day. Your accounts will be created with placeholder names
+        and balances will update automatically on the next sync (usually within 24 hours).
+        You can rename accounts any time after creation.
+      select_accounts_title: "Select the accounts you want to import:"
+      select_accounts_hint: Check the accounts to include. Choose the correct type for each. Unchecked accounts will be skipped.
+      historical_data_title: "Historical data range:"
+      historical_data_hint: Fetch transactions from this date onwards on first sync.
+      sync_frequency_title: "Sync frequency:"
+      sync_frequency_hint: >
+        GoCardless limits API calls. Choose how often to allow background syncing.
+        You can always trigger a manual sync at any time.
+      sync_frequency_manual_note: "(recommended — you control when)"
+      previously_skipped: Previously skipped
+      balance_not_available: balance not available
+      account_type_label: "Account type:"
+      submit_button: Create Accounts
+      submit_loading: Creating Accounts...
+      cancel: Cancel

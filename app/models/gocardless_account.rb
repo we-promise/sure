@@ -20,35 +20,6 @@ class GocardlessAccount < ApplicationRecord
     account
   end
 
-  def upsert_gocardless_snapshot!(account_snapshot)
-    # Convert to symbol keys or handle both string and symbol keys
-    snapshot = account_snapshot.with_indifferent_access
-
-    # Map Gocardless field names to our field names
-    # TODO: Customize this mapping based on your provider's API response
-    update!(
-      current_balance: snapshot[:balance] || snapshot[:current_balance],
-      currency: parse_currency(snapshot[:currency]) || currency,
-      name: snapshot[:name],
-      account_id: snapshot[:id]&.to_s,
-      account_status: snapshot[:status],
-      provider: snapshot[:provider],
-      institution_metadata: {
-        name: snapshot[:institution_name],
-        logo: snapshot[:institution_logo]
-      }.compact,
-      raw_payload: account_snapshot
-    )
-  end
-
-  def upsert_gocardless_transactions_snapshot!(transactions_snapshot)
-    assign_attributes(
-      raw_transactions_payload: transactions_snapshot
-    )
-
-    save!
-  end
-
   private
 
     def log_invalid_currency(currency_value)

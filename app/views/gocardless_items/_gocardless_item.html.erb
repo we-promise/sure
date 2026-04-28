@@ -16,38 +16,40 @@
           <div class="flex items-center gap-2">
             <%= tag.p gocardless_item.institution_name, class: "font-medium text-primary" %>
             <% if gocardless_item.scheduled_for_deletion? %>
-              <p class="text-destructive text-sm animate-pulse">Deletion in progress</p>
+              <p class="text-destructive text-sm animate-pulse"><%= t(".deletion_in_progress") %></p>
             <% end %>
           </div>
-          <p class="text-xs text-secondary">GoCardless</p>
+          <p class="text-xs text-secondary"><%= t(".provider_label") %></p>
           <% if gocardless_item.requires_update? || gocardless_item.agreement_expired? %>
             <div class="text-destructive flex items-center gap-1">
               <%= icon "alert-triangle", size: "sm", color: "destructive" %>
-              <%= tag.span "Bank authorisation expired — reauthorisation required" %>
+              <%= tag.span t(".auth_expired") %>
             </div>
           <% elsif gocardless_item.agreement_expiring_soon? %>
             <div class="text-warning flex items-center gap-1">
               <%= icon "alert-triangle", size: "sm", color: "warning" %>
-              <%= tag.span "Bank authorisation expires #{gocardless_item.agreement_expires_at.strftime('%d %b %Y')} (#{pluralize((gocardless_item.agreement_expires_at.to_date - Date.current).to_i, 'day')} remaining)" %>
+              <%= tag.span t(".auth_expiring",
+                    date: gocardless_item.agreement_expires_at.strftime("%d %b %Y"),
+                    days: pluralize((gocardless_item.agreement_expires_at.to_date - Date.current).to_i, "day")) %>
             </div>
           <% else %>
             <% if gocardless_item.last_synced_at %>
               <p class="text-secondary text-xs">
-                Last synced <%= time_ago_in_words(gocardless_item.last_synced_at) %> ago
+                <%= t(".last_synced", time: time_ago_in_words(gocardless_item.last_synced_at)) %>
                 &middot;
                 <% freq_label = GocardlessItem::SYNC_FREQUENCY_OPTIONS.find { |_, v| v == gocardless_item.sync_frequency }&.first %>
                 <%= freq_label %>
                 <% if gocardless_item.agreement_expires_at %>
-                  &middot; Auth expires <%= gocardless_item.agreement_expires_at.strftime('%d %b %Y') %>
+                  &middot; <%= t(".auth_expires_on", date: gocardless_item.agreement_expires_at.strftime("%d %b %Y")) %>
                 <% end %>
               </p>
             <% elsif gocardless_item.accounts.any? %>
               <div class="flex items-center gap-1 text-warning">
                 <%= icon "clock", size: "sm", class: "text-warning" %>
-                <span class="text-xs">First sync pending &mdash; GoCardless rate limits may delay this up to 24 hours</span>
+                <span class="text-xs"><%= t(".first_sync_pending") %></span>
               </div>
             <% else %>
-              <p class="text-secondary text-xs">Never synced</p>
+              <p class="text-secondary text-xs"><%= t(".never_synced") %></p>
             <% end %>
           <% end %>
         </div>
@@ -60,14 +62,14 @@
                           method: :post,
                           class: "inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-destructive border border-destructive hover:bg-destructive/10 transition-colors" do %>
               <%= icon "refresh-cw", size: "xs" %>
-              Reauthorize
+              <%= t(".reauthorize") %>
             <% end %>
           <% elsif !gocardless_item.scheduled_for_deletion? && gocardless_item.agreement_expiring_soon? %>
             <%= button_to reauthorize_gocardless_item_path(gocardless_item),
                           method: :post,
                           class: "inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-warning border border-warning hover:bg-warning/10 transition-colors" do %>
               <%= icon "refresh-cw", size: "xs" %>
-              Renew
+              <%= t(".renew") %>
             <% end %>
             <%= icon(
               "refresh-cw",
@@ -84,7 +86,7 @@
           <%= render DS::Menu.new do |menu| %>
             <% menu.with_item(
               variant: "button",
-              text: "Disconnect",
+              text: t(".disconnect"),
               icon: "trash-2",
               href: gocardless_item_path(gocardless_item),
               method: :delete,
@@ -115,10 +117,12 @@
 
         <% if unlinked_count > 0 %>
           <div class="p-4 flex flex-col gap-3 items-center justify-center">
-            <p class="text-primary font-medium text-sm">Accounts need setup</p>
-            <p class="text-secondary text-sm"><%= linked_count %> of <%= total_count %> accounts configured — <%= unlinked_count %> still need account types assigned.</p>
+            <p class="text-primary font-medium text-sm"><%= t(".accounts_need_setup") %></p>
+            <p class="text-secondary text-sm">
+              <%= t(".accounts_setup_progress", linked: linked_count, total: total_count, count: unlinked_count) %>
+            </p>
             <%= render DS::Link.new(
-              text: "Set up accounts",
+              text: t(".set_up_accounts"),
               icon: "settings",
               variant: "primary",
               href: setup_accounts_gocardless_item_path(gocardless_item)
@@ -126,8 +130,8 @@
           </div>
         <% elsif gocardless_item.accounts.empty? && total_count == 0 %>
           <div class="p-4 flex flex-col gap-3 items-center justify-center">
-            <p class="text-primary font-medium text-sm">No accounts found</p>
-            <p class="text-secondary text-sm">No accounts were imported yet. Try syncing.</p>
+            <p class="text-primary font-medium text-sm"><%= t(".no_accounts_found") %></p>
+            <p class="text-secondary text-sm"><%= t(".no_accounts_imported") %></p>
           </div>
         <% end %>
       </div>
