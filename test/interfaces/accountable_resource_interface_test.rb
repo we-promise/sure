@@ -16,6 +16,8 @@ module AccountableResourceInterfaceTest
   end
 
   test "update saves currency change" do
+    @account.update!(currency: "USD")
+
     patch send("#{@account.accountable_type.underscore}_path", @account), params: {
       account: {
         name: @account.name,
