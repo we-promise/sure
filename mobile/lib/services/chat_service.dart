@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/chat.dart';
 import '../models/message.dart';
+import '../utils/app_errors.dart';
 import 'api_config.dart';
 
 class ChatService {
@@ -43,7 +44,7 @@ class ChatService {
         final responseData = jsonDecode(response.body);
         return {
           'success': false,
-          'error': 'feature_disabled',
+          'error': AppErrors.aiFeatureDisabled,
           'message': responseData['message'] ?? 'AI features not enabled',
         };
       } else {
@@ -56,7 +57,7 @@ class ChatService {
     } catch (e) {
       return {
         'success': false,
-        'error': 'Network error: ${e.toString()}',
+        'error': AppErrors.networkError,
       };
     }
   }
@@ -108,7 +109,7 @@ class ChatService {
     } catch (e) {
       return {
         'success': false,
-        'error': 'Network error: ${e.toString()}',
+        'error': AppErrors.networkError,
       };
     }
   }
@@ -159,7 +160,7 @@ class ChatService {
         final responseData = jsonDecode(response.body);
         return {
           'success': false,
-          'error': 'feature_disabled',
+          'error': AppErrors.aiFeatureDisabled,
           'message': responseData['message'] ?? 'AI features not enabled',
         };
       } else {
@@ -172,7 +173,7 @@ class ChatService {
     } catch (e) {
       return {
         'success': false,
-        'error': 'Network error: ${e.toString()}',
+        'error': AppErrors.networkError,
       };
     }
   }
@@ -227,7 +228,7 @@ class ChatService {
     } catch (e) {
       return {
         'success': false,
-        'error': 'Network error: ${e.toString()}',
+        'error': AppErrors.networkError,
       };
     }
   }
@@ -282,7 +283,7 @@ class ChatService {
     } catch (e) {
       return {
         'success': false,
-        'error': 'Network error: ${e.toString()}',
+        'error': AppErrors.networkError,
       };
     }
   }
@@ -326,7 +327,7 @@ class ChatService {
     } catch (e) {
       return {
         'success': false,
-        'error': 'Network error: ${e.toString()}',
+        'error': AppErrors.networkError,
       };
     }
   }
@@ -370,7 +371,7 @@ class ChatService {
     } catch (e) {
       return {
         'success': false,
-        'error': 'Network error: ${e.toString()}',
+        'error': AppErrors.networkError,
       };
     }
   }

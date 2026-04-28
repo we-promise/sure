@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/transaction.dart';
+import '../utils/app_errors.dart';
 import 'api_config.dart';
 
 class TransactionsService {
@@ -68,10 +69,77 @@ class TransactionsService {
     } catch (e) {
       return {
         'success': false,
-        'error': 'Network error: ${e.toString()}',
+        'error': AppErrors.networkError,
       };
     }
   }
+
+  Future<Map<String, dynamic>> updateTransaction({
+    required String accessToken,
+    required String transactionId,
+    required String name,
+    required String date,
+    required String amount,
+    required String currency,
+    required String nature,
+    String? notes,
+  }) async {
+    final url = Uri.parse('${ApiConfig.baseUrl}/api/v1/transactions/$transactionId');
+
+    final body = {
+      'transaction': {
+        'name': name,
+        'date': date,
+        'amount': amount,
+        'currency': currency,
+        'nature': nature,
+        if (notes != null) 'notes': notes,
+      }
+    };
+
+    try {
+      final response = await http.patch(
+        url,
+        headers: {
+          ...ApiConfig.getAuthHeaders(accessToken),
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode(body),
+      ).timeout(const Duration(seconds: 30));
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final responseData = jsonDecode(response.body);
+        return {
+          'success': true,
+          'transaction': Transaction.fromJson(responseData),
+        };
+      } else if (response.statusCode == 401) {
+        return {
+          'success': false,
+          'error': 'unauthorized',
+        };
+      } else {
+        try {
+          final responseData = jsonDecode(response.body);
+          return {
+            'success': false,
+            'error': responseData['error'] ?? 'Failed to update transaction',
+          };
+        } catch (e) {
+          return {
+            'success': false,
+            'error': 'Failed to update transaction: ${response.body}',
+          };
+        }
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'error': AppErrors.networkError,
+      };
+    }
+  }
+
 
   Future<Map<String, dynamic>> getTransactions({
     required String accessToken,
@@ -147,7 +215,7 @@ class TransactionsService {
     } catch (e) {
       return {
         'success': false,
-        'error': 'Network error: ${e.toString()}',
+        'error': AppErrors.networkError,
       };
     }
   }
@@ -193,7 +261,7 @@ class TransactionsService {
     } catch (e) {
       return {
         'success': false,
-        'error': 'Network error: ${e.toString()}',
+        'error': AppErrors.networkError,
       };
     }
   }
@@ -227,7 +295,7 @@ class TransactionsService {
     } catch (e) {
       return {
         'success': false,
-        'error': 'Network error: ${e.toString()}',
+        'error': AppErrors.networkError,
       };
     }
   }

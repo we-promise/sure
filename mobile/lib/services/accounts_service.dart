@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/account.dart';
+import '../utils/app_errors.dart';
 import 'api_config.dart';
 
 class AccountsService {
@@ -47,7 +48,7 @@ class AccountsService {
     } catch (e) {
       return {
         'success': false,
-        'error': 'Network error: ${e.toString()}',
+        'error': AppErrors.networkError,
       };
     }
   }

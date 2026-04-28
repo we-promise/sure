@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../models/auth_tokens.dart';
 import '../models/user.dart';
+import '../utils/app_errors.dart';
 import 'api_config.dart';
 import 'log_service.dart';
 
@@ -83,13 +84,13 @@ class AuthService {
       LogService.instance.error('AuthService', 'Login SocketException: $e\n$stackTrace');
       return {
         'success': false,
-        'error': 'Network unavailable',
+        'error': AppErrors.noInternet,
       };
     } on TimeoutException catch (e, stackTrace) {
       LogService.instance.error('AuthService', 'Login TimeoutException: $e\n$stackTrace');
       return {
         'success': false,
-        'error': 'Request timed out',
+        'error': AppErrors.requestTimeout,
       };
     } on HttpException catch (e, stackTrace) {
       LogService.instance.error('AuthService', 'Login HttpException: $e\n$stackTrace');
@@ -183,13 +184,13 @@ class AuthService {
       LogService.instance.error('AuthService', 'Signup SocketException: $e\n$stackTrace');
       return {
         'success': false,
-        'error': 'Network unavailable',
+        'error': AppErrors.noInternet,
       };
     } on TimeoutException catch (e, stackTrace) {
       LogService.instance.error('AuthService', 'Signup TimeoutException: $e\n$stackTrace');
       return {
         'success': false,
-        'error': 'Request timed out',
+        'error': AppErrors.requestTimeout,
       };
     } on HttpException catch (e, stackTrace) {
       LogService.instance.error('AuthService', 'Signup HttpException: $e\n$stackTrace');
@@ -257,13 +258,13 @@ class AuthService {
       LogService.instance.error('AuthService', 'RefreshToken SocketException: $e\n$stackTrace');
       return {
         'success': false,
-        'error': 'Network unavailable',
+        'error': AppErrors.noInternet,
       };
     } on TimeoutException catch (e, stackTrace) {
       LogService.instance.error('AuthService', 'RefreshToken TimeoutException: $e\n$stackTrace');
       return {
         'success': false,
-        'error': 'Request timed out',
+        'error': AppErrors.requestTimeout,
       };
     } on HttpException catch (e, stackTrace) {
       LogService.instance.error('AuthService', 'RefreshToken HttpException: $e\n$stackTrace');
@@ -328,13 +329,13 @@ class AuthService {
       LogService.instance.error('AuthService', 'API key login SocketException: $e\n$stackTrace');
       return {
         'success': false,
-        'error': 'Network unavailable',
+        'error': AppErrors.noInternet,
       };
     } on TimeoutException catch (e, stackTrace) {
       LogService.instance.error('AuthService', 'API key login TimeoutException: $e\n$stackTrace');
       return {
         'success': false,
-        'error': 'Request timed out',
+        'error': AppErrors.requestTimeout,
       };
     } catch (e, stackTrace) {
       LogService.instance.error('AuthService', 'API key login unexpected error: $e\n$stackTrace');
@@ -437,13 +438,13 @@ class AuthService {
       LogService.instance.error('AuthService', 'SSO exchange SocketException: $e\n$stackTrace');
       return {
         'success': false,
-        'error': 'Network unavailable',
+        'error': AppErrors.noInternet,
       };
     } on TimeoutException catch (e, stackTrace) {
       LogService.instance.error('AuthService', 'SSO exchange TimeoutException: $e\n$stackTrace');
       return {
         'success': false,
-        'error': 'Request timed out',
+        'error': AppErrors.requestTimeout,
       };
     } catch (e, stackTrace) {
       LogService.instance.error('AuthService', 'SSO exchange unexpected error: $e\n$stackTrace');
@@ -499,9 +500,9 @@ class AuthService {
         };
       }
     } on SocketException {
-      return {'success': false, 'error': 'Network unavailable'};
+      return {'success': false, 'error': AppErrors.noInternet};
     } on TimeoutException {
-      return {'success': false, 'error': 'Request timed out'};
+      return {'success': false, 'error': AppErrors.requestTimeout};
     } catch (e, stackTrace) {
       LogService.instance.error('AuthService', 'SSO link error: $e\n$stackTrace');
       return {'success': false, 'error': 'Failed to link account'};
@@ -555,9 +556,9 @@ class AuthService {
         };
       }
     } on SocketException {
-      return {'success': false, 'error': 'Network unavailable'};
+      return {'success': false, 'error': AppErrors.noInternet};
     } on TimeoutException {
-      return {'success': false, 'error': 'Request timed out'};
+      return {'success': false, 'error': AppErrors.requestTimeout};
     } catch (e, stackTrace) {
       LogService.instance.error('AuthService', 'SSO create account error: $e\n$stackTrace');
       return {'success': false, 'error': 'Failed to create account'};
@@ -596,7 +597,7 @@ class AuthService {
     } catch (e) {
       return {
         'success': false,
-        'error': 'Network error: ${e.toString()}',
+        'error': AppErrors.networkError,
       };
     }
   }

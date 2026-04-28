@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import '../utils/app_errors.dart';
 import 'api_config.dart';
 
 class UserService {
@@ -31,7 +32,7 @@ class UserService {
     } catch (e) {
       return {
         'success': false,
-        'error': 'Network error: ${e.toString()}',
+        'error': AppErrors.networkError,
       };
     }
   }
@@ -64,7 +65,7 @@ class UserService {
     } catch (e) {
       return {
         'success': false,
-        'error': 'Network error: ${e.toString()}',
+        'error': AppErrors.networkError,
       };
     }
   }
