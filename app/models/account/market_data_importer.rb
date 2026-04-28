@@ -45,34 +45,52 @@ class Account::MarketDataImporter
   def import_security_prices
     return unless Security.provider
 
-    account_securities = (account.trades.map(&:security) + account.current_holdings.map(&:security)).uniq
+    current_security_ids = account.current_holdings.pluck(:security_id).to_set
+    traded_security_ids  = account.trades.pluck(:security_id).uniq
 
-    return if account_securities.empty?
+    all_security_ids = (current_security_ids | traded_security_ids)
+    return if all_security_ids.empty?
 
-    account_securities.each do |security|
-      security.import_provider_prices(
-        start_date: first_required_price_date(security),
-        end_date: Date.current
-      )
+    securities = Security.online.where(id: all_security_ids).index_by(&:id)
 
+    start_dates       = batch_first_required_price_dates(all_security_ids)
+
+    # For securities no longer held, cap end_date at the last holding date so
+    # all_prices_exist? stays stable and we don't call the provider every sync.
+    historical_ids    = traded_security_ids - current_security_ids.to_a
+    last_holding_date = account.holdings
+                               .where(security_id: historical_ids)
+                               .group(:security_id)
+                               .maximum(:date)
+
+    all_security_ids.each do |security_id|
+      security = securities[security_id]
+      next unless security
+
+      end_date = current_security_ids.include?(security_id) ? Date.current : (last_holding_date[security_id] || Date.current)
+
+      security.import_provider_prices(start_date: start_dates[security_id], end_date: end_date)
       security.import_provider_details
     end
   end
 
   private
-    # Calculates the first date we require a price for the given security scoped to this account
-    def first_required_price_date(security)
-      trade_start_date = account.trades.with_entry
-                              .where(security: security)
-                              .where(entries: { account_id: account.id })
-                              .minimum("entries.date")
+    # Replaces 2-queries-per-security with 3 queries total.
+    def batch_first_required_price_dates(security_ids)
+      # account.trades is a has_many :through :entries, so entries is already joined
+      trade_start_dates = account.trades.group(:security_id).minimum("entries.date")
 
-      holding_start_date =
-        if account.holdings.where(security: security).where.not(account_provider_id: nil).exists?
-          account.start_date
-        end
+      provider_holding_security_ids = account.holdings
+                                             .where(security_id: security_ids)
+                                             .where.not(account_provider_id: nil)
+                                             .pluck(:security_id)
+                                             .to_set
 
-      [ trade_start_date, holding_start_date ].compact.min
+      security_ids.each_with_object({}) do |security_id, hash|
+        trade_date   = trade_start_dates[security_id]
+        holding_date = provider_holding_security_ids.include?(security_id) ? account.start_date : nil
+        hash[security_id] = [ trade_date, holding_date ].compact.min || account.start_date
+      end
     end
 
     def needs_exchange_rates?

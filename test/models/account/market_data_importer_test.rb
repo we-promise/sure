@@ -112,6 +112,56 @@ class Account::MarketDataImporterTest < ActiveSupport::TestCase
     assert_equal 1, Security::Price.where(security: security, date: trade_date).count
   end
 
+  test "caps end_date at last holding date for securities no longer held" do
+    family = Family.create!(name: "Smith", currency: "USD")
+
+    account = family.accounts.create!(
+      name: "Brokerage",
+      currency: "USD",
+      balance: 0,
+      accountable: Investment.new
+    )
+
+    current_sec    = Security.create!(ticker: "CURR", exchange_operating_mic: "XNAS")
+    historical_sec = Security.create!(ticker: "HIST", exchange_operating_mic: "XNAS")
+
+    trade_date  = 30.days.ago.to_date
+    sold_date   = 5.days.ago.to_date
+
+    [ current_sec, historical_sec ].each do |sec|
+      trade = Trade.new(security: sec, qty: 10, price: 100, currency: "USD", investment_activity_label: "Buy")
+      account.entries.create!(name: "Buy #{sec.ticker}", date: trade_date, amount: 1000, currency: "USD", entryable: trade)
+    end
+
+    # Current: most-recent holding has qty > 0 — shows up in current_holdings
+    account.holdings.create!(security: current_sec, date: Date.current, qty: 10, price: 110, amount: 1100, currency: "USD")
+
+    # Historical: most-recent holding has qty == 0 (sold) — excluded from current_holdings
+    account.holdings.create!(security: historical_sec, date: 10.days.ago.to_date, qty: 10, price: 105, amount: 1050, currency: "USD")
+    account.holdings.create!(security: historical_sec, date: sold_date, qty: 0, price: 0, amount: 0, currency: "USD")
+
+    expected_start_date = trade_date - SECURITY_PRICE_BUFFER
+
+    @provider.expects(:fetch_security_prices)
+             .with(symbol: current_sec.ticker,
+                   exchange_operating_mic: current_sec.exchange_operating_mic,
+                   start_date: expected_start_date,
+                   end_date: Date.current.in_time_zone("America/New_York").to_date)
+             .returns(provider_success_response([]))
+
+    @provider.expects(:fetch_security_prices)
+             .with(symbol: historical_sec.ticker,
+                   exchange_operating_mic: historical_sec.exchange_operating_mic,
+                   start_date: expected_start_date,
+                   end_date: sold_date)
+             .returns(provider_success_response([]))
+
+    @provider.stubs(:fetch_security_info).returns(provider_success_response(OpenStruct.new(name: "Test", logo_url: nil)))
+    @provider.stubs(:fetch_exchange_rates).returns(provider_success_response([]))
+
+    Account::MarketDataImporter.new(account).import_all
+  end
+
   test "handles provider error response gracefully for security prices" do
     family = Family.create!(name: "Smith", currency: "USD")
 
