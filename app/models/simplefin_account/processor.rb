@@ -90,6 +90,15 @@ class SimplefinAccount::Processor
         # bank's sign for Loans and skip the heuristic.
         if account.accountable_type == "Loan"
           balance = observed.abs
+          Rails.logger.info(
+            "SimpleFIN loan sign: trusted bank-reported magnitude for sfa=#{simplefin_account.id}, " \
+            "observed=#{observed.to_s('F')} stored=#{balance.to_s('F')}"
+          )
+          Sentry.add_breadcrumb(Sentry::Breadcrumb.new(
+            category: "simplefin",
+            message: "liability_sign=loan",
+            data: { sfa_id: simplefin_account.id, observed: observed.to_s("F"), stored: balance.to_s("F") }
+          )) rescue nil
         else
           # 1) Try transaction-history heuristic when enabled
           begin
