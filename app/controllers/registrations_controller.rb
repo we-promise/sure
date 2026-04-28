@@ -12,6 +12,11 @@ class RegistrationsController < ApplicationController
     @user = User.new(email: @invitation&.email)
   end
 
+  # Creates an account from registration form input.
+  #
+  # Handles invitation/default-family assignment and performs the final
+  # persistence through an atomic helper that claims invite codes only when
+  # signup succeeds.
   def create
     if @invitation
       @user.family = @invitation.family
@@ -39,21 +44,34 @@ class RegistrationsController < ApplicationController
 
   private
 
+    # Loads a pending invitation from URL or nested user params.
     def set_invitation
       token = params[:invitation]
       token ||= params[:user][:invitation] if params[:user].present?
       @invitation = Invitation.pending.find_by(token: token)
     end
 
+    # Builds a user from permitted params while excluding invitation fields.
     def set_user
       @user = User.new user_params.except(:invite_code, :invitation)
     end
 
+    # Returns permitted registration params or a specific param value.
+    #
+    # @param specific_param [Symbol, nil] optional key to return
+    # @return [ActionController::Parameters, Object]
     def user_params(specific_param = nil)
       params = self.params.require(:user).permit(:name, :email, :password, :password_confirmation, :invite_code, :invitation)
       specific_param ? params[specific_param] : params
     end
 
+    # Persists signup and consumes invite code atomically.
+    #
+    # In invite-only mode, this prevents valid invite codes from being burned
+    # when user validation fails. Returns true only when user save, invite
+    # claim, invitation acceptance, and session creation all succeed.
+    #
+    # @return [Boolean] true when signup fully succeeds
     def signup_with_invite_claim!
       invite_code = user_params[:invite_code]
       @invite_code_invalid = invite_code_required? && invite_code.blank?
@@ -79,6 +97,9 @@ class RegistrationsController < ApplicationController
       success
     end
 
+    # Applies password policy checks before attempting to save the user.
+    #
+    # Renders the signup form with unprocessable status when policy checks fail.
     def validate_password_requirements
       password = user_params[:password]
       return if password.blank? # Let Rails built-in validations handle blank passwords
@@ -104,6 +125,7 @@ class RegistrationsController < ApplicationController
       end
     end
 
+    # Prevents registration while onboarding is fully closed.
     def ensure_signup_open
       return unless Setting.onboarding_state == "closed"
 
