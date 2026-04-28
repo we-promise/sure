@@ -209,6 +209,44 @@ class Account::MarketDataImporterTest < ActiveSupport::TestCase
     Account::MarketDataImporter.new(account).import_all
   end
 
+  test "skips price fetching for offline securities" do
+    family = Family.create!(name: "Smith", currency: "USD")
+
+    account = family.accounts.create!(
+      name: "Brokerage",
+      currency: "USD",
+      balance: 0,
+      accountable: Investment.new
+    )
+
+    online_sec  = Security.create!(ticker: "ONLN", exchange_operating_mic: "XNAS")
+    offline_sec = Security.create!(ticker: "OFF",  exchange_operating_mic: "XNAS", offline: true)
+
+    trade_date = 10.days.ago.to_date
+
+    [ online_sec, offline_sec ].each do |sec|
+      trade = Trade.new(security: sec, qty: 1, price: 100, currency: "USD", investment_activity_label: "Buy")
+      account.entries.create!(name: "Buy #{sec.ticker}", date: trade_date, amount: 100, currency: "USD", entryable: trade)
+    end
+
+    @provider.expects(:fetch_security_prices)
+             .with(symbol: "OFF", exchange_operating_mic: anything,
+                   start_date: anything, end_date: anything)
+             .never
+
+    @provider.expects(:fetch_security_prices)
+             .with(symbol: online_sec.ticker,
+                   exchange_operating_mic: online_sec.exchange_operating_mic,
+                   start_date: anything,
+                   end_date: anything)
+             .returns(provider_success_response([]))
+
+    @provider.stubs(:fetch_security_info).returns(provider_success_response(OpenStruct.new(name: "Test", logo_url: nil)))
+    @provider.stubs(:fetch_exchange_rates).returns(provider_success_response([]))
+
+    Account::MarketDataImporter.new(account).import_all
+  end
+
   test "handles provider error response gracefully for security prices" do
     family = Family.create!(name: "Smith", currency: "USD")
 
