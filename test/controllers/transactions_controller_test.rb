@@ -110,6 +110,32 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_select ".split-group > div.opacity-50 p.privacy-sensitive", count: 1
   end
 
+  test "destroy shows alert when deleting settled bond lot purchase entry" do
+    bond_account = accounts(:bond)
+    lot = BondLot.create!(
+      bond: bond_account.bond,
+      purchased_on: Date.new(2024, 1, 1),
+      amount: 1000,
+      subtype: "other_bond",
+      term_months: 12,
+      interest_rate: 10,
+      rate_type: "fixed",
+      coupon_frequency: "at_maturity",
+      auto_close_on_maturity: true,
+      tax_strategy: "standard",
+      tax_rate: 19
+    )
+    lot.create_purchase_entry!
+    lot.settle_if_matured!(on: Date.new(2025, 2, 1))
+
+    assert_no_difference "Entry.count" do
+      delete entry_url(lot.entry)
+    end
+
+    assert_redirected_to account_url(lot.entry.account)
+    assert_equal I18n.t("entries.destroy.blocked_settled_bond_lot"), flash[:alert]
+  end
+
   test "can paginate" do
   family = families(:empty)
   sign_in users(:empty)

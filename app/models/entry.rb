@@ -514,7 +514,11 @@ class Entry < ApplicationRecord
     def prevent_deletion_when_linked_bond_lot_settled
       return unless bond_lot&.closed_on.present?
 
-      errors.add(:base, "Cannot delete entry linked to a settled bond lot")
+      errors.add(:base, settled_bond_lot_deletion_error_message)
       throw :abort
+    end
+
+    def settled_bond_lot_deletion_error_message
+      I18n.t("entries.destroy.blocked_settled_bond_lot")
     end
 end
