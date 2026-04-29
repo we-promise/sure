@@ -10,6 +10,7 @@
 
         <%= render DS::Disclosure.new(title: "Transactions", open: true) do %>
           <div class="space-y-2">
+            <%= form.text_field :name, label: t("transactions.bulk_updates.new.name_label"), placeholder: t("transactions.bulk_updates.new.name_placeholder") %>
             <%= form.collection_select :category_id, Current.family.categories.alphabetically, :id, :name, { prompt: "Select a category", label: "Category", class: "text-subdued" } %>
             <%= form.collection_select :merchant_id, Current.family.available_merchants_for(Current.user).alphabetically, :id, :name, { prompt: "Select a merchant", label: "Merchant", class: "text-subdued" } %>
             <%= form.select :tag_ids, Current.family.tags.alphabetically.pluck(:name, :id), { include_blank: "None", multiple: true, label: "Tags", include_hidden: false } %>
