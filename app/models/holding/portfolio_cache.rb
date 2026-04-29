@@ -16,9 +16,9 @@ class Holding::PortfolioCache
 
   def get_trades(date: nil)
     if date.blank?
-      trades
+      trades.dup
     else
-      trades_by_date[date] || []
+      trades_by_date[date]&.dup || []
     end
   end
 
@@ -81,16 +81,11 @@ class Holding::PortfolioCache
     end
 
     def collect_unique_securities
-      unique_securities_from_trades = trades.map(&:entryable).map(&:security).uniq
-      unique_securities_from_trades = unique_securities_from_trades.select { |s| @security_ids.include?(s.id) } if @security_ids
+      ids = trades_by_security_id.keys
+      ids |= holdings_by_security_id.keys if use_holdings
+      ids &= @security_ids if @security_ids
 
-      return unique_securities_from_trades unless use_holdings
-
-      holding_security_ids = holdings.map(&:security_id).uniq
-      holding_security_ids = holding_security_ids.select { |id| @security_ids.include?(id) } if @security_ids
-      unique_securities_from_holdings = Security.where(id: holding_security_ids).to_a
-
-      (unique_securities_from_trades + unique_securities_from_holdings).uniq
+      Security.where(id: ids).to_a
     end
 
     # Loads all known prices for all securities in the account with priority based on source:
@@ -108,6 +103,7 @@ class Holding::PortfolioCache
       # Bulk-load all DB prices for all securities in one query, grouped by security_id
       db_prices_by_security_id = Security::Price
         .where(security_id: security_ids, date: account.start_date..Date.current)
+        .select(:security_id, :date, :price, :currency)
         .group_by(&:security_id)
 
       securities.each do |security|

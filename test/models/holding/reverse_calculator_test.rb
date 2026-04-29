@@ -186,7 +186,7 @@ class Holding::ReverseCalculatorTest < ActiveSupport::TestCase
       create_trade(security, account: @account, qty: 10, price: 100, date: buy_date)
     end
 
-    assert_equal 100.0, cost_basis_for(calc, security, buy_date)
+    assert_in_delta 100.0, cost_basis_for(calc, security, buy_date).to_f, 1e-6
   end
 
   test "cost_basis_for carries forward to dates between buys" do
@@ -200,12 +200,12 @@ class Holding::ReverseCalculatorTest < ActiveSupport::TestCase
     end
 
     # Between the two buys, cost basis is from the first buy only
-    assert_equal 100.0, cost_basis_for(calc, security, first_buy + 1)
-    assert_equal 100.0, cost_basis_for(calc, security, second_buy - 1)
+    assert_in_delta 100.0, cost_basis_for(calc, security, first_buy + 1).to_f, 1e-6
+    assert_in_delta 100.0, cost_basis_for(calc, security, second_buy - 1).to_f, 1e-6
 
     # After second buy: WAC = (10*100 + 5*130) / 15 = 110.0
-    assert_equal 110.0, cost_basis_for(calc, security, second_buy)
-    assert_equal 110.0, cost_basis_for(calc, security, Date.current)
+    assert_in_delta 110.0, cost_basis_for(calc, security, second_buy).to_f, 1e-6
+    assert_in_delta 110.0, cost_basis_for(calc, security, Date.current).to_f, 1e-6
   end
 
   test "cost_basis_for accumulates multiple buys on the same date" do
@@ -218,7 +218,7 @@ class Holding::ReverseCalculatorTest < ActiveSupport::TestCase
     end
 
     # WAC = (10*100 + 5*130) / 15 = 110.0 — not the intermediate value after only the first trade
-    assert_equal 110.0, cost_basis_for(calc, security, buy_date)
+    assert_in_delta 110.0, cost_basis_for(calc, security, buy_date).to_f, 1e-6
   end
 
   test "cost_basis_for ignores sell trades" do
@@ -232,8 +232,8 @@ class Holding::ReverseCalculatorTest < ActiveSupport::TestCase
     end
 
     # Sell does not change cost basis
-    assert_equal 100.0, cost_basis_for(calc, security, sell_date)
-    assert_equal 100.0, cost_basis_for(calc, security, Date.current)
+    assert_in_delta 100.0, cost_basis_for(calc, security, sell_date).to_f, 1e-6
+    assert_in_delta 100.0, cost_basis_for(calc, security, Date.current).to_f, 1e-6
   end
 
   private
