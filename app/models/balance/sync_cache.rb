@@ -24,7 +24,11 @@ class Balance::SyncCache
 
     def holdings_value_by_date
       @holdings_value_by_date ||= account.holdings.each_with_object(Hash.new(0)) do |h, totals|
-        converted = Money.new(h.amount, h.currency).exchange_to(account.currency, date: h.date).amount
+        begin
+          converted = Money.new(h.amount, h.currency).exchange_to(account.currency, date: h.date).amount
+        rescue Money::ConversionError
+          converted = h.amount # fallback to 1:1 conversion rate if exchange rate unavailable
+        end
         totals[h.date] += converted
       end
     end

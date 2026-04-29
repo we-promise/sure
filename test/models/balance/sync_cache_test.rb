@@ -5,7 +5,7 @@ class Balance::SyncCacheTest < ActiveSupport::TestCase
     @family = families(:dylan_family)
     @account = @family.accounts.create!(
       name: "Test Account",
-      accountable: Depository.new,
+      accountable: Investment.new,
       currency: "USD",
       balance: 1000
     )
@@ -162,13 +162,11 @@ class Balance::SyncCacheTest < ActiveSupport::TestCase
     assert_equal 150.0, Balance::SyncCache.new(@account).get_holdings_value(Date.current)
   end
 
-  test "raises Money::ConversionError when exchange rate is missing for a foreign currency holding" do
+  test "falls back to 1:1 conversion rate when exchange rate is missing for a foreign currency holding" do
     security = Security.create!(ticker: "TST", name: "Test")
     @account.holdings.create!(security: security, date: Date.current, qty: 1, price: 100, amount: 100, currency: "EUR")
 
-    assert_raises(Money::ConversionError) do
-      Balance::SyncCache.new(@account).get_holdings_value(Date.current)
-    end
+    assert_equal 100, Balance::SyncCache.new(@account).get_holdings_value(Date.current)
   end
 
   test "prioritizes custom rate over fetched rate" do
