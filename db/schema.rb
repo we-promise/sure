@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_04_12_120000) do
+ActiveRecord::Schema[7.2].define(version: 2026_04_28_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -116,7 +116,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_04_12_120000) do
     t.string "locality"
     t.string "region"
     t.string "country"
-    t.integer "postal_code"
+    t.string "postal_code"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["addressable_type", "addressable_id"], name: "index_addresses_on_addressable"
