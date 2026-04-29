@@ -86,6 +86,19 @@ class RegistrationsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "invalid invite code does not create a user" do
+    with_env_overrides REQUIRE_INVITE_CODE: "true" do
+      assert_no_difference "User.count" do
+        post registration_url, params: { user: {
+          email: "valid@example.com",
+          password: "Password1!",
+          invite_code: "invalid-token-that-does-not-exist" } }
+      end
+
+      assert_redirected_to new_registration_url
+    end
+  end
+
   test "creating account from guest invitation assigns guest role and intro layout" do
     invitation = invitations(:one)
     invitation.update!(role: "guest", email: "guest-signup@example.com")
