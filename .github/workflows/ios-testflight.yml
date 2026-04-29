@@ -162,6 +162,7 @@ jobs:
         run: |
           set -euo pipefail
 
+          IOS_BUILD_NUMBER="$(date -u +%Y%m%d%H%M)"
           ARCHIVE_PATH="$RUNNER_TEMP/Runner.xcarchive"
           EXPORT_PATH="$PWD/build/ios/ipa"
           EXPORT_PLIST="$RUNNER_TEMP/ExportOptions.plist"
@@ -224,7 +225,12 @@ jobs:
           </plist>
           EOF
 
-          flutter build ios --release --no-codesign
+          echo "Using iOS build number: $IOS_BUILD_NUMBER"
+
+          flutter build ios \
+            --release \
+            --no-codesign \
+            --build-number="$IOS_BUILD_NUMBER"
 
           xcodebuild \
             -workspace ios/Runner.xcworkspace \
@@ -232,6 +238,7 @@ jobs:
             -configuration Release \
             -archivePath "$ARCHIVE_PATH" \
             -destination 'generic/platform=iOS' \
+            CURRENT_PROJECT_VERSION="$IOS_BUILD_NUMBER" \
             archive
 
           mkdir -p "$EXPORT_PATH"
