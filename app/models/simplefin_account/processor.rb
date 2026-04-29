@@ -91,13 +91,16 @@ class SimplefinAccount::Processor
         if account.accountable_type == "Loan"
           balance = observed.abs
           Rails.logger.info(
-            "SimpleFIN loan sign: trusted bank-reported magnitude for sfa=#{simplefin_account.id}, " \
+            "SimpleFIN liability sign: classification=loan sfa=#{simplefin_account.id}"
+          )
+          Rails.logger.debug(
+            "SimpleFIN liability sign (loan) amounts: sfa=#{simplefin_account.id} " \
             "observed=#{observed.to_s('F')} stored=#{balance.to_s('F')}"
           )
           Sentry.add_breadcrumb(Sentry::Breadcrumb.new(
             category: "simplefin",
             message: "liability_sign=loan",
-            data: { sfa_id: simplefin_account.id, observed: observed.to_s("F"), stored: balance.to_s("F") }
+            data: { sfa_id: simplefin_account.id }
           )) rescue nil
         else
           # 1) Try transaction-history heuristic when enabled
@@ -110,36 +113,45 @@ class SimplefinAccount::Processor
             when :credit
               balance = -observed.abs
               Rails.logger.info(
-                "SimpleFIN overpayment heuristic: classified as credit for sfa=#{simplefin_account.id}, " \
+                "SimpleFIN overpayment heuristic: classified as credit for sfa=#{simplefin_account.id} " \
+                "tx_count=#{result.metrics[:tx_count]}"
+              )
+              Rails.logger.debug(
+                "SimpleFIN overpayment heuristic (credit) amounts: sfa=#{simplefin_account.id} " \
                 "observed=#{observed.to_s('F')} metrics=#{result.metrics.slice(:charges_total, :payments_total, :tx_count).inspect}"
               )
               Sentry.add_breadcrumb(Sentry::Breadcrumb.new(
                 category: "simplefin",
                 message: "liability_sign=credit",
-                data: { sfa_id: simplefin_account.id, observed: observed.to_s("F") }
+                data: { sfa_id: simplefin_account.id }
               )) rescue nil
             when :debt
               balance = observed.abs
               Rails.logger.info(
-                "SimpleFIN overpayment heuristic: classified as debt for sfa=#{simplefin_account.id}, " \
+                "SimpleFIN overpayment heuristic: classified as debt for sfa=#{simplefin_account.id} " \
+                "tx_count=#{result.metrics[:tx_count]}"
+              )
+              Rails.logger.debug(
+                "SimpleFIN overpayment heuristic (debt) amounts: sfa=#{simplefin_account.id} " \
                 "observed=#{observed.to_s('F')} metrics=#{result.metrics.slice(:charges_total, :payments_total, :tx_count).inspect}"
               )
               Sentry.add_breadcrumb(Sentry::Breadcrumb.new(
                 category: "simplefin",
                 message: "liability_sign=debt",
-                data: { sfa_id: simplefin_account.id, observed: observed.to_s("F") }
+                data: { sfa_id: simplefin_account.id }
               )) rescue nil
             else
               # 2) Fall back to existing sign-only logic (log unknown for observability)
               begin
-                obs = {
-                  reason: result.reason,
-                  tx_count: result.metrics[:tx_count],
-                  charges_total: result.metrics[:charges_total],
-                  payments_total: result.metrics[:payments_total],
-                  observed: observed.to_s("F")
-                }.compact
-                Rails.logger.info("SimpleFIN overpayment heuristic: unknown; falling back #{obs.inspect}")
+                Rails.logger.info(
+                  "SimpleFIN overpayment heuristic: unknown for sfa=#{simplefin_account.id} " \
+                  "reason=#{result.reason} tx_count=#{result.metrics[:tx_count]}; falling back"
+                )
+                Rails.logger.debug(
+                  "SimpleFIN overpayment heuristic (unknown) amounts: sfa=#{simplefin_account.id} " \
+                  "observed=#{observed.to_s('F')} " \
+                  "charges_total=#{result.metrics[:charges_total]} payments_total=#{result.metrics[:payments_total]}"
+                )
               rescue
                 # no-op
               end
