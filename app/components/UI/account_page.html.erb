@@ -6,6 +6,15 @@
 
     <%= render UI::Account::Chart.new(account: account, period: chart_period, view: chart_view) %>
 
+    <% if (fx_coverage_start = fx_coverage_start_date).present? %>
+      <div class="px-3">
+        <%= render DS::Alert.new(
+          message: t("accounts.show.limited_fx_history_warning", date: l(fx_coverage_start, format: :long)),
+          variant: :warning
+        ) %>
+      </div>
+    <% end %>
+
     <div data-testid="account-details">
       <% if tabs.count > 1 %>
         <%= render DS::Tabs.new(active_tab: active_tab, url_param_key: "tab") do |tabs_container| %>

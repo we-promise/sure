@@ -35,9 +35,37 @@ class IndexaCapitalAccount::ProcessorTest < ActiveSupport::TestCase
     assert_nothing_raised { processor.process }
   end
 
-  test "processor updates account balance from holdings value" do
+  test "processor trusts API current_balance over holdings sum when present" do
     @indexa_capital_account.update!(
       current_balance: 38905.21,
+      raw_holdings_payload: [
+        {
+          "amount" => 16333.96,
+          "titles" => 32.26,
+          "price" => 506.32,
+          "instrument" => { "identifier" => "IE00BFPM9V94", "name" => "Vanguard US 500" }
+        },
+        {
+          "amount" => 10759.05,
+          "titles" => 40.34,
+          "price" => 266.71,
+          "instrument" => { "identifier" => "IE00BFPM9L96", "name" => "Vanguard European" }
+        }
+      ]
+    )
+
+    @account.update!(balance: 0)
+
+    processor = IndexaCapitalAccount::Processor.new(@indexa_capital_account)
+    processor.process
+
+    @account.reload
+    assert_in_delta 38905.21, @account.balance.to_f, 0.01
+  end
+
+  test "processor falls back to holdings sum when current_balance is missing" do
+    @indexa_capital_account.update!(
+      current_balance: nil,
       raw_holdings_payload: [
         {
           "amount" => 16333.96,

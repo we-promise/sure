@@ -1,44 +1,34 @@
 <%# locals: (budget:) %>
 
-<div>
-  <div class="flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-secondary uppercase">
-    <p>Categories</p>
-    <span class="text-subdued">&middot;</span>
-    <p><%= budget.budget_categories.count %></p>
+<% categories_state = budget_categories_view_state(budget) %>
+<% uncategorized_budget_category = categories_state[:uncategorized_budget_category] %>
+<% visible_expenses_empty = categories_state[:visible_expenses_empty] %>
+<% over_budget_groups = categories_state[:over_budget_groups] %>
+<% show_over_budget_uncategorized = categories_state[:show_over_budget_uncategorized] %>
+<% over_budget_count = categories_state[:over_budget_count] %>
+<% on_track_groups = categories_state[:on_track_groups] %>
+<% show_on_track_uncategorized = categories_state[:show_on_track_uncategorized] %>
+<% on_track_count = categories_state[:on_track_count] %>
 
-    <p class="ml-auto">Amount</p>
-  </div>
+<div class="space-y-4">
 
-  <div class="bg-container py-1 shadow-border-xs rounded-md">
-    <% if budget.family.categories.expenses.empty? %>
-      <div class="py-8">
-        <%= render "budget_categories/no_categories" %>
-      </div>
-    <% else %>
-      <% category_groups = BudgetCategory::Group.for(budget.budget_categories) %>
+  <% if over_budget_count.positive? %>
+    <%= render "budgets/category_section",
+      budget: budget,
+      count: over_budget_count,
+      groups: over_budget_groups,
+      uncategorized: uncategorized_budget_category,
+      show_uncategorized: show_over_budget_uncategorized,
+      over_budget_mode: true %>
+  <% end %>
 
-      <% category_groups.each_with_index do |group, index| %>
-        <div class="py-2">
-          <%= render "budget_categories/budget_category", budget_category: group.budget_category %>
+  <%= render "budgets/category_section",
+    budget: budget,
+    count: on_track_count,
+    groups: on_track_groups,
+    uncategorized: uncategorized_budget_category,
+    show_uncategorized: show_on_track_uncategorized,
+    over_budget_mode: false
+  %>
 
-          <div>
-            <% group.budget_subcategories.each do |budget_subcategory| %>
-              <div class="w-full flex items-start">
-                <div class="ml-8 pt-4 flex items-center justify-center text-subdued">
-                  <%= icon "corner-down-right" %>
-                </div>
-
-                <%= render "budget_categories/budget_category", budget_category: budget_subcategory %>
-              </div>
-            <% end %>
-          </div>
-        </div>
-
-        <%= render "shared/ruler" %>
-      <% end %>
-      <div class="py-2">
-        <%= render "budget_categories/budget_category", budget_category: budget.uncategorized_budget_category %>
-      </div>
-    <% end %>
-  </div>
 </div>

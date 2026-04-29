@@ -19,12 +19,12 @@ fr:
         txn_count:
           one: "1 opération"
           other: "%{count} opérations"
-        empty_state_primary: Aucune catégorie ou étiquette trouvée dans ce fichier QIF.
-        empty_state_secondary: Toutes les transactions seront importées sans catégories ni étiquettes.
-        submit: Continuer vers la revue
         split_warning_title: Transactions scindées détectées
         split_warning_description: "Ce fichier QIF contient des transactions scindées. Les transactions scindées ne sont pas encore prises en charge : chaque transaction scindée sera importée comme une transaction unique avec son montant total et sans catégorie. Les ventilations individuelles ne seront pas conservées."
         split_badge: scindée
+        empty_state_primary: Aucune catégorie ou étiquette trouvée dans ce fichier QIF.
+        empty_state_secondary: Toutes les transactions seront importées sans catégories ni étiquettes.
+        submit: Continuer vers la revue
     cleans:
       show:
         description: Modifiez vos données dans le tableau ci-dessous. Les cellules rouges sont invalides.
@@ -111,6 +111,17 @@ fr:
       preview: "Première date analysée"
       error_title: "Impossible de détecter le format de date"
       error_description: "Aucun des formats de date pris en charge n'a pu analyser les dates dans ce fichier. Veuillez vérifier que le fichier contient des entrées de date valides."
+    type_labels:
+      transaction_import: "Import de transactions"
+      trade_import: "Import de transactions boursières"
+      account_import: "Import de comptes"
+      mint_import: "Import Mint"
+      qif_import: "Import QIF"
+      category_import: "Import de catégories"
+      rule_import: "Import de règles"
+      pdf_import: "Import PDF"
+      document_import: "Import de document"
+      sure_import: "Import Sure"
     steps:
       upload: Téléverser
       configure: Configurer
@@ -120,7 +131,6 @@ fr:
       select: Sélectionner
     index:
       title: Importations
-      imports: Imports
       new: Nouvelle importation
     table:
       title: Imports
@@ -130,6 +140,17 @@ fr:
         status: Statut
         actions: Actions
       row:
+        type_labels:
+          transaction_import: "Transaction"
+          trade_import: "Transaction boursière"
+          account_import: "Compte"
+          mint_import: "Mint"
+          qif_import: "QIF"
+          category_import: "Catégorie"
+          rule_import: "Règle"
+          pdf_import: "PDF"
+          document_import: "Document"
+          sure_import: "Sure"
         status:
           in_progress: En cours
           uploading: Traitement des lignes
@@ -144,7 +165,11 @@ fr:
           view: Afficher
       empty: Aucune importation pour l'instant.
     new:
-      description: Vous pouvez manuellement importer divers types de données via CSV ou utiliser un des modèles d'importation que nous proposons comme Mint.
+      description: Importez depuis un outil financier ou téléversez des fichiers de données bruts.
+      tab_financial_tools: Outils financiers et fichiers
+      tab_raw_data: Données brutes
+      coming_soon: Bientôt disponible
+      import_ynab: Importer depuis YNAB
       import_accounts: Importer les comptes
       import_categories: Importer les catégories
       import_mint: Importer depuis Mint
@@ -152,16 +177,19 @@ fr:
       import_rules: Importer les règles
       import_transactions: Importer les transactions
       import_qif: Importer depuis Quicken (QIF)
+      import_sure: Importer depuis Sure
+      import_sure_description: Fichier .ndjson d'export complet
       import_file: Importer un document
-      import_file_description: Analyse par IA pour les PDFs et téléversement avec recherche pour les autres fichiers pris en charge
+      import_file_description: Analyse par IA pour les PDF et téléversement de fichiers avec recherche
       requires_account: Importez d'abord des comptes pour débloquer cette option.
       resume: Reprendre %{type}
       sources: Sources
-      title: Nouvelle importation CSV
+      title: Nouvelle importation
     create:
       file_too_large: Le fichier est trop volumineux. La taille maximale est de %{max_size} Mo.
       invalid_file_type: Type de fichier invalide. Veuillez téléverser un fichier CSV.
       csv_uploaded: CSV téléversé avec succès.
+      ndjson_uploaded: Fichier NDJSON téléversé avec succès.
       pdf_too_large: Le fichier PDF est trop volumineux. La taille maximale est de %{max_size} Mo.
       pdf_processing: Votre PDF est en cours de traitement. Vous recevrez un e-mail lorsque l'analyse sera terminée.
       invalid_pdf: Le fichier téléversé n'est pas un PDF valide.
@@ -169,10 +197,19 @@ fr:
       invalid_document_file_type: Type de fichier de document invalide pour le magasin de vecteurs actif.
       document_uploaded: Document téléversé avec succès.
       document_upload_failed: Nous n'avons pas pu téléverser le document dans le magasin de vecteurs. Veuillez réessayer.
+      invalid_ndjson_file_type: Type ou format de fichier invalide. Veuillez téléverser un fichier d'export .ndjson ou .json valide.
       document_provider_not_configured: Aucun magasin de vecteurs n'est configuré pour les téléversements de documents.
     show:
       finalize_upload: Veuillez finaliser le téléversement de votre fichier.
       finalize_mappings: Veuillez finaliser vos correspondances avant de continuer.
+    ready:
+      description: Voici un résumé des nouveaux éléments qui seront ajoutés à votre compte une fois que vous aurez publié cette importation.
+      title: Confirmez vos données d'importation
+      summary_item_label: Élément
+      summary_count_label: Nombre
+      empty_summary: Aucun enregistrement importable n'a été trouvé dans ce fichier. Il est peut-être vide, ou les lignes ne correspondent pas au format d'export attendu (chaque ligne doit être un objet JSON avec les clés « type » et « data », pour des types pris en charge par cet import).
+      publish_import: Publier l'importation
+      back_to_imports: Retour aux importations
     errors:
       custom_column_requires_inflow: "Les importations de colonnes personnalisées nécessitent la sélection d'une colonne d'entrée"
     document_types:
@@ -202,11 +239,3 @@ fr:
       unknown_state_description: Cette importation est dans un état inattendu. Veuillez retourner aux importations.
       processing_failed_with_message: "%{message}"
       processing_failed_generic: "Traitement échoué : %{error}"
-    ready:
-      description: Voici un résumé des nouveaux éléments qui seront ajoutés à votre compte une fois que vous aurez publié cette importation.
-      title: Confirmez vos données d'importation
-      summary_item_label: Élément
-      summary_count_label: Nombre
-      empty_summary: Aucun enregistrement importable n'a été trouvé dans ce fichier. Il est peut-être vide, ou les lignes ne correspondent pas au format d'export attendu (chaque ligne doit être un objet JSON avec les clés « type » et « data », pour des types pris en charge par cet import).
-      publish_import: Publier l'importation
-      back_to_imports: Retour aux importations

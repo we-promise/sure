@@ -1,0 +1,31 @@
+<%#
+  Renders a one-line activity summary for a SimpleFIN account on the setup card.
+  Helps users distinguish live accounts from dormant ones during setup, which is
+  essential when an institution has replaced a card (e.g., fraud replacement)
+  and returns both the old (dormant) and new (active) cards for a sync cycle.
+
+  Locals:
+    activity       - SimplefinAccount::ActivitySummary
+    likely_closed  - Boolean (dormant AND near-zero balance)
+%>
+<% count = activity.recent_transaction_count %>
+<% last_at = activity.last_transacted_at %>
+
+<% if likely_closed %>
+  <p class="mt-1 flex items-center gap-1.5 text-xs text-warning">
+    <%= icon "alert-triangle", size: "sm" %>
+    <%= t("simplefin_items.setup_accounts.activity.likely_closed") %>
+  </p>
+<% elsif count.positive? %>
+  <p class="mt-1 text-xs text-secondary">
+    <%= t("simplefin_items.setup_accounts.activity.recent", count: count, when: activity_when(last_at)) %>
+  </p>
+<% elsif last_at.present? %>
+  <p class="mt-1 text-xs text-secondary">
+    <%= t("simplefin_items.setup_accounts.activity.dormant", days: activity.days_since_last_activity) %>
+  </p>
+<% else %>
+  <p class="mt-1 text-xs text-secondary">
+    <%= t("simplefin_items.setup_accounts.activity.empty") %>
+  </p>
+<% end %>

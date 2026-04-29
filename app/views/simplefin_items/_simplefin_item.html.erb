@@ -187,6 +187,15 @@
 
     <% unless simplefin_item.scheduled_for_deletion? %>
       <div class="space-y-4 mt-4">
+        <%# Replacement suggestions from the ReplacementDetector (card-fraud swap, etc.).
+           Only rendered when the latest sync flagged candidate pairs. %>
+        <% suggestions = ((@simplefin_sync_stats_map || {})[simplefin_item.id] || {})["replacement_suggestions"] %>
+        <% if suggestions.is_a?(Array) && suggestions.any? %>
+          <%= render "simplefin_items/replacement_prompt",
+                     simplefin_item: simplefin_item,
+                     suggestions: suggestions %>
+        <% end %>
+
         <% if simplefin_item.accounts.any? %>
           <%= render "accounts/index/account_groups", accounts: simplefin_item.accounts %>
         <% end %>

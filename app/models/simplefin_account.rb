@@ -26,6 +26,13 @@ class SimplefinAccount < ApplicationRecord
     linked_account || account
   end
 
+  # Summary of transaction activity derived from raw_transactions_payload.
+  # Used by the setup UI and ReplacementDetector to distinguish live vs dormant
+  # accounts without re-parsing the payload at every call site.
+  def activity_summary
+    ActivitySummary.new(raw_transactions_payload)
+  end
+
   # Ensure there is an AccountProvider link for this SimpleFin account and its current Account.
   # Safe and idempotent; returns the AccountProvider or nil if no account is associated yet.
   def ensure_account_provider!

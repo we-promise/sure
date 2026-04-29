@@ -2,6 +2,20 @@
 zh-CN:
   budgets:
     show:
+      categories:
+        amount: 金额
+        edit: 编辑
+        title: 分类
+      on_track_categories:
+        short_title: 正常
+        title: 正常
+      over_budget_categories:
+        short_title: 超预算
+        title: 超预算
+      filter:
+        all: 全部
+        on_track: 正常
+        over_budget: 超预算
       tabs:
         actual: 实际
         budgeted: 预算

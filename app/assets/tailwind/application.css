@@ -203,3 +203,30 @@
 .turbo-progress-bar {
   margin-top: env(safe-area-inset-top);
 }
+
+.table-divider {
+  position: relative;
+}
+
+.table-divider {
+  background-image: linear-gradient(
+    to right,
+    transparent 1rem,
+    var(--color-alpha-black-100) 1rem,
+    var(--color-alpha-black-100) calc(100% - 1rem),
+    transparent calc(100% - 1rem)
+  );
+  background-repeat: no-repeat;
+  background-size: 100% 1px;
+  background-position: bottom;
+}
+
+[data-theme="dark"] .table-divider {
+  background-image: linear-gradient(
+    to right,
+    transparent 1rem,
+    var(--color-alpha-white-200) 1rem,
+    var(--color-alpha-white-200) calc(100% - 1rem),
+    transparent calc(100% - 1rem)
+  );
+}

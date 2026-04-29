@@ -52,7 +52,9 @@ en:
     new:
       title: New merchant
     perform_merge:
-      success: Successfully merged %{count} merchants
+      success:
+        one: Successfully merged %{count} merchant
+        other: Successfully merged %{count} merchants
       no_merchants_selected: No merchants selected to merge
       target_not_found: Target merchant not found
       invalid_merchants: Invalid merchants selected

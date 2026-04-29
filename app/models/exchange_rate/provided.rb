@@ -58,6 +58,11 @@ module ExchangeRate::Provided
     def rates_for(currencies, to:, date: Date.current)
       currencies.uniq.each_with_object({}) do |currency, map|
         rate = find_or_fetch_rate(from: currency, to: to, date: date)
+        if rate.nil?
+          Rails.logger.warn("No exchange rate found for #{currency}/#{to} on #{date}, using 1")
+        elsif rate.date != date
+          Rails.logger.debug("FX rate #{currency}/#{to}: using #{rate.date} for #{date} (gap=#{(date - rate.date).to_i}d)")
+        end
         map[currency] = rate&.rate || 1
       end
     end

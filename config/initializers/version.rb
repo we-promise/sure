@@ -16,7 +16,7 @@ module Sure
 
     private
       def semver
-        Rails.root.join(".sure-version").read.strip
+        Rails.root.join(".sure-version").read.strip || "0.7.0-alpha.8"
       end
   end
 end

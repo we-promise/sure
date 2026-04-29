@@ -162,6 +162,35 @@ class BudgetCategory < ApplicationRecord
     available_to_spend.negative?
   end
 
+  def budgeted?
+    display_budgeted_spending.to_d.positive?
+  end
+
+  def unbudgeted_with_spending?
+    !budgeted? && actual_spending.to_d.positive?
+  end
+
+  def over_budget_with_budget?
+    budgeted? && over_budget?
+  end
+
+  def on_track?
+    budgeted? && !over_budget?
+  end
+
+  def any_over_budget?
+    unbudgeted_with_spending? || over_budget_with_budget?
+  end
+
+  def visible_on_track?
+    return false unless on_track?
+
+    # Subcategories inheriting parent budget are hidden until they have spending.
+    return true unless subcategory? && inherits_parent_budget?
+
+    actual_spending.to_d.positive?
+  end
+
   def near_limit?
     !over_budget? && percent_of_budget_spent >= 90
   end

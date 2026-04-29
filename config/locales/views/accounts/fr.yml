@@ -1,11 +1,13 @@
 ---
 fr:
   accounts:
+    not_authorized: "Vous n'avez pas la permission de gérer ce compte"
     account:
       edit: Modifier
       link_lunchflow: Lier avec Lunch Flow
       link_provider: Lier avec un fournisseur
       unlink_provider: Délier du fournisseur
+      change_simplefin_account: Changer le compte SimpleFIN
       troubleshoot: Dépannage
       enable: Activer le compte
       disable: Désactiver le compte
@@ -13,6 +15,7 @@ fr:
       remove_default: Retirer par défaut
       default_label: Par défaut
       delete: Supprimer le compte
+      sharing: Partage
     chart:
       data_not_available: Données non disponibles pour la période sélectionnée
     create:
@@ -22,12 +25,14 @@ fr:
     destroy:
       success: "Le compte %{type} a été préparé à la suppression"
       cannot_delete_linked: "Impossible de supprimer un compte lié. Veuillez d'abord le délier."
+      failed: "La suppression de la ressource a échoué. Veuillez réessayer plus tard."
     empty:
       empty_message: Ajoutez un compte via une connexion, une importation ou en entrant manuellement.
       new_account: Nouveau compte
       no_accounts: Aucun compte pour l'instant
     form:
-      balance: Solde actuel
+      balance: "Solde à la date :"
+      opening_balance_date_label: Date du solde d'ouverture
       name_label: Nom du compte
       name_placeholder: Nom de compte d'exemple
       additional_details: Détails supplémentaires
@@ -44,7 +49,7 @@ fr:
       new_account: Nouveau compte
       sync: Tout synchroniser
     sync_all:
-      syncing: "Synchronisation des comptes..."
+      syncing: "Synchronisation des comptes…"
     new:
       import_accounts: Importer des comptes
       method_selector:
@@ -56,6 +61,7 @@ fr:
         title: Comment voulez-vous l'ajouter ?
       title: Que voulez-vous ajouter ?
     show:
+      limited_fx_history_warning: "L'historique des taux de change n'est disponible qu'à partir du %{date}. Les transactions antérieures à cette date utilisent des conversions de devises approximatives — cela peut se produire lorsque le fournisseur FX n'offre qu'une fenêtre historique limitée."
       activity:
         amount: Montant
         balance: Solde
@@ -65,8 +71,11 @@ fr:
         entry: entrée
         filter: Filtrer
         new: Nouveau
+        new_activity: Nouvelle activité
         new_balance: Nouveau solde
+        new_trade: Nouvelle transaction boursière
         new_transaction: Nouvelle transaction
+        new_transfer: Nouveau virement
         no_entries: Aucune entrée trouvée
         pending: En attente
         search:
@@ -83,6 +92,8 @@ fr:
         confirm_title: Supprimer le compte ?
         edit: Modifier
         import: Importer des transactions
+        import_trades: Importer des transactions boursières
+        import_transactions: Importer des transactions
         manage: Gérer les comptes
     update:
       success: "Compte %{type} mis à jour"
@@ -102,12 +113,29 @@ fr:
       depository: Liquidités
       investment: Investissement
       crypto: Crypto
-      property: Propriété
+      property: Bien immobilier
       vehicle: Véhicule
       other_asset: Autre actif
       credit_card: Carte de crédit
       loan: Prêt
       other_liability: Autre passif
+    tax_treatments:
+      taxable: Imposable
+      tax_deferred: Imposition différée
+      tax_exempt: Exonéré d'impôt
+      tax_advantaged: Fiscalement avantagé
+    tax_treatment_descriptions:
+      taxable: Gains imposés lors de leur réalisation
+      tax_deferred: Contributions déductibles, imposées au retrait
+      tax_exempt: Contributions après impôt, gains non imposés
+      tax_advantaged: Avantages fiscaux particuliers sous conditions
+    subtype_regions:
+      us: États-Unis
+      uk: Royaume-Uni
+      ca: Canada
+      au: Australie
+      eu: Europe
+      generic: Général
     confirm_unlink:
       title: Délier le compte du fournisseur ?
       description_html: "Vous êtes sur le point de délier <strong>%{account_name}</strong> de <strong>%{provider_name}</strong>. Cela le convertira en compte manuel."

@@ -476,6 +476,383 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
     assert !q.key?("open_relink_for"), "did not expect auto-open when update produced no SFAs/candidates"
   end
 
+  # Replacement detection prompt (surfaces on the SimpleFIN card when the
+  # importer's ReplacementDetector has persisted suggestions on sync_stats).
+
+  test "replacement prompt renders on accounts index when suggestions are persisted" do
+    # Create the two sfas the detector would flag
+    old_sfa = @simplefin_item.simplefin_accounts.create!(
+      name: "Citi-3831", account_id: "sf_3831",
+      currency: "USD", account_type: "credit", current_balance: 0,
+      org_data: { "name" => "Citibank" },
+      raw_transactions_payload: [
+        { "id" => "t", "transacted_at" => 90.days.ago.to_i, "posted" => 90.days.ago.to_i, "amount" => "-5" }
+      ]
+    )
+    sure_account = Account.create!(
+      family: @family,
+      name: "Citi Double Cash Card-3831",
+      balance: 0, currency: "USD",
+      accountable: CreditCard.create!(subtype: "credit_card")
+    )
+    AccountProvider.create!(account: sure_account, provider: old_sfa)
+
+    new_sfa = @simplefin_item.simplefin_accounts.create!(
+      name: "Citi-2879", account_id: "sf_2879",
+      currency: "USD", account_type: "credit", current_balance: -1200,
+      org_data: { "name" => "Citibank" },
+      raw_transactions_payload: [
+        { "id" => "n", "transacted_at" => 2.days.ago.to_i, "posted" => 2.days.ago.to_i, "amount" => "-100" }
+      ]
+    )
+
+    # Persist a suggestion on the latest sync
+    sync = @simplefin_item.syncs.create!(status: :completed, sync_stats: {
+      "replacement_suggestions" => [
+        {
+          "dormant_sfa_id" => old_sfa.id,
+          "active_sfa_id" => new_sfa.id,
+          "sure_account_id" => sure_account.id,
+          "institution_name" => "Citibank",
+          "dormant_account_name" => "Citi-3831",
+          "active_account_name" => "Citi-2879",
+          "confidence" => "high"
+        }
+      ]
+    })
+    sync.update_column(:created_at, Time.current)
+
+    get accounts_url
+    assert_response :success
+    assert_match(/Citibank card may have been replaced/, response.body)
+    assert_match(/Citi Double Cash Card-3831/, response.body)
+    assert_match(/Relink to new card/, response.body)
+  end
+
+  test "replacement prompt is suppressed once the relink has been applied" do
+    old_sfa = @simplefin_item.simplefin_accounts.create!(
+      name: "Citi-3831", account_id: "sf_3831_applied",
+      currency: "USD", account_type: "credit", current_balance: 0,
+      org_data: { "name" => "Citibank" },
+      raw_transactions_payload: [
+        { "id" => "t", "transacted_at" => 90.days.ago.to_i, "posted" => 90.days.ago.to_i, "amount" => "-5" }
+      ]
+    )
+    sure_account = Account.create!(
+      family: @family,
+      name: "Citi Double Cash Card-3831 (applied)",
+      balance: 0, currency: "USD",
+      accountable: CreditCard.create!(subtype: "credit_card")
+    )
+    new_sfa = @simplefin_item.simplefin_accounts.create!(
+      name: "Citi-2879", account_id: "sf_2879_applied",
+      currency: "USD", account_type: "credit", current_balance: -1200,
+      org_data: { "name" => "Citibank" },
+      raw_transactions_payload: [
+        { "id" => "n", "transacted_at" => 2.days.ago.to_i, "posted" => 2.days.ago.to_i, "amount" => "-100" }
+      ]
+    )
+    # Simulate the post-relink state: new_sfa is now linked to the Sure account,
+    # old_sfa is unlinked. sync_stats still carries the stale suggestion.
+    AccountProvider.create!(account: sure_account, provider: new_sfa)
+    sync = @simplefin_item.syncs.create!(status: :completed, sync_stats: {
+      "replacement_suggestions" => [
+        {
+          "dormant_sfa_id" => old_sfa.id,
+          "active_sfa_id" => new_sfa.id,
+          "sure_account_id" => sure_account.id,
+          "institution_name" => "Citibank",
+          "dormant_account_name" => "Citi-3831",
+          "active_account_name" => "Citi-2879",
+          "confidence" => "high"
+        }
+      ]
+    })
+    sync.update_column(:created_at, Time.current)
+
+    get accounts_url
+    assert_response :success
+    refute_match(/Citibank card may have been replaced/, response.body,
+      "banner should disappear once the relink has landed on the new sfa")
+  end
+
+  test "dismissing a replacement suggestion hides the banner for that pair" do
+    old_sfa = @simplefin_item.simplefin_accounts.create!(
+      name: "Citi-3831", account_id: "sf_3831_dismiss",
+      currency: "USD", account_type: "credit", current_balance: 0,
+      org_data: { "name" => "Citibank" },
+      raw_transactions_payload: [
+        { "id" => "t", "transacted_at" => 90.days.ago.to_i, "posted" => 90.days.ago.to_i, "amount" => "-5" }
+      ]
+    )
+    sure_account = Account.create!(
+      family: @family, name: "Citi Double Cash Card-3831 (dismiss)",
+      balance: 0, currency: "USD",
+      accountable: CreditCard.create!(subtype: "credit_card")
+    )
+    AccountProvider.create!(account: sure_account, provider: old_sfa)
+    new_sfa = @simplefin_item.simplefin_accounts.create!(
+      name: "Citi-2879", account_id: "sf_2879_dismiss",
+      currency: "USD", account_type: "credit", current_balance: -1200,
+      org_data: { "name" => "Citibank" },
+      raw_transactions_payload: [
+        { "id" => "n", "transacted_at" => 2.days.ago.to_i, "posted" => 2.days.ago.to_i, "amount" => "-100" }
+      ]
+    )
+    sync = @simplefin_item.syncs.create!(status: :completed, sync_stats: {
+      "replacement_suggestions" => [
+        {
+          "dormant_sfa_id" => old_sfa.id,
+          "active_sfa_id" => new_sfa.id,
+          "sure_account_id" => sure_account.id,
+          "institution_name" => "Citibank",
+          "confidence" => "high"
+        }
+      ]
+    })
+    sync.update_column(:created_at, Time.current)
+
+    # Banner is present before dismissal
+    get accounts_url
+    assert_match(/Citibank card may have been replaced/, response.body)
+
+    # Dismiss — pair key (dormant + active)
+    post dismiss_replacement_suggestion_simplefin_item_path(@simplefin_item), params: {
+      dormant_sfa_id: old_sfa.id,
+      active_sfa_id: new_sfa.id
+    }
+    sync.reload
+    assert_includes Array(sync.sync_stats["dismissed_replacement_suggestions"]),
+                    "#{old_sfa.id}:#{new_sfa.id}"
+
+    # Banner is gone after dismissal
+    get accounts_url
+    refute_match(/Citibank card may have been replaced/, response.body,
+      "banner should not render for a dismissed pair")
+  end
+
+  test "replacement prompt relink button successfully swaps AccountProvider" do
+    old_sfa = @simplefin_item.simplefin_accounts.create!(
+      name: "Old", account_id: "o1", currency: "USD",
+      account_type: "credit", current_balance: 0
+    )
+    new_sfa = @simplefin_item.simplefin_accounts.create!(
+      name: "New", account_id: "n1", currency: "USD",
+      account_type: "credit", current_balance: -500
+    )
+    sure_account = Account.create!(
+      family: @family, name: "Citi", balance: 0, currency: "USD",
+      accountable: CreditCard.create!(subtype: "credit_card")
+    )
+    AccountProvider.create!(account: sure_account, provider: old_sfa)
+
+    # The relink button posts to link_existing_account just like the modal does
+    post link_existing_account_simplefin_items_path, params: {
+      account_id: sure_account.id,
+      simplefin_account_id: new_sfa.id
+    }
+
+    sure_account.reload
+    sf_aps = sure_account.account_providers.where(provider_type: "SimplefinAccount")
+    assert_equal 1, sf_aps.count
+    assert_equal new_sfa.id, sf_aps.first.provider_id
+  end
+
+  # Same-provider relink tests (Bug #3 — allow SimpleFIN-to-SimpleFIN swap without unlink dance)
+
+  test "link_existing_account allows relink when account is already SimpleFIN-linked via AccountProvider" do
+    # @account currently linked to sfa_old (fraud-replaced card). User picks sfa_new.
+    account = Account.create!(
+      family: @family,
+      name: "Citi Double Cash",
+      balance: 0,
+      currency: "USD",
+      accountable: CreditCard.create!(subtype: "credit_card")
+    )
+    sfa_old = @simplefin_item.simplefin_accounts.create!(
+      name: "Citi Card-OLD",
+      account_id: "sf_citi_old",
+      currency: "USD",
+      account_type: "credit",
+      current_balance: 0
+    )
+    sfa_new = @simplefin_item.simplefin_accounts.create!(
+      name: "Citi Card-NEW",
+      account_id: "sf_citi_new",
+      currency: "USD",
+      account_type: "credit",
+      current_balance: -100
+    )
+    AccountProvider.create!(account: account, provider: sfa_old)
+
+    post link_existing_account_simplefin_items_path, params: {
+      account_id: account.id,
+      simplefin_account_id: sfa_new.id
+    }
+
+    assert_response :see_other
+
+    # The SimpleFIN link should now point at sfa_new
+    account.reload
+    sf_providers = account.account_providers.where(provider_type: "SimplefinAccount")
+    assert_equal 1, sf_providers.count, "should have exactly one SimpleFIN link after relink"
+    assert_equal sfa_new.id, sf_providers.first.provider_id
+
+    # Old AccountProvider for sfa_old on this account is detached
+    refute AccountProvider.exists?(account_id: account.id, provider: sfa_old),
+      "old SimpleFIN AccountProvider for this account should be detached"
+  end
+
+  test "link_existing_account allows relink when account has only legacy simplefin_account_id FK" do
+    account = Account.create!(
+      family: @family,
+      name: "Citi Double Cash",
+      balance: 0,
+      currency: "USD",
+      accountable: CreditCard.create!(subtype: "credit_card")
+    )
+    sfa_old = @simplefin_item.simplefin_accounts.create!(
+      name: "Citi Card-OLD",
+      account_id: "sf_citi_old2",
+      currency: "USD",
+      account_type: "credit",
+      current_balance: 0
+    )
+    sfa_new = @simplefin_item.simplefin_accounts.create!(
+      name: "Citi Card-NEW",
+      account_id: "sf_citi_new2",
+      currency: "USD",
+      account_type: "credit",
+      current_balance: -100
+    )
+    account.update!(simplefin_account_id: sfa_old.id)
+
+    post link_existing_account_simplefin_items_path, params: {
+      account_id: account.id,
+      simplefin_account_id: sfa_new.id
+    }
+
+    assert_response :see_other
+    account.reload
+    assert_nil account.simplefin_account_id, "legacy SimpleFIN FK should be cleared"
+    assert_equal sfa_new.id,
+      account.account_providers.where(provider_type: "SimplefinAccount").first&.provider_id
+  end
+
+  test "link_existing_account rejects when account is linked to a foreign provider (Plaid)" do
+    account = Account.create!(
+      family: @family,
+      name: "Plaid-Linked",
+      balance: 0,
+      currency: "USD",
+      accountable: Depository.create!(subtype: "checking")
+    )
+    plaid_item = PlaidItem.create!(family: @family, name: "Plaid Conn", access_token: "t", plaid_id: "p")
+    plaid_acct = PlaidAccount.create!(
+      plaid_item: plaid_item,
+      plaid_id: "p_acct_1",
+      name: "Plaid A",
+      plaid_type: "depository",
+      currency: "USD",
+      current_balance: 0
+    )
+    AccountProvider.create!(account: account, provider: plaid_acct)
+
+    sfa = @simplefin_item.simplefin_accounts.create!(
+      name: "SF-Target",
+      account_id: "sf_target_1",
+      currency: "USD",
+      account_type: "depository",
+      current_balance: 100
+    )
+
+    post link_existing_account_simplefin_items_path, params: {
+      account_id: account.id,
+      simplefin_account_id: sfa.id
+    }
+
+    # Should NOT have attached the SimpleFIN provider
+    account.reload
+    assert_empty account.account_providers.where(provider_type: "SimplefinAccount")
+    # Plaid link should remain intact
+    assert account.account_providers.where(provider_type: "PlaidAccount").exists?
+  end
+
+  # Activity badge tests (helps users distinguish live vs replaced/closed cards during setup)
+
+  test "setup_accounts renders recent-transactions badge for active sfa" do
+    @simplefin_item.simplefin_accounts.create!(
+      name: "Active Card",
+      account_id: "active_card_1",
+      currency: "USD",
+      account_type: "credit",
+      current_balance: -123.45,
+      raw_transactions_payload: [
+        { "id" => "t1", "transacted_at" => 3.days.ago.to_i, "posted" => 3.days.ago.to_i, "amount" => "-10" },
+        { "id" => "t2", "transacted_at" => 10.days.ago.to_i, "posted" => 10.days.ago.to_i, "amount" => "-20" }
+      ]
+    )
+
+    get setup_accounts_simplefin_item_url(@simplefin_item)
+    assert_response :success
+    assert_match(/2 transactions.*3 days ago/, response.body,
+      "expected active sfa to show recent transaction count and last activity")
+  end
+
+  test "setup_accounts renders 'likely closed' warning for dormant+zero-balance sfa" do
+    @simplefin_item.simplefin_accounts.create!(
+      name: "Dead Card",
+      account_id: "dead_card_1",
+      currency: "USD",
+      account_type: "credit",
+      current_balance: 0,
+      raw_transactions_payload: [
+        { "id" => "old", "transacted_at" => 120.days.ago.to_i, "posted" => 120.days.ago.to_i, "amount" => "-5" }
+      ]
+    )
+
+    get setup_accounts_simplefin_item_url(@simplefin_item)
+    assert_response :success
+    assert_match(/closed or replaced card/, response.body,
+      "expected dormant+zero-balance sfa to show closed/replaced warning")
+  end
+
+  test "setup_accounts renders 'no transactions imported' for empty sfa" do
+    @simplefin_item.simplefin_accounts.create!(
+      name: "Brand New Card",
+      account_id: "fresh_card_1",
+      currency: "USD",
+      account_type: "credit",
+      current_balance: 0,
+      raw_transactions_payload: []
+    )
+
+    get setup_accounts_simplefin_item_url(@simplefin_item)
+    assert_response :success
+    assert_match(/No transactions imported yet/, response.body)
+  end
+
+  test "setup_accounts renders 'dormant but has balance' as plain text not warning" do
+    # Legitimate dormant case: HSA/savings account with real balance but no recent activity.
+    # Should NOT be flagged as likely-closed because the balance is non-trivial.
+    @simplefin_item.simplefin_accounts.create!(
+      name: "Dormant HSA",
+      account_id: "dormant_hsa_1",
+      currency: "USD",
+      account_type: "investment",
+      current_balance: 5432.10,
+      raw_transactions_payload: [
+        { "id" => "old", "transacted_at" => 120.days.ago.to_i, "posted" => 120.days.ago.to_i, "amount" => "100" }
+      ]
+    )
+
+    get setup_accounts_simplefin_item_url(@simplefin_item)
+    assert_response :success
+    assert_match(/No activity in 120 days/, response.body)
+    refute_match(/closed or replaced card/, response.body,
+      "dormant accounts with real balances should not be marked as closed")
+  end
+
   # Stale account detection and handling tests
 
   test "setup_accounts detects stale accounts not in upstream API" do

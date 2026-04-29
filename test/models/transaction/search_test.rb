@@ -625,4 +625,25 @@ class Transaction::SearchTest < ActiveSupport::TestCase
       end
     end
   end
+
+  test "empty accessible_account_ids yields no visible transactions" do
+    create_transaction(account: @checking_account, amount: 100)
+
+    search = Transaction::Search.new(@family, filters: {}, accessible_account_ids: [])
+
+    assert_empty search.transactions_scope
+  end
+
+  test "totals handles empty accessible_account_ids without raising" do
+    create_transaction(account: @checking_account, amount: 100)
+
+    search = Transaction::Search.new(@family, filters: {}, accessible_account_ids: [])
+    totals = search.totals
+
+    assert_equal 0, totals.count
+    assert_equal Money.new(0, @family.currency), totals.expense_money
+    assert_equal Money.new(0, @family.currency), totals.income_money
+    assert_equal Money.new(0, @family.currency), totals.transfer_inflow_money
+    assert_equal Money.new(0, @family.currency), totals.transfer_outflow_money
+  end
 end

@@ -17,17 +17,31 @@ fr:
       missing_params: "Paramètres requis manquants : adresse et blockchain."
       failed: Échec de la liaison du portefeuille crypto.
       error: "Échec de la liaison du portefeuille crypto : %{message}."
+    link_exchange:
+      success: "Plateforme d'échange %{name} liée."
+      missing_params: La plateforme d'échange et les identifiants sont requis.
+      invalid_exchange: La plateforme d'échange sélectionnée n'est plus prise en charge.
+      failed: Échec de la liaison de la plateforme d'échange.
+      error: "Échec de la liaison de la plateforme d'échange : %{message}."
     new:
       title: Lier un portefeuille crypto avec CoinStats
       blockchain_fetch_error: Échec du chargement des blockchains. Veuillez réessayer plus tard.
+      link_wallet_title: Lier une adresse de portefeuille
+      link_wallet_description: Suivez un portefeuille en auto-conservation ou une adresse on-chain unique via CoinStats.
       address_label: Adresse
       address_placeholder: Requis
       blockchain_label: Blockchain
       blockchain_placeholder: Requis
       blockchain_select_blank: Sélectionnez une blockchain
-      link: Lier le portefeuille crypto
+      link_wallet_submit: Lier le portefeuille crypto
+      link_exchange_title: Lier l'API d'une plateforme d'échange
+      link_exchange_description: Utilisez une clé API de plateforme d'échange en lecture seule pour que CoinStats puisse synchroniser les soldes et les transactions depuis Bitvavo, Binance et d'autres plateformes prises en charge.
+      link_exchange_note: Si votre plateforme d'échange nécessite l'activation de la clé API ou la confirmation par e-mail, effectuez cette étape avant de la lier ici.
+      exchange_select_blank: Sélectionnez une plateforme d'échange
+      exchange_label: Plateforme d'échange
+      link_exchange_submit: Lier la plateforme d'échange
       not_configured_title: Connexion au fournisseur CoinStats non configurée
-      not_configured_message: Pour lier un portefeuille crypto, vous devez d'abord configurer la connexion au fournisseur CoinStats.
+      not_configured_message: Pour lier un portefeuille crypto ou une plateforme d'échange, vous devez d'abord configurer la connexion au fournisseur CoinStats.
       not_configured_step1_html: Allez dans <strong>Paramètres → Fournisseurs</strong>
       not_configured_step2_html: Localisez le fournisseur <strong>CoinStats</strong>
       not_configured_step3_html: Suivez les <strong>instructions de configuration</strong> fournies pour terminer la configuration du fournisseur

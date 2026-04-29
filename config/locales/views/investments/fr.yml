@@ -10,6 +10,115 @@ fr:
       title: Saisir le solde du compte
     show:
       chart_title: Valeur totale
+    subtypes:
+      # United States
+      brokerage:
+        short: Courtier
+        long: Courtier
+      401k:
+        short: 401(k)
+        long: 401(k)
+      roth_401k:
+        short: Roth 401(k)
+        long: Roth 401(k)
+      403b:
+        short: 403(b)
+        long: 403(b)
+      457b:
+        short: 457(b)
+        long: 457(b)
+      tsp:
+        short: TSP
+        long: Plan d'épargne fédéral américain (TSP)
+      ira:
+        short: IRA
+        long: Compte de retraite individuel (IRA)
+      roth_ira:
+        short: Roth IRA
+        long: Compte de retraite individuel Roth (Roth IRA)
+      sep_ira:
+        short: SEP IRA
+        long: Plan de retraite simplifié pour employés (SEP-IRA)
+      simple_ira:
+        short: SIMPLE IRA
+        long: Plan d'épargne salariale (SIMPLE IRA)
+      529_plan:
+        short: Plan 529
+        long: Plan 529 d'épargne-études
+      hsa:
+        short: HSA
+        long: Compte d'épargne santé
+      ugma:
+        short: UGMA
+        long: Compte de garde UGMA
+      utma:
+        short: UTMA
+        long: Compte de garde UTMA
+      # United Kingdom
+      isa:
+        short: ISA
+        long: Plan d'épargne individuel britannique (ISA)
+      lisa:
+        short: LISA
+        long: Plan d'épargne individuel à vie (LISA)
+      sipp:
+        short: SIPP
+        long: Plan de retraite individuel auto-géré (SIPP)
+      workplace_pension_uk:
+        short: Pension
+        long: Pension d'entreprise
+      # Canada
+      rrsp:
+        short: REER
+        long: Régime enregistré d'épargne-retraite
+      tfsa:
+        short: CELI
+        long: Compte d'épargne libre d'impôt
+      resp:
+        short: REEE
+        long: Régime enregistré d'épargne-études
+      lira:
+        short: CRI
+        long: Compte de retraite immobilisé
+      rrif:
+        short: FERR
+        long: Fonds enregistré de revenu de retraite
+      # Australia
+      super:
+        short: Super
+        long: Superannuation
+      smsf:
+        short: SMSF
+        long: Self-Managed Super Fund
+      # Europe
+      pea:
+        short: PEA
+        long: Plan d'Épargne en Actions
+      pillar_3a:
+        short: Pilier 3a
+        long: Prévoyance privée (Pilier 3a)
+      riester:
+        short: Riester
+        long: Riester-Rente
+      # Generic
+      pension:
+        short: Retraite
+        long: Retraite
+      retirement:
+        short: Retraite
+        long: Compte de retraite
+      mutual_fund:
+        short: Fonds commun
+        long: Fonds commun de placement
+      angel:
+        short: Business angel
+        long: Investissement providentiel
+      trust:
+        short: Fiducie
+        long: Fiducie
+      other:
+        short: Autre
+        long: Autre investissement
     value_tooltip:
       cash: Liquidités
       holdings: Titres
