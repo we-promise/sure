@@ -20,7 +20,7 @@ if ENV["SENTRY_DSN"].present?
     # We recommend adjusting this value in production.
     config.profiles_sample_rate = 0.25
 
-    config.release = Rails.root.join(".sure-version").read.strip
+    config.release = Rails.root.join(".sure-version").read.strip rescue nil
     config.profiler_class = Sentry::Vernier::Profiler
   end
 end
