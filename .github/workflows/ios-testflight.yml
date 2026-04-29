@@ -186,7 +186,7 @@ jobs:
               if "CODE_SIGN_STYLE = Manual;" not in block:
                   block = block.replace("CURRENT_PROJECT_VERSION = \"$(FLUTTER_BUILD_NUMBER)\";", "CURRENT_PROJECT_VERSION = \"$(FLUTTER_BUILD_NUMBER)\";\n\t\t\t\tCODE_SIGN_STYLE = Manual;")
               if '"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "Apple Distribution";' not in block:
-                  block = block.replace("DEVELOPMENT_TEAM = C8WT3YC922;", f'"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "{identity}";\n\t\t\t\tDEVELOPMENT_TEAM = {team};')
+                  block = re.sub(r'DEVELOPMENT_TEAM = .*?;', f'"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "{identity}";\n\t\t\t\tDEVELOPMENT_TEAM = {team};', block, count=1)
               else:
                   block = re.sub(r'"CODE_SIGN_IDENTITY\[sdk=iphoneos\*\]" = ".*?";', f'"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "{identity}";', block)
                   block = re.sub(r'DEVELOPMENT_TEAM = .*?;', f'DEVELOPMENT_TEAM = {team};', block)
