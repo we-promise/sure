@@ -162,6 +162,7 @@ jobs:
         run: |
           set -euo pipefail
 
+          IOS_VERSION="$(tr -d '[:space:]' < ../.sure-version)"
           IOS_BUILD_NUMBER="$(date -u +%Y%m%d%H%M)"
           ARCHIVE_PATH="$RUNNER_TEMP/Runner.xcarchive"
           EXPORT_PATH="$PWD/build/ios/ipa"
@@ -225,11 +226,18 @@ jobs:
           </plist>
           EOF
 
+          if [ -z "$IOS_VERSION" ]; then
+            echo "::error::.sure-version is empty or unreadable"
+            exit 1
+          fi
+
+          echo "Using iOS version: $IOS_VERSION"
           echo "Using iOS build number: $IOS_BUILD_NUMBER"
 
           flutter build ios \
             --release \
             --no-codesign \
+            --build-name="$IOS_VERSION" \
             --build-number="$IOS_BUILD_NUMBER"
 
           xcodebuild \
@@ -238,6 +246,7 @@ jobs:
             -configuration Release \
             -archivePath "$ARCHIVE_PATH" \
             -destination 'generic/platform=iOS' \
+            MARKETING_VERSION="$IOS_VERSION" \
             CURRENT_PROJECT_VERSION="$IOS_BUILD_NUMBER" \
             archive
 
