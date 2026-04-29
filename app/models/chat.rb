@@ -83,6 +83,7 @@ class Chat < ApplicationRecord
   end
 
   def presentable_error_message
+    return nil if error.blank?
     parsed_error_payload["message"].presence || classify_error_message(error)
   end
 
@@ -122,16 +123,16 @@ class Chat < ApplicationRecord
 
     def classify_error_message(message)
       normalized_message = message.to_s.strip
-      return "Failed to generate a response. Please try again." if normalized_message.blank?
+      return I18n.t("chat.errors.default") if normalized_message.blank?
 
       if RATE_LIMIT_PATTERNS.any? { |pattern| normalized_message.match?(pattern) }
-        "The AI provider is rate limited right now. Please try again in a few minutes."
+        I18n.t("chat.errors.rate_limited")
       elsif TEMPORARY_PROVIDER_PATTERNS.any? { |pattern| normalized_message.match?(pattern) }
-        "The AI provider is temporarily unavailable right now. Please try again in a few minutes."
+        I18n.t("chat.errors.temporarily_unavailable")
       elsif AUTH_CONFIGURATION_PATTERNS.any? { |pattern| normalized_message.match?(pattern) }
-        "The AI provider is not configured correctly. Please contact your administrator."
+        I18n.t("chat.errors.misconfigured")
       else
-        "Failed to generate a response. Please try again."
+        I18n.t("chat.errors.default")
       end
     end
 
@@ -147,7 +148,7 @@ class Chat < ApplicationRecord
 
     def error_message_for(error)
       error.respond_to?(:message) ? error.message.to_s : error.to_s
-    rescue
+    rescue StandardError
       ""
     end
 
