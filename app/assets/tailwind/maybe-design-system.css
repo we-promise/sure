@@ -10,6 +10,7 @@
 @import './maybe-design-system/text-utils.css';
 @import './maybe-design-system/border-utils.css';
 @import './maybe-design-system/component-utils.css';
+@import './maybe-design-system/animation-utils.css';
 
 @custom-variant theme-dark (&:where([data-theme=dark], [data-theme=dark] *));
 
