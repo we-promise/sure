@@ -58,6 +58,19 @@ class Period
       label: "Current Year",
       comparison_label: "vs. start of year"
     },
+    "fiscal_year_to_date" => {
+      date_range: -> {
+        family = Current.family
+        # When family is nil the fallback silently produces a YTD-equivalent range
+        # (beginning_of_year..today) identical to current_year; callers such as
+        # Periodable should guard against this with uses_fiscal_year?.
+        start_date = family ? family.current_fiscal_year_start : Date.current.beginning_of_year
+        [ start_date, Date.current ]
+      },
+      label_short: "FYTD",
+      label: "Financial Year",
+      comparison_label: "vs. start of financial year"
+    },
     "last_365_days" => {
       date_range: -> { [ 365.days.ago.to_date, Date.current ] },
       label_short: "365D",
@@ -114,7 +127,10 @@ class Period
     end
 
     def all
-      PERIODS.map { |key, period| from_key(key) }
+      PERIODS.filter_map do |key, _period|
+        next if key == "fiscal_year_to_date" && !Current.family&.uses_fiscal_year?
+        from_key(key)
+      end
     end
 
     def as_options

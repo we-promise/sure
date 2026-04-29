@@ -49,6 +49,8 @@ class Family < ApplicationRecord
   validates :date_format, inclusion: { in: DATE_FORMATS.map(&:last) }
   validates :month_start_day, inclusion: { in: 1..28 }
   validates :moniker, inclusion: { in: MONIKERS }
+  validates :fiscal_year_start_month, inclusion: { in: 1..12 }
+  validates :fiscal_year_start_day, inclusion: { in: 1..28 }
   validates :assistant_type, inclusion: { in: ASSISTANT_TYPES }
   validates :default_account_sharing, inclusion: { in: SHARING_DEFAULTS }
 
@@ -116,6 +118,16 @@ class Family < ApplicationRecord
     start_date = custom_month_start_for(Date.current)
     end_date = custom_month_end_for(Date.current)
     Period.custom(start_date: start_date, end_date: end_date)
+  end
+
+  def uses_fiscal_year?
+    fiscal_year_start_month != 1 || fiscal_year_start_day != 1
+  end
+
+  def current_fiscal_year_start
+    today = Date.current
+    fy_start_this_year = Date.new(today.year, fiscal_year_start_month, fiscal_year_start_day)
+    fy_start_this_year <= today ? fy_start_this_year : fy_start_this_year - 1.year
   end
 
   def assigned_merchants

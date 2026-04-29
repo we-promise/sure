@@ -106,7 +106,7 @@ class UsersController < ApplicationController
     end
 
     def user_params
-      family_attrs = [ :name, :currency, :country, :date_format, :timezone, :locale, :month_start_day, :id ]
+      family_attrs = [ :name, :currency, :country, :date_format, :timezone, :locale, :month_start_day, :fiscal_year_start_month, :fiscal_year_start_day, :id ]
       if Current.user.admin?
         family_attrs.push(:moniker, :default_account_sharing)
         family_attrs << { enabled_currencies: [] }

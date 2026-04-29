@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_04_12_120000) do
+ActiveRecord::Schema[7.2].define(version: 2026_04_21_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -595,7 +595,11 @@ ActiveRecord::Schema[7.2].define(version: 2026_04_12_120000) do
     t.string "assistant_type", default: "builtin", null: false
     t.string "default_account_sharing", default: "shared", null: false
     t.string "enabled_currencies", array: true
+    t.integer "fiscal_year_start_month", default: 1, null: false
+    t.integer "fiscal_year_start_day", default: 1, null: false
     t.check_constraint "default_account_sharing::text = ANY (ARRAY['shared'::character varying::text, 'private'::character varying::text])", name: "chk_families_default_account_sharing"
+    t.check_constraint "fiscal_year_start_day >= 1 AND fiscal_year_start_day <= 28", name: "fiscal_year_start_day_range"
+    t.check_constraint "fiscal_year_start_month >= 1 AND fiscal_year_start_month <= 12", name: "fiscal_year_start_month_range"
     t.check_constraint "month_start_day >= 1 AND month_start_day <= 28", name: "month_start_day_range"
   end
 
