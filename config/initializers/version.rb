@@ -15,11 +15,11 @@ module Sure
     end
 
     private
-      FALLBACK_VERSION = "0.7.1-alpha.1".freeze
-
       def semver
         stripped_content = Rails.root.join(".sure-version").read.strip
-        stripped_content.present? ? stripped_content : FALLBACK_VERSION
+        stripped_content.presence || "n/a: #{commit_sha}"
+      rescue Errno::ENOENT
+        "n/a: #{commit_sha || 'unknown'}"
       end
   end
 end
