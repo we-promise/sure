@@ -15,7 +15,7 @@ module Sure
     end
 
     private
-      FALLBACK_VERSION = "0.7.0-alpha.4".freeze
+      FALLBACK_VERSION = "0.7.1-alpha.1".freeze
 
       def semver
         stripped_content = Rails.root.join(".sure-version").read.strip
