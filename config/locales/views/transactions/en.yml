@@ -277,3 +277,6 @@ en:
         other: "Files (%{count})"
       browse_to_add: "Browse to add files"
       max_reached: "Maximum file limit reached (%{count}/%{max}). Delete an existing file to upload another."
+    bulk_updates:
+      new:
+        tags_label: Tags

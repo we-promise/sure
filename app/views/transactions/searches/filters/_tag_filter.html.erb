@@ -4,9 +4,9 @@
     <input type="search" autocomplete="off" placeholder="Filter tags" data-list-filter-target="input" data-action="input->list-filter#filter" class="block w-full bg-container border border-secondary rounded-md py-2 pl-10 pr-3 focus:ring-gray-500 sm:text-sm">
     <%= icon("search", class: "absolute inset-y-0 left-2 top-1/2 transform -translate-y-1/2") %>
   </div>
-  <div class="my-2" id="list" data-list-filter-target="list">
+  <div class="my-2 flex flex-wrap gap-2" id="list" data-list-filter-target="list">
     <% Current.family.tags.alphabetically.each do |tag| %>
-      <div class="filterable-item flex items-center gap-2 p-2" data-filter-name="<%= tag.name %>">
+      <label class="filterable-item flex items-center gap-2 cursor-pointer" data-filter-name="<%= tag.name %>">
         <%= form.check_box :tags,
                            {
                              multiple: true,
@@ -15,18 +15,16 @@
                            },
                            tag.name,
                            nil %>
-        <%= form.label :tags, value: tag.name, class: "text-sm text-primary flex items-center gap-2" do %>
-          <% tag_color = tag.color.presence || Tag::UNCATEGORIZED_COLOR %>
-          <span class="border text-sm font-medium px-3 py-1 rounded-full inline-flex items-center gap-2"
-                style="
-                  background-color: color-mix(in oklab, <%= tag_color %> 10%, transparent);
-                  border-color: color-mix(in oklab, <%= tag_color %> 20%, transparent);
-                  color: <%= tag_color %>;">
-                <span class="size-1.5 rounded-full" style="background-color: <%= tag_color %>;"></span>
-            <%= tag.name %>
-          </span>
-        <% end %>
-      </div>
+        <% color = tag_display_color(tag) %>
+        <span class="border text-sm font-medium px-3 py-1 rounded-full inline-flex items-center gap-2"
+              style="
+                background-color: color-mix(in oklab, <%= color %> 10%, transparent);
+                border-color: color-mix(in oklab, <%= color %> 20%, transparent);
+                color: <%= color %>;">
+          <span class="size-1.5 rounded-full" style="background-color: <%= color %>;"></span>
+          <%= tag.name %>
+        </span>
+      </label>
     <% end %>
   </div>
 </div>

@@ -155,6 +155,7 @@ en:
       prompt: Please select
       search_placeholder: "Search"
       default_label: "Select..."
+      no_results: "No tags found"
     submit:
       create: Create %{model}
       submit: Save %{model}
