@@ -11,7 +11,7 @@
   <% end %>
 
   <% dialog.with_body do %>
-    <% if @bond_lot.open? %>
+    <% if @bond_lot.open? && @account.permission_for(Current.user).in?([:owner, :full_control]) %>
       <div class="pb-4">
         <%= render "form", account: @account, bond_lot: @bond_lot, url: bond_lot_path(@bond_lot) %>
       </div>
@@ -75,7 +75,7 @@
       </div>
     <% end %>
 
-    <% if @bond_lot.open? %>
+    <% if @bond_lot.open? && @account.permission_for(Current.user).in?([:owner, :full_control]) %>
       <% dialog.with_section(title: t(".settings"), open: true) do %>
         <div class="pb-4">
           <div class="flex items-center justify-between gap-2 p-3">
