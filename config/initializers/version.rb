@@ -15,8 +15,11 @@ module Sure
     end
 
     private
+      FALLBACK_VERSION = "0.7.0-alpha.4".freeze
+
       def semver
-        Rails.root.join(".sure-version").read.strip || "0.7.0-alpha.8"
+        stripped_content = Rails.root.join(".sure-version").read.strip
+        stripped_content.present? ? stripped_content : FALLBACK_VERSION
       end
   end
 end
