@@ -60,4 +60,56 @@ class ChatTest < ActiveSupport::TestCase
       assert_equal "custom-model", chat.messages.first.ai_model
     end
   end
+
+  test "returns nil presentable error message when no error is stored" do
+    chat = chats(:one)
+
+    chat.update!(error: nil)
+
+    assert_nil chat.presentable_error_message
+  end
+
+  test "surfaces a friendly rate limit error" do
+    chat = chats(:one)
+
+    chat.add_error(StandardError.new("OpenAI API error 429: rate limit exceeded"))
+
+    assert_equal I18n.t("chat.errors.rate_limited"), chat.presentable_error_message
+    assert_match "429", chat.technical_error_message
+  end
+
+  test "surfaces a friendly temporary provider error" do
+    chat = chats(:one)
+
+    chat.add_error(StandardError.new("OpenAI API error 503: service unavailable"))
+
+    assert_equal I18n.t("chat.errors.temporarily_unavailable"), chat.presentable_error_message
+    assert_match "503", chat.technical_error_message
+  end
+
+  test "surfaces a friendly auth configuration error" do
+    chat = chats(:one)
+
+    chat.add_error(StandardError.new("OpenAI API error: invalid api key"))
+
+    assert_equal I18n.t("chat.errors.misconfigured"), chat.presentable_error_message
+    assert_match "invalid api key", chat.technical_error_message
+  end
+
+  test "surfaces a friendly default error for unrecognized errors" do
+    chat = chats(:one)
+
+    chat.add_error(StandardError.new("something totally unknown happened"))
+
+    assert_equal I18n.t("chat.errors.default"), chat.presentable_error_message
+  end
+
+  test "falls back to a friendly message for legacy serialized errors" do
+    chat = chats(:one)
+
+    chat.update!(error: "OpenAI API error 429: rate limit exceeded".to_json)
+
+    assert_equal I18n.t("chat.errors.rate_limited"), chat.presentable_error_message
+    assert_equal "OpenAI API error 429: rate limit exceeded", chat.technical_error_message
+  end
 end
