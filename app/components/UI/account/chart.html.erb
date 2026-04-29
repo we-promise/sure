@@ -4,7 +4,7 @@
       <div class="flex items-center gap-1">
         <%= tag.p title, class: "text-sm font-medium text-secondary" %>
 
-        <% if account.investment? %>
+        <% if account.investment? || account.bond? %>
           <%= render "investments/value_tooltip", balance: account.balance_money, holdings: holdings_value_money, cash: account.cash_balance_money %>
         <% end %>
       </div>
@@ -19,7 +19,7 @@
 
     <%= form_with url: account_path(account), method: :get, data: { controller: "auto-submit-form" } do |form| %>
       <div class="flex items-center gap-2">
-        <% if account.investment? %>
+        <% if account.investment? || account.bond? %>
           <%= form.select :chart_view,
             [["Total value", "balance"], ["Holdings", "holdings_balance"], ["Cash", "cash_balance"]],
             { selected: view },

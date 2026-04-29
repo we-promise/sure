@@ -2,6 +2,9 @@
 pl:
   settings:
     hostings:
+      breadcrumbs:
+        home: Strona główna
+        self_hosting: Samodzielny hosting
       invite_code_settings:
         description: Kontroluj, jak nowe osoby rejestrują się w Twojej instancji %{product}.
         email_confirmation_description: Gdy opcja jest włączona, użytkownicy muszą potwierdzić adres e-mail przy jego zmianie.
@@ -20,6 +23,7 @@ pl:
         general: Ustawienia ogólne
         ai_assistant: Asystent AI
         financial_data_providers: Dostawcy danych finansowych
+        inflation: Inflacja
         sync_settings: Ustawienia synchronizacji
         invites: Kody zaproszeń
         title: Self-Hosting
@@ -106,34 +110,6 @@ pl:
         requires_plan: wymaga planu %{plan}
         view_pricing: Zobacz cennik Twelve Data
         title: Twelve Data
-      gus_sdp_settings:
-        title: GUS SDP (Inflacja)
-        description: Opcjonalny klucz API do danych inflacyjnych GUS SDP. Pozostaw puste, aby korzystać z bezpłatnego poziomu anonimowego.
-        env_configured_message: Pomyślnie skonfigurowano przez zmienną środowiskową GUS_SDP_API_KEY.
-        configured_in_settings_message: Klucz API skonfigurowany w ustawieniach.
-        configured_via_env: Klucz API jest skonfigurowany przez zmienną środowiskową GUS_SDP_API_KEY.
-        free_default_message: Brak skonfigurowanego klucza API. Domyślnie używany jest bezpłatny dostęp anonimowy.
-        clear_api_key: Wyczyść zapisany klucz API
-        clear_api_key_confirm: Usunąć zapisany klucz API GUS?
-        label: Klucz API
-        placeholder: Wprowadź klucz API GUS SDP
-        import_enabled_label: Włącz automatyczny import CPI GUS
-        import_enabled_help: Domyślnie wyłączone. Włącz tylko, jeśli chcesz automatycznie importować stawki CPI do obliczeń EOD/ROD.
-        import_enabled_env_locked: To ustawienie jest zablokowane przez zmienną środowiskową GUS_INFLATION_IMPORT_ENABLED.
-        start_year: Rok początkowy
-        end_year: Rok końcowy
-        import_now: Importuj historię CPI teraz
-        last_import: Ostatni import
-        last_range: Ostatni zakres
-        last_count: Zaimportowane rekordy
-        last_error: Ostatni błąd
-        stored_records: Zapisane rekordy
-        stored_range: Zapisany zakres
-        never: Nigdy
-      import_gus_inflation_rates:
-        import_enqueued: Import CPI został dodany do kolejki.
-        import_disabled: Import CPI jest wyłączony. Najpierw włącz go w ustawieniach.
-        invalid_import_range: Nieprawidłowy zakres lat dla importu CPI.
       update:
         failure: Nieprawidłowa wartość ustawienia
         success: Ustawienia zostały zaktualizowane

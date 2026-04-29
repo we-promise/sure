@@ -98,6 +98,9 @@ node_modules/
 *.ntvs*
 *.njsproj
 *.sln
+
+# Code review comments (local development only)
+bond-comments.md
 *.sw?
 *.roo*
 # OS specific
@@ -124,3 +127,6 @@ scripts/
 .claude_settings.json
 .security-key
 logs/security/
+# Local bond implementation notes
+Bond.md
+Bond.txt

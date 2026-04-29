@@ -281,3 +281,71 @@ Style for suggestions
 
 Notes from repository config
 - If .gemini/config.yaml disables automated code_review, still provide clear summaries and fix suggestions in PRs.
+
+---
+
+## Bond Feature (PR #1330 - UberDudePL/feature/bond)
+
+### Review context
+- Polish localization PR has already been merged.
+- Do not flag updates in `config/locales/views/**/pl.yml` as out-of-scope by default for Bond follow-up fixes.
+
+### Architecture
+- `Bond` → has many `BondLot` → references inflation provider
+- Subtypes: `zero_coupon`, `fixed_coupon`, `inflation_linked`, `savings`, `other`
+- Product codes: `pl_eod`, `pl_rod`, `us_tips_10y`, `es_letra_3m`, `us_t_bill_4w`
+- Coupon frequency: `at_maturity` (EOD/ROD), `semi_annual` (TIPS), `quarterly`, `monthly`
+
+### Inflation Providers (Pluggable)
+- `gus_sdp` — GUS SDP API (Poland, implemented)
+- `us_bls` — BLS/FRED CPI API (USA, implemented)
+- `es_ine` — INE/Eurostat CPI (Spain, implemented)
+- `nil` — manual CPI entry
+
+### Key Files
+- Models: `app/models/bond.rb`, `app/models/bond_lot.rb`, `app/models/gus_inflation_rate.rb`
+- Controllers: `app/controllers/bonds_controller.rb`, `app/controllers/bond_lots_controller.rb`
+- Tests: `test/models/bond_lot_test.rb`, `test/controllers/bond_lots_controller_test.rb`
+
+---
+
+## Response Style
+
+### Be Concise
+- Short, actionable answers
+- No fluff: avoid "Great question!", "Sure, I'd be happy to help!", "Of course!"
+- First: facts / results. Then details if needed.
+- Don't repeat context already known.
+
+### Tool First
+- Run commands / read files first
+- Then short summary of what happened
+- Then offer next steps if relevant.
+
+### Polish Context
+- User (UberDudePL) prefers Polish language in conversation
+- Code, commits, docs: English only
+- When in doubt, ask.
+
+---
+
+## Caveman-Style Behavior
+
+When working with code:
+1. **Tools first** — run commands, read files, check status
+2. **Then short summary** — 1-3 sentences max
+3. **Then offer action** — if something needs to be done, ask/confirm
+
+Example:
+- Don't: "Great question! Let me check the bond model for you. I'll read the file and analyze it."
+- Do: "Checking bond.rb..." → "Found SUBTYPES at line 15. Want me to refactor to generic version?"
+
+---
+
+## Pre-PR Checklist for Bond Feature
+
+- [ ] Tests pass: `bin/rails test test/models/bond_lot_test.rb`
+- [ ] Tests pass: `bin/rails test test/controllers/bond_lots_controller_test.rb`
+- [ ] Rubocop clean: `bin/rubocop app/models/bond* app/controllers/bond*`
+- [ ] Backfill migration works (eod/rod → inflation_linked + product_code)
+- [ ] US/ES bonds added to PRODUCT_DEFAULTS

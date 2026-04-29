@@ -321,7 +321,6 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
       patch settings_hosting_url, params: { setting: { securities_providers: [ "twelve_data", "fake_provider", "hacked" ] } }
 
       assert_redirected_to settings_hosting_url
-      # Only valid providers are stored
       enabled = Setting.enabled_securities_providers
       assert_includes enabled, "twelve_data"
       refute_includes enabled, "fake_provider"
@@ -335,10 +334,8 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     with_self_hosting do
       security = Security.create!(ticker: "CSPX", exchange_operating_mic: "XLON", price_provider: "tiingo", offline: false)
 
-      # First enable tiingo
       Setting.securities_providers = "twelve_data,tiingo"
 
-      # Then remove tiingo
       patch settings_hosting_url, params: { setting: { securities_providers: [ "twelve_data" ] } }
 
       security.reload
@@ -356,10 +353,8 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
         price_provider: "tiingo", offline: true, offline_reason: "provider_disabled"
       )
 
-      # Start without tiingo
       Setting.securities_providers = "twelve_data"
 
-      # Re-add tiingo
       patch settings_hosting_url, params: { setting: { securities_providers: [ "twelve_data", "tiingo" ] } }
 
       security.reload

@@ -1,0 +1,13 @@
+<% if params[:step] == "method_select" %>
+  <%= render "accounts/new/method_selector",
+             path: new_bond_path(return_to: params[:return_to]),
+             provider_configs: @provider_configs,
+             accountable_type: "Bond" %>
+<% else %>
+  <%= render DS::Dialog.new do |dialog| %>
+    <% dialog.with_header(title: t(".title")) %>
+    <% dialog.with_body do %>
+      <%= render "bonds/form", account: @account, url: bonds_path %>
+    <% end %>
+  <% end %>
+<% end %>

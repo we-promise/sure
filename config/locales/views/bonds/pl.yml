@@ -9,6 +9,22 @@ pl:
       auto_buy_new_issues: Automatycznie kupuj nowe emisje obligacji
       auto_buy_new_issues_hint: Po rozliczeniu zapadalności automatycznie kup kolejną emisję z dostępnych środków dla kont IKE/IKZE.
     subtypes:
+      zero_coupon:
+        short: Zero-kuponowa
+        long: Obligacja zero-kuponowa
+      fixed_coupon:
+        short: Stałokuponowa
+        long: Obligacja stałokuponowa
+      inflation_linked:
+        short: ILB
+        long: Obligacja inflacyjna
+      savings:
+        short: Oszczędnościowa
+        long: Obligacja oszczędnościowa
+      other:
+        short: Inna
+        long: Inna obligacja
+      # Legacy aliases for persisted lots during migration
       eod:
         short: EOD
         long: 10-letnia obligacja oszczędnościowa Skarbu Państwa
@@ -47,6 +63,7 @@ pl:
       cash_position: Gotówka z obligacji
     purchase_holding:
       unknown: Nieznane
+      month_year_format: "%m-%Y"
       update_needed: Wymagana aktualizacja
       purchased: "Zakupiono %{date}"
       term_months:
@@ -56,9 +73,17 @@ pl:
         other: "%{count} miesiąca"
       principal_term: "Kapitał, %{term}"
       bond_meta: "%{rate_type} / %{coupon}"
-      inflation_meta_gus: "%{inflation} inflacji + %{margin} marży (GUS SDP %{indicator})"
+      bond_meta_with_coupon_amount: "%{rate_type} / %{coupon} / kupon %{coupon_amount}"
+      inflation_meta_gus: "%{inflation} inflacji + %{margin} marży (PL GUS %{indicator})"
       inflation_meta_manual: "%{inflation} inflacji + %{margin} marży (ręcznie)"
+      inflation_meta_provider: "%{inflation} inflacji + %{margin} marży (%{provider})"
+      inflation_providers:
+        gus_sdp: PL GUS
+        us_bls: US BLS
+        es_ine: ES INE
+        manual: ręcznie
       first_period_fixed_rate: Stałe oprocentowanie pierwszego okresu
+      inflation_data_unavailable: "Brak bieżącej stopy: brak CPI dla mies. odn. %{reference}"
       maturity: "Zapada %{date}"
       maturity_label: Data zapadalności
       since_purchase: Od zakupu
@@ -89,6 +114,7 @@ pl:
       history_partial: Okres częściowy
       history_inflation_gus: "Użyta inflacja: %{inflation} + %{margin} marży (GUS SDP %{indicator}, odn. %{reference})"
       history_inflation_manual: "Użyta inflacja: %{inflation} + %{margin} marży (założenie ręczne)"
+      history_inflation_provider: "Użyta inflacja: %{inflation} + %{margin} marży (%{provider})"
       history_inflation_first_period: "Stała stopa pierwszego okresu"
       unknown: Nieznane
       purchased: "Zakupiono %{date}"
@@ -106,18 +132,23 @@ pl:
       purchased_on: Data zakupu
       issue_date: Data emisji
       amount: Kwota kapitału
+      product_code: Preset produktu
+      product_code_blank: Własny / brak presetu
       units: Jednostki
       nominal_per_unit: Nominał na jednostkę
       term_months: Okres (miesiące)
       subtype: Typ obligacji
+      subtype_derived_hint: Typ obligacji jest wyznaczany automatycznie na podstawie wybranego presetu produktu.
       rate_type: Typ oprocentowania
       coupon_frequency: Częstotliwość kuponu
       interest_rate: Oprocentowanie
       interest_rate_placeholder: "4.25"
       first_period_rate: Oprocentowanie pierwszego okresu (%)
       inflation_margin: Marża inflacyjna (%)
-      auto_fetch_inflation: Pobieraj inflację automatycznie z GUS
-      auto_fetch_disabled_hint: Automatyczny import CPI jest globalnie wyłączony w ustawieniach self-hosting. Wprowadź inflację ręcznie.
+      auto_fetch_inflation: Pobieraj inflację automatycznie od dostawcy
+      inflation_provider: Dostawca danych o inflacji
+      inflation_provider_blank: Ręczne CPI (bez dostawcy)
+      auto_fetch_disabled_hint: Automatyczny import CPI jest globalnie wyłączony w ustawieniach self-hosting. Auto-fetch dla tej obligacji wymaga włączenia tej opcji, więc wprowadź inflację ręcznie.
       inflation_rate_assumption: Założenie CPI (%)
       cpi_lag_months: Opóźnienie CPI (miesiące)
       early_redemption_fee: Opłata za wcześniejszy wykup

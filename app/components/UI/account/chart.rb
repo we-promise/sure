@@ -28,7 +28,7 @@ class UI::Account::Chart < ApplicationComponent
 
   def title
     case account.accountable_type
-    when "Investment", "Crypto"
+    when "Investment", "Crypto", "Bond"
       case view
       when "balance"
         "Total account value"

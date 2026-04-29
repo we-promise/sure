@@ -12,6 +12,31 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
   test "dashboard" do
     get root_path
     assert_response :ok
+    assert_select "#bond-summary"
+    assert_no_match(/Principal, \{one:/, @response.body)
+  end
+
+  test "dashboard shows bond rate review notice once per session" do
+    accounts(:bond).bond.bond_lots.create!(
+      purchased_on: Date.current,
+      amount: 1000,
+      subtype: "rod",
+      auto_fetch_inflation: false,
+      auto_close_on_maturity: true,
+      issue_date: Date.current,
+      units: 10,
+      nominal_per_unit: 100,
+      cpi_lag_months: 2,
+      requires_rate_review: true
+    )
+
+    get root_path
+    assert_response :ok
+    assert_match(/1 bond lot needs updated issue rate/, flash[:notice])
+
+    get root_path
+    assert_response :ok
+    assert_nil flash[:notice]
   end
 
   test "intro page requires guest role" do

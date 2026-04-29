@@ -1,0 +1,8 @@
+one:
+  interest_rate: 4.25
+  term_months: 12
+  rate_type: fixed
+  initial_balance: 10000
+  maturity_date: <%= 1.year.from_now.to_date %>
+  coupon_frequency: at_maturity
+  subtype: other

@@ -29,6 +29,7 @@ class Balance::SyncCache
     def converted_entries
       @converted_entries ||= account.entries.excluding_split_parents.includes(:entryable).order(:date).to_a.map do |e|
         converted_entry = e.dup
+        converted_entry.entryable = e.entryable if e.association(:entryable).loaded?
 
         # Extract custom exchange rate if present on Transaction
         custom_rate = if e.entryable.is_a?(Transaction)

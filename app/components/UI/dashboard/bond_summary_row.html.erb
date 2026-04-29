@@ -1,0 +1,31 @@
+<tr class="<%= row_classes %>">
+  <td class="px-4 py-4">
+    <div class="flex items-center gap-4">
+      <%= render DS::FilledIcon.new(variant: :text, text: subtype_label, size: "md", rounded: true) %>
+      <div class="space-y-0.5 min-w-0">
+        <%= link_to subtype_label, account_path(account, tab: "positions"), class: "truncate hover:underline" %>
+        <p class="text-xs text-secondary truncate"><%= t("pages.dashboard.bond_summary.account_wrapper", account: account.name, wrapper: account.bond_wrapper_label || account.short_subtype_label) %></p>
+      </div>
+    </div>
+  </td>
+
+  <td class="px-4 py-4 text-right">
+    <p class="privacy-sensitive"><%= rate_text %></p>
+    <p class="font-normal text-secondary"><%= rate_meta %></p>
+  </td>
+
+  <td class="px-4 py-4 text-right">
+    <p class="privacy-sensitive"><%= helpers.format_money(Money.new(lot.amount, account.currency)) %></p>
+    <p class="font-normal text-secondary"><%= t("pages.dashboard.bond_summary.principal_term", term: t("pages.dashboard.bond_summary.term_months", count: lot.term_months)) %></p>
+  </td>
+
+  <td class="px-4 py-4 text-right">
+    <p class="privacy-sensitive"><%= lot.maturity_date ? l(lot.maturity_date) : t("bonds.purchase_holding.unknown") %></p>
+    <p class="font-normal text-secondary"><%= t("pages.dashboard.bond_summary.maturity_label") %></p>
+  </td>
+
+  <td class="px-4 py-4 text-right">
+    <p class="privacy-sensitive <%= total_return_class %>"><%= helpers.format_money(Money.new(total_return_amount, account.currency)) %></p>
+    <p class="font-normal text-secondary"><%= total_return_label %></p>
+  </td>
+</tr>

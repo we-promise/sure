@@ -371,6 +371,13 @@ class Account < ApplicationRecord
     accountable_class.long_subtype_label_for(subtype) || accountable_class.display_name
   end
 
+  # Bond-specific helper for rendering tax wrapper where needed.
+  def bond_wrapper_label(format: :short)
+    return unless bond? && accountable.respond_to?(:wrapper_label)
+
+    accountable.wrapper_label(format: format)
+  end
+
   def supports_default?
     depository? || credit_card?
   end
@@ -406,7 +413,7 @@ class Account < ApplicationRecord
       :cash
     when "Property", "Vehicle", "OtherAsset", "Loan", "OtherLiability"
       :non_cash
-    when "Investment", "Crypto"
+    when "Investment", "Crypto", "Bond"
       :investment
     else
       raise "Unknown account type: #{accountable_type}"

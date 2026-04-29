@@ -1,0 +1,173 @@
+---
+en:
+  bonds:
+    edit:
+      edit: Edit %{account}
+    form:
+      initial_balance: Original bond balance
+      tax_wrapper: Tax wrapper
+      auto_buy_new_issues: Auto-buy new bond issues
+      auto_buy_new_issues_hint: After maturity settlement, automatically buy the next issue with available proceeds for IKE/IKZE accounts.
+    subtypes:
+      zero_coupon:
+        short: Zero-Coupon
+        long: Zero-Coupon Bill
+      fixed_coupon:
+        short: Fixed
+        long: Fixed Coupon Bond
+      inflation_linked:
+        short: ILB
+        long: Inflation-Linked Bond
+      savings:
+        short: Savings
+        long: Savings Bond
+      other:
+        short: Other
+        long: Other Bond
+    new:
+      title: Enter bond details
+    tabs:
+      positions:
+        positions: Bond positions
+        new_activity: New activity
+        name: Name
+        weight: Weight
+        rate: Rate
+        holdings: Holdings
+        maturity: Maturity
+        total_return: Total return
+        no_purchases: No purchases added yet.
+      closed:
+        closed: Closed bond lots
+        name: Name
+        weight: Weight
+        rate: Rate
+        holdings: Holdings
+        maturity: Maturity
+        total_return: Total return
+        no_closed_lots: No closed bond lots yet.
+        closed_lots: Closed bond lots
+        closed_lot_meta: "Purchased %{purchased}, closed %{closed}"
+        settled_net: Settled net
+    cash_holding:
+      cash_position: Bond cash
+    purchase_holding:
+      unknown: Unknown
+      month_year_format: "%m-%Y"
+      update_needed: Update needed
+      purchased: "Purchased %{date}"
+      term_months:
+        one: "%{count} month"
+        other: "%{count} months"
+      principal_term: "Principal, %{term}"
+      bond_meta: "%{rate_type} / %{coupon}"
+      bond_meta_with_coupon_amount: "%{rate_type} / %{coupon} / coupon %{coupon_amount}"
+      inflation_meta_gus: "%{inflation} inflation + %{margin} margin (PL GUS %{indicator})"
+      inflation_meta_manual: "%{inflation} inflation + %{margin} margin (manual)"
+      inflation_meta_provider: "%{inflation} inflation + %{margin} margin (%{provider})"
+      inflation_providers:
+        gus_sdp: PL GUS
+        us_bls: US BLS
+        es_ine: ES INE
+        manual: Manual
+      first_period_fixed_rate: First-period fixed rate
+      inflation_data_unavailable: "Current rate unavailable: missing CPI for ref %{reference}"
+      maturity: "Matures %{date}"
+      maturity_label: Maturity date
+      since_purchase: Since purchase
+      projected_to_maturity: Projected to maturity
+      pending_review: Awaiting updated issue rates
+      edit: Edit
+      remove: Remove
+      confirm_remove: Remove this purchase?
+
+  bond_lots:
+    not_bond_account: "This account is not a bond account."
+    new:
+      title: Add purchase for %{account}
+    edit:
+      title: Edit purchase for %{account}
+    show:
+      settings: Settings
+      history: History
+      no_history: No capitalization history yet.
+      overview_principal: Principal
+      overview_settlement: Settlement amount
+      overview_maturity: Maturity date
+      overview_closed_on: Closed on
+      history_period: "Period %{period}: %{start} - %{end}"
+      history_balance: "Balance %{opening} -> %{closing}"
+      history_interest: "Interest %{interest} at %{rate}"
+      history_capitalized: Capitalized
+      history_partial: Partial period
+      history_inflation_gus: "Inflation used: %{inflation} + %{margin} margin (GUS SDP %{indicator}, ref %{reference})"
+      history_inflation_manual: "Inflation used: %{inflation} + %{margin} margin (manual assumption)"
+      history_inflation_provider: "Inflation used: %{inflation} + %{margin} margin (%{provider})"
+      history_inflation_first_period: "First-period fixed rate"
+      unknown: Unknown
+      purchased: "Purchased %{date}"
+      delete_title: Delete purchase
+      delete_subtitle: Remove this purchase and linked activity entry.
+      delete: Delete
+      delete_confirm: Remove this purchase?
+    create:
+      success: Bond purchase added
+    update:
+      success: Bond purchase updated
+    destroy:
+      success: Bond purchase removed
+    form:
+      purchased_on: Purchase date
+      issue_date: Issue date
+      amount: Principal amount
+      product_code: Product label
+      product_code_blank: Custom / no preset
+      units: Units
+      nominal_per_unit: Nominal per unit
+      term_months: Term (months)
+      subtype: Bond type
+      subtype_derived_hint: Bond type is derived automatically from selected product preset.
+      rate_type: Rate type
+      coupon_frequency: Coupon frequency
+      interest_rate: Interest rate
+      interest_rate_placeholder: "4.25"
+      first_period_rate: First-period rate (%)
+      inflation_margin: Inflation margin (%)
+      auto_fetch_inflation: Fetch inflation automatically from provider
+      inflation_provider: Inflation data provider
+      inflation_provider_blank: Manual CPI (no provider)
+      auto_fetch_disabled_hint: Automatic CPI import is disabled globally in Self-Hosting settings. Auto-fetch for this lot requires enabling that setting, so enter inflation manually.
+      inflation_rate_assumption: CPI assumption (%)
+      cpi_lag_months: CPI lag (months)
+      early_redemption_fee: Early redemption fee
+      auto_close_on_maturity: Auto-close on maturity
+      auto_close_on_maturity_hint: Automatically settle this lot at maturity and convert proceeds to account cash.
+      tax_strategy: Tax handling at maturity
+      tax_rate: Tax rate (%)
+      tax_strategies:
+        standard: Standard tax
+        reduced: Reduced tax
+        exempt: Tax exempt (IKE/IKZE)
+      rate_types:
+        fixed: Fixed
+        variable: Variable
+      coupon_frequencies:
+        monthly: Monthly
+        quarterly: Quarterly
+        semi_annual: Semi-annual
+        annual: Annual
+        at_maturity: At maturity
+      submit: Add purchase
+      update: Update purchase
+    activity:
+      purchase_name: "Bond purchase: %{subtype}"
+      maturity_settlement_name: "Bond maturity settlement: %{subtype}"
+      maturity_settlement_notes_with_tax: "Purchase amount: %{purchase_amount}\nTotal interest: %{interest_amount}\nTax withheld: %{tax_withheld_amount}"
+      maturity_settlement_notes_without_tax: "Purchase amount: %{purchase_amount}\nTotal interest: %{interest_amount}\nTax withheld: none"
+
+    closed_purchase_holding:
+      closed_meta: "Purchased %{purchased}, closed %{closed}"
+      closed_rate_meta: "%{periods} capitalization periods"
+      settled_net: "Settled net %{net}"
+      history_meta: "Interest %{interest}, tax %{tax}"
+      not_bond_account: "This account is not a bond account."
