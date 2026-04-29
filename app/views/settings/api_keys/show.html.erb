@@ -44,10 +44,10 @@
           <code class="block w-full min-w-0 overflow-x-auto break-all whitespace-pre-wrap" data-clipboard-target="source">curl -H "X-Api-Key: <%= @current_api_key.plain_key %>" <%= request.base_url %>/api/v1/accounts</code>
           <div class="mt-2 flex justify-end">
             <%= render DS::Button.new(
-              text: "Copy",
-              variant: "ghost",
+              variant: :icon,
               icon: "copy",
-              class: "shrink-0",
+              title: "Copy",
+              aria: { label: "Copy" },
               data: { action: "clipboard#copy" }
             ) %>
           </div>
@@ -126,7 +126,7 @@
             <code id="api-key-display" class="block w-full min-w-0 overflow-x-auto font-mono text-sm text-primary break-all whitespace-pre-wrap" data-clipboard-target="source"><%= @current_api_key.plain_key %></code>
             <div class="mt-2 flex justify-end">
               <%= render DS::Button.new(
-                title: t("settings.api_keys.current_api_key.copy_key"),
+                title: t(".current_api_key.copy_key"),
                 variant: "ghost",
                 icon: "copy",
                 class: "shrink-0",
@@ -138,16 +138,16 @@
       </div>
 
       <div class="bg-surface-inset rounded-xl p-4">
-        <h4 class="font-medium text-primary mb-3"><%= t("settings.api_keys.current_api_key.usage_instructions_title") %></h4>
+        <h4 class="font-medium text-primary mb-3"><%= t(".current_api_key.usage_instructions_title") %></h4>
         <p class="text-secondary text-sm mb-3"><%= t(".current_api_key.usage_instructions", product_name: product_name) %></p>
         <div class="bg-container rounded-lg p-3 font-mono text-sm text-primary border border-primary max-w-full overflow-hidden" data-controller="clipboard">
           <code class="block w-full min-w-0 overflow-x-auto break-all whitespace-pre-wrap" data-clipboard-target="source">curl -H "X-Api-Key: <%= @current_api_key.plain_key %>" <%= request.base_url %>/api/v1/accounts</code>
           <div class="mt-2 flex justify-end">
             <%= render DS::Button.new(
-              title: t("settings.api_keys.current_api_key.copy_key"),
-              variant: "ghost",
+              variant: :icon,
               icon: "copy",
-              class: "shrink-0",
+              title: "Copy",
+              aria: { label: "Copy" },
               data: { action: "clipboard#copy" }
             ) %>
           </div>

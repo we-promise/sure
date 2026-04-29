@@ -26,10 +26,10 @@
           <code id="api-key-display" class="block w-full min-w-0 overflow-x-auto font-mono text-sm text-primary break-all whitespace-pre-wrap" data-clipboard-target="source"><%= @api_key.plain_key %></code>
           <div class="mt-2 flex justify-end">
             <%= render DS::Button.new(
-              title: t("settings.api_keys.created.copy_key"),
-              variant: "ghost",
+              variant: :icon,
               icon: "copy",
-              class: "shrink-0",
+              title: "Copy",
+              aria: { label: "Copy" },
               data: { action: "clipboard#copy" }
             ) %>
           </div>
