@@ -23,7 +23,7 @@ permissions:
 jobs:
   build-and-upload:
     name: Build signed IPA and upload to TestFlight
-    runs-on: macos-latest
+    runs-on: macos-26
     timeout-minutes: 120
 
     steps:
@@ -81,6 +81,14 @@ jobs:
         if: ${{ steps.check_prereqs.outputs.enabled != 'true' }}
         run: |
           echo "Skipping TestFlight upload because required credentials are not configured."
+
+      - name: Select Xcode 26
+        if: ${{ steps.check_prereqs.outputs.enabled == 'true' }}
+        run: |
+          set -euo pipefail
+          sudo xcode-select -s /Applications/Xcode_26.4.app/Contents/Developer
+          xcodebuild -version
+          xcrun --sdk iphoneos --show-sdk-version
 
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
