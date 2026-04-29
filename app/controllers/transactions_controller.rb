@@ -10,7 +10,7 @@ class TransactionsController < ApplicationController
     apply_duplicate_attributes!
     @income_categories = Current.family.categories.incomes.alphabetically
     @expense_categories = Current.family.categories.expenses.alphabetically
-    @categories = Current.family.categories.alphabetically
+    @categories = Current.family.categories_with_hierarchy
   end
 
   def index

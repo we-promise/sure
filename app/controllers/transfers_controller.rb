@@ -10,7 +10,7 @@ class TransfersController < ApplicationController
   end
 
   def show
-    @categories = Current.family.categories.alphabetically
+    @categories = Current.family.categories_with_hierarchy
   end
 
   def create
