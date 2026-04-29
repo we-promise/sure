@@ -162,7 +162,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          IOS_VERSION="$(tr -d '[:space:]' < ../.sure-version)"
+          IOS_VERSION="$(tr -d '[:space:]' < ../.sure-version | sed 's/-.*$//')"
           IOS_BUILD_NUMBER="$(date -u +%Y%m%d%H%M)"
           ARCHIVE_PATH="$RUNNER_TEMP/Runner.xcarchive"
           EXPORT_PATH="$PWD/build/ios/ipa"
