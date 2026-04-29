@@ -65,7 +65,7 @@ class Settings::ApiKeysTest < ApplicationSystemTestCase
     assert_text "Read/Write"
     assert_text "Never used"
     assert_link "Create New Key"
-    assert_button "Revoke Key"
+    assert_button "Revoke API Key"
   end
 
   test "should show usage instructions and example curl command" do
@@ -121,7 +121,7 @@ class Settings::ApiKeysTest < ApplicationSystemTestCase
     visit settings_api_key_path
 
     # Click the revoke button to open the modal
-    click_button "Revoke Key"
+    click_button "Revoke API Key"
 
     # Wait for the dialog and then confirm
     assert_selector "#confirm-dialog", visible: true
