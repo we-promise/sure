@@ -156,7 +156,7 @@
 
       <div class="flex justify-end pt-4 border-t border-primary">
         <%= render DS::Button.new(
-          title: t("settings.api_keys.current_api_key.revoke_key"),
+          text: t("settings.api_keys.show.current_api_key.revoke_key"),
           href: settings_api_key_path,
           method: :delete,
           variant: "destructive",
@@ -171,7 +171,7 @@
   <%= content_for :page_title, t(".no_api_key.title") %>
   <%= content_for :page_actions do %>
     <%= render DS::Link.new(
-      title: t("settings.api_keys.no_api_key.create_api_key"),
+      text: t("settings.api_keys.show.no_api_key.create_api_key"),
       href: new_settings_api_key_path,
       variant: "primary"
     ) %>
