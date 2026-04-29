@@ -1,11 +1,13 @@
 <%= render DS::Dialog.new(variant: "drawer", frame: "bulk_transaction_edit_drawer") do |dialog| %>
   <% dialog.with_header(title: "Edit transactions", data: { bulk_select_target: "bulkEditDrawerHeader" }) %>
+
   <% dialog.with_body do %>
     <%= styled_form_with url: transactions_bulk_update_path, scope: "bulk_update", class: "h-full flex flex-col justify-between gap-4", data: { turbo_frame: "_top" } do |form| %>
       <div class="space-y-4">
         <%= render DS::Disclosure.new(title: "Overview", open: true) do %>
           <%= form.date_field :date, label: "Date", max: Date.current %>
         <% end %>
+
         <%= render DS::Disclosure.new(title: "Transactions", open: true) do %>
           <div class="space-y-2">
             <%= form.text_field :name, label: t("transactions.bulk_updates.new.name_label"), placeholder: t("transactions.bulk_updates.new.name_placeholder") %>
@@ -16,6 +18,7 @@
           </div>
         <% end %>
       </div>
+
       <div class="flex justify-end gap-2 mt-auto">
         <%= render DS::Button.new(text: "Cancel", variant: "ghost", data: { action: "click->DS--dialog#close" }) %>
         <%= render DS::Button.new(text: "Save", data: { bulk_select_scope_param: "bulk_update", action: "bulk-select#submitBulkRequest" }) %>
