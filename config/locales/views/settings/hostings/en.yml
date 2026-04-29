@@ -183,4 +183,4 @@ en:
         auto_sync_time_description: Specify the time of day when automatic sync should occur.
         include_pending_label: Include pending transactions
         include_pending_description: When enabled, pending (uncleared) transactions will be imported and automatically reconciled when they post. Disable if your bank provides unreliable pending data.
-        env_configured_message: This setting is disabled because a provider environment variable (SIMPLEFIN_INCLUDE_PENDING or PLAID_INCLUDE_PENDING) is set. Remove it to enable this setting.
+        env_configured_message: Pending transaction imports are controlled by a provider environment variable (SIMPLEFIN_INCLUDE_PENDING or PLAID_INCLUDE_PENDING), so this toggle is disabled here. Remove that variable to manage this setting from the UI.
