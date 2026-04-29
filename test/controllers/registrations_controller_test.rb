@@ -59,12 +59,43 @@ class RegistrationsControllerTest < ActionDispatch::IntegrationTest
       end
 
       assert_difference "User.count", +1 do
+        invite_code = InviteCode.generate!
         post registration_url, params: { user: {
           email: "john@example.com",
           password: "Password1!",
-          invite_code: InviteCode.generate! } }
+          invite_code: invite_code } }
         assert_redirected_to root_url
+        assert_not InviteCode.exists?(token: invite_code)
       end
+    end
+  end
+
+  test "invite code is not consumed when signup fails validation" do
+    with_env_overrides REQUIRE_INVITE_CODE: "true" do
+      invite_code = InviteCode.generate!
+
+      assert_no_difference "User.count" do
+        post registration_url, params: { user: {
+          email: "validationfail@example.com",
+          password: "weak",
+          invite_code: invite_code } }
+      end
+
+      assert_response :unprocessable_entity
+      assert InviteCode.exists?(token: invite_code)
+    end
+  end
+
+  test "invalid invite code does not create a user" do
+    with_env_overrides REQUIRE_INVITE_CODE: "true" do
+      assert_no_difference "User.count" do
+        post registration_url, params: { user: {
+          email: "valid@example.com",
+          password: "Password1!",
+          invite_code: "invalid-token-that-does-not-exist" } }
+      end
+
+      assert_redirected_to new_registration_url
     end
   end
 
