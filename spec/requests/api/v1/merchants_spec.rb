@@ -47,6 +47,39 @@ RSpec.describe 'API V1 Merchants', type: :request do
         run_test!
       end
     end
+
+    post 'Create a merchant' do
+      tags 'Merchants'
+      security [ { apiKeyAuth: [] } ]
+      consumes 'application/json'
+      produces 'application/json'
+      parameter name: :merchant, in: :body, schema: {
+        type: :object,
+        properties: {
+          merchant: {
+            type: :object,
+            required: %w[name],
+            properties: {
+              name: { type: :string, description: 'Merchant name' },
+              color: { type: :string, description: 'Hex color code (auto-assigned if not provided)' },
+              website_url: { type: :string, description: 'Merchant website URL' }
+            }
+          }
+        }
+      }
+
+      response '201', 'merchant created' do
+        let(:merchant) { { merchant: { name: 'New Merchant', color: '#e99537' } } }
+
+        run_test!
+      end
+
+      response '422', 'validation failed' do
+        let(:merchant) { { merchant: { color: '#e99537' } } }
+
+        run_test!
+      end
+    end
   end
 
   path '/api/v1/merchants/{id}' do
@@ -60,6 +93,61 @@ RSpec.describe 'API V1 Merchants', type: :request do
       response '200', 'merchant retrieved' do
         schema '$ref' => '#/components/schemas/MerchantDetail'
 
+        let(:id) { family_merchant.id }
+
+        run_test!
+      end
+
+      response '404', 'merchant not found' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:id) { SecureRandom.uuid }
+
+        run_test!
+      end
+    end
+
+    patch 'Update a merchant' do
+      tags 'Merchants'
+      security [ { apiKeyAuth: [] } ]
+      consumes 'application/json'
+      produces 'application/json'
+      parameter name: :merchant, in: :body, schema: {
+        type: :object,
+        properties: {
+          merchant: {
+            type: :object,
+            properties: {
+              name: { type: :string, description: 'Merchant name' },
+              color: { type: :string, description: 'Hex color code' },
+              website_url: { type: :string, description: 'Merchant website URL' }
+            }
+          }
+        }
+      }
+
+      response '200', 'merchant updated' do
+        let(:id) { family_merchant.id }
+        let(:merchant) { { merchant: { name: 'Updated Merchant' } } }
+
+        run_test!
+      end
+
+      response '404', 'merchant not found' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:id) { SecureRandom.uuid }
+        let(:merchant) { { merchant: { name: 'Not Found' } } }
+
+        run_test!
+      end
+    end
+
+    delete 'Delete a merchant' do
+      tags 'Merchants'
+      security [ { apiKeyAuth: [] } ]
+
+      response '204', 'merchant deleted' do
         let(:id) { family_merchant.id }
 
         run_test!

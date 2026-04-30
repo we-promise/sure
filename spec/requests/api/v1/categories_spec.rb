@@ -96,6 +96,40 @@ RSpec.describe 'API V1 Categories', type: :request do
         run_test!
       end
     end
+
+    post 'Create a category' do
+      tags 'Categories'
+      security [ { apiKeyAuth: [] } ]
+      consumes 'application/json'
+      produces 'application/json'
+      parameter name: :category, in: :body, schema: {
+        type: :object,
+        properties: {
+          category: {
+            type: :object,
+            required: %w[name],
+            properties: {
+              name: { type: :string, description: 'Category name' },
+              color: { type: :string, description: 'Hex color code (auto-assigned if not provided)' },
+              lucide_icon: { type: :string, description: 'Lucide icon name (auto-assigned if not provided)' },
+              parent_id: { type: :string, format: :uuid, description: 'Parent category ID for subcategories' }
+            }
+          }
+        }
+      }
+
+      response '201', 'category created' do
+        let(:category) { { category: { name: 'New Category', color: '#4da568' } } }
+
+        run_test!
+      end
+
+      response '422', 'validation failed' do
+        let(:category) { { category: { color: '#4da568' } } }
+
+        run_test!
+      end
+    end
   end
 
   path '/api/v1/categories/{id}' do
@@ -118,6 +152,62 @@ RSpec.describe 'API V1 Categories', type: :request do
         schema '$ref' => '#/components/schemas/CategoryDetail'
 
         let(:id) { subcategory.id }
+
+        run_test!
+      end
+
+      response '404', 'category not found' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:id) { SecureRandom.uuid }
+
+        run_test!
+      end
+    end
+
+    patch 'Update a category' do
+      tags 'Categories'
+      security [ { apiKeyAuth: [] } ]
+      consumes 'application/json'
+      produces 'application/json'
+      parameter name: :category, in: :body, schema: {
+        type: :object,
+        properties: {
+          category: {
+            type: :object,
+            properties: {
+              name: { type: :string, description: 'Category name' },
+              color: { type: :string, description: 'Hex color code' },
+              lucide_icon: { type: :string, description: 'Lucide icon name' },
+              parent_id: { type: :string, format: :uuid, description: 'Parent category ID' }
+            }
+          }
+        }
+      }
+
+      response '200', 'category updated' do
+        let(:id) { parent_category.id }
+        let(:category) { { category: { name: 'Updated Category' } } }
+
+        run_test!
+      end
+
+      response '404', 'category not found' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:id) { SecureRandom.uuid }
+        let(:category) { { category: { name: 'Not Found' } } }
+
+        run_test!
+      end
+    end
+
+    delete 'Delete a category' do
+      tags 'Categories'
+      security [ { apiKeyAuth: [] } ]
+
+      response '204', 'category deleted' do
+        let(:id) { parent_category.id }
 
         run_test!
       end
