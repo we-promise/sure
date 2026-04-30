@@ -589,6 +589,28 @@ class IncomeStatementTest < ActiveSupport::TestCase
     assert_nil net.net_expense_categories.find { |ct| ct.category.id == @food_category.id }
   end
 
+  test "net_category_totals converts foreign currency before netting categories" do
+    Entry.joins(:account).where(accounts: { family_id: @family.id }).destroy_all
+
+    foreign_account = create_foreign_account!(family: @family, currency: "NGN")
+
+    create_transaction(account: @checking_account, amount: 100, currency: "USD", category: @food_category, date: Date.current)
+    create_transaction(account: foreign_account, amount: 1000, currency: "NGN", category: @food_category, date: Date.current)
+    create_transaction(account: foreign_account, amount: -250, currency: "NGN", category: @food_category, date: Date.current)
+
+    create_exchange_rate!(from: "NGN", to: @family.currency, rate: 0.01, date: Date.current)
+
+    net = IncomeStatement.new(@family).net_category_totals(period: Period.last_30_days)
+
+    assert_equal 107.5, net.total_net_expense
+    assert_equal 0, net.total_net_income
+
+    food_net = net.net_expense_categories.find { |ct| ct.category.id == @food_category.id }
+    assert_not_nil food_net
+    assert_equal 107.5, food_net.total
+    assert_in_delta 100.0, food_net.weight, 0.1
+  end
+
   test "empty account_ids returns no results for category stats" do
     results = IncomeStatement::CategoryStats.new(@family, account_ids: []).call
     assert_empty results
