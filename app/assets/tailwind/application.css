@@ -1,5 +1,7 @@
 @import 'tailwindcss';
 
+@source not "../../../tokens";
+
 @import "./sure-design-system.css";
 
 @import "./geist-font.css";
