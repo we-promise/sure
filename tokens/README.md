@@ -4,9 +4,9 @@ Single source of truth for the design system. Anything Tailwind / Figma / future
 
 ## Files
 
-- `sure.tokens.json` — every token, hand-edited.
-- `../tools/tokens/build.mjs` — plain Node script that compiles the JSON into Tailwind v4 CSS.
-- `../app/assets/tailwind/sure-design-system/_generated.css` — build output. **Generated, do not edit by hand.**
+- `sure.tokens.json`: every token, hand-edited.
+- `../tools/tokens/build.mjs`: plain Node script that compiles the JSON into Tailwind v4 CSS.
+- `../app/assets/tailwind/sure-design-system/_generated.css`: build output. **Generated, do not edit by hand.**
 
 ## Workflow
 
@@ -25,7 +25,7 @@ git add tokens/sure.tokens.json app/assets/tailwind/sure-design-system/_generate
 
 ## Schema
 
-The file follows the [W3C DTCG token format](https://design-tokens.github.io/community-group/format/) — `$value`, `$type`, `$description`, `$extensions`. Tokens reference each other via `{path.to.token}` placeholders.
+The file follows the [W3C DTCG token format](https://design-tokens.github.io/community-group/format/), with `$value`, `$type`, `$description`, `$extensions`. Tokens reference each other via `{path.to.token}` placeholders.
 
 ```jsonc
 {
@@ -60,7 +60,7 @@ The file follows the [W3C DTCG token format](https://design-tokens.github.io/com
 | Extension | Where | What it does |
 |-----------|-------|--------------|
 | `sure.dark` | any token | Dark-mode override value. String following the same template syntax as `$value`. |
-| `sure.alpha` | reserved | Currently unused — alpha is expressed inline via `{ref\|N%}`. Reserved for structured alpha if needed later. |
+| `sure.alpha` | reserved | Currently unused; alpha is expressed inline via `{ref\|N%}`. Reserved for structured alpha if needed later. |
 | `sure.utility.prefix` | `utility.*` only | The Tailwind utility family (`bg`, `text`, `border`). Tells the build which `@apply` class to emit. |
 | `sure.utility.raw` | `utility.*` only | Set to a CSS property name (e.g. `background-color`, `box-shadow`) when the utility emits raw CSS instead of `@apply`. |
 | `sure.compose` | `utility.*` only | Array of class names to `@apply` (e.g. `["bg-surface-inset", "animate-pulse"]` for `bg-loader`). |
@@ -69,8 +69,8 @@ The file follows the [W3C DTCG token format](https://design-tokens.github.io/com
 
 Anywhere a `$value` is a string:
 
-- `{path.to.token}` — resolves to `var(--path-to-token)` in the generated CSS.
-- `{path.to.token|N%}` — resolves to `--alpha(var(--path-to-token) / N%)` (Tailwind v4 alpha syntax).
+- `{path.to.token}` resolves to `var(--path-to-token)` in the generated CSS.
+- `{path.to.token|N%}` resolves to `--alpha(var(--path-to-token) / N%)` (Tailwind v4 alpha syntax).
 
 The same syntax appears inside composite values like `shadow.xs.$value`: `"0px 1px 2px 0px {color.black|6%}"`.
 
@@ -86,16 +86,16 @@ The same syntax appears inside composite values like `shadow.xs.$value`: `"0px 1
 
 ### Edge cases captured today
 
-- `color.gray.DEFAULT` — `DEFAULT` segment is dropped in the CSS variable name (`--color-gray`, not `--color-gray-DEFAULT`). DTCG convention; matches Tailwind's naming.
-- `utility.border-divider` — value is a plain class string (`border-tertiary`) rather than a `{ref}`. The build treats values without `{}` as raw `@apply` arguments.
-- `utility.bg-overlay` — uses `sure.utility.raw: "background-color"` because it needs alpha rendering rather than `@apply`.
-- `utility.bg-loader` — uses `sure.compose` to apply two utilities together (`bg-surface-inset animate-pulse`).
-- `utility.button-bg-ghost-hover` — its dark value is a multi-class string (`bg-gray-800 fg-inverse`) rather than a single ref. The build accepts both.
+- `color.gray.DEFAULT`: the `DEFAULT` segment is dropped in the CSS variable name (`--color-gray`, not `--color-gray-DEFAULT`). DTCG convention; matches Tailwind's naming.
+- `utility.border-divider`: value is a plain class string (`border-tertiary`) rather than a `{ref}`. The build treats values without `{}` as raw `@apply` arguments.
+- `utility.bg-overlay`: uses `sure.utility.raw: "background-color"` because it needs alpha rendering rather than `@apply`.
+- `utility.bg-loader`: uses `sure.compose` to apply two utilities together (`bg-surface-inset animate-pulse`).
+- `utility.button-bg-ghost-hover`: its dark value is a multi-class string (`bg-gray-800 fg-inverse`) rather than a single ref. The build accepts both.
 
 ## Consumers
 
-- **Rails / Tailwind** — via the generated CSS, automatically.
-- **Lookbook reference page** — `/design-system/inspect/design_tokens/*` reads `sure.tokens.json` at request time.
-- **External tools** (Figma Tokens Studio, AI design tools, etc.) — point them at this file. The schema is open and stable.
+- **Rails / Tailwind**: via the generated CSS, automatically.
+- **Lookbook reference page**: `/design-system/inspect/design_tokens/*` reads `sure.tokens.json` at request time.
+- **External tools** (Figma Tokens Studio, AI design tools, etc.): point them at this file. The schema is open and stable.
 
 If a consumer needs a different shape, prefer transforming the JSON in their tooling rather than mutating the source.
