@@ -1,6 +1,9 @@
 require "test_helper"
 
 class BudgetTest < ActiveSupport::TestCase
+  include EntriesTestHelper
+  include FxRegressionTestHelper
+
   setup do
     @family = families(:empty)
   end
@@ -223,6 +226,54 @@ class BudgetTest < ActiveSupport::TestCase
     assert_equal 0, budget.budget_category_actual_spending(
       budget.budget_categories.find_by(category: category)
     )
+  end
+
+  test "estimated income and spending use family-currency converted medians" do
+    family = Family.create!(name: "FX Budget Family", currency: "USD")
+    groceries = family.categories.create!(name: "Groceries", color: "#10b981")
+    income = family.categories.create!(name: "Income", color: "#6366f1")
+
+    usd_account = family.accounts.create!(name: "USD Checking", currency: "USD", balance: 0, accountable: Depository.new)
+    eur_account = create_foreign_account!(family: family, name: "EUR Checking", currency: "EUR")
+
+    create_transaction(account: usd_account, amount: 100, currency: "USD", category: groceries, date: Date.new(2026, 3, 5))
+    create_transaction(account: eur_account, amount: 100, currency: "EUR", category: groceries, date: Date.new(2026, 4, 5))
+    create_transaction(account: usd_account, amount: -300, currency: "USD", category: income, date: Date.new(2026, 3, 10))
+    create_transaction(account: eur_account, amount: -100, currency: "EUR", category: income, date: Date.new(2026, 4, 10))
+
+    create_exchange_rate!(from: "EUR", to: "USD", rate: 1.2, date: Date.new(2026, 4, 5))
+    create_exchange_rate!(from: "EUR", to: "USD", rate: 1.5, date: Date.new(2026, 4, 10))
+
+    travel_to Date.new(2026, 4, 30) do
+      budget = Budget.find_or_bootstrap(family, start_date: Date.current.beginning_of_month)
+
+      assert_equal 110, budget.estimated_spending
+      assert_equal 225, budget.estimated_income
+    end
+  end
+
+  test "actual_spending and budget category totals use family-currency converted amounts" do
+    family = Family.create!(name: "FX Actual Budget Family", currency: "USD")
+    groceries = family.categories.create!(name: "Groceries", color: "#10b981")
+
+    usd_account = family.accounts.create!(name: "USD Checking", currency: "USD", balance: 0, accountable: Depository.new)
+    eur_account = create_foreign_account!(family: family, name: "EUR Checking", currency: "EUR")
+
+    travel_to Date.new(2026, 4, 20) do
+      budget = Budget.find_or_bootstrap(family, start_date: Date.current.beginning_of_month)
+      budget_category = budget.budget_categories.find_by!(category: groceries)
+
+      create_transaction(account: usd_account, amount: 100, currency: "USD", category: groceries, date: Date.current)
+      create_transaction(account: eur_account, amount: 100, currency: "EUR", category: groceries, date: Date.current)
+      create_exchange_rate!(from: "EUR", to: "USD", rate: 1.2, date: Date.current)
+
+      budget = Budget.find(budget.id)
+      budget.sync_budget_categories
+      budget_category = budget.budget_categories.find_by!(category: groceries)
+
+      assert_equal 220, budget.actual_spending
+      assert_equal 220, budget.budget_category_actual_spending(budget_category)
+    end
   end
 
   test "to_donut_segments_json only includes top-level budget categories" do

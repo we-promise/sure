@@ -2,6 +2,7 @@ require "test_helper"
 
 class Transaction::SearchTest < ActiveSupport::TestCase
   include EntriesTestHelper
+  include FxRegressionTestHelper
 
   setup do
     @family = families(:dylan_family)
@@ -322,9 +323,9 @@ class Transaction::SearchTest < ActiveSupport::TestCase
     )
 
     # Create exchange rate EUR -> USD
-    ExchangeRate.create!(
-      from_currency: "EUR",
-      to_currency: "USD",
+    create_exchange_rate!(
+      from: "EUR",
+      to: "USD",
       rate: 1.1,
       date: eur_entry.date
     )
@@ -344,6 +345,24 @@ class Transaction::SearchTest < ActiveSupport::TestCase
     # EUR 100 * 1.1 + USD 50 = 110 + 50 = 160
     assert_equal Money.new(160, "USD"), totals.expense_money
     assert_equal Money.new(0, "USD"), totals.income_money
+  end
+
+  test "totals converts mixed-currency transfer inflow and outflow totals" do
+    foreign_account = create_foreign_account!(family: @family, currency: "EUR")
+    create_exchange_rate!(from: "EUR", to: "USD", rate: 1.2, date: Date.current)
+
+    create_transaction(account: foreign_account, amount: 100, currency: "EUR", kind: "funds_movement")
+    create_transaction(account: foreign_account, amount: -50, currency: "EUR", kind: "funds_movement")
+    create_transaction(account: @checking_account, amount: 25, currency: "USD", kind: "funds_movement")
+    create_transaction(account: @checking_account, amount: -40, currency: "USD", kind: "funds_movement")
+
+    search = Transaction::Search.new(@family)
+    totals = search.totals
+
+    assert_equal Money.new(0, "USD"), totals.expense_money
+    assert_equal Money.new(0, "USD"), totals.income_money
+    assert_equal Money.new(100, "USD"), totals.transfer_inflow_money
+    assert_equal Money.new(145, "USD"), totals.transfer_outflow_money
   end
 
   test "totals handles missing exchange rates gracefully" do

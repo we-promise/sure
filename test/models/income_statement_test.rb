@@ -2,6 +2,7 @@ require "test_helper"
 
 class IncomeStatementTest < ActiveSupport::TestCase
   include EntriesTestHelper
+  include FxRegressionTestHelper
 
   setup do
     @family = families(:empty)
@@ -28,6 +29,21 @@ class IncomeStatementTest < ActiveSupport::TestCase
     assert_equal 4, totals.transactions_count
   end
 
+  test "calculates totals for transactions in family currency when entries are mixed-currency" do
+    foreign_account = create_foreign_account!(family: @family, currency: "EUR")
+
+    create_transaction(account: foreign_account, amount: 100, currency: "EUR", category: @groceries_category, date: Date.current)
+    create_transaction(account: foreign_account, amount: -250, currency: "EUR", category: @income_category, date: Date.current)
+    create_exchange_rate!(from: "EUR", to: @family.currency, rate: 1.2, date: Date.current)
+
+    income_statement = IncomeStatement.new(@family)
+    totals = income_statement.totals(date_range: Period.last_30_days.date_range)
+
+    assert_equal Money.new(1300, @family.currency), totals.income_money
+    assert_equal Money.new(1020, @family.currency), totals.expense_money
+    assert_equal 6, totals.transactions_count
+  end
+
   test "calculates expenses for a period" do
     income_statement = IncomeStatement.new(@family)
     expense_totals = income_statement.expense_totals(period: Period.last_30_days)
@@ -37,6 +53,19 @@ class IncomeStatementTest < ActiveSupport::TestCase
     assert_equal expected_total_expense, expense_totals.total
     assert_equal expected_total_expense, expense_totals.category_totals.find { |ct| ct.category.id == @groceries_category.id }.total
     assert_equal expected_total_expense, expense_totals.category_totals.find { |ct| ct.category.id == @food_category.id }.total
+  end
+
+  test "calculates expense category totals in family currency for mixed-currency entries" do
+    foreign_account = create_foreign_account!(family: @family, currency: "EUR")
+    create_transaction(account: foreign_account, amount: 100, currency: "EUR", category: @groceries_category, date: Date.current)
+    create_exchange_rate!(from: "EUR", to: @family.currency, rate: 1.2, date: Date.current)
+
+    income_statement = IncomeStatement.new(@family)
+    expense_totals = income_statement.expense_totals(period: Period.last_30_days)
+
+    assert_equal 1020, expense_totals.total
+    assert_equal 1020, expense_totals.category_totals.find { |ct| ct.category.id == @groceries_category.id }.total
+    assert_equal 1020, expense_totals.category_totals.find { |ct| ct.category.id == @food_category.id }.total
   end
 
   test "calculates income for a period" do
@@ -148,6 +177,30 @@ class IncomeStatementTest < ActiveSupport::TestCase
     # CORRECT BUSINESS LOGIC: Calculates average of time-period totals for budget planning
     # All transactions in same month = monthly total of 600, so average = 600.0
     assert_equal 600.0, income_statement.avg_expense(interval: "month", category: @groceries_category)
+  end
+
+  test "family and category stats convert foreign currency before median and average aggregation" do
+    Entry.joins(:account).where(accounts: { family_id: @family.id }).destroy_all
+
+    foreign_account = create_foreign_account!(family: @family, currency: "EUR")
+
+    travel_to Date.new(2026, 4, 30) do
+      create_transaction(account: @checking_account, amount: 100, currency: "USD", category: @groceries_category, date: Date.new(2026, 3, 5))
+      create_transaction(account: foreign_account, amount: 100, currency: "EUR", category: @groceries_category, date: Date.new(2026, 4, 5))
+      create_transaction(account: @checking_account, amount: -300, currency: "USD", category: @income_category, date: Date.new(2026, 3, 10))
+      create_transaction(account: foreign_account, amount: -100, currency: "EUR", category: @income_category, date: Date.new(2026, 4, 10))
+
+      create_exchange_rate!(from: "EUR", to: "USD", rate: 1.2, date: Date.new(2026, 4, 5))
+      create_exchange_rate!(from: "EUR", to: "USD", rate: 1.5, date: Date.new(2026, 4, 10))
+
+      income_statement = IncomeStatement.new(@family)
+
+      assert_equal 110.0, income_statement.median_expense(interval: "month")
+      assert_equal 110.0, income_statement.avg_expense(interval: "month")
+      assert_equal 110.0, income_statement.median_expense(interval: "month", category: @groceries_category)
+      assert_equal 110.0, income_statement.avg_expense(interval: "month", category: @groceries_category)
+      assert_equal 225.0, income_statement.median_income(interval: "month")
+    end
   end
 
   # NEW TESTS: Transfer and Kind Filtering
