@@ -2,6 +2,7 @@ require "test_helper"
 
 class PagesControllerTest < ActionDispatch::IntegrationTest
   include EntriesTestHelper
+  include FxRegressionTestHelper
 
   setup do
     sign_in @user = users(:family_admin)
@@ -41,6 +42,27 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     get root_path
     assert_response :ok
     assert_select "[data-controller='sankey-chart']"
+  end
+
+  test "dashboard outflows donut shows family-currency converted foreign amounts" do
+    @family.accounts.each { |account| account.entries.delete_all }
+
+    food = @family.categories.create!(name: "NGN Food", color: "#22c55e")
+    ngn_account = create_foreign_account!(family: @family, name: "NGN Wallet", currency: "NGN")
+
+    travel_to Date.new(2026, 4, 30) do
+      create_transaction(account: ngn_account, amount: 1000, currency: "NGN", category: food, date: Date.current)
+      create_transaction(account: ngn_account, amount: -250, currency: "NGN", category: food, date: Date.current)
+      create_exchange_rate!(from: "NGN", to: "USD", rate: 0.01, date: Date.current)
+
+      get root_path
+      assert_response :ok
+
+      assert_includes response.body, "$7.50"
+      assert_includes response.body, "&quot;amount&quot;:7.5"
+      refute_includes response.body, "$750.00"
+      refute_includes response.body, "&quot;amount&quot;:750.0"
+    end
   end
 
   test "changelog" do
