@@ -92,6 +92,56 @@ class SureImport < Import
 
     result[:accounts].each { |account| accounts << account }
     result[:entries].each { |entry| entries << entry }
+
+    # Track created resource IDs for clean revert (stored in column_mappings, unused by SureImport)
+    update!(column_mappings: {
+      category_ids: result[:category_ids] || [],
+      tag_ids: result[:tag_ids] || [],
+      merchant_ids: result[:merchant_ids] || [],
+      budget_ids: result[:budget_ids] || []
+    })
+
+    # Surface import errors as a warning (import still succeeds for everything else)
+    if result[:errors].present?
+      summary = result[:errors].map { |e| "#{e[:section]}/#{e[:record]}: #{e[:error]}" }.join("; ")
+      update!(error: "Partial import warnings: #{summary.truncate(500)}")
+    end
+  end
+
+  def revert
+    Import.transaction do
+      # Batch-delete entries via SQL to avoid per-row callback overhead on large imports.
+      # Entryables (Transaction/Trade/Valuation) are cleaned up via DB-level CASCADE
+      # or by deleting them explicitly before entries.
+      entry_ids = entries.pluck(:id)
+
+      if entry_ids.any?
+        # Delete entryables first (transactions, trades, valuations linked to these entries)
+        Transaction.where(id: Entry.where(id: entry_ids).where(entryable_type: "Transaction").select(:entryable_id)).delete_all
+        Trade.where(id: Entry.where(id: entry_ids).where(entryable_type: "Trade").select(:entryable_id)).delete_all
+        Valuation.where(id: Entry.where(id: entry_ids).where(entryable_type: "Valuation").select(:entryable_id)).delete_all
+
+        # Delete taggings for those transactions
+        Tagging.where(taggable_type: "Transaction", taggable_id: Entry.where(id: entry_ids).where(entryable_type: "Transaction").select(:entryable_id)).delete_all
+
+        Entry.where(id: entry_ids).delete_all
+      end
+
+      accounts.destroy_all
+
+      if column_mappings.present?
+        family.budgets.where(id: column_mappings["budget_ids"]).destroy_all if column_mappings["budget_ids"].present?
+        family.categories.where(id: column_mappings["category_ids"]).destroy_all if column_mappings["category_ids"].present?
+        family.tags.where(id: column_mappings["tag_ids"]).destroy_all if column_mappings["tag_ids"].present?
+        family.merchants.where(id: column_mappings["merchant_ids"]).destroy_all if column_mappings["merchant_ids"].present?
+      end
+    end
+
+    family.sync_later
+
+    update! status: :pending, column_mappings: nil, error: nil
+  rescue => error
+    update! status: :revert_failed, error: error.message
   end
 
   def uploaded?

@@ -308,7 +308,7 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal 500.0, budget_category.budgeted_spending.to_f
   end
 
-  test "imports rules with conditions and actions" do
+  test "skips rules (not imported)" do
     ndjson = build_ndjson([
       {
         type: "Rule",
@@ -338,27 +338,11 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     importer.import!
 
     rule = @family.rules.find_by(name: "Categorize Coffee")
-    assert_not_nil rule
-    assert rule.active
-    assert_equal "transaction", rule.resource_type
-
-    assert_equal 1, rule.conditions.count
-    condition = rule.conditions.first
-    assert_equal "transaction_name", condition.condition_type
-    assert_equal "like", condition.operator
-    assert_equal "starbucks", condition.value
-
-    assert_equal 1, rule.actions.count
-    action = rule.actions.first
-    assert_equal "set_transaction_category", action.action_type
-
-    # Category should be created
-    category = @family.categories.find_by(name: "Coffee")
-    assert_not_nil category
-    assert_equal category.id, action.value
+    assert_nil rule, "Rules should not be imported"
+    assert_equal 0, @family.rules.count
   end
 
-  test "imports rules with compound conditions" do
+  test "skips rules with compound conditions" do
     ndjson = build_ndjson([
       {
         type: "Rule",
@@ -398,12 +382,7 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     importer.import!
 
     rule = @family.rules.find_by(name: "Compound Rule")
-    assert_not_nil rule
-
-    parent_condition = rule.conditions.first
-    assert_equal "compound", parent_condition.condition_type
-    assert_equal "or", parent_condition.operator
-    assert_equal 2, parent_condition.sub_conditions.count
+    assert_nil rule, "Rules should not be imported"
   end
 
   test "skips invalid records gracefully" do
@@ -557,7 +536,7 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal 1, @family.transactions.count
     assert_equal 1, @family.budgets.count
     assert_equal 1, @family.budget_categories.count
-    assert_equal 1, @family.rules.count
+    assert_equal 0, @family.rules.count, "Rules are not imported"
 
     # Verify relationships
     transaction = @family.transactions.first
