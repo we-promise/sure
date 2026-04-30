@@ -48,7 +48,7 @@ The file follows the [W3C DTCG token format](https://design-tokens.github.io/com
 | Key | Purpose |
 |-----|---------|
 | `font` | font-family stacks |
-| `color` | base colors, semantic aliases (success/warning/destructive/shadow), full scale ladders, alpha ladders |
+| `color` | base colors, semantic aliases (success/warning/destructive/shadow), full-scale ladders, alpha ladders |
 | `budget` | budget-chart fills (need their own dark variants in Stimulus controllers) |
 | `border.radius` | corner radii |
 | `shadow` | drop shadows (light + dark variants) |
