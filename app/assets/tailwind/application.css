@@ -1,5 +1,8 @@
 @import 'tailwindcss';
 
+/* Exclude tokens/sure.tokens.json from Tailwind's content scanner — its utility
+   keys (e.g. `bg-surface`) would otherwise be treated as used classes and skip
+   tree-shaking. Path is relative to this file. */
 @source not "../../../tokens";
 
 @import "./sure-design-system.css";
