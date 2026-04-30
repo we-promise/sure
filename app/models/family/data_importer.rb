@@ -92,7 +92,7 @@ class Family::DataImporter
           institution_name: data["institution_name"],
           institution_domain: data["institution_domain"],
           notes: data["notes"],
-          status: "active"
+          status: importable_account_status(data["status"])
         )
 
         account.save!
@@ -106,6 +106,10 @@ class Family::DataImporter
         @id_mappings[:accounts][old_id] = account.id
         @created_accounts << account
       end
+    end
+
+    def importable_account_status(status)
+      status.to_s.in?(%w[active disabled draft]) ? status.to_s : "active"
     end
 
     def import_categories(records)

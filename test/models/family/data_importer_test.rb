@@ -31,6 +31,52 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal "Depository", account.accountable_type
   end
 
+  test "imports non-destructive account status from ndjson" do
+    ndjson = build_ndjson([
+      {
+        type: "Account",
+        data: {
+          id: "disabled-account",
+          name: "Closed Checking",
+          balance: "0.00",
+          currency: "USD",
+          accountable_type: "Depository",
+          status: "disabled"
+        }
+      }
+    ])
+
+    importer = Family::DataImporter.new(@family, ndjson)
+    result = importer.import!
+
+    account = result[:accounts].first
+    assert_equal "Closed Checking", account.name
+    assert_equal "disabled", account.status
+  end
+
+  test "does not import pending deletion account status" do
+    ndjson = build_ndjson([
+      {
+        type: "Account",
+        data: {
+          id: "pending-delete-account",
+          name: "Pending Delete Checking",
+          balance: "0.00",
+          currency: "USD",
+          accountable_type: "Depository",
+          status: "pending_deletion"
+        }
+      }
+    ])
+
+    importer = Family::DataImporter.new(@family, ndjson)
+    result = importer.import!
+
+    account = result[:accounts].first
+    assert_equal "Pending Delete Checking", account.name
+    assert_equal "active", account.status
+  end
+
   test "imports categories with parent relationships" do
     ndjson = build_ndjson([
       {
