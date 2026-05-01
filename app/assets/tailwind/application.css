@@ -1,6 +1,11 @@
 @import 'tailwindcss';
 
-@import "./maybe-design-system.css";
+/* Exclude design/tokens/sure.tokens.json from Tailwind's content scanner: its utility
+   keys (e.g. `bg-surface`) would otherwise be treated as used classes and skip
+   tree-shaking. Path is relative to this file. */
+@source not "../../../design/tokens";
+
+@import "./sure-design-system.css";
 
 @import "./geist-font.css";
 @import "./geist-mono-font.css";

@@ -3,6 +3,9 @@
 # Mark the database schema as having been generated.
 db/schema.rb linguist-generated
 
+# Mark generated design system CSS (built from tokens/sure.tokens.json).
+app/assets/tailwind/sure-design-system/_generated.css linguist-generated
+
 # Mark any vendored files as having been vendored.
 vendor/* linguist-vendored
 config/credentials/*.yml.enc diff=rails_credentials
