@@ -82,7 +82,7 @@ class SnaptradeItemsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "entry routing prefers a registered active item over a pending one" do
-    pending_item = Current.family.snaptrade_items.create!(
+    pending_item = @user.family.snaptrade_items.create!(
       name: "Pending Registration",
       client_id: "pending_client_id",
       consumer_key: "pending_consumer_key",
