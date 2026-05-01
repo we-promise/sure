@@ -392,6 +392,44 @@ RSpec.configure do |config|
               other_account: { '$ref' => '#/components/schemas/Account', nullable: true }
             }
           },
+          RecurringTransaction: {
+            type: :object,
+            required: %w[id amount amount_cents currency expected_day_of_month last_occurrence_date next_expected_date status occurrence_count manual created_at updated_at],
+            properties: {
+              id: { type: :string, format: :uuid },
+              amount: { type: :string },
+              amount_cents: { type: :integer, description: 'Amount in currency minor units' },
+              currency: { type: :string },
+              expected_day_of_month: { type: :integer, minimum: 1, maximum: 31 },
+              last_occurrence_date: { type: :string, format: :date },
+              next_expected_date: { type: :string, format: :date },
+              status: { type: :string, enum: %w[active inactive] },
+              occurrence_count: { type: :integer, minimum: 0 },
+              name: { type: :string, nullable: true },
+              manual: { type: :boolean },
+              expected_amount_min: { type: :string, nullable: true },
+              expected_amount_min_cents: { type: :integer, nullable: true, description: 'Minimum expected amount in currency minor units' },
+              expected_amount_max: { type: :string, nullable: true },
+              expected_amount_max_cents: { type: :integer, nullable: true, description: 'Maximum expected amount in currency minor units' },
+              expected_amount_avg: { type: :string, nullable: true },
+              expected_amount_avg_cents: { type: :integer, nullable: true, description: 'Average expected amount in currency minor units' },
+              account: { '$ref' => '#/components/schemas/Account', nullable: true },
+              merchant: { '$ref' => '#/components/schemas/Merchant', nullable: true },
+              created_at: { type: :string, format: :'date-time' },
+              updated_at: { type: :string, format: :'date-time' }
+            }
+          },
+          RecurringTransactionCollection: {
+            type: :object,
+            required: %w[recurring_transactions pagination],
+            properties: {
+              recurring_transactions: {
+                type: :array,
+                items: { '$ref' => '#/components/schemas/RecurringTransaction' }
+              },
+              pagination: { '$ref' => '#/components/schemas/Pagination' }
+            }
+          },
           Transaction: {
             type: :object,
             required: %w[id date amount currency name classification account tags created_at updated_at],

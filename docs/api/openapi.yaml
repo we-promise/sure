@@ -612,6 +612,100 @@ components:
         other_account:
           "$ref": "#/components/schemas/Account"
           nullable: true
+    RecurringTransaction:
+      type: object
+      required:
+      - id
+      - amount
+      - amount_cents
+      - currency
+      - expected_day_of_month
+      - last_occurrence_date
+      - next_expected_date
+      - status
+      - occurrence_count
+      - manual
+      - created_at
+      - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        amount:
+          type: string
+        amount_cents:
+          type: integer
+          description: Amount in currency minor units
+        currency:
+          type: string
+        expected_day_of_month:
+          type: integer
+          minimum: 1
+          maximum: 31
+        last_occurrence_date:
+          type: string
+          format: date
+        next_expected_date:
+          type: string
+          format: date
+        status:
+          type: string
+          enum:
+          - active
+          - inactive
+        occurrence_count:
+          type: integer
+          minimum: 0
+        name:
+          type: string
+          nullable: true
+        manual:
+          type: boolean
+        expected_amount_min:
+          type: string
+          nullable: true
+        expected_amount_min_cents:
+          type: integer
+          nullable: true
+          description: Minimum expected amount in currency minor units
+        expected_amount_max:
+          type: string
+          nullable: true
+        expected_amount_max_cents:
+          type: integer
+          nullable: true
+          description: Maximum expected amount in currency minor units
+        expected_amount_avg:
+          type: string
+          nullable: true
+        expected_amount_avg_cents:
+          type: integer
+          nullable: true
+          description: Average expected amount in currency minor units
+        account:
+          "$ref": "#/components/schemas/Account"
+          nullable: true
+        merchant:
+          "$ref": "#/components/schemas/Merchant"
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    RecurringTransactionCollection:
+      type: object
+      required:
+      - recurring_transactions
+      - pagination
+      properties:
+        recurring_transactions:
+          type: array
+          items:
+            "$ref": "#/components/schemas/RecurringTransaction"
+        pagination:
+          "$ref": "#/components/schemas/Pagination"
     Transaction:
       type: object
       required:
@@ -2348,6 +2442,290 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
+  "/api/v1/recurring_transactions":
+    get:
+      summary: List recurring transactions
+      tags:
+      - Recurring Transactions
+      security:
+      - apiKeyAuth: []
+      parameters:
+      - name: page
+        in: query
+        required: false
+        description: 'Page number (default: 1)'
+        schema:
+          type: integer
+      - name: per_page
+        in: query
+        required: false
+        description: 'Items per page (default: 25, max: 100)'
+        schema:
+          type: integer
+      - name: status
+        in: query
+        required: false
+        description: Filter by recurring status
+        schema:
+          type: string
+          enum:
+          - active
+          - inactive
+      - name: account_id
+        in: query
+        required: false
+        description: Filter by account ID
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: recurring transactions listed
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/RecurringTransactionCollection"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '422':
+          description: validation error - malformed account filter
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+    post:
+      summary: Create recurring transaction
+      tags:
+      - Recurring Transactions
+      security:
+      - apiKeyAuth: []
+      parameters: []
+      responses:
+        '201':
+          description: recurring transaction created
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/RecurringTransaction"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: forbidden - requires read_write scope
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '404':
+          description: account not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '422':
+          description: validation error - negative occurrence count
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                recurring_transaction:
+                  type: object
+                  properties:
+                    account_id:
+                      type: string
+                      format: uuid
+                      nullable: true
+                    merchant_id:
+                      type: string
+                      format: uuid
+                      nullable: true
+                    name:
+                      type: string
+                      nullable: true
+                    amount:
+                      type: number
+                    currency:
+                      type: string
+                    expected_day_of_month:
+                      type: integer
+                      minimum: 1
+                      maximum: 31
+                    last_occurrence_date:
+                      type: string
+                      format: date
+                    next_expected_date:
+                      type: string
+                      format: date
+                    status:
+                      type: string
+                      enum:
+                      - active
+                      - inactive
+                    occurrence_count:
+                      type: integer
+                      minimum: 0
+                    manual:
+                      type: boolean
+                    expected_amount_min:
+                      type: number
+                      nullable: true
+                    expected_amount_max:
+                      type: number
+                      nullable: true
+                    expected_amount_avg:
+                      type: number
+                      nullable: true
+                  required:
+                  - amount
+                  - currency
+                  - expected_day_of_month
+                  - last_occurrence_date
+                  - next_expected_date
+                  anyOf:
+                  - required:
+                    - name
+                  - required:
+                    - merchant_id
+              required:
+              - recurring_transaction
+        required: true
+  "/api/v1/recurring_transactions/{id}":
+    parameters:
+    - name: id
+      in: path
+      required: true
+      description: Recurring transaction ID
+      schema:
+        type: string
+    get:
+      summary: Retrieve recurring transaction
+      tags:
+      - Recurring Transactions
+      security:
+      - apiKeyAuth: []
+      responses:
+        '200':
+          description: recurring transaction retrieved
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/RecurringTransaction"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '404':
+          description: recurring transaction not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+    patch:
+      summary: Update recurring transaction
+      tags:
+      - Recurring Transactions
+      security:
+      - apiKeyAuth: []
+      parameters: []
+      responses:
+        '200':
+          description: recurring transaction updated
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/RecurringTransaction"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: forbidden - requires read_write scope
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '404':
+          description: recurring transaction not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '422':
+          description: validation error
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                recurring_transaction:
+                  type: object
+                  properties:
+                    status:
+                      type: string
+                      enum:
+                      - active
+                      - inactive
+                    expected_day_of_month:
+                      type: integer
+                      minimum: 1
+                      maximum: 31
+                    next_expected_date:
+                      type: string
+                      format: date
+        required: true
+    delete:
+      summary: Delete recurring transaction
+      tags:
+      - Recurring Transactions
+      security:
+      - apiKeyAuth: []
+      responses:
+        '200':
+          description: recurring transaction deleted
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/SuccessMessage"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: forbidden - requires read_write scope
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '404':
+          description: recurring transaction not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
   "/api/v1/rules":
     get:
       summary: List rules
@@ -2415,7 +2793,6 @@ paths:
       description: Rule ID
       schema:
         type: string
-        format: uuid
     get:
       summary: Retrieve a rule
       tags:
