@@ -73,6 +73,35 @@ class SnaptradeItemsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to connect_snaptrade_item_path(snaptrade_item)
   end
 
+  test "preload_accounts redirects registered users to setup flow and queues sync" do
+    assert_difference "Sync.count", 1 do
+      get preload_accounts_snaptrade_items_url
+    end
+
+    assert_redirected_to setup_accounts_snaptrade_item_path(@snaptrade_item)
+  end
+
+  test "entry routing prefers a registered active item over a pending one" do
+    pending_item = Current.family.snaptrade_items.create!(
+      name: "Pending Registration",
+      client_id: "pending_client_id",
+      consumer_key: "pending_consumer_key",
+      status: :good,
+      scheduled_for_deletion: false,
+      pending_account_setup: true
+    )
+
+    get select_accounts_snaptrade_items_url, params: { accountable_type: "Investment", return_to: "/accounts" }
+    assert_redirected_to setup_accounts_snaptrade_item_path(@snaptrade_item, accountable_type: "Investment", return_to: "/accounts")
+
+    assert_difference "Sync.count", 1 do
+      get preload_accounts_snaptrade_items_url
+    end
+    assert_redirected_to setup_accounts_snaptrade_item_path(@snaptrade_item)
+
+    assert_not pending_item.user_registered?
+  end
+
   test "setup_accounts shows linkable investment and crypto accounts in dropdown" do
     get setup_accounts_snaptrade_item_url(@snaptrade_item)
 

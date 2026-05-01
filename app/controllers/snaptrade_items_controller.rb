@@ -428,8 +428,11 @@ class SnaptradeItemsController < ApplicationController
     end
 
     def current_snaptrade_item
-      Current.family.snaptrade_items.where.not(client_id: [ nil, "" ]).ordered.first ||
-        Current.family.snaptrade_items.ordered.first
+      active_items = Current.family.snaptrade_items.active
+
+      active_items.syncable.ordered.first ||
+        active_items.where.not(client_id: [ nil, "" ]).ordered.first ||
+        active_items.ordered.first
     end
 
     def snaptrade_item_params
