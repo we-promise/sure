@@ -1,18 +1,18 @@
 #!/usr/bin/env node
 // Sure design tokens build.
-// Reads tokens/sure.tokens.json (W3C DTCG-flavored), emits one Tailwind v4 CSS file.
+// Reads design/tokens/sure.tokens.json (W3C DTCG-flavored), emits one Tailwind v4 CSS file.
 
 import { readFileSync, writeFileSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
-const TOKENS = resolve(ROOT, "tokens/sure.tokens.json");
+const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const TOKENS = resolve(ROOT, "design/tokens/sure.tokens.json");
 const OUT = resolve(ROOT, "app/assets/tailwind/sure-design-system/_generated.css");
 
 const HEADER = `/*
  * GENERATED — do not edit by hand.
- * Source: tokens/sure.tokens.json
+ * Source: design/tokens/sure.tokens.json
  * Build:  npm run tokens:build
  */
 `;

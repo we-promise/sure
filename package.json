@@ -12,8 +12,8 @@
 		"lint:fix": "biome lint --write",
 		"format:check": "biome format",
 		"format": "biome format --write",
-		"tokens:build": "node tools/tokens/build.mjs",
-		"tokens:check": "node tools/tokens/build.mjs && git diff --quiet -- app/assets/tailwind/sure-design-system/_generated.css"
+		"tokens:build": "node bin/tokens.mjs",
+		"tokens:check": "node bin/tokens.mjs && git diff --quiet -- app/assets/tailwind/sure-design-system/_generated.css"
 	},
 	"author": "",
 	"license": "ISC"

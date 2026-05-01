@@ -5,20 +5,20 @@ Single source of truth for the design system. Anything Tailwind / Figma / future
 ## Files
 
 - `sure.tokens.json`: every token, hand-edited.
-- `../tools/tokens/build.mjs`: plain Node script that compiles the JSON into Tailwind v4 CSS.
-- `../app/assets/tailwind/sure-design-system/_generated.css`: build output. **Generated, do not edit by hand.**
+- `../../bin/tokens.mjs`: plain Node script that compiles the JSON into Tailwind v4 CSS.
+- `../../app/assets/tailwind/sure-design-system/_generated.css`: build output. **Generated, do not edit by hand.**
 
 ## Workflow
 
 ```bash
 # Edit a token:
-$EDITOR tokens/sure.tokens.json
+$EDITOR design/tokens/sure.tokens.json
 
 # Regenerate the CSS:
 npm run tokens:build
 
 # Commit both files in the same change:
-git add tokens/sure.tokens.json app/assets/tailwind/sure-design-system/_generated.css
+git add design/tokens/sure.tokens.json app/assets/tailwind/sure-design-system/_generated.css
 ```
 
 `bin/setup` runs the build automatically on a fresh checkout.
