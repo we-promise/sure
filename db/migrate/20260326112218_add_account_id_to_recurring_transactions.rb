@@ -70,27 +70,28 @@ class AddAccountIdToRecurringTransactions < ActiveRecord::Migration[7.2]
   end
 
   private
-    def dedupe_recurring_transactions!(partition_columns:, where_clause:)
-      execute <<~SQL
-        WITH ranked AS (
-          SELECT id,
-                 ROW_NUMBER() OVER (
-                   PARTITION BY #{partition_columns.join(', ')}
-                   ORDER BY manual DESC,
-                            (status = 'active') DESC,
-                            last_occurrence_date DESC NULLS LAST,
-                            updated_at DESC,
-                            id DESC
-                 ) AS row_num
-          FROM recurring_transactions
-          WHERE #{where_clause}
-        )
-        DELETE FROM recurring_transactions
-        WHERE id IN (
-          SELECT id FROM ranked WHERE row_num > 1
-        )
-      SQL
-    end
+
+  def dedupe_recurring_transactions!(partition_columns:, where_clause:)
+    execute <<~SQL
+      WITH ranked AS (
+        SELECT id,
+               ROW_NUMBER() OVER (
+                 PARTITION BY #{partition_columns.join(', ')}
+                 ORDER BY manual DESC,
+                          (status = 'active') DESC,
+                          last_occurrence_date DESC NULLS LAST,
+                          updated_at DESC,
+                          id DESC
+               ) AS row_num
+        FROM recurring_transactions
+        WHERE #{where_clause}
+      )
+      DELETE FROM recurring_transactions
+      WHERE id IN (
+        SELECT id FROM ranked WHERE row_num > 1
+      )
+    SQL
+  end
 
   def down
     remove_index :recurring_transactions, name: "idx_recurring_txns_acct_merchant", if_exists: true
