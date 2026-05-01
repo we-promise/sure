@@ -126,7 +126,7 @@
       "600": { "$value": "#088AB2", "$type": "color" },
       "700": { "$value": "#0E7090", "$type": "color" },
       "800": { "$value": "#155B75", "$type": "color" },
-      "900": { "$value": "#155B75", "$type": "color" },
+      "900": { "$value": "#164E63", "$type": "color" },
       "tint-5":  { "$value": "{color.cyan.500|5%}",  "$type": "color" },
       "tint-10": { "$value": "{color.cyan.500|10%}", "$type": "color" }
     },
