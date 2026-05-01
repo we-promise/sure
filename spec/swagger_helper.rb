@@ -364,6 +364,17 @@ RSpec.configure do |config|
               updated_at: { type: :string, format: :'date-time' }
             }
           },
+          ValuationCollection: {
+            type: :object,
+            required: %w[valuations pagination],
+            properties: {
+              valuations: {
+                type: :array,
+                items: { '$ref' => '#/components/schemas/Valuation' }
+              },
+              pagination: { '$ref' => '#/components/schemas/Pagination' }
+            }
+          },
           DeleteResponse: {
             type: :object,
             required: %w[message],
