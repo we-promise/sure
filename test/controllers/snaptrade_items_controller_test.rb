@@ -6,6 +6,12 @@ class SnaptradeItemsControllerTest < ActionDispatch::IntegrationTest
     @snaptrade_item = snaptrade_items(:configured_item)
   end
 
+  def sign_out
+    @user.sessions.each do |session|
+      delete session_path(session)
+    end
+  end
+
   test "connect handles decryption error gracefully" do
     SnaptradeItem.any_instance
       .stubs(:user_registered?)
@@ -40,8 +46,8 @@ class SnaptradeItemsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "select_accounts redirects unregistered users into connect flow" do
-    delete destroy_session_url
-    sign_in users(:empty)
+    sign_out
+    sign_in @user = users(:empty)
     snaptrade_item = snaptrade_items(:pending_registration_item)
 
     get select_accounts_snaptrade_items_url, params: { accountable_type: "Investment", return_to: "/accounts" }
@@ -56,8 +62,8 @@ class SnaptradeItemsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "preload_accounts redirects unregistered users into connect flow" do
-    delete destroy_session_url
-    sign_in users(:empty)
+    sign_out
+    sign_in @user = users(:empty)
     snaptrade_item = snaptrade_items(:pending_registration_item)
 
     assert_no_difference "Sync.count" do
