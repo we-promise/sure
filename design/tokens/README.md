@@ -23,6 +23,16 @@ git add design/tokens/sure.tokens.json app/assets/tailwind/sure-design-system/_g
 
 `bin/setup` runs the build automatically on a fresh checkout.
 
+## Versioning
+
+The root `$version` field follows semver, scoped to the token contract:
+
+- **Major** (`X.0.0`): breaking changes — token removed or renamed, value type changed, dark variant removed, semantic meaning changed.
+- **Minor** (`1.X.0`): additive changes — new tokens, new `$extensions.sure.*` keys, new top-level groups.
+- **Patch** (`1.0.X`): cosmetic / value tweaks that consumers don't need to know about — a hex shifts a few points without changing intent.
+
+Bump it when you commit. External consumers (Tokens Studio, future Figma sync, etc.) read this to decide whether their cached snapshot is stale.
+
 ## Schema
 
 The file uses the [W3C DTCG token format](https://design-tokens.github.io/community-group/format/): `$value`, `$type`, `$description`, `$extensions`. Tokens cross-reference via `{path.to.token}` placeholders.
