@@ -62,8 +62,10 @@ module AccountableResource
       end
     end
 
-    # Update remaining account attributes
-    update_params = account_params.except(:return_to, :balance, :currency, :opening_balance_date)
+    # Update remaining account attributes. Note: currency is intentionally allowed
+    # here so all account types (depositories, credit cards, loans, etc.) can
+    # have their currency changed via this shared update path.
+    update_params = account_params.except(:return_to, :balance, :opening_balance_date)
     unless @account.update(update_params)
       @error_message = @account.errors.full_messages.join(", ")
       render :edit, status: :unprocessable_entity

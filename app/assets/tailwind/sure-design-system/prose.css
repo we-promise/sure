@@ -1,0 +1,24 @@
+/* Specific override for strong tags in prose under dark mode */
+.prose:where([data-theme=dark], [data-theme=dark] *) strong {
+  color: theme(colors.white) !important;
+}
+
+/* Specific override for headings in prose under dark mode */
+.prose:where([data-theme=dark], [data-theme=dark] *) h1,
+.prose:where([data-theme=dark], [data-theme=dark] *) h2,
+.prose:where([data-theme=dark], [data-theme=dark] *) h3,
+.prose:where([data-theme=dark], [data-theme=dark] *) h4,
+.prose:where([data-theme=dark], [data-theme=dark] *) h5,
+.prose:where([data-theme=dark], [data-theme=dark] *) h6,
+.prose:where([data-theme=dark], [data-theme=dark] *) blockquote,
+.prose:where([data-theme=dark], [data-theme=dark] *) thead th {
+  color: theme(colors.white) !important;
+}
+
+/* Inline code in prose under dark mode. Without this the Tailwind Typography
+   plugin's default near-black foreground falls through and disappears against
+   the dark page background. */
+.prose:where([data-theme=dark], [data-theme=dark] *) code {
+  color: theme(colors.white) !important;
+  background-color: theme(colors.gray.800) !important;
+}

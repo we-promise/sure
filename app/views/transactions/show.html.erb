@@ -117,18 +117,13 @@
                     include_blank: t(".none"),
                     multiple: true,
                     label:    t(".tags_label"),
-                    disabled: @entry.split_child? || !can_annotate_entry?
+                    disabled: !can_annotate_entry?
                   },
                   { "data-controller": "multi-select", "data-auto-submit-form-target": "auto" } %>
           <% end %>
         <% end %>
-        <%= f.text_area :notes,
-                label: t(".note_label"),
-                placeholder: t(".note_placeholder"),
-                rows: 5,
-                disabled: @entry.split_child? || !can_annotate_entry?,
-                "data-auto-submit-form-target": "auto" %>
       <% end %>
+      <%= render "transactions/notes", entry: @entry, can_annotate: can_annotate_entry? %>
     <% end %>
 
     <% dialog.with_section(title: t(".attachments")) do %>

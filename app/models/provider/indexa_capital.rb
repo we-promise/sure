@@ -55,6 +55,21 @@ class Provider::IndexaCapital
     end
   end
 
+  # GET /accounts/{account_number}/portfolio → current snapshot with positions.
+  # Used as a fallback when fiscal-results is empty (e.g. pension plans, where
+  # Indexa returns {fiscal_results: [], total_fiscal_results: []} but exposes
+  # the same positions through this endpoint).
+  def get_portfolio(account_number:)
+    sanitize_account_number!(account_number)
+    with_retries("get_portfolio") do
+      response = self.class.get(
+        "#{base_url}/accounts/#{account_number}/portfolio",
+        headers: auth_headers
+      )
+      handle_response(response)
+    end
+  end
+
   # GET /accounts/{account_number}/performance → latest portfolio total_amount
   def get_account_balance(account_number:)
     sanitize_account_number!(account_number)

@@ -1,0 +1,13 @@
+<%# locals: (entry:, can_annotate:) %>
+<%= turbo_frame_tag dom_id(entry, :notes) do %>
+  <%= styled_form_with model: entry,
+        url: transaction_path(entry),
+        data: { controller: "auto-submit-form" } do |f| %>
+    <%= f.text_area :notes,
+            label: t("transactions.show.note_label"),
+            placeholder: t("transactions.show.note_placeholder"),
+            rows: 5,
+            disabled: !can_annotate,
+            "data-auto-submit-form-target": "auto" %>
+  <% end %>
+<% end %>

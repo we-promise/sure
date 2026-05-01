@@ -83,10 +83,10 @@ jobs:
 
   testflight:
     name: Upload iOS to TestFlight
-    needs: [build, release]
+    needs: [build, prepare_release]
     uses: ./.github/workflows/ios-testflight.yml
     with:
-      notes: "Mobile release ${{ needs.release.outputs.tag_name }}"
+      notes: "Mobile release ${{ needs.prepare_release.outputs.tag_name }}"
     secrets: inherit
 
   release:
