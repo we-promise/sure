@@ -23,8 +23,8 @@
               content_tag(:div, class: "space-y-0.5") do
                 safe_join([
                   content_tag(:p, u[:name], class: "text-xs font-medium text-primary"),
-                  content_tag(:p, u[:light_value], class: "#{meta} truncate"),
-                  (u[:dark_value] ? content_tag(:p, "dark: #{u[:dark_value]}", class: "#{meta} truncate text-subdued") : nil)
+                  content_tag(:p, u[:light_resolved] || u[:light_value], class: "#{meta} truncate"),
+                  (u[:dark_value] ? content_tag(:p, "dark: #{u[:dark_resolved] || u[:dark_value]}", class: "#{meta} truncate text-subdued") : nil)
                 ].compact)
               end
             ])

@@ -109,10 +109,14 @@ class DesignTokensPreview < ViewComponent::Preview
         name = path[1]
         next unless yield(name)
         ext = node["$extensions"] || {}
+        light_raw = node["$value"]
+        dark_raw = ext["sure.dark"]
         {
           name: path[1..].join("-"),
-          light_value: node["$value"],
-          dark_value: ext["sure.dark"],
+          light_value: light_raw,
+          dark_value: dark_raw,
+          light_resolved: light_raw.is_a?(String) ? resolve_template(light_raw) : nil,
+          dark_resolved:  dark_raw.is_a?(String) ? resolve_template(dark_raw) : nil,
           compose: ext["sure.compose"]
         }
       end

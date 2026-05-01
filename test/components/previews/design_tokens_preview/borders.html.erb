@@ -15,9 +15,9 @@
       <div class="<%= card %>">
         <div class="h-12 w-full rounded-md bg-container <%= is_shadow_border ? u[:name] : "border-2 #{u[:name]}" %>"></div>
         <p class="<%= label %>"><%= u[:name] %></p>
-        <p class="<%= meta %> truncate"><%= u[:light_value] %></p>
+        <p class="<%= meta %> truncate"><%= u[:light_resolved] || u[:light_value] %></p>
         <% if u[:dark_value] %>
-          <p class="<%= meta %> truncate text-subdued">dark: <%= u[:dark_value] %></p>
+          <p class="<%= meta %> truncate text-subdued">dark: <%= u[:dark_resolved] || u[:dark_value] %></p>
         <% end %>
       </div>
     <% end %>

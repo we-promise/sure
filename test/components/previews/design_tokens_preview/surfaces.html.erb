@@ -18,9 +18,9 @@
         <% if u[:compose] %>
           <p class="<%= meta %> truncate">@apply <%= u[:compose].join(" ") %></p>
         <% else %>
-          <p class="<%= meta %> truncate"><%= u[:light_value] %></p>
+          <p class="<%= meta %> truncate"><%= u[:light_resolved] || u[:light_value] %></p>
           <% if u[:dark_value] %>
-            <p class="<%= meta %> truncate text-subdued">dark: <%= u[:dark_value] %></p>
+            <p class="<%= meta %> truncate text-subdued">dark: <%= u[:dark_resolved] || u[:dark_value] %></p>
           <% end %>
         <% end %>
       </div>
