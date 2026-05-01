@@ -527,14 +527,41 @@ RSpec.configure do |config|
           },
           ImportStats: {
             type: :object,
+            required: %w[rows_count valid_rows_count invalid_rows_count mappings_count unassigned_mappings_count],
             properties: {
               rows_count: { type: :integer, minimum: 0 },
-              valid_rows_count: { type: :integer, minimum: 0, nullable: true }
+              valid_rows_count: { type: :integer, minimum: 0 },
+              invalid_rows_count: { type: :integer, minimum: 0 },
+              mappings_count: { type: :integer, minimum: 0 },
+              unassigned_mappings_count: { type: :integer, minimum: 0 }
             }
+          },
+          ImportStatusSummary: {
+            type: :object,
+            required: %w[uploaded configured terminal],
+            properties: {
+              uploaded: { type: :boolean },
+              configured: { type: :boolean },
+              terminal: { type: :boolean }
+            }
+          },
+          ImportStatusDetail: {
+            allOf: [
+              { '$ref' => '#/components/schemas/ImportStatusSummary' },
+              {
+                type: :object,
+                required: %w[cleaned publishable revertable],
+                properties: {
+                  cleaned: { type: :boolean },
+                  publishable: { type: :boolean },
+                  revertable: { type: :boolean }
+                }
+              }
+            ]
           },
           ImportSummary: {
             type: :object,
-            required: %w[id type status created_at updated_at],
+            required: %w[id type status created_at updated_at status_detail],
             properties: {
               id: { type: :string, format: :uuid },
               type: { type: :string, enum: %w[TransactionImport TradeImport AccountImport MintImport CategoryImport RuleImport SureImport] },
@@ -543,12 +570,13 @@ RSpec.configure do |config|
               updated_at: { type: :string, format: :'date-time' },
               account_id: { type: :string, format: :uuid, nullable: true },
               rows_count: { type: :integer, minimum: 0 },
-              error: { type: :string, nullable: true }
+              error: { type: :string, nullable: true },
+              status_detail: { '$ref' => '#/components/schemas/ImportStatusSummary' }
             }
           },
           ImportDetail: {
             type: :object,
-            required: %w[id type status created_at updated_at],
+            required: %w[id type status created_at updated_at status_detail configuration stats],
             properties: {
               id: { type: :string, format: :uuid },
               type: { type: :string, enum: %w[TransactionImport TradeImport AccountImport MintImport CategoryImport RuleImport SureImport] },
@@ -557,6 +585,7 @@ RSpec.configure do |config|
               updated_at: { type: :string, format: :'date-time' },
               account_id: { type: :string, format: :uuid, nullable: true },
               error: { type: :string, nullable: true },
+              status_detail: { '$ref' => '#/components/schemas/ImportStatusDetail' },
               configuration: { '$ref' => '#/components/schemas/ImportConfiguration' },
               stats: { '$ref' => '#/components/schemas/ImportStats' }
             }

@@ -875,6 +875,12 @@ components:
           nullable: true
     ImportStats:
       type: object
+      required:
+      - rows_count
+      - valid_rows_count
+      - invalid_rows_count
+      - mappings_count
+      - unassigned_mappings_count
       properties:
         rows_count:
           type: integer
@@ -882,7 +888,43 @@ components:
         valid_rows_count:
           type: integer
           minimum: 0
-          nullable: true
+        invalid_rows_count:
+          type: integer
+          minimum: 0
+        mappings_count:
+          type: integer
+          minimum: 0
+        unassigned_mappings_count:
+          type: integer
+          minimum: 0
+    ImportStatusSummary:
+      type: object
+      required:
+      - uploaded
+      - configured
+      - terminal
+      properties:
+        uploaded:
+          type: boolean
+        configured:
+          type: boolean
+        terminal:
+          type: boolean
+    ImportStatusDetail:
+      allOf:
+      - "$ref": "#/components/schemas/ImportStatusSummary"
+      - type: object
+        required:
+        - cleaned
+        - publishable
+        - revertable
+        properties:
+          cleaned:
+            type: boolean
+          publishable:
+            type: boolean
+          revertable:
+            type: boolean
     ImportSummary:
       type: object
       required:
@@ -891,6 +933,7 @@ components:
       - status
       - created_at
       - updated_at
+      - status_detail
       properties:
         id:
           type: string
@@ -930,6 +973,8 @@ components:
         error:
           type: string
           nullable: true
+        status_detail:
+          "$ref": "#/components/schemas/ImportStatusSummary"
     ImportDetail:
       type: object
       required:
@@ -938,6 +983,9 @@ components:
       - status
       - created_at
       - updated_at
+      - status_detail
+      - configuration
+      - stats
       properties:
         id:
           type: string
@@ -974,6 +1022,8 @@ components:
         error:
           type: string
           nullable: true
+        status_detail:
+          "$ref": "#/components/schemas/ImportStatusDetail"
         configuration:
           "$ref": "#/components/schemas/ImportConfiguration"
         stats:

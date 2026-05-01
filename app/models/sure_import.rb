@@ -112,6 +112,14 @@ class SureImport < Import
     cleaned? && dry_run.values.sum.positive?
   end
 
+  def cleaned_from_validation_stats?(invalid_rows_count:)
+    configured? && invalid_rows_count.zero?
+  end
+
+  def publishable_from_validation_stats?(invalid_rows_count:)
+    cleaned_from_validation_stats?(invalid_rows_count: invalid_rows_count) && dry_run.values.sum.positive?
+  end
+
   def max_row_count
     100_000
   end
@@ -127,6 +135,11 @@ class SureImport < Import
   private
 
     def ndjson_blob_string
-      ndjson_file.download.force_encoding(Encoding::UTF_8)
+      blob_id = ndjson_file.blob&.id
+
+      return @ndjson_blob_string if defined?(@ndjson_blob_string) && @ndjson_blob_id == blob_id
+
+      @ndjson_blob_id = blob_id
+      @ndjson_blob_string = ndjson_file.download.force_encoding(Encoding::UTF_8)
     end
 end
