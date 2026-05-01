@@ -42,12 +42,28 @@ function varName(path) {
   return "--" + cleaned.join("-");
 }
 
+// Set of valid token paths (e.g. "color.gray.50", "utility.border-tertiary").
+// Populated once at the start of build(); referenced by resolveTemplate() and
+// refToClass() so a typo'd `{ref}` fails the build instead of emitting broken
+// CSS or a dangling utility class.
+let VALID_PATHS = null;
+
+function assertKnownRef(ref, source) {
+  if (VALID_PATHS && !VALID_PATHS.has(ref)) {
+    throw new Error(
+      `[tokens] Unknown token reference \`${source}\` (resolved path: \`${ref}\`). ` +
+      `Add it to design/tokens/sure.tokens.json or fix the typo.`
+    );
+  }
+}
+
 // Resolve template strings:
 //   {a.b}     → var(--a-b)
 //   {a.b|N%}  → --alpha(var(--a-b) / N%)
 function resolveTemplate(s) {
   if (typeof s !== "string") return s;
-  return s.replace(/\{([^|}]+)(?:\|([^}]+))?\}/g, (_, ref, alpha) => {
+  return s.replace(/\{([^|}]+)(?:\|([^}]+))?\}/g, (whole, ref, alpha) => {
+    assertKnownRef(ref, whole);
     const cssVar = "--" + ref.split(".").join("-");
     return alpha ? `--alpha(var(${cssVar}) / ${alpha})` : `var(${cssVar})`;
   });
@@ -57,6 +73,7 @@ function resolveTemplate(s) {
 // Drops a leading `color.` segment (since Tailwind colors are referenced as `bg-gray-50`, not `bg-color-gray-50`).
 function refToClass(refStr, prefix) {
   const inner = refStr.replace(/^\{|\}$/g, "");
+  assertKnownRef(inner, refStr);
   if (inner.startsWith("utility.")) return inner.slice("utility.".length);
   const parts = inner.split(".");
   if (parts[0] === "color") parts.shift();
@@ -73,6 +90,12 @@ function utilityClasses(value, prefix) {
 
 function build() {
   const tokens = JSON.parse(readFileSync(TOKENS, "utf8"));
+
+  // Pre-compute the set of valid token paths so refs can be validated as we go.
+  VALID_PATHS = new Set();
+  for (const [path] of walk(tokens)) {
+    VALID_PATHS.add(path.join("."));
+  }
 
   const themeLines = [];
   const darkLines = [];
@@ -137,4 +160,13 @@ ${utilityBlocks.join("\n\n")}
   console.log(`tokens → ${OUT.replace(ROOT + "/", "")} (${themeLines.length} primitives, ${darkLines.length} dark overrides, ${utilityBlocks.length} utilities)`);
 }
 
-build();
+try {
+  build();
+} catch (err) {
+  // Token errors are user-facing; the stack trace is noise.
+  if (err.message?.startsWith("[tokens]")) {
+    console.error(err.message);
+    process.exit(1);
+  }
+  throw err;
+}
