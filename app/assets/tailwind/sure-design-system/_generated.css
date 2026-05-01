@@ -98,7 +98,7 @@
   --color-cyan-600: #088AB2;
   --color-cyan-700: #0E7090;
   --color-cyan-800: #155B75;
-  --color-cyan-900: #155B75;
+  --color-cyan-900: #164E63;
   --color-cyan-tint-5: --alpha(var(--color-cyan-500) / 5%);
   --color-cyan-tint-10: --alpha(var(--color-cyan-500) / 10%);
   --color-blue-25: #F5FAFF;
