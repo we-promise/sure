@@ -340,24 +340,34 @@ class SnaptradeItemsController < ApplicationController
   # Collection actions for account linking flow
 
   def preload_accounts
-    snaptrade_item = Current.family.snaptrade_items.first
-    if snaptrade_item
+    snaptrade_item = current_snaptrade_item
+    unless snaptrade_item
+      redirect_to settings_providers_path, alert: t(".not_configured", default: "SnapTrade is not configured.")
+      return
+    end
+
+    if snaptrade_item.user_registered?
       snaptrade_item.sync_later unless snaptrade_item.syncing?
       redirect_to setup_accounts_snaptrade_item_path(snaptrade_item)
     else
-      redirect_to settings_providers_path, alert: t(".not_configured", default: "SnapTrade is not configured.")
+      redirect_to connect_snaptrade_item_path(snaptrade_item)
     end
   end
 
   def select_accounts
     @accountable_type = params[:accountable_type]
     @return_to = params[:return_to]
-    snaptrade_item = Current.family.snaptrade_items.first
+    snaptrade_item = current_snaptrade_item
 
-    if snaptrade_item
+    unless snaptrade_item
+      redirect_to settings_providers_path, alert: t(".not_configured", default: "SnapTrade is not configured.")
+      return
+    end
+
+    if snaptrade_item.user_registered?
       redirect_to setup_accounts_snaptrade_item_path(snaptrade_item, accountable_type: @accountable_type, return_to: @return_to)
     else
-      redirect_to settings_providers_path, alert: t(".not_configured", default: "SnapTrade is not configured.")
+      redirect_to connect_snaptrade_item_path(snaptrade_item)
     end
   end
 
@@ -415,6 +425,11 @@ class SnaptradeItemsController < ApplicationController
 
     def set_snaptrade_item
       @snaptrade_item = Current.family.snaptrade_items.find(params[:id])
+    end
+
+    def current_snaptrade_item
+      Current.family.snaptrade_items.where.not(client_id: [ nil, "" ]).ordered.first ||
+        Current.family.snaptrade_items.ordered.first
     end
 
     def snaptrade_item_params

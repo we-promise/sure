@@ -39,6 +39,34 @@ class SnaptradeItemsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to portal_url
   end
 
+  test "select_accounts redirects unregistered users into connect flow" do
+    delete destroy_session_url
+    sign_in users(:empty)
+    snaptrade_item = snaptrade_items(:pending_registration_item)
+
+    get select_accounts_snaptrade_items_url, params: { accountable_type: "Investment", return_to: "/accounts" }
+
+    assert_redirected_to connect_snaptrade_item_path(snaptrade_item)
+  end
+
+  test "select_accounts redirects registered users to setup flow" do
+    get select_accounts_snaptrade_items_url, params: { accountable_type: "Investment", return_to: "/accounts" }
+
+    assert_redirected_to setup_accounts_snaptrade_item_path(@snaptrade_item, accountable_type: "Investment", return_to: "/accounts")
+  end
+
+  test "preload_accounts redirects unregistered users into connect flow" do
+    delete destroy_session_url
+    sign_in users(:empty)
+    snaptrade_item = snaptrade_items(:pending_registration_item)
+
+    assert_no_difference "Sync.count" do
+      get preload_accounts_snaptrade_items_url
+    end
+
+    assert_redirected_to connect_snaptrade_item_path(snaptrade_item)
+  end
+
   test "setup_accounts shows linkable investment and crypto accounts in dropdown" do
     get setup_accounts_snaptrade_item_url(@snaptrade_item)
 
