@@ -39,7 +39,7 @@ When you arrive at the main dashboard, showing **No accounts yet**, you're all s
 > - [**Lunch Flow**](https://www.lunchflow.app/)
 > - [**Plaid**](/docs/hosting/plaid.md)
 > - [**SimpleFIN**](https://beta-bridge.simplefin.org/)
-> - [**Enable Banking**](https://enablebanking.com/) (beta)
+> - [**Enable Banking**](/docs/hosting/enable-banking.md) (beta)
 > - [**CoinStats**](https://coinstats.app/) (beta)
 >
 > Even if you use an integration, we still recommend reading through this guide to understand **account types** and how they work in Sure.
