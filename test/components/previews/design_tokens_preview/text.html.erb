@@ -1,0 +1,61 @@
+<%
+  card        = "rounded-lg border border-secondary bg-container p-3 space-y-2"
+  meta        = "text-xs text-secondary font-mono"
+  light_ctx   = "rounded p-3 bg-surface"
+  dark_ctx    = "rounded p-3 bg-gray-900"
+
+  render_group = ->(items) {
+    capture do
+      content_tag(:div, class: "grid gap-3 grid-cols-1 lg:grid-cols-2") do
+        safe_join(items.map do |u|
+          content_tag(:div, class: card) do
+            safe_join([
+              content_tag(:div, class: "grid grid-cols-2 gap-2") do
+                safe_join([
+                  content_tag(:div, class: light_ctx) do
+                    content_tag(:p, "Quick brown fox", class: "text-sm font-medium #{u[:name]}")
+                  end,
+                  content_tag(:div, class: dark_ctx) do
+                    content_tag(:p, "Quick brown fox", class: "text-sm font-medium #{u[:name]}")
+                  end
+                ])
+              end,
+              content_tag(:div, class: "space-y-0.5") do
+                safe_join([
+                  content_tag(:p, u[:name], class: "text-xs font-medium text-primary"),
+                  content_tag(:p, u[:light_resolved] || u[:light_value], class: "#{meta} truncate"),
+                  (u[:dark_value] ? content_tag(:p, "dark: #{u[:dark_resolved] || u[:dark_value]}", class: "#{meta} truncate text-subdued") : nil)
+                ].compact)
+              end
+            ])
+          end
+        end)
+      end
+    end
+  }
+%>
+<div class="bg-surface min-h-screen p-6 space-y-10">
+  <header>
+    <h2 class="text-2xl font-semibold text-primary">Text &amp; foregrounds</h2>
+    <p class="text-sm text-secondary">
+      Each example renders the literal class on a light <em>and</em> a dark surface so utilities meant for inverse contexts show their intended state.
+    </p>
+  </header>
+
+  <section class="space-y-3">
+    <header class="space-y-1">
+      <h3 class="text-lg font-medium text-primary"><code class="font-mono">text-*</code> <span class="text-xs text-secondary font-normal">(canonical, ~2,000 uses across the codebase)</span></h3>
+    </header>
+    <%= render_group.call(text_utilities) %>
+  </section>
+
+  <section class="space-y-3">
+    <header class="space-y-1">
+      <h3 class="text-lg font-medium text-primary"><code class="font-mono">fg-*</code> <span class="text-xs text-warning font-normal">(legacy — prefer <code class="font-mono">text-*</code>)</span></h3>
+      <p class="text-sm text-secondary">
+        Older namespace, ~40 uses left in the codebase. Most are 1:1 duplicates of a <code class="font-mono">text-*</code> equivalent. Tracked for migration; no new code should reference these.
+      </p>
+    </header>
+    <%= render_group.call(fg_utilities) %>
+  </section>
+</div>
