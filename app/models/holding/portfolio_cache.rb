@@ -16,9 +16,9 @@ class Holding::PortfolioCache
 
   def get_trades(date: nil)
     if date.blank?
-      trades.dup
+      trades
     else
-      trades_by_date[date]&.dup || []
+      trades_by_date[date] || []
     end
   end
 
@@ -103,7 +103,6 @@ class Holding::PortfolioCache
       # Bulk-load all DB prices for all securities in one query, grouped by security_id
       db_prices_by_security_id = Security::Price
         .where(security_id: security_ids, date: account.start_date..Date.current)
-        .select(:security_id, :date, :price, :currency)
         .group_by(&:security_id)
 
       securities.each do |security|
