@@ -64,6 +64,14 @@ RSpec.configure do |config|
               }
             }
           },
+          MfaRequiredResponse: {
+            type: :object,
+            required: %w[error mfa_required],
+            properties: {
+              error: { type: :string },
+              mfa_required: { type: :boolean }
+            }
+          },
           ToolCall: {
             type: :object,
             required: %w[id function_name function_arguments created_at],
@@ -175,19 +183,29 @@ RSpec.configure do |config|
             properties: {
               id: { type: :string, format: :uuid },
               name: { type: :string },
-              account_type: { type: :string }
+              account_type: { type: :string, nullable: true },
+              status: { type: :string }
             }
           },
           AccountDetail: {
             type: :object,
-            required: %w[id name balance currency classification account_type],
+            required: %w[id name balance balance_cents cash_balance cash_balance_cents currency classification account_type status created_at updated_at],
             properties: {
               id: { type: :string, format: :uuid },
               name: { type: :string },
               balance: { type: :string },
+              balance_cents: { type: :integer, description: 'Signed balance in minor currency units' },
+              cash_balance: { type: :string },
+              cash_balance_cents: { type: :integer, description: 'Signed cash balance in minor currency units' },
               currency: { type: :string },
               classification: { type: :string },
-              account_type: { type: :string }
+              account_type: { type: :string, nullable: true },
+              subtype: { type: :string, nullable: true },
+              status: { type: :string, enum: %w[active draft disabled pending_deletion] },
+              institution_name: { type: :string, nullable: true },
+              institution_domain: { type: :string, nullable: true },
+              created_at: { type: :string, format: :'date-time' },
+              updated_at: { type: :string, format: :'date-time' }
             }
           },
           AccountCollection: {

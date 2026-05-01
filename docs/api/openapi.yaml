@@ -61,6 +61,16 @@ components:
           nullable: true
           description: Validation error messages (alternative to details used by trades,
             valuations, etc.)
+    MfaRequiredResponse:
+      type: object
+      required:
+      - error
+      - mfa_required
+      properties:
+        error:
+          type: string
+        mfa_required:
+          type: boolean
     ToolCall:
       type: object
       required:
@@ -230,15 +240,24 @@ components:
           type: string
         account_type:
           type: string
+          nullable: true
+        status:
+          type: string
     AccountDetail:
       type: object
       required:
       - id
       - name
       - balance
+      - balance_cents
+      - cash_balance
+      - cash_balance_cents
       - currency
       - classification
       - account_type
+      - status
+      - created_at
+      - updated_at
       properties:
         id:
           type: string
@@ -247,12 +266,43 @@ components:
           type: string
         balance:
           type: string
+        balance_cents:
+          type: integer
+          description: Signed balance in minor currency units
+        cash_balance:
+          type: string
+        cash_balance_cents:
+          type: integer
+          description: Signed cash balance in minor currency units
         currency:
           type: string
         classification:
           type: string
         account_type:
           type: string
+          nullable: true
+        subtype:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum:
+          - active
+          - draft
+          - disabled
+          - pending_deletion
+        institution_name:
+          type: string
+          nullable: true
+        institution_domain:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
     AccountCollection:
       type: object
       required:
@@ -270,7 +320,6 @@ components:
       required:
       - id
       - name
-      - classification
       - color
       - icon
       properties:
@@ -278,8 +327,6 @@ components:
           type: string
           format: uuid
         name:
-          type: string
-        classification:
           type: string
         color:
           type: string
@@ -301,7 +348,6 @@ components:
       required:
       - id
       - name
-      - classification
       - color
       - icon
       - subcategories_count
@@ -313,11 +359,6 @@ components:
           format: uuid
         name:
           type: string
-        classification:
-          type: string
-          enum:
-          - income
-          - expense
         color:
           type: string
         icon:
@@ -539,13 +580,6 @@ components:
           type: string
           format: date-time
     DeleteResponse:
-      type: object
-      required:
-      - message
-      properties:
-        message:
-          type: string
-    SuccessMessage:
       type: object
       required:
       - message
@@ -879,50 +913,47 @@ components:
             "$ref": "#/components/schemas/Holding"
         pagination:
           "$ref": "#/components/schemas/Pagination"
+    Money:
+      type: object
+      required:
+      - amount
+      - currency
+      - formatted
+      properties:
+        amount:
+          type: string
+          description: Numeric amount as string
+        currency:
+          type: string
+          description: ISO 4217 currency code
+        formatted:
+          type: string
+          description: Locale-formatted money string
+    BalanceSheet:
+      type: object
+      required:
+      - currency
+      - net_worth
+      - assets
+      - liabilities
+      properties:
+        currency:
+          type: string
+          description: Family primary currency
+        net_worth:
+          "$ref": "#/components/schemas/Money"
+        assets:
+          "$ref": "#/components/schemas/Money"
+        liabilities:
+          "$ref": "#/components/schemas/Money"
+    SuccessMessage:
+      type: object
+      required:
+      - message
+      properties:
+        message:
+          type: string
 paths:
-  "/api/v1/merchants":
-    get:
-      summary: List merchants
-      tags:
-      - Merchants
-      security:
-      - apiKeyAuth: []
-      responses:
-        '200':
-          description: merchants listed
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  "$ref": "#/components/schemas/MerchantDetail"
-  "/api/v1/merchants/{id}":
-    parameters:
-    - name: id
-      in: path
-      required: true
-      description: Merchant ID
-      schema:
-        type: string
-    get:
-      summary: Retrieve a merchant
-      tags:
-      - Merchants
-      security:
-      - apiKeyAuth: []
-      responses:
-        '200':
-          description: merchant retrieved
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/MerchantDetail"
-        '404':
-          description: merchant not found
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/ErrorResponse"
   "/api/v1/accounts":
     get:
       summary: List accounts
@@ -943,6 +974,12 @@ paths:
         description: 'Items per page (default: 25, max: 100)'
         schema:
           type: integer
+      - name: include_disabled
+        in: query
+        required: false
+        description: Include disabled accounts in the response. Defaults to false.
+        schema:
+          type: boolean
       responses:
         '200':
           description: accounts paginated
@@ -950,6 +987,53 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/AccountCollection"
+  "/api/v1/accounts/{id}":
+    parameters:
+    - name: id
+      in: path
+      required: true
+      description: Account ID
+      schema:
+        type: string
+        format: uuid
+    get:
+      summary: Retrieve an account
+      tags:
+      - Accounts
+      security:
+      - apiKeyAuth: []
+      parameters:
+      - name: include_disabled
+        in: query
+        required: false
+        description: Allow retrieving a disabled account. Defaults to false.
+        schema:
+          type: boolean
+      responses:
+        '200':
+          description: account retrieved
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/AccountDetail"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: insufficient scope
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '404':
+          description: account not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
   "/api/v1/auth/signup":
     post:
       summary: Sign up a new user
@@ -1267,6 +1351,181 @@ paths:
               - refresh_token
               - device
         required: true
+  "/api/v1/auth/sso_link":
+    post:
+      summary: Link an existing account via SSO
+      tags:
+      - Auth
+      description: Authenticates with email/password and links the SSO identity from
+        a previously issued linking code. Creates an OidcIdentity, logs the link via
+        SsoAuditLog, and issues mobile OAuth tokens.
+      parameters: []
+      responses:
+        '200':
+          description: account linked and tokens issued
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+                  refresh_token:
+                    type: string
+                  token_type:
+                    type: string
+                  expires_in:
+                    type: integer
+                  created_at:
+                    type: integer
+                  user:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      email:
+                        type: string
+                      first_name:
+                        type: string
+                      last_name:
+                        type: string
+                      ui_layout:
+                        type: string
+                        enum:
+                        - dashboard
+                        - intro
+                      ai_enabled:
+                        type: boolean
+        '400':
+          description: missing linking code
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '401':
+          description: invalid credentials or expired linking code
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - "$ref": "#/components/schemas/ErrorResponse"
+                - "$ref": "#/components/schemas/MfaRequiredResponse"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                linking_code:
+                  type: string
+                  description: One-time linking code from mobile SSO onboarding redirect
+                email:
+                  type: string
+                  format: email
+                  description: Email of the existing account to link
+                password:
+                  type: string
+                  description: Password for the existing account
+              required:
+              - linking_code
+              - email
+              - password
+        required: true
+  "/api/v1/auth/sso_create_account":
+    post:
+      summary: Create a new account via SSO
+      tags:
+      - Auth
+      description: Creates a new user and family from a previously issued linking
+        code. Links the SSO identity via OidcIdentity, logs the JIT account creation
+        via SsoAuditLog, and issues mobile OAuth tokens. The linking code must have
+        allow_account_creation enabled.
+      parameters: []
+      responses:
+        '200':
+          description: account created and tokens issued
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+                  refresh_token:
+                    type: string
+                  token_type:
+                    type: string
+                  expires_in:
+                    type: integer
+                  created_at:
+                    type: integer
+                  user:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      email:
+                        type: string
+                      first_name:
+                        type: string
+                      last_name:
+                        type: string
+                      ui_layout:
+                        type: string
+                        enum:
+                        - dashboard
+                        - intro
+                      ai_enabled:
+                        type: boolean
+        '400':
+          description: missing linking code
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '401':
+          description: invalid or expired linking code
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: account creation disabled
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '422':
+          description: user validation error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  errors:
+                    type: array
+                    items:
+                      type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                linking_code:
+                  type: string
+                  description: One-time linking code from mobile SSO onboarding redirect
+                first_name:
+                  type: string
+                  description: First name (overrides value from SSO provider if provided)
+                last_name:
+                  type: string
+                  description: Last name (overrides value from SSO provider if provided)
+              required:
+              - linking_code
+        required: true
   "/api/v1/auth/enable_ai":
     patch:
       summary: Enable AI features for the authenticated user
@@ -1309,6 +1568,34 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: insufficient scope
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+  "/api/v1/balance_sheet":
+    get:
+      summary: Show balance sheet
+      tags:
+      - Balance Sheet
+      description: Returns the family balance sheet including net worth, total assets,
+        and total liabilities with amounts converted to the family's primary currency.
+      security:
+      - apiKeyAuth: []
+      responses:
+        '200':
+          description: balance sheet returned
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/BalanceSheet"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
   "/api/v1/categories":
     get:
       summary: List categories
@@ -1329,15 +1616,6 @@ paths:
         description: 'Items per page (default: 25, max: 100)'
         schema:
           type: integer
-      - name: classification
-        in: query
-        required: false
-        description: Filter by classification (income or expense)
-        schema:
-          type: string
-          enum:
-          - income
-          - expense
       - name: roots_only
         in: query
         required: false
@@ -1879,6 +2157,49 @@ paths:
                 "$ref": "#/components/schemas/ImportResponse"
         '404':
           description: import not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+  "/api/v1/merchants":
+    get:
+      summary: List merchants
+      tags:
+      - Merchants
+      security:
+      - apiKeyAuth: []
+      responses:
+        '200':
+          description: merchants listed
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  "$ref": "#/components/schemas/MerchantDetail"
+  "/api/v1/merchants/{id}":
+    parameters:
+    - name: id
+      in: path
+      required: true
+      description: Merchant ID
+      schema:
+        type: string
+    get:
+      summary: Retrieve a merchant
+      tags:
+      - Merchants
+      security:
+      - apiKeyAuth: []
+      responses:
+        '200':
+          description: merchant retrieved
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/MerchantDetail"
+        '404':
+          description: merchant not found
           content:
             application/json:
               schema:
@@ -2583,6 +2904,53 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
+  "/api/v1/users/reset":
+    delete:
+      summary: Reset account
+      tags:
+      - Users
+      description: Resets all financial data (accounts, categories, merchants, tags,
+        etc.) for the current user's family while keeping the user account intact.
+        The reset runs asynchronously in the background. Requires admin role.
+      security:
+      - apiKeyAuth: []
+      responses:
+        '200':
+          description: account reset initiated
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/SuccessMessage"
+        '401':
+          description: unauthorized
+        '403':
+          description: forbidden - requires read_write scope and admin role
+  "/api/v1/users/me":
+    delete:
+      summary: Delete account
+      tags:
+      - Users
+      description: Permanently deactivates the current user account and all associated
+        data. This action cannot be undone.
+      security:
+      - apiKeyAuth: []
+      responses:
+        '200':
+          description: account deleted
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/SuccessMessage"
+        '401':
+          description: unauthorized
+        '403':
+          description: insufficient scope
+        '422':
+          description: deactivation failed
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
   "/api/v1/valuations":
     post:
       summary: Create valuation
@@ -2725,66 +3093,3 @@ paths:
                       type: string
                       description: Additional notes
         required: true
-  "/api/v1/users/reset":
-    delete:
-      summary: Reset account
-      tags:
-      - Users
-      description: Resets all financial data (accounts, categories, merchants, tags,
-        etc.) for the current user's family while keeping the user account intact.
-        The reset runs asynchronously in the background. Requires admin role.
-      security:
-      - apiKeyAuth: []
-      responses:
-        '200':
-          description: account reset initiated
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/SuccessMessage"
-        '401':
-          description: unauthorized
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/ErrorResponse"
-        '403':
-          description: "forbidden \u2014 requires read_write scope and admin role"
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/ErrorResponse"
-  "/api/v1/users/me":
-    delete:
-      summary: Delete account
-      tags:
-      - Users
-      description: Permanently deactivates the current user account and all associated
-        data. This action cannot be undone.
-      security:
-      - apiKeyAuth: []
-      responses:
-        '200':
-          description: account deleted
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/SuccessMessage"
-        '401':
-          description: unauthorized
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/ErrorResponse"
-        '403':
-          description: insufficient scope
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/ErrorResponse"
-        '422':
-          description: deactivation failed
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/ErrorResponse"
