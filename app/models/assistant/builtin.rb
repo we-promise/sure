@@ -18,11 +18,8 @@ class Assistant::Builtin < Assistant::Base
   end
 
   def respond_to(message)
-    assistant_message = AssistantMessage.new(
-      chat: chat,
-      content: "",
-      ai_model: message.ai_model
-    )
+    assistant_message = chat.messages.where(type: "AssistantMessage", status: :pending).order(:created_at).last ||
+      AssistantMessage.new(chat: chat, content: "", ai_model: message.ai_model)
 
     llm_provider = get_model_provider(message.ai_model)
     unless llm_provider
@@ -40,7 +37,6 @@ class Assistant::Builtin < Assistant::Base
 
     responder.on(:output_text) do |text|
       if assistant_message.content.blank?
-        stop_thinking
         Chat.transaction do
           assistant_message.append_text!(text)
           chat.update_latest_response!(latest_response_id)
@@ -51,7 +47,6 @@ class Assistant::Builtin < Assistant::Base
     end
 
     responder.on(:response) do |data|
-      update_thinking("Analyzing your data...")
       if data[:function_tool_calls].present?
         assistant_message.tool_calls = data[:function_tool_calls]
         latest_response_id = data[:id]
@@ -62,13 +57,13 @@ class Assistant::Builtin < Assistant::Base
 
     responder.respond(previous_response_id: latest_response_id)
   rescue => e
-    stop_thinking
-    # If we streamed any partial content before the error, the message was
-    # persisted with the default `complete` status. Demote it to `failed` so
-    # `Assistant::Responder#conversation_history` won't feed a broken turn
-    # back into future prompts.
     if assistant_message&.persisted?
-      assistant_message.update_columns(status: "failed")
+      if assistant_message.content.blank?
+        assistant_message.destroy
+      else
+        # Demote partially-streamed turns to `failed` so `Responder#conversation_history` excludes them.
+        assistant_message.update_columns(status: "failed")
+      end
     end
     chat.add_error(e)
   end

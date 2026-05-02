@@ -45,11 +45,8 @@ class Assistant::External < Assistant::Base
       raise Assistant::Error, "Your account is not authorized to use the external assistant."
     end
 
-    assistant_message = AssistantMessage.new(
-      chat: chat,
-      content: "",
-      ai_model: "external-agent"
-    )
+    assistant_message = chat.messages.where(type: "AssistantMessage", status: :pending).order(:created_at).last ||
+      AssistantMessage.new(chat: chat, content: "", ai_model: "external-agent")
 
     client = build_client
     messages = build_conversation_messages
@@ -58,17 +55,10 @@ class Assistant::External < Assistant::Base
       messages: messages,
       user: "sure-family-#{chat.user.family_id}"
     ) do |text|
-      if assistant_message.content.blank?
-        stop_thinking
-        assistant_message.content = text
-        assistant_message.save!
-      else
-        assistant_message.append_text!(text)
-      end
+      assistant_message.append_text!(text)
     end
 
-    if assistant_message.new_record?
-      stop_thinking
+    if assistant_message.content.blank?
       raise Assistant::Error, "External assistant returned an empty response."
     end
 
@@ -76,12 +66,10 @@ class Assistant::External < Assistant::Base
     assistant_message.update!(ai_model: model) if model.present?
   rescue Assistant::Error, ActiveRecord::ActiveRecordError => e
     cleanup_partial_response(assistant_message) unless response_completed
-    stop_thinking
     chat.add_error(e)
   rescue => e
     Rails.logger.error("[Assistant::External] Unexpected error: #{e.class} - #{e.message}")
     cleanup_partial_response(assistant_message) unless response_completed
-    stop_thinking
     chat.add_error(Assistant::Error.new("Something went wrong with the external assistant. Check server logs for details."))
   end
 
@@ -103,7 +91,7 @@ class Assistant::External < Assistant::Base
     end
 
     def build_conversation_messages
-      chat.conversation_messages.ordered.last(MAX_CONVERSATION_MESSAGES).map do |msg|
+      chat.conversation_messages.where(status: "complete").ordered.last(MAX_CONVERSATION_MESSAGES).map do |msg|
         { role: msg.role, content: msg.content }
       end
     end

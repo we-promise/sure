@@ -10,7 +10,7 @@ class MessagesController < ApplicationController
       ai_model: message_params[:ai_model].presence || Chat.default_model
     )
 
-    redirect_to chat_path(@chat, thinking: true)
+    redirect_to chat_path(@chat)
   end
 
   private

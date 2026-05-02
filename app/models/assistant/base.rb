@@ -1,6 +1,4 @@
 class Assistant::Base
-  include Assistant::Broadcastable
-
   attr_reader :chat
 
   def initialize(chat)
