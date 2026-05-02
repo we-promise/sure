@@ -9,6 +9,39 @@ class RecurringTransactionTest < ActiveSupport::TestCase
     @family.recurring_transactions.destroy_all
   end
 
+  test "status is required" do
+    recurring = @family.recurring_transactions.build(
+      account: @account,
+      merchant: @merchant,
+      amount: 29.99,
+      currency: "USD",
+      expected_day_of_month: 15,
+      last_occurrence_date: Date.current,
+      next_expected_date: 1.month.from_now.to_date,
+      status: nil
+    )
+
+    assert_not recurring.valid?
+    assert_includes recurring.errors[:status], "can't be blank"
+  end
+
+  test "occurrence count cannot be negative" do
+    recurring = @family.recurring_transactions.build(
+      account: @account,
+      merchant: @merchant,
+      amount: 29.99,
+      currency: "USD",
+      expected_day_of_month: 15,
+      last_occurrence_date: Date.current,
+      next_expected_date: 1.month.from_now.to_date,
+      status: "active",
+      occurrence_count: -1
+    )
+
+    assert_not recurring.valid?
+    assert_includes recurring.errors[:occurrence_count], "must be greater than or equal to 0"
+  end
+
   test "identify_patterns_for creates recurring transactions for patterns with 3+ occurrences" do
     # Create a series of transactions with same merchant and amount on similar days
     # Use dates within the last 3 months: today, 1 month ago, 2 months ago

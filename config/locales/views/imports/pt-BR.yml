@@ -36,18 +36,18 @@ pt-BR:
         unassigned_account: Precisa criar uma nova conta para linhas não atribuídas?
       show:
         account_mapping_description: Atribua todas as contas do seu arquivo importado às
-          contas existentes no %{product_name}. Você também pode adicionar novas contas ou deixá-las
+          contas existentes no %{product}. Você também pode adicionar novas contas ou deixá-las
           sem categoria.
         account_mapping_title: Atribuir suas contas
         account_type_mapping_description: Atribuir todos os tipos de conta do seu arquivo importado aos
-          do %{product_name}
+          do %{product}
         account_type_mapping_title: Atribuir seus tipos de conta
         category_mapping_description: Atribua todas as categorias do seu arquivo importado às
-          categorias existentes no %{product_name}. Você também pode adicionar novas categorias ou deixá-las
+          categorias existentes no %{product}. Você também pode adicionar novas categorias ou deixá-las
           sem categoria.
         category_mapping_title: Atribuir suas categorias
         tag_mapping_description: Atribua todas as tags do seu arquivo importado às 
-          tags existentes no %{product_name}. Você também pode adicionar novas tags ou deixá-las
+          tags existentes no %{product}. Você também pode adicionar novas tags ou deixá-las
           sem categoria.
         tag_mapping_title: Atribuir suas tags
     uploads:

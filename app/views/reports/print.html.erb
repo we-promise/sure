@@ -52,7 +52,7 @@
           savings_rate = @summary_metrics[:current_income].amount > 0 ? ((@summary_metrics[:net_savings].amount / @summary_metrics[:current_income].amount) * 100).round(0) : 0
         %>
         <% if savings_rate != 0 %>
-          <span class="tufte-metric-card-change" style="color: #666;"><%= t("reports.print.summary.of_income", percent: savings_rate) %></span>
+          <span class="tufte-metric-card-change text-secondary"><%= t("reports.print.summary.of_income", percent: savings_rate) %></span>
         <% end %>
         <% if has_sparkline_data?(@trends_data) %>
           <svg width="60" height="20" viewBox="0 0 60 20" style="display:block;margin-top:6px;">
@@ -65,7 +65,7 @@
         <div class="tufte-metric-card tufte-metric-card-sm">
           <span class="tufte-metric-card-label"><%= t("reports.print.summary.budget") %></span>
           <span class="tufte-metric-card-value"><%= @summary_metrics[:budget_percent] %>%</span>
-          <span class="tufte-metric-card-change" style="color: #666;"><%= t("reports.print.summary.used") %></span>
+          <span class="tufte-metric-card-change text-secondary"><%= t("reports.print.summary.used") %></span>
         </div>
       <% end %>
     </div>
@@ -213,12 +213,12 @@
         <div class="tufte-metric-card tufte-metric-card-sm">
           <span class="tufte-metric-card-label"><%= t("reports.print.investments.contributions") %></span>
           <span class="tufte-metric-card-value tufte-income"><%= format_money(@investment_metrics[:period_contributions]) %></span>
-          <span class="tufte-metric-card-change" style="color: #666;"><%= t("reports.print.investments.this_period") %></span>
+          <span class="tufte-metric-card-change text-secondary"><%= t("reports.print.investments.this_period") %></span>
         </div>
         <div class="tufte-metric-card tufte-metric-card-sm">
           <span class="tufte-metric-card-label"><%= t("reports.print.investments.withdrawals") %></span>
           <span class="tufte-metric-card-value tufte-expense"><%= format_money(@investment_metrics[:period_withdrawals]) %></span>
-          <span class="tufte-metric-card-change" style="color: #666;"><%= t("reports.print.investments.this_period") %></span>
+          <span class="tufte-metric-card-change text-secondary"><%= t("reports.print.investments.this_period") %></span>
         </div>
       </div>
 

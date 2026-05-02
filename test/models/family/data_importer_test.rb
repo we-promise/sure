@@ -31,6 +31,157 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal "Depository", account.accountable_type
   end
 
+  test "imports non-destructive account status from ndjson" do
+    ndjson = build_ndjson([
+      {
+        type: "Account",
+        data: {
+          id: "disabled-account",
+          name: "Closed Checking",
+          balance: "0.00",
+          currency: "USD",
+          accountable_type: "Depository",
+          status: "disabled"
+        }
+      }
+    ])
+
+    importer = Family::DataImporter.new(@family, ndjson)
+    result = importer.import!
+
+    account = result[:accounts].first
+    assert_equal "Closed Checking", account.name
+    assert_equal "disabled", account.status
+  end
+
+  test "does not import pending deletion account status" do
+    ndjson = build_ndjson([
+      {
+        type: "Account",
+        data: {
+          id: "pending-delete-account",
+          name: "Pending Delete Checking",
+          balance: "0.00",
+          currency: "USD",
+          accountable_type: "Depository",
+          status: "pending_deletion"
+        }
+      }
+    ])
+
+    importer = Family::DataImporter.new(@family, ndjson)
+    result = importer.import!
+
+    account = result[:accounts].first
+    assert_equal "Pending Delete Checking", account.name
+    assert_equal "active", account.status
+  end
+
+  test "dates synthesized account opening balance before oldest imported activity" do
+    ndjson = build_ndjson([
+      {
+        type: "Account",
+        data: {
+          id: "acct-1",
+          name: "Main Account",
+          balance: "5000",
+          currency: "USD",
+          accountable_type: "Depository"
+        }
+      },
+      {
+        type: "Transaction",
+        data: {
+          id: "txn-1",
+          account_id: "acct-1",
+          date: "2020-04-02",
+          amount: "-50.00",
+          name: "Grocery Store",
+          currency: "USD"
+        }
+      }
+    ])
+
+    Family::DataImporter.new(@family, ndjson).import!
+
+    account = @family.accounts.find_by!(name: "Main Account")
+    opening_anchor = account.valuations.opening_anchor.first
+
+    assert_not_nil opening_anchor
+    assert_equal Date.parse("2020-04-01"), opening_anchor.entry.date
+  end
+
+  test "clamps explicit account opening balance dates before imported activity" do
+    ndjson = build_ndjson([
+      {
+        type: "Account",
+        data: {
+          id: "acct-1",
+          name: "Main Account",
+          balance: "5000",
+          currency: "USD",
+          accountable_type: "Depository",
+          opening_balance_date: "2020-04-02"
+        }
+      },
+      {
+        type: "Transaction",
+        data: {
+          id: "txn-1",
+          account_id: "acct-1",
+          date: "2020-04-02",
+          amount: "-50.00",
+          name: "Grocery Store",
+          currency: "USD"
+        }
+      }
+    ])
+
+    Family::DataImporter.new(@family, ndjson).import!
+
+    account = @family.accounts.find_by!(name: "Main Account")
+    opening_anchor = account.valuations.opening_anchor.first
+
+    assert_not_nil opening_anchor
+    assert_equal Date.parse("2020-04-01"), opening_anchor.entry.date
+  end
+
+  test "imports explicit opening anchor valuations without synthesizing duplicates" do
+    ndjson = build_ndjson([
+      {
+        type: "Account",
+        data: {
+          id: "acct-1",
+          name: "Main Account",
+          balance: "5000",
+          currency: "USD",
+          accountable_type: "Depository"
+        }
+      },
+      {
+        type: "Valuation",
+        data: {
+          id: "val-opening",
+          account_id: "acct-1",
+          date: "2020-04-01",
+          amount: "5000",
+          name: "Opening balance",
+          currency: "USD",
+          kind: "opening_anchor"
+        }
+      }
+    ])
+
+    Family::DataImporter.new(@family, ndjson).import!
+
+    account = @family.accounts.find_by!(name: "Main Account")
+    opening_anchors = account.valuations.opening_anchor.to_a
+
+    assert_equal 1, opening_anchors.count
+    assert_equal Date.parse("2020-04-01"), opening_anchors.first.entry.date
+    assert_equal 5000.0, opening_anchors.first.entry.amount.to_f
+  end
+
   test "imports categories with parent relationships" do
     ndjson = build_ndjson([
       {
@@ -236,6 +387,39 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     valuation = account.valuations.joins(:entry).find_by(entries: { name: "Updated valuation" })
     assert_not_nil valuation
     assert_equal 520000.0, valuation.entry.amount.to_f
+  end
+
+  test "imports unknown valuation kinds as reconciliations" do
+    ndjson = build_ndjson([
+      {
+        type: "Account",
+        data: {
+          id: "prop-acct-1",
+          name: "Property",
+          balance: "500000",
+          currency: "USD",
+          accountable_type: "Property"
+        }
+      },
+      {
+        type: "Valuation",
+        data: {
+          id: "val-1",
+          account_id: "prop-acct-1",
+          date: "2024-06-15",
+          amount: "520000",
+          name: "Updated valuation",
+          currency: "USD",
+          kind: "legacy_unknown_kind"
+        }
+      }
+    ])
+
+    Family::DataImporter.new(@family, ndjson).import!
+
+    account = @family.accounts.find_by!(name: "Property")
+    valuation = account.valuations.joins(:entry).find_by!(entries: { name: "Updated valuation" })
+    assert_equal "reconciliation", valuation.kind
   end
 
   test "imports budgets" do

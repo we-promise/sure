@@ -1,6 +1,10 @@
 ---
 en:
   transactions:
+    bulk_updates:
+      new:
+        name_label: Name
+        name_placeholder: Enter a name that will be applied to selected transactions
     unknown_name: Unknown transaction
     selection_bar:
       duplicate: Duplicate

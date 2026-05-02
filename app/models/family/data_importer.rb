@@ -1,3 +1,5 @@
+require "set"
+
 class Family::DataImporter
   SUPPORTED_TYPES = %w[Account Category Tag Merchant Transaction Trade Valuation Budget BudgetCategory Rule].freeze
   ACCOUNTABLE_TYPES = Accountable::TYPES.freeze
@@ -19,6 +21,8 @@ class Family::DataImporter
 
   def import!
     records = parse_ndjson
+    @oldest_import_entry_dates_by_account = oldest_import_entry_dates_by_account(records)
+    @imported_opening_anchor_account_ids = imported_opening_anchor_account_ids(records["Valuation"] || [])
 
     Import.transaction do
       # Import in dependency order
@@ -92,20 +96,29 @@ class Family::DataImporter
           institution_name: data["institution_name"],
           institution_domain: data["institution_domain"],
           notes: data["notes"],
-          status: "active"
+          status: importable_account_status(data["status"])
         )
 
         account.save!
 
-        # Set opening balance if we have a historical balance
-        if data["balance"].present?
+        # Set opening balance if we have a historical balance and the import
+        # does not provide an explicit opening-anchor valuation for this account.
+        if data["balance"].present? && !@imported_opening_anchor_account_ids.include?(old_id)
           manager = Account::OpeningBalanceManager.new(account)
-          manager.set_opening_balance(balance: data["balance"].to_d)
+          result = manager.set_opening_balance(
+            balance: data["balance"].to_d,
+            date: opening_balance_date_for(old_id, data)
+          )
+          log_failed_opening_balance_import(account, old_id, result) unless result.success?
         end
 
         @id_mappings[:accounts][old_id] = account.id
         @created_accounts << account
       end
+    end
+
+    def importable_account_status(status)
+      status.to_s.in?(%w[active disabled draft]) ? status.to_s : "active"
     end
 
     def import_categories(records)
@@ -277,7 +290,7 @@ class Family::DataImporter
 
         account = @family.accounts.find(new_account_id)
 
-        valuation = Valuation.new
+        valuation = Valuation.new(kind: valuation_kind_for(data["kind"]))
 
         entry = Entry.new(
           account: account,
@@ -291,6 +304,63 @@ class Family::DataImporter
         entry.save!
         @created_entries << entry
       end
+    end
+
+    def oldest_import_entry_dates_by_account(records)
+      dates_by_account = {}
+
+      # Account-level opening balances must precede every imported account
+      # activity, including standalone valuation snapshots.
+      %w[Transaction Trade Valuation].each do |type|
+        records[type].to_a.each do |record|
+          data = record["data"] || {}
+          account_id = data["account_id"]
+          date = parse_import_date(data["date"])
+          next if account_id.blank? || date.blank?
+
+          dates_by_account[account_id] = [ dates_by_account[account_id], date ].compact.min
+        end
+      end
+
+      dates_by_account
+    end
+
+    def imported_opening_anchor_account_ids(records)
+      records.each_with_object(Set.new) do |record, account_ids|
+        data = record["data"] || {}
+        next unless data["kind"].to_s == "opening_anchor"
+        next if data["account_id"].blank?
+
+        account_ids.add(data["account_id"])
+      end
+    end
+
+    def opening_balance_date_for(old_id, data)
+      explicit_date = parse_import_date(
+        data["opening_balance_date"] || data["opening_balance_on"]
+      )
+
+      max_allowed_date = @oldest_import_entry_dates_by_account[old_id]&.prev_day
+      [ explicit_date, max_allowed_date ].compact.min
+    end
+
+    def log_failed_opening_balance_import(account, old_id, result)
+      Rails.logger.warn(
+        "Failed to import opening balance for account #{account.id} from source account #{old_id}: #{result.error}"
+      )
+    end
+
+    def valuation_kind_for(value)
+      kind = value.to_s
+      Valuation.kinds.key?(kind) ? kind : "reconciliation"
+    end
+
+    def parse_import_date(value)
+      return if value.blank?
+
+      Date.parse(value.to_s)
+    rescue Date::Error
+      nil
     end
 
     def import_budgets(records)

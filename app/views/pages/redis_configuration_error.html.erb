@@ -9,7 +9,7 @@
           <%= icon "alert-triangle", class: "w-8 h-8 text-red-600" %>
         </div>
         <h1 class="text-xl sm:text-2xl font-bold text-primary mb-2">Redis Configuration Required</h1>
-        <p class="text-sm sm:text-base text-muted">Your self-hosted Sure installation needs Redis to be properly configured.</p>
+        <p class="text-sm sm:text-base text-subdued">Your self-hosted Sure installation needs Redis to be properly configured.</p>
       </div>
 
       <!-- Explanation -->
@@ -36,14 +36,14 @@
             target: "_blank",
             rel: "noopener noreferrer"
           ) %>
-          <p class="text-sm text-muted">Follow our complete Docker setup guide to configure Redis</p>
+          <p class="text-sm text-subdued">Follow our complete Docker setup guide to configure Redis</p>
         </div>
       </div>
 
       <!-- Secondary CTA -->
       <div class="pt-6 border-t border-primary">
         <div class="text-center space-y-3">
-          <p class="text-sm text-muted">Once you've configured Redis, refresh this page to continue.</p>
+          <p class="text-sm text-subdued">Once you've configured Redis, refresh this page to continue.</p>
           <%= render DS::Button.new(
             text: "Refresh Page",
             variant: "secondary",

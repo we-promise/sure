@@ -310,6 +310,34 @@ class Family::DataExporterTest < ActiveSupport::TestCase
     end
   end
 
+  test "exports valuation kind in NDJSON" do
+    valuation_entry = @account.entries.create!(
+      date: Date.parse("2020-04-01"),
+      amount: 1000,
+      name: "Opening balance",
+      currency: "USD",
+      entryable: Valuation.new(kind: "opening_anchor")
+    )
+
+    zip_data = @exporter.generate_export
+
+    Zip::File.open_buffer(zip_data) do |zip|
+      ndjson_content = zip.read("all.ndjson")
+      valuation_lines = ndjson_content.split("\n").select do |line|
+        JSON.parse(line)["type"] == "Valuation"
+      end
+
+      assert valuation_lines.any?
+
+      valuation_data = valuation_lines
+        .map { |line| JSON.parse(line) }
+        .find { |line| line.dig("data", "entry_id") == valuation_entry.id }
+
+      assert valuation_data
+      assert_equal "opening_anchor", valuation_data["data"]["kind"]
+    end
+  end
+
   test "only exports rules from the specified family" do
     # Create a rule for another family that should NOT be exported
     other_rule = @other_family.rules.build(

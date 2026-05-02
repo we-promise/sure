@@ -235,6 +235,7 @@ class Family::DataExporter
             amount: entry.amount,
             currency: entry.currency,
             name: entry.name,
+            kind: entry.entryable.kind,
             created_at: entry.created_at,
             updated_at: entry.updated_at
           }

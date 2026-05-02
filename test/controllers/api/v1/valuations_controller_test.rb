@@ -17,6 +17,7 @@ class Api::V1::ValuationsControllerTest < ActionDispatch::IntegrationTest
       user: @user,
       name: "Test Read-Write Key",
       scopes: [ "read_write" ],
+      source: "web",
       display_key: "test_rw_#{SecureRandom.hex(8)}"
     )
 
@@ -31,6 +32,92 @@ class Api::V1::ValuationsControllerTest < ActionDispatch::IntegrationTest
     # Clear any existing rate limit data
     Redis.new.del("api_rate_limit:#{@api_key.id}")
     Redis.new.del("api_rate_limit:#{@read_only_api_key.id}")
+  end
+
+  # INDEX action tests
+  test "should get index with valid API key" do
+    get api_v1_valuations_url, headers: api_headers(@api_key)
+    assert_response :success
+
+    response_data = JSON.parse(response.body)
+    assert response_data.key?("valuations")
+    assert response_data.key?("pagination")
+    assert response_data["valuations"].is_a?(Array)
+    assert response_data["pagination"].key?("page")
+    assert response_data["pagination"].key?("per_page")
+    assert response_data["pagination"].key?("total_count")
+    assert response_data["pagination"].key?("total_pages")
+  end
+
+  test "should get index with read-only API key" do
+    get api_v1_valuations_url, headers: api_headers(@read_only_api_key)
+    assert_response :success
+  end
+
+  test "should filter index by account_id" do
+    get api_v1_valuations_url,
+        params: { account_id: @account.id },
+        headers: api_headers(@api_key)
+    assert_response :success
+
+    response_data = JSON.parse(response.body)
+    response_data["valuations"].each do |valuation|
+      assert_equal @account.id, valuation["account"]["id"]
+    end
+  end
+
+  test "should filter index by date range" do
+    entry = @valuation.entry
+
+    get api_v1_valuations_url,
+        params: { start_date: entry.date, end_date: entry.date },
+        headers: api_headers(@api_key)
+    assert_response :success
+
+    response_data = JSON.parse(response.body)
+    assert_includes response_data["valuations"].map { |valuation| valuation["id"] }, entry.id
+    response_data["valuations"].each do |valuation|
+      valuation_date = Date.iso8601(valuation["date"])
+      assert_equal entry.date, valuation_date
+    end
+  end
+
+  test "should reject index with invalid date filter" do
+    get api_v1_valuations_url,
+        params: { start_date: "04/30/2026" },
+        headers: api_headers(@api_key)
+    assert_response :unprocessable_entity
+
+    response_data = JSON.parse(response.body)
+    assert_equal "validation_failed", response_data["error"]
+  end
+
+  test "should reject index with malformed account_id filter" do
+    get api_v1_valuations_url,
+        params: { account_id: "not-a-uuid" },
+        headers: api_headers(@api_key)
+    assert_response :unprocessable_entity
+
+    response_data = JSON.parse(response.body)
+    assert_equal "validation_failed", response_data["error"]
+    assert_equal "account_id must be a valid UUID", response_data["message"]
+  end
+
+  test "should not expose internal index errors" do
+    Api::V1::ValuationsController.any_instance.stubs(:safe_page_param).raises(StandardError, "database password leaked")
+
+    get api_v1_valuations_url, headers: api_headers(@api_key)
+    assert_response :internal_server_error
+
+    response_data = JSON.parse(response.body)
+    assert_equal "internal_server_error", response_data["error"]
+    assert_equal "An unexpected error occurred", response_data["message"]
+    assert_not_includes response.body, "database password leaked"
+  end
+
+  test "should reject index without API key" do
+    get api_v1_valuations_url
+    assert_response :unauthorized
   end
 
   # CREATE action tests
@@ -207,6 +294,6 @@ class Api::V1::ValuationsControllerTest < ActionDispatch::IntegrationTest
   private
 
     def api_headers(api_key)
-      { "X-Api-Key" => api_key.display_key }
+      { "X-Api-Key" => api_key.plain_key }
     end
 end

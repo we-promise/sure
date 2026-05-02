@@ -7,8 +7,8 @@ class Balance::SyncCache
     entries_by_date[date]&.find { |e| e.valuation? }
   end
 
-  def get_holdings(date)
-    holdings_by_date[date] || []
+  def get_holdings_value(date)
+    holdings_value_by_date[date] || 0
   end
 
   def get_entries(date)
@@ -22,8 +22,15 @@ class Balance::SyncCache
       @entries_by_date ||= converted_entries.group_by(&:date)
     end
 
-    def holdings_by_date
-      @holdings_by_date ||= converted_holdings.group_by(&:date)
+    def holdings_value_by_date
+      @holdings_value_by_date ||= account.holdings.each_with_object(Hash.new(0)) do |h, totals|
+        begin
+          converted = Money.new(h.amount, h.currency).exchange_to(account.currency, date: h.date).amount
+        rescue Money::ConversionError
+          converted = h.amount # fallback to 1:1 conversion rate if exchange rate unavailable
+        end
+        totals[h.date] += converted
+      end
     end
 
     def converted_entries
@@ -44,18 +51,6 @@ class Balance::SyncCache
 
         converted_entry.currency = account.currency
         converted_entry
-      end
-    end
-
-    def converted_holdings
-      @converted_holdings ||= account.holdings.map do |h|
-        converted_holding = h.dup
-        converted_holding.amount = converted_holding.amount_money.exchange_to(
-          account.currency,
-          date: h.date
-        ).amount
-        converted_holding.currency = account.currency
-        converted_holding
       end
     end
 end

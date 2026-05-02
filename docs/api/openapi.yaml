@@ -61,6 +61,32 @@ components:
           nullable: true
           description: Validation error messages (alternative to details used by trades,
             valuations, etc.)
+    ErrorResponseWithImportId:
+      type: object
+      required:
+      - error
+      - import_id
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+          nullable: true
+        import_id:
+          type: string
+          format: uuid
+          description: Import ID preserved for retry or inspection after upload succeeds
+            but publish fails
+    MfaRequiredResponse:
+      type: object
+      required:
+      - error
+      - mfa_required
+      properties:
+        error:
+          type: string
+        mfa_required:
+          type: boolean
     ToolCall:
       type: object
       required:
@@ -230,15 +256,24 @@ components:
           type: string
         account_type:
           type: string
+          nullable: true
+        status:
+          type: string
     AccountDetail:
       type: object
       required:
       - id
       - name
       - balance
+      - balance_cents
+      - cash_balance
+      - cash_balance_cents
       - currency
       - classification
       - account_type
+      - status
+      - created_at
+      - updated_at
       properties:
         id:
           type: string
@@ -247,12 +282,43 @@ components:
           type: string
         balance:
           type: string
+        balance_cents:
+          type: integer
+          description: Signed balance in minor currency units
+        cash_balance:
+          type: string
+        cash_balance_cents:
+          type: integer
+          description: Signed cash balance in minor currency units
         currency:
           type: string
         classification:
           type: string
         account_type:
           type: string
+          nullable: true
+        subtype:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum:
+          - active
+          - draft
+          - disabled
+          - pending_deletion
+        institution_name:
+          type: string
+          nullable: true
+        institution_domain:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
     AccountCollection:
       type: object
       required:
@@ -270,7 +336,6 @@ components:
       required:
       - id
       - name
-      - classification
       - color
       - icon
       properties:
@@ -278,8 +343,6 @@ components:
           type: string
           format: uuid
         name:
-          type: string
-        classification:
           type: string
         color:
           type: string
@@ -301,7 +364,6 @@ components:
       required:
       - id
       - name
-      - classification
       - color
       - icon
       - subcategories_count
@@ -313,11 +375,6 @@ components:
           format: uuid
         name:
           type: string
-        classification:
-          type: string
-          enum:
-          - income
-          - expense
         color:
           type: string
         icon:
@@ -422,6 +479,138 @@ components:
       type: array
       items:
         "$ref": "#/components/schemas/TagDetail"
+    RuleAction:
+      type: object
+      required:
+      - id
+      - action_type
+      - created_at
+      - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        action_type:
+          type: string
+        value:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    RuleCondition:
+      type: object
+      required:
+      - id
+      - condition_type
+      - operator
+      - sub_conditions
+      - created_at
+      - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        condition_type:
+          type: string
+        operator:
+          type: string
+        value:
+          type: string
+          nullable: true
+        sub_conditions:
+          type: array
+          items:
+            "$ref": "#/components/schemas/RuleCondition"
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    Rule:
+      type: object
+      required:
+      - id
+      - resource_type
+      - active
+      - conditions
+      - actions
+      - created_at
+      - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          nullable: true
+        resource_type:
+          type: string
+          enum:
+          - transaction
+        active:
+          type: boolean
+        effective_date:
+          type: string
+          format: date
+          nullable: true
+        conditions:
+          type: array
+          items:
+            "$ref": "#/components/schemas/RuleCondition"
+        actions:
+          type: array
+          items:
+            "$ref": "#/components/schemas/RuleAction"
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    RuleResponse:
+      type: object
+      required:
+      - data
+      properties:
+        data:
+          "$ref": "#/components/schemas/Rule"
+    RuleCollection:
+      type: object
+      required:
+      - data
+      - meta
+      properties:
+        data:
+          type: array
+          items:
+            "$ref": "#/components/schemas/Rule"
+        meta:
+          type: object
+          required:
+          - current_page
+          - total_pages
+          - total_count
+          - per_page
+          properties:
+            current_page:
+              type: integer
+            next_page:
+              type: integer
+              nullable: true
+            prev_page:
+              type: integer
+              nullable: true
+            total_pages:
+              type: integer
+            total_count:
+              type: integer
+            per_page:
+              type: integer
     Transfer:
       type: object
       required:
@@ -439,6 +628,100 @@ components:
         other_account:
           "$ref": "#/components/schemas/Account"
           nullable: true
+    RecurringTransaction:
+      type: object
+      required:
+      - id
+      - amount
+      - amount_cents
+      - currency
+      - expected_day_of_month
+      - last_occurrence_date
+      - next_expected_date
+      - status
+      - occurrence_count
+      - manual
+      - created_at
+      - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        amount:
+          type: string
+        amount_cents:
+          type: integer
+          description: Amount in currency minor units
+        currency:
+          type: string
+        expected_day_of_month:
+          type: integer
+          minimum: 1
+          maximum: 31
+        last_occurrence_date:
+          type: string
+          format: date
+        next_expected_date:
+          type: string
+          format: date
+        status:
+          type: string
+          enum:
+          - active
+          - inactive
+        occurrence_count:
+          type: integer
+          minimum: 0
+        name:
+          type: string
+          nullable: true
+        manual:
+          type: boolean
+        expected_amount_min:
+          type: string
+          nullable: true
+        expected_amount_min_cents:
+          type: integer
+          nullable: true
+          description: Minimum expected amount in currency minor units
+        expected_amount_max:
+          type: string
+          nullable: true
+        expected_amount_max_cents:
+          type: integer
+          nullable: true
+          description: Maximum expected amount in currency minor units
+        expected_amount_avg:
+          type: string
+          nullable: true
+        expected_amount_avg_cents:
+          type: integer
+          nullable: true
+          description: Average expected amount in currency minor units
+        account:
+          "$ref": "#/components/schemas/Account"
+          nullable: true
+        merchant:
+          "$ref": "#/components/schemas/Merchant"
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    RecurringTransactionCollection:
+      type: object
+      required:
+      - recurring_transactions
+      - pagination
+      properties:
+        recurring_transactions:
+          type: array
+          items:
+            "$ref": "#/components/schemas/RecurringTransaction"
+        pagination:
+          "$ref": "#/components/schemas/Pagination"
     Transaction:
       type: object
       required:
@@ -538,14 +821,19 @@ components:
         updated_at:
           type: string
           format: date-time
-    DeleteResponse:
+    ValuationCollection:
       type: object
       required:
-      - message
+      - valuations
+      - pagination
       properties:
-        message:
-          type: string
-    SuccessMessage:
+        valuations:
+          type: array
+          items:
+            "$ref": "#/components/schemas/Valuation"
+        pagination:
+          "$ref": "#/components/schemas/Pagination"
+    DeleteResponse:
       type: object
       required:
       - message
@@ -587,6 +875,12 @@ components:
           nullable: true
     ImportStats:
       type: object
+      required:
+      - rows_count
+      - valid_rows_count
+      - invalid_rows_count
+      - mappings_count
+      - unassigned_mappings_count
       properties:
         rows_count:
           type: integer
@@ -594,7 +888,43 @@ components:
         valid_rows_count:
           type: integer
           minimum: 0
-          nullable: true
+        invalid_rows_count:
+          type: integer
+          minimum: 0
+        mappings_count:
+          type: integer
+          minimum: 0
+        unassigned_mappings_count:
+          type: integer
+          minimum: 0
+    ImportStatusSummary:
+      type: object
+      required:
+      - uploaded
+      - configured
+      - terminal
+      properties:
+        uploaded:
+          type: boolean
+        configured:
+          type: boolean
+        terminal:
+          type: boolean
+    ImportStatusDetail:
+      allOf:
+      - "$ref": "#/components/schemas/ImportStatusSummary"
+      - type: object
+        required:
+        - cleaned
+        - publishable
+        - revertable
+        properties:
+          cleaned:
+            type: boolean
+          publishable:
+            type: boolean
+          revertable:
+            type: boolean
     ImportSummary:
       type: object
       required:
@@ -603,6 +933,7 @@ components:
       - status
       - created_at
       - updated_at
+      - status_detail
       properties:
         id:
           type: string
@@ -616,6 +947,7 @@ components:
           - MintImport
           - CategoryImport
           - RuleImport
+          - SureImport
         status:
           type: string
           enum:
@@ -641,6 +973,8 @@ components:
         error:
           type: string
           nullable: true
+        status_detail:
+          "$ref": "#/components/schemas/ImportStatusSummary"
     ImportDetail:
       type: object
       required:
@@ -649,6 +983,9 @@ components:
       - status
       - created_at
       - updated_at
+      - status_detail
+      - configuration
+      - stats
       properties:
         id:
           type: string
@@ -662,6 +999,7 @@ components:
           - MintImport
           - CategoryImport
           - RuleImport
+          - SureImport
         status:
           type: string
           enum:
@@ -684,6 +1022,8 @@ components:
         error:
           type: string
           nullable: true
+        status_detail:
+          "$ref": "#/components/schemas/ImportStatusDetail"
         configuration:
           "$ref": "#/components/schemas/ImportConfiguration"
         stats:
@@ -879,50 +1219,47 @@ components:
             "$ref": "#/components/schemas/Holding"
         pagination:
           "$ref": "#/components/schemas/Pagination"
+    Money:
+      type: object
+      required:
+      - amount
+      - currency
+      - formatted
+      properties:
+        amount:
+          type: string
+          description: Numeric amount as string
+        currency:
+          type: string
+          description: ISO 4217 currency code
+        formatted:
+          type: string
+          description: Locale-formatted money string
+    BalanceSheet:
+      type: object
+      required:
+      - currency
+      - net_worth
+      - assets
+      - liabilities
+      properties:
+        currency:
+          type: string
+          description: Family primary currency
+        net_worth:
+          "$ref": "#/components/schemas/Money"
+        assets:
+          "$ref": "#/components/schemas/Money"
+        liabilities:
+          "$ref": "#/components/schemas/Money"
+    SuccessMessage:
+      type: object
+      required:
+      - message
+      properties:
+        message:
+          type: string
 paths:
-  "/api/v1/merchants":
-    get:
-      summary: List merchants
-      tags:
-      - Merchants
-      security:
-      - apiKeyAuth: []
-      responses:
-        '200':
-          description: merchants listed
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  "$ref": "#/components/schemas/MerchantDetail"
-  "/api/v1/merchants/{id}":
-    parameters:
-    - name: id
-      in: path
-      required: true
-      description: Merchant ID
-      schema:
-        type: string
-    get:
-      summary: Retrieve a merchant
-      tags:
-      - Merchants
-      security:
-      - apiKeyAuth: []
-      responses:
-        '200':
-          description: merchant retrieved
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/MerchantDetail"
-        '404':
-          description: merchant not found
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/ErrorResponse"
   "/api/v1/accounts":
     get:
       summary: List accounts
@@ -943,6 +1280,12 @@ paths:
         description: 'Items per page (default: 25, max: 100)'
         schema:
           type: integer
+      - name: include_disabled
+        in: query
+        required: false
+        description: Include disabled accounts in the response. Defaults to false.
+        schema:
+          type: boolean
       responses:
         '200':
           description: accounts paginated
@@ -950,6 +1293,53 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/AccountCollection"
+  "/api/v1/accounts/{id}":
+    parameters:
+    - name: id
+      in: path
+      required: true
+      description: Account ID
+      schema:
+        type: string
+        format: uuid
+    get:
+      summary: Retrieve an account
+      tags:
+      - Accounts
+      security:
+      - apiKeyAuth: []
+      parameters:
+      - name: include_disabled
+        in: query
+        required: false
+        description: Allow retrieving a disabled account. Defaults to false.
+        schema:
+          type: boolean
+      responses:
+        '200':
+          description: account retrieved
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/AccountDetail"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: insufficient scope
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '404':
+          description: account not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
   "/api/v1/auth/signup":
     post:
       summary: Sign up a new user
@@ -1267,6 +1657,181 @@ paths:
               - refresh_token
               - device
         required: true
+  "/api/v1/auth/sso_link":
+    post:
+      summary: Link an existing account via SSO
+      tags:
+      - Auth
+      description: Authenticates with email/password and links the SSO identity from
+        a previously issued linking code. Creates an OidcIdentity, logs the link via
+        SsoAuditLog, and issues mobile OAuth tokens.
+      parameters: []
+      responses:
+        '200':
+          description: account linked and tokens issued
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+                  refresh_token:
+                    type: string
+                  token_type:
+                    type: string
+                  expires_in:
+                    type: integer
+                  created_at:
+                    type: integer
+                  user:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      email:
+                        type: string
+                      first_name:
+                        type: string
+                      last_name:
+                        type: string
+                      ui_layout:
+                        type: string
+                        enum:
+                        - dashboard
+                        - intro
+                      ai_enabled:
+                        type: boolean
+        '400':
+          description: missing linking code
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '401':
+          description: invalid credentials or expired linking code
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - "$ref": "#/components/schemas/ErrorResponse"
+                - "$ref": "#/components/schemas/MfaRequiredResponse"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                linking_code:
+                  type: string
+                  description: One-time linking code from mobile SSO onboarding redirect
+                email:
+                  type: string
+                  format: email
+                  description: Email of the existing account to link
+                password:
+                  type: string
+                  description: Password for the existing account
+              required:
+              - linking_code
+              - email
+              - password
+        required: true
+  "/api/v1/auth/sso_create_account":
+    post:
+      summary: Create a new account via SSO
+      tags:
+      - Auth
+      description: Creates a new user and family from a previously issued linking
+        code. Links the SSO identity via OidcIdentity, logs the JIT account creation
+        via SsoAuditLog, and issues mobile OAuth tokens. The linking code must have
+        allow_account_creation enabled.
+      parameters: []
+      responses:
+        '200':
+          description: account created and tokens issued
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+                  refresh_token:
+                    type: string
+                  token_type:
+                    type: string
+                  expires_in:
+                    type: integer
+                  created_at:
+                    type: integer
+                  user:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      email:
+                        type: string
+                      first_name:
+                        type: string
+                      last_name:
+                        type: string
+                      ui_layout:
+                        type: string
+                        enum:
+                        - dashboard
+                        - intro
+                      ai_enabled:
+                        type: boolean
+        '400':
+          description: missing linking code
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '401':
+          description: invalid or expired linking code
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: account creation disabled
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '422':
+          description: user validation error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  errors:
+                    type: array
+                    items:
+                      type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                linking_code:
+                  type: string
+                  description: One-time linking code from mobile SSO onboarding redirect
+                first_name:
+                  type: string
+                  description: First name (overrides value from SSO provider if provided)
+                last_name:
+                  type: string
+                  description: Last name (overrides value from SSO provider if provided)
+              required:
+              - linking_code
+        required: true
   "/api/v1/auth/enable_ai":
     patch:
       summary: Enable AI features for the authenticated user
@@ -1309,6 +1874,34 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: insufficient scope
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+  "/api/v1/balance_sheet":
+    get:
+      summary: Show balance sheet
+      tags:
+      - Balance Sheet
+      description: Returns the family balance sheet including net worth, total assets,
+        and total liabilities with amounts converted to the family's primary currency.
+      security:
+      - apiKeyAuth: []
+      responses:
+        '200':
+          description: balance sheet returned
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/BalanceSheet"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
   "/api/v1/categories":
     get:
       summary: List categories
@@ -1329,15 +1922,6 @@ paths:
         description: 'Items per page (default: 25, max: 100)'
         schema:
           type: integer
-      - name: classification
-        in: query
-        required: false
-        description: Filter by classification (income or expense)
-        schema:
-          type: string
-          enum:
-          - income
-          - expense
       - name: roots_only
         in: query
         required: false
@@ -1757,6 +2341,7 @@ paths:
           - MintImport
           - CategoryImport
           - RuleImport
+          - SureImport
       responses:
         '200':
           description: imports filtered by type
@@ -1766,7 +2351,8 @@ paths:
                 "$ref": "#/components/schemas/ImportCollection"
     post:
       summary: Create import
-      description: Create a new import from raw CSV content.
+      description: Create a new import from raw CSV content, inline Sure NDJSON content,
+        or an uploaded Sure NDJSON file.
       tags:
       - Imports
       security:
@@ -1784,7 +2370,15 @@ paths:
           content:
             application/json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                oneOf:
+                - "$ref": "#/components/schemas/ErrorResponse"
+                - "$ref": "#/components/schemas/ErrorResponseWithImportId"
+        '500':
+          description: import uploaded but publish enqueue failed
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponseWithImportId"
       requestBody:
         content:
           application/json:
@@ -1793,7 +2387,8 @@ paths:
               properties:
                 raw_file_content:
                   type: string
-                  description: The raw CSV content as a string
+                  description: Raw CSV or Sure NDJSON content as a string. Required
+                    for SureImport unless a multipart file is uploaded.
                 type:
                   type: string
                   enum:
@@ -1803,6 +2398,7 @@ paths:
                   - MintImport
                   - CategoryImport
                   - RuleImport
+                  - SureImport
                   description: Import type (defaults to TransactionImport)
                 account_id:
                   type: string
@@ -1814,25 +2410,51 @@ paths:
                     if configuration is valid
                 date_col_label:
                   type: string
-                  description: Header name for the date column
+                  description: CSV imports only. Header name for the date column
                 amount_col_label:
                   type: string
-                  description: Header name for the amount column
+                  description: CSV imports only. Header name for the amount column
                 name_col_label:
                   type: string
-                  description: Header name for the transaction name column
+                  description: CSV imports only. Header name for the transaction name
+                    column
                 category_col_label:
                   type: string
-                  description: Header name for the category column
+                  description: CSV imports only. Header name for the category column
                 tags_col_label:
                   type: string
-                  description: Header name for the tags column
+                  description: CSV imports only. Header name for the tags column
                 notes_col_label:
                   type: string
-                  description: Header name for the notes column
+                  description: CSV imports only. Header name for the notes column
+                account_col_label:
+                  type: string
+                  description: CSV imports only. Header name for the account column
+                    when importing rows across multiple accounts
+                qty_col_label:
+                  type: string
+                  description: CSV trade imports only. Header name for the quantity
+                    column
+                ticker_col_label:
+                  type: string
+                  description: CSV trade imports only. Header name for the ticker
+                    column
+                price_col_label:
+                  type: string
+                  description: CSV trade imports only. Header name for the price column
+                entity_type_col_label:
+                  type: string
+                  description: CSV imports only. Header name for the entity type column
+                currency_col_label:
+                  type: string
+                  description: CSV imports only. Header name for the currency column
+                exchange_operating_mic_col_label:
+                  type: string
+                  description: CSV trade imports only. Header name for the exchange
+                    operating MIC column
                 date_format:
                   type: string
-                  description: Date format pattern (e.g., "%m/%d/%Y")
+                  description: CSV imports only. Date format pattern (e.g., "%m/%d/%Y")
                 number_format:
                   type: string
                   enum:
@@ -1840,20 +2462,135 @@ paths:
                   - 1.234,56
                   - 1 234,56
                   - '1,234'
-                  description: Number format for parsing amounts
+                  description: CSV imports only. Number format for parsing amounts
                 signage_convention:
                   type: string
                   enum:
                   - inflows_positive
                   - inflows_negative
-                  description: How to interpret positive/negative amounts
+                  description: CSV imports only. How to interpret positive/negative
+                    amounts
                 col_sep:
                   type: string
                   enum:
                   - ","
                   - ";"
-                  description: Column separator
-        required: true
+                  description: CSV imports only. Column separator
+                amount_type_strategy:
+                  type: string
+                  enum:
+                  - signed_amount
+                  - custom_column
+                  description: CSV imports only. Amount parsing strategy
+                amount_type_inflow_value:
+                  type: string
+                  description: CSV imports only. Column value that marks an amount
+                    as an inflow when using custom_column strategy
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                raw_file_content:
+                  type: string
+                  description: Raw CSV or Sure NDJSON content as a string. Required
+                    for SureImport unless a multipart file is uploaded.
+                type:
+                  type: string
+                  enum:
+                  - TransactionImport
+                  - TradeImport
+                  - AccountImport
+                  - MintImport
+                  - CategoryImport
+                  - RuleImport
+                  - SureImport
+                  description: Import type (defaults to TransactionImport)
+                account_id:
+                  type: string
+                  format: uuid
+                  description: Account ID to import into
+                publish:
+                  type: string
+                  description: Set to "true" to automatically queue for processing
+                    if configuration is valid
+                date_col_label:
+                  type: string
+                  description: CSV imports only. Header name for the date column
+                amount_col_label:
+                  type: string
+                  description: CSV imports only. Header name for the amount column
+                name_col_label:
+                  type: string
+                  description: CSV imports only. Header name for the transaction name
+                    column
+                category_col_label:
+                  type: string
+                  description: CSV imports only. Header name for the category column
+                tags_col_label:
+                  type: string
+                  description: CSV imports only. Header name for the tags column
+                notes_col_label:
+                  type: string
+                  description: CSV imports only. Header name for the notes column
+                account_col_label:
+                  type: string
+                  description: CSV imports only. Header name for the account column
+                    when importing rows across multiple accounts
+                qty_col_label:
+                  type: string
+                  description: CSV trade imports only. Header name for the quantity
+                    column
+                ticker_col_label:
+                  type: string
+                  description: CSV trade imports only. Header name for the ticker
+                    column
+                price_col_label:
+                  type: string
+                  description: CSV trade imports only. Header name for the price column
+                entity_type_col_label:
+                  type: string
+                  description: CSV imports only. Header name for the entity type column
+                currency_col_label:
+                  type: string
+                  description: CSV imports only. Header name for the currency column
+                exchange_operating_mic_col_label:
+                  type: string
+                  description: CSV trade imports only. Header name for the exchange
+                    operating MIC column
+                date_format:
+                  type: string
+                  description: CSV imports only. Date format pattern (e.g., "%m/%d/%Y")
+                number_format:
+                  type: string
+                  enum:
+                  - '1,234.56'
+                  - 1.234,56
+                  - 1 234,56
+                  - '1,234'
+                  description: CSV imports only. Number format for parsing amounts
+                signage_convention:
+                  type: string
+                  enum:
+                  - inflows_positive
+                  - inflows_negative
+                  description: CSV imports only. How to interpret positive/negative
+                    amounts
+                col_sep:
+                  type: string
+                  enum:
+                  - ","
+                  - ";"
+                  description: CSV imports only. Column separator
+                amount_type_strategy:
+                  type: string
+                  enum:
+                  - signed_amount
+                  - custom_column
+                  description: CSV imports only. Amount parsing strategy
+                amount_type_inflow_value:
+                  type: string
+                  description: CSV imports only. Column value that marks an amount
+                    as an inflow when using custom_column strategy
   "/api/v1/imports/{id}":
     parameters:
     - name: id
@@ -1879,6 +2616,431 @@ paths:
                 "$ref": "#/components/schemas/ImportResponse"
         '404':
           description: import not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+  "/api/v1/merchants":
+    get:
+      summary: List merchants
+      tags:
+      - Merchants
+      security:
+      - apiKeyAuth: []
+      responses:
+        '200':
+          description: merchants listed
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  "$ref": "#/components/schemas/MerchantDetail"
+  "/api/v1/merchants/{id}":
+    parameters:
+    - name: id
+      in: path
+      required: true
+      description: Merchant ID
+      schema:
+        type: string
+    get:
+      summary: Retrieve a merchant
+      tags:
+      - Merchants
+      security:
+      - apiKeyAuth: []
+      responses:
+        '200':
+          description: merchant retrieved
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/MerchantDetail"
+        '404':
+          description: merchant not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+  "/api/v1/recurring_transactions":
+    get:
+      summary: List recurring transactions
+      tags:
+      - Recurring Transactions
+      security:
+      - apiKeyAuth: []
+      parameters:
+      - name: page
+        in: query
+        required: false
+        description: 'Page number (default: 1)'
+        schema:
+          type: integer
+      - name: per_page
+        in: query
+        required: false
+        description: 'Items per page (default: 25, max: 100)'
+        schema:
+          type: integer
+      - name: status
+        in: query
+        required: false
+        description: Filter by recurring status
+        schema:
+          type: string
+          enum:
+          - active
+          - inactive
+      - name: account_id
+        in: query
+        required: false
+        description: Filter by account ID
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: recurring transactions listed
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/RecurringTransactionCollection"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '422':
+          description: validation error - malformed account filter
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+    post:
+      summary: Create recurring transaction
+      tags:
+      - Recurring Transactions
+      security:
+      - apiKeyAuth: []
+      parameters: []
+      responses:
+        '201':
+          description: recurring transaction created
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/RecurringTransaction"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: forbidden - requires read_write scope
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '404':
+          description: account not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '422':
+          description: validation error - negative occurrence count
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                recurring_transaction:
+                  type: object
+                  properties:
+                    account_id:
+                      type: string
+                      format: uuid
+                      nullable: true
+                    merchant_id:
+                      type: string
+                      format: uuid
+                      nullable: true
+                    name:
+                      type: string
+                      nullable: true
+                    amount:
+                      type: number
+                    currency:
+                      type: string
+                    expected_day_of_month:
+                      type: integer
+                      minimum: 1
+                      maximum: 31
+                    last_occurrence_date:
+                      type: string
+                      format: date
+                    next_expected_date:
+                      type: string
+                      format: date
+                    status:
+                      type: string
+                      enum:
+                      - active
+                      - inactive
+                    occurrence_count:
+                      type: integer
+                      minimum: 0
+                    manual:
+                      type: boolean
+                    expected_amount_min:
+                      type: number
+                      nullable: true
+                    expected_amount_max:
+                      type: number
+                      nullable: true
+                    expected_amount_avg:
+                      type: number
+                      nullable: true
+                  required:
+                  - amount
+                  - currency
+                  - expected_day_of_month
+                  - last_occurrence_date
+                  - next_expected_date
+                  anyOf:
+                  - required:
+                    - name
+                  - required:
+                    - merchant_id
+              required:
+              - recurring_transaction
+        required: true
+  "/api/v1/recurring_transactions/{id}":
+    parameters:
+    - name: id
+      in: path
+      required: true
+      description: Recurring transaction ID
+      schema:
+        type: string
+    get:
+      summary: Retrieve recurring transaction
+      tags:
+      - Recurring Transactions
+      security:
+      - apiKeyAuth: []
+      responses:
+        '200':
+          description: recurring transaction retrieved
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/RecurringTransaction"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '404':
+          description: recurring transaction not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+    patch:
+      summary: Update recurring transaction
+      tags:
+      - Recurring Transactions
+      security:
+      - apiKeyAuth: []
+      parameters: []
+      responses:
+        '200':
+          description: recurring transaction updated
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/RecurringTransaction"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: forbidden - requires read_write scope
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '404':
+          description: recurring transaction not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '422':
+          description: validation error
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                recurring_transaction:
+                  type: object
+                  properties:
+                    status:
+                      type: string
+                      enum:
+                      - active
+                      - inactive
+                    expected_day_of_month:
+                      type: integer
+                      minimum: 1
+                      maximum: 31
+                    next_expected_date:
+                      type: string
+                      format: date
+        required: true
+    delete:
+      summary: Delete recurring transaction
+      tags:
+      - Recurring Transactions
+      security:
+      - apiKeyAuth: []
+      responses:
+        '200':
+          description: recurring transaction deleted
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/SuccessMessage"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: forbidden - requires read_write scope
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '404':
+          description: recurring transaction not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+  "/api/v1/rules":
+    get:
+      summary: List rules
+      tags:
+      - Rules
+      security:
+      - apiKeyAuth: []
+      parameters:
+      - name: page
+        in: query
+        required: false
+        description: 'Page number (default: 1)'
+        schema:
+          type: integer
+      - name: per_page
+        in: query
+        required: false
+        description: 'Items per page (default: 25, max: 100)'
+        schema:
+          type: integer
+      - name: resource_type
+        in: query
+        required: false
+        description: Filter by rule resource type
+        schema:
+          type: string
+          enum:
+          - transaction
+      - name: active
+        in: query
+        required: false
+        description: Filter by active status
+        schema:
+          type: boolean
+      responses:
+        '200':
+          description: rules listed
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/RuleCollection"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: forbidden - requires read scope
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '422':
+          description: unsupported resource type
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+  "/api/v1/rules/{id}":
+    parameters:
+    - name: id
+      in: path
+      required: true
+      description: Rule ID
+      schema:
+        type: string
+    get:
+      summary: Retrieve a rule
+      tags:
+      - Rules
+      security:
+      - apiKeyAuth: []
+      responses:
+        '200':
+          description: rule retrieved
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/RuleResponse"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: forbidden - requires read scope
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '404':
+          description: rule not found
           content:
             application/json:
               schema:
@@ -2583,20 +3745,120 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
+  "/api/v1/users/reset":
+    delete:
+      summary: Reset account
+      tags:
+      - Users
+      description: Resets all financial data (accounts, categories, merchants, tags,
+        etc.) for the current user's family while keeping the user account intact.
+        The reset runs asynchronously in the background. Requires admin role.
+      security:
+      - apiKeyAuth: []
+      responses:
+        '200':
+          description: account reset initiated
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/SuccessMessage"
+        '401':
+          description: unauthorized
+        '403':
+          description: forbidden - requires read_write scope and admin role
+  "/api/v1/users/me":
+    delete:
+      summary: Delete account
+      tags:
+      - Users
+      description: Permanently deactivates the current user account and all associated
+        data. This action cannot be undone.
+      security:
+      - apiKeyAuth: []
+      responses:
+        '200':
+          description: account deleted
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/SuccessMessage"
+        '401':
+          description: unauthorized
+        '403':
+          description: insufficient scope
+        '422':
+          description: deactivation failed
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
   "/api/v1/valuations":
+    get:
+      summary: List valuations
+      tags:
+      - Valuations
+      security:
+      - apiKeyAuth: []
+      parameters:
+      - name: page
+        in: query
+        required: false
+        description: 'Page number (default: 1)'
+        schema:
+          type: integer
+      - name: per_page
+        in: query
+        required: false
+        description: 'Items per page (default: 25, max: 100)'
+        schema:
+          type: integer
+      - name: account_id
+        in: query
+        required: false
+        description: Filter by account ID
+        schema:
+          type: string
+          format: uuid
+      - name: start_date
+        in: query
+        required: false
+        description: Filter valuations from this date
+        schema:
+          type: string
+          format: date
+      - name: end_date
+        in: query
+        required: false
+        description: Filter valuations until this date
+        schema:
+          type: string
+          format: date
+      responses:
+        '200':
+          description: valuations listed
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ValuationCollection"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '422':
+          description: invalid account filter
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
     post:
       summary: Create valuation
       tags:
       - Valuations
       security:
       - apiKeyAuth: []
-      parameters:
-      - name: Authorization
-        in: header
-        required: true
-        schema:
-          type: string
-        description: Bearer token with write scope
+      parameters: []
       responses:
         '201':
           description: valuation created
@@ -2648,12 +3910,6 @@ paths:
         required: true
   "/api/v1/valuations/{id}":
     parameters:
-    - name: Authorization
-      in: header
-      required: true
-      schema:
-        type: string
-      description: Bearer token
     - name: id
       in: path
       required: true
@@ -2725,66 +3981,3 @@ paths:
                       type: string
                       description: Additional notes
         required: true
-  "/api/v1/users/reset":
-    delete:
-      summary: Reset account
-      tags:
-      - Users
-      description: Resets all financial data (accounts, categories, merchants, tags,
-        etc.) for the current user's family while keeping the user account intact.
-        The reset runs asynchronously in the background. Requires admin role.
-      security:
-      - apiKeyAuth: []
-      responses:
-        '200':
-          description: account reset initiated
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/SuccessMessage"
-        '401':
-          description: unauthorized
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/ErrorResponse"
-        '403':
-          description: "forbidden \u2014 requires read_write scope and admin role"
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/ErrorResponse"
-  "/api/v1/users/me":
-    delete:
-      summary: Delete account
-      tags:
-      - Users
-      description: Permanently deactivates the current user account and all associated
-        data. This action cannot be undone.
-      security:
-      - apiKeyAuth: []
-      responses:
-        '200':
-          description: account deleted
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/SuccessMessage"
-        '401':
-          description: unauthorized
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/ErrorResponse"
-        '403':
-          description: insufficient scope
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/ErrorResponse"
-        '422':
-          description: deactivation failed
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/ErrorResponse"
