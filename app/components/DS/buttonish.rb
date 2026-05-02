@@ -17,15 +17,15 @@ class DS::Buttonish < DesignSystemComponent
       icon_classes: "text-secondary"
     },
     outline_destructive: {
-      container_classes: "text-destructive border border-secondary bg-transparent hover:bg-gray-100 theme-dark:hover:bg-gray-700",
+      container_classes: "text-destructive border border-secondary bg-transparent hover:bg-container-inset-hover",
       icon_classes: "text-secondary"
     },
     ghost: {
-      container_classes: "text-primary bg-transparent hover:bg-gray-100 theme-dark:hover:bg-gray-700",
+      container_classes: "text-primary bg-transparent hover:bg-container-inset-hover",
       icon_classes: "text-secondary"
     },
     icon: {
-      container_classes: "hover:bg-gray-100 theme-dark:hover:bg-gray-700",
+      container_classes: "hover:bg-container-inset-hover",
       icon_classes: "text-secondary"
     },
     icon_inverse: {
