@@ -50,9 +50,24 @@ class SnaptradeItemsControllerTest < ActionDispatch::IntegrationTest
     sign_in @user = users(:empty)
     snaptrade_item = snaptrade_items(:pending_registration_item)
 
-    get select_accounts_snaptrade_items_url, params: { accountable_type: "Investment", return_to: "/accounts" }
+    get select_accounts_snaptrade_items_url, params: { accountable_type: "Investment", return_to: "setup_accounts" }
 
     assert_redirected_to connect_snaptrade_item_path(snaptrade_item)
+  end
+
+  test "callback resumes setup flow after first-time connect detour" do
+    sign_out
+    sign_in @user = users(:empty)
+    snaptrade_item = snaptrade_items(:pending_registration_item)
+
+    assert_difference "Sync.count", 1 do
+      get select_accounts_snaptrade_items_url, params: { accountable_type: "Investment", return_to: "setup_accounts" }
+      assert_redirected_to connect_snaptrade_item_path(snaptrade_item)
+
+      get callback_snaptrade_items_url, params: { item_id: snaptrade_item.id }
+    end
+
+    assert_redirected_to setup_accounts_snaptrade_item_path(snaptrade_item, accountable_type: "Investment")
   end
 
   test "select_accounts redirects registered users to setup flow" do
@@ -131,6 +146,30 @@ class SnaptradeItemsControllerTest < ActionDispatch::IntegrationTest
     refute_match(/option.*#{accounts(:investment).name}/, response.body)
     # Crypto still unlinked → should appear
     assert_match accounts(:crypto).name, response.body
+  end
+
+  test "select_existing_account prefers registered active item over pending one" do
+    pending_item = @user.family.snaptrade_items.create!(
+      name: "Pending Registration",
+      client_id: "pending_client_id",
+      consumer_key: "pending_consumer_key",
+      status: :good,
+      scheduled_for_deletion: false,
+      pending_account_setup: true
+    )
+    pending_item.snaptrade_accounts.create!(
+      snaptrade_account_id: "pending_snaptrade_account",
+      name: "Pending Brokerage Account",
+      brokerage_name: "Pending Broker",
+      currency: "USD",
+      current_balance: 0
+    )
+
+    get select_existing_account_snaptrade_items_url, params: { account_id: accounts(:investment).id }
+
+    assert_response :success
+    assert_includes response.body, snaptrade_accounts(:fidelity_401k).name
+    refute_includes response.body, "Pending Brokerage Account"
   end
 
   test "link_existing_account links account to snaptrade_account" do

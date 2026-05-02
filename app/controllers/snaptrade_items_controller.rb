@@ -132,12 +132,19 @@ class SnaptradeItemsController < ApplicationController
     snaptrade_item = Current.family.snaptrade_items.find_by(id: params[:item_id])
 
     if snaptrade_item
-      # Trigger a sync to fetch the newly connected accounts
       snaptrade_item.sync_later unless snaptrade_item.syncing?
-      # Redirect to accounts page - user can click "accounts need setup" badge
-      # when sync completes. This avoids the auto-refresh loop issues.
-      redirect_to accounts_path, notice: t(".success")
+
+      stored_return_to, stored_accountable_type = clear_snaptrade_resume_context
+      return_to = params[:return_to].presence || stored_return_to
+      accountable_type = params[:accountable_type].presence || stored_accountable_type
+
+      if return_to == "setup_accounts"
+        redirect_to setup_accounts_snaptrade_item_path(snaptrade_item, accountable_type: accountable_type.presence), notice: t(".success")
+      else
+        redirect_to accounts_path, notice: t(".success")
+      end
     else
+      clear_snaptrade_resume_context
       redirect_to settings_providers_path, alert: t(".no_item")
     end
   end
@@ -367,6 +374,7 @@ class SnaptradeItemsController < ApplicationController
     if snaptrade_item.user_registered?
       redirect_to setup_accounts_snaptrade_item_path(snaptrade_item, accountable_type: @accountable_type, return_to: @return_to)
     else
+      store_snaptrade_resume_context(return_to: @return_to, accountable_type: @accountable_type)
       redirect_to connect_snaptrade_item_path(snaptrade_item)
     end
   end
@@ -378,7 +386,7 @@ class SnaptradeItemsController < ApplicationController
   def select_existing_account
     @account_id = params[:account_id]
     @account = Current.family.accounts.find_by(id: @account_id)
-    snaptrade_item = Current.family.snaptrade_items.first
+    snaptrade_item = current_snaptrade_item
 
     if snaptrade_item && @account
       @snaptrade_accounts = snaptrade_item.snaptrade_accounts
@@ -431,8 +439,20 @@ class SnaptradeItemsController < ApplicationController
       active_items = Current.family.snaptrade_items.active
 
       active_items.syncable.ordered.first ||
-        active_items.where.not(client_id: [ nil, "" ]).ordered.first ||
+        active_items.credentials_configured.ordered.first ||
         active_items.ordered.first
+    end
+
+    def store_snaptrade_resume_context(return_to:, accountable_type:)
+      session[:snaptrade_resume] = {
+        return_to: return_to,
+        accountable_type: accountable_type
+      }
+    end
+
+    def clear_snaptrade_resume_context
+      resume = session.delete(:snaptrade_resume) || {}
+      [ resume[:return_to], resume[:accountable_type] ]
     end
 
     def snaptrade_item_params
