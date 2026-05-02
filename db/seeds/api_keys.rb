@@ -21,9 +21,8 @@ end
 if setup_key == "auto"
   api_key_value = ApiKey.generate_secure_key
 else
-  # Validate provided key format (64-character hex string)
-  setup_key = setup_key.downcase
-  unless setup_key.match?(/\A[0-9a-f]{64}\z/)
+  # Validate provided key format (64-character hex string, case-insensitive)
+  unless setup_key.match?(/\A[0-9a-fA-F]{64}\z/)
     puts "ERROR: SETUP_API_KEY must be a 64-character hex string or 'auto'"
     return
   end
@@ -65,6 +64,16 @@ begin
   api_key = user.api_keys.active.find_by(source: "web")
 
   if api_key
+    expected_scopes = [ "read_write" ]
+
+    if setup_key != "auto" && api_key.plain_key != api_key_value
+      raise "ERROR: existing active web API key for #{email} does not match SETUP_API_KEY (#{setup_key}); refusing to reuse a different key (api_key_value=#{api_key_value}). Revoke the existing key or unset SETUP_API_KEY."
+    end
+
+    if api_key.scopes.sort != expected_scopes.sort
+      raise "ERROR: existing active web API key for #{email} has scopes #{api_key.scopes.inspect}, expected #{expected_scopes.inspect}. Revoke the existing key before re-running seed."
+    end
+
     puts "Found existing API key for user (reusing)"
   else
     # Create new API key
