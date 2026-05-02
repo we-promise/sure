@@ -367,4 +367,67 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
     assert_equal "EUR", currency
     assert_equal 75.75, price
   end
+
+  # ================================
+  #   Indian Exchange Tests
+  # ================================
+
+  test "map_exchange_mic returns XNSE for NSE and NSI" do
+    assert_equal "XNSE", @provider.send(:map_exchange_mic, "NSE")
+    assert_equal "XNSE", @provider.send(:map_exchange_mic, "NSI")
+    assert_equal "XNSE", @provider.send(:map_exchange_mic, "nse")
+  end
+
+  test "map_exchange_mic returns XBOM for BSE and BOM" do
+    assert_equal "XBOM", @provider.send(:map_exchange_mic, "BSE")
+    assert_equal "XBOM", @provider.send(:map_exchange_mic, "BOM")
+  end
+
+  test "map_country_code returns IN for Indian exchanges" do
+    assert_equal "IN", @provider.send(:map_country_code, "NSE")
+    assert_equal "IN", @provider.send(:map_country_code, "BSE")
+    assert_equal "IN", @provider.send(:map_country_code, "MUMBAI")
+  end
+
+  test "normalize_indian_symbol appends .NS suffix for XNSE" do
+    assert_equal "RELIANCE.NS", @provider.send(:normalize_indian_symbol, "RELIANCE", "XNSE")
+    assert_equal "INFY.NS",     @provider.send(:normalize_indian_symbol, "INFY", "XNSE")
+  end
+
+  test "normalize_indian_symbol appends .BO suffix for XBOM" do
+    assert_equal "500325.BO", @provider.send(:normalize_indian_symbol, "500325", "XBOM")
+  end
+
+  test "normalize_indian_symbol does not double-suffix already suffixed symbols" do
+    assert_equal "RELIANCE.NS", @provider.send(:normalize_indian_symbol, "RELIANCE.NS", "XNSE")
+    assert_equal "500325.BO",   @provider.send(:normalize_indian_symbol, "500325.BO", "XBOM")
+  end
+
+  test "normalize_indian_symbol leaves non-Indian MIC symbols unchanged" do
+    assert_equal "AAPL", @provider.send(:normalize_indian_symbol, "AAPL", "XNAS")
+    assert_equal "BARC", @provider.send(:normalize_indian_symbol, "BARC", "XLON")
+    assert_equal "AAPL", @provider.send(:normalize_indian_symbol, "AAPL", nil)
+  end
+
+  test "prefer_indian_exchange keeps only NSE listing when both NSE and BSE present" do
+    nse = Provider::SecurityConcept::Security.new(symbol: "RELIANCE.NS", name: "Reliance", exchange_operating_mic: "XNSE")
+    bse = Provider::SecurityConcept::Security.new(symbol: "500325.BO",   name: "Reliance", exchange_operating_mic: "XBOM")
+    other = Provider::SecurityConcept::Security.new(symbol: "OTHER", name: "Other", exchange_operating_mic: "XNAS")
+
+    result = @provider.send(:prefer_indian_exchange, [ nse, bse, other ])
+
+    assert_equal "XNSE", result.first.exchange_operating_mic
+    assert_not result.map(&:exchange_operating_mic).include?("XBOM"), "BSE should be removed when NSE is present"
+    assert result.map(&:exchange_operating_mic).include?("XNAS"), "Non-Indian exchanges should be preserved"
+  end
+
+  test "prefer_indian_exchange returns original list when no Indian exchanges present" do
+    securities = [
+      Provider::SecurityConcept::Security.new(symbol: "AAPL", name: "Apple", exchange_operating_mic: "XNAS"),
+      Provider::SecurityConcept::Security.new(symbol: "MSFT", name: "Microsoft", exchange_operating_mic: "XNAS")
+    ]
+
+    result = @provider.send(:prefer_indian_exchange, securities)
+    assert_equal securities, result
+  end
 end

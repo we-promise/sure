@@ -165,6 +165,8 @@ class Provider::YahooFinance < Provider
           )
         end
 
+        securities = prefer_indian_exchange(securities)
+
         cache_result(cache_key, securities)
         securities
       end
@@ -175,6 +177,8 @@ class Provider::YahooFinance < Provider
 
   def fetch_security_info(symbol:, exchange_operating_mic:)
     with_provider_response do
+      symbol = normalize_indian_symbol(symbol, exchange_operating_mic)
+
       # quoteSummary endpoint requires cookie/crumb authentication
       throttle_request
       cookie, crumb = fetch_cookie_and_crumb
@@ -263,6 +267,7 @@ class Provider::YahooFinance < Provider
 
   def fetch_security_prices(symbol:, exchange_operating_mic: nil, start_date:, end_date:)
     with_provider_response do
+      symbol = normalize_indian_symbol(symbol, exchange_operating_mic)
       validate_date_params!(start_date, end_date)
       # Convert dates to Unix timestamps using UTC to ensure consistent epoch boundaries across timezones
       period1 = start_date.to_time.utc.to_i
@@ -285,7 +290,9 @@ class Provider::YahooFinance < Provider
       closes = quotes["close"] || []
 
       # Get currency from metadata
-      raw_currency = chart_data.dig("meta", "currency") || "USD"
+      meta_exchange = chart_data.dig("meta", "exchangeName") || ""
+      raw_currency = chart_data.dig("meta", "currency")
+      raw_currency ||= INDIAN_EXCHANGE_CODES.include?(meta_exchange.upcase) ? "INR" : "USD"
 
       prices = []
       timestamps.each_with_index do |timestamp, index|
@@ -321,6 +328,12 @@ class Provider::YahooFinance < Provider
     #      Currency Normalization
     # ================================
 
+    # Yahoo Finance exchange codes that correspond to Indian exchanges
+    INDIAN_EXCHANGE_CODES = %w[NSE NSI BSE BOM].freeze
+
+    # Preferred exchange MIC when a security is dual-listed on NSE and BSE
+    INDIAN_EXCHANGE_PREFERENCE = %w[XNSE XBOM].freeze
+
     # Yahoo Finance sometimes returns currencies in minor units (pence, cents)
     # This is not part of ISO 4217 but is a convention used by financial data providers
     # Mapping of Yahoo Finance minor unit codes to standard currency codes and conversion multipliers
@@ -338,6 +351,30 @@ class Provider::YahooFinance < Provider
       else
         [ currency, price ]
       end
+    end
+
+    # Normalizes a bare Indian equity symbol to its Yahoo Finance ticker form.
+    # NSE symbols get a ".NS" suffix (e.g. "RELIANCE" => "RELIANCE.NS").
+    # BSE symbols get a ".BO" suffix (e.g. "500325" => "500325.BO").
+    # Already-suffixed symbols are returned unchanged.
+    def normalize_indian_symbol(symbol, exchange_operating_mic)
+      return symbol if symbol.include?(".")
+      case exchange_operating_mic
+      when "XNSE" then "#{symbol}.NS"
+      when "XBOM" then "#{symbol}.BO"
+      else symbol
+      end
+    end
+
+    # Returns the preferred MIC when a security appears on both NSE and BSE.
+    # NSE (XNSE) is preferred because it typically has higher liquidity.
+    def prefer_indian_exchange(securities)
+      indian = securities.select { |s| INDIAN_EXCHANGE_PREFERENCE.include?(s.exchange_operating_mic) }
+      return securities if indian.empty?
+
+      preferred = indian.min_by { |s| INDIAN_EXCHANGE_PREFERENCE.index(s.exchange_operating_mic) }
+      non_indian = securities.reject { |s| INDIAN_EXCHANGE_PREFERENCE.include?(s.exchange_operating_mic) }
+      [ preferred ] + non_indian
     end
 
     # ================================
@@ -776,6 +813,10 @@ class Provider::YahooFinance < Provider
         "XJPX" # Japan Exchange Group
       when "ASX"
         "XASX" # Australian Securities Exchange
+      when "NSE", "NSI"
+        "XNSE" # National Stock Exchange of India
+      when "BSE", "BOM"
+        "XBOM" # BSE (Bombay Stock Exchange)
       else
         exchange_code.upcase
       end

@@ -129,11 +129,46 @@ class InvestmentTest < ActiveSupport::TestCase
   end
 
   test "all subtypes have valid region values" do
-    valid_regions = [ "us", "uk", "ca", "au", "eu", nil ]
+    valid_regions = [ "us", "uk", "ca", "au", "eu", "in", nil ]
 
     Investment::SUBTYPES.each do |key, metadata|
       assert_includes valid_regions, metadata[:region],
         "Subtype #{key} has invalid region: #{metadata[:region]}"
     end
+  end
+
+  # India account types
+
+  test "India pension subtypes have tax_advantaged treatment" do
+    %w[nps apy].each do |subtype|
+      investment = Investment.new(subtype: subtype)
+      assert_equal :tax_advantaged, investment.tax_treatment, "Expected #{subtype} to be tax_advantaged"
+    end
+  end
+
+  test "India equity and demat subtypes are taxable" do
+    %w[demat indian_equity indian_etf].each do |subtype|
+      investment = Investment.new(subtype: subtype)
+      assert_equal :taxable, investment.tax_treatment, "Expected #{subtype} to be taxable"
+    end
+  end
+
+  test "life insurance is tax_advantaged" do
+    investment = Investment.new(subtype: "life_insurance")
+    assert_equal :tax_advantaged, investment.tax_treatment
+  end
+
+  test "India subtypes all belong to the 'in' region" do
+    india_keys = %w[nps apy demat indian_equity indian_etf life_insurance]
+    india_keys.each do |key|
+      assert_equal "in", Investment::SUBTYPES.dig(key, :region), "Expected #{key} to have region 'in'"
+    end
+  end
+
+  test "subtypes_grouped_for_select places India region last" do
+    grouped = Investment.subtypes_grouped_for_select(currency: "INR")
+    assert grouped.any?, "grouped should not be empty"
+    last_group_label = grouped.last[0]
+    assert_equal I18n.t("accounts.subtype_regions.in"), last_group_label
   end
 end
