@@ -27,6 +27,12 @@ class RuleRun < ApplicationRecord
     status == "failed"
   end
 
+  # Transactions that matched the rule but were not processed,
+  # typically because they were blocked by attribute locks.
+  def transactions_blocked
+    [ transactions_queued - transactions_processed, 0 ].max
+  end
+
   # Thread-safe method to complete a job and update the run
   def complete_job!(modified_count: 0)
     with_lock do

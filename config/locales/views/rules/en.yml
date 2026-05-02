@@ -31,6 +31,7 @@ en:
           queued: Queued
           processed: Processed
           modified: Modified
+          blocked: Blocked
       execution_types:
         manual: Manual
         scheduled: Scheduled
