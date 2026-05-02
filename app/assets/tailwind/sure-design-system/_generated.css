@@ -434,6 +434,14 @@
   }
 }
 
+@utility border-inverse {
+  @apply border-alpha-white-200;
+
+  @variant theme-dark {
+    @apply border-alpha-black-300;
+  }
+}
+
 @utility button-bg-primary {
   @apply bg-gray-900;
 

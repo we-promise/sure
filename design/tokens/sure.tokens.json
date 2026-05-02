@@ -329,6 +329,7 @@
     "border-subdued":     { "$type": "utility", "$value": "{color.alpha-black.50}",  "$extensions": { "sure.utility": { "prefix": "border" }, "sure.dark": "{color.alpha-white.100}" } },
     "border-solid":       { "$type": "utility", "$value": "{color.black}",           "$extensions": { "sure.utility": { "prefix": "border" }, "sure.dark": "{color.white}" } },
     "border-destructive": { "$type": "utility", "$value": "{color.red.500}",         "$extensions": { "sure.utility": { "prefix": "border" }, "sure.dark": "{color.red.400}" } },
+    "border-inverse":     { "$type": "utility", "$value": "{color.alpha-white.200}", "$extensions": { "sure.utility": { "prefix": "border" }, "sure.dark": "{color.alpha-black.300}" } },
 
     "button-bg-primary":           { "$type": "utility", "$value": "{color.gray.900}", "$extensions": { "sure.utility": { "prefix": "bg" }, "sure.dark": "{color.white}" } },
     "button-bg-primary-hover":     { "$type": "utility", "$value": "{color.gray.800}", "$extensions": { "sure.utility": { "prefix": "bg" }, "sure.dark": "{color.gray.50}" } },
