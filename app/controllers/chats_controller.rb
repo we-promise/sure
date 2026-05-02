@@ -19,7 +19,7 @@ class ChatsController < ApplicationController
   def create
     @chat = Current.user.chats.start!(chat_params[:content], model: chat_params[:ai_model])
     set_last_viewed_chat(@chat)
-    redirect_to chat_path(@chat)
+    redirect_to chat_path(@chat, thinking: true)
   end
 
   def edit
