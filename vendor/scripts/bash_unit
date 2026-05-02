@@ -1,0 +1,601 @@
+#!/usr/bin/env bash
+#
+#   bash unit testing enterprise edition framework for professionals
+#   Copyright (C) 2011-2016 Pascal Grange
+#   This program is free software; you can redistribute it and/or modify
+#   it under the terms of the GNU General Public License as published by
+#   the Free Software Foundation; either version 3 of the License, or
+#   (at your option) any later version.
+#   This program is distributed in the hope that it will be useful,
+#   but WITHOUT ANY WARRANTY; without even the implied warranty of
+#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#   GNU General Public License for more details.
+#   You should have received a copy of the GNU General Public License
+#   along with this program; if not, write to the Free Software Foundation,
+#   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
+#
+#  https://github.com/bash-unit/bash_unit
+
+# shellcheck disable=2317  # Ignore unreachable - most function are not called.
+# shellcheck disable=2155  # Ignore Declare and assign separately
+
+VERSION=v2.3.3
+
+ESCAPE=$(printf "\033")
+NOCOLOR="${ESCAPE}[0m"
+RED="${ESCAPE}[91m"
+GREEN="${ESCAPE}[92m"
+YELLOW="${ESCAPE}[93m"
+BLUE="${ESCAPE}[94m"
+
+# Make bash_unit immune to some basic unix commands faking
+CAT="$(type -P cat)"
+SED="$(type -P sed)"
+GREP="$(type -P grep)"
+RM="$(type -P rm)"
+SHUF="$(type -P sort) -R"
+
+# Store the number of tests run in a file so that the value is available
+# from the parent process. This will become an issue if we start considering
+# parallel test execution in the future.
+TEST_COUNT_FILE="$(mktemp)"
+# shellcheck disable=2064 # Use single quotes, expands now, not when signaled.
+trap "$RM  -f \"$TEST_COUNT_FILE\"" EXIT
+
+fail() {
+  local message=${1:-}
+  local stdout=${2:-}
+  local stderr=${3:-}
+
+  # shellcheck disable=2154
+  notify_test_failed "$__bash_unit_current_test__"
+  notify_message "$message"
+  [[ -n "$stdout" ]] && [ -s "$stdout" ] && notify_stdout < "$stdout"
+  [[ -n "$stderr" ]] && [ -s "$stderr" ] && notify_stderr < "$stderr"
+
+  stacktrace | notify_stack
+  exit 1
+}
+
+assert() {
+  local assertion=$1
+  local message=${2:-}
+
+  _assert_expression \
+    "$assertion" \
+    "[ \$status == 0 ]" \
+    "\"$message\""
+}
+
+assert_fails() {
+  local assertion=$1
+  local message=${2:-}
+
+  _assert_expression \
+    "$assertion" \
+    "[ \$status != 0 ]" \
+    "\"$message\""
+}
+
+assert_fail() {
+  #deprecated, use assert_fails instead
+  assert_fails "$@"
+}
+
+assert_status_code() {
+  local expected_status=$1
+  local assertion="$2"
+  local message="${3:-}"
+
+  _assert_expression \
+    "$assertion" \
+    "[ \$status == $expected_status ]" \
+    "\"$message\" expected status code $expected_status but was \$status"
+}
+
+_assert_expression() {
+  local assertion=$1
+  local condition=$2
+  local message=$3
+  (
+    local stdout=$(mktemp)
+    local stderr=$(mktemp)
+    # shellcheck disable=2064 # Use single quotes, expands now, not when signaled.
+    trap "$RM  -f \"$stdout\" \"$stderr\"" EXIT
+
+    local status
+    eval "($assertion)" >"$stdout" 2>"$stderr" && status=$? || status=$?
+    if ! eval "$condition"
+    then
+      fail "$(eval echo "$message")" "$stdout" "$stderr"
+    fi
+  ) || exit $?
+}
+
+assert_equals() {
+  local expected=$1
+  local actual=$2
+  local message=${3:-}
+  [[ -z $message ]] || message="$message\n"
+
+  if [ "$expected" != "$actual" ]
+  then
+    fail "$message expected [$expected] but was [$actual]"
+  fi
+}
+
+assert_not_equals() {
+  local unexpected=$1
+  local actual=$2
+  local message=${3:-}
+  [[ -z $message ]] || message="$message\n"
+
+  [ "$unexpected" != "$actual" ] || \
+    fail "$message expected different value than [$unexpected] but was the same"
+}
+
+assert_matches() {
+  local expected=$1
+  local actual=$2
+  local message=${3:-}
+  [[ -z $message ]] || message="$message\n"
+
+  if [[ ! "${actual}" =~ ${expected} ]]; then
+    fail "$message expected regex [$expected] to match [$actual]"
+  fi
+}
+
+assert_not_matches() {
+  local unexpected=$1
+  local actual=$2
+  local message=${3:-}
+  [[ -z $message ]] || message="$message\n"
+
+  if [[ "${actual}" =~ ${unexpected} ]]; then
+    fail "$message expected regex [$unexpected] should not match but matched [$actual]"
+  fi
+}
+
+assert_within_delta() {
+  function abs() {
+    local value=$1
+    local sign=$(( value < 0 ? -1 : 1 ))
+    echo $((value * sign))
+  }
+  function is_number() {
+    local value=$1
+    test "$value" -eq "$value" 2>/dev/null
+  }
+  local expected=$1
+  local actual=$2
+  local max_delta=$3
+  assert "is_number $expected" "$message expected value [$expected] is not a number"
+  assert "is_number $actual" "$message actual value [$actual] is not a number"
+  assert "is_number $max_delta" "$message max_delta [$max_delta] is not a number"
+  local message=${4:-}
+  [[ -z $message ]] || message="$message\n"
+
+  local actual_delta="$(abs $((expected - actual)))"
+
+  if (( actual_delta > max_delta )); then
+    fail "$message expected value [$expected] to match [$actual] with a maximum delta of [$max_delta]"
+  fi
+}
+
+assert_no_diff() {
+  local expected=$1
+  local actual=$2
+  local message=${3:-}
+  [[ -z "$message" ]] || message="$message\n"
+
+  assert "diff '${expected}' '${actual}'"  \
+    "$message expected '${actual}' to be identical to '${expected}' but was different"
+}
+
+fake() {
+  local command=$1
+  shift
+  if [ $# -gt 0 ]
+  then
+    eval "function $command() { export FAKE_PARAMS=(\"\$@\") ; $* ; }"
+  else
+    eval "function $command() { echo \"$($CAT)\" ; }"
+  fi
+  export -f "${command?}"
+}
+
+stacktrace() {
+  local i=1
+  while [ -n "${BASH_SOURCE[$i]:-}" ]
+  do
+    echo "${BASH_SOURCE[$i]}:${BASH_LINENO[$((i-1))]}:${FUNCNAME[$i]}()"
+    i=$((i + 1))
+  done | "$GREP" -v "^$BASH_SOURCE"
+}
+
+run_test_suite() {
+  local failure=0
+
+  if run_setup_suite
+  then
+    run_tests || failure=$?
+  else
+    failure=$?
+  fi
+  run_teardown_suite
+
+  return $failure
+}
+
+run_setup_suite() {
+  if declare -F | "$GREP" ' setup_suite$' >/dev/null
+  then
+    setup_suite
+  fi
+}
+
+maybe_shuffle() {
+  # shellcheck disable=2015  # A && B || C. C may run when A is true.
+  ((randomize)) && $SHUF || $CAT
+}
+
+run_tests() {
+  local failure=0
+
+  local pending_tests=$(set | "$GREP"  -E '^(pending|todo).* \(\)' | "$GREP" -E "$test_pattern" | "$SED" -e 's: .*::')
+  if [[ -n "$skip_pattern" ]]
+  then
+    local skipped_tests=$(set | "$GREP"  -E '^test.* \(\)' | "$GREP" -E "$test_pattern" | "$GREP" -E "$skip_pattern" | "$SED" -e 's: .*::')
+    local tests_to_run="$(set | "$GREP"  -E '^test.* \(\)' | "$GREP" -E "$test_pattern" | "$GREP" -v -E "$skip_pattern" | "$SED" -e 's: .*::' | maybe_shuffle)"
+  else
+    local skipped_tests=""
+    local tests_to_run="$(set | "$GREP"  -E '^test.* \(\)' | "$GREP" -E "$test_pattern" |  "$SED" -e 's: .*::' | maybe_shuffle)"
+  fi
+
+  local test_count=$(cat "${TEST_COUNT_FILE}")
+  test_count=$((test_count + $(count "$pending_tests") + $(count "$tests_to_run") + $(count "$skipped_tests")))
+  echo "${test_count}" > "${TEST_COUNT_FILE}"
+
+  for pending_test in $pending_tests
+  do
+    notify_test_starting "$pending_test"
+    notify_test_pending "$pending_test"
+  done
+
+  for skipped_test in $skipped_tests
+  do
+    notify_test_starting "$skipped_test"
+    notify_test_skipped "$skipped_test"
+  done
+
+  for test in $tests_to_run
+  do
+    (
+      local status=0
+      declare -F | "$GREP" ' setup$' >/dev/null && setup
+      (__bash_unit_current_test__="$test" run_test) || status=$?
+      declare -F | "$GREP" ' teardown$' >/dev/null && teardown
+      exit $status
+    )
+    failure=$(( $? || failure))
+  done
+
+  return $failure
+}
+
+run_test() {
+  set -e
+  notify_test_starting "$__bash_unit_current_test__"
+  "$__bash_unit_current_test__" && notify_test_succeeded "$__bash_unit_current_test__"
+}
+
+run_teardown_suite() {
+  if declare -F | "$GREP" ' teardown_suite$' >/dev/null
+  then
+    teardown_suite
+  fi
+}
+
+usage() {
+  echo "$1" >&2
+  echo "$0 [-f <output format>] [-p <pattern1>] [-p <pattern2>] [-s <skip_pattern1>] [-s <skip_pattern2>] [-r] ... <test_file1> <test_file2> ..." >&2
+  echo >&2
+  echo "Runs tests in test files that match <pattern>s" >&2
+  echo "Test that match the skip patterns are skipped and displayed as SKIPPED" >&2
+  echo "<output format> is optional only supported value is tap" >&2
+  echo "-r to execute test cases in random order" >&2
+  echo "-v to get current version information" >&2
+  echo "See https://github.com/bash-unit/bash_unit" >&2
+  exit 1
+}
+
+# Formatting
+
+pretty_success() {
+  pretty_format "$GREEN" "\u2713" "${1:-}"
+}
+
+pretty_warning() {
+  pretty_format "$YELLOW" "\u2717" "${1:-}"
+}
+
+pretty_failure() {
+  pretty_format "$RED" "\u2717" "${1:-}"
+}
+
+pretty_format() {
+  local color="$1"
+  local pretty_symbol="$2"
+  local alt_symbol="${3:-}"
+  local term_utf8=false
+  #env
+  if is_terminal && [[ "${LANG:-}" =~ .*UTF-8.* ]]
+  then
+    term_utf8=true
+  fi
+  (
+    $CAT
+    if $term_utf8
+    then
+      echo -en " $pretty_symbol "
+    else
+      [[ -n "$alt_symbol" ]] && echo -en " $alt_symbol "
+    fi
+  ) | color "$color"
+}
+
+color() {
+  _start_color() {
+    if is_terminal ; then echo -en "$color" ; fi
+  }
+  _stop_color() {
+    if is_terminal ; then echo -en "$NOCOLOR" ; fi
+  }
+  local color=$1
+  shift
+  _start_color
+  if [ $# -gt 0 ]
+  then
+    echo "$*"
+  else
+    $CAT
+  fi
+  _stop_color
+}
+
+is_terminal() {
+  [ -t 1 ] || [[ "${FORCE_COLOR:-}" == true ]]
+}
+
+text_format() {
+  notify_suite_starting() {
+    local test_file="$1"
+    echo "Running tests in $test_file"
+  }
+  notify_test_starting() {
+    local test="$1"
+    echo -e -n "\tRunning $test ... " | color "$BLUE"
+  }
+  notify_test_pending() {
+    echo -n "PENDING" | pretty_warning
+    echo
+  }
+  notify_test_skipped() {
+    echo -n "SKIPPED" | pretty_warning
+    echo
+  }
+  notify_test_succeeded() {
+    echo -n "SUCCESS" | pretty_success
+    echo
+  }
+  notify_test_failed() {
+    echo -n "FAILURE" | pretty_failure
+    echo
+  }
+  notify_message() {
+    local message="$1"
+    # shellcheck disable=SC2059
+    [[ -z "$message" ]] || printf -- "$message\n"
+  }
+
+  notify_stdout() {
+    "$SED" 's:^:out> :' | color "$GREEN"
+  }
+  notify_stderr() {
+    "$SED" 's:^:err> :' | color "$RED"
+  }
+  notify_stack() {
+    color "$YELLOW"
+  }
+  notify_suites_succeded() {
+    echo -n "Overall result: SUCCESS" | pretty_success
+    echo
+  }
+  notify_suites_failed() {
+    echo -n "Overall result: FAILURE" | pretty_failure
+    echo
+  }
+}
+
+tap_format() {
+  notify_suite_starting() {
+    local test_file="$1"
+    echo "# Running tests in $test_file"
+  }
+  notify_test_starting() {
+    :
+  }
+  notify_test_pending() {
+    local test="$1"
+    echo -n "ok" | pretty_warning -
+    echo -n "$test" | color "$BLUE"
+    echo " # todo test to be written" | color "$YELLOW"
+  }
+  notify_test_skipped() {
+    local test="$1"
+    echo -n "ok" | pretty_warning -
+    echo -n "$test" | color "$BLUE"
+    echo " # skip test not run" | color "$YELLOW"
+  }
+  notify_test_succeeded() {
+    local test="$1"
+    echo -n "ok" | pretty_success -
+    echo "$test" | color "$BLUE"
+  }
+  notify_test_failed() {
+    local test="$1"
+    echo -n "not ok" | pretty_failure -
+    echo "$test" | color "$BLUE"
+  }
+  notify_message() {
+    local message="$1"
+    [[ -z "$message" ]] || printf -- "%b\n" "$message" | "$SED" -u -e 's/^/# /'
+  }
+  notify_stdout() {
+    "$SED" 's:^:# out> :' | color "$GREEN"
+  }
+  notify_stderr() {
+    "$SED" 's:^:# err> :' | color "$RED"
+  }
+  notify_stack() {
+    "$SED" 's:^:# :' | color "$YELLOW"
+  }
+  notify_suites_succeded() {
+    local message="$1"
+    echo "1..$message"
+  }
+  notify_suites_failed() {
+    local message="$1"
+    echo "1..$message"
+  }
+}
+
+quiet_mode() {
+  notify_message() {
+    :
+  }
+  notify_stdout() {
+    :
+  }
+  notify_stderr() {
+    :
+  }
+  notify_stack() {
+    :
+  }
+}
+
+skip_if() {
+  local condition="$1"
+  local pattern="$2"
+  if eval "$condition" >/dev/null 2>&1
+  then
+    skip_pattern="${skip_pattern}${skip_pattern_separator}${pattern}"
+    skip_pattern_separator="|"
+  fi
+}
+
+count() {
+  local tests="$1"
+  if [[ -z "$tests" ]]; then
+    echo 0
+  else
+    echo "$tests" | wc -l
+  fi
+}
+
+output_format=text
+verbosity=normal
+test_pattern=""
+test_pattern_separator=""
+skip_pattern=""
+skip_pattern_separator=""
+randomize=0
+while getopts "vp:s:f:rq" option
+do
+  case "$option" in
+    p)
+      test_pattern="${test_pattern}${test_pattern_separator}${OPTARG}"
+      test_pattern_separator="|"
+      ;;
+    s)
+      skip_pattern="${skip_pattern}${skip_pattern_separator}${OPTARG}"
+      skip_pattern_separator="|"
+      ;;
+    f)
+      output_format="${OPTARG}"
+      ;;
+    r)
+      randomize=1
+      ;;
+    v)
+      echo "bash_unit $VERSION"
+      exit
+      ;;
+    q)
+      verbosity=quiet
+      ;;
+    ?)
+      usage
+      ;;
+  esac
+done
+shift $((OPTIND-1))
+
+for test_file in "$@"
+do
+  test -e "$test_file" || usage "file does not exist: $test_file"
+  test -r "$test_file" || usage "can not read file: $test_file"
+done
+
+case "$output_format" in
+  text)
+    text_format
+    ;;
+  tap)
+    tap_format
+    ;;
+  *)
+    usage "unsupported output format: $output_format"
+    ;;
+esac
+
+if [[ "$verbosity" == quiet ]]
+then
+  quiet_mode
+fi
+
+#run tests received as parameters
+failure=0
+echo 0 > "${TEST_COUNT_FILE}"
+for test_file in "$@"
+do
+  notify_suite_starting "$test_file"
+  (
+    # Ensure bash_unit will exit with failure
+    # in case of syntax error.
+    set -e
+
+    if [[ "${STICK_TO_CWD:-}" != true ]]
+    then
+      cd "$(dirname "$test_file")"
+      # shellcheck disable=1090
+      source "./$(basename "$test_file")"
+    else
+      # shellcheck disable=1090
+      source "$test_file"
+    fi
+    set +e
+    run_test_suite
+  )
+  failure=$(( $? || failure))
+done
+
+if ((failure))
+then
+  notify_suites_failed "$(cat "${TEST_COUNT_FILE}")"
+else
+  notify_suites_succeded "$(cat "${TEST_COUNT_FILE}")"
+fi
+
+exit $failure

@@ -108,7 +108,9 @@ tasks.json
 .taskmaster/reports/
 .taskmaster/state.json
 *.mcp.json
-scripts/
+scripts/*
+!scripts/cut-version
+!scripts/cut-version.test.sh
 .cursor/mcp.json
 .taskmasterconfig
 .windsurfrules
