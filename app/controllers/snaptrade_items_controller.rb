@@ -451,7 +451,7 @@ class SnaptradeItemsController < ApplicationController
     end
 
     def clear_snaptrade_resume_context
-      resume = session.delete(:snaptrade_resume) || {}
+      resume = (session.delete(:snaptrade_resume) || {}).with_indifferent_access
       [ resume[:return_to], resume[:accountable_type] ]
     end
 
