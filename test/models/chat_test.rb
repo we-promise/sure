@@ -18,6 +18,16 @@ class ChatTest < ActiveSupport::TestCase
     assert_equal 3, chat.conversation_messages.count
   end
 
+  test "uses chat-scoped stream targets" do
+    first_chat = chats(:one)
+    second_chat = chats(:two)
+
+    assert_not_equal "messages", first_chat.messages_target
+    assert_not_equal "chat-error", first_chat.error_target
+    assert_not_equal first_chat.messages_target, second_chat.messages_target
+    assert_not_equal first_chat.error_target, second_chat.error_target
+  end
+
   test "creates with initial message" do
     prompt = "Test prompt"
 

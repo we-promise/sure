@@ -79,7 +79,7 @@ class Chat < ApplicationRecord
 
   def add_error(e)
     update!(error: build_error_payload(e).to_json)
-    broadcast_append target: "messages", partial: "chats/error", locals: { chat: self }
+    broadcast_append target: messages_target, partial: "chats/error", locals: { chat: self }
   end
 
   def presentable_error_message
@@ -93,11 +93,19 @@ class Chat < ApplicationRecord
 
   def clear_error
     update! error: nil
-    broadcast_remove target: "chat-error"
+    broadcast_remove target: error_target
   end
 
   def conversation_messages
     messages.where(type: [ "UserMessage", "AssistantMessage" ])
+  end
+
+  def messages_target
+    ActionView::RecordIdentifier.dom_id(self, :messages)
+  end
+
+  def error_target
+    ActionView::RecordIdentifier.dom_id(self, :chat_error)
   end
 
   def ask_assistant_later(message)
