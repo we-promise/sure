@@ -56,7 +56,7 @@ class ApiKey < ApplicationRecord
   end
 
   def key_matches?(plain_key)
-    display_key == plain_key
+    ActiveSupport::SecurityUtils.secure_compare(display_key.to_s, plain_key.to_s)
   end
 
   def revoke!
