@@ -727,6 +727,49 @@ RSpec.configure do |config|
             properties: {
               message: { type: :string }
             }
+          },
+          ResetInitiatedResponse: {
+            type: :object,
+            required: %w[message status job_id family_id status_url],
+            properties: {
+              message: { type: :string },
+              status: { type: :string, enum: %w[queued] },
+              job_id: {
+                type: :string,
+                description: 'Informational Active Job identifier returned by the queue adapter; reset status is family-scoped, not job-scoped.'
+              },
+              family_id: { type: :string, format: :uuid, description: 'UUID of the family being reset.' },
+              status_url: { type: :string }
+            }
+          },
+          ResetStatusResponse: {
+            type: :object,
+            required: %w[status family_id reset_complete counts],
+            properties: {
+              status: {
+                type: :string,
+                enum: %w[complete data_remaining],
+                description: 'Counts-based family reset status at response time.'
+              },
+              family_id: { type: :string, format: :uuid, description: 'UUID of the family whose reset target counts were checked.' },
+              reset_complete: {
+                type: :boolean,
+                description: 'True when all reset target counts are zero at response time. This is a family data snapshot, not a durable per-job completion record.'
+              },
+              counts: {
+                type: :object,
+                required: %w[accounts categories tags merchants plaid_items imports budgets],
+                properties: {
+                  accounts: { type: :integer, minimum: 0 },
+                  categories: { type: :integer, minimum: 0 },
+                  tags: { type: :integer, minimum: 0 },
+                  merchants: { type: :integer, minimum: 0 },
+                  plaid_items: { type: :integer, minimum: 0 },
+                  imports: { type: :integer, minimum: 0 },
+                  budgets: { type: :integer, minimum: 0 }
+                }
+              }
+            }
           }
         }
       }
