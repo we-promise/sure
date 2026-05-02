@@ -4,7 +4,7 @@
   <% if assistant_message.pending? %>
     <div class="flex items-start gap-3 mb-6">
       <%= render "chats/ai_avatar" %>
-      <p class="text-sm text-secondary animate-pulse">Thinking ...</p>
+      <p class="text-sm text-secondary animate-pulse"><%= t("chats.thinking") %></p>
     </div>
   <% elsif assistant_message.reasoning? %>
     <details class="group mb-1">
