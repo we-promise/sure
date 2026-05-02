@@ -410,9 +410,9 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
   end
 
   test "prefer_indian_exchange keeps only NSE listing when both NSE and BSE present" do
-    nse = Provider::SecurityConcept::Security.new(symbol: "RELIANCE.NS", name: "Reliance", exchange_operating_mic: "XNSE")
-    bse = Provider::SecurityConcept::Security.new(symbol: "500325.BO",   name: "Reliance", exchange_operating_mic: "XBOM")
-    other = Provider::SecurityConcept::Security.new(symbol: "OTHER", name: "Other", exchange_operating_mic: "XNAS")
+    nse = Provider::SecurityConcept::Security.new(symbol: "RELIANCE.NS", name: "Reliance", logo_url: nil, exchange_operating_mic: "XNSE", country_code: "IN")
+    bse = Provider::SecurityConcept::Security.new(symbol: "500325.BO",   name: "Reliance", logo_url: nil, exchange_operating_mic: "XBOM", country_code: "IN")
+    other = Provider::SecurityConcept::Security.new(symbol: "OTHER", name: "Other", logo_url: nil, exchange_operating_mic: "XNAS", country_code: "US")
 
     result = @provider.send(:prefer_indian_exchange, [ nse, bse, other ])
 
@@ -421,10 +421,26 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
     assert result.map(&:exchange_operating_mic).include?("XNAS"), "Non-Indian exchanges should be preserved"
   end
 
+  test "prefer_indian_exchange preserves unrelated Indian tickers" do
+    reliance_nse = Provider::SecurityConcept::Security.new(symbol: "RELIANCE.NS", name: "Reliance Industries", logo_url: nil, exchange_operating_mic: "XNSE", country_code: "IN")
+    reliance_bse = Provider::SecurityConcept::Security.new(symbol: "500325.BO",   name: "Reliance Industries", logo_url: nil, exchange_operating_mic: "XBOM", country_code: "IN")
+    infy_nse     = Provider::SecurityConcept::Security.new(symbol: "INFY.NS",     name: "Infosys",             logo_url: nil, exchange_operating_mic: "XNSE", country_code: "IN")
+    other        = Provider::SecurityConcept::Security.new(symbol: "AAPL",        name: "Apple",               logo_url: nil, exchange_operating_mic: "XNAS", country_code: "US")
+
+    result = @provider.send(:prefer_indian_exchange, [ reliance_nse, reliance_bse, infy_nse, other ])
+
+    symbols = result.map(&:symbol)
+    assert_includes symbols, "RELIANCE.NS", "NSE listing for Reliance should be kept"
+    assert_not_includes symbols, "500325.BO", "BSE duplicate for Reliance should be removed"
+    assert_includes symbols, "INFY.NS", "Unrelated Indian ticker should be preserved"
+    assert_includes symbols, "AAPL", "Non-Indian ticker should be preserved"
+    assert_equal 3, result.size
+  end
+
   test "prefer_indian_exchange returns original list when no Indian exchanges present" do
     securities = [
-      Provider::SecurityConcept::Security.new(symbol: "AAPL", name: "Apple", exchange_operating_mic: "XNAS"),
-      Provider::SecurityConcept::Security.new(symbol: "MSFT", name: "Microsoft", exchange_operating_mic: "XNAS")
+      Provider::SecurityConcept::Security.new(symbol: "AAPL", name: "Apple", logo_url: nil, exchange_operating_mic: "XNAS", country_code: "US"),
+      Provider::SecurityConcept::Security.new(symbol: "MSFT", name: "Microsoft", logo_url: nil, exchange_operating_mic: "XNAS", country_code: "US")
     ]
 
     result = @provider.send(:prefer_indian_exchange, securities)

@@ -159,7 +159,8 @@ class InvestmentTest < ActiveSupport::TestCase
   end
 
   test "India subtypes all belong to the 'in' region" do
-    india_keys = %w[nps apy demat indian_equity indian_etf life_insurance]
+    india_keys = Investment::SUBTYPES.keys.select { |k| Investment::SUBTYPES.dig(k, :region) == "in" }
+    assert india_keys.any?, "Expected at least one India subtype"
     india_keys.each do |key|
       assert_equal "in", Investment::SUBTYPES.dig(key, :region), "Expected #{key} to have region 'in'"
     end

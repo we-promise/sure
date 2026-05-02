@@ -366,15 +366,22 @@ class Provider::YahooFinance < Provider
       end
     end
 
-    # Returns the preferred MIC when a security appears on both NSE and BSE.
-    # NSE (XNSE) is preferred because it typically has higher liquidity.
+    # De-duplicates Indian dual-listings (NSE + BSE) for the same company,
+    # preferring NSE (XNSE) for its higher liquidity.  Securities are grouped
+    # by name so that unrelated Indian tickers are preserved.
     def prefer_indian_exchange(securities)
-      indian = securities.select { |s| INDIAN_EXCHANGE_PREFERENCE.include?(s.exchange_operating_mic) }
+      indian, non_indian = securities.partition { |s| INDIAN_EXCHANGE_PREFERENCE.include?(s.exchange_operating_mic) }
       return securities if indian.empty?
 
-      preferred = indian.min_by { |s| INDIAN_EXCHANGE_PREFERENCE.index(s.exchange_operating_mic) }
-      non_indian = securities.reject { |s| INDIAN_EXCHANGE_PREFERENCE.include?(s.exchange_operating_mic) }
-      [ preferred ] + non_indian
+      preferred = indian.group_by(&:name).flat_map do |_name, group|
+        if group.size > 1
+          [ group.min_by { |s| INDIAN_EXCHANGE_PREFERENCE.index(s.exchange_operating_mic) } ]
+        else
+          group
+        end
+      end
+
+      preferred + non_indian
     end
 
     # ================================
