@@ -17,9 +17,8 @@ class Assistant::Builtin < Assistant::Base
     @functions = functions
   end
 
-  def respond_to(message)
-    assistant_message = chat.messages.where(type: "AssistantMessage", status: :pending).order(:created_at).last ||
-      AssistantMessage.new(chat: chat, content: "", ai_model: message.ai_model)
+  def respond_to(message, assistant_message: nil)
+    assistant_message ||= AssistantMessage.new(chat: chat, content: "", ai_model: message.ai_model)
 
     llm_provider = get_model_provider(message.ai_model)
     unless llm_provider

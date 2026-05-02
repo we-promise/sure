@@ -28,7 +28,7 @@ class AssistantTest < ActiveSupport::TestCase
 
     @chat.expects(:add_error).with(error).once
 
-    assert_difference "AssistantMessage.count", -1 do
+    assert_no_difference "AssistantMessage.count"  do
       @assistant.respond_to(@message)
     end
   end
@@ -48,7 +48,7 @@ class AssistantTest < ActiveSupport::TestCase
       true
     end
 
-    assert_difference "AssistantMessage.count", -1 do
+    assert_no_difference "AssistantMessage.count" do
       @assistant.respond_to(@message)
     end
   end
@@ -78,7 +78,7 @@ class AssistantTest < ActiveSupport::TestCase
       true
     end
 
-    assert_difference "AssistantMessage.count", -1 do
+    assert_no_difference "AssistantMessage.count" do
       @assistant.respond_to(@message)
     end
   end
@@ -113,7 +113,7 @@ class AssistantTest < ActiveSupport::TestCase
       true
     end.returns(response)
 
-    assert_no_difference "AssistantMessage.count" do
+    assert_difference "AssistantMessage.count", 1 do
       @assistant.respond_to(@message)
       message = @chat.messages.ordered.where(type: "AssistantMessage").last
       assert_equal "I do not have the information to answer that question", message.content
@@ -176,7 +176,7 @@ class AssistantTest < ActiveSupport::TestCase
       true
     end.returns(call1_response).once.in_sequence(sequence)
 
-    assert_no_difference "AssistantMessage.count" do
+    assert_difference "AssistantMessage.count", 1 do
       @assistant.respond_to(@message)
       message = @chat.messages.ordered.where(type: "AssistantMessage").last
       assert_equal 1, message.tool_calls.size
@@ -226,7 +226,7 @@ class AssistantTest < ActiveSupport::TestCase
       "EXTERNAL_ASSISTANT_URL" => "http://localhost:18789/v1/chat",
       "EXTERNAL_ASSISTANT_TOKEN" => "test-token"
     ) do
-      assert_no_difference "AssistantMessage.count" do
+      assert_difference "AssistantMessage.count", 1 do
         assistant.respond_to(@message)
       end
 
@@ -273,7 +273,7 @@ class AssistantTest < ActiveSupport::TestCase
       "EXTERNAL_ASSISTANT_URL" => "http://localhost:18789/v1/chat",
       "EXTERNAL_ASSISTANT_TOKEN" => "test-token"
     ) do
-      assert_difference "AssistantMessage.count", -1 do
+      assert_no_difference "AssistantMessage.count" do
         assistant.respond_to(@message)
       end
 
@@ -301,7 +301,7 @@ class AssistantTest < ActiveSupport::TestCase
       "EXTERNAL_ASSISTANT_URL" => "http://localhost:18789/v1/chat",
       "EXTERNAL_ASSISTANT_TOKEN" => "test-token"
     ) do
-      assert_difference "AssistantMessage.count", -1 do
+      assert_no_difference "AssistantMessage.count" do
         assistant.respond_to(@message)
       end
 

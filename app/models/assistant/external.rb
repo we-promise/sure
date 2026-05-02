@@ -33,8 +33,9 @@ class Assistant::External < Assistant::Base
     end
   end
 
-  def respond_to(message)
+  def respond_to(message, assistant_message: nil)
     response_completed = false
+    assistant_message ||= AssistantMessage.new(chat: chat, content: "", ai_model: "external-agent")
 
     unless self.class.configured?
       raise Assistant::Error,
@@ -44,9 +45,6 @@ class Assistant::External < Assistant::Base
     unless self.class.allowed_user?(chat.user)
       raise Assistant::Error, "Your account is not authorized to use the external assistant."
     end
-
-    assistant_message = chat.messages.where(type: "AssistantMessage", status: :pending).order(:created_at).last ||
-      AssistantMessage.new(chat: chat, content: "", ai_model: "external-agent")
 
     client = build_client
     messages = build_conversation_messages
