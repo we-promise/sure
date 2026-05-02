@@ -7,3 +7,37 @@ linters:
       Style/StringLiterals:
         Enabled: true
         EnforcedStyle: double_quotes
+  DeprecatedClasses:
+    enabled: true
+    addendum: "Design tokens live in design/tokens/sure.tokens.json; semantic utilities are documented in app/assets/tailwind/sure-design-system.css."
+    rule_set:
+      - suggestion: "Use text-primary, text-secondary, text-subdued, text-inverse, text-link, or a semantic color token (text-success, text-warning, text-destructive)."
+        deprecated:
+          - 'text-gray-50'
+          - 'text-gray-100'
+          - 'text-gray-200'
+          - 'text-gray-500'
+          - 'text-gray-600'
+          - 'text-gray-700'
+          - 'text-gray-800'
+          - 'text-gray-900'
+          - 'text-white'
+      - suggestion: "Use bg-container, bg-container-inset, bg-surface, bg-surface-inset, bg-inverse, button-bg-primary, button-bg-secondary, or one of their hover variants."
+        deprecated:
+          - 'bg-gray-50'
+          - 'bg-gray-100'
+          - 'bg-gray-200'
+          - 'bg-gray-500'
+          - 'bg-gray-600'
+          - 'bg-gray-700'
+          - 'bg-gray-800'
+          - 'bg-gray-900'
+          - 'bg-white'
+      - suggestion: "Use border-primary, border-secondary, border-tertiary, border-subdued, border-inverse, or border-destructive."
+        deprecated:
+          - 'border-gray-200'
+          - 'border-gray-300'
+          - 'border-gray-500'
+          - 'border-gray-700'
+          - 'border-gray-900'
+          - 'border-white'
