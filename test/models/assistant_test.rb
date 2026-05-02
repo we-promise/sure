@@ -226,11 +226,13 @@ class AssistantTest < ActiveSupport::TestCase
       "EXTERNAL_ASSISTANT_URL" => "http://localhost:18789/v1/chat",
       "EXTERNAL_ASSISTANT_TOKEN" => "test-token"
     ) do
+      assistant_message = pending_assistant_message
+
       assert_no_difference "AssistantMessage.count" do
-        assistant.respond_to(@message, assistant_message: pending_assistant_message)
+        assistant.respond_to(@message, assistant_message: assistant_message)
       end
 
-      response_msg = pending_assistant_message.reload
+      response_msg = assistant_message.reload
       assert_equal "Your net worth is $124,200.", response_msg.content
       assert_equal "ext-agent:main", response_msg.ai_model
     end
@@ -368,12 +370,13 @@ class AssistantTest < ActiveSupport::TestCase
       "EXTERNAL_ASSISTANT_TOKEN" => "test-token"
     ) do
       assistant = Assistant::External.new(@chat)
-      assistant.respond_to(@message, assistant_message: pending_assistant_message)
+      assistant_message = pending_assistant_message
+      assistant.respond_to(@message, assistant_message: assistant_message)
 
       @chat.reload
       assert_nil @chat.error
 
-      response = pending_assistant_message.reload
+      response = assistant_message.reload
       assert_equal "Based on your accounts, your net worth is $50,000.", response.content
       assert_equal "ext-agent:main", response.ai_model
     end
@@ -414,9 +417,10 @@ class AssistantTest < ActiveSupport::TestCase
       "EXTERNAL_ASSISTANT_URL" => "http://localhost:18789/v1/chat",
       "EXTERNAL_ASSISTANT_TOKEN" => "test-token"
     ) do
-      assistant.respond_to(@message, assistant_message: pending_assistant_message)
+      assistant_message = pending_assistant_message
+      assistant.respond_to(@message, assistant_message: assistant_message)
 
-      response = pending_assistant_message.reload
+      response = assistant_message.reload
       assert_equal "ext-agent:custom", response.ai_model
     end
   end
