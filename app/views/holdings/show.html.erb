@@ -68,7 +68,7 @@
                   </div>
                   <div class="flex justify-end gap-2">
                     <button type="button"
-                            class="inline-flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium text-primary bg-gray-200 hover:bg-gray-300 theme-dark:bg-gray-700 theme-dark:hover:bg-gray-600"
+                            class="inline-flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium text-primary button-bg-secondary-strong hover:button-bg-secondary-strong-hover"
                             data-action="click->holding-security-remap#toggle">
                       <%= t(".cancel") %>
                     </button>
@@ -181,7 +181,7 @@
                 </div>
                 <div class="flex justify-end gap-2 pt-2">
                   <button type="button"
-                          class="inline-flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium text-primary bg-gray-200 hover:bg-gray-300 theme-dark:bg-gray-700 theme-dark:hover:bg-gray-600"
+                          class="inline-flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium text-primary button-bg-secondary-strong hover:button-bg-secondary-strong-hover"
                           data-action="click->drawer-cost-basis#toggle">
                     <%= t("holdings.cost_basis_cell.cancel") %>
                   </button>
@@ -278,7 +278,7 @@
               <%= button_to t(".reset_to_provider"),
                   reset_security_holding_path(@holding),
                   method: :post,
-                  class: "inline-flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium text-primary bg-gray-200 hover:bg-gray-300 theme-dark:bg-gray-700 theme-dark:hover:bg-gray-600",
+                  class: "inline-flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium text-primary button-bg-secondary-strong hover:button-bg-secondary-strong-hover",
                   form: { data: { turbo: false } },
                   data: { turbo_confirm: {
                     title: t(".reset_confirm_title"),
@@ -297,7 +297,7 @@
               <%= button_to t(".market_data_sync_button"),
                   sync_prices_holding_path(@holding),
                   method: :post,
-                  class: "inline-flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium text-primary bg-gray-200 hover:bg-gray-300 theme-dark:bg-gray-700 theme-dark:hover:bg-gray-600",
+                  class: "inline-flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium text-primary button-bg-secondary-strong hover:button-bg-secondary-strong-hover",
                   data: { loading_button_target: "button" },
                   form: { data: {
                     controller: "loading-button",
@@ -315,7 +315,7 @@
               <%= button_to t(".unlock_cost_basis"),
                   unlock_cost_basis_holding_path(@holding),
                   method: :post,
-                  class: "inline-flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium text-primary bg-gray-200 hover:bg-gray-300 theme-dark:bg-gray-700 theme-dark:hover:bg-gray-600",
+                  class: "inline-flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium text-primary button-bg-secondary-strong hover:button-bg-secondary-strong-hover",
                   form: { data: { turbo: false } },
                   data: { turbo_confirm: { title: t(".unlock_confirm_title"), body: t(".unlock_confirm_body") } } %>
             </div>
