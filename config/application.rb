@@ -34,6 +34,12 @@ module Sure
       config.active_record.encryption = Rails.application.credentials.active_record_encryption
     end
 
+    if config.active_record.encryption.is_a?(Hash)
+      config.active_record.encryption[:support_unencrypted_data] = true
+    else
+      config.active_record.encryption.support_unencrypted_data = true
+    end
+
     config.view_component.preview_controller = "LookbooksController"
     config.lookbook.preview_display_options = {
       theme: [ "light", "dark" ] # available in view as params[:theme]

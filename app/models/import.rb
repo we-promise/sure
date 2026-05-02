@@ -29,6 +29,8 @@ class Import < ApplicationRecord
   belongs_to :family
   belongs_to :account, optional: true
 
+  encrypts :raw_file_str
+
   before_validation :set_default_number_format
   before_validation :ensure_utf8_encoding
 

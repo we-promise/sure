@@ -19,11 +19,7 @@ class SimplefinItem::Syncer
       if total_linked == 0
         sync.update!(status_text: "Discovering accounts (balances only)...") if sync.respond_to?(:status_text)
         # Pre-mark the sync as balances_only for runtime only (no persistence)
-        begin
-          sync.define_singleton_method(:balances_only?) { true }
-        rescue => e
-          Rails.logger.warn("SimplefinItem::Syncer: failed to attach balances_only? flag: #{e.class} - #{e.message}")
-        end
+        sync.balances_only = true
         SimplefinItem::Importer.new(simplefin_item, simplefin_provider: simplefin_item.simplefin_provider, sync: sync).import_balances_only
         finalize_setup_counts(sync)
         mark_completed(sync)
