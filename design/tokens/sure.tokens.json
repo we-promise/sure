@@ -21,7 +21,7 @@
     "success":     { "$value": "{color.green.600}",  "$type": "color", "$extensions": { "sure.dark": "{color.green.500}" } },
     "warning":     { "$value": "{color.yellow.600}", "$type": "color", "$extensions": { "sure.dark": "{color.yellow.400}" } },
     "destructive": { "$value": "{color.red.600}",    "$type": "color", "$extensions": { "sure.dark": "{color.red.400}" } },
-    "shadow":      { "$value": "{color.black|6%}",   "$type": "color", "$extensions": { "sure.dark": "{color.black|25%}" } },
+    "shadow":      { "$value": "{color.black|6%}",   "$type": "color", "$extensions": { "sure.dark": "{color.white|8%}" } },
 
     "gray": {
       "25":  { "$value": "#FAFAFA", "$type": "color" },
@@ -240,11 +240,11 @@
   },
 
   "shadow": {
-    "xs": { "$value": "0px 1px 2px 0px {color.black|6%}",   "$type": "shadow", "$extensions": { "sure.dark": "0px 1px 2px 0px {color.black|25%}" } },
-    "sm": { "$value": "0px 1px 6px 0px {color.black|6%}",   "$type": "shadow", "$extensions": { "sure.dark": "0px 1px 6px 0px {color.black|30%}" } },
-    "md": { "$value": "0px 4px 8px -2px {color.black|6%}",  "$type": "shadow", "$extensions": { "sure.dark": "0px 4px 8px -2px {color.black|35%}" } },
-    "lg": { "$value": "0px 12px 16px -4px {color.black|6%}","$type": "shadow", "$extensions": { "sure.dark": "0px 12px 16px -4px {color.black|40%}" } },
-    "xl": { "$value": "0px 20px 24px -4px {color.black|6%}","$type": "shadow", "$extensions": { "sure.dark": "0px 20px 24px -4px {color.black|50%}" } }
+    "xs": { "$value": "0px 1px 2px 0px {color.black|6%}",   "$type": "shadow", "$extensions": { "sure.dark": "0px 1px 2px 0px {color.white|8%}" } },
+    "sm": { "$value": "0px 1px 6px 0px {color.black|6%}",   "$type": "shadow", "$extensions": { "sure.dark": "0px 1px 6px 0px {color.white|8%}" } },
+    "md": { "$value": "0px 4px 8px -2px {color.black|6%}",  "$type": "shadow", "$extensions": { "sure.dark": "0px 4px 8px -2px {color.white|8%}" } },
+    "lg": { "$value": "0px 12px 16px -4px {color.black|6%}","$type": "shadow", "$extensions": { "sure.dark": "0px 12px 16px -4px {color.white|8%}" } },
+    "xl": { "$value": "0px 20px 24px -4px {color.black|6%}","$type": "shadow", "$extensions": { "sure.dark": "0px 20px 24px -4px {color.white|8%}" } }
   },
 
   "animate": {
