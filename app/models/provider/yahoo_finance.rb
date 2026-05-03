@@ -165,7 +165,7 @@ class Provider::YahooFinance < Provider
           )
         end
 
-        securities = prefer_indian_exchange(securities)
+        securities = deduplicate_dual_listings(securities)
 
         cache_result(cache_key, securities)
         securities
@@ -177,7 +177,7 @@ class Provider::YahooFinance < Provider
 
   def fetch_security_info(symbol:, exchange_operating_mic:)
     with_provider_response do
-      symbol = normalize_indian_symbol(symbol, exchange_operating_mic)
+      symbol = normalize_symbol(symbol, exchange_operating_mic)
 
       # quoteSummary endpoint requires cookie/crumb authentication
       throttle_request
@@ -267,7 +267,7 @@ class Provider::YahooFinance < Provider
 
   def fetch_security_prices(symbol:, exchange_operating_mic: nil, start_date:, end_date:)
     with_provider_response do
-      symbol = normalize_indian_symbol(symbol, exchange_operating_mic)
+      symbol = normalize_symbol(symbol, exchange_operating_mic)
       validate_date_params!(start_date, end_date)
       # Convert dates to Unix timestamps using UTC to ensure consistent epoch boundaries across timezones
       period1 = start_date.to_time.utc.to_i
@@ -292,7 +292,7 @@ class Provider::YahooFinance < Provider
       # Get currency from metadata
       meta_exchange = chart_data.dig("meta", "exchangeName") || ""
       raw_currency = chart_data.dig("meta", "currency")
-      raw_currency ||= INDIAN_EXCHANGE_CODES.include?(meta_exchange.upcase) ? "INR" : "USD"
+      raw_currency ||= default_currency_for_exchange(meta_exchange) || "USD"
 
       prices = []
       timestamps.each_with_index do |timestamp, index|
@@ -328,11 +328,21 @@ class Provider::YahooFinance < Provider
     #      Currency Normalization
     # ================================
 
-    # Yahoo Finance exchange codes that correspond to Indian exchanges
-    INDIAN_EXCHANGE_CODES = %w[NSE NSI BSE BOM].freeze
+    # Per-exchange configuration for Yahoo Finance.  Each entry maps an ISO
+    # MIC code to its Yahoo-specific symbol suffix, the default currency when
+    # Yahoo omits one, and an optional dual-listing group with a preference
+    # rank (lower = preferred).  Adding a new market is a one-line hash entry.
+    EXCHANGE_CONFIG = {
+      "XNSE" => { yahoo_suffix: ".NS", default_currency: "INR", dual_list_group: :india, preference_rank: 0 },
+      "XBOM" => { yahoo_suffix: ".BO", default_currency: "INR", dual_list_group: :india, preference_rank: 1 },
+    }.freeze
 
-    # Preferred exchange MIC when a security is dual-listed on NSE and BSE
-    INDIAN_EXCHANGE_PREFERENCE = %w[XNSE XBOM].freeze
+    # Reverse lookup: Yahoo exchange name (from chart metadata) → default currency.
+    # Built from EXCHANGE_CONFIG via map_exchange_mic so the raw Yahoo codes
+    # ("NSE", "BSE", etc.) resolve to the same config.
+    YAHOO_EXCHANGE_CURRENCY = EXCHANGE_CONFIG.each_with_object({}) do |(mic, cfg), h|
+      h[mic] = cfg[:default_currency]
+    end.freeze
 
     # Yahoo Finance sometimes returns currencies in minor units (pence, cents)
     # This is not part of ISO 4217 but is a convention used by financial data providers
@@ -353,35 +363,41 @@ class Provider::YahooFinance < Provider
       end
     end
 
-    # Normalizes a bare Indian equity symbol to its Yahoo Finance ticker form.
-    # NSE symbols get a ".NS" suffix (e.g. "RELIANCE" => "RELIANCE.NS").
-    # BSE symbols get a ".BO" suffix (e.g. "500325" => "500325.BO").
-    # Already-suffixed symbols are returned unchanged.
-    def normalize_indian_symbol(symbol, exchange_operating_mic)
+    # Appends the Yahoo Finance symbol suffix for exchanges that require one
+    # (e.g. XNSE → ".NS", XBOM → ".BO").  Already-suffixed symbols pass through.
+    def normalize_symbol(symbol, exchange_operating_mic)
       return symbol if symbol.include?(".")
-      case exchange_operating_mic
-      when "XNSE" then "#{symbol}.NS"
-      when "XBOM" then "#{symbol}.BO"
-      else symbol
-      end
+      cfg = EXCHANGE_CONFIG[exchange_operating_mic]
+      cfg ? "#{symbol}#{cfg[:yahoo_suffix]}" : symbol
     end
 
-    # De-duplicates Indian dual-listings (NSE + BSE) for the same company,
-    # preferring NSE (XNSE) for its higher liquidity.  Securities are grouped
-    # by name so that unrelated Indian tickers are preserved.
-    def prefer_indian_exchange(securities)
-      indian, non_indian = securities.partition { |s| INDIAN_EXCHANGE_PREFERENCE.include?(s.exchange_operating_mic) }
-      return securities if indian.empty?
+    # Returns the default currency for a Yahoo exchange name (e.g. "NSE" → "INR")
+    # by resolving through map_exchange_mic → EXCHANGE_CONFIG.  Returns nil for
+    # unknown exchanges so callers can fall back to their own default.
+    def default_currency_for_exchange(yahoo_exchange_name)
+      mic = map_exchange_mic(yahoo_exchange_name)
+      EXCHANGE_CONFIG.dig(mic, :default_currency)
+    end
 
-      preferred = indian.group_by(&:name).flat_map do |_name, group|
+    # De-duplicates dual-listed securities that share the same company name
+    # and dual_list_group (e.g. NSE + BSE for India), keeping the exchange
+    # with the lowest preference_rank.  Unrelated securities and exchanges
+    # outside any dual_list_group pass through unchanged.
+    def deduplicate_dual_listings(securities)
+      dual_listed, others = securities.partition { |s| EXCHANGE_CONFIG.dig(s.exchange_operating_mic, :dual_list_group) }
+      return securities if dual_listed.empty?
+
+      preferred = dual_listed.group_by { |s|
+        [ EXCHANGE_CONFIG[s.exchange_operating_mic][:dual_list_group], s.name ]
+      }.flat_map do |_key, group|
         if group.size > 1
-          [ group.min_by { |s| INDIAN_EXCHANGE_PREFERENCE.index(s.exchange_operating_mic) } ]
+          [ group.min_by { |s| EXCHANGE_CONFIG[s.exchange_operating_mic][:preference_rank] } ]
         else
           group
         end
       end
 
-      preferred + non_indian
+      preferred + others
     end
 
     # ================================
