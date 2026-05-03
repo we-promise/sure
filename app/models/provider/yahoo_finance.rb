@@ -165,7 +165,7 @@ class Provider::YahooFinance < Provider
           )
         end
 
-        securities = deduplicate_dual_listings(securities)
+        securities = deduplicate_dual_listings(securities) unless exchange_operating_mic.present?
 
         cache_result(cache_key, securities)
         securities
@@ -381,23 +381,22 @@ class Provider::YahooFinance < Provider
 
     # De-duplicates dual-listed securities that share the same company name
     # and dual_list_group (e.g. NSE + BSE for India), keeping the exchange
-    # with the lowest preference_rank.  Unrelated securities and exchanges
-    # outside any dual_list_group pass through unchanged.
+    # with the lowest preference_rank.  Preserves Yahoo's original relevance
+    # ordering by removing duplicates in-place rather than reordering.
     def deduplicate_dual_listings(securities)
-      dual_listed, others = securities.partition { |s| EXCHANGE_CONFIG.dig(s.exchange_operating_mic, :dual_list_group) }
-      return securities if dual_listed.empty?
+      dominated = Set.new
 
-      preferred = dual_listed.group_by { |s|
-        [ EXCHANGE_CONFIG[s.exchange_operating_mic][:dual_list_group], s.name.to_s.strip.downcase ]
-      }.flat_map do |_key, group|
-        if group.size > 1
-          [ group.min_by { |s| EXCHANGE_CONFIG[s.exchange_operating_mic][:preference_rank] } ]
-        else
-          group
+      securities
+        .select { |s| EXCHANGE_CONFIG.dig(s.exchange_operating_mic, :dual_list_group) }
+        .group_by { |s| [ EXCHANGE_CONFIG[s.exchange_operating_mic][:dual_list_group], s.name.to_s.strip.downcase ] }
+        .each_value do |group|
+          next unless group.size > 1
+          preferred = group.min_by { |s| EXCHANGE_CONFIG[s.exchange_operating_mic][:preference_rank] }
+          group.each { |s| dominated << s.object_id unless s.equal?(preferred) }
         end
-      end
 
-      preferred + others
+      return securities if dominated.empty?
+      securities.reject { |s| dominated.include?(s.object_id) }
     end
 
     # ================================
