@@ -388,7 +388,7 @@ class Provider::YahooFinance < Provider
       return securities if dual_listed.empty?
 
       preferred = dual_listed.group_by { |s|
-        [ EXCHANGE_CONFIG[s.exchange_operating_mic][:dual_list_group], s.name ]
+        [ EXCHANGE_CONFIG[s.exchange_operating_mic][:dual_list_group], s.name.to_s.strip.downcase ]
       }.flat_map do |_key, group|
         if group.size > 1
           [ group.min_by { |s| EXCHANGE_CONFIG[s.exchange_operating_mic][:preference_rank] } ]
