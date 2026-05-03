@@ -14,7 +14,7 @@ class AssistantMessageTest < ActiveSupport::TestCase
       progress_state: "analyzing_data"
     )
 
-    assert_equal "Analyzing your data...", message.progress_state_label
+    assert_equal I18n.t("chats.analyzing_data"), message.progress_state_label
   end
 
   test "mark_analyzing_data transitions pending messages" do
