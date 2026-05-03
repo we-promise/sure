@@ -122,6 +122,14 @@ class AssistantTest < ActiveSupport::TestCase
   end
 
   test "responds with tool function calls" do
+    assistant_message = AssistantMessage.create!(
+      chat: @chat,
+      content: "",
+      ai_model: "gpt-4.1",
+      status: :pending,
+      progress_state: "thinking"
+    )
+
     @assistant.expects(:get_model_provider).with("gpt-4.1").returns(@provider).once
 
     # Only first provider call executes function
@@ -172,16 +180,15 @@ class AssistantTest < ActiveSupport::TestCase
       assert_equal @expected_session_id, options[:session_id]
       assert_equal @expected_user_identifier, options[:user_identifier]
       assert_equal @expected_conversation_history, options[:messages]
-      pending_message = @chat.messages.where(type: "AssistantMessage", status: "pending").order(:created_at).last
-      assert_equal "thinking", pending_message.progress_state
+      assert_equal "thinking", assistant_message.progress_state
       options[:streamer].call(call1_response_chunk)
-      assert_equal "analyzing_data", pending_message.reload.progress_state
+      assert_equal "analyzing_data", assistant_message.reload.progress_state
       true
     end.returns(call1_response).once.in_sequence(sequence)
 
-    assert_difference "AssistantMessage.count", 1 do
-      @assistant.respond_to(@message)
-      message = @chat.messages.ordered.where(type: "AssistantMessage").last
+    assert_no_difference "AssistantMessage.count" do
+      @assistant.respond_to(@message, assistant_message: assistant_message)
+      message = assistant_message.reload
       assert_equal 1, message.tool_calls.size
     end
   end
