@@ -45,9 +45,12 @@ class Assistant::Builtin < Assistant::Base
       end
     end
 
+    responder.on(:tool_calls_started) do |_data|
+      assistant_message.mark_analyzing_data! if assistant_message.persisted?
+    end
+
     responder.on(:response) do |data|
       if data[:function_tool_calls].present?
-        assistant_message.mark_analyzing_data! if assistant_message.persisted?
         assistant_message.tool_calls = data[:function_tool_calls]
         latest_response_id = data[:id]
       else

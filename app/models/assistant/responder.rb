@@ -57,6 +57,8 @@ class Assistant::Responder
         end
       end
 
+      emit(:tool_calls_started, { id: response.id, function_requests: response.function_requests })
+
       function_tool_calls = function_tool_caller.fulfill_requests(response.function_requests)
 
       emit(:response, {
