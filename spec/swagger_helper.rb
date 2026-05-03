@@ -43,6 +43,48 @@ RSpec.configure do |config|
               total_pages: { type: :integer, minimum: 0 }
             }
           },
+          FamilyExportFile: {
+            type: :object,
+            required: %w[attached],
+            properties: {
+              attached: { type: :boolean },
+              byte_size: { type: :integer, nullable: true, minimum: 0 },
+              content_type: { type: :string, nullable: true }
+            }
+          },
+          FamilyExport: {
+            type: :object,
+            required: %w[id status filename downloadable file created_at updated_at],
+            properties: {
+              id: { type: :string, format: :uuid },
+              status: { type: :string, enum: %w[pending processing completed failed] },
+              filename: { type: :string },
+              downloadable: { type: :boolean },
+              download_path: { type: :string, nullable: true },
+              file: { '$ref' => '#/components/schemas/FamilyExportFile' },
+              created_at: { type: :string, format: :'date-time' },
+              updated_at: { type: :string, format: :'date-time' }
+            }
+          },
+          FamilyExportResponse: {
+            type: :object,
+            required: %w[data],
+            properties: {
+              data: { '$ref' => '#/components/schemas/FamilyExport' }
+            }
+          },
+          FamilyExportCollection: {
+            type: :object,
+            required: %w[data meta],
+            properties: {
+              data: {
+                type: :array,
+                maxItems: 100,
+                items: { '$ref' => '#/components/schemas/FamilyExport' }
+              },
+              meta: { '$ref' => '#/components/schemas/Pagination' }
+            }
+          },
           ErrorResponse: {
             type: :object,
             required: %w[error],

@@ -3,6 +3,9 @@
 class Api::V1::BaseController < ApplicationController
   include Doorkeeper::Rails::Helpers
 
+  UUID_PATTERN = /\A[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\z/i
+  private_constant :UUID_PATTERN
+
   # Skip regular session-based authentication for API
   skip_authentication
 
@@ -207,6 +210,10 @@ class Api::V1::BaseController < ApplicationController
     # Consistent JSON response method
     def render_json(data, status: :ok)
       render json: data, status: status
+    end
+
+    def valid_uuid?(value)
+      value.to_s.match?(UUID_PATTERN)
     end
 
     # Error handlers
