@@ -132,8 +132,12 @@ class AssistantTest < ActiveSupport::TestCase
 
     @assistant.expects(:get_model_provider).with("gpt-4.1").returns(@provider).once
 
-    # Only first provider call executes function
-    Assistant::Function::GetAccounts.any_instance.stubs(:call).returns("test value").once
+    # Only first provider call executes function, and the message should already
+    # be in analyzing state while that work is happening.
+    Assistant::Function::GetAccounts.any_instance.stubs(:call).returns do
+      assert_equal "analyzing_data", assistant_message.reload.progress_state
+      "test value"
+    end.once
 
     # Call #1: Function requests
     call1_response_chunk = provider_response_chunk(
@@ -180,7 +184,6 @@ class AssistantTest < ActiveSupport::TestCase
       assert_equal @expected_session_id, options[:session_id]
       assert_equal @expected_user_identifier, options[:user_identifier]
       assert_equal @expected_conversation_history, options[:messages]
-      assert_equal "thinking", assistant_message.progress_state
       options[:streamer].call(call1_response_chunk)
       assert_equal "analyzing_data", assistant_message.reload.progress_state
       true
