@@ -231,7 +231,7 @@ class Account::CurrentBalanceManagerTest < ActiveSupport::TestCase
       preserved_valuation = Valuation.find(original_id)
       assert_equal "reconciliation", preserved_valuation.kind
       assert_equal 1000, preserved_valuation.entry.amount
-      assert_equal "Manual balance update", preserved_valuation.entry.name
+      assert_equal Valuation.build_reconciliation_name(@linked_account.accountable_type), preserved_valuation.entry.name
 
       # A new current anchor should exist for today
       new_anchor = @linked_account.valuations.current_anchor.first

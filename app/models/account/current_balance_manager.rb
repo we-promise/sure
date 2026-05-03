@@ -97,18 +97,23 @@ class Account::CurrentBalanceManager
     # reconciliation valuation. This preserves the API-reported balance as a historical
     # waypoint that the ReverseCalculator uses for more accurate balance history.
     def set_current_balance_for_linked_account(balance)
-      # If an anchor exists from a previous day, preserve it as a reconciliation
-      # before replacing it with today's fresh anchor.
-      preserve_anchor_as_reconciliation_if_stale if current_anchor_valuation
+      changes_made = false
 
-      # Re-check: the memoized value was cleared if the anchor was converted
-      if current_anchor_valuation
-        changes_made = update_current_anchor(balance)
-        Result.new(success?: true, changes_made?: changes_made, error: nil)
-      else
-        create_current_anchor(balance)
-        Result.new(success?: true, changes_made?: true, error: nil)
+      ActiveRecord::Base.transaction do
+        # If an anchor exists from a previous day, preserve it as a reconciliation
+        # before replacing it with today's fresh anchor.
+        preserve_anchor_as_reconciliation_if_stale if current_anchor_valuation
+
+        # Re-check: the memoized value was cleared if the anchor was converted
+        if current_anchor_valuation
+          changes_made = update_current_anchor(balance)
+        else
+          create_current_anchor(balance)
+          changes_made = true
+        end
       end
+
+      Result.new(success?: true, changes_made?: changes_made, error: nil)
     end
 
     def current_anchor_valuation
@@ -127,7 +132,8 @@ class Account::CurrentBalanceManager
       ActiveRecord::Base.transaction do
         current_anchor_valuation.update!(kind: "reconciliation")
         entry.update!(name: Valuation.build_reconciliation_name(account.accountable_type))
-        Rails.logger.info("[AnchorRotation] Converted current_anchor to reconciliation for account #{account.id}, date=#{entry.date}, amount=#{entry.amount}")
+        Rails.logger.info("[AnchorRotation] Converted current_anchor to reconciliation for account #{account.id}, date=#{entry.date}, has_amount=#{entry.amount.present?}")
+        Rails.logger.debug("[AnchorRotation] Converted current_anchor to reconciliation for account #{account.id}, date=#{entry.date}, amount=#{entry.amount}")
       end
 
       # Clear memoized value so the next check creates a fresh current_anchor

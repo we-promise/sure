@@ -85,6 +85,69 @@ class Balance::ReverseCalculatorTest < ActiveSupport::TestCase
     )
   end
 
+  test "same-day flows are not ignored when processing current_anchor valuation" do
+    # This regression test ensures that the ReverseCalculator does not mistake the
+    # current_anchor valuation (on Date.current) for a reconciliation waypoint,
+    # which would cause it to reset the balance and ignore same-day transactions.
+    account = create_account_with_ledger(
+      account: { type: Depository, balance: 20000, cash_balance: 20000, currency: "USD" },
+      entries: [
+        { type: "current_anchor", date: Date.current, balance: 20000 },
+        # A transaction on the same day as the current anchor!
+        # If we incorrectly "reset" at Date.current, this flow is ignored.
+        { type: "transaction", date: Date.current, amount: -500 },
+        { type: "reconciliation", date: 2.days.ago, balance: 18000 },
+        { type: "opening_anchor", date: 4.days.ago, balance: 15000 }
+      ]
+    )
+
+    calculated = Balance::ReverseCalculator.new(account).calculate
+
+    assert_calculated_ledger_balances(
+      calculated_data: calculated,
+      expected_data: [
+        {
+          date: Date.current,
+          legacy_balances: { balance: 20000, cash_balance: 20000 },
+          # Since there was a $500 income (amount: -500) today, the START balance
+          # of today must be 19500 to end at 20000.
+          balances: { start: 19500, start_cash: 19500, start_non_cash: 0, end_cash: 20000, end_non_cash: 0, end: 20000 },
+          flows: { cash_inflows: 500, cash_outflows: 0 },
+          adjustments: 0
+        },
+        {
+          date: 1.day.ago,
+          legacy_balances: { balance: 19500, cash_balance: 19500 },
+          balances: { start: 19500, start_cash: 19500, start_non_cash: 0, end_cash: 19500, end_non_cash: 0, end: 19500 },
+          flows: 0,
+          adjustments: 0
+        },
+        {
+          date: 2.days.ago,
+          legacy_balances: { balance: 18000, cash_balance: 18000 },
+          balances: { start: 18000, start_cash: 18000, start_non_cash: 0, end_cash: 18000, end_non_cash: 0, end: 18000 },
+          flows: 0,
+          adjustments: 0
+        }, # Reset by Reconciliation waypoint
+        {
+          date: 3.days.ago,
+          legacy_balances: { balance: 18000, cash_balance: 18000 },
+          balances: { start: 18000, start_cash: 18000, start_non_cash: 0, end_cash: 18000, end_non_cash: 0, end: 18000 },
+          flows: 0,
+          adjustments: { cash_adjustments: 0, non_cash_adjustments: 0 }
+        },
+        {
+          date: 4.days.ago,
+          legacy_balances: { balance: 15000, cash_balance: 15000 },
+          balances: { start: 15000, start_cash: 15000, start_non_cash: 0, end_cash: 15000, end_non_cash: 0, end: 15000 },
+          flows: 0,
+          adjustments: 0
+        } # Opening anchor
+      ]
+    )
+  end
+
+
   # Investment account balances are made of two components: cash and holdings.
   test "anchors on investment accounts calculate cash balance dynamically based on holdings value" do
     account = create_account_with_ledger(

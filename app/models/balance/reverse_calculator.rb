@@ -24,7 +24,7 @@ class Balance::ReverseCalculator < Balance::BaseCalculator
           start_cash_balance = end_cash_balance
           start_non_cash_balance = end_non_cash_balance
           market_value_change = 0
-        elsif valuation
+        elsif valuation && valuation.entryable.reconciliation?
           # Reconciliation waypoint: reset to the known API-reported balance.
           # These waypoints are created by CurrentBalanceManager when it preserves
           # a stale current_anchor as a reconciliation before replacing it.
