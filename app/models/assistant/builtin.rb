@@ -47,6 +47,7 @@ class Assistant::Builtin < Assistant::Base
 
     responder.on(:response) do |data|
       if data[:function_tool_calls].present?
+        assistant_message.mark_analyzing_data! if assistant_message.persisted?
         assistant_message.tool_calls = data[:function_tool_calls]
         latest_response_id = data[:id]
       else
@@ -61,7 +62,7 @@ class Assistant::Builtin < Assistant::Base
         assistant_message.destroy
       else
         # Demote partially-streamed turns to `failed` so `Responder#conversation_history` excludes them.
-        assistant_message.update_columns(status: "failed")
+        assistant_message.update_columns(status: "failed", progress_state: nil)
       end
     end
     chat.add_error(e)

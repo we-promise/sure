@@ -110,7 +110,13 @@ class Chat < ApplicationRecord
 
   def ask_assistant_later(message)
     clear_error
-    pending = messages.create!(type: "AssistantMessage", content: "", ai_model: message.ai_model, status: :pending)
+    pending = messages.create!(
+      type: "AssistantMessage",
+      content: "",
+      ai_model: message.ai_model,
+      status: :pending,
+      progress_state: "thinking"
+    )
     AssistantResponseJob.perform_later(message, pending)
   end
 

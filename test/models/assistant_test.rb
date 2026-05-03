@@ -183,6 +183,7 @@ class AssistantTest < ActiveSupport::TestCase
     end
   end
 
+
   test "for_chat returns Builtin by default" do
     assert_instance_of Assistant::Builtin, Assistant.for_chat(@chat)
   end

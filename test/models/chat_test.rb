@@ -33,10 +33,12 @@ class ChatTest < ActiveSupport::TestCase
 
     assert_difference "@user.chats.count", 1 do
       chat = @user.chats.start!(prompt, model: "gpt-4.1")
+      pending_message = chat.messages.find_by!(type: "AssistantMessage", status: "pending")
 
       assert_equal 2, chat.messages.count
       assert_equal 1, chat.messages.where(type: "UserMessage").count
       assert_equal 1, chat.messages.where(type: "AssistantMessage", status: "pending").count
+      assert_equal "thinking", pending_message.progress_state
     end
   end
 
