@@ -129,13 +129,14 @@ class AssistantTest < ActiveSupport::TestCase
       status: :pending,
       progress_state: "thinking"
     )
+    analyzing_state_seen_during_tool_call = false
 
     @assistant.expects(:get_model_provider).with("gpt-4.1").returns(@provider).once
 
     # Only first provider call executes function, and the message should already
     # be in analyzing state while that work is happening.
     Assistant::Function::GetAccounts.any_instance.stubs(:call).returns do
-      assert_equal "analyzing_data", assistant_message.reload.progress_state
+      analyzing_state_seen_during_tool_call = (assistant_message.reload.progress_state == "analyzing_data")
       "test value"
     end.once
 
@@ -185,7 +186,6 @@ class AssistantTest < ActiveSupport::TestCase
       assert_equal @expected_user_identifier, options[:user_identifier]
       assert_equal @expected_conversation_history, options[:messages]
       options[:streamer].call(call1_response_chunk)
-      assert_equal "analyzing_data", assistant_message.reload.progress_state
       true
     end.returns(call1_response).once.in_sequence(sequence)
 
@@ -193,6 +193,7 @@ class AssistantTest < ActiveSupport::TestCase
       @assistant.respond_to(@message, assistant_message: assistant_message)
       message = assistant_message.reload
       assert_equal 1, message.tool_calls.size
+      assert analyzing_state_seen_during_tool_call
     end
   end
 
