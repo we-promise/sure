@@ -120,6 +120,26 @@ class SplitsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "create with excluded parameter sets child as excluded" do
+    assert_difference "Entry.count", 2 do
+      post transaction_split_path(@entry), params: {
+        split: {
+          splits: [
+            { name: "Groceries", amount: "-70", category_id: categories(:food_and_drink).id, excluded: "true" },
+            { name: "Household", amount: "-30", category_id: "", excluded: "false" }
+          ]
+        }
+      }
+    end
+
+    assert_redirected_to transactions_url
+    children = @entry.child_entries.order(:amount)
+    # Household has amount 30 (smaller), Groceries has amount 70 (larger)
+    # Household is NOT excluded, Groceries IS excluded
+    refute children.first.excluded?
+    assert children.last.excluded?
+  end
+
   # Edit action tests
   test "edit renders with existing children pre-filled" do
     @entry.split!([

@@ -1,5 +1,4 @@
 <%# locals: (transaction:, in_split_group: false) %>
-<% in_split_group = local_assigns.fetch(:in_split_group, false) %>
 
 <%= render DS::Menu.new(variant: "button") do |menu| %>
   <% menu.with_button(class: "block w-full overflow-hidden") do %>

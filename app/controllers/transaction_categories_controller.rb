@@ -21,7 +21,7 @@ class TransactionCategoriesController < ApplicationController
     transaction.lock_saved_attributes!
     @entry.lock_saved_attributes!
 
-    in_split_group = @entry.split_child? && Current.user.show_split_grouped? && params[:grouped] == "true"
+    in_split_group = helpers.in_split_group?(@entry, params[:grouped])
     respond_to do |format|
       format.html { redirect_back_or_to transaction_path(@entry) }
       format.turbo_stream do

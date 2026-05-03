@@ -1,5 +1,4 @@
 <%# locals: (entry:, balance_trend: nil, view_ctx: "global", in_split_group: false) %>
-<% in_split_group = local_assigns.fetch(:in_split_group, false) %>
 
 <% if entry.entryable.present? %>
   <%= render partial: entry.entryable.to_partial_path,

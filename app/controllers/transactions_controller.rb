@@ -142,7 +142,7 @@ class TransactionsController < ApplicationController
       respond_to do |format|
         format.html { redirect_back_or_to account_path(@entry.account), notice: "Transaction updated" }
         format.turbo_stream do
-          in_split_group = @entry.split_child? && Current.user.show_split_grouped? && params[:grouped] == "true"
+          in_split_group = helpers.in_split_group?(@entry, params[:grouped])
           render turbo_stream: [
             turbo_stream.replace(
               dom_id(@entry, :header),

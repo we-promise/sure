@@ -1,5 +1,4 @@
 <%# locals: (entry:, balance_trend: nil, view_ctx: "global", in_split_group: false) %>
-<% in_split_group = local_assigns.fetch(:in_split_group, false) %>
 
 <% transaction = entry.entryable %>
 
@@ -71,7 +70,7 @@
                     <% else %>
                       <%= link_to(
                             entry.name,
-                            in_split_group ? entry_path(entry, grouped: true) : entry_path(entry),
+                            entry_path(entry, grouped: in_split_group),
                             data: {
                               turbo_frame: "drawer",
                               turbo_prefetch: false
