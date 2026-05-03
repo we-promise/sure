@@ -85,7 +85,7 @@
                         method: :patch,
                         data: { controller: "auto-submit-form" } do |f| %>
               <%= f.hidden_field "entry[excluded]", value: !@transaction.entry.excluded %>
-              <%= f.hidden_field :grouped, value: params[:grouped] %>
+              <%= hidden_field_tag :grouped, params[:grouped] %>
               <%= f.check_box "entry[excluded]",
                           checked: @transaction.entry.excluded,
                           class: "checkbox checkbox--light",

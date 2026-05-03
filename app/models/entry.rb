@@ -392,7 +392,7 @@ class Entry < ApplicationRecord
           name: split_attrs[:name],
           amount: split_attrs[:amount],
           currency: currency,
-          excluded: split_attrs[:excluded],
+          excluded: split_attrs[:excluded] || false,
           entryable: child_transaction
         )
       end
