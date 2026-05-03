@@ -216,6 +216,28 @@ class Api::V1::BaseController < ApplicationController
       value.to_s.match?(UUID_PATTERN)
     end
 
+    def safe_page_param
+      page = params[:page].to_i
+      page > 0 ? page : 1
+    end
+
+    def safe_per_page_param
+      per_page = params[:per_page].to_i
+      case per_page
+      when 1..100   then per_page
+      when (101..)  then 100
+      else               25
+      end
+    end
+
+    def render_validation_error(message)
+      render_json({
+        error: "validation_failed",
+        message: message,
+        errors: [ message ]
+      }, status: :unprocessable_entity)
+    end
+
     # Error handlers
     def handle_not_found(exception)
       Rails.logger.warn "API Record Not Found: #{exception.message}"

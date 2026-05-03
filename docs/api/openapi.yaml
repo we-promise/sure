@@ -740,6 +740,124 @@ components:
               type: integer
             per_page:
               type: integer
+    RuleRun:
+      type: object
+      required:
+      - id
+      - rule_id
+      - rule_name
+      - execution_type
+      - status
+      - transactions_queued
+      - transactions_processed
+      - transactions_modified
+      - pending_jobs_count
+      - executed_at
+      - rule
+      - created_at
+      - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        rule_id:
+          type: string
+          format: uuid
+        rule_name:
+          type: string
+          nullable: true
+        execution_type:
+          type: string
+          enum:
+          - manual
+          - scheduled
+        status:
+          type: string
+          enum:
+          - pending
+          - success
+          - failed
+        transactions_queued:
+          type: integer
+          minimum: 0
+        transactions_processed:
+          type: integer
+          minimum: 0
+        transactions_modified:
+          type: integer
+          minimum: 0
+        pending_jobs_count:
+          type: integer
+          minimum: 0
+        executed_at:
+          type: string
+          format: date-time
+        error_message:
+          type: string
+          nullable: true
+        rule:
+          type: object
+          nullable: true
+          required:
+          - id
+          - resource_type
+          - active
+          properties:
+            id:
+              type: string
+              format: uuid
+            name:
+              type: string
+              nullable: true
+            resource_type:
+              type: string
+            active:
+              type: boolean
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    RuleRunResponse:
+      type: object
+      required:
+      - data
+      properties:
+        data:
+          "$ref": "#/components/schemas/RuleRun"
+    RuleRunCollection:
+      type: object
+      required:
+      - data
+      - meta
+      properties:
+        data:
+          type: array
+          items:
+            "$ref": "#/components/schemas/RuleRun"
+        meta:
+          type: object
+          required:
+          - current_page
+          - total_pages
+          - total_count
+          - per_page
+          properties:
+            current_page:
+              type: integer
+            next_page:
+              type: integer
+              nullable: true
+            prev_page:
+              type: integer
+              nullable: true
+            total_pages:
+              type: integer
+            total_count:
+              type: integer
+            per_page:
+              type: integer
     Transfer:
       type: object
       required:
@@ -3336,6 +3454,133 @@ paths:
                 "$ref": "#/components/schemas/ErrorResponse"
         '404':
           description: recurring transaction not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+  "/api/v1/rule_runs":
+    get:
+      summary: List rule runs
+      description: List rule run history for the authenticated user family.
+      tags:
+      - Rule Runs
+      security:
+      - apiKeyAuth: []
+      parameters:
+      - name: page
+        in: query
+        required: false
+        description: 'Page number (default: 1)'
+        schema:
+          type: integer
+      - name: per_page
+        in: query
+        required: false
+        description: 'Items per page (default: 25, max: 100)'
+        schema:
+          type: integer
+      - name: rule_id
+        in: query
+        required: false
+        description: Filter by rule ID
+        schema:
+          type: string
+          format: uuid
+      - name: status
+        in: query
+        required: false
+        description: Filter by run status
+        schema:
+          type: string
+          enum:
+          - pending
+          - success
+          - failed
+      - name: execution_type
+        in: query
+        required: false
+        description: Filter by execution type
+        schema:
+          type: string
+          enum:
+          - manual
+          - scheduled
+      - name: start_executed_at
+        in: query
+        required: false
+        description: Filter runs executed at or after this timestamp
+        schema:
+          type: string
+          format: date-time
+      - name: end_executed_at
+        in: query
+        required: false
+        description: Filter runs executed at or before this timestamp
+        schema:
+          type: string
+          format: date-time
+      responses:
+        '200':
+          description: rule runs listed
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/RuleRunCollection"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: insufficient scope
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '422':
+          description: invalid filter
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+  "/api/v1/rule_runs/{id}":
+    parameters:
+    - name: id
+      in: path
+      required: true
+      description: Rule run ID
+      schema:
+        type: string
+        format: uuid
+    get:
+      summary: Retrieve a rule run
+      description: Retrieve one rule run from the authenticated user family.
+      tags:
+      - Rule Runs
+      security:
+      - apiKeyAuth: []
+      responses:
+        '200':
+          description: rule run retrieved
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/RuleRunResponse"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: insufficient scope
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '404':
+          description: rule run not found
           content:
             application/json:
               schema:
