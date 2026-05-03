@@ -51,7 +51,10 @@ class Assistant::Builtin < Assistant::Base
 
     responder.on(:response) do |data|
       if data[:function_tool_calls].present?
-        assistant_message.tool_calls = data[:function_tool_calls]
+        data[:function_tool_calls].each do |tool_call|
+          tool_call.message = assistant_message
+          tool_call.save!
+        end
         latest_response_id = data[:id]
       else
         chat.update_latest_response!(data[:id])
