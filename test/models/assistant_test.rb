@@ -173,6 +173,14 @@ class AssistantTest < ActiveSupport::TestCase
       assert_equal @expected_session_id, options[:session_id]
       assert_equal @expected_user_identifier, options[:user_identifier]
       assert_equal @expected_conversation_history, options[:messages]
+      options[:streamer].call(call1_response_chunk)
+      true
+    end.returns(call1_response).once.in_sequence(sequence)
+
+    @provider.expects(:chat_response).with do |message, **options|
+      assert_equal @expected_session_id, options[:session_id]
+      assert_equal @expected_user_identifier, options[:user_identifier]
+      assert_equal @expected_conversation_history, options[:messages]
       call2_text_chunks.each do |text_chunk|
         options[:streamer].call(text_chunk)
       end
@@ -180,14 +188,6 @@ class AssistantTest < ActiveSupport::TestCase
       options[:streamer].call(call2_response_chunk)
       true
     end.returns(call2_response).once.in_sequence(sequence)
-
-    @provider.expects(:chat_response).with do |message, **options|
-      assert_equal @expected_session_id, options[:session_id]
-      assert_equal @expected_user_identifier, options[:user_identifier]
-      assert_equal @expected_conversation_history, options[:messages]
-      options[:streamer].call(call1_response_chunk)
-      true
-    end.returns(call1_response).once.in_sequence(sequence)
 
     assert_no_difference "AssistantMessage.count" do
       @assistant.respond_to(@message, assistant_message: assistant_message)
