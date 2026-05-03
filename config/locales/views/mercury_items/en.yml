@@ -23,6 +23,7 @@ en:
       no_api_token: Mercury API token not found. Please configure it in Provider Settings.
       partial_invalid: "Successfully linked %{created_count} account(s), %{already_linked_count} were already linked, %{invalid_count} account(s) had invalid names"
       partial_success: "Successfully linked %{created_count} account(s). %{already_linked_count} account(s) were already linked: %{already_linked_names}"
+      select_connection: Choose a Mercury connection before linking accounts.
       success:
         one: "Successfully linked %{count} account"
         other: "Successfully linked %{count} accounts"
@@ -42,6 +43,36 @@ en:
       syncing: Syncing...
       total: Total
       unlinked: Unlinked
+    provider_panel:
+      accounts_link: Accounts
+      add_connection: Add Mercury connection
+      base_url_label: Base URL (optional)
+      base_url_placeholder: https://api.mercury.com/api/v1 (default)
+      configured_html: "Configured and ready to use. Visit the %{accounts_link} tab to manage and set up accounts."
+      connection_name_label: Connection name
+      connection_name_placeholder: Business checking
+      default_connection_name: Mercury Connection
+      disconnect_confirm: "Disconnect %{name}?"
+      instructions:
+        copy_token_html: "Copy the <strong>full token</strong> (including the <code>secret-token:</code> prefix) and add it as a named connection below"
+        create_token: Create a new API token with "Read Only" access
+        open_tokens: Go to Settings > Developer > API Tokens
+        sign_in_html: "Visit %{link} and log in to the account you want to connect"
+        whitelist_ip_html: "<strong>Important:</strong> Add your server's IP address to the token's whitelist"
+      keep_token_placeholder: Leave blank to keep the current token
+      not_configured: Not configured
+      sandbox_note_html: "Use a separate named connection for each Mercury login/API token you want to sync. For sandbox testing, use <code>https://api-sandbox.mercury.com/api/v1</code> as the Base URL. Mercury requires IP whitelisting - make sure to add your IP in the Mercury dashboard."
+      setup_accounts: Set up accounts
+      setup_title: "Setup instructions:"
+      sync: Sync
+      token_label: Token
+      token_placeholder: Paste token here
+      update_connection: Update connection
+    provider_connection:
+      default_description: Connect to your bank via Mercury
+      default_name: Mercury
+      description: "Connect using %{name}"
+      name: "Mercury - %{name}"
     select_accounts:
       accounts_selected: accounts selected
       api_error: "API error: %{message}"
@@ -53,6 +84,7 @@ en:
       no_api_token: Mercury API token is not configured. Please configure it in Settings.
       no_credentials_configured: Please configure your Mercury API token first in Provider Settings.
       no_name_placeholder: "(No name)"
+      select_connection: Choose a Mercury connection in Provider Settings.
       title: Select Mercury Accounts
     select_existing_account:
       account_already_linked: This account is already linked to a provider
@@ -67,6 +99,7 @@ en:
       no_api_token: Mercury API token is not configured. Please configure it in Settings.
       no_credentials_configured: Please configure your Mercury API token first in Provider Settings.
       no_name_placeholder: "(No name)"
+      select_connection: Choose a Mercury connection in Provider Settings.
       title: "Link %{account_name} with Mercury"
     link_existing_account:
       account_already_linked: This account is already linked to a provider
@@ -76,6 +109,7 @@ en:
       mercury_account_not_found: Mercury account not found
       missing_parameters: Missing required parameters
       no_api_token: Mercury API token not found. Please configure it in Provider Settings.
+      select_connection: Choose a Mercury connection before linking accounts.
       success: "Successfully linked %{account_name} with Mercury"
     setup_accounts:
       account_type_label: "Account Type:"
