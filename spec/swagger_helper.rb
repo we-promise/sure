@@ -274,6 +274,29 @@ RSpec.configure do |config|
               pagination: { '$ref' => '#/components/schemas/Pagination' }
             }
           },
+          FamilySettings: {
+            type: :object,
+            required: %w[id currency locale date_format month_start_day moniker default_account_sharing custom_enabled_currencies enabled_currencies created_at updated_at],
+            properties: {
+              id: { type: :string, format: :uuid },
+              name: { type: :string, nullable: true },
+              currency: { type: :string },
+              locale: { type: :string },
+              date_format: { type: :string },
+              country: { type: :string, nullable: true },
+              timezone: { type: :string, nullable: true },
+              month_start_day: { type: :integer, minimum: 1, maximum: 28 },
+              moniker: { type: :string, enum: Family::MONIKERS },
+              default_account_sharing: { type: :string, enum: %w[shared private] },
+              custom_enabled_currencies: { type: :boolean },
+              enabled_currencies: {
+                type: :array,
+                items: { type: :string }
+              },
+              created_at: { type: :string, format: :'date-time' },
+              updated_at: { type: :string, format: :'date-time' }
+            }
+          },
           Category: {
             type: :object,
             required: %w[id name color icon],

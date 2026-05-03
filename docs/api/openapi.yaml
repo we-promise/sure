@@ -401,6 +401,65 @@ components:
             "$ref": "#/components/schemas/AccountDetail"
         pagination:
           "$ref": "#/components/schemas/Pagination"
+    FamilySettings:
+      type: object
+      required:
+      - id
+      - currency
+      - locale
+      - date_format
+      - month_start_day
+      - moniker
+      - default_account_sharing
+      - custom_enabled_currencies
+      - enabled_currencies
+      - created_at
+      - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          nullable: true
+        currency:
+          type: string
+        locale:
+          type: string
+        date_format:
+          type: string
+        country:
+          type: string
+          nullable: true
+        timezone:
+          type: string
+          nullable: true
+        month_start_day:
+          type: integer
+          minimum: 1
+          maximum: 28
+        moniker:
+          type: string
+          enum:
+          - Family
+          - Group
+        default_account_sharing:
+          type: string
+          enum:
+          - shared
+          - private
+        custom_enabled_currencies:
+          type: boolean
+        enabled_currencies:
+          type: array
+          items:
+            type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
     Category:
       type: object
       required:
@@ -2484,6 +2543,33 @@ paths:
                 "$ref": "#/components/schemas/ErrorResponse"
         '409':
           description: export not ready
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+  "/api/v1/family_settings":
+    get:
+      summary: Retrieve family settings
+      description: Retrieve a read-only snapshot of non-secret family configuration.
+      tags:
+      - Family Settings
+      security:
+      - apiKeyAuth: []
+      responses:
+        '200':
+          description: family settings retrieved
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FamilySettings"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: insufficient scope
           content:
             application/json:
               schema:
