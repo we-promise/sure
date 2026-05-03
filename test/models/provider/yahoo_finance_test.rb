@@ -410,6 +410,11 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
     assert_equal "AAPL", @provider.send(:normalize_symbol, "AAPL", nil)
   end
 
+  test "normalize_symbol appends suffix to dotted symbols that do not already end with the configured suffix" do
+    assert_equal "BRK.A.NS", @provider.send(:normalize_symbol, "BRK.A", "XNSE")
+    assert_equal "BRK.B.BO", @provider.send(:normalize_symbol, "BRK.B", "XBOM")
+  end
+
   # ================================
   #  default_currency_for_exchange Tests
   # ================================

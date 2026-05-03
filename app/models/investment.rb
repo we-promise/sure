@@ -60,7 +60,7 @@ class Investment < ApplicationRecord
     "apy" => { short: "APY", long: "Atal Pension Yojana", region: "in", tax_treatment: :tax_advantaged },
     "life_insurance" => { short: "Life Insurance", long: "Life Insurance", region: "in", tax_treatment: :tax_advantaged },
     # Equity / market-linked
-    "demat" => { short: "Demat A/C", long: "Demat Account", region: "in", tax_treatment: :taxable },
+    "indian_stocks" => { short: "Indian Stocks", long: "Indian Stocks (Demat)", region: "in", tax_treatment: :taxable },
     "indian_equity" => { short: "Indian Equity", long: "Indian Equity", region: "in", tax_treatment: :taxable },
     "indian_etf" => { short: "Indian ETF", long: "Indian ETF", region: "in", tax_treatment: :taxable },
     # Fixed-income / small-savings
@@ -121,7 +121,8 @@ class Investment < ApplicationRecord
       "CAD" => "ca",
       "AUD" => "au",
       "EUR" => "eu",
-      "CHF" => "eu"
+      "CHF" => "eu",
+      "INR" => "in"
     }.freeze
 
     # Returns subtypes grouped by region for use with grouped_options_for_select

@@ -8,11 +8,9 @@ class Property < ApplicationRecord
     "townhouse" => { short: "Townhouse", long: "Townhouse" },
     "investment_property" => { short: "Investment Property", long: "Investment Property" },
     "second_home" => { short: "Second Home", long: "Second Home" },
-    # India
     "apartment" => { short: "Apartment", long: "Apartment" },
     "plot" => { short: "Plot", long: "Plot / Land" },
     "commercial" => { short: "Commercial", long: "Commercial Property" },
-    "rented" => { short: "Rented", long: "Rented Property" },
     "agri_land" => { short: "Agri Land", long: "Agricultural Land" }
   }.freeze
 

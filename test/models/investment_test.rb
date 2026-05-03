@@ -146,8 +146,8 @@ class InvestmentTest < ActiveSupport::TestCase
     end
   end
 
-  test "India equity and demat subtypes are taxable" do
-    %w[demat indian_equity indian_etf].each do |subtype|
+  test "India equity subtypes are taxable" do
+    %w[indian_stocks indian_equity indian_etf].each do |subtype|
       investment = Investment.new(subtype: subtype)
       assert_equal :taxable, investment.tax_treatment, "Expected #{subtype} to be taxable"
     end
@@ -166,10 +166,10 @@ class InvestmentTest < ActiveSupport::TestCase
     end
   end
 
-  test "subtypes_grouped_for_select places India region last" do
+  test "subtypes_grouped_for_select places India region first for INR users" do
     grouped = Investment.subtypes_grouped_for_select(currency: "INR")
     assert grouped.any?, "grouped should not be empty"
-    last_group_label = grouped.last[0]
-    assert_equal I18n.t("accounts.subtype_regions.in"), last_group_label
+    first_group_label = grouped.first[0]
+    assert_equal I18n.t("accounts.subtype_regions.in"), first_group_label
   end
 end

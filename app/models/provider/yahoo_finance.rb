@@ -1,3 +1,5 @@
+require "set"
+
 class Provider::YahooFinance < Provider
   include ExchangeRateConcept, SecurityConcept
   extend SslConfigurable
@@ -231,6 +233,7 @@ class Provider::YahooFinance < Provider
 
   def fetch_security_price(symbol:, exchange_operating_mic: nil, date:)
     with_provider_response do
+      symbol = normalize_symbol(symbol, exchange_operating_mic)
       cache_key = "security_price_#{symbol}_#{exchange_operating_mic}_#{date}"
       if cached_result = get_cached_result(cache_key)
         cached_result
@@ -337,13 +340,6 @@ class Provider::YahooFinance < Provider
       "XBOM" => { yahoo_suffix: ".BO", default_currency: "INR", dual_list_group: :india, preference_rank: 1 },
     }.freeze
 
-    # Reverse lookup: Yahoo exchange name (from chart metadata) → default currency.
-    # Built from EXCHANGE_CONFIG via map_exchange_mic so the raw Yahoo codes
-    # ("NSE", "BSE", etc.) resolve to the same config.
-    YAHOO_EXCHANGE_CURRENCY = EXCHANGE_CONFIG.each_with_object({}) do |(mic, cfg), h|
-      h[mic] = cfg[:default_currency]
-    end.freeze
-
     # Yahoo Finance sometimes returns currencies in minor units (pence, cents)
     # This is not part of ISO 4217 but is a convention used by financial data providers
     # Mapping of Yahoo Finance minor unit codes to standard currency codes and conversion multipliers
@@ -366,9 +362,9 @@ class Provider::YahooFinance < Provider
     # Appends the Yahoo Finance symbol suffix for exchanges that require one
     # (e.g. XNSE → ".NS", XBOM → ".BO").  Already-suffixed symbols pass through.
     def normalize_symbol(symbol, exchange_operating_mic)
-      return symbol if symbol.include?(".")
-      cfg = EXCHANGE_CONFIG[exchange_operating_mic]
-      cfg ? "#{symbol}#{cfg[:yahoo_suffix]}" : symbol
+      suffix = EXCHANGE_CONFIG.dig(exchange_operating_mic, :yahoo_suffix)
+      return symbol if suffix.nil? || symbol.end_with?(suffix)
+      "#{symbol}#{suffix}"
     end
 
     # Returns the default currency for a Yahoo exchange name (e.g. "NSE" → "INR")
