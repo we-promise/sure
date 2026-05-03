@@ -28,6 +28,7 @@ class User < ApplicationRecord
   has_many :sessions, dependent: :destroy
   has_many :chats, dependent: :destroy
   has_many :api_keys, dependent: :destroy
+  has_many :webauthn_credentials, dependent: :destroy
   has_many :mobile_devices, dependent: :destroy
   has_many :invitations, foreign_key: :inviter_id, dependent: :destroy
   has_many :impersonator_support_sessions, class_name: "ImpersonationSession", foreign_key: :impersonator_id, dependent: :destroy
@@ -227,11 +228,14 @@ class User < ApplicationRecord
   end
 
   def disable_mfa!
-    update!(
-      otp_secret: nil,
-      otp_required: false,
-      otp_backup_codes: []
-    )
+    transaction do
+      update!(
+        otp_secret: nil,
+        otp_required: false,
+        otp_backup_codes: []
+      )
+      webauthn_credentials.destroy_all
+    end
   end
 
   def verify_otp?(code)
@@ -243,6 +247,20 @@ class User < ApplicationRecord
   def provisioning_uri
     return nil unless otp_secret.present?
     totp.provisioning_uri(email)
+  end
+
+  def ensure_webauthn_id!
+    return webauthn_id if webauthn_id.present?
+
+    with_lock do
+      update!(webauthn_id: WebAuthn.generate_user_id) unless webauthn_id.present?
+    end
+
+    webauthn_id
+  end
+
+  def webauthn_enabled?
+    otp_required? && webauthn_credentials.exists?
   end
 
   def onboarded?

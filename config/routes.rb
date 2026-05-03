@@ -118,6 +118,8 @@ Rails.application.routes.draw do
   resource :mfa, controller: "mfa", only: [ :new, :create ] do
     get :verify
     post :verify, to: "mfa#verify_code"
+    post :webauthn_options
+    post :verify_webauthn
     delete :disable
   end
 
@@ -195,6 +197,9 @@ Rails.application.routes.draw do
     end
     resource :payment, only: :show
     resource :security, only: :show
+    resources :webauthn_credentials, only: %i[create destroy] do
+      post :options, on: :collection
+    end
     resources :sso_identities, only: :destroy
     resource :api_key, only: [ :show, :new, :create, :destroy ]
     resource :ai_prompts, only: :show
