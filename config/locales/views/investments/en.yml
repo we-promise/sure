@@ -107,9 +107,9 @@ en:
       apy:
         short: APY
         long: Atal Pension Yojana
-      demat:
-        short: Demat A/C
-        long: Demat Account
+      indian_stocks:
+        short: Indian Stocks
+        long: Indian Stocks (Demat)
       indian_equity:
         short: Indian Equity
         long: Indian Equity

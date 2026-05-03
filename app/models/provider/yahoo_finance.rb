@@ -337,7 +337,7 @@ class Provider::YahooFinance < Provider
     # rank (lower = preferred).  Adding a new market is a one-line hash entry.
     EXCHANGE_CONFIG = {
       "XNSE" => { yahoo_suffix: ".NS", default_currency: "INR", dual_list_group: :india, preference_rank: 0 },
-      "XBOM" => { yahoo_suffix: ".BO", default_currency: "INR", dual_list_group: :india, preference_rank: 1 },
+      "XBOM" => { yahoo_suffix: ".BO", default_currency: "INR", dual_list_group: :india, preference_rank: 1 }
     }.freeze
 
     # Yahoo Finance sometimes returns currencies in minor units (pence, cents)
