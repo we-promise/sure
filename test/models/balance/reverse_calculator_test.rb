@@ -28,29 +28,21 @@ class Balance::ReverseCalculatorTest < ActiveSupport::TestCase
     )
   end
 
-  # An artificial constraint we put on the reverse sync because it's confusing in both the code and the UI
-  # to think about how an absolute "Valuation" affects balances when syncing backwards. Furthermore, since
-  # this is typically a Plaid sync, we expect Plaid to provide us the history.
-  # Note: while "reconciliation" valuations don't affect balance, `current_anchor` and `opening_anchor` do.
-  test "reconciliation valuations do not affect balance for reverse syncs" do
+  # Reconciliation valuations act as waypoints during reverse syncs. This ensures that
+  # historical balances accurately reflect the API-reported values, even if the transaction
+  # history is incomplete or missing.
+  test "reconciliation valuations act as waypoints that reset balance for reverse syncs" do
     account = create_account_with_ledger(
       account: { type: Depository, balance: 20000, cash_balance: 20000, currency: "USD" },
       entries: [
         { type: "current_anchor", date: Date.current, balance: 20000 },
-        { type: "reconciliation", date: 1.day.ago, balance: 17000 }, # Ignored
-        { type: "reconciliation", date: 2.days.ago, balance: 17000 }, # Ignored
+        { type: "reconciliation", date: 2.days.ago, balance: 17000 }, # Waypoint!
         { type: "opening_anchor", date: 4.days.ago, balance: 15000 }
       ]
     )
 
     calculated = Balance::ReverseCalculator.new(account).calculate
 
-    # The "opening anchor" works slightly differently than most would expect. Since it's an artificial
-    # value provided by the user to set the date/balance of the start of the account, we must assume
-    # that there are "missing" entries following it. Because of this, we cannot "carry forward" this value
-    # like we do for a "forward sync". We simply sync backwards normally, then set the balance on opening
-    # date equal to this anchor. This is not "ideal", but is a constraint put on us since we cannot guarantee
-    # a 100% full entries history.
     assert_calculated_ledger_balances(
       calculated_data: calculated,
       expected_data: [
@@ -67,21 +59,21 @@ class Balance::ReverseCalculatorTest < ActiveSupport::TestCase
           balances: { start: 20000, start_cash: 20000, start_non_cash: 0, end_cash: 20000, end_non_cash: 0, end: 20000 },
           flows: 0,
           adjustments: 0
-        },
+        }, # Derived from Current anchor
         {
           date: 2.days.ago,
-          legacy_balances: { balance: 20000, cash_balance: 20000 },
-          balances: { start: 20000, start_cash: 20000, start_non_cash: 0, end_cash: 20000, end_non_cash: 0, end: 20000 },
+          legacy_balances: { balance: 17000, cash_balance: 17000 },
+          balances: { start: 17000, start_cash: 17000, start_non_cash: 0, end_cash: 17000, end_non_cash: 0, end: 17000 },
           flows: 0,
           adjustments: 0
-        },
+        }, # Reset by Reconciliation waypoint
         {
           date: 3.days.ago,
-          legacy_balances: { balance: 20000, cash_balance: 20000 },
-          balances: { start: 20000, start_cash: 20000, start_non_cash: 0, end_cash: 20000, end_non_cash: 0, end: 20000 },
+          legacy_balances: { balance: 17000, cash_balance: 17000 },
+          balances: { start: 17000, start_cash: 17000, start_non_cash: 0, end_cash: 17000, end_non_cash: 0, end: 17000 },
           flows: 0,
           adjustments: { cash_adjustments: 0, non_cash_adjustments: 0 }
-        },
+        }, # Derived from Reconciliation waypoint
         {
           date: 4.days.ago,
           legacy_balances: { balance: 15000, cash_balance: 15000 },
