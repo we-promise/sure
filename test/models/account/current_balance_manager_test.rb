@@ -232,6 +232,7 @@ class Account::CurrentBalanceManagerTest < ActiveSupport::TestCase
       assert_equal "reconciliation", preserved_valuation.kind
       assert_equal 1000, preserved_valuation.entry.amount
       assert_equal Valuation.build_reconciliation_name(@linked_account.accountable_type), preserved_valuation.entry.name
+      assert_equal Date.yesterday, preserved_valuation.entry.date
 
       # A new current anchor should exist for today
       new_anchor = @linked_account.valuations.current_anchor.first
