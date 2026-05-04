@@ -1,6 +1,9 @@
 class Entry < ApplicationRecord
   include Monetizable, Enrichable
 
+  TRUTHY_VALUES = [ true, "true", "1", 1 ].freeze
+  private_constant :TRUTHY_VALUES
+
   attr_accessor :unsplitting
 
   monetize :amount
@@ -392,7 +395,7 @@ class Entry < ApplicationRecord
           name: split_attrs[:name],
           amount: split_attrs[:amount],
           currency: currency,
-          excluded: [true, "true", "1", 1].include?(split_attrs[:excluded]),
+          excluded: TRUTHY_VALUES.include?(split_attrs[:excluded]),
           entryable: child_transaction
         )
       end
