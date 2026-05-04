@@ -445,6 +445,54 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
     end
   end
 
+  test "streaming surfaces a useful error when the stream ends with response.failed and no completion" do
+    fake_responses = mock
+    fake_client = mock
+    fake_client.stubs(:responses).returns(fake_responses)
+    @subject.stubs(:client).returns(fake_client)
+
+    fake_responses.expects(:create).with do |*_args, **kwargs|
+      stream = kwargs.dig(:parameters, :stream)
+      stream.call({
+        "type" => "response.failed",
+        "response" => {
+          "error" => { "message" => "Previous response not found", "code" => "previous_response_not_found" }
+        }
+      })
+      true
+    end.returns(nil)
+
+    response = @subject.chat_response(
+      "hi",
+      model: @subject_model,
+      streamer: proc { |_| }
+    )
+
+    assert_not response.success?
+    assert_kind_of Provider::Openai::Error, response.error
+    assert_match(/Previous response not found/, response.error.message)
+    assert_match(/previous_response_not_found/, response.error.message)
+  end
+
+  test "streaming surfaces a useful error when the stream ends with no response and no error event" do
+    fake_responses = mock
+    fake_client = mock
+    fake_client.stubs(:responses).returns(fake_responses)
+    @subject.stubs(:client).returns(fake_client)
+
+    fake_responses.expects(:create).returns(nil)
+
+    response = @subject.chat_response(
+      "hi",
+      model: @subject_model,
+      streamer: proc { |_| }
+    )
+
+    assert_not response.success?
+    assert_kind_of Provider::Openai::Error, response.error
+    assert_match(/stream ended without a completion event/i, response.error.message)
+  end
+
   test "build_input no longer accepts inline messages history" do
     config = Provider::Openai::ChatConfig.new(functions: [], function_results: [])
     # Positive control: prompt works
