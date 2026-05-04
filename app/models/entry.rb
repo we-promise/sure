@@ -392,7 +392,7 @@ class Entry < ApplicationRecord
           name: split_attrs[:name],
           amount: split_attrs[:amount],
           currency: currency,
-          excluded: ActiveModel::Type::Boolean.new.cast(split_attrs[:excluded]) || false,
+          excluded: [true, "true", "1", 1].include?(split_attrs[:excluded]),
           entryable: child_transaction
         )
       end
