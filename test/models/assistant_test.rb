@@ -192,11 +192,12 @@ class AssistantTest < ActiveSupport::TestCase
     ]
 
     sequence = sequence("provider_chat_response")
+    seen_histories = []
 
     @provider.expects(:chat_response).with do |message, **options|
       assert_equal @expected_session_id, options[:session_id]
       assert_equal @expected_user_identifier, options[:user_identifier]
-      assert_equal @expected_conversation_history, options[:messages]
+      seen_histories << Marshal.load(Marshal.dump(options[:messages]))
       options[:streamer].call(call1_response_chunk)
       true
     end.returns(call1_response).once.in_sequence(sequence)
@@ -204,7 +205,7 @@ class AssistantTest < ActiveSupport::TestCase
     @provider.expects(:chat_response).with do |message, **options|
       assert_equal @expected_session_id, options[:session_id]
       assert_equal @expected_user_identifier, options[:user_identifier]
-      assert_includes [@expected_conversation_history, expected_follow_up_history], options[:messages]
+      seen_histories << Marshal.load(Marshal.dump(options[:messages]))
       call2_text_chunks.each do |text_chunk|
         options[:streamer].call(text_chunk)
       end
@@ -218,6 +219,8 @@ class AssistantTest < ActiveSupport::TestCase
       message = assistant_message.reload
       assert_equal 1, message.tool_calls.size
       assert analyzing_state_seen_during_tool_call
+      assert_includes seen_histories, @expected_conversation_history
+      assert_includes seen_histories, expected_follow_up_history
     end
   end
 
