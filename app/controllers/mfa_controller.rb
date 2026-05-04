@@ -11,8 +11,7 @@ class MfaController < ApplicationController
 
   def create
     if Current.user.verify_otp?(params[:code])
-      Current.user.enable_mfa!
-      @backup_codes = Current.user.otp_backup_codes
+      @backup_codes = Current.user.enable_mfa!
       render :backup_codes
     else
       Current.user.disable_mfa!
