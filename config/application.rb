@@ -30,6 +30,11 @@ module Sure
     config.app_mode = (ENV["SELF_HOSTED"] == "true" || ENV["SELF_HOSTING_ENABLED"] == "true" ? "self_hosted" : "managed").inquiry
 
     config.remote_user_header_email = ENV["REMOTE_USER_HEADER_EMAIL"]
+    config.remote_user_trusted_proxies = ENV["REMOTE_USER_TRUSTED_PROXIES"]
+      &.split(",")
+      &.map(&:strip)
+      &.reject(&:empty?)
+      &.filter_map { |s| IPAddr.new(s) rescue nil }
 
     # Self hosters can optionally set their own encryption keys if they want to use ActiveRecord encryption.
     if Rails.application.credentials.active_record_encryption.present?
