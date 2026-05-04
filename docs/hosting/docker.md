@@ -329,3 +329,10 @@ REMOTE_USER_HEADER_EMAIL="Remote-Email"
 ```
 
  !! NOTE!! this allows unchallenged (passwordless) login via simple HTTP headers. Only use this method if you have a proxy in front of Sure that is applying the authentication challenge, *AND THE SURE HTTP SERVER IS NOT ACCESSIBLE DIRECTLY*.
+
+### Restrict by source IP (recommended)
+
+Only honor the header when the request comes from a known proxy address. When unset, the gate is skipped; when set, requests from any other IP are treated as if the header weren't present. Accepts a comma-separated list of IPs or CIDRs:
+```
+REMOTE_USER_TRUSTED_PROXIES="10.0.0.5,172.18.0.0/16"
+```
