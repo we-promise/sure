@@ -193,33 +193,35 @@ class AssistantTest < ActiveSupport::TestCase
       }
     ]
 
-    sequence = sequence("provider_chat_response")
     seen_histories = []
+    provider_calls = 0
 
-    @provider.expects(:chat_response).with do |message, **options|
+    @provider.stubs(:chat_response).with do |message, **options|
       assert_equal @expected_session_id, options[:session_id]
       assert_equal @expected_user_identifier, options[:user_identifier]
       seen_histories << Marshal.load(Marshal.dump(options[:messages]))
-      options[:streamer].call(call1_response_chunk)
-      true
-    end.returns(call1_response).once.in_sequence(sequence)
+      provider_calls += 1
 
-    @provider.expects(:chat_response).with do |message, **options|
-      assert_equal @expected_session_id, options[:session_id]
-      assert_equal @expected_user_identifier, options[:user_identifier]
-      seen_histories << Marshal.load(Marshal.dump(options[:messages]))
-      call2_text_chunks.each do |text_chunk|
-        options[:streamer].call(text_chunk)
+      if provider_calls == 1
+        options[:streamer].call(call1_response_chunk)
+      elsif provider_calls == 2
+        call2_text_chunks.each do |text_chunk|
+          options[:streamer].call(text_chunk)
+        end
+
+        options[:streamer].call(call2_response_chunk)
+      else
+        flunk("unexpected provider call ##{provider_calls}")
       end
 
-      options[:streamer].call(call2_response_chunk)
       true
-    end.returns(call2_response).once.in_sequence(sequence)
+    end.returns(call1_response, call2_response)
 
     assert_no_difference "AssistantMessage.count" do
       @assistant.respond_to(@message, assistant_message: assistant_message)
       message = assistant_message.reload
       assert_equal 1, message.tool_calls.size
+      assert_equal 2, provider_calls
       assert_operator get_accounts_calls, :>=, 1
       assert analyzing_state_seen_during_tool_call
       assert_includes seen_histories, @expected_conversation_history
