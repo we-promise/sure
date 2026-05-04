@@ -201,7 +201,7 @@ class AssistantTest < ActiveSupport::TestCase
       assert_equal 2, provider_calls
       assert_operator get_accounts_calls, :>=, 1
       assert analyzing_state_seen_during_tool_call
-      assert_equal [@expected_conversation_history, @expected_conversation_history], seen_histories
+      assert_equal [ @expected_conversation_history, @expected_conversation_history ], seen_histories
     end
   end
 
