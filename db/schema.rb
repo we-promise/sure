@@ -1605,6 +1605,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_02_120000) do
     t.string "locale"
     t.string "ui_layout"
     t.uuid "default_account_id"
+    t.string "webauthn_id"
     t.index ["default_account_id"], name: "index_users_on_default_account_id"
     t.index ["email"], name: "index_users_on_email", unique: true
     t.index ["family_id"], name: "index_users_on_family_id"
@@ -1612,6 +1613,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_02_120000) do
     t.index ["locale"], name: "index_users_on_locale"
     t.index ["otp_secret"], name: "index_users_on_otp_secret", unique: true, where: "(otp_secret IS NOT NULL)"
     t.index ["preferences"], name: "index_users_on_preferences", using: :gin
+    t.index ["webauthn_id"], name: "index_users_on_webauthn_id", unique: true, where: "(webauthn_id IS NOT NULL)"
   end
 
   create_table "valuations", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1631,6 +1633,21 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_02_120000) do
     t.string "model"
     t.jsonb "locked_attributes", default: {}
     t.string "subtype"
+  end
+
+  create_table "webauthn_credentials", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "user_id", null: false
+    t.string "nickname", null: false
+    t.string "credential_id", null: false
+    t.text "public_key", null: false
+    t.bigint "sign_count", default: 0, null: false
+    t.string "transports", default: [], null: false, array: true
+    t.datetime "last_used_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.check_constraint "sign_count >= 0", name: "chk_webauthn_credentials_sign_count_non_negative"
+    t.index ["credential_id"], name: "index_webauthn_credentials_on_credential_id", unique: true
+    t.index ["user_id"], name: "index_webauthn_credentials_on_user_id"
   end
 
   add_foreign_key "account_providers", "accounts", on_delete: :cascade
@@ -1728,4 +1745,5 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_02_120000) do
   add_foreign_key "users", "accounts", column: "default_account_id", on_delete: :nullify
   add_foreign_key "users", "chats", column: "last_viewed_chat_id"
   add_foreign_key "users", "families"
+  add_foreign_key "webauthn_credentials", "users"
 end

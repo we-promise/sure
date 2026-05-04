@@ -11,7 +11,7 @@ class UserMessage < Message
     chat.ask_assistant_later(self)
   end
 
-  def request_response
-    chat.ask_assistant(self)
+  def request_response(assistant_message: nil)
+    chat.ask_assistant(self, assistant_message: assistant_message)
   end
 end

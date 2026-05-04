@@ -100,7 +100,7 @@ The same syntax appears inside composite values like `shadow.xs.$value`: `"0px 1
 - `utility.border-divider`: the value is a plain class string (`border-tertiary`) instead of a `{ref}`. The build treats values without `{}` as raw `@apply` arguments.
 - `utility.bg-overlay`: uses `sure.utility.raw: "background-color"` because it needs alpha rendering instead of `@apply`.
 - `utility.bg-loader`: uses `sure.compose` to apply two utilities together (`bg-surface-inset animate-pulse`).
-- `utility.button-bg-ghost-hover`: its dark value is a multi-class string (`bg-gray-800 fg-inverse`), not a single ref. The build accepts both forms.
+- `utility.button-bg-ghost-hover`: its dark value is a multi-class string (`bg-gray-800 text-inverse`), not a single ref. The build accepts both forms.
 
 ## Consumers
 
