@@ -58,7 +58,7 @@ module Authentication
         user.email = user_email
         user.password = SecureRandom.base58(50)
         user.family = Family.new
-        user.role = :admin
+        user.role = User.role_for_new_family_creator(fallback_role: :admin)
         user.save!
         user
       rescue ActiveRecord::RecordNotUnique
