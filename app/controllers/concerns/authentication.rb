@@ -54,9 +54,11 @@ module Authentication
 
     def find_or_create_remote_header_user(user_email)
       User.find_by(email: user_email) || begin
+        # Leave password_digest nil so the user can't fall back to local
+        # password login or password reset; the proxy is the only path in.
         user = User.new
         user.email = user_email
-        user.password = SecureRandom.base58(50)
+        user.skip_password_validation = true
         user.family = Family.new
         user.role = User.role_for_new_family_creator(fallback_role: :admin)
         user.save!
