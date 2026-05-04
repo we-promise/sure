@@ -4549,6 +4549,12 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/Valuation"
+        '200':
+          description: existing valuation upserted
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Valuation"
         '422':
           description: validation error - missing date
           content:
@@ -4584,10 +4590,22 @@ paths:
                     notes:
                       type: string
                       description: Additional notes
+                    upsert:
+                      type: boolean
+                      description: Nested alternative to the top-level response-status
+                        flag. Top-level upsert takes precedence when both are provided.
                   required:
                   - account_id
                   - amount
                   - date
+                upsert:
+                  type: boolean
+                  description: Response-status signal only. When true and a same-account
+                    same-date valuation exists before the request, the endpoint returns
+                    200 OK instead of 201 Created. The underlying reconciliation write
+                    path is unchanged; this flag does not add duplicate-prevention
+                    or safe-retry guarantees beyond existing same-date reconciliation
+                    behavior.
               required:
               - valuation
         required: true
