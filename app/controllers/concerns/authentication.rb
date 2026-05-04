@@ -38,7 +38,7 @@ module Authentication
           family = Family.new
           user.family = family
           user.role = :admin
-          user.save
+          user.save!
         end
         create_session_for(user)
       end
