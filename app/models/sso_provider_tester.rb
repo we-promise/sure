@@ -70,7 +70,7 @@ class SsoProviderTester
 
           return Result.new(
             success?: false,
-            message: ["Issuer mismatch: expected #{provider.issuer}, got #{discovery["issuer"]}", hint].compact.join(". "),
+            message: [ "Issuer mismatch: expected #{provider.issuer}, got #{discovery["issuer"]}", hint ].compact.join(". "),
             details: { expected: provider.issuer, actual: discovery["issuer"] }
           )
         end
@@ -211,6 +211,6 @@ class SsoProviderTester
     def trailing_slash_hint(expected, actual)
       return unless expected.to_s.chomp("/") == actual.to_s.chomp("/")
 
-      "This usually means the issuer URL differs only by a trailing slash. Update the configured issuer to exactly match the discovery document"
+      "trailing slash mismatch. This usually means the issuer URL differs only by a trailing slash. Update the configured issuer to exactly match the discovery document"
     end
 end
