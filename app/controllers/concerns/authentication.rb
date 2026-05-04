@@ -1,6 +1,8 @@
 module Authentication
   extend ActiveSupport::Concern
 
+  REMOTE_HEADER_SSO_PROVIDER = "remote_user_header"
+
   included do
     before_action :set_request_details
     before_action :authenticate_user!
@@ -47,13 +49,27 @@ module Authentication
 
     def create_session_by_remote_header
       if user_email = request.headers[Rails.application.config.remote_user_header_email]
-        user = find_or_create_remote_header_user(user_email)
+        user, created = find_or_create_remote_header_user(user_email)
+        if created
+          SsoAuditLog.log_jit_account_created!(
+            user: user,
+            provider: REMOTE_HEADER_SSO_PROVIDER,
+            request: request
+          )
+        end
+        SsoAuditLog.log_login!(
+          user: user,
+          provider: REMOTE_HEADER_SSO_PROVIDER,
+          request: request
+        )
         create_session_for(user)
       end
     end
 
     def find_or_create_remote_header_user(user_email)
-      User.find_by(email: user_email) || begin
+      if user = User.find_by(email: user_email)
+        [ user, false ]
+      else
         # Leave password_digest nil so the user can't fall back to local
         # password login or password reset; the proxy is the only path in.
         user = User.new
@@ -61,10 +77,12 @@ module Authentication
         user.skip_password_validation = true
         user.family = Family.new
         user.role = User.role_for_new_family_creator(fallback_role: :admin)
-        user.save!
-        user
-      rescue ActiveRecord::RecordNotUnique
-        User.find_by!(email: user_email)
+        begin
+          user.save!
+          [ user, true ]
+        rescue ActiveRecord::RecordNotUnique
+          [ User.find_by!(email: user_email), false ]
+        end
       end
     end
 
