@@ -135,10 +135,8 @@ class AssistantTest < ActiveSupport::TestCase
 
     # Only first provider call executes function, and the message should already
     # be in analyzing state while that work is happening.
-    get_accounts_calls = 0
-    Assistant::Function::GetAccounts.any_instance.stubs(:call).with do |args|
+    Assistant::Function::GetAccounts.any_instance.expects(:call).at_least_once.with do |args|
       assert_equal({}, args)
-      get_accounts_calls += 1
       analyzing_state_seen_during_tool_call ||= (assistant_message.reload.progress_state == "analyzing_data")
       true
     end.returns("test value")
@@ -199,7 +197,6 @@ class AssistantTest < ActiveSupport::TestCase
       message = assistant_message.reload
       assert_equal 1, message.tool_calls.size
       assert_equal 2, provider_calls
-      assert_operator get_accounts_calls, :>=, 1
       assert analyzing_state_seen_during_tool_call
       assert_equal [ @expected_conversation_history, @expected_conversation_history ], seen_histories
     end

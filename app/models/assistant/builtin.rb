@@ -51,15 +51,17 @@ class Assistant::Builtin < Assistant::Base
 
     responder.on(:response) do |data|
       if data[:function_tool_calls].present?
-        data[:function_tool_calls].each do |tool_call|
-          assistant_message.tool_calls.create!(
-            type: tool_call.type,
-            provider_id: tool_call.provider_id,
-            provider_call_id: tool_call.provider_call_id,
-            function_name: tool_call.function_name,
-            function_arguments: tool_call.function_arguments,
-            function_result: tool_call.function_result
-          )
+        assistant_message.transaction do
+          data[:function_tool_calls].each do |tool_call|
+            assistant_message.tool_calls.create!(
+              type: tool_call.type,
+              provider_id: tool_call.provider_id,
+              provider_call_id: tool_call.provider_call_id,
+              function_name: tool_call.function_name,
+              function_arguments: tool_call.function_arguments,
+              function_result: tool_call.function_result
+            )
+          end
         end
         latest_response_id = data[:id]
       else
