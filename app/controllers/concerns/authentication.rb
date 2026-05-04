@@ -31,16 +31,22 @@ module Authentication
 
     def create_session_by_remote_header
       if user_email = request.headers[Rails.application.config.remote_user_header_email]
-        unless user = User.find_by(email: user_email)
-          user = User.new
-          user.email = user_email
-          user.password = SecureRandom.base58(50)
-          family = Family.new
-          user.family = family
-          user.role = :admin
-          user.save!
-        end
+        user = find_or_create_remote_header_user(user_email)
         create_session_for(user)
+      end
+    end
+
+    def find_or_create_remote_header_user(user_email)
+      User.find_by(email: user_email) || begin
+        user = User.new
+        user.email = user_email
+        user.password = SecureRandom.base58(50)
+        user.family = Family.new
+        user.role = :admin
+        user.save!
+        user
+      rescue ActiveRecord::RecordNotUnique
+        User.find_by!(email: user_email)
       end
     end
 
