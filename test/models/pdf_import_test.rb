@@ -41,6 +41,19 @@ class PdfImportTest < ActiveSupport::TestCase
     assert_not @processed_import.publishable?
   end
 
+  test "status detail cleaned check requires account and transaction statement" do
+    @import_with_rows.update!(account: accounts(:depository), document_type: "bank_statement")
+
+    assert @import_with_rows.cleaned_from_validation_stats?(invalid_rows_count: 0)
+    assert_not @import_with_rows.cleaned_from_validation_stats?(invalid_rows_count: 1)
+
+    @import_with_rows.update!(account: nil)
+    assert_not @import_with_rows.cleaned_from_validation_stats?(invalid_rows_count: 0)
+
+    @import_with_rows.update!(account: accounts(:depository), document_type: "other")
+    assert_not @import_with_rows.cleaned_from_validation_stats?(invalid_rows_count: 0)
+  end
+
   test "column_keys returns transaction columns" do
     assert_equal %i[date amount name category notes], @import.column_keys
   end

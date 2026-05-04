@@ -1,5 +1,19 @@
 class AddAccountIdToRecurringTransactions < ActiveRecord::Migration[7.2]
   def up
+    # Some long-lived self-hosted instances can already contain duplicate recurring
+    # rows because older name-based uniqueness was reflected in schema.rb but was not
+    # enforced by a migration on upgraded databases. Deduplicate on the pre-migration
+    # shape first so the migration can recover cleanly after a rollback.
+    dedupe_recurring_transactions!(
+      partition_columns: %w[family_id merchant_id amount currency],
+      where_clause: "merchant_id IS NOT NULL"
+    )
+
+    dedupe_recurring_transactions!(
+      partition_columns: %w[family_id name amount currency],
+      where_clause: "merchant_id IS NULL AND name IS NOT NULL"
+    )
+
     add_reference :recurring_transactions, :account, type: :uuid, null: true, foreign_key: true
 
     # Backfill account_id from the most recent matching entry
@@ -24,6 +38,18 @@ class AddAccountIdToRecurringTransactions < ActiveRecord::Migration[7.2]
       ) subquery
       WHERE rt.id = subquery.recurring_transaction_id
     SQL
+
+    # Deduplicate again after backfill because rows that were distinct at the
+    # family level can collapse onto the same account-scoped uniqueness key.
+    dedupe_recurring_transactions!(
+      partition_columns: %w[family_id account_id merchant_id amount currency],
+      where_clause: "merchant_id IS NOT NULL"
+    )
+
+    dedupe_recurring_transactions!(
+      partition_columns: %w[family_id account_id name amount currency],
+      where_clause: "merchant_id IS NULL AND name IS NOT NULL"
+    )
 
     # Remove old unique indexes
     remove_index :recurring_transactions, name: "idx_recurring_txns_merchant", if_exists: true
@@ -61,4 +87,28 @@ class AddAccountIdToRecurringTransactions < ActiveRecord::Migration[7.2]
 
     remove_reference :recurring_transactions, :account
   end
+
+  private
+
+    def dedupe_recurring_transactions!(partition_columns:, where_clause:)
+      execute <<~SQL
+        WITH ranked AS (
+          SELECT id,
+                 ROW_NUMBER() OVER (
+                   PARTITION BY #{partition_columns.join(', ')}
+                   ORDER BY manual DESC,
+                            (status = 'active') DESC,
+                            last_occurrence_date DESC NULLS LAST,
+                            updated_at DESC,
+                            id DESC
+                 ) AS row_num
+          FROM recurring_transactions
+          WHERE #{where_clause}
+        )
+        DELETE FROM recurring_transactions
+        WHERE id IN (
+          SELECT id FROM ranked WHERE row_num > 1
+        )
+      SQL
+    end
 end

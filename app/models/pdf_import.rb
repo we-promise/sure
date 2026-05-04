@@ -154,6 +154,14 @@ class PdfImport < Import
     account.present? && statement_with_transactions? && cleaned? && mappings.all?(&:valid?)
   end
 
+  def cleaned_from_validation_stats?(invalid_rows_count:)
+    account.present? && statement_with_transactions? && super
+  end
+
+  def publishable_from_validation_stats?(invalid_rows_count:)
+    account.present? && statement_with_transactions? && super
+  end
+
   def column_keys
     %i[date amount name category notes]
   end

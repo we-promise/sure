@@ -178,6 +178,14 @@ class Family::DataExporter
         }.to_json
       end
 
+      # Export recurring transactions after accounts and merchants so import can remap dependencies.
+      @family.recurring_transactions.includes(:account, :merchant).find_each do |recurring_transaction|
+        lines << {
+          type: "RecurringTransaction",
+          data: serialize_recurring_transaction_for_export(recurring_transaction)
+        }.to_json
+      end
+
       # Export transactions with full data (exclude split parents, export children instead)
       @family.transactions.includes(:category, :merchant, :tags, entry: :account).merge(Entry.excluding_split_parents).find_each do |transaction|
         lines << {
@@ -268,6 +276,28 @@ class Family::DataExporter
       end
 
       lines.join("\n")
+    end
+
+    def serialize_recurring_transaction_for_export(recurring_transaction)
+      {
+        id: recurring_transaction.id,
+        account_id: recurring_transaction.account_id,
+        merchant_id: recurring_transaction.merchant_id,
+        amount: recurring_transaction.amount,
+        currency: recurring_transaction.currency,
+        expected_day_of_month: recurring_transaction.expected_day_of_month,
+        last_occurrence_date: recurring_transaction.last_occurrence_date,
+        next_expected_date: recurring_transaction.next_expected_date,
+        status: recurring_transaction.status,
+        occurrence_count: recurring_transaction.occurrence_count,
+        name: recurring_transaction.name,
+        manual: recurring_transaction.manual,
+        expected_amount_min: recurring_transaction.expected_amount_min,
+        expected_amount_max: recurring_transaction.expected_amount_max,
+        expected_amount_avg: recurring_transaction.expected_amount_avg,
+        created_at: recurring_transaction.created_at,
+        updated_at: recurring_transaction.updated_at
+      }
     end
 
     def serialize_rule_for_export(rule)

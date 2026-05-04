@@ -73,6 +73,10 @@ class QifImport < Import
     account.present? && super
   end
 
+  def publishable_from_validation_stats?(invalid_rows_count:)
+    account.present? && super
+  end
+
   # Returns true if import! will move the opening anchor back to cover transactions
   # that predate the current anchor date. Used to show a notice in the confirm step.
   def will_adjust_opening_anchor?

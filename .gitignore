@@ -124,3 +124,6 @@ scripts/
 .claude_settings.json
 .security-key
 logs/security/
+
+# Added by codex
+.codex
