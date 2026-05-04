@@ -10,6 +10,14 @@ class Rack::Attack
     request.ip if request.path == "/oauth/token"
   end
 
+  # Throttle unauthenticated WebAuthn MFA ceremonies similarly to sign-in
+  # endpoints; registration remains behind normal application authentication.
+  throttle("mfa/webauthn", limit: 10, period: 1.minute) do |request|
+    if request.post? && request.path.in?(%w[/mfa/webauthn_options /mfa/verify_webauthn])
+      request.ip
+    end
+  end
+
   # Throttle admin endpoints to prevent brute-force attacks
   # More restrictive than general API limits since admin access is sensitive
   throttle("admin/ip", limit: 10, period: 1.minute) do |request|
