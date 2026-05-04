@@ -168,6 +168,29 @@ class AssistantTest < ActiveSupport::TestCase
 
     call2_response = provider_success_response(call2_response_chunk.data)
 
+    expected_follow_up_history = @expected_conversation_history + [
+      {
+        role: "assistant",
+        content: "Your net worth is $124,200",
+        tool_calls: [
+          {
+            id: "1",
+            type: "function",
+            function: {
+              name: "get_accounts",
+              arguments: "{}"
+            }
+          }
+        ]
+      },
+      {
+        role: "tool",
+        tool_call_id: "1",
+        name: "get_accounts",
+        content: "test value"
+      }
+    ]
+
     sequence = sequence("provider_chat_response")
 
     @provider.expects(:chat_response).with do |message, **options|
@@ -181,7 +204,7 @@ class AssistantTest < ActiveSupport::TestCase
     @provider.expects(:chat_response).with do |message, **options|
       assert_equal @expected_session_id, options[:session_id]
       assert_equal @expected_user_identifier, options[:user_identifier]
-      assert_equal @expected_conversation_history, options[:messages]
+      assert_equal expected_follow_up_history, options[:messages]
       call2_text_chunks.each do |text_chunk|
         options[:streamer].call(text_chunk)
       end
