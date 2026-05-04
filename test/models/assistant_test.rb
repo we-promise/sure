@@ -170,29 +170,6 @@ class AssistantTest < ActiveSupport::TestCase
 
     call2_response = provider_success_response(call2_response_chunk.data)
 
-    expected_follow_up_history = @expected_conversation_history + [
-      {
-        role: "assistant",
-        content: "Your net worth is $124,200",
-        tool_calls: [
-          {
-            id: "1",
-            type: "function",
-            function: {
-              name: "get_accounts",
-              arguments: "{}"
-            }
-          }
-        ]
-      },
-      {
-        role: "tool",
-        tool_call_id: "1",
-        name: "get_accounts",
-        content: "test value"
-      }
-    ]
-
     seen_histories = []
     provider_calls = 0
 
@@ -224,8 +201,7 @@ class AssistantTest < ActiveSupport::TestCase
       assert_equal 2, provider_calls
       assert_operator get_accounts_calls, :>=, 1
       assert analyzing_state_seen_during_tool_call
-      assert_includes seen_histories, @expected_conversation_history
-      assert_includes seen_histories, expected_follow_up_history
+      assert_equal [@expected_conversation_history, @expected_conversation_history], seen_histories
     end
   end
 
