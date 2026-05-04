@@ -43,6 +43,48 @@ RSpec.configure do |config|
               total_pages: { type: :integer, minimum: 0 }
             }
           },
+          FamilyExportFile: {
+            type: :object,
+            required: %w[attached],
+            properties: {
+              attached: { type: :boolean },
+              byte_size: { type: :integer, nullable: true, minimum: 0 },
+              content_type: { type: :string, nullable: true }
+            }
+          },
+          FamilyExport: {
+            type: :object,
+            required: %w[id status filename downloadable file created_at updated_at],
+            properties: {
+              id: { type: :string, format: :uuid },
+              status: { type: :string, enum: %w[pending processing completed failed] },
+              filename: { type: :string },
+              downloadable: { type: :boolean },
+              download_path: { type: :string, nullable: true },
+              file: { '$ref' => '#/components/schemas/FamilyExportFile' },
+              created_at: { type: :string, format: :'date-time' },
+              updated_at: { type: :string, format: :'date-time' }
+            }
+          },
+          FamilyExportResponse: {
+            type: :object,
+            required: %w[data],
+            properties: {
+              data: { '$ref' => '#/components/schemas/FamilyExport' }
+            }
+          },
+          FamilyExportCollection: {
+            type: :object,
+            required: %w[data meta],
+            properties: {
+              data: {
+                type: :array,
+                maxItems: 100,
+                items: { '$ref' => '#/components/schemas/FamilyExport' }
+              },
+              meta: { '$ref' => '#/components/schemas/Pagination' }
+            }
+          },
           ErrorResponse: {
             type: :object,
             required: %w[error],
@@ -232,6 +274,29 @@ RSpec.configure do |config|
               pagination: { '$ref' => '#/components/schemas/Pagination' }
             }
           },
+          FamilySettings: {
+            type: :object,
+            required: %w[id currency locale date_format month_start_day moniker default_account_sharing custom_enabled_currencies enabled_currencies created_at updated_at],
+            properties: {
+              id: { type: :string, format: :uuid },
+              name: { type: :string, nullable: true },
+              currency: { type: :string },
+              locale: { type: :string },
+              date_format: { type: :string },
+              country: { type: :string, nullable: true },
+              timezone: { type: :string, nullable: true },
+              month_start_day: { type: :integer, minimum: 1, maximum: 28 },
+              moniker: { type: :string, enum: Family::MONIKERS },
+              default_account_sharing: { type: :string, enum: %w[shared private] },
+              custom_enabled_currencies: { type: :boolean },
+              enabled_currencies: {
+                type: :array,
+                items: { type: :string }
+              },
+              created_at: { type: :string, format: :'date-time' },
+              updated_at: { type: :string, format: :'date-time' }
+            }
+          },
           Category: {
             type: :object,
             required: %w[id name color icon],
@@ -380,6 +445,65 @@ RSpec.configure do |config|
               data: {
                 type: :array,
                 items: { '$ref' => '#/components/schemas/Rule' }
+              },
+              meta: {
+                type: :object,
+                required: %w[current_page total_pages total_count per_page],
+                properties: {
+                  current_page: { type: :integer },
+                  next_page: { type: :integer, nullable: true },
+                  prev_page: { type: :integer, nullable: true },
+                  total_pages: { type: :integer },
+                  total_count: { type: :integer },
+                  per_page: { type: :integer }
+                }
+              }
+            }
+          },
+          RuleRun: {
+            type: :object,
+            required: %w[id rule_id rule_name execution_type status transactions_queued transactions_processed transactions_modified pending_jobs_count executed_at rule created_at updated_at],
+            properties: {
+              id: { type: :string, format: :uuid },
+              rule_id: { type: :string, format: :uuid },
+              rule_name: { type: :string, nullable: true },
+              execution_type: { type: :string, enum: %w[manual scheduled] },
+              status: { type: :string, enum: %w[pending success failed] },
+              transactions_queued: { type: :integer, minimum: 0 },
+              transactions_processed: { type: :integer, minimum: 0 },
+              transactions_modified: { type: :integer, minimum: 0 },
+              pending_jobs_count: { type: :integer, minimum: 0 },
+              executed_at: { type: :string, format: :'date-time' },
+              error_message: { type: :string, nullable: true },
+              rule: {
+                type: :object,
+                nullable: true,
+                required: %w[id resource_type active],
+                properties: {
+                  id: { type: :string, format: :uuid },
+                  name: { type: :string, nullable: true },
+                  resource_type: { type: :string },
+                  active: { type: :boolean }
+                }
+              },
+              created_at: { type: :string, format: :'date-time' },
+              updated_at: { type: :string, format: :'date-time' }
+            }
+          },
+          RuleRunResponse: {
+            type: :object,
+            required: %w[data],
+            properties: {
+              data: { '$ref' => '#/components/schemas/RuleRun' }
+            }
+          },
+          RuleRunCollection: {
+            type: :object,
+            required: %w[data meta],
+            properties: {
+              data: {
+                type: :array,
+                items: { '$ref' => '#/components/schemas/RuleRun' }
               },
               meta: {
                 type: :object,
@@ -726,6 +850,49 @@ RSpec.configure do |config|
             required: %w[message],
             properties: {
               message: { type: :string }
+            }
+          },
+          ResetInitiatedResponse: {
+            type: :object,
+            required: %w[message status job_id family_id status_url],
+            properties: {
+              message: { type: :string },
+              status: { type: :string, enum: %w[queued] },
+              job_id: {
+                type: :string,
+                description: 'Informational Active Job identifier returned by the queue adapter; reset status is family-scoped, not job-scoped.'
+              },
+              family_id: { type: :string, format: :uuid, description: 'UUID of the family being reset.' },
+              status_url: { type: :string }
+            }
+          },
+          ResetStatusResponse: {
+            type: :object,
+            required: %w[status family_id reset_complete counts],
+            properties: {
+              status: {
+                type: :string,
+                enum: %w[complete data_remaining],
+                description: 'Counts-based family reset status at response time.'
+              },
+              family_id: { type: :string, format: :uuid, description: 'UUID of the family whose reset target counts were checked.' },
+              reset_complete: {
+                type: :boolean,
+                description: 'True when all reset target counts are zero at response time. This is a family data snapshot, not a durable per-job completion record.'
+              },
+              counts: {
+                type: :object,
+                required: %w[accounts categories tags merchants plaid_items imports budgets],
+                properties: {
+                  accounts: { type: :integer, minimum: 0 },
+                  categories: { type: :integer, minimum: 0 },
+                  tags: { type: :integer, minimum: 0 },
+                  merchants: { type: :integer, minimum: 0 },
+                  plaid_items: { type: :integer, minimum: 0 },
+                  imports: { type: :integer, minimum: 0 },
+                  budgets: { type: :integer, minimum: 0 }
+                }
+              }
             }
           }
         }

@@ -118,6 +118,8 @@ Rails.application.routes.draw do
   resource :mfa, controller: "mfa", only: [ :new, :create ] do
     get :verify
     post :verify, to: "mfa#verify_code"
+    post :webauthn_options
+    post :verify_webauthn
     delete :disable
   end
 
@@ -195,6 +197,9 @@ Rails.application.routes.draw do
     end
     resource :payment, only: :show
     resource :security, only: :show
+    resources :webauthn_credentials, only: %i[create destroy] do
+      post :options, on: :collection
+    end
     resources :sso_identities, only: :destroy
     resource :api_key, only: [ :show, :new, :create, :destroy ]
     resource :ai_prompts, only: :show
@@ -427,6 +432,7 @@ Rails.application.routes.draw do
       resources :categories, only: [ :index, :show ]
       resources :merchants, only: %i[index show]
       resources :rules, only: [ :index, :show ]
+      resources :rule_runs, only: [ :index, :show ]
       resources :tags, only: %i[index show create update destroy]
 
       resources :transactions, only: [ :index, :show, :create, :update, :destroy ]
@@ -434,9 +440,13 @@ Rails.application.routes.draw do
       resources :holdings, only: [ :index, :show ]
       resources :valuations, only: [ :index, :create, :update, :show ]
       resources :recurring_transactions, only: [ :index, :show, :create, :update, :destroy ]
+      resources :family_exports, only: [ :index, :show, :create ] do
+        get :download, on: :member
+      end
       resources :imports, only: [ :index, :show, :create ]
       resource :usage, only: [ :show ], controller: :usage
       resource :balance_sheet, only: [ :show ], controller: :balance_sheet
+      resource :family_settings, only: [ :show ], controller: :family_settings
       post :sync, to: "sync#create"
 
       resources :chats, only: [ :index, :show, :create, :update, :destroy ] do
@@ -445,6 +455,7 @@ Rails.application.routes.draw do
         end
       end
 
+      get "users/reset/status", to: "users#reset_status"
       delete "users/reset", to: "users#reset"
       delete "users/me", to: "users#destroy"
 

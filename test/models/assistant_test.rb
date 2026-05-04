@@ -226,11 +226,13 @@ class AssistantTest < ActiveSupport::TestCase
       "EXTERNAL_ASSISTANT_URL" => "http://localhost:18789/v1/chat",
       "EXTERNAL_ASSISTANT_TOKEN" => "test-token"
     ) do
-      assert_difference "AssistantMessage.count", 1 do
-        assistant.respond_to(@message)
+      assistant_message = pending_assistant_message
+
+      assert_no_difference "AssistantMessage.count" do
+        assistant.respond_to(@message, assistant_message: assistant_message)
       end
 
-      response_msg = @chat.messages.where(type: "AssistantMessage").last
+      response_msg = assistant_message.reload
       assert_equal "Your net worth is $124,200.", response_msg.content
       assert_equal "ext-agent:main", response_msg.ai_model
     end
@@ -368,12 +370,13 @@ class AssistantTest < ActiveSupport::TestCase
       "EXTERNAL_ASSISTANT_TOKEN" => "test-token"
     ) do
       assistant = Assistant::External.new(@chat)
-      assistant.respond_to(@message)
+      assistant_message = pending_assistant_message
+      assistant.respond_to(@message, assistant_message: assistant_message)
 
       @chat.reload
       assert_nil @chat.error
 
-      response = @chat.messages.where(type: "AssistantMessage").last
+      response = assistant_message.reload
       assert_equal "Based on your accounts, your net worth is $50,000.", response.content
       assert_equal "ext-agent:main", response.ai_model
     end
@@ -414,9 +417,10 @@ class AssistantTest < ActiveSupport::TestCase
       "EXTERNAL_ASSISTANT_URL" => "http://localhost:18789/v1/chat",
       "EXTERNAL_ASSISTANT_TOKEN" => "test-token"
     ) do
-      assistant.respond_to(@message)
+      assistant_message = pending_assistant_message
+      assistant.respond_to(@message, assistant_message: assistant_message)
 
-      response = @chat.messages.where(type: "AssistantMessage").last
+      response = assistant_message.reload
       assert_equal "ext-agent:custom", response.ai_model
     end
   end
@@ -534,6 +538,10 @@ class AssistantTest < ActiveSupport::TestCase
 
       Net::HTTP.stubs(:new).returns(mock_http)
       capture
+    end
+
+    def pending_assistant_message
+      @chat.messages.where(type: "AssistantMessage", status: "pending").order(:created_at).last
     end
 
     def provider_function_request(id:, call_id:, function_name:, function_args:)

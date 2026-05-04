@@ -3,8 +3,6 @@
 class Api::V1::RecurringTransactionsController < Api::V1::BaseController
   include Pagy::Backend
 
-  UUID_REGEX = /\A[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\z/i
-
   before_action :ensure_read_scope, only: %i[index show]
   before_action :ensure_write_scope, only: %i[create update destroy]
   before_action :set_readable_recurring_transaction, only: :show
@@ -209,10 +207,6 @@ class Api::V1::RecurringTransactionsController < Api::V1::BaseController
 
       current_resource_owner.family.merchants.find_by(id: merchant_id) ||
         raise(ActiveRecord::RecordNotFound, "Merchant not found")
-    end
-
-    def valid_uuid?(value)
-      value.to_s.match?(UUID_REGEX)
     end
 
     def validate_create_write_params(recurring_transaction)

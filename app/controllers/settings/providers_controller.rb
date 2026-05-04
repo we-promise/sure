@@ -141,7 +141,7 @@ class Settings::ProvidersController < ApplicationController
       # Providers page only needs to know whether any Sophtron connections exist with valid credentials
       @sophtron_items = Current.family.sophtron_items.where.not(user_id: [ nil, "" ], access_key: [ nil, "" ]).ordered.select(:id)
       @coinstats_items = Current.family.coinstats_items.ordered # CoinStats panel needs account info for status display
-      @mercury_items = Current.family.mercury_items.ordered.select(:id)
+      @mercury_items = Current.family.mercury_items.active.ordered.includes(:syncs, :mercury_accounts)
       @coinbase_items = Current.family.coinbase_items.ordered # Coinbase panel needs name and sync info for status display
       @snaptrade_items = Current.family.snaptrade_items.includes(:snaptrade_accounts).ordered
       @indexa_capital_items = Current.family.indexa_capital_items.ordered.select(:id)
