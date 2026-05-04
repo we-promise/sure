@@ -116,7 +116,7 @@
         <div class="flex items-center justify-between p-3 rounded-lg bg-container border border-primary">
           <div class="flex items-center gap-3">
             <% if item.syncing? %>
-              <div class="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
+              <div class="w-2 h-2 bg-inverse rounded-full animate-pulse"></div>
               <div>
                 <p class="text-sm font-medium text-primary"><%= item.aspsp_name || t("settings.providers.enable_banking_panel.syncing", default: "Syncing") %></p>
                 <p class="text-xs text-secondary"><%= t("settings.providers.enable_banking_panel.syncing", default: "Syncing") %></p>
