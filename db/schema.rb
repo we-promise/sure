@@ -721,7 +721,10 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_02_120000) do
     t.string "effective_date"
     t.text "conditions"
     t.text "actions"
+    t.integer "source_row_number", null: false
+    t.index ["import_id", "source_row_number"], name: "index_import_rows_on_import_id_and_source_row_number", unique: true
     t.index ["import_id"], name: "index_import_rows_on_import_id"
+    t.check_constraint "source_row_number > 0", name: "chk_import_rows_source_row_number_positive"
   end
 
   create_table "imports", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|

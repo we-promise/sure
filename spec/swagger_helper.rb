@@ -743,6 +743,95 @@ RSpec.configure do |config|
               data: { '$ref' => '#/components/schemas/ImportDetail' }
             }
           },
+          ImportRowMapping: {
+            type: :object,
+            required: %w[key type value create_when_empty creatable mappable],
+            properties: {
+              key: { type: :string, nullable: true },
+              type: { type: :string },
+              value: { type: :string, nullable: true },
+              create_when_empty: { type: :boolean },
+              creatable: { type: :boolean },
+              mappable: {
+                type: :object,
+                nullable: true,
+                properties: {
+                  id: { type: :string, format: :uuid },
+                  type: { type: :string },
+                  name: { type: :string, nullable: true }
+                }
+              }
+            }
+          },
+          ImportRowDiagnostic: {
+            type: :object,
+            required: %w[id row_number valid errors fields mappings],
+            properties: {
+              id: { type: :string, format: :uuid },
+              row_number: { type: :integer, minimum: 1 },
+              valid: { type: :boolean },
+              errors: {
+                type: :array,
+                items: { type: :string }
+              },
+              fields: {
+                type: :object,
+                properties: {
+                  account: { type: :string, nullable: true },
+                  date: { type: :string, nullable: true },
+                  qty: { type: :string, nullable: true },
+                  ticker: { type: :string, nullable: true },
+                  exchange_operating_mic: { type: :string, nullable: true },
+                  price: { type: :string, nullable: true },
+                  amount: { type: :string, nullable: true },
+                  currency: { type: :string, nullable: true },
+                  name: { type: :string, nullable: true },
+                  category: { type: :string, nullable: true },
+                  tags: { type: :string, nullable: true },
+                  entity_type: { type: :string, nullable: true },
+                  notes: { type: :string, nullable: true },
+                  active: { type: :boolean, nullable: true },
+                  effective_date: { type: :string, nullable: true },
+                  conditions: { type: :string, nullable: true },
+                  actions: { type: :string, nullable: true }
+                }
+              },
+              mappings: {
+                type: :object,
+                properties: {
+                  account: { '$ref' => '#/components/schemas/ImportRowMapping' },
+                  category: { '$ref' => '#/components/schemas/ImportRowMapping' },
+                  account_type: { '$ref' => '#/components/schemas/ImportRowMapping' },
+                  tags: {
+                    type: :array,
+                    items: { '$ref' => '#/components/schemas/ImportRowMapping' }
+                  }
+                }
+              }
+            }
+          },
+          ImportRowDiagnosticCollection: {
+            type: :object,
+            required: %w[data meta],
+            properties: {
+              data: {
+                type: :array,
+                items: { '$ref' => '#/components/schemas/ImportRowDiagnostic' }
+              },
+              meta: {
+                type: :object,
+                required: %w[current_page total_pages total_count per_page],
+                properties: {
+                  current_page: { type: :integer, minimum: 1 },
+                  next_page: { type: :integer, nullable: true },
+                  prev_page: { type: :integer, nullable: true },
+                  total_pages: { type: :integer, minimum: 0 },
+                  total_count: { type: :integer, minimum: 0 },
+                  per_page: { type: :integer, minimum: 1 }
+                }
+              }
+            }
+          },
           Trade: {
             type: :object,
             required: %w[id date amount currency name qty price account created_at updated_at],
