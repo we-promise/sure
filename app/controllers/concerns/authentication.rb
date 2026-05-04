@@ -48,7 +48,11 @@ module Authentication
     end
 
     def create_session_by_remote_header
-      if user_email = request.headers[Rails.application.config.remote_user_header_email]
+      header_name = Rails.application.config.remote_user_header_email
+      return if header_name.blank?
+
+      user_email = request.headers[header_name]&.strip&.downcase
+      if user_email.present? && URI::MailTo::EMAIL_REGEXP.match?(user_email)
         user, created = find_or_create_remote_header_user(user_email)
         if created
           SsoAuditLog.log_jit_account_created!(
