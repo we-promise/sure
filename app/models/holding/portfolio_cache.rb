@@ -18,7 +18,7 @@ class Holding::PortfolioCache
     if date.blank?
       trades
     else
-      trades_by_date[date] || []
+      trades_by_date[date]&.dup || []
     end
   end
 
