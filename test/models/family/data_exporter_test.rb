@@ -376,6 +376,55 @@ class Family::DataExporterTest < ActiveSupport::TestCase
     end
   end
 
+  test "exports holding snapshots in NDJSON" do
+    investment_account = @family.accounts.create!(
+      name: "Investment Account",
+      accountable: Investment.new,
+      balance: 25_000,
+      currency: "USD"
+    )
+    security = Security.create!(
+      ticker: "VTI#{SecureRandom.hex(4).upcase}",
+      name: "Vanguard Total Stock Market ETF",
+      country_code: "US",
+      exchange_operating_mic: "ARCX"
+    )
+    holding = investment_account.holdings.create!(
+      security: security,
+      date: Date.parse("2024-01-15"),
+      qty: 100,
+      price: 250.25,
+      amount: 25_025,
+      currency: "USD",
+      cost_basis: 200,
+      cost_basis_source: "manual",
+      cost_basis_locked: true,
+      security_locked: true
+    )
+
+    zip_data = @exporter.generate_export
+
+    Zip::File.open_buffer(zip_data) do |zip|
+      ndjson_records = zip.read("all.ndjson").split("\n").map { |line| JSON.parse(line) }
+      holding_data = ndjson_records.find { |record| record["type"] == "Holding" && record.dig("data", "id") == holding.id }
+
+      assert holding_data
+      assert_equal investment_account.id, holding_data["data"]["account_id"]
+      assert_equal security.id, holding_data["data"]["security_id"]
+      assert_equal security.ticker, holding_data["data"]["ticker"]
+      assert_equal "ARCX", holding_data["data"]["exchange_operating_mic"]
+      assert_equal "2024-01-15", holding_data["data"]["date"]
+      assert_equal "100.0", BigDecimal(holding_data["data"]["qty"].to_s).to_s("F")
+      assert_equal "250.25", BigDecimal(holding_data["data"]["price"].to_s).to_s("F")
+      assert_equal "25025.0", BigDecimal(holding_data["data"]["amount"].to_s).to_s("F")
+      assert_equal "200.0", BigDecimal(holding_data["data"]["cost_basis"].to_s).to_s("F")
+      assert_equal "manual", holding_data["data"]["cost_basis_source"]
+      assert_equal true, holding_data["data"]["cost_basis_locked"]
+      assert_not holding_data["data"].key?("created_at")
+      assert_not holding_data["data"].key?("updated_at")
+    end
+  end
+
   test "only exports rules from the specified family" do
     # Create a rule for another family that should NOT be exported
     other_rule = @other_family.rules.build(
