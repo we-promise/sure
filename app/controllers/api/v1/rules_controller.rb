@@ -55,29 +55,11 @@ class Api::V1::RulesController < Api::V1::BaseController
       authorize_scope!(:read)
     end
 
-    def safe_page_param
-      page = params[:page].to_i
-      page > 0 ? page : 1
-    end
-
-    def safe_per_page_param
-      per_page = params[:per_page].to_i
-      case per_page
-      when 1..100
-        per_page
-      else
-        25
-      end
-    end
-
     def parse_boolean_filter(value)
       normalized = value.to_s.downcase
       return BOOLEAN_FILTERS[normalized] if BOOLEAN_FILTERS.key?(normalized)
 
-      render json: {
-        error: "validation_failed",
-        message: "active must be one of: true, false, 1, 0"
-      }, status: :unprocessable_entity
+      render_validation_error("active must be one of: true, false, 1, 0")
       nil
     end
 
@@ -86,9 +68,6 @@ class Api::V1::RulesController < Api::V1::BaseController
     end
 
     def render_invalid_resource_type_filter
-      render json: {
-        error: "validation_failed",
-        message: "resource_type must be one of: #{RESOURCE_TYPES.join(", ")}"
-      }, status: :unprocessable_entity
+      render_validation_error("resource_type must be one of: #{RESOURCE_TYPES.join(", ")}")
     end
 end

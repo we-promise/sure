@@ -102,11 +102,45 @@ class UserTest < ActiveSupport::TestCase
     user = users(:family_member)
     user.setup_mfa!
     user.enable_mfa!
+    user.webauthn_credentials.create!(
+      nickname: "YubiKey",
+      credential_id: "credential-id",
+      public_key: "public-key"
+    )
+
     user.disable_mfa!
 
     assert_nil user.otp_secret
     assert_not user.otp_required?
     assert_empty user.otp_backup_codes
+    assert_empty user.webauthn_credentials
+  end
+
+  test "ensure_webauthn_id! generates a stable credential user handle" do
+    user = users(:family_member)
+    assert_nil user.webauthn_id
+
+    webauthn_id = user.ensure_webauthn_id!
+
+    assert webauthn_id.present?
+    assert_equal webauthn_id, user.reload.ensure_webauthn_id!
+  end
+
+  test "webauthn_enabled? requires MFA and at least one credential" do
+    user = users(:family_member)
+    assert_not user.webauthn_enabled?
+
+    user.setup_mfa!
+    user.enable_mfa!
+    assert_not user.webauthn_enabled?
+
+    user.webauthn_credentials.create!(
+      nickname: "Touch ID",
+      credential_id: "touch-id-credential",
+      public_key: "public-key"
+    )
+
+    assert user.webauthn_enabled?
   end
 
   test "verify_otp? validates TOTP codes" do

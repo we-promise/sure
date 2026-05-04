@@ -1,6 +1,6 @@
 {
   "$schema": "https://design-tokens.github.io/community-group/format/",
-  "$version": "1.0.0",
+  "$version": "2.0.0",
   "$description": "Sure design tokens. Single source of truth. Hand-edit; run `npm run tokens:build` to regenerate CSS. Template syntax in $value strings: `{path.to.token}` resolves to `var(--path-to-token)`; `{path|N%}` becomes `--alpha(var(--path) / N%)`. Utility tokens whose value lacks `{}` are treated as raw Tailwind class lists for @apply.",
 
   "font": {
@@ -275,15 +275,6 @@
       "$extensions": { "sure.compose": ["bg-surface-inset", "animate-pulse"] }
     },
 
-    "fg-gray":              { "$type": "utility", "$value": "{color.gray.500}", "$extensions": { "sure.utility": { "prefix": "text" }, "sure.dark": "{color.gray.400}" } },
-    "fg-contrast":          { "$type": "utility", "$value": "{color.gray.400}", "$extensions": { "sure.utility": { "prefix": "text" }, "sure.dark": "{color.gray.500}" } },
-    "fg-inverse":           { "$type": "utility", "$value": "{color.white}",    "$extensions": { "sure.utility": { "prefix": "text" }, "sure.dark": "{color.gray.900}" } },
-    "fg-primary":           { "$type": "utility", "$value": "{color.gray.900}", "$extensions": { "sure.utility": { "prefix": "text" }, "sure.dark": "{color.white}" } },
-    "fg-primary-variant":   { "$type": "utility", "$value": "{color.gray.800}", "$extensions": { "sure.utility": { "prefix": "text" }, "sure.dark": "{color.gray.50}" } },
-    "fg-secondary":         { "$type": "utility", "$value": "{color.gray.50}",  "$extensions": { "sure.utility": { "prefix": "text" }, "sure.dark": "{color.gray.400}" } },
-    "fg-secondary-variant": { "$type": "utility", "$value": "{color.gray.100}", "$extensions": { "sure.utility": { "prefix": "text" }, "sure.dark": "{color.gray.500}" } },
-    "fg-subdued":           { "$type": "utility", "$value": "{color.gray.400}", "$extensions": { "sure.utility": { "prefix": "text" }, "sure.dark": "{color.gray.500}" } },
-
     "text-primary":   { "$type": "utility", "$value": "{color.gray.900}", "$extensions": { "sure.utility": { "prefix": "text" }, "sure.dark": "{color.white}" } },
     "text-inverse":   { "$type": "utility", "$value": "{color.white}",    "$extensions": { "sure.utility": { "prefix": "text" }, "sure.dark": "{color.gray.900}" } },
     "text-secondary": { "$type": "utility", "$value": "{color.gray.500}", "$extensions": { "sure.utility": { "prefix": "text" }, "sure.dark": "{color.gray.300}" } },
@@ -338,6 +329,7 @@
     "border-subdued":     { "$type": "utility", "$value": "{color.alpha-black.50}",  "$extensions": { "sure.utility": { "prefix": "border" }, "sure.dark": "{color.alpha-white.100}" } },
     "border-solid":       { "$type": "utility", "$value": "{color.black}",           "$extensions": { "sure.utility": { "prefix": "border" }, "sure.dark": "{color.white}" } },
     "border-destructive": { "$type": "utility", "$value": "{color.red.500}",         "$extensions": { "sure.utility": { "prefix": "border" }, "sure.dark": "{color.red.400}" } },
+    "border-inverse":     { "$type": "utility", "$value": "{color.alpha-white.200}", "$extensions": { "sure.utility": { "prefix": "border" }, "sure.dark": "{color.alpha-black.300}" } },
 
     "button-bg-primary":           { "$type": "utility", "$value": "{color.gray.900}", "$extensions": { "sure.utility": { "prefix": "bg" }, "sure.dark": "{color.white}" } },
     "button-bg-primary-hover":     { "$type": "utility", "$value": "{color.gray.800}", "$extensions": { "sure.utility": { "prefix": "bg" }, "sure.dark": "{color.gray.50}" } },
@@ -346,7 +338,7 @@
     "button-bg-disabled":          { "$type": "utility", "$value": "{color.gray.50}",  "$extensions": { "sure.utility": { "prefix": "bg" }, "sure.dark": "{color.gray.700}" } },
     "button-bg-destructive":       { "$type": "utility", "$value": "{color.red.500}",  "$extensions": { "sure.utility": { "prefix": "bg" }, "sure.dark": "{color.red.400}" } },
     "button-bg-destructive-hover": { "$type": "utility", "$value": "{color.red.600}",  "$extensions": { "sure.utility": { "prefix": "bg" }, "sure.dark": "{color.red.500}" } },
-    "button-bg-ghost-hover":       { "$type": "utility", "$value": "{color.gray.50}",  "$extensions": { "sure.utility": { "prefix": "bg" }, "sure.dark": "bg-gray-800 fg-inverse" } },
+    "button-bg-ghost-hover":       { "$type": "utility", "$value": "{color.gray.50}",  "$extensions": { "sure.utility": { "prefix": "bg" }, "sure.dark": "bg-gray-800 text-inverse" } },
     "button-bg-outline-hover":     { "$type": "utility", "$value": "{color.gray.100}", "$extensions": { "sure.utility": { "prefix": "bg" }, "sure.dark": "{color.gray.700}" } },
 
     "tab-item-active":  { "$type": "utility", "$value": "{color.white}",     "$extensions": { "sure.utility": { "prefix": "bg" }, "sure.dark": "{color.gray.700}" } },

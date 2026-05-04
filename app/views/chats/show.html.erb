@@ -15,7 +15,7 @@
         <% end %>
       </div>
 
-      <div id="messages" class="grow overflow-y-auto p-4 space-y-6 lg:pb-4" data-chat-target="messages">
+      <div id="<%= @chat.messages_target %>" class="grow overflow-y-auto p-4 space-y-6 lg:pb-4" data-chat-target="messages">
         <% if @chat.conversation_messages.any? %>
           <% @chat.conversation_messages.ordered.each do |message| %>
             <%= render message %>
@@ -24,10 +24,6 @@
           <div class="mt-auto">
             <%= render "chats/ai_greeting", context: "chat" %>
           </div>
-        <% end %>
-
-        <% if params[:thinking].present? %>
-          <%= render "chats/thinking_indicator", chat: @chat %>
         <% end %>
 
         <% if @chat.error.present? && @chat.needs_assistant_response? %>

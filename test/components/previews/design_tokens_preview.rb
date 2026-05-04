@@ -48,10 +48,7 @@ class DesignTokensPreview < ViewComponent::Preview
   end
 
   def text
-    render_with_template(locals: {
-      text_utilities: collect_utilities { |name| name.start_with?("text-") },
-      fg_utilities:   collect_utilities { |name| name.start_with?("fg-") }
-    })
+    render_with_template(locals: { utilities: collect_utilities { |name| name.start_with?("text-") } })
   end
 
   def borders

@@ -50,6 +50,7 @@ class Investment < ApplicationRecord
     "smsf" => { short: "SMSF", long: "Self-Managed Super Fund", region: "au", tax_treatment: :tax_deferred },
 
     # === Europe ===
+    "assurance_vie" => { short: "AV", long: "Assurance Vie", region: "eu", tax_treatment: :tax_advantaged },
     "pea" => { short: "PEA", long: "Plan d'Épargne en Actions", region: "eu", tax_treatment: :tax_advantaged },
     "pillar_3a" => { short: "Pillar 3a", long: "Private Pension (Pillar 3a)", region: "eu", tax_treatment: :tax_deferred },
     "riester" => { short: "Riester", long: "Riester-Rente", region: "eu", tax_treatment: :tax_deferred },
