@@ -40,34 +40,52 @@ module Authentication
     end
 
     def cookie_session_disagrees_with_header?(session)
-      header_name = Rails.application.config.remote_user_header_email
-      return false if header_name.blank?
-
-      header_email = request.headers[header_name]&.strip&.downcase
-      header_email.present? && session.user.email != header_email
+      email = trusted_remote_user_email
+      email.present? && session.user.email != email
     end
 
     def create_session_by_remote_header
-      header_name = Rails.application.config.remote_user_header_email
-      return if header_name.blank?
+      return unless user_email = trusted_remote_user_email
 
-      user_email = request.headers[header_name]&.strip&.downcase
-      if user_email.present? && URI::MailTo::EMAIL_REGEXP.match?(user_email)
-        user, created = find_or_create_remote_header_user(user_email)
-        if created
-          SsoAuditLog.log_jit_account_created!(
-            user: user,
-            provider: REMOTE_HEADER_SSO_PROVIDER,
-            request: request
-          )
-        end
-        SsoAuditLog.log_login!(
+      user, created = find_or_create_remote_header_user(user_email)
+      if created
+        SsoAuditLog.log_jit_account_created!(
           user: user,
           provider: REMOTE_HEADER_SSO_PROVIDER,
           request: request
         )
-        create_session_for(user)
       end
+      SsoAuditLog.log_login!(
+        user: user,
+        provider: REMOTE_HEADER_SSO_PROVIDER,
+        request: request
+      )
+      create_session_for(user)
+    end
+
+    # Returns the email asserted by the upstream proxy, but only when the
+    # request passes all configured trust gates: header set, source IP in
+    # the trusted-proxies allowlist (if any), and email shape is valid.
+    def trusted_remote_user_email
+      header_name = Rails.application.config.remote_user_header_email
+      return nil if header_name.blank?
+      return nil unless remote_user_proxy_trusted?
+
+      email = request.headers[header_name]&.strip&.downcase
+      return nil if email.blank?
+      return nil unless URI::MailTo::EMAIL_REGEXP.match?(email)
+
+      email
+    end
+
+    def remote_user_proxy_trusted?
+      trusted = Rails.application.config.remote_user_trusted_proxies
+      return true if trusted.blank?
+
+      client_ip = IPAddr.new(request.remote_ip)
+      trusted.any? { |range| range.include?(client_ip) }
+    rescue IPAddr::Error
+      false
     end
 
     def find_or_create_remote_header_user(user_email)
