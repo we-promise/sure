@@ -10,6 +10,7 @@
 
         <form action="<%= link_existing_account_mercury_items_path %>" method="post" class="space-y-4" data-turbo-frame="_top">
           <%= hidden_field_tag :authenticity_token, form_authenticity_token %>
+          <%= hidden_field_tag :mercury_item_id, @mercury_item.id %>
           <%= hidden_field_tag :account_id, @account.id %>
           <%= hidden_field_tag :return_to, @return_to %>
 
