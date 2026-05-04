@@ -18,14 +18,25 @@ class ChatTest < ActiveSupport::TestCase
     assert_equal 3, chat.conversation_messages.count
   end
 
+  test "uses chat-scoped stream targets" do
+    first_chat = chats(:one)
+    second_chat = chats(:two)
+
+    assert_not_equal "messages", first_chat.messages_target
+    assert_not_equal "chat-error", first_chat.error_target
+    assert_not_equal first_chat.messages_target, second_chat.messages_target
+    assert_not_equal first_chat.error_target, second_chat.error_target
+  end
+
   test "creates with initial message" do
     prompt = "Test prompt"
 
     assert_difference "@user.chats.count", 1 do
       chat = @user.chats.start!(prompt, model: "gpt-4.1")
 
-      assert_equal 1, chat.messages.count
+      assert_equal 2, chat.messages.count
       assert_equal 1, chat.messages.where(type: "UserMessage").count
+      assert_equal 1, chat.messages.where(type: "AssistantMessage", status: "pending").count
     end
   end
 
@@ -35,8 +46,8 @@ class ChatTest < ActiveSupport::TestCase
     assert_difference "@user.chats.count", 1 do
       chat = @user.chats.start!(prompt, model: nil)
 
-      assert_equal 1, chat.messages.count
-      assert_equal Provider::Openai::DEFAULT_MODEL, chat.messages.first.ai_model
+      assert_equal 2, chat.messages.count
+      assert_equal Provider::Openai::DEFAULT_MODEL, chat.messages.find_by!(type: "UserMessage").ai_model
     end
   end
 
@@ -46,8 +57,8 @@ class ChatTest < ActiveSupport::TestCase
     assert_difference "@user.chats.count", 1 do
       chat = @user.chats.start!(prompt, model: "")
 
-      assert_equal 1, chat.messages.count
-      assert_equal Provider::Openai::DEFAULT_MODEL, chat.messages.first.ai_model
+      assert_equal 2, chat.messages.count
+      assert_equal Provider::Openai::DEFAULT_MODEL, chat.messages.find_by!(type: "UserMessage").ai_model
     end
   end
 
@@ -57,7 +68,7 @@ class ChatTest < ActiveSupport::TestCase
     with_env_overrides OPENAI_MODEL: "custom-model" do
       chat = @user.chats.start!(prompt, model: "")
 
-      assert_equal "custom-model", chat.messages.first.ai_model
+      assert_equal "custom-model", chat.messages.find_by!(type: "UserMessage").ai_model
     end
   end
 
