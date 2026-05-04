@@ -129,19 +129,15 @@ class Account::CurrentBalanceManager
       entry = current_anchor_valuation.entry
       return if entry.date == Date.current # Same-day update — nothing to preserve
 
-      ActiveRecord::Base.transaction do
-        current_anchor_valuation.update!(kind: "reconciliation")
-        entry.update!(name: Valuation.build_reconciliation_name(account.accountable_type))
-        Rails.logger.info("[AnchorRotation] Converted current_anchor to reconciliation for account #{account.id}, date=#{entry.date}, has_amount=#{entry.amount.present?}")
-        Rails.logger.debug("[AnchorRotation] Converted current_anchor to reconciliation for account #{account.id}, date=#{entry.date}, amount=#{entry.amount}")
-      end
+      current_anchor_valuation.update!(kind: "reconciliation")
+      entry.update!(name: Valuation.build_reconciliation_name(account.accountable_type))
+      Rails.logger.info("[AnchorRotation] Converted current_anchor to reconciliation for account #{account.id}, date=#{entry.date}, has_amount=#{entry.amount.present?}")
 
       # Clear memoized value so the next check creates a fresh current_anchor
       account.valuations.reload
       @current_anchor_valuation = nil
     end
 
-  # Return value unused; side effects (reload + memoization clear) are what matter
     def create_current_anchor(balance)
       account.entries.create!(
         date: Date.current,
