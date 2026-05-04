@@ -16,8 +16,16 @@ module Authentication
 
   private
     def authenticate_user!
-      if session_record = find_session_by_cookie
-        Current.session = session_record
+      cookie_session = find_session_by_cookie
+
+      if cookie_session && cookie_session_disagrees_with_header?(cookie_session)
+        cookie_session.destroy
+        cookies.delete(:session_token)
+        cookie_session = nil
+      end
+
+      if cookie_session
+        Current.session = cookie_session
       elsif session_record = create_session_by_remote_header
         Current.session = session_record
       else
@@ -27,6 +35,14 @@ module Authentication
           redirect_to new_session_url
         end
       end
+    end
+
+    def cookie_session_disagrees_with_header?(session)
+      header_name = Rails.application.config.remote_user_header_email
+      return false if header_name.blank?
+
+      header_email = request.headers[header_name]&.strip&.downcase
+      header_email.present? && session.user.email != header_email
     end
 
     def create_session_by_remote_header
