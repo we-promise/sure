@@ -1466,6 +1466,141 @@ components:
             "$ref": "#/components/schemas/Holding"
         pagination:
           "$ref": "#/components/schemas/Pagination"
+    Security:
+      type: object
+      required:
+      - id
+      - ticker
+      - kind
+      - offline
+      - created_at
+      - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        ticker:
+          type: string
+        name:
+          type: string
+          nullable: true
+        kind:
+          type: string
+          enum:
+          - standard
+          - cash
+        country_code:
+          type: string
+          nullable: true
+        exchange_mic:
+          type: string
+          nullable: true
+        exchange_acronym:
+          type: string
+          nullable: true
+        exchange_operating_mic:
+          type: string
+          nullable: true
+        exchange_name:
+          type: string
+          nullable: true
+        offline:
+          type: boolean
+        offline_reason:
+          type: string
+          nullable: true
+        website_url:
+          type: string
+          nullable: true
+        logo_url:
+          type: string
+          nullable: true
+        first_provider_price_on:
+          type: string
+          format: date
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    SecurityCollection:
+      type: object
+      required:
+      - securities
+      - pagination
+      properties:
+        securities:
+          type: array
+          items:
+            "$ref": "#/components/schemas/Security"
+        pagination:
+          "$ref": "#/components/schemas/Pagination"
+    SecurityPrice:
+      type: object
+      required:
+      - id
+      - date
+      - price
+      - price_amount
+      - currency
+      - provisional
+      - security
+      - created_at
+      - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        date:
+          type: string
+          format: date
+        price:
+          type: string
+          description: Formatted security price
+        price_amount:
+          type: string
+          description: Exact decimal security price
+        currency:
+          type: string
+        provisional:
+          type: boolean
+        security:
+          type: object
+          required:
+          - id
+          - ticker
+          properties:
+            id:
+              type: string
+              format: uuid
+            ticker:
+              type: string
+            name:
+              type: string
+              nullable: true
+            exchange_operating_mic:
+              type: string
+              nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    SecurityPriceCollection:
+      type: object
+      required:
+      - security_prices
+      - pagination
+      properties:
+        security_prices:
+          type: array
+          items:
+            "$ref": "#/components/schemas/SecurityPrice"
+        pagination:
+          "$ref": "#/components/schemas/Pagination"
     Money:
       type: object
       required:
@@ -3679,6 +3814,237 @@ paths:
                 "$ref": "#/components/schemas/ErrorResponse"
         '404':
           description: rule not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+  "/api/v1/securities":
+    get:
+      summary: List securities referenced by family investment data
+      tags:
+      - Securities
+      security:
+      - apiKeyAuth: []
+      parameters:
+      - name: page
+        in: query
+        required: false
+        description: 'Page number (default: 1)'
+        schema:
+          type: integer
+      - name: per_page
+        in: query
+        required: false
+        description: 'Items per page (default: 25, max: 100)'
+        schema:
+          type: integer
+      - name: ticker
+        in: query
+        required: false
+        description: Filter by ticker symbol
+        schema:
+          type: string
+      - name: exchange_operating_mic
+        in: query
+        required: false
+        description: Filter by exchange operating MIC
+        schema:
+          type: string
+      - name: kind
+        in: query
+        required: false
+        description: Filter by security kind
+        schema:
+          type: string
+          enum:
+          - standard
+          - cash
+      - name: offline
+        in: query
+        required: false
+        description: Filter by offline status. When supplied, must be true or false.
+        schema:
+          type: boolean
+      responses:
+        '200':
+          description: securities listed
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/SecurityCollection"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: insufficient scope
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '422':
+          description: invalid filter
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+  "/api/v1/securities/{id}":
+    parameters:
+    - name: id
+      in: path
+      required: true
+      description: Security ID
+      schema:
+        type: string
+        format: uuid
+    get:
+      summary: Retrieve a security referenced by family investment data
+      tags:
+      - Securities
+      security:
+      - apiKeyAuth: []
+      responses:
+        '200':
+          description: security retrieved
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Security"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: insufficient scope
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '404':
+          description: security not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+  "/api/v1/security_prices":
+    get:
+      summary: List security price history referenced by family investment data
+      tags:
+      - Security Prices
+      security:
+      - apiKeyAuth: []
+      parameters:
+      - name: page
+        in: query
+        required: false
+        description: 'Page number (default: 1)'
+        schema:
+          type: integer
+      - name: per_page
+        in: query
+        required: false
+        description: 'Items per page (default: 25, max: 100)'
+        schema:
+          type: integer
+      - name: security_id
+        in: query
+        required: false
+        description: Filter by security ID
+        schema:
+          type: string
+          format: uuid
+      - name: currency
+        in: query
+        required: false
+        description: Filter by currency code
+        schema:
+          type: string
+      - name: start_date
+        in: query
+        required: false
+        description: Filter prices from this date
+        schema:
+          type: string
+          format: date
+      - name: end_date
+        in: query
+        required: false
+        description: Filter prices until this date
+        schema:
+          type: string
+          format: date
+      - name: provisional
+        in: query
+        required: false
+        description: Filter by provisional price status. When supplied, must be true
+          or false.
+        schema:
+          type: boolean
+      responses:
+        '200':
+          description: security prices listed
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/SecurityPriceCollection"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: insufficient scope
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '422':
+          description: invalid filter
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+  "/api/v1/security_prices/{id}":
+    parameters:
+    - name: id
+      in: path
+      required: true
+      description: Security price ID
+      schema:
+        type: string
+        format: uuid
+    get:
+      summary: Retrieve a security price referenced by family investment data
+      tags:
+      - Security Prices
+      security:
+      - apiKeyAuth: []
+      responses:
+        '200':
+          description: security price retrieved
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/SecurityPrice"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: insufficient scope
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '404':
+          description: security price not found
           content:
             application/json:
               schema:

@@ -429,6 +429,8 @@ Rails.application.routes.draw do
       resources :merchants, only: %i[index show]
       resources :rules, only: [ :index, :show ]
       resources :rule_runs, only: [ :index, :show ]
+      resources :securities, only: [ :index, :show ]
+      resources :security_prices, only: [ :index, :show ]
       resources :tags, only: %i[index show create update destroy]
 
       resources :transactions, only: [ :index, :show, :create, :update, :destroy ]

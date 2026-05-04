@@ -826,6 +826,74 @@ RSpec.configure do |config|
               pagination: { '$ref' => '#/components/schemas/Pagination' }
             }
           },
+          Security: {
+            type: :object,
+            required: %w[id ticker kind offline created_at updated_at],
+            properties: {
+              id: { type: :string, format: :uuid },
+              ticker: { type: :string },
+              name: { type: :string, nullable: true },
+              kind: { type: :string, enum: %w[standard cash] },
+              country_code: { type: :string, nullable: true },
+              exchange_mic: { type: :string, nullable: true },
+              exchange_acronym: { type: :string, nullable: true },
+              exchange_operating_mic: { type: :string, nullable: true },
+              exchange_name: { type: :string, nullable: true },
+              offline: { type: :boolean },
+              offline_reason: { type: :string, nullable: true },
+              website_url: { type: :string, nullable: true },
+              logo_url: { type: :string, nullable: true },
+              first_provider_price_on: { type: :string, format: :date, nullable: true },
+              created_at: { type: :string, format: :'date-time' },
+              updated_at: { type: :string, format: :'date-time' }
+            }
+          },
+          SecurityCollection: {
+            type: :object,
+            required: %w[securities pagination],
+            properties: {
+              securities: {
+                type: :array,
+                items: { '$ref' => '#/components/schemas/Security' }
+              },
+              pagination: { '$ref' => '#/components/schemas/Pagination' }
+            }
+          },
+          SecurityPrice: {
+            type: :object,
+            required: %w[id date price price_amount currency provisional security created_at updated_at],
+            properties: {
+              id: { type: :string, format: :uuid },
+              date: { type: :string, format: :date },
+              price: { type: :string, description: 'Formatted security price' },
+              price_amount: { type: :string, description: 'Exact decimal security price' },
+              currency: { type: :string },
+              provisional: { type: :boolean },
+              security: {
+                type: :object,
+                required: %w[id ticker],
+                properties: {
+                  id: { type: :string, format: :uuid },
+                  ticker: { type: :string },
+                  name: { type: :string, nullable: true },
+                  exchange_operating_mic: { type: :string, nullable: true }
+                }
+              },
+              created_at: { type: :string, format: :'date-time' },
+              updated_at: { type: :string, format: :'date-time' }
+            }
+          },
+          SecurityPriceCollection: {
+            type: :object,
+            required: %w[security_prices pagination],
+            properties: {
+              security_prices: {
+                type: :array,
+                items: { '$ref' => '#/components/schemas/SecurityPrice' }
+              },
+              pagination: { '$ref' => '#/components/schemas/Pagination' }
+            }
+          },
           Money: {
             type: :object,
             required: %w[amount currency formatted],
