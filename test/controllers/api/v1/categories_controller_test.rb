@@ -188,4 +188,102 @@ class Api::V1::CategoriesControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :not_found
   end
+
+  # Create action tests
+
+  test "create requires authentication" do
+    post "/api/v1/categories", params: { category: { name: "Anything" } }
+    assert_response :unauthorized
+  end
+
+  test "create rejects token without read_write scope" do
+    post "/api/v1/categories",
+      params: { category: { name: "Coffee Runs", color: "#22c55e", icon: "coffee" } },
+      headers: { "Authorization" => "Bearer #{@access_token.token}" }
+
+    assert_response :forbidden
+  end
+
+  test "create returns 201 with full attributes" do
+    post "/api/v1/categories",
+      params: { category: { name: "Coffee Runs", color: "#22c55e", icon: "coffee" } },
+      headers: { "Authorization" => "Bearer #{write_token.token}" }
+
+    assert_response :created
+    body = JSON.parse(response.body)
+    assert body["id"].present?
+    assert_equal "Coffee Runs", body["name"]
+    assert_equal "#22c55e", body["color"]
+    assert_equal "coffee", body["icon"]
+    assert_nil body["parent"]
+    assert_equal 0, body["subcategories_count"]
+
+    persisted = @user.family.categories.find(body["id"])
+    assert_equal "coffee", persisted.lucide_icon
+  end
+
+  test "create auto-suggests icon when omitted" do
+    post "/api/v1/categories",
+      params: { category: { name: "Groceries Imported", color: "#407706" } },
+      headers: { "Authorization" => "Bearer #{write_token.token}" }
+
+    assert_response :created
+    body = JSON.parse(response.body)
+    assert body["icon"].present?
+    assert_not_equal "", body["icon"]
+  end
+
+  test "create attaches parent when provided" do
+    post "/api/v1/categories",
+      params: { category: { name: "Imported Subcategory", color: "#22c55e", icon: "shapes", parent_id: @category.id } },
+      headers: { "Authorization" => "Bearer #{write_token.token}" }
+
+    assert_response :created
+    body = JSON.parse(response.body)
+    assert_equal @category.id, body.dig("parent", "id")
+    assert_equal @category.name, body.dig("parent", "name")
+  end
+
+  test "create returns 422 on duplicate name within family" do
+    post "/api/v1/categories",
+      params: { category: { name: @category.name } },
+      headers: { "Authorization" => "Bearer #{write_token.token}" }
+
+    assert_response :unprocessable_entity
+    body = JSON.parse(response.body)
+    assert_equal "unprocessable_entity", body["error"]
+    assert body["message"].present?
+  end
+
+  test "create returns 422 on invalid color" do
+    post "/api/v1/categories",
+      params: { category: { name: "Bad Color", color: "not-a-hex" } },
+      headers: { "Authorization" => "Bearer #{write_token.token}" }
+
+    assert_response :unprocessable_entity
+  end
+
+  test "create returns 422 when parent_id belongs to another family" do
+    other_family_category = families(:empty).categories.create!(
+      name: "External Parent",
+      color: "#FF0000",
+      classification_unused: "expense"
+    )
+
+    post "/api/v1/categories",
+      params: { category: { name: "Should Fail", color: "#22c55e", icon: "shapes", parent_id: other_family_category.id } },
+      headers: { "Authorization" => "Bearer #{write_token.token}" }
+
+    assert_response :unprocessable_entity
+  end
+
+  private
+
+    def write_token
+      @write_token ||= Doorkeeper::AccessToken.create!(
+        application: @oauth_app,
+        resource_owner_id: @user.id,
+        scopes: "read_write"
+      )
+    end
 end
