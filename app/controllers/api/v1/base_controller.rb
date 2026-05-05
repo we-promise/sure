@@ -6,6 +6,8 @@ class Api::V1::BaseController < ApplicationController
   UUID_PATTERN = /\A[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\z/i
   private_constant :UUID_PATTERN
 
+  InvalidFilterError = Class.new(StandardError)
+
   # Skip regular session-based authentication for API
   skip_authentication
 
@@ -252,6 +254,12 @@ class Api::V1::BaseController < ApplicationController
     def handle_bad_request(exception)
       Rails.logger.warn "API Bad Request: #{exception.message}"
       render_json({ error: "bad_request", message: "Required parameters are missing or invalid" }, status: :bad_request)
+    end
+
+    def parse_date_param(key)
+      Date.iso8601(params[key].to_s)
+    rescue ArgumentError
+      raise InvalidFilterError, "#{key} must be an ISO 8601 date"
     end
 
     # Log API access for monitoring and debugging
