@@ -8,18 +8,6 @@ class Api::V1::CategoriesControllerTest < ActionDispatch::IntegrationTest
     @other_family_user = users(:family_member)
     @other_family_user.update!(family: families(:empty))
 
-    @oauth_app = Doorkeeper::Application.create!(
-      name: "Test API App",
-      redirect_uri: "https://example.com/callback",
-      scopes: "read read_write"
-    )
-
-    @access_token = Doorkeeper::AccessToken.create!(
-      application: @oauth_app,
-      resource_owner_id: @user.id,
-      scopes: "read"
-    )
-
     @category = categories(:food_and_drink)
     @subcategory = categories(:subcategory)
   end
@@ -35,9 +23,7 @@ class Api::V1::CategoriesControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "should return user's family categories successfully" do
-    get "/api/v1/categories", params: {}, headers: {
-      "Authorization" => "Bearer #{@access_token.token}"
-    }
+    get "/api/v1/categories", params: {}, headers: api_headers(read_only_api_key)
 
     assert_response :success
     response_body = JSON.parse(response.body)
@@ -53,15 +39,15 @@ class Api::V1::CategoriesControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "should not return other family's categories" do
-    access_token = Doorkeeper::AccessToken.create!(
-      application: @oauth_app,
-      resource_owner_id: @other_family_user.id,
-      scopes: "read"
+    other_family_api_key = ApiKey.create!(
+      user: @other_family_user,
+      name: "Other Family Read Key",
+      display_key: "other_family_#{SecureRandom.hex(8)}",
+      scopes: %w[read],
+      source: "web"
     )
 
-    get "/api/v1/categories", params: {}, headers: {
-      "Authorization" => "Bearer #{access_token.token}"
-    }
+    get "/api/v1/categories", params: {}, headers: api_headers(other_family_api_key)
 
     assert_response :success
     response_body = JSON.parse(response.body)
@@ -72,9 +58,7 @@ class Api::V1::CategoriesControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "should return proper category data structure" do
-    get "/api/v1/categories", params: {}, headers: {
-      "Authorization" => "Bearer #{@access_token.token}"
-    }
+    get "/api/v1/categories", params: {}, headers: api_headers(read_only_api_key)
 
     assert_response :success
     response_body = JSON.parse(response.body)
@@ -96,9 +80,7 @@ class Api::V1::CategoriesControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "should include parent information for subcategories" do
-    get "/api/v1/categories", params: {}, headers: {
-      "Authorization" => "Bearer #{@access_token.token}"
-    }
+    get "/api/v1/categories", params: {}, headers: api_headers(read_only_api_key)
 
     assert_response :success
     response_body = JSON.parse(response.body)
@@ -112,9 +94,7 @@ class Api::V1::CategoriesControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "should handle pagination parameters" do
-    get "/api/v1/categories", params: { page: 1, per_page: 2 }, headers: {
-      "Authorization" => "Bearer #{@access_token.token}"
-    }
+    get "/api/v1/categories", params: { page: 1, per_page: 2 }, headers: api_headers(read_only_api_key)
 
     assert_response :success
     response_body = JSON.parse(response.body)
@@ -125,9 +105,7 @@ class Api::V1::CategoriesControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "should filter for roots only" do
-    get "/api/v1/categories", params: { roots_only: true }, headers: {
-      "Authorization" => "Bearer #{@access_token.token}"
-    }
+    get "/api/v1/categories", params: { roots_only: true }, headers: api_headers(read_only_api_key)
 
     assert_response :success
     response_body = JSON.parse(response.body)
@@ -138,9 +116,7 @@ class Api::V1::CategoriesControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "should sort categories alphabetically" do
-    get "/api/v1/categories", params: {}, headers: {
-      "Authorization" => "Bearer #{@access_token.token}"
-    }
+    get "/api/v1/categories", params: {}, headers: api_headers(read_only_api_key)
 
     assert_response :success
     response_body = JSON.parse(response.body)
@@ -152,9 +128,7 @@ class Api::V1::CategoriesControllerTest < ActionDispatch::IntegrationTest
   # Show action tests
 
   test "should return a single category" do
-    get "/api/v1/categories/#{@category.id}", params: {}, headers: {
-      "Authorization" => "Bearer #{@access_token.token}"
-    }
+    get "/api/v1/categories/#{@category.id}", params: {}, headers: api_headers(read_only_api_key)
 
     assert_response :success
     response_body = JSON.parse(response.body)
@@ -166,9 +140,7 @@ class Api::V1::CategoriesControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "should return 404 for non-existent category" do
-    get "/api/v1/categories/00000000-0000-0000-0000-000000000000", params: {}, headers: {
-      "Authorization" => "Bearer #{@access_token.token}"
-    }
+    get "/api/v1/categories/00000000-0000-0000-0000-000000000000", params: {}, headers: api_headers(read_only_api_key)
 
     assert_response :not_found
     response_body = JSON.parse(response.body)
@@ -182,9 +154,7 @@ class Api::V1::CategoriesControllerTest < ActionDispatch::IntegrationTest
       classification_unused: "expense"
     )
 
-    get "/api/v1/categories/#{other_family_category.id}", params: {}, headers: {
-      "Authorization" => "Bearer #{@access_token.token}"
-    }
+    get "/api/v1/categories/#{other_family_category.id}", params: {}, headers: api_headers(read_only_api_key)
 
     assert_response :not_found
   end
