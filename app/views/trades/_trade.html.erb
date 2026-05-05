@@ -32,10 +32,10 @@
             </div>
 
             <div class="truncate flex-shrink">
-              <%= link_to(highlight_activity_entry_name(entry.name),
+              <%= link_to entry.name,
                         entry_path(entry),
                         data: { turbo_frame: "drawer", turbo_prefetch: false },
-                        class: "hover:underline") %>
+                        class: "hover:underline" %>
             </div>
           <% end %>
         </div>
