@@ -26,6 +26,7 @@ en:
         one: 1 statement uploaded.
         other: "%{count} statements uploaded."
     destroy:
+      failure: Statement could not be deleted.
       success: Statement deleted.
     form:
       account_upload: Upload statement
@@ -46,6 +47,7 @@ en:
       upload_description: Upload statements to the inbox, or choose an account to link immediately.
       upload_title: Upload statements
     link:
+      no_account: Choose an account before linking this statement.
       success: Linked statement to %{account}.
     period:
       unknown: Period unknown

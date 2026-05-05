@@ -66,11 +66,11 @@ class AccountStatementsController < ApplicationController
   def update
     return if @statement.account && !require_account_permission!(@statement.account)
 
-    target = statement_params[:account_id].present? ? Current.user.accessible_accounts.find(statement_params[:account_id]) : nil
+    target = statement_account_id.present? ? Current.user.accessible_accounts.find(statement_account_id) : nil
     return if target && !require_account_permission!(target)
 
-    attrs = statement_params.except(:account_id)
-    attrs[:account] = target if statement_params.key?(:account_id)
+    attrs = statement_params.to_h
+    attrs[:account] = target if statement_account_id_provided?
 
     @statement.assign_attributes(attrs)
     @statement.match_account! if @statement.account.nil? && !@statement.rejected?
@@ -86,7 +86,13 @@ class AccountStatementsController < ApplicationController
   end
 
   def link
-    account = Current.user.accessible_accounts.find(params[:account_id].presence || @statement.suggested_account_id)
+    account_id = params[:account_id].presence || @statement.suggested_account_id
+    if account_id.blank?
+      redirect_to account_statement_path(@statement), alert: t("account_statements.link.no_account")
+      return
+    end
+
+    account = Current.user.accessible_accounts.find(account_id)
     return unless require_account_permission!(account)
 
     @statement.link_to_account!(account)
@@ -111,8 +117,11 @@ class AccountStatementsController < ApplicationController
     return if @statement.account && !require_account_permission!(@statement.account)
 
     redirect_path = @statement.account ? account_path(@statement.account, tab: "statements") : account_statements_path
-    @statement.destroy
-    redirect_to redirect_path, notice: t("account_statements.destroy.success")
+    if @statement.destroy
+      redirect_to redirect_path, notice: t("account_statements.destroy.success")
+    else
+      redirect_back_or_to redirect_path, alert: t("account_statements.destroy.failure")
+    end
   end
 
   private
@@ -134,12 +143,11 @@ class AccountStatementsController < ApplicationController
     end
 
     def statement_upload_params
-      params.fetch(:account_statement, ActionController::Parameters.new).permit(:account_id, files: [])
+      params.fetch(:account_statement, ActionController::Parameters.new).permit(files: [])
     end
 
     def statement_params
       params.require(:account_statement).permit(
-        :account_id,
         :institution_name_hint,
         :account_name_hint,
         :account_last4_hint,
@@ -152,10 +160,18 @@ class AccountStatementsController < ApplicationController
     end
 
     def target_account
-      account_id = statement_upload_params[:account_id].presence
+      account_id = statement_account_id.presence
       return nil if account_id.blank?
 
       Current.user.accessible_accounts.find(account_id)
+    end
+
+    def statement_account_id
+      params.fetch(:account_statement, ActionController::Parameters.new)[:account_id]
+    end
+
+    def statement_account_id_provided?
+      params.fetch(:account_statement, ActionController::Parameters.new).key?(:account_id)
     end
 
     def valid_upload?(file)

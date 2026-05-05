@@ -33,6 +33,8 @@ Rails.application.config.to_prepare do
 
       def authorize_account_statement_attachment(attachment)
         statement = attachment.record
+        raise ActiveRecord::RecordNotFound if statement.nil?
+
         allowed =
           Current.family == statement.family &&
           (statement.account.nil? || statement.account.shared_with?(Current.user))

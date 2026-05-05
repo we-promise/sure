@@ -93,6 +93,17 @@ class ActiveStorageAuthorizationTest < ActionDispatch::IntegrationTest
     assert_response :not_found
   end
 
+  test "orphaned statement attachment fails closed" do
+    attachment = @statement_a.original_file.attachment
+    attachment.update_columns(record_id: SecureRandom.uuid)
+
+    sign_in @user_a
+
+    get rails_blob_path(attachment)
+
+    assert_response :not_found
+  end
+
   private
 
     def uploaded_file(filename:, content_type:, content:)

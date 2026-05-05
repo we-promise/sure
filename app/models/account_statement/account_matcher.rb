@@ -33,8 +33,8 @@ class AccountStatement::AccountMatcher
         score += 0.25.to_d if account.name.to_s.downcase.include?(account_name_hint)
       end
 
-      if statement.account_last4_hint.present?
-        score += 0.25.to_d if account_sensitive_match_text(account).include?(statement.account_last4_hint)
+      if account_last4_hint.present?
+        score += 0.25.to_d if account_sensitive_match_text(account).include?(account_last4_hint)
       end
 
       score += 0.05.to_d if statement.statement_currency == account.currency
@@ -47,6 +47,10 @@ class AccountStatement::AccountMatcher
 
     def account_name_hint
       @account_name_hint ||= statement.account_name_hint.to_s.downcase.squish.presence
+    end
+
+    def account_last4_hint
+      @account_last4_hint ||= statement.account_last4_hint.to_s.downcase.squish.presence
     end
 
     def account_text(account)

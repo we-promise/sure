@@ -152,6 +152,22 @@ class AccountStatementsControllerTest < ActionDispatch::IntegrationTest
     assert statement.linked?
   end
 
+  test "link shows friendly error when no target account is available" do
+    statement = AccountStatement.create_from_upload!(
+      family: @account.family,
+      account: nil,
+      file: uploaded_file(filename: "statement.csv", content_type: "text/csv", content: "date,amount\n2024-01-01,1\n")
+    )
+
+    patch link_account_statement_url(statement)
+
+    assert_redirected_to account_statement_url(statement)
+    assert_equal "Choose an account before linking this statement.", flash[:alert]
+    statement.reload
+    assert_nil statement.account
+    assert statement.unmatched?
+  end
+
   test "unlinks statement back to inbox" do
     statement = AccountStatement.create_from_upload!(
       family: @account.family,
@@ -239,6 +255,22 @@ class AccountStatementsControllerTest < ActionDispatch::IntegrationTest
     end
 
     assert_redirected_to account_url(@account, tab: "statements")
+  end
+
+  test "destroy reports failure when statement cannot be deleted" do
+    statement = AccountStatement.create_from_upload!(
+      family: @account.family,
+      account: @account,
+      file: uploaded_file(filename: "statement.csv", content_type: "text/csv", content: "date,amount\n2024-01-01,1\n")
+    )
+    AccountStatement.any_instance.stubs(:destroy).returns(false)
+
+    assert_no_difference "AccountStatement.count" do
+      delete account_statement_url(statement)
+    end
+
+    assert_redirected_to account_url(@account, tab: "statements")
+    assert_equal "Statement could not be deleted.", flash[:alert]
   end
 
   private

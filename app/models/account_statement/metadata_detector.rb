@@ -45,10 +45,16 @@ class AccountStatement::MetadataDetector
       output["pdf_detection"] = "filename_only"
     end
 
-    output = statement.sanitized_parser_output || {}
+    output.merge!(statement.sanitized_parser_output || {})
     output["metadata_sources"] = metadata_sources
     statement.sanitized_parser_output = output
-    statement.parser_confidence ||= metadata_sources.include?("csv_dates") ? 0.65 : metadata_sources.any? ? 0.45 : 0.1
+    statement.parser_confidence ||= if metadata_sources.include?("csv_dates")
+      0.65
+    elsif metadata_sources.any?
+      0.45
+    else
+      0.1
+    end
   end
 
   private

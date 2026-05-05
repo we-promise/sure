@@ -122,6 +122,22 @@ class AccountStatementTest < ActiveSupport::TestCase
     assert_not_includes statement.sanitized_parser_output.to_json, "Payroll"
   end
 
+  test "preserves sanitized pdf metadata output" do
+    statement = AccountStatement.create_from_upload!(
+      family: @family,
+      account: nil,
+      file: uploaded_file(
+        filename: "Statement.pdf",
+        content_type: "application/pdf",
+        content: "%PDF-1.4 statement"
+      )
+    )
+
+    assert_equal "filename_only", statement.sanitized_parser_output["pdf_detection"]
+    assert_equal [ "filename" ], statement.sanitized_parser_output["metadata_sources"]
+    assert_equal 0.45.to_d, statement.parser_confidence
+  end
+
   test "handles malformed csv metadata detection without raw parser output" do
     statement = AccountStatement.create_from_upload!(
       family: @family,
@@ -176,6 +192,22 @@ class AccountStatementTest < ActiveSupport::TestCase
     assert_nil statement.account
     assert statement.unmatched?
     assert_includes @family.account_statements.unmatched, statement
+  end
+
+  test "normalizes account last four hint when matching accounts" do
+    @account.update!(institution_name: "Acme Bank", notes: "Masked statement suffix abcd")
+
+    statement = AccountStatement.new(
+      family: @family,
+      institution_name_hint: "Acme",
+      account_last4_hint: "ABCD",
+      currency: @account.currency
+    )
+
+    match = AccountStatement::AccountMatcher.new(statement).best_match
+
+    assert_equal @account, match.account
+    assert_operator match.confidence, :>=, 0.75.to_d
   end
 
   test "coverage marks covered duplicate ambiguous and mismatched months" do
