@@ -5,15 +5,24 @@ Rails.application.config.to_prepare do
 
     included do
       include Authentication
-      before_action :authorize_transaction_attachment, if: :transaction_attachment?
+      before_action :authorize_protected_attachment, if: :protected_attachment?
     end
 
     private
 
-      def authorize_transaction_attachment
-        attachment = ActiveStorage::Attachment.find_by(blob: authorized_blob)
-        return unless attachment&.record_type == "Transaction"
+      def authorize_protected_attachment
+        attachment = authorized_attachment
+        return unless attachment
 
+        case attachment.record_type
+        when "Transaction"
+          authorize_transaction_attachment(attachment)
+        when "AccountStatement"
+          authorize_account_statement_attachment(attachment)
+        end
+      end
+
+      def authorize_transaction_attachment(attachment)
         transaction = attachment.record
 
         # Check if current user has access to this transaction's family
@@ -22,11 +31,23 @@ Rails.application.config.to_prepare do
         end
       end
 
-      def transaction_attachment?
-        return false unless authorized_blob
+      def authorize_account_statement_attachment(attachment)
+        statement = attachment.record
+        allowed =
+          Current.family == statement.family &&
+          (statement.account.nil? || statement.account.shared_with?(Current.user))
 
-        attachment = ActiveStorage::Attachment.find_by(blob: authorized_blob)
-        attachment&.record_type == "Transaction"
+        raise ActiveRecord::RecordNotFound unless allowed
+      end
+
+      def protected_attachment?
+        authorized_attachment&.record_type.in?([ "Transaction", "AccountStatement" ])
+      end
+
+      def authorized_attachment
+        return nil unless authorized_blob
+
+        @authorized_attachment ||= ActiveStorage::Attachment.find_by(blob: authorized_blob)
       end
 
       def authorized_blob

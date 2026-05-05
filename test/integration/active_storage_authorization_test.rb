@@ -12,6 +12,16 @@ class ActiveStorageAuthorizationTest < ActionDispatch::IntegrationTest
       content_type: "application/pdf"
     )
     @attachment_a = @transaction_a.attachments.first
+
+    @statement_a = AccountStatement.create_from_upload!(
+      family: @user_a.family,
+      account: @transaction_a.entry.account,
+      file: uploaded_file(
+        filename: "statement.pdf",
+        content_type: "application/pdf",
+        content: "%PDF-1.4 Family A Secret Statement"
+      )
+    )
   end
 
   test "user can access attachments within their own family" do
@@ -55,4 +65,46 @@ class ActiveStorageAuthorizationTest < ActionDispatch::IntegrationTest
 
     assert_response :not_found
   end
+
+  test "user cannot access statement blob from a different family" do
+    sign_in @user_b
+
+    get rails_blob_path(@statement_a.original_file)
+
+    assert_response :not_found
+  end
+
+  test "user cannot access linked statement blob for an inaccessible account" do
+    private_account = accounts(:other_asset)
+    statement = AccountStatement.create_from_upload!(
+      family: @user_a.family,
+      account: private_account,
+      file: uploaded_file(
+        filename: "private_statement.pdf",
+        content_type: "application/pdf",
+        content: "%PDF-1.4 Private Family Statement"
+      )
+    )
+
+    sign_in users(:family_member)
+
+    get rails_blob_path(statement.original_file)
+
+    assert_response :not_found
+  end
+
+  private
+
+    def uploaded_file(filename:, content_type:, content:)
+      tempfile = Tempfile.new([ File.basename(filename, ".*"), File.extname(filename) ])
+      tempfile.binmode
+      tempfile.write(content)
+      tempfile.rewind
+
+      ActionDispatch::Http::UploadedFile.new(
+        tempfile: tempfile,
+        filename: filename,
+        type: content_type
+      )
+    end
 end

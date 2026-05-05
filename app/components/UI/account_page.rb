@@ -37,7 +37,7 @@ class UI::AccountPage < ApplicationComponent
   end
 
   def tabs
-    case account.accountable_type
+    base_tabs = case account.accountable_type
     when "Investment", "Crypto"
       [ :activity, :holdings ]
     when "Property", "Vehicle", "Loan"
@@ -45,6 +45,8 @@ class UI::AccountPage < ApplicationComponent
     else
       [ :activity ]
     end
+
+    base_tabs + [ :statements ]
   end
 
   def fx_coverage_start_date
@@ -71,6 +73,8 @@ class UI::AccountPage < ApplicationComponent
     when :holdings, :overview
       # Accountable is responsible for implementing the partial in the correct folder
       render "#{account.accountable_type.downcase.pluralize}/tabs/#{tab}", account: account
+    when :statements
+      render "accounts/show/statements", account: account
     end
   end
 end
