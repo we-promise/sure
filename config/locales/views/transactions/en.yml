@@ -225,6 +225,8 @@ en:
         unexpected_error: "Unexpected error during conversion: %{error}"
     searches:
       filters:
+        account_filter:
+          no_matches_found: No matches found
         amount_filter:
           equal_to: Equal to
           greater_than: Greater than
@@ -238,6 +240,12 @@ en:
           transfer: Transfer
           confirmed: Confirmed
           pending: Pending
+        category_filter:
+          no_matches_found: No matches found
+        merchant_filter:
+          no_matches_found: No matches found
+        tag_filter:
+          no_matches_found: No matches found
         type_filter:
           expense: Expense
           income: Income

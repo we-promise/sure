@@ -6,7 +6,7 @@
   </div>
   <div class="my-2" id="list" data-list-filter-target="list">
     <p class="hidden px-2 py-3 text-sm text-secondary" data-list-filter-target="emptyMessage">
-      No matches found
+      <%= t(".no_matches_found") %>
     </p>
     <% Current.user.accessible_accounts.alphabetically.each do |account| %>
       <div class="filterable-item flex items-center gap-2 p-2" data-filter-name="<%= account.name %>">
