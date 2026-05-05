@@ -26,6 +26,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final _passwordController = TextEditingController();
   final _firstNameController = TextEditingController();
   final _lastNameController = TextEditingController();
+  final _mfaController = TextEditingController();
   bool _passwordVisible = false;
   bool _isSignUp = false;
 
@@ -79,6 +80,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     _passwordController.dispose();
     _firstNameController.dispose();
     _lastNameController.dispose();
+    _mfaController.dispose();
     super.dispose();
   }
 
@@ -284,86 +286,124 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 ),
                 const SizedBox(height: 12),
               ],
-              // Sign Up extra fields
-              if (_isSignUp) ...[
+              // MFA flow — shown instead of the normal form when required
+              if (authProvider.showMfaInput) ...[
+                Text(
+                  'Two-factor authentication',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Enter the code from your authenticator app.',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: colorScheme.onSurfaceVariant),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 16),
                 TextField(
-                  controller: _firstNameController,
-                  textCapitalization: TextCapitalization.words,
+                  controller: _mfaController,
+                  keyboardType: TextInputType.number,
                   decoration: const InputDecoration(
-                    labelText: 'First name',
-                    prefixIcon: Icon(Icons.person_outlined),
+                    labelText: 'One-time code',
+                    prefixIcon: Icon(Icons.lock_clock_outlined),
                   ),
                 ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _lastNameController,
-                  textCapitalization: TextCapitalization.words,
-                  decoration: const InputDecoration(
-                    labelText: 'Last name',
-                    prefixIcon: Icon(Icons.person_outlined),
-                  ),
-                ),
-                const SizedBox(height: 12),
-              ],
-              // Email field
-              TextField(
-                controller: _emailController,
-                keyboardType: TextInputType.emailAddress,
-                decoration: const InputDecoration(
-                  labelText: 'Email',
-                  prefixIcon: Icon(Icons.email_outlined),
-                ),
-              ),
-              const SizedBox(height: 12),
-              // Password field
-              TextField(
-                controller: _passwordController,
-                obscureText: !_passwordVisible,
-                decoration: InputDecoration(
-                  labelText: 'Password',
-                  prefixIcon: const Icon(Icons.lock_outlined),
-                  suffixIcon: IconButton(
-                    icon: Icon(_passwordVisible ? Icons.visibility_off : Icons.visibility),
-                    onPressed: () => setState(() => _passwordVisible = !_passwordVisible),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton(
-                  onPressed: authProvider.isLoading
-                      ? null
-                      : () {
-                          if (_isSignUp) {
-                            authProvider.signup(
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
+                    onPressed: authProvider.isLoading
+                        ? null
+                        : () => authProvider.login(
                               email: _emailController.text.trim(),
                               password: _passwordController.text,
-                              firstName: _firstNameController.text.trim(),
-                              lastName: _lastNameController.text.trim(),
-                            );
-                          } else {
-                            authProvider.login(
-                              email: _emailController.text.trim(),
-                              password: _passwordController.text,
-                            );
-                          }
-                        },
-                  style: FilledButton.styleFrom(
-                    minimumSize: const Size(double.infinity, 52),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                              otpCode: _mfaController.text.trim(),
+                            ),
+                    style: FilledButton.styleFrom(
+                      minimumSize: const Size(double.infinity, 52),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    child: authProvider.isLoading
+                        ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                        : const Text('Verify'),
+                  ),
+                ),
+              ] else ...[
+                // Sign Up extra fields
+                if (_isSignUp) ...[
+                  TextField(
+                    controller: _firstNameController,
+                    textCapitalization: TextCapitalization.words,
+                    decoration: const InputDecoration(
+                      labelText: 'First name',
+                      prefixIcon: Icon(Icons.person_outlined),
                     ),
                   ),
-                  child: authProvider.isLoading
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : Text(_isSignUp ? 'Create Account' : 'Sign In'),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _lastNameController,
+                    textCapitalization: TextCapitalization.words,
+                    decoration: const InputDecoration(
+                      labelText: 'Last name',
+                      prefixIcon: Icon(Icons.person_outlined),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+                // Email field
+                TextField(
+                  controller: _emailController,
+                  keyboardType: TextInputType.emailAddress,
+                  decoration: const InputDecoration(
+                    labelText: 'Email',
+                    prefixIcon: Icon(Icons.email_outlined),
+                  ),
                 ),
-              ),
+                const SizedBox(height: 12),
+                // Password field
+                TextField(
+                  controller: _passwordController,
+                  obscureText: !_passwordVisible,
+                  decoration: InputDecoration(
+                    labelText: 'Password',
+                    prefixIcon: const Icon(Icons.lock_outlined),
+                    suffixIcon: IconButton(
+                      icon: Icon(_passwordVisible ? Icons.visibility_off : Icons.visibility),
+                      onPressed: () => setState(() => _passwordVisible = !_passwordVisible),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
+                    onPressed: authProvider.isLoading
+                        ? null
+                        : () {
+                            if (_isSignUp) {
+                              authProvider.signup(
+                                email: _emailController.text.trim(),
+                                password: _passwordController.text,
+                                firstName: _firstNameController.text.trim(),
+                                lastName: _lastNameController.text.trim(),
+                              );
+                            } else {
+                              authProvider.login(
+                                email: _emailController.text.trim(),
+                                password: _passwordController.text,
+                              );
+                            }
+                          },
+                    style: FilledButton.styleFrom(
+                      minimumSize: const Size(double.infinity, 52),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    child: authProvider.isLoading
+                        ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                        : Text(_isSignUp ? 'Create Account' : 'Sign In'),
+                  ),
+                ),
+              ],
               const SizedBox(height: 48),
             ],
           ),
