@@ -196,10 +196,10 @@ class Api::V1::CategoriesControllerTest < ActionDispatch::IntegrationTest
     assert_response :unauthorized
   end
 
-  test "create rejects token without read_write scope" do
+  test "create rejects api key without read_write scope" do
     post "/api/v1/categories",
       params: { category: { name: "Coffee Runs", color: "#22c55e", icon: "coffee" } },
-      headers: { "Authorization" => "Bearer #{@access_token.token}" }
+      headers: api_headers(read_only_api_key)
 
     assert_response :forbidden
   end
@@ -207,7 +207,7 @@ class Api::V1::CategoriesControllerTest < ActionDispatch::IntegrationTest
   test "create returns 201 with full attributes" do
     post "/api/v1/categories",
       params: { category: { name: "Coffee Runs", color: "#22c55e", icon: "coffee" } },
-      headers: { "Authorization" => "Bearer #{write_token.token}" }
+      headers: api_headers(read_write_api_key)
 
     assert_response :created
     body = JSON.parse(response.body)
@@ -225,7 +225,7 @@ class Api::V1::CategoriesControllerTest < ActionDispatch::IntegrationTest
   test "create auto-suggests icon when omitted" do
     post "/api/v1/categories",
       params: { category: { name: "Groceries Imported", color: "#407706" } },
-      headers: { "Authorization" => "Bearer #{write_token.token}" }
+      headers: api_headers(read_write_api_key)
 
     assert_response :created
     body = JSON.parse(response.body)
@@ -236,7 +236,7 @@ class Api::V1::CategoriesControllerTest < ActionDispatch::IntegrationTest
   test "create attaches parent when provided" do
     post "/api/v1/categories",
       params: { category: { name: "Imported Subcategory", color: "#22c55e", icon: "shapes", parent_id: @category.id } },
-      headers: { "Authorization" => "Bearer #{write_token.token}" }
+      headers: api_headers(read_write_api_key)
 
     assert_response :created
     body = JSON.parse(response.body)
@@ -247,7 +247,7 @@ class Api::V1::CategoriesControllerTest < ActionDispatch::IntegrationTest
   test "create returns 422 on duplicate name within family" do
     post "/api/v1/categories",
       params: { category: { name: @category.name } },
-      headers: { "Authorization" => "Bearer #{write_token.token}" }
+      headers: api_headers(read_write_api_key)
 
     assert_response :unprocessable_entity
     body = JSON.parse(response.body)
@@ -258,7 +258,7 @@ class Api::V1::CategoriesControllerTest < ActionDispatch::IntegrationTest
   test "create returns 422 on invalid color" do
     post "/api/v1/categories",
       params: { category: { name: "Bad Color", color: "not-a-hex" } },
-      headers: { "Authorization" => "Bearer #{write_token.token}" }
+      headers: api_headers(read_write_api_key)
 
     assert_response :unprocessable_entity
   end
@@ -272,18 +272,47 @@ class Api::V1::CategoriesControllerTest < ActionDispatch::IntegrationTest
 
     post "/api/v1/categories",
       params: { category: { name: "Should Fail", color: "#22c55e", icon: "shapes", parent_id: other_family_category.id } },
-      headers: { "Authorization" => "Bearer #{write_token.token}" }
+      headers: api_headers(read_write_api_key)
 
     assert_response :unprocessable_entity
   end
 
+  test "create returns 422 when nesting exceeds two levels" do
+    child = @user.family.categories.create!(
+      name: "Existing Child",
+      color: "#22c55e",
+      lucide_icon: "shapes",
+      parent: @category
+    )
+
+    post "/api/v1/categories",
+      params: { category: { name: "Grandchild", parent_id: child.id } },
+      headers: api_headers(read_write_api_key)
+
+    assert_response :unprocessable_entity
+  end
+
+  test "create returns 400 when category payload is missing" do
+    post "/api/v1/categories",
+      params: {},
+      headers: api_headers(read_write_api_key)
+
+    assert_response :bad_request
+    body = JSON.parse(response.body)
+    assert_equal "bad_request", body["error"]
+  end
+
   private
 
-    def write_token
-      @write_token ||= Doorkeeper::AccessToken.create!(
-        application: @oauth_app,
-        resource_owner_id: @user.id,
-        scopes: "read_write"
-      )
+    def read_write_api_key
+      api_keys(:active_key)
+    end
+
+    def read_only_api_key
+      api_keys(:one)
+    end
+
+    def api_headers(api_key)
+      { "X-Api-Key" => api_key.display_key }
     end
 end

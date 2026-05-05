@@ -147,6 +147,25 @@ RSpec.describe 'API V1 Categories', type: :request do
         run_test!
       end
 
+      response '403', 'forbidden - api key missing read_write scope' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:read_only_api_key) do
+          key = ApiKey.generate_secure_key
+          ApiKey.create!(
+            user: user,
+            name: 'API Docs Read Key',
+            key: key,
+            scopes: %w[read],
+            source: 'mobile'
+          )
+        end
+        let(:'X-Api-Key') { read_only_api_key.plain_key }
+        let(:body) { { category: { name: 'Anything' } } }
+
+        run_test!
+      end
+
       response '401', 'unauthorized - missing api key' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 

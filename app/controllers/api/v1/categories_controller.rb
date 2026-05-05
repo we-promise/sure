@@ -68,6 +68,8 @@ class Api::V1::CategoriesController < Api::V1::BaseController
         message: @category.errors.full_messages.join(", ")
       }, status: :unprocessable_entity
     end
+  rescue ActionController::ParameterMissing
+    raise
   rescue => e
     Rails.logger.error "CategoriesController#create error: #{e.message}"
     Rails.logger.error e.backtrace.join("\n")
