@@ -17,7 +17,7 @@
           <%= hidden_field_tag :account_id, @account.id %>
           <div class="space-y-2 max-h-64 overflow-auto">
             <% @available_coinbase_accounts.each do |ca| %>
-              <label class="flex items-center gap-3 p-2 rounded border border-surface-inset/50 hover:border-primary cursor-pointer">
+              <label class="flex items-center gap-3 p-2 rounded border border-secondary hover:border-primary cursor-pointer">
                 <%= radio_button_tag :coinbase_account_id, ca.id, false %>
                 <div class="flex flex-col">
                   <span class="text-sm text-primary font-medium"><%= ca.name.presence || ca.account_id %></span>

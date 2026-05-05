@@ -29,14 +29,14 @@
           <div class="space-y-0.5">
             <div class="flex items-center gap-1 min-w-0">
               <div class="truncate flex-shrink">
-                <%= link_to entry.name,
+                <%= link_to(highlight_activity_entry_name(entry.name),
                     entry_path(entry),
                     data: { turbo_frame: "drawer", turbo_prefetch: false },
-                    class: "hover:underline" %>
+                    class: "hover:underline") %>
               </div>
 
               <div class="flex items-center gap-1 flex-shrink-0">
-                <span class="inline-flex items-center gap-1 text-xs font-medium rounded-full px-1.5 py-0.5 border border-accent bg-accent/10 text-accent">
+                <span class="inline-flex items-center gap-1 text-xs font-medium rounded-full px-1.5 py-0.5 border border-secondary bg-surface-inset text-secondary">
                   <%= icon "split", size: "sm", color: "current" %>
                   <%= t("transactions.split_parent_row.split_label") %>
                 </span>
@@ -64,6 +64,6 @@
   </div>
 
   <div class="shrink-0 col-span-4 lg:col-span-2 ml-auto flex items-center justify-end gap-2">
-    <%= content_tag :p, format_money(-entry.amount_money) %>
+    <%= content_tag :p, format_money(-entry.amount_money), class: "privacy-sensitive" %>
   </div>
 </div>

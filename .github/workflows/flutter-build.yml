@@ -2,6 +2,10 @@ name: Flutter Mobile Build
 
 on:
   workflow_call:
+    outputs:
+      has_app_release_aab:
+        description: "Whether a signed release AAB artifact was produced"
+        value: ${{ jobs.build-android.outputs.has_app_release_aab }}
   workflow_dispatch:
 
 permissions:
@@ -12,6 +16,8 @@ jobs:
     name: Build Android APK
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    outputs:
+      has_app_release_aab: ${{ steps.check_secrets.outputs.has_keystore }}
 
     steps:
       - name: Checkout code

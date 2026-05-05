@@ -1,24 +1,19 @@
-<div class="space-y-4">
+<div id="mercury-providers-panel" class="space-y-4">
+  <% active_items = local_assigns[:mercury_items] || @mercury_items || Current.family.mercury_items.active.ordered %>
+  <% credentialed_items = active_items.select(&:credentials_configured?) %>
+
   <div class="prose prose-sm text-secondary">
-    <p class="text-primary font-medium">Setup instructions:</p>
+    <p class="text-primary font-medium"><%= t("mercury_items.provider_panel.setup_title") %></p>
     <ol>
-      <li>Visit <a href="https://mercury.com" target="_blank" rel="noopener noreferrer" class="link">Mercury</a> and log in to your account</li>
-      <li>Go to Settings > Developer > API Tokens</li>
-      <li>Create a new API token with "Read Only" access</li>
-      <li><strong>Important:</strong> Add your server's IP address to the token's whitelist</li>
-      <li>Copy the <strong>full token</strong> (including the <code>secret-token:</code> prefix) and paste it below</li>
-      <li>After a successful connection, go to the Accounts tab to set up new accounts</li>
+      <li><%= t("mercury_items.provider_panel.instructions.sign_in_html", link: link_to("Mercury", "https://mercury.com", target: "_blank", rel: "noopener noreferrer", class: "link")) %></li>
+      <li><%= t("mercury_items.provider_panel.instructions.open_tokens") %></li>
+      <li><%= t("mercury_items.provider_panel.instructions.create_token") %></li>
+      <li><%= t("mercury_items.provider_panel.instructions.whitelist_ip_html") %></li>
+      <li><%= t("mercury_items.provider_panel.instructions.copy_token_html") %></li>
     </ol>
 
-    <p class="text-primary font-medium">Field descriptions:</p>
-    <ul>
-      <li><strong>API Token:</strong> Your full Mercury API token including the <code>secret-token:</code> prefix (required)</li>
-      <li><strong>Base URL:</strong> Mercury API URL (optional, defaults to https://api.mercury.com/api/v1)</li>
-    </ul>
-
-    <p class="text-sm text-muted-foreground mt-2">
-      <strong>Note:</strong> For sandbox testing, use <code>https://api-sandbox.mercury.com/api/v1</code> as the Base URL.
-      Mercury requires IP whitelisting - make sure to add your IP in the Mercury dashboard.
+    <p class="text-sm text-subdued mt-2">
+      <%= t("mercury_items.provider_panel.sandbox_note_html") %>
     </p>
   </div>
 
@@ -29,45 +24,119 @@
     </div>
   <% end %>
 
-  <%
-    # Get or initialize a mercury_item for this family
-    # - If family has an item WITH credentials, use it (for updates)
-    # - If family has an item WITHOUT credentials, use it (to add credentials)
-    # - If family has no items at all, create a new one
-    mercury_item = Current.family.mercury_items.first_or_initialize(name: "Mercury Connection")
-    is_new_record = mercury_item.new_record?
-  %>
+  <% if active_items.any? %>
+    <div class="space-y-3">
+      <% active_items.each do |item| %>
+        <details class="group bg-container p-4 shadow-border-xs rounded-xl">
+          <summary class="flex items-center justify-between gap-2">
+            <div class="flex items-center gap-3">
+              <div class="flex items-center justify-center h-8 w-8 bg-blue-600/10 rounded-full">
+                <p class="text-blue-600 text-xs font-medium"><%= item.name.to_s.first.to_s.upcase %></p>
+              </div>
+              <div>
+                <p class="font-medium text-primary"><%= item.name %></p>
+                <p class="text-xs text-secondary"><%= item.sync_status_summary %></p>
+              </div>
+            </div>
+          </summary>
 
-  <%= styled_form_with model: mercury_item,
-                       url: is_new_record ? mercury_items_path : mercury_item_path(mercury_item),
-                       scope: :mercury_item,
-                       method: is_new_record ? :post : :patch,
-                       data: { turbo: true },
-                       class: "space-y-3" do |form| %>
-    <%= form.text_field :token,
-                        label: "Token",
-                        placeholder: is_new_record ? "Paste token here" : "Enter new token to update",
-                        type: :password %>
+          <div class="mt-4 space-y-4">
+            <div class="flex items-center gap-2">
+              <%= button_to sync_mercury_item_path(item),
+                            method: :post,
+                            class: "inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-secondary hover:text-primary border border-secondary rounded-lg hover:border-primary",
+                            disabled: item.syncing? do %>
+                <%= icon "refresh-cw", size: "sm" %>
+                <%= t("mercury_items.provider_panel.sync") %>
+              <% end %>
+              <%= button_to mercury_item_path(item),
+                            method: :delete,
+                            class: "inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-destructive hover:bg-destructive/10 rounded-lg",
+                            data: { turbo_confirm: t("mercury_items.provider_panel.disconnect_confirm", name: item.name) } do %>
+                <%= icon "trash-2", size: "sm" %>
+              <% end %>
+            </div>
 
-    <%= form.text_field :base_url,
-                        label: "Base Url (Optional)",
-                        placeholder: "https://api.mercury.com/api/v1 (default)",
-                        value: mercury_item.base_url %>
+            <%= styled_form_with model: item,
+                                 url: mercury_item_path(item),
+                                 scope: :mercury_item,
+                                 method: :patch,
+                                 data: { turbo: true },
+                                 class: "space-y-3" do |form| %>
+              <%= form.text_field :name,
+                                  label: t("mercury_items.provider_panel.connection_name_label"),
+                                  placeholder: t("mercury_items.provider_panel.connection_name_placeholder") %>
 
-    <div class="flex justify-end">
-      <%= form.submit is_new_record ? "Save Configuration" : "Update Configuration",
-                      class: "inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-white bg-gray-900 hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2 transition-colors" %>
+              <%= form.text_field :token,
+                                  label: t("mercury_items.provider_panel.token_label"),
+                                  placeholder: t("mercury_items.provider_panel.keep_token_placeholder"),
+                                  type: :password,
+                                  value: nil %>
+
+              <%= form.text_field :base_url,
+                                  label: t("mercury_items.provider_panel.base_url_label"),
+                                  placeholder: t("mercury_items.provider_panel.base_url_placeholder"),
+                                  value: item.base_url %>
+
+              <div class="flex flex-wrap justify-end gap-2">
+                <%= render DS::Link.new(
+                  text: t("mercury_items.provider_panel.setup_accounts"),
+                  icon: "settings",
+                  variant: "secondary",
+                  href: setup_accounts_mercury_item_path(item),
+                  frame: :modal
+                ) %>
+                <%= form.submit t("mercury_items.provider_panel.update_connection"),
+                                class: "inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-inverse bg-inverse hover:bg-inverse-hover focus:outline-none focus:ring-2 focus:ring-primary transition-colors" %>
+              </div>
+            <% end %>
+          </div>
+        </details>
+      <% end %>
     </div>
   <% end %>
 
-  <% items = local_assigns[:mercury_items] || @mercury_items || Current.family.mercury_items.where.not(token: [nil, ""]) %>
+  <details <%= "open" unless active_items.any? %> class="group bg-container p-4 shadow-border-xs rounded-xl">
+    <summary class="flex items-center gap-2 text-sm font-medium text-primary">
+      <%= icon "plus" %>
+      <%= t("mercury_items.provider_panel.add_connection") %>
+    </summary>
+
+    <% mercury_item = Current.family.mercury_items.build(name: t("mercury_items.provider_panel.default_connection_name")) %>
+    <%= styled_form_with model: mercury_item,
+                         url: mercury_items_path,
+                         scope: :mercury_item,
+                         method: :post,
+                         data: { turbo: true },
+                         class: "space-y-3 mt-4" do |form| %>
+      <%= form.text_field :name,
+                          label: t("mercury_items.provider_panel.connection_name_label"),
+                          placeholder: t("mercury_items.provider_panel.connection_name_placeholder") %>
+
+      <%= form.text_field :token,
+                          label: t("mercury_items.provider_panel.token_label"),
+                          placeholder: t("mercury_items.provider_panel.token_placeholder"),
+                          type: :password,
+                          value: nil %>
+
+      <%= form.text_field :base_url,
+                          label: t("mercury_items.provider_panel.base_url_label"),
+                          placeholder: t("mercury_items.provider_panel.base_url_placeholder") %>
+
+      <div class="flex justify-end">
+        <%= form.submit t("mercury_items.provider_panel.add_connection"),
+                        class: "inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-inverse bg-inverse hover:bg-inverse-hover focus:outline-none focus:ring-2 focus:ring-primary transition-colors" %>
+      </div>
+    <% end %>
+  </details>
+
   <div class="flex items-center gap-2">
-    <% if items&.any? %>
+    <% if credentialed_items.any? %>
       <div class="w-2 h-2 bg-success rounded-full"></div>
-      <p class="text-sm text-secondary">Configured and ready to use. Visit the <a href="<%= accounts_path %>" class="link">Accounts</a> tab to manage and set up accounts.</p>
+      <p class="text-sm text-secondary"><%= t("mercury_items.provider_panel.configured_html", accounts_link: link_to(t("mercury_items.provider_panel.accounts_link"), accounts_path, class: "link")) %></p>
     <% else %>
       <div class="w-2 h-2 bg-gray-400 rounded-full"></div>
-      <p class="text-sm text-secondary">Not configured</p>
+      <p class="text-sm text-secondary"><%= t("mercury_items.provider_panel.not_configured") %></p>
     <% end %>
   </div>
 </div>

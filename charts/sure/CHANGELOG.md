@@ -5,6 +5,15 @@ All notable changes to the Sure Helm chart will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+- Bumped `pipelock.image.tag` from `2.0.0` to `2.2.0` (three minor releases behind latest). Floating `@v2` CI action pin picks up patch/minor updates automatically.
+- Refreshed pipelock feature notes in the chart README, `docs/hosting/pipelock.md`, and `pipelock.example.yaml` to reference the upstream changelog instead of a single version.
+
+### Added
+- README: CI scan status badge for the pipelock workflow.
+
 ## [0.6.9-alpha] - 2026-03-24
 
 ### Changed

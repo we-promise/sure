@@ -22,7 +22,7 @@
       <div class="form-field__actions">
         <div data-controller="tooltip">
           <%= icon "help-circle", size: "sm", color: "default", class: "cursor-help" %>
-          <div role="tooltip" data-tooltip-target="tooltip" class="tooltip bg-gray-700 text-sm p-2 rounded w-64 text-white">
+          <div role="tooltip" data-tooltip-target="tooltip" class="tooltip bg-inverse text-inverse text-sm p-2 rounded w-64">
             <%= options[:label_tooltip] %>
           </div>
         </div>
@@ -78,7 +78,7 @@
              currency_data["action"] = ["change->money-field#handleCurrencyChange", existing_action].compact.join(" ")
           %>
           <%= form.select currency_method,
-                        Money::Currency.as_options.map(&:iso_code),
+                        currency_picker_options_for_family(extra: currency.iso_code),
                         { inline: true, selected: currency.iso_code },
                         {
                           class: "w-fit pr-5 disabled:text-subdued form-field__input",

@@ -5,7 +5,7 @@ class Balance::SyncCacheTest < ActiveSupport::TestCase
     @family = families(:dylan_family)
     @account = @family.accounts.create!(
       name: "Test Account",
-      accountable: Depository.new,
+      accountable: Investment.new,
       currency: "USD",
       balance: 1000
     )
@@ -123,6 +123,50 @@ class Balance::SyncCacheTest < ActiveSupport::TestCase
     assert_in_delta 63.5, amounts[0], 0.01   # 50 GBP * 1.27
     assert_in_delta 75.0, amounts[1], 0.01   # 75 USD * 1.0
     assert_in_delta 120.0, amounts[2], 0.01  # 100 EUR * 1.2
+  end
+
+  # get_holdings_value
+
+  test "returns 0 for date with no holdings" do
+    cache = Balance::SyncCache.new(@account)
+    assert_equal 0, cache.get_holdings_value(Date.current)
+  end
+
+  test "sums holdings value for a single date" do
+    security = Security.create!(ticker: "TST", name: "Test")
+
+    @account.holdings.create!(security: security, date: Date.current, qty: 10, price: 100, amount: 1000, currency: "USD")
+    @account.holdings.create!(security: security, date: 1.day.ago.to_date, qty: 10, price: 90, amount: 900, currency: "USD")
+
+    cache = Balance::SyncCache.new(@account)
+    assert_equal 1000, cache.get_holdings_value(Date.current)
+    assert_equal 900, cache.get_holdings_value(1.day.ago.to_date)
+  end
+
+  test "sums multiple holdings on the same date" do
+    s1 = Security.create!(ticker: "S1", name: "Security 1")
+    s2 = Security.create!(ticker: "S2", name: "Security 2")
+
+    @account.holdings.create!(security: s1, date: Date.current, qty: 10, price: 100, amount: 1000, currency: "USD")
+    @account.holdings.create!(security: s2, date: Date.current, qty: 5, price: 200, amount: 1000, currency: "USD")
+
+    assert_equal 2000, Balance::SyncCache.new(@account).get_holdings_value(Date.current)
+  end
+
+  test "converts foreign currency holdings to account currency" do
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: Date.current, rate: 1.5)
+
+    security = Security.create!(ticker: "TST", name: "Test")
+    @account.holdings.create!(security: security, date: Date.current, qty: 1, price: 100, amount: 100, currency: "EUR")
+
+    assert_equal 150.0, Balance::SyncCache.new(@account).get_holdings_value(Date.current)
+  end
+
+  test "falls back to 1:1 conversion rate when exchange rate is missing for a foreign currency holding" do
+    security = Security.create!(ticker: "TST", name: "Test")
+    @account.holdings.create!(security: security, date: Date.current, qty: 1, price: 100, amount: 100, currency: "EUR")
+
+    assert_equal 100, Balance::SyncCache.new(@account).get_holdings_value(Date.current)
   end
 
   test "prioritizes custom rate over fetched rate" do

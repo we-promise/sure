@@ -37,7 +37,7 @@
 
       <div class="bg-surface-inset rounded-xl p-4">
         <h4 class="font-medium text-primary mb-3">How to use your API key</h4>
-        <p class="text-secondary text-sm mb-3">Include your API key in the X-Api-Key header when making requests:</p>
+        <p class="text-secondary text-sm mb-3"><%= t(".current_api_key.usage_instructions", product_name: product_name) %></p>
         <div class="bg-container rounded-lg p-3 font-mono text-sm text-primary border border-primary">
           curl -H "X-Api-Key: <%= @current_api_key.plain_key %>" <%= request.base_url %>/api/v1/accounts
         </div>
@@ -94,7 +94,7 @@
         <h4 class="font-medium text-primary mb-3">Permissions</h4>
         <div class="flex flex-wrap gap-2">
           <% @current_api_key.scopes.each do |scope| %>
-            <span class="inline-flex items-center gap-1 px-2 py-1 bg-primary text-primary-foreground rounded-full text-xs font-medium">
+            <span class="inline-flex items-center gap-1 px-2 py-1 button-bg-primary text-inverse rounded-full text-xs font-medium">
               <%= icon("shield-check", class: "w-3 h-3") %>
               <%= case scope
                   when "read" then "Read Only"
@@ -125,7 +125,7 @@
 
       <div class="bg-surface-inset rounded-xl p-4">
         <h4 class="font-medium text-primary mb-3">How to use your API key</h4>
-        <p class="text-secondary text-sm mb-3">Include your API key in the X-Api-Key header when making requests:</p>
+        <p class="text-secondary text-sm mb-3"><%= t(".current_api_key.usage_instructions", product_name: product_name) %></p>
         <div class="bg-container rounded-lg p-3 font-mono text-sm text-primary border border-primary">
           curl -H "X-Api-Key: <%= @current_api_key.plain_key %>" <%= request.base_url %>/api/v1/accounts
         </div>

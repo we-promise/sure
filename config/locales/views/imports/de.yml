@@ -61,13 +61,13 @@ de:
         rows_label: Zeilen
         unassigned_account: Neues Konto für nicht zugewiesene Zeilen erstellen?
       show:
-        account_mapping_description: Weise alle Konten aus deiner importierten Datei den bestehenden Konten in %{product_name} zu. Du kannst auch neue Konten hinzufügen oder sie ohne Kategorie lassen.
+        account_mapping_description: Weise alle Konten aus deiner importierten Datei den bestehenden Konten in %{product} zu. Du kannst auch neue Konten hinzufügen oder sie ohne Kategorie lassen.
         account_mapping_title: Konten zuweisen
-        account_type_mapping_description: Weise alle Kontotypen aus deiner importierten Datei den Kontotypen in %{product_name} zu.
+        account_type_mapping_description: Weise alle Kontotypen aus deiner importierten Datei den Kontotypen in %{product} zu.
         account_type_mapping_title: Kontotypen zuweisen
-        category_mapping_description: Weise alle Kategorien aus deiner importierten Datei den bestehenden Kategorien in %{product_name} zu. Du kannst auch neue Kategorien hinzufügen oder sie ohne Kategorie lassen.
+        category_mapping_description: Weise alle Kategorien aus deiner importierten Datei den bestehenden Kategorien in %{product} zu. Du kannst auch neue Kategorien hinzufügen oder sie ohne Kategorie lassen.
         category_mapping_title: Kategorien zuweisen
-        tag_mapping_description: Weise alle Tags aus deiner importierten Datei den bestehenden Tags in %{product_name} zu. Du kannst auch neue Tags hinzufügen oder sie ohne Kategorie lassen.
+        tag_mapping_description: Weise alle Tags aus deiner importierten Datei den bestehenden Tags in %{product} zu. Du kannst auch neue Tags hinzufügen oder sie ohne Kategorie lassen.
         tag_mapping_title: Tags zuweisen
     uploads:
       show:

@@ -31,6 +31,20 @@ en:
         placeholder: "Paste your SimpleFIN setup token here..."
         help_text: "The token should be a long string starting with letters and numbers"
     setup_accounts:
+      account_card:
+        balance: "Balance"
+      activity:
+        recent:
+          one: "1 transaction • latest %{when}"
+          other: "%{count} transactions • latest %{when}"
+        dormant: "No activity in %{days} days"
+        empty: "No transactions imported yet"
+        likely_closed: "No recent activity and zero balance — this may be a closed or replaced card"
+        today: "today"
+        yesterday: "yesterday"
+        days_ago:
+          one: "1 day ago"
+          other: "%{count} days ago"
       stale_accounts:
         title: "Accounts No Longer in SimpleFIN"
         description: "These accounts exist in your database but are no longer provided by SimpleFIN. This can happen when account configurations change upstream."
@@ -97,7 +111,17 @@ en:
       success: Account successfully linked to SimpleFIN
       errors:
         only_manual: Only manual accounts can be linked
+        different_provider: This account is linked to a different provider. Unlink it from that provider first, then link to SimpleFIN.
         invalid_simplefin_account: Invalid SimpleFIN account selected
+    dismiss_replacement_suggestion:
+      dismissed: Replacement suggestion dismissed
+    replacement_prompt:
+      title: "Your %{institution} card may have been replaced"
+      description: "“%{account_name}” is linked to “%{old_name}”, which has had no recent activity and a zero balance. A new card, “%{new_name}”, is now active at the same institution. Relink to keep your history intact."
+      relink: Relink to new card
+      confirm_title: Relink to the new card?
+      confirm_body: "“%{account_name}” will be linked to “%{new_name}”. Your transaction history stays; future transactions come from the new card."
+      dismiss_aria: Dismiss replacement suggestion
     reconciled_status:
       message:
         one: "%{count} duplicate pending transaction reconciled"

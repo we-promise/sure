@@ -59,7 +59,7 @@
                   <div class="truncate flex-shrink">
                     <% if transaction.transfer? %>
                       <%= link_to(
-                            entry.name,
+                            highlight_activity_entry_name(entry.name),
                             transaction.transfer.present? ? transfer_path(transaction.transfer) : entry_path(entry),
                             data: {
                               turbo_frame: "drawer",
@@ -69,7 +69,7 @@
                           ) %>
                     <% else %>
                       <%= link_to(
-                            entry.name,
+                            highlight_activity_entry_name(entry.name),
                             entry_path(entry),
                             data: {
                               turbo_frame: "drawer",
@@ -112,7 +112,7 @@
 
                     <%# Split indicator %>
                     <% if @split_parent_entry_ids ? @split_parent_entry_ids.include?(entry.id) : entry.split_parent? %>
-                      <span class="inline-flex items-center gap-1 text-xs font-medium rounded-full px-1.5 py-0.5 border border-accent bg-accent/10 text-accent" title="<%= t("transactions.transaction.split_tooltip") %>">
+                      <span class="inline-flex items-center gap-1 text-xs font-medium rounded-full px-1.5 py-0.5 border border-secondary bg-surface-inset text-secondary" title="<%= t("transactions.transaction.split_tooltip") %>">
                         <%= icon "split", size: "sm", color: "current" %>
                         <%= t("transactions.transaction.split") %>
                       </span>
@@ -144,10 +144,10 @@
                           data: { turbo_frame: "_top" },
                           class: "hover:underline" %>
                     </span>
-                    <div class="flex items-center gap-1 truncate">
+                    <div class="flex min-w-0 items-center gap-1">
                       <%= render "categories/category_name_mobile", transaction: transaction %>
                       <% if transaction.merchant&.present? %>
-                        <span class="lg:hidden truncate">• <%= transaction.merchant.name %></span>
+                        <span class="lg:hidden min-w-0 truncate">• <%= transaction.merchant.name %></span>
                       <% end %>
                     </div>
                   <% end %>
@@ -158,7 +158,7 @@
         </div>
       </div>
 
-      <div class="hidden md:flex items-center gap-1 col-span-2">
+      <div class="hidden md:flex min-w-0 items-center gap-1 col-span-2">
         <% if entry.account.investment? && !transaction.transfer? %>
           <%# For investment accounts, show activity label instead of category %>
           <%= render "investment_activity/quick_edit_badge", entry: entry, entryable: transaction %>

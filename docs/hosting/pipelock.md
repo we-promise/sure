@@ -77,13 +77,13 @@ Enable Pipelock in your Helm values:
 pipelock:
   enabled: true
   image:
-    tag: "2.0.0"
+    tag: "2.2.0"
   mode: balanced
 ```
 
 This creates a separate Deployment, Service, and ConfigMap. The chart auto-injects `HTTPS_PROXY`/`HTTP_PROXY`/`NO_PROXY` into web and worker pods.
 
-v2.0 adds trusted domain allowlisting, MCP tool redirect profiles, enhanced tool poisoning detection (full JSON schema scanning), and per-read kill switch preemption on long-lived connections. Process sandboxing and attack simulation are also available via `extraConfig` and CLI.
+Recent pipelock releases add trusted domain allowlisting, MCP tool redirect profiles, enhanced tool poisoning detection (full JSON schema scanning), per-read kill switch preemption, signed action receipts, per-pattern DLP warn mode, and the `pipelock posture verify` / `pipelock session` CLI commands. See the [pipelock changelog](https://github.com/luckyPipewrench/pipelock/releases) for details.
 
 ### Exposing MCP to external agents (Kubernetes)
 

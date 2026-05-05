@@ -22,7 +22,7 @@
                     <p class="text-sm font-medium text-primary"><%= potential_match.name %></p>
                     <p class="text-xs text-secondary"><%= potential_match.date.strftime("%b %d, %Y") %> • <%= potential_match.account.name %></p>
                   </div>
-                  <p class="text-sm font-medium <%= potential_match.amount.negative? ? "text-green-600" : "text-primary" %>">
+                  <p class="text-sm font-medium privacy-sensitive <%= potential_match.amount.negative? ? "text-green-600" : "text-primary" %>">
                     <%= format_money(-potential_match.amount_money) %>
                   </p>
                 </div>
@@ -117,18 +117,13 @@
                     include_blank: t(".none"),
                     multiple: true,
                     label:    t(".tags_label"),
-                    disabled: @entry.split_child? || !can_annotate_entry?
+                    disabled: !can_annotate_entry?
                   },
                   { "data-controller": "multi-select", "data-auto-submit-form-target": "auto" } %>
           <% end %>
         <% end %>
-        <%= f.text_area :notes,
-                label: t(".note_label"),
-                placeholder: t(".note_placeholder"),
-                rows: 5,
-                disabled: @entry.split_child? || !can_annotate_entry?,
-                "data-auto-submit-form-target": "auto" %>
       <% end %>
+      <%= render "transactions/notes", entry: @entry, can_annotate: can_annotate_entry? %>
     <% end %>
 
     <% dialog.with_section(title: t(".attachments")) do %>
@@ -349,7 +344,7 @@
           <div class="flex items-center justify-between gap-4 p-3">
             <div class="text-sm space-y-1">
               <h4 class="text-primary">Transfer or Debt Payment?</h4>
-              <p class="text-secondary">Transfers and payments are special types of transactions that indicate money movement between 2 accounts.</p>
+              <p class="text-secondary"><%= t(".transfer_matcher_description") %></p>
             </div>
             <%= render DS::Link.new(
               text: "Open matcher",

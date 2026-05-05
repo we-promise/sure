@@ -71,6 +71,17 @@
             <% if !account.linked? && %w[Depository CreditCard Investment Crypto].include?(account.accountable_type) %>
               <% menu.with_item(variant: "link", text: t("accounts.account.link_provider"), href: select_provider_account_path(account), icon: "link", data: { turbo_frame: :modal }) %>
             <% elsif account.linked? %>
+              <%# Same-provider relink (e.g., card-replacement fraud). Only surfaced for
+                 SimpleFIN-linked accounts today; other providers can be added later. %>
+              <% if account.linked_to?("SimplefinAccount") %>
+                <% menu.with_item(
+                  variant: "link",
+                  text: t("accounts.account.change_simplefin_account"),
+                  href: select_existing_account_simplefin_items_path(account_id: account.id),
+                  icon: "arrow-left-right",
+                  data: { turbo_frame: :modal }
+                ) %>
+              <% end %>
               <% menu.with_item(variant: "link", text: t("accounts.account.unlink_provider"), href: confirm_unlink_account_path(account), icon: "unlink", data: { turbo_frame: :modal }) %>
             <% end %>
           <% end %>

@@ -65,8 +65,9 @@ class CategoryImport < Import
     parent_header = header_for("parent_category", "parent category")
     icon_header = header_for("lucide_icon", "lucide icon", "icon")
 
-    csv_rows.each do |row|
+    csv_rows.each.with_index(1) do |row, index|
       rows.create!(
+        source_row_number: index,
         name: row[name_header].to_s.strip,
         category_color: row[color_header].to_s.strip,
         category_parent: row[parent_header].to_s.strip,

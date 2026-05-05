@@ -1,5 +1,5 @@
 <%= render DS::Dialog.new do |dialog| %>
-  <% dialog.with_header(title: "Match transfer or payment") %>
+  <% dialog.with_header(title: t(".header.title"), subtitle: t(".header.subtitle")) %>
   <% dialog.with_body do %>
     <%= styled_form_with(
           url: transaction_transfer_match_path(@entry),
@@ -9,7 +9,7 @@
         ) do |f| %>
       <section class="space-y-4">
         <div class="space-y-2">
-          <h2 class="text-sm font-medium text-gray-700">
+          <h2 class="text-sm font-medium text-secondary">
             <%= @entry.amount.positive? ? "From account: #{@entry.account.name}" : "From account" %>
           </h2>
 
@@ -36,7 +36,7 @@
 
       <section class="space-y-4">
         <div class="space-y-2">
-          <h2 class="text-sm font-medium text-gray-700">
+          <h2 class="text-sm font-medium text-secondary">
             <%= @entry.amount.negative? ? "To account: #{@entry.account.name}" : "To account" %>
           </h2>
 

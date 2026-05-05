@@ -18,7 +18,7 @@ class Holding::ForwardCalculator
         trades = portfolio_cache.get_trades(date: date)
         update_cost_basis_tracker(trades)
         next_portfolio = transform_portfolio(current_portfolio, trades, direction: :forward)
-        holdings += build_holdings(next_portfolio, date)
+        holdings.concat(build_holdings(next_portfolio, date))
         current_portfolio = next_portfolio
       end
 

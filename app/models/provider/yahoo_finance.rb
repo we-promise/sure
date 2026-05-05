@@ -1,3 +1,5 @@
+require "set"
+
 class Provider::YahooFinance < Provider
   include ExchangeRateConcept, SecurityConcept
   extend SslConfigurable
@@ -165,6 +167,8 @@ class Provider::YahooFinance < Provider
           )
         end
 
+        securities = deduplicate_dual_listings(securities) unless exchange_operating_mic.present?
+
         cache_result(cache_key, securities)
         securities
       end
@@ -175,6 +179,8 @@ class Provider::YahooFinance < Provider
 
   def fetch_security_info(symbol:, exchange_operating_mic:)
     with_provider_response do
+      symbol = normalize_symbol(symbol, exchange_operating_mic)
+
       # quoteSummary endpoint requires cookie/crumb authentication
       throttle_request
       cookie, crumb = fetch_cookie_and_crumb
@@ -227,6 +233,7 @@ class Provider::YahooFinance < Provider
 
   def fetch_security_price(symbol:, exchange_operating_mic: nil, date:)
     with_provider_response do
+      symbol = normalize_symbol(symbol, exchange_operating_mic)
       cache_key = "security_price_#{symbol}_#{exchange_operating_mic}_#{date}"
       if cached_result = get_cached_result(cache_key)
         cached_result
@@ -263,6 +270,7 @@ class Provider::YahooFinance < Provider
 
   def fetch_security_prices(symbol:, exchange_operating_mic: nil, start_date:, end_date:)
     with_provider_response do
+      symbol = normalize_symbol(symbol, exchange_operating_mic)
       validate_date_params!(start_date, end_date)
       # Convert dates to Unix timestamps using UTC to ensure consistent epoch boundaries across timezones
       period1 = start_date.to_time.utc.to_i
@@ -285,7 +293,9 @@ class Provider::YahooFinance < Provider
       closes = quotes["close"] || []
 
       # Get currency from metadata
-      raw_currency = chart_data.dig("meta", "currency") || "USD"
+      meta_exchange = chart_data.dig("meta", "exchangeName") || ""
+      raw_currency = chart_data.dig("meta", "currency")
+      raw_currency ||= default_currency_for_exchange(meta_exchange) || "USD"
 
       prices = []
       timestamps.each_with_index do |timestamp, index|
@@ -321,6 +331,15 @@ class Provider::YahooFinance < Provider
     #      Currency Normalization
     # ================================
 
+    # Per-exchange configuration for Yahoo Finance.  Each entry maps an ISO
+    # MIC code to its Yahoo-specific symbol suffix, the default currency when
+    # Yahoo omits one, and an optional dual-listing group with a preference
+    # rank (lower = preferred).  Adding a new market is a one-line hash entry.
+    EXCHANGE_CONFIG = {
+      "XNSE" => { yahoo_suffix: ".NS", default_currency: "INR", dual_list_group: :india, preference_rank: 0 },
+      "XBOM" => { yahoo_suffix: ".BO", default_currency: "INR", dual_list_group: :india, preference_rank: 1 }
+    }.freeze
+
     # Yahoo Finance sometimes returns currencies in minor units (pence, cents)
     # This is not part of ISO 4217 but is a convention used by financial data providers
     # Mapping of Yahoo Finance minor unit codes to standard currency codes and conversion multipliers
@@ -338,6 +357,42 @@ class Provider::YahooFinance < Provider
       else
         [ currency, price ]
       end
+    end
+
+    # Appends the Yahoo Finance symbol suffix for exchanges that require one
+    # (e.g. XNSE → ".NS", XBOM → ".BO").  Already-suffixed symbols pass through.
+    def normalize_symbol(symbol, exchange_operating_mic)
+      suffix = EXCHANGE_CONFIG.dig(exchange_operating_mic, :yahoo_suffix)
+      return symbol if suffix.nil? || symbol.end_with?(suffix)
+      "#{symbol}#{suffix}"
+    end
+
+    # Returns the default currency for a Yahoo exchange name (e.g. "NSE" → "INR")
+    # by resolving through map_exchange_mic → EXCHANGE_CONFIG.  Returns nil for
+    # unknown exchanges so callers can fall back to their own default.
+    def default_currency_for_exchange(yahoo_exchange_name)
+      mic = map_exchange_mic(yahoo_exchange_name)
+      EXCHANGE_CONFIG.dig(mic, :default_currency)
+    end
+
+    # De-duplicates dual-listed securities that share the same company name
+    # and dual_list_group (e.g. NSE + BSE for India), keeping the exchange
+    # with the lowest preference_rank.  Preserves Yahoo's original relevance
+    # ordering by removing duplicates in-place rather than reordering.
+    def deduplicate_dual_listings(securities)
+      dominated = Set.new
+
+      securities
+        .select { |s| EXCHANGE_CONFIG.dig(s.exchange_operating_mic, :dual_list_group) }
+        .group_by { |s| [ EXCHANGE_CONFIG[s.exchange_operating_mic][:dual_list_group], s.name.to_s.strip.downcase ] }
+        .each_value do |group|
+          next unless group.size > 1
+          preferred = group.min_by { |s| EXCHANGE_CONFIG[s.exchange_operating_mic][:preference_rank] }
+          group.each { |s| dominated << s.object_id unless s.equal?(preferred) }
+        end
+
+      return securities if dominated.empty?
+      securities.reject { |s| dominated.include?(s.object_id) }
     end
 
     # ================================
@@ -776,6 +831,10 @@ class Provider::YahooFinance < Provider
         "XJPX" # Japan Exchange Group
       when "ASX"
         "XASX" # Australian Securities Exchange
+      when "NSE", "NSI"
+        "XNSE" # National Stock Exchange of India
+      when "BSE", "BOM"
+        "XBOM" # BSE (Bombay Stock Exchange)
       else
         exchange_code.upcase
       end

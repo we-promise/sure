@@ -171,7 +171,7 @@ class Holding::Materializer
     end
 
     def purge_stale_holdings
-      portfolio_security_ids = account.entries.trades.map { |entry| entry.entryable.security_id }.uniq
+      portfolio_security_ids = account.trades.distinct.pluck(:security_id)
 
       # Never delete provider-sourced holdings - they're authoritative from the provider
       # If there are no securities in the portfolio, only delete non-provider holdings

@@ -1,6 +1,15 @@
 class Settings::HostingsController < ApplicationController
   layout "settings"
 
+  # Minimum accepted value for each configurable LLM budget field. Mirrors the
+  # `min:` attribute on the form inputs in `_openai_settings.html.erb` so the
+  # controller rejects what the browser-side validator would reject.
+  LLM_BUDGET_MINIMUMS = {
+    llm_context_window: 256,
+    llm_max_response_tokens: 64,
+    llm_max_items_per_call: 1
+  }.freeze
+
   guard_feature unless: -> { self_hosted? }
 
   before_action :ensure_admin, only: [ :update, :clear_cache, :disconnect_external_assistant ]
@@ -157,6 +166,21 @@ class Settings::HostingsController < ApplicationController
       Setting.openai_json_mode = hosting_params[:openai_json_mode].presence
     end
 
+    LLM_BUDGET_MINIMUMS.each do |key, minimum|
+      next unless hosting_params.key?(key)
+      raw = hosting_params[key].to_s.strip
+      if raw.blank?
+        Setting.public_send("#{key}=", nil)
+        next
+      end
+      parsed = Integer(raw, 10) rescue nil
+      if parsed.nil? || parsed < minimum
+        label = t("settings.hostings.openai_settings.#{key}_label")
+        raise Setting::ValidationError, t(".invalid_llm_budget", field: label, minimum: minimum)
+      end
+      Setting.public_send("#{key}=", parsed)
+    end
+
     if hosting_params.key?(:external_assistant_url)
       Setting.external_assistant_url = hosting_params[:external_assistant_url]
     end
@@ -199,7 +223,7 @@ class Settings::HostingsController < ApplicationController
   private
     def hosting_params
       return ActionController::Parameters.new unless params.key?(:setting)
-      params.require(:setting).permit(:onboarding_state, :require_email_confirmation, :invite_only_default_family_id, :brand_fetch_client_id, :brand_fetch_high_res_logos, :twelve_data_api_key, :tiingo_api_key, :eodhd_api_key, :alpha_vantage_api_key, :openai_access_token, :openai_uri_base, :openai_model, :openai_json_mode, :exchange_rate_provider, :securities_provider, :syncs_include_pending, :auto_sync_enabled, :auto_sync_time, :external_assistant_url, :external_assistant_token, :external_assistant_agent_id, securities_providers: [])
+      params.require(:setting).permit(:onboarding_state, :require_email_confirmation, :invite_only_default_family_id, :brand_fetch_client_id, :brand_fetch_high_res_logos, :twelve_data_api_key, :tiingo_api_key, :eodhd_api_key, :alpha_vantage_api_key, :openai_access_token, :openai_uri_base, :openai_model, :openai_json_mode, :llm_context_window, :llm_max_response_tokens, :llm_max_items_per_call, :exchange_rate_provider, :securities_provider, :syncs_include_pending, :auto_sync_enabled, :auto_sync_time, :external_assistant_url, :external_assistant_token, :external_assistant_agent_id, securities_providers: [])
     end
 
     def update_assistant_type

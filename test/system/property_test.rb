@@ -15,11 +15,7 @@ class PropertiesEditTest < ApplicationSystemTestCase
     click_link "[system test] Property Account"
     find("[data-testid='account-menu']").click
     click_on "Edit"
-    assert_selector "#account_accountable_attributes_subtype"
-    assert_selector(
-        "#account_accountable_attributes_subtype option[selected]",
-        text: "Single Family Home"
-    )
+    assert_equal "single_family_home", find("#account_accountable_attributes_subtype").value
   end
 
   private

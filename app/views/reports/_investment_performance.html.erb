@@ -72,7 +72,7 @@
             </thead>
             <tbody class="text-secondary text-sm">
               <% investment_metrics[:top_holdings].each_with_index do |holding, idx| %>
-                <tr class="<%= idx < investment_metrics[:top_holdings].size - 1 ? "border-b border-divider" : "" %>">
+                <tr class="<%= idx < investment_metrics[:top_holdings].size - 1 ? "table-divider" : "" %>">
                   <td class="py-3 px-4 lg:px-6">
                     <div class="flex items-center gap-3">
                       <% if (logo = holding.security.display_logo_url).present? %>

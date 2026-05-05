@@ -17,7 +17,7 @@ module ApplicationHelper
   def icon(key, size: "md", color: "default", custom: false, as_button: false, **opts)
     extra_classes = opts.delete(:class)
     sizes = { xs: "w-3 h-3", sm: "w-4 h-4", md: "w-5 h-5", lg: "w-6 h-6", xl: "w-7 h-7", "2xl": "w-8 h-8" }
-    colors = { default: "fg-gray", white: "fg-inverse", success: "text-success", warning: "text-warning", destructive: "text-destructive", current: "text-current" }
+    colors = { default: "text-secondary", white: "text-inverse", success: "text-success", warning: "text-warning", destructive: "text-destructive", current: "text-current" }
 
     icon_classes = class_names(
       "shrink-0",
@@ -26,12 +26,14 @@ module ApplicationHelper
       extra_classes
     )
 
+    resolved_key = normalize_icon_key(key)
+
     if custom
-      inline_svg_tag("#{key}.svg", class: icon_classes, **opts)
+      inline_svg_tag("#{resolved_key}.svg", class: icon_classes, **opts)
     elsif as_button
-      render DS::Button.new(variant: "icon", class: extra_classes, icon: key, size: size, type: "button", **opts)
+      render DS::Button.new(variant: "icon", class: extra_classes, icon: resolved_key, size: size, type: "button", **opts)
     else
-      lucide_icon(key, class: icon_classes, **opts)
+      safe_lucide_icon(resolved_key, class: icon_classes, **opts)
     end
   end
 
@@ -98,6 +100,17 @@ module ApplicationHelper
               .transform_values { |item| calculate_total(item, money_method, negate) }
               .map { |_currency, money| format_money(money) }
               .join(separator)
+  end
+
+  def currency_picker_options_for_family(family = Current.family, extra: [])
+    return Money::Currency.as_options.map(&:iso_code) unless family
+
+    family.enabled_currency_codes(extra:)
+  end
+
+  def currency_label(currency_or_code)
+    currency = currency_or_code.is_a?(Money::Currency) ? currency_or_code : Money::Currency.new(currency_or_code)
+    "#{currency.name} (#{currency.iso_code})"
   end
 
   def show_super_admin_bar?
@@ -179,6 +192,20 @@ module ApplicationHelper
   end
 
   private
+    def safe_lucide_icon(key, **opts)
+      lucide_icon(key, **opts)
+    rescue StandardError => e
+      Rails.logger.warn("[ApplicationHelper] Falling back to key for unknown icon #{key.inspect}: #{e.message}")
+      lucide_icon("key", **opts)
+    end
+
+    def normalize_icon_key(key)
+      normalized = key.to_s.strip
+      return normalized if normalized.blank?
+
+      normalized.downcase
+    end
+
     def calculate_total(item, money_method, negate)
       # Filter out transfer-type transactions from entries
       # Only Entry objects have entryable transactions, Account objects don't

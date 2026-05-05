@@ -1,9 +1,47 @@
 # frozen_string_literal: true
 
 class Api::V1::ValuationsController < Api::V1::BaseController
-  before_action :ensure_read_scope, only: [ :show ]
+  include Pagy::Backend
+
+  InvalidFilterError = Class.new(StandardError)
+  BOOLEAN_PARAM = ActiveModel::Type::Boolean.new
+
+  before_action :ensure_read_scope, only: [ :index, :show ]
   before_action :ensure_write_scope, only: [ :create, :update ]
   before_action :set_valuation, only: [ :show, :update ]
+
+  def index
+    family = current_resource_owner.family
+    accessible_account_ids = family.accounts.accessible_by(current_resource_owner).select(:id)
+    valuations_query = family.entries
+      .where(entryable_type: "Valuation", account_id: accessible_account_ids)
+      .includes(:account, :entryable)
+
+    valuations_query = apply_filters(valuations_query).reverse_chronological
+    @per_page = safe_per_page_param
+
+    @pagy, @entries = pagy(
+      valuations_query,
+      page: safe_page_param,
+      limit: @per_page
+    )
+
+    render :index
+  rescue InvalidFilterError => e
+    render json: {
+      error: "validation_failed",
+      message: e.message,
+      errors: [ e.message ]
+    }, status: :unprocessable_entity
+  rescue => e
+    Rails.logger.error "ValuationsController#index error: #{e.message}"
+    Rails.logger.error e.backtrace.join("\n")
+
+    render json: {
+      error: "internal_server_error",
+      message: "An unexpected error occurred"
+    }, status: :internal_server_error
+  end
 
   def show
     render :show
@@ -13,7 +51,7 @@ class Api::V1::ValuationsController < Api::V1::BaseController
 
     render json: {
       error: "internal_server_error",
-      message: "Error: #{e.message}"
+      message: "An unexpected error occurred"
     }, status: :internal_server_error
   end
 
@@ -46,11 +84,17 @@ class Api::V1::ValuationsController < Api::V1::BaseController
     end
 
     account = current_resource_owner.family.accounts.find(valuation_account_id)
+    requested_upsert = upsert_requested?
+    existing_write = false
 
     create_success = false
     error_payload = nil
 
     ActiveRecord::Base.transaction do
+      account.lock! if requested_upsert
+      existing_write = account.entries.valuations.exists?(date: valuation_params[:date]) if requested_upsert
+
+      # upsert=true only affects response status; reconciliation owns write behavior.
       result = account.create_reconciliation(
         balance: valuation_params[:amount],
         date: valuation_params[:date]
@@ -87,7 +131,7 @@ class Api::V1::ValuationsController < Api::V1::BaseController
       return
     end
 
-    render :show, status: :created
+    render :show, status: requested_upsert && existing_write ? :ok : :created
 
   rescue ActiveRecord::RecordNotFound
     render json: {
@@ -100,7 +144,7 @@ class Api::V1::ValuationsController < Api::V1::BaseController
 
     render json: {
       error: "internal_server_error",
-      message: "Error: #{e.message}"
+      message: "An unexpected error occurred"
     }, status: :internal_server_error
   end
 
@@ -181,7 +225,7 @@ class Api::V1::ValuationsController < Api::V1::BaseController
 
     render json: {
       error: "internal_server_error",
-      message: "Error: #{e.message}"
+      message: "An unexpected error occurred"
     }, status: :internal_server_error
   end
 
@@ -208,11 +252,54 @@ class Api::V1::ValuationsController < Api::V1::BaseController
       authorize_scope!(:write)
     end
 
+    def apply_filters(query)
+      if params[:account_id].present?
+        raise InvalidFilterError, "account_id must be a valid UUID" unless valid_uuid?(params[:account_id])
+
+        query = query.where(account_id: params[:account_id])
+      end
+      query = query.where("entries.date >= ?", parse_date_param(:start_date)) if params[:start_date].present?
+      query = query.where("entries.date <= ?", parse_date_param(:end_date)) if params[:end_date].present?
+      query
+    end
+
+    def parse_date_param(key)
+      Date.iso8601(params[key].to_s)
+    rescue ArgumentError
+      raise InvalidFilterError, "#{key} must be an ISO 8601 date"
+    end
+
+    def valid_uuid?(value)
+      value.to_s.match?(/\A[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\z/i)
+    end
+
+    def safe_page_param
+      page = params[:page].to_i
+      page > 0 ? page : 1
+    end
+
+    def safe_per_page_param
+      per_page = params[:per_page].to_i
+
+      case per_page
+      when 1..100
+        per_page
+      else
+        25
+      end
+    end
+
     def valuation_account_id
       params.dig(:valuation, :account_id)
     end
 
     def valuation_params
       params.require(:valuation).permit(:amount, :date, :notes)
+    end
+
+    def upsert_requested?
+      raw_value = params.key?(:upsert) ? params[:upsert] : params.dig(:valuation, :upsert)
+
+      BOOLEAN_PARAM.cast(raw_value)
     end
 end

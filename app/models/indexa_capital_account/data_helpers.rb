@@ -39,6 +39,25 @@ module IndexaCapitalAccount::DataHelpers
       nil
     end
 
+    # Extract the canonical security key from an Indexa fiscal-results row.
+    # Indexa's response shape varies between endpoints (and across time), so
+    # try the nested instrument hash first, then a few flat fallbacks. Both
+    # HoldingsProcessor and Processor#calculate_holdings_value go through
+    # this helper so they can't disagree on which rows refer to the same
+    # security.
+    def extract_instrument_key(data)
+      return nil unless data.respond_to?(:[])
+
+      hash = data.respond_to?(:with_indifferent_access) ? data.with_indifferent_access : data
+      instrument = hash[:instrument]
+      if instrument.is_a?(Hash)
+        nested = instrument.with_indifferent_access
+        return nested[:identifier] || nested[:isin_code] || nested[:isin]
+      end
+
+      hash[:identifier] || hash[:isin_code] || hash[:isin] || hash[:symbol] || hash[:ticker]
+    end
+
     def parse_date(date_value)
       return nil if date_value.nil?
 

@@ -32,6 +32,40 @@ class UsersControllerTest < ActionDispatch::IntegrationTest
     assert_equal "es", @user.reload.locale
   end
 
+  test "admin can update enabled family currencies" do
+    patch user_url(@user), params: {
+      user: {
+        redirect_to: "preferences",
+        family_attributes: {
+          id: @user.family.id,
+          enabled_currencies: [ "USD", "SGD" ]
+        }
+      }
+    }
+
+    assert_redirected_to settings_preferences_url
+    assert_equal [ "USD", "SGD" ], @user.family.reload.enabled_currency_codes
+  end
+
+  test "non-admin cannot update enabled family currencies" do
+    sign_in @member = users(:family_member)
+    original_codes = @member.family.enabled_currency_codes
+
+    patch user_url(@member), params: {
+      user: {
+        redirect_to: "preferences",
+        family_attributes: {
+          id: @member.family.id,
+          enabled_currencies: [ "USD", "SGD" ]
+        }
+      }
+    }
+
+    assert_redirected_to settings_profile_url
+    assert_equal I18n.t("users.reset.unauthorized"), flash[:alert]
+    assert_equal original_codes, @member.family.reload.enabled_currency_codes
+  end
+
   test "admin can reset family data" do
     account = accounts(:investment)
     category = categories(:income)

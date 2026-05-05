@@ -440,6 +440,7 @@ class Entry < ApplicationRecord
       bulk_attributes = {
         date: bulk_update_params[:date],
         notes: bulk_update_params[:notes],
+        name: bulk_update_params[:name],
         entryable_attributes: {
           category_id: bulk_update_params[:category_id],
           merchant_id: bulk_update_params[:merchant_id]
