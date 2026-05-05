@@ -297,6 +297,69 @@ RSpec.configure do |config|
               updated_at: { type: :string, format: :'date-time' }
             }
           },
+          Balance: {
+            type: :object,
+            required: %w[id date currency flows_factor balance balance_cents start_balance start_balance_cents end_balance end_balance_cents account created_at updated_at],
+            properties: {
+              id: { type: :string, format: :uuid },
+              date: { type: :string, format: :date },
+              currency: { type: :string },
+              flows_factor: { type: :number, format: :float },
+              balance: { type: :string },
+              balance_cents: { type: :integer, description: 'Balance in currency minor units' },
+              cash_balance: { type: :string, nullable: true },
+              cash_balance_cents: { type: :integer, nullable: true, description: 'Cash balance in currency minor units' },
+              start_cash_balance: { type: :string },
+              start_cash_balance_cents: { type: :integer, description: 'Starting cash balance in currency minor units' },
+              start_non_cash_balance: { type: :string },
+              start_non_cash_balance_cents: { type: :integer, description: 'Starting non-cash balance in currency minor units' },
+              start_balance: { type: :string },
+              start_balance_cents: { type: :integer, description: 'Starting total balance in currency minor units' },
+              cash_inflows: { type: :string },
+              cash_inflows_cents: { type: :integer, description: 'Cash inflows in currency minor units' },
+              cash_outflows: { type: :string },
+              cash_outflows_cents: { type: :integer, description: 'Cash outflows in currency minor units' },
+              non_cash_inflows: { type: :string },
+              non_cash_inflows_cents: { type: :integer, description: 'Non-cash inflows in currency minor units' },
+              non_cash_outflows: { type: :string },
+              non_cash_outflows_cents: { type: :integer, description: 'Non-cash outflows in currency minor units' },
+              net_market_flows: { type: :string },
+              net_market_flows_cents: { type: :integer, description: 'Net market flows in currency minor units' },
+              cash_adjustments: { type: :string },
+              cash_adjustments_cents: { type: :integer, description: 'Cash adjustments in currency minor units' },
+              non_cash_adjustments: { type: :string },
+              non_cash_adjustments_cents: { type: :integer, description: 'Non-cash adjustments in currency minor units' },
+              end_cash_balance: { type: :string },
+              end_cash_balance_cents: { type: :integer, description: 'Ending cash balance in currency minor units' },
+              end_non_cash_balance: { type: :string },
+              end_non_cash_balance_cents: { type: :integer, description: 'Ending non-cash balance in currency minor units' },
+              end_balance: { type: :string },
+              end_balance_cents: { type: :integer, description: 'Ending total balance in currency minor units' },
+              account: { '$ref' => '#/components/schemas/BalanceAccount' },
+              created_at: { type: :string, format: :'date-time' },
+              updated_at: { type: :string, format: :'date-time' }
+            }
+          },
+          BalanceAccount: {
+            type: :object,
+            required: %w[id name account_type],
+            properties: {
+              id: { type: :string, format: :uuid },
+              name: { type: :string },
+              account_type: { type: :string, nullable: true }
+            }
+          },
+          BalanceCollection: {
+            type: :object,
+            required: %w[balances pagination],
+            properties: {
+              balances: {
+                type: :array,
+                items: { '$ref' => '#/components/schemas/Balance' }
+              },
+              pagination: { '$ref' => '#/components/schemas/Pagination' }
+            }
+          },
           Category: {
             type: :object,
             required: %w[id name color icon],

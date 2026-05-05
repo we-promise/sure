@@ -59,7 +59,7 @@
                   <div class="truncate flex-shrink">
                     <% if transaction.transfer? %>
                       <%= link_to(
-                            highlight_activity_entry_name(entry.name),
+                            entry.name,
                             transaction.transfer.present? ? transfer_path(transaction.transfer) : entry_path(entry),
                             data: {
                               turbo_frame: "drawer",
@@ -69,7 +69,7 @@
                           ) %>
                     <% else %>
                       <%= link_to(
-                            highlight_activity_entry_name(entry.name),
+                            entry.name,
                             entry_path(entry),
                             data: {
                               turbo_frame: "drawer",
