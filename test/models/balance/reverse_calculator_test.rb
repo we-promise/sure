@@ -85,6 +85,90 @@ class Balance::ReverseCalculatorTest < ActiveSupport::TestCase
     )
   end
 
+  # Steady-state production scenario: after several consecutive daily syncs, a chain of
+  # reconciliation waypoints accumulates. Each waypoint must independently reset the
+  # balance without interactions leaking between them or toward the opening_anchor.
+  # Non-monotonic balance values (up and down) confirm each reset is truly independent.
+  test "multiple consecutive reconciliation waypoints thread through independently" do
+    account = create_account_with_ledger(
+      account: { type: Depository, balance: 25000, cash_balance: 25000, currency: "USD" },
+      entries: [
+        { type: "current_anchor", date: Date.current, balance: 25000 },
+        { type: "reconciliation", date: 1.day.ago, balance: 23000 },   # Waypoint 1 (down)
+        { type: "reconciliation", date: 2.days.ago, balance: 24500 },  # Waypoint 2 (up — non-monotonic)
+        { type: "reconciliation", date: 3.days.ago, balance: 21000 },  # Waypoint 3 (down)
+        { type: "reconciliation", date: 4.days.ago, balance: 22000 },  # Waypoint 4 (up — non-monotonic)
+        { type: "transaction", date: 5.days.ago, amount: 500 },        # Expense in the gap
+        { type: "transaction", date: 6.days.ago, amount: -300 },       # Income in the gap
+        { type: "opening_anchor", date: 7.days.ago, balance: 18000 }
+      ]
+    )
+
+    calculated = Balance::ReverseCalculator.new(account).calculate
+
+    assert_calculated_ledger_balances(
+      calculated_data: calculated,
+      expected_data: [
+        {
+          date: Date.current,
+          legacy_balances: { balance: 25000, cash_balance: 25000 },
+          balances: { start: 25000, start_cash: 25000, start_non_cash: 0, end_cash: 25000, end_non_cash: 0, end: 25000 },
+          flows: 0,
+          adjustments: 0
+        }, # Current anchor
+        {
+          date: 1.day.ago,
+          legacy_balances: { balance: 23000, cash_balance: 23000 },
+          balances: { start: 23000, start_cash: 23000, start_non_cash: 0, end_cash: 23000, end_non_cash: 0, end: 23000 },
+          flows: 0,
+          adjustments: 0
+        }, # Waypoint 1: reset to 23000 (independent of current_anchor 25000)
+        {
+          date: 2.days.ago,
+          legacy_balances: { balance: 24500, cash_balance: 24500 },
+          balances: { start: 24500, start_cash: 24500, start_non_cash: 0, end_cash: 24500, end_non_cash: 0, end: 24500 },
+          flows: 0,
+          adjustments: 0
+        }, # Waypoint 2: reset UP to 24500 (proves no carry-forward from waypoint 1's 23000)
+        {
+          date: 3.days.ago,
+          legacy_balances: { balance: 21000, cash_balance: 21000 },
+          balances: { start: 21000, start_cash: 21000, start_non_cash: 0, end_cash: 21000, end_non_cash: 0, end: 21000 },
+          flows: 0,
+          adjustments: 0
+        }, # Waypoint 3: reset down to 21000
+        {
+          date: 4.days.ago,
+          legacy_balances: { balance: 22000, cash_balance: 22000 },
+          balances: { start: 22000, start_cash: 22000, start_non_cash: 0, end_cash: 22000, end_non_cash: 0, end: 22000 },
+          flows: 0,
+          adjustments: 0
+        }, # Waypoint 4: reset up to 22000 (last waypoint before the gap)
+        {
+          date: 5.days.ago,
+          legacy_balances: { balance: 22000, cash_balance: 22000 },
+          balances: { start: 22500, start_cash: 22500, start_non_cash: 0, end_cash: 22000, end_non_cash: 0, end: 22000 },
+          flows: { cash_inflows: 0, cash_outflows: 500 },
+          adjustments: 0
+        }, # Expense derived from waypoint 4's 22000
+        {
+          date: 6.days.ago,
+          legacy_balances: { balance: 22500, cash_balance: 22500 },
+          balances: { start: 22200, start_cash: 22200, start_non_cash: 0, end_cash: 22500, end_non_cash: 0, end: 22500 },
+          flows: { cash_inflows: 300, cash_outflows: 0 },
+          adjustments: { cash_adjustments: 0, non_cash_adjustments: 0 }
+        }, # Income derived further back, right before opening_anchor
+        {
+          date: 7.days.ago,
+          legacy_balances: { balance: 18000, cash_balance: 18000 },
+          balances: { start: 18000, start_cash: 18000, start_non_cash: 0, end_cash: 18000, end_non_cash: 0, end: 18000 },
+          flows: 0,
+          adjustments: 0
+        } # Opening anchor
+      ]
+    )
+  end
+
   test "same-day flows are not ignored when processing current_anchor valuation" do
     # This regression test ensures that the ReverseCalculator does not mistake the
     # current_anchor valuation (on Date.current) for a reconciliation waypoint,

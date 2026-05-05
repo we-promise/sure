@@ -133,8 +133,9 @@ class Account::CurrentBalanceManager
       entry.update!(name: Valuation.build_reconciliation_name(account.accountable_type))
       Rails.logger.info("[AnchorRotation] Converted current_anchor to reconciliation for account #{account.id}, date=#{entry.date}, has_amount=#{entry.amount.present?}")
 
-      # Clear memoized value so the next check creates a fresh current_anchor
-      account.valuations.reload
+      # Clear memoized value so the next check creates a fresh current_anchor.
+      # The chained scope (.current_anchor.first) always issues a fresh SQL query,
+      # so we don't need to reload the full association.
       @current_anchor_valuation = nil
     end
 
@@ -147,8 +148,7 @@ class Account::CurrentBalanceManager
         entryable: Valuation.new(kind: "current_anchor")
       )
 
-      # Reload associations and clear memoized value so it gets the new anchor
-      account.valuations.reload
+      # Clear memoized value so it picks up the new anchor on next access.
       @current_anchor_valuation = nil
     end
 
