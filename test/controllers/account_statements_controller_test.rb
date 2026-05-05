@@ -66,6 +66,38 @@ class AccountStatementsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "1 duplicate statement was skipped.", flash[:alert]
   end
 
+  test "rejects invalid statement file type" do
+    assert_no_difference "AccountStatement.count" do
+      post account_statements_url, params: {
+        account_statement: {
+          files: [ uploaded_file(filename: "statement.bin", content_type: "application/octet-stream", content: "\x00\x01\x02".b) ]
+        }
+      }
+    end
+
+    assert_redirected_to account_statements_url
+    assert_equal "Upload a PDF, CSV, or XLSX statement under the size limit.", flash[:alert]
+  end
+
+  test "rejects oversized statement upload" do
+    assert_no_difference "AccountStatement.count" do
+      post account_statements_url, params: {
+        account_statement: {
+          files: [
+            uploaded_file(
+              filename: "oversized.csv",
+              content_type: "text/csv",
+              content: "x" * (AccountStatement::MAX_FILE_SIZE + 1)
+            )
+          ]
+        }
+      }
+    end
+
+    assert_redirected_to account_statements_url
+    assert_equal "Upload a PDF, CSV, or XLSX statement under the size limit.", flash[:alert]
+  end
+
   test "rejects cross-family account id" do
     other_account = Account.create!(
       family: families(:empty),

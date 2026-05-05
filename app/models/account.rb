@@ -2,6 +2,7 @@ class Account < ApplicationRecord
   include AASM, Syncable, Monetizable, Chartable, Linkable, Enrichable, Anchorable, Reconcileable, TaxTreatable
 
   before_validation :assign_default_owner, if: -> { owner_id.blank? }
+  before_destroy :move_account_statements_to_inbox
 
   validates :name, :balance, :currency, presence: true
   validate :owner_belongs_to_family, if: -> { owner_id.present? && family_id.present? }
@@ -470,5 +471,14 @@ class Account < ApplicationRecord
     def owner_belongs_to_family
       return if User.where(id: owner_id, family_id: family_id).exists?
       errors.add(:owner, :invalid, message: "must belong to the same family as the account")
+    end
+
+    def move_account_statements_to_inbox
+      account_statements.update_all(
+        account_id: nil,
+        review_status: "unmatched",
+        match_confidence: nil,
+        updated_at: Time.current
+      )
     end
 end

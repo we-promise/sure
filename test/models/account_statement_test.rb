@@ -103,8 +103,84 @@ class AccountStatementTest < ActiveSupport::TestCase
     assert_includes statement.errors[:account], "is invalid"
   end
 
+  test "stores sanitized csv parser output without raw rows" do
+    statement = AccountStatement.create_from_upload!(
+      family: @family,
+      account: @account,
+      file: uploaded_file(
+        filename: "Checking_2024-01.csv",
+        content_type: "text/csv",
+        content: "posted_at,description,amount\n2024-01-01,Coffee Shop,-5.00\n2024-01-31,Payroll,100.00\n"
+      )
+    )
+
+    assert_equal Date.new(2024, 1, 1), statement.period_start_on
+    assert_equal Date.new(2024, 1, 31), statement.period_end_on
+    assert_equal "posted_at", statement.sanitized_parser_output.dig("csv", "date_header")
+    assert_equal 2, statement.sanitized_parser_output.dig("csv", "rows_sampled")
+    assert_not_includes statement.sanitized_parser_output.to_json, "Coffee Shop"
+    assert_not_includes statement.sanitized_parser_output.to_json, "Payroll"
+  end
+
+  test "handles malformed csv metadata detection without raw parser output" do
+    statement = AccountStatement.create_from_upload!(
+      family: @family,
+      account: nil,
+      file: uploaded_file(
+        filename: "Unknown 2024-02.csv",
+        content_type: "text/csv",
+        content: "date,description\n\"unterminated"
+      )
+    )
+
+    assert_equal Date.new(2024, 2, 1), statement.period_start_on
+    assert_equal Date.new(2024, 2, 29), statement.period_end_on
+    assert_nil statement.sanitized_parser_output["csv"]
+    assert_not_includes statement.sanitized_parser_output.to_json, "unterminated"
+  end
+
+  test "reports reconciliation unavailable when balances are missing" do
+    statement = AccountStatement.create_from_upload!(
+      family: @family,
+      account: @account,
+      file: uploaded_file(filename: "statement.csv", content_type: "text/csv", content: "date,amount\n2024-01-01,1\n")
+    )
+    statement.update!(
+      period_start_on: Date.new(2024, 1, 1),
+      period_end_on: Date.new(2024, 1, 31),
+      closing_balance: 100
+    )
+
+    assert_empty statement.reconciliation_checks
+    assert_equal "unavailable", statement.reconciliation_status
+  end
+
+  test "moves linked statements to inbox when account is deleted" do
+    account = Account.create!(
+      family: @family,
+      owner: users(:family_admin),
+      name: "Temporary Checking",
+      balance: 0,
+      currency: "USD",
+      accountable: Depository.new
+    )
+    statement = AccountStatement.create_from_upload!(
+      family: @family,
+      account: account,
+      file: uploaded_file(filename: "statement.csv", content_type: "text/csv", content: "date,amount\n2024-01-01,1\n")
+    )
+
+    account.destroy!
+
+    statement.reload
+    assert_nil statement.account
+    assert statement.unmatched?
+    assert_includes @family.account_statements.unmatched, statement
+  end
+
   test "coverage marks covered duplicate ambiguous and mismatched months" do
-    covered_month = 4.months.ago.to_date.beginning_of_month
+    covered_month = 5.months.ago.to_date.beginning_of_month
+    missing_month = 4.months.ago.to_date.beginning_of_month
     duplicate_month = 3.months.ago.to_date.beginning_of_month
     ambiguous_month = 2.months.ago.to_date.beginning_of_month
     mismatched_month = 1.month.ago.to_date.beginning_of_month
@@ -132,6 +208,7 @@ class AccountStatementTest < ActiveSupport::TestCase
 
     statuses = coverage.months.index_by(&:date).transform_values(&:status)
     assert_equal "covered", statuses[covered_month]
+    assert_equal "missing", statuses[missing_month]
     assert_equal "duplicate", statuses[duplicate_month]
     assert_equal "ambiguous", statuses[ambiguous_month]
     assert_equal "mismatched", statuses[mismatched_month]
