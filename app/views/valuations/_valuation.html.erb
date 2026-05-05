@@ -17,10 +17,10 @@
           <%= render DS::FilledIcon.new(icon: icon, size: "md", hex_color: color, rounded: true) %>
 
           <div class="truncate text-primary">
-            <%= link_to entry.name,
+            <%= link_to(highlight_activity_entry_name(entry.name),
                         entry_path(entry),
                         data: { turbo_frame: "drawer", turbo_prefetch: false },
-                        class: "hover:underline" %>
+                        class: "hover:underline") %>
           </div>
         </div>
       </div>
