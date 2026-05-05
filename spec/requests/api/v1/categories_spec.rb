@@ -166,6 +166,14 @@ RSpec.describe 'API V1 Categories', type: :request do
         run_test!
       end
 
+      response '400', 'bad request - missing category payload' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:body) { {} }
+
+        run_test!
+      end
+
       response '401', 'unauthorized - missing api key' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 

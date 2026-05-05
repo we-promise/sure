@@ -8,6 +8,11 @@ class Api::V1::CategoriesControllerTest < ActionDispatch::IntegrationTest
     @other_family_user = users(:family_member)
     @other_family_user.update!(family: families(:empty))
 
+    # Fixtures pre-create active keys for family_admin; clear them so we can
+    # create scoped keys per-test without tripping the one-active-key-per-source
+    # validation.
+    @user.api_keys.active.destroy_all
+
     @category = categories(:food_and_drink)
     @subcategory = categories(:subcategory)
   end
@@ -275,11 +280,23 @@ class Api::V1::CategoriesControllerTest < ActionDispatch::IntegrationTest
   private
 
     def read_write_api_key
-      api_keys(:active_key)
+      @read_write_api_key ||= ApiKey.create!(
+        user: @user,
+        name: "Test RW Key",
+        display_key: "test_rw_#{SecureRandom.hex(8)}",
+        scopes: %w[read_write],
+        source: "web"
+      )
     end
 
     def read_only_api_key
-      api_keys(:one)
+      @read_only_api_key ||= ApiKey.create!(
+        user: @user,
+        name: "Test RO Key",
+        display_key: "test_ro_#{SecureRandom.hex(8)}",
+        scopes: %w[read],
+        source: "mobile"
+      )
     end
 
     def api_headers(api_key)

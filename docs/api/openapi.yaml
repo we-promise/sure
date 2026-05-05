@@ -2615,6 +2615,12 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
+        '400':
+          description: bad request - missing category payload
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
         '401':
           description: unauthorized - missing api key
           content:
