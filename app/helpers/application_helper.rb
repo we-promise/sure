@@ -59,6 +59,14 @@ module ApplicationHelper
     current_page?(path) || (request.path.start_with?(path) && path != "/")
   end
 
+  # Returns the account id segment from `/accounts/<id>(/...)?`, or nil.
+  # Used as a cache-key component so the sidebar's active-link styling is
+  # correct without busting the cache for every unrelated path change.
+  def sidebar_active_account_id
+    match = request.path.match(%r{\A/accounts/([\w-]+)})
+    match && match[1]
+  end
+
   # Wrapper around I18n.l to support custom date formats
   def format_date(object, format = :default, options = {})
     date = object.to_date
