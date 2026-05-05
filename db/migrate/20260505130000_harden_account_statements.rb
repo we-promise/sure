@@ -11,18 +11,23 @@ class HardenAccountStatements < ActiveRecord::Migration[7.2]
 
     add_check_constraint :account_statements,
                          "byte_size <= 26214400",
-                         name: "chk_account_statements_byte_size_max"
+                         name: "chk_account_statements_byte_size_max",
+                         validate: false
     add_check_constraint :account_statements,
                          "source IN ('manual_upload')",
-                         name: "chk_account_statements_source"
+                         name: "chk_account_statements_source",
+                         validate: false
     add_check_constraint :account_statements,
                          "upload_status IN ('stored', 'failed')",
-                         name: "chk_account_statements_upload_status"
+                         name: "chk_account_statements_upload_status",
+                         validate: false
     add_check_constraint :account_statements,
                          "review_status IN ('unmatched', 'linked', 'rejected')",
-                         name: "chk_account_statements_review_status"
+                         name: "chk_account_statements_review_status",
+                         validate: false
     add_check_constraint :account_statements,
                          "content_sha256 IS NULL OR content_sha256 ~ '^[0-9a-f]{64}$'",
-                         name: "chk_account_statements_content_sha256"
+                         name: "chk_account_statements_content_sha256",
+                         validate: false
   end
 end

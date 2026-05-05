@@ -288,6 +288,19 @@ class AccountStatementTest < ActiveSupport::TestCase
     assert_includes @family.account_statements.unmatched, statement
   end
 
+  test "preserves explicit rejected review status" do
+    statement = AccountStatement.create_from_upload!(
+      family: @family,
+      account: @account,
+      file: uploaded_file(filename: "statement.csv", content_type: "text/csv", content: "date,amount\n2024-01-01,1\n")
+    )
+
+    statement.reject_match!
+
+    assert statement.rejected?
+    assert_equal @account, statement.account
+  end
+
   test "normalizes account last four hint when matching accounts" do
     @account.update!(institution_name: "Acme Bank", notes: "Masked statement suffix abcd")
 

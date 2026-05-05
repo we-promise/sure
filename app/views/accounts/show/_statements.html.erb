@@ -90,8 +90,10 @@
                     <%= link_to account_statement_path(statement), aria: { label: t("account_statements.table.view") } do %>
                       <%= icon("eye", class: "w-5 h-5 text-primary") %>
                     <% end %>
-                    <%= link_to rails_blob_path(statement.original_file, disposition: "attachment"), aria: { label: t("account_statements.table.download") } do %>
-                      <%= icon("download", class: "w-5 h-5 text-primary") %>
+                    <% if statement.original_file.attached? %>
+                      <%= link_to rails_blob_path(statement.original_file, disposition: "attachment"), aria: { label: t("account_statements.table.download") } do %>
+                        <%= icon("download", class: "w-5 h-5 text-primary") %>
+                      <% end %>
                     <% end %>
                     <% if can_manage_statements %>
                       <%= button_to unlink_account_statement_path(statement),

@@ -327,6 +327,8 @@ class AccountStatement < ApplicationRecord
     end
 
     def sync_review_status
+      return if rejected? && will_save_change_to_review_status?
+
       self.review_status = "linked" if account.present? && !linked?
       self.review_status = "unmatched" if account.blank? && linked?
     end

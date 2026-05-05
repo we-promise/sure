@@ -17,10 +17,12 @@
         </div>
 
         <div class="flex items-center gap-3">
-          <%= link_to rails_blob_path(@statement.original_file, disposition: "attachment"),
-                      class: "inline-flex items-center gap-2 text-sm font-medium text-primary hover:text-primary-hover" do %>
-            <%= icon("download", size: "sm") %>
-            <%= t(".download") %>
+          <% if @statement.original_file.attached? %>
+            <%= link_to rails_blob_path(@statement.original_file, disposition: "attachment"),
+                        class: "inline-flex items-center gap-2 text-sm font-medium text-primary hover:text-primary-hover" do %>
+              <%= icon("download", size: "sm") %>
+              <%= t(".download") %>
+            <% end %>
           <% end %>
           <%= button_to account_statement_path(@statement),
                         method: :delete,
