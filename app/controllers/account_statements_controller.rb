@@ -2,16 +2,17 @@
 
 class AccountStatementsController < ApplicationController
   before_action :set_statement, only: %i[show update destroy link unlink reject]
-  before_action :ensure_statement_manager!, only: %i[create update destroy link unlink reject]
+  before_action :ensure_statement_manager!, only: %i[index create update destroy link unlink reject]
 
   def index
-    @account_statements = Current.family.account_statements
+    account_statements = Current.family.account_statements
       .with_attached_original_file
       .includes(:account, :suggested_account)
       .ordered
-    @unmatched_statements = @account_statements.unmatched
-    @linked_statements = @account_statements.linked
-    @total_storage_bytes = @account_statements.sum(:byte_size)
+
+    @unmatched_pagy, @unmatched_statements = pagy(account_statements.unmatched, limit: safe_per_page, page_param: :unmatched_page)
+    @linked_pagy, @linked_statements = pagy(account_statements.linked, limit: safe_per_page, page_param: :linked_page)
+    @total_storage_bytes = Current.family.account_statements.sum(:byte_size)
     @accounts = Current.user.accessible_accounts.visible.alphabetically
     @breadcrumbs = [
       [ t("breadcrumbs.home"), root_path ],
@@ -42,7 +43,9 @@ class AccountStatementsController < ApplicationController
 
     return if account && !require_account_permission!(account)
 
-    unless files.all? { |file| valid_upload?(file) }
+    begin
+      prepared_uploads = files.map { |file| AccountStatement.prepare_upload!(file) }
+    rescue AccountStatement::InvalidUploadError
       redirect_back_or_to redirect_after_create(account), alert: t("account_statements.create.invalid_file_type")
       return
     end
@@ -50,8 +53,8 @@ class AccountStatementsController < ApplicationController
     created = []
     duplicates = []
 
-    files.each do |file|
-      created << AccountStatement.create_from_upload!(family: Current.family, account: account, file: file)
+    prepared_uploads.each do |prepared_upload|
+      created << AccountStatement.create_from_prepared_upload!(family: Current.family, account: account, prepared_upload: prepared_upload)
     rescue AccountStatement::DuplicateUploadError => e
       duplicates << e.statement
     rescue ActiveRecord::RecordInvalid => e
@@ -132,13 +135,13 @@ class AccountStatementsController < ApplicationController
         .includes(:account, :suggested_account)
         .find(params[:id])
 
-      raise ActiveRecord::RecordNotFound if @statement.account.present? && !@statement.account.shared_with?(Current.user)
+      raise ActiveRecord::RecordNotFound unless @statement.viewable_by?(Current.user)
     end
 
     def ensure_statement_manager!
-      return true if Current.user&.admin? || Current.user&.member?
+      return true if AccountStatement.statement_manager?(Current.user)
 
-      redirect_to account_statements_path, alert: t("accounts.not_authorized")
+      redirect_to accounts_path, alert: t("accounts.not_authorized")
       false
     end
 
@@ -172,28 +175,6 @@ class AccountStatementsController < ApplicationController
 
     def statement_account_id_provided?
       params.fetch(:account_statement, ActionController::Parameters.new).key?(:account_id)
-    end
-
-    def valid_upload?(file)
-      return false if file.size.to_i > AccountStatement::MAX_FILE_SIZE
-
-      content_type = AccountStatement.detected_content_type(
-        content: file.read,
-        filename: file.original_filename.to_s,
-        declared_content_type: file.content_type
-      )
-      file.rewind
-
-      return false unless AccountStatement::ALLOWED_CONTENT_TYPES.include?(content_type)
-      return valid_pdf?(file) if content_type == "application/pdf"
-
-      true
-    end
-
-    def valid_pdf?(file)
-      header = file.read(5)
-      file.rewind
-      header&.start_with?("%PDF-")
     end
 
     def redirect_after_create(account, statement = nil)

@@ -19,6 +19,23 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "statements tab shows coverage and upload for statement managers with account write access" do
+    get account_url(@account, tab: "statements")
+
+    assert_response :success
+    assert_select "input[type=file][accept='.pdf,.csv,.xlsx']"
+    assert_select "p", text: I18n.l(Date.current.beginning_of_month, format: "%b %Y")
+  end
+
+  test "statements tab hides upload for read only account access" do
+    sign_in users(:family_member)
+
+    get account_url(accounts(:credit_card), tab: "statements")
+
+    assert_response :success
+    assert_select "input[type=file]", count: 0
+  end
+
   test "account activity marks trade amounts as privacy-sensitive" do
     trade_entry = entries(:trade)
     expected_amount = ApplicationController.helpers.format_money(-trade_entry.amount_money)

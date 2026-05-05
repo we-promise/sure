@@ -2,10 +2,6 @@
 
 class AccountStatement::Coverage
   Month = Struct.new(:date, :status, :statements, :ambiguous_statements, keyword_init: true) do
-    def label
-      date.strftime("%b %Y")
-    end
-
     def covered?
       status == "covered"
     end
@@ -56,17 +52,12 @@ class AccountStatement::Coverage
   private
 
     def build_month(month)
-      linked_statements = account.account_statements.for_month(month).ordered.to_a
-      ambiguous_statements = account.family.account_statements
-        .unmatched
-        .where(suggested_account: account)
-        .for_month(month)
-        .ordered
-        .to_a
+      linked_statements = statements_covering(linked_statement_scope, month)
+      ambiguous_statements = statements_covering(ambiguous_statement_scope, month)
 
       status = if linked_statements.size > 1
         "duplicate"
-      elsif linked_statements.any?(&:reconciliation_mismatched?)
+      elsif linked_statements.any? { |statement| statement.reconciliation_mismatched?(balance_lookup: balance_lookup) }
         "mismatched"
       elsif linked_statements.one?
         "covered"
@@ -77,5 +68,48 @@ class AccountStatement::Coverage
       end
 
       Month.new(date: month, status: status, statements: linked_statements, ambiguous_statements: ambiguous_statements)
+    end
+
+    def linked_statement_scope
+      @linked_statement_scope ||= account.account_statements
+        .where("period_start_on <= ? AND period_end_on >= ?", end_month.end_of_month, start_month)
+        .ordered
+        .to_a
+    end
+
+    def ambiguous_statement_scope
+      @ambiguous_statement_scope ||= account.family.account_statements
+        .unmatched
+        .where(suggested_account: account)
+        .where("period_start_on <= ? AND period_end_on >= ?", end_month.end_of_month, start_month)
+        .ordered
+        .to_a
+    end
+
+    def statements_covering(statements, month)
+      month_start = month.to_date.beginning_of_month
+      month_end = month_start.end_of_month
+
+      statements.select do |statement|
+        statement.period_start_on.present? &&
+          statement.period_end_on.present? &&
+          statement.period_start_on <= month_end &&
+          statement.period_end_on >= month_start
+      end
+    end
+
+    def balance_lookup
+      @balance_lookup ||= begin
+        currencies = linked_statement_scope.map(&:statement_currency).compact.uniq
+        dates = linked_statement_scope.flat_map { |statement| [ statement.period_start_on, statement.period_end_on ] }.compact.uniq
+        balances = if currencies.any? && dates.any?
+          account.balances.where(currency: currencies, date: dates).to_a
+        else
+          []
+        end
+        by_key = balances.index_by { |balance| [ balance.date, balance.currency ] }
+
+        ->(date, currency) { by_key[[ date, currency ]] }
+      end
     end
 end

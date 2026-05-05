@@ -19,7 +19,7 @@
           <%= form.label :files, t("account_statements.form.files_label"), class: "form-field__label" %>
           <%= form.file_field :files,
                               multiple: true,
-                              accept: AccountStatement::ALLOWED_CONTENT_TYPES.join(","),
+                              accept: AccountStatement::ACCEPTED_FILE_EXTENSIONS.join(","),
                               class: "form-field__input" %>
           <p class="text-xs text-secondary mt-2"><%= t("account_statements.form.files_hint", max_size: AccountStatement::MAX_FILE_SIZE / 1.megabyte) %></p>
         </div>
@@ -39,7 +39,7 @@
       <div class="flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-secondary uppercase">
         <p><%= t(".unmatched_title") %></p>
         <span class="text-subdued">&middot;</span>
-        <p><%= @unmatched_statements.count %></p>
+        <p><%= @unmatched_pagy.count %></p>
       </div>
 
       <div class="bg-container rounded-lg shadow-border-xs overflow-x-auto">
@@ -104,13 +104,18 @@
           <p class="text-sm text-secondary text-center py-8 font-medium"><%= t(".empty_unmatched") %></p>
         <% end %>
       </div>
+      <% if @unmatched_pagy.pages > 1 %>
+        <div class="px-3 py-2">
+          <%= render "shared/pagination", pagy: @unmatched_pagy %>
+        </div>
+      <% end %>
     </div>
 
     <div class="rounded-xl bg-container-inset space-y-1 p-1">
       <div class="flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-secondary uppercase">
         <p><%= t(".linked_title") %></p>
         <span class="text-subdued">&middot;</span>
-        <p><%= @linked_statements.count %></p>
+        <p><%= @linked_pagy.count %></p>
       </div>
 
       <div class="bg-container rounded-lg shadow-border-xs overflow-x-auto">
@@ -153,6 +158,11 @@
           <p class="text-sm text-secondary text-center py-8 font-medium"><%= t(".empty_linked") %></p>
         <% end %>
       </div>
+      <% if @linked_pagy.pages > 1 %>
+        <div class="px-3 py-2">
+          <%= render "shared/pagination", pagy: @linked_pagy %>
+        </div>
+      <% end %>
     </div>
   </div>
 <% end %>

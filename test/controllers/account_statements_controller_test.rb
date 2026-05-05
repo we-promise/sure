@@ -13,6 +13,28 @@ class AccountStatementsControllerTest < ActionDispatch::IntegrationTest
     assert_select "h1", text: "Statement vault"
   end
 
+  test "non manager cannot open statement vault" do
+    sign_in family_guest
+
+    get account_statements_url
+
+    assert_redirected_to accounts_url
+    assert_equal "You don't have permission to manage this account", flash[:alert]
+  end
+
+  test "non manager cannot view unmatched statement" do
+    statement = AccountStatement.create_from_upload!(
+      family: @account.family,
+      account: nil,
+      file: uploaded_file(filename: "statement.csv", content_type: "text/csv")
+    )
+    sign_in family_guest
+
+    get account_statement_url(statement)
+
+    assert_response :not_found
+  end
+
   test "uploads statement to account without importing transactions" do
     assert_difference "AccountStatement.count", 1 do
       assert_no_difference [ "Import.count", "Entry.count", "Transaction.count" ] do
@@ -28,6 +50,23 @@ class AccountStatementsControllerTest < ActionDispatch::IntegrationTest
     statement = AccountStatement.order(:created_at).last
     assert_equal @account, statement.account
     assert statement.linked?
+    assert_redirected_to account_url(@account, tab: "statements")
+  end
+
+  test "member with writable account access can upload linked statement" do
+    sign_in users(:family_member)
+
+    assert_difference "AccountStatement.count", 1 do
+      post account_statements_url, params: {
+        account_statement: {
+          account_id: @account.id,
+          files: [ uploaded_file(filename: "member_statement.csv", content_type: "text/csv") ]
+        }
+      }
+    end
+
+    statement = AccountStatement.order(:created_at).last
+    assert_equal @account, statement.account
     assert_redirected_to account_url(@account, tab: "statements")
   end
 
@@ -77,6 +116,24 @@ class AccountStatementsControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to account_statements_url
     assert_equal "Upload a PDF, CSV, or XLSX statement under the size limit.", flash[:alert]
+  end
+
+  test "rejects txt and xls statement uploads" do
+    [
+      uploaded_file(filename: "statement.txt", content_type: "text/plain"),
+      uploaded_file(filename: "statement.xls", content_type: "application/vnd.ms-excel")
+    ].each do |file|
+      assert_no_difference "AccountStatement.count" do
+        post account_statements_url, params: {
+          account_statement: {
+            files: [ file ]
+          }
+        }
+      end
+
+      assert_redirected_to account_statements_url
+      assert_equal "Upload a PDF, CSV, or XLSX statement under the size limit.", flash[:alert]
+    end
   end
 
   test "rejects oversized statement upload" do
@@ -282,5 +339,17 @@ class AccountStatementsControllerTest < ActionDispatch::IntegrationTest
       tempfile.rewind
 
       Rack::Test::UploadedFile.new(tempfile.path, content_type, true, original_filename: filename)
+    end
+
+    def family_guest
+      @family_guest ||= users(:family_admin).family.users.create!(
+        first_name: "Readonly",
+        last_name: "Guest",
+        email: "readonly-guest@example.com",
+        password: user_password_test,
+        role: "guest",
+        onboarded_at: Time.current,
+        ui_layout: "dashboard"
+      )
     end
 end

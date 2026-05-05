@@ -24,6 +24,7 @@ Rails.application.config.to_prepare do
 
       def authorize_transaction_attachment(attachment)
         transaction = attachment.record
+        raise ActiveRecord::RecordNotFound if transaction.nil?
 
         # Check if current user has access to this transaction's family
         unless Current.family == transaction.entry.account.family
@@ -35,11 +36,7 @@ Rails.application.config.to_prepare do
         statement = attachment.record
         raise ActiveRecord::RecordNotFound if statement.nil?
 
-        allowed =
-          Current.family == statement.family &&
-          (statement.account.nil? || statement.account.shared_with?(Current.user))
-
-        raise ActiveRecord::RecordNotFound unless allowed
+        raise ActiveRecord::RecordNotFound unless statement.viewable_by?(Current.user)
       end
 
       def protected_attachment?
@@ -54,6 +51,22 @@ Rails.application.config.to_prepare do
 
       def authorized_blob
         @blob || @representation&.blob
+      end
+
+      def new_session_url
+        Rails.application.routes.url_helpers.new_session_url(active_storage_auth_url_options)
+      end
+
+      def new_registration_url
+        Rails.application.routes.url_helpers.new_registration_url(active_storage_auth_url_options)
+      end
+
+      def active_storage_auth_url_options
+        {
+          protocol: request.protocol,
+          host: request.host,
+          port: request.optional_port
+        }.compact
       end
   end
 

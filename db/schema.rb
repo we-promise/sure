@@ -67,17 +67,24 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_10_120000) do
     t.jsonb "sanitized_parser_output", default: {}, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "content_sha256"
     t.index ["account_id", "period_start_on", "period_end_on"], name: "index_account_statements_on_account_period"
     t.index ["account_id"], name: "index_account_statements_on_account_id"
     t.index ["family_id", "checksum"], name: "index_account_statements_on_family_checksum", unique: true
+    t.index ["family_id", "content_sha256"], name: "index_account_statements_on_family_content_sha256", unique: true, where: "(content_sha256 IS NOT NULL)"
     t.index ["family_id", "review_status"], name: "index_account_statements_on_family_review_status"
     t.index ["family_id"], name: "index_account_statements_on_family_id"
     t.index ["suggested_account_id", "review_status"], name: "index_account_statements_on_suggested_account_review"
     t.index ["suggested_account_id"], name: "index_account_statements_on_suggested_account_id"
+    t.check_constraint "byte_size <= 26214400", name: "chk_account_statements_byte_size_max"
     t.check_constraint "byte_size >= 0", name: "chk_account_statements_byte_size_positive"
+    t.check_constraint "content_sha256 IS NULL OR content_sha256::text ~ '^[0-9a-f]{64}$'::text", name: "chk_account_statements_content_sha256"
     t.check_constraint "match_confidence IS NULL OR match_confidence >= 0::numeric AND match_confidence <= 1::numeric", name: "chk_account_statements_match_confidence"
     t.check_constraint "parser_confidence IS NULL OR parser_confidence >= 0::numeric AND parser_confidence <= 1::numeric", name: "chk_account_statements_parser_confidence"
     t.check_constraint "period_start_on IS NULL OR period_end_on IS NULL OR period_start_on <= period_end_on", name: "chk_account_statements_period_order"
+    t.check_constraint "review_status::text = ANY (ARRAY['unmatched'::character varying, 'linked'::character varying, 'rejected'::character varying]::text[])", name: "chk_account_statements_review_status"
+    t.check_constraint "source::text = 'manual_upload'::text", name: "chk_account_statements_source"
+    t.check_constraint "upload_status::text = ANY (ARRAY['stored'::character varying, 'failed'::character varying]::text[])", name: "chk_account_statements_upload_status"
   end
 
   create_table "accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1286,7 +1293,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_10_120000) do
     t.index ["kind"], name: "index_securities_on_kind"
     t.index ["price_provider", "offline_reason"], name: "index_securities_on_price_provider_and_offline_reason"
     t.index ["price_provider"], name: "index_securities_on_price_provider"
-    t.check_constraint "kind::text = ANY (ARRAY['standard'::character varying, 'cash'::character varying]::text[])", name: "chk_securities_kind"
+    t.check_constraint "kind::text = ANY (ARRAY['standard'::character varying::text, 'cash'::character varying::text])", name: "chk_securities_kind"
   end
 
   create_table "security_prices", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1445,8 +1452,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_10_120000) do
     t.datetime "updated_at", null: false
     t.boolean "manual_sync", default: false, null: false
     t.index ["account_id"], name: "index_sophtron_accounts_on_account_id"
-    t.index ["sophtron_item_id"], name: "index_sophtron_accounts_on_sophtron_item_id"
     t.index ["sophtron_item_id", "account_id"], name: "idx_unique_sophtron_accounts_per_item", unique: true
+    t.index ["sophtron_item_id"], name: "index_sophtron_accounts_on_sophtron_item_id"
   end
 
   create_table "sophtron_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1701,9 +1708,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_10_120000) do
     t.datetime "last_used_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.check_constraint "sign_count >= 0", name: "chk_webauthn_credentials_sign_count_non_negative"
     t.index ["credential_id"], name: "index_webauthn_credentials_on_credential_id", unique: true
     t.index ["user_id"], name: "index_webauthn_credentials_on_user_id"
+    t.check_constraint "sign_count >= 0", name: "chk_webauthn_credentials_sign_count_non_negative"
   end
 
   add_foreign_key "account_providers", "accounts", on_delete: :cascade

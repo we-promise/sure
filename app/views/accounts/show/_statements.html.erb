@@ -3,7 +3,7 @@
 <% coverage = AccountStatement::Coverage.new(account) %>
 <% statements = account.account_statements.with_attached_original_file.ordered %>
 <% permission = account.permission_for(Current.user) %>
-<% can_manage_statements = permission.in?([ :owner, :full_control ]) %>
+<% can_manage_statements = AccountStatement.statement_manager?(Current.user) && permission.in?([ :owner, :full_control ]) %>
 
 <div class="space-y-4">
   <div class="rounded-xl bg-container-inset p-1">
@@ -22,7 +22,7 @@
     <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 bg-container rounded-lg shadow-border-xs p-3">
       <% coverage.months.each do |month| %>
         <div class="rounded-lg ring px-3 py-2 <%= account_statement_coverage_classes(month.status) %>">
-          <p class="text-xs font-medium"><%= month.label %></p>
+          <p class="text-xs font-medium"><%= account_statement_coverage_label(month) %></p>
           <p class="text-xs capitalize"><%= t("account_statements.coverage.status.#{month.status}") %></p>
         </div>
       <% end %>
@@ -37,7 +37,7 @@
           <%= form.label :files, t("account_statements.form.files_label"), class: "form-field__label" %>
           <%= form.file_field :files,
                               multiple: true,
-                              accept: AccountStatement::ALLOWED_CONTENT_TYPES.join(","),
+                              accept: AccountStatement::ACCEPTED_FILE_EXTENSIONS.join(","),
                               class: "form-field__input" %>
           <p class="text-xs text-secondary mt-2"><%= t("account_statements.form.files_hint", max_size: AccountStatement::MAX_FILE_SIZE / 1.megabyte) %></p>
         </div>

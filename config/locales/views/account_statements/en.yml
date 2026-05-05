@@ -52,6 +52,10 @@ en:
     period:
       unknown: Period unknown
     reconciliation:
+      checks:
+        closing_balance: Closing balance
+        opening_balance: Opening balance
+        period_movement: Period movement
       matched: Matched
       mismatched: Mismatched
       unavailable: Not checked

@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "csv"
+require "stringio"
 
 class AccountStatement::MetadataDetector
   DATE_PATTERNS = [
@@ -21,6 +22,16 @@ class AccountStatement::MetadataDetector
   /ix.freeze
 
   LAST4_PATTERN = /(?:^|[^a-z0-9])(?:x{2,}|ending|last\s*4|acct|account|card)[^\d]*(\d{4})(?=\D|$)/i.freeze
+  GENERIC_FILENAME_HINTS = [
+    "statement",
+    "statements",
+    "bank statement",
+    "bank statements",
+    "account statement",
+    "account statements",
+    "credit card statement",
+    "card statement"
+  ].freeze
 
   attr_reader :statement, :content
 
@@ -100,9 +111,9 @@ class AccountStatement::MetadataDetector
         .squish
         .presence
 
-      if hint.present?
-        statement.institution_name_hint ||= hint
-        statement.account_name_hint ||= hint
+      if (meaningful_hint = meaningful_filename_hint(hint))
+        statement.institution_name_hint ||= meaningful_hint
+        statement.account_name_hint ||= meaningful_hint
         detected = true
       end
 
@@ -110,13 +121,20 @@ class AccountStatement::MetadataDetector
     end
 
     def detect_from_csv
-      csv = CSV.parse(content.to_s, headers: true, liberal_parsing: true)
-      return false if csv.headers.blank? || csv.count.zero?
+      csv = CSV.new(StringIO.new(content.to_s), headers: true, liberal_parsing: true)
+      first_row = csv.shift
+      return false if first_row.blank?
 
-      date_header = csv.headers.compact.find { |header| header.to_s.match?(/date|posted|transaction/i) }
+      date_header = first_row.headers.compact.find { |header| header.to_s.match?(/date|posted|transaction/i) }
       return false if date_header.blank?
 
-      samples = csv.first(250).map { |row| row[date_header].to_s }.reject(&:blank?)
+      samples = [ first_row[date_header].to_s ].reject(&:blank?)
+      csv.each do |row|
+        break if samples.size >= 250
+
+        sample = row[date_header].to_s
+        samples << sample if sample.present?
+      end
       return false if samples.blank?
 
       date_format = Import.detect_date_format(samples)
@@ -135,6 +153,19 @@ class AccountStatement::MetadataDetector
       true
     rescue CSV::MalformedCSVError
       false
+    end
+
+    def meaningful_filename_hint(hint)
+      return nil if hint.blank?
+
+      normalized = hint.downcase.gsub(/[^a-z0-9]+/, " ").squish
+      without_generic_words = normalized
+        .gsub(/\b(?:bank|account|card|credit|debit|statement|statements)\b/, "")
+        .squish
+
+      return nil if GENERIC_FILENAME_HINTS.include?(normalized) || without_generic_words.blank?
+
+      hint
     end
 
     def parse_date(value)

@@ -74,6 +74,12 @@ class ActiveStorageAuthorizationTest < ActionDispatch::IntegrationTest
     assert_response :not_found
   end
 
+  test "unauthenticated user is redirected before statement blob access" do
+    get rails_blob_path(@statement_a.original_file)
+
+    assert_redirected_to new_session_url
+  end
+
   test "user cannot access linked statement blob for an inaccessible account" do
     private_account = accounts(:other_asset)
     statement = AccountStatement.create_from_upload!(
@@ -93,6 +99,42 @@ class ActiveStorageAuthorizationTest < ActionDispatch::IntegrationTest
     assert_response :not_found
   end
 
+  test "user can access linked statement blob for a shared account" do
+    statement = AccountStatement.create_from_upload!(
+      family: @user_a.family,
+      account: accounts(:credit_card),
+      file: uploaded_file(
+        filename: "shared_statement.pdf",
+        content_type: "application/pdf",
+        content: "%PDF-1.4 Shared Family Statement"
+      )
+    )
+
+    sign_in users(:family_member)
+
+    get rails_blob_path(statement.original_file)
+
+    assert_response :redirect
+  end
+
+  test "guest cannot access unmatched statement blob" do
+    statement = AccountStatement.create_from_upload!(
+      family: @user_a.family,
+      account: nil,
+      file: uploaded_file(
+        filename: "unmatched_statement.pdf",
+        content_type: "application/pdf",
+        content: "%PDF-1.4 Unmatched Family Statement"
+      )
+    )
+
+    sign_in family_guest
+
+    get rails_blob_path(statement.original_file)
+
+    assert_response :not_found
+  end
+
   test "orphaned statement attachment fails closed" do
     attachment = @statement_a.original_file.attachment
     attachment.update_columns(record_id: SecureRandom.uuid)
@@ -100,6 +142,16 @@ class ActiveStorageAuthorizationTest < ActionDispatch::IntegrationTest
     sign_in @user_a
 
     get rails_blob_path(attachment)
+
+    assert_response :not_found
+  end
+
+  test "orphaned transaction attachment fails closed" do
+    @attachment_a.update_columns(record_id: SecureRandom.uuid)
+
+    sign_in @user_a
+
+    get rails_blob_path(@attachment_a)
 
     assert_response :not_found
   end
@@ -116,6 +168,18 @@ class ActiveStorageAuthorizationTest < ActionDispatch::IntegrationTest
         tempfile: tempfile,
         filename: filename,
         type: content_type
+      )
+    end
+
+    def family_guest
+      @family_guest ||= @user_a.family.users.create!(
+        first_name: "Readonly",
+        last_name: "Guest",
+        email: "storage-guest@example.com",
+        password: user_password_test,
+        role: "guest",
+        onboarded_at: Time.current,
+        ui_layout: "dashboard"
       )
     end
 end

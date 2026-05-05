@@ -23,6 +23,7 @@ class AccountStatementTest < ActiveSupport::TestCase
       assert_equal Date.new(2024, 1, 1), statement.period_start_on
       assert_equal Date.new(2024, 1, 31), statement.period_end_on
       assert_equal "USD", statement.currency
+      assert_equal Digest::SHA256.hexdigest("date,description,amount\n2024-01-01,Coffee,-5.00\n2024-01-31,Deposit,100.00\n"), statement.content_sha256
       assert statement.original_file.attached?
     end
   end
@@ -65,6 +66,31 @@ class AccountStatementTest < ActiveSupport::TestCase
     assert_equal "statement.csv", error.statement.filename
   end
 
+  test "reports duplicate upload after database uniqueness race" do
+    file_content = "date,description,amount\n2024-01-01,Coffee,-5.00\n"
+    existing = AccountStatement.create_from_upload!(
+      family: @family,
+      account: @account,
+      file: uploaded_file(filename: "statement.csv", content_type: "text/csv", content: file_content)
+    )
+    prepared_upload = AccountStatement.prepare_upload!(
+      uploaded_file(filename: "statement-copy.csv", content_type: "text/csv", content: file_content)
+    )
+
+    AccountStatement.stubs(:duplicate_for).returns(nil, existing)
+    AccountStatement.any_instance.stubs(:save!).raises(ActiveRecord::RecordNotUnique.new("duplicate"))
+
+    error = assert_raises(AccountStatement::DuplicateUploadError) do
+      AccountStatement.create_from_prepared_upload!(
+        family: @family,
+        account: @account,
+        prepared_upload: prepared_upload
+      )
+    end
+
+    assert_equal existing, error.statement
+  end
+
   test "allows same checksum in different families" do
     file_content = "date,description,amount\n2024-01-01,Coffee,-5.00\n"
 
@@ -103,6 +129,37 @@ class AccountStatementTest < ActiveSupport::TestCase
     assert_includes statement.errors[:account], "is invalid"
   end
 
+  test "validates statement currency codes" do
+    statement = AccountStatement.create_from_upload!(
+      family: @family,
+      account: @account,
+      file: uploaded_file(filename: "statement.csv", content_type: "text/csv", content: "date,amount\n2024-01-01,1\n")
+    )
+
+    statement.currency = "NOPE"
+
+    assert_not statement.valid?
+    assert_includes statement.errors[:currency], "is invalid"
+  end
+
+  test "rejects unsupported file extension even when mime type is broadly allowed" do
+    assert_raises(AccountStatement::InvalidUploadError) do
+      AccountStatement.create_from_upload!(
+        family: @family,
+        account: @account,
+        file: uploaded_file(filename: "statement.txt", content_type: "text/plain", content: "date,amount\n2024-01-01,1\n")
+      )
+    end
+
+    assert_raises(AccountStatement::InvalidUploadError) do
+      AccountStatement.create_from_upload!(
+        family: @family,
+        account: @account,
+        file: uploaded_file(filename: "statement.xls", content_type: "application/vnd.ms-excel", content: "date,amount\n2024-01-01,1\n")
+      )
+    end
+  end
+
   test "stores sanitized csv parser output without raw rows" do
     statement = AccountStatement.create_from_upload!(
       family: @family,
@@ -122,6 +179,22 @@ class AccountStatementTest < ActiveSupport::TestCase
     assert_not_includes statement.sanitized_parser_output.to_json, "Payroll"
   end
 
+  test "samples csv metadata without parsing raw rows into sanitized output" do
+    rows = 300.times.map { |index| "2024-01-#{(index % 28) + 1},Row #{index}" }.join("\n")
+    statement = AccountStatement.create_from_upload!(
+      family: @family,
+      account: @account,
+      file: uploaded_file(
+        filename: "Checking_2024-01.csv",
+        content_type: "text/csv",
+        content: "posted_at,description\n#{rows}\n"
+      )
+    )
+
+    assert_equal 250, statement.sanitized_parser_output.dig("csv", "rows_sampled")
+    assert_not_includes statement.sanitized_parser_output.to_json, "Row 299"
+  end
+
   test "preserves sanitized pdf metadata output" do
     statement = AccountStatement.create_from_upload!(
       family: @family,
@@ -134,8 +207,10 @@ class AccountStatementTest < ActiveSupport::TestCase
     )
 
     assert_equal "filename_only", statement.sanitized_parser_output["pdf_detection"]
-    assert_equal [ "filename" ], statement.sanitized_parser_output["metadata_sources"]
-    assert_equal 0.45.to_d, statement.parser_confidence
+    assert_empty statement.sanitized_parser_output["metadata_sources"]
+    assert_nil statement.institution_name_hint
+    assert_nil statement.account_name_hint
+    assert_equal 0.1.to_d, statement.parser_confidence
   end
 
   test "handles malformed csv metadata detection without raw parser output" do
@@ -169,6 +244,25 @@ class AccountStatementTest < ActiveSupport::TestCase
 
     assert_empty statement.reconciliation_checks
     assert_equal "unavailable", statement.reconciliation_status
+  end
+
+  test "database constraints reject invalid persisted status values" do
+    attrs = {
+      family_id: @family.id,
+      filename: "statement.csv",
+      content_type: "text/csv",
+      byte_size: 1,
+      checksum: SecureRandom.base64(16),
+      source: "provider_sync",
+      upload_status: "stored",
+      review_status: "unmatched"
+    }
+
+    assert_raises(ActiveRecord::StatementInvalid) do
+      AccountStatement.transaction(requires_new: true) do
+        AccountStatement.insert_all!([ attrs ], record_timestamps: true)
+      end
+    end
   end
 
   test "moves linked statements to inbox when account is deleted" do

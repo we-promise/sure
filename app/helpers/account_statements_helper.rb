@@ -35,6 +35,14 @@ module AccountStatementsHelper
     end
   end
 
+  def account_statement_coverage_label(month)
+    l(month.date, format: "%b %Y")
+  end
+
+  def account_statement_reconciliation_label(check)
+    t("account_statements.reconciliation.checks.#{check[:key]}")
+  end
+
   def account_statement_balance_label(statement, field)
     money = statement.public_send("#{field}_money")
     money ? money.format : t("account_statements.balance.unknown")

@@ -7,6 +7,7 @@ en:
         account_last4_hint: Account last four
         account_name_hint: Account name hint
         closing_balance: Closing balance
+        content_sha256: Content digest
         currency: Currency
         filename: Filename
         institution_name_hint: Institution hint
@@ -19,6 +20,8 @@ en:
         account_statement:
           attributes:
             checksum:
+              duplicate_statement_file: has already been uploaded for this family
+            content_sha256:
               duplicate_statement_file: has already been uploaded for this family
             original_file:
               invalid_format: must be a PDF, CSV, or XLSX file
