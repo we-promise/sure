@@ -167,7 +167,8 @@ module LanguagesHelper
     "pt-BR", # Brazilian Portuguese
     "zh-CN", # Chinese (Simplified)
     "zh-TW",  # Chinese (Traditional)
-    "nl"   # Dutch
+    "nl",   # Dutch
+    "hu"   # Hungarian
   ].freeze
 
   COUNTRY_MAPPING = {

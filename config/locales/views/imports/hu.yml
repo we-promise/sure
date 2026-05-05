@@ -1,0 +1,241 @@
+---
+hu:
+  import:
+    qif_category_selections:
+      show:
+        title: "Konfigurálás és kiválasztás"
+        description: "Ellenőrizd az automatikusan felismert dátumformátumot, majd válaszd ki, mely kategóriákat és címkéket szeretnéd beimportálni a QIF fájlodból a %{product_name} alkalmazásba."
+        categories_heading: Kategóriák
+        categories_found:
+          one: "1 kategória található"
+          other: "%{count} kategória található"
+        category_name_col: Kategória neve
+        transactions_col: Tranzakciók
+        tags_heading: Címkék
+        tags_found:
+          one: "1 címke található"
+          other: "%{count} címke található"
+        tag_name_col: Címke neve
+        txn_count:
+          one: "1 tranzakció"
+          other: "%{count} tranzakció"
+        split_warning_title: Felosztott tranzakciók észlelve
+        split_warning_description: "Ez a QIF fájl felosztott tranzakciókat tartalmaz. A felosztott tranzakciókat még nem támogatjuk, ezért minden ilyen tranzakció teljes összegével, kategória nélkül kerül importálásra. Az egyes felosztási részletek nem őrződnek meg."
+        split_badge: felosztott
+        empty_state_primary: Ebben a QIF fájlban nem találhatók kategóriák vagy címkék.
+        empty_state_secondary: Minden tranzakció kategóriák és címkék nélkül kerül importálásra.
+        submit: Tovább az áttekintéshez
+    cleans:
+      show:
+        description: Szerkeszd az adatokat az alábbi táblázatban. A piros cellák érvénytelen adatokat tartalmaznak.
+        errors_notice: Hibák vannak az adataidban. Vidd az egeret a hiba fölé a részletekért.
+        errors_notice_mobile: Hibák vannak az adataidban. Koppints a hibajelzőre a részletekért.
+        title: Adatok megtisztítása
+    configurations:
+      update:
+        success: Az importálás konfigurálása sikeresen megtörtént.
+      category_import:
+        button_label: Folytatás
+        description: Tölts fel egy egyszerű CSV fájlt (például olyat, amit az adatexportáláskor generálunk). Az oszlopokat automatikusan leképezzük neked.
+        instructions: Kattints a Folytatás gombra a CSV feldolgozásához és a megtisztítási lépéshez való továbblépéshez.
+      mint_import:
+        date_format_label: Dátumformátum
+      rule_import:
+        description: Konfiguráld a szabályimportálást. A szabályok a CSV adatok alapján lesznek létrehozva vagy frissítve.
+        process_button: Szabályok feldolgozása
+        process_help: Kattints az alábbi gombra a CSV feldolgozásához és a szabálysorok generálásához.
+      show:
+        description: Válaszd ki, melyik oszlopok felelnek meg a CSV egyes mezőinek.
+        title: Importálás konfigurálása
+      trade_import:
+        date_format_label: Dátumformátum
+      transaction_import:
+        date_format_label: Dátumformátum
+        rows_to_skip_label: Első n sor kihagyása
+    confirms:
+      sure_import:
+        title: Importálás megerősítése
+        description: Ellenőrizd az exportfájlból importálandó adatokat.
+        summary: Importálás összefoglalója
+        empty_summary: Nem találtunk importálható rekordokat ebben a fájlban. Lehetséges, hogy üres, vagy a sorok nem felelnek meg a várt exportformátumnak (minden sornak egy JSON objektumnak kell lennie „type" és „data" kulcsokkal, az importálás által támogatott típusokkal).
+        publish_button: Importálás indítása
+        cancel: Mégse
+      mappings:
+        create_account: Számla létrehozása
+        csv_mapping_label: "%{mapping} a CSV-ben"
+        sure_mapping_label: "%{mapping} a %{product_name} alkalmazásban"
+        no_accounts: Még nincs egyetlen számlád sem. Kérjük, hozz létre egy számlát a CSV-ben nem hozzárendelt sorokhoz, vagy lépj vissza a Megtisztítás lépéshez, és adj meg egy használható számlanevet.
+        rows_label: Sorok
+        unassigned_account: Új számlát kell létrehoznod a nem hozzárendelt sorokhoz?
+      show:
+        account_mapping_description: Rendeld hozzá az importált fájl számláit a Maybe meglévő számláihoz. Új számlákat is hozzáadhatsz, vagy hagyhatod őket kategorizálatlanul.
+        account_mapping_title: Számlák hozzárendelése
+        account_type_mapping_description: Rendeld hozzá az importált fájl számlatípusait a Maybe típusaihoz.
+        account_type_mapping_title: Számlatípusok hozzárendelése
+        category_mapping_description: Rendeld hozzá az importált fájl kategóriáit a Maybe meglévő kategóriáihoz. Új kategóriákat is hozzáadhatsz, vagy hagyhatod őket kategorizálatlanul.
+        category_mapping_title: Kategóriák hozzárendelése
+        tag_mapping_description: Rendeld hozzá az importált fájl címkéit a Maybe meglévő címkéihez. Új címkéket is hozzáadhatsz, vagy hagyhatod őket kategorizálatlanul.
+        tag_mapping_title: Címkék hozzárendelése
+    uploads:
+      show:
+        qif_title: QIF fájl feltöltése
+        qif_description: Válaszd ki azt a számlát, amelyhez ez a QIF fájl tartozik, majd töltsd fel a Quickenből exportált .qif fájlodat.
+        qif_account_label: Számla
+        qif_account_placeholder: Válassz számlát…
+        qif_file_prompt: a QIF fájl idehelyezéséhez
+        qif_file_hint: Csak .qif fájlok
+        qif_submit: QIF feltöltése
+        browse: Tallózás
+        csv_file_prompt: a CSV fájl idehelyezéséhez
+        description: Illeszd be vagy töltsd fel az alábbi CSV fájlodat. Kérjük, az importálás megkezdése előtt tekintsd át az alábbi táblázatban lévő útmutatót.
+        instructions_1: Az alábbiakban egy példa CSV látható az importáláshoz elérhető oszlopokkal.
+        instructions_2: A CSV-nek fejlécsorral kell rendelkeznie
+        instructions_3: Az oszlopokat tetszőlegesen elnevezheted. Egy későbbi lépésben fogod majd leképezni őket.
+        instructions_4: A csillaggal (*) jelölt oszlopok kötelező adatokat tartalmaznak.
+        instructions_5: Számokban ne szerepeljen vessző, pénznemjel vagy zárójel.
+        title: Adatok importálása
+      sure_import:
+        title: Importálás exportból
+        description: Töltsd fel az all.ndjson fájlt az adatexportodból a számlák, tranzakciók, kategóriák és egyéb adatok visszaállításához.
+        drop_title: Húzd ide az NDJSON fájlt a feltöltéshez
+        drop_subtitle: A fájl automatikusan feltöltődik
+        browse: Tallózás
+        browse_hint: az all.ndjson fájl hozzáadásához
+        upload_button: NDJSON feltöltése
+        hint_html: Töltsd fel az <strong>all.ndjson</strong> fájlt az adatexport ZIP archívumból
+        ndjson_invalid: Érvényes NDJSON szükséges, legalább egy rekorddal
+  imports:
+    date_format:
+      heading: Dátumformátum
+      description: "A dátumformátum automatikusan lett felismerve a fájlból. Módosítsd, ha a dátumok helytelenül jelennek meg."
+      preview: "Első feldolgozott dátum"
+      error_title: "Nem sikerült felismerni a dátumformátumot"
+      error_description: "A támogatott dátumformátumok egyike sem tudta feldolgozni a fájlban szereplő dátumokat. Ellenőrizd, hogy a fájl érvényes dátumbejegyzéseket tartalmaz-e."
+    type_labels:
+      transaction_import: "Tranzakcióimportálás"
+      trade_import: "Kereskedésimportálás"
+      account_import: "Számlaimportálás"
+      mint_import: "Mint importálás"
+      qif_import: "QIF importálás"
+      category_import: "Kategóriaimportálás"
+      rule_import: "Szabályimportálás"
+      pdf_import: "PDF importálás"
+      document_import: "Dokumentumimportálás"
+      sure_import: "Sure importálás"
+    steps:
+      upload: Feltöltés
+      configure: Konfigurálás
+      clean: Megtisztítás
+      map: Leképezés
+      confirm: Megerősítés
+      select: Kiválasztás
+    index:
+      title: Importálások
+      new: Új importálás
+    table:
+      title: Importálások
+      header:
+        date: Dátum
+        operation: Művelet
+        status: Állapot
+        actions: Műveletek
+      row:
+        type_labels:
+          transaction_import: "Tranzakció"
+          trade_import: "Kereskedés"
+          account_import: "Számla"
+          mint_import: "Mint"
+          qif_import: "QIF"
+          category_import: "Kategória"
+          rule_import: "Szabály"
+          pdf_import: "PDF"
+          document_import: "Dokumentum"
+          sure_import: "Sure"
+        status:
+          in_progress: Folyamatban
+          uploading: Sorok feldolgozása
+          reverting: Visszavonás folyamatban
+          revert_failed: Visszavonás sikertelen
+          complete: Kész
+          failed: Sikertelen
+        actions:
+          revert: Visszavonás
+          confirm_revert: Ez törli az importált tranzakciókat, de bármikor megtekintheted és újra importálhatod az adataidat.
+          delete: Törlés
+          view: Megtekintés
+      empty: Még nincs importálás.
+    new:
+      description: Importálás pénzügyi eszközből vagy nyers adatfájlok feltöltése.
+      tab_financial_tools: Pénzügyi eszközök és fájlok
+      tab_raw_data: Nyers adatok
+      coming_soon: Hamarosan
+      import_ynab: Importálás YNAB-ból
+      import_accounts: Számlák importálása
+      import_categories: Kategóriák importálása
+      import_mint: Importálás Mint-ből
+      import_portfolio: Befektetések importálása
+      import_rules: Szabályok importálása
+      import_transactions: Tranzakciók importálása
+      import_qif: Importálás Quickenből (QIF)
+      import_sure: Importálás Sure-ból
+      import_sure_description: Teljes exportból készült .ndjson fájl
+      import_file: Dokumentum importálása
+      import_file_description: Mesterséges intelligenciával segített PDF-elemzés és kereshető fájlfeltöltés
+      requires_account: Először importálj számlákat a lehetőség feloldásához.
+      resume: "%{type} folytatása"
+      sources: Források
+      title: Új importálás
+    create:
+      file_too_large: A fájl túl nagy. A maximális méret %{max_size} MB.
+      invalid_file_type: Érvénytelen fájltípus. Kérjük, tölts fel CSV fájlt.
+      csv_uploaded: A CSV sikeresen feltöltve.
+      ndjson_uploaded: Az NDJSON fájl sikeresen feltöltve.
+      pdf_too_large: A PDF fájl túl nagy. A maximális méret %{max_size} MB.
+      pdf_processing: A PDF feldolgozás alatt áll. Az elemzés elkészültéről e-mailben értesítünk.
+      invalid_pdf: A feltöltött fájl nem érvényes PDF.
+      document_too_large: A dokumentumfájl túl nagy. A maximális méret %{max_size} MB.
+      invalid_document_file_type: Érvénytelen dokumentumfájl-típus az aktív vektortárhoz.
+      document_uploaded: A dokumentum sikeresen feltöltve.
+      document_upload_failed: Nem sikerült feltölteni a dokumentumot a vektortárba. Kérjük, próbáld újra.
+      invalid_ndjson_file_type: Érvénytelen fájltípus vagy formátum. Kérjük, tölts fel érvényes .ndjson vagy .json exportfájlt.
+      document_provider_not_configured: Nincs vektortár konfigurálva dokumentumfeltöltéshez.
+    show:
+      finalize_upload: Kérjük, fejezd be a fájlfeltöltést.
+      finalize_mappings: Kérjük, véglegesítsd a leképezéseket a továbblépés előtt.
+    ready:
+      description: Íme egy összefoglaló azokról az új elemekről, amelyek a számládhoz kerülnek, miután közzéteszed ezt az importálást.
+      title: Importált adatok megerősítése
+      summary_item_label: Elem
+      summary_count_label: Darab
+      empty_summary: Nem találtunk importálható rekordokat ebben a fájlban. Lehetséges, hogy üres, vagy a sorok nem felelnek meg a várt exportformátumnak (minden sornak egy JSON objektumnak kell lennie „type" és „data" kulcsokkal, az importálás által támogatott típusokkal).
+      publish_import: Importálás közzététele
+      back_to_imports: Vissza az importálásokhoz
+    errors:
+      custom_column_requires_inflow: "Az egyéni oszlopos importáláshoz be kell jelölni egy beérkező összeg oszlopot"
+    document_types:
+      bank_statement: Bankszámlakivonat
+      credit_card_statement: Hitelkártyakivonat
+      investment_statement: Befektetési kimutatás
+      financial_document: Pénzügyi dokumentum
+      contract: Szerződés
+      other: Egyéb dokumentum
+      unknown: Ismeretlen dokumentum
+    pdf_import:
+      processing_title: PDF feldolgozása folyamatban
+      processing_description: Mesterséges intelligenciával elemezzük a dokumentumodat. Ez eltarthat egy ideig. Az elemzés elkészültéről e-mailben értesítünk.
+      check_status: Állapot ellenőrzése
+      back_to_dashboard: Vissza az irányítópultra
+      failed_title: Feldolgozás sikertelen
+      failed_description: Nem sikerült feldolgozni a PDF dokumentumodat. Kérjük, próbáld újra, vagy vedd fel a kapcsolatot az ügyfélszolgálattal.
+      try_again: Újrapróbálkozás
+      delete_import: Importálás törlése
+      complete_title: Dokumentum elemezve
+      complete_description: Elemeztük a PDF-edet, és íme, amit találtunk.
+      document_type_label: Dokumentum típusa
+      summary_label: Összefoglaló
+      email_sent_notice: E-mailben elküldtük a következő lépéseket.
+      back_to_imports: Vissza az importálásokhoz
+      unknown_state_title: Ismeretlen állapot
+      unknown_state_description: Ez az importálás váratlan állapotban van. Kérjük, térj vissza az importálásokhoz.
+      processing_failed_with_message: "%{message}"
+      processing_failed_generic: "Feldolgozási hiba: %{error}"

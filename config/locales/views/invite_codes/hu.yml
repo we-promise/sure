@@ -1,0 +1,6 @@
+---
+hu:
+  invite_codes:
+    index:
+      invite_code_description: Generálj új kódot, hogy az megjelenjen itt. A már felhasznált generált kódok nem jelennek meg tovább.
+      no_invite_codes: Nincs megjeleníthető kód

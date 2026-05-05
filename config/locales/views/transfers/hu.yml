@@ -1,0 +1,38 @@
+---
+hu:
+  transfers:
+    create:
+      success: Átutalás létrehozva
+    destroy:
+      success: Átutalás eltávolítva
+    form:
+      amount: Összeg
+      calculate_rate_tab: Árfolyam kiszámítása
+      convert_tab: Átváltás árfolyammal
+      date: Dátum
+      destination_amount: Célösszeg
+      destination_amount_display: "Célösszeg: %{amount}"
+      exchange_rate: Árfolyam
+      exchange_rate_display: "Árfolyam: %{rate}"
+      exchange_rate_help: Válaszd meg, hogyan adod meg az átutalás összegét.
+      expense: Kiadás
+      from: Honnan
+      income: Bevétel
+      select_account: Válassz számlát
+      source_amount: Forrásösszeg
+      submit: Átutalás létrehozása
+      to: Hova
+      transfer: Átutalás
+    new:
+      title: Új átutalás
+    show:
+      delete: Átutalás eltávolítása
+      delete_subtitle: Ez eltávolítja az átutalást. Az alapul szolgáló tranzakciókat nem törli.
+      delete_title: Eltávolítja az átutalást?
+      details: Részletek
+      note_label: Megjegyzések
+      note_placeholder: Adj meg egy megjegyzést ehhez az átutaláshoz
+      overview: Áttekintés
+      settings: Beállítások
+    update:
+      success: Átutalás frissítve

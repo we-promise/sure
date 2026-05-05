@@ -1,0 +1,131 @@
+---
+hu:
+  simplefin_items:
+    new:
+      title: SimpleFIN csatlakoztatása
+      setup_token: Beállítási token
+      setup_token_placeholder: illeszd be a SimpleFIN beállítási tokenedet
+      connect: Csatlakoztatás
+      cancel: Mégse
+    create:
+      success: A SimpleFIN kapcsolat sikeresen hozzáadva! A számlák hamarosan megjelennek, miközben a háttérben szinkronizálódnak.
+      errors:
+        blank_token: Kérjük, add meg a SimpleFIN beállítási tokent.
+        invalid_token: Érvénytelen beállítási token. Ellenőrizd, hogy a teljes tokent másoltad-e a SimpleFIN Bridge-ből.
+        token_compromised: A beállítási token esetleg sérült, lejárt, vagy már felhasználták. Kérjük, hozz létre egy újat.
+        create_failed: "Nem sikerült csatlakozni: %{message}"
+        unexpected: Váratlan hiba történt. Kérjük, próbáld újra.
+    destroy:
+      success: A SimpleFIN kapcsolat el lesz távolítva
+    update:
+      success: A SimpleFIN kapcsolat sikeresen frissítve! A számlák újracsatlakoztatása folyamatban van.
+      errors:
+        blank_token: Kérjük, add meg a SimpleFIN beállítási tokent.
+        invalid_token: Érvénytelen beállítási token. Ellenőrizd, hogy a teljes tokent másoltad-e a SimpleFIN Bridge-ből.
+        token_compromised: A beállítási token esetleg sérült, lejárt, vagy már felhasználták. Kérjük, hozz létre egy újat.
+        update_failed: "Nem sikerült frissíteni a kapcsolatot: %{message}"
+        unexpected: Váratlan hiba történt. Kérjük, próbáld újra.
+    edit:
+      setup_token:
+        label: "SimpleFIN beállítási token:"
+        placeholder: "Illeszd be ide a SimpleFIN beállítási tokenedet..."
+        help_text: "A token egy betűkkel és számokkal kezdődő hosszú karakterlánc"
+    setup_accounts:
+      account_card:
+        balance: "Egyenleg"
+      activity:
+        recent:
+          one: "1 tranzakció • legújabb: %{when}"
+          other: "%{count} tranzakció • legújabb: %{when}"
+        dormant: "%{days} napja nincs aktivitás"
+        empty: "Még nem lett tranzakció importálva"
+        likely_closed: "Nincs friss aktivitás és az egyenleg nulla — ez egy megszűnt vagy cserélt kártya lehet"
+        today: "ma"
+        yesterday: "tegnap"
+        days_ago:
+          one: "1 napja"
+          other: "%{count} napja"
+      stale_accounts:
+        title: "A SimpleFIN-ből eltűnt számlák"
+        description: "Ezek a számlák megtalálhatók az adatbázisban, de a SimpleFIN már nem biztosítja őket. Ez akkor fordulhat elő, ha a számlakonfigurációk megváltoznak a szolgáltatónál."
+        action_prompt: "Mit szeretnél tenni?"
+        action_delete: "Számla és az összes tranzakció törlése"
+        action_move: "Tranzakciók áthelyezése ide:"
+        action_skip: "Kihagyás most"
+        transaction_count:
+          one: "%{count} tranzakció"
+          other: "%{count} tranzakció"
+    complete_account_setup:
+      all_skipped: "Minden számla ki lett hagyva. Egyetlen számla sem lett létrehozva."
+      no_accounts: "Nincs beállítandó számla."
+      success:
+        one: "Sikeresen létrehozva %{count} SimpleFIN-számla! A tranzakciók és befektetések importálása a háttérben zajlik."
+        other: "Sikeresen létrehozva %{count} SimpleFIN-számla! A tranzakciók és befektetések importálása a háttérben zajlik."
+      stale_accounts_processed: "Elavult számlák: %{deleted} törölve, %{moved} áthelyezve."
+      stale_accounts_errors:
+        one: "%{count} elavult számla művelete sikertelen. Részletekért lásd a naplót."
+        other: "%{count} elavult számla művelete sikertelen. Részletekért lásd a naplót."
+    simplefin_item:
+      add_new: Új kapcsolat hozzáadása
+      confirm_accept: Kapcsolat törlése
+      confirm_body: Ez véglegesen törli az összes számlát ebben a csoportban és az összes kapcsolódó adatot.
+      confirm_title: Töröljük a SimpleFIN kapcsolatot?
+      delete: Töröl
+      deletion_in_progress: "(törlés folyamatban...)"
+      error: Hiba történt az adatok szinkronizálása közben
+      no_accounts_description: Ennek a kapcsolatnak még nincsenek szinkronizált számlái.
+      no_accounts_title: Nem találhatók számlák
+      requires_update: Újracsatlakozás
+      setup_needed: Új számlák készen állnak a beállításra
+      setup_description: Válassz számlatípust az újonnan importált SimpleFIN-számlákhoz.
+      setup_action: Új számlák beállítása
+      setup_accounts_menu: Számlák beállítása
+      more_accounts_available:
+        one: "%{count} további számla áll rendelkezésre a beállításhoz"
+        other: "%{count} további számla áll rendelkezésre a beállításhoz"
+      accounts_skipped_tooltip: "Néhány számla ki lett hagyva a szinkronizálás közbeni hibák miatt"
+      accounts_skipped_label: "Kihagyva: %{count}"
+      rate_limited_ago: "Rátakorlátozott (%{time} ezelőtt)"
+      rate_limited_recently: "Nemrég rátakorlátozás lépett fel"
+      status: Utolsó szinkronizálás %{timestamp} ezelőtt
+      status_never: Még nem volt szinkronizálva
+      status_with_summary: "Utolsó szinkronizálás %{timestamp} ezelőtt • %{summary}"
+      syncing: Szinkronizálás folyamatban...
+      update: Frissítés
+      stale_pending_note: "(kizárva a költségvetésekből)"
+      stale_pending_accounts: "itt: %{accounts}"
+      reconciled_details_note: "(lásd a szinkronizálás összefoglalóját)"
+      duplicate_accounts_skipped: 'Néhány számla duplikátumként ki lett hagyva — az összevonáshoz használd a "Meglévő számlák összekapcsolása" lehetőséget.'
+    select_existing_account:
+      title: "%{account_name} csatlakoztatása SimpleFIN-hez"
+      description: Válassz egy SimpleFIN-számlát a meglévő számlád összekapcsolásához
+      cancel: Mégse
+      link_account: Számla összekapcsolása
+      no_accounts_found: "Nem található SimpleFIN-számla ehhez: %{moniker}."
+      wait_for_sync: Ha most csatlakoztál vagy szinkronizáltál, próbáld újra, miután a szinkronizálás befejeződött.
+      unlink_to_move: A kapcsolat áthelyezéséhez először szüntess meg a jelenlegi kapcsolatot a számla műveletek menüjéből.
+      all_accounts_already_linked: Úgy tűnik, az összes SimpleFIN-számla már össze van kapcsolva.
+      currently_linked_to: "Jelenleg összekapcsolva: %{account_name}"
+    link_existing_account:
+      success: A számla sikeresen össze lett kapcsolva a SimpleFIN-nel
+      errors:
+        only_manual: Csak manuális számlákat lehet összekapcsolni
+        different_provider: Ez a számla egy másik szolgáltatóhoz van kapcsolva. Először szüntesd meg azt a kapcsolatot, majd kapcsold a SimpleFIN-hez.
+        invalid_simplefin_account: Érvénytelen SimpleFIN-számla választva
+    dismiss_replacement_suggestion:
+      dismissed: A csere javaslata elutasítva
+    replacement_prompt:
+      title: "Lehet, hogy a %{institution} kártyád le lett cserélve"
+      description: 'A(z) "%{account_name}" össze van kapcsolva a(z) "%{old_name}"-vel, amelyen nem volt friss aktivitás és az egyenleg nulla. Egy új kártya, "%{new_name}", most aktív ugyanennél az intézménynél. Kapcsold újra, hogy a tranzakcióelőzmények megmaradjanak.'
+      relink: Újrakapcsolás az új kártyához
+      confirm_title: Újrakapcsolás az új kártyához?
+      confirm_body: 'A(z) "%{account_name}" össze lesz kapcsolva a(z) "%{new_name}"-vel. A tranzakcióelőzmények megmaradnak; a jövőbeli tranzakciók az új kártyáról érkeznek.'
+      dismiss_aria: Csere javaslat elutasítása
+    reconciled_status:
+      message:
+        one: "%{count} duplikált függőben lévő tranzakció egyeztetve"
+        other: "%{count} duplikált függőben lévő tranzakció egyeztetve"
+    stale_pending_status:
+      message:
+        one: "%{count} függőben lévő tranzakció %{days} napnál régebbi"
+        other: "%{count} függőben lévő tranzakció %{days} napnál régebbi"

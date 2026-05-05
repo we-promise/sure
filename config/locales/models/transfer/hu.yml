@@ -1,0 +1,18 @@
+---
+hu:
+  activerecord:
+    errors:
+      models:
+        transfer:
+          attributes:
+            base:
+              inflow_cannot_be_in_multiple_transfers: A beérkező tranzakció nem szerepelhet több átutalásban
+              must_be_from_different_accounts: Az átutalásnak különböző számlák között kell történnie
+              must_be_from_same_family: Az átutalásnak ugyanazon a háztartáson belül kell maradnia
+              must_be_within_date_range: Az átutalás tranzakcióinak dátuma legfeljebb 4 nappal térhet el egymástól
+              must_have_opposite_amounts: Az átutalás tranzakcióinak ellentétes összegűeknek kell lenniük
+              must_have_single_currency: Az átutalásnak egyetlen pénznemben kell lennie
+              outflow_cannot_be_in_multiple_transfers: A kimenő tranzakció nem szerepelhet több átutalásban
+  transfer:
+    name: "Átutalás ide: %{to_account}"
+    payment_name: "Fizetés ide: %{to_account}"

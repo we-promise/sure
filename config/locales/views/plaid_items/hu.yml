@@ -1,0 +1,28 @@
+---
+hu:
+  plaid_items:
+    create:
+      success: A számla sikeresen össze lett kapcsolva. Kérjük, várj, amíg a számlák szinkronizálódnak.
+    destroy:
+      success: A számlák törlése ütemezve.
+    plaid_item:
+      add_new: Új kapcsolat hozzáadása
+      confirm_accept: Intézmény törlése
+      confirm_body: Ez véglegesen törli az összes számlát ebben a csoportban és az összes kapcsolódó adatot.
+      confirm_title: Töröljük az intézményt?
+      connection_lost: A kapcsolat megszakadt
+      connection_lost_description: Ez a kapcsolat már nem érvényes. Törölnöd kell ezt a kapcsolatot, majd újra hozzá kell adnod az adatok szinkronizálásának folytatásához.
+      delete: Töröl
+      error: Hiba történt az adatok szinkronizálása közben
+      no_accounts_description: Nem sikerült betölteni egyetlen számlát sem erről a pénzintézetről.
+      no_accounts_title: Nem találhatók számlák
+      requires_update: Újracsatlakozás
+      status: Utolsó szinkronizálás %{timestamp} ezelőtt
+      status_never: Adatszinkronizálás szükséges
+      syncing: Szinkronizálás folyamatban...
+      update: Frissítés
+    select_existing_account:
+      title: "%{account_name} csatlakoztatása Plaid-hez"
+      description: Válassz egy Plaid-számlát a meglévő számlád összekapcsolásához
+      cancel: Mégse
+      link_account: Számla összekapcsolása

@@ -1,0 +1,8 @@
+---
+hu:
+  password_mailer:
+    password_reset:
+      cta: Jelszó visszaállítása
+      ignore_if_not_requested: Ha nem te kezdeményezted ezt a kérést, figyelmen kívül hagyhatod ezt az e-mailt.
+      request_made: Kérés érkezett a(z) %{product_name} jelszavad visszaállítására. Kattints a linkre a visszaállításhoz.
+      subject: '%{product_name}: Jelszó visszaállítása'

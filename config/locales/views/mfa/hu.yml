@@ -1,0 +1,41 @@
+---
+hu:
+  mfa:
+    backup_codes:
+      backup_codes_description: Minden kód csak egyszer használható. Tartsd ezeket a kódokat biztonságos helyen.
+      backup_codes_title: A tartalékkódjaid
+      continue: Folytatás a biztonsági beállításokhoz
+      description: Tárold ezeket a tartalékkódokat biztonságos helyen – szükséged lesz rájuk, ha elveszíted a hozzáférést a hitelesítő alkalmazásodhoz
+      page_title: Tartalékkódok
+      title: Mentsd el a tartalékkódjaidat
+    create:
+      invalid_code: Érvénytelen ellenőrzőkód. Kérjük, próbáld újra.
+    disable:
+      success: A kétlépéses hitelesítés le lett tiltva
+    new:
+      code_label: Ellenőrzőkód
+      code_placeholder: Add meg a 6 jegyű kódot
+      description: Növeld a fiókod biztonságát a kétlépéses hitelesítés beállításával
+      page_title: Kétlépéses hitelesítés beállítása
+      scan_description: Használj egy hitelesítő alkalmazást, például a Google Authenticatort vagy az 1Passwordöt a QR-kód beolvasásához
+      scan_title: 1. QR-kód beolvasása
+      secret_description: Ha nem tudod beolvasni a QR-kódot, add meg ezt a titkos kulcsot manuálisan a hitelesítő alkalmazásodban
+      secret_title: Manuális beviteli kód
+      title: Kétlépéses hitelesítés beállítása
+      verify_button: Ellenőrzés és 2FA engedélyezése
+      verify_description: Add meg a 6 jegyű kódot a hitelesítő alkalmazásodból
+      verify_title: 2. Ellenőrzőkód megadása
+    verify:
+      description: Add meg a hitelesítő alkalmazásodban lévő kódot a folytatáshoz
+      or: vagy
+      page_title: Kétlépéses hitelesítés ellenőrzése
+      title: Kétlépéses hitelesítés
+      verify_button: Ellenőrzés
+      webauthn_button: Jelszókulcs vagy biztonsági kulcs használata
+      webauthn_unsupported: Ez a böngésző nem támogatja a jelszókulcsokat vagy biztonsági kulcsokat.
+    verify_code:
+      invalid_code: Érvénytelen hitelesítési kód. Kérjük, próbáld újra.
+    verify_webauthn:
+      invalid_credential: Nem sikerült ellenőrizni a jelszókulcsot vagy biztonsági kulcsot. Kérjük, próbáld újra.
+    webauthn_options:
+      unavailable: Ehhez a fiókhoz nem áll rendelkezésre jelszókulcs vagy biztonsági kulcs.
