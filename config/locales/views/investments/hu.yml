@@ -46,7 +46,7 @@ hu:
         long: 529 oktatási megtakarítási terv
       hsa:
         short: HSA
-        long: Health Savings Account
+        long: Egészségmegtakarítási számla
       ugma:
         short: UGMA
         long: UGMA letéti számla
@@ -67,10 +67,10 @@ hu:
         long: Munkahelyi nyugdíjalap
       rrsp:
         short: RRSP
-        long: Registered Retirement Savings Plan
+        long: Regisztrált nyugdíj-megtakarítási terv
       tfsa:
         short: TFSA
-        long: Tax-Free Savings Account
+        long: Adómentes megtakarítási számla
       resp:
         short: RESP
         long: Registered Education Savings Plan
