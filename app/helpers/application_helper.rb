@@ -195,8 +195,8 @@ module ApplicationHelper
     def safe_lucide_icon(key, **opts)
       lucide_icon(key, **opts)
     rescue StandardError => e
-      Rails.logger.warn("[ApplicationHelper] Falling back to help-circle for unknown icon #{key.inspect}: #{e.message}")
-      lucide_icon("help-circle", **opts)
+      Rails.logger.warn("[ApplicationHelper] Falling back to key for unknown icon #{key.inspect}: #{e.message}")
+      lucide_icon("key", **opts)
     end
 
     def normalize_icon_key(key)

@@ -28,7 +28,7 @@ class ApplicationHelperTest < ActionView::TestCase
 
     result = icon("not-a-real-icon")
 
-    assert_equal [ "not-a-real-icon", "help-circle" ], calls
+    assert_equal [ "not-a-real-icon", "key" ], calls
     assert_equal "<svg></svg>", result
   ensure
     singleton_class.send(:remove_method, :lucide_icon) if singleton_class.method_defined?(:lucide_icon)
