@@ -29,6 +29,53 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
 
     Redis.new.del("api_rate_limit:#{@api_key.id}")
     Redis.new.del("api_rate_limit:#{@read_only_api_key.id}")
+
+    @diagnostic_category_name = "Diagnostic Groceries #{SecureRandom.hex(4)}"
+    @diagnostic_import = @family.imports.create!(
+      type: "TransactionImport",
+      status: "pending",
+      account: @account,
+      raw_file_str: "date,amount,name,category,tags\n01/15/2024,-10.00,Grocery Run,#{@diagnostic_category_name},Food|Weekly",
+      date_col_label: "date",
+      amount_col_label: "amount",
+      name_col_label: "name",
+      category_col_label: "category",
+      tags_col_label: "tags"
+    )
+    @diagnostic_row = @diagnostic_import.rows.create!(
+      source_row_number: 7,
+      date: "01/15/2024",
+      amount: "-10.00",
+      currency: "USD",
+      name: "Grocery Run",
+      category: @diagnostic_category_name,
+      entity_type: "checking",
+      tags: "Food|Weekly"
+    )
+    @invalid_diagnostic_row = @diagnostic_import.rows.build(
+      source_row_number: 8,
+      date: "not-a-date",
+      amount: "not-a-number",
+      currency: "BAD",
+      name: "Bad Row"
+    )
+    @invalid_diagnostic_row.save!(validate: false)
+
+    @diagnostic_category = @family.categories.create!(
+      name: @diagnostic_category_name,
+      color: "#407706",
+      lucide_icon: "shopping-basket"
+    )
+    Import::CategoryMapping.create!(
+      import: @diagnostic_import,
+      key: @diagnostic_category_name,
+      mappable: @diagnostic_category
+    )
+    Import::AccountTypeMapping.create!(
+      import: @diagnostic_import,
+      key: "checking",
+      value: "Depository"
+    )
   end
 
   test "should list imports" do
@@ -71,6 +118,105 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_equal @import.mappings.count, json_response["data"]["stats"]["mappings_count"]
     assert_equal @import.mappings.where(mappable_id: nil).count,
                  json_response["data"]["stats"]["unassigned_mappings_count"]
+  end
+
+  test "should list sanitized import row diagnostics" do
+    get rows_api_v1_import_url(@diagnostic_import), headers: api_headers(@read_only_api_key)
+
+    assert_response :success
+    json_response = JSON.parse(response.body)
+
+    assert_equal 2, json_response["meta"]["total_count"]
+    row_data = json_response["data"].find { |row| row["id"] == @diagnostic_row.id }
+
+    assert_not_nil row_data
+    assert_equal true, row_data["valid"]
+    assert_equal 7, row_data["row_number"]
+    assert_equal "Grocery Run", row_data.dig("fields", "name")
+    assert_equal @diagnostic_category_name, row_data.dig("fields", "category")
+    assert_equal @diagnostic_category.id, row_data.dig("mappings", "category", "mappable", "id")
+    assert_equal "Depository", row_data.dig("mappings", "account_type", "value")
+    tag_mapping = row_data.dig("mappings", "tags").find { |mapping| mapping["key"] == "Weekly" }
+    assert_not_nil tag_mapping
+    assert_nil tag_mapping["value"]
+    assert_not row_data.key?("raw_file_str")
+    refute_includes response.body, @diagnostic_import.raw_file_str
+  end
+
+  test "should include validation errors for invalid import rows" do
+    get rows_api_v1_import_url(@diagnostic_import), headers: api_headers(@api_key)
+
+    assert_response :success
+    json_response = JSON.parse(response.body)
+    row_data = json_response["data"].find { |row| row["id"] == @invalid_diagnostic_row.id }
+
+    assert_not_nil row_data
+    assert_equal false, row_data["valid"]
+    assert_not_empty row_data["errors"]
+  end
+
+  test "should paginate import row diagnostics" do
+    get rows_api_v1_import_url(@diagnostic_import),
+        params: { page: 1, per_page: 1 },
+        headers: api_headers(@api_key)
+
+    assert_response :success
+    json_response = JSON.parse(response.body)
+
+    assert_equal 1, json_response["data"].length
+    assert_equal 2, json_response["meta"]["total_count"]
+    assert_equal 1, json_response["meta"]["per_page"]
+  end
+
+  test "should list import row diagnostics in source row order" do
+    @diagnostic_import.rows.create!(
+      source_row_number: 6,
+      date: "01/14/2024",
+      amount: "-5.00",
+      currency: "USD",
+      name: "Earlier Source Row"
+    )
+
+    get rows_api_v1_import_url(@diagnostic_import), headers: api_headers(@api_key)
+
+    assert_response :success
+    json_response = JSON.parse(response.body)
+
+    assert_equal [ 6, 7, 8 ], json_response["data"].map { |row| row["row_number"] }
+  end
+
+  test "should not expose another family's import rows" do
+    other_family = Family.create!(name: "Other Family", currency: "USD", locale: "en")
+    other_import = other_family.imports.create!(type: "TransactionImport", raw_file_str: "date,amount,name")
+
+    get rows_api_v1_import_url(other_import), headers: api_headers(@api_key)
+
+    assert_response :not_found
+    json_response = JSON.parse(response.body)
+    assert_equal "not_found", json_response["error"]
+  end
+
+  test "should require authentication for import row diagnostics" do
+    get rows_api_v1_import_url(@diagnostic_import)
+
+    assert_response :unauthorized
+  end
+
+  test "should require read scope for import row diagnostics" do
+    api_key_without_read = ApiKey.new(
+      user: @user,
+      name: "No Read Key",
+      scopes: [],
+      source: "web",
+      display_key: "no_read_#{SecureRandom.hex(8)}"
+    )
+    api_key_without_read.save!(validate: false)
+
+    get rows_api_v1_import_url(@diagnostic_import), headers: api_headers(api_key_without_read)
+
+    assert_response :forbidden
+  ensure
+    api_key_without_read&.destroy
   end
 
   test "should create import with raw content" do

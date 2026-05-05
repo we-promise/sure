@@ -743,6 +743,95 @@ RSpec.configure do |config|
               data: { '$ref' => '#/components/schemas/ImportDetail' }
             }
           },
+          ImportRowMapping: {
+            type: :object,
+            required: %w[key type value create_when_empty creatable mappable],
+            properties: {
+              key: { type: :string, nullable: true },
+              type: { type: :string },
+              value: { type: :string, nullable: true },
+              create_when_empty: { type: :boolean },
+              creatable: { type: :boolean },
+              mappable: {
+                type: :object,
+                nullable: true,
+                properties: {
+                  id: { type: :string, format: :uuid },
+                  type: { type: :string },
+                  name: { type: :string, nullable: true }
+                }
+              }
+            }
+          },
+          ImportRowDiagnostic: {
+            type: :object,
+            required: %w[id row_number valid errors fields mappings],
+            properties: {
+              id: { type: :string, format: :uuid },
+              row_number: { type: :integer, minimum: 1 },
+              valid: { type: :boolean },
+              errors: {
+                type: :array,
+                items: { type: :string }
+              },
+              fields: {
+                type: :object,
+                properties: {
+                  account: { type: :string, nullable: true },
+                  date: { type: :string, nullable: true },
+                  qty: { type: :string, nullable: true },
+                  ticker: { type: :string, nullable: true },
+                  exchange_operating_mic: { type: :string, nullable: true },
+                  price: { type: :string, nullable: true },
+                  amount: { type: :string, nullable: true },
+                  currency: { type: :string, nullable: true },
+                  name: { type: :string, nullable: true },
+                  category: { type: :string, nullable: true },
+                  tags: { type: :string, nullable: true },
+                  entity_type: { type: :string, nullable: true },
+                  notes: { type: :string, nullable: true },
+                  active: { type: :boolean, nullable: true },
+                  effective_date: { type: :string, nullable: true },
+                  conditions: { type: :string, nullable: true },
+                  actions: { type: :string, nullable: true }
+                }
+              },
+              mappings: {
+                type: :object,
+                properties: {
+                  account: { '$ref' => '#/components/schemas/ImportRowMapping' },
+                  category: { '$ref' => '#/components/schemas/ImportRowMapping' },
+                  account_type: { '$ref' => '#/components/schemas/ImportRowMapping' },
+                  tags: {
+                    type: :array,
+                    items: { '$ref' => '#/components/schemas/ImportRowMapping' }
+                  }
+                }
+              }
+            }
+          },
+          ImportRowDiagnosticCollection: {
+            type: :object,
+            required: %w[data meta],
+            properties: {
+              data: {
+                type: :array,
+                items: { '$ref' => '#/components/schemas/ImportRowDiagnostic' }
+              },
+              meta: {
+                type: :object,
+                required: %w[current_page total_pages total_count per_page],
+                properties: {
+                  current_page: { type: :integer, minimum: 1 },
+                  next_page: { type: :integer, nullable: true },
+                  prev_page: { type: :integer, nullable: true },
+                  total_pages: { type: :integer, minimum: 0 },
+                  total_count: { type: :integer, minimum: 0 },
+                  per_page: { type: :integer, minimum: 1 }
+                }
+              }
+            }
+          },
           Trade: {
             type: :object,
             required: %w[id date amount currency name qty price account created_at updated_at],
@@ -822,6 +911,74 @@ RSpec.configure do |config|
               holdings: {
                 type: :array,
                 items: { '$ref' => '#/components/schemas/Holding' }
+              },
+              pagination: { '$ref' => '#/components/schemas/Pagination' }
+            }
+          },
+          Security: {
+            type: :object,
+            required: %w[id ticker kind offline created_at updated_at],
+            properties: {
+              id: { type: :string, format: :uuid },
+              ticker: { type: :string },
+              name: { type: :string, nullable: true },
+              kind: { type: :string, enum: %w[standard cash] },
+              country_code: { type: :string, nullable: true },
+              exchange_mic: { type: :string, nullable: true },
+              exchange_acronym: { type: :string, nullable: true },
+              exchange_operating_mic: { type: :string, nullable: true },
+              exchange_name: { type: :string, nullable: true },
+              offline: { type: :boolean },
+              offline_reason: { type: :string, nullable: true },
+              website_url: { type: :string, nullable: true },
+              logo_url: { type: :string, nullable: true },
+              first_provider_price_on: { type: :string, format: :date, nullable: true },
+              created_at: { type: :string, format: :'date-time' },
+              updated_at: { type: :string, format: :'date-time' }
+            }
+          },
+          SecurityCollection: {
+            type: :object,
+            required: %w[securities pagination],
+            properties: {
+              securities: {
+                type: :array,
+                items: { '$ref' => '#/components/schemas/Security' }
+              },
+              pagination: { '$ref' => '#/components/schemas/Pagination' }
+            }
+          },
+          SecurityPrice: {
+            type: :object,
+            required: %w[id date price price_amount currency provisional security created_at updated_at],
+            properties: {
+              id: { type: :string, format: :uuid },
+              date: { type: :string, format: :date },
+              price: { type: :string, description: 'Formatted security price' },
+              price_amount: { type: :string, description: 'Exact decimal security price' },
+              currency: { type: :string },
+              provisional: { type: :boolean },
+              security: {
+                type: :object,
+                required: %w[id ticker],
+                properties: {
+                  id: { type: :string, format: :uuid },
+                  ticker: { type: :string },
+                  name: { type: :string, nullable: true },
+                  exchange_operating_mic: { type: :string, nullable: true }
+                }
+              },
+              created_at: { type: :string, format: :'date-time' },
+              updated_at: { type: :string, format: :'date-time' }
+            }
+          },
+          SecurityPriceCollection: {
+            type: :object,
+            required: %w[security_prices pagination],
+            properties: {
+              security_prices: {
+                type: :array,
+                items: { '$ref' => '#/components/schemas/SecurityPrice' }
               },
               pagination: { '$ref' => '#/components/schemas/Pagination' }
             }

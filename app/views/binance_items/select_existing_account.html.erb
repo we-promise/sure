@@ -17,7 +17,7 @@
           <%= hidden_field_tag :account_id, @account.id %>
           <div class="space-y-2 max-h-64 overflow-auto">
             <% @available_binance_accounts.each do |ba| %>
-              <label class="flex items-center gap-3 p-2 rounded border border-surface-inset/50 hover:border-primary cursor-pointer">
+              <label class="flex items-center gap-3 p-2 rounded border border-secondary hover:border-primary cursor-pointer">
                 <%= radio_button_tag :binance_account_id, ba.id, false %>
                 <div class="flex flex-col">
                   <span class="text-sm text-primary font-medium"><%= ba.name.presence || ba.id %></span>
