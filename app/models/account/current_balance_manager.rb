@@ -131,7 +131,7 @@ class Account::CurrentBalanceManager
 
       current_anchor_valuation.update!(kind: "reconciliation")
       entry.update!(name: Valuation.build_reconciliation_name(account.accountable_type))
-      Rails.logger.info("[AnchorRotation] Converted current_anchor to reconciliation for account #{account.id}, date=#{entry.date}, has_amount=#{entry.amount.present?}")
+      Rails.logger.info("[AnchorRotation] Converted current_anchor to reconciliation for account #{account.id}, date=#{entry.date}, entry_id=#{entry.id}")
 
       # Clear memoized value so the next check creates a fresh current_anchor.
       # The chained scope (.current_anchor.first) always issues a fresh SQL query,
@@ -155,22 +155,20 @@ class Account::CurrentBalanceManager
     def update_current_anchor(balance)
       changes_made = false
 
-      ActiveRecord::Base.transaction do
-        # Update associated entry attributes
-        entry = current_anchor_valuation.entry
+      # Update associated entry attributes
+      entry = current_anchor_valuation.entry
 
-        if entry.amount != balance
-          entry.amount = balance
-          changes_made = true
-        end
-
-        if entry.date != Date.current
-          entry.date = Date.current
-          changes_made = true
-        end
-
-        entry.save! if entry.changed?
+      if entry.amount != balance
+        entry.amount = balance
+        changes_made = true
       end
+
+      if entry.date != Date.current
+        entry.date = Date.current
+        changes_made = true
+      end
+
+      entry.save! if entry.changed?
 
       changes_made
     end
