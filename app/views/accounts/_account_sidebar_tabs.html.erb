@@ -1,17 +1,6 @@
 <%# locals: (family:, active_tab:, mobile: false) %>
 
-<% shares_version = (Current.user && AccountShare.where(user_id: Current.user.id).maximum(:updated_at)&.to_i) %>
-<% cache_key = [
-     family.build_cache_key("account_sidebar_tabs_v1", invalidate_on_data_updates: true),
-     Current.user&.id,
-     shares_version,
-     active_tab,
-     mobile,
-     I18n.locale,
-     sidebar_active_account_id
-   ] %>
-
-<% cache cache_key, expires_in: 12.hours do %>
+<% cache account_sidebar_tabs_cache_key(family: family, active_tab: active_tab, mobile: mobile), expires_in: 12.hours do %>
 <div id="account-sidebar-tabs">
   <% if family.missing_data_provider? %>
     <details class="group bg-yellow-tint-10 rounded-lg p-2 text-yellow-600 mb-3 text-xs">
