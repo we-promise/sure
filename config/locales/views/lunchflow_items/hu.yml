@@ -45,7 +45,7 @@ hu:
       accounts_selected: kiválasztott számla
       api_error: "API hiba: %{message}"
       cancel: Mégse
-      configure_name_in_lunchflow: Nem importálható — kérlek állítsd be a számla nevét a Lunchflow-ban
+      configure_name_in_lunchflow: Nem importálható — kérlek állítsd be a számla nevét a Lunch Flow-ban
       description: "Válaszd ki azokat a számlákat, amelyeket össze szeretnél kapcsolni a(z) %{product_name} fiókkal."
       link_accounts: Kiválasztott számlák összekapcsolása
       no_accounts_found: Nem találhatók számlák. Kérlek ellenőrizd az API-kulcs konfigurációdat.

@@ -41,7 +41,7 @@ hu:
       status_with_summary: "Utolsó szinkronizálás: %{timestamp} ezelőtt – %{summary}"
       status_never: Még nem volt szinkronizálva
       update_credentials: Hitelesítő adatok frissítése
-      delete: Töröl
+      delete: Törölés
       no_accounts_title: Nem találhatók számlák
       no_accounts_message: A Coinbase pénztárcáid szinkronizálás után fognak megjelenni itt.
       setup_needed: Pénztárcák importálásra készen

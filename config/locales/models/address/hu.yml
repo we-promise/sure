@@ -8,4 +8,4 @@ hu:
       locality: Helység
       postal_code: Irányítószám
       region: Megye/Régió
-    format: "%{country} %{postal_code} %{locality}, %{line1} %{line2}"
+    format: "%{country} %{region} %{postal_code} %{locality}, %{line1} %{line2}"
