@@ -131,7 +131,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         child: Padding(
           padding: const EdgeInsets.only(top: 12, left: 12),
           child: SvgPicture.asset(
-            'assets/images/logomark.svg',
+            'assets/images/companion-logo.svg',
             width: 36,
             height: 36,
           ),

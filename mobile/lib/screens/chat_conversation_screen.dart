@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:provider/provider.dart';
 import '../models/chat.dart';
 import '../providers/auth_provider.dart';
@@ -479,14 +480,10 @@ class _MessageBubble extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (!isUser)
-            CircleAvatar(
-              radius: 16,
-              backgroundColor: colorScheme.primaryContainer,
-              child: Icon(
-                Icons.smart_toy,
-                size: 18,
-                color: colorScheme.onPrimaryContainer,
-              ),
+            SvgPicture.asset(
+              'assets/images/companion-logo.svg',
+              width: 32,
+              height: 32,
             ),
           const SizedBox(width: 8),
           Flexible(

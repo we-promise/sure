@@ -41,7 +41,7 @@ void main() async {
   await ApiConfig.initialize();
 
   // Add initial log entry
-  LogService.instance.info('App', 'Sure app starting...');
+  LogService.instance.info('App', 'Chancen Companion starting...');
 
   runApp(const SureApp());
 }
@@ -88,7 +88,7 @@ class SureApp extends StatelessWidget {
       ],
       child: Consumer<ThemeProvider>(
         builder: (context, themeProvider, _) => MaterialApp(
-        title: 'Sure Finances',
+        title: 'Chancen Companion',
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
           fontFamily: 'Geist',

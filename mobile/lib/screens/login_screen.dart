@@ -71,7 +71,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _openSignUpPage() async {
-    final signUpUrl = Uri.parse('${ApiConfig.defaultBaseUrl}/registration/new');
+    final signUpUrl = Uri.parse('${ApiConfig.baseUrl}/registration/new');
     final launched = await launchUrl(
       signUpUrl,
       mode: LaunchMode.externalApplication,
@@ -225,7 +225,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     const SizedBox(height: 48),
                     // Logo/Title
                     SvgPicture.asset(
-                      'assets/images/logomark.svg',
+                      'assets/images/companion-logo.svg',
                       width: 80,
                       height: 80,
                     ),
