@@ -221,7 +221,7 @@ class Api::V1::CategoriesControllerTest < ActionDispatch::IntegrationTest
 
   test "create returns 422 on duplicate name within family" do
     post "/api/v1/categories",
-      params: { category: { name: @category.name } },
+      params: { category: { name: @category.name, color: "#22c55e", icon: "shapes" } },
       headers: api_headers(read_write_api_key)
 
     assert_response :unprocessable_entity
@@ -236,6 +236,9 @@ class Api::V1::CategoriesControllerTest < ActionDispatch::IntegrationTest
       headers: api_headers(read_write_api_key)
 
     assert_response :unprocessable_entity
+    body = JSON.parse(response.body)
+    assert_equal "unprocessable_entity", body["error"]
+    assert body["message"].present?
   end
 
   test "create returns 422 when parent_id belongs to another family" do
@@ -250,6 +253,9 @@ class Api::V1::CategoriesControllerTest < ActionDispatch::IntegrationTest
       headers: api_headers(read_write_api_key)
 
     assert_response :unprocessable_entity
+    body = JSON.parse(response.body)
+    assert_equal "unprocessable_entity", body["error"]
+    assert body["message"].present?
   end
 
   test "create returns 422 when nesting exceeds two levels" do
@@ -261,10 +267,13 @@ class Api::V1::CategoriesControllerTest < ActionDispatch::IntegrationTest
     )
 
     post "/api/v1/categories",
-      params: { category: { name: "Grandchild", parent_id: child.id } },
+      params: { category: { name: "Grandchild", color: "#22c55e", icon: "shapes", parent_id: child.id } },
       headers: api_headers(read_write_api_key)
 
     assert_response :unprocessable_entity
+    body = JSON.parse(response.body)
+    assert_equal "unprocessable_entity", body["error"]
+    assert body["message"].present?
   end
 
   test "create returns 400 when category payload is missing" do
