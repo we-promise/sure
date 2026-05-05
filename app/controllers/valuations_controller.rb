@@ -8,7 +8,7 @@ class ValuationsController < ApplicationController
     @entry = @account.entries.build(entry_params.merge(currency: @account.currency))
 
     if entry_params[:amount].blank?
-      @error_message = "Amount is required"
+      @error_message = t("valuations.errors.amount_required")
       render :new, status: :unprocessable_entity
       return
     end
@@ -29,7 +29,7 @@ class ValuationsController < ApplicationController
     @account = @entry.account
 
     if entry_params[:amount].blank?
-      @error_message = "Amount is required"
+      @error_message = t("valuations.errors.amount_required")
       render :show, status: :unprocessable_entity
       return
     end
