@@ -15,6 +15,7 @@ module AccountsHelper
     search = query.to_s.strip
     return name if search.blank?
 
-    highlight(name, search, highlighter: ACTIVITY_HIGHLIGHT_MARKUP)
+    escaped_name = ERB::Util.html_escape(name.to_s)
+    highlight(escaped_name, search, highlighter: ACTIVITY_HIGHLIGHT_MARKUP, sanitize: false)
   end
 end
