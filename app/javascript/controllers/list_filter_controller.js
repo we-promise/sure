@@ -33,6 +33,7 @@ export default class extends Controller {
       this.emptyMessageTarget.classList.remove("hidden");
     }
 
+    this.highlightQueryMatches(filterValue);
     this.highlightedIndex = -1;
     this.clearHighlights();
     this.updateAriaActiveDescendant();
@@ -109,5 +110,53 @@ export default class extends Controller {
     return Array.from(this.listTarget.querySelectorAll(".filterable-item")).filter(
       (item) => item.style.display !== "none"
     );
+  }
+
+  highlightQueryMatches(filterValue) {
+    const highlightTargets = this.listTarget.querySelectorAll("[data-list-filter-highlight]");
+
+    highlightTargets.forEach((target) => {
+      if (!target.dataset.originalText) {
+        target.dataset.originalText = target.textContent;
+      }
+
+      const originalText = target.dataset.originalText;
+
+      if (!filterValue) {
+        target.innerHTML = this.escapeHtml(originalText);
+        return;
+      }
+
+      target.innerHTML = this.buildHighlightedText(originalText, filterValue);
+    });
+  }
+
+  buildHighlightedText(text, filterValue) {
+    const normalizedText = text.toLowerCase();
+    let fromIndex = 0;
+    let highlightedText = "";
+    let matchIndex = normalizedText.indexOf(filterValue, fromIndex);
+
+    while (matchIndex !== -1) {
+      const beforeMatch = text.slice(fromIndex, matchIndex);
+      const match = text.slice(matchIndex, matchIndex + filterValue.length);
+
+      highlightedText += this.escapeHtml(beforeMatch);
+      highlightedText += `<mark class="bg-transparent px-0 text-warning font-medium">${this.escapeHtml(match)}</mark>`;
+
+      fromIndex = matchIndex + filterValue.length;
+      matchIndex = normalizedText.indexOf(filterValue, fromIndex);
+    }
+
+    highlightedText += this.escapeHtml(text.slice(fromIndex));
+    return highlightedText;
+  }
+
+  escapeHtml(text) {
+    const textNode = document.createTextNode(text);
+    const div = document.createElement("div");
+
+    div.appendChild(textNode);
+    return div.innerHTML;
   }
 }
