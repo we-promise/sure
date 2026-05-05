@@ -43,8 +43,8 @@ class Settings::ApiKeysTest < ApplicationSystemTestCase
     api_key_display = find("#api-key-display")
     assert api_key_display.text.length > 30 # Should be a long hex string
 
-    # Should show copy buttons
-    assert_button "Copy API Key"
+    # Should expose a copy action for the generated API key
+    assert_selector '[data-action="clipboard#copy"]', minimum: 1
     assert_link "Create New Key"
   end
 
