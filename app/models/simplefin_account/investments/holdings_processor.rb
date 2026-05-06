@@ -47,8 +47,8 @@ class SimplefinAccount::Investments::HoldingsProcessor
         # which would cause the system to display average cost as current price. (GH #1182)
         qty = parse_decimal(any_of(simplefin_holding, %w[shares quantity qty units]))
         market_value = parse_decimal(any_of(simplefin_holding, %w[market_value current_value]))
-        raw_cost_basis = parse_decimal(any_of(simplefin_holding, %w[cost_basis basis total_cost value]))
-        cost_basis = normalize_cost_basis(raw_cost_basis, qty, simplefin_holding)
+        raw_cost_basis, cost_basis_source_key = cost_basis_from(simplefin_holding)
+        cost_basis = normalize_cost_basis(raw_cost_basis, qty, cost_basis_source_key)
 
         # Derive price from market_value when possible; otherwise fall back to any price field
         fallback_price = parse_decimal(any_of(simplefin_holding, %w[purchase_price price unit_price average_cost avg_cost]))
@@ -113,13 +113,22 @@ class SimplefinAccount::Investments::HoldingsProcessor
       simplefin_account.raw_holdings_payload || []
     end
 
+    def cost_basis_from(simplefin_holding)
+      %w[cost_basis basis total_cost value].each do |key|
+        value = parse_decimal(simplefin_holding[key])
+        return [ value, key ] if value.present?
+      end
+
+      [ nil, nil ]
+    end
+
     # Sure stores holding cost_basis as per-share average cost. Some SimpleFIN
-    # providers expose total position basis via total_cost/value, so normalize those
-    # fields before passing the holding to the provider import adapter.
-    def normalize_cost_basis(raw_cost_basis, qty, simplefin_holding)
+    # providers expose total position basis via total_cost/value, so normalize only
+    # when the selected provider field is known to represent total position basis.
+    def normalize_cost_basis(raw_cost_basis, qty, source_key)
       return nil if raw_cost_basis.nil?
 
-      if qty.to_d.positive? && (simplefin_holding.key?("total_cost") || simplefin_holding.key?("value"))
+      if qty.to_d.positive? && %w[total_cost value].include?(source_key)
         raw_cost_basis / qty
       else
         raw_cost_basis
