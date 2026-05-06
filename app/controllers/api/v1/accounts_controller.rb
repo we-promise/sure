@@ -69,24 +69,4 @@ class Api::V1::AccountsController < Api::V1::BaseController
     def include_disabled_accounts?
       ActiveModel::Type::Boolean.new.cast(params[:include_disabled])
     end
-
-    def valid_uuid?(value)
-      value.to_s.match?(/\A[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\z/i)
-    end
-
-    def safe_page_param
-      page = params[:page].to_i
-      page > 0 ? page : 1
-    end
-
-    def safe_per_page_param
-      per_page = params[:per_page].to_i
-
-      case per_page
-      when 1..100
-        per_page
-      else
-        25
-      end
-    end
 end
