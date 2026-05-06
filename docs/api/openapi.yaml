@@ -942,6 +942,33 @@ components:
             "$ref": "#/components/schemas/CategoryDetail"
         pagination:
           "$ref": "#/components/schemas/Pagination"
+    CategoryCreateRequest:
+      type: object
+      required:
+      - category
+      properties:
+        category:
+          type: object
+          required:
+          - name
+          properties:
+            name:
+              type: string
+              description: Category name (required, unique within family)
+            color:
+              type: string
+              description: 'Hex color code (e.g. #22c55e). Defaults to #6172F3 if
+                omitted; subcategories inherit parent color.'
+            icon:
+              type: string
+              description: Lucide icon name (e.g. "coffee"). Auto-suggested from the
+                name when omitted.
+            parent_id:
+              type: string
+              format: uuid
+              nullable: true
+              description: Parent category ID. Must belong to the same family. Categories
+                support up to 2 levels of nesting.
     Merchant:
       type: object
       required:
@@ -3411,6 +3438,50 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/CategoryCollection"
+    post:
+      summary: Create category
+      tags:
+      - Categories
+      security:
+      - apiKeyAuth: []
+      parameters: []
+      responses:
+        '201':
+          description: subcategory created with parent
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/CategoryDetail"
+        '422':
+          description: validation error - duplicate name
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: forbidden - api key missing read_write scope
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '400':
+          description: bad request - missing category payload
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '401':
+          description: unauthorized - missing api key
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              "$ref": "#/components/schemas/CategoryCreateRequest"
+        required: true
   "/api/v1/categories/{id}":
     parameters:
     - name: id

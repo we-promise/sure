@@ -3,7 +3,8 @@
 class Api::V1::CategoriesController < Api::V1::BaseController
   include Pagy::Backend
 
-  before_action :ensure_read_scope
+  before_action :ensure_read_scope, only: %i[index show]
+  before_action :ensure_write_scope, only: :create
   before_action :set_category, only: :show
 
   def index
@@ -45,6 +46,30 @@ class Api::V1::CategoriesController < Api::V1::BaseController
     }, status: :internal_server_error
   end
 
+  def create
+    family = current_resource_owner.family
+    attrs = category_params
+
+    if attrs[:parent_id].present? && !family.categories.exists?(id: attrs[:parent_id])
+      return render json: {
+        error: "unprocessable_entity",
+        message: "Parent must be a category in your family"
+      }, status: :unprocessable_entity
+    end
+
+    @category = family.categories.new(attrs)
+    @category.lucide_icon = Category.suggested_icon(@category.name) if @category.lucide_icon.blank?
+
+    if @category.save
+      render :show, status: :created
+    else
+      render json: {
+        error: "unprocessable_entity",
+        message: @category.errors.full_messages.join(", ")
+      }, status: :unprocessable_entity
+    end
+  end
+
   private
 
     def set_category
@@ -59,6 +84,17 @@ class Api::V1::CategoriesController < Api::V1::BaseController
 
     def ensure_read_scope
       authorize_scope!(:read)
+    end
+
+    def ensure_write_scope
+      authorize_scope!(:read_write)
+    end
+
+    def category_params
+      permitted = params.require(:category).permit(:name, :color, :icon, :parent_id)
+      icon = permitted.delete(:icon)
+      permitted[:lucide_icon] = icon if icon.present?
+      permitted
     end
 
     def apply_filters(query)
