@@ -51,8 +51,8 @@ class Holding < ApplicationRecord
     # - If locked (user-set), trust the value even if 0 (valid for airdrops)
     # - Otherwise require positive since providers sometimes return 0 when unknown
     if cost_basis.present?
-      if (cost_basis_locked? || cost_basis.positive?) && qty.to_f > 0
-        return Money.new(cost_basis / qty, currency)
+      if cost_basis_locked? || cost_basis.positive?
+        return Money.new(cost_basis, currency)
       end
     end
 
