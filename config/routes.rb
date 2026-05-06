@@ -454,6 +454,7 @@ Rails.application.routes.draw do
       resources :syncs, only: [ :index, :show ] do
         get :latest, on: :collection
       end
+      resources :provider_connections, only: [ :index ]
 
       resources :chats, only: [ :index, :show, :create, :update, :destroy ] do
         resources :messages, only: [ :create ] do
