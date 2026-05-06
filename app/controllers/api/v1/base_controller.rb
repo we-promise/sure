@@ -35,6 +35,7 @@ class Api::V1::BaseController < ApplicationController
   rescue_from ActiveRecord::RecordNotFound, with: :handle_not_found
   rescue_from Doorkeeper::Errors::DoorkeeperError, with: :handle_unauthorized
   rescue_from ActionController::ParameterMissing, with: :handle_bad_request
+  rescue_from InvalidFilterError, with: :handle_invalid_filter
 
   private
 
@@ -254,6 +255,10 @@ class Api::V1::BaseController < ApplicationController
     def handle_bad_request(exception)
       Rails.logger.warn "API Bad Request: #{exception.message}"
       render_json({ error: "bad_request", message: "Required parameters are missing or invalid" }, status: :bad_request)
+    end
+
+    def handle_invalid_filter(exception)
+      render_validation_error(exception.message)
     end
 
     def parse_date_param(key)

@@ -426,13 +426,15 @@ Rails.application.routes.draw do
       # Production API endpoints
       resources :accounts, only: [ :index, :show ]
       resources :balances, only: [ :index, :show ]
-      resources :categories, only: %i[index show create]
-      resources :merchants, only: %i[index show]
+      resources :budgets, only: [ :index, :show ]
+      resources :budget_categories, only: [ :index, :show ]
+      resources :categories, only: [:index :show :create]
+      resources :merchants, only: [:index :show]
       resources :rules, only: [ :index, :show ]
       resources :rule_runs, only: [ :index, :show ]
       resources :securities, only: [ :index, :show ]
       resources :security_prices, only: [ :index, :show ]
-      resources :tags, only: %i[index show create update destroy]
+      resources :tags, only: [:index :show :create :update :destroy]
 
       resources :transactions, only: [ :index, :show, :create, :update, :destroy ]
       resources :trades, only: [ :index, :show, :create, :update, :destroy ]
