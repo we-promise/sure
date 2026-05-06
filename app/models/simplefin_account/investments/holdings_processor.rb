@@ -47,7 +47,8 @@ class SimplefinAccount::Investments::HoldingsProcessor
         # which would cause the system to display average cost as current price. (GH #1182)
         qty = parse_decimal(any_of(simplefin_holding, %w[shares quantity qty units]))
         market_value = parse_decimal(any_of(simplefin_holding, %w[market_value current_value]))
-        cost_basis = parse_decimal(any_of(simplefin_holding, %w[cost_basis basis total_cost value]))
+        raw_cost_basis = parse_decimal(any_of(simplefin_holding, %w[cost_basis basis total_cost value]))
+        cost_basis = normalize_cost_basis(raw_cost_basis, qty, simplefin_holding)
 
         # Derive price from market_value when possible; otherwise fall back to any price field
         fallback_price = parse_decimal(any_of(simplefin_holding, %w[purchase_price price unit_price average_cost avg_cost]))
@@ -110,6 +111,19 @@ class SimplefinAccount::Investments::HoldingsProcessor
     def holdings_data
       # Use the dedicated raw_holdings_payload field
       simplefin_account.raw_holdings_payload || []
+    end
+
+    # Sure stores holding cost_basis as per-share average cost. Some SimpleFIN
+    # providers expose total position basis via total_cost/value, so normalize those
+    # fields before passing the holding to the provider import adapter.
+    def normalize_cost_basis(raw_cost_basis, qty, simplefin_holding)
+      return nil if raw_cost_basis.nil?
+
+      if qty.to_d.positive? && (simplefin_holding.key?("total_cost") || simplefin_holding.key?("value"))
+        raw_cost_basis / qty
+      else
+        raw_cost_basis
+      end
     end
 
     def resolve_security(symbol, description)
