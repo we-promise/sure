@@ -120,6 +120,9 @@
   <%= form.select :notes_col_label,
                   import.csv_headers,
                   { include_blank: "Leave empty", label: "Notes" } %>
+  <%= form.select :external_id_col_label,
+                  import.csv_headers,
+                  { include_blank: "Leave empty", label: "External ID" } %>
 
   <%= form.submit "Apply configuration", disabled: import.complete? %>
 <% end %>

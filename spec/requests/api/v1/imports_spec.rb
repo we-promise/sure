@@ -202,6 +202,10 @@ RSpec.describe 'API V1 Imports', type: :request do
             type: :string,
             description: 'CSV trade imports only. Header name for the exchange operating MIC column'
           },
+          external_id_col_label: {
+            type: :string,
+            description: 'Header name for the external ID column (used for deduplication on re-import)'
+          },
           date_format: {
             type: :string,
             description: 'CSV imports only. Date format pattern (e.g., "%m/%d/%Y")'
