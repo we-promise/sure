@@ -29,7 +29,7 @@ class AccountStatementTest < ActiveSupport::TestCase
   end
 
   test "suggests obvious account match without linking inbox upload" do
-    @account.update!(institution_name: "Chase Bank", notes: "Statement account ending 6789")
+    @account.update!(institution_name: "Chase Bank 6789", notes: "Private note")
 
     statement = AccountStatement.create_from_upload!(
       family: @family,
@@ -47,7 +47,7 @@ class AccountStatementTest < ActiveSupport::TestCase
     assert_operator statement.match_confidence, :>=, 0.7
   end
 
-  test "rejects duplicate checksum within family" do
+  test "rejects duplicate sha256 within family" do
     file_content = "date,description,amount\n2024-01-01,Coffee,-5.00\n"
     AccountStatement.create_from_upload!(
       family: @family,
@@ -64,6 +64,44 @@ class AccountStatementTest < ActiveSupport::TestCase
     end
 
     assert_equal "statement.csv", error.statement.filename
+  end
+
+  test "allows distinct files with same md5 checksum and different sha256" do
+    Digest::MD5.stubs(:base64digest).returns("same-md5-checksum")
+
+    assert_difference "AccountStatement.count", 2 do
+      AccountStatement.create_from_upload!(
+        family: @family,
+        account: @account,
+        file: uploaded_file(filename: "statement-a.csv", content_type: "text/csv", content: "date,amount\n2024-01-01,1\n")
+      )
+
+      AccountStatement.create_from_upload!(
+        family: @family,
+        account: @account,
+        file: uploaded_file(filename: "statement-b.csv", content_type: "text/csv", content: "date,amount\n2024-01-02,2\n")
+      )
+    end
+  end
+
+  test "uses md5 checksum fallback for legacy statements without sha256" do
+    Digest::MD5.stubs(:base64digest).returns("legacy-md5-checksum")
+    existing = AccountStatement.create_from_upload!(
+      family: @family,
+      account: @account,
+      file: uploaded_file(filename: "legacy.csv", content_type: "text/csv", content: "date,amount\n2024-01-01,1\n")
+    )
+    existing.update_columns(content_sha256: nil)
+
+    error = assert_raises(AccountStatement::DuplicateUploadError) do
+      AccountStatement.create_from_upload!(
+        family: @family,
+        account: @account,
+        file: uploaded_file(filename: "legacy-copy.csv", content_type: "text/csv", content: "date,amount\n2024-01-02,2\n")
+      )
+    end
+
+    assert_equal existing, error.statement
   end
 
   test "reports duplicate upload after database uniqueness race" do
@@ -302,7 +340,7 @@ class AccountStatementTest < ActiveSupport::TestCase
   end
 
   test "normalizes account last four hint when matching accounts" do
-    @account.update!(institution_name: "Acme Bank", notes: "Masked statement suffix abcd")
+    @account.update!(institution_name: "Acme Bank ABCD", notes: "Private note")
 
     statement = AccountStatement.new(
       family: @family,
@@ -315,6 +353,78 @@ class AccountStatementTest < ActiveSupport::TestCase
 
     assert_equal @account, match.account
     assert_operator match.confidence, :>=, 0.75.to_d
+  end
+
+  test "does not match account last four hints from account notes" do
+    @account.update!(institution_name: "Acme Bank", notes: "Masked statement suffix abcd")
+
+    statement = AccountStatement.new(
+      family: @family,
+      account_last4_hint: "ABCD",
+      currency: @account.currency
+    )
+
+    assert_nil AccountStatement::AccountMatcher.new(statement).best_match
+  end
+
+  test "coverage year selection spans historical account data through last completed month" do
+    account = Account.create!(
+      family: @family,
+      owner: users(:family_admin),
+      name: "Historical Checking",
+      balance: 0,
+      currency: "USD",
+      accountable: Depository.new
+    )
+
+    travel_to Date.new(2026, 5, 6) do
+      create_statement(account: account, month: Date.new(2024, 2, 1), content: "historical")
+
+      current_year_coverage = AccountStatement::Coverage.for_year(account, nil)
+      historical_coverage = AccountStatement::Coverage.for_year(account, 2024)
+
+      assert_equal 2026, current_year_coverage.selected_year
+      assert_equal [ 2026, 2025, 2024 ], current_year_coverage.available_years
+
+      historical_statuses = historical_coverage.months.index_by(&:date).transform_values(&:status)
+      assert_equal "not_expected", historical_statuses[Date.new(2024, 1, 1)]
+      assert_equal "covered", historical_statuses[Date.new(2024, 2, 1)]
+      assert_equal "missing", historical_statuses[Date.new(2024, 3, 1)]
+
+      current_statuses = current_year_coverage.months.index_by(&:date).transform_values(&:status)
+      assert_equal "missing", current_statuses[Date.new(2026, 4, 1)]
+      assert_equal "not_expected", current_statuses[Date.new(2026, 5, 1)]
+    end
+  end
+
+  test "coverage start can come from balances entries and suggested statements" do
+    account = Account.create!(
+      family: @family,
+      owner: users(:family_admin),
+      name: "Archive Checking",
+      balance: 0,
+      currency: "USD",
+      accountable: Depository.new
+    )
+
+    account.entries.create!(
+      name: "Old transaction",
+      date: Date.new(2021, 6, 15),
+      amount: 10,
+      currency: "USD",
+      entryable: Transaction.new
+    )
+    account.balances.create!(date: Date.new(2020, 3, 31), balance: 100, currency: "USD")
+    create_statement(account: nil, suggested_account: account, month: Date.new(2019, 7, 1), content: "suggested")
+
+    travel_to Date.new(2026, 5, 6) do
+      coverage = AccountStatement::Coverage.for_year(account, 2019)
+      statuses = coverage.months.index_by(&:date).transform_values(&:status)
+
+      assert_equal [ 2026, 2025, 2024, 2023, 2022, 2021, 2020, 2019 ], coverage.available_years
+      assert_equal "not_expected", statuses[Date.new(2019, 6, 1)]
+      assert_equal "ambiguous", statuses[Date.new(2019, 7, 1)]
+    end
   end
 
   test "coverage marks covered duplicate ambiguous and mismatched months" do

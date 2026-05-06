@@ -64,8 +64,7 @@ class AccountStatement::AccountMatcher
     def account_sensitive_match_text(account)
       [
         account.name,
-        account.institution_name,
-        account.notes
+        account.institution_name
       ].compact.join(" ").downcase
     end
 end

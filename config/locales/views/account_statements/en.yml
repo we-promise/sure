@@ -3,10 +3,12 @@ en:
   account_statements:
     account_tab:
       coverage_title: Statement coverage
-      coverage_description: Recent months backed by uploaded statements and balance checks.
+      coverage_description: Historical months backed by uploaded statements and balance checks.
+      coverage_range: "%{start} - %{end}"
       empty: No statements linked to this account yet.
       open_inbox: Inbox
       statements_title: Statements
+      year_label: Coverage year
     balance:
       unknown: Unknown
     coverage:
@@ -16,6 +18,7 @@ en:
         duplicate: Duplicate
         mismatched: Mismatched
         missing: Missing
+        not_expected: Not expected
     create:
       duplicates:
         one: 1 duplicate statement was skipped.

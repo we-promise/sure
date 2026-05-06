@@ -24,7 +24,44 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_select "input[type=file][accept='.pdf,.csv,.xlsx']"
-    assert_select "p", text: I18n.l(Date.current.beginning_of_month, format: "%b %Y")
+    assert_select "select[name='statement_year']"
+    assert_select "p", text: I18n.l(Date.current.prev_month.beginning_of_month, format: "%b %Y")
+  end
+
+  test "statements tab filters historical coverage by year" do
+    account = Account.create!(
+      family: @user.family,
+      owner: @user,
+      name: "Historical Checking",
+      balance: 0,
+      currency: "USD",
+      accountable: Depository.new
+    )
+    statement = AccountStatement.create_from_upload!(
+      family: @user.family,
+      account: account,
+      file: uploaded_file(filename: "historical.csv", content_type: "text/csv")
+    )
+    statement.update!(period_start_on: Date.new(2024, 2, 1), period_end_on: Date.new(2024, 2, 29))
+
+    travel_to Date.new(2026, 5, 6) do
+      get account_url(account, tab: "statements")
+
+      assert_response :success
+      assert_select "select[name='statement_year'] option[selected='selected']", text: "2026"
+      assert_select "p", text: "May 2026"
+      assert_select "p", text: "Not expected"
+
+      get account_url(account, tab: "statements", statement_year: 2024)
+
+      assert_response :success
+      assert_select "select[name='statement_year'] option[selected='selected']", text: "2024"
+      assert_select "p", text: "Jan 2024"
+      assert_select "p", text: "Feb 2024"
+      assert_select "p", text: "Covered"
+      assert_select "p", text: "Missing"
+      assert_select "p", text: "Not expected"
+    end
   end
 
   test "statements tab hides upload for read only account access" do
@@ -313,6 +350,21 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
 
     assert_nil holding.account_provider_id, "Holding should be detached from provider after unlink"
   end
+
+  private
+
+    def uploaded_file(filename:, content_type:, content: "date,amount\n2024-01-01,1\n")
+      tempfile = Tempfile.new([ File.basename(filename, ".*"), File.extname(filename) ])
+      tempfile.binmode
+      tempfile.write(content)
+      tempfile.rewind
+
+      ActionDispatch::Http::UploadedFile.new(
+        tempfile: tempfile,
+        filename: filename,
+        type: content_type
+      )
+    end
 end
 
 class AccountsControllerSimplefinCtaTest < ActionDispatch::IntegrationTest

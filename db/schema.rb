@@ -70,7 +70,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_10_120000) do
     t.string "content_sha256"
     t.index ["account_id", "period_start_on", "period_end_on"], name: "index_account_statements_on_account_period"
     t.index ["account_id"], name: "index_account_statements_on_account_id"
-    t.index ["family_id", "checksum"], name: "index_account_statements_on_family_checksum", unique: true
+    t.index ["family_id", "checksum"], name: "index_account_statements_on_family_checksum"
     t.index ["family_id", "content_sha256"], name: "index_account_statements_on_family_content_sha256", unique: true, where: "(content_sha256 IS NOT NULL)"
     t.index ["family_id", "review_status"], name: "index_account_statements_on_family_review_status"
     t.index ["family_id"], name: "index_account_statements_on_family_id"

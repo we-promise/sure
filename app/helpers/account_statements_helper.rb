@@ -14,6 +14,8 @@ module AccountStatementsHelper
 
   def account_statement_coverage_classes(status)
     case status.to_s
+    when "not_expected"
+      "bg-container-inset text-subdued ring-alpha-black-25"
     when "covered"
       "bg-green-500/10 text-green-600 ring-green-500/20"
     when "duplicate"
@@ -36,7 +38,19 @@ module AccountStatementsHelper
   end
 
   def account_statement_coverage_label(month)
-    l(month.date, format: "%b %Y")
+    account_statement_month_label(month.date)
+  end
+
+  def account_statement_month_label(date)
+    l(date, format: "%b %Y")
+  end
+
+  def account_statement_coverage_range(coverage)
+    t(
+      "account_statements.account_tab.coverage_range",
+      start: account_statement_month_label(coverage.expected_start_month),
+      end: account_statement_month_label(coverage.expected_end_month)
+    )
   end
 
   def account_statement_reconciliation_label(check)

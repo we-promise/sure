@@ -30,7 +30,7 @@ class CreateAccountStatements < ActiveRecord::Migration[7.2]
 
       t.timestamps
 
-      t.index [ :family_id, :checksum ], unique: true, name: "index_account_statements_on_family_checksum"
+      t.index [ :family_id, :checksum ], name: "index_account_statements_on_family_checksum"
       t.index [ :family_id, :review_status ], name: "index_account_statements_on_family_review_status"
       t.index [ :account_id, :period_start_on, :period_end_on ], name: "index_account_statements_on_account_period"
       t.index [ :suggested_account_id, :review_status ], name: "index_account_statements_on_suggested_account_review"

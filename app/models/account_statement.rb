@@ -47,7 +47,6 @@ class AccountStatement < ApplicationRecord
   validates :filename, :content_type, :checksum, presence: true
   validates :byte_size, presence: true, numericality: { greater_than_or_equal_to: 0, less_than_or_equal_to: MAX_FILE_SIZE }
   validates :content_type, inclusion: { in: ALLOWED_CONTENT_TYPES }
-  validates :checksum, uniqueness: { scope: :family_id, message: :duplicate_statement_file }
   validates :content_sha256,
             format: { with: /\A[0-9a-f]{64}\z/ },
             uniqueness: { scope: :family_id, allow_nil: true, message: :duplicate_statement_file },
@@ -158,11 +157,11 @@ class AccountStatement < ApplicationRecord
 
     def duplicate_for(family, prepared_upload)
       scope = family.account_statements
-      if prepared_upload.content_sha256.present?
-        scope.find_by(content_sha256: prepared_upload.content_sha256) || scope.find_by(checksum: prepared_upload.checksum)
-      else
-        scope.find_by(checksum: prepared_upload.checksum)
-      end
+      sha_duplicate = scope.find_by(content_sha256: prepared_upload.content_sha256) if prepared_upload.content_sha256.present?
+      return sha_duplicate if sha_duplicate
+
+      legacy_scope = prepared_upload.content_sha256.present? ? scope.where(content_sha256: nil) : scope
+      legacy_scope.find_by(checksum: prepared_upload.checksum)
     end
   end
 

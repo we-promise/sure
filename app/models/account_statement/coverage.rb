@@ -2,6 +2,10 @@
 
 class AccountStatement::Coverage
   Month = Struct.new(:date, :status, :statements, :ambiguous_statements, keyword_init: true) do
+    def expected?
+      status != "not_expected"
+    end
+
     def covered?
       status == "covered"
     end
@@ -21,14 +25,81 @@ class AccountStatement::Coverage
     def mismatched?
       status == "mismatched"
     end
+
+    def not_expected?
+      status == "not_expected"
+    end
   end
 
-  attr_reader :account, :start_month, :end_month
+  attr_reader :account, :start_month, :end_month, :expected_start_month, :expected_end_month, :selected_year, :available_years
 
-  def initialize(account, start_month: 11.months.ago.to_date.beginning_of_month, end_month: Date.current.beginning_of_month)
+  class << self
+    def for_year(account, year)
+      expected_end_month = default_expected_end_month
+      expected_start_month = default_expected_start_month(account, fallback_end_month: expected_end_month)
+      available_years = years_between(expected_start_month, expected_end_month)
+      selected_year = resolve_year_value(year, available_years)
+
+      new(
+        account,
+        start_month: Date.new(selected_year, 1, 1),
+        end_month: Date.new(selected_year, 12, 1),
+        expected_start_month: expected_start_month,
+        expected_end_month: expected_end_month,
+        selected_year: selected_year,
+        available_years: available_years
+      )
+    end
+
+    def years_for(account)
+      expected_end_month = default_expected_end_month
+      expected_start_month = default_expected_start_month(account, fallback_end_month: expected_end_month)
+
+      years_between(expected_start_month, expected_end_month)
+    end
+
+    def resolve_year(account, year)
+      resolve_year_value(year, years_for(account))
+    end
+
+    def default_expected_end_month
+      Date.current.prev_month.beginning_of_month
+    end
+
+    def default_expected_start_month(account, fallback_end_month: default_expected_end_month)
+      candidates = [
+        account.entries.minimum(:date),
+        account.balances.minimum(:date),
+        account.account_statements.where.not(period_start_on: nil).minimum(:period_start_on),
+        account.family.account_statements.unmatched.where(suggested_account: account).where.not(period_start_on: nil).minimum(:period_start_on)
+      ].compact
+
+      start_month = (candidates.min || fallback_end_month.advance(months: -11)).to_date.beginning_of_month
+      start_month > fallback_end_month ? fallback_end_month : start_month
+    end
+
+    private
+
+      def years_between(start_month, end_month)
+        (start_month.year..end_month.year).to_a.reverse
+      end
+
+      def resolve_year_value(year, available_years)
+        requested_year = year.to_i if year.present?
+
+        available_years.include?(requested_year) ? requested_year : available_years.first
+      end
+  end
+
+  def initialize(account, start_month: nil, end_month: nil, expected_start_month: nil, expected_end_month: nil, selected_year: nil, available_years: nil)
     @account = account
-    @start_month = start_month
-    @end_month = end_month
+    @expected_end_month = (expected_end_month || end_month || self.class.default_expected_end_month).to_date.beginning_of_month
+    resolved_expected_start_month = (expected_start_month || start_month || self.class.default_expected_start_month(account, fallback_end_month: @expected_end_month)).to_date.beginning_of_month
+    @expected_start_month = resolved_expected_start_month > @expected_end_month ? @expected_end_month : resolved_expected_start_month
+    @start_month = (start_month || @expected_start_month).to_date.beginning_of_month
+    @end_month = (end_month || @expected_end_month).to_date.beginning_of_month
+    @selected_year = selected_year
+    @available_years = available_years || self.class.years_for(account)
   end
 
   def months
@@ -52,6 +123,8 @@ class AccountStatement::Coverage
   private
 
     def build_month(month)
+      return Month.new(date: month, status: "not_expected", statements: [], ambiguous_statements: []) unless expected_month?(month)
+
       linked_statements = statements_covering(linked_statement_scope, month)
       ambiguous_statements = statements_covering(ambiguous_statement_scope, month)
 
@@ -68,6 +141,10 @@ class AccountStatement::Coverage
       end
 
       Month.new(date: month, status: status, statements: linked_statements, ambiguous_statements: ambiguous_statements)
+    end
+
+    def expected_month?(month)
+      month >= expected_start_month && month <= expected_end_month
     end
 
     def linked_statement_scope

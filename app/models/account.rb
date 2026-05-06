@@ -474,6 +474,7 @@ class Account < ApplicationRecord
     end
 
     def move_account_statements_to_inbox
+      # Bypass callbacks deliberately: the account is being destroyed, so linked statements need a direct inbox move.
       account_statements.update_all(
         account_id: nil,
         review_status: "unmatched",
