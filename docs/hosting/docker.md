@@ -324,7 +324,7 @@ Sure can be configured to trust a request header set by an upstream reverse prox
 For more information and examples, see https://doc.traefik.io/traefik/middlewares/http/forwardauth/ or similar documentation for your HTTP proxy and authentication software.
 
 Configure the Sure environment with the name of the header that carries the authenticated user's email:
-```
+```txt
 REMOTE_USER_HEADER_EMAIL="Remote-Email"
 ```
 
@@ -332,7 +332,7 @@ REMOTE_USER_HEADER_EMAIL="Remote-Email"
 
 ### Restrict by source IP (recommended)
 
-Only honor the header when the request comes from a known proxy address. When unset, the gate is skipped; when set, requests from any other IP are treated as if the header weren't present. Accepts a comma-separated list of IPs or CIDRs:
-```
+Only honor the header when the immediate peer (`REMOTE_ADDR`) is in this list. Leave the variable unset to disable the gate (the default, every request is honored). Set it to a comma-separated list of IPs or CIDRs to enable. A set-but-empty or unparseable value fails closed — every request is treated as outside the allowlist and the header is ignored.
+```txt
 REMOTE_USER_TRUSTED_PROXIES="10.0.0.5,172.18.0.0/16"
 ```
