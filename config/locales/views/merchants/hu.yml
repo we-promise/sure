@@ -1,0 +1,70 @@
+---
+hu:
+  family_merchants:
+    create:
+      error: 'Hiba a kereskedő létrehozásakor: %{error}'
+      success: Új kereskedő sikeresen létrehozva
+    destroy:
+      success: Kereskedő sikeresen törölve
+      unlinked_success: Kereskedő eltávolítva a tranzakcióidból
+    edit:
+      title: Kereskedő szerkesztése
+    form:
+      name_placeholder: Kereskedő neve
+      website_placeholder: Weboldal (pl. starbucks.com)
+      website_hint: Add meg a kereskedő weboldalát, hogy automatikusan megjelenjen a logójuk
+    index:
+      empty: Még nincsenek kereskedők
+      new: Új kereskedő
+      merge: Kereskedők egyesítése
+      title: Kereskedők
+      family_title: "%{moniker} kereskedők"
+      family_empty: "Még nincsenek %{moniker} kereskedők"
+      provider_title: Szolgáltatói kereskedők
+      provider_empty: "Ehhez a(z) %{moniker}-hoz még nincs összekapcsolt szolgáltatói kereskedő"
+      provider_read_only: A szolgáltatói kereskedők az összekapcsolt pénzintézeteidből szinkronizálódnak. Itt nem szerkeszthetők.
+      provider_info: Ezeket a kereskedőket a bankkapcsolataid vagy a mesterséges intelligencia automatikusan észlelte. Szerkesztheted őket saját verzió létrehozásához, vagy eltávolíthatod, hogy leválaszd a tranzakcióidról.
+      enhance_info:
+        one: "%{count} szolgáltatói kereskedőnél hiányzik a weboldal-információ. Fejleszd AI-jal a weboldalak felismeréséhez, logók megjelenítéséhez és az ismétlődő kereskedők egyesítéséhez."
+        other: "%{count} szolgáltatói kereskedőnél hiányzik a weboldal-információ. Fejleszd AI-jal a weboldalak felismeréséhez, logók megjelenítéséhez és az ismétlődő kereskedők egyesítéséhez."
+      enhance_button: Fejlesztés AI-jal
+      unlinked_title: Nemrég leválasztva
+      unlinked_info: Ezeket a kereskedőket nemrég távolítottad el a tranzakcióidból. 30 nap után eltűnnek erről a listáról, hacsak nem rendelik hozzá újra egy tranzakcióhoz.
+      table:
+        merchant: Kereskedő
+        actions: Műveletek
+        source: Forrás
+    merchant:
+      confirm_accept: Kereskedő törlése
+      confirm_body: Biztosan törlöd ezt a kereskedőt? A törlés megszünteti az összes kapcsolódó tranzakció hozzárendelését, ami hatással lehet a jelentéseidre.
+      confirm_title: Törlöd a kereskedőt?
+      delete: Kereskedő törlése
+      edit: Kereskedő szerkesztése
+    merge:
+      title: Kereskedők egyesítése
+      description: Válassz egy célkereskedőt és az abba beolvasztandó kereskedőket. Az egyesített kereskedők tranzakciói átkerülnek a célkereskedőhöz.
+      target_label: Beolvasztás ebbe (cél)
+      select_target: Célkereskedő kiválasztása...
+      sources_label: Beolvasztandó kereskedők
+      sources_hint: A kiválasztott kereskedők beolvadnak a célkereskedőbe. A saját kereskedők törlésre kerülnek, a szolgáltatói kereskedők leválasztásra kerülnek.
+      submit: Kijelöltek egyesítése
+    new:
+      title: Új kereskedő
+    perform_merge:
+      success:
+        one: "%{count} kereskedő sikeresen egyesítve"
+        other: "%{count} kereskedő sikeresen egyesítve"
+      no_merchants_selected: Nincs kiválasztott kereskedő az egyesítéshez
+      target_not_found: A célkereskedő nem található
+      invalid_merchants: Érvénytelen kereskedők vannak kiválasztva
+    provider_merchant:
+      edit: Szerkesztés
+      remove: Eltávolítás
+      remove_confirm_title: Eltávolítod a kereskedőt?
+      remove_confirm_body: Biztosan eltávolítod a(z) %{name} kereskedőt? Ez leválasztja az összes kapcsolódó tranzakciót erről a kereskedőről, de maga a kereskedő nem törlődik.
+    enhance:
+      success: A szolgáltatói kereskedők fejlesztése elindult. A kereskedők hamarosan frissülnek, és az ismétlődők egyesítésre kerülnek.
+      already_running: A fejlesztés már folyamatban van. Kérjük, várj, amíg befejeződik.
+    update:
+      success: Kereskedő sikeresen frissítve
+      converted_success: Kereskedő sikeresen konvertálva és frissítve

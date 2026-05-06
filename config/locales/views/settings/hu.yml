@@ -1,0 +1,228 @@
+---
+hu:
+  views:
+    settings:
+      payments:
+        renewal: "A hozzájárulásod %{date}-én megújul."
+        cancellation: "A hozzájárulásod %{date}-én lejár."
+  settings:
+    ai_prompts:
+      show:
+        page_title: MI promptok
+        openai_label: OpenAI
+        disable_ai: MI asszisztens letiltása
+        prompt_instructions: Prompt utasítások
+        main_system_prompt:
+          title: Fő rendszerprompt
+          subtitle: Alapvető utasítások, amelyek meghatározzák, hogyan viselkedik az MI asszisztens minden csevegési beszélgetésben
+        transaction_categorizer:
+          title: Tranzakció-kategorizáló
+          subtitle: Az MI automatikusan kategorizálja a tranzakcióidat a meghatározott kategóriák alapján
+        merchant_detector:
+          title: Kereskedő-felismerő
+          subtitle: Az MI azonosítja és kereskedőinformációkkal gazdagítja a tranzakcióadatokat
+    payments:
+      show:
+        page_title: Fizetések
+        subscription_subtitle: Frissítsd bankkártyaadataidat
+        subscription_title: Hozzájárulások kezelése
+    appearances:
+      show:
+        page_title: Megjelenés
+        theme_title: Téma
+        theme_subtitle: Válassz egy előnyben részesített témát az alkalmazáshoz
+        theme_dark: Sötét
+        theme_light: Világos
+        theme_system: Rendszer
+        transactions_title: Tranzakciók
+        transactions_subtitle: Szabd testre a tranzakciók megjelenítését
+        dashboard_title: Irányítópult
+        dashboard_subtitle: Szabd testre az irányítópult megjelenítését
+        dashboard_two_column_title: Kétoszlopos elrendezés
+        dashboard_two_column_description: Az irányítópult-widgetek megjelenítése két oszlopban nagy képernyőkön. Ha ki van kapcsolva, a widgetek egyetlen oszlopban egymás alatt jelennek meg.
+        split_grouped_title: Felosztott tranzakciók csoportosítása
+        split_grouped_description: A felosztott tranzakciók megjelenítése szülőjük alatt csoportosítva a tranzakciólistában. Ha ki van kapcsolva, a felosztott tételek egyedi sorként jelennek meg.
+    preferences:
+      show:
+        country: Ország
+        currency: Pénznem
+        date_format: Dátumformátum
+        general_subtitle: Preferenciáid beállítása
+        general_title: Általános
+        default_period: Alapértelmezett időszak
+        default_account_order: Számlák alapértelmezett sorrendje
+        language: Nyelv
+        language_auto: Böngésző nyelve
+        page_title: Preferenciák
+        timezone: Időzóna
+        month_start_day: A költségvetési hónap kezdete
+        month_start_day_hint: Állítsd be, mikor kezdődjön a költségvetési hónapod (pl. fizetési nap)
+        month_start_day_warning: A költségvetéseid és a hónapközi számítások ezt az egyéni kezdőnapot használják az 1-je helyett.
+        currencies_title: "%{moniker} pénznemek"
+        currencies_subtitle: Válaszd ki, mely pénznemek jelenjenek meg a pénzmezőkben a %{moniker} számára
+        base_currency_label: Alappénznem
+        base_currency_badge: Alappénznem
+        additional_currencies_label: További pénznemek
+        no_additional_currencies: Nincs kiválasztva
+        currencies_more: "+%{count} további"
+        manage_currencies: Pénznemek kezelése
+        manage_currencies_subtitle: Szüntess meg olyan pénznemeket, amelyeket sosem használsz, vagy szűkítsd le a listát néhányra.
+        select_all_currencies: Összes kijelölése
+        select_base_only: Csak alappénznem
+        currency_search_placeholder: Pénznem keresése
+        no_matching_currencies: Nem található pénznem
+        selected_currencies_count:
+          one: "%{count} kijelölve"
+          other: "%{count} kijelölve"
+        save_currencies: Pénznemek mentése
+        sharing_title: "%{moniker} megosztás"
+        sharing_subtitle: "Szabályozd, hogyan kerüljenek megosztásra a számlák a %{moniker} tagjaival"
+        sharing_default_label: Új számlák alapértelmezett megosztása
+        sharing_shared: Megosztás az összes taggal
+        sharing_private: Alapértelmezetten privát
+    profiles:
+      destroy:
+        cannot_remove_self: Nem távolíthatod el magadat a fiókból.
+        member_removal_failed: Probléma merült fel a tag eltávolítása során.
+        member_removed: A tag sikeresen eltávolítva.
+        not_authorized: Nincs jogosultságod tagok eltávolítására.
+      show:
+        confirm_delete:
+          body: Biztosan véglegesen törölni szeretnéd a fiókodat? Ez a művelet visszavonhatatlan.
+          title: Fiók törlése?
+        confirm_reset:
+          body: Biztosan vissza szeretnéd állítani a fiókodat? Ez törli az összes számládat, kategóriádat, kereskedődet, címkédet és egyéb adatodat. Ez a művelet nem vonható vissza.
+          title: Fiók visszaállítása?
+        confirm_reset_with_sample_data:
+          body: Biztosan vissza szeretnéd állítani a fiókodat és betölteni a mintaadatokat? Ez törli a meglévő adataidat, és demo adatokkal helyettesíti azokat, hogy biztonságosan felfedezhessed a Sure-t.
+          title: Fiók visszaállítása és mintaadatok betöltése?
+        confirm_remove_invitation:
+          body: Biztosan el szeretnéd távolítani a %{email} részére szóló meghívót?
+          title: Meghívó eltávolítása
+        confirm_remove_member:
+          body: Biztosan el szeretnéd távolítani %{name} személyt a fiókodból?
+          title: Tag eltávolítása
+        danger_zone_title: Veszélyes zóna
+        delete_account: Fiók törlése
+        delete_account_warning: A fiók törlése véglegesen eltávolítja az összes adatodat, és nem vonható vissza.
+        reset_account: Fiók visszaállítása
+        reset_account_warning: A fiók visszaállítása törli az összes számládat, kategóriádat, kereskedődet, címkédet és egyéb adatodat, de a felhasználói fiókod megmarad.
+        reset_account_with_sample_data: Visszaállítás és előtöltés
+        reset_account_with_sample_data_warning: Töröld az összes meglévő adatodat, majd tölts be friss mintaadatokat, hogy egy előre kitöltött környezetben fedezhesd fel az alkalmazást.
+        email: E-mail cím
+        first_name: Keresztnév
+        group_form_input_placeholder: Adj meg egy csoportnevet
+        group_form_label: Csoport neve
+        group_title: Csoporttagok
+        household_form_input_placeholder: Adj meg egy háztartásnevet
+        household_form_label: Háztartás neve
+        household_subtitle: A meghívottak bejelentkezhetnek a %{moniker} fiókodba és hozzáférhetnek a megosztott erőforrásokhoz.
+        household_title: Háztartás
+        invitation_link: Meghívó link
+        invite_member: Tag hozzáadása
+        last_name: Vezetéknév
+        page_title: Profiladatok
+        pending: Függőben
+        profile_subtitle: Szabd testre, hogyan jelensz meg a %{product_name} alkalmazásban
+        profile_title: Személyes
+        remove_invitation: Meghívó eltávolítása
+        remove_member: Tag eltávolítása
+        save: Mentés
+    securities:
+      show:
+        page_title: Biztonság
+        mfa_title: Kétlépéses azonosítás
+        mfa_description: Adj hozzá egy extra biztonsági réteget a fiókodhoz azáltal, hogy bejelentkezéskor egy kódot kérsz a hitelesítő alkalmazásodtól
+        enable_mfa: Kétlépéses azonosítás bekapcsolása
+        disable_mfa: Kétlépéses azonosítás kikapcsolása
+        disable_mfa_confirm: Biztosan ki szeretnéd kapcsolni a kétlépéses azonosítást?
+        sso_title: Kapcsolt fiókok
+        sso_subtitle: Egyszeri bejelentkezési fiókkapcsolatok kezelése
+        sso_disconnect: Leválasztás
+        sso_last_used: Utoljára használva
+        sso_never: Soha
+        sso_no_email: Nincs e-mail cím
+        sso_no_identities: Nincs kapcsolt egyszeri bejelentkezési fiók
+        sso_connect_hint: Jelentkezz ki, majd jelentkezz be egy SSO-szolgáltatóval a fiók összekapcsolásához.
+        sso_confirm_title: Fiók leválasztása?
+        sso_confirm_body: Biztosan le szeretnéd választani a %{provider} fiókodat? Később újra összekapcsolhatod, ha azzal a szolgáltatóval jelentkezel be.
+        sso_confirm_button: Leválasztás
+        sso_warning_message: Ez az egyetlen bejelentkezési módod. Mielőtt leválasztanád, állíts be jelszót a biztonsági beállításokban, különben kizárhatod magad a fiókodból.
+    settings_nav:
+      accounts_label: Számlák
+      advanced_section_title: Speciális
+      ai_prompts_label: MI promptok
+      api_key_label: API-kulcs
+      payment_label: Fizetés
+      categories_label: Kategóriák
+      feedback_label: Visszajelzés
+      general_section_title: Általános
+      imports_label: Importálások
+      exports_label: Exportálások
+      logout: Kijelentkezés
+      merchants_label: Kereskedők
+      guides_label: Útmutatók
+      other_section_title: Egyéb
+      preferences_label: Preferenciák
+      profile_label: Profiladatok
+      recurring_transactions_label: Ismétlődő
+      rules_label: Szabályok
+      security_label: Biztonság
+      self_hosting_label: Saját üzemeltetés
+      tags_label: Címkék
+      transactions_section_title: Tranzakciók
+      whats_new_label: Újdonságok
+      api_keys_label: API-kulcs
+      appearance_label: Megjelenés
+      bank_sync_label: Banki szinkronizálás
+    settings_nav_link_large:
+      next: Következő
+      previous: Vissza
+    user_avatar_field:
+      accepted_formats: JPG vagy PNG. Maximum 5 MB.
+      choose: Fotó feltöltése
+      choose_label: (nem kötelező)
+      change: Fotó módosítása
+    providers:
+      show:
+        coinbase_title: Coinbase
+      encryption_error:
+        title: Titkosítási konfiguráció szükséges
+        message: Az Active Record titkosítási kulcsok nincsenek konfigurálva. Kérjük, gondoskodj arról, hogy a titkosítási hitelesítő adatok (active_record_encryption.primary_key, active_record_encryption.deterministic_key és active_record_encryption.key_derivation_salt) megfelelően be legyenek állítva a Rails hitelesítő adataiban vagy a környezeti változókban, mielőtt szinkronizálási szolgáltatókat használnál.
+      coinbase_panel:
+        setup_instructions: "A Coinbase csatlakoztatásához:"
+        step1_html: Nyisd meg a <a href="https://portal.cdp.coinbase.com/projects/api-keys" target="_blank" rel="noopener noreferrer" class="text-primary underline">Coinbase API beállításait</a>
+        step2: Hozz létre egy új, csak olvasási jogosultsággal rendelkező API-kulcsot (számlák és tranzakciók megtekintése)
+        step3: Másold ki az API-kulcsot és az API-titkot, majd illeszd be az alábbiakba
+        api_key_label: API-kulcs
+        api_key_placeholder: Add meg a Coinbase API-kulcsodat
+        api_secret_label: API-titok
+        api_secret_placeholder: Add meg a Coinbase API-titkodat
+        connect_button: Coinbase csatlakoztatása
+        syncing: Szinkronizálás...
+        sync: Szinkronizálás
+        disconnect_confirm: Biztosan le szeretnéd választani ezt a Coinbase-kapcsolatot? A szinkronizált számlák manuális számlákká válnak.
+        status_connected: A Coinbase csatlakoztatva van, és szinkronizálja a kriptovaluta-állományodat.
+        status_not_connected: Nincs csatlakoztatva. Az induláshoz add meg az API-hitelesítő adataidat fent.
+      binance_panel:
+        setup_instructions: "A Binance csatlakoztatásához hozz létre egy csak olvasási jogosultsággal rendelkező API-kulcsot:"
+        step1_html: 'Nyisd meg a <a href="https://www.binance.com/en/my/settings/api-management" target="_blank" rel="noopener noreferrer" class="underline">Binance API-kezelőjét</a>'
+        step2: "Hozz létre egy új API-kulcsot, csak olvasási engedéllyel"
+        step3: "Illeszd be az API-kulcsodat és az API-titkodat az alábbiakba"
+        no_withdraw_warning: "Figyelmeztetés: NE engedélyezd a kifizetési jogosultságot"
+        ip_hint_title: "IP-cím-engedélyezési lista szükséges"
+        ip_hint_body: "Add hozzá az alkalmazásszerver kimenő IP-címét a Binance API-kulcs engedélyezési listájához:"
+        ip_hint_contact_admin: "Az alkalmazásszerver kimenő IP-címéért fordulj a rendszergazdádhoz."
+        api_key_label: API-kulcs
+        api_key_placeholder: Illeszd be a Binance API-kulcsodat
+        api_secret_label: API-titok
+        api_secret_placeholder: Illeszd be a Binance API-titkodat
+        connect_button: Binance csatlakoztatása
+        syncing: Szinkronizálás...
+        sync: Szinkronizálás
+        disconnect_confirm: "Biztosan le szeretnéd választani a Binance-t?"
+        status_connected: A Binance csatlakoztatva van
+        status_not_connected: A Binance nincs csatlakoztatva
+      enable_banking_panel:
+        callback_url_instruction: "A visszahívási URL-hez használd a következőt: %{callback_url}."
+        connection_error: Kapcsolódási hiba

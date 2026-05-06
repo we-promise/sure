@@ -1,0 +1,31 @@
+---
+hu:
+  family_exports:
+    access_denied: Hozzáférés megtagadva
+    create:
+      success: Az exportálás elindult. Hamarosan letöltheted.
+    delete_confirmation: Biztosan törlöd ezt az exportot? Ez a művelet nem vonható vissza.
+    delete_failed_confirmation: Biztosan törlöd ezt a sikertelen exportot?
+    destroy:
+      success: Az export sikeresen törölve
+    export_not_ready: Az export még nem áll készen a letöltésre
+    exporting: Exportálás folyamatban...
+    index:
+      title: Exportok
+      new: Új export
+    table:
+      title: Exportok
+      header:
+        date: Dátum
+        filename: Fájlnév
+        status: Állapot
+        actions: Műveletek
+      row:
+        status:
+          in_progress: Folyamatban
+          complete: Kész
+          failed: Sikertelen
+        actions:
+          delete: Törlés
+          download: Letöltés
+      empty: Még nincsenek exportok.
