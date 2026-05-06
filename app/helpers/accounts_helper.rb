@@ -23,14 +23,16 @@ module AccountsHelper
   # `shares_version` includes both row count and `max(updated_at)` because
   # deleting a non-most-recent share would not move `max(updated_at)` and
   # could otherwise serve stale fragments to a user who lost access.
-  # Both are pulled in a single SQL round-trip.
+  # Both are pulled in a single SQL round-trip via `pick`. Note: Rails
+  # returns the values as Strings for raw SQL fragments — that's fine
+  # since they only feed into a cache key (concat-stable, never coerced).
   def account_sidebar_tabs_cache_key(family:, active_tab:, mobile:)
     shares_version =
       if Current.user
         count, max_at = AccountShare
           .where(user_id: Current.user.id)
-          .pick(Arel.sql("count(*), max(updated_at)"))
-        "#{count}-#{max_at&.to_i}"
+          .pick(Arel.sql("count(*)"), Arel.sql("max(updated_at)"))
+        "#{count}-#{max_at}"
       end
 
     [
