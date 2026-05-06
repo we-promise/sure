@@ -16,6 +16,7 @@ export default class extends Controller {
     let noMatchFound = true;
 
     if (this.hasEmptyMessageTarget) {
+      this.emptyMessageTarget.textContent = "";
       this.emptyMessageTarget.classList.add("hidden");
     }
 
@@ -30,7 +31,9 @@ export default class extends Controller {
     });
 
     if (noMatchFound && this.hasEmptyMessageTarget) {
+      const msg = this.emptyMessageTarget.dataset.emptyMessage ?? "";
       this.emptyMessageTarget.classList.remove("hidden");
+      this.emptyMessageTarget.textContent = msg;
     }
 
     this.highlightedIndex = -1;
