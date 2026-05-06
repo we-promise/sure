@@ -1,0 +1,6 @@
+---
+hu:
+  chats:
+    demo_banner_title: "Demo mód aktív"
+    demo_banner_message: "LLM-eket használsz a Cloudflare Workers AI által biztosított krediteken keresztül. Az eredmények változhatnak, mivel a kódot `gpt-4.1`-en tesztelték, de a tokenjeid nem kerülnek sehova tanítás céljából! 🤖"
+    thinking: "Gondolkodás..."

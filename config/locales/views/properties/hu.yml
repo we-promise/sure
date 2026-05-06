@@ -1,0 +1,32 @@
+---
+hu:
+  properties:
+    edit:
+      edit: '%{account} szerkesztése'
+    form:
+      address_line1: Utca, házszám
+      address_line1_placeholder: Kossuth utca 1.
+      area: Alapterület
+      area_placeholder: '2000'
+      area_unit: Mértékegység
+      country: Ország
+      country_placeholder: HU
+      locality: Város
+      locality_placeholder: Budapest
+      none: Nincs
+      postal_code: Irányítószám
+      postal_code_placeholder: '1011'
+      region: Megye/Kerület
+      region_placeholder: Budapest
+      subtype_prompt: Válassz ingatlantípust
+      year_built: Építési év
+      year_built_placeholder: '2000'
+    new:
+      title: Add meg az ingatlan adatait
+    overview:
+      living_area: Alapterület
+      market_value: Piaci érték
+      purchase_price: Vételár
+      trend: Tendencia
+      unknown: Ismeretlen
+      year_built: Építési év

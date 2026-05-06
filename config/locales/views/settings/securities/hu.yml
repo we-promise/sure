@@ -1,0 +1,33 @@
+---
+hu:
+  settings:
+    securities:
+      show:
+        disable_mfa: 2FA letiltása
+        disable_mfa_confirm: Biztosan le szeretnéd tiltani a kétlépéses hitelesítést?
+          Ez kevésbé biztonságossá teszi a fiókodat.
+        enable_mfa: 2FA engedélyezése
+        mfa_description: Adj egy extra biztonsági réteget a fiókodhoz azzal, hogy bejelentkezéskor
+          kódot kérsz az hitelesítő alkalmazásodtól
+        mfa_title: Kétlépéses hitelesítés
+        webauthn_add: Hozzáférési kulcs vagy biztonsági kulcs hozzáadása
+        webauthn_added: "Hozzáadva: %{date}"
+        webauthn_description: Használj hozzáférési kulcsot, Touch ID-t, Windows Hello-t vagy hardveres
+          biztonsági kulcsot második hitelesítési tényezőként bejelentkezéskor.
+        webauthn_empty: Még nincsenek regisztrált hozzáférési kulcsok vagy biztonsági kulcsok.
+        webauthn_last_used: Utoljára használva %{time_ago} ezelőtt
+        webauthn_name_label: Kulcsnév
+        webauthn_name_placeholder: MacBook Touch ID, YubiKey stb.
+        webauthn_remove: Eltávolítás
+        webauthn_remove_confirm: Biztosan el szeretnéd távolítani ezt a hozzáférési kulcsot vagy
+          biztonsági kulcsot?
+        webauthn_remove_confirm_body: A hozzáférési kulcsot vagy biztonsági kulcsot újra kell regisztrálnod,
+          mielőtt ismét bejelentkezési azonosításra használhatnád.
+        webauthn_title: Hozzáférési kulcsok és biztonsági kulcsok
+        webauthn_unsupported: Ez a böngésző nem támogatja a hozzáférési kulcsokat és biztonsági
+          kulcsokat.
+  webauthn_credentials:
+    default_name: Biztonsági kulcs
+    failure: Nem sikerült menteni a hozzáférési kulcsot vagy biztonsági kulcsot. Kérjük, próbáld újra.
+    mfa_required: Engedélyezd a kétlépéses hitelesítést, mielőtt hozzáférési kulcsot vagy biztonsági kulcsot adsz hozzá.
+    success: Hozzáférési kulcs vagy biztonsági kulcs eltávolítva.

@@ -376,6 +376,50 @@ class Family::DataExporterTest < ActiveSupport::TestCase
     end
   end
 
+  test "exports balance history in NDJSON for backup verification" do
+    balance = @account.balances.create!(
+      date: Date.parse("2024-01-15"),
+      balance: 1234.56,
+      cash_balance: 1234.56,
+      start_cash_balance: 1000,
+      start_non_cash_balance: 0,
+      cash_inflows: 234.56,
+      cash_outflows: 0,
+      flows_factor: 1,
+      currency: "USD"
+    )
+
+    zip_data = @exporter.generate_export
+
+    Zip::File.open_buffer(zip_data) do |zip|
+      ndjson_records = zip.read("all.ndjson").split("\n").map { |line| JSON.parse(line) }
+      balance_data = ndjson_records.find { |record| record["type"] == "Balance" && record.dig("data", "id") == balance.id }
+
+      assert balance_data
+      assert_equal @account.id, balance_data["data"]["account_id"]
+      assert_equal "2024-01-15", balance_data["data"]["date"]
+      assert_equal "1234.56", BigDecimal(balance_data["data"]["balance"].to_s).to_s("F")
+      assert_equal "USD", balance_data["data"]["currency"]
+    end
+  end
+
+  test "exports balance history chronologically" do
+    @account.balances.create!(date: Date.parse("2024-03-01"), balance: 300, flows_factor: 1, currency: "USD")
+    @account.balances.create!(date: Date.parse("2024-01-01"), balance: 100, flows_factor: 1, currency: "USD")
+
+    zip_data = @exporter.generate_export
+
+    Zip::File.open_buffer(zip_data) do |zip|
+      balance_dates = zip.read("all.ndjson")
+        .split("\n")
+        .map { |line| JSON.parse(line) }
+        .select { |record| record["type"] == "Balance" }
+        .map { |record| Date.iso8601(record.dig("data", "date")) }
+
+      assert_equal balance_dates.sort, balance_dates
+    end
+  end
+
   test "exports holding snapshots in NDJSON" do
     investment_account = @family.accounts.create!(
       name: "Investment Account",

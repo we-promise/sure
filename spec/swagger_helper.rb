@@ -297,6 +297,201 @@ RSpec.configure do |config|
               updated_at: { type: :string, format: :'date-time' }
             }
           },
+          BudgetSummary: {
+            type: :object,
+            required: %w[id start_date end_date name currency initialized current created_at updated_at],
+            properties: {
+              id: { type: :string, format: :uuid },
+              start_date: { type: :string, format: :date },
+              end_date: { type: :string, format: :date },
+              name: { type: :string },
+              currency: { type: :string },
+              initialized: { type: :boolean },
+              current: { type: :boolean },
+              budgeted_spending: { type: :string, nullable: true },
+              budgeted_spending_cents: { type: :integer, nullable: true },
+              expected_income: { type: :string, nullable: true },
+              expected_income_cents: { type: :integer, nullable: true },
+              allocated_spending: { type: :string },
+              allocated_spending_cents: { type: :integer },
+              created_at: { type: :string, format: :'date-time' },
+              updated_at: { type: :string, format: :'date-time' }
+            }
+          },
+          Budget: {
+            type: :object,
+            required: %w[id start_date end_date name currency initialized current created_at updated_at],
+            properties: {
+              id: { type: :string, format: :uuid },
+              start_date: { type: :string, format: :date },
+              end_date: { type: :string, format: :date },
+              name: { type: :string },
+              currency: { type: :string },
+              initialized: { type: :boolean },
+              current: { type: :boolean },
+              budgeted_spending: { type: :string, nullable: true },
+              budgeted_spending_cents: { type: :integer, nullable: true },
+              expected_income: { type: :string, nullable: true },
+              expected_income_cents: { type: :integer, nullable: true },
+              allocated_spending: { type: :string },
+              allocated_spending_cents: { type: :integer },
+              actual_spending: { type: :string },
+              actual_spending_cents: { type: :integer },
+              actual_income: { type: :string },
+              actual_income_cents: { type: :integer },
+              available_to_spend: { type: :string },
+              available_to_spend_cents: { type: :integer },
+              available_to_allocate: { type: :string },
+              available_to_allocate_cents: { type: :integer },
+              created_at: { type: :string, format: :'date-time' },
+              updated_at: { type: :string, format: :'date-time' }
+            }
+          },
+          BudgetCollection: {
+            type: :object,
+            required: %w[budgets pagination],
+            properties: {
+              budgets: {
+                type: :array,
+                items: { '$ref' => '#/components/schemas/BudgetSummary' }
+              },
+              pagination: { '$ref' => '#/components/schemas/Pagination' }
+            }
+          },
+          BudgetCategorySummary: {
+            type: :object,
+            required: %w[id budget_id currency subcategory inherits_parent_budget category created_at updated_at],
+            properties: {
+              id: { type: :string, format: :uuid },
+              budget_id: { type: :string, format: :uuid },
+              currency: { type: :string },
+              subcategory: { type: :boolean },
+              inherits_parent_budget: { type: :boolean },
+              budgeted_spending: { type: :string },
+              budgeted_spending_cents: { type: :integer },
+              display_budgeted_spending: { type: :string },
+              display_budgeted_spending_cents: { type: :integer },
+              category: {
+                type: :object,
+                required: %w[id name color lucide_icon],
+                properties: {
+                  id: { type: :string, format: :uuid },
+                  name: { type: :string },
+                  color: { type: :string },
+                  lucide_icon: { type: :string },
+                  parent_id: { type: :string, format: :uuid, nullable: true }
+                }
+              },
+              created_at: { type: :string, format: :'date-time' },
+              updated_at: { type: :string, format: :'date-time' }
+            }
+          },
+          BudgetCategory: {
+            type: :object,
+            required: %w[id budget_id currency subcategory inherits_parent_budget category created_at updated_at],
+            properties: {
+              id: { type: :string, format: :uuid },
+              budget_id: { type: :string, format: :uuid },
+              currency: { type: :string },
+              subcategory: { type: :boolean },
+              inherits_parent_budget: { type: :boolean },
+              budgeted_spending: { type: :string },
+              budgeted_spending_cents: { type: :integer },
+              display_budgeted_spending: { type: :string },
+              display_budgeted_spending_cents: { type: :integer },
+              actual_spending: { type: :string },
+              actual_spending_cents: { type: :integer },
+              available_to_spend: { type: :string },
+              available_to_spend_cents: { type: :integer },
+              category: {
+                type: :object,
+                required: %w[id name color lucide_icon],
+                properties: {
+                  id: { type: :string, format: :uuid },
+                  name: { type: :string },
+                  color: { type: :string },
+                  lucide_icon: { type: :string },
+                  parent_id: { type: :string, format: :uuid, nullable: true }
+                }
+              },
+              created_at: { type: :string, format: :'date-time' },
+              updated_at: { type: :string, format: :'date-time' }
+            }
+          },
+          BudgetCategoryCollection: {
+            type: :object,
+            required: %w[budget_categories pagination],
+            properties: {
+              budget_categories: {
+                type: :array,
+                items: { '$ref' => '#/components/schemas/BudgetCategorySummary' }
+              },
+              pagination: { '$ref' => '#/components/schemas/Pagination' }
+            }
+          },
+          Balance: {
+            type: :object,
+            required: %w[id date currency flows_factor balance balance_cents start_balance start_balance_cents end_balance end_balance_cents account created_at updated_at],
+            properties: {
+              id: { type: :string, format: :uuid },
+              date: { type: :string, format: :date },
+              currency: { type: :string },
+              flows_factor: { type: :number, format: :float },
+              balance: { type: :string },
+              balance_cents: { type: :integer, description: 'Balance in currency minor units' },
+              cash_balance: { type: :string, nullable: true },
+              cash_balance_cents: { type: :integer, nullable: true, description: 'Cash balance in currency minor units' },
+              start_cash_balance: { type: :string },
+              start_cash_balance_cents: { type: :integer, description: 'Starting cash balance in currency minor units' },
+              start_non_cash_balance: { type: :string },
+              start_non_cash_balance_cents: { type: :integer, description: 'Starting non-cash balance in currency minor units' },
+              start_balance: { type: :string },
+              start_balance_cents: { type: :integer, description: 'Starting total balance in currency minor units' },
+              cash_inflows: { type: :string },
+              cash_inflows_cents: { type: :integer, description: 'Cash inflows in currency minor units' },
+              cash_outflows: { type: :string },
+              cash_outflows_cents: { type: :integer, description: 'Cash outflows in currency minor units' },
+              non_cash_inflows: { type: :string },
+              non_cash_inflows_cents: { type: :integer, description: 'Non-cash inflows in currency minor units' },
+              non_cash_outflows: { type: :string },
+              non_cash_outflows_cents: { type: :integer, description: 'Non-cash outflows in currency minor units' },
+              net_market_flows: { type: :string },
+              net_market_flows_cents: { type: :integer, description: 'Net market flows in currency minor units' },
+              cash_adjustments: { type: :string },
+              cash_adjustments_cents: { type: :integer, description: 'Cash adjustments in currency minor units' },
+              non_cash_adjustments: { type: :string },
+              non_cash_adjustments_cents: { type: :integer, description: 'Non-cash adjustments in currency minor units' },
+              end_cash_balance: { type: :string },
+              end_cash_balance_cents: { type: :integer, description: 'Ending cash balance in currency minor units' },
+              end_non_cash_balance: { type: :string },
+              end_non_cash_balance_cents: { type: :integer, description: 'Ending non-cash balance in currency minor units' },
+              end_balance: { type: :string },
+              end_balance_cents: { type: :integer, description: 'Ending total balance in currency minor units' },
+              account: { '$ref' => '#/components/schemas/BalanceAccount' },
+              created_at: { type: :string, format: :'date-time' },
+              updated_at: { type: :string, format: :'date-time' }
+            }
+          },
+          BalanceAccount: {
+            type: :object,
+            required: %w[id name account_type],
+            properties: {
+              id: { type: :string, format: :uuid },
+              name: { type: :string },
+              account_type: { type: :string, nullable: true }
+            }
+          },
+          BalanceCollection: {
+            type: :object,
+            required: %w[balances pagination],
+            properties: {
+              balances: {
+                type: :array,
+                items: { '$ref' => '#/components/schemas/Balance' }
+              },
+              pagination: { '$ref' => '#/components/schemas/Pagination' }
+            }
+          },
           Category: {
             type: :object,
             required: %w[id name color icon],
@@ -338,6 +533,22 @@ RSpec.configure do |config|
                 items: { '$ref' => '#/components/schemas/CategoryDetail' }
               },
               pagination: { '$ref' => '#/components/schemas/Pagination' }
+            }
+          },
+          CategoryCreateRequest: {
+            type: :object,
+            required: %w[category],
+            properties: {
+              category: {
+                type: :object,
+                required: %w[name],
+                properties: {
+                  name: { type: :string, description: 'Category name (required, unique within family)' },
+                  color: { type: :string, description: 'Hex color code (e.g. #22c55e). Defaults to #6172F3 if omitted; subcategories inherit parent color.' },
+                  icon: { type: :string, description: 'Lucide icon name (e.g. "coffee"). Auto-suggested from the name when omitted.' },
+                  parent_id: { type: :string, format: :uuid, nullable: true, description: 'Parent category ID. Must belong to the same family. Categories support up to 2 levels of nesting.' }
+                }
+              }
             }
           },
           Merchant: {
@@ -830,6 +1041,63 @@ RSpec.configure do |config|
                   per_page: { type: :integer, minimum: 1 }
                 }
               }
+            }
+          },
+          SyncableSummary: {
+            type: :object,
+            required: %w[type id],
+            properties: {
+              type: { type: :string },
+              id: { type: :string, format: :uuid },
+              name: { type: :string, nullable: true }
+            }
+          },
+          SyncErrorSummary: {
+            type: :object,
+            required: %w[message],
+            properties: {
+              message: { type: :string }
+            }
+          },
+          SyncResource: {
+            type: :object,
+            required: %w[id status in_progress terminal syncable children_count created_at updated_at],
+            properties: {
+              id: { type: :string, format: :uuid },
+              status: { type: :string, enum: %w[pending syncing completed failed stale] },
+              in_progress: { type: :boolean },
+              terminal: { type: :boolean },
+              syncable: { '$ref' => '#/components/schemas/SyncableSummary' },
+              parent_id: { type: :string, format: :uuid, nullable: true },
+              children_count: { type: :integer, minimum: 0 },
+              window_start_date: { type: :string, format: :date, nullable: true },
+              window_end_date: { type: :string, format: :date, nullable: true },
+              pending_at: { type: :string, format: :'date-time', nullable: true },
+              syncing_at: { type: :string, format: :'date-time', nullable: true },
+              completed_at: { type: :string, format: :'date-time', nullable: true },
+              failed_at: { type: :string, format: :'date-time', nullable: true },
+              error: { nullable: true, allOf: [ { '$ref' => '#/components/schemas/SyncErrorSummary' } ] },
+              created_at: { type: :string, format: :'date-time' },
+              updated_at: { type: :string, format: :'date-time' }
+            }
+          },
+          SyncResponse: {
+            type: :object,
+            required: %w[data],
+            properties: {
+              data: { nullable: true, allOf: [ { '$ref' => '#/components/schemas/SyncResource' } ] }
+            }
+          },
+          SyncCollection: {
+            type: :object,
+            required: %w[data meta],
+            properties: {
+              data: {
+                type: :array,
+                maxItems: 100,
+                items: { '$ref' => '#/components/schemas/SyncResource' }
+              },
+              meta: { '$ref' => '#/components/schemas/Pagination' }
             }
           },
           Trade: {

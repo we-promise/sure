@@ -1,0 +1,7 @@
+---
+hu:
+  transfer_matches:
+    new:
+      header:
+        title: Átutalás vagy fizetés párosítása
+        subtitle: Párosítsd a megfelelő tranzakciót egy másik számlán, vagy hozz létre újat, ha még nem létezik.

@@ -154,6 +154,39 @@ class Family::DataExporter
         }.to_json
       end
 
+      Balance.joins(:account)
+        .where(accounts: { family_id: @family.id })
+        .chronological
+        .each do |balance|
+        lines << {
+          type: "Balance",
+          data: {
+            id: balance.id,
+            account_id: balance.account_id,
+            date: balance.date,
+            balance: balance.balance,
+            currency: balance.currency,
+            cash_balance: balance.cash_balance,
+            start_cash_balance: balance.start_cash_balance,
+            start_non_cash_balance: balance.start_non_cash_balance,
+            cash_inflows: balance.cash_inflows,
+            cash_outflows: balance.cash_outflows,
+            non_cash_inflows: balance.non_cash_inflows,
+            non_cash_outflows: balance.non_cash_outflows,
+            net_market_flows: balance.net_market_flows,
+            cash_adjustments: balance.cash_adjustments,
+            non_cash_adjustments: balance.non_cash_adjustments,
+            flows_factor: balance.flows_factor,
+            start_balance: balance.start_balance,
+            end_cash_balance: balance.end_cash_balance,
+            end_non_cash_balance: balance.end_non_cash_balance,
+            end_balance: balance.end_balance,
+            created_at: balance.created_at,
+            updated_at: balance.updated_at
+          }
+        }.to_json
+      end
+
       # Export categories
       @family.categories.find_each do |category|
         lines << {

@@ -1,0 +1,34 @@
+---
+hu:
+  categories:
+    bootstrap:
+      success: Alapértelmezett kategóriák sikeresen létrehozva
+    category:
+      delete: Kategória törlése
+      edit: Kategória szerkesztése
+    create:
+      success: Kategória sikeresen létrehozva
+    destroy:
+      success: Kategória sikeresen törölve
+    edit:
+      edit: Kategória szerkesztése
+    form:
+      placeholder: Kategória neve
+    index:
+      bootstrap: Alapértelmezések használata (ajánlott)
+      categories: Kategóriák
+      categories_expenses: Kiadás kategóriák
+      categories_incomes: Bevétel kategóriák
+      empty: Nem található kategória
+      new: Új kategória
+    menu:
+      loading: Betöltés...
+    new:
+      new_category: Új kategória
+    update:
+      success: Kategória sikeresen frissítve
+  category:
+    dropdowns:
+      show:
+        bootstrap: Alapértelmezett kategóriák létrehozása
+        empty: Nem található kategória
