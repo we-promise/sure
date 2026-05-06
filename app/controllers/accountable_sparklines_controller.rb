@@ -46,17 +46,11 @@ class AccountableSparklinesController < ApplicationController
     # balance_type is derived purely from accountable_type, so only Investment/Crypto
     # can yield :investment. Short-circuit to avoid an N+1 `account.linked?` check
     # on every account for non-investment accountable types (loan, credit_card, etc).
-    # `Account#linked?` recognizes both new-style (account_providers) and legacy
-    # (plaid_account_id / simplefin_account_id) links, so the bulk check must too.
+    # The `Account.linked` scope is the SQL-level mirror of `Account#linked?`.
     def requires_normalized_aggregation?
       return false unless %w[Investment Crypto].include?(@accountable.name)
 
-      accounts
-        .left_outer_joins(:account_providers)
-        .where(
-          "account_providers.id IS NOT NULL OR accounts.plaid_account_id IS NOT NULL OR accounts.simplefin_account_id IS NOT NULL"
-        )
-        .exists?
+      accounts.linked.exists?
     end
 
     def aggregate_normalized_series

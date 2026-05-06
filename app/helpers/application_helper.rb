@@ -59,38 +59,6 @@ module ApplicationHelper
     current_page?(path) || (request.path.start_with?(path) && path != "/")
   end
 
-  # Returns the account id segment from `/accounts/<id>(/...)?`, or nil.
-  # Used as a cache-key component so the sidebar's active-link styling is
-  # correct without busting the cache for every unrelated path change.
-  def sidebar_active_account_id
-    match = request.path.match(%r{\A/accounts/([\w-]+)})
-    match && match[1]
-  end
-
-  # Cache key for `accounts/_account_sidebar_tabs.html.erb`.
-  # Kept here (not in the ERB) so the partial stays render-only.
-  #
-  # `shares_version` includes both `count` and `max(updated_at)` because
-  # deleting a non-most-recent share would not move `max(updated_at)` and
-  # could otherwise serve stale fragments to a user who lost access.
-  def account_sidebar_tabs_cache_key(family:, active_tab:, mobile:)
-    shares_version =
-      if Current.user
-        rel = AccountShare.where(user_id: Current.user.id)
-        "#{rel.count}-#{rel.maximum(:updated_at)&.to_i}"
-      end
-
-    [
-      family.build_cache_key("account_sidebar_tabs_v1", invalidate_on_data_updates: true),
-      Current.user&.id,
-      shares_version,
-      active_tab,
-      mobile,
-      I18n.locale,
-      sidebar_active_account_id
-    ]
-  end
-
   # Wrapper around I18n.l to support custom date formats
   def format_date(object, format = :default, options = {})
     date = object.to_date
