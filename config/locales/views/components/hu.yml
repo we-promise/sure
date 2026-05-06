@@ -1,0 +1,67 @@
+---
+hu:
+  provider_sync_summary:
+    title: Szinkronizálás összegzése
+    last_sync: "Utolsó szinkronizálás: %{time_ago} ezelőtt"
+    accounts:
+      title: Számlák
+      total: "Összesen: %{count}"
+      linked: "Csatlakoztatva: %{count}"
+      unlinked: "Nincs csatlakoztatva: %{count}"
+      institutions: "Intézmények: %{count}"
+    transactions:
+      title: Tranzakciók
+      seen: "Látott: %{count}"
+      imported: "Importálva: %{count}"
+      updated: "Frissítve: %{count}"
+      skipped: "Kihagyva: %{count}"
+      fetching: "Lekérés a brókertől..."
+      protected:
+        one: "%{count} bejegyzés védett (nem lett felülírva)"
+        other: "%{count} bejegyzés védett (nem lett felülírva)"
+      view_protected: Védett bejegyzések megtekintése
+    skip_reasons:
+      excluded: Kizárva
+      user_modified: Felhasználó módosította
+      import_locked: CSV importálás
+      protected: Védett
+    holdings:
+      title: Portfólió
+      found: "Megtalálva: %{count}"
+      processed: "Feldolgozva: %{count}"
+    trades:
+      title: Kereskedések
+      imported: "Importálva: %{count}"
+      skipped: "Kihagyva: %{count}"
+      fetching: "Tevékenységek lekérése a brókertől..."
+    health:
+      title: Állapot
+      view_error_details: Hibák részleteinek megtekintése
+      rate_limited: "Forgalomkorlátozva %{time_ago}"
+      recently: nemrég
+      errors: "Hibák: %{count}"
+      pending_reconciled:
+        one: "%{count} duplikált függő tranzakció egyeztetve"
+        other: "%{count} duplikált függő tranzakció egyeztetve"
+      view_reconciled: Egyeztetett tranzakciók megtekintése
+      duplicate_suggestions:
+        one: "%{count} lehetséges duplikátum felülvizsgálatra vár"
+        other: "%{count} lehetséges duplikátum felülvizsgálatra vár"
+      view_duplicate_suggestions: Javasolt duplikátumok megtekintése
+      stale_pending:
+        one: "%{count} elavult függő tranzakció (kizárva a költségvetésekből)"
+        other: "%{count} elavult függő tranzakció (kizárva a költségvetésekből)"
+      view_stale_pending: Érintett számlák megtekintése
+      stale_pending_count:
+        one: "%{count} tranzakció"
+        other: "%{count} tranzakció"
+      stale_unmatched:
+        one: "%{count} függő tranzakció manuális felülvizsgálatra vár"
+        other: "%{count} függő tranzakció manuális felülvizsgálatra vár"
+      view_stale_unmatched: Felülvizsgálatra váró tranzakciók megtekintése
+      stale_unmatched_count:
+        one: "%{count} tranzakció"
+        other: "%{count} tranzakció"
+      data_warnings: "Adatfigyelmeztetések: %{count}"
+      notices: "Értesítések: %{count}"
+      view_data_quality: Adatminőség részleteinek megtekintése

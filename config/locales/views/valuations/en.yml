@@ -1,6 +1,8 @@
 ---
 en:
   valuations:
+    errors:
+      amount_required: Amount is required
     form:
       amount: Amount
       submit: Add balance update

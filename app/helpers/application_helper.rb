@@ -26,12 +26,14 @@ module ApplicationHelper
       extra_classes
     )
 
+    resolved_key = normalize_icon_key(key)
+
     if custom
-      inline_svg_tag("#{key}.svg", class: icon_classes, **opts)
+      inline_svg_tag("#{resolved_key}.svg", class: icon_classes, **opts)
     elsif as_button
-      render DS::Button.new(variant: "icon", class: extra_classes, icon: key, size: size, type: "button", **opts)
+      render DS::Button.new(variant: "icon", class: extra_classes, icon: resolved_key, size: size, type: "button", **opts)
     else
-      lucide_icon(key, class: icon_classes, **opts)
+      safe_lucide_icon(resolved_key, class: icon_classes, **opts)
     end
   end
 
@@ -190,6 +192,20 @@ module ApplicationHelper
   end
 
   private
+    def safe_lucide_icon(key, **opts)
+      lucide_icon(key, **opts)
+    rescue StandardError => e
+      Rails.logger.warn("[ApplicationHelper] Falling back to key for unknown icon #{key.inspect}: #{e.message}")
+      lucide_icon("key", **opts)
+    end
+
+    def normalize_icon_key(key)
+      normalized = key.to_s.strip
+      return normalized if normalized.blank?
+
+      normalized.downcase
+    end
+
     def calculate_total(item, money_method, negate)
       # Filter out transfer-type transactions from entries
       # Only Entry objects have entryable transactions, Account objects don't

@@ -164,6 +164,7 @@ class AccountImportTest < ActiveSupport::TestCase
 
   test "dry_run returns expected counts" do
     @import.rows.create!(
+      source_row_number: 1,
       entity_type: "depository",
       name: "Test Account",
       amount: "1000.00",

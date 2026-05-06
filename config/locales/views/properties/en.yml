@@ -30,3 +30,19 @@ en:
       trend: Trend
       unknown: Unknown
       year_built: Year Built
+    subtypes:
+      apartment:
+        short: Apartment
+        long: Apartment
+      plot:
+        short: Plot
+        long: Plot / Land
+      commercial:
+        short: Commercial
+        long: Commercial Property
+      rented:
+        short: Rented
+        long: Rented Property
+      agri_land:
+        short: Agri Land
+        long: Agricultural Land

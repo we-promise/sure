@@ -31,6 +31,17 @@ RSpec.describe 'API V1 Imports', type: :request do
     )
   end
 
+  let(:api_key_without_read_scope) do
+    key = ApiKey.generate_secure_key
+    ApiKey.new(
+      user: user,
+      name: 'No Read Docs Key',
+      key: key,
+      scopes: %w[write],
+      source: 'web'
+    ).tap { |api_key| api_key.save!(validate: false) }
+  end
+
   let(:'X-Api-Key') { api_key.plain_key }
 
   let(:account) do
@@ -49,6 +60,16 @@ RSpec.describe 'API V1 Imports', type: :request do
       status: 'pending',
       account: account,
       raw_file_str: "date,amount,name\n01/01/2024,10.00,Test Transaction"
+    )
+  end
+
+  let!(:import_row) do
+    pending_import.rows.create!(
+      source_row_number: 1,
+      date: '01/01/2024',
+      amount: '10.00',
+      currency: 'USD',
+      name: 'Test Transaction'
     )
   end
 
@@ -282,6 +303,63 @@ RSpec.describe 'API V1 Imports', type: :request do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 
         let(:id) { SecureRandom.uuid }
+
+        run_test!
+      end
+    end
+  end
+
+  path '/api/v1/imports/{id}/rows' do
+    parameter name: :id, in: :path, type: :string, required: true, description: 'Import ID'
+
+    get 'List import row diagnostics' do
+      description 'List sanitized import rows with validation errors and mapping resolution state.'
+      tags 'Imports'
+      security [ { apiKeyAuth: [] } ]
+      produces 'application/json'
+      parameter name: :page, in: :query, type: :integer, required: false,
+                description: 'Page number (default: 1)'
+      parameter name: :per_page, in: :query, type: :integer, required: false,
+                description: 'Items per page (default: 25, max: 100)'
+
+      let(:id) { pending_import.id }
+
+      response '200', 'import rows listed' do
+        schema '$ref' => '#/components/schemas/ImportRowDiagnosticCollection'
+
+        run_test!
+      end
+
+      response '401', 'unauthorized' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:'X-Api-Key') { nil }
+
+        run_test!
+      end
+
+      response '403', 'insufficient scope' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:'X-Api-Key') { api_key_without_read_scope.plain_key }
+
+        run_test!
+      end
+
+      response '404', 'import not found' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:id) { SecureRandom.uuid }
+
+        run_test!
+      end
+
+      response '500', 'internal server error' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        before do
+          allow_any_instance_of(Import::Row).to receive(:valid?).and_raise(StandardError, 'validation down')
+        end
 
         run_test!
       end

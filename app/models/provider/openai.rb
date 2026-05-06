@@ -373,7 +373,16 @@ class Provider::Openai < Provider
           # If streaming, Ruby OpenAI does not return anything, so to normalize this method's API, we search
           # for the "response chunk" in the stream and return it (it is already parsed)
           if stream_proxy.present?
+            error_chunk = collected_chunks.find { |chunk| chunk.type == "error" }
             response_chunk = collected_chunks.find { |chunk| chunk.type == "response" }
+
+            if response_chunk.nil?
+              raise Error.new(
+                build_stream_error_message(error_chunk),
+                details: error_chunk&.data&.details
+              )
+            end
+
             response = response_chunk.data
             usage = response_chunk.usage
             Rails.logger.debug("Stream response usage: #{usage.inspect}")
@@ -743,5 +752,28 @@ class Provider::Openai < Provider
       error&.message
     rescue => e
       "(message unavailable: #{e.class})"
+    end
+
+    # Builds a useful error message when the OpenAI Responses stream ended
+    # without delivering a `response.completed` event. Uses upstream details
+    # when present (e.g. `response.failed`, `response.incomplete`, top-level
+    # `error`) and falls back to a generic message that hints at the most
+    # common causes.
+    def build_stream_error_message(error_chunk)
+      if error_chunk&.data&.message.present?
+        upstream = error_chunk.data
+        prefix = case upstream.event
+        when "response.incomplete" then "OpenAI response was incomplete"
+        when "response.failed"     then "OpenAI response failed"
+        else                            "OpenAI returned an error"
+        end
+        code_suffix = upstream.code.present? ? " [#{upstream.code}]" : ""
+        "#{prefix}#{code_suffix}: #{upstream.message}"
+      else
+        "OpenAI stream ended without a completion event. " \
+        "This usually means the upstream call was cut short — common causes: " \
+        "expired previous_response_id (Responses API state TTL), context-length overflow, " \
+        "or a transient OpenAI error."
+      end
     end
 end

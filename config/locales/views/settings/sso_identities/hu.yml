@@ -1,0 +1,7 @@
+---
+hu:
+  settings:
+    sso_identities:
+      destroy:
+        cannot_unlink_last: Az utolsó identitás nem távolítható el
+        success: Sikeres

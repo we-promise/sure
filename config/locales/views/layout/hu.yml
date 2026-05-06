@@ -1,0 +1,24 @@
+---
+hu:
+  layouts:
+    application:
+      privacy_mode: Adatvédelmi mód váltása
+      nav:
+        assistant: Asszisztens
+        budgets: Költségvetések
+        home: Kezdőlap
+        reports: Jelentések
+        transactions: Tranzakciók
+    auth:
+      existing_account: Már van fiókod?
+      no_account: Még nem ismered a %{product_name}-t?
+      sign_in: Bejelentkezés
+      sign_up: Fiók létrehozása
+    shared:
+      footer:
+        privacy_policy: Adatvédelmi irányelvek
+        terms_of_service: Felhasználási feltételek
+    trial:
+      open_demo: Demo megnyitása
+      data_deleted_in_days: Az adatok törlődnek %{days} nap múlva
+      contribute: Közreműködés

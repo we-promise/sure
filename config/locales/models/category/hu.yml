@@ -1,0 +1,7 @@
+---
+hu:
+  models:
+    category:
+      uncategorized: Kategorizálatlan
+      other_investments: Egyéb befektetések
+      investment_contributions: Befektetési befizetések
