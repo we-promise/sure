@@ -155,6 +155,24 @@ class Balance::MaterializerTest < ActiveSupport::TestCase
       "Balance before opening_anchor_date should be purged"
   end
 
+  test "raises Money::ConversionError when opening anchor currency does not match account currency and no rate exists" do
+    @account.update!(currency: "EUR", balance: 0, cash_balance: 0)
+
+    @account.entries.create!(
+      name: "Opening balance",
+      date: Date.current,
+      amount: 0,
+      currency: "USD",
+      entryable: Valuation.new(kind: "opening_anchor")
+    )
+
+    Holding::Materializer.any_instance.stubs(:materialize_holdings).returns([])
+
+    assert_raises(Money::ConversionError) do
+      Balance::Materializer.new(@account, strategy: :forward).materialize_balances
+    end
+  end
+
   test "purges stale balances outside calculated range" do
     # Create existing balances that will be stale
     stale_old = create_balance(account: @account, date: 5.days.ago.to_date, balance: 5000)
