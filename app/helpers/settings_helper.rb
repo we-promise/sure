@@ -14,13 +14,13 @@ module SettingsHelper
     { name: "Rules", path: :rules_path },
     { name: "Merchants", path: :family_merchants_path },
     { name: "Recurring", path: :recurring_transactions_path },
+    { name: "Statement Vault", path: :account_statements_path, condition: :admin_user? },
     # Advanced section
     { name: "AI Prompts", path: :settings_ai_prompts_path, condition: :admin_user? },
     { name: "LLM Usage", path: :settings_llm_usage_path, condition: :admin_user? },
     { name: "API Key", path: :settings_api_key_path, condition: :admin_user? },
     { name: "Self-Hosting", path: :settings_hosting_path, condition: :self_hosted_and_admin? },
     { name: "Imports", path: :imports_path, condition: :admin_user? },
-    { name: "Statement Vault", path: :account_statements_path, condition: :admin_user? },
     { name: "Exports", path: :family_exports_path, condition: :admin_user? },
     # More section
     { name: "Guides", path: :settings_guides_path },

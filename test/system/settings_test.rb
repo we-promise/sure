@@ -26,10 +26,11 @@ class SettingsTest < ApplicationSystemTestCase
 
     # Add admin settings if user is admin
     if @user.admin?
+      merchants_index = @settings_links.index([ "Merchants", family_merchants_path ])
+      @settings_links.insert(merchants_index + 1, [ "Statement Vault", account_statements_path ])
       @settings_links += [
         [ "AI Prompts", settings_ai_prompts_path ],
-        [ "API Key", settings_api_key_path ],
-        [ "Statement Vault", account_statements_path ]
+        [ "API Key", settings_api_key_path ]
       ]
     end
   end
@@ -94,6 +95,7 @@ class SettingsTest < ApplicationSystemTestCase
       assert_no_selector "li", text: "AI Prompts"
       assert_no_selector "li", text: "API Key"
       assert_no_selector "li", text: "Bank sync"
+      assert_no_selector "li", text: "Statement Vault"
     end
   end
 

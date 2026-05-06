@@ -19,7 +19,8 @@ nav_sections = [
       { label: t(".tags_label"), path: tags_path, icon: "tags" },
       { label: t(".rules_label"), path: rules_path, icon: "git-branch" },
       { label: t(".merchants_label"), path: family_merchants_path, icon: "store" },
-      { label: t(".recurring_transactions_label"), path: recurring_transactions_path, icon: "repeat" }
+      { label: t(".recurring_transactions_label"), path: recurring_transactions_path, icon: "repeat" },
+      { label: t(".statement_vault_label"), path: account_statements_path, icon: "archive", if: Current.user&.admin? }
     ]
   },
   (
@@ -31,7 +32,6 @@ nav_sections = [
         { label: t(".api_keys_label"), path: settings_api_key_path, icon: "key" },
         { label: t(".self_hosting_label"), path: settings_hosting_path, icon: "database", if: self_hosted? },
         { label: t(".imports_label"), path: imports_path, icon: "download" },
-        { label: t(".statement_vault_label"), path: account_statements_path, icon: "archive" },
         { label: t(".exports_label"), path: family_exports_path, icon: "upload" },
         { label: "SSO Providers", path: admin_sso_providers_path, icon: "key-round", if: Current.user&.super_admin? },
         { label: "Users", path: admin_users_path, icon: "users", if: Current.user&.super_admin? }
