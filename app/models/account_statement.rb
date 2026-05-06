@@ -20,6 +20,7 @@ class AccountStatement < ApplicationRecord
   PreparedUpload = Data.define(:content, :filename, :content_type, :byte_size, :checksum, :content_sha256)
 
   MAX_FILE_SIZE = 25.megabytes
+  READ_CHUNK_SIZE = 1.megabyte
   ALLOWED_EXTENSION_CONTENT_TYPES = {
     ".pdf" => %w[application/pdf],
     ".csv" => %w[text/csv text/plain application/csv application/vnd.ms-excel],
@@ -36,7 +37,7 @@ class AccountStatement < ApplicationRecord
 
   enum :source, { manual_upload: "manual_upload" }, validate: true, default: "manual_upload"
   enum :upload_status, { stored: "stored", failed: "failed" }, validate: true, default: "stored"
-  enum :review_status, { unmatched: "unmatched", linked: "linked", rejected: "rejected" }, validate: true, default: "unmatched"
+  enum :review_status, { unmatched: "unmatched", linked: "linked", rejected: "rejected" }, validate: true, default: "unmatched", scopes: false
 
   monetize :opening_balance, :closing_balance
 
@@ -103,23 +104,20 @@ class AccountStatement < ApplicationRecord
       )
 
       MetadataDetector.new(statement, content: prepared_upload.content).apply
-      statement.match_account! unless account.present?
+      statement.assign_account_match unless account.present?
       statement.save!
       statement
     rescue ActiveRecord::RecordNotUnique
-      duplicate = duplicate_for(family, prepared_upload) if defined?(prepared_upload)
+      duplicate = duplicate_for(family, prepared_upload)
       raise DuplicateUploadError, duplicate if duplicate
 
       raise
     end
 
     def prepare_upload!(file)
-      content = file.read
-      file.rewind if file.respond_to?(:rewind)
-
       filename = file.original_filename.to_s
+      content = read_upload_content!(file)
       byte_size = content.bytesize
-      raise InvalidUploadError if byte_size > MAX_FILE_SIZE
 
       content_type = detected_content_type(content:, filename:, declared_content_type: file.content_type)
       raise InvalidUploadError unless allowed_upload?(filename:, content_type:)
@@ -153,6 +151,31 @@ class AccountStatement < ApplicationRecord
 
     def valid_pdf_content?(content)
       content.start_with?("%PDF-")
+    end
+
+    def read_upload_content!(file)
+      declared_size = declared_upload_size(file)
+      raise InvalidUploadError if declared_size.present? && declared_size > MAX_FILE_SIZE
+
+      content = +"".b
+      loop do
+        chunk = file.read(READ_CHUNK_SIZE)
+        break if chunk.nil? || chunk.empty?
+
+        content << chunk
+        raise InvalidUploadError if content.bytesize > MAX_FILE_SIZE
+      end
+
+      file.rewind if file.respond_to?(:rewind)
+      content
+    end
+
+    def declared_upload_size(file)
+      if file.respond_to?(:size)
+        file.size
+      elsif file.respond_to?(:length)
+        file.length
+      end
     end
 
     def duplicate_for(family, prepared_upload)
@@ -191,13 +214,15 @@ class AccountStatement < ApplicationRecord
   end
 
   def unlink!
-    update!(
-      account: nil,
-      review_status: :unmatched,
-      match_confidence: nil
-    )
-    match_account!
-    save!
+    transaction do
+      update!(
+        account: nil,
+        review_status: :unmatched,
+        match_confidence: nil
+      )
+      assign_account_match
+      save!
+    end
   end
 
   def reject_match!
@@ -208,7 +233,7 @@ class AccountStatement < ApplicationRecord
     )
   end
 
-  def match_account!
+  def assign_account_match
     match = AccountMatcher.new(self).best_match
 
     self.suggested_account = match&.account

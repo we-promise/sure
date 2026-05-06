@@ -3,6 +3,7 @@ FROM ruby:${RUBY_VERSION}-slim-bookworm
 
 ENV DEBIAN_FRONTEND=noninteractive
 
+# libvips42 is required by image_processing/ruby-vips for ActiveStorage profile image variants.
 RUN apt-get update -qq \
   && apt-get -y install --no-install-recommends \
     apt-utils \

@@ -53,18 +53,18 @@ class AccountStatementsController < ApplicationController
 
     created = []
     duplicates = []
+    validation_errors = []
 
     prepared_uploads.each do |prepared_upload|
       created << AccountStatement.create_from_prepared_upload!(family: Current.family, account: account, prepared_upload: prepared_upload)
     rescue AccountStatement::DuplicateUploadError => e
       duplicates << e.statement
     rescue ActiveRecord::RecordInvalid => e
-      redirect_back_or_to redirect_after_create(account), alert: e.record.errors.full_messages.to_sentence
-      return
+      validation_errors << e.record.errors.full_messages.to_sentence
     end
 
     redirect_to redirect_after_create(account, created.first || duplicates.first),
-                flash_for_upload(created:, duplicates:)
+                flash_for_upload(created:, duplicates:, validation_errors:)
   end
 
   def update
@@ -77,7 +77,7 @@ class AccountStatementsController < ApplicationController
     attrs[:account] = target if statement_account_id_provided?
 
     @statement.assign_attributes(attrs)
-    @statement.match_account! if @statement.account.nil? && !@statement.rejected?
+    @statement.assign_account_match if @statement.account.nil? && !@statement.rejected?
 
     if @statement.save
       redirect_to account_statement_path(@statement), notice: t("account_statements.update.success")
@@ -141,10 +141,9 @@ class AccountStatementsController < ApplicationController
     end
 
     def ensure_statement_manager!
-      return true if AccountStatement.statement_manager?(Current.user)
+      return if AccountStatement.statement_manager?(Current.user)
 
       redirect_to accounts_path, alert: t("accounts.not_authorized")
-      false
     end
 
     def statement_upload_params
@@ -193,16 +192,17 @@ class AccountStatementsController < ApplicationController
       statement.account ? account_path(statement.account, tab: "statements") : account_statement_path(statement)
     end
 
-    def flash_for_upload(created:, duplicates:)
-      if created.any? && duplicates.any?
-        {
-          notice: t("account_statements.create.success", count: created.size),
-          alert: t("account_statements.create.duplicates", count: duplicates.size)
-        }
-      elsif created.any?
-        { notice: t("account_statements.create.success", count: created.size) }
+    def flash_for_upload(created:, duplicates:, validation_errors: [])
+      alerts = []
+      alerts << t("account_statements.create.duplicates", count: duplicates.size) if duplicates.any?
+      alerts.concat(validation_errors.compact_blank)
+
+      if created.any?
+        flash = { notice: t("account_statements.create.success", count: created.size) }
+        flash[:alert] = alerts.to_sentence if alerts.any?
+        flash
       else
-        { alert: t("account_statements.create.duplicates", count: duplicates.size) }
+        { alert: alerts.to_sentence }
       end
     end
 end

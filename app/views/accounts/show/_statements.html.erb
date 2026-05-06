@@ -1,7 +1,7 @@
 <%# locals: (account:, statement_year: nil) %>
 
 <% coverage = AccountStatement::Coverage.for_year(account, statement_year) %>
-<% statements = account.account_statements.with_attached_original_file.ordered %>
+<% statements = account.account_statements.with_attached_original_file.ordered.to_a %>
 <% permission = account.permission_for(Current.user) %>
 <% can_manage_statements = AccountStatement.statement_manager?(Current.user) && permission.in?([ :owner, :full_control ]) %>
 
@@ -62,7 +62,7 @@
     <div class="flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-secondary uppercase">
       <p><%= t("account_statements.account_tab.statements_title") %></p>
       <span class="text-subdued">&middot;</span>
-      <p><%= statements.count %></p>
+      <p><%= statements.size %></p>
     </div>
 
     <div class="bg-container rounded-lg shadow-border-xs overflow-x-auto">

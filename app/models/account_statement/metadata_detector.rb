@@ -5,20 +5,20 @@ require "stringio"
 
 class AccountStatement::MetadataDetector
   DATE_PATTERNS = [
-    /\b\d{4}[-_\.]\d{1,2}[-_\.]\d{1,2}\b/,
-    /\b\d{1,2}[-_\.]\d{1,2}[-_\.]\d{4}\b/,
-    /\b\d{8}\b/
+    /(?<![a-z0-9])\d{4}[-_\.]\d{1,2}[-_\.]\d{1,2}(?![a-z0-9])/,
+    /(?<![a-z0-9])\d{1,2}[-_\.]\d{1,2}[-_\.]\d{4}(?![a-z0-9])/,
+    /(?<![a-z0-9])\d{8}(?![a-z0-9])/
   ].freeze
 
   MONTH_PATTERN = /
-    \b
+    (?<![a-z0-9])
     (?:
       (?<year_first>\d{4})[-_\.](?<month_first>0?[1-9]|1[0-2])
       |
       (?<month_name>jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)
       [-_\s\.]+(?<year_second>\d{4})
     )
-    \b
+    (?![a-z0-9])
   /ix.freeze
 
   LAST4_PATTERN = /(?:^|[^a-z0-9])(?:x{2,}|ending|last\s*4|acct|account|card)[^\d]*(\d{4})(?=\D|$)/i.freeze
@@ -167,11 +167,13 @@ class AccountStatement::MetadataDetector
 
     def parse_date(value)
       text = value.to_s.tr("_", "-")
-      if text.match?(/\A\d{8}\z/)
+      date = if text.match?(/\A\d{8}\z/)
         Date.strptime(text, "%Y%m%d")
       else
         Date.parse(text)
       end
+
+      AccountStatement::MetadataDetector.reasonable_date?(date) ? date : nil
     rescue Date::Error, ArgumentError
       nil
     end
@@ -194,7 +196,8 @@ class AccountStatement::MetadataDetector
         Date::ABBR_MONTHNAMES.index(match[:month_name][0, 3].capitalize)
       end
 
-      Date.new(year, month, 1)
+      date = Date.new(year, month, 1)
+      AccountStatement::MetadataDetector.reasonable_date?(date) ? date : nil
     rescue Date::Error, NoMethodError
       nil
     end

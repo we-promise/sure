@@ -350,21 +350,6 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
 
     assert_nil holding.account_provider_id, "Holding should be detached from provider after unlink"
   end
-
-  private
-
-    def uploaded_file(filename:, content_type:, content: "date,amount\n2024-01-01,1\n")
-      tempfile = Tempfile.new([ File.basename(filename, ".*"), File.extname(filename) ])
-      tempfile.binmode
-      tempfile.write(content)
-      tempfile.rewind
-
-      ActionDispatch::Http::UploadedFile.new(
-        tempfile: tempfile,
-        filename: filename,
-        type: content_type
-      )
-    end
 end
 
 class AccountsControllerSimplefinCtaTest < ActionDispatch::IntegrationTest

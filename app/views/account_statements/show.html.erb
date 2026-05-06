@@ -43,12 +43,6 @@
 
         <% if @can_manage_statement %>
           <%= styled_form_with model: @statement, url: account_statement_path(@statement), method: :patch, class: "space-y-4" do |form| %>
-            <%= form.collection_select :account_id,
-                                       @accounts,
-                                       :id,
-                                       :name,
-                                       { include_blank: t(".unmatched_account"), label: t(".account_label") } %>
-
             <div class="grid gap-3 md:grid-cols-2">
               <%= form.text_field :institution_name_hint, label: t(".institution_name_hint") %>
               <%= form.text_field :account_name_hint, label: t(".account_name_hint") %>

@@ -19,13 +19,13 @@ module AccountStatementsHelper
     when "not_expected"
       "bg-container-inset text-subdued ring-alpha-black-25"
     when "covered"
-      "bg-green-500/10 text-green-600 ring-green-500/20"
+      "bg-success/10 text-success ring-success/20"
     when "duplicate"
-      "bg-orange-500/10 text-orange-600 ring-orange-500/20"
+      "bg-warning/10 text-warning ring-warning/20"
     when "ambiguous"
-      "bg-yellow-tint-10 text-yellow-600 ring-yellow-600/20"
+      "bg-warning/10 text-warning ring-warning/20"
     when "mismatched"
-      "bg-red-500/10 text-red-600 ring-red-500/20"
+      "bg-destructive/10 text-destructive ring-destructive/20"
     else
       "bg-gray-tint-5 text-secondary ring-alpha-black-50"
     end

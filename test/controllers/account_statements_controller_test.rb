@@ -105,6 +105,37 @@ class AccountStatementsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "1 duplicate statement was skipped.", flash[:alert]
   end
 
+  test "continues upload loop after a validation error" do
+    invalid_record = AccountStatement.new
+    invalid_record.errors.add(:filename, "is invalid")
+    calls = 0
+    original_create = AccountStatement.method(:create_from_prepared_upload!)
+
+    assert_difference "AccountStatement.count", 1 do
+      AccountStatement.stub(:create_from_prepared_upload!, lambda do |**kwargs|
+        calls += 1
+        raise ActiveRecord::RecordInvalid.new(invalid_record) if calls == 1
+
+        original_create.call(**kwargs)
+      end) do
+        post account_statements_url, params: {
+          account_statement: {
+            account_id: @account.id,
+            files: [
+              uploaded_file(filename: "invalid.csv", content_type: "text/csv", content: "date,amount\n2024-01-01,1\n"),
+              uploaded_file(filename: "valid.csv", content_type: "text/csv", content: "date,amount\n2024-01-02,2\n")
+            ]
+          }
+        }
+      end
+    end
+
+    assert_equal 2, calls
+    assert_redirected_to account_url(@account, tab: "statements")
+    assert_equal "1 statement uploaded.", flash[:notice]
+    assert_includes flash[:alert], "Filename is invalid"
+  end
+
   test "rejects invalid statement file type" do
     assert_no_difference "AccountStatement.count" do
       post account_statements_url, params: {
@@ -210,6 +241,20 @@ class AccountStatementsControllerTest < ActionDispatch::IntegrationTest
     assert_select "button", text: "Delete", count: 0
     assert_select "button", text: "Save", count: 0
     assert_select "button", text: "Unlink", count: 0
+  end
+
+  test "metadata form does not expose account select for managers" do
+    statement = AccountStatement.create_from_upload!(
+      family: @account.family,
+      account: @account,
+      file: uploaded_file(filename: "manager_statement.csv", content_type: "text/csv")
+    )
+
+    get account_statement_url(statement)
+
+    assert_response :success
+    assert_select "input[name='account_statement[period_start_on]']", 1
+    assert_select "select[name='account_statement[account_id]']", 0
   end
 
   test "links suggested statement" do
@@ -350,15 +395,6 @@ class AccountStatementsControllerTest < ActionDispatch::IntegrationTest
   end
 
   private
-
-    def uploaded_file(filename:, content_type:, content: "date,amount\n2024-01-01,1\n")
-      tempfile = Tempfile.new([ File.basename(filename, ".*"), File.extname(filename) ])
-      tempfile.binmode
-      tempfile.write(content)
-      tempfile.rewind
-
-      Rack::Test::UploadedFile.new(tempfile.path, content_type, true, original_filename: filename)
-    end
 
     def family_guest
       @family_guest ||= users(:family_admin).family.users.create!(

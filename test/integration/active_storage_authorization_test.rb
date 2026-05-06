@@ -115,6 +115,9 @@ class ActiveStorageAuthorizationTest < ActionDispatch::IntegrationTest
     get rails_blob_path(statement.original_file)
 
     assert_response :redirect
+    follow_redirect!
+    assert_response :success
+    assert_match(/rails\/active_storage\/disk/, request.path)
   end
 
   test "guest cannot access unmatched statement blob" do
@@ -157,19 +160,6 @@ class ActiveStorageAuthorizationTest < ActionDispatch::IntegrationTest
   end
 
   private
-
-    def uploaded_file(filename:, content_type:, content:)
-      tempfile = Tempfile.new([ File.basename(filename, ".*"), File.extname(filename) ])
-      tempfile.binmode
-      tempfile.write(content)
-      tempfile.rewind
-
-      ActionDispatch::Http::UploadedFile.new(
-        tempfile: tempfile,
-        filename: filename,
-        type: content_type
-      )
-    end
 
     def family_guest
       @family_guest ||= @user_a.family.users.create!(

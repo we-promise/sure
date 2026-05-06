@@ -6,6 +6,34 @@ class AccountStatementTest < ActiveSupport::TestCase
     @account = accounts(:depository)
   end
 
+  OversizedDeclaredUpload = Struct.new(:original_filename, keyword_init: true) do
+    def size
+      AccountStatement::MAX_FILE_SIZE + 1
+    end
+
+    def read(*)
+      raise "oversized upload should be rejected before reading"
+    end
+  end
+
+  class UploadWithoutDeclaredSize
+    attr_reader :original_filename, :content_type
+
+    def initialize(filename:, content_type:, content:)
+      @original_filename = filename
+      @content_type = content_type
+      @io = StringIO.new(content)
+    end
+
+    def read(length)
+      @io.read(length)
+    end
+
+    def rewind
+      @io.rewind
+    end
+  end
+
   test "creates linked statement from upload without importing transactions" do
     assert_no_difference [ "Import.count", "Entry.count", "Transaction.count" ] do
       statement = AccountStatement.create_from_upload!(
@@ -129,6 +157,25 @@ class AccountStatementTest < ActiveSupport::TestCase
     assert_equal existing, error.statement
   end
 
+  test "linked scope keeps account linkage semantics while enum predicate follows review status" do
+    linked_statement = AccountStatement.create_from_upload!(
+      family: @family,
+      account: @account,
+      file: uploaded_file(filename: "linked.csv", content_type: "text/csv", content: "date,amount\n2024-01-01,1\n")
+    )
+    accountless_statement = AccountStatement.create_from_upload!(
+      family: @family,
+      account: nil,
+      file: uploaded_file(filename: "accountless.csv", content_type: "text/csv", content: "date,amount\n2024-01-02,2\n")
+    )
+    accountless_statement.update_columns(review_status: "linked")
+
+    assert accountless_statement.reload.linked?
+    assert_includes @family.account_statements.linked, linked_statement
+    assert_not_includes @family.account_statements.linked, accountless_statement
+    assert_not_includes @family.account_statements.unmatched, accountless_statement
+  end
+
   test "allows same checksum in different families" do
     file_content = "date,description,amount\n2024-01-01,Coffee,-5.00\n"
 
@@ -198,6 +245,24 @@ class AccountStatementTest < ActiveSupport::TestCase
     end
   end
 
+  test "rejects declared oversized upload before reading content" do
+    assert_raises(AccountStatement::InvalidUploadError) do
+      AccountStatement.prepare_upload!(OversizedDeclaredUpload.new(original_filename: "oversized.csv"))
+    end
+  end
+
+  test "streams unknown-size uploads and rejects when content exceeds size limit" do
+    file = UploadWithoutDeclaredSize.new(
+      filename: "oversized.csv",
+      content_type: "text/csv",
+      content: "x" * (AccountStatement::MAX_FILE_SIZE + 1)
+    )
+
+    assert_raises(AccountStatement::InvalidUploadError) do
+      AccountStatement.prepare_upload!(file)
+    end
+  end
+
   test "stores sanitized csv parser output without raw rows" do
     statement = AccountStatement.create_from_upload!(
       family: @family,
@@ -215,6 +280,36 @@ class AccountStatementTest < ActiveSupport::TestCase
     assert_equal 2, statement.sanitized_parser_output.dig("csv", "rows_sampled")
     assert_not_includes statement.sanitized_parser_output.to_json, "Coffee Shop"
     assert_not_includes statement.sanitized_parser_output.to_json, "Payroll"
+  end
+
+  test "detects filename dates separated by underscores" do
+    statement = AccountStatement.create_from_upload!(
+      family: @family,
+      account: @account,
+      file: uploaded_file(
+        filename: "statement_2024_01_31.csv",
+        content_type: "text/csv",
+        content: "description,amount\nCoffee,-5.00\n"
+      )
+    )
+
+    assert_equal Date.new(2024, 1, 1), statement.period_start_on
+    assert_equal Date.new(2024, 1, 31), statement.period_end_on
+  end
+
+  test "ignores unreasonable filename dates" do
+    statement = AccountStatement.create_from_upload!(
+      family: @family,
+      account: @account,
+      file: uploaded_file(
+        filename: "statement_1969_01_31.csv",
+        content_type: "text/csv",
+        content: "description,amount\nCoffee,-5.00\n"
+      )
+    )
+
+    assert_nil statement.period_start_on
+    assert_nil statement.period_end_on
   end
 
   test "samples csv metadata without parsing raw rows into sanitized output" do
@@ -324,6 +419,32 @@ class AccountStatementTest < ActiveSupport::TestCase
     assert_nil statement.account
     assert statement.unmatched?
     assert_includes @family.account_statements.unmatched, statement
+  end
+
+  test "unlink rolls back when recomputed suggestion is invalid" do
+    statement = AccountStatement.create_from_upload!(
+      family: @family,
+      account: @account,
+      file: uploaded_file(filename: "statement.csv", content_type: "text/csv", content: "date,amount\n2024-01-01,1\n")
+    )
+    other_account = Account.create!(
+      family: families(:empty),
+      owner: users(:empty),
+      name: "Other family account",
+      balance: 0,
+      currency: "USD",
+      accountable: Depository.new
+    )
+    invalid_match = AccountStatement::AccountMatcher::Match.new(account: other_account, confidence: 0.9)
+    AccountStatement::AccountMatcher.any_instance.stubs(:best_match).returns(invalid_match)
+
+    assert_raises(ActiveRecord::RecordInvalid) do
+      statement.unlink!
+    end
+
+    statement.reload
+    assert_equal @account, statement.account
+    assert statement.linked?
   end
 
   test "preserves explicit rejected review status" do
@@ -482,18 +603,5 @@ class AccountStatementTest < ActiveSupport::TestCase
         closing_balance: closing_balance
       )
       statement
-    end
-
-    def uploaded_file(filename:, content_type:, content:)
-      tempfile = Tempfile.new([ File.basename(filename, ".*"), File.extname(filename) ])
-      tempfile.binmode
-      tempfile.write(content)
-      tempfile.rewind
-
-      ActionDispatch::Http::UploadedFile.new(
-        tempfile: tempfile,
-        filename: filename,
-        type: content_type
-      )
     end
 end
