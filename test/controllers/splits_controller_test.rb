@@ -213,6 +213,27 @@ class SplitsControllerTest < ActionDispatch::IntegrationTest
     assert_equal 2, @entry.reload.child_entries.count
   end
 
+  test "update with excluded parameter sets child as excluded" do
+    @entry.split!([
+      { name: "Groceries", amount: 70, category_id: nil },
+      { name: "Household", amount: 30, category_id: nil }
+    ])
+
+    patch transaction_split_path(@entry), params: {
+      split: {
+        splits: [
+          { name: "Groceries", amount: "-70", category_id: "", excluded: "true" },
+          { name: "Household", amount: "-30", category_id: "", excluded: "false" }
+        ]
+      }
+    }
+
+    assert_redirected_to transactions_url
+    children = @entry.child_entries.order(:amount)
+    refute children.first.excluded?
+    assert children.last.excluded?
+  end
+
   # Destroy from child tests
   test "destroy from child resolves to parent and unsplits" do
     @entry.split!([

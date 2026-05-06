@@ -70,7 +70,7 @@
                     <% else %>
                       <%= link_to(
                             entry.name,
-                            entry_path(entry, grouped: in_split_group),
+                            in_split_group ? entry_path(entry, grouped: true) : entry_path(entry),
                             data: {
                               turbo_frame: "drawer",
                               turbo_prefetch: false
