@@ -1,12 +1,4 @@
-<%#
-  Reusable empty state for Stimulus list-filter when all .filterable-item rows are hidden.
-  Pass message (required for non-default copy) and optional classes for layout context.
-
-  Body stays empty at rest: list_filter fills text from data-empty-message after reveal so
-  role="status" / aria-live announces reliably (toggle hidden alone does not notify AT).
-
-  Default copy/styles suit the transactions filter menu; override classes where the list layout differs.
-%>
+<%# Reusable list-filter empty state; text is populated on reveal for aria-live. %>
 <% message = local_assigns.fetch(:message, t("transactions.searches.filters.list_filter_empty_state.no_matches")) %>
 <% classes = local_assigns.fetch(:classes, "py-3 w-full text-center text-sm text-secondary") %>
 <%= tag.p(
