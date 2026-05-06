@@ -115,6 +115,18 @@ module ActiveSupport
       Rack::Test::UploadedFile.new(tempfile.path, content_type, true, original_filename: filename)
     end
 
+    def family_guest
+      @family_guest ||= users(:family_admin).family.users.create!(
+        first_name: "Readonly",
+        last_name: "Guest",
+        email: "readonly-guest@example.com",
+        password: user_password_test,
+        role: "guest",
+        onboarded_at: Time.current,
+        ui_layout: "dashboard"
+      )
+    end
+
     # Ensures the Investment Contributions category exists for a family
     # Used in transfer tests where this bootstrapped category is required
     # Uses family locale to ensure consistent naming

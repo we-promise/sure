@@ -92,6 +92,7 @@ en:
       title: Statement
       unlink: Unlink
       unmatched_account: Unmatched inbox
+      unknown_value: Unknown
     status:
       linked: Linked
       rejected: Rejected
@@ -110,3 +111,5 @@ en:
       view: View
     unlink:
       success: Statement moved back to the unmatched inbox.
+    update:
+      success: Statement updated.

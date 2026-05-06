@@ -157,6 +157,39 @@ class AccountStatementTest < ActiveSupport::TestCase
     assert_equal existing, error.statement
   end
 
+  test "purges staged blob when database uniqueness race is re-raised" do
+    prepared_upload = AccountStatement.prepare_upload!(
+      uploaded_file(filename: "statement-copy.csv", content_type: "text/csv", content: "date,amount\n2024-01-01,1\n")
+    )
+
+    AccountStatement.stubs(:duplicate_for).returns(nil)
+    AccountStatement.any_instance.stubs(:save!).raises(ActiveRecord::RecordNotUnique.new("duplicate"))
+
+    assert_no_difference [ "ActiveStorage::Blob.count", "ActiveStorage::Attachment.count" ] do
+      assert_raises(ActiveRecord::RecordNotUnique) do
+        AccountStatement.create_from_prepared_upload!(
+          family: @family,
+          account: @account,
+          prepared_upload: prepared_upload
+        )
+      end
+    end
+  end
+
+  test "purges staged blob when metadata detection fails after attach" do
+    AccountStatement::MetadataDetector.any_instance.stubs(:apply).raises(StandardError, "parser failed")
+
+    assert_no_difference [ "ActiveStorage::Blob.count", "ActiveStorage::Attachment.count" ] do
+      assert_raises(StandardError) do
+        AccountStatement.create_from_upload!(
+          family: @family,
+          account: @account,
+          file: uploaded_file(filename: "statement.csv", content_type: "text/csv", content: "date,amount\n2024-01-01,1\n")
+        )
+      end
+    end
+  end
+
   test "linked scope keeps account linkage semantics while enum predicate follows review status" do
     linked_statement = AccountStatement.create_from_upload!(
       family: @family,
@@ -455,6 +488,20 @@ class AccountStatementTest < ActiveSupport::TestCase
     )
 
     statement.reject_match!
+
+    assert statement.rejected?
+    assert_equal @account, statement.account
+  end
+
+  test "preserves rejected review status across unrelated saves" do
+    statement = AccountStatement.create_from_upload!(
+      family: @family,
+      account: @account,
+      file: uploaded_file(filename: "statement.csv", content_type: "text/csv", content: "date,amount\n2024-01-01,1\n")
+    )
+    statement.reject_match!
+
+    statement.update!(period_start_on: Date.new(2024, 1, 1))
 
     assert statement.rejected?
     assert_equal @account, statement.account

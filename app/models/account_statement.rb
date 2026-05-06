@@ -81,6 +81,7 @@ class AccountStatement < ApplicationRecord
     end
 
     def create_from_prepared_upload!(family:, account:, prepared_upload:)
+      statement = nil
       duplicate = duplicate_for(family, prepared_upload)
       raise DuplicateUploadError, duplicate if duplicate
 
@@ -109,9 +110,25 @@ class AccountStatement < ApplicationRecord
       statement
     rescue ActiveRecord::RecordNotUnique
       duplicate = duplicate_for(family, prepared_upload)
-      raise DuplicateUploadError, duplicate if duplicate
+      if duplicate
+        purge_original_file(statement)
+        raise DuplicateUploadError, duplicate
+      end
 
+      purge_original_file(statement)
       raise
+    rescue StandardError
+      purge_original_file(statement)
+      raise
+    end
+
+    def reconciliation_statuses_for(statements, account:)
+      statement_list = statements.to_a
+      balance_lookup = balance_lookup_for(account, statement_list)
+
+      statement_list.to_h do |statement|
+        [ statement.id, statement.reconciliation_status(balance_lookup: balance_lookup) ]
+      end
     end
 
     def prepare_upload!(file)
@@ -151,6 +168,25 @@ class AccountStatement < ApplicationRecord
 
     def valid_pdf_content?(content)
       content.start_with?("%PDF-")
+    end
+
+    def purge_original_file(statement)
+      return unless statement&.original_file&.attached?
+
+      statement.original_file.purge
+    end
+
+    def balance_lookup_for(account, statements)
+      currencies = statements.map(&:statement_currency).compact.uniq
+      dates = statements.flat_map { |statement| [ statement.period_start_on, statement.period_end_on ] }.compact.uniq
+      balances = if currencies.any? && dates.any?
+        account.balances.where(currency: currencies, date: dates).to_a
+      else
+        []
+      end
+      balances_by_key = balances.index_by { |balance| [ balance.date, balance.currency ] }
+
+      ->(date, currency) { balances_by_key[[ date, currency ]] }
     end
 
     def read_upload_content!(file)
@@ -352,7 +388,7 @@ class AccountStatement < ApplicationRecord
     end
 
     def sync_review_status
-      return if rejected? && will_save_change_to_review_status?
+      return if rejected?
 
       self.review_status = "linked" if account.present? && !linked?
       self.review_status = "unmatched" if account.blank? && linked?

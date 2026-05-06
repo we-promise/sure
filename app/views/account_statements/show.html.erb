@@ -47,7 +47,9 @@
               <%= form.text_field :institution_name_hint, label: t(".institution_name_hint") %>
               <%= form.text_field :account_name_hint, label: t(".account_name_hint") %>
               <%= form.text_field :account_last4_hint, label: t(".account_last4_hint") %>
-              <%= form.text_field :currency, label: t(".currency") %>
+              <%= form.select :currency,
+                              account_statement_currency_options(@statement),
+                              { label: t(".currency"), selected: @statement.statement_currency } %>
               <%= form.date_field :period_start_on, label: t(".period_start_on") %>
               <%= form.date_field :period_end_on, label: t(".period_end_on") %>
               <%= form.number_field :opening_balance, label: t(".opening_balance"), step: "0.01" %>
@@ -64,15 +66,15 @@
             </div>
             <div>
               <dt class="text-xs text-secondary"><%= t(".institution_name_hint") %></dt>
-              <dd class="text-primary"><%= @statement.institution_name_hint.presence || t("account_statements.balance.unknown") %></dd>
+              <dd class="text-primary"><%= @statement.institution_name_hint.presence || t(".unknown_value") %></dd>
             </div>
             <div>
               <dt class="text-xs text-secondary"><%= t(".account_name_hint") %></dt>
-              <dd class="text-primary"><%= @statement.account_name_hint.presence || t("account_statements.balance.unknown") %></dd>
+              <dd class="text-primary"><%= @statement.account_name_hint.presence || t(".unknown_value") %></dd>
             </div>
             <div>
               <dt class="text-xs text-secondary"><%= t(".account_last4_hint") %></dt>
-              <dd class="text-primary"><%= @statement.account_last4_hint.presence || t("account_statements.balance.unknown") %></dd>
+              <dd class="text-primary"><%= @statement.account_last4_hint.presence || t(".unknown_value") %></dd>
             </div>
             <div>
               <dt class="text-xs text-secondary"><%= t(".currency") %></dt>

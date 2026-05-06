@@ -158,18 +158,4 @@ class ActiveStorageAuthorizationTest < ActionDispatch::IntegrationTest
 
     assert_response :not_found
   end
-
-  private
-
-    def family_guest
-      @family_guest ||= @user_a.family.users.create!(
-        first_name: "Readonly",
-        last_name: "Guest",
-        email: "storage-guest@example.com",
-        password: user_password_test,
-        role: "guest",
-        onboarded_at: Time.current,
-        ui_layout: "dashboard"
-      )
-    end
 end

@@ -161,8 +161,10 @@ en:
       general_section_title: General
       imports_label: Imports
       exports_label: Exports
+      llm_usage_label: LLM Usage
       logout: Logout
       merchants_label: Merchants
+      providers_label: Providers
       guides_label: Guides
       other_section_title: More
       preferences_label: Preferences

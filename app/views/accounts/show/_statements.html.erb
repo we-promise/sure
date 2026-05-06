@@ -2,6 +2,7 @@
 
 <% coverage = AccountStatement::Coverage.for_year(account, statement_year) %>
 <% statements = account.account_statements.with_attached_original_file.ordered.to_a %>
+<% reconciliation_statuses = AccountStatement.reconciliation_statuses_for(statements, account: account) %>
 <% permission = account.permission_for(Current.user) %>
 <% can_manage_statements = AccountStatement.statement_manager?(Current.user) && permission.in?([ :owner, :full_control ]) %>
 
@@ -88,7 +89,7 @@
                 </td>
                 <td class="px-3 py-3 text-sm text-secondary"><%= account_statement_period(statement) %></td>
                 <td class="px-3 py-3">
-                  <% case statement.reconciliation_status %>
+                  <% case reconciliation_statuses[statement.id] %>
                   <% when "matched" %>
                     <%= render "shared/badge", color: "success" do %><%= t("account_statements.reconciliation.matched") %><% end %>
                   <% when "mismatched" %>

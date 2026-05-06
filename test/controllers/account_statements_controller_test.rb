@@ -10,7 +10,7 @@ class AccountStatementsControllerTest < ActionDispatch::IntegrationTest
   test "shows statement vault" do
     get account_statements_url
     assert_response :success
-    assert_select "h1", text: "Statement Vault"
+    assert_select "h1", text: I18n.t("account_statements.index.title")
   end
 
   test "non manager cannot open statement vault" do
@@ -19,7 +19,7 @@ class AccountStatementsControllerTest < ActionDispatch::IntegrationTest
     get account_statements_url
 
     assert_redirected_to accounts_url
-    assert_equal "You don't have permission to manage this account", flash[:alert]
+    assert_equal I18n.t("accounts.not_authorized"), flash[:alert]
   end
 
   test "non manager cannot view unmatched statement" do
@@ -102,38 +102,37 @@ class AccountStatementsControllerTest < ActionDispatch::IntegrationTest
     end
 
     assert_redirected_to account_url(@account, tab: "statements")
-    assert_equal "1 duplicate statement was skipped.", flash[:alert]
+    assert_equal I18n.t("account_statements.create.duplicates", count: 1), flash[:alert]
   end
 
   test "continues upload loop after a validation error" do
     invalid_record = AccountStatement.new
     invalid_record.errors.add(:filename, "is invalid")
-    calls = 0
-    original_create = AccountStatement.method(:create_from_prepared_upload!)
 
     assert_difference "AccountStatement.count", 1 do
-      AccountStatement.stub(:create_from_prepared_upload!, lambda do |**kwargs|
-        calls += 1
-        raise ActiveRecord::RecordInvalid.new(invalid_record) if calls == 1
+      created_statement = AccountStatement.create_from_upload!(
+        family: @account.family,
+        account: @account,
+        file: uploaded_file(filename: "valid-result.csv", content_type: "text/csv", content: "date,amount\n2024-01-02,2\n")
+      )
+      upload_sequence = sequence("statement upload processing")
+      AccountStatement.expects(:create_from_prepared_upload!).in_sequence(upload_sequence).raises(ActiveRecord::RecordInvalid.new(invalid_record))
+      AccountStatement.expects(:create_from_prepared_upload!).in_sequence(upload_sequence).returns(created_statement)
 
-        original_create.call(**kwargs)
-      end) do
-        post account_statements_url, params: {
-          account_statement: {
-            account_id: @account.id,
-            files: [
-              uploaded_file(filename: "invalid.csv", content_type: "text/csv", content: "date,amount\n2024-01-01,1\n"),
-              uploaded_file(filename: "valid.csv", content_type: "text/csv", content: "date,amount\n2024-01-02,2\n")
-            ]
-          }
+      post account_statements_url, params: {
+        account_statement: {
+          account_id: @account.id,
+          files: [
+            uploaded_file(filename: "invalid.csv", content_type: "text/csv", content: "date,amount\n2024-01-01,1\n"),
+            uploaded_file(filename: "valid.csv", content_type: "text/csv", content: "date,amount\n2024-01-02,2\n")
+          ]
         }
-      end
+      }
     end
 
-    assert_equal 2, calls
     assert_redirected_to account_url(@account, tab: "statements")
-    assert_equal "1 statement uploaded.", flash[:notice]
-    assert_includes flash[:alert], "Filename is invalid"
+    assert_equal I18n.t("account_statements.create.success", count: 1), flash[:notice]
+    assert_includes flash[:alert], invalid_record.errors.full_messages.to_sentence
   end
 
   test "rejects invalid statement file type" do
@@ -146,7 +145,7 @@ class AccountStatementsControllerTest < ActionDispatch::IntegrationTest
     end
 
     assert_redirected_to account_statements_url
-    assert_equal "Upload a PDF, CSV, or XLSX statement under the size limit.", flash[:alert]
+    assert_equal I18n.t("account_statements.create.invalid_file_type"), flash[:alert]
   end
 
   test "rejects txt and xls statement uploads" do
@@ -163,27 +162,34 @@ class AccountStatementsControllerTest < ActionDispatch::IntegrationTest
       end
 
       assert_redirected_to account_statements_url
-      assert_equal "Upload a PDF, CSV, or XLSX statement under the size limit.", flash[:alert]
+      assert_equal I18n.t("account_statements.create.invalid_file_type"), flash[:alert]
     end
   end
 
   test "rejects oversized statement upload" do
-    assert_no_difference "AccountStatement.count" do
-      post account_statements_url, params: {
-        account_statement: {
-          files: [
-            uploaded_file(
-              filename: "oversized.csv",
-              content_type: "text/csv",
-              content: "x" * (AccountStatement::MAX_FILE_SIZE + 1)
-            )
-          ]
+    original_max_file_size = AccountStatement::MAX_FILE_SIZE
+    silence_warnings { AccountStatement.const_set(:MAX_FILE_SIZE, 16) }
+
+    begin
+      assert_no_difference "AccountStatement.count" do
+        post account_statements_url, params: {
+          account_statement: {
+            files: [
+              uploaded_file(
+                filename: "oversized.csv",
+                content_type: "text/csv",
+                content: "x" * (AccountStatement::MAX_FILE_SIZE + 1)
+              )
+            ]
+          }
         }
-      }
+      end
+    ensure
+      silence_warnings { AccountStatement.const_set(:MAX_FILE_SIZE, original_max_file_size) }
     end
 
     assert_redirected_to account_statements_url
-    assert_equal "Upload a PDF, CSV, or XLSX statement under the size limit.", flash[:alert]
+    assert_equal I18n.t("account_statements.create.invalid_file_type"), flash[:alert]
   end
 
   test "rejects cross-family account id" do
@@ -221,7 +227,7 @@ class AccountStatementsControllerTest < ActionDispatch::IntegrationTest
     end
 
     assert_redirected_to account_url(account)
-    assert_equal "You don't have permission to manage this account", flash[:alert]
+    assert_equal I18n.t("accounts.not_authorized"), flash[:alert]
   end
 
   test "read only shared user sees statement detail without edit controls" do
@@ -238,9 +244,9 @@ class AccountStatementsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select "input[name='account_statement[period_start_on]']", 0
     assert_select "select[name='account_statement[account_id]']", 0
-    assert_select "button", text: "Delete", count: 0
-    assert_select "button", text: "Save", count: 0
-    assert_select "button", text: "Unlink", count: 0
+    assert_select "button", text: I18n.t("account_statements.show.delete"), count: 0
+    assert_select "button", text: I18n.t("account_statements.show.save"), count: 0
+    assert_select "button", text: I18n.t("account_statements.show.unlink"), count: 0
   end
 
   test "metadata form does not expose account select for managers" do
@@ -254,6 +260,8 @@ class AccountStatementsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_select "input[name='account_statement[period_start_on]']", 1
+    assert_select "input[name='account_statement[currency]']", 0
+    assert_select "select[name='account_statement[currency]'] option[value='USD']"
     assert_select "select[name='account_statement[account_id]']", 0
   end
 
@@ -283,7 +291,7 @@ class AccountStatementsControllerTest < ActionDispatch::IntegrationTest
     patch link_account_statement_url(statement)
 
     assert_redirected_to account_statement_url(statement)
-    assert_equal "Choose an account before linking this statement.", flash[:alert]
+    assert_equal I18n.t("account_statements.link.no_account"), flash[:alert]
     statement.reload
     assert_nil statement.account
     assert statement.unmatched?
@@ -391,20 +399,6 @@ class AccountStatementsControllerTest < ActionDispatch::IntegrationTest
     end
 
     assert_redirected_to account_url(@account, tab: "statements")
-    assert_equal "Statement could not be deleted.", flash[:alert]
+    assert_equal I18n.t("account_statements.destroy.failure"), flash[:alert]
   end
-
-  private
-
-    def family_guest
-      @family_guest ||= users(:family_admin).family.users.create!(
-        first_name: "Readonly",
-        last_name: "Guest",
-        email: "readonly-guest@example.com",
-        password: user_password_test,
-        role: "guest",
-        onboarded_at: Time.current,
-        ui_layout: "dashboard"
-      )
-    end
 end
