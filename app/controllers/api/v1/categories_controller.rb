@@ -68,16 +68,6 @@ class Api::V1::CategoriesController < Api::V1::BaseController
         message: @category.errors.full_messages.join(", ")
       }, status: :unprocessable_entity
     end
-  rescue ActionController::ParameterMissing
-    raise
-  rescue => e
-    Rails.logger.error "CategoriesController#create error: #{e.message}"
-    Rails.logger.error e.backtrace.join("\n")
-
-    render json: {
-      error: "internal_server_error",
-      message: "An unexpected error occurred"
-    }, status: :internal_server_error
   end
 
   private
@@ -101,9 +91,9 @@ class Api::V1::CategoriesController < Api::V1::BaseController
     end
 
     def category_params
-      permitted = params.require(:category).permit(:name, :color, :icon, :lucide_icon, :parent_id)
+      permitted = params.require(:category).permit(:name, :color, :icon, :parent_id)
       icon = permitted.delete(:icon)
-      permitted[:lucide_icon] = icon if icon.present? && permitted[:lucide_icon].blank?
+      permitted[:lucide_icon] = icon if icon.present?
       permitted
     end
 
