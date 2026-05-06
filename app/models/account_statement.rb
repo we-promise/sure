@@ -345,15 +345,15 @@ class AccountStatement < ApplicationRecord
   end
 
   def pdf?
-    content_type == "application/pdf"
+    content_type.in?(ALLOWED_EXTENSION_CONTENT_TYPES[".pdf"])
   end
 
   def csv?
-    content_type.in?(%w[text/csv text/plain application/csv application/vnd.ms-excel])
+    content_type.in?(ALLOWED_EXTENSION_CONTENT_TYPES[".csv"])
   end
 
   def xlsx?
-    content_type == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    content_type.in?(ALLOWED_EXTENSION_CONTENT_TYPES[".xlsx"])
   end
 
   private
