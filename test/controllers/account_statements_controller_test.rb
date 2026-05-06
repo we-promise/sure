@@ -10,7 +10,7 @@ class AccountStatementsControllerTest < ActionDispatch::IntegrationTest
   test "shows statement vault" do
     get account_statements_url
     assert_response :success
-    assert_select "h1", text: "Statement vault"
+    assert_select "h1", text: "Statement Vault"
   end
 
   test "non manager cannot open statement vault" do
