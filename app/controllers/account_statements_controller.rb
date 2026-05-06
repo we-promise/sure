@@ -23,6 +23,7 @@ class AccountStatementsController < ApplicationController
 
   def show
     @accounts = Current.user.accessible_accounts.visible.alphabetically
+    @can_manage_statement = @statement.manageable_by?(Current.user)
     @reconciliation_checks = @statement.reconciliation_checks
     @breadcrumbs = [
       [ t("breadcrumbs.home"), root_path ],
@@ -82,6 +83,7 @@ class AccountStatementsController < ApplicationController
       redirect_to account_statement_path(@statement), notice: t("account_statements.update.success")
     else
       @accounts = Current.user.accessible_accounts.visible.alphabetically
+      @can_manage_statement = @statement.manageable_by?(Current.user)
       @reconciliation_checks = @statement.reconciliation_checks
       flash.now[:alert] = @statement.errors.full_messages.to_sentence
       render :show, status: :unprocessable_entity, layout: "settings"

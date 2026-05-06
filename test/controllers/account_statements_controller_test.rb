@@ -193,6 +193,25 @@ class AccountStatementsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "You don't have permission to manage this account", flash[:alert]
   end
 
+  test "read only shared user sees statement detail without edit controls" do
+    account = accounts(:credit_card)
+    statement = AccountStatement.create_from_upload!(
+      family: @account.family,
+      account: account,
+      file: uploaded_file(filename: "readonly_statement.csv", content_type: "text/csv")
+    )
+    sign_in users(:family_member)
+
+    get account_statement_url(statement)
+
+    assert_response :success
+    assert_select "input[name='account_statement[period_start_on]']", 0
+    assert_select "select[name='account_statement[account_id]']", 0
+    assert_select "button", text: "Delete", count: 0
+    assert_select "button", text: "Save", count: 0
+    assert_select "button", text: "Unlink", count: 0
+  end
+
   test "links suggested statement" do
     statement = AccountStatement.create_from_upload!(
       family: @account.family,

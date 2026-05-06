@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 module AccountStatementsHelper
+  ACCOUNT_STATEMENT_BALANCE_FIELDS = %w[opening_balance closing_balance].freeze
+
   def account_statement_status_badge(statement)
     case statement.review_status
     when "linked"
@@ -58,6 +60,8 @@ module AccountStatementsHelper
   end
 
   def account_statement_balance_label(statement, field)
+    return t("account_statements.balance.unknown") unless field.to_s.in?(ACCOUNT_STATEMENT_BALANCE_FIELDS)
+
     money = statement.public_send("#{field}_money")
     money ? money.format : t("account_statements.balance.unknown")
   end

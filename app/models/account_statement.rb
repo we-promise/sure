@@ -160,6 +160,7 @@ class AccountStatement < ApplicationRecord
       sha_duplicate = scope.find_by(content_sha256: prepared_upload.content_sha256) if prepared_upload.content_sha256.present?
       return sha_duplicate if sha_duplicate
 
+      # Active Storage's MD5 checksum is retained only to catch legacy rows that predate content_sha256.
       legacy_scope = prepared_upload.content_sha256.present? ? scope.where(content_sha256: nil) : scope
       legacy_scope.find_by(checksum: prepared_upload.checksum)
     end

@@ -48,7 +48,7 @@ class AccountStatement::MetadataDetector
       metadata_sources << "filename"
     end
 
-    if statement.csv? && detect_from_csv
+    if statement.csv? && detect_from_csv(output)
       metadata_sources << "csv_dates"
     elsif statement.xlsx?
       output["spreadsheet_detection"] = "filename_only"
@@ -56,7 +56,6 @@ class AccountStatement::MetadataDetector
       output["pdf_detection"] = "filename_only"
     end
 
-    output.merge!(statement.sanitized_parser_output || {})
     output["metadata_sources"] = metadata_sources
     statement.sanitized_parser_output = output
     statement.parser_confidence ||= if metadata_sources.include?("csv_dates")
@@ -120,7 +119,7 @@ class AccountStatement::MetadataDetector
       detected
     end
 
-    def detect_from_csv
+    def detect_from_csv(output)
       csv = CSV.new(StringIO.new(content.to_s), headers: true, liberal_parsing: true)
       first_row = csv.shift
       return false if first_row.blank?
@@ -143,13 +142,11 @@ class AccountStatement::MetadataDetector
 
       statement.period_start_on ||= dates.first
       statement.period_end_on ||= dates.last
-      statement.sanitized_parser_output = (statement.sanitized_parser_output || {}).merge(
-        "csv" => {
-          "date_header" => date_header.to_s,
-          "date_format" => date_format,
-          "rows_sampled" => samples.size
-        }
-      )
+      output["csv"] = {
+        "date_header" => date_header.to_s,
+        "date_format" => date_format,
+        "rows_sampled" => samples.size
+      }
       true
     rescue CSV::MalformedCSVError
       false
