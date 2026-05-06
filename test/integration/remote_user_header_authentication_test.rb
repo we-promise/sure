@@ -6,6 +6,7 @@ class RemoteUserHeaderAuthenticationTest < ActionDispatch::IntegrationTest
 
   setup do
     Rails.application.config.stubs(:remote_user_header_email).returns(HEADER_NAME)
+    Rails.application.config.stubs(:remote_user_trusted_proxies).returns(nil)
   end
 
   test "feature is opt-in: with config unset, the header is ignored" do
