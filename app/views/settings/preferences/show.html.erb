@@ -140,9 +140,9 @@
                 </div>
               </div>
               <div data-list-filter-target="list" class="max-h-80 overflow-auto rounded-xl border border-secondary divide-y divide-alpha-black-100 theme-dark:divide-alpha-white-100">
-                <p class="hidden px-4 py-3 text-sm text-secondary" data-list-filter-target="emptyMessage">
-                  <%= t(".no_matching_currencies") %>
-                </p>
+                <%= render "shared/list_filter_empty_state",
+                           message: t(".no_matching_currencies"),
+                           classes: "px-4 py-3 text-sm text-secondary" %>
                 <% currency_rows.each do |currency| %>
                   <% checked = selected_currency_codes.include?(currency.iso_code) %>
                   <% base_currency = currency.iso_code == primary_currency_code %>

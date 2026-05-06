@@ -11,7 +11,7 @@ export default class extends Controller {
   }
 
   filter() {
-    const filterValue = this.inputTarget.value.toLowerCase();
+    const filterValue = this.inputTarget.value.trim().toLowerCase();
     const items = this.listTarget.querySelectorAll(".filterable-item");
     let noMatchFound = true;
 

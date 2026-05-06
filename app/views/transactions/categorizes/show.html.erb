@@ -117,9 +117,9 @@
             <div data-list-filter-target="list" data-categorize-target="list"
                  data-action="click->categorize#clearFilter"
                  class="flex flex-wrap gap-2">
-              <p class="hidden text-sm text-secondary w-full py-2" data-list-filter-target="emptyMessage">
-                <%= t(".no_categories") %>
-              </p>
+              <%= render "shared/list_filter_empty_state",
+                         message: t(".no_categories"),
+                         classes: "w-full py-2 text-sm text-secondary" %>
               <% @categories.each do |category| %>
                 <button type="submit"
                         name="category_id"

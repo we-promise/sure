@@ -17,9 +17,9 @@
         </div>
       </div>
       <div data-list-filter-target="list" role="listbox" class="flex flex-col gap-0.5 p-1.5 mt-0.5 mr-2 max-h-64 overflow-y-scroll scrollbar">
-        <div class="pb-2 pl-4 mr-2 text-secondary hidden" data-list-filter-target="emptyMessage">
-          <%= t(".no_categories") %>
-        </div>
+        <%= render "shared/list_filter_empty_state",
+                   message: t(".no_categories"),
+                   classes: "mr-2 pb-2 pl-4 text-sm text-secondary" %>
         <% if @categories.any? %>
           <% Category::Group.for(@categories).each do |group| %>
             <%= render "category/dropdowns/row", category: group.category %>

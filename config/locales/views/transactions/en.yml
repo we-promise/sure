@@ -225,6 +225,8 @@ en:
         unexpected_error: "Unexpected error during conversion: %{error}"
     searches:
       filters:
+        list_filter_empty_state:
+          no_matches: No matching results
         amount_filter:
           equal_to: Equal to
           greater_than: Greater than
