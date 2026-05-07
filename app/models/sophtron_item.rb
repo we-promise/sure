@@ -160,7 +160,24 @@ class SophtronItem < ApplicationRecord
   end
 
   def connected_to_institution?
-    user_institution_id.present? && good?
+    user_institution_id.present? && current_job_id.blank? && good? && !failed_connection_job?
+  end
+
+  def failed_connection_job?
+    payload = raw_job_payload || {}
+    payload = payload.with_indifferent_access if payload.respond_to?(:with_indifferent_access)
+
+    success_flag = if payload.respond_to?(:key?) && payload.key?(:SuccessFlag)
+      payload[:SuccessFlag]
+    elsif payload.respond_to?(:key?)
+      payload[:success_flag]
+    end
+
+    last_status = job_status.presence ||
+      (payload[:LastStatus] if payload.respond_to?(:[])) ||
+      (payload[:last_status] if payload.respond_to?(:[]))
+
+    success_flag == false && Provider::Sophtron.failure_job_status?(last_status)
   end
 
   def upsert_job_snapshot!(job_payload)

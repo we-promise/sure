@@ -30,6 +30,28 @@ class SophtronItemsControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, "Connect Sophtron Institution"
   end
 
+  test "select_accounts renders institution search after stale Sophtron timeout" do
+    @item.update!(
+      user_institution_id: "ui-1",
+      status: :good,
+      job_status: "Timeout",
+      raw_job_payload: {
+        AccountID: "00000000-0000-0000-0000-000000000000",
+        JobType: "AddAccounts",
+        JobID: "job-1",
+        SuccessFlag: false,
+        LastStep: "LogInPanel",
+        LastStatus: "Timeout"
+      }
+    )
+    SophtronItem.any_instance.stubs(:ensure_customer!).returns("cust-1")
+
+    get select_accounts_sophtron_items_url
+
+    assert_response :success
+    assert_includes response.body, "Connect Sophtron Institution"
+  end
+
   test "member cannot access Sophtron account selection" do
     sign_in users(:family_member)
 

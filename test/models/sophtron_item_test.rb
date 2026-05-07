@@ -46,4 +46,24 @@ class SophtronItemTest < ActiveSupport::TestCase
 
     assert_not @item.connected_to_institution?
   end
+
+  test "connected_to_institution ignores jobs that are still running" do
+    @item.update!(user_institution_id: "ui-1", current_job_id: "job-1", status: :good)
+
+    assert_not @item.connected_to_institution?
+  end
+
+  test "connected_to_institution ignores stale timeout job snapshots" do
+    @item.update!(
+      user_institution_id: "ui-1",
+      status: :good,
+      job_status: "Timeout",
+      raw_job_payload: {
+        SuccessFlag: false,
+        LastStatus: "Timeout"
+      }
+    )
+
+    assert_not @item.connected_to_institution?
+  end
 end
