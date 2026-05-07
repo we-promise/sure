@@ -349,6 +349,8 @@ class SophtronItemsControllerTest < ActionDispatch::IntegrationTest
           account_id: "acct-1",
           account_name: "Sophtron Checking",
           institution_name: "Example Bank",
+          balance: "123.45",
+          balance_currency: "USD",
           currency: "USD",
           status: "active"
         }.with_indifferent_access
