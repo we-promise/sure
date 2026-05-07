@@ -188,6 +188,13 @@ class Transaction < ApplicationRecord
     return false unless posted_entry
 
     pending_entry = entry
+
+    # Guard: ensure posted_entry belongs to the same account
+    if posted_entry.account_id != pending_entry.account_id
+      Rails.logger.warn("merge_with_duplicate! rejected: posted_entry #{posted_entry.id} belongs to different account than pending entry #{pending_entry.id}")
+      return false
+    end
+
     pending_entry_id = pending_entry.id
     pending_entry_name = pending_entry.name
     pending_entry_date = pending_entry.date
@@ -195,57 +202,74 @@ class Transaction < ApplicationRecord
 
     ApplicationRecord.transaction(requires_new: true) do
       # Lock rows to prevent concurrent modifications and ensure consistent reads
-      pending_entry.lock!
+      # If a concurrent request already destroyed this entry, lock! raises RecordNotFound
+      begin
+        pending_entry.lock!
+      rescue ActiveRecord::RecordNotFound
+        Rails.logger.info("Pending entry #{pending_entry_id} already destroyed (concurrent merge), skipping")
+        return true # Already merged by another request — treat as success
+      end
       posted_entry.lock!
-
-      # Store merge metadata on the pending transaction before merging
-      # This records that a manual merge was performed
-      update!(
-        extra: (extra || {}).merge(
-          "potential_posted_match" => {
-            "entry_id" => posted_entry.id,
-            "reason" => "manual_merge",
-            "posted_amount" => posted_entry.amount.to_s,
-            "confidence" => "high",
-            "merged_at" => Time.current.to_s
-          }
-        )
-      )
 
       # Create exclusion record BEFORE deletion to prevent re-import on next sync
       # Idempotent: if exclusion already exists (from concurrent merge), ignore error
       if external_id.present? && pending_entry.account.present?
         begin
+          provider = pending_entry.source || "unknown"
           TransactionExclusion.create!(
             family: pending_entry.account.family,
             external_id: external_id,
-            provider: "enable_banking",
+            provider: provider,
             exclusion_reason: "merged"
           )
-        rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotUnique => e
-          # Exclusion already exists - another concurrent merge created it.
-          # This is safe; proceed with merge (updates may already be applied).
+        rescue ActiveRecord::RecordNotUnique
+          # Expected: concurrent merge already created exclusion at database level.
+          # This is safe; proceed with merge.
+        rescue ActiveRecord::RecordInvalid => e
+          # Rails uniqueness validation runs before database, so we may see this
+          # for concurrent exclusion creation as well (from the validates :external_id, uniqueness: {...}).
+          if e.record.errors[:external_id].any? { |msg| msg.match?(/has already been taken/) }
+            # Expected: another concurrent merge beat us to it on the uniqueness validation
+          else
+            Rails.logger.error("TransactionExclusion validation failed during merge for entry #{pending_entry_id}: #{e.message}")
+            raise
+          end
         end
       end
 
       # Update the posted entry's date to the pending entry's date (pending dates are often more accurate for actual transaction time)
       # Skip if posted entry is protected from sync (user_modified, excluded, import_locked)
-      if posted_entry.date != pending_entry_date && !posted_entry.protected_from_sync?
-        posted_entry.update!(date: pending_entry_date)
-      end
-
-      # Copy category from pending to posted if pending has one and posted doesn't
-      # Skip if posted entry is protected from sync
-      pending_transaction = pending_entry.entryable
-      posted_transaction = posted_entry.entryable
-      if pending_transaction.is_a?(Transaction) && posted_transaction.is_a?(Transaction)
-        if pending_transaction.category_id.present? && posted_transaction.category_id.blank? && !posted_entry.protected_from_sync?
-          posted_transaction.update!(category_id: pending_transaction.category_id)
+      unless posted_entry.protected_from_sync?
+        if posted_entry.date != pending_entry_date
+          posted_entry.update!(date: pending_entry_date)
         end
+
+        # Copy category from pending to posted if pending has one and posted doesn't
+        pending_transaction = pending_entry.entryable
+        posted_transaction = posted_entry.entryable
+        if pending_transaction.is_a?(Transaction) && posted_transaction.is_a?(Transaction)
+          if pending_transaction.category_id.present? && posted_transaction.category_id.blank?
+            posted_transaction.update!(category_id: pending_transaction.category_id)
+          end
+        end
+
+        # Mark the posted entry as user-modified to prevent sync from overwriting the date/category on future syncs
+        posted_entry.mark_user_modified!
       end
 
-      # Mark the posted entry as user-modified to prevent sync from overwriting the date/category on future syncs
-      posted_entry.mark_user_modified!
+      # Record merge audit on the posted transaction (survives after pending is deleted)
+      posted_tx = posted_entry.entryable
+      if posted_tx.is_a?(Transaction)
+        posted_tx.update!(
+          extra: (posted_tx.extra || {}).merge(
+            "manual_merge" => {
+              "merged_from_entry_id" => pending_entry.id,
+              "merged_at" => Time.current.to_s,
+              "source" => pending_entry.source
+            }
+          )
+        )
+      end
 
       # Delete this pending entry completely (no need to keep it around)
       pending_entry.destroy!

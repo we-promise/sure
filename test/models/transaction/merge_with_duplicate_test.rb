@@ -78,7 +78,7 @@ class Transaction::MergeWithDuplicateTest < ActiveSupport::TestCase
   end
 
   test "merge skips exclusion creation when external_id is blank" do
-    @pending_transaction.update!(external_id: nil)
+    @pending_entry.update_columns(external_id: nil)
 
     result = @pending_transaction.merge_with_duplicate!
 
@@ -195,11 +195,19 @@ class Transaction::MergeWithDuplicateTest < ActiveSupport::TestCase
     assert_equal Date.parse("2026-05-03"), @posted_entry.reload.date
   end
 
-  test "merge creates exclusion with correct provider" do
+  test "merge creates exclusion with correct provider based on entry source" do
     @pending_transaction.merge_with_duplicate!
 
     exclusion = TransactionExclusion.find_by(family: @family, external_id: "pending_456")
     assert_equal "enable_banking", exclusion.provider
+  end
+
+  test "merge creates exclusion with provider matching entry source for non-enable-banking providers" do
+    @pending_entry.update!(source: "simplefin")
+    @pending_transaction.merge_with_duplicate!
+
+    exclusion = TransactionExclusion.find_by(family: @family, external_id: "pending_456")
+    assert_equal "simplefin", exclusion.provider
   end
 
   test "merge marks posted entry as user_modified even when no other changes applied" do
@@ -208,5 +216,21 @@ class Transaction::MergeWithDuplicateTest < ActiveSupport::TestCase
     @pending_transaction.merge_with_duplicate!
 
     assert @posted_entry.reload.user_modified?
+  end
+
+  test "merge re-raises RecordInvalid when exclusion creation fails validation with invalid reason" do
+    # Stub the create! to raise RecordInvalid with an invalid exclusion_reason error
+    # (not a uniqueness violation, which should be handled gracefully)
+    exception = ActiveRecord::RecordInvalid.new(TransactionExclusion.new)
+    exception.record.errors.add(:exclusion_reason, "is not included in the list")
+
+    TransactionExclusion.stub :create!, ->(**) { raise exception } do
+      assert_raises ActiveRecord::RecordInvalid do
+        @pending_transaction.merge_with_duplicate!
+      end
+
+      # Verify pending entry still exists (transaction rolled back)
+      assert Entry.exists?(@pending_entry.id)
+    end
   end
 end

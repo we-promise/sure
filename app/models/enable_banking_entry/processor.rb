@@ -10,10 +10,11 @@ class EnableBankingEntry::Processor
   #   transaction_amount: { amount, currency },
   #   creditor_name, debtor_name, remittance_information, ...
   # }
-  def initialize(enable_banking_transaction, enable_banking_account:, import_adapter: nil)
+  def initialize(enable_banking_transaction, enable_banking_account:, import_adapter: nil, excluded_ids: nil)
     @enable_banking_transaction = enable_banking_transaction
     @enable_banking_account = enable_banking_account
     @import_adapter = import_adapter
+    @excluded_ids = excluded_ids
   end
 
   def process
@@ -57,11 +58,15 @@ class EnableBankingEntry::Processor
 
     def excluded_from_sync?
       return false unless account&.family
-      TransactionExclusion.exists?(
-        family: account.family,
-        external_id: external_id,
-        provider: "enable_banking"
-      )
+      if @excluded_ids
+        @excluded_ids.include?(external_id)
+      else
+        TransactionExclusion.exists?(
+          family: account.family,
+          external_id: external_id,
+          provider: "enable_banking"
+        )
+      end
     end
 
     attr_reader :enable_banking_transaction, :enable_banking_account

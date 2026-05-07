@@ -22,12 +22,22 @@ class EnableBankingAccount::Transactions::Processor
       Account::ProviderImportAdapter.new(enable_banking_account.current_account)
     end
 
+    excluded_ids = if enable_banking_account.current_account&.family
+      TransactionExclusion
+        .where(family: enable_banking_account.current_account.family, provider: "enable_banking")
+        .pluck(:external_id)
+        .to_set
+    else
+      Set.new
+    end
+
     enable_banking_account.raw_transactions_payload.each_with_index do |transaction_data, index|
       begin
         result = EnableBankingEntry::Processor.new(
           transaction_data,
           enable_banking_account: enable_banking_account,
-          import_adapter: shared_adapter
+          import_adapter: shared_adapter,
+          excluded_ids: excluded_ids
         ).process
 
         if result.nil?
