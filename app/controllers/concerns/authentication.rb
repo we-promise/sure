@@ -64,9 +64,12 @@ module Authentication
     end
 
     # Returns the email asserted by the upstream proxy, but only when the
-    # request passes all configured trust gates: header set, source IP in
-    # the trusted-proxies allowlist (if any), and email shape is valid.
+    # request passes all configured trust gates: self-hosted mode, header
+    # set, source IP in the trusted-proxies allowlist (if any), and email
+    # shape is valid.
     def trusted_remote_user_email
+      return nil unless Rails.application.config.app_mode.self_hosted?
+
       header_name = Rails.application.config.remote_user_header_email
       return nil if header_name.blank?
       return nil unless remote_user_proxy_trusted?
