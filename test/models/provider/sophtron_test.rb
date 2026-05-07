@@ -160,6 +160,22 @@ class Provider::SophtronTest < ActiveSupport::TestCase
     assert_equal "2026-01-15", transaction[:date]
   end
 
+  test "normalizes TransactionId transaction identifiers" do
+    stub_request(:post, "https://api.sophtron.com/api/Transaction/GetTransactionsByTransactionDate")
+      .to_return(status: 200, body: [
+        {
+          TransactionId: "tx-1",
+          Amount: "-12.34",
+          TransactionDate: "2026-01-15",
+          Description: "CHECKCARD 1234 Coffee Shop NY"
+        }
+      ].to_json)
+
+    result = provider_data(@provider.get_account_transactions("acct-1", start_date: Date.new(2026, 1, 1), end_date: Date.new(2026, 2, 1)))
+
+    assert_equal "tx-1", result[:transactions].first[:id]
+  end
+
   test "maps user institution accounts from V1 fields" do
     stub_request(:post, "https://api.sophtron.com/api/UserInstitution/GetUserInstitutionAccounts")
       .with(body: { UserInstitutionID: "ui-1" }.to_json)

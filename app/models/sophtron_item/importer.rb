@@ -289,11 +289,17 @@ class SophtronItem::Importer
           return { success: false, transactions_count: 0, error: "Invalid response format" }
         end
 
-        transactions_count = transactions_data[:transactions]&.count || 0
+        transactions = transactions_data[:transactions]
+        unless transactions.is_a?(Array)
+          Rails.logger.error "SophtronItem::Importer - Missing transactions array for account #{sophtron_account.account_id}"
+          return { success: false, transactions_count: 0, error: "Missing transactions array" }
+        end
+
+        transactions_count = transactions.count
         Rails.logger.info "SophtronItem::Importer - Fetched #{transactions_count} transactions for account #{sophtron_account.account_id}"
 
         # Store transactions in the account
-        if transactions_data[:transactions].present?
+        if transactions.any?
           begin
             existing_transactions = sophtron_account.raw_transactions_payload.to_a
 
@@ -304,7 +310,7 @@ class SophtronItem::Importer
 
             # Filter to ONLY truly new transactions (skip duplicates)
             # Transactions are immutable on the bank side, so we don't need to update them
-            new_transactions = transactions_data[:transactions].select do |tx|
+            new_transactions = transactions.select do |tx|
               next false unless tx.is_a?(Hash)
 
               tx_id = tx.with_indifferent_access[:id]
@@ -312,10 +318,11 @@ class SophtronItem::Importer
             end
 
             if new_transactions.any?
-              Rails.logger.info "SophtronItem::Importer - Storing #{new_transactions.count} new transactions (#{existing_transactions.count} existing, #{transactions_data[:transactions].count - new_transactions.count} duplicates skipped) for account #{sophtron_account.account_id}"
+              Rails.logger.info "SophtronItem::Importer - Storing #{new_transactions.count} new transactions (#{existing_transactions.count} existing, #{transactions.count - new_transactions.count} duplicates skipped) for account #{sophtron_account.account_id}"
               sophtron_account.upsert_sophtron_transactions_snapshot!(existing_transactions + new_transactions)
             else
-              Rails.logger.info "SophtronItem::Importer - No new transactions to store (all #{transactions_data[:transactions].count} were duplicates) for account #{sophtron_account.account_id}"
+              Rails.logger.info "SophtronItem::Importer - No new transactions to store (all #{transactions.count} were duplicates) for account #{sophtron_account.account_id}"
+              sophtron_account.upsert_sophtron_transactions_snapshot!(existing_transactions) if sophtron_account.raw_transactions_payload.nil?
             end
           rescue => e
             Rails.logger.error "SophtronItem::Importer - Failed to store transactions for account #{sophtron_account.account_id}: #{e.message}"
@@ -323,6 +330,7 @@ class SophtronItem::Importer
           end
         else
           Rails.logger.info "SophtronItem::Importer - No transactions to store for account #{sophtron_account.account_id}"
+          sophtron_account.upsert_sophtron_transactions_snapshot!([]) if sophtron_account.raw_transactions_payload.nil?
         end
 
         { success: true, transactions_count: transactions_count }
@@ -402,7 +410,7 @@ class SophtronItem::Importer
     end
 
     def initial_transaction_fetch?(sophtron_account)
-      sophtron_account.raw_transactions_payload.to_a.empty?
+      sophtron_account.raw_transactions_payload.nil? && sophtron_item.last_synced_at.blank?
     end
 
     # Handles API errors and marks the item for re-authentication if needed.

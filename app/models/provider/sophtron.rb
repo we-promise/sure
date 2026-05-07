@@ -433,7 +433,7 @@ class Provider::Sophtron < Provider
       transaction = transaction.with_indifferent_access
 
       {
-        id: first_present(transaction, :TransactionID, :transaction_id, :id),
+        id: first_present(transaction, :TransactionID, :TransactionId, :transaction_id, :transactionId, :ID, :id),
         accountId: account_id,
         type: first_present(transaction, :Type, :type).presence || "unknown",
         status: first_present(transaction, :Status, :status).presence || "completed",
