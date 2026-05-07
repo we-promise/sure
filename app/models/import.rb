@@ -202,8 +202,9 @@ class Import < ApplicationRecord
   def generate_rows_from_csv
     rows.destroy_all
 
-    mapped_rows = csv_rows.map do |row|
+    mapped_rows = csv_rows.map.with_index(1) do |row, index|
       {
+        source_row_number: index,
         account: row[account_col_label].to_s,
         date: row[date_col_label].to_s,
         qty: sanitize_number(row[qty_col_label]).to_s,
@@ -258,12 +259,33 @@ class Import < ApplicationRecord
     uploaded? && rows_count > 0
   end
 
+  def configured_for_status_detail?
+    configured?
+  end
+
   def cleaned?
     configured? && rows.all?(&:valid?)
   end
 
   def publishable?
     cleaned? && mappings.all?(&:valid?)
+  end
+
+  def cleaned_from_validation_stats?(invalid_rows_count:)
+    configured? && invalid_rows_count.zero?
+  end
+
+  def publishable_from_validation_stats?(invalid_rows_count:)
+    cleaned_from_validation_stats?(invalid_rows_count: invalid_rows_count) && mappings.all?(&:valid?)
+  end
+
+  def mapping_status_counts
+    mappable_ids = mappings.pluck(:mappable_id)
+
+    {
+      mappings_count: mappable_ids.size,
+      unassigned_mappings_count: mappable_ids.count(&:nil?)
+    }
   end
 
   def revertable?

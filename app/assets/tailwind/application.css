@@ -1,6 +1,6 @@
 @import 'tailwindcss';
 
-@import "./maybe-design-system.css";
+@import "./sure-design-system.css";
 
 @import "./geist-font.css";
 @import "./geist-mono-font.css";
@@ -56,7 +56,7 @@
   }
 
   .hw-combobox__label {
-    @apply block text-xs text-gray-500 peer-disabled:text-gray-400;
+    @apply block text-xs text-secondary peer-disabled:text-subdued;
   }
   
   .hw-combobox__option {
@@ -155,12 +155,12 @@
   }
 
   ::-webkit-scrollbar-thumb {
-    background: #d6d6d6;
+    background: var(--color-gray-300);
     border-radius: 10px;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background: #a6a6a6;
+    background: var(--color-gray-400);
   }  
 }
 
@@ -170,12 +170,12 @@
   }
 
   &::-webkit-scrollbar-thumb {
-    background: #d6d6d6;
+    background: var(--color-gray-300);
     border-radius: 10px;
   }
 
   &::-webkit-scrollbar-thumb:hover {
-    background: #a6a6a6;
+    background: var(--color-gray-400);
   }
 }
 

@@ -2,11 +2,11 @@ class DS::Buttonish < DesignSystemComponent
   VARIANTS = {
     primary: {
       container_classes: "text-inverse bg-inverse hover:bg-inverse-hover disabled:bg-gray-500 theme-dark:disabled:bg-gray-400",
-      icon_classes: "fg-inverse"
+      icon_classes: "text-inverse"
     },
     secondary: {
       container_classes: "text-primary bg-gray-200 theme-dark:bg-gray-700 hover:bg-gray-300 theme-dark:hover:bg-gray-600 disabled:bg-gray-200 theme-dark:disabled:bg-gray-600",
-      icon_classes: "fg-primary"
+      icon_classes: "text-primary"
     },
     destructive: {
       container_classes: "text-inverse bg-red-500 theme-dark:bg-red-400 hover:bg-red-600 theme-dark:hover:bg-red-500 disabled:bg-red-200 theme-dark:disabled:bg-red-600",
@@ -14,23 +14,23 @@ class DS::Buttonish < DesignSystemComponent
     },
     outline: {
       container_classes: "text-primary border border-secondary bg-transparent hover:bg-surface-hover",
-      icon_classes: "fg-gray"
+      icon_classes: "text-secondary"
     },
     outline_destructive: {
-      container_classes: "text-destructive border border-secondary bg-transparent hover:bg-gray-100 theme-dark:hover:bg-gray-700",
-      icon_classes: "fg-gray"
+      container_classes: "text-destructive border border-secondary bg-transparent hover:bg-container-inset-hover",
+      icon_classes: "text-secondary"
     },
     ghost: {
-      container_classes: "text-primary bg-transparent hover:bg-gray-100 theme-dark:hover:bg-gray-700",
-      icon_classes: "fg-gray"
+      container_classes: "text-primary bg-transparent hover:bg-container-inset-hover",
+      icon_classes: "text-secondary"
     },
     icon: {
-      container_classes: "hover:bg-gray-100 theme-dark:hover:bg-gray-700",
-      icon_classes: "fg-gray"
+      container_classes: "hover:bg-container-inset-hover",
+      icon_classes: "text-secondary"
     },
     icon_inverse: {
       container_classes: "bg-inverse hover:bg-inverse-hover",
-      icon_classes: "fg-inverse"
+      icon_classes: "text-inverse"
     }
   }.freeze
 

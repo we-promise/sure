@@ -1,0 +1,190 @@
+---
+hu:
+  snaptrade_items:
+    default_name: "SnapTrade kapcsolat"
+    create:
+      success: "SnapTrade sikeresen beállítva."
+    update:
+      success: "SnapTrade konfiguráció sikeresen frissítve."
+    destroy:
+      success: "SnapTrade kapcsolat törlése ütemezve."
+    connect:
+      decryption_failed: "Nem sikerült beolvasni a SnapTrade hitelesítő adatokat. Kérlek töröld és hozd létre újra a kapcsolatot."
+      connection_failed: "Nem sikerült csatlakozni a SnapTrade-hez: %{message}"
+    callback:
+      success: "Brókercég csatlakoztatva! Kérlek válaszd ki, mely számlákat szeretnéd összekapcsolni."
+      no_item: "SnapTrade konfiguráció nem található."
+    complete_account_setup:
+      success:
+        one: "%{count} számla sikeresen összekapcsolva."
+        other: "%{count} számla sikeresen összekapcsolva."
+      partial_success:
+        one: "%{count} számla összekapcsolva. %{failed_count} összekapcsolás sikertelen."
+        other: "%{count} számla összekapcsolva. %{failed_count} összekapcsolás sikertelen."
+      link_failed: "Nem sikerült összekapcsolni a számlákat: %{errors}"
+      no_accounts: "Nem lett kijelölve számla az összekapcsoláshoz."
+    preload_accounts:
+      not_configured: "A SnapTrade nincs beállítva."
+    select_accounts:
+      not_configured: "A SnapTrade nincs beállítva."
+    select_existing_account:
+      not_found: "Számla vagy SnapTrade konfiguráció nem található."
+      title: "Összekapcsolás SnapTrade számlával"
+      header: "Meglévő számla összekapcsolása"
+      subtitle: "Válassz egy SnapTrade számlát az összekapcsoláshoz"
+      no_accounts: "Nincs elérhető nem összekapcsolt SnapTrade számla."
+      connect_hint: "Előbb lehet, hogy brókercéget kell csatlakoztatnod."
+      settings_link: "Szolgáltatói beállítások megnyitása"
+      linking_to: "Összekapcsolás ezzel a számlával:"
+      balance_label: "Egyenleg:"
+      link_button: "Összekapcsolás"
+      cancel_button: "Mégse"
+    link_existing_account:
+      success: "Sikeresen összekapcsolva a SnapTrade számlával."
+      failed: "Nem sikerült összekapcsolni a számlát: %{message}"
+      not_found: "Számla nem található."
+    connections:
+      unknown_brokerage: "Ismeretlen brókercég"
+    delete_connection:
+      success: "Kapcsolat sikeresen törölve. Egy hely felszabadult."
+      failed: "Nem sikerült törölni a kapcsolatot: %{message}"
+      missing_authorization_id: "Hiányzó engedélyezési azonosító"
+      api_deletion_failed: "Nem sikerült törölni a kapcsolatot a SnapTrade-ből — hiányzó hitelesítő adatok. A kapcsolat még mindig létezhet a SnapTrade fiókodon."
+    delete_orphaned_user:
+      success: "Árva regisztráció sikeresen törölve."
+      failed: "Nem sikerült törölni az árva regisztrációt."
+    setup_accounts:
+      title: "SnapTrade számlák beállítása"
+      header: "SnapTrade számlák beállítása"
+      subtitle: "Válaszd ki, mely brókeri számlákat szeretnéd összekapcsolni"
+      syncing: "Számlák lekérése..."
+      loading: "Számlák lekérése a SnapTrade-ből..."
+      loading_hint: "Kattints a Frissítésre a számlák ellenőrzéséhez."
+      refresh: "Frissítés"
+      info_title: "SnapTrade befektetési adatok"
+      info_holdings: "Portfólió aktuális árakkal és mennyiségekkel"
+      info_cost_basis: "Pozíciónkénti bekerülési érték (ha elérhető)"
+      info_activities: "Kereskedési előzmények tevékenységcímkékkel (Vétel, Eladás, Osztalék stb.)"
+      info_history: "Legfeljebb 3 év tranzakciós előzmény"
+      free_tier_note: "A SnapTrade ingyenes szintje 5 bróker kapcsolatot tesz lehetővé. Az aktuális felhasználásért ellenőrizd a SnapTrade irányítópultodat."
+      no_accounts_title: "Nem találhatók számlák"
+      no_accounts_message: "Nem találhatók brókeri számlák. Ez előfordulhat, ha megszakítottad a kapcsolatot, vagy ha a brókercéged nem támogatott."
+      try_again: "Brókercég csatlakoztatása"
+      back_to_settings: "Vissza a beállításokhoz"
+      available_accounts: "Elérhető számlák"
+      balance_label: "Egyenleg:"
+      account_number: "Számla:"
+      create_button: "Kiválasztott számlák létrehozása"
+      cancel_button: "Mégse"
+      creating: "Számlák létrehozása..."
+      done_button: "Kész"
+      or_link_existing: "Vagy kapcsold össze egy meglévő számlával ahelyett, hogy újat hoznál létre:"
+      select_account: "Válassz egy számlát..."
+      link_button: "Összekapcsolás"
+      linked_accounts: "Már összekapcsolt"
+      linked_to: "Összekapcsolva:"
+    snaptrade_item:
+      accounts_need_setup:
+        one: "%{count} számla beállítást igényel"
+        other: "%{count} számla beállítást igényel"
+      deletion_in_progress: "Törlés folyamatban..."
+      syncing: "Szinkronizálás..."
+      requires_update: "A kapcsolat frissítést igényel"
+      error: "Szinkronizálási hiba"
+      status: "Utolsó szinkronizálás %{timestamp} ezelőtt — %{summary}"
+      status_never: "Még nem szinkronizált"
+      reconnect: "Újracsatlakozás"
+      connect_brokerage: "Brókercég csatlakoztatása"
+      add_another_brokerage: "Másik brókercég csatlakoztatása"
+      delete: "Törlés"
+      setup_needed: "Számlák beállítást igényelnek"
+      setup_description: "Egyes SnapTrade számlák összekapcsolásra várnak a Sure számláival."
+      setup_action: "Számlák beállítása"
+      setup_accounts_menu: "Számlák beállítása"
+      manage_connections: "Kapcsolatok kezelése"
+      more_accounts_available:
+        one: "%{count} további beállítható számla"
+        other: "%{count} további beállítható számla"
+      no_accounts_title: "Nem találhatók számlák"
+      no_accounts_description: "Csatlakoztass egy brókercéget a befektetési számlák importálásához."
+
+  providers:
+    snaptrade:
+      name: "SnapTrade"
+      connection_description: "Csatlakozás a brókereidhez a SnapTrade-en keresztül (25+ bróker támogatott)"
+      description: "A SnapTrade 25+ nagyobb brókercéghez csatlakozik (Fidelity, Vanguard, Schwab, Robinhood stb.), és teljes kereskedési előzményeket biztosít tevékenységcímkékkel és bekerülési értékkel."
+      setup_title: "Beállítási utasítások:"
+      step_1_html: "Hozz létre fiókot a <a href=\"https://dashboard.snaptrade.com\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"text-primary underline\">dashboard.snaptrade.com</a> oldalon"
+      step_2: "Másold ki az Ügyfél-azonosítót és a Fogyasztói kulcsot az irányítópultból"
+      step_3: "Add meg a hitelesítő adatokat alább, majd kattints a Mentésre"
+      step_4: "Menj a Számlák oldalra, és az 'Másik brókercég csatlakoztatása' opcióval kapcsold össze a befektetési számláidat"
+      free_tier_warning: "Az ingyenes szint 5 bróker kapcsolatot tartalmaz. További kapcsolatokhoz fizetős SnapTrade előfizetés szükséges."
+      client_id_label: "Ügyfél-azonosító"
+      client_id_placeholder: "Add meg a SnapTrade ügyfél-azonosítódat"
+      client_id_update_placeholder: "Add meg az új ügyfél-azonosítót a frissítéshez"
+      consumer_key_label: "Fogyasztói kulcs"
+      consumer_key_placeholder: "Add meg a SnapTrade fogyasztói kulcsodat"
+      consumer_key_update_placeholder: "Add meg az új fogyasztói kulcsot a frissítéshez"
+      save_button: "Konfiguráció mentése"
+      update_button: "Konfiguráció frissítése"
+      status_connected:
+        one: "%{count} számla a SnapTrade-ből"
+        other: "%{count} számla a SnapTrade-ből"
+      needs_setup:
+        one: "%{count} beállítást igényel"
+        other: "%{count} beállítást igényel"
+      status_ready: "Készen áll brókercégek csatlakoztatásához"
+      status_needs_registration: "Hitelesítő adatok mentve. Menj a Számlák oldalra brókercégek csatlakoztatásához."
+      status_not_configured: "Nincs beállítva"
+      setup_accounts_button: "Számlák beállítása"
+      connect_button: "Brókercég csatlakoztatása"
+      connected_brokerages: "Csatlakoztatva:"
+      manage_connections: "Kapcsolatok kezelése"
+      connection_limit_info: "A SnapTrade ingyenes szintje 5 bróker kapcsolatot tesz lehetővé. Töröl nem használt kapcsolatokat a helyek felszabadításához."
+      loading_connections: "Kapcsolatok betöltése..."
+      connections_error: "Nem sikerült betölteni a kapcsolatokat: %{message}"
+      accounts_count:
+        one: "%{count} számla"
+        other: "%{count} számla"
+      orphaned_connection: "Árva kapcsolat (nincs helyi szinkronizálás)"
+      needs_linking: "összekapcsolásra vár"
+      no_connections: "Nem találhatók brókeri kapcsolatok."
+      delete_connection: "Törlés"
+      delete_connection_title: "Brókeri kapcsolat törlése?"
+      delete_connection_body: "Ez véglegesen eltávolítja a(z) %{brokerage} kapcsolatot a SnapTrade-ből. Az ehhez a brókercéghez tartozó összes számla szétkapcsolásra kerül. A számlák újbóli szinkronizálásához újra kell csatlakoznod."
+      delete_connection_confirm: "Kapcsolat törlése"
+      orphaned_users_title:
+        one: "%{count} árva regisztráció"
+        other: "%{count} árva regisztráció"
+      orphaned_users_description: "Ezek korábbi SnapTrade felhasználói regisztrációk, amelyek a kapcsolati helyeidet foglalják. Töröl őket a helyek felszabadításához."
+      orphaned_user: "Árva regisztráció"
+      delete_orphaned_user: "Törlés"
+      delete_orphaned_user_title: "Árva regisztráció törlése?"
+      delete_orphaned_user_body: "Ez véglegesen törli ezt az árva SnapTrade felhasználót és az összes brókeri kapcsolatát, felszabadítva a kapcsolati helyeket."
+      delete_orphaned_user_confirm: "Regisztráció törlése"
+
+  snaptrade_item:
+    sync_status:
+      no_accounts: "Nem találhatók számlák"
+      synced:
+        one: "%{count} számla szinkronizálva"
+        other: "%{count} számla szinkronizálva"
+      synced_with_setup: "%{linked} szinkronizálva, %{unlinked} beállítást igényel"
+    institution_summary:
+      none: "Nincs csatlakoztatott intézmény"
+      count:
+        one: "%{count} intézmény"
+        other: "%{count} intézmény"
+    brokerage_summary:
+      none: "Nincs csatlakoztatott brókercég"
+      count:
+        one: "%{count} brókercég"
+        other: "%{count} brókercég"
+    syncer:
+      discovering: "Számlák felderítése..."
+      importing: "Számlák importálása a SnapTrade-ből..."
+      processing: "Portfólió és tevékenységek feldolgozása..."
+      calculating: "Egyenlegek kiszámítása..."
+      checking_config: "Számlakonfiguráció ellenőrzése..."
+      needs_setup: "%{count} számla beállítást igényel..."
+      activities_fetching_async: "A tevékenységek a háttérben kerülnek lekérésre. Ez friss brókerkapcsolatoknál akár egy percig is tarthat."

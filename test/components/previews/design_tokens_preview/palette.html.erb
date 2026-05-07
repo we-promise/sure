@@ -1,0 +1,50 @@
+<%
+  card    = "rounded-lg border border-secondary bg-container p-3 space-y-1.5"
+  label   = "text-xs font-medium text-primary"
+  meta    = "text-xs text-secondary font-mono"
+  swatch  = "h-12 w-full rounded-md border border-secondary"
+%>
+<div class="bg-surface min-h-screen p-6 space-y-10">
+  <header>
+    <h2 class="text-2xl font-semibold text-primary">Palette</h2>
+    <p class="text-sm text-secondary">Base colors, semantic aliases, and the full scale ladders. Aliases that have a dark variant show both values.</p>
+  </header>
+
+  <section class="space-y-3">
+    <h3 class="text-lg font-medium text-primary">Base &amp; semantic colors</h3>
+    <div class="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
+      <% (base_colors + semantic_colors + budget_colors).each do |entry| %>
+        <div class="<%= card %>">
+          <div class="<%= swatch %>" style="background-color: <%= entry[:light_resolved] %>"></div>
+          <div class="flex items-center justify-between gap-1">
+            <span class="<%= label %>"><%= entry[:var] %></span>
+            <% if entry[:dark_resolved] %>
+              <span class="text-[10px] uppercase tracking-wide text-secondary">light/dark</span>
+            <% end %>
+          </div>
+          <p class="<%= meta %> truncate"><%= entry[:light_resolved] %></p>
+          <% if entry[:dark_resolved] %>
+            <p class="<%= meta %> truncate text-subdued">dark: <%= entry[:dark_resolved] %></p>
+          <% end %>
+        </div>
+      <% end %>
+    </div>
+  </section>
+
+  <section class="space-y-4">
+    <h3 class="text-lg font-medium text-primary">Color scales</h3>
+    <% scales.each do |scale, entries| %>
+      <div class="space-y-2">
+        <h4 class="text-sm font-medium text-primary"><%= scale %></h4>
+        <div class="grid grid-cols-6 sm:grid-cols-9 lg:grid-cols-13 gap-1">
+          <% entries.each do |entry| %>
+            <div class="space-y-1">
+              <div class="h-10 rounded border border-subdued" style="background-color: <%= entry[:light_resolved] %>" title="<%= entry[:var] %>: <%= entry[:light_resolved] %>"></div>
+              <p class="text-[10px] text-secondary text-center"><%= entry[:name] %></p>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    <% end %>
+  </section>
+</div>

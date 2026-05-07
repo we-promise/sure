@@ -1,0 +1,60 @@
+<%
+  card  = "rounded-lg border border-secondary bg-container p-3 space-y-1.5"
+  label = "text-xs font-medium text-primary"
+  meta  = "text-xs text-secondary font-mono"
+%>
+<div class="bg-surface min-h-screen p-6 space-y-10">
+  <header>
+    <h2 class="text-2xl font-semibold text-primary">Typography</h2>
+    <p class="text-sm text-secondary">Font family tokens defined in <code class="font-mono">design/tokens/sure.tokens.json</code>. Sizes, weights, and line heights are not yet curated as Sure tokens — the codebase uses Tailwind defaults, listed below for reference.</p>
+  </header>
+
+  <section class="space-y-3">
+    <h3 class="text-lg font-medium text-primary">Font families <span class="text-xs text-secondary font-normal">(Sure tokens)</span></h3>
+    <div class="grid gap-3 grid-cols-1 lg:grid-cols-2">
+      <% fonts.each do |entry| %>
+        <div class="<%= card %>">
+          <div class="flex items-baseline justify-between">
+            <span class="<%= label %>"><%= entry[:var] %></span>
+            <span class="<%= meta %>"><%= entry[:name] %></span>
+          </div>
+          <p class="text-2xl text-primary" style="font-family: var(<%= entry[:var] %>)">
+            The quick brown fox jumps over the lazy dog. 0123456789
+          </p>
+          <p class="<%= meta %> truncate"><%= entry[:value] %></p>
+        </div>
+      <% end %>
+    </div>
+  </section>
+
+  <section class="space-y-3">
+    <header class="space-y-1">
+      <h3 class="text-lg font-medium text-primary">Size scale <span class="text-xs text-secondary font-normal">(Tailwind defaults — not Sure tokens)</span></h3>
+      <p class="text-sm text-secondary">Used heavily across the codebase. Listed here as reference until a Sure-specific hierarchy is curated.</p>
+    </header>
+    <div class="<%= card %>">
+      <% text_sizes.each do |class_name, value| %>
+        <div class="flex items-baseline gap-4 py-1.5 border-b border-subdued last:border-0">
+          <code class="<%= meta %> w-20 shrink-0"><%= class_name %></code>
+          <span class="<%= meta %> w-24 shrink-0 text-subdued"><%= value %></span>
+          <span class="<%= class_name %> text-primary truncate">The quick brown fox</span>
+        </div>
+      <% end %>
+    </div>
+  </section>
+
+  <section class="space-y-3">
+    <header class="space-y-1">
+      <h3 class="text-lg font-medium text-primary">Weight scale <span class="text-xs text-secondary font-normal">(Tailwind defaults — not Sure tokens)</span></h3>
+    </header>
+    <div class="<%= card %>">
+      <% font_weights.each do |class_name, value| %>
+        <div class="flex items-baseline gap-4 py-1.5 border-b border-subdued last:border-0">
+          <code class="<%= meta %> w-28 shrink-0"><%= class_name %></code>
+          <span class="<%= meta %> w-12 shrink-0 text-subdued"><%= value %></span>
+          <span class="text-lg <%= class_name %> text-primary">The quick brown fox</span>
+        </div>
+      <% end %>
+    </div>
+  </section>
+</div>

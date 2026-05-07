@@ -367,4 +367,107 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
     assert_equal "EUR", currency
     assert_equal 75.75, price
   end
+
+  # ================================
+  #   Exchange Mapping Tests
+  # ================================
+
+  test "map_exchange_mic returns XNSE for NSE and NSI" do
+    assert_equal "XNSE", @provider.send(:map_exchange_mic, "NSE")
+    assert_equal "XNSE", @provider.send(:map_exchange_mic, "NSI")
+    assert_equal "XNSE", @provider.send(:map_exchange_mic, "nse")
+  end
+
+  test "map_exchange_mic returns XBOM for BSE and BOM" do
+    assert_equal "XBOM", @provider.send(:map_exchange_mic, "BSE")
+    assert_equal "XBOM", @provider.send(:map_exchange_mic, "BOM")
+  end
+
+  test "map_country_code returns IN for Indian exchanges" do
+    assert_equal "IN", @provider.send(:map_country_code, "NSE")
+    assert_equal "IN", @provider.send(:map_country_code, "BSE")
+    assert_equal "IN", @provider.send(:map_country_code, "MUMBAI")
+  end
+
+  # ================================
+  #   normalize_symbol Tests
+  # ================================
+
+  test "normalize_symbol appends configured suffix for known MICs" do
+    assert_equal "RELIANCE.NS", @provider.send(:normalize_symbol, "RELIANCE", "XNSE")
+    assert_equal "INFY.NS",     @provider.send(:normalize_symbol, "INFY", "XNSE")
+    assert_equal "500325.BO",   @provider.send(:normalize_symbol, "500325", "XBOM")
+  end
+
+  test "normalize_symbol does not double-suffix already suffixed symbols" do
+    assert_equal "RELIANCE.NS", @provider.send(:normalize_symbol, "RELIANCE.NS", "XNSE")
+    assert_equal "500325.BO",   @provider.send(:normalize_symbol, "500325.BO", "XBOM")
+  end
+
+  test "normalize_symbol leaves unconfigured MIC symbols unchanged" do
+    assert_equal "AAPL", @provider.send(:normalize_symbol, "AAPL", "XNAS")
+    assert_equal "BARC", @provider.send(:normalize_symbol, "BARC", "XLON")
+    assert_equal "AAPL", @provider.send(:normalize_symbol, "AAPL", nil)
+  end
+
+  test "normalize_symbol appends suffix to dotted symbols that do not already end with the configured suffix" do
+    assert_equal "BRK.A.NS", @provider.send(:normalize_symbol, "BRK.A", "XNSE")
+    assert_equal "BRK.B.BO", @provider.send(:normalize_symbol, "BRK.B", "XBOM")
+  end
+
+  # ================================
+  #  default_currency_for_exchange Tests
+  # ================================
+
+  test "default_currency_for_exchange returns configured currency for known Yahoo exchange names" do
+    assert_equal "INR", @provider.send(:default_currency_for_exchange, "NSE")
+    assert_equal "INR", @provider.send(:default_currency_for_exchange, "BSE")
+  end
+
+  test "default_currency_for_exchange returns nil for unknown exchanges" do
+    assert_nil @provider.send(:default_currency_for_exchange, "UNKNOWN")
+    assert_nil @provider.send(:default_currency_for_exchange, "NMS")
+  end
+
+  # ================================
+  #  deduplicate_dual_listings Tests
+  # ================================
+
+  test "deduplicate_dual_listings keeps preferred exchange when both are present" do
+    nse = Provider::SecurityConcept::Security.new(symbol: "RELIANCE.NS", name: "Reliance", logo_url: nil, exchange_operating_mic: "XNSE", country_code: "IN")
+    bse = Provider::SecurityConcept::Security.new(symbol: "500325.BO",   name: "Reliance", logo_url: nil, exchange_operating_mic: "XBOM", country_code: "IN")
+    other = Provider::SecurityConcept::Security.new(symbol: "OTHER", name: "Other", logo_url: nil, exchange_operating_mic: "XNAS", country_code: "US")
+
+    result = @provider.send(:deduplicate_dual_listings, [ nse, bse, other ])
+
+    assert_equal "XNSE", result.first.exchange_operating_mic
+    assert_not result.map(&:exchange_operating_mic).include?("XBOM"), "Lower-ranked exchange should be removed"
+    assert result.map(&:exchange_operating_mic).include?("XNAS"), "Non-dual-listed exchanges should be preserved"
+  end
+
+  test "deduplicate_dual_listings preserves unrelated securities in the same dual_list_group" do
+    reliance_nse = Provider::SecurityConcept::Security.new(symbol: "RELIANCE.NS", name: "Reliance Industries", logo_url: nil, exchange_operating_mic: "XNSE", country_code: "IN")
+    reliance_bse = Provider::SecurityConcept::Security.new(symbol: "500325.BO",   name: "Reliance Industries", logo_url: nil, exchange_operating_mic: "XBOM", country_code: "IN")
+    infy_nse     = Provider::SecurityConcept::Security.new(symbol: "INFY.NS",     name: "Infosys",             logo_url: nil, exchange_operating_mic: "XNSE", country_code: "IN")
+    other        = Provider::SecurityConcept::Security.new(symbol: "AAPL",        name: "Apple",               logo_url: nil, exchange_operating_mic: "XNAS", country_code: "US")
+
+    result = @provider.send(:deduplicate_dual_listings, [ reliance_nse, reliance_bse, infy_nse, other ])
+
+    symbols = result.map(&:symbol)
+    assert_includes symbols, "RELIANCE.NS", "Preferred listing should be kept"
+    assert_not_includes symbols, "500325.BO", "Duplicate listing should be removed"
+    assert_includes symbols, "INFY.NS", "Unrelated security in same group should be preserved"
+    assert_includes symbols, "AAPL", "Non-dual-listed security should be preserved"
+    assert_equal 3, result.size
+  end
+
+  test "deduplicate_dual_listings returns original list when no dual-listed exchanges present" do
+    securities = [
+      Provider::SecurityConcept::Security.new(symbol: "AAPL", name: "Apple", logo_url: nil, exchange_operating_mic: "XNAS", country_code: "US"),
+      Provider::SecurityConcept::Security.new(symbol: "MSFT", name: "Microsoft", logo_url: nil, exchange_operating_mic: "XNAS", country_code: "US")
+    ]
+
+    result = @provider.send(:deduplicate_dual_listings, securities)
+    assert_equal securities, result
+  end
 end

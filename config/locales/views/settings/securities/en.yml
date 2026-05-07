@@ -10,3 +10,25 @@ en:
         mfa_description: Add an extra layer of security to your account by requiring
           a code from your authenticator app when signing in
         mfa_title: Two-Factor Authentication
+        webauthn_add: Add passkey or security key
+        webauthn_added: Added %{date}
+        webauthn_description: Use a passkey, Touch ID, Windows Hello, or a hardware
+          security key as a second factor when signing in.
+        webauthn_empty: No passkeys or security keys are registered yet.
+        webauthn_last_used: Last used %{time_ago} ago
+        webauthn_name_label: Key name
+        webauthn_name_placeholder: MacBook Touch ID, YubiKey, etc.
+        webauthn_remove: Remove
+        webauthn_remove_confirm: Are you sure you want to remove this passkey or
+          security key?
+        webauthn_remove_confirm_body: You will need to register this passkey or
+          security key again before it can be used for sign-in verification.
+        webauthn_title: Passkeys and security keys
+        webauthn_unsupported: This browser does not support passkeys or security
+          keys.
+  webauthn_credentials:
+    default_name: Security key
+    failure: Could not save that passkey or security key. Please try again.
+    mfa_required: Enable two-factor authentication before adding a passkey or security
+      key.
+    success: Passkey or security key removed.

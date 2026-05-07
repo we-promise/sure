@@ -4,8 +4,9 @@ class MintImport < Import
   def generate_rows_from_csv
     rows.destroy_all
 
-    mapped_rows = csv_rows.map do |row|
+    mapped_rows = csv_rows.map.with_index(1) do |row, index|
       {
+        source_row_number: index,
         account: row[account_col_label].to_s,
         date: row[date_col_label].to_s,
         amount: signed_csv_amount(row).to_s,

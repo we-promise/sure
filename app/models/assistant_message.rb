@@ -7,6 +7,7 @@ class AssistantMessage < Message
 
   def append_text!(text)
     self.content += text
+    self.status = :complete if pending?
     save!
   end
 end

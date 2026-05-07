@@ -10,7 +10,7 @@
     </div>
     <%# Rows %>
     <div class="shadow-border-xs rounded-lg overflow-hidden">
-      <div class="max-h-[32rem] overflow-y-auto divide-y divide-primary text-sm">
+      <div class="max-h-[32rem] overflow-y-auto divide-y divide-alpha-black-200 theme-dark:divide-alpha-white-200 text-sm">
         <% entries.each do |entry| %>
           <%= render partial: "transactions/categorizes/entry_row", locals: { entry: entry, categories: categories } %>
         <% end %>

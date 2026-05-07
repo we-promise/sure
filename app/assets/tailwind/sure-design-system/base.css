@@ -1,0 +1,33 @@
+@layer base {
+  button {
+    @apply cursor-pointer focus-visible:outline-gray-900;
+  }
+
+  hr {
+    @apply text-gray-200;
+  }
+
+  /* We control the sizing through DialogComponent, so reset this value */
+  dialog:modal {
+    max-width: 100dvw;
+    max-height: 100dvh;
+  }
+
+  details>summary::-webkit-details-marker {
+    @apply hidden;
+  }
+
+  details>summary {
+    @apply list-none;
+  }
+
+  input[type='radio'] {
+    @apply border-gray-300 text-indigo-600 focus:ring-indigo-600;
+    /* Default light mode */
+
+    @variant theme-dark {
+      /* Dark mode radio button base and checked styles */
+      @apply border-gray-600 bg-gray-700 checked:bg-blue-500 focus:ring-blue-500 focus:ring-offset-gray-800;
+    }
+  }
+}

@@ -5,7 +5,7 @@
 
   <h3 class="text-sm font-medium text-primary mb-1 -mt-2 text-center">Enable AI Chats</h3>
 
-  <p class="text-gray-600 mb-4 text-sm text-center">
+  <p class="text-secondary mb-4 text-sm text-center">
     <% if Current.user.ai_available? %>
       AI chat can answer financial questions and provide insights based on your data. To use this feature you'll need to explicitly enable it.
     <% else %>
@@ -18,7 +18,7 @@
     <%= form_with url: user_path(Current.user), method: :patch, class: "w-full", data: { turbo: false } do |form| %>
       <%= form.hidden_field "user[ai_enabled]", value: true %>
       <%= form.hidden_field "user[redirect_to]", value: "home" %>
-      <%= form.submit "Enable AI Chats", class: "cursor-pointer hover:bg-inverse-hover w-full py-2 px-4 bg-inverse fg-inverse rounded-lg text-sm font-medium" %>
+      <%= form.submit "Enable AI Chats", class: "cursor-pointer hover:bg-inverse-hover w-full py-2 px-4 bg-inverse text-inverse rounded-lg text-sm font-medium" %>
     <% end %>
   <% end %>
 

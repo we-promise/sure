@@ -111,6 +111,17 @@ and change it to `true`
 RAILS_ASSUME_SSL: "true"
 ```
 
+#### WebAuthn MFA (passkeys and security keys)
+
+If you enable passkeys, Touch ID, Windows Hello, or hardware security keys as MFA credentials, pin the WebAuthn relying party settings in your `.env` file:
+
+```txt
+WEBAUTHN_RP_ID="example.com"
+WEBAUTHN_ALLOWED_ORIGINS="https://sure.example.com"
+```
+
+`WEBAUTHN_RP_ID` should usually be your registrable domain, not a full URL. See [WebAuthn MFA Configuration](webauthn.md) before changing hostnames or reverse proxy settings for an instance with registered passkeys.
+
 #### Binding to IPv6 (optional)
 
 By default Sure listens on `0.0.0.0:3000` (IPv4 wildcard) inside the container and Docker publishes the port on the host's IPv4 interface only. If you want the app reachable over IPv6 as well, two things need to change:

@@ -114,9 +114,10 @@ class PdfImport < Import
 
       currency = account&.currency || family.currency
 
-      mapped_rows = extracted_transactions.map do |txn|
+      mapped_rows = extracted_transactions.map.with_index(1) do |txn, index|
         {
           import_id: id,
+          source_row_number: index,
           date: format_date_for_import(txn["date"]),
           amount: txn["amount"].to_s,
           name: txn["name"].to_s,
@@ -152,6 +153,14 @@ class PdfImport < Import
 
   def publishable?
     account.present? && statement_with_transactions? && cleaned? && mappings.all?(&:valid?)
+  end
+
+  def cleaned_from_validation_stats?(invalid_rows_count:)
+    account.present? && statement_with_transactions? && super
+  end
+
+  def publishable_from_validation_stats?(invalid_rows_count:)
+    account.present? && statement_with_transactions? && super
   end
 
   def column_keys

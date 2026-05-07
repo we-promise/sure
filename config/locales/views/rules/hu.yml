@@ -1,0 +1,52 @@
+---
+hu:
+  rules:
+    no_action: Nincs művelet
+    no_condition: Nincs feltétel
+    actions:
+      value_placeholder: Adj meg egy értéket
+    apply_all:
+      button: Összes alkalmazása
+      confirm_title: Összes szabály alkalmazása
+      confirm_message: Ezzel %{count} szabályt alkalmazol, amelyek %{transactions} egyedi tranzakciót érintenek. Kérjük, erősítsd meg, ha folytatni szeretnéd.
+      confirm_button: Megerősítés és összes alkalmazása
+      success: Minden szabály végrehajtásra van ütemezve
+      ai_cost_title: AI-költség becslése
+      ai_cost_message: Ez AI segítségével kategorizál legfeljebb %{transactions} tranzakciót.
+      estimated_cost: "Becsült költség: ~$%{cost}"
+      cost_unavailable_model: A(z) „%{model}" modellhez nem érhető el költségbecslés.
+      cost_unavailable_no_provider: A költségbecslés nem érhető el (nincs LLM-szolgáltató beállítva).
+      cost_warning: Költségek merülhetnek fel – a legfrissebb árakért ellenőrizd a modellszolgáltatónál.
+      view_usage: Felhasználási előzmények megtekintése
+    recent_runs:
+      title: Legutóbbi futtatások
+      description: Tekintsd meg a szabályok végrehajtási előzményeit, beleértve a sikeres/sikertelen állapotot és a tranzakciók számát.
+      unnamed_rule: Névtelen szabály
+      columns:
+        date_time: Dátum/Idő
+        execution_type: Típus
+        status: Állapot
+        rule_name: Szabály neve
+        transactions_counts:
+          queued: Sorban álló
+          processed: Feldolgozott
+          modified: Módosított
+      execution_types:
+        manual: Manuális
+        scheduled: Ütemezett
+      statuses:
+        pending: Függőben lévő
+        success: Sikeres
+        failed: Sikertelen
+    clear_ai_cache:
+      button: AI-gyorsítótár visszaállítása
+      confirm_title: Visszaállítod az AI-gyorsítótárat?
+      confirm_body: Biztosan visszaállítod az AI-gyorsítótárat? Ez lehetővé teszi az AI-szabályok számára az összes tranzakció újrafeldolgozását. Ez további API-költségeket okozhat.
+      confirm_button: Gyorsítótár visszaállítása
+      success: Az AI-gyorsítótár törlése folyamatban van. Ez néhány percet igénybe vehet.
+    condition_filters:
+      transaction_type:
+        income: Bevétel
+        expense: Kiadás
+        transfer: Átutalás
+        equal_to: Egyenlő

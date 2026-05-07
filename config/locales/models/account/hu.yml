@@ -1,0 +1,21 @@
+---
+hu:
+  activerecord:
+    attributes:
+      account:
+        balance: Egyenleg
+        currency: Pénznem
+        family: "%{moniker}"
+        family_id: "%{moniker}"
+        name: Név
+        subtype: Altípus
+    models:
+      account: Számla
+      account/credit: Hitelkártya
+      account/depository: Bankszámla
+      account/investment: Befektetés
+      account/loan: Kölcsön
+      account/other_asset: Egyéb eszköz
+      account/other_liability: Egyéb kötelezettség
+      account/property: Ingatlan
+      account/vehicle: Jármű

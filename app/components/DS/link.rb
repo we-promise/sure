@@ -6,7 +6,7 @@ class DS::Link < DS::Buttonish
   VARIANTS = VARIANTS.reverse_merge(
     default: {
       container_classes: "",
-      icon_classes: "fg-gray"
+      icon_classes: "text-secondary"
     }
   ).freeze
 

@@ -22,6 +22,11 @@ class MercuryItemTest < ActiveSupport::TestCase
     assert_not @mercury_item.credentials_configured?
   end
 
+  test "credentials_configured returns false when token is whitespace" do
+    @mercury_item.token = "   "
+    assert_not @mercury_item.credentials_configured?
+  end
+
   test "effective_base_url returns custom url when set" do
     assert_equal "https://api-sandbox.mercury.com/api/v1", @mercury_item.effective_base_url
   end
@@ -40,6 +45,42 @@ class MercuryItemTest < ActiveSupport::TestCase
   test "mercury_provider returns nil when credentials not configured" do
     @mercury_item.token = nil
     assert_nil @mercury_item.mercury_provider
+  end
+
+  test "family credential check ignores blank and scheduled for deletion items" do
+    family = families(:empty)
+    blank_item = MercuryItem.create!(
+      family: family,
+      name: "Blank Mercury",
+      token: "temporary_token",
+      base_url: "https://api-sandbox.mercury.com/api/v1"
+    )
+    blank_item.update_column(:token, "")
+
+    whitespace_item = MercuryItem.create!(
+      family: family,
+      name: "Whitespace Mercury",
+      token: "temporary_token",
+      base_url: "https://api-sandbox.mercury.com/api/v1"
+    )
+    whitespace_item.update_column(:token, "   ")
+
+    deleted_item = MercuryItem.create!(
+      family: family,
+      name: "Deleted Mercury",
+      token: "deleted_token",
+      base_url: "https://api-sandbox.mercury.com/api/v1",
+      scheduled_for_deletion: true
+    )
+
+    refute family.has_mercury_credentials?
+
+    whitespace_item.update_column(:token, "configured_token")
+    assert family.has_mercury_credentials?
+
+    whitespace_item.update_column(:token, "   ")
+    deleted_item.update!(scheduled_for_deletion: false)
+    assert family.has_mercury_credentials?
   end
 
   test "syncer returns MercuryItem::Syncer instance" do

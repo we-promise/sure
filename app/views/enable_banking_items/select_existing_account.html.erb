@@ -17,7 +17,7 @@
           <%= hidden_field_tag :account_id, @account.id %>
           <div class="space-y-2 max-h-64 overflow-auto">
             <% @available_enable_banking_accounts.each do |eba| %>
-              <label class="flex items-center gap-3 p-2 rounded border border-surface-inset/50 hover:border-primary cursor-pointer">
+              <label class="flex items-center gap-3 p-2 rounded border border-secondary hover:border-primary cursor-pointer">
                 <%= radio_button_tag :enable_banking_account_id, eba.id, false %>
                 <div class="flex flex-col">
                   <span class="text-sm text-primary font-medium"><%= eba.name.presence || eba.account_id %></span>

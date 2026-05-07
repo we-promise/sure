@@ -34,13 +34,13 @@ zh-CN:
         sure_mapping_label: "%{product_name} 中的 %{mapping}"
         unassigned_account: 需要为未分配行创建新账户？
       show:
-        account_mapping_description: 将导入文件中的所有账户分配到 %{product_name} 的现有账户。您也可以新建账户或保留为未分类。
+        account_mapping_description: 将导入文件中的所有账户分配到 %{product} 的现有账户。您也可以新建账户或保留为未分类。
         account_mapping_title: 分配账户
-        account_type_mapping_description: 将导入文件中的所有账户类型分配到 %{product_name} 的账户类型
+        account_type_mapping_description: 将导入文件中的所有账户类型分配到 %{product} 的账户类型
         account_type_mapping_title: 分配账户类型
-        category_mapping_description: 将导入文件中的所有分类分配到 %{product_name} 的现有分类。您也可以新建分类或保留为未分类。
+        category_mapping_description: 将导入文件中的所有分类分配到 %{product} 的现有分类。您也可以新建分类或保留为未分类。
         category_mapping_title: 分配分类
-        tag_mapping_description: 将导入文件中的所有标签分配到 %{product_name} 的现有标签。您也可以新建标签或保留为未分类。
+        tag_mapping_description: 将导入文件中的所有标签分配到 %{product} 的现有标签。您也可以新建标签或保留为未分类。
         tag_mapping_title: 分配标签
     uploads:
       show:
