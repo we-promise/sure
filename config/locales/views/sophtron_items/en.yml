@@ -68,7 +68,6 @@ en:
       institution_search_placeholder: Search by bank name
       no_institutions: No matching institutions found.
       password: Password
-      pin: PIN
       search: Search
       search_too_short: Enter at least two characters to search.
       title: Connect Sophtron Institution

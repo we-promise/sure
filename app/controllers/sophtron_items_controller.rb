@@ -92,7 +92,7 @@ class SophtronItemsController < ApplicationController
       institution_id: params[:institution_id],
       username: params[:bank_username],
       password: params[:bank_password],
-      pin: params[:bank_pin]
+      pin: ""
     ).with_indifferent_access
 
     job_id = response[:JobID] || response[:job_id]

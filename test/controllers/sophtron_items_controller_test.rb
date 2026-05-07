@@ -42,7 +42,12 @@ class SophtronItemsControllerTest < ActionDispatch::IntegrationTest
 
   test "connect_institution persists job and user institution ids" do
     provider = mock
-    provider.expects(:create_user_institution).returns({
+    provider.expects(:create_user_institution).with(
+      institution_id: "inst-1",
+      username: "bank-user",
+      password: "bank-pass",
+      pin: ""
+    ).returns({
       JobID: "job-1",
       UserInstitutionID: "ui-1"
     })
