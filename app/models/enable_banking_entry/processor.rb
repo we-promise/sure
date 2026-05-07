@@ -58,15 +58,7 @@ class EnableBankingEntry::Processor
 
     def excluded_from_sync?
       return false unless account&.family
-      if @excluded_ids
-        @excluded_ids.include?(external_id)
-      else
-        TransactionExclusion.exists?(
-          family: account.family,
-          external_id: external_id,
-          provider: "enable_banking"
-        )
-      end
+      @excluded_ids&.include?(external_id) || false
     end
 
     attr_reader :enable_banking_transaction, :enable_banking_account

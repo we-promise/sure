@@ -211,31 +211,9 @@ class Transaction < ApplicationRecord
       end
       posted_entry.lock!
 
-      # Create exclusion record BEFORE deletion to prevent re-import on next sync
-      # Idempotent: if exclusion already exists (from concurrent merge), ignore error
-      if external_id.present? && pending_entry.account.present?
-        begin
-          provider = pending_entry.source || "unknown"
-          TransactionExclusion.create!(
-            family: pending_entry.account.family,
-            external_id: external_id,
-            provider: provider,
-            exclusion_reason: "merged"
-          )
-        rescue ActiveRecord::RecordNotUnique
-          # Expected: concurrent merge already created exclusion at database level.
-          # This is safe; proceed with merge.
-        rescue ActiveRecord::RecordInvalid => e
-          # Rails uniqueness validation runs before database, so we may see this
-          # for concurrent exclusion creation as well (from the validates :external_id, uniqueness: {...}).
-          if e.record.errors[:external_id].any? { |msg| msg.match?(/has already been taken/) }
-            # Expected: another concurrent merge beat us to it on the uniqueness validation
-          else
-            Rails.logger.error("TransactionExclusion validation failed during merge for entry #{pending_entry_id}: #{e.message}")
-            raise
-          end
-        end
-      end
+      # Note: We record the pending entry's external_id in the posted entry's extra JSON
+      # This prevents the provider from re-importing the deleted pending transaction
+      # without needing a dedicated exclusion schema.
 
       # Update the posted entry's date to the pending entry's date (pending dates are often more accurate for actual transaction time)
       # Skip if posted entry is protected from sync (user_modified, excluded, import_locked)
@@ -244,11 +222,11 @@ class Transaction < ApplicationRecord
           posted_entry.update!(date: pending_entry_date)
         end
 
-        # Copy category from pending to posted if pending has one and posted doesn't
+        # Copy category from pending to posted if pending has one
         pending_transaction = pending_entry.entryable
         posted_transaction = posted_entry.entryable
         if pending_transaction.is_a?(Transaction) && posted_transaction.is_a?(Transaction)
-          if pending_transaction.category_id.present? && posted_transaction.category_id.blank?
+          if pending_transaction.category_id.present?
             posted_transaction.update!(category_id: pending_transaction.category_id)
           end
         end
@@ -264,6 +242,7 @@ class Transaction < ApplicationRecord
           extra: (posted_tx.extra || {}).merge(
             "manual_merge" => {
               "merged_from_entry_id" => pending_entry.id,
+              "merged_from_external_id" => external_id,
               "merged_at" => Time.current.to_s,
               "source" => pending_entry.source
             }

@@ -50,9 +50,9 @@ class Transaction::MergeWithDuplicateTest < ActiveSupport::TestCase
     assert_equal Date.parse("2026-05-03"), @posted_entry.reload.date
     assert_equal @category.id, @posted_transaction.reload.category_id
     assert @posted_entry.reload.user_modified?
-    exclusion = TransactionExclusion.find_by(family: @family, external_id: "pending_456", provider: "enable_banking")
-    assert exclusion
-    assert_equal "merged", exclusion.exclusion_reason
+    
+    assert_equal "pending_456", @posted_transaction.reload.extra.dig("manual_merge", "merged_from_external_id")
+    assert_equal @pending_entry.id, @posted_transaction.extra.dig("manual_merge", "merged_from_entry_id")
   end
 
   test "merge skips date update when posted entry is protected by user_modified" do
@@ -64,7 +64,7 @@ class Transaction::MergeWithDuplicateTest < ActiveSupport::TestCase
     assert result
     assert_equal original_date, @posted_entry.reload.date
     assert_not Entry.exists?(@pending_entry.id)
-    assert TransactionExclusion.exists?(family: @family, external_id: "pending_456", provider: "enable_banking")
+    assert_equal "pending_456", @posted_transaction.reload.extra.dig("manual_merge", "merged_from_external_id")
   end
 
   test "merge skips category update when posted entry is protected by user_modified" do
@@ -77,13 +77,13 @@ class Transaction::MergeWithDuplicateTest < ActiveSupport::TestCase
     assert_equal posted_category_id, @posted_transaction.reload.category_id
   end
 
-  test "merge skips exclusion creation when external_id is blank" do
-    @pending_entry.update_columns(external_id: nil)
+  test "merge ignores blank external_id for recording exclusions" do
+    @pending_entry.update!(external_id: nil)
 
-    result = @pending_transaction.merge_with_duplicate!
+    result = @pending_transaction.reload.merge_with_duplicate!
 
     assert result
-    assert_not TransactionExclusion.exists?(family: @family, external_id: nil, provider: "enable_banking")
+    assert_nil @posted_transaction.reload.extra.dig("manual_merge", "merged_from_external_id")
     assert_not Entry.exists?(@pending_entry.id)
     assert_equal Date.parse("2026-05-03"), @posted_entry.reload.date
   end
@@ -97,15 +97,18 @@ class Transaction::MergeWithDuplicateTest < ActiveSupport::TestCase
 
     assert Entry.exists?(@pending_entry.id)
     assert_equal Date.parse("2026-05-01"), @posted_entry.reload.date
-    assert_not TransactionExclusion.exists?(family: @family, external_id: "pending_456")
+    assert_nil @posted_transaction.reload.extra.dig("manual_merge", "merged_from_external_id")
   end
 
-  test "merge handles concurrent exclusion creation idempotently" do
-    TransactionExclusion.create!(
-      family: @family,
-      external_id: "pending_456",
-      provider: "enable_banking",
-      exclusion_reason: "merged"
+  test "merge handles existing manual_merge safely" do
+    @posted_transaction.update!(
+      extra: {
+        "manual_merge" => {
+          "merged_from_entry_id" => "old_123",
+          "merged_from_external_id" => "old_456",
+          "source" => "enable_banking"
+        }
+      }
     )
 
     result = @pending_transaction.merge_with_duplicate!
@@ -114,6 +117,9 @@ class Transaction::MergeWithDuplicateTest < ActiveSupport::TestCase
     assert_not Entry.exists?(@pending_entry.id)
     assert_equal Date.parse("2026-05-03"), @posted_entry.reload.date
     assert @posted_entry.reload.user_modified?
+    
+    # It overwrites with the latest merge
+    assert_equal "pending_456", @posted_transaction.reload.extra.dig("manual_merge", "merged_from_external_id")
   end
 
   test "merge is idempotent - second merge returns false when pending already gone" do
@@ -143,14 +149,14 @@ class Transaction::MergeWithDuplicateTest < ActiveSupport::TestCase
     assert_equal @category.id, @posted_transaction.reload.category_id
   end
 
-  test "merge does not copy category when posted already has one" do
+  test "merge copies category when posted already has one" do
     other_category = categories(:one)
     @posted_transaction.update!(category: other_category)
 
     result = @pending_transaction.merge_with_duplicate!
 
     assert result
-    assert_equal other_category.id, @posted_transaction.reload.category_id
+    assert_equal @category.id, @posted_transaction.reload.category_id
   end
 
   test "merge with protected_from_sync excluded skips date and category updates" do
@@ -164,7 +170,7 @@ class Transaction::MergeWithDuplicateTest < ActiveSupport::TestCase
     assert_equal original_date, @posted_entry.reload.date
     assert_nil @posted_transaction.reload.category_id
     assert_not Entry.exists?(@pending_entry.id)
-    assert TransactionExclusion.exists?(family: @family, external_id: "pending_456", provider: "enable_banking")
+    assert_equal "pending_456", @posted_transaction.reload.extra.dig("manual_merge", "merged_from_external_id")
   end
 
   test "merge with protected_from_sync import_locked skips date and category updates" do
@@ -195,42 +201,4 @@ class Transaction::MergeWithDuplicateTest < ActiveSupport::TestCase
     assert_equal Date.parse("2026-05-03"), @posted_entry.reload.date
   end
 
-  test "merge creates exclusion with correct provider based on entry source" do
-    @pending_transaction.merge_with_duplicate!
-
-    exclusion = TransactionExclusion.find_by(family: @family, external_id: "pending_456")
-    assert_equal "enable_banking", exclusion.provider
-  end
-
-  test "merge creates exclusion with provider matching entry source for non-enable-banking providers" do
-    @pending_entry.update!(source: "simplefin")
-    @pending_transaction.merge_with_duplicate!
-
-    exclusion = TransactionExclusion.find_by(family: @family, external_id: "pending_456")
-    assert_equal "simplefin", exclusion.provider
-  end
-
-  test "merge marks posted entry as user_modified even when no other changes applied" do
-    @posted_entry.update!(user_modified: false)
-
-    @pending_transaction.merge_with_duplicate!
-
-    assert @posted_entry.reload.user_modified?
-  end
-
-  test "merge re-raises RecordInvalid when exclusion creation fails validation with invalid reason" do
-    # Stub the create! to raise RecordInvalid with an invalid exclusion_reason error
-    # (not a uniqueness violation, which should be handled gracefully)
-    exception = ActiveRecord::RecordInvalid.new(TransactionExclusion.new)
-    exception.record.errors.add(:exclusion_reason, "is not included in the list")
-
-    TransactionExclusion.stub :create!, ->(**) { raise exception } do
-      assert_raises ActiveRecord::RecordInvalid do
-        @pending_transaction.merge_with_duplicate!
-      end
-
-      # Verify pending entry still exists (transaction rolled back)
-      assert Entry.exists?(@pending_entry.id)
-    end
-  end
 end

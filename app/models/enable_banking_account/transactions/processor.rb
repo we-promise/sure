@@ -22,11 +22,12 @@ class EnableBankingAccount::Transactions::Processor
       Account::ProviderImportAdapter.new(enable_banking_account.current_account)
     end
 
-    excluded_ids = if enable_banking_account.current_account&.family
-      TransactionExclusion
-        .where(family: enable_banking_account.current_account.family, provider: "enable_banking")
-        .pluck(:external_id)
-        .to_set
+    excluded_ids = if enable_banking_account.current_account
+      Transaction.joins(:entry)
+                 .where(entries: { account_id: enable_banking_account.current_account.id })
+                 .where("transactions.extra->'manual_merge'->>'merged_from_external_id' IS NOT NULL")
+                 .pluck(Arel.sql("transactions.extra->'manual_merge'->>'merged_from_external_id'"))
+                 .to_set
     else
       Set.new
     end
