@@ -1,0 +1,33 @@
+---
+hu:
+  budgets:
+    name:
+      custom_range: "%{start} - %{end_date}"
+      month_year: "%{month}"
+    show:
+      categories:
+        amount: Összeg
+        edit: Szerkesztés
+        title: Kategóriák
+      on_track_categories:
+        short_title: Ütemben
+        title: Ütemben
+      over_budget_categories:
+        short_title: Túllépve
+        title: Túllépve
+      filter:
+        all: Mind
+        on_track: Ütemben
+        over_budget: Túllépve
+      tabs:
+        actual: Tényleges
+        budgeted: Tervezett
+    copy_previous_prompt:
+      title: "Állítsd be a költségvetésed"
+      description: "Átmásolhatod a költségvetésed innen: %{source_name}, vagy kezdhetsz nulláról."
+      copy_button: "Másolás innen: %{source_name}"
+      fresh_button: "Kezdés nulláról"
+    copy_previous:
+      success: "Költségvetés átmásolva innen: %{source_name}"
+      no_source: "Nem található korábbi költségvetés a másoláshoz"
+      already_initialized: "Ez a költségvetés már be van állítva"

@@ -39,7 +39,12 @@ class MfaControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert @user.reload.otp_required?
     assert_equal 8, @user.otp_backup_codes.length
+    assert @user.otp_backup_codes.all? { |code| code.start_with?("$2") }
     assert_select "div.grid-cols-2" # Check for backup codes grid
+    rendered_codes = css_select("div.grid-cols-2 div").map { |node| node.text.strip }
+    assert_equal 8, rendered_codes.length
+    assert rendered_codes.all? { |code| code.match?(/\A[0-9a-f]{16}\z/) }
+    assert_empty rendered_codes & @user.otp_backup_codes
   end
 
   test "does not enable MFA with invalid code" do
@@ -96,17 +101,19 @@ class MfaControllerTest < ActionDispatch::IntegrationTest
 
   test "verify_code authenticates with valid backup code" do
     @user.setup_mfa!
-    @user.enable_mfa!
+    backup_code = @user.enable_mfa!.first
+    matching_digest = @user.otp_backup_codes.find { |digest| BCrypt::Password.new(digest).is_password?(backup_code) }
+    assert_not_nil matching_digest
     sign_out
 
     post sessions_path, params: { email: @user.email, password: user_password_test }
-    backup_code = @user.otp_backup_codes.first
 
     post verify_mfa_path, params: { code: backup_code }
 
     assert_redirected_to root_path
     assert Session.exists?(user_id: @user.id)
-    assert_not @user.reload.otp_backup_codes.include?(backup_code)
+    assert_equal 7, @user.reload.otp_backup_codes.size
+    assert_not_includes @user.otp_backup_codes, matching_digest
   end
 
   test "verify_code rejects invalid codes" do

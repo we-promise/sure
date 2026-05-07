@@ -1,0 +1,139 @@
+hu:
+  activerecord:
+    attributes:
+      doorkeeper/application:
+        name: 'Név'
+        redirect_uri: 'Átirányítási URI'
+    errors:
+      models:
+        doorkeeper/application:
+          attributes:
+            redirect_uri:
+              fragment_present: 'nem tartalmazhat töredéket.'
+              invalid_uri: 'érvényes URI kell legyen.'
+              unspecified_scheme: 'meg kell adni a sémát.'
+              relative_uri: 'abszolút URI kell legyen.'
+              secured_uri: 'HTTPS/SSL URI kell legyen.'
+              forbidden_uri: 'a szerver nem engedélyezi.'
+            scopes:
+              not_match_configured: "nem egyezik a szerveren beállítottal."
+  doorkeeper:
+    applications:
+      confirmations:
+        destroy: 'Biztosan törlöd?'
+      buttons:
+        edit: 'Szerkesztés'
+        destroy: 'Törlés'
+        submit: 'Küldés'
+        cancel: 'Mégsem'
+        authorize: 'Engedélyezés'
+      form:
+        error: 'Hoppá! Ellenőrizd az űrlapot, mert lehetnek hibák'
+      help:
+        confidential: 'Az alkalmazás olyan esetben kerül használatra, ahol az ügyfél titka bizalmas maradhat. A natív mobilalkalmazások és az egyoldalas alkalmazások (SPA) nem bizalmasnak minősülnek.'
+        redirect_uri: 'URI-nként egy sort használj'
+        blank_redirect_uri: "Hagyd üresen, ha a szolgáltatód Client Credentials, Resource Owner Password Credentials vagy más olyan hitelesítési folyamatot használ, amely nem igényel átirányítási URI-t."
+        scopes: 'A hatóköröket szóközzel válaszd el. Hagyd üresen az alapértelmezett hatókörök használatához.'
+      edit:
+        title: 'Alkalmazás szerkesztése'
+      index:
+        title: 'Alkalmazásaid'
+        new: 'Új alkalmazás'
+        name: 'Név'
+        callback_url: 'Visszahívási URL'
+        confidential: 'Bizalmas?'
+        actions: 'Műveletek'
+        confidentiality:
+          'yes': 'Igen'
+          'no': 'Nem'
+      new:
+        title: 'Új alkalmazás'
+      show:
+        title: 'Alkalmazás: %{name}'
+        application_id: 'UID'
+        secret: 'Titok'
+        secret_hashed: 'Titkosított titok'
+        scopes: 'Hatókörök'
+        confidential: 'Bizalmas'
+        callback_urls: 'Visszahívási URL-ek'
+        actions: 'Műveletek'
+        not_defined: 'Nincs megadva'
+    authorizations:
+      buttons:
+        authorize: 'Engedélyezés'
+        deny: 'Elutasítás'
+      error:
+        title: 'Hiba történt'
+      new:
+        title: 'Engedélyezés szükséges'
+        prompt: 'Engedélyezed, hogy %{client_name} hozzáférjen a fiókodhoz?'
+        able_to: 'Az alkalmazás a következőkre lesz jogosult'
+      show:
+        title: 'Engedélyezési kód'
+      form_post:
+        title: 'Küldd el ezt az űrlapot'
+    authorized_applications:
+      confirmations:
+        revoke: 'Biztosan visszavonod?'
+      buttons:
+        revoke: 'Visszavonás'
+      index:
+        title: 'Engedélyezett alkalmazásaid'
+        application: 'Alkalmazás'
+        created_at: 'Létrehozva'
+        date_format: '%Y.%m.%d %H:%M:%S'
+    pre_authorization:
+      status: 'Előzetes engedélyezés'
+    errors:
+      messages:
+        invalid_request:
+          unknown: 'A kérésből hiányzik egy kötelező paraméter, nem támogatott paraméterértéket tartalmaz, vagy egyéb szempontból hibás.'
+          missing_param: 'Hiányzó kötelező paraméter: %{value}.'
+          request_not_authorized: 'A kérést engedélyezni kell. A kérés engedélyezéséhez szükséges paraméter hiányzik vagy érvénytelen.'
+          invalid_code_challenge: 'A kódkihívás megadása kötelező.'
+        invalid_redirect_uri: "A kért átirányítási URI hibás formátumú vagy nem egyezik az ügyfél átirányítási URI-jával."
+        unauthorized_client: 'Az ügyfél nem jogosult erre a kérésre ezzel a módszerrel.'
+        access_denied: 'Az erőforrás tulajdonosa vagy az engedélyezési szerver elutasította a kérést.'
+        invalid_scope: 'A kért hatókör érvénytelen, ismeretlen vagy hibás formátumú.'
+        invalid_code_challenge_method:
+          zero: 'Az engedélyezési szerver nem támogatja a PKCE-t, mivel nincsenek elfogadott code_challenge_method értékek.'
+          one: 'A code_challenge_method értéke csak %{challenge_methods} lehet.'
+          other: 'A code_challenge_method értéke a következők egyike lehet: %{challenge_methods}.'
+        server_error: 'Az engedélyezési szerver váratlan hibába ütközött, amely megakadályozta a kérés teljesítését.'
+        temporarily_unavailable: 'Az engedélyezési szerver jelenleg nem tudja kezelni a kérést a szerver túlterheltsége vagy karbantartása miatt.'
+        credential_flow_not_configured: 'A Resource Owner Password Credentials folyamat meghiúsult, mert a Doorkeeper.configure.resource_owner_from_credentials nincs beállítva.'
+        resource_owner_authenticator_not_configured: 'Az erőforrás-tulajdonos keresése meghiúsult, mert a Doorkeeper.configure.resource_owner_authenticator nincs beállítva.'
+        admin_authenticator_not_configured: 'Az adminisztrációs felülethez való hozzáférés le van tiltva, mert a Doorkeeper.configure.admin_authenticator nincs beállítva.'
+        unsupported_response_type: 'Az engedélyezési szerver nem támogatja ezt a választípust.'
+        unsupported_response_mode: 'Az engedélyezési szerver nem támogatja ezt a válaszmódot.'
+        invalid_client: 'Az ügyfél hitelesítése sikertelen: ismeretlen ügyfél, hiányzó hitelesítés vagy nem támogatott hitelesítési módszer.'
+        invalid_grant: 'A megadott engedélyezési jogosultság érvénytelen, lejárt, visszavont, nem egyezik az engedélyezési kérésben használt átirányítási URI-val, vagy másik ügyfélnek lett kiadva.'
+        unsupported_grant_type: 'Az engedélyezési jogosultság típusát az engedélyezési szerver nem támogatja.'
+        invalid_token:
+          revoked: "A hozzáférési token vissza lett vonva"
+          expired: "A hozzáférési token lejárt"
+          unknown: "A hozzáférési token érvénytelen"
+        revoke:
+          unauthorized: "Nincs jogosultságod visszavonni ezt a tokent"
+        forbidden_token:
+          missing_scope: 'Ehhez az erőforráshoz a következő hatókör szükséges: "%{oauth_scopes}".'
+    flash:
+      applications:
+        create:
+          notice: 'Az alkalmazás létrehozva.'
+        destroy:
+          notice: 'Az alkalmazás törölve.'
+        update:
+          notice: 'Az alkalmazás frissítve.'
+      authorized_applications:
+        destroy:
+          notice: 'Az alkalmazás hozzáférése visszavonva.'
+    layouts:
+      admin:
+        title: 'Doorkeeper'
+        nav:
+          oauth2_provider: 'OAuth2 Provider'
+          applications: 'Alkalmazások'
+          home: 'Kezdőlap'
+      application:
+        title: 'OAuth engedélyezés szükséges'

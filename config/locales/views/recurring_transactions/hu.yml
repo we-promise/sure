@@ -1,0 +1,52 @@
+---
+hu:
+  recurring_transactions:
+    title: Ismétlődő tranzakciók
+    upcoming: Közelgő ismétlődő tranzakciók
+    projected: Várható
+    recurring: Ismétlődő
+    expected_today: "Ma várható"
+    expected_in:
+      one: "%{count} nap múlva várható"
+      other: "%{count} nap múlva várható"
+    day_of_month: A hónap %{day}. napja
+    identify_patterns: Minták azonosítása
+    cleanup_stale: Elavultak törlése
+    settings:
+      enable_label: Ismétlődő tranzakciók engedélyezése
+      enable_description: Automatikusan felismeri az ismétlődő tranzakciós mintákat, és megjeleníti a közelgő várható tranzakciókat.
+    settings_updated: Az ismétlődő tranzakciók beállításai frissítve
+    info:
+      title: Automatikus mintafelismerés
+      manual_description: A fenti gombokkal manuálisan is azonosíthatod a mintákat, vagy törölheted az elavult ismétlődő tranzakciókat.
+      automatic_description: "Az automatikus azonosítás ezután is lefut:"
+      triggers:
+        - CSV importálás befejeztével (tranzakciók, ügyletek, számlák stb.)
+        - Bármely szolgáltatói szinkronizálás befejeztével (Plaid, SimpleFIN stb.)
+    identified: "%{count} ismétlődő tranzakciós minta azonosítva"
+    cleaned_up: "%{count} elavult ismétlődő tranzakció törölve"
+    marked_inactive: Az ismétlődő tranzakció inaktívvá jelölve
+    marked_active: Az ismétlődő tranzakció aktívvá jelölve
+    deleted: Ismétlődő tranzakció törölve
+    confirm_delete: Biztosan törlöd ezt az ismétlődő tranzakciót?
+    marked_as_recurring: Tranzakció ismétlődőként jelölve
+    already_exists: Ehhez a mintához már létezik egy manuálisan rögzített ismétlődő tranzakció
+    creation_failed: Nem sikerült létrehozni az ismétlődő tranzakciót. Ellenőrizd a tranzakció adatait, és próbáld újra.
+    unexpected_error: Váratlan hiba történt az ismétlődő tranzakció létrehozása során
+    amount_range: "Tartomány: %{min} és %{max} között"
+    empty:
+      title: Nem találhatók ismétlődő tranzakciók
+      description: Kattints a „Minták azonosítása" gombra, hogy automatikusan felismerd az ismétlődő tranzakciókat a tranzakcióelőzményeidből.
+    table:
+      merchant: Név
+      amount: Összeg
+      expected_day: Várható nap
+      next_date: Következő dátum
+      last_occurrence: Utolsó előfordulás
+      status: Státusz
+      actions: Műveletek
+    status:
+      active: Aktív
+      inactive: Inaktív
+    badges:
+      manual: Manuális

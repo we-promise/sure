@@ -41,7 +41,7 @@
                     <% if item.session_valid? %>
                     <%= button_to sync_enable_banking_item_path(item),
                                     method: :post,
-                                    class: "inline-flex items-center justify-center rounded-lg px-3 py-1.5 text-xs font-medium text-primary bg-container border border-primary hover:bg-gray-50 transition-colors",
+                                    class: "inline-flex items-center justify-center rounded-lg px-3 py-1.5 text-xs font-medium text-primary bg-container border border-primary hover:bg-surface-inset transition-colors",
                                     data: { turbo: false } do %>
                         Sync
                     <% end %>
@@ -54,7 +54,7 @@
                     <% end %>
                     <% else %>
                     <%= link_to select_bank_enable_banking_item_path(item),
-                                class: "inline-flex items-center justify-center rounded-lg px-3 py-1.5 text-xs font-medium text-white bg-gray-900 hover:bg-gray-800 transition-colors",
+                                class: "inline-flex items-center justify-center rounded-lg px-3 py-1.5 text-xs font-medium text-inverse button-bg-primary hover:button-bg-primary-hover transition-colors",
                                 data: { turbo_frame: "modal" } do %>
                         Connect Bank
                     <% end %>
@@ -75,7 +75,7 @@
                 <div class="flex justify-center pt-2">
                 <%= button_to new_connection_enable_banking_item_path(item_for_new_connection),
                                 method: :post,
-                                class: "inline-flex items-center gap-2 justify-center rounded-lg px-4 py-2 text-sm font-medium text-white bg-gray-900 hover:bg-gray-800 transition-colors",
+                                class: "inline-flex items-center gap-2 justify-center rounded-lg px-4 py-2 text-sm font-medium text-inverse button-bg-primary hover:button-bg-primary-hover transition-colors",
                                 data: { turbo_frame: "modal" } do %>
                     <%= icon "plus", size: "sm" %>
                     Add Connection

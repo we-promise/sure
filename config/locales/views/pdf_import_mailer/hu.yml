@@ -1,0 +1,17 @@
+---
+hu:
+  pdf_import_mailer:
+    next_steps:
+      greeting: "Szia, %{name}!"
+      intro: "Befejeztük a(z) %{product} alkalmazásba feltöltött PDF-dokumentum elemzését."
+      document_type_label: Dokumentumtípus
+      summary_label: AI-összefoglaló
+      transactions_note: Úgy tűnik, hogy ez a dokumentum tranzakciókat tartalmaz. Most kibonthatod és áttekintheted azokat.
+      document_stored_note: Ez a dokumentum el lett mentve referenciaként. Felhasználható kontextusként a jövőbeli AI-párbeszédekben.
+      next_steps_label: Mi a következő lépés?
+      next_steps_intro: "Több lehetőséged is van:"
+      option_extract_transactions: Tranzakciók kibontása ebből a kivonatból
+      option_keep_reference: Megőrzöm ezt a dokumentumot referenciaként a jövőbeli AI-párbeszédekhez
+      option_delete: Törlöm ezt az importot, ha már nincs rá szükségem
+      view_import_button: Importálás részleteinek megtekintése
+      footer_note: Ez egy automatikus üzenet. Kérjük, ne válaszolj közvetlenül erre az e-mailre.

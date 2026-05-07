@@ -15,7 +15,7 @@ class Sync < ApplicationRecord
   belongs_to :parent, class_name: "Sync", optional: true
   has_many :children, class_name: "Sync", foreign_key: :parent_id, dependent: :destroy
 
-  scope :ordered, -> { order(created_at: :desc) }
+  scope :ordered, -> { order(created_at: :desc, id: :desc) }
   scope :incomplete, -> { where("syncs.status IN (?)", %w[pending syncing]) }
   scope :visible, -> { incomplete.where("syncs.created_at > ?", VISIBLE_FOR.ago) }
 
@@ -57,6 +57,52 @@ class Sync < ApplicationRecord
     def clean
       incomplete.where("syncs.created_at < ?", STALE_AFTER.ago).find_each(&:mark_stale!)
     end
+
+    def for_family(family, resource_owner: nil)
+      query = where(syncable_type: "Family", syncable_id: family.id)
+      query = query.or(where(syncable_type: "Account", syncable_id: account_syncable_ids(family, resource_owner)))
+
+      family_syncable_associations.each do |association|
+        query = query.or(
+          where(syncable_type: association.klass.name, syncable_id: family.public_send(association.name).select(:id))
+        )
+      end
+
+      query
+    end
+
+    private
+      def account_syncable_ids(family, resource_owner)
+        (resource_owner ? resource_owner.accessible_accounts : family.accounts)
+          .where(family_id: family.id)
+          .select(:id)
+      end
+
+      def family_syncable_associations
+        Family.reflect_on_all_associations(:has_many).select do |association|
+          association.name.to_s.end_with?("_items") &&
+            association.klass.included_modules.include?(Syncable)
+        rescue NameError
+          false
+        end
+      end
+  end
+
+  def in_progress?
+    pending? || syncing?
+  end
+
+  def terminal?
+    completed? || failed? || stale?
+  end
+
+  def api_error_payload
+    return unless failed? || stale?
+    return if stale? && error.blank?
+
+    {
+      message: stale? ? "Sync became stale before completion" : "Sync failed"
+    }
   end
 
   def perform

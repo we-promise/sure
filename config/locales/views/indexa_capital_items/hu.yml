@@ -1,0 +1,241 @@
+---
+hu:
+  indexa_capital_items:
+    sync_status:
+      no_accounts: "Nem találhatók számlák"
+      synced:
+        one: "%{count} számla szinkronizálva"
+        other: "%{count} számla szinkronizálva"
+      synced_with_setup: "%{linked} szinkronizálva, %{unlinked} beállítást igényel"
+    institution_summary:
+      none: "Nincs csatlakoztatott intézmény"
+      count:
+        one: "%{count} intézmény"
+        other: "%{count} intézmény"
+    errors:
+      provider_not_configured: "Az IndexaCapital szolgáltató nincs beállítva"
+
+    sync:
+      status:
+        importing: "Számlák importálása az IndexaCapital-ból..."
+        processing: "Portfólió és tevékenységek feldolgozása..."
+        calculating: "Egyenlegek kiszámítása..."
+        importing_data: "Számlaadatok importálása..."
+        checking_setup: "Számlakonfiguráció ellenőrzése..."
+        needs_setup: "%{count} számla beállítást igényel..."
+      success: "Szinkronizálás elindítva"
+
+    panel:
+      setup_instructions: "Beállítási utasítások:"
+      step_1: "Látogass el az Indexa Capital irányítópultra egy csak olvasható API token létrehozásához"
+      step_2: "Illeszd be az API tokenedet alább, majd kattints a Mentésre"
+      step_3: "Sikeres csatlakozás után menj a Számlák lapra az új számlák beállításához"
+      field_descriptions: "Mezőleírások:"
+      optional: "(opcionális)"
+      required: "(kötelező)"
+      optional_with_default: "(opcionális, alapértelmezett: %{default_value})"
+      alternative_auth: "Vagy használj felhasználónév/jelszó hitelesítést helyette..."
+      save_button: "Konfiguráció mentése"
+      update_button: "Konfiguráció frissítése"
+      status_configured_html: "Beállítva és használatra kész. A számlák kezeléséhez és beállításához látogass el a <a href=\"%{accounts_path}\" class=\"link\">Számlák</a> lapra."
+      status_not_configured: "Nincs beállítva"
+      fields:
+        api_token:
+          label: "API token"
+          description: "Az Indexa Capital irányítópultról származó csak olvasható API tokened"
+          placeholder_new: "Illeszd be ide az API tokenedet"
+          placeholder_update: "Add meg az új API tokent a frissítéshez"
+        username:
+          label: "Felhasználónév"
+          description: "Az Indexa Capital felhasználóneved/e-mail-ed"
+          placeholder_new: "Illeszd be ide a felhasználónevet"
+          placeholder_update: "Add meg az új felhasználónevet a frissítéshez"
+        document:
+          label: "Dokumentum azonosító"
+          description: "Az Indexa Capital dokumentum/azonosítód"
+          placeholder_new: "Illeszd be ide a dokumentum azonosítót"
+          placeholder_update: "Add meg az új dokumentum azonosítót a frissítéshez"
+        password:
+          label: "Jelszó"
+          description: "Az Indexa Capital jelszavad"
+          placeholder_new: "Illeszd be ide a jelszót"
+          placeholder_update: "Add meg az új jelszót a frissítéshez"
+
+    create:
+      success: "IndexaCapital kapcsolat sikeresen létrehozva"
+    update:
+      success: "IndexaCapital kapcsolat frissítve"
+    destroy:
+      success: "IndexaCapital kapcsolat eltávolítva"
+    index:
+      title: "IndexaCapital kapcsolatok"
+
+    loading:
+      loading_message: "IndexaCapital számlák betöltése..."
+      loading_title: "Betöltés"
+
+    link_accounts:
+      all_already_linked:
+        one: "A kiválasztott számla (%{names}) már össze van kapcsolva"
+        other: "Mind a(z) %{count} kiválasztott számla már össze van kapcsolva: %{names}"
+      api_error: "API hiba: %{message}"
+      invalid_account_names:
+        one: "Nem lehet összekapcsolni üres nevű számlát"
+        other: "Nem lehet összekapcsolni %{count} üres nevű számlát"
+      link_failed: "Nem sikerült összekapcsolni a számlákat"
+      no_accounts_selected: "Kérlek válassz legalább egy számlát"
+      no_api_key: "Nem találhatók az IndexaCapital hitelesítő adatok. Kérlek állítsd be őket a Szolgáltatói beállításokban."
+      partial_invalid: "%{created_count} számla sikeresen összekapcsolva, %{already_linked_count} már össze volt kapcsolva, %{invalid_count} számla nevei érvénytelenek"
+      partial_success: "%{created_count} számla sikeresen összekapcsolva. %{already_linked_count} számla már össze volt kapcsolva: %{already_linked_names}"
+      success:
+        one: "%{count} számla sikeresen összekapcsolva"
+        other: "%{count} számla sikeresen összekapcsolva"
+
+    indexa_capital_item:
+      accounts_need_setup: "Számlák beállítást igényelnek"
+      delete: "Kapcsolat törlése"
+      deletion_in_progress: "törlés folyamatban..."
+      error: "Hiba"
+      more_accounts_available:
+        one: "%{count} további elérhető számla"
+        other: "%{count} további elérhető számla"
+      no_accounts_description: "Ehhez a kapcsolathoz még nincsenek összekapcsolt számlák."
+      no_accounts_title: "Nincsenek számlák"
+      provider_name: "IndexaCapital"
+      requires_update: "A kapcsolat frissítést igényel"
+      setup_action: "Új számlák beállítása"
+      setup_description: "%{linked} / %{total} számla összekapcsolva. Válaszd ki az újonnan importált IndexaCapital számlák típusait."
+      setup_needed: "Új számlák beállításra várnak"
+      status: "Szinkronizálva %{timestamp} ezelőtt — %{summary}"
+      status_never: "Még nem szinkronizált"
+      syncing: "Szinkronizálás..."
+      total: "Összesen"
+      unlinked: "Nincs összekapcsolva"
+      update_credentials: "Hitelesítő adatok frissítése"
+
+    select_accounts:
+      accounts_selected: "kiválasztott számla"
+      api_error: "API hiba: %{message}"
+      cancel: "Mégse"
+      configure_name_in_provider: "Nem importálható — kérlek állítsd be a számla nevét az IndexaCapital-ban"
+      description: "Válaszd ki azokat a számlákat, amelyeket össze szeretnél kapcsolni a(z) %{product_name} fiókkal."
+      link_accounts: "Kiválasztott számlák összekapcsolása"
+      no_accounts_found: "Nem találhatók számlák. Kérlek ellenőrizd az IndexaCapital hitelesítő adataidat."
+      no_api_key: "Az IndexaCapital hitelesítő adatok nincsenek beállítva. Kérlek állítsd be őket a Beállításokban."
+      no_credentials_configured: "Kérlek előbb állítsd be az IndexaCapital hitelesítő adataidat a Szolgáltatói beállításokban."
+      no_name_placeholder: "(Nincs név)"
+      title: "IndexaCapital számlák kiválasztása"
+
+    select_existing_account:
+      account_already_linked: "Ez a számla már össze van kapcsolva egy szolgáltatóval"
+      all_accounts_already_linked: "Minden IndexaCapital számla már össze van kapcsolva"
+      api_error: "API hiba: %{message}"
+      balance_label: "Egyenleg:"
+      cancel: "Mégse"
+      cancel_button: "Mégse"
+      configure_name_in_provider: "Nem importálható — kérlek állítsd be a számla nevét az IndexaCapital-ban"
+      connect_hint: "Csatlakoztass egy IndexaCapital számlát az automatikus szinkronizálás engedélyezéséhez."
+      description: "Válassz egy IndexaCapital számlát, amelyet ehhez a számlához szeretnél kapcsolni. A tranzakciók automatikusan szinkronizálásra és deduplikálásra kerülnek."
+      header: "Összekapcsolás az IndexaCapital-lal"
+      link_account: "Számla összekapcsolása"
+      link_button: "Ez a számla összekapcsolása"
+      linking_to: "Összekapcsolás:"
+      no_account_specified: "Nem lett megadva számla"
+      no_accounts: "Nem találhatók nem összekapcsolt IndexaCapital számlák."
+      no_accounts_found: "Nem találhatók IndexaCapital számlák. Kérlek ellenőrizd a hitelesítő adataidat."
+      no_api_key: "Az IndexaCapital hitelesítő adatok nincsenek beállítva. Kérlek állítsd be őket a Beállításokban."
+      no_credentials_configured: "Kérlek előbb állítsd be az IndexaCapital hitelesítő adataidat a Szolgáltatói beállításokban."
+      no_name_placeholder: "(Nincs név)"
+      settings_link: "Szolgáltatói beállítások megnyitása"
+      subtitle: "Válassz egy IndexaCapital számlát"
+      title: "%{account_name} összekapcsolása az IndexaCapital-lal"
+
+    link_existing_account:
+      account_already_linked: "Ez a számla már össze van kapcsolva egy szolgáltatóval"
+      api_error: "API hiba: %{message}"
+      invalid_account_name: "Nem lehet összekapcsolni üres nevű számlát"
+      provider_account_already_linked: "Ez az IndexaCapital számla már össze van kapcsolva egy másik számlával"
+      provider_account_not_found: "Nem található az IndexaCapital számla"
+      missing_parameters: "Hiányzó kötelező paraméterek"
+      no_api_key: "Nem találhatók az IndexaCapital hitelesítő adatok. Kérlek állítsd be őket a Szolgáltatói beállításokban."
+      success: "%{account_name} sikeresen összekapcsolva az IndexaCapital-lal"
+
+    setup_accounts:
+      account_type_label: "Számla típusa:"
+      accounts_count:
+        one: "%{count} elérhető számla"
+        other: "%{count} elérhető számla"
+      all_accounts_linked: "Minden IndexaCapital számlád már be van állítva."
+      api_error: "API hiba: %{message}"
+      creating: "Számlák létrehozása..."
+      fetch_failed: "Nem sikerült lekérni a számlákat"
+      import_selected: "Kiválasztott számlák importálása"
+      instructions: "Válaszd ki az IndexaCapital-ból importálni kívánt számlákat. Több számlát is választhatsz."
+      no_accounts: "Nem találhatók nem összekapcsolt számlák ebből az IndexaCapital kapcsolatból."
+      no_accounts_to_setup: "Nincs beállítandó számla"
+      no_api_key: "Az IndexaCapital hitelesítő adatok nincsenek beállítva. Kérlek ellenőrizd a kapcsolati beállításaidat."
+      select_all: "Összes kijelölése"
+      account_types:
+        skip: "Számla kihagyása"
+        depository: "Folyó- vagy megtakarítási számla"
+        credit_card: "Hitelkártya"
+        investment: "Befektetési számla"
+        crypto: "Kriptovaluta számla"
+        loan: "Hitel vagy jelzálog"
+        other_asset: "Egyéb eszköz"
+      subtype_labels:
+        depository: "Számla altípusa:"
+        credit_card: ""
+        investment: "Befektetés típusa:"
+        crypto: ""
+        loan: "Hitel típusa:"
+        other_asset: ""
+      subtype_messages:
+        credit_card: "A hitelkártyák automatikusan hitelkártya számlákként lesznek beállítva."
+        other_asset: "Az egyéb eszközökhöz nincs szükség további beállításokra."
+        crypto: "A kriptovaluta számlák pozíciók és tranzakciók nyomon követésére lesznek beállítva."
+      subtypes:
+        depository:
+          checking: "Folyószámla"
+          savings: "Megtakarítási számla"
+          hsa: "Egészségügyi megtakarítási számla"
+          cd: "Lekötött betét"
+          money_market: "Pénzpiaci számla"
+        investment:
+          brokerage: "Brókeri számla"
+          pension: "Nyugdíjalap"
+          retirement: "Nyugdíj-megtakarítás"
+          "401k": "401(k)"
+          roth_401k: "Roth 401(k)"
+          "403b": "403(b)"
+          tsp: "Thrift Savings Plan"
+          "529_plan": "529 Terv"
+          hsa: "Egészségügyi megtakarítási számla"
+          mutual_fund: "Befektetési alap"
+          ira: "Hagyományos IRA"
+          roth_ira: "Roth IRA"
+          angel: "Angyal befektető"
+        loan:
+          mortgage: "Jelzálog"
+          student: "Diákhitel"
+          auto: "Autóhitel"
+          other: "Egyéb hitel"
+      balance: "Egyenleg"
+      cancel: "Mégse"
+      choose_account_type: "Válaszd ki a megfelelő számlatípust minden IndexaCapital számlához:"
+      create_accounts: "Számlák létrehozása"
+      creating_accounts: "Számlák létrehozása..."
+      historical_data_range: "Előzmények időtartama:"
+      subtitle: "Válaszd ki az importált számlák helyes típusait"
+      sync_start_date_help: "Válaszd ki, milyen messzire szeretnél visszamenni a tranzakciós előzmények szinkronizálásában."
+      sync_start_date_label: "Tranzakciók szinkronizálásának kezdete:"
+      title: "IndexaCapital számlák beállítása"
+
+    complete_account_setup:
+      all_skipped: "Minden számla ki lett hagyva. Nem jött létre számla."
+      creation_failed: "Nem sikerült létrehozni a számlákat: %{error}"
+      no_accounts: "Nincs beállítandó számla."
+      success: "%{count} számla sikeresen létrehozva."
+
+    preload_accounts:
+      no_credentials_configured: "Kérlek előbb állítsd be az IndexaCapital hitelesítő adataidat a Szolgáltatói beállításokban."

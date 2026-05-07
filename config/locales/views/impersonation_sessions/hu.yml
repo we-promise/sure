@@ -1,0 +1,15 @@
+---
+hu:
+  impersonation_sessions:
+    approve:
+      success: Kérés jóváhagyva
+    complete:
+      success: Munkamenet befejezve
+    create:
+      success: Kérés elküldve a felhasználónak. Jóváhagyásra vár.
+    join:
+      success: Csatlakozás a munkamenethez megtörtént
+    leave:
+      success: Kilépés a munkamenetből megtörtént
+    reject:
+      success: Kérés elutasítva

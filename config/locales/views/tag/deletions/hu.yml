@@ -1,0 +1,13 @@
+---
+hu:
+  tag:
+    deletions:
+      create:
+        deleted: Címke törölve
+      new:
+        delete_and_leave_uncategorized: '"%{tag_name}" törlése'
+        delete_and_recategorize: '"%{tag_name}" törlése és új címke hozzárendelése'
+        delete_tag: Törlöd a címkét?
+        explanation: "%{tag_name} el lesz távolítva a tranzakciókból és egyéb, címkézett elemekből. Ahelyett, hogy címke nélkül maradnának, alább új címkét is hozzárendelhetsz."
+        replacement_tag_prompt: Válassz címkét
+        tag: Címke
