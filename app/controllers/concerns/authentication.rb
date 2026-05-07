@@ -83,8 +83,6 @@ module Authentication
 
     def remote_user_proxy_trusted?
       trusted = Rails.application.config.remote_user_trusted_proxies
-      return true if trusted.nil?
-
       peer_ip = IPAddr.new(request.env["REMOTE_ADDR"])
       trusted.any? { |range| range.include?(peer_ip) }
     rescue IPAddr::Error
