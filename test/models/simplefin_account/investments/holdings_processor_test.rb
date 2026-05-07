@@ -67,7 +67,7 @@ class SimplefinAccount::Investments::HoldingsProcessorTest < ActiveSupport::Test
     assert_equal "value", source_key
   end
 
-  test "total cost source with zero quantity does not divide" do
+  test "total cost source with zero quantity returns nil" do
     payload = {
       "total_cost" => "9588.61"
     }
@@ -75,7 +75,19 @@ class SimplefinAccount::Investments::HoldingsProcessorTest < ActiveSupport::Test
     raw_cost_basis, source_key = @processor.send(:cost_basis_from, payload)
     cost_basis = @processor.send(:normalize_cost_basis, raw_cost_basis, BigDecimal("0"), source_key)
 
-    assert_equal BigDecimal("9588.61"), cost_basis
+    assert_nil cost_basis
+    assert_equal "total_cost", source_key
+  end
+
+  test "total cost source with nil quantity returns nil" do
+    payload = {
+      "total_cost" => "9588.61"
+    }
+
+    raw_cost_basis, source_key = @processor.send(:cost_basis_from, payload)
+    cost_basis = @processor.send(:normalize_cost_basis, raw_cost_basis, nil, source_key)
+
+    assert_nil cost_basis
     assert_equal "total_cost", source_key
   end
 

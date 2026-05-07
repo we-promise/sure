@@ -128,7 +128,9 @@ class SimplefinAccount::Investments::HoldingsProcessor
     def normalize_cost_basis(raw_cost_basis, qty, source_key)
       return nil if raw_cost_basis.nil?
 
-      if qty.to_d.positive? && %w[total_cost value].include?(source_key)
+      if %w[total_cost value].include?(source_key)
+        return nil unless qty.to_d.positive?
+
         raw_cost_basis / qty
       else
         raw_cost_basis
