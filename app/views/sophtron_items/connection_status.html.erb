@@ -30,7 +30,7 @@
                   <%= @timed_out ? t(".timeout") : t(".waiting") %>
                 </p>
                 <p class="text-xs text-secondary">
-                  <%= t(".attempt", attempt: @poll_attempt, max: @max_poll_attempts) %>
+                  <%= t(".attempt", attempt: (@poll_attempt || 1), max: @max_poll_attempts) %>
                 </p>
               </div>
             </div>

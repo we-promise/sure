@@ -541,10 +541,10 @@ Rails.application.routes.draw do
       post :link_accounts
       get :select_existing_account
       post :link_existing_account
-      post :connect_institution
     end
 
     member do
+      post :connect_institution
       post :sync
       post :balances
       get :connection_status

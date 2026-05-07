@@ -1434,7 +1434,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_07_120000) do
     t.string "current_job_id"
     t.string "job_status"
     t.jsonb "raw_job_payload"
-    t.string "last_connection_error"
+    t.text "last_connection_error"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["customer_id"], name: "index_sophtron_items_on_customer_id"

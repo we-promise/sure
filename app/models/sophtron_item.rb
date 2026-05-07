@@ -289,7 +289,11 @@ class SophtronItem < ApplicationRecord
   private
 
     def find_matching_customer(customers)
-      Array(customers).find do |customer|
+      customers = Array(customers)
+
+      customers.find do |customer|
+        extract_customer_id(customer).to_s == generated_customer_unique_id
+      end || customers.find do |customer|
         extract_customer_name(customer).to_s == generated_customer_name
       end
     end

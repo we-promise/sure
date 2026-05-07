@@ -7,7 +7,8 @@ class SophtronItemsController < ApplicationController
   MAX_SECURITY_ANSWER_LENGTH = 256
 
   before_action :set_sophtron_item, only: [
-    :show, :edit, :update, :destroy, :sync, :connection_status, :submit_mfa,
+    :show, :edit, :update, :destroy, :connect_institution, :sync,
+    :connection_status, :submit_mfa,
     :setup_accounts, :complete_account_setup
   ]
   before_action :require_admin!, only: [
@@ -83,11 +84,7 @@ class SophtronItemsController < ApplicationController
   end
 
   def connect_institution
-    item = configured_sophtron_item
-    unless item
-      redirect_to settings_providers_path, alert: t("sophtron_items.select_accounts.no_credentials_configured")
-      return
-    end
+    item = @sophtron_item
 
     if params[:institution_id].blank? || params[:bank_username].blank? || params[:bank_password].blank?
       redirect_to select_accounts_sophtron_items_path(connection_context_params), alert: t(".missing_parameters")

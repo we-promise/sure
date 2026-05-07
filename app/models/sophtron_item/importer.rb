@@ -147,6 +147,7 @@ class SophtronItem::Importer
           transactions_imported += result[:transactions_count]
         else
           transactions_failed += 1
+          break if result[:requires_update]
         end
       rescue => e
         transactions_failed += 1
@@ -326,8 +327,10 @@ class SophtronItem::Importer
 
         { success: true, transactions_count: transactions_count }
       rescue Provider::Sophtron::Error => e
+        requires_update = e.error_type.in?([ :unauthorized, :access_forbidden ])
+        sophtron_item.update!(status: :requires_update) if requires_update
         Rails.logger.error "SophtronItem::Importer - Sophtron API error for account #{sophtron_account.id}: #{e.message}"
-        { success: false, transactions_count: 0, error: e.message }
+        { success: false, transactions_count: 0, error: e.message, requires_update: requires_update }
       rescue JSON::ParserError => e
         Rails.logger.error "SophtronItem::Importer - Failed to parse transaction response for account #{sophtron_account.id}: #{e.message}"
         { success: false, transactions_count: 0, error: "Failed to parse response" }
@@ -352,7 +355,7 @@ class SophtronItem::Importer
           current_job_id: job_id,
           last_connection_error: "Sophtron refresh requires MFA"
         )
-        return { success: false, transactions_count: 0, error: "Sophtron refresh requires MFA" }
+        return { success: false, transactions_count: 0, error: "Sophtron refresh requires MFA", requires_update: true }
       end
 
       if Provider::Sophtron.job_failed?(job)
@@ -361,9 +364,10 @@ class SophtronItem::Importer
 
       nil
     rescue Provider::Sophtron::Error => e
-      sophtron_item.update!(status: :requires_update) if e.error_type.in?([ :unauthorized, :access_forbidden ])
+      requires_update = e.error_type.in?([ :unauthorized, :access_forbidden ])
+      sophtron_item.update!(status: :requires_update) if requires_update
       Rails.logger.error "SophtronItem::Importer - Sophtron API error refreshing account #{sophtron_account.id}: #{e.message}"
-      { success: false, transactions_count: 0, error: e.message }
+      { success: false, transactions_count: 0, error: e.message, requires_update: requires_update }
     end
 
     # Determines the appropriate start date for fetching transactions.

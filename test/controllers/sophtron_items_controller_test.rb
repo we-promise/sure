@@ -87,7 +87,7 @@ class SophtronItemsControllerTest < ActionDispatch::IntegrationTest
     SophtronItem.any_instance.stubs(:ensure_customer!).returns("cust-1")
     SophtronItem.any_instance.stubs(:sophtron_provider).returns(provider)
 
-    post connect_institution_sophtron_items_url, params: {
+    post connect_institution_sophtron_item_url(@item), params: {
       institution_id: "inst-1",
       institution_name: "Example Bank",
       bank_username: "bank-user",
