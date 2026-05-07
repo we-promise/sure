@@ -49,6 +49,7 @@ export default class extends Controller {
           `turbo-frame#${this.element.id}`,
         );
         if (newFrame) {
+          this.syncPollingAttributes(newFrame);
           this.element.innerHTML = newFrame.innerHTML;
 
           // Check if we should stop polling (no more pending/processing exports)
@@ -59,6 +60,25 @@ export default class extends Controller {
       }
     } catch (error) {
       console.error("Polling error:", error);
+    }
+  }
+
+  syncPollingAttributes(newFrame) {
+    const pollingUrl = newFrame.getAttribute("data-polling-url-value");
+    const pollingInterval = newFrame.getAttribute(
+      "data-polling-interval-value",
+    );
+
+    if (pollingUrl) {
+      this.element.setAttribute("data-polling-url-value", pollingUrl);
+    } else {
+      this.element.removeAttribute("data-polling-url-value");
+    }
+
+    if (pollingInterval) {
+      this.element.setAttribute("data-polling-interval-value", pollingInterval);
+    } else {
+      this.element.removeAttribute("data-polling-interval-value");
     }
   }
 }

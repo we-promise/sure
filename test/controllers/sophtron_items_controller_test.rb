@@ -169,6 +169,7 @@ class SophtronItemsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_includes response.body, "poll_attempt=4"
+    assert_select "a[href*='poll_attempt=4']"
   end
 
   test "connection_status treats Sophtron timeout as failed" do

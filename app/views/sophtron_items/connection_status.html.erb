@@ -28,7 +28,7 @@
 
         <div class="flex gap-2 justify-end">
           <%= link_to t(".check_again"),
-              connection_status_sophtron_item_path(@sophtron_item, accountable_type: @accountable_type, account_id: @account_id, return_to: @return_to),
+              connection_status_sophtron_item_path(@sophtron_item, accountable_type: @accountable_type, account_id: @account_id, return_to: @return_to, poll_attempt: @next_poll_attempt || @poll_attempt.to_i + 1),
               class: "inline-flex items-center gap-1 px-3 py-2 text-sm font-medium rounded-lg text-inverse bg-inverse hover:bg-inverse-hover",
               data: { turbo_frame: "modal" } %>
         </div>
