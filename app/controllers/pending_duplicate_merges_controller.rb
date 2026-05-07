@@ -33,21 +33,8 @@ class PendingDuplicateMergesController < ApplicationController
       return
     end
 
-    # Store the merge suggestion and immediately execute it
-    @transaction.update!(
-      extra: (@transaction.extra || {}).merge(
-        "potential_posted_match" => {
-          "entry_id" => posted_entry.id,
-          "reason" => "manual_match",
-          "posted_amount" => posted_entry.amount.to_s,
-          "confidence" => "high",  # Manual matches are high confidence
-          "detected_at" => Date.current.to_s
-        }
-      )
-    )
-
-    # Immediately merge
-    if @transaction.merge_with_duplicate!
+    # Immediately merge (metadata is stored atomically inside the model)
+    if @transaction.merge_with_duplicate!(posted_entry: posted_entry)
       redirect_back_or_to transactions_path, notice: "Pending transaction merged with posted transaction"
     else
       redirect_back_or_to transactions_path, alert: "Could not merge transactions"

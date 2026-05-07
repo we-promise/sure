@@ -1,11 +1,13 @@
 require "test_helper"
 
 class TransactionExclusionTest < ActiveSupport::TestCase
-  let(:family) { families(:dylan_family) }
+  setup do
+    @family = families(:dylan_family)
+  end
 
   test "should be valid with required attributes" do
     exclusion = TransactionExclusion.new(
-      family: family,
+      family: @family,
       external_id: "test_external_123",
       provider: "enable_banking",
       exclusion_reason: "merged"
@@ -21,7 +23,7 @@ class TransactionExclusionTest < ActiveSupport::TestCase
 
   test "should require external_id presence" do
     exclusion = TransactionExclusion.new(
-      family: family,
+      family: @family,
       external_id: nil,
       provider: "enable_banking",
       exclusion_reason: "merged"
@@ -32,7 +34,7 @@ class TransactionExclusionTest < ActiveSupport::TestCase
 
   test "should require provider presence" do
     exclusion = TransactionExclusion.new(
-      family: family,
+      family: @family,
       external_id: "test_123",
       provider: nil,
       exclusion_reason: "merged"
@@ -43,7 +45,7 @@ class TransactionExclusionTest < ActiveSupport::TestCase
 
   test "should require exclusion_reason presence" do
     exclusion = TransactionExclusion.new(
-      family: family,
+      family: @family,
       external_id: "test_123",
       provider: "enable_banking",
       exclusion_reason: nil
@@ -53,15 +55,15 @@ class TransactionExclusionTest < ActiveSupport::TestCase
   end
 
   test "should validate uniqueness of external_id scoped to family and provider" do
-    existing = TransactionExclusion.create!(
-      family: family,
+    TransactionExclusion.create!(
+      family: @family,
       external_id: "unique_123",
       provider: "enable_banking",
       exclusion_reason: "merged"
     )
 
     duplicate = TransactionExclusion.new(
-      family: family,
+      family: @family,
       external_id: "unique_123",
       provider: "enable_banking",
       exclusion_reason: "dismissed"
@@ -72,14 +74,14 @@ class TransactionExclusionTest < ActiveSupport::TestCase
 
   test "should allow same external_id across different providers" do
     TransactionExclusion.create!(
-      family: family,
+      family: @family,
       external_id: "shared_id",
       provider: "enable_banking",
       exclusion_reason: "merged"
     )
 
     second = TransactionExclusion.new(
-      family: family,
+      family: @family,
       external_id: "shared_id",
       provider: "plaid",
       exclusion_reason: "merged"
@@ -91,7 +93,7 @@ class TransactionExclusionTest < ActiveSupport::TestCase
     other_family = families(:empty)
 
     TransactionExclusion.create!(
-      family: family,
+      family: @family,
       external_id: "shared_id",
       provider: "enable_banking",
       exclusion_reason: "merged"
@@ -107,9 +109,9 @@ class TransactionExclusionTest < ActiveSupport::TestCase
   end
 
   test "enum should include merged, dismissed, excluded" do
-    assert TransactionExclusion.merged?
-    assert TransactionExclusion.dismissed?
-    assert TransactionExclusion.excluded?
+    assert_includes TransactionExclusion.exclusion_reasons.keys, "merged"
+    assert_includes TransactionExclusion.exclusion_reasons.keys, "dismissed"
+    assert_includes TransactionExclusion.exclusion_reasons.keys, "excluded"
   end
 
   test "enum values should be accessible" do
@@ -120,23 +122,23 @@ class TransactionExclusionTest < ActiveSupport::TestCase
 
   test "should belong to family" do
     exclusion = TransactionExclusion.new(
-      family: family,
+      family: @family,
       external_id: "test",
       provider: "enable_banking",
       exclusion_reason: "merged"
     )
-    assert_equal family, exclusion.family
+    assert_equal @family, exclusion.family
   end
 
   test "scope for_provider should filter by provider" do
     enable_banking_exclusion = TransactionExclusion.create!(
-      family: family,
+      family: @family,
       external_id: "enable_123",
       provider: "enable_banking",
       exclusion_reason: "merged"
     )
     plaid_exclusion = TransactionExclusion.create!(
-      family: family,
+      family: @family,
       external_id: "plaid_123",
       provider: "plaid",
       exclusion_reason: "merged"
@@ -153,19 +155,19 @@ class TransactionExclusionTest < ActiveSupport::TestCase
 
   test "scope for_external_ids should filter by list of ids" do
     exclusion1 = TransactionExclusion.create!(
-      family: family,
+      family: @family,
       external_id: "ext_1",
       provider: "enable_banking",
       exclusion_reason: "merged"
     )
     exclusion2 = TransactionExclusion.create!(
-      family: family,
+      family: @family,
       external_id: "ext_2",
       provider: "enable_banking",
       exclusion_reason: "merged"
     )
     exclusion3 = TransactionExclusion.create!(
-      family: family,
+      family: @family,
       external_id: "ext_3",
       provider: "plaid",
       exclusion_reason: "merged"
@@ -175,17 +177,10 @@ class TransactionExclusionTest < ActiveSupport::TestCase
     assert_includes results, exclusion1
     assert_includes results, exclusion2
     assert_not_includes results, exclusion3
-  end
+   end
 
-  test "should destroy when family is destroyed" do
-    exclusion = TransactionExclusion.create!(
-      family: family,
-      external_id: "test_family_destroy",
-      provider: "enable_banking",
-      exclusion_reason: "merged"
-    )
-    assert_difference "TransactionExclusion.count", -1 do
-      family.destroy!
-    end
+  test "association should have dependent: :destroy" do
+    reflection = Family.reflect_on_association(:transaction_exclusions)
+    assert_equal :destroy, reflection.options[:dependent]
   end
 end

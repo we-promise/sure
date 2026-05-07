@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_05_03_180000) do
+ActiveRecord::Schema[7.2].define(version: 2026_05_07_212748) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -1248,7 +1248,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_03_180000) do
     t.index ["kind"], name: "index_securities_on_kind"
     t.index ["price_provider", "offline_reason"], name: "index_securities_on_price_provider_and_offline_reason"
     t.index ["price_provider"], name: "index_securities_on_price_provider"
-    t.check_constraint "kind::text = ANY (ARRAY['standard'::character varying, 'cash'::character varying]::text[])", name: "chk_securities_kind"
+    t.check_constraint "kind::text = ANY (ARRAY['standard'::character varying::text, 'cash'::character varying::text])", name: "chk_securities_kind"
   end
 
   create_table "security_prices", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1405,8 +1405,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_03_180000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["account_id"], name: "index_sophtron_accounts_on_account_id"
-    t.index ["sophtron_item_id"], name: "index_sophtron_accounts_on_sophtron_item_id"
     t.index ["sophtron_item_id", "account_id"], name: "idx_unique_sophtron_accounts_per_item", unique: true
+    t.index ["sophtron_item_id"], name: "index_sophtron_accounts_on_sophtron_item_id"
   end
 
   create_table "sophtron_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1546,6 +1546,17 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_03_180000) do
     t.index ["security_id"], name: "index_trades_on_security_id"
   end
 
+  create_table "transaction_exclusions", force: :cascade do |t|
+    t.uuid "family_id", null: false
+    t.string "external_id", null: false
+    t.string "provider", null: false
+    t.string "exclusion_reason", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["family_id", "external_id", "provider"], name: "index_transaction_exclusions_unique", unique: true
+    t.index ["family_id", "provider", "exclusion_reason"], name: "idx_on_family_id_provider_exclusion_reason_6d8d54d021"
+  end
+
   create_table "transactions", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
@@ -1648,9 +1659,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_03_180000) do
     t.datetime "last_used_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.check_constraint "sign_count >= 0", name: "chk_webauthn_credentials_sign_count_non_negative"
     t.index ["credential_id"], name: "index_webauthn_credentials_on_credential_id", unique: true
     t.index ["user_id"], name: "index_webauthn_credentials_on_user_id"
+    t.check_constraint "sign_count >= 0", name: "chk_webauthn_credentials_sign_count_non_negative"
   end
 
   add_foreign_key "account_providers", "accounts", on_delete: :cascade
@@ -1741,6 +1752,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_03_180000) do
   add_foreign_key "tags", "families"
   add_foreign_key "tool_calls", "messages"
   add_foreign_key "trades", "securities"
+  add_foreign_key "transaction_exclusions", "families"
   add_foreign_key "transactions", "categories", on_delete: :nullify
   add_foreign_key "transactions", "merchants"
   add_foreign_key "transfers", "transactions", column: "inflow_transaction_id", on_delete: :cascade

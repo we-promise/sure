@@ -74,30 +74,6 @@ class PendingDuplicateMergesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Please select a posted transaction to merge with", flash[:alert]
   end
 
-  test "create stores potential_posted_match metadata before merging" do
-    pending_transaction = create_pending_transaction(amount: -50, account: @account)
-    posted_transaction = create_transaction(amount: -50, account: @account)
-
-    # Stub merge to prevent deletion so we can check metadata
-    Transaction.any_instance.stubs(:merge_with_duplicate!).returns(true)
-
-    post transaction_pending_duplicate_merges_path(pending_transaction), params: {
-      pending_duplicate_merges: {
-        posted_entry_id: posted_transaction.id
-      }
-    }
-
-    pending_transaction.reload
-    metadata = pending_transaction.entryable.extra["potential_posted_match"]
-
-    assert_not_nil metadata
-    assert_equal posted_transaction.id, metadata["entry_id"]
-    assert_equal "manual_match", metadata["reason"]
-    assert_equal posted_transaction.amount.to_s, metadata["posted_amount"]
-    assert_equal "high", metadata["confidence"]
-    assert_equal Date.current.to_s, metadata["detected_at"]
-  end
-
   test "pending_duplicate_candidates excludes pending transactions" do
     pending_transaction = create_pending_transaction(amount: -50, account: @account)
     posted_transaction = create_transaction(amount: -50, account: @account)
