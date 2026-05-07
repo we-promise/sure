@@ -251,20 +251,22 @@ class SophtronItemsController < ApplicationController
         next
       end
 
-      account = Account.create_and_sync(
-        {
-          family: Current.family,
-          name: account_data[:account_name],
-          balance: 0,
-          currency: account_data[:currency] || "USD",
-          accountable_type: accountable_type,
-          accountable_attributes: {}
-        },
-        skip_initial_sync: true
-      )
+      ActiveRecord::Base.transaction do
+        account = Account.create_and_sync(
+          {
+            family: Current.family,
+            name: account_data[:account_name],
+            balance: 0,
+            currency: account_data[:currency] || "USD",
+            accountable_type: accountable_type,
+            accountable_attributes: {}
+          },
+          skip_initial_sync: true
+        )
 
-      AccountProvider.create!(account: account, provider: sophtron_account)
-      created_accounts << account
+        AccountProvider.create!(account: account, provider: sophtron_account)
+        created_accounts << account
+      end
     end
 
     item.start_initial_load_later if created_accounts.any?
