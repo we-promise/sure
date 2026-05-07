@@ -157,13 +157,14 @@ class SophtronItemsController < ApplicationController
       prepare_connection_status_context
       render :mfa, layout: false
     elsif Provider::Sophtron.job_failed?(job)
+      failure_message = sophtron_connection_failure_message(job)
       @sophtron_item.update!(
         current_job_id: nil,
         user_institution_id: nil,
-        last_connection_error: t(".failed"),
+        last_connection_error: failure_message,
         status: :requires_update
       )
-      render_api_error(t(".failed"), accounts_path)
+      render_institution_connection_error(failure_message)
     else
       if @poll_attempt >= connection_status_max_polls
         render_connection_timeout
@@ -701,9 +702,32 @@ class SophtronItemsController < ApplicationController
       ].any? { |value| value.to_s.include?("prefetch") }
     end
 
-    def render_api_error(message, return_path)
+    def render_institution_connection_error(message)
+      render_api_error(
+        message,
+        select_accounts_sophtron_items_path(connection_context_params.except(:post_mfa, "post_mfa")),
+        heading: t("sophtron_items.api_error.institution_unable_to_connect"),
+        issue_keys: %w[bank_credentials verification_code institution_timeout unsupported_mfa],
+        action_label: t("sophtron_items.api_error.try_again")
+      )
+    end
+
+    def sophtron_connection_failure_message(job)
+      last_status = job.with_indifferent_access[:LastStatus].to_s
+      return t("sophtron_items.connection_status.failed_timeout") if last_status.match?(/timeout/i)
+
+      t("sophtron_items.connection_status.failed")
+    end
+
+    def render_api_error(message, return_path, heading: nil, issue_keys: nil, action_label: nil)
       render partial: "sophtron_items/api_error",
-             locals: { error_message: message, return_path: return_path },
+             locals: {
+               error_message: message,
+               return_path: return_path,
+               heading: heading,
+               issue_keys: issue_keys,
+               action_label: action_label
+             },
              layout: false
     end
 

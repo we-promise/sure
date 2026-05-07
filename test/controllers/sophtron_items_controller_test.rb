@@ -277,7 +277,12 @@ class SophtronItemsControllerTest < ActionDispatch::IntegrationTest
     get connection_status_sophtron_item_url(@item)
 
     assert_response :success
-    assert_includes response.body, "Sophtron could not complete this connection."
+    assert_includes response.body, "Sophtron timed out while the institution was completing login."
+    assert_includes response.body, "Unable to connect to the institution"
+    assert_includes response.body, "Bank credentials"
+    assert_includes response.body, "Verification code"
+    assert_includes response.body, "Try connecting again"
+    assert_not_includes response.body, "Check Provider Settings"
     @item.reload
     assert_equal "requires_update", @item.status
     assert_nil @item.current_job_id
