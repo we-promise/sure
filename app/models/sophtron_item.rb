@@ -160,7 +160,7 @@ class SophtronItem < ApplicationRecord
   end
 
   def connected_to_institution?
-    user_institution_id.present?
+    user_institution_id.present? && good?
   end
 
   def upsert_job_snapshot!(job_payload)

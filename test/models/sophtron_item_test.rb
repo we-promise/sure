@@ -40,4 +40,10 @@ class SophtronItemTest < ActiveSupport::TestCase
     assert_equal "cust-new", @item.ensure_customer!(provider: provider)
     assert_equal "cust-new", @item.customer_id
   end
+
+  test "connected_to_institution ignores failed connection attempts" do
+    @item.update!(user_institution_id: "ui-1", status: :requires_update)
+
+    assert_not @item.connected_to_institution?
+  end
 end

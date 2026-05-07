@@ -155,6 +155,7 @@ class SophtronItemsController < ApplicationController
     elsif Provider::Sophtron.job_failed?(job)
       @sophtron_item.update!(
         current_job_id: nil,
+        user_institution_id: nil,
         last_connection_error: t(".failed"),
         status: :requires_update
       )

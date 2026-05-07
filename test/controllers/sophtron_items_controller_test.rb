@@ -20,6 +20,16 @@ class SophtronItemsControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, "Connect Sophtron Institution"
   end
 
+  test "select_accounts renders institution search after failed connection attempt" do
+    @item.update!(user_institution_id: "ui-1", status: :requires_update)
+    SophtronItem.any_instance.stubs(:ensure_customer!).returns("cust-1")
+
+    get select_accounts_sophtron_items_url
+
+    assert_response :success
+    assert_includes response.body, "Connect Sophtron Institution"
+  end
+
   test "member cannot access Sophtron account selection" do
     sign_in users(:family_member)
 
@@ -160,6 +170,7 @@ class SophtronItemsControllerTest < ActionDispatch::IntegrationTest
     @item.reload
     assert_equal "requires_update", @item.status
     assert_nil @item.current_job_id
+    assert_nil @item.user_institution_id
   end
 
   test "submit_mfa sends security answer as array string" do
