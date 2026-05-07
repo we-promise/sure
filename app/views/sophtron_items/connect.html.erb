@@ -9,57 +9,66 @@
           <%= hidden_field_tag :account_id, @account&.id %>
           <%= hidden_field_tag :return_to, @return_to %>
 
-          <div>
-            <%= label_tag :institution_name, t(".institution_search_label"), class: "block text-sm font-medium text-primary mb-1" %>
-            <%= text_field_tag :institution_name, @institution_search, placeholder: t(".institution_search_placeholder"), autocomplete: "off", class: "form-field__input" %>
+          <div class="form-field">
+            <div class="form-field__body">
+              <%= label_tag :institution_name, t(".institution_search_label"), class: "form-field__label" %>
+              <%= text_field_tag :institution_name, @institution_search, placeholder: t(".institution_search_placeholder"), autocomplete: "off", class: "form-field__input" %>
+            </div>
           </div>
 
           <div class="flex justify-end">
-            <%= submit_tag t(".search"), class: "inline-flex items-center gap-1 px-3 py-2 text-sm font-medium rounded-lg text-inverse bg-inverse hover:bg-inverse-hover" %>
+            <%= render DS::Button.new(text: t(".search"), type: "submit") %>
           </div>
         <% end %>
 
         <% if @institution_search.present? && @institution_search.length < 2 %>
-          <p class="text-sm text-secondary"><%= t(".search_too_short") %></p>
+          <p class="rounded-lg border border-primary bg-container-inset p-3 text-sm text-secondary"><%= t(".search_too_short") %></p>
         <% elsif @institution_search.present? && @institutions.empty? %>
-          <p class="text-sm text-secondary"><%= t(".no_institutions") %></p>
+          <p class="rounded-lg border border-primary bg-container-inset p-3 text-sm text-secondary"><%= t(".no_institutions") %></p>
         <% end %>
 
-        <% @institutions.each do |institution| %>
-          <% institution = institution.with_indifferent_access %>
-          <%= form_with url: connect_institution_sophtron_items_path, method: :post, class: "space-y-3 p-3 border border-primary rounded-lg", data: { turbo_frame: "modal" } do %>
-            <%= hidden_field_tag :institution_id, institution[:InstitutionID] || institution[:institution_id] %>
-            <%= hidden_field_tag :institution_name, institution[:InstitutionName] || institution[:institution_name] %>
-            <%= hidden_field_tag :accountable_type, @accountable_type %>
-            <%= hidden_field_tag :account_id, @account&.id %>
-            <%= hidden_field_tag :return_to, @return_to %>
+        <div class="space-y-3">
+          <% @institutions.each do |institution| %>
+            <% institution = institution.with_indifferent_access %>
+            <%= form_with url: connect_institution_sophtron_items_path, method: :post, class: "space-y-3 rounded-lg border border-primary bg-container-inset p-3", data: { turbo_frame: "modal" } do %>
+              <%= hidden_field_tag :institution_id, institution[:InstitutionID] || institution[:institution_id] %>
+              <%= hidden_field_tag :institution_name, institution[:InstitutionName] || institution[:institution_name] %>
+              <%= hidden_field_tag :accountable_type, @accountable_type %>
+              <%= hidden_field_tag :account_id, @account&.id %>
+              <%= hidden_field_tag :return_to, @return_to %>
 
-            <div>
-              <p class="text-sm font-medium text-primary"><%= institution[:InstitutionName] || institution[:institution_name] %></p>
-            </div>
+              <h3 class="text-sm font-medium text-primary"><%= institution[:InstitutionName] || institution[:institution_name] %></h3>
 
-            <div class="grid grid-cols-1 gap-3">
-              <div>
-                <%= label_tag :bank_username, t(".username"), class: "block text-sm font-medium text-primary mb-1" %>
-                <%= text_field_tag :bank_username, nil, autocomplete: "username", class: "form-field__input" %>
+              <div class="grid grid-cols-1 gap-3">
+                <div class="form-field">
+                  <div class="form-field__body">
+                    <%= label_tag :bank_username, t(".username"), class: "form-field__label" %>
+                    <%= text_field_tag :bank_username, nil, autocomplete: "username", class: "form-field__input" %>
+                  </div>
+                </div>
+
+                <div class="form-field">
+                  <div class="form-field__body">
+                    <%= label_tag :bank_password, t(".password"), class: "form-field__label" %>
+                    <%= password_field_tag :bank_password, nil, autocomplete: "current-password", class: "form-field__input" %>
+                  </div>
+                </div>
               </div>
 
-              <div>
-                <%= label_tag :bank_password, t(".password"), class: "block text-sm font-medium text-primary mb-1" %>
-                <%= password_field_tag :bank_password, nil, autocomplete: "current-password", class: "form-field__input" %>
+              <div class="flex justify-end">
+                <%= render DS::Button.new(text: t(".connect"), type: "submit") %>
               </div>
-            </div>
-
-            <div class="flex justify-end">
-              <%= submit_tag t(".connect"), class: "inline-flex items-center gap-1 px-3 py-2 text-sm font-medium rounded-lg text-inverse bg-inverse hover:bg-inverse-hover" %>
-            </div>
+            <% end %>
           <% end %>
-        <% end %>
+        </div>
 
         <div class="flex justify-end pt-2">
-          <%= link_to t(".cancel"), @return_to || accounts_path,
-              class: "inline-flex items-center gap-1 px-3 py-2 text-sm font-medium rounded-lg text-primary button-bg-secondary hover:button-bg-secondary-hover",
-              data: { turbo_frame: "_top", action: "click->DS--dialog#close" } %>
+          <%= render DS::Link.new(
+                text: t(".cancel"),
+                href: @return_to || accounts_path,
+                variant: :secondary,
+                data: { turbo_frame: "_top", action: "click->DS--dialog#close" }
+              ) %>
         </div>
       </div>
     <% end %>
