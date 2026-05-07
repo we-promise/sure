@@ -1,6 +1,8 @@
 require "test_helper"
 
 class SophtronItem::ImporterTest < ActiveSupport::TestCase
+  include ActiveJob::TestHelper
+
   setup do
     @family = families(:dylan_family)
     @item = @family.sophtron_items.create!(
@@ -150,7 +152,7 @@ class SophtronItem::ImporterTest < ActiveSupport::TestCase
       total: 1
     })
     provider.expects(:refresh_account).with("acct-1").returns({ JobID: "refresh-job" })
-    provider.expects(:poll_job).with("refresh-job").returns({ LastStatus: "Completed" })
+    provider.expects(:get_job_information).with("refresh-job").returns({ LastStatus: "Completed" })
     provider.expects(:get_account_transactions).with("acct-1", start_date: anything).returns({
       transactions: [
         {
@@ -198,7 +200,7 @@ class SophtronItem::ImporterTest < ActiveSupport::TestCase
       total: 1
     })
     provider.expects(:refresh_account).with("acct-1").returns({ JobID: "refresh-job" })
-    provider.expects(:poll_job).with("refresh-job").returns({ LastStatus: "Completed" })
+    provider.expects(:get_job_information).with("refresh-job").returns({ LastStatus: "Completed" })
     provider.expects(:get_account_transactions).with("acct-1", start_date: anything).returns({
       transactions: [
         {
@@ -245,7 +247,7 @@ class SophtronItem::ImporterTest < ActiveSupport::TestCase
       total: 1
     })
     provider.expects(:refresh_account).with("acct-1").returns({ JobID: "refresh-job" })
-    provider.expects(:poll_job).with("refresh-job").returns({
+    provider.expects(:get_job_information).with("refresh-job").returns({
       SecurityQuestion: [ "Question?" ].to_json,
       LastStatus: "Waiting"
     })
@@ -255,5 +257,42 @@ class SophtronItem::ImporterTest < ActiveSupport::TestCase
     assert_not result[:success]
     assert_equal "requires_update", @item.reload.status
     assert_equal "refresh-job", @item.current_job_id
+  end
+
+  test "refresh job still running enqueues poll job without fetching transactions" do
+    account = accounts(:depository)
+    sophtron_account = @item.sophtron_accounts.create!(
+      account_id: "acct-1",
+      name: "Checking",
+      currency: "USD",
+      balance: 100,
+      raw_transactions_payload: [ { id: "existing-tx" } ]
+    )
+    AccountProvider.create!(account: account, provider: sophtron_account)
+
+    provider = mock
+    provider.expects(:get_accounts).with("ui-1").returns({
+      accounts: [
+        {
+          account_id: "acct-1",
+          account_name: "Checking",
+          balance: "100.00",
+          balance_currency: "USD",
+          currency: "USD"
+        }.with_indifferent_access
+      ],
+      total: 1
+    })
+    provider.expects(:refresh_account).with("acct-1").returns({ JobID: "refresh-job" })
+    provider.expects(:get_job_information).with("refresh-job").returns({ LastStatus: "Started" })
+    provider.expects(:get_account_transactions).never
+
+    assert_enqueued_with(job: SophtronRefreshPollJob) do
+      result = SophtronItem::Importer.new(@item, sophtron_provider: provider).import
+
+      assert result[:success]
+      assert_equal 0, result[:transactions_imported]
+      assert_equal 0, result[:transactions_failed]
+    end
   end
 end

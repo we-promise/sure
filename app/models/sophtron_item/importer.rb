@@ -168,6 +168,10 @@ class SophtronItem::Importer
     }
   end
 
+  def import_transactions_after_refresh(sophtron_account)
+    fetch_and_store_transactions(sophtron_account, refresh: false)
+  end
+
   private
 
     def fetch_accounts_data
@@ -265,14 +269,14 @@ class SophtronItem::Importer
     #   - :success [Boolean] Whether the fetch was successful
     #   - :transactions_count [Integer] Number of transactions fetched
     #   - :error [String, nil] Error message if failed
-    def fetch_and_store_transactions(sophtron_account)
+    def fetch_and_store_transactions(sophtron_account, refresh: true)
       start_date = determine_sync_start_date(sophtron_account)
       Rails.logger.info "SophtronItem::Importer - Fetching transactions for account #{sophtron_account.account_id} from #{start_date}"
 
       begin
-        unless initial_transaction_fetch?(sophtron_account)
+        if refresh && !initial_transaction_fetch?(sophtron_account)
           refresh_result = refresh_account_before_transaction_fetch(sophtron_account)
-          return refresh_result if refresh_result.present? && refresh_result[:success] == false
+          return refresh_result if refresh_result.present?
         end
 
         # Fetch transactions
@@ -354,7 +358,7 @@ class SophtronItem::Importer
       job_id = refresh_response.with_indifferent_access[:JobID] || refresh_response.with_indifferent_access[:job_id]
       return nil if job_id.blank?
 
-      job = Provider::Sophtron.response_data!(sophtron_provider.poll_job(job_id))
+      job = Provider::Sophtron.response_data!(sophtron_provider.get_job_information(job_id))
       sophtron_item.upsert_job_snapshot!(job)
 
       if Provider::Sophtron.job_requires_input?(job)
@@ -368,6 +372,16 @@ class SophtronItem::Importer
 
       if Provider::Sophtron.job_failed?(job)
         return { success: false, transactions_count: 0, error: "Sophtron refresh failed" }
+      end
+
+      unless Provider::Sophtron.job_success?(job) || Provider::Sophtron.job_completed?(job)
+        SophtronRefreshPollJob.set(wait: SophtronRefreshPollJob::POLL_INTERVAL).perform_later(
+          sophtron_account,
+          job_id: job_id,
+          sync: sync
+        )
+
+        return { success: true, transactions_count: 0, refresh_pending: true }
       end
 
       nil

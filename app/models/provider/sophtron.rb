@@ -280,21 +280,8 @@ class Provider::Sophtron < Provider
     end
   end
 
-  def poll_job(job_id, max_attempts: 60, interval: 4)
-    with_provider_response do
-      result = nil
-      max_attempts.times do |attempt|
-        job = fetch_job_information(job_id)
-        if self.class.job_success?(job) || self.class.job_completed?(job) || self.class.job_failed?(job) || self.class.job_requires_input?(job)
-          result = job
-          break
-        end
-
-        sleep interval if interval.to_f.positive? && attempt < max_attempts - 1
-      end
-
-      result || raise(Error.new("Sophtron job did not complete before the polling timeout", :timeout))
-    end
+  def poll_job(job_id, **)
+    get_job_information(job_id)
   end
 
   private
