@@ -1,5 +1,6 @@
 class SophtronItemsController < ApplicationController
   CONNECTION_STATUS_MAX_POLLS = 3
+  POST_MFA_CONNECTION_STATUS_MAX_POLLS = 15
   CONNECTION_STATUS_POLL_INTERVAL_MS = 4_000
 
   before_action :set_sophtron_item, only: [
@@ -135,7 +136,7 @@ class SophtronItemsController < ApplicationController
     end
 
     @poll_attempt = requested_poll_attempt
-    if @poll_attempt > CONNECTION_STATUS_MAX_POLLS
+    if @poll_attempt > connection_status_max_polls
       render_connection_timeout
       return
     end
@@ -151,6 +152,10 @@ class SophtronItemsController < ApplicationController
         status: :good
       )
       render_account_selection(@sophtron_item, force_refresh: true)
+    elsif Provider::Sophtron.job_requires_input?(job)
+      @challenge = build_mfa_challenge(job)
+      prepare_connection_status_context
+      render :mfa, layout: false
     elsif Provider::Sophtron.job_failed?(job)
       @sophtron_item.update!(
         current_job_id: nil,
@@ -159,12 +164,8 @@ class SophtronItemsController < ApplicationController
         status: :requires_update
       )
       render_api_error(t(".failed"), accounts_path)
-    elsif Provider::Sophtron.job_requires_input?(job)
-      @challenge = build_mfa_challenge(job)
-      prepare_connection_status_context
-      render :mfa, layout: false
     else
-      if @poll_attempt >= CONNECTION_STATUS_MAX_POLLS
+      if @poll_attempt >= connection_status_max_polls
         render_connection_timeout
         return
       end
@@ -198,7 +199,7 @@ class SophtronItemsController < ApplicationController
       return
     end
 
-    redirect_to connection_status_sophtron_item_path(@sophtron_item, connection_context_params)
+    redirect_to connection_status_sophtron_item_path(@sophtron_item, connection_context_params.merge(post_mfa: true))
   rescue Provider::Sophtron::Error => e
     Rails.logger.error("Sophtron MFA submission error: #{e.message}")
     redirect_to connection_status_sophtron_item_path(@sophtron_item, connection_context_params), alert: t(".api_error", message: e.message)
@@ -658,7 +659,8 @@ class SophtronItemsController < ApplicationController
       @account_id = params[:account_id]
       @return_to = safe_return_to_path
       @poll_interval_ms = CONNECTION_STATUS_POLL_INTERVAL_MS
-      @max_poll_attempts = CONNECTION_STATUS_MAX_POLLS
+      @post_mfa_polling = post_mfa_polling?
+      @max_poll_attempts = connection_status_max_polls
     end
 
     def requested_poll_attempt
@@ -667,7 +669,7 @@ class SophtronItemsController < ApplicationController
     end
 
     def render_connection_timeout
-      @poll_attempt = CONNECTION_STATUS_MAX_POLLS if @poll_attempt.to_i > CONNECTION_STATUS_MAX_POLLS
+      @poll_attempt = connection_status_max_polls if @poll_attempt.to_i > connection_status_max_polls
       @poll_attempt = 1 if @poll_attempt.to_i < 1
       @sophtron_item.update!(
         last_connection_error: t(".timeout"),
@@ -676,6 +678,19 @@ class SophtronItemsController < ApplicationController
       prepare_connection_status_context
       @timed_out = true
       render :connection_status, layout: false
+    end
+
+    def connection_status_max_polls
+      post_mfa_polling? ? POST_MFA_CONNECTION_STATUS_MAX_POLLS : CONNECTION_STATUS_MAX_POLLS
+    end
+
+    def post_mfa_polling?
+      ActiveModel::Type::Boolean.new.cast(params[:post_mfa]) || post_mfa_job_payload?(@sophtron_item.raw_job_payload)
+    end
+
+    def post_mfa_job_payload?(job_payload)
+      job = (job_payload || {}).with_indifferent_access
+      job[:TokenInput].present? || %w[TokenInput TransactionTable].include?(job[:LastStep].to_s)
     end
 
     def prefetch_request?
@@ -763,7 +778,7 @@ class SophtronItemsController < ApplicationController
       {
         security_questions: Provider::Sophtron.parse_json_array(job[:SecurityQuestion] || job[:security_question]),
         token_methods: Provider::Sophtron.parse_json_array(job[:TokenMethod] || job[:token_method]),
-        token_sent: job[:TokenSentFlag] == true || job[:token_sent_flag] == true,
+        token_sent: Provider::Sophtron.job_token_input_required?(job),
         token_read: job[:TokenRead] || job[:token_read],
         captcha_image: job[:CaptchaImage] || job[:captcha_image]
       }
@@ -794,7 +809,7 @@ class SophtronItemsController < ApplicationController
     end
 
     def connection_context_params
-      params.permit(:accountable_type, :account_id, :return_to).to_h.compact
+      params.permit(:accountable_type, :account_id, :return_to, :post_mfa).to_h.compact
     end
 
     def safe_return_to_path

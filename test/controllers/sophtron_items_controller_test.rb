@@ -143,6 +143,29 @@ class SophtronItemsControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, "What is your favorite color?"
   end
 
+  test "connection_status renders token challenge before failed timeout handling" do
+    @item.update!(user_institution_id: "ui-1", current_job_id: "job-1")
+    provider = mock
+    provider.expects(:get_job_information).with("job-1").returns({
+      AccountID: "00000000-0000-0000-0000-000000000000",
+      JobType: "AddAccounts",
+      JobID: "job-1",
+      SuccessFlag: false,
+      TokenSentFlag: true,
+      TokenInputName: "Token",
+      LastStep: "TokenInput",
+      LastStatus: "Timeout"
+    })
+
+    SophtronItem.any_instance.stubs(:sophtron_provider).returns(provider)
+
+    get connection_status_sophtron_item_url(@item)
+
+    assert_response :success
+    assert_includes response.body, "Verification code"
+    assert_not_includes response.body, "Sophtron could not complete this connection."
+  end
+
   test "connection_status times out after max UI polls" do
     @item.update!(user_institution_id: "ui-1", current_job_id: "job-1")
     provider = mock
@@ -183,6 +206,28 @@ class SophtronItemsControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, 'data-polling-frame-id-value="modal"'
     assert_includes response.body, 'data-turbo-prefetch="false"'
     assert_select "a[href*='poll_attempt=3']"
+  end
+
+  test "connection_status uses longer polling after mfa is submitted" do
+    @item.update!(user_institution_id: "ui-1", current_job_id: "job-1")
+    provider = mock
+    provider.expects(:get_job_information).with("job-1").returns({
+      AccountID: "00000000-0000-0000-0000-000000000000",
+      JobType: "AddAccounts",
+      JobID: "job-1",
+      TokenInput: "123456",
+      LastStep: "TransactionTable",
+      LastStatus: "Started"
+    })
+
+    SophtronItem.any_instance.stubs(:sophtron_provider).returns(provider)
+
+    get connection_status_sophtron_item_url(@item, poll_attempt: SophtronItemsController::CONNECTION_STATUS_MAX_POLLS, post_mfa: true)
+
+    assert_response :success
+    assert_includes response.body, "Attempt 3 of 15"
+    assert_includes response.body, "poll_attempt=4"
+    assert_not_includes response.body, "Sophtron did not finish connecting"
   end
 
   test "connection_status ignores browser prefetches" do
@@ -231,7 +276,22 @@ class SophtronItemsControllerTest < ActionDispatch::IntegrationTest
       security_answers: [ "blue" ]
     }
 
-    assert_redirected_to connection_status_sophtron_item_path(@item)
+    assert_redirected_to connection_status_sophtron_item_path(@item, post_mfa: true)
+  end
+
+  test "submit_mfa redirects to post mfa polling window" do
+    @item.update!(user_institution_id: "ui-1", current_job_id: "job-1")
+    provider = mock
+    provider.expects(:update_job_token_input).with("job-1", token_input: "123456").returns({})
+
+    SophtronItem.any_instance.stubs(:sophtron_provider).returns(provider)
+
+    post submit_mfa_sophtron_item_url(@item), params: {
+      mfa_type: "token_input",
+      token_input: "123456"
+    }
+
+    assert_redirected_to connection_status_sophtron_item_path(@item, post_mfa: true)
   end
 
   test "link_existing_account links manual account to sophtron account" do

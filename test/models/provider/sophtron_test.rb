@@ -85,6 +85,27 @@ class Provider::SophtronTest < ActiveSupport::TestCase
     assert Provider::Sophtron.job_failed?(job)
   end
 
+  test "classifies token input prompt as requiring input" do
+    job = {
+      TokenInputName: "Token",
+      LastStep: "TokenInput",
+      LastStatus: "Started"
+    }
+
+    assert Provider::Sophtron.job_requires_input?(job)
+  end
+
+  test "does not classify submitted token as requiring input" do
+    job = {
+      TokenInputName: "Token",
+      TokenInput: "123456",
+      LastStep: "TokenInput",
+      LastStatus: "Started"
+    }
+
+    assert_not Provider::Sophtron.job_requires_input?(job)
+  end
+
   test "submits security answers as JSON array string" do
     stub_request(:post, "https://api.sophtron.com/api/Job/UpdateJobSecurityAnswer")
       .with(body: { JobID: "job-1", SecurityAnswer: [ "blue" ].to_json }.to_json)

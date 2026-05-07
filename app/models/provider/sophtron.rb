@@ -74,12 +74,24 @@ class Provider::Sophtron < Provider
       job[:security_question].present? ||
       job[:TokenMethod].present? ||
       job[:token_method].present? ||
-      job[:TokenSentFlag] == true ||
-      job[:token_sent_flag] == true ||
+      job_token_input_required?(job) ||
       job[:TokenRead].present? ||
       job[:token_read].present? ||
       job[:CaptchaImage].present? ||
       job[:captcha_image].present?
+  end
+
+  def self.job_token_input_required?(job)
+    job = job.with_indifferent_access
+    token_input = job[:TokenInput] || job[:token_input]
+    token_input.blank? && (
+      job[:TokenSentFlag] == true ||
+      job[:token_sent_flag] == true ||
+      job[:TokenInputName].present? ||
+      job[:token_input_name].present? ||
+      job[:LastStep].to_s == "TokenInput" ||
+      job[:last_step].to_s == "TokenInput"
+    )
   end
 
   def self.parse_json_array(value)
