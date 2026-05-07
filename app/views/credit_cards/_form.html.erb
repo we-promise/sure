@@ -27,8 +27,7 @@
 
       <div class="flex items-center gap-2">
         <%= credit_card_form.date_field :expiration_date,
-                                      label: t("credit_cards.form.expiration_date"),
-                                      min: Date.current %>
+                                      label: t("credit_cards.form.expiration_date") %>
         <%= credit_card_form.number_field :annual_fee,
                                         label: t("credit_cards.form.annual_fee"),
                                         placeholder: t("credit_cards.form.annual_fee_placeholder"),
