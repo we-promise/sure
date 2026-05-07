@@ -66,7 +66,7 @@ class SophtronItem < ApplicationRecord
   #
   # @return [Hash] Import results with counts of accounts and transactions imported
   # @raise [StandardError] if the Sophtron provider is not configured
-  # @raise [Provider::Error] if the Sophtron API returns an error
+  # @raise [Provider::Sophtron::Error] if the Sophtron API returns an error
   def import_latest_sophtron_data
     provider = sophtron_provider
     unless provider
@@ -128,6 +128,48 @@ class SophtronItem < ApplicationRecord
     )
 
     save!
+  end
+
+  def ensure_customer!(provider: sophtron_provider)
+    return customer_id if customer_id.present?
+    raise Provider::Sophtron::Error.new("Sophtron provider is not configured", :configuration_error) unless provider
+
+    matching_customer = find_matching_customer(provider.list_customers)
+    customer_payload = matching_customer || provider.create_customer(
+      unique_id: generated_customer_unique_id,
+      name: generated_customer_name,
+      source: "Sure"
+    )
+
+    # Some Sophtron endpoints may return an empty body on success; re-list to find
+    # the customer we just created if the create response does not include an id.
+    if extract_customer_id(customer_payload).blank?
+      customer_payload = find_matching_customer(provider.list_customers)
+    end
+
+    extracted_customer_id = extract_customer_id(customer_payload)
+    raise Provider::Sophtron::Error.new("Sophtron customer response did not include CustomerID", :invalid_response) if extracted_customer_id.blank?
+
+    update!(
+      customer_id: extracted_customer_id,
+      customer_name: extract_customer_name(customer_payload).presence || generated_customer_name,
+      raw_customer_payload: customer_payload
+    )
+
+    customer_id
+  end
+
+  def connected_to_institution?
+    user_institution_id.present?
+  end
+
+  def upsert_job_snapshot!(job_payload)
+    job_payload = job_payload.with_indifferent_access
+
+    update!(
+      job_status: job_payload[:LastStatus] || job_payload[:last_status],
+      raw_job_payload: job_payload
+    )
   end
 
   def has_completed_initial_setup?
@@ -193,6 +235,36 @@ class SophtronItem < ApplicationRecord
   end
 
   def effective_base_url
-    base_url.presence || "https://api.sophtron.com/api/v2"
+    base_url.presence || Provider::Sophtron::DEFAULT_BASE_URL
   end
+
+  def generated_customer_unique_id
+    "sure-family-#{family.id}"
+  end
+
+  def generated_customer_name
+    "Sure family #{family.id}"
+  end
+
+  private
+
+    def find_matching_customer(customers)
+      Array(customers).find do |customer|
+        extract_customer_name(customer).to_s == generated_customer_name
+      end
+    end
+
+    def extract_customer_id(customer_payload)
+      return nil unless customer_payload.respond_to?(:with_indifferent_access)
+
+      customer_payload = customer_payload.with_indifferent_access
+      customer_payload[:CustomerID] || customer_payload[:customer_id] || customer_payload[:id]
+    end
+
+    def extract_customer_name(customer_payload)
+      return nil unless customer_payload.respond_to?(:with_indifferent_access)
+
+      customer_payload = customer_payload.with_indifferent_access
+      customer_payload[:CustomerName] || customer_payload[:customer_name] || customer_payload[:name]
+    end
 end

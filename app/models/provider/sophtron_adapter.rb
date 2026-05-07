@@ -45,7 +45,7 @@ class Provider::SophtronAdapter < Provider::Base
     return nil unless family.present?
 
     # Get family-specific credentials
-    sophtron_item = family.sophtron_items.where.not(user_id: nil, access_key: nil).first
+    sophtron_item = family.configured_sophtron_item
     return nil unless sophtron_item&.credentials_configured?
 
     Provider::Sophtron.new(
