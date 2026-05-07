@@ -14,15 +14,19 @@ require "set"
 # explicitly connected to Maybe Accounts). This allows users to selectively
 # import accounts of their choosing.
 class SophtronItem::Importer
-  attr_reader :sophtron_item, :sophtron_provider
+  INCREMENTAL_SYNC_BUFFER_DAYS = 60
+
+  attr_reader :sophtron_item, :sophtron_provider, :sync
 
   # Initializes a new importer.
   #
   # @param sophtron_item [SophtronItem] The Sophtron item to import data for
   # @param sophtron_provider [Provider::Sophtron] Configured Sophtron API client
-  def initialize(sophtron_item, sophtron_provider:)
+  # @param sync [Sync, nil] Optional sync record whose window should guide import scope
+  def initialize(sophtron_item, sophtron_provider:, sync: nil)
     @sophtron_item = sophtron_item
     @sophtron_provider = sophtron_provider
+    @sync = sync
   end
 
   # Performs the complete import process for this Sophtron item.
@@ -255,8 +259,10 @@ class SophtronItem::Importer
       Rails.logger.info "SophtronItem::Importer - Fetching transactions for account #{sophtron_account.account_id} from #{start_date}"
 
       begin
-        refresh_result = refresh_account_before_transaction_fetch(sophtron_account)
-        return refresh_result if refresh_result.present? && refresh_result[:success] == false
+        unless initial_transaction_fetch?(sophtron_account)
+          refresh_result = refresh_account_before_transaction_fetch(sophtron_account)
+          return refresh_result if refresh_result.present? && refresh_result[:success] == false
+        end
 
         # Fetch transactions
         transactions_data = sophtron_provider.get_account_transactions(
@@ -356,41 +362,36 @@ class SophtronItem::Importer
     # Determines the appropriate start date for fetching transactions.
     #
     # Logic:
-    # - For accounts with stored transactions: uses last sync date minus 60-day buffer
-    # - For new accounts: uses account creation date minus 60 days, capped at 120 days ago
+    # - For accounts with stored transactions: uses last sync date minus a buffer
+    # - For new accounts: uses the sync window or provider default initial lookback
     #
-    # This ensures we capture any late-arriving transactions while limiting
-    # the historical window for new accounts.
+    # This captures late-arriving transactions while keeping history bounded.
     #
     # @param sophtron_account [SophtronAccount] The account to determine start date for
     # @return [Date] The start date for transaction sync
     def determine_sync_start_date(sophtron_account)
-      configured_start = sophtron_item.sync_start_date&.to_time
-      max_history_start = 3.years.ago
+      configured_start = sync&.window_start_date || sophtron_item.sync_start_date&.to_date
+      max_history_start = SophtronItem::MAX_TRANSACTION_HISTORY_YEARS.years.ago.to_date
       floor_start = [ configured_start, max_history_start ].compact.max
-      # Check if this account has any stored transactions
-      # If not, treat it as a first sync for this account even if the item has been synced before
-      has_stored_transactions = sophtron_account.raw_transactions_payload.to_a.any?
 
-      if has_stored_transactions
+      if !initial_transaction_fetch?(sophtron_account)
         # Account has been synced before, use item-level logic with buffer
         # For subsequent syncs, fetch from last sync date with a buffer
         if sophtron_item.last_synced_at
-          [ sophtron_item.last_synced_at - 60.days, floor_start ].compact.max
+          [ sophtron_item.last_synced_at.to_date - INCREMENTAL_SYNC_BUFFER_DAYS, floor_start ].compact.max
         else
           # Fallback if item hasn't been synced but account has transactions
-          floor_start || 120.days.ago
+          floor_start || sophtron_item.initial_load_window_start_date
         end
       else
         # Account has no stored transactions - this is a first sync for this account
-        # Use account creation date or a generous historical window
-        account_baseline = sophtron_account.created_at || Time.current
-        first_sync_window = [ account_baseline - 60.days, floor_start || 120.days.ago ].max
-
-        # Use the more recent of: (account created - 60 days) or (120 days ago)
-        # This caps old accounts at 120 days while respecting recent account creation dates
-        first_sync_window
+        # Use the configured sync window if present, otherwise the provider's default initial lookback.
+        floor_start || sophtron_item.initial_load_window_start_date
       end
+    end
+
+    def initial_transaction_fetch?(sophtron_account)
+      sophtron_account.raw_transactions_payload.to_a.empty?
     end
 
     # Handles API errors and marks the item for re-authentication if needed.

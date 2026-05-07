@@ -93,6 +93,7 @@ en:
       token: Verification code
     submit_mfa:
       api_error: "Verification failed: %{message}"
+      invalid_security_answers: Security answers are missing or too long.
       unknown_challenge: Unknown Sophtron verification step.
     sophtron_item:
       accounts_need_setup: Accounts need setup

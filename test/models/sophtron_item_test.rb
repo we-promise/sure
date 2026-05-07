@@ -79,6 +79,14 @@ class SophtronItemTest < ActiveSupport::TestCase
     end
   end
 
+  test "start_initial_load_later seeds sync window for transaction import" do
+    @item.update!(sync_start_date: Date.new(2026, 1, 1))
+
+    @item.start_initial_load_later
+
+    assert_equal Date.new(2026, 1, 1), @item.syncs.ordered.first.window_start_date
+  end
+
   test "start_initial_load_later queues a follow-up when current sync is already running" do
     sync = @item.syncs.create!
     sync.start!

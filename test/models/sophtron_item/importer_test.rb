@@ -34,13 +34,60 @@ class SophtronItem::ImporterTest < ActiveSupport::TestCase
     assert_equal "acct-1", @item.sophtron_accounts.first.account_id
   end
 
-  test "marks item requires update when refresh job requires mfa" do
+  test "initial linked account import fetches transactions without starting a refresh job" do
     account = accounts(:depository)
     sophtron_account = @item.sophtron_accounts.create!(
       account_id: "acct-1",
       name: "Checking",
       currency: "USD",
       balance: 100
+    )
+    AccountProvider.create!(account: account, provider: sophtron_account)
+
+    provider = mock
+    provider.expects(:get_accounts).with("ui-1").returns({
+      accounts: [
+        {
+          account_id: "acct-1",
+          account_name: "Checking",
+          balance: "100.00",
+          balance_currency: "USD",
+          currency: "USD"
+        }.with_indifferent_access
+      ],
+      total: 1
+    })
+    provider.expects(:refresh_account).never
+    provider.expects(:get_account_transactions).with("acct-1", start_date: anything).returns({
+      transactions: [
+        {
+          id: "tx-1",
+          accountId: "acct-1",
+          amount: "-12.34",
+          currency: "USD",
+          date: "2026-05-01",
+          merchant: "Coffee Shop",
+          description: "Coffee Shop"
+        }.with_indifferent_access
+      ],
+      total: 1
+    })
+
+    result = SophtronItem::Importer.new(@item, sophtron_provider: provider).import
+
+    assert result[:success]
+    assert_equal 1, result[:transactions_imported]
+    assert_equal 1, sophtron_account.reload.raw_transactions_payload.count
+  end
+
+  test "marks item requires update when refresh job requires mfa" do
+    account = accounts(:depository)
+    sophtron_account = @item.sophtron_accounts.create!(
+      account_id: "acct-1",
+      name: "Checking",
+      currency: "USD",
+      balance: 100,
+      raw_transactions_payload: [ { id: "existing-tx" } ]
     )
     AccountProvider.create!(account: account, provider: sophtron_account)
 

@@ -14,6 +14,9 @@
 class SophtronItem < ApplicationRecord
   include Syncable, Provided, Unlinking
 
+  INITIAL_LOAD_LOOKBACK_DAYS = 120
+  MAX_TRANSACTION_HISTORY_YEARS = 3
+
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
 
   # Helper to detect if ActiveRecord Encryption is configured for this app.
@@ -67,14 +70,14 @@ class SophtronItem < ApplicationRecord
   # @return [Hash] Import results with counts of accounts and transactions imported
   # @raise [StandardError] if the Sophtron provider is not configured
   # @raise [Provider::Sophtron::Error] if the Sophtron API returns an error
-  def import_latest_sophtron_data
+  def import_latest_sophtron_data(sync: nil)
     provider = sophtron_provider
     unless provider
       Rails.logger.error "SophtronItem #{id} - Cannot import: Sophtron provider is not configured (missing API key)"
       raise StandardError.new("Sophtron provider is not configured")
     end
 
-    SophtronItem::Importer.new(self, sophtron_provider: provider).import
+    SophtronItem::Importer.new(self, sophtron_provider: provider, sync: sync).import
   rescue => e
     Rails.logger.error "SophtronItem #{id} - Failed to import data: #{e.message}"
     raise
@@ -125,11 +128,19 @@ class SophtronItem < ApplicationRecord
   def start_initial_load_later
     active_sync = syncs.visible.ordered.first
 
-    sync_later
+    sync_later(window_start_date: initial_load_window_start_date)
 
     return unless active_sync&.reload&.syncing?
 
     SophtronInitialLoadJob.set(wait: SophtronInitialLoadJob::RETRY_DELAY).perform_later(self)
+  end
+
+  def initial_load_window_start_date
+    configured_start = sync_start_date&.to_date
+    default_start = INITIAL_LOAD_LOOKBACK_DAYS.days.ago.to_date
+    max_history_start = MAX_TRANSACTION_HISTORY_YEARS.years.ago.to_date
+
+    [ configured_start || default_start, max_history_start ].max
   end
 
   def upsert_sophtron_snapshot!(accounts_snapshot)

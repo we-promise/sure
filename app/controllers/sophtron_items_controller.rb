@@ -3,6 +3,8 @@ class SophtronItemsController < ApplicationController
   LOGIN_PROGRESS_CONNECTION_STATUS_MAX_POLLS = 15
   POST_MFA_CONNECTION_STATUS_MAX_POLLS = 15
   CONNECTION_STATUS_POLL_INTERVAL_MS = 4_000
+  MAX_SECURITY_ANSWERS = 10
+  MAX_SECURITY_ANSWER_LENGTH = 256
 
   before_action :set_sophtron_item, only: [
     :show, :edit, :update, :destroy, :sync, :connection_status, :submit_mfa,
@@ -184,7 +186,13 @@ class SophtronItemsController < ApplicationController
 
     case params[:mfa_type]
     when "security_answer"
-      provider.update_job_security_answer(job_id, Array(params[:security_answers]).reject(&:blank?))
+      security_answers = normalized_security_answers
+      unless security_answers
+        redirect_to connection_status_sophtron_item_path(@sophtron_item, connection_context_params), alert: t(".invalid_security_answers")
+        return
+      end
+
+      provider.update_job_security_answer(job_id, security_answers)
     when "token_choice"
       provider.update_job_token_input(job_id, token_choice: params[:token_choice])
     when "token_input"
@@ -574,6 +582,20 @@ class SophtronItemsController < ApplicationController
 
     def configured_sophtron_item
       Current.family.configured_sophtron_item
+    end
+
+    def normalized_security_answers
+      raw_answers = Array(params[:security_answers]).flatten
+      return if raw_answers.size > MAX_SECURITY_ANSWERS
+      return if raw_answers.any? { |answer| answer.to_s.length > MAX_SECURITY_ANSWER_LENGTH }
+
+      answers = raw_answers.filter_map do |answer|
+        answer.to_s.strip.presence
+      end
+
+      return if answers.empty?
+
+      answers
     end
 
     def verify_and_provision_customer(item)

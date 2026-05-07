@@ -1,4 +1,6 @@
 <%= turbo_frame_tag "modal" do %>
+  <% safe_captcha_image = @challenge[:captcha_image].to_s.gsub(/[^A-Za-z0-9+\/=]/, "") %>
+
   <%= render DS::Dialog.new do |dialog| %>
     <% dialog.with_header(title: t(".title")) %>
 
@@ -66,14 +68,14 @@
               <%= render DS::Button.new(text: t(".phone_confirmed"), type: "submit") %>
             <% end %>
           </div>
-        <% elsif @challenge[:captcha_image].present? %>
+        <% elsif safe_captcha_image.present? %>
           <%= form_with url: submit_mfa_sophtron_item_path(@sophtron_item), method: :post, class: "space-y-3", data: { turbo_frame: "modal" } do %>
             <%= hidden_field_tag :mfa_type, "captcha" %>
             <%= hidden_field_tag :accountable_type, @accountable_type %>
             <%= hidden_field_tag :account_id, @account_id %>
             <%= hidden_field_tag :return_to, @return_to %>
             <div class="rounded-lg border border-primary bg-container-inset p-3">
-              <%= image_tag "data:image/png;base64,#{@challenge[:captcha_image]}", alt: t(".captcha_alt"), class: "max-w-full rounded-md" %>
+              <%= image_tag "data:image/png;base64,#{safe_captcha_image}", alt: t(".captcha_alt"), class: "max-w-full rounded-md" %>
             </div>
             <div class="form-field">
               <div class="form-field__body">

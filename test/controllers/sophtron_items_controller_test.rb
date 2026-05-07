@@ -100,6 +100,15 @@ class SophtronItemsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to connection_status_sophtron_item_path(@item)
   end
 
+  test "Sophtron bank credentials and mfa inputs are filtered from logs" do
+    filter_parameters = Rails.application.config.filter_parameters
+
+    assert_includes filter_parameters, :bank_username
+    assert_includes filter_parameters, :bank_password
+    assert_includes filter_parameters, :security_answers
+    assert_includes filter_parameters, :captcha_input
+  end
+
   test "create verifies credentials and persists provisioned customer id" do
     stub_request(:get, "https://api.sophtron.com/api/Institution/HealthCheckAuth")
       .to_return(status: 200, body: "")
@@ -141,6 +150,24 @@ class SophtronItemsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_includes response.body, "What is your favorite color?"
+  end
+
+  test "connection_status sanitizes captcha image before rendering data uri" do
+    @item.update!(user_institution_id: "ui-1", current_job_id: "job-1")
+    provider = mock
+    provider.expects(:get_job_information).with("job-1").returns({
+      CaptchaImage: "YWJj+/=\"><svg onload=alert(1)>",
+      LastStatus: "Waiting"
+    })
+
+    SophtronItem.any_instance.stubs(:sophtron_provider).returns(provider)
+
+    get connection_status_sophtron_item_url(@item)
+
+    assert_response :success
+    assert_includes response.body, "data:image/png;base64,YWJj+/=svgonload=alert1"
+    assert_not_includes response.body, "\"><svg"
+    assert_not_includes response.body, "<svg"
   end
 
   test "connection_status renders token challenge before failed timeout handling" do
@@ -419,6 +446,38 @@ class SophtronItemsControllerTest < ActionDispatch::IntegrationTest
     }
 
     assert_redirected_to connection_status_sophtron_item_path(@item, post_mfa: true)
+  end
+
+  test "submit_mfa rejects too many security answers" do
+    @item.update!(user_institution_id: "ui-1", current_job_id: "job-1")
+    provider = mock
+    provider.expects(:update_job_security_answer).never
+
+    SophtronItem.any_instance.stubs(:sophtron_provider).returns(provider)
+
+    post submit_mfa_sophtron_item_url(@item), params: {
+      mfa_type: "security_answer",
+      security_answers: Array.new(SophtronItemsController::MAX_SECURITY_ANSWERS + 1, "blue")
+    }
+
+    assert_redirected_to connection_status_sophtron_item_path(@item)
+    assert_equal "Security answers are missing or too long.", flash[:alert]
+  end
+
+  test "submit_mfa rejects oversized security answers" do
+    @item.update!(user_institution_id: "ui-1", current_job_id: "job-1")
+    provider = mock
+    provider.expects(:update_job_security_answer).never
+
+    SophtronItem.any_instance.stubs(:sophtron_provider).returns(provider)
+
+    post submit_mfa_sophtron_item_url(@item), params: {
+      mfa_type: "security_answer",
+      security_answers: [ "a" * (SophtronItemsController::MAX_SECURITY_ANSWER_LENGTH + 1) ]
+    }
+
+    assert_redirected_to connection_status_sophtron_item_path(@item)
+    assert_equal "Security answers are missing or too long.", flash[:alert]
   end
 
   test "submit_mfa redirects to post mfa polling window" do
