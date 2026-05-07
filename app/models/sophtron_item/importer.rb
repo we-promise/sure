@@ -53,8 +53,22 @@ class SophtronItem::Importer
   def import
     Rails.logger.info "SophtronItem::Importer - Starting import for item #{sophtron_item.id}"
     unless sophtron_item.user_institution_id.present?
-      Rails.logger.info "SophtronItem::Importer - Item #{sophtron_item.id} has no Sophtron UserInstitutionID yet"
-      return { success: true, accounts_updated: 0, accounts_created: 0, accounts_failed: 0, transactions_imported: 0, transactions_failed: 0 }
+      error_message = "Sophtron institution connection is incomplete"
+      Rails.logger.warn "SophtronItem::Importer - Item #{sophtron_item.id} has no Sophtron UserInstitutionID"
+      sophtron_item.update!(
+        status: :requires_update,
+        last_connection_error: error_message
+      )
+
+      return {
+        success: false,
+        error: error_message,
+        accounts_updated: 0,
+        accounts_created: 0,
+        accounts_failed: 0,
+        transactions_imported: 0,
+        transactions_failed: 0
+      }
     end
 
     # Step 1: Fetch all accounts from Sophtron

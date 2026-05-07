@@ -34,6 +34,28 @@ class SophtronItem::ImporterTest < ActiveSupport::TestCase
     assert_equal "acct-1", @item.sophtron_accounts.first.account_id
   end
 
+  test "missing user institution id fails import and marks item requires update" do
+    account = accounts(:depository)
+    sophtron_account = @item.sophtron_accounts.create!(
+      account_id: "acct-1",
+      name: "Checking",
+      currency: "USD",
+      balance: 100
+    )
+    AccountProvider.create!(account: account, provider: sophtron_account)
+    @item.update!(user_institution_id: nil, status: :good, last_connection_error: nil)
+
+    provider = mock
+    provider.expects(:get_accounts).never
+
+    result = SophtronItem::Importer.new(@item, sophtron_provider: provider).import
+
+    assert_not result[:success]
+    assert_equal "Sophtron institution connection is incomplete", result[:error]
+    assert_equal "requires_update", @item.reload.status
+    assert_equal "Sophtron institution connection is incomplete", @item.last_connection_error
+  end
+
   test "initial linked account import fetches transactions without starting a refresh job" do
     account = accounts(:depository)
     sophtron_account = @item.sophtron_accounts.create!(
