@@ -339,7 +339,7 @@ For day-to-day triage of stuck syncs, imports, and exports, prefer **Settings â†
 
 ## Reverse-proxy authentication
 
-Sure can be configured to trust a request header set by an upstream reverse proxy and use it to log a user in automatically (passwordless). This is intended to be used in conjunction with separate authorization software running in front of Sure.
+Sure can be configured to trust a request header set by an upstream reverse proxy and use it to log a user in automatically (passwordless). This is intended to be used in conjunction with separate authorization software running in front of Sure. Self-hosted only â€” managed deployments ignore the configuration.
 
 For more information and examples, see https://doc.traefik.io/traefik/middlewares/http/forwardauth/ or similar documentation for your HTTP proxy and authentication software.
 
