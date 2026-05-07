@@ -379,7 +379,7 @@ class SophtronItem::Importer
     def determine_sync_start_date(sophtron_account)
       configured_start = sync&.window_start_date || sophtron_item.sync_start_date&.to_date
       max_history_start = SophtronItem::MAX_TRANSACTION_HISTORY_YEARS.years.ago.to_date
-      floor_start = [ configured_start, max_history_start ].compact.max
+      floor_start = configured_start ? [ configured_start, max_history_start ].max : nil
 
       if !initial_transaction_fetch?(sophtron_account)
         # Account has been synced before, use item-level logic with buffer
