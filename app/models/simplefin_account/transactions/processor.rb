@@ -52,6 +52,9 @@ class SimplefinAccount::Transactions::Processor
 
   private
 
+    # TODO: When SimpleFIN category matching is wired up (SimplefinAccount::Transactions::CategoryMatcher
+    # does not exist yet and this method is currently unused), apply the same
+    # `account&.enable_category_matcher?` guard used in PlaidEntry::Processor#matched_category.
     def category_matcher
       @category_matcher ||= SimplefinAccount::Transactions::CategoryMatcher.new(family_categories)
     end

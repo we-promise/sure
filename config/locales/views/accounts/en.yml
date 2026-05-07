@@ -51,6 +51,8 @@ en:
       notes_label: Notes
       notes_placeholder: Store additional information like account numbers, sort codes, IBAN, routing numbers, etc.
       exclude_from_reports: Exclude from all reports
+      enable_category_matcher_label: Enable category matcher
+      enable_category_matcher_hint: When enabled, the provider's suggested category is applied to imported transactions. Disable to leave new transactions uncategorized.
     index:
       accounts: Accounts
       manual_accounts:
