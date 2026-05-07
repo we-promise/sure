@@ -278,6 +278,23 @@ class AccountStatementTest < ActiveSupport::TestCase
     end
   end
 
+  test "rejects empty csv and xlsx statement uploads" do
+    [
+      uploaded_file(filename: "empty.csv", content_type: "text/csv", content: ""),
+      uploaded_file(
+        filename: "empty.xlsx",
+        content_type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        content: ""
+      )
+    ].each do |file|
+      assert_no_difference "AccountStatement.count" do
+        assert_raises(AccountStatement::InvalidUploadError) do
+          AccountStatement.create_from_upload!(family: @family, account: @account, file: file)
+        end
+      end
+    end
+  end
+
   test "rejects declared oversized upload before reading content" do
     assert_raises(AccountStatement::InvalidUploadError) do
       AccountStatement.prepare_upload!(OversizedDeclaredUpload.new(original_filename: "oversized.csv"))
@@ -420,6 +437,25 @@ class AccountStatementTest < ActiveSupport::TestCase
       byte_size: 1,
       checksum: SecureRandom.base64(16),
       source: "provider_sync",
+      upload_status: "stored",
+      review_status: "unmatched"
+    }
+
+    assert_raises(ActiveRecord::StatementInvalid) do
+      AccountStatement.transaction(requires_new: true) do
+        AccountStatement.insert_all!([ attrs ], record_timestamps: true)
+      end
+    end
+  end
+
+  test "database constraints reject empty persisted statement byte sizes" do
+    attrs = {
+      family_id: @family.id,
+      filename: "empty.csv",
+      content_type: "text/csv",
+      byte_size: 0,
+      checksum: SecureRandom.base64(16),
+      source: "manual_upload",
       upload_status: "stored",
       review_status: "unmatched"
     }

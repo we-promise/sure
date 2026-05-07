@@ -46,7 +46,7 @@ class AccountStatement < ApplicationRecord
   before_validation :sync_review_status
 
   validates :filename, :content_type, :checksum, presence: true
-  validates :byte_size, presence: true, numericality: { greater_than_or_equal_to: 0, less_than_or_equal_to: MAX_FILE_SIZE }
+  validates :byte_size, presence: true, numericality: { greater_than: 0, less_than_or_equal_to: MAX_FILE_SIZE }
   validates :content_type, inclusion: { in: ALLOWED_CONTENT_TYPES }
   validates :content_sha256,
             format: { with: /\A[0-9a-f]{64}\z/ },
@@ -135,6 +135,7 @@ class AccountStatement < ApplicationRecord
       filename = file.original_filename.to_s
       content = read_upload_content!(file)
       byte_size = content.bytesize
+      raise InvalidUploadError if byte_size.zero?
 
       content_type = detected_content_type(content:, filename:, declared_content_type: file.content_type)
       raise InvalidUploadError unless allowed_upload?(filename:, content_type:)
@@ -431,7 +432,9 @@ class AccountStatement < ApplicationRecord
     end
 
     def original_file_constraints
-      if original_file.byte_size > MAX_FILE_SIZE
+      if original_file.byte_size.zero?
+        errors.add(:original_file, :blank)
+      elsif original_file.byte_size > MAX_FILE_SIZE
         errors.add(:original_file, :too_large, max_mb: MAX_FILE_SIZE / 1.megabyte)
       end
 

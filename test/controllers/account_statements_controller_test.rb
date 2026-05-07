@@ -166,6 +166,28 @@ class AccountStatementsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "rejects empty csv and xlsx statement uploads" do
+    [
+      uploaded_file(filename: "empty.csv", content_type: "text/csv", content: ""),
+      uploaded_file(
+        filename: "empty.xlsx",
+        content_type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        content: ""
+      )
+    ].each do |file|
+      assert_no_difference "AccountStatement.count" do
+        post account_statements_url, params: {
+          account_statement: {
+            files: [ file ]
+          }
+        }
+      end
+
+      assert_redirected_to account_statements_url
+      assert_equal I18n.t("account_statements.create.invalid_file_type"), flash[:alert]
+    end
+  end
+
   test "rejects oversized statement upload" do
     original_max_file_size = AccountStatement::MAX_FILE_SIZE
     silence_warnings { AccountStatement.const_set(:MAX_FILE_SIZE, 16) }

@@ -36,7 +36,7 @@ class CreateAccountStatements < ActiveRecord::Migration[7.2]
       t.index [ :suggested_account_id, :review_status ], name: "index_account_statements_on_suggested_account_review"
     end
 
-    add_check_constraint :account_statements, "byte_size >= 0", name: "chk_account_statements_byte_size_positive"
+    add_check_constraint :account_statements, "byte_size > 0", name: "chk_account_statements_byte_size_positive"
     add_check_constraint :account_statements,
                          "period_start_on IS NULL OR period_end_on IS NULL OR period_start_on <= period_end_on",
                          name: "chk_account_statements_period_order"
