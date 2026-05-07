@@ -109,7 +109,7 @@ class SophtronItemsController < ApplicationController
     end
 
     item.update!(
-      name: params[:institution_name].presence || item.name.presence || t("sophtron_items.defaults.name"),
+      name: item.name.presence || t("sophtron_items.defaults.name"),
       institution_id: params[:institution_id],
       institution_name: params[:institution_name],
       user_institution_id: user_institution_id,

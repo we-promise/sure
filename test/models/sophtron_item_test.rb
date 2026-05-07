@@ -69,6 +69,12 @@ class SophtronItemTest < ActiveSupport::TestCase
     assert_not @item.connected_to_institution?
   end
 
+  test "provider_display_name keeps accounts grouping provider-level" do
+    @item.update!(name: "Bank of America", institution_name: "Bank of America")
+
+    assert_equal "Sophtron Connection", @item.provider_display_name
+  end
+
   test "fetch_remote_accounts persists Sophtron account snapshots" do
     @item.update!(user_institution_id: "ui-1")
     provider = mock

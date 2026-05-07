@@ -300,6 +300,10 @@ class SophtronItem < ApplicationRecord
     institution_name.presence || institution_domain.presence || name
   end
 
+  def provider_display_name
+    I18n.t("sophtron_items.defaults.name", default: "Sophtron Connection")
+  end
+
   def connected_institutions
     # Get unique institutions from all accounts
     sophtron_accounts.includes(:account)

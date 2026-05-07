@@ -95,6 +95,8 @@ class SophtronItemsControllerTest < ActionDispatch::IntegrationTest
     }
 
     @item.reload
+    assert_equal "Sophtron", @item.name
+    assert_equal "Example Bank", @item.institution_name
     assert_equal "job-1", @item.current_job_id
     assert_equal "ui-1", @item.user_institution_id
     assert_redirected_to connection_status_sophtron_item_path(@item)
