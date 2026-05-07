@@ -139,6 +139,29 @@ class SophtronItemsControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, "poll_attempt=4"
   end
 
+  test "connection_status treats Sophtron timeout as failed" do
+    @item.update!(user_institution_id: "ui-1", current_job_id: "job-1")
+    provider = mock
+    provider.expects(:get_job_information).with("job-1").returns({
+      AccountID: "00000000-0000-0000-0000-000000000000",
+      JobType: "AddAccounts",
+      JobID: "job-1",
+      SuccessFlag: false,
+      LastStep: "LogInPanel",
+      LastStatus: "Timeout"
+    })
+
+    SophtronItem.any_instance.stubs(:sophtron_provider).returns(provider)
+
+    get connection_status_sophtron_item_url(@item)
+
+    assert_response :success
+    assert_includes response.body, "Sophtron could not complete this connection."
+    @item.reload
+    assert_equal "requires_update", @item.status
+    assert_nil @item.current_job_id
+  end
+
   test "submit_mfa sends security answer as array string" do
     @item.update!(user_institution_id: "ui-1", current_job_id: "job-1")
     provider = mock

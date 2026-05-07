@@ -8,6 +8,7 @@ class Provider::Sophtron < Provider
 
   DEFAULT_BASE_URL = "https://api.sophtron.com/api"
   USER_AGENT = "Sure Finance Sophtron Client"
+  FAILURE_JOB_STATUSES = %w[Completed Timeout Failed Failure Error].freeze
 
   headers "User-Agent" => USER_AGENT
   default_options.merge!(verify: true, ssl_verify_mode: OpenSSL::SSL::VERIFY_PEER, timeout: 120)
@@ -59,7 +60,12 @@ class Provider::Sophtron < Provider
     job = job.with_indifferent_access
     success_flag = job.key?(:SuccessFlag) ? job[:SuccessFlag] : job[:success_flag]
     last_status = job[:LastStatus] || job[:last_status]
-    success_flag == false && last_status.to_s == "Completed"
+    success_flag == false && failure_job_status?(last_status)
+  end
+
+  def self.failure_job_status?(last_status)
+    status = last_status.to_s
+    FAILURE_JOB_STATUSES.include?(status) || status.match?(/timeout|fail|error/i)
   end
 
   def self.job_requires_input?(job)

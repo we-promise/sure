@@ -75,6 +75,16 @@ class Provider::SophtronTest < ActiveSupport::TestCase
     assert_equal "ui-1", response[:UserInstitutionID]
   end
 
+  test "classifies Sophtron timeout job as failed" do
+    job = {
+      SuccessFlag: false,
+      LastStep: "LogInPanel",
+      LastStatus: "Timeout"
+    }
+
+    assert Provider::Sophtron.job_failed?(job)
+  end
+
   test "submits security answers as JSON array string" do
     stub_request(:post, "https://api.sophtron.com/api/Job/UpdateJobSecurityAnswer")
       .with(body: { JobID: "job-1", SecurityAnswer: [ "blue" ].to_json }.to_json)
