@@ -101,12 +101,18 @@ class SophtronItemsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "Sophtron bank credentials and mfa inputs are filtered from logs" do
-    filter_parameters = Rails.application.config.filter_parameters
+    parameter_filter = ActiveSupport::ParameterFilter.new(Rails.application.config.filter_parameters)
+    filtered_params = parameter_filter.filter(
+      bank_username: "bank-user",
+      bank_password: "bank-pass",
+      security_answers: [ "blue" ],
+      captcha_input: "captcha"
+    )
 
-    assert_includes filter_parameters, :bank_username
-    assert_includes filter_parameters, :bank_password
-    assert_includes filter_parameters, :security_answers
-    assert_includes filter_parameters, :captcha_input
+    assert_equal "[FILTERED]", filtered_params[:bank_username]
+    assert_equal "[FILTERED]", filtered_params[:bank_password]
+    assert_equal "[FILTERED]", filtered_params[:security_answers]
+    assert_equal "[FILTERED]", filtered_params[:captcha_input]
   end
 
   test "create verifies credentials and persists provisioned customer id" do
@@ -165,9 +171,9 @@ class SophtronItemsControllerTest < ActionDispatch::IntegrationTest
     get connection_status_sophtron_item_url(@item)
 
     assert_response :success
-    assert_includes response.body, "data:image/png;base64,YWJj+/=svgonload=alert1"
-    assert_not_includes response.body, "\"><svg"
-    assert_not_includes response.body, "<svg"
+    captcha_src = response.body[/src="data:image\/png;base64,([^"]+)"/, 1]
+    assert_equal "YWJj+/=", captcha_src
+    assert_no_match(/svg|onload|alert|[<>"\s]/i, captcha_src)
   end
 
   test "connection_status renders token challenge before failed timeout handling" do

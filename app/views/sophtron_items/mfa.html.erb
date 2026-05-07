@@ -1,5 +1,5 @@
 <%= turbo_frame_tag "modal" do %>
-  <% safe_captcha_image = @challenge[:captcha_image].to_s.gsub(/[^A-Za-z0-9+\/=]/, "") %>
+  <% safe_captcha_image = @challenge[:captcha_image].to_s.split(%r{[^A-Za-z0-9+/=\s]}, 2).first.to_s.gsub(/\s+/, "") %>
 
   <%= render DS::Dialog.new do |dialog| %>
     <% dialog.with_header(title: t(".title")) %>
