@@ -124,6 +124,11 @@ class SophtronItemsController < ApplicationController
   end
 
   def connection_status
+    if prefetch_request?
+      head :no_content
+      return
+    end
+
     if @sophtron_item.current_job_id.blank?
       redirect_to select_accounts_sophtron_items_path(connection_context_params)
       return
@@ -671,6 +676,14 @@ class SophtronItemsController < ApplicationController
       prepare_connection_status_context
       @timed_out = true
       render :connection_status, layout: false
+    end
+
+    def prefetch_request?
+      [
+        request.headers["X-Sec-Purpose"],
+        request.headers["Sec-Purpose"],
+        request.headers["Purpose"]
+      ].any? { |value| value.to_s.include?("prefetch") }
     end
 
     def render_api_error(message, return_path)

@@ -3,41 +3,44 @@
    else
      {
        controller: "polling",
+       polling_frame_id_value: "modal",
        polling_url_value: connection_status_sophtron_item_path(@sophtron_item, accountable_type: @accountable_type, account_id: @account_id, return_to: @return_to, poll_attempt: @next_poll_attempt),
        polling_interval_value: @poll_interval_ms
      }
    end %>
 <% check_again_attempt = @timed_out ? 1 : (@next_poll_attempt || @poll_attempt.to_i + 1) %>
 
-<%= turbo_frame_tag "modal", data: polling_data do %>
-  <%= render DS::Dialog.new do |dialog| %>
-    <% dialog.with_header(title: t(".title")) %>
+<%= turbo_frame_tag "modal" do %>
+  <%= tag.div(data: polling_data) do %>
+    <%= render DS::Dialog.new do |dialog| %>
+      <% dialog.with_header(title: t(".title")) %>
 
-    <% dialog.with_body do %>
-      <div class="space-y-4">
-        <% if @timed_out %>
-          <div class="flex items-center gap-2 text-secondary">
-            <%= icon "alert-circle", size: "sm" %>
-            <span><%= t(".timeout") %></span>
+      <% dialog.with_body do %>
+        <div class="space-y-4">
+          <% if @timed_out %>
+            <div class="flex items-center gap-2 text-secondary">
+              <%= icon "alert-circle", size: "sm" %>
+              <span><%= t(".timeout") %></span>
+            </div>
+          <% else %>
+            <div class="flex items-center gap-2 text-secondary">
+              <%= icon "loader", size: "sm", class: "animate-spin" %>
+              <span><%= t(".waiting") %></span>
+            </div>
+          <% end %>
+
+          <p class="text-sm text-secondary">
+            <%= t(".attempt", attempt: @poll_attempt, max: @max_poll_attempts) %>
+          </p>
+
+          <div class="flex gap-2 justify-end">
+            <%= link_to t(".check_again"),
+                connection_status_sophtron_item_path(@sophtron_item, accountable_type: @accountable_type, account_id: @account_id, return_to: @return_to, poll_attempt: check_again_attempt),
+                class: "inline-flex items-center gap-1 px-3 py-2 text-sm font-medium rounded-lg text-inverse bg-inverse hover:bg-inverse-hover",
+                data: { turbo_frame: "modal", turbo_prefetch: false } %>
           </div>
-        <% else %>
-          <div class="flex items-center gap-2 text-secondary">
-            <%= icon "loader", size: "sm", class: "animate-spin" %>
-            <span><%= t(".waiting") %></span>
-          </div>
-        <% end %>
-
-        <p class="text-sm text-secondary">
-          <%= t(".attempt", attempt: @poll_attempt, max: @max_poll_attempts) %>
-        </p>
-
-        <div class="flex gap-2 justify-end">
-          <%= link_to t(".check_again"),
-              connection_status_sophtron_item_path(@sophtron_item, accountable_type: @accountable_type, account_id: @account_id, return_to: @return_to, poll_attempt: check_again_attempt),
-              class: "inline-flex items-center gap-1 px-3 py-2 text-sm font-medium rounded-lg text-inverse bg-inverse hover:bg-inverse-hover",
-              data: { turbo_frame: "modal" } %>
         </div>
-      </div>
+      <% end %>
     <% end %>
   <% end %>
 <% end %>

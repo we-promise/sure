@@ -179,7 +179,20 @@ class SophtronItemsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_includes response.body, "Attempt 2 of 3"
     assert_includes response.body, "poll_attempt=3"
+    assert_includes response.body, 'data-controller="polling"'
+    assert_includes response.body, 'data-polling-frame-id-value="modal"'
+    assert_includes response.body, 'data-turbo-prefetch="false"'
     assert_select "a[href*='poll_attempt=3']"
+  end
+
+  test "connection_status ignores browser prefetches" do
+    @item.update!(user_institution_id: "ui-1", current_job_id: "job-1")
+    SophtronItem.any_instance.expects(:sophtron_provider).never
+
+    get connection_status_sophtron_item_url(@item, poll_attempt: 2), headers: { "X-Sec-Purpose" => "prefetch" }
+
+    assert_response :no_content
+    assert_nil @item.reload.job_status
   end
 
   test "connection_status treats Sophtron timeout as failed" do

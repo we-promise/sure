@@ -6,6 +6,7 @@ export default class extends Controller {
   static values = {
     url: String,
     interval: { type: Number, default: 3000 },
+    frameId: String,
   };
 
   connect() {
@@ -33,10 +34,16 @@ export default class extends Controller {
 
   async refresh() {
     try {
+      const frame = this.frameElement();
+      if (!frame) {
+        this.stopPolling();
+        return;
+      }
+
       const response = await fetch(this.urlValue, {
         headers: {
           Accept: "text/html",
-          "Turbo-Frame": this.element.id,
+          "Turbo-Frame": frame.id,
         },
       });
 
@@ -46,14 +53,19 @@ export default class extends Controller {
         template.innerHTML = html;
 
         const newFrame = template.content.querySelector(
-          `turbo-frame#${this.element.id}`,
+          `turbo-frame#${this.cssEscape(frame.id)}`,
         );
         if (newFrame) {
-          this.syncPollingAttributes(newFrame);
-          this.element.innerHTML = newFrame.innerHTML;
+          if (frame === this.element) {
+            this.syncPollingAttributes(newFrame);
+          }
+          frame.innerHTML = newFrame.innerHTML;
 
           // Check if we should stop polling (no more pending/processing exports)
-          if (!newFrame.hasAttribute("data-polling-url-value")) {
+          if (
+            frame === this.element &&
+            !newFrame.hasAttribute("data-polling-url-value")
+          ) {
             this.stopPolling();
           }
         }
@@ -61,6 +73,24 @@ export default class extends Controller {
     } catch (error) {
       console.error("Polling error:", error);
     }
+  }
+
+  frameElement() {
+    if (this.hasFrameIdValue) {
+      return document.getElementById(this.frameIdValue);
+    }
+
+    if (this.element.tagName.toLowerCase() === "turbo-frame") {
+      return this.element;
+    }
+
+    return this.element.closest("turbo-frame");
+  }
+
+  cssEscape(value) {
+    if (window.CSS?.escape) return CSS.escape(value);
+
+    return value.replaceAll('"', '\\"');
   }
 
   syncPollingAttributes(newFrame) {
