@@ -155,7 +155,7 @@ class AccountsTest < ApplicationSystemTestCase
       fill_in "Institution domain", with: updated_institution_domain
       fill_in "Notes", with: updated_notes
       click_button "Update Account"
-      assert_selector "h2", text: "Updated account name"
+      assert_selector "h3", text: "Updated account name"
 
       created_account.reload
       assert_equal updated_institution_name, created_account[:institution_name]
