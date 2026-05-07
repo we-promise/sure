@@ -22,6 +22,12 @@ class EnableBankingEntry::Processor
       return nil
     end
 
+    # Check exclusion registry to prevent re-import of merged/dismissed transactions
+    if excluded_from_sync?
+      Rails.logger.info "EnableBankingEntry::Processor - Skipping excluded transaction #{external_id}"
+      return nil
+    end
+
     begin
       import_adapter.import_transaction(
         external_id: external_id,
@@ -48,6 +54,15 @@ class EnableBankingEntry::Processor
   end
 
   private
+
+    def excluded_from_sync?
+      return false unless account&.family
+      TransactionExclusion.exists?(
+        family: account.family,
+        external_id: external_id,
+        provider: "enable_banking"
+      )
+    end
 
     attr_reader :enable_banking_transaction, :enable_banking_account
 

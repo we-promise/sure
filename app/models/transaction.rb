@@ -178,6 +178,8 @@ class Transaction < ApplicationRecord
 
   # Merge this pending transaction with its suggested posted match
   # This DELETES the pending entry since the posted version is canonical
+  # The posted entry's date and category are updated to match the pending entry's values
+  # The posted entry is marked as user_modified to prevent sync from overwriting changes
   def merge_with_duplicate!
     return false unless has_potential_duplicate?
 
@@ -186,6 +188,35 @@ class Transaction < ApplicationRecord
 
     pending_entry_id = entry.id
     pending_entry_name = entry.name
+    pending_entry_date = entry.date
+    external_id = entry.external_id
+
+    # Create exclusion record BEFORE deletion to prevent re-import on next sync
+    if external_id.present? && entry.account.present?
+      TransactionExclusion.create!(
+        family: entry.account.family,
+        external_id: external_id,
+        provider: "enable_banking",
+        exclusion_reason: "merged"
+      )
+    end
+
+    # Update the posted entry's date to the pending entry's date (pending dates are often more accurate for actual transaction time)
+    if posted_entry.date != pending_entry_date
+      posted_entry.update!(date: pending_entry_date)
+    end
+
+    # Copy category from pending to posted if pending has one and posted doesn't
+    pending_transaction = entry.entryable
+    posted_transaction = posted_entry.entryable
+    if pending_transaction.is_a?(Transaction) && posted_transaction.is_a?(Transaction)
+      if pending_transaction.category_id.present? && posted_transaction.category_id.blank?
+        posted_transaction.update!(category_id: pending_transaction.category_id)
+      end
+    end
+
+    # Mark the posted entry as user-modified to prevent sync from overwriting the date/category on future syncs
+    posted_entry.mark_user_modified!
 
     # Delete this pending entry completely (no need to keep it around)
     entry.destroy!
