@@ -1,5 +1,6 @@
 class SophtronItemsController < ApplicationController
   CONNECTION_STATUS_MAX_POLLS = 6
+  LOGIN_PROGRESS_CONNECTION_STATUS_MAX_POLLS = 15
   POST_MFA_CONNECTION_STATUS_MAX_POLLS = 15
   CONNECTION_STATUS_POLL_INTERVAL_MS = 4_000
 
@@ -682,7 +683,13 @@ class SophtronItemsController < ApplicationController
     end
 
     def connection_status_max_polls
-      post_mfa_polling? ? POST_MFA_CONNECTION_STATUS_MAX_POLLS : CONNECTION_STATUS_MAX_POLLS
+      if post_mfa_polling?
+        POST_MFA_CONNECTION_STATUS_MAX_POLLS
+      elsif login_progress_polling?
+        LOGIN_PROGRESS_CONNECTION_STATUS_MAX_POLLS
+      else
+        CONNECTION_STATUS_MAX_POLLS
+      end
     end
 
     def post_mfa_polling?
@@ -692,6 +699,18 @@ class SophtronItemsController < ApplicationController
     def post_mfa_job_payload?(job_payload)
       job = (job_payload || {}).with_indifferent_access
       job[:TokenInput].present? || %w[TokenInput TransactionTable].include?(job[:LastStep].to_s)
+    end
+
+    def login_progress_polling?
+      login_progress_job_payload?(@sophtron_item.raw_job_payload)
+    end
+
+    def login_progress_job_payload?(job_payload)
+      job = (job_payload || {}).with_indifferent_access
+      last_status = job[:LastStatus] || job[:last_status]
+      return false if Provider::Sophtron.failure_job_status?(last_status)
+
+      job[:LastStep].present? || job[:last_step].present? || last_status.present?
     end
 
     def prefetch_request?
