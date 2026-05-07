@@ -5,6 +5,8 @@ class CreditCard < ApplicationRecord
     "credit_card" => { short: "Credit Card", long: "Credit Card" }
   }.freeze
 
+  validate :expiration_date_not_in_past
+
   class << self
     def color
       "#F13636"
@@ -30,4 +32,13 @@ class CreditCard < ApplicationRecord
   def annual_fee_money
     annual_fee ? Money.new(annual_fee, account.currency) : nil
   end
+
+  private
+
+    def expiration_date_not_in_past
+      return if expiration_date.blank?
+      return if expiration_date >= Date.current
+
+      errors.add(:expiration_date, :greater_than_or_equal_to, count: Date.current)
+    end
 end
