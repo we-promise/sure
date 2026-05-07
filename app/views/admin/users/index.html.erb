@@ -95,7 +95,7 @@
                     <th class="px-4 py-2 text-right text-xs font-medium text-secondary uppercase"><%= t(".table.role") %></th>
                   </tr>
                 </thead>
-                <tbody class="divide-y divide-primary">
+                <tbody class="divide-y divide-alpha-black-200 theme-dark:divide-alpha-white-200">
                   <% users.each do |user| %>
                     <tr>
                       <td class="px-4 py-3">
@@ -137,7 +137,7 @@
                   <% end %>
                 </tbody>
                 <% if pending_invitations.any? %>
-                  <tbody class="divide-y divide-primary border-t border-dashed border-primary">
+                  <tbody class="divide-y divide-alpha-black-200 theme-dark:divide-alpha-white-200 border-t border-dashed border-primary">
                     <% pending_invitations.each do |invitation| %>
                       <tr class="bg-red-50/30 dark:bg-red-950/20">
                         <td class="px-4 py-3">

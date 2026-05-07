@@ -439,11 +439,16 @@ Rails.application.routes.draw do
 
       # Production API endpoints
       resources :accounts, only: [ :index, :show ]
-      resources :categories, only: [ :index, :show ]
-      resources :merchants, only: %i[index show]
+      resources :balances, only: [ :index, :show ]
+      resources :budgets, only: [ :index, :show ]
+      resources :budget_categories, only: [ :index, :show ]
+      resources :categories, only: [ :index, :show, :create ]
+      resources :merchants, only: [ :index, :show ]
       resources :rules, only: [ :index, :show ]
       resources :rule_runs, only: [ :index, :show ]
-      resources :tags, only: %i[index show create update destroy]
+      resources :securities, only: [ :index, :show ]
+      resources :security_prices, only: [ :index, :show ]
+      resources :tags, only: [ :index, :show, :create, :update, :destroy ]
 
       resources :transactions, only: [ :index, :show, :create, :update, :destroy ]
       resources :trades, only: [ :index, :show, :create, :update, :destroy ]
@@ -453,11 +458,17 @@ Rails.application.routes.draw do
       resources :family_exports, only: [ :index, :show, :create ] do
         get :download, on: :member
       end
-      resources :imports, only: [ :index, :show, :create ]
+      resources :imports, only: [ :index, :show, :create ] do
+        get :rows, on: :member
+      end
       resource :usage, only: [ :show ], controller: :usage
       resource :balance_sheet, only: [ :show ], controller: :balance_sheet
       resource :family_settings, only: [ :show ], controller: :family_settings
-      post :sync, to: "sync#create"
+      post :sync, to: "sync#create", as: :sync_job
+      resources :syncs, only: [ :index, :show ] do
+        get :latest, on: :collection
+      end
+      resources :provider_connections, only: [ :index ]
 
       resources :chats, only: [ :index, :show, :create, :update, :destroy ] do
         resources :messages, only: [ :create ] do

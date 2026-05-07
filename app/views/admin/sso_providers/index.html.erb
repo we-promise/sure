@@ -10,7 +10,7 @@
 
   <%= settings_section title: "Configured Providers" do %>
     <% if @sso_providers.any? %>
-      <div class="divide-y divide-primary">
+      <div class="divide-y divide-alpha-black-200 theme-dark:divide-alpha-white-200">
         <% @sso_providers.each do |provider| %>
           <div class="flex items-center justify-between py-3 first:pt-0 last:pb-0">
             <div class="flex items-center gap-3">
@@ -73,7 +73,7 @@
         </div>
       </div>
 
-      <div class="divide-y divide-primary">
+      <div class="divide-y divide-alpha-black-200 theme-dark:divide-alpha-white-200">
         <% @legacy_providers.each do |provider| %>
           <div class="flex items-center justify-between py-3 first:pt-0 last:pb-0">
             <div class="flex items-center gap-3">

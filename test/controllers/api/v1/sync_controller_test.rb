@@ -33,7 +33,7 @@ class Api::V1::SyncControllerTest < ActionDispatch::IntegrationTest
 
   test "should trigger sync with valid write API key" do
     assert_enqueued_with(job: SyncJob) do
-      post api_v1_sync_url, headers: api_headers(@api_key)
+      post api_v1_sync_job_url, headers: api_headers(@api_key)
     end
 
     assert_response :accepted
@@ -48,7 +48,7 @@ class Api::V1::SyncControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "should reject sync with read-only API key" do
-    post api_v1_sync_url, headers: api_headers(@read_only_api_key)
+    post api_v1_sync_job_url, headers: api_headers(@read_only_api_key)
     assert_response :forbidden
 
     response_data = JSON.parse(response.body)
@@ -56,7 +56,7 @@ class Api::V1::SyncControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "should reject sync without API key" do
-    post api_v1_sync_url
+    post api_v1_sync_job_url
     assert_response :unauthorized
 
     response_data = JSON.parse(response.body)
@@ -64,7 +64,7 @@ class Api::V1::SyncControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "should return proper sync details in response" do
-    post api_v1_sync_url, headers: api_headers(@api_key)
+    post api_v1_sync_job_url, headers: api_headers(@api_key)
     assert_response :accepted
 
     response_data = JSON.parse(response.body)

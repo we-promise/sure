@@ -1,0 +1,17 @@
+---
+hu:
+  users:
+    destroy:
+      success: A fiókod törölve lett.
+    update:
+      email_change_failed: Nem sikerült megváltoztatni az e-mail címet.
+      email_change_initiated: Kérjük, ellenőrizd az új e-mail címedet a megerősítési utasításokért.
+      success: A profilod frissítve lett.
+    resend_confirmation_email:
+      success: Egy új megerősítő e-mail küldése folyamatban van.
+      no_pending_change: Jelenleg nincs függőben lévő e-mail változtatás!
+    reset:
+      success: A fiókod visszaállítva. Az adatok hamarosan törlődnek a háttérben.
+      unauthorized: Nincs jogosultságod ezt a műveletet végrehajtani.
+    reset_with_sample_data:
+      success: A fiókod visszaállítva, és a mintaadatok előkészítése folyamatban van. Hamarosan megjelennek a demóadatok.

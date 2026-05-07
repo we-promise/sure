@@ -1,0 +1,181 @@
+---
+hu:
+  mercury_items:
+    create:
+      success: Mercury kapcsolat sikeresen létrehozva
+    destroy:
+      success: Mercury kapcsolat eltávolítva
+    index:
+      title: Mercury kapcsolatok
+    loading:
+      loading_message: Mercury számlák betöltése...
+      loading_title: Betöltés
+    link_accounts:
+      all_already_linked:
+        one: "A kiválasztott számla (%{names}) már össze van kapcsolva"
+        other: "Mind a(z) %{count} kiválasztott számla már össze van kapcsolva: %{names}"
+      api_error: "API hiba: %{message}"
+      invalid_account_names:
+        one: "Nem lehet összekapcsolni üres nevű számlát"
+        other: "Nem lehet összekapcsolni %{count} üres nevű számlát"
+      link_failed: Nem sikerült összekapcsolni a számlákat
+      no_accounts_selected: Kérlek válassz legalább egy számlát
+      no_api_token: Mercury API token nem található. Kérlek állítsd be a Szolgáltatói beállításokban.
+      partial_invalid: "%{created_count} számla sikeresen összekapcsolva, %{already_linked_count} már össze volt kapcsolva, %{invalid_count} számla nevei érvénytelenek"
+      partial_success: "%{created_count} számla sikeresen összekapcsolva. %{already_linked_count} számla már össze volt kapcsolva: %{already_linked_names}"
+      select_connection: Válassz Mercury kapcsolatot a számlák összekapcsolása előtt.
+      success:
+        one: "%{count} számla sikeresen összekapcsolva"
+        other: "%{count} számla sikeresen összekapcsolva"
+    mercury_item:
+      accounts_need_setup: Számlák beállítást igényelnek
+      delete: Kapcsolat törlése
+      deletion_in_progress: törlés folyamatban...
+      error: Hiba
+      no_accounts_description: Ehhez a kapcsolathoz még nincsenek összekapcsolt számlák.
+      no_accounts_title: Nincsenek számlák
+      setup_action: Új számlák beállítása
+      setup_description: "%{linked} / %{total} számla összekapcsolva. Válaszd ki az újonnan importált Mercury számlák típusait."
+      setup_needed: Új számlák beállításra várnak
+      status: "Szinkronizálva %{timestamp} ezelőtt"
+      status_never: Még nem szinkronizált
+      status_with_summary: "Utolsó szinkronizálás %{timestamp} ezelőtt - %{summary}"
+      syncing: Szinkronizálás...
+      total: Összesen
+      unlinked: Nincs összekapcsolva
+    provider_panel:
+      accounts_link: Számlák
+      add_connection: Mercury kapcsolat hozzáadása
+      base_url_label: Alap URL (opcionális)
+      base_url_placeholder: https://api.mercury.com/api/v1 (alapértelmezett)
+      configured_html: "Beállítva és használatra kész. A számlák kezeléséhez és beállításához látogass el a %{accounts_link} lapra."
+      connection_name_label: Kapcsolat neve
+      connection_name_placeholder: Üzleti folyószámla
+      default_connection_name: Mercury kapcsolat
+      disconnect_confirm: "%{name} lecsatlakoztatása?"
+      instructions:
+        copy_token_html: "Másold ki a <strong>teljes tokent</strong> (beleértve a <code>secret-token:</code> előtagot), és add hozzá alább elnevezett kapcsolatként"
+        create_token: Hozz létre egy új API tokent „Csak olvasható" hozzáféréssel
+        open_tokens: Menj a Beállítások > Fejlesztő > API tokenek menübe
+        sign_in_html: "Látogass el a(z) %{link} oldalra, és lépj be az összekapcsolni kívánt fiókba"
+        whitelist_ip_html: "<strong>Fontos:</strong> Add a szervered IP-címét a token engedélyezési listájához"
+      keep_token_placeholder: Hagyd üresen az aktuális token megtartásához
+      not_configured: Nincs beállítva
+      sandbox_note_html: "Minden Mercury bejelentkezéshez/API tokenhez használj külön elnevezett kapcsolatot. Sandbox teszteléshez használd a <code>https://api-sandbox.mercury.com/api/v1</code> alap URL-t. A Mercury IP engedélyezési listát igényel — győződj meg róla, hogy hozzáadtad az IP-d a Mercury irányítópulton."
+      setup_accounts: Számlák beállítása
+      setup_title: "Beállítási utasítások:"
+      sync: Szinkronizálás
+      token_label: Token
+      token_placeholder: Illeszd be ide a tokent
+      update_connection: Kapcsolat frissítése
+    provider_connection:
+      default_description: Csatlakozás a bankhoz a Mercury-n keresztül
+      default_name: Mercury
+      description: "Csatlakozás a következőn keresztül: %{name}"
+      name: "Mercury - %{name}"
+    select_accounts:
+      accounts_selected: kiválasztott számla
+      api_error: "API hiba: %{message}"
+      cancel: Mégse
+      configure_name_in_mercury: Nem importálható — kérlek állítsd be a számla nevét a Mercury-ban
+      description: "Válaszd ki azokat a számlákat, amelyeket össze szeretnél kapcsolni a(z) %{product_name} fiókkal."
+      link_accounts: Kiválasztott számlák összekapcsolása
+      no_accounts_found: Nem találhatók számlák. Kérlek ellenőrizd az API token konfigurációdat.
+      no_api_token: A Mercury API token nincs beállítva. Kérlek állítsd be a Beállításokban.
+      no_credentials_configured: Kérlek előbb állítsd be a Mercury API tokenedet a Szolgáltatói beállításokban.
+      no_name_placeholder: "(Nincs név)"
+      select_connection: Válassz Mercury kapcsolatot a Szolgáltatói beállításokban.
+      title: Mercury számlák kiválasztása
+    select_existing_account:
+      account_already_linked: Ez a számla már össze van kapcsolva egy szolgáltatóval
+      all_accounts_already_linked: Minden Mercury számla már össze van kapcsolva
+      api_error: "API hiba: %{message}"
+      cancel: Mégse
+      configure_name_in_mercury: Nem importálható — kérlek állítsd be a számla nevét a Mercury-ban
+      description: Válassz egy Mercury számlát, amelyet ehhez a számlához szeretnél kapcsolni. A tranzakciók automatikusan szinkronizálásra és deduplikálásra kerülnek.
+      link_account: Számla összekapcsolása
+      no_account_specified: Nem lett megadva számla
+      no_accounts_found: Nem találhatók Mercury számlák. Kérlek ellenőrizd az API token konfigurációdat.
+      no_api_token: A Mercury API token nincs beállítva. Kérlek állítsd be a Beállításokban.
+      no_credentials_configured: Kérlek előbb állítsd be a Mercury API tokenedet a Szolgáltatói beállításokban.
+      no_name_placeholder: "(Nincs név)"
+      select_connection: Válassz Mercury kapcsolatot a Szolgáltatói beállításokban.
+      title: "%{account_name} összekapcsolása a Mercury-val"
+    link_existing_account:
+      account_already_linked: Ez a számla már össze van kapcsolva egy szolgáltatóval
+      api_error: "API hiba: %{message}"
+      invalid_account_name: Nem lehet összekapcsolni üres nevű számlát
+      mercury_account_already_linked: Ez a Mercury számla már össze van kapcsolva egy másik számlával
+      mercury_account_not_found: Mercury számla nem található
+      missing_parameters: Hiányzó kötelező paraméterek
+      no_api_token: Mercury API token nem található. Kérlek állítsd be a Szolgáltatói beállításokban.
+      select_connection: Válassz Mercury kapcsolatot a számlák összekapcsolása előtt.
+      success: "%{account_name} sikeresen összekapcsolva a Mercury-val"
+    setup_accounts:
+      account_type_label: "Számla típusa:"
+      all_accounts_linked: "Minden Mercury számlád már be van állítva."
+      api_error: "API hiba: %{message}"
+      fetch_failed: "Nem sikerült lekérni a számlákat"
+      no_accounts_to_setup: "Nincs beállítandó számla"
+      no_api_token: "A Mercury API token nincs beállítva. Kérlek ellenőrizd a kapcsolati beállításaidat."
+      account_types:
+        skip: Számla kihagyása
+        depository: Folyó- vagy megtakarítási számla
+        credit_card: Hitelkártya
+        investment: Befektetési számla
+        loan: Hitel vagy jelzálog
+        other_asset: Egyéb eszköz
+      subtype_labels:
+        depository: "Számla altípusa:"
+        credit_card: ""
+        investment: "Befektetés típusa:"
+        loan: "Hitel típusa:"
+        other_asset: ""
+      subtype_messages:
+        credit_card: "A hitelkártyák automatikusan hitelkártya számlákként lesznek beállítva."
+        other_asset: "Az egyéb eszközökhöz nincs szükség további beállításokra."
+      subtypes:
+        depository:
+          checking: Folyószámla
+          savings: Megtakarítási számla
+          hsa: Egészségügyi megtakarítási számla
+          cd: Lekötött betét
+          money_market: Pénzpiaci számla
+        investment:
+          brokerage: Brókeri számla
+          pension: Nyugdíjalap
+          retirement: Nyugdíj-megtakarítás
+          "401k": "401(k)"
+          roth_401k: "Roth 401(k)"
+          "403b": "403(b)"
+          tsp: Thrift Savings Plan
+          "529_plan": "529 Terv"
+          hsa: Egészségügyi megtakarítási számla
+          mutual_fund: Befektetési alap
+          ira: Hagyományos IRA
+          roth_ira: Roth IRA
+          angel: Angyal befektető
+        loan:
+          mortgage: Jelzálog
+          student: Diákhitel
+          auto: Autóhitel
+          other: Egyéb hitel
+      balance: Egyenleg
+      cancel: Mégse
+      choose_account_type: "Válaszd ki a megfelelő számlatípust minden Mercury számlához:"
+      create_accounts: Számlák létrehozása
+      creating_accounts: Számlák létrehozása...
+      historical_data_range: "Előzmények időtartama:"
+      subtitle: Válaszd ki az importált számlák helyes típusait
+      sync_start_date_help: "Válaszd ki, milyen messzire szeretnél visszamenni a tranzakciós előzmények szinkronizálásában. Maximum 3 év előzmény érhető el."
+      sync_start_date_label: "Tranzakciók szinkronizálásának kezdete:"
+      title: Mercury számlák beállítása
+    complete_account_setup:
+      all_skipped: "Minden számla ki lett hagyva. Nem jött létre számla."
+      creation_failed: "Nem sikerült létrehozni a számlákat: %{error}"
+      no_accounts: "Nincs beállítandó számla."
+      success: "%{count} számla sikeresen létrehozva."
+    sync:
+      success: Szinkronizálás elindítva
+    update:
+      success: Mercury kapcsolat frissítve

@@ -1,0 +1,21 @@
+---
+hu:
+  shared:
+    confirm_modal:
+      accept: Megerősítés
+      body_html: "<p>Ezt a döntést nem tudod visszavonni</p>"
+      cancel: Mégse
+      title: Biztos vagy benne?
+    money_field:
+      label: Összeg
+    exchange_rate_tabs:
+      calculate_rate_tab: Árfolyam kiszámítása
+      convert_tab: Átváltás árfolyammal
+      destination_amount: Célösszeg
+      exchange_rate: Árfolyam
+      exchange_rate_help: Válaszd ki, hogyan szeretnéd megadni az összeget.
+    syncing_notice:
+      syncing: Számlák adatainak szinkronizálása...
+    require_admin: "Ezt a műveletet csak adminisztrátorok hajthatják végre"
+    trend_change:
+      no_change: "nincs változás"

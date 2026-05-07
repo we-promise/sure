@@ -1,0 +1,77 @@
+---
+hu:
+  coinstats_items:
+    create:
+      success: A CoinStats szolgáltató kapcsolat sikeresen beállítva.
+      default_name: CoinStats kapcsolat
+      errors:
+        validation_failed: "Érvényesítési hiba: %{message}."
+    update:
+      success: A CoinStats szolgáltató kapcsolat sikeresen frissítve.
+      errors:
+        validation_failed: "Érvényesítési hiba: %{message}."
+    destroy:
+      success: A CoinStats szolgáltató kapcsolat törlése ütemezve.
+    link_wallet:
+      success: "%{count} kriptó pénztárca sikeresen összekapcsolva."
+      missing_params: "Hiányzó kötelező paraméterek: cím és blokklánc."
+      failed: A kriptó pénztárca összekapcsolása sikertelen.
+      error: "A kriptó pénztárca összekapcsolása sikertelen: %{message}."
+    link_exchange:
+      success: "%{name} tőzsde összekapcsolva."
+      missing_params: A tőzsde és a hitelesítő adatok megadása kötelező.
+      invalid_exchange: A kiválasztott tőzsde már nem támogatott.
+      failed: Nem sikerült összekapcsolni a tőzsdét.
+      error: "Nem sikerült összekapcsolni a tőzsdét: %{message}."
+    new:
+      title: Kriptó összekapcsolása CoinStats-szal
+      blockchain_fetch_error: Nem sikerült betölteni a blokkláncokat. Kérjük, próbáld újra később.
+      link_wallet_title: Pénztárca cím összekapcsolása
+      link_wallet_description: Kövess egy önőrzésű pénztárcát vagy egyetlen on-chain címet a CoinStats segítségével.
+      address_label: Cím
+      address_placeholder: Kötelező
+      blockchain_label: Blokklánc
+      blockchain_placeholder: Kötelező
+      blockchain_select_blank: Válassz blokkláncot
+      link_wallet_submit: Kriptó pénztárca összekapcsolása
+      link_exchange_title: Tőzsde API összekapcsolása
+      link_exchange_description: Használj csak olvasható tőzsde API kulcsot, hogy a CoinStats szinkronizálni tudja az egyenlegeket és a tranzakciókat a Bitvavo, Binance és más támogatott tőzsdékről.
+      link_exchange_note: Ha a tőzsdéd API-kulcs aktiválást vagy e-mailes megerősítést igényel, végezd el ezt a lépést az összekapcsolás előtt.
+      exchange_select_blank: Válassz tőzsdét
+      exchange_label: Tőzsde
+      link_exchange_submit: Tőzsde összekapcsolása
+      not_configured_title: A CoinStats szolgáltató kapcsolat nincs beállítva
+      not_configured_message: Kriptó pénztárca vagy tőzsde összekapcsolásához először be kell állítanod a CoinStats szolgáltató kapcsolatot.
+      not_configured_step1_html: Menj a <strong>Beállítások → Szolgáltatók</strong> oldalra
+      not_configured_step2_html: Keresd meg a <strong>CoinStats</strong> szolgáltatót
+      not_configured_step3_html: Kövesd a megadott <strong>beállítási utasításokat</strong> a szolgáltató konfigurálásának befejezéséhez
+      go_to_settings: Szolgáltatói beállítások megnyitása
+      setup_instructions: "Beállítási utasítások:"
+      step1_html: Látogass el a <a href="https://openapi.coinstats.app/" class="link" target="_blank" rel="noopener noreferrer">CoinStats Public API Dashboard</a> oldalra egy API kulcs megszerzéséhez.
+      step2: Add meg az API kulcsodat lent, majd kattints a Konfigurálás gombra.
+      step3_html: Sikeres csatlakozás után látogasd meg a <a href="%{accounts_url}" class="link" data-turbo-frame="_top">Számlák</a> fület a kriptó számláid beállításához.
+      api_key_label: API kulcs
+      api_key_placeholder: Kötelező
+      configure: Konfigurálás
+      update_configuration: Újrakonfigurálás
+      default_name: CoinStats kapcsolat
+      status_configured_html: Használatra kész
+      status_not_configured: Nincs beállítva
+    coinstats_item:
+      deletion_in_progress: A kriptó pénztárca adatai törlés alatt…
+      provider_name: CoinStats
+      syncing: Szinkronizálás…
+      sync_status:
+        no_accounts: Nem találhatók kriptó pénztárcák
+        all_synced:
+          one: "%{count} kriptó pénztárca szinkronizálva"
+          other: "%{count} kriptó pénztárca szinkronizálva"
+        partial_sync: "%{linked_count} kriptó pénztárca szinkronizálva, %{unlinked_count} beállítást igényel"
+      reconnect: Újracsatlakozás
+      status: Utolsó szinkronizálás %{timestamp} ezelőtt
+      status_never: Még nem volt szinkronizálva
+      status_with_summary: "Utolsó szinkronizálás: %{timestamp} ezelőtt • %{summary}"
+      update_api_key: API kulcs frissítése
+      delete: Töröl
+      no_wallets_title: Nincs csatlakoztatott kriptó pénztárca
+      no_wallets_message: Jelenleg nincs kriptó pénztárca csatlakoztatva a CoinStats-hoz.

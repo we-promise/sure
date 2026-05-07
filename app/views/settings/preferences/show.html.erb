@@ -48,7 +48,7 @@
          data-currency-preferences-selected-count-translations-value="<%= selected_count_translations.to_json %>">
       <% additional_preview_currencies = @user.family.secondary_enabled_currency_objects.first(6) %>
       <% additional_currency_count = @user.family.secondary_enabled_currency_objects.count %>
-      <div class="rounded-xl border border-secondary p-4 bg-surface-inset/40">
+      <div class="rounded-xl border border-secondary p-4 bg-container-inset">
         <div class="grid gap-4 md:grid-cols-2">
           <div>
             <p class="text-xs font-medium uppercase tracking-wide text-secondary"><%= t(".base_currency_label") %></p>
@@ -139,7 +139,7 @@
                   <%= icon("search", class: "text-secondary") %>
                 </div>
               </div>
-              <div data-list-filter-target="list" class="max-h-80 overflow-auto rounded-xl border border-secondary divide-y divide-secondary/60">
+              <div data-list-filter-target="list" class="max-h-80 overflow-auto rounded-xl border border-secondary divide-y divide-alpha-black-100 theme-dark:divide-alpha-white-100">
                 <p class="hidden px-4 py-3 text-sm text-secondary" data-list-filter-target="emptyMessage">
                   <%= t(".no_matching_currencies") %>
                 </p>
@@ -147,8 +147,8 @@
                   <% checked = selected_currency_codes.include?(currency.iso_code) %>
                   <% base_currency = currency.iso_code == primary_currency_code %>
                   <label class="<%= class_names(
-                    "filterable-item flex items-start gap-3 px-4 py-3 cursor-pointer transition-colors hover:bg-surface-inset/30",
-                    "bg-surface-inset/30": base_currency,
+                    "filterable-item flex items-start gap-3 px-4 py-3 cursor-pointer transition-colors hover:bg-surface-inset",
+                    "bg-surface-inset": base_currency,
                     "cursor-default": base_currency
                   ) %>"
                          data-filter-name="<%= "#{currency.iso_code} #{currency.name}" %>">

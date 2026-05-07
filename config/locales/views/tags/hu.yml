@@ -1,0 +1,23 @@
+---
+hu:
+  tags:
+    create:
+      created: Címke létrehozva
+      error: 'Hiba a címke létrehozásakor: %{error}'
+    destroy:
+      deleted: Címke törölve
+    edit:
+      edit: Címke szerkesztése
+    form:
+      placeholder: Címke neve
+    index:
+      empty: Még nincsenek címkék
+      new: Új címke
+      tags: Címkék
+    new:
+      new: Új címke
+    tag:
+      delete: Törlés
+      edit: Szerkesztés
+    update:
+      updated: Címke frissítve

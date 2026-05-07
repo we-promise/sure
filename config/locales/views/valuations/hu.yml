@@ -1,0 +1,30 @@
+---
+hu:
+  valuations:
+    form:
+      amount: Összeg
+      submit: Egyenlegfrissítés hozzáadása
+    header:
+      balance: Egyenleg
+    index:
+      change: változás
+      date: dátum
+      new_entry: Új bejegyzés
+      no_valuations: Ehhez a számlához még nincs értékelés
+      valuations: Érték
+      value: érték
+    new:
+      title: Új egyenleg
+    show:
+      amount: Összeg
+      date_label: Dátum
+      delete: Törlés
+      delete_subtitle: Ez a művelet nem vonható vissza
+      delete_title: Bejegyzés törlése
+      details: Részletek
+      name_label: Név
+      name_placeholder: Add meg a bejegyzés nevét
+      note_label: Megjegyzések
+      note_placeholder: Adj meg további részleteket erről a bejegyzésről
+      overview: Áttekintés
+      settings: Beállítások

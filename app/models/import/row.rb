@@ -8,7 +8,7 @@ class Import::Row < ApplicationRecord
   validate :required_columns
   validate :currency_is_valid
 
-  scope :ordered, -> { order(:id) }
+  scope :ordered, -> { order(:source_row_number, :id) }
 
   def tags_list
     if tags.blank?
