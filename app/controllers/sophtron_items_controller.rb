@@ -1,5 +1,5 @@
 class SophtronItemsController < ApplicationController
-  CONNECTION_STATUS_MAX_POLLS = 60
+  CONNECTION_STATUS_MAX_POLLS = 3
   CONNECTION_STATUS_POLL_INTERVAL_MS = 4_000
 
   before_action :set_sophtron_item, only: [
@@ -129,15 +129,9 @@ class SophtronItemsController < ApplicationController
       return
     end
 
-    @poll_attempt = params[:poll_attempt].to_i
-    if @poll_attempt >= CONNECTION_STATUS_MAX_POLLS
-      @sophtron_item.update!(
-        last_connection_error: t(".timeout"),
-        status: :requires_update
-      )
-      prepare_connection_status_context
-      @timed_out = true
-      render :connection_status, layout: false
+    @poll_attempt = requested_poll_attempt
+    if @poll_attempt > CONNECTION_STATUS_MAX_POLLS
+      render_connection_timeout
       return
     end
 
@@ -165,6 +159,11 @@ class SophtronItemsController < ApplicationController
       prepare_connection_status_context
       render :mfa, layout: false
     else
+      if @poll_attempt >= CONNECTION_STATUS_MAX_POLLS
+        render_connection_timeout
+        return
+      end
+
       prepare_connection_status_context
       @next_poll_attempt = @poll_attempt + 1
       render :connection_status, layout: false
@@ -654,6 +653,24 @@ class SophtronItemsController < ApplicationController
       @account_id = params[:account_id]
       @return_to = safe_return_to_path
       @poll_interval_ms = CONNECTION_STATUS_POLL_INTERVAL_MS
+      @max_poll_attempts = CONNECTION_STATUS_MAX_POLLS
+    end
+
+    def requested_poll_attempt
+      poll_attempt = params[:poll_attempt].to_i
+      poll_attempt.positive? ? poll_attempt : 1
+    end
+
+    def render_connection_timeout
+      @poll_attempt = CONNECTION_STATUS_MAX_POLLS if @poll_attempt.to_i > CONNECTION_STATUS_MAX_POLLS
+      @poll_attempt = 1 if @poll_attempt.to_i < 1
+      @sophtron_item.update!(
+        last_connection_error: t(".timeout"),
+        status: :requires_update
+      )
+      prepare_connection_status_context
+      @timed_out = true
+      render :connection_status, layout: false
     end
 
     def render_api_error(message, return_path)

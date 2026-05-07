@@ -77,6 +77,7 @@ en:
       missing_parameters: Select an institution and enter your bank login credentials.
     connection_status:
       api_error: "API connection error: %{message}"
+      attempt: "Attempt %{attempt} of %{max}"
       check_again: Check again
       failed: Sophtron could not complete this connection.
       timeout: Sophtron did not finish connecting within the expected time. You can check again, or try reconnecting later.

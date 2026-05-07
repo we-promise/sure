@@ -145,11 +145,20 @@ class SophtronItemsControllerTest < ActionDispatch::IntegrationTest
 
   test "connection_status times out after max UI polls" do
     @item.update!(user_institution_id: "ui-1", current_job_id: "job-1")
+    provider = mock
+    provider.expects(:get_job_information).with("job-1").returns({
+      AccountID: "00000000-0000-0000-0000-000000000000",
+      JobType: "AddAccounts",
+      JobID: "job-1"
+    })
+
+    SophtronItem.any_instance.stubs(:sophtron_provider).returns(provider)
 
     get connection_status_sophtron_item_url(@item, poll_attempt: SophtronItemsController::CONNECTION_STATUS_MAX_POLLS)
 
     assert_response :success
     assert_includes response.body, "Sophtron did not finish connecting"
+    assert_includes response.body, "Attempt 3 of 3"
     assert_equal "requires_update", @item.reload.status
     assert_equal "job-1", @item.current_job_id
   end
@@ -165,11 +174,12 @@ class SophtronItemsControllerTest < ActionDispatch::IntegrationTest
 
     SophtronItem.any_instance.stubs(:sophtron_provider).returns(provider)
 
-    get connection_status_sophtron_item_url(@item, poll_attempt: 3)
+    get connection_status_sophtron_item_url(@item, poll_attempt: 2)
 
     assert_response :success
-    assert_includes response.body, "poll_attempt=4"
-    assert_select "a[href*='poll_attempt=4']"
+    assert_includes response.body, "Attempt 2 of 3"
+    assert_includes response.body, "poll_attempt=3"
+    assert_select "a[href*='poll_attempt=3']"
   end
 
   test "connection_status treats Sophtron timeout as failed" do
