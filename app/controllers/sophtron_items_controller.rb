@@ -40,7 +40,7 @@ class SophtronItemsController < ApplicationController
       return
     end
 
-    accounts = fetch_remote_accounts(item)
+    accounts = item.fetch_remote_accounts
     render json: { success: true, has_accounts: accounts.any?, cached: true }
   rescue Provider::Sophtron::Error => e
     Rails.logger.error("Sophtron preload error: #{e.message}")
@@ -65,7 +65,7 @@ class SophtronItemsController < ApplicationController
       return
     end
 
-    @available_accounts = reject_already_linked(fetch_remote_accounts(item), item)
+    @available_accounts = item.reject_already_linked(item.fetch_remote_accounts)
     @accountable_type = params[:accountable_type] || "Depository"
     @return_to = safe_return_to_path
 
@@ -155,7 +155,7 @@ class SophtronItemsController < ApplicationController
       )
       render_account_selection(@sophtron_item, force_refresh: true)
     elsif Provider::Sophtron.job_requires_input?(job)
-      @challenge = build_mfa_challenge(job)
+      @challenge = @sophtron_item.build_mfa_challenge(job)
       prepare_connection_status_context
       render :mfa, layout: false
     elsif post_mfa_polling? && Provider::Sophtron.job_completed?(job)
@@ -227,14 +227,14 @@ class SophtronItemsController < ApplicationController
       return
     end
 
-    accounts_data = fetch_remote_accounts(item, force: true)
+    accounts_data = item.fetch_remote_accounts(force: true)
 
     created_accounts = []
     already_linked_accounts = []
     invalid_accounts = []
 
     selected_account_ids.each do |account_id|
-      account_data = accounts_data.find { |account| external_account_id(account).to_s == account_id.to_s }
+      account_data = accounts_data.find { |account| SophtronItem.external_account_id(account).to_s == account_id.to_s }
       next unless account_data
 
       if account_data[:account_name].blank?
@@ -243,7 +243,7 @@ class SophtronItemsController < ApplicationController
         next
       end
 
-      sophtron_account = upsert_sophtron_account(item, account_data)
+      sophtron_account = item.upsert_sophtron_account(account_data)
 
       if sophtron_account.account_provider.present?
         already_linked_accounts << account_data[:account_name]
@@ -301,7 +301,7 @@ class SophtronItemsController < ApplicationController
       return
     end
 
-    @available_accounts = reject_already_linked(fetch_remote_accounts(item), item)
+    @available_accounts = item.reject_already_linked(item.fetch_remote_accounts)
     @return_to = safe_return_to_path
 
     if @available_accounts.empty?
@@ -341,7 +341,7 @@ class SophtronItemsController < ApplicationController
       return
     end
 
-    account_data = fetch_remote_accounts(item, force: true).find { |remote_account| external_account_id(remote_account).to_s == sophtron_account_id.to_s }
+    account_data = item.fetch_remote_accounts(force: true).find { |remote_account| SophtronItem.external_account_id(remote_account).to_s == sophtron_account_id.to_s }
     unless account_data
       redirect_to accounts_path, alert: t(".sophtron_account_not_found")
       return
@@ -352,7 +352,7 @@ class SophtronItemsController < ApplicationController
       return
     end
 
-    sophtron_account = upsert_sophtron_account(item, account_data)
+    sophtron_account = item.upsert_sophtron_account(account_data)
 
     if sophtron_account.account_provider.present?
       redirect_to accounts_path, alert: t(".sophtron_account_already_linked")
@@ -668,7 +668,7 @@ class SophtronItemsController < ApplicationController
     end
 
     def render_account_selection(item, force_refresh: false)
-      @available_accounts = reject_already_linked(fetch_remote_accounts(item, force: force_refresh), item)
+      @available_accounts = item.reject_already_linked(item.fetch_remote_accounts(force: force_refresh))
       @accountable_type = params[:accountable_type] || "Depository"
       @return_to = safe_return_to_path
 
@@ -681,7 +681,7 @@ class SophtronItemsController < ApplicationController
     end
 
     def render_account_selection_if_accounts_available(item)
-      accounts = fetch_remote_accounts(item, force: true)
+      accounts = item.fetch_remote_accounts(force: true)
       return false if accounts.empty?
 
       item.update!(
@@ -691,7 +691,7 @@ class SophtronItemsController < ApplicationController
         status: :good
       )
 
-      @available_accounts = reject_already_linked(accounts, item)
+      @available_accounts = item.reject_already_linked(accounts)
       @accountable_type = params[:accountable_type] || "Depository"
       @return_to = safe_return_to_path
 
@@ -813,45 +813,6 @@ class SophtronItemsController < ApplicationController
              layout: false
     end
 
-    def fetch_remote_accounts(item, force: false)
-      cache_key = "sophtron_accounts_#{Current.family.id}_#{item.id}_#{item.user_institution_id}"
-      cached = Rails.cache.read(cache_key)
-      return cached if cached.present? && !force
-
-      accounts_data = sophtron_response_data!(item.sophtron_provider.get_accounts(item.user_institution_id))
-      accounts = accounts_data[:accounts] || []
-      Rails.cache.write(cache_key, accounts, expires_in: 5.minutes)
-      persist_remote_sophtron_accounts(item, accounts)
-      accounts
-    end
-
-    def persist_remote_sophtron_accounts(item, accounts)
-      accounts.each do |account_data|
-        next if account_data[:account_name].blank?
-
-        upsert_sophtron_account(item, account_data)
-      rescue ActiveRecord::RecordInvalid => e
-        Rails.logger.warn("Skipping Sophtron account #{external_account_id(account_data)}: #{e.message}")
-      end
-    end
-
-    def reject_already_linked(accounts, item)
-      linked_account_ids = item.sophtron_accounts.joins(:account_provider).pluck(:account_id).map(&:to_s)
-      accounts.reject { |account| linked_account_ids.include?(external_account_id(account).to_s) }
-    end
-
-    def upsert_sophtron_account(item, account_data)
-      item.sophtron_accounts.find_or_initialize_by(
-        account_id: external_account_id(account_data).to_s
-      ).tap do |sophtron_account|
-        sophtron_account.upsert_sophtron_snapshot!(account_data)
-      end
-    end
-
-    def external_account_id(account_data)
-      account_data.with_indifferent_access[:account_id] || account_data.with_indifferent_access[:id]
-    end
-
     def redirect_after_account_link(return_to, created_accounts, already_linked_accounts, invalid_accounts)
       if invalid_accounts.any? && created_accounts.empty? && already_linked_accounts.empty?
         redirect_to new_account_path, alert: t(".invalid_account_names", count: invalid_accounts.count)
@@ -879,23 +840,12 @@ class SophtronItemsController < ApplicationController
       end
     end
 
-    def build_mfa_challenge(job)
-      job = job.with_indifferent_access
-      {
-        security_questions: Provider::Sophtron.parse_json_array(job[:SecurityQuestion] || job[:security_question]),
-        token_methods: Provider::Sophtron.parse_json_array(job[:TokenMethod] || job[:token_method]),
-        token_sent: Provider::Sophtron.job_token_input_required?(job),
-        token_read: job[:TokenRead] || job[:token_read],
-        captcha_image: job[:CaptchaImage] || job[:captcha_image]
-      }
-    end
-
     def fetch_sophtron_accounts_from_api
       return nil unless @sophtron_item.sophtron_accounts.empty?
       return t("sophtron_items.setup_accounts.no_access_key") unless @sophtron_item.credentials_configured?
       return t("sophtron_items.setup_accounts.no_institution_connected") unless @sophtron_item.connected_to_institution?
 
-      fetch_remote_accounts(@sophtron_item, force: true)
+      @sophtron_item.fetch_remote_accounts(force: true)
       nil
     rescue Provider::Sophtron::Error => e
       Rails.logger.error("Sophtron API error: #{e.message}")

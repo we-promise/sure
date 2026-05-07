@@ -212,6 +212,57 @@ class SophtronItem < ApplicationRecord
     )
   end
 
+  def fetch_remote_accounts(force: false)
+    cache_key = "sophtron_accounts_#{family.id}_#{id}_#{user_institution_id}"
+    cached = Rails.cache.read(cache_key)
+    return cached if cached.present? && !force
+
+    accounts_data = Provider::Sophtron.response_data!(sophtron_provider.get_accounts(user_institution_id))
+    accounts = accounts_data[:accounts] || []
+    Rails.cache.write(cache_key, accounts, expires_in: 5.minutes)
+    persist_remote_sophtron_accounts(accounts)
+    accounts
+  end
+
+  def persist_remote_sophtron_accounts(accounts)
+    Array(accounts).each do |account_data|
+      account_data = account_data.with_indifferent_access
+      next if account_data[:account_name].blank?
+
+      upsert_sophtron_account(account_data)
+    rescue ActiveRecord::RecordInvalid => e
+      Rails.logger.warn("Skipping Sophtron account #{self.class.external_account_id(account_data)}: #{e.message}")
+    end
+  end
+
+  def reject_already_linked(accounts)
+    linked_account_ids = sophtron_accounts.joins(:account_provider).pluck(:account_id).map(&:to_s)
+    Array(accounts).reject { |account| linked_account_ids.include?(self.class.external_account_id(account).to_s) }
+  end
+
+  def upsert_sophtron_account(account_data)
+    sophtron_accounts.find_or_initialize_by(
+      account_id: self.class.external_account_id(account_data).to_s
+    ).tap do |sophtron_account|
+      sophtron_account.upsert_sophtron_snapshot!(account_data)
+    end
+  end
+
+  def build_mfa_challenge(job)
+    job = job.with_indifferent_access
+    {
+      security_questions: Provider::Sophtron.parse_json_array(job[:SecurityQuestion] || job[:security_question]),
+      token_methods: Provider::Sophtron.parse_json_array(job[:TokenMethod] || job[:token_method]),
+      token_sent: Provider::Sophtron.job_token_input_required?(job),
+      token_read: job[:TokenRead] || job[:token_read],
+      captcha_image: job[:CaptchaImage] || job[:captcha_image]
+    }
+  end
+
+  def self.external_account_id(account_data)
+    account_data.with_indifferent_access[:account_id] || account_data.with_indifferent_access[:id]
+  end
+
   def has_completed_initial_setup?
     # Setup is complete if we have any linked accounts
     accounts.any?

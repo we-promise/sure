@@ -69,6 +69,65 @@ class SophtronItemTest < ActiveSupport::TestCase
     assert_not @item.connected_to_institution?
   end
 
+  test "fetch_remote_accounts persists Sophtron account snapshots" do
+    @item.update!(user_institution_id: "ui-1")
+    provider = mock
+    provider.expects(:get_accounts).with("ui-1").returns({
+      accounts: [
+        {
+          id: "acct-1",
+          account_id: "acct-1",
+          account_name: "Sophtron Checking",
+          balance: "123.45",
+          balance_currency: "USD",
+          currency: "USD"
+        }.with_indifferent_access
+      ],
+      total: 1
+    })
+    @item.stubs(:sophtron_provider).returns(provider)
+
+    accounts = @item.fetch_remote_accounts(force: true)
+
+    assert_equal 1, accounts.count
+    assert_equal "Sophtron Checking", @item.sophtron_accounts.find_by!(account_id: "acct-1").name
+  end
+
+  test "reject_already_linked removes accounts with existing account provider links" do
+    account = accounts(:depository)
+    sophtron_account = @item.sophtron_accounts.create!(
+      account_id: "acct-1",
+      name: "Sophtron Checking",
+      currency: "USD",
+      balance: 100
+    )
+    AccountProvider.create!(account: account, provider: sophtron_account)
+
+    available = @item.reject_already_linked([
+      { id: "acct-1", account_name: "Linked" },
+      { id: "acct-2", account_name: "Available" }
+    ])
+
+    assert_equal [ "acct-2" ], available.map { |account_data| SophtronItem.external_account_id(account_data) }
+  end
+
+  test "build_mfa_challenge normalizes Sophtron job challenge fields" do
+    challenge = @item.build_mfa_challenge(
+      SecurityQuestion: [ "Question?" ].to_json,
+      TokenMethod: [ "sms" ].to_json,
+      TokenSentFlag: true,
+      TokenInputName: "Token",
+      TokenRead: "phone",
+      CaptchaImage: "YWJj"
+    )
+
+    assert_equal [ "Question?" ], challenge[:security_questions]
+    assert_equal [ "sms" ], challenge[:token_methods]
+    assert_equal true, challenge[:token_sent]
+    assert_equal "phone", challenge[:token_read]
+    assert_equal "YWJj", challenge[:captcha_image]
+  end
+
   test "start_initial_load_later starts a sync when no active sync exists" do
     assert_no_enqueued_jobs only: SophtronInitialLoadJob do
       assert_difference "@item.syncs.count", 1 do
