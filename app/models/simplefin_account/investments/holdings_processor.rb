@@ -115,8 +115,10 @@ class SimplefinAccount::Investments::HoldingsProcessor
 
     def cost_basis_from(simplefin_holding)
       %w[cost_basis basis total_cost value].each do |key|
-        value = parse_decimal(simplefin_holding[key])
-        return [ value, key ] if value.present?
+        raw = simplefin_holding[key]
+        next if raw.nil? || raw.to_s.strip.empty?
+
+        return [ parse_decimal(raw), key ]
       end
 
       [ nil, nil ]
