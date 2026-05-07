@@ -2,18 +2,7 @@ require "test_helper"
 
 class SimplefinAccount::Investments::HoldingsProcessorTest < ActiveSupport::TestCase
   setup do
-    @simplefin_account = SimplefinAccount.create!(
-      name: "Schwab IRA",
-      provider_account_id: "simplefin-test-account",
-      currency: "USD",
-      balance: 10_108.17,
-      raw_payload: {},
-      raw_transactions_payload: [],
-      raw_holdings_payload: [],
-      account: accounts(:investment)
-    )
-
-    @processor = SimplefinAccount::Investments::HoldingsProcessor.new(@simplefin_account)
+    @processor = SimplefinAccount::Investments::HoldingsProcessor.new(nil)
   end
 
   test "cost_basis source is used unchanged as per share basis" do
