@@ -171,11 +171,7 @@ class SophtronItem::Importer
 
     def fetch_accounts_data
       begin
-        accounts_data = sophtron_provider.get_accounts(sophtron_item.user_institution_id)
-        # Extract data from Provider::Response object if needed
-        if accounts_data.respond_to?(:data)
-          accounts_data = accounts_data.data
-        end
+        accounts_data = Provider::Sophtron.response_data!(sophtron_provider.get_accounts(sophtron_item.user_institution_id))
       rescue Provider::Sophtron::Error => e
         # Handle authentication errors by marking item as requiring update
         if e.error_type == :unauthorized || e.error_type == :access_forbidden
@@ -279,15 +275,12 @@ class SophtronItem::Importer
         end
 
         # Fetch transactions
-        transactions_data = sophtron_provider.get_account_transactions(
-          sophtron_account.account_id,
-          start_date: start_date
+        transactions_data = Provider::Sophtron.response_data!(
+          sophtron_provider.get_account_transactions(
+            sophtron_account.account_id,
+            start_date: start_date
+          )
         )
-
-        # Extract data from Provider::Response object if needed
-        if transactions_data.respond_to?(:data)
-          transactions_data = transactions_data.data
-        end
 
         # Validate response structure
         unless transactions_data.is_a?(Hash)
@@ -346,11 +339,11 @@ class SophtronItem::Importer
     end
 
     def refresh_account_before_transaction_fetch(sophtron_account)
-      refresh_response = sophtron_provider.refresh_account(sophtron_account.account_id)
+      refresh_response = Provider::Sophtron.response_data!(sophtron_provider.refresh_account(sophtron_account.account_id))
       job_id = refresh_response.with_indifferent_access[:JobID] || refresh_response.with_indifferent_access[:job_id]
       return nil if job_id.blank?
 
-      job = sophtron_provider.poll_job(job_id)
+      job = Provider::Sophtron.response_data!(sophtron_provider.poll_job(job_id))
       sophtron_item.upsert_job_snapshot!(job)
 
       if Provider::Sophtron.job_requires_input?(job)

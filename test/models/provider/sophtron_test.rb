@@ -24,7 +24,7 @@ class Provider::SophtronTest < ActiveSupport::TestCase
     stub_request(:get, "https://api.sophtron.com/api/v2/customers")
       .to_return(status: 200, body: [ { CustomerID: "cust-1", CustomerName: "Sure family 1" } ].to_json)
 
-    customers = @provider.list_customers
+    customers = provider_data(@provider.list_customers)
 
     assert_equal 1, customers.length
     assert_equal "cust-1", customers.first[:CustomerID]
@@ -35,7 +35,7 @@ class Provider::SophtronTest < ActiveSupport::TestCase
       .with(body: { UniqueID: "sure-family-1", Name: "Sure family 1", Source: "Sure" }.to_json)
       .to_return(status: 200, body: { CustomerID: "cust-1", CustomerName: "Sure family 1" }.to_json)
 
-    customer = @provider.create_customer(unique_id: "sure-family-1", name: "Sure family 1", source: "Sure")
+    customer = provider_data(@provider.create_customer(unique_id: "sure-family-1", name: "Sure family 1", source: "Sure"))
 
     assert_equal "cust-1", customer[:CustomerID]
   end
@@ -44,14 +44,14 @@ class Provider::SophtronTest < ActiveSupport::TestCase
     stub_request(:get, "https://api.sophtron.com/api/Institution/HealthCheckAuth")
       .to_return(status: 200, body: "")
 
-    assert_equal({}, @provider.health_check_auth)
+    assert_equal({}, provider_data(@provider.health_check_auth))
   end
 
   test "health check auth accepts non json success body" do
     stub_request(:get, "https://api.sophtron.com/api/Institution/HealthCheckAuth")
       .to_return(status: 200, body: "OK")
 
-    assert_equal "OK", @provider.health_check_auth
+    assert_equal "OK", provider_data(@provider.health_check_auth)
   end
 
   test "creates user institution with documented V1 body" do
@@ -65,11 +65,11 @@ class Provider::SophtronTest < ActiveSupport::TestCase
       }.to_json)
       .to_return(status: 200, body: { JobID: "job-1", UserInstitutionID: "ui-1" }.to_json)
 
-    response = @provider.create_user_institution(
+    response = provider_data(@provider.create_user_institution(
       institution_id: "inst-1",
       username: "bank-user",
       password: "bank-pass"
-    )
+    ))
 
     assert_equal "job-1", response[:JobID]
     assert_equal "ui-1", response[:UserInstitutionID]
@@ -132,7 +132,7 @@ class Provider::SophtronTest < ActiveSupport::TestCase
       .with(body: { JobID: "job-1", SecurityAnswer: [ "blue" ].to_json }.to_json)
       .to_return(status: 200, body: "")
 
-    assert_equal({}, @provider.update_job_security_answer("job-1", [ "blue" ]))
+    assert_equal({}, provider_data(@provider.update_job_security_answer("job-1", [ "blue" ])))
   end
 
   test "fetches transactions by transaction date with documented body" do
@@ -151,7 +151,7 @@ class Provider::SophtronTest < ActiveSupport::TestCase
         }
       ].to_json)
 
-    result = @provider.get_account_transactions("acct-1", start_date: Date.new(2026, 1, 1), end_date: Date.new(2026, 2, 1))
+    result = provider_data(@provider.get_account_transactions("acct-1", start_date: Date.new(2026, 1, 1), end_date: Date.new(2026, 2, 1)))
     transaction = result[:transactions].first
 
     assert_equal "tx-1", transaction[:id]
@@ -173,7 +173,7 @@ class Provider::SophtronTest < ActiveSupport::TestCase
         }
       ].to_json)
 
-    result = @provider.get_accounts("ui-1")
+    result = provider_data(@provider.get_accounts("ui-1"))
     account = result[:accounts].first
 
     assert_equal "acct-1", account[:account_id]
@@ -186,17 +186,24 @@ class Provider::SophtronTest < ActiveSupport::TestCase
     stub_request(:post, "https://api.sophtron.com/api/Job/UpdateJobCaptcha")
       .to_return(status: 200, body: "")
 
-    assert_equal({}, @provider.update_job_captcha("job-1", "abc123"))
+    assert_equal({}, provider_data(@provider.update_job_captcha("job-1", "abc123")))
   end
 
   test "raises typed error on unauthorized response" do
     stub_request(:get, "https://api.sophtron.com/api/Institution/HealthCheckAuth")
       .to_return(status: 401, body: "bad auth")
 
-    error = assert_raises Provider::Sophtron::Error do
-      @provider.health_check_auth
-    end
+    response = @provider.health_check_auth
 
-    assert_equal :unauthorized, error.error_type
+    assert_not response.success?
+    assert_instance_of Provider::Sophtron::Error, response.error
+    assert_equal :unauthorized, response.error.error_type
   end
+
+  private
+
+    def provider_data(response)
+      assert response.success?
+      response.data
+    end
 end

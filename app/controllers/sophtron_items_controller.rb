@@ -95,11 +95,13 @@ class SophtronItemsController < ApplicationController
     end
 
     item.ensure_customer!
-    response = item.sophtron_provider.create_user_institution(
-      institution_id: params[:institution_id],
-      username: params[:bank_username],
-      password: params[:bank_password],
-      pin: ""
+    response = sophtron_response_data!(
+      item.sophtron_provider.create_user_institution(
+        institution_id: params[:institution_id],
+        username: params[:bank_username],
+        password: params[:bank_password],
+        pin: ""
+      )
     ).with_indifferent_access
 
     job_id = response[:JobID] || response[:job_id]
@@ -144,7 +146,7 @@ class SophtronItemsController < ApplicationController
       return
     end
 
-    job = @sophtron_item.sophtron_provider.get_job_information(@sophtron_item.current_job_id)
+    job = sophtron_response_data!(@sophtron_item.sophtron_provider.get_job_information(@sophtron_item.current_job_id))
     @sophtron_item.upsert_job_snapshot!(job)
 
     if Provider::Sophtron.job_success?(job)
@@ -192,15 +194,15 @@ class SophtronItemsController < ApplicationController
         return
       end
 
-      provider.update_job_security_answer(job_id, security_answers)
+      sophtron_response_data!(provider.update_job_security_answer(job_id, security_answers))
     when "token_choice"
-      provider.update_job_token_input(job_id, token_choice: params[:token_choice])
+      sophtron_response_data!(provider.update_job_token_input(job_id, token_choice: params[:token_choice]))
     when "token_input"
-      provider.update_job_token_input(job_id, token_input: params[:token_input])
+      sophtron_response_data!(provider.update_job_token_input(job_id, token_input: params[:token_input]))
     when "verify_phone"
-      provider.update_job_token_input(job_id, verify_phone_flag: true)
+      sophtron_response_data!(provider.update_job_token_input(job_id, verify_phone_flag: true))
     when "captcha"
-      provider.update_job_captcha(job_id, params[:captcha_input])
+      sophtron_response_data!(provider.update_job_captcha(job_id, params[:captcha_input]))
     else
       redirect_to connection_status_sophtron_item_path(@sophtron_item, connection_context_params), alert: t(".unknown_challenge")
       return
@@ -600,11 +602,15 @@ class SophtronItemsController < ApplicationController
       answers
     end
 
+    def sophtron_response_data!(response)
+      Provider::Sophtron.response_data!(response)
+    end
+
     def verify_and_provision_customer(item)
       provider = item.sophtron_provider
       raise Provider::Sophtron::Error.new("Sophtron provider is not configured", :configuration_error) unless provider
 
-      provider.health_check_auth
+      sophtron_response_data!(provider.health_check_auth)
       item.ensure_customer!(provider: provider)
       true
     rescue Provider::Sophtron::Error => e
@@ -660,7 +666,7 @@ class SophtronItemsController < ApplicationController
       @institutions = []
 
       if @institution_search.length >= 2
-        @institutions = item.sophtron_provider.search_institutions(@institution_search)
+        @institutions = sophtron_response_data!(item.sophtron_provider.search_institutions(@institution_search))
       end
     end
 
@@ -815,7 +821,7 @@ class SophtronItemsController < ApplicationController
       cached = Rails.cache.read(cache_key)
       return cached if cached.present? && !force
 
-      accounts_data = item.sophtron_provider.get_accounts(item.user_institution_id)
+      accounts_data = sophtron_response_data!(item.sophtron_provider.get_accounts(item.user_institution_id))
       accounts = accounts_data[:accounts] || []
       Rails.cache.write(cache_key, accounts, expires_in: 5.minutes)
       persist_remote_sophtron_accounts(item, accounts)

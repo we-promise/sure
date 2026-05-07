@@ -155,17 +155,19 @@ class SophtronItem < ApplicationRecord
     return customer_id if customer_id.present?
     raise Provider::Sophtron::Error.new("Sophtron provider is not configured", :configuration_error) unless provider
 
-    matching_customer = find_matching_customer(provider.list_customers)
-    customer_payload = matching_customer || provider.create_customer(
-      unique_id: generated_customer_unique_id,
-      name: generated_customer_name,
-      source: "Sure"
+    matching_customer = find_matching_customer(Provider::Sophtron.response_data!(provider.list_customers))
+    customer_payload = matching_customer || Provider::Sophtron.response_data!(
+      provider.create_customer(
+        unique_id: generated_customer_unique_id,
+        name: generated_customer_name,
+        source: "Sure"
+      )
     )
 
     # Some Sophtron endpoints may return an empty body on success; re-list to find
     # the customer we just created if the create response does not include an id.
     if extract_customer_id(customer_payload).blank?
-      customer_payload = find_matching_customer(provider.list_customers)
+      customer_payload = find_matching_customer(Provider::Sophtron.response_data!(provider.list_customers))
     end
 
     extracted_customer_id = extract_customer_id(customer_payload)

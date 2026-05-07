@@ -109,163 +109,232 @@ class Provider::Sophtron < Provider
     Array(value)
   end
 
+  def self.response_data!(response)
+    return response unless response.respond_to?(:success?) && response.respond_to?(:data)
+    return response.data if response.success?
+
+    raise response.error || Error.new("Sophtron provider response did not include data", :invalid_response)
+  end
+
   # GET /api/Institution/HealthCheckAuth
   def health_check_auth
-    request(:get, "/Institution/HealthCheckAuth", parse_json: false)
+    with_provider_response do
+      request(:get, "/Institution/HealthCheckAuth", parse_json: false)
+    end
   end
 
   # GET /api/v2/customers
   def list_customers
-    parsed = request(:get, "/v2/customers")
-    parsed.is_a?(Array) ? parsed : Array(parsed[:customers] || parsed[:Customers])
+    with_provider_response do
+      parsed = request(:get, "/v2/customers")
+      extract_array_response(parsed, :customers, :Customers)
+    end
   end
 
   # POST /api/v2/customers
   def create_customer(unique_id:, name:, source: "Sure")
-    request(
-      :post,
-      "/v2/customers",
-      body: {
-        UniqueID: unique_id,
-        Name: name,
-        Source: source
-      }
-    )
+    with_provider_response do
+      request(
+        :post,
+        "/v2/customers",
+        body: {
+          UniqueID: unique_id,
+          Name: name,
+          Source: source
+        }
+      )
+    end
   end
 
   # POST /api/Institution/GetInstitutionByName
   def search_institutions(institution_name)
-    parsed = request(
-      :post,
-      "/Institution/GetInstitutionByName",
-      body: { InstitutionName: institution_name.to_s }
-    )
-    parsed.is_a?(Array) ? parsed : Array(parsed[:institutions] || parsed[:Institutions])
+    with_provider_response do
+      parsed = request(
+        :post,
+        "/Institution/GetInstitutionByName",
+        body: { InstitutionName: institution_name.to_s }
+      )
+      extract_array_response(parsed, :institutions, :Institutions)
+    end
   end
 
   # POST /api/UserInstitution/GetUserInstitutionsByUser
   def list_user_institutions
-    parsed = request(
-      :post,
-      "/UserInstitution/GetUserInstitutionsByUser",
-      body: { UserID: user_id }
-    )
-    parsed.is_a?(Array) ? parsed : Array(parsed[:user_institutions] || parsed[:UserInstitutions])
+    with_provider_response do
+      parsed = request(
+        :post,
+        "/UserInstitution/GetUserInstitutionsByUser",
+        body: { UserID: user_id }
+      )
+      extract_array_response(parsed, :user_institutions, :UserInstitutions)
+    end
   end
 
   # POST /api/UserInstitution/CreateUserInstitution
   def create_user_institution(institution_id:, username:, password:, pin: "")
-    request(
-      :post,
-      "/UserInstitution/CreateUserInstitution",
-      body: {
-        UserID: user_id,
-        InstitutionID: institution_id,
-        UserName: username,
-        Password: password,
-        PIN: pin.to_s
-      }
-    )
+    with_provider_response do
+      request(
+        :post,
+        "/UserInstitution/CreateUserInstitution",
+        body: {
+          UserID: user_id,
+          InstitutionID: institution_id,
+          UserName: username,
+          Password: password,
+          PIN: pin.to_s
+        }
+      )
+    end
   end
 
   # POST /api/Job/GetJobInformationByID
   def get_job_information(job_id)
-    request(
-      :post,
-      "/Job/GetJobInformationByID",
-      body: { JobID: job_id }
-    )
+    with_provider_response do
+      fetch_job_information(job_id)
+    end
   end
 
   # POST /api/Job/UpdateJobSecurityAnswer
   def update_job_security_answer(job_id, answers)
     security_answer = answers.is_a?(String) ? answers : Array(answers).to_json
 
-    request(
-      :post,
-      "/Job/UpdateJobSecurityAnswer",
-      body: { JobID: job_id, SecurityAnswer: security_answer }
-    )
+    with_provider_response do
+      request(
+        :post,
+        "/Job/UpdateJobSecurityAnswer",
+        body: { JobID: job_id, SecurityAnswer: security_answer }
+      )
+    end
   end
 
   # POST /api/Job/UpdateJobTokenInput
   def update_job_token_input(job_id, token_choice: nil, token_input: nil, verify_phone_flag: nil)
-    request(
-      :post,
-      "/Job/UpdateJobTokenInput",
-      body: {
-        JobID: job_id,
-        TokenChoice: token_choice,
-        TokenInput: token_input,
-        VerifyPhoneFlag: verify_phone_flag
-      }
-    )
+    with_provider_response do
+      request(
+        :post,
+        "/Job/UpdateJobTokenInput",
+        body: {
+          JobID: job_id,
+          TokenChoice: token_choice,
+          TokenInput: token_input,
+          VerifyPhoneFlag: verify_phone_flag
+        }
+      )
+    end
   end
 
   # POST /api/Job/UpdateJobCaptcha
   def update_job_captcha(job_id, captcha_input)
-    request(
-      :post,
-      "/Job/UpdateJobCaptcha",
-      body: { JobID: job_id, CaptchaInput: captcha_input }
-    )
+    with_provider_response do
+      request(
+        :post,
+        "/Job/UpdateJobCaptcha",
+        body: { JobID: job_id, CaptchaInput: captcha_input }
+      )
+    end
   end
 
   # POST /api/UserInstitution/GetUserInstitutionAccounts
   def get_user_institution_accounts(user_institution_id)
-    parsed = request(
-      :post,
-      "/UserInstitution/GetUserInstitutionAccounts",
-      body: { UserInstitutionID: user_institution_id }
-    )
-    parsed.is_a?(Array) ? parsed : Array(parsed[:accounts] || parsed[:Accounts])
+    with_provider_response do
+      fetch_user_institution_accounts(user_institution_id)
+    end
   end
 
   def get_accounts(user_institution_id)
-    accounts = get_user_institution_accounts(user_institution_id)
-    normalized = accounts.map { |account| normalize_account(account, user_institution_id: user_institution_id) }
-    { accounts: normalized, total: normalized.size }
+    with_provider_response do
+      accounts = fetch_user_institution_accounts(user_institution_id)
+      normalized = accounts.map { |account| normalize_account(account, user_institution_id: user_institution_id) }
+      { accounts: normalized, total: normalized.size }
+    end
   end
 
   # POST /api/UserInstitutionAccount/RefreshUserInstitutionAccount
   def refresh_account(account_id)
-    request(
-      :post,
-      "/UserInstitutionAccount/RefreshUserInstitutionAccount",
-      body: { AccountID: account_id }
-    )
+    with_provider_response do
+      request(
+        :post,
+        "/UserInstitutionAccount/RefreshUserInstitutionAccount",
+        body: { AccountID: account_id }
+      )
+    end
   end
 
   # POST /api/Transaction/GetTransactionsByTransactionDate
   def get_account_transactions(account_id, start_date: nil, end_date: nil)
-    parsed = request(
-      :post,
-      "/Transaction/GetTransactionsByTransactionDate",
-      body: {
-        AccountID: account_id,
-        StartDate: (start_date || 120.days.ago).to_date.to_s,
-        EndDate: (end_date || Date.tomorrow).to_date.to_s
-      }
-    )
+    with_provider_response do
+      parsed = request(
+        :post,
+        "/Transaction/GetTransactionsByTransactionDate",
+        body: {
+          AccountID: account_id,
+          StartDate: (start_date || 120.days.ago).to_date.to_s,
+          EndDate: (end_date || Date.tomorrow).to_date.to_s
+        }
+      )
 
-    raw_transactions = parsed.is_a?(Array) ? parsed : Array(parsed[:transactions] || parsed[:Transactions])
-    transactions = raw_transactions.map { |transaction| normalize_transaction(transaction, account_id) }
+      raw_transactions = extract_array_response(parsed, :transactions, :Transactions)
+      transactions = raw_transactions.map { |transaction| normalize_transaction(transaction, account_id) }
 
-    { transactions: transactions, total: transactions.size }
+      { transactions: transactions, total: transactions.size }
+    end
   end
 
   def poll_job(job_id, max_attempts: 60, interval: 4)
-    max_attempts.times do |attempt|
-      job = get_job_information(job_id)
-      return job if self.class.job_success?(job) || self.class.job_completed?(job) || self.class.job_failed?(job) || self.class.job_requires_input?(job)
+    with_provider_response do
+      result = nil
+      max_attempts.times do |attempt|
+        job = fetch_job_information(job_id)
+        if self.class.job_success?(job) || self.class.job_completed?(job) || self.class.job_failed?(job) || self.class.job_requires_input?(job)
+          result = job
+          break
+        end
 
-      sleep interval if interval.to_f.positive? && attempt < max_attempts - 1
+        sleep interval if interval.to_f.positive? && attempt < max_attempts - 1
+      end
+
+      result || raise(Error.new("Sophtron job did not complete before the polling timeout", :timeout))
     end
-
-    raise Error.new("Sophtron job did not complete before the polling timeout", :timeout)
   end
 
   private
+
+    def default_error_transformer(error)
+      return error if error.is_a?(Error)
+
+      super
+    end
+
+    def fetch_job_information(job_id)
+      request(
+        :post,
+        "/Job/GetJobInformationByID",
+        body: { JobID: job_id }
+      )
+    end
+
+    def fetch_user_institution_accounts(user_institution_id)
+      parsed = request(
+        :post,
+        "/UserInstitution/GetUserInstitutionAccounts",
+        body: { UserInstitutionID: user_institution_id }
+      )
+      extract_array_response(parsed, :accounts, :Accounts)
+    end
+
+    def extract_array_response(parsed, *keys)
+      return parsed if parsed.is_a?(Array)
+      return [] if parsed.respond_to?(:empty?) && parsed.empty?
+
+      if parsed.respond_to?(:with_indifferent_access)
+        parsed = parsed.with_indifferent_access
+        keys.each do |key|
+          return Array(parsed[key]) if parsed.key?(key)
+        end
+      end
+
+      raise Error.new("Invalid Sophtron response format", :invalid_response, details: parsed)
+    end
 
     def request(method, api_path, body: nil, parse_json: true)
       options = { headers: auth_headers(method: method, api_path: api_path) }
