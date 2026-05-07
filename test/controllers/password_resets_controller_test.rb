@@ -87,4 +87,39 @@ class PasswordResetsControllerTest < ActionDispatch::IntegrationTest
     sso_user.reload
     assert_nil sso_user.password_digest, "SSO-only user should still have nil password_digest"
   end
+
+  # Security: users provisioned with no local password (e.g. via the
+  # remote-header proxy auth path) must not be able to acquire a
+  # password through reset, even when they have no OIDC identity.
+  test "create does not send email for password-less user without OIDC identity" do
+    jit_user = User.create!(
+      email: "headerjit@test.example",
+      family: Family.create!,
+      role: :admin,
+      skip_password_validation: true
+    )
+
+    assert_no_enqueued_emails do
+      post password_reset_path, params: { email: jit_user.email }
+    end
+
+    assert_redirected_to new_password_reset_url(step: "pending")
+  end
+
+  test "update blocks password setting for password-less user without OIDC identity" do
+    jit_user = User.create!(
+      email: "headerjit@test.example",
+      family: Family.create!,
+      role: :admin,
+      skip_password_validation: true
+    )
+    token = jit_user.generate_token_for(:password_reset)
+
+    patch password_reset_path(token: token),
+      params: { user: { password: "NewSecure1!", password_confirmation: "NewSecure1!" } }
+
+    assert_redirected_to new_session_path
+    jit_user.reload
+    assert_nil jit_user.password_digest, "password-less user should still have nil password_digest after update attempt"
+  end
 end
