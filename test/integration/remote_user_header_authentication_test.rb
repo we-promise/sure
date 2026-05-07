@@ -7,7 +7,11 @@ class RemoteUserHeaderAuthenticationTest < ActionDispatch::IntegrationTest
   setup do
     Rails.application.config.app_mode.stubs(:self_hosted?).returns(true)
     Rails.application.config.stubs(:remote_user_header_email).returns(HEADER_NAME)
-    Rails.application.config.stubs(:remote_user_trusted_proxies).returns(nil)
+    # Use the production default (loopback) so the integration test client's
+    # default REMOTE_ADDR of 127.0.0.1 satisfies the IP gate. Tests that want
+    # to exercise the gate explicitly override this.
+    Rails.application.config.stubs(:remote_user_trusted_proxies)
+                            .returns([ IPAddr.new("127.0.0.0/8"), IPAddr.new("::1/128") ])
   end
 
   test "feature is inert in managed mode even with config set" do
@@ -92,8 +96,18 @@ class RemoteUserHeaderAuthenticationTest < ActionDispatch::IntegrationTest
 
   test "IP allowlist: request from an allowlisted CIDR is honored" do
     Rails.application.config.stubs(:remote_user_trusted_proxies)
-                            .returns([ IPAddr.new("127.0.0.0/8") ])
+                            .returns([ IPAddr.new("10.0.0.0/24") ])
 
+    assert_difference -> { User.count }, 1 do
+      get root_url,
+          env: { "REMOTE_ADDR" => "10.0.0.5" },
+          headers: { HEADER_NAME => JIT_EMAIL }
+    end
+  end
+
+  test "default loopback allowlist honors a request from 127.0.0.1" do
+    # Setup mirrors the production loopback default (127.0.0.0/8 + ::1/128)
+    # and the integration client connects from 127.0.0.1, so JIT proceeds.
     assert_difference -> { User.count }, 1 do
       get root_url, headers: { HEADER_NAME => JIT_EMAIL }
     end

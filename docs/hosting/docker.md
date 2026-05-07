@@ -330,9 +330,10 @@ REMOTE_USER_HEADER_EMAIL="Remote-Email"
 
  !! NOTE!! this allows unchallenged (passwordless) login via simple HTTP headers. Only use this method if you have a proxy in front of Sure that is applying the authentication challenge, *AND THE SURE HTTP SERVER IS NOT ACCESSIBLE DIRECTLY*.
 
-### Restrict by source IP (recommended)
+### Source-IP allowlist
 
-Only honor the header when the immediate peer (`REMOTE_ADDR`) is in this list. Leave the variable unset to disable the gate (the default, every request is honored). Set it to a comma-separated list of IPs or CIDRs to enable. A set-but-empty or unparseable value fails closed — every request is treated as outside the allowlist and the header is ignored.
+Sure honors the header only when the immediate peer (`REMOTE_ADDR`) is in this list. The default is loopback (`127.0.0.0/8,::1/128`) — fail-closed by design, so a misconfigured deployment surfaces a broken login at first test rather than silently default-opening. If your proxy lives on a different host or container, override it:
 ```txt
 REMOTE_USER_TRUSTED_PROXIES="10.0.0.5,172.18.0.0/16"
 ```
+Setting the variable replaces the default. A set-but-empty or unparseable value resolves to an empty allowlist — every request is treated as outside it and the header is ignored.
