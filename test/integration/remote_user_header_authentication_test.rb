@@ -5,8 +5,18 @@ class RemoteUserHeaderAuthenticationTest < ActionDispatch::IntegrationTest
   JIT_EMAIL = "headerjit@test.example"
 
   setup do
+    Rails.application.config.app_mode.stubs(:self_hosted?).returns(true)
     Rails.application.config.stubs(:remote_user_header_email).returns(HEADER_NAME)
     Rails.application.config.stubs(:remote_user_trusted_proxies).returns(nil)
+  end
+
+  test "feature is inert in managed mode even with config set" do
+    Rails.application.config.app_mode.stubs(:self_hosted?).returns(false)
+
+    assert_no_difference -> { User.count } do
+      get root_url, headers: { HEADER_NAME => JIT_EMAIL }
+    end
+    assert_redirected_to new_session_url
   end
 
   test "feature is opt-in: with config unset, the header is ignored" do
