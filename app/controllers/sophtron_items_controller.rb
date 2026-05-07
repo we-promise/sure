@@ -259,7 +259,7 @@ class SophtronItemsController < ApplicationController
       created_accounts << account
     end
 
-    item.sync_later if created_accounts.any?
+    item.start_initial_load_later if created_accounts.any?
     redirect_after_account_link(return_to, created_accounts, already_linked_accounts, invalid_accounts)
   rescue Provider::Sophtron::Error => e
     redirect_to new_account_path, alert: t(".api_error", message: e.message)
@@ -351,7 +351,7 @@ class SophtronItemsController < ApplicationController
     end
 
     AccountProvider.create!(account: account, provider: sophtron_account)
-    item.sync_later
+    item.start_initial_load_later
 
     redirect_to return_to || accounts_path, notice: t(".success", account_name: account.name)
   rescue Provider::Sophtron::Error => e
@@ -532,7 +532,7 @@ class SophtronItemsController < ApplicationController
       return
     end
 
-    @sophtron_item.sync_later if created_accounts.any?
+    @sophtron_item.start_initial_load_later if created_accounts.any?
 
     flash[:notice] = if created_accounts.any?
       t(".success", count: created_accounts.count)

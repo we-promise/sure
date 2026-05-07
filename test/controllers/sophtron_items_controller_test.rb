@@ -456,7 +456,7 @@ class SophtronItemsControllerTest < ActionDispatch::IntegrationTest
     })
 
     SophtronItem.any_instance.stubs(:sophtron_provider).returns(provider)
-    SophtronItem.any_instance.stubs(:sync_later)
+    SophtronItem.any_instance.stubs(:start_initial_load_later)
 
     assert_difference "AccountProvider.count", 1 do
       post link_existing_account_sophtron_items_url, params: {

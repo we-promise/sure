@@ -1,6 +1,8 @@
 require "test_helper"
 
 class SophtronItemTest < ActiveSupport::TestCase
+  include ActiveJob::TestHelper
+
   setup do
     @family = families(:dylan_family)
     @item = @family.sophtron_items.create!(
@@ -65,5 +67,26 @@ class SophtronItemTest < ActiveSupport::TestCase
     )
 
     assert_not @item.connected_to_institution?
+  end
+
+  test "start_initial_load_later starts a sync when no active sync exists" do
+    assert_no_enqueued_jobs only: SophtronInitialLoadJob do
+      assert_difference "@item.syncs.count", 1 do
+        assert_enqueued_with job: SyncJob do
+          @item.start_initial_load_later
+        end
+      end
+    end
+  end
+
+  test "start_initial_load_later queues a follow-up when current sync is already running" do
+    sync = @item.syncs.create!
+    sync.start!
+
+    assert_no_difference "@item.syncs.count" do
+      assert_enqueued_with job: SophtronInitialLoadJob do
+        @item.start_initial_load_later
+      end
+    end
   end
 end

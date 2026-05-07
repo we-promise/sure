@@ -122,6 +122,16 @@ class SophtronItem < ApplicationRecord
     results
   end
 
+  def start_initial_load_later
+    active_sync = syncs.visible.ordered.first
+
+    sync_later
+
+    return unless active_sync&.reload&.syncing?
+
+    SophtronInitialLoadJob.set(wait: SophtronInitialLoadJob::RETRY_DELAY).perform_later(self)
+  end
+
   def upsert_sophtron_snapshot!(accounts_snapshot)
     assign_attributes(
       raw_payload: accounts_snapshot
