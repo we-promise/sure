@@ -124,7 +124,7 @@ class SimplefinHoldingsApplyJobTest < ActiveSupport::TestCase
     # Price derived from market_value
     assert_in_delta 500.0, holding.price.to_f, 0.01
 
-    # cost_basis should fall back to "value" field (45000)
-    assert_in_delta 45000.0, holding.cost_basis.to_f, 0.01
+    # cost_basis should fall back to "value" field and normalize total basis to per-share basis
+    assert_in_delta 450.0, holding.cost_basis.to_f, 0.01
   end
 end
