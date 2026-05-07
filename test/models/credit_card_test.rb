@@ -6,7 +6,7 @@ class CreditCardTest < ActiveSupport::TestCase
     card.expiration_date = Date.yesterday
 
     assert_not card.valid?
-    assert_includes card.errors[:expiration_date], "must be greater than or equal to #{Date.current}"
+    assert_includes card.errors.details[:expiration_date].map { |error| error[:error] }, :greater_than_or_equal_to
   end
 
   test "is valid when expiration date is today or later" do
