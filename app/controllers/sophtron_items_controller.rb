@@ -1,4 +1,7 @@
 class SophtronItemsController < ApplicationController
+  CONNECTION_STATUS_MAX_POLLS = 60
+  CONNECTION_STATUS_POLL_INTERVAL_MS = 4_000
+
   before_action :set_sophtron_item, only: [
     :show, :edit, :update, :destroy, :sync, :connection_status, :submit_mfa,
     :setup_accounts, :complete_account_setup
@@ -126,6 +129,18 @@ class SophtronItemsController < ApplicationController
       return
     end
 
+    @poll_attempt = params[:poll_attempt].to_i
+    if @poll_attempt >= CONNECTION_STATUS_MAX_POLLS
+      @sophtron_item.update!(
+        last_connection_error: t(".timeout"),
+        status: :requires_update
+      )
+      prepare_connection_status_context
+      @timed_out = true
+      render :connection_status, layout: false
+      return
+    end
+
     job = @sophtron_item.sophtron_provider.get_job_information(@sophtron_item.current_job_id)
     @sophtron_item.upsert_job_snapshot!(job)
 
@@ -146,14 +161,11 @@ class SophtronItemsController < ApplicationController
       render_api_error(t(".failed"), accounts_path)
     elsif Provider::Sophtron.job_requires_input?(job)
       @challenge = build_mfa_challenge(job)
-      @accountable_type = params[:accountable_type] || "Depository"
-      @account_id = params[:account_id]
-      @return_to = safe_return_to_path
+      prepare_connection_status_context
       render :mfa, layout: false
     else
-      @accountable_type = params[:accountable_type] || "Depository"
-      @account_id = params[:account_id]
-      @return_to = safe_return_to_path
+      prepare_connection_status_context
+      @next_poll_attempt = @poll_attempt + 1
       render :connection_status, layout: false
     end
   rescue Provider::Sophtron::Error => e
@@ -634,6 +646,13 @@ class SophtronItemsController < ApplicationController
       else
         render :select_accounts, layout: false
       end
+    end
+
+    def prepare_connection_status_context
+      @accountable_type = params[:accountable_type] || "Depository"
+      @account_id = params[:account_id]
+      @return_to = safe_return_to_path
+      @poll_interval_ms = CONNECTION_STATUS_POLL_INTERVAL_MS
     end
 
     def render_api_error(message, return_path)

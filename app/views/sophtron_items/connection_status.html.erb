@@ -1,18 +1,30 @@
-<%= turbo_frame_tag "modal",
-    data: {
-      controller: "polling",
-      polling_url_value: connection_status_sophtron_item_path(@sophtron_item, accountable_type: @accountable_type, account_id: @account_id, return_to: @return_to),
-      polling_interval_value: 4000
-    } do %>
+<% polling_data = if @timed_out
+     {}
+   else
+     {
+       controller: "polling",
+       polling_url_value: connection_status_sophtron_item_path(@sophtron_item, accountable_type: @accountable_type, account_id: @account_id, return_to: @return_to, poll_attempt: @next_poll_attempt),
+       polling_interval_value: @poll_interval_ms
+     }
+   end %>
+
+<%= turbo_frame_tag "modal", data: polling_data do %>
   <%= render DS::Dialog.new do |dialog| %>
     <% dialog.with_header(title: t(".title")) %>
 
     <% dialog.with_body do %>
       <div class="space-y-4">
-        <div class="flex items-center gap-2 text-secondary">
-          <%= icon "loader", size: "sm", class: "animate-spin" %>
-          <span><%= t(".waiting") %></span>
-        </div>
+        <% if @timed_out %>
+          <div class="flex items-center gap-2 text-secondary">
+            <%= icon "alert-circle", size: "sm" %>
+            <span><%= t(".timeout") %></span>
+          </div>
+        <% else %>
+          <div class="flex items-center gap-2 text-secondary">
+            <%= icon "loader", size: "sm", class: "animate-spin" %>
+            <span><%= t(".waiting") %></span>
+          </div>
+        <% end %>
 
         <div class="flex gap-2 justify-end">
           <%= link_to t(".check_again"),

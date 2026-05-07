@@ -79,6 +79,7 @@ en:
       api_error: "API connection error: %{message}"
       check_again: Check again
       failed: Sophtron could not complete this connection.
+      timeout: Sophtron did not finish connecting within the expected time. You can check again, or try reconnecting later.
       title: Connecting Sophtron
       waiting: Sophtron is still connecting to your institution.
     mfa:
