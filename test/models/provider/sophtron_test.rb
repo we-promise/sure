@@ -85,6 +85,27 @@ class Provider::SophtronTest < ActiveSupport::TestCase
     assert Provider::Sophtron.job_failed?(job)
   end
 
+  test "classifies completed job without failure flag as completed" do
+    job = {
+      LastStep: "TokenInput",
+      LastStatus: "Completed"
+    }
+
+    assert Provider::Sophtron.job_completed?(job)
+    assert_not Provider::Sophtron.job_failed?(job)
+  end
+
+  test "does not classify completed job with failure flag as completed" do
+    job = {
+      SuccessFlag: false,
+      LastStep: "LogInPanel",
+      LastStatus: "Completed"
+    }
+
+    assert Provider::Sophtron.job_failed?(job)
+    assert_not Provider::Sophtron.job_completed?(job)
+  end
+
   test "classifies token input prompt as requiring input" do
     job = {
       TokenInputName: "Token",

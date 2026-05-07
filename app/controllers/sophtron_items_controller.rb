@@ -157,6 +157,10 @@ class SophtronItemsController < ApplicationController
       @challenge = build_mfa_challenge(job)
       prepare_connection_status_context
       render :mfa, layout: false
+    elsif post_mfa_polling? && Provider::Sophtron.job_completed?(job)
+      return if render_account_selection_if_accounts_available(@sophtron_item)
+
+      render_pending_connection_status
     elsif Provider::Sophtron.job_failed?(job)
       failure_message = sophtron_connection_failure_message(job)
       @sophtron_item.update!(
@@ -167,14 +171,7 @@ class SophtronItemsController < ApplicationController
       )
       render_institution_connection_error(failure_message)
     else
-      if @poll_attempt >= connection_status_max_polls
-        render_connection_timeout
-        return
-      end
-
-      prepare_connection_status_context
-      @next_poll_attempt = @poll_attempt + 1
-      render :connection_status, layout: false
+      render_pending_connection_status
     end
   rescue Provider::Sophtron::Error => e
     Rails.logger.error("Sophtron job polling error: #{e.message}")
@@ -654,6 +651,45 @@ class SophtronItemsController < ApplicationController
       else
         render :select_accounts, layout: false
       end
+    end
+
+    def render_account_selection_if_accounts_available(item)
+      accounts = fetch_remote_accounts(item, force: true)
+      return false if accounts.empty?
+
+      item.update!(
+        current_job_id: nil,
+        last_connection_error: nil,
+        pending_account_setup: true,
+        status: :good
+      )
+
+      @available_accounts = reject_already_linked(accounts, item)
+      @accountable_type = params[:accountable_type] || "Depository"
+      @return_to = safe_return_to_path
+
+      if params[:account_id].present?
+        @account = Current.family.accounts.find(params[:account_id])
+        render :select_existing_account, layout: false
+      else
+        render :select_accounts, layout: false
+      end
+
+      true
+    rescue Provider::Sophtron::Error => e
+      Rails.logger.info("Sophtron accounts are not available after completed job #{item.current_job_id}: #{e.message}")
+      false
+    end
+
+    def render_pending_connection_status
+      if @poll_attempt >= connection_status_max_polls
+        render_connection_timeout
+        return
+      end
+
+      prepare_connection_status_context
+      @next_poll_attempt = @poll_attempt + 1
+      render :connection_status, layout: false
     end
 
     def prepare_connection_status_context

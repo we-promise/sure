@@ -304,6 +304,69 @@ class SophtronItemsControllerTest < ActionDispatch::IntegrationTest
     assert_not_includes response.body, "Sophtron did not finish connecting"
   end
 
+  test "connection_status renders accounts when post mfa completed job has available accounts" do
+    @item.update!(user_institution_id: "ui-1", current_job_id: "job-1")
+    provider = mock
+    provider.expects(:get_job_information).with("job-1").returns({
+      AccountID: "00000000-0000-0000-0000-000000000000",
+      JobType: "AddAccounts",
+      JobID: "job-1",
+      TokenInput: "123456",
+      LastStep: "TokenInput",
+      LastStatus: "Completed"
+    })
+    provider.expects(:get_accounts).with("ui-1").returns({
+      accounts: [
+        {
+          id: "acct-1",
+          account_id: "acct-1",
+          account_name: "Sophtron Checking",
+          institution_name: "Example Bank",
+          currency: "USD",
+          status: "active"
+        }.with_indifferent_access
+      ],
+      total: 1
+    })
+
+    SophtronItem.any_instance.stubs(:sophtron_provider).returns(provider)
+
+    get connection_status_sophtron_item_url(@item, poll_attempt: 5, post_mfa: true)
+
+    assert_response :success
+    assert_includes response.body, "Sophtron Checking"
+    assert_not_includes response.body, "poll_attempt=6"
+
+    @item.reload
+    assert_nil @item.current_job_id
+    assert_equal "good", @item.status
+    assert @item.pending_account_setup?
+  end
+
+  test "connection_status keeps polling when post mfa completed job has no accounts yet" do
+    @item.update!(user_institution_id: "ui-1", current_job_id: "job-1")
+    provider = mock
+    provider.expects(:get_job_information).with("job-1").returns({
+      AccountID: "00000000-0000-0000-0000-000000000000",
+      JobType: "AddAccounts",
+      JobID: "job-1",
+      TokenInput: "123456",
+      LastStep: "Reset",
+      LastStatus: "Completed"
+    })
+    provider.expects(:get_accounts).with("ui-1").returns({ accounts: [], total: 0 })
+
+    SophtronItem.any_instance.stubs(:sophtron_provider).returns(provider)
+
+    get connection_status_sophtron_item_url(@item, poll_attempt: 6, post_mfa: true)
+
+    assert_response :success
+    assert_includes response.body, "Attempt 6 of #{SophtronItemsController::POST_MFA_CONNECTION_STATUS_MAX_POLLS}"
+    assert_includes response.body, "poll_attempt=7"
+    assert_not_includes response.body, "Sophtron did not finish connecting"
+    assert_equal "job-1", @item.reload.current_job_id
+  end
+
   test "connection_status ignores browser prefetches" do
     @item.update!(user_institution_id: "ui-1", current_job_id: "job-1")
     SophtronItem.any_instance.expects(:sophtron_provider).never

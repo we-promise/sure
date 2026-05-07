@@ -63,6 +63,11 @@ class Provider::Sophtron < Provider
     success_flag == false && failure_job_status?(last_status)
   end
 
+  def self.job_completed?(job)
+    job = job.with_indifferent_access
+    (job[:LastStatus] || job[:last_status]).to_s == "Completed" && !job_failed?(job)
+  end
+
   def self.failure_job_status?(last_status)
     status = last_status.to_s
     FAILURE_JOB_STATUSES.include?(status) || status.match?(/timeout|fail|error/i)
@@ -252,7 +257,7 @@ class Provider::Sophtron < Provider
   def poll_job(job_id, max_attempts: 60, interval: 4)
     max_attempts.times do |attempt|
       job = get_job_information(job_id)
-      return job if self.class.job_success?(job) || self.class.job_failed?(job) || self.class.job_requires_input?(job)
+      return job if self.class.job_success?(job) || self.class.job_completed?(job) || self.class.job_failed?(job) || self.class.job_requires_input?(job)
 
       sleep interval if interval.to_f.positive? && attempt < max_attempts - 1
     end
