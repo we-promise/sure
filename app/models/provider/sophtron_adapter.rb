@@ -22,7 +22,8 @@ class Provider::SophtronAdapter < Provider::Base
       new_account_path: ->(accountable_type, return_to) {
         Rails.application.routes.url_helpers.select_accounts_sophtron_items_path(
           accountable_type: accountable_type,
-          return_to: return_to
+          return_to: return_to,
+          connect_new_institution: true
         )
       },
       existing_account_path: ->(account_id) {

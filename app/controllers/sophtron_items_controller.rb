@@ -59,7 +59,7 @@ class SophtronItemsController < ApplicationController
 
     item.ensure_customer!
 
-    unless item.connected_to_institution?
+    if connect_new_institution_flow? || !item.connected_to_institution?
       prepare_connection_form(item)
       render :connect, layout: false
       return
@@ -659,6 +659,7 @@ class SophtronItemsController < ApplicationController
       @account = account
       @accountable_type = params[:accountable_type] || "Depository"
       @return_to = safe_return_to_path
+      @connect_new_institution = connect_new_institution_flow?
       @institution_search = params[:institution_name].to_s.strip
       @institutions = []
 
@@ -865,7 +866,11 @@ class SophtronItemsController < ApplicationController
     end
 
     def connection_context_params
-      params.permit(:accountable_type, :account_id, :return_to, :post_mfa).to_h.compact
+      params.permit(:accountable_type, :account_id, :return_to, :post_mfa, :connect_new_institution).to_h.compact
+    end
+
+    def connect_new_institution_flow?
+      ActiveModel::Type::Boolean.new.cast(params[:connect_new_institution])
     end
 
     def safe_return_to_path

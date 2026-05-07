@@ -8,6 +8,7 @@
           <%= hidden_field_tag :accountable_type, @accountable_type %>
           <%= hidden_field_tag :account_id, @account&.id %>
           <%= hidden_field_tag :return_to, @return_to %>
+          <%= hidden_field_tag :connect_new_institution, true if @connect_new_institution %>
 
           <div class="form-field">
             <div class="form-field__body">
@@ -40,6 +41,7 @@
               <%= hidden_field_tag :accountable_type, @accountable_type %>
               <%= hidden_field_tag :account_id, @account&.id %>
               <%= hidden_field_tag :return_to, @return_to %>
+              <%= hidden_field_tag :connect_new_institution, true if @connect_new_institution %>
 
               <h3 class="text-sm font-medium text-primary"><%= institution[:InstitutionName] || institution[:institution_name] %></h3>
 

@@ -52,6 +52,17 @@ class SophtronItemsControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, "Connect Sophtron Institution"
   end
 
+  test "select_accounts can start a new institution connection when already connected" do
+    @item.update!(user_institution_id: "ui-1", status: :good)
+    SophtronItem.any_instance.stubs(:ensure_customer!).returns("cust-1")
+
+    get select_accounts_sophtron_items_url(connect_new_institution: true)
+
+    assert_response :success
+    assert_includes response.body, "Connect Sophtron Institution"
+    assert_includes response.body, 'name="connect_new_institution"'
+  end
+
   test "member cannot access Sophtron account selection" do
     sign_in users(:family_member)
 
