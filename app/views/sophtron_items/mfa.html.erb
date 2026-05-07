@@ -1,4 +1,6 @@
 <%= turbo_frame_tag "modal" do %>
+  <% security_questions = Array(@challenge[:security_questions]) %>
+  <% token_methods = Array(@challenge[:token_methods]) %>
   <% safe_captcha_image = @challenge[:captcha_image].to_s.split(%r{[^A-Za-z0-9+/=\s]}, 2).first.to_s.gsub(/\s+/, "") %>
 
   <%= render DS::Dialog.new do |dialog| %>
@@ -6,14 +8,14 @@
 
     <% dialog.with_body do %>
       <div class="space-y-4">
-        <% if @challenge[:security_questions].any? %>
+        <% if security_questions.any? %>
           <%= form_with url: submit_mfa_sophtron_item_path(@sophtron_item), method: :post, class: "space-y-3", data: { turbo_frame: "modal" } do %>
             <%= hidden_field_tag :mfa_type, "security_answer" %>
             <%= hidden_field_tag :accountable_type, @accountable_type %>
             <%= hidden_field_tag :account_id, @account_id %>
             <%= hidden_field_tag :return_to, @return_to %>
 
-            <% @challenge[:security_questions].each do |question| %>
+            <% security_questions.each do |question| %>
               <div class="form-field">
                 <div class="form-field__body">
                   <%= label_tag "security_answers[]", question, class: "form-field__label" %>
@@ -26,9 +28,9 @@
               <%= render DS::Button.new(text: t(".submit"), type: "submit") %>
             </div>
           <% end %>
-        <% elsif @challenge[:token_methods].any? %>
+        <% elsif token_methods.any? %>
           <div class="space-y-2">
-            <% @challenge[:token_methods].each do |method| %>
+            <% token_methods.each do |method| %>
               <%= form_with url: submit_mfa_sophtron_item_path(@sophtron_item), method: :post, data: { turbo_frame: "modal" } do %>
                 <%= hidden_field_tag :mfa_type, "token_choice" %>
                 <%= hidden_field_tag :token_choice, method %>
