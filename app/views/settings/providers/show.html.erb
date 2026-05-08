@@ -17,22 +17,45 @@
         Configure credentials for third-party sync providers. Settings configured here will override environment variables.
       </p>
     </div>
-  <% end %>
 
-  <% unless @encryption_error %>
+    <%= render Settings::HealthSummary.new(counts: @health_counts) %>
+
     <%= render "settings/providers/group_heading",
                title: t("settings.providers.groups.connected"),
-               count: @connected_providers.size %>
+               count: @connected.size %>
 
-    <% if @connected_providers.empty? %>
+    <% if @connected.empty? && @needs_attention.empty? %>
       <p class="text-sm text-secondary px-1 py-2"><%= t("settings.providers.groups.empty_connected") %></p>
-    <% else %>
-      <%# Auto-open the only-one connected case so the relevant section is immediately visible. %>
-      <% auto_open_only = @connected_providers.size == 1 %>
-      <% @connected_providers.each do |entry| %>
+    <% end %>
+
+    <%# Auto-open when there is exactly one connected (and no action-needed) item. %>
+    <% auto_open_only = @connected.size == 1 && @needs_attention.empty? %>
+    <% @connected.each do |entry| %>
+      <%= settings_section title: entry[:title],
+                           collapsible: true,
+                           open: auto_open_only,
+                           auto_open_param: entry[:auto_open_param],
+                           status: entry[:summary][:status],
+                           meta: entry[:summary][:meta] do %>
+        <% if entry[:configuration] %>
+          <%= render "settings/providers/provider_form", configuration: entry[:configuration] %>
+        <% else %>
+          <turbo-frame id="<%= entry[:turbo_id] %>-providers-panel">
+            <%= render "settings/providers/#{entry[:partial]}" %>
+          </turbo-frame>
+        <% end %>
+      <% end %>
+    <% end %>
+
+    <% unless @needs_attention.empty? %>
+      <%= render "settings/providers/group_heading",
+                 title: t("settings.providers.groups.needs_attention"),
+                 count: @needs_attention.size %>
+
+      <% @needs_attention.each do |entry| %>
         <%= settings_section title: entry[:title],
                              collapsible: true,
-                             open: auto_open_only,
+                             open: true,
                              auto_open_param: entry[:auto_open_param],
                              status: entry[:summary][:status],
                              meta: entry[:summary][:meta] do %>
@@ -49,9 +72,9 @@
 
     <%= render "settings/providers/group_heading",
                title: t("settings.providers.groups.available"),
-               count: @available_providers.size %>
+               count: @available.size %>
 
-    <% @available_providers.each do |entry| %>
+    <% @available.each do |entry| %>
       <%= settings_section title: entry[:title],
                            collapsible: true,
                            open: false,

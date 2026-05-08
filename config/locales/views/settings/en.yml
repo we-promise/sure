@@ -193,8 +193,22 @@ en:
         off: Not configured
       groups:
         connected: Connected
+        needs_attention: Action needed
         available: Available
         empty_connected: Nothing connected yet — pick a provider below to get started.
+      health:
+        connected: Connected
+        needs_attention: Action needed
+        errors: Errors
+        accounts_synced: Accounts synced
+      meta:
+        sync_error: Sync error
+        no_recent_sync: Sync overdue
+        registration_needed: Registration needed
+        reconsent_needed:
+          one: Re-consent needed in 1 day
+          other: Re-consent needed in %{count} days
+        last_synced: Synced %{time} ago
       show:
         coinbase_title: Coinbase
       encryption_error:

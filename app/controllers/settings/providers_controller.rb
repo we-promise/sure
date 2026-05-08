@@ -139,6 +139,20 @@ class Settings::ProvidersController < ApplicationController
 
     FAMILY_PANEL_KEYS = FAMILY_PANELS.map { |p| p[:key] }.freeze
 
+    # Maps panel key → ActiveRecord model name for sync health queries
+    PANEL_SYNCABLE_TYPES = {
+      "simplefin"      => "SimplefinItem",
+      "lunchflow"      => "LunchflowItem",
+      "enable_banking" => "EnableBankingItem",
+      "coinstats"      => "CoinstatsItem",
+      "mercury"        => "MercuryItem",
+      "coinbase"       => "CoinbaseItem",
+      "binance"        => "BinanceItem",
+      "snaptrade"      => "SnaptradeItem",
+      "indexa_capital" => "IndexaCapitalItem",
+      "sophtron"       => "SophtronItem"
+    }.freeze
+
     # Prepares instance vars needed by the show view and partials
     def prepare_show_context
       # Load all provider configurations (exclude family-scoped panels, which have their own UI below)
@@ -158,9 +172,54 @@ class Settings::ProvidersController < ApplicationController
       @coinbase_items = Current.family.coinbase_items.ordered # Coinbase panel needs name and sync info for status display
       @snaptrade_items = Current.family.snaptrade_items.includes(:snaptrade_accounts).ordered
       @indexa_capital_items = Current.family.indexa_capital_items.ordered.select(:id)
+      @binance_items = Current.family.binance_items.active.ordered
+
+      @provider_sync_health = compute_provider_sync_health
 
       entries = build_provider_entries
-      @connected_providers, @available_providers = entries.partition { |entry| entry[:summary][:status] == :ok }
+
+      @connected        = entries.select { |e| e[:summary][:status] == :ok }
+      @needs_attention  = entries.select { |e| [ :warn, :err ].include?(e[:summary][:status]) }
+      @available        = entries.select { |e| e[:summary][:status] == :off }
+
+      @health_counts = {
+        connected:       @connected.size + @needs_attention.size,
+        needs_attention: @needs_attention.size,
+        errors:          @needs_attention.count { |e| e[:summary][:status] == :err },
+        accounts_synced: Current.family.accounts.joins(:account_providers).distinct.count
+      }
+    end
+
+    # Returns a hash mapping provider key → { error:, last_synced_at:, stale: }
+    # by querying the latest sync per item for each family panel provider.
+    def compute_provider_sync_health
+      PANEL_SYNCABLE_TYPES.each_with_object({}) do |(key, syncable_type), health|
+        items = instance_variable_get("@#{key}_items")
+        ids = items&.map(&:id)&.compact
+        next if ids.blank?
+
+        health[key] = sync_health_for(syncable_type, ids)
+      end
+    end
+
+    # Determines error/stale status and last successful sync time for a set of items.
+    def sync_health_for(syncable_type, item_ids)
+      # Use window function to get the single latest sync per item (same pattern as ProviderConnectionStatus)
+      ranked_subq = Sync
+        .where(syncable_type: syncable_type, syncable_id: item_ids)
+        .select("syncs.*, ROW_NUMBER() OVER (PARTITION BY syncable_id ORDER BY created_at DESC, id DESC) AS sync_rank")
+
+      latest_per_item = Sync.from(ranked_subq, :syncs).where("sync_rank = 1").to_a
+
+      has_error = latest_per_item.any? { |s| s.failed? || s.stale? }
+
+      last_synced = Sync
+        .where(syncable_type: syncable_type, syncable_id: item_ids, status: "completed")
+        .maximum(:completed_at)
+
+      stale = !has_error && last_synced.present? && last_synced < 24.hours.ago
+
+      { error: has_error, last_synced_at: last_synced, stale: stale }
     end
 
     # Builds a unified list of provider entries (registry-driven configurations

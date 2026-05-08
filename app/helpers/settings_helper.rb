@@ -51,37 +51,46 @@ module SettingsHelper
   end
 
   def provider_summary(provider_key)
-    case provider_key.to_s.downcase
+    key = provider_key.to_s.downcase
+
+    case key
     when "plaid"
       plaid_configured = @provider_configurations&.find { |c| c.provider_key.to_s.casecmp("plaid").zero? }&.configured?
       plaid_configured ? { status: :ok } : { status: :off }
     when "simplefin"
-      @simplefin_items&.any? ? { status: :ok } : { status: :off }
+      return { status: :off } unless @simplefin_items&.any?
+      sync_based_summary(key)
     when "lunchflow"
-      @lunchflow_items&.any? ? { status: :ok } : { status: :off }
+      return { status: :off } unless @lunchflow_items&.any?
+      sync_based_summary(key)
     when "enable_banking"
-      @enable_banking_items&.any?(&:session_valid?) ? { status: :ok } : { status: :off }
+      return { status: :off } unless @enable_banking_items&.any?(&:session_valid?)
+      enable_banking_summary
     when "coinstats"
-      @coinstats_items&.any? ? { status: :ok } : { status: :off }
+      return { status: :off } unless @coinstats_items&.any?
+      sync_based_summary(key)
     when "mercury"
-      @mercury_items&.any? ? { status: :ok } : { status: :off }
+      return { status: :off } unless @mercury_items&.any?
+      sync_based_summary(key)
     when "coinbase"
-      @coinbase_items&.any? ? { status: :ok } : { status: :off }
+      return { status: :off } unless @coinbase_items&.any?
+      sync_based_summary(key)
     when "binance"
-      Current.family.binance_items.active.any? ? { status: :ok } : { status: :off }
+      return { status: :off } unless @binance_items&.any?
+      sync_based_summary(key)
     when "snaptrade"
       configured_item = @snaptrade_items&.find(&:credentials_configured?)
-      if configured_item&.user_registered?
-        { status: :ok }
-      elsif configured_item
-        { status: :warn }
-      else
-        { status: :off }
+      return { status: :off } unless configured_item
+      unless configured_item.user_registered?
+        return { status: :warn, meta: t("settings.providers.meta.registration_needed") }
       end
+      sync_based_summary(key)
     when "indexa_capital"
-      @indexa_capital_items&.any? ? { status: :ok } : { status: :off }
+      return { status: :off } unless @indexa_capital_items&.any?
+      sync_based_summary(key)
     when "sophtron"
-      @sophtron_items&.any? ? { status: :ok } : { status: :off }
+      return { status: :off } unless @sophtron_items&.any?
+      sync_based_summary(key)
     else
       { status: :off }
     end
@@ -108,6 +117,44 @@ module SettingsHelper
   end
 
   private
+    def sync_based_summary(provider_key)
+      health = @provider_sync_health&.dig(provider_key) || {}
+
+      if health[:error]
+        { status: :err, meta: t("settings.providers.meta.sync_error") }
+      elsif health[:stale]
+        { status: :warn, meta: t("settings.providers.meta.no_recent_sync") }
+      elsif health[:last_synced_at].present?
+        { status: :ok, meta: t("settings.providers.meta.last_synced", time: time_ago_in_words(health[:last_synced_at])) }
+      else
+        { status: :ok }
+      end
+    end
+
+    def enable_banking_summary
+      health = @provider_sync_health&.dig("enable_banking") || {}
+
+      return { status: :err, meta: t("settings.providers.meta.sync_error") } if health[:error]
+
+      valid_items = @enable_banking_items&.select(&:session_valid?) || []
+      expiring = valid_items.find do |item|
+        item.session_expires_at.present? && item.session_expires_at < 7.days.from_now
+      end
+
+      if expiring
+        days = [ ((expiring.session_expires_at - Time.current) / 1.day).ceil, 1 ].max
+        return { status: :warn, meta: t("settings.providers.meta.reconsent_needed", count: days) }
+      end
+
+      return { status: :warn, meta: t("settings.providers.meta.no_recent_sync") } if health[:stale]
+
+      if health[:last_synced_at].present?
+        { status: :ok, meta: t("settings.providers.meta.last_synced", time: time_ago_in_words(health[:last_synced_at])) }
+      else
+        { status: :ok }
+      end
+    end
+
     def not_self_hosted?
       !self_hosted?
     end
