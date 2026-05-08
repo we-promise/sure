@@ -66,4 +66,45 @@ class Account::LinkableTest < ActiveSupport::TestCase
 
     assert @account.can_delete_holdings?
   end
+
+  # The `linked` scope mirrors `linked?` at the SQL level. These tests pin
+  # all three link types so a future schema or `linked?` change breaks the
+  # test instead of silently diverging (e.g. wrong sparkline aggregation).
+  test "linked scope matches accounts linked via account_providers" do
+    plaid_account = plaid_accounts(:one)
+    AccountProvider.create!(account: @account, provider: plaid_account)
+
+    assert_includes Account.linked, @account
+  end
+
+  test "linked scope matches accounts with legacy plaid_account_id" do
+    plaid_account = plaid_accounts(:one)
+    @account.update!(plaid_account: plaid_account)
+
+    assert_includes Account.linked, @account
+  end
+
+  test "linked scope matches accounts with legacy simplefin_account_id" do
+    simplefin_item = SimplefinItem.create!(
+      family: @family,
+      name: "Test SimpleFin",
+      access_url: "https://example.com/access_token"
+    )
+    simplefin_account = SimplefinAccount.create!(
+      simplefin_item: simplefin_item,
+      name: "Test Account",
+      account_id: "test-acct",
+      currency: "USD",
+      account_type: "checking",
+      current_balance: 0
+    )
+    @account.update!(simplefin_account: simplefin_account)
+
+    assert_includes Account.linked, @account
+  end
+
+  test "linked scope excludes manual accounts" do
+    assert @account.unlinked?
+    refute_includes Account.linked, @account
+  end
 end
