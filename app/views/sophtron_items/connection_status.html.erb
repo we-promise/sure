@@ -1,0 +1,51 @@
+<% polling_data = if @timed_out
+     {}
+   else
+     {
+       controller: "polling",
+       polling_frame_id_value: "modal",
+       polling_url_value: connection_status_sophtron_item_path(@sophtron_item, accountable_type: @accountable_type, account_id: @account_id, return_to: @return_to, poll_attempt: @next_poll_attempt, post_mfa: @post_mfa_polling),
+       polling_interval_value: @poll_interval_ms
+     }
+   end %>
+<% check_again_attempt = @timed_out ? 1 : (@next_poll_attempt || @poll_attempt.to_i + 1) %>
+
+<%= turbo_frame_tag "modal" do %>
+  <%= tag.div(data: polling_data) do %>
+    <%= render DS::Dialog.new do |dialog| %>
+      <% dialog.with_header(title: t(".title")) %>
+
+      <% dialog.with_body do %>
+        <div class="space-y-4">
+          <div class="rounded-lg border border-primary bg-container-inset p-3">
+            <div class="flex items-start gap-3">
+              <% if @timed_out %>
+                <%= icon "alert-circle", size: "sm", class: "mt-0.5" %>
+              <% else %>
+                <%= icon "loader", size: "sm", class: "mt-0.5 animate-spin" %>
+              <% end %>
+
+              <div class="space-y-1 text-sm">
+                <p class="font-medium text-primary">
+                  <%= @timed_out ? t(".timeout") : t(".waiting") %>
+                </p>
+                <p class="text-xs text-secondary">
+                  <%= t(".attempt", attempt: (@poll_attempt || 1), max: @max_poll_attempts) %>
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex gap-2 justify-end">
+            <%= render DS::Link.new(
+                  text: t(".check_again"),
+                  href: connection_status_sophtron_item_path(@sophtron_item, accountable_type: @accountable_type, account_id: @account_id, return_to: @return_to, poll_attempt: check_again_attempt, post_mfa: @post_mfa_polling),
+                  variant: :primary,
+                  data: { turbo_frame: "modal", turbo_prefetch: false }
+                ) %>
+          </div>
+        </div>
+      <% end %>
+    <% end %>
+  <% end %>
+<% end %>

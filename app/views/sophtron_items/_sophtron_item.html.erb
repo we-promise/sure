@@ -1,6 +1,7 @@
 <%# locals: (sophtron_item:) %>
 
 <%= tag.div id: dom_id(sophtron_item) do %>
+  <% provider_display_name = sophtron_item.provider_display_name %>
   <details open class="group bg-container p-4 shadow-border-xs rounded-xl">
     <summary class="flex items-center justify-between gap-2">
       <div class="flex items-center gap-2">
@@ -11,14 +12,14 @@
             <%= image_tag sophtron_item.logo, class: "rounded-full h-full w-full", loading: "lazy" %>
           <% else %>
             <div class="flex items-center justify-center">
-              <%= tag.p sophtron_item.name&.first&.upcase || "?", class: "text-orange-600 text-xs font-medium" %>
+              <%= tag.p provider_display_name.first.upcase, class: "text-orange-600 text-xs font-medium" %>
             </div>
           <% end %>
         </div>
 
         <div class="pl-1 text-sm">
           <div class="flex items-center gap-2">
-            <%= tag.p sophtron_item.name, class: "font-medium text-primary" %>
+            <%= tag.p provider_display_name, class: "font-medium text-primary" %>
             <% if sophtron_item.scheduled_for_deletion? %>
               <p class="text-destructive text-sm animate-pulse"><%= t(".deletion_in_progress") %></p>
             <% end %>
@@ -70,7 +71,7 @@
             icon: "trash-2",
             href: sophtron_item_path(sophtron_item),
             method: :delete,
-            confirm: CustomConfirm.for_resource_deletion(sophtron_item.name, high_severity: true)
+            confirm: CustomConfirm.for_resource_deletion(provider_display_name, high_severity: true)
           ) %>
         <% end %>
       </div>
