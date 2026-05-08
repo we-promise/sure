@@ -241,7 +241,7 @@ en:
       expired_credentials: "Expired Credentials: Generate a new User ID and Access Key from Sophtron"  
       network_issue: "Network Issue: Check your internet connection"  
       service_down: "Service Down: Sophtron API may be temporarily unavailable"  
-      bank_credentials: "Bank credentials: Check the username and password for the selected institution"
+      bad_credentials: "Credentials: Check the username and password are correct"
       verification_code: "Verification code: Make sure the latest code was entered before it expired"
       institution_timeout: "Institution timeout: The bank login page did not finish in time"
       unsupported_mfa: "MFA support: Sophtron may not support this institution's current verification flow"

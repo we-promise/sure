@@ -976,7 +976,7 @@ class SophtronItemsController < ApplicationController
         message,
         select_accounts_sophtron_items_path(connection_context_params.except(:post_mfa, "post_mfa")),
         heading: t("sophtron_items.api_error.institution_unable_to_connect"),
-        issue_keys: %w[bank_credentials verification_code institution_timeout unsupported_mfa],
+        issue_keys: %w[bad_credentials verification_code institution_timeout unsupported_mfa],
         action_label: t("sophtron_items.api_error.try_again")
       )
     end
