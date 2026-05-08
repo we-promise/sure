@@ -18,12 +18,14 @@ module Family::SophtronConnectable
       base_url: base_url
     )
 
-    sophtron_item.sync_later
-
     sophtron_item
   end
 
   def has_sophtron_credentials?
     sophtron_items.where.not(user_id: [ nil, "" ], access_key: [ nil, "" ]).exists?
+  end
+
+  def configured_sophtron_item
+    sophtron_items.where.not(user_id: [ nil, "" ], access_key: [ nil, "" ]).ordered.first
   end
 end

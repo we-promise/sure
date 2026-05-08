@@ -10,6 +10,7 @@ class AccountsController < ApplicationController
     @manual_accounts = family.accounts
           .listable_manual
           .where(id: @accessible_account_ids)
+          .includes(:accountable, :account_providers, :plaid_account, :simplefin_account)
           .order(:name)
     @plaid_items = visible_provider_items(family.plaid_items.ordered.includes(:syncs, :plaid_accounts))
     @simplefin_items = visible_provider_items(family.simplefin_items.ordered.includes(:syncs))

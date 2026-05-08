@@ -1,0 +1,97 @@
+<%= turbo_frame_tag "modal" do %>
+  <% security_questions = Array(@challenge[:security_questions]) %>
+  <% token_methods = Array(@challenge[:token_methods]) %>
+  <% safe_captcha_image = @challenge[:captcha_image].to_s.split(%r{[^A-Za-z0-9+/=\s]}, 2).first.to_s.gsub(/\s+/, "") %>
+
+  <%= render DS::Dialog.new do |dialog| %>
+    <% dialog.with_header(title: t(".title")) %>
+
+    <% dialog.with_body do %>
+      <div class="space-y-4">
+        <% if security_questions.any? %>
+          <%= form_with url: submit_mfa_sophtron_item_path(@sophtron_item), method: :post, class: "space-y-3", data: { turbo_frame: "modal" } do %>
+            <%= hidden_field_tag :mfa_type, "security_answer" %>
+            <%= hidden_field_tag :accountable_type, @accountable_type %>
+            <%= hidden_field_tag :account_id, @account_id %>
+            <%= hidden_field_tag :return_to, @return_to %>
+
+            <% security_questions.each_with_index do |question, index| %>
+              <% answer_field_id = "security_answer_#{index}" %>
+              <div class="form-field">
+                <div class="form-field__body">
+                  <%= label_tag answer_field_id, question, class: "form-field__label" %>
+                  <%= text_field_tag "security_answers[]", nil, id: answer_field_id, autocomplete: "off", class: "form-field__input" %>
+                </div>
+              </div>
+            <% end %>
+
+            <div class="flex justify-end">
+              <%= render DS::Button.new(text: t(".submit"), type: "submit") %>
+            </div>
+          <% end %>
+        <% elsif token_methods.any? %>
+          <div class="space-y-2">
+            <% token_methods.each do |method| %>
+              <%= form_with url: submit_mfa_sophtron_item_path(@sophtron_item), method: :post, data: { turbo_frame: "modal" } do %>
+                <%= hidden_field_tag :mfa_type, "token_choice" %>
+                <%= hidden_field_tag :token_choice, method %>
+                <%= hidden_field_tag :accountable_type, @accountable_type %>
+                <%= hidden_field_tag :account_id, @account_id %>
+                <%= hidden_field_tag :return_to, @return_to %>
+                <%= button_tag type: "submit", class: "w-full rounded-lg border border-primary bg-container-inset p-3 text-left text-sm text-primary transition-colors hover:bg-container-inset-hover" do %>
+                  <span class="font-medium"><%= method %></span>
+                <% end %>
+              <% end %>
+            <% end %>
+          </div>
+        <% elsif @challenge[:token_sent] %>
+          <%= form_with url: submit_mfa_sophtron_item_path(@sophtron_item), method: :post, class: "space-y-3", data: { turbo_frame: "modal" } do %>
+            <%= hidden_field_tag :mfa_type, "token_input" %>
+            <%= hidden_field_tag :accountable_type, @accountable_type %>
+            <%= hidden_field_tag :account_id, @account_id %>
+            <%= hidden_field_tag :return_to, @return_to %>
+            <div class="form-field">
+              <div class="form-field__body">
+                <%= label_tag :token_input, t(".token"), class: "form-field__label" %>
+                <%= text_field_tag :token_input, nil, autocomplete: "one-time-code", class: "form-field__input" %>
+              </div>
+            </div>
+            <div class="flex justify-end">
+              <%= render DS::Button.new(text: t(".submit"), type: "submit") %>
+            </div>
+          <% end %>
+        <% elsif @challenge[:token_read].present? %>
+          <div class="space-y-3">
+            <p class="rounded-lg border border-primary bg-container-inset p-3 text-sm text-primary"><%= @challenge[:token_read] %></p>
+            <%= form_with url: submit_mfa_sophtron_item_path(@sophtron_item), method: :post, data: { turbo_frame: "modal" } do %>
+              <%= hidden_field_tag :mfa_type, "verify_phone" %>
+              <%= hidden_field_tag :accountable_type, @accountable_type %>
+              <%= hidden_field_tag :account_id, @account_id %>
+              <%= hidden_field_tag :return_to, @return_to %>
+              <%= render DS::Button.new(text: t(".phone_confirmed"), type: "submit") %>
+            <% end %>
+          </div>
+        <% elsif safe_captcha_image.present? %>
+          <%= form_with url: submit_mfa_sophtron_item_path(@sophtron_item), method: :post, class: "space-y-3", data: { turbo_frame: "modal" } do %>
+            <%= hidden_field_tag :mfa_type, "captcha" %>
+            <%= hidden_field_tag :accountable_type, @accountable_type %>
+            <%= hidden_field_tag :account_id, @account_id %>
+            <%= hidden_field_tag :return_to, @return_to %>
+            <div class="rounded-lg border border-primary bg-container-inset p-3">
+              <%= image_tag "data:image/png;base64,#{safe_captcha_image}", alt: t(".captcha_alt"), class: "max-w-full rounded-md" %>
+            </div>
+            <div class="form-field">
+              <div class="form-field__body">
+                <%= label_tag :captcha_input, t(".captcha"), class: "form-field__label" %>
+                <%= text_field_tag :captcha_input, nil, autocomplete: "off", class: "form-field__input" %>
+              </div>
+            </div>
+            <div class="flex justify-end">
+              <%= render DS::Button.new(text: t(".submit"), type: "submit") %>
+            </div>
+          <% end %>
+        <% end %>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>
