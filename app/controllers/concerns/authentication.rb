@@ -65,14 +65,15 @@ module Authentication
 
     # Returns the email asserted by the upstream proxy, but only when the
     # request passes all configured trust gates: self-hosted mode, header
-    # set, source IP in the trusted-proxies allowlist (if any), and email
-    # shape is valid.
+    # set, source IP in the trusted-proxies allowlist, shared-secret match
+    # (if configured), and email shape is valid.
     def trusted_remote_user_email
       return nil unless Rails.application.config.app_mode.self_hosted?
 
       header_name = Rails.application.config.remote_user_header_email
       return nil if header_name.blank?
       return nil unless remote_user_proxy_trusted?
+      return nil unless remote_user_secret_valid?
 
       email = request.headers[header_name]&.strip&.downcase
       return nil if email.blank?
@@ -87,6 +88,14 @@ module Authentication
       trusted.any? { |range| range.include?(peer_ip) }
     rescue IPAddr::Error
       false
+    end
+
+    def remote_user_secret_valid?
+      expected = Rails.application.config.remote_user_shared_secret
+      return true if expected.blank?
+
+      provided = request.headers[Rails.application.config.remote_user_shared_secret_header].to_s
+      ActiveSupport::SecurityUtils.secure_compare(expected, provided)
     end
 
     def find_or_create_remote_header_user(user_email)
