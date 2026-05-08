@@ -105,6 +105,8 @@ en:
       no_accounts_title: No accounts
       manual_sync: Manual sync
       manual_sync_action: Require manual sync
+      manual_sync_action_for: "Require manual sync for %{institution}"
+      automatic_sync_for: "Use automatic sync for %{institution}"
       setup_action: Set Up New Accounts
       setup_description: "%{linked} of %{total} accounts linked. Choose account types for your newly imported Sophtron accounts."
       setup_needed: New accounts ready to set up
@@ -279,7 +281,7 @@ en:
         configured_html: 'Configured and ready to use. Visit the <a href="%{accounts_path}" class="link">Accounts</a> tab to manage and set up accounts.'
         not_configured: "Not configured"
     syncer:
-      manual_sync_required: "Manual Sophtron sync is enabled; skipping automated sync."
+      manual_sync_required: "Manual Sophtron sync is required for this institution; skipping those accounts during automated sync."
       importing_accounts: "Importing accounts from Sophtron..."
       checking_account_configuration: "Checking account configuration..."
       accounts_need_setup: "%{count} account(s) need setup"

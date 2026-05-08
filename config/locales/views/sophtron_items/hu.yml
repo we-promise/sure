@@ -69,6 +69,8 @@ hu:
       no_accounts_title: Nincsenek számlák
       manual_sync: Kézi szinkronizálás
       manual_sync_action: Kézi szinkronizálás megkövetelése
+      manual_sync_action_for: "Kézi szinkronizálás megkövetelése ehhez: %{institution}"
+      automatic_sync_for: "Automatikus szinkronizálás használata ehhez: %{institution}"
       setup_action: Új számlák beállítása
       setup_description: "%{linked} / %{total} számla összekapcsolva. Válaszd ki az újonnan importált Sophtron számlák típusait."
       setup_needed: Új számlák beállításra várnak
