@@ -270,7 +270,7 @@ end
     end
 
     def apply_search(query)
-      search_term = "%#{params[:search]}%"
+      search_term = "%#{ActiveRecord::Base.sanitize_sql_like(params[:search])}%"
 
       query.joins(:entry)
            .left_joins(:merchant)
