@@ -180,7 +180,9 @@ class TransactionsController < ApplicationController
     end
 
     redirect_to transactions_path
-  rescue ActiveRecord::RecordNotDestroyed, ActiveRecord::RecordInvalid => e
+  rescue ActiveRecord::RecordNotFound, ActiveRecord::RecordInvalid,
+         ActiveRecord::RecordNotDestroyed, ActiveRecord::Deadlocked,
+         ActiveRecord::LockWaitTimeout => e
     Rails.logger.error("Failed to merge duplicate transaction #{params[:id]}: #{e.message}")
     flash[:alert] = t("transactions.merge_duplicate.failure")
     redirect_to transactions_path

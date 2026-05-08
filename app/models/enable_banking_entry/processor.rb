@@ -10,6 +10,12 @@ class EnableBankingEntry::Processor
   #   transaction_amount: { amount, currency },
   #   creditor_name, debtor_name, remittance_information, ...
   # }
+  def self.compute_external_id(raw_transaction_data)
+    data = raw_transaction_data.with_indifferent_access
+    id = data[:transaction_id].presence || data[:entry_reference].presence
+    id ? "enable_banking_#{id}" : nil
+  end
+
   def initialize(enable_banking_transaction, enable_banking_account:, import_adapter: nil)
     @enable_banking_transaction = enable_banking_transaction
     @enable_banking_account = enable_banking_account
@@ -64,9 +70,9 @@ class EnableBankingEntry::Processor
     end
 
     def external_id
-      id = data[:transaction_id].presence || data[:entry_reference].presence
+      id = self.class.compute_external_id(data)
       raise ArgumentError, "Enable Banking transaction missing required field 'transaction_id'" unless id
-      "enable_banking_#{id}"
+      id
     end
 
     def name
