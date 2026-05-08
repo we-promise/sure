@@ -36,7 +36,8 @@ class SophtronItem::Syncer
   def perform_sync(sync)
     # Phase 1: Import data from Sophtron API
     sync.update!(status_text: t("sophtron_items.syncer.importing_accounts")) if sync.respond_to?(:status_text)
-    sophtron_item.import_latest_sophtron_data
+    import_result = sophtron_item.import_latest_sophtron_data(sync: sync)
+    import_errors = import_errors_for(import_result)
 
     # Phase 2: Check account setup status and collect sync statistics
     sync.update!(status_text: t("sophtron_items.syncer.checking_account_configuration")) if sync.respond_to?(:status_text)
@@ -79,9 +80,14 @@ class SophtronItem::Syncer
     end
 
     # Mark sync health
-    collect_health_stats(sync, errors: nil)
+    if import_errors.present?
+      collect_health_stats(sync, errors: import_errors)
+      raise StandardError.new(import_errors.map { |error| error[:message] }.join(", "))
+    else
+      collect_health_stats(sync, errors: nil)
+    end
   rescue => e
-    collect_health_stats(sync, errors: [ { message: e.message, category: "sync_error" } ])
+    collect_health_stats(sync, errors: [ { message: e.message, category: "sync_error" } ]) unless sync_errors_recorded?(sync)
     raise
   end
 
@@ -93,4 +99,37 @@ class SophtronItem::Syncer
   def perform_post_sync
     # no-op
   end
+
+  private
+
+    def import_errors_for(import_result)
+      return [] if import_result.blank? || import_result[:success]
+
+      if import_result[:error].present?
+        return [ { message: import_result[:error], category: "sync_error" } ]
+      end
+
+      errors = []
+      if import_result[:accounts_failed].to_i.positive?
+        errors << {
+          message: "#{import_result[:accounts_failed]} #{'account'.pluralize(import_result[:accounts_failed])} failed to import",
+          category: "account_import"
+        }
+      end
+
+      if import_result[:transactions_failed].to_i.positive?
+        errors << {
+          message: "#{import_result[:transactions_failed]} #{'account'.pluralize(import_result[:transactions_failed])} failed to import transactions",
+          category: "transaction_import"
+        }
+      end
+
+      errors.presence || [ { message: "Sophtron import failed", category: "sync_error" } ]
+    end
+
+    def sync_errors_recorded?(sync)
+      return false unless sync.respond_to?(:sync_stats)
+
+      sync.sync_stats.to_h["total_errors"].to_i.positive?
+    end
 end
